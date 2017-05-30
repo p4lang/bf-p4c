@@ -162,33 +162,27 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @use_hash_action(1) @name("test1") table test1 {
         actions = {
             setf1;
-            @default_only NoAction;
         }
         key = {
             hdr.data.b1: exact;
         }
         size = 256;
-        default_action = NoAction();
     }
     @name("test2") table test2 {
         actions = {
             setf3;
-            @default_only NoAction;
         }
         key = {
             hdr.data.f2: ternary;
         }
-        default_action = NoAction();
     }
     @name("test3") table test3 {
         actions = {
             setf3;
-            @default_only NoAction;
         }
         key = {
             hdr.data.f4: ternary;
         }
-        default_action = NoAction();
     }
     apply {
         if (hdr.data.b2 == 8w10) {

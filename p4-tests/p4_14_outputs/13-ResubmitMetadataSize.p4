@@ -180,9 +180,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("t1") table t1 {
         actions = {
             a1;
-            @default_only NoAction;
         }
-        default_action = NoAction();
     }
     apply {
         if (hdr.ig_intr_md.resubmit_flag == 1w0) {

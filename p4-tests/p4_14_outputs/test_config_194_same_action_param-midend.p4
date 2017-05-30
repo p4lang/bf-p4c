@@ -179,7 +179,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         actions = {
             do_nothing_0();
             drop_me_0();
-            @default_only NoAction_0();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.pkt.field_a_32: ternary @name("hdr.pkt.field_a_32") ;
@@ -221,7 +221,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             action_2();
             do_nothing_1();
-            @default_only NoAction_1();
+            @defaultonly NoAction_1();
         }
         key = {
             hdr.pkt.field_l_8 : ternary @name("hdr.pkt.field_l_8") ;
@@ -236,7 +236,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @immediate(0) @name("table_1") table table_1 {
         actions = {
             action_3();
-            @default_only NoAction_7();
+            @defaultonly NoAction_7();
         }
         key = {
             hdr.pkt.field_a_32[7:0]: ternary @name("hdr.pkt.field_a_32[7:0]") ;
@@ -247,14 +247,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_2") table table_2 {
         actions = {
             action_5();
-            @default_only NoAction_8();
+            @defaultonly NoAction_8();
         }
         default_action = NoAction_8();
     }
     @random_seed(0x4567) @name("table_3") table table_3 {
         actions = {
             do_nothing_4();
-            @default_only NoAction_9();
+            @defaultonly NoAction_9();
         }
         key = {
             hdr.pkt.field_j_8: exact @name("hdr.pkt.field_j_8") ;

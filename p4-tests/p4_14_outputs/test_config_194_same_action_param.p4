@@ -177,13 +177,11 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         actions = {
             do_nothing;
             drop_me;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_a_32: ternary;
         }
         size = 36864;
-        default_action = NoAction();
     }
     apply {
         table_e.apply();
@@ -205,7 +203,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             action_0;
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_l_8 : ternary;
@@ -215,35 +212,28 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_e_16: exact;
         }
         size = 256;
-        default_action = NoAction();
     }
     @immediate(0) @name("table_1") table table_1 {
         actions = {
             action_1;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_a_32[7:0]: ternary;
         }
         size = 256;
-        default_action = NoAction();
     }
     @name("table_2") table table_2 {
         actions = {
             action_1;
-            @default_only NoAction;
         }
-        default_action = NoAction();
     }
     @random_seed(0x4567) @name("table_3") table table_3 {
         actions = {
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_j_8: exact;
         }
-        default_action = NoAction();
     }
     apply {
         if (hdr.ig_intr_md.resubmit_flag == 1w0) {

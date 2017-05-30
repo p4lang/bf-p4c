@@ -198,7 +198,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @table_counter("disabled") @name("match_cntr_1") table match_cntr_1 {
         actions = {
             cnt();
-            @default_only NoAction_0();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.pkt.field_a_32: exact @name("hdr.pkt.field_a_32") ;
@@ -209,7 +209,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("match_cntr_2") table match_cntr_2 {
         actions = {
             cnt_0();
-            @default_only NoAction_4();
+            @defaultonly NoAction_4();
         }
         key = {
             hdr.pkt.field_a_32   : exact @name("hdr.pkt.field_a_32") ;
@@ -222,7 +222,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("match_flow") table match_flow {
         actions = {
             sample_0();
-            @default_only NoAction_5();
+            @defaultonly NoAction_5();
         }
         key = {
             hdr.pkt.field_a_32      : ternary @name("hdr.pkt.field_a_32") ;

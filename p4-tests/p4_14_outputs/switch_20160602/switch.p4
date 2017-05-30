@@ -1204,13 +1204,11 @@ control process_mirroring(inout headers hdr, inout metadata meta, inout standard
             nop;
             set_mirror_nhop;
             set_mirror_bd;
-            @default_only NoAction;
         }
         key = {
             meta.i2e_metadata.mirror_session_id: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     apply {
         mirror.apply();
@@ -1247,27 +1245,23 @@ control process_replication(inout headers hdr, inout metadata meta, inout standa
         actions = {
             nop;
             set_replica_copy_bridged;
-            @default_only NoAction;
         }
         key = {
             meta.multicast_metadata.replica   : exact;
             meta.egress_metadata.same_bd_check: ternary;
         }
         size = 512;
-        default_action = NoAction();
     }
     @name("rid") table rid {
         actions = {
             nop;
             outer_replica_from_rid;
             inner_replica_from_rid;
-            @default_only NoAction;
         }
         key = {
             meta.eg_intr_md.egress_rid: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     apply {
         if (meta.eg_intr_md.egress_rid != 16w0) {
@@ -1294,14 +1288,12 @@ control process_vlan_decap(inout headers hdr, inout metadata meta, inout standar
             nop;
             remove_vlan_single_tagged;
             remove_vlan_double_tagged;
-            @default_only NoAction;
         }
         key = {
             hdr.vlan_tag_[0].isValid(): exact;
             hdr.vlan_tag_[1].isValid(): exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     apply {
         vlan_decap.apply();
@@ -1541,7 +1533,6 @@ control process_tunnel_decap(inout headers hdr, inout metadata meta, inout stand
             decap_inner_tcp;
             decap_inner_icmp;
             decap_inner_unknown;
-            @default_only NoAction;
         }
         key = {
             hdr.inner_tcp.isValid() : exact;
@@ -1549,7 +1540,6 @@ control process_tunnel_decap(inout headers hdr, inout metadata meta, inout stand
             hdr.inner_icmp.isValid(): exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("tunnel_decap_process_outer") table tunnel_decap_process_outer {
         actions = {
@@ -1582,7 +1572,6 @@ control process_tunnel_decap(inout headers hdr, inout metadata meta, inout stand
             decap_mpls_inner_ethernet_ipv4_pop3;
             decap_mpls_inner_ethernet_ipv6_pop3;
             decap_mpls_inner_ethernet_non_ip_pop3;
-            @default_only NoAction;
         }
         key = {
             meta.tunnel_metadata.ingress_tunnel_type: exact;
@@ -1590,7 +1579,6 @@ control process_tunnel_decap(inout headers hdr, inout metadata meta, inout stand
             hdr.inner_ipv6.isValid()                : exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     apply {
         if (meta.tunnel_metadata.tunnel_terminate == 1w1) {
@@ -1680,20 +1668,17 @@ control process_rewrite(inout headers hdr, inout metadata meta, inout standard_m
             set_mpls_push_rewrite_l2;
             set_mpls_swap_push_rewrite_l3;
             set_mpls_push_rewrite_l3;
-            @default_only NoAction;
         }
         key = {
             meta.l3_metadata.nexthop_index: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("rewrite_multicast") table rewrite_multicast {
         actions = {
             nop;
             rewrite_ipv4_multicast;
             rewrite_ipv6_multicast;
-            @default_only NoAction;
         }
         key = {
             hdr.ipv4.isValid()       : exact;
@@ -1701,7 +1686,6 @@ control process_rewrite(inout headers hdr, inout metadata meta, inout standard_m
             hdr.ipv4.dstAddr[31:28]  : ternary;
             hdr.ipv6.dstAddr[127:120]: ternary;
         }
-        default_action = NoAction();
     }
     apply {
         if (meta.egress_metadata.routed == 1w0 || meta.l3_metadata.nexthop_index != 16w0) {
@@ -1724,13 +1708,11 @@ control process_egress_bd(inout headers hdr, inout metadata meta, inout standard
         actions = {
             nop;
             set_egress_bd_properties;
-            @default_only NoAction;
         }
         key = {
             meta.egress_metadata.bd: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     apply {
         egress_bd_map.apply();
@@ -1771,7 +1753,6 @@ control process_mac_rewrite(inout headers hdr, inout metadata meta, inout standa
             ipv6_unicast_rewrite;
             ipv6_multicast_rewrite;
             mpls_rewrite;
-            @default_only NoAction;
         }
         key = {
             hdr.ipv4.isValid()       : exact;
@@ -1780,18 +1761,15 @@ control process_mac_rewrite(inout headers hdr, inout metadata meta, inout standa
             hdr.ipv4.dstAddr[31:28]  : ternary;
             hdr.ipv6.dstAddr[127:120]: ternary;
         }
-        default_action = NoAction();
     }
     @name("smac_rewrite") table smac_rewrite {
         actions = {
             rewrite_smac;
-            @default_only NoAction;
         }
         key = {
             meta.egress_metadata.smac_idx: exact;
         }
         size = 512;
-        default_action = NoAction();
     }
     apply {
         if (meta.egress_metadata.routed == 1w1) {
@@ -1816,7 +1794,6 @@ control process_mtu(inout headers hdr, inout metadata meta, inout standard_metad
             mtu_miss;
             ipv4_mtu_check;
             ipv6_mtu_check;
-            @default_only NoAction;
         }
         key = {
             meta.l3_metadata.mtu_index: exact;
@@ -1824,7 +1801,6 @@ control process_mtu(inout headers hdr, inout metadata meta, inout standard_metad
             hdr.ipv6.isValid()        : exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     apply {
         mtu.apply();
@@ -1897,13 +1873,11 @@ control process_egress_nat(inout headers hdr, inout metadata meta, inout standar
             set_nat_src_tcp_rewrite;
             set_nat_dst_tcp_rewrite;
             set_nat_src_dst_tcp_rewrite;
-            @default_only NoAction;
         }
         key = {
             meta.nat_metadata.nat_rewrite_index: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     apply {
         if (meta.nat_metadata.ingress_nat_mode != 2w0 && meta.nat_metadata.ingress_nat_mode != meta.nat_metadata.egress_nat_mode) {
@@ -1922,14 +1896,12 @@ control process_egress_bd_stats(inout headers hdr, inout metadata meta, inout st
     @name("egress_bd_stats") table egress_bd_stats_0 {
         actions = {
             nop_0;
-            @default_only NoAction;
         }
         key = {
             meta.egress_metadata.bd      : exact;
             meta.l2_metadata.lkp_pkt_type: exact;
         }
         size = 1024;
-        default_action = NoAction();
         @name("egress_bd_stats") counters = direct_counter(CounterType.packets_and_bytes);
     }
     apply {
@@ -2284,39 +2256,33 @@ control process_tunnel_encap(inout headers hdr, inout metadata meta, inout stand
         actions = {
             nop;
             set_egress_tunnel_vni;
-            @default_only NoAction;
         }
         key = {
             meta.egress_metadata.bd                : exact;
             meta.tunnel_metadata.egress_tunnel_type: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("tunnel_dmac_rewrite") table tunnel_dmac_rewrite {
         actions = {
             nop;
             rewrite_tunnel_dmac;
-            @default_only NoAction;
         }
         key = {
             meta.tunnel_metadata.tunnel_dmac_index: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("tunnel_dst_rewrite") table tunnel_dst_rewrite {
         actions = {
             nop;
             rewrite_tunnel_ipv4_dst;
             rewrite_tunnel_ipv6_dst;
-            @default_only NoAction;
         }
         key = {
             meta.tunnel_metadata.tunnel_dst_index: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("tunnel_encap_process_inner") table tunnel_encap_process_inner {
         actions = {
@@ -2329,7 +2295,6 @@ control process_tunnel_encap(inout headers hdr, inout metadata meta, inout stand
             inner_ipv6_icmp_rewrite;
             inner_ipv6_unknown_rewrite;
             inner_non_ip_rewrite;
-            @default_only NoAction;
         }
         key = {
             hdr.ipv4.isValid(): exact;
@@ -2339,7 +2304,6 @@ control process_tunnel_encap(inout headers hdr, inout metadata meta, inout stand
             hdr.icmp.isValid(): exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("tunnel_encap_process_outer") table tunnel_encap_process_outer {
         actions = {
@@ -2363,7 +2327,6 @@ control process_tunnel_encap(inout headers hdr, inout metadata meta, inout stand
             mpls_ip_push2_rewrite;
             mpls_ethernet_push3_rewrite;
             mpls_ip_push3_rewrite;
-            @default_only NoAction;
         }
         key = {
             meta.tunnel_metadata.egress_tunnel_type : exact;
@@ -2371,19 +2334,16 @@ control process_tunnel_encap(inout headers hdr, inout metadata meta, inout stand
             meta.multicast_metadata.replica         : exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("tunnel_mtu") table tunnel_mtu {
         actions = {
             tunnel_mtu_check;
             tunnel_mtu_miss;
-            @default_only NoAction;
         }
         key = {
             meta.tunnel_metadata.tunnel_index: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("tunnel_rewrite") table tunnel_rewrite {
         actions = {
@@ -2393,38 +2353,32 @@ control process_tunnel_encap(inout headers hdr, inout metadata meta, inout stand
             set_mpls_rewrite_push1;
             set_mpls_rewrite_push2;
             set_mpls_rewrite_push3;
-            @default_only NoAction;
         }
         key = {
             meta.tunnel_metadata.tunnel_index: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("tunnel_smac_rewrite") table tunnel_smac_rewrite {
         actions = {
             nop;
             rewrite_tunnel_smac;
-            @default_only NoAction;
         }
         key = {
             meta.tunnel_metadata.tunnel_smac_index: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("tunnel_src_rewrite") table tunnel_src_rewrite {
         actions = {
             nop;
             rewrite_tunnel_ipv4_src;
             rewrite_tunnel_ipv6_src;
-            @default_only NoAction;
         }
         key = {
             meta.tunnel_metadata.tunnel_src_index: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     apply {
         if (meta.fabric_metadata.fabric_header_present == 1w0 && meta.tunnel_metadata.egress_tunnel_type != 5w0) {
@@ -2471,14 +2425,12 @@ control process_vlan_xlate(inout headers hdr, inout metadata meta, inout standar
             set_egress_packet_vlan_untagged;
             set_egress_packet_vlan_tagged;
             set_egress_packet_vlan_double_tagged;
-            @default_only NoAction;
         }
         key = {
             meta.egress_metadata.ifindex: exact;
             meta.egress_metadata.bd     : exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     apply {
         egress_vlan_xlate.apply();
@@ -2518,7 +2470,6 @@ control process_egress_acl(inout headers hdr, inout metadata meta, inout standar
             egress_mirror_coal_hdr;
             egress_mirror;
             egress_mirror_drop;
-            @default_only NoAction;
         }
         key = {
             meta.eg_intr_md.egress_port    : ternary;
@@ -2526,7 +2477,6 @@ control process_egress_acl(inout headers hdr, inout metadata meta, inout standar
             meta.l3_metadata.l3_mtu_check  : ternary;
         }
         size = 512;
-        default_action = NoAction();
     }
     apply {
         if (meta.egress_metadata.bypass == 1w0) {
@@ -2555,13 +2505,11 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             egress_port_type_normal;
             egress_port_type_fabric;
             egress_port_type_cpu;
-            @default_only NoAction;
         }
         key = {
             meta.eg_intr_md.egress_port: exact;
         }
         size = 288;
-        default_action = NoAction();
     }
     @name("process_int_egress_prep") process_int_egress_prep() process_int_egress_prep_0;
     @name("process_mirroring") process_mirroring() process_mirroring_0;
@@ -2628,24 +2576,20 @@ control process_ingress_port_mapping(inout headers hdr, inout metadata meta, ino
     @name("ingress_port_mapping") table ingress_port_mapping {
         actions = {
             set_ifindex;
-            @default_only NoAction;
         }
         key = {
             meta.ig_intr_md.ingress_port: exact;
         }
         size = 288;
-        default_action = NoAction();
     }
     @name("ingress_port_properties") table ingress_port_properties {
         actions = {
             set_ingress_port_properties;
-            @default_only NoAction;
         }
         key = {
             meta.ig_intr_md.ingress_port: exact;
         }
         size = 288;
-        default_action = NoAction();
     }
     apply {
         if (meta.ig_intr_md.resubmit_flag == 1w0) {
@@ -2669,7 +2613,6 @@ control validate_outer_ipv4_header(inout headers hdr, inout metadata meta, inout
         actions = {
             set_valid_outer_ipv4_packet;
             set_malformed_outer_ipv4_packet;
-            @default_only NoAction;
         }
         key = {
             hdr.ipv4.version       : ternary;
@@ -2677,7 +2620,6 @@ control validate_outer_ipv4_header(inout headers hdr, inout metadata meta, inout
             hdr.ipv4.srcAddr[31:24]: ternary;
         }
         size = 512;
-        default_action = NoAction();
     }
     apply {
         validate_outer_ipv4_packet.apply();
@@ -2698,7 +2640,6 @@ control validate_outer_ipv6_header(inout headers hdr, inout metadata meta, inout
         actions = {
             set_valid_outer_ipv6_packet;
             set_malformed_outer_ipv6_packet;
-            @default_only NoAction;
         }
         key = {
             hdr.ipv6.version         : ternary;
@@ -2706,7 +2647,6 @@ control validate_outer_ipv6_header(inout headers hdr, inout metadata meta, inout
             hdr.ipv6.srcAddr[127:112]: ternary;
         }
         size = 512;
-        default_action = NoAction();
     }
     apply {
         validate_outer_ipv6_packet.apply();
@@ -2731,7 +2671,6 @@ control validate_mpls_header(inout headers hdr, inout metadata meta, inout stand
             set_valid_mpls_label1;
             set_valid_mpls_label2;
             set_valid_mpls_label3;
-            @default_only NoAction;
         }
         key = {
             hdr.mpls[0].label    : ternary;
@@ -2745,7 +2684,6 @@ control validate_mpls_header(inout headers hdr, inout metadata meta, inout stand
             hdr.mpls[2].isValid(): exact;
         }
         size = 512;
-        default_action = NoAction();
     }
     apply {
         validate_mpls_packet.apply();
@@ -2820,7 +2758,6 @@ control process_validate_outer_header(inout headers hdr, inout metadata meta, in
             set_valid_outer_broadcast_packet_single_tagged;
             set_valid_outer_broadcast_packet_double_tagged;
             set_valid_outer_broadcast_packet_qinq_tagged;
-            @default_only NoAction;
         }
         key = {
             hdr.ethernet.srcAddr      : ternary;
@@ -2829,7 +2766,6 @@ control process_validate_outer_header(inout headers hdr, inout metadata meta, in
             hdr.vlan_tag_[1].isValid(): exact;
         }
         size = 512;
-        default_action = NoAction();
     }
     @name("validate_outer_ipv4_header") validate_outer_ipv4_header() validate_outer_ipv4_header_0;
     @name("validate_outer_ipv6_header") validate_outer_ipv6_header() validate_outer_ipv6_header_0;
@@ -2872,10 +2808,8 @@ control process_global_params(inout headers hdr, inout metadata meta, inout stan
     @name("switch_config_params") table switch_config_params {
         actions = {
             set_config_parameters;
-            @default_only NoAction;
         }
         size = 1;
-        default_action = NoAction();
     }
     apply {
         switch_config_params.apply();
@@ -2919,7 +2853,6 @@ control process_port_vlan_mapping(inout headers hdr, inout metadata meta, inout 
         actions = {
             set_bd_properties;
             port_vlan_mapping_miss;
-            @default_only NoAction;
         }
         key = {
             meta.ingress_metadata.ifindex: exact;
@@ -2929,7 +2862,6 @@ control process_port_vlan_mapping(inout headers hdr, inout metadata meta, inout 
             hdr.vlan_tag_[1].vid         : exact;
         }
         size = 4096;
-        default_action = NoAction();
         @name("bd_action_profile") implementation = action_profile(32w1024);
     }
     apply {
@@ -2944,14 +2876,12 @@ control process_spanning_tree(inout headers hdr, inout metadata meta, inout stan
     @name("spanning_tree") table spanning_tree {
         actions = {
             set_stp_state;
-            @default_only NoAction;
         }
         key = {
             meta.ingress_metadata.ifindex: exact;
             meta.l2_metadata.stp_group   : exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     apply {
         if (meta.ingress_metadata.port_type == 2w0 && meta.l2_metadata.stp_group != 10w0) {
@@ -2985,12 +2915,10 @@ control process_ingress_fabric(inout headers hdr, inout metadata meta, inout sta
         actions = {
             nop;
             terminate_cpu_packet;
-            @default_only NoAction;
         }
         key = {
             hdr.fabric_header.dstDevice: exact;
         }
-        default_action = NoAction();
     }
     apply {
         if (meta.ingress_metadata.port_type != 2w0) {
@@ -3019,7 +2947,6 @@ control process_ipv4_vtep(inout headers hdr, inout metadata meta, inout standard
             nop;
             set_tunnel_termination_flag;
             set_tunnel_vni_and_termination_flag;
-            @default_only NoAction;
         }
         key = {
             meta.l3_metadata.vrf                    : exact;
@@ -3027,13 +2954,11 @@ control process_ipv4_vtep(inout headers hdr, inout metadata meta, inout standard
             meta.tunnel_metadata.ingress_tunnel_type: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("ipv4_src_vtep") table ipv4_src_vtep {
         actions = {
             on_miss;
             src_vtep_hit;
-            @default_only NoAction;
         }
         key = {
             meta.l3_metadata.vrf                    : exact;
@@ -3041,7 +2966,6 @@ control process_ipv4_vtep(inout headers hdr, inout metadata meta, inout standard
             meta.tunnel_metadata.ingress_tunnel_type: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     apply {
         switch (ipv4_src_vtep.apply().action_run) {
@@ -3073,7 +2997,6 @@ control process_ipv6_vtep(inout headers hdr, inout metadata meta, inout standard
             nop;
             set_tunnel_termination_flag;
             set_tunnel_vni_and_termination_flag;
-            @default_only NoAction;
         }
         key = {
             meta.l3_metadata.vrf                    : exact;
@@ -3081,13 +3004,11 @@ control process_ipv6_vtep(inout headers hdr, inout metadata meta, inout standard
             meta.tunnel_metadata.ingress_tunnel_type: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("ipv6_src_vtep") table ipv6_src_vtep {
         actions = {
             on_miss;
             src_vtep_hit;
-            @default_only NoAction;
         }
         key = {
             meta.l3_metadata.vrf                    : exact;
@@ -3095,7 +3016,6 @@ control process_ipv6_vtep(inout headers hdr, inout metadata meta, inout standard
             meta.tunnel_metadata.ingress_tunnel_type: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     apply {
         switch (ipv6_src_vtep.apply().action_run) {
@@ -3162,7 +3082,6 @@ control process_mpls(inout headers hdr, inout metadata meta, inout standard_meta
             terminate_ipv6_over_mpls;
             terminate_pw;
             forward_mpls;
-            @default_only NoAction;
         }
         key = {
             meta.tunnel_metadata.mpls_label: exact;
@@ -3170,7 +3089,6 @@ control process_mpls(inout headers hdr, inout metadata meta, inout standard_meta
             hdr.inner_ipv6.isValid()       : exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     apply {
         mpls_0.apply();
@@ -3213,7 +3131,6 @@ control process_outer_ipv4_multicast(inout headers hdr, inout metadata meta, ino
             on_miss;
             outer_multicast_route_s_g_hit;
             outer_multicast_bridge_s_g_hit;
-            @default_only NoAction;
         }
         key = {
             meta.multicast_metadata.ipv4_mcast_key_type: exact;
@@ -3222,7 +3139,6 @@ control process_outer_ipv4_multicast(inout headers hdr, inout metadata meta, ino
             hdr.ipv4.dstAddr                           : exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("outer_ipv4_multicast_star_g") table outer_ipv4_multicast_star_g {
         actions = {
@@ -3230,7 +3146,6 @@ control process_outer_ipv4_multicast(inout headers hdr, inout metadata meta, ino
             outer_multicast_route_sm_star_g_hit;
             outer_multicast_route_bidir_star_g_hit;
             outer_multicast_bridge_star_g_hit;
-            @default_only NoAction;
         }
         key = {
             meta.multicast_metadata.ipv4_mcast_key_type: exact;
@@ -3238,7 +3153,6 @@ control process_outer_ipv4_multicast(inout headers hdr, inout metadata meta, ino
             hdr.ipv4.dstAddr                           : ternary;
         }
         size = 512;
-        default_action = NoAction();
     }
     apply {
         switch (outer_ipv4_multicast.apply().action_run) {
@@ -3286,7 +3200,6 @@ control process_outer_ipv6_multicast(inout headers hdr, inout metadata meta, ino
             on_miss;
             outer_multicast_route_s_g_hit;
             outer_multicast_bridge_s_g_hit;
-            @default_only NoAction;
         }
         key = {
             meta.multicast_metadata.ipv6_mcast_key_type: exact;
@@ -3295,7 +3208,6 @@ control process_outer_ipv6_multicast(inout headers hdr, inout metadata meta, ino
             hdr.ipv6.dstAddr                           : exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("outer_ipv6_multicast_star_g") table outer_ipv6_multicast_star_g {
         actions = {
@@ -3303,7 +3215,6 @@ control process_outer_ipv6_multicast(inout headers hdr, inout metadata meta, ino
             outer_multicast_route_sm_star_g_hit;
             outer_multicast_route_bidir_star_g_hit;
             outer_multicast_bridge_star_g_hit;
-            @default_only NoAction;
         }
         key = {
             meta.multicast_metadata.ipv6_mcast_key_type: exact;
@@ -3311,7 +3222,6 @@ control process_outer_ipv6_multicast(inout headers hdr, inout metadata meta, ino
             hdr.ipv6.dstAddr                           : ternary;
         }
         size = 512;
-        default_action = NoAction();
     }
     apply {
         switch (outer_ipv6_multicast.apply().action_run) {
@@ -3467,26 +3377,22 @@ control process_tunnel(inout headers hdr, inout metadata meta, inout standard_me
             non_ip_lkp;
             ipv4_lkp;
             ipv6_lkp;
-            @default_only NoAction;
         }
         key = {
             hdr.ipv4.isValid(): exact;
             hdr.ipv6.isValid(): exact;
         }
-        default_action = NoAction();
     }
     @ternary(1) @name("outer_rmac") table outer_rmac {
         actions = {
             on_miss;
             outer_rmac_hit;
-            @default_only NoAction;
         }
         key = {
             meta.l3_metadata.rmac_group: exact;
             hdr.ethernet.dstAddr       : exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("tunnel") table tunnel {
         actions = {
@@ -3497,7 +3403,6 @@ control process_tunnel(inout headers hdr, inout metadata meta, inout standard_me
             terminate_tunnel_inner_ipv4;
             terminate_tunnel_inner_ethernet_ipv6;
             terminate_tunnel_inner_ipv6;
-            @default_only NoAction;
         }
         key = {
             meta.tunnel_metadata.tunnel_vni         : exact;
@@ -3506,20 +3411,17 @@ control process_tunnel(inout headers hdr, inout metadata meta, inout standard_me
             hdr.inner_ipv6.isValid()                : exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("tunnel_lookup_miss") table tunnel_lookup_miss_0 {
         actions = {
             non_ip_lkp;
             ipv4_lkp;
             ipv6_lkp;
-            @default_only NoAction;
         }
         key = {
             hdr.ipv4.isValid(): exact;
             hdr.ipv6.isValid(): exact;
         }
-        default_action = NoAction();
     }
     @name("process_ingress_fabric") process_ingress_fabric() process_ingress_fabric_0;
     @name("process_ipv4_vtep") process_ipv4_vtep() process_ipv4_vtep_0;
@@ -3577,14 +3479,12 @@ control process_storm_control(inout headers hdr, inout metadata meta, inout stan
         actions = {
             nop;
             set_storm_control_meter;
-            @default_only NoAction;
         }
         key = {
             meta.ig_intr_md.ingress_port : exact;
             meta.l2_metadata.lkp_pkt_type: ternary;
         }
         size = 512;
-        default_action = NoAction();
     }
     apply {
         if (meta.ingress_metadata.port_type == 2w0) {
@@ -3629,7 +3529,6 @@ control process_validate_packet(inout headers hdr, inout metadata meta, inout st
             set_multicast_and_ipv6_src_is_link_local;
             set_broadcast;
             set_malformed_packet;
-            @default_only NoAction;
         }
         key = {
             meta.l2_metadata.lkp_mac_sa[40:40]     : ternary;
@@ -3641,7 +3540,6 @@ control process_validate_packet(inout headers hdr, inout metadata meta, inout st
             meta.ipv6_metadata.lkp_ipv6_sa[127:112]: ternary;
         }
         size = 512;
-        default_action = NoAction();
     }
     apply {
         if (meta.ingress_metadata.drop_flag == 1w0) {
@@ -3692,28 +3590,24 @@ control process_mac(inout headers hdr, inout metadata meta, inout standard_metad
             dmac_redirect_nexthop;
             dmac_redirect_ecmp;
             dmac_drop;
-            @default_only NoAction;
         }
         key = {
             meta.ingress_metadata.bd   : exact;
             meta.l2_metadata.lkp_mac_da: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("smac") table smac {
         actions = {
             nop;
             smac_miss;
             smac_hit;
-            @default_only NoAction;
         }
         key = {
             meta.ingress_metadata.bd   : exact;
             meta.l2_metadata.lkp_mac_sa: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     apply {
         if (meta.ingress_metadata.port_type == 2w0) {
@@ -3778,7 +3672,6 @@ control process_mac_acl(inout headers hdr, inout metadata meta, inout standard_m
             acl_redirect_nexthop;
             acl_redirect_ecmp;
             acl_mirror;
-            @default_only NoAction;
         }
         key = {
             meta.acl_metadata.if_label   : ternary;
@@ -3788,7 +3681,6 @@ control process_mac_acl(inout headers hdr, inout metadata meta, inout standard_m
             meta.l2_metadata.lkp_mac_type: ternary;
         }
         size = 512;
-        default_action = NoAction();
     }
     apply {
         if ((meta.ingress_metadata.bypass_lookups & 16w0x4) == 16w0) {
@@ -3850,7 +3742,6 @@ control process_ip_acl(inout headers hdr, inout metadata meta, inout standard_me
             acl_redirect_nexthop;
             acl_redirect_ecmp;
             acl_mirror;
-            @default_only NoAction;
         }
         key = {
             meta.acl_metadata.if_label    : ternary;
@@ -3864,7 +3755,6 @@ control process_ip_acl(inout headers hdr, inout metadata meta, inout standard_me
             meta.l3_metadata.lkp_ip_ttl   : ternary;
         }
         size = 512;
-        default_action = NoAction();
     }
     @name("ipv6_acl") table ipv6_acl {
         actions = {
@@ -3874,7 +3764,6 @@ control process_ip_acl(inout headers hdr, inout metadata meta, inout standard_me
             acl_redirect_nexthop;
             acl_redirect_ecmp;
             acl_mirror;
-            @default_only NoAction;
         }
         key = {
             meta.acl_metadata.if_label    : ternary;
@@ -3888,7 +3777,6 @@ control process_ip_acl(inout headers hdr, inout metadata meta, inout standard_me
             meta.l3_metadata.lkp_ip_ttl   : ternary;
         }
         size = 512;
-        default_action = NoAction();
     }
     apply {
         if ((meta.ingress_metadata.bypass_lookups & 16w0x4) == 16w0) {
@@ -3951,7 +3839,6 @@ control process_ipv4_racl(inout headers hdr, inout metadata meta, inout standard
             racl_permit;
             racl_redirect_nexthop;
             racl_redirect_ecmp;
-            @default_only NoAction;
         }
         key = {
             meta.acl_metadata.bd_label    : ternary;
@@ -3962,7 +3849,6 @@ control process_ipv4_racl(inout headers hdr, inout metadata meta, inout standard
             meta.l3_metadata.lkp_l4_dport : ternary;
         }
         size = 512;
-        default_action = NoAction();
     }
     apply {
         ipv4_racl.apply();
@@ -3984,27 +3870,23 @@ control process_ipv4_urpf(inout headers hdr, inout metadata meta, inout standard
         actions = {
             on_miss;
             ipv4_urpf_hit;
-            @default_only NoAction;
         }
         key = {
             meta.l3_metadata.vrf          : exact;
             meta.ipv4_metadata.lkp_ipv4_sa: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("ipv4_urpf_lpm") table ipv4_urpf_lpm {
         actions = {
             ipv4_urpf_hit;
             urpf_miss;
-            @default_only NoAction;
         }
         key = {
             meta.l3_metadata.vrf          : exact;
             meta.ipv4_metadata.lkp_ipv4_sa: lpm;
         }
         size = 512;
-        default_action = NoAction();
     }
     apply {
         if (meta.ipv4_metadata.ipv4_urpf_mode != 2w0) {
@@ -4036,28 +3918,24 @@ control process_ipv4_fib(inout headers hdr, inout metadata meta, inout standard_
             on_miss;
             fib_hit_nexthop;
             fib_hit_ecmp;
-            @default_only NoAction;
         }
         key = {
             meta.l3_metadata.vrf          : exact;
             meta.ipv4_metadata.lkp_ipv4_da: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("ipv4_fib_lpm") table ipv4_fib_lpm {
         actions = {
             on_miss;
             fib_hit_nexthop;
             fib_hit_ecmp;
-            @default_only NoAction;
         }
         key = {
             meta.l3_metadata.vrf          : exact;
             meta.ipv4_metadata.lkp_ipv4_da: lpm;
         }
         size = 512;
-        default_action = NoAction();
     }
     apply {
         switch (ipv4_fib.apply().action_run) {
@@ -4106,7 +3984,6 @@ control process_ipv6_racl(inout headers hdr, inout metadata meta, inout standard
             racl_permit;
             racl_redirect_nexthop;
             racl_redirect_ecmp;
-            @default_only NoAction;
         }
         key = {
             meta.acl_metadata.bd_label    : ternary;
@@ -4117,7 +3994,6 @@ control process_ipv6_racl(inout headers hdr, inout metadata meta, inout standard
             meta.l3_metadata.lkp_l4_dport : ternary;
         }
         size = 512;
-        default_action = NoAction();
     }
     apply {
         ipv6_racl.apply();
@@ -4139,27 +4015,23 @@ control process_ipv6_urpf(inout headers hdr, inout metadata meta, inout standard
         actions = {
             on_miss;
             ipv6_urpf_hit;
-            @default_only NoAction;
         }
         key = {
             meta.l3_metadata.vrf          : exact;
             meta.ipv6_metadata.lkp_ipv6_sa: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("ipv6_urpf_lpm") table ipv6_urpf_lpm {
         actions = {
             ipv6_urpf_hit;
             urpf_miss;
-            @default_only NoAction;
         }
         key = {
             meta.l3_metadata.vrf          : exact;
             meta.ipv6_metadata.lkp_ipv6_sa: lpm;
         }
         size = 512;
-        default_action = NoAction();
     }
     apply {
         if (meta.ipv6_metadata.ipv6_urpf_mode != 2w0) {
@@ -4191,28 +4063,24 @@ control process_ipv6_fib(inout headers hdr, inout metadata meta, inout standard_
             on_miss;
             fib_hit_nexthop;
             fib_hit_ecmp;
-            @default_only NoAction;
         }
         key = {
             meta.l3_metadata.vrf          : exact;
             meta.ipv6_metadata.lkp_ipv6_da: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("ipv6_fib_lpm") table ipv6_fib_lpm {
         actions = {
             on_miss;
             fib_hit_nexthop;
             fib_hit_ecmp;
-            @default_only NoAction;
         }
         key = {
             meta.l3_metadata.vrf          : exact;
             meta.ipv6_metadata.lkp_ipv6_da: lpm;
         }
         size = 512;
-        default_action = NoAction();
     }
     apply {
         switch (ipv6_fib.apply().action_run) {
@@ -4234,14 +4102,12 @@ control process_urpf_bd(inout headers hdr, inout metadata meta, inout standard_m
         actions = {
             nop;
             urpf_bd_miss;
-            @default_only NoAction;
         }
         key = {
             meta.l3_metadata.urpf_bd_group: exact;
             meta.ingress_metadata.bd      : exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     apply {
         if (meta.l3_metadata.urpf_mode == 2w2 && meta.l3_metadata.urpf_hit == 1w1) {
@@ -4290,7 +4156,6 @@ control process_ipv4_multicast(inout headers hdr, inout metadata meta, inout sta
         actions = {
             on_miss;
             multicast_bridge_s_g_hit;
-            @default_only NoAction;
         }
         key = {
             meta.ingress_metadata.bd      : exact;
@@ -4298,20 +4163,17 @@ control process_ipv4_multicast(inout headers hdr, inout metadata meta, inout sta
             meta.ipv4_metadata.lkp_ipv4_da: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("ipv4_multicast_bridge_star_g") table ipv4_multicast_bridge_star_g {
         actions = {
             nop;
             multicast_bridge_star_g_hit;
-            @default_only NoAction;
         }
         key = {
             meta.ingress_metadata.bd      : exact;
             meta.ipv4_metadata.lkp_ipv4_da: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name(".on_miss") action on_miss_0() {
         ipv4_multicast_route_s_g_stats.count();
@@ -4327,7 +4189,6 @@ control process_ipv4_multicast(inout headers hdr, inout metadata meta, inout sta
         actions = {
             on_miss_0;
             multicast_route_s_g_hit_0;
-            @default_only NoAction;
         }
         key = {
             meta.l3_metadata.vrf          : exact;
@@ -4335,7 +4196,6 @@ control process_ipv4_multicast(inout headers hdr, inout metadata meta, inout sta
             meta.ipv4_metadata.lkp_ipv4_da: exact;
         }
         size = 1024;
-        default_action = NoAction();
         @name("ipv4_multicast_route_s_g_stats") counters = direct_counter(CounterType.packets);
     }
     @name(".multicast_route_star_g_miss") action multicast_route_star_g_miss_0() {
@@ -4361,14 +4221,12 @@ control process_ipv4_multicast(inout headers hdr, inout metadata meta, inout sta
             multicast_route_star_g_miss_0;
             multicast_route_sm_star_g_hit_0;
             multicast_route_bidir_star_g_hit_0;
-            @default_only NoAction;
         }
         key = {
             meta.l3_metadata.vrf          : exact;
             meta.ipv4_metadata.lkp_ipv4_da: exact;
         }
         size = 1024;
-        default_action = NoAction();
         @name("ipv4_multicast_route_star_g_stats") counters = direct_counter(CounterType.packets);
     }
     apply {
@@ -4431,7 +4289,6 @@ control process_ipv6_multicast(inout headers hdr, inout metadata meta, inout sta
         actions = {
             on_miss;
             multicast_bridge_s_g_hit;
-            @default_only NoAction;
         }
         key = {
             meta.ingress_metadata.bd      : exact;
@@ -4439,20 +4296,17 @@ control process_ipv6_multicast(inout headers hdr, inout metadata meta, inout sta
             meta.ipv6_metadata.lkp_ipv6_da: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("ipv6_multicast_bridge_star_g") table ipv6_multicast_bridge_star_g {
         actions = {
             nop;
             multicast_bridge_star_g_hit;
-            @default_only NoAction;
         }
         key = {
             meta.ingress_metadata.bd      : exact;
             meta.ipv6_metadata.lkp_ipv6_da: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name(".on_miss") action on_miss_1() {
         ipv6_multicast_route_s_g_stats.count();
@@ -4468,7 +4322,6 @@ control process_ipv6_multicast(inout headers hdr, inout metadata meta, inout sta
         actions = {
             on_miss_1;
             multicast_route_s_g_hit_1;
-            @default_only NoAction;
         }
         key = {
             meta.l3_metadata.vrf          : exact;
@@ -4476,7 +4329,6 @@ control process_ipv6_multicast(inout headers hdr, inout metadata meta, inout sta
             meta.ipv6_metadata.lkp_ipv6_da: exact;
         }
         size = 1024;
-        default_action = NoAction();
         @name("ipv6_multicast_route_s_g_stats") counters = direct_counter(CounterType.packets);
     }
     @name(".multicast_route_star_g_miss") action multicast_route_star_g_miss_1() {
@@ -4502,14 +4354,12 @@ control process_ipv6_multicast(inout headers hdr, inout metadata meta, inout sta
             multicast_route_star_g_miss_1;
             multicast_route_sm_star_g_hit_1;
             multicast_route_bidir_star_g_hit_1;
-            @default_only NoAction;
         }
         key = {
             meta.l3_metadata.vrf          : exact;
             meta.ipv6_metadata.lkp_ipv6_da: exact;
         }
         size = 1024;
-        default_action = NoAction();
         @name("ipv6_multicast_route_star_g_stats") counters = direct_counter(CounterType.packets);
     }
     apply {
@@ -4578,7 +4428,6 @@ control process_ingress_nat(inout headers hdr, inout metadata meta, inout standa
         actions = {
             on_miss;
             set_dst_nat_nexthop_index;
-            @default_only NoAction;
         }
         key = {
             meta.l3_metadata.vrf          : exact;
@@ -4587,7 +4436,6 @@ control process_ingress_nat(inout headers hdr, inout metadata meta, inout standa
             meta.l3_metadata.lkp_l4_dport : exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("nat_flow") table nat_flow {
         actions = {
@@ -4595,7 +4443,6 @@ control process_ingress_nat(inout headers hdr, inout metadata meta, inout standa
             set_src_nat_rewrite_index;
             set_dst_nat_nexthop_index;
             set_twice_nat_nexthop_index;
-            @default_only NoAction;
         }
         key = {
             meta.l3_metadata.vrf          : ternary;
@@ -4606,13 +4453,11 @@ control process_ingress_nat(inout headers hdr, inout metadata meta, inout standa
             meta.l3_metadata.lkp_l4_dport : ternary;
         }
         size = 512;
-        default_action = NoAction();
     }
     @name("nat_src") table nat_src {
         actions = {
             on_miss;
             set_src_nat_rewrite_index;
-            @default_only NoAction;
         }
         key = {
             meta.l3_metadata.vrf          : exact;
@@ -4621,13 +4466,11 @@ control process_ingress_nat(inout headers hdr, inout metadata meta, inout standa
             meta.l3_metadata.lkp_l4_sport : exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("nat_twice") table nat_twice {
         actions = {
             on_miss;
             set_twice_nat_nexthop_index;
-            @default_only NoAction;
         }
         key = {
             meta.l3_metadata.vrf          : exact;
@@ -4638,7 +4481,6 @@ control process_ingress_nat(inout headers hdr, inout metadata meta, inout standa
             meta.l3_metadata.lkp_l4_dport : exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     apply {
         switch (nat_twice.apply().action_run) {
@@ -4675,13 +4517,11 @@ control process_meter_index(inout headers hdr, inout metadata meta, inout standa
     @ternary(1) @name("meter_index") table meter_index_0 {
         actions = {
             nop_1;
-            @default_only NoAction;
         }
         key = {
             meta.meter_metadata.meter_index: exact;
         }
         size = 1024;
-        default_action = NoAction();
         meters = meter_index;
     }
     apply {
@@ -4717,43 +4557,35 @@ control process_hashes(inout headers hdr, inout metadata meta, inout standard_me
     @name("compute_ipv4_hashes") table compute_ipv4_hashes {
         actions = {
             compute_lkp_ipv4_hash;
-            @default_only NoAction;
         }
         key = {
             hdr.ethernet.isValid(): exact;
         }
-        default_action = NoAction();
     }
     @name("compute_ipv6_hashes") table compute_ipv6_hashes {
         actions = {
             compute_lkp_ipv6_hash;
-            @default_only NoAction;
         }
         key = {
             hdr.ethernet.isValid(): exact;
         }
-        default_action = NoAction();
     }
     @name("compute_non_ip_hashes") table compute_non_ip_hashes {
         actions = {
             compute_lkp_non_ip_hash;
-            @default_only NoAction;
         }
         key = {
             hdr.ethernet.isValid(): exact;
         }
-        default_action = NoAction();
     }
     @ternary(1) @name("compute_other_hashes") table compute_other_hashes {
         actions = {
             computed_two_hashes;
             computed_one_hash;
-            @default_only NoAction;
         }
         key = {
             meta.hash_metadata.hash1: exact;
         }
-        default_action = NoAction();
     }
     apply {
         if (meta.tunnel_metadata.tunnel_terminate == 1w0 && hdr.ipv4.isValid() || meta.tunnel_metadata.tunnel_terminate == 1w1 && hdr.inner_ipv4.isValid()) {
@@ -4789,14 +4621,12 @@ control process_meter_action(inout headers hdr, inout metadata meta, inout stand
         actions = {
             meter_permit_0;
             meter_deny_0;
-            @default_only NoAction;
         }
         key = {
             meta.meter_metadata.meter_color: exact;
             meta.meter_metadata.meter_index: exact;
         }
         size = 1024;
-        default_action = NoAction();
         @name("meter_stats") counters = direct_counter(CounterType.packets);
     }
     apply {
@@ -4814,10 +4644,8 @@ control process_ingress_bd_stats(inout headers hdr, inout metadata meta, inout s
     @name("ingress_bd_stats") table ingress_bd_stats_0 {
         actions = {
             update_ingress_bd_stats;
-            @default_only NoAction;
         }
         size = 1024;
-        default_action = NoAction();
     }
     apply {
         ingress_bd_stats_0.apply();
@@ -4832,10 +4660,8 @@ control process_ingress_acl_stats(inout headers hdr, inout metadata meta, inout 
     @name("acl_stats") table acl_stats_0 {
         actions = {
             acl_stats_update;
-            @default_only NoAction;
         }
         size = 1024;
-        default_action = NoAction();
     }
     apply {
         acl_stats_0.apply();
@@ -4852,14 +4678,12 @@ control process_storm_control_stats(inout headers hdr, inout metadata meta, inou
     @name("storm_control_stats") table storm_control_stats_0 {
         actions = {
             nop_2;
-            @default_only NoAction;
         }
         key = {
             meta.meter_metadata.meter_color: exact;
             meta.ig_intr_md.ingress_port   : exact;
         }
         size = 1024;
-        default_action = NoAction();
         @name("storm_control_stats") counters = direct_counter(CounterType.packets);
     }
     apply {
@@ -4937,7 +4761,6 @@ control process_fwd_results(inout headers hdr, inout metadata meta, inout standa
             set_multicast_bridge_action;
             set_multicast_flood;
             set_multicast_drop;
-            @default_only NoAction;
         }
         key = {
             meta.l2_metadata.l2_redirect                 : ternary;
@@ -4956,7 +4779,6 @@ control process_fwd_results(inout headers hdr, inout metadata meta, inout standa
             meta.multicast_metadata.mcast_mode           : ternary;
         }
         size = 512;
-        default_action = NoAction();
     }
     apply {
         if (!(meta.ingress_metadata.bypass_lookups == 16w0xffff)) {
@@ -4997,14 +4819,12 @@ control process_nexthop(inout headers hdr, inout metadata meta, inout standard_m
             nop;
             set_ecmp_nexthop_details;
             set_ecmp_nexthop_details_for_post_routed_flood;
-            @default_only NoAction;
         }
         key = {
             meta.l3_metadata.nexthop_index: exact;
             meta.hash_metadata.hash1      : selector;
         }
         size = 1024;
-        default_action = NoAction();
         @name("ecmp_action_profile") @mode("fair") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w14);
     }
     @name("nexthop") table nexthop {
@@ -5012,13 +4832,11 @@ control process_nexthop(inout headers hdr, inout metadata meta, inout standard_m
             nop;
             set_nexthop_details;
             set_nexthop_details_for_post_routed_flood;
-            @default_only NoAction;
         }
         key = {
             meta.l3_metadata.nexthop_index: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     apply {
         if (meta.nexthop_metadata.nexthop_type == 1w1) {
@@ -5040,14 +4858,12 @@ control process_multicast_flooding(inout headers hdr, inout metadata meta, inout
         actions = {
             nop;
             set_bd_flood_mc_index;
-            @default_only NoAction;
         }
         key = {
             meta.ingress_metadata.bd     : exact;
             meta.l2_metadata.lkp_pkt_type: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     apply {
         bd_flood.apply();
@@ -5064,14 +4880,12 @@ control process_lag(inout headers hdr, inout metadata meta, inout standard_metad
         actions = {
             set_lag_miss;
             set_lag_port;
-            @default_only NoAction;
         }
         key = {
             meta.ingress_metadata.egress_ifindex: exact;
             meta.hash_metadata.hash2            : selector;
         }
         size = 1024;
-        default_action = NoAction();
         @name("lag_action_profile") @mode("fair") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w14);
     }
     apply {
@@ -5095,7 +4909,6 @@ control process_mac_learning(inout headers hdr, inout metadata meta, inout stand
         actions = {
             nop;
             generate_learn_notify;
-            @default_only NoAction;
         }
         key = {
             meta.l2_metadata.l2_src_miss: ternary;
@@ -5103,7 +4916,6 @@ control process_mac_learning(inout headers hdr, inout metadata meta, inout stand
             meta.l2_metadata.stp_state  : ternary;
         }
         size = 512;
-        default_action = NoAction();
     }
     apply {
         if (meta.l2_metadata.learning_enabled == 1w1) {
@@ -5149,10 +4961,8 @@ control process_system_acl(inout headers hdr, inout metadata meta, inout standar
     @name("drop_stats") table drop_stats_0 {
         actions = {
             drop_stats_update;
-            @default_only NoAction;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("system_acl") table system_acl {
         actions = {
@@ -5163,7 +4973,6 @@ control process_system_acl(inout headers hdr, inout metadata meta, inout standar
             drop_packet;
             drop_packet_with_reason;
             negative_mirror;
-            @default_only NoAction;
         }
         key = {
             meta.acl_metadata.if_label                : ternary;
@@ -5195,7 +5004,6 @@ control process_system_acl(inout headers hdr, inout metadata meta, inout standar
             meta.ingress_metadata.egress_ifindex      : ternary;
         }
         size = 512;
-        default_action = NoAction();
     }
     apply {
         if ((meta.ingress_metadata.bypass_lookups & 16w0x20) == 16w0) {
@@ -5218,14 +5026,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             rmac_hit;
             rmac_miss;
-            @default_only NoAction;
         }
         key = {
             meta.l3_metadata.rmac_group: exact;
             meta.l2_metadata.lkp_mac_da: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("process_ingress_port_mapping") process_ingress_port_mapping() process_ingress_port_mapping_0;
     @name("process_validate_outer_header") process_validate_outer_header() process_validate_outer_header_0;
@@ -5349,10 +5155,8 @@ control process_flowlet(inout headers hdr, inout metadata meta, inout standard_m
     @name("flowlet") table flowlet {
         actions = {
             flowlet_lookup;
-            @default_only NoAction;
         }
         size = 1;
-        default_action = NoAction();
     }
     apply {
         if (meta.flowlet_metadata.inactive_timeout != 32w0) {

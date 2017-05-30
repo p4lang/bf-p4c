@@ -61,20 +61,20 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             action_0_0();
             action_1_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.hdr0.a: ternary @name("hdr.hdr0.a") ;
         }
         size = 512;
-        default_action = NoAction();
         meters = meter_0;
+        default_action = NoAction();
     }
     @name("table_1") table table_1 {
         actions = {
             action_2();
             do_nothing();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.hdr0.a: ternary @name("hdr.hdr0.a") ;

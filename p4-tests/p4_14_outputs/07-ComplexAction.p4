@@ -167,12 +167,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table1") table table1 {
         actions = {
             action1;
-            @default_only NoAction;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
         }
-        default_action = NoAction();
     }
     apply {
         table1.apply();

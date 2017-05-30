@@ -227,13 +227,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("dmac") table dmac {
         actions = {
             action1;
-            @default_only NoAction;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
         }
         size = 16536;
-        default_action = NoAction();
     }
     apply {
         dmac.apply();

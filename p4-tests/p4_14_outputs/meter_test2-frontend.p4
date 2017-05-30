@@ -72,14 +72,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test1") table test1_0 {
         actions = {
             h1_3();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.data.f1: exact @name("hdr.data.f1") ;
         }
         size = 6000;
-        default_action = NoAction();
         meters = meter_0;
+        default_action = NoAction();
     }
     @name(".h4_6") action h4_6(bit<16> val4, bit<16> val5, bit<16> val6) {
         meter_5.read(hdr.data.color_2);
@@ -90,19 +90,19 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test2") table test2_0 {
         actions = {
             h4_6();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.data.f2: exact @name("hdr.data.f2") ;
         }
         size = 10000;
-        default_action = NoAction();
         meters = meter_5;
+        default_action = NoAction();
     }
     @name("test3") table test3_0 {
         actions = {
             h7_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.data.f3: exact @name("hdr.data.f3") ;
@@ -113,7 +113,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test4") table test4_0 {
         actions = {
             h10_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.data.f4: exact @name("hdr.data.f4") ;
@@ -124,7 +124,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test5") table test5_0 {
         actions = {
             set_port_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.data.color_1: ternary @name("hdr.data.color_1") ;
@@ -135,7 +135,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test6") table test6_0 {
         actions = {
             seth13_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.data.color_3: ternary @name("hdr.data.color_3") ;

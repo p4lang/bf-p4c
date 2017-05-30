@@ -41,7 +41,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @stage(1) @name("table_1") table table_2 {
         actions = {
             action_2();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.pkt.field_b_32: lpm @name("hdr.pkt.field_b_32") ;
@@ -62,7 +62,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @stage(2) @name("table_0") table table_3 {
         actions = {
             action_3();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.pkt.field_a_32: lpm @name("hdr.pkt.field_a_32") ;

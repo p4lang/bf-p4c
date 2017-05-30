@@ -443,7 +443,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             action_8_13();
             action_8_14();
             action_8_15();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.ethernet.dstAddr: exact @name("hdr.ethernet.dstAddr") ;

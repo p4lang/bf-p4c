@@ -83,43 +83,43 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             set_port_0();
         }
-        const default_action = set_port_0();
+        default_action = set_port_0();
     }
     @name("test1") table test1_0 {
         actions = {
             action1_0();
         }
-        const default_action = action1_0();
+        default_action = action1_0();
     }
     @name("test2") table test2_0 {
         actions = {
             action2_0();
         }
-        const default_action = action2_0();
+        default_action = action2_0();
     }
     @name("test3") table test3_0 {
         actions = {
             action3_0();
         }
-        const default_action = action3_0();
+        default_action = action3_0();
     }
     @name("test4") table test4_0 {
         actions = {
             action4_0();
         }
-        const default_action = action4_0();
+        default_action = action4_0();
     }
     @name("test5") table test5_0 {
         actions = {
             action5_0();
         }
-        const default_action = action5_0();
+        default_action = action5_0();
     }
     @name("test6") table test6_0 {
         actions = {
             action6_0();
         }
-        const default_action = action6_0();
+        default_action = action6_0();
     }
     apply {
         test1_0.apply();

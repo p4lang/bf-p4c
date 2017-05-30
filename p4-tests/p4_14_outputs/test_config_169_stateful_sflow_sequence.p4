@@ -241,45 +241,37 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("sflow_seq_num") table sflow_seq_num {
         actions = {
             get_sflow_seq_num;
-            @default_only NoAction;
         }
         key = {
             meta.meta.sflow_src          : exact;
             meta.meta.sflow_sample_seq_no: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("sflow_verify_seq_no_step_1") table sflow_verify_seq_no_step_1 {
         actions = {
             calc_next_seq_num;
-            @default_only NoAction;
         }
         size = 512;
-        default_action = NoAction();
     }
     @stage(1) @name("sflow_verify_seq_no_step_2") table sflow_verify_seq_no_step_2 {
         actions = {
             chk_sflow_seq_num;
-            @default_only NoAction;
         }
         key = {
             meta.meta.sflow_src: exact;
         }
         size = 16384;
-        default_action = NoAction();
     }
     @name("sflow_verify_seq_no_step_3") table sflow_verify_seq_no_step_3 {
         actions = {
             drop_me;
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             meta.sflowHdr.drops: ternary;
         }
         size = 512;
-        default_action = NoAction();
     }
     apply {
         sflow_seq_num.apply();

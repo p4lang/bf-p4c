@@ -204,7 +204,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("trill_forward") table trill_forward {
         actions = {
             forward_trill_0();
-            @default_only NoAction_0();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.trill.egressRbridge: exact @name("hdr.trill.egressRbridge") ;

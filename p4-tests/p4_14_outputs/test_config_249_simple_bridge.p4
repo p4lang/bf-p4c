@@ -208,7 +208,6 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         actions = {
             do_nothing;
             set_port;
-            @default_only NoAction;
         }
         key = {
             meta.m.w    : ternary;
@@ -218,7 +217,6 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             hdr.ipv4.ttl: exact;
         }
         size = 512;
-        default_action = NoAction();
     }
     apply {
         te0.apply();
@@ -238,24 +236,20 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             do_nothing;
             i0;
-            @default_only NoAction;
         }
         key = {
             hdr.ethernet.srcAddr[15:0]: ternary;
         }
         size = 512;
-        default_action = NoAction();
     }
     @name("t1") table t1 {
         actions = {
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.ethernet.srcAddr[15:0]: ternary;
         }
         size = 512;
-        default_action = NoAction();
     }
     apply {
         t0.apply();

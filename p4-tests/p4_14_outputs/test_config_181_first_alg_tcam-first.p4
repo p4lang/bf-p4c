@@ -223,7 +223,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             ipv4_lpm_hit();
             lpm_miss();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             meta.meta.partition_index: exact @name("meta.meta.partition_index") ;
@@ -236,7 +236,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("ipv4_lpm_partition") table ipv4_lpm_partition {
         actions = {
             set_partition_index();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             meta.meta.vrf   : exact @name("meta.meta.vrf") ;
@@ -249,7 +249,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             do_nothing();
             do_nothing_2();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.ipv4.dstAddr: exact @name("hdr.ipv4.dstAddr") ;
@@ -259,7 +259,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_x") table table_x {
         actions = {
             do_nothing();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.ipv4.dstAddr: ternary @name("hdr.ipv4.dstAddr") ;

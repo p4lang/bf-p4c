@@ -189,14 +189,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("update_counters") table update_counters {
         actions = {
             update_flex_counter_0();
-            @default_only NoAction_0();
+            @defaultonly NoAction_0();
         }
         default_action = NoAction_0();
     }
     @name("vlan") table vlan {
         actions = {
             set_flex_counter_index_0();
-            @default_only NoAction_3();
+            @defaultonly NoAction_3();
         }
         key = {
             hdr.vlan_tag.vlan_id: exact @name("hdr.vlan_tag.vlan_id") ;

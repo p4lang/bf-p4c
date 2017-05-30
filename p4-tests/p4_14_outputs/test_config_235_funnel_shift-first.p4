@@ -164,7 +164,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             action_0();
             action_1();
             do_nothing();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.hdr.x: ternary @name("hdr.hdr.x") ;

@@ -250,7 +250,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         actions = {
             nop_0();
             udp_set_src_0();
-            @default_only NoAction_0();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ethernet.isValid(): exact @name("hdr.ethernet.isValid()") ;
@@ -281,7 +281,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop_1();
             hop_ipv4_0();
-            @default_only NoAction_1();
+            @defaultonly NoAction_1();
         }
         key = {
             hdr.ipv4.dstAddr: ternary @name("hdr.ipv4.dstAddr") ;

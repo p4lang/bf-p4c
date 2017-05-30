@@ -202,67 +202,55 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("t_em_direct") table t_em_direct {
         actions = {
             a_em_direct;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_a_32: exact;
         }
         size = 4096;
-        default_action = NoAction();
     }
     @name("t_em_indirect") table t_em_indirect {
         actions = {
             a_em_indirect;
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_a_32: exact;
         }
         size = 2048;
-        default_action = NoAction();
     }
     @name("t_hash_act") table t_hash_act {
         actions = {
             a_hash_act;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_d_32[9:0]: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("t_no_key") table t_no_key {
         actions = {
             a_no_key;
-            @default_only NoAction;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("t_t_direct") table t_t_direct {
         actions = {
             a_t_direct;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_a_32: ternary;
         }
         size = 4096;
-        default_action = NoAction();
     }
     @name("t_t_indirect") table t_t_indirect {
         actions = {
             a_t_indirect;
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_a_32: ternary;
         }
         size = 2048;
-        default_action = NoAction();
     }
     apply {
         t_em_direct.apply();

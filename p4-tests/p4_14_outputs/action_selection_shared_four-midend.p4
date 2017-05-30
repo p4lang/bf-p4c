@@ -80,7 +80,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             setb1_0();
             setb2_0();
             setb3_0();
-            @default_only NoAction_0();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.data.f1: exact @name("hdr.data.f1") ;
@@ -89,15 +89,15 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.h3: selector @name("hdr.data.h3") ;
         }
         size = 10000;
-        default_action = NoAction_0();
         @name("set_b1_3") @mode("fair") implementation = action_selector(HashAlgorithm.crc16, 32w1024, 32w14);
+        default_action = NoAction_0();
     }
     @name("test2") table test2 {
         actions = {
             setb1_4();
             setb2_4();
             setb3_4();
-            @default_only NoAction_5();
+            @defaultonly NoAction_5();
         }
         key = {
             hdr.data.f2: exact @name("hdr.data.f2") ;
@@ -106,15 +106,15 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.h3: selector @name("hdr.data.h3") ;
         }
         size = 5000;
-        default_action = NoAction_5();
         @name("set_b1_3") @mode("fair") implementation = action_selector(HashAlgorithm.crc16, 32w1024, 32w14);
+        default_action = NoAction_5();
     }
     @name("test3") table test3 {
         actions = {
             setb1_5();
             setb2_5();
             setb3_5();
-            @default_only NoAction_6();
+            @defaultonly NoAction_6();
         }
         key = {
             hdr.data.f3: exact @name("hdr.data.f3") ;
@@ -123,15 +123,15 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.h3: selector @name("hdr.data.h3") ;
         }
         size = 2000;
-        default_action = NoAction_6();
         @name("set_b1_3") @mode("fair") implementation = action_selector(HashAlgorithm.crc16, 32w1024, 32w14);
+        default_action = NoAction_6();
     }
     @name("test4") table test4 {
         actions = {
             setb1_6();
             setb2_6();
             setb3_6();
-            @default_only NoAction_7();
+            @defaultonly NoAction_7();
         }
         key = {
             hdr.data.f4: exact @name("hdr.data.f4") ;
@@ -140,8 +140,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.h3: selector @name("hdr.data.h3") ;
         }
         size = 1024;
-        default_action = NoAction_7();
         @name("set_b1_3") @mode("fair") implementation = action_selector(HashAlgorithm.crc16, 32w1024, 32w14);
+        default_action = NoAction_7();
     }
     apply {
         if (hdr.data.b4 == 8w0 || hdr.data.b4 == 8w2) 

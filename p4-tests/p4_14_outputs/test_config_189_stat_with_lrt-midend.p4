@@ -46,15 +46,15 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop();
             action_0();
-            @default_only NoAction_0();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.pkt.srcPort: exact @name("hdr.pkt.srcPort") ;
             hdr.pkt.dstPort: ternary @name("hdr.pkt.dstPort") ;
         }
         size = 4096;
-        default_action = NoAction_0();
         @name("counter_0") counters = direct_counter(CounterType.packets_and_bytes);
+        default_action = NoAction_0();
     }
     apply {
         table_0.apply();

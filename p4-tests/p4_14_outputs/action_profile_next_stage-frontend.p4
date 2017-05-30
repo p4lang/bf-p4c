@@ -40,28 +40,28 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             setb1_0();
             setb2_0();
             setb3_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.data.f1: exact @name("hdr.data.f1") ;
         }
         size = 10000;
-        default_action = NoAction();
         @name("set_b1_3") implementation = action_profile(32w1024);
+        default_action = NoAction();
     }
     @name("test2") table test2_0 {
         actions = {
             setb1_0();
             setb2_0();
             setb3_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.data.b1: exact @name("hdr.data.b1") ;
         }
         size = 5000;
-        default_action = NoAction();
         @name("set_b1_3") implementation = action_profile(32w1024);
+        default_action = NoAction();
     }
     apply {
         test1_0.apply();

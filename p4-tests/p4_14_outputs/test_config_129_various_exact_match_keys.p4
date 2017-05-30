@@ -173,7 +173,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_10_bytes") table table_10_bytes {
         actions = {
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_a: exact;
@@ -188,12 +187,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_k: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("table_11_bytes") table table_11_bytes {
         actions = {
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_a     : exact;
@@ -209,12 +206,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_l     : exact;
         }
         size = 65536;
-        default_action = NoAction();
     }
     @name("table_12_bytes") table table_12_bytes {
         actions = {
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_a: exact;
@@ -231,12 +226,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_m: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("table_13_bytes") table table_13_bytes {
         actions = {
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_a: exact;
@@ -254,12 +247,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_n: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("table_14_bytes") table table_14_bytes {
         actions = {
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_a: exact;
@@ -278,12 +269,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_o: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("table_15_bytes") table table_15_bytes {
         actions = {
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_a: exact;
@@ -303,12 +292,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_p: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("table_16_bytes") table table_16_bytes {
         actions = {
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_a: exact;
@@ -329,24 +316,20 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_q: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("table_2_bytes") table table_2_bytes {
         actions = {
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_a: exact;
             hdr.pkt.field_b: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("table_3_bytes") table table_3_bytes {
         actions = {
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_a: exact;
@@ -354,12 +337,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_c: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("table_4_bytes") table table_4_bytes {
         actions = {
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_a: exact;
@@ -368,12 +349,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_d: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("table_5_bytes") table table_5_bytes {
         actions = {
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_a: exact;
@@ -383,12 +362,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_f: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("table_6_bytes") table table_6_bytes {
         actions = {
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_a: exact;
@@ -399,12 +376,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_g: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("table_7_bytes") table table_7_bytes {
         actions = {
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_a: exact;
@@ -416,12 +391,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_h: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("table_8_bytes") table table_8_bytes {
         actions = {
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_a: exact;
@@ -434,12 +407,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_i: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("table_9_bytes") table table_9_bytes {
         actions = {
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_a: exact;
@@ -453,7 +424,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_j: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     apply {
         table_2_bytes.apply();

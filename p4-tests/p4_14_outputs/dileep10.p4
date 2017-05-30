@@ -250,7 +250,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop;
             custom_action_3;
-            @default_only NoAction;
         }
         key = {
             hdr.ipv4.dstAddr    : exact;
@@ -261,7 +260,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.tcp.dstPort     : exact;
         }
         size = 32768;
-        default_action = NoAction();
     }
     apply {
         exm_3ways_32k.apply();

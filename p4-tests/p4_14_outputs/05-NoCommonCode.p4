@@ -176,24 +176,20 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             action1;
             action2;
-            @default_only NoAction;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
         }
         size = 16536;
-        default_action = NoAction();
     }
     @name("dmac2") table dmac2 {
         actions = {
             action2_1;
-            @default_only NoAction;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
         }
         size = 16536;
-        default_action = NoAction();
     }
     apply {
         dmac1.apply();

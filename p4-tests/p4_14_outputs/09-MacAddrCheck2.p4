@@ -167,9 +167,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("bad_mac_drop") table bad_mac_drop {
         actions = {
             ing_drop;
-            @default_only NoAction;
         }
-        default_action = NoAction();
     }
     apply {
         if (hdr.ethernet.srcAddr16 == hdr.ethernet.dstAddr16) {

@@ -42,7 +42,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop();
             set_dip();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.pkt.srcAddr : exact @name("hdr.pkt.srcAddr") ;

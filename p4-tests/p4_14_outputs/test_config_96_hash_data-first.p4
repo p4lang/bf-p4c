@@ -176,7 +176,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @include_idletime(1) @idletime_precision(1) @name("table_0") table table_0 {
         actions = {
             action_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.pkt.field_a_28: exact @name("hdr.pkt.field_a_28") ;
@@ -187,7 +187,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             action_1();
             do_nothing();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.pkt.field_c_32: exact @name("hdr.pkt.field_c_32") ;
@@ -203,7 +203,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             action_2();
             do_nothing();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.pkt.field_b_32: ternary @name("hdr.pkt.field_b_32") ;
@@ -214,8 +214,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_f_16: selector @name("hdr.pkt.field_f_16") ;
         }
         size = 2048;
-        default_action = NoAction();
         @name("table_2_action_profile") implementation = action_selector(HashAlgorithm.random, 32w512, 32w72);
+        default_action = NoAction();
     }
     apply {
         if (hdr.pkt.isValid()) 

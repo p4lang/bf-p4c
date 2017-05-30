@@ -170,14 +170,12 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         actions = {
             egr_action;
             egr_action2;
-            @default_only NoAction;
         }
         key = {
             hdr.eg_intr_md_from_parser_aux.egress_parser_err: exact;
             hdr.ethernet.dstAddr                            : exact;
             meta.m.foo                                      : exact;
         }
-        default_action = NoAction();
     }
     apply {
         egr_null_table.apply();
@@ -195,12 +193,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             ingr_action;
             ingr_action2;
-            @default_only NoAction;
         }
         key = {
             hdr.ig_intr_md_from_parser_aux.ingress_parser_err: exact;
         }
-        default_action = NoAction();
     }
     apply {
         ingr_null_table.apply();

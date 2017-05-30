@@ -60,13 +60,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             setb1;
             setb2;
             setb3;
-            @default_only NoAction;
         }
         key = {
             hdr.data.f1: exact;
         }
         size = 10000;
-        default_action = NoAction();
         @name("set_b1_3") implementation = action_profile(32w1024);
     }
     @name("test2") table test2 {
@@ -74,13 +72,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             setb5;
             setb6;
             setb7;
-            @default_only NoAction;
         }
         key = {
             hdr.data.f2: exact;
         }
         size = 5000;
-        default_action = NoAction();
         @name("set_b5_7") implementation = action_profile(32w1024);
     }
     @name("test3") table test3 {
@@ -88,13 +84,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             setb1;
             setb2;
             setb3;
-            @default_only NoAction;
         }
         key = {
             hdr.data.f1: exact;
         }
         size = 5000;
-        default_action = NoAction();
         @name("set_b1_3") implementation = action_profile(32w1024);
     }
     @name("test4") table test4 {
@@ -102,34 +96,28 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             setb5;
             setb6;
             setb7;
-            @default_only NoAction;
         }
         key = {
             hdr.data.f2: exact;
         }
         size = 10000;
-        default_action = NoAction();
         @name("set_b5_7") implementation = action_profile(32w1024);
     }
     @name("test_mid") table test_mid {
         actions = {
             setf1;
-            @default_only NoAction;
         }
         key = {
             hdr.data.f3: exact;
         }
-        default_action = NoAction();
     }
     @name("test_mid2") table test_mid2 {
         actions = {
             setf2;
-            @default_only NoAction;
         }
         key = {
             hdr.data.f4: exact;
         }
-        default_action = NoAction();
     }
     apply {
         if (hdr.data.b4 == 8w0) {

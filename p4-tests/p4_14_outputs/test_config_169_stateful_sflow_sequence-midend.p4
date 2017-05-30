@@ -249,7 +249,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("sflow_seq_num") table sflow_seq_num {
         actions = {
             get_sflow_seq_num_0();
-            @default_only NoAction_0();
+            @defaultonly NoAction_0();
         }
         key = {
             meta.meta.sflow_src          : exact @name("meta.meta.sflow_src") ;
@@ -261,7 +261,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("sflow_verify_seq_no_step_1") table sflow_verify_seq_no_step_1 {
         actions = {
             calc_next_seq_num_0();
-            @default_only NoAction_5();
+            @defaultonly NoAction_5();
         }
         size = 512;
         default_action = NoAction_5();
@@ -269,7 +269,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @stage(1) @name("sflow_verify_seq_no_step_2") table sflow_verify_seq_no_step_2 {
         actions = {
             chk_sflow_seq_num_0();
-            @default_only NoAction_6();
+            @defaultonly NoAction_6();
         }
         key = {
             meta.meta.sflow_src: exact @name("meta.meta.sflow_src") ;
@@ -281,7 +281,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             drop_me_0();
             do_nothing_0();
-            @default_only NoAction_7();
+            @defaultonly NoAction_7();
         }
         key = {
             meta.sflowHdr.drops: ternary @name("meta.sflowHdr.drops") ;

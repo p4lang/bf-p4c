@@ -240,56 +240,56 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("new_inner_cfi") table new_inner_cfi {
         actions = {
             do_new_inner_cfi();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         default_action = NoAction();
     }
     @name("new_inner_pri") table new_inner_pri {
         actions = {
             do_new_inner_pri();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         default_action = NoAction();
     }
     @name("new_inner_tpid") table new_inner_tpid {
         actions = {
             do_new_inner_tpid();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         default_action = NoAction();
     }
     @name("new_inner_vid") table new_inner_vid {
         actions = {
             do_new_inner_vid();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         default_action = NoAction();
     }
     @name("new_outer_cfi") table new_outer_cfi {
         actions = {
             do_new_outer_cfi();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         default_action = NoAction();
     }
     @name("new_outer_pri") table new_outer_pri {
         actions = {
             do_new_outer_pri();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         default_action = NoAction();
     }
     @name("new_outer_tpid") table new_outer_tpid {
         actions = {
             do_new_outer_tpid();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         default_action = NoAction();
     }
     @name("new_outer_vid") table new_outer_vid {
         actions = {
             do_new_outer_vid();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         default_action = NoAction();
     }
@@ -297,7 +297,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop();
             rewrite_tags();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.vlan_tag[0].isValid(): exact @name("hdr.vlan_tag[0].isValid()") ;

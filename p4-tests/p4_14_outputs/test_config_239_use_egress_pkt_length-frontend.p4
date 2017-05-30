@@ -195,7 +195,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         actions = {
             do_nothing_0();
             action_2();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.hdr1.b : exact @name("hdr.hdr1.b") ;
@@ -223,7 +223,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             do_nothing_1();
             action_3();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.hdr0.a: ternary @name("hdr.hdr0.a") ;

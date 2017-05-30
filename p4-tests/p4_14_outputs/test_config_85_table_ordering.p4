@@ -181,57 +181,47 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             action_0;
             nop;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_b: exact;
         }
         size = 256000;
-        default_action = NoAction();
     }
     @name("table_1") table table_1 {
         actions = {
             action_1;
             nop;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_d: exact;
         }
-        default_action = NoAction();
     }
     @name("table_2") table table_2 {
         actions = {
             action_2;
             nop;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_f: exact;
         }
-        default_action = NoAction();
     }
     @name("table_3") table table_3 {
         actions = {
             action_3;
             nop;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_h: exact;
         }
-        default_action = NoAction();
     }
     @name("table_4") table table_4 {
         actions = {
             action_4;
             nop;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_e: exact;
         }
-        default_action = NoAction();
     }
     apply {
         switch (table_0.apply().action_run) {

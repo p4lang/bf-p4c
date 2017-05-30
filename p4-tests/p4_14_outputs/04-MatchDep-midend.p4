@@ -164,7 +164,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name("e_t1") table e_t1 {
         actions = {
             nop_0();
-            @default_only NoAction_0();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ethernet.srcAddr: exact @name("hdr.ethernet.srcAddr") ;
@@ -198,7 +198,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop_1();
             set_egress_port_0();
-            @default_only NoAction_1();
+            @defaultonly NoAction_1();
         }
         key = {
             hdr.ethernet.dstAddr: exact @name("hdr.ethernet.dstAddr") ;
@@ -210,7 +210,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("port_bd") table port_bd {
         actions = {
             set_bd_0();
-            @default_only NoAction_6();
+            @defaultonly NoAction_6();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("hdr.ig_intr_md.ingress_port") ;
@@ -221,7 +221,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("port_drop") table port_drop {
         actions = {
             ing_drop_0();
-            @default_only NoAction_7();
+            @defaultonly NoAction_7();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("hdr.ig_intr_md.ingress_port") ;

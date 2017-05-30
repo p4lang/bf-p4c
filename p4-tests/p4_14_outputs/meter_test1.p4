@@ -52,13 +52,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test1") table test1 {
         actions = {
             h1_3_0;
-            @default_only NoAction;
         }
         key = {
             hdr.data.f1: exact;
         }
         size = 6000;
-        default_action = NoAction();
         meters = meter_1;
     }
     @name(".h4_6") action h4_6_0(bit<16> val4, bit<16> val5, bit<16> val6, bit<9> port) {
@@ -71,13 +69,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test2") table test2 {
         actions = {
             h4_6_0;
-            @default_only NoAction;
         }
         key = {
             hdr.data.f2: exact;
         }
         size = 10000;
-        default_action = NoAction();
         meters = meter_2;
     }
     apply {

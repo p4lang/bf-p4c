@@ -169,24 +169,20 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_0") table table_0 {
         actions = {
             action_0;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_a_32: ternary;
         }
         size = 512;
-        default_action = NoAction();
     }
     @name("table_1") table table_1 {
         actions = {
             action_1;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_b_32: ternary;
         }
         size = 512;
-        default_action = NoAction();
     }
     apply {
         table_0.apply();

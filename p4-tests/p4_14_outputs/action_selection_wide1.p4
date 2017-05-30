@@ -53,7 +53,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             setr1_5;
             setr6_10;
-            @default_only NoAction;
         }
         key = {
             hdr.data.f1: exact;
@@ -62,7 +61,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.h3: selector;
         }
         size = 10000;
-        default_action = NoAction();
         @name("set_r1_10") @mode("fair") implementation = action_selector(HashAlgorithm.crc16, 32w1024, 32w14);
     }
     apply {

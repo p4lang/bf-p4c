@@ -257,7 +257,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             do_nothing_0();
             set_m_0();
-            @default_only NoAction_0();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ethernet.srcAddr[15:0]: ternary @name("hdr.ethernet.srcAddr[15:0]") ;
@@ -269,7 +269,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             do_nothing_5();
             add_vlan_0();
-            @default_only NoAction_6();
+            @defaultonly NoAction_6();
         }
         key = {
             hdr.ethernet.srcAddr[15:0]: ternary @name("hdr.ethernet.srcAddr[15:0]") ;
@@ -281,7 +281,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             do_nothing_6();
             set_m2_0();
-            @default_only NoAction_7();
+            @defaultonly NoAction_7();
         }
         key = {
             hdr.ethernet.srcAddr[15:0]: ternary @name("hdr.ethernet.srcAddr[15:0]") ;
@@ -293,7 +293,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             do_nothing_7();
             set_m_again_0();
-            @default_only NoAction_8();
+            @defaultonly NoAction_8();
         }
         key = {
             hdr.ethernet.srcAddr[15:0]: ternary @name("hdr.ethernet.srcAddr[15:0]") ;
@@ -305,7 +305,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         support_timeout = true;
         actions = {
             do_nothing_8();
-            @default_only NoAction_9();
+            @defaultonly NoAction_9();
         }
         key = {
             meta.m.p : exact @name("meta.m.p") ;

@@ -248,7 +248,6 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         actions = {
             nop;
             udp_set_src;
-            @default_only NoAction;
         }
         key = {
             hdr.ethernet.isValid(): exact;
@@ -256,7 +255,6 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             hdr.udp.isValid()     : exact;
             hdr.udp.srcPort       : exact;
         }
-        default_action = NoAction();
     }
     apply {
         eg_udp.apply();
@@ -277,14 +275,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop;
             hop_ipv4;
-            @default_only NoAction;
         }
         key = {
             hdr.ipv4.dstAddr: ternary;
             hdr.tcp.dstPort : range;
         }
         size = 1024;
-        default_action = NoAction();
     }
     apply {
         tcam_range.apply();

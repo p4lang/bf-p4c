@@ -198,7 +198,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("packet_offset_counting") table packet_offset_counting {
         actions = {
             increment_counter_0();
-            @default_only NoAction_0();
+            @defaultonly NoAction_0();
         }
         key = {
             meta.meta.encap_decap_size : exact @name("meta.meta.encap_decap_size") ;

@@ -190,7 +190,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         actions = {
             eg_drop();
             permit();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             meta.routing_metadata.drop: ternary @name("meta.routing_metadata.drop") ;
@@ -225,7 +225,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             do_nothing();
             l3_set_index();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.ipv4.dstAddr: exact @name("hdr.ipv4.dstAddr") ;
@@ -237,7 +237,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             ig_drop();
             hop_ipv4();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.ipv4.dstAddr: lpm @name("hdr.ipv4.dstAddr") ;

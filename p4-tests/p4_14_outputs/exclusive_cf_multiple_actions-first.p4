@@ -182,7 +182,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             branch();
         }
         size = 1;
-        const default_action = branch();
+        default_action = branch();
     }
     @name("t1") table t1 {
         actions = {
@@ -191,7 +191,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             a3();
             a4();
             a5();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.ether.dstAddr: exact @name("hdr.ether.dstAddr") ;
@@ -203,28 +203,28 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             forward();
         }
         size = 1;
-        const default_action = forward();
+        default_action = forward();
     }
     @name("t3") table t3 {
         actions = {
             forward();
         }
         size = 1;
-        const default_action = forward();
+        default_action = forward();
     }
     @name("t4") table t4 {
         actions = {
             forward();
         }
         size = 1;
-        const default_action = forward();
+        default_action = forward();
     }
     @name("t5") table t5 {
         actions = {
             forward();
         }
         size = 1;
-        const default_action = forward();
+        default_action = forward();
     }
     apply {
         t0.apply();

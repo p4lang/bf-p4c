@@ -40,7 +40,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             action_0;
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.ethernet.isValid(): ternary;
@@ -49,7 +48,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ethernet.etherType: exact;
         }
         size = 512;
-        default_action = NoAction();
     }
     apply {
         if (hdr.ethernet.isValid()) {

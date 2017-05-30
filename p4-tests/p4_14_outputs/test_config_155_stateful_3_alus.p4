@@ -192,18 +192,15 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @table_counter("disabled") @name("match_cntr_1") table match_cntr_1 {
         actions = {
             cnt_1;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_a_32: exact;
         }
         size = 16384;
-        default_action = NoAction();
     }
     @name("match_cntr_2") table match_cntr_2 {
         actions = {
             cnt_2;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_a_32   : exact;
@@ -211,19 +208,16 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.meta.count_value: exact;
         }
         size = 16384;
-        default_action = NoAction();
     }
     @name("match_flow") table match_flow {
         actions = {
             sample;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_a_32      : ternary;
             meta.meta.needs_sampling: exact;
         }
         size = 8192;
-        default_action = NoAction();
     }
     apply {
         match_cntr_1.apply();

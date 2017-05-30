@@ -174,7 +174,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             set_flag;
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.my_test_config_1.a_32: exact;
@@ -185,7 +184,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.my_test_config_1.i_32: exact;
         }
         max_size = 16384;
-        default_action = NoAction();
     }
     apply {
         test_exact_table.apply();

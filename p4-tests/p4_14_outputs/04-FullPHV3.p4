@@ -395,7 +395,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("t1") table t1 {
         actions = {
             a1;
-            @default_only NoAction;
         }
         key = {
             meta.m.field_8_01: exact;
@@ -463,12 +462,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.m.field_8_63: exact;
             meta.m.field_8_64: exact;
         }
-        default_action = NoAction();
     }
     @name("t2") table t2 {
         actions = {
             a2;
-            @default_only NoAction;
         }
         key = {
             meta.m.field_16_01: exact;
@@ -504,12 +501,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.m.field_16_31: exact;
             meta.m.field_16_32: exact;
         }
-        default_action = NoAction();
     }
     @name("t3") table t3 {
         actions = {
             a3;
-            @default_only NoAction;
         }
         key = {
             meta.m.field_16_33: exact;
@@ -577,12 +572,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.m.field_16_95: exact;
             meta.m.field_16_96: exact;
         }
-        default_action = NoAction();
     }
     @name("t4") table t4 {
         actions = {
             a4;
-            @default_only NoAction;
         }
         key = {
             meta.m.field_32_01: exact;
@@ -618,12 +611,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.m.field_32_31: exact;
             meta.m.field_32_32: exact;
         }
-        default_action = NoAction();
     }
     @name("t5") table t5 {
         actions = {
             a5;
-            @default_only NoAction;
         }
         key = {
             meta.m.field_32_33: exact;
@@ -654,7 +645,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.m.field_32_58: exact;
             meta.m.field_32_59: exact;
         }
-        default_action = NoAction();
     }
     apply {
         t1.apply();

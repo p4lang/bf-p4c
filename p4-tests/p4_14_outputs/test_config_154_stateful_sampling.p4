@@ -181,14 +181,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("match_tbl") table match_tbl {
         actions = {
             sample;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_a_32      : ternary;
             meta.meta.needs_sampling: exact;
         }
         size = 8192;
-        default_action = NoAction();
     }
     apply {
         match_tbl.apply();

@@ -54,32 +54,26 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("set_all") table set_all {
         actions = {
             set_fields;
-            @default_only NoAction;
         }
         key = {
             hdr.hdr.f1: exact;
         }
-        default_action = NoAction();
     }
     @name("set_back") table set_back {
         actions = {
             back_to_hdr;
-            @default_only NoAction;
         }
         key = {
             hdr.hdr.f3: exact;
         }
-        default_action = NoAction();
     }
     @name("set_nibbles") table set_nibbles {
         actions = {
             set_nibble_meta;
-            @default_only NoAction;
         }
         key = {
             hdr.hdr.f2: exact;
         }
-        default_action = NoAction();
     }
     apply {
         set_all.apply();

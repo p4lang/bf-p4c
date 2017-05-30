@@ -60,61 +60,61 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             setb1_0();
             setb2_0();
             setb3_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.data.f1: exact @name("hdr.data.f1") ;
         }
         size = 10000;
-        default_action = NoAction();
         @name("set_b1_3") implementation = action_profile(32w1024);
+        default_action = NoAction();
     }
     @name("test2") table test2_0 {
         actions = {
             setb5_0();
             setb6_0();
             setb7_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.data.f2: exact @name("hdr.data.f2") ;
         }
         size = 5000;
-        default_action = NoAction();
         @name("set_b5_7") implementation = action_profile(32w1024);
+        default_action = NoAction();
     }
     @name("test3") table test3_0 {
         actions = {
             setb1_0();
             setb2_0();
             setb3_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.data.f1: exact @name("hdr.data.f1") ;
         }
         size = 5000;
-        default_action = NoAction();
         @name("set_b1_3") implementation = action_profile(32w1024);
+        default_action = NoAction();
     }
     @name("test4") table test4_0 {
         actions = {
             setb5_0();
             setb6_0();
             setb7_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.data.f2: exact @name("hdr.data.f2") ;
         }
         size = 10000;
-        default_action = NoAction();
         @name("set_b5_7") implementation = action_profile(32w1024);
+        default_action = NoAction();
     }
     @name("test_mid") table test_mid_0 {
         actions = {
             setf1_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.data.f3: exact @name("hdr.data.f3") ;
@@ -124,7 +124,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test_mid2") table test_mid2_0 {
         actions = {
             setf2_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.data.f4: exact @name("hdr.data.f4") ;

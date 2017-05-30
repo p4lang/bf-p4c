@@ -180,37 +180,31 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             do_nothing;
             action_0;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_a_32: exact;
         }
         size = 4096;
-        default_action = NoAction();
     }
     @name("table_1") table table_1 {
         actions = {
             do_nothing_1;
             action_1;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_b_32: exact;
         }
         size = 4096;
-        default_action = NoAction();
     }
     @name("table_2") table table_2 {
         actions = {
             do_nothing;
             action_2;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_b_32: exact;
         }
         size = 4096;
-        default_action = NoAction();
     }
     apply {
         switch (table_0.apply().action_run) {

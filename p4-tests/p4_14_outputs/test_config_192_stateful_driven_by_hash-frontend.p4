@@ -202,7 +202,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("t_em_direct") table t_em_direct_0 {
         actions = {
             a_em_direct_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.pkt.field_a_32: exact @name("hdr.pkt.field_a_32") ;
@@ -214,7 +214,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             a_em_indirect_0();
             do_nothing_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.pkt.field_a_32: exact @name("hdr.pkt.field_a_32") ;
@@ -225,7 +225,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("t_hash_act") table t_hash_act_0 {
         actions = {
             a_hash_act_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.pkt.field_d_32[9:0]: exact @name("hdr.pkt.field_d_32[9:0]") ;
@@ -236,7 +236,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("t_no_key") table t_no_key_0 {
         actions = {
             a_no_key_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         size = 1024;
         default_action = NoAction();
@@ -244,7 +244,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("t_t_direct") table t_t_direct_0 {
         actions = {
             a_t_direct_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.pkt.field_a_32: ternary @name("hdr.pkt.field_a_32") ;
@@ -256,7 +256,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             a_t_indirect_0();
             do_nothing_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.pkt.field_a_32: ternary @name("hdr.pkt.field_a_32") ;

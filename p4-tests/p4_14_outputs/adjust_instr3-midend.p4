@@ -36,12 +36,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             setport_0();
         }
-        const default_action = setport_0(9w1);
+        default_action = setport_0(9w1);
     }
     @name("test1") table test1 {
         actions = {
             set_nibbles_0();
-            @default_only NoAction_0();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.data.f1: exact @name("hdr.data.f1") ;

@@ -206,12 +206,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             action_0;
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.ipv4.dstAddr: exact;
         }
-        default_action = NoAction();
     }
     apply {
         table_0.apply();

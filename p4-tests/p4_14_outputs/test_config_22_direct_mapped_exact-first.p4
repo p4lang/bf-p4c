@@ -199,7 +199,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             action_0();
             action_1();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.vlan.vid: exact @name("hdr.vlan.vid") ;

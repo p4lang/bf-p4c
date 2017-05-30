@@ -255,7 +255,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nhop_set();
             nop();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.ipv4.dstAddr       : lpm @name("hdr.ipv4.dstAddr") ;
@@ -265,8 +265,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.protocol      : selector @name("hdr.ipv4.protocol") ;
         }
         size = 512;
-        default_action = NoAction();
         @name("ecmp_action_profile") @mode("resilient") implementation = action_selector(HashAlgorithm.random, 32w4096, 32w72);
+        default_action = NoAction();
     }
     apply {
         ipv4_routing_select_2.apply();

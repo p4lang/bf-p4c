@@ -202,7 +202,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             drop_me_0();
             on_miss_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             meta.meta.needs_sampling: exact @name("meta.meta.needs_sampling") ;
@@ -212,13 +212,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("ipv4_fib") table ipv4_fib_0 {
         actions = {
             ipv4_fib_hit_0();
-            @default_only on_miss_0();
+            @defaultonly on_miss_0();
         }
         key = {
             hdr.ipv4.dstAddr: exact @name("hdr.ipv4.dstAddr") ;
         }
         size = 1024;
-        const default_action = on_miss_0();
+        default_action = on_miss_0();
     }
     apply {
         ipv4_fib_0.apply();

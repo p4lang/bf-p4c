@@ -221,30 +221,25 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             set_all;
             action_0;
-            @default_only NoAction;
         }
         key = {
             hdr.hdr_0.b: ternary;
         }
         size = 512;
-        default_action = NoAction();
     }
     @name("table_i1") table table_i1 {
         actions = {
             action_1;
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.hdr_1.c: ternary;
         }
         size = 512;
-        default_action = NoAction();
     }
     @name("table_i2") table table_i2 {
         actions = {
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             meta.meta.a: exact;
@@ -253,7 +248,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.meta.d: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     apply {
         if (hdr.hdr_0.isValid()) {

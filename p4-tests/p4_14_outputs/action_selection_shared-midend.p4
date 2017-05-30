@@ -56,7 +56,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             setb1_0();
             setb2_0();
             setb3_0();
-            @default_only NoAction_0();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.data.f1: exact @name("hdr.data.f1") ;
@@ -65,15 +65,15 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.h3: selector @name("hdr.data.h3") ;
         }
         size = 10000;
-        default_action = NoAction_0();
         @name("set_b1_3") @mode("fair") implementation = action_selector(HashAlgorithm.crc16, 32w1024, 32w14);
+        default_action = NoAction_0();
     }
     @name("test2") table test2 {
         actions = {
             setb1_2();
             setb2_2();
             setb3_2();
-            @default_only NoAction_3();
+            @defaultonly NoAction_3();
         }
         key = {
             hdr.data.f2: exact @name("hdr.data.f2") ;
@@ -82,8 +82,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.h3: selector @name("hdr.data.h3") ;
         }
         size = 5000;
-        default_action = NoAction_3();
         @name("set_b1_3") @mode("fair") implementation = action_selector(HashAlgorithm.crc16, 32w1024, 32w14);
+        default_action = NoAction_3();
     }
     apply {
         if (hdr.data.b4 == 8w0) 

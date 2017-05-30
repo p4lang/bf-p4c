@@ -219,14 +219,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("flowlet_next_hop") table flowlet_next_hop {
         actions = {
             get_flowlet_next_hop;
-            @default_only NoAction;
         }
         key = {
             meta.meta.next_hop: ternary;
             meta.meta.tstamp  : exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     apply {
         flowlet_next_hop.apply();

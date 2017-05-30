@@ -219,19 +219,16 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             do_nothing;
             read_vlan;
-            @default_only NoAction;
         }
         key = {
             hdr.ethernet.srcAddr[15:0]: ternary;
         }
         size = 512;
-        default_action = NoAction();
     }
     @name("t2") table t2 {
         actions = {
             do_nothing;
             set_port;
-            @default_only NoAction;
         }
         key = {
             meta.m.p: ternary;
@@ -240,7 +237,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.m.v: exact;
         }
         size = 512;
-        default_action = NoAction();
     }
     apply {
         t1.apply();

@@ -60,7 +60,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("set_all") table set_all {
         actions = {
             set_fields_0();
-            @default_only NoAction_0();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.hdr.f1: exact @name("hdr.hdr.f1") ;
@@ -70,7 +70,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("set_back") table set_back {
         actions = {
             back_to_hdr_0();
-            @default_only NoAction_4();
+            @defaultonly NoAction_4();
         }
         key = {
             hdr.hdr.f3: exact @name("hdr.hdr.f3") ;
@@ -80,7 +80,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("set_nibbles") table set_nibbles {
         actions = {
             set_nibble_meta_0();
-            @default_only NoAction_5();
+            @defaultonly NoAction_5();
         }
         key = {
             hdr.hdr.f2: exact @name("hdr.hdr.f2") ;

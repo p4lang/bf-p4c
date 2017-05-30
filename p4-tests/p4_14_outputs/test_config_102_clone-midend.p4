@@ -175,7 +175,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         actions = {
             egr_action_0();
             egr_action2_0();
-            @default_only NoAction_0();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.eg_intr_md_from_parser_aux.egress_parser_err: exact @name("hdr.eg_intr_md_from_parser_aux.egress_parser_err") ;
@@ -202,7 +202,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             ingr_action_0();
             ingr_action2_0();
-            @default_only NoAction_1();
+            @defaultonly NoAction_1();
         }
         key = {
             hdr.ig_intr_md_from_parser_aux.ingress_parser_err: exact @name("hdr.ig_intr_md_from_parser_aux.ingress_parser_err") ;

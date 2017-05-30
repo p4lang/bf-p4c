@@ -281,7 +281,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             set_all_0();
             action_4();
-            @default_only NoAction_0();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.hdr_0.b: ternary @name("hdr.hdr_0.b") ;
@@ -293,7 +293,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             action_5();
             do_nothing_0();
-            @default_only NoAction_5();
+            @defaultonly NoAction_5();
         }
         key = {
             hdr.hdr_1[0].c: ternary @name("hdr.hdr_1[0].c") ;
@@ -305,7 +305,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             do_nothing_3();
             action_6();
-            @default_only NoAction_6();
+            @defaultonly NoAction_6();
         }
         key = {
             meta.meta.a: exact @name("meta.meta.a") ;
@@ -320,7 +320,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             do_nothing_4();
             action_7();
-            @default_only NoAction_7();
+            @defaultonly NoAction_7();
         }
         key = {
             meta.meta.b: ternary @name("meta.meta.b") ;

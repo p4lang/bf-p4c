@@ -208,25 +208,21 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             bfd_rx;
             bfd_tx;
-            @default_only NoAction;
         }
         key = {
             meta.meta.bfd_tx_or_rx     : exact;
             meta.meta.bfd_discriminator: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @name("check_needs") table check_needs {
         actions = {
             drop_me;
             on_miss;
-            @default_only NoAction;
         }
         key = {
             meta.meta.bfd_timeout_detected: exact;
         }
-        default_action = NoAction();
     }
     apply {
         bfd.apply();

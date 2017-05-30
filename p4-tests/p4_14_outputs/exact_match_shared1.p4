@@ -34,83 +34,67 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test1") table test1 {
         actions = {
             noop;
-            @default_only NoAction;
         }
         key = {
             hdr.data.b1: exact;
         }
-        default_action = NoAction();
     }
     @name("test2") table test2 {
         actions = {
             noop;
-            @default_only NoAction;
         }
         key = {
             hdr.data.b2: exact;
         }
-        default_action = NoAction();
     }
     @name("test3") table test3 {
         actions = {
             noop;
-            @default_only NoAction;
         }
         key = {
             hdr.data.b3: exact;
         }
-        default_action = NoAction();
     }
     @name("test4") table test4 {
         actions = {
             noop;
-            @default_only NoAction;
         }
         key = {
             hdr.data.b4: exact;
         }
-        default_action = NoAction();
     }
     @name("test5") table test5 {
         actions = {
             noop;
-            @default_only NoAction;
         }
         key = {
             hdr.data.b5: exact;
         }
-        default_action = NoAction();
     }
     @name("test6") table test6 {
         actions = {
             noop;
-            @default_only NoAction;
         }
         key = {
             hdr.data.b6: exact;
         }
-        default_action = NoAction();
     }
     @name("test7") table test7 {
         actions = {
             noop;
-            @default_only NoAction;
         }
         key = {
             hdr.data.b7: exact;
         }
-        default_action = NoAction();
     }
     @name("test8") table test8 {
         actions = {
             noop;
-            @default_only NoAction;
         }
         key = {
             hdr.data.b8: exact;
             hdr.data.b9: exact;
         }
-        default_action = NoAction();
     }
     apply {
         test1.apply();

@@ -178,42 +178,34 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             action1;
             action2;
-            @default_only NoAction;
         }
         key = {
             hdr.ethernet.srcAddr: exact;
         }
-        default_action = NoAction();
     }
     @name("table2") table table2 {
         actions = {
             action3;
-            @default_only NoAction;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
         }
-        default_action = NoAction();
     }
     @name("table3") table table3 {
         actions = {
             action3;
-            @default_only NoAction;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
         }
-        default_action = NoAction();
     }
     @name("table4") table table4 {
         actions = {
             action4;
-            @default_only NoAction;
         }
         key = {
             hdr.ethernet.ethertype: exact;
         }
-        default_action = NoAction();
     }
     apply {
         switch (table1.apply().action_run) {

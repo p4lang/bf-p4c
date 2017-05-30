@@ -50,7 +50,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("t_one") table t_one {
         actions = {
             action_0;
-            @default_only NoAction;
         }
         key = {
             hdr.one.a  : ternary;
@@ -58,7 +57,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.three.a: ternary;
         }
         size = 512;
-        default_action = NoAction();
     }
     apply {
         t_one.apply();

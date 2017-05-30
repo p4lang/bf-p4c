@@ -177,48 +177,39 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_a") table table_a {
         actions = {
             count_it;
-            @default_only NoAction;
         }
-        default_action = NoAction();
     }
     @name("table_b") table table_b {
         actions = {
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_b_32: ternary;
         }
         size = 512;
-        default_action = NoAction();
     }
     @name("table_c") table table_c {
         actions = {
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_c_32: ternary;
         }
         size = 512;
-        default_action = NoAction();
     }
     @name("table_d") table table_d {
         actions = {
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_d_32: ternary;
         }
         size = 512;
-        default_action = NoAction();
     }
     @entries_with_ranges(64) @tcam_error_detect(1) @name("table_e") table table_e {
         actions = {
             do_nothing;
             action_0;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_o_10: range;
@@ -226,18 +217,15 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_h_16: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @tcam_error_detect(1) @name("table_f") table table_f {
         actions = {
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_g_16: ternary;
         }
         size = 1024;
-        default_action = NoAction();
     }
     apply {
         table_a.apply();

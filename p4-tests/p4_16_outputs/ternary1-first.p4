@@ -48,7 +48,9 @@ control ingress(inout packet_t hdrs, inout standard_metadata meta) {
         actions = {
             setb1();
             noop();
+            @defaultonly NoAction();
         }
+        default_action = NoAction();
     }
     apply {
         test1.apply();

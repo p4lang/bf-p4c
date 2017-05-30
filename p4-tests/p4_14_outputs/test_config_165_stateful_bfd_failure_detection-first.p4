@@ -208,7 +208,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             bfd_rx();
             bfd_tx();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             meta.meta.bfd_tx_or_rx     : exact @name("meta.meta.bfd_tx_or_rx") ;
@@ -221,7 +221,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             drop_me();
             on_miss();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             meta.meta.bfd_timeout_detected: exact @name("meta.meta.bfd_timeout_detected") ;

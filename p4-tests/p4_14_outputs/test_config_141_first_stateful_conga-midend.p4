@@ -176,7 +176,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("conga_rd_next_hop_table") table conga_rd_next_hop_table {
         actions = {
             get_preferred_next_hop_0();
-            @default_only NoAction_0();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.pkt.field_e_16: ternary @name("hdr.pkt.field_e_16") ;
@@ -187,7 +187,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("conga_wr_next_hop_table") table conga_wr_next_hop_table {
         actions = {
             update_preferred_next_hop_0();
-            @default_only NoAction_3();
+            @defaultonly NoAction_3();
         }
         key = {
             hdr.pkt.field_f_16: ternary @name("hdr.pkt.field_f_16") ;

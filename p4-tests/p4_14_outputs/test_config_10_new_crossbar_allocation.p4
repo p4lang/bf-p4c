@@ -194,20 +194,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             action_0;
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.ethernet.etherType    : ternary;
             hdr.ethernet.srcAddr[39:8]: ternary;
         }
         max_size = 1024;
-        default_action = NoAction();
     }
     @ways(6) @pack(3) @name("table_1") table table_1 {
         actions = {
             action_1;
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.ipv4.srcAddr    : exact;
@@ -217,7 +214,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ethernet.dstAddr: exact;
         }
         max_size = 40960;
-        default_action = NoAction();
     }
     apply {
         table_0.apply();

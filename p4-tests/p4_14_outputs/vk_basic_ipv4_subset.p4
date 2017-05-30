@@ -247,7 +247,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop;
             modify_ip_id;
-            @default_only NoAction;
         }
         key = {
             hdr.ethernet.srcAddr  : ternary;
@@ -259,7 +258,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.version      : exact;
         }
         size = 2048;
-        default_action = NoAction();
         @name("indirect_action_profile") implementation = action_profile(32w2048);
     }
     apply {

@@ -43,7 +43,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             setb1;
             setb2;
             setb3;
-            @default_only NoAction;
         }
         key = {
             hdr.data.f1: exact;
@@ -52,7 +51,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.h3: selector;
         }
         size = 10000;
-        default_action = NoAction();
         @name("set_b1_3") @mode("fair") implementation = action_selector(HashAlgorithm.crc16, 32w1024, 32w14);
     }
     @name("test2") table test2 {
@@ -60,7 +58,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             setb1;
             setb2;
             setb3;
-            @default_only NoAction;
         }
         key = {
             hdr.data.f2: exact;
@@ -69,7 +66,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.h3: selector;
         }
         size = 5000;
-        default_action = NoAction();
         @name("set_b1_3") @mode("fair") implementation = action_selector(HashAlgorithm.crc16, 32w1024, 32w14);
     }
     apply {

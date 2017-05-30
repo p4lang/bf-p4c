@@ -176,26 +176,22 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             action_0;
             action_1;
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_b_32: ternary;
         }
         size = 512;
-        default_action = NoAction();
     }
     @name("table_1") table table_1 {
         actions = {
             action_0;
             action_1;
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_c_32: ternary;
         }
         size = 512;
-        default_action = NoAction();
     }
     apply {
         if (hdr.pkt.field_i_8 == 8w1) {

@@ -41,13 +41,11 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @stage(1) @name("table_1") table table_1 {
         actions = {
             action_1;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_b_32: lpm;
         }
         size = 512;
-        default_action = NoAction();
     }
     apply {
         if (hdr.pkt.field_i_8 == 8w3) {
@@ -63,13 +61,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @stage(2) @name("table_0") table table_0 {
         actions = {
             action_0;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_a_32: lpm;
         }
         size = 512;
-        default_action = NoAction();
     }
     apply {
         table_0.apply();

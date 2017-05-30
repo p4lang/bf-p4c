@@ -45,13 +45,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test1") table test1 {
         actions = {
             h1_3;
-            @default_only NoAction;
         }
         key = {
             hdr.data.f1: exact;
         }
         size = 32000;
-        default_action = NoAction();
     }
     @name(".h4_6") action h4_6_0(bit<16> val4, bit<16> val5, bit<16> val6) {
         counter2.count();
@@ -62,13 +60,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test2") table test2 {
         actions = {
             h4_6_0;
-            @default_only NoAction;
         }
         key = {
             hdr.data.f2: exact;
         }
         size = 2048;
-        default_action = NoAction();
         @name("counter2") counters = direct_counter(CounterType.packets);
     }
     apply {

@@ -192,7 +192,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             a_pred_0();
             a_comb_pred_0();
-            @default_only NoAction_0();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.pkt.field_a_32: lpm @name("hdr.pkt.field_a_32") ;

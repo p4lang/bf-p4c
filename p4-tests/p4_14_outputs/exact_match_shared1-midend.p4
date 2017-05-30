@@ -64,7 +64,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test1") table test1 {
         actions = {
             noop_0();
-            @default_only NoAction_0();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.data.b1: exact @name("hdr.data.b1") ;
@@ -74,7 +74,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test2") table test2 {
         actions = {
             noop_8();
-            @default_only NoAction_9();
+            @defaultonly NoAction_9();
         }
         key = {
             hdr.data.b2: exact @name("hdr.data.b2") ;
@@ -84,7 +84,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test3") table test3 {
         actions = {
             noop_9();
-            @default_only NoAction_10();
+            @defaultonly NoAction_10();
         }
         key = {
             hdr.data.b3: exact @name("hdr.data.b3") ;
@@ -94,7 +94,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test4") table test4 {
         actions = {
             noop_10();
-            @default_only NoAction_11();
+            @defaultonly NoAction_11();
         }
         key = {
             hdr.data.b4: exact @name("hdr.data.b4") ;
@@ -104,7 +104,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test5") table test5 {
         actions = {
             noop_11();
-            @default_only NoAction_12();
+            @defaultonly NoAction_12();
         }
         key = {
             hdr.data.b5: exact @name("hdr.data.b5") ;
@@ -114,7 +114,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test6") table test6 {
         actions = {
             noop_12();
-            @default_only NoAction_13();
+            @defaultonly NoAction_13();
         }
         key = {
             hdr.data.b6: exact @name("hdr.data.b6") ;
@@ -124,7 +124,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test7") table test7 {
         actions = {
             noop_13();
-            @default_only NoAction_14();
+            @defaultonly NoAction_14();
         }
         key = {
             hdr.data.b7: exact @name("hdr.data.b7") ;
@@ -134,7 +134,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test8") table test8 {
         actions = {
             noop_14();
-            @default_only NoAction_15();
+            @defaultonly NoAction_15();
         }
         key = {
             hdr.data.b8: exact @name("hdr.data.b8") ;

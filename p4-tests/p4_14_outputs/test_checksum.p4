@@ -319,10 +319,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name("ip_hdr_update") table ip_hdr_update {
         actions = {
             ip_header_modify;
-            @default_only NoAction;
         }
         size = 1;
-        default_action = NoAction();
     }
     apply {
         ip_hdr_update.apply();
@@ -339,26 +337,22 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("ingress_port_mapping") table ingress_port_mapping {
         actions = {
             nop;
-            @default_only NoAction;
         }
         key = {
             hdr.ig_intr_md.ingress_port                      : exact;
             hdr.ig_intr_md_from_parser_aux.ingress_parser_err: exact;
         }
         size = 288;
-        default_action = NoAction();
     }
     @name("ip_nhop") table ip_nhop {
         actions = {
             nhop_set;
             nop;
-            @default_only NoAction;
         }
         key = {
             hdr.ipv4.dstAddr: exact;
         }
         size = 512;
-        default_action = NoAction();
     }
     apply {
         if (hdr.ig_intr_md.resubmit_flag == 1w0) {

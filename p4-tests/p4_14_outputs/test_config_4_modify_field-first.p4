@@ -178,7 +178,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             modify_from_constant();
             modify_from_field();
             modify_from_param();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.my_test_config_1.a_32: lpm @name("hdr.my_test_config_1.a_32") ;

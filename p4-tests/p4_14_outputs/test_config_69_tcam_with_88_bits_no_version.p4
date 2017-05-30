@@ -160,7 +160,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @no_versioning(1) @name("table_0") table table_0 {
         actions = {
             action_0;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_b: ternary;
@@ -168,7 +167,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_e: ternary;
             hdr.pkt.field_f: ternary;
         }
-        default_action = NoAction();
     }
     apply {
         table_0.apply();

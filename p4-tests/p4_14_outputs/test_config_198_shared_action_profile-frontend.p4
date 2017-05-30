@@ -173,33 +173,33 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             do_nothing_0();
             action_2();
             action_3();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.pkt.field_a_32: ternary @name("hdr.pkt.field_a_32") ;
         }
         size = 2048;
-        default_action = NoAction();
         @name("shared_action_profile") implementation = action_profile(32w1024);
+        default_action = NoAction();
     }
     @name("table_1") table table_4 {
         actions = {
             do_nothing_0();
             action_2();
             action_3();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.pkt.field_b_32: ternary @name("hdr.pkt.field_b_32") ;
         }
         size = 2048;
-        default_action = NoAction();
         @name("shared_action_profile") implementation = action_profile(32w1024);
+        default_action = NoAction();
     }
     @name("table_2") table table_5 {
         actions = {
             do_nothing_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.pkt.field_a_32: exact @name("hdr.pkt.field_a_32") ;

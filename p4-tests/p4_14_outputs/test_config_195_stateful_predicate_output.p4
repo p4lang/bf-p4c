@@ -190,13 +190,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             a_pred;
             a_comb_pred;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_a_32: lpm;
         }
         size = 512;
-        default_action = NoAction();
     }
     apply {
         t_pred.apply();

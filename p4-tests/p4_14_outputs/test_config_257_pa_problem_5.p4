@@ -238,55 +238,46 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             do_nothing;
             set_m;
-            @default_only NoAction;
         }
         key = {
             hdr.ethernet.srcAddr[15:0]: ternary;
         }
         size = 512;
-        default_action = NoAction();
     }
     @name("t2") table t2 {
         actions = {
             do_nothing;
             add_vlan;
-            @default_only NoAction;
         }
         key = {
             hdr.ethernet.srcAddr[15:0]: ternary;
         }
         size = 512;
-        default_action = NoAction();
     }
     @name("t3") table t3 {
         actions = {
             do_nothing;
             set_m2;
-            @default_only NoAction;
         }
         key = {
             hdr.ethernet.srcAddr[15:0]: ternary;
         }
         size = 512;
-        default_action = NoAction();
     }
     @name("t4") table t4 {
         actions = {
             do_nothing;
             set_m_again;
-            @default_only NoAction;
         }
         key = {
             hdr.ethernet.srcAddr[15:0]: ternary;
         }
         size = 512;
-        default_action = NoAction();
     }
     @name("t5") table t5 {
         support_timeout = true;
         actions = {
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             meta.m.p : exact;
@@ -299,7 +290,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.m2.t: exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     apply {
         t1.apply();

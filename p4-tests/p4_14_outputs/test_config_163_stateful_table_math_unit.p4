@@ -182,7 +182,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("match_cntr_1") table match_cntr_1 {
         actions = {
             cnt_1;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_a_32      : exact;
@@ -191,7 +190,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.meta.needs_sampling: exact;
         }
         size = 16384;
-        default_action = NoAction();
     }
     apply {
         match_cntr_1.apply();

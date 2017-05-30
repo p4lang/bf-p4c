@@ -35,6 +35,8 @@ parser p(packet_in b, out packet_t hdrs, inout standard_metadata meta) {
 }
 
 control ingress(inout packet_t hdrs, inout standard_metadata meta) {
+    @name("NoAction") action NoAction_0() {
+    }
     @name("setb1") action setb1_0(bit<9> port, bit<8> val) {
         hdrs.data.b1 = val;
         meta.egress_spec = port;
@@ -48,7 +50,9 @@ control ingress(inout packet_t hdrs, inout standard_metadata meta) {
         actions = {
             setb1_0();
             noop_0();
+            @defaultonly NoAction_0();
         }
+        default_action = NoAction_0();
     }
     apply {
         test1.apply();

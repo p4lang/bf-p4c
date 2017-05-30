@@ -42,7 +42,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_i0") table table_i0 {
         actions = {
             do_nothing_0();
-            @default_only NoAction_0();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.hdr0.a : ternary @name("hdr.hdr0.a") ;

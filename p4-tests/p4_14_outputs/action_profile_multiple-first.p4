@@ -54,56 +54,56 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             setb1();
             setb2();
             setb3();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.data.f1: exact @name("hdr.data.f1") ;
         }
         size = 10000;
-        default_action = NoAction();
         @name("set_b1_3") implementation = action_profile(32w1024);
+        default_action = NoAction();
     }
     @name("test2") table test2 {
         actions = {
             setb1();
             setb2();
             setb3();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.data.f2: exact @name("hdr.data.f2") ;
         }
         size = 5000;
-        default_action = NoAction();
         @name("set_b1_3") implementation = action_profile(32w1024);
+        default_action = NoAction();
     }
     @name("test3") table test3 {
         actions = {
             setb5();
             setb6();
             setb7();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.data.f3: exact @name("hdr.data.f3") ;
         }
         size = 5000;
-        default_action = NoAction();
         @name("set_b5_7") implementation = action_profile(32w2048);
+        default_action = NoAction();
     }
     @name("test4") table test4 {
         actions = {
             setb5();
             setb6();
             setb7();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.data.f4: exact @name("hdr.data.f4") ;
         }
         size = 10000;
-        default_action = NoAction();
         @name("set_b5_7") implementation = action_profile(32w2048);
+        default_action = NoAction();
     }
     apply {
         if (hdr.data.b4 == 8w0) {

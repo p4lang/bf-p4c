@@ -196,14 +196,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_a") table table_a {
         actions = {
             count_it_0();
-            @default_only NoAction_0();
+            @defaultonly NoAction_0();
         }
         default_action = NoAction_0();
     }
     @name("table_b") table table_b {
         actions = {
             do_nothing_0();
-            @default_only NoAction_7();
+            @defaultonly NoAction_7();
         }
         key = {
             hdr.pkt.field_b_32: ternary @name("hdr.pkt.field_b_32") ;
@@ -214,7 +214,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_c") table table_c {
         actions = {
             do_nothing_5();
-            @default_only NoAction_8();
+            @defaultonly NoAction_8();
         }
         key = {
             hdr.pkt.field_c_32: ternary @name("hdr.pkt.field_c_32") ;
@@ -225,7 +225,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_d") table table_d {
         actions = {
             do_nothing_6();
-            @default_only NoAction_9();
+            @defaultonly NoAction_9();
         }
         key = {
             hdr.pkt.field_d_32: ternary @name("hdr.pkt.field_d_32") ;
@@ -237,7 +237,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             do_nothing_7();
             action_1();
-            @default_only NoAction_10();
+            @defaultonly NoAction_10();
         }
         key = {
             hdr.pkt.field_o_10: range @name("hdr.pkt.field_o_10") ;
@@ -250,7 +250,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @tcam_error_detect(1) @name("table_f") table table_f {
         actions = {
             do_nothing_8();
-            @default_only NoAction_11();
+            @defaultonly NoAction_11();
         }
         key = {
             hdr.pkt.field_g_16: ternary @name("hdr.pkt.field_g_16") ;

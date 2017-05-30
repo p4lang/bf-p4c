@@ -182,7 +182,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("match_cntr_1") table match_cntr {
         actions = {
             cnt();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.pkt.field_a_32      : exact @name("hdr.pkt.field_a_32") ;

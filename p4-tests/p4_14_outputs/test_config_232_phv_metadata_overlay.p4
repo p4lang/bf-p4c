@@ -104,20 +104,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             do_nothing;
             action_0;
-            @default_only NoAction;
         }
         key = {
             hdr.hdr0.a    : ternary;
             meta.meta.tbl0: exact;
         }
         size = 512;
-        default_action = NoAction();
     }
     @name("table_i1") table table_i1 {
         actions = {
             do_nothing;
             action_1;
-            @default_only NoAction;
         }
         key = {
             hdr.hdr0.a         : ternary;
@@ -125,13 +122,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.meta.tbl0_tbl1: exact;
         }
         size = 512;
-        default_action = NoAction();
     }
     @name("table_i2") table table_i2 {
         actions = {
             do_nothing;
             action_2;
-            @default_only NoAction;
         }
         key = {
             hdr.hdr0.a         : ternary;
@@ -140,13 +135,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.meta.tbl1_tbl2: exact;
         }
         size = 512;
-        default_action = NoAction();
     }
     @name("table_i3") table table_i3 {
         actions = {
             do_nothing;
             action_3;
-            @default_only NoAction;
         }
         key = {
             hdr.hdr0.a         : ternary;
@@ -156,13 +149,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.meta.tbl2_tbl3: exact;
         }
         size = 512;
-        default_action = NoAction();
     }
     @name("table_i4") table table_i4 {
         actions = {
             do_nothing;
             action_4;
-            @default_only NoAction;
         }
         key = {
             hdr.hdr0.a    : ternary;
@@ -170,7 +161,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.meta.tbl4: exact;
         }
         size = 512;
-        default_action = NoAction();
     }
     apply {
         if (hdr.hdr0.c == 8w0) {

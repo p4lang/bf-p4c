@@ -178,13 +178,13 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name("table_3") table table_3 {
         actions = {
             action_3_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             meta.meta.field_17: exact @name("meta.meta.field_17") ;
         }
-        default_action = NoAction();
         @name("extra_stats") counters = direct_counter(CounterType.bytes);
+        default_action = NoAction();
     }
     apply {
         table_3.apply();
@@ -209,7 +209,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             do_nothing();
             action_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.pkt.field_i_8: exact @name("hdr.pkt.field_i_8") ;
@@ -220,7 +220,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @include_idletime(1) @idletime_two_way_notification(1) @idletime_per_flow_idletime(1) @name("table_1") table table_1 {
         actions = {
             action_1();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.pkt.field_g_16: exact @name("hdr.pkt.field_g_16") ;
@@ -231,7 +231,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_2") table table_2 {
         actions = {
             action_2();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         default_action = NoAction();
     }

@@ -175,14 +175,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             do_nothing_0();
             action_2();
             action_3();
-            @default_only NoAction_0();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.pkt.field_a_32: exact @name("hdr.pkt.field_a_32") ;
         }
         size = 3072;
-        default_action = NoAction_0();
         @name("table_0_action_profile") implementation = action_profile(32w3072);
+        default_action = NoAction_0();
     }
     apply {
         table_0.apply();

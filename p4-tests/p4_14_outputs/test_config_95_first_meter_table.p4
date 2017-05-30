@@ -176,7 +176,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @pa_solitare("meter_result.color_0", "meter_result.color_1") @include_stash(1) @name("table_0") table table_0 {
         actions = {
             action_0_0;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_e_16: ternary;
@@ -184,20 +183,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.color_1   : exact;
         }
         size = 6000;
-        default_action = NoAction();
         meters = meter_0;
     }
     @idletime_two_way_notification(1) @include_stash(1) @name("table_1") table table_1 {
         actions = {
             do_nothing;
             action_1;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_e_16: exact;
         }
         size = 32768;
-        default_action = NoAction();
     }
     apply {
         table_0.apply();

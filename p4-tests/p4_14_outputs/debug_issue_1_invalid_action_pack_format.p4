@@ -192,12 +192,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop;
             mod_mac_adr;
-            @default_only NoAction;
         }
         key = {
             hdr.ipv4.dstAddr: lpm;
         }
-        default_action = NoAction();
     }
     apply {
         tcam_tbl_stage_2.apply();

@@ -38,13 +38,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test1") table test1_0 {
         actions = {
             c1_2();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.data.f1: exact @name("hdr.data.f1") ;
         }
-        default_action = NoAction();
         @name("cnt") counters = direct_counter(CounterType.packets);
+        default_action = NoAction();
     }
     @name(".c3_4") action c3_4(bit<8> val3, bit<8> val4, bit<9> port) {
         cnt3_0.count();
@@ -55,14 +55,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test2") table test2_0 {
         actions = {
             c3_4();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.data.f2: exact @name("hdr.data.f2") ;
         }
         size = 1024;
-        default_action = NoAction();
         @name("cnt3") counters = direct_counter(CounterType.packets);
+        default_action = NoAction();
     }
     apply {
         test1_0.apply();

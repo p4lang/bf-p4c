@@ -168,7 +168,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_0") table table_0 {
         actions = {
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_a_32: exact;
@@ -178,12 +177,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_e_16: exact;
         }
         size = 4096;
-        default_action = NoAction();
     }
     @name("table_1") table table_1 {
         actions = {
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_i_8: exact;
@@ -191,12 +188,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_k_8: exact;
         }
         size = 4096;
-        default_action = NoAction();
     }
     @name("table_2") table table_2 {
         actions = {
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_a_32: exact;
@@ -206,7 +201,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_e_16: exact;
             hdr.pkt.field_j_8 : exact;
         }
-        default_action = NoAction();
     }
     apply {
         if (hdr.pkt.isValid()) {

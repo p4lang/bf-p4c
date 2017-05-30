@@ -413,7 +413,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             set_field32_21();
             set_field32_23();
             set_field32_25();
-            @default_only NoAction_0();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ethernet.dstAddr: exact @name("hdr.ethernet.dstAddr") ;
@@ -454,7 +454,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             set_field32_22();
             set_field32_24();
             set_field32_26();
-            @default_only NoAction_3();
+            @defaultonly NoAction_3();
         }
         key = {
             hdr.ethernet.dstAddr: exact @name("hdr.ethernet.dstAddr") ;

@@ -250,14 +250,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop;
             next_hop_ipv4;
-            @default_only NoAction;
         }
         key = {
             hdr.ethernet.srcAddr: exact;
             hdr.ethernet.dstAddr: exact;
             hdr.tcp.srcPort     : exact;
         }
-        default_action = NoAction();
     }
     apply {
         ipv4_routing_exm_ways_4_pack_4_stage_6.apply();

@@ -172,14 +172,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             addr_compare;
         }
         size = 1;
-        const default_action = addr_compare(0, 2);
+        default_action = addr_compare(0, 2);
     }
     @name("addr_compare_success") table addr_compare_success {
         actions = {
             addr_compare;
         }
         size = 1;
-        const default_action = addr_compare(1, 1);
+        default_action = addr_compare(1, 1);
     }
     apply {
         if (hdr.ethernet.srcAddr_hi == hdr.ethernet.dstAddr_hi) {

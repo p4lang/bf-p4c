@@ -184,7 +184,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name("table_e") table table_e {
         actions = {
             action_e_0();
-            @default_only NoAction_0();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.ipv4.srcAddr : exact @name("hdr.ipv4.srcAddr") ;
@@ -215,7 +215,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             action_2();
             action_3();
-            @default_only NoAction_1();
+            @defaultonly NoAction_1();
         }
         key = {
             hdr.ipv4.dstAddr: lpm @name("hdr.ipv4.dstAddr") ;
@@ -225,7 +225,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_1") table table_1 {
         actions = {
             action_5();
-            @default_only NoAction_5();
+            @defaultonly NoAction_5();
         }
         key = {
             hdr.ipv4.dstAddr : exact @name("hdr.ipv4.dstAddr") ;

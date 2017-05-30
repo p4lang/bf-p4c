@@ -158,7 +158,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @no_versioning(1) @name("table_0") table table_0 {
         actions = {
             action_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.pkt.field_b: ternary @name("hdr.pkt.field_b") ;

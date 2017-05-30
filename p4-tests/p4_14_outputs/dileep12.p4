@@ -302,45 +302,38 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop;
             next_hop_ipv4;
-            @default_only NoAction;
         }
         key = {
             hdr.ipv4.dstAddr: exact;
         }
         size = 21504;
-        default_action = NoAction();
     }
     @stage(2) @pack(6) @ways(4) @name("exm_4ways_6Entries") table exm_4ways_6Entries {
         actions = {
             nop;
             custom_action_1;
-            @default_only NoAction;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
             hdr.ethernet.srcAddr: exact;
         }
         size = 24576;
-        default_action = NoAction();
     }
     @stage(6) @pack(8) @ways(4) @name("exm_4ways_8Entries") table exm_4ways_8Entries {
         actions = {
             nop;
             modify_tcp_dst_port_1;
-            @default_only NoAction;
         }
         key = {
             hdr.ipv4.dstAddr: exact;
             hdr.ipv4.srcAddr: exact;
         }
         size = 32768;
-        default_action = NoAction();
     }
     @stage(0) @pack(5) @ways(5) @name("exm_5ways_5Entries") table exm_5ways_5Entries {
         actions = {
             nop;
             custom_action_3;
-            @default_only NoAction;
         }
         key = {
             hdr.ipv4.dstAddr: exact;
@@ -348,25 +341,21 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.tcp.srcPort : exact;
         }
         size = 25600;
-        default_action = NoAction();
     }
     @stage(3) @pack(6) @ways(5) @name("exm_5ways_6Entries") table exm_5ways_6Entries {
         actions = {
             nop;
             custom_action_2;
-            @default_only NoAction;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
         }
         size = 30720;
-        default_action = NoAction();
     }
     @stage(1) @pack(5) @ways(6) @name("exm_6ways_5Entries") table exm_6ways_5Entries {
         actions = {
             nop;
             next_hop_ipv4;
-            @default_only NoAction;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
@@ -374,20 +363,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.tcp.dstPort     : exact;
         }
         size = 30720;
-        default_action = NoAction();
     }
     @stage(4) @pack(6) @ways(6) @name("exm_6ways_6Entries") table exm_6ways_6Entries {
         actions = {
             nop;
             mod_mac_addr;
-            @default_only NoAction;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
             hdr.tcp.srcPort     : exact;
         }
         size = 36864;
-        default_action = NoAction();
     }
     apply {
         exm_5ways_5Entries.apply();

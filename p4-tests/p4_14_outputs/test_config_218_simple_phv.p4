@@ -194,25 +194,21 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_i0") table table_i0 {
         actions = {
             action_0;
-            @default_only NoAction;
         }
         key = {
             hdr.hdr_0.b: ternary;
         }
         size = 512;
-        default_action = NoAction();
     }
     @name("table_i1") table table_i1 {
         actions = {
             action_1;
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.hdr_0.c: ternary;
         }
         size = 512;
-        default_action = NoAction();
     }
     apply {
         if (hdr.hdr_0.isValid()) {

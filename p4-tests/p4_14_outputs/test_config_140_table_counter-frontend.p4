@@ -171,7 +171,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @table_counter("gateway_hit") @name("table_0") table table_3 {
         actions = {
             do_nothing_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.pkt.field_e_16: ternary @name("hdr.pkt.field_e_16") ;
@@ -182,14 +182,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @table_counter("table_miss") @name("table_1") table table_4 {
         actions = {
             do_nothing_0();
-            @default_only action_0();
+            @defaultonly action_0();
         }
         key = {
             hdr.pkt.field_e_16: exact @name("hdr.pkt.field_e_16") ;
             hdr.pkt.field_f_16: exact @name("hdr.pkt.field_f_16") ;
         }
         size = 16384;
-        const default_action = action_0(16w0xf);
+        default_action = action_0(16w0xf);
     }
     @table_counter("table_hit") @name("table_2") table table_5 {
         actions = {
@@ -199,7 +199,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_f_16: ternary @name("hdr.pkt.field_f_16") ;
         }
         size = 2048;
-        const default_action = do_nothing_0();
+        default_action = do_nothing_0();
     }
     apply {
         if (hdr.pkt.isValid()) 

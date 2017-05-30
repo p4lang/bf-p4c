@@ -195,7 +195,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name("table_0") table table_0 {
         actions = {
             action_2();
-            @default_only NoAction_0();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.pkt.field_i_8: exact @name("hdr.pkt.field_i_8") ;
@@ -218,7 +218,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @include_idletime(1) @idletime_two_way_notification(1) @idletime_per_flow_idletime(1) @name("table_1") table table_1 {
         actions = {
             action_3();
-            @default_only NoAction_1();
+            @defaultonly NoAction_1();
         }
         key = {
             hdr.pkt.field_g_16: exact @name("hdr.pkt.field_g_16") ;

@@ -183,7 +183,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("dummy") table dummy {
         actions = {
             do_nothing();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             meta.meta.count_value: exact @name("meta.meta.count_value") ;
@@ -193,7 +193,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("match_cntr") table match_cntr {
         actions = {
             cnt();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.pkt.field_a_32: exact @name("hdr.pkt.field_a_32") ;

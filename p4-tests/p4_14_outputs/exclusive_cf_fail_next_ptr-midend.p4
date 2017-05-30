@@ -159,14 +159,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table1") table table1 {
         actions = {
             a1_0();
-            @default_only NoAction_0();
+            @defaultonly NoAction_0();
         }
         default_action = NoAction_0();
     }
     @name("table2") table table2 {
         actions = {
             a1_2();
-            @default_only NoAction_3();
+            @defaultonly NoAction_3();
         }
         default_action = NoAction_3();
     }

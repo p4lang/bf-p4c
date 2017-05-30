@@ -207,35 +207,35 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("new_cfi") table new_cfi_0 {
         actions = {
             do_new_cfi_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         default_action = NoAction();
     }
     @name("new_pri") table new_pri_0 {
         actions = {
             do_new_pri_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         default_action = NoAction();
     }
     @name("new_tpid") table new_tpid_0 {
         actions = {
             do_new_tpid_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         default_action = NoAction();
     }
     @name("new_vid") table new_vid_0 {
         actions = {
             do_new_vid_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         default_action = NoAction();
     }
     @name("vlan_xlate") table vlan_xlate_0 {
         actions = {
             rewrite_tag_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.vlan_tag.vid: exact @name("hdr.vlan_tag.vid") ;

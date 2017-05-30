@@ -255,13 +255,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop;
             custom_action_3;
-            @default_only NoAction;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
             hdr.tcp.srcPort     : exact;
         }
-        default_action = NoAction();
     }
     apply {
         exm_5ways_1Entries_stage_2.apply();

@@ -196,26 +196,22 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_0") table table_0 {
         actions = {
             action_0;
-            @default_only NoAction;
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact;
             hdr.pkt.color_0            : exact;
         }
         size = 1024;
-        default_action = NoAction();
     }
     @include_idletime(1) @idletime_two_way_notification(1) @idletime_per_flow_idletime(1) @name("table_1") table table_1 {
         actions = {
             action_1;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_g_16: exact;
             hdr.pkt.color_0   : exact;
         }
         size = 65536;
-        default_action = NoAction();
     }
     apply {
         if (1w0 == hdr.ig_intr_md.resubmit_flag) {

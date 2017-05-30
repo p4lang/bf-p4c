@@ -166,13 +166,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             nop;
             ing_drop;
             set_egress_port;
-            @default_only NoAction;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
         }
         size = 131072;
-        default_action = NoAction();
     }
     apply {
         dmac.apply();

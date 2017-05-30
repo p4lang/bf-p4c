@@ -38,7 +38,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test") table test_0 {
         actions = {
             action0_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.packet.packet_read: exact @name("hdr.packet.packet_read") ;
@@ -49,7 +49,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             set_port_0();
         }
-        const default_action = set_port_0();
+        default_action = set_port_0();
     }
     apply {
         test_0.apply();

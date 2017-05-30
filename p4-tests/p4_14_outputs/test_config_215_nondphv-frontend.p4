@@ -70,7 +70,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name("table_e0") table table_e0_0 {
         actions = {
             action_e_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             meta.meta.e: exact @name("meta.meta.e") ;
@@ -122,7 +122,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             set_all_0();
             action_3();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.hdr_0.b: ternary @name("hdr.hdr_0.b") ;
@@ -134,7 +134,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             action_4();
             do_nothing_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.hdr_1.c: ternary @name("hdr.hdr_1.c") ;
@@ -146,7 +146,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             action_5();
             do_nothing_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             meta.meta.a: exact @name("meta.meta.a") ;

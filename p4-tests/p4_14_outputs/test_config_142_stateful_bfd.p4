@@ -192,14 +192,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             bfd_rx;
             bfd_tx;
-            @default_only NoAction;
         }
         key = {
             meta.bfd_md.bfd_tx_or_rx     : exact;
             meta.bfd_md.bfd_discriminator: exact;
         }
         size = 16384;
-        default_action = NoAction();
     }
     apply {
         bfd.apply();

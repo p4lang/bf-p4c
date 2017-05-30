@@ -220,7 +220,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("trill_forward") table trill_forward {
         actions = {
             do_trill_forward_0();
-            @default_only NoAction_0();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.trill.egressRbridge: exact @name("hdr.trill.egressRbridge") ;
@@ -230,14 +230,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("trill_forward_1") table trill_forward_1 {
         actions = {
             do_trill_forward_3();
-            @default_only NoAction_4();
+            @defaultonly NoAction_4();
         }
         default_action = NoAction_4();
     }
     @name("trill_forward_2") table trill_forward_2 {
         actions = {
             do_trill_forward_4();
-            @default_only NoAction_5();
+            @defaultonly NoAction_5();
         }
         default_action = NoAction_5();
     }

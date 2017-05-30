@@ -198,19 +198,16 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_group") table table_group {
         actions = {
             action_select;
-            @default_only NoAction;
         }
         key = {
             hdr.ipv4.blah1: ternary;
         }
-        default_action = NoAction();
     }
     @immediate(0) @selector_max_group_size(121) @name("test_select") table test_select {
         actions = {
             action_0;
             big_action;
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.ethernet.etherType: exact;
@@ -221,13 +218,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.blah3        : selector;
         }
         size = 8192;
-        default_action = NoAction();
         @name("some_action_profile") @mode("resilient") implementation = action_selector(HashAlgorithm.random, 32w2048, 32w32);
     }
     @name("test_select2") table test_select2 {
         actions = {
             action_1;
-            @default_only NoAction;
         }
         key = {
             hdr.ethernet.etherType: exact;
@@ -236,7 +231,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.blah3        : selector;
         }
         size = 4096;
-        default_action = NoAction();
         @name("some_action_profile2") @mode("resilient") implementation = action_selector(HashAlgorithm.random, 32w2048, 32w32);
     }
     apply {

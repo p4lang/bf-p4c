@@ -176,7 +176,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             action_0;
             action_1;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_a_32: exact;
@@ -185,7 +184,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_f_16: exact;
         }
         size = 16384;
-        default_action = NoAction();
     }
     apply {
         table_0.apply();

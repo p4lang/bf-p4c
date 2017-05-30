@@ -44,33 +44,27 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             action_0;
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_a_32: ternary;
         }
-        default_action = NoAction();
     }
     @name("table_1") table table_1 {
         actions = {
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_b_32: ternary;
         }
-        default_action = NoAction();
     }
     @name("table_2") table table_2 {
         actions = {
             action_0;
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_c_32: ternary;
         }
-        default_action = NoAction();
     }
     apply {
         if (hdr.pkt.field_i_8 == 8w0) {

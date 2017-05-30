@@ -59,7 +59,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             adjust_first_0();
             adjust_first_ad_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.hdr.f2: exact @name("hdr.hdr.f2") ;
@@ -69,7 +69,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("adjust2") table adjust2_0 {
         actions = {
             adjust_second_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.hdr.f3: exact @name("hdr.hdr.f3") ;
@@ -79,7 +79,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("offset") table offset_0 {
         actions = {
             set_offset_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.hdr.f1: exact @name("hdr.hdr.f1") ;
@@ -90,7 +90,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             setport_0();
         }
-        const default_action = setport_0(9w1);
+        default_action = setport_0(9w1);
     }
     apply {
         offset_0.apply();

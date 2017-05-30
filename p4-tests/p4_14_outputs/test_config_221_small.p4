@@ -30,13 +30,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_i0") table table_i0 {
         actions = {
             action_0;
-            @default_only NoAction;
         }
         key = {
             hdr.one.a: ternary;
         }
         size = 512;
-        default_action = NoAction();
     }
     apply {
         table_i0.apply();

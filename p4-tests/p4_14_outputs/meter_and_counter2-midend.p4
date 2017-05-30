@@ -58,7 +58,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test1") table test1 {
         actions = {
             h1_0();
-            @default_only NoAction_0();
+            @defaultonly NoAction_0();
         }
         key = {
             hdr.data.f1: exact @name("hdr.data.f1") ;
@@ -75,19 +75,19 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test2") table test2 {
         actions = {
             h4_1();
-            @default_only NoAction_4();
+            @defaultonly NoAction_4();
         }
         key = {
             hdr.data.f2: exact @name("hdr.data.f2") ;
         }
         size = 2048;
-        default_action = NoAction_4();
         @name("counter2") counters = direct_counter(CounterType.packets);
+        default_action = NoAction_4();
     }
     @name("test3") table test3 {
         actions = {
             h7_0();
-            @default_only NoAction_5();
+            @defaultonly NoAction_5();
         }
         key = {
             hdr.data.f3: exact @name("hdr.data.f3") ;

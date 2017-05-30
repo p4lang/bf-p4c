@@ -74,19 +74,16 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             do_nothing;
             action_0;
-            @default_only NoAction;
         }
         key = {
             hdr.hdr0.a: ternary;
         }
         size = 512;
-        default_action = NoAction();
     }
     @name("table_i1") table table_i1 {
         actions = {
             do_nothing;
             action_1;
-            @default_only NoAction;
         }
         key = {
             meta.meta.a_8: ternary;
@@ -95,7 +92,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.meta.d_4: exact;
         }
         size = 512;
-        default_action = NoAction();
     }
     apply {
         table_i0.apply();

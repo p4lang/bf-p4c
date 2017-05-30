@@ -42,19 +42,19 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             action1();
         }
-        const default_action = action1();
+        default_action = action1();
     }
     @name("test2") table test2 {
         actions = {
             action2();
         }
-        const default_action = action2();
+        default_action = action2();
     }
     @name("test3") table test3 {
         actions = {
             action3();
         }
-        const default_action = action3();
+        default_action = action3();
     }
     apply {
         test1.apply();

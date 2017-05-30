@@ -198,19 +198,19 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_0") table table_2 {
         actions = {
             action_0_1();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("hdr.ig_intr_md.ingress_port") ;
         }
         size = 1024;
-        default_action = NoAction();
         meters = meter_1;
+        default_action = NoAction();
     }
     @include_idletime(1) @idletime_two_way_notification(1) @idletime_per_flow_idletime(1) @name("table_1") table table_3 {
         actions = {
             action_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.pkt.field_g_16: exact @name("hdr.pkt.field_g_16") ;

@@ -59,38 +59,32 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             adjust_first;
             adjust_first_ad;
-            @default_only NoAction;
         }
         key = {
             hdr.hdr.f2: exact;
         }
-        default_action = NoAction();
     }
     @name("adjust2") table adjust2 {
         actions = {
             adjust_second;
-            @default_only NoAction;
         }
         key = {
             hdr.hdr.f3: exact;
         }
-        default_action = NoAction();
     }
     @name("offset") table offset {
         actions = {
             set_offset;
-            @default_only NoAction;
         }
         key = {
             hdr.hdr.f1: exact;
         }
-        default_action = NoAction();
     }
     @name("setting_port") table setting_port {
         actions = {
             setport;
         }
-        const default_action = setport(1);
+        default_action = setport(1);
     }
     apply {
         offset.apply();

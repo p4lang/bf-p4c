@@ -49,7 +49,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test1") table test1 {
         actions = {
             noop;
-            @default_only NoAction;
         }
         key = {
             hdr.data.f1: exact;
@@ -57,12 +56,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.w1: exact;
             hdr.data.w2: exact;
         }
-        default_action = NoAction();
     }
     @name("test2") table test2 {
         actions = {
             noop;
-            @default_only NoAction;
         }
         key = {
             hdr.data.f3: exact;
@@ -70,12 +67,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.w3: exact;
             hdr.data.b1: exact;
         }
-        default_action = NoAction();
     }
     @name("test3") table test3 {
         actions = {
             noop;
-            @default_only NoAction;
         }
         key = {
             hdr.data.f5: exact;
@@ -84,51 +79,42 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.b2: exact;
             hdr.data.b3: exact;
         }
-        default_action = NoAction();
     }
     @name("test4") table test4 {
         actions = {
             noop;
-            @default_only NoAction;
         }
         key = {
             hdr.data.f6: exact;
             hdr.data.f7: exact;
         }
-        default_action = NoAction();
     }
     @name("test5") table test5 {
         actions = {
             noop;
-            @default_only NoAction;
         }
         key = {
             hdr.data.w6: exact;
             hdr.data.w7: exact;
             hdr.data.b6: exact;
         }
-        default_action = NoAction();
     }
     @name("test6") table test6 {
         actions = {
             noop;
-            @default_only NoAction;
         }
         key = {
             hdr.data.w8: exact;
             hdr.data.b7: exact;
         }
-        default_action = NoAction();
     }
     @name("test7") table test7 {
         actions = {
             noop;
-            @default_only NoAction;
         }
         key = {
             hdr.data.f8: exact;
         }
-        default_action = NoAction();
     }
     apply {
         test1.apply();

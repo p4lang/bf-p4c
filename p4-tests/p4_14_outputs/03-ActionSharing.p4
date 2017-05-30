@@ -316,13 +316,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             set_field32_5;
             set_field32_6;
             set_field32_7;
-            @default_only NoAction;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
         }
         size = 32768;
-        default_action = NoAction();
     }
     @name("dmac2") table dmac2 {
         actions = {
@@ -357,13 +355,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             set_field32_5;
             set_field32_6;
             set_field32_7;
-            @default_only NoAction;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
         }
         size = 32768;
-        default_action = NoAction();
     }
     apply {
         if ((hdr.ig_intr_md.ingress_port & 9w0x1) == 9w0x1) {

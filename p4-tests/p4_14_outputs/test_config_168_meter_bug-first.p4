@@ -200,15 +200,15 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             action_0_0();
             action_1_0();
             nop_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             hdr.ipv4.srcAddr : exact @name("hdr.ipv4.srcAddr") ;
             hdr.ipv4.dstAddr : exact @name("hdr.ipv4.dstAddr") ;
             hdr.ipv4.diffserv: exact @name("hdr.ipv4.diffserv") ;
         }
-        default_action = NoAction();
         meters = exm_meter2;
+        default_action = NoAction();
     }
     apply {
         table_0.apply();

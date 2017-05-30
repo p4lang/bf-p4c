@@ -42,7 +42,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop;
             set_dip;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.srcAddr : exact;
@@ -52,7 +51,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.dstPort : exact;
         }
         size = 400000;
-        default_action = NoAction();
     }
     apply {
         exm_proxy_hash.apply();

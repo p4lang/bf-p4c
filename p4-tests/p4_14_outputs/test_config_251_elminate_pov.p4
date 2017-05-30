@@ -217,13 +217,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("t0") table t0 {
         actions = {
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.ethernet.srcAddr[31:0]: ternary;
         }
         size = 147456;
-        default_action = NoAction();
     }
     apply {
         t0.apply();
