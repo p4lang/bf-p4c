@@ -171,7 +171,7 @@ TYPED_TEST_CASE(TofinoPHVTrivialAllocators, TrivialAllocators);
 // *same* results.)
 TYPED_TEST(TofinoPHVTrivialAllocators, AutomaticAllocation) {
     auto testcase = SharedPhvTestCases::trivialAlloc();
-    ASSERT_TRUE(testcase != boost::none);
+    ASSERT_TRUE(testcase);
 
     // Perform PHV analysis and run the allocator.
     PhvInfo phv;
@@ -330,7 +330,7 @@ class TofinoPHVManualAlloc : public ::testing::Test {
     static void
     runManualAllocTest(const PHV::ManualAlloc::AssignmentMap& assignments) {
         auto testcase = SharedPhvTestCases::trivialAlloc();
-        ASSERT_TRUE(testcase != boost::none);
+        ASSERT_TRUE(testcase);
 
         // Perform PHV analysis and run the allocator.
         PhvInfo phv;
@@ -425,7 +425,7 @@ TEST_F(TofinoPHVManualAlloc, ReservedContainerAllocation) {
     // constructing ManualAlloc instances with  `/* checked = */ true`.
 
     auto testcase = SharedPhvTestCases::trivialAlloc();
-    ASSERT_TRUE(testcase != boost::none);
+    ASSERT_TRUE(testcase);
 
     // Perform PHV analysis.
     PhvInfo phv;
