@@ -87,7 +87,7 @@ class ManualAlloc final : public Inspector {
      */
     explicit ManualAlloc(PhvInfo& phv, const AssignmentMap& assignments = { })
         : phv(phv), assignments(assignments), checkAssignments(false) { }
-    ManualAlloc(PhvInfo& phv, AssignmentMap&& assignments)
+    ManualAlloc(PhvInfo& phv, AssignmentMap && assignments)
         : phv(phv), assignments(assignments), checkAssignments(false) { }
 
     /**
@@ -99,7 +99,7 @@ class ManualAlloc final : public Inspector {
      */
     ManualAlloc(PhvInfo& phv, bool checked, const AssignmentMap& assignments = { })
         : phv(phv), assignments(assignments), checkAssignments(checked) { }
-    ManualAlloc(PhvInfo& phv, bool checked, AssignmentMap&& assignments)
+    ManualAlloc(PhvInfo& phv, bool checked, AssignmentMap && assignments)
         : phv(phv), assignments(assignments), checkAssignments(checked) { }
 
  private:

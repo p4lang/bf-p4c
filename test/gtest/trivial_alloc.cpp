@@ -93,7 +93,7 @@ struct PhvTestCase {
     /// A Tofino Pipe containing the Tofino IR version of the program.
     const IR::Tofino::Pipe* pipe;
 
-private:
+ private:
     PhvTestCase(const IR::P4Program* program, const IR::Tofino::Pipe* pipe)
         : program(program), pipe(pipe)
     { }
@@ -153,7 +153,7 @@ static boost::optional<PhvTestCase> trivialAlloc() {
     )"));
 }
 
-}  // namespace SharedTrivialAllocTestCases
+}  // namespace SharedPhvTestCases
 
 template <typename T>
 class TofinoPHVTrivialAllocators : public ::testing::Test {

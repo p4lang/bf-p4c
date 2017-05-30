@@ -119,7 +119,7 @@ class PhvInfo : public Inspector {
         friend class SplitPhvUse;             // phv/split_phv_use
         friend class PHV::ManualAlloc;        // phv/trivial_alloc
         friend class PHV::TrivialAlloc;       // phv/trivial_alloc
-        friend class PHV::ValidateAllocation; // phv/validate_allocation
+        friend class PHV::ValidateAllocation;  // phv/validate_allocation
         friend class Slice;                   // common/asm_output
         friend class ArgumentAnalyzer;        // mau/action_format
         friend class TableLayout;             // mau/table_layout
@@ -265,7 +265,7 @@ class PhvInfo : public Inspector {
         void set_ccgf(Field *f)                                { ccgf_i = f; }
         vector<Field *>& ccgf_fields()                         { return ccgf_fields_i; }
         const vector<Field *>& ccgf_fields() const             { return ccgf_fields_i; }
-        int ccgf_width() const;                               // phv width = aggregate size of members
+        int ccgf_width() const;  // phv width = aggregate size of members
         //
         // clusters, phv_containers
         //

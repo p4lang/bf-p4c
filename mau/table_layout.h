@@ -15,7 +15,7 @@ class HashDistReq {
     const IR::Primitive *get_instr() const { return instr; }
     const IR::Stateful *get_stateful() const {
         auto glob = instr->operands.at(0)->to<IR::GlobalRef>();
-        return glob ? glob->obj->to<IR::Stateful>() : nullptr; };
+        return glob ? glob->obj->to<IR::Stateful>() : nullptr; }
     bool is_address() const { return get_stateful() != nullptr; }
     bool is_immediate() const {
         if (instr && instr->name == "hash")

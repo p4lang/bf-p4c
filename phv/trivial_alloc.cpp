@@ -329,9 +329,12 @@ void ManualAlloc::allocateFieldGroup(const FieldGroup& group,
                 // bits as possible without introducing unnecessary wasted bits.
                 using Kind = PHV::Container::Kind;
                 Kind kind;
-                if (remainingBits > 24) kind = group.tagalong ? Kind::TW : Kind::W;
-                else if (remainingBits > 8) kind = group.tagalong ? Kind::TH : Kind::H;
-                else kind = group.tagalong ? Kind::TB : Kind::B;
+                if (remainingBits > 24)
+                    kind = group.tagalong ? Kind::TW : Kind::W;
+                else if (remainingBits > 8)
+                    kind = group.tagalong ? Kind::TH : Kind::H;
+                else
+                    kind = group.tagalong ? Kind::TB : Kind::B;
 
                 // Find the next container of this size that's available.
                 container = alloc.allocateNext(group.gress, kind);

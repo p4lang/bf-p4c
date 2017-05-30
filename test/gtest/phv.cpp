@@ -33,8 +33,10 @@ TEST(TofinoPhvContainer, Kinds) {
         auto length = std::max(c.index() * 2, 128u);
         for (unsigned kindId = 0; kindId < PHV::Container::NumKinds; ++kindId) {
             auto range = PHV::Container::range(Kind(kindId), begin, length);
-            if (kindId == unsigned(c.kind())) EXPECT_TRUE(range.getbit(c.id()));
-            else EXPECT_FALSE(range.getbit(c.id()));
+            if (kindId == unsigned(c.kind()))
+                EXPECT_TRUE(range.getbit(c.id()));
+            else
+                EXPECT_FALSE(range.getbit(c.id()));
         }
 
         auto rangeBefore = PHV::Container::range(c.kind(), 0, c.index());
@@ -44,10 +46,10 @@ TEST(TofinoPhvContainer, Kinds) {
     };
 
     PHV::Container c;
-    EXPECT_FALSE(bool(c));
+    EXPECT_FALSE(static_cast<bool>(c));
 
     c = "B0";
-    EXPECT_TRUE(bool(c));
+    EXPECT_TRUE(static_cast<bool>(c));
     EXPECT_EQ(Kind::B, c.kind());
     EXPECT_EQ(0u, c.log2sz());
     EXPECT_EQ(0u, c.index());
@@ -59,7 +61,7 @@ TEST(TofinoPhvContainer, Kinds) {
     checkRange(c);
 
     c = "H15";
-    EXPECT_TRUE(bool(c));
+    EXPECT_TRUE(static_cast<bool>(c));
     EXPECT_EQ(Kind::H, c.kind());
     EXPECT_EQ(1u, c.log2sz());
     EXPECT_EQ(15u, c.index());
@@ -69,7 +71,7 @@ TEST(TofinoPhvContainer, Kinds) {
     checkRange(c);
 
     c = "W3157";
-    EXPECT_TRUE(bool(c));
+    EXPECT_TRUE(static_cast<bool>(c));
     EXPECT_EQ(Kind::W, c.kind());
     EXPECT_EQ(2u, c.log2sz());
     EXPECT_EQ(3157u, c.index());
@@ -79,7 +81,7 @@ TEST(TofinoPhvContainer, Kinds) {
     checkRange(c);
 
     c = "TB0";
-    EXPECT_TRUE(bool(c));
+    EXPECT_TRUE(static_cast<bool>(c));
     EXPECT_EQ(Kind::TB, c.kind());
     EXPECT_EQ(0u, c.log2sz());
     EXPECT_EQ(0u, c.index());
@@ -89,7 +91,7 @@ TEST(TofinoPhvContainer, Kinds) {
     checkRange(c);
 
     c = "TH15";
-    EXPECT_TRUE(bool(c));
+    EXPECT_TRUE(static_cast<bool>(c));
     EXPECT_EQ(Kind::TH, c.kind());
     EXPECT_EQ(1u, c.log2sz());
     EXPECT_EQ(15u, c.index());
@@ -99,7 +101,7 @@ TEST(TofinoPhvContainer, Kinds) {
     checkRange(c);
 
     c = "TW3157";
-    EXPECT_TRUE(bool(c));
+    EXPECT_TRUE(static_cast<bool>(c));
     EXPECT_EQ(Kind::TW, c.kind());
     EXPECT_EQ(2u, c.log2sz());
     EXPECT_EQ(3157u, c.index());
