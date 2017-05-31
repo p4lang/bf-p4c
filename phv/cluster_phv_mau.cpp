@@ -779,7 +779,7 @@ PHV_MAU_Group_Assignments::container_no_pack(
                 // pick next Empty container in MAU group g
                 // for each container assigned to cluster, taint bits that are filled
                 //
-                for (size_t i=0, j=0; i < cl->cluster_vec().size(); i++) {
+                for (size_t i=0; i < cl->cluster_vec().size(); i++) {
                     //
                     PhvInfo::Field *field = cl->cluster_vec()[i];
                     //
@@ -795,7 +795,7 @@ PHV_MAU_Group_Assignments::container_no_pack(
                     } else {
                        field_width = field->phv_use_width();
                     }
-                    for (auto field_bit_lo=0; j < req_containers && field_width > 0; j++) {
+                    for (auto field_bit_lo=0; field_width > 0;) {
                         //
                         // parser containers exact width requirement
                         //
@@ -815,7 +815,6 @@ PHV_MAU_Group_Assignments::container_no_pack(
                                 0,
                                 taint_bits,
                                 field,
-                                0 /* range_start */,
                                 field_bit_lo);
                         LOG3(*container);
                         //
@@ -824,7 +823,7 @@ PHV_MAU_Group_Assignments::container_no_pack(
                         // returns processed width
                         //
                         field_bit_lo += g->width();
-                        field_width -= processed_bits;  // inner loop termination
+                        field_width -= processed_bits;  // loop termination
                         //
                         // check if this container is partially filled with parser field
                         // if field in MAU, avoid MAU Group violation, avoid relocation to another G
@@ -835,6 +834,8 @@ PHV_MAU_Group_Assignments::container_no_pack(
                         // placing field_a in 32b, field_e in 16b will cause mau group violation
                         // "registers in an instruction must all be in the same phv group"
                         //
+                        /**********
+                        superceded by field->exact_containers() analysis & downsize_mau_group()
                         if (PHV_Container::constraint_no_holes(field)
                             && !PHV_Container::constraint_no_cohabit(field)
                             && container->status() == PHV_Container::Container_status::PARTIAL
@@ -849,9 +850,11 @@ PHV_MAU_Group_Assignments::container_no_pack(
                                 break;
                             }
                         }
+                        **********/
                     }  // for field
                     if (field->ccgf() == field) {
-                        LOG1("*****sanity_FAIL*****.....ccgf member(s) NOT allocated");
+                        LOG1("*****cluster_phv_mau.cpp: sanity_FAIL*****"
+                            << ".....ccgf member(s) INCOMPLETE ALLOCATION");
                         LOG1(field);
                     }
                 }  // for cluster
@@ -981,7 +984,6 @@ PHV_MAU_Group_Assignments::fix_parser_container(
             0,
             cc->width(),
             cc->field(),
-            0 /* range_start */,
             cc->field_bit_lo() /* field_bit_lo */);
         //
         // for overlayed fields, their field_bit_lo must be copied over accurately from container c
@@ -1014,7 +1016,6 @@ PHV_MAU_Group_Assignments::fix_parser_container(
                 0,
                 cc_1->width(),
                 cc_1->field(),
-                0 /* range_start */,
                 cc_1->field_bit_lo() /* field_bit_lo */);
             //
             LOG3("----->Transfer parser container .....2 ----->"
@@ -1459,7 +1460,6 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
                             cc->container()->taint(start,                     // start
                                                    cl_w,                      // width
                                                    f,                         // field
-                                                   cc->lo(),                  // range_start
                                                    field_bit_lo);             // field_bit_lo
                             cc->container()->sanity_check_container_ranges(
                                 "PHV_MAU_Group_Assignments::container_pack_cohabit..");

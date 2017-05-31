@@ -208,29 +208,35 @@ Cluster_PHV::Cluster_PHV(
     //
     insert_field_clusters();
     //
+    set_exact_containers();
+    //
     compute_requirements();
     //
-    if (cluster_vec_i.size() == 1                                            // no MAU oper
-        && cluster_vec_i.front()->deparser_no_holes()                        // f tagged no holes
-        && (cluster_vec_i.front()->size % PHV_Container::PHV_Word::b8 == 0)  // -9,23b +24,40,48,56b
-        && cluster_vec_i.front()->phv_use_width() >= PHV_Container::PHV_Word::b8) {  // ignore <b8
-        //
-        // e.g., cannot map
-        // ipv4.hdrChecksum<16:0..15>: W47(16..31)
-        // icmp.hdrChecksum<16:0..15>: W47(0..15)
+}  // Cluster_PHV
+
+void
+Cluster_PHV::set_exact_containers() {
+    //
+    if (cluster_vec_i.size() == 1                                 // no MAU oper
+        && cluster_vec_i.front()->deparser_no_holes()             // f tagged no holes
+        && !cluster_vec_i.front()->deparser_no_pack()             // f tagged no pack
+        && (cluster_vec_i.front()->phv_use_width() % PHV_Container::PHV_Word::b8 == 0)) {
+                                                                  // ok 24,40,48,56b, not <b8,9,23b
+        // e.g., cannot map W47 as
+        //     icmp.hdrChecksum<16:0..15>: W47(0..15), ipv4.hdrChecksum<16:0..15>: W47(16..31)
         // the parser can only extract whole containers, so extract to W47 => extract 4 bytes
-        // these vars quantities need to be in either 8-bit or 16-bit containers
-        // ipv4.hdrChecksum<16:0..15>: --> H227
-        // icmp.hdrChecksum<16:0..15>: --> TH228
+        // these vars need to be in either 8-bit or 16-bit containers
+        //     ipv4.hdrChecksum<16:0..15>: --> H227
+        //     icmp.hdrChecksum<16:0..15>: --> TH228
         // set clusters exact_containers so that
-        // cluster_phv_mau::container_pack_cohabit() honors exact width match
-        // can happen when packing attempted on field before placement attempt
-        // e.g., when PHV <== TPHV_Overflow
+        //     cluster_phv_mau::container_pack_cohabit() honors exact width match
+        //     can happen when packing attempted on field before placement attempt
+        //     e.g., when PHV <== TPHV_Overflow
         //
         exact_containers_i = true;
         cluster_vec_i.front()->set_exact_containers(true);
     }
-}  // Cluster_PHV
+}  // set_exact_containers
 
 void
 Cluster_PHV::set_gress() {
@@ -434,12 +440,29 @@ Cluster_PHV::compute_width_req() {
 PHV_Container::PHV_Word
 Cluster_PHV::container_width(int field_width) {
     //
-    if (field_width > PHV_Container::PHV_Word::b16) {
-        return PHV_Container::PHV_Word::b32;
-    } else {
-        if (field_width > PHV_Container::PHV_Word::b8) {
+    if (exact_containers_i) {
+        //
+        // exact_containers estimate reduces stress on
+        // PHV_MAU_Group_Assignments::container_no_pack() ..... downsize_mau_group()
+        //
+        if (field_width % PHV_Container::PHV_Word::b32 == 0) {
+            return PHV_Container::PHV_Word::b32;
+        }
+        if (field_width % PHV_Container::PHV_Word::b16 == 0) {
             return PHV_Container::PHV_Word::b16;
         }
+        if (field_width % PHV_Container::PHV_Word::b8 == 0) {
+            return PHV_Container::PHV_Word::b8;
+        }
+        LOG3("*****Cluster_PHV::container_width() cannot satisfy exactness for field_width = "
+            << field_width << "******");
+        // continue below for container width determination
+    }
+    if (field_width > PHV_Container::PHV_Word::b16) {
+        return PHV_Container::PHV_Word::b32;
+    }
+    if (field_width > PHV_Container::PHV_Word::b8) {
+        return PHV_Container::PHV_Word::b16;
     }
     return PHV_Container::PHV_Word::b8;
 }

@@ -32,6 +32,7 @@ class PHV_Container {
      public:
         enum Pass {
             None = '=',
+            Header_Stack_Pov_Ccgf = '^',
             Aggregate = '@',
             Field_Interference = '~',
             Cluster_Overlay = '%',
@@ -70,8 +71,10 @@ class PHV_Container {
         void container(PHV_Container *c) { container_i = c; }   // during transfer parser container
         std::string& taint_color()       { return taint_color_i; }
         Pass pass()                      { return pass_i; }
+        void pass(Pass pass)             { pass_i = pass; }
         bool overlayed()                 { return pass_i == Cluster_Overlay
                                                || pass_i == Field_Interference; }
+        bool header_stack_overlayed()    { return pass_i == Header_Stack_Pov_Ccgf; }
         bool sliced()                    { return field_i->sliced(); }
         bool phv_bind()                  { return pass_i == Phv_Bind; }
         //
@@ -167,7 +170,6 @@ class PHV_Container {
         int start,
         int width,
         PhvInfo::Field *field,
-        int range_start = 0,
         int field_bit_lo = 0);
     int taint_ccgf(
         int start,
@@ -195,12 +197,14 @@ class PHV_Container {
         int width,
         const int field_bit_lo);
     void field_overlays();
-    ordered_map<int, std::pair<int, int>>* lowest_bit_and_ccgf_width(bool by_cluster_id = true);
-    void taint_bits(
-        int start,
-        int width,
-        PhvInfo::Field *field,
-        int field_bit_lo);
+    ordered_map<int, std::pair<int, int>>*
+        lowest_bit_and_ccgf_width(bool by_cluster_id = true);
+    Container_Content*
+        taint_bits(
+            int start,
+            int width,
+            PhvInfo::Field *field,
+            int field_bit_lo);
     int avail_bits()                                            { return avail_bits_i; }
     ordered_map<int, int>& ranges()                             { return ranges_i; }
     const ordered_map<PhvInfo::Field *,

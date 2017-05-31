@@ -118,6 +118,7 @@ class Cluster_PHV {
     //
     bool sliced()                                       { return sliced_i; }
     bool exact_containers()                             { return exact_containers_i; }
+    void set_exact_containers();                        // set exact_containers
 };  // Cluster_PHV
 //
 //

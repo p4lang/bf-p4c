@@ -127,22 +127,11 @@ PHV_Container::taint(
     int start,
     int width,
     PhvInfo::Field *field,
-    int range_start,
     int field_bit_lo) {
     //
     BUG_CHECK((start+width <= width_i),
         "*****PHV_Container::taint()*****%s start=%d width=%d width_i=%d, field=%d:%s",
         phv_number_string(), start, width, width_i, field->id, field->name);
-    BUG_CHECK((range_start < width_i),
-        "*****PHV_Container::taint()*****%s range_start=%d width=%d width_i=%d, field=%d:%s",
-        phv_number_string(), start, width, width_i, field->id, field->name);
-    if (ranges_i[range_start]) {
-        BUG_CHECK(start+width <= ranges_i[range_start]+1,
-            "*****PHV_Container::taint()*****"
-            "%s start=%d width=%d range_start=%d ranges_i[range_start]=%d, field=%d:%s",
-            phv_number_string(),
-            start, width, range_start, ranges_i[range_start], field->id, field->name);
-    }
     //
     // ccgf field processing
     //
@@ -199,7 +188,7 @@ PHV_Container::taint_ccgf(
     //
     // header stack pov's allocation is composition of members
     // it is not present as a member in its ccgf
-    // as no separate allocation required
+    // as allocation is extra-bit overlaying members
     //
     start += width;  // start allocation from ccgf-segment RHS in container
     int processed_members = 0;
@@ -219,8 +208,6 @@ PHV_Container::taint_ccgf(
             } else {
                 //
                 // account pad for no_pack constraint
-                // if width_i (8) is less than member size (egress_port: 9), No padding
-                // such egress_ports may come assigned to 2 Byte containers
                 //
                 if (width_i < member->size) {
                     LOG1(
@@ -259,23 +246,45 @@ PHV_Container::taint_ccgf(
             processed_members++;
         }
         member->set_ccgf(0);        // recursive taint call should skip ccgf
-        taint(start, use_width, member, start /*range start*/, member_bit_lo);
+        taint(start, use_width, member, member_bit_lo);
         processed_width += constraint_no_cohabit(member)? width_i: use_width;
         if (start <= 0) {
             break;
         }
     }  // for ccgf members
+    if (field->header_stack_pov_ccgf()) {
+        //
+        // header stack pov ccgf needs additional bit + overlay its members
+        // PHV-64.B0.I.Fp  76543221
+        // 1= 63:ingress::data.$valid<1> I off=7 pov /phv_2,PHV-64;/[0..0]=PHV-64.B0<1:7..7>
+        // 2= 64:ingress::extra.$push<2:0..1> I off=5 ..... /phv_2,PHV-64;/[0..1]=PHV-64.B0<2:5..6>
+        // 3= 65:ingress::extra[0].$valid<1> I off=4 pov /phv_2,PHV-64;/[0..0]=PHV-64.B0<1:4..4>
+        // 4= 66:ingress::extra[1].$valid<1> I off=3 pov /phv_2,PHV-64;/[0..0]=PHV-64.B0<1:3..3>
+        // 5= 67:ingress::extra[2].$valid<1> I off=2 pov /phv_2,PHV-64;/[0..0]=PHV-64.B0<1:2..2>
+        // 6= 68:ingress::extra[3].$valid<1> I off=1 pov /phv_2,PHV-64;/[0..0]=PHV-64.B0<1:1..1>
+        // 72^ 70:ingress::extra.$stkvalid<7:0..6> ..... /phv_2,PHV-64;/[0..6]=PHV-64.B0<7:0..6>
+        // .....
+        // W44: 11111111111111118765444322222222
+        // 3= 717:egress::vxlan.$valid<1> E off=8 pov /phv_168,PHV-44;/[0..0]=PHV-44.W44<1:23..23>
+        // 4= 718:egress::mpls.$push<3:0..2>  ..... /phv_168,PHV-44;/[0..2]=PHV-44.W44<3:20..22>
+        // 5= 719:egress::mpls[0].$valid<1> E off=4 pov /phv_168,PHV-44;/[0..0]=PHV-44.W44<1:19..19>
+        // 6= 720:egress::mpls[1].$valid<1> E off=3 pov /phv_168,PHV-44;/[0..0]=PHV-44.W44<1:18..18>
+        // 7= 721:egress::mpls[2].$valid<1> E off=2 pov /phv_168,PHV-44;/[0..0]=PHV-44.W44<1:17..17>
+        // 84^ 722:egress::mpls.$stkvalid<6:0..5> ..... /phv_168,PHV-44;/[0..6]=PHV-44.W44<7:16..22>
+        //
+        assert(start >= 1 && start < width_i);
+        Container_Content *header_stack_cc = taint_bits(start - 1, 1, field, field_bit_lo);
+        processed_width++;
+        //
+        header_stack_cc->pass(Container_Content::Pass::Header_Stack_Pov_Ccgf);
+        header_stack_cc->hi(start + field->size - 2);  // start - 1 + field->size - 1
+        header_stack_cc->taint_color() += std::string(1, bits()[header_stack_cc->hi()]);
+    }
     //
     // update ccgf owner record
     //
     update_ccgf(field, processed_members, processed_width);
-
-    if (field->header_stack_pov_ccgf()) {
-        fields_in_container(
-            field,
-            new Container_Content(this, 0/*start*/, width-1, field, field_bit_lo, taint_color_i));
-    }
-
+    //
     return processed_width;  // all bits of this field may NOT be processed
 }  // taint_ccgf
 
@@ -474,7 +483,7 @@ PHV_Container::lowest_bit_and_ccgf_width(bool by_cluster_id) {
     return lbcw;
 }  // lowest_bit_and_ccgf_width
 
-void
+PHV_Container::Container_Content*
 PHV_Container::taint_bits(
     int start,
     int width,
@@ -536,9 +545,11 @@ PHV_Container::taint_bits(
     //
     // track fields in this container
     //
-    fields_in_container(
-        field,
-        new Container_Content(this, start, width, field, field_bit_lo, taint_color_i));
+    Container_Content *cc =
+        new Container_Content(this, start, width, field, field_bit_lo, taint_color_i);
+    fields_in_container(field, cc);
+    //
+    return cc;
 }  // taint_bits()
 
 void
@@ -741,7 +752,7 @@ void PHV_Container::Container_Content::sanity_check_container(
     }
     for (auto i=lo_i; i <= hi_i; i++) {
         if (container->bits()[i] != taint_color_i.back()) {
-            if (overlayed()) {
+            if (overlayed() || header_stack_overlayed()) {
                 //
                 // overlayed fields may not exact match container taint
                 // if they straddle substratum fields
@@ -771,21 +782,6 @@ void PHV_Container::Container_Content::sanity_check_container(
                 }
                 break;
             } else {
-                if (field_i->header_stack_pov_ccgf()) {
-                    //
-                    // PHV-111.B47.E.Pp(0..0)  05432221
-                    // 1= 948:egress::vxlan_gpe_int_header.$valid<1>
-                    // .....
-                    // 4= 976:egress::mpls[1].$valid<1>
-                    // 5= 977:egress::mpls[2].$valid<1>
-                    // 5= 978:egress::mpls.$stkvalid<6:0..5>
-                    //
-                    if (container->bits()[container->width() - field_i->phv_use_width()]
-                        == taint_color_i.back()) {
-                        // taint color ok
-                        break;
-                    }
-                }
                 // taint color NOT ok
                 LOG1(
                     "*****cluster_phv_container.cpp:sanity_FAIL*****....."
@@ -827,8 +823,10 @@ void PHV_Container::sanity_check_container(const std::string& msg) {
                 // can have multiple overlays
                 overlayed_width = std::max(overlayed_width, cc->width());
             } else {
-                // discount header_stack_pov_ccgf
-                if (!cc->field()->header_stack_pov_ccgf()) {
+                if (cc->field()->header_stack_pov_ccgf()) {
+                    // header_stack_pov_ccgf counted as 1 bit occupation
+                    occupation_width++;
+                } else {
                     occupation_width += cc->width();
                 }
             }
@@ -862,7 +860,7 @@ void PHV_Container::sanity_check_container(const std::string& msg) {
     if (fill + avail_bits_i != width_i) {
         LOG1("*****cluster_phv_container.cpp:sanity_FAIL*****....."
         << msg_1
-        << " fill + available_bits != container_width "
+        << " max(occupation_width, overlayed_width) + available_bits != container_width "
         << " occupation_width = " << occupation_width
         << " overlayed_width = " << overlayed_width
         << " available_bits = " << avail_bits_i

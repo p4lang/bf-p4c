@@ -423,7 +423,7 @@ PhvInfo::Field::constrained(bool packing_constraint) const {
 
 bool
 PhvInfo::Field::is_ccgf() const {
-    if (header_stack_pov_ccgf_i || simple_header_pov_ccgf_i) {
+    if (ccgf_i == this || header_stack_pov_ccgf_i || simple_header_pov_ccgf_i) {
         assert(ccgf_fields_i.size());
         return true;
     }

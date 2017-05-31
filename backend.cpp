@@ -153,7 +153,8 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
                                // fields, eg. (arpSrc, ipSrc)
         &phv_field_ops,        // PHV field operations analysis
         &cluster_phv_req,      // cluster PHV requirements analysis
-        options.phv_interference?  &cluster_phv_interference: nullptr,
+        options.phv_interference?
+            &cluster_phv_interference: nullptr,
                                // cluster PHV interference graph analysis
         &cluster_phv_mau,      // cluster PHV container placements
                                // first cut PHV MAU Group assignments
@@ -162,7 +163,9 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
                                // attempt packing with reduced width requirements
                                // slicing also improves overlay possibilities due to lesser width
                                // although number and mutual exclusion of fields don't change
-        &cluster_phv_overlay,  // overlay unallocated clusters to clusters as well as MAU groups
+        options.phv_overlay?
+            &cluster_phv_overlay: nullptr,
+                               // overlay unallocated clusters to clusters as well as MAU groups
         &phv_analysis_api,     // phv analysis results api interface
     });
 

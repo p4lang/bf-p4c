@@ -188,25 +188,26 @@ bool Cluster::preorder(const IR::HeaderRef *hr) {
     //
     // discard following container contiguous group widths
     // not byte-multiple (includes < byte)
-    // > largest container width,
+    // contiguity limit / run-length ccgf phv-allocation supports
     //
     for (auto &entry : ccg) {
         auto owner = entry.first;
         auto ccg_width = entry.second;
-        if ((ccg_width
-            && ccg_width % PHV_Container::PHV_Word::b8)
-            || ccg_width > PHV_Container::PHV_Word::b32) {
+        assert(ccg_width > 0);
+        bool not_byte_multiple = ccg_width % PHV_Container::PHV_Word::b8;
+        auto contiguity_limit = /* PHV_Container::Containers::MAX * */ PHV_Container::PHV_Word::b32;
+        if (not_byte_multiple || ccg_width > contiguity_limit) {
             for (auto &f : owner->ccgf_fields()) {
                 f->set_ccgf(0);
             }
             owner->ccgf_fields().clear();
-            LOG4("-----discarded PHV_container_contiguous_group....."
+            WARNING("*****cluster.cpp: ccgf fields not grouped *****"
+                << "-----discarded PHV_container_contiguous_group....."
                 << ccg_width
                 << " "
                 << owner);
         }
     }
-
     return true;
 }
 
@@ -423,6 +424,15 @@ void Cluster::compute_fields_no_use_mau() {
     ordered_set<PhvInfo::Field *> not_used_mau;                        // fields not used in MAU
                                                                        // all - cluster - pov_fields
     for (auto &field : phv_i) {
+        //
+        // set deparser_no_holes
+        // used in parser / deparser
+        //
+        if (uses_i->use[0][field.gress][field.id]) {
+            field.set_deparser_no_holes(true);
+        }
+    }  // for all fields
+    for (auto &field : phv_i) {
         all_fields.insert(&field);
         //
         // avoid duplicate allocation for povs that are
@@ -452,13 +462,18 @@ void Cluster::compute_fields_no_use_mau() {
         //
         field.set_phv_use_width(field.ccgf() == &field);
         //
-        // set deparsed_no_holes
-        // used in parser / deparser
+        // set deparser_no_holes for ccgf owner
+        // if any member used in parser / deparser, ccgf in exact containers
         //
-        if (uses_i->use[0][field.gress][field.id]) {
-            field.set_deparser_no_holes(true);
+        if (field.ccgf()) {
+            for (auto &m : field.ccgf_fields()) {
+                if (m->deparser_no_holes()) {
+                    field.set_deparser_no_holes(true);
+                    break;
+                }
+            }
         }
-    }
+    }  // for all fields
     pov_fields_i.assign(pov_fields.begin(), pov_fields.end());         // pov_fields_i
     LOG3(std::endl << "..........All fields (" << all_fields.size() << ")..........");
     for (auto &entry : dst_map_i) {
