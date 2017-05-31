@@ -294,3 +294,8 @@ XFAIL_TESTS += \
 # Failure due to PHV allocation of stkvalid
 XFAIL_TESTS += \
     tofino/%reldir%/p4_16/stack_valid.p4.test
+
+# Failure due to default action setup -- simple_test_harness needs to set up default
+# action arguments properly as the driver does
+XFAIL_TESTS += tofino/%reldir%/p4_14/action_default_multiple.p4.test
+XFAIL_TESTS += tofino/%reldir%/p4_14/adjust_instr3.p4.test
