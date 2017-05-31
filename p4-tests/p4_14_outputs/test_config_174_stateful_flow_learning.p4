@@ -264,74 +264,61 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("flow_table_cache_1_1") table flow_table_cache_1_1 {
         actions = {
             do_flow_table_cache_1_1;
-            @default_only NoAction;
         }
         key = {
             meta.meta.hash_1: exact;
         }
         size = 65536;
-        default_action = NoAction();
     }
     @name("flow_table_cache_1_2") table flow_table_cache_1_2 {
         actions = {
             do_flow_table_cache_1_2;
-            @default_only NoAction;
         }
         key = {
             meta.meta.hash_1: exact;
         }
         size = 1;
-        default_action = NoAction();
     }
     @name("flow_table_cache_1_age") table flow_table_cache_1_age {
         actions = {
             do_flow_table_learn_1_1;
-            @default_only NoAction;
         }
         key = {
             meta.meta.hash_1: exact;
         }
         size = 65536;
-        default_action = NoAction();
     }
     @name("flow_table_cache_2_1") table flow_table_cache_2_1 {
         actions = {
             do_flow_table_cache_2_1;
-            @default_only NoAction;
         }
         key = {
             meta.meta.hash_2: exact;
         }
         size = 65536;
-        default_action = NoAction();
     }
     @name("flow_table_cache_2_2") table flow_table_cache_2_2 {
         actions = {
             do_flow_table_cache_2_2;
-            @default_only NoAction;
         }
         key = {
             meta.meta.hash_2: exact;
         }
         size = 1;
-        default_action = NoAction();
     }
     @name("flow_table_cache_2_age") table flow_table_cache_2_age {
         actions = {
             do_flow_table_learn_2_1;
-            @default_only NoAction;
         }
         key = {
             meta.meta.hash_2: exact;
         }
         size = 65536;
-        default_action = NoAction();
     }
     @name("flow_table_cpu") table flow_table_cpu {
         actions = {
             set_rewrite_idx;
             on_miss;
-            @default_only NoAction;
         }
         key = {
             hdr.ipv4.srcAddr : exact;
@@ -340,31 +327,26 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.meta.ports  : exact;
         }
         size = 4096;
-        default_action = NoAction();
     }
     @name("rewrite_tbl") table rewrite_tbl {
         actions = {
             set_dst_port;
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             meta.meta.rewrite_idx: exact;
         }
         size = 4096;
-        default_action = NoAction();
     }
     @name("slow_path") table slow_path {
         actions = {
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             hdr.ipv4.totalLen     : exact;
             meta.meta.port_numbers: exact;
         }
         size = 3072;
-        default_action = NoAction();
     }
     apply {
         switch (flow_table_cpu.apply().action_run) {

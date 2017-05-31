@@ -262,7 +262,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("bloom_filter_membership_1") table bloom_filter_membership {
         actions = {
             run_bloom_filter();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         size = 262144;
         default_action = NoAction();
@@ -270,7 +270,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("bloom_filter_membership_2") table bloom_filter_membership_0 {
         actions = {
             run_bloom_filter_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             meta.meta.hash_2: exact @name("meta.meta.hash_2") ;
@@ -281,7 +281,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("bloom_filter_membership_3") table bloom_filter_membership_4 {
         actions = {
             run_bloom_filter_4();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             meta.meta.hash_3: exact @name("meta.meta.hash_3") ;
@@ -293,7 +293,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             drop_me_0();
             do_nothing_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         key = {
             meta.meta.is_not_member: exact @name("meta.meta.is_not_member") ;
@@ -303,7 +303,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("set_hash_1_tbl") table set_hash_1_tbl_0 {
         actions = {
             set_hash();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         size = 256;
         default_action = NoAction();
@@ -311,7 +311,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("set_hash_2_tbl") table set_hash_2_tbl_0 {
         actions = {
             set_hash_0();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         size = 1;
         default_action = NoAction();
@@ -319,7 +319,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("set_hash_3_tbl") table set_hash_3_tbl_0 {
         actions = {
             set_hash_4();
-            @default_only NoAction();
+            @defaultonly NoAction();
         }
         size = 1;
         default_action = NoAction();

@@ -284,7 +284,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("flow_table_cache_1_1") table flow_table_cache {
         actions = {
             do_flow_table_cache_1();
-            @default_only NoAction_0();
+            @defaultonly NoAction_0();
         }
         key = {
             meta.meta.hash_1: exact @name("meta.meta.hash_1") ;
@@ -295,7 +295,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("flow_table_cache_1_2") table flow_table_cache_1_1 {
         actions = {
             do_flow_table_cache_1_0();
-            @default_only NoAction_10();
+            @defaultonly NoAction_10();
         }
         key = {
             meta.meta.hash_1: exact @name("meta.meta.hash_1") ;
@@ -306,7 +306,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("flow_table_cache_1_age") table flow_table_cache_1_age {
         actions = {
             do_flow_table_learn_1();
-            @default_only NoAction_11();
+            @defaultonly NoAction_11();
         }
         key = {
             meta.meta.hash_1: exact @name("meta.meta.hash_1") ;
@@ -317,7 +317,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("flow_table_cache_2_1") table flow_table_cache_0 {
         actions = {
             do_flow_table_cache_2();
-            @default_only NoAction_12();
+            @defaultonly NoAction_12();
         }
         key = {
             meta.meta.hash_2: exact @name("meta.meta.hash_2") ;
@@ -328,7 +328,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("flow_table_cache_2_2") table flow_table_cache_2_1 {
         actions = {
             do_flow_table_cache_2_0();
-            @default_only NoAction_13();
+            @defaultonly NoAction_13();
         }
         key = {
             meta.meta.hash_2: exact @name("meta.meta.hash_2") ;
@@ -339,7 +339,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("flow_table_cache_2_age") table flow_table_cache_2_age {
         actions = {
             do_flow_table_learn_2();
-            @default_only NoAction_14();
+            @defaultonly NoAction_14();
         }
         key = {
             meta.meta.hash_2: exact @name("meta.meta.hash_2") ;
@@ -351,7 +351,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             set_rewrite_idx_0();
             on_miss_0();
-            @default_only NoAction_15();
+            @defaultonly NoAction_15();
         }
         key = {
             hdr.ipv4.srcAddr : exact @name("hdr.ipv4.srcAddr") ;
@@ -366,7 +366,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             set_dst_port_0();
             do_nothing_0();
-            @default_only NoAction_16();
+            @defaultonly NoAction_16();
         }
         key = {
             meta.meta.rewrite_idx: exact @name("meta.meta.rewrite_idx") ;
@@ -377,7 +377,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("slow_path") table slow_path {
         actions = {
             do_nothing_2();
-            @default_only NoAction_17();
+            @defaultonly NoAction_17();
         }
         key = {
             hdr.ipv4.totalLen     : exact @name("hdr.ipv4.totalLen") ;

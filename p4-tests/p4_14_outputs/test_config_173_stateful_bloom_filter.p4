@@ -262,67 +262,53 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("bloom_filter_membership_1") table bloom_filter_membership_1 {
         actions = {
             run_bloom_filter_1;
-            @default_only NoAction;
         }
         size = 262144;
-        default_action = NoAction();
     }
     @name("bloom_filter_membership_2") table bloom_filter_membership_2 {
         actions = {
             run_bloom_filter_2;
-            @default_only NoAction;
         }
         key = {
             meta.meta.hash_2: exact;
         }
         size = 262144;
-        default_action = NoAction();
     }
     @name("bloom_filter_membership_3") table bloom_filter_membership_3 {
         actions = {
             run_bloom_filter_3;
-            @default_only NoAction;
         }
         key = {
             meta.meta.hash_3: exact;
         }
         size = 262144;
-        default_action = NoAction();
     }
     @name("react") table react {
         actions = {
             drop_me;
             do_nothing;
-            @default_only NoAction;
         }
         key = {
             meta.meta.is_not_member: exact;
         }
-        default_action = NoAction();
     }
     @name("set_hash_1_tbl") table set_hash_1_tbl {
         actions = {
             set_hash_1;
-            @default_only NoAction;
         }
         size = 256;
-        default_action = NoAction();
     }
     @name("set_hash_2_tbl") table set_hash_2_tbl {
         actions = {
             set_hash_2;
-            @default_only NoAction;
         }
         size = 1;
-        default_action = NoAction();
     }
     @name("set_hash_3_tbl") table set_hash_3_tbl {
         actions = {
             set_hash_3;
-            @default_only NoAction;
         }
         size = 1;
-        default_action = NoAction();
     }
     apply {
         set_hash_1_tbl.apply();
