@@ -23,6 +23,11 @@ limitations under the License.
 #include "lib/cstring.h"
 #include "tofino/phv/phv.h"
 
+#if 1
+#undef ERROR_CHECK
+#define ERROR_CHECK WARN_CHECK
+#endif
+
 namespace PHV {
 
 bool ValidateAllocation::preorder(const IR::Tofino::Pipe*) {
@@ -75,8 +80,8 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe*) {
         // Verify that we didn't overflow the PHV space which is actually
         // available on the hardware.
         for (auto id : assignedContainers - PHV::Container::physicalContainers())
-            ::error("Allocated overflow (non-physical) container %1% to field %2%",
-                    PHV::Container::fromId(id), cstring::to_cstring(field));
+            ERROR_CHECK(false, "Allocated overflow (non-physical) container %1% to field %2%",
+                        PHV::Container::fromId(id), cstring::to_cstring(field));
 
         // Verify that all bits in the field are allocated.
         // XXX(seth): Long term it would be ideal to only allocate the bits we
