@@ -445,6 +445,8 @@ void GatewayTable::write_regs(REGS &regs) {
         // FIXME -- allow table_counter on standalone gateay?  What can it count?
         if (options.match_compiler)
             merge.mau_table_counter_ctl[logical_id/8U].set_subfield(4, 3 * (logical_id%8U), 3); }
+    if (stage->tcam_delay(gress) > 0)
+        merge.exact_match_logical_result_delay |= 1 << logical_id;
 }
 
 void GatewayTable::gen_tbl_cfg(json::vector &out) {

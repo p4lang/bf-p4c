@@ -1183,6 +1183,12 @@ template<class REGS> void MatchTable::write_regs(REGS &regs, int type, Table *re
     // Doable but non-trivial, probably requiring a small helper function. Need
     // to deal with both exact match and ternary indirect.
     //
+    // For now, most miss configuration registers are only written by the driver
+    // (since the user API says what miss behavior to perform). The compiler
+    // (glass) relies on the driver to write them but this could change in
+    // future. This particular register would only be set if the compiler chose
+    // to allocate action parameters in match overhead.
+    //
     //if (default_action_parameters.size() > 0)
     //    merge.mau_immediate_data_miss_value[logical_id] = default_action_parameters[0];
     //else if (result->default_action_parameters.size() > 0)
