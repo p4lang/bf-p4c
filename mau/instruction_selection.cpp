@@ -43,6 +43,7 @@ class InstructionSelection::SplitInstructions : public Transform {
     InstructionSelection &self;
     IR::Vector<IR::Primitive> &split;
     const IR::Expression *postorder(IR::MAU::Instruction *inst) override {
+        if (inst->operands.empty()) return inst;
         if (auto *tv = inst->operands[0]->to<IR::TempVar>()) {
             self.phv.addTempVar(tv);
             if (getContext() != nullptr) {

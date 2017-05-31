@@ -412,7 +412,9 @@ class GetTofinoTables : public Inspector {
         auto table = mi->object->to<IR::P4Table>();
         if (!table) BUG("%1% not apllied to table", m);
         if (!tables.count(m)) {
-            auto tt = tables[m] = new IR::MAU::Table(table->name, gress, table);
+            auto tt = tables[m] =
+                new IR::MAU::Table(cstring::make_unique(unique_names, table->name), gress, table);
+            unique_names.insert(tt->name);
             tt->match_table = table =
                 table->apply(FixP4Table(refMap, tt, unique_names))->to<IR::P4Table>();
             setup_tt_actions(tt, table);

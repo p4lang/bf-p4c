@@ -25,8 +25,11 @@ bool CreateSaluInstruction::preorder(const IR::Property *prop) {
         etype = PRED;
     } else if (prop->name == "update_lo_1_value" || prop->name == "update_lo_2_value" ||
                prop->name == "update_hi_1_value" || prop->name == "update_hi_2_value") {
-        opcode = "alu_a";
-        etype = VALUE;
+        if (salu->width == 1) {
+            etype = BIT_INSTR;
+        } else {
+            opcode = "alu_a";
+            etype = VALUE; }
     } else if (prop->name == "output_value") {
         opcode = "output";
         etype = OUTPUT;
@@ -103,6 +106,14 @@ bool CreateSaluInstruction::preorder(const IR::AttribLocal *attr) {
             e = new IR::MAU::SaluReg("cmplo");
         else if (attr->name == "condition_hi")
             e = new IR::MAU::SaluReg("cmphi");
+        break;
+    case BIT_INSTR:
+        if (attr->name == "set_bit" || attr->name == "set_bitc" || attr->name == "clr_bit" ||
+            attr->name == "clr_bitc" || attr->name == "read_bit" || attr->name == "read_bitc" ||
+            attr->name == "set_bit_at" || attr->name == "set_bitc_at" ||
+            attr->name == "clr_bit_at" || attr->name == "clr_bitc_at") {
+            opcode = attr->name;
+            return false; }
         break;
     default:
         break; }
@@ -284,6 +295,13 @@ void CreateSaluInstruction::postorder(const IR::Property *prop) {
             operands.insert(operands.begin(), predicates[pred_idx]);
         action->action.push_back(new IR::MAU::Instruction(opcode, operands));
         LOG3("  add " << *action->action.back());
+        break;
+    case BIT_INSTR:
+        if (opcode) {
+            action->action.push_back(new IR::MAU::Instruction(opcode));
+            LOG3("  add " << *action->action.back());
+        } else {
+            /* error message already output */ }
         break;
     case OUTPUT:
         if (predicates[pred_idx])

@@ -27,7 +27,7 @@ does not support very well.
 class CreateSaluInstruction : public Inspector {
     IR::MAU::StatefulAlu        *salu;
     IR::MAU::SaluAction         *action = nullptr;
-    enum { NONE, COND, PRED, VALUE, OUTPUT } etype = NONE;
+    enum { NONE, COND, PRED, VALUE, OUTPUT, BIT_INSTR } etype = NONE;
     bool                        negate = false;
     cstring                     opcode;
     std::vector<const IR::Expression *> operands;
