@@ -195,7 +195,6 @@ libtofinobackend_la_SOURCES = \
 
 bin_PROGRAMS += p4c-tofino
 p4c_tofino_LDADD = \
-	libp4ctoolkit.a \
 	libtofinobackend.la \
         $(BOOST_FILESYSTEM_LIB) \
 	$(BOOST_SYSTEM_LIB)
