@@ -180,6 +180,9 @@ XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_244_gateway_compare.p4.test
 XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_245_alias_test.p4.test
 XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_247_first_clpm.p4.test
 
+# CLI failure getting confused about two tables with same-named action?
+XFAIL_TESTS += bmv2/%reldir%/p4_16/stack_valid.p4.test
+
 # These currently fail gateway check with 'expression too complex'
 XFAIL_TESTS += \
     tofino/testdata/p4_14_samples/flowlet_switching.p4.test \
@@ -299,3 +302,15 @@ XFAIL_TESTS += \
 # action arguments properly as the driver does
 XFAIL_TESTS += tofino/%reldir%/p4_14/action_default_multiple.p4.test
 XFAIL_TESTS += tofino/%reldir%/p4_14/adjust_instr3.p4.test
+
+# Failure due to needing complex deposit-field to merge two values into a container
+XFAIL_TESTS += tofino/testdata/p4_14_samples/instruct5.p4.test
+
+# error -- container allocated to both INGRESS and EGRESS
+XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_88_testing_action_data_allocation_3.p4.test
+
+# default drop packet instead of writing to port 0
+XFAIL_TESTS += tofino/testdata/p4_16_samples/issue655-bmv2.p4.test
+
+# Crash due to uncaught Backtrack::trigger
+XFAIL_TESTS += tofino/testdata/p4_14_samples/switch_20160512/switch.p4.test
