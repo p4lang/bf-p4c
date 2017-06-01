@@ -968,8 +968,10 @@ template void Table::Actions::write_regs(Target::JBay::mau_regs &, Table *);
 
 void Table::Actions::gen_tbl_cfg(json::vector &cfg) {
     for (auto &act : *this) {
+        int full_address = ACTION_INSTRUCTION_ADR_ENABLE | act.addr;
         cfg.push_back(json::map{{ "name", json::string(act.name) },
-                                { "address_to_use", json::number(act.code) }}); }
+                                { "address_to_use", json::number(act.code) },
+                                { "full_address", json::number(full_address) }}); }
 }
 
 void Table::Actions::add_immediate_mapping(json::map &tbl) {
@@ -1060,7 +1062,7 @@ template<class REGS> void MatchTable::write_regs(REGS &regs, int type, Table *re
             setup_muxctl(merge.match_to_logical_table_ixbar_outputmap[type][bus], logical_id);
             setup_muxctl(merge.match_to_logical_table_ixbar_outputmap[type+2][bus], logical_id);
 
-            int default_action = result->enable_action_instruction_enable ? 0 : 0x40;
+            int default_action = 0;
             if (result->action.args.size() >= 1 && result->action.args[0].field()) {
                 merge.mau_action_instruction_adr_mask[type][bus] =
                     ((1U << result->action.args[0].size()) - 1) & ~action_enable;
@@ -1068,9 +1070,11 @@ template<class REGS> void MatchTable::write_regs(REGS &regs, int type, Table *re
             } else {
                 merge.mau_action_instruction_adr_mask[type][bus] = 0;
                 if (actions->count() == 1)
-                    default_action |= actions->begin()->code;
+                    default_action = actions->begin()->code;
                 if (options.match_compiler)
                     shift_en.action_instruction_adr_payload_shifter_en = 1; }
+            if (!result->enable_action_instruction_enable)
+                default_action |= ACTION_INSTRUCTION_ADR_ENABLE;
             merge.mau_action_instruction_adr_default[type][bus] = default_action;
 
             if (action_enable) {
@@ -1114,13 +1118,16 @@ template<class REGS> void MatchTable::write_regs(REGS &regs, int type, Table *re
         for (auto &act : *actions)
             if ((act.name != default_action) || !default_only_action) {
                 merge.mau_action_instruction_adr_map_data[type][logical_id][act.code/4]
-                    .set_subfield(act.addr + 0x40, (act.code%4) * 7, 7); } }
+                    .set_subfield(act.addr + ACTION_INSTRUCTION_ADR_ENABLE, (act.code%4) * 7, 7);
+            } }
     if (!default_action.empty()) {
         auto *act = actions->action(default_action);
-        merge.mau_action_instruction_adr_miss_value[logical_id] = 0x40 + act->addr;
+        merge.mau_action_instruction_adr_miss_value[logical_id] =
+            ACTION_INSTRUCTION_ADR_ENABLE + act->addr;
     } else if (!result->default_action.empty()) {
         auto *act = actions->action(result->default_action);
-        merge.mau_action_instruction_adr_miss_value[logical_id] = 0x40 + act->addr; }
+        merge.mau_action_instruction_adr_miss_value[logical_id] =
+            ACTION_INSTRUCTION_ADR_ENABLE + act->addr; }
 
     /*------------------------
      * Next Table

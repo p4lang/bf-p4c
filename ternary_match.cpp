@@ -301,7 +301,7 @@ void TernaryMatchTable::write_regs(REGS &regs) {
         setup_muxctl(merge.match_to_logical_table_ixbar_outputmap[1][indirect_bus], logical_id);
         setup_muxctl(merge.match_to_logical_table_ixbar_outputmap[3][indirect_bus], logical_id);
         setup_muxctl(merge.tcam_match_adr_to_physical_oxbar_outputmap[indirect_bus], tcam_id);
-        merge.mau_action_instruction_adr_default[1][indirect_bus] = 0x40;
+        merge.mau_action_instruction_adr_default[1][indirect_bus] = ACTION_INSTRUCTION_ADR_ENABLE;
         auto &shift_en = merge.mau_payload_shifter_enable[1][indirect_bus];
         if (1 || options.match_compiler) {
             // FIXME -- only need this if there is an instruction address?
