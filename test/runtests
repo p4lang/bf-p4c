@@ -36,12 +36,18 @@ TRY_STF="
     $TESTDIR/../../model/*/tests/simple_test_harness/simple_test_harness
 "
 
+prev_mflag=""
 for mflag in $MAKEFLAGS; do
     case $mflag in
     n)  exit 0
         ;;
     -j[1-9]|-j[1-9][0-9])
         PARALLEL=${mflag#-j}
+        ;;
+    [1-9]|[1-9][0-9])
+        if [ "$prev_mflag" = "-j" ]; then
+            PARALLEL=${mflag}
+        fi
         ;;
     --jobserver-*=*)
         fds=${mflag/*=/}
@@ -54,6 +60,7 @@ for mflag in $MAKEFLAGS; do
         TOKEN_WRITE=${vec[1]}
         ;;
     esac
+    prev_mflag=$mflag
 done
 
 while expr "$1" : - >/dev/null; do
