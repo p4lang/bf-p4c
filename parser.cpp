@@ -811,7 +811,7 @@ void Parser::State::Match::pass1(Parser *pa, State *state) {
         pa->phv_use[state->gress][s.where->reg.index] = 1;
         if (s.where->lo || s.where->hi != s.where->reg.size-1) {
             pa->phv_allow_multi_write[s.where->reg.index] = 1;
-            if (s.what != ~(~1 << (s.where->hi - s.where->lo)))
+            if (s.what != ~(~1U << (s.where->hi - s.where->lo)))
                 warning(s.where.lineno, "Not writing all bits of phv slice"); }
     }
     for (auto &m : state->match) {

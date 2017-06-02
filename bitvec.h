@@ -8,6 +8,14 @@
 #include <string.h>
 #include <utility>
 #include <iostream>
+#include "config.h"
+
+#if HAVE_LIBGC
+#include <gc/gc_cpp.h>
+#define IF_HAVE_LIBGC(X)    X
+#else
+#define IF_HAVE_LIBGC(X)
+#endif /* HAVE_LIBGC */
 
 #ifdef setbit
 /* some broken systems define a `setbit' macro in their system header files! */
@@ -94,7 +102,7 @@ class bitvec {
         friend class bitvec;
         nonconst_bitref(bitvec &s, int i) : bitref(s, i) {}
      public:
-        nonconst_bitref(const bitref<bitvec> &a) : bitref(a) {}
+        nonconst_bitref(const bitref<bitvec> &a) : bitref(a) {}  // NOLINT(runtime/explicit)
         nonconst_bitref(const nonconst_bitref &a) = default;
         nonconst_bitref(nonconst_bitref &&a) = default;
         bool operator=(bool b) const {
@@ -112,7 +120,7 @@ class bitvec {
         friend class bitvec;
         const_bitref(const bitvec &s, int i) : bitref(s, i) {}
      public:
-        const_bitref(const bitref<const bitvec> &a) : bitref(a) {}
+        const_bitref(const bitref<const bitvec> &a) : bitref(a) {}  // NOLINT(runtime/explicit)
         const_bitref(const const_bitref &a) = default;
         const_bitref(const_bitref &&a) = default;
     };
@@ -123,7 +131,7 @@ class bitvec {
     bitvec(size_t lo, size_t cnt) : size(1), data(0) { setrange(lo, cnt); }
     bitvec(const bitvec &a) : size(a.size) {
         if (size > 1) {
-            ptr = new uintptr_t[size];
+            ptr = new IF_HAVE_LIBGC((PointerFreeGC)) uintptr_t[size];
             memcpy(ptr, a.ptr, size * sizeof(*ptr));
         } else {
             data = a.data; }}
@@ -132,7 +140,7 @@ class bitvec {
         if (this == &a) return *this;
         if (size > 1) delete [] ptr;
         if ((size = a.size) > 1) {
-            ptr = new uintptr_t[size];
+            ptr = new IF_HAVE_LIBGC((PointerFreeGC)) uintptr_t[size];
             memcpy(ptr, a.ptr, size * sizeof(*ptr));
         } else {
             data = a.data; }
@@ -144,7 +152,7 @@ class bitvec {
 
     void clear() {
         if (size > 1) memset(ptr, 0, size * sizeof(*ptr));
-        else data = 0; }
+        else data = 0; }  // NOLINT(whitespace/newline)
     bool setbit(size_t idx) {
         if (idx >= size * bits_per_unit) expand(1 + idx/bits_per_unit);
         if (size > 1)
@@ -153,6 +161,7 @@ class bitvec {
             data |= (uintptr_t)1 << idx;
         return true; }
     void setrange(size_t idx, size_t sz) {
+        if (sz == 0) return;
         if (idx+sz > size * bits_per_unit) expand(1 + (idx+sz-1)/bits_per_unit);
         if (size == 1) {
             data |= ~(~(uintptr_t)1 << (sz-1)) << idx;
@@ -191,6 +200,7 @@ class bitvec {
             data &= ~((uintptr_t)1 << idx);
         return false; }
     void clrrange(size_t idx, size_t sz) {
+        if (sz == 0) return;
         if (idx >= size * bits_per_unit) return;
         if (size == 1) {
             if (idx + sz < bits_per_unit)
@@ -383,13 +393,13 @@ class bitvec {
             newsize = (newsize + m) & ~m; }
         if (size > 1) {
             uintptr_t *old = ptr;
-            ptr = new uintptr_t[newsize];
+            ptr = new IF_HAVE_LIBGC((PointerFreeGC)) uintptr_t[newsize];
             memcpy(ptr, old, size * sizeof(*ptr));
             memset(ptr + size, 0, (newsize - size) * sizeof(*ptr));
             delete [] old;
         } else {
             uintptr_t d = data;
-            ptr = new uintptr_t[newsize];
+            ptr = new IF_HAVE_LIBGC((PointerFreeGC)) uintptr_t[newsize];
             *ptr = d;
             memset(ptr + size, 0, (newsize - size) * sizeof(*ptr));
         }

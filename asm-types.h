@@ -9,7 +9,7 @@
 #include <sstream>
 #include "vector.h"
 
-enum gress_t { INGRESS, EGRESS };
+enum gress_t { INGRESS, EGRESS, NONE };
 
 struct match_t {
     unsigned long       word0, word1;

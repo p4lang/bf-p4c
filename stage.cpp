@@ -122,14 +122,14 @@ void AsmStage::process() {
             table->pass1();
         if (i == NUM_MAU_STAGES/2) {
             /* to turn the corner, the middle stage must always be match dependent */
-            for (auto gress : Range(INGRESS, EGRESS))
+            for (gress_t gress : Range(INGRESS, EGRESS))
                 stage[i].stage_dep[gress] = Stage::MATCH_DEP; }
         if (options.match_compiler || 1) {
             /* FIXME -- do we really want to do this?  In theory different stages could
              * FIXME -- use the same PHV slots differently, but the compiler always uses them
              * FIXME -- consistently, so we need this to get bit-identical results
              * FIXME -- we also don't correctly determine liveness, so need this */
-            for (auto gress : Range(INGRESS, EGRESS)) {
+            for (gress_t gress : Range(INGRESS, EGRESS)) {
                 Phv::setuse(gress, stage[i].match_use[gress]);
                 Phv::setuse(gress, stage[i].action_use[gress]);
                 Phv::setuse(gress, stage[i].action_set[gress]); }
@@ -329,7 +329,7 @@ template<class REGS> void Stage::write_regs(REGS &regs) {
             regs.dp.phv_ingress_thread[i][j] = in_use.getrange(8*phv_use_transpose[i][j], 8);
             regs.dp.phv_egress_thread_alu[i][j] = regs.dp.phv_egress_thread_imem[i][j] =
             regs.dp.phv_egress_thread[i][j] = eg_use.getrange(8*phv_use_transpose[i][j], 8); } }
-    for (auto gress : Range(INGRESS, EGRESS))
+    for (gress_t gress : Range(INGRESS, EGRESS))
         if (table_use[gress] & USE_TCAM_PIPED)
             regs.tcams.tcam_piped |=  options.match_compiler ? 3 : 1 << gress;
 #if 0

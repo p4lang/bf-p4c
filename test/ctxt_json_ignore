@@ -87,3 +87,9 @@ disallowed_as_default_action_reason
 override_meter_addr_pfe
 override_stat_addr_pfe
 override_stateful_addr_pfe
+override_meter_addr
+override_meter_full_addr
+override_stat_addr
+override_stat_full_addr
+override_stateful_addr
+override_stateful_full_addr

@@ -120,7 +120,7 @@ class Parser : public Section {
             std::vector<Save>               save;
             struct Set {
                 Phv::Ref        where;
-                int             what;
+                unsigned        what;
                 int             flags;
                 Set(gress_t gress, value_t &data, int v, int flgs=0);
                 template<class REGS>
