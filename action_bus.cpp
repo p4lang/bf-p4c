@@ -153,9 +153,13 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
             error(kv.key.lineno, "Action bus index out of range");
             continue; }
         if (by_byte.count(idx)) {
-            error(kv.key.lineno, "Multiple action bus entries at %d", idx);
-            continue; }
-        by_byte.emplace(idx, Slot(name, idx, sz, src, off));
+            auto &slot = by_byte.at(idx);
+            if (sz > slot.size) {
+                slot.name = name;
+                slot.size = sz; }
+            slot.data.emplace(src, off);
+        } else {
+            by_byte.emplace(idx, Slot(name, idx, sz, src, off)); }
         tbl->apply_to_field(name, [](Table::Format::Field *f){
             f->flags |= Table::Format::Field::USED_IMMED; });
     }
@@ -174,6 +178,19 @@ unsigned ActionBus::Slot::lo(Table *tbl) const {
     return rv;
 }
 
+bool ActionBus::compatible(const Source &a, unsigned a_off, const Source &b, unsigned b_off) {
+    if (a.type != b.type) return false;
+    switch (a.type) {
+    case Source::Field:
+        return a.field->bit(a_off) == b.field->bit(b_off);
+    case Source::HashDist:
+        return a.hd->hash_group == b.hd->hash_group && a.hd->id == b.hd->id && a_off == b_off;
+    case Source::TableOutput:
+        return a.table == b.table;
+    default:
+        return false; }
+}
+
 void ActionBus::pass1(Table *tbl) {
     bool is_immed_data = dynamic_cast<MatchTable *>(tbl) != nullptr;
     LOG1("ActionBus::pass1(" << tbl->name() << ")" << (is_immed_data ? " [immed]" : ""));
@@ -181,12 +198,17 @@ void ActionBus::pass1(Table *tbl) {
         lineno = tbl->format && tbl->format->lineno >= 0 ? tbl->format->lineno : tbl->lineno;
     Slot *use[ACTION_DATA_BUS_SLOTS] = { 0 };
     for (auto &slot : Values(by_byte)) {
+        bool ok = true;
         for (auto it = slot.data.begin(); it != slot.data.end();) {
             if (it->first.type == Source::TableRefOutput) {
                 // Remove all TableRefOutputs and replace with TableOutputs
                 if (it->first.table_ref) {
-                    if (it->first.table_ref->check())
+                    if (*it->first.table_ref)
                         slot.data[Source(*it->first.table_ref)] = it->second;
+                    else {
+                        error(it->first.table_ref->lineno, "No format field or table named %s",
+                              it->first.table_ref->name.c_str());
+                        ok = false; }
                 } else {
                     auto att = tbl->get_attached();
                     if (!att || att->meter.empty())
@@ -198,7 +220,12 @@ void ActionBus::pass1(Table *tbl) {
                 it = slot.data.erase(it);
             } else {
                 ++it; } }
-
+        if (!ok) continue;
+        auto first = slot.data.begin();
+        if (first != slot.data.end())
+            for (auto it = next(first); it != slot.data.end(); ++it)
+                if (!compatible(first->first, first->second, it->first, it->second))
+                    error(lineno, "Incompatible action bus entries at offset %d", slot.byte);
         int slotno = Stage::action_bus_slot_map[slot.byte];
         for (unsigned byte = slot.byte; byte < slot.byte + slot.size/8U;
              byte += Stage::action_bus_slot_size[slotno++]/8U)
@@ -219,8 +246,11 @@ void ActionBus::pass1(Table *tbl) {
                         nstart = nsrc.field->bit(nstart);
                     auto osrc = use[slotno]->data.begin()->first;
                     unsigned ostart = 8*(byte - use[slotno]->byte);
-                    if (osrc.type == Source::Field)
-                        ostart = osrc.field->bit(ostart);
+                    if (osrc.type == Source::Field) {
+                        if (ostart < osrc.field->size)
+                            ostart = osrc.field->bit(ostart);
+                        else
+                            ostart += osrc.field->bit(0); }
                     if (nstart != ostart)
                         error(lineno, "Action bus byte %d used inconsistently for fields %s and "
                               "%s in table %s", byte, use[slotno]->name.c_str(),

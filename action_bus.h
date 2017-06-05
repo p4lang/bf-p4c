@@ -26,6 +26,9 @@ class ActionBus {
             return type == a.type ? field < a.field : type < a.type; }
         std::string toString(Table *tbl) const;
     };
+    // Check two Source refs to ensure that they are compatible (can be at the same
+    // location on the aciton bus -- basically the same data)
+    static bool compatible(const Source &a, unsigned a_off, const Source &b, unsigned b_off);
     friend std::ostream &operator<<(std::ostream &, const Source &);
     struct Slot {
         std::string                 name;
