@@ -15,24 +15,28 @@
 // contains results from PHV Analysis PassManager in backend.cpp
 // treated as extended object to PhvInfo::Field
 //
+// TODO: What is an extended object?
+//
 //***********************************************************************************
 //
 //
 class PHV_Analysis_API : public Visitor {
-    //
  private:
-    //
-    PhvInfo &phv_i;                                           // referenced through constructor
-    PHV_MAU_Group_Assignments &phv_mau_i;                     // PHV MAU Group Assignments
-    PhvInfo::Field *field_i;                                  // owner field
+    PhvInfo &phv_i;                                           /// referenced through constructor
+    PHV_MAU_Group_Assignments &phv_mau_i;                     /// PHV MAU Group Assignments
+    PhvInfo::Field *field_i;                                  /// owner field
+                                                              // TODO: owner field?
     ordered_map<std::pair<int, int>, PHV_Container::Container_Content *> field_container_map_i;
-                                                              // field ranges -> container bits
-                                                              // range does not straddle containers
-    //
+                                                              /// field ranges -> container bits
+                                                              /// range does not straddle containers
+
  public:
-    PHV_Analysis_API(PhvInfo &phv_p, PHV_MAU_Group_Assignments &phv_mau_p, PhvInfo::Field *f_p)
-        : phv_i(phv_p), phv_mau_i(phv_mau_p), field_i(f_p) {}
-    //
+    PHV_Analysis_API(
+        PhvInfo &phv_p,
+        PHV_MAU_Group_Assignments &phv_mau_p,
+        PhvInfo::Field *f_p)
+      : phv_i(phv_p), phv_mau_i(phv_mau_p), field_i(f_p) { }
+
     PhvInfo& phv()                                            { return phv_i; }
     PHV_MAU_Group_Assignments & phv_mau()                     { return phv_mau_i; }
     PhvInfo::Field *field()                                   { return field_i; }
@@ -57,12 +61,8 @@ class PHV_Analysis_API : public Visitor {
     // APIs
     //
     // field allocated, contiguously
-    //
-    bool
-    field_allocated(
-        PhvInfo::Field *f,
-        bool contiguously = false);
-    //
+    bool field_allocated(PhvInfo::Field *f, bool contiguously = false);
+
     // fields to containers
     //
     bool

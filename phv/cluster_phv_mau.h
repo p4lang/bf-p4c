@@ -9,29 +9,39 @@
 #include "lib/range.h"
 #include "tofino/ir/thread_visitor.h"
 #include "cluster_phv_req.h"
-//
-//
-//***********************************************************************************
-//
-// class PHV_MAU_Group_Assignments computes MAU Group Assignments to clusters
-// conditions:
-// must perform PHV_MAU_Group_Assigments after Cluster_PHV_Requirements pass
-// input:
-// cluster_phv_requirements.cluster_phv_map()
-// sorted requirements computed by Cluster_PHV_Requirements
-// accumulated vector<Cluster_PHV*> for each of PHV_Word (32,16,8-bit) widths
-// output:
-// cluster fields mapped to MAU Groups with Container Assignments
-//
-//***********************************************************************************
-//
-//
+
+/** @brief PHV_MAU_Group_Assignments computes MAU Group Assignments to clusters.
+ *
+ * input:
+ * - cluster_phv_requirements.cluster_phv_map()
+ * - sorted requirements computed by Cluster_PHV_Requirements
+ * - accumulated vector<Cluster_PHV*> for each of PHV_Word (32,16,8-bit) widths
+ *
+ * output:
+ * - cluster fields mapped to MAU Groups with Container Assignments
+ * - substratum_phv_clusters and substratum_t_phv_clusters, which are (non-POV)
+ *   clusters that could not be assigned
+ * - cohabit_fields
+ * - clusters_to_be_assigned, clusters_to_be_assigned_nibble, t_phv_fields, and
+ *   t_phv_fields_nibble with remaining clusters that were not able to be
+ *   assigned (if any)
+ *
+ * @pre Cluster_PHV_Requirements.
+ */
 class PHV_MAU_Group_Assignments;
-//
+
+/** @brief A PHV container group.  ALU operands and the container being written
+ * must be in the same group.
+ */
 class PHV_MAU_Group {
  public:
-    //
+    /** @brief Marks a contiguous bit segment @l to @h (inclusive) of a
+     * PHV_Container.
+     */
     class Container_Content {
+     // TODO: This doesn't actually contain any content?
+     // TODO: Why is this in PHV_MAU_Group?
+     // TODO: Why does this have the same name as PHV_Container::Container_Content?
      private:
         int lo_i;  // low of bit range in container for packing
         int hi_i;  // high of bit range in container for packing
@@ -74,7 +84,15 @@ class PHV_MAU_Group {
                                               // ingress, egress slices having same width, num
                                               // [w](n) --> ((Ingress set) (Egress set))
  public:
-    //
+    /** Create @containers_in_group PHV_Container containers of size @w and
+     * gress @gress, numbered consecutively starting from @phv_number.  Update
+     * @owner->phv_containers to map container number to each new container.
+     *
+     * Then, create a PHV_MAU_Group with these containers and assigned number
+     * @n.
+     *
+     * Afterwards, @phv_number = @phv_number + @containers_in_group.
+     */
     PHV_MAU_Group(
         PHV_MAU_Group_Assignments *owner,
         PHV_Container::PHV_Word w,
@@ -83,7 +101,7 @@ class PHV_MAU_Group {
         std::string asm_encoded,
         PHV_Container::Ingress_Egress gress,
         const int containers_in_group = PHV_Container::Containers::MAX);
-    //
+
     void clear() {
         for (auto &c : phv_containers_i) {
             c->clear();
@@ -92,7 +110,7 @@ class PHV_MAU_Group {
         cluster_phv_i.clear();
         aligned_container_slices_i.clear();
     }
-    //
+
     PHV_Container::PHV_Word width()                     { return width_i; }
     int number()                                        { return number_i; }
     void gress(PHV_Container::Ingress_Egress gress_p)   {
@@ -126,7 +144,7 @@ class PHV_MAU_Group {
     }
     void container_population_density(
         ordered_map<PHV_Container::Container_status, std::pair<int, int>>&);
-    //
+
     std::vector<Cluster_PHV *>& clusters()              { return cluster_phv_i; }
     void create_aligned_container_slices_per_range(std::list<PHV_Container *>&);
     void create_aligned_container_slices(std::list<PHV_Container *>&);
@@ -135,7 +153,7 @@ class PHV_MAU_Group {
         ordered_map<int,
             std::list<std::list<Container_Content *>>>>&
                 aligned_container_slices()              { return aligned_container_slices_i; }
-    //
+
     void sanity_check_container_packs(const std::string&);
     void sanity_check_container_fields_gress(const std::string&);
     void sanity_check_group_containers(const std::string&);
@@ -171,7 +189,7 @@ class PHV_MAU_Group_Assignments : public Visitor {
         {PHV_Container::PHV_Word::b16, "H"},
         {PHV_Container::PHV_Word::b8,  "B"},
     };
-    //
+    // Container ranges hard-wired to a specific gress.
     const ordered_map<std::pair<int, int>, PHV_Container::Ingress_Egress> ingress_egress_i {
         {std::make_pair(0, 15), PHV_Container::Ingress_Egress::Ingress_Only},
         {std::make_pair(16, 31), PHV_Container::Ingress_Egress::Egress_Only},
@@ -190,6 +208,7 @@ class PHV_MAU_Group_Assignments : public Visitor {
                                        // all PHV MAU groups
                                        // PHV_MAU_i[width] = vector of groups
     ordered_map<int, ordered_map<PHV_Container::PHV_Word, std::vector<PHV_Container *>>> T_PHV_i;
+    // TODO: what is a collection?
                                        // all TPHV collections
                                        // T_PHV_i[collection][width] = vector of containers
     std::list<PHV_MAU_Group *> PHV_groups_i;
@@ -250,8 +269,12 @@ class PHV_MAU_Group_Assignments : public Visitor {
     void consolidate_slices_in_group(
         ordered_map<int,
             ordered_map<int, std::list<std::list<PHV_MAU_Group::Container_Content *>>>>&);
+
+    /** Populate `cohabit_fields` with containers that contain more than one
+     * field written to in the MAU pipeline.
+     */
     void container_cohabit_summary();
-    //
+
  public:
     //
     PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &phv_r)  // NOLINT(runtime/explicit)
@@ -296,17 +319,30 @@ class PHV_MAU_Group_Assignments : public Visitor {
     // cohabit_fields requests to TP to avoid single-write issue
     //
     std::vector<PHV_Container *>& cohabit_fields()        { return cohabit_fields_i; }
-    //
+
+    /** Build PHV containers and groups. */
     void create_MAU_groups();
+
+    /** Build TPHV containers and collections. */
     void create_TPHV_collections();
+
     void cluster_PHV_placements();
     void cluster_TPHV_placements();
     void cluster_POV_placements();
     void cluster_PHV_nibble_placements();
     void cluster_T_PHV_nibble_placements();
+
+    /** Updates `substratum_phv_clusters_i` and `substratum_t_phv_clusters_i`
+     * with Cluster_PHV_Requirements.cluster_phv_fields (resp.
+     * Cluster_PHV_Requirements.t_phv_fields()) that have already been assigned
+     * to PHV container groups (resp. TPHV collections).
+     */
     void compute_substratum_clusters();
+
+    /** Assign non-owner fields to the containers where their owners were
+     * assigned. */
     void field_overlays();
-    //
+
     const IR::Node *apply_visitor(const IR::Node *, const char *name = 0) override;
     //
     // public member

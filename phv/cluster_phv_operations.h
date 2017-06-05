@@ -8,14 +8,18 @@
 #include "lib/ordered_map.h"
 #include "lib/range.h"
 #include "tofino/ir/thread_visitor.h"
-//
-//***********************************************************************************
-//
-// class PHV_Field_Operations
-// collects all operations field participates
-//
-//***********************************************************************************
-//
+
+/** @brief Annotate each Field in PhvInfo with the instructions it's involved
+ * in.
+ *
+ * Specifically, include the name of the instruction, whether it is a
+ * move-based instruction, and whether it is read, written, both, or
+ * invalidated. This information is stored in the Field.operations field.
+ *
+ * @pre An up-to-date PhvInfo data structure.
+ *
+ * @post The operations field of all Field objects in @phv_f will be populated.
+ */
 class PHV_Field_Operations : public Inspector {
     //
     // define enum INVALID, R, W, RW

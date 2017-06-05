@@ -28,6 +28,7 @@ PHV_MAU_Group::PHV_MAU_Group(
     PHV_MAU_Group_Assignments *owner,
     PHV_Container::PHV_Word w,
     int n,
+    // TODO: It's surprising that a constructor also updates a reference.  Refactor?
     int& phv_number,
     std::string asm_encoded,
     PHV_Container::Ingress_Egress gress,
@@ -251,11 +252,15 @@ PHV_MAU_Group_Assignments::apply_visitor(const IR::Node *node, const char *name)
     cluster_PHV_nibble_placements();    // nibble cluster PHV placements
     cluster_T_PHV_nibble_placements();  // nibble T_PHV placements
     //
-    field_overlays();                   // phv_interference based overlay fields in containers
+    field_overlays();                   // place non-owner fields in containers "on top of" their
+                                        // owners, i.e. overlaid starting at the same lo bit
     //
-    compute_substratum_clusters();
+    compute_substratum_clusters();      // write non-POV clusters that have already been placed to
+                                        // substratum_phv_clusters and substratum_t_phv_clusters
     //
-    container_cohabit_summary();        // summarize recommendations to TP
+    container_cohabit_summary();        // summarize recommendations to TP by storing containers
+                                        // in cohabit_fields that contain more than one field which
+                                        // is written to in the MAU pipeline
     //
     sanity_check_group_containers("PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments()..");
     //
@@ -350,6 +355,7 @@ PHV_MAU_Group_Assignments::create_MAU_groups() {
             PHV_Container::Ingress_Egress gress = PHV_Container::Ingress_Egress::Ingress_Or_Egress;
             for (auto ie : ingress_egress_i) {
                 std::pair<int, int> limits = ie.first;
+                // TODO: redundant check?
                 if (phv_number < limits.first) {
                     break;
                 }
@@ -426,8 +432,7 @@ PHV_MAU_Group_Assignments::create_TPHV_collections() {
     //
 }  // PHV_MAU_Group_Assignments::create_TPHV_collections
 
-void
-PHV_MAU_Group_Assignments::compute_substratum_clusters() {
+void PHV_MAU_Group_Assignments::compute_substratum_clusters() {
     //
     // substratum clusters are computed by noting the incoming clusters from phv_requirements
     // and then subtracting clusters that remain to be assigned
@@ -473,8 +478,7 @@ PHV_MAU_Group_Assignments::compute_substratum_clusters() {
     //
 }  // compute_substratum_clusters
 
-void
-PHV_MAU_Group_Assignments::cluster_PHV_placements() {
+void PHV_MAU_Group_Assignments::cluster_PHV_placements() {
     //
     // cluster placement in containers conforming to MAU group constraints
     //
@@ -510,8 +514,7 @@ PHV_MAU_Group_Assignments::cluster_PHV_placements() {
     }
 }  // PHV_MAU_Group_Assignments::cluster_PHV_placements
 
-void
-PHV_MAU_Group_Assignments::cluster_POV_placements() {
+void PHV_MAU_Group_Assignments::cluster_POV_placements() {
     //
     // POV fields in PHV containers
     //
@@ -675,6 +678,8 @@ PHV_MAU_Group_Assignments::field_overlays() {
 //    field f may need several containers, e.g., f:128 --> C1<32>,C2,C3,C4
 //    but each C single or partial field only => C does not contain 2 fields
 //
+// TODO: what happens to fields that do not have any grouping constraints?
+//
 // 4. when all G exhausted
 //    clusters_to_be_assigned contains clusters not assigned
 //
@@ -795,11 +800,11 @@ PHV_MAU_Group_Assignments::container_no_pack(
             if (req_containers <= cl_g->empty_containers()) {  // attempt assigning cl to cl_g
                 LOG3("..... attempting MAU Group .....");
                 LOG3(*cl_g);
-                //
-                // pick next Empty container in MAU group g
-                // for each container assigned to cluster, taint bits that are filled
+
+                // for each field in cluster cl, assign consecutive chunks
+                // across consecutive empty containers in g, tainting container
+                // bits that are assigned.
                 for (size_t i=0; i < cl->cluster_vec().size(); i++) {
-                    //
                     PhvInfo::Field *field = cl->cluster_vec()[i];
                     //
                     // phv_use_width can be inflated by Operations ceil_phv_use_width()
@@ -858,6 +863,7 @@ PHV_MAU_Group_Assignments::container_no_pack(
                             // partial container with parser field
                             // parser / deparser require fully packed containers
                             //
+                            // TODO: why is it OK to move part of a field to a different group?
                             if (!fix_parser_container(container, phv_groups_to_be_filled)) {
                                 LOG1("*****cluster_phv_mau.cpp: sanity_FAIL*****"
                                     << ".....cannot Fix Parser Container "
@@ -927,8 +933,12 @@ PHV_MAU_Group_Assignments::container_no_pack(
     //
 }  // container_no_pack
 
-bool
-PHV_MAU_Group_Assignments::fix_parser_container(
+/** Given a partially-filled container (with one field), move that field to an
+ * empty container in a different group.
+ *
+ * @return true on success.
+ */
+bool PHV_MAU_Group_Assignments::fix_parser_container(
     PHV_Container *c,
     std::list<PHV_MAU_Group *>& phv_groups_to_be_filled) {
     //
@@ -947,7 +957,7 @@ PHV_MAU_Group_Assignments::fix_parser_container(
     assert(c->fields_in_container().size());
     assert(c->fields_in_container().begin()->second.size());
     PHV_Container::Container_Content *cc = c->fields_in_container().begin()->second.front();
-    PHV_Container::Container_Content *cc_1 = 0;
+    PHV_Container::Container_Content *cc_1 = nullptr;
     bool fixed_parser_container = false;
     //
     // transfer necessary for partially filled container only

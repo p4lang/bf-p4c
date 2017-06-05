@@ -153,8 +153,7 @@ PHV_Interference::interference_reduction_singleton_clusters(
     //
 }  // interference_reduction_singleton_clusters
 
-void
-PHV_Interference::interference_reduction(
+void PHV_Interference::interference_reduction(
     std::vector<Cluster_PHV *>& cluster_vec,
     const std::string& msg) {
     //
@@ -168,6 +167,7 @@ PHV_Interference::interference_reduction(
     singletons.clear();
     for (auto &cl : cluster_vec) {
         if (!cl->cluster_vec().size()) {
+            // TODO: Use BUG macro?
             LOG1("*****cluster_phv_interference:sanity_FAIL*****"
                  " cluster with O fields!"
                  << cl);
@@ -194,9 +194,15 @@ PHV_Interference::interference_reduction(
         //
         // cluster: field interference with siblings
         //
+
+        // TODO: either rename cluster_vec (the formal parameter) or
+        // cl->cluster_vec (the Cluster_PHV field), because they have very
+        // different types.
+
         for (auto &f : cl->cluster_vec()) {
             interference_edge_i[f] = new ordered_set<PhvInfo::Field *>;  // new set
         }
+
         ordered_set<PhvInfo::Field *> f_set;
         for (auto &f : cl->cluster_vec()) {
             f_set.insert(f);
@@ -210,39 +216,43 @@ PHV_Interference::interference_reduction(
                 }
             }
         }
-        //
+
         sanity_check_interference(cl, "PHV_Interference::apply_visitor()..");
+
+        // Sort fields within cluster by width.  These will be greedily
+        // assigned to virtual containers, and this sorting ensures that the
+        // first field assigned will be the widest and can "own" the container.
         //
-        // sort fields within cluster
-        // highest width first
-        // such fields become "owners" of containers
-        // other non-interfering fields point to these owners
+        // Other fields may be assigned to the same container if they can be
+        // overlaid; these point to the owner.
+        //
         // avoids container_adjacency_violation for fields exceeding container width
         // e.g., F<2c> = adjacent <c1,c2> instead of <c1,c3>
-        //
         std::sort(cl->cluster_vec().begin(), cl->cluster_vec().end(),
             [](PhvInfo::Field *l, PhvInfo::Field *r) {
             if (l->phv_use_width() == r->phv_use_width()) {
                 // sort by cluster id_num to prevent non-determinism
                 return l->id < r->id;
             }
-            //
+
             return l->phv_use_width() > r->phv_use_width();
         });
-        //
+
         // for each field in cluster
         // assign ownership to containers
         // for overlaps, entry in field_overlay_map[owner][reg#]
         //
-        ordered_map<int, PhvInfo::Field*> reg_map;  // register r owner field
+        // reg_map maps a virtual container number to the field that "owns" it
+        ordered_map<int, PhvInfo::Field*> reg_map;
+        // TODO: Do ordered maps not start empty?
         reg_map.clear();
         for (auto &f : cl->cluster_vec()) {
             assign_virtual_container(cl, f, reg_map);
         }
         sanity_check_overlay_maps(reg_map, cl, "PHV_Interference::apply_visitor()");
         LOG3(reg_map);
-        //
-        // recompute reduced cluster requirements
+
+        // Recompute reduced cluster requirements
         //
         std::list<PhvInfo::Field *> map_remove_list;
         cl->cluster_vec().clear();                         // remove all fields in cluster
@@ -250,7 +260,7 @@ PHV_Interference::interference_reduction(
             if (entry.second.empty()) {
                 continue;
             } else {
-                cl->cluster_vec().push_back(entry.first);  // add field to cluster
+                cl->cluster_vec().push_back(entry.first);  // add owner to cluster
             }
             //
             // if other fields do not overlay on this field 'entry.first'
@@ -258,11 +268,11 @@ PHV_Interference::interference_reduction(
             //
             int overlays = 0;
             for (auto &n : entry.second) {
-                overlays += n.second->size();
-            }
+                overlays += n.second->size(); }
             if (!overlays) {
-                map_remove_list.push_back(entry.first);    // remove from cluster's interference map
-            }
+                map_remove_list.push_back(entry.first); }  // remove owner from
+                                                           // cluster's interference map
+                                                           // if no fields overlay it
         }
         for (auto &fp : map_remove_list) {
             cl->field_overlay_map().erase(fp);             // erase map key
@@ -334,8 +344,16 @@ PHV_Interference::create_interference_edge(PhvInfo::Field *f2, PhvInfo::Field *f
     interference_edge_i[f1]->insert(f2);
 }
 
-void
-PHV_Interference::virtual_container_overlay(
+/** Assign @field to virtual container @r.  If no other field has yet been
+ * assigned to @r, then make @field its owner.
+ *
+ * (This is safe, because fields are assigned in order of decreasing width,
+ * ensuring that the widest field is always the owner.)
+ *
+ * Update `@cl->field_overlay_map`, `owner->field_overlay_map`, and
+ * `@field->cl_id` with the new ownership information.
+ */
+void PHV_Interference::virtual_container_overlay(
     Cluster_PHV *cl,
     PhvInfo::Field *field,
     ordered_map<int, PhvInfo::Field*>& reg_map,
@@ -375,8 +393,15 @@ PHV_Interference::virtual_container_overlay(
     }
 }  // virtual_container_overlay
 
-void
-PHV_Interference::assign_virtual_container(
+/** Assign @field to virtual containers (more than one if @field is too wide).
+ * Multiple fields may be assigned to the same virtual containers so long as
+ * they may be overlaid; in this case, the widest field is the "owner" of the
+ * container.
+ *
+ * Once virtual containers are selected, invoke virtual_container_overlay() to
+ * update the appropriate ownership information.
+ */
+void PHV_Interference::assign_virtual_container(
     Cluster_PHV *cl,
     PhvInfo::Field *field,
     ordered_map<int, PhvInfo::Field*>& reg_map) {
@@ -406,6 +431,8 @@ PHV_Interference::assign_virtual_container(
         // new color(s) for field
         //
         for (int i = 0; i < field_containers; i++) {
+            // TODO: Is this supposed to always produce contiguous color
+            // numbers?  Is that guaranteed?
             int r = *std::min_element(s_diff.begin(), s_diff.end());
             s_diff.erase(r);  // remove r from consideration when s_diff used in next iteration
             virtual_container_overlay(cl, field, reg_map, r);

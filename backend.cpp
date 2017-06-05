@@ -112,7 +112,8 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
     Cluster_PHV_Requirements cluster_phv_req(cluster);           // cluster PHV requirements
     PHV_Field_Operations phv_field_ops(phv);                     // field operation analysis
     PHV_Interference cluster_phv_interference(cluster_phv_req, mutually_exclusive_field_ids);
-                                                                 // cluster PHV Interference Graph
+                                                                 // intra-cluster PHV Interference
+                                                                 // Graph
     PHV_MAU_Group_Assignments cluster_phv_mau(cluster_phv_req);  // cluster PHV Container placements
     Cluster_Slicing cluster_slicing(cluster_phv_mau);            // cluster slicing
     Cluster_PHV_Overlay cluster_phv_overlay(cluster_phv_mau, cluster_phv_interference);

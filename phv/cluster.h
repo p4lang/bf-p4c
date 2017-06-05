@@ -9,42 +9,47 @@
 #include "lib/ordered_set.h"
 #include "lib/range.h"
 #include "tofino/ir/thread_visitor.h"
-//
-//
-//***********************************************************************************
-//
-// class Cluster computes cluster sets of fields
-// conditions:
-// must perform cluster analysis after last &phv pass
-// input:
-// fields computed by PhvInfo phv
-// these field pointers are not part of IR, they are calculated by &phv
-// output:
-// accumulated map<field*, pointer to cluster_set of field*>
-//
-//***********************************************************************************
-//
-//
+
+/** @brief Builds "clusters" of PHV fields that must be placed in the same
+ * group.
+ *
+ * Produces a map from each PhvInfo.Field to its "cluster" set.  Two fields are
+ * placed in the same cluster if any of the following are true:
+ *
+ *  - they are part of same instruction (as operands and/or assignment
+ *  destination)
+ *  - they are part of two CCGFs that are in the same group
+ *
+ * This pass also fills in the following PhvInfo::Field fields:
+ *  - mau_write
+ *  - phv_use_lo
+ *  - phv_use_hi
+ *  - ccgf
+ *  - ccgf_fields
+ *
+ * @pre An up-to-date PhvInfo object.
+ */
 class Cluster : public Inspector, P4WriteContext {
  public:
     class Uses;
  private:
-    PhvInfo &phv_i;             // phv object referenced through constructor
-    //
+    PhvInfo &phv_i;
+
+    /// Map of field to cluster it belongs.
     ordered_map<PhvInfo::Field *, ordered_set<PhvInfo::Field *>*> dst_map_i;
-                                // map of field to cluster it belongs
+    /// Maintains unique cluster pointers.
+    // TODO: what does this mean?
     ordered_set<PhvInfo::Field *> lhs_unique_i;
-                                // maintains unique cluster ptrs
+    /// Destination of current statement.
     PhvInfo::Field *dst_i = nullptr;
-                                // destination of current statement
+    /// All POV fields.
     std::list<PhvInfo::Field *> pov_fields_i;
-                                // all pov fields
+    /// POV fields not in cluster, need to be PHV allocated.
     std::list<PhvInfo::Field *> pov_fields_not_in_cluster_i;
-                                // pov fields not in cluster, need to be PHV allocated
+    /// Fields that are not used through mau pipeline.
     std::list<PhvInfo::Field *> fields_no_use_mau_i;
-                                // fields that are not used through mau pipeline
     Uses *uses_i;
-    //
+
     bool preorder(const IR::Tofino::Pipe *) override;
     bool preorder(const IR::Member*) override;
     bool preorder(const IR::Operation_Unary*) override;

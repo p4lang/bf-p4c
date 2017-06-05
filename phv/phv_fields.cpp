@@ -39,6 +39,7 @@ void PhvInfo::add_hdr(cstring name, const IR::Type_StructLike *type, bool meta) 
         LOG2("PhvInfo no type for " << name);
         return; }
     LOG2("PhvInfo adding " << (meta ? "metadata" : "header") << " " << name);
+    // TODO: Use BUG macro.
     assert(all_headers.count(name) == 0);
     int start = by_id.size();
     int offset = 0;
@@ -300,8 +301,9 @@ void PhvInfo::allocatePOV(const HeaderStackInfo &stacks) {
                 pov_fields_h.push_back(hdr_dd_valid);
             }
         }
-        // accumulate member povs of simple headers
-        // all pov bits must be in single container
+
+        // Accumulate member povs of simple headers into the same ccgf.
+        //
         // e.g.,
         // ingress::udp.$valid[1]{0..4}-r- --> ingress::udp.$valid
         // [      ingress::ethernet.$valid[1]
@@ -311,6 +313,10 @@ void PhvInfo::allocatePOV(const HeaderStackInfo &stacks) {
         //        ingress::udp.$valid[1]
         // :5]
         //
+        //  Use hdr_dd_valid (the last $valid field created in the loop above)
+        //  as the owner.
+
+        // TODO: Why only do this when no stacks are present?
         if (!stacks_num && pov_fields_h.size() > 1) {
             for (auto &f : pov_fields_h) {
                 hdr_dd_valid->ccgf_fields().push_back(f);
@@ -323,6 +329,7 @@ void PhvInfo::allocatePOV(const HeaderStackInfo &stacks) {
         }
         for (auto &stack : stacks) {
             vector<Field *> pov_fields;  // accumulate member povs of header stk pov
+            // TODO: Why just push hdr_dd_valid?  Why not all of pov_fields_h?
             if (hdr_dd_valid) {
                 pov_fields.push_back(hdr_dd_valid);
             }
@@ -343,12 +350,14 @@ void PhvInfo::allocatePOV(const HeaderStackInfo &stacks) {
                 }
                 if (stack.maxpop) {
                     size[gress] -= stack.maxpop;
+                    // TODO FIXME should this be stack.maxpop?
                     add(stack.name + ".$pop", stack.maxpush, size[gress], true, true);
                 }
                 add(stack.name + ".$stkvalid", stack.size + stack.maxpush + stack.maxpop,
                     size[gress], true, true);
                 // do not push ".$stkvalid" as a member
                 // members are slices of owner ".stkvalid"'s allocation span
+                // TODO FIXME: why only push_exists?  What about the $valid and $pop fields?
                 if (push_exists) {
                     Field *pov_stk = &all_fields[stack.name + ".$stkvalid"];
                     for (auto &f : pov_fields) {

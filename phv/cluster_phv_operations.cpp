@@ -1,15 +1,6 @@
 #include "cluster_phv_operations.h"
 #include "lib/log.h"
 
-//***********************************************************************************
-//
-// Mark field if used in move-based (defined below) operations.
-// A field can be used (read or write) in multiple instructions.
-// This pass collects all operations on a field, and append a record of the operation
-// (represented as a tuple3 (op, mode, dst/src)) to the vec of operations in the field.
-//
-//***********************************************************************************
-//
 bool PHV_Field_Operations::preorder(const IR::MAU::Instruction *inst) {
     //
     // see mau/instruction-selection.cpp for all supported instructions

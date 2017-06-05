@@ -27,7 +27,8 @@ class PHV_Container {
     enum Containers {MAX = 16};
     enum Container_status {EMPTY = 'V', PARTIAL = 'P', FULL = 'F'};  // V = Vacant, E = Egress_Only
     enum Ingress_Egress {Ingress_Only = 'I', Egress_Only = 'E', Ingress_Or_Egress = ' '};
-    //
+
+    /** Marks the contents of a PHV container. */
     class Container_Content {
      public:
         enum Pass {
@@ -49,7 +50,6 @@ class PHV_Container {
         Pass pass_i = None;                // tracks pass that creates this cc: overlay, slicing
 
      public:
-        //
         Container_Content(
             const PHV_Container *c,
             const int l,

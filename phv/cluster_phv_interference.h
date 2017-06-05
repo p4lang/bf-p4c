@@ -9,28 +9,16 @@
 #include "lib/symbitmatrix.h"
 #include "tofino/ir/thread_visitor.h"
 #include "cluster_phv_req.h"
-//
-//
-//***********************************************************************************
-//
-// class PHV_Interference constructs an interference graph after liveness analysis
-// to reduce cluster phv requirements
-//
-// conditions:
-// must perform PHV_Interference after Cluster_PHV_Requirements pass
-//
-// input:
-// Cluster_PHV_Requirements
-// ordered_map<PHV_Container::PHV_Word,
-//   ordered_map<int, std::vector<Cluster_PHV *>>> cluster_phv_map()
-// SymBitMatrix mutex_i  = fields' liveness interference
-//
-// output:
-// for each cluster in cluster_phv_map(), reduced requirements <num, width>
-//
-//***********************************************************************************
-//
-//
+
+/** @brief Reduce cluster requirements by identifying fields within a cluster
+ * that can be overlaid.
+ *
+ * @pre Cluster_PHV_Requirements and any field overlay information available.
+ *
+ * @post Populate the field_overlay_map of each Cluster_PHV, and the
+ * field_overlay_map of each Field, and update the <num, width> requirements of
+ * each cluster to reflect overlaid fields.
+ */
 class PHV_Interference : public Visitor {
  private:
     //

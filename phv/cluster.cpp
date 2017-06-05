@@ -62,6 +62,7 @@ bool Cluster::preorder(const IR::Member* expression) {
         // e.g., ing_metadata.egress_port: H1(0..8)
         //       ing_metadata.drop: H1(15)
         // ing_metadata.drop bit controlled by valid bit in egress_spec
+        // TODO: What does this mean?
         //
         ordered_set<const char *> egress_deparser_constraint;
         egress_deparser_constraint.insert("egress_port");
@@ -69,6 +70,7 @@ bool Cluster::preorder(const IR::Member* expression) {
         for (auto &es : egress_deparser_constraint) {
             if (const char *s = strstr(field->name, es)) {
                 // restrict to name ending in egress_port, i.e., discard egress_port_id
+                // TODO: Perhaps keep the header name and field name separate?
                 if (strlen(s) == strlen(es)) {
                     LOG1(".....Deparser Constraint on field..... " << field->name);
                     field->set_deparser_no_pack(true);
@@ -184,12 +186,12 @@ bool Cluster::preorder(const IR::HeaderRef *hr) {
            << accumulator_bits);
        LOG4(group_accumulator);
     }
-    //
-    // discard following container contiguous group widths
-    // single member ccgf
-    // not byte-multiple but allow sub-byte
-    // contiguity limit / run-length ccgf phv-allocation supports
-    //
+
+    // discard container contiguous groups with:
+    // - only one member
+    // - widths that are larger than one byte but not byte-multiples
+    // - widths that are larger than the contiguity limit/run-length that phv
+    //   allocation supports
     for (auto &entry : ccgf) {
         auto owner = entry.first;
         auto ccgf_width = entry.second;
@@ -262,11 +264,14 @@ bool Cluster::preorder(const IR::Primitive* primitive) {
 
 bool Cluster::preorder(const IR::Operation* operation) {
     // should not reach here
+    // TODO: use a BUG macro?
     LOG1("*****cluster.cpp: sanity_FAIL Operation*****" << operation->toString());
 
     return true;
 }
 
+// TODO: Perhaps separate different analyses into different passes.  Eg. set
+// mau_write elsewhere, since it doesn't have to do with clustering?
 bool Cluster::preorder(const IR::Expression* expression) {
     LOG4(".....Expression.....");
     auto field = phv_i.field(expression);
@@ -524,6 +529,8 @@ void Cluster::deparser_ccgf_t_phv() {
 //
 // compute fields that do not use mau pipeine
 //
+// TODO: What does it mean to "not use" the mau pipeline?  Not read?  Not
+// written?
 
 void Cluster::compute_fields_no_use_mau() {
     //
@@ -614,6 +621,7 @@ void Cluster::compute_fields_no_use_mau() {
         // compute ccgf width
         // need PHV container of this width
         //
+        // TODO: What does this method do?  Why is it called for every field?
         field.set_phv_use_width(field.ccgf() == &field);
         //
         // set deparser_no_holes for ccgf owner
@@ -756,7 +764,6 @@ Cluster::sort_fields_remove_non_determinism() {
 // insert_cluster
 //
 //***********************************************************************************
-
 void Cluster::create_dst_map_entry(PhvInfo::Field *field) {
     assert(field);
     if (!dst_map_i[field]) {
@@ -824,6 +831,12 @@ void Cluster::set_field_range(PhvInfo::Field *field, int container_width) {
 //
 //***********************************************************************************
 
+// TODO: This seems complicated.  If we didn't have to worry about CCGF, is
+// clustering just Union-Find?
+
+// TODO: Why not always insert rhs->ccgf if not null, rather than checking
+// is_ccgf_member?
+
 void Cluster::insert_cluster(PhvInfo::Field *lhs, PhvInfo::Field *rhs) {
     if (lhs && dst_map_i[lhs] && rhs) {
         if (rhs == lhs) {   // b == a
@@ -864,9 +877,13 @@ void Cluster::insert_cluster(PhvInfo::Field *lhs, PhvInfo::Field *rhs) {
 }  // insert_cluster
 
 
-bool
-Cluster::is_ccgf_member(PhvInfo::Field *lhs, PhvInfo::Field *rhs) {
-    // ccgf check: rhs is not a member of f.ccgf, f element of dst_map_i[lhs]
+/// @return true if the CCGF owner of @rhs is in the same cluster as @lhs.
+bool Cluster::is_ccgf_member(PhvInfo::Field *lhs, PhvInfo::Field *rhs) {
+    // ccgf check: rhs is not a member of f.ccgf_fields, f element of dst_map_i[lhs]
+
+    // TODO: why not check whether rhs.ccgf in dst_map_i[lhs] and
+    // ccgf_fields.size() == 0?
+
     if (lhs && rhs && dst_map_i[lhs]) {
         for (auto &f : *dst_map_i[lhs]) {
             if (std::find(f->ccgf_fields().begin(), f->ccgf_fields().end(), rhs)
@@ -916,6 +933,7 @@ void Cluster::sanity_check_clusters(const std::string& msg, PhvInfo::Field *lhs)
     if (lhs && dst_map_i[lhs]) {
         // b --> (b,d,e); count b=1 in (b,d,e)
         if (dst_map_i[lhs]->count(lhs) != 1) {
+            // TODO: don't sets contain at most one of any element?
             LOG1("*****cluster.cpp:sanity_FAIL*****"
                 << msg << ".....cluster member count > 1");
             LOG1(lhs << "-->" << dst_map_i[lhs]);

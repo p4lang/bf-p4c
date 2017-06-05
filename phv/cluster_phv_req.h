@@ -11,24 +11,7 @@
 #include "tofino/ir/thread_visitor.h"
 #include "cluster.h"
 #include "cluster_phv_container.h"
-//
-//
-//***********************************************************************************
-//
-// class Cluster_PHV_Requirements computes Cluster Requirements (width & number of containers)
-// for every computed cluster after Cluster analysis
-// class Cluster_PHV computes requirements for each cluster
-// conditions:
-// must perform Cluster_PHV_Requirements analysis after &cluster pass
-// input:
-// cluster.dst_map() computed by Cluster
-// accumulated map<field*, pointer to cluster_set of field*>
-// output:
-// accumulated vector<Cluster_PHV*> for each of PHV_Word (32,16,8-bit) widths
-//
-//***********************************************************************************
-//
-//
+
 static int cluster_id_g = 0;                // global counter for assigning cluster ids
 //
 class Cluster_PHV {
@@ -43,20 +26,14 @@ class Cluster_PHV {
     int max_width_i = 0;                    // max width of field in cluster
     int num_containers_i = 0;               // number of containers
     int num_fields_no_cohabit_i = 0;        // number of constrained fields, no cohabit
-    //
+
+    /// See documentation for field_overlay_map.
     ordered_map<PhvInfo::Field *,
         ordered_map<int, std::vector<PhvInfo::Field *> *>> field_overlay_map_i;
-                                            // liveness / interference graph related
-                                            // fields (within cluster) overlay map
-                                            // F = <c1,c2> adjacent containers based on F width
-                                            // F[0] = c1
-                                            // F[1] = c2
-                                            // F<c1,c2> -- [0] -- B<c1>, A<c1>
-                                            //          -- [1] -- B<c2>, D<c2>, E<c2>
-    //
+
     bool sliced_i = false;                  // sliced cluster, move-based ops only
     bool exact_containers_i = false;        // true => single field must exact match container width
-    //
+
  public:
     Cluster_PHV(
         ordered_set<PhvInfo::Field *> *set_of_f,
@@ -111,7 +88,11 @@ class Cluster_PHV {
     void num_containers(int n)                          { num_containers_i = n; }
     int num_containers(std::vector<PhvInfo::Field *>&, PHV_Container::PHV_Word);
     int num_fields_no_cohabit()                         { return num_fields_no_cohabit_i; }
-    //
+
+    /** A field overlay map maps each "owner" field to the virtual containers
+     * it owns and the other non-owner fields in them.  Fields that are too
+     * wide will own more than one virtual container.
+     */
     ordered_map<PhvInfo::Field *,
         ordered_map<int, std::vector<PhvInfo::Field *> *>>&
             field_overlay_map()                         { return field_overlay_map_i; }
@@ -120,23 +101,54 @@ class Cluster_PHV {
     bool exact_containers()                             { return exact_containers_i; }
     void set_exact_containers();                        // set exact_containers
 };  // Cluster_PHV
+
+
+//***********************************************************************************
+//
+// class Cluster_PHV_Requirements computes Cluster Requirements (width & number of containers)
+// for every computed cluster after Cluster analysis
+// class Cluster_PHV computes requirements for each cluster
+// conditions:
+// must perform Cluster_PHV_Requirements analysis after &cluster pass
+// input:
+// cluster.dst_map() computed by Cluster
+// accumulated map<field*, pointer to cluster_set of field*>
+// output:
+// accumulated vector<Cluster_PHV*> for each of PHV_Word (32,16,8-bit) widths
+//
+//***********************************************************************************
 //
 //
+
+/** @brief Analyze properties and requirements for each cluster, and sort them
+ * by size and kind.
+ *
+ * @pre PhvInfo, Cluster.
+ *
+ * @post Each cluster has a Cluster_PHV object describing its properties and
+ * requirements, but the field_overlay_map is empty.  Cluster_PHVs are sorted
+ * and stored in Cluster_PHV_Requirements fields.
+ */
 class Cluster_PHV_Requirements : public Visitor {
  private:
-    Cluster &cluster_i;            // reference to parent cluster
-    //
+    Cluster &cluster_i;
+
+    /** Cluster requirements sorted by <number of fields, width> in decreasing
+     * order (num, then width).
+     */
     std::vector<Cluster_PHV *> Cluster_PHV_i;
-                                   // sorted PHV requirements <num, width>,
-                                   // num decreasing then width decreasing
+
+    /** sorted pov fields, width decreasing header-stack POVs are not 1-bit
+     * fields such fields must be contiguously allocated in PHV
+     */
     std::vector<Cluster_PHV *> pov_fields_i;
-                                   // sorted pov fields, width decreasing
-                                   // header-stack POVs are not 1-bit fields
-                                   // such fields must be contiguously allocated in PHV
+
+    /// fields that are not used through mau pipeline, sorted width decreasing
     std::vector<Cluster_PHV *> t_phv_fields_i;
-                                   // fields that are not used through mau pipeline
-                                   // sorted width decreasing
+
  public:
+    // TODO: The name "Cluster" is a bit confusing---it implies a single
+    // cluster.
     Cluster_PHV_Requirements(Cluster &c) : cluster_i(c) {}  // NOLINT(runtime/explicit)
     //
     Cluster&

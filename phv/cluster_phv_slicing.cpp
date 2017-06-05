@@ -1,28 +1,6 @@
 #include "cluster_phv_slicing.h"
 #include "lib/log.h"
 
-//***********************************************************************************
-//
-// Cluster Slicing
-//
-// slice clusters into smaller clusters
-// (i) attempt packing with reduced width requirements
-//     albeit due to gress mismatch sliced clusters may not be packed
-//
-// (ii) slicing improves overlay possibilities due to lesser width
-//      although number and mutual exclusion of fields don't change
-//
-// 1. iterate over all fields in cluster,
-//    if all operations on field are "move" based
-//        cluster can be sliced
-//    else
-//        cluster cannot sliced
-//
-// 2. slice cluster by half, or +/- 1-bit around center
-//
-//***********************************************************************************
-//
-
 const IR::Node *
 Cluster_Slicing::apply_visitor(const IR::Node *node, const char *name) {
     //

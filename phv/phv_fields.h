@@ -27,9 +27,25 @@ class PHV_Analysis_API;
 class PHV_Bind;
 class Slice;
 
+/** @brief Create and store a PhvInfo::Field for each header and metadata
+ * field.
+ *
+ * Does not allocate POV fields---that must be done with a separate invocation
+ * of PhvInfo::allocatePOV.  All fields are cleared each time this pass is
+ * applied.
+ *
+ * @pre None.
+ *
+ * @post This object contains a PhvInfo::Field for each header and metadata
+ * field, but not POV fields.
+ */
 class PhvInfo : public Inspector {
  public:
-    //
+    /** @brief For each field `f` in an expression, set the "referenced" member
+     * of the Field struct for `f` and for the Field struct of `f`'s "valid"
+     * bit.
+     */
+    // TODO: Delete this class?  It seems to be unused.
     class SetReferenced : public Inspector {
         PhvInfo &self;
         bool preorder(const IR::Expression *e) override;
@@ -39,19 +55,32 @@ class PhvInfo : public Inspector {
      public:
         explicit SetReferenced(PhvInfo &phv) : self(phv) {}
     };
-    //
+
     class Field {
      public:
-        //
+        /** Field name, following this scheme:
+         *   - "header.field"
+         *   - "header.field[i]" where "i" is a positive integer
+         *   - "header.$valid"
+         */
         cstring         name;
+        /// Unique field ID.
         int             id;
+        /// Whether the Field is ingress or egress.
         gress_t         gress;
+        /// Total size of Field in bits.
         int             size;
-        int             offset;           // offset of lsb from lsb (last) bit of containing header
+        /// Offset of lsb from lsb (last) bit of containing header.
+        int             offset;
+        /// True if this Field is ever read.
         bool            referenced;
+        /// True if this Field is metadata.
         bool            metadata;
         bool            bridged = false;
+
+        /// True if this Field is a validity bit.  Implies metadata.
         bool            pov;
+
         //
         // ****************************************************************************************
         // begin phv_assignment (phv_bind) interface
@@ -151,24 +180,23 @@ class PhvInfo : public Inspector {
         //
         // constraints on this field
         //
-        bool            mau_phv_no_pack_i = false;         // true if op on field not "move based"
-                                                           // set by PHV_Field_Operations
-        bool            deparser_no_pack_i = false;        // true when egress_port
-        bool            deparser_no_holes_i = false;       // true if deparsed field
-        bool            exact_containers_i = false;        // place in container exactly (no holes)
+        bool            mau_phv_no_pack_i = false;         /// true if op on field not "move based"
+                                                           /// set by PHV_Field_Operations
+        bool            deparser_no_pack_i = false;        /// true when egress_port
+        bool            deparser_no_holes_i = false;       /// true if deparsed field
+        bool            exact_containers_i = false;        /// place in container exactly (no holes)
         //
         // operations on this field
         //
-        bool            mau_write_i = false;               // true when field Write in MAU
+        bool            mau_write_i = false;               /// true when field Write in MAU
         vector<std::tuple<bool, cstring, Field_Ops>> operations_i;
-                                                           // all operations performed on field
+                                                           /// all operations performed on field
         //
         // ccgf fields
         //
-        bool            header_stack_pov_ccgf_i = false;   // header stack pov owner
-        bool            simple_header_pov_ccgf_i = false;  // simple header ccgf
-        Field *ccgf_i = 0;                 // container contiguous group fields (ccgf)
-                                           //
+        bool            header_stack_pov_ccgf_i = false;   /// header stack pov owner
+        bool            simple_header_pov_ccgf_i = false;  /// simple header ccgf
+        Field *ccgf_i = 0;                 /// container contiguous group fields (ccgf)
                                            // (i) header stack povs: container FULL, no holes
                                            //     only when .$push exists -- see allocatePOV()
                                            //     owner".$stkvalid"->ccgf = 0, member->ccgf = owner
@@ -232,6 +260,11 @@ class PhvInfo : public Inspector {
         //
         // cluster ids
         //
+
+        // TODO: Why are cluster IDs strings?  Is this for pretty printing?
+        // (Eg. what is PHV_Interference::virtual_container_overlay() doing
+        // when it updates the cluster id?
+
         void cl_id(std::string cl_p) const;
         std::string cl_id(Cluster_PHV *cl = 0) const;
         int cl_id_num(Cluster_PHV *cl = 0) const;
@@ -345,8 +378,18 @@ class PhvInfo : public Inspector {
  private:  // class PhvInfo
     //
     map<cstring, Field>                 all_fields;
+    /// Maps Field.id to Field.  Also used to generate fresh Field.id values.
     vector<Field *>                     by_id;
+
+    /** Maps names of headers to the range in `by_id` containing their fields.
+     * 
+     * Eg. a header `h` has three fields `f1`, `f2`, `f3`, which are located at
+     * `by_id[2]`, `by_id[3]`, and `by_id[4]` (fields are always placed
+     * contiguously, in order, in `by_id`).  In this example, `all_headers == (2,4)`.
+     */
     map<cstring, std::pair<int, int>>   all_headers;
+    /// Like `all_headers`, but only headers, not header stacks.
+    // TODO: what about header unions?
     map<cstring, std::pair<int, int>>   simple_headers;
     gress_t                             gress;
     bool                                alloc_done_ = false;
@@ -394,7 +437,19 @@ class PhvInfo : public Inspector {
     iterator<vector<Field *>::iterator> end() { return by_id.end(); }
     iterator<vector<Field *>::const_iterator> begin() const { return by_id.begin(); }
     iterator<vector<Field *>::const_iterator> end() const { return by_id.end(); }
-    //
+
+    // TODO: This is its own pass---factor out?
+    /** Add a 1-bit "hdr.$valid" field for each simple header.  For each header stack, add:
+     *  - A "stack[x].$valid" field for each stack element.
+     *  - A "stack.$push" field if the push_front primitive is used.
+     *  - A "stack.$pop" field if the pop_front primitive is used.
+     *  - A "stack.$stkvalid" field.
+     *
+     * POV fields are grouped into container contiguous group fields (CCGFs) as follows:
+     *
+     * @pre PhvInfo and HeaderStackInfo.
+     * @post POV fields for all headers added to PhvInfo.
+     */
     void allocatePOV(const HeaderStackInfo &);
     bool alloc_done() const { return alloc_done_; }
     void set_done() { alloc_done_ = true; }
