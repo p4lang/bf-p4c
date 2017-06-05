@@ -242,6 +242,7 @@ class PHV_MAU_Group_Assignments : public Visitor {
     PHV_MAU_Group* downsize_mau_group(
         PHV_Container::Ingress_Egress gress,
         int width,
+        size_t required_containers,
         std::list<PHV_MAU_Group *> phv_groups_to_be_filled);
     //
     void create_aligned_container_slices();

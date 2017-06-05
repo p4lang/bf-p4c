@@ -764,21 +764,40 @@ PHV_MAU_Group_Assignments::container_no_pack(
             //    field f may need several containers, e.g., f:128 --> C1[32],C2,C3,C4
             //    each C single or partial field, e.g., f:24 --> C1[16], C2[8/16]
             //
+            // parser containers exact width requirement
+            // group can change based on cl downsize_mau_group(), use cl_g, save g for next cl
+            //
+            PHV_MAU_Group *cl_g = g;
             size_t req_containers = cl->num_containers();
-            if (g->width() < cl->width()) {
+            if (cl->exact_containers()
+                && cl->width() < static_cast<int>(cl_g->width())) {
+                //
+                if (auto g_scale_down = downsize_mau_group(
+                                            cl->gress(),
+                                            cl->width(),
+                                            req_containers,
+                                            phv_groups_to_be_filled)) {
+                    //
+                    cl_g = g_scale_down;
+                    LOG3("..... exact_containers ... downsizing MAU Group .....");
+                    LOG3(*cl_g);
+                } else {
+                    LOG1("*****cluster_phv_mau.cpp: sanity_FAIL*****"
+                        << ".....exact_containers MATCH NOT AVAILABLE");
+                    LOG1(cl);
+                }
+            }
+            if (cl_g->width() < cl->width()) {
                 // scale cl width down
                 // <2:_48_32>{3*32} => <2:_48_32>{5*16}
-                req_containers = cl->num_containers(cl->cluster_vec(), g->width());
+                req_containers = cl->num_containers(cl->cluster_vec(), cl_g->width());
             }
-            if (req_containers <= g->empty_containers()) {
-                // attempt assigning cl to g
-                bool cl_to_mau_g = true;  // may become false if cannot fix parser containers
+            if (req_containers <= cl_g->empty_containers()) {  // attempt assigning cl to cl_g
                 LOG3("..... attempting MAU Group .....");
-                LOG3(*g);
+                LOG3(*cl_g);
                 //
                 // pick next Empty container in MAU group g
                 // for each container assigned to cluster, taint bits that are filled
-                //
                 for (size_t i=0; i < cl->cluster_vec().size(); i++) {
                     //
                     PhvInfo::Field *field = cl->cluster_vec()[i];
@@ -788,7 +807,7 @@ PHV_MAU_Group_Assignments::container_no_pack(
                     // use correct amount to set cc->width
                     //
                     auto field_width = 0;
-                    // field constained no_pack and not ccgf owner, use size
+                    // field constrained no_pack and not ccgf owner, use size
                     if (PHV_Container::constraint_no_cohabit(field)
                        && field->ccgf() != field) {
                        field_width = field->size;
@@ -796,20 +815,14 @@ PHV_MAU_Group_Assignments::container_no_pack(
                        field_width = field->phv_use_width();
                     }
                     for (auto field_bit_lo=0; field_width > 0;) {
-                        //
-                        // parser containers exact width requirement
-                        //
-                        if (cl->exact_containers() && field_width < static_cast<int>(g->width())) {
-                            if (auto g_scale_down = downsize_mau_group(
-                                                        cl->gress(),
-                                                        field_width,
-                                                        phv_groups_to_be_filled)) {
-                                //
-                                g = g_scale_down;
-                            }
+                        int taint_bits = std::min(field_width, static_cast<int>(cl_g->width()));
+                        PHV_Container *container = cl_g->empty_container();
+                        if (!container) {
+                            LOG1("*****cluster_phv_mau.cpp: sanity_FAIL*****"
+                                << ".....NO CONTAINER AVAILABLE for field ");
+                            LOG1(field);
+                            assert(container);
                         }
-                        int taint_bits = std::min(field_width, static_cast<int>(g->width()));
-                        PHV_Container *container = g->empty_container();
                         int processed_bits =
                             container->taint(
                                 0,
@@ -822,7 +835,7 @@ PHV_MAU_Group_Assignments::container_no_pack(
                         // taint() sets field's hi reflecting balance remaining,
                         // returns processed width
                         //
-                        field_bit_lo += g->width();
+                        field_bit_lo += cl_g->width();
                         field_width -= processed_bits;  // loop termination
                         //
                         // check if this container is partially filled with parser field
@@ -846,7 +859,10 @@ PHV_MAU_Group_Assignments::container_no_pack(
                             // parser / deparser require fully packed containers
                             //
                             if (!fix_parser_container(container, phv_groups_to_be_filled)) {
-                                cl_to_mau_g = false;
+                                LOG1("*****cluster_phv_mau.cpp: sanity_FAIL*****"
+                                    << ".....cannot Fix Parser Container "
+                                    << field
+                                    << container);
                                 break;
                             }
                         }
@@ -858,25 +874,23 @@ PHV_MAU_Group_Assignments::container_no_pack(
                         LOG1(field);
                     }
                 }  // for cluster
-                if (cl_to_mau_g) {
-                    // if scaled width, update num_containers
-                    cl->num_containers(req_containers);
-                    cl->width(g->width());
-                    g->clusters().push_back(cl);
-                    clusters_remove.push_back(cl);
-                    //
-                    // fix MAU group's gress Ingress Or Egress
-                    //
-                    if (g->gress() == PHV_Container::Ingress_Egress::Ingress_Or_Egress) {
-                        g->gress(cl->gress());
-                    }
-                    //
-                    LOG3(*g << " <-- " << cl);
+                // update num_containers
+                cl->num_containers(req_containers);
+                cl->width(cl_g->width());
+                cl_g->clusters().push_back(cl);
+                clusters_remove.push_back(cl);
+                //
+                // fix MAU group's gress Ingress Or Egress
+                //
+                if (cl_g->gress() == PHV_Container::Ingress_Egress::Ingress_Or_Egress) {
+                    cl_g->gress(cl->gress());
                 }
-                if (g->empty_containers() == 0) {
+                //
+                LOG3(*cl_g << " <-- " << cl);
+                if (cl_g->empty_containers() == 0) {
                     break;
                 }
-            }
+            }  // attempt cl to g
         }  // for clusters
         // remove clusters already assigned
         for (auto &cl : clusters_remove) {
@@ -1072,9 +1086,10 @@ PHV_MAU_Group*
 PHV_MAU_Group_Assignments::downsize_mau_group(
     PHV_Container::Ingress_Egress gress,
     int width,
+    size_t required_containers,
     std::list<PHV_MAU_Group *> phv_groups_to_be_filled) {
     //
-    // find available MAU group w/ container width <= width
+    // find available MAU group w/ container width <= width & required containers
     // e.g., for width = 24, try 16b, then 8b
     //
     phv_groups_to_be_filled.sort([](PHV_MAU_Group *l, PHV_MAU_Group *r) {
@@ -1084,17 +1099,17 @@ PHV_MAU_Group_Assignments::downsize_mau_group(
         return l->width() > r->width();
     });
     for (auto &g : phv_groups_to_be_filled) {
-        if (g->empty_containers()
+        if (g->empty_containers() >= required_containers
             && gress_compatibility(g->gress(), gress)
             && g->width() <= width) {
             //
             return g;
         }
     }  // for
-    LOG1("***** get_available_mau_group() FAILED for <gress,width>  *****"
-        << "<" << static_cast<char>(gress) << "," <<  width << ">");
+    LOG1("***** downsize_mau_group() FAILED for <gress,width,required_containers>  *****"
+        << "<" << static_cast<char>(gress) << "," <<  width << "," << required_containers << ">");
     return 0;
-}  // get_available_mau_group
+}  // downsize_mau_group
 
 
 //***********************************************************************************

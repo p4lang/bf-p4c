@@ -134,32 +134,33 @@ bool Cluster::preorder(const IR::HeaderRef *hr) {
     // parser extract, deparser emit
     // operand can be field or header
     // when header, set_field_range all fields in header
-    //
-    int header_size = 0;
-    for (auto fid : Range(*phv_i.header(hr))) {
-        auto field = phv_i.field(fid);
-        set_field_range(field);
-        LOG4(field);
-        header_size += field->size;
-    }
-    //
     // attempting container contiguous groups
     //
-    ordered_map<PhvInfo::Field *, int> ccg;
+    ordered_map<PhvInfo::Field *, int> ccgf;
     PhvInfo::Field *group_accumulator = 0;
     int accumulator_bits = 0;
     for (auto fid : Range(*phv_i.header(hr))) {
         auto field = phv_i.field(fid);
+        if (!uses_i->is_referenced(field)) {
+            //
+            // disregard unreferenced fields before ccgf accumulation
+            //
+            continue;
+        }
+        set_field_range(field);
+        LOG4(field);
         //
         // accumulate sub-byte fields to group to a byte boundary
         // so that if any field is part of MAU then entire PHV container has no holes
         // fields must be contiguous
         // e.g.,
-        //   extra$0.x1: W0(0..23), extra$0.more: B1 = 5 bytes  -- deparser problem
-        //   extra$0.x1: W0(8..31), extra$0.more: W0(0..7) = 4 bytes
+        //   {extra$0.x1: W0(0..23), extra$0.more: B1}               => 5 bytes  -- deparser problem
+        //   {extra$0.x1: W0(8..31), extra$0.more: W0(0..7)}         => 4 bytes -- ok
+        //   {extra$0.x1.16-23: B2,extra$0.x1.8-15: B1,extra$0.x1.0-7: B0,extra$0.more: B49} => 4B
         //
         if (!field->ccgf()) {
-            if (group_accumulator || !PHV_Container::exact_container(field->size)) {
+            bool byte_multiple = field->size % PHV_Container::PHV_Word::b8 == 0;
+            if (group_accumulator || !byte_multiple) {
                 if (!group_accumulator) {
                     group_accumulator = field;
                     accumulator_bits = 0;
@@ -168,43 +169,66 @@ bool Cluster::preorder(const IR::HeaderRef *hr) {
                 group_accumulator->ccgf_fields().push_back(field);
                 accumulator_bits += field->size;
                 if (PHV_Container::exact_container(accumulator_bits)) {
-                    ccg[group_accumulator] = accumulator_bits;
+                    ccgf[group_accumulator] = accumulator_bits;
                     LOG4("+++++PHV_container_contiguous_group....."
-                        << accumulator_bits
-                        << " "
-                        << group_accumulator);
+                        << accumulator_bits);
+                    LOG4(group_accumulator);
                     group_accumulator = 0;
                 }
             }
         }
     }
     if (group_accumulator) {
-       ccg[group_accumulator] = accumulator_bits;
+       ccgf[group_accumulator] = accumulator_bits;
        LOG4("+++++PHV_container_contiguous_group....."
-           << accumulator_bits
-           << " "
-           << group_accumulator);
+           << accumulator_bits);
+       LOG4(group_accumulator);
     }
     //
     // discard following container contiguous group widths
-    // not byte-multiple (includes < byte)
+    // single member ccgf
+    // not byte-multiple but allow sub-byte
     // contiguity limit / run-length ccgf phv-allocation supports
     //
-    for (auto &entry : ccg) {
+    for (auto &entry : ccgf) {
         auto owner = entry.first;
-        auto ccg_width = entry.second;
-        assert(ccg_width > 0);
-        bool not_byte_multiple = ccg_width % PHV_Container::PHV_Word::b8;
+        auto ccgf_width = entry.second;
+        assert(ccgf_width > 0);
+        //
+        bool single_member = owner->ccgf_fields().size() == 1;
+        bool sub_byte = ccgf_width < PHV_Container::PHV_Word::b8;
+        bool byte_multiple = ccgf_width % PHV_Container::PHV_Word::b8 == 0;
         auto contiguity_limit = /* PHV_Container::Containers::MAX * */ PHV_Container::PHV_Word::b32;
-        if (not_byte_multiple || ccg_width > contiguity_limit) {
+        //
+        bool discard = false;
+        if (single_member) {
+            LOG1("*****cluster.cpp: ccgf fields not grouped *****"
+                << "-----discarding PHV_container_contiguous_group....."
+                << "single member");
+            discard = true;
+        }
+        if (!sub_byte && !byte_multiple) {
+            LOG1("*****cluster.cpp: ccgf fields not grouped *****"
+                << "-----discarding PHV_container_contiguous_group....."
+                << "not byte_multiple");
+            discard = true;
+        }
+        if (ccgf_width > contiguity_limit) {
+            LOG1("*****cluster.cpp: ccgf fields not grouped *****"
+                << "-----discarding PHV_container_contiguous_group....."
+                << "ccgf_width=" << ccgf_width
+                << " > contiguity_limit=" << contiguity_limit);
+            discard = true;
+        }
+        if (discard) {
             for (auto &f : owner->ccgf_fields()) {
                 f->set_ccgf(0);
             }
             owner->ccgf_fields().clear();
+            //
+            LOG1(owner);
             WARNING("*****cluster.cpp: ccgf fields not grouped *****"
-                << "-----discarded PHV_container_contiguous_group....."
-                << ccg_width
-                << " "
+                << "-----discarded PHV_container_contiguous_group.....\n"
                 << owner);
         }
     }
@@ -389,10 +413,14 @@ void Cluster::end_apply() {
     LOG4(".....dst_map_i.....");
     LOG4(dst_map_i);
     //
+    deparser_ccgf_phv();
+    //
     // compute all fields that are not used through the MAU pipeline
     // potential candidates for T-PHV allocation
     //
     compute_fields_no_use_mau();
+    //
+    deparser_ccgf_t_phv();
     //
     sort_fields_remove_non_determinism();
     //
@@ -404,6 +432,94 @@ void Cluster::end_apply() {
     LOG3(*this);                                                        // all Clusters
     //
 }  // end_apply
+
+//
+// deparser ccgf accumulation
+//
+
+void Cluster::deparser_ccgf_phv() {
+    //
+    // scan through dst_map_i => phv related fields as t_phv fields will not be in clusters
+    //
+    ordered_map<gress_t, std::list<PhvInfo::Field *>> ccgf;
+    ordered_map<gress_t, int> ccgf_width;
+    for (auto &entry : dst_map_i) {
+        PhvInfo::Field *f = entry.first;
+        ordered_set<PhvInfo::Field *> *s = entry.second;
+        if (s->size() == 1
+            && !f->metadata && !f->pov && !f->is_ccgf() && f->size < PHV_Container::PHV_Word::b8) {
+            //
+            ccgf[f->gress].push_back(f);
+            ccgf_width[f->gress] += f->size;
+        }
+    }
+    auto contiguity_limit = /* PHV_Container::Containers::MAX * */ PHV_Container::PHV_Word::b32;
+    for (auto &entry : ccgf) {
+        std::list<PhvInfo::Field *> member_list = entry.second;
+        PhvInfo::Field *owner = member_list.front();
+        if (ccgf_width[entry.first] > contiguity_limit) {
+            LOG1("*****cluster.cpp: ccgf fields not grouped *****"
+                << "-----deparser_ccgf_phv....."
+                << "ccgf_width=" << ccgf_width[entry.first]
+                << " > contiguity_limit=" << contiguity_limit);
+            LOG1(owner);
+            continue;
+        }
+        if (member_list.size() > 1) {
+            for (auto &f : member_list) {
+                //
+                f->set_ccgf(owner);
+                owner->ccgf_fields().push_back(f);
+                //
+                dst_map_i.erase(f);
+            }
+            dst_map_i[owner] = new ordered_set<PhvInfo::Field *>;  // new set
+            dst_map_i[owner]->insert(owner);
+            LOG3("..........deparser_ccgf_phv..........");
+            LOG3(owner);
+        }
+    }
+}  // deparser_ccgf_phv
+
+void Cluster::deparser_ccgf_t_phv() {
+    //
+    // scan through fields_no_use_mau_i => t_phv fields
+    //
+    ordered_map<gress_t, std::list<PhvInfo::Field *>> ccgf;
+    ordered_map<gress_t, int> ccgf_width;
+    for (auto &f : fields_no_use_mau_i) {
+        if (!f->metadata && !f->pov && !f->is_ccgf() && f->size < PHV_Container::PHV_Word::b8) {
+            //
+            ccgf[f->gress].push_back(f);
+            ccgf_width[f->gress] += f->size;
+        }
+    }
+    auto contiguity_limit = /* PHV_Container::Containers::MAX * */ PHV_Container::PHV_Word::b32;
+    for (auto &entry : ccgf) {
+        std::list<PhvInfo::Field *> member_list = entry.second;
+        PhvInfo::Field *owner = member_list.front();
+        if (ccgf_width[entry.first] > contiguity_limit) {
+            LOG1("*****cluster.cpp: ccgf fields not grouped *****"
+                << "-----deparser_ccgf_t_phv....."
+                << "ccgf_width=" << ccgf_width[entry.first]
+                << " > contiguity_limit=" << contiguity_limit);
+            LOG1(owner);
+            continue;
+        }
+        if (member_list.size() > 1) {
+            for (auto &f : member_list) {
+                //
+                f->set_ccgf(owner);
+                owner->ccgf_fields().push_back(f);
+                //
+                fields_no_use_mau_i.remove(f);
+            }
+            fields_no_use_mau_i.push_back(owner);
+            LOG3("..........deparser_ccgf_t_phv..........");
+            LOG3(owner);
+        }
+    }
+}  // deparser_ccgf_t_phv
 
 //
 // compute fields that do not use mau pipeine
@@ -423,16 +539,54 @@ void Cluster::compute_fields_no_use_mau() {
     ordered_set<PhvInfo::Field *> pov_fields;                          // pov fields
     ordered_set<PhvInfo::Field *> not_used_mau;                        // fields not used in MAU
                                                                        // all - cluster - pov_fields
+    //
+    // preprocess fields before accumulation
+    //
     for (auto &field : phv_i) {
         //
         // set deparser_no_holes
         // used in parser / deparser
         //
-        if (uses_i->use[0][field.gress][field.id]) {
+        if (uses_i->use[0][field.gress][field.id]
+            && !(field.metadata && !field.bridged) && !field.pov) {
+            //
             field.set_deparser_no_holes(true);
         }
+        if (field.simple_header_pov_ccgf() && !uses_i->is_referenced(&field)) {
+            //
+            // if singleton member, grouping of pov bits not required
+            // else appoint new owner of group
+            //
+            std::vector<PhvInfo::Field *> members;
+            for (auto &m : field.ccgf_fields()) {
+                if (uses_i->is_referenced(m)) {
+                    members.push_back(m);
+                }
+                m->set_ccgf(0);
+            }
+            if (members.size() > 1) {
+                PhvInfo::Field *owner = members.front();
+                owner->set_simple_header_pov_ccgf(true);
+                for (auto &m : members) {
+                    m->set_ccgf(owner);
+                    owner->ccgf_fields().push_back(m);
+                }
+            }
+            field.set_simple_header_pov_ccgf(false);
+            field.set_ccgf(0);
+            field.ccgf_fields().clear();
+        }
     }  // for all fields
+    //
+    // accumulation
+    //
     for (auto &field : phv_i) {
+        if (!uses_i->is_referenced(&field)) {
+            //
+            // disregard unreferenced fields before all_fields accumulation
+            //
+            continue;
+        }
         all_fields.insert(&field);
         //
         // avoid duplicate allocation for povs that are
@@ -529,7 +683,7 @@ void Cluster::compute_fields_no_use_mau() {
     // from T_PHV candidates,
     // discard the following
     // metadata & pov
-    // members of "container contiguous group"
+    // members of "container contiguous group" (owner accounts, avoid duplicate allocations)
     // fields not used in ingress or egress
     // set_field_range (entire field deparsed) for T_PHV fields_no_use_mau
     //
@@ -537,11 +691,9 @@ void Cluster::compute_fields_no_use_mau() {
     for (auto &f : not_used_mau) {
         bool use_pd = uses_i->use[0][f->gress][f->id];  // used in parser / deparser
         //
-        // normally f->metadata in the T_PHV path can be removed
-        // but bridge_metadata deparsed must be allocated
-        // f->metadata && !use_pd
+        // metadata in T_PHV can be removed but bridge_metadata deparsed must be allocated
         //
-        if (!use_pd || f->pov || (f->ccgf() && f->ccgf() != f)) {
+        if (!use_pd || f->pov || (f->metadata && !f->bridged) || (f->ccgf() && f->ccgf() != f)) {
             //
             delete_set.insert(f);
         } else {
@@ -921,6 +1073,33 @@ void Cluster::sanity_check_fields_use(const std::string& msg,
         LOG1(msg << s_check);
     }
 }  // sanity_check_fields_use
+
+//***********************************************************************************
+//
+// Cluster::Uses
+//
+//***********************************************************************************
+//
+
+bool
+Cluster::Uses::is_referenced(PhvInfo::Field *f) {      // use in mau or parde
+    assert(f);
+    bool use_mau = use[1][f->gress][f->id];  // use in mau
+    bool use_pd = use[0][f->gress][f->id];   // use in parser / deparser
+    if (f->pov && f->referenced) {
+        // SetReferenced pass sets the referenced flag
+        return true;
+    }
+    if (f->metadata && f->referenced) {
+        // set_metadata
+        return true;
+    }
+    if (f->bridged) {
+        // bridge metadata
+        return true;
+    }
+    return use_mau || use_pd;
+}
 
 //***********************************************************************************
 //

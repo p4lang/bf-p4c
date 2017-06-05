@@ -558,16 +558,30 @@ PHV_Container::fields_in_container(PhvInfo::Field *f, Container_Content *cc) {
     assert(cc);
     if (fields_in_container_i.count(f)) {
         for (auto &cc_slice : fields_in_container_i[f]) {
+            //
             // ensure ranges do not overlay for field slices
-            int s_lo = cc_slice->lo();
-            int s_hi = cc_slice->hi();
-            BUG_CHECK(((s_lo >= cc->lo() && s_lo <= cc->hi())
-               || (s_hi >= cc->lo() && s_hi <= cc->hi())),
+            // e.g., a sliced field |phv_185_lo,0..3||phv_185_hi,4..8|[4..8]=
+            // PHV-44.W44<5:17..21>, [0..3]=PHV-44.W44<5:25..28>
+            //
+            BUG_CHECK((cc_slice->hi() >= cc_slice->lo() && cc->hi() >= cc->lo())
+                && (cc_slice->lo() > cc->hi() || cc_slice->hi() < cc->lo()),
                 "*****PHV_Container::fields_in_container()*****"
-                "<s_lo=%d..s_hi=%d> <cc->lo()=%d..cc->hi()=%d>,"
+                ".....field slices overlap.....\n"
+                "<cc_slice_lo=%d..cc_slice_hi=%d> <cc->lo()=%d..cc->hi()=%d>\n,"
                 "cc_slice->field()=%d:%s, cc->field()=%d:%s",
-                s_lo, s_hi, cc->lo(), cc->hi(),
-                cc_slice->field()->id, cc_slice->field()->name, cc->field()->id, cc->field()->name);
+                cc_slice->lo(), cc_slice->hi(), cc->lo(), cc->hi(),
+                cc_slice->field()->id, cc_slice->field()->name,
+                cc->field()->id, cc->field()->name);
+            BUG_CHECK(cc_slice->taint_color() != cc->taint_color(),
+                "*****PHV_Container::fields_in_container()*****"
+                ".....field slices taint colors should not be same.....\n"
+                "<cc_slice_lo=%d..cc_slice_hi=%d> <cc->lo()=%d..cc->hi()=%d>\n"
+                "cc_slice->field()=%d:%s, cc->field()=%d:%s\n"
+                "cc_slice taint_color=%s ==  cc taint_color=%s",
+                cc_slice->lo(), cc_slice->hi(), cc->lo(), cc->hi(),
+                cc_slice->field()->id, cc_slice->field()->name,
+                cc->field()->id, cc->field()->name,
+                cc_slice->taint_color(), cc->taint_color());
         }
     }
     fields_in_container_i[f].push_back(cc);

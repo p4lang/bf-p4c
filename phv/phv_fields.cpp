@@ -669,6 +669,7 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field &field) {
     out << '>';
     out << (field.gress ? " E" : " I") << " off=" << field.offset;
     if (field.referenced) out << " ref";
+    if (field.bridged) out << " bridge";
     if (field.metadata) out << " meta";
     if (field.pov) out << " pov";
     if (field.mau_write()) out << " mau_write";

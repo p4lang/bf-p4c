@@ -89,6 +89,9 @@ class Cluster : public Inspector, P4WriteContext {
     std::list<PhvInfo::Field *>& pov_fields_not_in_cluster()
                                                             { return pov_fields_not_in_cluster_i; }
     //
+    void deparser_ccgf_phv();
+    void deparser_ccgf_t_phv();
+    //
     std::list<PhvInfo::Field *>& fields_no_use_mau()        { return fields_no_use_mau_i; }
     void compute_fields_no_use_mau();
     void sort_fields_remove_non_determinism();
@@ -103,20 +106,29 @@ class Cluster::Uses : public Inspector {
     /*              |  ^- gress                 */
     /*              0 == use in parser/deparser */
     /*              1 == use in mau             */
+    bitvec      dep[1][2];
+    /*              |  ^- gress                 */
+    /*              0 == use in deparser        */
+    //
     explicit Uses(const PhvInfo &p) : phv(p) { }
-
+    //
+    bool is_referenced(PhvInfo::Field *f);
+    //
  private:
     const PhvInfo       &phv;
     gress_t             thread;
     bool                in_mau;
+    bool                in_dep;
     bool preorder(const IR::Tofino::Parser *p) {
         in_mau = false;
+        in_dep = false;
         thread = p->gress;
         revisit_visited();
         return true; }
     bool preorder(const IR::Tofino::Deparser *d) {
         thread = d->gress;
         in_mau = true;  // treat egress_port and digests as in mau as they can't go in TPHV
+        in_dep = true;
         revisit_visited();
         visit(d->egress_port);
         d->digests.visit_children(*this);
@@ -126,16 +138,21 @@ class Cluster::Uses : public Inspector {
         return false; }
     bool preorder(const IR::MAU::TableSeq *) {
         in_mau = true;
+        in_dep = false;
         revisit_visited();
         return true; }
     bool preorder(const IR::HeaderRef *hr) {
-        if (auto head = phv.header(hr))
+        if (auto head = phv.header(hr)) {
             use[in_mau][thread].setrange(head->first, head->second - head->first + 1);
+            dep[0][thread].setrange(head->first, head->second - head->first + 1);
+        }
         return false; }
     bool preorder(const IR::Expression *e) {
         if (auto info = phv.field(e)) {
             LOG3("use " << info->name << " in " << thread << (in_mau ? " mau" : ""));
             use[in_mau][thread][info->id] = true;
+            LOG3("dep " << info->name << " in " << thread << (in_dep ? " dep" : ""));
+            dep[0][thread][info->id] = in_dep? true: false;
             return false; }
         return true; }
 };

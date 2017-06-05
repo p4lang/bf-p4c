@@ -166,26 +166,27 @@ class PhvInfo : public Inspector {
         // ccgf fields
         //
         bool            header_stack_pov_ccgf_i = false;   // header stack pov owner
-                                                           // has members in ccgf_fields
         bool            simple_header_pov_ccgf_i = false;  // simple header ccgf
-                                                           // has members in ccgf_fields
-        Field *ccgf_i = 0;                 // container contiguous group fields
-                                           // used for
+        Field *ccgf_i = 0;                 // container contiguous group fields (ccgf)
+                                           //
                                            // (i) header stack povs: container FULL, no holes
-                                           // (ii) sub-byte header fields: container may be PARTIAL
-                                           // sub-byte header fields
-                                           // owner->ccgf = owner, member->ccgf = owner
-                                           // owner->ccgf_fields = (owner, members)
-                                           // header stack povs
-                                           // only when .$push exists -- see allocatePOV()
-                                           // owner ".$stkvalid" ->ccgf = 0, member->ccgf = owner
-                                           // owner->ccgf_fields (members)
-                                           // e.g.,
-                                           // extra.$push: B9(5..6) --> extra.$stkvalid: B9(0..6)
-                                           // extra$0.$valid: B9(4) --> extra.$stkvalid: B9(0..6)
-        vector<Field *> ccgf_fields_i;     // member fields of container contiguous groups
-                                           // member pov fields of header stk pov
-                                           // these members are in same container as header stk pov
+                                           //     only when .$push exists -- see allocatePOV()
+                                           //     owner".$stkvalid"->ccgf = 0, member->ccgf = owner
+                                           //     owner->ccgf_fields (members)
+                                           //     e.g.,
+                                           //     extra.$push:B9(5..6) --> extra.$stkvalid: B9(0..6)
+                                           //     extra$0.$valid:B9(4) --> extra.$stkvalid: B9(0..6)
+                                           //
+                                           // (ii) simple header povs: container may be PARTIAL
+                                           //      owner->ccgf = owner, member->ccgf = owner
+                                           //      owner->ccgf_fields = (owner + members)
+                                           //
+                                           // (iii) sub-byte & byte boundary accumulation
+                                           //                                 -- deparser constraint
+                                           //      owner->ccgf = owner, member->ccgf = owner
+                                           //      owner->ccgf_fields = (owner + members)
+        vector<Field *> ccgf_fields_i;     // member fields of ccgfs
+                                           // members are in same container as owner
         //
         // phv container requirement of field
         //

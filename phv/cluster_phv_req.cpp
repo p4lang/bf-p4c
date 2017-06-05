@@ -217,24 +217,33 @@ Cluster_PHV::Cluster_PHV(
 void
 Cluster_PHV::set_exact_containers() {
     //
-    if (cluster_vec_i.size() == 1                                 // no MAU oper
-        && cluster_vec_i.front()->deparser_no_holes()             // f tagged no holes
-        && !cluster_vec_i.front()->deparser_no_pack()             // f tagged no pack
-        && (cluster_vec_i.front()->phv_use_width() % PHV_Container::PHV_Word::b8 == 0)) {
-                                                                  // ok 24,40,48,56b, not <b8,9,23b
-        // e.g., cannot map W47 as
-        //     icmp.hdrChecksum<16:0..15>: W47(0..15), ipv4.hdrChecksum<16:0..15>: W47(16..31)
-        // the parser can only extract whole containers, so extract to W47 => extract 4 bytes
-        // these vars need to be in either 8-bit or 16-bit containers
-        //     ipv4.hdrChecksum<16:0..15>: --> H227
-        //     icmp.hdrChecksum<16:0..15>: --> TH228
-        // set clusters exact_containers so that
-        //     cluster_phv_mau::container_pack_cohabit() honors exact width match
-        //     can happen when packing attempted on field before placement attempt
-        //     e.g., when PHV <== TPHV_Overflow
-        //
-        exact_containers_i = true;
-        cluster_vec_i.front()->set_exact_containers(true);
+    for (auto &field : cluster_vec_i) {
+        if (field->deparser_no_pack()) {                           // f tagged deparser no pack
+            exact_containers_i = false;
+            break;
+        }
+        if (field->deparser_no_holes()                             // f tagged no holes
+            && !field->metadata
+            && (field->phv_use_width() % PHV_Container::PHV_Word::b8 == 0)) {
+                                                                   // ok 24,40,48,56b, not <b8,9,23b
+            // e.g., cannot map W47 as
+            //     icmp.hdrChecksum<16:0..15>: W47(0..15), ipv4.hdrChecksum<16:0..15>: W47(16..31)
+            // the parser can only extract whole containers, so extract to W47 => extract 4 bytes
+            // these vars need to be in either 8-bit or 16-bit containers
+            //     ipv4.hdrChecksum<16:0..15>: --> H227
+            //     icmp.hdrChecksum<16:0..15>: --> TH228
+            //
+            // similarly, 48b field participating in MAU operations + deparsed cannot be in 32b
+            // in principle, if "move based" operations only, slice 48b to 32b, 16b
+            //
+            // set clusters exact_containers so that
+            //     cluster_phv_mau::container_pack_cohabit() honors exact width match
+            //     can happen when packing attempted on field before placement attempt
+            //     e.g., when PHV <== TPHV_Overflow
+            //
+            exact_containers_i = true;
+            field->set_exact_containers(true);
+        }
     }
 }  // set_exact_containers
 
@@ -456,6 +465,7 @@ Cluster_PHV::container_width(int field_width) {
         }
         LOG3("*****Cluster_PHV::container_width() cannot satisfy exactness for field_width = "
             << field_width << "******");
+        LOG3(this);
         // continue below for container width determination
     }
     if (field_width > PHV_Container::PHV_Word::b16) {
@@ -484,13 +494,16 @@ Cluster_PHV::num_containers(
     for (auto &pfield : cluster_vec) {
         //
         // fields can span containers  (e.g., 48b = 2*32b or 3*16b = 6*8b)
-        // no sharing of containers with cohabitant fields
-        // sharing needs analyses:
-        // (i)  container single-write table interference
-        // (ii) surround interference
+        // container cannot contain two fields from same cluster
         //
         int field_width = pfield->phv_use_width();
         num_containers += field_width / width + (field_width % width? 1 : 0);
+        // if any member of ccgf is no_pack constrained, need extra container
+        for (auto &m : pfield->ccgf_fields()) {
+            if (PHV_Container::constraint_no_cohabit(m)) {
+                num_containers++;
+            }
+        }   // for
     }
     if (num_containers > PHV_Container::Containers::MAX) {
         LOG1(

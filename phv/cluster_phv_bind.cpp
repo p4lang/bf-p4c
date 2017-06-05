@@ -16,10 +16,7 @@ PHV_Bind::apply_visitor(const IR::Node *node, const char *name) {
     if (name) {
         LOG1(name);
     }
-    //
-    // uses_i recomputed after dead-code elimination
-    //
-    node->apply(*uses_i);
+    node->apply(*uses_i);  // uses_i recomputed after dead-code elimination
     //
     create_phv_asm_container_map();
     //
@@ -148,18 +145,10 @@ PHV_Bind::collect_containers_with_fields() {
     ordered_set<PhvInfo::Field *> all_phv_fields;
     // All Fields
     for (auto &field : phv_i) {
-        //
-        // discard fields that are not used
-        //
-        bool use_mau = uses_i->use[1][field.gress][field.id];
-        bool use_parde = uses_i->use[0][field.gress][field.id];
-        if (field.pov
-           || use_mau
-           || use_parde) {
-            //
+        if (uses_i->is_referenced(&field)) {  // disregard unreferenced fields
             all_phv_fields.insert(&field);
         } else {
-            LOG3("PHV_Bind::collect_containers.....discarding field use_mau,use_parde=<0,0>....."
+            LOG3("PHV_Bind::collect_containers.....discarding unreferenced field....."
                 << &field);
         }
     }
@@ -186,16 +175,14 @@ PHV_Bind::phv_tphv_allocate(std::list<PhvInfo::Field *>& fields) {
             remove_set.insert(f);
             continue;
         }
-        if (uses_i->use[1][f->gress][f->id]) {
-            // used in MAU
+        if (uses_i->use[1][f->gress][f->id]) {  // used in MAU
             phv_clusters.push_back(
                 new Cluster_PHV(
                     f,
                     std::string(1,
                         PHV_Container::Container_Content::Pass::Phv_Bind) + f->cl_id()));
         } else {
-            if (uses_i->use[0][f->gress][f->id]) {
-                // used in parser / deparser
+            if (uses_i->use[0][f->gress][f->id]) {  // used in parser / deparser
                 t_phv_clusters.push_back(
                     new Cluster_PHV(
                         f,
@@ -400,10 +387,7 @@ PHV_Bind::trivial_allocate(std::list<PhvInfo::Field *>& fields) {
         }
         std::string container_prefix = "";
         if (!uses_i->use[1][f->gress][f->id]
-            && uses_i->use[0][f->gress][f->id]) {
-            //
-            // not used in mau && used in paser / deparser
-            //
+            && uses_i->use[0][f->gress][f->id]) {  // not used in mau but used in parde
             container_prefix = "T";
         }
         int field_bit = 0;

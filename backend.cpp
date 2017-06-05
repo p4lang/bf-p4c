@@ -189,13 +189,12 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
         new HeaderPushPop(stacks),
         new CopyHeaderEliminator,   // needs to be after POV alloc and before InstSel
         new InstructionSelection(phv),
-        new DumpPipe("Before ElimUnused .....after InstructionSelection"),
+        new DumpPipe("After InstructionSelection"),
         &defuse,
-        new ElimUnused(phv, defuse),
-        new DumpPipe("After ElimUnused .....before phv_analysis"),
-        //
+        new ElimUnused(phv, defuse),  // ElimUnused may have eliminated all references to a field
+        new PhvInfo::SetReferenced(phv),  // ElimUnused can cause field unreferenced
+        new DumpPipe("Before phv_analysis"),
         phv_analysis,               // phv analysis after last &phv pass
-        //
         new GatewayOpt(phv),   // must be before TableLayout?  or just TablePlacement?
         new TableLayout(phv, lc),
         new TableFindSeqDependencies,
@@ -208,26 +207,23 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
         new FindDependencyGraph(phv, deps),
         &mutex,
         new DetermineActionProfileFaults(mutex),
-        new DumpPipe("Before table placement"),
+        new DumpPipe("Before TablePlacement"),
         new TablePlacement(&deps, mutex, phv, lc),
         new CheckTableNameDuplicate,
         new TableFindSeqDependencies,  // not needed?
         new CheckTableNameDuplicate,
         new ComputeShifts,
-        new DumpPipe("Before ElimUnused .....after ComputeShifts"),
+        new DumpPipe("After ComputeShifts"),
         &defuse,
         new ElimUnused(phv, defuse),
-        new DumpPipe("After ElimUnused .....before SetReferenced"),
         new PhvInfo::SetReferenced(phv),
         &mutex,
         &summary,
         Log::verbose() ? new VisitFunctor([&summary]() { std::cout << summary; }) : nullptr,
-        //
+        new DumpPipe("Before phv_alloc/bind"),
         phv_alloc,                   // phv assignment / binding
-        //
         Log::verbose() ? new VisitFunctor([&phv]() { std::cout << phv; }) : nullptr,
         new PHV::ValidateAllocation(phv),
-
         new IXBarRealign(phv),
         new SplitExtractEmit,
         new TotalInstructionAdjustment(phv),
