@@ -330,7 +330,7 @@ static void yyerror(const char *fmt, ...) {
     va_end(args);
 }
 
-void asm_parse_file(const char *name, FILE *in) {
+int asm_parse_file(const char *name, FILE *in) {
 #ifdef YYDEBUG
     if (const char *p = getenv("YYDEBUG"))
         yydebug = atoi(p);
@@ -339,6 +339,7 @@ void asm_parse_file(const char *name, FILE *in) {
     line_file_map[lineno++] = std::make_pair(name, 0);
     if (yyparse())
         error_count++;
+    return error_count;
 }
 
 /* check a list and see if it is a list of singleton maps -- if so, concatenate the

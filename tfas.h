@@ -15,7 +15,7 @@ extern struct option_t {
 #include <iostream>
 #include <memory>
 
-void asm_parse_file(const char *name, FILE *in);
+int asm_parse_file(const char *name, FILE *in);
 
 extern int error_count;
 extern void error(int lineno, const char *fmt, va_list);

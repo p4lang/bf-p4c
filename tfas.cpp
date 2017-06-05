@@ -206,7 +206,8 @@ int main(int ac, char **av) {
                     error_count++; }
         } else if (FILE *fp = fopen(av[i], "r")) {
             if (!srcfiles++) firstsrc = av[i];
-            asm_parse_file(av[i], fp);
+            error_count += asm_parse_file(av[i], fp);
+            if (error_count > 0) return error_count;
             fclose(fp);
             asmfile = true;
         } else {

@@ -1,6 +1,8 @@
 #!/bin/bash
 
 fast=false
+brig=false
+outdir=false
 verbose=false
 TIME=false
 # parallel make arguments
@@ -23,6 +25,12 @@ TRY_GLSC="
     $PWD/../../p4c-tofino/p4c_tofino/shell.py
     $TESTDIR/../../p4c-tofino/shell.py
     $TESTDIR/../../p4c-tofino/p4c_tofino/shell.py
+"
+TRY_BRIG="
+    $HOME/p4c/build/p4c-tofino
+    $PWD/../p4c/build/p4c-tofino
+    $PWD/../../p4c/build/p4c-tofino
+    $TESTDIR/../../p4c/build/p4c-tofino
 "
 
 TRY_STF="
@@ -67,6 +75,8 @@ while expr "$1" : - >/dev/null; do
     case $1 in
     -f) fast=true
         ;;
+    -b) brig=true
+        ;;
     -stage*|-work*)
         TRY_GLSC="$HOME/p4c-tofino$1/p4c_tofino/shell.py"
         ;;
@@ -83,6 +93,11 @@ while expr "$1" : - >/dev/null; do
         ;;
     -j[1-9]|-j[1-9][0-9])
         PARALLEL=${1#-j}
+        ;;
+    -o)
+        shift
+        outdir=true
+        odir=$1
         ;;
     -v)
         verbose=true
@@ -120,6 +135,15 @@ if [ ! -x "$GLSC" ]; then
     done
 fi
 
+if [ ! -x "$BRIG" ]; then
+    for f in $TRY_BRIG; do
+        if [ -x $f ]; then
+            BRIG=$f
+            break
+        fi
+    done
+fi
+
 for f in $TRY_STF; do
     if [ -x "$f" -a "$f" -nt "$STF" ]; then
         STF="$f"
@@ -129,8 +153,15 @@ done
 if [ -x "$GLSC" ]; then
     echo "Using $GLSC"
 else
-    echo >&2 "Can't find p4c-tofino executable"
+    echo >&2 "Can't find p4c-tofino (glass) executable"
     GLSC=false
+fi
+
+if [ -x "$BRIG" ]; then
+    echo "Using $BRIG"
+else
+    echo >&2 "Can't find p4c-tofino (brig) executable"
+    BRIG=false
 fi
 
 if [ -x "$STF" ]; then
@@ -232,25 +263,30 @@ function test_p4() {
         true
     else 
         rm -f $name.tfa
-        if run $GLSC -o . --verbose 2 -vl 2 -S -G $glsc_args ../$name.p4 </dev/null >glsc.log 2>&1; then
-            if [ out.tfa -nt $name.tfa ]; then
-                rm -f $name.tfa
-                ln -s out.tfa $name.tfa
+        if $brig; then
+            if run $BRIG -D__TARGET_TOFINO__ ../$name.p4 -o out.tfa </dev/null >brig.log 2>&1; then
+                clog='brig.log'
             fi
-            if [ ! -r $name.tfa ]; then
-                msg="$msg p4 compile failed to produce asm"
-                fail_type="compile"
-                rv=1
-                ok=false
-            fi
+        elif run $GLSC -o . --verbose 2 -vl 2 -S -G $glsc_args ../$name.p4 </dev/null >glsc.log 2>&1; then
+            clog='glsc.log'
         else
             msg="$msg p4 compile failed"
             fail_type="compile"
             rv=1
             ok=false
         fi
+        if [ out.tfa -nt $name.tfa ]; then
+            rm -f $name.tfa
+            ln -s out.tfa $name.tfa
+        fi
+        if [ ! -r $name.tfa ] && $ok; then
+            msg="$msg p4 compile failed to produce asm"
+            fail_type="compile"
+            rv=1
+            ok=false
+        fi
         if not $ok && ( [ $count -eq 1 ] || [ "$expect_fail" != "compile" ] ); then
-            flock $FAILLOG -c "echo '$p4file:' >>$FAILLOG; sed 's/^/ /' glsc.log >>$FAILLOG"
+            flock $FAILLOG -c "echo '$p4file:' >>$FAILLOG; sed 's/^/ /' $clog >>$FAILLOG"
         fi
     fi
     glsc_cfg=.
@@ -273,38 +309,40 @@ function test_p4() {
                 rm $f
             fi
         done
-        for f in $name.out/*.cfg.json.gz; do
-            if zcmp -s $f $glsc_cfg/$(basename $f); then
-                continue
-            elif [ "$f" = "$name.out/regs.pipe.cfg.json.gz" ]; then
-                $JSON_DIFF -i mau $f $glsc_cfg/$(basename $f)
-                if [ $? -gt 128 ]; then
-                    echo "***json_diff crashed"
+        if ! $brig; then
+            for f in $name.out/*.cfg.json.gz; do
+                if zcmp -s $f $glsc_cfg/$(basename $f); then
+                    continue
+                elif [ "$f" = "$name.out/regs.pipe.cfg.json.gz" ]; then
+                    $JSON_DIFF -i mau $f $glsc_cfg/$(basename $f)
+                    if [ $? -gt 128 ]; then
+                        echo "***json_diff crashed"
+                    fi
+                    continue
                 fi
-                continue
+                $DIFF $f $glsc_cfg/$(basename $f)
+            done > json_diff.txt
+            glsc_ctxt=${name}_context_llir.json
+            if [ -d context ]; then
+                glsc_ctxt=context/mau.context.json
             fi
-            $DIFF $f $glsc_cfg/$(basename $f)
-        done > json_diff.txt
-        glsc_ctxt=${name}_context_llir.json
-        if [ -d context ]; then
-            glsc_ctxt=context/mau.context.json
-        fi
-        if [ -r $name.out/tbl-cfg ]; then
-            { $JSON_DIFF $CTXT_DIFFARGS $name.out/tbl-cfg $glsc_ctxt;
-              if [ $? -gt 128 ]; then echo "***json_diff crashed"; fi; } >> json_diff.txt
-        fi
-        cnt=$(grep -Ev '^\+\+\+|^---|"int_inj"' json_diff.txt | grep -Ec '^\+|^-')
-        if [ $cnt -gt 0 ]; then
-            msg="$msg mismatch"
-            fail_type="mismatch"
-            rv=1
-            if [ $count -eq 1 ] || [ "$expect_fail" != "mismatch" ]; then
-                flock $FAILLOG -c "echo '$p4file:' >>$FAILLOG; cat json_diff.txt >>$FAILLOG"
+            if [ -r $name.out/tbl-cfg ]; then
+                { $JSON_DIFF $CTXT_DIFFARGS $name.out/tbl-cfg $glsc_ctxt;
+                  if [ $? -gt 128 ]; then echo "***json_diff crashed"; fi; } >> json_diff.txt
             fi
-            ok=false
-        else
-            msg="$msg pass"
-            let pass++
+            cnt=$(grep -Ev '^\+\+\+|^---|"int_inj"' json_diff.txt | grep -Ec '^\+|^-')
+            if [ $cnt -gt 0 ]; then
+                msg="$msg mismatch"
+                fail_type="mismatch"
+                rv=1
+                if [ $count -eq 1 ] || [ "$expect_fail" != "mismatch" ]; then
+                    flock $FAILLOG -c "echo '$p4file:' >>$FAILLOG; cat json_diff.txt >>$FAILLOG"
+                fi
+                ok=false
+            else
+                msg="$msg pass"
+                let pass++
+            fi
         fi
     elif $ok; then
         msg="$msg tfas failed"
@@ -390,18 +428,28 @@ function test_stf() {
     pushd $(dirname $1) >/dev/null
     name=$(basename $1 .stf)
     rv=0
-    if [[ -r $name.tfa && ( ! -r $name.out/tofino-bin || $fast = false ) ]]; then
-        mkdir -p $name.out
-        if not run $TFAS -Mvvvvl $name.out/tfas.config.log $name.tfa >$name.out/tfas.log 2>&1; then
-            msg="$msg tfas failed"
-            flock $FAILLOG -c "echo '$1:' >>$FAILLOG; sed -e 's/^/ /' -e '/\n/!a\' $name.out/tfas.log >>$FAILLOG"
-            rv=1
-        fi
+    #if [[ ( ! -f `pwd`/$name.out/$name.tfa || $fast = false ) && ! -d $outdir ]]; then
+    if ! $outdir; then
+        test_p4 $name.p4 
     fi
+    #if [[ -r `pwd`/$name.out/$name.tfa && ( ! -r `pwd`/$name.out/$name.out/tofino-bin || $fast = false ) ]]; then
+    #    mkdir -p $name.out
+    #    if not run $TFAS -Mvvvvl $name.out/tfas.config.log $name.out/$name.tfa >$name.out/tfas.log 2>&1; then
+    #        msg="$msg tfas failed"
+    #        flock $FAILLOG -c "echo '$1:' >>$FAILLOG; sed -e 's/^/ /' -e '/\n/!a\' $name.out/tfas.log >>$FAILLOG"
+    #        rv=1
+    #    fi
+    #fi
     if [[ $rv == 0 && -d $name.out ]]; then
         bindir=$name.out
+        jsondir=$name.out/cfg
         if [ -d "$bindir/$name.out" ]; then
             bindir="$bindir/$name.out"
+            jsondir=$bindir
+        fi
+        if [ -d outdir ]; then
+            bindir=$outdir
+            jsondir=$bindir
         fi
         start=`date +%s`
         linked=false
@@ -414,7 +462,7 @@ function test_stf() {
                 fi
             done
         fi
-        if $linked || run $TFLINK -o $bindir/tofino.bin $bindir/*.cfg.json* >/dev/null 2>&1; then
+        if $linked || run $TFLINK -o $bindir/tofino.bin $jsondir/*.cfg.json* >/dev/null 2>&1; then
             export TOFINO_BIN=$bindir/tofino.bin
             export TABLE_CONFIG=$bindir/tbl-cfg
             if run "$STF" -l $bindir $name.stf >$name.out/stf.txt 2>&1; then
@@ -505,7 +553,16 @@ for file in "$@"; do
         fi
         wait_1
     fi
-    if [ "${file##*.}" == "p4" ]; then
+    if $outdir; then
+        if [ "${file##*.}" == "stf" ]; then
+            let running++
+            test_stf $file &
+        else
+            echo "-o option can only be passed for stf file"
+            echo "Input file : $file"
+            exit 1
+        fi
+    elif [ "${file##*.}" == "p4" ]; then
         let running++
         test_p4 $file &
     elif [ "${file##*.}" == "tfa" ]; then

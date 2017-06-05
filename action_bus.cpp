@@ -84,9 +84,9 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
                 if (!PCHECKTYPEM(kv.value.vec.size == 2, kv.value[1], tRANGE,
                                  "field name or slice"))
                     continue;
-                if ((kv.value[1].lo & 7) != 0 || (kv.value[1].hi & 7) != 7) {
-                    error(kv.value.lineno, "Slice must be byte slice");
-                    continue; }
+                //if ((kv.value[1].lo & 7) != 0 || (kv.value[1].hi & 7) != 7) {
+                //    error(kv.value.lineno, "Slice must be byte slice");
+                //    continue; }
                 name = kv.value[0].s;
                 name_ref = &kv.value[0];
                 off = kv.value[1].lo;
@@ -142,10 +142,10 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
             idx = kv.key.lo;
             unsigned size = (kv.key.hi-idx+1) * 8;
             if (!sz) sz = size;
-            if (f && size != f->size) {
-                error(kv.key.lineno, "Byte range doesn't match size %d of %s",
-                      f->size, name);
-                continue; }
+            //if (f && size != f->size) {
+            //    error(kv.key.lineno, "Byte range doesn't match size %d of %s",
+            //          f->size, name);
+            //    continue; }
         } else if (!sz)
             sz = idx < ACTION_DATA_8B_SLOTS ? 8 :
                  idx < ACTION_DATA_8B_SLOTS + 2*ACTION_DATA_16B_SLOTS ? 16 : 32;
