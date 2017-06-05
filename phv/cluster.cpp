@@ -554,7 +554,7 @@ void Cluster::compute_fields_no_use_mau() {
         // set deparser_no_holes
         // used in parser / deparser
         //
-        if (uses_i->use[0][field.gress][field.id]
+        if (uses_i->dep[0][field.gress][field.id]
             && !(field.metadata && !field.bridged) && !field.pov) {
             //
             field.set_deparser_no_holes(true);

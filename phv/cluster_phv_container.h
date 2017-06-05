@@ -103,6 +103,7 @@ class PHV_Container {
         fields_in_container_i;                               // fields binned in this container
                                                              // list of ccs necessary for mutliple
                                                              // sliced fields in same container
+    bool deparser_no_holes_i = false;                        // true if container has deparsed field
     //
     char *bits_i;                                            // tainted bits in container
     std::string taint_color_i = "0";                         // each resident field separate color
@@ -212,27 +213,17 @@ class PHV_Container {
         return fields_in_container_i;
     }
     ordered_map<PhvInfo::Field *,
-        std::list<Container_Content *>>& fields_in_container() {
-        return fields_in_container_i;
-    }
-    void fields_in_container(std::list<Container_Content *>& cc_list) {
-        // sorted in bit-wise order in container
-        cc_list.clear();
-        for (auto &cc_s : Values(fields_in_container_i)) {
-            for (auto &cc : cc_s) {
-                cc_list.push_back(cc);
-            }
-        }
-        cc_list.sort([](Container_Content *l, Container_Content *r) {
-            return l->lo() < r->lo();
-        });
-    }
+        std::list<Container_Content *>>& fields_in_container() { return fields_in_container_i; }
+    void fields_in_container(std::list<Container_Content *>& cc_list);
     void fields_in_container(PhvInfo::Field *f, Container_Content *cc);
     void fields_in_container(int start, int end, ordered_set<PhvInfo::Field *>& f_set);
     //
     std::pair<int, int> start_bit_and_width(PhvInfo::Field *f);
     void holes(std::vector<char>& bits, char empty, std::list<std::pair<int, int>>& holes_list);
     void holes(std::list<std::pair<int, int>>& holes_list);
+    //
+    bool deparser_no_holes() const                              { return deparser_no_holes_i; }
+    void set_deparser_no_holes(bool b)                          { deparser_no_holes_i = b; }
     //
     void create_ranges();
     void clear();

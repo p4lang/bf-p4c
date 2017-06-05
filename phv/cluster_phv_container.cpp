@@ -553,6 +553,20 @@ PHV_Container::taint_bits(
 }  // taint_bits()
 
 void
+PHV_Container::fields_in_container(std::list<Container_Content *>& cc_list) {
+    // sorted in bit-wise order in container
+    cc_list.clear();
+    for (auto &cc_s : Values(fields_in_container_i)) {
+        for (auto &cc : cc_s) {
+            cc_list.push_back(cc);
+        }
+    }
+    cc_list.sort([](Container_Content *l, Container_Content *r) {
+        return l->lo() < r->lo();
+    });
+}
+
+void
 PHV_Container::fields_in_container(PhvInfo::Field *f, Container_Content *cc) {
     assert(f);
     assert(cc);
@@ -585,6 +599,9 @@ PHV_Container::fields_in_container(PhvInfo::Field *f, Container_Content *cc) {
         }
     }
     fields_in_container_i[f].push_back(cc);
+    if (f->deparser_no_holes()) {
+        set_deparser_no_holes(true);
+    }
 }  // fields_in_container f cc
 
 void
@@ -822,6 +839,33 @@ void PHV_Container::Container_Content::sanity_check_container(
 
 void PHV_Container::sanity_check_container(const std::string& msg) {
     const std::string msg_1 = msg + "..PHV_Container::sanity_check_container";
+    //
+    // if container is deparsed then
+    // (i) cannot have a mix of metadata & non-metadata fields
+    // (ii) should not have unused bits
+    // a deparsed container can have unused bits, but unused bits will be deparsed as well
+    // arises in bridged metadata, where unused bits are padding on the wire
+    //
+    if (deparser_no_holes_i) {
+        for (auto &entry : fields_in_container_i) {
+            PhvInfo::Field *f = entry.first;
+            if (f->metadata && !f->bridged) {
+                LOG3("*****cluster_phv_container.cpp:sanity_FAIL*****....."
+                << msg_1
+                << " metadata field in deparsed container "
+                << this
+                << std::endl
+                << f);
+            }
+        }
+        if (avail_bits_i != 0) {
+            LOG3("*****cluster_phv_container.cpp:sanity_FAIL*****....."
+            << msg_1
+            << " deparsed container has avail_bits = "
+            << avail_bits_i
+            << this);
+        }
+    }
     //
     // for fields binned in this container check bits occupied
     //

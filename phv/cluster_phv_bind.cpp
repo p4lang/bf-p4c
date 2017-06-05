@@ -230,6 +230,10 @@ PHV_Bind::bind_fields_to_containers() {
         for (auto &cc_s : Values(c->fields_in_container())) {
             for (auto &cc : cc_s) {
                 PhvInfo::Field *f = cc->field();
+                if (!uses_i->is_referenced(f)) {
+                    // referenced @ phv_analysis but ElimUnused / unreferenced now @ phv_bind
+                    continue;
+                }
                 int field_bit = cc->field_bit_lo();
                 int container_bit = cc->lo();
                 int width_in_container = cc->width();
