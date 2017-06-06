@@ -6,8 +6,8 @@ It has the following structure:
 ```
 bf-p4c-compilers
 ├── p4c      -- submodule for the p4lang/p4c repo
-├── bf-p4c   -- the contents of the current p4c-extension-tofino repo
-├── bf-asm   -- the contents of the tofino-asm repo
+├── bf-p4c   -- the contents of the old p4c-extension-tofino repo
+├── bf-asm   -- the contents of the old tofino-asm repo
 └-- p4_tests -- submodule for the p4_tests repo
 ```
 
@@ -23,8 +23,7 @@ integrated into the bf-p4c build at a later time.
 
 To configure and build:
 ```
-git clone git@github.com:barefootnetworks/bf-p4c-compilers.git
-git submodule update --init --recursive
+git clone --recursive git@github.com:barefootnetworks/bf-p4c-compilers.git
 ./bootstrap_bfn_compilers.sh [--prefix <path>] [--enable-doxygen-docs]
 cd build
 make -j N [install]
@@ -33,7 +32,7 @@ cd build/bf-asm
 make -j N [install]
 cd ../..
 
-# Dependences
+# Dependencies
 
 Each of the submodules have dependencies. Please see the
 [p4lang/p4c](p4c/README.md), [Barefoot p4c](bf-p4c/README.md), and

@@ -28,8 +28,11 @@ fi
 
 # bootstrap the compiler
 mkdir -p p4c/extensions
-ln -sf bf-p4c p4c/extensions/tofino
+
 pushd p4c
+pushd extensions
+ln -sf ../../bf-p4c tofino
+popd
 ./bootstrap.sh $*
 popd
 ln -s p4c/build build
