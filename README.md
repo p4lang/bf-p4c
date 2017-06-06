@@ -28,6 +28,7 @@ cd bf-p4c-compilers
 ./bootstrap_bfn_compilers.sh [--prefix <path>] [--enable-doxygen-docs]
 cd build
 make -j N [check] [install]
+```
 
 # Dependencies
 
