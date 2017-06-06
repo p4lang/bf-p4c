@@ -296,6 +296,3 @@ XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_88_testing_action_data_allocati
 
 # default drop packet instead of writing to port 0
 XFAIL_TESTS += tofino/testdata/p4_16_samples/issue655-bmv2.p4.test
-
-# Crash due to uncaught Backtrack::trigger
-XFAIL_TESTS += tofino/testdata/p4_14_samples/switch_20160512/switch.p4.test

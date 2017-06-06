@@ -1,7 +1,7 @@
-../extensions/p4_tests/p4_16/flowlet_switching.p4(34): warning: index shadows index
+flowlet_switching.p4(34): warning: index shadows index
         void onPacket(in Index index, in Timestamp ts, inout NextHop nextHop) {
                                ^^^^^
-../extensions/p4_tests/p4_16/flowlet_switching.p4(32)
+flowlet_switching.p4(32)
 control FlowletSwitching(in Index index, inout Metadata metadata) {
                                   ^^^^^
 warning: Program does not contain a `main' module

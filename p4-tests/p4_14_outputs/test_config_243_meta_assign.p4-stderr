@@ -1,9 +1,9 @@
-../extensions/p4_tests/p4_14/test_config_243_meta_assign.p4(40): warning: Could not infer type for p, using bit<8>
+test_config_243_meta_assign.p4(40): warning: Could not infer type for p, using bit<8>
 action action_2(p){
                 ^
-../extensions/p4_tests/p4_14/test_config_243_meta_assign.p4(32): warning: Could not infer type for p, using bit<8>
+test_config_243_meta_assign.p4(32): warning: Could not infer type for p, using bit<8>
 action action_0(p){
                 ^
-../extensions/p4_tests/p4_14/test_config_243_meta_assign.p4(36): warning: Could not infer type for p, using bit<8>
+test_config_243_meta_assign.p4(36): warning: Could not infer type for p, using bit<8>
 action action_1(p){
                 ^

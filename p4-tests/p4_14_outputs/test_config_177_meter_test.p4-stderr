@@ -1,12 +1,12 @@
-../extensions/p4_tests/p4_14/test_config_177_meter_test.p4(56): warning: Could not infer type for param0, using bit<8>
+test_config_177_meter_test.p4(56): warning: Could not infer type for param0, using bit<8>
 action action_0(param0){
                 ^^^^^^
-../extensions/p4_tests/p4_14/test_config_177_meter_test.p4(60): warning: Could not infer type for param0, using bit<8>
+test_config_177_meter_test.p4(60): warning: Could not infer type for param0, using bit<8>
 action action_1(param0){
                 ^^^^^^
-../extensions/p4_tests/p4_14/test_config_177_meter_test.p4(56): warning: Could not infer type for param0, using bit<8>
+test_config_177_meter_test.p4(56): warning: Could not infer type for param0, using bit<8>
 action action_0(param0){
                 ^^^^^^
-../extensions/p4_tests/p4_14/test_config_177_meter_test.p4(60): warning: Could not infer type for param0, using bit<8>
+test_config_177_meter_test.p4(60): warning: Could not infer type for param0, using bit<8>
 action action_1(param0){
                 ^^^^^^

@@ -1,3 +1,3 @@
-../extensions/p4_tests/p4_14/test_config_2_action_data_table_sizing.p4(34): warning: Could not infer type for param_4_32, using bit<8>
+test_config_2_action_data_table_sizing.p4(34): warning: Could not infer type for param_4_32, using bit<8>
 action action_160(param_1_32, param_2_32, param_3_32, param_4_32, param_5_16, param_6_8){
                                                       ^^^^^^^^^^

@@ -1,6 +1,6 @@
-../extensions/p4_tests/p4_14/test_config_102_clone.p4(24): warning: SelectCase: unreachable
+test_config_102_clone.p4(24): warning: SelectCase: unreachable
         default: ingress;
         ^^^^^^^
-../extensions/p4_tests/p4_14/test_config_102_clone.p4(22): warning: ListExpression: transition does not depend on select argument
+test_config_102_clone.p4(22): warning: ListExpression: transition does not depend on select argument
     return select(current(0,1)) {
                   ^^^^^^^^^^^^
