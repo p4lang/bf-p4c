@@ -25,12 +25,13 @@ To configure and build:
 ```
 git clone --recursive git@github.com:barefootnetworks/bf-p4c-compilers.git
 ./bootstrap_bfn_compilers.sh [--prefix <path>] [--enable-doxygen-docs]
-cd build
+cd p4c/build
 make -j N [install]
-cd ..
+cd ../..
 cd build/bf-asm
 make -j N [install]
 cd ../..
+```
 
 # Dependencies
 
