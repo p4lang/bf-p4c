@@ -26,27 +26,14 @@ gitclone() {
     git clone --recursive $1 $2 || { rm -rf $2; die "can't clone $1"; }
 }
 
-
+cd $(dirname $@)
 curdir=$(basename $PWD)
-topdir=$PWD
-
-if [ "$curdir" = "tofino" -a "$(basename $(dirname $topdir))" = "extensions" ]; then
-    p4cdir=$(dirname $(dirname $topdir))
-    if [ "$(basename $p4cdir)" = "p4c" ]; then
-        topdir=$(dirname $p4cdir)
-    else
-        echo >&2 "We're in an extensions/tofino directory, but not under p4c"
-        echo >&2 "Need to rename $p4cdir to $(dirname $p4cdir)/p4c if you want bootstrap to work"
-        exit 1
-    fi
-elif [ "$curdir" = "p4c-extension-tofino" ]; then
-    topdir=$(dirname $topdir)
-fi
+topdir=$(dirname $PWD)
 
 cd $topdir
 found=""
 
-for repo in p4c tofino-asm behavioral-model model p4c-extension-tofino p4c/extensions/tofino p4c/extensions/p4_tests; do
+for repo in behavioral-model model; do
     if [ -d $repo ]; then
         if [ -d $repo/.git ]; then
             found=$found$'\n'"$repo in $topdir/$repo"
@@ -174,81 +161,5 @@ pushd model >/dev/null
             make clean
         fi
         make || die "harlyn model build failed"
-    fi
-popd >/dev/null
-
-### Assembler setup
-if [ ! -d tofino-asm/.git ]; then
-    gitclone git@github.com:barefootnetworks/tofino-asm tofino-asm
-elif $pull_before_rebuild; then
-    pushd tofino-asm >/dev/null
-        git pull $rebase_option origin master
-    popd >/dev/null
-fi
-pushd tofino-asm >/dev/null
-    if [ -r opt/Makefile ]; then
-        cd opt
-    elif [ -r debug/Makefile ]; then
-        cd debug
-    fi
-    if $reuse_asis && [ -x tfas ]; then
-        echo "Reusing $PWD/tfas as is"
-        true
-    else
-        if [ ! -r Makefile ]; then
-            ./bootstrap.sh
-        fi
-        if $clean_before_rebuild; then
-            make clean
-        fi
-        make all || die "assembler build failed"
-    fi
-popd >/dev/null
-
-### P4C setup
-if [ ! -d p4c/.git ]; then
-    gitclone git@github.com:p4lang/p4c.git p4c
-elif $pull_before_rebuild; then
-    pushd p4c >/dev/null
-        git pull $rebase_option origin master
-    popd >/dev/null
-fi
-pushd p4c >/dev/null
-    git submodule sync
-    git submodule update --init --recursive
-    mkdir -p extensions
-    cd extensions
-    if [ ! -e p4_tests ]; then
-        git clone git@github.com:barefootnetworks/p4_tests.git
-    fi
-    if [ ! -e tofino ]; then
-        if [ -d ../../p4c-extension-tofino/.git ]; then
-            mv ../../p4c-extension-tofino tofino
-        else
-            gitclone git@github.com:barefootnetworks/p4c-extension-tofino.git tofino
-        fi
-        if [ -d ../build ]; then
-            rm -rf ../build
-        fi
-    else
-        cd tofino
-        if $pull_before_rebuild; then
-            git pull $rebase_option origin master
-        else
-            echo "Reusing $PWD as is"
-        fi
-        cd ..
-    fi
-    cd ..
-    if $reuse_asis && [ -r build/Makefile ]; then
-        echo "Reusing $PWD/build as is"
-    else
-        if [ ! -d build ]; then
-            ./bootstrap.sh
-        fi
-        if $clean_before_rebuild; then
-            make -C build clean
-        fi
-        make -C build
     fi
 popd >/dev/null

@@ -34,18 +34,12 @@ pushd extensions
 ln -sf ../../bf-p4c tofino
 ln -sf ../../p4-tests p4_tests
 popd
-./bootstrap.sh $*
+./bootstrap.sh
+rm -rf build  # don't actually want this...
 popd
-ln -s p4c/build build
 
-# bootstrap and configure the assembler
-pushd bf-asm
 autoreconf -i
 mkdir -p build && cd build
 ../configure $*
-popd
-pushd p4c/build
-ln -sf ../../bf-asm/build bf-asm
-popd
 
-echo "Configured for build: p4c in build, bf-asm in build/bf-asm"
+echo "Configured for build in build"

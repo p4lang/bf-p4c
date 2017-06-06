@@ -15,23 +15,19 @@ There are two scripts in the top level directory that support building
 the compiler and assembler.
 
 bootstrap_bfn_env.sh -- used to checkout and build all dependent
-repositories (needs updating to the structure for this repo)
+repositories and install dependent packages
 
 bootstrap_bfn_compilers.sh -- bootstaps the configuration for p4c
-(with the Tofino extension) and assembler. The assembler build will be
-integrated into the bf-p4c build at a later time.
+(with the Tofino extension) and assembler.
 
 To configure and build:
 ```
 git clone --recursive git@github.com:barefootnetworks/bf-p4c-compilers.git
+cd bf-p4c-compilers
+./bootstrap_bfn_env.sh
 ./bootstrap_bfn_compilers.sh [--prefix <path>] [--enable-doxygen-docs]
-cd p4c/build
-make -j N [install]
-cd ../..
-cd build/bf-asm
-make -j N [install]
-cd ../..
-```
+cd build
+make -j N [check] [install]
 
 # Dependencies
 

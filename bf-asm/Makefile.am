@@ -119,8 +119,7 @@ am__v_LEX_1 =
 	@$(RM) $@
 	$(AM_V_LEX) $(LEX) -t $< > $@
 
-check-local:
-	+@export BUILDDIR=$$(pwd); cd $(srcdir)/test; ./runtests -f asm/*.tfa *.p4 */*.p4
+recheck:
 
 ctags:
 	cd $(srcdir); ctags -R -I VECTOR --exclude=test --exclude=submodules \
@@ -131,4 +130,3 @@ tests:
 
 check-sanity:
 	+@export BUILDDIR=$$(pwd); cd $(srcdir)/test; ./runtests *.p4
-
