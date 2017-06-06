@@ -22,7 +22,7 @@ set -e
 mydir=`dirname $0`
 cd $mydir
 
-if [ ! -d p4c ]; then
+if [ ! -r p4c/Makefile.am ]; then
     git submodule update --init --recursive
 fi
 
@@ -32,6 +32,7 @@ mkdir -p p4c/extensions
 pushd p4c
 pushd extensions
 ln -sf ../../bf-p4c tofino
+ln -sf ../../p4-tests p4_tests
 popd
 ./bootstrap.sh $*
 popd
