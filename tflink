@@ -1,0 +1,123 @@
+#!/bin/sh
+
+READLINK=readlink
+if [ `uname -s` = "Darwin" ]; then
+    READLINK=greadlink
+fi
+
+script=$($READLINK -f $0)
+
+findfile () {
+    dir=$(dirname $script)
+    while [ "$dir" != "/" ]; do
+        if [ -f "$dir/$1" ]; then
+            echo "$dir/$1"
+            return
+        fi
+        if [ "$dir" = "." ]; then
+            dir=$(pwd -P)
+        fi
+        dir=$(dirname $dir)
+    done
+}
+
+WALLE=""
+SCHEMA=""
+OUT="tofino.bin"
+objs=""
+tmpdir=""
+
+tempfile() {
+    file=$(basename $1 $2)
+    orig=file
+    ctr=1
+    while [ -r $tmpdir/$file ]; do
+        file=$ctr-$file
+        ctr=$((ctr + 1))
+    done
+    echo $file
+}
+
+while [ $# -gt 0 ]; do
+    case $1 in
+    -o)
+        OUT="$2"
+        shift ; shift ;;
+    --schema|-s)
+        SCHEMA="$2"
+        shift ; shift ;;
+    --walle|-w)
+        WALLE="$2"
+        shift ; shift ;;
+    *.json.Z)
+        if [ -z "$tmpdir" ]; then
+            tmpdir=$(mktemp -d)
+        fi
+        file=$(tempfile $1 .Z)
+        gunzip -c $1 >$tmpdir/$file
+        objs="$objs $tmpdir/$file"
+        shift ;;
+    *.json.gz)
+        if [ -z "$tmpdir" ]; then
+            tmpdir=$(mktemp -d)
+        fi
+        file=$(tempfile $1 .gz)
+        gunzip -c $1 >$tmpdir/$file
+        objs="$objs $tmpdir/$file"
+        shift ;;
+    *.json.bz)
+        if [ -z "$tmpdir" ]; then
+            tmpdir=$(mktemp -d)
+        fi
+        file=$(tempfile $1 .bz)
+        bzcat $1 >$tmpdir/$file
+        objs="$objs $tmpdir/$file"
+        shift ;;
+    *.json.bz2)
+        if [ -z "$tmpdir" ]; then
+            tmpdir=$(mktemp -d)
+        fi
+        file=$(tempfile $1 .bz2)
+        bzcat $1 >$tmpdir/$file
+        objs="$objs $tmpdir/$file"
+        shift ;;
+    *.json)
+        objs="$objs $1"
+        shift ;;
+    *)
+        echo >&2 "Unknown argument $1"
+        shift ;;
+    esac
+done
+
+if [ ! -x "$WALLE" ]; then
+    WALLE=$(findfile walle/walle.py)
+    if [ ! -x "$WALLE" ]; then
+        WALLE=$(findfile walle/walle/walle.py)
+    fi
+    if [ ! -x "$WALLE" ]; then
+        if [ -e "$WALLE" ]; then
+            echo "$WALLE must be executable"
+        else
+            echo "4: $WALLE"
+            echo >&2 "Can't find walle"
+        fi
+        exit 1
+    fi
+fi
+if [ ! -r "$SCHEMA" ]; then
+    SCHEMA=$(findfile chip.schema)
+    if [ ! -r "$SCHEMA" ]; then
+        SCHEMA=$(findfile tofino/chip.schema)
+    fi
+    if [ ! -r "$SCHEMA" ]; then
+        echo >&2 "Can't find chip schema"
+        exit 1
+    fi
+fi
+
+$WALLE --schema $SCHEMA -o $OUT $objs
+
+if [ -d "$tmpdir" ]; then
+    rm -rf $tmpdir
+fi
