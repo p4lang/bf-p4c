@@ -147,6 +147,7 @@ struct ActionDataBus {
     bool alloc_immediate(const bitvec total_layouts[ActionFormat::CONTAINER_TYPES],
                          vector<Use::ReservedSpace> &locations,
                          const bitvec immed_mask, cstring name);
+
  public:
     bool alloc_action_data_bus(const IR::MAU::Table *tbl, const LayoutOption *lo,
                                TableResourceAlloc &alloc);

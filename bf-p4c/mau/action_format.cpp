@@ -257,7 +257,7 @@ cstring ActionFormat::ActionDataPlacement::immed_name() const {
         return arg_locs[0].immed_plac.immed_name();
     }
     bool index_set = false;
-    bool is_indexed;
+    bool is_indexed = false;
     int immed_index = -1;
     int lo = 33; int hi = 0;
     for (auto &arg_loc : arg_locs) {
