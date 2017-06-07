@@ -282,7 +282,7 @@ XFAIL_TESTS += \
 
 # New failures with action bus working in compiler
 XFAIL_TESTS += \
-    tofino/extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4.test
+    tofino/%reldir%/p4_14/test_config_101_switch_msdc.p4.test
 
 # Failure due to PHV allocation of stkvalid
 XFAIL_TESTS += \
@@ -296,3 +296,20 @@ XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_88_testing_action_data_allocati
 
 # default drop packet instead of writing to port 0
 XFAIL_TESTS += tofino/testdata/p4_16_samples/issue655-bmv2.p4.test
+
+# failures due to BRIG-97
+XFAIL_TESTS += tofino/testdata/p4_14_samples/hash_action_basic.p4.test
+XFAIL_TESTS += tofino/%reldir%/p4_14/max_counters.p4.test
+XFAIL_TESTS += tofino/%reldir%/p4_14/simple_counter.p4.test
+
+# failures due to parser error in the model from configuration
+XFAIL_TESTS += tofino/%reldir%/p4_14/adb_shared2.p4.test
+
+# failure due to too restrictive constraint of full words in action data bus allocation
+XFAIL_TESTS += tofino/%reldir%/p4_14/adb_shared3.p4.test
+
+# Failure due to action format constraint not yet handled
+XFAIL_TESTS += tofino/%reldir%/p4_14/adb_shared4.p4.test
+
+# Failure due to tbl-cfg incorrect driver code for split parameter in single ad table container
+XFAIL_TESTS += tofino/%reldir%/p4_14/adjust_instr4.p4.test
