@@ -179,8 +179,14 @@ fi
 
 
 if $run_stf && [ -r ${file%.p4}.stf ]; then
-    TFAS=$(findbin tofino-asm tfas)
-    TFLN=$(findbin tofino-asm tflink)
+    TFAS=$(findbin bf-asm tfas)
+    if [ ! -x $TFAS ]; then
+        TFAS=$(findbin tofino-asm tfas)
+    fi
+    TFLN=$(findbin bf-asm tflink)
+    if [ ! -x $TFLN ]; then
+        TFLN=$(findbin tofino-asm tflink)
+    fi
     STF=$(findbin model simple_test_harness)
 
     if [[ "$file" =~ ^/ ]]; then
@@ -200,7 +206,10 @@ if $run_stf && [ -r ${file%.p4}.stf ]; then
         grep -v 'WARN MAU::[a-z_]* Time gone backwards!' \
         || die
 elif ${RUN_TFAS:-false}; then
-    TFAS=$(findbin tofino-asm tfas)
+    TFAS=$(findbin bf-asm tfas)
+    if [ ! -x $TFAS ]; then
+        TFAS=$(findbin tofino-asm tfas)
+    fi
     cd $testdir
     mkdir -p $name.out
     rm -f $name.out/*.cfg.json
