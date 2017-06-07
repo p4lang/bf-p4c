@@ -26,7 +26,7 @@ gitclone() {
     git clone --recursive $1 $2 || { rm -rf $2; die "can't clone $1"; }
 }
 
-cd $(dirname $@)
+cd $(dirname $0)
 curdir=$(basename $PWD)
 topdir=$(dirname $PWD)
 
