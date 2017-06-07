@@ -56,8 +56,11 @@ class MauAsmOutput : public MauInspector {
     void emit_table_indir(std::ostream &out, indent_t, const IR::MAU::Table *tbl) const;
     void emit_action_data_format(std::ostream &out, indent_t, const IR::MAU::Table *tbl,
             const IR::MAU::Action *af) const;
+    void emit_action_data_alias(std::ostream &out, indent_t, const IR::MAU::Table *tbl,
+            const IR::MAU::Action *af) const;
     void emit_immediate_format(std::ostream &out, indent_t, const IR::MAU::Table *tbl,
             const IR::MAU::Action *af) const;
+    void emit_action_data_bus(std::ostream &out, indent_t, const IR::MAU::Table *tbl) const;
     class EmitAction;
     class EmitAttached;
     class UnattachedName;

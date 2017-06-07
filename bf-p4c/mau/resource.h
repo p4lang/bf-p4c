@@ -5,6 +5,7 @@
 #include "input_xbar.h"
 #include "memories.h"
 #include "table_format.h"
+#include "action_data_bus.h"
 
 
 struct TableResourceAlloc {
@@ -13,6 +14,7 @@ struct TableResourceAlloc {
     TableFormat::Use                    table_format;
     map<cstring, Memories::Use>         memuse;
     ActionFormat::Use                   action_format;
+    ActionDataBus::Use                  action_data_xbar;
     TableResourceAlloc *clone_rename(const char *ext, const cstring name) const {
         TableResourceAlloc *rv = new TableResourceAlloc;
         rv->match_ixbar = match_ixbar;
@@ -20,6 +22,7 @@ struct TableResourceAlloc {
         rv->selector_ixbar = selector_ixbar;
         rv->table_format = table_format;
         rv->action_format = action_format;
+        rv->action_data_xbar = action_data_xbar;
         for (auto &use : memuse) {
             if (name == use.first) {
                 rv->memuse.emplace(name + ext, use.second);
@@ -40,6 +43,7 @@ struct TableResourceAlloc {
         rv->salu_ixbar = salu_ixbar;
         rv->table_format = table_format;
         rv->action_format = action_format;
+        rv->action_data_xbar = action_data_xbar;
         return rv; }
     void clear_ixbar() {
         match_ixbar.clear();
@@ -49,7 +53,10 @@ struct TableResourceAlloc {
     void clear() {
         clear_ixbar();
         table_format.clear();
-        memuse.clear(); }
+        memuse.clear();
+        action_format.clear();
+        action_data_xbar.clear();
+    }
     void toJSON(JSONGenerator &json) const { json << "null"; }
     static TableResourceAlloc *fromJSON(JSONLoader &) { return nullptr; }
 };

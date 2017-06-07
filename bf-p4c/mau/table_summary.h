@@ -9,11 +9,13 @@ class TableSummary: public MauInspector {
     map<int, const IR::MAU::Table *>    order;
     map<int, IXBar>                     ixbar;
     map<int, Memories>                  memory;
+    map<int, ActionDataBus>             action_data_bus;
     profile_t init_apply(const IR::Node *root) override {
         auto rv = MauInspector::init_apply(root);
         order.clear();
         ixbar.clear();
         memory.clear();
+        action_data_bus.clear();
         return rv; }
     bool preorder(const IR::MAU::Table *t) override {
         assert(order.count(t->logical_id) == 0);
@@ -21,6 +23,7 @@ class TableSummary: public MauInspector {
         if (t->resources) {
             ixbar[t->stage()].update(t);
             memory[t->stage()].update(t->resources->memuse); }
+            action_data_bus[t->stage()].update(t);
         return true; }
     friend std::ostream &operator<<(std::ostream &out, const TableSummary &ts);
 };

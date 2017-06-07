@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <list>
 #include "ir/ir.h"
+#include "action_data_bus.h"
 #include "resource_estimate.h"
 #include "input_xbar.h"
 #include "memories.h"
@@ -165,6 +166,7 @@ struct TablePlacement::Placed {
         gw = p->gw; stage = p->stage; logical_id = p->logical_id; use = p->use;
     }
 
+
     TablePlacement::Placed *gateway_merge();
     void set_prev(const Placed *p, bool make_new, vector<TableResourceAlloc *> &prev_resources) {
         if (!make_new) {
@@ -290,6 +292,7 @@ static bool try_alloc_ixbar(TablePlacement::Placed *next, const TablePlacement::
     resources->match_ixbar.clear();
     resources->gateway_ixbar.clear();
     resources->selector_ixbar.clear();
+    resources->salu_ixbar.clear();
     IXBar current_ixbar;
     for (auto *p = done; p && p->stage == next->stage; p = p->prev) {
         current_ixbar.update(p->name, p->resources->match_ixbar);
@@ -345,6 +348,30 @@ static bool try_alloc_mem(TablePlacement::Placed *next, const TablePlacement::Pl
         }
         return false;
     }
+    return true;
+}
+
+static bool try_alloc_adb(TablePlacement::Placed *next, const TablePlacement::Placed *done,
+                          const LayoutOption *lo, TableResourceAlloc *resources, bool is_gw) {
+    if (is_gw)
+        return true;
+
+    ActionDataBus current_adb;
+    resources->action_data_xbar.clear();
+
+    for (auto *p = done; p && p->stage == next->stage; p = p->prev) {
+        current_adb.update(p->name, p->resources->action_data_xbar);
+    }
+    if (!current_adb.alloc_action_data_bus(next->table, lo, *resources)) {
+        resources->action_data_xbar.clear();
+        return false;
+    }
+
+    ActionDataBus adb_update;
+    for (auto *p = done; p && p->stage == next->stage; p = p->prev) {
+        adb_update.update(p->name, p->resources->action_data_xbar);
+    }
+    adb_update.update(next->name, resources->action_data_xbar);
     return true;
 }
 
@@ -417,6 +444,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
         }
     }
     assert(!rv->placed[tblInfo.at(rv->table).uid]);
+    min_resources->action_format = lc.get_action_format(t);
     resources->action_format = lc.get_action_format(t);
     const vector<LayoutOption> layout_options = lc.get_layout_options(t);
     StageUseEstimate min_use(t, min_entries, prev_placed, has_action_data, layout_options);
@@ -427,6 +455,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
     bool allocated = false;
     bool ixbar_allocation_bug = false;
     bool mem_allocation_bug = false;
+    bool adb_allocation_bug = false;
     int furthest_stage = (done == nullptr) ? 0 : done->stage + 1;
 
     /* Loop to find the right size of entries for a table to place into stage */
@@ -436,14 +465,16 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
         bool advance_to_next_stage = false;
         allocated = false; ixbar_allocation_bug = false; mem_allocation_bug = false;
         rv->use = StageUseEstimate(t, rv->entries, prev_placed, has_action_data, layout_options);
+        // FIXME: This is not the appropriate way to check if a table is a single gateway
+        bool is_gw = rv->entries == 0;
 
-        if (!try_alloc_ixbar(rv, done, phv, min_use, min_resources, lc, rv->entries == 0)) {
+        if (!try_alloc_ixbar(rv, done, phv, min_use, min_resources, lc, is_gw)) {
             advance_to_next_stage = true;
             ixbar_allocation_bug = true;
             LOG3("Min Use ixbar allocation did not fit");
         }
 
-        if (!try_alloc_ixbar(rv, done, phv, rv->use, resources, lc, rv->entries == 0)) {
+        if (!try_alloc_ixbar(rv, done, phv, rv->use, resources, lc, is_gw)) {
             advance_to_next_stage = true;
             ixbar_allocation_bug = true;
             LOG3("Table Use ixbar allocation did not fit");
@@ -461,6 +492,22 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
             mem_allocation_bug = true;
             advance_to_next_stage = true;
             LOG3("Min use of memory allocation did not fit");
+        }
+
+        // FIXME: Min Use vs. Normal Use may be very different, have to fold this into
+        // the code better
+        if (!advance_to_next_stage &&
+            !try_alloc_adb(rv, done, min_use.preferred(),  min_resources, is_gw)) {
+            adb_allocation_bug = true;
+            advance_to_next_stage = true;
+            LOG3("Min use of action data bus did not fit");
+        }
+
+        if (!advance_to_next_stage &&
+            !try_alloc_adb(rv, done, rv->use.preferred(), resources, is_gw)) {
+            adb_allocation_bug = true;
+            advance_to_next_stage = true;
+            LOG3("Normal use of action data bus did not fit");
         }
 
         if (done && rv->stage == done->stage) {
@@ -493,9 +540,16 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
 
             LOG3(" - reducing to " << rv->entries << " of " << t->name
                  << " in stage " << rv->stage);
-            if (!try_alloc_ixbar(rv, done, phv, rv->use, resources, lc, rv->entries == 0)) {
+            if (!try_alloc_ixbar(rv, done, phv, rv->use, resources, lc, is_gw)) {
                 ixbar_allocation_bug = true;
                 ERROR("IXBar Allocation error after previous allocation?");
+                advance_to_next_stage = true;
+                break;
+            }
+
+            if (!try_alloc_adb(rv, done, rv->use.preferred(), resources, is_gw)) {
+                adb_allocation_bug = true;
+                ERROR("Action Data Bus Allocation error after previous allocation?");
                 advance_to_next_stage = true;
                 break;
             }
@@ -515,6 +569,8 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
             BUG("Can't fit table %s in input xbar by itself", rv->name);
         if (mem_allocation_bug)
             BUG("Can't fit the minimum number of table %s entries within the memories", rv->name);
+        if (adb_allocation_bug)
+            BUG("Can't fit table %s in action data bus by itself", rv->name);
         BUG("Unknown error for stage advancement?");
     }
 

@@ -43,80 +43,98 @@ class MauAsmOutput::TableMatch {
     TableMatch(const MauAsmOutput &s, const PhvInfo &phv, const IR::MAU::Table *tbl);
 };
 
-/* Function that emits the immediate information based on the immediate_format object
-   contained within the table resources object.  This function must also coordinate with
-   all of the potential holes within the immediate format, as they might contain other
-   data that is not action data */
-void MauAsmOutput::emit_immediate_format(std::ostream &out, indent_t indent,
+
+/** Function that emits the action data aliases needed for consistency across the action data
+ *  bus.  The aliases are found within the action_data_format code.
+ */
+void MauAsmOutput::emit_action_data_alias(std::ostream &out, indent_t indent,
         const IR::MAU::Table *tbl, const IR::MAU::Action *af) const {
-    auto &placement = tbl->resources->action_format.immediate_format.at(af->name);
+    auto &placement = tbl->resources->action_format.action_data_format.at(af->name);
     out << indent << "- { ";
-    auto &immediate_mask = tbl->resources->action_format.immediate_mask;
-
-    bool need_indices = false;
-    if (immediate_mask.max() != immediate_mask.end()
-        && immediate_mask.ffz(immediate_mask.min().index())
-               < static_cast<size_t>(immediate_mask.max().index()))
-        need_indices = true;
-
-    size_t immediate_count = 0;
-    int immediate_location = immediate_mask.min().index();
-    bool immediate_to_end = true;
-    int container_spot = 0;
-    bool started = false;
     size_t index = 0;
     for (auto &container : placement) {
-        bitvec total_arg(0);
-        for (auto &arg_loc : container.arg_locs) {
-            total_arg |= arg_loc.data_loc;
+        bool needs_comma = true;
+        out << container.asm_name;
+
+        if (container.arg_locs.size() == 1 && !container.arg_locs[0].single_loc) {
+            int start = container.arg_locs[0].field_bit;
+            int end = start + container.arg_locs[0].data_loc.popcount() - 1;
+            out << "." << start << "-" << end;
         }
+        out << ": " << container.adf_name();
 
-        if ((started && total_arg.ffs() != 0) || !immediate_to_end
-            || container_spot != container.start) {
-            immediate_count++;
-            immediate_location = 0;
-        }
-        started = true;
+        if (index == placement.size() - 1 && container.arg_locs.size() == 1)
+            needs_comma = false;
+        if (needs_comma)
+            out << ", ";
 
-        int start = total_arg.min().index();
-        bool all_spaces_handled = false;
-
-        // If a container has a hole, the output of the function must be able to handle that
-        do {
-            int end = total_arg.ffz(start);
-            if (end == container.size) {
-                all_spaces_handled = true;
-            }
-            out << container.asm_name << ": ";
-            cstring immed_name = "immediate";
-            if (need_indices)
-                immed_name = immed_name + std::to_string(immediate_count);
-            out << immed_name;
-
-            int immediate_back = immediate_location + end - start - 1;
-            out << "(" << immediate_location << ".." << immediate_back << ")";
-
-            if (!all_spaces_handled) {
-                start = total_arg.ffs(end);
-                if (start == -1) {
-                    immediate_to_end = false;
-                    all_spaces_handled = true;
-                } else {
-                    immediate_count++;
-                    immediate_location = 0;
+        if (container.arg_locs.size() > 1) {
+            size_t arg_index = 0;
+            for (auto &arg_loc : container.arg_locs) {
+                out << arg_loc.name;
+                if (!arg_loc.single_loc) {
+                    int start = arg_loc.field_bit;
+                    int end = start + arg_loc.data_loc.popcount() - 1;
+                    out << "." << start << "-" << end;
                 }
-            } else {
-                immediate_location = immediate_back + 1;
-                immediate_to_end = end == container.size;
+                out << ": " << container.adf_name() << "(" << arg_loc.data_loc.min().index()
+                    << ".." << arg_loc.data_loc.max().index() << ")";
+                if (index == placement.size() - 1
+                    && arg_index == container.arg_locs.size() - 1)
+                    needs_comma = false;
+                if (needs_comma)
+                    out << ", ";
+                arg_index++;
             }
-
-            if (all_spaces_handled && index + 1 != placement.size())
-                out << ", ";
-            else
-                out << " ";
-        } while (!all_spaces_handled);
+        }
         index++;
-        container_spot = container.start + container.size / 8;
+    }
+    out << " }" << std::endl;
+}
+
+/** Function that emits the immediate information based on the immediate_format object
+ *  contained within the table resources object.  This function must also coordinate with
+ *  all of the potential holes within the immediate format, as they might contain other
+ *  data that is not action data.  The names are now calculatd in the action_data_format code
+ */
+void MauAsmOutput::emit_immediate_format(std::ostream &out, indent_t indent,
+        const IR::MAU::Table *tbl, const IR::MAU::Action *af) const {
+    auto &placement_vec = tbl->resources->action_format.immediate_format.at(af->name);
+    out << indent << "- { ";
+    size_t index = 0;
+    for (auto &placement : placement_vec) {
+        bool needs_comma = true;
+        out << placement.asm_name;
+        if (placement.arg_locs.size() == 1 && !placement.arg_locs[0].single_loc) {
+            int start = placement.arg_locs[0].field_bit;
+            int end = start + placement.arg_locs[0].data_loc.popcount() - 1;
+            out << "." << start << "-" << end;
+        }
+        out << ": " << placement.immed_name();
+
+        if (index == placement_vec.size() - 1 && placement.arg_locs.size() == 1)
+            needs_comma = false;
+        if (needs_comma)
+             out << ", ";
+        if (placement.arg_locs.size() > 1) {
+            size_t arg_index = 0;
+            for (auto &arg_loc : placement.arg_locs) {
+                out << arg_loc.name;
+                if (!arg_loc.single_loc) {
+                    int start = arg_loc.field_bit;
+                    int end = start + arg_loc.data_loc.popcount() - 1;
+                    out << "." << start << "-" << end;
+                }
+                out << ": " << arg_loc.immed_plac.immed_name();
+                if (index == placement_vec.size() - 1
+                    && arg_index == placement.arg_locs.size() - 1)
+                    needs_comma = false;
+                if (needs_comma)
+                    out << ", ";
+                arg_index++;
+            }
+        }
+        index++;
     }
     out << " }" << std::endl;
 }
@@ -130,12 +148,7 @@ void MauAsmOutput::emit_action_data_format(std::ostream &out, indent_t indent,
     out << indent << "format " << canon_name(af->name) << ": { ";
     size_t index = 0;
     for (auto &container : placement) {
-        out << container.asm_name;
-        if (container.arg_locs.size() == 1 && !container.arg_locs[0].single_loc) {
-            int start = container.arg_locs[0].field_bit;
-            int end = start + container.arg_locs[0].data_loc.popcount() - 1;
-            out << "." << start << "-" << end;
-        }
+        out << container.adf_name();
         out << ": " << (8 * container.start) << ".."
             << (8 * container.start + container.size - 1);
         if (index + 1 != placement.size())
@@ -550,6 +563,47 @@ cstring format_name(int type) {
     return "";
 }
 
+void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
+        const IR::MAU::Table *tbl) const {
+    auto &action_data_xbar = tbl->resources->action_data_xbar;
+    out << indent << "action_bus: { ";
+
+    if (tbl->layout.action_data_bytes_in_overhead > 0) {
+        size_t total_index = 0;
+        for (auto &rs : action_data_xbar.reserved_spaces) {
+            if (!rs.immediate) continue;
+            int byte_sz = ActionFormat::CONTAINER_SIZES[rs.location.type] / 8;
+            out << rs.location.byte;
+            if (byte_sz > 1)
+                out << ".." << (rs.location.byte + byte_sz - 1);
+            out << " : " << rs.name;
+
+            if (total_index != action_data_xbar.reserved_spaces.size() - 1)
+                out << ", ";
+            else
+                out << " ";
+
+            total_index++;
+        }
+    } else if (tbl->layout.action_data_bytes > 0) {
+        size_t total_index = 0;
+        for (auto &rs : action_data_xbar.reserved_spaces) {
+            if (rs.immediate) continue;
+            int byte_sz = ActionFormat::CONTAINER_SIZES[rs.location.type] / 8;
+            out << rs.location.byte;
+            if (byte_sz > 1)
+                out << ".." << (rs.location.byte + byte_sz - 1);
+            out << " : " << rs.name;
+            if (total_index != action_data_xbar.reserved_spaces.size() - 1)
+                out << ", ";
+            else
+                out << " ";
+            total_index++;
+        }
+    }
+    out << "}" << std::endl;
+}
+
 /* Emits the format portion of tind tables and for exact match tables. */
 void MauAsmOutput::emit_table_format(std::ostream &out, indent_t indent,
           const TableFormat::Use &use, const TableMatch *tm, bool ternary) const {
@@ -668,8 +722,12 @@ class MauAsmOutput::EmitAction : public Inspector {
         out << indent << canon_name(act->name) << ":" << std::endl;
         is_empty = true;
         if (table->layout.action_data_bytes_in_overhead > 0) {
-             self.emit_immediate_format(out, indent, table, act);
-            is_empty = false; }
+            self.emit_immediate_format(out, indent, table, act);
+            is_empty = false;
+        } else if (table->layout.action_data_bytes > 0) {
+            self.emit_action_data_alias(out, indent, table, act);
+            is_empty = false;
+        }
         if (!alias.empty()) {
             out << indent << "- " << alias << std::endl;
             is_empty = false;
@@ -778,43 +836,9 @@ class MauAsmOutput::EmitAction : public Inspector {
         return false; }
     bool preorder(const IR::LAnd *e) override { return preorder_binop(e, " & "); }
     bool preorder(const IR::LOr *e) override { return preorder_binop(e, " | "); }
-    void emit_multi_op_action_data(cstring name) {
-        out << indent << "- { ";
-        auto &act_format = table->resources->action_format;
-        const vector<ActionFormat::ActionDataPlacement> *placements;
-        if (table->layout.action_data_bytes_in_overhead > 0)
-            placements = &act_format.immediate_format.at(act_name);
-        else
-            placements = &act_format.action_data_format.at(act_name);
-
-        for (auto placement : *placements) {
-            if (name != placement.asm_name) continue;
-
-            size_t index = 0;
-            for (auto arg_loc : placement.arg_locs) {
-                out << arg_loc.name;
-                if (!arg_loc.single_loc) {
-                    int arg_lo = arg_loc.field_bit;
-                    int arg_hi = arg_lo + arg_loc.data_loc.popcount() - 1;
-                    out << "." << arg_lo << "-" << arg_hi;
-                }
-                out << ": ";
-                out << name << "(" << arg_loc.data_loc.min().index() << "..";
-                out << arg_loc.data_loc.max().index() << ")";
-                if (index != placement.arg_locs.size() - 1)
-                    out << ", ";
-                index++;
-            }
-            break;
-        }
-        out << " }" << std::endl;
-    }
-
     void postorder(const IR::MAU::Instruction *) override {
         sep = nullptr;
         out << std::endl;
-        if (!mo_name.isNullOrEmpty())
-            emit_multi_op_action_data(mo_name);
     }
     bool preorder(const IR::Cast *c) override { visit(c->expr); return false; }
     bool preorder(const IR::Expression *exp) override {
@@ -1084,6 +1108,10 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
             out << indent << "next: " << next_hit << std::endl;
         }
     }
+
+    if (tbl->layout.action_data_bytes_in_overhead > 0)
+        emit_action_data_bus(out, indent, tbl);
+
     /* FIXME -- this is a mess and needs to be rewritten to be sane */
     bool have_action = false, have_indirect = false;
     for (auto at : tbl->attached) {
@@ -1354,6 +1382,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::ActionProfile *ap) {
         if (act->args.empty()) continue;
         self.emit_action_data_format(out, indent, tbl, act);
     }
+    self.emit_action_data_bus(out, indent, tbl);
     if (!tbl->actions.empty()) {
         out << indent++ << "actions:" << std::endl;
         for (auto act : Values(tbl->actions))
@@ -1398,6 +1427,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::ActionData *ad) {
         if (act->args.empty()) continue;
         self.emit_action_data_format(out, indent, tbl, act);
     }
+    self.emit_action_data_bus(out, indent, tbl);
     if (!tbl->actions.empty()) {
         out << indent++ << "actions:" << std::endl;
         for (auto act : Values(tbl->actions))

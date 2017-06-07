@@ -76,12 +76,42 @@ struct ActionFormat {
             bool single_loc = true;
             ArgLoc(cstring n, bitvec dl, int fb, bool sl)
                 : name(n), data_loc(dl), field_bit(fb), single_loc(sl) {}
+            /** Structure to help determine where an individual field is within the immediate
+             *  section.  Used for determine best asm_output for these fields.
+             */
+            struct ImmediatePlacement {
+                bool setup = false;
+                bool indexed = false;
+                int index = -1;
+                int lo = -1; int hi = -1;
+                void init(int ind, int l, int h) {
+                    setup = true; indexed = true; index = ind; lo = l; hi = h;
+                }
+                void init(int l, int h) {
+                    setup = true; lo = l; hi = h;
+                }
+                cstring immed_name() const {
+                    if (!setup)
+                        BUG("Calling immed name on a non-immediate action data");
+                    cstring ret = "immediate";
+                    if (indexed)
+                        ret += std::to_string(index);
+                    ret += "(" + std::to_string(lo) + ".." + std::to_string(hi) + ")";
+                    return ret;
+                }
+            };
+            ImmediatePlacement immed_plac;
         };
         vector<ArgLoc> arg_locs;
-        int size;         ///< Number of bits needed
-        bitvec range;     ///< Total mask
-        int start = -1;   ///< Byte offset within the action data table
-        cstring asm_name;
+        int size;          ///< Number of bits needed
+        bitvec range;      ///< Total mask
+        int start = -1;    ///< Byte offset within the action data table
+        cstring asm_name;  ///< Potential rename if multiple action args within one placement
+        int adf_offset = -1;
+
+        cstring adf_name() const;
+        cstring immed_name() const;
+
         int gen_index() {
             return ceil_log2(size / 8);
         }
@@ -183,6 +213,8 @@ struct ActionFormat {
         std::map<cstring, ArgPlacementData> arg_placement;
         int action_data_bytes = 0;
         bitvec immediate_mask;
+        bitvec total_layouts[CONTAINER_TYPES];
+        bitvec total_layouts_immed[CONTAINER_TYPES];
 
         void clear() {
             arguments.clear();
@@ -200,8 +232,6 @@ struct ActionFormat {
     Use *use;
     // Which bytes of the action format correspond to the different container sizes
     // Will be necessary for the action bus allocation
-    bitvec total_layouts[CONTAINER_TYPES];
-    bitvec total_layouts_immed[CONTAINER_TYPES];
 
  private:
     const IR::MAU::Table *tbl;
@@ -234,6 +264,8 @@ struct ActionFormat {
     void sort_and_asm_name(vector<ActionDataPlacement> &placement_vec, bool immediate);
     void calculate_placement_data(vector<ActionDataPlacement> &placement_vec,
                                   ArgPlacementData &apd, bool immediate);
+    void determine_format_name();
+    void determine_immed_format_name();
 };
 
 /** Class for building the initial information for the ActionDataPlacment, as well as the

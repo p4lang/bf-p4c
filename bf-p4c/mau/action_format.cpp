@@ -234,6 +234,65 @@ int ActionFormat::ActionContainerInfo::find_maximum_immed() {
     return maximum;
 }
 
+
+cstring ActionFormat::ActionDataPlacement::adf_name() const {
+    cstring name = "$adf_";
+    if (size == 8)
+        name += "b";
+    else if (size == 16)
+        name += "h";
+    else
+        name += "f";
+    name += std::to_string(adf_offset);
+    return name;
+}
+
+/** Determining the names generated in the asm_output name for any action data stored as
+ *  immediate.  If there are multiple fields packed into an individual container, both the
+ *  container and the individual fields require a location within the immediate.  Also
+ *  verifies that the alignment of the immediate data matches with the masks. 
+ */
+cstring ActionFormat::ActionDataPlacement::immed_name() const {
+    if (arg_locs.size() == 1) {
+        return arg_locs[0].immed_plac.immed_name();
+    }
+    bool index_set = false;
+    bool is_indexed;
+    int immed_index = -1;
+    int lo = 33; int hi = 0;
+    for (auto &arg_loc : arg_locs) {
+        if (arg_loc.immed_plac.indexed) {
+            if (!index_set) {
+                immed_index = arg_loc.immed_plac.index;
+                index_set = true;
+                is_indexed = true;
+            } else if (!is_indexed) {
+                BUG("Index alignment issues");
+            } else if (immed_index != arg_loc.immed_plac.indexed) {
+                ERROR("Immed index doesn't line up for a bitmasked-set");
+                return arg_locs[0].immed_plac.immed_name();
+            }
+        } else {
+            if (!index_set)
+                is_indexed = false;
+            else if (is_indexed)
+                BUG("Index alignment issues");
+        }
+
+        if (lo > arg_loc.immed_plac.lo)
+            lo = arg_loc.immed_plac.lo;
+        if (hi < arg_loc.immed_plac.hi)
+            hi = arg_loc.immed_plac.hi;
+    }
+
+    cstring name = "immediate";
+    if (is_indexed) {
+        name += std::to_string(immed_index);
+    }
+    name += "(" + std::to_string(lo) + ".." + std::to_string(hi) +")";
+    return name;
+}
+
 /** The allocation scheme for the action data format and immediate format.
  */
 void ActionFormat::allocate_format(Use *u) {
@@ -251,6 +310,7 @@ void ActionFormat::allocate_format(Use *u) {
     LOG2("Space all containers");
     align_action_data_layouts();
     LOG2("Alignment");
+    determine_format_name();
 
 
     if (immediate_possible) {
@@ -261,6 +321,7 @@ void ActionFormat::allocate_format(Use *u) {
         LOG2("Space immediate containers");
         align_immediate_layouts();
         LOG2("Alignment immediate");
+        determine_immed_format_name();
     }
 }
 
@@ -393,6 +454,7 @@ int ActionFormat::offset_constraints_and_total_layouts() {
     int lowest_16_full = (max_small_bytes - max_total.counts[HALF] * 2) / 4;
 
     bitvec offset_locs;
+    bitvec offset_8count;
 
     // Essentially find the location of the 8 16 split
     for (auto &aci : action_counts) {
@@ -404,16 +466,24 @@ int ActionFormat::offset_constraints_and_total_layouts() {
         else
             aci.offset_full_word = highest_8_full;
         offset_locs.setbit(aci.offset_full_word);
+        if ((aci.counts[BYTE] % 4) == 2)
+            offset_8count.setbit(aci.offset_full_word);
         // FIXME: This needs to check at the next PR if the 32 things are paired for bitmasked sets
     }
 
-    total_layouts[BYTE].setrange(0, max_total.counts[BYTE]);
+    use->total_layouts[BYTE].setrange(0, max_total.counts[BYTE]);
     int starting_16_loc = max_small_bytes - max_total.counts[HALF] * 2;
-    total_layouts[HALF].setrange(starting_16_loc, max_total.counts[HALF] * 2);
+    use->total_layouts[HALF].setrange(starting_16_loc, max_total.counts[HALF] * 2);
 
     for (auto full_word : offset_locs) {
-        total_layouts[BYTE].setrange(full_word * 4, 2);
-        total_layouts[HALF].setrange(full_word * 4 + 2, 2);
+        int added = 0;
+        if (offset_8count.getbit(full_word) == 0)
+            added = 1;
+        else
+            added = 2;
+
+        use->total_layouts[BYTE].setrange(full_word * 4, added);
+        use->total_layouts[HALF].setrange(full_word * 4 + 2, 2);
     }
     return max_small_bytes;
 }
@@ -427,7 +497,7 @@ void ActionFormat::space_8_and_16_containers(int max_small_bytes) {
         int count_byte = aci.counts[BYTE];
         int count_half = aci.counts[HALF];
         if (aci.offset_constraint) {
-            count_byte -= 2;
+            count_byte -= (aci.counts[BYTE] % 4);
             count_half -= 1;
         }
 
@@ -441,7 +511,7 @@ void ActionFormat::space_8_and_16_containers(int max_small_bytes) {
         }
 
         if (aci.offset_constraint) {
-            aci.layouts[BYTE].setrange(aci.offset_full_word * 4, 2);
+            aci.layouts[BYTE].setrange(aci.offset_full_word * 4, (aci.counts[BYTE] % 4));
             aci.layouts[HALF].setrange(aci.offset_full_word * 4 + 2, 2);
         }
 
@@ -451,10 +521,10 @@ void ActionFormat::space_8_and_16_containers(int max_small_bytes) {
         if ((aci.layouts[BYTE] & aci.layouts[HALF]).popcount() != 0)
             BUG("Collision between bytes and half word on action data format");
 
-        if ((total_layouts[BYTE] & aci.layouts[BYTE]).popcount() < aci.counts[BYTE])
+        if ((use->total_layouts[BYTE] & aci.layouts[BYTE]).popcount() < aci.counts[BYTE])
             BUG("Error in the spread of bytes in action data format");
 
-        if ((total_layouts[HALF] & aci.layouts[HALF]).popcount() < aci.counts[HALF] * 2)
+        if ((use->total_layouts[HALF] & aci.layouts[HALF]).popcount() < aci.counts[HALF] * 2)
             BUG("Error in the spread of half words in action data format");
     }
 }
@@ -472,6 +542,7 @@ void ActionFormat::space_32_containers() {
             if (combined.getrange(i, 4) != 0)
                 continue;
             aci.layouts[FULL].setrange(i, 4);
+            use->total_layouts[FULL].setrange(i, 4);
             count_full--;
         }
         if (count_full != 0)
@@ -555,7 +626,7 @@ void ActionFormat::space_individ_immed(ActionContainerInfo &aci) {
         BUG("Erroneous layout of immediate data");
 
     for (int i = 0; i < CONTAINER_TYPES; i++)
-        total_layouts_immed[i] |= aci.layouts[i];
+        use->total_layouts_immed[i] |= aci.layouts[i];
 }
 
 
@@ -673,5 +744,73 @@ void ActionFormat::calculate_placement_data(vector<ActionDataPlacement> &placeme
             apd[arg_loc.name].emplace_back(index, immediate);
         }
         index++;
+    }
+}
+
+/** Algorithm to determine the names of the action data contained within an individual table
+ *  format.  It then coordinates these names back to the individual fields allocated within
+ *  each action, and places them that way.
+ */
+void ActionFormat::determine_format_name() {
+    vector<map<int, int>> format_locations;
+    for (int i = 0; i < CONTAINER_TYPES; i++) {
+        int index = 0;
+        format_locations.emplace_back();
+        for (int j = 0; j <= use->total_layouts[i].max().index(); j += CONTAINER_SIZES[i] / 8) {
+            if (use->total_layouts[i].getslice(j, CONTAINER_SIZES[i] / 8).popcount()
+                == CONTAINER_SIZES[i] / 8) {
+                format_locations[i].emplace(j, index);
+                index++;
+            }
+        }
+    }
+
+    for (auto &ad_placement : use->action_data_format) {
+        auto &placement_vec = ad_placement.second;
+        for (auto &placement : placement_vec) {
+            placement.adf_offset = format_locations[placement.gen_index()].at(placement.start);
+        }
+    }
+}
+
+/** Algorithm to determine the names of the action data contained within the immediate data.
+ *  Both the general container name may be needed, as well as the individual fields within
+ *  the container, if multiple fields are contained within the container
+ */
+void ActionFormat::determine_immed_format_name() {
+    vector<std::pair<int, int>> immed_indices;
+    int start = use->immediate_mask.ffs();
+    bool beginning = true;
+    do {
+        int end = use->immediate_mask.ffz(start);
+        if (beginning) {
+            immed_indices.emplace_back(0, end - 1);
+            beginning = false;
+        } else {
+            immed_indices.emplace_back(start, end - 1);
+        }
+        start = use->immediate_mask.ffs(end);
+    } while (start != -1);
+
+    for (auto &immed_placement : use->immediate_format) {
+        auto &placement_vec = immed_placement.second;
+        for (auto &placement : placement_vec) {
+            int start_bit = placement.start * 8;
+            for (auto &arg_loc : placement.arg_locs) {
+                int data_start_bit = arg_loc.data_loc.ffs() + start_bit;
+                int index = -1;
+                for (auto immed_index : immed_indices) {
+                    index++;
+                    if (immed_index.first > data_start_bit || immed_index.second < data_start_bit)
+                        continue;
+                    int lo = data_start_bit - immed_index.first;
+                    int hi = lo + arg_loc.data_loc.popcount() - 1;
+                    if (immed_indices.size() == 1)
+                        arg_loc.immed_plac.init(lo, hi);
+                    else
+                        arg_loc.immed_plac.init(index, lo, hi);
+                }
+            }
+        }
     }
 }
