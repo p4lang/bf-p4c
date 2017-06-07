@@ -413,7 +413,9 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
             set_entries -= p->entries;
         } else if (p->stage == rv->stage &&
                  deps->happens_before(p->table, rv->table)) {
-             rv->stage++; } }
+             rv->stage++;
+        }
+    }
     assert(!rv->placed[tblInfo.at(rv->table).uid]);
     resources->action_format = lc.get_action_format(t);
     const vector<LayoutOption> layout_options = lc.get_layout_options(t);
@@ -600,8 +602,6 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed *
 bool TablePlacement::is_better(const Placed *a, const Placed *b) {
     if (a->stage < b->stage) return true;
     if (a->stage > b->stage) return false;
-    if (b->need_more && !a->need_more) return true;
-    if (a->need_more && !b->need_more) return false;
 
     int a_deps_stages = deps->dependence_tail_size(a->table);
     int b_deps_stages = deps->dependence_tail_size(b->table);
@@ -611,8 +611,12 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b) {
     int a_total_deps = deps->happens_before_dependences(a->table).size();
     int b_total_deps = deps->happens_before_dependences(b->table).size();
     if (a_total_deps < b_total_deps) return true;
+    if (a_total_deps > b_total_deps) return false;
 
-    return false;
+    if (b->need_more && !a->need_more) return true;
+    if (a->need_more && !b->need_more) return false;
+
+    return true;
 }
 
 class DumpSeqTables {
