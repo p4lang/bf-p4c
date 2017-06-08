@@ -423,11 +423,11 @@ PhvInfo::Field::cl_id_num(Cluster_PHV *cl) const {
 //
 bool
 PhvInfo::Field::constrained(bool packing_constraint) const {
-    bool pack_c = mau_phv_no_pack_i || deparser_no_pack_i;
+    bool pack_c = mau_phv_no_pack_i || deparsed_no_pack_i;
     if (packing_constraint) {
         return pack_c;
     }
-    return  pack_c || deparser_no_holes_i;
+    return  pack_c || deparsed_i;
 }
 
 bool
@@ -682,9 +682,9 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field &field) {
     if (field.metadata) out << " meta";
     if (field.pov) out << " pov";
     if (field.mau_write()) out << " mau_write";
+    if (field.deparsed()) out << " deparsed";
     if (field.mau_phv_no_pack()) out << " mau_phv_no_pack";
-    if (field.deparser_no_pack()) out << " deparser_no_pack";
-    if (field.deparser_no_holes()) out << " deparser_no_holes";
+    if (field.deparsed_no_pack()) out << " deparsed_no_pack";
     if (field.exact_containers()) out << " exact_containers";
     if (field.header_stack_pov_ccgf()) out << " header_stack_pov_ccgf";
     if (field.simple_header_pov_ccgf()) out << " simple_header_pov_ccgf";

@@ -218,11 +218,11 @@ void
 Cluster_PHV::set_exact_containers() {
     //
     for (auto &field : cluster_vec_i) {
-        if (field->deparser_no_pack()) {                           // f tagged deparser no pack
+        if (field->deparsed_no_pack()) {
             exact_containers_i = false;
             break;
         }
-        if (field->deparser_no_holes()                             // f tagged no holes
+        if (field->deparsed()
             && !field->metadata
             && (field->phv_use_width() % PHV_Container::PHV_Word::b8 == 0)) {
                                                                    // ok 24,40,48,56b, not <b8,9,23b
@@ -337,7 +337,7 @@ Cluster_PHV::compute_requirements() {
     //
     size_t scale_down = 0;
     for (auto &pfield : cluster_vec_i) {
-        if (pfield->deparser_no_pack()) {
+        if (pfield->deparsed_no_pack()) {
             // cannot scale-down egress_spec<9:0..15> into 8-bit containers
             scale_down = 0;
             break;

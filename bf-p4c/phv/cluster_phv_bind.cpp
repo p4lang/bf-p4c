@@ -175,14 +175,14 @@ PHV_Bind::phv_tphv_allocate(std::list<PhvInfo::Field *>& fields) {
             remove_set.insert(f);
             continue;
         }
-        if (uses_i->use[1][f->gress][f->id]) {  // used in MAU
+        if (uses_i->is_used_mau(f)) {  // used in MAU
             phv_clusters.push_back(
                 new Cluster_PHV(
                     f,
                     std::string(1,
                         PHV_Container::Container_Content::Pass::Phv_Bind) + f->cl_id()));
         } else {
-            if (uses_i->use[0][f->gress][f->id]) {  // used in parser / deparser
+            if (uses_i->is_used_parde(f)) {  // used in parser / deparser
                 t_phv_clusters.push_back(
                     new Cluster_PHV(
                         f,
@@ -390,8 +390,7 @@ PHV_Bind::trivial_allocate(std::list<PhvInfo::Field *>& fields) {
             continue;
         }
         std::string container_prefix = "";
-        if (!uses_i->use[1][f->gress][f->id]
-            && uses_i->use[0][f->gress][f->id]) {  // not used in mau but used in parde
+        if (!uses_i->is_used_mau(f) && uses_i->is_used_parde(f)) {  // not used mau but used parde
             container_prefix = "T";
         }
         int field_bit = 0;

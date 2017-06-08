@@ -846,8 +846,8 @@ PHV_MAU_Group_Assignments::container_no_pack(
                         // check if this container is partially filled with parser field
                         // if field in MAU, avoid MAU Group violation, avoid relocation to another G
                         // also, if cluster is not uniform width, e.g.,
-                        //     (ingress::test.field_a{0..31} deparser_no_holes,
-                        //      ingress::test.field_e{0..15} deparser_no_holes)
+                        //     (ingress::test.field_a{0..31} deparsed,
+                        //      ingress::test.field_e{0..15} deparsed)
                         //     set test.field_a, test.field_e
                         // placing field_a in 32b, field_e in 16b will cause mau group violation
                         // "registers in an instruction must all be in the same phv group"

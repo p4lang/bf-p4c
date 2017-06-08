@@ -31,7 +31,12 @@
  */
 class Cluster : public Inspector, P4WriteContext {
  public:
+    enum CCGF_contiguity_limit {Parser_Extract = 28, Metadata = 16};
+                                // parser: 4x8b,4x16b,4x32b extractors per parse state
+                                // metadata: extensive aggregation causes ccgf related cluster bloat
+                                //           consequent pressure on phv allocation
     class Uses;
+    //
  private:
     PhvInfo &phv_i;
 
@@ -107,17 +112,20 @@ class Cluster : public Inspector, P4WriteContext {
 //
 class Cluster::Uses : public Inspector {
  public:
-    bitvec      use[2][2];
-    /*              |  ^- gress                 */
-    /*              0 == use in parser/deparser */
-    /*              1 == use in mau             */
-    bitvec      dep[1][2];
-    /*              |  ^- gress                 */
-    /*              0 == use in deparser        */
+    bitvec      use_i[2][2];
+    /*                |  ^- gress                 */
+    /*                0 == use in parser/deparser */
+    /*                1 == use in mau             */
+    bitvec      deparser_i[2];
+    /*                |    ^- gress               */
+    /*                 == use in deparser         */
     //
     explicit Uses(const PhvInfo &p) : phv(p) { }
     //
     bool is_referenced(PhvInfo::Field *f);
+    bool is_deparsed(PhvInfo::Field *f);
+    bool is_used_mau(PhvInfo::Field *f);
+    bool is_used_parde(PhvInfo::Field *f);
     //
  private:
     const PhvInfo       &phv;
@@ -148,16 +156,16 @@ class Cluster::Uses : public Inspector {
         return true; }
     bool preorder(const IR::HeaderRef *hr) {
         if (auto head = phv.header(hr)) {
-            use[in_mau][thread].setrange(head->first, head->second - head->first + 1);
-            dep[0][thread].setrange(head->first, head->second - head->first + 1);
+            use_i[in_mau][thread].setrange(head->first, head->second - head->first + 1);
+            deparser_i[thread].setrange(head->first, head->second - head->first + 1);
         }
         return false; }
     bool preorder(const IR::Expression *e) {
         if (auto info = phv.field(e)) {
             LOG3("use " << info->name << " in " << thread << (in_mau ? " mau" : ""));
-            use[in_mau][thread][info->id] = true;
+            use_i[in_mau][thread][info->id] = true;
             LOG3("dep " << info->name << " in " << thread << (in_dep ? " dep" : ""));
-            dep[0][thread][info->id] = in_dep? true: false;
+            deparser_i[thread][info->id] = in_dep? true: false;
             return false; }
         return true; }
 };

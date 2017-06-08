@@ -404,7 +404,7 @@ bool Cluster_PHV_Overlay::overlay_field_to_container(
     assert(cl);
     assert(field);
     assert(run_width <= c->width());
-    if (field->deparser_no_holes() && run_width != c->width()) {
+    if (field->deparsed() && run_width != c->width()) {
         return false;
     }
     //

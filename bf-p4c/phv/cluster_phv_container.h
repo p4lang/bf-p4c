@@ -103,7 +103,7 @@ class PHV_Container {
         fields_in_container_i;                               // fields binned in this container
                                                              // list of ccs necessary for mutliple
                                                              // sliced fields in same container
-    bool deparser_no_holes_i = false;                        // true if container has deparsed field
+    bool deparsed_no_holes_i = false;                        // true if container has deparsed field
     //
     char *bits_i;                                            // tainted bits in container
     std::string taint_color_i = "0";                         // each resident field separate color
@@ -222,21 +222,21 @@ class PHV_Container {
     void holes(std::vector<char>& bits, char empty, std::list<std::pair<int, int>>& holes_list);
     void holes(std::list<std::pair<int, int>>& holes_list);
     //
-    bool deparser_no_holes() const                              { return deparser_no_holes_i; }
-    void set_deparser_no_holes(bool b)                          { deparser_no_holes_i = b; }
+    bool deparsed_no_holes() const                              { return deparsed_no_holes_i; }
+    void set_deparsed_no_holes(bool b)                          { deparsed_no_holes_i = b; }
     //
     void create_ranges();
     void clear();
     void clean_ranges();
     //
     static bool constraint_no_cohabit(PhvInfo::Field *field) {
-        return field->deparser_no_pack() || field->mau_phv_no_pack();
+        return field->deparsed_no_pack() || field->mau_phv_no_pack();
     }
     static bool constraint_no_holes(PhvInfo::Field *field) {
-        return field->deparser_no_holes();
+        return field->deparsed();
     }
     static bool constraint_no_cohabit_exclusive_mau(PhvInfo::Field *field) {
-        return field->mau_phv_no_pack() && !field->deparser_no_pack();
+        return field->mau_phv_no_pack() && !field->deparsed_no_pack();
     }
     static int ceil_phv_use_width(PhvInfo::Field* f, int min_ceil = 0) {
         assert(f);

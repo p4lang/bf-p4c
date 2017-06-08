@@ -599,8 +599,8 @@ PHV_Container::fields_in_container(PhvInfo::Field *f, Container_Content *cc) {
         }
     }
     fields_in_container_i[f].push_back(cc);
-    if (f->deparser_no_holes()) {
-        set_deparser_no_holes(true);
+    if (f->deparsed()) {
+        set_deparsed_no_holes(true);
     }
 }  // fields_in_container f cc
 
@@ -846,7 +846,7 @@ void PHV_Container::sanity_check_container(const std::string& msg) {
     // a deparsed container can have unused bits, but unused bits will be deparsed as well
     // arises in bridged metadata, where unused bits are padding on the wire
     //
-    if (deparser_no_holes_i) {
+    if (deparsed_no_holes_i) {
         for (auto &entry : fields_in_container_i) {
             PhvInfo::Field *f = entry.first;
             if (f->metadata && !f->bridged) {

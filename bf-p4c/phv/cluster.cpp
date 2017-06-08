@@ -73,7 +73,7 @@ bool Cluster::preorder(const IR::Member* expression) {
                 // TODO: Perhaps keep the header name and field name separate?
                 if (strlen(s) == strlen(es)) {
                     LOG1(".....Deparser Constraint on field..... " << field->name);
-                    field->set_deparser_no_pack(true);
+                    field->set_deparsed_no_pack(true);
                 }
             }
         }
@@ -153,8 +153,8 @@ bool Cluster::preorder(const IR::HeaderRef *hr) {
         LOG4(field);
         //
         // accumulate sub-byte fields to group to a byte boundary
-        // so that if any field is part of MAU then entire PHV container has no holes
         // fields must be contiguous
+        // aggregating beyond byte boundary can cause problems
         // e.g.,
         //   {extra$0.x1: W0(0..23), extra$0.more: B1}               => 5 bytes  -- deparser problem
         //   {extra$0.x1: W0(8..31), extra$0.more: W0(0..7)}         => 4 bytes -- ok
@@ -186,12 +186,13 @@ bool Cluster::preorder(const IR::HeaderRef *hr) {
            << accumulator_bits);
        LOG4(group_accumulator);
     }
-
     // discard container contiguous groups with:
     // - only one member
     // - widths that are larger than one byte but not byte-multiples
     // - widths that are larger than the contiguity limit/run-length that phv
     //   allocation supports
+    // - parser has 4x8b, 4x16b, and 4x32b extractors, all can be written to PHV per parse state
+    // - extensive metadata aggregation causes ccgf cluster bloat & pressure on phv allocation
     for (auto &entry : ccgf) {
         auto owner = entry.first;
         auto ccgf_width = entry.second;
@@ -200,7 +201,9 @@ bool Cluster::preorder(const IR::HeaderRef *hr) {
         bool single_member = owner->ccgf_fields().size() == 1;
         bool sub_byte = ccgf_width < PHV_Container::PHV_Word::b8;
         bool byte_multiple = ccgf_width % PHV_Container::PHV_Word::b8 == 0;
-        auto contiguity_limit = /* PHV_Container::Containers::MAX * */ PHV_Container::PHV_Word::b32;
+        auto contiguity_limit = owner->metadata?
+                                CCGF_contiguity_limit::Metadata * PHV_Container::PHV_Word::b8:
+                                CCGF_contiguity_limit::Parser_Extract * PHV_Container::PHV_Word::b8;
         //
         bool discard = false;
         if (single_member) {
@@ -382,16 +385,16 @@ void Cluster::end_apply() {
             dst_map_i[lhs] = nullptr;
             delete_list.push_back(lhs);
         } else {
-            bool use_mau = uses_i->use[1][lhs->gress][lhs->id];
+            bool use_mau = uses_i->is_used_mau(lhs);
             if (!use_mau && entry.second) {
                 for (auto &f : *(entry.second)) {
-                    if (uses_i->use[1][f->gress][f->id]) {
+                    if (uses_i->is_used_mau(f)) {
                         use_mau = true;
                         break;
                     } else {
                         if (f->ccgf() && f->ccgf() == f) {
                             for (auto &m : f->ccgf_fields()) {
-                                if (uses_i->use[1][m->gress][m->id]) {
+                                if (uses_i->is_used_mau(m)) {
                                     use_mau = true;
                                     break;
                                 }
@@ -458,7 +461,7 @@ void Cluster::deparser_ccgf_phv() {
             ccgf_width[f->gress] += f->size;
         }
     }
-    auto contiguity_limit = /* PHV_Container::Containers::MAX * */ PHV_Container::PHV_Word::b32;
+    auto contiguity_limit = CCGF_contiguity_limit::Parser_Extract * PHV_Container::PHV_Word::b8;
     for (auto &entry : ccgf) {
         std::list<PhvInfo::Field *> member_list = entry.second;
         PhvInfo::Field *owner = member_list.front();
@@ -499,7 +502,7 @@ void Cluster::deparser_ccgf_t_phv() {
             ccgf_width[f->gress] += f->size;
         }
     }
-    auto contiguity_limit = /* PHV_Container::Containers::MAX * */ PHV_Container::PHV_Word::b32;
+    auto contiguity_limit = CCGF_contiguity_limit::Parser_Extract * PHV_Container::PHV_Word::b8;
     for (auto &entry : ccgf) {
         std::list<PhvInfo::Field *> member_list = entry.second;
         PhvInfo::Field *owner = member_list.front();
@@ -551,13 +554,11 @@ void Cluster::compute_fields_no_use_mau() {
     //
     for (auto &field : phv_i) {
         //
-        // set deparser_no_holes
-        // used in parser / deparser
+        // set field's deparsed if used in deparser
         //
-        if (uses_i->dep[0][field.gress][field.id]
-            && !(field.metadata && !field.bridged) && !field.pov) {
+        if (uses_i->is_deparsed(&field) && !(field.metadata && !field.bridged) && !field.pov) {
             //
-            field.set_deparser_no_holes(true);
+            field.set_deparsed(true);
         }
         if (field.simple_header_pov_ccgf() && !uses_i->is_referenced(&field)) {
             //
@@ -624,13 +625,13 @@ void Cluster::compute_fields_no_use_mau() {
         // TODO: What does this method do?  Why is it called for every field?
         field.set_phv_use_width(field.ccgf() == &field);
         //
-        // set deparser_no_holes for ccgf owner
-        // if any member used in parser / deparser, ccgf in exact containers
+        // set deparsed for ccgf owner
+        // if any member used in deparser, ccgf must be in exact containers
         //
         if (field.ccgf()) {
             for (auto &m : field.ccgf_fields()) {
-                if (m->deparser_no_holes()) {
-                    field.set_deparser_no_holes(true);
+                if (m->deparsed()) {
+                    field.set_deparsed(true);
                     break;
                 }
             }
@@ -697,7 +698,7 @@ void Cluster::compute_fields_no_use_mau() {
     //
     ordered_set<PhvInfo::Field *> delete_set;
     for (auto &f : not_used_mau) {
-        bool use_pd = uses_i->use[0][f->gress][f->id];  // used in parser / deparser
+        bool use_pd = uses_i->is_used_parde(f);  // used in parser / deparser
         //
         // metadata in T_PHV can be removed but bridge_metadata deparsed must be allocated
         //
@@ -1102,21 +1103,36 @@ void Cluster::sanity_check_fields_use(const std::string& msg,
 bool
 Cluster::Uses::is_referenced(PhvInfo::Field *f) {      // use in mau or parde
     assert(f);
-    bool use_mau = use[1][f->gress][f->id];  // use in mau
-    bool use_pd = use[0][f->gress][f->id];   // use in parser / deparser
-    if (f->pov && f->referenced) {
+    if (f->referenced) {
         // SetReferenced pass sets the referenced flag
-        return true;
-    }
-    if (f->metadata && f->referenced) {
-        // set_metadata
         return true;
     }
     if (f->bridged) {
         // bridge metadata
         return true;
     }
-    return use_mau || use_pd;
+    return is_used_mau(f) || is_used_parde(f);
+}
+
+bool
+Cluster::Uses::is_deparsed(PhvInfo::Field *f) {      // use in deparser
+    assert(f);
+    bool use_deparser = deparser_i[f->gress][f->id];
+    return use_deparser;
+}
+
+bool
+Cluster::Uses::is_used_mau(PhvInfo::Field *f) {      // use in mau
+    assert(f);
+    bool use_mau = use_i[1][f->gress][f->id];
+    return use_mau;
+}
+
+bool
+Cluster::Uses::is_used_parde(PhvInfo::Field *f) {    // use in parser / deparser
+    assert(f);
+    bool use_pd = use_i[0][f->gress][f->id];
+    return use_pd;
 }
 
 //***********************************************************************************
@@ -1185,3 +1201,18 @@ std::ostream &operator<<(std::ostream &out, Cluster &cluster) {
     out << cluster.fields_no_use_mau();
     return out;
 }
+
+//***********************************************************************************
+//
+// Notes
+//
+//***********************************************************************************
+//
+// $mirror_id is a ‘special’ field.
+// it is introduced by the parser shims for parsing mirror packets.
+// for PHV allocation it should be treated like any other metadata field, how it is used in the IR.
+// in particular expect `$mirror_id` to often be “unused” and thus not need to be allocated to a PHV
+// it is extracted in the parser and used to switch parser states, but that it not actually a “use”
+// of PHV allocation, the parser accesses it from the input buffer directly,
+// so if no later use in MAU or deparser, the extract to PHV can be left as dead
+//
