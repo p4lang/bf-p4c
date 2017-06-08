@@ -1,0 +1,9 @@
+test_config_123_meter_2.p4(60): warning: Could not infer type for param0, using bit<8>
+action action_0(param0){
+                ^^^^^^
+test_config_123_meter_2.p4(66): warning: Could not infer type for param0, using bit<8>
+action action_1(param0){
+                ^^^^^^
+test_config_123_meter_2.p4(60): warning: Could not infer type for param0, using bit<8>
+action action_0(param0){
+                ^^^^^^

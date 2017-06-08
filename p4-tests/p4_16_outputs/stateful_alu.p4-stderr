@@ -1,0 +1,37 @@
+stateful_alu.p4(155): warning: index shadows index
+        bool condition1( in op_num instr, in bit<32> index, in bit<32> digest, in bit<32> unused) {
+                                                     ^^^^^
+stateful_alu.p4(152)
+control PLT_bloom_filter_way_ctrl(in bit<32> index, in Metadata metadata, out bit<32> result) {
+                                             ^^^^^
+stateful_alu.p4(162): warning: index shadows index
+        bool condition2( in op_num instr, in bit<32> index, in bit<32> unused1, in bit<32> unused2 ) {
+                                                     ^^^^^
+stateful_alu.p4(152)
+control PLT_bloom_filter_way_ctrl(in bit<32> index, in Metadata metadata, out bit<32> result) {
+                                             ^^^^^
+stateful_alu.p4(169): warning: index shadows index
+        bit<32> compute_value_a_1( in op_num instr, in bit<32> index, in bit<32> digest, in bit<32> unused ) {
+                                                               ^^^^^
+stateful_alu.p4(152)
+control PLT_bloom_filter_way_ctrl(in bit<32> index, in Metadata metadata, out bit<32> result) {
+                                             ^^^^^
+stateful_alu.p4(173): warning: index shadows index
+        bit<32> compute_value_a_2( in op_num instr, in bit<32> index, in bit<32> digest, in bit<32> unused ) {
+                                                               ^^^^^
+stateful_alu.p4(152)
+control PLT_bloom_filter_way_ctrl(in bit<32> index, in Metadata metadata, out bit<32> result) {
+                                             ^^^^^
+stateful_alu.p4(176): warning: index shadows index
+        bit<32> compute_value_b_1( in op_num instr, in bit<32> index, in bit<32> unused1, in bit<32> unused2 ) {
+                                                               ^^^^^
+stateful_alu.p4(152)
+control PLT_bloom_filter_way_ctrl(in bit<32> index, in Metadata metadata, out bit<32> result) {
+                                             ^^^^^
+stateful_alu.p4(180): warning: index shadows index
+        bit<32> compute_value_b_2( in op_num instr, in bit<32> index, in bit<32> unused1, in bit<32> unused2 ) {
+                                                               ^^^^^
+stateful_alu.p4(152)
+control PLT_bloom_filter_way_ctrl(in bit<32> index, in Metadata metadata, out bit<32> result) {
+                                             ^^^^^
+warning: Program does not contain a `main' module

@@ -1,0 +1,3 @@
+test_config_39_action_data_add_to_field.p4(31): warning: -1: negative value with unsigned type
+   add_to_field(test.field_a, -1);
+                               ^

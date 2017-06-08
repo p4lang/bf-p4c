@@ -1,0 +1,49 @@
+warning: The order of headers in deparser is not uniquely determined by parser!
+17-Vlantransform.p4(123): warning: new_outer_tpid shadows new_outer_tpid
+        new_outer_tpid, new_outer_tpid_en,
+        ^^^^^^^^^^^^^^
+17-Vlantransform.p4(81)
+table new_outer_tpid { actions {do_new_outer_tpid;} }
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+17-Vlantransform.p4(124): warning: new_outer_pri shadows new_outer_pri
+        new_outer_pri, new_outer_pri_en,
+        ^^^^^^^^^^^^^
+17-Vlantransform.p4(86)
+table new_outer_pri { actions {do_new_outer_pri;} }
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+17-Vlantransform.p4(125): warning: new_outer_cfi shadows new_outer_cfi
+        new_outer_cfi, new_outer_cfi_en,
+        ^^^^^^^^^^^^^
+17-Vlantransform.p4(91)
+table new_outer_cfi { actions {do_new_outer_cfi;} }
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+17-Vlantransform.p4(126): warning: new_outer_vid shadows new_outer_vid
+        new_outer_vid, new_outer_vid_en,
+        ^^^^^^^^^^^^^
+17-Vlantransform.p4(96)
+table new_outer_vid { actions {do_new_outer_vid;} }
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+17-Vlantransform.p4(127): warning: new_inner_tpid shadows new_inner_tpid
+        new_inner_tpid, new_inner_tpid_en,
+        ^^^^^^^^^^^^^^
+17-Vlantransform.p4(102)
+table new_inner_tpid { actions {do_new_inner_tpid;} }
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+17-Vlantransform.p4(128): warning: new_inner_pri shadows new_inner_pri
+        new_inner_pri, new_inner_pri_en,
+        ^^^^^^^^^^^^^
+17-Vlantransform.p4(107)
+table new_inner_pri { actions {do_new_inner_pri;} }
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+17-Vlantransform.p4(129): warning: new_inner_cfi shadows new_inner_cfi
+        new_inner_cfi, new_inner_cfi_en,
+        ^^^^^^^^^^^^^
+17-Vlantransform.p4(112)
+table new_inner_cfi { actions {do_new_inner_cfi;} }
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+17-Vlantransform.p4(130): warning: new_inner_vid shadows new_inner_vid
+        new_inner_vid, new_inner_vid_en)
+        ^^^^^^^^^^^^^
+17-Vlantransform.p4(117)
+table new_inner_vid { actions {do_new_inner_vid;} }
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

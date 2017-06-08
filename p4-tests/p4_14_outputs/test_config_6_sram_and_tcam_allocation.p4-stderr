@@ -1,0 +1,3 @@
+test_config_6_sram_and_tcam_allocation.p4(63): warning: -1: negative value with unsigned type
+    add_to_field(ttl, -1);
+                       ^

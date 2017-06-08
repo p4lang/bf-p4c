@@ -1,0 +1,5 @@
+add test packet.packet_read:0x01010101 action0()
+add test packet.packet_read:0x02020202 action0()
+
+expect 1 01010101 02020202 03030303 ********
+packet 0 01010101 02020202 03030303 ffffffff

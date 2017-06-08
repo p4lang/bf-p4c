@@ -1,0 +1,24 @@
+18-SimpleVlanTransform.p4(90): warning: new_tpid shadows new_tpid
+action rewrite_tag(new_tpid, new_tpid_en,
+                   ^^^^^^^^
+18-SimpleVlanTransform.p4(69)
+table new_tpid { actions {do_new_tpid;} }
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+18-SimpleVlanTransform.p4(91): warning: new_pri shadows new_pri
+                   new_pri, new_pri_en,
+                   ^^^^^^^
+18-SimpleVlanTransform.p4(74)
+table new_pri { actions {do_new_pri;} }
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+18-SimpleVlanTransform.p4(92): warning: new_cfi shadows new_cfi
+                   new_cfi, new_cfi_en,
+                   ^^^^^^^
+18-SimpleVlanTransform.p4(79)
+table new_cfi { actions {do_new_cfi;} }
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+18-SimpleVlanTransform.p4(93): warning: new_vid shadows new_vid
+                   new_vid, new_vid_en)
+                   ^^^^^^^
+18-SimpleVlanTransform.p4(84)
+table new_vid { actions {do_new_vid;} }
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

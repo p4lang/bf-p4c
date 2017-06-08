@@ -1,0 +1,3 @@
+test_config_186_hlir_modify.p4(57): warning: -1: negative value with unsigned type
+    modify_field(meta.h, -1);
+                          ^
