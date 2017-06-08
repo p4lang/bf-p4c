@@ -1,0 +1,24 @@
+test_config_189_stat_with_lrt.p4(30): warning: Could not infer type for param1, using bit<8>
+action action_0(param0, param1, param2, param3, param4){
+                        ^^^^^^
+test_config_189_stat_with_lrt.p4(30): warning: Could not infer type for param2, using bit<8>
+action action_0(param0, param1, param2, param3, param4){
+                                ^^^^^^
+test_config_189_stat_with_lrt.p4(30): warning: Could not infer type for param3, using bit<8>
+action action_0(param0, param1, param2, param3, param4){
+                                        ^^^^^^
+test_config_189_stat_with_lrt.p4(30): warning: Could not infer type for param4, using bit<8>
+action action_0(param0, param1, param2, param3, param4){
+                                                ^^^^^^
+test_config_189_stat_with_lrt.p4(30): warning: Could not infer type for param1, using bit<8>
+action action_0(param0, param1, param2, param3, param4){
+                        ^^^^^^
+test_config_189_stat_with_lrt.p4(30): warning: Could not infer type for param2, using bit<8>
+action action_0(param0, param1, param2, param3, param4){
+                                ^^^^^^
+test_config_189_stat_with_lrt.p4(30): warning: Could not infer type for param3, using bit<8>
+action action_0(param0, param1, param2, param3, param4){
+                                        ^^^^^^
+test_config_189_stat_with_lrt.p4(30): warning: Could not infer type for param4, using bit<8>
+action action_0(param0, param1, param2, param3, param4){
+                                                ^^^^^^

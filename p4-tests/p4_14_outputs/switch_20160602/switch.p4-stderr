@@ -1,0 +1,40 @@
+l3.p4(141): warning: -1: negative value with unsigned type
+    add_to_field(ipv4.ttl, -1);
+                            ^
+l3.p4(146): warning: -1: negative value with unsigned type
+    add_to_field(ipv4.ttl, -1);
+                            ^
+l3.p4(151): warning: -1: negative value with unsigned type
+    add_to_field(ipv6.hopLimit, -1);
+                                 ^
+l3.p4(156): warning: -1: negative value with unsigned type
+    add_to_field(ipv6.hopLimit, -1);
+                                 ^
+l3.p4(161): warning: -1: negative value with unsigned type
+    add_to_field(mpls[0].ttl, -1);
+                               ^
+nat.p4(145): warning: -20: negative value with unsigned type
+    add(nat_metadata.l4_len, ipv4.totalLen, -20);
+                                             ^^
+acl.p4(675): warning: Could not infer type for session_id, using bit<8>
+action egress_mirror_coal_hdr(session_id, id) {
+                              ^^^^^^^^^^
+acl.p4(675): warning: Could not infer type for id, using bit<8>
+action egress_mirror_coal_hdr(session_id, id) {
+                                          ^^
+switch_config.p4(5): warning: Could not infer type for enable_flowlet, using bit<8>
+action set_config_parameters(enable_dod, enable_flowlet) {
+                                         ^^^^^^^^^^^^^^
+warning: The order of headers in deparser is not uniquely determined by parser!
+stateful_alu_blackbox.p4(3): warning: stateful_alu: extern has attributes, which are not supported in P4-16, and thus are not emitted as P4-16
+blackbox_type stateful_alu {
+^
+stateful_alu_blackbox.p4(3): warning: stateful_alu: extern has attributes, which are not supported in P4-16, and thus are not emitted as P4-16
+blackbox_type stateful_alu {
+^
+stateful_alu_blackbox.p4(3): warning: stateful_alu: extern has attributes, which are not supported in P4-16, and thus are not emitted as P4-16
+blackbox_type stateful_alu {
+^
+stateful_alu_blackbox.p4(3): warning: stateful_alu: extern has attributes, which are not supported in P4-16, and thus are not emitted as P4-16
+blackbox_type stateful_alu {
+^

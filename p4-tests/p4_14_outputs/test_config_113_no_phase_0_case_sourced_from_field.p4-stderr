@@ -1,0 +1,3 @@
+test_config_113_no_phase_0_case_sourced_from_field.p4(50): warning: Could not infer type for param3, using bit<8>
+action action_0(param0, param1, param2, param3){
+                                        ^^^^^^

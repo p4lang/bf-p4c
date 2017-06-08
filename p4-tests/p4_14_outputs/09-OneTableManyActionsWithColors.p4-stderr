@@ -1,0 +1,69 @@
+09-OneTableManyActionsWithColors.p4(172): warning: 11: value does not fit in 1 bits
+action action_1_1(value) { modify_field(md.field_1_1_1, value); modify_field(md.field_2_1_1, 11); }
+                                                                                             ^^
+09-OneTableManyActionsWithColors.p4(173): warning: 12: value does not fit in 1 bits
+action action_1_2(value) { modify_field(md.field_1_1_2, value); modify_field(md.field_2_1_2, 12); }
+                                                                                             ^^
+09-OneTableManyActionsWithColors.p4(174): warning: 13: value does not fit in 1 bits
+action action_1_3(value) { modify_field(md.field_1_1_3, value); modify_field(md.field_2_1_3, 13); }
+                                                                                             ^^
+09-OneTableManyActionsWithColors.p4(175): warning: 14: value does not fit in 1 bits
+action action_1_4(value) { modify_field(md.field_1_1_4, value); modify_field(md.field_2_1_4, 14); }
+                                                                                             ^^
+09-OneTableManyActionsWithColors.p4(176): warning: 15: value does not fit in 1 bits
+action action_1_5(value) { modify_field(md.field_1_1_5, value); modify_field(md.field_2_1_5, 15); }
+                                                                                             ^^
+09-OneTableManyActionsWithColors.p4(177): warning: 16: value does not fit in 1 bits
+action action_1_6(value) { modify_field(md.field_1_1_6, value); modify_field(md.field_2_1_6, 16); }
+                                                                                             ^^
+09-OneTableManyActionsWithColors.p4(178): warning: 17: value does not fit in 1 bits
+action action_1_7(value) { modify_field(md.field_1_1_7, value); modify_field(md.field_2_1_7, 17); }
+                                                                                             ^^
+09-OneTableManyActionsWithColors.p4(179): warning: 18: value does not fit in 1 bits
+action action_1_8(value) { modify_field(md.field_1_1_8, value); modify_field(md.field_2_1_8, 18); }
+                                                                                             ^^
+09-OneTableManyActionsWithColors.p4(180): warning: 19: value does not fit in 1 bits
+action action_1_9(value) { modify_field(md.field_1_1_9, value); modify_field(md.field_2_1_9, 19); }
+                                                                                             ^^
+09-OneTableManyActionsWithColors.p4(181): warning: 110: value does not fit in 1 bits
+action action_1_10(value) { modify_field(md.field_1_1_10, value); modify_field(md.field_2_1_10, 110); }
+                                                                                                ^^^
+09-OneTableManyActionsWithColors.p4(182): warning: 111: value does not fit in 1 bits
+action action_1_11(value) { modify_field(md.field_1_1_11, value); modify_field(md.field_2_1_11, 111); }
+                                                                                                ^^^
+09-OneTableManyActionsWithColors.p4(183): warning: 112: value does not fit in 1 bits
+action action_1_12(value) { modify_field(md.field_1_1_12, value); modify_field(md.field_2_1_12, 112); }
+                                                                                                ^^^
+09-OneTableManyActionsWithColors.p4(184): warning: 113: value does not fit in 1 bits
+action action_1_13(value) { modify_field(md.field_1_1_13, value); modify_field(md.field_2_1_13, 113); }
+                                                                                                ^^^
+09-OneTableManyActionsWithColors.p4(185): warning: 114: value does not fit in 1 bits
+action action_1_14(value) { modify_field(md.field_1_1_14, value); modify_field(md.field_2_1_14, 114); }
+                                                                                                ^^^
+09-OneTableManyActionsWithColors.p4(186): warning: 115: value does not fit in 1 bits
+action action_1_15(value) { modify_field(md.field_1_1_15, value); modify_field(md.field_2_1_15, 115); }
+                                                                                                ^^^
+09-OneTableManyActionsWithColors.p4(187): warning: 116: value does not fit in 1 bits
+action action_1_16(value) { modify_field(md.field_1_1_16, value); modify_field(md.field_2_1_16, 116); }
+                                                                                                ^^^
+09-OneTableManyActionsWithColors.p4(198): warning: 810: value does not fit in 8 bits
+action action_8_10(value) { modify_field(md.field_1_8_10, value); modify_field(md.field_2_8_10, 810); }
+                                                                                                ^^^
+09-OneTableManyActionsWithColors.p4(199): warning: 811: value does not fit in 8 bits
+action action_8_11(value) { modify_field(md.field_1_8_11, value); modify_field(md.field_2_8_11, 811); }
+                                                                                                ^^^
+09-OneTableManyActionsWithColors.p4(200): warning: 812: value does not fit in 8 bits
+action action_8_12(value) { modify_field(md.field_1_8_12, value); modify_field(md.field_2_8_12, 812); }
+                                                                                                ^^^
+09-OneTableManyActionsWithColors.p4(201): warning: 813: value does not fit in 8 bits
+action action_8_13(value) { modify_field(md.field_1_8_13, value); modify_field(md.field_2_8_13, 813); }
+                                                                                                ^^^
+09-OneTableManyActionsWithColors.p4(202): warning: 814: value does not fit in 8 bits
+action action_8_14(value) { modify_field(md.field_1_8_14, value); modify_field(md.field_2_8_14, 814); }
+                                                                                                ^^^
+09-OneTableManyActionsWithColors.p4(203): warning: 815: value does not fit in 8 bits
+action action_8_15(value) { modify_field(md.field_1_8_15, value); modify_field(md.field_2_8_15, 815); }
+                                                                                                ^^^
+09-OneTableManyActionsWithColors.p4(204): warning: 816: value does not fit in 8 bits
+action action_8_16(value) { modify_field(md.field_1_8_16, value); modify_field(md.field_2_8_16, 816); }
+                                                                                                ^^^

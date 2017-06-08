@@ -1,0 +1,223 @@
+#!/bin/bash
+
+set -o pipefail
+
+# On macOS, 'timeout' is not installed by default, and 'brew install coreutils'
+# prefixes all of the standard GNU utilities with 'g', so 'timeout' is
+# 'gtimeout' on that plaform. 'readlink' also needs this treatment because the
+# BSD version accepts different options.
+TIMEOUT_COMMAND=$(which gtimeout || which timeout)
+READLINK_COMMAND=$(which greadlink || which readlink)
+
+TIMEOUT=${P4C_TIMEOUT:-120}
+TIME_COMMAND="" # don't time commands
+verbose=false
+debug=false
+run_stf=true
+
+die() {
+    if [ $# -gt 0 ]; then
+        echo >&2 "$@"
+    fi
+    exit 1
+}
+
+run() {
+    if $verbose; then
+        echo "$@"
+    fi
+    $TIME_COMMAND $TIMEOUT_COMMAND --foreground $TIMEOUT "$@"
+    status=$?
+    if [ $status -eq 124 ]; then
+        echo >&2 $1 TIMEOUT
+    elif [ $status -gt 128 ]; then
+        echo >&2 $1 CRASH with signal $(expr $status - 128)
+    elif [ $status -gt 0 ]; then
+        echo >&2 $1 FAILED
+    fi
+    return $status
+}
+
+findbin() {
+    dir=$(pwd -P)
+    while [ "$dir" != "/" ]; do
+        if [ -d "$dir/$1" ]; then
+            x=""
+            for f in $(find $($READLINK_COMMAND -f "$dir/$1") -name $2 -type f); do
+                if [ -z "$x" -o "$f" -nt "$x" ]; then
+                    x="$f"
+                fi
+            done
+            if [ -x "$x" ]; then
+                echo $x
+                return
+            fi
+        fi
+        dir=$(dirname $dir)
+    done
+    echo $2
+}
+
+srcdir=${1%/}
+if [ ! -d "$srcdir" ]; then
+    die "Usage: $0 <srcdir> <test-source>"
+fi
+shift
+
+P4C=./p4c-tofino
+testdir=tofino
+filter_P4C_ARGS=""
+for p4c_arg in $P4C_ARGS; do
+    if [ "$p4c_arg" = "--runtfas" -o "$p4c_arg" = "-runtfas" ]; then
+        RUN_TFAS=true
+    elif [ "$p4c_arg" = "-norun" ]; then
+        run_stf=false
+    elif [ "$p4c_arg" = "-time" ]; then
+        TIME_COMMAND="time"
+    elif [ "$p4c_arg" = "-v" ]; then
+        if $verbose; then
+            filter_P4C_ARGS="$filter_P4C_ARGS $p4c_arg"
+        fi
+        verbose=true
+    else
+        filter_P4C_ARGS="$filter_P4C_ARGS $p4c_arg"
+    fi
+done
+P4C_ARGS="$filter_P4C_ARGS"
+
+while [ $# -gt 1 ]; do
+    case $1 in
+    -h|-help|--help)
+        echo >&2 "p4c-tofino test runner options"
+        echo >&2 "   -v             verbose -- print commands before running them"
+        echo >&2 "   -gdb           run p4c-tofino under gdb"
+        echo >&2 "   -time          time commands as they run"
+        echo >&2 "   -to <sec>      timeout programs after <sec> seconds (default 30)"
+        echo >&2 "other arguments passed to p4c-tofino:"
+        $P4C --help
+        exit 0
+        ;;
+    -db|-gdb)
+        debug=true
+        if $verbose; then
+            P4C_ARGS="$P4C_ARGS -v"
+        fi
+        ;;
+    -to)
+        TIMEOUT=$2
+        shift
+        ;;
+    -time)
+        TIME_COMMAND="time"
+        ;;
+    -norun)
+        run_stf=false
+        ;;
+    -v) if $verbose || $debug; then
+            P4C_ARGS="$P4C_ARGS $1"
+        fi
+        verbose=true
+        ;;
+    -runtfas|--runtfas)
+        RUN_TFAS=true
+        ;;
+    --*)
+        if [ -d $testdir${1#-} ]; then
+            testdir="$testdir${1#-}"
+        fi
+        P4C_ARGS="$P4C_ARGS $1"
+        ;;
+    *)  P4C_ARGS="$P4C_ARGS $1"
+        ;;
+    esac
+    shift
+done
+
+if [ ! -r $1 ]; then
+    die "Can't read $1"
+fi
+file=$1
+
+if [[ "$file" =~ ^"$srcdir/" || "$srcdir" == "." ]]; then
+    testdir=$testdir/$(dirname ${file#$srcdir/})
+elif [[ "$file" =~ ^/ ]]; then
+    testdir=$(dirname $file)
+else
+    die "$file is not under $srcdir"
+fi
+
+name=$(basename $file .p4)
+
+P4C_ARGS="$P4C_ARGS -D__TARGET_TOFINO__"
+if [ $(expr "$file" : ".*v1_2") -gt 0 -o $(expr "$file" : ".*p4_16") -gt 0 ]; then
+    P4C_ARGS="$P4C_ARGS --p4v 1.2"
+fi
+
+if [ ! -x $P4C ]; then
+    die "Can't find $P4C"
+fi
+
+if $debug; then
+    exec gdb --args $P4C $P4C_ARGS $file -o $testdir/$name.tfa
+fi
+
+if [ $(expr "$file" : ".*_errors") -gt 0 ]; then
+    if run $P4C $P4C_ARGS $file -o $testdir/$name.tfa; then
+        echo >&2 "$P4C did not give an error when expected"
+        exit 1
+    fi
+    exit 0
+fi
+
+rm -f $testdir/$name.tfa
+run $P4C $P4C_ARGS $file -o $testdir/$name.tfa || die
+
+if [ ! -r $testdir/$name.tfa ]; then
+    echo >&2 "$P4C did not give an error but did not generate output either"
+    exit 1
+fi
+
+
+if $run_stf && [ -r ${file%.p4}.stf ]; then
+    TFAS=$(findbin bf-asm tfas)
+    if [ ! -x $TFAS ]; then
+        TFAS=$(findbin tofino-asm tfas)
+    fi
+    TFLN=$(findbin bf-asm tflink)
+    if [ ! -x $TFLN ]; then
+        TFLN=$(findbin tofino-asm tflink)
+    fi
+    STF=$(findbin model simple_test_harness)
+
+    if [[ "$file" =~ ^/ ]]; then
+        test=${file%.p4}.stf
+    else
+        test=`pwd`/${file%.p4}.stf
+    fi
+    cd $testdir
+    mkdir -p $name.out
+    obsLog=$name.p4.obs
+
+    rm -f $name.out/*.cfg.json
+    cp $name.tfa $name.out
+    run $TFAS -vvvvl $name.out/tfas.config.log $name.tfa || die
+    run $TFLN $name.out/*.cfg.json -o $name.out/tofino.bin || die
+    run $STF -l $name.out --observation-log $obsLog $test | \
+        grep -v 'WARN MAU::[a-z_]* Time gone backwards!' \
+        || die
+elif ${RUN_TFAS:-false}; then
+    TFAS=$(findbin bf-asm tfas)
+    if [ ! -x $TFAS ]; then
+        TFAS=$(findbin tofino-asm tfas)
+    fi
+    cd $testdir
+    mkdir -p $name.out
+    rm -f $name.out/*.cfg.json
+    run $TFAS -vvvvl $name.out/tfas.config.log $name.tfa || die
+fi
+
+if [[ " $IFAIL_TESTS " =~ " $testdir/$name.p4.test " ]]; then
+    echo "intermittent test PASSED"
+    exit 1
+fi
+
