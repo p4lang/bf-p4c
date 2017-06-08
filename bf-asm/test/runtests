@@ -9,6 +9,7 @@ TIME=false
 PARALLEL=1
 TOKEN_READ=0
 TOKEN_WRITE=0
+TFAS_OPTS="-Mvvvvl"
 
 shopt -s nullglob
 set -o pipefail
@@ -23,6 +24,7 @@ TRY_GLSC="
     $PWD/../p4c-tofino/p4c_tofino/shell.py
     $PWD/../../p4c-tofino/shell.py
     $PWD/../../p4c-tofino/p4c_tofino/shell.py
+    $PWD/../../../p4c-tofino/p4c_tofino/shell.py
     $TESTDIR/../../p4c-tofino/shell.py
     $TESTDIR/../../p4c-tofino/p4c_tofino/shell.py
 "
@@ -40,6 +42,7 @@ TRY_STF="
     $PWD/../model/*/tests/simple_test_harness/simple_test_harness
     $PWD/../../model/tests/simple_test_harness/simple_test_harness
     $PWD/../../model/*/tests/simple_test_harness/simple_test_harness
+    $PWD/../../../model/*/tests/simple_test_harness/simple_test_harness
     $TESTDIR/../../model/tests/simple_test_harness/simple_test_harness
     $TESTDIR/../../model/*/tests/simple_test_harness/simple_test_harness
 "
@@ -147,6 +150,7 @@ fi
 for f in $TRY_STF; do
     if [ -x "$f" -a "$f" -nt "$STF" ]; then
         STF="$f"
+        break
     fi
 done
 
@@ -166,6 +170,9 @@ fi
 
 if [ -x "$STF" ]; then
     echo "Using $STF"
+else
+    echo >&2 "Can't find simple-test-harness executable"
+    STF=false
 fi
 
 TRY_BINDIRS="
@@ -302,7 +309,7 @@ function test_p4() {
         fi
     done
     tfas_succeeded=false
-    if $ok && run $TFAS -Mvvvvl tfas.config.log $name.tfa >tfas.log 2>&1; then
+    if $ok && run $TFAS $TFAS_OPTS tfas.config.log $name.tfa >tfas.log 2>&1; then
         tfas_succeeded=true
         for f in $name.out/*.cfg.json; do
             if $REFLOW $f | gzip -9 > $f.gz; then
@@ -430,6 +437,7 @@ function test_stf() {
     rv=0
     #if [[ ( ! -f `pwd`/$name.out/$name.tfa || $fast = false ) && ! -d $outdir ]]; then
     if ! $outdir; then
+        TFAS_OPTS="-vvvvl"
         test_p4 $name.p4 
     fi
     #if [[ -r `pwd`/$name.out/$name.tfa && ( ! -r `pwd`/$name.out/$name.out/tofino-bin || $fast = false ) ]]; then

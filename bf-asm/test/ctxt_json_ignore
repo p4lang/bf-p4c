@@ -93,3 +93,5 @@ override_stat_addr
 override_stat_full_addr
 override_stateful_addr
 override_stateful_full_addr
+all_hash_calculations
+dynamic_selection

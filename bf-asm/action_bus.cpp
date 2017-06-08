@@ -241,7 +241,8 @@ void ActionBus::pass1(Table *tbl) {
                 else {
                     assert(!slot.data.empty() && !use[slotno]->data.empty());
                     auto nsrc = slot.data.begin()->first;
-                    unsigned nstart = 8*(byte - slot.byte);
+                    unsigned noff = slot.data.begin()->second;
+                    unsigned nstart = 8*(byte - slot.byte) + noff;
                     if (nsrc.type == Source::Field)
                         nstart = nsrc.field->bit(nstart);
                     auto osrc = use[slotno]->data.begin()->first;
@@ -251,13 +252,13 @@ void ActionBus::pass1(Table *tbl) {
                             ostart = osrc.field->bit(ostart);
                         else
                             ostart += osrc.field->bit(0); }
-                    if (nstart != ostart)
+                    if (ostart != nstart)
                         error(lineno, "Action bus byte %d used inconsistently for fields %s and "
                               "%s in table %s", byte, use[slotno]->name.c_str(),
-                              slot.name.c_str(), tbl->name());
-                    continue; } }
-            tbl->stage->action_bus_use[slotno] = tbl;
-            use[slotno] = &slot;
+                              slot.name.c_str(), tbl->name()); } 
+            } else {
+                tbl->stage->action_bus_use[slotno] = tbl;
+                use[slotno] = &slot; }
             unsigned hi = slot.lo(tbl) + slot.size - 1;
             if (action_hv_slice_use.size() <= hi/128U)
                 action_hv_slice_use.resize(hi/128U + 1);

@@ -126,7 +126,8 @@ ctags:
 	    --regex-C++='/^DECLARE_(ABSTRACT_)?TABLE_TYPE\(([a-zA-Z0-9_]+)/\2/c/'
 
 tests:
-	+@export BUILDDIR=$$(pwd); cd $(srcdir)/test; ./runtests asm/*.tfa *.p4 */*.p4
+	+@export BUILDDIR=$$(pwd); cd $(srcdir)/test; ./runtests -f asm/*.tfa *.p4 mau/*.p4
+	+@export BUILDDIR=$$(pwd); cd $(srcdir)/test; ./runtests -f -b stf/*.stf 
 
 check-sanity:
 	+@export BUILDDIR=$$(pwd); cd $(srcdir)/test; ./runtests *.p4
