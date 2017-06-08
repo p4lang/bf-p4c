@@ -347,7 +347,7 @@ void CreateSaluInstruction::postorder(const IR::Property *prop) {
 
 bool CreateSaluInstruction::preorder(const IR::Declaration_Instance *di) {
     BUG_CHECK(!action, "%s: Nested extern", di->srcInfo);
-    BUG_CHECK(di->type->to<IR::Type_Extern>()->name == "stateful_alu",
+    BUG_CHECK(di->type->to<IR::Type_Extern>()->name == "stateful_alu_14",
               "%s: Not a stateful_alu", di->srcInfo);
     LOG3("Creating action " << di->name << " for stateful table " << salu->name);
     action = new IR::MAU::SaluAction(di->srcInfo, di->name);

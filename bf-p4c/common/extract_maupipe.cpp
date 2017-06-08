@@ -189,7 +189,7 @@ static IR::Attached *createAttached(IR::MAU::Table *tt, Util::SourceInfo srcInfo
 static void updateAttachedSalu(const Util::SourceInfo &loc, const P4::ReferenceMap *refMap,
                                IR::MAU::StatefulAlu *&salu, const IR::Declaration_Instance *ext,
                                cstring action) {
-    BUG_CHECK(ext->type->toString() == "stateful_alu", "%s is not a stateful alu", ext);
+    BUG_CHECK(ext->type->toString() == "stateful_alu_14", "%s is not a stateful alu", ext);
     auto regprop = ext->properties["reg"];
     if (!regprop) {
         error("%s: no reg property in stateful_alu %s", ext->srcInfo, ext->name);
@@ -331,7 +331,7 @@ struct AttachTables : public Modifier {
                 LOG3("Created " << att->node_type_name() << ' ' << att->name << " (pt 3)");
                 gref->obj = converted[di] = att;
                 attached[tt->name].push_back(att);
-            } else if (di->type->toString() == "stateful_alu") {
+            } else if (di->type->toString() == "stateful_alu_14") {
                 auto act = findContext<IR::MAU::Action>();
                 updateAttachedSalu(gref->srcInfo, refMap, salu[tt->name], di, act->name);
                 gref->obj = converted[di] = salu[tt->name]; } } }

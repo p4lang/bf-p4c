@@ -326,13 +326,13 @@ const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
     } else if (prim->name == "drop" || prim->name == "mark_to_drop") {
         return new IR::MAU::Instruction(prim->srcInfo, "invalidate",
             gen_stdmeta(VisitingThread(this) ? "egress_port" : "egress_spec"));
-    } else if (prim->name == "stateful_alu.execute_stateful_alu" ||
-               prim->name == "stateful_alu.execute_stateful_alu_from_hash" ||
-               prim->name == "stateful_alu.execute_stateful_log") {
+    } else if (prim->name == "stateful_alu_14.execute_stateful_alu" ||
+               prim->name == "stateful_alu_14.execute_stateful_alu_from_hash" ||
+               prim->name == "stateful_alu_14.execute_stateful_log") {
         bool direct_access = false;
         if (prim->operands.size() > 1)
             stateful.push_back(prim);  // needed to setup the index properly
-        else if (prim->name == "stateful_alu.execute_stateful_alu")
+        else if (prim->name == "stateful_alu_14.execute_stateful_alu")
             direct_access = true;
         auto glob = prim->operands.at(0)->to<IR::GlobalRef>();
         auto salu = glob->obj->to<IR::MAU::StatefulAlu>();
@@ -366,7 +366,7 @@ const IR::Type *stateful_type_for_primitive(const IR::Primitive *prim) {
         return IR::Type_Counter::get();
     if (prim->name == "meter.execute_meter" || prim->name == "direct_meter.read")
         return IR::Type_Meter::get();
-    if (prim->name.startsWith("stateful_alu."))
+    if (prim->name.startsWith("stateful_alu_14."))
         return IR::Type_Register::get();
     BUG("Not a stateful primitive %s", prim);
 }

@@ -16,6 +16,7 @@
 #include "frontends/p4-14/typecheck.h"
 #include "frontends/common/parseInput.h"
 #include "common/extract_maupipe.h"
+#include "common/frontend.h"
 #include "common/remap_intrin.h"
 #include "midend.h"
 #include "midend/actionsInlining.h"
@@ -40,7 +41,7 @@ int main(int ac, char **av) {
         error("only supported target is 'tofino'");
         return 1; }
 
-    auto program = P4::parseP4File(options);
+    auto program = P4::parseP4File(options, new Tofino::ExternConverter);
     program = P4::FrontEnd(hook).run(options, program, true);
     if (!program)
         return 1;

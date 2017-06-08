@@ -24,6 +24,7 @@ tofino_backend_common_UNIFIED = \
 	%reldir%/common/elim_unused.cpp \
 	%reldir%/common/extract_maupipe.cpp \
 	%reldir%/common/field_defuse.cpp \
+	%reldir%/common/frontend.cpp \
 	%reldir%/common/header_stack.cpp \
 	%reldir%/common/live_at_entry.cpp \
 	%reldir%/common/remap_intrin.cpp \
@@ -37,6 +38,7 @@ noinst_HEADERS += \
 	%reldir%/common/elim_unused.h \
 	%reldir%/common/extract_maupipe.h \
 	%reldir%/common/field_defuse.h \
+	%reldir%/common/frontend.h \
 	%reldir%/common/header_stack.h \
 	%reldir%/common/live_at_entry.h \
 	%reldir%/common/remap_intrin.h \
@@ -175,6 +177,9 @@ ir_DEF_FILES += \
     $(srcdir)/%reldir%/ir/parde.def
 
 p4include_HEADERS += $(srcdir)/%reldir%/p4include/tofino_model.p4
+p4include_tofinodir = $(p4includedir)/tofino
+p4include_tofino_HEADERS = \
+    $(srcdir)/%reldir%/p4include/tofino/stateful_alu.p4
 p4_14include_tofinodir = $(p4_14includedir)/tofino
 p4_14include_tofino_HEADERS = \
     $(srcdir)/%reldir%/p4_14include/tofino/constants.p4 \
@@ -185,6 +190,8 @@ p4_14include_tofino_HEADERS = \
     $(srcdir)/%reldir%/p4_14include/tofino/primitives.p4 \
     $(srcdir)/%reldir%/p4_14include/tofino/stateful_alu_blackbox.p4 \
     $(srcdir)/%reldir%/p4_14include/tofino/wred_blackbox.p4
+
+installed-data.stamp: $(p4include_tofino_HEADERS) $(p4_14include_tofino_HEADERS)
 
 noinst_LTLIBRARIES += libtofinobackend.la
 libtofinobackend_la_LIBADD = libfrontend.la
