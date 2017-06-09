@@ -64,13 +64,11 @@ if [ ! -d "$srcdir" ]; then
 fi
 shift
 
-P4C=./p4c-tofino
+P4C=./p4c
 testdir=tofino
 filter_P4C_ARGS=""
 for p4c_arg in $P4C_ARGS; do
-    if [ "$p4c_arg" = "--runtfas" -o "$p4c_arg" = "-runtfas" ]; then
-        RUN_TFAS=true
-    elif [ "$p4c_arg" = "-norun" ]; then
+    if [ "$p4c_arg" = "-norun" ]; then
         run_stf=false
     elif [ "$p4c_arg" = "-time" ]; then
         TIME_COMMAND="time"
@@ -88,7 +86,7 @@ P4C_ARGS="$filter_P4C_ARGS"
 while [ $# -gt 1 ]; do
     case $1 in
     -h|-help|--help)
-        echo >&2 "p4c-tofino test runner options"
+        echo >&2 "p4c tofino test runner options"
         echo >&2 "   -v             verbose -- print commands before running them"
         echo >&2 "   -gdb           run p4c-tofino under gdb"
         echo >&2 "   -time          time commands as they run"
@@ -118,9 +116,6 @@ while [ $# -gt 1 ]; do
         fi
         verbose=true
         ;;
-    -runtfas|--runtfas)
-        RUN_TFAS=true
-        ;;
     --*)
         if [ -d $testdir${1#-} ]; then
             testdir="$testdir${1#-}"
@@ -148,9 +143,25 @@ fi
 
 name=$(basename $file .p4)
 
-P4C_ARGS="$P4C_ARGS -D__TARGET_TOFINO__"
+if $debug; then
+    # we need to invoke the debugger directly on the backend executable
+    P4C=./p4c-tofino
+    P4C_ARGS="$P4C_ARGS -D__TARGET_TOFINO__"
+else
+    P4C_ARGS="$P4C_ARGS --target tofino-native-barefoot"
+fi
 if [ $(expr "$file" : ".*v1_2") -gt 0 -o $(expr "$file" : ".*p4_16") -gt 0 ]; then
-    P4C_ARGS="$P4C_ARGS --p4v 1.2"
+    if $debug; then
+        P4C_ARGS="$P4C_ARGS --p4v 16"
+    else
+        P4C_ARGS="$P4C_ARGS -x p4-16"
+    fi
+else
+    if $debug; then
+        P4C_ARGS="$P4C_ARGS --p4v 14"
+    else
+        P4C_ARGS="$P4C_ARGS -x p4-14"
+    fi
 fi
 
 if [ ! -x $P4C ]; then
@@ -158,11 +169,14 @@ if [ ! -x $P4C ]; then
 fi
 
 if $debug; then
+    if $verbose; then
+        echo "gdb --args $P4C $P4C_ARGS $file -o $testdir/$name.tfa"
+    fi
     exec gdb --args $P4C $P4C_ARGS $file -o $testdir/$name.tfa
 fi
 
 if [ $(expr "$file" : ".*_errors") -gt 0 ]; then
-    if run $P4C $P4C_ARGS $file -o $testdir/$name.tfa; then
+    if run $P4C $P4C_ARGS $file -o $testdir/${name}.out; then
         echo >&2 "$P4C did not give an error when expected"
         exit 1
     fi
@@ -170,23 +184,14 @@ if [ $(expr "$file" : ".*_errors") -gt 0 ]; then
 fi
 
 rm -f $testdir/$name.tfa
-run $P4C $P4C_ARGS $file -o $testdir/$name.tfa || die
+run $P4C $P4C_ARGS $file -o $testdir/${name}.out || die
 
-if [ ! -r $testdir/$name.tfa ]; then
+if [ ! -r $testdir/$name.out/$name.tfa ]; then
     echo >&2 "$P4C did not give an error but did not generate output either"
     exit 1
 fi
 
-
 if $run_stf && [ -r ${file%.p4}.stf ]; then
-    TFAS=$(findbin bf-asm tfas)
-    if [ ! -x $TFAS ]; then
-        TFAS=$(findbin tofino-asm tfas)
-    fi
-    TFLN=$(findbin bf-asm tflink)
-    if [ ! -x $TFLN ]; then
-        TFLN=$(findbin tofino-asm tflink)
-    fi
     STF=$(findbin model simple_test_harness)
 
     if [[ "$file" =~ ^/ ]]; then
@@ -199,25 +204,12 @@ if $run_stf && [ -r ${file%.p4}.stf ]; then
     obsLog=$name.p4.obs
 
     rm -f $name.out/*.cfg.json
-    cp $name.tfa $name.out
-    run $TFAS -vvvvl $name.out/tfas.config.log $name.tfa || die
-    run $TFLN $name.out/*.cfg.json -o $name.out/tofino.bin || die
     run $STF -l $name.out --observation-log $obsLog $test | \
         grep -v 'WARN MAU::[a-z_]* Time gone backwards!' \
         || die
-elif ${RUN_TFAS:-false}; then
-    TFAS=$(findbin bf-asm tfas)
-    if [ ! -x $TFAS ]; then
-        TFAS=$(findbin tofino-asm tfas)
-    fi
-    cd $testdir
-    mkdir -p $name.out
-    rm -f $name.out/*.cfg.json
-    run $TFAS -vvvvl $name.out/tfas.config.log $name.tfa || die
 fi
 
 if [[ " $IFAIL_TESTS " =~ " $testdir/$name.p4.test " ]]; then
     echo "intermittent test PASSED"
     exit 1
 fi
-
