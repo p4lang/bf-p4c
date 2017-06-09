@@ -400,18 +400,29 @@ PHV_Container::field_overlays(
     //
     assert(field);
     //
+    // field can have overlays spanning containers
+    // e.g., field->field_overlay_map is {[3]=f,[4]=f,[5]=f}, 24b field mapped to 3*8b containers
+    // and overlayed field f spans these 3 containers
+    // this container should only overlay the first slice
+    // other containers should consider remaining slices
+    // f's slice width mimics substratum width in each container
+    //
+    ordered_set<PhvInfo::Field *> overlayed_fields;
     if (field->field_overlay_map().size()) {
         LOG3("\t.....PHV_Container::field_overlays.....");
         LOG3("\t" << field);
         for (auto &entry : field->field_overlay_map()) {
             if (entry.second) {
                 for (auto &f : *(entry.second)) {
-                    single_field_overlay(
-                        f,
-                        start,
-                        width,
-                        field_bit_lo,
-                        Container_Content::Pass::Field_Interference);
+                    if (!overlayed_fields.count(f)) {
+                        single_field_overlay(
+                            f,
+                            start,
+                            width,
+                            field_bit_lo,
+                            Container_Content::Pass::Field_Interference);
+                        overlayed_fields.insert(f);
+                    }
                 }
             }
         }
@@ -581,21 +592,23 @@ PHV_Container::fields_in_container(PhvInfo::Field *f, Container_Content *cc) {
                 && (cc_slice->lo() > cc->hi() || cc_slice->hi() < cc->lo()),
                 "*****PHV_Container::fields_in_container()*****"
                 ".....field slices overlap.....\n"
-                "<cc_slice_lo=%d..cc_slice_hi=%d> <cc->lo()=%d..cc->hi()=%d>\n,"
-                "cc_slice->field()=%d:%s, cc->field()=%d:%s",
+                "<cc_slice_lo=%d..cc_slice_hi=%d> <cc->lo()=%d..cc->hi()=%d>\n"
+                "cc_slice->field()=%d:%s, cc->field()=%d:%s\t%s",
                 cc_slice->lo(), cc_slice->hi(), cc->lo(), cc->hi(),
                 cc_slice->field()->id, cc_slice->field()->name,
-                cc->field()->id, cc->field()->name);
+                cc->field()->id, cc->field()->name,
+                phv_number_string());
             BUG_CHECK(cc_slice->taint_color() != cc->taint_color(),
                 "*****PHV_Container::fields_in_container()*****"
                 ".....field slices taint colors should not be same.....\n"
                 "<cc_slice_lo=%d..cc_slice_hi=%d> <cc->lo()=%d..cc->hi()=%d>\n"
                 "cc_slice->field()=%d:%s, cc->field()=%d:%s\n"
-                "cc_slice taint_color=%s ==  cc taint_color=%s",
+                "cc_slice taint_color=%s ==  cc taint_color=%s\t%s",
                 cc_slice->lo(), cc_slice->hi(), cc->lo(), cc->hi(),
                 cc_slice->field()->id, cc_slice->field()->name,
                 cc->field()->id, cc->field()->name,
-                cc_slice->taint_color(), cc->taint_color());
+                cc_slice->taint_color(), cc->taint_color(),
+                phv_number_string());
         }
     }
     fields_in_container_i[f].push_back(cc);

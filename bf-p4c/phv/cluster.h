@@ -20,6 +20,9 @@
  *  destination)
  *  - they are part of two CCGFs that are in the same group
  *
+ * Perform cluster analysis after last &phv pass
+ * fields computed by PhvInfo phv, these field pointers are not part of IR
+ *
  * This pass also fills in the following PhvInfo::Field fields:
  *  - mau_write
  *  - phv_use_lo
