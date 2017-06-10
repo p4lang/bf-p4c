@@ -405,7 +405,7 @@ PHV_Bind::trivial_allocate(std::list<PhvInfo::Field *>& fields) {
             container_width = PHV_Container::PHV_Word::b8;
             container_prefix += "B";
         }
-        PHV::Container *asm_container;
+        PHV::Container *asm_container = nullptr;
         for (field_bit = 0; field_bit < f->phv_use_width(); /* nil */) {
             std::stringstream ss;
             ss << overflow_reg[container_width];
@@ -449,13 +449,14 @@ PHV_Bind::trivial_allocate(std::list<PhvInfo::Field *>& fields) {
                 //
                 f->alloc_i.clear();
             }
+            assert(asm_container);
             container_contiguous_alloc(f,
                                        container_width,
                                        asm_container,
                                        container_width);
         }
     }
-}
+}  // trivial_allocate
 
 
 //***********************************************************************************

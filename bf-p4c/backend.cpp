@@ -160,7 +160,9 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
         &cluster_phv_mau,      // cluster PHV container placements
                                // first cut PHV MAU Group assignments
                                // produces cohabit fields for Table Placement
-        &cluster_slicing,      // slice clusters into smaller clusters
+        options.phv_slicing?
+            &cluster_slicing: nullptr,
+                               // slice clusters into smaller clusters
                                // attempt packing with reduced width requirements
                                // slicing also improves overlay possibilities due to lesser width
                                // although number and mutual exclusion of fields don't change

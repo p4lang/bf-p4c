@@ -253,6 +253,8 @@ class PhvInfo : public Inspector {
                                            // F[1] = c2
                                            // F<c1,c2> -- [0] -- B<c1>, A<c1>
                                            //          -- [1] -- B<c2>, D<c2>, E<c2>
+                                           // after phv container association with field
+                                           // virtual container number keys replaced by phv-numbers
         //
         // API: phv analysis to rest of Compiler
         //
@@ -260,11 +262,10 @@ class PhvInfo : public Inspector {
         //
         // cluster ids
         //
-
-        // TODO: Why are cluster IDs strings?  Is this for pretty printing?
-        // (Eg. what is PHV_Interference::virtual_container_overlay() doing
-        // when it updates the cluster id?
-
+        // cluster IDs strings for tracking and differentiating purposes
+        // e.g., PHV_Interference::virtual_container_overlay() updates cluster id
+        // tracks chain of "interference reduced" overlay fields to substratum field
+        //
         void cl_id(std::string cl_p) const;
         std::string cl_id(Cluster_PHV *cl = 0) const;
         int cl_id_num(Cluster_PHV *cl = 0) const;
@@ -341,6 +342,7 @@ class PhvInfo : public Inspector {
         const ordered_map<int, ordered_set<Field *> *>&
             field_overlay_map() const                          { return field_overlay_map_i; }
         void field_overlay_map(int r, Field *field);
+        ordered_set<Field *> *field_overlay_map(int r);
         void field_overlays(std::list<Field *>& fields_list);
         void field_overlay(Field *overlay);
         //

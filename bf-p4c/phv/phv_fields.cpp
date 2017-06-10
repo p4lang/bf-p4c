@@ -503,7 +503,7 @@ PhvInfo::Field::ccgf_width() const {
 }
 
 //
-// clusters, phv_containers
+// clusters
 //
 
 void
@@ -526,12 +526,6 @@ PhvInfo::Field::clusters(Cluster_PHV *cluster_p) {
             m->clusters(cluster_p);
         }
     }
-}
-
-void
-PhvInfo::Field::phv_containers(PHV_Container *c) {
-    assert(c);
-    phv_containers_i.insert(c);
 }
 
 //
@@ -590,6 +584,32 @@ PhvInfo::Field::phv_use_hi(Cluster_PHV *cl) const {
 //
 
 void
+PhvInfo::Field::phv_containers(PHV_Container *c) {
+    assert(c);
+    // actual phv container associated with field
+    // field can have several phv containers, e.g, 24bF = 3*8bC
+    phv_containers_i.insert(c);
+    if (field_overlay_map_i.size()) {
+        //
+        // field overlays exist, update field overlay map key with actual container number
+        // remove virtual container entry from ordered map
+        // add actual phv-container entry
+        // alternate solution would be to key as std::pair<int virtual, PHV_Container*>
+        //
+        int container_number = field_overlay_map_i.begin()->first;
+        ordered_set<Field *> *set_of_f = field_overlay_map_i.begin()->second;
+        if (container_number < 0) {
+            // remove virtual container entry
+            field_overlay_map_i.erase(container_number);
+        }
+        if (set_of_f && set_of_f->size()) {
+            // insert phv container entry
+            field_overlay_map_i[c->phv_number()] = set_of_f;
+        }
+    }
+}
+
+void
 PhvInfo::Field::overlay_substratum(Field *f) {
     assert(f);
     overlay_substratum_i = f;
@@ -597,8 +617,16 @@ PhvInfo::Field::overlay_substratum(Field *f) {
 
 void
 PhvInfo::Field::field_overlay_map(int r, Field *field) {
-    assert(r >= 0);
+    assert(r > 0);
     assert(field);
+    //
+    // r, as virtual container, made -ve when map entry created (by phv_interference)
+    // after phv container association w/ field, virtual entry replaced by actual container
+    // r becomes actual phv container number and used when associating overlayed fields
+    // see PhvInfo::Field::phv_containers(PHV_Container *c) above
+    // -ve virtual containers will never clash with actual phv containers {0,+ve}
+    //
+    r = -r;
     if (!field_overlay_map_i[r]) {
         field_overlay_map_i[r] = new ordered_set<Field *>;
     }
@@ -610,6 +638,15 @@ PhvInfo::Field::field_overlay_map(int r, Field *field) {
     for (auto &m : field->ccgf_fields()) {
         m->overlay_substratum(this);
     }
+}
+
+
+ordered_set<PhvInfo::Field *> *
+PhvInfo::Field::field_overlay_map(int r) {
+    if (!field_overlay_map_i.size() || !field_overlay_map_i.count(r)) {
+        return 0;
+    }
+    return field_overlay_map_i[r];
 }
 
 void

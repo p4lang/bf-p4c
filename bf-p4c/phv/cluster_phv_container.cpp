@@ -401,29 +401,26 @@ PHV_Container::field_overlays(
     assert(field);
     //
     // field can have overlays spanning containers
-    // e.g., field->field_overlay_map is {[3]=f,[4]=f,[5]=f}, 24b field mapped to 3*8b containers
-    // and overlayed field f spans these 3 containers
+    // e.g., 24b field mapped to 3*8b containers
+    // field->field_overlay_map is [3]={f_ov,...}, [4]={f_ov,...}, [5]={f_ov,...}
+    // where overlayed field f_ov also spans same 3 containers as substratum
     // this container should only overlay the first slice
-    // other containers should consider remaining slices
-    // f's slice width mimics substratum width in each container
+    // other containers should overlay remaining slices
+    // f_ov's slice-width mimics substratum width in each container
     //
-    ordered_set<PhvInfo::Field *> overlayed_fields;
     if (field->field_overlay_map().size()) {
-        LOG3("\t.....PHV_Container::field_overlays.....");
+        LOG3("\t.....PHV_Container::field_overlays.....for container " << phv_number_string());
         LOG3("\t" << field);
-        for (auto &entry : field->field_overlay_map()) {
-            if (entry.second) {
-                for (auto &f : *(entry.second)) {
-                    if (!overlayed_fields.count(f)) {
-                        single_field_overlay(
-                            f,
-                            start,
-                            width,
-                            field_bit_lo,
-                            Container_Content::Pass::Field_Interference);
-                        overlayed_fields.insert(f);
-                    }
-                }
+        // consider overlayed fields, if any, for this container only
+        ordered_set<PhvInfo::Field *> *set_of_f = field->field_overlay_map(phv_number_i);
+        if (set_of_f) {
+            for (auto &f : *set_of_f) {
+                single_field_overlay(
+                    f,
+                    start,
+                    width,
+                    field_bit_lo,
+                    Container_Content::Pass::Field_Interference);
             }
         }
     }

@@ -154,7 +154,7 @@ PHV_Interference::interference_reduction_singleton_clusters(
 }  // interference_reduction_singleton_clusters
 
 void PHV_Interference::interference_reduction(
-    std::vector<Cluster_PHV *>& cluster_vec,
+    std::vector<Cluster_PHV *>& clusters,
     const std::string& msg) {
     //
     LOG3("..........Begin: PHV_Interference::interference_reduction().........." << msg);
@@ -165,7 +165,7 @@ void PHV_Interference::interference_reduction(
         ordered_map<int,
             std::vector<Cluster_PHV *>>> singletons;                    // gather singleton clusters
     singletons.clear();
-    for (auto &cl : cluster_vec) {
+    for (auto &cl : clusters) {
         if (!cl->cluster_vec().size()) {
             // TODO: Use BUG macro?
             LOG1("*****cluster_phv_interference:sanity_FAIL*****"
@@ -194,10 +194,6 @@ void PHV_Interference::interference_reduction(
         //
         // cluster: field interference with siblings
         //
-
-        // TODO: either rename cluster_vec (the formal parameter) or
-        // cl->cluster_vec (the Cluster_PHV field), because they have very
-        // different types.
 
         for (auto &f : cl->cluster_vec()) {
             interference_edge_i[f] = new ordered_set<PhvInfo::Field *>;  // new set
@@ -244,8 +240,6 @@ void PHV_Interference::interference_reduction(
         //
         // reg_map maps a virtual container number to the field that "owns" it
         ordered_map<int, PhvInfo::Field*> reg_map;
-        // TODO: Do ordered maps not start empty?
-        reg_map.clear();
         for (auto &f : cl->cluster_vec()) {
             assign_virtual_container(cl, f, reg_map);
         }
@@ -280,7 +274,7 @@ void PHV_Interference::interference_reduction(
         cl->compute_requirements();                        // recompute cluster requirements
     }
     if (!singletons.empty()) {
-        interference_reduction_singleton_clusters(cluster_vec, singletons, msg);
+        interference_reduction_singleton_clusters(clusters, singletons, msg);
     }
     LOG3("..........End: PHV_Interference::interference_reduction().........." << msg);
 }  // interference_reduction
@@ -359,6 +353,7 @@ void PHV_Interference::virtual_container_overlay(
     ordered_map<int, PhvInfo::Field*>& reg_map,
     const int r) {
     //
+    assert(r > 0);
     if (reg_map[r]) {
         //
         // container r has owner
@@ -368,10 +363,11 @@ void PHV_Interference::virtual_container_overlay(
         cl->field_overlay_map()[owner][r]->push_back(field);
         //
         // insert field in owner field's field_overlay_map
+        //
+        owner->field_overlay_map(r, field);
+        //
         // modify overlayed field's cluster id so it differs w/ other overlayed fields in container
         // this is necessary to pass sanity_check_overlayed_fields() in container
-        //
-        owner->field_overlay_map(r, field);  // fld->field_overlay_map
         //
         // original cluster with x fields have been interference-reduced to y fields
         // trail of interference chain in field's cl_id starting with substratum/owner
@@ -412,7 +408,13 @@ void PHV_Interference::assign_virtual_container(
         field->phv_use_width() / cl->width() + (field->phv_use_width() % cl->width() ? 1 : 0);
     if (interference_edge_i[field]) {
         ordered_set<int> universe_colors;
-        for (int i = 0; i < cl->num_containers(); i++) {
+        //
+        // virtual regs kept as -ve keys in field->field_overlay_map
+        // to avoid clash with phv container numbers {0,+ve}
+        // ref virtual reg to physical container replacement in map PhvInfo::Field::phv_containers()
+        // exclude color 0 to avoid virtual-0 clash w/ phv-0
+        //
+        for (int i = 1; i <= cl->num_containers(); i++) {
             universe_colors.insert(i);
         }
         ordered_set<int> neighbor_colors;
@@ -431,8 +433,9 @@ void PHV_Interference::assign_virtual_container(
         // new color(s) for field
         //
         for (int i = 0; i < field_containers; i++) {
-            // TODO: Is this supposed to always produce contiguous color
-            // numbers?  Is that guaranteed?
+            // no guarantee to always produce contiguous color numbers
+            // but fields w/ non-adjacent virtual regs will be mapped to adjacent phvs
+            // std::min_element points to element with smallest value in range (first,last)
             int r = *std::min_element(s_diff.begin(), s_diff.end());
             s_diff.erase(r);  // remove r from consideration when s_diff used in next iteration
             virtual_container_overlay(cl, field, reg_map, r);
