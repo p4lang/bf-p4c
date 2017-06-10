@@ -129,7 +129,8 @@ static int add_cols(Table::Layout &row, const value_t &cols) {
     return rv;
 }
 
-void Table::setup_layout(std::vector<Layout> &layout, const value_t *row, const value_t *col,
+void Table::setup_layout(std::vector<Layout> &layout, const value_t *row,
+                         const value_t *col,
                          const value_t *bus, const char *subname) {
     if (!row) {
         error(lineno, "No 'row' attribute in table %s%s", name(), subname);
@@ -145,8 +146,8 @@ void Table::setup_layout(std::vector<Layout> &layout, const value_t *row, const 
             for (int i = 0; i < col->vec.size; i++)
                 err |= add_cols(layout[i], col->vec[i]);
         } else {
-            for (auto &row : layout)
-                if ((err |= add_cols(row, *col))) break; }
+            for (auto &lrow : layout)
+                if ((err |= add_cols(lrow, *col))) break; }
     } else if (layout.size() > 1) {
         error(lineno, "No 'column' attribute in table %s%s", name(), subname);
         return; }
@@ -162,8 +163,8 @@ void Table::setup_layout(std::vector<Layout> &layout, const value_t *row, const 
                         layout[i].bus = bus->vec[i].i;
                     else err = 1;
         } else
-            for (auto &row : layout)
-                row.bus = bus->i; }
+            for (auto &lrow : layout)
+              lrow.bus = bus->i; }
     if (err) return;
     for (auto i = layout.begin(); i != layout.end(); i++)
         for (auto j = i+1; j != layout.end(); j++)
