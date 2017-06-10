@@ -272,7 +272,7 @@ void ActionTable::write_regs(REGS &regs) {
     unsigned fmt_log2size = format->log2size;
     for (auto fmt : Values(action_formats))
         fmt_log2size = std::max(fmt_log2size, fmt->log2size);
-    unsigned width = (fmt_log2size > 7) ? 1 << fmt_log2size - 7 : 1;
+    unsigned width = (fmt_log2size > 7) ? 1 << (fmt_log2size - 7) : 1;
     unsigned depth = layout_size()/width;
     int idx = 0;
     int word = 0;
@@ -436,4 +436,3 @@ void ActionTable::gen_tbl_cfg(json::vector &out) {
     if (options.match_compiler)
         tbl["indirect"] = indirect;
 }
-

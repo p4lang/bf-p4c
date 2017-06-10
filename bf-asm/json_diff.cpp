@@ -214,6 +214,8 @@ void list_map_print_diff(json::vector *a, json::vector *b, int indent, const cha
     std::cout << ']';
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpotentially-evaluated-expression"
 bool equiv(json::vector *a, json::vector *b, const std::set<long> &ignore_idx) {
     for (auto key : list_map_keys)
         if (is_list_map(a, key) && is_list_map(b, key))
@@ -287,6 +289,7 @@ void print_diff(json::vector *a, json::vector *b, const std::set<long> &ignore_i
     do_prefix(indent, " ");
     std::cout << ']';
 }
+#pragma GCC diagnostic pop
 
 std::map<json::obj *, json::obj *, json::obj::ptrless> build_sort_map(json::map *m) {
     std::map<json::obj *, json::obj *, json::obj::ptrless> rv;
@@ -423,12 +426,12 @@ void print_diff(json::map *a, json::map *b, int indent) {
 bool equiv(json::obj *a, json::obj *b, json::obj *key) {
     if (a == b) return true;
     //Check true for map with nullptr and map with no elements "{}"
-    if (!a) { 
-        if (auto m = b->as_map()) { 
-                if (m->empty()) return true; } } 
-    if (!b) { 
-        if (auto m = a->as_map()) { 
-                if (m->empty()) return true; } } 
+    if (!a) {
+        if (auto m = b->as_map()) {
+                if (m->empty()) return true; } }
+    if (!b) {
+        if (auto m = a->as_map()) {
+                if (m->empty()) return true; } }
     if (!a || !b) return false;
     if (typeid(*a) != typeid(*b)) return false;
     if (typeid(*a) == typeid(json::vector))
