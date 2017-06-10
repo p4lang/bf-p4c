@@ -205,7 +205,8 @@ void MeterTable::write_regs(REGS &regs) {
                 adr_ctl.adr_dist_oflo_adr_xbar_source_sel = AdrDist::METER; }
             adr_ctl.adr_dist_oflo_adr_xbar_enable = 1; } }
     auto &merge = regs.rams.match.merge;
-    int color_map_color = (color_maprams[0].row & 2) >> 1;
+
+    int color_map_color = color_maprams.empty() ? 0 : (color_maprams[0].row & 2) >> 1;
     for (Layout &row : color_maprams) {
         if (&row == &color_maprams[0]) { /* color mapram home row */
             if (color_map_color)
@@ -276,6 +277,10 @@ void MeterTable::write_regs(REGS &regs) {
         //icxbar.address_distr_to_overflow = push_on_overflow;
         //if (direct)
         //    regs.cfg_regs.mau_cfg_lt_meter_are_direct |= 1 << m->logical_id;
+        assert(!color_maprams.empty()); // CC: there are instances when the color_maprams key
+                                        // is not present (e.g. table_1$meter.meter_1 in
+                                        // test_config_123_meter_2.p4).
+                                        // Likely needs better handling than an assert.
         merge.mau_mapram_color_map_to_logical_ctl[m->logical_id/8].set_subfield(
             0x4 | (color_maprams[0].row/2U), 3 * (m->logical_id%8U), 3);
         // FIXME -- this bus_index calculation is probably wrong
