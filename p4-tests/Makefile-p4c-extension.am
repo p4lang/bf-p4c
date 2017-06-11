@@ -308,3 +308,228 @@ XFAIL_TESTS += tofino/%reldir%/p4_14/adb_shared4.p4.test
 
 # Failure due to tbl-cfg incorrect driver code for split parameter in single ad table container
 XFAIL_TESTS += tofino/%reldir%/p4_14/adjust_instr4.p4.test
+
+# BRIG-99
+XFAIL_TESTS += \
+		tofino/%reldir%/p4_14/test_config_123_meter_2.p4.test \
+		tofino/%reldir%/p4_14/test_config_86_multiple_action_widths_for_indirect_action.p4.test
+
+# BRIG-100
+XFAIL_TESTS += \
+		tofino/%reldir%/p4_14/test_config_119_tcam_range_3.p4.test \
+		tofino/%reldir%/p4_14/test_config_121_tcam_range_5.p4.test \
+		tofino/%reldir%/p4_14/test_config_135_tcam_range_7.p4.test \
+		tofino/%reldir%/p4_14/test_config_136_tcam_error_detection.p4.test \
+		tofino/%reldir%/p4_14/test_config_85_table_ordering.p4.test \
+		tofino/testdata/p4_14_samples/exact_match7.p4.test
+
+# BRIG-101
+XFAIL_TESTS += \
+		tofino/%reldir%/p4_14/11-AssignChooseDest.p4.test \
+		tofino/%reldir%/p4_14/action_selection_with_counter.p4.test \
+		tofino/%reldir%/p4_14/switch_20160602/switch.p4.test \
+		tofino/%reldir%/p4_14/test_config_166_stateful_generic_counter.p4.test \
+		tofino/%reldir%/p4_14/test_config_202_write_same_byte.p4.test \
+		tofino/%reldir%/p4_14/test_config_224_stateful_error_check.p4.test \
+		tofino/%reldir%/p4_14/test_config_32_action_data_imm_param_imm.p4.test \
+		tofino/%reldir%/p4_14/test_config_45_action_data_immediate_param_and_constant.p4.test \
+		tofino/%reldir%/p4_14/test_config_48_action_data_bit_masked_set.p4.test \
+		tofino/%reldir%/p4_14/test_config_49_action_data_bit_masked_set_immediate.p4.test \
+		tofino/testdata/p4_14_samples/acl1.p4.test \
+		tofino/testdata/p4_14_samples/source_routing.p4.test
+
+# BRIG-102
+XFAIL_TESTS += \
+		tofino/%reldir%/p4_14/test_checksum.p4.test \
+		tofino/%reldir%/p4_14/test_config_102_clone.p4.test \
+		tofino/%reldir%/p4_14/test_config_103_first_phase_0.p4.test \
+		tofino/%reldir%/p4_14/test_config_104_no_phase_0_case_egress_table.p4.test \
+		tofino/%reldir%/p4_14/test_config_105_no_phase_0_case_has_side_effect.p4.test \
+		tofino/%reldir%/p4_14/test_config_106_no_phase_0_case_not_first_table.p4.test \
+		tofino/%reldir%/p4_14/test_config_107_no_phase_0_case_no_condition.p4.test \
+		tofino/%reldir%/p4_14/test_config_108_no_phae_0_case_wrong_condition.p4.test \
+		tofino/%reldir%/p4_14/test_config_109_no_phase_0_case_wrong_key.p4.test \
+		tofino/%reldir%/p4_14/test_config_110_no_phase_0_case_wrong_match_type.p4.test \
+		tofino/%reldir%/p4_14/test_config_111_no_phase_0_case_two_actions.p4.test \
+		tofino/%reldir%/p4_14/test_config_113_no_phase_0_case_sourced_from_field.p4.test \
+		tofino/%reldir%/p4_14/test_config_120_tcam_range_4.p4.test \
+		tofino/%reldir%/p4_14/test_config_167_stateful_flowlet_switching.p4.test \
+		tofino/%reldir%/p4_14/test_config_195_stateful_predicate_output.p4.test \
+		tofino/%reldir%/p4_14/test_config_199_stateful_constant_index.p4.test \
+		tofino/%reldir%/p4_14/test_config_235_funnel_shift.p4.test \
+		tofino/%reldir%/p4_14/test_config_35_action_data_1_bit_params_and_imms.p4.test \
+		tofino/%reldir%/p4_14/test_config_55_generate_digest.p4.test \
+		tofino/%reldir%/p4_14/test_config_96_hash_data.p4.test \
+		tofino/%reldir%/p4_14/test_config_no_phase_0_case_two_actions.p4.test \
+		tofino/testdata/p4_14_samples/hash_action_gateway2.p4.test \
+		tofino/testdata/p4_14_samples/packet_redirect.p4.test \
+		tofino/testdata/p4_14_samples/sai_p4.p4.test \
+		tofino/testdata/p4_16_samples/clone-bmv2.p4.test \
+		tofino/testdata/p4_16_samples/issue430-1-bmv2.p4.test
+
+# BRIG-103
+XFAIL_TESTS +=  tofino/testdata/p4_14_samples/instruct1.p4.test \
+	        tofino/testdata/p4_14_samples/instruct3.p4.test \
+		tofino/%reldir%/p4_14/14-MultipleActionsInAContainer.p4.test \
+		tofino/%reldir%/p4_14/dileep.p4.test \
+		tofino/%reldir%/p4_14/dileep2.p4.test \
+		tofino/%reldir%/p4_14/dileep3.p4.test \
+		tofino/%reldir%/p4_14/dileep4.p4.test \
+		tofino/%reldir%/p4_14/dileep7-b.p4.test \
+		tofino/%reldir%/p4_14/dileep8.p4.test \
+		tofino/%reldir%/p4_14/dileep10.p4.test \
+		tofino/%reldir%/p4_14/dileep11.p4.test \
+		tofino/%reldir%/p4_14/dileep12.p4.test \
+		tofino/%reldir%/p4_14/instruct1.p4.test \
+		tofino/%reldir%/p4_14/test_config_112_no_phase_0_case_action_width_too_big.p4.test \
+		tofino/%reldir%/p4_14/test_config_143_packing_constants.p4.test \
+		tofino/%reldir%/p4_14/test_config_230_phv_metadata_sharing.p4.test \
+		tofino/%reldir%/p4_14/test_config_248_pa_problem.p4.test \
+		tofino/%reldir%/p4_14/test_config_252_pa_required_packing.p4.test \
+		tofino/%reldir%/p4_14/test_config_256_pa_problem_4.p4.test \
+		tofino/%reldir%/p4_14/test_config_257_pa_problem_5.p4.test \
+		tofino/%reldir%/p4_14/test_config_94_action_constant_alignment.p4.test \
+		tofino/%reldir%/p4_14/vk_basic_ipv4_20150706.p4.test
+
+# BRIG-104
+XFAIL_TESTS +=  tofino/testdata/p4_14_samples/mac_rewrite.p4.test \
+		tofino/%reldir%/p4_14/12-SmallToBigFieldWithMask8.p4.test \
+		tofino/%reldir%/p4_14/22-BigToSmallFieldWithMask8.p4.test \
+		tofino/%reldir%/p4_14/test_config_224_stateful_error_check.p4.test
+
+# BRIG-105
+XFAIL_TESTS +=  tofino/%reldir%/p4_14/04-FullPHV3.p4.test \
+		tofino/%reldir%/p4_14/switch_20160602/switch.p4.test \
+		tofino/%reldir%/p4_14/switch_l2_profile_tofino.p4.test \
+		tofino/%reldir%/p4_14/switch_l2_profile.p4.test \
+		tofino/testdata/p4_14_samples/05-FullTPHV.p4.test \
+		tofino/testdata/p4_14_samples/06-FullTPHV1.p4.test \
+		tofino/testdata/p4_14_samples/07-FullTPHV2.p4.test \
+		tofino/testdata/p4_14_samples/08-FullTPHV3.p4.test \
+		tofino/testdata/p4_14_samples/parser_dc_full.p4.test \
+		tofino/testdata/p4_14_samples/switch_20160226/switch.p4.test \
+		tofino/testdata/p4_14_samples/switch_20160512/switch.p4.test
+# BRIG-106
+XFAIL_TESTS +=  tofino/%reldir%/p4_14/test_config_190_modify_with_expr.p4.test \
+		tofino/%reldir%/p4_14/test_config_40_action_data_bit_xor.p4.test \
+		tofino/testdata/p4_14_samples/02-FullPHV1.p4.test \
+		tofino/testdata/p4_14_samples/03-FullPHV2.p4.test
+
+# BRIG-107
+XFAIL_TESTS += \
+		tofino/testdata/p4_14_samples/13-Counters1and2.p4.test \
+		tofino/testdata/p4_14_samples/14-Counter.p4.test \
+		tofino/testdata/p4_16_samples/action_profile-bmv2.p4.test \
+		tofino/testdata/p4_16_samples/action_selector_shared-bmv2.p4.test \
+		tofino/testdata/p4_16_samples/issue297-bmv2.p4.test
+
+# BRIG-108
+XFAIL_TESTS += \
+		tofino/testdata/p4_14_samples/port_vlan_mapping.p4.test \
+		tofino/testdata/p4_14_samples/selector0.p4.test
+
+# BRIG-109
+XFAIL_TESTS += tofino/testdata/p4_14_samples/queueing.p4.test
+
+# BRIG-110
+XFAIL_TESTS += \
+		tofino/%reldir%/p4_14/adjust_instr1.p4.test \
+		tofino/%reldir%/p4_14/exclusive_cf_multiple_actions.p4.test \
+		tofino/%reldir%/p4_14/hash_calculation_16.p4.test \
+		tofino/%reldir%/p4_14/hash_calculation_max_size.p4.test \
+		tofino/%reldir%/p4_14/hash_calculation_multiple.p4.test \
+		tofino/%reldir%/p4_14/hash_calculation_two_hash1.p4.test \
+		tofino/%reldir%/p4_14/hash_calculation_two_hash2.p4.test \
+		tofino/%reldir%/p4_14/test_config_151_action_bus_allocation_2.p4.test \
+		tofino/%reldir%/p4_14/test_config_211_nested_field_list.p4.test \
+		tofino/%reldir%/p4_14/test_config_222_small_tag_stack.p4.test \
+		tofino/%reldir%/p4_14/test_config_23_same_container_modified.p4.test \
+		tofino/%reldir%/p4_14/test_config_90_testing_action_data_allocation_3_with_fields_in_overhead.p4.test \
+		tofino/%reldir%/p4_14/test_config_93_push_and_pop.p4.test \
+		tofino/testdata/p4_14_samples/test_config_23_same_container_modified.p4.test \
+		tofino/testdata/p4_16_samples/hash-bmv2.p4.test \
+		tofino/testdata/p4_16_samples/slice-def-use.p4.test \
+		tofino/testdata/p4_16_samples/slice-def-use1.p4.test
+
+# BRIG-112
+XFAIL_TESTS += \
+		tofino/%reldir%/p4_14/01-FlexCounter.p4.test \
+		tofino/%reldir%/p4_14/03-VlanProfile.p4.test \
+		tofino/%reldir%/p4_14/06-MultiFieldAdd.p4.test \
+		tofino/%reldir%/p4_14/19-SimpleTrill.p4.test \
+		tofino/%reldir%/p4_14/20-SimpleTrillTwoStep.p4.test \
+		tofino/%reldir%/p4_14/21-SimpleTrillThreeStep.p4.test \
+		tofino/%reldir%/p4_14/24-SimpleTrillThreeStep2.p4.test \
+		tofino/%reldir%/p4_14/test_config_216_phv_aff.p4.test \
+		tofino/%reldir%/p4_14/test_config_217_gateway_non_determin.p4.test \
+		tofino/%reldir%/p4_14/test_config_92_bit_xor_10_bits.p4.test \
+		tofino/testdata/p4_16_samples/issue414-bmv2.p4.test \
+		tofino/testdata/p4_16_samples/parser-locals2.p4.test
+
+# BRIG-111
+XFAIL_TESTS += \
+		tofino/%reldir%/p4_14/test_config_142_stateful_bfd.p4.test \
+		tofino/%reldir%/p4_14/test_config_152_stateful_simple_cntr.p4.test \
+		tofino/%reldir%/p4_14/test_config_155_stateful_3_alus.p4.test \
+		tofino/%reldir%/p4_14/test_config_165_stateful_bfd_failure_detection.p4.test
+
+# BRIG-112
+XFAIL_TESTS += \
+		tofino/%reldir%/p4_14/01-FlexCounter.p4.test \
+		tofino/%reldir%/p4_14/03-VlanProfile.p4.test \
+		tofino/%reldir%/p4_14/06-MultiFieldAdd.p4.test \
+		tofino/%reldir%/p4_14/19-SimpleTrill.p4.test \
+		tofino/%reldir%/p4_14/20-SimpleTrillTwoStep.p4.test \
+		tofino/%reldir%/p4_14/21-SimpleTrillThreeStep.p4.test \
+		tofino/%reldir%/p4_14/24-SimpleTrillThreeStep2.p4.test \
+		tofino/%reldir%/p4_14/test_config_216_phv_aff.p4.test \
+		tofino/%reldir%/p4_14/test_config_217_gateway_non_determin.p4.test \
+		tofino/%reldir%/p4_14/test_config_92_bit_xor_10_bits.p4.test \
+		tofino/testdata/p4_16_samples/issue414-bmv2.p4.test \
+		tofino/testdata/p4_16_samples/parser-locals2.p4.test
+
+# BRIG-113
+XFAIL_TESTS += \
+		tofino/%reldir%/p4_14/09-MatchNoDep.p4.test \
+		tofino/%reldir%/p4_14/10-MatchNoDep1.p4.test \
+		tofino/%reldir%/p4_14/test_config_129_various_exact_match_keys.p4.test \
+		tofino/%reldir%/p4_14/test_config_181_first_alg_tcam.p4.test
+
+# BRIG-114
+XFAIL_TESTS += \
+		tofino/%reldir%/p4_14/18-SimpleVlanTransform.p4.test \
+		tofino/%reldir%/p4_14/adjust_instr2.p4.test
+
+# BRIG-115
+XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_237_hash_action_17_bits.p4.test
+
+# BRIG-116
+XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_223_simple_set_metadata.p4.test
+
+# BRIG-117
+XFAIL_TESTS += tofino/%reldir%/p4_14/gateway_and_big_table.p4.test
+
+# BRIG-118
+XFAIL_TESTS += tofino/testdata/p4_16_samples/named_meter_bmv2.p4.test
+
+# BRIG-119
+XFAIL_TESTS += \
+		tofino/%reldir%/p4_14/test_config_100_hash_action.p4.test \
+		tofino/%reldir%/p4_14/test_config_13_first_selection.p4.test
+
+# various stateful
+XFAIL_TESTS += \
+		tofino/%reldir%/p4_14/test_config_163_stateful_table_math_unit.p4.test \
+		tofino/%reldir%/p4_14/test_config_169_stateful_sflow_sequence.p4.test \
+		tofino/%reldir%/p4_14/test_config_184_stateful_bug1.p4.test \
+		tofino/%reldir%/p4_14/test_config_192_stateful_driven_by_hash.p4.test \
+		tofino/%reldir%/p4_14/test_config_195_stateful_predicate.p4.test \
+		tofino/%reldir%/p4_14/test_config_236_stateful_read_bit.p4.test
+
+
+
+# Tofino expected failures (Glass fails as well)
+XFAIL_TESTS +=  tofino/testdata/p4_14_samples/issue583.p4.test \
+		tofino/testdata/p4_14_samples/counter.p4.test \
+		tofino/testdata/p4_14_samples/copy_to_cpu.p4.test \
+		tofino/testdata/p4_14_samples/action_inline.p4.test
