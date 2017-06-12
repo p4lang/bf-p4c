@@ -319,7 +319,7 @@ struct AttachTables : public Modifier {
             auto tt = findContext<IR::MAU::Table>();
             BUG_CHECK(tt, "GlobalRef not in a table");
             for (auto att : tt->attached) {
-                if (att->name == di->name) {
+                if (att->name == di->externalName()) {
                     gref->obj = converted[di] = att;
                     break; } }
             if (converted.count(di)) {
