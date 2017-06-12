@@ -432,15 +432,11 @@ void ActionFormat::setup_immediate_format() {
  *  8 8 16 constraint.
  */
 int ActionFormat::offset_constraints_and_total_layouts() {
-    int max_offset_constraint = 0;
     for (auto &aci : action_counts) {
         if (((aci.counts[BYTE] % 4) == 1 || (aci.counts[BYTE] % 4) == 2)
-             && (aci.counts[HALF] % 4) == 1) {
+             && (aci.counts[HALF] % 2) == 1) {
             if (aci.total_bytes() + 1 >= (1 << ceil_log2(max_bytes))) {
                 aci.offset_constraint = true;
-                if (max_offset_constraint < (aci.counts[BYTE] % 4)) {
-                    max_offset_constraint = (aci.counts[BYTE] % 4);
-                }
             }
         }
     }
@@ -450,9 +446,6 @@ int ActionFormat::offset_constraints_and_total_layouts() {
     if (max_small_bytes > (1 << ceil_log2(max_bytes)))
         max_small_bytes = (1 << ceil_log2(max_bytes));
 
-    int highest_8_full = max_total.counts[BYTE] / 4;
-    int lowest_16_full = (max_small_bytes - max_total.counts[HALF] * 2) / 4;
-
     bitvec offset_locs;
     bitvec offset_8count;
 
@@ -460,11 +453,9 @@ int ActionFormat::offset_constraints_and_total_layouts() {
     for (auto &aci : action_counts) {
         if (!aci.offset_constraint) continue;
 
-        int aci_lowest_16_full = (max_small_bytes - max_total.counts[HALF] * 2) / 4;
-        if (aci_lowest_16_full == lowest_16_full)
-            aci.offset_full_word = lowest_16_full;
-        else
-            aci.offset_full_word = highest_8_full;
+        int aci_highest_8_full = (aci.counts[BYTE] - 1) / 4;
+        aci.offset_full_word = aci_highest_8_full;
+
         offset_locs.setbit(aci.offset_full_word);
         if ((aci.counts[BYTE] % 4) == 2)
             offset_8count.setbit(aci.offset_full_word);

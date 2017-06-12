@@ -12,6 +12,7 @@ header data_t {
     bit<16> h1;
     bit<16> h2;
     bit<16> h3;
+    bit<32> f1;
 }
 
 struct metadata {
@@ -51,6 +52,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.data.h2 = half2;
         hdr.data.h3 = half3;
     }
+    @name(".third") action third_0(bit<8> byte1, bit<8> byte2, bit<16> half1, bit<32> full1) {
+        hdr.data.c1 = byte1;
+        hdr.data.c2 = byte2;
+        hdr.data.h1 = half1;
+        hdr.data.f1 = full1;
+    }
     @name("setting_port") table setting_port {
         actions = {
             setport_0();
@@ -65,6 +72,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             first_0();
             second_0();
+            third_0();
             @defaultonly NoAction_3();
         }
         key = {

@@ -303,9 +303,6 @@ XFAIL_TESTS += tofino/%reldir%/p4_14/adb_shared2.p4.test
 # failure due to too restrictive constraint of full words in action data bus allocation
 XFAIL_TESTS += tofino/%reldir%/p4_14/adb_shared3.p4.test
 
-# Failure due to action format constraint not yet handled
-XFAIL_TESTS += tofino/%reldir%/p4_14/adb_shared4.p4.test
-
 # Failure due to tbl-cfg incorrect driver code for split parameter in single ad table container
 XFAIL_TESTS += tofino/%reldir%/p4_14/adjust_instr4.p4.test
 

@@ -439,7 +439,7 @@ bool ActionDataBus::alloc_full_sect(vector<Use::ReservedSpace> &reserved_spaces,
         else if ((full_shares[i].shared_status & (1 << ActionFormat::BYTE)) != 0)
             start_byte = full_shares[i].shared_byte[ActionFormat::BYTE];
 
-        int name_offset = begin_offset(layout, begin + i * byte_sz, type);
+        int name_offset = begin_offset(layout, i * byte_sz, type);
         reserve_space(reserved_spaces, type, shared_adj, start_byte,
                       i * byte_sz + init_byte_offset, name_offset + init_name_offset,
                       false, name);

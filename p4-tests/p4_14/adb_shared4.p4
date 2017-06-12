@@ -30,6 +30,7 @@ header_type data_t {
        h1 : 16;
        h2 : 16;
        h3 : 16;
+       f1 : 32;
     }
 }
 
@@ -56,6 +57,13 @@ action second(half1, half2, half3) {
     modify_field(data.h3, half3);
 }
 
+action third(byte1, byte2, half1, full1) {
+    modify_field(data.c1, byte1);
+    modify_field(data.c2, byte2);
+    modify_field(data.h1, half1);
+    modify_field(data.f1, full1);
+}
+
 action setport(port) {
     modify_field(standard_metadata.egress_spec, port);
 }
@@ -67,6 +75,7 @@ table test1 {
     actions {
         first;
         second;
+        third;
     }
 }
 
