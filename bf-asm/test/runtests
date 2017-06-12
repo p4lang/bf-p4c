@@ -4,6 +4,7 @@ fast=false
 brig=false
 outdir=false
 verbose=false
+link=false
 TIME=false
 # parallel make arguments
 PARALLEL=1
@@ -15,37 +16,6 @@ shopt -s nullglob
 set -o pipefail
 
 TESTDIR=$(cd $(dirname $0); pwd -P)
-
-TRY_GLSC="
-    #$HOME/p4c-tofino/build/lib.linux-x86_64-2.7/p4c_tofino/shell.py
-    $HOME/p4c-tofino/shell.py
-    $HOME/p4c-tofino/p4c_tofino/shell.py
-    $PWD/../p4c-tofino/shell.py
-    $PWD/../p4c-tofino/p4c_tofino/shell.py
-    $PWD/../../p4c-tofino/shell.py
-    $PWD/../../p4c-tofino/p4c_tofino/shell.py
-    $PWD/../../../p4c-tofino/p4c_tofino/shell.py
-    $TESTDIR/../../p4c-tofino/shell.py
-    $TESTDIR/../../p4c-tofino/p4c_tofino/shell.py
-"
-TRY_BRIG="
-    $HOME/p4c/build/p4c-tofino
-    $PWD/../p4c/build/p4c-tofino
-    $PWD/../../p4c/build/p4c-tofino
-    $TESTDIR/../../p4c/build/p4c-tofino
-"
-
-TRY_STF="
-    $HOME/model/tests/simple_test_harness/simple_test_harness
-    $HOME/model/*/tests/simple_test_harness/simple_test_harness
-    $PWD/../model/tests/simple_test_harness/simple_test_harness
-    $PWD/../model/*/tests/simple_test_harness/simple_test_harness
-    $PWD/../../model/tests/simple_test_harness/simple_test_harness
-    $PWD/../../model/*/tests/simple_test_harness/simple_test_harness
-    $PWD/../../../model/*/tests/simple_test_harness/simple_test_harness
-    $TESTDIR/../../model/tests/simple_test_harness/simple_test_harness
-    $TESTDIR/../../model/*/tests/simple_test_harness/simple_test_harness
-"
 
 prev_mflag=""
 for mflag in $MAKEFLAGS; do
@@ -80,8 +50,7 @@ while expr "$1" : - >/dev/null; do
         ;;
     -b) brig=true
         ;;
-    -stage*|-work*)
-        TRY_GLSC="$HOME/p4c-tofino$1/p4c_tofino/shell.py"
+    -l) link=true
         ;;
     -t)
         TIME=true
@@ -129,70 +98,34 @@ FAILLOG=$(pwd -P)/faillog.txt
 echo -n "Test run started at " >$FAILLOG
 date >> $FAILLOG
 
-if [ ! -x "$GLSC" ]; then
-    for f in $TRY_GLSC; do
-        if [ -x $f ]; then
-            GLSC=$f
-            break
-        fi
-    done
-fi
-
-if [ ! -x "$BRIG" ]; then
-    for f in $TRY_BRIG; do
-        if [ -x $f ]; then
-            BRIG=$f
-            break
-        fi
-    done
-fi
-
-for f in $TRY_STF; do
-    if [ -x "$f" -a "$f" -nt "$STF" ]; then
-        STF="$f"
-        break
-    fi
-done
-
-if [ -x "$GLSC" ]; then
-    echo "Using $GLSC"
-else
-    echo >&2 "Can't find p4c-tofino (glass) executable"
-    GLSC=false
-fi
-
-if [ -x "$BRIG" ]; then
-    echo "Using $BRIG"
-else
-    echo >&2 "Can't find p4c-tofino (brig) executable"
-    BRIG=false
-fi
-
-if [ -x "$STF" ]; then
-    echo "Using $STF"
-else
-    echo >&2 "Can't find simple-test-harness executable"
-    STF=false
-fi
-
 TRY_BINDIRS="
     $PWD
     $PWD/..
-    $PWD/../*
+    $PWD/../..
+    $PWD/../../..
+    $PWD/../../../..
     $TESTDIR/..
-    $TESTDIR/../*
+    $TESTDIR/../..
 "
 
-function findbin () {
+function searchdir () {
     found=""
     if [ -x "$BUILDDIR/$1" ]; then
         echo $BUILDDIR/$1
         return
     fi
     for d in $TRY_BINDIRS; do
-        if [ -x "$d/$1" ]; then
-            if [ -z "$found" -o "$d/$1" -nt "$found" ]; then
-                found="$(cd $d; pwd -P)/$1"
+        if [[ $2 ]]; then
+            if [ -d "$d/$2" ]; then
+                found=`find $d/$2 -executable -type f -name $1 -print -quit`
+                if [ -n "$found" ]; then
+                    break;
+                fi
+            fi
+        else
+            found=`find $d -executable -type f -name $1 -print -quit`
+            if [ -n "$found" ]; then
+                break;
             fi
         fi
     done
@@ -204,25 +137,32 @@ function findbin () {
     fi
 }
 
-function not() { if "$@"; then return 1; else return 0; fi }
+function findexec () {
+    evarref=\$"$1"
+    evalue=`eval "expr \"$evarref\" "`
+    if [ ! -x "$evalue" ]; then
+        e=$(searchdir $2 $4) 
+        eval "${1}=${e}"
+        evalue=`eval "expr \"$evarref\" "`
+        if [ -x "$evalue" ]; then
+            echo "Using $evalue"
+        else
+            #echo >&2 "Can't find $3 executable"
+            eval "${1}=false"
+        fi
+    fi
+}
 
-if [ ! -x "$TFAS" ]; then
-    TFAS=$(findbin tfas)
-fi
-echo "Using $TFAS"
-if [ ! -x "$TFLINK" ]; then
-    TFLINK=$(findbin tflink)
-fi
-if [ ! -x "$REFLOW" ]; then
-    REFLOW=$(findbin reflow)
-fi
-if [ ! -x "$JSON_DIFF" ]; then
-    JSON_DIFF=$(findbin json_diff)
-fi
-if [ -z "$DIFF" ]; then
-    #DIFF="zdiff -u"
-    DIFF=$JSON_DIFF
-fi
+#FINDFUNC  PARAM   EXECUTABLE              NAME                    OPTIONAL SEARCH DIR PREFIX
+findexec GLSC      "shell.py"              "glass"                 ""
+findexec BRIG      "p4c-tofino"            "brig"                  ""
+findexec STF       "simple_test_harness"   "simple_test_harness"   "model"
+findexec TFAS      "tfas"                  "tfas"                  ""
+findexec TFLINK    "tflink"                "tflink"                ""
+findexec REFLOW    "reflow"                "reflow"                ""
+findexec JSON_DIFF "json_diff"             "json_diff"             ""
+
+function not() { if "$@"; then return 1; else return 0; fi }
 
 if [ -r $TESTDIR/ctxt_json_ignore ]; then
     CTXT_DIFFARGS="-l handle -l start_offset -l entry_number -i @$TESTDIR/ctxt_json_ignore"
@@ -251,6 +191,34 @@ run() {
     return $status
 }
 
+function link_json() {
+    p4file=$1
+    pushd $(dirname $p4file) >/dev/null
+    name=$(basename $p4file .p4)
+    ok=true
+    if [ -d $name.out ];then
+        bindir=$name.out
+        jsondir=$name.out
+        cd $name.out
+        if $brig;then
+            if [ -d $name.out ];then
+                jsondir=$name.out/$name.out
+            else
+                msg="$msg no $name.out/$name.out found"
+                ok=false
+                rv=1
+            fi
+        fi
+        if $ok && run $TFLINK -o $bindir/tofino.bin $jsondir/*.cfg.json* >/dev/null 2>&1; then
+            msg="$msg link pass"
+        else
+            msg="$msg link failed"
+            flock $FAILLOG -c "echo '$1:' >>$FAILLOG; sed -e 's/^/  /'$name.out/link.txt >>$FAILLOG"
+            rv=1
+        fi
+    fi
+    return $rv
+}
 
 function test_p4() {
     p4file="$1"
@@ -268,7 +236,7 @@ function test_p4() {
     start=`date +%s`
     if $fast && [ -r $name.tfa ]; then
         true
-    else 
+    else
         rm -f $name.tfa
         if $brig; then
             if run $BRIG -D__TARGET_TOFINO__ ../$name.p4 -o out.tfa </dev/null >brig.log 2>&1; then
@@ -327,7 +295,7 @@ function test_p4() {
                     fi
                     continue
                 fi
-                $DIFF $f $glsc_cfg/$(basename $f)
+                $JSON_DIFF $f $glsc_cfg/$(basename $f)
             done > json_diff.txt
             glsc_ctxt=${name}_context_llir.json
             if [ -d context ]; then
@@ -438,7 +406,7 @@ function test_stf() {
     #if [[ ( ! -f `pwd`/$name.out/$name.tfa || $fast = false ) && ! -d $outdir ]]; then
     if ! $outdir; then
         TFAS_OPTS="-vvvvl"
-        test_p4 $name.p4 
+        test_p4 $name.p4
     fi
     #if [[ -r `pwd`/$name.out/$name.tfa && ( ! -r `pwd`/$name.out/$name.out/tofino-bin || $fast = false ) ]]; then
     #    mkdir -p $name.out
@@ -581,6 +549,9 @@ for file in "$@"; do
         test_stf $file &
     else
         echo "unrecognized file type $file"
+    fi
+    if $link; then
+        link_json $file
     fi
 done
 
