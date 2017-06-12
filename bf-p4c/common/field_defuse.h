@@ -59,11 +59,16 @@ class FieldDefUse : public ControlFlowVisitor, public Inspector, P4WriteContext 
 
     const LocPairSet &getDefs(locpair use) const {
         static const LocPairSet emptyset;
-        return defs.count(use) ? uses.at(use) : emptyset; }
+        return defs.count(use) ? defs.at(use) : emptyset; }
     const LocPairSet &getDefs(const IR::Tofino::Unit *u, const IR::Expression *e) const {
         return getDefs(locpair(u, e)); }
     const LocPairSet &getDefs(const Visitor *v, const IR::Expression *e) const {
         return getDefs(locpair(v->findOrigCtxt<IR::Tofino::Unit>(), e)); }
+    /** Get all defs of the PhvInfo::Field with ID @fid. */
+    const LocPairSet &getDefs(int fid) const {
+        static const LocPairSet emptyset;
+        return defuse.count(fid) ? defuse.at(fid).def : emptyset; }
+ 
     const LocPairSet &getUses(locpair def) const {
         static const LocPairSet emptyset;
         return uses.count(def) ? uses.at(def) : emptyset; }
@@ -71,6 +76,10 @@ class FieldDefUse : public ControlFlowVisitor, public Inspector, P4WriteContext 
         return getUses(locpair(u, e)); }
     const LocPairSet &getUses(const Visitor *v, const IR::Expression *e) const {
         return getUses(locpair(v->findOrigCtxt<IR::Tofino::Unit>(), e)); }
+    /** Get all uses of the PhvInfo::Field with ID @fid. */
+    const LocPairSet &getUses(int fid) const {
+        static const LocPairSet emptyset;
+        return defuse.count(fid) ? defuse.at(fid).use : emptyset; }
 };
 
 #endif /* _FIELD_DEFUSE_H_ */
