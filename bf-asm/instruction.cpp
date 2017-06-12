@@ -318,7 +318,7 @@ operand::operand(Table *tbl, const Table::Actions::Action *act, const value_t &v
                 if (alias.lo >= 0) {
                     lo += alias.lo;
                     hi += alias.lo;
-                    if (hi > alias.hi)
+                    if (alias.hi >= 0 && hi > alias.hi)
                         error(v.lineno, "invalid bitslice of %s", name.c_str()); }
             } else {
                 lo = alias.lo;
