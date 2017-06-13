@@ -312,9 +312,10 @@ PHV_Container::overlay_ccgf_field(
     PhvInfo::Field *field,
     int start,
     int width,
+    int field_bit_lo,
     Container_Content::Pass pass) {
     //
-    // if two ccgfs are overlayed, start from lowest phv_use bit of substratum
+    // 1. if two ccgfs are overlayed, start from lowest phv_use bit of substratum
     // e.g.,
     // 25:ingress::hdr_1[0].d_0[4]{0..7}
     // [  25:ingress::hdr_1[0].d_0[4]
@@ -329,7 +330,28 @@ PHV_Container::overlay_ccgf_field(
     // ccgf d_0(d_0,d_1) = ccgf a_1(a_0,a_1)
     // a_0 start = 0, not owner d_0 start which is 4
     //
+    // 2. same ccgf overlayed across containers
+    // cluster_phv_overlay cl->maug ==> (
+    //   PHV-96.B32.I.F;
+    //   PHV-97.B33.I.F;)
+    //   ==> overlayed'%' 45:ingress::vlan_tag_[1].pcp<3:0..15> /phv_183,PHV-96;/
+    //       [       45:ingress::vlan_tag_[1].pcp<3>*
+    //               46:ingress::vlan_tag_[1].cfi<1> /phv_183,PHV-96;/
+    //               47:ingress::vlan_tag_[1].vid<12:0..11> /phv_183,PHV-96;/
+    //       ][0..7]
+    //       = 45:ingress::vlan_tag_[1].pcp<3>
+    //       + 46:ingress::vlan_tag_[1].cfi<1>
+    //       + 47:ingress::vlan_tag_[1].vid<4>[0..3] => PHV-96
+    //   ==> overlayed'%' 47:ingress::vlan_tag_[1].vid<12:0..11>  /phv_183,PHV-96;PHV-97;/
+    //       ][8..15]
+    //       = 47:ingress::vlan_tag_[1].vid [4..11]  => PHV-97
+    //
+    int skip_member = 0;
     for (auto &member : field->ccgf_fields()) {
+        skip_member += member->size;
+        if (field_bit_lo > skip_member) {
+            continue;
+        }
         int member_bit_lo = member->phv_use_lo() + member->phv_use_rem();
         int use_width = member->size - member->phv_use_rem();
         if (use_width > width) {
@@ -374,7 +396,7 @@ PHV_Container::single_field_overlay(
     assert(width >= 0);
     //
     if (f->ccgf_fields().size()) {
-        overlay_ccgf_field(f, start, width, pass);
+        overlay_ccgf_field(f, start, width, field_bit_lo, pass);
     } else {
         fields_in_container(
             f,
@@ -389,6 +411,17 @@ PHV_Container::single_field_overlay(
     }
     LOG3("\t==> overlayed'" << static_cast<char>(pass) << "' " << f
         << "[" << field_bit_lo << ".." << field_bit_lo + width - 1 << "]");
+    if (pass == Container_Content::Cluster_Overlay) {
+        //
+        // for all fields f_s overlapped by f in container
+        // update field_overlay_map info in f_s' owner field
+        //
+        ordered_set<PhvInfo::Field *> f_set;
+        fields_in_container(start, start + width - 1, f_set);
+        for (auto &f_s : f_set) {
+            f_s->field_overlay(f, phv_number_i);
+        }
+    }
 }  // single_field_overlay
 
 void

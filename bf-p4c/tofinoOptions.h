@@ -9,7 +9,7 @@ class Tofino_Options : public CompilerOptions {
     bool trivial_phvalloc = false;
     bool phv_interference = true;
     bool phv_slicing = true;
-    bool phv_overlay = false;
+    bool phv_overlay = true;
 
     Tofino_Options() {
         registerOption("--trivpa", nullptr,
@@ -22,7 +22,7 @@ class Tofino_Options : public CompilerOptions {
             [this](const char *) { phv_slicing = false; return false; },
             "do not use cluster_phv_slicing based PHV slices");
         registerOption("--phvover", nullptr,
-            [this](const char *) { phv_overlay = true; return true; },
+            [this](const char *) { phv_overlay = false; return false; },
             "use cluster_phv_overlay based PHV overlays");
         target = "tofino";
     }

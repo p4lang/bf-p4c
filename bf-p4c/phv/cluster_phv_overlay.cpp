@@ -284,8 +284,6 @@ Cluster_PHV_Overlay::overlay_cluster_to_cluster(
                 break;
             }
         }  // for
-        // update field_overlay_map info in f_s' owner field
-        f_s->field_overlay(f_o);
     }  // for
 
     return true;
@@ -580,15 +578,6 @@ Cluster_PHV_Overlay::overlay_cluster_to_mau_group(Cluster_PHV *cl, PHV_MAU_Group
                 use_width,
                 field_bit_lo,
                 PHV_Container::Container_Content::Cluster_Overlay);
-            //
-            // for all fields f_s overlapped by f in container
-            // update field_overlay_map info in f_s' owner field
-            //
-            ordered_set<PhvInfo::Field *> f_set;
-            c->fields_in_container(start, start + use_width - 1, f_set);
-            for (auto &f_s : f_set) {
-                f_s->field_overlay(f);
-            }
             // next iteration
             field_width -= use_width;
             field_bit_lo += use_width;
@@ -676,9 +665,12 @@ std::ostream &operator<<(
     for (auto &e : overlay_substratum_map) {
         out << "\t"
             << e.first
+            << "\t"
+            << "cluster_phv_overlay cl->cl"
             << std::endl
-            << "cluster_phv_overlay cl->cl ==> "
-            << e.second;
+            << "\t==> "
+            << e.second
+            << std::endl;
     }
     return out;
 }

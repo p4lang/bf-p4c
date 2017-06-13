@@ -616,8 +616,7 @@ PhvInfo::Field::overlay_substratum(Field *f) {
 }
 
 void
-PhvInfo::Field::field_overlay_map(int r, Field *field) {
-    assert(r > 0);
+PhvInfo::Field::field_overlay_map(Field *field, int r, bool actual_register) {
     assert(field);
     //
     // r, as virtual container, made -ve when map entry created (by phv_interference)
@@ -626,7 +625,10 @@ PhvInfo::Field::field_overlay_map(int r, Field *field) {
     // see PhvInfo::Field::phv_containers(PHV_Container *c) above
     // -ve virtual containers will never clash with actual phv containers {0,+ve}
     //
-    r = -r;
+    if (!actual_register) {
+        assert(r > 0);
+        r = -r;
+    }
     if (!field_overlay_map_i[r]) {
         field_overlay_map_i[r] = new ordered_set<Field *>;
     }
@@ -662,12 +664,12 @@ PhvInfo::Field::field_overlays(std::list<Field *>& fields_list) {
 }
 
 void
-PhvInfo::Field::field_overlay(Field *overlay) {
+PhvInfo::Field::field_overlay(Field *overlay, int phv_number) {
     // add overlay to substratum's owner field map of overlays
     // to make phv_interference->mutually_exclusive() computation updated & accurate
     assert(overlay);
     overlay->overlay_substratum(overlay_substratum_i? overlay_substratum_i: this);
-    overlay->overlay_substratum()->field_overlay_map(0, overlay);
+    overlay->overlay_substratum()->field_overlay_map(overlay, phv_number);
 }
 
 //

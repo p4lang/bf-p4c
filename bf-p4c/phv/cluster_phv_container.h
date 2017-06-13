@@ -185,6 +185,7 @@ class PHV_Container {
         PhvInfo::Field *field,
         int start,
         int width,
+        int field_bit_lo,
         Container_Content::Pass pass = Container_Content::Pass::Field_Interference);
     void single_field_overlay(
         PhvInfo::Field *f,

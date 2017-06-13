@@ -341,10 +341,10 @@ class PhvInfo : public Inspector {
             field_overlay_map()                                { return field_overlay_map_i; }
         const ordered_map<int, ordered_set<Field *> *>&
             field_overlay_map() const                          { return field_overlay_map_i; }
-        void field_overlay_map(int r, Field *field);
+        void field_overlay_map(Field *field, int r, bool actual_register = true);
         ordered_set<Field *> *field_overlay_map(int r);
         void field_overlays(std::list<Field *>& fields_list);
-        void field_overlay(Field *overlay);
+        void field_overlay(Field *overlay, int phv_number);
         //
         // friends of phv_analysis interface
         //

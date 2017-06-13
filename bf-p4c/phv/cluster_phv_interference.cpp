@@ -364,7 +364,7 @@ void PHV_Interference::virtual_container_overlay(
         //
         // insert field in owner field's field_overlay_map
         //
-        owner->field_overlay_map(r, field);
+        owner->field_overlay_map(field, r, false/*virtual_register*/);
         //
         // modify overlayed field's cluster id so it differs w/ other overlayed fields in container
         // this is necessary to pass sanity_check_overlayed_fields() in container
