@@ -340,9 +340,10 @@ const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
             error("%s: %sdirect access to %sdirect stateful_alu", prim->srcInfo,
                   direct_access ? "" : "in", salu->direct ? "" : "in");
         cstring action = findContext<IR::ActionFunction>()->name;
-        auto out = salu->instruction.at(salu->action_map.at(action))->output_dst;
-        return new IR::MAU::Instruction(prim->srcInfo, "set", out,
-                                        new IR::MAU::AttachedOutput(salu));
+        if (auto out = salu->instruction.at(salu->action_map.at(action))->output_dst)
+            return new IR::MAU::Instruction(prim->srcInfo, "set", out,
+                                            new IR::MAU::AttachedOutput(salu));
+        return nullptr;
     } else if (prim->name == "counter.count" || prim->name == "meter.execute_meter") {
         stateful.push_back(prim);  // needed to setup the index
         return nullptr;

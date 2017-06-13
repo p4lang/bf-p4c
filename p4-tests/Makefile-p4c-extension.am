@@ -466,13 +466,6 @@ XFAIL_TESTS += \
 		tofino/testdata/p4_16_samples/issue414-bmv2.p4.test \
 		tofino/testdata/p4_16_samples/parser-locals2.p4.test
 
-# BRIG-111
-XFAIL_TESTS += \
-		tofino/%reldir%/p4_14/test_config_142_stateful_bfd.p4.test \
-		tofino/%reldir%/p4_14/test_config_152_stateful_simple_cntr.p4.test \
-		tofino/%reldir%/p4_14/test_config_155_stateful_3_alus.p4.test \
-		tofino/%reldir%/p4_14/test_config_165_stateful_bfd_failure_detection.p4.test
-
 # BRIG-112
 XFAIL_TESTS += \
 		tofino/%reldir%/p4_14/01-FlexCounter.p4.test \
