@@ -68,7 +68,7 @@ class FieldDefUse : public ControlFlowVisitor, public Inspector, P4WriteContext 
     const LocPairSet &getDefs(int fid) const {
         static const LocPairSet emptyset;
         return defuse.count(fid) ? defuse.at(fid).def : emptyset; }
- 
+
     const LocPairSet &getUses(locpair def) const {
         static const LocPairSet emptyset;
         return uses.count(def) ? uses.at(def) : emptyset; }
