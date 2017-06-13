@@ -278,7 +278,8 @@ XFAIL_TESTS += \
     tofino/testdata/p4_16_samples/issue447-1-bmv2.p4.test \
     tofino/testdata/p4_16_samples/issue447-2-bmv2.p4.test \
     tofino/testdata/p4_16_samples/issue447-3-bmv2.p4.test \
-    tofino/testdata/p4_16_samples/issue447-4-bmv2.p4.test
+    tofino/testdata/p4_16_samples/issue447-4-bmv2.p4.test \
+    tofino/testdata/p4_16_samples/issue447-5-bmv2.p4.test
 
 # New failures with action bus working in compiler
 XFAIL_TESTS += \
@@ -367,6 +368,7 @@ XFAIL_TESTS += \
 # BRIG-103
 XFAIL_TESTS +=  tofino/testdata/p4_14_samples/instruct1.p4.test \
 	        tofino/testdata/p4_14_samples/instruct3.p4.test \
+		tofino/%reldir%/p4_14/13-IngressEgressConflict.p4.test \
 		tofino/%reldir%/p4_14/14-MultipleActionsInAContainer.p4.test \
 		tofino/%reldir%/p4_14/dileep.p4.test \
 		tofino/%reldir%/p4_14/dileep2.p4.test \
@@ -385,6 +387,7 @@ XFAIL_TESTS +=  tofino/testdata/p4_14_samples/instruct1.p4.test \
 		tofino/%reldir%/p4_14/test_config_252_pa_required_packing.p4.test \
 		tofino/%reldir%/p4_14/test_config_256_pa_problem_4.p4.test \
 		tofino/%reldir%/p4_14/test_config_257_pa_problem_5.p4.test \
+		tofino/%reldir%/p4_14/test_config_50_action_data_different_size_fields.p4.test \
 		tofino/%reldir%/p4_14/test_config_94_action_constant_alignment.p4.test \
 		tofino/%reldir%/p4_14/vk_basic_ipv4_20150706.p4.test
 
@@ -492,11 +495,6 @@ XFAIL_TESTS += \
 		tofino/%reldir%/p4_14/test_config_129_various_exact_match_keys.p4.test \
 		tofino/%reldir%/p4_14/test_config_181_first_alg_tcam.p4.test
 
-# BRIG-114
-XFAIL_TESTS += \
-		tofino/%reldir%/p4_14/18-SimpleVlanTransform.p4.test \
-		tofino/%reldir%/p4_14/adjust_instr2.p4.test
-
 # BRIG-115
 XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_237_hash_action_17_bits.p4.test
 
@@ -506,8 +504,6 @@ XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_223_simple_set_metadata.p4.test
 # BRIG-117
 XFAIL_TESTS += tofino/%reldir%/p4_14/gateway_and_big_table.p4.test
 
-# BRIG-118
-XFAIL_TESTS += tofino/testdata/p4_16_samples/named_meter_bmv2.p4.test
 
 # BRIG-119
 XFAIL_TESTS += \
