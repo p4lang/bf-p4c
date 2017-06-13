@@ -31,12 +31,12 @@ mkdir -p p4c/extensions
 
 pushd p4c
 pushd extensions
-ln -sf ../../bf-p4c tofino
-ln -sf ../../p4-tests p4_tests
-popd
+if [ ! -e tofino ]; then ln -sf ../../bf-p4c tofino; fi
+if [ ! -e p4_tests ]; then ln -sf ../../p4-tests p4_tests; fi
+popd # extensions
 ./bootstrap.sh
 rm -rf build  # don't actually want this...
-popd
+popd # p4c
 
 autoreconf -i
 mkdir -p build && cd build
