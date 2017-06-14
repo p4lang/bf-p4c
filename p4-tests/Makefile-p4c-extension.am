@@ -322,14 +322,13 @@ XFAIL_TESTS += \
 		tofino/testdata/p4_14_samples/exact_match7.p4.test
 
 # BRIG-101
-XFAIL_TESTS += \
-		tofino/%reldir%/p4_14/test_config_166_stateful_generic_counter.p4.test \
+BRIG_101_XFAIL = \
 		tofino/%reldir%/p4_14/test_config_202_write_same_byte.p4.test \
-		tofino/%reldir%/p4_14/test_config_224_stateful_error_check.p4.test \
 		tofino/%reldir%/p4_14/test_config_32_action_data_imm_param_imm.p4.test \
 		tofino/%reldir%/p4_14/test_config_45_action_data_immediate_param_and_constant.p4.test \
 		tofino/%reldir%/p4_14/test_config_48_action_data_bit_masked_set.p4.test \
 		tofino/%reldir%/p4_14/test_config_49_action_data_bit_masked_set_immediate.p4.test
+XFAIL_TESTS += $(BRIG_101_XFAIL)
 
 # asm error: placing ... off the top of the input xbar
 XFAIL_TESTS += tofino/testdata/p4_14_samples/acl1.p4.test
@@ -394,8 +393,7 @@ XFAIL_TESTS +=  tofino/testdata/p4_14_samples/instruct1.p4.test \
 # BRIG-104
 XFAIL_TESTS +=  tofino/testdata/p4_14_samples/mac_rewrite.p4.test \
 		tofino/%reldir%/p4_14/12-SmallToBigFieldWithMask8.p4.test \
-		tofino/%reldir%/p4_14/22-BigToSmallFieldWithMask8.p4.test \
-		tofino/%reldir%/p4_14/test_config_224_stateful_error_check.p4.test
+		tofino/%reldir%/p4_14/22-BigToSmallFieldWithMask8.p4.test
 
 # BRIG-105
 XFAIL_TESTS +=  tofino/%reldir%/p4_14/04-FullPHV3.p4.test \

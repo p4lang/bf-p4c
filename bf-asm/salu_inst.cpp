@@ -137,9 +137,13 @@ operand::operand(Table *tbl, const Table::Actions::Action *act, const value_t &v
     if (v->type == tCMD && *v == "-") {
         neg = true;
         v = &v->vec[1]; }
-    if (v->type == tINT)
+    if (v->type == tINT) {
         op = new Const(v->lineno, v->i);
-    else if (v->type == tSTR) {
+    } else if (v->type == tBIGINT) {
+        if (v->bigi.size > 1 || v->bigi.data[0] > LONG_MAX)
+            error(v->lineno, "Integer too large");
+        op = new Const(v->lineno, v->bigi.data[0]);
+    } else if (v->type == tSTR) {
         if (auto f = tbl->format->field(v->s))
             op = new Memory(v->lineno, tbl, f);
         else if (*v == "phv_lo" || *v == "phv_hi")
