@@ -1,0 +1,11 @@
+services:
+  - docker
+
+env:
+  - MAKEFLAGS="-j2"
+
+install:
+  - docker build -t bf-p4c-compilers .
+
+script:
+  - docker run -w /bfn/bf-p4c-compilers/build/p4c -e MAKEFLAGS bf-p4c-compilers make cpplint VERBOSE=1
