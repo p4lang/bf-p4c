@@ -50,17 +50,12 @@ RUN git clone --recursive https://github.com/google/protobuf.git && \
     ./autogen.sh && \
     ./configure && \
     make && make install-strip && \
-    ldconfig
+    ldconfig && \
+    rm -rf /bfn/protobuf
 
 COPY . /bfn/bf-p4c-compilers/
 WORKDIR /bfn/bf-p4c-compilers
 RUN pip install pyinstaller
 RUN ./bootstrap_bfn_compilers.sh && \
-    cd p4c/build && \
-    make && make install-strip && \
-    cd ../.. && \
-    cd bf-asm/build && \
+    cd build && \
     make && make install-strip
-
-WORKDIR /bfn
-RUN rm -rf /bfn/protobuf
