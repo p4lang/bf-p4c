@@ -315,6 +315,14 @@ PHV_Container::overlay_ccgf_field(
     int field_bit_lo,
     Container_Content::Pass pass) {
     //
+    // f is a ccgf
+    // ccgf can be overlayed on top of another ccgf
+    // ccgf overlay can span containers
+    //
+    // overlay field f, slice starting from field_bit_lo
+    // onto this container starting at bit 'start' with width
+    //
+    //
     // 1. if two ccgfs are overlayed, start from lowest phv_use bit of substratum
     // e.g.,
     // 25:ingress::hdr_1[0].d_0[4]{0..7}
@@ -331,6 +339,17 @@ PHV_Container::overlay_ccgf_field(
     // a_0 start = 0, not owner d_0 start which is 4
     //
     // 2. same ccgf overlayed across containers
+    // e.g.,
+    // overlaying a cluster to a mau group containing 8b phv containers PHV-96, PHV-97
+    // cluster (cluster ID phv_183) comprises ccgf field 45:ingress::vlan_tag_[1].pcp
+    // members of this ccgf field are
+    // [45:ingress::vlan_tag_[1].pcp, 46:ingress::vlan_tag_[1].cfi, 47:ingress::vlan_tag_[1].vid]
+    //          3-bits + 1-bit + 12-bits = 16-bits  in two 8b phvs
+    // PHV-96 = vlan_tag_[1].pcp, 46:ingress::vlan_tag_[1].cfi, 47:ingress::vlan_tag_[1].vid[0..3]
+    //          3-bits + 1-bit + 4-bits = 8-bits
+    // PHV-97 = 47:ingress::vlan_tag_[1].vid[4..11]
+    //          8-bits
+    //
     // cluster_phv_overlay cl->maug ==> (
     //   PHV-96.B32.I.F;
     //   PHV-97.B33.I.F;)
@@ -390,6 +409,9 @@ PHV_Container::single_field_overlay(
     const int width,
     const int field_bit_lo,
     Container_Content::Pass pass) {
+    //
+    // overlay field f, slice starting from field_bit_lo
+    // onto this container starting at bit 'start' with width
     //
     assert(f);
     assert(start >= 0);

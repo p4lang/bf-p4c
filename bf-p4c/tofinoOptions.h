@@ -15,15 +15,15 @@ class Tofino_Options : public CompilerOptions {
         registerOption("--trivpa", nullptr,
             [this](const char *) { trivial_phvalloc = true; return true; },
             "use the trivial PHV allocator");
-        registerOption("--phvintf", nullptr,
+        registerOption("--nophvintf", nullptr,
             [this](const char *) { phv_interference = false; return false; },
             "do not use cluster_phv_interference interference-graph based PHV reduction");
-        registerOption("--phvslice", nullptr,
+        registerOption("--nophvslice", nullptr,
             [this](const char *) { phv_slicing = false; return false; },
             "do not use cluster_phv_slicing based PHV slices");
-        registerOption("--phvover", nullptr,
+        registerOption("--nophvover", nullptr,
             [this](const char *) { phv_overlay = false; return false; },
-            "use cluster_phv_overlay based PHV overlays");
+            "do not use cluster_phv_overlay based PHV overlays");
         target = "tofino";
     }
 };
