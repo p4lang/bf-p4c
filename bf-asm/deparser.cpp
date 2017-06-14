@@ -169,6 +169,7 @@ void Deparser::input(VECTOR(value_t) args, value_t data) {
         for (auto &kv : MapIterChecked(data.map, true)) {
             if (kv.key == "dictionary") {
                 if (kv.value.type == tVEC && kv.value.vec.size == 0) continue;
+                collapse_list_of_maps(kv.value);
                 if (!CHECKTYPE(kv.value, tMAP)) continue;
                 for (auto &ent : kv.value.map)
                     dictionary[gress].emplace_back(RefOrChksum(gress, ent.key),

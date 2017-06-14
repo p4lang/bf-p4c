@@ -88,7 +88,6 @@ static value_t command(char *cmd, value_t &a1, value_t &a2, int lineno_adj) {
     VECTOR_init3(rv.vec, value(cmd, 0), a1, a2);
     rv[0].lineno = rv.lineno;
     return rv; }
-static value_t list_map_expand(VECTOR(value_t) &v);
 
 #define VAL(...)  value(__VA_ARGS__, yychar == '\n' ? 1 : 0)
 #define CMD(...)  command(__VA_ARGS__, yychar == '\n' ? 1 : 0)
@@ -196,8 +195,8 @@ indent_elements
         : INDENT elements UNINDENT { $$ = $2; }
         | INDENT error { $<i>$ = lineno; } error_resync UNINDENT { $$ = empty_map(lineno-$<i>3); }
         ;
-elements: list_elements { $$ = list_map_expand($1); }
-        | list_elements error error_resync { $$ = list_map_expand($1); }
+elements: list_elements { $$ = VAL($1); }
+        | list_elements error error_resync { $$ = VAL($1); }
         | map_elements { $$ = VAL($1); }
         | map_elements error error_resync { $$ = VAL($1); }
         ;
@@ -213,8 +212,8 @@ map_element
         | flow_value ':' value '\n' { $$ = pair_t($1, $3); }
         | key ':' '\n' indent_elements { $$ = pair_t($1, $4); }
         | flow_value ':' '\n' indent_elements { $$ = pair_t($1, $4); }
-        | key ':' '\n' list_elements { $$ = pair_t($1, list_map_expand($4)); }
-        | flow_value ':' '\n' list_elements { $$ = pair_t($1, list_map_expand($4)); }
+        | key ':' '\n' list_elements { $$ = pair_t($1, VAL($4)); }
+        | flow_value ':' '\n' list_elements { $$ = pair_t($1, VAL($4)); }
         | '?' value  ':' value '\n' { $$ = pair_t($2, $4); }
         | '?' value '\n' ':' value '\n' { $$ = pair_t($2, $5); }
         ;
@@ -344,25 +343,5 @@ int asm_parse_file(const char *name, FILE *in) {
         error_count++;
     return error_count;
 }
-
-/* check a list and see if it is a list of singleton maps -- if so, concatenate the
- * maps into a single map and return that, otherwise return the list */
-static value_t list_map_expand(VECTOR(value_t) &v) {
-    bool list_of_maps = v.size > 0;
-    for (int i = 0; i < v.size; i++) {
-        if (v.data[i].type != tMAP || v.data[i].map.size != 1) {
-            list_of_maps = false;
-            break; } }
-    value_t rv{tVEC, lineno};
-    if (list_of_maps) {
-        rv.type = tMAP;
-        rv.map = v.data[0].map;
-        for (int i = 1; i < v.size; i++) {
-            VECTOR_addcopy(rv.map, v.data[i].map.data, v.data[i].map.size);
-            VECTOR_fini(v.data[i].map); }
-        VECTOR_fini(v);
-    } else
-        rv.vec = v;
-    return rv; }
 
 std::map<std::string, Section *> *Section::sections = 0;

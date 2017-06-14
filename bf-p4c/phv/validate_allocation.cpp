@@ -219,7 +219,6 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe*) {
                         "it has unused bits: %2%", container,
                         cstring::to_cstring(fields));
         }
-
     }
 
     return false;

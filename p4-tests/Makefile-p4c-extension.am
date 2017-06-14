@@ -323,18 +323,18 @@ XFAIL_TESTS += \
 
 # BRIG-101
 XFAIL_TESTS += \
-		tofino/%reldir%/p4_14/11-AssignChooseDest.p4.test \
-		tofino/%reldir%/p4_14/action_selection_with_counter.p4.test \
-		tofino/%reldir%/p4_14/switch_20160602/switch.p4.test \
 		tofino/%reldir%/p4_14/test_config_166_stateful_generic_counter.p4.test \
 		tofino/%reldir%/p4_14/test_config_202_write_same_byte.p4.test \
 		tofino/%reldir%/p4_14/test_config_224_stateful_error_check.p4.test \
 		tofino/%reldir%/p4_14/test_config_32_action_data_imm_param_imm.p4.test \
 		tofino/%reldir%/p4_14/test_config_45_action_data_immediate_param_and_constant.p4.test \
 		tofino/%reldir%/p4_14/test_config_48_action_data_bit_masked_set.p4.test \
-		tofino/%reldir%/p4_14/test_config_49_action_data_bit_masked_set_immediate.p4.test \
-		tofino/testdata/p4_14_samples/acl1.p4.test \
-		tofino/testdata/p4_14_samples/source_routing.p4.test
+		tofino/%reldir%/p4_14/test_config_49_action_data_bit_masked_set_immediate.p4.test
+
+# asm error: placing ... off the top of the input xbar
+XFAIL_TESTS += tofino/testdata/p4_14_samples/acl1.p4.test
+# asm error: invalid src2 (due to constant out of range for 32-bit signed int)
+XFAIL_TESTS += tofino/testdata/p4_14_samples/source_routing.p4.test
 
 # BRIG-102
 XFAIL_TESTS += \
