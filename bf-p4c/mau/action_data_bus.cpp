@@ -518,6 +518,9 @@ cstring ActionDataBus::find_immed_name(int start_byte, ActionFormat::cont_type_t
 
     int begin = start_byte * 8 - immed_starts[index].first;
     int diff = immed_starts[index].second - immed_starts[index].first;
+    BUG_CHECK(begin >= 0, "Invalid begin for immediate slice");
+    BUG_CHECK(byte_sz > 0, "Invalid size for immediate slice");
+    BUG_CHECK(diff >= begin, "Invalid end for immediate slice");
     name += "(" +  std::to_string(begin) + "..";
     if (diff <= begin + byte_sz * 8) {
         name += std::to_string(diff);
