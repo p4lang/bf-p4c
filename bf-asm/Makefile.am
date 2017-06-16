@@ -127,7 +127,7 @@ ctags:
 
 tests:
 	+@export BUILDDIR=$$(pwd); cd $(srcdir)/test; ./runtests -f asm/*.tfa *.p4 mau/*.p4
-	+@export BUILDDIR=$$(pwd); cd $(srcdir)/test; ./runtests -f -b stf/*.stf 
+	+@export BUILDDIR=$$(pwd); cd $(srcdir)/test; ./runtests -f -b stf/*.stf brig/*.p4 
 
 check-sanity:
 	+@export BUILDDIR=$$(pwd); cd $(srcdir)/test; ./runtests *.p4

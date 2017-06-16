@@ -36,7 +36,7 @@ class Parser : public Section {
         gress_t         gress;
         Phv::Ref        dest;
         unsigned        add = 0, mask = 0, swap = 0, end_pos = 0;
-        bool            start = false, end = false, shift = false, residual = false; 
+        bool            start = false, end = false, shift = false, residual = false;
         Checksum(gress_t, pair_t);
         bool equiv(const Checksum &) const;
         void pass1(Parser *);
@@ -126,6 +126,9 @@ class Parser : public Section {
                 template<class REGS>
                 void write_output_config(REGS &, void *, unsigned &) const;
                 OutputUse output_use() const;
+                bool merge(const Set &a);
+                bool operator==(const Set &a) const { return where == a.where && what == a.what
+                    && flags == a.flags; }
             };
             std::vector<Set>            set;
             std::vector<Checksum>       csum;
