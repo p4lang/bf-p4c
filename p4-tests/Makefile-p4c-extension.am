@@ -501,6 +501,9 @@ XFAIL_TESTS += \
 		tofino/%reldir%/p4_14/test_config_100_hash_action.p4.test \
 		tofino/%reldir%/p4_14/test_config_13_first_selection.p4.test
 
+# BRIG-124
+XFAIL_TESTS += tofino/testdata/p4_16_samples/issue510-bmv2.p4.test
+
 # various stateful
 XFAIL_TESTS += \
 		tofino/%reldir%/p4_14/test_config_163_stateful_table_math_unit.p4.test \
