@@ -27,19 +27,35 @@ does not support very well.
 class CreateSaluInstruction : public Inspector {
     IR::MAU::StatefulAlu        *salu;
     IR::MAU::SaluAction         *action = nullptr;
-    enum { NONE, COND, PRED, VALUE, OUTPUT, BIT_INSTR } etype = NONE;
+    const IR::ParameterList     *params = nullptr;
+    enum { NONE, COND, PRED, IF, VALUE, OUTPUT, BIT_INSTR } etype = NONE;
     bool                        negate = false;
     cstring                     opcode;
-    std::vector<const IR::Expression *> operands;
+    std::vector<const IR::Expression *>         operands, pred_operands;
+    std::vector<const IR::MAU::Instruction *>   cmp_instr;
     const IR::Expression        *predicates[5];
     const IR::MAU::Instruction  *output;
     IR::MAU::StatefulAlu::MathUnit      math;
     IR::MAU::SaluMathFunction   *math_function = nullptr;
     const IR::Expression        *math_input = nullptr;
 
+    const IR::MAU::Instruction *createInstruction(int);
+    bool applyArg(const IR::PathExpression *, cstring);
+    const IR::Expression *reuseCmp(const IR::MAU::Instruction *cmp, int idx);
+
     bool preorder(const IR::Declaration_Instance *di) override;
     bool preorder(const IR::Property *) override;
     void postorder(const IR::Property *) override;
+    bool preorder(const IR::Function *) override;
+    void postorder(const IR::Function *) override;
+    bool preorder(const IR::AssignmentStatement *) override;
+    bool preorder(const IR::IfStatement *) override;
+    bool preorder(const IR::BlockStatement *) override { return true; }
+    bool preorder(const IR::Statement *s) override {
+        error("%s: statement too complex for register action", s->srcInfo);
+        return false; }
+    bool preorder(const IR::PathExpression *) override;
+
     bool preorder(const IR::Constant *) override;
     bool preorder(const IR::AttribLocal *) override;
     bool preorder(const IR::Member *) override;
@@ -65,7 +81,7 @@ class CreateSaluInstruction : public Inspector {
     bool preorder(const IR::BOr *) override;
     bool preorder(const IR::BXor *) override;
     bool preorder(const IR::Expression *e) override {
-        error("%s: expression too complex for stateful alu", e->srcInfo);
+        error("%s: expression too complex for register action", e->srcInfo);
         return false; }
 
  public:

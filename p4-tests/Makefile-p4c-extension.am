@@ -38,8 +38,9 @@ p4_tests_bmv2.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile-p4c-extension.am $(wil
     $(shell grep -L 'tofino/stateful_alu_blackbox' \
 	$(srcdir)/%reldir%/p4_14/*.p4 \
 	$(srcdir)/%reldir%/p4_14/switch_*/switch.p4 ) \
-    $(shell grep -l main $(shell grep -l -E '(v1model|psa)\.p4' \
-	    $(srcdir)/%reldir%/p4_16/*.p4)) ) \
+    $(shell grep -L 'tofino/stateful_alu' \
+	$(shell grep -l main $(shell grep -l -E '(v1model|psa)\.p4' \
+	    $(srcdir)/%reldir%/p4_16/*.p4))) ) \
     $(srcdir)/%reldir%/p4_14 $(srcdir)/%reldir%/p4_16
 	@$(GENTESTS) $(srcdir) bmv2 $(srcdir)/%reldir%/test-bmv2.sh $^ >$@ || ( rm $@ && false )
 

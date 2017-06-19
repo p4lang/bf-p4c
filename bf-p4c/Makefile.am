@@ -195,7 +195,7 @@ p4_14include_tofino_HEADERS = \
     $(srcdir)/%reldir%/p4_14include/tofino/stateful_alu_blackbox.p4 \
     $(srcdir)/%reldir%/p4_14include/tofino/wred_blackbox.p4
 
-installed-data.stamp: $(p4include_tofino_HEADERS) $(p4_14include_tofino_HEADERS)
+.installed-data.stamp: $(p4include_tofino_HEADERS) $(p4_14include_tofino_HEADERS)
 
 noinst_LTLIBRARIES += libtofinobackend.la
 libtofinobackend_la_LIBADD = libfrontend.la

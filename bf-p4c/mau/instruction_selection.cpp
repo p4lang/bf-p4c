@@ -329,19 +329,24 @@ const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
             gen_stdmeta(VisitingThread(this) ? "egress_port" : "egress_spec"));
     } else if (prim->name == "stateful_alu_14.execute_stateful_alu" ||
                prim->name == "stateful_alu_14.execute_stateful_alu_from_hash" ||
-               prim->name == "stateful_alu_14.execute_stateful_log") {
+               prim->name == "stateful_alu_14.execute_stateful_log" ||
+               prim->name == "register_action.execute") {
         bool direct_access = false;
         if (prim->operands.size() > 1)
             stateful.push_back(prim);  // needed to setup the index properly
-        else if (prim->name == "stateful_alu_14.execute_stateful_alu")
+        else if (prim->name == "stateful_alu_14.execute_stateful_alu" ||
+                 prim->name == "register_action.execute")
             direct_access = true;
         auto glob = prim->operands.at(0)->to<IR::GlobalRef>();
         auto salu = glob->obj->to<IR::MAU::StatefulAlu>();
         if (salu->direct != direct_access)
-            error("%s: %sdirect access to %sdirect stateful_alu", prim->srcInfo,
+            error("%s: %sdirect access to %sdirect register", prim->srcInfo,
                   direct_access ? "" : "in", salu->direct ? "" : "in");
         cstring action = findContext<IR::ActionFunction>()->name;
-        if (auto out = salu->instruction.at(salu->action_map.at(action))->output_dst)
+        auto out = salu->instruction.at(salu->action_map.at(action))->output_dst;
+        if (prim->name == "register_action.execute")
+            out = new IR::TempVar(prim->type);
+        if (out)
             return new IR::MAU::Instruction(prim->srcInfo, "set", out,
                                             new IR::MAU::AttachedOutput(salu));
         return nullptr;

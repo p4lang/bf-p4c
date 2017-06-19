@@ -33,16 +33,23 @@ class ActionBodySetup : public Inspector {
     P4::TypeMap             *typeMap;
     IR::MAU::Action         *af;
     ActionArgSetup          &setup;
+
+    const IR::Primitive *cvtMethodCall(const IR::MethodCallExpression *mc);
     bool preorder(const IR::IndexedVector<IR::StatOrDecl> *) override { return true; }
     bool preorder(const IR::BlockStatement *) override { return true; }
     bool preorder(const IR::AssignmentStatement *assign) override {
         cstring pname = "modify_field";
         if (assign->left->type->is<IR::Type_Header>())
             pname = "copy_header";
-        auto prim = new IR::Primitive(assign->srcInfo, pname, assign->left, assign->right);
+        auto right = assign->right;
+        if (auto mc = right->to<IR::MethodCallExpression>())
+            right = cvtMethodCall(mc);
+        auto prim = new IR::Primitive(assign->srcInfo, pname, assign->left, right);
         af->action.push_back(prim->apply(setup));
         return false; }
-    bool preorder(const IR::MethodCallStatement *mc) override;
+    bool preorder(const IR::MethodCallStatement *mc) override {
+        af->action.push_back(cvtMethodCall(mc->methodCall)->apply(setup));
+        return false; }
     bool preorder(const IR::Declaration *) override {
         // FIXME -- for now, ignoring local variables?  Need copy prop + dead code elim
         return false; }
@@ -59,8 +66,8 @@ class ActionBodySetup : public Inspector {
     : refMap(refMap), typeMap(typeMap), af(af), setup(setup) {}
 };
 
-bool ActionBodySetup::preorder(const IR::MethodCallStatement *mc) {
-    auto mi = P4::MethodInstance::resolve(mc->methodCall, refMap, typeMap, true);
+const IR::Primitive *ActionBodySetup::cvtMethodCall(const IR::MethodCallExpression *mc) {
+    auto mi = P4::MethodInstance::resolve(mc, refMap, typeMap, true);
     cstring name;
     const IR::Expression *recv = nullptr;
     if (auto bi = mi->to<P4::BuiltInMethod>()) {
@@ -74,12 +81,11 @@ bool ActionBodySetup::preorder(const IR::MethodCallStatement *mc) {
         name = ef->method->name;
     } else {
         BUG("method call %s not yet implemented", mc); }
-    auto prim = new IR::Primitive(mc->srcInfo, mc->methodCall->type, name);
+    auto prim = new IR::Primitive(mc->srcInfo, mc->type, name);
     if (recv) prim->operands.push_back(recv);
-    for (auto arg : *mc->methodCall->arguments)
+    for (auto arg : *mc->arguments)
         prim->operands.push_back(arg);
-    af->action.push_back(prim->apply(setup));
-    return false;
+    return prim;
 }
 
 }  // anonymous namespace
@@ -189,18 +195,22 @@ static IR::Attached *createAttached(IR::MAU::Table *tt, Util::SourceInfo srcInfo
 static void updateAttachedSalu(const Util::SourceInfo &loc, const P4::ReferenceMap *refMap,
                                IR::MAU::StatefulAlu *&salu, const IR::Declaration_Instance *ext,
                                cstring action) {
-    BUG_CHECK(ext->type->toString() == "stateful_alu_14", "%s is not a stateful alu", ext);
-    auto regprop = ext->properties["reg"];
-    if (!regprop) {
-        error("%s: no reg property in stateful_alu %s", ext->srcInfo, ext->name);
-        return; }
-    auto rpv = regprop->value->to<IR::ExpressionValue>();
-    auto pe = rpv ? rpv->expression->to<IR::PathExpression>() : nullptr;
+    auto reg_arg = ext->arguments->size() > 0 ? ext->arguments->at(0) : nullptr;
+    if (!reg_arg) {
+        if (auto regprop = ext->properties["reg"]) {
+            if (auto rpv = regprop->value->to<IR::ExpressionValue>())
+                reg_arg = rpv->expression;
+            else
+                BUG("reg property %s is not an ExpressionValue", regprop);
+        } else {
+            error("%s: no reg property in stateful_alu %s", ext->srcInfo, ext->name);
+            return; } }
+    auto pe = reg_arg->to<IR::PathExpression>();
     auto d = pe ? refMap->getDeclaration(pe->path, true) : nullptr;
     auto reg = d ? d->to<IR::Declaration_Instance>() : nullptr;
     auto regtype = reg ? reg->type->to<IR::Type_Specialized>() : nullptr;
     if (!regtype || regtype->baseType->toString() != "register") {
-        error("%s: reg is not a register", regprop->srcInfo);
+        error("%s: reg is not a register", reg_arg->srcInfo);
         return; }
     if (!salu) {
         LOG3("Creating new StatefulAlu for " << regtype->toString() << " " << reg->name);
@@ -212,12 +222,12 @@ static void updateAttachedSalu(const Util::SourceInfo &loc, const P4::ReferenceM
             salu->direct = true; }
         salu->width = regtype->arguments->at(0)->width_bits();
     } else if (salu->reg != reg) {
-        error("%s: stateful_alu blocks in the same table must use the same underlying regster,"
+        error("%s: register actions in the same table must use the same underlying regster,"
               "trying to use %s", salu->srcInfo, reg); }
     LOG3("Adding " << ext->name << " to StatefulAlu " << reg->name);
     ext->apply(CreateSaluInstruction(salu));
     if (!salu->action_map.emplace(action, ext->name).second)
-        error("%s: multiple calls to execute_stateful_alu in action %s", loc, action);
+        error("%s: multiple calls to execute in action %s", loc, action);
 }
 
 namespace {
@@ -317,6 +327,7 @@ struct AttachTables : public Modifier {
     void postorder(IR::GlobalRef *gref) override {
         if (auto di = gref->obj->to<IR::Declaration_Instance>()) {
             auto tt = findContext<IR::MAU::Table>();
+            cstring tname;
             BUG_CHECK(tt, "GlobalRef not in a table");
             for (auto att : tt->attached) {
                 if (att->name == di->externalName()) {
@@ -331,7 +342,8 @@ struct AttachTables : public Modifier {
                 LOG3("Created " << att->node_type_name() << ' ' << att->name << " (pt 3)");
                 gref->obj = converted[di] = att;
                 attached[tt->name].push_back(att);
-            } else if (di->type->toString() == "stateful_alu_14") {
+            } else if ((tname = di->type->toString()) == "stateful_alu_14" ||
+                       tname.startsWith("register_action<")) {
                 auto act = findContext<IR::MAU::Action>();
                 updateAttachedSalu(gref->srcInfo, refMap, salu[tt->name], di, act->name);
                 gref->obj = converted[di] = salu[tt->name]; } } }

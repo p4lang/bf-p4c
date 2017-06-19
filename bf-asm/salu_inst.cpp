@@ -253,6 +253,7 @@ static AluOP::Decode opADD("add", 0x1c, true), opSUB("sub", 0x1e),
 Instruction *AluOP::Decode::decode(Table *tbl, const Table::Actions::Action *act,
                                    const VECTOR(value_t) &op) const {
     AluOP *rv = new AluOP(this, op[0].lineno);
+    auto operands = this->operands;
     int idx = 1;
     // Check optional predicate operand
     if (idx < op.size) {
@@ -284,7 +285,7 @@ Instruction *AluOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
     if (idx < op.size)
         rv->srcb = operand(tbl, act, op[idx++]);
     if ((rv->srca.to<operand::Phv>() || rv->srca.to<operand::MathFn>()) && swap_args) {
-        rv->opc = swap_args;
+        operands = (rv->opc = swap_args)->operands;
         std::swap(rv->srca, rv->srcb);
     } else if (operands == B) {
         std::swap(rv->srca, rv->srcb); }

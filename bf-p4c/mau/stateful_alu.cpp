@@ -5,6 +5,7 @@ bool CreateSaluInstruction::preorder(const IR::Property *prop) {
     negate = false;
     opcode = cstring();
     operands.clear();
+    pred_operands.clear();
     if (prop->name == "reg") {
         // handled in extract_maupipe when creating the IR::MAU::StatefulAlu
         return false;
@@ -95,16 +96,118 @@ bool CreateSaluInstruction::preorder(const IR::Property *prop) {
     return true;
 }
 
+/// Check a name to see if it is a reference to an argument of register_action::apply.
+/// If so, process it as an operand and return true
+bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field) {
+    if (!params) return false;
+    int idx = 0, field_idx = 0;
+    const IR::Type_StructLike *stype = nullptr;
+    for (auto p : params->parameters) {
+        if (p->name == pe->path->name) {
+            stype = p->type->to<IR::Type_StructLike>();
+            break; }
+        ++idx; }
+    if (size_t(idx) >= params->parameters.size()) return false;
+    if (field && stype) {
+        for (auto f : stype->fields) {
+            if (f->name == field)
+                break;
+            ++field_idx; } }
+    BUG_CHECK(field_idx < 2, "bad field name in register layout");
+    cstring name = field_idx ? "hi" : "lo";
+    IR::Expression *e = nullptr;
+    switch (idx) {
+    case 0:
+        if (etype == NONE) etype = VALUE;
+        if (!opcode) opcode = "alu_a";
+        if (etype == OUTPUT) name = "mem_" + name;
+        e = new IR::MAU::SaluReg(name);
+        break;
+    case 1:
+        if (etype == NONE) etype = OUTPUT;
+        if (!opcode) opcode = "output";
+        return true;
+    default:
+        return false; }
+    if (e) {
+        if (negate)
+            e = new IR::Neg(e);
+        LOG4("applyArg operand: " << e);
+        operands.push_back(e); }
+    return true;
+}
+
+bool CreateSaluInstruction::preorder(const IR::Function *func) {
+    BUG_CHECK(params == nullptr, "Nested function?");
+    LOG5(func);
+    params = func->type->parameters;
+    return true;
+}
+void CreateSaluInstruction::postorder(const IR::Function *func) {
+    BUG_CHECK(params == func->type->parameters, "recursion fasilure");
+    params = nullptr;
+}
+bool CreateSaluInstruction::preorder(const IR::AssignmentStatement *as) {
+    BUG_CHECK(operands.empty(), "recursion failure");
+    etype = NONE;
+    opcode = cstring();
+    visit(as->left, "left");
+    BUG_CHECK(operands.size() == (etype != OUTPUT), "recursion failure");
+    if (etype == NONE) {
+        error("Can't assign to %s in register action", as->left);
+    } else {
+        visit(as->right);
+        BUG_CHECK(operands.size() > (etype != OUTPUT), "recursion failure");
+        createInstruction(0); }
+    operands.clear();
+    return false;
+}
+
+static const IR::Expression *negatePred(const IR::Expression *e) {
+    if (auto a = e->to<IR::LAnd>())
+        return new IR::LOr(e->srcInfo, negatePred(a->left), negatePred(a->right));
+    if (auto a = e->to<IR::LOr>())
+        return new IR::LAnd(e->srcInfo, negatePred(a->left), negatePred(a->right));
+    if (auto a = e->to<IR::LNot>())
+        return a->expr;
+    return new IR::LNot(e);
+}
+
+bool CreateSaluInstruction::preorder(const IR::IfStatement *s) {
+    if (!pred_operands.empty()) {
+        error("%s: nested conditionals not supported in register action", s->srcInfo);
+        return false; }
+    etype = IF;
+    visit(s->condition, "condition");
+    BUG_CHECK(pred_operands.size() == 1, "recursion failure");
+    etype = NONE;
+    predicates[0] = pred_operands.at(0);
+    visit(s->ifTrue, "ifTrue");
+    predicates[0] = negatePred(predicates[0]);
+    visit(s->ifFalse, "ifFalse");
+    predicates[0] = nullptr;
+    pred_operands.clear();
+    return false;
+}
+
+bool CreateSaluInstruction::preorder(const IR::PathExpression *pe) {
+    if (!applyArg(pe, cstring()))
+        BUG("Unrecognized PathExpression %s in salu", pe);
+    return false;
+}
+
 bool CreateSaluInstruction::preorder(const IR::Constant *c) {
-    if (etype == COND && c->value == 0)
+    if ((etype == COND || etype == IF) && c->value == 0)
         return false;
     if (negate)
         c = (-*c).clone();
+    LOG4("Constant operand: " << c);
     operands.push_back(c);
     return false;
 }
 bool CreateSaluInstruction::preorder(const IR::AttribLocal *attr) {
     IR::Expression *e = nullptr;
+    auto *operands = &this->operands;
     switch (etype) {
     case OUTPUT:
         if (attr->name == "predicate" || attr->name == "combined_predicate")
@@ -139,6 +242,7 @@ bool CreateSaluInstruction::preorder(const IR::AttribLocal *attr) {
             e = new IR::MAU::SaluReg("cmplo");
         else if (attr->name == "condition_hi")
             e = new IR::MAU::SaluReg("cmphi");
+        operands = &this->pred_operands;
         break;
     case BIT_INSTR:
         if (attr->name == "set_bit" || attr->name == "set_bitc" || attr->name == "clr_bit" ||
@@ -153,21 +257,65 @@ bool CreateSaluInstruction::preorder(const IR::AttribLocal *attr) {
     if (e) {
         if (negate)
             e = new IR::Neg(e);
-        operands.push_back(e);
+        LOG4("AttribLocal operand: " << e);
+        operands->push_back(e);
     } else {
         error("%s: unexpected keyword %s", attr->srcInfo, attr->name); }
     return false;
 }
 bool CreateSaluInstruction::preorder(const IR::Member *e) {
+    if (auto pe = e->expr->to<IR::PathExpression>()) {
+        if (applyArg(pe, e->member))
+            return false; }
     if (negate)
         operands.push_back(new IR::Neg(e));
     else
         operands.push_back(e);
+    LOG4("Member operand: " << operands.back());
     return false;
 }
 
+static std::map<cstring, cstring> negate_op = {
+    { "equ", "neq" }, { "neq", "equ" },
+    { "geq.s", "lss.s" }, { "geq.u", "lss.u" },
+    { "grt.s", "leq.s" }, { "grt.u", "leq.u" },
+    { "leq.s", "grt.s" }, { "leq.u", "grt.u" },
+    { "lss.s", "geq.s" }, { "lss.u", "geq.u" },
+};
+
+static bool equiv(const IR::Expression *a, const IR::Expression *b) {
+    if (*a == *b) return true;
+    if (typeid(*a) != typeid(*b)) return false;
+    if (auto ma = a->to<IR::Member>()) {
+        auto mb = b->to<IR::Member>();
+        return ma->member == mb->member && equiv(ma->expr, mb->expr); }
+    if (auto na = a->to<IR::Neg>()) {
+        auto nb = b->to<IR::Neg>();
+        return equiv(na->expr, nb->expr); }
+    if (auto pa = a->to<IR::PathExpression>()) {
+        auto pb = b->to<IR::PathExpression>();
+        return pa->path->name == pb->path->name; }
+    if (auto ka = a->to<IR::Constant>()) {
+        auto kb = b->to<IR::Constant>();
+        return ka->value == kb->value; }
+    return false;
+}
+
+const IR::Expression *CreateSaluInstruction::reuseCmp(const IR::MAU::Instruction *cmp,
+                                                            int idx) {
+    if (operands.size() + 1 != cmp->operands.size()) return nullptr;
+    for (unsigned i = 0; i < operands.size(); ++i)
+        if (!equiv(operands.at(i), cmp->operands.at(i+1)))
+            return nullptr;
+    if (opcode == cmp->name)
+        return new IR::MAU::SaluReg(idx ? "cmphi" : "cmplo");
+    if (negate_op.at(opcode) == cmp->name)
+        return new IR::LNot(new IR::MAU::SaluReg(idx ? "cmphi" : "cmplo"));
+    return nullptr;
+}
+
 bool CreateSaluInstruction::preorder(const IR::Operation::Relation *rel, cstring op, bool eq) {
-    if (etype == COND) {
+    if (etype == COND || etype == IF) {
         visit(rel->left, "left");
         negate = !negate;
         visit(rel->right, "right");
@@ -176,33 +324,49 @@ bool CreateSaluInstruction::preorder(const IR::Operation::Relation *rel, cstring
             auto t = rel->left->type->to<IR::Type::Bits>();
             op += (t && t->isSigned) ? ".s" : ".u"; }
         opcode = op;
+        if (etype == IF) {
+            int idx = 0;
+            for (auto cmp : cmp_instr) {
+                if (auto inst = reuseCmp(cmp, idx++)) {
+                    LOG4("Relation reuse pred_operand: " << inst);
+                    pred_operands.push_back(inst);
+                    operands.clear();
+                    return false; } }
+            operands.insert(operands.begin(), new IR::MAU::SaluReg(idx ? "hi" : "lo"));
+            cmp_instr.push_back(createInstruction(0));
+            pred_operands.push_back(new IR::MAU::SaluReg(idx ? "cmphi" : "cmplo"));
+            LOG4("Relation pred_operand: " << pred_operands.back());
+            operands.clear(); }
     } else {
         error("%s: expression in stateful alu too complex", rel->srcInfo); }
     return false;
 }
 
 void CreateSaluInstruction::postorder(const IR::LNot *e) {
-    if (operands.size() < 1) return;  // can only happen if there has been an error
-    if (etype == PRED)
-        operands.back() = new IR::LNot(e->srcInfo, operands.back());
-    else
-        error("%s: expression too complex for stateful alu", e->srcInfo);
+    if (etype == PRED || etype == IF) {
+        if (pred_operands.size() < 1) return;  // can only happen if there has been an error
+        pred_operands.back() = new IR::LNot(e->srcInfo, pred_operands.back());
+        LOG4("LNot rewrite pred_opeands: " << pred_operands.back());
+    } else {
+        error("%s: expression too complex for stateful alu", e->srcInfo); }
 }
 void CreateSaluInstruction::postorder(const IR::LAnd *e) {
-    if (operands.size() < 2) return;  // can only happen if there has been an error
-    if (etype == PRED) {
-        auto r = operands.back();
-        operands.pop_back();
-        operands.back() = new IR::LAnd(e->srcInfo, operands.back(), r);
+    if (etype == PRED || etype == IF) {
+        if (pred_operands.size() < 2) return;  // can only happen if there has been an error
+        auto r = pred_operands.back();
+        pred_operands.pop_back();
+        pred_operands.back() = new IR::LAnd(e->srcInfo, pred_operands.back(), r);
+        LOG4("LAnd rewrite pred_opeands: " << pred_operands.back());
     } else {
         error("%s: expression too complex for stateful alu", e->srcInfo); }
 }
 void CreateSaluInstruction::postorder(const IR::LOr *e) {
-    if (operands.size() < 2) return;  // can only happen if there has been an error
-    if (etype == PRED) {
-        auto r = operands.back();
-        operands.pop_back();
-        operands.back() = new IR::LOr(e->srcInfo, operands.back(), r);
+    if (etype == PRED || etype == IF) {
+        if (pred_operands.size() < 2) return;  // can only happen if there has been an error
+        auto r = pred_operands.back();
+        pred_operands.pop_back();
+        pred_operands.back() = new IR::LOr(e->srcInfo, pred_operands.back(), r);
+        LOG4("LOr rewrite pred_opeands: " << pred_operands.back());
     } else {
         error("%s: expression too complex for stateful alu", e->srcInfo); }
 }
@@ -210,6 +374,7 @@ void CreateSaluInstruction::postorder(const IR::LOr *e) {
 bool CreateSaluInstruction::preorder(const IR::Add *e) {
     switch (etype) {
     case COND:
+    case IF:
         return true;
     case VALUE:
         opcode = "add";
@@ -221,6 +386,7 @@ bool CreateSaluInstruction::preorder(const IR::Add *e) {
 bool CreateSaluInstruction::preorder(const IR::Sub *e) {
     switch (etype) {
     case COND:
+    case IF:
         visit(e->left, "left");
         negate = !negate;
         visit(e->right, "right");
@@ -286,9 +452,9 @@ void CreateSaluInstruction::postorder(const IR::Property *prop) {
     int pred_idx = -1;
     cstring dest;
     if (prop->name == "condition_hi") {
-        operands.insert(operands.begin(), new IR::MAU::SaluReg("hi"));
+        dest = "hi";
     } else if (prop->name == "condition_lo") {
-        operands.insert(operands.begin(), new IR::MAU::SaluReg("lo"));
+        dest = "lo";
     } else if (prop->name == "update_lo_1_predicate" || prop->name == "update_lo_1_value") {
         pred_idx = 0;
         dest = "lo";
@@ -312,43 +478,53 @@ void CreateSaluInstruction::postorder(const IR::Property *prop) {
     } else if (prop->name == "reduction_or_group") {
     } else if (prop->name == "stateful_logging_mode") {
     }
+    if (dest && etype != PRED)
+        operands.insert(operands.begin(), new IR::MAU::SaluReg(dest));
+    createInstruction(pred_idx);
+}
+
+const IR::MAU::Instruction *CreateSaluInstruction::createInstruction(int pred_idx) {
+    const IR::MAU::Instruction *rv = nullptr;
     switch (etype) {
     case COND:
-        action->action.push_back(new IR::MAU::Instruction(opcode, operands));
+    case IF:
+        action->action.push_back(rv = new IR::MAU::Instruction(opcode, operands));
         LOG3("  add " << *action->action.back());
         break;
     case PRED:
-        predicates[pred_idx] = operands.at(0);
+        BUG_CHECK(pred_idx >= 0 && pred_idx < 5, "Invalid index");
+        predicates[pred_idx] = pred_operands.at(0);
         break;
     case VALUE:
-        operands.insert(operands.begin(), new IR::MAU::SaluReg(dest));
         /* DANGER -- we're relying on the properties being processed in alphabetical
          * order (as they're in a NameMap<std::map>) to process predicates before values */
+        BUG_CHECK(pred_idx >= 0 && pred_idx < 5, "Invalid index");
         if (predicates[pred_idx])
             operands.insert(operands.begin(), predicates[pred_idx]);
-        action->action.push_back(new IR::MAU::Instruction(opcode, operands));
+        action->action.push_back(rv = new IR::MAU::Instruction(opcode, operands));
         LOG3("  add " << *action->action.back());
         break;
     case BIT_INSTR:
         if (opcode) {
-            action->action.push_back(new IR::MAU::Instruction(opcode));
+            action->action.push_back(rv = new IR::MAU::Instruction(opcode));
             LOG3("  add " << *action->action.back());
         } else {
             /* error message already output */ }
         break;
     case OUTPUT:
+        BUG_CHECK(pred_idx >= 0 && pred_idx < 5, "Invalid index");
         if (predicates[pred_idx])
             operands.insert(operands.begin(), predicates[pred_idx]);
-        output = new IR::MAU::Instruction(opcode, operands);
+        rv = output = new IR::MAU::Instruction(opcode, operands);
         break;
     default:
+        BUG("Invalid etype");
         break; }
+    return rv;
 }
 
 bool CreateSaluInstruction::preorder(const IR::Declaration_Instance *di) {
     BUG_CHECK(!action, "%s: Nested extern", di->srcInfo);
-    BUG_CHECK(di->type->to<IR::Type_Extern>()->name == "stateful_alu_14",
-              "%s: Not a stateful_alu", di->srcInfo);
     LOG3("Creating action " << di->name << " for stateful table " << salu->name);
     action = new IR::MAU::SaluAction(di->srcInfo, di->name);
     salu->instruction.addUnique(di->name, action);
@@ -357,7 +533,11 @@ bool CreateSaluInstruction::preorder(const IR::Declaration_Instance *di) {
     math = IR::MAU::StatefulAlu::MathUnit();
     math_function = nullptr;
     math_input = nullptr;
-    di->properties.visit_children(*this);  // only visit the properties
+    visit(di->properties, "properties");    // for P4_14 stateful_alu
+    visit(di->initializer, "initializer");  // for P4_16 abstract function
+    if (cmp_instr.size() > 2)
+        error("%s: register action %s needs %d comparisons; only 2 possible",
+              di->srcInfo, di->name, cmp_instr.size());
     if (output) {
         action->action.push_back(output);
         LOG3("  add " << *action->action.back()); }

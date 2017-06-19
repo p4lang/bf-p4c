@@ -850,6 +850,10 @@ class MauAsmOutput::EmitAction : public Inspector {
         out << sep << "!";
         sep = "";
         return true; }
+    bool preorder(const IR::Neg *) override {
+        out << sep << "-";
+        sep = "";
+        return true; }
     bool preorder_binop(const IR::Operation::Binary *bin, const char *op) {
         visit(bin->left);
         sep = op;
