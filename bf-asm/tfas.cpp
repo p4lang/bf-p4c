@@ -23,6 +23,7 @@ int verbose = 0;
 static std::vector<std::string> debug_specs;
 static std::string output_dir;
 int indent_t::tabsz = 2;
+extern char *program_name;
 
 static bool match(const char *pattern, const char *name) {
     const char *pend = pattern + strcspn(pattern, ",:");
@@ -89,7 +90,7 @@ std::unique_ptr<std::ostream> open_output(const char *name, ...) {
 std::string usage(std::string tfas) {
     std::string u = "usage: ";
     u.append(tfas);
-    u.append(" [-l:Mo:qtvh] file..."); 
+    u.append(" [-l:Mo:qtvh] file...");
     return u; }
 
 int main(int ac, char **av) {
@@ -99,6 +100,7 @@ int main(int ac, char **av) {
     bool asmfile = false;
     extern void register_exit_signals();
     register_exit_signals();
+    program_name = av[0];
     for (int i = 1; i < ac; i++) {
         if (av[i][0] == '-' && av[i][1] == 0) {
             asm_parse_file("<stdin>", stdin);
@@ -107,7 +109,7 @@ int main(int ac, char **av) {
             if (!av[i]) {
                 std::cerr << "No target specified '--target <tofino|jbay>'"
                     << std::endl;
-                error_count++; 
+                error_count++;
                 break;}
             if (!strcmp(av[i], "tofino"))
                 options.target = TOFINO;

@@ -24,7 +24,7 @@ static const char *signames[] = {
     "PWR" , "SYS"
 };
 
-char *program_name;
+char *program_name = nullptr;
 
 #ifdef MULTITHREAD
 #include <pthread.h>
@@ -70,9 +70,12 @@ const char *addr2line(void *addr, const char *text)
     if (text && (t = strchr(text, '('))) {
         strncpy(p, text, t-text);
         p += t-text;
-    } else {
-        strcpy(p, program_name);
+    } else if (program_name != nullptr) {
+        strncpy(p, program_name, (buffer+1023-p));
         p += strlen(p); }
+    else {
+      return nullptr;
+    }
     strcpy(p, ") | c++filt");
     p += strlen(p);
 #ifdef __linux__
@@ -190,7 +193,7 @@ static void crash_shutdown(int sig, siginfo_t *info, void *uctxt)
         if (strings)
             LOG1("  " << strings[i]);
         if (const char *line = addr2line(buffer[i], strings ? strings[i] : 0))
-            LOG1("    " << line); }
+          LOG1("    " << line); }
     if (size < 1)
         LOG1("backtrace failed");
 #endif
