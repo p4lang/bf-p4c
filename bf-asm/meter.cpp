@@ -59,6 +59,8 @@ void MeterTable::pass1() {
     else p4_table->check(this);
     alloc_vpns();
     alloc_maprams();
+    if (color_maprams.empty())
+        error(lineno, "Missing color_maprams in meter table %s", name());
     if (!no_vpns && !color_maprams.empty() && color_maprams[0].vpns.empty())
         setup_vpns(color_maprams, 0);
     std::sort(layout.begin(), layout.end(),
@@ -205,7 +207,6 @@ void MeterTable::write_regs(REGS &regs) {
                 adr_ctl.adr_dist_oflo_adr_xbar_source_sel = AdrDist::METER; }
             adr_ctl.adr_dist_oflo_adr_xbar_enable = 1; } }
     auto &merge = regs.rams.match.merge;
-
     int color_map_color = color_maprams.empty() ? 0 : (color_maprams[0].row & 2) >> 1;
     for (Layout &row : color_maprams) {
         if (&row == &color_maprams[0]) { /* color mapram home row */
@@ -277,17 +278,14 @@ void MeterTable::write_regs(REGS &regs) {
         //icxbar.address_distr_to_overflow = push_on_overflow;
         //if (direct)
         //    regs.cfg_regs.mau_cfg_lt_meter_are_direct |= 1 << m->logical_id;
-        assert(!color_maprams.empty()); // CC: there are instances when the color_maprams key
-                                        // is not present (e.g. table_1$meter.meter_1 in
-                                        // test_config_123_meter_2.p4).
-                                        // Likely needs better handling than an assert.
-        merge.mau_mapram_color_map_to_logical_ctl[m->logical_id/8].set_subfield(
-            0x4 | (color_maprams[0].row/2U), 3 * (m->logical_id%8U), 3);
-        // FIXME -- this bus_index calculation is probably wrong
-        int bus_index = color_maprams[0].bus;
-        if (color_maprams[0].row >= 4) bus_index += 10;
-        adrdist.adr_dist_idletime_adr_oxbar_ctl[bus_index/4]
-            .set_subfield(m->logical_id | 0x10, 5 * (bus_index%4), 5);
+        if (!color_maprams.empty()) {
+            merge.mau_mapram_color_map_to_logical_ctl[m->logical_id/8].set_subfield(
+                0x4 | (color_maprams[0].row/2U), 3 * (m->logical_id%8U), 3);
+            // FIXME -- this bus_index calculation is probably wrong
+            int bus_index = color_maprams[0].bus;
+            if (color_maprams[0].row >= 4) bus_index += 10;
+            adrdist.adr_dist_idletime_adr_oxbar_ctl[bus_index/4]
+                .set_subfield(m->logical_id | 0x10, 5 * (bus_index%4), 5); }
         // FIXME -- color map should be programmable, rather than fixed
         adrdist.meter_color_output_map[m->logical_id].set_subfield(0,  0, 8);  // green
         adrdist.meter_color_output_map[m->logical_id].set_subfield(1,  8, 8);  // yellow

@@ -277,6 +277,9 @@ function test_p4() {
         fi
     done
     tfas_succeeded=false
+    if $brig; then
+        TFAS_OPTS="-vvvvl"
+    fi
     if $ok && run $TFAS $TFAS_OPTS tfas.config.log $name.tfa >tfas.log 2>&1; then
         tfas_succeeded=true
         for f in $name.out/*.cfg.json; do
