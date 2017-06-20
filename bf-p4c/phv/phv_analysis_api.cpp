@@ -16,6 +16,8 @@ PHV_Analysis_API::apply_visitor(const IR::Node *node, const char *name) {
     if (name) {
         LOG1(name);
     }
+    node->apply(*uses_i);  // uses_i recomputed
+    //
     for (auto &f : phv_i) {
        //
        // set up extended phv_analysis object for each field
@@ -36,8 +38,6 @@ void
 PHV_Analysis_API::end_apply() {
     //
     sanity_check_fields("PHV_Analysis_API::end_apply()");
-    sanity_check_fields_containers("PHV_Analysis_API::end_apply()");
-    sanity_check_container_holes("PHV_Analysis_API::end_apply()");
 }
 
 void
@@ -101,6 +101,8 @@ PHV_Analysis_API::sanity_check_fields(const std::string& msg) {
                 << f);
         }
     }
+    sanity_check_fields_containers(msg);
+    sanity_check_container_holes(msg);
 }  // sanity_check_fields
 
 void
@@ -179,7 +181,6 @@ PHV_Analysis_API::sanity_check_fields_containers(const std::string& msg) {
                 << std::endl
                 << tuple_list_c);
         }
-        //
         // sanity check containers in field's phv_containers match those in tuple_list_f
         //
         ordered_set<PHV_Container *> s_check;
@@ -192,6 +193,58 @@ PHV_Analysis_API::sanity_check_fields_containers(const std::string& msg) {
                 << f
                 << std::endl
                 << phv_containers);
+        }
+        // sanity check field slices
+        // not duplicated in containers
+        // don't overlap
+        // completely allocated
+        // sorted map of field slices to containers
+        //
+        std::map<const std::pair<int, int>, const PHV_Container *> field_slices_to_container;
+        for (auto &t : tuple_list_c) {
+            auto field_range = std::get<1>(t);
+            auto container = std::get<2>(t);
+            if (field_slices_to_container.count(field_range)) {
+                LOG1("*****phv_analysis_api.cpp:sanity_FAIL*****....."
+                    << "..... sanity_check_fields_containers: field slice duplicate container ....."
+                    << std::endl
+                    << f
+                    << '{' << field_range.first << ".." << field_range.second << '}'
+                    << " containers are "
+                    << std::endl
+                    << field_slices_to_container[field_range]
+                    << container);
+            }
+            field_slices_to_container[field_range] = container;
+        }
+        auto field_size = f.size;
+        auto prev_lo = -1;
+        auto prev_hi = -1;
+        for (auto &e : field_slices_to_container) {
+            auto field_range = e.first;
+            auto lo = field_range.first;
+            auto hi = field_range.second;
+            if (lo < prev_hi) {  // overlap with previous slice
+                LOG1("*****phv_analysis_api.cpp:sanity_FAIL*****....."
+                    << "..... sanity_check_fields_containers: field_slices_overlap ..... "
+                    << std::endl
+                    << f
+                    << '{' << lo << ".." << hi << '}'
+                    << " overlaps "
+                    << '{' << prev_lo << ".." << prev_hi << '}');
+            }
+            field_size -= (hi - lo + 1);
+            prev_lo = lo;
+            prev_hi = hi;
+        }
+        if (field_size && uses_i->is_referenced(&f)) {  // disregard unreferenced fields)
+            LOG1("*****phv_analysis_api.cpp:sanity_FAIL*****....."
+                << "..... sanity_check_fields_containers: field_incomplete_allocation ..... "
+                << std::endl
+                << f
+                << "<" << f.size << ">"
+                << " remainder "
+                << field_size);
         }
     }  // for
 }  // sanity_check_fields_containers

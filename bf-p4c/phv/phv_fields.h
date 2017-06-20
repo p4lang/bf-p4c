@@ -232,16 +232,11 @@ class PhvInfo : public Inspector {
         //
         // clusters, containers and field_slices associated with this field
         //
-        std::list<Cluster_PHV *> clusters_i;
-                                           // field is in a single cluster before cluster_slicing
-                                           // if this list is a singleton then cluster not sliced
-                                           // after cluster slicing, field in a list of clusters
-                                           // each slice represents same field, slice varies lo..hi
+        ordered_map<Cluster_PHV *, std::pair<int, int>> field_slices_i;
+                                           // map has singleton entry when cluster/field not sliced
+                                           // field slice = lo .. hi represents slice of same field
         ordered_set<PHV_Container *> phv_containers_i;
                                            // field in one or more containers
-        ordered_map<Cluster_PHV *, std::pair<int, int>> field_slices_i;
-                                           // each sliced cluster containing this field represents
-                                           // slice of field as pair of bitranges after slicing
         //
         // field overlays
         //
@@ -293,6 +288,7 @@ class PhvInfo : public Inspector {
         // ccgf
         //
         bool is_ccgf() const;
+        bool allocation_complete() const;
         bool simple_header_pov_ccgf() const                    { return simple_header_pov_ccgf_i; }
         void set_simple_header_pov_ccgf(bool b)                { simple_header_pov_ccgf_i = b; }
         bool header_stack_pov_ccgf() const                     { return header_stack_pov_ccgf_i; }
@@ -303,10 +299,8 @@ class PhvInfo : public Inspector {
         const vector<Field *>& ccgf_fields() const             { return ccgf_fields_i; }
         int ccgf_width() const;  // phv width = aggregate size of members
         //
-        // clusters, phv_containers
+        // phv_containers
         //
-        std::list<Cluster_PHV *>& clusters()                   { return clusters_i; }
-        void clusters(Cluster_PHV *cluster_p);
         ordered_set<PHV_Container *>& phv_containers()         { return phv_containers_i; }
         const ordered_set<PHV_Container *>&
             phv_containers() const                             { return phv_containers_i; }
@@ -315,7 +309,7 @@ class PhvInfo : public Inspector {
         // phv_widths
         //
         int phv_use_width(Cluster_PHV *cl = 0) const;     // width of field needed in phv container
-        void set_phv_use_width(bool ccgf, int min_ceil = 0);  // set phv_use_width for ccgf owners
+        void set_ccgf_phv_use_width(int min_ceil = 0);    // set phv_use_width for ccgf owners
         int phv_use_lo(Cluster_PHV *cl = 0) const;
         void set_phv_use_lo(int value)                         { phv_use_lo_i = value; }
         int phv_use_hi(Cluster_PHV *cl = 0) const;
@@ -332,7 +326,7 @@ class PhvInfo : public Inspector {
             field_slices() const                               { return field_slices_i; }
         std::pair<int, int>& field_slices(Cluster_PHV *cl);
         const std::pair<int, int>& field_slices(Cluster_PHV *cl) const;
-        void set_field_slices(Cluster_PHV *cl, int lo, int hi);
+        void set_field_slices(Cluster_PHV *cl, int lo, int hi, Cluster_PHV *parent = nullptr);
         //
         // field overlays
         //

@@ -156,7 +156,7 @@ class PHV_MAU_Group {
 
     void sanity_check_container_packs(const std::string&);
     void sanity_check_container_fields_gress(const std::string&);
-    void sanity_check_group_containers(const std::string&);
+    void sanity_check_group_containers(const std::string&, bool check_deparsed_no_hole = true);
 };  // class PHV_MAU_Group
 //
 //
@@ -353,11 +353,15 @@ class PHV_MAU_Group_Assignments : public Visitor {
         std::list<Cluster_PHV *>& clusters_to_be_assigned,
         ordered_map<int,
         ordered_map<int, std::list<std::list<PHV_MAU_Group::Container_Content *>>>>&,
-        const char *msg = "");
+        const char *msg = "",
+        bool allow_deparsed_metadata = false);  // default disallow metadata in deparsed container
     //
     bool gress_compatibility(
         PHV_Container::Ingress_Egress gc_gress,
         PHV_Container::Ingress_Egress cl_gress);
+    bool metadata_in_deparsed_container(
+        Cluster_PHV *cl,
+        std::list<PHV_MAU_Group::Container_Content *>& cc_set);
     std::pair<int, int>
         gress(
             ordered_map<int,

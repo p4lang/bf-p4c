@@ -80,7 +80,9 @@ void PHV_Field_Operations::end_apply() {
     }
     // recompute phv_use_width for ccgf owners
     for (auto &f : phv) {
-        f.set_phv_use_width(f.ccgf() == &f);
+        if (f.is_ccgf()) {
+            f.set_ccgf_phv_use_width();
+        }
     }
     LOG3("..........End PHV_Field_Operations..........");
 }  // end_apply()

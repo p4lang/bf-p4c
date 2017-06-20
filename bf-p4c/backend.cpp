@@ -166,6 +166,10 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
                                // attempt packing with reduced width requirements
                                // slicing also improves overlay possibilities due to lesser width
                                // although number and mutual exclusion of fields don't change
+        options.phv_slicing?
+            &cluster_slicing: nullptr,
+                               // repeat once more: unallocated clusters sliced further
+                               // further improves chances of packing and/or overlay
         options.phv_overlay?
             &cluster_phv_overlay: nullptr,
                                // overlay unallocated clusters to clusters as well as MAU groups

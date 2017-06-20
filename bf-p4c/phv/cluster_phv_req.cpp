@@ -50,11 +50,9 @@ Cluster_PHV_Requirements::apply_visitor(const IR::Node *node, const char *name) 
                             return l->id_num() < r->id_num();
                         }
                         if (l->uniform_width() == true && r->uniform_width() == false) {
-                            // sort by cluster id_num to prevent non-determinism
                             return true;
                         }
                         if (l->uniform_width() == false && r->uniform_width() == true) {
-                            // sort by cluster id_num to prevent non-determinism
                             return false;
                         }
                         if (l->uniform_width() == false && r->uniform_width() == false) {
@@ -273,10 +271,10 @@ void
 Cluster_PHV::insert_field_clusters(Cluster_PHV *parent_cl, bool slice_lo) {
     //
     for (auto &f : cluster_vec_i) {
-        // set field's list of clusters
-        f->clusters(this);
+        // update field's list of clusters, keep child, remove parent_cl
         // sliced cluster
         if (sliced_i) {
+            Cluster_PHV *remove_parent_cl = nullptr;
             assert(parent_cl);
             int lo = 0, hi = 0;
             if (parent_cl->sliced()) {
@@ -287,6 +285,8 @@ Cluster_PHV::insert_field_clusters(Cluster_PHV *parent_cl, bool slice_lo) {
                 } else {
                     lo += parent_cl->max_width() / 2;
                     hi = f->phv_use_hi(parent_cl);
+                    // now that both slices have been formed, first lo then hi, remove parent
+                    remove_parent_cl = parent_cl;
                 }
             } else {
                 // use _lo and _hi from original field
@@ -296,9 +296,11 @@ Cluster_PHV::insert_field_clusters(Cluster_PHV *parent_cl, bool slice_lo) {
                 } else {
                     lo += f->size / 2;
                     hi = f->phv_use_hi();
+                    // now that both slices have been formed, first lo then hi, remove parent
+                    remove_parent_cl = parent_cl;
                 }
             }
-            f->set_field_slices(this, lo, hi);
+            f->set_field_slices(this, lo, hi, remove_parent_cl);
             // width of field slice in this cluster
             if (max_width_i) {
                 assert(max_width_i == hi - lo + 1);
@@ -309,6 +311,8 @@ Cluster_PHV::insert_field_clusters(Cluster_PHV *parent_cl, bool slice_lo) {
             }
             // number of containers
             num_containers_i += max_width_i / width_i + (max_width_i % width_i? 1 : 0);
+        } else {
+            f->set_field_slices(this, f->phv_use_lo(), f->phv_use_hi());
         }
     }  // for
 }  // insert_field_clusters
@@ -363,7 +367,9 @@ Cluster_PHV::compute_requirements() {
     // count constrained fields, preference given during container placement
     //
     for (auto &f : cluster_vec_i) {
-        f->set_phv_use_width(f->ccgf() == f, width_i);
+        if (f->is_ccgf()) {
+            f->set_ccgf_phv_use_width(width_i);
+        }
         if (PHV_Container::constraint_no_cohabit(f)) {
             num_fields_no_cohabit_i++;
         }
@@ -392,11 +398,11 @@ Cluster_PHV::compute_max_width() {
     int width = static_cast<int>(width_i);
     PhvInfo::Field *field = cluster_vec_i.front();
     if (uniform_width_i) {
-        if (cluster_vec_i.size() == 1 && field->ccgf() == field) {
+        if (cluster_vec_i.size() == 1 && field->is_ccgf()) {
             int constrained_width = 0;
             for (auto &m : field->ccgf_fields()) {
                 if (PHV_Container::constraint_no_cohabit(m)) {
-                    if (m->ccgf() == m) {
+                    if (m->is_ccgf()) {
                         constrained_width = std::max(constrained_width, width);
                     } else {
                         constrained_width = std::max(constrained_width, m->phv_use_width());
@@ -421,12 +427,12 @@ int
 Cluster_PHV::compute_width_req() {
     int max_width = 0;
     for (auto &field : cluster_vec_i) {
-        if (field->ccgf() == field) {
+        if (field->is_ccgf()) {
             bool phv_no_pack = false;
             for (auto &m : field->ccgf_fields()) {
                 if (PHV_Container::constraint_no_cohabit(m)) {
                     phv_no_pack = true;
-                    if (m->ccgf() == m) {
+                    if (m->is_ccgf()) {
                         max_width = std::max(max_width, m->size);
                     } else {
                         max_width = std::max(max_width, m->phv_use_width());

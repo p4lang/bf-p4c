@@ -175,6 +175,8 @@ PHV_Bind::phv_tphv_allocate(std::list<PhvInfo::Field *>& fields) {
             remove_set.insert(f);
             continue;
         }
+        // at this allocation stage, fields are considered NOT sliced
+        //
         if (uses_i->is_used_mau(f)) {  // used in MAU
             phv_clusters.push_back(
                 new Cluster_PHV(
@@ -201,13 +203,15 @@ PHV_Bind::phv_tphv_allocate(std::list<PhvInfo::Field *>& fields) {
         phv_mau_i.container_pack_cohabit(
             phv_clusters,
             phv_mau_i.aligned_container_slices(),
-            "PHV_Bind:PHV");
+            "PHV_Bind:PHV",
+            true /* allow deparsed metadata */);
     }
     if (t_phv_clusters.size()) {
         phv_mau_i.container_pack_cohabit(
             t_phv_clusters,
             phv_mau_i.T_PHV_container_slices(),
-            "PHV_Bind:T_PHV");
+            "PHV_Bind:T_PHV",
+            true /* allow deparsed metadata */);
     }
 }  // phv_tphv_allocate
 
@@ -274,85 +278,83 @@ PHV_Bind::container_contiguous_alloc(
     // header fields allocation permits no holes in container
     // header stack povs allocation permits leading / trailing holes beside ccgf
     //
-    if (f1->ccgf_fields().size()) {
-        if (f1->ccgf() == f1) {
-            // contiguous container group allocation
-            // cases bypassing MAU PHV allocation PHV_container::taint() recursion
-            // consider MSB order
-            int processed_members = 0;
-            // container_bit start
-            int start = container_width;
-            for (auto &member : f1->ccgf_fields()) {
-                int member_bit_lo = member->phv_use_lo();
-                int use_width = member->size - member->phv_use_rem();
-                start -= use_width;
-                if (start < 0) {
-                    // member straddles containers
-                    // remainder bits processed
-                    // in subsequent container allocated to owner
-                    use_width += start;
-                    start = 0;
-                    member_bit_lo = member->size - member->phv_use_rem() - use_width;
-                    // spans several containers => aggregate used bits
-                    // [width 20] = 12..19[8b] 4..11[8b] 0..3[4b]
-                    member->set_phv_use_rem(member->phv_use_rem() + use_width);
-                } else {
-                    processed_members++;
-                    member->set_phv_use_rem(0);
-                }
-                // -- reentrant PHV_Bind, preserve entry state of member
-                // member->ccgf = 0;
-                member->alloc_i.emplace_back(
-                    member,
-                    *asm_container,
-                    member_bit_lo,
-                    start,
-                    use_width);
-                if (start <= 0) {
-                    break;
-                }
+    if (!f1->header_stack_pov_ccgf()) {
+        // contiguous container group allocation
+        // cases bypassing MAU PHV allocation PHV_container::taint() recursion
+        // consider MSB order
+        int processed_members = 0;
+        // container_bit start
+        int start = container_width;
+        for (auto &member : f1->ccgf_fields()) {
+            int member_bit_lo = member->phv_use_lo();
+            int use_width = member->size - member->phv_use_rem();
+            start -= use_width;
+            if (start < 0) {
+                // member straddles containers
+                // remainder bits processed
+                // in subsequent container allocated to owner
+                use_width += start;
+                start = 0;
+                member_bit_lo = member->size - member->phv_use_rem() - use_width;
+                // spans several containers => aggregate used bits
+                // [width 20] = 12..19[8b] 4..11[8b] 0..3[4b]
+                member->set_phv_use_rem(member->phv_use_rem() + use_width);
+            } else {
+                processed_members++;
+                member->set_phv_use_rem(0);
             }
-            // -- reentrant PHV_Bind, preserve entry state of f1
-            // f1->ccgf_fields.erase(
-                // f1->ccgf_fields.begin(),
-                // f1->ccgf_fields.begin() + processed_members);
-            // if (f1->ccgf_fields.size()) {
-                // f1->ccgf = f1;
-            // }
-        } else {
-            //
-            // header stack pov members
-            // constituent members of header stack povs must fit header stk pov
-            // this condition should be guaranteed by phv_fields.cpp allocatePOV()
-            //
-            int container_bit = width_in_container + 1;
-            for (auto &pov_f : f1->ccgf_fields()) {
-                int field_bit = pov_f->phv_use_lo();
-                int pov_width = pov_f->size;
-                container_bit -= pov_width;
-                if (f1->simple_header_pov_ccgf()) {  // simple header ccgf
-                    container_bit -= 2;
-                    f1->set_phv_use_hi(f1->size - 1);
-                }
-                //
-                // check constituent members do fit hdr stk pov
-                //
-                if (container_bit < 0) {
-                    WARNING("*****PHV_Bind: header stack overrun *****"
-                        << " hdr stk pov: "
-                        << f1
-                        << " pov member: "
-                        << pov_f
-                        << " container_bit: "
-                        << container_bit);
-                }
-                pov_f->alloc_i.emplace_back(
-                    pov_f,
-                    *asm_container,
-                    field_bit,
-                    container_bit,
-                    pov_width);
+            // -- reentrant PHV_Bind, preserve entry state of member
+            // member->ccgf = 0;
+            member->alloc_i.emplace_back(
+                member,
+                *asm_container,
+                member_bit_lo,
+                start,
+                use_width);
+            if (start <= 0) {
+                break;
             }
+        }
+        // -- reentrant PHV_Bind, preserve entry state of f1
+        // f1->ccgf_fields.erase(
+            // f1->ccgf_fields.begin(),
+            // f1->ccgf_fields.begin() + processed_members);
+        // if (f1->ccgf_fields.size()) {
+            // f1->ccgf = f1;
+        // }
+    } else {
+        //
+        // header stack pov members
+        // constituent members of header stack povs must fit header stk pov
+        // this condition should be guaranteed by phv_fields.cpp allocatePOV()
+        //
+        int container_bit = width_in_container + 1;
+        for (auto &pov_f : f1->ccgf_fields()) {
+            int field_bit = pov_f->phv_use_lo();
+            int pov_width = pov_f->size;
+            container_bit -= pov_width;
+            if (f1->simple_header_pov_ccgf()) {  // simple header ccgf
+                container_bit -= 2;
+                f1->set_phv_use_hi(f1->size - 1);
+            }
+            //
+            // check constituent members do fit hdr stk pov
+            //
+            if (container_bit < 0) {
+                WARNING("*****PHV_Bind: header stack overrun *****"
+                    << " hdr stk pov: "
+                    << f1
+                    << " pov member: "
+                    << pov_f
+                    << " container_bit: "
+                    << container_bit);
+            }
+            pov_f->alloc_i.emplace_back(
+                pov_f,
+                *asm_container,
+                field_bit,
+                container_bit,
+                pov_width);
         }
     }
 }  // container_contiguous_alloc
@@ -428,7 +430,7 @@ PHV_Bind::trivial_allocate(std::list<PhvInfo::Field *>& fields) {
             field_bit += width_in_container;
         }
         // ccgf owners allocate for members
-        if (f->ccgf_fields().size()) {
+        if (f->is_ccgf()) {
             if (!f->header_stack_pov_ccgf()) {
                 //
                 // do not remove allocation for owners
@@ -500,31 +502,46 @@ PHV_Bind::sanity_check_field_slices(
     const std::string msg_1 = msg + "PHV_Bind::sanity_check_field_slices";
     //
     // sliced fields, check all slices allocated
+    // remove incompletely allocated fields from allocated_fields
     //
+    ordered_set<PhvInfo::Field *> incomplete_slices;
     for (auto &f : allocated_fields) {
-        if (f->sliced()) {
-            int allocated_width = 0;
-            for (auto &c : f->phv_containers()) {
-                for (auto &cc : c->fields_in_container()[f]) {
-                    allocated_width += cc->width();
-                }
-            }
-            if (allocated_width < f->size) {
-                LOG1(std::endl
-                    << "*****cluster_phv_bind.cpp:sanity_FAIL***** "
-                    << msg_1
-                    << std::endl
-                    << ".....PHV_Bind Field Slices allocation incomplete..... "
-                    << "allocation_width = "
-                    << allocated_width
-                    << ", field_size = "
-                    << f->size
-                    << std::endl
-                    << f
-                    << std::endl);
+        int allocated_width = 0;
+        for (auto &c : f->phv_containers()) {
+            for (auto &cc : c->fields_in_container()[f]) {
+                allocated_width += cc->width();
             }
         }
+        if (allocated_width < f->size) {
+            LOG1(std::endl
+                << "*****cluster_phv_bind.cpp:sanity_FAIL***** "
+                << msg_1
+                << std::endl
+                << ".....PHV_Bind Field Slices allocation incomplete..... "
+                << "allocation_width = "
+                << allocated_width
+                << ", field_size = "
+                << f->size
+                << std::endl
+                << f
+                << std::endl);
+            incomplete_slices.insert(f);
+        }
     }
+    // remove incomplete ones from allocated fields so that they can be overflow allocated
+    LOG3(".....cluster_phv_bind.cpp:sanity_INFO..... "
+        << ".....PHV_Bind Incompletely Allocated Fields..... = "
+        << incomplete_slices.size()
+        << std::endl
+        << incomplete_slices);
+    allocated_fields -= incomplete_slices;
+    //
+    // sort allocated_fields on field id before printing
+    // LOG3(".....cluster_phv_bind.cpp:sanity_INFO..... "
+        // << ".....PHV_Bind Updated Completely Allocated Fields..... = "
+        // << allocated_fields.size()
+        // << std::endl
+        // << allocated_fields);
 }
 
 void

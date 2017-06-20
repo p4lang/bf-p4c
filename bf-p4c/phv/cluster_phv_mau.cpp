@@ -787,7 +787,7 @@ PHV_MAU_Group_Assignments::container_no_pack(
                     LOG3("..... exact_containers ... downsizing MAU Group .....");
                     LOG3(*cl_g);
                 } else {
-                    LOG1("*****cluster_phv_mau.cpp: sanity_FAIL*****"
+                    LOG1("*****cluster_phv_mau.cpp: sanity_WARN*****"
                         << ".....exact_containers MATCH NOT AVAILABLE");
                     LOG1(cl);
                 }
@@ -863,7 +863,8 @@ PHV_MAU_Group_Assignments::container_no_pack(
                             // partial container with parser field
                             // parser / deparser require fully packed containers
                             //
-                            // TODO: why is it OK to move part of a field to a different group?
+                            // OK to move part of a field to a different group only if
+                            // field participates in "move based" operations only
                             if (!fix_parser_container(container, phv_groups_to_be_filled)) {
                                 LOG1("*****cluster_phv_mau.cpp: sanity_FAIL*****"
                                     << ".....cannot Fix Parser Container "
@@ -874,7 +875,7 @@ PHV_MAU_Group_Assignments::container_no_pack(
                         }
                         **********/
                     }  // for field
-                    if (field->ccgf() == field) {
+                    if (!field->allocation_complete()) {
                         LOG1("*****cluster_phv_mau.cpp: sanity_FAIL*****"
                             << ".....ccgf member(s) INCOMPLETE ALLOCATION");
                         LOG1(field);
@@ -1117,7 +1118,7 @@ PHV_MAU_Group_Assignments::downsize_mau_group(
         }
     }  // for
     LOG1("***** downsize_mau_group() FAILED for <gress,width,required_containers>  *****"
-        << "<" << static_cast<char>(gress) << "," <<  width << "," << required_containers << ">");
+        << "<" << required_containers << "*" << width << static_cast<char>(gress) << ">");
     return 0;
 }  // downsize_mau_group
 
@@ -1306,7 +1307,8 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
     std::list<Cluster_PHV *>& clusters_to_be_assigned,
     ordered_map<int, ordered_map<int, std::list<std::list<PHV_MAU_Group::Container_Content *>>>>&
         aligned_slices,
-    const char *msg) {
+    const char *msg,
+    bool allow_deparsed_metadata) {
     //
     // slice containers to form groups that can accommodate larger number for given width in <n:w>
     //
@@ -1378,23 +1380,29 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
                         // check gress compatibility
                         //
                         std::list<PHV_MAU_Group::Container_Content *> cc_set;
+                        cc_set.clear();
                         PHV_Container::Ingress_Egress c_gress
                             = PHV_Container::Ingress_Egress::Ingress_Or_Egress;
-                        cc_set.clear();
                         for (auto &cc_set_x : j.second) {
                             c_gress = (*(cc_set_x.begin()))->container()->gress();
                             if (gress_compatibility(c_gress, cl->gress())) {
-                                cc_set = cc_set_x;
-                                //
-                                // remove matching PHV_MAU_Group Container Content from set_of_sets
-                                // if set_of_sets empty then remove map[m_w] entry
-                                //
-                                j.second.remove(cc_set_x);
-                                if (j.second.empty()) {
-                                    i.second.erase(j.first);
+                                // metadata should be in deparsed container only as last resort
+                                if (allow_deparsed_metadata
+                                    || (!allow_deparsed_metadata
+                                        && !metadata_in_deparsed_container(cl, cc_set_x))) {
+                                    //
+                                    cc_set = cc_set_x;
+                                    //
+                                    // remove matching MAU_Group Container Content from set_of_sets
+                                    // if set_of_sets empty then remove map[m_w] entry
+                                    //
+                                    j.second.remove(cc_set_x);
+                                    if (j.second.empty()) {
+                                        i.second.erase(j.first);
+                                    }
+                                    //
+                                    break;
                                 }
-                                //
-                                break;
                             }
                         }
                         if (cc_set.empty()) {
@@ -1481,6 +1489,17 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
                                 LOG1(".....field width exceeds slice .....");
                                 LOG1(f);
                                 LOG1(" slice width cl_w = " << cl_w);
+                            }
+                            if (f->metadata && cc->container()->deparsed()) {
+                                //
+                                if (allow_deparsed_metadata) {
+                                    LOG1("cluster_phv_mau.cpp*****sanity_WARN*****");
+                                } else {
+                                    LOG1("cluster_phv_mau.cpp*****sanity_FAIL*****");
+                                }
+                                LOG1(".....metadata being placed in deparsed container .....");
+                                LOG1(f);
+                                LOG1(cc->container());
                             }
                             cc->container()->taint(start,                     // start
                                                    cl_w,                      // width
@@ -1603,11 +1622,13 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
         phv_groups.remove(g);
     }
     //
-    sanity_check_container_avail("container_pack_cohabit ()..");
-    //
     // update correct state for aligned slices in all groups
     //
     create_aligned_container_slices();
+    //
+    // sanity check after correct state for aligned slices so that container ranges are correct
+    //
+    sanity_check_container_avail("container_pack_cohabit ()..");
     //
     LOG3("..........End Pack Cohabit ("
          << clusters_to_be_assigned.size()
@@ -1688,6 +1709,85 @@ PHV_MAU_Group_Assignments::gress_compatibility(
     }
     return true;
 }  // gress_compatibility
+
+bool
+PHV_MAU_Group_Assignments::metadata_in_deparsed_container(
+    Cluster_PHV *cl,
+    std::list<PHV_MAU_Group::Container_Content *>& cc_set) {
+    //
+    // return true if metadata field will be mapped to deparsed container
+    //
+    assert(cl);
+    assert(cc_set.size() >= cl->cluster_vec().size());
+    //
+    size_t metadata_fields = 0;
+    for (auto &f : cl->cluster_vec()) {
+        if (f->metadata) {
+            metadata_fields++;
+        }
+    }
+    if (!metadata_fields) {  // no metadata fields
+        return false;
+    }
+    size_t deparsed_containers = 0;
+    for (auto &cc : cc_set) {
+        if (cc->container()->deparsed()) {
+            deparsed_containers++;
+        }
+    }
+    if (!deparsed_containers) {  // no deparsed containers
+        return false;
+    }
+    // attempt reorder cc_set to match metadata to non-deparsed containers
+    // s.t. metadata fields are matched to non-deparsed containers
+    // during packing, when cc_set > cl size, cc_set is horizontally sliced @ number equality
+    // and bottom slice is used to contain cl
+    // sort cc_set with non-deparsed containers congregating to the end
+    //
+    if (cc_set.size() - deparsed_containers > metadata_fields) {
+        cc_set.sort([](PHV_MAU_Group::Container_Content *l, PHV_MAU_Group::Container_Content *r) {
+            if (l->container()->deparsed() && r->container()->deparsed()) {
+                // sort by phv_number to prevent non-determinism
+                return l->container()->phv_number() < r->container()->phv_number();
+            }
+            if (l->container()->deparsed() && !r->container()->deparsed()) {
+                return true;
+            }
+            if (!l->container()->deparsed() && r->container()->deparsed()) {
+                return false;
+            }
+            // sort by phv_number to prevent non-determinism
+            return l->container()->phv_number() < r->container()->phv_number();
+        });
+        LOG3("..........Reordered non-deparsed containers to end ("
+             << cc_set.size()
+             << ").........."
+             << cc_set
+             << std::endl);
+        // sort cluster fields s.t. metadata fields are towards end to map non-deparsed containers
+        // e.g., {f1, f2, fmeta} => {C_deparsed_1, C_deparsed_2, .. C_deparsed_m, C_deparsed_n, c3}
+        //
+        std::sort(cl->cluster_vec().begin(), cl->cluster_vec().end(),
+            [](PhvInfo::Field *l, PhvInfo::Field *r) {
+            if (!l->metadata && !r->metadata) {
+                // sort by field id to prevent non-determinism
+                return l->id < r->id;
+            }
+            if (!l->metadata && r->metadata) {
+                return true;
+            }
+            if (l->metadata && !r->metadata) {
+                return false;
+            }
+            // sort by field id to prevent non-determinism
+            return l->id < r->id;
+        });
+        //
+        return false;
+    }
+    //
+    return true;
+}  // metadata_in_deparsed_container
 
 std::pair<int, int>
 PHV_MAU_Group_Assignments::gress(
@@ -2075,7 +2175,9 @@ void PHV_MAU_Group::sanity_check_container_fields_gress(const std::string& msg) 
     }
 }
 
-void PHV_MAU_Group::sanity_check_group_containers(const std::string& msg) {
+void PHV_MAU_Group::sanity_check_group_containers(
+    const std::string& msg, bool check_deparsed) {
+    //
     for (auto &w : aligned_container_slices_i) {
         for (auto &n : w.second) {
             for (auto &cc_set : n.second) {
@@ -2088,7 +2190,8 @@ void PHV_MAU_Group::sanity_check_group_containers(const std::string& msg) {
     }
     for (auto &c : phv_containers_i) {
         c->sanity_check_container(msg
-           + "PHV_MAU_Group::sanity_check_group_containers phv_containers..");
+           + "PHV_MAU_Group::sanity_check_group_containers phv_containers..",
+           check_deparsed);
     }
 }
 
@@ -2122,6 +2225,7 @@ void PHV_MAU_Group_Assignments::sanity_check(
 }
 
 void PHV_MAU_Group_Assignments::sanity_check_container_avail(const std::string& msg) {
+    //
     const std::string msg_1 = msg+"PHV_MAU_Group_Assignments::sanity_check_container_avail..";
     //
     // check aligned_container_slices map agrees with container filling
@@ -2137,7 +2241,8 @@ void PHV_MAU_Group_Assignments::sanity_check_container_avail(const std::string& 
                         "PHV-%d, ranges[%d] = %d, should be %d",
                         c->phv_number(), cc->lo(), c->ranges()[cc->lo()], cc->hi());
                     PHV_MAU_Group *g = c->phv_mau_group();
-                    g->sanity_check_group_containers(msg_1);
+                    // container bits not yet fully assigned, premature to check_deparsed
+                    g->sanity_check_group_containers(msg_1, false/*check_deparsed*/);
                     LOG4("~~~~~G"
                          << g->number()
                          <<":["
@@ -2160,7 +2265,8 @@ void PHV_MAU_Group_Assignments::sanity_check_container_fields_gress(const std::s
     }
 }
 
-void PHV_MAU_Group_Assignments::sanity_check_group_containers(const std::string& msg) {
+void PHV_MAU_Group_Assignments::sanity_check_group_containers(
+    const std::string& msg) {
     //
     // sanity check PHV_MAU_Group_Assignments aligned_container_slices with individual MAU Groups
     //
@@ -2207,7 +2313,7 @@ void PHV_MAU_Group_Assignments::sanity_check_group_containers(const std::string&
                     }
                 }
             }
-            g->sanity_check_group_containers(msg);
+            g->sanity_check_group_containers(msg);  // default true: check_deparsed
         }
     }
     // sanity check a field is not duplicately allocated
@@ -2274,7 +2380,7 @@ void PHV_MAU_Group_Assignments::sanity_check_group_containers(const std::string&
             }
         }
     }  // for
-}
+}  // sanity_check_group_containers
 
 void PHV_MAU_Group_Assignments::sanity_check_T_PHV_collections(const std::string& msg) {
     //

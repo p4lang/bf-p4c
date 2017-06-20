@@ -267,8 +267,9 @@ bool Cluster::preorder(const IR::Primitive* primitive) {
 
 bool Cluster::preorder(const IR::Operation* operation) {
     // should not reach here
-    // TODO: use a BUG macro?
     LOG1("*****cluster.cpp: sanity_FAIL Operation*****" << operation->toString());
+    BUG("*****cluster.cpp: should not invoke preorder(IR::Operation*)*****%s",
+        operation->toString());
 
     return true;
 }
@@ -346,7 +347,7 @@ void Cluster::end_apply() {
             // b appearing in dst_map_i[y] :-
             //     cluster(a{a,b},x), cluster(y,b) => cluster(a{a,b},x,y)
             //
-            if (f.ccgf() == &f) {
+            if (f.is_ccgf()) {
                 for (auto &m : f.ccgf_fields()) {
                     if (dst_map_i.count(m)) {
                         insert_cluster(&f, m);
@@ -392,7 +393,7 @@ void Cluster::end_apply() {
                         use_mau = true;
                         break;
                     } else {
-                        if (f->ccgf() && f->ccgf() == f) {
+                        if (f->is_ccgf()) {
                             for (auto &m : f->ccgf_fields()) {
                                 if (uses_i->is_used_mau(m)) {
                                     use_mau = true;
@@ -530,10 +531,10 @@ void Cluster::deparser_ccgf_t_phv() {
 }  // deparser_ccgf_t_phv
 
 //
-// compute fields that do not use mau pipeine
+// compute fields that do not use mau pipeine, no MAU reads or writes
+// these fields do not participate as operands in MAU instructions
+// they can be placed in T_PHV, by-passing MAU
 //
-// TODO: What does it mean to "not use" the mau pipeline?  Not read?  Not
-// written?
 
 void Cluster::compute_fields_no_use_mau() {
     //
@@ -618,12 +619,12 @@ void Cluster::compute_fields_no_use_mau() {
             //
             pov_fields.insert(&field);                                 // pov field
         }
+        // compute width required for ccgf owner (responsible for its members)
+        // need PHV container(s) space for ccgf_width
         //
-        // compute ccgf width
-        // need PHV container of this width
-        //
-        // TODO: What does this method do?  Why is it called for every field?
-        field.set_phv_use_width(field.ccgf() == &field);
+        if (field.is_ccgf()) {
+            field.set_ccgf_phv_use_width();
+        }
         //
         // set deparsed for ccgf owner
         // if any member used in deparser, ccgf must be in exact containers
@@ -801,9 +802,11 @@ void Cluster::set_field_range(const IR::Expression& expression) {
 void Cluster::set_field_range(PhvInfo::Field *field, int container_width) {
     if (field) {
         field->set_phv_use_lo(0);
+        BUG_CHECK(field->size,
+            "***** cluster.cpp: set_field_range ..... field size is 0 *****%d:%s",
+            field->id, field->name);
         if (field->ccgf() != field) {
-            field->set_phv_use_hi(field->phv_use_lo() +
-                                  std::max(field->size, container_width) - 1);
+            field->set_phv_use_hi(field->phv_use_lo() + std::max(field->size, container_width) - 1);
         }
     }
 }

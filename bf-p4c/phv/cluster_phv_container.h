@@ -103,7 +103,8 @@ class PHV_Container {
         fields_in_container_i;                               // fields binned in this container
                                                              // list of ccs necessary for mutliple
                                                              // sliced fields in same container
-    bool deparsed_no_holes_i = false;                        // true if container has deparsed field
+    bool deparsed_i = false;                                 // true if container is deparsed
+                                                             // has deparsed field(s)
     //
     char *bits_i;                                            // tainted bits in container
     std::string taint_color_i = "0";                         // each resident field separate color
@@ -171,7 +172,8 @@ class PHV_Container {
         int start,
         int width,
         PhvInfo::Field *field,
-        int field_bit_lo = 0);
+        int field_bit_lo = 0,
+        Container_Content::Pass pass = Container_Content::Pass::None);
     int taint_ccgf(
         int start,
         int width,
@@ -206,7 +208,8 @@ class PHV_Container {
             int start,
             int width,
             PhvInfo::Field *field,
-            int field_bit_lo);
+            int field_bit_lo,
+            Container_Content::Pass pass = Container_Content::Pass::None);
     int avail_bits()                                            { return avail_bits_i; }
     ordered_map<int, int>& ranges()                             { return ranges_i; }
     const ordered_map<PhvInfo::Field *,
@@ -223,8 +226,8 @@ class PHV_Container {
     void holes(std::vector<char>& bits, char empty, std::list<std::pair<int, int>>& holes_list);
     void holes(std::list<std::pair<int, int>>& holes_list);
     //
-    bool deparsed_no_holes() const                              { return deparsed_no_holes_i; }
-    void set_deparsed_no_holes(bool b)                          { deparsed_no_holes_i = b; }
+    bool deparsed() const                                       { return deparsed_i; }
+    void set_deparsed(bool b)                                   { deparsed_i = b; }
     //
     void create_ranges();
     void clear();
@@ -256,7 +259,7 @@ class PHV_Container {
         return std::max(f->size, min_ceil);
     }
     //
-    void sanity_check_container(const std::string& msg);
+    void sanity_check_container(const std::string& msg, bool check_deparsed = true);
     void sanity_check_overlayed_fields(const std::string& msg);
     void sanity_check_container_avail(int lo, int hi, const std::string&);
     void sanity_check_container_ranges(const std::string&, int lo = -1, int hi = -1);

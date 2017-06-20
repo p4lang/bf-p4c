@@ -127,7 +127,8 @@ PHV_Container::taint(
     int start,
     int width,
     PhvInfo::Field *field,
-    int field_bit_lo) {
+    int field_bit_lo,
+    Container_Content::Pass pass) {
     //
     BUG_CHECK((start+width <= width_i),
         "*****PHV_Container::taint()*****%s start=%d width=%d width_i=%d, field=%d:%s",
@@ -135,14 +136,14 @@ PHV_Container::taint(
     //
     // ccgf field processing
     //
-    if (field->ccgf() == field) {
+    if (!field->allocation_complete()) {
         return taint_ccgf(start, width, field, field_bit_lo);
     }
     //
     // non cluster_overlay fields
     // includes interference based overlay fields
     //
-    taint_bits(start, width, field, field_bit_lo);
+    taint_bits(start, width, field, field_bit_lo, pass);
     //
     // if field has overlay fields after cluster's interference graph computation
     // add those overlay fields to container's container_contents
@@ -417,19 +418,26 @@ PHV_Container::single_field_overlay(
     assert(start >= 0);
     assert(width >= 0);
     //
-    if (f->ccgf_fields().size()) {
-        overlay_ccgf_field(f, start, width, field_bit_lo, pass);
+    // if substratum area is not yet associated with a field, taint color will be 0
+    // need to go through steps for container area allocation, updating its avail bits
+    //
+    if (taint_color(start, start + width - 1) == "0") {
+        taint(start, width, f, field_bit_lo, pass);
     } else {
-        fields_in_container(
-            f,
-            new Container_Content(
-                this,
-                start,
-                width,
+        if (f->ccgf_fields().size()) {
+            overlay_ccgf_field(f, start, width, field_bit_lo, pass);
+        } else {
+            fields_in_container(
                 f,
-                field_bit_lo,
-                taint_color(start, start + width - 1),
-                pass /* pass that performs the overlay */));
+                new Container_Content(
+                    this,
+                    start,
+                    width,
+                    f,
+                    field_bit_lo,
+                    taint_color(start, start + width - 1),
+                    pass /* pass that performs the overlay */));
+        }
     }
     LOG3("\t==> overlayed'" << static_cast<char>(pass) << "' " << f
         << "[" << field_bit_lo << ".." << field_bit_lo + width - 1 << "]");
@@ -551,7 +559,8 @@ PHV_Container::taint_bits(
     int start,
     int width,
     PhvInfo::Field *field,
-    int field_bit_lo) {
+    int field_bit_lo,
+    Container_Content::Pass pass) {
     //
     if (taint_color_i == "9") {
         taint_color_i = "a";
@@ -609,7 +618,7 @@ PHV_Container::taint_bits(
     // track fields in this container
     //
     Container_Content *cc =
-        new Container_Content(this, start, width, field, field_bit_lo, taint_color_i);
+        new Container_Content(this, start, width, field, field_bit_lo, taint_color_i, pass);
     fields_in_container(field, cc);
     //
     return cc;
@@ -665,7 +674,7 @@ PHV_Container::fields_in_container(PhvInfo::Field *f, Container_Content *cc) {
     }
     fields_in_container_i[f].push_back(cc);
     if (f->deparsed()) {
-        set_deparsed_no_holes(true);
+        set_deparsed(true);
     }
 }  // fields_in_container f cc
 
@@ -902,7 +911,7 @@ void PHV_Container::Container_Content::sanity_check_container(
     }
 }  // Container_Content::sanity_check_container
 
-void PHV_Container::sanity_check_container(const std::string& msg) {
+void PHV_Container::sanity_check_container(const std::string& msg, bool check_deparsed) {
     const std::string msg_1 = msg + "..PHV_Container::sanity_check_container";
     //
     // if container is deparsed then
@@ -911,7 +920,7 @@ void PHV_Container::sanity_check_container(const std::string& msg) {
     // a deparsed container can have unused bits, but unused bits will be deparsed as well
     // arises in bridged metadata, where unused bits are padding on the wire
     //
-    if (deparsed_no_holes_i) {
+    if (deparsed_i) {
         for (auto &entry : fields_in_container_i) {
             PhvInfo::Field *f = entry.first;
             if (f->metadata && !f->bridged) {
@@ -923,8 +932,8 @@ void PHV_Container::sanity_check_container(const std::string& msg) {
                 << f);
             }
         }
-        if (avail_bits_i != 0) {
-            LOG3("*****cluster_phv_container.cpp:sanity_FAIL*****....."
+        if (check_deparsed && avail_bits_i != 0) {
+            LOG3("*****cluster_phv_container.cpp:sanity_WARN*****....."
             << msg_1
             << " deparsed container has avail_bits = "
             << avail_bits_i
@@ -1286,9 +1295,9 @@ std::ostream &operator<<(std::ostream &out, ordered_set<PHV_Container::Container
 //
 
 std::ostream &operator<<(std::ostream &out, ordered_map<int, int>& ranges) {
-    out << std::endl << ".....container ranges....." << std::endl;
+    out << std::endl << ".....container ranges are.....";
     for (auto i : ranges) {
-        out << '[' << i.first << "] -- " << i.second << std::endl;
+        out << " [" << i.first << "]=" << i.second;
     }
     return out;
 }
@@ -1303,6 +1312,9 @@ std::ostream &operator<<(std::ostream &out, PHV_Container *c) {
             << '.' << c->asm_string()
             << '.' << static_cast<char>(c->gress())
             << '.' << static_cast<char>(c->status());
+        if (c->deparsed()) {
+            out << "d";
+        }
         if (c->fields_in_container().size() > 1) {
             out << "p";
         }

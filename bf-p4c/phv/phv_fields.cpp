@@ -119,6 +119,9 @@ void PhvInfo::Field::foreach_alloc(int lo, int hi,
     auto it = alloc_i.rbegin();
     while (it != alloc_i.rend() && (it->container.tagalong() || it->field_hi() < lo)) ++it;
     if (it != alloc_i.rend() && it->field_bit != lo) {
+        if (it->field_bit >= lo) {
+            LOG1("**********" << " field = " << this);
+        }
         assert(it->field_bit < lo);
         tmp = *it;
         tmp.container_bit += it->field_bit - lo;
@@ -387,16 +390,18 @@ void PhvInfo::allocatePOV(const HeaderStackInfo &stacks) {
 void
 PhvInfo::Field::cl_id(std::string cl_p) const {
     // can only change id of original non-sliced cluster
-    if (!sliced() && clusters_i.size()) {
-        clusters_i.front()->id(cl_p);
+    if (!sliced() && field_slices_i.size()) {
+        Cluster_PHV *cl = field_slices_i.begin()->first;
+        cl->id(cl_p);
     }
 }
 
 std::string
 PhvInfo::Field::cl_id(Cluster_PHV * cl) const {
     // the first cl in list is the non-sliced owner cl
-    if (!cl && clusters_i.size()) {
-        return clusters_i.front()->id();
+    if (!cl && field_slices_i.size()) {
+        Cluster_PHV *cl = field_slices_i.begin()->first;
+        return cl->id();
     }
     // cluster cl among field_slices
     if (field_slices_i.count(cl)) {
@@ -408,8 +413,9 @@ PhvInfo::Field::cl_id(Cluster_PHV * cl) const {
 int
 PhvInfo::Field::cl_id_num(Cluster_PHV *cl) const {
     // the first cl in list is the non-sliced owner cl
-    if (!cl && clusters_i.size()) {
-        return clusters_i.front()->id_num();
+    if (!cl && field_slices_i.size()) {
+        Cluster_PHV *cl = field_slices_i.begin()->first;
+        return cl->id_num();
     }
     // cluster cl among field_slices
     if (field_slices_i.count(cl)) {
@@ -439,6 +445,16 @@ PhvInfo::Field::is_ccgf() const {
     return false;
 }
 
+bool
+PhvInfo::Field::allocation_complete() const {
+    //
+    // after phv container association for each member of ccgf, its ccgf parent pointer is removed
+    // finally ccgf owner's ccgf pointer is removed
+    // if pointer remains then its members are not yet completely associated w/ phv container space
+    //
+    return ccgf_i != this;
+}
+
 int
 PhvInfo::Field::phv_use_width(Cluster_PHV *cl) const {
     // non-sliced owner not in map
@@ -449,44 +465,42 @@ PhvInfo::Field::phv_use_width(Cluster_PHV *cl) const {
 }
 
 void
-PhvInfo::Field::set_phv_use_width(bool ccgf_owner, int min_ceil) {
+PhvInfo::Field::set_ccgf_phv_use_width(int min_ceil) {
     // compute ccgf width, need PHV container(s) of this width
-    if (ccgf_owner && ccgf_fields_i.size()) {
-        int ccg_width = 0;
-        for (auto &f : ccgf_fields_i) {
-            // ccgf owner appears as member, phv_use_width = aggregate size of members
-            if (f->ccgf() == f) {
-                if (PHV_Container::constraint_no_cohabit(f)) {
-                    ccg_width += PHV_Container::ceil_phv_use_width(f, min_ceil);
-                } else {
-                    ccg_width += f->size;
-                }
+    int ccg_width = 0;
+    for (auto &f : ccgf_fields_i) {
+        // ccgf owner appears as member, phv_use_width = aggregate size of members
+        if (f->is_ccgf()) {
+            if (PHV_Container::constraint_no_cohabit(f)) {
+                ccg_width += PHV_Container::ceil_phv_use_width(f, min_ceil);
             } else {
-                if (PHV_Container::constraint_no_cohabit(f)) {
-                    ccg_width += PHV_Container::ceil_phv_use_width(f, min_ceil);
-                } else {
-                    ccg_width += f->phv_use_width();
-                }
+                ccg_width += f->size;
             }
-        }  // for
-        if (header_stack_pov_ccgf_i) {
-            // e.g.,
-            // ingress::data.$stkvalid, egress::mpls.$stkvalid, ingress::extra.$stkvalid
-            // width requirement temporarily incremented
-            // so that "header stack" owner gets allocated in members' container pointing to tos
-            // note: size remains untouched
-            //
-            ccg_width++;
+        } else {
+            if (PHV_Container::constraint_no_cohabit(f)) {
+                ccg_width += PHV_Container::ceil_phv_use_width(f, min_ceil);
+            } else {
+                ccg_width += f->phv_use_width();
+            }
         }
-        phv_use_hi_i = ccg_width - 1;
+    }  // for
+    if (header_stack_pov_ccgf_i) {
+        // e.g.,
+        // ingress::data.$stkvalid, egress::mpls.$stkvalid, ingress::extra.$stkvalid
+        // width requirement temporarily incremented
+        // so that "header stack" owner gets allocated in members' container pointing to tos
+        // note: size remains untouched
+        //
+        ccg_width++;
     }
-}  // phv_use_width()
+    phv_use_hi_i = ccg_width - 1;
+}  // set_ccgf_phv_use_width()
 
 int
 PhvInfo::Field::ccgf_width() const {
     int ccgf_width_l = 0;
     for (auto &f : ccgf_fields_i) {
-        if (f->ccgf() == f) {
+        if (f->is_ccgf() && !f->header_stack_pov_ccgf()) {
             // ccgf owner appears as member, phv_use_width = aggregate size of members
             ccgf_width_l += f->size;
         } else {
@@ -503,39 +517,12 @@ PhvInfo::Field::ccgf_width() const {
 }
 
 //
-// clusters
-//
-
-void
-PhvInfo::Field::clusters(Cluster_PHV *cluster_p) {
-    assert(cluster_p);
-    if (!cluster_p->sliced()) {
-        // new owner for non-sliced field, due to phv_interference, phv_bind
-        clusters_i.clear();
-        // clear clusters_i for ccgf members
-        for (auto &m : ccgf_fields_i) {
-            if (m != this) {
-                m->clusters_i.clear();
-            }
-        }
-    }
-    clusters_i.push_back(cluster_p);
-    // set clusters_i for ccgf members
-    for (auto &m : ccgf_fields_i) {
-        if (m != this) {
-            m->clusters(cluster_p);
-        }
-    }
-}
-
-//
 // field slices
 //
 
 bool
 PhvInfo::Field::sliced() const {
-    if (clusters_i.size() > 1) {
-        BUG_CHECK(!field_slices_i.empty(), "field %d has empty map field_slices_i", id);
+    if (field_slices_i.size() > 1) {
         return true;
     }
     return false;
@@ -556,11 +543,27 @@ PhvInfo::Field::field_slices(Cluster_PHV *cl) const {
 }
 
 void
-PhvInfo::Field::set_field_slices(Cluster_PHV *cl, int lo, int hi) {
+PhvInfo::Field::set_field_slices(Cluster_PHV *cl, int lo, int hi, Cluster_PHV *parent_cl) {
     assert(cl);
     assert(lo >= 0);
     assert(hi >= lo);
+    if (!cl->sliced()) {
+        // in cases of cluster id renaming, clear previous incarnation
+        assert(!parent_cl);
+        field_slices_i.clear();
+    }
     field_slices_i.emplace(cl, std::make_pair(lo, hi));
+    // cluster map entry for ccgf members
+    for (auto &m : ccgf_fields_i) {
+        if (m != this) {
+            m->field_slices().clear();
+            m->set_field_slices(cl, m->phv_use_lo(), m->phv_use_hi());
+        }
+    }
+    if (parent_cl) {
+        // remove parent from map
+        field_slices_i.erase(parent_cl);
+    }
 }
 
 int
@@ -739,7 +742,7 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field &field) {
         out << std::endl << '[';
         for (auto &f : field.ccgf_fields()) {
             out << '\t';
-            if (f->ccgf() == f) {
+            if (f->is_ccgf() && !f->header_stack_pov_ccgf()) {
                 // ccgf owner appears as member, phv_use_width = aggregate size of members
                 out << f->id << ':' << f->name << '<' << f->size << ">*";
             } else {
