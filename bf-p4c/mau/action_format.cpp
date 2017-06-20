@@ -594,11 +594,16 @@ void ActionFormat::align_immediate_layouts() {
         ArgPlacementData &apd = use->arg_placement[aci.action];
         calculate_placement_data(placement_vec, apd, true);
     }
+    /* FIXME: Due to complication on action_bus, no longer allowed holes
     if (tbl->layout.no_match_data()) {
         auto max = use->immediate_mask.max();
         if (max != use->immediate_mask.end())
             use->immediate_mask.setrange(0, max.index());
     }
+    */
+    auto max = use->immediate_mask.max();
+    if (max != use->immediate_mask.end())
+        use->immediate_mask.setrange(0, max.index());
     LOG3("Immediate mask calculated is " << use->immediate_mask);
 }
 

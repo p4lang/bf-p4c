@@ -323,7 +323,6 @@ XFAIL_TESTS += \
 
 # BRIG-101
 BRIG_101_XFAIL = \
-		tofino/%reldir%/p4_14/test_config_202_write_same_byte.p4.test \
 		tofino/%reldir%/p4_14/test_config_32_action_data_imm_param_imm.p4.test \
 		tofino/%reldir%/p4_14/test_config_45_action_data_immediate_param_and_constant.p4.test \
 		tofino/%reldir%/p4_14/test_config_48_action_data_bit_masked_set.p4.test \
