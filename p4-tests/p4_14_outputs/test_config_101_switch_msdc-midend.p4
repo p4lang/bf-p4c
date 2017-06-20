@@ -2290,7 +2290,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("process_ingress_bd_stats.ingress_bd_stats") counter(32w16384, CounterType.packets_and_bytes) process_ingress_bd_stats_ingress_bd_stats_1;
     @name(".update_ingress_bd_stats") action _update_ingress_bd_stats() {
-        process_ingress_bd_stats_ingress_bd_stats_1.count((bit<32>)(bit<14>)meta.l2_metadata.bd_stats_idx);
+        process_ingress_bd_stats_ingress_bd_stats_1.count((bit<32>)meta.l2_metadata.bd_stats_idx);
     }
     @name("process_ingress_bd_stats.ingress_bd_stats") table process_ingress_bd_stats_ingress_bd_stats_2 {
         actions = {

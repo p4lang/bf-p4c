@@ -95,12 +95,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".do_nothing") action do_nothing_8() {
     }
-    @name(".action_0") action action_5(bit<11> idx) {
+    @name(".action_0") action action_5(bit<32> idx) {
         meta.meta.tbl0_tbl1 = 16w1;
         meta.meta.tbl0_tbl2 = 16w1;
         meta.meta.tbl0_tbl3 = 16w1;
         meta.meta.tbl0 = 16w1;
-        cnt_0.count((bit<32>)idx);
+        cnt_0.count(idx);
     }
     @name(".action_1") action action_6() {
         meta.meta.tbl0_tbl1 = 16w1;

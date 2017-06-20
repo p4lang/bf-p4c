@@ -3033,7 +3033,7 @@ control process_meter_action(inout headers hdr, inout metadata meta, inout stand
 control process_ingress_bd_stats(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("ingress_bd_stats") @min_width(32) counter(32w16384, CounterType.packets_and_bytes) ingress_bd_stats;
     @name(".update_ingress_bd_stats") action update_ingress_bd_stats() {
-        ingress_bd_stats.count((bit<32>)(bit<14>)meta.l2_metadata.bd_stats_idx);
+        ingress_bd_stats.count((bit<32>)(bit<32>)meta.l2_metadata.bd_stats_idx);
     }
     @name("ingress_bd_stats") table ingress_bd_stats_0 {
         actions = {
@@ -3049,7 +3049,7 @@ control process_ingress_bd_stats(inout headers hdr, inout metadata meta, inout s
 control process_ingress_acl_stats(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("acl_stats") @min_width(16) counter(32w128, CounterType.packets_and_bytes) acl_stats;
     @name(".acl_stats_update") action acl_stats_update() {
-        acl_stats.count((bit<32>)(bit<7>)meta.acl_metadata.acl_stats_index);
+        acl_stats.count((bit<32>)(bit<32>)meta.acl_metadata.acl_stats_index);
     }
     @name("acl_stats") table acl_stats_0 {
         actions = {
@@ -3306,7 +3306,7 @@ control process_system_acl(inout headers hdr, inout metadata meta, inout standar
     @name("drop_stats") counter(32w256, CounterType.packets) drop_stats;
     @name("drop_stats_2") counter(32w256, CounterType.packets) drop_stats_2;
     @name(".drop_stats_update") action drop_stats_update() {
-        drop_stats_2.count((bit<32>)meta.ingress_metadata.drop_reason);
+        drop_stats_2.count((bit<32>)(bit<32>)meta.ingress_metadata.drop_reason);
     }
     @name(".nop") action nop() {
     }
@@ -3332,7 +3332,7 @@ control process_system_acl(inout headers hdr, inout metadata meta, inout standar
     @name(".drop_packet") action drop_packet() {
         mark_to_drop();
     }
-    @name(".drop_packet_with_reason") action drop_packet_with_reason(bit<8> drop_reason) {
+    @name(".drop_packet_with_reason") action drop_packet_with_reason(bit<32> drop_reason) {
         drop_stats.count((bit<32>)drop_reason);
         mark_to_drop();
     }

@@ -72,7 +72,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("cnt_0") counter(32w2048, CounterType.packets_and_bytes) cnt_0;
     @name(".do_nothing") action do_nothing() {
     }
-    @name(".action_0") action action_0(bit<11> idx) {
+    @name(".action_0") action action_0(bit<32> idx) {
         meta.meta.tbl0_tbl1 = 16w1;
         meta.meta.tbl0_tbl2 = 16w1;
         meta.meta.tbl0_tbl3 = 16w1;

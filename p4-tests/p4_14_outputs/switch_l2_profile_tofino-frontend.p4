@@ -2262,7 +2262,7 @@ control process_meter_action(inout headers hdr, inout metadata meta, inout stand
 control process_ingress_bd_stats(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("ingress_bd_stats") @min_width(32) counter(32w16384, CounterType.packets_and_bytes) ingress_bd_stats_1;
     @name(".update_ingress_bd_stats") action update_ingress_bd_stats_0() {
-        ingress_bd_stats_1.count((bit<32>)(bit<14>)meta.l2_metadata.bd_stats_idx);
+        ingress_bd_stats_1.count((bit<32>)meta.l2_metadata.bd_stats_idx);
     }
     @name("ingress_bd_stats") table ingress_bd_stats_2 {
         actions = {
@@ -2280,7 +2280,7 @@ control process_ingress_bd_stats(inout headers hdr, inout metadata meta, inout s
 control process_ingress_acl_stats(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("acl_stats") @min_width(16) counter(32w128, CounterType.packets_and_bytes) acl_stats_1;
     @name(".acl_stats_update") action acl_stats_update_0() {
-        acl_stats_1.count((bit<32>)(bit<7>)meta.acl_metadata.acl_stats_index);
+        acl_stats_1.count((bit<32>)meta.acl_metadata.acl_stats_index);
     }
     @name("acl_stats") table acl_stats_2 {
         actions = {
@@ -2540,8 +2540,8 @@ control process_system_acl(inout headers hdr, inout metadata meta, inout standar
     @name(".drop_packet") action drop_packet_1() {
         mark_to_drop();
     }
-    @name(".drop_packet_with_reason") action drop_packet_with_reason_0(bit<8> drop_reason) {
-        drop_stats_1.count((bit<32>)drop_reason);
+    @name(".drop_packet_with_reason") action drop_packet_with_reason_0(bit<32> drop_reason) {
+        drop_stats_1.count(drop_reason);
         mark_to_drop();
     }
     @name("drop_stats") table drop_stats_4 {

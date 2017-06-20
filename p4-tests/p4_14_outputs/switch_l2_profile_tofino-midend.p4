@@ -2004,7 +2004,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @min_width(32) @name("process_ingress_bd_stats.ingress_bd_stats") counter(32w16384, CounterType.packets_and_bytes) process_ingress_bd_stats_ingress_bd_stats_1;
     @name(".update_ingress_bd_stats") action _update_ingress_bd_stats() {
-        process_ingress_bd_stats_ingress_bd_stats_1.count((bit<32>)(bit<14>)meta.l2_metadata.bd_stats_idx);
+        process_ingress_bd_stats_ingress_bd_stats_1.count((bit<32>)meta.l2_metadata.bd_stats_idx);
     }
     @name("process_ingress_bd_stats.ingress_bd_stats") table process_ingress_bd_stats_ingress_bd_stats_2 {
         actions = {
@@ -2016,7 +2016,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @min_width(16) @name("process_ingress_acl_stats.acl_stats") counter(32w128, CounterType.packets_and_bytes) process_ingress_acl_stats_acl_stats_1;
     @name(".acl_stats_update") action _acl_stats_update() {
-        process_ingress_acl_stats_acl_stats_1.count((bit<32>)(bit<7>)meta.acl_metadata.acl_stats_index);
+        process_ingress_acl_stats_acl_stats_1.count((bit<32>)meta.acl_metadata.acl_stats_index);
     }
     @name("process_ingress_acl_stats.acl_stats") table process_ingress_acl_stats_acl_stats_2 {
         actions = {
@@ -2219,8 +2219,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".drop_packet") action _drop_packet_0() {
         mark_to_drop();
     }
-    @name(".drop_packet_with_reason") action _drop_packet_with_reason(bit<8> drop_reason) {
-        process_system_acl_drop_stats_2.count((bit<32>)drop_reason);
+    @name(".drop_packet_with_reason") action _drop_packet_with_reason(bit<32> drop_reason) {
+        process_system_acl_drop_stats_2.count(drop_reason);
         mark_to_drop();
     }
     @name("process_system_acl.drop_stats") table process_system_acl_drop_stats_4 {

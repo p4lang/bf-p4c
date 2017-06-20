@@ -48,25 +48,25 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.data.h1 = val1;
         hdr.data.h2 = val2;
         hdr.data.h3 = val3;
-        meter_1.execute_meter((bit<32>)14w7, hdr.data.color_1);
+        meter_1.execute_meter((bit<32>)32w7, hdr.data.color_1);
     }
     @name(".h4_6") action h4_6(bit<16> val4, bit<16> val5, bit<16> val6) {
         hdr.data.h4 = val4;
         hdr.data.h5 = val5;
         hdr.data.h6 = val6;
-        meter_2.execute_meter((bit<32>)10w7, hdr.data.color_2);
+        meter_2.execute_meter((bit<32>)32w7, hdr.data.color_2);
     }
     @name(".h7_9") action h7_9(bit<16> val7, bit<16> val8, bit<16> val9) {
         hdr.data.h7 = val7;
         hdr.data.h8 = val8;
         hdr.data.h9 = val9;
-        meter_3.execute_meter((bit<32>)13w7, hdr.data.color_3);
+        meter_3.execute_meter((bit<32>)32w7, hdr.data.color_3);
     }
     @name(".h10_12") action h10_12(bit<16> val10, bit<16> val11, bit<16> val12) {
         hdr.data.h10 = val10;
         hdr.data.h11 = val11;
         hdr.data.h12 = val12;
-        meter_4.execute_meter((bit<32>)10w7, hdr.data.color_4);
+        meter_4.execute_meter((bit<32>)32w7, hdr.data.color_4);
     }
     @name("test1") table test1 {
         actions = {

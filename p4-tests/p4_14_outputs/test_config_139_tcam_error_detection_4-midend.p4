@@ -178,7 +178,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("simple_stats") counter(32w16384, CounterType.packets) simple_stats;
     @name(".count_it") action count_it_0() {
-        simple_stats.count((bit<32>)(bit<14>)hdr.pkt.field_h_16);
+        simple_stats.count((bit<32>)hdr.pkt.field_h_16);
     }
     @name(".do_nothing") action do_nothing_0() {
     }

@@ -168,7 +168,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         ;
     }
     @name(".action_1") action action_1(bit<8> param0) {
-        meter_1.execute_meter((bit<32>)9w7, hdr.pkt.color_1);
+        meter_1.execute_meter((bit<32>)32w7, hdr.pkt.color_1);
     }
     @name(".action_0") action action_0_0(bit<8> param0) {
         meter_0.read(hdr.pkt.color_0);

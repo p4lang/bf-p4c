@@ -169,7 +169,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("cntr_0") counter(32w500, CounterType.packets) cntr;
     @name(".action_0") action action_1() {
-        cntr.count((bit<32>)(bit<9>)hdr.pkt.field_i_8);
+        cntr.count((bit<32>)hdr.pkt.field_i_8);
     }
     @name("table_0") table table_1 {
         actions = {
