@@ -1,6 +1,7 @@
 #ifndef EXTENSIONS_TOFINO_MAU_ACTION_FORMAT_H_
 #define EXTENSIONS_TOFINO_MAU_ACTION_FORMAT_H_
 
+#include "action_analysis.h"
 #include "ir/ir.h"
 #include "lib/bitops.h"
 #include "lib/bitvec.h"
@@ -192,7 +193,7 @@ struct ActionFormat {
         ArgInfo() {}
     };
 
-    typedef std::map<cstring, ArgInfo> ArgMap;
+    // typedef std::map<cstring, ArgInfo> ArgMap;
     typedef std::map<cstring, vector<ActionDataPlacement>> ArgFormat;
     typedef std::map<cstring, vector<std::pair<int, bool>>> ArgPlacementData;
     bool immediate_possible = false;
@@ -206,7 +207,6 @@ struct ActionFormat {
      *  the meantime, we can keep them as separate structures.
      */
     struct Use {
-        std::map<cstring, ArgMap> arguments;
         bool has_immediate = false;
         ArgFormat action_data_format;
         ArgFormat immediate_format;
@@ -217,7 +217,6 @@ struct ActionFormat {
         bitvec total_layouts_immed[CONTAINER_TYPES];
 
         void clear() {
-            arguments.clear();
             action_data_format.clear();
             immediate_format.clear();
             immediate_mask.clear();
@@ -241,11 +240,18 @@ struct ActionFormat {
     int action_data_bytes = 0;
     ActionContainerInfo max_total;
 
+    void create_placement_non_phv(ActionAnalysis::FieldActionsMap &field_actions_map,
+                                  cstring action_name);
+    void create_placement_phv(ActionAnalysis::ContainerActionsMap &container_actions_map,
+                              cstring action_name);
+
     void space_individ_immed(ActionContainerInfo &aci);
     int offset_constraints_and_total_layouts();
     void space_8_and_16_containers(int max_small_bytes);
     void space_32_containers();
     void space_32_immed(ActionContainerInfo &aci);
+
+
 
  public:
     ActionFormat(const IR::MAU::Table *t, const PhvInfo &p, bool ad)
@@ -266,49 +272,6 @@ struct ActionFormat {
                                   ArgPlacementData &apd, bool immediate);
     void determine_format_name();
     void determine_immed_format_name();
-};
-
-/** Class for building the initial information for the ActionDataPlacment, as well as the
- *  ArgInfo classes.  Passes over all of the Instructions to determine which need to be spread
- *  out within the class
- */
-class ArgumentAnalyzer : public MauInspector, P4WriteContext {
-    /** Information on what fields are contained within an individual container.  Must be separated
-     *  from the PHV allocation, as this pass can be called before or after PHV allocation
-     */
-    struct ContainerInfo {
-        struct ContainerSection {
-            cstring arg_name;
-            int field_bit, container_bit, width;
-            ContainerSection(cstring a, int fb, int cb, int w)
-                : arg_name(a), field_bit(fb), container_bit(cb), width(w) {}
-        };
-        vector<ContainerSection> sections;
-        bool shared = false;
-        bool can_shift = true;
-    };
-
- private:
-    const PhvInfo &phv;
-    ActionFormat::Use *use;
-    bool alloc_done = false;
-    vector<cstring> action_args;
-    vector<const PhvInfo::Field *> fields_used;
-    bitvec instr_used;
-    ActionFormat::ArgMap arg_map;
-    void parse_container_phv(const IR::MAU::Action *af);
-    void parse_container_non_phv(const IR::MAU::Action *af);
-
- public:
-     ArgumentAnalyzer(const PhvInfo &p, ActionFormat::Use *u, bool ad)
-         : phv(p), use(u), alloc_done(ad) {}
-     bool preorder(const IR::MAU::Action *) override;
-     bool preorder(const IR::Primitive *) override;
-     bool preorder(const IR::MAU::Instruction *) override;
-     bool preorder(const IR::Expression *) override;
-
-     void postorder(const IR::MAU::Instruction *) override;
-     void postorder(const IR::MAU::Action *) override;
 };
 
 #endif /* EXTENSIONS_TOFINO_MAU_ACTION_FORMAT_H_ */

@@ -49,6 +49,7 @@ noinst_HEADERS += \
 cpplint_FILES += $(tofino_backend_common_UNIFIED) $(tofino_backend_common_NONUNIFIED)
 
 tofino_backend_mau_UNIFIED = \
+	%reldir%/mau/action_analysis.cpp \
 	%reldir%/mau/action_data_bus.cpp \
 	%reldir%/mau/action_format.cpp \
 	%reldir%/mau/asm_output.cpp \
@@ -72,6 +73,7 @@ tofino_backend_mau_UNIFIED = \
 	%reldir%/mau/table_summary.cpp
 
 noinst_HEADERS += \
+	%reldir%/mau/action_analysis.h \
 	%reldir%/mau/action_data_bus.h \
 	%reldir%/mau/action_format.h \
 	%reldir%/mau/asm_output.h \

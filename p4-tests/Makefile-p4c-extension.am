@@ -367,7 +367,6 @@ XFAIL_TESTS += \
 # BRIG-103
 XFAIL_TESTS +=  tofino/testdata/p4_14_samples/instruct1.p4.test \
 	        tofino/testdata/p4_14_samples/instruct3.p4.test \
-		tofino/%reldir%/p4_14/13-IngressEgressConflict.p4.test \
 		tofino/%reldir%/p4_14/14-MultipleActionsInAContainer.p4.test \
 		tofino/%reldir%/p4_14/dileep.p4.test \
 		tofino/%reldir%/p4_14/dileep2.p4.test \
@@ -386,14 +385,12 @@ XFAIL_TESTS +=  tofino/testdata/p4_14_samples/instruct1.p4.test \
 		tofino/%reldir%/p4_14/test_config_252_pa_required_packing.p4.test \
 		tofino/%reldir%/p4_14/test_config_256_pa_problem_4.p4.test \
 		tofino/%reldir%/p4_14/test_config_257_pa_problem_5.p4.test \
-		tofino/%reldir%/p4_14/test_config_50_action_data_different_size_fields.p4.test \
 		tofino/%reldir%/p4_14/test_config_94_action_constant_alignment.p4.test \
 		tofino/%reldir%/p4_14/vk_basic_ipv4_20150706.p4.test
 
 # BRIG-104
 XFAIL_TESTS +=  tofino/testdata/p4_14_samples/mac_rewrite.p4.test \
-		tofino/%reldir%/p4_14/12-SmallToBigFieldWithMask8.p4.test \
-		tofino/%reldir%/p4_14/22-BigToSmallFieldWithMask8.p4.test
+		tofino/%reldir%/p4_14/12-SmallToBigFieldWithMask8.p4.test
 
 # BRIG-105
 XFAIL_TESTS +=  tofino/%reldir%/p4_14/04-FullPHV3.p4.test \

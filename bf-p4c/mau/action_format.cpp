@@ -3,203 +3,6 @@
 
 constexpr int ActionFormat::CONTAINER_SIZES[];
 
-bool ArgumentAnalyzer::preorder(const IR::MAU::Action *af) {
-    action_args.clear();
-    arg_map.clear();
-    ActionFormat::ArgInfo arg_info;
-
-    for (auto arg : af->args) {
-        action_args.push_back(arg->toString());
-        arg_map.emplace(arg->toString(), arg_info);
-    }
-    return true;
-}
-
-bool ArgumentAnalyzer::preorder(const IR::Primitive *prim) {
-    LOG3("Not handling action arguments in unhandled prim " << prim->name);
-    return false;
-}
-
-/** Only want to gather information on Instructions, and not primitives in MAU::Action
- *  such as count, as those don't contain primitives that we need
- */
-bool ArgumentAnalyzer::preorder(const IR::MAU::Instruction *) {
-    instr_used.clear();
-    fields_used.clear();
-    return true;
-}
-
-/** Save the locations of the action arguments and the corresponding fields that they use
- */
-bool ArgumentAnalyzer::preorder(const IR::Expression *e) {
-    if (phv.field(e) && isWrite()) {
-        fields_used.push_back(phv.field(e));
-    } else {
-        auto loc = std::find(action_args.begin(), action_args.end(), e->toString());
-        if (loc != action_args.end()) {
-            instr_used |= bitvec(loc - action_args.begin(), 1);
-        }
-    }
-    return false;
-}
-
-void ArgumentAnalyzer::postorder(const IR::MAU::Instruction *) {
-    for (auto position : instr_used) {
-        arg_map[action_args[position]].append(fields_used);
-    }
-}
-
-
-/** Create the ActionDataPlacement before PHV allocation has been completed.  Essentially 
- *  base the container size guess on specifically the width of the ActionArg.  If the argument
- *  is greater than the size of the largest container, break it into multiple containers.  
- *  This then generates the action data format
- *
- *  The container provided to the action data is the smallest container it can fit into.
- *  If the field is larger than 32 bits, say N where 2 * 32 < N < 3 * 32, then N is given two
- *  32 bit containers, and N - 64 bits determines the size of the small container.  This is
- *  an easy best estimate for PHV allocation
- */
-void ArgumentAnalyzer::parse_container_non_phv(const IR::MAU::Action *af) {
-    vector<ActionFormat::ActionDataPlacement> overlaps;
-    for (auto arg_entry : arg_map) {
-        auto arg_name = arg_entry.first;
-        auto &arg_info = arg_entry.second;
-        auto loc = std::find(action_args.begin(), action_args.end(), arg_name);
-        if (loc == action_args.end())
-            BUG("Action arg was added to the Argument Map even though never used within the "
-                 "action call");
-        int index = loc - action_args.begin();
-        int arg_width = af->args[index]->type->width_bits();
-
-        if (arg_info.fields.size() == 0) continue;
-
-        for (auto *field : arg_info.fields) {
-            if (field->size != arg_width)
-                ERROR("Width and Information don't align");
-            vector<std::pair<int, bitvec>> container_sizes;
-            int starting_width = arg_width;
-            while (starting_width > 32) {
-                container_sizes.emplace_back(32, bitvec(0, 32));
-                starting_width -= 32;
-            }
-            int container_size = (1 << ceil_log2(starting_width));
-            container_size = container_size < 8 ? 8 : container_size;
-            container_sizes.emplace_back(container_size, bitvec(0, starting_width));
-            arg_info.append(container_sizes);
-        }
-
-        int start = 0;
-        for (auto cont_pair : arg_info.act_bus_reqs[0]) {
-            LOG3("Container information: " << arg_name << " " << cont_pair.second << " " << start);
-            ActionFormat::ActionDataPlacement adp;
-            adp.arg_locs.emplace_back(arg_name, cont_pair.second, start,
-                                      arg_info.act_bus_reqs[0].size() == 1);
-            adp.size = cont_pair.first;
-            adp.range = cont_pair.second;
-            start += cont_pair.first;
-            overlaps.push_back(adp);
-        }
-    }
-    use->action_data_format[af->name] = overlaps;
-    // use->arguments[af->name] = arg_map;
-}
-
-/** Creates the initial ActionDataPlacement after PHV allocation has been completed.  For each
- *  ActionArg used, this code examines the containers used by the fields affected by this
- *  ActionArg.  The code saves this information, checks if these constraints are too difficult
- *  to allocate to in the first iteration of action data formatting, and then from this
- *  information creates the ActionDataPlacement for all the containers affected.  As
- *  containers may be affected by multiple fields, this only allocates the space for one
- *  container
- */
-void ArgumentAnalyzer::parse_container_phv(const IR::MAU::Action *af) {
-    vector<ActionFormat::ActionDataPlacement> overlaps;
-    std::map<const PHV::Container, ContainerInfo> container_info;
-
-    // Gather every container's information
-    for (auto arg_entry : arg_map) {
-        auto arg_name = arg_entry.first;
-        auto &arg_info = arg_entry.second;
-        for (auto *field : arg_info.fields) {
-            field->foreach_alloc([&](const PhvInfo::Field::alloc_slice &sl) {
-                if (sl.container.size() != 32 && sl.container.size() != 16
-                    && sl.container.size() != 8) {
-                    ERROR("PHV not allocated for " << field->name);
-                } else {
-                    auto &ci = container_info[sl.container];
-                    ci.sections.emplace_back(arg_name, sl.field_bit, sl.container_bit, sl.width);
-                }
-            });
-        }
-    }
-
-    // Check if there are weird overlaps of PHVs that are not yet handled
-    for (auto arg_entry : arg_map) {
-        auto &arg_info = arg_entry.second;
-        if (arg_info.fields.size() == 1) continue;
-
-        vector<std::pair<int, int>> container_sets;
-        bool already_tested = false;
-        for (auto *field : arg_info.fields) {
-            size_t index = 0;
-            field->foreach_alloc([&](const PhvInfo::Field::alloc_slice &sl) {
-                if (container_info.at(sl.container).sections.size() > 1) {
-                    // FIXME: Todo this section. Argument accesses two fields that have other
-                    // fields in them.
-                    BUG("PHV layout for an action too complex to handle");
-                }
-                if (!already_tested) {
-                    container_sets.emplace_back(sl.container.size(), sl.width);
-                } else {
-                    if (index >= container_sets.size()
-                        || container_sets[index].first != static_cast<int>(sl.container.size())
-                        || container_sets[index].second != sl.width) {
-                        // FIXME: Also todo.  When a argument accesses separate fields with
-                        // different PHV layouts
-                        BUG("PHV layout for an aciton to complex to handle");
-                    }
-                    container_info.at(sl.container).shared = true;
-                }
-                index++;
-            });
-        }
-    }
-
-    // Generate the ActionDataPlacement for every single container
-    for (auto ci : container_info) {
-        auto &cont = ci.first;
-        auto &info_vec = ci.second;
-        bitvec total_mask;
-        if (info_vec.shared) continue;
-        for (auto sl : info_vec.sections) {
-            total_mask |= bitvec(sl.container_bit, sl.width);
-        }
-        ActionFormat::ActionDataPlacement placement;
-        for (auto sl : info_vec.sections) {
-            placement.arg_locs.emplace_back(sl.arg_name, bitvec(sl.container_bit, sl.width),
-                sl.field_bit, arg_map[sl.arg_name].fields[0]->alloc_i.size() == 1);
-        }
-
-        placement.range = total_mask;
-        placement.size = cont.size();
-        overlaps.push_back(placement);
-    }
-
-    use->action_data_format[af->name] = overlaps;
-    use->arguments[af->name] = arg_map;
-    // Have to still step up ArgMap, used more for action bus and asm output
-}
-
-void ArgumentAnalyzer::postorder(const IR::MAU::Action *af) {
-    if (alloc_done)
-        parse_container_phv(af);
-    else
-        parse_container_non_phv(af);
-}
-
-
-
 void ActionFormat::ActionContainerInfo::reset() {
     for (int i = 0; i < CONTAINER_TYPES; i++) {
         counts[i] = 0; layouts[i].clear();
@@ -325,11 +128,124 @@ void ActionFormat::allocate_format(Use *u) {
     }
 }
 
+/** Based on the field_actions returned for the ActionAnalysis pass, this function makes
+ *  a best guess on the action data requirements, and fills out the ActionDataPlacement
+ *  vector fo this action with the appropriate information.
+ *
+ *  The information provided are what arguments are in what action data slot, and the
+ *  necessary sizes of the action data slots.
+ */
+void ActionFormat::create_placement_non_phv(ActionAnalysis::FieldActionsMap &field_actions_map,
+                                            cstring action_name) {
+    // FIXME: Verification on some argument limitations still required
+    vector<ActionDataPlacement> adp_vector;
+    for (auto &field_action_info : field_actions_map) {
+        auto &field_action = field_action_info.second;
+        for (auto &read : field_action.reads) {
+            if (read.type != ActionAnalysis::ActionParam::ACTIONDATA) continue;
+            int bits_needed = read.expr->type->width_bits();
+            int bits_allocated = 0;
+            bool single_loc = true;
+            bitvec data_location;
+            // Best guess at action data slot needs, may be corrected after PHV allocation
+            while (bits_allocated < bits_needed) {
+                data_location.clear();
+                int container_size;
+                if (bits_allocated + CONTAINER_SIZES[FULL] < bits_needed) {
+                    container_size = CONTAINER_SIZES[FULL];
+                    single_loc = false;
+                    data_location.setrange(0, CONTAINER_SIZES[FULL]);
+                } else {
+                    int diff = bits_needed - bits_allocated;
+                    container_size = (1 << ceil_log2(diff));
+                    if (container_size < CONTAINER_SIZES[BYTE])
+                        container_size = CONTAINER_SIZES[BYTE];
+                    data_location.setrange(0, diff);
+                }
+                ActionDataPlacement adp;
+                auto arg_name = read.expr->to<IR::ActionArg>()->name;
+                adp.arg_locs.emplace_back(arg_name, data_location, 0, single_loc);
+                adp.size = container_size;
+                adp.range = data_location;
+                adp_vector.push_back(adp);
+                bits_allocated += data_location.popcount();
+            }
+        }
+    }
+
+    use->action_data_format[action_name] = adp_vector;
+}
+
+/** Run after PHV allocation has completed.  Based on how fields are packed into the PHV,
+ *  action data affecting multiple fields might have to be in the same container, i.e. if two
+ *  fields that are written by action data are in the same container, then the action data
+ *  parameters have to be in the same action data slot.
+ *
+ *  The function goes through every single use of action data in the function, and will
+ *  determine what types of action data slots are needed as well as where action data is stored
+ *  within the slots.  This will be saved in a vector of ActionDataPlacement
+ */
+void ActionFormat::create_placement_phv(ActionAnalysis::ContainerActionsMap &container_actions_map,
+                                        cstring action_name) {
+    vector<ActionDataPlacement> adp_vector;
+    for (auto &container_action_info : container_actions_map) {
+        auto container = container_action_info.first;
+        auto &cont_action = container_action_info.second;
+        if (cont_action.counts[ActionAnalysis::ActionParam::ACTIONDATA] == 0) continue;
+        ActionDataPlacement adp;
+        // Every instruction in the container process has to have its action data stored
+        // in the same action data slot
+        for (auto &field_action : cont_action.field_actions) {
+            auto *write_field = phv.field(field_action.write.expr);
+            int container_bit = 0;
+            write_field->foreach_alloc([&](const PhvInfo::Field::alloc_slice &alloc) {
+                container_bit = alloc.container_bit;
+            });
+
+            bitvec data_location;
+            for (auto &read : field_action.reads) {
+                data_location.clear();
+                if (read.type != ActionAnalysis::ActionParam::ACTIONDATA) continue;
+                bool single_loc = true;
+                int field_bit = 0;
+                if (auto *sl = read.expr->to<IR::Slice>()) {
+                    single_loc = false;
+                    field_bit = sl->getL();
+                }
+                data_location.setrange(container_bit, read.size());
+                auto arg_name = read.unsliced_expr()->to<IR::ActionArg>()->name;
+                adp.arg_locs.emplace_back(arg_name, data_location, field_bit,
+                                          single_loc);
+                adp.range |= data_location;
+            }
+        }
+        adp.size = container.size();
+        adp_vector.push_back(adp);
+    }
+
+    use->action_data_format[action_name] = adp_vector;
+}
+
 /** Performs the argument analyzer and initializes the vector of ActionContainerInfo
  */
 void ActionFormat::analyze_all_actions() {
+    ActionAnalysis::FieldActionsMap field_actions_map;
+    ActionAnalysis::ContainerActionsMap container_actions_map;
+
     for (auto action : Values(tbl->actions)) {
-        action->apply(ArgumentAnalyzer(phv, use, alloc_done));
+        field_actions_map.clear();
+        container_actions_map.clear();
+
+        ActionAnalysis aa(phv, alloc_done, false, tbl);
+        aa.set_field_actions_map(&field_actions_map);
+        aa.set_container_actions_map(&container_actions_map);
+
+        action->apply(aa);
+
+        if (!alloc_done)
+            create_placement_non_phv(field_actions_map, action->name);
+        else
+            create_placement_phv(container_actions_map, action->name);
     }
 
     setup_action_counts(false);
@@ -368,7 +284,7 @@ void ActionFormat::setup_action_counts(bool immediate) {
                 }
             }
             if (odd_container_size)
-                BUG("What happened here?");
+                BUG("What happened here? %d", container.size);
             index++;
         }
         // Analysis of the ACI

@@ -155,7 +155,8 @@ class PhvInfo : public Inspector {
         friend class CollectGatewayFields;    // mau/gateway
         friend class MauAsmOutput;            // mau/asm_output
         friend class IXBarRealign;            // mau/ixbar_realign
-        friend class InstructionAdjustment;   // mau/instruction_adjustment
+        friend class ActionAnalysis;          // mau/action_analysis
+        friend class MergeInstructions;       // mau/instruction_adjustment
         //
         friend void alloc_pov(PhvInfo::Field *i, PhvInfo::Field *pov);
         friend void repack_metadata(PhvInfo &phv);
