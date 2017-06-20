@@ -163,7 +163,12 @@ void ActionFormat::create_placement_non_phv(ActionAnalysis::FieldActionsMap &fie
                     data_location.setrange(0, diff);
                 }
                 ActionDataPlacement adp;
-                auto arg_name = read.expr->to<IR::ActionArg>()->name;
+                cstring arg_name;
+                if (auto *sl = read.expr->to<IR::Slice>())
+                    arg_name = sl->e0->to<IR::ActionArg>()->name;
+                else
+                    arg_name = read.expr->to<IR::ActionArg>()->name;
+
                 adp.arg_locs.emplace_back(arg_name, data_location, 0, single_loc);
                 adp.size = container_size;
                 adp.range = data_location;

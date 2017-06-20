@@ -213,6 +213,8 @@ bool ActionAnalysis::verify_phv_read_instr(const ActionParam &write, const Actio
 
     PhvInfo::Field::bitrange read_range;
     PhvInfo::Field::bitrange write_range;
+
+
     auto *read_field = phv.field(read.expr, &read_range);
     auto *write_field = phv.field(write.expr, &write_range);
 
@@ -225,6 +227,7 @@ bool ActionAnalysis::verify_phv_read_instr(const ActionParam &write, const Actio
     PHV::Container read_container;
     read_field->foreach_alloc(read_range, [&](const PhvInfo::Field::alloc_slice &alloc) {
         read_count++;
+        BUG_CHECK(alloc.container_bit >= 0, "Invalid negative container bit");
         read_bits.setrange(alloc.container_bit, alloc.width);
         read_container = alloc.container;
     });
@@ -236,6 +239,7 @@ bool ActionAnalysis::verify_phv_read_instr(const ActionParam &write, const Actio
     int write_count = 0;
     write_field->foreach_alloc(write_range, [&](const PhvInfo::Field::alloc_slice &alloc) {
         write_count++;
+        BUG_CHECK(alloc.container_bit >= 0, "Invalid negative container bit");
         write_bits.setrange(alloc.container_bit, alloc.width);
     });
 
@@ -296,6 +300,7 @@ bool ActionAnalysis::verify_action_data_instr(const ActionParam &write, const Ac
 
     write_field->foreach_alloc(write_range, [&](const PhvInfo::Field::alloc_slice &alloc) {
         write_count++;
+        BUG_CHECK(alloc.container_bit >= 0, "Invalid negative container bit");
         write_bits.setrange(alloc.container_bit, alloc.width);
     });
 
@@ -350,6 +355,7 @@ void ActionAnalysis::action_data_align(const ActionParam &write, ContainerAction
     auto *write_field = phv.field(write.expr, &write_range);
     write_field->foreach_alloc(write_range, [&](const PhvInfo::Field::alloc_slice &alloc) {
         write_count++;
+        BUG_CHECK(alloc.container_bit >= 0, "Invalid negative container bit");
         write_bits.setrange(alloc.container_bit, alloc.width);
     });
 

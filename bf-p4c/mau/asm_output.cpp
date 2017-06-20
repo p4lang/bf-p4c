@@ -705,12 +705,8 @@ class MauAsmOutput::EmitAction : public Inspector {
     indent_t                    indent;
     const char                  *sep = nullptr;
     std::map<cstring, cstring>  alias;
-    bool                        sliced = false;
     cstring                     act_name;
-    int                         lo = -1;
-    int                         hi = -1;
     bool                        is_empty;
-    cstring                     mo_name;
 
     bool preorder(const IR::MAU::Action *act) override {
         act_name = act->name;
@@ -748,29 +744,57 @@ class MauAsmOutput::EmitAction : public Inspector {
         out << indent << "- " << inst->name;
         sep = " ";
         is_empty = false;
-        mo_name = "";
         return true; }
     /** With instructions now over potential slices, must keep this information passed
      *  down through the entirety of the action pass
      */
     bool preorder(const IR::MAU::MultiOperand *mo) override {
          out << sep << mo->name;
-         if (sliced)
-             out << "(" << lo << ".." << hi << ")";
-         if (!mo->is_phv)
-             mo_name = mo->name;
          sep = ", ";
          return false;
     }
-
+    void handle_phv_expr(const IR::Expression *expr) {
+        if (sep) {
+            PhvInfo::Field::bitrange bits;
+            if (auto field = self.phv.field(expr, &bits)) {
+                out << sep << canon_name(field->name);
+                int count = 0;
+                field->foreach_alloc(bits, [&](const PhvInfo::Field::alloc_slice &) {
+                    count++;
+                });
+                if (count == 1) {
+                    bool single_loc = (field->alloc_i.size() == 1);
+                    field->foreach_alloc([&](const PhvInfo::Field::alloc_slice &alloc) {
+                        if (!(alloc.field_bit <= bits.lo && alloc.field_hi() >= bits.hi))
+                            return;
+                        if (!single_loc)
+                            out << "." << alloc.field_bit << "-" << alloc.field_hi();
+                        if (bits.lo > alloc.field_bit || bits.hi < alloc.field_hi())
+                            out << "(" << bits.lo << ".." << bits.hi << ")";
+                    });
+                }
+            } else {
+                ERROR(expr << " does not have a PHV allocation though it is used in an action");
+                out << sep;
+            }
+            sep = ", ";
+        } else {
+            out << indent << "# " << *expr << std::endl;
+        }
+    }
     bool preorder(const IR::Slice *sl) override {
         assert(sep);
-        sliced = true;
-        lo = sl->e2->to<IR::Constant>()->asInt();
-        hi = sl->e1->to<IR::Constant>()->asInt();
+        if (self.phv.field(sl)) {
+            handle_phv_expr(sl);
+            return false;
+        }
         visit(sl->e0);
-        sep = ", ";
-        sliced = false;
+        if (sl->e0->is<IR::ActionArg>()) {
+            out << "." << sl->getL() << "-" << sl->getH();
+        // Eventually just shouldn't slice constants but make separate constants
+        } else if (sl->e0->is<IR::Constant>() == false) {
+            out << "(" << sl->getL() << ".." << sl->getH() << ")";
+        }
         return false;
     }
     bool preorder(const IR::Constant *c) override {
@@ -788,8 +812,6 @@ class MauAsmOutput::EmitAction : public Inspector {
     bool preorder(const IR::ActionArg *a) override {
         assert(sep);
         out << sep << a->toString();
-        if (sliced)
-            out << "." << lo << "-" << hi;
         sep = ", ";
         return false; }
     bool preorder(const IR::MAU::SaluReg *r) override {
@@ -842,27 +864,7 @@ class MauAsmOutput::EmitAction : public Inspector {
     }
     bool preorder(const IR::Cast *c) override { visit(c->expr); return false; }
     bool preorder(const IR::Expression *exp) override {
-        if (sep) {
-            PhvInfo::Field::bitrange bits;
-            if (auto field = self.phv.field(exp, &bits)) {
-                out << sep << canon_name(field->name);
-                if (sliced) {
-                    for (auto &alloc : field->alloc_i) {
-                        if (alloc.field_bit <= lo && alloc.field_hi() >= hi) {
-                            out << '.' << alloc.field_bit << "-" << alloc.field_hi();
-                            if (lo > alloc.field_bit || hi < alloc.field_hi())
-                                out << "(" << lo << ".." << hi << ")";
-                        }
-                    }
-                }
-            } else {
-                ERROR(exp << " does not have a PHV allocation though it is used in an action");
-                out << sep;
-            }
-            sep = ", ";
-        } else {
-            out << indent << "# " << *exp << std::endl;
-        }
+        handle_phv_expr(exp);
         return false;
     }
     bool preorder(const IR::Node *n) override { BUG("Unexpected node %s in EmitAction", n); }
