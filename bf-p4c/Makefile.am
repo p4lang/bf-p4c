@@ -179,6 +179,8 @@ ir_DEF_FILES += \
     $(srcdir)/%reldir%/ir/parde.def
 
 p4include_HEADERS += $(srcdir)/%reldir%/p4include/tofino_model.p4
+	$(srcdir)/%reldir%/p4include/tofino.p4 \
+	$(srcdir)/%reldir%/p4include/constants.p4
 p4include_tofinodir = $(p4includedir)/tofino
 p4include_tofino_HEADERS = \
     $(srcdir)/%reldir%/p4include/tofino/stateful_alu.p4

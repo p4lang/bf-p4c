@@ -23,7 +23,9 @@
 #include "tofinoOptions.h"
 #include "version.h"
 
+
 int main(int ac, char **av) {
+    vector<cstring> supported_arch = { "tofino-v1model-barefoot", "tofino-native-barefoot" };
     setup_gc_logging();
     setup_signals();
 
@@ -37,8 +39,9 @@ int main(int ac, char **av) {
         return 1;
     options.preprocessor_options += " -D__TARGET_TOFINO__";
 
-    if (options.target != "tofino") {
-        error("only supported target is 'tofino'");
+    auto it = std::find(supported_arch.begin(), supported_arch.end(), options.target);
+    if (it == supported_arch.end()) {
+        error("target '%s' not supported", options.target);
         return 1; }
 
     auto program = P4::parseP4File(options, new Tofino::ExternConverter);

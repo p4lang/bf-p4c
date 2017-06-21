@@ -15,8 +15,9 @@ IR::Member *InstructionSelection::gen_stdmeta(cstring field) {
     // FIXME -- this seems like an ugly hack -- need to make it match up to the
     // names created by CreateThreadLocalInstances.  Should have a better way of getting
     // a handle on the standard metadata.
-    auto *std_meta = findContext<IR::Tofino::Pipe>()->standard_metadata->clone();
-    std_meta->name = IR::ID(cstring::to_cstring(VisitingThread(this)) + "::" + std_meta->name);
+    auto gress = VisitingThread(this);
+    auto *std_meta = findContext<IR::Tofino::Pipe>()->thread[gress].in_metadata->clone();
+    std_meta->name = IR::ID(cstring::to_cstring(gress) + "::" + std_meta->name);
     if (auto f = std_meta->type->getField(field))
         return new IR::Member(f->type, new IR::ConcreteHeaderRef(std_meta), field);
     else

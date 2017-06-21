@@ -148,7 +148,7 @@ if $debug; then
     P4C=./p4c-tofino
     P4C_ARGS="$P4C_ARGS -D__TARGET_TOFINO__"
 else
-    P4C_ARGS="$P4C_ARGS --target tofino-native-barefoot"
+    P4C_ARGS="$P4C_ARGS --target tofino-v1model-barefoot"
 fi
 if [ $(expr "$file" : ".*v1_2") -gt 0 -o $(expr "$file" : ".*p4_16") -gt 0 ]; then
     if $debug; then

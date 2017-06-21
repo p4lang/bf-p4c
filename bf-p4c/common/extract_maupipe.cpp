@@ -484,18 +484,8 @@ class ConvertIndexToHeaderStackItemRef : public Transform {
         return new IR::HeaderStackItemRef(idx->srcInfo, type, idx->left, idx->right); }
 };
 
-const IR::Tofino::Pipe *extract_maupipe(const IR::P4Program *program, Tofino_Options &options) {
-    P4::ReferenceMap  refMap;
-    P4::TypeMap       typeMap;
-    refMap.setIsV1(options.isv1());
-    P4::EvaluatorPass evaluator(&refMap, &typeMap);
-    program = program->apply(evaluator);
-    auto toplevel = evaluator.getToplevelBlock();
-    auto top = toplevel->getMain();
-    if (!top) {
-        error("No main switch");
-        return nullptr; }
-
+const IR::Tofino::Pipe* extract_v1model_arch(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
+                                             const IR::PackageBlock* top) {
     auto parser_blk = top->getParameterValue("p");
     auto parser = parser_blk->to<IR::ParserBlock>()->container;
     auto ingress_blk = top->getParameterValue("ig");
@@ -512,7 +502,7 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::P4Program *program, Tofino_Opt
 
     auto rv = new IR::Tofino::Pipe();
 
-    ParamBinding bindings(&refMap, &typeMap);
+    ParamBinding bindings(refMap, typeMap);
 
     for (auto param : *parser->type->applyParams->getEnumerator())
         bindings.bind(param);
@@ -524,8 +514,11 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::P4Program *program, Tofino_Opt
         bindings.bind(param);
 
     auto it = ingress->type->applyParams->parameters.rbegin();
-    rv->standard_metadata =
+    // hanw: all map to standard_metadata
+    rv->thread[INGRESS].in_metadata = rv->thread[INGRESS].out_metadata =
+    rv->thread[EGRESS].in_metadata = rv->thread[EGRESS].out_metadata =
         bindings.get(*it)->obj->to<IR::Metadata>();
+
     PassManager fixups = {
         &bindings,
         new SplitComplexInstanceRef,
@@ -551,14 +544,124 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::P4Program *program, Tofino_Opt
         rv->thread[EGRESS].deparser = new IR::Tofino::Deparser(EGRESS, eg_parser);
 
     // ingress = ingress->apply(InlineControlFlow(blockMap));
-    ingress->apply(GetTofinoTables(&refMap, &typeMap, INGRESS, rv));
+    ingress->apply(GetTofinoTables(refMap, typeMap, INGRESS, rv));
     // egress = egress->apply(InlineControlFlow(blockMap));
-    egress->apply(GetTofinoTables(&refMap, &typeMap, EGRESS, rv));
+    egress->apply(GetTofinoTables(refMap, typeMap, EGRESS, rv));
 
     // AttachTables...
-    AttachTables toAttach(&refMap);
+    AttachTables toAttach(refMap);
     for (auto &th : rv->thread)
         th.mau = th.mau->apply(toAttach);
 
     return rv->apply(fixups);
+}
+
+const IR::Tofino::Pipe* extract_native_arch(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
+                                            const IR::PackageBlock* top) {
+    auto ingress_parser_blk = top->getParameterValue("ingress_parser");
+    auto ingress_parser = ingress_parser_blk->to<IR::ParserBlock>()->container;
+    auto ingress_blk = top->getParameterValue("ingress");
+    auto ingress = ingress_blk->to<IR::ControlBlock>()->container;
+    auto ingress_deparser_blk = top->getParameterValue("ingress_deparser");
+    auto ingress_deparser = ingress_deparser_blk->to<IR::ControlBlock>()->container;
+    auto egress_parser_blk = top->getParameterValue("egress_parser");
+    auto egress_parser = egress_parser_blk->to<IR::ParserBlock>()->container;
+    auto egress_blk = top->getParameterValue("egress");
+    auto egress = egress_blk->to<IR::ControlBlock>()->container;
+    auto egress_deparser_blk = top->getParameterValue("egress_deparser");
+    auto egress_deparser = egress_deparser_blk->to<IR::ControlBlock>()->container;
+
+    LOG1("in_parser:" << ingress_parser);
+    LOG1("ingress:" << ingress);
+    LOG1("in_deparser:" << ingress_deparser);
+    LOG1("eg_parser:" << egress_parser);
+    LOG1("egress:" << egress);
+    LOG1("eg_deparser:" << egress_deparser);
+
+    auto rv = new IR::Tofino::Pipe();
+
+    ParamBinding bindings(refMap, typeMap);
+    for (auto param : *ingress_parser->type->applyParams->getEnumerator())
+        bindings.bind(param);
+    for (auto param : *ingress->type->applyParams->getEnumerator())
+        bindings.bind(param);
+    for (auto param : *ingress_deparser->type->applyParams->getEnumerator())
+        bindings.bind(param);
+    for (auto param : *egress_parser->type->applyParams->getEnumerator())
+        bindings.bind(param);
+    for (auto param : *egress->type->applyParams->getEnumerator())
+        bindings.bind(param);
+    for (auto param : *egress_deparser->type->applyParams->getEnumerator())
+        bindings.bind(param);
+
+    // ingress_input_metadata at position 1
+    auto it = ingress->type->applyParams->parameters.at(1);
+    rv->thread[INGRESS].in_metadata =
+        bindings.get(it)->obj->to<IR::Metadata>();
+
+    // ingress_output_metadata at position 2
+    it = ingress->type->applyParams->parameters.at(2);
+    rv->thread[INGRESS].out_metadata =
+        bindings.get(it)->obj->to<IR::Metadata>();
+
+    // egress_input_metadata at position 1
+    it = egress->type->applyParams->parameters.at(1);
+    rv->thread[EGRESS].in_metadata =
+        bindings.get(it)->obj->to<IR::Metadata>();
+
+    // egress_output_metadata at position 2
+    it = egress->type->applyParams->parameters.at(2);
+    rv->thread[EGRESS].out_metadata =
+        bindings.get(it)->obj->to<IR::Metadata>();
+
+    PassManager fixups = {
+        &bindings,
+        new SplitComplexInstanceRef,
+        new RemoveInstanceRef,
+        new ConvertIndexToHeaderStackItemRef,
+        new RewriteForTofino,
+    };
+    ingress_parser = ingress_parser->apply(fixups);
+    ingress = ingress->apply(fixups);
+    ingress_deparser = ingress_deparser->apply(fixups);
+    egress_parser = egress_parser->apply(fixups);
+    egress = egress->apply(fixups);
+    egress_deparser = egress_deparser->apply(fixups);
+
+    auto parserInfo = Tofino::extractParser(&ingress_parser->as<IR::P4Parser>());
+    rv->thread[INGRESS].parser = parserInfo.parser(INGRESS);
+    rv->thread[INGRESS].deparser = new IR::Tofino::Deparser(INGRESS, ingress_deparser);
+    rv->thread[EGRESS].parser = parserInfo.parser(EGRESS);
+    rv->thread[EGRESS].deparser = new IR::Tofino::Deparser(EGRESS, egress_deparser);
+
+    ingress->apply(GetTofinoTables(refMap, typeMap, INGRESS, rv));
+    egress->apply(GetTofinoTables(refMap, typeMap, EGRESS, rv));
+
+    AttachTables toAttach(refMap);
+    for (auto &th : rv->thread)
+        th.mau = th.mau->apply(toAttach);
+
+    return rv->apply(fixups);
+}
+
+const IR::Tofino::Pipe *extract_maupipe(const IR::P4Program *program, Tofino_Options &options) {
+    P4::ReferenceMap  refMap;
+    P4::TypeMap       typeMap;
+    refMap.setIsV1(options.isv1());
+    P4::EvaluatorPass evaluator(&refMap, &typeMap);
+    program = program->apply(evaluator);
+    auto toplevel = evaluator.getToplevelBlock();
+    auto top = toplevel->getMain();
+    if (!top) {
+        error("No main switch");
+        return nullptr; }
+
+    if (options.target == "tofino-v1model-barefoot") {
+        return extract_v1model_arch(&refMap, &typeMap, top);
+    }
+    if (options.target == "tofino-native-barefoot") {
+        return extract_native_arch(&refMap, &typeMap, top);
+    }
+    error("Unknown architecture %s", options.target);
+    return nullptr;
 }
