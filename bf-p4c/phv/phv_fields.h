@@ -124,6 +124,7 @@ class PhvInfo : public Inspector {
         int container_bytes(bitrange bits = {0, -1}) const;
         //
         const alloc_slice &for_bit(int bit) const;
+        //
         void foreach_alloc(int lo, int hi, std::function<void(const alloc_slice &)> fn) const;
         void foreach_alloc(std::function<void(const alloc_slice &)> fn) const {
             foreach_alloc(0, size-1, fn); }
@@ -131,6 +132,7 @@ class PhvInfo : public Inspector {
             foreach_alloc(r.lo, r.hi, fn); }
         void foreach_alloc(const bitrange *r, std::function<void(const alloc_slice &)> fn) const {
             foreach_alloc(r ? r->lo : 0, r ? r->hi : size-1, fn); }
+        //
         void foreach_byte(int lo, int hi, std::function<void(const alloc_slice &)> fn) const;
         void foreach_byte(std::function<void(const alloc_slice &)> fn) const {
             foreach_byte(0, size-1, fn); }

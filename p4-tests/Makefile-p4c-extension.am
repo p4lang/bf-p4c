@@ -290,7 +290,7 @@ XFAIL_TESTS += \
     tofino/%reldir%/p4_16/stack_valid.p4.test
 
 # Failure due to needing complex deposit-field to merge two values into a container
-XFAIL_TESTS += tofino/testdata/p4_14_samples/instruct5.p4.test
+# XFAIL_TESTS += tofino/testdata/p4_14_samples/instruct5.p4.test -- git #257
 
 # error -- container allocated to both INGRESS and EGRESS
 XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_88_testing_action_data_allocation_3.p4.test
@@ -472,14 +472,7 @@ XFAIL_TESTS += \
 # BRIG-124
 XFAIL_TESTS += tofino/testdata/p4_16_samples/issue510-bmv2.p4.test
 
-# BRIG-128
-XFAIL_TESTS += \ 
-		tofino/%reldir%/p4_14/test_config_151_action_bus_allocation_2.p4.test \
-		tofino/%reldir%/p4_14/test_config_222_small_tag_stack.p4.test \
-		tofino/%reldir%/p4_14/test_config_23_same_container_modified.p4.test \
-		tofino/%reldir%/p4_14/test_config_93_push_and_pop.p4.test \
-		tofino/testdata/p4_14_samples/instruct6.p4.test \
-		tofino/%reldir%/p4_14/test_config_90_testing_action_data_allocation_3_with_fields_in_overhead.p4.test
+# BRIG-128 -- fixed git #257
 
 # BRIG-129
 XFAIL_TESTS += \

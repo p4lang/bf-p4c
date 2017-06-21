@@ -120,16 +120,37 @@ void PhvInfo::Field::foreach_alloc(int lo, int hi,
     while (it != alloc_i.rend() && (it->container.tagalong() || it->field_hi() < lo)) ++it;
     if (it != alloc_i.rend() && it->field_bit != lo) {
         if (it->field_bit >= lo) {
-            LOG1("**********" << " field = " << this);
+            LOG1("********** phv_fields.cpp:sanity_FAIL **********"
+                << ".....field_bit in alloc_slice not less than lo....."
+                << " field_bit = " << it->field_bit
+                << " container_bit = " << it->container_bit
+                << " width = " << it->width
+                << " lo = " << lo
+                << std::endl
+                << " field = " << this
+                << " container = " << it->container.kind() << it->container.index());
+            BUG("phv_fields.cpp:foreach_alloc(): field_bit in alloc_slice not less than lo");
         }
-        assert(it->field_bit < lo);
         tmp = *it;
-        tmp.container_bit += it->field_bit - lo;
+        tmp.container_bit += abs(it->field_bit - lo);
+        if (tmp.container_bit < 0) {
+            LOG1("********** phv_fields.cpp:sanity_FAIL **********"
+                << ".....container_bit negative in alloc_slice....."
+                << " field_bit = " << it->field_bit
+                << " container_bit = " << it->container_bit
+                << " width = " << it->width
+                << " lo = " << lo
+                << " tmp.container_bit = " << tmp.container_bit
+                << std::endl
+                << " field = " << this
+                << " container = " << it->container.kind() << it->container.index());
+            BUG("phv_fields.cpp:foreach_alloc(): container_bit negative in alloc_slice");
+        }
         tmp.field_bit = lo;
         if (it->field_hi() > hi)
             tmp.width = hi - lo + 1;
         else
-            tmp.width -= it->field_bit - lo;
+            tmp.width -= abs(it->field_bit - lo);
         fn(tmp);
         ++it; }
     while (it != alloc_i.rend() && it->field_bit <= hi) {
@@ -171,13 +192,21 @@ void PhvInfo::Field::foreach_byte(int lo, int hi,
                     tmp.width -= chi - (cbyte*8+7);
             } else {
                 int byte_hi = std::min(chi, cbyte*8+7);
-                if (byte_hi <= tmp.container_hi()) {
-                    LOG1("**********"
-                        << " field = " << name
+                if (byte_hi < tmp.container_hi()) {
+                    LOG1("********** phv_fields.cpp:sanity_FAIL **********"
+                        << ".....byte_hi <= container_hi....."
                         << " byte_hi = " << byte_hi
-                        << " tmp.container_hi = " << tmp.container_hi());
+                        << " tmp.container_hi = " << tmp.container_hi()
+                        << " field_bit = " << it->field_bit
+                        << " container_bit = " << it->container_bit
+                        << " width = " << it->width
+                        << " lo = " << lo
+                        << " tmp.container_bit = " << tmp.container_bit
+                        << std::endl
+                        << " field = " << this
+                        << " container = " << it->container.kind() << it->container.index());
+                    BUG("phv_fields.cpp:foreach_byte(): byte_hi < container_hi");
                 }
-                assert(byte_hi >= tmp.container_hi());
                 if (byte_hi > tmp.container_hi())
                     tmp.width += byte_hi - tmp.container_hi();
                 assert(tmp.width <= 8); } }
