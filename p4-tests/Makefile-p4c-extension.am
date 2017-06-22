@@ -490,7 +490,7 @@ XFAIL_TESTS += \
 		tofino/%reldir%/p4_14/test_config_169_stateful_sflow_sequence.p4.test \
 		tofino/%reldir%/p4_14/test_config_184_stateful_bug1.p4.test \
 		tofino/%reldir%/p4_14/test_config_192_stateful_driven_by_hash.p4.test \
-		tofino/%reldir%/p4_14/test_config_195_stateful_predicate.p4.test \
+		tofino/%reldir%/p4_14/test_config_195_stateful_predicate_output.p4.test \
 		tofino/%reldir%/p4_14/test_config_199_stateful_constant_index.p4.test \
 		tofino/%reldir%/p4_14/test_config_236_stateful_read_bit.p4.test
 
