@@ -158,18 +158,18 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_ethernet") state parse_ethernet {
+    @name(".parse_ethernet") state parse_ethernet {
         packet.extract<ethernet_t>(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
             16w0x800: parse_ipv4;
             default: accept;
         }
     }
-    @name("parse_ipv4") state parse_ipv4 {
+    @name(".parse_ipv4") state parse_ipv4 {
         packet.extract<ipv4_t>(hdr.ipv4);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_ethernet;
     }
 }
@@ -189,7 +189,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".action_3") action action_3() {
         hdr.ipv4.identification = 16w4;
     }
-    @name("table_0") table table_0 {
+    @name(".table_0") table table_0 {
         actions = {
             action_0();
             do_nothing();
@@ -202,7 +202,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         max_size = 1024;
         default_action = NoAction();
     }
-    @name("table_1") table table_1 {
+    @name(".table_1") table table_1 {
         actions = {
             action_1();
             do_nothing();
@@ -215,7 +215,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         max_size = 16384;
         default_action = NoAction();
     }
-    @name("table_2") table table_2 {
+    @name(".table_2") table table_2 {
         actions = {
             action_2();
             do_nothing();
@@ -228,7 +228,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         max_size = 4096;
         default_action = NoAction();
     }
-    @name("table_3") table table_3 {
+    @name(".table_3") table table_3 {
         actions = {
             action_3();
             @defaultonly NoAction();

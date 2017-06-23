@@ -165,7 +165,7 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("p_hdr0") state p_hdr0 {
+    @name(".p_hdr0") state p_hdr0 {
         packet.extract<hdr0_t>(hdr.hdr0);
         transition select(hdr.hdr0.c) {
             8w0: p_hdr1;
@@ -173,15 +173,15 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
             default: noMatch;
         }
     }
-    @name("p_hdr1") state p_hdr1 {
+    @name(".p_hdr1") state p_hdr1 {
         packet.extract<hdr1_t>(hdr.hdr1);
         transition p_hdr2;
     }
-    @name("p_hdr2") state p_hdr2 {
+    @name(".p_hdr2") state p_hdr2 {
         packet.extract<hdr2_t>(hdr.hdr2);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition p_hdr0;
     }
     state noMatch {
@@ -198,7 +198,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name(".action_1") action action_2() {
         hdr.hdr2.a = hdr.hdr2.a + hdr.eg_intr_md.pkt_length;
     }
-    @name("table_e0") table table_e0 {
+    @name(".table_e0") table table_e0 {
         actions = {
             do_nothing_0();
             action_2();
@@ -228,7 +228,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.meta.y = py;
         meta.meta.z = pz;
     }
-    @name("table_i0") table table_i0 {
+    @name(".table_i0") table table_i0 {
         actions = {
             do_nothing_1();
             action_3();

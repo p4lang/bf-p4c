@@ -33,17 +33,17 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("start") state start {
+    @name(".start") state start {
         packet.extract(hdr.data);
         transition accept;
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("meter_1") meter(32w12000, MeterType.bytes) meter_1;
-    @name("meter_2") meter(32w1024, MeterType.bytes) meter_2;
-    @name("meter_3") meter(32w6000, MeterType.bytes) meter_3;
-    @name("meter_4") meter(32w1024, MeterType.bytes) meter_4;
+    @name(".meter_1") meter(32w12000, MeterType.bytes) meter_1;
+    @name(".meter_2") meter(32w1024, MeterType.bytes) meter_2;
+    @name(".meter_3") meter(32w6000, MeterType.bytes) meter_3;
+    @name(".meter_4") meter(32w1024, MeterType.bytes) meter_4;
     @name(".h1_3") action h1_3(bit<16> val1, bit<16> val2, bit<16> val3) {
         hdr.data.h1 = val1;
         hdr.data.h2 = val2;
@@ -68,7 +68,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.data.h12 = val12;
         meter_4.execute_meter((bit<32>)32w7, hdr.data.color_4);
     }
-    @name("test1") table test1 {
+    @name(".test1") table test1 {
         actions = {
             h1_3;
         }
@@ -77,7 +77,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 6000;
     }
-    @name("test2") table test2 {
+    @name(".test2") table test2 {
         actions = {
             h4_6;
         }
@@ -86,7 +86,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 10000;
     }
-    @name("test3") table test3 {
+    @name(".test3") table test3 {
         actions = {
             h7_9;
         }
@@ -95,7 +95,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 1000;
     }
-    @name("test4") table test4 {
+    @name(".test4") table test4 {
         actions = {
             h10_12;
         }

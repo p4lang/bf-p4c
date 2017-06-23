@@ -19,23 +19,23 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("start") state start {
+    @name(".start") state start {
         packet.extract<data_t>(hdr.data);
         transition accept;
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("cnt") direct_counter(CounterType.packets) cnt_0;
-    @name("cnt2") direct_counter(CounterType.bytes) cnt2_0;
-    @name("cnt3") direct_counter(CounterType.packets) cnt3_0;
-    @name("cnt4") direct_counter(CounterType.bytes) cnt4_0;
+    @name(".cnt") direct_counter(CounterType.packets) cnt_0;
+    @name(".cnt2") direct_counter(CounterType.bytes) cnt2_0;
+    @name(".cnt3") direct_counter(CounterType.packets) cnt3_0;
+    @name(".cnt4") direct_counter(CounterType.bytes) cnt4_0;
     @name(".c1_2") action c1_2(bit<8> val1, bit<8> val2) {
         cnt_0.count();
         hdr.data.c1 = val1;
         hdr.data.c2 = val2;
     }
-    @name("test1") table test1_0 {
+    @name(".test1") table test1_0 {
         actions = {
             c1_2();
             @defaultonly NoAction();
@@ -43,7 +43,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         key = {
             hdr.data.f1: exact @name("hdr.data.f1") ;
         }
-        @name("cnt") counters = direct_counter(CounterType.packets);
+        @name(".cnt") counters = direct_counter(CounterType.packets);
         default_action = NoAction();
     }
     @name(".c3_4") action c3_4(bit<8> val3, bit<8> val4, bit<9> port) {
@@ -52,7 +52,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.data.c4 = val4;
         standard_metadata.egress_spec = port;
     }
-    @name("test2") table test2_0 {
+    @name(".test2") table test2_0 {
         actions = {
             c3_4();
             @defaultonly NoAction();
@@ -61,7 +61,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.f2: exact @name("hdr.data.f2") ;
         }
         size = 1024;
-        @name("cnt3") counters = direct_counter(CounterType.packets);
+        @name(".cnt3") counters = direct_counter(CounterType.packets);
         default_action = NoAction();
     }
     apply {

@@ -201,14 +201,14 @@ extern stateful_alu {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_ethernet") state parse_ethernet {
+    @name(".parse_ethernet") state parse_ethernet {
         packet.extract(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
             16w0x800: parse_ipv4;
             default: accept;
         }
     }
-    @name("parse_ipv4") state parse_ipv4 {
+    @name(".parse_ipv4") state parse_ipv4 {
         packet.extract(hdr.ipv4);
         transition select(hdr.ipv4.protocol) {
             8w0x6: parse_tcp;
@@ -216,23 +216,23 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
             default: accept;
         }
     }
-    @name("parse_tcp") state parse_tcp {
+    @name(".parse_tcp") state parse_tcp {
         packet.extract(hdr.tcp);
         transition accept;
     }
-    @name("parse_udp") state parse_udp {
+    @name(".parse_udp") state parse_udp {
         packet.extract(hdr.udp);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_ethernet;
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("bloom_filter_1") register<bit<1>>(32w262144) bloom_filter_1;
-    @name("bloom_filter_2") register<bit<1>>(32w262144) bloom_filter_2;
-    @name("bloom_filter_3") register<bit<1>>(32w262144) bloom_filter_3;
+    @name(".bloom_filter_1") register<bit<1>>(32w262144) bloom_filter_1;
+    @name(".bloom_filter_2") register<bit<1>>(32w262144) bloom_filter_2;
+    @name(".bloom_filter_3") register<bit<1>>(32w262144) bloom_filter_3;
     stateful_alu() bloom_filter_alu_1;
     stateful_alu() bloom_filter_alu_2;
     stateful_alu() bloom_filter_alu_3;
@@ -259,13 +259,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".set_hash_3") action set_hash_3() {
         hash(meta.meta.hash_3, HashAlgorithm.identity, (bit<18>)0, { hdr.ipv4.srcAddr, hdr.ipv4.dstAddr, hdr.tcp.srcPort }, (bit<36>)262144);
     }
-    @name("bloom_filter_membership_1") table bloom_filter_membership_1 {
+    @name(".bloom_filter_membership_1") table bloom_filter_membership_1 {
         actions = {
             run_bloom_filter_1;
         }
         size = 262144;
     }
-    @name("bloom_filter_membership_2") table bloom_filter_membership_2 {
+    @name(".bloom_filter_membership_2") table bloom_filter_membership_2 {
         actions = {
             run_bloom_filter_2;
         }
@@ -274,7 +274,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 262144;
     }
-    @name("bloom_filter_membership_3") table bloom_filter_membership_3 {
+    @name(".bloom_filter_membership_3") table bloom_filter_membership_3 {
         actions = {
             run_bloom_filter_3;
         }
@@ -283,7 +283,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 262144;
     }
-    @name("react") table react {
+    @name(".react") table react {
         actions = {
             drop_me;
             do_nothing;
@@ -292,19 +292,19 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.meta.is_not_member: exact;
         }
     }
-    @name("set_hash_1_tbl") table set_hash_1_tbl {
+    @name(".set_hash_1_tbl") table set_hash_1_tbl {
         actions = {
             set_hash_1;
         }
         size = 256;
     }
-    @name("set_hash_2_tbl") table set_hash_2_tbl {
+    @name(".set_hash_2_tbl") table set_hash_2_tbl {
         actions = {
             set_hash_2;
         }
         size = 1;
     }
-    @name("set_hash_3_tbl") table set_hash_3_tbl {
+    @name(".set_hash_3_tbl") table set_hash_3_tbl {
         actions = {
             set_hash_3;
         }

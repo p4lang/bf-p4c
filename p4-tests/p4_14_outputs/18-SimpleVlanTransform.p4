@@ -163,11 +163,11 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_vlan_tag") state parse_vlan_tag {
+    @name(".parse_vlan_tag") state parse_vlan_tag {
         packet.extract(hdr.vlan_tag);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         packet.extract(hdr.ethernet);
         transition select(hdr.ethernet.ethertype) {
             16w0x8100: parse_vlan_tag;
@@ -204,27 +204,27 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.meta.new_vid = new_vid;
         meta.meta.new_vid_en = new_vid_en;
     }
-    @name("new_cfi") table new_cfi {
+    @name(".new_cfi") table new_cfi {
         actions = {
             do_new_cfi;
         }
     }
-    @name("new_pri") table new_pri {
+    @name(".new_pri") table new_pri {
         actions = {
             do_new_pri;
         }
     }
-    @name("new_tpid") table new_tpid {
+    @name(".new_tpid") table new_tpid {
         actions = {
             do_new_tpid;
         }
     }
-    @name("new_vid") table new_vid {
+    @name(".new_vid") table new_vid {
         actions = {
             do_new_vid;
         }
     }
-    @name("vlan_xlate") table vlan_xlate {
+    @name(".vlan_xlate") table vlan_xlate {
         actions = {
             rewrite_tag;
         }

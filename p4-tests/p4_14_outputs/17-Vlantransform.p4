@@ -166,19 +166,19 @@ struct headers {
     generator_metadata_t_0                         ig_pg_md;
     @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_prsr_ctrl") @name("ig_prsr_ctrl") 
     ingress_parser_control_signals                 ig_prsr_ctrl;
-    @name("vlan_tag") 
+    @name(".vlan_tag") 
     vlan_tag_t[2]                                  vlan_tag;
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_vlan_tag") state parse_vlan_tag {
+    @name(".parse_vlan_tag") state parse_vlan_tag {
         packet.extract(hdr.vlan_tag.next);
         transition select(hdr.vlan_tag.last.ethertype) {
             16w0x8100: parse_vlan_tag;
             default: accept;
         }
     }
-    @name("start") state start {
+    @name(".start") state start {
         packet.extract(hdr.ethernet);
         transition select(hdr.ethernet.ethertype) {
             16w0x8100: parse_vlan_tag;
@@ -237,47 +237,47 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.meta.new_inner_vid = new_inner_vid;
         meta.meta.new_inner_vid_en = new_inner_vid_en;
     }
-    @name("new_inner_cfi") table new_inner_cfi {
+    @name(".new_inner_cfi") table new_inner_cfi {
         actions = {
             do_new_inner_cfi;
         }
     }
-    @name("new_inner_pri") table new_inner_pri {
+    @name(".new_inner_pri") table new_inner_pri {
         actions = {
             do_new_inner_pri;
         }
     }
-    @name("new_inner_tpid") table new_inner_tpid {
+    @name(".new_inner_tpid") table new_inner_tpid {
         actions = {
             do_new_inner_tpid;
         }
     }
-    @name("new_inner_vid") table new_inner_vid {
+    @name(".new_inner_vid") table new_inner_vid {
         actions = {
             do_new_inner_vid;
         }
     }
-    @name("new_outer_cfi") table new_outer_cfi {
+    @name(".new_outer_cfi") table new_outer_cfi {
         actions = {
             do_new_outer_cfi;
         }
     }
-    @name("new_outer_pri") table new_outer_pri {
+    @name(".new_outer_pri") table new_outer_pri {
         actions = {
             do_new_outer_pri;
         }
     }
-    @name("new_outer_tpid") table new_outer_tpid {
+    @name(".new_outer_tpid") table new_outer_tpid {
         actions = {
             do_new_outer_tpid;
         }
     }
-    @name("new_outer_vid") table new_outer_vid {
+    @name(".new_outer_vid") table new_outer_vid {
         actions = {
             do_new_outer_vid;
         }
     }
-    @name("vlan_xlate") table vlan_xlate {
+    @name(".vlan_xlate") table vlan_xlate {
         actions = {
             nop;
             rewrite_tags;

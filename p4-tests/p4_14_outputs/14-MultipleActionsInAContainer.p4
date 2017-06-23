@@ -157,11 +157,11 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_vlan_tag") state parse_vlan_tag {
+    @name(".parse_vlan_tag") state parse_vlan_tag {
         packet.extract(hdr.vlan_tag);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         packet.extract(hdr.ethernet);
         transition select(hdr.ethernet.ethertype) {
             16w0x8100: parse_vlan_tag;
@@ -186,12 +186,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.vlan_tag.cfi = meta.vtag.cfi;
         hdr.vlan_tag.vid = meta.vtag.vid;
     }
-    @name("t1") table t1 {
+    @name(".t1") table t1 {
         actions = {
             a1;
         }
     }
-    @name("t2") table t2 {
+    @name(".t2") table t2 {
         actions = {
             a2;
         }

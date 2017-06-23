@@ -22,17 +22,17 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_ethernet") state parse_ethernet {
+    @name(".parse_ethernet") state parse_ethernet {
         packet.extract<pkt_t>(hdr.pkt);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_ethernet;
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @lrt_scale(100) @name("counter_0") direct_counter(CounterType.packets_and_bytes) counter_0;
+    @lrt_scale(100) @name(".counter_0") direct_counter(CounterType.packets_and_bytes) counter_0;
     @name(".nop") action nop() {
     }
     @name(".action_0") action action_0(bit<32> param0, bit<8> param1, bit<8> param2, bit<8> param3, bit<8> param4) {
@@ -45,7 +45,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         counter_0.count();
         hdr.pkt.a = param0;
     }
-    @immediate(0) @name("table_0") table table_0 {
+    @immediate(0) @name(".table_0") table table_0 {
         actions = {
             nop_0();
             action_0_0();
@@ -56,7 +56,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.dstPort: ternary @name("hdr.pkt.dstPort") ;
         }
         size = 4096;
-        @name("counter_0") counters = direct_counter(CounterType.packets_and_bytes);
+        @name(".counter_0") counters = direct_counter(CounterType.packets_and_bytes);
         default_action = NoAction();
     }
     apply {

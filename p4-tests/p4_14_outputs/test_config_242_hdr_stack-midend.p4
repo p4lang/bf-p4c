@@ -44,12 +44,12 @@ struct headers {
     hdr1_t     hdr1;
     @name("hdr2") 
     hdr2_t     hdr2;
-    @name("stack") 
+    @name(".stack") 
     stack_t[3] stack;
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("p_hdr0") state p_hdr0 {
+    @name(".p_hdr0") state p_hdr0 {
         packet.extract<hdr0_t>(hdr.hdr0);
         transition select(hdr.hdr0.c) {
             8w0: p_hdr1;
@@ -57,15 +57,15 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
             default: noMatch;
         }
     }
-    @name("p_hdr1") state p_hdr1 {
+    @name(".p_hdr1") state p_hdr1 {
         packet.extract<hdr1_t>(hdr.hdr1);
         transition p_stack;
     }
-    @name("p_hdr2") state p_hdr2 {
+    @name(".p_hdr2") state p_hdr2 {
         packet.extract<hdr2_t>(hdr.hdr2);
         transition accept;
     }
-    @name("p_stack") state p_stack {
+    @name(".p_stack") state p_stack {
         packet.extract<stack_t>(hdr.stack.next);
         transition select(hdr.stack.last.x) {
             4w0: p_stack;
@@ -73,7 +73,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
             default: accept;
         }
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition p_hdr0;
     }
     state noMatch {
@@ -97,7 +97,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".action_1") action action_3(bit<8> p) {
         hdr.stack[1].w = hdr.stack[2].x;
     }
-    @name("table_i0") table table_i0 {
+    @name(".table_i0") table table_i0 {
         actions = {
             do_nothing_0();
             action_2();
@@ -109,7 +109,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_0();
     }
-    @name("table_i1") table table_i1 {
+    @name(".table_i1") table table_i1 {
         actions = {
             do_nothing_2();
             action_3();

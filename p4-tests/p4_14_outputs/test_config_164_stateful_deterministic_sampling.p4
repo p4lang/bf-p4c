@@ -171,24 +171,24 @@ extern stateful_alu {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_ethernet") state parse_ethernet {
+    @name(".parse_ethernet") state parse_ethernet {
         packet.extract(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
             16w0x800: parse_ipv4;
             default: accept;
         }
     }
-    @name("parse_ipv4") state parse_ipv4 {
+    @name(".parse_ipv4") state parse_ipv4 {
         packet.extract(hdr.ipv4);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_ethernet;
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("flow_cnt") register<bit<8>>(32w0) flow_cnt;
+    @name(".flow_cnt") register<bit<8>>(32w0) flow_cnt;
     stateful_alu() sampler_alu;
     @name(".drop_me") action drop_me() {
         mark_to_drop();
@@ -198,7 +198,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".ipv4_fib_hit") action ipv4_fib_hit() {
         sampler_alu.execute_stateful_alu();
     }
-    @name("check_needs") table check_needs {
+    @name(".check_needs") table check_needs {
         actions = {
             drop_me;
             on_miss;
@@ -207,7 +207,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.meta.needs_sampling: exact;
         }
     }
-    @name("ipv4_fib") table ipv4_fib {
+    @name(".ipv4_fib") table ipv4_fib {
         actions = {
             ipv4_fib_hit;
             @defaultonly on_miss;

@@ -150,7 +150,7 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("start") state start {
+    @name(".start") state start {
         packet.extract<ethernet_t>(hdr.ethernet);
         transition accept;
     }
@@ -174,21 +174,21 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".set_ingress_port_props") action set_ingress_port_props_0(bit<1> port_type) {
         meta.ing_metadata.flag = port_type;
     }
-    @name("assign_egress1") table assign_egress1_0 {
+    @name(".assign_egress1") table assign_egress1_0 {
         actions = {
             assign_egress1_action_0();
             @defaultonly NoAction();
         }
         default_action = NoAction();
     }
-    @name("assign_egress2") table assign_egress2_0 {
+    @name(".assign_egress2") table assign_egress2_0 {
         actions = {
             assign_egress2_action_0();
             @defaultonly NoAction();
         }
         default_action = NoAction();
     }
-    @name("dmac") table dmac_0 {
+    @name(".dmac") table dmac_0 {
         actions = {
             assign_egress_interfaces_0();
             @defaultonly NoAction();
@@ -198,7 +198,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @name("ingress_port_map") table ingress_port_map_0 {
+    @name(".ingress_port_map") table ingress_port_map_0 {
         actions = {
             set_ingress_port_props_0();
             @defaultonly NoAction();

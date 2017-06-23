@@ -150,11 +150,11 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_pkt") state parse_pkt {
+    @name(".parse_pkt") state parse_pkt {
         packet.extract<pkt_t>(hdr.pkt);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_pkt;
     }
 }
@@ -185,7 +185,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".action_e") action action_e_0() {
     }
-    @name("table_a") table table_a {
+    @name(".table_a") table table_a {
         actions = {
             action_a_0();
             @defaultonly NoAction_0();
@@ -196,7 +196,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_0();
     }
-    @name("table_b") table table_b {
+    @name(".table_b") table table_b {
         actions = {
             action_b_0();
             @defaultonly NoAction_6();
@@ -207,7 +207,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_6();
     }
-    @name("table_c") table table_c {
+    @name(".table_c") table table_c {
         actions = {
             action_c_0();
             @defaultonly NoAction_7();
@@ -218,7 +218,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_7();
     }
-    @stage(3) @name("table_d") table table_d {
+    @stage(3) @name(".table_d") table table_d {
         actions = {
             action_d_0();
             @defaultonly NoAction_8();
@@ -229,7 +229,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_8();
     }
-    @stage(4) @name("table_e") table table_e {
+    @stage(4) @name(".table_e") table table_e {
         actions = {
             action_e_0();
             @defaultonly NoAction_9();

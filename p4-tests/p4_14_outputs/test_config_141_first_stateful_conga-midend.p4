@@ -155,11 +155,11 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_ethernet") state parse_ethernet {
+    @name(".parse_ethernet") state parse_ethernet {
         packet.extract<pkt_t>(hdr.pkt);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_ethernet;
     }
 }
@@ -173,7 +173,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".update_preferred_next_hop") action update_preferred_next_hop_0() {
     }
-    @name("conga_rd_next_hop_table") table conga_rd_next_hop_table {
+    @name(".conga_rd_next_hop_table") table conga_rd_next_hop_table {
         actions = {
             get_preferred_next_hop_0();
             @defaultonly NoAction_0();
@@ -184,7 +184,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_0();
     }
-    @name("conga_wr_next_hop_table") table conga_wr_next_hop_table {
+    @name(".conga_wr_next_hop_table") table conga_wr_next_hop_table {
         actions = {
             update_preferred_next_hop_0();
             @defaultonly NoAction_3();

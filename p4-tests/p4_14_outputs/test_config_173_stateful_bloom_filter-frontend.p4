@@ -201,14 +201,14 @@ extern stateful_alu {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_ethernet") state parse_ethernet {
+    @name(".parse_ethernet") state parse_ethernet {
         packet.extract<ethernet_t>(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
             16w0x800: parse_ipv4;
             default: accept;
         }
     }
-    @name("parse_ipv4") state parse_ipv4 {
+    @name(".parse_ipv4") state parse_ipv4 {
         packet.extract<ipv4_t>(hdr.ipv4);
         transition select(hdr.ipv4.protocol) {
             8w0x6: parse_tcp;
@@ -216,23 +216,23 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
             default: accept;
         }
     }
-    @name("parse_tcp") state parse_tcp {
+    @name(".parse_tcp") state parse_tcp {
         packet.extract<tcp_t>(hdr.tcp);
         transition accept;
     }
-    @name("parse_udp") state parse_udp {
+    @name(".parse_udp") state parse_udp {
         packet.extract<udp_t>(hdr.udp);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_ethernet;
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("bloom_filter_1") register<bit<1>>(32w262144) bloom_filter;
-    @name("bloom_filter_2") register<bit<1>>(32w262144) bloom_filter_0;
-    @name("bloom_filter_3") register<bit<1>>(32w262144) bloom_filter_4;
+    @name(".bloom_filter_1") register<bit<1>>(32w262144) bloom_filter;
+    @name(".bloom_filter_2") register<bit<1>>(32w262144) bloom_filter_0;
+    @name(".bloom_filter_3") register<bit<1>>(32w262144) bloom_filter_4;
     @name("bloom_filter_alu_1") stateful_alu() bloom_filter_alu;
     @name("bloom_filter_alu_2") stateful_alu() bloom_filter_alu_0;
     @name("bloom_filter_alu_3") stateful_alu() bloom_filter_alu_4;
@@ -259,7 +259,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".set_hash_3") action set_hash_4() {
         hash<bit<18>, bit<18>, tuple<bit<32>, bit<32>, bit<16>>, bit<36>>(meta.meta.hash_3, HashAlgorithm.identity, 18w0, { hdr.ipv4.srcAddr, hdr.ipv4.dstAddr, hdr.tcp.srcPort }, 36w262144);
     }
-    @name("bloom_filter_membership_1") table bloom_filter_membership {
+    @name(".bloom_filter_membership_1") table bloom_filter_membership {
         actions = {
             run_bloom_filter();
             @defaultonly NoAction();
@@ -267,7 +267,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 262144;
         default_action = NoAction();
     }
-    @name("bloom_filter_membership_2") table bloom_filter_membership_0 {
+    @name(".bloom_filter_membership_2") table bloom_filter_membership_0 {
         actions = {
             run_bloom_filter_0();
             @defaultonly NoAction();
@@ -278,7 +278,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 262144;
         default_action = NoAction();
     }
-    @name("bloom_filter_membership_3") table bloom_filter_membership_4 {
+    @name(".bloom_filter_membership_3") table bloom_filter_membership_4 {
         actions = {
             run_bloom_filter_4();
             @defaultonly NoAction();
@@ -289,7 +289,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 262144;
         default_action = NoAction();
     }
-    @name("react") table react_0 {
+    @name(".react") table react_0 {
         actions = {
             drop_me_0();
             do_nothing_0();
@@ -300,7 +300,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @name("set_hash_1_tbl") table set_hash_1_tbl_0 {
+    @name(".set_hash_1_tbl") table set_hash_1_tbl_0 {
         actions = {
             set_hash();
             @defaultonly NoAction();
@@ -308,7 +308,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction();
     }
-    @name("set_hash_2_tbl") table set_hash_2_tbl_0 {
+    @name(".set_hash_2_tbl") table set_hash_2_tbl_0 {
         actions = {
             set_hash_0();
             @defaultonly NoAction();
@@ -316,7 +316,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1;
         default_action = NoAction();
     }
-    @name("set_hash_3_tbl") table set_hash_3_tbl_0 {
+    @name(".set_hash_3_tbl") table set_hash_3_tbl_0 {
         actions = {
             set_hash_4();
             @defaultonly NoAction();

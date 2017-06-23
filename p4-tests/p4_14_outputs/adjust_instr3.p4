@@ -16,7 +16,7 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("start") state start {
+    @name(".start") state start {
         packet.extract(hdr.data);
         transition accept;
     }
@@ -30,13 +30,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.data.n1 = param1;
         hdr.data.n2 = param2;
     }
-    @name("setting_port") table setting_port {
+    @name(".setting_port") table setting_port {
         actions = {
             setport;
         }
         default_action = setport(1);
     }
-    @name("test1") table test1 {
+    @name(".test1") table test1 {
         actions = {
             set_nibbles;
         }

@@ -199,34 +199,34 @@ extern stateful_alu {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_ethernet") state parse_ethernet {
+    @name(".parse_ethernet") state parse_ethernet {
         packet.extract(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
             16w0x800: parse_ipv4;
             default: accept;
         }
     }
-    @name("parse_ipv4") state parse_ipv4 {
+    @name(".parse_ipv4") state parse_ipv4 {
         packet.extract(hdr.ipv4);
         transition select(hdr.ipv4.protocol) {
             8w0x6: parse_tcp;
             default: accept;
         }
     }
-    @name("parse_tcp") state parse_tcp {
+    @name(".parse_tcp") state parse_tcp {
         packet.extract(hdr.tcp);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_ethernet;
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("flow_cache_1_way_1") register<bit<64>>(32w16384) flow_cache_1_way_1;
-    @name("flow_cache_1_way_2") register<bit<64>>(32w16384) flow_cache_1_way_2;
-    @name("flow_cache_2_way_1") register<bit<32>>(32w16384) flow_cache_2_way_1;
-    @name("flow_cache_2_way_2") register<bit<32>>(32w16384) flow_cache_2_way_2;
+    @name(".flow_cache_1_way_1") register<bit<64>>(32w16384) flow_cache_1_way_1;
+    @name(".flow_cache_1_way_2") register<bit<64>>(32w16384) flow_cache_1_way_2;
+    @name(".flow_cache_2_way_1") register<bit<32>>(32w16384) flow_cache_2_way_1;
+    @name(".flow_cache_2_way_2") register<bit<32>>(32w16384) flow_cache_2_way_2;
     stateful_alu() flow_cache_1_way_1_alu;
     stateful_alu() flow_cache_1_way_1_learn_alu;
     stateful_alu() flow_cache_1_way_2_alu;
@@ -261,7 +261,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".do_nothing") action do_nothing() {
     }
-    @name("flow_table_cache_1_1") table flow_table_cache_1_1 {
+    @name(".flow_table_cache_1_1") table flow_table_cache_1_1 {
         actions = {
             do_flow_table_cache_1_1;
         }
@@ -270,7 +270,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 65536;
     }
-    @name("flow_table_cache_1_2") table flow_table_cache_1_2 {
+    @name(".flow_table_cache_1_2") table flow_table_cache_1_2 {
         actions = {
             do_flow_table_cache_1_2;
         }
@@ -279,7 +279,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 1;
     }
-    @name("flow_table_cache_1_age") table flow_table_cache_1_age {
+    @name(".flow_table_cache_1_age") table flow_table_cache_1_age {
         actions = {
             do_flow_table_learn_1_1;
         }
@@ -288,7 +288,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 65536;
     }
-    @name("flow_table_cache_2_1") table flow_table_cache_2_1 {
+    @name(".flow_table_cache_2_1") table flow_table_cache_2_1 {
         actions = {
             do_flow_table_cache_2_1;
         }
@@ -297,7 +297,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 65536;
     }
-    @name("flow_table_cache_2_2") table flow_table_cache_2_2 {
+    @name(".flow_table_cache_2_2") table flow_table_cache_2_2 {
         actions = {
             do_flow_table_cache_2_2;
         }
@@ -306,7 +306,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 1;
     }
-    @name("flow_table_cache_2_age") table flow_table_cache_2_age {
+    @name(".flow_table_cache_2_age") table flow_table_cache_2_age {
         actions = {
             do_flow_table_learn_2_1;
         }
@@ -315,7 +315,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 65536;
     }
-    @name("flow_table_cpu") table flow_table_cpu {
+    @name(".flow_table_cpu") table flow_table_cpu {
         actions = {
             set_rewrite_idx;
             on_miss;
@@ -328,7 +328,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 4096;
     }
-    @name("rewrite_tbl") table rewrite_tbl {
+    @name(".rewrite_tbl") table rewrite_tbl {
         actions = {
             set_dst_port;
             do_nothing;
@@ -338,7 +338,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 4096;
     }
-    @name("slow_path") table slow_path {
+    @name(".slow_path") table slow_path {
         actions = {
             do_nothing;
         }

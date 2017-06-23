@@ -1039,12 +1039,12 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
     out << indent++ << tbl_type << ' '<< tbl->name << ' ' << tbl->logical_id % 16U << ':'
         << std::endl;
     if (tbl->match_table) {
-        out << indent << "p4: { name: " << tbl->match_table->name;
+        out << indent << "p4: { name: " << canon_name(tbl->match_table->name);
         if (auto k = tbl->match_table->getConstantProperty("size"))
             out << ", size: " << k->asInt();
         for (auto at : tbl->attached)
             if (auto ap = at->to<IR::ActionProfile>())
-                out << ", action_profile: " << ap->name;
+                out << ", action_profile: " << canon_name(ap->name);
         out << " }" << std::endl;
         auto memuse_name = tbl->get_use_name();
         emit_memory(out, indent, tbl->resources->memuse.at(memuse_name));
@@ -1328,7 +1328,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::Counter *counter) {
     indent_t indent(1);
     auto name = tbl->get_use_name(counter);
     out << indent++ << "counter " << name << ":" << std::endl;
-    out << indent << "p4: { name: " << counter->name << " }" << std::endl;
+    out << indent << "p4: { name: " << canon_name(counter->name) << " }" << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(name));
     cstring count_type;
     switch (counter->type) {
@@ -1352,7 +1352,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::Meter *meter) {
     indent_t indent(1);
     auto name = tbl->get_use_name(meter);
     out << indent++ << "meter " << name << ":" << std::endl;
-    out << indent << "p4: { name: " << meter->name << " }" << std::endl;
+    out << indent << "p4: { name: " << canon_name(meter->name) << " }" << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(name));
     cstring imp_type;
     if (!meter->implementation.name)
@@ -1427,7 +1427,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::ActionData *ad) {
     auto name = tbl->get_use_name(ad);
     out << indent++ << "action " << name << ':' << std::endl;
     if (tbl->match_table)
-        out << indent << "p4: { name: " << ad->name << " }" << std::endl;
+        out << indent << "p4: { name: " << canon_name(ad->name) << " }" << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(name));
     for (auto act : Values(tbl->actions)) {
         if (act->args.empty()) continue;
@@ -1446,7 +1446,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
     indent_t    indent(1);
     auto name = tbl->get_use_name(salu);
     out << indent++ << "stateful " << name << ':' << std::endl;
-    out << indent << "p4: { name: " << salu->name << " }" << std::endl;
+    out << indent << "p4: { name: " << canon_name(salu->name) << " }" << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(name));
     self.emit_ixbar(out, indent, tbl->resources->salu_ixbar,
                     &tbl->resources->memuse.at(name), nullptr, false);

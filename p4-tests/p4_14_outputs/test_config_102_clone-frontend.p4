@@ -148,11 +148,11 @@ struct headers {
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     bit<1> tmp;
-    @name("abc") state abc {
+    @name(".abc") state abc {
         packet.extract<ethernet_t>(hdr.ethernet);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         tmp = packet.lookahead<bit<1>>();
         transition select(tmp[0:0]) {
             default: abc;
@@ -168,7 +168,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name(".egr_action2") action egr_action2_0() {
         clone(CloneType.E2E, 32w8);
     }
-    @name("egr_null_table") table egr_null_table_0 {
+    @name(".egr_null_table") table egr_null_table_0 {
         actions = {
             egr_action_0();
             egr_action2_0();
@@ -193,7 +193,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".ingr_action2") action ingr_action2_0() {
         clone(CloneType.I2E, 32w6);
     }
-    @name("ingr_null_table") table ingr_null_table_0 {
+    @name(".ingr_null_table") table ingr_null_table_0 {
         actions = {
             ingr_action_0();
             ingr_action2_0();

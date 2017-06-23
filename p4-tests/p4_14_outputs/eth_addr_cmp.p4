@@ -151,7 +151,7 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("start") state start {
+    @name(".start") state start {
         packet.extract(hdr.ethernet);
         transition accept;
     }
@@ -167,14 +167,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.md.is_equal = is_equal;
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name("addr_compare_failure") table addr_compare_failure {
+    @name(".addr_compare_failure") table addr_compare_failure {
         actions = {
             addr_compare;
         }
         size = 1;
         default_action = addr_compare(0, 2);
     }
-    @name("addr_compare_success") table addr_compare_success {
+    @name(".addr_compare_success") table addr_compare_success {
         actions = {
             addr_compare;
         }

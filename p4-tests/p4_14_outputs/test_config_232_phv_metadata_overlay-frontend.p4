@@ -48,28 +48,28 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("p_hdr0") state p_hdr0 {
+    @name(".p_hdr0") state p_hdr0 {
         packet.extract<hdr0_t>(hdr.hdr0);
         transition select(hdr.hdr0.c) {
             8w0: p_hdr1;
             8w1: p_hdr2;
         }
     }
-    @name("p_hdr1") state p_hdr1 {
+    @name(".p_hdr1") state p_hdr1 {
         packet.extract<hdr1_t>(hdr.hdr1);
         transition p_hdr2;
     }
-    @name("p_hdr2") state p_hdr2 {
+    @name(".p_hdr2") state p_hdr2 {
         packet.extract<hdr2_t>(hdr.hdr2);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition p_hdr0;
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("cnt_0") counter(32w2048, CounterType.packets_and_bytes) cnt;
+    @name(".cnt_0") counter(32w2048, CounterType.packets_and_bytes) cnt;
     @name(".do_nothing") action do_nothing_0() {
     }
     @name(".action_0") action action_5(bit<32> idx) {
@@ -100,7 +100,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".action_4") action action_9() {
         meta.meta.tbl4 = 16w1;
     }
-    @name("table_i0") table table_i0_0 {
+    @name(".table_i0") table table_i0_0 {
         actions = {
             do_nothing_0();
             action_5();
@@ -113,7 +113,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction();
     }
-    @name("table_i1") table table_i1_0 {
+    @name(".table_i1") table table_i1_0 {
         actions = {
             do_nothing_0();
             action_6();
@@ -127,7 +127,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction();
     }
-    @name("table_i2") table table_i2_0 {
+    @name(".table_i2") table table_i2_0 {
         actions = {
             do_nothing_0();
             action_7();
@@ -142,7 +142,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction();
     }
-    @name("table_i3") table table_i3_0 {
+    @name(".table_i3") table table_i3_0 {
         actions = {
             do_nothing_0();
             action_8();
@@ -158,7 +158,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction();
     }
-    @name("table_i4") table table_i4_0 {
+    @name(".table_i4") table table_i4_0 {
         actions = {
             do_nothing_0();
             action_9();

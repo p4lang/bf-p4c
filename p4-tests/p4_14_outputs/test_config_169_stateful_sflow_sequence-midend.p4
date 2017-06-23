@@ -196,25 +196,25 @@ extern stateful_alu {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_ethernet") state parse_ethernet {
+    @name(".parse_ethernet") state parse_ethernet {
         packet.extract<ethernet_t>(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
             16w0x800: parse_ipv4;
             default: accept;
         }
     }
-    @name("parse_ipv4") state parse_ipv4 {
+    @name(".parse_ipv4") state parse_ipv4 {
         packet.extract<ipv4_t>(hdr.ipv4);
         transition select(hdr.ipv4.protocol) {
             8w0x6: parse_tcp;
             default: accept;
         }
     }
-    @name("parse_tcp") state parse_tcp {
+    @name(".parse_tcp") state parse_tcp {
         packet.extract<tcp_t>(hdr.tcp);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_ethernet;
     }
 }
@@ -228,8 +228,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_7() {
     }
-    @name("sflow_state_exp_seq_num") register<bit<32>>(32w0) sflow_state_exp_seq_num;
-    @name("sflow_state_seq_num") register<bit<32>>(32w0) sflow_state_seq_num;
+    @name(".sflow_state_exp_seq_num") register<bit<32>>(32w0) sflow_state_exp_seq_num;
+    @name(".sflow_state_seq_num") register<bit<32>>(32w0) sflow_state_seq_num;
     @name("seq_num_gen") stateful_alu() seq_num_gen;
     @name("sflow_exp_seq_num") stateful_alu() sflow_exp_seq_num;
     @name(".get_sflow_seq_num") action get_sflow_seq_num_0() {
@@ -246,7 +246,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".do_nothing") action do_nothing_0() {
     }
-    @name("sflow_seq_num") table sflow_seq_num {
+    @name(".sflow_seq_num") table sflow_seq_num {
         actions = {
             get_sflow_seq_num_0();
             @defaultonly NoAction_0();
@@ -258,7 +258,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_0();
     }
-    @name("sflow_verify_seq_no_step_1") table sflow_verify_seq_no_step_1 {
+    @name(".sflow_verify_seq_no_step_1") table sflow_verify_seq_no_step_1 {
         actions = {
             calc_next_seq_num_0();
             @defaultonly NoAction_5();
@@ -266,7 +266,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_5();
     }
-    @stage(1) @name("sflow_verify_seq_no_step_2") table sflow_verify_seq_no_step_2 {
+    @stage(1) @name(".sflow_verify_seq_no_step_2") table sflow_verify_seq_no_step_2 {
         actions = {
             chk_sflow_seq_num_0();
             @defaultonly NoAction_6();
@@ -277,7 +277,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 16384;
         default_action = NoAction_6();
     }
-    @name("sflow_verify_seq_no_step_3") table sflow_verify_seq_no_step_3 {
+    @name(".sflow_verify_seq_no_step_3") table sflow_verify_seq_no_step_3 {
         actions = {
             drop_me_0();
             do_nothing_0();

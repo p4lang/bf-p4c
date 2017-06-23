@@ -151,11 +151,11 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_pkt") state parse_pkt {
+    @name(".parse_pkt") state parse_pkt {
         packet.extract<pkt_t>(hdr.pkt);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_pkt;
     }
 }
@@ -166,7 +166,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     @name(".do_nothing") action do_nothing_0() {
     }
-    @name("table_2") table table_4 {
+    @name(".table_2") table table_4 {
         actions = {
             action_3();
             @defaultonly NoAction();
@@ -176,7 +176,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         default_action = NoAction();
     }
-    @name("table_3") table table_5 {
+    @name(".table_3") table table_5 {
         actions = {
             do_nothing_0();
             @defaultonly NoAction();
@@ -196,7 +196,7 @@ control pipe_0(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name(".action_1") action action_4(bit<32> param0) {
         hdr.pkt.field_c_32 = param0;
     }
-    @name("table_1") table table_6 {
+    @name(".table_1") table table_6 {
         actions = {
             action_4();
             @defaultonly NoAction();
@@ -215,7 +215,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".action_0") action action_5(bit<32> param0) {
         hdr.pkt.field_b_32 = param0;
     }
-    @name("table_0") table table_7 {
+    @name(".table_0") table table_7 {
         actions = {
             action_5();
             @defaultonly NoAction();
@@ -225,7 +225,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @name("pipe_0") pipe_0() pipe_0_1;
+    @name(".pipe_0") pipe_0() pipe_0_1;
     apply {
         table_7.apply();
         pipe_0_1.apply(hdr, meta, standard_metadata);

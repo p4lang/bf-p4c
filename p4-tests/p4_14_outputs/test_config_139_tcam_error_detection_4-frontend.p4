@@ -154,17 +154,17 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_pkt") state parse_pkt {
+    @name(".parse_pkt") state parse_pkt {
         packet.extract<pkt_t>(hdr.pkt);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_pkt;
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("simple_stats") counter(32w16384, CounterType.packets) simple_stats_0;
+    @name(".simple_stats") counter(32w16384, CounterType.packets) simple_stats_0;
     @name(".count_it") action count_it_0() {
         simple_stats_0.count((bit<32>)hdr.pkt.field_h_16);
     }
@@ -173,14 +173,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".action_0") action action_1() {
         hdr.pkt.field_f_16 = 16w1;
     }
-    @name("table_a") table table_a_0 {
+    @name(".table_a") table table_a_0 {
         actions = {
             count_it_0();
             @defaultonly NoAction();
         }
         default_action = NoAction();
     }
-    @name("table_b") table table_b_0 {
+    @name(".table_b") table table_b_0 {
         actions = {
             do_nothing_0();
             @defaultonly NoAction();
@@ -191,7 +191,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction();
     }
-    @name("table_c") table table_c_0 {
+    @name(".table_c") table table_c_0 {
         actions = {
             do_nothing_0();
             @defaultonly NoAction();
@@ -202,7 +202,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction();
     }
-    @name("table_d") table table_d_0 {
+    @name(".table_d") table table_d_0 {
         actions = {
             do_nothing_0();
             @defaultonly NoAction();
@@ -213,7 +213,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction();
     }
-    @entries_with_ranges(64) @tcam_error_detect(1) @name("table_e") table table_e_0 {
+    @entries_with_ranges(64) @tcam_error_detect(1) @name(".table_e") table table_e_0 {
         actions = {
             do_nothing_0();
             action_1();
@@ -227,7 +227,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction();
     }
-    @tcam_error_detect(1) @name("table_f") table table_f_0 {
+    @tcam_error_detect(1) @name(".table_f") table table_f_0 {
         actions = {
             do_nothing_0();
             @defaultonly NoAction();

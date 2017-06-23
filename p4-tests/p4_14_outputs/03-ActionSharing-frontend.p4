@@ -178,7 +178,7 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("start") state start {
+    @name(".start") state start {
         packet.extract<ethernet_t>(hdr.ethernet);
         transition accept;
     }
@@ -283,7 +283,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".set_field32_7") action set_field32_12(bit<32> value) {
         meta.md.field32_7 = value;
     }
-    @name("dmac1") table dmac1_0 {
+    @name(".dmac1") table dmac1_0 {
         actions = {
             set_field1();
             set_field1_0();
@@ -324,7 +324,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 32768;
         default_action = NoAction();
     }
-    @name("dmac2") table dmac2_0 {
+    @name(".dmac2") table dmac2_0 {
         actions = {
             set_field1();
             set_field1_0();

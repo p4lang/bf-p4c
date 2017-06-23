@@ -151,11 +151,11 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_pkt") state parse_pkt {
+    @name(".parse_pkt") state parse_pkt {
         packet.extract(hdr.pkt);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_pkt;
     }
 }
@@ -174,7 +174,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".action_2") action action_2(bit<16> param0) {
         hdr.pkt.field_h_16 = param0;
     }
-    @include_idletime(1) @idletime_precision(1) @name("table_0") table table_0 {
+    @include_idletime(1) @idletime_precision(1) @name(".table_0") table table_0 {
         actions = {
             action_0;
         }
@@ -182,7 +182,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_a_28: exact;
         }
     }
-    @ways(8) @include_idletime(1) @name("table_1") table table_1 {
+    @ways(8) @include_idletime(1) @name(".table_1") table table_1 {
         actions = {
             action_1;
             do_nothing;
@@ -196,7 +196,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 2048;
     }
-    @selector_max_group_size(121) @include_idletime(1) @idletime_sweep_interval(12) @name("table_2") table table_2 {
+    @selector_max_group_size(121) @include_idletime(1) @idletime_sweep_interval(12) @name(".table_2") table table_2 {
         actions = {
             action_2;
             do_nothing;
@@ -210,7 +210,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_f_16: selector;
         }
         size = 2048;
-        @name("table_2_action_profile") implementation = action_selector(HashAlgorithm.random, 32w512, 32w72);
+        @name(".table_2_action_profile") implementation = action_selector(HashAlgorithm.random, 32w512, 32w72);
     }
     apply {
         if (hdr.pkt.isValid()) {

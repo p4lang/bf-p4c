@@ -24,7 +24,7 @@ class Tofino_Options : public CompilerOptions {
         registerOption("--nophvover", nullptr,
             [this](const char *) { phv_overlay = false; return false; },
             "do not use cluster_phv_overlay based PHV overlays");
-        target = "tofino";
+        target = "tofino-v1model-barefoot";
     }
 };
 

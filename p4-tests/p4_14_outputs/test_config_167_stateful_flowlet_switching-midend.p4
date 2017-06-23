@@ -187,25 +187,25 @@ extern stateful_alu {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_ethernet") state parse_ethernet {
+    @name(".parse_ethernet") state parse_ethernet {
         packet.extract<ethernet_t>(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
             16w0x800: parse_ipv4;
             default: accept;
         }
     }
-    @name("parse_ipv4") state parse_ipv4 {
+    @name(".parse_ipv4") state parse_ipv4 {
         packet.extract<ipv4_t>(hdr.ipv4);
         transition select(hdr.ipv4.protocol) {
             8w0x6: parse_tcp;
             default: accept;
         }
     }
-    @name("parse_tcp") state parse_tcp {
+    @name(".parse_tcp") state parse_tcp {
         packet.extract<tcp_t>(hdr.tcp);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_ethernet;
     }
 }
@@ -213,12 +213,12 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("NoAction") action NoAction_0() {
     }
-    @name("flowlet_state") register<bit<64>>(32w65536) flowlet_state;
+    @name(".flowlet_state") register<bit<64>>(32w65536) flowlet_state;
     @name("flowlet_state_alu") stateful_alu() flowlet_state_alu;
     @name(".get_flowlet_next_hop") action get_flowlet_next_hop_0(bit<32> idx) {
         flowlet_state_alu.execute_stateful_alu(idx);
     }
-    @name("flowlet_next_hop") table flowlet_next_hop {
+    @name(".flowlet_next_hop") table flowlet_next_hop {
         actions = {
             get_flowlet_next_hop_0();
             @defaultonly NoAction_0();

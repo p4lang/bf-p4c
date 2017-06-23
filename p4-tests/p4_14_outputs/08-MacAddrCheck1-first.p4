@@ -149,7 +149,7 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("start") state start {
+    @name(".start") state start {
         packet.extract<ethernet_t>(hdr.ethernet);
         transition accept;
     }
@@ -164,7 +164,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".ing_drop") action ing_drop() {
         mark_to_drop();
     }
-    @name("bad_mac_drop") table bad_mac_drop {
+    @name(".bad_mac_drop") table bad_mac_drop {
         actions = {
             ing_drop();
             @defaultonly NoAction();

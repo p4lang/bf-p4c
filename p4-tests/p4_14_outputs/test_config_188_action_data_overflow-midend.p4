@@ -22,11 +22,11 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_ethernet") state parse_ethernet {
+    @name(".parse_ethernet") state parse_ethernet {
         packet.extract<pkt_t>(hdr.pkt);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_ethernet;
     }
 }
@@ -41,7 +41,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.pkt.b = param1;
         hdr.pkt.c = param2;
     }
-    @immediate(0) @name("table_0") table table_0 {
+    @immediate(0) @name(".table_0") table table_0 {
         actions = {
             nop_0();
             action_1();

@@ -155,11 +155,11 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_vlan_tag") state parse_vlan_tag {
+    @name(".parse_vlan_tag") state parse_vlan_tag {
         packet.extract<vlan_tag_t>(hdr.vlan_tag);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         packet.extract<ethernet_t>(hdr.ethernet);
         transition select(hdr.ethernet.ethertype) {
             16w0x8100: parse_vlan_tag;
@@ -179,21 +179,21 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_3() {
     }
-    @name("flex_counter") counter(32w8192, CounterType.packets) flex_counter;
+    @name(".flex_counter") counter(32w8192, CounterType.packets) flex_counter;
     @name(".update_flex_counter") action update_flex_counter_0() {
         flex_counter.count((bit<32>)meta.md.flex_counter_index);
     }
     @name(".set_flex_counter_index") action set_flex_counter_index_0(bit<13> flex_counter_base) {
         meta.md.flex_counter_index = flex_counter_base + (bit<13>)hdr.vlan_tag.prio;
     }
-    @name("update_counters") table update_counters {
+    @name(".update_counters") table update_counters {
         actions = {
             update_flex_counter_0();
             @defaultonly NoAction_0();
         }
         default_action = NoAction_0();
     }
-    @name("vlan") table vlan {
+    @name(".vlan") table vlan {
         actions = {
             set_flex_counter_index_0();
             @defaultonly NoAction_3();

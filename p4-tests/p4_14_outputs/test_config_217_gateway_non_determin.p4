@@ -178,22 +178,22 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("first_p") state first_p {
+    @name(".first_p") state first_p {
         packet.extract(hdr.first);
         transition select(hdr.first.c) {
             8w0x3f: parse_hdr_0;
             default: parse_hdr_1;
         }
     }
-    @name("parse_hdr_0") state parse_hdr_0 {
+    @name(".parse_hdr_0") state parse_hdr_0 {
         packet.extract(hdr.hdr_0);
         transition accept;
     }
-    @name("parse_hdr_1") state parse_hdr_1 {
+    @name(".parse_hdr_1") state parse_hdr_1 {
         packet.extract(hdr.hdr_1);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition first_p;
     }
 }
@@ -217,7 +217,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".do_nothing") action do_nothing() {
     }
-    @name("table_i0") table table_i0 {
+    @name(".table_i0") table table_i0 {
         actions = {
             set_all;
             action_0;
@@ -227,7 +227,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 512;
     }
-    @name("table_i1") table table_i1 {
+    @name(".table_i1") table table_i1 {
         actions = {
             action_1;
             do_nothing;
@@ -237,7 +237,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 512;
     }
-    @name("table_i2") table table_i2 {
+    @name(".table_i2") table table_i2 {
         actions = {
             do_nothing;
         }

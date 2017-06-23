@@ -150,11 +150,11 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_ethernet") state parse_ethernet {
+    @name(".parse_ethernet") state parse_ethernet {
         packet.extract<pkt_t>(hdr.pkt);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_ethernet;
     }
 }
@@ -168,7 +168,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".action_1") action action_3(bit<32> param1) {
         hdr.pkt.field_b_32 = param1;
     }
-    @name("table_0") table table_3 {
+    @name(".table_0") table table_3 {
         actions = {
             do_nothing_0();
             action_2();
@@ -179,10 +179,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_a_32: ternary @name("hdr.pkt.field_a_32") ;
         }
         size = 2048;
-        @name("shared_action_profile") implementation = action_profile(32w1024);
+        @name(".shared_action_profile") implementation = action_profile(32w1024);
         default_action = NoAction();
     }
-    @name("table_1") table table_4 {
+    @name(".table_1") table table_4 {
         actions = {
             do_nothing_0();
             action_2();
@@ -193,10 +193,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_b_32: ternary @name("hdr.pkt.field_b_32") ;
         }
         size = 2048;
-        @name("shared_action_profile") implementation = action_profile(32w1024);
+        @name(".shared_action_profile") implementation = action_profile(32w1024);
         default_action = NoAction();
     }
-    @name("table_2") table table_5 {
+    @name(".table_2") table table_5 {
         actions = {
             do_nothing_0();
             @defaultonly NoAction();

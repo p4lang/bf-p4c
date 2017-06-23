@@ -31,7 +31,7 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("start") state start {
+    @name(".start") state start {
         packet.extract<hdr_t>(hdr.hdr);
         transition accept;
     }
@@ -57,7 +57,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.nibble_meta.hn1 = hdr.hdr.hn1;
         meta.nibble_meta.hn2 = hdr.hdr.hn2;
     }
-    @name("set_all") table set_all {
+    @name(".set_all") table set_all {
         actions = {
             set_fields_0();
             @defaultonly NoAction_0();
@@ -67,7 +67,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name("set_back") table set_back {
+    @name(".set_back") table set_back {
         actions = {
             back_to_hdr_0();
             @defaultonly NoAction_4();
@@ -77,7 +77,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_4();
     }
-    @name("set_nibbles") table set_nibbles {
+    @name(".set_nibbles") table set_nibbles {
         actions = {
             set_nibble_meta_0();
             @defaultonly NoAction_5();

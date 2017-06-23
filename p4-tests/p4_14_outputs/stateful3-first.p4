@@ -43,20 +43,20 @@ extern stateful_alu {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("start") state start {
+    @name(".start") state start {
         packet.extract<data_t>(hdr.data);
         transition accept;
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("accum") register<pair32_t>(32w65536) accum;
+    @name(".accum") register<pair32_t>(32w65536) accum;
     stateful_alu() sful;
     @name(".act1") action act1(bit<9> port) {
         standard_metadata.egress_spec = port;
         sful.execute_stateful_alu((bit<32>)hdr.data.h1);
     }
-    @name("test1") table test1 {
+    @name(".test1") table test1 {
         actions = {
             act1();
             @defaultonly NoAction();

@@ -26,7 +26,7 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("start") state start {
+    @name(".start") state start {
         packet.extract<data_t>(hdr.data);
         transition accept;
     }
@@ -39,9 +39,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_5() {
     }
-    @name("meter_1") meter(32w1024, MeterType.bytes) meter_1;
-    @name("meter_2") meter(32w1024, MeterType.bytes) meter_2;
-    @name("meter_3") meter(32w1024, MeterType.bytes) meter_3;
+    @name(".meter_1") meter(32w1024, MeterType.bytes) meter_1;
+    @name(".meter_2") meter(32w1024, MeterType.bytes) meter_2;
+    @name(".meter_3") meter(32w1024, MeterType.bytes) meter_3;
     @name(".h1_2") action h1_0(bit<16> val1, bit<16> val2) {
         hdr.data.h1 = val1;
         hdr.data.h2 = val2;
@@ -57,7 +57,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.data.h5 = val5;
         meter_3.execute_meter<bit<8>>(32w7, hdr.data.color_3);
     }
-    @name("test1") table test1 {
+    @name(".test1") table test1 {
         actions = {
             h1_0();
             @defaultonly NoAction_0();
@@ -68,7 +68,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_0();
     }
-    @name("test2") table test2 {
+    @name(".test2") table test2 {
         actions = {
             h3_b1_0();
             @defaultonly NoAction_4();
@@ -79,7 +79,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_4();
     }
-    @name("test3") table test3 {
+    @name(".test3") table test3 {
         actions = {
             h4_0();
             @defaultonly NoAction_5();

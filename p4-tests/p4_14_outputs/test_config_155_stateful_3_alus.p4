@@ -164,19 +164,19 @@ extern stateful_alu {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_ethernet") state parse_ethernet {
+    @name(".parse_ethernet") state parse_ethernet {
         packet.extract(hdr.pkt);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_ethernet;
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("flow_cnt") register<bit<8>>(32w0) flow_cnt;
-    @name("stateful_cntr_1") register<bit<16>>(32w0) stateful_cntr_1;
-    @name("stateful_cntr_2") register<bit<16>>(32w0) stateful_cntr_2;
+    @name(".flow_cnt") register<bit<8>>(32w0) flow_cnt;
+    @name(".stateful_cntr_1") register<bit<16>>(32w0) stateful_cntr_1;
+    @name(".stateful_cntr_2") register<bit<16>>(32w0) stateful_cntr_2;
     stateful_alu() cntr_1;
     stateful_alu() cntr_2;
     stateful_alu() sampler_alu;
@@ -189,7 +189,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".sample") action sample() {
         sampler_alu.execute_stateful_alu();
     }
-    @table_counter("disabled") @name("match_cntr_1") table match_cntr_1 {
+    @table_counter("disabled") @name(".match_cntr_1") table match_cntr_1 {
         actions = {
             cnt_1;
         }
@@ -198,7 +198,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 16384;
     }
-    @name("match_cntr_2") table match_cntr_2 {
+    @name(".match_cntr_2") table match_cntr_2 {
         actions = {
             cnt_2;
         }
@@ -209,7 +209,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 16384;
     }
-    @name("match_flow") table match_flow {
+    @name(".match_flow") table match_flow {
         actions = {
             sample;
         }

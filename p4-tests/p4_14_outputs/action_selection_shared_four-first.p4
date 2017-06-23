@@ -24,7 +24,7 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("start") state start {
+    @name(".start") state start {
         packet.extract<data_t>(hdr.data);
         transition accept;
     }
@@ -40,7 +40,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".setb3") action setb3(bit<8> val3) {
         hdr.data.b3 = val3;
     }
-    @name("test1") table test1 {
+    @name(".test1") table test1 {
         actions = {
             setb1();
             setb2();
@@ -54,10 +54,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.h3: selector @name("hdr.data.h3") ;
         }
         size = 10000;
-        @name("set_b1_3") @mode("fair") implementation = action_selector(HashAlgorithm.crc16, 32w1024, 32w14);
+        @name(".set_b1_3") @mode("fair") implementation = action_selector(HashAlgorithm.crc16, 32w1024, 32w14);
         default_action = NoAction();
     }
-    @name("test2") table test2 {
+    @name(".test2") table test2 {
         actions = {
             setb1();
             setb2();
@@ -71,10 +71,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.h3: selector @name("hdr.data.h3") ;
         }
         size = 5000;
-        @name("set_b1_3") @mode("fair") implementation = action_selector(HashAlgorithm.crc16, 32w1024, 32w14);
+        @name(".set_b1_3") @mode("fair") implementation = action_selector(HashAlgorithm.crc16, 32w1024, 32w14);
         default_action = NoAction();
     }
-    @name("test3") table test3 {
+    @name(".test3") table test3 {
         actions = {
             setb1();
             setb2();
@@ -88,10 +88,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.h3: selector @name("hdr.data.h3") ;
         }
         size = 2000;
-        @name("set_b1_3") @mode("fair") implementation = action_selector(HashAlgorithm.crc16, 32w1024, 32w14);
+        @name(".set_b1_3") @mode("fair") implementation = action_selector(HashAlgorithm.crc16, 32w1024, 32w14);
         default_action = NoAction();
     }
-    @name("test4") table test4 {
+    @name(".test4") table test4 {
         actions = {
             setb1();
             setb2();
@@ -105,7 +105,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.h3: selector @name("hdr.data.h3") ;
         }
         size = 1024;
-        @name("set_b1_3") @mode("fair") implementation = action_selector(HashAlgorithm.crc16, 32w1024, 32w14);
+        @name(".set_b1_3") @mode("fair") implementation = action_selector(HashAlgorithm.crc16, 32w1024, 32w14);
         default_action = NoAction();
     }
     apply {

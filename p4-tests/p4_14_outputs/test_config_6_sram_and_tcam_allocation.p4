@@ -164,18 +164,18 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_ethernet") state parse_ethernet {
+    @name(".parse_ethernet") state parse_ethernet {
         packet.extract(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
             16w0x800: parse_ipv4;
             default: accept;
         }
     }
-    @name("parse_ipv4") state parse_ipv4 {
+    @name(".parse_ipv4") state parse_ipv4 {
         packet.extract(hdr.ipv4);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_ethernet;
     }
 }
@@ -186,7 +186,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     @name(".permit") action permit() {
     }
-    @name("egress_acl") table egress_acl {
+    @name(".egress_acl") table egress_acl {
         actions = {
             eg_drop;
             permit;
@@ -220,7 +220,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
     }
-    @name("host_ip") table host_ip {
+    @name(".host_ip") table host_ip {
         actions = {
             do_nothing;
             l3_set_index;
@@ -230,7 +230,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         max_size = 16384;
     }
-    @name("ipv4_routing") table ipv4_routing {
+    @name(".ipv4_routing") table ipv4_routing {
         actions = {
             ig_drop;
             hop_ipv4;

@@ -38,7 +38,7 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("start") state start {
+    @name(".start") state start {
         packet.extract(hdr.first_hdr);
         packet.extract(hdr.second_hdr);
         transition accept;
@@ -69,7 +69,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.second_hdr.f3 = full1;
         hdr.second_hdr.f4 = full2;
     }
-    @name("setting_port") table setting_port {
+    @name(".setting_port") table setting_port {
         actions = {
             setport;
         }
@@ -77,7 +77,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.first_hdr.f1: exact;
         }
     }
-    @name("test1") table test1 {
+    @name(".test1") table test1 {
         actions = {
             first_hdr1;
             first_hdr2;
@@ -86,7 +86,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.first_hdr.f1: exact;
         }
     }
-    @name("test2") table test2 {
+    @name(".test2") table test2 {
         actions = {
             second_hdr1;
             second_hdr2;

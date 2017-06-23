@@ -19,7 +19,7 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("start") state start {
+    @name(".start") state start {
         packet.extract<data_t>(hdr.data);
         transition accept;
     }
@@ -30,7 +30,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_3() {
     }
-    @name("cnt") direct_counter(CounterType.packets) cnt;
+    @name(".cnt") direct_counter(CounterType.packets) cnt;
     @name(".c3_4") action c3_0(bit<8> val3, bit<8> val4, bit<9> port) {
         hdr.data.c3 = val3;
         hdr.data.c4 = val4;
@@ -41,7 +41,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.data.c1 = val1;
         hdr.data.c2 = val2;
     }
-    @name("test1") table test1 {
+    @name(".test1") table test1 {
         actions = {
             c1_1();
             @defaultonly NoAction_0();
@@ -49,10 +49,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         key = {
             hdr.data.f1: exact @name("hdr.data.f1") ;
         }
-        @name("cnt") counters = direct_counter(CounterType.packets);
+        @name(".cnt") counters = direct_counter(CounterType.packets);
         default_action = NoAction_0();
     }
-    @name("test2") table test2 {
+    @name(".test2") table test2 {
         actions = {
             c3_0();
             @defaultonly NoAction_3();

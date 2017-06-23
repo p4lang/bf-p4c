@@ -151,11 +151,11 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_pkt") state parse_pkt {
+    @name(".parse_pkt") state parse_pkt {
         packet.extract<pkt_t>(hdr.pkt);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_pkt;
     }
 }
@@ -207,7 +207,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".action_2") action action_5(bit<16> param0) {
         hdr.pkt.field_h_16 = param0;
     }
-    @include_idletime(1) @idletime_precision(1) @name("table_0") table table_0 {
+    @include_idletime(1) @idletime_precision(1) @name(".table_0") table table_0 {
         actions = {
             action_3();
             @defaultonly NoAction_0();
@@ -217,7 +217,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @ways(8) @include_idletime(1) @name("table_1") table table_1 {
+    @ways(8) @include_idletime(1) @name(".table_1") table table_1 {
         actions = {
             action_4();
             do_nothing_0();
@@ -233,7 +233,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 2048;
         default_action = NoAction_4();
     }
-    @selector_max_group_size(121) @include_idletime(1) @idletime_sweep_interval(12) @name("table_2") table table_2 {
+    @selector_max_group_size(121) @include_idletime(1) @idletime_sweep_interval(12) @name(".table_2") table table_2 {
         actions = {
             action_5();
             do_nothing_2();
@@ -248,7 +248,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_f_16: selector @name("hdr.pkt.field_f_16") ;
         }
         size = 2048;
-        @name("table_2_action_profile") implementation = action_selector(HashAlgorithm.random, 32w512, 32w72);
+        @name(".table_2_action_profile") implementation = action_selector(HashAlgorithm.random, 32w512, 32w72);
         default_action = NoAction_5();
     }
     apply {

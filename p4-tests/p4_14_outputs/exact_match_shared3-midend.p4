@@ -29,7 +29,7 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("start") state start {
+    @name(".start") state start {
         packet.extract<data_t>(hdr.data);
         transition accept;
     }
@@ -57,7 +57,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".noop") action noop_4() {
     }
-    @name("test1") table test1 {
+    @name(".test1") table test1 {
         actions = {
             noop_0();
             @defaultonly NoAction_0();
@@ -68,7 +68,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name("test2") table test2 {
+    @name(".test2") table test2 {
         actions = {
             noop_3();
             @defaultonly NoAction_6();
@@ -80,7 +80,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_6();
     }
-    @name("test3") table test3 {
+    @name(".test3") table test3 {
         actions = {
             @defaultonly NoAction_7();
         }
@@ -92,7 +92,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_7();
     }
-    @name("test4") table test4 {
+    @name(".test4") table test4 {
         actions = {
             noop_4();
             @defaultonly NoAction_8();
@@ -107,7 +107,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_8();
     }
-    @name("test5") table test5 {
+    @name(".test5") table test5 {
         actions = {
             @defaultonly NoAction_9();
         }

@@ -161,18 +161,18 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_ethernet") state parse_ethernet {
+    @name(".parse_ethernet") state parse_ethernet {
         packet.extract(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
             16w0x800: parse_ipv4;
             default: accept;
         }
     }
-    @name("parse_ipv4") state parse_ipv4 {
+    @name(".parse_ipv4") state parse_ipv4 {
         packet.extract(hdr.ipv4);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_ethernet;
     }
 }
@@ -195,7 +195,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".action_1") action action_1(bit<16> param1) {
         hdr.ethernet.etherType = param1;
     }
-    @name("table_group") table table_group {
+    @name(".table_group") table table_group {
         actions = {
             action_select;
         }
@@ -203,7 +203,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.blah1: ternary;
         }
     }
-    @immediate(0) @selector_max_group_size(121) @name("test_select") table test_select {
+    @immediate(0) @selector_max_group_size(121) @name(".test_select") table test_select {
         actions = {
             action_0;
             big_action;
@@ -218,9 +218,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.blah3        : selector;
         }
         size = 8192;
-        @name("some_action_profile") @mode("resilient") implementation = action_selector(HashAlgorithm.random, 32w2048, 32w32);
+        @name(".some_action_profile") @mode("resilient") implementation = action_selector(HashAlgorithm.random, 32w2048, 32w32);
     }
-    @name("test_select2") table test_select2 {
+    @name(".test_select2") table test_select2 {
         actions = {
             action_1;
         }
@@ -231,7 +231,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.blah3        : selector;
         }
         size = 4096;
-        @name("some_action_profile2") @mode("resilient") implementation = action_selector(HashAlgorithm.random, 32w2048, 32w32);
+        @name(".some_action_profile2") @mode("resilient") implementation = action_selector(HashAlgorithm.random, 32w2048, 32w32);
     }
     apply {
         test_select.apply();

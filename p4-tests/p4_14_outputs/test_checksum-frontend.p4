@@ -235,14 +235,14 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_inner_ethernet") state parse_inner_ethernet {
+    @name(".parse_inner_ethernet") state parse_inner_ethernet {
         packet.extract<ethernet_t>(hdr.inner_ethernet);
         transition select(hdr.inner_ethernet.etherType) {
             16w0x800: parse_inner_ipv4;
             default: accept;
         }
     }
-    @name("parse_inner_ipv4") state parse_inner_ipv4 {
+    @name(".parse_inner_ipv4") state parse_inner_ipv4 {
         packet.extract<ipv4_t>(hdr.inner_ipv4);
         transition select(hdr.inner_ipv4.fragOffset, hdr.inner_ipv4.ihl, hdr.inner_ipv4.protocol) {
             (13w0x0, 4w0x5, 8w0x6): parse_inner_tcp;
@@ -250,15 +250,15 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
             default: accept;
         }
     }
-    @name("parse_inner_tcp") state parse_inner_tcp {
+    @name(".parse_inner_tcp") state parse_inner_tcp {
         packet.extract<tcp_t>(hdr.inner_tcp);
         transition accept;
     }
-    @name("parse_inner_udp") state parse_inner_udp {
+    @name(".parse_inner_udp") state parse_inner_udp {
         packet.extract<udp_t>(hdr.inner_udp);
         transition accept;
     }
-    @name("parse_ipv4") state parse_ipv4 {
+    @name(".parse_ipv4") state parse_ipv4 {
         packet.extract<ipv4_t>(hdr.ipv4);
         transition select(hdr.ipv4.fragOffset, hdr.ipv4.ihl, hdr.ipv4.protocol) {
             (13w0x0, 4w0x5, 8w0x6): parse_tcp;
@@ -266,7 +266,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
             default: accept;
         }
     }
-    @name("parse_ipv6") state parse_ipv6 {
+    @name(".parse_ipv6") state parse_ipv6 {
         packet.extract<ipv6_t>(hdr.ipv6);
         transition select(hdr.ipv6.nextHdr) {
             8w0x6: parse_tcp;
@@ -274,32 +274,32 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
             default: accept;
         }
     }
-    @name("parse_tcp") state parse_tcp {
+    @name(".parse_tcp") state parse_tcp {
         packet.extract<tcp_t>(hdr.tcp);
         transition select(hdr.tcp.dstPort) {
             16w0x4118: parse_inner_ipv4;
             default: accept;
         }
     }
-    @name("parse_udp") state parse_udp {
+    @name(".parse_udp") state parse_udp {
         packet.extract<udp_t>(hdr.udp);
         transition select(hdr.udp.dstPort) {
             16w0x4118: parse_vxlan;
             default: accept;
         }
     }
-    @name("parse_vlan") state parse_vlan {
+    @name(".parse_vlan") state parse_vlan {
         packet.extract<vlan_tag_t>(hdr.vlan_hdr);
         transition select(hdr.vlan_hdr.etherType) {
             16w0x800: parse_ipv4;
             default: accept;
         }
     }
-    @name("parse_vxlan") state parse_vxlan {
+    @name(".parse_vxlan") state parse_vxlan {
         packet.extract<vxlan_t>(hdr.vxlan);
         transition parse_inner_ethernet;
     }
-    @name("start") state start {
+    @name(".start") state start {
         packet.extract<ethernet_t>(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
             16w0x800: parse_ipv4;
@@ -316,7 +316,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         hdr.ipv4.hdrChecksum = 16w0;
         clone(CloneType.E2E, 32w200);
     }
-    @name("ip_hdr_update") table ip_hdr_update_0 {
+    @name(".ip_hdr_update") table ip_hdr_update_0 {
         actions = {
             ip_header_modify_0();
             @defaultonly NoAction();
@@ -336,7 +336,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
         clone(CloneType.I2E, 32w100);
     }
-    @name("ingress_port_mapping") table ingress_port_mapping_0 {
+    @name(".ingress_port_mapping") table ingress_port_mapping_0 {
         actions = {
             nop_0();
             @defaultonly NoAction();
@@ -348,7 +348,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction();
     }
-    @name("ip_nhop") table ip_nhop_0 {
+    @name(".ip_nhop") table ip_nhop_0 {
         actions = {
             nhop_set_0();
             nop_0();

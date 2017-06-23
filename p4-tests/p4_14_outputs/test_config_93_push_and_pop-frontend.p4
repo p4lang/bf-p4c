@@ -29,19 +29,19 @@ struct metadata {
 struct headers {
     @name("pkt") 
     pkt_t     pkt;
-    @name("tags") 
+    @name(".tags") 
     tags_t[5] tags;
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_rest") state parse_rest {
+    @name(".parse_rest") state parse_rest {
         packet.extract<tags_t>(hdr.tags[1]);
         packet.extract<tags_t>(hdr.tags[2]);
         packet.extract<tags_t>(hdr.tags[3]);
         packet.extract<tags_t>(hdr.tags[4]);
         transition accept;
     }
-    @name("parse_test") state parse_test {
+    @name(".parse_test") state parse_test {
         packet.extract<pkt_t>(hdr.pkt);
         packet.extract<tags_t>(hdr.tags[0]);
         transition select(hdr.pkt.field_k_8) {
@@ -49,7 +49,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
             default: accept;
         }
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_test;
     }
 }
@@ -61,7 +61,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".pop_action") action pop_action_0() {
         hdr.tags.pop_front(4);
     }
-    @name("table_0") table table_1 {
+    @name(".table_0") table table_1 {
         actions = {
             push_action_0();
             pop_action_0();

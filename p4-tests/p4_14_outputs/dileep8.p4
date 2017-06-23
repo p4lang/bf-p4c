@@ -198,7 +198,7 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_ethernet") state parse_ethernet {
+    @name(".parse_ethernet") state parse_ethernet {
         packet.extract(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
             16w0x8100: parse_vlan_tag;
@@ -206,7 +206,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
             default: accept;
         }
     }
-    @name("parse_ipv4") state parse_ipv4 {
+    @name(".parse_ipv4") state parse_ipv4 {
         packet.extract(hdr.ipv4);
         transition select(hdr.ipv4.fragOffset, hdr.ipv4.protocol) {
             (13w0, 8w6): parse_tcp;
@@ -214,22 +214,22 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
             default: accept;
         }
     }
-    @name("parse_tcp") state parse_tcp {
+    @name(".parse_tcp") state parse_tcp {
         packet.extract(hdr.tcp);
         transition accept;
     }
-    @name("parse_udp") state parse_udp {
+    @name(".parse_udp") state parse_udp {
         packet.extract(hdr.udp);
         transition accept;
     }
-    @name("parse_vlan_tag") state parse_vlan_tag {
+    @name(".parse_vlan_tag") state parse_vlan_tag {
         packet.extract(hdr.vlan_tag);
         transition select(hdr.vlan_tag.etherType) {
             16w0x800: parse_ipv4;
             default: accept;
         }
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_ethernet;
     }
 }
@@ -266,7 +266,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
     }
-    @pack(7) @ways(2) @name("exm_2ways_7Entries_stage_3") table exm_2ways_7Entries_stage_3 {
+    @pack(7) @ways(2) @name(".exm_2ways_7Entries_stage_3") table exm_2ways_7Entries_stage_3 {
         actions = {
             nop;
             next_hop_ipv4;
@@ -277,7 +277,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.dstAddr    : exact;
         }
     }
-    @ways(3) @pack(1) @name("exm_3ways_1Entries") table exm_3ways_1Entries {
+    @ways(3) @pack(1) @name(".exm_3ways_1Entries") table exm_3ways_1Entries {
         actions = {
             nop;
             next_hop_ipv4;
@@ -287,7 +287,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ethernet.srcAddr: exact;
         }
     }
-    @pack(2) @ways(3) @name("exm_3ways_2Entries_stage_3") table exm_3ways_2Entries_stage_3 {
+    @pack(2) @ways(3) @name(".exm_3ways_2Entries_stage_3") table exm_3ways_2Entries_stage_3 {
         actions = {
             nop;
             next_hop_ipv4;
@@ -298,7 +298,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.tcp.dstPort : exact;
         }
     }
-    @ways(4) @name("exm_4ways_16k_stage_5") table exm_4ways_16k_stage_5 {
+    @ways(4) @name(".exm_4ways_16k_stage_5") table exm_4ways_16k_stage_5 {
         actions = {
             nop;
             next_hop_ipv4;
@@ -311,7 +311,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 16384;
     }
-    @ways(4) @pack(1) @name("exm_4ways_1Entries") table exm_4ways_1Entries {
+    @ways(4) @pack(1) @name(".exm_4ways_1Entries") table exm_4ways_1Entries {
         actions = {
             nop;
             custom_action_2;
@@ -321,7 +321,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.tcp.dstPort : exact;
         }
     }
-    @pack(2) @ways(4) @name("exm_4ways_2Entries_stage_4") table exm_4ways_2Entries_stage_4 {
+    @pack(2) @ways(4) @name(".exm_4ways_2Entries_stage_4") table exm_4ways_2Entries_stage_4 {
         actions = {
             nop;
             next_hop_ipv4;
@@ -331,7 +331,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.tcp.srcPort : exact;
         }
     }
-    @pack(2) @ways(5) @name("exm_5ways_2Entries_stage_4") table exm_5ways_2Entries_stage_4 {
+    @pack(2) @ways(5) @name(".exm_5ways_2Entries_stage_4") table exm_5ways_2Entries_stage_4 {
         actions = {
             nop;
             custom_action_3;
@@ -342,7 +342,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.tcp.dstPort : exact;
         }
     }
-    @stage(0) @pack(7) @ways(5) @name("exm_5ways_7Entries") table exm_5ways_7Entries {
+    @stage(0) @pack(7) @ways(5) @name(".exm_5ways_7Entries") table exm_5ways_7Entries {
         actions = {
             nop;
             custom_action_3;
@@ -352,7 +352,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ethernet.dstAddr: exact;
         }
     }
-    @pack(1) @ways(6) @name("exm_6ways_1Entries_stage_3") table exm_6ways_1Entries_stage_3 {
+    @pack(1) @ways(6) @name(".exm_6ways_1Entries_stage_3") table exm_6ways_1Entries_stage_3 {
         actions = {
             nop;
             next_hop_ipv4;
@@ -362,7 +362,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.dstAddr    : exact;
         }
     }
-    @pack(2) @ways(6) @name("exm_6ways_2Entries_stage_4") table exm_6ways_2Entries_stage_4 {
+    @pack(2) @ways(6) @name(".exm_6ways_2Entries_stage_4") table exm_6ways_2Entries_stage_4 {
         actions = {
             nop;
             custom_action_2;
@@ -371,7 +371,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.dstAddr: exact;
         }
     }
-    @ways(6) @pack(7) @name("exm_6ways_7Entries_stage_1") table exm_6ways_7Entries_stage_1 {
+    @ways(6) @pack(7) @name(".exm_6ways_7Entries_stage_1") table exm_6ways_7Entries_stage_1 {
         actions = {
             nop;
             next_hop_ipv4;
@@ -382,7 +382,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ethernet.srcAddr: exact;
         }
     }
-    @ways(5) @pack(8) @name("exm_6ways_8Entries_stage_2") table exm_6ways_8Entries_stage_2 {
+    @ways(5) @pack(8) @name(".exm_6ways_8Entries_stage_2") table exm_6ways_8Entries_stage_2 {
         actions = {
             nop;
             mod_mac_addr;

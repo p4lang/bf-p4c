@@ -146,18 +146,18 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("start") state start {
+    @name(".start") state start {
         packet.extract(hdr.data);
         transition accept;
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("simple") counter(32w256, CounterType.packets) simple;
+    @name(".simple") counter(32w256, CounterType.packets) simple;
     @name(".countb2") action countb2(bit<8> val) {
         simple.count((bit<32>)(bit<32>)hdr.data.b2);
     }
-    @name("test1") table test1 {
+    @name(".test1") table test1 {
         actions = {
             countb2;
         }

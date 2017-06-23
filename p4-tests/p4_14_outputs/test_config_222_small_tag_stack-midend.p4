@@ -18,19 +18,19 @@ struct metadata {
 struct headers {
     @name("one") 
     one_byte_t     one;
-    @name("hdr_stack_") 
+    @name(".hdr_stack_") 
     hdr_stack_t[3] hdr_stack_;
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("oneb") state oneb {
+    @name(".oneb") state oneb {
         packet.extract<one_byte_t>(hdr.one);
         transition stck;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition oneb;
     }
-    @name("stck") state stck {
+    @name(".stck") state stck {
         packet.extract<hdr_stack_t>(hdr.hdr_stack_.next);
         transition select(hdr.hdr_stack_.last.b) {
             8w0: stck;
@@ -60,7 +60,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".pop_1") action pop_0() {
         hdr.hdr_stack_.pop_front(1);
     }
-    @name("table_i0") table table_i0 {
+    @name(".table_i0") table table_i0 {
         actions = {
             do_nothing_0();
             action_1();

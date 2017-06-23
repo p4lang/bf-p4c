@@ -159,11 +159,11 @@ extern stateful_alu {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_ethernet") state parse_ethernet {
+    @name(".parse_ethernet") state parse_ethernet {
         packet.extract<pkt_t>(hdr.pkt);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_ethernet;
     }
 }
@@ -171,12 +171,12 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("NoAction") action NoAction_0() {
     }
-    @name("reg_0") register<bit<1>>(32w131072) reg_0;
+    @name(".reg_0") register<bit<1>>(32w131072) reg_0;
     @name("bbox_0") stateful_alu() bbox_0;
     @name(".action_0") action action_1(bit<32> idx) {
         bbox_0.execute_stateful_alu(idx);
     }
-    @name("table_0") table table_0 {
+    @name(".table_0") table table_0 {
         actions = {
             action_1();
             @defaultonly NoAction_0();

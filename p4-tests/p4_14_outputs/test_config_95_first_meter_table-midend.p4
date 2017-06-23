@@ -150,11 +150,11 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_ethernet") state parse_ethernet {
+    @name(".parse_ethernet") state parse_ethernet {
         packet.extract<pkt_t>(hdr.pkt);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_ethernet;
     }
 }
@@ -164,8 +164,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_3() {
     }
-    @name("meter_0") direct_meter<bit<5>>(MeterType.bytes) meter_0;
-    @name("meter_1") meter(32w500, MeterType.bytes) meter_1;
+    @name(".meter_0") direct_meter<bit<5>>(MeterType.bytes) meter_0;
+    @name(".meter_1") meter(32w500, MeterType.bytes) meter_1;
     @name(".do_nothing") action do_nothing_0() {
     }
     @name(".action_1") action action_0(bit<8> param0) {
@@ -174,7 +174,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".action_0") action action_0_1(bit<8> param0) {
         meter_0.read(hdr.pkt.color_0);
     }
-    @pa_solitare("meter_result.color_0", "meter_result.color_1") @include_stash(1) @name("table_0") table table_0 {
+    @pa_solitare("meter_result.color_0", "meter_result.color_1") @include_stash(1) @name(".table_0") table table_0 {
         actions = {
             action_0_1();
             @defaultonly NoAction_0();
@@ -188,7 +188,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meters = meter_0;
         default_action = NoAction_0();
     }
-    @idletime_two_way_notification(1) @include_stash(1) @name("table_1") table table_1 {
+    @idletime_two_way_notification(1) @include_stash(1) @name(".table_1") table table_1 {
         actions = {
             do_nothing_0();
             action_0();

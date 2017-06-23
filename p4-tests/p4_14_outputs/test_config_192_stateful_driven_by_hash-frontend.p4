@@ -157,22 +157,22 @@ extern stateful_alu {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_ethernet") state parse_ethernet {
+    @name(".parse_ethernet") state parse_ethernet {
         packet.extract<pkt_t>(hdr.pkt);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_ethernet;
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("r_em_direct") register<bit<16>>(32w2048) r_em_direct_0;
-    @name("r_em_indirect") register<bit<16>>(32w8192) r_em_indirect_0;
-    @name("r_hash_act") register<bit<8>>(32w256) r_hash_act_0;
-    @name("r_no_key") register<bit<16>>(32w1024) r_no_key_0;
-    @name("r_t_direct") register<bit<16>>(32w3072) r_t_direct_0;
-    @name("r_t_indirect") register<bit<16>>(32w8192) r_t_indirect_0;
+    @name(".r_em_direct") register<bit<16>>(32w2048) r_em_direct_0;
+    @name(".r_em_indirect") register<bit<16>>(32w8192) r_em_indirect_0;
+    @name(".r_hash_act") register<bit<8>>(32w256) r_hash_act_0;
+    @name(".r_no_key") register<bit<16>>(32w1024) r_no_key_0;
+    @name(".r_t_direct") register<bit<16>>(32w3072) r_t_direct_0;
+    @name(".r_t_indirect") register<bit<16>>(32w8192) r_t_indirect_0;
     @name("b_em_direct") stateful_alu() b_em_direct_0;
     @name("b_em_indirect") stateful_alu() b_em_indirect_0;
     @name("b_hash_act") stateful_alu() b_hash_act_0;
@@ -199,7 +199,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".a_t_indirect") action a_t_indirect_0() {
         b_t_indirect_0.execute_stateful_alu_from_hash<tuple<bit<32>, bit<32>>>({ hdr.pkt.field_a_32, hdr.pkt.field_b_32 });
     }
-    @name("t_em_direct") table t_em_direct_0 {
+    @name(".t_em_direct") table t_em_direct_0 {
         actions = {
             a_em_direct_0();
             @defaultonly NoAction();
@@ -210,7 +210,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction();
     }
-    @name("t_em_indirect") table t_em_indirect_0 {
+    @name(".t_em_indirect") table t_em_indirect_0 {
         actions = {
             a_em_indirect_0();
             do_nothing_0();
@@ -222,7 +222,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 2048;
         default_action = NoAction();
     }
-    @name("t_hash_act") table t_hash_act_0 {
+    @name(".t_hash_act") table t_hash_act_0 {
         actions = {
             a_hash_act_0();
             @defaultonly NoAction();
@@ -233,7 +233,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction();
     }
-    @name("t_no_key") table t_no_key_0 {
+    @name(".t_no_key") table t_no_key_0 {
         actions = {
             a_no_key_0();
             @defaultonly NoAction();
@@ -241,7 +241,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction();
     }
-    @name("t_t_direct") table t_t_direct_0 {
+    @name(".t_t_direct") table t_t_direct_0 {
         actions = {
             a_t_direct_0();
             @defaultonly NoAction();
@@ -252,7 +252,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction();
     }
-    @name("t_t_indirect") table t_t_indirect_0 {
+    @name(".t_t_indirect") table t_t_indirect_0 {
         actions = {
             a_t_indirect_0();
             do_nothing_0();

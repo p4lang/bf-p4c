@@ -158,11 +158,11 @@ extern stateful_alu {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_ethernet") state parse_ethernet {
+    @name(".parse_ethernet") state parse_ethernet {
         packet.extract<ethernet_t>(hdr.ethernet);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_ethernet;
     }
 }
@@ -179,7 +179,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_3() {
     }
-    @name("sampling_cntr") register<bit<32>>(32w139264) sampling_cntr;
+    @name(".sampling_cntr") register<bit<32>>(32w139264) sampling_cntr;
     @name("sampling_alu") stateful_alu() sampling_alu;
     @name(".action_0") action action_2(bit<32> idx) {
         sampling_alu.execute_stateful_alu(idx);
@@ -192,7 +192,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hash<bit<16>, bit<16>, tuple_0, bit<32>>(tmp_1, HashAlgorithm.random, 16w0, tmp_2, 32w262144);
         hdr.ethernet.blah = tmp_1;
     }
-    @name("table_0") table table_0 {
+    @name(".table_0") table table_0 {
         actions = {
             action_2();
             action_3();
@@ -204,7 +204,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_0();
     }
-    @name("table_1") table table_1 {
+    @name(".table_1") table table_1 {
         actions = {
             action_4();
             @defaultonly NoAction_3();

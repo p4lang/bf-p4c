@@ -181,25 +181,25 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_ethernet") state parse_ethernet {
+    @name(".parse_ethernet") state parse_ethernet {
         packet.extract<ethernet_t>(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
             16w0x800: parse_ipv4;
             default: accept;
         }
     }
-    @name("parse_ipv4") state parse_ipv4 {
+    @name(".parse_ipv4") state parse_ipv4 {
         packet.extract<ipv4_t>(hdr.ipv4);
         transition select(hdr.ipv4.protocol) {
             8w0x6: parse_tcp;
             default: accept;
         }
     }
-    @name("parse_tcp") state parse_tcp {
+    @name(".parse_tcp") state parse_tcp {
         packet.extract<tcp_t>(hdr.tcp);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_ethernet;
     }
 }
@@ -215,7 +215,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".set_partition_index") action set_partition_index(bit<10> idx) {
         meta.meta.partition_index = idx;
     }
-    @pack(1) @ways(4) @atcam_partition_index("meta.partition_index") @name("ipv4_alg_tcam") table ipv4_alg_tcam {
+    @pack(1) @ways(4) @atcam_partition_index("meta.partition_index") @name(".ipv4_alg_tcam") table ipv4_alg_tcam {
         actions = {
             ipv4_lpm_hit();
             lpm_miss();
@@ -227,10 +227,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.dstAddr         : lpm @name("hdr.ipv4.dstAddr") ;
         }
         size = 65536;
-        @name("ap") implementation = action_profile(32w65536);
+        @name(".ap") implementation = action_profile(32w65536);
         default_action = NoAction();
     }
-    @name("ipv4_lpm_partition") table ipv4_lpm_partition {
+    @name(".ipv4_lpm_partition") table ipv4_lpm_partition {
         actions = {
             set_partition_index();
             @defaultonly NoAction();

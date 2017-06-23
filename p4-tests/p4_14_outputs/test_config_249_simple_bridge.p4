@@ -177,7 +177,7 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_ethernet") state parse_ethernet {
+    @name(".parse_ethernet") state parse_ethernet {
         packet.extract(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
             16w0x800: parse_ipv4;
@@ -185,15 +185,15 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
             default: accept;
         }
     }
-    @name("parse_ipv4") state parse_ipv4 {
+    @name(".parse_ipv4") state parse_ipv4 {
         packet.extract(hdr.ipv4);
         transition accept;
     }
-    @name("parse_vlan") state parse_vlan {
+    @name(".parse_vlan") state parse_vlan {
         packet.extract(hdr.vlan);
         transition parse_ipv4;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_ethernet;
     }
 }
@@ -204,7 +204,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name(".set_port") action set_port(bit<9> p0) {
         hdr.eg_intr_md.egress_port = p0;
     }
-    @name("te0") table te0 {
+    @name(".te0") table te0 {
         actions = {
             do_nothing;
             set_port;
@@ -232,7 +232,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.m.y = py;
         meta.m.z = pz;
     }
-    @name("t0") table t0 {
+    @name(".t0") table t0 {
         actions = {
             do_nothing;
             i0;
@@ -242,7 +242,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 512;
     }
-    @name("t1") table t1 {
+    @name(".t1") table t1 {
         actions = {
             do_nothing;
         }

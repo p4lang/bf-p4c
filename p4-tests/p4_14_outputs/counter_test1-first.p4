@@ -21,15 +21,15 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("start") state start {
+    @name(".start") state start {
         packet.extract<data_t>(hdr.data);
         transition accept;
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("cnt") direct_counter(CounterType.packets) cnt;
-    @name("cnt2") direct_counter(CounterType.packets) cnt2;
+    @name(".cnt") direct_counter(CounterType.packets) cnt;
+    @name(".cnt2") direct_counter(CounterType.packets) cnt2;
     @name(".c1_3") action c1_3(bit<16> val1, bit<16> val2, bit<16> val3) {
         hdr.data.c1 = val1;
         hdr.data.c2 = val2;
@@ -47,7 +47,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.data.c2 = val2;
         hdr.data.c3 = val3;
     }
-    @name("test1") table test1 {
+    @name(".test1") table test1 {
         actions = {
             c1_3_0();
             @defaultonly NoAction();
@@ -56,7 +56,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.f1: exact @name("hdr.data.f1") ;
         }
         size = 32768;
-        @name("cnt") counters = direct_counter(CounterType.packets);
+        @name(".cnt") counters = direct_counter(CounterType.packets);
         default_action = NoAction();
     }
     @name(".c4_6") action c4_6_0(bit<16> val4, bit<16> val5, bit<16> val6, bit<9> port) {
@@ -66,7 +66,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.data.c6 = val6;
         standard_metadata.egress_spec = port;
     }
-    @name("test2") table test2 {
+    @name(".test2") table test2 {
         actions = {
             c4_6_0();
             @defaultonly NoAction();
@@ -75,7 +75,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.f2: exact @name("hdr.data.f2") ;
         }
         size = 10000;
-        @name("cnt2") counters = direct_counter(CounterType.packets);
+        @name(".cnt2") counters = direct_counter(CounterType.packets);
         default_action = NoAction();
     }
     apply {

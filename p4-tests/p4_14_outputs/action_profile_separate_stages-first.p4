@@ -24,7 +24,7 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("start") state start {
+    @name(".start") state start {
         packet.extract<data_t>(hdr.data);
         transition accept;
     }
@@ -55,7 +55,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".setf2") action setf2(bit<32> val2) {
         hdr.data.f2 = val2;
     }
-    @name("test1") table test1 {
+    @name(".test1") table test1 {
         actions = {
             setb1();
             setb2();
@@ -66,10 +66,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.f1: exact @name("hdr.data.f1") ;
         }
         size = 10000;
-        @name("set_b1_3") implementation = action_profile(32w1024);
+        @name(".set_b1_3") implementation = action_profile(32w1024);
         default_action = NoAction();
     }
-    @name("test2") table test2 {
+    @name(".test2") table test2 {
         actions = {
             setb5();
             setb6();
@@ -80,10 +80,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.f2: exact @name("hdr.data.f2") ;
         }
         size = 5000;
-        @name("set_b5_7") implementation = action_profile(32w1024);
+        @name(".set_b5_7") implementation = action_profile(32w1024);
         default_action = NoAction();
     }
-    @name("test3") table test3 {
+    @name(".test3") table test3 {
         actions = {
             setb1();
             setb2();
@@ -94,10 +94,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.f1: exact @name("hdr.data.f1") ;
         }
         size = 5000;
-        @name("set_b1_3") implementation = action_profile(32w1024);
+        @name(".set_b1_3") implementation = action_profile(32w1024);
         default_action = NoAction();
     }
-    @name("test4") table test4 {
+    @name(".test4") table test4 {
         actions = {
             setb5();
             setb6();
@@ -108,10 +108,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.f2: exact @name("hdr.data.f2") ;
         }
         size = 10000;
-        @name("set_b5_7") implementation = action_profile(32w1024);
+        @name(".set_b5_7") implementation = action_profile(32w1024);
         default_action = NoAction();
     }
-    @name("test_mid") table test_mid {
+    @name(".test_mid") table test_mid {
         actions = {
             setf1();
             @defaultonly NoAction();
@@ -121,7 +121,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @name("test_mid2") table test_mid2 {
+    @name(".test_mid2") table test_mid2 {
         actions = {
             setf2();
             @defaultonly NoAction();

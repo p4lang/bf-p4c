@@ -166,19 +166,19 @@ struct headers {
     generator_metadata_t_0                         ig_pg_md;
     @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_prsr_ctrl") @name("ig_prsr_ctrl") 
     ingress_parser_control_signals                 ig_prsr_ctrl;
-    @name("vlan_tag") 
+    @name(".vlan_tag") 
     vlan_tag_t[2]                                  vlan_tag;
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_vlan_tag") state parse_vlan_tag {
+    @name(".parse_vlan_tag") state parse_vlan_tag {
         packet.extract<vlan_tag_t>(hdr.vlan_tag.next);
         transition select(hdr.vlan_tag.last.ethertype) {
             16w0x8100: parse_vlan_tag;
             default: accept;
         }
     }
-    @name("start") state start {
+    @name(".start") state start {
         packet.extract<ethernet_t>(hdr.ethernet);
         transition select(hdr.ethernet.ethertype) {
             16w0x8100: parse_vlan_tag;
@@ -237,73 +237,73 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.meta.new_inner_vid = new_inner_vid;
         meta.meta.new_inner_vid_en = new_inner_vid_en;
     }
-    @name("new_inner_cfi") table new_inner_cfi_0 {
+    @name(".new_inner_cfi") table new_inner_cfi_0 {
         actions = {
             do_new_inner_cfi_0();
             @defaultonly NoAction();
         }
         default_action = NoAction();
     }
-    @name("new_inner_pri") table new_inner_pri_0 {
+    @name(".new_inner_pri") table new_inner_pri_0 {
         actions = {
             do_new_inner_pri_0();
             @defaultonly NoAction();
         }
         default_action = NoAction();
     }
-    @name("new_inner_tpid") table new_inner_tpid_0 {
+    @name(".new_inner_tpid") table new_inner_tpid_0 {
         actions = {
             do_new_inner_tpid_0();
             @defaultonly NoAction();
         }
         default_action = NoAction();
     }
-    @name("new_inner_vid") table new_inner_vid_0 {
+    @name(".new_inner_vid") table new_inner_vid_0 {
         actions = {
             do_new_inner_vid_0();
             @defaultonly NoAction();
         }
         default_action = NoAction();
     }
-    @name("new_outer_cfi") table new_outer_cfi_0 {
+    @name(".new_outer_cfi") table new_outer_cfi_0 {
         actions = {
             do_new_outer_cfi_0();
             @defaultonly NoAction();
         }
         default_action = NoAction();
     }
-    @name("new_outer_pri") table new_outer_pri_0 {
+    @name(".new_outer_pri") table new_outer_pri_0 {
         actions = {
             do_new_outer_pri_0();
             @defaultonly NoAction();
         }
         default_action = NoAction();
     }
-    @name("new_outer_tpid") table new_outer_tpid_0 {
+    @name(".new_outer_tpid") table new_outer_tpid_0 {
         actions = {
             do_new_outer_tpid_0();
             @defaultonly NoAction();
         }
         default_action = NoAction();
     }
-    @name("new_outer_vid") table new_outer_vid_0 {
+    @name(".new_outer_vid") table new_outer_vid_0 {
         actions = {
             do_new_outer_vid_0();
             @defaultonly NoAction();
         }
         default_action = NoAction();
     }
-    @name("vlan_xlate") table vlan_xlate_0 {
+    @name(".vlan_xlate") table vlan_xlate_0 {
         actions = {
             nop_0();
             rewrite_tags_0();
             @defaultonly NoAction();
         }
         key = {
-            hdr.vlan_tag[0].isValid(): exact @name("hdr.vlan_tag[0].isValid()") ;
-            hdr.vlan_tag[0].vid      : exact @name("hdr.vlan_tag[0].vid") ;
-            hdr.vlan_tag[1].isValid(): exact @name("hdr.vlan_tag[1].isValid()") ;
-            hdr.vlan_tag[1].vid      : exact @name("hdr.vlan_tag[1].vid") ;
+            hdr.vlan_tag[0].isValid(): exact @name("hdr..vlan_tag[0].isValid()") ;
+            hdr.vlan_tag[0].vid      : exact @name("hdr..vlan_tag[0].vid") ;
+            hdr.vlan_tag[1].isValid(): exact @name("hdr..vlan_tag[1].isValid()") ;
+            hdr.vlan_tag[1].vid      : exact @name("hdr..vlan_tag[1].vid") ;
         }
         default_action = NoAction();
     }

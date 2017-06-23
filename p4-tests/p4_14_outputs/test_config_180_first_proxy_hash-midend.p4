@@ -155,11 +155,11 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_ethernet") state parse_ethernet {
+    @name(".parse_ethernet") state parse_ethernet {
         packet.extract<pkt_t>(hdr.pkt);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_ethernet;
     }
 }
@@ -174,7 +174,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".action_1") action action_3() {
         mark_to_drop();
     }
-    @proxy_hash_width(24) @proxy_hash_algorithm("crc16_extend") @name("table_0") table table_0 {
+    @proxy_hash_width(24) @proxy_hash_algorithm("crc16_extend") @name(".table_0") table table_0 {
         actions = {
             action_2();
             action_3();

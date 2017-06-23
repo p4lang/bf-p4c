@@ -181,25 +181,25 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_ethernet") state parse_ethernet {
+    @name(".parse_ethernet") state parse_ethernet {
         packet.extract<ethernet_t>(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
             16w0x800: parse_ipv4;
             default: accept;
         }
     }
-    @name("parse_ipv4") state parse_ipv4 {
+    @name(".parse_ipv4") state parse_ipv4 {
         packet.extract<ipv4_t>(hdr.ipv4);
         transition select(hdr.ipv4.protocol) {
             8w0x6: parse_tcp;
             default: accept;
         }
     }
-    @name("parse_tcp") state parse_tcp {
+    @name(".parse_tcp") state parse_tcp {
         packet.extract<tcp_t>(hdr.tcp);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_ethernet;
     }
 }
@@ -214,7 +214,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".do_nothing") action do_nothing_0() {
     }
-    @alpm(1) @alpm_partitions(2048) @alpm_subtrees_per_partition(1) @name("ipv4_alpm") table ipv4_alpm_0 {
+    @alpm(1) @alpm_partitions(2048) @alpm_subtrees_per_partition(1) @name(".ipv4_alpm") table ipv4_alpm_0 {
         actions = {
             ipv4_lpm_hit_0();
             lpm_miss_0();
@@ -227,7 +227,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 65536;
         default_action = NoAction();
     }
-    @name("table_0") table table_2 {
+    @name(".table_0") table table_2 {
         actions = {
             do_nothing_0();
             @defaultonly NoAction();
@@ -237,7 +237,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @name("table_1") table table_3 {
+    @name(".table_1") table table_3 {
         actions = {
             do_nothing_0();
             @defaultonly NoAction();

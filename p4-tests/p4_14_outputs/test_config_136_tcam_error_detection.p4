@@ -154,11 +154,11 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_pkt") state parse_pkt {
+    @name(".parse_pkt") state parse_pkt {
         packet.extract(hdr.pkt);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_pkt;
     }
 }
@@ -170,7 +170,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".action_0") action action_0() {
         hdr.pkt.field_f_16 = 16w1;
     }
-    @entries_with_ranges(64) @tcam_error_detect(1) @name("table_0") table table_0 {
+    @entries_with_ranges(64) @tcam_error_detect(1) @name(".table_0") table table_0 {
         actions = {
             do_nothing;
             action_0;

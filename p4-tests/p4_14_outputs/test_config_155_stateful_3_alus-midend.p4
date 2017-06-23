@@ -164,11 +164,11 @@ extern stateful_alu {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_ethernet") state parse_ethernet {
+    @name(".parse_ethernet") state parse_ethernet {
         packet.extract<pkt_t>(hdr.pkt);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_ethernet;
     }
 }
@@ -180,9 +180,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_5() {
     }
-    @name("flow_cnt") register<bit<8>>(32w0) flow_cnt;
-    @name("stateful_cntr_1") register<bit<16>>(32w0) stateful_cntr_1;
-    @name("stateful_cntr_2") register<bit<16>>(32w0) stateful_cntr_2;
+    @name(".flow_cnt") register<bit<8>>(32w0) flow_cnt;
+    @name(".stateful_cntr_1") register<bit<16>>(32w0) stateful_cntr_1;
+    @name(".stateful_cntr_2") register<bit<16>>(32w0) stateful_cntr_2;
     @name("cntr_1") stateful_alu() cntr_1;
     @name("cntr_2") stateful_alu() cntr_2;
     @name("sampler_alu") stateful_alu() sampler_alu;
@@ -195,7 +195,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".sample") action sample_0() {
         sampler_alu.execute_stateful_alu();
     }
-    @table_counter("disabled") @name("match_cntr_1") table match_cntr_1 {
+    @table_counter("disabled") @name(".match_cntr_1") table match_cntr_1 {
         actions = {
             cnt();
             @defaultonly NoAction_0();
@@ -206,7 +206,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 16384;
         default_action = NoAction_0();
     }
-    @name("match_cntr_2") table match_cntr_2 {
+    @name(".match_cntr_2") table match_cntr_2 {
         actions = {
             cnt_0();
             @defaultonly NoAction_4();
@@ -219,7 +219,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 16384;
         default_action = NoAction_4();
     }
-    @name("match_flow") table match_flow {
+    @name(".match_flow") table match_flow {
         actions = {
             sample_0();
             @defaultonly NoAction_5();

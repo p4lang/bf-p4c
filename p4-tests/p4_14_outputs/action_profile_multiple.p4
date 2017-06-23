@@ -24,7 +24,7 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("start") state start {
+    @name(".start") state start {
         packet.extract(hdr.data);
         transition accept;
     }
@@ -49,7 +49,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".setb7") action setb7(bit<8> val7) {
         hdr.data.b7 = val7;
     }
-    @name("test1") table test1 {
+    @name(".test1") table test1 {
         actions = {
             setb1;
             setb2;
@@ -59,9 +59,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.f1: exact;
         }
         size = 10000;
-        @name("set_b1_3") implementation = action_profile(32w1024);
+        @name(".set_b1_3") implementation = action_profile(32w1024);
     }
-    @name("test2") table test2 {
+    @name(".test2") table test2 {
         actions = {
             setb1;
             setb2;
@@ -71,9 +71,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.f2: exact;
         }
         size = 5000;
-        @name("set_b1_3") implementation = action_profile(32w1024);
+        @name(".set_b1_3") implementation = action_profile(32w1024);
     }
-    @name("test3") table test3 {
+    @name(".test3") table test3 {
         actions = {
             setb5;
             setb6;
@@ -83,9 +83,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.f3: exact;
         }
         size = 5000;
-        @name("set_b5_7") implementation = action_profile(32w2048);
+        @name(".set_b5_7") implementation = action_profile(32w2048);
     }
-    @name("test4") table test4 {
+    @name(".test4") table test4 {
         actions = {
             setb5;
             setb6;
@@ -95,7 +95,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.f4: exact;
         }
         size = 10000;
-        @name("set_b5_7") implementation = action_profile(32w2048);
+        @name(".set_b5_7") implementation = action_profile(32w2048);
     }
     apply {
         if (hdr.data.b4 == 8w0) {

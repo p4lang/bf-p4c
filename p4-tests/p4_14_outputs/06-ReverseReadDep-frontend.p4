@@ -150,7 +150,7 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("start") state start {
+    @name(".start") state start {
         packet.extract<ethernet_t>(hdr.ethernet);
         transition accept;
     }
@@ -159,7 +159,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".nop") action nop_0() {
     }
-    @name("e_t1") table e_t1_0 {
+    @name(".e_t1") table e_t1_0 {
         actions = {
             nop_0();
             @defaultonly NoAction();
@@ -186,7 +186,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".set_bd") action set_bd_0(bit<16> bd) {
         meta.ing_metadata.bd = bd;
     }
-    @name("dmac") table dmac_0 {
+    @name(".dmac") table dmac_0 {
         actions = {
             nop_1();
             ing_drop_0();
@@ -200,7 +200,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 131072;
         default_action = NoAction();
     }
-    @name("port_bd") table port_bd_0 {
+    @name(".port_bd") table port_bd_0 {
         actions = {
             set_bd_0();
             @defaultonly NoAction();
@@ -211,7 +211,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction();
     }
-    @name("smac_bd_translate") table smac_bd_translate_0 {
+    @name(".smac_bd_translate") table smac_bd_translate_0 {
         actions = {
             nop_1();
             set_bd_0();

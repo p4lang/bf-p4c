@@ -202,7 +202,7 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_ethernet") state parse_ethernet {
+    @name(".parse_ethernet") state parse_ethernet {
         packet.extract<ethernet_t>(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
             16w0x8100: parse_vlan_tag;
@@ -210,7 +210,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
             default: accept;
         }
     }
-    @name("parse_ipv4") state parse_ipv4 {
+    @name(".parse_ipv4") state parse_ipv4 {
         packet.extract<ipv4_t>(hdr.ipv4);
         transition select(hdr.ipv4.fragOffset, hdr.ipv4.protocol) {
             (13w0, 8w6): parse_tcp;
@@ -218,22 +218,22 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
             default: accept;
         }
     }
-    @name("parse_tcp") state parse_tcp {
+    @name(".parse_tcp") state parse_tcp {
         packet.extract<tcp_t>(hdr.tcp);
         transition accept;
     }
-    @name("parse_udp") state parse_udp {
+    @name(".parse_udp") state parse_udp {
         packet.extract<udp_t>(hdr.udp);
         transition accept;
     }
-    @name("parse_vlan_tag") state parse_vlan_tag {
+    @name(".parse_vlan_tag") state parse_vlan_tag {
         packet.extract<vlan_tag_t>(hdr.vlan_tag);
         transition select(hdr.vlan_tag.etherType) {
             16w0x800: parse_ipv4;
             default: accept;
         }
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_ethernet;
     }
 }
@@ -244,7 +244,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name(".udp_set_src") action udp_set_src_0(bit<16> port) {
         hdr.udp.srcPort = port;
     }
-    @immediate(1) @stage(0) @name("eg_udp") table eg_udp_0 {
+    @immediate(1) @stage(0) @name(".eg_udp") table eg_udp_0 {
         actions = {
             nop_0();
             udp_set_src_0();
@@ -273,7 +273,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".hop_ipv4") action hop_ipv4_0(bit<9> egress_port) {
         hop_0(hdr.ipv4.ttl, egress_port);
     }
-    @stage(5) @name("tcam_range") table tcam_range_0 {
+    @stage(5) @name(".tcam_range") table tcam_range_0 {
         actions = {
             nop_1();
             hop_ipv4_0();

@@ -146,11 +146,11 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_test") state parse_test {
+    @name(".parse_test") state parse_test {
         packet.extract(hdr.test);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_test;
     }
 }
@@ -163,7 +163,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".action_1") action action_1() {
         ;
     }
-    @action_entries(200) @name("table_0") table table_0 {
+    @action_entries(200) @name(".table_0") table table_0 {
         actions = {
             action_0;
             action_1;

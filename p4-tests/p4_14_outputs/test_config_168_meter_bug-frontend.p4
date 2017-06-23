@@ -158,24 +158,24 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_ethernet") state parse_ethernet {
+    @name(".parse_ethernet") state parse_ethernet {
         packet.extract<ethernet_t>(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
             16w0x800: parse_ipv4;
             default: accept;
         }
     }
-    @name("parse_ipv4") state parse_ipv4 {
+    @name(".parse_ipv4") state parse_ipv4 {
         packet.extract<ipv4_t>(hdr.ipv4);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_ethernet;
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("exm_meter2") direct_meter<bit<8>>(MeterType.bytes) exm_meter2_0;
+    @name(".exm_meter2") direct_meter<bit<8>>(MeterType.bytes) exm_meter2_0;
     @name(".action_0") action action_0() {
         exm_meter2_0.read(hdr.ipv4.diffserv);
         hdr.ipv4.ttl = 8w4;
@@ -187,7 +187,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".nop") action nop() {
         exm_meter2_0.read(hdr.ipv4.diffserv);
     }
-    @name("table_0") table table_1 {
+    @name(".table_0") table table_1 {
         actions = {
             action_0();
             action_1();

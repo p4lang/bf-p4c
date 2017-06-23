@@ -143,11 +143,11 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_my_test_config_1") state parse_my_test_config_1 {
+    @name(".parse_my_test_config_1") state parse_my_test_config_1 {
         packet.extract<my_test_config_1_t>(hdr.my_test_config_1);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_my_test_config_1;
     }
 }
@@ -158,7 +158,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".just_no_op") action just_no_op() {
     }
-    @name("my_test_config_1_table") table my_test_config_1_table {
+    @name(".my_test_config_1_table") table my_test_config_1_table {
         actions = {
             modify_b();
             just_no_op();

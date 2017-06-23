@@ -173,24 +173,24 @@ extern stateful_alu {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_ethernet") state parse_ethernet {
+    @name(".parse_ethernet") state parse_ethernet {
         packet.extract<ethernet_t>(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
             16w0x800: parse_ipv4;
             default: accept;
         }
     }
-    @name("parse_ipv4") state parse_ipv4 {
+    @name(".parse_ipv4") state parse_ipv4 {
         packet.extract<ipv4_t>(hdr.ipv4);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_ethernet;
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("bfd_cnt") register<bit<8>>(32w1024) bfd_cnt;
+    @name(".bfd_cnt") register<bit<8>>(32w1024) bfd_cnt;
     stateful_alu() bfd_cnt_rx_alu;
     stateful_alu() bfd_cnt_tx_alu;
     @name(".bfd_rx") action bfd_rx(bit<32> idx) {
@@ -204,7 +204,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".on_miss") action on_miss() {
     }
-    @name("bfd") table bfd {
+    @name(".bfd") table bfd {
         actions = {
             bfd_rx();
             bfd_tx();
@@ -217,7 +217,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction();
     }
-    @name("check_needs") table check_needs {
+    @name(".check_needs") table check_needs {
         actions = {
             drop_me();
             on_miss();

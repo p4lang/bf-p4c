@@ -158,11 +158,11 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_ethernet") state parse_ethernet {
+    @name(".parse_ethernet") state parse_ethernet {
         packet.extract(hdr.pkt);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_ethernet;
     }
 }
@@ -170,7 +170,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".do_nothing") action do_nothing() {
     }
-    @name("table_10_bytes") table table_10_bytes {
+    @name(".table_10_bytes") table table_10_bytes {
         actions = {
             do_nothing;
         }
@@ -188,7 +188,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 1024;
     }
-    @name("table_11_bytes") table table_11_bytes {
+    @name(".table_11_bytes") table table_11_bytes {
         actions = {
             do_nothing;
         }
@@ -207,7 +207,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 65536;
     }
-    @name("table_12_bytes") table table_12_bytes {
+    @name(".table_12_bytes") table table_12_bytes {
         actions = {
             do_nothing;
         }
@@ -227,7 +227,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 1024;
     }
-    @name("table_13_bytes") table table_13_bytes {
+    @name(".table_13_bytes") table table_13_bytes {
         actions = {
             do_nothing;
         }
@@ -248,7 +248,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 1024;
     }
-    @name("table_14_bytes") table table_14_bytes {
+    @name(".table_14_bytes") table table_14_bytes {
         actions = {
             do_nothing;
         }
@@ -270,7 +270,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 1024;
     }
-    @name("table_15_bytes") table table_15_bytes {
+    @name(".table_15_bytes") table table_15_bytes {
         actions = {
             do_nothing;
         }
@@ -293,7 +293,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 1024;
     }
-    @name("table_16_bytes") table table_16_bytes {
+    @name(".table_16_bytes") table table_16_bytes {
         actions = {
             do_nothing;
         }
@@ -317,7 +317,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 1024;
     }
-    @name("table_2_bytes") table table_2_bytes {
+    @name(".table_2_bytes") table table_2_bytes {
         actions = {
             do_nothing;
         }
@@ -327,7 +327,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 1024;
     }
-    @name("table_3_bytes") table table_3_bytes {
+    @name(".table_3_bytes") table table_3_bytes {
         actions = {
             do_nothing;
         }
@@ -338,7 +338,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 1024;
     }
-    @name("table_4_bytes") table table_4_bytes {
+    @name(".table_4_bytes") table table_4_bytes {
         actions = {
             do_nothing;
         }
@@ -350,7 +350,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 1024;
     }
-    @name("table_5_bytes") table table_5_bytes {
+    @name(".table_5_bytes") table table_5_bytes {
         actions = {
             do_nothing;
         }
@@ -363,7 +363,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 1024;
     }
-    @name("table_6_bytes") table table_6_bytes {
+    @name(".table_6_bytes") table table_6_bytes {
         actions = {
             do_nothing;
         }
@@ -377,7 +377,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 1024;
     }
-    @name("table_7_bytes") table table_7_bytes {
+    @name(".table_7_bytes") table table_7_bytes {
         actions = {
             do_nothing;
         }
@@ -392,7 +392,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 1024;
     }
-    @name("table_8_bytes") table table_8_bytes {
+    @name(".table_8_bytes") table table_8_bytes {
         actions = {
             do_nothing;
         }
@@ -408,7 +408,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 1024;
     }
-    @name("table_9_bytes") table table_9_bytes {
+    @name(".table_9_bytes") table table_9_bytes {
         actions = {
             do_nothing;
         }

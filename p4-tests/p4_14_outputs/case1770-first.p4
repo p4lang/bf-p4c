@@ -174,7 +174,7 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parseEthernet") state parseEthernet {
+    @name(".parseEthernet") state parseEthernet {
         packet.extract<EthernetHdr_0>(hdr.ethHdr);
         transition select(hdr.ethHdr.etherType) {
             16w0x8100: parseVlanHdr;
@@ -182,20 +182,20 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
             default: accept;
         }
     }
-    @name("parseIpv4Hdr") state parseIpv4Hdr {
+    @name(".parseIpv4Hdr") state parseIpv4Hdr {
         packet.extract<Ipv4Hdr_0>(hdr.ipv4Hdr);
         transition select(hdr.ipv4Hdr.fragOffset, hdr.ipv4Hdr.ihl, hdr.ipv4Hdr.protocol) {
             default: accept;
         }
     }
-    @name("parseVlanHdr") state parseVlanHdr {
+    @name(".parseVlanHdr") state parseVlanHdr {
         packet.extract<VlanHdr_0>(hdr.vlanHdr);
         transition select(hdr.vlanHdr.etherType) {
             16w0x800: parseIpv4Hdr;
             default: accept;
         }
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parseEthernet;
     }
 }
@@ -210,7 +210,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".a") action a(bit<12> data) {
         meta.h1.f2 = data;
     }
-    @name("f") table f {
+    @name(".f") table f {
         actions = {
             b();
             @defaultonly NoAction();
@@ -218,7 +218,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1;
         default_action = NoAction();
     }
-    @name("forward") table forward {
+    @name(".forward") table forward {
         actions = {
             do_forward();
             @defaultonly NoAction();
@@ -228,7 +228,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @atcam_partition_index("h1.f1") @atcam_number_partitions(16384) @name("t") table t {
+    @atcam_partition_index("h1.f1") @atcam_number_partitions(16384) @name(".t") table t {
         actions = {
             a();
             @defaultonly NoAction();

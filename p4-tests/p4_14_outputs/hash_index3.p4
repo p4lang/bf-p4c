@@ -146,7 +146,7 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("start") state start {
+    @name(".start") state start {
         packet.extract(hdr.data);
         transition accept;
     }
@@ -159,7 +159,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".setf3") action setf3(bit<32> val) {
         hdr.data.f3 = val;
     }
-    @use_hash_action(1) @name("test1") table test1 {
+    @use_hash_action(1) @name(".test1") table test1 {
         actions = {
             setf1;
         }
@@ -168,7 +168,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 256;
     }
-    @name("test2") table test2 {
+    @name(".test2") table test2 {
         actions = {
             setf3;
         }
@@ -176,7 +176,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.f2: ternary;
         }
     }
-    @name("test3") table test3 {
+    @name(".test3") table test3 {
         actions = {
             setf3;
         }

@@ -181,25 +181,25 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_ethernet") state parse_ethernet {
+    @name(".parse_ethernet") state parse_ethernet {
         packet.extract(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
             16w0x800: parse_ipv4;
             default: accept;
         }
     }
-    @name("parse_ipv4") state parse_ipv4 {
+    @name(".parse_ipv4") state parse_ipv4 {
         packet.extract(hdr.ipv4);
         transition select(hdr.ipv4.protocol) {
             8w0x6: parse_tcp;
             default: accept;
         }
     }
-    @name("parse_tcp") state parse_tcp {
+    @name(".parse_tcp") state parse_tcp {
         packet.extract(hdr.tcp);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_ethernet;
     }
 }
@@ -219,7 +219,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".do_nothing_2") action do_nothing_2() {
     }
-    @atcam_partition_index("meta.partition_index") @name("ipv4_alg_tcam") table ipv4_alg_tcam {
+    @atcam_partition_index("meta.partition_index") @name(".ipv4_alg_tcam") table ipv4_alg_tcam {
         actions = {
             ipv4_lpm_hit;
             lpm_miss;
@@ -231,7 +231,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 65536;
     }
-    @name("ipv4_lpm_partition") table ipv4_lpm_partition {
+    @name(".ipv4_lpm_partition") table ipv4_lpm_partition {
         actions = {
             set_partition_index;
         }
@@ -241,7 +241,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 1024;
     }
-    @name("table_n") table table_n {
+    @name(".table_n") table table_n {
         actions = {
             do_nothing;
             do_nothing_2;
@@ -250,7 +250,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.dstAddr: exact;
         }
     }
-    @name("table_x") table table_x {
+    @name(".table_x") table table_x {
         actions = {
             do_nothing;
         }

@@ -155,11 +155,11 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_vlan_tag") state parse_vlan_tag {
+    @name(".parse_vlan_tag") state parse_vlan_tag {
         packet.extract(hdr.vlan_tag);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         packet.extract(hdr.ethernet);
         transition select(hdr.ethernet.ethertype) {
             16w0x8100: parse_vlan_tag;
@@ -174,19 +174,19 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("flex_counter") counter(32w8192, CounterType.packets) flex_counter;
+    @name(".flex_counter") counter(32w8192, CounterType.packets) flex_counter;
     @name(".update_flex_counter") action update_flex_counter() {
         flex_counter.count((bit<32>)(bit<32>)meta.md.flex_counter_index);
     }
     @name(".set_flex_counter_index") action set_flex_counter_index(bit<13> flex_counter_base) {
         meta.md.flex_counter_index = flex_counter_base + (bit<13>)hdr.vlan_tag.prio;
     }
-    @name("update_counters") table update_counters {
+    @name(".update_counters") table update_counters {
         actions = {
             update_flex_counter;
         }
     }
-    @name("vlan") table vlan {
+    @name(".vlan") table vlan {
         actions = {
             set_flex_counter_index;
         }

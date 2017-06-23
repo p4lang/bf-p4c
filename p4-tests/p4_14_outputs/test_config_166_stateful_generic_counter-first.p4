@@ -171,29 +171,29 @@ extern stateful_alu {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_ethernet") state parse_ethernet {
+    @name(".parse_ethernet") state parse_ethernet {
         packet.extract<ethernet_t>(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
             16w0x800: parse_ipv4;
             default: accept;
         }
     }
-    @name("parse_ipv4") state parse_ipv4 {
+    @name(".parse_ipv4") state parse_ipv4 {
         packet.extract<ipv4_t>(hdr.ipv4);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_ethernet;
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("cntr") register<bit<64>>(32w8192) cntr;
+    @name(".cntr") register<bit<64>>(32w8192) cntr;
     stateful_alu() counter_alu;
     @name(".increment_counter") action increment_counter(bit<32> idx) {
         counter_alu.execute_stateful_alu(idx);
     }
-    @name("packet_offset_counting") table packet_offset_counting {
+    @name(".packet_offset_counting") table packet_offset_counting {
         actions = {
             increment_counter();
             @defaultonly NoAction();

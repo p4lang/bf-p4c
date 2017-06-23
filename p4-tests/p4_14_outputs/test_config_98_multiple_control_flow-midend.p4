@@ -151,11 +151,11 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_pkt") state parse_pkt {
+    @name(".parse_pkt") state parse_pkt {
         packet.extract<pkt_t>(hdr.pkt);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_pkt;
     }
 }
@@ -170,7 +170,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     @name(".do_nothing") action do_nothing_0() {
     }
-    @name("table_2") table table_0 {
+    @name(".table_2") table table_0 {
         actions = {
             action_2();
             @defaultonly NoAction_0();
@@ -180,7 +180,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         default_action = NoAction_0();
     }
-    @name("table_3") table table_1 {
+    @name(".table_3") table table_1 {
         actions = {
             do_nothing_0();
             @defaultonly NoAction_1();
@@ -204,7 +204,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".action_0") action action_3(bit<32> param0) {
         hdr.pkt.field_b_32 = param0;
     }
-    @name("table_0") table table_2 {
+    @name(".table_0") table table_2 {
         actions = {
             action_3();
             @defaultonly NoAction_6();
@@ -217,7 +217,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".action_1") action _action(bit<32> param0) {
         hdr.pkt.field_c_32 = param0;
     }
-    @name("pipe_0.table_1") table pipe_0_table_0 {
+    @name(".table_1") table _table_0 {
         actions = {
             _action();
             @defaultonly NoAction_7();
@@ -229,7 +229,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         table_2.apply();
-        pipe_0_table_0.apply();
+        _table_0.apply();
     }
 }
 

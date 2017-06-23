@@ -170,20 +170,20 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_trill") state parse_trill {
+    @name(".parse_trill") state parse_trill {
         packet.extract<trill_t>(hdr.trill);
         meta.m.hopCount = hdr.trill.hopCount;
         packet.extract<ethernet_t_0>(hdr.inner_ethernet);
         transition accept;
     }
-    @name("parse_vlan_tag") state parse_vlan_tag {
+    @name(".parse_vlan_tag") state parse_vlan_tag {
         packet.extract<vlan_tag_t>(hdr.vlan_tag);
         transition select(hdr.vlan_tag.ethertype) {
             16w0x2222: parse_trill;
             default: accept;
         }
     }
-    @name("start") state start {
+    @name(".start") state start {
         packet.extract<ethernet_t_0>(hdr.outer_ethernet);
         transition select(hdr.outer_ethernet.ethertype) {
             16w0x8100: parse_vlan_tag;
@@ -213,14 +213,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ig_intr_md_for_tm.ucast_egress_port = new_port;
         meta.m.hopCount = meta.m.hopCount + 6w63;
     }
-    @name("fix_trill_header") table fix_trill_header {
+    @name(".fix_trill_header") table fix_trill_header {
         actions = {
             copy_hopCount_0();
             @defaultonly NoAction_0();
         }
         default_action = NoAction_0();
     }
-    @name("trill_forward") table trill_forward {
+    @name(".trill_forward") table trill_forward {
         actions = {
             forward_trill_0();
             @defaultonly NoAction_3();

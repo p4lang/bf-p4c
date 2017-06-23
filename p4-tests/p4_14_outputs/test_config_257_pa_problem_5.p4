@@ -180,7 +180,7 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_ethernet") state parse_ethernet {
+    @name(".parse_ethernet") state parse_ethernet {
         packet.extract(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
             16w0x800: parse_ipv4;
@@ -188,16 +188,16 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
             default: accept;
         }
     }
-    @name("parse_ipv4") state parse_ipv4 {
+    @name(".parse_ipv4") state parse_ipv4 {
         packet.extract(hdr.ipv4);
         transition accept;
     }
-    @name("parse_vlan") state parse_vlan {
+    @name(".parse_vlan") state parse_vlan {
         packet.extract(hdr.vlan);
         packet.extract(hdr.vlan2);
         transition parse_ipv4;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_ethernet;
     }
 }
@@ -234,7 +234,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.m2.v = meta.m.v;
         meta.m2.t = meta.m.t;
     }
-    @name("t1") table t1 {
+    @name(".t1") table t1 {
         actions = {
             do_nothing;
             set_m;
@@ -244,7 +244,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 512;
     }
-    @name("t2") table t2 {
+    @name(".t2") table t2 {
         actions = {
             do_nothing;
             add_vlan;
@@ -254,7 +254,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 512;
     }
-    @name("t3") table t3 {
+    @name(".t3") table t3 {
         actions = {
             do_nothing;
             set_m2;
@@ -264,7 +264,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 512;
     }
-    @name("t4") table t4 {
+    @name(".t4") table t4 {
         actions = {
             do_nothing;
             set_m_again;
@@ -274,7 +274,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 512;
     }
-    @name("t5") table t5 {
+    @name(".t5") table t5 {
         support_timeout = true;
         actions = {
             do_nothing;

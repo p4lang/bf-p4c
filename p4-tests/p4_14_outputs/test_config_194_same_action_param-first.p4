@@ -158,11 +158,11 @@ extern stateful_alu {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_ethernet") state parse_ethernet {
+    @name(".parse_ethernet") state parse_ethernet {
         packet.extract<pkt_t>(hdr.pkt);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_ethernet;
     }
 }
@@ -173,7 +173,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name(".drop_me") action drop_me() {
         mark_to_drop();
     }
-    @name("table_e") table table_e {
+    @name(".table_e") table table_e {
         actions = {
             do_nothing();
             drop_me();
@@ -201,7 +201,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.pkt.field_a_32 = hdr.pkt.field_a_32 ^ param_1;
         hdr.pkt.field_b_32 = param_1;
     }
-    @immediate(0) @name("table_0") table table_0 {
+    @immediate(0) @name(".table_0") table table_0 {
         actions = {
             action_0();
             do_nothing();
@@ -217,7 +217,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction();
     }
-    @immediate(0) @name("table_1") table table_1 {
+    @immediate(0) @name(".table_1") table table_1 {
         actions = {
             action_1();
             @defaultonly NoAction();
@@ -228,14 +228,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction();
     }
-    @name("table_2") table table_2 {
+    @name(".table_2") table table_2 {
         actions = {
             action_1();
             @defaultonly NoAction();
         }
         default_action = NoAction();
     }
-    @random_seed(0x4567) @name("table_3") table table_3 {
+    @random_seed(0x4567) @name(".table_3") table table_3 {
         actions = {
             do_nothing();
             @defaultonly NoAction();

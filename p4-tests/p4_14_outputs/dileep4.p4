@@ -189,14 +189,14 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_ethernet") state parse_ethernet {
+    @name(".parse_ethernet") state parse_ethernet {
         packet.extract(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
             16w0x800: parse_ipv4;
             default: accept;
         }
     }
-    @name("parse_ipv4") state parse_ipv4 {
+    @name(".parse_ipv4") state parse_ipv4 {
         packet.extract(hdr.ipv4);
         transition select(hdr.ipv4.fragOffset, hdr.ipv4.protocol) {
             (13w0, 8w6): parse_tcp;
@@ -204,15 +204,15 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
             default: accept;
         }
     }
-    @name("parse_tcp") state parse_tcp {
+    @name(".parse_tcp") state parse_tcp {
         packet.extract(hdr.tcp);
         transition accept;
     }
-    @name("parse_udp") state parse_udp {
+    @name(".parse_udp") state parse_udp {
         packet.extract(hdr.udp);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_ethernet;
     }
 }
@@ -270,7 +270,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ipv4.protocol = 8w17;
         hdr.ipv4.totalLen = hdr.ipv4.totalLen + 16w8;
     }
-    @name("ipv4_routing") table ipv4_routing {
+    @name(".ipv4_routing") table ipv4_routing {
         actions = {
             nop;
             hop_ipv4;
@@ -280,7 +280,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.dstAddr: lpm;
         }
     }
-    @name("ipv4_routing_exm_ways_3_pack_3") table ipv4_routing_exm_ways_3_pack_3 {
+    @name(".ipv4_routing_exm_ways_3_pack_3") table ipv4_routing_exm_ways_3_pack_3 {
         actions = {
             nop;
             custom_action_1;
@@ -290,7 +290,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ethernet.dstAddr: exact;
         }
     }
-    @name("ipv4_routing_exm_ways_3_pack_5") table ipv4_routing_exm_ways_3_pack_5 {
+    @name(".ipv4_routing_exm_ways_3_pack_5") table ipv4_routing_exm_ways_3_pack_5 {
         actions = {
             nop;
             modify_tcp_dst_port;
@@ -300,7 +300,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.srcAddr: exact;
         }
     }
-    @name("ipv4_routing_exm_ways_4_pack_3_stage_1") table ipv4_routing_exm_ways_4_pack_3_stage_1 {
+    @name(".ipv4_routing_exm_ways_4_pack_3_stage_1") table ipv4_routing_exm_ways_4_pack_3_stage_1 {
         actions = {
             nop;
             next_hop_ipv4;
@@ -310,7 +310,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.srcAddr: exact;
         }
     }
-    @name("ipv4_routing_exm_ways_4_pack_7_stage_2") table ipv4_routing_exm_ways_4_pack_7_stage_2 {
+    @name(".ipv4_routing_exm_ways_4_pack_7_stage_2") table ipv4_routing_exm_ways_4_pack_7_stage_2 {
         actions = {
             nop;
             custom_action_2;
@@ -322,7 +322,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.tcp.srcPort : exact;
         }
     }
-    @name("ipv4_routing_exm_ways_5_pack_3_stage_3") table ipv4_routing_exm_ways_5_pack_3_stage_3 {
+    @name(".ipv4_routing_exm_ways_5_pack_3_stage_3") table ipv4_routing_exm_ways_5_pack_3_stage_3 {
         actions = {
             nop;
             next_hop_ipv4;
@@ -331,7 +331,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.dstAddr: exact;
         }
     }
-    @name("ipv4_routing_exm_ways_6_pack_3_stage_4") table ipv4_routing_exm_ways_6_pack_3_stage_4 {
+    @name(".ipv4_routing_exm_ways_6_pack_3_stage_4") table ipv4_routing_exm_ways_6_pack_3_stage_4 {
         actions = {
             nop;
             next_hop_ipv4;
@@ -340,7 +340,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.dstAddr: exact;
         }
     }
-    @name("ipv4_routing_stage_1") table ipv4_routing_stage_1 {
+    @name(".ipv4_routing_stage_1") table ipv4_routing_stage_1 {
         actions = {
             nop;
             hop_ipv4;
@@ -351,7 +351,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 1024;
     }
-    @name("tcam_tbl_stage_2") table tcam_tbl_stage_2 {
+    @name(".tcam_tbl_stage_2") table tcam_tbl_stage_2 {
         actions = {
             nop;
             mod_mac_adr;
@@ -360,7 +360,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.dstAddr: lpm;
         }
     }
-    @name("tcp_rm_tbl_stage_4") table tcp_rm_tbl_stage_4 {
+    @name(".tcp_rm_tbl_stage_4") table tcp_rm_tbl_stage_4 {
         actions = {
             nop;
             tcp_hdr_rm;
@@ -369,7 +369,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ethernet.srcAddr: ternary;
         }
     }
-    @name("udp_add_tbl_stage_3") table udp_add_tbl_stage_3 {
+    @name(".udp_add_tbl_stage_3") table udp_add_tbl_stage_3 {
         actions = {
             nop;
             udp_hdr_add;
