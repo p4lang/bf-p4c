@@ -490,7 +490,6 @@ XFAIL_TESTS += $(BRIG_132_XFAIL)
 # various stateful
 XFAIL_TESTS += \
 		tofino/%reldir%/p4_14/test_config_163_stateful_table_math_unit.p4.test \
-		tofino/%reldir%/p4_14/test_config_167_stateful_flowlet_switching.p4.test \
 		tofino/%reldir%/p4_14/test_config_169_stateful_sflow_sequence.p4.test \
 		tofino/%reldir%/p4_14/test_config_184_stateful_bug1.p4.test \
 		tofino/%reldir%/p4_14/test_config_192_stateful_driven_by_hash.p4.test \

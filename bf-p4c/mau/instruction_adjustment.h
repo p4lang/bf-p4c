@@ -29,12 +29,18 @@
  *  their place put the names of the PHV containers instead, along the lines of:
  *      -set W1(0..23), W5(8..31)
  *
- *  The other major case is the splitting of fields. Say header.field5 is in multiple containers.
+ *  Another major case is the splitting of fields. Say header.field5 is in multiple containers.
  *  The action_data_param may not come into the ALUs contiguously, and thus must be broken into
  *  instruction based on the allocation within the containers:
  *      -set header.field5.0-31 action_data_param.0-31
  *      -set header.field5.32-47 action_data_param.32-47
+ *
+ *  In particular, some constants have to be converted to action data, based on how they are
+ *  use in an instruction within a container.  These constraints are fully detailed by 
+ *  comments in action_analysis, but are summarized by the restrictions from load const and one
+ *  of the sources of an action
  */
+
 
 class SplitInstructions : public MauTransform, P4WriteContext {
     const PhvInfo &phv;
@@ -63,6 +69,35 @@ class SplitInstructions : public MauTransform, P4WriteContext {
     SplitInstructions(const PhvInfo &p, const IR::MAU::Table *t) : phv(p), tbl(t) {}
 };
 
+class ConstantsToActionData : public MauTransform, P4WriteContext {
+    const PhvInfo &phv;
+    const IR::MAU::Table *tbl;
+    ActionAnalysis::ContainerActionsMap container_actions_map;
+
+    const IR::MAU::Action *preorder(IR::MAU::Action *) override;
+    const IR::MAU::Instruction *preorder(IR::MAU::Instruction *) override;
+    const IR::ActionArg *preorder(IR::ActionArg *) override;
+    const IR::Expression *preorder(IR::Expression *) override;
+    const IR::Constant *preorder(IR::Constant *) override;
+    const IR::Slice *preorder(IR::Slice *) override;
+    void analyze_phv_field(IR::Expression *);
+    const IR::Primitive *preorder(IR::Primitive *) override;
+    const IR::MAU::Instruction *postorder(IR::MAU::Instruction *) override;
+    const IR::MAU::Action *postorder(IR::MAU::Action *) override;
+
+    const IR::MAU::AttachedOutput *preorder(IR::MAU::AttachedOutput *) override;
+    const IR::MAU::StatefulAlu *preorder(IR::MAU::StatefulAlu *) override;
+    const IR::MAU::HashDist *preorder(IR::MAU::HashDist *) override;
+
+    bool has_constant = false;
+    bool write_found = false;
+    std::pair<cstring, int> constant_renames_key = std::make_pair(cstring::empty, 0);
+    cstring action_name;
+
+ public:
+    ConstantsToActionData(const PhvInfo &p, const IR::MAU::Table *t) : phv(p), tbl(t) {}
+};
+
 class MergeInstructions : public MauTransform, P4WriteContext {
  private:
     const PhvInfo &phv;
@@ -74,6 +109,7 @@ class MergeInstructions : public MauTransform, P4WriteContext {
     const IR::Expression *preorder(IR::Expression *) override;
     const IR::Slice *preorder(IR::Slice *) override;
     void analyze_phv_field(IR::Expression *);
+    const IR::MAU::ActionDataConstant *preorder(IR::MAU::ActionDataConstant *) override;
     const IR::ActionArg *preorder(IR::ActionArg *) override;
     const IR::Constant *preorder(IR::Constant *) override;
     const IR::Primitive *preorder(IR::Primitive *) override;

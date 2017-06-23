@@ -344,6 +344,14 @@ class HashDist : Expression {
 // Currently we reconstruct the unit id(s) in MauAsmOutput::EmitAction
 }
 
+class ActionDataConstant : Expression {
+#nodbprint
+    cstring name;
+    Constant constant;
+
+    ActionDataConstant { type = constant->type; }
+}
+
 /// A use of an attached table output; an operand of an instruction
 class AttachedOutput : Expression {
     Attached    attached;

@@ -123,6 +123,158 @@ const IR::MAU::Action *SplitInstructions::postorder(IR::MAU::Action *act) {
     return act;
 }
 
+/** ConvertConstantsToActionData */
+
+/** The purpose of this pass is to either convert all constants that are necessarily supposed
+ *  to be action data, to action data, or if the action formats were decided before PHV
+ *  allocation was known, throw a Backtrack exception back to TableLayout in order to determine
+ *  the best allocation.
+ *
+ *  If a container is determined to need conversion, then all of the constants are converted into
+ *  action data for that container.  The reasons constants are converted are detailed in the
+ *  action_analysis pass, but summarized are restricted from a load_const, and a src2 limitation
+ *  on all instructions.
+ */
+const IR::MAU::Action *ConstantsToActionData::preorder(IR::MAU::Action *act) {
+    container_actions_map.clear();
+    ActionAnalysis aa(phv, true, true, tbl);
+    aa.set_container_actions_map(&container_actions_map);
+    act->apply(aa);
+
+    bool proceed = false;
+    for (auto &container_action_entry : container_actions_map) {
+        auto &cont_action = container_action_entry.second;
+        if (cont_action.convert_constant_to_actiondata()) {
+            proceed = true;
+            break;
+        }
+    }
+    if (!proceed) {
+        prune();
+        return act;
+    }
+
+    action_name = act->name;
+    auto &constant_renames = tbl->resources->action_format.constant_locations.at(action_name);
+    // Backtrack if the constants are not fully setup by the action format
+    if (constant_renames.empty())
+        throw ActionFormat::failure(act->name);
+
+    return act;
+}
+
+const IR::MAU::Instruction *ConstantsToActionData::preorder(IR::MAU::Instruction *instr) {
+    write_found = false;
+    has_constant = false;
+    constant_renames_key.first = cstring::empty;
+    constant_renames_key.second = 0;
+    return instr;
+}
+
+const IR::ActionArg *ConstantsToActionData::preorder(IR::ActionArg *arg) {
+    return arg;
+}
+
+const IR::Primitive *ConstantsToActionData::preorder(IR::Primitive *prim) {
+    prune();
+    return prim;
+}
+
+const IR::Constant *ConstantsToActionData::preorder(IR::Constant *constant) {
+    has_constant = true;
+    return constant;
+}
+
+void ConstantsToActionData::analyze_phv_field(IR::Expression *expr) {
+    PhvInfo::Field::bitrange bits;
+    auto *field = phv.field(expr, &bits);
+
+    if (field == nullptr)
+        return;
+
+    if (isWrite()) {
+        if (write_found)
+            BUG("Multiple writes found within a single field instruction");
+
+        int write_count = 0;
+        int container_bit = 0;
+        cstring container_name;
+        field->foreach_alloc(bits, [&](const PhvInfo::Field::alloc_slice &alloc) {
+            write_count++;
+            container_bit = alloc.container_bit;
+            container_name = alloc.container.toString();
+        });
+
+        if (write_count != 1)
+            BUG("Splitting of writes did not work in ConstantsToActionData");
+
+        constant_renames_key.first = container_name;
+        constant_renames_key.second = container_bit;
+        write_found = true;
+    }
+}
+
+const IR::Slice *ConstantsToActionData::preorder(IR::Slice *sl) {
+    if (phv.field(sl))
+        analyze_phv_field(sl);
+
+    prune();
+    return sl;
+}
+
+const IR::Expression *ConstantsToActionData::preorder(IR::Expression *expr) {
+    if (phv.field(expr))
+        analyze_phv_field(expr);
+    return expr;
+}
+
+const IR::MAU::AttachedOutput *ConstantsToActionData::preorder(IR::MAU::AttachedOutput *ao) {
+    prune();
+    return ao;
+}
+
+const IR::MAU::StatefulAlu *ConstantsToActionData::preorder(IR::MAU::StatefulAlu *salu) {
+    prune();
+    return salu;
+}
+
+const IR::MAU::HashDist *ConstantsToActionData::preorder(IR::MAU::HashDist *hd) {
+    prune();
+    return hd;
+}
+
+/** Replace any constant in these particular instructions with the an IR::MAU::ActionDataConstant
+ */
+const IR::MAU::Instruction *ConstantsToActionData::postorder(IR::MAU::Instruction *instr) {
+    if (!write_found)
+        BUG("No write found in an instruction in ConstantsToActionData?");
+
+    auto &constant_renames = tbl->resources->action_format.constant_locations.at(action_name);
+    bool constant_found = constant_renames.find(constant_renames_key) != constant_renames.end();
+
+    if (constant_found != has_constant)
+        BUG("Constant lookup does not match the ActionFormat");
+
+    if (!constant_found)
+        return instr;
+
+    cstring constant_name = constant_renames.at(constant_renames_key);
+
+    for (size_t i = 0; i < instr->operands.size(); i++) {
+        const IR::Constant *c = instr->operands[i]->to<IR::Constant>();
+        if (c == nullptr)
+            continue;
+        auto *adc = new IR::MAU::ActionDataConstant(constant_name, c);
+        instr->operands[i] = adc;
+    }
+    return instr;
+}
+
+const IR::MAU::Action *ConstantsToActionData::postorder(IR::MAU::Action *act) {
+    return act;
+}
+
+
 /** Merge Instructions */
 
 /** Run an analysis on the instructions to determine which instructions should be merged.  The
@@ -205,6 +357,11 @@ const IR::Expression *MergeInstructions::preorder(IR::Expression *expr) {
 const IR::ActionArg *MergeInstructions::preorder(IR::ActionArg *aa) {
     prune();
     return aa;
+}
+
+const IR::MAU::ActionDataConstant *MergeInstructions::preorder(IR::MAU::ActionDataConstant *adc) {
+    prune();
+    return adc;
 }
 
 const IR::Constant *MergeInstructions::preorder(IR::Constant *cst) {
@@ -343,7 +500,7 @@ void MergeInstructions::build_multi_operand_info(PHV::Container container,
  *  action parameter:
  *     - set hdr.f1, param1
  *     - set hdr.f2, param2
- * to:
+ *  to:
  *     - set $(container), $(action_data_name)
  *
  *  where $(container) is the container in which f1 and f2 are in, and $(action_data_name)
@@ -400,6 +557,7 @@ IR::MAU::Instruction *MergeInstructions::make_multi_operand_set(PHV::Container c
 const IR::MAU::Table *TotalInstructionAdjustment::preorder(IR::MAU::Table *tbl) {
     for (auto &action : Values(tbl->actions)) {
         action = action->apply(SplitInstructions(phv, tbl))->to<IR::MAU::Action>();
+        action = action->apply(ConstantsToActionData(phv, tbl))->to<IR::MAU::Action>();
         action = action->apply(MergeInstructions(phv, tbl))->to<IR::MAU::Action>();
     }
     return tbl;

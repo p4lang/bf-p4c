@@ -45,74 +45,49 @@ class MauAsmOutput::TableMatch {
 
 
 /** Function that emits the action data aliases needed for consistency across the action data
- *  bus.  The aliases are found within the action_data_format code.
+ *  bus.  The aliases are to be used to set up parameters for the Context JSON, and if necessary
+ *  rename multiple action data parameters as one parameter name.  This must be done in order
+ *  to have one parameter used in a container in the action
+ *
+ *  The constants converted to action data parameters are also printed here for the Context
+ *  JSON.
+ *
+ *  The determination of the names is done by the action_format code, in order to simplify
+ *  this function significantly.  This just outputs information for either immediate or
+ *  action data tables.
  */
 void MauAsmOutput::emit_action_data_alias(std::ostream &out, indent_t indent,
         const IR::MAU::Table *tbl, const IR::MAU::Action *af) const {
-    auto &placement = tbl->resources->action_format.action_data_format.at(af->name);
+    bool is_immediate = tbl->layout.action_data_bytes_in_overhead > 0;
+    const vector<ActionFormat::ActionDataPlacement> *placement_vec = nullptr;
+    if (is_immediate)
+        placement_vec = &(tbl->resources->action_format.immediate_format.at(af->name));
+    else
+        placement_vec = &(tbl->resources->action_format.action_data_format.at(af->name));
+
     out << indent << "- { ";
     size_t index = 0;
-    for (auto &container : placement) {
-        bool needs_comma = true;
-        out << container.asm_name;
-
-        if (container.arg_locs.size() == 1 && !container.arg_locs[0].single_loc) {
-            int start = container.arg_locs[0].field_bit;
-            int end = start + container.arg_locs[0].data_loc.popcount() - 1;
-            out << "." << start << "-" << end;
-        }
-        out << ": " << container.adf_name();
-
-        if (index == placement.size() - 1 && container.arg_locs.size() == 1)
-            needs_comma = false;
-        if (needs_comma)
-            out << ", ";
-
-        if (container.arg_locs.size() > 1) {
-            size_t arg_index = 0;
-            for (auto &arg_loc : container.arg_locs) {
-                out << arg_loc.name;
-                if (!arg_loc.single_loc) {
-                    int start = arg_loc.field_bit;
-                    int end = start + arg_loc.data_loc.popcount() - 1;
-                    out << "." << start << "-" << end;
-                }
-                out << ": " << container.adf_name() << "(" << arg_loc.data_loc.min().index()
-                    << ".." << arg_loc.data_loc.max().index() << ")";
-                if (index == placement.size() - 1
-                    && arg_index == container.arg_locs.size() - 1)
-                    needs_comma = false;
-                if (needs_comma)
-                    out << ", ";
-                arg_index++;
-            }
-        }
-        index++;
-    }
-    out << " }" << std::endl;
-}
-
-/** Function that emits the immediate information based on the immediate_format object
- *  contained within the table resources object.  This function must also coordinate with
- *  all of the potential holes within the immediate format, as they might contain other
- *  data that is not action data.  The names are now calculatd in the action_data_format code
- */
-void MauAsmOutput::emit_immediate_format(std::ostream &out, indent_t indent,
-        const IR::MAU::Table *tbl, const IR::MAU::Action *af) const {
-    auto &placement_vec = tbl->resources->action_format.immediate_format.at(af->name);
-    out << indent << "- { ";
-    size_t index = 0;
-    for (auto &placement : placement_vec) {
+    for (auto &placement : *placement_vec) {
         bool needs_comma = true;
         out << placement.asm_name;
+        LOG1("placement asm name " << placement.asm_name);
         if (placement.arg_locs.size() == 1 && !placement.arg_locs[0].single_loc) {
             int start = placement.arg_locs[0].field_bit;
             int end = start + placement.arg_locs[0].data_loc.popcount() - 1;
             out << "." << start << "-" << end;
         }
-        out << ": " << placement.immed_name();
+        if (is_immediate)
+            out << ": " << placement.immed_name();
+        else
+            out << ": " << placement.adf_name();
 
-        if (index == placement_vec.size() - 1 && placement.arg_locs.size() == 1)
+        if (placement.arg_locs.size() == 1 && placement.arg_locs[0].is_constant) {
+            out << ", ";
+            out << placement.arg_locs[0].name;
+            out << ": " << placement.arg_locs[0].constant_value;
+        }
+
+        if (index == placement_vec->size() - 1 && placement.arg_locs.size() == 1)
             needs_comma = false;
         if (needs_comma)
              out << ", ";
@@ -125,8 +100,19 @@ void MauAsmOutput::emit_immediate_format(std::ostream &out, indent_t indent,
                     int end = start + arg_loc.data_loc.popcount() - 1;
                     out << "." << start << "-" << end;
                 }
-                out << ": " << arg_loc.immed_plac.immed_name();
-                if (index == placement_vec.size() - 1
+                if (is_immediate)
+                    out << ": " << arg_loc.immed_plac.immed_name();
+                else
+                    out << ": " << placement.adf_name() << "(" << arg_loc.data_loc.min().index()
+                        << ".." << arg_loc.data_loc.max().index() << ")";
+
+                if (arg_loc.is_constant) {
+                    out << ", ";
+                    out << arg_loc.name;
+                    out << ": " << arg_loc.constant_value;
+                }
+
+                if (index == placement_vec->size() - 1
                     && arg_index == placement.arg_locs.size() - 1)
                     needs_comma = false;
                 if (needs_comma)
@@ -138,6 +124,8 @@ void MauAsmOutput::emit_immediate_format(std::ostream &out, indent_t indent,
     }
     out << " }" << std::endl;
 }
+
+
 
 // Simply emits the action data format of the action data table or action profile
 void MauAsmOutput::emit_action_data_format(std::ostream &out, indent_t indent,
@@ -717,10 +705,7 @@ class MauAsmOutput::EmitAction : public Inspector {
                 alias[aa->name] = self.find_indirect_index(table, at); } }
         out << indent << canon_name(act->name) << ":" << std::endl;
         is_empty = true;
-        if (table->layout.action_data_bytes_in_overhead > 0) {
-            self.emit_immediate_format(out, indent, table, act);
-            is_empty = false;
-        } else if (table->layout.action_data_bytes > 0) {
+        if (table->layout.action_data_bytes > 0) {
             self.emit_action_data_alias(out, indent, table, act);
             is_empty = false;
         }
@@ -806,6 +791,12 @@ class MauAsmOutput::EmitAction : public Inspector {
     bool preorder(const IR::BoolLiteral *c) override {
         assert(sep);
         out << sep << c->value;
+        sep = ", ";
+        return false;
+    }
+    bool preorder(const IR::MAU::ActionDataConstant *adc) override {
+        assert(sep);
+        out << sep << adc->name;
         sep = ", ";
         return false;
     }

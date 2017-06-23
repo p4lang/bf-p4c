@@ -25,6 +25,8 @@ struct TableResourceAlloc;
  */
 class ActionAnalysis : public MauInspector, P4WriteContext {
  public:
+    static constexpr int LOADCONST_MAX = 20;
+    static constexpr int CONST_SRC_MAX = 3;
     /** A way to encapsulate the information contained within a single operand of an instruction,
      *  whether the instruction is read from or written to.  Also contains the information on
      *  what particular bits of the mask are encapsulated.
@@ -37,7 +39,7 @@ class ActionAnalysis : public MauInspector, P4WriteContext {
         ActionParam(type_t t, const IR::Expression *e)
             : type(t), expr(e) {}
 
-        int size() {
+        int size() const {
             return expr->type->width_bits();
         }
 
@@ -140,11 +142,16 @@ class ActionAnalysis : public MauInspector, P4WriteContext {
         ///> Eventually we want to craft correct backtrack/error messages from all
         ///> of these error messages.  In the meantime, used for tracking action
         ///> data issues
-        enum error_code_t { NO_PROBLEM, MULTIPLE_CONTAINER_ACTIONS, READ_PHV_MISMATCH,
-                            ACTION_DATA_MISMATCH, TOO_MANY_SOURCES, DEPOSIT_FIELD_ISSUE,
-                            BITMASKED_SET_ISSUE, IMPOSSIBLE_ALIGNMENT, CONSTANT_TO_ACTION_DATA,
-                            MULTIPLE_ACTION_DATA };
-        error_code_t error_code = NO_PROBLEM;
+        enum error_code_t { NO_PROBLEM = 0,
+                            MULTIPLE_CONTAINER_ACTIONS = 1,
+                            READ_PHV_MISMATCH = (1 << 1),
+                            ACTION_DATA_MISMATCH = (1 << 2),
+                            CONSTANT_MISMATCH = (1 << 3),
+                            TOO_MANY_SOURCES = (1 << 4),
+                            IMPOSSIBLE_ALIGNMENT = (1 << 5),
+                            CONSTANT_TO_ACTION_DATA = (1 << 6),
+                            MULTIPLE_ACTION_DATA = (1 << 7) };
+        unsigned error_code = NO_PROBLEM;
         cstring name;
         ActionDataInfo adi;
         TotalAlignment constant_alignment;
@@ -163,6 +170,14 @@ class ActionAnalysis : public MauInspector, P4WriteContext {
             return field_actions[0].reads.size();
         }
 
+        bool is_shift() {
+            return name == "shru" || name == "shrs" || name == "shl";
+        }
+
+
+        bool constant_set = false;
+        int constant_used = 0;
+
         // FIXME: Can potentially use rotational shifts at some point
         // bool is_contig_rotate(bitvec check, int &shift, int size);
         // bitvec rotate_contig(bitvec orig, int shift, int size);
@@ -172,6 +187,9 @@ class ActionAnalysis : public MauInspector, P4WriteContext {
         bool verify_all_alignment();
 
         bitvec total_write() const;
+        bool convert_constant_to_actiondata() {
+            return (error_code & CONSTANT_TO_ACTION_DATA) != 0;
+        }
     };
 
     typedef ordered_map<const IR::MAU::Instruction *, FieldAction> FieldActionsMap;
@@ -194,12 +212,13 @@ class ActionAnalysis : public MauInspector, P4WriteContext {
     int lo = -1; int hi = -1;
     void initialize_phv_field(const IR::Expression *expr);
     void initialize_action_data(const IR::Expression *expr);
-    const IR::ActionArg *isActionParam(const IR::Expression *expr,
-        PhvInfo::Field::bitrange *bits_out = nullptr);
+    const IR::Expression *isActionParam(const IR::Expression *expr,
+        PhvInfo::Field::bitrange *bits_out = nullptr, ActionParam::type_t *type = nullptr);
 
     bool preorder(const IR::Slice *) override;
     bool preorder(const IR::ActionArg *) override;
     bool preorder(const IR::Expression *) override;
+    bool preorder(const IR::MAU::ActionDataConstant *) override;
     bool preorder(const IR::Constant *) override;
     bool preorder(const IR::MAU::AttachedOutput *) override;
     bool preorder(const IR::MAU::HashDist *) override;
@@ -213,9 +232,12 @@ class ActionAnalysis : public MauInspector, P4WriteContext {
             ContainerAction &cont_action);
     bool verify_action_data_instr(const ActionParam &write, const ActionParam &read,
             ContainerAction &cont_action, cstring action_name, PHV::Container container);
+    bool verify_constant_instr(const ActionParam &write, const ActionParam &read,
+            ContainerAction &cont_action);
     void action_data_align(const ActionParam &write, ContainerAction &cont_action);
 
-    bool check_constant_to_actiondata(ContainerAction &cont_action);
+    bool tofino_instruction_constant(int value, int max_shift, int container_size);
+    bool check_constant_to_actiondata(ContainerAction &cont_action, PHV::Container container);
     bool check_container_instruction();
     bool check_2_PHV_instruction(ContainerAction &cont_action, PHV::Container container);
     bool check_1_PHV_instruction(ContainerAction &cont_action, PHV::Container container);

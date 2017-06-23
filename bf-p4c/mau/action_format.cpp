@@ -139,6 +139,7 @@ void ActionFormat::create_placement_non_phv(ActionAnalysis::FieldActionsMap &fie
                                             cstring action_name) {
     // FIXME: Verification on some argument limitations still required
     vector<ActionDataPlacement> adp_vector;
+    ConstantRenames constant_renames;
     for (auto &field_action_info : field_actions_map) {
         auto &field_action = field_action_info.second;
         for (auto &read : field_action.reads) {
@@ -179,6 +180,48 @@ void ActionFormat::create_placement_non_phv(ActionAnalysis::FieldActionsMap &fie
     }
 
     use->action_data_format[action_name] = adp_vector;
+    use->constant_locations[action_name] = constant_renames;
+}
+
+/** Creates an ActionDataPlacement from an ActionArg, correctly verified from the PHV allocation
+ */
+void ActionFormat::create_from_actiondata(ActionDataPlacement &adp,
+        const ActionAnalysis::ActionParam &read, int container_bit) {
+    bitvec data_location;
+    bool single_loc = true;
+    int field_bit = 0;
+    if (auto *sl = read.expr->to<IR::Slice>()) {
+        single_loc = false;
+        field_bit = sl->getL();
+    }
+    data_location.setrange(container_bit, read.size());
+    auto arg_name = read.unsliced_expr()->to<IR::ActionArg>()->name;
+    adp.arg_locs.emplace_back(arg_name, data_location, field_bit,
+                              single_loc);
+    adp.range |= data_location;
+}
+
+/** Creates an ActionDataPlacement from a Constant that has to be converted into ActionData.
+ *  This constant will later be converted to a ActionDataConstant in the InstructionAdjustment
+ *  pass.
+ */
+void ActionFormat::create_from_constant(ActionDataPlacement &adp,
+         const ActionAnalysis::ActionParam &read, int field_bit, int container_bit,
+         int &constant_to_ad_count, PHV::Container container, ConstantRenames &constant_renames) {
+    bitvec data_location;
+    bool single_loc = true;
+
+    data_location.setrange(container_bit, read.size());
+    auto constant_key = std::make_pair(container.toString(), container_bit);
+    auto arg_name = "$constant" + std::to_string(constant_to_ad_count);
+    adp.arg_locs.emplace_back(arg_name, data_location, field_bit,
+                              single_loc);
+    adp.range |= data_location;
+    constant_renames[constant_key] = arg_name;
+    constant_to_ad_count++;
+
+    int constant_value = read.expr->to<IR::Constant>()->asInt();
+    adp.arg_locs.back().set_as_constant(constant_value);
 }
 
 /** Run after PHV allocation has completed.  Based on how fields are packed into the PHV,
@@ -193,42 +236,50 @@ void ActionFormat::create_placement_non_phv(ActionAnalysis::FieldActionsMap &fie
 void ActionFormat::create_placement_phv(ActionAnalysis::ContainerActionsMap &container_actions_map,
                                         cstring action_name) {
     vector<ActionDataPlacement> adp_vector;
+    int constant_to_ad_count = 0;
+    ConstantRenames constant_renames;
     for (auto &container_action_info : container_actions_map) {
         auto container = container_action_info.first;
         auto &cont_action = container_action_info.second;
-        if (cont_action.counts[ActionAnalysis::ActionParam::ACTIONDATA] == 0) continue;
         ActionDataPlacement adp;
         // Every instruction in the container process has to have its action data stored
         // in the same action data slot
+        bool initialized = false;
         for (auto &field_action : cont_action.field_actions) {
-            auto *write_field = phv.field(field_action.write.expr);
+            PhvInfo::Field::bitrange bits;
+            auto *write_field = phv.field(field_action.write.expr, &bits);
             int container_bit = 0;
-            write_field->foreach_alloc([&](const PhvInfo::Field::alloc_slice &alloc) {
+            int write_count = 0;
+
+            write_field->foreach_alloc(bits, [&](const PhvInfo::Field::alloc_slice &alloc) {
+                write_count++;
+                BUG_CHECK(alloc.container_bit >= 0, "Invalid negative container bit");
                 container_bit = alloc.container_bit;
             });
 
-            bitvec data_location;
+            if (write_count > 1)
+                BUG("Splitting of writes handled incorrectly");
+
             for (auto &read : field_action.reads) {
-                data_location.clear();
-                if (read.type != ActionAnalysis::ActionParam::ACTIONDATA) continue;
-                bool single_loc = true;
-                int field_bit = 0;
-                if (auto *sl = read.expr->to<IR::Slice>()) {
-                    single_loc = false;
-                    field_bit = sl->getL();
+                if (read.type == ActionAnalysis::ActionParam::ACTIONDATA) {
+                    create_from_actiondata(adp, read, container_bit);
+                    initialized = true;
+                } else if (read.type == ActionAnalysis::ActionParam::CONSTANT
+                    && cont_action.convert_constant_to_actiondata()) {
+                    create_from_constant(adp, read, bits.lo, container_bit, constant_to_ad_count,
+                                         container, constant_renames);
+                    initialized = true;
                 }
-                data_location.setrange(container_bit, read.size());
-                auto arg_name = read.unsliced_expr()->to<IR::ActionArg>()->name;
-                adp.arg_locs.emplace_back(arg_name, data_location, field_bit,
-                                          single_loc);
-                adp.range |= data_location;
             }
         }
-        adp.size = container.size();
-        adp_vector.push_back(adp);
+        if (initialized) {
+            adp.size = container.size();
+            adp_vector.push_back(adp);
+        }
     }
 
     use->action_data_format[action_name] = adp_vector;
+    use->constant_locations[action_name] = constant_renames;
 }
 
 /** Performs the argument analyzer and initializes the vector of ActionContainerInfo
@@ -244,6 +295,7 @@ void ActionFormat::analyze_all_actions() {
         ActionAnalysis aa(phv, alloc_done, false, tbl);
         aa.set_field_actions_map(&field_actions_map);
         aa.set_container_actions_map(&container_actions_map);
+        aa.set_verbose();
 
         action->apply(aa);
 
@@ -609,7 +661,6 @@ void ActionFormat::align_immediate_layouts() {
     auto max = use->immediate_mask.max();
     if (max != use->immediate_mask.end())
         use->immediate_mask.setrange(0, max.index());
-    LOG3("Immediate mask calculated is " << use->immediate_mask);
 }
 
 /** This sorts the action data from lowest to highest bit position for easiest assembly output.

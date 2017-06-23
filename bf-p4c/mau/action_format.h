@@ -75,8 +75,15 @@ struct ActionFormat {
             bitvec data_loc;    ///< The location within the container of this action data
             int field_bit;      ///< The starting bit which the arg is allocating over
             bool single_loc = true;
+            bool is_constant = false;
+            int constant_value = 0;
             ArgLoc(cstring n, bitvec dl, int fb, bool sl)
                 : name(n), data_loc(dl), field_bit(fb), single_loc(sl) {}
+            void set_as_constant(int cv) {
+                is_constant = true;
+                constant_value = cv;
+            }
+
             /** Structure to help determine where an individual field is within the immediate
              *  section.  Used for determine best asm_output for these fields.
              */
@@ -193,11 +200,12 @@ struct ActionFormat {
         ArgInfo() {}
     };
 
-    // typedef std::map<cstring, ArgInfo> ArgMap;
     typedef std::map<cstring, vector<ActionDataPlacement>> ArgFormat;
     typedef std::map<cstring, vector<std::pair<int, bool>>> ArgPlacementData;
+    typedef std::map<std::pair<cstring, int>, cstring> ConstantRenames;
     bool immediate_possible = false;
     vector<ActionContainerInfo> action_counts;
+
 
     /** Contains all of the information on all the action data format and individual arguments
      *  Because we only currently have either only an action data table or action data through
@@ -211,6 +219,8 @@ struct ActionFormat {
         ArgFormat action_data_format;
         ArgFormat immediate_format;
         std::map<cstring, ArgPlacementData> arg_placement;
+        std::map<cstring, ConstantRenames> constant_locations;
+
         int action_data_bytes = 0;
         bitvec immediate_mask;
         bitvec total_layouts[CONTAINER_TYPES];
@@ -244,6 +254,11 @@ struct ActionFormat {
                                   cstring action_name);
     void create_placement_phv(ActionAnalysis::ContainerActionsMap &container_actions_map,
                               cstring action_name);
+    void create_from_actiondata(ActionDataPlacement &adp,
+        const ActionAnalysis::ActionParam &read, int container_bit);
+    void create_from_constant(ActionDataPlacement &adp,
+        const ActionAnalysis::ActionParam &read, int field_bit, int container_bit,
+        int &constant_to_ad_count, PHV::Container container, ConstantRenames &constant_renames);
 
     void space_individ_immed(ActionContainerInfo &aci);
     int offset_constraints_and_total_layouts();

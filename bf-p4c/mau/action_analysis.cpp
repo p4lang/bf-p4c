@@ -21,17 +21,28 @@ void ActionAnalysis::initialize_action_data(const IR::Expression *expr) {
     field_action.reads.emplace_back(ActionParam::ACTIONDATA, expr);
 }
 
-const IR::ActionArg *ActionAnalysis::isActionParam(const IR::Expression *e,
-        PhvInfo::Field::bitrange *bits_out) {
+/** Similar to phv.field, it returns the IR structure that corresponds to actiondata,
+ *  If it is an ActionArg, then the type is ACTIONDATA
+ *  If it is an ActionDataConstant, then the type is CONSTANT
+ */
+const IR::Expression *ActionAnalysis::isActionParam(const IR::Expression *e,
+        PhvInfo::Field::bitrange *bits_out, ActionParam::type_t *type) {
     PhvInfo::Field::bitrange bits = { 0, e->type->width_bits() - 1};
     if (auto *sl = e->to<IR::Slice>()) {
         bits.lo = sl->getL();
         bits.hi = sl->getH();
         e = sl->e0;;
+        if (e->is<IR::MAU::ActionDataConstant>())
+            BUG("No ActionDataConstant should be a member of a Slice");
     }
-    if (auto *ap = e->to<IR::ActionArg>()) {
-        if (bits_out) *bits_out = bits;
-        return ap;
+    if (e->is<IR::ActionArg>() || e->is<IR::MAU::ActionDataConstant>()) {
+        if (bits_out)
+            *bits_out = bits;
+        if (e->is<IR::ActionArg>() && type)
+            *type = ActionParam::ACTIONDATA;
+        if (e->is<IR::MAU::ActionDataConstant>() && type)
+            *type = ActionParam::CONSTANT;
+        return e;
     }
     return nullptr;
 }
@@ -71,6 +82,11 @@ bool ActionAnalysis::preorder(const IR::ActionArg *arg) {
 
 bool ActionAnalysis::preorder(const IR::Constant *constant) {
     field_action.reads.emplace_back(ActionParam::CONSTANT, constant);
+    return false;
+}
+
+bool ActionAnalysis::preorder(const IR::MAU::ActionDataConstant *adc) {
+    field_action.reads.emplace_back(ActionParam::ACTIONDATA, adc);
     return false;
 }
 
@@ -152,6 +168,7 @@ void ActionAnalysis::postorder(const IR::MAU::Instruction *instr) {
             } else {
                 FieldAction field_action_split;
                 field_action_split.name = field_action.name;
+                field_action_split.requires_split = true;
                 auto *write_slice = MakeSlice(field_action.write.expr, alloc.field_bit,
                                               alloc.field_hi());
                 ActionParam write_split(field_action.write.type, write_slice);
@@ -283,11 +300,16 @@ bool ActionAnalysis::verify_action_data_instr(const ActionParam &write, const Ac
         immediate_format = &(action_format.immediate_format.at(action_name));
 
     PhvInfo::Field::bitrange read_range;
-    auto *action_arg = isActionParam(read.expr, &read_range);
+    ActionParam::type_t type = ActionParam::ACTIONDATA;
+    auto action_arg = isActionParam(read.expr, &read_range, &type);
     if (action_arg == nullptr)
         BUG("Action argument not converted correctly");
 
-    auto arg_name = action_arg->to<IR::ActionArg>()->name;
+    cstring arg_name;
+    if (type == ActionParam::ACTIONDATA)
+        arg_name = action_arg->to<IR::ActionArg>()->name;
+    else if (type == ActionParam::CONSTANT)
+        arg_name = action_arg->to<IR::MAU::ActionDataConstant>()->name;
 
     auto &arg_placement = placements.at(arg_name);
     bool is_immediate;
@@ -343,6 +365,43 @@ bool ActionAnalysis::verify_action_data_instr(const ActionParam &write, const Ac
     return false;
 }
 
+/** This is a check to guarantee that the instruction using a constant is being setup
+ *  correctly, and if so, saves information about the value of this constant so that
+ *  
+ */
+bool ActionAnalysis::verify_constant_instr(const ActionParam &write, const ActionParam &read,
+         ContainerAction &cont_action) {
+    if (cont_action.is_shift()) {
+        return true;
+    }
+
+    PhvInfo::Field::bitrange write_range;
+    bitvec write_bits;
+    int write_count = 0;
+    auto *write_field = phv.field(write.expr, &write_range);
+
+    write_field->foreach_alloc(write_range, [&](const PhvInfo::Field::alloc_slice &alloc) {
+        write_count++;
+        BUG_CHECK(alloc.container_bit >= 0, "Invalid negative container bit");
+        write_bits.setrange(alloc.container_bit, alloc.width);
+    });
+
+    if (write_count > 1)
+        BUG("Instruction has issue with splitting writes?");
+    auto *constant = read.expr->to<IR::Constant>();
+    if (constant == nullptr)
+        return false;
+
+    if (!cont_action.constant_set) {
+        cont_action.constant_used = constant->asInt();
+        cont_action.constant_set = true;
+    }
+
+    cont_action.constant_alignment.add_alignment(write_bits, write_bits);
+    cont_action.counts[ActionParam::CONSTANT]++;
+    return true;
+}
+
 /** Action data analysis before action data has been fully allocated to spaces in an action
  *  data table.  The alignment is still check by the tofino compliance, in case we need
  *  to configure bitmasked-sets/PHV allocation will not work.  This simply sets up
@@ -392,7 +451,7 @@ bool ActionAnalysis::verify_P4_action_with_phv(cstring action_name) {
             if (index == 0)
                 instr_name = field_action.name;
             else if (instr_name != field_action.name)
-                cont_action.error_code = ContainerAction::MULTIPLE_CONTAINER_ACTIONS;
+                cont_action.error_code |= ContainerAction::MULTIPLE_CONTAINER_ACTIONS;
         }
 
         cont_action.name = instr_name;
@@ -401,26 +460,27 @@ bool ActionAnalysis::verify_P4_action_with_phv(cstring action_name) {
             for (auto &read : field_action.reads) {
                 if (read.type == ActionParam::PHV
                     && !verify_phv_read_instr(write, read, cont_action)) {
-                    cont_action.error_code = ContainerAction::READ_PHV_MISMATCH;
+                    cont_action.error_code |= ContainerAction::READ_PHV_MISMATCH;
                 } else if (read.type == ActionParam::ACTIONDATA) {
                     if (ad_alloc) {
                        if (!verify_action_data_instr(write, read, cont_action, action_name,
                                                      container)) {
-                            cont_action.error_code = ContainerAction::ACTION_DATA_MISMATCH;
+                            cont_action.error_code |= ContainerAction::ACTION_DATA_MISMATCH;
                        }
                     } else {
                        action_data_align(write, cont_action);
                     }
                 } else if (read.type == ActionParam::CONSTANT) {
                     // Probably need a verify constant
-                    cont_action.counts[ActionParam::CONSTANT]++;
+                    if (!verify_constant_instr(write, read, cont_action))
+                        cont_action.error_code |= ContainerAction::CONSTANT_MISMATCH;
                 }
             }
         }
         if (cont_action.error_code != ContainerAction::NO_PROBLEM)
             continue;
 
-        bool verify = check_constant_to_actiondata(cont_action);
+        bool verify = check_constant_to_actiondata(cont_action, container);
         if (!verify)
             continue;
         verify = verify_container_action(cont_action, container);
@@ -430,10 +490,8 @@ bool ActionAnalysis::verify_P4_action_with_phv(cstring action_name) {
 
     for (auto &container_action : *container_actions_map) {
         auto &cont_action = container_action.second;
-        if (cont_action.error_code == ContainerAction::ACTION_DATA_MISMATCH
-            // FIXME: Must be implemented eventually
-            // || cont_action.error_code == ContainerAction::CONSTANT_TO_ACTION_DATA
-            || cont_action.error_code == ContainerAction::MULTIPLE_ACTION_DATA) {
+        if ((cont_action.error_code & ContainerAction::ACTION_DATA_MISMATCH) != 0
+            || (cont_action.error_code & ContainerAction::MULTIPLE_ACTION_DATA) != 0) {
             action_data_misaligned = true;
             break;
         }
@@ -492,14 +550,14 @@ bool ActionAnalysis::ContainerAction::verify_one_alignment(TotalAlignment &tot_a
         int size, int &unaligned_count) {
     (void) size;
     if (tot_alignment.write_bits.popcount() != tot_alignment.read_bits.popcount()) {
-        error_code = IMPOSSIBLE_ALIGNMENT;
+        error_code |= IMPOSSIBLE_ALIGNMENT;
         return false;
     }
 
     if (!tot_alignment.write_bits.is_contiguous() || !tot_alignment.read_bits.is_contiguous()) {
         // FIXME: Eventually can support rotational shifts, but not yet with IR::Slice setup
         // || !is_contig_rotate(tot_alignment.read_bits, read_rot_shift, size)) {
-        error_code = IMPOSSIBLE_ALIGNMENT;
+        error_code |= IMPOSSIBLE_ALIGNMENT;
         return false;
     }
 
@@ -538,7 +596,7 @@ bool ActionAnalysis::ContainerAction::verify_all_alignment() {
         max_unaligned = 0;
 
     if (unaligned_count > max_unaligned) {
-        error_code = IMPOSSIBLE_ALIGNMENT;
+        error_code |= IMPOSSIBLE_ALIGNMENT;
         return false;
     }
 
@@ -568,31 +626,103 @@ bool ActionAnalysis::ContainerAction::total_overwritten(PHV::Container container
     return true;
 }
 
-/** A check to guarantee that the use of constant is legal in the action.  Will have to be
- *  wrapped into a separate pass to convert possible constants to action data, as well as
- *  splitting constants and even merging constants into a load-const function
+/** A verification of the constant used in a ContainerAction to make sure that it can
+ *  be used without being converted to action data
  */
-bool ActionAnalysis::check_constant_to_actiondata(ContainerAction &cont_action) {
+bool ActionAnalysis::tofino_instruction_constant(int value, int max_shift, int container_size) {
+    int max_value = (1 << max_shift);
+    int complement = (1 << (container_size - 1));
+
+    if ((value <= max_value - 1 && value >= -max_value)
+        || value >= complement - max_value || value <= -complement + max_value - 1)
+        return true;
+    return false;
+}
+
+/** A check to guarantee that the use of constant is legal in the action within a container.
+ *  The constant does not have to be converted to action data if:
+ *
+ *  the constant is used in a set instruction
+ *      - if the constant covers the whole container, when the container is 8 or 16 bit size
+ *      - if the constant covers the whole container, the container is a 32 bit size, and
+ *        the constant is between -(2^19) <= value <= 2^19 - 1
+ *      - if the constant doesn't cover the whole container, and the constant is between
+ *        -8 <= value <= 7
+ *
+ *  the constant is used in another instruction, where the constant convers the whole container,
+ *  and the constant is between -8 <= value <= 7
+ *
+ *  This range also applies to the complement of the range i.e. an 8 bit container converts to
+ *  value >= 255 - 7 OR value < -255 + 8
+ *
+ *  These ranges are due to instruction formats of load-consts, and one of the src fields in
+ *  every instruction
+ *
+ *  A constant must be converted to action data if it doesn't meet the requirements, or:
+ *      - the container also requires action data
+ *      - multiple constants are used
+ */
+bool ActionAnalysis::check_constant_to_actiondata(ContainerAction &cont_action,
+        PHV::Container container) {
     auto &counts = cont_action.counts;
 
-    // Could be combined into one constant, rather than converted into action_data
+    if (counts[ActionParam::CONSTANT] == 1
+        && cont_action.constant_alignment.write_bits.popcount()
+           != static_cast<int>(container.size())) {
+        if (!cont_action.constant_set)
+            BUG("Constant not setup by the program correctly");
+
+        if (cont_action.name == "set") {
+            if (!(tofino_instruction_constant(cont_action.constant_used, CONST_SRC_MAX,
+                  container.size()))) {
+                return false;
+            }
+        } else {  // At this point probably impossible
+            cont_action.error_code |= ContainerAction::CONSTANT_TO_ACTION_DATA;
+            return false;
+        }
+    }
+
+    if (counts[ActionParam::CONSTANT] == 1) {
+        // Load const constraint
+        if (!cont_action.constant_set)
+            BUG("Constant not setup by the program correctly");
+
+        if (cont_action.name == "set") {
+            if (container.size() == 32 &&
+                !(tofino_instruction_constant(cont_action.constant_used, LOADCONST_MAX,
+                  container.size()))) {
+                cont_action.error_code |= ContainerAction::CONSTANT_TO_ACTION_DATA;
+                return false;
+            }
+        } else if (cont_action.operands() == 2) {
+            if (!(tofino_instruction_constant(cont_action.constant_used, CONST_SRC_MAX,
+                container.size()))) {
+                cont_action.error_code |= ContainerAction::CONSTANT_TO_ACTION_DATA;
+                return false;
+            }
+        }
+    }
+
+
+    // Could be combined into one constant potentially, rather than converted into action_data
     if (counts[ActionParam::CONSTANT] > 1) {
-        cont_action.error_code = ContainerAction::CONSTANT_TO_ACTION_DATA;
+        cont_action.error_code |= ContainerAction::CONSTANT_TO_ACTION_DATA;
         cont_action.constant_to_ad = true;
-        cont_action.unhandled_action = true;
         return false;
     }
 
     if (counts[ActionParam::ACTIONDATA] > 0 && counts[ActionParam::CONSTANT] > 0) {
-        cont_action.error_code = ContainerAction::CONSTANT_TO_ACTION_DATA;
+        cont_action.error_code |= ContainerAction::CONSTANT_TO_ACTION_DATA;
         cont_action.unhandled_action = true;
         return false;
     }
 
     if (counts[ActionParam::ACTIONDATA] > 1 && ad_alloc) {
-        cont_action.error_code = ContainerAction::MULTIPLE_ACTION_DATA;
+        cont_action.error_code |= ContainerAction::MULTIPLE_ACTION_DATA;
         return false;
     }
+
     return true;
 }
 
@@ -603,7 +733,7 @@ bool ActionAnalysis::check_2_PHV_instruction(ContainerAction &cont_action,
                                              PHV::Container container) {
     auto &counts = cont_action.counts;
     if (counts[ActionParam::ACTIONDATA] > 0 || counts[ActionParam::CONSTANT] > 0) {
-        cont_action.error_code = ContainerAction::TOO_MANY_SOURCES;
+        cont_action.error_code |= ContainerAction::TOO_MANY_SOURCES;
         cont_action.impossible = true;
         return false;
     }
@@ -635,7 +765,7 @@ bool ActionAnalysis::check_1_PHV_instruction(ContainerAction &cont_action,
             cont_action.constant_to_ad = true;
             if (!(cont_action.verify_all_alignment() && cont_action.total_overwritten(container)))
                 return false;
-            cont_action.error_code = ContainerAction::CONSTANT_TO_ACTION_DATA;
+            cont_action.error_code |= ContainerAction::CONSTANT_TO_ACTION_DATA;
             return false;
         } else if (counts[ActionParam::ACTIONDATA] > 0) {
             cont_action.to_deposit_field = true;
@@ -658,8 +788,7 @@ bool ActionAnalysis::check_1_PHV_instruction(ContainerAction &cont_action,
  */
 bool ActionAnalysis::check_0_PHV_instruction(ContainerAction &cont_action) {
     auto &counts = cont_action.counts;
-    // In theory, bitmasked-set could have a single PHV source, but I doubt that's ever
-    // a real possibility in any action in Tofino
+    // In theory, bitmasked-set could have a single PHV source, but Glass equivalency?
     if (cont_action.name == "set") {
         if (counts[ActionParam::ACTIONDATA] > 0 || counts[ActionParam::CONSTANT] > 0) {
             bitvec all_ad = cont_action.adi.ad_alignment.write_bits;
@@ -700,7 +829,7 @@ bool ActionAnalysis::verify_container_action(ContainerAction &cont_action,
     }
 
     if (counts[ActionParam::PHV] > 2) {
-        cont_action.error_code = ContainerAction::TOO_MANY_SOURCES;
+        cont_action.error_code |= ContainerAction::TOO_MANY_SOURCES;
         cont_action.impossible = true;
         return false;
     }
