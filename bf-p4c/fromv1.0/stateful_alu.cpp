@@ -17,9 +17,12 @@ class CreateSaluApplyFunction : public Inspector {
     P4V1::ProgramStructure *structure;
     const IR::Type *rtype;
     const IR::Type::Bits *utype;
+    cstring math_unit_name;
     IR::BlockStatement *body;
+    IR::Function *apply;
     const IR::Expression *cond_lo = nullptr;
     const IR::Expression *cond_hi = nullptr;
+    const IR::Expression *math_input = nullptr;
     const IR::Expression *pred = nullptr;
     const IR::Statement *output = nullptr;
     enum expr_index_t { LO1, LO2, HI1, HI2, OUT } expr_index;
@@ -74,6 +77,10 @@ class CreateSaluApplyFunction : public Inspector {
                 return new IR::Constant(self.utype, 0);
             } else if (attr->name == "read_bit" || attr->name == "read_bitc") {
                 idx = 0;
+            } else if (attr->name == "math_unit") {
+                return new IR::MethodCallExpression(
+                        new IR::Member(new IR::PathExpression(self.math_unit_name), "execute"),
+                        new IR::Vector<IR::Expression>({ self.math_input }));
             } else {
                 BUG("Unrecognized AttribLocal %s", attr);
                 return attr; }
@@ -96,6 +103,11 @@ class CreateSaluApplyFunction : public Inspector {
             return false;
         } else if (prop->name == "condition_lo") {
             cond_lo = prop->value->to<IR::ExpressionValue>()->expression->apply(rewrite);
+            return false;
+        } else if (prop->name == "math_unit_input") {
+            math_input = prop->value->to<IR::ExpressionValue>()->expression->apply(rewrite);
+            if (math_input->type != utype)
+                math_input = new IR::Cast(utype, math_input);
             return false;
         } else if (prop->name == "update_lo_1_predicate") {
             expr_index = LO1;
@@ -150,10 +162,9 @@ class CreateSaluApplyFunction : public Inspector {
         return false; }
 
  public:
-    IR::Function *apply;
     CreateSaluApplyFunction(P4V1::ProgramStructure *s, const IR::Type *rtype,
-                            const IR::Type::Bits *utype)
-    : structure(s), rtype(rtype), utype(utype),
+                            const IR::Type::Bits *utype, cstring mu)
+    : structure(s), rtype(rtype), utype(utype), math_unit_name(mu),
       rewrite({ new RewriteExpr(*this), new TypeCheck }) {
         body = new IR::BlockStatement;
         if (auto st = rtype->to<IR::Type_StructLike>())
@@ -169,18 +180,86 @@ class CreateSaluApplyFunction : public Inspector {
             body->components.insert(body->components.begin(),
                                     new IR::Declaration_Variable("alu_hi", utype));
         if (output && defer_out)
-            body->push_back(output);
+            body->push_back(output); }
+    static const IR::Function *create(P4V1::ProgramStructure *structure,
+                const IR::Declaration_Instance *ext, const IR::Type *rtype,
+                const IR::Type::Bits *utype, cstring math_unit_name) {
+        CreateSaluApplyFunction create_apply(structure, rtype, utype, math_unit_name);
+        ext->apply(create_apply);
+        return create_apply.apply; }
+};
+
+class CreateMathUnit : public Inspector {
+    cstring name;
+    const IR::Type::Bits *utype;
+    IR::Declaration_Instance *unit = nullptr;
+    bool have_unit = false;
+    const IR::BoolLiteral *exp_invert = nullptr;
+    const IR::Constant *exp_shift = nullptr, *output_scale = nullptr;
+    const IR::ExpressionListValue *table;
+
+    bool preorder(const IR::Property *prop) {
+        if (prop->name == "math_unit_exponent_invert") {
+            have_unit = true;
+            if (auto ev = prop->value->to<IR::ExpressionValue>())
+                if ((exp_invert = ev->expression->to<IR::BoolLiteral>()))
+                    return false;
+            error("%s: %s must be a constant", prop->value->srcInfo, prop->name);
+        } else if (prop->name == "math_unit_exponent_shift") {
+            have_unit = true;
+            if (auto ev = prop->value->to<IR::ExpressionValue>())
+                if ((exp_shift = ev->expression->to<IR::Constant>()))
+                    return false;
+            error("%s: %s must be a constant", prop->value->srcInfo, prop->name);
+        } else if (prop->name == "math_unit_input") {
+            have_unit = true;
+        } else if (prop->name == "math_unit_lookup_table") {
+            have_unit = true;
+            if (!(table = prop->value->to<IR::ExpressionListValue>()))
+                error("%s: %s must be a list", prop->value->srcInfo, prop->name);
+        } else if (prop->name == "math_unit_output_scale") {
+            have_unit = true;
+            if (auto ev = prop->value->to<IR::ExpressionValue>())
+                if ((output_scale = ev->expression->to<IR::Constant>()))
+                    return false;
+            error("%s: %s must be a constant", prop->value->srcInfo, prop->name); }
+        return false;
     }
+
+ public:
+    CreateMathUnit(cstring n, const IR::Type::Bits *utype) : name(n), utype(utype) {}
+    void end_apply(const IR::Node *) {
+        if (!have_unit) {
+            unit = nullptr;
+            return; }
+        if (!exp_invert) exp_invert = new IR::BoolLiteral(false);
+        if (!exp_shift) exp_shift = new IR::Constant(0);
+        if (!output_scale) output_scale = new IR::Constant(0);
+        if (!table) table = new IR::ExpressionListValue({});
+        auto *tuple_type = new IR::Type_Tuple;
+        for (int i = table->expressions.size(); i > 0; --i)
+            tuple_type->components.push_back(utype);
+        auto mutype = new IR::Type_Specialized(new IR::Type_Name("math_unit"),
+                               new IR::Vector<IR::Type>({ utype, tuple_type }));
+        auto *ctor_args = new IR::Vector<IR::Expression>({
+            exp_invert, exp_shift, output_scale, new IR::ListExpression(table->expressions)
+        });
+        unit = new IR::Declaration_Instance(name, mutype, ctor_args);
+    }
+    static const IR::Declaration_Instance *create(P4V1::ProgramStructure *structure,
+                const IR::Declaration_Instance *ext, const IR::Type::Bits *utype) {
+        CreateMathUnit create_math(structure->makeUniqueName(ext->name + "_math_unit"), utype);
+        ext->apply(create_math);
+        return create_math.unit; }
 };
 
 /* FIXME -- still need to deal with the following stateful_alu properties:
         initial_register_hi_value initial_register_lo_value
-        math_unit_exponent_invert math_unit_exponent_shift math_unit_input
-        math_unit_lookup_table math_unit_output_scale
         reduction_or_group
         selector_binding
         stateful_logging_mode
 */
+
 
 P4V1::StatefulAluConverter::reg_info P4V1::StatefulAluConverter::getRegInfo(
         P4V1::ProgramStructure *structure, const IR::Declaration_Instance *ext) {
@@ -237,14 +316,16 @@ const IR::Declaration_Instance *P4V1::StatefulAluConverter::convertExternInstanc
         LOG2("Creating apply function for register_action " << ext->name);
         auto ratype = new IR::Type_Specialized(new IR::Type_Name("register_action"),
                                new IR::Vector<IR::Type>({ info.rtype, info.utype }));
-        auto *block = new IR::BlockStatement;
-        auto *rv = new IR::Declaration_Instance(name, ratype,
-            new IR::Vector<IR::Expression>({
-                new IR::PathExpression(new IR::Path(info.reg->name)) }),
-            block);
-        CreateSaluApplyFunction create_apply(structure, info.rtype, info.utype);
-        ext->apply(create_apply);
-        block->components.push_back(create_apply.apply);
+        auto *ctor_args = new IR::Vector<IR::Expression>({
+                new IR::PathExpression(new IR::Path(info.reg->name)) });
+        auto *math = CreateMathUnit::create(structure, ext, info.utype);
+        if (math) {
+            structure->declarations->push_back(math);
+            ctor_args->push_back(new IR::PathExpression(new IR::Path(math->name))); }
+        auto *block = new IR::BlockStatement({
+            CreateSaluApplyFunction::create(structure, ext, info.rtype, info.utype,
+                                            math ? math->name.name : cstring()) });
+        auto *rv = new IR::Declaration_Instance(name, ratype, ctor_args, block);
         return rv->apply(TypeConverter(structure))->to<IR::Declaration_Instance>();
     }
     BUG("Failed to find utype for %s", ext);

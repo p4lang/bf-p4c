@@ -2,6 +2,7 @@
 
 #if !defined(_V1_MODEL_P4_)
 extern register;  // "forward" declaration -- so parser recognizes it as a type name
+extern action_selector;
 #endif /* !_V1_MODEL_P4_ */
 
 extern register_params<T> {
@@ -14,8 +15,14 @@ extern register_params<T> {
     T read(bit<2> index);
 }
 
+extern math_unit<T, U> {
+    math_unit(bool invert, int<2> shift, int<6> scale, U data);
+    T execute(in T x);
+}
+
 extern register_action<T, U> {
-    register_action(register<T> reg);
+    register_action(register<T> reg, @optional math_unit<U, _> math,
+                                     @optional register_params<U> params);
     abstract void apply(inout T value, @optional out U rv, @optional register_params<U> params);
     U execute(@optional in bit<32> index); /* {
         U rv;
@@ -24,4 +31,10 @@ extern register_action<T, U> {
         reg.write(index, value);
         return rv;
     } */
+}
+
+extern selector_action {
+    selector_action(action_selector sel);
+    abstract void apply(inout bit<1> value, @optional out bit<1> rv);
+    bit<1> execute(@optional in bit<32> index);
 }
