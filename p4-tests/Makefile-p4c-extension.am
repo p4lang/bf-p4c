@@ -151,7 +151,6 @@ XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_182_warp_primitive.p4.test
 XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_183_sample_e2e.p4.test
 XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_191_invalidate.p4.test
 XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_219_modify_field_conditionally.p4.test
-XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_254_simple_exit.p4.test
 
 # reduction_or_group (blackbox string attrib) failure
 XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_203_first_reduction_or.p4.test
