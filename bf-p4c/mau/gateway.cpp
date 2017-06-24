@@ -411,6 +411,14 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
         match_field = field;
         match_field_bits = bits;
         LOG4("  match_field = " << field->name << bits);
+        if (bits.size() == 1 && !getParent<IR::Operation::Relation>()) {
+            auto &match_info = fields.info.at(match_field);
+            LOG4("  match_info = " << match_info);
+            for (auto &off : match_info.offsets) {
+                if (getParent<IR::LNot>())
+                    match.word1 &= ~(1ULL << off.first >> shift);
+                else
+                    match.word0 &= ~(1ULL << off.first >> shift); } }
     } else {
         size_t size = std::max(bits.size(), match_field_bits.size());
         uint64_t mask = (1ULL << size) - 1;
@@ -440,7 +448,7 @@ bool BuildGatewayMatch::preorder(const IR::Primitive *prim) {
     auto hdr = prim->operands[0]->to<IR::HeaderRef>()->toString();
     if (!fields.valid_offsets.count(hdr))
         BUG("Failed to get valid bit in BuildGatewayMatch");
-    if (getContext() && getContext()->node->is<IR::LNot>())
+    if (getParent<IR::LNot>())
         match.word1 &= ~(1ULL << fields.valid_offsets[hdr] >> shift);
     else
         match.word0 &= ~(1ULL << fields.valid_offsets[hdr] >> shift);

@@ -250,24 +250,27 @@ const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
     const IR::Expression *dest = prim->operands.size() > 0 ? prim->operands[0] : nullptr;
     if (prim->name == "modify_field") {
         long mask;
-        if ((prim->operands.size() | 1) != 3)
+        if ((prim->operands.size() | 1) != 3) {
             error("%s: wrong number of operands to %s", prim->srcInfo, prim->name);
-        else if (!phv.field(dest))
+        } else if (!phv.field(dest)) {
             error("%s: destination of %s must be a field", prim->srcInfo, prim->name);
-        else if (auto *rv = fillInstDest(prim->operands[1], dest))
+        } else if (auto *rv = fillInstDest(prim->operands[1], dest)) {
             return rv;
-        else if (!checkSrc1(prim->operands[1]))
-            error("%s: source of %s invalid", prim->srcInfo, prim->name);
-        else if (prim->operands.size() == 2)
+        } else if (!checkSrc1(prim->operands[1])) {
+            if (prim->operands[1]->is<IR::Mux>())
+                error("%s: conditional assignment not supported", prim->srcInfo);
+            else
+                error("%s: source of %s invalid", prim->srcInfo, prim->name);
+        } else if (prim->operands.size() == 2) {
             return new IR::MAU::Instruction(prim->srcInfo, "set", &prim->operands);
-        else if (!checkConst(prim->operands[2], mask))
+        } else if (!checkConst(prim->operands[2], mask)) {
             error("%s: mask of %s must be a constant", prim->srcInfo, prim->name);
-        else if (1L << dest->type->width_bits() == mask + 1)
+        } else if (1L << dest->type->width_bits() == mask + 1) {
             return new IR::MAU::Instruction(prim->srcInfo, "set", dest, prim->operands[1]);
-        else if (isDepositMask(mask))
+        } else if (isDepositMask(mask)) {
             return makeDepositField(prim, mask);
-        else
-            return new IR::MAU::Instruction(prim->srcInfo, "bitmasked-set", &prim->operands);
+        } else {
+            return new IR::MAU::Instruction(prim->srcInfo, "bitmasked-set", &prim->operands); }
     } else if (prim->name == "add" || prim->name == "sub" || prim->name == "subtract") {
         if (prim->operands.size() != 3) {
             error("%s: wrong number of operands to %s", prim->srcInfo, prim->name);
@@ -324,6 +327,14 @@ const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
             auto rv = new IR::MAU::Instruction(*prim);
             rv->name = rv->name + 4;  // strip off bit_ prefix
             return rv; }
+    } else if (prim->name == "isValid") {
+        auto hdr_ref = prim->operands[0]->to<const IR::HeaderRef>();
+        // tyepchecking should have caught these errors
+        BUG_CHECK(hdr_ref, "Invalid header operand in isValid");
+        BUG_CHECK(!hdr_ref->baseRef()->is<IR::Metadata>(), "Can't check validity of metadata");
+        auto bit1 = IR::Type::Bits::get(1);
+        return new IR::MAU::Instruction(prim->srcInfo, "set", new IR::TempVar(bit1),
+                                        new IR::Member(prim->srcInfo, bit1, hdr_ref, "$valid"));
     } else if (prim->name == "drop" || prim->name == "mark_to_drop") {
         return new IR::MAU::Instruction(prim->srcInfo, "invalidate",
             gen_stdmeta(VisitingThread(this) ? "egress_port" : "egress_spec"));
@@ -362,8 +373,8 @@ const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
         IR::MAU::Instruction *instr = new IR::MAU::Instruction(prim->srcInfo, "set",
             new IR::Slice(prim->operands[0], size-1, 0), new IR::MAU::HashDist);
         return instr;
-    }
-    WARNING("unhandled in InstSel: " << *prim);
+    } else {
+        WARNING("unhandled in InstSel: " << *prim); }
     return prim;
 }
 

@@ -401,14 +401,6 @@ class GetTofinoTables : public Inspector {
     bool preorder(const IR::IndexedVector<IR::Declaration> *) override { return false; }
     bool preorder(const IR::P4Table *) override { return false; }
 
-    bool preorder(const IR::Vector<IR::Expression> *v) override {
-        assert(!seqs.count(v));
-        seqs[v] = new IR::MAU::TableSeq();
-        return true; }
-    void postorder(const IR::Vector<IR::Expression> *v) override {
-        for (auto el : *v)
-            if (tables.count(el))
-                seqs.at(v)->tables.push_back(tables.at(el)); }
     bool preorder(const IR::BlockStatement *b) override {
         assert(!seqs.count(b));
         seqs[b] = new IR::MAU::TableSeq();
