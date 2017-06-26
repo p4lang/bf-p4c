@@ -13,10 +13,10 @@ p4_tests_tofino.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile-p4c-extension.am $(w
    $(srcdir)/%reldir%/p4_16/*.p4 \
    $(srcdir)/%reldir%/p4_16/google-tor/p4/spec/tor.p4 \
    $(srcdir)/%reldir%/p4_14/*.p4 \
-   $(srcdir)/%reldir%/p4_14/c1/*\/*.p4 \
-   $(srcdir)/%reldir%/p4_14/c2/*\/*.p4 \
-   $(srcdir)/%reldir%/p4_14/c3/*\/*.p4 \
-   $(srcdir)/%reldir%/p4_14/jenkins/*\/*.p4 \
+   $(srcdir)/%reldir%/p4_14/c1/*/*.p4 \
+   $(srcdir)/%reldir%/p4_14/c2/*/*.p4 \
+   $(srcdir)/%reldir%/p4_14/c3/*/*.p4 \
+   $(srcdir)/%reldir%/p4_14/jenkins/*/*.p4 \
    $(srcdir)/%reldir%/p4_14/switch_*/switch.p4 ) \
    $(srcdir)/testdata/p4_14_samples \
    $(srcdir)/%reldir%/p4_16 \
@@ -29,10 +29,10 @@ p4_tests_tofino.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile-p4c-extension.am $(w
 # Exercise v12test back-end on Tofino-specific programs
 p4_tests_p14_to_16.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile-p4c-extension.am $(wildcard \
    $(srcdir)/%reldir%/p4_14/*.p4 \
-   $(srcdir)/%reldir%/p4_14/c1/*\/*.p4 \
-   $(srcdir)/%reldir%/p4_14/c2/*\/*.p4 \
-   $(srcdir)/%reldir%/p4_14/c3/*\/*.p4 \
-   $(srcdir)/%reldir%/p4_14/jenkins/*\/*.p4 \
+   $(srcdir)/%reldir%/p4_14/c1/*/*.p4 \
+   $(srcdir)/%reldir%/p4_14/c2/*/*.p4 \
+   $(srcdir)/%reldir%/p4_14/c3/*/*.p4 \
+   $(srcdir)/%reldir%/p4_14/jenkins/*/*.p4 \
    $(srcdir)/%reldir%/p4_14/switch_*/switch.p4 ) \
    $(srcdir)/%reldir%/p4_14
 	@$(GENTESTS) $(srcdir) p14_to_16 $(srcdir)/%reldir%/test-v12-sample.sh $^ >$@ || ( rm $@ && false )
