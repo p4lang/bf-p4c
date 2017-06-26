@@ -835,11 +835,10 @@ void Cluster::set_field_range(PhvInfo::Field *field, int container_width) {
 //
 //***********************************************************************************
 
-// TODO: This seems complicated.  If we didn't have to worry about CCGF, is
-// clustering just Union-Find?
-
-// TODO: Why not always insert rhs->ccgf if not null, rather than checking
-// is_ccgf_member?
+// barring CCGF, clustering = Union-Find
+// Find: determine which subset contains a particular element
+// Union: Join two subsets into a single subset
+// if rhs is ccgf member, check if rhs ccgf owner in lhs cluster
 
 void Cluster::insert_cluster(PhvInfo::Field *lhs, PhvInfo::Field *rhs) {
     if (lhs && dst_map_i[lhs] && rhs) {
@@ -854,14 +853,14 @@ void Cluster::insert_cluster(PhvInfo::Field *lhs, PhvInfo::Field *rhs) {
                 // e.g.,  owner's cluster as (lhs{lhs->ccgf_fields=(field,...)}, field)
                 //
                 if (!dst_map_i[rhs]) {
-                    if (!is_ccgf_member(lhs, rhs)) {  // ccgf check
+                    if (!rhs->ccgf() || !is_ccgf_owner_in_cluster(lhs, rhs)) {
                         dst_map_i[lhs]->insert(rhs);
                         dst_map_i[rhs] = dst_map_i[lhs];
                     }
                 } else {   // [b]-->(b,d,x)
                     // [a]-->(a,u,v)U(b,d,x)
                     for (auto field : *(dst_map_i[rhs])) {
-                        if (!is_ccgf_member(lhs, field)) {  // ccgf check
+                        if (!field->ccgf() || !is_ccgf_owner_in_cluster(lhs, field)) {
                             dst_map_i[lhs]->insert(field);
                         }
                     }
@@ -882,29 +881,14 @@ void Cluster::insert_cluster(PhvInfo::Field *lhs, PhvInfo::Field *rhs) {
 
 
 /// @return true if the CCGF owner of @rhs is in the same cluster as @lhs.
-bool Cluster::is_ccgf_member(PhvInfo::Field *lhs, PhvInfo::Field *rhs) {
-    // ccgf check: rhs is not a member of f.ccgf_fields, f element of dst_map_i[lhs]
-
-    // TODO: why not check whether rhs.ccgf in dst_map_i[lhs] and
-    // ccgf_fields.size() == 0?
-
-    if (lhs && rhs && dst_map_i[lhs]) {
-        for (auto &f : *dst_map_i[lhs]) {
-            if (std::find(f->ccgf_fields().begin(), f->ccgf_fields().end(), rhs)
-               != f->ccgf_fields().end()) {
-               // rhs is member of f.ccgf, f element of lhs.cluster
-               LOG4("=====");
-               LOG4(rhs);
-               LOG4(" .....member of ccgf of..... ");
-               LOG4(f);
-               LOG4("=====");
-               //
-               return true;
-            }
-        }  // for
-    }
-    return false;
-}  // is_ccgf_member
+bool Cluster::is_ccgf_owner_in_cluster(PhvInfo::Field *lhs, PhvInfo::Field *rhs) {
+    //
+    // return true if rhs' ccgf owner in cluster
+    // i.e., rhs is not a member of f.ccgf_fields, f element of lhs cluster
+    // check rhs.ccgf in dst_map_i[lhs]
+    //
+    return lhs && rhs && rhs->ccgf() && dst_map_i[lhs] && dst_map_i[lhs]->count(rhs->ccgf());
+}  // is_ccgf_owner_in_cluster
 
 //***********************************************************************************
 //
@@ -936,10 +920,10 @@ void Cluster::sanity_check_field_range(const std::string& msg) {
 void Cluster::sanity_check_clusters(const std::string& msg, PhvInfo::Field *lhs) {
     if (lhs && dst_map_i[lhs]) {
         // b --> (b,d,e); count b=1 in (b,d,e)
-        if (dst_map_i[lhs]->count(lhs) != 1) {
-            // TODO: don't sets contain at most one of any element?
+        if (!dst_map_i[lhs]->count(lhs)) {
+            // sets contain at most one of any element, sanity check non-zero
             LOG1("*****cluster.cpp:sanity_FAIL*****"
-                << msg << ".....cluster member count > 1");
+                << msg << ".....cluster member does not exist in dst_map set");
             LOG1(lhs << "-->" << dst_map_i[lhs]);
         }
         // forall x elem (b,d,e), x-->(b,d,e)

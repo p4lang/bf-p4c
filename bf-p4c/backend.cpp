@@ -65,6 +65,7 @@ limitations under the License.
 #include "tofino/phv/cluster_phv_slicing.h"
 #include "tofino/phv/cluster_phv_overlay.h"
 #include "tofino/phv/phv_analysis_api.h"
+#include "tofino/phv/phv_assignment_api.h"
 #include "tofino/phv/validate_allocation.h"
 #include "tofino/common/parser_overlay.h"
 
@@ -122,6 +123,8 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
                                                                  // func mutually_exclusive(f1, f2)
     PHV_Analysis_API phv_analysis_api(phv, cluster_phv_mau, 0);  // extended object interface
                                                                  // phv_analysis to rest of compiler
+    PHV_Assignment_API phv_assignment_api(phv, 0);               // extended object interface
+                                                                 // phv_assignment to compiler
     PHV_Bind phv_bind(phv, cluster_phv_mau);                     // field binding to PHV Containers
     DependencyGraph deps;
     TablesMutuallyExclusive mutex;
@@ -138,13 +141,14 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
     } else {
         phv_alloc = new PassManager({
             //
-            // &cluster_phv_mau,   // cluster PHV container placements
-                                // second cut PHV MAU Group assignments
-                                // honor single write conflicts from Table Placement
-            &phv_bind,          // fields bound to PHV containers
-                                // later passes assume that phv alloc info
-                                // is sorted in field bit order, msb first
-                                // done by phv_bind
+            // &cluster_phv_mau,     // cluster PHV container placements
+                                  // second cut PHV MAU Group assignments
+                                  // honor single write conflicts from Table Placement
+            &phv_bind,            // fields bound to PHV containers
+                                  // later passes assume that phv alloc info
+                                  // is sorted in field bit order, msb first
+                                  // done by phv_bind
+            &phv_assignment_api,  // phv assignment results api interface
         });
     }
 

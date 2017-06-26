@@ -136,6 +136,7 @@ tofino_backend_phv_UNIFIED = \
 	%reldir%/phv/cluster_phv_slicing.cpp \
 	%reldir%/phv/phv.cpp \
 	%reldir%/phv/phv_analysis_api.cpp \
+	%reldir%/phv/phv_assignment_api.cpp \
 	%reldir%/phv/phv_fields.cpp \
 	%reldir%/phv/repack_metadata.cpp \
 	%reldir%/phv/split_phv_use.cpp \
@@ -154,6 +155,7 @@ noinst_HEADERS += \
 	%reldir%/phv/cluster_phv_req.h \
 	%reldir%/phv/cluster_phv_slicing.h \
 	%reldir%/phv/phv_analysis_api.h \
+	%reldir%/phv/phv_assignment_api.h \
 	%reldir%/phv/phv_fields.h \
 	%reldir%/phv/phv.h \
 	%reldir%/phv/split_phv_use.h \

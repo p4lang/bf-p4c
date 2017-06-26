@@ -24,6 +24,7 @@ class TofinoPHVManualAlloc;
 class Cluster_PHV;
 class PHV_Container;
 class PHV_Analysis_API;
+class PHV_Assignment_API;
 class PHV_Bind;
 class Slice;
 
@@ -45,7 +46,6 @@ class PhvInfo : public Inspector {
      * of the Field struct for `f` and for the Field struct of `f`'s "valid"
      * bit.
      */
-    // TODO: Delete this class?  It seems to be unused.
     class SetReferenced : public Inspector {
         PhvInfo &self;
         bool preorder(const IR::Expression *e) override;
@@ -81,6 +81,14 @@ class PhvInfo : public Inspector {
         /// True if this Field is a validity bit.  Implies metadata.
         bool            pov;
 
+        //
+        // ****************************************************************************************
+        // ****************************************************************************************
+        // TODO goal to move Analysis API related members here into field->phv_analysis_api object
+        // similarly move Assignment API related members here into field->phv_assignment_api object
+        // ****************************************************************************************
+        // ****************************************************************************************
+        //
         //
         // ****************************************************************************************
         // begin phv_assignment (phv_bind) interface
@@ -120,20 +128,10 @@ class PhvInfo : public Inspector {
             bool operator!=(const alloc_slice& other) const {
                 return !operator==(other); } };
         //
-        cstring header() const { return name.before(strrchr(name, '.')); }
-        int container_bytes(bitrange bits = {0, -1}) const;
-        //
+        // alloc_slice bit
         const alloc_slice &for_bit(int bit) const;
         //
-        void foreach_alloc(int lo, int hi, std::function<void(const alloc_slice &)> fn) const;
-        void foreach_alloc(std::function<void(const alloc_slice &)> fn) const {
-            foreach_alloc(0, size-1, fn); }
-        void foreach_alloc(bitrange r, std::function<void(const alloc_slice &)> fn) const {
-            foreach_alloc(r.lo, r.hi, fn); }
-        void foreach_alloc(const bitrange *r, std::function<void(const alloc_slice &)> fn) const {
-            foreach_alloc(r ? r->lo : 0, r ? r->hi : size-1, fn); }
-        //
-        void foreach_byte(int lo, int hi, std::function<void(const alloc_slice &)> fn) const;
+        // alloc_slice byte
         void foreach_byte(std::function<void(const alloc_slice &)> fn) const {
             foreach_byte(0, size-1, fn); }
         void foreach_byte(bitrange r, std::function<void(const alloc_slice &)> fn) const {
@@ -141,9 +139,42 @@ class PhvInfo : public Inspector {
         void foreach_byte(const bitrange *r, std::function<void(const alloc_slice &)> fn) const {
             foreach_byte(r ? r->lo : 0, r ? r->hi : size-1, fn); }
         //
+        // alloc_slice bitrange
+        void foreach_alloc(
+            std::function<void(const alloc_slice &)> fn,
+            bool skip_tagalong = true) const {
+            foreach_alloc(0, size-1, fn, skip_tagalong);
+        }
+        void foreach_alloc(bitrange r, std::function<void(const alloc_slice &)> fn) const {
+            foreach_alloc(r.lo, r.hi, fn); }
+        void foreach_alloc(const bitrange *r, std::function<void(const alloc_slice &)> fn) const {
+            foreach_alloc(r ? r->lo : 0, r ? r->hi : size-1, fn); }
+                // e.g., foreach_alloc function with bitrange to only iterate over part of field
+                // PhvInfo::Field::bitrange  bits;        // local var (on stack)
+                // auto *field = phv.field(expr, &bits);  // pointer to bits, phv.field fills it
+                // field->foreach_alloc(bits, [&](const PhvInfo::Field::alloc_slice &alloc) {
+                //     LOG1("Alloc slice of write " << alloc); }
+        //
+        cstring header() const { return name.before(strrchr(name, '.')); }
+        int container_bytes(bitrange bits = {0, -1}) const;
+        //
+        PHV_Assignment_API *phv_assignment_api()        { return phv_assignment_api_i; }
+        void phv_assignment_api(PHV_Assignment_API *p)  { phv_assignment_api_i = p; }
+        //
      private:  // class Field
         //
         vector<alloc_slice> alloc_i;          // sorted MSB (field) first
+        //
+        // API: phv assignment to rest of Compiler
+        //
+        PHV_Assignment_API *phv_assignment_api_i = nullptr;
+        //
+        void foreach_alloc(
+            int lo,
+            int hi,
+            std::function<void(const alloc_slice &)> fn,
+            bool skip_tagalong = true) const;
+        void foreach_byte(int lo, int hi, std::function<void(const alloc_slice &)> fn) const;
         //
         // friends of phv_assignment interface
         //
@@ -159,6 +190,7 @@ class PhvInfo : public Inspector {
         friend class IXBarRealign;            // mau/ixbar_realign
         friend class ActionAnalysis;          // mau/action_analysis
         friend class MergeInstructions;       // mau/instruction_adjustment
+        friend class PHV_Assignment_API;
         //
         friend void alloc_pov(PhvInfo::Field *i, PhvInfo::Field *pov);
         friend void repack_metadata(PhvInfo &phv);
@@ -204,9 +236,20 @@ class PhvInfo : public Inspector {
                                            //     only when .$push exists -- see allocatePOV()
                                            //     owner".$stkvalid"->ccgf = 0, member->ccgf = owner
                                            //     owner->ccgf_fields (members)
+                                           //     owner is not in ccgf_fields
+                                           //     it "overlaps" members in phv container
                                            //     e.g.,
-                                           //     extra.$push:B9(5..6) --> extra.$stkvalid: B9(0..6)
-                                           //     extra$0.$valid:B9(4) --> extra.$stkvalid: B9(0..6)
+                                           //     PHV-64.B0.I.Fp  76543221
+                                           //     1= 63:ingress::data.$valid<1>           B0<1:7..7>
+                                           //     2= 64:ingress::extra.$push<2:0..1>      B0<2:5..6>
+                                           //     3= 65:ingress::extra[0].$valid<1>       B0<1:4..4>
+                                           //     4= 66:ingress::extra[1].$valid<1>       B0<1:3..3>
+                                           //     5= 67:ingress::extra[2].$valid<1>       B0<1:2..2>
+                                           //     6= 68:ingress::extra[3].$valid<1>       B0<1:1..1>
+                                           //     72^ 70:ingress::extra.$stkvalid<7:0..6> B0<7:0..6>
+                                           //     extra.$push.ccgf_i --> extra.$stkvalid
+                                           //     extra[0].$valid.ccgf_i --> extra.$stkvalid
+                                           //     extra.$stkvalid.ccgf_i --> 0
                                            //
                                            // (ii) simple header povs: container may be PARTIAL
                                            //      owner->ccgf = owner, member->ccgf = owner
@@ -256,7 +299,7 @@ class PhvInfo : public Inspector {
         //
         // API: phv analysis to rest of Compiler
         //
-        PHV_Analysis_API *phv_analysis_api_i = 0;
+        PHV_Analysis_API *phv_analysis_api_i = nullptr;
         //
         // cluster ids
         //
@@ -332,7 +375,7 @@ class PhvInfo : public Inspector {
         //
         // field overlays
         //
-        Field *overlay_substratum()                            { return overlay_substratum_i; }
+        Field *overlay_substratum() const                      { return overlay_substratum_i; }
         void overlay_substratum(Field *f);
         ordered_map<int, ordered_set<Field *> *>&
             field_overlay_map()                                { return field_overlay_map_i; }

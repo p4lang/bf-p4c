@@ -167,6 +167,15 @@ std::ostream& operator<<(std::ostream& out, const PHV::Container c) {
     return out << (c.tagalong_ ? "T" : "") << "BHW?"[c.log2sz_] << c.index_;
 }
 
+std::ostream& operator<<(std::ostream& out, ordered_set<const PHV::Container *>& c_set) {
+    out << "{";
+    for (auto &c : c_set) {
+        out << *c << ",";
+    }
+    out << "}";
+    return out;
+}
+
 std::ostream& operator<<(std::ostream& out, const PHV::Container::Kind k) {
     PHV::Container c(k, 0);
     return out << (c.tagalong_ ? "T" : "") << "BHW?"[c.log2sz_];

@@ -2,6 +2,7 @@
 #define TOFINO_PHV_PHV_H_
 
 #include <iosfwd>
+#include "lib/ordered_set.h"
 
 class bitvec;
 class cstring;
@@ -128,6 +129,7 @@ class Container {
 };
 
 std::ostream &operator<<(std::ostream &out, const PHV::Container c);
+std::ostream& operator<<(std::ostream &out, ordered_set<const PHV::Container *>& c_set);
 std::ostream &operator<<(std::ostream &out, const PHV::Container::Kind k);
 
 }  // namespace PHV

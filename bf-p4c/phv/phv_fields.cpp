@@ -1,8 +1,18 @@
 #include "phv_fields.h"
+#include "phv_analysis_api.h"
+#include "phv_assignment_api.h"
 #include "ir/ir.h"
 #include "lib/log.h"
 #include "lib/stringref.h"
 #include "lib/range.h"
+
+//
+//***********************************************************************************
+//
+// PhvInfo::SetReferenced preorder
+//
+//***********************************************************************************
+//
 
 bool PhvInfo::SetReferenced::preorder(const IR::Expression *e) {
     if (auto *field = self.field(e)) {
@@ -19,38 +29,13 @@ bool PhvInfo::SetReferenced::preorder(const IR::Expression *e) {
     return true;
 }
 
-void PhvInfo::add(cstring name, int size, int offset, bool meta, bool pov) {
-    LOG3("PhvInfo adding " << (meta ? "metadata" : "header") << " field " << name <<
-         " size " << size);
-    assert(all_fields.count(name) == 0);
-    auto *info = &all_fields[name];
-    info->name = name;
-    info->id = by_id.size();
-    info->gress = gress;
-    info->size = size;
-    info->offset = offset;
-    info->metadata = meta;
-    info->pov = pov;
-    by_id.push_back(info);
-}
-
-void PhvInfo::add_hdr(cstring name, const IR::Type_StructLike *type, bool meta) {
-    if (!type) {
-        LOG2("PhvInfo no type for " << name);
-        return; }
-    LOG2("PhvInfo adding " << (meta ? "metadata" : "header") << " " << name);
-    // TODO: Use BUG macro.
-    assert(all_headers.count(name) == 0);
-    int start = by_id.size();
-    int offset = 0;
-    for (auto f : type->fields)
-        offset += f->type->width_bits();
-    for (auto f : type->fields) {
-        int size = f->type->width_bits();
-        add(name + '.' + f->name, size, offset -= size, meta, false); }
-    int end = by_id.size() - 1;
-    all_headers.emplace(name, std::make_pair(start, end));
-}
+//
+//***********************************************************************************
+//
+// PhvInfo member functions
+//
+//***********************************************************************************
+//
 
 Visitor::profile_t PhvInfo::init_apply(const IR::Node *root) {
     auto rv = Inspector::init_apply(root);
@@ -94,6 +79,43 @@ bool PhvInfo::preorder(const IR::TempVar *tv) {
     return false;
 }
 
+void PhvInfo::add(cstring name, int size, int offset, bool meta, bool pov) {
+    LOG3("PhvInfo adding " << (meta ? "metadata" : "header") << " field " << name <<
+         " size " << size);
+    assert(all_fields.count(name) == 0);
+    auto *info = &all_fields[name];
+    info->name = name;
+    info->id = by_id.size();
+    info->gress = gress;
+    info->size = size;
+    info->offset = offset;
+    info->metadata = meta;
+    info->pov = pov;
+    by_id.push_back(info);
+    //
+    // create extended objects for phv_analysis_api, phv_assignment_api
+    //
+    info->phv_analysis_api(new PHV_Analysis_API(*this, info));
+    info->phv_assignment_api(new PHV_Assignment_API(*this, info));
+}
+
+void PhvInfo::add_hdr(cstring name, const IR::Type_StructLike *type, bool meta) {
+    if (!type) {
+        LOG2("PhvInfo no type for " << name);
+        return; }
+    LOG2("PhvInfo adding " << (meta ? "metadata" : "header") << " " << name);
+    BUG_CHECK(all_headers.count(name) == 0, "phv_fields.cpp:add_hdr(): all_headers inconsistent");
+    int start = by_id.size();
+    int offset = 0;
+    for (auto f : type->fields)
+        offset += f->type->width_bits();
+    for (auto f : type->fields) {
+        int size = f->type->width_bits();
+        add(name + '.' + f->name, size, offset -= size, meta, false); }
+    int end = by_id.size() - 1;
+    all_headers.emplace(name, std::make_pair(start, end));
+}
+
 void PhvInfo::addTempVar(const IR::TempVar *tv) {
     BUG_CHECK(tv->type->is<IR::Type::Bits>() || tv->type->is<IR::Type::Boolean>(),
               "Can't create temp of type %s", tv->type);
@@ -101,134 +123,25 @@ void PhvInfo::addTempVar(const IR::TempVar *tv) {
         add(tv->name, tv->type->width_bits(), 0, true, tv->POV);
 }
 
-const PhvInfo::Field::alloc_slice &PhvInfo::Field::for_bit(int bit) const {
-    for (auto &sl : alloc_i)
-        if (bit >= sl.field_bit && bit < sl.field_bit + sl.width)
-            return sl;
-    ERROR("No allocation for bit " << bit << " in " << name);
-    static alloc_slice invalid(nullptr, PHV::Container(), 0, 0, 0);
-    return invalid;
+const std::pair<int, int> *PhvInfo::header(cstring name_) const {
+    StringRef name = name_;
+    if (auto *rv = getref(all_headers, name))
+        return rv;
+    if (auto *p = name.findstr("::")) {
+        name = name.after(p+2);
+        if (auto *rv = getref(all_headers, name))
+            return rv; }
+    return nullptr;
 }
 
-void PhvInfo::Field::foreach_alloc(int lo, int hi,
-                                   std::function<void(const alloc_slice &)> fn) const {
-    alloc_slice tmp(this, PHV::Container(), lo, lo, hi-lo+1);
-    if (alloc_i.empty()) {
-        fn(tmp);
-        return; }
-    auto it = alloc_i.rbegin();
-    while (it != alloc_i.rend() && (it->container.tagalong() || it->field_hi() < lo)) ++it;
-    if (it != alloc_i.rend() && it->field_bit != lo) {
-        if (it->field_bit >= lo) {
-            LOG1("********** phv_fields.cpp:sanity_FAIL **********"
-                << ".....field_bit in alloc_slice not less than lo....."
-                << " field_bit = " << it->field_bit
-                << " container_bit = " << it->container_bit
-                << " width = " << it->width
-                << " lo = " << lo
-                << std::endl
-                << " field = " << this
-                << " container = " << it->container.kind() << it->container.index());
-            BUG("phv_fields.cpp:foreach_alloc(): field_bit in alloc_slice not less than lo");
-        }
-        tmp = *it;
-        tmp.container_bit += abs(it->field_bit - lo);
-        if (tmp.container_bit < 0) {
-            LOG1("********** phv_fields.cpp:sanity_FAIL **********"
-                << ".....container_bit negative in alloc_slice....."
-                << " field_bit = " << it->field_bit
-                << " container_bit = " << it->container_bit
-                << " width = " << it->width
-                << " lo = " << lo
-                << " tmp.container_bit = " << tmp.container_bit
-                << std::endl
-                << " field = " << this
-                << " container = " << it->container.kind() << it->container.index());
-            BUG("phv_fields.cpp:foreach_alloc(): container_bit negative in alloc_slice");
-        }
-        tmp.field_bit = lo;
-        if (it->field_hi() > hi)
-            tmp.width = hi - lo + 1;
-        else
-            tmp.width -= abs(it->field_bit - lo);
-        fn(tmp);
-        ++it; }
-    while (it != alloc_i.rend() && it->field_bit <= hi) {
-        if (it->container.tagalong()) continue;
-        if (it->field_hi() > hi) {
-            tmp = *it;
-            tmp.width = hi - it->field_bit + 1;
-            fn(tmp);
-        } else {
-            fn(*it); }
-        ++it; }
-}
-
-void PhvInfo::Field::foreach_byte(int lo, int hi,
-                                  std::function<void(const alloc_slice &)> fn) const {
-    alloc_slice tmp(this, PHV::Container(), lo, lo, 8 - (lo&7));
-    if (alloc_i.empty()) {
-        while (lo <= hi) {
-            if (lo/8U == hi/8U)
-                tmp.width = hi - lo + 1;
-            fn(tmp);
-            tmp.field_bit = tmp.container_bit = lo = (lo|7) + 1;
-            tmp.width = 8; }
-        return; }
-    auto it = alloc_i.rbegin();
-    while (it != alloc_i.rend() && (it->container.tagalong() || it->field_hi() < lo)) ++it;
-    while (it != alloc_i.rend() && it->field_bit <= hi) {
-        if (it->container.tagalong()) continue;
-        unsigned clo = it->container_bit, chi = it->container_hi();
-        for (unsigned cbyte = clo/8U; cbyte <= chi/8U; ++cbyte) {
-            if (it->container != tmp.container || cbyte != tmp.container_bit/8U) {
-                if (tmp.container) fn(tmp);
-                tmp = *it;
-                if (cbyte*8 > clo) {
-                    tmp.container_bit = cbyte*8;
-                    tmp.field_bit += cbyte*8 - clo;
-                    tmp.width -= cbyte*8 - clo; }
-                if (cbyte*8+7 < chi)
-                    tmp.width -= chi - (cbyte*8+7);
-            } else {
-                int byte_hi = std::min(chi, cbyte*8+7);
-                if (byte_hi < tmp.container_hi()) {
-                    LOG1("********** phv_fields.cpp:sanity_FAIL **********"
-                        << ".....byte_hi <= container_hi....."
-                        << " byte_hi = " << byte_hi
-                        << " tmp.container_hi = " << tmp.container_hi()
-                        << " field_bit = " << it->field_bit
-                        << " container_bit = " << it->container_bit
-                        << " width = " << it->width
-                        << " lo = " << lo
-                        << " tmp.container_bit = " << tmp.container_bit
-                        << std::endl
-                        << " field = " << this
-                        << " container = " << it->container.kind() << it->container.index());
-                    BUG("phv_fields.cpp:foreach_byte(): byte_hi < container_hi");
-                }
-                if (byte_hi > tmp.container_hi())
-                    tmp.width += byte_hi - tmp.container_hi();
-                assert(tmp.width <= 8); } }
-        ++it; }
-    if (tmp.container) fn(tmp);
-}
-
-/* figure out how many disinct container bytes contain info from a bitrange of a particular field */
-int PhvInfo::Field::container_bytes(PhvInfo::Field::bitrange bits) const {
-    if (bits.hi < 0) bits.hi = size - 1;
-    if (alloc_i.empty())
-        return bits.hi/8U + bits.lo/8U + 1;
-    int rv = 0, w;
-    for (int bit = bits.lo; bit <= bits.hi; bit += w) {
-        auto &sl = for_bit(bit);
-        w = sl.width - (bit - sl.field_bit);
-        if (bit + w > bits.hi)
-            w = bits.hi - bit + 1;
-        int cbit = bit + sl.container_bit - sl.field_bit;
-        rv += (cbit+w-1)/8U - cbit/8U + 1; }
-    return rv;
-}
+//
+//***********************************************************************************
+//
+// PhvInfo::field functions to extract field
+// retrieve field from IR expression, IR member
+//
+//***********************************************************************************
+//
 
 const PhvInfo::Field *PhvInfo::field(const IR::Expression *e, Field::bitrange *bits) const {
     if (!e) return nullptr;
@@ -280,22 +193,14 @@ const PhvInfo::Field *PhvInfo::field(const IR::Member *fr, Field::bitrange *bits
     return nullptr;
 }
 
-vector<PhvInfo::Field::alloc_slice> *PhvInfo::alloc(const IR::Member *member) {
-    PhvInfo::Field *info = field(member);
-    BUG_CHECK(nullptr != info, "; Cannot find PHV allocation for %s", member->toString());
-    return &info->alloc_i;
-}
-
-const std::pair<int, int> *PhvInfo::header(cstring name_) const {
-    StringRef name = name_;
-    if (auto *rv = getref(all_headers, name))
-        return rv;
-    if (auto *p = name.findstr("::")) {
-        name = name.after(p+2);
-        if (auto *rv = getref(all_headers, name))
-            return rv; }
-    return nullptr;
-}
+//
+//***********************************************************************************
+//
+// PhvInfo::allocatePOV
+// simple header pov & header stack pov ccgfs
+//
+//***********************************************************************************
+//
 
 void PhvInfo::allocatePOV(const HeaderStackInfo &stacks) {
     if (pov_alloc_done) BUG("trying to reallocate POV");
@@ -408,7 +313,164 @@ void PhvInfo::allocatePOV(const HeaderStackInfo &stacks) {
 //
 //***********************************************************************************
 //
-// PhvInfo::Field member functions
+// PhvInfo::Field bitrange interface related member functions
+//
+//***********************************************************************************
+//
+
+// figure out how many disinct container bytes contain info from a bitrange of a particular field
+//
+int PhvInfo::Field::container_bytes(PhvInfo::Field::bitrange bits) const {
+    if (bits.hi < 0) bits.hi = size - 1;
+    if (alloc_i.empty())
+        return bits.hi/8U + bits.lo/8U + 1;
+    int rv = 0, w;
+    for (int bit = bits.lo; bit <= bits.hi; bit += w) {
+        auto &sl = for_bit(bit);
+        w = sl.width - (bit - sl.field_bit);
+        if (bit + w > bits.hi)
+            w = bits.hi - bit + 1;
+        int cbit = bit + sl.container_bit - sl.field_bit;
+        rv += (cbit+w-1)/8U - cbit/8U + 1; }
+    return rv;
+}
+
+//
+//***********************************************************************************
+//
+// PhvInfo::Field Cluster Phv_Bind / alloc_i interface related member functions
+//
+//***********************************************************************************
+//
+
+vector<PhvInfo::Field::alloc_slice> *PhvInfo::alloc(const IR::Member *member) {
+    PhvInfo::Field *info = field(member);
+    BUG_CHECK(nullptr != info, "; Cannot find PHV allocation for %s", member->toString());
+    return &info->alloc_i;
+}
+
+const PhvInfo::Field::alloc_slice &PhvInfo::Field::for_bit(int bit) const {
+    for (auto &sl : alloc_i)
+        if (bit >= sl.field_bit && bit < sl.field_bit + sl.width)
+            return sl;
+    ERROR("No allocation for bit " << bit << " in " << name);
+    static alloc_slice invalid(nullptr, PHV::Container(), 0, 0, 0);
+    return invalid;
+}
+
+void PhvInfo::Field::foreach_byte(int lo, int hi,
+                                  std::function<void(const alloc_slice &)> fn) const {
+    alloc_slice tmp(this, PHV::Container(), lo, lo, 8 - (lo&7));
+    if (alloc_i.empty()) {
+        while (lo <= hi) {
+            if (lo/8U == hi/8U)
+                tmp.width = hi - lo + 1;
+            fn(tmp);
+            tmp.field_bit = tmp.container_bit = lo = (lo|7) + 1;
+            tmp.width = 8; }
+        return; }
+    auto it = alloc_i.rbegin();
+    while (it != alloc_i.rend() && (it->container.tagalong() || it->field_hi() < lo)) ++it;
+    while (it != alloc_i.rend() && it->field_bit <= hi) {
+        if (it->container.tagalong()) continue;
+        unsigned clo = it->container_bit, chi = it->container_hi();
+        for (unsigned cbyte = clo/8U; cbyte <= chi/8U; ++cbyte) {
+            if (it->container != tmp.container || cbyte != tmp.container_bit/8U) {
+                if (tmp.container) fn(tmp);
+                tmp = *it;
+                if (cbyte*8 > clo) {
+                    tmp.container_bit = cbyte*8;
+                    tmp.field_bit += cbyte*8 - clo;
+                    tmp.width -= cbyte*8 - clo; }
+                if (cbyte*8+7 < chi)
+                    tmp.width -= chi - (cbyte*8+7);
+            } else {
+                int byte_hi = std::min(chi, cbyte*8+7);
+                if (byte_hi < tmp.container_hi()) {
+                    LOG1("********** phv_fields.cpp:sanity_FAIL **********"
+                        << ".....byte_hi <= container_hi....."
+                        << " byte_hi = " << byte_hi
+                        << " tmp.container_hi = " << tmp.container_hi()
+                        << " field_bit = " << it->field_bit
+                        << " container_bit = " << it->container_bit
+                        << " width = " << it->width
+                        << " lo = " << lo
+                        << " tmp.container_bit = " << tmp.container_bit
+                        << std::endl
+                        << " field = " << this
+                        << " container = " << it->container.kind() << it->container.index());
+                    BUG("phv_fields.cpp:foreach_byte(): byte_hi < container_hi");
+                }
+                if (byte_hi > tmp.container_hi())
+                    tmp.width += byte_hi - tmp.container_hi();
+                assert(tmp.width <= 8); } }
+        ++it; }
+    if (tmp.container) fn(tmp);
+}  // foreach byte
+
+void PhvInfo::Field::foreach_alloc(
+    int lo,
+    int hi,
+    std::function<void(const alloc_slice &)> fn,
+    bool skip_tagalong) const {
+    //
+    alloc_slice tmp(this, PHV::Container(), lo, lo, hi-lo+1);
+    if (alloc_i.empty()) {
+        fn(tmp);
+        return; }
+    auto it = alloc_i.rbegin();
+    while (it != alloc_i.rend()
+          && ((skip_tagalong && it->container.tagalong()) || it->field_hi() < lo)) ++it;
+    if (it != alloc_i.rend() && it->field_bit != lo) {
+        if (it->field_bit >= lo) {
+            LOG1("********** phv_fields.cpp:sanity_FAIL **********"
+                << ".....field_bit in alloc_slice not less than lo....."
+                << " field_bit = " << it->field_bit
+                << " container_bit = " << it->container_bit
+                << " width = " << it->width
+                << " lo = " << lo
+                << std::endl
+                << " field = " << this
+                << " container = " << it->container.kind() << it->container.index());
+            BUG("phv_fields.cpp:foreach_alloc(): field_bit in alloc_slice not less than lo");
+        }
+        tmp = *it;
+        tmp.container_bit += abs(it->field_bit - lo);
+        if (tmp.container_bit < 0) {
+            LOG1("********** phv_fields.cpp:sanity_FAIL **********"
+                << ".....container_bit negative in alloc_slice....."
+                << " field_bit = " << it->field_bit
+                << " container_bit = " << it->container_bit
+                << " width = " << it->width
+                << " lo = " << lo
+                << " tmp.container_bit = " << tmp.container_bit
+                << std::endl
+                << " field = " << this
+                << " container = " << it->container.kind() << it->container.index());
+            BUG("phv_fields.cpp:foreach_alloc(): container_bit negative in alloc_slice");
+        }
+        tmp.field_bit = lo;
+        if (it->field_hi() > hi)
+            tmp.width = hi - lo + 1;
+        else
+            tmp.width -= abs(it->field_bit - lo);
+        fn(tmp);
+        ++it; }
+    while (it != alloc_i.rend() && it->field_bit <= hi) {
+        if (skip_tagalong && it->container.tagalong()) continue;
+        if (it->field_hi() > hi) {
+            tmp = *it;
+            tmp.width = hi - it->field_bit + 1;
+            fn(tmp);
+        } else {
+            fn(*it); }
+        ++it; }
+}  // foreach alloc
+
+//
+//***********************************************************************************
+//
+// PhvInfo::Field Cluster based Phv Allocation related member functions
 //
 //***********************************************************************************
 //

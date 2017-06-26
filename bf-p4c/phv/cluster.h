@@ -46,11 +46,13 @@ class Cluster : public Inspector, P4WriteContext {
     /// Map of field to cluster it belongs.
     ordered_map<PhvInfo::Field *, ordered_set<PhvInfo::Field *>*> dst_map_i;
     /// Maintains unique cluster pointers.
-    // TODO: what does this mean?
+    /// There is always a single owner to a cluster
+    //  e.g., [b]-->(b,d,x) & op c d => [c]-->(c,b,d,x), lhs_unique set: +insert(c)-remove(b,d,x)
     ordered_set<PhvInfo::Field *> lhs_unique_i;
     /// Destination of current statement.
     PhvInfo::Field *dst_i = nullptr;
     /// All POV fields.
+    /// POV bits (one per header) only used for deparsing
     std::list<PhvInfo::Field *> pov_fields_i;
     /// POV fields not in cluster, need to be PHV allocated.
     std::list<PhvInfo::Field *> pov_fields_not_in_cluster_i;
@@ -73,7 +75,7 @@ class Cluster : public Inspector, P4WriteContext {
     void create_dst_map_entry(PhvInfo::Field *);
     void set_field_range(const IR::Expression&);
     void insert_cluster(PhvInfo::Field *, PhvInfo::Field *);
-    bool is_ccgf_member(PhvInfo::Field *, PhvInfo::Field *);
+    bool is_ccgf_owner_in_cluster(PhvInfo::Field *, PhvInfo::Field *);
     //
     void sanity_check_field_range(const std::string&);
     void sanity_check_clusters(const std::string&, PhvInfo::Field *);
