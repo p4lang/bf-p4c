@@ -137,16 +137,18 @@ const IR::MAU::Action *SplitInstructions::postorder(IR::MAU::Action *act) {
  */
 const IR::MAU::Action *ConstantsToActionData::preorder(IR::MAU::Action *act) {
     container_actions_map.clear();
+    constant_containers.clear();
     ActionAnalysis aa(phv, true, true, tbl);
     aa.set_container_actions_map(&container_actions_map);
     act->apply(aa);
 
     bool proceed = false;
     for (auto &container_action_entry : container_actions_map) {
+        auto container = container_action_entry.first;
         auto &cont_action = container_action_entry.second;
         if (cont_action.convert_constant_to_actiondata()) {
             proceed = true;
-            break;
+            constant_containers.insert(container.toString());
         }
     }
     if (!proceed) {
@@ -248,6 +250,9 @@ const IR::MAU::HashDist *ConstantsToActionData::preorder(IR::MAU::HashDist *hd) 
 const IR::MAU::Instruction *ConstantsToActionData::postorder(IR::MAU::Instruction *instr) {
     if (!write_found)
         BUG("No write found in an instruction in ConstantsToActionData?");
+
+    if (constant_containers.find(constant_renames_key.first) == constant_containers.end())
+        return instr;
 
     auto &constant_renames = tbl->resources->action_format.constant_locations.at(action_name);
     bool constant_found = constant_renames.find(constant_renames_key) != constant_renames.end();

@@ -91,6 +91,7 @@ class ConstantsToActionData : public MauTransform, P4WriteContext {
 
     bool has_constant = false;
     bool write_found = false;
+    ordered_set<cstring> constant_containers;
     std::pair<cstring, int> constant_renames_key = std::make_pair(cstring::empty, 0);
     cstring action_name;
 
