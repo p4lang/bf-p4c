@@ -495,6 +495,9 @@ XFAIL_TESTS += \
 BRIG_132_XFAIL = tofino/testdata/p4_16_samples/union-bmv2.p4.test
 XFAIL_TESTS += $(BRIG_132_XFAIL)
 
+# BRIG-133
+XFAIL_TESTS += tofino/%reldir%/p4_14/adjust_instr5.p4.test
+
 # various stateful
 XFAIL_TESTS += \
 		tofino/%reldir%/p4_14/test_config_163_stateful_table_math_unit.p4.test \

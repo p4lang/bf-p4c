@@ -675,6 +675,7 @@ bool ActionAnalysis::check_constant_to_actiondata(ContainerAction &cont_action,
         if (cont_action.name == "set") {
             if (!(tofino_instruction_constant(cont_action.constant_used, CONST_SRC_MAX,
                   container.size()))) {
+                cont_action.error_code |= ContainerAction::CONSTANT_TO_ACTION_DATA;
                 return false;
             }
         } else {  // At this point probably impossible
