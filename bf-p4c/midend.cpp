@@ -93,6 +93,24 @@ class SkipControls : public P4::ActionSynthesisPolicy {
     }
 };
 
+/**
+ * Policy for SimplifyKey that treats a key as complex if it's not one of (1) a
+ * simple lvalue, (2) a call to isValid(), or (3) a mask applied to a simple
+ * lvalue.
+ */
+class NonMaskLeftValueOrIsValid : public P4::KeyIsComplex {
+    P4::NonLeftValueOrIsValid nonLeftValueOrIsValid;
+    P4::NonMaskLeftValue nonMaskLeftValue;
+ public:
+    NonMaskLeftValueOrIsValid(P4::ReferenceMap* refMap, P4::TypeMap* typeMap)
+        : nonLeftValueOrIsValid(refMap, typeMap), nonMaskLeftValue(typeMap)
+    { }
+    bool isTooComplex(const IR::Expression* expression) const override {
+        return nonLeftValueOrIsValid.isTooComplex(expression) &&
+               nonMaskLeftValue.isTooComplex(expression);
+    }
+};
+
 MidEnd::MidEnd(CompilerOptions& options) {
     // we may come through this path even if the program is actually a P4 v1.0 program
     setName("MidEnd");
@@ -135,7 +153,7 @@ MidEnd::MidEnd(CompilerOptions& options) {
         new P4::SimplifyControlFlow(&refMap, &typeMap),
         new P4::RemoveActionParameters(&refMap, &typeMap),
         new P4::SimplifyKey(&refMap, &typeMap,
-                            new P4::NonMaskLeftValue(&refMap, &typeMap)),
+                            new NonMaskLeftValueOrIsValid(&refMap, &typeMap)),
         new P4::RemoveExits(&refMap, &typeMap),
         new P4::ConstantFolding(&refMap, &typeMap),
         new P4::StrengthReduction(),
