@@ -415,6 +415,17 @@ void ActionTable::write_regs(REGS &regs) {
     if (actions) actions->write_regs(regs, this);
 }
 
+//Action data address huffman encoding
+//    { 0,      {"xxx", "xxxxx"} },
+//    { 8,      {"xxx", "xxxx0"} },
+//    { 16,     {"xxx", "xxx01"} },
+//    { 32,     {"xxx", "xx011"} },
+//    { 64,     {"xxx", "x0111"} },
+//    { 128,    {"xxx", "01111"} },
+//    { 256,    {"xx0", "11111"} },
+//    { 512,    {"x01", "11111"} },
+//    { 1024,   {"011", "11111"} };
+
 void ActionTable::gen_tbl_cfg(json::vector &out) {
     // FIXME -- this is wrong if actions have different format sizes
     unsigned number_entries = (layout_size() * 128 * 1024) / (1 << format->log2size);
@@ -430,7 +441,9 @@ void ActionTable::gen_tbl_cfg(json::vector &out) {
         actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
     stage_tbl["how_referenced"] = indirect ? "indirect" : "direct";
     // FIXME -- this is wrong if actions have different format sizes
-    tbl["action_data_entry_width"] = 1 << format->log2size;
+    unsigned action_data_entry_width = 1 << format->log2size;
+    tbl["action_data_entry_width"] = action_data_entry_width;
+    stage_tbl["default_lower_huffman_bits_included"] = std::min(std::max(format->log2size, 2U) - 2, 5U);
     /* FIXME -- don't include ref to select table as compiler doesn't */
     tbl.erase("p4_selection_tables");
     if (options.match_compiler)

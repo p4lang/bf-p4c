@@ -16,12 +16,11 @@ action_to_next_table_mapping
 action_to_perform
 ap_bind_indirect_res_to_match
 bound_to_stateful_table
-bound_to_stateful_table_handle
+bound_to_selection_table
 color_address_extract
 color_aware_per_flow_enable_address_type_bit_position
 constant_name_to_value
 default_address_bits_provided
-default_lower_huffman_bits_included
 default_next_table
 default_next_table_modifiable
 default_only_action
@@ -82,8 +81,6 @@ uses_range
 vliw_resource_allocation
 way_match_group_map
 & 0xff000000 == 0x21000000
-allowed_to_be_default_action
-disallowed_as_default_action_reason
 override_meter_addr_pfe
 override_stat_addr_pfe
 override_stateful_addr_pfe

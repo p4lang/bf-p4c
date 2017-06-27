@@ -319,12 +319,12 @@ void sort_map_print_diff(json::map *a, json::map *b, int indent) {
     indent += 2;
     while (p1 != amap.end() && p2 != bmap.end()) {
         if (*p1->first < *p2->first) {
-            if (show_deletion && !ignore(p1->first))
+            if (show_deletion && !ignore(p1->first) && p1->second)
                 do_output(p1, indent, "-");
             p1++;
             continue; }
         if (*p2->first < *p1->first) {
-            if (show_addition && !ignore(p2->first))
+            if (show_addition && !ignore(p2->first) && p2->second)
                 do_output(p2, indent, "+");
             p2++;
             continue; }

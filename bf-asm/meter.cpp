@@ -340,4 +340,5 @@ void MeterTable::gen_tbl_cfg(json::vector &out) {
     default: break; }
     tbl["enable_color_aware"] = color_aware;
     tbl["enable_color_aware_per_flow_enable"] = color_aware_per_flow_enable;
+    stage_tbl["default_lower_huffman_bits_included"] = METER_LOWER_HUFFMAN_BITS; 
 }

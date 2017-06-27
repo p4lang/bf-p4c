@@ -196,4 +196,5 @@ void CounterTable::gen_tbl_cfg(json::vector &out) {
     default: break; }
     tbl["lrt_enable"] = false;
     tbl["saturating"] = false;  // FIXME?
+    stage_tbl["default_lower_huffman_bits_included"] = 0; 
 }

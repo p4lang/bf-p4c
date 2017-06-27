@@ -26,8 +26,10 @@ struct Instruction;
 class InputXbar;
 class MatchTable;
 class SelectionTable;
+class Stateful;
 class Synth2Port;
 class Stage;
+struct Ref;
 
 class Table {
 public:
@@ -230,6 +232,7 @@ public:
                 int             lineno = -1, lo = -1, hi = -1;
                 alias_t(value_t &); };
             std::string                         name;
+            std::string                         rng_param_name = "";
             int                                 lineno = -1, addr = -1, code = -1;
             std::map<std::string, alias_t>      alias;
             std::vector<Instruction *>          instr;
@@ -239,12 +242,14 @@ public:
             bool equiv(Action *a);
             typedef const decltype(alias)::value_type alias_value_t;
             std::map<std::string, std::vector<alias_value_t *>> reverse_alias() const;
+            bool has_rng() { return !rng_param_name.empty(); }
         };
     private:
         typedef ordered_map<std::string, Action> map_t;
         map_t           actions;
         bitvec          code_use;
         bitvec          slot_use;
+        Table           *table;
     public:
         int                                     max_code = -1;
         Actions(Table *tbl, VECTOR(pair_t) &);
@@ -265,6 +270,7 @@ public:
         void gen_tbl_cfg(json::vector &);
         void add_immediate_mapping(json::map &);
         void add_next_table_mapping(Table *, json::map &);
+        bool has_hash_dist() { return ( table->table_type() == HASH_ACTION ); }
     };
 public:
     const char *name() const { return name_.c_str(); }
@@ -289,7 +295,7 @@ public:
             const char *type, std::vector<Layout> &layout, bool skip_spare_bank = false);
     virtual void common_tbl_cfg(json::map &tbl, const char *match_type);
     enum table_type_t { OTHER=0, TERNARY_INDIRECT, GATEWAY, ACTION, SELECTION, COUNTER,
-                        METER, IDLETIME, STATEFUL };
+                        METER, IDLETIME, STATEFUL, HASH_ACTION };
     virtual table_type_t table_type() { return OTHER; }
     virtual int instruction_set() { return 0; /* VLIW_ALU */ }
     virtual table_type_t set_match_table(MatchTable *m, bool indirect) { assert(0); }
@@ -298,6 +304,8 @@ public:
     virtual const AttachedTables *get_attached() const { return 0; }
     virtual const GatewayTable *get_gateway() const { return 0; }
     virtual SelectionTable *get_selector() const { return 0; }
+    virtual void set_stateful (Stateful *s) { assert(0); }
+    virtual Stateful *get_stateful() const { return 0; }
     virtual const Call &get_action() const { return action; }
     virtual int direct_shiftcount() { assert(0); }
     virtual int home_row() const { assert(0); }
@@ -583,6 +591,7 @@ DECLARE_TABLE_TYPE(Phase0MatchTable, Table, "phase0_match",
 DECLARE_TABLE_TYPE(HashActionTable, MatchTable, "hash_action",
 public:
     //int                                 row = -1, bus = -1;
+    table_type_t table_type() override { return HASH_ACTION; }
     template<class REGS> void write_merge_regs(REGS &regs, int type, int bus);
     void write_merge_regs(Target::Tofino::mau_regs &regs, int type, int bus) override {
         write_merge_regs<Target::Tofino::mau_regs>(regs, type, bus); }
@@ -650,6 +659,7 @@ DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",
     std::vector<int>                    home_rows;
     int                                 home_lineno = -1;
     std::map<std::string, Format *>     action_formats;
+    static const std::map<unsigned, std::vector<std::string>> action_data_address_huffman_encoding; 
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) override;
     std::string find_field(Format::Field *field) override;
     int find_field_lineno(Format::Field *field) override;
@@ -660,6 +670,8 @@ DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",
     table_type_t table_type() override { return ACTION; }
     int unitram_type() override { return UnitRam::ACTION; }
     void pad_format_fields();
+    unsigned get_do_care_count(std::string bstring);
+    unsigned get_lower_huffman_encoding_bits (unsigned width); 
 )
 
 DECLARE_TABLE_TYPE(GatewayTable, Table, "gateway",
@@ -720,6 +732,7 @@ DECLARE_TABLE_TYPE(SelectionTable, AttachedTable, "selection",
     int                 min_words = -1, max_words = -1;
     int                 selection_hash = -1;
 public:
+    Stateful*           bound_stateful = nullptr;
     bool                per_flow_enable;
     table_type_t table_type() override { return SELECTION; }
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) override {
@@ -737,6 +750,8 @@ public:
     unsigned meter_group() const { return layout.at(0).row/4U; }
     int home_row() const override { return layout.at(0).row | 3; }
     int unitram_type() override { return UnitRam::SELECTOR; }
+    Stateful *get_stateful() const override { return bound_stateful; }
+    void set_stateful(Stateful *s) override { bound_stateful = s; }
 )
 
 class IdletimeTable : public Table {

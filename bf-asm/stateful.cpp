@@ -110,6 +110,9 @@ void Stateful::pass1() {
         else if (!match_table_layouts(this, bound_selector))
             error(layout[0].lineno, "Layout in %s does not match selector %s", name(),
                   bound_selector->name());
+        //Add a back reference to this table
+        if (!bound_selector->get_stateful())
+            bound_selector->set_stateful(this);
     } else {
         alloc_maprams();
         alloc_rams(true, stage->sram_use); }
@@ -287,6 +290,22 @@ void Stateful::gen_tbl_cfg(json::vector &out) {
     int size = (layout_size() - 1) * 1024 * (128U/format->size);
     json::map &tbl = *base_tbl_cfg(out, "stateful", size);
     /*json::map &stage_tbl = */add_stage_tbl_cfg(tbl, "stateful", size);
-    if (actions)
-        actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
+    tbl["stateful_alu_width"] = format->size/(dual_mode ? 2 : 1);
+    tbl["dual_width_mode"] = dual_mode;
+    if (actions) {
+        for (auto &a : *actions) {
+            for (auto &i : a.instr) {
+                if (i->name() == "set_bit_at")
+                        tbl["set_instr_at"] = a.code; 
+                if (i->name() == "set_bit")
+                        tbl["set_instr"] = a.code; 
+                if (i->name() == "clr_bit_at")
+                        tbl["clr_instr_at"] = a.code; 
+                if (i->name() == "clr_bit")
+                        tbl["clr_instr"] = a.code; } }
+        actions->gen_tbl_cfg((tbl["actions"] = json::vector())); }
+    if (bound_selector)
+        tbl["bound_to_selection_table_handle"] = bound_selector->handle();
+    json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "stateful", size);
+    stage_tbl["default_lower_huffman_bits_included"] = METER_LOWER_HUFFMAN_BITS; 
 }

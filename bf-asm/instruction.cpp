@@ -439,6 +439,7 @@ struct AluOP : VLIWInstruction {
           const value_t &s1, const value_t &s2)
     : VLIWInstruction(d.lineno), opc(op), dest(tbl->gress, d),
       src1(tbl, act, s1), src2(tbl, act, s2) {}
+    std::string name() { return opc->name; };
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
     void pass2(Table *tbl, Table::Actions::Action *) {
         src1->pass2(slot/16);
@@ -524,6 +525,7 @@ struct LoadConst : VLIWInstruction {
     LoadConst(Table *tbl, const Table::Actions::Action *act, const value_t &d, int&s)
         : VLIWInstruction(d.lineno), dest(tbl->gress, d), src(s) {}
     LoadConst(int line, Phv::Ref &d, int v) : VLIWInstruction(line), dest(d), src(v) {}
+    std::string name() { return ""; };
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
     void pass2(Table *, Table::Actions::Action *) {}
     int encode();
@@ -571,10 +573,11 @@ bool LoadConst::equiv(Instruction *a_) {
 
 struct CondMoveMux : VLIWInstruction {
     const struct Decode : Instruction::Decode {
+        std::string name;
         unsigned opcode, cond_size;
         bool    src2opt;
         Decode(const char *name, unsigned opc, bool s2opt, unsigned csize, const char *alias_name)
-        : Instruction::Decode(name), opcode(opc), cond_size(csize), src2opt(s2opt) {
+        : name(name), Instruction::Decode(name), opcode(opc), cond_size(csize), src2opt(s2opt) {
             alias(alias_name); }
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
                             const VECTOR(value_t) &op) const override;
@@ -590,6 +593,7 @@ struct CondMoveMux : VLIWInstruction {
                 const value_t &d, const value_t &s1, const value_t &s2)
     : VLIWInstruction(d.lineno), opc(op), dest(tbl->gress, d), src1(tbl, act, s1),
       src2(tbl, act, s2) {}
+    std::string name() { return opc->name; }
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
     void pass2(Table *tbl, Table::Actions::Action *) {
         src1->pass2(slot/16);
@@ -672,6 +676,7 @@ struct DepositField : VLIWInstruction {
                  const value_t &s1, const value_t &s2)
     : VLIWInstruction(d.lineno), dest(tbl->gress, d), src1(tbl, act, s1), src2(tbl, act, s2) {}
     DepositField(const Set &);
+    std::string name() { return "deposit_field"; }
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
     void pass2(Table *tbl, Table::Actions::Action *) {
         src1->pass2(slot/16);
@@ -744,7 +749,8 @@ bool DepositField::equiv(Instruction *a_) {
 
 struct Set : VLIWInstruction {
     struct Decode : Instruction::Decode {
-        Decode(const char *n) : Instruction::Decode(n) {}
+        std::string name;
+        Decode(const char *n) : name(n), Instruction::Decode(n) {}
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
                             const VECTOR(value_t) &op) const override;
     };
@@ -752,6 +758,7 @@ struct Set : VLIWInstruction {
     operand     src;
     Set(Table *tbl, const Table::Actions::Action *act, const value_t &d, const value_t &s)
         : VLIWInstruction(d.lineno), dest(tbl->gress, d), src(tbl, act, s) {}
+    std::string name() { return "set"; };
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
     void pass2(Table *tbl, Table::Actions::Action *) { src->pass2(slot/16); }
     int encode();
@@ -814,6 +821,7 @@ struct NulOP : VLIWInstruction {
     Phv::Ref    dest;
     NulOP(Table *tbl, const Table::Actions::Action *act, const Decode *o, const value_t &d) :
         VLIWInstruction(d.lineno), opc(o), dest(tbl->gress, d) {}
+    std::string name() { return opc->name; };
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
     void pass2(Table *, Table::Actions::Action *) {}
     int encode();
@@ -872,6 +880,7 @@ struct ShiftOP : VLIWInstruction {
                 } else {
                     src2 = src1;
                     if (CHECKTYPE(ops[2], tINT)) shift = ops[2].i; } }
+    std::string name() { return opc->name; };
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
     void pass2(Table *tbl, Table::Actions::Action *) {
         src1->pass2(slot/16);

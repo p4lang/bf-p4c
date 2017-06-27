@@ -44,7 +44,8 @@ enum {
     STATEFUL_PREDICATION_ENCODE_CMPLO = 10,
     STATEFUL_PREDICATION_ENCODE_CMPHI = 12,
     STATEFUL_PREDICATION_ENCODE_UNCOND = 15,
-    METER_ALU_GROUP_DATA_DELAY = 13
+    METER_ALU_GROUP_DATA_DELAY = 13,
+    METER_LOWER_HUFFMAN_BITS = 7
 };
 
 /* constants for various config params */
@@ -58,6 +59,7 @@ namespace UnitRam {
         STATEFUL = 5,
         TERNARY_INDIRECTION = 6,
         SELECTOR = 7,
+        HASH_ACTION = 8,
     };
     namespace DataMux {
         enum {

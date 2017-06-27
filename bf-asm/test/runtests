@@ -307,6 +307,7 @@ function test_p4() {
             if [ -r $name.out/tbl-cfg ]; then
                 { $JSON_DIFF $CTXT_DIFFARGS $name.out/tbl-cfg $glsc_ctxt;
                   if [ $? -gt 128 ]; then echo "***json_diff crashed"; fi; } >> json_diff.txt
+                #echo $JSON_DIFF $CTXT_DIFFARGS $name.out/tbl-cfg $glsc_ctxt;
             fi
             cnt=$(grep -Ev '^\+\+\+|^---|"int_inj"' json_diff.txt | grep -Ec '^\+|^-')
             if [ $cnt -gt 0 ]; then

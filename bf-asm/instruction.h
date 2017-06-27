@@ -10,6 +10,7 @@ struct Instruction {
     Instruction(int l) : lineno(l), slot(-1) {}
     virtual ~Instruction() {}
     virtual Instruction *pass1(Table *, Table::Actions::Action *) = 0;
+    virtual std::string name() = 0;
     virtual void pass2(Table *, Table::Actions::Action *) = 0;
     virtual void dbprint(std::ostream &) const = 0;
     virtual bool equiv(Instruction *a) = 0;

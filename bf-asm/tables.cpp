@@ -775,6 +775,7 @@ Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv) {
 }
 
 Table::Actions::Actions(Table *tbl, VECTOR(pair_t) &data) {
+    table = tbl;
     for (auto &kv : data) {
         if ((kv.key.type != tINT && !CHECKTYPE2M(kv.key, tSTR, tCMD, "action")) ||
             !CHECKTYPE(kv.value, tVEC))
@@ -970,9 +971,23 @@ template void Table::Actions::write_regs(Target::JBay::mau_regs &, Table *);
 void Table::Actions::gen_tbl_cfg(json::vector &cfg) {
     for (auto &act : *this) {
         int full_address = ACTION_INSTRUCTION_ADR_ENABLE | act.addr;
-        cfg.push_back(json::map{{ "name", json::string(act.name) },
-                                { "address_to_use", json::number(act.code) },
-                                { "full_address", json::number(full_address) }}); }
+        json::map action_cfg;
+        action_cfg["name"] = act.name;
+        action_cfg["address_to_use"] = act.code;
+        action_cfg["full_address"] = full_address;
+        //FIXME: Check for random number generation must implement assembly
+        //support in table to identify rng type and corresponding updates in
+        //assembler to parse and set registers accordingly. Below checks should
+        //see if an operand is Hash-Dist type or RNG-type.
+        action_cfg["allowed_as_default_action"] = (has_hash_dist() || act.has_rng()) ? false : true;
+        action_cfg["disallowed_as_default_action_reason"] = nullptr;
+        if (has_hash_dist() && act.has_rng()) {
+            action_cfg["disallowed_as_default_action_reason"] = "USES_HASH_DIST_AND_RNG";
+        } else if (has_hash_dist()) {
+            action_cfg["disallowed_as_default_action_reason"] = "USES_HASH_DIST";
+        } else if (act.has_rng()) {
+            action_cfg["disallowed_as_default_action_reason"] = "USES_RNG"; }
+        cfg.push_back(std::move(action_cfg)); }
 }
 
 void Table::Actions::add_immediate_mapping(json::map &tbl) {
@@ -1414,6 +1429,8 @@ json::map *Table::add_stage_tbl_cfg(json::map &tbl, const char *type, int size) 
     if (options.match_compiler && !strcmp(type, "selection")) {
     } else if (logical_id >= 0)
         stage_tbl["stage_table_handle"] = logical_id;
+    if (!strcmp(type, "selection") && get_stateful())
+        tbl["bound_to_stateful_table_handle"] = get_stateful()->handle();
     return &stage_tbl;
 }
 

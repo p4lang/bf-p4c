@@ -42,8 +42,8 @@ parser parse_ethernet {
 
 register stateful_cntr{
     width : 16;
-    direct : match_cntr;
-    /* instance_count : 8192; */
+    /* direct : match_cntr; */
+    instance_count : 8192;
 }
 
 
@@ -55,11 +55,26 @@ blackbox stateful_alu cntr {
     initial_register_lo_value : 1;
 }
 
+/*
+blackbox stateful_alu cntr2 {
+    reg: stateful_cntr;
+    update_lo_1_value: register_lo + 2;
+    output_value : alu_lo;
+    output_dst : meta.count_value;
+    initial_register_lo_value : 1;
+}
+*/
 
 action cnt(/* param0 */) {
     cntr.execute_stateful_alu(); 
     /* modify_field(pkt.field_e_16, param0); */
 }
+
+/*
+action cnt2(){
+    cntr2.execute_stateful_alu();
+}
+*/
 
 action do_nothing(){}
 
