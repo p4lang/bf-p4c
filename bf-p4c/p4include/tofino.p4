@@ -342,7 +342,7 @@ extern random<T> {
 /// Counter
 extern counter<I> {
     counter(counter_type_t type, @optional I instance_count);
-    void count(@optional I index)
+    void count(@optional I index);
 }
 
 /// Meter
