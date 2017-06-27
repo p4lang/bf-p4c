@@ -134,6 +134,16 @@ XFAIL_TESTS += \
     tofino/%reldir%/p4_14/test_config_185_first_lpf.p4.test \
     tofino/%reldir%/p4_14/test_config_201_meter_constant_index.p4.test
 
+# failures due to p4test not converting stateful_alu to register_action
+XFAIL_TESTS += \
+    p14_to_16/%reldir%/p4_14/test_config_166_stateful_generic_counter.p4.test \
+    p14_to_16/%reldir%/p4_14/test_config_142_stateful_bfd.p4.test \
+    p14_to_16/%reldir%/p4_14/test_config_195_stateful_predicate_output.p4.test \
+    p14_to_16/%reldir%/p4_14/test_config_165_stateful_bfd_failure_detection.p4.test \
+    p14_to_16/%reldir%/p4_14/test_config_184_stateful_bug1.p4.test
+
+
+
 # Could not find declaration error in generated P4_16 code (JIRA #BRIG-31)
 XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_206_stateful_logging.p4.test
 XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_209_pack_hash_dist.p4.test
@@ -164,7 +174,7 @@ XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_219_modify_field_conditionally.
 # reduction_or_group (blackbox string attrib) failure
 XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_203_first_reduction_or.p4.test
 XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_203_first_reduction_or.p4.test
-XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_203_first_reduction_or.p4.test
+# XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_203_first_reduction_or.p4.test
 
 # broken gateway valid check
 XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_244_gateway_compare.p4.test

@@ -41,5 +41,8 @@ popd # p4c
 autoreconf -i
 mkdir -p build && cd build
 ../configure $*
+cd p4c
+if [ ! -e p4c-tofino-gdb.gdb ]; then ln -sf ../../bf-p4c/.gdbinit p4c-tofino-gdb.gdb; fi
+if [ ! -e p4c-bm2-ss-gdb.gdb ]; then ln -sf ../../bf-p4c/.gdbinit p4c-bm2-ss-gdb.gdb; fi
 
 echo "Configured for build in build"

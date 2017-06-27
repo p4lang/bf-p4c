@@ -42,6 +42,8 @@ class ActionBodySetup : public Inspector {
         if (assign->left->type->is<IR::Type_Header>())
             pname = "copy_header";
         auto right = assign->right;
+        if (auto cast = right->to<IR::Cast>())
+            right = cast->expr;
         if (auto mc = right->to<IR::MethodCallExpression>())
             right = cvtMethodCall(mc);
         auto prim = new IR::Primitive(assign->srcInfo, pname, assign->left, right);

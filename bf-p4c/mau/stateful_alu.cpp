@@ -96,31 +96,38 @@ bool CreateSaluInstruction::preorder(const IR::Property *prop) {
     return true;
 }
 
-/// Check a name to see if it is a reference to an argument of register_action::apply.
+/// Check a name to see if it is a reference to an argument of register_action::apply,
+/// or a reference to the local var we put in alu_hi.
 /// If so, process it as an operand and return true
 bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field) {
-    if (!params) return false;
-    int idx = 0, field_idx = 0;
-    const IR::Type_StructLike *stype = nullptr;
-    for (auto p : params->parameters) {
-        if (p->name == pe->path->name) {
-            stype = p->type->to<IR::Type_StructLike>();
-            break; }
-        ++idx; }
-    if (size_t(idx) >= params->parameters.size()) return false;
-    if (field && stype) {
-        for (auto f : stype->fields) {
-            if (f->name == field)
-                break;
-            ++field_idx; } }
-    BUG_CHECK(field_idx < 2, "bad field name in register layout");
-    cstring name = field_idx ? "hi" : "lo";
     IR::Expression *e = nullptr;
+    int idx = 0, field_idx = 0;
+    if (pe->path->name.name == alu_hi_var) {
+        alu_write[(field_idx = 1)] = true;
+    } else {
+        if (!params) return false;
+        const IR::Type_StructLike *stype = nullptr;
+        for (auto p : params->parameters) {
+            if (p->name == pe->path->name) {
+                stype = p->type->to<IR::Type_StructLike>();
+                break; }
+            ++idx; }
+        if (size_t(idx) >= params->parameters.size()) return false;
+        if (field && stype) {
+            for (auto f : stype->fields) {
+                if (f->name == field)
+                    break;
+                ++field_idx; } }
+        BUG_CHECK(field_idx < 2, "bad field name in register layout"); }
+    cstring name = field_idx ? "hi" : "lo";
     switch (idx) {
     case 0:
-        if (etype == NONE) etype = VALUE;
+        if (etype == NONE) {
+            alu_write[field_idx] = true;
+            etype = VALUE; }
         if (!opcode) opcode = "alu_a";
-        if (etype == OUTPUT) name = "mem_" + name;
+        if (etype == OUTPUT)
+            name = (alu_write[field_idx] ? "alu_" : "mem_") + name;
         e = new IR::MAU::SaluReg(name);
         break;
     case 1:
@@ -129,6 +136,7 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
         return true;
     default:
         return false; }
+
     if (e) {
         if (negate)
             e = new IR::Neg(e);
@@ -513,6 +521,19 @@ const IR::MAU::Instruction *CreateSaluInstruction::createInstruction(int pred_id
         break;
     case OUTPUT:
         BUG_CHECK(pred_idx >= 0 && pred_idx < 5, "Invalid index");
+        if (operands.at(0)->is<IR::Constant>()) {
+            // FIXME -- can't ouput a constant!  Perhaps have an optimization pass
+            // that deals with this better, but for now, see if we can use alu_hi to
+            // to output the constant and use that instead
+            if (!salu->dual && !alu_hi_var) {
+                alu_hi_var = "--output--";
+                action->action.push_back(new IR::MAU::Instruction(
+                        "alu_a", new IR::MAU::SaluReg("hi"), operands.at(0)));
+                LOG3("  add " << *action->action.back());
+                operands.at(0) = new IR::MAU::SaluReg("alu_hi");
+            } else {
+                error("%s: can't output a constant from a register action",
+                      operands.at(0)->srcInfo); } }
         if (predicates[pred_idx])
             operands.insert(operands.begin(), predicates[pred_idx]);
         rv = output = new IR::MAU::Instruction(opcode, operands);
@@ -521,6 +542,15 @@ const IR::MAU::Instruction *CreateSaluInstruction::createInstruction(int pred_id
         BUG("Invalid etype");
         break; }
     return rv;
+}
+
+bool CreateSaluInstruction::preorder(const IR::Declaration_Variable *v) {
+    auto vt = v->type->to<IR::Type::Bits>();
+    if (salu->dual || alu_hi_var || !vt || vt->size != salu->width) {
+        error("register action can't support local var %s", v);
+    } else {
+        alu_hi_var = v->name; }
+    return false;
 }
 
 bool CreateSaluInstruction::preorder(const IR::Declaration_Instance *di) {

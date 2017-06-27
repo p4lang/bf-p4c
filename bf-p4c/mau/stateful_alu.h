@@ -28,8 +28,11 @@ class CreateSaluInstruction : public Inspector {
     IR::MAU::StatefulAlu        *salu;
     IR::MAU::SaluAction         *action = nullptr;
     const IR::ParameterList     *params = nullptr;
+    cstring                     alu_hi_var;  // a single variable can live in alu_hi
+                                             // if its not needed for dual mode
     enum { NONE, COND, PRED, IF, VALUE, OUTPUT, BIT_INSTR } etype = NONE;
     bool                        negate = false;
+    bool                        alu_write[2] = { false, false };
     cstring                     opcode;
     std::vector<const IR::Expression *>         operands, pred_operands;
     std::vector<const IR::MAU::Instruction *>   cmp_instr;
@@ -44,6 +47,7 @@ class CreateSaluInstruction : public Inspector {
     const IR::Expression *reuseCmp(const IR::MAU::Instruction *cmp, int idx);
 
     bool preorder(const IR::Declaration_Instance *di) override;
+    bool preorder(const IR::Declaration_Variable *v) override;
     bool preorder(const IR::Property *) override;
     void postorder(const IR::Property *) override;
     bool preorder(const IR::Function *) override;
@@ -85,7 +89,8 @@ class CreateSaluInstruction : public Inspector {
         return false; }
 
  public:
-    explicit CreateSaluInstruction(IR::MAU::StatefulAlu *salu) : salu(salu) {}
+    explicit CreateSaluInstruction(IR::MAU::StatefulAlu *salu) : salu(salu) {
+        visitDagOnce = false; }
 };
 
 /** Check all IR::MAU::StatefulAlu objects to make sure they're implementable
