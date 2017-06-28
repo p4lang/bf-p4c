@@ -332,7 +332,6 @@ XFAIL_TESTS += \
 
 # BRIG-101
 BRIG_101_XFAIL = \
-		tofino/%reldir%/p4_14/test_config_32_action_data_imm_param_imm.p4.test \
 		tofino/%reldir%/p4_14/test_config_45_action_data_immediate_param_and_constant.p4.test \
 		tofino/%reldir%/p4_14/test_config_48_action_data_bit_masked_set.p4.test \
 		tofino/%reldir%/p4_14/test_config_49_action_data_bit_masked_set_immediate.p4.test
@@ -352,18 +351,7 @@ XFAIL_TESTS += \
 
 # BRIG-103
 XFAIL_TESTS +=  tofino/testdata/p4_14_samples/instruct1.p4.test \
-	        tofino/testdata/p4_14_samples/instruct3.p4.test \
-		tofino/%reldir%/p4_14/test_config_103_first_phase_0.p4.test \
-		tofino/%reldir%/p4_14/test_config_104_no_phase_0_case_egress_table.p4.test \
-		tofino/%reldir%/p4_14/test_config_105_no_phase_0_case_has_side_effect.p4.test \
-		tofino/%reldir%/p4_14/test_config_106_no_phase_0_case_not_first_table.p4.test \
-		tofino/%reldir%/p4_14/test_config_107_no_phase_0_case_no_condition.p4.test \
-		tofino/%reldir%/p4_14/test_config_108_no_phae_0_case_wrong_condition.p4.test \
-		tofino/%reldir%/p4_14/test_config_109_no_phase_0_case_wrong_key.p4.test \
-		tofino/%reldir%/p4_14/test_config_110_no_phase_0_case_wrong_match_type.p4.test \
-		tofino/%reldir%/p4_14/test_config_111_no_phase_0_case_two_actions.p4.test \
-		tofino/%reldir%/p4_14/test_config_113_no_phase_0_case_sourced_from_field.p4.test \
-		tofino/%reldir%/p4_14/test_config_no_phase_0_case_two_actions.p4.test \
+	    tofino/testdata/p4_14_samples/instruct3.p4.test \
 		tofino/%reldir%/p4_14/14-MultipleActionsInAContainer.p4.test \
 		tofino/%reldir%/p4_14/dileep.p4.test \
 		tofino/%reldir%/p4_14/dileep2.p4.test \
@@ -375,15 +363,8 @@ XFAIL_TESTS +=  tofino/testdata/p4_14_samples/instruct1.p4.test \
 		tofino/%reldir%/p4_14/dileep11.p4.test \
 		tofino/%reldir%/p4_14/dileep12.p4.test \
 		tofino/%reldir%/p4_14/instruct1.p4.test \
-		tofino/%reldir%/p4_14/test_config_112_no_phase_0_case_action_width_too_big.p4.test \
 		tofino/%reldir%/p4_14/test_config_143_packing_constants.p4.test \
-		tofino/%reldir%/p4_14/test_config_230_phv_metadata_sharing.p4.test \
-		tofino/%reldir%/p4_14/test_config_248_pa_problem.p4.test \
-		tofino/%reldir%/p4_14/test_config_252_pa_required_packing.p4.test \
 		tofino/%reldir%/p4_14/test_config_256_pa_problem_4.p4.test \
-		tofino/%reldir%/p4_14/test_config_257_pa_problem_5.p4.test \
-		tofino/%reldir%/p4_14/test_config_94_action_constant_alignment.p4.test \
-		tofino/%reldir%/p4_14/test_config_35_action_data_1_bit_params_and_imms.p4.test \
 		tofino/%reldir%/p4_14/adjust_instr1.p4.test \
 		tofino/%reldir%/p4_14/vk_basic_ipv4_20150706.p4.test
 
@@ -402,10 +383,9 @@ XFAIL_TESTS +=  tofino/%reldir%/p4_14/04-FullPHV3.p4.test \
 		tofino/testdata/p4_14_samples/parser_dc_full.p4.test \
 		tofino/testdata/p4_14_samples/switch_20160226/switch.p4.test \
 		tofino/testdata/p4_14_samples/switch_20160512/switch.p4.test
+
 # BRIG-106
-XFAIL_TESTS +=  tofino/%reldir%/p4_14/test_config_190_modify_with_expr.p4.test \
-		tofino/%reldir%/p4_14/test_config_40_action_data_bit_xor.p4.test \
-		tofino/testdata/p4_14_samples/02-FullPHV1.p4.test \
+XFAIL_TESTS +=  tofino/testdata/p4_14_samples/02-FullPHV1.p4.test \
 		tofino/testdata/p4_14_samples/03-FullPHV2.p4.test
 
 # BRIG-107
@@ -510,8 +490,8 @@ XFAIL_TESTS += \
 
 
 # Google Tor - we know it fails for now
-GOOGLE_TOR_XFAIL = tofino/%reldir%/p4_16/google-tor/p4/spec/tor.p4
-XFAIL_TESTS += (GOOGLE_TOR_XFAIL)
+GOOGLE_TOR_XFAIL = tofino/%reldir%/p4_16/google-tor/p4/spec/tor.p4.test
+XFAIL_TESTS += $(GOOGLE_TOR_XFAIL)
 
 
 # Tofino expected failures (Glass fails as well)

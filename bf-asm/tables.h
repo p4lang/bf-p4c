@@ -230,6 +230,8 @@ public:
             struct alias_t {
                 std::string     name;
                 int             lineno = -1, lo = -1, hi = -1;
+                bool            is_constant = false;
+                unsigned        value;
                 alias_t(value_t &); };
             std::string                         name;
             std::string                         rng_param_name = "";

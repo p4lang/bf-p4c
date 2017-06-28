@@ -726,18 +726,21 @@ Table::Actions::Action::reverse_alias() const {
 
 Table::Actions::Action::alias_t::alias_t(value_t &data) {
     lineno = data.lineno;
-    if (CHECKTYPE2(data, tSTR, tCMD)) {
+    if (CHECKTYPE3(data, tSTR, tCMD, tINT)) {
         if (data.type == tSTR) {
             name = data.s;
             lo = 0; hi = -1;
-        } else {
+        } else if (data.type == tCMD) {
             name = data.vec[0].s;
             if (CHECKTYPE2(data.vec[1], tINT, tRANGE)) {
                 if (data.vec[1].type == tINT)
                     lo = hi = data.vec[1].i;
                 else {
                     lo = data.vec[1].lo;
-                    hi = data.vec[1].hi; } } } }
+                    hi = data.vec[1].hi; } }
+        } else
+            is_constant = true;
+            value = data.i; }
 }
 
 Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv) {
@@ -761,8 +764,15 @@ Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv) {
                 error(i.lineno, "Invalid instruction address %d", i.i);
         } else if (i.type == tMAP) {
             for (auto &a : i.map)
-                if (CHECKTYPE(a.key, tSTR) && CHECKTYPE2(a.value, tSTR, tCMD))
-                    alias.emplace(a.key.s, a.value);
+                if (CHECKTYPE(a.key, tSTR) && CHECKTYPE3(a.value, tSTR, tCMD, tINT))
+                    if (a.value.type == tINT) {
+                        auto k = alias.find(a.key.s);
+                        if (k == alias.end())
+                            alias.emplace(a.key.s, a.value);
+                        else {
+                            k->second.is_constant = true;
+                            k->second.value = a.value.i; }
+                    } else alias.emplace(a.key.s, a.value);
         } else if (i.type == tSTR) {
             VECTOR(value_t)     tmp;
             VECTOR_init1(tmp, i);
@@ -832,7 +842,9 @@ void Table::Actions::pass1(Table *tbl) {
                             a.first.c_str(), a.second.name.c_str(), a.second.lo, a.second.hi,
                             a.second.name.c_str(), rec.name.c_str(), rec.lo, rec.hi );
                     break; }
-                a.second.name = rec.name; }
+                a.second.name = rec.name;
+                a.second.is_constant = rec.is_constant;
+                a.second.value = rec.value; }
             if (auto *f = tbl->lookup_field(a.second.name, act.name)) {
                 if (a.second.hi < 0)
                     a.second.hi = f->size - 1;

@@ -148,6 +148,10 @@ void collapse_list_of_maps(value_t &);
     ((V).type == (T1) || (V).type == (T2) || \
      (error((V).lineno, "Syntax error, expecting %s or %s", \
             value_type_desc[T1], value_type_desc[T2]), 0))
+#define CHECKTYPE3(V, T1, T2, T3) \
+    ((V).type == (T1) || (V).type == (T2) || (V).type == (T3) || \
+     (error((V).lineno, "Syntax error, expecting %s or %s or %s", \
+            value_type_desc[T1], value_type_desc[T2], value_type_desc[T3]), 0))
 #define PCHECKTYPE2(P, V, T1, T2) \
     (((P) && ((V).type == (T1) || (V).type == (T2))) || \
      (error((V).lineno, "Syntax error, expecting %s or %s", \
