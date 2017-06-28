@@ -63,6 +63,10 @@ class ElimUnused::Headers : public PardeTransform, ThreadVisitor {
              * ingress pipe (all processing done in egress pipe), but harlyn doesn't
              * like it */
             return match;
+        if (state->name == "egress::start$")
+            /* FIXME -- similar reason to ingress::start$. In addition, eliminating
+             * start state in egress triggers a NULL check in IR */
+            return match;
         for (auto stmt : match->stmts) {
             auto *prim = stmt->to<IR::Primitive>();
             if (!prim) {

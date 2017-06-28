@@ -343,7 +343,8 @@ struct AttachTables : public Modifier {
                 gref->obj = converted[di] = att;
                 attached[tt->name].push_back(att);
             } else if ((tname = di->type->toString()) == "stateful_alu_14" ||
-                       tname.startsWith("register_action<")) {
+                       tname.startsWith("register_action<") ||
+                       tname.startsWith("stateful_alu<")) {
                 auto act = findContext<IR::MAU::Action>();
                 updateAttachedSalu(gref->srcInfo, refMap, salu[tt->name], di, act->name);
                 gref->obj = converted[di] = salu[tt->name]; } } }
@@ -498,6 +499,7 @@ const IR::Tofino::Pipe* extract_v1model_arch(P4::ReferenceMap* refMap, P4::TypeM
     auto egress = egress_blk->to<IR::ControlBlock>()->container;
     auto deparser_blk = top->getParameterValue("dep");
     auto deparser = deparser_blk->to<IR::ControlBlock>()->container;
+
     LOG1("parser:" << parser);
     LOG1("ingress:" << ingress);
     LOG1("egress:" << egress);
@@ -516,12 +518,10 @@ const IR::Tofino::Pipe* extract_v1model_arch(P4::ReferenceMap* refMap, P4::TypeM
         bindings.bind(param);
     for (auto param : *deparser->type->applyParams->getEnumerator())
         bindings.bind(param);
-
     auto it = ingress->type->applyParams->parameters.rbegin();
     // hanw: all map to standard_metadata
-    rv->thread[INGRESS].in_metadata = rv->thread[INGRESS].out_metadata =
-    rv->thread[EGRESS].in_metadata = rv->thread[EGRESS].out_metadata =
-        bindings.get(*it)->obj->to<IR::Metadata>();
+    rv->metadata.addUnique("standard_metadata",
+                           bindings.get(*it)->obj->to<IR::Metadata>());
 
     PassManager fixups = {
         &bindings,
@@ -600,23 +600,23 @@ const IR::Tofino::Pipe* extract_native_arch(P4::ReferenceMap* refMap, P4::TypeMa
 
     // ingress_input_metadata at position 1
     auto it = ingress->type->applyParams->parameters.at(1);
-    rv->thread[INGRESS].in_metadata =
-        bindings.get(it)->obj->to<IR::Metadata>();
+    rv->metadata.addUnique("ingress_in_metadata",
+                           bindings.get(it)->obj->to<IR::Metadata>());
 
     // ingress_output_metadata at position 2
     it = ingress->type->applyParams->parameters.at(2);
-    rv->thread[INGRESS].out_metadata =
-        bindings.get(it)->obj->to<IR::Metadata>();
+    rv->metadata.addUnique("ingress_out_metadata",
+                           bindings.get(it)->obj->to<IR::Metadata>());
 
     // egress_input_metadata at position 1
     it = egress->type->applyParams->parameters.at(1);
-    rv->thread[EGRESS].in_metadata =
-        bindings.get(it)->obj->to<IR::Metadata>();
+    rv->metadata.addUnique("egress_in_metadata",
+                           bindings.get(it)->obj->to<IR::Metadata>());
 
     // egress_output_metadata at position 2
     it = egress->type->applyParams->parameters.at(2);
-    rv->thread[EGRESS].out_metadata =
-        bindings.get(it)->obj->to<IR::Metadata>();
+    rv->metadata.addUnique("egress_out_metadata",
+                           bindings.get(it)->obj->to<IR::Metadata>());
 
     PassManager fixups = {
         &bindings,

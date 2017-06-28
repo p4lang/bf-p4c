@@ -100,7 +100,8 @@ XFAIL_TESTS += \
        tofino/%reldir%/p4_16/bfd_offload.p4.test \
        tofino/%reldir%/p4_16/bloom_filter.p4.test \
        tofino/%reldir%/p4_16/flowlet_switching.p4.test \
-       tofino/%reldir%/p4_16/stateful_alu.p4.test
+       tofino/%reldir%/p4_16/stateful_alu.p4.test \
+       tofino/%reldir%/p4_16/tna-salu.p4.test
 
 # failure due to type substitution into a package instance declaration
 XFAIL_TESTS += \

@@ -16,10 +16,10 @@ IR::Member *InstructionSelection::gen_stdmeta(cstring field) {
     // names created by CreateThreadLocalInstances.  Should have a better way of getting
     // a handle on the standard metadata.
     auto gress = VisitingThread(this);
-    auto *std_meta = findContext<IR::Tofino::Pipe>()->thread[gress].in_metadata->clone();
-    std_meta->name = IR::ID(cstring::to_cstring(gress) + "::" + std_meta->name);
-    if (auto f = std_meta->type->getField(field))
-        return new IR::Member(f->type, new IR::ConcreteHeaderRef(std_meta), field);
+    auto *meta = findContext<IR::Tofino::Pipe>()->metadata["standard_metadata"]->clone();
+    meta->name = IR::ID(cstring::to_cstring(gress) + "::" + meta->name);
+    if (auto f = meta->type->getField(field))
+        return new IR::Member(f->type, new IR::ConcreteHeaderRef(meta), field);
     else
         BUG("No field %s in standard_metadata", field);
     return nullptr;
@@ -80,6 +80,7 @@ bool InstructionSelection::checkSrc1(const IR::Expression *e) {
     if (e->is<IR::Constant>()) return true;
     if (e->is<IR::BoolLiteral>()) return true;
     if (e->is<IR::ActionArg>()) return true;
+    if (e->is<IR::Primitive>()) return true;
     if (auto slice = e->to<IR::Slice>())
         if (slice->e0->is<IR::ActionArg>()) return true;
     return phv.field(e);
@@ -341,11 +342,13 @@ const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
     } else if (prim->name == "stateful_alu_14.execute_stateful_alu" ||
                prim->name == "stateful_alu_14.execute_stateful_alu_from_hash" ||
                prim->name == "stateful_alu_14.execute_stateful_log" ||
+               prim->name == "stateful_alu.execute" ||
                prim->name == "register_action.execute") {
         bool direct_access = false;
         if (prim->operands.size() > 1)
             stateful.push_back(prim);  // needed to setup the index properly
         else if (prim->name == "stateful_alu_14.execute_stateful_alu" ||
+                 prim->name == "stateful_alu.execute" ||
                  prim->name == "register_action.execute")
             direct_access = true;
         auto glob = prim->operands.at(0)->to<IR::GlobalRef>();
@@ -355,7 +358,7 @@ const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
                   direct_access ? "" : "in", salu->direct ? "" : "in");
         cstring action = findContext<IR::ActionFunction>()->name;
         auto out = salu->instruction.at(salu->action_map.at(action))->output_dst;
-        if (prim->name == "register_action.execute")
+        if (prim->name == "register_action.execute" || prim->name == "stateful_alu.execute")
             out = new IR::TempVar(prim->type);
         if (out)
             return new IR::MAU::Instruction(prim->srcInfo, "set", out,
@@ -383,7 +386,7 @@ const IR::Type *stateful_type_for_primitive(const IR::Primitive *prim) {
         return IR::Type_Counter::get();
     if (prim->name == "meter.execute_meter" || prim->name == "direct_meter.read")
         return IR::Type_Meter::get();
-    if (prim->name.startsWith("stateful_alu_14."))
+    if (prim->name.startsWith("stateful_alu_14.") || prim->name.startsWith("stateful_alu."))
         return IR::Type_Register::get();
     BUG("Not a stateful primitive %s", prim);
 }

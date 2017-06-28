@@ -13,20 +13,20 @@ IR::Member *gen_fieldref(const IR::HeaderOrMetadata *hdr, cstring field) {
 
 bool AddMetadataShims::preorder(IR::Tofino::Parser *parser) {
     if (parser->gress == INGRESS) {
-        auto *std_meta = findContext<IR::Tofino::Pipe>()->thread[INGRESS].in_metadata;
-        if (!std_meta) return false;
+        auto *meta = findContext<IR::Tofino::Pipe>()->metadata["standard_metadata"];
+        if (!meta) return false;
         parser->start = new IR::Tofino::ParserState(
             "$ingress_metadata_shim", parser->gress, {}, {
             new IR::Tofino::ParserMatch(match_t(), 16, {
-                new IR::Primitive("extract", gen_fieldref(std_meta, "ingress_port")) },
+                new IR::Primitive("extract", gen_fieldref(meta, "ingress_port")) },
                 parser->start) });
     } else if (parser->gress == EGRESS) {
-        auto *std_meta = findContext<IR::Tofino::Pipe>()->thread[EGRESS].in_metadata;
-        if (!std_meta) return false;
+        auto *meta = findContext<IR::Tofino::Pipe>()->metadata["standard_metadata"];
+        if (!meta) return false;
         parser->start = new IR::Tofino::ParserState(
             "$egress_metadata_shim", parser->gress, {}, {
             new IR::Tofino::ParserMatch(match_t(), 2, {
-                new IR::Primitive("extract", gen_fieldref(std_meta, "egress_port")) },
+                new IR::Primitive("extract", gen_fieldref(meta, "egress_port")) },
                 parser->start) });
     }
     return false;
@@ -34,14 +34,14 @@ bool AddMetadataShims::preorder(IR::Tofino::Parser *parser) {
 
 bool AddMetadataShims::preorder(IR::Tofino::Deparser *d) {
     if (d->gress == INGRESS) {
-        auto *std_meta = findContext<IR::Tofino::Pipe>()->thread[INGRESS].out_metadata;
-        if (!std_meta) return false;
-        d->egress_port =  gen_fieldref(std_meta, "egress_spec");
+        auto *meta = findContext<IR::Tofino::Pipe>()->metadata["standard_metadata"];
+        if (!meta) return false;
+        d->egress_port =  gen_fieldref(meta, "egress_spec");
     } else if (d->gress == EGRESS) {
         // egress_port is read-only
-        auto *std_meta = findContext<IR::Tofino::Pipe>()->thread[EGRESS].in_metadata;
-        if (!std_meta) return false;
-        d->egress_port =  gen_fieldref(std_meta, "egress_port");
+        auto *meta = findContext<IR::Tofino::Pipe>()->metadata["standard_metadata"];
+        if (!meta) return false;
+        d->egress_port =  gen_fieldref(meta, "egress_port");
     }
     return false;
 }

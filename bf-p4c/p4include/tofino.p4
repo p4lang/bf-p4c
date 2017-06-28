@@ -365,12 +365,12 @@ extern wred<T, I> {
 
 /// Register
 extern register<T, I> {
-  register(@optional I instance_count, @optional T initial_value);
+    register(@optional I instance_count, @optional T initial_value);
 }
 
 extern stateful_param<T> {
-  stateful_param(T initial_value);
-  T read();
+    stateful_param(T initial_value);
+    T read();
 }
 
 /// StatefulALU
@@ -451,15 +451,15 @@ control IngressDeparser<H, M>(
   packet_out pkt,
   in H hdr,
   in M metadata,
-  @optional mirror_out mirror,
-  @optional resubmit_out resubmit,
-  @optional learn_filter_out lf);
+  @optional mirror_packet mirror,
+  @optional resubmit_packet resubmit,
+  @optional learn_filter_packet lf);
 
 control EgressDeparser<H, M>(
   packet_out pkt,
   in H hdr,
   in M metadata,
-  @optional mirror_out mirror);
+  @optional mirror_packet mirror);
 
 package Switch<IH, IM, EH, EM>(
   IngressParser<IH, IM> ingress_parser,
