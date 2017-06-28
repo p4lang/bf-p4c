@@ -84,45 +84,38 @@ struct ActionFormat {
                 constant_value = cv;
             }
 
-            /** Structure to help determine where an individual field is within the immediate
-             *  section.  Used for determine best asm_output for these fields.
-             */
-            struct ImmediatePlacement {
-                bool setup = false;
-                bool indexed = false;
-                int index = -1;
-                int lo = -1; int hi = -1;
-                void init(int ind, int l, int h) {
-                    setup = true; indexed = true; index = ind; lo = l; hi = h;
+            /** The alias needed for a single action parameter */
+            cstring get_asm_name() const {
+                cstring ret_name = name;
+                if (!single_loc) {
+                    int lo = field_bit;
+                    int hi = field_bit + data_loc.popcount() - 1;
+                    ret_name = ret_name + + "." + std::to_string(lo) + "-" + std::to_string(hi);
                 }
-                void init(int l, int h) {
-                    setup = true; lo = l; hi = h;
-                }
-                cstring immed_name() const {
-                    if (!setup)
-                        BUG("Calling immed name on a non-immediate action data");
-                    cstring ret = "immediate";
-                    if (indexed)
-                        ret += std::to_string(index);
-                    ret += "(" + std::to_string(lo) + ".." + std::to_string(hi) + ")";
-                    return ret;
-                }
-            };
-            ImmediatePlacement immed_plac;
+                return ret_name;
+            }
         };
+
         vector<ArgLoc> arg_locs;
         int size;          ///< Number of bits needed
         bitvec range;      ///< Total mask
         int start = -1;    ///< Byte offset within the action data table
-        cstring asm_name;  ///< Potential rename if multiple action args within one placement
-        int adf_offset = -1;
+        cstring action_name;  ///< Potential rename if multiple action args within one placement
 
-        cstring adf_name() const;
-        cstring immed_name() const;
-
-        int gen_index() {
+        int gen_index() const {
             return ceil_log2(size / 8);
         }
+
+        /** The alias needed in the format of the action for a placement */
+        cstring get_action_name() const {
+            BUG_CHECK(action_name.isNull() == (arg_locs.size() == 1), "Action Format"
+                      " arg_loc size doesn't match name");
+            if (arg_locs.size() == 1)
+                return arg_locs[0].get_asm_name();
+            else
+                return action_name;
+        }
+
         ActionDataPlacement() {}
     };
 
@@ -180,28 +173,8 @@ struct ActionFormat {
     };
 
 
-    /** Contains information on the individual Arguments, and which field they correspond to.
-     *  This structure is not fully complete yet, as I have not yet needed it to provide
-     *  information.  This may be necessary for the next PR, and thus it's is being kept around.
-     */ 
-    struct ArgInfo {
-        vector<const PhvInfo::Field *> fields;
-        vector<vector<std::pair<int, bitvec>>> act_bus_reqs;
-
-        void append(vector<const PhvInfo::Field *> &a) {
-            fields.insert(fields.end(), a.begin(), a.end());
-        }
-
-        void append(vector<std::pair<int, bitvec>> &a) {
-            act_bus_reqs.push_back(a);
-        }
-
-        bool empty() { return fields.empty() && act_bus_reqs.empty(); }
-        ArgInfo() {}
-    };
-
     typedef std::map<cstring, vector<ActionDataPlacement>> ArgFormat;
-    typedef std::map<cstring, vector<std::pair<int, bool>>> ArgPlacementData;
+    typedef std::map<std::pair<cstring, int>, vector<std::pair<int, bool>>> ArgPlacementData;
     typedef std::map<std::pair<cstring, int>, cstring> ConstantRenames;
     bool immediate_possible = false;
     vector<ActionContainerInfo> action_counts;
@@ -231,6 +204,8 @@ struct ActionFormat {
             immediate_format.clear();
             immediate_mask.clear();
         }
+
+        cstring get_format_name(int start_byte, cont_type_t type, bool immediate) const;
     };
 
     struct failure : public Backtrack::trigger {
@@ -285,8 +260,6 @@ struct ActionFormat {
     void sort_and_asm_name(vector<ActionDataPlacement> &placement_vec, bool immediate);
     void calculate_placement_data(vector<ActionDataPlacement> &placement_vec,
                                   ArgPlacementData &apd, bool immediate);
-    void determine_format_name();
-    void determine_immed_format_name();
 };
 
 #endif /* EXTENSIONS_TOFINO_MAU_ACTION_FORMAT_H_ */

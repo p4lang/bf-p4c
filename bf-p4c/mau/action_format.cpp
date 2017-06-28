@@ -37,64 +37,40 @@ int ActionFormat::ActionContainerInfo::find_maximum_immed() {
     return maximum;
 }
 
-
-cstring ActionFormat::ActionDataPlacement::adf_name() const {
-    cstring name = "$adf_";
-    if (size == 8)
-        name += "b";
-    else if (size == 16)
-        name += "h";
-    else
-        name += "f";
-    name += std::to_string(adf_offset);
-    return name;
-}
-
-/** Determining the names generated in the asm_output name for any action data stored as
- *  immediate.  If there are multiple fields packed into an individual container, both the
- *  container and the individual fields require a location within the immediate.  Also
- *  verifies that the alignment of the immediate data matches with the masks. 
+/** General naming scheme used for finding information on either immediate or action data
+ *  table location of a particular field, which needs to be coordinated in the action data
+ *  table format, the action data bus, and the action format itself within the assembly code
  */
-cstring ActionFormat::ActionDataPlacement::immed_name() const {
-    if (arg_locs.size() == 1) {
-        return arg_locs[0].immed_plac.immed_name();
+cstring ActionFormat::Use::get_format_name(int start_byte, cont_type_t type,
+        bool immediate) const {
+    int byte_sz = CONTAINER_SIZES[type] / 8;
+    // Based on assumption, immediate is contiguous.  May have to be changed later
+    cstring ret_name;
+    if (immediate) {
+        if (!total_layouts_immed[type].getrange(start_byte, byte_sz))
+            BUG("Impossible immediate format name lookup");
+        bitvec lookup = immediate_mask;
+        int lo = start_byte * 8;
+        ret_name = "immediate(" +  std::to_string(lo) + "..";
+        int hi = lo + CONTAINER_SIZES[type] - 1;
+        if (lookup.max().index() < hi)
+            hi = lookup.max().index();
+        ret_name += std::to_string(hi) + ")";
+    } else {
+        bitvec lookup = total_layouts[type];
+        ret_name = "$adf_";
+        if (type == BYTE)
+            ret_name += "b";
+        else if (type == HALF)
+            ret_name += "h";
+        else
+            ret_name += "f";
+        int adf_offset = lookup.getslice(0, start_byte).popcount() / byte_sz;
+        ret_name += std::to_string(adf_offset);
     }
-    bool index_set = false;
-    bool is_indexed = false;
-    int immed_index = -1;
-    int lo = 33; int hi = 0;
-    for (auto &arg_loc : arg_locs) {
-        if (arg_loc.immed_plac.indexed) {
-            if (!index_set) {
-                immed_index = arg_loc.immed_plac.index;
-                index_set = true;
-                is_indexed = true;
-            } else if (!is_indexed) {
-                BUG("Index alignment issues");
-            } else if (immed_index != arg_loc.immed_plac.indexed) {
-                ERROR("Immed index doesn't line up for a bitmasked-set");
-                return arg_locs[0].immed_plac.immed_name();
-            }
-        } else {
-            if (!index_set)
-                is_indexed = false;
-            else if (is_indexed)
-                BUG("Index alignment issues");
-        }
-
-        if (lo > arg_loc.immed_plac.lo)
-            lo = arg_loc.immed_plac.lo;
-        if (hi < arg_loc.immed_plac.hi)
-            hi = arg_loc.immed_plac.hi;
-    }
-
-    cstring name = "immediate";
-    if (is_indexed) {
-        name += std::to_string(immed_index);
-    }
-    name += "(" + std::to_string(lo) + ".." + std::to_string(hi) +")";
-    return name;
+    return ret_name;
 }
+
 
 /** The allocation scheme for the action data format and immediate format.
  */
@@ -113,7 +89,6 @@ void ActionFormat::allocate_format(Use *u) {
     LOG2("Space all containers");
     align_action_data_layouts();
     LOG2("Alignment");
-    determine_format_name();
 
 
     if (immediate_possible) {
@@ -124,7 +99,6 @@ void ActionFormat::allocate_format(Use *u) {
         LOG2("Space immediate containers");
         align_immediate_layouts();
         LOG2("Alignment immediate");
-        determine_immed_format_name();
     }
 }
 
@@ -689,12 +663,10 @@ void ActionFormat::sort_and_asm_name(vector<ActionDataPlacement> &placement_vec,
     int index = 0;
     for (auto &container : placement_vec) {
         if (container.arg_locs.size() > 1) {
-            container.asm_name = "$data" + std::to_string(index);
+            container.action_name = "$data" + std::to_string(index);
             index++;
-        } else if (container.arg_locs.size() == 1) {
-            container.asm_name = container.arg_locs[0].name;
-        } else {
-            container.asm_name = "$no_arg";
+        } else if (container.arg_locs.size() < 1) {
+            container.action_name = "$no_arg";
         }
         if (immediate) {
             for (auto arg_loc : container.arg_locs) {
@@ -709,76 +681,8 @@ void ActionFormat::calculate_placement_data(vector<ActionDataPlacement> &placeme
     int index = 0;
     for (auto &container : placement_vec) {
         for (auto arg_loc : container.arg_locs) {
-            apd[arg_loc.name].emplace_back(index, immediate);
+            apd[std::make_pair(arg_loc.name, arg_loc.field_bit)].emplace_back(index, immediate);
         }
         index++;
-    }
-}
-
-/** Algorithm to determine the names of the action data contained within an individual table
- *  format.  It then coordinates these names back to the individual fields allocated within
- *  each action, and places them that way.
- */
-void ActionFormat::determine_format_name() {
-    vector<map<int, int>> format_locations;
-    for (int i = 0; i < CONTAINER_TYPES; i++) {
-        int index = 0;
-        format_locations.emplace_back();
-        for (int j = 0; j <= use->total_layouts[i].max().index(); j += CONTAINER_SIZES[i] / 8) {
-            if (use->total_layouts[i].getslice(j, CONTAINER_SIZES[i] / 8).popcount()
-                == CONTAINER_SIZES[i] / 8) {
-                format_locations[i].emplace(j, index);
-                index++;
-            }
-        }
-    }
-
-    for (auto &ad_placement : use->action_data_format) {
-        auto &placement_vec = ad_placement.second;
-        for (auto &placement : placement_vec) {
-            placement.adf_offset = format_locations[placement.gen_index()].at(placement.start);
-        }
-    }
-}
-
-/** Algorithm to determine the names of the action data contained within the immediate data.
- *  Both the general container name may be needed, as well as the individual fields within
- *  the container, if multiple fields are contained within the container
- */
-void ActionFormat::determine_immed_format_name() {
-    vector<std::pair<int, int>> immed_indices;
-    int start = use->immediate_mask.ffs();
-    bool beginning = true;
-    do {
-        int end = use->immediate_mask.ffz(start);
-        if (beginning) {
-            immed_indices.emplace_back(0, end - 1);
-            beginning = false;
-        } else {
-            immed_indices.emplace_back(start, end - 1);
-        }
-        start = use->immediate_mask.ffs(end);
-    } while (start != -1);
-
-    for (auto &immed_placement : use->immediate_format) {
-        auto &placement_vec = immed_placement.second;
-        for (auto &placement : placement_vec) {
-            int start_bit = placement.start * 8;
-            for (auto &arg_loc : placement.arg_locs) {
-                int data_start_bit = arg_loc.data_loc.ffs() + start_bit;
-                int index = -1;
-                for (auto immed_index : immed_indices) {
-                    index++;
-                    if (immed_index.first > data_start_bit || immed_index.second < data_start_bit)
-                        continue;
-                    int lo = data_start_bit - immed_index.first;
-                    int hi = lo + arg_loc.data_loc.popcount() - 1;
-                    if (immed_indices.size() == 1)
-                        arg_loc.immed_plac.init(lo, hi);
-                    else
-                        arg_loc.immed_plac.init(index, lo, hi);
-                }
-            }
-        }
     }
 }

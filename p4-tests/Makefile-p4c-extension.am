@@ -364,7 +364,6 @@ XFAIL_TESTS +=  tofino/testdata/p4_14_samples/instruct1.p4.test \
 		tofino/%reldir%/p4_14/dileep11.p4.test \
 		tofino/%reldir%/p4_14/dileep12.p4.test \
 		tofino/%reldir%/p4_14/instruct1.p4.test \
-		tofino/%reldir%/p4_14/test_config_143_packing_constants.p4.test \
 		tofino/%reldir%/p4_14/test_config_256_pa_problem_4.p4.test \
 		tofino/%reldir%/p4_14/adjust_instr1.p4.test \
 		tofino/%reldir%/p4_14/vk_basic_ipv4_20150706.p4.test
@@ -478,6 +477,9 @@ XFAIL_TESTS += $(BRIG_132_XFAIL)
 
 # BRIG-133
 XFAIL_TESTS += tofino/%reldir%/p4_14/adjust_instr5.p4.test
+
+# BRIG-146
+XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_112_no_phase_0_case_action_width_too_big.p4.test
 
 # various stateful
 XFAIL_TESTS += \

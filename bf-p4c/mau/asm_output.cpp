@@ -60,30 +60,24 @@ void MauAsmOutput::emit_action_data_alias(std::ostream &out, indent_t indent,
         const IR::MAU::Table *tbl, const IR::MAU::Action *af) const {
     bool is_immediate = tbl->layout.action_data_bytes_in_overhead > 0;
     const vector<ActionFormat::ActionDataPlacement> *placement_vec = nullptr;
+    auto &use = tbl->resources->action_format;
     if (is_immediate)
-        placement_vec = &(tbl->resources->action_format.immediate_format.at(af->name));
+        placement_vec = &(use.immediate_format.at(af->name));
     else
-        placement_vec = &(tbl->resources->action_format.action_data_format.at(af->name));
+        placement_vec = &(use.action_data_format.at(af->name));
 
     out << indent << "- { ";
     size_t index = 0;
     for (auto &placement : *placement_vec) {
         bool needs_comma = true;
-        out << placement.asm_name;
-        LOG1("placement asm name " << placement.asm_name);
-        if (placement.arg_locs.size() == 1 && !placement.arg_locs[0].single_loc) {
-            int start = placement.arg_locs[0].field_bit;
-            int end = start + placement.arg_locs[0].data_loc.popcount() - 1;
-            out << "." << start << "-" << end;
-        }
-        if (is_immediate)
-            out << ": " << placement.immed_name();
-        else
-            out << ": " << placement.adf_name();
+        out << placement.get_action_name();
+
+        auto type = static_cast<ActionFormat::cont_type_t>(placement.gen_index());
+        out << ": " << use.get_format_name(placement.start, type, is_immediate);
 
         if (placement.arg_locs.size() == 1 && placement.arg_locs[0].is_constant) {
             out << ", ";
-            out << placement.arg_locs[0].name;
+            out << placement.arg_locs[0].get_asm_name();
             out << ": " << placement.arg_locs[0].constant_value;
         }
 
@@ -94,21 +88,14 @@ void MauAsmOutput::emit_action_data_alias(std::ostream &out, indent_t indent,
         if (placement.arg_locs.size() > 1) {
             size_t arg_index = 0;
             for (auto &arg_loc : placement.arg_locs) {
-                out << arg_loc.name;
-                if (!arg_loc.single_loc) {
-                    int start = arg_loc.field_bit;
-                    int end = start + arg_loc.data_loc.popcount() - 1;
-                    out << "." << start << "-" << end;
-                }
-                if (is_immediate)
-                    out << ": " << arg_loc.immed_plac.immed_name();
-                else
-                    out << ": " << placement.adf_name() << "(" << arg_loc.data_loc.min().index()
-                        << ".." << arg_loc.data_loc.max().index() << ")";
+                out << arg_loc.get_asm_name();
+                out << ": " << placement.get_action_name()
+                    << "(" << arg_loc.data_loc.min().index()
+                    << ".." << arg_loc.data_loc.max().index() << ")";
 
                 if (arg_loc.is_constant) {
                     out << ", ";
-                    out << arg_loc.name;
+                    out << arg_loc.get_asm_name();
                     out << ": " << arg_loc.constant_value;
                 }
 
@@ -130,13 +117,15 @@ void MauAsmOutput::emit_action_data_alias(std::ostream &out, indent_t indent,
 // Simply emits the action data format of the action data table or action profile
 void MauAsmOutput::emit_action_data_format(std::ostream &out, indent_t indent,
         const IR::MAU::Table *tbl, const IR::MAU::Action *af) const {
-    auto &placement = tbl->resources->action_format.action_data_format.at(af->name);
+    auto &use = tbl->resources->action_format;
+    auto &placement = use.action_data_format.at(af->name);
     if (placement.size() == 0)
         return;
     out << indent << "format " << canon_name(af->name) << ": { ";
     size_t index = 0;
     for (auto &container : placement) {
-        out << container.adf_name();
+        auto type = static_cast<ActionFormat::cont_type_t>(container.gen_index());
+        out << use.get_format_name(container.start, type, false);
         out << ": " << (8 * container.start) << ".."
             << (8 * container.start + container.size - 1);
         if (index + 1 != placement.size())
@@ -554,26 +543,10 @@ cstring format_name(int type) {
 void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
         const IR::MAU::Table *tbl) const {
     auto &action_data_xbar = tbl->resources->action_data_xbar;
+    auto &use = tbl->resources->action_format;
     out << indent << "action_bus: { ";
 
-    if (tbl->layout.action_data_bytes_in_overhead > 0) {
-        size_t total_index = 0;
-        for (auto &rs : action_data_xbar.reserved_spaces) {
-            if (!rs.immediate) continue;
-            int byte_sz = ActionFormat::CONTAINER_SIZES[rs.location.type] / 8;
-            out << rs.location.byte;
-            if (byte_sz > 1)
-                out << ".." << (rs.location.byte + byte_sz - 1);
-            out << " : " << rs.name;
-
-            if (total_index != action_data_xbar.reserved_spaces.size() - 1)
-                out << ", ";
-            else
-                out << " ";
-
-            total_index++;
-        }
-    } else if (tbl->layout.action_data_bytes > 0) {
+    if (tbl->layout.action_data_bytes > 0) {
         size_t total_index = 0;
         for (auto &rs : action_data_xbar.reserved_spaces) {
             if (rs.immediate) continue;
@@ -581,7 +554,7 @@ void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
             out << rs.location.byte;
             if (byte_sz > 1)
                 out << ".." << (rs.location.byte + byte_sz - 1);
-            out << " : " << rs.name;
+            out << " : " << use.get_format_name(rs.byte_offset, rs.location.type, rs.immediate);
             if (total_index != action_data_xbar.reserved_spaces.size() - 1)
                 out << ", ";
             else

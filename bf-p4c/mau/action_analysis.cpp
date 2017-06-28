@@ -311,7 +311,10 @@ bool ActionAnalysis::verify_action_data_instr(const ActionParam &write, const Ac
     else if (type == ActionParam::CONSTANT)
         arg_name = action_arg->to<IR::MAU::ActionDataConstant>()->name;
 
-    auto &arg_placement = placements.at(arg_name);
+    auto pair = std::make_pair(arg_name, read_range.lo);
+    if (placements.find(pair) == placements.end())
+        return false;
+    auto &arg_placement = placements.at(pair);
     bool is_immediate;
 
 
@@ -350,7 +353,8 @@ bool ActionAnalysis::verify_action_data_instr(const ActionParam &write, const Ac
             auto &adi = cont_action.adi;
 
             if (cont_action.counts[ActionParam::ACTIONDATA] == 0) {
-                adi.initialize(adp.asm_name, is_immediate, adp.start, adp.arg_locs.size());
+                adi.initialize(adp.get_action_name(), is_immediate, adp.start,
+                               adp.arg_locs.size());
                 adi.ad_alignment.add_alignment(write_bits, arg_loc.data_loc);
                 cont_action.counts[ActionParam::ACTIONDATA] = 1;
             } else if (adi.start != adp.start || adi.immediate != is_immediate) {

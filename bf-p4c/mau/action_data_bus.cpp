@@ -12,21 +12,6 @@ void ActionDataBus::clear() {
     total_in_use.clear();
 }
 
-/** Generates the name printed out by asm_output for this particular action data table position.
- *  The name that appears in the action data format and action data bus is:
- *  $adf_(type)(name_offset)
- */
-cstring ActionDataBus::find_adf_name(ActionFormat::cont_type_t type, int name_offset) {
-    cstring name = "$adf_";
-    if (type == ActionFormat::BYTE)
-        name += "b";
-    else if (type == ActionFormat::HALF)
-        name += "h";
-    else
-        name += "f";
-    name += std::to_string(name_offset);
-    return name;
-}
 
 /** Conversion between a byte on the action data bus and the output of a particular type */
 inline int ActionDataBus::byte_to_output(int byte, ActionFormat::cont_type_t type) {
@@ -67,8 +52,7 @@ bool ActionDataBus::alloc_ad_table(const bitvec total_layouts[ActionFormat::CONT
     int max = byte_layout.max().index();
     for (int i = 0; i <= max; i += BYTES_PER_RAM) {
         bitvec layout = (byte_layout.getslice(i, BYTES_PER_RAM));
-        int name_offset = begin_offset(byte_layout, i, ActionFormat::BYTE);
-        bool allocated = alloc_bytes(reserved_spaces, layout, i, name_offset, name);
+        bool allocated = alloc_bytes(reserved_spaces, layout, i, name);
         if (!allocated) return false;
     }
 
@@ -77,8 +61,7 @@ bool ActionDataBus::alloc_ad_table(const bitvec total_layouts[ActionFormat::CONT
 
     for (int i = 0; i <= max; i += BYTES_PER_RAM) {
         bitvec layout = (half_layout.getslice(i, BYTES_PER_RAM));
-        int name_offset = begin_offset(half_layout, i, ActionFormat::BYTE);
-        bool allocated = alloc_halves(reserved_spaces, layout, i, name_offset, name);
+        bool allocated = alloc_halves(reserved_spaces, layout, i, name);
         if (!allocated) return false;
     }
 
@@ -90,8 +73,7 @@ bool ActionDataBus::alloc_ad_table(const bitvec total_layouts[ActionFormat::CONT
         for (int j = 0; j < ActionFormat::CONTAINER_TYPES; j++) {
             layouts[j] = total_layouts[j].getslice(i, BYTES_PER_RAM);
         }
-        int name_offset = begin_offset(full_layout, i, ActionFormat::FULL);
-        bool allocated = alloc_fulls(reserved_spaces, layouts, i, name_offset, name);
+        bool allocated = alloc_fulls(reserved_spaces, layouts, i, name);
         if (!allocated) return false;
     }
     return true;
@@ -184,27 +166,13 @@ bitvec ActionDataBus::paired_space(ActionFormat::cont_type_t type, bitvec adjace
     return total_mask;
 }
 
-/** This finds the adf_(type)(name_offset), name_offset of a particular region of the format.
- *  This is so the naming of these fields can be properly updated.
- */
-int ActionDataBus::begin_offset(bitvec adjacent, int sec_begin, ActionFormat::cont_type_t type) {
-    int offset = 0;
-    for (auto bitpos : adjacent) {
-        if (bitpos % find_byte_sz(type) != 0) continue;
-        if (bitpos >= sec_begin) break;
-        offset++;
-    }
-    return offset;
-}
-
 /** Reserves the action data bus space within the bitvecs, and adds it to the Use structure
  *  for the region.  Must only reserve the spaces for the actual bytes, and comes up with 
  *  the correct name for the assembly output.
  */
 void ActionDataBus::reserve_space(vector<Use::ReservedSpace> &reserved_spaces,
                                   ActionFormat::cont_type_t type, bitvec adjacent,
-                                  int start_byte, int byte_offset, int name_offset, bool immed,
-                                  cstring name) {
+                                  int start_byte, int byte_offset, bool immed, cstring name) {
     // auto &use = cont_use[index];
     // auto &in_use = cont_in_use[index];
     // Because the reservations are paired, must pair up with the other portions of the table
@@ -218,12 +186,9 @@ void ActionDataBus::reserve_space(vector<Use::ReservedSpace> &reserved_spaces,
         if (bitpos % find_byte_sz(type) != 0) continue;
         Loc loc(start_byte + bitpos, type);
         if (!immed) {
-            cstring ab_name = find_adf_name(type, name_offset + byte_add);
-            reserved_spaces.emplace_back(loc, byte_offset + bitpos, name_offset + byte_add,
-                                         ab_name);
+            reserved_spaces.emplace_back(loc, byte_offset + bitpos);
         } else {
             reserved_spaces.emplace_back(loc, byte_offset + bitpos, immed);
-            reserved_spaces.back().name = find_immed_name(byte_offset + bitpos, type);
         }
         byte_add++;
     }
@@ -244,15 +209,12 @@ void ActionDataBus::reserve_space(vector<Use::ReservedSpace> &reserved_spaces,
  *                data format
  *     - init_byte_offset - if the action format is wide, then this specifies which section
  *                          the allocation is on, useful for pairing
- *     - init_name_offset - if the action format is wide, then specifies which asm name to begin
- *                          using as a starting point
  *     - sec_begin - the byte offset within the 16 byte region that adjacent begins at
  *     - size - number of bytes to update by in the location algorithm
  */
 bool ActionDataBus::fit_adf_section(vector<Use::ReservedSpace> &reserved_spaces, bitvec adjacent,
-                                    bitvec layout, ActionFormat::cont_type_t type,
-                                    loc_alg_t loc_alg, int init_byte_offset,
-                                    int init_name_offset, int sec_begin, int size, cstring name) {
+                                    ActionFormat::cont_type_t type, loc_alg_t loc_alg,
+                                    int init_byte_offset, int sec_begin, int size, cstring name) {
     bool found = false;
     int start_byte = 0;
     if (loc_alg == FIND_NORMAL)
@@ -262,9 +224,8 @@ bool ActionDataBus::fit_adf_section(vector<Use::ReservedSpace> &reserved_spaces,
     else if (loc_alg == FIND_FULL)
         found = find_full_location(adjacent, size, start_byte);
     if (!found) return false;
-    int name_offset = begin_offset(layout, sec_begin, type);
     reserve_space(reserved_spaces, type, adjacent, start_byte, init_byte_offset + sec_begin,
-                  init_name_offset + name_offset, false, name);
+                  false, name);
     return true;
 }
 
@@ -276,20 +237,19 @@ bool ActionDataBus::fit_adf_section(vector<Use::ReservedSpace> &reserved_spaces,
  *      - sections for bytes 0-1 and bytes 2-3, and allocates to a lower region
  */
 bool ActionDataBus::alloc_bytes(vector<Use::ReservedSpace> &reserved_spaces,
-                                bitvec layout, int init_byte_offset, int init_name_offset,
-                                cstring name) {
+                                bitvec layout, int init_byte_offset, cstring name) {
     ActionFormat::cont_type_t type = ActionFormat::BYTE;
     bitvec adjacent = layout.getslice(8, 8);
     if (layout.max().index() > 8) {
-        bool found = fit_adf_section(reserved_spaces, adjacent, layout, type, FIND_NORMAL,
-                                     init_byte_offset, init_name_offset, 8, 8, name);
+        bool found = fit_adf_section(reserved_spaces, adjacent, type, FIND_NORMAL,
+                                     init_byte_offset, 8, 8, name);
         if (!found) return false;
     }
 
     adjacent = layout.getslice(4, 4);
     if (adjacent.popcount() > 0) {
-        bool found = fit_adf_section(reserved_spaces, adjacent, layout, type, FIND_NORMAL,
-                                     init_byte_offset, init_name_offset, 4, 4, name);
+        bool found = fit_adf_section(reserved_spaces, adjacent, type, FIND_NORMAL,
+                                     init_byte_offset, 4, 4, name);
         if (!found) return false;
     }
 
@@ -297,13 +257,13 @@ bool ActionDataBus::alloc_bytes(vector<Use::ReservedSpace> &reserved_spaces,
     bitvec small_adj = adjacent.getslice(0, 2);
 
     if (small_adj == adjacent && adjacent.popcount() > 0) {
-        bool found = fit_adf_section(reserved_spaces, small_adj, layout, type, FIND_LOWER,
-                                    init_byte_offset, init_name_offset, 0, 2, name);
+        bool found = fit_adf_section(reserved_spaces, small_adj, type, FIND_LOWER,
+                                    init_byte_offset, 0, 2, name);
         if (!found) return false;
     } else if (adjacent.popcount() > 0) {
         // Attempt to put together as a 4 bit section
-        bool found = fit_adf_section(reserved_spaces, adjacent, layout, type, FIND_NORMAL,
-                                    init_byte_offset, init_name_offset, 0, 4, name);
+        bool found = fit_adf_section(reserved_spaces, adjacent, type, FIND_NORMAL,
+                                    init_byte_offset, 0, 4, name);
         if (!found) return false;
     }
     return true;
@@ -316,13 +276,12 @@ bool ActionDataBus::alloc_bytes(vector<Use::ReservedSpace> &reserved_spaces,
  *       4 byte sections for bytes 0-3 and 4-7 respectively
  */
 bool ActionDataBus::alloc_halves(vector<Use::ReservedSpace> &reserved_spaces,
-                                 bitvec layout, int init_byte_offset, int init_name_offset,
-                                 cstring name) {
+                                 bitvec layout, int init_byte_offset, cstring name) {
     ActionFormat::cont_type_t type = ActionFormat::HALF;
     bitvec adjacent = layout.getslice(8, 8);
     if (layout.max().index() > 8) {
-        bool found = fit_adf_section(reserved_spaces, adjacent, layout, type, FIND_NORMAL,
-                                     init_byte_offset, init_name_offset, 8, 8, name);
+        bool found = fit_adf_section(reserved_spaces, adjacent, type, FIND_NORMAL,
+                                     init_byte_offset, 8, 8, name);
         if (!found) return false;
     }
 
@@ -330,16 +289,16 @@ bool ActionDataBus::alloc_halves(vector<Use::ReservedSpace> &reserved_spaces,
     bitvec adj_lo = layout.getslice(0, 4);
     bitvec adj_hi = layout.getslice(4, 4);
     if (adj_lo.popcount() < adjacent.popcount() && adj_hi.popcount() < adjacent.popcount()) {
-        bool found = fit_adf_section(reserved_spaces, adjacent, layout, type, FIND_NORMAL,
-                                     init_byte_offset, init_name_offset, 0, 8, name);
+        bool found = fit_adf_section(reserved_spaces, adjacent, type, FIND_NORMAL,
+                                     init_byte_offset, 0, 8, name);
         if (!found) return false;
     } else if (adj_hi.popcount() > 0) {
-        bool found = fit_adf_section(reserved_spaces, adj_hi, layout, type, FIND_LOWER,
-                                     init_byte_offset, init_name_offset, 4, 4, name);
+        bool found = fit_adf_section(reserved_spaces, adj_hi, type, FIND_LOWER,
+                                     init_byte_offset, 4, 4, name);
         if (!found) return false;
     } else if (adj_lo.popcount() > 0) {
-        bool found = fit_adf_section(reserved_spaces, adj_lo, layout, type, FIND_LOWER,
-                                     init_byte_offset, init_name_offset, 0, 4, name);
+        bool found = fit_adf_section(reserved_spaces, adj_lo, type, FIND_LOWER,
+                                     init_byte_offset, 0, 4, name);
         if (!found) return false;
     }
     return true;
@@ -409,8 +368,8 @@ void ActionDataBus::analyze_full_shares(vector<Use::ReservedSpace> &reserved_spa
  *  Needs to be done shortly.
  */
 bool ActionDataBus::alloc_full_sect(vector<Use::ReservedSpace> &reserved_spaces,
-                                    FullShare full_shares[4], bitvec layout, int begin,
-                                    int init_byte_offset, int init_name_offset, cstring name) {
+                                    FullShare full_shares[4], int begin, int init_byte_offset,
+                                    cstring name) {
     ActionFormat::cont_type_t type = ActionFormat::FULL;
     int byte_sz = find_byte_sz(type);
     bitvec unshared_adj;
@@ -424,10 +383,8 @@ bool ActionDataBus::alloc_full_sect(vector<Use::ReservedSpace> &reserved_spaces,
     if (unshared_adj.popcount() != 0) {
         // Obviously have to expand this over the entire xbar region rather than only
         // the 32 bit section
-        int name_offset_adj = begin_offset(layout, unshared_adj.min().index(), type);
-        bool found = fit_adf_section(reserved_spaces, unshared_adj, layout, type, FIND_FULL,
-                                     init_byte_offset, init_name_offset + name_offset_adj,
-                                     begin * byte_sz, 8, name);
+        bool found = fit_adf_section(reserved_spaces, unshared_adj, type, FIND_FULL,
+                                     init_byte_offset, begin * byte_sz, 8, name);
         if (!found) return false;
     }
     for (int i = begin; i < begin + 2; i++) {
@@ -439,10 +396,8 @@ bool ActionDataBus::alloc_full_sect(vector<Use::ReservedSpace> &reserved_spaces,
         else if ((full_shares[i].shared_status & (1 << ActionFormat::BYTE)) != 0)
             start_byte = full_shares[i].shared_byte[ActionFormat::BYTE];
 
-        int name_offset = begin_offset(layout, i * byte_sz, type);
         reserve_space(reserved_spaces, type, shared_adj, start_byte,
-                      i * byte_sz + init_byte_offset, name_offset + init_name_offset,
-                      false, name);
+                      i * byte_sz + init_byte_offset, false, name);
     }
     return true;
 }
@@ -453,7 +408,7 @@ bool ActionDataBus::alloc_full_sect(vector<Use::ReservedSpace> &reserved_spaces,
  */
 bool ActionDataBus::alloc_fulls(vector<Use::ReservedSpace> &reserved_spaces,
                                 bitvec layouts[ActionFormat::CONTAINER_TYPES],
-                                int init_byte_offset, int init_name_offset, cstring name) {
+                                int init_byte_offset, cstring name) {
     ActionFormat::cont_type_t type = ActionFormat::FULL;
     bitvec layout = layouts[type];
     FullShare full_shares[4];
@@ -461,75 +416,18 @@ bool ActionDataBus::alloc_fulls(vector<Use::ReservedSpace> &reserved_spaces,
 
     int begin = 8 / find_byte_sz(type);
     if (layouts[type].max().index() > 8) {
-        bool found = alloc_full_sect(reserved_spaces, full_shares, layout, begin,
-                                     init_byte_offset, init_name_offset, name);
+        bool found = alloc_full_sect(reserved_spaces, full_shares, begin, init_byte_offset, name);
         if (!found) return false;
     }
 
     begin = 0;
     if (layouts[type].getslice(0, 8).popcount() > 0) {
-        bool found = alloc_full_sect(reserved_spaces, full_shares, layout, begin,
-                                     init_byte_offset, init_name_offset, name);
+        bool found = alloc_full_sect(reserved_spaces, full_shares, begin, init_byte_offset, name);
         if (!found) return false;
     }
     return true;
 }
 
-/** A breakdown of the immediate mask in order to determine the correct naming of the immediates
- *  on the action data bus asm output.
- */
-void ActionDataBus::find_immed_starts(const bitvec immed_mask) {
-    int start = immed_mask.ffs();
-    if (start == -1)
-        BUG("Immediate mask is configure improperly");
-    do {
-        int end = immed_mask.ffz(start);
-        immed_starts.emplace_back(start, end - 1);
-        start = immed_mask.ffs(end);
-    } while (start != -1);
-}
-
-/** Naming scheme of immediate fields coming through the action data bus.  Essentially the
- *  name on the action data bus has to be the first byte region in use on the bus, and everything
- *  after this will get picked up by the action data bus.
- */
-cstring ActionDataBus::find_immed_name(int start_byte, ActionFormat::cont_type_t type) {
-    int byte_sz = find_byte_sz(type);
-    bool requires_index = true;
-    ssize_t index = -1;
-    cstring name = "immediate";
-    if (immed_starts.size() == 1) {
-        requires_index = false;
-        index = 0;
-    } else {
-        bool found = false;
-        for (size_t i = 0; i < immed_starts.size(); i++) {
-            if (immed_starts[i].first > start_byte * 8) {
-                found = true;
-                index = i - 1;
-            }
-        }
-        if (!found)
-            index = immed_starts.size() - 1;
-    }
-
-    if (requires_index)
-        name += std::to_string(index);
-
-    int begin = start_byte * 8 - immed_starts[index].first;
-    int diff = immed_starts[index].second - immed_starts[index].first;
-    BUG_CHECK(begin >= 0, "Invalid begin for immediate slice");
-    BUG_CHECK(byte_sz > 0, "Invalid size for immediate slice");
-    BUG_CHECK(diff >= begin, "Invalid end for immediate slice");
-    name += "(" +  std::to_string(begin) + "..";
-    if (diff <= begin + byte_sz * 8) {
-        name += std::to_string(diff);
-    } else {
-        name += std::to_string(begin + byte_sz * 8 - 1);
-    }
-    name += ")";
-    return name;
-}
 
 /** Similar to fit_adf_section, for fitting action immediate data onto the action data bus.
  *  Because for all immediates section are allocated on a mod 4 basis, there is no difference
@@ -548,7 +446,7 @@ bool ActionDataBus::fit_immed_sect(vector<Use::ReservedSpace> &reserved_spaces, 
     else if (loc_alg == FIND_FULL)
         found = find_full_location(layout, IMMED_SECT, start_byte);
     if (!found) return false;
-    reserve_space(reserved_spaces, type, layout, start_byte, 0, -1, true, name);
+    reserve_space(reserved_spaces, type, layout, start_byte, 0, true, name);
     return true;
 }
 
@@ -611,7 +509,7 @@ bool ActionDataBus::alloc_shared_immed(vector<Use::ReservedSpace> &reserved_spac
                 start_byte = full_share.shared_byte[ActionFormat::HALF];
             else if ((full_share.shared_status & (1 << ActionFormat::BYTE)) != 0)
                 start_byte = full_share.shared_byte[ActionFormat::BYTE];
-            reserve_space(reserved_spaces, type, layouts[type], start_byte, 0, -1, true, name);
+            reserve_space(reserved_spaces, type, layouts[type], start_byte, 0, true, name);
         }
     }
     return true;
@@ -622,14 +520,12 @@ bool ActionDataBus::alloc_shared_immed(vector<Use::ReservedSpace> &reserved_spac
  *  of potentially sharing bytes.
  */
 bool ActionDataBus::alloc_immediate(const bitvec total_layouts[ActionFormat::CONTAINER_TYPES],
-                                    vector<Use::ReservedSpace> &reserved_spaces,
-                                    const bitvec immed_mask, cstring name) {
+                                    vector<Use::ReservedSpace> &reserved_spaces, cstring name) {
     LOG2("Total Layouts for Action Format Immediate");
     for (int i = 0; i < ActionFormat::CONTAINER_TYPES; i++) {
         LOG2("Layout for type " << i << " is " << total_layouts[i]);
     }
 
-    find_immed_starts(immed_mask);
     ActionFormat::cont_type_t type = ActionFormat::BYTE;
     bitvec layout = total_layouts[type];
     bool found = alloc_unshared_immed(reserved_spaces, type, layout, name);
@@ -664,7 +560,7 @@ bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl, const Layou
     LOG1("Allocating action data bus for " << tbl->name);
     if (lo->layout.action_data_bytes_in_overhead > 0) {
         bool allocated = alloc_immediate(act_format.total_layouts_immed, ad_xbar.reserved_spaces,
-                                         act_format.immediate_mask, tbl->name);
+                                         tbl->name);
         if (!allocated) return false;
     } else if (lo->layout.action_data_bytes > 0) {
         bool allocated = alloc_ad_table(act_format.total_layouts, ad_xbar.reserved_spaces,
@@ -674,7 +570,7 @@ bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl, const Layou
 
     LOG2("Action data bus for " << tbl->name);
     for (auto &rs : ad_xbar.reserved_spaces) {
-        LOG2("Reserved " << rs.location.byte << " for " << rs.name << " of type "
+        LOG2("Reserved " << rs.location.byte << " for offset " << rs.byte_offset << " of type "
              << rs.location.type);
     }
 

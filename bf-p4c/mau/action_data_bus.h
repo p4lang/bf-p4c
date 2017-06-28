@@ -71,12 +71,9 @@ struct ActionDataBus {
         struct ReservedSpace {
             Loc location;
             int byte_offset = -1;  ///> Bytes from the lsb of the Action Data Format
-            int name_offset = -1;  ///> Name of adf allocations in asm_output are
-                                     //  $adf_(type)(name_offset). Determines name_offset
             bool immediate = false;  ///> Is in action immediate or not
-            cstring name;
-            ReservedSpace(Loc l, int bo, int no, cstring n)
-                : location(l), byte_offset(bo), name_offset(no), name(n) {}
+            ReservedSpace(Loc l, int bo)
+                : location(l), byte_offset(bo) {}
             ReservedSpace(Loc l, int bo, bool im)
                 : location(l), byte_offset(bo), immediate(im) {}
         };
@@ -97,9 +94,7 @@ struct ActionDataBus {
     int find_byte_sz(ActionFormat::cont_type_t);
 
 
-    cstring find_adf_name(ActionFormat::cont_type_t type, int name_offset);
     bitvec paired_space(ActionFormat::cont_type_t type, bitvec adjacent, int start_byte);
-    int begin_offset(bitvec adjacent, int sec_begin, ActionFormat::cont_type_t type);
     bool find_location(ActionFormat::cont_type_t type, bitvec adjacent, int diff,
                        int &start_byte);
     bool find_lower_location(ActionFormat::cont_type_t type, bitvec adjacent,
@@ -116,27 +111,22 @@ struct ActionDataBus {
 
     void reserve_space(vector<Use::ReservedSpace> &reserved_spaces,
                        ActionFormat::cont_type_t type, bitvec adjacent,
-                       int start_byte, int byte_offset, int name_offset, bool immed,
-                       cstring name);
+                       int start_byte, int byte_offset, bool immed, cstring name);
     bool fit_adf_section(vector<Use::ReservedSpace> &reserved_spaces, bitvec adjacent,
-                         bitvec layout, ActionFormat::cont_type_t type, loc_alg_t loc_alg,
-                         int init_byte_offset, int init_name_offset, int sec_begin, int size,
-                         cstring name);
+                         ActionFormat::cont_type_t type, loc_alg_t loc_alg,
+                         int init_byte_offset, int sec_begin, int size, cstring name);
     bool alloc_bytes(vector<Use::ReservedSpace> &reserved_spaces,
-                     bitvec layout, int init_byte_offset, int init_name_offset, cstring name);
+                     bitvec layout, int init_byte_offset, cstring name);
     bool alloc_halves(vector<Use::ReservedSpace> &reserved_spaces,
-                      bitvec layout, int init_byte_offset, int init_name_offset, cstring name);
+                      bitvec layout, int init_byte_offset, cstring name);
     bool alloc_fulls(vector<Use::ReservedSpace> &reserved_spaces,
                      bitvec layouts[ActionFormat::CONTAINER_TYPES],
-                     int init_byte_offset, int init_name_offset, cstring name);
+                     int init_byte_offset, cstring name);
     bool alloc_full_sect(vector<Use::ReservedSpace> &reserved_spaces,
-                         FullShare full_shares[4], bitvec layout, int begin,
-                         int init_byte_offset, int init_name_offset, cstring name);
+                         FullShare full_shares[4], int begin, int init_byte_offset, cstring name);
     bool alloc_ad_table(const bitvec total_layouts[ActionFormat::CONTAINER_TYPES],
                         vector<Use::ReservedSpace> &locations, cstring name);
 
-    void find_immed_starts(const bitvec immed_mask);
-    cstring find_immed_name(int start_byte, ActionFormat::cont_type_t type);
     bool fit_immed_sect(vector<Use::ReservedSpace> &reserved_spaces, bitvec layout,
                         ActionFormat::cont_type_t type, loc_alg_t loc_alg, cstring name);
 
@@ -145,8 +135,7 @@ struct ActionDataBus {
     bool alloc_shared_immed(vector<Use::ReservedSpace> &reserved_spaces,
                             bitvec layouts[ActionFormat::CONTAINER_TYPES], cstring name);
     bool alloc_immediate(const bitvec total_layouts[ActionFormat::CONTAINER_TYPES],
-                         vector<Use::ReservedSpace> &locations,
-                         const bitvec immed_mask, cstring name);
+                         vector<Use::ReservedSpace> &locations, cstring name);
 
  public:
     bool alloc_action_data_bus(const IR::MAU::Table *tbl, const LayoutOption *lo,
