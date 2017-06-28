@@ -103,6 +103,10 @@ pushd behavioral-model >/dev/null
             fi
         fi
         make || die "BMV2 build failed"
+        # p4c bmv2 tests end up using this simple_switch
+        # it is a libtool wrapper script and is slow to execute the first time
+        # to avoid a potential timeout in STF tests, we "warm up" here
+        ./targets/simple_switch/simple_switch -h > /dev/null 2>&1
         sudo make install
     fi
 popd >/dev/null
