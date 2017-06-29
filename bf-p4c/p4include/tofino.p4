@@ -339,6 +339,11 @@ extern random<T> {
   T get(@optional in T mask);
 }
 
+/// idle timeout
+extern idle_timeout<N, T> {
+  idle_timeout(N state_count, T idle_interval);
+}
+
 /// Counter
 extern counter<I> {
     counter(counter_type_t type, @optional I instance_count);
