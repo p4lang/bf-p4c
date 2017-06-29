@@ -386,28 +386,32 @@ void Cluster::end_apply() {
             dst_map_i[lhs] = nullptr;
             delete_list.push_back(lhs);
         } else {
-            bool use_mau = uses_i->is_used_mau(lhs);
-            if (!use_mau && entry.second) {
+            // set_metadata lhs, ....
+            // lhs can have is_used_mau false but is_used_parde true
+            // lhs should not be removed from dst_map_i as mau operation needed
+            //
+            bool need_mau = uses_i->is_used_mau(lhs) || uses_i->is_used_parde(lhs);
+            if (!need_mau && entry.second) {
                 for (auto &f : *(entry.second)) {
                     if (uses_i->is_used_mau(f)) {
-                        use_mau = true;
+                        need_mau = true;
                         break;
                     } else {
                         if (f->is_ccgf()) {
                             for (auto &m : f->ccgf_fields()) {
                                 if (uses_i->is_used_mau(m)) {
-                                    use_mau = true;
+                                    need_mau = true;
                                     break;
                                 }
                             }  // for
                         }
-                        if (use_mau) {
+                        if (need_mau) {
                             break;
                         }
                     }
                 }  // for
             }
-            if (!use_mau) {
+            if (!need_mau) {
                 dst_map_i[lhs] = nullptr;
                 delete_list.push_back(lhs);
             }

@@ -1501,8 +1501,13 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
                                 LOG1(f);
                                 LOG1(cc->container());
                             }
+                            // last alloc of field slice may be remainder of division by cl_w,
+                            // e.g., 375bits mod 32b containers, last field slice = 23 bits
+                            //
+                            int remaining_field_width = f->phv_use_hi(cl) - field_bit_lo + 1;
+                            int width_in_container = std::min(cl_w, remaining_field_width);
                             cc->container()->taint(start,                     // start
-                                                   cl_w,                      // width
+                                                   width_in_container,        // width
                                                    f,                         // field
                                                    field_bit_lo);             // field_bit_lo
                             cc->container()->sanity_check_container_ranges(
