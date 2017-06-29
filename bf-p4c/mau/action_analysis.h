@@ -182,9 +182,10 @@ class ActionAnalysis : public MauInspector, P4WriteContext {
         // bool is_contig_rotate(bitvec check, int &shift, int size);
         // bitvec rotate_contig(bitvec orig, int shift, int size);
 
-        bool verify_one_alignment(TotalAlignment &tot_alingment, int size, int &unaligned_count);
+        bool verify_one_alignment(TotalAlignment &tot_alignment, int size, int &unaligned_count,
+            bool bitmasked_set = false);
         bool total_overwritten(PHV::Container container);
-        bool verify_all_alignment();
+        bool verify_all_alignment(bool bitmasked_set = false);
 
         bitvec total_write() const;
         bool convert_constant_to_actiondata() {

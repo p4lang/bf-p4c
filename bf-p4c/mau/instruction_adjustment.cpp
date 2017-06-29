@@ -304,7 +304,6 @@ const IR::MAU::Action *MergeInstructions::preorder(IR::MAU::Action *act) {
         if (cont_action.error_code != ActionAnalysis::ContainerAction::NO_PROBLEM) continue;
         // FIXME: To do these shortly
         if (cont_action.to_deposit_field) continue;
-        if (cont_action.to_bitmasked_set) continue;
 
         merged_fields.insert(container);
     }
@@ -425,8 +424,10 @@ const IR::MAU::Action *MergeInstructions::postorder(IR::MAU::Action *act) {
         if (merged_fields.find(container) == merged_fields.end()) continue;
         // FIXME: Obviously to do these shortly
         if (cont_action.to_deposit_field) continue;
-        if (cont_action.to_bitmasked_set) continue;
-        act->action.push_back(make_multi_operand_set(container, cont_action));
+        if (cont_action.to_bitmasked_set)
+            act->action.push_back(make_bitmasked_set(container, cont_action));
+        else
+            act->action.push_back(make_multi_operand_set(container, cont_action));
     }
     return act;
 }
@@ -552,6 +553,26 @@ IR::MAU::Instruction *MergeInstructions::make_multi_operand_set(PHV::Container c
         else
             read_operand = read_mo.second;
         merged_instr->operands.push_back(read_operand);
+    }
+
+    return merged_instr;
+}
+
+/** Converts an instruction to a bitmasked-set.  Currently this makes the assumption that
+ *  src1/background is the same as the destination.  Can be adapted eventually.  No slicing
+ *  is needed within a bitmasked-set
+ */
+IR::MAU::Instruction *MergeInstructions::make_bitmasked_set(PHV::Container container,
+        ActionAnalysis::ContainerAction &cont_action) {
+    MultiOperandInfo mo;
+    build_multi_operand_info(container, cont_action, mo);
+    IR::MAU::Instruction *merged_instr = new IR::MAU::Instruction("bitmasked-set");
+
+    merged_instr->operands.push_back(mo.write);
+    if (mo.reads.size() != 1)
+        P4C_UNIMPLEMENTED("Unhandled bitmasked-set in instruction adjustment");
+    for (auto &read_mo : mo.reads) {
+        merged_instr->operands.push_back(read_mo.second);
     }
 
     return merged_instr;

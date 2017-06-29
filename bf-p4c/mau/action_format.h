@@ -64,6 +64,7 @@ struct ActionFormat {
  public:
     enum cont_type_t {BYTE, HALF, FULL, CONTAINER_TYPES};
     static constexpr int CONTAINER_SIZES[3] = {8, 16, 32};
+    static constexpr int IMMEDIATE_BYTES = 4;
 
     /** Delineates where a specific container is contained within an action format, whether
      *  it is an action data table or in the immediate.  The start tells what byte the
@@ -101,6 +102,8 @@ struct ActionFormat {
         bitvec range;      ///< Total mask
         int start = -1;    ///< Byte offset within the action data table
         cstring action_name;  ///< Potential rename if multiple action args within one placement
+        bool bitmasked_set = false;  ///< If the placement requires a mask as well
+        cstring mask_name;  ///< A name that coordinates the mask to be setup in asm_output
 
         int gen_index() const {
             return ceil_log2(size / 8);
@@ -116,6 +119,13 @@ struct ActionFormat {
                 return action_name;
         }
 
+        /** Returns the mask name.  Only can be called on a placement that has bitmasked-set */
+        cstring get_mask_name() const {
+            BUG_CHECK(bitmasked_set && arg_locs.size() > 1, "Cannot call get_mask_name on "
+                      "a placement that has no bitmask");
+            return mask_name;
+        }
+
         ActionDataPlacement() {}
     };
 
@@ -128,8 +138,11 @@ struct ActionFormat {
         cstring action;
         enum order_t {FIRST_8, FIRST_16, EITHER, NOT_SET} order = NOT_SET;
         int counts[CONTAINER_TYPES] = {0, 0, 0};
-        bitvec layouts[CONTAINER_TYPES];
         int minmaxes[CONTAINER_TYPES] = {9, 17, 33};
+        int bitmasked_sets[CONTAINER_TYPES] = {0, 0, 0};
+
+        bitvec layouts[CONTAINER_TYPES];
+
         int maximum = -1;
         bool offset_constraint = false;
         int offset_full_word = -1;
@@ -198,6 +211,7 @@ struct ActionFormat {
         bitvec immediate_mask;
         bitvec total_layouts[CONTAINER_TYPES];
         bitvec total_layouts_immed[CONTAINER_TYPES];
+        bitvec full_layout_bitmasked;
 
         void clear() {
             action_data_format.clear();
@@ -205,7 +219,8 @@ struct ActionFormat {
             immediate_mask.clear();
         }
 
-        cstring get_format_name(int start_byte, cont_type_t type, bool immediate) const;
+        cstring get_format_name(int start_byte, cont_type_t type, bool immediate,
+            bool bitmasked_set = false) const;
     };
 
     struct failure : public Backtrack::trigger {
@@ -238,18 +253,10 @@ struct ActionFormat {
     void space_individ_immed(ActionContainerInfo &aci);
     int offset_constraints_and_total_layouts();
     void space_8_and_16_containers(int max_small_bytes);
+    int check_full_bitmasked(ActionContainerInfo &aci, int max_small_bytes);
     void space_32_containers();
     void space_32_immed(ActionContainerInfo &aci);
 
-
-
- public:
-    ActionFormat(const IR::MAU::Table *t, const PhvInfo &p, bool ad)
-        : tbl(t), phv(p), alloc_done(ad) {
-         max_total.action = "$MAX_TOTAL";
-    }
-
-    void allocate_format(Use *use);
     void setup_action_counts(bool immediate);
     void analyze_all_actions();
     void setup_immediate_format();
@@ -260,6 +267,14 @@ struct ActionFormat {
     void sort_and_asm_name(vector<ActionDataPlacement> &placement_vec, bool immediate);
     void calculate_placement_data(vector<ActionDataPlacement> &placement_vec,
                                   ArgPlacementData &apd, bool immediate);
+
+ public:
+    ActionFormat(const IR::MAU::Table *t, const PhvInfo &p, bool ad)
+        : tbl(t), phv(p), alloc_done(ad) {
+         max_total.action = "$MAX_TOTAL";
+    }
+
+    void allocate_format(Use *use);
 };
 
 #endif /* EXTENSIONS_TOFINO_MAU_ACTION_FORMAT_H_ */

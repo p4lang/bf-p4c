@@ -551,14 +551,15 @@ bitvec ActionAnalysis::ContainerAction::total_write() const {
 }
 
 bool ActionAnalysis::ContainerAction::verify_one_alignment(TotalAlignment &tot_alignment,
-        int size, int &unaligned_count) {
+        int size, int &unaligned_count, bool bitmasked_set) {
     (void) size;
     if (tot_alignment.write_bits.popcount() != tot_alignment.read_bits.popcount()) {
         error_code |= IMPOSSIBLE_ALIGNMENT;
         return false;
     }
 
-    if (!tot_alignment.write_bits.is_contiguous() || !tot_alignment.read_bits.is_contiguous()) {
+    if (!bitmasked_set &&
+       (!tot_alignment.write_bits.is_contiguous() || !tot_alignment.read_bits.is_contiguous())) {
         // FIXME: Eventually can support rotational shifts, but not yet with IR::Slice setup
         // || !is_contig_rotate(tot_alignment.read_bits, read_rot_shift, size)) {
         error_code |= IMPOSSIBLE_ALIGNMENT;
@@ -580,13 +581,18 @@ bool ActionAnalysis::ContainerAction::verify_one_alignment(TotalAlignment &tot_a
  *  one field in a set can be unaligned, and if the set contains action data, then no
  *  PHVs can be unaligned.
  */
-bool ActionAnalysis::ContainerAction::verify_all_alignment() {
+bool ActionAnalysis::ContainerAction::verify_all_alignment(bool bitmasked_set) {
     int unaligned_count = 0;
+
+    if (bitmasked_set && phv_alignment.size() > 0)
+        P4C_UNIMPLEMENTED("Alignment check of bitmasked-set with a PHV background unsupported");
+
     for (auto &tot_align_info : phv_alignment) {
         auto &curr_container = tot_align_info.first;
         auto &tot_alignment = tot_align_info.second;
         // Verify on an individual field by field basis on the instruction on alignment
-        bool verify = verify_one_alignment(tot_alignment, curr_container.size(), unaligned_count);
+        bool verify = verify_one_alignment(tot_alignment, curr_container.size(),
+                                           unaligned_count, bitmasked_set);
         if (!verify)
             return false;
     }
@@ -605,8 +611,12 @@ bool ActionAnalysis::ContainerAction::verify_all_alignment() {
     }
 
     if (counts[ActionParam::ACTIONDATA] > 0) {
-        bool verify = verify_one_alignment(adi.ad_alignment, adi.size, unaligned_count);
+        bool verify = verify_one_alignment(adi.ad_alignment, adi.size, unaligned_count,
+                                           bitmasked_set);
         if (!verify)
+            return false;
+
+        if (bitmasked_set && unaligned_count > 0)
             return false;
     }
     return true;
@@ -798,11 +808,13 @@ bool ActionAnalysis::check_0_PHV_instruction(ContainerAction &cont_action) {
         if (counts[ActionParam::ACTIONDATA] > 0 || counts[ActionParam::CONSTANT] > 0) {
             bitvec all_ad = cont_action.adi.ad_alignment.write_bits;
             all_ad |= cont_action.constant_alignment.write_bits;
-            if (!all_ad.is_contiguous())
+            if (!all_ad.is_contiguous()) {
                 cont_action.to_bitmasked_set = true;
+            }
         }
     }
-    if (!cont_action.verify_all_alignment()) {
+
+    if (!cont_action.verify_all_alignment(cont_action.to_bitmasked_set)) {
         return false;
     }
     return true;

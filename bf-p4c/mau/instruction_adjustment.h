@@ -135,8 +135,9 @@ class MergeInstructions : public MauTransform, P4WriteContext {
 
     void build_multi_operand_info(PHV::Container container,
         ActionAnalysis::ContainerAction &cont_action, MultiOperandInfo &mo);
-
     IR::MAU::Instruction *make_multi_operand_set(PHV::Container container,
+        ActionAnalysis::ContainerAction &cont_action);
+    IR::MAU::Instruction *make_bitmasked_set(PHV::Container container,
         ActionAnalysis::ContainerAction &cont_action);
 
  public:

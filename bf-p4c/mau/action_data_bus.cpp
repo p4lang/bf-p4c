@@ -43,6 +43,7 @@ inline int ActionDataBus::find_byte_sz(ActionFormat::cont_type_t type) {
  *  128 bit rams, thus 16 byte regions.
  */
 bool ActionDataBus::alloc_ad_table(const bitvec total_layouts[ActionFormat::CONTAINER_TYPES],
+                                   const bitvec full_layout_bitmasked,
                                    vector<Use::ReservedSpace> &reserved_spaces, cstring name) {
     LOG2("Total Layouts for Action Data Table");
     for (int i = 0; i < ActionFormat::CONTAINER_TYPES; i++) {
@@ -73,7 +74,8 @@ bool ActionDataBus::alloc_ad_table(const bitvec total_layouts[ActionFormat::CONT
         for (int j = 0; j < ActionFormat::CONTAINER_TYPES; j++) {
             layouts[j] = total_layouts[j].getslice(i, BYTES_PER_RAM);
         }
-        bool allocated = alloc_fulls(reserved_spaces, layouts, i, name);
+        bitvec full_bitmasked = full_layout_bitmasked.getslice(i, BYTES_PER_RAM);
+        bool allocated = alloc_fulls(reserved_spaces, layouts, full_bitmasked, i, name);
         if (!allocated) return false;
     }
     return true;
@@ -348,14 +350,40 @@ void ActionDataBus::analyze_full_share(vector<Use::ReservedSpace> &reserved_spac
  */
 void ActionDataBus::analyze_full_shares(vector<Use::ReservedSpace> &reserved_spaces,
                                         bitvec layouts[ActionFormat::CONTAINER_TYPES],
-                                        FullShare full_shares[4],
+                                        bitvec full_bitmasked, FullShare full_shares[4],
                                         int init_byte_offset) {
     ActionFormat::cont_type_t type = ActionFormat::FULL;
     int byte_sz = find_byte_sz(type);
-    for (int i = 0; i < 16; i += byte_sz) {
+    for (int i = 0; i < BYTES_PER_RAM; i += byte_sz) {
         if (layouts[ActionFormat::FULL].getslice(i, 4).popcount() == 0) continue;
         analyze_full_share(reserved_spaces, layouts, full_shares[i / byte_sz],
                            init_byte_offset, i, false);
+    }
+
+    ///> Analysis for the constraint of two fulls in a bitmasked-set operation have to be
+    ///> juxtaposed on the action data bus as an even odd pair
+    for (int i = 0; i < BYTES_PER_RAM; i += byte_sz * 2) {
+        if (!full_bitmasked.getrange(i, byte_sz * 2))
+            continue;
+        int index0 = i / byte_sz;
+        int index1 = (i + byte_sz) / byte_sz;
+        if (!full_shares[index0].shared_status || !full_shares[index1].shared_status)
+            continue;
+        int byte_index = -1;
+        bool found = false;
+        for (int j = 0; j < ActionFormat::CONTAINER_TYPES - 1; j++) {
+            if ((full_shares[index0].shared_byte[j]
+                 == full_shares[index1].shared_byte[j] - byte_sz)
+                && (full_shares[index0].shared_byte[j] % (byte_sz * 2)) == 0) {
+                found = true;
+                byte_index = j;
+                break;
+            }
+        }
+        if (!found) continue;
+        full_shares[index0].init_full_bitmask(byte_index);
+        full_shares[index1].init_full_bitmask(byte_index);
+        break;
     }
 }
 
@@ -369,17 +397,21 @@ void ActionDataBus::analyze_full_shares(vector<Use::ReservedSpace> &reserved_spa
  */
 bool ActionDataBus::alloc_full_sect(vector<Use::ReservedSpace> &reserved_spaces,
                                     FullShare full_shares[4], int begin, int init_byte_offset,
-                                    cstring name) {
+                                    cstring name, bitvec full_bitmasked) {
+    bool fbi = full_bitmasked.popcount() > 0;
     ActionFormat::cont_type_t type = ActionFormat::FULL;
     int byte_sz = find_byte_sz(type);
     bitvec unshared_adj;
     for (int i = begin; i < begin + 2; i++) {
         if (!full_shares[i].full_in_use)
             continue;
-        if (full_shares[i].full_in_use == true && full_shares[i].shared_status != 0)
+        if (!fbi && full_shares[i].full_in_use && full_shares[i].shared_status != 0)
+            continue;
+        if (fbi && full_shares[i].full_bitmasked_set)
             continue;
         unshared_adj.setrange((i - begin) * byte_sz, byte_sz);
     }
+
     if (unshared_adj.popcount() != 0) {
         // Obviously have to expand this over the entire xbar region rather than only
         // the 32 bit section
@@ -389,13 +421,19 @@ bool ActionDataBus::alloc_full_sect(vector<Use::ReservedSpace> &reserved_spaces,
     }
     for (int i = begin; i < begin + 2; i++) {
         if (full_shares[i].shared_status == 0) continue;
+        if (fbi && !full_shares[i].full_bitmasked_set)
+            continue;
         bitvec shared_adj(0, 4);
         int start_byte = -1;
-        if ((full_shares[i].shared_status & (1 << ActionFormat::HALF)) != 0)
-            start_byte = full_shares[i].shared_byte[ActionFormat::HALF];
-        else if ((full_shares[i].shared_status & (1 << ActionFormat::BYTE)) != 0)
-            start_byte = full_shares[i].shared_byte[ActionFormat::BYTE];
-
+        if (!fbi) {
+            if ((full_shares[i].shared_status & (1 << ActionFormat::HALF)) != 0)
+                start_byte = full_shares[i].shared_byte[ActionFormat::HALF];
+            else if ((full_shares[i].shared_status & (1 << ActionFormat::BYTE)) != 0)
+                start_byte = full_shares[i].shared_byte[ActionFormat::BYTE];
+        } else {
+            int lookup = full_shares[i].full_bitmasked_index;
+            start_byte = full_shares[i].shared_byte[lookup];
+        }
         reserve_space(reserved_spaces, type, shared_adj, start_byte,
                       i * byte_sz + init_byte_offset, false, name);
     }
@@ -408,21 +446,25 @@ bool ActionDataBus::alloc_full_sect(vector<Use::ReservedSpace> &reserved_spaces,
  */
 bool ActionDataBus::alloc_fulls(vector<Use::ReservedSpace> &reserved_spaces,
                                 bitvec layouts[ActionFormat::CONTAINER_TYPES],
-                                int init_byte_offset, cstring name) {
+                                bitvec full_bitmasked, int init_byte_offset, cstring name) {
     ActionFormat::cont_type_t type = ActionFormat::FULL;
     bitvec layout = layouts[type];
     FullShare full_shares[4];
-    analyze_full_shares(reserved_spaces, layouts, full_shares, init_byte_offset);
+    analyze_full_shares(reserved_spaces, layouts, full_bitmasked, full_shares, init_byte_offset);
 
     int begin = 8 / find_byte_sz(type);
     if (layouts[type].max().index() > 8) {
-        bool found = alloc_full_sect(reserved_spaces, full_shares, begin, init_byte_offset, name);
+        bitvec full_bitmasked_sect = full_bitmasked.getslice(begin, 8);
+        bool found = alloc_full_sect(reserved_spaces, full_shares, begin, init_byte_offset, name,
+                                     full_bitmasked_sect);
         if (!found) return false;
     }
 
     begin = 0;
     if (layouts[type].getslice(0, 8).popcount() > 0) {
-        bool found = alloc_full_sect(reserved_spaces, full_shares, begin, init_byte_offset, name);
+        bitvec full_bitmasked_sect = full_bitmasked.getslice(begin, 8);
+        bool found = alloc_full_sect(reserved_spaces, full_shares, begin, init_byte_offset, name,
+                                     full_bitmasked_sect);
         if (!found) return false;
     }
     return true;
@@ -563,8 +605,8 @@ bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl, const Layou
                                          tbl->name);
         if (!allocated) return false;
     } else if (lo->layout.action_data_bytes > 0) {
-        bool allocated = alloc_ad_table(act_format.total_layouts, ad_xbar.reserved_spaces,
-                                        tbl->name);
+        bool allocated = alloc_ad_table(act_format.total_layouts, act_format.full_layout_bitmasked,
+                                        ad_xbar.reserved_spaces, tbl->name);
         if (!allocated) return false;
     }
 

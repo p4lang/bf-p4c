@@ -1,3 +1,4 @@
+
 /*
 Copyright 2013-present Barefoot Networks, Inc. 
 
@@ -19,8 +20,11 @@ header_type data_t {
         read : 16;
         f1 : 32;
         b1 : 8;
-        n1 : 4;
-        n2 : 4;
+        b2 : 8;
+        x1 : 2;
+        x2 : 2;
+        x3 : 2;
+        x4 : 2;
     }
 }
 
@@ -31,22 +35,25 @@ parser start {
     return ingress;
 }
 
-action constant_conversion_adt(param1, param2) {
-    modify_field(data.n1, 4);
-    modify_field(data.n2, param1);
-    modify_field(data.f1, param2);
+action bitmasked_adt(param1, param2, param3) {
+    modify_field(data.x1, param1);
+    modify_field(data.x3, param2);
+    modify_field(data.f1, param3);
 }
 
-action constant_conversion_immed(param1) {
-    modify_field(data.n1, 7);
-    modify_field(data.n2, param1);
-    modify_field(data.b1, 0xab);
+
+action bitmasked_immed(param1, param2, param3) {
+    modify_field(data.x1, param1);
+    modify_field(data.x3, param2);
+    modify_field(data.b1, param3);
 }
 
-action constant_conversion_adt2(param1) {
-    modify_field(data.n1, 9);
-    modify_field(data.n2, param1);
-    modify_field(data.f1, 0x77777f77);
+
+action bitmasked_immed2(param1, param2, param3, param4) {
+    modify_field(data.x2, param1);
+    modify_field(data.x4, param2);
+    modify_field(data.b1, param3);
+    modify_field(data.b2, param4);
 }
 
 table test1 {
@@ -54,8 +61,7 @@ table test1 {
         data.read : exact;
     }
     actions {
-        constant_conversion_adt;
-        constant_conversion_adt2;
+        bitmasked_adt;
     }
 }
 
@@ -64,7 +70,8 @@ table test2 {
         data.read : exact;
     }
     actions {
-        constant_conversion_immed;
+        bitmasked_immed;
+        bitmasked_immed2;
     }
 }
 

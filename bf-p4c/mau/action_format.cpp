@@ -42,7 +42,7 @@ int ActionFormat::ActionContainerInfo::find_maximum_immed() {
  *  table format, the action data bus, and the action format itself within the assembly code
  */
 cstring ActionFormat::Use::get_format_name(int start_byte, cont_type_t type,
-        bool immediate) const {
+        bool immediate, bool bitmasked_set /* = false */) const {
     int byte_sz = CONTAINER_SIZES[type] / 8;
     // Based on assumption, immediate is contiguous.  May have to be changed later
     cstring ret_name;
@@ -51,6 +51,8 @@ cstring ActionFormat::Use::get_format_name(int start_byte, cont_type_t type,
             BUG("Impossible immediate format name lookup");
         bitvec lookup = immediate_mask;
         int lo = start_byte * 8;
+        if (bitmasked_set)
+            lo += CONTAINER_SIZES[type];
         ret_name = "immediate(" +  std::to_string(lo) + "..";
         int hi = lo + CONTAINER_SIZES[type] - 1;
         if (lookup.max().index() < hi)
@@ -65,7 +67,11 @@ cstring ActionFormat::Use::get_format_name(int start_byte, cont_type_t type,
             ret_name += "h";
         else
             ret_name += "f";
-        int adf_offset = lookup.getslice(0, start_byte).popcount() / byte_sz;
+        int adf_offset;
+        if (!bitmasked_set)
+            adf_offset = lookup.getslice(0, start_byte).popcount() / byte_sz;
+        else
+            adf_offset = lookup.getslice(0, start_byte + byte_sz).popcount() / byte_sz;
         ret_name += std::to_string(adf_offset);
     }
     return ret_name;
@@ -248,6 +254,8 @@ void ActionFormat::create_placement_phv(ActionAnalysis::ContainerActionsMap &con
         }
         if (initialized) {
             adp.size = container.size();
+            if (cont_action.to_bitmasked_set)
+                adp.bitmasked_set = true;
             adp_vector.push_back(adp);
         }
     }
@@ -269,8 +277,6 @@ void ActionFormat::analyze_all_actions() {
         ActionAnalysis aa(phv, alloc_done, false, tbl);
         aa.set_field_actions_map(&field_actions_map);
         aa.set_container_actions_map(&container_actions_map);
-        aa.set_verbose();
-
         action->apply(aa);
 
         if (!alloc_done)
@@ -303,19 +309,23 @@ void ActionFormat::setup_action_counts(bool immediate) {
             placement_vec = &(use->immediate_format.at(action->name));
         int index = 0;
         // Build the ACI;
-        for (auto container : *placement_vec) {
+        for (auto placement : *placement_vec) {
             bool odd_container_size = true;
             for (int i = 0; i < CONTAINER_TYPES; i++) {
-                if (container.size == CONTAINER_SIZES[i]) {
+                if (placement.size == CONTAINER_SIZES[i]) {
                     aci.counts[i]++;
-                    if (aci.minmaxes[i] > container.range.max().index() + 1)
-                        aci.minmaxes[i] = container.range.max().index() + 1;
+                    if (placement.bitmasked_set) {
+                        aci.counts[i]++;
+                        aci.bitmasked_sets[i]++;
+                    }
+                    if (aci.minmaxes[i] > placement.range.max().index() + 1)
+                        aci.minmaxes[i] = placement.range.max().index() + 1;
                     odd_container_size = false;
                     break;
                 }
             }
             if (odd_container_size)
-                BUG("What happened here? %d", container.size);
+                BUG("What happened here? %d", placement.size);
             index++;
         }
         // Analysis of the ACI
@@ -406,7 +416,6 @@ int ActionFormat::offset_constraints_and_total_layouts() {
         offset_locs.setbit(aci.offset_full_word);
         if ((aci.counts[BYTE] % 4) == 2)
             offset_8count.setbit(aci.offset_full_word);
-        // FIXME: This needs to check at the next PR if the 32 things are paired for bitmasked sets
     }
 
     use->total_layouts[BYTE].setrange(0, max_total.counts[BYTE]);
@@ -444,8 +453,15 @@ void ActionFormat::space_8_and_16_containers(int max_small_bytes) {
             aci.layouts[BYTE].setbit(i);
         }
 
+        // Due to action bus constraint, any 32 bit operation must be contained within a 8-bit
+        // section of the action format for an ease of allocation
+        int half_ends = max_small_bytes;
+        if (aci.bitmasked_sets[FULL] > 0) {
+            half_ends = check_full_bitmasked(aci, max_small_bytes);
+        }
+
         for (int i = 0; i < count_half; i++) {
-            aci.layouts[HALF].setrange(max_small_bytes - 2 * i - 2, 2);
+            aci.layouts[HALF].setrange(half_ends - 2 * i - 2, 2);
         }
 
         if (aci.offset_constraint) {
@@ -465,6 +481,18 @@ void ActionFormat::space_8_and_16_containers(int max_small_bytes) {
         if ((use->total_layouts[HALF] & aci.layouts[HALF]).popcount() < aci.counts[HALF] * 2)
             BUG("Error in the spread of half words in action data format");
     }
+}
+
+/** A small check to guarantee that if a full word requires a bitmasked-set, then the
+ *  bitmasked pair will be on an even-odd pairing to ease the placement on the action data bus
+ */
+int ActionFormat::check_full_bitmasked(ActionContainerInfo &aci, int max_small_bytes) {
+    int diff = max_bytes - max_small_bytes;
+    if ((CONTAINER_SIZES[FULL] / 8) * aci.bitmasked_sets[FULL] < diff)
+        return max_small_bytes;
+
+    int small_sizes_needed = aci.counts[BYTE] + aci.counts[HALF] * 2;
+    return (small_sizes_needed - 1) / 4;
 }
 
 /** This function just fills in all of the 32 bit holes for each individual action.  Because
@@ -505,16 +533,57 @@ void ActionFormat::space_all_containers() {
  */
 void ActionFormat::align_action_data_layouts() {
     for (auto aci : action_counts) {
-        int starts[CONTAINER_TYPES] = {0, 0, 0};
         auto &placement_vec = use->action_data_format[aci.action];
-        for (auto &container : placement_vec) {
-            int index = container.gen_index();
-            int loc = aci.layouts[index].ffs(starts[index]);
-            if (aci.layouts[index].getrange(loc, container.size / 8) == 0)
+        bitvec bitmasked_reservations[CONTAINER_TYPES];
+        int starts[CONTAINER_TYPES] = {0, 0, 0};
+
+        // Handle bitmasked-set requirements first, as they have to be on an even-odd pair,
+        // Algorithm is to place all bitmasked-set required placements, as those are constrained
+        // Once those are placed, fill in the other non bitmasked-sets
+        for (auto &placement : placement_vec) {
+            if (!placement.bitmasked_set) continue;
+            int byte_sz = placement.size / 8;
+            int index = placement.gen_index();
+            int lookup = starts[index];
+            int loc;
+            int max = aci.layouts[index].max().index() + 1;
+            do {
+                if ((lookup % byte_sz) != 0)
+                    BUG("Action formats are setup incorrectly");
+                loc = aci.layouts[index].ffs(lookup);
+                lookup = loc + byte_sz;
+            } while ((loc % ((byte_sz) * 2)) != 0 && lookup < max);
+
+            if (aci.layouts[index].getrange(loc, byte_sz) == 0)
                 BUG("Misalignment on the action data format");
-            container.start = loc;
-            starts[index] = loc + container.size / 8;
+            placement.start = loc;
+            starts[index] = loc + byte_sz;
+            bitmasked_reservations[index].setrange(loc, byte_sz * 2);
+            if (index == FULL)
+                use->full_layout_bitmasked.setrange(loc, byte_sz * 2);
         }
+
+        std::fill(starts, starts + CONTAINER_TYPES, 0);
+        for (auto &placement : placement_vec) {
+            if (placement.bitmasked_set) continue;
+            int byte_sz = placement.size / 8;
+            int index = placement.gen_index();
+            int lookup = starts[index];
+            int loc;
+            int max = aci.layouts[index].max().index() + 1;
+            do {
+                if ((lookup % byte_sz) != 0)
+                    BUG("Action formats are setup incorrectly");
+                loc = aci.layouts[index].ffs(lookup);
+                lookup = loc + byte_sz;
+            } while (bitmasked_reservations[index].getbit(loc) == true && lookup < max);
+
+            if (aci.layouts[index].getrange(loc, byte_sz) == 0)
+                BUG("Misalignment on the action data format");
+            placement.start = loc;
+            starts[index] = loc + byte_sz;
+        }
+
         sort_and_asm_name(placement_vec, false);
         ArgPlacementData &apd = use->arg_placement[aci.action];
         calculate_placement_data(placement_vec, apd, false);
@@ -602,24 +671,81 @@ void ActionFormat::space_all_immediate_containers() {
  */
 void ActionFormat::align_immediate_layouts() {
     for (auto aci : action_counts) {
+        auto &placement_vec = use->immediate_format.at(aci.action);
+        bitvec bitmasked_reservations[CONTAINER_TYPES];
         int starts[CONTAINER_TYPES] = {0, 0, 0};
         bool already_maxed[CONTAINER_TYPES] = {false, false, false};
-        auto &placement_vec = use->immediate_format.at(aci.action);
-        for (auto &container : placement_vec) {
-            int index = container.gen_index();
-            if (container.range.max().index() + 1 == aci.minmaxes[index]
-                && !already_maxed[index]) {
+
+        // Handle bitmasked-set requirements first, as they have to be on an even-odd pair,
+        // Algorithm is to place all bitmasked-set required placements, as those are constrained
+        // Once those are placed, fill in the other non bitmasked-sets
+        for (auto &placement : placement_vec) {
+            if (!placement.bitmasked_set) continue;
+            int byte_sz = placement.size / 8;
+            int index = placement.gen_index();
+            // Deals with a particular bitmasked-set case of 3 8-bit fields, ensuring that
+            // the bitmasked-set is on an even odd pair
+            if (placement.range.max().index() + 1 == aci.minmaxes[index]
+                && aci.total_bytes() % 2 == 0) {
+                // Bitmasked-set should be the last parameter
                 int start = aci.layouts[index].max().index();
-                start -= (CONTAINER_SIZES[index] / 8) - 1;
-                container.start = start;
+                start -= byte_sz * 2 - 1;
+                placement.start = start;
+                already_maxed[index] = true;
+                bitmasked_reservations[index].setrange(start, byte_sz * 2);
+            } else {
+                // Bitmasked-set should not be the last parameter.  Minimize immediate
+                int lookup = starts[index];
+                int loc;
+                int max = aci.layouts[index].max().index() + 1;
+                do {
+                    if ((lookup % byte_sz) != 0)
+                        BUG("Action formats are setup incorrectly");
+                    loc = aci.layouts[index].ffs(lookup);
+                    lookup = loc + byte_sz;
+                } while ((loc % ((byte_sz) * 2)) != 0 && lookup < max);
+
+                if (aci.layouts[index].getrange(loc, byte_sz) == 0)
+                    BUG("Misalignment on the action data format");
+                placement.start = loc;
+                starts[index] = loc + byte_sz;
+                bitmasked_reservations[index].setrange(loc, byte_sz * 2);
+            }
+            if (placement.start > IMMEDIATE_BYTES)
+                BUG("Somehow immediate bytes have 4 bytes");
+        }
+
+
+        std::fill(starts, starts + CONTAINER_TYPES, 0);
+        for (auto &placement : placement_vec) {
+            if (placement.bitmasked_set) continue;
+            int byte_sz = placement.size / 8;
+            int index = placement.gen_index();
+            if (placement.range.max().index() + 1 == aci.minmaxes[index]
+                && !already_maxed[index]) {
+                // Normal parameter should be last field to minimize immediate
+                int start = aci.layouts[index].max().index();
+                start -= byte_sz - 1;
+                placement.start = start;
                 already_maxed[index] = true;
             } else {
-                int loc = aci.layouts[index].ffs(starts[index]);
-                if (aci.layouts[index].getrange(loc, container.size / 8) == 0)
-                    BUG("Misalignment on the immediate data format");
-                container.start = loc;
-                starts[index] = loc + container.size / 8;
+                // Normal parameter should not be last field to minimize immediate
+                int lookup = starts[index];
+                int loc;
+                int max = aci.layouts[index].max().index() + 1;
+                do {
+                    if ((lookup % byte_sz) != 0)
+                        BUG("Action formats are setup incorrectly");
+                    loc = aci.layouts[index].ffs(lookup);
+                    lookup = loc + byte_sz;
+                } while (bitmasked_reservations[index].getbit(loc) == true && lookup < max);
+                if (aci.layouts[index].getrange(loc, byte_sz) == 0)
+                    BUG("Misalignment on the action data format");
+                placement.start = loc;
+                starts[index] = loc + byte_sz;
             }
+            if (placement.start > IMMEDIATE_BYTES)
+                BUG("Somehow immediate bytes have 4 bytes");
         }
         sort_and_asm_name(placement_vec, true);
         ArgPlacementData &apd = use->arg_placement[aci.action];
@@ -661,21 +787,29 @@ void ActionFormat::sort_and_asm_name(vector<ActionDataPlacement> &placement_vec,
         return a.start < b.start;
     });
     int index = 0;
-    for (auto &container : placement_vec) {
-        if (container.arg_locs.size() > 1) {
-            container.action_name = "$data" + std::to_string(index);
+    int mask_index = 0;
+    for (auto &placement : placement_vec) {
+        int byte_sz = placement.size  / 8;
+        if (placement.arg_locs.size() > 1) {
+            placement.action_name = "$data" + std::to_string(index);
+            if (placement.bitmasked_set) {
+                placement.mask_name = "$mask" + std::to_string(mask_index++);
+            }
             index++;
-        } else if (container.arg_locs.size() < 1) {
-            container.action_name = "$no_arg";
+        } else if (placement.arg_locs.size() < 1) {
+            placement.action_name = "$no_arg";
         }
         if (immediate) {
-            for (auto arg_loc : container.arg_locs) {
-                use->immediate_mask |= (arg_loc.data_loc << (container.start * 8));
-            }
+            use->immediate_mask |= (placement.range << (placement.start * 8));
+            if (placement.bitmasked_set)
+                use->immediate_mask |= (placement.range << ((placement.start + byte_sz) * 8));
         }
     }
 }
 
+/** A way to perform an easy lookup of where the action data parameter is contained within the
+ *  entire action data placement
+ */
 void ActionFormat::calculate_placement_data(vector<ActionDataPlacement> &placement_vec,
                                             ArgPlacementData &apd, bool immediate) {
     int index = 0;

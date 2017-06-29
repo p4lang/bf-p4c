@@ -68,8 +68,8 @@ void MauAsmOutput::emit_action_data_alias(std::ostream &out, indent_t indent,
 
     out << indent << "- { ";
     size_t index = 0;
+    bool last_entry = false;
     for (auto &placement : *placement_vec) {
-        bool needs_comma = true;
         out << placement.get_action_name();
 
         auto type = static_cast<ActionFormat::cont_type_t>(placement.gen_index());
@@ -82,8 +82,8 @@ void MauAsmOutput::emit_action_data_alias(std::ostream &out, indent_t indent,
         }
 
         if (index == placement_vec->size() - 1 && placement.arg_locs.size() == 1)
-            needs_comma = false;
-        if (needs_comma)
+            last_entry = true;
+        if (!last_entry)
              out << ", ";
         if (placement.arg_locs.size() > 1) {
             size_t arg_index = 0;
@@ -101,11 +101,24 @@ void MauAsmOutput::emit_action_data_alias(std::ostream &out, indent_t indent,
 
                 if (index == placement_vec->size() - 1
                     && arg_index == placement.arg_locs.size() - 1)
-                    needs_comma = false;
-                if (needs_comma)
+                    last_entry = true;
+                if (!last_entry)
                     out << ", ";
                 arg_index++;
             }
+        }
+
+        if (placement.bitmasked_set) {
+            if (last_entry)
+                out << ", ";
+            out << placement.get_mask_name();
+            out << ": " << use.get_format_name(placement.start, type, is_immediate,
+                                               placement.bitmasked_set);
+            out << ", ";
+            out << placement.mask_name;
+            out << ": 0x" << hex(placement.range.getrange(0, placement.size));
+            if (!last_entry)
+                out << ", ";
         }
         index++;
     }
@@ -118,18 +131,33 @@ void MauAsmOutput::emit_action_data_alias(std::ostream &out, indent_t indent,
 void MauAsmOutput::emit_action_data_format(std::ostream &out, indent_t indent,
         const IR::MAU::Table *tbl, const IR::MAU::Action *af) const {
     auto &use = tbl->resources->action_format;
-    auto &placement = use.action_data_format.at(af->name);
-    if (placement.size() == 0)
+    auto &placement_vec = use.action_data_format.at(af->name);
+    if (placement_vec.size() == 0)
         return;
     out << indent << "format " << canon_name(af->name) << ": { ";
     size_t index = 0;
-    for (auto &container : placement) {
-        auto type = static_cast<ActionFormat::cont_type_t>(container.gen_index());
-        out << use.get_format_name(container.start, type, false);
-        out << ": " << (8 * container.start) << ".."
-            << (8 * container.start + container.size - 1);
-        if (index + 1 != placement.size())
+    bool last_entry = false;
+    for (auto &placement : placement_vec) {
+        auto type = static_cast<ActionFormat::cont_type_t>(placement.gen_index());
+        out << use.get_format_name(placement.start, type, false);
+        out << ": " << (8 * placement.start) << ".."
+            << (8 * placement.start + placement.size - 1);
+        if (index + 1 == placement_vec.size())
+            last_entry = true;
+
+        if (!last_entry)
             out << ", ";
+
+        if (placement.bitmasked_set) {
+            if (last_entry)
+                out << ", ";
+            out << use.get_format_name(placement.start, type, false, placement.bitmasked_set);
+            int mask_start = 8 * placement.start + placement.size;
+            out << ": " << mask_start << ".." << (mask_start + placement.size - 1);
+            if (!last_entry)
+                out << ", ";
+        }
+
         index++;
     }
     out << " }" << std::endl;
@@ -749,8 +777,7 @@ class MauAsmOutput::EmitAction : public Inspector {
         visit(sl->e0);
         if (sl->e0->is<IR::ActionArg>()) {
             out << "." << sl->getL() << "-" << sl->getH();
-        // Eventually just shouldn't slice constants but make separate constants
-        } else if (sl->e0->is<IR::Constant>() == false) {
+        } else {
             out << "(" << sl->getL() << ".." << sl->getH() << ")";
         }
         return false;

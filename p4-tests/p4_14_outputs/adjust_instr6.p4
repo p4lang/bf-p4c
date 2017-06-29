@@ -5,8 +5,11 @@ header data_t {
     bit<16> read;
     bit<32> f1;
     bit<8>  b1;
-    bit<4>  n1;
-    bit<4>  n2;
+    bit<8>  b2;
+    bit<2>  x1;
+    bit<2>  x2;
+    bit<2>  x3;
+    bit<2>  x4;
 }
 
 struct metadata {
@@ -19,7 +22,7 @@ struct headers {
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".start") state start {
-        packet.extract<data_t>(hdr.data);
+        packet.extract(hdr.data);
         transition accept;
     }
 }
@@ -28,51 +31,46 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".set_port") action set_port(bit<9> port) {
         standard_metadata.egress_spec = port;
     }
-    @name(".constant_conversion_adt") action constant_conversion_adt(bit<4> param1, bit<32> param2) {
-        hdr.data.n1 = 4w4;
-        hdr.data.n2 = param1;
-        hdr.data.f1 = param2;
+    @name(".bitmasked_adt") action bitmasked_adt(bit<2> param1, bit<2> param2, bit<32> param3) {
+        hdr.data.x1 = param1;
+        hdr.data.x3 = param2;
+        hdr.data.f1 = param3;
     }
-    @name(".constant_conversion_adt2") action constant_conversion_adt2(bit<4> param1) {
-        hdr.data.n1 = 4w9;
-        hdr.data.n2 = param1;
-        hdr.data.f1 = 32w0x77777f77;
+    @name(".bitmasked_immed") action bitmasked_immed(bit<2> param1, bit<2> param2, bit<8> param3) {
+        hdr.data.x1 = param1;
+        hdr.data.x3 = param2;
+        hdr.data.b1 = param3;
     }
-    @name(".constant_conversion_immed") action constant_conversion_immed(bit<4> param1) {
-        hdr.data.n1 = 4w7;
-        hdr.data.n2 = param1;
-        hdr.data.b1 = 8w0xab;
+    @name(".bitmasked_immed2") action bitmasked_immed2(bit<2> param1, bit<2> param2, bit<8> param3, bit<8> param4) {
+        hdr.data.x2 = param1;
+        hdr.data.x4 = param2;
+        hdr.data.b1 = param3;
+        hdr.data.b2 = param4;
     }
     @name(".port_setter") table port_setter {
         actions = {
-            set_port();
-            @defaultonly NoAction();
+            set_port;
         }
         key = {
-            hdr.data.read: exact @name("hdr.data.read") ;
+            hdr.data.read: exact;
         }
-        default_action = NoAction();
     }
     @name(".test1") table test1 {
         actions = {
-            constant_conversion_adt();
-            constant_conversion_adt2();
-            @defaultonly NoAction();
+            bitmasked_adt;
         }
         key = {
-            hdr.data.read: exact @name("hdr.data.read") ;
+            hdr.data.read: exact;
         }
-        default_action = NoAction();
     }
     @name(".test2") table test2 {
         actions = {
-            constant_conversion_immed();
-            @defaultonly NoAction();
+            bitmasked_immed;
+            bitmasked_immed2;
         }
         key = {
-            hdr.data.read: exact @name("hdr.data.read") ;
+            hdr.data.read: exact;
         }
-        default_action = NoAction();
     }
     apply {
         test1.apply();
@@ -88,7 +86,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        packet.emit<data_t>(hdr.data);
+        packet.emit(hdr.data);
     }
 }
 
@@ -102,4 +100,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
     }
 }
 
-V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+V1Switch(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;

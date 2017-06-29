@@ -3,10 +3,18 @@
 
 header data_t {
     bit<16> read;
-    bit<32> f1;
     bit<8>  b1;
-    bit<4>  n1;
-    bit<4>  n2;
+    bit<8>  b2;
+    bit<8>  b3;
+    bit<8>  b4;
+    bit<16> h1;
+    bit<16> h2;
+    bit<16> h3;
+    bit<16> h4;
+    bit<26> t1;
+    bit<2>  x1;
+    bit<2>  x2;
+    bit<2>  x3;
 }
 
 struct metadata {
@@ -25,60 +33,65 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
-    }
-    @name("NoAction") action NoAction_4() {
-    }
-    @name("NoAction") action NoAction_5() {
-    }
-    @name(".set_port") action set_port_0(bit<9> port) {
+    @name(".setport") action setport(bit<9> port) {
         standard_metadata.egress_spec = port;
     }
-    @name(".constant_conversion_adt") action constant_conversion_adt_0(bit<4> param1, bit<32> param2) {
-        hdr.data.n1 = 4w4;
-        hdr.data.n2 = param1;
-        hdr.data.f1 = param2;
+    @name(".bitmasked_full") action bitmasked_full(bit<26> param1, bit<2> param2) {
+        hdr.data.t1 = param1;
+        hdr.data.x2 = param2;
     }
-    @name(".constant_conversion_adt2") action constant_conversion_adt2_0(bit<4> param1) {
-        hdr.data.n1 = 4w9;
-        hdr.data.n2 = param1;
-        hdr.data.f1 = 32w0x77777f77;
+    @name(".all_bytes") action all_bytes(bit<8> byte1, bit<8> byte2, bit<8> byte3, bit<8> byte4) {
+        hdr.data.b1 = byte1;
+        hdr.data.b2 = byte2;
+        hdr.data.b3 = byte3;
+        hdr.data.b4 = byte4;
     }
-    @name(".constant_conversion_immed") action constant_conversion_immed_0(bit<4> param1) {
-        hdr.data.n1 = 4w7;
-        hdr.data.n2 = param1;
-        hdr.data.b1 = 8w0xab;
+    @name(".some_halves") action some_halves(bit<16> half1, bit<16> half2) {
+        hdr.data.h1 = half1;
+        hdr.data.h2 = half2;
+    }
+    @name(".bitmasked_full2") action bitmasked_full2(bit<26> param1, bit<2> param2) {
+        hdr.data.t1 = param1;
+        hdr.data.x2 = param2;
+    }
+    @name(".all_halves") action all_halves(bit<16> half1, bit<16> half2, bit<16> half3, bit<16> half4) {
+        hdr.data.h1 = half1;
+        hdr.data.h2 = half2;
+        hdr.data.h3 = half3;
+        hdr.data.h4 = half4;
     }
     @name(".port_setter") table port_setter {
         actions = {
-            set_port_0();
-            @defaultonly NoAction_0();
+            setport();
+            @defaultonly NoAction();
         }
         key = {
             hdr.data.read: exact @name("hdr.data.read") ;
         }
-        default_action = NoAction_0();
+        default_action = NoAction();
     }
     @name(".test1") table test1 {
         actions = {
-            constant_conversion_adt_0();
-            constant_conversion_adt2_0();
-            @defaultonly NoAction_4();
+            bitmasked_full();
+            all_bytes();
+            some_halves();
+            @defaultonly NoAction();
         }
         key = {
             hdr.data.read: exact @name("hdr.data.read") ;
         }
-        default_action = NoAction_4();
+        default_action = NoAction();
     }
     @name(".test2") table test2 {
         actions = {
-            constant_conversion_immed_0();
-            @defaultonly NoAction_5();
+            bitmasked_full2();
+            all_halves();
+            @defaultonly NoAction();
         }
         key = {
             hdr.data.read: exact @name("hdr.data.read") ;
         }
-        default_action = NoAction_5();
+        default_action = NoAction();
     }
     apply {
         test1.apply();

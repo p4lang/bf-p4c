@@ -481,6 +481,12 @@ XFAIL_TESTS += tofino/%reldir%/p4_14/adjust_instr5.p4.test
 # BRIG-146
 XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_112_no_phase_0_case_action_width_too_big.p4.test
 
+# BRIG-147
+XFAIL_TESTS += tofino/%reldir%/p4_14/adjust_instr6.p4.test
+
+# BRIG-149
+XFAIL_TESTS += tofino/%reldir%/p4_14/adjust_instr7.p4.test
+
 # various stateful
 XFAIL_TESTS += \
 		tofino/%reldir%/p4_14/test_config_163_stateful_table_math_unit.p4.test \

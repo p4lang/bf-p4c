@@ -62,6 +62,12 @@ struct ActionDataBus {
         bool full_in_use = false;
         unsigned shared_status = 0;
         int shared_byte[2] = {-1, -1};
+        bool full_bitmasked_set = false;
+        int full_bitmasked_index = -1;
+        void init_full_bitmask(int fbi) {
+            full_bitmasked_set = true;
+            full_bitmasked_index = fbi;
+        }
     };
 
 
@@ -107,8 +113,8 @@ struct ActionDataBus {
                             int add_byte_offset, bool immed);
     void analyze_full_shares(vector<Use::ReservedSpace> &reserved_spaces,
                              bitvec layouts[ActionFormat::CONTAINER_TYPES],
-                             FullShare full_shares[4], int init_byte_offset);
-
+                             bitvec full_bitmasked, FullShare full_shares[4],
+                             int init_byte_offset);
     void reserve_space(vector<Use::ReservedSpace> &reserved_spaces,
                        ActionFormat::cont_type_t type, bitvec adjacent,
                        int start_byte, int byte_offset, bool immed, cstring name);
@@ -121,10 +127,12 @@ struct ActionDataBus {
                       bitvec layout, int init_byte_offset, cstring name);
     bool alloc_fulls(vector<Use::ReservedSpace> &reserved_spaces,
                      bitvec layouts[ActionFormat::CONTAINER_TYPES],
-                     int init_byte_offset, cstring name);
+                     bitvec full_bitmasked, int init_byte_offset, cstring name);
     bool alloc_full_sect(vector<Use::ReservedSpace> &reserved_spaces,
-                         FullShare full_shares[4], int begin, int init_byte_offset, cstring name);
+                         FullShare full_shares[4], int begin, int init_byte_offset,
+                         cstring name, bitvec full_bitmasked);
     bool alloc_ad_table(const bitvec total_layouts[ActionFormat::CONTAINER_TYPES],
+                        const bitvec full_layout_bitmasked,
                         vector<Use::ReservedSpace> &locations, cstring name);
 
     bool fit_immed_sect(vector<Use::ReservedSpace> &reserved_spaces, bitvec layout,
