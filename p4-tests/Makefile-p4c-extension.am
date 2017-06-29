@@ -496,9 +496,12 @@ XFAIL_TESTS += \
 GOOGLE_TOR_XFAIL = tofino/%reldir%/p4_16/google-tor/p4/spec/tor.p4.test
 XFAIL_TESTS += $(GOOGLE_TOR_XFAIL)
 
+# support for unions
+XFAIL_TESTS += tofino/testdata/p4_16_samples/union-valid-bmv2.p4.test
 
 # Tofino expected failures (Glass fails as well)
 XFAIL_TESTS +=  tofino/testdata/p4_14_samples/issue583.p4.test \
 		tofino/testdata/p4_14_samples/counter.p4.test \
 		tofino/testdata/p4_14_samples/copy_to_cpu.p4.test \
-		tofino/testdata/p4_14_samples/action_inline.p4.test
+		tofino/testdata/p4_14_samples/action_inline.p4.test \
+		tofino/testdata/p4_14_samples/issue60.p4.test
