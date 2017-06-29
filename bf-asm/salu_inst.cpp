@@ -635,11 +635,11 @@ Instruction *OutOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
                 warning(op[idx-1].lineno, "Instruction predicate is always true"); } }
     //Check mux operand
     if (idx < op.size) {
-        auto ops = OutOP::ops_mux_lookup.find(op[idx].s);
-        if (ops != OutOP::ops_mux_lookup.end()) {
-            rv->output_mux = (mux_select)ops->second;
-        } else
-            error(rv->lineno, "invalid operand '%s' for '%s' instruction", op[idx].s, op[0].s); }
+        if (op[idx].type == tSTR &&  OutOP::ops_mux_lookup.count(op[idx].s))
+            rv->output_mux = (mux_select)OutOP::ops_mux_lookup.at(op[idx].s);
+        else
+            error(op[idx].lineno, "invalid operand '%s' for '%s' instruction",
+                  value_desc(op[idx]), op[0].s); }
     return rv;
 }
 
