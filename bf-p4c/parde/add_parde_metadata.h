@@ -11,8 +11,15 @@
  */
 
 class AddMetadataShims : public PardeModifier {
+ public:
+    explicit AddMetadataShims(const IR::Tofino::Pipe* pipe) : pipe(pipe)
+    { CHECK_NULL(pipe); }
+
+ private:
     bool preorder(IR::Tofino::Parser *) override;
     bool preorder(IR::Tofino::Deparser *) override;
+
+    const IR::Tofino::Pipe* pipe;
 };
 
 #endif /* _TOFINO_PARDE_ADD_PARDE_METADATA_H_ */
