@@ -8,12 +8,28 @@ class ElimUnused::ParserMetadata : public Transform {
     IR::MAU::StatefulAlu *preorder(IR::MAU::StatefulAlu *salu) override {
         prune();
         return salu; }
+
+    // XXX(seth): This is a gross hack. Right now, if we extract a field in a
+    // ParserMatch and the *only* use of that field is as part of the select
+    // expression in that ParserState, FieldDefUse doesn't consider the field
+    // used, because its traversal order means that it sees the read before the
+    // write. Until that's fixed, this check serves as a workaround.
+    bool usedInParserSelect(const PhvInfo::Field* field) {
+        auto* state = findContext<IR::Tofino::ParserState>();
+        if (state == nullptr) return false;
+        for (auto expr : state->select)
+            if (self.phv.field(expr) == field) return true;
+        return false;
+    }
+
     IR::Primitive *preorder(IR::Primitive *prim) override {
-        if (prim->name == "extract" && self.phv.field(prim->operands[0]) &&
-            self.defuse.getUses(this, prim->operands[0]).empty()) {
-            LOG1("elim unused extract metadata " << prim);
-            return nullptr; }
-        return prim; }
+        if (prim->name != "extract") return prim;
+        auto field = self.phv.field(prim->operands[0]);
+        if (!field) return prim;
+        if (!self.defuse.getUses(this, prim->operands[0]).empty()) return prim;
+        if (usedInParserSelect(field)) return prim;
+        LOG1("elim unused extract metadata " << prim);
+        return nullptr; }
     IR::MAU::Instruction *preorder(IR::MAU::Instruction *i) override {
         if (i->operands[0] && self.defuse.getUses(this, i->operands[0]).empty()) {
             LOG1("elim unused instruction " << i);
@@ -22,6 +38,7 @@ class ElimUnused::ParserMetadata : public Transform {
     IR::GlobalRef *preorder(IR::GlobalRef *gr) override {
         prune();  // don't go through these.
         return gr; }
+
  public:
     explicit ParserMetadata(ElimUnused &self) : self(self) {}
 };
