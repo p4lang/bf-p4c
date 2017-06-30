@@ -47,14 +47,12 @@ limitations under the License.
 #include "tofino/mau/table_placement.h"
 #include "tofino/mau/table_seqdeps.h"
 #include "tofino/mau/table_summary.h"
-#include "tofino/parde/add_parde_metadata.h"
 #include "tofino/parde/asm_output.h"
 #include "tofino/parde/bridge_metadata.h"
 #include "tofino/parde/compute_shifts.h"
 #include "tofino/parde/digest.h"
 #include "tofino/parde/match_keys.h"
 #include "tofino/parde/split_big_states.h"
-#include "tofino/parde/split_header.h"
 #include "tofino/parde/stack_push_shims.h"
 #include "tofino/phv/asm_output.h"
 #include "tofino/phv/trivial_alloc.h"
@@ -196,7 +194,6 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
         &phv,
         &defuse,
         new AddBridgedMetadata(phv, defuse),
-        new AddMetadataShims,
         new Digests,
         &phv,  // only needed to avoid warnings about otherwise unused ingress/egress_port?
         new LiveAtEntry(phv),
@@ -245,10 +242,9 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
         Log::verbose() ? new VisitFunctor([&phv]() { std::cout << phv; }) : nullptr,
         new PHV::ValidateAllocation(phv),
         new IXBarRealign(phv),
-        new SplitExtractEmit,
         new TotalInstructionAdjustment(phv),
-        new LoadMatchKeys(phv),   // depends on SplitExtractEmit
-        new SplitPhvUse(phv),     // depends on SplitExtractEmit
+        new LoadMatchKeys(phv),
+        new SplitPhvUse(phv),
         new SplitBigStates(phv),  // depends on SplitPhvUse
         new DumpPipe("Final table graph"),
         new CheckTableNameDuplicate,

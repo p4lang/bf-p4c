@@ -1,14 +1,16 @@
 #include <ir/ir.h>
 #include "extract_parser.h"
+
 #include "lib/log.h"
+#include "tofino/parde/add_parde_metadata.h"
 
 namespace Tofino {
 
 class GetTofinoParser : public Inspector {
  public:
-    explicit GetTofinoParser(const IR::P4Parser *p) : container(p) {}
-    IR::Tofino::Parser *parser(gress_t);
-    cstring ingress_entry();
+    static const IR::Tofino::Parser*
+    extract(gress_t gress, const IR::P4Parser* parser,
+            bool filterSetMetadata = false);
 
     struct Context {
         /* records the path through the parser state machine from the start state to the
@@ -27,25 +29,84 @@ class GetTofinoParser : public Inspector {
     IR::Tofino::ParserState *state(cstring, const Context *);
 
  private:
+    GetTofinoParser(gress_t gress, bool filterSetMetadata)
+        : gress(gress), filterSetMetadata(filterSetMetadata) { }
+
     bool preorder(const IR::ParserState *) override;
 
-    const IR::P4Parser                         *container = 0;
     gress_t                                     gress = INGRESS;
     map<cstring, IR::Tofino::ParserState *>     states;
-    IR::ID                                      ingress_control;
+    bool                                        filterSetMetadata;
 };
 
-class RemoveSetMetadata : public Transform {
-    IR::Primitive *preorder(IR::Primitive *prim) override {
-        return prim->name == "set_metadata" ? nullptr : prim; }
+/* static */ const IR::Tofino::Parser*
+GetTofinoParser::extract(gress_t gress, const IR::P4Parser* parser,
+                         bool filterSetMetadata /* = false */) {
+    GetTofinoParser getter(gress, filterSetMetadata);
+    parser->apply(getter);
+    auto startState = getter.state("start", nullptr);
+    return new IR::Tofino::Parser(gress, startState);
+}
+
+// XXX(seth): This pass should go away; we should just perform this lowering
+// directly when converting to Tofino IR.
+class SplitExtractEmit : public PardeTransform {
+    IR::Node *preorder(IR::Primitive *p) override {
+        if (p->name != "extract" && p->name != "emit")
+            return p;
+        assert(p->operands.size() == 1);
+        auto *hdr = p->operands[0]->to<IR::HeaderRef>();
+        if (!hdr) return p;
+        auto *rv = new IR::Vector<IR::Expression>;
+        auto *hdr_type = hdr->type->to<IR::Type_StructLike>();
+        assert(hdr_type);
+        for (auto field : hdr_type->fields) {
+            IR::Expression *fref = new IR::Member(field->type, hdr, field->name);
+            rv->push_back(new IR::Primitive(p->srcInfo, p->name, fref)); }
+        if (p->name == "extract" && !hdr->baseRef()->is<IR::Metadata>()) {
+            rv->push_back(new IR::Primitive(p->srcInfo, "set_metadata",
+                new IR::Member(IR::Type::Bits::get(1), hdr, "$valid"),
+                new IR::Constant(1))); }
+        return rv;
+    }
 };
 
-ParserInfo extractParser(const IR::P4Parser* parser) {
-  GetTofinoParser parserGetter(parser);
+class LowerParser : public PassManager {
+ public:
+  explicit LowerParser(const IR::Tofino::Pipe* pipe) {
+      setName("LowerParser");
+      passes.push_back(new SplitExtractEmit);
+      passes.push_back(new AddMetadataShims(pipe));
+  }
+};
+
+ParserInfo extractParser(const IR::Tofino::Pipe* pipe,
+                         const IR::P4Parser* igParser,
+                         const IR::P4Control* igDeparser,
+                         const IR::P4Parser* egParser /* = nullptr */,
+                         const IR::P4Control* egDeparser /* = nullptr */) {
+  CHECK_NULL(igParser);
+  CHECK_NULL(igDeparser);
+
+  // Convert the parsers. If no egress parser was provided, we generate one from
+  // the ingress parser by removing all 'set_metadata' primitives.
+  auto tofinoIgParser = GetTofinoParser::extract(INGRESS, igParser);
+  auto tofinoEgParser = egParser != nullptr
+      ? GetTofinoParser::extract(EGRESS, egParser)
+      : GetTofinoParser::extract(EGRESS, igParser, /* filterSetMetadata = */ true);
+
+  // Convert the deparsers, generating the egress deparser if necessary.
+  const auto* tofinoIgDeparser = new IR::Tofino::Deparser(INGRESS, igDeparser);
+  const auto* tofinoEgDeparser = egDeparser != nullptr
+      ? new IR::Tofino::Deparser(EGRESS, egDeparser)
+      : new IR::Tofino::Deparser(EGRESS, tofinoEgParser);
+
+  LowerParser lowerParser(pipe);
   return {
-    parserGetter.parser(INGRESS),
-    parserGetter.parser(EGRESS)->apply(RemoveSetMetadata()),
-    parserGetter.ingress_entry()
+      tofinoIgParser->apply(lowerParser),
+      tofinoIgDeparser->apply(lowerParser),
+      tofinoEgParser->apply(lowerParser),
+      tofinoEgDeparser->apply(lowerParser)
   };
 }
 
@@ -82,6 +143,8 @@ class RewriteExtractNext : public Transform {
     typedef GetTofinoParser::Context Context;     // not to be confused with Visitor::Context
     const Context                 *ctxt;
     std::map<cstring, int>        adjust;
+    bool                          filterSetMetadata;
+
     const IR::Expression *preorder(IR::Member *name) override;
     const IR::Vector<IR::Expression> *preorder(IR::IndexedVector<IR::StatOrDecl> *vec) override {
         auto *rv = new IR::Vector<IR::Expression>;
@@ -106,6 +169,7 @@ class RewriteExtractNext : public Transform {
     const IR::Expression *preorder(IR::AssignmentStatement *s) override {
         if (!canEvaluateInParser(s->right))
             ::error("Assignment cannot be supported in the parser: %1%", s->right);
+        if (filterSetMetadata) return nullptr;
         return new IR::Primitive(s->srcInfo, "set_metadata", s->left, s->right); }
     const IR::Expression *preorder(IR::Statement *) override { BUG("Unhandled statement kind"); }
 
@@ -126,7 +190,8 @@ class RewriteExtractNext : public Transform {
 
  public:
     bool                        failed = false;
-    explicit RewriteExtractNext(const Context *c) : ctxt(c) {}
+    RewriteExtractNext(const Context *c, bool filterSetMetadata)
+        : ctxt(c), filterSetMetadata(filterSetMetadata) { }
 };
 
 const IR::Expression *RewriteExtractNext::preorder(IR::Member *m) {
@@ -217,7 +282,7 @@ IR::Tofino::ParserState *GetTofinoParser::state(cstring name, const Context *ctx
         rv->name = cstring::make_unique(states, name);
         states[rv->name] = rv; }
     if (!rv->match.empty()) return rv;
-    RewriteExtractNext rewrite(ctxt);
+    RewriteExtractNext rewrite(ctxt, filterSetMetadata);
     const IR::Vector<IR::Expression> *stmts;
     stmts = rv->p4state->components.Node::apply(rewrite)->to<IR::Vector<IR::Expression>>();
     if (rewrite.failed)
@@ -240,24 +305,6 @@ IR::Tofino::ParserState *GetTofinoParser::state(cstring name, const Context *ctx
         BUG("Invalid select expression %1%", rv->p4state->selectExpression); }
 
     return rv;
-}
-
-IR::Tofino::Parser *GetTofinoParser::parser(gress_t gress) {
-    if (this->gress != gress) {
-        states.clear();
-        this->gress = gress; }
-    if (states.empty()) {
-        LOG1("#GetTofinoParser");
-        container->apply(*this); }
-    return new IR::Tofino::Parser(gress, state("start", nullptr));
-}
-
-cstring GetTofinoParser::ingress_entry() {
-    if (!ingress_control && states.empty()) {
-        LOG1("#GetTofinoParser");
-        container->apply(*this);
-        state("start", nullptr); }
-    return ingress_control.name;
 }
 
 }  // namespace Tofino

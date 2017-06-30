@@ -562,17 +562,11 @@ const IR::Tofino::Pipe* extract_v1model_arch(P4::ReferenceMap* refMap, P4::TypeM
     egress = egress->apply(fixups);
     deparser = deparser->apply(fixups);
 
-    auto parserInfo = Tofino::extractParser(&parser->as<IR::P4Parser>());
-    auto in_parser = rv->thread[INGRESS].parser = parserInfo.parser(INGRESS);
-    if (deparser)
-        rv->thread[INGRESS].deparser = new IR::Tofino::Deparser(INGRESS, deparser);
-    else if (in_parser)
-        rv->thread[INGRESS].deparser = new IR::Tofino::Deparser(INGRESS, in_parser);
-    auto eg_parser = rv->thread[EGRESS].parser = parserInfo.parser(EGRESS);
-    if (deparser)
-        rv->thread[EGRESS].deparser = new IR::Tofino::Deparser(EGRESS, deparser);
-    else if (eg_parser)
-        rv->thread[EGRESS].deparser = new IR::Tofino::Deparser(EGRESS, eg_parser);
+    auto parserInfo = Tofino::extractParser(rv, parser, deparser);
+    for (auto gress : { INGRESS, EGRESS }) {
+        rv->thread[gress].parser = parserInfo.parser(gress);
+        rv->thread[gress].deparser = parserInfo.deparser(gress);
+    }
 
     // ingress = ingress->apply(InlineControlFlow(blockMap));
     ingress->apply(GetTofinoTables(refMap, typeMap, INGRESS, rv));
@@ -659,11 +653,12 @@ const IR::Tofino::Pipe* extract_native_arch(P4::ReferenceMap* refMap, P4::TypeMa
     egress = egress->apply(fixups);
     egress_deparser = egress_deparser->apply(fixups);
 
-    auto parserInfo = Tofino::extractParser(&ingress_parser->as<IR::P4Parser>());
-    rv->thread[INGRESS].parser = parserInfo.parser(INGRESS);
-    rv->thread[INGRESS].deparser = new IR::Tofino::Deparser(INGRESS, ingress_deparser);
-    rv->thread[EGRESS].parser = parserInfo.parser(EGRESS);
-    rv->thread[EGRESS].deparser = new IR::Tofino::Deparser(EGRESS, egress_deparser);
+    auto parserInfo = Tofino::extractParser(rv, ingress_parser, ingress_deparser,
+                                                egress_parser, egress_deparser);
+    for (auto gress : { INGRESS, EGRESS }) {
+        rv->thread[gress].parser = parserInfo.parser(gress);
+        rv->thread[gress].deparser = parserInfo.deparser(gress);
+    }
 
     ingress->apply(GetTofinoTables(refMap, typeMap, INGRESS, rv));
     egress->apply(GetTofinoTables(refMap, typeMap, EGRESS, rv));
