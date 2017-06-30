@@ -2,6 +2,8 @@
 #include <map>
 
 static std::map<std::pair<cstring, cstring>, std::pair<cstring, cstring>> remap = {
+    { { "ig_intr_md", "ingress_port" }, { "standard_metadata", "ingress_port" } },
+    { { "ig_intr_md", "resubmit_flag" }, { "standard_metadata", "resubmit_flag" } },
     { { "ig_intr_md_for_tm", "ucast_egress_port" }, { "standard_metadata", "egress_spec" } },
     { { "eg_intr_md", "egress_port" }, { "standard_metadata", "egress_port" } },
 #if 0
