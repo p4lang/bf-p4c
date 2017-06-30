@@ -9,6 +9,7 @@
 #include "tofino/mau/stateful_alu.h"
 #include "tofino/mau/table_dependency_graph.h"
 #include "tofino/parde/extract_parser.h"
+#include "tofino/parde/phase0.h"
 #include "tofino/tofinoOptions.h"
 #include "lib/algorithm.h"
 #include "lib/error.h"
@@ -558,8 +559,6 @@ const IR::Tofino::Pipe* extract_v1model_arch(P4::ReferenceMap* refMap, P4::TypeM
         new RewriteForTofino,
     };
     parser = parser->apply(fixups);
-    ingress = ingress->apply(fixups);
-    egress = egress->apply(fixups);
     deparser = deparser->apply(fixups);
 
     auto parserInfo = Tofino::extractParser(rv, parser, deparser);
@@ -567,6 +566,13 @@ const IR::Tofino::Pipe* extract_v1model_arch(P4::ReferenceMap* refMap, P4::TypeM
         rv->thread[gress].parser = parserInfo.parser(gress);
         rv->thread[gress].deparser = parserInfo.deparser(gress);
     }
+
+    // Check for a phase 0 table. If one exists, it'll be removed from the
+    // ingress pipeline and converted to a parser program.
+    std::tie(ingress, rv) = Tofino::extractPhase0(ingress, rv, refMap, typeMap);
+
+    ingress = ingress->apply(fixups);
+    egress = egress->apply(fixups);
 
     // ingress = ingress->apply(InlineControlFlow(blockMap));
     ingress->apply(GetTofinoTables(refMap, typeMap, INGRESS, rv));

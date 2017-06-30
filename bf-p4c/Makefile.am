@@ -111,6 +111,7 @@ tofino_backend_parde_UNIFIED = \
 	%reldir%/parde/gen_deparser.cpp \
 	%reldir%/parde/match_keys.cpp \
 	%reldir%/parde/parser_output.cpp \
+	%reldir%/parde/phase0.cpp \
 	%reldir%/parde/split_big_states.cpp
 
 noinst_HEADERS += \
@@ -121,6 +122,7 @@ noinst_HEADERS += \
 	%reldir%/parde/extract_parser.h \
 	%reldir%/parde/field_packing.h \
 	%reldir%/parde/match_keys.h \
+	%reldir%/parde/phase0.h \
 	%reldir%/parde/split_big_states.h
 
 cpplint_FILES += $(tofino_backend_parde_UNIFIED) $(tofino_backend_parde_NONUNIFIED)

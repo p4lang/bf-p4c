@@ -7,6 +7,7 @@
 #include "lib/indent.h"
 #include "lib/log.h"
 #include "lib/stringref.h"
+#include "tofino/parde/phase0.h"
 #include "tofino/phv/asm_output.h"
 #include "resource.h"
 
@@ -30,8 +31,11 @@ class MauAsmOutput::EmitAttached : public Inspector {
 std::ostream &operator<<(std::ostream &out, const MauAsmOutput &mauasm) {
     for (auto &stage : mauasm.by_stage) {
         out << "stage " << stage.first.second << ' ' << stage.first.first << ':' << std::endl;
+        if (stage.first.second == 0)
+            out << mauasm.pipe->phase0Info;
         for (auto tbl : stage.second)
-            mauasm.emit_table(out, tbl); }
+            mauasm.emit_table(out, tbl);
+    }
     return out;
 }
 

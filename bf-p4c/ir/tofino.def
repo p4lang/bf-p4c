@@ -10,6 +10,10 @@ struct StageUse {
     static constexpr int MAX_IXBAR_BYTES = 128;
     static constexpr int MAX_TERNARY_GROUPS = 12;
 };
+
+namespace Tofino {
+struct Phase0Info;
+}  // namespace Tofino
 #end
 
 #emit_impl
@@ -38,6 +42,12 @@ class Tofino::Pipe {
         }
     }
     thread_t[2] thread = {};  // INGRESS and EGRESS
+
+#emit
+    /// If non-null, the phase 0 metadata for this pipe.
+    ::Tofino::Phase0Info* phase0Info = nullptr;
+#end
+
 #apply
     operator== { return metadata == a.metadata &&
                         thread[0] == a.thread[0] && thread[1] == a.thread[1]; }
