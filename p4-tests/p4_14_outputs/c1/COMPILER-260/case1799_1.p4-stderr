@@ -1,0 +1,21 @@
+case1799_1.p4(1225): warning: Could not infer type for rEXFwh, using bit<8>
+action DURXNj(rEXFwh) {
+              ^^^^^^
+case1799_1.p4(1734): warning: -1: negative value with unsigned type
+   add_to_field(oADQdp.YiOJqy, -1);
+                                ^
+case1799_1.p4(1739): warning: -1: negative value with unsigned type
+   add_to_field(CsNnAq.zjHDzN, -1);
+                                ^
+stateful_alu_blackbox.p4(3): warning: stateful_alu: extern has attributes, which are not supported in P4-16, and thus are not emitted as P4-16
+blackbox_type stateful_alu {
+^
+stateful_alu_blackbox.p4(3): warning: stateful_alu: extern has attributes, which are not supported in P4-16, and thus are not emitted as P4-16
+blackbox_type stateful_alu {
+^
+stateful_alu_blackbox.p4(3): warning: stateful_alu: extern has attributes, which are not supported in P4-16, and thus are not emitted as P4-16
+blackbox_type stateful_alu {
+^
+stateful_alu_blackbox.p4(3): warning: stateful_alu: extern has attributes, which are not supported in P4-16, and thus are not emitted as P4-16
+blackbox_type stateful_alu {
+^

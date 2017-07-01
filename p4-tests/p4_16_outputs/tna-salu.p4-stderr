@@ -1,0 +1,6 @@
+tna-salu.p4(34): warning: out parameter ig_intr_tm_md may be uninitialized when IngressP terminates
+                 out ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
+                                                         ^^^^^^^^^^^^^
+tna-salu.p4(30)
+control IngressP(inout headers hdr,
+        ^^^^^^^^

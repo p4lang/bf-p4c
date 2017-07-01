@@ -1,0 +1,21 @@
+case2537.p4(2246): warning: -1: negative value with unsigned type
+   add_to_field(Bowdon.Pelican, -1);
+                                 ^
+case2537.p4(2251): warning: -1: negative value with unsigned type
+   add_to_field(Strasburg.Othello, -1);
+                                    ^
+case2537.p4(2455): warning: Could not infer type for Hettinger, using bit<8>
+action Alamosa( Hettinger ) {
+                ^^^^^^^^^
+stateful_alu_blackbox.p4(3): warning: stateful_alu: extern has attributes, which are not supported in P4-16, and thus are not emitted as P4-16
+blackbox_type stateful_alu {
+^
+stateful_alu_blackbox.p4(3): warning: stateful_alu: extern has attributes, which are not supported in P4-16, and thus are not emitted as P4-16
+blackbox_type stateful_alu {
+^
+stateful_alu_blackbox.p4(3): warning: stateful_alu: extern has attributes, which are not supported in P4-16, and thus are not emitted as P4-16
+blackbox_type stateful_alu {
+^
+stateful_alu_blackbox.p4(3): warning: stateful_alu: extern has attributes, which are not supported in P4-16, and thus are not emitted as P4-16
+blackbox_type stateful_alu {
+^

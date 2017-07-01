@@ -1,0 +1,18 @@
+case2387_1.p4(2298): warning: -1: negative value with unsigned type
+   add_to_field(Harlem.Perryton, -1);
+                                  ^
+case2387_1.p4(2303): warning: -1: negative value with unsigned type
+   add_to_field(Lugert.Anguilla, -1);
+                                  ^
+stateful_alu_blackbox.p4(3): warning: stateful_alu: extern has attributes, which are not supported in P4-16, and thus are not emitted as P4-16
+blackbox_type stateful_alu {
+^
+stateful_alu_blackbox.p4(3): warning: stateful_alu: extern has attributes, which are not supported in P4-16, and thus are not emitted as P4-16
+blackbox_type stateful_alu {
+^
+stateful_alu_blackbox.p4(3): warning: stateful_alu: extern has attributes, which are not supported in P4-16, and thus are not emitted as P4-16
+blackbox_type stateful_alu {
+^
+stateful_alu_blackbox.p4(3): warning: stateful_alu: extern has attributes, which are not supported in P4-16, and thus are not emitted as P4-16
+blackbox_type stateful_alu {
+^
