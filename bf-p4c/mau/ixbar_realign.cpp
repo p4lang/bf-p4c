@@ -107,6 +107,8 @@ void IXBarRealign::postorder(IR::MAU::Table *tbl) {
     auto &remap = stage_fix[tbl->stage()];
     if (remap.need_remap) {
         auto rsrc = new TableResourceAlloc(*tbl->resources);
-        if (remap.remap_use(rsrc->gateway_ixbar) | remap.remap_use(rsrc->match_ixbar))
-            tbl->resources = rsrc; }
+        if (remap.remap_use(rsrc->gateway_ixbar) | remap.remap_use(rsrc->match_ixbar)
+            | remap.remap_use(rsrc->selector_ixbar) | remap.remap_use(rsrc->salu_ixbar))
+            tbl->resources = rsrc;
+    }
 }

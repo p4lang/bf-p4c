@@ -325,9 +325,6 @@ XFAIL_TESTS += \
 # BRIG-100
 XFAIL_TESTS += \
 		tofino/%reldir%/p4_14/test_config_119_tcam_range_3.p4.test \
-		tofino/%reldir%/p4_14/test_config_121_tcam_range_5.p4.test \
-		tofino/%reldir%/p4_14/test_config_135_tcam_range_7.p4.test \
-		tofino/%reldir%/p4_14/test_config_136_tcam_error_detection.p4.test \
 		tofino/%reldir%/p4_14/test_config_85_table_ordering.p4.test \
 		tofino/testdata/p4_14_samples/exact_match7.p4.test
 
@@ -338,14 +335,11 @@ BRIG_101_XFAIL = \
 		tofino/%reldir%/p4_14/test_config_49_action_data_bit_masked_set_immediate.p4.test
 XFAIL_TESTS += $(BRIG_101_XFAIL)
 
-# asm error: placing ... off the top of the input xbar
-XFAIL_TESTS += tofino/testdata/p4_14_samples/acl1.p4.test
 # asm error: invalid src2 (due to constant out of range for 32-bit signed int)
 XFAIL_TESTS += tofino/testdata/p4_14_samples/source_routing.p4.test
 
 # BRIG-102
 XFAIL_TESTS += \
-		tofino/%reldir%/p4_14/test_config_120_tcam_range_4.p4.test \
 		tofino/%reldir%/p4_14/test_config_235_funnel_shift.p4.test \
 		tofino/%reldir%/p4_14/test_config_55_generate_digest.p4.test \
 		tofino/%reldir%/p4_14/test_config_96_hash_data.p4.test
@@ -438,8 +432,7 @@ XFAIL_TESTS += \
 XFAIL_TESTS += \
 		tofino/%reldir%/p4_14/09-MatchNoDep.p4.test \
 		tofino/%reldir%/p4_14/10-MatchNoDep1.p4.test \
-		tofino/%reldir%/p4_14/test_config_129_various_exact_match_keys.p4.test \
-		tofino/%reldir%/p4_14/test_config_181_first_alg_tcam.p4.test
+		tofino/%reldir%/p4_14/test_config_129_various_exact_match_keys.p4.test
 
 # BRIG-115
 XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_237_hash_action_17_bits.p4.test

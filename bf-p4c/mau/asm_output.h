@@ -28,10 +28,10 @@ class MauAsmOutput : public MauInspector {
     // class ImmedFormat;
     // class ActionDataFormat;
     void emit_ixbar(std::ostream &out, indent_t, const IXBar::Use &,
-            const Memories::Use *, const TableMatch *, bool hash_action,
+            const Memories::Use *, const TableMatch *, bool ternary, bool hash_action,
             bool is_sel = false, const IR::ActionSelector *as = nullptr) const;
     void emit_ixbar_gather_bytes(const vector<IXBar::Use::Byte> &use,
-                                 map<int, map<int, Slice>> &sort) const;
+                                 map<int, map<int, Slice>> &sort, bool ternary) const;
     void emit_ixbar_ways(std::ostream &out, indent_t indent,
              const IXBar::Use &use, const Memories::Use *mem, bool is_sel) const;
     void emit_ixbar_hash_dist(std::ostream &out, indent_t indent,

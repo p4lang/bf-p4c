@@ -512,9 +512,28 @@ int IXBar::free_bytes(grp_use *grp, vector<IXBar::Use::Byte *> &unalloced,
    following alignment constraints.  Specifically designed to handle the allocation of a large
    ternary group */
 int IXBar::free_bytes_big_group(big_grp_use *grp, vector<IXBar::Use::Byte*> &unalloced,
-                                vector<IXBar::Use::Byte *> &alloced) {
+                                vector<IXBar::Use::Byte *> &alloced, bool &version_placed) {
     int bytes_placed = 0;
     int free_bytes = grp->total_free();
+    int align = (grp->big_group * (2 * TERNARY_BYTES_PER_GROUP + 1)) & 3;
+
+    /* Version bit information has to be at the midbyte boundary.  However, if there is a hole
+       in the bits, then the code can go there. */
+    if (!version_placed) {
+        for (int i = 0; i < static_cast<int>(unalloced.size()); i++) {
+            if (free_bytes == 0)
+                break;
+            auto &need = *(unalloced[i]);
+            if (need.hi / 4 != need.lo / 4) continue;
+            if (align_flags[(TERNARY_BYTES_PER_GROUP + align) & 3] & need.flags) continue;
+            allocate_free_byte(nullptr, unalloced, alloced, need,
+                               grp->big_group * 2, 5, i, free_bytes, bytes_placed);
+            grp->mid_byte_free = false;
+            version_placed = true;
+            break;
+        }
+    }
+
 
     for (int i = 0; i < static_cast<int>(unalloced.size()); i++) {
         bool found = false;
@@ -522,8 +541,6 @@ int IXBar::free_bytes_big_group(big_grp_use *grp, vector<IXBar::Use::Byte*> &una
             break;
 
         auto &need = *(unalloced[i]);
-        int align = (grp->big_group * (2 * TERNARY_BYTES_PER_GROUP + 1)) & 3;
-
         /* Allocate free bytes within the first ternary group */
         for (auto byte : grp->first.free) {
             if (align_flags[(byte + align) & 3] & need.flags) continue;
@@ -556,7 +573,6 @@ int IXBar::free_bytes_big_group(big_grp_use *grp, vector<IXBar::Use::Byte*> &una
             grp->mid_byte_free = false;
         }
     }
-    LOG4("Total free bytes placed was " << bytes_placed);
     return bytes_placed;
 }
 
@@ -582,7 +598,9 @@ bool IXBar::big_grp_alloc(bool ternary, bool second_try, vector<IXBar::Use::Byte
                           vector<IXBar::Use::Byte *> &alloced, vector<big_grp_use> &order,
                           int big_groups_needed, int &total_bytes_needed, int bytes_per_big_group,
                           bool hash_dist, unsigned byte_mask) {
-    while (big_groups_needed > 1) {
+    bool version_placed = false;
+    int big_groups_max = 1;
+    while (big_groups_needed > big_groups_max) {
         int reduced_bytes_needed = total_bytes_needed % bytes_per_big_group;
         if (reduced_bytes_needed == 0)
             reduced_bytes_needed += bytes_per_big_group;
@@ -604,7 +622,7 @@ bool IXBar::big_grp_alloc(bool ternary, bool second_try, vector<IXBar::Use::Byte
         if (ternary) {
             LOG4("TCAM big group selected was " << order[0].big_group);
             bytes_placed += found_bytes_big_group(&order[0], unalloced);
-            bytes_placed += free_bytes_big_group(&order[0], unalloced, alloced);
+            bytes_placed += free_bytes_big_group(&order[0], unalloced, alloced, version_placed);
         } else {
             LOG4("SRAM group selected was " << order[0].first.group);
             bytes_placed += found_bytes(&order[0].first, unalloced, ternary);
@@ -619,7 +637,11 @@ bool IXBar::big_grp_alloc(bool ternary, bool second_try, vector<IXBar::Use::Byte
         /* FIXME: Need some calculations for 88 bit multiples */
         big_groups_needed = (total_bytes_needed + bytes_per_big_group - 1)/bytes_per_big_group;
         calculate_found(unalloced, order, ternary, hash_dist, byte_mask);
+        if (ternary && version_placed)
+            big_groups_max = 0;
     }
+
+
     return true;
 }
 
@@ -695,7 +717,6 @@ bool IXBar::find_alloc(vector<IXBar::Use::Byte> &alloc_use, bool ternary, bool s
     int bytes_per_big_group = ternary ? 11 : EXACT_BYTES_PER_GROUP;
 
     int total_bytes_needed = alloc_use.size();
-    LOG4("Total Bytes needed to allocate is " << total_bytes_needed);
     int big_groups_needed = (total_bytes_needed + bytes_per_big_group - 1)/bytes_per_big_group;
 
 
@@ -731,6 +752,15 @@ bool IXBar::find_alloc(vector<IXBar::Use::Byte> &alloc_use, bool ternary, bool s
             small_order.push_back(&order[i].second);
     }
     vector<IXBar::Use::Byte *> unalloced;
+
+    /* Try to place most constrained to least constrained bytes */
+    std::sort(alloc_use.begin(), alloc_use.end(), [=](const Use::Byte &a, const Use::Byte &b) {
+        int t;
+        if ((t = static_cast<size_t>(a.flags) - static_cast<size_t>(b.flags)) != 0)
+            return t > 0;
+        return a < b;
+    });
+
     for (auto &need : alloc_use) {
         unalloced.push_back(&need);
     }
@@ -759,7 +789,8 @@ bool IXBar::find_alloc(vector<IXBar::Use::Byte> &alloc_use, bool ternary, bool s
     /* While more than one individual group is necessary for the number of unallocated bytes */
     if (!big_grp_alloc(ternary, second_try, unalloced, alloced, order, big_groups_needed,
                        total_bytes_needed, bytes_per_big_group, hash_dist, byte_mask)) {
-        return false; }
+        return false;
+    }
 
     // Only one large group at most is necessary
     if (!small_grp_alloc(ternary, second_try, unalloced, alloced, small_order, order,
@@ -791,6 +822,7 @@ static void add_use(IXBar::Use &alloc, const PhvInfo::Field *field,
                     const PhvInfo::Field::bitrange *bits = nullptr, int flags = 0,
                     bool hash_dist = false) {
     bool ok = false;
+    int index = 0;
     field->foreach_byte(bits, [&](const PhvInfo::Field::alloc_slice &sl) {
         ok = true;  // FIXME -- better sanity check?
         IXBar::Use::Byte byte(field->name, sl.field_bit, sl.field_hi());
@@ -800,6 +832,7 @@ static void add_use(IXBar::Use &alloc, const PhvInfo::Field *field,
             alloc.hash_dist_use.back().use.push_back(byte);
         else
             alloc.use.push_back(byte);
+        index++;
     });
     if (!ok)
         ERROR("field " << field->name << " allocated to tagalong but used in MAU pipe");
@@ -1082,8 +1115,10 @@ bool IXBar::allocHashWay(const IR::MAU::Table *tbl,
     }
     for (auto ht : bitvec(hash_table_input)) {
         hash_index_use[ht][group] = tbl->name;
-        for (auto bit : bitvec(way_mask))
-            hash_single_bit_use[ht][bit] = tbl->name; }
+        for (auto bit : bitvec(way_mask)) {
+            hash_single_bit_use[ht][bit] = tbl->name;
+        }
+    }
     return true;
 }
 
@@ -1121,7 +1156,6 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
         alloc.clear();
         LOG3("collect.compute_offsets failed?");
         return false; }
-    LOG3("Collect bits is " << collect.bits);
     if (collect.bits > 0) {
         int hash_table_input = alloc.compute_hash_tables();
         int hash_group = getHashGroup(hash_table_input);
@@ -1132,11 +1166,12 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
          * tables for bytes we want to put through the hash table to get into the upper gw bits */
         unsigned avail = 0;
         unsigned need = (1U << collect.bits) - 1;
-        for (auto i : Range(0, HASH_SINGLE_BITS-1)) {
-            if ((hash_single_bit_inuse[i] & hash_table_input) == 0)
-                avail |= (1U << i); }
+        for (auto j : Range(0, HASH_SINGLE_BITS-1)) {
+            if ((hash_single_bit_inuse[j] & hash_table_input) == 0) {
+                avail |= (1U << j);
+            }
+        }
         int shift = 0;
-        LOG3("Avail is " << avail);
         while (((avail >> shift) & need) != need && shift < 12) {
             shift += 4;
         }
@@ -1152,12 +1187,10 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
                 alloc.bit_use.emplace_back(info.first->name, hash_group, offset.second.lo,
                                            offset.first - 32, offset.second.size()); } }
         for (auto &valid : collect.valid_offsets) {
-            LOG3("Valid.second " << valid.second);
             if (valid.second < 32) continue;
             valid.second += shift;
             alloc.bit_use.emplace_back(valid.first + ".$valid", hash_group, 0,
                                        valid.second - 32, 1); }
-        LOG3("Before bit_use size is " << alloc.bit_use.size());
         for (auto ht : bitvec(hash_table_input))
             for (int i = 0; i < collect.bits; ++i)
                 hash_single_bit_use[ht][shift + i] = tbl->name + "$gw";
@@ -1184,9 +1217,9 @@ bool IXBar::allocSelector(const IR::ActionSelector *, const IR::P4Table *match_t
         auto *field = key->expression;
         field_management(field, alloc, fields_needed, false, name, phv);
     }
+
     LOG3("need " << alloc.use.size() << " bytes for table " << match_table->name);
     LOG3("need fields " << fields_needed);
-
     bool rv = find_alloc(alloc.use, false, second_try, alloced, HASH_INDEX_GROUPS);
     unsigned hash_table_input = 0;
     if (rv)
@@ -1203,12 +1236,14 @@ bool IXBar::allocSelector(const IR::ActionSelector *, const IR::P4Table *match_t
     fill_out_use(alloced, false);
     for (int i = 0; i < HASH_TABLES; i++) {
         if ((1U << i) & hash_table_input) {
-            for (int j = 0; j < HASH_INDEX_GROUPS; j++)
+            for (int j = 0; j < HASH_INDEX_GROUPS; j++) {
                 hash_index_use[i][j] = name + "$select";
-            hash_index_inuse[i] |= 0xf;
-            for (int j = 0; j < HASH_SINGLE_BITS; j++)
+                hash_index_inuse[j] |= (1 << i);
+            }
+            for (int j = 0; j < HASH_SINGLE_BITS; j++) {
                 hash_single_bit_use[i][j] = name + "$select";
-            hash_single_bit_inuse[i] |= 0xfff;
+                hash_single_bit_inuse[j] |= (1 << i);
+            }
         }
     }
     hash_group_print_use[hash_group] = name + "$select";
@@ -1610,12 +1645,14 @@ void IXBar::update(cstring name, const Use &alloc) {
     for (auto &select : alloc.select_use) {
         for (int i = 0; i < HASH_TABLES; i++) {
             if ((1U << i) & alloc.hash_table_inputs[select.group]) {
-                for (int j = 0; j < HASH_INDEX_GROUPS; j++)
+                for (int j = 0; j < HASH_INDEX_GROUPS; j++) {
                     hash_index_use[i][j] = name;
-                hash_index_inuse[i] |= 0xf;
-                for (int j = 0; j < HASH_SINGLE_BITS; j++)
+                    hash_index_inuse[j] |= (1 << i);
+                }
+                for (int j = 0; j < HASH_SINGLE_BITS; j++) {
                     hash_single_bit_use[i][j] = name;
-                hash_single_bit_inuse[i] |= 0xfff;
+                    hash_single_bit_inuse[j] |= (1 << i);
+                }
             }
         }
         hash_group_print_use[select.group] = name;

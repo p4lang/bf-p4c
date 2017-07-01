@@ -206,11 +206,45 @@ std::ostream &operator<<(std::ostream &out, const FormatHash &hash) {
 
 /* Calculate the hash tables used by an individual P4 table in the IXBar */
 void MauAsmOutput::emit_ixbar_gather_bytes(const vector<IXBar::Use::Byte> &use,
-        map<int, map<int, Slice>> &sort) const {
+        map<int, map<int, Slice>> &sort, bool ternary) const {
     for (auto &b : use) {
-        Slice sl(phv, b.field, b.lo, b.hi);
-        auto n = sort[b.loc.group].emplace(b.loc.byte*8 + sl.bytealign(), sl);
-        assert(n.second);
+        int byte_loc = IXBar::TERNARY_BYTES_PER_GROUP;
+        int split_byte = 4;
+        if (b.loc.byte == byte_loc && ternary) {
+            auto *field = phv.field(b.field);
+            field->foreach_byte([&](const PhvInfo::Field::alloc_slice &sl) {
+                if (sl.field_bit != b.lo) return;
+                if ((sl.container_bit % 8)  >= split_byte) {
+                    int lo = std::max(b.hi - split_byte + 1, b.lo);
+                    Slice sl(phv, b.field, lo, b.hi);
+                    auto n = sort[b.loc.group + 1].emplace(byte_loc*8 + sl.bytealign() - 4, sl);
+                    assert(n.second);
+                } else {
+                    Slice sl(phv, b.field, b.lo, b.hi);
+                    auto n = sort[b.loc.group].emplace(b.loc.byte*8 + sl.bytealign(), sl);
+                    assert(n.second);
+                }
+                /* Should be the code if the assembly parsing was reasonable
+                if ((sl.container_bit % 8) < split_byte) {
+                    int hi = std::min(b.hi, b.lo + split_byte - 1);
+                    Slice sl(phv, b.field, b.lo, hi);
+                    auto n = sort[b.loc.group].emplace(byte_loc*8 + sl.bytealign(), sl);
+                    assert(n.second);
+                }
+                if ((sl.container_hi()% 8) >= split_byte) {
+                    int lo = std::max(b.hi - split_byte + 1, b.lo);
+                    Slice sl(phv, b.field, lo, b.hi);
+                    auto n = sort[b.loc.group + 1].emplace(byte_loc*8 + sl.bytealign() - 4, sl);
+                    assert(n.second);
+                }
+                */
+            });
+
+        } else {
+            Slice sl(phv, b.field, b.lo, b.hi);
+            auto n = sort[b.loc.group].emplace(b.loc.byte*8 + sl.bytealign(), sl);
+            assert(n.second);
+        }
     }
     for (auto &group : sort) {
         auto it = group.second.begin();
@@ -375,14 +409,14 @@ void MauAsmOutput::emit_ixbar_hash_dist_hash(std::ostream &out, indent_t indent,
 
 /* Emit the ixbar use for a particular type of table */
 void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent,
-        const IXBar::Use &use, const Memories::Use *mem, const TableMatch *fmt,
+        const IXBar::Use &use, const Memories::Use *mem, const TableMatch *fmt, bool ternary,
         bool /*hash_action*/, bool is_sel /*= false*/,
         const IR::ActionSelector *as /*= nullptr */) const {
     map<int, map<int, Slice>> sort;
     map<int, map<int, Slice>> total_sort;
     emit_ixbar_ways(out, indent, use, mem, is_sel);
     emit_ixbar_hash_dist(out, indent, use);
-    emit_ixbar_gather_bytes(use.use, sort);
+    emit_ixbar_gather_bytes(use.use, sort, ternary);
     if (use.use.empty() && use.hash_dist_use.empty()) {
         return;
     }
@@ -412,7 +446,7 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent,
     }
     for (auto hash_dist : use.hash_dist_use) {
         sort.clear();
-        emit_ixbar_gather_bytes(hash_dist.use, sort);
+        emit_ixbar_gather_bytes(hash_dist.use, sort, false);
         for (auto &group : sort)
             out << indent << "exact group " << group.first << ": " << group.second << std::endl;
         for (int ht : bitvec(hash_dist.hash_table_input)) {
@@ -1040,7 +1074,8 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
         auto memuse_name = tbl->get_use_name();
         emit_memory(out, indent, tbl->resources->memuse.at(memuse_name));
         emit_ixbar(out, indent, tbl->resources->match_ixbar,
-                   &tbl->resources->memuse.at(memuse_name), &fmt, tbl->layout.hash_action);
+                   &tbl->resources->memuse.at(memuse_name), &fmt, tbl->layout.ternary,
+                   tbl->layout.hash_action);
         if (!tbl->layout.ternary && !tbl->layout.no_match_data()) {
             emit_table_format(out, indent, tbl->resources->table_format, &fmt, false);
         }
@@ -1068,7 +1103,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
         indent_t gw_indent = indent;
         if (tbl->match_table)
             out << gw_indent++ << "gateway:" << std::endl;
-        emit_ixbar(out, gw_indent, tbl->resources->gateway_ixbar, 0, &fmt,
+        emit_ixbar(out, gw_indent, tbl->resources->gateway_ixbar, 0, &fmt, false,
                    tbl->layout.hash_action);
         for (auto &use : Values(tbl->resources->memuse))
             if (use.type == Memories::Use::GATEWAY) {
@@ -1398,7 +1433,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::ActionSelector *as) {
     out << indent++ << "selection " << name << ":" << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(name));
     self.emit_ixbar(out, indent, tbl->resources->selector_ixbar,
-                    &tbl->resources->memuse.at(name), nullptr, false, true, as);
+                    &tbl->resources->memuse.at(name), nullptr, false, false, true, as);
     out << indent << "mode: " << as->mode.name << " 0" << std::endl;
     return false;
 }
@@ -1440,7 +1475,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
     out << indent << "p4: { name: " << canon_name(salu->name) << " }" << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(name));
     self.emit_ixbar(out, indent, tbl->resources->salu_ixbar,
-                    &tbl->resources->memuse.at(name), nullptr, false);
+                    &tbl->resources->memuse.at(name), nullptr, false, false);
     out << indent << "format: { lo: ";
     if (salu->dual)
         out << salu->width/2 << ", hi:" << salu->width/2;

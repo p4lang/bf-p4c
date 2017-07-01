@@ -286,7 +286,7 @@ struct IXBar {
                    vector<IXBar::Use::Byte *> &alloced, bool ternary, bool hash_dist);
     int found_bytes_big_group(big_grp_use *grp, vector<IXBar::Use::Byte *> &unalloced);
     int free_bytes_big_group(big_grp_use *grp, vector<IXBar::Use::Byte *> &unalloced,
-                                 vector<IXBar::Use::Byte *> &alloced);
+                             vector<IXBar::Use::Byte *> &alloced, bool &version_placed);
     void allocate_free_byte(grp_use *grp, vector<IXBar::Use::Byte *> &unalloced,
                             vector<IXBar::Use::Byte *> &alloced, IXBar::Use::Byte &need,
                             int group, int byte, int &index, int &free_bytes, int &bytes_placed);
