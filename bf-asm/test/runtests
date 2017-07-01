@@ -239,12 +239,17 @@ function test_p4() {
     else
         rm -f $name.tfa
         if $brig; then
-            if run $BRIG -D__TARGET_TOFINO__ ../$name.p4 -o out.tfa </dev/null >brig.log 2>&1; then
-                clog='brig.log'
+            clog='brig.log'
+            if not run $BRIG -D__TARGET_TOFINO__ ../$name.p4 -o out.tfa </dev/null >brig.log 2>&1; then
+                ok=false
             fi
-        elif run $GLSC -o . --verbose 2 -vl 2 -S -G $glsc_args ../$name.p4 </dev/null >glsc.log 2>&1; then
-            clog='glsc.log'
         else
+            clog='glsc.log'
+            if not run $GLSC -o . --verbose 2 -vl 2 -S -G $glsc_args ../$name.p4 </dev/null >glsc.log 2>&1; then
+                ok=false
+            fi
+        fi
+        if not $ok; then
             msg="$msg p4 compile failed"
             fail_type="compile"
             rv=1
@@ -373,7 +378,9 @@ function test_tfa() {
     if not run $TFAS -Mvvvvl $name.out/tfas.config.log $name.tfa >$name.out/tfas.log 2>&1; then
         msg="$msg tfas failed"
         fail_type="tfas"
-        flock $FAILLOG -c "echo '$1:' >>$FAILLOG; sed -e 's/^/ /' -e '/\n/!a\' $name.out/tfas.log >>$FAILLOG"
+        if [ $count -eq 1 ] || [ "$expect_fail" != "tfas" ]; then
+            flock $FAILLOG -c "echo '$1:' >>$FAILLOG; sed -e 's/^/ /' -e '/\n/!a\' $name.out/tfas.log >>$FAILLOG"
+        fi
         rv=1
         ok=false
     else

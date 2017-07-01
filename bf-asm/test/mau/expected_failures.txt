@@ -28,6 +28,17 @@ test_config_97_unrelated_tables.p4 mismatch
 test_config_103_first_phase_0.p4 mismatch
 - data duplicated on ixbar; assembler always uses first copy in byteswizzle
 
+12-SmallToBigFieldWithMask8.p4 mismatch
+22-BigToSmallFieldWithMask8.p4 mismatch
+action_params.p4 mismatch
+test_config_114_simple_drop.p4 mismatch
+test_config_130_test_default_action.p4 mismatch
+test_config_140_table_counter.p4 mismatch
+test_config_182_warp_primitive.p4 mismatch
+test_config_208_table_no_key.p4 mismatch
+test_config_25_no_reads_for_table.p4 mismatch
+- missing default_action.allowed_to_be_default_action in tbl-cfg
+
 - uncharacterized failures (FIXME)
 01-FlexCounter.p4 compile
 02-FlexCounterActionProfile.p4 compile
@@ -68,7 +79,7 @@ test_config_165_stateful_bfd_failure_detection.p4 mismatch
 test_config_166_stateful_generic_counter.p4 mismatch
 test_config_167_stateful_flowlet_switching.p4 compile
 test_config_168_meter_bug.p4 mismatch
-test_config_169_stateful_sflow_sequence.p4 mismatch
+test_config_169_stateful_sflow_sequence.p4 tfas
 test_config_170_stateful_selection_table_update.p4 mismatch
 test_config_171_stateful_conga.p4 compile
 test_config_172_stateful_heavy_hitter.p4 tfas
