@@ -1,6 +1,7 @@
 #include "lib/bitops.h"
 #include "lib/range.h"
 #include "memories.h"
+#include "resource.h"
 #include "resource_estimate.h"
 #include "mau_visitor.h"
 
@@ -2082,7 +2083,7 @@ bool Memories::allocate_all_payload_gw() {
 }
 
 /* Allocation of a standard gateway.  Has search bus requirements and thus can potentially
-   share with exact match search buses.  If no search bus is found, it just finds the first 
+   share with exact match search buses.  If no search bus is found, it just finds the first
    open search bus to use.  */
 bool Memories::allocate_all_normal_gw() {
     size_t normal_index = 0;

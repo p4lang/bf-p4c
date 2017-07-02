@@ -1,3 +1,4 @@
+#include <ir/ir.h>
 #include "extract_parser.h"
 #include "lib/log.h"
 

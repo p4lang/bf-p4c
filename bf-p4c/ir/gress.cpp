@@ -1,3 +1,5 @@
+#include <lib/cstring.h>
+#include <lib/exceptions.h>
 #include "gress.h"
 
 static cstring toString(gress_t gress) {

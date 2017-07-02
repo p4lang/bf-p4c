@@ -1,13 +1,14 @@
 #ifndef _TOFINO_MAU_ACTION_DATA_BUS_H_
 #define _TOFINO_MAU_ACTION_DATA_BUS_H_
 
+#include <lib/alloc.h>
 #include "tofino/mau/table_layout.h"
 #include "tofino/mau/action_format.h"
 
 /** Algorithm for the allocation of the action data bus.  The action data bus is broken into
  *  3 parts, a BYTE, HALF, and FULL region.  The byte and half regions are mutually exclusive,
  *  while the full region shares places with the byte and half region.  There are 32 outputs
- *  for each type of container region.  The bytes 0-31 are for the byte region, bytes 32-95 
+ *  for each type of container region.  The bytes 0-31 are for the byte region, bytes 32-95
  *  are for the half region, and all 128 bytes are for the full regions.  Because actions
  *  within the same table are mutually exclusive, FULLs can potentially share locations with
  *  BYTES and HALFs on the action data bus.
@@ -18,7 +19,7 @@
  *
  *  The rules for allocation are set by the uArch on section 5.2.5.1/6.2.5.1 on the Action Data
  *  Bus.  The section is titled Action Output HV Xbar Programming, under the section Action
- *  Output HV Xbar(s) in the Section RAM Array.  The bytes are broken into 16 byte regions 
+ *  Output HV Xbar(s) in the Section RAM Array.  The bytes are broken into 16 byte regions
  *  and bytes in particular offsets of the action data table have to be allocated contiguously
  *  within these 16 byte regions.  The constraints are better detailed over the alloc_bytes,
  *  alloc_halves, and alloc_fulls function calls.

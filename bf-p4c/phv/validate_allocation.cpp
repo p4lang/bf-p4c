@@ -14,14 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "tofino/phv/validate_allocation.h"
 
 #include <algorithm>
 #include <iterator>
 #include <sstream>
 
 #include "lib/cstring.h"
+#include "ir/ir.h"
 #include "tofino/phv/phv.h"
+#include "tofino/phv/validate_allocation.h"
 
 #if 1
 #undef ERROR_CHECK

@@ -6,6 +6,9 @@
 #include "lib/ordered_map.h"
 #include "lib/range.h"
 #include "tofino/ir/thread_visitor.h"
+#include "cluster.h"
+#include "cluster_phv_container.h"
+#include "phv_fields.h"
 //
 //***********************************************************************************
 //

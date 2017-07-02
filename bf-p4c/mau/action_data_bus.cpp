@@ -1,4 +1,5 @@
 #include "tofino/mau/action_data_bus.h"
+#include "tofino/mau/resource.h"
 
 constexpr int ActionDataBus::ADB_STARTS[];
 
@@ -104,7 +105,7 @@ bool ActionDataBus::find_location(ActionFormat::cont_type_t type, bitvec adjacen
     return found;
 }
 
-/** An algorithm to find a space in the region below the paired offset region.  
+/** An algorithm to find a space in the region below the paired offset region.
  */
 bool ActionDataBus::find_lower_location(ActionFormat::cont_type_t type, bitvec adjacent,
                                         int diff, int &start_byte) {
@@ -169,7 +170,7 @@ bitvec ActionDataBus::paired_space(ActionFormat::cont_type_t type, bitvec adjace
 }
 
 /** Reserves the action data bus space within the bitvecs, and adds it to the Use structure
- *  for the region.  Must only reserve the spaces for the actual bytes, and comes up with 
+ *  for the region.  Must only reserve the spaces for the actual bytes, and comes up with
  *  the correct name for the assembly output.
  */
 void ActionDataBus::reserve_space(vector<Use::ReservedSpace> &reserved_spaces,
@@ -493,7 +494,7 @@ bool ActionDataBus::fit_immed_sect(vector<Use::ReservedSpace> &reserved_spaces, 
 }
 
 /** Allocation of both the byte and half word requirements of the immediate section, specified
- *  by type.  Because of the nature of the mod 4 per byte on the action immediate constraint, 
+ *  by type.  Because of the nature of the mod 4 per byte on the action immediate constraint,
  *  the algorithms are extremely similar for halves and bytes
  */
 bool ActionDataBus::alloc_unshared_immed(vector<Use::ReservedSpace> &reserved_spaces,
@@ -661,4 +662,3 @@ void ActionDataBus::update(cstring name, const Use &alloc) {
 void ActionDataBus::update(cstring name, const TableResourceAlloc *alloc) {
     update(name, alloc->action_data_xbar);
 }
-

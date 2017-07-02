@@ -1,3 +1,4 @@
+#include "cluster_phv_container.h"
 #include "cluster_phv_operations.h"
 #include "lib/log.h"
 

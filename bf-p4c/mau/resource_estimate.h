@@ -2,7 +2,6 @@
 #define _TOFINO_MAU_RESOURCE_ESTIMATE_H_
 
 #include "table_layout.h"
-#include "resource.h"
 
 struct StageUseEstimate {
     int logical_ids;
