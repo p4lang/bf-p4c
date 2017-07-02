@@ -14,22 +14,57 @@
 
 MESSAGE("-- Adding BFN Compiler test suite")
 
-# set(BMV2_DRIVER ${CMAKE_CURRENT_SOURCE_DIR}/run-bmv2-test.py)
+include(TofinoXfail.cmake)
 
-# set (BMV2_TEST_SUITES
-#   "${P4C_SOURCE_DIR}/testdata/p4_16_samples/*-bmv2.p4"
-#   "${P4C_SOURCE_DIR}/testdata/p4_16_bmv_errors/*-bmv2.p4"
-#   "${P4C_SOURCE_DIR}/testdata/p4_14_samples/*.p4"
-#   "${P4C_SOURCE_DIR}/testdata/p4_14_samples/switch_*/switch.p4"
-#   )
+set (TOFINO_RUNTEST ${CMAKE_CURRENT_SOURCE_DIR}/runtest)
 
-# # This test defines two lpm keys for a table.
-# # Even though the P4 spec allows it, it doesn't really make sense in a switch
-# # so we allow it to fail on BMv2.
-# set (XFAIL_TESTS
-#   testdata/p4_14_samples/issue60.p4
-#   )
+#   $(shell grep -l main $(shell grep -l -E '(v1model|psa)\.p4'
+#	   $(srcdir)/testdata/p4_16_samples/*.p4))
+set (TOFINO_TEST_SUITES
+  ${P4C_SRC_DIR}/testdata/p4_14_samples/*.p4
+  ${P4C_SRC_DIR}/testdata/p4_14_samples/switch_*/switch.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/*.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/google-tor/p4/spec/tor.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/*.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c1/*/*.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c2/*/*.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c3/*/*.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/jenkins/*/*.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch_*/switch.p4
+  )
 
+p4c_add_tests("tofino" ${TOFINO_DRIVER} "${TOFINO_TEST_SUITES}" ${XFAIL_TESTS})
+
+# We have additional test inputs that are used to test the other (standard) back-ends
+# These test input programs depend on Tofino in some way.
+
+# Exercise v12 back-end on Tofino-specific programs
+set (P14_TEST_SUITES
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/*.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c1/*/*.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c2/*/*.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c3/*/*.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/jenkins/*/*.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch_*/switch.p4
+  )
+
+set (V12_DRIVER ${CMAKE_CURRENT_SOURCE_DIR}/test-v12-sample.sh)
+p4c_add_tests("p14_to_16" ${V12_DRIVER} "${P14_TEST_SUITES}" ${XFAIL_TESTS})
+
+set (P16_TEST_SUITES
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/*.p4
+  )
+set (P4TEST_DRIVER ${P4C_SOURCE_DIR}/backends/p4test/run-p4-sample.py)
+p4c_add_tests("p4" ${P4TEST_DRIVER} "${P16_TEST_SUITES}" ${XFAIL_TESTS})
+
+# $(shell grep -L 'tofino/stateful_alu_blackbox'
+#    $(shell grep -L 'tofino/stateful_alu' \
+#	$(shell grep -l main $(shell grep -l -E '(v1model|psa)\.p4' \
+# Exercise bmv2 back-end on Tofino-specific programs
+set (BMV2_TEST_SUITES
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/*.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch_*/switch.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/*.p4
+  )
+set(BMV2_DRIVER ${P4C_SOURCE_DIR}/backends/bmv2/run-bmv2-test.py)
 # p4c_add_tests("bmv2" ${BMV2_DRIVER} "${BMV2_TEST_SUITES}" ${XFAIL_TESTS})
-# # store the tags in a global list to enable check-* make rules
-# set (TEST_TAGS ${TEST_TAGS} "bmv2" PARENT_SCOPE)

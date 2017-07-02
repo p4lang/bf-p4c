@@ -14,7 +14,7 @@
 
 ####### Tofino back-end
 
-MESSAGE("Adding p4c-tofino")
+MESSAGE("-- Adding p4c-tofino")
 
 find_package (Boost REQUIRED COMPONENTS graph)
 add_definitions("-DBOOST_NO_ARGUMENT_DEPENDENT_LOOKUP")
@@ -208,7 +208,6 @@ set (TOFINO_IR_DEF_FILES
   )
 # publish IR_DEF_FILES upstream
 set (IR_DEF_FILES ${IR_DEF_FILES} ${TOFINO_IR_DEF_FILES} PARENT_SCOPE)
-MESSAGE("*** Tofino IR files: ${TOFINO_IR_DEF_FILES}")
 
 set (p4include_HEADERS
   p4include/tofino_model.p4
