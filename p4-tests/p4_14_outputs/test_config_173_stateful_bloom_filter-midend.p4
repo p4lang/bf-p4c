@@ -192,13 +192,7 @@ struct headers {
     @name("udp") 
     udp_t                                          udp;
 }
-
-extern stateful_alu {
-    void execute_stateful_alu(@optional in bit<32> index);
-    void execute_stateful_alu_from_hash<FL>(in FL hash_field_list);
-    void execute_stateful_log();
-    stateful_alu();
-}
+#include <tofino/stateful_alu.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".parse_ethernet") state parse_ethernet {
@@ -236,6 +230,9 @@ struct tuple_0 {
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    bit<1> tmp_2;
+    bit<1> tmp_3;
+    bit<1> tmp_4;
     @name("NoAction") action NoAction_0() {
     }
     @name("NoAction") action NoAction_8() {
@@ -253,17 +250,35 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".bloom_filter_1") register<bit<1>>(32w262144) bloom_filter_1;
     @name(".bloom_filter_2") register<bit<1>>(32w262144) bloom_filter_2;
     @name(".bloom_filter_3") register<bit<1>>(32w262144) bloom_filter_3;
-    @name("bloom_filter_alu_1") stateful_alu() bloom_filter_alu_1;
-    @name("bloom_filter_alu_2") stateful_alu() bloom_filter_alu_2;
-    @name("bloom_filter_alu_3") stateful_alu() bloom_filter_alu_3;
+    @name("bloom_filter_alu_1") register_action<bit<1>, bit<1>>(bloom_filter_1) bloom_filter_alu_1 = {
+        void apply(inout bit<1> value, out bit<1> rv) {
+            value = 1w1;
+            rv = 1w1;
+        }
+    };
+    @name("bloom_filter_alu_2") register_action<bit<1>, bit<1>>(bloom_filter_2) bloom_filter_alu_2 = {
+        void apply(inout bit<1> value, out bit<1> rv) {
+            value = 1w1;
+            rv = 1w1;
+        }
+    };
+    @name("bloom_filter_alu_3") register_action<bit<1>, bit<1>>(bloom_filter_3) bloom_filter_alu_3 = {
+        void apply(inout bit<1> value, out bit<1> rv) {
+            value = 1w1;
+            rv = 1w1;
+        }
+    };
     @name(".run_bloom_filter_1") action run_bloom_filter() {
-        bloom_filter_alu_1.execute_stateful_alu((bit<32>)meta.meta.hash_1);
+        tmp_2 = bloom_filter_alu_1.execute((bit<32>)meta.meta.hash_1);
+        meta.meta.is_not_member = tmp_2;
     }
     @name(".run_bloom_filter_2") action run_bloom_filter_0() {
-        bloom_filter_alu_2.execute_stateful_alu();
+        tmp_3 = bloom_filter_alu_2.execute();
+        meta.meta.is_not_member = tmp_3;
     }
     @name(".run_bloom_filter_3") action run_bloom_filter_4() {
-        bloom_filter_alu_3.execute_stateful_alu();
+        tmp_4 = bloom_filter_alu_3.execute();
+        meta.meta.is_not_member = tmp_4;
     }
     @name(".drop_me") action drop_me_0() {
         mark_to_drop();

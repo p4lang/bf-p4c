@@ -155,13 +155,7 @@ struct headers {
     @name("pkt") 
     pkt_t                                          pkt;
 }
-
-extern stateful_alu {
-    void execute_stateful_alu(@optional in bit<32> index);
-    void execute_stateful_alu_from_hash<FL>(in FL hash_field_list);
-    void execute_stateful_log();
-    stateful_alu();
-}
+#include <tofino/stateful_alu.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".parse_ethernet") state parse_ethernet {
@@ -174,6 +168,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    bit<16> tmp_1;
+    bit<8> tmp_2;
     @name("NoAction") action NoAction_0() {
     }
     @name("NoAction") action NoAction_4() {
@@ -183,17 +179,37 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".flow_cnt") register<bit<8>>(32w0) flow_cnt;
     @name(".stateful_cntr_1") register<bit<16>>(32w0) stateful_cntr_1;
     @name(".stateful_cntr_2") register<bit<16>>(32w0) stateful_cntr_2;
-    @name("cntr_1") stateful_alu() cntr_1;
-    @name("cntr_2") stateful_alu() cntr_2;
-    @name("sampler_alu") stateful_alu() sampler_alu;
+    @name("cntr_1") register_action<bit<16>, bit<16>>(stateful_cntr_1) cntr_1 = {
+        void apply(inout bit<16> value, out bit<16> rv) {
+            value = value + 16w1;
+        }
+    };
+    @name("cntr_2") register_action<bit<16>, bit<16>>(stateful_cntr_2) cntr_2 = {
+        void apply(inout bit<16> value, out bit<16> rv) {
+            value = value + 16w1;
+            rv = value;
+        }
+    };
+    @name("sampler_alu") register_action<bit<8>, bit<8>>(flow_cnt) sampler_alu = {
+        void apply(inout bit<8> value, out bit<8> rv) {
+            if (value == 8w10) 
+                value = 8w1;
+            if (value != 8w10) 
+                value = value + 8w1;
+            if (value == 8w10) 
+                rv = value;
+        }
+    };
     @name(".cnt_1") action cnt() {
-        cntr_1.execute_stateful_alu();
+        cntr_1.execute();
     }
     @name(".cnt_2") action cnt_0() {
-        cntr_2.execute_stateful_alu();
+        tmp_1 = cntr_2.execute();
+        meta.meta.count_value = tmp_1;
     }
     @name(".sample") action sample_0() {
-        sampler_alu.execute_stateful_alu();
+        tmp_2 = sampler_alu.execute();
+        meta.meta.needs_sampling = tmp_2;
     }
     @table_counter("disabled") @name(".match_cntr_1") table match_cntr_1 {
         actions = {

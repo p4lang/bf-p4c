@@ -198,16 +198,10 @@ struct headers {
     @name("udp") 
     udp_t                                          udp;
 }
-
-extern stateful_alu {
-    void execute_stateful_alu(@optional in bit<32> index);
-    void execute_stateful_alu_from_hash<FL>(in FL hash_field_list);
-    void execute_stateful_log();
-    stateful_alu();
-}
+#include <tofino/stateful_alu.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<8> tmp_1;
+    bit<8> tmp_2;
     @name(".parse_ethernet") state parse_ethernet {
         packet.extract<ethernet_t>(hdr.ethernet);
         transition select(hdr.ethernet.ethertype) {
@@ -239,8 +233,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
         }
     }
     @name(".start") state start {
-        tmp_1 = packet.lookahead<bit<8>>();
-        transition select(tmp_1[7:0]) {
+        tmp_2 = packet.lookahead<bit<8>>();
+        transition select(tmp_2[7:0]) {
             default: parse_ethernet;
         }
     }
@@ -256,7 +250,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bool tmp_2;
+    bit<32> tmp_3;
+    bool tmp_4;
     @name("NoAction") action NoAction_0() {
     }
     @name("NoAction") action NoAction_6() {
@@ -268,7 +263,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("NoAction") action NoAction_9() {
     }
     @name(".kv_register") register<bit<32>>(32w8192) kv_register;
-    @name("kv_alu") stateful_alu() kv_alu;
+    @name("kv_alu") register_action<bit<32>, bit<32>>(kv_register) kv_alu = {
+        void apply(inout bit<32> value, out bit<32> rv) {
+            rv = value;
+        }
+    };
     @name(".set_egr_port") action set_egr_port_0(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
@@ -279,7 +278,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.md.nh_id = nh;
     }
     @name(".kv_read") action kv_read_0(bit<32> index) {
-        kv_alu.execute_stateful_alu(index);
+        tmp_3 = kv_alu.execute(index);
+        hdr.kv.value = tmp_3;
     }
     @name(".set_egr_ifid") action set_egr_ifid_0(bit<16> ifid) {
         meta.md.egr_ifid = ifid;
@@ -347,10 +347,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_9();
     }
     @hidden action act() {
-        tmp_2 = true;
+        tmp_4 = true;
     }
     @hidden action act_0() {
-        tmp_2 = false;
+        tmp_4 = false;
     }
     @hidden table tbl_act {
         actions = {
@@ -373,7 +373,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             tbl_act.apply();
         else 
             tbl_act_0.apply();
-        if (tmp_2) 
+        if (tmp_4) 
             ;
         else 
             egr_port.apply();

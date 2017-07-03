@@ -190,13 +190,7 @@ struct headers {
     @name("tcp") 
     tcp_t                                          tcp;
 }
-
-extern stateful_alu {
-    void execute_stateful_alu(@optional in bit<32> index);
-    void execute_stateful_alu_from_hash<FL>(in FL hash_field_list);
-    void execute_stateful_log();
-    stateful_alu();
-}
+#include <tofino/stateful_alu.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".parse_ethernet") state parse_ethernet {
@@ -222,34 +216,105 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+struct flow_cache_1_way_1_alu_layout {
+    bit<32> lo;
+    bit<32> hi;
+}
+
+struct flow_cache_1_way_1_learn_alu_layout {
+    bit<32> lo;
+    bit<32> hi;
+}
+
+struct flow_cache_1_way_2_alu_layout {
+    bit<32> lo;
+    bit<32> hi;
+}
+
+struct flow_cache_1_way_1_alu_layout_0 {
+    bit<32> lo;
+    bit<32> hi;
+}
+
+struct flow_cache_1_way_2_alu_layout_0 {
+    bit<32> lo;
+    bit<32> hi;
+}
+
+struct flow_cache_1_way_1_learn_alu_layout_0 {
+    bit<32> lo;
+    bit<32> hi;
+}
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".flow_cache_1_way_1") register<bit<64>>(32w16384) flow_cache_1_way_1;
     @name(".flow_cache_1_way_2") register<bit<64>>(32w16384) flow_cache_1_way_2;
     @name(".flow_cache_2_way_1") register<bit<32>>(32w16384) flow_cache_2_way_1;
     @name(".flow_cache_2_way_2") register<bit<32>>(32w16384) flow_cache_2_way_2;
-    stateful_alu() flow_cache_1_way_1_alu;
-    stateful_alu() flow_cache_1_way_1_learn_alu;
-    stateful_alu() flow_cache_1_way_2_alu;
-    stateful_alu() flow_cache_2_way_1_alu;
-    stateful_alu() flow_cache_2_way_1_learn_alu;
-    stateful_alu() flow_cache_2_way_2_alu;
+    register_action<flow_cache_1_way_1_alu_layout, bit<32>>(flow_cache_1_way_1) flow_cache_1_way_1_alu = {
+        void apply(inout flow_cache_1_way_1_alu_layout value, out bit<32> rv) {
+            value.lo = 32w1;
+            if (value.lo == hdr.ipv4.dstAddr && value.hi == hdr.ipv4.srcAddr) 
+                rv = value.lo;
+        }
+    };
+    register_action<flow_cache_1_way_1_learn_alu_layout, bit<32>>(flow_cache_1_way_1) flow_cache_1_way_1_learn_alu = {
+        void apply(inout flow_cache_1_way_1_learn_alu_layout value, out bit<32> rv) {
+            if (value.lo == 32w0 && value.hi == 32w0) 
+                value.hi = hdr.ipv4.srcAddr;
+            if (value.lo == 32w0 && value.hi == 32w0) 
+                value.lo = hdr.ipv4.dstAddr;
+        }
+    };
+    register_action<flow_cache_1_way_2_alu_layout, bit<32>>(flow_cache_1_way_2) flow_cache_1_way_2_alu = {
+        void apply(inout flow_cache_1_way_2_alu_layout value, out bit<32> rv) {
+            value.lo = 32w1;
+            if (value.lo == hdr.ipv4.dstAddr && value.hi == hdr.ipv4.srcAddr) 
+                rv = value.lo;
+        }
+    };
+    register_action<bit<32>, bit<32>>(flow_cache_2_way_1) flow_cache_2_way_1_alu = {
+        void apply(inout bit<32> value, out bit<32> rv) {
+            bit<32> alu_hi;
+            value = value;
+            if (alu_hi == (bit<32>)meta.meta.port_numbers) 
+                rv = value;
+        }
+    };
+    register_action<bit<32>, bit<32>>(flow_cache_2_way_1) flow_cache_2_way_1_learn_alu = {
+        void apply(inout bit<32> value, out bit<32> rv) {
+            bit<32> alu_hi;
+            if (value == 32w0 && alu_hi == 32w0) 
+                alu_hi = (bit<32>)meta.meta.port_numbers;
+            if (value == 32w0 && alu_hi == 32w0) 
+                value = (bit<32>)meta.meta.proto_idx_pair1;
+        }
+    };
+    register_action<bit<32>, bit<32>>(flow_cache_2_way_2) flow_cache_2_way_2_alu = {
+        void apply(inout bit<32> value, out bit<32> rv) {
+            bit<32> alu_hi;
+            value = value;
+            if (alu_hi == (bit<32>)meta.meta.port_numbers) 
+                rv = value;
+        }
+    };
     @name(".do_flow_table_cache_1_1") action do_flow_table_cache_1_1() {
-        flow_cache_1_way_1_alu.execute_stateful_alu();
+        meta.meta.fc_1_1_hit = (bit<1>)flow_cache_1_way_1_alu.execute();
     }
     @name(".do_flow_table_cache_1_2") action do_flow_table_cache_1_2() {
-        flow_cache_1_way_2_alu.execute_stateful_alu();
+        meta.meta.fc_1_1_hit = (bit<1>)flow_cache_1_way_2_alu.execute();
     }
     @name(".do_flow_table_learn_1_1") action do_flow_table_learn_1_1() {
-        flow_cache_1_way_1_learn_alu.execute_stateful_alu();
+        flow_cache_1_way_1_learn_alu.execute();
     }
     @name(".do_flow_table_cache_2_1") action do_flow_table_cache_2_1() {
-        flow_cache_2_way_1_alu.execute_stateful_alu();
+        meta.meta.proto_idx_pair1 = (bit<16>)flow_cache_2_way_1_alu.execute();
     }
     @name(".do_flow_table_cache_2_2") action do_flow_table_cache_2_2() {
-        flow_cache_2_way_2_alu.execute_stateful_alu();
+        meta.meta.proto_idx_pair1 = (bit<16>)flow_cache_2_way_2_alu.execute();
     }
     @name(".do_flow_table_learn_2_1") action do_flow_table_learn_2_1() {
-        flow_cache_2_way_1_learn_alu.execute_stateful_alu();
+        flow_cache_2_way_1_learn_alu.execute();
     }
     @name(".set_rewrite_idx") action set_rewrite_idx(bit<16> rewrite_idx) {
         meta.meta.rewrite_idx = rewrite_idx;

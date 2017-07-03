@@ -310,13 +310,7 @@ struct headers {
     @name("wWygMU") 
     LVrPBB_0                                       wWygMU;
 }
-
-extern stateful_alu {
-    void execute_stateful_alu(@optional in bit<32> index);
-    void execute_stateful_alu_from_hash<FL>(in FL hash_field_list);
-    void execute_stateful_log();
-    stateful_alu();
-}
+#include <tofino/stateful_alu.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".CURkOl") state CURkOl {
@@ -453,7 +447,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("NoAction") action NoAction_49() {
     }
     @name(".uVMcgg") register<bit<1>>(32w65536) uVMcgg;
-    @name("abcAlu1") stateful_alu() abcAlu1;
+    @name("abcAlu1") register_action<bit<1>, bit<1>>(uVMcgg) abcAlu1 = {
+        void apply(inout bit<1> value, out bit<1> rv) {
+            value = 1w1;
+        }
+    };
     @name(".xekLAZ") action xekLAZ_0(bit<16> bUNITB) {
         meta.WEiEAO.JAeDzl = bUNITB;
     }
@@ -552,7 +550,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.aiEvpD.fLJxJk = MELMPx;
     }
     @name(".wgUyys") action wgUyys_0(bit<8> pIFssJ) {
-        abcAlu1.execute_stateful_alu();
+        abcAlu1.execute();
     }
     @name(".oLXWui") action oLXWui_0() {
         meta.ISBegy.jXJoRq = 1w0x1;

@@ -34,13 +34,7 @@ struct headers {
     @name("data") 
     data_t data;
 }
-
-extern stateful_alu {
-    void execute_stateful_alu(@optional in bit<32> index);
-    void execute_stateful_alu_from_hash<FL>(in FL hash_field_list);
-    void execute_stateful_log();
-    stateful_alu();
-}
+#include <tofino/stateful_alu.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".start") state start {
@@ -50,11 +44,22 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    bit<32> tmp_0;
     @name(".accum") register<pair32_t>(32w65536) accum_0;
-    @name("sful") stateful_alu() sful_0;
+    @name("sful") register_action<pair32_t, bit<32>>(accum_0) sful_0 = {
+        void apply(inout pair32_t value, out bit<32> rv) {
+            rv = value.lo;
+            value.hi = value.hi + 32w1;
+            if (hdr.data.f2 > 32w1000 && hdr.data.f2 < 32w2000) 
+                value.lo = value.lo + hdr.data.f3;
+            if (hdr.data.f2 <= 32w1000 && hdr.data.f2 < 32w2000) 
+                value.lo = value.lo - hdr.data.f3;
+        }
+    };
     @name(".act1") action act1_0(bit<9> port) {
         standard_metadata.egress_spec = port;
-        sful_0.execute_stateful_alu((bit<32>)hdr.data.h1);
+        tmp_0 = sful_0.execute((bit<32>)hdr.data.h1);
+        hdr.data.f4 = tmp_0;
     }
     @name(".test1") table test1_0 {
         actions = {

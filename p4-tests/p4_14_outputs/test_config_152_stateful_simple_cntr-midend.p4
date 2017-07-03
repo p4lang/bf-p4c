@@ -148,13 +148,7 @@ struct headers {
     @name("pkt") 
     pkt_t                                          pkt;
 }
-
-extern stateful_alu {
-    void execute_stateful_alu(@optional in bit<32> index);
-    void execute_stateful_alu_from_hash<FL>(in FL hash_field_list);
-    void execute_stateful_log();
-    stateful_alu();
-}
+#include <tofino/stateful_alu.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".parse_ethernet") state parse_ethernet {
@@ -167,20 +161,35 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    bit<16> tmp_0;
     @name("NoAction") action NoAction_0() {
     }
     @name(".stateful_cntr") register<bit<16>>(32w8192) stateful_cntr;
-    @name("cntr") stateful_alu() cntr;
-    @name("cntr2") stateful_alu() cntr2;
-    @name("cntr3") stateful_alu() cntr3;
+    @name("cntr") register_action<bit<16>, bit<16>>(stateful_cntr) cntr = {
+        void apply(inout bit<16> value, out bit<16> rv) {
+            value = value + 16w1;
+        }
+    };
+    @name("cntr2") register_action<bit<16>, bit<16>>(stateful_cntr) cntr2 = {
+        void apply(inout bit<16> value, out bit<16> rv) {
+            value = value + 16w255;
+        }
+    };
+    @name("cntr3") register_action<bit<16>, bit<16>>(stateful_cntr) cntr3 = {
+        void apply(inout bit<16> value, out bit<16> rv) {
+            value = value + 16w63;
+            rv = value;
+        }
+    };
     @name(".cnt") action cnt_0(bit<32> idx) {
-        cntr.execute_stateful_alu(idx);
+        cntr.execute(idx);
     }
     @name(".cnt2") action cnt2_0(bit<32> idx) {
-        cntr2.execute_stateful_alu(idx);
+        cntr2.execute(idx);
     }
     @name(".cnt3") action cnt3_0(bit<32> idx) {
-        cntr3.execute_stateful_alu(idx);
+        tmp_0 = cntr3.execute(idx);
+        hdr.pkt.field_l_8 = (bit<8>)tmp_0;
     }
     @name(".do_nothing") action do_nothing_0() {
     }

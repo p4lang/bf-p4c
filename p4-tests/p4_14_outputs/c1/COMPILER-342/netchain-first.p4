@@ -198,13 +198,7 @@ struct headers {
     @name("udp") 
     udp_t                                          udp;
 }
-
-extern stateful_alu {
-    void execute_stateful_alu(@optional in bit<32> index);
-    void execute_stateful_alu_from_hash<FL>(in FL hash_field_list);
-    void execute_stateful_log();
-    stateful_alu();
-}
+#include <tofino/stateful_alu.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".parse_ethernet") state parse_ethernet {
@@ -249,7 +243,11 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".kv_register") register<bit<32>>(32w8192) kv_register;
-    stateful_alu() kv_alu;
+    register_action<bit<32>, bit<32>>(kv_register) kv_alu = {
+        void apply(inout bit<32> value, out bit<32> rv) {
+            rv = value;
+        }
+    };
     @name(".set_egr_port") action set_egr_port(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
@@ -260,7 +258,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.md.nh_id = nh;
     }
     @name(".kv_read") action kv_read(bit<32> index) {
-        kv_alu.execute_stateful_alu(index);
+        hdr.kv.value = kv_alu.execute(index);
     }
     @name(".set_egr_ifid") action set_egr_ifid(bit<16> ifid) {
         meta.md.egr_ifid = ifid;

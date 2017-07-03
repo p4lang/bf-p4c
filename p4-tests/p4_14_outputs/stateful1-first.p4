@@ -16,13 +16,7 @@ struct headers {
     @name("data") 
     data_t data;
 }
-
-extern stateful_alu {
-    void execute_stateful_alu(@optional in bit<32> index);
-    void execute_stateful_alu_from_hash<FL>(in FL hash_field_list);
-    void execute_stateful_log();
-    stateful_alu();
-}
+#include <tofino/stateful_alu.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".start") state start {
@@ -33,10 +27,15 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".accum") register<bit<16>>(32w0) accum;
-    stateful_alu() sful;
+    register_action<bit<16>, bit<16>>(accum) sful = {
+        void apply(inout bit<16> value, out bit<16> rv) {
+            rv = value;
+            value = value + (bit<16>)hdr.data.b1;
+        }
+    };
     @name(".addb1") action addb1(bit<9> port) {
         standard_metadata.egress_spec = port;
-        sful.execute_stateful_alu();
+        hdr.data.h1 = sful.execute();
     }
     @name(".test1") table test1 {
         actions = {

@@ -24,7 +24,6 @@ tofino_backend_common_UNIFIED = \
 	%reldir%/common/elim_unused.cpp \
 	%reldir%/common/extract_maupipe.cpp \
 	%reldir%/common/field_defuse.cpp \
-	%reldir%/common/frontend.cpp \
 	%reldir%/common/header_stack.cpp \
 	%reldir%/common/live_at_entry.cpp \
 	%reldir%/common/remap_intrin.cpp \
@@ -38,7 +37,6 @@ noinst_HEADERS += \
 	%reldir%/common/elim_unused.h \
 	%reldir%/common/extract_maupipe.h \
 	%reldir%/common/field_defuse.h \
-	%reldir%/common/frontend.h \
 	%reldir%/common/header_stack.h \
 	%reldir%/common/live_at_entry.h \
 	%reldir%/common/remap_intrin.h \
@@ -175,7 +173,8 @@ tofino_backend_main_UNIFIED = \
 noinst_HEADERS += \
 	%reldir%/backend.h \
 	%reldir%/midend.h \
-	%reldir%/tofinoOptions.h
+	%reldir%/tofinoOptions.h \
+	%reldir%/fromv1.0/stateful_alu.h
 
 cpplint_FILES += $(tofino_backend_main_UNIFIED) $(tofino_backend_main_NONUNIFIED)
 
@@ -217,7 +216,11 @@ p4c_tofino_LDADD = \
         $(BOOST_FILESYSTEM_LIB) \
 	$(BOOST_SYSTEM_LIB)
 p4c_tofino_SOURCES = \
-	%reldir%/p4c-tofino.cpp
+	%reldir%/p4c-tofino.cpp \
+	%reldir%/fromv1.0/stateful_alu.cpp
+
+p4test_NONUNIFIED = \
+	%reldir%/fromv1.0/stateful_alu.cpp
 
 cpplint_FILES += $(p4c_tofino_SOURCES)
 

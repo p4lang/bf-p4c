@@ -162,13 +162,7 @@ struct headers {
     @name("ipv4") 
     ipv4_t                                         ipv4;
 }
-
-extern stateful_alu {
-    void execute_stateful_alu(@optional in bit<32> index);
-    void execute_stateful_alu_from_hash<FL>(in FL hash_field_list);
-    void execute_stateful_log();
-    stateful_alu();
-}
+#include <tofino/stateful_alu.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".parse_ethernet") state parse_ethernet {
@@ -189,14 +183,25 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".flow_cnt") register<bit<8>>(32w0) flow_cnt;
-    stateful_alu() sampler_alu;
+    register_action<bit<8>, bit<8>>(flow_cnt) sampler_alu = {
+        void apply(inout bit<8> value, out bit<8> rv) {
+            bit<8> alu_hi;
+            alu_hi = (bit<8>)1;
+            if (value == 8w100) 
+                value = (bit<8>)0;
+            if (!(value == 8w100)) 
+                value = value + 8w1;
+            if (value == 8w100) 
+                rv = alu_hi;
+        }
+    };
     @name(".drop_me") action drop_me() {
         mark_to_drop();
     }
     @name(".on_miss") action on_miss() {
     }
     @name(".ipv4_fib_hit") action ipv4_fib_hit() {
-        sampler_alu.execute_stateful_alu();
+        meta.meta.needs_sampling = sampler_alu.execute();
     }
     @name(".check_needs") table check_needs {
         actions = {

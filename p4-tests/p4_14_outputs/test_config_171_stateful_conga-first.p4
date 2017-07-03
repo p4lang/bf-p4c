@@ -192,13 +192,7 @@ struct headers {
     @name("tcp") 
     tcp_t                                          tcp;
 }
-
-extern stateful_alu {
-    void execute_stateful_alu(@optional in bit<32> index);
-    void execute_stateful_alu_from_hash<FL>(in FL hash_field_list);
-    void execute_stateful_log();
-    stateful_alu();
-}
+#include <tofino/stateful_alu.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".parse_ethernet") state parse_ethernet {
@@ -226,13 +220,26 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".conga_state") register<conga_state_layout>(32w256) conga_state;
-    stateful_alu() conga_alu;
-    stateful_alu() conga_update_alu;
+    register_action<conga_state_layout, bit<8>>(conga_state) conga_alu = {
+        void apply(inout conga_state_layout value, out bit<8> rv) {
+            value.next_hop = value.utilization;
+            rv = value.next_hop;
+        }
+    };
+    register_action<conga_state_layout, bit<8>>(conga_state) conga_update_alu = {
+        void apply(inout conga_state_layout value, out bit<8> rv) {
+            if (value.next_hop > meta.conga_meta.util) 
+                value.utilization = meta.conga_meta.next_hop;
+            if (value.next_hop > meta.conga_meta.util || value.utilization == meta.conga_meta.next_hop) 
+                value.next_hop = meta.conga_meta.util;
+            rv = value.utilization;
+        }
+    };
     @name(".get_preferred_next_hop") action get_preferred_next_hop() {
-        conga_alu.execute_stateful_alu();
+        meta.meta.next_hop = conga_alu.execute();
     }
     @name(".update_preferred_next_hop") action update_preferred_next_hop() {
-        conga_update_alu.execute_stateful_alu();
+        meta.meta.next_hop = conga_update_alu.execute();
     }
     @name(".conga_rd_next_hop_table") table conga_rd_next_hop_table {
         actions = {

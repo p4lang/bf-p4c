@@ -16,13 +16,11 @@
 #include "frontends/p4-14/typecheck.h"
 #include "frontends/common/parseInput.h"
 #include "common/extract_maupipe.h"
-#include "common/frontend.h"
 #include "common/remap_intrin.h"
 #include "midend.h"
 #include "midend/actionsInlining.h"
 #include "tofinoOptions.h"
 #include "version.h"
-
 
 int main(int ac, char **av) {
     vector<cstring> supported_arch = { "tofino-v1model-barefoot", "tofino-native-barefoot" };
@@ -44,7 +42,7 @@ int main(int ac, char **av) {
         error("target '%s' not supported", options.target);
         return 1; }
 
-    auto program = P4::parseP4File(options, new Tofino::ExternConverter);
+    auto program = P4::parseP4File(options);
     program = P4::FrontEnd(hook).run(options, program, true);
     if (!program)
         return 1;

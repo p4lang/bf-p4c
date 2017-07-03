@@ -143,13 +143,7 @@ struct headers {
     @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_prsr_ctrl") @name("ig_prsr_ctrl") 
     ingress_parser_control_signals                 ig_prsr_ctrl;
 }
-
-extern stateful_alu {
-    void execute_stateful_alu(@optional in bit<32> index);
-    void execute_stateful_alu_from_hash<FL>(in FL hash_field_list);
-    void execute_stateful_log();
-    stateful_alu();
-}
+#include <tofino/stateful_alu.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".parse_ethernet") state parse_ethernet {
@@ -162,10 +156,19 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    bit<32> tmp;
     @name(".sampling_cntr") register<bit<32>>(32w8192) sampling_cntr_0;
-    @name("sampling_alu") stateful_alu() sampling_alu_0;
+    @name("sampling_alu") register_action<bit<32>, bit<32>>(sampling_cntr_0) sampling_alu_0 = {
+        void apply(inout bit<32> value, out bit<32> rv) {
+            if (true) 
+                value = value + 32w1;
+            if (true) 
+                rv = value;
+        }
+    };
     @name(".action_0") action action_2() {
-        sampling_alu_0.execute_stateful_alu(32w8191);
+        tmp = sampling_alu_0.execute(32w8191);
+        hdr.ethernet.x = tmp;
     }
     @name(".action_1") action action_3() {
     }

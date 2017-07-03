@@ -155,13 +155,7 @@ struct headers {
     @name("pkt") 
     pkt_t                                          pkt;
 }
-
-extern stateful_alu {
-    void execute_stateful_alu(@optional in bit<32> index);
-    void execute_stateful_alu_from_hash<FL>(in FL hash_field_list);
-    void execute_stateful_log();
-    stateful_alu();
-}
+#include <tofino/stateful_alu.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".parse_ethernet") state parse_ethernet {
@@ -177,17 +171,35 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".flow_cnt") register<bit<8>>(32w0) flow_cnt;
     @name(".stateful_cntr_1") register<bit<16>>(32w0) stateful_cntr_1;
     @name(".stateful_cntr_2") register<bit<16>>(32w0) stateful_cntr_2;
-    stateful_alu() cntr_1;
-    stateful_alu() cntr_2;
-    stateful_alu() sampler_alu;
+    register_action<bit<16>, bit<16>>(stateful_cntr_1) cntr_1 = {
+        void apply(inout bit<16> value, out bit<16> rv) {
+            value = value + 16w1;
+        }
+    };
+    register_action<bit<16>, bit<16>>(stateful_cntr_2) cntr_2 = {
+        void apply(inout bit<16> value, out bit<16> rv) {
+            value = value + 16w1;
+            rv = value;
+        }
+    };
+    register_action<bit<8>, bit<8>>(flow_cnt) sampler_alu = {
+        void apply(inout bit<8> value, out bit<8> rv) {
+            if (value == 8w10) 
+                value = 8w1;
+            if (value != 8w10) 
+                value = value + 8w1;
+            if (value == 8w10) 
+                rv = value;
+        }
+    };
     @name(".cnt_1") action cnt_1() {
-        cntr_1.execute_stateful_alu();
+        cntr_1.execute();
     }
     @name(".cnt_2") action cnt_2() {
-        cntr_2.execute_stateful_alu();
+        meta.meta.count_value = cntr_2.execute();
     }
     @name(".sample") action sample() {
-        sampler_alu.execute_stateful_alu();
+        meta.meta.needs_sampling = sampler_alu.execute();
     }
     @table_counter("disabled") @name(".match_cntr_1") table match_cntr_1 {
         actions = {

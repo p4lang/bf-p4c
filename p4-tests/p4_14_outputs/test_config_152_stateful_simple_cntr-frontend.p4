@@ -148,13 +148,7 @@ struct headers {
     @name("pkt") 
     pkt_t                                          pkt;
 }
-
-extern stateful_alu {
-    void execute_stateful_alu(@optional in bit<32> index);
-    void execute_stateful_alu_from_hash<FL>(in FL hash_field_list);
-    void execute_stateful_log();
-    stateful_alu();
-}
+#include <tofino/stateful_alu.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".parse_ethernet") state parse_ethernet {
@@ -167,18 +161,33 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    bit<16> tmp;
     @name(".stateful_cntr") register<bit<16>>(32w8192) stateful_cntr_0;
-    @name("cntr") stateful_alu() cntr_0;
-    @name("cntr2") stateful_alu() cntr2_0;
-    @name("cntr3") stateful_alu() cntr3_0;
+    @name("cntr") register_action<bit<16>, bit<16>>(stateful_cntr_0) cntr_0 = {
+        void apply(inout bit<16> value, out bit<16> rv) {
+            value = value + 16w1;
+        }
+    };
+    @name("cntr2") register_action<bit<16>, bit<16>>(stateful_cntr_0) cntr2_0 = {
+        void apply(inout bit<16> value, out bit<16> rv) {
+            value = value + 16w255;
+        }
+    };
+    @name("cntr3") register_action<bit<16>, bit<16>>(stateful_cntr_0) cntr3_0 = {
+        void apply(inout bit<16> value, out bit<16> rv) {
+            value = value + 16w63;
+            rv = value;
+        }
+    };
     @name(".cnt") action cnt_0(bit<32> idx) {
-        cntr_0.execute_stateful_alu(idx);
+        cntr_0.execute(idx);
     }
     @name(".cnt2") action cnt2_0(bit<32> idx) {
-        cntr2_0.execute_stateful_alu(idx);
+        cntr2_0.execute(idx);
     }
     @name(".cnt3") action cnt3_0(bit<32> idx) {
-        cntr3_0.execute_stateful_alu(idx);
+        tmp = cntr3_0.execute(idx);
+        hdr.pkt.field_l_8 = (bit<8>)tmp;
     }
     @name(".do_nothing") action do_nothing_0() {
     }

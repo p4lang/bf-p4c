@@ -139,13 +139,7 @@ struct headers {
     @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_prsr_ctrl") @name("ig_prsr_ctrl") 
     ingress_parser_control_signals                 ig_prsr_ctrl;
 }
-
-extern stateful_alu {
-    void execute_stateful_alu(@optional in bit<32> index);
-    void execute_stateful_alu_from_hash<FL>(in FL hash_field_list);
-    void execute_stateful_log();
-    stateful_alu();
-}
+#include <tofino/stateful_alu.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".start") state start {
@@ -157,9 +151,16 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".cntr") @min_width(64) counter(32w2, CounterType.packets) cntr;
     @name(".log") register<bit<16>>(32w64000) log;
-    @name("salu") stateful_alu() salu;
+    @name("salu") register_action<bit<16>, bit<16>>(log) salu = {
+        void apply(inout bit<16> value, out bit<16> rv) {
+            if (hdr.eg_intr_md.egress_rid_first == 1w1) 
+                value = value + 16w0x100;
+            if (hdr.eg_intr_md.egress_rid_first != 1w1) 
+                value = value + 16w1;
+        }
+    };
     @name(".log_only") action log_only_0() {
-        salu.execute_stateful_alu();
+        salu.execute();
         cntr.count(32w0);
         mark_to_drop();
     }

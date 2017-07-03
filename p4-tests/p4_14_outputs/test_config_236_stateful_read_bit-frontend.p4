@@ -150,13 +150,7 @@ struct headers {
     @name("pkt") 
     pkt_t                                          pkt;
 }
-
-extern stateful_alu {
-    void execute_stateful_alu(@optional in bit<32> index);
-    void execute_stateful_alu_from_hash<FL>(in FL hash_field_list);
-    void execute_stateful_log();
-    stateful_alu();
-}
+#include <tofino/stateful_alu.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".parse_ethernet") state parse_ethernet {
@@ -169,10 +163,16 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    bit<1> tmp;
     @name(".reg_0") register<bit<1>>(32w131072) reg_1;
-    @name("bbox_0") stateful_alu() bbox;
+    @name("bbox_0") register_action<bit<1>, bit<1>>(reg_1) bbox = {
+        void apply(inout bit<1> value, out bit<1> rv) {
+            rv = value;
+        }
+    };
     @name(".action_0") action action_1(bit<32> idx) {
-        bbox.execute_stateful_alu(idx);
+        tmp = bbox.execute(idx);
+        hdr.pkt.single_bit = tmp;
     }
     @name(".table_0") table table_1 {
         actions = {

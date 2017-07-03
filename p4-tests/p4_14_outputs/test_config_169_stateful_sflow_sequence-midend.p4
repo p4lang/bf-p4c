@@ -187,13 +187,7 @@ struct headers {
     @name("tcp") 
     tcp_t                                          tcp;
 }
-
-extern stateful_alu {
-    void execute_stateful_alu(@optional in bit<32> index);
-    void execute_stateful_alu_from_hash<FL>(in FL hash_field_list);
-    void execute_stateful_log();
-    stateful_alu();
-}
+#include <tofino/stateful_alu.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".parse_ethernet") state parse_ethernet {
@@ -220,6 +214,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    bit<32> tmp_1;
+    bit<32> tmp_2;
     @name("NoAction") action NoAction_0() {
     }
     @name("NoAction") action NoAction_5() {
@@ -230,16 +226,32 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".sflow_state_exp_seq_num") register<bit<32>>(32w0) sflow_state_exp_seq_num;
     @name(".sflow_state_seq_num") register<bit<32>>(32w0) sflow_state_seq_num;
-    @name("seq_num_gen") stateful_alu() seq_num_gen;
-    @name("sflow_exp_seq_num") stateful_alu() sflow_exp_seq_num;
+    @name("seq_num_gen") register_action<bit<32>, bit<32>>(sflow_state_seq_num) seq_num_gen = {
+        void apply(inout bit<32> value, out bit<32> rv) {
+            bit<32> alu_hi;
+            alu_hi = value;
+            value = value + 32w1;
+            rv = alu_hi;
+        }
+    };
+    @name("sflow_exp_seq_num") register_action<bit<32>, bit<32>>(sflow_state_exp_seq_num) sflow_exp_seq_num = {
+        void apply(inout bit<32> value, out bit<32> rv) {
+            bit<32> alu_hi_2;
+            alu_hi_2 = (bit<32>)meta.sflowHdr.seq_num - value;
+            value = (bit<32>)meta.sflowHdr.temp;
+            rv = alu_hi_2;
+        }
+    };
     @name(".get_sflow_seq_num") action get_sflow_seq_num_0() {
-        seq_num_gen.execute_stateful_alu();
+        tmp_1 = seq_num_gen.execute();
+        meta.meta.sflow_sample_seq_no = tmp_1;
     }
     @name(".calc_next_seq_num") action calc_next_seq_num_0() {
         meta.sflowHdr.temp = meta.sflowHdr.seq_num + meta.sflowHdr.num_samples;
     }
     @name(".chk_sflow_seq_num") action chk_sflow_seq_num_0() {
-        sflow_exp_seq_num.execute_stateful_alu();
+        tmp_2 = sflow_exp_seq_num.execute();
+        meta.sflowHdr.drops = (bit<16>)tmp_2;
     }
     @name(".drop_me") action drop_me_0() {
         mark_to_drop();

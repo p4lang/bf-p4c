@@ -192,13 +192,7 @@ struct headers {
     @name("tcp") 
     tcp_t                                          tcp;
 }
-
-extern stateful_alu {
-    void execute_stateful_alu(@optional in bit<32> index);
-    void execute_stateful_alu_from_hash<FL>(in FL hash_field_list);
-    void execute_stateful_log();
-    stateful_alu();
-}
+#include <tofino/stateful_alu.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".parse_ethernet") state parse_ethernet {
@@ -225,14 +219,31 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    bit<8> tmp;
+    bit<8> tmp_0;
     @name(".conga_state") register<conga_state_layout>(32w256) conga_state_0;
-    @name("conga_alu") stateful_alu() conga_alu_0;
-    @name("conga_update_alu") stateful_alu() conga_update_alu_0;
+    @name("conga_alu") register_action<conga_state_layout, bit<8>>(conga_state_0) conga_alu_0 = {
+        void apply(inout conga_state_layout value, out bit<8> rv) {
+            value.next_hop = value.utilization;
+            rv = value.next_hop;
+        }
+    };
+    @name("conga_update_alu") register_action<conga_state_layout, bit<8>>(conga_state_0) conga_update_alu_0 = {
+        void apply(inout conga_state_layout value, out bit<8> rv) {
+            if (value.next_hop > meta.conga_meta.util) 
+                value.utilization = meta.conga_meta.next_hop;
+            if (value.next_hop > meta.conga_meta.util || value.utilization == meta.conga_meta.next_hop) 
+                value.next_hop = meta.conga_meta.util;
+            rv = value.utilization;
+        }
+    };
     @name(".get_preferred_next_hop") action get_preferred_next_hop_0() {
-        conga_alu_0.execute_stateful_alu();
+        tmp = conga_alu_0.execute();
+        meta.meta.next_hop = tmp;
     }
     @name(".update_preferred_next_hop") action update_preferred_next_hop_0() {
-        conga_update_alu_0.execute_stateful_alu();
+        tmp_0 = conga_update_alu_0.execute();
+        meta.meta.next_hop = tmp_0;
     }
     @name(".conga_rd_next_hop_table") table conga_rd_next_hop_table_0 {
         actions = {

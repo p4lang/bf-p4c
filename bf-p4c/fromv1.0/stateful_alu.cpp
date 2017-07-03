@@ -1,20 +1,20 @@
-#include "frontend.h"
+#include "stateful_alu.h"
 #include "frontends/p4-14/typecheck.h"
 
-const IR::Type_Extern *Tofino::ExternConverter::convertExternType(
-        const IR::Type_Extern *ext, cstring name) {
-    if (ext->name == "stateful_alu") {
-        if (!has_stateful_alu) {
-            has_stateful_alu = true;
-            structure->include("tofino/stateful_alu.p4");
-        }
-        return nullptr;
-    } else {
-        warning("Unrecognized extern_type %s", ext); }
-    return P4V1::ExternConverter::convertExternType(ext, name);
+P4V1::StatefulAluConverter::StatefulAluConverter() {
+    addConverter("stateful_alu", this);
+}
+
+const IR::Type_Extern *P4V1::StatefulAluConverter::convertExternType(
+    P4V1::ProgramStructure *structure, const IR::Type_Extern *, cstring) {
+    if (!has_stateful_alu) {
+        has_stateful_alu = true;
+        structure->include("tofino/stateful_alu.p4"); }
+    return nullptr;
 }
 
 class CreateSaluApplyFunction : public Inspector {
+    P4V1::ProgramStructure *structure;
     const IR::Type *rtype;
     const IR::Type::Bits *utype;
     IR::BlockStatement *body;
@@ -68,6 +68,12 @@ class CreateSaluApplyFunction : public Inspector {
             } else if (attr->name == "alu_hi") {
                 idx = 1;
                 self.defer_out = true;
+            } else if (attr->name == "set_bit" || attr->name == "set_bitc") {
+                return new IR::Constant(self.utype, 1);
+            } else if (attr->name == "clr_bit" || attr->name == "clr_bitc") {
+                return new IR::Constant(self.utype, 0);
+            } else if (attr->name == "read_bit" || attr->name == "read_bitc") {
+                idx = 0;
             } else {
                 BUG("Unrecognized AttribLocal %s", attr);
                 return attr; }
@@ -125,13 +131,15 @@ class CreateSaluApplyFunction : public Inspector {
             return false; }
         auto e = prop->value->to<IR::ExpressionValue>()->expression->apply(rewrite);
         if (predicate) {
+            if (e->type != IR::Type::Boolean::get())
+                e = new IR::Cast(IR::Type::Boolean::get(), e);
             pred = e;
             return false; }
         IR::Expression *dest = new IR::PathExpression(utype,
                 new IR::Path(idx < 0 ? "rv" : "value"));
         if (idx >= 0)
             dest = makeRegFieldMember(dest, idx);
-        IR::Statement *instr = new IR::AssignmentStatement(prop->srcInfo, dest, e);
+        const IR::Statement *instr = structure->assign(prop->srcInfo, dest, e, utype);
         LOG2("adding " << instr << " with pred " << pred);
         if (pred)
             instr = new IR::IfStatement(pred, instr, nullptr);
@@ -143,9 +151,13 @@ class CreateSaluApplyFunction : public Inspector {
 
  public:
     IR::Function *apply;
-    CreateSaluApplyFunction(const IR::Type *rtype, const IR::Type::Bits *utype)
-    : rtype(rtype), utype(utype), rewrite({ new RewriteExpr(*this), new TypeCheck }) {
+    CreateSaluApplyFunction(P4V1::ProgramStructure *s, const IR::Type *rtype,
+                            const IR::Type::Bits *utype)
+    : structure(s), rtype(rtype), utype(utype),
+      rewrite({ new RewriteExpr(*this), new TypeCheck }) {
         body = new IR::BlockStatement;
+        if (auto st = rtype->to<IR::Type_StructLike>())
+            rtype = new IR::Type_Name(st->name);
         apply = new IR::Function("apply", new IR::Type_Method(
                                  IR::Type_Void::get(), new IR::ParameterList({
                                      new IR::Parameter("value", IR::Direction::InOut, rtype),
@@ -170,8 +182,8 @@ class CreateSaluApplyFunction : public Inspector {
         stateful_logging_mode
 */
 
-Tofino::ExternConverter::reg_info Tofino::ExternConverter::getRegInfo(
-        const IR::Declaration_Instance *ext) {
+P4V1::StatefulAluConverter::reg_info P4V1::StatefulAluConverter::getRegInfo(
+        P4V1::ProgramStructure *structure, const IR::Declaration_Instance *ext) {
     reg_info rv;
     if (auto rp = ext->properties.get<IR::Property>("reg")) {
         auto rpv = rp->value->to<IR::ExpressionValue>();
@@ -198,9 +210,11 @@ Tofino::ExternConverter::reg_info Tofino::ExternConverter::getRegInfo(
             } else if (rv.reg->width == 64) {
                 // Some (broken?) test programs use width 64 when they really mean 2x32
                 rv.utype = IR::Type::Bits::get(32, rv.reg->signed_);
-                rv.rtype = new IR::Type_Struct(IR::ID(ext->name + "_layout"), {
+                cstring rtype_name = structure->makeUniqueName(ext->name + "_layout");
+                rv.rtype = new IR::Type_Struct(IR::ID(rtype_name), {
                     new IR::StructField("lo", rv.utype),
                     new IR::StructField("hi", rv.utype) });
+                structure->declarations->push_back(rv.rtype);
             } else {
                 error("register %s width %d not supported for stateful_alu", rv.reg, rv.reg->width);
             }
@@ -213,53 +227,84 @@ Tofino::ExternConverter::reg_info Tofino::ExternConverter::getRegInfo(
     return rv;
 }
 
-const IR::Declaration_Instance *Tofino::ExternConverter::convertExternInstance(
-        const IR::Declaration_Instance *ext, cstring name) {
+const IR::Declaration_Instance *P4V1::StatefulAluConverter::convertExternInstance(
+        P4V1::ProgramStructure *structure, const IR::Declaration_Instance *ext, cstring name) {
     auto *et = ext->type->to<IR::Type_Extern>();
-    BUG_CHECK(et, "Extern %s is not extern type, but %s", ext, ext->type);
-    if (et->name == "stateful_alu") {
-        auto info = getRegInfo(ext);
-        if (info.utype) {
-            LOG2("Creating apply function for register_action " << ext->name);
-            auto ratype = new IR::Type_Specialized(new IR::Type_Name("register_action"),
-                                   new IR::Vector<IR::Type>({ info.rtype, info.utype }));
-            auto *block = new IR::BlockStatement;
-            auto *rv = new IR::Declaration_Instance(name, ratype,
-                new IR::Vector<IR::Expression>({
-                    new IR::PathExpression(new IR::Path(info.reg->name)) }),
-                block);
-            CreateSaluApplyFunction create_apply(info.rtype, info.utype);
-            ext->apply(create_apply);
-            block->components.push_back(create_apply.apply);
-            return rv->apply(P4V1::TypeConverter(structure))->to<IR::Declaration_Instance>();
-        }
+    BUG_CHECK(et && et->name == "stateful_alu",
+              "Extern %s is not stateful_alu type, but %s", ext, ext->type);
+    auto info = getRegInfo(structure, ext);
+    if (info.utype) {
+        LOG2("Creating apply function for register_action " << ext->name);
+        auto ratype = new IR::Type_Specialized(new IR::Type_Name("register_action"),
+                               new IR::Vector<IR::Type>({ info.rtype, info.utype }));
+        auto *block = new IR::BlockStatement;
+        auto *rv = new IR::Declaration_Instance(name, ratype,
+            new IR::Vector<IR::Expression>({
+                new IR::PathExpression(new IR::Path(info.reg->name)) }),
+            block);
+        CreateSaluApplyFunction create_apply(structure, info.rtype, info.utype);
+        ext->apply(create_apply);
+        block->components.push_back(create_apply.apply);
+        return rv->apply(TypeConverter(structure))->to<IR::Declaration_Instance>();
     }
-    return P4V1::ExternConverter::convertExternInstance(ext, name);
+    BUG("Failed to find utype for %s", ext);
+    return ExternConverter::convertExternInstance(structure, ext, name);
 }
 
-const IR::Statement *Tofino::ExternConverter::convertExternCall(
-        const IR::Declaration_Instance *ext, const IR::Primitive *prim) {
+const IR::Statement *P4V1::StatefulAluConverter::convertExternCall(
+            P4V1::ProgramStructure *structure, const IR::Declaration_Instance *ext,
+            const IR::Primitive *prim) {
     auto *et = ext->type->to<IR::Type_Extern>();
-    BUG_CHECK(et, "Extern %s is not extern type, but %s", ext, ext->type);
-    if (et->name == "stateful_alu") {
-        auto info = getRegInfo(ext);
-        BUG_CHECK(prim->name == "execute_stateful_alu",
-                  "Unknown method %s in stateful_alu", prim->name);
-        P4V1::ExpressionConverter conv(structure);
-        auto extref = new IR::PathExpression(structure->externs.get(ext));
-        auto method = new IR::Member(prim->srcInfo, extref, "execute");
-        auto args = new IR::Vector<IR::Expression>();
-        for (unsigned i = 1; i < prim->operands.size(); ++i)
-            args->push_back(conv.convert(prim->operands.at(i)));
-        auto mc = new IR::MethodCallExpression(prim->srcInfo, info.utype, method, args);
-        if (auto prop = ext->properties.get<IR::Property>("output_dst")) {
-            if (auto ev = prop->value->to<IR::ExpressionValue>()) {
-                return structure->assign(prim->srcInfo, conv.convert(ev->expression), mc,
-                                         ev->expression->type);
-            } else {
-                error("%s: output_dst property is not an expression", prop->value->srcInfo); }
+    BUG_CHECK(et && et->name == "stateful_alu",
+              "Extern %s is not stateful_alu type, but %s", ext, ext->type);
+    auto info = getRegInfo(structure, ext);
+    ExpressionConverter conv(structure);
+    const IR::Statement *rv = nullptr;
+    IR::BlockStatement *block = nullptr;
+    auto extref = new IR::PathExpression(structure->externs.get(ext));
+    auto method = new IR::Member(prim->srcInfo, extref, "execute");
+    auto args = new IR::Vector<IR::Expression>();
+    if (prim->name == "execute_stateful_alu") {
+        BUG_CHECK(prim->operands.size() <= 2, "Wrong number of operands to %s", prim->name);
+        if (prim->operands.size() == 2)
+            args->push_back(conv.convert(prim->operands.at(1)));
+    } else if (prim->name == "execute_stateful_alu_from_hash") {
+        BUG_CHECK(prim->operands.size() == 2, "Wrong number of operands to %s", prim->name);
+        auto pe = prim->operands.at(1)->to<IR::PathExpression>();
+        auto flc = pe ? structure->field_list_calculations.get(pe->path->name) : nullptr;
+        if (!flc) {
+            error("%s: Expected a field_list_calculation", prim->operands.at(1));
+            return nullptr; }
+        auto ttype = IR::Type_Bits::get(flc->output_width);
+        auto algo = new IR::TypeNameExpression(structure->v1model.algorithm.Id());
+        block = new IR::BlockStatement;
+        cstring temp = structure->makeUniqueName("temp");
+        block->push_back(new IR::Declaration_Variable(temp, ttype));
+        args->push_back(new IR::PathExpression(new IR::Path(temp)));
+        args->push_back(new IR::Member(algo, flc->algorithm));
+        args->push_back(new IR::Constant(ttype, 0));
+        args->push_back(conv.convert(flc->input_fields));
+        args->push_back(new IR::Constant(1 << flc->output_width));
+        block->push_back(new IR::MethodCallStatement(new IR::MethodCallExpression(
+                new IR::PathExpression(structure->v1model.hash.Id()), args)));
+        args = new IR::Vector<IR::Expression>();
+        args->push_back(new IR::PathExpression(new IR::Path(temp)));
+    } else {
+        BUG("Unknown method %s in stateful_alu", prim->name); }
+    auto mc = new IR::MethodCallExpression(prim->srcInfo, info.utype, method, args);
+    if (auto prop = ext->properties.get<IR::Property>("output_dst")) {
+        if (auto ev = prop->value->to<IR::ExpressionValue>()) {
+            rv = structure->assign(prim->srcInfo, conv.convert(ev->expression), mc,
+                                     ev->expression->type);
         } else {
-            return new IR::MethodCallStatement(prim->srcInfo, mc); }
-    }
-    return P4V1::ExternConverter::convertExternCall(ext, prim);
+            error("%s: output_dst property is not an expression", prop->value->srcInfo);
+            return nullptr; }
+    } else {
+        rv = new IR::MethodCallStatement(prim->srcInfo, mc); }
+    if (block) {
+        block->push_back(rv);
+        rv = block; }
+    return rv;
 }
+
+P4V1::StatefulAluConverter P4V1::StatefulAluConverter::singleton;

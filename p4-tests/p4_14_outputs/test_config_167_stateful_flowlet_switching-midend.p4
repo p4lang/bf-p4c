@@ -178,13 +178,7 @@ struct headers {
     @name("tcp") 
     tcp_t                                          tcp;
 }
-
-extern stateful_alu {
-    void execute_stateful_alu(@optional in bit<32> index);
-    void execute_stateful_alu_from_hash<FL>(in FL hash_field_list);
-    void execute_stateful_log();
-    stateful_alu();
-}
+#include <tofino/stateful_alu.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".parse_ethernet") state parse_ethernet {
@@ -210,13 +204,30 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+struct flowlet_state_alu_layout {
+    bit<32> lo;
+    bit<32> hi;
+}
+
+struct flowlet_state_alu_layout_0 {
+    bit<32> lo;
+    bit<32> hi;
+}
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    bit<32> tmp_0;
     @name("NoAction") action NoAction_0() {
     }
     @name(".flowlet_state") register<bit<64>>(32w65536) flowlet_state;
-    @name("flowlet_state_alu") stateful_alu() flowlet_state_alu;
+    @name("flowlet_state_alu") register_action<flowlet_state_alu_layout, bit<32>>(flowlet_state) flowlet_state_alu = {
+        void apply(inout flowlet_state_alu_layout value, out bit<32> rv) {
+            value.lo = meta.meta.tstamp;
+            rv = value.hi;
+        }
+    };
     @name(".get_flowlet_next_hop") action get_flowlet_next_hop_0(bit<32> idx) {
-        flowlet_state_alu.execute_stateful_alu(idx);
+        tmp_0 = flowlet_state_alu.execute(idx);
+        meta.meta.next_hop = (bit<16>)tmp_0;
     }
     @name(".flowlet_next_hop") table flowlet_next_hop {
         actions = {
