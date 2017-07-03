@@ -252,22 +252,22 @@ add_library(tofinobackend ${TOFINO_SOURCES})
 add_dependencies(tofinobackend genIR)
 
 add_executable(p4c-tofino ${P4C_TOFINO_SRCS})
-target_link_libraries (p4c-tofino ${P4C_LIBRARIES} tofinobackend ${P4C_LIB_DEPS})
+target_link_libraries (p4c-tofino tofinobackend ${P4C_LIBRARIES} ${P4C_LIB_DEPS})
 
 # hack to get around the fact that the test scripts expect the backend
 # binary to be in the top level directory. This should go away when we
 # remove automake and fix the scripts.
 add_custom_target(linktofino
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINARY_DIR}/p4c-tofino ${CMAKE_BINARY_DIR}/p4c-tofino
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/p4include
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/p4include/tofino
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/p4_14include
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/p4_14include/tofino
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINARY_DIR}/p4c-tofino ${P4C_BINARY_DIR}/p4c-tofino
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${P4C_BINARY_DIR}/p4include
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${P4C_BINARY_DIR}/p4include/tofino
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${P4C_BINARY_DIR}/p4_14include
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${P4C_BINARY_DIR}/p4_14include/tofino
   COMMAND for h in ${p4include_HEADERS} ${p4_14include_HEADERS} \; do
-     ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/\$$h ${CMAKE_BINARY_DIR}/\$$h \;
+     ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/\$$h ${P4C_BINARY_DIR}/\$$h \;
   done
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/p4c_src
-  COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino.cfg ${CMAKE_BINARY_DIR}/p4c_src
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${P4C_BINARY_DIR}/p4c_src
+  COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino.cfg ${P4C_BINARY_DIR}/p4c_src
   )
 add_dependencies(p4c_driver linktofino)
 

@@ -19,6 +19,12 @@
 
 set -e
 
+use_cmake=0
+if [[ "$1" == "--use-cmake" ]]; then
+    use_cmake=1
+    shift
+fi
+
 mydir=`dirname $0`
 cd $mydir
 
@@ -34,13 +40,21 @@ pushd extensions
 if [ ! -e tofino ]; then ln -sf ../../bf-p4c tofino; fi
 if [ ! -e p4_tests ]; then ln -sf ../../p4-tests p4_tests; fi
 popd # extensions
-./bootstrap.sh
-rm -rf build  # don't actually want this...
+if [[ $use_cmake == 0 ]]; then
+   ./bootstrap.sh
+   rm -rf build  # don't actually want this...
+fi
 popd # p4c
 
-autoreconf -i
-mkdir -p build && cd build
-../configure $*
+if [[ $use_cmake == 1 ]]; then
+    mkdir -p build && cd build
+    cmake .. $*
+else
+    autoreconf -i
+    mkdir -p build && cd build
+    ../configure $*
+fi
+
 cd p4c
 if [ ! -e p4c-tofino-gdb.gdb ]; then ln -sf ../../bf-p4c/.gdbinit p4c-tofino-gdb.gdb; fi
 if [ ! -e p4c-bm2-ss-gdb.gdb ]; then ln -sf ../../bf-p4c/.gdbinit p4c-bm2-ss-gdb.gdb; fi

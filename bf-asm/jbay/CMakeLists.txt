@@ -14,10 +14,10 @@ set (GEN_JBAY
 set (ARCH "JBay")
 
 foreach(f IN LISTS GEN_JBAY)
-  list (APPEND GEN_JBAY_SRCS ${CMAKE_BINARY_DIR}/gen/jbay/${f}.cpp)
-  list (APPEND GEN_JBAY_HDRS ${CMAKE_BINARY_DIR}/gen/jbay/${f}.h)
-  list (APPEND GEN_TEMPLATES_CFG  ${CMAKE_BINARY_DIR}/templates/jbay/${f}.cfg.json)
-  list (APPEND GEN_TEMPLATES_SIZE ${CMAKE_BINARY_DIR}/templates/jbay/${f}.size.json)
+  list (APPEND GEN_JBAY_SRCS ${BFASM_BINARY_DIR}/gen/jbay/${f}.cpp)
+  list (APPEND GEN_JBAY_HDRS ${BFASM_BINARY_DIR}/gen/jbay/${f}.h)
+  list (APPEND GEN_TEMPLATES_CFG  ${BFASM_BINARY_DIR}/templates/jbay/${f}.cfg.json)
+  list (APPEND GEN_TEMPLATES_SIZE ${BFASM_BINARY_DIR}/templates/jbay/${f}.size.json)
   add_registers ("jbay" ${f} ${f} ${ARCH})
 endforeach()
 
@@ -27,15 +27,15 @@ set_source_files_properties(
   PROPERTIES GENERATED TRUE)
 
 add_custom_command(OUTPUT ${GEN_TEMPLATES_CFG} ${GEN_TEMPLATES_SIZE}
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/templates/jbay
-  COMMAND ${CMAKE_BINARY_DIR}/walle/walle --schema chip.schema --generate-templates template_objects.yaml -o ${CMAKE_BINARY_DIR}/templates/jbay
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${BFASM_BINARY_DIR}/templates/jbay
+  COMMAND ${BFASM_WALLE} --schema chip.schema --generate-templates template_objects.yaml -o ${BFASM_BINARY_DIR}/templates/jbay
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   DEPENDS template_objects.yaml chip.schema walle
   COMMENT "Generating walle templates for jbay")
 
 
-include_directories (${CMAKE_BINARY_DIR}/gen/jbay)
-add_library (jbay ${GEN_JBAY_SRCS} ${GEN_JBAY_HDRS})
+include_directories (${BFASM_BINARY_DIR}/gen/jbay)
+add_library (regs_jbay ${GEN_JBAY_SRCS} ${GEN_JBAY_HDRS})
 
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/chip.schema
   DESTINATION ${CMAKE_INSTALL_PREFIX}/share/p4c/jbay)

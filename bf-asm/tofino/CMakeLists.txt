@@ -13,10 +13,10 @@ set (GEN_TOFINO
   )
 
 foreach(f IN LISTS GEN_TOFINO)
-  list (APPEND GEN_TOFINO_SRCS ${CMAKE_BINARY_DIR}/gen/tofino/${f}.cpp)
-  list (APPEND GEN_TOFINO_HDRS ${CMAKE_BINARY_DIR}/gen/tofino/${f}.h)
-  list (APPEND GEN_TEMPLATES_CFG  ${CMAKE_BINARY_DIR}/templates/tofino/${f}.cfg.json)
-  list (APPEND GEN_TEMPLATES_SIZE ${CMAKE_BINARY_DIR}/templates/tofino/${f}.size.json)
+  list (APPEND GEN_TOFINO_SRCS ${BFASM_BINARY_DIR}/gen/tofino/${f}.cpp)
+  list (APPEND GEN_TOFINO_HDRS ${BFASM_BINARY_DIR}/gen/tofino/${f}.h)
+  list (APPEND GEN_TEMPLATES_CFG  ${BFASM_BINARY_DIR}/templates/tofino/${f}.cfg.json)
+  list (APPEND GEN_TEMPLATES_SIZE ${BFASM_BINARY_DIR}/templates/tofino/${f}.size.json)
 endforeach()
 
 set_source_files_properties(
@@ -25,8 +25,8 @@ set_source_files_properties(
   PROPERTIES GENERATED TRUE)
 
 add_custom_command(OUTPUT ${GEN_TEMPLATES_CFG} ${GEN_TEMPLATES_SIZE}
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/templates/tofino
-  COMMAND ${CMAKE_BINARY_DIR}/walle/walle --schema chip.schema --generate-templates template_objects.yaml -o ${CMAKE_BINARY_DIR}/templates/tofino
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${BFASM_BINARY_DIR}/templates/tofino
+  COMMAND ${BFASM_WALLE} --schema chip.schema --generate-templates template_objects.yaml -o ${BFASM_BINARY_DIR}/templates/tofino
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   DEPENDS template_objects.yaml chip.schema walle
   COMMENT "Generating walle templates for tofino")
@@ -44,8 +44,8 @@ add_registers ("tofino" "regs.pipe_addrmap" "regs.pipe" "${ARCH}" "+E")
 add_registers ("tofino" "memories.pipe_top_level" "memories.top" ${ARCH})
 add_registers ("tofino" "memories.pipe_addrmap" "memories.pipe" ${ARCH})
 
-include_directories (${CMAKE_BINARY_DIR}/gen/tofino)
-add_library (tofino ${GEN_TOFINO_SRCS} ${GEN_TOFINO_HDRS})
+include_directories (${BFASM_BINARY_DIR}/gen/tofino)
+add_library (regs_tofino ${GEN_TOFINO_SRCS} ${GEN_TOFINO_HDRS})
 
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/chip.schema
   DESTINATION ${CMAKE_INSTALL_PREFIX}/share/p4c/tofino)
