@@ -86,6 +86,9 @@ class PhvInfo : public Inspector {
         // ****************************************************************************************
         // TODO goal to move Analysis API related members here into field->phv_analysis_api object
         // similarly move Assignment API related members here into field->phv_assignment_api object
+        // alternately, use abstract base classes
+        // define both APIs as abstract classes that PhvInfo::Field implements
+        // more efficient than creating new API objects for every field
         // ****************************************************************************************
         // ****************************************************************************************
         //
@@ -191,6 +194,7 @@ class PhvInfo : public Inspector {
         friend class ActionAnalysis;          // mau/action_analysis
         friend class MergeInstructions;       // mau/instruction_adjustment
         friend class PHV_Assignment_API;
+        friend class PHV_Assignment_Validate;
         //
         friend void alloc_pov(PhvInfo::Field *i, PhvInfo::Field *pov);
         friend void repack_metadata(PhvInfo &phv);
@@ -388,6 +392,7 @@ class PhvInfo : public Inspector {
         //
         // friends of phv_analysis interface
         //
+        friend class PhvInfo;
         friend class Cluster;
         friend class PHV_Bind;
         friend class PHV_Container;
@@ -400,7 +405,7 @@ class PhvInfo : public Inspector {
         friend class Cluster_PHV_Requirements;
         friend class Cluster_Slicing;
         friend class PHV_Analysis_API;
-        friend class PhvInfo;
+        friend class PHV_Analysis_Validate;
         //
         friend std::ostream &operator<<(std::ostream &, const PhvInfo::Field::Field_Ops &);
         friend std::ostream &operator<<(std::ostream &out, const PhvInfo::Field &field);

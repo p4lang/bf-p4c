@@ -64,8 +64,8 @@ limitations under the License.
 #include "tofino/phv/cluster_phv_operations.h"
 #include "tofino/phv/cluster_phv_slicing.h"
 #include "tofino/phv/cluster_phv_overlay.h"
-#include "tofino/phv/phv_analysis_api.h"
-#include "tofino/phv/phv_assignment_api.h"
+#include "tofino/phv/phv_analysis_validate.h"
+#include "tofino/phv/phv_assignment_validate.h"
 #include "tofino/phv/validate_allocation.h"
 #include "tofino/common/parser_overlay.h"
 
@@ -121,10 +121,9 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
                                                                  // overlay clusters to MAU groups
                                                                  // need cluster_phv_interference
                                                                  // func mutually_exclusive(f1, f2)
-    PHV_Analysis_API phv_analysis_api(phv, cluster_phv_mau, 0);  // extended object interface
-                                                                 // phv_analysis to rest of compiler
-    PHV_Assignment_API phv_assignment_api(phv, 0);               // extended object interface
-                                                                 // phv_assignment to compiler
+    PHV_Analysis_Validate phv_analysis_validate(phv, cluster_phv_mau);
+                                                                 // phv_analysis validation
+    PHV_Assignment_Validate phv_assignment_validate(phv);        // phv_assignment validation
     PHV_Bind phv_bind(phv, cluster_phv_mau);                     // field binding to PHV Containers
     DependencyGraph deps;
     TablesMutuallyExclusive mutex;
@@ -141,43 +140,43 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
     } else {
         phv_alloc = new PassManager({
             //
-            // &cluster_phv_mau,     // cluster PHV container placements
-                                  // second cut PHV MAU Group assignments
-                                  // honor single write conflicts from Table Placement
-            &phv_bind,            // fields bound to PHV containers
-                                  // later passes assume that phv alloc info
-                                  // is sorted in field bit order, msb first
-                                  // done by phv_bind
-            &phv_assignment_api,  // phv assignment results api interface
+            // &cluster_phv_mau,       // cluster PHV container placements
+                                       // second cut PHV MAU Group assignments
+                                       // honor single write conflicts from Table Placement
+            &phv_bind,                 // fields bound to PHV containers
+                                       // later passes assume that phv alloc info
+                                       // is sorted in field bit order, msb first
+                                       // sorting done by phv_bind
+            &phv_assignment_validate,  // phv assignment results validation
         });
     }
 
     PassManager *phv_analysis = new PassManager({
-        &cluster,              // cluster analysis
-        &parserOverlay,        // produce pairs of mutually exclusive header
-                               // fields, eg. (arpSrc, ipSrc)
-        &phv_field_ops,        // PHV field operations analysis
-        &cluster_phv_req,      // cluster PHV requirements analysis
+        &cluster,                      // cluster analysis
+        &parserOverlay,                // produce pairs of mutually exclusive header
+                                       // fields, eg. (arpSrc, ipSrc)
+        &phv_field_ops,                // PHV field operations analysis
+        &cluster_phv_req,              // cluster PHV requirements analysis
         options.phv_interference?
             &cluster_phv_interference: nullptr,
-                               // cluster PHV interference graph analysis
-        &cluster_phv_mau,      // cluster PHV container placements
-                               // first cut PHV MAU Group assignments
-                               // produces cohabit fields for Table Placement
+                                       // cluster PHV interference graph analysis
+        &cluster_phv_mau,              // cluster PHV container placements
+                                       // first cut PHV MAU Group assignments
+                                       // produces cohabit fields for Table Placement
         options.phv_slicing?
             &cluster_slicing: nullptr,
-                               // slice clusters into smaller clusters
-                               // attempt packing with reduced width requirements
-                               // slicing also improves overlay possibilities due to lesser width
-                               // although number and mutual exclusion of fields don't change
+                                       // slice clusters into smaller clusters
+                                       // attempt packing with reduced width requirements
+                                       // slicing improves overlay possibilities due to less width
+                                       // although number & mutual exclusion of fields don't change
         options.phv_slicing?
             &cluster_slicing: nullptr,
-                               // repeat once more: unallocated clusters sliced further
-                               // further improves chances of packing and/or overlay
+                                       // repeat once more: unallocated clusters sliced further
+                                       // further improves chances of packing and/or overlay
         options.phv_overlay?
             &cluster_phv_overlay: nullptr,
-                               // overlay unallocated clusters to clusters as well as MAU groups
-        &phv_analysis_api,     // phv analysis results api interface
+                                       // overlay unallocated clusters to clusters & MAU groups
+        &phv_analysis_validate,        // phv analysis results validation
     });
 
     PassManager backend = {

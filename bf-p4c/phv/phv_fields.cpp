@@ -95,8 +95,8 @@ void PhvInfo::add(cstring name, int size, int offset, bool meta, bool pov) {
     //
     // create extended objects for phv_analysis_api, phv_assignment_api
     //
-    info->phv_analysis_api(new PHV_Analysis_API(*this, info));
-    info->phv_assignment_api(new PHV_Assignment_API(*this, info));
+    info->phv_analysis_api(new PHV_Analysis_API(info));
+    info->phv_assignment_api(new PHV_Assignment_API(info));
 }
 
 void PhvInfo::add_hdr(cstring name, const IR::Type_StructLike *type, bool meta) {
