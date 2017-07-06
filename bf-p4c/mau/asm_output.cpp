@@ -1434,7 +1434,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::ActionSelector *as) {
     self.emit_memory(out, indent, tbl->resources->memuse.at(name));
     self.emit_ixbar(out, indent, tbl->resources->selector_ixbar,
                     &tbl->resources->memuse.at(name), nullptr, false, false, true, as);
-    out << indent << "mode: " << as->mode.name << " 0" << std::endl;
+    out << indent << "mode: " << (as->mode ? as->mode.name : "fair") << " 0" << std::endl;
     return false;
 }
 

@@ -74,9 +74,9 @@ std::ostream &operator<<(std::ostream &out, const DeparserAsmOutput &d) {
             int idx = 0;
             out << indent++ << digest->name << ":" << std::endl;
             for (auto l : digest->sets) {
-                out << indent << idx++ << ": [ " << digest->select->name;
+                out << indent << idx++ << ": [ " << canon_name(digest->select->name);
                 d.emit_fieldlist(out, l, ", ");
                 out << " ]" << std::endl; }
-            out << indent-- << "select: " << digest->select->name << std::endl; } }
+            out << indent-- << "select: " << canon_name(digest->select->name) << std::endl; } }
     return out;
 }
