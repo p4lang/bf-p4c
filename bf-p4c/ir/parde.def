@@ -54,6 +54,10 @@ class Digest {
     Digest(gress_t gress, cstring name) : gress(gress), name(name),
         select(new TempVar(Type::Bits::get(3),
                            cstring((gress ? "egress::$" : "ingress::$") + name))) {}
+    visit_children {
+        v.visit(select, "select");
+        for (auto &s : sets)
+            v.visit(s, "set"); }
 }
 
 class Deparser : Unit {

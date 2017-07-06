@@ -508,7 +508,6 @@ XFAIL_TESTS += tofino/testdata/p4_16_samples/union-valid-bmv2.p4.test
 # Tofino expected failures (Glass fails as well)
 XFAIL_TESTS +=  tofino/testdata/p4_14_samples/issue583.p4.test \
 		tofino/testdata/p4_14_samples/counter.p4.test \
-		tofino/testdata/p4_14_samples/copy_to_cpu.p4.test \
 		tofino/testdata/p4_14_samples/action_inline.p4.test
 
 # Customer c1 c2 c3 expected failures from glass
@@ -610,9 +609,6 @@ XFAIL_TESTS += tofino/%reldir%/p4_14/jenkins/stful/stful.p4.test \
 #BRIG-138
 XFAIL_TESTS += tofino/%reldir%/p4_14/jenkins/iterator/iterator.p4.test
 
-#BRIG-148
-XFAIL_TESTS += tofino/%reldir%/p4_14/jenkins/ecmp_pi/ecmp_pi.p4.test
-
 #BRIG-139
 XFAIL_TESTS += tofino/%reldir%/p4_14/jenkins/mau_mem_test/mau_mem_test.p4.test \
                p14_to_16/%reldir%/p4_14/jenkins/mau_mem_test/mau_mem_test.p4.test \
@@ -700,7 +696,6 @@ XFAIL_TESTS += \
     tofino/%reldir%/p4_14/c1/COMPILER-385/case2247.p4.test \
     tofino/%reldir%/p4_14/c1/COMPILER-386/test_config_286_stat_bugs.p4.test \
     tofino/%reldir%/p4_14/c1/COMPILER-402/case2318.p4.test \
-    tofino/%reldir%/p4_14/c1/COMPILER-413/mirror_test.p4.test \
     tofino/%reldir%/p4_14/c1/COMPILER-414/case2387_1.p4.test \
     tofino/%reldir%/p4_14/c1/COMPILER-415/case2386.p4.test \
     tofino/%reldir%/p4_14/c1/COMPILER-447/case2527.p4.test \
@@ -723,5 +718,4 @@ XFAIL_TESTS += \
     tofino/%reldir%/p4_14/c2/COMPILER-466/case2563_without_nop.p4.test \
     tofino/%reldir%/p4_14/c2/COMPILER-475/case2600.p4.test \
     tofino/%reldir%/p4_14/c2/COMPILER-502/case2675.p4.test \
-    tofino/%reldir%/p4_14/c2/COMPILER-510/case2682.p4.test \
-    tofino/%reldir%/p4_14/jenkins/stats_pi/stats_pi.p4.test
+    tofino/%reldir%/p4_14/c2/COMPILER-510/case2682.p4.test

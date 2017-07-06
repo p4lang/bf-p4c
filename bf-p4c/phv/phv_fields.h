@@ -505,6 +505,7 @@ class PhvInfo : public Inspector {
 //
 extern void repack_metadata(PhvInfo &phv);
 void dump(const PhvInfo *);
+void dump(const PhvInfo::Field *);
 //
 std::ostream &operator<<(std::ostream &, const PhvInfo::Field::bitrange &);
 std::ostream &operator<<(std::ostream &, const PhvInfo::Field::alloc_slice &);

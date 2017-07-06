@@ -920,6 +920,6 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field::Field_Ops &op)
     return out;
 }
 
-void dump(PhvInfo *phv) {
-    std::cout << *phv;
-}
+// for calling from the debugger
+void dump(const PhvInfo *phv) { std::cout << *phv; }
+void dump(const PhvInfo::Field *f) { std::cout << *f; }

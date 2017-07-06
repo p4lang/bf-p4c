@@ -141,8 +141,12 @@ void IR::Tofino::Parser::dbprint(std::ostream &out) const {
 }
 
 void IR::Tofino::Digest::dbprint(std::ostream &out) const {
-    for (auto s : sets)
-        out << endl << name << ": " << *s;
+    out << endl << gress << ' ' << name << ": " << indent << endl << "select: " << *select;
+    int idx = 0;
+    for (auto s : sets) {
+        out << endl << name << ' ' << idx++ << ": " << indent << *s << unindent;
+    }
+    out << unindent;
 }
 
 void IR::Tofino::Deparser::dbprint(std::ostream &out) const {
