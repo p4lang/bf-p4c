@@ -19,8 +19,11 @@
 
 set -e
 
-use_cmake=0
-if [[ "$1" == "--use-cmake" ]]; then
+use_cmake=1
+if [[ "$1" == "--use-automake" ]]; then
+    use_cmake=0
+    shift
+elif [[ "$1" == "--use-cmake" ]]; then
     use_cmake=1
     shift
 fi

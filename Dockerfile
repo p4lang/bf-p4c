@@ -7,9 +7,11 @@ ENV DEBIAN_FRONTEND noninteractive
 ENV P4C_DEPS automake \
              bison \
              build-essential \
+             cmake \
              flex \
              g++ \
              libboost-dev \
+             libboost-graph-dev \
              libboost-iostreams-dev \
              libfl-dev \
              libgc-dev \
@@ -56,6 +58,6 @@ RUN git clone --recursive https://github.com/google/protobuf.git && \
 COPY . /bfn/bf-p4c-compilers/
 WORKDIR /bfn/bf-p4c-compilers
 RUN pip install pyinstaller
-RUN ./bootstrap_bfn_compilers.sh && \
+RUN ./bootstrap_bfn_compilers.sh --use-cmake && \
     cd build && \
     make && make install-strip

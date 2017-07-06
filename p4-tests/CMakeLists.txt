@@ -26,10 +26,14 @@ include(TofinoXfail.cmake)
 
 set (P4C_TOFINO_RUNTEST ${CMAKE_CURRENT_SOURCE_DIR}/runtest)
 
-#   $(shell grep -l main $(shell grep -l -E '(v1model|psa)\.p4'
-#	   $(srcdir)/testdata/p4_16_samples/*.p4))
+set (V1_SEARCH_PATTERNS "include.*(v1model|psa).p4" "main")
+set (P4TESTDATA ${P4C_SOURCE_DIR}/testdata)
+set (P4TESTS_FOR_TOFINO "${P4TESTDATA}/p4_16_samples/*.p4")
+p4c_find_tests("${P4TESTS_FOR_TOFINO}" v1tests INCLUDE "${V1_SEARCH_PATTERNS}")
+
 set (TOFINO_TEST_SUITES
   ${P4C_SOURCE_DIR}/testdata/p4_14_samples/*.p4
+  ${P4TESTDATA}/p4_14_samples/switch_*/switch.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/*.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/google-tor/p4/spec/tor.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/*.p4
@@ -38,14 +42,18 @@ set (TOFINO_TEST_SUITES
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c3/*/*.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/jenkins/*/*.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch_*/switch.p4
+  ${v1tests}
   )
 
-p4c_add_tests("tofino" ${P4C_TOFINO_RUNTEST} "${TOFINO_TEST_SUITES}" "${XFAIL_TESTS}")
+p4c_add_tests("tofino" ${P4C_TOFINO_RUNTEST} "${TOFINO_TEST_SUITES}"
+  "${TOFINO_XFAIL_TESTS}")
 
-# We have additional test inputs that are used to test the other (standard) back-ends
-# These test input programs depend on Tofino in some way.
+# We have additional test inputs that are used to test the other
+# (standard) back-ends These test input programs depend on Tofino in
+# some way.
 
 # Exercise v12 back-end on Tofino-specific programs
+include (P14Xfail.cmake)
 set (P14_TEST_SUITES
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/*.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c1/*/*.p4
@@ -56,22 +64,30 @@ set (P14_TEST_SUITES
   )
 
 set (V12_DRIVER ${CMAKE_CURRENT_SOURCE_DIR}/test-v12-sample.sh)
-p4c_add_tests("p14_to_16" ${V12_DRIVER} "${P14_TEST_SUITES}" "${XFAIL_TESTS}")
+p4c_add_tests("p14_to_16" ${V12_DRIVER} "${P14_TEST_SUITES}" "${P14_XFAIL_TESTS}")
 
+# P4_16 tests
 set (P16_TEST_SUITES
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/*.p4
   )
 set (P4TEST_DRIVER ${P4C_SOURCE_DIR}/backends/p4test/run-p4-sample.py)
-p4c_add_tests("p4" ${P4TEST_DRIVER} "${P16_TEST_SUITES}" "${XFAIL_TESTS}")
+p4c_add_tests("p4" ${P4TEST_DRIVER} "${P16_TEST_SUITES}" "${P4_XFAIL_TESTS}")
 
-# $(shell grep -L 'tofino/stateful_alu_blackbox'
-#    $(shell grep -L 'tofino/stateful_alu' \
-#	$(shell grep -l main $(shell grep -l -E '(v1model|psa)\.p4' \
 # Exercise bmv2 back-end on Tofino-specific programs
-set (BMV2_TEST_SUITES
+include (BMV2Xfail.cmake)
+set (exclude_stateful "tofino/stateful_alu_blackbox" "tofino/stateful_alu")
+set (BMV2_P4_14_DIRS
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/*.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch_*/switch.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/*.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch_*/switch.p4)
+
+p4c_find_tests("${BMV2_P4_14_DIRS}" bmv2_p4_14_tests
+  EXCLUDE "${exclude_stateful}")
+
+p4c_find_tests("${CMAKE_CURRENT_SOURCE_DIR}/p4_16/*.p4" bmv2_p4_16_tests
+  INCLUDE "${V1_SEARCH_PATTERNS}" EXCLUDE "${exclude_stateful}")
+set (BMV2_TEST_SUITES
+  ${bmv2_p4_14_tests}
+  ${bmv2_p4_16_tests}
   )
-set(BMV2_DRIVER ${P4C_SOURCE_DIR}/backends/bmv2/run-bmv2-test.py)
-# p4c_add_tests("bmv2" ${BMV2_DRIVER} "${BMV2_TEST_SUITES}" "${XFAIL_TESTS}")
+set(BMV2_DRIVER ${CMAKE_CURRENT_SOURCE_DIR}/test-bmv2.sh)
+p4c_add_tests("bmv2" ${BMV2_DRIVER} "${BMV2_TEST_SUITES}" "${BMV2_XFAIL_TESTS}")

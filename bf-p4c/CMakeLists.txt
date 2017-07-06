@@ -18,11 +18,9 @@ MESSAGE("-- Adding p4c-tofino")
 
 find_package (Boost REQUIRED COMPONENTS graph)
 add_definitions("-DBOOST_NO_ARGUMENT_DEPENDENT_LOOKUP")
-if (Boost_GRAPH_FOUND)
-  include_directories(${Boost_INCLUDE_DIRS})
-  set (HAVE_LIBBOOST_GRAPH 1)
-  set (P4C_LIB_DEPS "${P4C_LIB_DEPS};${Boost_GRAPH_LIBRARY}")
-endif()
+include_directories(${Boost_INCLUDE_DIRS})
+set (HAVE_LIBBOOST_GRAPH 1)
+set (P4C_LIB_DEPS "${P4C_LIB_DEPS};${Boost_GRAPH_LIBRARY}")
 
 set (TOFINO_IR_SRCS
   ir/dbprint-tofino.cpp
@@ -31,18 +29,38 @@ set (TOFINO_IR_SRCS
   ir/parde.cpp
   ir/thread_visitor.cpp
   ir/tofino.cpp
+  ir/tofino_write_context.cpp
   )
 
 set (TOFINO_IR_HDRS
   ir/gress.h
   ir/thread_visitor.h
+  ir/tofino_write_context.h
   )
 
+set (TOFINO_BACKEND_CONV_SRCS
+  fromv1.0/stateful_alu.cpp
+  )
+
+set (TOFINO_BACKEND_CONV_HDRS
+  fromv1.0/stateful_alu.h
+  )
+
+# IR sources that need to go into the frontend library
 set(QUAL_TOFINO_IR_SRCS)
 foreach(src IN LISTS TOFINO_IR_SRCS)
   set(QUAL_TOFINO_IR_SRCS ${QUAL_TOFINO_IR_SRCS} ${CMAKE_CURRENT_SOURCE_DIR}/${src})
 endforeach()
 set(EXTENSION_FRONTEND_SOURCES ${EXTENSION_FRONTEND_SOURCES} ${QUAL_TOFINO_IR_SRCS} PARENT_SCOPE)
+
+# sources that need to be linked directly in p4test to properly handle
+# p4 14 to 16 conversion
+set(QUAL_TOFINO_P4_14_CONV_SRCS)
+foreach(src IN LISTS TOFINO_BACKEND_CONV_SRCS)
+  set(QUAL_TOFINO_P4_14_CONV_SRCS ${QUAL_TOFINO_P4_14_CONV_SRCS} ${CMAKE_CURRENT_SOURCE_DIR}/${src})
+endforeach()
+set(EXTENSION_P4_14_CONV_SOURCES ${EXTENSION_P4_14_CONV_SOURCES} ${QUAL_TOFINO_P4_14_CONV_SRCS} PARENT_SCOPE)
+
 
 set (TOFINO_BACKEND_COMMON_SRCS
   common/asm_output.cpp
@@ -50,7 +68,6 @@ set (TOFINO_BACKEND_COMMON_SRCS
   common/elim_unused.cpp
   common/extract_maupipe.cpp
   common/field_defuse.cpp
-  common/frontend.cpp
   common/header_stack.cpp
   common/live_at_entry.cpp
   common/remap_intrin.cpp
@@ -65,7 +82,6 @@ set (TOFINO_BACKEND_COMMON_HDRS
   common/elim_unused.h
   common/extract_maupipe.h
   common/field_defuse.h
-  common/frontend.h
   common/header_stack.h
   common/live_at_entry.h
   common/remap_intrin.h
@@ -162,7 +178,9 @@ set (TOFINO_BACKEND_PHV_SRCS
   phv/cluster_phv_slicing.cpp
   phv/phv.cpp
   phv/phv_analysis_api.cpp
+  phv/phv_analysis_validate.cpp
   phv/phv_assignment_api.cpp
+  phv/phv_assignment_validate.cpp
   phv/phv_fields.cpp
   phv/repack_metadata.cpp
   phv/split_phv_use.cpp
@@ -183,6 +201,7 @@ set (TOFINO_BACKEND_PHV_HDRS
   phv/cluster_phv_slicing.h
   phv/phv_analysis_api.h
   phv/phv_assignment_api.h
+  phv/phv_assignment_validate.h
   phv/phv_fields.h
   phv/phv.h
   phv/split_phv_use.h
@@ -244,9 +263,12 @@ set (TOFINO_HEADERS
 
 set (P4C_TOFINO_SRCS
   p4c-tofino.cpp
+  ${TOFINO_BACKEND_CONV_SRCS}
   )
 
-set (tofino_CPPLINT_FILES ${TOFINO_IR_SRCS} ${TOFINO_SOURCES} ${TOFINO_HEADERS} ${P4C_TOFINO_SRCS})
+
+set (tofino_cpplint ${TOFINO_IR_SRCS} ${TOFINO_SOURCES} ${TOFINO_HEADERS} ${P4C_TOFINO_SRCS})
+add_cpplint_files( ${CMAKE_CURRENT_SOURCE_DIR} "${tofino_cpplint}")
 
 add_library(tofinobackend ${TOFINO_SOURCES})
 add_dependencies(tofinobackend genIR)
@@ -274,10 +296,11 @@ add_dependencies(p4c_driver linktofino)
 ################ Testing
 
 # # Tofino-specific GTests.
-# gtest_tofino_UNIFIED = \
-# 	%reldir%/test/gtest/phv.cpp \
-# 	%reldir%/test/gtest/trivial_alloc.cpp
+set (GTEST_TOFINO_SOURCES
+  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/tofino_write_context.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/trivial_alloc.cpp
+  )
 
-# cpplint_FILES += $(gtest_tofino_UNIFIED) $(gtest_tofino_NONUNIFIED)
-# gtest_SOURCES += $(gtest_tofino_SOURCES)
-# gtest_LDADD += libtofinobackend.la
+set (GTEST_SOURCES ${GTEST_SOURCES} ${GTEST_TOFINO_SOURCES} PARENT_SCOPE)
+set (GTEST_LDADD ${GTEST_LDADD} tofinobackend PARENT_SCOPE)
