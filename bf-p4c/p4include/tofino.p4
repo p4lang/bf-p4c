@@ -6,10 +6,10 @@
 // -----------------------------------------------------------------------------
 // COMMON TYPES
 // -----------------------------------------------------------------------------
-typedef bit<9>  portid_t;  // Port ID -- ingress or egress port
-typedef bit<16>  mgid_t;   // Multicast group id
-typedef bit<5>  qid_t;     // Queue id
-
+typedef bit<9> portid_t;  // Port ID -- ingress or egress port
+typedef bit<16> mgid_t;   // Multicast group id
+typedef bit<5> qid_t;     // Queue id
+typedef bit<4> cloneid_t; // Clone id
 
 /// Meter types
 enum meter_type_t {
@@ -239,7 +239,7 @@ struct egress_intrinsic_metadata_from_parser_t {
                                        // encountered at egress
                                        // parser.
 
-  bit<4> clone_digest_id;              // value indicating the digest ID,
+  cloneid_t clone_digest_id;           // value indicating the digest ID,
                                        // based on the field list ID.
 
   bit<4> clone_src;                    // value indicating whether or not a
@@ -331,14 +331,14 @@ extern value_set<D> {
     bool is_member(in D data);
 }
 
-extern hash<O> {
+extern hash<T> {
   /// Constructor
   hash(hash_algorithm_t algo);
 
   /// compute the hash for data
   ///  @base :
   ///  @max :
-  O get_hash<D, T>(in D data, in T base, in T max);
+  T get_hash<D>(in D data, @optional in T base, @optional in T max);
 }
 
 /// Random number generator
@@ -389,21 +389,17 @@ extern stateful_param<T> {
 /// StatefulALU
 extern stateful_alu<T, I, O, P> {
   stateful_alu(register<T, I> reg, @optional stateful_param<P> param);
-  abstract void instruction(inout T value, @optional out O rv);
+  abstract void instruction(inout T value, @optional out O rv, @optional in P p);
   O execute(@optional in I index);
 }
 
 extern action_selector<T> {
   action_selector(bit<32> size,
                   @optional selector_mode_t mode,
-                  @optional bit<32> num_groups);
+                  @optional bit<32> max_num_groups,
+                  @optional bit<32> max_group_size,
+                  @optional register<bit<1>, T> reg);
   abstract T hash();
-}
-
-extern stateful_selector<I, T> {
-  stateful_selector(action_selector<T> sel);
-  void clear(in I index);
-  void set(in I index);
 }
 
 extern action_profile {
@@ -463,7 +459,7 @@ control Egress<H, M>(
 control IngressDeparser<H, M>(
   packet_out pkt,
   in H hdr,
-  in M metadata,
+  @optional in M metadata,
   @optional mirror_packet mirror,
   @optional resubmit_packet resubmit,
   @optional learn_filter_packet lf);
@@ -471,7 +467,7 @@ control IngressDeparser<H, M>(
 control EgressDeparser<H, M>(
   packet_out pkt,
   in H hdr,
-  in M metadata,
+  @optional in M metadata,
   @optional mirror_packet mirror);
 
 package Switch<IH, IM, EH, EM>(
