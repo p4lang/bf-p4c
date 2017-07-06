@@ -1,3 +1,4 @@
+#include "phv_analysis_api.h"
 #include "phv_analysis_validate.h"
 #include "lib/log.h"
 #include "lib/stringref.h"

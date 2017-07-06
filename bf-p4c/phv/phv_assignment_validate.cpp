@@ -1,3 +1,8 @@
+#include "cluster.h"
+// phv_fields needs to be included before the other phv_assignment* headers
+#include "phv_fields.h"
+#include "phv_analysis_api.h"
+#include "phv_assignment_api.h"
 #include "phv_assignment_validate.h"
 #include "lib/log.h"
 #include "lib/stringref.h"
