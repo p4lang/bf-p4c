@@ -9,11 +9,13 @@ tofino_ir_UNIFIED = \
 	%reldir%/ir/mau.cpp \
 	%reldir%/ir/parde.cpp \
 	%reldir%/ir/thread_visitor.cpp \
-	%reldir%/ir/tofino.cpp
+	%reldir%/ir/tofino.cpp \
+	%reldir%/ir/tofino_write_context.cpp
 
 noinst_HEADERS += \
 	%reldir%/ir/gress.h \
-	%reldir%/ir/thread_visitor.h
+	%reldir%/ir/thread_visitor.h \
+	%reldir%/ir/tofino_write_context.h
 
 cpplint_FILES += $(tofino_ir_UNIFIED) $(tofino_ir_NONUNIFIED)
 extension_frontend_SOURCES += $(tofino_ir_SOURCES)
@@ -231,6 +233,7 @@ p4c_PYTHON += $(srcdir)/%reldir%/driver/p4c.tofino.cfg
 # Tofino-specific GTests.
 gtest_tofino_UNIFIED = \
 	%reldir%/test/gtest/phv.cpp \
+    %reldir%/test/gtest/tofino_write_context.cpp \
 	%reldir%/test/gtest/trivial_alloc.cpp
 
 cpplint_FILES += $(gtest_tofino_UNIFIED) $(gtest_tofino_NONUNIFIED)

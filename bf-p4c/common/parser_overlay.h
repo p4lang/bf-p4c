@@ -8,13 +8,14 @@
 #include "lib/symbitmatrix.h"
 #include "tofino/phv/phv_fields.h"
 #include "tofino/parde/parde_visitor.h"
+#include "tofino/ir/tofino_write_context.h"
 
 /* Produces a SymBitMatrix where keys are PhvInfo::Field ids and values
  * indicate whether two fields are mutually exclusive.
  */
 
 class ParserOverlay : public ControlFlowVisitor,
-                      public PardeInspector, P4WriteContext {
+                      public PardeInspector, TofinoWriteContext {
  private:
     const PhvInfo&   phv;
 

@@ -301,6 +301,19 @@ class TableSeq {
 #apply
 }
 
+/// A primitive function, optionally annotated with its front end type.
+class TypedPrimitive : Primitive {
+#nodbprint
+#noconstructor
+    IR::Type method_type;
+
+    TypedPrimitive(cstring name)
+    : method_type(nullptr), Primitive(name) { }
+    TypedPrimitive(Util::SourceInfo srcInfo, const IR::Type* return_type, const IR::Type* m_type, cstring name)
+    : method_type(m_type), Primitive(srcInfo, return_type, name) { }
+
+    visit_children { Primitive::visit_children(v); }
+}
 
 /// A single MAU instruction.  For the most part instructions look exactly like Primitives,
 /// just with more constraints applied.  For example, an "add" instruction has the same
@@ -323,9 +336,9 @@ class Instruction : Primitive {
 /// The Action part of an action table -- basically a single VLIW instruction, which is a
 /// set of instructions on different PHV containers that all run simultaneously
 class Action : ActionFunction {
-    // Removed the stateful primitives as they aren't instructions as such.
+    // Separate stateful primitives from actions, as they aren't instructions
+    // as such.
     inline Vector<Primitive>    stateful = {};
-    inline Vector<Primitive>    modify_with_hash = {};
 }
 /// A stateful ALU VLIW instruction -- multiple instructions that all run together
 /// "simultanesouly" in different ALUs (certain ALUs are actually later in the pipeline)
@@ -340,6 +353,16 @@ class SaluAction : ActionFunction {
 /// A use of one or two hash distribution units; an operand of an instruction
 class HashDist : Expression {
 #nodbprint
+    // Fields read by this HashDist
+    Expression           field_list;
+
+    // Pointer to the IR::Primitive that was used to generate this HashDist
+    // (and then removed).  This is not visited as part of IR traversal.
+    Primitive            prim;
+
+    visit_children {
+        Expression::visit_children(v);
+        v.visit(field_list, "field_list"); }
 // FIXME -- what info goes here?
 // Currently we reconstruct the unit id(s) in MauAsmOutput::EmitAction
 }

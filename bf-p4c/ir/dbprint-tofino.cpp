@@ -82,11 +82,6 @@ void IR::MAU::Action::dbprint(std::ostream &out) const {
         for (auto &p : stateful)
             out << endl << p;
         out << unindent << " }"; }
-    if (!modify_with_hash.empty()) {
-        out << " + {" << indent;
-        for (auto &p : modify_with_hash)
-            out << endl << p;
-        out << unindent << " }"; }
 }
 
 void IR::MAU::SaluAction::dbprint(std::ostream &out) const {

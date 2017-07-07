@@ -311,7 +311,6 @@ const IR::MAU::Action *MergeInstructions::preorder(IR::MAU::Action *act) {
     if (merged_fields.empty())
         prune();
 
-
     return act;
 }
 

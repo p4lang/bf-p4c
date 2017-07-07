@@ -138,12 +138,23 @@ static void setup_action_layout(IR::MAU::Table *tbl, LayoutChoices &lc, const Ph
     lc.total_action_formats[tbl->name] = af_use;
 }
 
+/** Add the IR::Primitive `prim` field for each HashDist to @hash_dist_reqs. */
+class GetHashDistReqs : public Inspector {
+    vector<HashDistReq> &hash_dist_reqs;
+
+    bool preorder(const IR::MAU::HashDist *hd) {
+        hash_dist_reqs.emplace_back(true, hd->prim);
+        return false;}
+
+ public:
+    explicit GetHashDistReqs(vector<HashDistReq> &hdr) : hash_dist_reqs(hdr) { }
+};
+
 static void setup_hash_dist(IR::MAU::Table *tbl, const PhvInfo &phv, LayoutChoices &lc) {
     vector<HashDistReq> hash_dist_reqs;
-    for (auto action : Values(tbl->actions)) {
-        for (auto instr : action->modify_with_hash) {
-            if (instr->name == "hash") {
-                hash_dist_reqs.emplace_back(true, instr); } }
+    GetHashDistReqs hdrv(hash_dist_reqs);
+    for (const IR::MAU::Action *action : Values(tbl->actions)) {
+        action->apply(hdrv);
         for (auto instr : action->stateful) {
             if (phv.field(instr->operands[1]) == nullptr) continue;
             hash_dist_reqs.emplace_back(true, instr); } }

@@ -3,6 +3,7 @@
 
 #include "mau_visitor.h"
 #include "tofino/phv/phv_fields.h"
+#include "tofino/ir/tofino_write_context.h"
 
 struct TableResourceAlloc;
 
@@ -23,7 +24,7 @@ struct TableResourceAlloc;
  *  actions is necessary for having a correct view of the action data requirements, as well
  *  as reshaping the instructions from field by field to container by container
  */
-class ActionAnalysis : public MauInspector, P4WriteContext {
+class ActionAnalysis : public MauInspector, TofinoWriteContext {
  public:
     static constexpr int LOADCONST_MAX = 20;
     static constexpr int CONST_SRC_MAX = 3;

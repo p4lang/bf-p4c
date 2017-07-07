@@ -8,7 +8,7 @@ class InstructionSelection : public MauTransform {
     PhvInfo &phv;
     const IR::MAU::Action *af = nullptr;
     class SplitInstructions;
-    std::vector<const IR::Primitive *>  stateful, modify_with_hash;
+    std::vector<const IR::Primitive *>  stateful;
 
     profile_t init_apply(const IR::Node *root) override;
     const IR::GlobalRef *preorder(IR::GlobalRef *) override;

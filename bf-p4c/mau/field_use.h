@@ -4,8 +4,9 @@
 #include <iostream>
 #include "mau_visitor.h"
 #include "lib/bitvec.h"
+#include "tofino/ir/tofino_write_context.h"
 
-class FieldUse : public MauInspector, P4WriteContext {
+class FieldUse : public MauInspector, TofinoWriteContext {
     vector<cstring>             field_names;
     map<cstring, int>           field_index;
     struct rw_t { bitvec reads, writes; };

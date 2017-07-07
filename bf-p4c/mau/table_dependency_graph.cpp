@@ -4,6 +4,7 @@
 #include <algorithm>
 #include "ir/ir.h"
 #include "lib/log.h"
+#include "tofino/ir/tofino_write_context.h"
 
 
 static const char *dep_types[] = { "CONTROL", "DATA", "ANTI", "OUTPUT" };
@@ -27,7 +28,7 @@ std::ostream &operator<<(std::ostream &out, const DependencyGraph &dg) {
     return out;
 }
 
-class FindDependencyGraph::AddDependencies : public MauInspector, P4WriteContext {
+class FindDependencyGraph::AddDependencies : public MauInspector, TofinoWriteContext {
     FindDependencyGraph         &self;
     const IR::MAU::Table        *table;
 
@@ -55,7 +56,7 @@ class FindDependencyGraph::AddDependencies : public MauInspector, P4WriteContext
     bool preorder(const IR::Annotation *) override { return false; }
 };
 
-class FindDependencyGraph::UpdateAccess : public MauInspector , P4WriteContext {
+class FindDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteContext {
     FindDependencyGraph         &self;
     const IR::MAU::Table        *table;
 

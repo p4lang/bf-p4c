@@ -34,7 +34,7 @@ const IR::GlobalRef *InstructionSelection::preorder(IR::GlobalRef *gr) {
 
 const IR::MAU::Action *InstructionSelection::preorder(IR::MAU::Action *af) {
     BUG_CHECK(this->af == nullptr, "Nested action functions");
-    BUG_CHECK(stateful.empty() && modify_with_hash.empty(), "invalid state in visitor");
+    BUG_CHECK(stateful.empty(), "invalid state in visitor");
     LOG2("InstructionSelection processing action " << af->name);
     this->af = af;
     return af;
@@ -67,8 +67,6 @@ const IR::MAU::Action *InstructionSelection::postorder(IR::MAU::Action *af) {
         af->action = std::move(split);
     af->stateful.append(stateful);
     stateful.clear();
-    af->modify_with_hash.append(modify_with_hash);
-    modify_with_hash.clear();
     return af;
 }
 
@@ -344,6 +342,7 @@ const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
                prim->name == "stateful_alu_14.execute_stateful_log" ||
                prim->name == "stateful_alu.execute" ||
                prim->name == "register_action.execute") {
+        // FIXME: Remove stateful_alu_14
         bool direct_access = false;
         if (prim->operands.size() > 1)
             stateful.push_back(prim);  // needed to setup the index properly
@@ -370,11 +369,12 @@ const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
     } else if (prim->name == "direct_counter.count" || prim->name == "direct_meter.read") {
         return nullptr;
     } else if (prim->name == "hash") {
-        modify_with_hash.push_back(prim);
         int size = bitcount(prim->operands[4]->to<IR::Constant>()->asLong() - 1);
         /* FIXME -- is the above correct?  Or do we want ceil_log2? */
-        IR::MAU::Instruction *instr = new IR::MAU::Instruction(prim->srcInfo, "set",
-            new IR::Slice(prim->operands[0], size-1, 0), new IR::MAU::HashDist);
+        IR::MAU::Instruction *instr =
+            new IR::MAU::Instruction( prim->srcInfo, "set",
+                new IR::Slice(prim->operands[0], size-1, 0),
+                new IR::MAU::HashDist(prim->operands[3], prim));
         return instr;
     } else {
         WARNING("unhandled in InstSel: " << *prim); }

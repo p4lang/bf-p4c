@@ -5,6 +5,7 @@
 #include "resource.h"
 #include "action_analysis.h"
 #include "tofino/phv/phv.h"
+#include "tofino/ir/tofino_write_context.h"
 
 /** The purpose of these classes is to adjust the instructions in a single action that perform on
  *  multiple containers into one single action for the entire container.  The pass also
@@ -42,7 +43,7 @@
  */
 
 
-class SplitInstructions : public MauTransform, P4WriteContext {
+class SplitInstructions : public MauTransform, TofinoWriteContext {
     const PhvInfo &phv;
     const IR::MAU::Table *tbl;
     ActionAnalysis::ContainerActionsMap container_actions_map;
@@ -69,7 +70,7 @@ class SplitInstructions : public MauTransform, P4WriteContext {
     SplitInstructions(const PhvInfo &p, const IR::MAU::Table *t) : phv(p), tbl(t) {}
 };
 
-class ConstantsToActionData : public MauTransform, P4WriteContext {
+class ConstantsToActionData : public MauTransform, TofinoWriteContext {
     const PhvInfo &phv;
     const IR::MAU::Table *tbl;
     ActionAnalysis::ContainerActionsMap container_actions_map;
@@ -99,7 +100,7 @@ class ConstantsToActionData : public MauTransform, P4WriteContext {
     ConstantsToActionData(const PhvInfo &p, const IR::MAU::Table *t) : phv(p), tbl(t) {}
 };
 
-class MergeInstructions : public MauTransform, P4WriteContext {
+class MergeInstructions : public MauTransform, TofinoWriteContext {
  private:
     const PhvInfo &phv;
     const IR::MAU::Table *tbl;
@@ -144,7 +145,7 @@ class MergeInstructions : public MauTransform, P4WriteContext {
     MergeInstructions(const PhvInfo &p, const IR::MAU::Table *t) : phv(p), tbl(t) {}
 };
 
-class TotalInstructionAdjustment : public MauTransform, P4WriteContext {
+class TotalInstructionAdjustment : public MauTransform, TofinoWriteContext {
     const PhvInfo &phv;
     const IR::MAU::Table *preorder(IR::MAU::Table *) override;
  public:

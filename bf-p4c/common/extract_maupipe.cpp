@@ -84,6 +84,8 @@ const IR::Primitive *ActionBodySetup::cvtMethodCall(const IR::MethodCallExpressi
     } else {
         BUG("method call %s not yet implemented", mc); }
     auto prim = new IR::Primitive(mc->srcInfo, mc->type, name);
+    if (mc->method && mc->method->type)
+        prim = new IR::MAU::TypedPrimitive(mc->srcInfo, mc->type, mc->method->type, name);
     if (recv) prim->operands.push_back(recv);
     for (auto arg : *mc->arguments)
         prim->operands.push_back(arg);

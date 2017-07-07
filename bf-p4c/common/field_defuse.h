@@ -7,8 +7,10 @@
 #include "lib/ltbitmatrix.h"
 #include "lib/ordered_set.h"
 #include "tofino/phv/phv_fields.h"
+#include "tofino/ir/tofino_write_context.h"
 
-class FieldDefUse : public ControlFlowVisitor, public Inspector, P4WriteContext {
+
+class FieldDefUse : public ControlFlowVisitor, public Inspector, TofinoWriteContext {
  public:
     /* A given expression for a field might appear multiple places in the IR dag (eg, an
      * action used by mulitple tables), so we use a pair<Unit,Expr> to denote a particular

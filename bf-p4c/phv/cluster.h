@@ -9,6 +9,7 @@
 #include "lib/ordered_set.h"
 #include "lib/range.h"
 #include "tofino/ir/thread_visitor.h"
+#include "tofino/ir/tofino_write_context.h"
 
 /** @brief Builds "clusters" of PHV fields that must be placed in the same
  * group.
@@ -32,7 +33,7 @@
  *
  * @pre An up-to-date PhvInfo object.
  */
-class Cluster : public Inspector, P4WriteContext {
+class Cluster : public Inspector, TofinoWriteContext {
  public:
     enum CCGF_contiguity_limit {Parser_Extract = 28, Metadata = 16};
                                 // parser: 4x8b,4x16b,4x32b extractors per parse state
