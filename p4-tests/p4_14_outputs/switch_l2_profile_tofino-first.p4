@@ -42,11 +42,6 @@ struct fabric_metadata_t {
     bit<16> reason_code;
 }
 
-struct flowlet_metadata_t {
-    bit<16> id;
-    bit<32> inactive_timeout;
-}
-
 struct global_config_metadata_t {
     bit<1>  enable_dod;
     bit<32> switch_id;
@@ -684,8 +679,6 @@ struct metadata {
     egress_metadata_t        egress_metadata;
     @name("fabric_metadata") 
     fabric_metadata_t        fabric_metadata;
-    @pa_atomic("ingress", "flowlet_metadata.id") @name("flowlet_metadata") 
-    flowlet_metadata_t       flowlet_metadata;
     @name("global_config_metadata") 
     global_config_metadata_t global_config_metadata;
     @pa_atomic("ingress", "hash_metadata.hash1") @pa_solitary("ingress", "hash_metadata.hash1") @pa_atomic("ingress", "hash_metadata.hash2") @pa_solitary("ingress", "hash_metadata.hash2") @name("hash_metadata") 
@@ -838,13 +831,7 @@ struct headers {
     @name(".vlan_tag_") 
     vlan_tag_t[2]                                  vlan_tag_;
 }
-
-extern stateful_alu {
-    void execute_stateful_alu(@optional in bit<32> index);
-    void execute_stateful_alu_from_hash<FL>(in FL hash_field_list);
-    void execute_stateful_log();
-    stateful_alu();
-}
+#include <tofino/stateful_alu.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".parse_arp_rarp") state parse_arp_rarp {
@@ -2910,26 +2897,6 @@ control process_bfd_tx_packet(inout headers hdr, inout metadata meta, inout stan
 
 control process_egress_bfd_tx_timers(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-    }
-}
-
-control process_flowlet(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".flowlet_state") register<bit<64>>(32w8192) flowlet_state;
-    stateful_alu() flowlet_alu;
-    @name(".flowlet_lookup") action flowlet_lookup() {
-        flowlet_alu.execute_stateful_alu_from_hash<tuple<bit<16>>>({ meta.hash_metadata.hash1 });
-    }
-    @name(".flowlet") table flowlet {
-        actions = {
-            flowlet_lookup();
-            @defaultonly NoAction();
-        }
-        size = 1;
-        default_action = NoAction();
-    }
-    apply {
-        if (meta.flowlet_metadata.inactive_timeout != 32w0) 
-            flowlet.apply();
     }
 }
 

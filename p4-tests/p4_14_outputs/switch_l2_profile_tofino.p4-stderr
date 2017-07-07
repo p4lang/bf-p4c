@@ -91,15 +91,3 @@ action copy_to_cpu_with_reason(reason_code, qid, meter_id, icos) {
 acl.p4(691): warning: Could not infer type for meter_id, using bit<8>
 action redirect_to_cpu_with_reason(reason_code, qid, meter_id, icos) {
                                                      ^^^^^^^^
-stateful_alu_blackbox.p4(3): warning: stateful_alu: extern has attributes, which are not supported in P4-16, and thus are not emitted as P4-16
-blackbox_type stateful_alu {
-^
-stateful_alu_blackbox.p4(3): warning: stateful_alu: extern has attributes, which are not supported in P4-16, and thus are not emitted as P4-16
-blackbox_type stateful_alu {
-^
-stateful_alu_blackbox.p4(3): warning: stateful_alu: extern has attributes, which are not supported in P4-16, and thus are not emitted as P4-16
-blackbox_type stateful_alu {
-^
-stateful_alu_blackbox.p4(3): warning: stateful_alu: extern has attributes, which are not supported in P4-16, and thus are not emitted as P4-16
-blackbox_type stateful_alu {
-^

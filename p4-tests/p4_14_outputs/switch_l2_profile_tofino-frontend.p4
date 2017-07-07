@@ -42,11 +42,6 @@ struct fabric_metadata_t {
     bit<16> reason_code;
 }
 
-struct flowlet_metadata_t {
-    bit<16> id;
-    bit<32> inactive_timeout;
-}
-
 struct global_config_metadata_t {
     bit<1>  enable_dod;
     bit<32> switch_id;
@@ -684,8 +679,6 @@ struct metadata {
     egress_metadata_t        egress_metadata;
     @name("fabric_metadata") 
     fabric_metadata_t        fabric_metadata;
-    @pa_atomic("ingress", "flowlet_metadata.id") @name("flowlet_metadata") 
-    flowlet_metadata_t       flowlet_metadata;
     @name("global_config_metadata") 
     global_config_metadata_t global_config_metadata;
     @pa_atomic("ingress", "hash_metadata.hash1") @pa_solitary("ingress", "hash_metadata.hash1") @pa_atomic("ingress", "hash_metadata.hash2") @pa_solitary("ingress", "hash_metadata.hash2") @name("hash_metadata") 
@@ -838,13 +831,7 @@ struct headers {
     @name(".vlan_tag_") 
     vlan_tag_t[2]                                  vlan_tag_;
 }
-
-extern stateful_alu {
-    void execute_stateful_alu(@optional in bit<32> index);
-    void execute_stateful_alu_from_hash<FL>(in FL hash_field_list);
-    void execute_stateful_log();
-    stateful_alu();
-}
+#include <tofino/stateful_alu.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     bit<112> tmp;
