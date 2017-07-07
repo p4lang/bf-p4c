@@ -365,11 +365,13 @@ const IR::Statement *P4V1::StatefulAluConverter::convertExternCall(
         args->push_back(new IR::Member(algo, flc->algorithm));
         args->push_back(new IR::Constant(ttype, 0));
         args->push_back(conv.convert(flc->input_fields));
-        args->push_back(new IR::Constant(1 << flc->output_width));
+        args->push_back(new IR::Constant(IR::Type_Bits::get(flc->output_width + 1),
+                                         1 << flc->output_width));
         block->push_back(new IR::MethodCallStatement(new IR::MethodCallExpression(
                 new IR::PathExpression(structure->v1model.hash.Id()), args)));
         args = new IR::Vector<IR::Expression>();
-        args->push_back(new IR::PathExpression(new IR::Path(temp)));
+        args->push_back(new IR::Cast(IR::Type_Bits::get(32),
+                        new IR::PathExpression(new IR::Path(temp))));
     } else {
         BUG("Unknown method %s in stateful_alu", prim->name); }
     auto mc = new IR::MethodCallExpression(prim->srcInfo, info.utype, method, args);

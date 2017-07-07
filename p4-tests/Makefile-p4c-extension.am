@@ -145,7 +145,6 @@ XFAIL_TESTS += \
 
 # Could not find declaration error in generated P4_16 code (JIRA #BRIG-31)
 XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_206_stateful_logging.p4.test
-XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_209_pack_hash_dist.p4.test
 XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_206_stateful_logging.p4.test
 XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_209_pack_hash_dist.p4.test
 
