@@ -6,5 +6,5 @@
 	url = git@github.com:barefootnetworks/p4c-tofino.git
 [submodule "p4-tests/p4_16/google-tor"]
 	path = p4-tests/p4_16/google-tor
-	url = ../google
+	url = git@github.com:barefootnetworks/google.git
 	branch = bf-tor
