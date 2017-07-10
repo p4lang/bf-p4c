@@ -48,7 +48,9 @@ bool TofinoWriteContext::isWrite(bool root_value) {
     if ((size_t)(ctxt->child_index) < params->size()) {
         const IR::Direction d = params->at(ctxt->child_index)->direction;
         if (d == IR::Direction::Out || d == IR::Direction::InOut)
-            return true; } } } } } } }
+            return true;
+        else
+            return false; } } } } } } }
 
     if (ctxt->node->to<IR::MAU::Instruction>())
         return ctxt->child_index == 0;
@@ -57,7 +59,7 @@ bool TofinoWriteContext::isWrite(bool root_value) {
 }
 
 bool TofinoWriteContext::isRead(bool root_value) {
-    bool rv = P4WriteContext::isWrite(root_value);
+    bool rv = P4WriteContext::isRead(root_value);
     const IR::Node *current = getCurrentNode();
     const Context *ctxt = getContext();
     if (!ctxt || !ctxt->node || !current)
@@ -73,6 +75,10 @@ bool TofinoWriteContext::isRead(bool root_value) {
 
     if (ctxt->child_index < 0)
         return rv;
+
+    auto *salu = findContext<IR::MAU::SaluAction>();
+    if (salu && current == salu->output_dst) {
+        return false; }
 
     if (auto *match = ctxt->node->to<IR::Tofino::ParserMatch>()) {
         return (size_t)(ctxt->child_index) < match->stmts.size(); }
@@ -92,10 +98,20 @@ bool TofinoWriteContext::isRead(bool root_value) {
     if ((size_t)(ctxt->child_index) < params->size()) {
         const IR::Direction d = params->at(ctxt->child_index)->direction;
         if (d == IR::Direction::In || d == IR::Direction::InOut)
-            return true; } } } } } }
+            return true;
+        else
+            return false; } } } } } }
 
     if (ctxt->node->is<IR::MAU::Instruction>())
         return ctxt->child_index > 0;
+
+    if (auto *hashdist = ctxt->node->to<IR::MAU::HashDist>()) {
+        if (current == hashdist->field_list)
+            return true;
+        if (auto *fl = hashdist->field_list->to<IR::FieldList>()) {
+            for (auto *f : fl->fields) {
+                if (current == f)
+                    return true; } } }
 
     return rv;
 }

@@ -51,7 +51,7 @@ TEST(TofinoWriteContext, Read) {
 
     auto prim = new IR::MAU::TypedPrimitive("foo_prim");
     prim->operands = IR::Vector<IR::Expression>({zero, one, two});
-    prim->type =
+    prim->method_type =
       new IR::Type_Method(
         new IR::ParameterList(
           IR::IndexedVector<IR::Parameter>({
@@ -67,7 +67,7 @@ TEST(TofinoWriteContext, Read) {
 
 class TestWrite : public Inspector, TofinoWriteContext {
     bool preorder(const IR::Expression *p) {
-        if (findContext<IR::MAU::SaluAction>() ||
+        if ((findContext<IR::MAU::SaluAction>() && p == one) ||
            (findContext<IR::MAU::Instruction>() && p == zero) ||
            (findContext<IR::MAU::TypedPrimitive>() && p == one)) {
             EXPECT_FALSE(isRead());
@@ -89,7 +89,7 @@ TEST(TofinoWriteContext, Write) {
 
     auto prim = new IR::MAU::TypedPrimitive("foo_prim");
     prim->operands = IR::Vector<IR::Expression>({zero, one, two});
-    prim->type =
+    prim->method_type =
       new IR::Type_Method(
         new IR::ParameterList(
           IR::IndexedVector<IR::Parameter>({
