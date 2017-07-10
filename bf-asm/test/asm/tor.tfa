@@ -1277,7 +1277,7 @@ stage 1 ingress:
 stage 2 ingress:
   ternary_match l3_fwd_l3_ipv4_override_table_0 0:
     p4: { name: l3_fwd.l3_ipv4_override_table, action_profile: l3_fwd.wcmp_action_profile }
-    row: 0
+    row: 2
     bus: 0
     column: 0
     input_xbar:
@@ -1289,7 +1289,7 @@ stage 2 ingress:
           40: ipv4_base.$valid
         hash group 1:
           table: [2]
-      row: 7
+      row: 5
       bus: 0
       match: { 32: ipv4_base.$valid }
       0x1: run_table
@@ -1297,48 +1297,15 @@ stage 2 ingress:
     hit: tbl_act_2
     miss: l3_fwd_l3_ipv4_vrf_table_0
     indirect: l3_fwd_l3_ipv4_override_table_0$tind
-  action l3_fwd_l3_ipv4_override_table_0$act_prof.l3_fwd.wcmp_action_profile:
-    row: 15
-    column: 2
-    home_row: 15
-    format l3_fwd.set_nexthop: { $adf_h0: 16..31, $adf_h1: 32..47, $adf_h2: 48..63, $adf_h3: 64..79, $adf_h4: 80..95, $adf_h5: 96..111, $adf_h6: 112..127 }
-    action_bus: { 64..65 : $adf_h3, 66..67 : $adf_h4, 68..69 : $adf_h5, 70..71 : $adf_h6, 74..75 : $adf_h0, 76..77 : $adf_h1, 78..79 : $adf_h2 }
-    actions:
-      l3_fwd.set_nexthop:
-      - { port: $adf_h0, dmac.0-15: $adf_h1, dmac.16-31: $adf_h2, dmac.32-47: $adf_h3, smac.0-15: $adf_h4, smac.16-31: $adf_h5, smac.32-47: $adf_h6 }
-      - set standard_metadata.egress_spec, port
-      - add ipv4_base.ttl, ipv4_base.ttl, 255
-      - set ethernet.dst_addr.0-15, dmac.0-15
-      - set ethernet.dst_addr.16-31, dmac.16-31
-      - set ethernet.dst_addr.32-47, dmac.32-47
-      - set ethernet.src_addr.0-15, smac.0-15
-      - set ethernet.src_addr.16-31, smac.16-31
-      - set ethernet.src_addr.32-47, smac.32-47
-      NoAction:
-      - {  }
-  selection l3_fwd_l3_ipv4_override_table_0$act_sel.l3_fwd.wcmp_action_profile:
-    row: 15
-    column: [ 0, 1 ]
-    maprams: [ 0, 1 ]
-    input_xbar:
-      group 0: { 0: ipv4_base.dst_addr, 32: ipv4_base.src_addr, 64: local_metadata.l4_dst_port, 80: local_metadata.l4_src_port, 96: ipv4_base.protocol }
-      hash 0:
-        0..50: random(ipv4_base.dst_addr, ipv4_base.src_addr)
-      hash 1:
-        0..50: random(local_metadata.l4_dst_port, local_metadata.l4_src_port, ipv4_base.protocol)
-      hash group 0:
-        table: [0, 1]
-    mode: fair 0
   ternary_indirect l3_fwd_l3_ipv4_override_table_0$tind:
     row: 0
     bus: 0
     column: 2
     format: { action: 27..27, action_ptr: 0..9, select_ptr: 17}
-    action: l3_fwd_l3_ipv4_override_table_0$act_prof.l3_fwd.wcmp_action_profile(action, action_ptr)
-    selector: l3_fwd_l3_ipv4_override_table_0$act_sel.l3_fwd.wcmp_action_profile(select_ptr)
+    action: l3_fwd_l3_ipv4_fallback_table_0$act_prof.l3_fwd.wcmp_action_profile(action, action_ptr)
+    selector: l3_fwd_l3_ipv4_fallback_table_0$act_sel.l3_fwd.wcmp_action_profile(select_ptr)
     default_action: NoAction
-stage 3 ingress:
-  ternary_match l3_fwd_l3_ipv4_vrf_table_0 0:
+  ternary_match l3_fwd_l3_ipv4_vrf_table_0 1:
     p4: { name: l3_fwd.l3_ipv4_vrf_table, action_profile: l3_fwd.wcmp_action_profile }
     row: [ 0, 1 ]
     bus: [ 0, 0 ]
@@ -1351,50 +1318,17 @@ stage 3 ingress:
     hit: tbl_act_2
     miss: l3_fwd_l3_ipv4_fallback_table_0
     indirect: l3_fwd_l3_ipv4_vrf_table_0$tind
-  action l3_fwd_l3_ipv4_vrf_table_0$act_prof.l3_fwd.wcmp_action_profile:
-    row: 15
-    column: 2
-    home_row: 15
-    format l3_fwd.set_nexthop: { $adf_h0: 16..31, $adf_h1: 32..47, $adf_h2: 48..63, $adf_h3: 64..79, $adf_h4: 80..95, $adf_h5: 96..111, $adf_h6: 112..127 }
-    action_bus: { 64..65 : $adf_h3, 66..67 : $adf_h4, 68..69 : $adf_h5, 70..71 : $adf_h6, 74..75 : $adf_h0, 76..77 : $adf_h1, 78..79 : $adf_h2 }
-    actions:
-      l3_fwd.set_nexthop:
-      - { port: $adf_h0, dmac.0-15: $adf_h1, dmac.16-31: $adf_h2, dmac.32-47: $adf_h3, smac.0-15: $adf_h4, smac.16-31: $adf_h5, smac.32-47: $adf_h6 }
-      - set standard_metadata.egress_spec, port
-      - add ipv4_base.ttl, ipv4_base.ttl, 255
-      - set ethernet.dst_addr.0-15, dmac.0-15
-      - set ethernet.dst_addr.16-31, dmac.16-31
-      - set ethernet.dst_addr.32-47, dmac.32-47
-      - set ethernet.src_addr.0-15, smac.0-15
-      - set ethernet.src_addr.16-31, smac.16-31
-      - set ethernet.src_addr.32-47, smac.32-47
-      NoAction:
-      - {  }
-  selection l3_fwd_l3_ipv4_vrf_table_0$act_sel.l3_fwd.wcmp_action_profile:
-    row: 15
-    column: [ 0, 1 ]
-    maprams: [ 0, 1 ]
-    input_xbar:
-      group 0: { 0: ipv4_base.dst_addr, 32: ipv4_base.src_addr, 64: local_metadata.l4_dst_port, 80: local_metadata.l4_src_port, 96: ipv4_base.protocol }
-      hash 0:
-        0..50: random(ipv4_base.dst_addr, ipv4_base.src_addr)
-      hash 1:
-        0..50: random(local_metadata.l4_dst_port, local_metadata.l4_src_port, ipv4_base.protocol)
-      hash group 0:
-        table: [0, 1]
-    mode: fair 0
   ternary_indirect l3_fwd_l3_ipv4_vrf_table_0$tind:
-    row: 0
+    row: 1
     bus: 0
     column: 2
     format: { action: 27..27, action_ptr: 0..9, select_ptr: 17}
-    action: l3_fwd_l3_ipv4_vrf_table_0$act_prof.l3_fwd.wcmp_action_profile(action, action_ptr)
-    selector: l3_fwd_l3_ipv4_vrf_table_0$act_sel.l3_fwd.wcmp_action_profile(select_ptr)
+    action: l3_fwd_l3_ipv4_fallback_table_0$act_prof.l3_fwd.wcmp_action_profile(action, action_ptr)
+    selector: l3_fwd_l3_ipv4_fallback_table_0$act_sel.l3_fwd.wcmp_action_profile(select_ptr)
     default_action: NoAction
-stage 4 ingress:
-  ternary_match l3_fwd_l3_ipv4_fallback_table_0 0:
+  ternary_match l3_fwd_l3_ipv4_fallback_table_0 2:
     p4: { name: l3_fwd.l3_ipv4_fallback_table, action_profile: l3_fwd.wcmp_action_profile }
-    row: 0
+    row: 3
     bus: 0
     column: 0
     input_xbar:
@@ -1406,7 +1340,7 @@ stage 4 ingress:
     column: 2
     home_row: 15
     format l3_fwd.set_nexthop: { $adf_h0: 16..31, $adf_h1: 32..47, $adf_h2: 48..63, $adf_h3: 64..79, $adf_h4: 80..95, $adf_h5: 96..111, $adf_h6: 112..127 }
-    action_bus: { 64..65 : $adf_h3, 66..67 : $adf_h4, 68..69 : $adf_h5, 70..71 : $adf_h6, 74..75 : $adf_h0, 76..77 : $adf_h1, 78..79 : $adf_h2 }
+    action_bus: { 32..33 : $adf_h3, 34..35 : $adf_h4, 36..37 : $adf_h5, 38..39 : $adf_h6, 42..43 : $adf_h0, 44..45 : $adf_h1, 46..47 : $adf_h2 }
     actions:
       l3_fwd.set_nexthop:
       - { port: $adf_h0, dmac.0-15: $adf_h1, dmac.16-31: $adf_h2, dmac.32-47: $adf_h3, smac.0-15: $adf_h4, smac.16-31: $adf_h5, smac.32-47: $adf_h6 }
@@ -1421,27 +1355,20 @@ stage 4 ingress:
       NoAction:
       - {  }
   selection l3_fwd_l3_ipv4_fallback_table_0$act_sel.l3_fwd.wcmp_action_profile:
+    p4: { name: l3_fwd.wcmp_action_profile }
     row: 15
     column: [ 0, 1 ]
     maprams: [ 0, 1 ]
-    input_xbar:
-      group 0: { 0: ipv4_base.dst_addr, 32: ipv4_base.src_addr, 64: local_metadata.l4_dst_port, 80: local_metadata.l4_src_port, 96: ipv4_base.protocol }
-      hash 0:
-        0..50: random(ipv4_base.dst_addr, ipv4_base.src_addr)
-      hash 1:
-        0..50: random(local_metadata.l4_dst_port, local_metadata.l4_src_port, ipv4_base.protocol)
-      hash group 0:
-        table: [0, 1]
     mode: fair 0
   ternary_indirect l3_fwd_l3_ipv4_fallback_table_0$tind:
-    row: 0
+    row: 2
     bus: 0
     column: 2
     format: { action: 27..27, action_ptr: 0..9, select_ptr: 17}
     action: l3_fwd_l3_ipv4_fallback_table_0$act_prof.l3_fwd.wcmp_action_profile(action, action_ptr)
     selector: l3_fwd_l3_ipv4_fallback_table_0$act_sel.l3_fwd.wcmp_action_profile(select_ptr)
     default_action: NoAction
-stage 5 ingress:
+stage 3 ingress:
   exact_match tbl_act_2 0:
     p4: { name: tbl_act_2 }
     row: 0
@@ -1460,7 +1387,7 @@ stage 5 ingress:
       act_2:
       - invalidate standard_metadata.egress_spec
     default_action: act_2
-stage 6 ingress:
+stage 4 ingress:
   ternary_match punt_punt_table_0 0:
     p4: { name: punt.punt_table }
     row: [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 ]
@@ -1532,7 +1459,7 @@ stage 6 ingress:
       NoAction:
       - {  }
     default_action: NoAction
-stage 7 ingress:
+stage 5 ingress:
   exact_match tbl_act_3 0:
     p4: { name: tbl_act_3 }
     row: 0
@@ -1600,7 +1527,7 @@ stage 1 egress:
       - set hasExited_0, 1
     default_action: act_5
 stage 2 egress:
-  gateway cond-10 1:
+  gateway cond-10 3:
     input_xbar:
       group 0: { 110: hasExited_0 }
     row: 0
@@ -1608,15 +1535,18 @@ stage 2 egress:
     match: { 6: hasExited_0 }
     0b*0: spoof_protection_dhcp_spoof_protection_table_0
     miss: END
-  exact_match spoof_protection_dhcp_spoof_protection_table_0 2:
+  exact_match spoof_protection_dhcp_spoof_protection_table_0 4:
     p4: { name: spoof_protection.dhcp_spoof_protection_table }
-    row: 7
-    bus: 0
-    column: [ 2, 3, 4 ]
+    row: [ 5, 6, 7 ]
+    bus: [ 0, 0, 0 ]
+    column:
+    - 2
+    - 2
+    - 2
     ways:
     - [1, 0, 0x0, [7, 2]]
-    - [1, 1, 0x0, [7, 3]]
-    - [1, 2, 0x0, [7, 4]]
+    - [1, 1, 0x0, [6, 2]]
+    - [1, 2, 0x0, [5, 2]]
     input_xbar:
       group 1: { 8: local_metadata.l4_dst_port(8..15), 16: local_metadata.l4_dst_port(0..7), 24: standard_metadata.egress_spec(8), 32: standard_metadata.egress_spec(0..7) }
       hash 2:

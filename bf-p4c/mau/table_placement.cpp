@@ -439,7 +439,8 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
                 return nullptr; }
             set_entries -= p->entries;
         } else if (p->stage == rv->stage &&
-                 deps->happens_before(p->table, rv->table)) {
+                 deps->happens_before(p->table, rv->table)
+                 && !mutex.action(p->table, rv->table)) {
              rv->stage++;
         }
     }

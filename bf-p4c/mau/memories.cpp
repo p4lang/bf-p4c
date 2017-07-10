@@ -283,8 +283,8 @@ class SetupAttachedTables : public MauInspector {
             mem.action_profiles.push_back(new Memories::profile_info(as, ta));
         } else {
             auto linked_name = linked_pi->linked_ta->table->get_use_name();
-            (*ta->memuse)[table_name].unattached_profile = true;
-            (*ta->memuse)[table_name].profile_name = linked_name;
+            (*ta->memuse)[table_name].unattached_selector = true;
+            (*ta->memuse)[table_name].selector_name = linked_name;
         }
         mi.selector_RAMs += 2;
         return false;

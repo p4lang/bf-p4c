@@ -129,7 +129,9 @@ static IR::ID getAnnotID(const IR::Annotations *annot, cstring name) {
 
 static IR::Attached *createAttached(IR::MAU::Table *tt, Util::SourceInfo srcInfo, cstring name,
                                     const IR::Type *type, const IR::Vector<IR::Expression> *args,
-                                    const IR::Annotations *annot) {
+                                    const IR::Annotations *annot,
+                                    map<cstring, IR::ActionProfile *> *shared_ap,
+                                    map<cstring, IR::ActionSelector *> *shared_as) {
     IR::CounterOrMeter *rv = nullptr;
     // FIXME -- this should be looking at the arch model, but the current arch model stuff
     // is too complex -- need a way of building this automatically from the arch.p4 file.
@@ -138,23 +140,36 @@ static IR::Attached *createAttached(IR::MAU::Table *tt, Util::SourceInfo srcInfo
     if (auto p = tname.find('<'))  // strip off type args (if any)
         tname = tname.before(p);
     if (tname == "action_selector") {
+        if (shared_as == nullptr || shared_ap == nullptr)
+            BUG("Action Selector %s used in an impossible manner", name);
+        if (shared_as->find(name) != shared_as->end()) {
+            if (shared_ap->find(name) == shared_ap->end())
+                BUG("Shared Action Selector with no corresponding Action Profile");
+            if (tt)
+                 tt->attached.push_back(shared_ap->at(name));
+            return shared_as->at(name);
+        }
         auto sel = new IR::ActionSelector(srcInfo, name, annot);
-        auto flc = new IR::FieldListCalculation();
-        flc->algorithm = args->at(0)->as<IR::Member>().member;
-        flc->output_width = args->at(2)->as<IR::Constant>().asInt();
-        sel->key_fields = flc;
         sel->mode = getAnnotID(annot, "mode");
         sel->type = getAnnotID(annot, "type");
         auto ap = new IR::ActionProfile(srcInfo, name);
         ap->size = args->at(1)->as<IR::Constant>().asInt();
         ap->selector = name;
         // FIXME Need to reconstruct the field list from the table key?
+        (*shared_ap)[name] = ap;
+        (*shared_as)[name] = sel;
         if (tt)
             tt->attached.push_back(ap);
         return sel;
     } else if (tname == "action_profile") {
+        if (shared_as == nullptr || shared_ap == nullptr)
+            BUG("Action Profile %s used in an impossible manner", name);
+        if (shared_ap->find(name) != shared_ap->end()) {
+            return shared_ap->at(name);
+        }
         auto ap = new IR::ActionProfile(srcInfo, name);
         ap->size = args->at(0)->as<IR::Constant>().asInt();
+        (*shared_ap)[name] = ap;
         return ap;
     } else if (tname == "counter" || tname == "direct_counter") {
         auto ctr = new IR::Counter(srcInfo, name, annot);
@@ -239,6 +254,8 @@ class FixP4Table : public Transform {
     const P4::ReferenceMap *refMap;
     IR::MAU::Table *tt;
     set<cstring> &unique_names;
+    map<cstring, IR::ActionProfile *> *shared_ap;
+    map<cstring, IR::ActionSelector *> *shared_as;
     bool default_action_fix = false;
 
     const IR::P4Table *preorder(IR::P4Table *tc) override {
@@ -266,12 +283,12 @@ class FixP4Table : public Transform {
                 tname = cstring::make_unique(unique_names, tname);
                 unique_names.insert(tname);
                 obj = createAttached(tt, cc->srcInfo, prop->externalName(tname), cc->type,
-                                     cc->arguments, prop->annotations);
+                                     cc->arguments, prop->annotations, shared_ap, shared_as);
                 LOG3("Created " << obj->node_type_name() << ' ' << obj->name << " (pt 1)");
             } else if (auto pe = pval->to<IR::PathExpression>()) {
                 auto &d = refMap->getDeclaration(pe->path, true)->as<IR::Declaration_Instance>();
                 obj = createAttached(tt, d.srcInfo, d.externalName(), d.type,
-                                     d.arguments, d.annotations);
+                                     d.arguments, d.annotations, shared_ap, shared_as);
                 LOG3("Created " << obj->node_type_name() << ' ' << obj->name << " (pt 2)"); }
             BUG_CHECK(obj, "not valid for %s: %s", prop->name, pval);
             LOG3("attaching " << obj->name << " to " << tt->name);
@@ -306,8 +323,9 @@ class FixP4Table : public Transform {
         return exp; }
 
  public:
-    FixP4Table(const P4::ReferenceMap *r, IR::MAU::Table *tt, set<cstring> &u)
-    : refMap(r), tt(tt), unique_names(u) {}
+    FixP4Table(const P4::ReferenceMap *r, IR::MAU::Table *tt, set<cstring> &u,
+               map<cstring, IR::ActionProfile *> *ap, map<cstring, IR::ActionSelector *> *as)
+    : refMap(r), tt(tt), unique_names(u), shared_ap(ap), shared_as(as) {}
 };
 
 struct AttachTables : public Modifier {
@@ -315,6 +333,7 @@ struct AttachTables : public Modifier {
     map<cstring, vector<const IR::Attached *>>  attached;
     map<cstring, IR::MAU::StatefulAlu *>        salu;
     map<const IR::Declaration_Instance *, const IR::Attached *> converted;
+
 
     void postorder(IR::MAU::Table *tbl) override {
         if (attached.count(tbl->name)) {
@@ -342,7 +361,8 @@ struct AttachTables : public Modifier {
                 if (!contains(attached[tt->name], converted.at(di)))
                     attached[tt->name].push_back(converted.at(di));
             } else if (auto att = createAttached(nullptr, di->srcInfo, di->externalName(),
-                                                 di->type, di->arguments, di->annotations)) {
+                                                 di->type, di->arguments, di->annotations,
+                                                 nullptr, nullptr)) {
                 LOG3("Created " << att->node_type_name() << ' ' << att->name << " (pt 3)");
                 gref->obj = converted[di] = att;
                 attached[tt->name].push_back(att);
@@ -378,6 +398,8 @@ class GetTofinoTables : public Inspector {
     set<cstring>                                unique_names;
     map<const IR::Node *, IR::MAU::Table *>     tables;
     map<const IR::Node *, IR::MAU::TableSeq *>  seqs;
+    map<cstring, IR::ActionProfile *> shared_ap;
+    map<cstring, IR::ActionSelector *> shared_as;
     IR::MAU::TableSeq *getseq(const IR::Node *n) {
         if (!seqs.count(n) && tables.count(n))
             seqs[n] = new IR::MAU::TableSeq(tables.at(n));
@@ -425,7 +447,8 @@ class GetTofinoTables : public Inspector {
                 new IR::MAU::Table(cstring::make_unique(unique_names, table->name), gress, table);
             unique_names.insert(tt->name);
             tt->match_table = table =
-                table->apply(FixP4Table(refMap, tt, unique_names))->to<IR::P4Table>();
+                table->apply(FixP4Table(refMap, tt, unique_names,
+                                        &shared_ap, &shared_as))->to<IR::P4Table>();
             setup_tt_actions(tt, table);
         } else {
             error("%s: Multiple applies of table %s not supported", m->srcInfo, table->name); }

@@ -156,7 +156,6 @@ bool FindDependencyGraph::preorder(const IR::MAU::Table *t) {
     for (auto &action : Values(t->actions))
         action->apply(UpdateAccess(*this, t));
     t->apply(UpdateAttached(*this, t));
-
     return true;
 }
 
@@ -168,7 +167,8 @@ inline set<T> &operator |=(set<T> &s, const set<T> &a) {
 void FindDependencyGraph::flow_merge(Visitor &v) {
     for (auto &a : dynamic_cast<FindDependencyGraph &>(v).access) {
         access[a.first].read |= a.second.read;
-        access[a.first].write |= a.second.write; }
+        access[a.first].write |= a.second.write;
+    }
 }
 
 // Should be applied to a reversed graph, so that it populates happens_before_map

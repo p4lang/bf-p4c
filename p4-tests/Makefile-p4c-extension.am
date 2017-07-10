@@ -207,8 +207,8 @@ XFAIL_TESTS += \
 XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_246_fill_stage.p4.test
 
 # Fail on purpose due to action profiles not being mutually exclusive
-#XFAIL_TESTS += tofino/%reldir%/p4_14/action_profile_not_shared.p4.test
-#XFAIL_TESTS += tofino/%reldir%/p4_14/action_profile_next_stage.p4.test
+XFAIL_TESTS += tofino/%reldir%/p4_14/action_profile_not_shared.p4.test
+XFAIL_TESTS += tofino/%reldir%/p4_14/action_profile_next_stage.p4.test
 
 # Hash Action Bugs within the ASM or Model
 XFAIL_TESTS += tofino/testdata/p4_14_samples/hash_action_gateway.p4.test
@@ -626,6 +626,9 @@ XFAIL_TESTS += tofino/%reldir%/p4_14/jenkins/pvs/pvs.p4.test \
 #BRIG-141
 XFAIL_TESTS += tofino/%reldir%/p4_14/jenkins/pctr/pctr.p4.test \
                p14_to_16/%reldir%/p4_14/jenkins/pctr/pctr.p4.test
+
+#BRIG-185
+XFAIL_TESTS += tofino/%reldir%/p4_14/action_selection_shared_four.p4.test
 
 
 #uncharacterized failures

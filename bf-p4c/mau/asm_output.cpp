@@ -1431,6 +1431,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::ActionSelector *as) {
     }
     cstring name = tbl->get_use_name(as);
     out << indent++ << "selection " << name << ":" << std::endl;
+    out << indent << "p4: { name: " << canon_name(as->name) << " }" << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(name));
     self.emit_ixbar(out, indent, tbl->resources->selector_ixbar,
                     &tbl->resources->memuse.at(name), nullptr, false, false, true, as);
