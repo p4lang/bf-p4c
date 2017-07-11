@@ -10,13 +10,14 @@ set (P14_XFAIL_TESTS
   extensions/p4_tests/p4_14/test_config_160_stateful_single_bit_mode.p4
   extensions/p4_tests/p4_14/test_config_185_first_lpf.p4
   extensions/p4_tests/p4_14/test_config_201_meter_constant_index.p4
+  extensions/p4_tests/p4_14/test_config_163_stateful_table_math_unit.p4
+  extensions/p4_tests/p4_14/test_config_192_stateful_driven_by_hash.p4
   extensions/p4_tests/p4_14/test_config_166_stateful_generic_counter.p4
   extensions/p4_tests/p4_14/test_config_142_stateful_bfd.p4
   extensions/p4_tests/p4_14/test_config_195_stateful_predicate_output.p4
   extensions/p4_tests/p4_14/test_config_165_stateful_bfd_failure_detection.p4
   extensions/p4_tests/p4_14/test_config_184_stateful_bug1.p4
   extensions/p4_tests/p4_14/test_config_206_stateful_logging.p4
-  extensions/p4_tests/p4_14/test_config_209_pack_hash_dist.p4
   extensions/p4_tests/p4_14/test_config_205_modify_field_from_hash.p4
   extensions/p4_tests/p4_14/test_config_214_full_stats.p4
   extensions/p4_tests/p4_14/test_config_182_warp_primitive.p4

@@ -749,13 +749,7 @@ struct headers {
     @name(".vlan_tag_") 
     vlan_tag_t[2]             vlan_tag_;
 }
-
-extern stateful_alu {
-    void execute_stateful_alu(@optional in bit<32> index);
-    void execute_stateful_alu_from_hash<FL>(in FL hash_field_list);
-    void execute_stateful_log();
-    stateful_alu();
-}
+#include <tofino/stateful_alu.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     bit<4> tmp_0;
@@ -5170,6 +5164,16 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                     _drop_stats_4.apply();
             }
     }
+}
+
+struct flowlet_alu_layout {
+    bit<32> lo;
+    bit<32> hi;
+}
+
+struct flowlet_alu_layout_0 {
+    bit<32> lo;
+    bit<32> hi;
 }
 
 control DeparserImpl(packet_out packet, in headers hdr) {

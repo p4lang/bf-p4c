@@ -34,7 +34,7 @@ set (TOFINO_XFAIL_TESTS
   extensions/p4_tests/p4_14/test_config_201_meter_constant_index.p4
 # Could not find declaration error in generated P4_16 code (JIRA #BRIG-31)
   extensions/p4_tests/p4_14/test_config_206_stateful_logging.p4
-# extensions/p4_tests/p4_14/test_config_209_pack_hash_dist.p4
+  extensions/p4_tests/p4_14/test_config_209_pack_hash_dist.p4
 # blackbox type unification failures (JIRA #BRIG-30, #COMPILER-341)
   extensions/p4_tests/p4_14/test_config_174_stateful_flow_learning.p4
   extensions/p4_tests/p4_14/test_config_205_modify_field_from_hash.p4
@@ -169,7 +169,6 @@ set (TOFINO_XFAIL_TESTS
   testdata/p4_14_samples/source_routing.p4
 # BRIG-102
   extensions/p4_tests/p4_14/test_config_235_funnel_shift.p4
-  extensions/p4_tests/p4_14/test_config_55_generate_digest.p4
   extensions/p4_tests/p4_14/test_config_96_hash_data.p4
 # BRIG-103
   testdata/p4_14_samples/instruct1.p4
@@ -267,7 +266,6 @@ set (TOFINO_XFAIL_TESTS
   extensions/p4_tests/p4_14/test_config_102_clone.p4
   testdata/p4_14_samples/sai_p4.p4
   testdata/p4_16_samples/clone-bmv2.p4
-  testdata/p4_16_samples/issue430-1-bmv2.p4
 # BRIG_132
   testdata/p4_16_samples/union-bmv2.p4
 # BRIG-133
@@ -309,7 +307,7 @@ set (TOFINO_XFAIL_TESTS
 # BRIG-149
   extensions/p4_tests/p4_14/adjust_instr7.p4
 # BRIG-185
-  extensions/p4_14/action_selection_shared_four.p4.test
+  extensions/p4_tests/p4_14/action_selection_shared_four.p4
 # various stateful
   extensions/p4_tests/p4_14/test_config_163_stateful_table_math_unit.p4
   extensions/p4_tests/p4_14/test_config_169_stateful_sflow_sequence.p4

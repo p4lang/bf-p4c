@@ -749,13 +749,7 @@ struct headers {
     @name(".vlan_tag_") 
     vlan_tag_t[2]             vlan_tag_;
 }
-
-extern stateful_alu {
-    void execute_stateful_alu(@optional in bit<32> index);
-    void execute_stateful_alu_from_hash<FL>(in FL hash_field_list);
-    void execute_stateful_log();
-    stateful_alu();
-}
+#include <tofino/stateful_alu.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".parse_arp_rarp") state parse_arp_rarp {
@@ -5146,11 +5140,34 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
 }
 
+struct flowlet_alu_layout {
+    bit<32> lo;
+    bit<32> hi;
+}
+
+struct flowlet_alu_layout_0 {
+    bit<32> lo;
+    bit<32> hi;
+}
+
 control process_flowlet(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".flowlet_state") register<bit<64>>(32w8192) flowlet_state;
-    stateful_alu() flowlet_alu;
+    register_action<flowlet_alu_layout, bit<32>>(flowlet_state) flowlet_alu = {
+        void apply(inout flowlet_alu_layout value, out bit<32> rv) {
+            if (meta.i2e_metadata.ingress_tstamp - value.lo > 32w1) 
+                value.hi = value.hi + 32w1;
+            if (!(meta.i2e_metadata.ingress_tstamp - value.lo > 32w1)) 
+                value.hi = value.hi;
+            value.lo = meta.i2e_metadata.ingress_tstamp;
+            rv = value.hi;
+        }
+    };
     @name(".flowlet_lookup") action flowlet_lookup() {
-        flowlet_alu.execute_stateful_alu_from_hash({ meta.hash_metadata.hash1 });
+        {
+            bit<13> temp;
+            hash(temp, HashAlgorithm.identity, 13w0, { meta.hash_metadata.hash1 }, 14w8192);
+            meta.flowlet_metadata.id = (bit<16>)flowlet_alu.execute((bit<32>)temp);
+        }
     }
     @name(".flowlet") table flowlet {
         actions = {
