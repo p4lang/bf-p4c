@@ -34,7 +34,7 @@ set (TOFINO_XFAIL_TESTS
   extensions/p4_tests/p4_14/test_config_201_meter_constant_index.p4
 # Could not find declaration error in generated P4_16 code (JIRA #BRIG-31)
   extensions/p4_tests/p4_14/test_config_206_stateful_logging.p4
-  extensions/p4_tests/p4_14/test_config_209_pack_hash_dist.p4
+# extensions/p4_tests/p4_14/test_config_209_pack_hash_dist.p4
 # blackbox type unification failures (JIRA #BRIG-30, #COMPILER-341)
   extensions/p4_tests/p4_14/test_config_174_stateful_flow_learning.p4
   extensions/p4_tests/p4_14/test_config_205_modify_field_from_hash.p4
@@ -65,8 +65,8 @@ set (TOFINO_XFAIL_TESTS
 # match group packing overflow
   extensions/p4_tests/p4_14/test_config_246_fill_stage.p4
 # Fail on purpose due to action profiles not being mutually exclusive
-#  extensions/p4_tests/p4_14/action_profile_not_shared.p4
-#  extensions/p4_tests/p4_14/action_profile_next_stage.p4
+  extensions/p4_tests/p4_14/action_profile_not_shared.p4
+  extensions/p4_tests/p4_14/action_profile_next_stage.p4
 # Hash Action Bugs within the ASM or Model
   testdata/p4_14_samples/hash_action_gateway.p4
 # No support yet in assembler for hash calcuation
@@ -301,6 +301,8 @@ set (TOFINO_XFAIL_TESTS
 #  extensions/p4_tests/p4_14/jenkins/ecmp_pi/ecmp_pi.p4
 # BRIG-149
   extensions/p4_tests/p4_14/adjust_instr7.p4
+# BRIG-185
+  extensions/p4_14/action_selection_shared_four.p4.test
 # various stateful
   extensions/p4_tests/p4_14/test_config_163_stateful_table_math_unit.p4
   extensions/p4_tests/p4_14/test_config_169_stateful_sflow_sequence.p4

@@ -70,6 +70,7 @@ set (TOFINO_BACKEND_COMMON_SRCS
   common/field_defuse.cpp
   common/header_stack.cpp
   common/live_at_entry.cpp
+  common/live_range_overlay.cpp
   common/remap_intrin.cpp
   common/param_binding.cpp
   common/parser_overlay.cpp
@@ -84,6 +85,7 @@ set (TOFINO_BACKEND_COMMON_HDRS
   common/field_defuse.h
   common/header_stack.h
   common/live_at_entry.h
+  common/live_range_overlay.h
   common/remap_intrin.h
   common/param_binding.h
   common/parser_overlay.h
