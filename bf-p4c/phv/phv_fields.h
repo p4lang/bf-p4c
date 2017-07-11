@@ -221,8 +221,9 @@ class PhvInfo : public Inspector {
         //
         bool            mau_phv_no_pack_i = false;         /// true if op on field not "move based"
                                                            /// set by PHV_Field_Operations
-        bool            deparsed_no_pack_i = false;        /// true when egress_port
         bool            deparsed_i = false;                /// true if deparsed field
+        bool            deparsed_no_pack_i = false;        /// true when egress_port/spec, no pack
+        bool            deparsed_bottom_bits_i = false;    /// true when learning digest, no shifter
         bool            exact_containers_i = false;        /// place in container exactly (no holes)
         //
         // operations on this field
@@ -319,10 +320,12 @@ class PhvInfo : public Inspector {
         //
         bool mau_phv_no_pack() const                           { return mau_phv_no_pack_i; }
         void set_mau_phv_no_pack(bool b)                       { mau_phv_no_pack_i = b; }
-        bool deparsed_no_pack() const                          { return deparsed_no_pack_i; }
-        void set_deparsed_no_pack(bool b)                      { deparsed_no_pack_i = b; }
         bool deparsed() const                                  { return deparsed_i; }
         void set_deparsed(bool b)                              { deparsed_i = b; }
+        bool deparsed_no_pack() const                          { return deparsed_no_pack_i; }
+        void set_deparsed_no_pack(bool b)                      { deparsed_no_pack_i = b; }
+        bool deparsed_bottom_bits() const                      { return deparsed_bottom_bits_i; }
+        void set_deparsed_bottom_bits(bool b)                  { deparsed_bottom_bits_i = b; }
         bool exact_containers() const                          { return exact_containers_i; }
         void set_exact_containers(bool b)                      { exact_containers_i = b; }
         bool constrained(bool packing_constraint = false) const;

@@ -54,31 +54,7 @@ bool Cluster::preorder(const IR::Member* expression) {
         // dst_map[x] points to singleton cluster using MAU
         //
         create_dst_map_entry(field);
-        //
-        // deparser constraint
-        // some fields e.g., egress_port (9 bits), egress_spec (9 bits)
-        // cannot share container with other fields, they expect cohabit bits = 0
-        // should NOT place ing_meta_data.drop bit cohabit with egress_port
-        // e.g., ing_metadata.egress_port: H1(0..8)
-        //       ing_metadata.drop: H1(15)
-        // ing_metadata.drop bit controlled by valid bit in egress_spec
-        // TODO: What does this mean?
-        //
-        ordered_set<const char *> egress_deparser_constraint;
-        egress_deparser_constraint.insert("egress_port");
-        egress_deparser_constraint.insert("egress_spec");
-        for (auto &es : egress_deparser_constraint) {
-            if (const char *s = strstr(field->name, es)) {
-                // restrict to name ending in egress_port, i.e., discard egress_port_id
-                // TODO: Perhaps keep the header name and field name separate?
-                if (strlen(s) == strlen(es)) {
-                    LOG1(".....Deparser Constraint on field..... " << field->name);
-                    field->set_deparsed_no_pack(true);
-                }
-            }
-        }
     }
-
     return true;
 }
 
@@ -426,6 +402,8 @@ void Cluster::end_apply() {
     LOG4(".....dst_map_i.....");
     LOG4(dst_map_i);
     //
+    set_deparsed_flag();
+    //
     deparser_ccgf_phv();
     //
     // compute all fields that are not used through the MAU pipeline
@@ -445,6 +423,23 @@ void Cluster::end_apply() {
     LOG3(*this);                                                        // all Clusters
     //
 }  // end_apply
+
+//
+// set deparsed flag on fields
+//
+
+void Cluster::set_deparsed_flag() {
+    //
+    for (auto &f : phv_i) {
+        //
+        // set field's deparsed if used in deparser
+        //
+        if (uses_i->is_deparsed(&f) && !(f.metadata && !f.bridged) && !f.pov) {
+            //
+            f.set_deparsed(true);
+        }
+    }
+}  // set_deparsed_flag
 
 //
 // deparser ccgf accumulation
@@ -558,13 +553,6 @@ void Cluster::compute_fields_no_use_mau() {
     // preprocess fields before accumulation
     //
     for (auto &field : phv_i) {
-        //
-        // set field's deparsed if used in deparser
-        //
-        if (uses_i->is_deparsed(&field) && !(field.metadata && !field.bridged) && !field.pov) {
-            //
-            field.set_deparsed(true);
-        }
         if (field.simple_header_pov_ccgf() && !uses_i->is_referenced(&field)) {
             //
             // if singleton member, grouping of pov bits not required
@@ -1199,6 +1187,7 @@ std::ostream &operator<<(std::ostream &out, Cluster &cluster) {
 //
 //***********************************************************************************
 //
+// Note 1
 // $mirror_id is a ‘special’ field.
 // it is introduced by the parser shims for parsing mirror packets.
 // for PHV allocation it should be treated like any other metadata field, how it is used in the IR.
@@ -1206,4 +1195,25 @@ std::ostream &operator<<(std::ostream &out, Cluster &cluster) {
 // it is extracted in the parser and used to switch parser states, but that it not actually a “use”
 // of PHV allocation, the parser accesses it from the input buffer directly,
 // so if no later use in MAU or deparser, the extract to PHV can be left as dead
+//
+// Note 2
+// some fields e.g., egress_port (9 bits), egress_spec (9 bits)
+// cannot share container with other fields, they expect cohabit bits = 0
+// should NOT place ing_meta_data.drop bit cohabit with egress_port
+// e.g., ing_metadata.egress_port: H1(0..8)
+//       ing_metadata.drop: H1(15)
+// ing_metadata.drop bit controlled by valid bit in egress_spec
+//
+// Note 3
+// all digest selectors in Tofino are 3 bits, so rest of the phv is available for other uses
+// mirror & resubmit both have shifts, so can use any 3 contiguous bits from any phv
+// the deparser's learn_cfg has no shifter, value must be in bottom bits of container
+// i.e., learning only looks at those bottom 3 bits
+// allow packing after $learning in bottom bits
+//
+// Note 4
+// ref: bf-p4c/ir/parde.def
+// IR::Tofino::Deparser has a field egress_port,
+// which points to the egress port in the egress pipeline & egress spec in the ingress pipeline
+// Each Deparser holds a vector of digests, one of which will be the learning digest if present
 //

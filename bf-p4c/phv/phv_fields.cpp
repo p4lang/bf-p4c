@@ -524,7 +524,7 @@ PhvInfo::Field::constrained(bool packing_constraint) const {
     if (packing_constraint) {
         return pack_c;
     }
-    return  pack_c || deparsed_i;
+    return  pack_c || deparsed_bottom_bits_i;
 }
 
 bool
@@ -818,6 +818,7 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field &field) {
     if (field.deparsed()) out << " deparsed";
     if (field.mau_phv_no_pack()) out << " mau_phv_no_pack";
     if (field.deparsed_no_pack()) out << " deparsed_no_pack";
+    if (field.deparsed_bottom_bits()) out << " deparsed_bottom_bits";
     if (field.exact_containers()) out << " exact_containers";
     if (field.header_stack_pov_ccgf()) out << " header_stack_pov_ccgf";
     if (field.simple_header_pov_ccgf()) out << " simple_header_pov_ccgf";

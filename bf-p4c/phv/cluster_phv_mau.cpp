@@ -350,13 +350,15 @@ PHV_MAU_Group_Assignments::create_MAU_groups() {
         std::string asm_encoded = asm_prefix_i[x.first] + ss.str();
         //
         for (int i=1; i <= x.second; i++) {
+            //
             // does this group phv containers fall in ingress_only or egress_only category
             //
             PHV_Container::Ingress_Egress gress = PHV_Container::Ingress_Egress::Ingress_Or_Egress;
             for (auto ie : ingress_egress_i) {
                 std::pair<int, int> limits = ie.first;
-                // TODO: redundant check?
                 if (phv_number < limits.first) {
+                    // e.g., phv_number=32, limits.first=64
+                    // no need to preset gress or search for preset range
                     break;
                 }
                 if (phv_number >= limits.first && phv_number <= limits.second) {
@@ -484,8 +486,9 @@ void PHV_MAU_Group_Assignments::cluster_PHV_placements() {
     //
     for (auto &cl : phv_requirements_i.cluster_phv_fields()) {
         //
-        // nibble clusters separated from others
-        // container placement for nibble clusters after TPHVoverflow, POV
+        // nibble clusters separated from others -- lower priority placement after TPHVoverflow, POV
+        // it is beneficial to include contrained nibbles also, e.g., learning "bottom bits"
+        // as packing smaller widths before larger widths restricts latter accommodation
         //
         if (cl->max_width() <= Nibble::nibble) {
             clusters_to_be_assigned_nibble_i.push_front(cl);
@@ -659,7 +662,7 @@ PHV_MAU_Group_Assignments::field_overlays() {
     }
 }  // field_overlays
 
-//***********************************************************************************
+//*************************************************************************************************
 //
 // PHV_MAU_Group_Assignments::container_no_pack
 //
@@ -678,12 +681,14 @@ PHV_MAU_Group_Assignments::field_overlays() {
 //    field f may need several containers, e.g., f:128 --> C1<32>,C2,C3,C4
 //    but each C single or partial field only => C does not contain 2 fields
 //
-// TODO: what happens to fields that do not have any grouping constraints?
+// fields that do not have any grouping constraints form singleton clusters
+// they are subjected to the same allocation algorithm using <number = 1, width>
+// cluster_phv_interference.cpp graph reduction attempts to group & reduce / overlay singletons
 //
 // 4. when all G exhausted
 //    clusters_to_be_assigned contains clusters not assigned
 //
-//***********************************************************************************
+//*************************************************************************************************
 
 void
 PHV_MAU_Group_Assignments::container_no_pack(
@@ -705,7 +710,7 @@ PHV_MAU_Group_Assignments::container_no_pack(
     // preference given to clusters with fields having no cohabit, e.g., deparser constraints
     //
     clusters_to_be_assigned.sort([](Cluster_PHV *l, Cluster_PHV *r) {
-        if (l->num_fields_no_cohabit() == r->num_fields_no_cohabit()) {
+        if (l->num_constraints() == r->num_constraints()) {
             if (l->num_containers() == r->num_containers()) {
                 //
                 // when placement, no pack, consider container_width, not field width (max_width())
@@ -714,7 +719,7 @@ PHV_MAU_Group_Assignments::container_no_pack(
             }
             return l->num_containers() > r->num_containers();
         }
-        return l->num_fields_no_cohabit() > r->num_fields_no_cohabit();
+        return l->num_constraints() > r->num_constraints();
     });
     //
     LOG3("..........Begin PHV Container NO PACK ("
@@ -1207,6 +1212,49 @@ void PHV_MAU_Group_Assignments::create_aligned_container_slices() {
     LOG3(T_PHV_container_slices_i);
 }  // PHV_MAU_Group_Assignments::create_aligned_container_slices()
 
+//
+// ensure each predicate is satisfied before container packing
+//
+bool
+PHV_MAU_Group_Assignments::packing_predicates(
+    Cluster_PHV *cl,
+    std::list<PHV_MAU_Group::Container_Content *>& cc_set,
+    bool allow_deparsed_metadata) {
+    //
+    assert(cl);
+    assert(*(cc_set.begin()));
+    PHV_Container::Ingress_Egress c_gress = (*(cc_set.begin()))->container()->gress();
+    if (!gress_compatibility(c_gress, cl->gress())) {
+        return false;
+    }
+    // metadata should be in deparsed container only as last resort
+    if (!allow_deparsed_metadata && metadata_in_deparsed_container(cl, cc_set)) {
+        return false;
+    }
+    // constrained nibbles, e.g., learning digest, place in container's "bottom bits"
+    int req = cl->req_containers_bottom_bits();
+    if (req && !num_containers_bottom_bits(cl, cc_set, req)) {
+        return false;
+    }
+    // TODO
+    //
+    // field start restrictions, e.g., must start bits 0..7 in container
+    //
+    // field solitary: e.g., 7*1b can't be packed to 8b, use separate containers, albeit 2TCAMS, 88b
+    //
+    // checksum 16b..16b..8b in 16b or 8b container ?
+    //
+    // mutually_cohabit(f1, f2),
+    //
+    // bridge metadata mirror & bridge metadata Not mirror
+    // bridge metadata belong to same field list (they can be part of 8 field lists)
+    //
+    // learning digests: L1, L2 belong to same digest
+    // mirror, resubmit digests no constraints ?
+    //
+    return true;
+}  // packing_predicates
+
 //***********************************************************************************
 //
 // PHV_MAU_Group_Assignments::container_pack_cohabit
@@ -1385,29 +1433,23 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
                             = PHV_Container::Ingress_Egress::Ingress_Or_Egress;
                         for (auto &cc_set_x : j.second) {
                             c_gress = (*(cc_set_x.begin()))->container()->gress();
-                            if (gress_compatibility(c_gress, cl->gress())) {
-                                // metadata should be in deparsed container only as last resort
-                                if (allow_deparsed_metadata
-                                    || (!allow_deparsed_metadata
-                                        && !metadata_in_deparsed_container(cl, cc_set_x))) {
-                                    //
-                                    cc_set = cc_set_x;
-                                    //
-                                    // remove matching MAU_Group Container Content from set_of_sets
-                                    // if set_of_sets empty then remove map[m_w] entry
-                                    //
-                                    j.second.remove(cc_set_x);
-                                    if (j.second.empty()) {
-                                        i.second.erase(j.first);
-                                    }
-                                    //
-                                    break;
+                            if (packing_predicates(cl, cc_set_x, allow_deparsed_metadata)) {
+                                //
+                                cc_set = cc_set_x;
+                                //
+                                // remove matching MAU_Group Container Content from set_of_sets
+                                // if set_of_sets empty then remove map[m_w] entry
+                                //
+                                j.second.remove(cc_set_x);
+                                if (j.second.empty()) {
+                                    i.second.erase(j.first);
                                 }
+                                break;
                             }
-                        }
+                        }  // for aligned_container_slices
                         if (cc_set.empty()) {
                             //
-                            // not gress compatible
+                            // not compatible, constraints not satisfied
                             //
                             LOG3("-----"
                                 << cl->id()
@@ -1482,6 +1524,12 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
                             // start with rightmost vertical slice that accommodates this width
                             //
                             int start = cc->hi() + 1 - cl_w;
+                            if (f->deparsed_bottom_bits()) {
+                                // f has constraints "bottom bits", e.g., learning digest
+                                // packing_predicates() must have ensured bottom bits available
+                                assert(cc->lo() == 0);
+                                start = cc->lo();
+                            }
                             if (f->phv_use_width(cl) > cl_w
                                 && cl_w != cc->container()->width()) {       // 128b = 32*4
                                 //
@@ -1743,11 +1791,9 @@ PHV_MAU_Group_Assignments::metadata_in_deparsed_container(
     if (!deparsed_containers) {  // no deparsed containers
         return false;
     }
-    // attempt reorder cc_set to match metadata to non-deparsed containers
-    // s.t. metadata fields are matched to non-deparsed containers
-    // during packing, when cc_set > cl size, cc_set is horizontally sliced @ number equality
-    // and bottom slice is used to contain cl
-    // sort cc_set with non-deparsed containers congregating to the end
+    // attempt reorder cc_set to match metadata fields to non-deparsed containers
+    // packing: if cc_set > cl size, cc_set horizontally sliced @equality, bottom slice contains cl
+    // sort cc_set, non-deparsed containers congregating to the end
     //
     if (cc_set.size() - deparsed_containers > metadata_fields) {
         cc_set.sort([](PHV_MAU_Group::Container_Content *l, PHV_MAU_Group::Container_Content *r) {
@@ -1769,8 +1815,9 @@ PHV_MAU_Group_Assignments::metadata_in_deparsed_container(
              << ").........."
              << cc_set
              << std::endl);
+        //
         // sort cluster fields s.t. metadata fields are towards end to map non-deparsed containers
-        // e.g., {f1, f2, fmeta} => {C_deparsed_1, C_deparsed_2, .. C_deparsed_m, C_deparsed_n, c3}
+        // e.g., {f1, f2, fmeta1, fmeta2} => {Cdeparsed1, Cdeparsed2, .. CNon_deparsed1, CNon2 ..}
         //
         std::sort(cl->cluster_vec().begin(), cl->cluster_vec().end(),
             [](PhvInfo::Field *l, PhvInfo::Field *r) {
@@ -1793,6 +1840,77 @@ PHV_MAU_Group_Assignments::metadata_in_deparsed_container(
     //
     return true;
 }  // metadata_in_deparsed_container
+
+bool
+PHV_MAU_Group_Assignments::num_containers_bottom_bits(
+    Cluster_PHV *cl,
+    std::list<PHV_MAU_Group::Container_Content *>& cc_set,
+    int num_c) {
+    //
+    // return true if there are num_c containers with bottom bits available
+    //
+    assert(cl);
+    assert(num_c);
+    //
+    int containers_bottom_avail = 0;
+    for (auto &cc : cc_set) {
+        if (!cc->lo()) {
+            containers_bottom_avail++;
+        }
+    }
+    if (!containers_bottom_avail) {  // no such containers
+        return false;
+    }
+    // attempt reorder cc_set
+    // packing: if cc_set > cl size, cc_set horizontally sliced @equality, bottom slice contains cl
+    // sort cc_set, containers w/ bottom bits available congregating to the end
+    //
+    if (containers_bottom_avail >= num_c) {
+        cc_set.sort([](PHV_MAU_Group::Container_Content *l, PHV_MAU_Group::Container_Content *r) {
+            if (l->lo() && r->lo()) {
+                // sort by phv_number to prevent non-determinism
+                return l->container()->phv_number() < r->container()->phv_number();
+            }
+            if (l->lo() && !r->lo()) {
+                return true;
+            }
+            if (!l->lo() && r->lo()) {
+                return false;
+            }
+            // sort by phv_number to prevent non-determinism
+            return l->container()->phv_number() < r->container()->phv_number();
+        });
+        LOG3("..........Reordered bottom-bit containers to end ("
+             << cc_set.size()
+             << ").........."
+             << cc_set
+             << std::endl);
+        //
+        // sort cluster fields s.t. constrained fields (i.e., need bottom bits) are towards end
+        // to map "bottom-bit available" containers
+        // e.g., {f1, f2, fneed_b1, fneed_b2} => {CNo_bottom1, CNo_bottom2,..Cbottom_1, Cbottom_2..}
+        //
+        std::sort(cl->cluster_vec().begin(), cl->cluster_vec().end(),
+            [](PhvInfo::Field *l, PhvInfo::Field *r) {
+            if (!l->deparsed_bottom_bits() && !r->deparsed_bottom_bits()) {
+                // sort by field id to prevent non-determinism
+                return l->id < r->id;
+            }
+            if (!l->deparsed_bottom_bits() && r->deparsed_bottom_bits()) {
+                return true;
+            }
+            if (l->deparsed_bottom_bits() && !r->deparsed_bottom_bits()) {
+                return false;
+            }
+            // sort by field id to prevent non-determinism
+            return l->id < r->id;
+        });
+        //
+        return true;
+    }
+    //
+    return false;
+}  // num_containers_bottom_bits
 
 std::pair<int, int>
 PHV_MAU_Group_Assignments::gress(

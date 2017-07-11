@@ -25,7 +25,7 @@ class Cluster_PHV {
     bool uniform_width_i = false;           // field widths differ in cluster
     int max_width_i = 0;                    // max width of field in cluster
     int num_containers_i = 0;               // number of containers
-    int num_fields_no_cohabit_i = 0;        // number of constrained fields, no cohabit
+    int num_constraints_i = 0;              // number of constrained fields, e.g., no cohabit
 
     /// See documentation for field_overlay_map.
     ordered_map<PhvInfo::Field *,
@@ -87,7 +87,7 @@ class Cluster_PHV {
     int num_containers()                                { return num_containers_i; }
     void num_containers(int n)                          { num_containers_i = n; }
     int num_containers(std::vector<PhvInfo::Field *>&, PHV_Container::PHV_Word);
-    int num_fields_no_cohabit()                         { return num_fields_no_cohabit_i; }
+    int num_constraints()                               { return num_constraints_i; }
 
     /** A field overlay map maps each "owner" field to the virtual containers
      * it owns and the other non-owner fields in them.  Fields that are too
@@ -98,6 +98,7 @@ class Cluster_PHV {
             field_overlay_map()                         { return field_overlay_map_i; }
     //
     bool sliced()                                       { return sliced_i; }
+    int req_containers_bottom_bits();  // number of fields that must be in bottom bits of container
     bool exact_containers()                             { return exact_containers_i; }
     void set_exact_containers();                        // set exact_containers
 };  // Cluster_PHV

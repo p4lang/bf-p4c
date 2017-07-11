@@ -370,8 +370,10 @@ Cluster_PHV::compute_requirements() {
         if (f->is_ccgf()) {
             f->set_ccgf_phv_use_width(width_i);
         }
-        if (PHV_Container::constraint_no_cohabit(f)) {
-            num_fields_no_cohabit_i++;
+        if (PHV_Container::constraint_no_cohabit(f)
+            || PHV_Container::constraint_bottom_bits(f)) {
+            //
+            num_constraints_i++;
         }
     }
     //
@@ -525,6 +527,21 @@ Cluster_PHV::num_containers(
             << " ******");
     }
     return num_containers;
+}
+
+
+int
+Cluster_PHV::req_containers_bottom_bits() {
+    //
+    // number of fields that have restrictions on bottom bits only, e.g., learning digest
+    //
+    int req = 0;
+    for (auto &f : cluster_vec_i) {
+        if (f->deparsed_bottom_bits()) {
+            req++;
+        }
+    }
+    return req;
 }
 
 //***********************************************************************************

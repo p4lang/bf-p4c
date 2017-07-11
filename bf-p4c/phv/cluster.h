@@ -105,6 +105,7 @@ class Cluster : public Inspector, TofinoWriteContext {
     std::list<PhvInfo::Field *>& pov_fields_not_in_cluster()
                                                             { return pov_fields_not_in_cluster_i; }
     //
+    void set_deparsed_flag();
     void deparser_ccgf_phv();
     void deparser_ccgf_t_phv();
     //
@@ -154,6 +155,33 @@ class Cluster::Uses : public Inspector {
         in_mau = false;
         revisit_visited();
         d->emits.visit_children(*this);
+        // extract deparser constraints from Deparser & Digest IR nodes ref: bf-p4c/ir/parde.def
+        // set deparser constaints on field
+        if (d->egress_port) {
+            // IR::Tofino::Deparser has a field egress_port which points to
+            // egress port in the egress pipeline and
+            // egress spec in the ingress pipeline
+            PhvInfo::Field *field = const_cast<PhvInfo::Field *>(phv.field(d->egress_port));
+            if (field) {
+                field->set_deparsed_no_pack(true);
+                LOG1(".....Deparser Constraint 'egress port' on field..... " << field);
+            }
+        }
+        // TODO: we should extend the IR to distinguish between different kinds of digests,
+        // since different digests have different constraints---right now, there's only
+        // the IR::Tofino::Digest node, with a string field that distinguishes different kinds
+        // distinguish each digest as an enumeration: learning, mirror, resubmit
+        for (auto &entry : d->digests) {
+            const char *learning = "learning";
+            if (const char *s = strstr(entry.second->name.c_str(), learning)) {
+                if (strlen(s) == strlen(learning)) {
+                    PhvInfo::Field *field
+                        = const_cast<PhvInfo::Field *>(phv.field(entry.second->select));
+                    field->set_deparsed_bottom_bits(true);
+                    LOG1(".....Deparser Constraint 'learning digest' on field..... " << field);
+                }
+            }
+        }
         return false; }
     bool preorder(const IR::MAU::TableSeq *) {
         in_mau = true;

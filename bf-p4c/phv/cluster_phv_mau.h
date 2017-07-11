@@ -39,9 +39,12 @@ class PHV_MAU_Group {
      * PHV_Container.
      */
     class Container_Content {
-     // TODO: This doesn't actually contain any content?
-     // TODO: Why is this in PHV_MAU_Group?
-     // TODO: Why does this have the same name as PHV_Container::Container_Content?
+     //
+     // PHV_MAU_Group Container_Content represents a container slice of contiguously available bits
+     // a container's range of available bits can be partitioned into several slices
+     // based on alignment with slices from other containers within the same MAU group
+     // cluster of fields mapped to aligned container slices, <number, width>, within a MAU group
+     //
      private:
         int lo_i;  // low of bit range in container for packing
         int hi_i;  // high of bit range in container for packing
@@ -205,11 +208,12 @@ class PHV_MAU_Group_Assignments : public Visitor {
     ordered_map<int, PHV_Container *> phv_containers_i;
                                        // map phv_number to Container
     ordered_map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>> PHV_MAU_i;
-                                       // all PHV MAU groups
+                                       // PHV MAU groups comprise 16 same-width containers
+                                       // = 4g*32b + 4g*8b + 6g*16b = 64+64+96 = 224 containers
                                        // PHV_MAU_i[width] = vector of groups
     ordered_map<int, ordered_map<PHV_Container::PHV_Word, std::vector<PHV_Container *>>> T_PHV_i;
-    // TODO: what is a collection?
-                                       // all TPHV collections
+                                       // TPHV Collections comprise 4*8b + 4*32b + 6+16b containers
+                                       //  = 14 containers * 8 collections = 112 containers
                                        // T_PHV_i[collection][width] = vector of containers
     std::list<PHV_MAU_Group *> PHV_groups_i;
                                        // list of groups w/ Empty containers
@@ -345,6 +349,12 @@ class PHV_MAU_Group_Assignments : public Visitor {
 
     const IR::Node *apply_visitor(const IR::Node *, const char *name = 0) override;
     //
+    bool
+    packing_predicates(
+        Cluster_PHV *cl,
+        std::list<PHV_MAU_Group::Container_Content *>& cc_set,
+        bool allow_deparsed_metadata = false);  // default disallow metadata in deparsed container
+    //
     // public member
     // container_pack_cohabit also used by
     // Cluster_Slicing : public Visitor .. void Cluster_Slicing::end_apply()
@@ -362,6 +372,10 @@ class PHV_MAU_Group_Assignments : public Visitor {
     bool metadata_in_deparsed_container(
         Cluster_PHV *cl,
         std::list<PHV_MAU_Group::Container_Content *>& cc_set);
+    bool num_containers_bottom_bits(
+        Cluster_PHV *cl,
+        std::list<PHV_MAU_Group::Container_Content *>& cc_set,
+        int num_c);
     std::pair<int, int>
         gress(
             ordered_map<int,
