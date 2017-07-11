@@ -134,7 +134,11 @@ struct TablePlacement::Placed {
     cstring                     name;
     int                         entries = 0;
     bitvec                      placed;  // fully placed tables after this placement
+
+    /// True if the table needs to be split across multiple stages, because it
+    /// can't fit within a single stage (eg. not enough entries in the stage).
     bool                        need_more = false;
+
     cstring                     gw_result_tag;
     const IR::MAU::Table        *table, *gw = 0;
     int                         stage, logical_id;

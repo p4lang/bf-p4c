@@ -21,6 +21,14 @@ namespace MAU {
 class Table : Tofino::Unit {
     cstring                                     name;
     gress_t                                     gress;
+    /** Each stage has 16 slots for tables.  Logical IDs are numbered from 0
+     * (Stage 0, Slot 0) to N * 16 + 15 (Stage N, Slot 15).  The @logical_id is
+     * where this table has been assigned, or -1 if it has not yet been
+     * assigned.
+     *
+     * If @logical_id is not -1, the stage this table is assigned to is
+     * `(int)(logical_id/16)`.
+     */
     int                                         logical_id = -1;
     vector<std::pair<Expression, cstring>>      gateway_rows;
     /** each gateway_row is a an expression for a single row of the gateway,

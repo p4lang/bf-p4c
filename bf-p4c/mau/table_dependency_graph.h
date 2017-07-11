@@ -146,6 +146,10 @@ class FindDependencyGraph : public MauInspector, ControlFlowVisitor {
 
     void finalize_dependence_graph(void);
 
+    /** Check that no ingress table ever depends on an egress table happening
+     * first. */
+    void verify_dependence_graph(void);
+
     bool preorder(const IR::MAU::TableSeq *) override;
     bool preorder(const IR::MAU::Table *) override;
     void end_apply() override { finalize_dependence_graph(); }

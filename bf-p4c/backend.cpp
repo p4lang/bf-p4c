@@ -31,6 +31,7 @@ limitations under the License.
 #include "tofino/common/field_defuse.h"
 #include "tofino/common/header_stack.h"
 #include "tofino/common/live_at_entry.h"
+#include "tofino/common/live_range_overlay.h"
 #include "tofino/mau/asm_output.h"
 #include "tofino/mau/empty_controls.h"
 #include "tofino/mau/gateway.h"
@@ -133,6 +134,7 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
     MauAsmOutput mauasm(phv);
     Visitor *phv_alloc;
     ParserOverlay parserOverlay(phv, mutually_exclusive_field_ids);
+    LiveRangeOverlay liveRangeOverlay(phv, deps, defuse, mutually_exclusive_field_ids);
     LayoutChoices lc;
 
     if (options.trivial_phvalloc) {
@@ -152,11 +154,19 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
     }
 
     PassManager *phv_analysis = new PassManager({
-        &cluster,                      // cluster analysis
-        &parserOverlay,                // produce pairs of mutually exclusive header
-                                       // fields, eg. (arpSrc, ipSrc)
-        &phv_field_ops,                // PHV field operations analysis
-        &cluster_phv_req,              // cluster PHV requirements analysis
+        &cluster,              // cluster analysis
+        &parserOverlay,        // produce pairs of mutually exclusive header
+                               // fields, eg. (arpSrc, ipSrc)
+
+        new FindDependencyGraph(phv, deps),
+                               // refresh dependency graph for live range
+                               // analysis
+        &defuse,               // refresh defuse
+        &liveRangeOverlay,     // produce pairs of fields that are never live
+                               // in the same stage
+
+        &phv_field_ops,        // PHV field operations analysis
+        &cluster_phv_req,      // cluster PHV requirements analysis
         options.phv_interference?
             &cluster_phv_interference: nullptr,
                                        // cluster PHV interference graph analysis

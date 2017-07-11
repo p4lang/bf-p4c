@@ -22,6 +22,7 @@ class FieldDefUse : public ControlFlowVisitor, public Inspector, TofinoWriteCont
     const PhvInfo               &phv;
     SymBitMatrix                &conflict;
     ordered_map<locpair, LocPairSet>  &uses, &defs;
+
     struct info {
         const PhvInfo::Field    *field = 0;
         LocPairSet            def, use;
@@ -54,7 +55,8 @@ class FieldDefUse : public ControlFlowVisitor, public Inspector, TofinoWriteCont
 
  public:
     explicit FieldDefUse(const PhvInfo &p)
-    : phv(p), conflict(*new SymBitMatrix), uses(*new std::remove_reference<decltype(uses)>::type),
+    : phv(p), conflict(*new SymBitMatrix),
+      uses(*new std::remove_reference<decltype(uses)>::type),
       defs(*new std::remove_reference<decltype(defs)>::type)
     { joinFlows = true; visitDagOnce = false; }
     const SymBitMatrix &conflicts() { return conflict; }

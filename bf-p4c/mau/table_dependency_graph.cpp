@@ -317,9 +317,17 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
         dg.stage_info[table].min_stage = kv.second;
     }
 
+    verify_dependence_graph();
     dg.finalized = true;
+}
 
-
-    // TODO: traverse the finalized dependency graph and check that no egress
-    // table is required to happen before an ingress table.
+void FindDependencyGraph::verify_dependence_graph() {
+    typename DependencyGraph::Graph::edge_iterator out, out_end;
+    for (boost::tie(out, out_end) = boost::edges(dg.g);
+         out != out_end;
+         ++out) {
+        const IR::MAU::Table *t1 = dg.g[boost::source(*out, dg.g)];
+        const IR::MAU::Table *t2 = dg.g[boost::target(*out, dg.g)];
+        if (t1->gress == EGRESS && t2->gress == INGRESS)
+            BUG("Ingress table '%s' depends on egress table '%s'.", t1->name, t2->name); }
 }
