@@ -3,11 +3,12 @@
 
 #include "ir/ir.h"
 #include "tofino/common/field_defuse.h"
+#include "tofino/parde/field_packing.h"
 
 class AddBridgedMetadata : public PassManager {
     PhvInfo       &phv;
     const FieldDefUse   &defuse;
-    std::map<int, const IR::Expression *> need_bridge;
+    Tofino::FieldPacking packing;
 
     class FindFieldsToBridge;
     class AddBridge;

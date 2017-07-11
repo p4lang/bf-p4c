@@ -8,8 +8,14 @@ class AddBridgedMetadata::FindFieldsToBridge : public ThreadVisitor, Inspector {
             for (auto &loc : self.defuse.getUses(this, e)) {
                 if (loc.first->thread() == EGRESS) {
                     assert(field->metadata);
-                    field->bridged = true;
-                    self.need_bridge[field->id] = loc.second;
+                    if (!field->bridged) {
+                      LOG2("bridging field " << loc.second << " id=" << field->id);
+                      field->bridged = true;
+                      // XXX(seth): We should pack these fields more efficiently...
+                      self.packing.appendField(loc.second,
+                                               loc.second->type->width_bits());
+                      self.packing.padToAlignment(8);
+                    }
                     break; } }
             return false;
         } else {
@@ -20,33 +26,40 @@ class AddBridgedMetadata::FindFieldsToBridge : public ThreadVisitor, Inspector {
 
 class AddBridgedMetadata::AddBridge : public PardeModifier {
     AddBridgedMetadata &self;
+
     bool preorder(IR::Tofino::Deparser *deparser) override {
-        if (deparser->gress == INGRESS && !self.need_bridge.empty()) {
-            IR::Vector<IR::Expression> bridge;
-            for (auto &f : self.need_bridge) {
-                LOG2("bridging field " << f.second << " id=" << f.first);
-                bridge.push_back(new IR::Primitive("emit", f.second)); }
-            deparser->emits.insert(deparser->emits.begin(), bridge.begin(), bridge.end()); }
-        return false; }
+        if (deparser->gress != INGRESS) return false;
+        if (!self.packing.containsFields()) return false;
+
+        IR::Vector<IR::Expression> bridge;
+        for (auto& item : self.packing.fields) {
+            if (item.isPadding()) continue;
+            bridge.push_back(new IR::Primitive("emit", item.field));
+        }
+
+        deparser->emits.insert(deparser->emits.begin(),
+                               bridge.begin(), bridge.end());
+        return false;
+    }
+
     bool preorder(IR::Tofino::Parser *parser) override {
-        if (self.need_bridge.empty()) return false;
-        if (parser->gress == INGRESS) {
-            /* We need a constant 1 bit to output the bridged metadata, so we create and set
-             * one here.  Perhaps should be in the MAU?  deparser_output.cpp hardcodes the name
-             * $bridge-metadata, so that's what we use here. */
-            parser->start = new IR::Tofino::ParserState("$bridge-metadata", parser->gress, {}, {
-                new IR::Tofino::ParserMatch(match_t(), -1, {
-                    new IR::Primitive("set_metadata",
-                        new IR::TempVar(IR::Type::Bits::get(1), true, "$bridge-metadata"),
-                        new IR::Constant(IR::Type::Bits::get(1), 1))
-                }, parser->start) });
-        } else {
-            auto *shim = new IR::Tofino::ParserMatch(match_t(), -1, {}, parser->start);
-            for (auto field : Values(self.need_bridge))
-                shim->stmts.push_back(new IR::Primitive("extract", field));
-            parser->start = new IR::Tofino::ParserState("$bridge-metadata", parser->gress,
-                                                        {}, { shim }); }
-        return false; }
+        if (parser->gress != EGRESS) return false;
+        if (!self.packing.containsFields()) return false;
+
+        auto start = transformAllMatching<IR::Tofino::ParserState>(parser->start,
+                     [this](const IR::Tofino::ParserState* state) {
+            if (state->name != "$bridged_metadata") return state;
+
+            // Replace this placeholder state with a generated parser program
+            // that extracts the bridged metadata.
+            auto next = state->match[0]->next;
+            cstring stateName = "$bridge_metadata_extract";
+            return self.packing.createExtractionStates(EGRESS, stateName, next);
+        });
+
+        parser->start = start->to<IR::Tofino::ParserState>();
+        return false;
+    }
 
  public:
     explicit AddBridge(AddBridgedMetadata &self) : self(self) {}

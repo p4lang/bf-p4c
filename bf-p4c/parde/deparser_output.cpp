@@ -27,7 +27,7 @@ class OutputDictionary : public Inspector {
                 out << '.' << bits.lo << '-' << bits.hi; }
         out << ": ";
         if (field->metadata)
-            out << "$bridge-metadata";
+            out << "$always_deparse";
         else
             out << canon_name(trim_asm_name(field->header())) << ".$valid";
         out << std::endl;
