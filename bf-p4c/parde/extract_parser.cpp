@@ -1,10 +1,52 @@
 #include <ir/ir.h>
 #include "extract_parser.h"
 
+#include <boost/range/adaptor/reversed.hpp>
+
+#include <algorithm>
+#include <vector>
+
 #include "lib/log.h"
 #include "tofino/parde/add_parde_metadata.h"
 
 namespace Tofino {
+
+namespace {
+
+/// A helper type that represents a transitive predecessor of the current state
+/// in the parse graph.
+struct Ancestor {
+    Ancestor(const IR::Tofino::ParserState* state,
+             const IR::Tofino::ParserMatch* match);
+
+    /// The ancestor state.
+    const IR::Tofino::ParserState* state;
+
+    /// The outgoing edge of the ancestor state that we traversed to reach the
+    /// current state.
+    const IR::Tofino::ParserMatch* match;
+    bool canBePartOfLoop;
+};
+
+/// The stack of ancestors we traversed to reach the current state.
+typedef std::vector<Ancestor> AncestorStack;
+
+Ancestor::Ancestor(const IR::Tofino::ParserState* state,
+                   const IR::Tofino::ParserMatch* match)
+        : state(state), match(match), canBePartOfLoop(true) {
+    // If a state extracts a header which isn't part of a header stack, we don't
+    // allow it to be part of a loop. Such a loop would trigger an error at
+    // runtime anyway since the parser can't overwrite a PHV container it has
+    // already written to.
+    forAllMatching<IR::Primitive>(&match->stmts, [&](const IR::Primitive* prim) {
+        if (prim->name != "extract") return;
+        if (!prim->operands[0]->is<IR::HeaderRef>()) return;
+        if (!prim->operands[0]->is<IR::HeaderStackItemRef>())
+            canBePartOfLoop = false;
+    });
+}
+
+}  // namespace
 
 class GetTofinoParser : public Inspector {
  public:
@@ -12,21 +54,9 @@ class GetTofinoParser : public Inspector {
     extract(gress_t gress, const IR::P4Parser* parser,
             bool filterSetMetadata = false);
 
-    struct Context {
-        /* records the path through the parser state machine from the start state to the
-         * current state.  Not to be confused with Visitor::Context */
-        const Context               *parent;
-        int                         depth;
-        IR::Tofino::ParserState     *state;
-        const Context *find(IR::Tofino::ParserState *s) const {
-            for (auto *c = this; c; c = c->parent)
-                if (c->state == s)
-                    return c;
-            return nullptr; }
-    };
-    void addMatch(IR::Tofino::ParserState *, match_t, const IR::Vector<IR::Expression> &,
-                  const IR::ID &, const Context *);
-    IR::Tofino::ParserState *state(cstring, const Context *);
+    void addMatch(IR::Tofino::ParserState *, match_t,
+                  const IR::Vector<IR::Expression> &, const IR::ID &);
+    IR::Tofino::ParserState *state(cstring);
 
  private:
     GetTofinoParser(gress_t gress, bool filterSetMetadata)
@@ -34,6 +64,7 @@ class GetTofinoParser : public Inspector {
 
     bool preorder(const IR::ParserState *) override;
 
+    AncestorStack                               ancestorStack;
     gress_t                                     gress = INGRESS;
     map<cstring, IR::Tofino::ParserState *>     states;
     bool                                        filterSetMetadata;
@@ -44,7 +75,7 @@ GetTofinoParser::extract(gress_t gress, const IR::P4Parser* parser,
                          bool filterSetMetadata /* = false */) {
     GetTofinoParser getter(gress, filterSetMetadata);
     parser->apply(getter);
-    auto startState = getter.state("start", nullptr);
+    auto startState = getter.state("start");
     return new IR::Tofino::Parser(gress, startState);
 }
 
@@ -140,8 +171,7 @@ class FindStackExtract : public Inspector {
 };
 
 class RewriteExtractNext : public Transform {
-    typedef GetTofinoParser::Context Context;     // not to be confused with Visitor::Context
-    const Context                 *ctxt;
+    AncestorStack&                ancestorStack;
     std::map<cstring, int>        adjust;
     bool                          filterSetMetadata;
 
@@ -190,16 +220,20 @@ class RewriteExtractNext : public Transform {
 
  public:
     bool                        failed = false;
-    RewriteExtractNext(const Context *c, bool filterSetMetadata)
-        : ctxt(c), filterSetMetadata(filterSetMetadata) { }
+    RewriteExtractNext(AncestorStack& ancestorStack, bool filterSetMetadata)
+        : ancestorStack(ancestorStack), filterSetMetadata(filterSetMetadata) { }
 };
 
 const IR::Expression *RewriteExtractNext::preorder(IR::Member *m) {
     if (m->member != "next" && m->member != "last") return m;
     int index = -1;
-    for (const Context *c = ctxt; index < 0 && c; c = c->parent)
-        for (auto match : c->state->match)
-            match->stmts.apply(FindStackExtract(m->expr, index));
+    // XXX(seth): This isn't sound. There could be more than one path through
+    // the parse graph that reaches this point, and each path may have extracted
+    // this header stack a different number of times.
+    for (auto ancestor : boost::adaptors::reverse(ancestorStack)) {
+        ancestor.match->stmts.apply(FindStackExtract(m->expr, index));
+        if (index >= 0) break;
+    }
     cstring hdrname = m->expr->toString();
     index += adjust[hdrname];
     if (m->member == "next")
@@ -217,22 +251,25 @@ const IR::Expression *RewriteExtractNext::preorder(IR::Member *m) {
 }
 
 void GetTofinoParser::addMatch(IR::Tofino::ParserState *s, match_t match_val,
-                               const IR::Vector<IR::Expression> &stmts, const IR::ID &action,
-                               const Context *ctxt) {
-    Context local = { ctxt, ctxt ? ctxt->depth+1 : 0, s };
+                               const IR::Vector<IR::Expression> &stmts, const IR::ID &action) {
     LOG2("GetParser::addMatch(" << s->p4state->toString() << ", " << match_val <<
-         ", " << local.depth << ")");
+         ", " << (ancestorStack.size() + 1) << ")");
+
     auto match = new IR::Tofino::ParserMatch(match_val, stmts);
     s->match.push_back(match);
-    if (!(match->next = state(action, &local))) {
-        if (action == "accept" || action == "reject")
-            return;
-        else if (!states.count(action))
-            error("%s: No definition for %s", action.srcInfo, action);
-        // If there is a parser state with this name, but we couldn't generate it, its probably
-        // because we've unrolled a loop filling a header stack completely.  Should set some
-        // parser error code?
-    }
+
+    ancestorStack.emplace_back(s, match);
+    match->next = state(action);
+    ancestorStack.pop_back();
+
+    // If there is a parser state with this name, but we couldn't generate it,
+    // its probably because we've unrolled a loop filling a header stack
+    // completely.
+    // XXX: Should we set some parser error code?
+    if (match->next != nullptr) return;
+    if (action == "accept" || action == "reject") return;
+    if (!states.count(action))
+        error("%s: No definition for %s", action.srcInfo, action);
 }
 
 static match_t buildListMatch(const IR::Vector<IR::Expression> *list) {
@@ -273,16 +310,26 @@ static match_t buildMatch(int match_size, const IR::Expression *key) {
     return match_t();
 }
 
-IR::Tofino::ParserState *GetTofinoParser::state(cstring name, const Context *ctxt) {
+IR::Tofino::ParserState *GetTofinoParser::state(cstring name) {
     if (states.count(name) == 0) return nullptr;
-    if (ctxt && ctxt->depth >= 256) return nullptr;
+    if (ancestorStack.size() >= 256) return nullptr;
     auto rv = states[name];
-    if (ctxt && ctxt->find(rv)) {
-        rv = new IR::Tofino::ParserState(rv->p4state, gress);
+
+    // Check if we've already reached this state on this path, and if so, make
+    // sure that the resulting loop is legal.
+    bool isLegalLoop = true;
+    for (auto ancestor : boost::adaptors::reverse(ancestorStack)) {
+        isLegalLoop &= ancestor.canBePartOfLoop;
+        if (ancestor.state != rv) continue;
+        if (!isLegalLoop) return nullptr;
+        rv = new IR::Tofino::ParserState(ancestor.state->p4state, gress);
         rv->name = cstring::make_unique(states, name);
-        states[rv->name] = rv; }
+        states[rv->name] = rv;
+        break;
+    }
+
     if (!rv->match.empty()) return rv;
-    RewriteExtractNext rewrite(ctxt, filterSetMetadata);
+    RewriteExtractNext rewrite(ancestorStack, filterSetMetadata);
     const IR::Vector<IR::Expression> *stmts;
     stmts = rv->p4state->components.Node::apply(rewrite)->to<IR::Vector<IR::Expression>>();
     if (rewrite.failed)
@@ -296,11 +343,11 @@ IR::Tofino::ParserState *GetTofinoParser::state(cstring name, const Context *ctx
     LOG2("GetParser::state(" << name << ")");
     if (!rv->p4state->selectExpression) {
     } else if (auto *path = rv->p4state->selectExpression->to<IR::PathExpression>()) {
-        addMatch(rv, match_t(), *stmts, path->path->name, ctxt);
+        addMatch(rv, match_t(), *stmts, path->path->name);
     } else if (auto *sel = rv->p4state->selectExpression->to<IR::SelectExpression>()) {
         for (auto ce : sel->selectCases)
             addMatch(rv, buildMatch(match_size, ce->keyset), *stmts,
-                     ce->state->path->name, ctxt);
+                     ce->state->path->name);
     } else {
         BUG("Invalid select expression %1%", rv->p4state->selectExpression); }
 
