@@ -2272,7 +2272,7 @@ table Poynette {
    actions {
       Mendham;
    }
-   default_action: Mendham;
+   default_action: Mendham(0);
    size : 1;
 }
 
@@ -2940,7 +2940,7 @@ table Theta {
    actions {
       Corry;
    }
-   default_action : Corry;
+   default_action : Corry(0, 0);
    size : Petoskey;
 }
 
@@ -3506,7 +3506,7 @@ control Kenney {
    }
 
    if( ( Maddock.Chevak != Sodaville and Maddock.Fayette == 1 ) or
-       ( Maddock.Chevak == Sodaville and Bladen.valid == 1 ) ) {
+       ( Maddock.Chevak == Sodaville and Bladen.valid ) ) {
       apply( Ocoee );
       if( Maddock.Deferiet != Pumphrey ){
          apply( Burrton );

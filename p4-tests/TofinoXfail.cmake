@@ -127,6 +127,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_45_action_data_immediate_param_and_constant.p4
   extensions/p4_tests/p4_14/test_config_48_action_data_bit_masked_set.p4
   extensions/p4_tests/p4_14/test_config_49_action_data_bit_masked_set_immediate.p4
+  extensions/p4_tests/p4_14/jenkins/pgrs/pgrs_one.p4
   )
 
 # BRIG-103
@@ -308,7 +309,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "error: register.*: Type register has .* type parameter"
+  "Type register has 1 type parameter.*, but it is specialized with 2"
   extensions/p4_tests/p4_16/stful.p4
   extensions/p4_tests/p4_16/tna-salu.p4
   )
@@ -499,11 +500,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_132_meter_pre_color_4.p4
   )
 
-p4c_add_xfail_reason("tofino"
-"error: port: expected a field list"
-  extensions/p4_tests/p4_14/test_config_144_recirculate.p4
-  )
-
 # various stateful
 # Signed 1-bit field not allowed in P4_16 (and really makes no sense?)
 p4c_add_xfail_reason("tofino"
@@ -551,6 +547,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "hash_dist .* not defined in table"
   extensions/p4_tests/p4_14/test_config_192_stateful_driven_by_hash.p4
+  extensions/p4_tests/p4_14/test_config_313_neg_test_addr_modes.p4
   )
 
 # BRIG-119
@@ -611,12 +608,8 @@ p4c_add_xfail_reason("tofino"
 # also BRIG-180
 #  extensions/p4_tests/p4_14/test_config_284_swap_primitive.p4
 p4c_add_xfail_reason("tofino"
-  "Unhandled primitive"
-  extensions/p4_tests/p4_14/test_config_182_warp_primitive.p4
-  extensions/p4_tests/p4_14/test_config_183_sample_e2e.p4
-  extensions/p4_tests/p4_14/test_config_191_invalidate.p4
+  "Unsupported primitive"
   extensions/p4_tests/p4_14/test_config_284_swap_primitive.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-532/case2807.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -649,11 +642,9 @@ p4c_add_xfail_reason("tofino"
   )
 
 #BRIG-142
-p4c_add_xfail_reason("tofino"
-  "error: .*: expected a field list"
-  extensions/p4_tests/p4_14/test_config_313_neg_test_addr_modes.p4
-  extensions/p4_tests/p4_14/jenkins/pgrs/pgrs_one.p4
-  )
+#p4c_add_xfail_reason("tofino"
+#  "error: .*: expected a field list"
+#  )
 
 p4c_add_xfail_reason("tofino"
   "cluster.cpp: Operation ..... mixed gress"
@@ -696,6 +687,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-483/case2619.p4
   extensions/p4_tests/p4_14/c1/COMPILER-503/case2678.p4
   extensions/p4_tests/p4_14/c1/COMPILER-505/case2690.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-532/case2807.p4
   extensions/p4_tests/p4_14/c1/DRV-543/case2499.p4
   extensions/p4_tests/p4_14/jenkins/iterator/iterator.p4
   )

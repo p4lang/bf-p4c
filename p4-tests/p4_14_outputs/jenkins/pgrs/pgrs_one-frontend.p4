@@ -1,6 +1,13 @@
 #include <core.p4>
 #include <v1model.p4>
 
+struct ig_md_t {
+    bit<1> skip_lkups;
+    bit<1> pktgen_port;
+    bit<2> pktgen_type;
+    bit<1> test_recirc;
+}
+
 header egress_intrinsic_metadata_t {
     bit<7>  _pad0;
     bit<9>  egress_port;
@@ -104,24 +111,52 @@ header ingress_intrinsic_metadata_from_parser_aux_t {
 
 header ingress_parser_control_signals {
     bit<3> priority;
+    bit<5> _pad1;
+    bit<8> parser_counter;
 }
 
-header pkt_t {
-    bit<32> field_a_32;
-    bit<32> field_b_32;
-    bit<32> field_c_32;
-    bit<32> field_d_32;
-    bit<16> field_e_16;
-    bit<16> field_f_16;
-    bit<16> field_g_16;
-    bit<16> field_h_16;
-    bit<8>  field_i_8;
-    bit<8>  field_j_8;
-    bit<8>  field_k_8;
-    bit<8>  field_l_8;
+@pa_alias("ingress", "ig_intr_md.ingress_port", "ingress_metadata.ingress_port") header pktgen_header_t {
+    bit<8> id;
+}
+
+header pktgen_generic_header_t {
+    bit<3>  _pad0;
+    bit<3>  app_id;
+    bit<2>  pipe_id;
+    bit<8>  key_msb;
+    bit<16> batch_id;
+    bit<16> packet_id;
+}
+
+header pktgen_port_down_header_t {
+    bit<3>  _pad0;
+    bit<3>  app_id;
+    bit<2>  pipe_id;
+    bit<15> _pad1;
+    bit<9>  port_num;
+    bit<16> packet_id;
+}
+
+header pktgen_recirc_header_t {
+    bit<3>  _pad0;
+    bit<3>  app_id;
+    bit<2>  pipe_id;
+    bit<24> key;
+    bit<16> packet_id;
+}
+
+header pktgen_timer_header_t {
+    bit<3>  _pad0;
+    bit<3>  app_id;
+    bit<2>  pipe_id;
+    bit<8>  _pad1;
+    bit<16> batch_id;
+    bit<16> packet_id;
 }
 
 struct metadata {
+    @name("ig_md") 
+    ig_md_t ig_md;
 }
 
 struct headers {
@@ -145,38 +180,71 @@ struct headers {
     generator_metadata_t_0                         ig_pg_md;
     @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_prsr_ctrl") @name("ig_prsr_ctrl") 
     ingress_parser_control_signals                 ig_prsr_ctrl;
-    @name("pkt") 
-    pkt_t                                          pkt;
+    @name("pgen_header") 
+    pktgen_header_t                                pgen_header;
+    @name("pktgen_generic") 
+    pktgen_generic_header_t                        pktgen_generic;
+    @name("pktgen_port_down") 
+    pktgen_port_down_header_t                      pktgen_port_down;
+    @name("pktgen_recirc") 
+    pktgen_recirc_header_t                         pktgen_recirc;
+    @name("pktgen_timer") 
+    pktgen_timer_header_t                          pktgen_timer;
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".parse_ethernet") state parse_ethernet {
-        packet.extract<pkt_t>(hdr.pkt);
+    @name(".pktgen_done") state pktgen_done {
         transition accept;
     }
+    @name(".pktgen_port_down") state pktgen_port_down {
+        meta.ig_md.pktgen_type = 2w2;
+        transition pktgen_done;
+    }
+    @name(".pktgen_recirc") state pktgen_recirc {
+        meta.ig_md.pktgen_type = 2w3;
+        transition pktgen_done;
+    }
+    @name(".pktgen_timer") state pktgen_timer {
+        meta.ig_md.pktgen_type = 2w0;
+        transition pktgen_done;
+    }
     @name(".start") state start {
-        transition parse_ethernet;
-    }
-}
-
-control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".action_0") action action_1(bit<8> port) {
-        recirculate<bit<8>>(port);
-    }
-    @name(".table_0") table table_1 {
-        actions = {
-            action_1();
-            @defaultonly NoAction();
+        packet.extract<pktgen_header_t>(hdr.pgen_header);
+        transition select(hdr.pgen_header.id) {
+            8w0x0 &&& 8w0x1f: pktgen_port_down;
+            8w0x4 &&& 8w0x1f: pktgen_timer;
+            8w0x8 &&& 8w0x1f: pktgen_recirc;
+            8w0xc &&& 8w0x1f: pktgen_timer;
+            8w0x10 &&& 8w0x1f: pktgen_timer;
+            8w0x14 &&& 8w0x1f: pktgen_timer;
+            8w0x18 &&& 8w0x1f: pktgen_timer;
+            8w0x1c &&& 8w0x1f: pktgen_timer;
+            8w0x1 &&& 8w0x1f: pktgen_timer;
+            8w0x5 &&& 8w0x1f: pktgen_port_down;
+            8w0x9 &&& 8w0x1f: pktgen_timer;
+            8w0xd &&& 8w0x1f: pktgen_recirc;
+            8w0x11 &&& 8w0x1f: pktgen_timer;
+            8w0x15 &&& 8w0x1f: pktgen_timer;
+            8w0x19 &&& 8w0x1f: pktgen_timer;
+            8w0x1d &&& 8w0x1f: pktgen_timer;
+            8w0x2 &&& 8w0x1f: pktgen_timer;
+            8w0x6 &&& 8w0x1f: pktgen_timer;
+            8w0xa &&& 8w0x1f: pktgen_port_down;
+            8w0xe &&& 8w0x1f: pktgen_timer;
+            8w0x12 &&& 8w0x1f: pktgen_recirc;
+            8w0x16 &&& 8w0x1f: pktgen_timer;
+            8w0x1a &&& 8w0x1f: pktgen_timer;
+            8w0x1e &&& 8w0x1f: pktgen_timer;
+            8w0x3 &&& 8w0x1f: pktgen_timer;
+            8w0x7 &&& 8w0x1f: pktgen_timer;
+            8w0xb &&& 8w0x1f: pktgen_timer;
+            8w0xf &&& 8w0x1f: pktgen_port_down;
+            8w0x13 &&& 8w0x1f: pktgen_timer;
+            8w0x17 &&& 8w0x1f: pktgen_recirc;
+            8w0x1b &&& 8w0x1f: pktgen_timer;
+            8w0x1f &&& 8w0x1f: pktgen_timer;
+            default: accept;
         }
-        key = {
-            hdr.pkt.field_a_32                     : ternary @name("hdr.pkt.field_a_32") ;
-            hdr.ig_intr_md_for_tm.ucast_egress_port: exact @name("hdr.ig_intr_md_for_tm.ucast_egress_port") ;
-        }
-        size = 512;
-        default_action = NoAction();
-    }
-    apply {
-        table_1.apply();
     }
 }
 
@@ -185,9 +253,104 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
 }
 
+control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name(".local_recirc") action local_recirc_0(bit<8> local_port) {
+        recirculate<bit<8>>(local_port);
+    }
+    @name(".port_down_ok") action port_down_ok_0() {
+    }
+    @name(".port_down_nok") action port_down_nok_0() {
+        hdr.ig_intr_md_for_tm.ucast_egress_port = 9w6;
+    }
+    @name(".recirc_ok") action recirc_ok_0() {
+    }
+    @name(".recirc_nok") action recirc_nok_0() {
+        hdr.ig_intr_md_for_tm.ucast_egress_port = 9w6;
+    }
+    @name(".timer_ok") action timer_ok_0() {
+    }
+    @name(".timer_nok") action timer_nok_0() {
+        hdr.ig_intr_md_for_tm.ucast_egress_port = 9w6;
+    }
+    @name(".set_md") action set_md_0(bit<9> eg_port, bit<1> skip, bit<1> pktgen_port, bit<1> test_recirc, bit<16> mgid1, bit<16> mgid2) {
+        hdr.ig_intr_md_for_tm.ucast_egress_port = eg_port;
+        meta.ig_md.skip_lkups = skip;
+        meta.ig_md.pktgen_port = pktgen_port;
+        meta.ig_md.test_recirc = test_recirc;
+        hdr.ig_intr_md_for_tm.mcast_grp_a = mgid1;
+        hdr.ig_intr_md_for_tm.mcast_grp_b = mgid2;
+    }
+    @name(".do_local_recirc") table do_local_recirc_0 {
+        actions = {
+            local_recirc_0();
+            @defaultonly NoAction();
+        }
+        default_action = NoAction();
+    }
+    @name(".pg_verify_port_down") table pg_verify_port_down_0 {
+        actions = {
+            port_down_ok_0();
+            port_down_nok_0();
+            @defaultonly NoAction();
+        }
+        key = {
+            hdr.ig_intr_md.ingress_port: exact @name("hdr.ig_intr_md.ingress_port") ;
+        }
+        default_action = NoAction();
+    }
+    @name(".pg_verify_recirc") table pg_verify_recirc_0 {
+        actions = {
+            recirc_ok_0();
+            recirc_nok_0();
+            @defaultonly NoAction();
+        }
+        key = {
+            hdr.ig_intr_md.ingress_port: exact @name("hdr.ig_intr_md.ingress_port") ;
+        }
+        default_action = NoAction();
+    }
+    @name(".pg_verify_timer") table pg_verify_timer_0 {
+        actions = {
+            timer_ok_0();
+            timer_nok_0();
+            @defaultonly NoAction();
+        }
+        key = {
+            hdr.ig_intr_md.ingress_port: exact @name("hdr.ig_intr_md.ingress_port") ;
+        }
+        default_action = NoAction();
+    }
+    @name(".port_tbl") table port_tbl_0 {
+        actions = {
+            set_md_0();
+            @defaultonly NoAction();
+        }
+        key = {
+            hdr.ig_intr_md.ingress_port: exact @name("hdr.ig_intr_md.ingress_port") ;
+        }
+        size = 288;
+        default_action = NoAction();
+    }
+    apply {
+        port_tbl_0.apply();
+        if (meta.ig_md.skip_lkups == 1w0) 
+            if (meta.ig_md.pktgen_port == 1w1) {
+                if (meta.ig_md.pktgen_type == 2w0) 
+                    pg_verify_timer_0.apply();
+                if (meta.ig_md.pktgen_type == 2w2) 
+                    pg_verify_port_down_0.apply();
+                if (meta.ig_md.pktgen_type == 2w3) 
+                    pg_verify_recirc_0.apply();
+            }
+        else 
+            if (meta.ig_md.test_recirc == 1w1) 
+                do_local_recirc_0.apply();
+    }
+}
+
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        packet.emit<pkt_t>(hdr.pkt);
+        packet.emit<pktgen_header_t>(hdr.pgen_header);
     }
 }
 

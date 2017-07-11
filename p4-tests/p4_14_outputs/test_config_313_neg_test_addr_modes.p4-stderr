@@ -1,0 +1,6 @@
+test_config_313_neg_test_addr_modes.p4(159): warning: Could not infer type for local_port, using bit<8>
+action local_recirc(local_port) {
+                    ^^^^^^^^^^
+warning: out parameter rv may be uninitialized when apply terminates
+warning: out parameter rv may be uninitialized when apply terminates
+warning: out parameter rv may be uninitialized when apply terminates

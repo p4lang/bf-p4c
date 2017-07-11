@@ -96,7 +96,7 @@ header ingress_intrinsic_metadata_from_parser_aux_t {
     bit<16> ingress_parser_err;
 }
 
-header generator_metadata_t {
+@name("generator_metadata_t") header generator_metadata_t_0 {
     bit<16> app_id;
     bit<16> batch_id;
     bit<16> instance_id;
@@ -142,7 +142,7 @@ struct headers {
     @pa_fragment("ingress", "ig_intr_md_from_parser_aux.ingress_parser_err") @pa_atomic("ingress", "ig_intr_md_from_parser_aux.ingress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md_from_parser_aux") @name("ig_intr_md_from_parser_aux") 
     ingress_intrinsic_metadata_from_parser_aux_t   ig_intr_md_from_parser_aux;
     @not_deparsed("ingress") @not_deparsed("egress") @name("ig_pg_md") 
-    generator_metadata_t                           ig_pg_md;
+    generator_metadata_t_0                         ig_pg_md;
     @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_prsr_ctrl") @name("ig_prsr_ctrl") 
     ingress_parser_control_signals                 ig_prsr_ctrl;
     @name("pkt") 
@@ -150,30 +150,28 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_ethernet") state parse_ethernet {
+    @name(".parse_ethernet") state parse_ethernet {
         packet.extract(hdr.pkt);
         transition accept;
     }
-    @name("start") state start {
+    @name(".start") state start {
         transition parse_ethernet;
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".action_0") action action_0(bit<9> port) {
+    @name(".action_0") action action_0(bit<8> port) {
         recirculate(port);
     }
-    @name("table_0") table table_0 {
+    @name(".table_0") table table_0 {
         actions = {
             action_0;
-            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_a_32                     : ternary;
             hdr.ig_intr_md_for_tm.ucast_egress_port: exact;
         }
         size = 512;
-        default_action = NoAction();
     }
     apply {
         table_0.apply();

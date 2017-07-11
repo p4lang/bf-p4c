@@ -40,6 +40,7 @@ set (TOFINO_IR_HDRS
   )
 
 set (TOFINO_BACKEND_CONV_SRCS
+  fromv1.0/primitives.cpp
   fromv1.0/stateful_alu.cpp
   )
 
@@ -252,6 +253,7 @@ set (IR_DEF_FILES ${IR_DEF_FILES} ${TOFINO_IR_DEF_FILES} PARENT_SCOPE)
 set (p4include_HEADERS
   p4include/tofino_model.p4
   p4include/tofino.p4
+  p4include/tofino/p4_14_prim.p4
   p4include/tofino/stateful_alu.p4
   )
 

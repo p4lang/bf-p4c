@@ -160,12 +160,12 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".action_0") action action_1(bit<8> port) {
+    @name(".action_0") action action_0(bit<8> port) {
         recirculate<bit<8>>(port);
     }
-    @name(".table_0") table table_1 {
+    @name(".table_0") table table_0 {
         actions = {
-            action_1();
+            action_0();
             @defaultonly NoAction();
         }
         key = {
@@ -176,7 +176,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
     }
     apply {
-        table_1.apply();
+        table_0.apply();
     }
 }
 

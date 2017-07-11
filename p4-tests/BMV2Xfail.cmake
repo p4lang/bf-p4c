@@ -23,7 +23,6 @@ set (BMV2_XFAIL_TESTS
   extensions/p4_tests/p4_14/test_config_247_first_clpm.p4
   extensions/p4_tests/p4_14/test_config_278_meta_init2.p4
   extensions/p4_tests/p4_14/test_config_284_swap_primitive.p4
-  extensions/p4_tests/p4_14/test_config_291_default_action.p4
   extensions/p4_tests/p4_16/stack_valid.p4
   extensions/p4_tests/p4_14/shared_names.p4
   extensions/p4_tests/p4_14/test_config_295_polynomial_hash.p4
@@ -41,7 +40,4 @@ set (BMV2_XFAIL_TESTS
   extensions/p4_tests/p4_14/test_config_261_mutually_exclusive_src_ops.p4
   extensions/p4_tests/p4_14/test_config_262_req_packing.p4
   extensions/p4_tests/p4_14/test_config_277_meta_init.p4
-  extensions/p4_tests/p4_14/test_config_278_meta_init2.p4.test
-  extensions/p4_tests/p4_14/test_config_284_swap_primitive.p4.test
-  extensions/p4_tests/p4_14/test_config_291_default_action.p4.test
   )
