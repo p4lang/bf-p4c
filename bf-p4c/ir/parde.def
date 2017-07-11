@@ -10,7 +10,10 @@ class ParserMatch {
     ParserMatch(match_t v, const Vector<Expression> &e)
     : value(v), shift(-1), stmts(e), next(0), except(0) {}
 #emit
-    ParserMatch(match_t v, int sh, const std::initializer_list<const Expression *> &st,
+    ParserMatch(match_t v, int sh, std::initializer_list<const Expression *> st,
+                const ParserState *n, const ParserException *ex = nullptr)
+    : value(v), shift(sh), stmts(st), next(n), except(ex) {}
+    ParserMatch(match_t v, int sh, const Vector<Expression> &st,
                 const ParserState *n, const ParserException *ex = nullptr)
     : value(v), shift(sh), stmts(st), next(n), except(ex) {}
 #end
