@@ -107,6 +107,7 @@ tofino_backend_parde_UNIFIED = \
 	%reldir%/parde/bridge_metadata.cpp \
 	%reldir%/parde/deparser_output.cpp \
 	%reldir%/parde/extract_parser.cpp \
+	%reldir%/parde/field_packing.cpp \
 	%reldir%/parde/gen_deparser.cpp \
 	%reldir%/parde/match_keys.cpp \
 	%reldir%/parde/parser_output.cpp \
@@ -118,6 +119,7 @@ noinst_HEADERS += \
 	%reldir%/parde/bridge_metadata.h \
 	%reldir%/parde/compute_shifts.h \
 	%reldir%/parde/extract_parser.h \
+	%reldir%/parde/field_packing.h \
 	%reldir%/parde/match_keys.h \
 	%reldir%/parde/split_big_states.h
 
