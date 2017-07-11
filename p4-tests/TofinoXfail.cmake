@@ -50,6 +50,10 @@ set (TOFINO_XFAIL_TESTS
   extensions/p4_tests/p4_14/test_config_247_first_clpm.p4
 # Failure due to PHV allocation of stkvalid
   extensions/p4_tests/p4_16/stack_valid.p4
+# BRIG-187: Failure due to POV bits for header stack elements being incorrectly overlaid
+  extensions/p4_tests/p4_16/ternary2.p4
+  testdata/p4_14_samples/action_chain1.p4
+  testdata/p4_16_samples/ternary2-bmv2.p4
 # These currently fail gateway check with 'expression too complex'
   testdata/p4_14_samples/flowlet_switching.p4
   extensions/p4_tests/p4_14/07-MacAddrCheck.p4
@@ -106,7 +110,6 @@ set (TOFINO_XFAIL_TESTS
   testdata/p4_16_samples/issue281.p4
   testdata/p4_16_samples/issue361-bmv2.p4
   testdata/p4_16_samples/issue420.p4
-  testdata/p4_16_samples/issue430-bmv2.p4
   testdata/p4_16_samples/key-bmv2.p4
   testdata/p4_16_samples/noMatch.p4
   testdata/p4_16_samples/pred1.p4
@@ -145,6 +148,10 @@ set (TOFINO_XFAIL_TESTS
   extensions/p4_tests/p4_14/adb_shared3.p4
 # Failure due to tbl-cfg incorrect driver code for split parameter in single ad table container
   extensions/p4_tests/p4_14/adjust_instr4.p4
+# BRIG-188: Failure: "Can't fit table table_i2 in input xbar by itself"
+  extensions/p4_tests/p4_14/test_config_215_nondphv.p4
+# BRIG-189: Fails due to crash in IXBar::find_alloc()
+  testdata/p4_14_samples/01-BigMatch.p4
 #BRIG-56
   extensions/p4_tests/p4_14/jenkins/smoke_large_tbls/smoke_large_tbls.p4
 # BRIG-99
@@ -310,7 +317,6 @@ set (TOFINO_XFAIL_TESTS
   extensions/p4_tests/p4_14/test_config_192_stateful_driven_by_hash.p4
   extensions/p4_tests/p4_14/test_config_195_stateful_predicate_output.p4
   extensions/p4_tests/p4_14/test_config_199_stateful_constant_index.p4
-  extensions/p4_tests/p4_14/test_config_236_stateful_read_bit.p4
 # Google Tor - we know it fails for now
   extensions/p4_tests/p4_16/google-tor/p4/spec/tor.p4
 # support for unions

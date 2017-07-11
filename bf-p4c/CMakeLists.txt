@@ -149,11 +149,12 @@ set (TOFINO_BACKEND_PARDE_SRCS
   parde/bridge_metadata.cpp
   parde/deparser_output.cpp
   parde/extract_parser.cpp
+  parde/field_packing.cpp
   parde/gen_deparser.cpp
   parde/match_keys.cpp
   parde/parser_output.cpp
+  parde/phase0.cpp
   parde/split_big_states.cpp
-  parde/split_header.cpp
   )
 
 set (TOFINO_BACKEND_PARDE_HDRS
@@ -162,9 +163,10 @@ set (TOFINO_BACKEND_PARDE_HDRS
   parde/bridge_metadata.h
   parde/compute_shifts.h
   parde/extract_parser.h
+  parde/field_packing.h
   parde/match_keys.h
+  parde/phase0.h
   parde/split_big_states.h
-  parde/split_header.h
   )
 
 set (TOFINO_BACKEND_PHV_SRCS
