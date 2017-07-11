@@ -18,5 +18,5 @@ add_custom_command (OUTPUT ${WALLE_BINARY_DIR}/walle
 add_custom_target (walle ALL
   DEPENDS ${WALLE_BINARY_DIR}/walle)
 
-install (PROGRAMS walle
+install (PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/walle
   DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
