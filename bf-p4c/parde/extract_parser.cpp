@@ -1,4 +1,3 @@
-#include <ir/ir.h>
 #include "extract_parser.h"
 
 #include <boost/range/adaptor/reversed.hpp>
@@ -6,6 +5,7 @@
 #include <algorithm>
 #include <vector>
 
+#include "ir/ir.h"
 #include "lib/log.h"
 #include "tofino/parde/add_parde_metadata.h"
 

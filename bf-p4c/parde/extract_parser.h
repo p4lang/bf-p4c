@@ -24,9 +24,12 @@ limitations under the License.
 namespace IR {
 
 namespace Tofino {
+class Deparser;
 class Parser;
+class Pipe;
 }  // namespace Tofino
 
+class P4Control;
 class P4Parser;
 
 }  // namespace IR
@@ -59,10 +62,6 @@ struct ParserInfo {
 /**
  * Convert the frontend parser and deparser IR into the representation used in
  * the Tofino backend. Special Tofino-specific states are automatically added.
- *
- * XXX(seth): It'd be ideal to create all Tofino-specific states (or at least
- * hooks for them) here, but right now some things (e.g., bridged metadata) are
- * still handled later in the pipeline.
  *
  * XXX(seth): We shouldn't really be doing any inferring here. Long term we
  * should be converting both P4-14 and v1model P4-16 programs to TNA, and any
