@@ -1415,6 +1415,7 @@ bool IXBar::allocHashDistImmediate(const HashDistReq &hash_dist_req,
             bits_needed = (bits_needed <= HASH_DIST_BITS) ? bits_needed : HASH_DIST_BITS;
             unsigned long bit_vector = (1 << bits_needed) - 1;
             bit_mask |= (bit_vector << (j * HASH_DIST_BITS));
+            hash_dist_bit_inuse[i] |= bit_mask;
             allocated_groups++;
         }
     }
@@ -1572,7 +1573,8 @@ void IXBar::update_hash_dist(cstring name, const Use &alloc) {
                  if (!hash_dist_bit_use[i][bit]) {
                      hash_dist_bit_use[i][bit] = name;
                  } else {
-                     BUG("Conflicting hash distribution bit allocation");
+                     BUG("Conflicting hash distribution bit allocation %s and %s",
+                         name, hash_dist_bit_use[i][bit]);
                  }
             }
             hash_dist_bit_inuse[i] |= hash_dist.bit_mask;

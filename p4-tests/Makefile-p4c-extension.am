@@ -146,7 +146,6 @@ XFAIL_TESTS += \
 # Could not find declaration error in generated P4_16 code (JIRA #BRIG-31)
 XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_206_stateful_logging.p4.test
 XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_206_stateful_logging.p4.test
-XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_209_pack_hash_dist.p4.test
 
 # blackbox type unification failures (JIRA #BRIG-30, #COMPILER-341)
 XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_205_modify_field_from_hash.p4.test
@@ -327,9 +326,6 @@ XFAIL_TESTS += tofino/%reldir%/p4_14/adjust_instr4.p4.test
 # BRIG-188: Failure: "Can't fit table table_i2 in input xbar by itself"
 XFAIL_TESTS += tofino/extensions/p4_tests/p4_14/test_config_215_nondphv.p4.test
 
-# BRIG-189: Fails due to crash in IXBar::find_alloc()
-XFAIL_TESTS += tofino/testdata/p4_14_samples/01-BigMatch.p4.test
-
 # BRIG-99
 XFAIL_TESTS += \
 		tofino/%reldir%/p4_14/test_config_123_meter_2.p4.test \
@@ -354,7 +350,6 @@ XFAIL_TESTS += tofino/testdata/p4_14_samples/source_routing.p4.test
 # BRIG-102
 XFAIL_TESTS += \
 		tofino/%reldir%/p4_14/test_config_235_funnel_shift.p4.test \
-		tofino/%reldir%/p4_14/test_config_55_generate_digest.p4.test \
 		tofino/%reldir%/p4_14/test_config_96_hash_data.p4.test
 
 # BRIG-103
@@ -463,6 +458,7 @@ XFAIL_TESTS += \
 		tofino/%reldir%/p4_14/hash_calculation_two_hash1.p4.test \
 		tofino/%reldir%/p4_14/hash_calculation_two_hash2.p4.test \
 		tofino/testdata/p4_14_samples/hash_action_gateway2.p4.test \
+                tofino/%reldir%/p4_14/test_config_209_pack_hash_dist.p4.test \
 		tofino/%reldir%/p4_14/test_config_13_first_selection.p4.test
 
 # BRIG-124
@@ -475,7 +471,6 @@ XFAIL_TESTS += \
 		tofino/testdata/p4_14_samples/packet_redirect.p4.test \
 		tofino/%reldir%/p4_14/test_checksum.p4.test \
 		tofino/%reldir%/p4_14/test_config_102_clone.p4.test \
-		tofino/testdata/p4_14_samples/sai_p4.p4.test \
 		tofino/testdata/p4_16_samples/clone-bmv2.p4.test \
 		tofino/testdata/p4_16_samples/issue430-1-bmv2.p4.test
 
@@ -637,9 +632,8 @@ XFAIL_TESTS += tofino/%reldir%/p4_14/jenkins/pvs/pvs.p4.test \
 XFAIL_TESTS += tofino/%reldir%/p4_14/jenkins/pctr/pctr.p4.test \
                p14_to_16/%reldir%/p4_14/jenkins/pctr/pctr.p4.test
 
-#BRIG-185
-XFAIL_TESTS += tofino/%reldir%/p4_14/action_selection_shared_four.p4.test
-
+#Needs discussion with Gana/Seth before Brig issue generated
+XFAIL_TESTS += tofino/testdata/p4_14_samples/sai_p4.p4.test
 
 #uncharacterized failures
 XFAIL_TESTS += \

@@ -44,7 +44,7 @@ phv ingress:
   tcp.urgent_ptr: TH13
   local_metadata.vrf_id: W11
   local_metadata.class_id: B3
-  local_metadata.skip_egress: B14(6)
+  local_metadata.skip_egress: B63(6)
   local_metadata.egress_spec_at_punt_match: H2(0..8)
   local_metadata.color: B47(5..6)
   local_metadata.l4_src_port: H12
@@ -81,7 +81,7 @@ phv ingress:
   arp.target_hw_addr.16-31: TH1
   arp.target_hw_addr.0-15: TH0
   arp.target_proto_addr: W9
-  hasExited: B46(6)
+  hasExited: B63(6)
   $mirror_id: B1
   $mirror: B15(4..6)
   arp.$valid: B15(7)
@@ -94,12 +94,12 @@ phv ingress:
   vlan_tag$0.$valid: B61(7)
   vlan_tag$1.$valid: B13(7)
 phv egress:
-  standard_metadata.ingress_port: H20(0..8)
-  standard_metadata.egress_spec: H19(0..8)
-  standard_metadata.egress_port: H18(0..8)
-  local_metadata.skip_egress: H21(15)
+  standard_metadata.ingress_port: H19(0..8)
+  standard_metadata.egress_spec: H22(0..8)
+  standard_metadata.egress_port: H16(0..8)
+  local_metadata.skip_egress: B31(6)
   local_metadata.egress_spec_at_punt_match: H17(0..8)
-  local_metadata.l4_dst_port: H22
+  local_metadata.l4_dst_port: H21
   packet_out.egress_physical_port: TH27(0..8)
   packet_out.submit_to_ingress: TW27(31)
   ethernet.dst_addr.32-47: TH30
@@ -147,7 +147,7 @@ phv egress:
   ipv6_base.dst_addr.64-95: TW18
   ipv6_base.dst_addr.32-63: TW17
   ipv6_base.dst_addr.0-31: TW16
-  hasExited_0: B31(6)
+  hasExited_0: H22(15)
   ethernet.$valid: B31(7)
   ipv4_base.$valid: B30(7)
   ipv6_base.$valid: B29(7)
@@ -674,7 +674,7 @@ parser ingress:
 deparser ingress:
   dictionary:
     H0: $bridge-metadata
-    B14: $bridge-metadata
+    B63: $bridge-metadata
     H2: $bridge-metadata
     local_metadata.l4_dst_port: $bridge-metadata
     ethernet.dst_addr.32-47: ethernet.$valid
@@ -744,16 +744,16 @@ parser egress:
   start: $egress_metadata_shim
   $egress_metadata_shim:
     0x*:
-      0..1: H18
+      0..1: H16
       shift: 2
       next: $bridge-metadata
       save: { half:0..1 }
   $bridge-metadata:
     0x*:
-      0..1: H19
-      2..3: H21
-      4..5: H17
-      6..7: local_metadata.l4_dst_port
+      0..1: H22
+      2: B31
+      3..4: H17
+      5..6: local_metadata.l4_dst_port
       shift: 7
       next: start$
   start$:
@@ -1145,11 +1145,12 @@ stage 1 ingress:
       0x0: run_table
       miss: tbl_act_1
     next: tbl_act_1
+    action_bus: { }
     actions:
       act:
-      - set local_metadata.skip_egress, 1
+      - { $data0: immediate(0..6), $constant0: $data0(6..6), $constant0: 1, $constant1: $data0(6..6), $constant1: 1 }
       - set standard_metadata.egress_spec, packet_out.egress_physical_port
-      - set hasExited, 1
+      - set B63(6..6), $data0(6..6)
     default_action: act
   exact_match tbl_act_1 2:
     p4: { name: tbl_act_1 }
@@ -1158,7 +1159,7 @@ stage 1 ingress:
     column: [  ]
     gateway:
       input_xbar:
-        group 0: { 6: hasExited }
+        group 0: { 22: hasExited }
       row: 0
       bus: 1
       match: { 6: hasExited }
@@ -1189,7 +1190,7 @@ stage 1 ingress:
       group 5: { 0: ethernet.src_addr.32-47(0..7), 8: ethernet.src_addr.0-15(8..15), 16: standard_metadata.ingress_port(0..7), 24: ethernet.src_addr.16-31(8..15), 32: ipv4_base.diffserv }
     gateway:
       input_xbar:
-        group 0: { 6: hasExited }
+        group 0: { 22: hasExited }
       row: 0
       bus: 0
       match: { 6: hasExited }
@@ -1240,7 +1241,7 @@ stage 1 ingress:
     column: 0
     home_row: 15
     format class_id.set_class_id: { $adf_b0: 0..7 }
-    action_bus: { 0 : $adf_b0 }
+    action_bus: { 2 : $adf_b0 }
     actions:
       class_id.set_class_id:
       - { class_id_value: $adf_b0 }
@@ -1255,15 +1256,15 @@ stage 1 ingress:
     - [0, 1, 0x0, [7, 3]]
     - [0, 2, 0x0, [7, 4]]
     input_xbar:
-      group 0: { 16: ethernet.dst_addr.0-15(0..7), 32: ethernet.dst_addr.16-31(0..7), 40: ethernet.dst_addr.0-15(8..15), 48: ethernet.dst_addr.32-47(0..7), 56: ethernet.dst_addr.16-31(8..15), 72: ethernet.dst_addr.32-47(8..15) }
+      group 0: { 24: ethernet.dst_addr.0-15(8..15), 32: ethernet.dst_addr.0-15(0..7), 40: ethernet.dst_addr.16-31(8..15), 48: ethernet.dst_addr.16-31(0..7), 56: ethernet.dst_addr.32-47(8..15), 64: ethernet.dst_addr.32-47(0..7) }
       hash 0:
-        0..9: random(ethernet.dst_addr.0-15(0..7), ethernet.dst_addr.16-31(2..7), ethernet.dst_addr.0-15(8..15), ethernet.dst_addr.16-31(8..15)) ^ stripe(ethernet.dst_addr.16-31(0..1), ethernet.dst_addr.32-47(0..7))
-        10..19: random(ethernet.dst_addr.0-15(0..7), ethernet.dst_addr.16-31(2..7), ethernet.dst_addr.0-15(8..15), ethernet.dst_addr.16-31(8..15)) ^ stripe(ethernet.dst_addr.16-31(0..1), ethernet.dst_addr.32-47(0..7))
-        20..29: random(ethernet.dst_addr.0-15(0..7), ethernet.dst_addr.16-31(2..7), ethernet.dst_addr.0-15(8..15), ethernet.dst_addr.16-31(8..15)) ^ stripe(ethernet.dst_addr.16-31(0..1), ethernet.dst_addr.32-47(0..7))
+        0..9: random(ethernet.dst_addr.0-15(8..15), ethernet.dst_addr.0-15(0..7), ethernet.dst_addr.16-31(8..15), ethernet.dst_addr.16-31(2..7), ethernet.dst_addr.32-47(8..15)) ^ stripe(ethernet.dst_addr.16-31(0..1))
+        10..19: random(ethernet.dst_addr.0-15(8..15), ethernet.dst_addr.0-15(0..7), ethernet.dst_addr.16-31(8..15), ethernet.dst_addr.16-31(2..7), ethernet.dst_addr.32-47(8..15)) ^ stripe(ethernet.dst_addr.16-31(0..1))
+        20..29: random(ethernet.dst_addr.0-15(8..15), ethernet.dst_addr.0-15(0..7), ethernet.dst_addr.16-31(8..15), ethernet.dst_addr.16-31(2..7), ethernet.dst_addr.32-47(8..15)) ^ stripe(ethernet.dst_addr.16-31(0..1))
       hash 1:
-        0..9: random(ethernet.dst_addr.32-47(8..15))
-        10..19: random(ethernet.dst_addr.32-47(8..15))
-        20..29: random(ethernet.dst_addr.32-47(8..15))
+        0..9: stripe(ethernet.dst_addr.32-47(0..7))
+        10..19: stripe(ethernet.dst_addr.32-47(0..7))
+        20..29: stripe(ethernet.dst_addr.32-47(0..7))
       hash group 0:
         table: [0, 1]
     format: { version(0): 112..115, match(0): [56..63, 32..39, 66..71, 40..55 ] }
@@ -1359,6 +1360,14 @@ stage 2 ingress:
     row: 15
     column: [ 0, 1 ]
     maprams: [ 0, 1 ]
+    input_xbar:
+      group 0: { 0: ipv4_base.dst_addr, 32: ipv4_base.src_addr, 64: local_metadata.l4_dst_port, 80: local_metadata.l4_src_port, 96: ipv4_base.protocol }
+      hash 0:
+        0..50: random(ipv4_base.dst_addr, ipv4_base.src_addr)
+      hash 1:
+        0..50: random(local_metadata.l4_dst_port, local_metadata.l4_src_port, ipv4_base.protocol)
+      hash group 0:
+        table: [0, 1]
     mode: fair 0
   ternary_indirect l3_fwd_l3_ipv4_fallback_table_0$tind:
     row: 2
@@ -1515,11 +1524,11 @@ stage 1 egress:
     column: [  ]
     gateway:
       input_xbar:
-        group 0: { 31: local_metadata.skip_egress }
+        group 0: { 6: local_metadata.skip_egress }
       row: 1
       bus: 0
-      match: { 7: local_metadata.skip_egress }
-      0x1: run_table
+      match: { 6: local_metadata.skip_egress }
+      0b*1: run_table
       miss: cond-10
     next: cond-10
     actions:
@@ -1529,11 +1538,11 @@ stage 1 egress:
 stage 2 egress:
   gateway cond-10 3:
     input_xbar:
-      group 0: { 110: hasExited_0 }
+      group 0: { 111: hasExited_0 }
     row: 0
     bus: 0
-    match: { 6: hasExited_0 }
-    0b*0: spoof_protection_dhcp_spoof_protection_table_0
+    match: { 7: hasExited_0 }
+    0x0: spoof_protection_dhcp_spoof_protection_table_0
     miss: END
   exact_match spoof_protection_dhcp_spoof_protection_table_0 4:
     p4: { name: spoof_protection.dhcp_spoof_protection_table }

@@ -257,6 +257,7 @@ const IR::MAU::Instruction *ConstantsToActionData::postorder(IR::MAU::Instructio
     auto &constant_renames = tbl->resources->action_format.constant_locations.at(action_name);
     bool constant_found = constant_renames.find(constant_renames_key) != constant_renames.end();
 
+
     if (constant_found != has_constant)
         BUG("Constant lookup does not match the ActionFormat");
 

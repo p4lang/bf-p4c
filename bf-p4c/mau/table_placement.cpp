@@ -388,7 +388,7 @@ static void coord_selector_xbar(const TablePlacement::Placed *curr,
         if ((as = at->to<IR::ActionSelector>()) != nullptr) break;
     }
     if (as == nullptr) return;
-    auto loc = resource->memuse.find(curr->table->name + "$selector");
+    auto loc = resource->memuse.find(curr->table->get_use_name(as));
     if (loc == resource->memuse.end() || (loc != resource->memuse.end()
         && !resource->selector_ixbar.use.empty()))
         return;

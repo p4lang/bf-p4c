@@ -24,6 +24,7 @@ class InstructionSelection : public MauTransform {
     const IR::Expression *postorder(IR::Cmpl *) override;
     const IR::Expression *postorder(IR::Cast *) override;
     const IR::Expression *postorder(IR::Mux *) override;
+    const IR::Expression *postorder(IR::BoolLiteral *) override;
     const IR::Primitive *postorder(IR::Primitive *) override;
     const IR::MAU::Instruction *postorder(IR::MAU::Instruction *i) override { return i; }
     const IR::MAU::Table *postorder(IR::MAU::Table *) override;

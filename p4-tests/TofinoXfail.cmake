@@ -34,7 +34,6 @@ set (TOFINO_XFAIL_TESTS
   extensions/p4_tests/p4_14/test_config_201_meter_constant_index.p4
 # Could not find declaration error in generated P4_16 code (JIRA #BRIG-31)
   extensions/p4_tests/p4_14/test_config_206_stateful_logging.p4
-  extensions/p4_tests/p4_14/test_config_209_pack_hash_dist.p4
 # blackbox type unification failures (JIRA #BRIG-30, #COMPILER-341)
   extensions/p4_tests/p4_14/test_config_174_stateful_flow_learning.p4
   extensions/p4_tests/p4_14/test_config_205_modify_field_from_hash.p4
@@ -150,8 +149,6 @@ set (TOFINO_XFAIL_TESTS
   extensions/p4_tests/p4_14/adjust_instr4.p4
 # BRIG-188: Failure: "Can't fit table table_i2 in input xbar by itself"
   extensions/p4_tests/p4_14/test_config_215_nondphv.p4
-# BRIG-189: Fails due to crash in IXBar::find_alloc()
-  testdata/p4_14_samples/01-BigMatch.p4
 #BRIG-56
   extensions/p4_tests/p4_14/jenkins/smoke_large_tbls/smoke_large_tbls.p4
 # BRIG-99
@@ -255,6 +252,7 @@ set (TOFINO_XFAIL_TESTS
   extensions/p4_tests/p4_14/hash_calculation_multiple.p4
   extensions/p4_tests/p4_14/hash_calculation_two_hash1.p4
   extensions/p4_tests/p4_14/hash_calculation_two_hash2.p4
+  extensions/p4_tests/p4_14/test_config_209_pack_hash_dist.p4
   testdata/p4_14_samples/hash_action_gateway2.p4
   extensions/p4_tests/p4_14/test_config_13_first_selection.p4
 # BRIG-124
@@ -264,7 +262,6 @@ set (TOFINO_XFAIL_TESTS
   testdata/p4_14_samples/packet_redirect.p4
   extensions/p4_tests/p4_14/test_checksum.p4
   extensions/p4_tests/p4_14/test_config_102_clone.p4
-  testdata/p4_14_samples/sai_p4.p4
   testdata/p4_16_samples/clone-bmv2.p4
 # BRIG_132
   testdata/p4_16_samples/union-bmv2.p4
@@ -306,8 +303,6 @@ set (TOFINO_XFAIL_TESTS
 #  extensions/p4_tests/p4_14/jenkins/ecmp_pi/ecmp_pi.p4
 # BRIG-149
   extensions/p4_tests/p4_14/adjust_instr7.p4
-# BRIG-185
-  extensions/p4_tests/p4_14/action_selection_shared_four.p4
 # various stateful
   extensions/p4_tests/p4_14/test_config_163_stateful_table_math_unit.p4
   extensions/p4_tests/p4_14/test_config_169_stateful_sflow_sequence.p4
@@ -355,6 +350,8 @@ set (TOFINO_XFAIL_TESTS
 #COMPILER-329
   extensions/p4_tests/p4_14/jenkins/meters/meters_one.p4
   extensions/p4_tests/p4_14/jenkins/drivers_test/drivers_test_one.p4
+#Need further discussion with Seth and Gana before JIRA ticket
+  testdata/p4_14_samples/sai_p4.p4
 # uncharacterized failures
   extensions/p4_tests/p4_14/c1/COMPILER-133/full_tphv.p4
   extensions/p4_tests/p4_14/c1/COMPILER-228/case1644.p4
