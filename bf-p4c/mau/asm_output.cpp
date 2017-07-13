@@ -31,7 +31,7 @@ class MauAsmOutput::EmitAttached : public Inspector {
 std::ostream &operator<<(std::ostream &out, const MauAsmOutput &mauasm) {
     for (auto &stage : mauasm.by_stage) {
         out << "stage " << stage.first.second << ' ' << stage.first.first << ':' << std::endl;
-        if (stage.first.second == 0)
+        if (stage.first.first == INGRESS && stage.first.second == 0)
             out << mauasm.pipe->phase0Info;
         for (auto tbl : stage.second)
             mauasm.emit_table(out, tbl);
