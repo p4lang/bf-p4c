@@ -237,22 +237,18 @@ bool TableFormat::allocate_all_indirect_ptrs() {
      for (size_t i = 0; i < overhead_groups_per_RAM.size(); i++) {
          for (int j = 0; j < overhead_groups_per_RAM[i]; j++) {
              int total;
-             if ((total = layout_option.layout.counter_overhead_bits) != 0) {
+             if ((total = layout_option.layout.counter_addr_bits) != 0) {
                  if (!allocate_indirect_ptr(total, COUNTER, group, i))
                      return false;
              }
 
-             if ((total = layout_option.layout.meter_overhead_bits) != 0) {
+             if ((total = layout_option.layout.meter_addr_bits) != 0) {
                  if (!allocate_indirect_ptr(total, METER, group, i))
                      return false;
              }
 
-             if ((total = layout_option.layout.indirect_action_overhead_bits) != 0) {
+             if ((total = layout_option.layout.indirect_action_addr_bits) != 0) {
                  if (!allocate_indirect_ptr(total, INDIRECT_ACTION, group, i))
-                     return false;
-             }
-             if ((total = layout_option.layout.selector_overhead_bits) != 0) {
-                 if (!allocate_indirect_ptr(total, SELECTOR, group, i))
                      return false;
              }
              group++;
@@ -693,7 +689,7 @@ void TableFormat::verify() {
     bitvec verify_mask;
 
     for (int i = 0; i < layout_option.way.match_groups; i++) {
-        for (int j = ACTION; j <= SELECTOR; j++) {
+        for (int j = ACTION; j <= INDIRECT_ACTION; j++) {
             if ((verify_mask & use->match_groups[i].mask[j]).popcount() != 0)
                 BUG("Overlap of multiple things in the format");
             verify_mask |= use->match_groups[i].mask[j];

@@ -55,10 +55,9 @@ class Table : Tofino::Unit {
         int             action_data_bytes = 0;
         int             action_data_bytes_in_overhead = 0;
         int             overhead_bits = 0;
-        int             meter_overhead_bits = 0;
-        int             counter_overhead_bits = 0;
-        int             indirect_action_overhead_bits = 0;
-        int             selector_overhead_bits = 0;
+        int             meter_addr_bits = 0;
+        int             counter_addr_bits = 0;
+        int             indirect_action_addr_bits = 0;
         Layout() { memset(this, 0, sizeof(*this)); }
         operator== { return memcmp(this, &a, sizeof(Layout)) == 0; }
         toJSON {
@@ -85,7 +84,7 @@ class Table : Tofino::Unit {
             return rv; }
 
         bool action_data_required() const {
-            if (indirect_action_overhead_bits > 0)
+            if (indirect_action_addr_bits > 0)
                 return false;
             if (action_data_bytes == 0)
                 return false;

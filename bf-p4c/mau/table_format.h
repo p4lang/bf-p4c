@@ -33,8 +33,7 @@ struct TableFormat {
     static constexpr int VERSION_BITS = 4;
     static constexpr int VERSION_NIBBLES = 4;
 
-    enum type_t {MATCH, ACTION, IMMEDIATE, VERS, COUNTER, METER, INDIRECT_ACTION, SELECTOR,
-                 ENTRY_TYPES };
+    enum type_t {MATCH, ACTION, IMMEDIATE, VERS, COUNTER, METER, INDIRECT_ACTION, ENTRY_TYPES };
 
     struct Use {
         struct match_group_use {

@@ -49,6 +49,43 @@ set (TOFINO_XFAIL_TESTS
   extensions/p4_tests/p4_14/test_config_247_first_clpm.p4
 # Failure due to PHV allocation of stkvalid
   extensions/p4_tests/p4_16/stack_valid.p4
+# BRIG-186: per_flow_enable
+  testdata/p4_14_samples/12-Counters.p4
+  testdata/p4_14_samples/meter.p4
+  testdata/p4_14_samples/selector3.p4
+  testdata/p4_14_samples/acl1.p4
+  testdata/p4_14_samples/counter5.p4
+  testdata/p4_14_samples/counter4.p4
+  testdata/p4_14_samples/selector2.p4
+  testdata/p4_14_samples/selector1.p4
+  extensions/p4_tests/p4_14/action_selection_with_counter.p4
+  extensions/p4_tests/p4_14/meter_test2.p4
+  extensions/p4_tests/p4_14/test_config_232_phv_metadata_overlay.p4
+  extensions/p4_tests/p4_14/meter_and_counter2.p4
+  extensions/p4_tests/p4_14/stateful3.p4
+  extensions/p4_tests/p4_14/test_config_95_first_meter_table.p4
+  extensions/p4_tests/p4_14/basic_ipv4_selection.p4
+  extensions/p4_tests/p4_14/action_selection_wide1.p4
+  extensions/p4_tests/p4_14/stateful2.p4
+  extensions/p4_tests/p4_14/meter_and_counter.p4
+  extensions/p4_tests/p4_14/action_selection_shared_four.p4
+  extensions/p4_tests/p4_14/action_selection_wide2.p4
+  extensions/p4_tests/p4_14/test_config_200_counter_constant_index.p4
+  extensions/p4_tests/p4_14/meter_test4.p4
+  extensions/p4_tests/p4_14/test_config_124_meter_3.p4
+  extensions/p4_tests/p4_14/meter_test3.p4
+  extensions/p4_tests/p4_14/action_selection_two_selectors.p4
+  extensions/p4_tests/p4_14/action_selection_shared.p4
+  extensions/p4_tests/p4_14/selector1.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-342/netchain.p4
+  extensions/p4_tests/p4_14/jenkins/ecmp_pi/ecmp_pi.p4
+  extensions/p4_tests/p4_14/jenkins/stats_pi/stats_pi.p4
+  extensions/p4_tests/p4_14/test_config_236_stateful_read_bit.p4
+  extensions/p4_tests/p4_14/test_config_152_stateful_simple_cntr.p4
+  extensions/p4_tests/p4_14/test_config_166_stateful_generic_counter.p4
+  extensions/p4_tests/p4_14/test_config_165_stateful_bfd_failure_detection.p4
+  extensions/p4_tests/p4_14/test_config_203_first_reduction_or.p4
+  extensions/p4_tests/p4_14/test_config_167_stateful_flowlet_switching.p4
 # BRIG-187: Failure due to POV bits for header stack elements being incorrectly overlaid
   extensions/p4_tests/p4_16/ternary2.p4
   testdata/p4_14_samples/action_chain1.p4

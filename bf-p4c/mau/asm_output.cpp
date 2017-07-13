@@ -356,11 +356,11 @@ void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent, vector<Sl
         const IR::ActionSelector *as) const {
     unsigned done = 0; unsigned mask_bits = 0;
     if (as != nullptr) {
-        if (as->mode == "fair")
-            out << indent << "0..13: "
+        if (as->mode == "resilient")
+            out << indent << "0..50: "
                 << FormatHash(match_data, ghost, use.select_use.back().alg) << std::endl;
         else
-            out << indent << "0..50: "
+            out << indent << "0..13: "
                 << FormatHash(match_data, ghost, use.select_use.back().alg) << std::endl;
     }
     for (auto &way : use.way_use) {
@@ -564,10 +564,7 @@ struct fmt_state {
         if (group != -1)
             out << '(' << group << ")";
         out << ": ";
-        if (next == bit)
-            out << width;
-        else
-            out << bit << ".." << bit+width-1;
+        out << bit << ".." << bit+width-1;
         next = bit+width;
         sep = ", "; }
     void emit(std::ostream &out, const char *name, int group,
@@ -586,7 +583,7 @@ struct fmt_state {
             out << " ]"; } }
 };
 
-cstring format_name(int type) {
+cstring format_name(int type, bool pfe_bit = false) {
     if (type == TableFormat::MATCH)
         return "match";
     if (type == TableFormat::ACTION)
@@ -595,14 +592,20 @@ cstring format_name(int type) {
         return "immediate";
     if (type == TableFormat::VERS)
         return "version";
-    if (type == TableFormat::COUNTER)
-        return "counter_ptr";
-    if (type == TableFormat::METER)
-        return "meter_ptr";
+    if (type == TableFormat::COUNTER) {
+        if (pfe_bit)
+            return "counter_pfe";
+        else
+            return "counter_addr";
+    }
+    if (type == TableFormat::METER) {
+        if (pfe_bit)
+            return "meter_pfe";
+        else
+            return "meter_addr";
+    }
     if (type == TableFormat::INDIRECT_ACTION)
-        return "action_ptr";
-    if (type == TableFormat::SELECTOR)
-        return "select_ptr";
+        return "action_addr";
     return "";
 }
 
@@ -641,16 +644,22 @@ void MauAsmOutput::emit_table_format(std::ostream &out, indent_t indent,
     for (auto match_group : use.match_groups) {
         int type;
         vector<std::pair<int, int>> bits;
+        vector<std::pair<int, int>> pfe_bits;
         // For table objects that are not match
-        for (type = TableFormat::ACTION; type <= TableFormat::SELECTOR; type++) {
+        for (type = TableFormat::ACTION; type <= TableFormat::INDIRECT_ACTION; type++) {
             if (match_group.mask[type].popcount() == 0) continue;
             bits.clear();
             int start = match_group.mask[type].ffs();
             while (start >= 0) {
                 int end = match_group.mask[type].ffz(start);
                 if (end == -1)
-                    end = match_group.mask[type].max();
-                bits.emplace_back(start, end - 1);
+                    end = match_group.mask[type].max().index();
+                if (type == TableFormat::COUNTER || type == TableFormat::METER) {
+                    bits.emplace_back(start, end - 2);
+                    pfe_bits.emplace_back(end - 1, end - 1);
+                } else {
+                    bits.emplace_back(start, end - 1);
+                }
                 start = match_group.mask[type].ffs(end);
             }
             // Specifically, the immediate information may have to be broken up into mutliple
@@ -664,6 +673,9 @@ void MauAsmOutput::emit_table_format(std::ostream &out, indent_t indent,
                 }
             } else {
                 fmt.emit(out, format_name(type), group, bits);
+                if (type == TableFormat::COUNTER || type == TableFormat::METER) {
+                    fmt.emit(out, format_name(type, true), group, pfe_bits);
+                }
             }
         }
 
@@ -1211,13 +1223,13 @@ std::string MauAsmOutput::find_indirect_index(const IR::MAU::Table *tbl,
     cstring index_name = "";
     IXBar::Use::hash_dist_type_t type;
     if (at->is<IR::Counter>()) {
-        index_name = "counter_ptr";
+        index_name = "counter_addr";
         type = IXBar::Use::CounterPtr;
     } else if (at->is<IR::Meter>()) {
-        index_name = "meter_ptr";
+        index_name = "meter_addr";
         type = IXBar::Use::MeterPtr;
     } else if (at->is<IR::MAU::StatefulAlu>()) {
-        index_name = "meter_ptr";
+        index_name = "meter_addr";
         type = IXBar::Use::MeterPtr;
     } else {
         BUG("unsupported attached table type in find_indirect_index: %s", at);
@@ -1264,7 +1276,7 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
                 out << tbl->get_use_name(ap);
             }
             if (at->indexed())
-                out << "(action, action_ptr)";
+                out << "(action, action_addr)";
             out << std::endl;
         } else if (auto *as = at->to<IR::ActionSelector>()) {
              auto &memuse = tbl->resources->memuse.at(match_name);
@@ -1276,7 +1288,7 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
              } else {
                  out << tbl->get_use_name(as);
              }
-             out << "(select_ptr)";
+             out << "(meter_addr)";
              out << std::endl;
         } else {
             out << indent << at->kind() << ": " << tbl->get_use_name(at);
@@ -1375,6 +1387,8 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::Counter *counter) {
     out << indent << "format: {";
     counter_format(out, counter->type, tbl->resources->memuse.at(name).per_row);
     out << "}" << std::endl;
+    if (counter->indexed() && !tbl->layout.hash_action)
+        out << indent << "per_flow_enable: " << "counter_pfe" << std::endl;
     return false;
 }
 
@@ -1402,6 +1416,8 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::Meter *meter) {
             count_type = "";
     }
     out << indent << "count: " << count_type << std::endl;
+    if (meter->indexed() && !tbl->layout.hash_action)
+        out << indent << "per_flow_enable: " << "meter_pfe" << std::endl;
     return false;
 }
 
@@ -1440,6 +1456,11 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::ActionSelector *as) {
     self.emit_ixbar(out, indent, tbl->resources->selector_ixbar,
                     &tbl->resources->memuse.at(name), nullptr, false, false, true, as);
     out << indent << "mode: " << (as->mode ? as->mode.name : "fair") << " 0" << std::endl;
+    out << indent << "per_flow_enable: " << "meter_pfe" << std::endl;
+    // FIXME: Currently outputting default values for now, these must be brought through
+    // either the tofino native definitions or pragmas
+    out << indent << "non_linear: true" << std::endl;
+    out << indent << "pool_sizes: [4, 120]" << std::endl;
     return false;
 }
 
@@ -1504,5 +1525,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
         for (auto act : Values(salu->instruction))
             act->apply(EmitAction(self, out, tbl, indent));
         --indent; }
+    if (salu->indexed() && !tbl->layout.hash_action)
+        out << indent << "per_flow_enable: meter_pfe" << std::endl;
     return false;
 }

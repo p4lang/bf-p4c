@@ -32,9 +32,8 @@ IR::MAU::Table::Layout &IR::MAU::Table::Layout::operator +=(const IR::MAU::Table
     } else {
         overhead_bits -= 8 * a.action_data_bytes_in_overhead; }
     overhead_bits += a.overhead_bits;
-    meter_overhead_bits += a.meter_overhead_bits;
-    counter_overhead_bits += a.counter_overhead_bits;
-    indirect_action_overhead_bits += a.indirect_action_overhead_bits;
-    selector_overhead_bits += a.selector_overhead_bits;
+    meter_addr_bits += a.meter_addr_bits;
+    counter_addr_bits += a.counter_addr_bits;
+    indirect_action_addr_bits += a.indirect_action_addr_bits;
     return *this;
 }

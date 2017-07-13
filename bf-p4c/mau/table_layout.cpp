@@ -233,46 +233,96 @@ namespace {
 class VisitAttached : public Inspector {
     IR::MAU::Table::Layout &layout;
     int immediate_bytes_needed;
-    int counter_vpn_bits_needed;
-    int meter_vpn_bits_needed;
-    bool preorder(const IR::Stateful *st) override {
-        if (!st->direct) {
+    int counter_addr_bits_needed = 0;
+    int meter_addr_bits_needed = 0;
+    bool counter_set = false;
+    bool meter_set = false;
+    bool register_set = false;
+    cstring counter_addr_name;
+    cstring meter_addr_name;
+
+    /** The purpose of this function is to determine whether or not the tables using stateful
+     *  tables are allowed within Tofino.  Essentially the constraints are the following:
+     *  - Multiple counters, meters, or registers can be found on a table if they use the
+     *    same exact addressing scheme.
+     *  - A table can only have a meter, a stateful alu, or a selector, as they use
+     *    the same address in match central
+     *  - Indirect addresses for twoport tables require a per flow enable bit as well
+     */
+    void interpret_stateful(const IR::Stateful *st, cstring &st_addr_name, bool &st_set,
+                            int &st_addr_bits_needed, int *layout_addr_bits) {
+        if (st->direct) {
+            if (st_set && st_addr_bits_needed > 0)
+                BUG("Tofino does not allow counter to use different address schemes on one "
+                    "table.  Counters %s and %s have different address schemes",
+                     st_addr_name, st->name);
+        } else {
             if (st->instance_count <= 0)
-                error("%s: No instance count in indirect %s %s", st->srcInfo, st->kind(), st->name);
-            int vpn_bits_needed = std::max(10, ceil_log2(st->instance_count));
-            layout.overhead_bits += vpn_bits_needed;
-            if (st->is<IR::Counter>()) {
-                if (counter_vpn_bits_needed < vpn_bits_needed) {
-                    layout.counter_overhead_bits = vpn_bits_needed;
-                    counter_vpn_bits_needed = vpn_bits_needed;
-                }
-            } else {
-                if (meter_vpn_bits_needed < vpn_bits_needed) {
-                    layout.meter_overhead_bits = vpn_bits_needed;
-                    meter_vpn_bits_needed = vpn_bits_needed;
-                }
-                if (auto *mtr = st->to<IR::Meter>()) {
-                    if (!mtr->implementation.name) {
-                        immediate_bytes_needed = 1;
-                    }
-                }
+                error("%s: No instance count in indirect %s %s", st->srcInfo, st->kind(),
+                      st->name);
+            if (st_set && st_addr_bits_needed == 0)
+                BUG("Tofino does not allow meters to use different address schemes on one "
+                    "table.  Meters %s and %s have different address schemes",
+                     st_addr_name, st->name);
+
+            int addr_bits_needed = std::max(10, ceil_log2(st->instance_count)) + 1;
+            int addition_to_overhead = addr_bits_needed;
+            int diff;
+            if ((diff = addr_bits_needed - st_addr_bits_needed) > 0) {
+                addition_to_overhead = diff;
+                *(layout_addr_bits) = addr_bits_needed;
             }
+            layout.overhead_bits += addition_to_overhead;
         }
-        return false; }
+        st_set = true;
+        st_addr_name = st->name;
+    }
+
+    bool preorder(const IR::Counter *cnt) override {
+        interpret_stateful(cnt, counter_addr_name, counter_set, counter_addr_bits_needed,
+                           &(layout.counter_addr_bits));
+        return false;
+    }
+
+    bool preorder(const IR::Meter *mtr) override {
+        if ((!meter_set && meter_addr_bits_needed > 0) || register_set) {
+            BUG("Table cannot have both attached tables %s and %s as they use the same "
+                "address hardware", meter_addr_name, mtr->name);
+        }
+        interpret_stateful(mtr, meter_addr_name, meter_set, meter_addr_bits_needed,
+                           &(layout.meter_addr_bits));
+        return false;
+    }
+
+    bool preorder(const IR::MAU::StatefulAlu *salu) override {
+        if ((!register_set && meter_addr_bits_needed > 0) || meter_set) {
+            BUG("Table cannot have both attached tables %s and %s as they use the same "
+                "address hardware", meter_addr_name, salu->name);
+        }
+        interpret_stateful(salu, meter_addr_name, register_set, meter_addr_bits_needed,
+                           &(layout.meter_addr_bits));
+        return false;
+    }
+
     bool preorder(const IR::ActionProfile *ap) override {
         have_action_data = true;
         have_action_profile = true;
         if (ap->size <= 0)
             error("%s: No size count in %s %s", ap->srcInfo, ap->kind(), ap->name);
-        int vpn_bits_needed = std::max(10, ceil_log2(ap->size));
+        int vpn_bits_needed = std::max(10, ceil_log2(ap->size)) + 1;
         layout.overhead_bits += vpn_bits_needed;
-        layout.indirect_action_overhead_bits = vpn_bits_needed;
-        return false; }
-    bool preorder(const IR::ActionSelector *) override {
-        // TODO(cdodd) -- what does this require from the layout?
-        int vpn_bits_needed = 17;  // FIXME: This is not correct
+        layout.indirect_action_addr_bits = vpn_bits_needed;
+        return false;
+    }
+
+    bool preorder(const IR::ActionSelector *as) override {
+        int vpn_bits_needed =  11;  // FIXME: Eventually based off of pool sizes
+        if (meter_addr_bits_needed > 0 || meter_set || register_set)
+            BUG("Table cannot have both attached tables %s and %s as they use the same "
+                "address hardware", meter_addr_name, as->name);
+        meter_addr_name = as->name;
         layout.overhead_bits += vpn_bits_needed;
-        layout.selector_overhead_bits = vpn_bits_needed;
+        layout.meter_addr_bits = vpn_bits_needed;
         return false; }
     bool preorder(const IR::MAU::TernaryIndirect *) override {
         have_ternary_indirect = true;
@@ -285,7 +335,7 @@ class VisitAttached : public Inspector {
 
  public:
     explicit VisitAttached(IR::MAU::Table::Layout *l) : layout(*l),
-        immediate_bytes_needed(0), counter_vpn_bits_needed(0), meter_vpn_bits_needed(0) {}
+        immediate_bytes_needed(0) {}
     bool have_ternary_indirect = false;
     bool have_action_data = false;
     bool have_action_profile = false;
@@ -304,8 +354,9 @@ bool TableLayout::preorder(IR::MAU::Table *tbl) {
     setup_action_layout(tbl, lc, phv, alloc_done);
     setup_hash_dist(tbl, phv, lc);
     VisitAttached attached(&tbl->layout);
-    for (auto at : tbl->attached)
+    for (auto at : tbl->attached) {
         at->apply(attached);
+    }
     int immediate_bytes_reserved = attached.immediate_reserved();
     if (tbl->layout.gateway)
         return true;

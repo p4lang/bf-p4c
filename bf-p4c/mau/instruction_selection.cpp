@@ -96,7 +96,7 @@ bool InstructionSelection::checkConst(const IR::Expression *ex, long &value) {
 const IR::Expression *InstructionSelection::postorder(IR::BoolLiteral *bl) {
     if (!findContext<IR::MAU::Action>())
         return bl;
-    return new IR::Constant(IR::Type::Bits::get(1), static_cast<int>(bl->value));
+    return new IR::Constant(new IR::Type::Bits(1, false), static_cast<int>(bl->value));
 }
 
 const IR::Expression *InstructionSelection::postorder(IR::Cast *e) {
