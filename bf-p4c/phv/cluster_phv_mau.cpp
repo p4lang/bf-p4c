@@ -1590,7 +1590,12 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
                                 = new std::list<PHV_MAU_Group::Container_Content *>;
                             *cc_w = cc_set;
                             for (auto &cc : *cc_w) {
-                                cc->hi(cc->hi() - cl_w);
+                                // usually top-bit occupation but check bottom bit, e.g., $learning
+                                if (cc->container()->bits()[cc->lo()] != '0') {
+                                    cc->lo(cc->lo() + cl_w);
+                                } else {
+                                    cc->hi(cc->hi() - cl_w);
+                                }
                             }
                             auto w = m_w - cl_w;
                             aligned_slices[w][cl_n].push_back(*cc_w);

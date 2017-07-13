@@ -363,10 +363,10 @@ void Cluster::end_apply() {
             delete_list.push_back(lhs);
         } else {
             // set_metadata lhs, ....
-            // lhs can have is_used_mau false but is_used_parde true
             // lhs should not be removed from dst_map_i as mau operation needed
+            // parde (e.g., "extract", "emit") operands not used_mau should be removed from dst_map
             //
-            bool need_mau = uses_i->is_used_mau(lhs) || uses_i->is_used_parde(lhs);
+            bool need_mau = uses_i->is_used_mau(lhs);
             if (!need_mau && entry.second) {
                 for (auto &f : *(entry.second)) {
                     if (uses_i->is_used_mau(f)) {

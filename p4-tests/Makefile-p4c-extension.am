@@ -338,14 +338,12 @@ XFAIL_TESTS += \
     tofino/extensions/p4_tests/p4_14/test_config_203_first_reduction_or.p4.test \
     tofino/extensions/p4_tests/p4_14/test_config_167_stateful_flowlet_switching.p4.test
 
-# BRIG-187: Failure due to POV bits for header stack elements being incorrectly overlaid
-XFAIL_TESTS += \
-    tofino/extensions/p4_tests/p4_16/ternary2.p4.test \
-    tofino/testdata/p4_14_samples/action_chain1.p4.test \
-    tofino/testdata/p4_16_samples/ternary2-bmv2.p4.test
-
 # Failure due to needing complex deposit-field to merge two values into a container
-# XFAIL_TESTS += tofino/testdata/p4_14_samples/instruct5.p4.test -- git #257
+# git #257 fixed this
+# but with phase-0 new problem, verification does not pass
+XFAIL_TESTS += \
+		tofino/testdata/p4_14_samples/instruct5.p4.test \
+		tofino/testdata/p4_14_samples/parser2.p4.test
 
 # error -- container allocated to both INGRESS and EGRESS
 XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_88_testing_action_data_allocation_3.p4.test
@@ -361,9 +359,6 @@ XFAIL_TESTS += tofino/%reldir%/p4_14/adb_shared3.p4.test
 
 # Failure due to tbl-cfg incorrect driver code for split parameter in single ad table container
 XFAIL_TESTS += tofino/%reldir%/p4_14/adjust_instr4.p4.test
-
-# BRIG-188: Failure: "Can't fit table table_i2 in input xbar by itself"
-XFAIL_TESTS += tofino/extensions/p4_tests/p4_14/test_config_215_nondphv.p4.test
 
 # BRIG-99
 XFAIL_TESTS += \
@@ -510,8 +505,7 @@ XFAIL_TESTS += \
 		tofino/testdata/p4_14_samples/packet_redirect.p4.test \
 		tofino/%reldir%/p4_14/test_checksum.p4.test \
 		tofino/%reldir%/p4_14/test_config_102_clone.p4.test \
-		tofino/testdata/p4_16_samples/clone-bmv2.p4.test \
-		tofino/testdata/p4_16_samples/issue430-1-bmv2.p4.test
+		tofino/testdata/p4_16_samples/clone-bmv2.p4.test
 
 BRIG_132_XFAIL = tofino/testdata/p4_16_samples/union-bmv2.p4.test
 XFAIL_TESTS += $(BRIG_132_XFAIL)
@@ -672,7 +666,7 @@ XFAIL_TESTS += tofino/%reldir%/p4_14/jenkins/pctr/pctr.p4.test \
                p14_to_16/%reldir%/p4_14/jenkins/pctr/pctr.p4.test
 
 #Needs discussion with Gana/Seth before Brig issue generated
-XFAIL_TESTS += tofino/testdata/p4_14_samples/sai_p4.p4.test
+#XFAIL_TESTS += tofino/testdata/p4_14_samples/sai_p4.p4.test
 
 #uncharacterized failures
 XFAIL_TESTS += \

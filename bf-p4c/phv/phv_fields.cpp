@@ -411,16 +411,14 @@ void PhvInfo::Field::foreach_byte(int lo, int hi,
 void PhvInfo::Field::foreach_alloc(
     int lo,
     int hi,
-    std::function<void(const alloc_slice &)> fn,
-    bool skip_tagalong) const {
+    std::function<void(const alloc_slice &)> fn) const {
     //
     alloc_slice tmp(this, PHV::Container(), lo, lo, hi-lo+1);
     if (alloc_i.empty()) {
         fn(tmp);
         return; }
     auto it = alloc_i.rbegin();
-    while (it != alloc_i.rend()
-          && ((skip_tagalong && it->container.tagalong()) || it->field_hi() < lo)) ++it;
+    while (it != alloc_i.rend() && it->field_hi() < lo) ++it;
     if (it != alloc_i.rend() && it->field_bit != lo) {
         if (it->field_bit >= lo) {
             LOG1("********** phv_fields.cpp:sanity_FAIL **********"
@@ -457,7 +455,6 @@ void PhvInfo::Field::foreach_alloc(
         fn(tmp);
         ++it; }
     while (it != alloc_i.rend() && it->field_bit <= hi) {
-        if (skip_tagalong && it->container.tagalong()) continue;
         if (it->field_hi() > hi) {
             tmp = *it;
             tmp.width = hi - it->field_bit + 1;
@@ -659,7 +656,7 @@ PhvInfo::Field::set_field_slices(Cluster_PHV *cl, int lo, int hi, Cluster_PHV *p
 
 int
 PhvInfo::Field::phv_use_lo(Cluster_PHV *cl) const {
-    if (cl && field_slices_i.size()) {
+    if (cl && field_slices_i.size() && field_slices_i.count(cl)) {
         return field_slices(cl).first;
     }
     return phv_use_lo_i;
@@ -667,7 +664,7 @@ PhvInfo::Field::phv_use_lo(Cluster_PHV *cl) const {
 
 int
 PhvInfo::Field::phv_use_hi(Cluster_PHV *cl) const {
-    if (cl && field_slices_i.size()) {
+    if (cl && field_slices_i.size() && field_slices_i.count(cl)) {
         return field_slices(cl).second;
     }
     return phv_use_hi_i;

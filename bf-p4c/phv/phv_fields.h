@@ -144,9 +144,8 @@ class PhvInfo : public Inspector {
         //
         // alloc_slice bitrange
         void foreach_alloc(
-            std::function<void(const alloc_slice &)> fn,
-            bool skip_tagalong = true) const {
-            foreach_alloc(0, size-1, fn, skip_tagalong);
+            std::function<void(const alloc_slice &)> fn) const {
+            foreach_alloc(0, size-1, fn);
         }
         void foreach_alloc(bitrange r, std::function<void(const alloc_slice &)> fn) const {
             foreach_alloc(r.lo, r.hi, fn); }
@@ -175,8 +174,7 @@ class PhvInfo : public Inspector {
         void foreach_alloc(
             int lo,
             int hi,
-            std::function<void(const alloc_slice &)> fn,
-            bool skip_tagalong = true) const;
+            std::function<void(const alloc_slice &)> fn) const;
         void foreach_byte(int lo, int hi, std::function<void(const alloc_slice &)> fn) const;
         //
         // friends of phv_assignment interface

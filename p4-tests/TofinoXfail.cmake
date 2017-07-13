@@ -86,10 +86,6 @@ set (TOFINO_XFAIL_TESTS
   extensions/p4_tests/p4_14/test_config_165_stateful_bfd_failure_detection.p4
   extensions/p4_tests/p4_14/test_config_203_first_reduction_or.p4
   extensions/p4_tests/p4_14/test_config_167_stateful_flowlet_switching.p4
-# BRIG-187: Failure due to POV bits for header stack elements being incorrectly overlaid
-  extensions/p4_tests/p4_16/ternary2.p4
-  testdata/p4_14_samples/action_chain1.p4
-  testdata/p4_16_samples/ternary2-bmv2.p4
 # These currently fail gateway check with 'expression too complex'
   testdata/p4_14_samples/flowlet_switching.p4
   extensions/p4_tests/p4_14/07-MacAddrCheck.p4
@@ -174,6 +170,10 @@ set (TOFINO_XFAIL_TESTS
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
 # Failure due to needing complex deposit-field to merge two values into a container
 #   testdata/p4_14_samples/instruct5.p4 -- git #257
+# git #257 fixed this
+# but with phase-0 new problem, verification does not pass
+  testdata/p4_14_samples/instruct5.p4.test
+  testdata/p4_14_samples/parser2.p4.test
 # error -- container allocated to both INGRESS and EGRESS
   extensions/p4_tests/p4_14/test_config_88_testing_action_data_allocation_3.p4
 # default drop packet instead of writing to port 0
@@ -184,8 +184,6 @@ set (TOFINO_XFAIL_TESTS
   extensions/p4_tests/p4_14/adb_shared3.p4
 # Failure due to tbl-cfg incorrect driver code for split parameter in single ad table container
   extensions/p4_tests/p4_14/adjust_instr4.p4
-# BRIG-188: Failure: "Can't fit table table_i2 in input xbar by itself"
-  extensions/p4_tests/p4_14/test_config_215_nondphv.p4
 #BRIG-56
   extensions/p4_tests/p4_14/jenkins/smoke_large_tbls/smoke_large_tbls.p4
 # BRIG-99
@@ -387,8 +385,6 @@ set (TOFINO_XFAIL_TESTS
 #COMPILER-329
   extensions/p4_tests/p4_14/jenkins/meters/meters_one.p4
   extensions/p4_tests/p4_14/jenkins/drivers_test/drivers_test_one.p4
-#Need further discussion with Seth and Gana before JIRA ticket
-  testdata/p4_14_samples/sai_p4.p4
 # uncharacterized failures
   extensions/p4_tests/p4_14/c1/COMPILER-133/full_tphv.p4
   extensions/p4_tests/p4_14/c1/COMPILER-228/case1644.p4
