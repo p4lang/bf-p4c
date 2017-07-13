@@ -119,25 +119,47 @@ void HashActionTable::write_regs(REGS &regs) {
 }
 
 void HashActionTable::gen_tbl_cfg(json::vector &out) {
-    int size = hash_dist.empty() ? 1 : 1 + hash_dist[0].mask;
-    json::map &tbl = *base_tbl_cfg(out, "match_entry", size);
-    size = tbl["number_entries"].get()->as_number()->val;
-    if (!tbl.count("preferred_match_type"))
-        tbl["preferred_match_type"] = "exact";
-    const char *stage_tbl_type = "hash_action";
-    if (hash_dist.empty()) {
-        stage_tbl_type = "match_with_no_key";
-        size = 1; }
-    json::map &stage_tbl = *add_stage_tbl_cfg(tbl, stage_tbl_type, size);
-    add_pack_format(stage_tbl, 0, 0, hash_dist.empty() ? 1 : 0);
-    if (options.match_compiler)
-        stage_tbl["memory_resource_allocation"] = nullptr;
-    if (actions)
-        actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
-    common_tbl_cfg(tbl, "exact");
-    if (idletime)
-        idletime->gen_stage_tbl_cfg(stage_tbl);
-    else if (options.match_compiler)
-        stage_tbl["stage_idletime_table"] = nullptr;
-    tbl["performs_hash_action"] = !hash_dist.empty();
+    if (options.new_ctx_json) {
+        int size = hash_dist.empty() ? 1 : 1 + hash_dist[0].mask;
+        json::map &tbl = *base_tbl_cfg(out, "match_entry", size);
+        if (!tbl.count("preferred_match_type"))
+            tbl["preferred_match_type"] = "exact";
+        const char *stage_tbl_type = "hash_action";
+        if (hash_dist.empty()) {
+            stage_tbl_type = "match_with_no_key";
+            size = 1; }
+        json::map &stage_tbl = *add_stage_tbl_cfg(tbl, stage_tbl_type, size);
+        add_pack_format(stage_tbl, 0, 0, hash_dist.empty() ? 1 : 0);
+        if (options.match_compiler)
+            stage_tbl["memory_resource_allocation"] = nullptr;
+        if (actions)
+            actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
+        common_tbl_cfg(tbl, "exact");
+        if (idletime)
+            idletime->gen_stage_tbl_cfg(stage_tbl);
+        else if (options.match_compiler)
+            stage_tbl["stage_idletime_table"] = nullptr;
+        tbl["performs_hash_action"] = !hash_dist.empty();
+    } else {
+        int size = hash_dist.empty() ? 1 : 1 + hash_dist[0].mask;
+        json::map &tbl = *base_tbl_cfg(out, "match_entry", size);
+        size = tbl["number_entries"].get()->as_number()->val;
+        if (!tbl.count("preferred_match_type"))
+            tbl["preferred_match_type"] = "exact";
+        const char *stage_tbl_type = "hash_action";
+        if (hash_dist.empty()) {
+            stage_tbl_type = "match_with_no_key";
+            size = 1; }
+        json::map &stage_tbl = *add_stage_tbl_cfg(tbl, stage_tbl_type, size);
+        add_pack_format(stage_tbl, 0, 0, hash_dist.empty() ? 1 : 0);
+        if (options.match_compiler)
+            stage_tbl["memory_resource_allocation"] = nullptr;
+        if (actions)
+            actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
+        common_tbl_cfg(tbl, "exact");
+        if (idletime)
+            idletime->gen_stage_tbl_cfg(stage_tbl);
+        else if (options.match_compiler)
+            stage_tbl["stage_idletime_table"] = nullptr;
+        tbl["performs_hash_action"] = !hash_dist.empty(); }
 }

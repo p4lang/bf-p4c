@@ -109,9 +109,12 @@ void SelectionTable::pass1() {
 
 void SelectionTable::pass2() {
     LOG1("### Selection table " << name() << " pass2");
-    if (input_xbar) input_xbar->pass2();
-    if (selection_hash < 0 && (selection_hash = input_xbar->hash_group()) < 0)
-        error(lineno, "No selection_hash in selector table %s", name());
+    if (input_xbar) { 
+        input_xbar->pass2();
+        if (selection_hash < 0 && (selection_hash = input_xbar->hash_group()) < 0)
+            error(lineno, "No selection_hash in selector table %s", name());
+    } else {
+        error(lineno, "No input xbar in selector table %s", name()); }
 }
 
 template<class REGS> void SelectionTable::write_merge_regs(REGS &regs, MatchTable *match,
@@ -211,9 +214,13 @@ void SelectionTable::write_regs(REGS &regs) {
         //auto &icxbar = adrdist.adr_dist_meter_adr_icxbar_ctl[m->logical_id];
         //icxbar.address_distr_to_logical_rows = 1 << home->row;
         //icxbar.address_distr_to_overflow = push_on_overflow;
-        if (auto &act = m->get_action())
-            /* FIXME -- can't be attached to mutliple tables with different format sizes? */
-            merge.mau_selector_action_entry_size[meter_group] = act->format->log2size - 3;
+        if (auto &act = m->get_action()) {
+            /* FIXME -- can't be attached to mutliple tables ? */
+            unsigned fmt = 3;
+            fmt = std::max(fmt, act->format->log2size);
+            if (auto at = dynamic_cast<ActionTable *>(&(*act)))
+                for (auto &f: at->get_action_formats()) fmt = std::max(fmt, f.second->log2size); 
+            merge.mau_selector_action_entry_size[meter_group] = fmt - 3; } //val in bytes
         adrdist.mau_ad_meter_virt_lt[meter_group] |= 1U << m->logical_id;
         adrdist.movereg_ad_meter_alu_to_logical_xbar_ctl[m->logical_id/8U].set_subfield(
             4 | meter_group, 3*(m->logical_id % 8U), 3);
@@ -237,13 +244,24 @@ void SelectionTable::write_regs(REGS &regs) {
 }
 
 void SelectionTable::gen_tbl_cfg(json::vector &out) {
-    json::map &tbl = *base_tbl_cfg(out, "selection", 1024);
-    tbl["selection_type"] = resilient_hash ? "resilient" : "fair";
-    tbl["enable_sps_scrambling"] = non_linear_hash;
-    json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "selection", 1024);
-    stage_tbl["how_referenced"] = indirect ? "indirect" : "direct";
-    add_pack_format(stage_tbl, 128, 1, 1);
-    stage_tbl["memory_resource_allocation"] =
-            gen_memory_resource_allocation_tbl_cfg("sram", layout, true);
-    stage_tbl["stage_table_handle"] = logical_id;
+    if (options.new_ctx_json) {
+        json::map &tbl = *base_tbl_cfg(out, "selection", 1024);
+        tbl["selection_type"] = resilient_hash ? "resilient" : "fair";
+        tbl["how_referenced"] = indirect ? "indirect" : "direct";
+        if (pool_sizes.size() > 0)
+            tbl["max_port_pool_size"] = *std::max_element(std::begin(pool_sizes), std::end(pool_sizes));
+        json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "selection", 1024);
+        add_pack_format(stage_tbl, 128, 1, 1);
+        stage_tbl["memory_resource_allocation"] =
+                gen_memory_resource_allocation_tbl_cfg("sram", layout, true);
+    } else {
+        json::map &tbl = *base_tbl_cfg(out, "selection", 1024);
+        tbl["selection_type"] = resilient_hash ? "resilient" : "fair";
+        tbl["enable_sps_scrambling"] = non_linear_hash;
+        json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "selection", 1024);
+        stage_tbl["how_referenced"] = indirect ? "indirect" : "direct";
+        add_pack_format(stage_tbl, 128, 1, 1);
+        stage_tbl["memory_resource_allocation"] =
+                gen_memory_resource_allocation_tbl_cfg("sram", layout, true);
+        stage_tbl["stage_table_handle"] = logical_id; }
 }

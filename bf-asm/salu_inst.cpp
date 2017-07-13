@@ -218,7 +218,7 @@ struct AluOP : public SaluInstruction {
     enum { LO, HI }     dest;
     operand             srca, srcb;
     AluOP(const Decode *op, int l) : SaluInstruction(l), opc(op) {}
-    std::string name() { return opc->name; };
+    std::string name() override { return opc->name; };
     Instruction *pass1(Table *tbl, Table::Actions::Action *) override;
     void pass2(Table *tbl, Table::Actions::Action *)  override { }
     bool equiv(Instruction *a_) override;
@@ -402,7 +402,7 @@ struct BitOP : public SaluInstruction {
     } *opc;
     int predication_encode = STATEFUL_PREDICATION_ENCODE_UNCOND;
     BitOP(const Decode *op, int lineno) : SaluInstruction(lineno), opc(op) {}
-    std::string name() { return opc->name; };
+    std::string name() override { return opc->name; };
     Instruction *pass1(Table *, Table::Actions::Action *) override { slot = ALU1LO; return this; }
     void pass2(Table *, Table::Actions::Action *) override { }
     bool equiv(Instruction *a_) override;
@@ -465,7 +465,7 @@ struct CmpOP : public SaluInstruction {
     operand::Const      *srcc = 0;
     bool                srca_neg = false, srcb_neg = false;
     CmpOP(const Decode *op, int lineno) : SaluInstruction(lineno), opc(op) {}
-    std::string name() { return opc->name; };
+    std::string name() override { return opc->name; };
     Instruction *pass1(Table *tbl, Table::Actions::Action *) override;
     void pass2(Table *tbl, Table::Actions::Action *) override { }
     bool equiv(Instruction *a_) override;
@@ -575,7 +575,7 @@ struct OutOP : public SaluInstruction {
     mux_select output_mux;
     static const std::map<std::string, int> ops_mux_lookup;
     OutOP(const Decode *op, int lineno) : SaluInstruction(lineno) {}
-    std::string name() { return "output"; };
+    std::string name() override { return "output"; };
     Instruction *pass1(Table *tbl, Table::Actions::Action *) override { slot = ALUOUT; return this; }
     void pass2(Table *tbl, Table::Actions::Action *) override { }
     bool equiv(Instruction *a_) override;

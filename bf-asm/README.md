@@ -1,18 +1,12 @@
-################################################################################
-# Tofino Assembler
-################################################################################
+# **Tofino Assembler**
 
-################################################################################
-# Documentation
-################################################################################
+## **Documentation**
 
 Documentation on using the assembler, notes on file formats, and internals are
 in [Google Drive > Barefoot shared > documents > Software > Assembler]
 (https://drive.google.com/drive/folders/0Byf8esgFy8YacmNzMmZiSkN4OFU)
 
-################################################################################
-# Setup
-################################################################################
+## **Setup**
 
 The repository contains code for the tofino assembler (tfas) and linker (walle).
 More info on walle can be found in walle/README.md.
@@ -20,9 +14,7 @@ More info on walle can be found in walle/README.md.
 Assembler takes assembly files (.tfa) as input to generate output json which is
 then fed to walle to produce binary for tofino.
 
-################################################################################
-# Dependencies
-################################################################################
+## **Dependencies**
 
 - GNU make
 - A C++ compiler supporting C++11 (the Makefile uses g++ by defalt)
@@ -35,9 +27,7 @@ Running stf tests requires access to the simple test harness.  The
 `tests/runtests` script will look in various places for these tools (see the top
 of the script)
 
-################################################################################
-# Building Assembler
-################################################################################
+## **Building Assembler**
 
     user@box$ cd tofino-asm
     user@box$ ./bootstrap.sh
@@ -50,9 +40,7 @@ files and compiled in gen/tofino or gen/jbay
 json2cpp program is used to compile the backend files which contain register, 
 memory and pipe stages resource information. 
 
-################################################################################
-# Address Sanitizer checks
-################################################################################
+## **Address Sanitizer checks**
 
 To enable address sanitizer checks in the assembler use,
 
@@ -67,11 +55,9 @@ By default the leak sanitizer is also enabled along with the address santizier.
 You can disable it by setting environment variable ASAN_OPTIONS with
 "detect_leaks=0".
 
-################################################################################
-# Testing
-################################################################################
+## **Testing**
 
-# Make Targets
+### **Make Targets**
 
 user@box$ make check 
 
@@ -86,7 +72,7 @@ user@box$ make check-sanity
 This is similar to `make check` but will only run on .p4 files in the tests
 directory which is a small subset for a quick sanity check.
 
-# Runtests Script
+### **Runtests Script**
 
 The ./tests/runtests script will first run glass compiler (p4c-tofino) on
 input .p4 file and then run the assembler (tfas) on generated assembly (.tfa)
@@ -98,32 +84,31 @@ To skip running glass use -f option on the runtests script
 Use -j <value> to run parallel threads. If invoking through Make targets set
 MAKEFLAGS to "-j <value>"
 
-# Expected Failures
+### **Expected Failures**
 
 expected_failures.txt files are under tests & tests/mau directory which outline
 failing tests with cause (compile, tfas, mismatch). These files must be updated
 to reflect any new or fixed fails.
 
-=================================================================================
-FAIL      TYPE            CAUSE
-=================================================================================
-compile   Glass           Glass cannot compile input .p4 file
-tfas      Assembler       Assembler error while running input assembly file (.tfa)
-mismatch  Json output     Difference in json outputs for glass and assembler
-=================================================================================
+| FAIL     |  TYPE        | CAUSE                                                   |
+|----------|--------------|---------------------------------------------------------|
+| compile  |  Glass       | Glass cannot compile input .p4 file                     |
+| tfas     |  Assembler   | Assembler error while running input assembly file (.tfa)|
+| mismatch |  Json output | Difference in json outputs for glass and assembler      |
 
-# Context Json Ignore
+### **Context Json Ignore**
 Context Json output from Glass compiler is verbose and may or may not be
 consumed entirely by the drivers unlike the assembler Json output. The
 tests/runtests script ignores the keys placed in the tests/ctxt_json_ignore file
 while creating json diff to only display relevant mismatches
 
-# Json Diff
+### **Json Diff**
 Each test after running will have its own <testname>.out dir with following
 items:
 E.g. TEST = exact_match0.p4
 exact_match0.p4.out
-# Glass Json output
+##### **Glass Json output**
+```
 ├── cfg
 │   ├── memories.all.parser.egress.cfg.json.gz
 │   ├── memories.all.parser.ingress.cfg.json.gz
@@ -154,9 +139,13 @@ exact_match0.p4.out
 │   ├── p4_name_lookup.json
 │   ├── parser.context.json
 │   └── phv.context.json
-# Assembler Output Directory
+```
+##### **Assembler Output Directory**
+```
 ├── exact_match0.out
-# Assembler Json Output
+```
+##### **Assembler Json Output**
+```
 │   ├── memories.all.parser.egress.cfg.json.gz
 │   ├── memories.all.parser.ingress.cfg.json.gz
 │   ├── memories.pipe.cfg.json.gz
@@ -181,14 +170,25 @@ exact_match0.p4.out
 │   ├── regs.match_action_stage.0b.cfg.json.gz
 │   ├── regs.pipe.cfg.json.gz
 │   ├── regs.top.cfg.json.gz
+```
+##### **Context Json**
+```
 │   └── tbl-cfg
-# Symlink to Glass Assembly File
+```
+##### **Symlink to Glass Assembly File**
+```
 ├── exact_match0.tfa -> out.tfa
-# Glass Run Log
+```
+##### **Glass Run Log**
+```
 ├── glsc.log
-# Json Diff File
+```
+##### **Json Diff File**
+```
 ├── json_diff.txt
-# Glass Output Logs
+```
+##### **Glass Output Logs**
+```
 ├── logs
 │   ├── asm.log
 │   ├── mau.characterize.log
@@ -213,12 +213,18 @@ exact_match0.p4.out
 │   ├── parser.characterize.log
 │   └── transform.log
 ├── name_lookup.c
-# Glass output assembly file
+```
+##### **Glass output assembly file**
+```
 ├── out.tfa
-# Assembler Run Log
+```
+##### **Assembler Run Log**
+```
 ├── tfas.config.log
 ├── tfas.log
-# Test visualization htmls
+```
+##### **Test visualization htmls**
+```
 └── visualization
     ├── deparser.html
     ├── jquery.js
@@ -227,10 +233,9 @@ exact_match0.p4.out
     ├── parser.ingress.html
     ├── phv_allocation.html
     └── table_placement.html
+```
 
-################################################################################
-# Backends (Tofino/JBay)
-################################################################################
+## **Backends (Tofino/JBay)**
 Assembler currently supports Tofino backend but code is generic enough to be
 ported to a different backend like JBay. Architecture specific constants must be 
 parameterized and placed in the contants.h file

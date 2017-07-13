@@ -63,22 +63,22 @@ int CounterTable::direct_shiftcount() {
 template<class REGS> void CounterTable::write_merge_regs(REGS &regs, MatchTable *match,
             int type, int bus, const std::vector<Call::Arg> &args) {
     auto &merge =  regs.rams.match.merge;
-    auto pfe_bit = 19;
+    per_flow_enable_bit = 19;
     /* FIXME -- This should be cleaner -- rather than checking the match table type, have
      * the pfe bit stored in the CounterTable and hve the match table set it in some pass?
      * Should be using the top bit from the counter index field in the match foramt?
      * Or add a second arg to the stats/counter call in the match table specifying which bit?  */
     if (per_flow_enable && dynamic_cast<HashActionTable *>(match)) {
-        pfe_bit = 7; }
+        per_flow_enable_bit = 7; }
     if (options.match_compiler && dynamic_cast<HashActionTable *>(match)) {
         /* FIXME -- for some reason the compiler does not set the stats_adr_mask
          * for hash_action tables.  Is it not needed? */
     } else
         merge.mau_stats_adr_mask[type][bus] = 0xfffff & ~counter_masks[format->groups()];
     merge.mau_stats_adr_hole_swizzle_mode[type][bus] = counter_hole_swizzle[format->groups()];
-    merge.mau_stats_adr_default[type][bus] = per_flow_enable ? 0 : (1U << pfe_bit);
+    merge.mau_stats_adr_default[type][bus] = per_flow_enable ? 0 : (1U << per_flow_enable_bit);
     if (per_flow_enable)
-        merge.mau_stats_adr_per_entry_en_mux_ctl[type][bus] = pfe_bit;
+        merge.mau_stats_adr_per_entry_en_mux_ctl[type][bus] = per_flow_enable_bit;
 }
 
 template<class REGS> void CounterTable::write_regs(REGS &regs) {
@@ -174,27 +174,38 @@ template<class REGS> void CounterTable::write_regs(REGS &regs) {
 }
 
 void CounterTable::gen_tbl_cfg(json::vector &out) {
-    // FIXME -- factor common Synth2Port stuff
-    int size = (layout_size() - 1)*1024*format->groups();
-    json::map &tbl = *base_tbl_cfg(out, "statistics", size);
-    json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "statistics", size);
-    if (auto *f = lookup_field("bytes"))
-        stage_tbl["byte_width"] = f->size;
-    else
-        stage_tbl["byte_width"] = 0L;
-    if (auto *f = lookup_field("packets"))
-        stage_tbl["pkt_width"] = f->size;
-    else
-        stage_tbl["pkt_width"] = 0L;
-    switch (type) {
-    case PACKETS: tbl["statistics_type"] = "packets";
-                  stage_tbl["stat_type"] = "packets"; break;
-    case BYTES: tbl["statistics_type"] = "bytes";
-                stage_tbl["stat_type"] = "bytes"; break;
-    case BOTH: tbl["statistics_type"] = "packets_and_bytes";
-               stage_tbl["stat_type"] = "packets_and_bytes"; break;
-    default: break; }
-    tbl["lrt_enable"] = false;
-    tbl["saturating"] = false;  // FIXME?
-    stage_tbl["default_lower_huffman_bits_included"] = 0; 
+    if (options.new_ctx_json) {
+        // FIXME -- factor common Synth2Port stuff
+        int size = (layout_size() - 1)*1024*format->groups();
+        json::map &tbl = *base_tbl_cfg(out, "statistics", size);
+        json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "statistics", size);
+        switch (type) {
+        case PACKETS: tbl["statistics_type"] = "packets"; break;
+        case BYTES: tbl["statistics_type"] = "bytes"; break;
+        case BOTH: tbl["statistics_type"] = "packets_and_bytes"; break;
+        default: break; }
+    } else {
+        // FIXME -- factor common Synth2Port stuff
+        int size = (layout_size() - 1)*1024*format->groups();
+        json::map &tbl = *base_tbl_cfg(out, "statistics", size);
+        json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "statistics", size);
+        if (auto *f = lookup_field("bytes"))
+            stage_tbl["byte_width"] = f->size;
+        else
+            stage_tbl["byte_width"] = 0L;
+        if (auto *f = lookup_field("packets"))
+            stage_tbl["pkt_width"] = f->size;
+        else
+            stage_tbl["pkt_width"] = 0L;
+        switch (type) {
+        case PACKETS: tbl["statistics_type"] = "packets";
+                      stage_tbl["stat_type"] = "packets"; break;
+        case BYTES: tbl["statistics_type"] = "bytes";
+                    stage_tbl["stat_type"] = "bytes"; break;
+        case BOTH: tbl["statistics_type"] = "packets_and_bytes";
+                   stage_tbl["stat_type"] = "packets_and_bytes"; break;
+        default: break; }
+        tbl["lrt_enable"] = false;
+        tbl["saturating"] = false;  // FIXME?
+        stage_tbl["default_lower_huffman_bits_included"] = 0; } 
 }

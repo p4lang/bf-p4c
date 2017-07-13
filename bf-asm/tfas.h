@@ -8,7 +8,13 @@ extern struct option_t {
     target_t            target;
     bool                match_compiler;
     bool                condense_json;
+    bool                new_ctx_json;
 } options;
+
+extern unsigned unique_action_handle;
+
+#include <string>
+extern std::string asmfile_name;
 
 #include "stdarg.h"
 #include "stdio.h"

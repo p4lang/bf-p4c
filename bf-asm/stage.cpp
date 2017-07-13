@@ -6,9 +6,10 @@
 #include "input_xbar.h"
 #include "top_level.h"
 
+extern std::string asmfile_name;
+
 unsigned char Stage::action_bus_slot_map[ACTION_DATA_BUS_BYTES];
 unsigned char Stage::action_bus_slot_size[ACTION_DATA_BUS_SLOTS];
-
 
 class AsmStage : public Section {
     void start(int lineno, VECTOR(value_t) args);
@@ -170,18 +171,42 @@ void AsmStage::output() {
         for (int i = stage.size()-1; i > 0; i--)
             if (stage[i].stage_dep[gress] != Stage::MATCH_DEP)
                 stage[i-1].group_table_use[gress] |= stage[i].group_table_use[gress]; }
-    for (unsigned i = 0; i < stage.size(); i++) {
-        // if  (stage[i].tables.empty()) continue;
-        switch (options.target) {
-        case TOFINO: stage[i].output<Target::Tofino>(tbl_cfg); break;
-        case JBAY: stage[i].output<Target::JBay>(tbl_cfg); break;
-        default: assert(0); } }
+    // Also output new context json schema.
     auto json_out = open_output("tbl-cfg");
-    if (options.match_compiler)
-        *json_out << "{ \"ContextJsonNode\": ";
-    *json_out << '[' << &tbl_cfg << (options.match_compiler ? ",\n[] " : "") << ']' << std::endl;
-    if (options.match_compiler)
+    if (options.new_ctx_json) {
+        json::string json_build_date = "XX-XX-XXXX";
+        json::string json_compiler_version = "v1.0";
+        json::vector json_learn_quantas;
+        json::vector json_parser;
+        json::vector json_phv_allocation;
+        json::vector json_tables;
+        json::string json_program_name = asmfile_name.substr(0, asmfile_name.find_last_of(".")); 
+        for (unsigned i = 0; i < stage.size(); i++) {
+            switch (options.target) {
+            case TOFINO: stage[i].output<Target::Tofino>(json_tables); break;
+            case JBAY: stage[i].output<Target::JBay>(json_tables); break;
+            default: assert(0); } }
+        *json_out << '{' << std::endl;
+        *json_out << "\t\"build_date\": "  << &json_build_date << "," << std::endl;
+        *json_out << "\t\"compiler_version\": " << &json_compiler_version << "," << std::endl;
+        *json_out << "\t\"program_name\": " << &json_program_name << "," << std::endl;
+        //*json_out << '[' << &json_learn_quantas << "]," << std::endl;
+        //*json_out << '[' << &json_parser << "]," << std::endl;
+        //*json_out << '[' << &json_phv_allocation << "]," << std::endl;
+        *json_out << "\t\"tables\": " << &json_tables << std::endl;
         *json_out << '}' << std::endl;
+    } else {
+        for (unsigned i = 0; i < stage.size(); i++) {
+            // if  (stage[i].tables.empty()) continue;
+            switch (options.target) {
+            case TOFINO: stage[i].output<Target::Tofino>(tbl_cfg); break;
+            case JBAY: stage[i].output<Target::JBay>(tbl_cfg); break;
+            default: assert(0); } }
+        if (options.match_compiler)
+            *json_out << "{ \"ContextJsonNode\": ";
+        *json_out << '[' << &tbl_cfg << (options.match_compiler ? ",\n[] " : "") << ']' << std::endl;
+        if (options.match_compiler)
+            *json_out << '}' << std::endl; }
     TopLevel::all.mem_pipe.mau.disable();
 }
 

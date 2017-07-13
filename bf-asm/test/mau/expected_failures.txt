@@ -4,8 +4,6 @@ test_config_101_switch_msdc.p4 compile
  - compiler uses tcam byte swizzler to duplicate 8-bit phv, rather than just loading it directly
 test_config_120_tcam_range_4.p4 mismatch
  - compiler uses tcam byte swizzler to duplicate 8-bit phv, rather than just loading it directly
-test_config_121_tcam_range_5.p4 compile
- - idletime config difference
 test_config_132_meter_pre_color_4.p4 tfas
  - compiler uses tcam byte swizzler to duplicate 8-bit phv, rather than just loading it directly
 test_config_136_tcam_error_detection.p4 mismatch

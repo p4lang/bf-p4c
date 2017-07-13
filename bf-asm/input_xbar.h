@@ -85,6 +85,19 @@ public:
     unsigned tcam_width();
     int tcam_byte_group(int n);
     int tcam_word_group(int n);
+    const std::map<unsigned, std::map<int, HashCol>>& get_hash_tables() { return hash_tables; } 
+    Phv::Ref get_group_bit(Group grp, unsigned bit) {
+        if (groups.count(grp))
+            for (auto &in : groups.at(grp))
+                if (bit >= in.lo && bit <= in.hi)
+                    return Phv::Ref(in.what, bit-in.lo, bit-in.hi);
+        return Phv::Ref(); }
+    std::string get_field_name(unsigned bit) {
+        for (auto &g: groups) {
+            for (auto &p: g.second) {
+                if (bit <= p.hi && bit >= p.lo)
+                    return p.what.name(); } } 
+        return ""; }
 
     class all_iter {
         decltype(groups)::const_iterator        outer, outer_end;

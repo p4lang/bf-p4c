@@ -6,6 +6,8 @@
 #include "stage.h"
 #include "tables.h"
 
+extern unsigned unique_action_handle;
+
 std::map<std::string, Table *> Table::all;
 std::map<std::string, Table::Type *> *Table::Type::all;
 
@@ -764,7 +766,7 @@ Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv) {
                 error(i.lineno, "Invalid instruction address %d", i.i);
         } else if (i.type == tMAP) {
             for (auto &a : i.map)
-                if (CHECKTYPE(a.key, tSTR) && CHECKTYPE3(a.value, tSTR, tCMD, tINT))
+                if (CHECKTYPE(a.key, tSTR) && CHECKTYPE3(a.value, tSTR, tCMD, tINT)) {
                     if (a.value.type == tINT) {
                         auto k = alias.find(a.key.s);
                         if (k == alias.end())
@@ -772,7 +774,7 @@ Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv) {
                         else {
                             k->second.is_constant = true;
                             k->second.value = a.value.i; }
-                    } else alias.emplace(a.key.s, a.value);
+                    } else alias.emplace(a.key.s, a.value); }
         } else if (i.type == tSTR) {
             VECTOR(value_t)     tmp;
             VECTOR_init1(tmp, i);
@@ -782,6 +784,7 @@ Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv) {
         } else if (CHECKTYPE(i, tCMD))
             if (auto *p = Instruction::decode(tbl, this, i.vec))
                 instr.push_back(p); }
+    handle = unique_action_handle++;
 }
 
 Table::Actions::Actions(Table *tbl, VECTOR(pair_t) &data) {
@@ -981,25 +984,111 @@ template void Table::Actions::write_regs(Target::Tofino::mau_regs &, Table *);
 template void Table::Actions::write_regs(Target::JBay::mau_regs &, Table *);
 
 void Table::Actions::gen_tbl_cfg(json::vector &cfg) {
+    if (options.new_ctx_json) {
+        for (auto &act : *this) {
+            json::map action_cfg;
+            action_cfg["name"] = act.name;
+            action_cfg["handle"] = act.handle; //FIXME-JSON
+            action_cfg["indirect_resources"] = json::vector(); //FIXME-JSON
+            //FIXME: Check for random number generation must implement assembly
+            //support in table to identify rng type and corresponding updates in
+            //assembler to parse and set registers accordingly. Below checks should
+            //see if an operand is Hash-Dist type or RNG-type.
+            action_cfg["allowed_as_default_action"] = (has_hash_dist() || act.has_rng()) ? false : true;
+            if (has_hash_dist() && act.has_rng()) {
+                action_cfg["disallowed_as_default_action_reason"] = "USES_HASH_DIST_AND_RNG";
+            } else if (has_hash_dist()) {
+                action_cfg["disallowed_as_default_action_reason"] = "USES_HASH_DIST";
+            } else if (act.has_rng()) {
+                action_cfg["disallowed_as_default_action_reason"] = "USES_RNG"; }
+            if (!act.alias.empty()) add_p4_params(act, action_cfg["p4_parameters"] = json::vector());
+            action_cfg["override_meter_addr"] = false;
+            action_cfg["override_meter_addr_pfe"] = false;
+            action_cfg["override_meter_full_addr"] = 0;
+            action_cfg["override_stat_addr"] = false;
+            action_cfg["override_stat_addr_pfe"] = false;
+            action_cfg["override_stat_full_addr"] = 0;
+            action_cfg["override_stateful_addr"] = false;
+            action_cfg["override_stateful_addr_pfe"] = false;
+            action_cfg["override_stateful_full_addr"] = 0;
+            cfg.push_back(std::move(action_cfg)); }
+    } else {
+        for (auto &act : *this) {
+            int full_address = ACTION_INSTRUCTION_ADR_ENABLE | act.addr;
+            json::map action_cfg;
+            action_cfg["name"] = act.name;
+            action_cfg["address_to_use"] = act.code;
+            action_cfg["full_address"] = full_address;
+            //FIXME: Check for random number generation must implement assembly
+            //support in table to identify rng type and corresponding updates in
+            //assembler to parse and set registers accordingly. Below checks should
+            //see if an operand is Hash-Dist type or RNG-type.
+            action_cfg["allowed_as_default_action"] = (has_hash_dist() || act.has_rng()) ? false : true;
+            action_cfg["disallowed_as_default_action_reason"] = nullptr;
+            if (has_hash_dist() && act.has_rng()) {
+                action_cfg["disallowed_as_default_action_reason"] = "USES_HASH_DIST_AND_RNG";
+            } else if (has_hash_dist()) {
+                action_cfg["disallowed_as_default_action_reason"] = "USES_HASH_DIST";
+            } else if (act.has_rng()) {
+                action_cfg["disallowed_as_default_action_reason"] = "USES_RNG"; }
+            cfg.push_back(std::move(action_cfg)); } }
+}
+
+void Table::Actions::add_p4_params(const Action &act, json::vector &cfg) {
+    int index = 0;
+    for (auto &a : act.alias) {
+        json::string name = a.first;
+        int lo = remove_name_tail_range(name);
+        cfg.push_back( json::map {
+            { "name", std::move(name) },
+            { "start_bit", json::number(lo) },
+            { "position", json::number(index++) },
+            { "bit_width", json::number(a.second.hi - a.second.lo + 1) } } ); }
+}
+
+void Table::Actions::add_action_format(Table *table, json::map &tbl) {
+    /* FIXME -- this is mostly a hack, since the actions need not map 1-to-1 to the
+     * hit_next entries.  Need a way of speicfying next table in the actual action */
+    //if (table->hit_next.size() <= 1) return;
+    unsigned hit_index = 0;
+    json::vector &action_format = tbl["action_format"] = json::vector();
     for (auto &act : *this) {
-        int full_address = ACTION_INSTRUCTION_ADR_ENABLE | act.addr;
-        json::map action_cfg;
-        action_cfg["name"] = act.name;
-        action_cfg["address_to_use"] = act.code;
-        action_cfg["full_address"] = full_address;
-        //FIXME: Check for random number generation must implement assembly
-        //support in table to identify rng type and corresponding updates in
-        //assembler to parse and set registers accordingly. Below checks should
-        //see if an operand is Hash-Dist type or RNG-type.
-        action_cfg["allowed_as_default_action"] = (has_hash_dist() || act.has_rng()) ? false : true;
-        action_cfg["disallowed_as_default_action_reason"] = nullptr;
-        if (has_hash_dist() && act.has_rng()) {
-            action_cfg["disallowed_as_default_action_reason"] = "USES_HASH_DIST_AND_RNG";
-        } else if (has_hash_dist()) {
-            action_cfg["disallowed_as_default_action_reason"] = "USES_HASH_DIST";
-        } else if (act.has_rng()) {
-            action_cfg["disallowed_as_default_action_reason"] = "USES_RNG"; }
-        cfg.push_back(std::move(action_cfg)); }
+        json::map action_format_per_action;
+        if ((hit_index >= table->hit_next.size()) || 
+                ((table->hit_next.size() == 1) && (table->hit_next[0].name == "END"))){
+            action_format_per_action["next_table"] = 0;
+            action_format_per_action["next_table_full"] = 0xff;
+            action_format_per_action["action_name"] = act.name;
+            action_format_per_action["table_name"] = "--END_OF_PIPELINE--";
+            action_format_per_action["vliw_instruction"] = act.code; 
+            action_format_per_action["immediate_fields"] = json::vector();
+            for (auto &a : act.alias) {
+                json::string name = a.first;
+                int lo = remove_name_tail_range(name);
+                action_format_per_action["immediate_fields"] = ( json::vector { json::map {
+                    { "param_name", std::move(name) },
+                    { "param_type", json::string("parameter") },
+                    { "param_shift", json::number(lo) },
+                    { "dest_start", json::number(a.second.lo) },
+                    { "dest_width", json::number(a.second.hi - a.second.lo + 1) } } } ); }
+        } else {
+            auto next = table->hit_next[hit_index++];
+            action_format_per_action["next_table"] = next ? hit_index : 0;
+            action_format_per_action["next_table_full"] = next ? next->table_id() : 0xff;
+            action_format_per_action["action_name"] = act.name;
+            action_format_per_action["table_name"] = next ? next->name() : "--END_OF_PIPELINE--";
+            action_format_per_action["vliw_instruction"] = act.code; 
+            if (act.alias.empty()) continue;
+            for (auto &a : act.alias) {
+                json::string name = a.first;
+                int lo = remove_name_tail_range(name);
+                action_format_per_action["immediate_fields"] = ( json::vector { json::map {
+                    { "param_name", std::move(name) },
+                    { "param_type", json::string("parameter") },
+                    { "param_shift", json::number(lo) },
+                    { "dest_start", json::number(a.second.lo) },
+                    { "dest_width", json::number(a.second.hi - a.second.lo + 1) } } } ); } }
+        action_format.push_back(std::move(action_format_per_action)); }
 }
 
 void Table::Actions::add_immediate_mapping(json::map &tbl) {
@@ -1258,6 +1347,9 @@ void Table::write_mapram_regs(REGS &regs, int row, int col, int vpn, int type) {
     else
         mapram_config.mapram_egress = 1;
     mapram_config.mapram_enable = 1;
+    if (!this->to<CounterTable>()) {
+        mapram_config.mapram_ecc_check = 1;
+        mapram_config.mapram_ecc_generate = 1; }
     //if (!options.match_compiler) // FIXME -- compiler doesn't set this?
     //    mapram_ctl.mapram_vpn_limit = maxvpn;
     if (gress)
@@ -1321,48 +1413,94 @@ int Table::find_on_ixbar(Phv::Slice sl, int group) {
 }
 
 std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(const char *type, std::vector<Layout> &layout, bool skip_spare_bank) {
-    int width, depth, period;
-    const char *period_name;
-    // FIXME -- calling vpn_params here is only valid when layout == this->layout, but we also
-    // FIXME -- get here for color_maprams.  It works out as we don't use depth or width, only
-    // FIXME -- period, which will always be 1 for meter layout or color_maprams
-    vpn_params(width, depth, period, period_name);
-    json::map mra;
-    mra["memory_type"] = type;
-    std::vector<json::vector> mem_units;
-    json::vector &mem_units_and_vpns = mra["memory_units_and_vpns"] = json::vector();
-    int ctr = 0;
-    bool no_vpns = false;
-    for (auto &row : layout) {
-        auto vpn = row.vpns.begin();
-        for (auto col : row.cols) {
-            if (vpn == row.vpns.end())
-                no_vpns = true;
-            else ctr = *vpn++;
-            int unit = ctr++/period;
-            if (size_t(unit) >= mem_units.size())
-                mem_units.resize(unit + 1);
-            mem_units[unit].push_back(memunit(row.row, col)); } }
-    int vpn = 0;
-    for (auto &mem : mem_units) {
-        if (skip_spare_bank && &mem == &mem_units.back()) {
-            if (mem.size() == 1)
-                mra["spare_bank_memory_unit"] = std::move(mem[0]);
+    if (options.new_ctx_json) {
+        int width, depth, period;
+        const char *period_name;
+        // FIXME -- calling vpn_params here is only valid when layout == this->layout, but we also
+        // FIXME -- get here for color_maprams.  It works out as we don't use depth or width, only
+        // FIXME -- period, which will always be 1 for meter layout or color_maprams
+        vpn_params(width, depth, period, period_name);
+        json::map mra;
+        mra["memory_type"] = type;
+        std::vector<json::vector> mem_units;
+        json::vector &mem_units_and_vpns = mra["memory_units_and_vpns"] = json::vector();
+        int ctr = 0;
+        bool no_vpns = false;
+        for (auto &row : layout) {
+            auto vpn = row.vpns.begin();
+            for (auto col : row.cols) {
+                if (vpn == row.vpns.end())
+                    no_vpns = true;
+                else ctr = *vpn++;
+                int unit = ctr++/period;
+                if (size_t(unit) >= mem_units.size())
+                    mem_units.resize(unit + 1);
+                mem_units[unit].push_back(memunit(row.row, col)); } }
+        int vpn = 0;
+        for (auto &mem : mem_units) {
+            if (skip_spare_bank && &mem == &mem_units.back()) {
+                if (mem.size() == 1)
+                    mra["spare_bank_memory_unit"] = mem[0]->clone();
+                else 
+                    mra["spare_bank_memory_unit"] = mem.clone(); 
+            if (table_type() == SELECTION) break; }
+            //FIXME-JSON -- Hack to match glass json
+            //if (table_type() != ACTION) break; } 
+            std::sort(mem.begin(), mem.end(), json::obj::ptrless());
+            json::map tmp;
+            tmp["memory_units"] = std::move(mem);
+            json::vector vpns;
+            if (no_vpns)
+                vpns.push_back(nullptr);
             else
-                mra["spare_bank_memory_unit"] = std::move(mem);
-            break; }
-        std::sort(mem.begin(), mem.end(), json::obj::ptrless());
-        json::map tmp;
-        tmp["memory_units"] = std::move(mem);
-        json::vector vpns;
-        if (no_vpns)
-            vpns.push_back(nullptr);
-        else
-            vpns.push_back(vpn);
-        tmp["vpns"] = std::move(vpns);
-        mem_units_and_vpns.push_back(std::move(tmp));
-        vpn += period; }
-    return json::mkuniq<json::map>(std::move(mra));
+                vpns.push_back(vpn);
+            tmp["vpns"] = std::move(vpns);
+            mem_units_and_vpns.push_back(std::move(tmp));
+            vpn += period; }
+        return json::mkuniq<json::map>(std::move(mra));
+    } else {
+        int width, depth, period;
+        const char *period_name;
+        // FIXME -- calling vpn_params here is only valid when layout == this->layout, but we also
+        // FIXME -- get here for color_maprams.  It works out as we don't use depth or width, only
+        // FIXME -- period, which will always be 1 for meter layout or color_maprams
+        vpn_params(width, depth, period, period_name);
+        json::map mra;
+        mra["memory_type"] = type;
+        std::vector<json::vector> mem_units;
+        json::vector &mem_units_and_vpns = mra["memory_units_and_vpns"] = json::vector();
+        int ctr = 0;
+        bool no_vpns = false;
+        for (auto &row : layout) {
+            auto vpn = row.vpns.begin();
+            for (auto col : row.cols) {
+                if (vpn == row.vpns.end())
+                    no_vpns = true;
+                else ctr = *vpn++;
+                int unit = ctr++/period;
+                if (size_t(unit) >= mem_units.size())
+                    mem_units.resize(unit + 1);
+                mem_units[unit].push_back(memunit(row.row, col)); } }
+        int vpn = 0;
+        for (auto &mem : mem_units) {
+            if (skip_spare_bank && &mem == &mem_units.back()) {
+                if (mem.size() == 1)
+                    mra["spare_bank_memory_unit"] = std::move(mem[0]);
+                else
+                    mra["spare_bank_memory_unit"] = std::move(mem);
+                break; }
+            std::sort(mem.begin(), mem.end(), json::obj::ptrless());
+            json::map tmp;
+            tmp["memory_units"] = std::move(mem);
+            json::vector vpns;
+            if (no_vpns)
+                vpns.push_back(nullptr);
+            else
+                vpns.push_back(vpn);
+            tmp["vpns"] = std::move(vpns);
+            mem_units_and_vpns.push_back(std::move(tmp));
+            vpn += period; }
+        return json::mkuniq<json::map>(std::move(mra)); }
 }
 
 SelectionTable *AttachedTables::get_selector() const {
@@ -1431,21 +1569,40 @@ json::map *Table::base_tbl_cfg(json::vector &out, const char *type, int size) {
 }
 
 json::map *Table::add_stage_tbl_cfg(json::map &tbl, const char *type, int size) {
-    auto &stage_tables = dynamic_cast<json::vector &>(*tbl["stage_tables"]);
-    stage_tables.push_back(json::map());
-    auto &stage_tbl = dynamic_cast<json::map &>(*stage_tables.back());
-    tbl["stage_tables_length"] = stage_tables.size();
-    stage_tbl["stage_number"] = stage->stageno;
-    stage_tbl["number_entries"] = size;
-    stage_tbl["stage_table_type"] = type;
-    if (options.match_compiler && !strcmp(type, "selection")) {
-    } else if (logical_id >= 0)
-        stage_tbl["stage_table_handle"] = logical_id;
-    if (!strcmp(type, "selection") && get_stateful())
-        tbl["bound_to_stateful_table_handle"] = get_stateful()->handle();
-    return &stage_tbl;
+    if (options.new_ctx_json) {
+        auto &stage_tables = dynamic_cast<json::vector &>(*tbl["stage_tables"]);
+        stage_tables.push_back(json::map());
+        auto &stage_tbl = dynamic_cast<json::map &>(*stage_tables.back());
+        stage_tbl["stage_number"] = stage->stageno;
+        stage_tbl["stage_table_type"] = type;
+        stage_tbl["logical_table_id"] = logical_id;
+        if (!strcmp(type, "selection") && get_stateful())
+            tbl["bound_to_stateful_table_handle"] = get_stateful()->handle();
+        return &stage_tbl;
+    } else {
+        auto &stage_tables = dynamic_cast<json::vector &>(*tbl["stage_tables"]);
+        stage_tables.push_back(json::map());
+        auto &stage_tbl = dynamic_cast<json::map &>(*stage_tables.back());
+        tbl["stage_tables_length"] = stage_tables.size();
+        stage_tbl["stage_number"] = stage->stageno;
+        stage_tbl["number_entries"] = size;
+        stage_tbl["stage_table_type"] = type;
+        if (options.match_compiler && !strcmp(type, "selection")) {
+        } else if (logical_id >= 0)
+            stage_tbl["stage_table_handle"] = logical_id;
+        if (!strcmp(type, "selection") && get_stateful())
+            tbl["bound_to_stateful_table_handle"] = get_stateful()->handle();
+        return &stage_tbl; }
 }
 
+void Table::add_reference_table(json::vector &table_refs, const Table::Call& c, const std::string& href) {
+    json::map table_ref;
+    table_ref["how_referenced"] = href;
+    table_ref["handle"] = c->handle();
+    table_ref["name"] = c->name();
+    table_refs.push_back(std::move(table_ref)); 
+}
+                    
 json::map &Table::add_pack_format(json::map &stage_tbl, int memword, int words, int entries) {
     json::map pack_fmt;
     pack_fmt["table_word_width"] = memword * words;
@@ -1459,83 +1616,178 @@ json::map &Table::add_pack_format(json::map &stage_tbl, int memword, int words, 
 }
 
 void Table::canon_field_list(json::vector &field_list) {
-    for (auto &field_ : field_list) {
-        auto &field = field_->to<json::map>();
-        auto &name = field["name"]->to<json::string>();
-        if (int lo = remove_name_tail_range(name))
-            field["start_bit"]->to<json::number>().val += lo; }
+    if (options.new_ctx_json) {
+        for (auto &field_ : field_list) {
+            auto &field = field_->to<json::map>();
+            auto &name = field["field_name"]->to<json::string>();
+            if (int lo = remove_name_tail_range(name))
+                field["start_bit"]->to<json::number>().val += lo; }
+    } else {
+        for (auto &field_ : field_list) {
+            auto &field = field_->to<json::map>();
+            auto &name = field["name"]->to<json::string>();
+            if (int lo = remove_name_tail_range(name))
+                field["start_bit"]->to<json::number>().val += lo; } }
 }
 
 void Table::add_field_to_pack_format(json::vector &field_list, int basebit, std::string name,
                                      const Table::Format::Field &field,
                                      const std::vector<Actions::Action::alias_value_t *> &alias) {
-    int lobit = 0;
-    for (auto &bits : field.bits) {
-        field_list.push_back( json::map {
-            { "name", json::string(name) },
-            { "start_offset", json::number(basebit - bits.hi) },
-            { "start_bit", json::number(lobit) },
-            { "bit_width", json::number(bits.size()) }});
-        lobit += bits.size(); }
-    for (auto a : alias) {
-        Format::bitrange_t abits(a->second.lo, a->second.hi);
-        if (a->second.lo < 0) abits.lo = 0;
-        if (a->second.hi < 0) abits.hi = field.size;
-        lobit = 0;
+    if (options.new_ctx_json) {
+        int lobit = 0;
         for (auto &bits : field.bits) {
-            Format::bitrange_t fbits(lobit, lobit + bits.size() - 1);
-            lobit += bits.size();
-            if (fbits.disjoint(abits)) continue;
-            auto overlap = fbits.overlap(abits);
+            std::string source = "spec"; //FIXME-JSON 
+            std::string immediate_name = "";
+            if (name == "--version_valid--")
+                source = "version";
+            else if (name == "--immediate--") {
+                source = "immediate";
+                immediate_name = name; }
             field_list.push_back( json::map {
-                { "name", json::string(a->first) },
-                { "start_offset", json::number(basebit - bits.hi - (overlap.hi - fbits.hi)) },
-                { "start_bit", json::number(overlap.lo) },
-                { "bit_width", json::number(overlap.size()) }}); } }
+                { "field_name", json::string(name) },
+                { "source", json::string(source) },
+                { "lsb_mem_word_offset", json::number(bits.lo) },
+                { "start_bit", json::number(lobit) },
+                { "immediate_name", json::string(immediate_name) },
+                { "lsb_mem_word_idx", json::number(0) }, //FIXME-JSON 
+                { "match_mode", json::string("") }, //FIXME-JSON 
+                { "field_width", json::number(bits.size()) }});
+            lobit += bits.size(); }
+        for (auto a : alias) {
+            Format::bitrange_t abits(a->second.lo, a->second.hi);
+            if (a->second.lo < 0) abits.lo = 0;
+            if (a->second.hi < 0) abits.hi = field.size;
+            lobit = 0;
+            std::string source = "spec"; //FIXME-JSON 
+            std::string immediate_name = "";
+            if (a->first == "--version_valid--")
+                source = "version";
+            else if (a->first == "--immediate--") {
+                source = "immediate";
+                immediate_name = name; }
+            for (auto &bits : field.bits) {
+                Format::bitrange_t fbits(lobit, lobit + bits.size() - 1);
+                lobit += bits.size();
+                if (fbits.disjoint(abits)) continue;
+                auto overlap = fbits.overlap(abits);
+                field_list.push_back( json::map {
+                    { "field_name", json::string(a->first) },
+                    { "source", json::string(source) },
+                    { "lsb_mem_word_offset", json::number(basebit - bits.hi - (overlap.hi - fbits.hi)) },
+                    { "start_bit", json::number(overlap.lo) },
+                    { "immediate_name", json::string(immediate_name) },
+                    { "lsb_mem_word_idx", json::number(0) }, //FIXME-JSON 
+                    { "match_mode", json::string("") }, //FIXME-JSON 
+                    { "field_width", json::number(overlap.size()) }}); } }
+    } else {
+        int lobit = 0;
+        for (auto &bits : field.bits) {
+            field_list.push_back( json::map {
+                { "name", json::string(name) },
+                { "start_offset", json::number(basebit - bits.hi) },
+                { "start_bit", json::number(lobit) },
+                { "bit_width", json::number(bits.size()) }});
+            lobit += bits.size(); }
+        for (auto a : alias) {
+            Format::bitrange_t abits(a->second.lo, a->second.hi);
+            if (a->second.lo < 0) abits.lo = 0;
+            if (a->second.hi < 0) abits.hi = field.size;
+            lobit = 0;
+            for (auto &bits : field.bits) {
+                Format::bitrange_t fbits(lobit, lobit + bits.size() - 1);
+                lobit += bits.size();
+                if (fbits.disjoint(abits)) continue;
+                auto overlap = fbits.overlap(abits);
+                field_list.push_back( json::map {
+                    { "name", json::string(a->first) },
+                    { "start_offset", json::number(basebit - bits.hi - (overlap.hi - fbits.hi)) },
+                    { "start_bit", json::number(overlap.lo) },
+                    { "bit_width", json::number(overlap.size()) }}); } } }
 }
 
 json::map &Table::add_pack_format(json::map &stage_tbl, const Table::Format *format,
                                   Table::Actions::Action *act) {
-
-    decltype(act->reverse_alias()) alias;
-    if (act) alias = act->reverse_alias();
-    json::map pack_fmt { { "memory_word_width", json::number(128) } };
-    /* FIXME -- factor the two cases of this if better */
-    if (format->log2size >= 7 || format->groups() > 1) {
-        pack_fmt["table_word_width"] = ((format->size - 1) | 127) + 1;
-        pack_fmt["entries_per_table_word"] = format->groups();
-        pack_fmt["number_memory_units_per_table_word"] = (format->size - 1)/128U + 1;
-        json::vector &entry_list = pack_fmt["entry_list"];
-        int basebit = (format->size - 1) | 127;
-        for (int i = format->groups()-1; i >= 0; --i) {
-            json::vector field_list;
-            for (auto it = format->begin(i); it != format->end(i); ++it)
-                add_field_to_pack_format(field_list, basebit, it->first, it->second,
-                                         get(alias, it->first));
-            canon_field_list(field_list);
-            entry_list.push_back( json::map {
-                { "entry_number", json::number(i) },
-                { "field_list", std::move(field_list) }}); }
+    if (options.new_ctx_json) {
+        //FIXME-JSON: Do not output entries if way tbls present
+        decltype(act->reverse_alias()) alias;
+        if (act) alias = act->reverse_alias();
+        json::map pack_fmt { { "memory_word_width", json::number(128) } };
+        /* FIXME -- factor the two cases of this if better */
+        if (format->log2size >= 7 || format->groups() > 1) {
+            pack_fmt["table_word_width"] = ((format->size - 1) | 127) + 1;
+            pack_fmt["entries_per_table_word"] = format->groups();
+            pack_fmt["number_memory_units_per_table_word"] = (format->size - 1)/128U + 1;
+            json::vector &entry_list = pack_fmt["entries"];
+            int basebit = (format->size - 1) | 127;
+            for (int i = format->groups()-1; i >= 0; --i) {
+                json::vector field_list;
+                for (auto it = format->begin(i); it != format->end(i); ++it)
+                    add_field_to_pack_format(field_list, basebit, it->first, it->second,
+                                             get(alias, it->first));
+                canon_field_list(field_list);
+                entry_list.push_back( json::map {
+                    { "entry_number", json::number(i) },
+                    { "fields", std::move(field_list) }}); }
+        } else {
+            int entries = format->log2size ? 1U << (7 - format->log2size) : 0;
+            pack_fmt["table_word_width"] = 128;
+            pack_fmt["entries_per_table_word"] = entries;
+            pack_fmt["number_memory_units_per_table_word"] = 1;
+            json::vector &entry_list = pack_fmt["entries"];
+            int basebit = (1 << format->log2size) - 1;
+            for (int i = entries-1; i >= 0; --i) {
+                json::vector field_list;
+                for (auto &field : *format)
+                    add_field_to_pack_format(field_list, basebit, field.first, field.second,
+                                             get(alias, field.first));
+                canon_field_list(field_list);
+                entry_list.push_back( json::map {
+                    { "entry_number", json::number(i) },
+                    { "fields", std::move(field_list) }});
+                basebit += 1 << format->log2size; } }
+        json::vector &pack_format = stage_tbl["pack_format"];
+        pack_format.push_back(std::move(pack_fmt));
+        return pack_format.back()->to<json::map>();
     } else {
-        int entries = format->log2size ? 1U << (7 - format->log2size) : 0;
-        pack_fmt["table_word_width"] = 128;
-        pack_fmt["entries_per_table_word"] = entries;
-        pack_fmt["number_memory_units_per_table_word"] = 1;
-        json::vector &entry_list = pack_fmt["entry_list"];
-        int basebit = (1 << format->log2size) - 1;
-        for (int i = entries-1; i >= 0; --i) {
-            json::vector field_list;
-            for (auto &field : *format)
-                add_field_to_pack_format(field_list, basebit, field.first, field.second,
-                                         get(alias, field.first));
-            canon_field_list(field_list);
-            entry_list.push_back( json::map {
-                { "entry_number", json::number(i) },
-                { "field_list", std::move(field_list) }});
-            basebit += 1 << format->log2size; } }
-    json::vector &pack_format = stage_tbl["pack_format"];
-    pack_format.push_back(std::move(pack_fmt));
-    return pack_format.back()->to<json::map>();
+        decltype(act->reverse_alias()) alias;
+        if (act) alias = act->reverse_alias();
+        json::map pack_fmt { { "memory_word_width", json::number(128) } };
+        /* FIXME -- factor the two cases of this if better */
+        if (format->log2size >= 7 || format->groups() > 1) {
+            pack_fmt["table_word_width"] = ((format->size - 1) | 127) + 1;
+            pack_fmt["entries_per_table_word"] = format->groups();
+            pack_fmt["number_memory_units_per_table_word"] = (format->size - 1)/128U + 1;
+            json::vector &entry_list = pack_fmt["entry_list"];
+            int basebit = (format->size - 1) | 127;
+            for (int i = format->groups()-1; i >= 0; --i) {
+                json::vector field_list;
+                for (auto it = format->begin(i); it != format->end(i); ++it)
+                    add_field_to_pack_format(field_list, basebit, it->first, it->second,
+                                             get(alias, it->first));
+                canon_field_list(field_list);
+                entry_list.push_back( json::map {
+                    { "entry_number", json::number(i) },
+                    { "field_list", std::move(field_list) }}); }
+        } else {
+            int entries = format->log2size ? 1U << (7 - format->log2size) : 0;
+            pack_fmt["table_word_width"] = 128;
+            pack_fmt["entries_per_table_word"] = entries;
+            pack_fmt["number_memory_units_per_table_word"] = 1;
+            json::vector &entry_list = pack_fmt["entry_list"];
+            int basebit = (1 << format->log2size) - 1;
+            for (int i = entries-1; i >= 0; --i) {
+                json::vector field_list;
+                for (auto &field : *format)
+                    add_field_to_pack_format(field_list, basebit, field.first, field.second,
+                                             get(alias, field.first));
+                canon_field_list(field_list);
+                entry_list.push_back( json::map {
+                    { "entry_number", json::number(i) },
+                    { "field_list", std::move(field_list) }});
+                basebit += 1 << format->log2size; } }
+        json::vector &pack_format = stage_tbl["pack_format"];
+        pack_format.push_back(std::move(pack_fmt));
+        return pack_format.back()->to<json::map>(); }
 }
 
 void MatchTable::gen_name_lookup(json::map &out) {
@@ -1546,6 +1798,26 @@ void MatchTable::gen_name_lookup(json::map &out) {
 }
 
 void Table::common_tbl_cfg(json::map &tbl, const char *default_match_type) {
+    if (options.new_ctx_json) {
+        if (!default_action.empty()) {
+            tbl["default_action"] = json::map{
+                { "name", json::string(default_action) },
+                { "handle", json::number(default_action_handle) } };
+            tbl["default_action_parameters"] = nullptr;
+            if (!default_action_parameters.empty()) {
+                json::map &params = tbl["default_action_parameters"] = json::map();
+                for (auto val : default_action_parameters)
+                    params[val.first] = val.second; }
+        }
+        if (!p4_table->action_profile.empty())
+            tbl["action_profile"] = p4_table->action_profile;
+        else
+            tbl["action_profile"] = nullptr;
+        //tbl["dynamic_match_key_masks"] = json::map(); //FIXME-JSON: Need example
+        //tbl["static_entries"] = json::vector(); //FIXME-JSON
+        tbl["ap_bind_indirect_res_to_match"] = json::vector(); //FIXME-JSON: Need example
+        tbl["is_resource_controllable"] = true; //FIXME-JSON: Need example for false
+    } else {
     if (!default_action.empty()) {
         tbl["default_action"] = json::map{
             { "name", json::string(default_action) },
@@ -1567,5 +1839,5 @@ void Table::common_tbl_cfg(json::map &tbl, const char *default_match_type) {
     else
         tbl["action_profile"] = nullptr;
     tbl["dynamic_match_key_masks"] = false;
-    tbl["uses_static_entries"] = false;
+    tbl["uses_static_entries"] = false; }
 }

@@ -239,6 +239,7 @@ public:
             std::map<std::string, alias_t>      alias;
             std::vector<Instruction *>          instr;
             bitvec                              slot_use;
+            unsigned                            handle;
             Action(Table *, Actions *, pair_t &);
             Action(const char *n, int l) : name(n), lineno(l) {}
             bool equiv(Action *a);
@@ -269,9 +270,11 @@ public:
         void pass2(Table *);
         void stateful_pass2(Table *);
         template<class REGS> void write_regs(REGS &, Table *);
+        void add_p4_params(const Action&, json::vector &);
         void gen_tbl_cfg(json::vector &);
         void add_immediate_mapping(json::map &);
         void add_next_table_mapping(Table *, json::map &);
+        void add_action_format(Table *, json::map &);
         bool has_hash_dist() { return ( table->table_type() == HASH_ACTION ); }
     };
 public:
@@ -297,7 +300,7 @@ public:
             const char *type, std::vector<Layout> &layout, bool skip_spare_bank = false);
     virtual void common_tbl_cfg(json::map &tbl, const char *match_type);
     enum table_type_t { OTHER=0, TERNARY_INDIRECT, GATEWAY, ACTION, SELECTION, COUNTER,
-                        METER, IDLETIME, STATEFUL, HASH_ACTION };
+                        METER, IDLETIME, STATEFUL, HASH_ACTION, EXACT, TERNARY };
     virtual table_type_t table_type() { return OTHER; }
     virtual int instruction_set() { return 0; /* VLIW_ALU */ }
     virtual table_type_t set_match_table(MatchTable *m, bool indirect) { assert(0); }
@@ -317,6 +320,7 @@ public:
     virtual bool adr_mux_select_stats() { return false; }
     virtual bool run_at_eop() { return false; }
     template<class REGS> void write_mapram_regs(REGS &regs, int row, int col, int vpn, int type);
+    template<class T> T *to() { return dynamic_cast<T *>(this); }
 
     std::string                 name_;
     P4Table                     *p4_table = 0;
@@ -387,6 +391,7 @@ public:
     virtual void need_on_actionbus(HashDistribution *hd, int off, int size);
     virtual Call &action_call() { return action; }
     virtual Actions *get_actions() { return actions; }
+    void add_reference_table(json::vector &table_refs, const Table::Call& c, const std::string& href); 
     json::map &add_pack_format(json::map &stage_tbl, int memword, int words, int entries = -1);
     json::map &add_pack_format(json::map &stage_tbl, const Table::Format *format,
                                Table::Actions::Action *act = nullptr);
@@ -534,6 +539,7 @@ public:
                                   const Table::Format::Field &field,
                                   const std::vector<Actions::Action::alias_value_t *> &) override;
     int unitram_type() override { return UnitRam::MATCH; }
+    table_type_t table_type() override { return EXACT; }
 )
 
 DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
@@ -584,6 +590,7 @@ public:
         if (indirect && indirect->hit_next.size() > 0)
             return indirect->hit_next.size();
         return hit_next.size(); }
+    table_type_t table_type() override { return TERNARY; }
 )
 
 DECLARE_TABLE_TYPE(Phase0MatchTable, Table, "phase0_match",
@@ -674,6 +681,8 @@ DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",
     void pad_format_fields();
     unsigned get_do_care_count(std::string bstring);
     unsigned get_lower_huffman_encoding_bits (unsigned width); 
+public:
+    std::map<std::string, Format *>& get_action_formats() { return action_formats; }
 )
 
 DECLARE_TABLE_TYPE(GatewayTable, Table, "gateway",
@@ -802,6 +811,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(Synth2Port, AttachedTable,
         width = period = 1; depth = layout_size(); period_name = 0; }
     bool                per_flow_enable = false;
     bool                global_binding = false;
+    unsigned            per_flow_enable_bit = 0;
     json::map *base_tbl_cfg(json::vector &out, const char *type, int size) override;
     json::map *add_stage_tbl_cfg(json::map &tbl, const char *type, int size) override;
 public:

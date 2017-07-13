@@ -4,6 +4,7 @@
 #include <fstream>
 #include <iostream>
 #include "indent.h"
+#include "constants.h"
 #include <string>
 #include <vector>
 #include <sys/stat.h>
@@ -17,7 +18,13 @@ option_t options = {
     .target = TOFINO,
     .match_compiler = false,
     .condense_json = true,
+    .new_ctx_json = false,
 };
+
+
+//Unique Handles
+unsigned unique_action_handle = ACTION_HANDLE_START + 2; //FIXME-JSON +2 to match glass
+std::string asmfile_name;
 
 int verbose = 0;
 static std::vector<std::string> debug_specs;
@@ -156,6 +163,9 @@ int main(int ac, char **av) {
                 case 'C':
                     options.condense_json = true;
                     break;
+                case 'N':
+                    options.new_ctx_json = true;
+                    break;
                 case 'M':
                     options.match_compiler = true;
                     options.condense_json = false;
@@ -212,6 +222,7 @@ int main(int ac, char **av) {
             if (error_count > 0) return error_count;
             fclose(fp);
             asmfile = true;
+            asmfile_name = av[i];
         } else {
             std::cerr << "Can't read " << av[i] << ": " << strerror(errno) << std::endl;
             error_count++; } }

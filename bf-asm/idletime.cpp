@@ -85,6 +85,14 @@ void IdletimeTable::write_regs(REGS &regs) {
             else
                 mapram_cfg.mapram_egress = 1;
             mapram_cfg.mapram_enable = 1;
+            if ((precision == 1) || (precision == 2)) {
+                mapram_cfg.mapram_parity_generate = 1;
+                mapram_cfg.mapram_parity_check = 1;
+            } else {
+                if ((precision != 3) && (precision != 6))
+                    error(lineno, "Unknown idletime precision = %d", precision);
+                mapram_cfg.mapram_ecc_generate = 1;
+                mapram_cfg.mapram_ecc_check = 1; }
             auto &adrmux_ctl = adrmux.ram_address_mux_ctl[1][col];
             adrmux_ctl.map_ram_wadr_mux_select = MapRam::Mux::IDLETIME;
             adrmux_ctl.map_ram_wadr_mux_enable = 1;

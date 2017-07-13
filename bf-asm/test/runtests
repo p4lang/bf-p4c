@@ -4,6 +4,8 @@ fast=false
 brig=false
 outdir=false
 verbose=false
+nodiff=false
+newctxjson=false
 link=false
 TIME=false
 # parallel make arguments
@@ -54,6 +56,12 @@ while expr "$1" : - >/dev/null; do
         ;;
     -t)
         TIME=true
+        ;;
+    -n)
+        nodiff=true
+        ;;
+    -N)
+        newctxjson=true
         ;;
     -j)
         shift
@@ -164,8 +172,14 @@ findexec JSON_DIFF "json_diff"             "json_diff"             ""
 
 function not() { if "$@"; then return 1; else return 0; fi }
 
-if [ -r $TESTDIR/ctxt_json_ignore ]; then
-    CTXT_DIFFARGS="-l handle -l start_offset -l entry_number -i @$TESTDIR/ctxt_json_ignore"
+ctxt_json_ignore=$TESTDIR/ctxt_json_ignore
+if $newctxjson; then
+    ctxt_json_ignore=$TESTDIR/ctxt_json_ignore_new
+fi
+echo "Using context json ignore file - $ctxt_json_ignore"
+
+if [ -r $ctxt_json_ignore ]; then
+    CTXT_DIFFARGS="-l handle -l start_offset -l entry_number -i @$ctxt_json_ignore"
 else
     CTXT_DIFFARGS="-al handle -i table_type"
 fi
@@ -240,20 +254,30 @@ function test_p4() {
         rm -f $name.tfa
         if $brig; then
             clog='brig.log'
-            if not run $BRIG -D__TARGET_TOFINO__ ../$name.p4 -o out.tfa </dev/null >brig.log 2>&1; then
+            if not run $GLSC -o . --verbose 2 -vl 2 -G $glsc_args ../$name.p4 </dev/null >glsc.log 2>&1; then
                 ok=false
+            fi
+            if not $ok; then
+                msg="$msg p4 glass compile failed"
+            fi
+            if $ok && not run $BRIG -D__TARGET_TOFINO__ ../$name.p4 -o out.tfa </dev/null >brig.log 2>&1; then
+                ok=false
+            fi
+            if not $ok; then
+                msg="$msg p4 brig compile failed"
             fi
         else
             clog='glsc.log'
             if not run $GLSC -o . --verbose 2 -vl 2 -S -G $glsc_args ../$name.p4 </dev/null >glsc.log 2>&1; then
                 ok=false
             fi
+            if not $ok; then
+                msg="$msg p4 glass compile failed"
+            fi
         fi
         if not $ok; then
-            msg="$msg p4 compile failed"
             fail_type="compile"
             rv=1
-            ok=false
         fi
         if [ out.tfa -nt $name.tfa ]; then
             rm -f $name.tfa
@@ -285,6 +309,9 @@ function test_p4() {
     if $brig; then
         TFAS_OPTS="-vvvvl"
     fi
+    if $newctxjson; then
+        TFAS_OPTS="-N $TFAS_OPTS"
+    fi
     if $ok && run $TFAS $TFAS_OPTS tfas.config.log $name.tfa >tfas.log 2>&1; then
         tfas_succeeded=true
         for f in $name.out/*.cfg.json; do
@@ -292,7 +319,7 @@ function test_p4() {
                 rm $f
             fi
         done
-        if ! $brig; then
+        if ! $nodiff; then
             for f in $name.out/*.cfg.json.gz; do
                 if zcmp -s $f $glsc_cfg/$(basename $f); then
                     continue
@@ -308,11 +335,15 @@ function test_p4() {
             glsc_ctxt=${name}_context_llir.json
             if [ -d context ]; then
                 glsc_ctxt=context/mau.context.json
+                if $newctxjson; then
+                    glsc_ctxt=context/context.json
+                fi
             fi
-            if [ -r $name.out/tbl-cfg ]; then
-                { $JSON_DIFF $CTXT_DIFFARGS $name.out/tbl-cfg $glsc_ctxt;
+            brig_ctxt=$name.out/tbl-cfg
+            if [ -r $brig_ctxt ]; then
+                { $JSON_DIFF $CTXT_DIFFARGS $brig_ctxt $glsc_ctxt;
                   if [ $? -gt 128 ]; then echo "***json_diff crashed"; fi; } >> json_diff.txt
-                #echo $JSON_DIFF $CTXT_DIFFARGS $name.out/tbl-cfg $glsc_ctxt;
+                #echo $JSON_DIFF $CTXT_DIFFARGS $brig_ctxt $glsc_ctxt;
             fi
             cnt=$(grep -Ev '^\+\+\+|^---|"int_inj"' json_diff.txt | grep -Ec '^\+|^-')
             if [ $cnt -gt 0 ]; then

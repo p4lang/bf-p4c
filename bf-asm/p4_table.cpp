@@ -5,7 +5,7 @@ std::map<unsigned, P4Table *>                                   P4Table::by_hand
 std::map<P4Table::type, std::map<std::string, P4Table *>>       P4Table::by_name;
 unsigned                                P4Table::max_handle[7];
 const char *P4Table::type_name[] = { 0,
-"match_entry", "action_data", "selection", "statistics", "meter", "stateful" };
+"match", "action", "selection", "statistics", "meter", "stateful" };
 
 P4Table *P4Table::get(P4Table::type t, VECTOR(pair_t) &data) {
     P4Table *rv;
@@ -88,61 +88,90 @@ void P4Table::check(Table *tbl) {
 }
 
 json::map *P4Table::base_tbl_cfg(json::vector &out, int size, Table *table) {
-    if (!config) {
-        out.emplace_back(json::mkuniq<json::map>());
-        json::map &tbl = dynamic_cast<json::map &>(*out.back());
-        config = &tbl;
-        tbl["name"] = p4_name();
-        if (handle) tbl["handle"] = handle;
-        tbl["table_type"] = type_name[handle >> 24];
-        tbl["direction"] = table->gress ? "egress" : "ingress";
-        tbl["number_entries"] = explicit_size ? this->size : size;
-        tbl["stage_tables_length"] = 0L;
-        if (!preferred_match_type.empty())
-            tbl["preferred_match_type"] = preferred_match_type;
-        tbl["stage_tables"] = json::mkuniq<json::vector>();
-        if (options.match_compiler && handle >> 24 == MatchEntry) {
-            tbl["p4_action_data_tables"] = json::vector();
-            tbl["p4_selection_tables"] = json::vector(); }
-        if (options.match_compiler && handle >> 24 == Selection)
-            tbl["p4_action_data_table"] = json::vector();
-        if (auto &action = table->action_call()) if ((Table *)action != table) {
-            json::map act;
-            act["name"] = action->p4_name();
-            act["handle_reference"] = action->handle();
-            if (options.match_compiler && handle >> 24 == Selection) {
-                (tbl["p4_action_data_table"] = json::vector()).push_back(std::move(act));
-            } else {
-                act["how_referenced"] = action.args.size() > 1 ? "indirect" : "direct";
-                (tbl["p4_action_data_tables"] = json::vector()).push_back(std::move(act)); } }
-        if (auto *selector = table->get_selector()) if (selector != table) {
-            json::map sel;
-            sel["name"] = selector->p4_name();
-            sel["handle_reference"] = selector->handle();
-            sel["how_referenced"] = "indirect";
-            (tbl["p4_selection_tables"] = json::vector()).push_back(std::move(sel)); }
-        if (auto *attached = table->get_attached()) {
-            json::vector *vec = 0;
-            if (options.match_compiler)
-                vec = &(tbl["p4_statistics_tables"] = json::vector());
-            for (auto &tblcall : attached->stats) {
-                if (!vec) vec = &(tbl["p4_statistics_tables"] = json::vector());
-                json::map stats;
-                stats["name"] = tblcall->p4_name();
-                stats["handle_reference"] = tblcall->handle();
-                stats["how_referenced"] = tblcall.args.empty() ? "direct" : "indirect";
-                vec->push_back(std::move(stats)); }
-            vec = 0;
-            for (auto &tblcall : attached->meter) {
-                if (!vec) vec = &(tbl["p4_meter_tables"] = json::vector());
-                json::map meter;
-                meter["name"] = tblcall->p4_name();
-                meter["handle_reference"] = tblcall->handle();
-                meter["how_referenced"] = tblcall.args.empty() ? "direct" : "indirect";
-                vec->push_back(std::move(meter)); } }
-        if (!explicit_size)
-            this->size = size;
-    } else if (!explicit_size)
-        (*config)["number_entries"] = this->size += size;
-    return config;
+    if (options.new_ctx_json) {
+        if (!config) {
+            out.emplace_back(json::mkuniq<json::map>());
+            json::map &tbl = dynamic_cast<json::map &>(*out.back());
+            config = &tbl;
+            tbl["direction"] = table->gress ? "egress" : "ingress";
+            if (handle) tbl["handle"] = handle;
+            tbl["name"] = p4_name();
+            tbl["table_type"] = type_name[handle >> 24];
+            tbl["size"] = explicit_size ? this->size : size;
+            tbl["stage_tables"] = json::mkuniq<json::vector>();
+            if (auto *attached = table->get_attached()) {
+                json::vector *vec = &(tbl["statistics_table_refs"] = json::vector());
+                for (auto &tblcall : attached->stats) {
+                    json::map stats;
+                    stats["name"] = tblcall->p4_name();
+                    stats["handle"] = tblcall->handle();
+                    stats["how_referenced"] = tblcall.args.empty() ? "direct" : "indirect";
+                    vec->push_back(std::move(stats)); }
+                vec = 0;
+                for (auto &tblcall : attached->meter) {
+                    if (!vec) vec = &(tbl["meter_table_refs"] = json::vector());
+                    json::map meter;
+                    meter["name"] = tblcall->p4_name();
+                    meter["handle"] = tblcall->handle();
+                    meter["how_referenced"] = tblcall.args.empty() ? "direct" : "indirect";
+                    vec->push_back(std::move(meter)); } } }
+        return config;
+    } else {
+        if (!config) {
+            out.emplace_back(json::mkuniq<json::map>());
+            json::map &tbl = dynamic_cast<json::map &>(*out.back());
+            config = &tbl;
+            tbl["name"] = p4_name();
+            if (handle) tbl["handle"] = handle;
+            tbl["table_type"] = type_name[handle >> 24];
+            tbl["direction"] = table->gress ? "egress" : "ingress";
+            tbl["number_entries"] = explicit_size ? this->size : size;
+            tbl["stage_tables_length"] = 0L;
+            if (!preferred_match_type.empty())
+                tbl["preferred_match_type"] = preferred_match_type;
+            tbl["stage_tables"] = json::mkuniq<json::vector>();
+            if (options.match_compiler && handle >> 24 == MatchEntry) {
+                tbl["p4_action_data_tables"] = json::vector();
+                tbl["p4_selection_tables"] = json::vector(); }
+            if (options.match_compiler && handle >> 24 == Selection)
+                tbl["p4_action_data_table"] = json::vector();
+            if (auto &action = table->action_call()) if ((Table *)action != table) {
+                json::map act;
+                act["name"] = action->p4_name();
+                act["handle_reference"] = action->handle();
+                if (options.match_compiler && handle >> 24 == Selection) {
+                    (tbl["p4_action_data_table"] = json::vector()).push_back(std::move(act));
+                } else {
+                    act["how_referenced"] = action.args.size() > 1 ? "indirect" : "direct";
+                    (tbl["p4_action_data_tables"] = json::vector()).push_back(std::move(act)); } }
+            if (auto *selector = table->get_selector()) if (selector != table) {
+                json::map sel;
+                sel["name"] = selector->p4_name();
+                sel["handle_reference"] = selector->handle();
+                sel["how_referenced"] = "indirect";
+                (tbl["p4_selection_tables"] = json::vector()).push_back(std::move(sel)); }
+            if (auto *attached = table->get_attached()) {
+                json::vector *vec = 0;
+                if (options.match_compiler)
+                    vec = &(tbl["p4_statistics_tables"] = json::vector());
+                for (auto &tblcall : attached->stats) {
+                    if (!vec) vec = &(tbl["p4_statistics_tables"] = json::vector());
+                    json::map stats;
+                    stats["name"] = tblcall->p4_name();
+                    stats["handle_reference"] = tblcall->handle();
+                    stats["how_referenced"] = tblcall.args.empty() ? "direct" : "indirect";
+                    vec->push_back(std::move(stats)); }
+                vec = 0;
+                for (auto &tblcall : attached->meter) {
+                    if (!vec) vec = &(tbl["p4_meter_tables"] = json::vector());
+                    json::map meter;
+                    meter["name"] = tblcall->p4_name();
+                    meter["handle_reference"] = tblcall->handle();
+                    meter["how_referenced"] = tblcall.args.empty() ? "direct" : "indirect";
+                    vec->push_back(std::move(meter)); } }
+            if (!explicit_size)
+                this->size = size;
+        } else if (!explicit_size)
+            (*config)["number_entries"] = this->size += size;
+        return config; }
 }

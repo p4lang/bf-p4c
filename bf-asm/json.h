@@ -65,7 +65,8 @@ public:
     template<class T> bool is() const { return dynamic_cast<const T *>(this) != nullptr; }
     template<class T> T &to() { return dynamic_cast<T &>(*this); }
     template<class T> const T &to() const { return dynamic_cast<const T &>(*this); }
-    virtual std::unique_ptr<obj> copy() && = 0;
+    virtual std::unique_ptr<obj> copy() && = 0; //Creates a shallow copy of unique_ptr
+    virtual std::unique_ptr<obj> clone() { return nullptr; } //Creates a deep copy of obj
     std::string toString() const;
 };
 
@@ -94,20 +95,21 @@ public:
     long        val;
     number(long l) : val(l) {}
     ~number() {}
-    bool operator <(const obj &a) const {
+    bool operator <(const obj &a) const override {
         if (auto *b = dynamic_cast<const number *>(&a)) return val < b->val;
         return std::type_index(typeid(*this)) < std::type_index(typeid(a)); }
-    bool operator ==(const obj &a) const {
+    bool operator ==(const obj &a) const override {
         if (auto *b = dynamic_cast<const number *>(&a)) return val == b->val;
         return false; }
-    bool operator==(long v) const { return val == v; }
-    void print_on(std::ostream &out, int indent=0, int width=80, const char *pfx="") const {
+    bool operator==(long v) const override { return val == v; }
+    void print_on(std::ostream &out, int indent=0, int width=80, const char *pfx="") const override {
         out << val; }
-    bool test_width(int &limit) const
+    bool test_width(int &limit) const override
         { char buf[32]; limit -= sprintf(buf, "%ld", val); return limit >= 0; }
-    number *as_number() { return this; }
-    const number *as_number() const { return this; }
-    std::unique_ptr<obj> copy() && { return mkuniq<number>(std::move(*this)); }
+    number *as_number() override { return this; }
+    const number *as_number() const override { return this; }
+    std::unique_ptr<obj> copy() && override { return mkuniq<number>(std::move(*this)); }
+    std::unique_ptr<obj> clone() override { return std::unique_ptr<number>(new number(val)); }
 };
 
 class string : public obj, public std::string {
@@ -156,7 +158,7 @@ public:
     vector &operator=(const vector &) & = default;
     vector &operator=(vector &&) & = default;
     ~vector() {}
-    bool operator <(const obj &a) const {
+    bool operator <(const obj &a) const override {
         if (const vector *b = dynamic_cast<const vector *>(&a)) {
             auto p1 = begin(), p2 = b->begin();
             while (p1 != end() && p2 != b->end()) {
@@ -168,7 +170,7 @@ public:
     using obj::operator <=;
     using obj::operator >=;
     using obj::operator >;
-    bool operator ==(const obj &a) const {
+    bool operator ==(const obj &a) const override {
         if (const vector *b = dynamic_cast<const vector *>(&a)) {
             auto p1 = begin(), p2 = b->begin();
             while (p1 != end() && p2 != b->end()) {
@@ -177,8 +179,8 @@ public:
             return (p1 == end() && p2 == b->end()); }
         return false; }
     using obj::operator !=;
-    void print_on(std::ostream &out, int indent=0, int width=80, const char *pfx="") const;
-    bool test_width(int &limit) const {
+    void print_on(std::ostream &out, int indent=0, int width=80, const char *pfx="") const override;
+    bool test_width(int &limit) const override {
         limit -= 2;
         for (auto &e : *this) {
             if (e ? !e->test_width(limit) : (limit -= 4) < 0) return false;
@@ -196,9 +198,13 @@ public:
     void push_back(const char *s) { push_back(mkuniq<string>(string(s))); }
     void push_back(vector &&v) { push_back(mkuniq<vector>(std::move(v))); }
     void push_back(json::map &&);
-    vector *as_vector() { return this; }
-    const vector *as_vector() const { return this; }
-    std::unique_ptr<obj> copy() && { return mkuniq<vector>(std::move(*this)); }
+    vector *as_vector() override { return this; }
+    const vector *as_vector() const override { return this; }
+    std::unique_ptr<obj> copy() && override { return mkuniq<vector>(std::move(*this)); }
+    std::unique_ptr<obj> clone() override { 
+        vector *v = new vector(); 
+        for (auto &e: *this) v->push_back(e->clone());
+        return std::unique_ptr<vector>(v); }
 };
 
 typedef ordered_map<obj *, std::unique_ptr<obj>, obj::ptrless> map_base;
@@ -393,6 +399,7 @@ public:
     map *as_map() { return this; }
     const map *as_map() const { return this; }
     std::unique_ptr<obj> copy() && { return mkuniq<map>(std::move(*this)); }
+    //std::unique_ptr<obj> clone() override { }; //FIXME 
 };
 
 inline void vector::push_back(map &&m) { emplace_back(mkuniq<map>(std::move(m))); }

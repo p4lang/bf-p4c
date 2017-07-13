@@ -248,6 +248,8 @@ void MeterTable::write_regs(REGS &regs) {
             mapram_config.mapram_vpn = *vpn;
             mapram_config.mapram_parity_generate = 1;
             mapram_config.mapram_parity_check = 0;
+            mapram_config.mapram_ecc_check = 1;
+            mapram_config.mapram_ecc_generate = 1;
             if (gress == INGRESS)
                 mapram_config.mapram_ingress = 1;
             else
