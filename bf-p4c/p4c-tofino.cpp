@@ -10,6 +10,7 @@
 #include "lib/gc.h"
 #include "lib/log.h"
 #include "lib/exceptions.h"
+#include "lib/nullstream.h"
 #include "frontends/p4/frontend.h"
 #include "frontends/common/constantFolding.h"
 #include "frontends/p4-14/header_type.h"
@@ -21,6 +22,7 @@
 #include "midend/actionsInlining.h"
 #include "tofinoOptions.h"
 #include "version.h"
+#include "control-plane/p4RuntimeSerializer.h"
 
 int main(int ac, char **av) {
     vector<cstring> supported_arch = { "tofino-v1model-barefoot", "tofino-native-barefoot" };
@@ -67,6 +69,17 @@ int main(int ac, char **av) {
             dump(program);
         else
             std::cout << *program << std::endl; }
+
+    if (!options.p4RuntimeFile.isNullOrEmpty()) {
+        if (Log::verbose())
+            std::cout << "Generating P4Runtime output" << std::endl;
+        std::ostream* out = openFile(options.p4RuntimeFile, false);
+        if (out != nullptr) {
+            serializeP4Runtime(out, program, midend.toplevel, &midend.refMap,
+                               &midend.typeMap, options.p4RuntimeFormat);
+        }
+    }
+
     auto maupipe = extract_maupipe(program, options);
 
     if (ErrorReporter::instance.getErrorCount() > 0)
