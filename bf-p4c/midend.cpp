@@ -182,6 +182,8 @@ MidEnd::MidEnd(CompilerOptions& options) {
         new RemapIntrinsics,
         new P4::TypeChecking(&refMap, &typeMap, true),
         new FillFromBlockMap(&refMap, &typeMap),
+        evaluator,
+        new VisitFunctor([this, evaluator]() { toplevel = evaluator->getToplevelBlock(); }),
     });
 }
 
