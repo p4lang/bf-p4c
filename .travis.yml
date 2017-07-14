@@ -1,11 +1,21 @@
 services:
-  - docker
-
+- docker
 env:
+  matrix:
   - MAKEFLAGS="-j2"
+  global:
+  - secure: x2rLjtCCDnxAorJ1hzqEsKxlZcB3npkOqTMKdjxXxbhuZB03ICuOWjDiAEGSG4EMSVdN3fHVbKVZzmWIHvh41RKM7oYiH3USudFv/NwBsvyXo9AVmvQdw/OLi2qQoy+2vO2gD+OVNiTTEFlwsv2xfMF8DktPbmSO2wRQ/wsglcSM7+2YFJI96MIOgcByjDyP/GJKHR7/K3oRKbGb9b+EqK9i/yFXIlO01icvdQBTZFtNDuIk/4K158/ncw7VojKCCgnbYOFdmj9Dtw3/q+lHzqT73mLhaGWyFIjIRLTT1YCabrgeiOqJV6Ak5fplDKSAfQWBAxSJsLch3p5iMt4bfekZhnAFitWDFnGyPRupyToFnKaPuvdbWQKIXFNC66lMP54Jsp7Rq0VXWPxxrqpNC5JyHbxrI4iVHFG2QsctQ9Iu9cUbvMEwV3Z/u75jzY9GGhC+Wu0fvNAMJryG+9LAKVX6wur3S8nBWHmP1x+Ml1ovqYxPnALR1ZDsuDwIZJeVPWYq0Fao5jhvLxnwHbyAQobUvu9VI4szLmulqZIf77u/Uqb/GiE6rqVv5MYmi0WgloGhksKrf6SweFHd2hrfhNQ4rKf5sWhmWZ4UgRP+spOiNlqL/ZKKd5VZGo8d0AkRUtTOQJXykaUGNe0VdpVZiFd04bxFa7hhqU98waiAaas=
+  - secure: e1rCzKyvSiBFKypXJPuV3sPxV+VBylkSLaxNhixB9OnBW7a8KZvIIyxAOJRpR4RsFDFKtR6mUssuzRHmM1mc/TIXmUYqrauUyjmTKPFpfyNYsUyNzKoHDslgr4G2oBzKom2N3uGEMsYsVMRhXoeORGfgXZ/EFzMfRcVICSsZOXzSGhMNFDog2Llz5JiQbhbzjM3qxto7ZLJbcT/aAGmxnA1RSRnjMM/acFblda5mZ+ypvesUzcmECKwMqY16TvCUWE7QsHxUQhJHm9TLrjQNLlP3XhXRAlO2kBjzxxS481mGIcHPmnohDZrxZiYIbvFZrj4teEnWLM1XKIPoAluzXbLYT6RMx+8mp+7QG2LZ5HWS2N9d1qYSCSTif5Wd+KZDIcjFVZqNPw7JS/dbCQ/SelbJ8nM6TwlngTiEz9dUwh1TwEYVCPSn7szdXAcv7fEe6gdTtZ+w2ZTE5NkwgQcC6IUh5wA9+2Enomk/3y42k3gmHJjr4xb5502WRJPZrvAlO01S21UsJys6jNxYLdw3ylNbia+yFLx/TakqM0R1xKV6QcoiRGShxZA2IQv+6Cw/fgeEKeK4V2eu6J0meoAP5sJGWPZlEfWYb4gY8DMhWkjlI8SPdbGSCzvJqUyCBbAlJDap/q7f6Bdh1GaGLG/Ky0hVy2F/cv6lBWH6BaUOZJ0=
+
+before_install:
+- echo "$DOCKER_USERNAME"
+- docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PWD"
 
 install:
-  - docker build -t bf-p4c-compilers .
+- docker build -t bf-p4c-compilers .
 
 script:
-  - docker run -w /bfn/bf-p4c-compilers/build/p4c -e MAKEFLAGS bf-p4c-compilers make cpplint VERBOSE=1
+- docker run -w /bfn/bf-p4c-compilers/build/p4c -e MAKEFLAGS bf-p4c-compilers ctest
+  -R cpplint
+- docker run -w /bfn/bf-p4c-compilers/build/p4c -e MAKEFLAGS bf-p4c-compilers -L tofino
+  -LE XFAIL
