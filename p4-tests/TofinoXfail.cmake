@@ -49,6 +49,8 @@ set (TOFINO_XFAIL_TESTS
   extensions/p4_tests/p4_14/test_config_247_first_clpm.p4
 # Failure due to PHV allocation of stkvalid
   extensions/p4_tests/p4_16/stack_valid.p4
+# tofino native version of stateful alu, not fully tested yet
+  extensions/p4_tests/p4_16/stful.p4
 # BRIG-186: per_flow_enable
   testdata/p4_14_samples/12-Counters.p4
   testdata/p4_14_samples/meter.p4

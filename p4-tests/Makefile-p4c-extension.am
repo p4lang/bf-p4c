@@ -299,6 +299,10 @@ XFAIL_TESTS += \
 XFAIL_TESTS += \
     tofino/%reldir%/p4_16/stack_valid.p4.test
 
+# tofino native version of stateful alu, not fully tested yet
+XFAIL_TESTS += \
+    tofino/%reldir%/p4_16/stful.p4.test
+
 #BRIG-186: per_flow_enable bugs
 XFAIL_TESTS += \
     tofino/testdata/p4_14_samples/12-Counters.p4.test \

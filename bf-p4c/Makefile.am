@@ -191,9 +191,11 @@ ir_DEF_FILES += \
 
 p4include_HEADERS += $(srcdir)/%reldir%/p4include/tofino_model.p4 \
     $(srcdir)/%reldir%/p4include/tofino.p4
+
 p4include_tofinodir = $(p4includedir)/tofino
 p4include_tofino_HEADERS = \
     $(srcdir)/%reldir%/p4include/tofino/stateful_alu.p4
+
 p4_14include_tofinodir = $(p4_14includedir)/tofino
 p4_14include_tofino_HEADERS = \
     $(srcdir)/%reldir%/p4_14include/tofino/constants.p4 \
