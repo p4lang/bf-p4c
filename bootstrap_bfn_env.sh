@@ -77,6 +77,7 @@ sudo apt-get install -y $apt_packages || die "Failed to install needed packages"
 sudo pip install pyinstaller || die "Failed to install needed packages"
 sudo apt-get remove -y python-thrift    # remove this broken package in case it was installed
 sudo pip install thrift || die "Failed to install needed packages"  # need this one instead
+sudo apt-get install libboost-iostreams-dev || die "Failed to update boost-iostream"
 
 echo "Using $topdir as top level directory for git repositories"
 echo Using MAKEFLAGS=${MAKEFLAGS:=-j 4}
