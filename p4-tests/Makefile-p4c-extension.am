@@ -17,6 +17,8 @@ p4_tests_tofino.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile-p4c-extension.am $(w
    $(srcdir)/%reldir%/p4_14/c2/*/*.p4 \
    $(srcdir)/%reldir%/p4_14/c3/*/*.p4 \
    $(srcdir)/%reldir%/p4_14/jenkins/*/*.p4 \
+   $(srcdir)/%reldir%/p4_14/c4/*/*.p4 \
+   $(srcdir)/%reldir%/p4_14/switch/*/*.p4 \
    $(srcdir)/%reldir%/p4_14/switch_*/switch.p4 ) \
    $(srcdir)/testdata/p4_14_samples \
    $(srcdir)/%reldir%/p4_16 \
@@ -33,6 +35,8 @@ p4_tests_p14_to_16.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile-p4c-extension.am 
    $(srcdir)/%reldir%/p4_14/c2/*/*.p4 \
    $(srcdir)/%reldir%/p4_14/c3/*/*.p4 \
    $(srcdir)/%reldir%/p4_14/jenkins/*/*.p4 \
+   $(srcdir)/%reldir%/p4_14/c4/*/*.p4 \
+   $(srcdir)/%reldir%/p4_14/switch/*/*.p4 \
    $(srcdir)/%reldir%/p4_14/switch_*/switch.p4 ) \
    $(srcdir)/%reldir%/p4_14
 	@$(GENTESTS) $(srcdir) p14_to_16 $(srcdir)/%reldir%/test-v12-sample.sh $^ >$@ || ( rm $@ && false )
@@ -155,6 +159,10 @@ XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_214_full_stats.p4.test
 XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_174_stateful_flow_learning.p4.test
 XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_205_modify_field_from_hash.p4.test
 XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_214_full_stats.p4.test
+XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_295_polynomial_hash.p4.test
+XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_295_polynomial_hash.p4.test
+XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_295_polynomial_hash.p4.test
+XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_300_multi_hash.p4.test
 
 # P4_14->16 unhandled primitives
 XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_182_warp_primitive.p4.test
@@ -364,6 +372,15 @@ XFAIL_TESTS += tofino/%reldir%/p4_14/adb_shared3.p4.test
 # Failure due to tbl-cfg incorrect driver code for split parameter in single ad table container
 XFAIL_TESTS += tofino/%reldir%/p4_14/adjust_instr4.p4.test
 
+# BRIG-67
+XFAIL_TESTS += \
+               tofino/%reldir%/p4_14/test_config_308_hash_96b.p4.test \
+               p14_to_16/%reldir%/p4_14/test_config_308_hash_96b.p4.test \
+               bmv2/%reldir%/p4_14/test_config_308_hash_96b.p4.test \
+               tofino/%reldir%/p4_14/test_config_311_hash_adb.p4.test \
+               p14_to_16/%reldir%/p4_14/test_config_311_hash_adb.p4.test \
+               bmv2/%reldir%/p4_14/test_config_311_hash_adb.p4.test
+               
 # BRIG-99
 XFAIL_TESTS += \
 		tofino/%reldir%/p4_14/test_config_123_meter_2.p4.test \
@@ -392,7 +409,7 @@ XFAIL_TESTS += \
 
 # BRIG-103
 XFAIL_TESTS +=  tofino/testdata/p4_14_samples/instruct1.p4.test \
-	    tofino/testdata/p4_14_samples/instruct3.p4.test \
+	        tofino/testdata/p4_14_samples/instruct3.p4.test \
 		tofino/%reldir%/p4_14/14-MultipleActionsInAContainer.p4.test \
 		tofino/%reldir%/p4_14/dileep.p4.test \
 		tofino/%reldir%/p4_14/dileep2.p4.test \
@@ -603,7 +620,8 @@ XFAIL_TESTS += \
                 p14_to_16/%reldir%/p4_14/c3/COMPILER-393/case2277.p4.test
 
 # BRIG-134
-XFAIL_TESTS += tofino/%reldir%/p4_14/jenkins/alpm_test/alpm_test.p4.test
+XFAIL_TESTS += tofino/%reldir%/p4_14/jenkins/alpm_test/alpm_test.p4.test \
+               tofino/%reldir%/p4_14/test_config_294_parser_loop.p4.test
 
 # BRIG-136
 XFAIL_TESTS += tofino/%reldir%/p4_14/jenkins/basic_ipv4/basic_ipv4.p4.test \
@@ -636,7 +654,10 @@ XFAIL_TESTS += tofino/%reldir%/p4_14/jenkins/meters/meters_one.p4.test \
 
 #BRIG-142
 XFAIL_TESTS += tofino/%reldir%/p4_14/jenkins/pgrs/pgrs_one.p4.test \
-               p14_to_16/%reldir%/p4_14/jenkins/pgrs/pgrs_one.p4.test
+               p14_to_16/%reldir%/p4_14/jenkins/pgrs/pgrs_one.p4.test \
+               tofino/%reldir%/p4_14/test_config_313_neg_test_addr_modes.p4.test \
+               p14_to_16/%reldir%/p4_14/test_config_313_neg_test_addr_modes.p4.test \
+               bmv2/%reldir%/p4_14/test_config_313_neg_test_addr_modes.p4.test
 
 #BRIG-56
 XFAIL_TESTS += tofino/%reldir%/p4_14/jenkins/smoke_large_tbls/smoke_large_tbls.p4.test
@@ -652,11 +673,45 @@ XFAIL_TESTS += tofino/%reldir%/p4_14/jenkins/iterator/iterator.p4.test
 XFAIL_TESTS += tofino/%reldir%/p4_14/jenkins/mau_mem_test/mau_mem_test.p4.test \
                p14_to_16/%reldir%/p4_14/jenkins/mau_mem_test/mau_mem_test.p4.test \
                tofino/%reldir%/p4_14/jenkins/mau_tcam_test/mau_tcam_test.p4.test \
-               p14_to_16/%reldir%/p4_14/jenkins/mau_tcam_test/mau_tcam_test.p4.test
+               p14_to_16/%reldir%/p4_14/jenkins/mau_tcam_test/mau_tcam_test.p4.test \
+               tofino/%reldir%/p4_14/test_config_307_dyn_selection.p4.test \
+               p14_to_16/%reldir%/p4_14/test_config_307_dyn_selection.p4.test \
+               bmv2/%reldir%/p4_14/test_config_307_dyn_selection.p4.test \
+               tofino/%reldir%/p4_14/test_config_309_wide_dyn_selection.p4.test \
+               p14_to_16/%reldir%/p4_14/test_config_309_wide_dyn_selection.p4.test \
+               bmv2/%reldir%/p4_14/test_config_309_wide_dyn_selection.p4.test \
+               tofino/%reldir%/p4_14/test_config_314_sym_hash.p4.test \
+               p14_to_16/%reldir%/p4_14/test_config_314_sym_hash.p4.test \
+               bmv2/%reldir%/p4_14/test_config_314_sym_hash.p4.test \
+               tofino/%reldir%/p4_14/test_config_315_sym_hash_neg_test_1.p4.test \
+               p14_to_16/%reldir%/p4_14/test_config_315_sym_hash_neg_test_1.p4.test \
+               bmv2/%reldir%/p4_14/test_config_315_sym_hash_neg_test_1.p4.test \
+               tofino/%reldir%/p4_14/test_config_316_sym_hash_neg_test_2.p4.test \
+               p14_to_16/%reldir%/p4_14/test_config_316_sym_hash_neg_test_2.p4.test \
+               bmv2/%reldir%/p4_14/test_config_316_sym_hash_neg_test_2.p4.test \
+               tofino/%reldir%/p4_14/test_config_317_sym_hash_neg_test_3.p4.test \
+               p14_to_16/%reldir%/p4_14/test_config_317_sym_hash_neg_test_3.p4.test \
+               bmv2/%reldir%/p4_14/test_config_317_sym_hash_neg_test_3.p4.test \
+               tofino/%reldir%/p4_14/test_config_318_sym_hash_neg_test_4.p4.test \
+               p14_to_16/%reldir%/p4_14/test_config_318_sym_hash_neg_test_4.p4.test \
+               bmv2/%reldir%/p4_14/test_config_318_sym_hash_neg_test_4.p4.test \
+               tofino/%reldir%/p4_14/test_config_319_sym_hash_neg_test_5.p4.test \
+               p14_to_16/%reldir%/p4_14/test_config_319_sym_hash_neg_test_5.p4.test \
+               bmv2/%reldir%/p4_14/test_config_319_sym_hash_neg_test_5.p4.test
 
 #COMPILER-329
 XFAIL_TESTS += tofino/%reldir%/p4_14/jenkins/drivers_test/drivers_test_one.p4.test \
-               p14_to_16/%reldir%/p4_14/jenkins/drivers_test/drivers_test_one.p4.test
+               p14_to_16/%reldir%/p4_14/jenkins/drivers_test/drivers_test_one.p4.test \
+               tofino/%reldir%/p4_14/c4/COMPILER-529/dnets_bng_case1.p4.test \
+               p14_to_16/%reldir%/p4_14/c4/COMPILER-529/dnets_bng_case1.p4.test \
+               tofino/%reldir%/p4_14/c4/COMPILER-529/dnets_bng_case2.p4.test \
+               p14_to_16/%reldir%/p4_14/c4/COMPILER-529/dnets_bng_case2.p4.test \
+               tofino/%reldir%/p4_14/switch/minsizes/switch_minsizes.p4.test \
+               p14_to_16/%reldir%/p4_14/switch/minsizes/switch_minsizes.p4.test \
+               tofino/%reldir%/p4_14/switch/sflow_profile/switch_sflow_profile.p4.test \
+               p14_to_16/%reldir%/p4_14/switch/sflow_profile/switch_sflow_profile.p4.test \
+               tofino/%reldir%/p4_14/switch/transit_post_l45/switch_TRANSIT_post_L45.p4.test \
+               p14_to_16/%reldir%/p4_14/switch/transit_post_l45/switch_TRANSIT_post_L45.p4.test
 
 #BRIG-140
 XFAIL_TESTS += tofino/%reldir%/p4_14/jenkins/pvs/pvs.p4.test \
@@ -765,4 +820,35 @@ XFAIL_TESTS += \
     tofino/%reldir%/p4_14/c2/COMPILER-466/case2563_without_nop.p4.test \
     tofino/%reldir%/p4_14/c2/COMPILER-475/case2600.p4.test \
     tofino/%reldir%/p4_14/c2/COMPILER-502/case2675.p4.test \
+    tofino/%reldir%/p4_14/c2/COMPILER-510/case2682.p4.test \
     tofino/%reldir%/p4_14/c2/COMPILER-510/case2682.p4.test
+
+#BRIG-179
+XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_261_mutually_exclusive_src_ops.p4.test \
+               p14_to_16/%reldir%/p4_14/test_config_261_mutually_exclusive_src_ops.p4.test \
+               bmv2/%reldir%/p4_14/test_config_261_mutually_exclusive_src_ops.p4.test \
+               tofino/%reldir%/p4_14/test_config_262_req_packing.p4.test \
+               p14_to_16/%reldir%/p4_14/test_config_262_req_packing.p4.test \
+               bmv2/%reldir%/p4_14/test_config_262_req_packing.p4.test \
+               tofino/%reldir%/p4_14/test_config_277_meta_init.p4.test \
+               p14_to_16/%reldir%/p4_14/test_config_277_meta_init.p4.test \
+               bmv2/%reldir%/p4_14/test_config_277_meta_init.p4.test \
+               tofino/%reldir%/p4_14/test_config_278_meta_init2.p4.test \
+               p14_to_16/%reldir%/p4_14/test_config_278_meta_init2.p4.test \
+               bmv2/%reldir%/p4_14/test_config_278_meta_init2.p4.test
+
+#BRIG-180
+XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_284_swap_primitive.p4.test \
+               p14_to_16/%reldir%/p4_14/test_config_284_swap_primitive.p4.test \
+               bmv2/%reldir%/p4_14/test_config_284_swap_primitive.p4.test
+
+#BRIG-181
+XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_291_default_action.p4.test \
+               p14_to_16/%reldir%/p4_14/test_config_291_default_action.p4.test \
+               bmv2/%reldir%/p4_14/test_config_291_default_action.p4.test
+
+#BRIG-182
+XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_297_big_metadata.p4.test
+
+#BRIG-183
+XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_303_static_table.p4.test

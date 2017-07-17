@@ -38,6 +38,8 @@ set (TOFINO_XFAIL_TESTS
   extensions/p4_tests/p4_14/test_config_174_stateful_flow_learning.p4
   extensions/p4_tests/p4_14/test_config_205_modify_field_from_hash.p4
   extensions/p4_tests/p4_14/test_config_214_full_stats.p4
+  extensions/p4_tests/p4_14/test_config_295_polynomial_hash.p4
+  extensions/p4_tests/p4_14/test_config_300_multi_hash.p4
 # P4_14->16 unhandled primitives
   extensions/p4_tests/p4_14/test_config_182_warp_primitive.p4
   extensions/p4_tests/p4_14/test_config_183_sample_e2e.p4
@@ -299,6 +301,7 @@ set (TOFINO_XFAIL_TESTS
   testdata/p4_14_samples/packet_redirect.p4
   extensions/p4_tests/p4_14/test_checksum.p4
   extensions/p4_tests/p4_14/test_config_102_clone.p4
+  testdata/p4_16_samples/issue430-1-bmv2.p4
   extensions/p4_tests/p4_16/clone-bmv2.p4
 # BRIG_132
   testdata/p4_16_samples/union-bmv2.p4
@@ -306,6 +309,7 @@ set (TOFINO_XFAIL_TESTS
   extensions/p4_tests/p4_14/adjust_instr5.p4
 # BRIG-134
   extensions/p4_tests/p4_14/jenkins/alpm_test/alpm_test.p4
+  extensions/p4_tests/p4_14/test_config_294_parser_loop.p4
 # BRIG-136
   extensions/p4_tests/p4_14/jenkins/basic_ipv4/basic_ipv4.p4
   extensions/p4_tests/p4_14/jenkins/exm_direct/exm_direct_one.p4
@@ -323,6 +327,14 @@ set (TOFINO_XFAIL_TESTS
 #BRIG-139
   extensions/p4_tests/p4_14/jenkins/mau_mem_test/mau_mem_test.p4
   extensions/p4_tests/p4_14/jenkins/mau_tcam_test/mau_tcam_test.p4
+  extensions/p4_tests/p4_14/test_config_307_dyn_selection.p4
+  extensions/p4_tests/p4_14/test_config_309_wide_dyn_selection.p4
+  extensions/p4_tests/p4_14/test_config_314_sym_hash.p4
+  extensions/p4_tests/p4_14/test_config_315_sym_hash_neg_test_1.p4
+  extensions/p4_tests/p4_14/test_config_316_sym_hash_neg_test_2.p4
+  extensions/p4_tests/p4_14/test_config_317_sym_hash_neg_test_3.p4
+  extensions/p4_tests/p4_14/test_config_318_sym_hash_neg_test_4.p4
+  extensions/p4_tests/p4_14/test_config_319_sym_hash_neg_test_5.p4
 #BRIG-140
   extensions/p4_tests/p4_14/jenkins/pvs/pvs.p4
   extensions/p4_tests/p4_14/jenkins/parser_intr_md/parser_intr_md.p4
@@ -330,6 +342,7 @@ set (TOFINO_XFAIL_TESTS
   extensions/p4_tests/p4_14/jenkins/pctr/pctr.p4
 #BRIG-142
   extensions/p4_tests/p4_14/jenkins/pgrs/pgrs_one.p4
+  extensions/p4_tests/p4_14/test_config_313_neg_test_addr_modes.p4
 #BRIG-143
   extensions/p4_tests/p4_14/jenkins/stful/stful.p4
 # BRIG-146
@@ -387,6 +400,13 @@ set (TOFINO_XFAIL_TESTS
 #COMPILER-329
   extensions/p4_tests/p4_14/jenkins/meters/meters_one.p4
   extensions/p4_tests/p4_14/jenkins/drivers_test/drivers_test_one.p4
+  extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case1.p4
+  extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case2.p4
+  extensions/p4_tests/p4_14/switch/minsizes/switch_minsizes.p4
+  extensions/p4_tests/p4_14/switch/sflow_profile/switch_sflow_profile.p4
+  extensions/p4_tests/p4_14/switch/transit_post_l45/switch_TRANSIT_post_L45.p4
+#Need further discussion with Seth and Gana before JIRA ticket
+  testdata/p4_14_samples/sai_p4.p4
 # uncharacterized failures
   extensions/p4_tests/p4_14/c1/COMPILER-133/full_tphv.p4
   extensions/p4_tests/p4_14/c1/COMPILER-228/case1644.p4
@@ -436,4 +456,20 @@ set (TOFINO_XFAIL_TESTS
   extensions/p4_tests/p4_14/c2/COMPILER-502/case2675.p4
   extensions/p4_tests/p4_14/c2/COMPILER-510/case2682.p4
 #  extensions/p4_tests/p4_14/jenkins/stats_pi/stats_pi.p4
+# BRIG-67
+  extensions/p4_tests/p4_14/test_config_308_hash_96b.p4
+  extensions/p4_tests/p4_14/test_config_311_hash_adb.p4
+# BRIG-179
+  extensions/p4_tests/p4_14/test_config_261_mutually_exclusive_src_ops.p4
+  extensions/p4_tests/p4_14/test_config_262_req_packing.p4
+  extensions/p4_tests/p4_14/test_config_277_meta_init.p4
+  extensions/p4_tests/p4_14/test_config_278_meta_init2.p4
+# BRIG-180
+  extensions/p4_tests/p4_14/test_config_284_swap_primitive.p4
+# BRIG-181
+  extensions/p4_tests/p4_14/test_config_291_default_action.p4
+# BRIG-182extensions/p4_tests
+  extensions/p4_tests/p4_14/test_config_297_big_metadata.p4
+# BRIG-183
+  extensions/p4_tests/p4_14/test_config_303_static_table.p4
   )

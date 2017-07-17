@@ -23,4 +23,22 @@ set (BMV2_XFAIL_TESTS
   extensions/p4_tests/p4_14/test_config_247_first_clpm.p4
   extensions/p4_tests/p4_16/stack_valid.p4
   extensions/p4_tests/p4_14/shared_names.p4
+  extensions/p4_tests/p4_14/test_config_295_polynomial_hash.p4
+  extensions/p4_tests/p4_14/test_config_308_hash_96b.p4
+  extensions/p4_tests/p4_14/test_config_311_hash_adb.p4
+  extensions/p4_tests/p4_14/test_config_313_neg_test_addr_modes.p4
+  extensions/p4_tests/p4_14/test_config_307_dyn_selection.p4
+  extensions/p4_tests/p4_14/test_config_309_wide_dyn_selection.p4
+  extensions/p4_tests/p4_14/test_config_314_sym_hash.p4
+  extensions/p4_tests/p4_14/test_config_315_sym_hash_neg_test_1.p4
+  extensions/p4_tests/p4_14/test_config_316_sym_hash_neg_test_2.p4
+  extensions/p4_tests/p4_14/test_config_317_sym_hash_neg_test_3.p4
+  extensions/p4_tests/p4_14/test_config_318_sym_hash_neg_test_4.p4
+  extensions/p4_tests/p4_14/test_config_319_sym_hash_neg_test_5.p4
+  extensions/p4_tests/p4_14/test_config_261_mutually_exclusive_src_ops.p4
+  extensions/p4_tests/p4_14/test_config_262_req_packing.p4
+  extensions/p4_tests/p4_14/test_config_277_meta_init.p4
+  extensions/p4_tests/p4_14/test_config_278_meta_init2.p4.test
+  extensions/p4_tests/p4_14/test_config_284_swap_primitive.p4.test
+  extensions/p4_tests/p4_14/test_config_291_default_action.p4.test 
   )
