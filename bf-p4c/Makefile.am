@@ -29,6 +29,7 @@ tofino_backend_common_UNIFIED = \
 	%reldir%/common/header_stack.cpp \
 	%reldir%/common/live_at_entry.cpp \
 	%reldir%/common/live_range_overlay.cpp \
+	%reldir%/common/metadata_constant_propagation.cpp \
 	%reldir%/common/remap_intrin.cpp \
 	%reldir%/common/param_binding.cpp \
 	%reldir%/common/parser_overlay.cpp \
@@ -43,6 +44,7 @@ noinst_HEADERS += \
 	%reldir%/common/header_stack.h \
 	%reldir%/common/live_at_entry.h \
 	%reldir%/common/live_range_overlay.h \
+	%reldir%/common/metadata_constant_propagation.h \
 	%reldir%/common/remap_intrin.h \
 	%reldir%/common/param_binding.h \
 	%reldir%/common/parser_overlay.h \

@@ -299,7 +299,7 @@ set (TOFINO_XFAIL_TESTS
   testdata/p4_14_samples/packet_redirect.p4
   extensions/p4_tests/p4_14/test_checksum.p4
   extensions/p4_tests/p4_14/test_config_102_clone.p4
-  testdata/p4_16_samples/clone-bmv2.p4
+  extensions/p4_tests/p4_16/clone-bmv2.p4
 # BRIG_132
   testdata/p4_16_samples/union-bmv2.p4
 # BRIG-133

@@ -32,6 +32,7 @@ limitations under the License.
 #include "tofino/common/header_stack.h"
 #include "tofino/common/live_at_entry.h"
 #include "tofino/common/live_range_overlay.h"
+#include "tofino/common/metadata_constant_propagation.h"
 #include "tofino/mau/asm_output.h"
 #include "tofino/mau/empty_controls.h"
 #include "tofino/mau/gateway.h"
@@ -194,6 +195,11 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
         &phv,
         &defuse,
         new AddBridgedMetadata(phv, defuse),
+        &phv,
+        &defuse,
+        new MetadataConstantPropagation(phv, defuse),
+        &phv,
+        &defuse,
         new Digests,
         &phv,  // only needed to avoid warnings about otherwise unused ingress/egress_port?
         new LiveAtEntry(phv),
