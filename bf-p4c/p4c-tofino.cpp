@@ -23,6 +23,7 @@
 #include "tofinoOptions.h"
 #include "version.h"
 #include "control-plane/p4RuntimeSerializer.h"
+#include "arch/simple_switch.h"
 
 int main(int ac, char **av) {
     vector<cstring> supported_arch = { "tofino-v1model-barefoot", "tofino-native-barefoot" };
@@ -45,6 +46,11 @@ int main(int ac, char **av) {
         return 1; }
 
     auto program = P4::parseP4File(options);
+
+    if (options.target == "tofino-v1model-barefoot" && options.native_arch) {
+        program = P4::translateSimpleSwitch(program, hook);
+    }
+
     program = P4::FrontEnd(hook).run(options, program, true);
     if (!program)
         return 1;

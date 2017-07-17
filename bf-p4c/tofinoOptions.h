@@ -10,6 +10,7 @@ class Tofino_Options : public CompilerOptions {
     bool phv_interference = true;
     bool phv_slicing = true;
     bool phv_overlay = true;
+    bool native_arch = false;
 
     Tofino_Options() {
         registerOption("--trivpa", nullptr,
@@ -24,6 +25,9 @@ class Tofino_Options : public CompilerOptions {
         registerOption("--nophvover", nullptr,
             [this](const char *) { phv_overlay = false; return false; },
             "do not use cluster_phv_overlay based PHV overlays");
+        registerOption("--native", nullptr,
+            [this](const char *) { native_arch = true; return true; },
+            "use tofino native model as target architecture (experimental)");
         target = "tofino-v1model-barefoot";
     }
 };

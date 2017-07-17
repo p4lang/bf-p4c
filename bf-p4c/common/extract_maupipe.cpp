@@ -688,10 +688,10 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::P4Program *program, Tofino_Opt
         error("No main switch");
         return nullptr; }
 
-    if (options.target == "tofino-v1model-barefoot") {
+    if (options.target == "tofino-v1model-barefoot" && !options.native_arch) {
         return extract_v1model_arch(&refMap, &typeMap, top);
     }
-    if (options.target == "tofino-native-barefoot") {
+    if (options.target == "tofino-native-barefoot" || options.native_arch) {
         return extract_native_arch(&refMap, &typeMap, top);
     }
     error("Unknown architecture %s", options.target);
