@@ -101,7 +101,7 @@ class PHV_Container {
     Container_status status_i = Container_status::EMPTY;
     ordered_map<PhvInfo::Field *, std::list<Container_Content *>>
         fields_in_container_i;                               // fields binned in this container
-                                                             // list of ccs necessary for mutliple
+                                                             // list of ccs necessary for multiple
                                                              // sliced fields in same container
     bool deparsed_i = false;                                 // true if container is deparsed
                                                              // has deparsed field(s)
@@ -192,7 +192,7 @@ class PHV_Container {
     void single_field_overlay(
         PhvInfo::Field *f,
         const int start,
-        const int width,
+        int width,
         const int field_bit_lo,
         Container_Content::Pass pass = Container_Content::Pass::Field_Interference);
     void field_overlays(

@@ -230,7 +230,6 @@ set (TOFINO_XFAIL_TESTS
   extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
   extensions/p4_tests/p4_14/switch_l2_profile.p4
   testdata/p4_14_samples/05-FullTPHV.p4
-  testdata/p4_14_samples/06-FullTPHV1.p4
   testdata/p4_14_samples/07-FullTPHV2.p4
   testdata/p4_14_samples/08-FullTPHV3.p4
   testdata/p4_14_samples/parser_dc_full.p4

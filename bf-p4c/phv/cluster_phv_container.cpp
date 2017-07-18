@@ -407,7 +407,7 @@ void
 PHV_Container::single_field_overlay(
     PhvInfo::Field *f,
     const int start,
-    const int width,
+    int width,
     const int field_bit_lo,
     Container_Content::Pass pass) {
     //
@@ -417,6 +417,10 @@ PHV_Container::single_field_overlay(
     assert(f);
     assert(start >= 0);
     assert(width >= 0);
+    //
+    // if field width is less that substratum width, reduce width required
+    //
+    width = std::min(f->phv_use_width(), width);
     //
     // if substratum area is not yet associated with a field, taint color will be 0
     // need to go through steps for container area allocation, updating its avail bits
@@ -538,13 +542,17 @@ PHV_Container::lowest_bit_and_ccgf_width(bool by_cluster_id) {
             int id = by_cluster_id? cc->field()->cl_id_num(): cc->field()->id;
             int lo = cc->lo();
             int width = cc->width();
+            if (PHV_Container::constraint_no_cohabit(cc->field())) {
+                // entire container can be considered for overlay
+                width = static_cast<int>(width_i);
+            }
             if (lbcw->count(id)) {
                 lo = std::min(lo, lbcw->at(id).first);
                 width += lbcw->at(id).second;
                 //
                 // aggregate interference based overlays can overlay on top of each other
                 // having the same cluster_id_num
-                // double (mutliple) counting their widths can exceed container width
+                // double (multiple) counting their widths can exceed container width
                 //
                 width = std::min(width, static_cast<int>(width_i));
             }
@@ -785,7 +793,10 @@ PHV_Container::holes(std::list<std::pair<int, int>>& holes_list) {
     } else {
         assert(status_i == Container_status::FULL);
         // "Full" container w/ pack-constrained fields can yield unoccupied, unassignable holes
-        holes(bits_v, '-', holes_list);
+        // however, if there are overlayed fields then no holes
+        if (fields_in_container_i.size() == 1) {
+            holes(bits_v, '-', holes_list);
+        }
     }
 }  // holes holes_list
 
@@ -964,10 +975,20 @@ void PHV_Container::sanity_check_container(const std::string& msg, bool check_de
             }
             // sanity check constraints on field
             if (constraint_no_cohabit(cc->field())) {
-                if (fields_in_container_i.size() != 1) {
+                // consider ccs that are not overlayed()
+                int num_non_overlayed_cc = 0;
+                for (auto &x : Values(fields_in_container_i)) {
+                    for (auto &y : x) {
+                        if (!y->overlayed()) {
+                           num_non_overlayed_cc++;
+                        }
+                    }
+                }
+                if (num_non_overlayed_cc != 1) {
                     LOG3("*****cluster_phv_container.cpp:sanity_FAIL*****....."
                     << msg_1
                     << " cohabit fields with 'constraint_no_cohabit' "
+                    << std::endl
                     << cc->field());
                 }
                 if (cc->overlayed()) {
