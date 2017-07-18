@@ -41,7 +41,8 @@ set (TOFINO_TEST_SUITES
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c2/*/*.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c3/*/*.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c4/*/*.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch/*/*.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch/p4src/switch.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch_profiles/*/*.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/jenkins/*/*.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch_*/switch.p4
   ${v1tests}
@@ -62,7 +63,8 @@ set (P14_TEST_SUITES
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c2/*/*.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c3/*/*.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c4/*/*.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch/*/*.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch/p4src/switch.p4
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch_profiles/*/*.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/jenkins/*/*.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch_*/switch.p4
   )

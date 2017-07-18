@@ -8,3 +8,6 @@
 	path = p4-tests/p4_16/google-tor
 	url = git@github.com:barefootnetworks/google.git
 	branch = bf-tor
+[submodule "p4-tests/p4_14/switch"]
+	path = p4-tests/p4_14/switch
+	url = git@github.com:barefootnetworks/switch.git

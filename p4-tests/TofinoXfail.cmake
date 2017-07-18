@@ -187,6 +187,8 @@ set (TOFINO_XFAIL_TESTS
   extensions/p4_tests/p4_14/adb_shared3.p4
 # Failure due to tbl-cfg incorrect driver code for split parameter in single ad table container
   extensions/p4_tests/p4_14/adjust_instr4.p4
+# BRIG-28
+  extensions/p4_tests/p4_14/switch/p4src/switch.p4
 #BRIG-56
   extensions/p4_tests/p4_14/jenkins/smoke_large_tbls/smoke_large_tbls.p4
 # BRIG-99
@@ -400,9 +402,9 @@ set (TOFINO_XFAIL_TESTS
   extensions/p4_tests/p4_14/jenkins/drivers_test/drivers_test_one.p4
   extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case1.p4
   extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case2.p4
-  extensions/p4_tests/p4_14/switch/minsizes/switch_minsizes.p4
-  extensions/p4_tests/p4_14/switch/sflow_profile/switch_sflow_profile.p4
-  extensions/p4_tests/p4_14/switch/transit_post_l45/switch_TRANSIT_post_L45.p4
+  extensions/p4_tests/p4_14/switch_profiles/minsizes/switch_minsizes.p4
+  extensions/p4_tests/p4_14/switch_profiles/sflow_profile/switch_sflow_profile.p4
+  extensions/p4_tests/p4_14/switch_profiles/transit_post_l45/switch_TRANSIT_post_L45.p4
 #Need further discussion with Seth and Gana before JIRA ticket
   testdata/p4_14_samples/sai_p4.p4
 # uncharacterized failures

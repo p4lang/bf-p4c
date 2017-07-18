@@ -18,7 +18,8 @@ p4_tests_tofino.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile-p4c-extension.am $(w
    $(srcdir)/%reldir%/p4_14/c3/*/*.p4 \
    $(srcdir)/%reldir%/p4_14/jenkins/*/*.p4 \
    $(srcdir)/%reldir%/p4_14/c4/*/*.p4 \
-   $(srcdir)/%reldir%/p4_14/switch/*/*.p4 \
+   $(srcdir)/%reldir%/p4_14/switch/p4src/switch.p4 \
+   $(srcdir)/%reldir%/p4_14/switch_profiles/*/*.p4 \
    $(srcdir)/%reldir%/p4_14/switch_*/switch.p4 ) \
    $(srcdir)/testdata/p4_14_samples \
    $(srcdir)/%reldir%/p4_16 \
@@ -36,7 +37,8 @@ p4_tests_p14_to_16.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile-p4c-extension.am 
    $(srcdir)/%reldir%/p4_14/c3/*/*.p4 \
    $(srcdir)/%reldir%/p4_14/jenkins/*/*.p4 \
    $(srcdir)/%reldir%/p4_14/c4/*/*.p4 \
-   $(srcdir)/%reldir%/p4_14/switch/*/*.p4 \
+   $(srcdir)/%reldir%/p4_14/switch/p4src/switch.p4 \
+   $(srcdir)/%reldir%/p4_14/switch_profiles/*/*.p4 \
    $(srcdir)/%reldir%/p4_14/switch_*/switch.p4 ) \
    $(srcdir)/%reldir%/p4_14
 	@$(GENTESTS) $(srcdir) p14_to_16 $(srcdir)/%reldir%/test-v12-sample.sh $^ >$@ || ( rm $@ && false )
@@ -379,7 +381,7 @@ XFAIL_TESTS += \
                tofino/%reldir%/p4_14/test_config_311_hash_adb.p4.test \
                p14_to_16/%reldir%/p4_14/test_config_311_hash_adb.p4.test \
                bmv2/%reldir%/p4_14/test_config_311_hash_adb.p4.test
-               
+
 # BRIG-99
 XFAIL_TESTS += \
 		tofino/%reldir%/p4_14/test_config_123_meter_2.p4.test \
@@ -704,12 +706,19 @@ XFAIL_TESTS += tofino/%reldir%/p4_14/jenkins/drivers_test/drivers_test_one.p4.te
                p14_to_16/%reldir%/p4_14/c4/COMPILER-529/dnets_bng_case1.p4.test \
                tofino/%reldir%/p4_14/c4/COMPILER-529/dnets_bng_case2.p4.test \
                p14_to_16/%reldir%/p4_14/c4/COMPILER-529/dnets_bng_case2.p4.test \
-               tofino/%reldir%/p4_14/switch/minsizes/switch_minsizes.p4.test \
-               p14_to_16/%reldir%/p4_14/switch/minsizes/switch_minsizes.p4.test \
-               tofino/%reldir%/p4_14/switch/sflow_profile/switch_sflow_profile.p4.test \
-               p14_to_16/%reldir%/p4_14/switch/sflow_profile/switch_sflow_profile.p4.test \
-               tofino/%reldir%/p4_14/switch/transit_post_l45/switch_TRANSIT_post_L45.p4.test \
-               p14_to_16/%reldir%/p4_14/switch/transit_post_l45/switch_TRANSIT_post_L45.p4.test
+               tofino/%reldir%/p4_14/switch_profiles/minsizes/switch_minsizes.p4.test \
+               p14_to_16/%reldir%/p4_14/switch_profiles/minsizes/switch_minsizes.p4.test \
+               tofino/%reldir%/p4_14/switch_profiles/sflow_profile/switch_sflow_profile.p4.test \
+               p14_to_16/%reldir%/p4_14/switch_profiles/sflow_profile/switch_sflow_profile.p4.test \
+               tofino/%reldir%/p4_14/switch_profiles/transit_post_l45/switch_TRANSIT_post_L45.p4.test \
+               p14_to_16/%reldir%/p4_14/switch_profiles/transit_post_l45/switch_TRANSIT_post_L45.p4.test
+
+# Switch
+BFN_SWITCH   = \
+	       tofino/%reldir%/p4_14/switch/p4src/switch.p4.test \
+	       p14_to_16/%reldir%/p4_14/switch/p4src/switch.p4.test
+XFAIL_TESTS += $(BFN_SWITCH)
+
 
 #BRIG-140
 XFAIL_TESTS += tofino/%reldir%/p4_14/jenkins/pvs/pvs.p4.test \

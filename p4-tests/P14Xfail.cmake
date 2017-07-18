@@ -111,13 +111,15 @@ set (P14_XFAIL_TESTS
   extensions/p4_tests/p4_14/test_config_319_sym_hash_neg_test_5.p4
   extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case1.p4
   extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case2.p4
-  extensions/p4_tests/p4_14/switch/minsizes/switch_minsizes.p4
-  extensions/p4_tests/p4_14/switch/sflow_profile/switch_sflow_profile.p4
-  extensions/p4_tests/p4_14/switch/transit_post_l45/switch_TRANSIT_post_L45.p4
+  extensions/p4_tests/p4_14/switch_profiles/minsizes/switch_minsizes.p4
+  extensions/p4_tests/p4_14/switch_profiles/sflow_profile/switch_sflow_profile.p4
+  extensions/p4_tests/p4_14/switch_profiles/transit_post_l45/switch_TRANSIT_post_L45.p4
   extensions/p4_tests/p4_14/test_config_261_mutually_exclusive_src_ops.p4
   extensions/p4_tests/p4_14/test_config_262_req_packing.p4
   extensions/p4_tests/p4_14/test_config_277_meta_init.p4
   extensions/p4_tests/p4_14/test_config_278_meta_init2.p4
   extensions/p4_tests/p4_14/test_config_284_swap_primitive.p4
   extensions/p4_tests/p4_14/test_config_291_default_action.p4
+# BRIG-28
+  extensions/p4_tests/p4_14/switch/p4src/switch.p4
   )
