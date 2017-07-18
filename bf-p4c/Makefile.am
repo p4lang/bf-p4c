@@ -174,6 +174,14 @@ noinst_HEADERS += \
 
 cpplint_FILES += $(tofino_backend_phv_UNIFIED) $(tofino_backend_phv_NONUNIFIED)
 
+tofino_backend_arch_UNIFIED = \
+	%reldir%/arch/simple_switch.cpp
+
+noinst_HEADERS += \
+	%reldir%/arch/simple_switch.h
+
+cpplint_FILES += $(tofino_backend_arch_UNIFIED) $(tofino_backend_arch_NONUNIFIED)
+
 tofino_backend_main_UNIFIED = \
 	%reldir%/backend.cpp \
 	%reldir%/midend.cpp
@@ -218,7 +226,8 @@ libtofinobackend_la_SOURCES = \
 	$(tofino_backend_main_SOURCES) \
 	$(tofino_backend_mau_SOURCES) \
 	$(tofino_backend_parde_SOURCES) \
-	$(tofino_backend_phv_SOURCES)
+	$(tofino_backend_phv_SOURCES) \
+	$(tofino_backend_arch_SOURCES)
 
 bin_PROGRAMS += p4c-tofino
 p4c_tofino_LDADD = \
