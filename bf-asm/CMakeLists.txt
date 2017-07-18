@@ -96,12 +96,67 @@ set (TFAS_COMMON_SOURCES
   widereg.cpp
   )
 
+SET (TFAS_COMMON_HEADERS
+  action_bus.h
+  asm-types.h
+  checked_array.h
+  constants.h
+  data_switchbox.h
+  deparser.h
+  escape.h
+  fdstream.h
+  hash_dist.h
+  hashexpr.h
+  input_xbar.h
+  instruction.h
+  json.h
+  misc.h
+  p4_table.h
+  parser.h
+  phv.h
+  rvalue_reference_wrapper.h
+  sections.h
+  stage.h
+  tables.h
+  target.h
+  tfas.h
+  top_level.h
+  ubits.h
+  widereg.h
+  )
+
+# \TODO: use the headers from p4c/lib for utilities
+set (TFAS_UTIL_HEADERS
+  algorithm.h
+  alloc.h
+  bitops.h
+  bitvec.h
+  hex.h
+  indent.h
+  log.h
+  map.h
+  ordered_map.h
+  range.h
+  slist.h
+  vector.h
+  )
+
 set (TFAS_GEN_SOURCES
   ${BFASM_BINARY_DIR}/asm-parse.cpp
   ${BFASM_BINARY_DIR}/gen/uptr_sizes.h)
 
 
 BISON_TARGET (asm-parse asm-parse.ypp ${CMAKE_CURRENT_BINARY_DIR}/asm-parse.cpp)
+
+set (CPPLINT_FILES
+  ${JSON2CPP_SOURCES}
+  ${REFLOW_SOURCES}
+  ${MKSIZE_SOURCES}
+  ${TFAS_COMMON_SOURCES}
+  asm-parse.ypp
+  ${TFAS_UTIL_HEADERS}
+  ${TFAS_COMMON_HEADERS}
+  )
 
 add_custom_command(OUTPUT lex-yaml.c
   COMMAND ${FLEX_EXECUTABLE} -t ${CMAKE_CURRENT_SOURCE_DIR}/lex-yaml.l > lex-yaml.c
@@ -141,6 +196,17 @@ add_custom_target(check-asm
 add_custom_target(check-sanity
   COMMAND export BUILDDIR=${BFASM_BINARY_DIR} && cd ${BFASM_SOURCE_DIR}/test &&
   ./runtests *.p4)
+
+set (CPPLINT_CMD ${BFN_P4C_SOURCE_DIR}/p4c/tools/cpplint.py)
+set (CPPLINT_ARGS --root=${BFASM_SOURCE_DIR} --extensions=h,hpp,cpp,ypp,l)
+add_custom_target(cpplint-asm
+  COMMAND ${CPPLINT_CMD} ${CPPLINT_ARGS} ${CPPLINT_FILES}
+  WORKING_DIRECTORY ${BFASM_SOURCE_DIR}
+  COMMENT "cpplint")
+add_custom_target(cpplint-asm-quiet
+  COMMAND ${CPPLINT_CMD} --quiet ${CPPLINT_ARGS} ${CPPLINT_FILES}
+  WORKING_DIRECTORY ${BFASM_SOURCE_DIR}
+  COMMENT "cpplint quietly")
 
 string(CONFIGURE "/^DECLARE_(ABSTRACT_)?TABLE_TYPE(([a-zA-Z0-9_]+)/2/c/" CTAGS_CXX_REGEXP @ONLY)
 add_custom_target(ctags-asm

@@ -13,3 +13,8 @@ add_custom_target(ctags-all
                 ${P4C_SOURCE_DIR}/midend/ ${P4C_SOURCE_DIR}/lib .
   DEPENDS ctags-asm ctags
   COMMENT "Building ctags")
+
+add_custom_target(cpplint-all
+  DEPENDS cpplint-asm cpplint
+  COMMENT "cpplint everything"
+  )
