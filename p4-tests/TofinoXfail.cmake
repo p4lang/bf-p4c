@@ -173,11 +173,10 @@ set (TOFINO_XFAIL_TESTS
 # New failures with action bus working in compiler
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
 # Failure due to needing complex deposit-field to merge two values into a container
-#   testdata/p4_14_samples/instruct5.p4 -- git #257
+# testdata/p4_14_samples/instruct5.p4 -- git #257
 # git #257 fixed this
 # but with phase-0 new problem, verification does not pass
   testdata/p4_14_samples/instruct5.p4
-  testdata/p4_14_samples/parser2.p4
 # error -- container allocated to both INGRESS and EGRESS
   extensions/p4_tests/p4_14/test_config_88_testing_action_data_allocation_3.p4
 # default drop packet instead of writing to port 0

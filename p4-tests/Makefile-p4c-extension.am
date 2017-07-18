@@ -354,8 +354,7 @@ XFAIL_TESTS += \
 # git #257 fixed this
 # but with phase-0 new problem, verification does not pass
 XFAIL_TESTS += \
-		tofino/testdata/p4_14_samples/instruct5.p4.test \
-		tofino/testdata/p4_14_samples/parser2.p4.test
+		tofino/testdata/p4_14_samples/instruct5.p4.test
 
 # error -- container allocated to both INGRESS and EGRESS
 XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_88_testing_action_data_allocation_3.p4.test

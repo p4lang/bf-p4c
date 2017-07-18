@@ -695,7 +695,10 @@ void Cluster::compute_fields_no_use_mau() {
         //
         // metadata in T_PHV can be removed but bridge_metadata deparsed must be allocated
         //
-        if (!use_pd || f->pov || (f->metadata && !f->bridged) || (f->ccgf() && f->ccgf() != f)) {
+        if (!use_pd
+            || f->pov
+            || (f->metadata && !f->bridged && !f->referenced)
+            || (f->ccgf() && f->ccgf() != f)) {
             //
             delete_set.insert(f);
         } else {
