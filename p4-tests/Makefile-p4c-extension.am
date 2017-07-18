@@ -525,7 +525,7 @@ XFAIL_TESTS += \
 		tofino/testdata/p4_14_samples/packet_redirect.p4.test \
 		tofino/%reldir%/p4_14/test_checksum.p4.test \
 		tofino/%reldir%/p4_14/test_config_102_clone.p4.test \
-		tofino/%reldir%/p4_16/clone-bmv2.p4.test \
+		tofino/%reldir%/p4_16/clone-bmv2.p4.test
 
 BRIG_132_XFAIL = tofino/testdata/p4_16_samples/union-bmv2.p4.test
 XFAIL_TESTS += $(BRIG_132_XFAIL)

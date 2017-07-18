@@ -953,7 +953,6 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
         stage_tables.push_back(std::move(stage_tbl));
         match_attributes["stage_tables"] = std::move(stage_tables);
         match_attributes["match_type"] = "exact";
-        tbl["match_key_fields"] = json::vector(); //FIXME-JSON
         tbl["meter_table_refs"] = json::vector();
         tbl["selection_table_refs"] = json::vector();
         tbl["stateful_table_refs"] = json::vector();

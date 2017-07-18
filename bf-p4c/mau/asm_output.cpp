@@ -747,6 +747,18 @@ class MauAsmOutput::EmitAction : public Inspector {
     cstring                     act_name;
     bool                        is_empty;
 
+    void action_context_json(const IR::MAU::Action *act) {
+        if (act->args.size() > 0) {
+            size_t list_index = 0;
+            out << indent << "- p4_param_order: {";
+            for (auto arg : act->args) {
+                out << arg->name << ": ";
+                out << arg->type->width_bits();
+                if (list_index != act->args.size() - 1)
+                    out << ", ";
+                list_index++; }
+            out << " }" << std::endl; }
+    }
     bool preorder(const IR::MAU::Action *act) override {
         act_name = act->name;
         for (auto prim : act->stateful) {
@@ -755,6 +767,7 @@ class MauAsmOutput::EmitAction : public Inspector {
             if (auto aa = prim->operands.at(1)->to<IR::ActionArg>()) {
                 alias[aa->name] = self.find_indirect_index(table, at); } }
         out << indent << canon_name(act->name) << ":" << std::endl;
+        action_context_json(act);
         is_empty = true;
         if (table->layout.action_data_bytes > 0) {
             self.emit_action_data_alias(out, indent, table, act);
@@ -1068,6 +1081,50 @@ void MauAsmOutput::emit_hash_action_gateway(std::ostream &out, indent_t gw_inden
     out << gw_indent << "miss: " << next_for(tbl, "", default_next) << std::endl;
 }
 
+void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
+        const IR::MAU::Table *tbl) const {
+    out << indent << "p4: { name: " << canon_name(tbl->match_table->name);
+    if (auto k = tbl->match_table->getConstantProperty("size"))
+        out << ", size: " << k->asInt();
+    for (auto at : tbl->attached)
+        if (auto ap = at->to<IR::ActionProfile>())
+            out << ", action_profile: " << canon_name(ap->name);
+    out << " }" << std::endl;
+
+    if (tbl->match_table->getKey() == nullptr)
+        return;
+    auto keys = tbl->match_table->getKey()->keyElements;
+    if (keys.size() > 0) {
+        size_t list_index = 0;
+        size_t match_key_count = 0;
+        for (auto key : keys) {
+             if (key->matchType->path->name == "selector") continue;
+             match_key_count++;
+        }
+        out << indent++ <<  "p4_param_order: " << std::endl;
+        list_index = 0;
+        for (auto key : keys) {
+            if (key->matchType->path->name == "selector") continue;
+            if (auto prim = key->expression->to<IR::Primitive>()) {
+                if (prim->name == "isValid") {
+                    auto hdr = prim->operands[0]->to<IR::HeaderRef>()->toString();
+                    out << indent << canon_name(phv.field(hdr + ".$valid")->name) << ": ";
+                } else {
+                    BUG("Unrecognized primitive as match header");
+                }
+            } else if (auto mask = key->expression->to<IR::Mask>()) {
+                out << indent << canon_name(phv.field(mask->left)->name) << ": ";
+            } else {
+                out << indent << canon_name(phv.field(key->expression)->name) << ": ";
+            }
+            cstring match_type = key->matchType->path->name;
+            out << "{ type: " << match_type << ",";
+            out << " size: " << key->expression->type->width_bits() << "}" << std::endl;
+            list_index++;
+        }
+    }
+}
+
 void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) const {
     /* FIXME -- some of this should be method(s) in IR::MAU::Table? */
     TableMatch fmt(*this, phv, tbl);
@@ -1080,13 +1137,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
     out << indent++ << tbl_type << ' '<< tbl->name << ' ' << tbl->logical_id % 16U << ':'
         << std::endl;
     if (tbl->match_table) {
-        out << indent << "p4: { name: " << canon_name(tbl->match_table->name);
-        if (auto k = tbl->match_table->getConstantProperty("size"))
-            out << ", size: " << k->asInt();
-        for (auto at : tbl->attached)
-            if (auto ap = at->to<IR::ActionProfile>())
-                out << ", action_profile: " << canon_name(ap->name);
-        out << " }" << std::endl;
+        emit_table_context_json(out, indent, tbl);
         auto memuse_name = tbl->get_use_name();
         emit_memory(out, indent, tbl->resources->memuse.at(memuse_name));
         emit_ixbar(out, indent, tbl->resources->match_ixbar,
@@ -1112,8 +1163,6 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
             next_miss = next_for(tbl, "$miss", default_next);
         }
     }
-
-
 
     if (tbl->uses_gateway() || tbl->layout.hash_action) {
         indent_t gw_indent = indent;

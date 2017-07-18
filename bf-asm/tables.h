@@ -224,6 +224,17 @@ public:
         Call(const value_t &v, Table *tbl) { setup(v, tbl); }
     };
 
+    struct p4_param {
+        std::string name;
+        unsigned position;
+        unsigned bit_width;
+        unsigned bit_width_full;
+        std::string type;
+        p4_param(std::string n = "", unsigned p = 0, unsigned bw = 0, unsigned bwf = 0, std::string t = "") : 
+            name(n), position(p), bit_width(bw), bit_width_full(bwf), type(t) {}
+    };
+    typedef std::vector<p4_param>  p4_params;
+
     class Actions {
     public:
         struct Action {
@@ -240,6 +251,7 @@ public:
             std::vector<Instruction *>          instr;
             bitvec                              slot_use;
             unsigned                            handle;
+            p4_params                           p4_params_list;
             Action(Table *, Actions *, pair_t &);
             Action(const char *n, int l) : name(n), lineno(l) {}
             bool equiv(Action *a);
@@ -348,6 +360,7 @@ public:
     Ref                         miss_next;
     std::set<Table *>           pred;
     std::vector<HashDistribution>       hash_dist;
+    p4_params                   p4_params_list;
 
     static std::map<std::string, Table *>       all;
 
@@ -403,6 +416,11 @@ public:
     void check_next(Ref &next);
     bool choose_logical_id(const slist<Table *> *work = nullptr);
     virtual int hit_next_size() const { return hit_next.size(); }
+    p4_param *find_p4_param(value_t &v, p4_params &l) { 
+        for (auto &p : l) 
+            if (p.name == v.s) return &p;
+        return nullptr;
+    }
 };
 
 class FakeTable : public Table {

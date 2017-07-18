@@ -257,3 +257,5 @@ ln -s $HOME/p4c-tofino/p4c_tofino/target/tofino/output/templates p4c-templates
 then any time you update the glass repo with a new chip.schema it will
 automatically be copied into the tofino-asm source tree.
 
+## **Assembly Syntax**
+The assembly syntax is documented in `SYNTAX.md` file

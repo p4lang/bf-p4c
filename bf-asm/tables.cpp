@@ -332,6 +332,17 @@ bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p
     } else if (kv.key == "p4") {
         if (CHECKTYPE(kv.value, tMAP))
             p4_table = P4Table::get(p4type, kv.value.map);
+    } else if (kv.key == "p4_param_order") {
+        if (CHECKTYPE(kv.value, tMAP)) {
+            for (auto &v : kv.value.map) {
+                if ((CHECKTYPE(v.key, tSTR)) && (CHECKTYPE(v.value, tMAP))) {
+                    p4_param p(v.key.s);
+                    for (auto &w : v.value.map) {
+                        if (CHECKTYPE(w.key, tSTR) && CHECKTYPE2(w.value, tSTR, tINT)) {
+                            if (w.key == "type") p.type = w.value.s;
+                            else if (w.key == "size") p.bit_width = w.value.i;
+                            else error(lineno, "Incorrect param type %s in p4_param_order", w.key.s); } }
+                    p4_params_list.emplace_back(p); } } }
     } else
         return false;
     return true;
@@ -766,15 +777,22 @@ Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv) {
                 error(i.lineno, "Invalid instruction address %d", i.i);
         } else if (i.type == tMAP) {
             for (auto &a : i.map)
-                if (CHECKTYPE(a.key, tSTR) && CHECKTYPE3(a.value, tSTR, tCMD, tINT)) {
-                    if (a.value.type == tINT) {
-                        auto k = alias.find(a.key.s);
-                        if (k == alias.end())
-                            alias.emplace(a.key.s, a.value);
-                        else {
-                            k->second.is_constant = true;
-                            k->second.value = a.value.i; }
-                    } else alias.emplace(a.key.s, a.value); }
+                if (CHECKTYPE(a.key, tSTR)) {
+                    if (a.key == "p4_param_order") {
+                        if CHECKTYPE(a.value, tMAP) {
+                            unsigned position = 0;
+                            for (auto &p : a.value.map) {
+                                if (CHECKTYPE(p.key, tSTR) && CHECKTYPE(p.value, tINT))
+                                    p4_params_list.emplace_back(p.key.s, position++, p.value.i); } }
+                    } else if (CHECKTYPE3(a.value, tSTR, tCMD, tINT)) {
+                        if (a.value.type == tINT) {
+                            auto k = alias.find(a.key.s);
+                            if (k == alias.end())
+                                alias.emplace(a.key.s, a.value);
+                            else {
+                                k->second.is_constant = true;
+                                k->second.value = a.value.i; }
+                        } else alias.emplace(a.key.s, a.value); } }
         } else if (i.type == tSTR) {
             VECTOR(value_t)     tmp;
             VECTOR_init1(tmp, i);
@@ -1036,14 +1054,23 @@ void Table::Actions::gen_tbl_cfg(json::vector &cfg) {
 
 void Table::Actions::add_p4_params(const Action &act, json::vector &cfg) {
     int index = 0;
-    for (auto &a : act.alias) {
-        json::string name = a.first;
-        int lo = remove_name_tail_range(name);
+    //for (auto &a : act.alias) {
+    //    json::string name = a.first;
+    //    int lo = remove_name_tail_range(name);
+    //    cfg.push_back( json::map {
+    //        { "name", std::move(name) },
+    //        { "start_bit", json::number(lo) },
+    //        { "position", json::number(index++) },
+    //        { "bit_width", json::number(a.second.hi - a.second.lo + 1) } } ); }
+    for (auto &a : act.p4_params_list) {
+        unsigned start_bit = 0;
         cfg.push_back( json::map {
-            { "name", std::move(name) },
-            { "start_bit", json::number(lo) },
-            { "position", json::number(index++) },
-            { "bit_width", json::number(a.second.hi - a.second.lo + 1) } } ); }
+            { "name", json::string(a.name) },
+            { "start_bit", json::number(start_bit) },
+            { "position", json::number(a.position) },
+            { "bit_width", json::number(a.bit_width) } } ); 
+        start_bit += a.bit_width;
+    }
 }
 
 void Table::Actions::add_action_format(Table *table, json::map &tbl) {
@@ -1138,6 +1165,14 @@ void MatchTable::pass1(int type) {
     if (table_counter >= GATEWAY_MISS && !gateway)
         error(lineno, "Can't count gateway events on table %s as it doesn't have a gateway",
               name());
+    //FIXME-JSON -- determine param full width from phv container size
+    if (!p4_params_list.empty()){
+        for (auto &p : p4_params_list) {
+            if (!p.bit_width_full) 
+                p.bit_width_full = p.bit_width;
+            auto n = p.name.find(".$valid");
+            if (n != std::string::npos) {
+                p.name = "--validity_check--" + p.name.substr(0,n); } } }
 }
 
 template<class REGS> void MatchTable::write_regs(REGS &regs, int type, Table *result) {
@@ -1347,9 +1382,8 @@ void Table::write_mapram_regs(REGS &regs, int row, int col, int vpn, int type) {
     else
         mapram_config.mapram_egress = 1;
     mapram_config.mapram_enable = 1;
-    if (!this->to<CounterTable>()) {
-        mapram_config.mapram_ecc_check = 1;
-        mapram_config.mapram_ecc_generate = 1; }
+    mapram_config.mapram_ecc_check = 1;
+    mapram_config.mapram_ecc_generate = 1;
     //if (!options.match_compiler) // FIXME -- compiler doesn't set this?
     //    mapram_ctl.mapram_vpn_limit = maxvpn;
     if (gress)
@@ -1807,8 +1841,7 @@ void Table::common_tbl_cfg(json::map &tbl, const char *default_match_type) {
             if (!default_action_parameters.empty()) {
                 json::map &params = tbl["default_action_parameters"] = json::map();
                 for (auto val : default_action_parameters)
-                    params[val.first] = val.second; }
-        }
+                    params[val.first] = val.second; } }
         if (!p4_table->action_profile.empty())
             tbl["action_profile"] = p4_table->action_profile;
         else
@@ -1817,27 +1850,38 @@ void Table::common_tbl_cfg(json::map &tbl, const char *default_match_type) {
         //tbl["static_entries"] = json::vector(); //FIXME-JSON
         tbl["ap_bind_indirect_res_to_match"] = json::vector(); //FIXME-JSON: Need example
         tbl["is_resource_controllable"] = true; //FIXME-JSON: Need example for false
+        if ((!p4_params_list.empty()) && (this->to<MatchTable>())) {
+            json::vector &params = tbl["match_key_fields"] = json::vector();
+            for (auto &p : p4_params_list) {
+                unsigned start_bit = 0;
+                params.push_back( json::map {
+                    { "name", json::string(p.name) },
+                    { "match_type", json::string(p.type) },
+                    { "start_bit", json::number(start_bit) },
+                    { "bit_width", json::number(p.bit_width) },
+                    { "bit_width_full", json::number(p.bit_width_full) }} );
+                start_bit += p.bit_width_full; } }
     } else {
-    if (!default_action.empty()) {
-        tbl["default_action"] = json::map{
-            { "name", json::string(default_action) },
-            { "handle", json::number(default_action_handle) } };
-        tbl["default_action_parameters"] = nullptr;
-        if (!default_action_parameters.empty()) {
-            json::map &params = tbl["default_action_parameters"] = json::map();
-            for (auto val : default_action_parameters)
-                params[val.first] = val.second; }
-    } else if (options.match_compiler) {
-        tbl["default_action"] = nullptr;
-        tbl["default_action_parameters"] = nullptr; }
-    tbl["performs_hash_action"] = false;
-    tbl["uses_versioning"] = true;
-    tbl["tcam_error_detect"] = false;
-    tbl["match_type"] = p4_table->match_type.empty() ? default_match_type : p4_table->match_type;
-    if (!p4_table->action_profile.empty())
-        tbl["action_profile"] = p4_table->action_profile;
-    else
-        tbl["action_profile"] = nullptr;
-    tbl["dynamic_match_key_masks"] = false;
-    tbl["uses_static_entries"] = false; }
+        if (!default_action.empty()) {
+            tbl["default_action"] = json::map{
+                { "name", json::string(default_action) },
+                { "handle", json::number(default_action_handle) } };
+            tbl["default_action_parameters"] = nullptr;
+            if (!default_action_parameters.empty()) {
+                json::map &params = tbl["default_action_parameters"] = json::map();
+                for (auto val : default_action_parameters)
+                    params[val.first] = val.second; }
+        } else if (options.match_compiler) {
+            tbl["default_action"] = nullptr;
+            tbl["default_action_parameters"] = nullptr; }
+        tbl["performs_hash_action"] = false;
+        tbl["uses_versioning"] = true;
+        tbl["tcam_error_detect"] = false;
+        tbl["match_type"] = p4_table->match_type.empty() ? default_match_type : p4_table->match_type;
+        if (!p4_table->action_profile.empty())
+            tbl["action_profile"] = p4_table->action_profile;
+        else
+            tbl["action_profile"] = nullptr;
+        tbl["dynamic_match_key_masks"] = false;
+        tbl["uses_static_entries"] = false; }
 }

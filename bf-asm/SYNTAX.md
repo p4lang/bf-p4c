@@ -1,0 +1,554 @@
+# yaml format tags for tofino assembler
+#
+# symbols used below:
+#   <name>      ::= a string of 1 or more letters, digits, '_', '-', '.',
+#                   '$', or '@' not starting with a digit.  Cannot start or
+#                   end with '-' or '.' or have two consecutive '-' or '.'
+#   <thread>    ::= "ingress" | "egress"
+#   <register>  ::= <name> that matches a predefined register name
+#   <slice>     ::= <name>(<lo>..<hi>) | <name>(<bit>)
+#                   no spaces between parts of the <slice>
+#   <constant>  ::= unsigned integer constant 
+#                   0x/0b/0o prefix for hex/binary/octal
+#   <match-constant> ::= constant where one or more digits may be replaced
+#                   by '*' to denote don't-care for ternary matches.
+#   <range>     ::= <constant>..<constant>
+#                   no spaces between parts of the <range>
+#   <vector>    ::= <constant> | <range> | '[' <constant> | <range> , ... ']'
+#                   can be a single constant or range or multiple constants
+#                   or ranges in a yaml list
+#   <phv-location> ::= <name> | <slice>
+#                   Must be a register name or a name defined in the phv section
+#   <bit-location> ::= <phv-location>
+#                   Denotes a single bit
+#   <matcher>    ::= half | byte0 | byte1
+#            denotes one of the parser match units
+#
+phv [<thread>]:
+    # Defines PHV alias names for registers.  <thread> is 'ingress' or
+    # 'egress' and is optional.  If present, aliases are defined only for
+    # that thread.  If not present, aliases are for both threads
+    <name>: <register> | <slice>
+        # Makes <name> an alias for a register or piece of a register.
+        # register B0 through B63 for byte registers, H0-H95 for half
+        # (16-bit) registers, or W0-W63 for word (32-bit) registers.
+        # May also use R0-R224 for all registers in W/B/H order.
+        # TW0-TW31, TB0-TB21, TH0-TH47, R256-R367 for tagalong
+parser [<thread>]:
+    # Defines a parser.  <thread> must be 'ingress' or 'egress' 
+    start: <name>
+    start: '[' <name>, ... ']'
+        # define up to 4 distinct initial start states for the four channels
+    priority: <int> | '[' <int>, ... ']'
+    priority_threshold: <int> | '[' <int>, ... ']'
+        # define initial parser priority and threshold for the 4 channels
+    <name> [<match-constant>]:
+        # Defines a parser state.  The state 'start' is the implicit initial state
+        # if there is no explicit initial state defined by a separate 'start' entry.
+        # The state 'end' cannot exist (used for exit)
+        # The optional constant is the 8-bit value used to denote the state;
+        # overlapping state values will be flagged as an error
+        match: <vector> | { <matcher> : <byte-loc> }
+            # specifies up to 4 bytes to match against in the input buffer
+            # may also specify 'ctr_zero' and 'ctr_neg' to match those
+            # special bits, or the specific matchers 'byte0', 'byte1' or 'half'
+            # to match against values explicitly loaded by a 'save' in a previous
+            # state.  May additionally specify specific matchers to use.
+        <match-constant>:
+            # actions to perform when the match matches this match constant
+            # this is a tcam priority match, so only the first match triggers
+            counter: [set] <constant> | inc <constant> | dec <constant> | load <expression>
+                # modification of the counter
+            offset: [set] <constant> | inc <constant>
+                # modificate to the offset
+        save: { <matcher> : <byte-loc>, ... } | <matcher>
+        # specifies one or more values from the input stream to be
+        # loaded into specific matchers or specific matchers to have
+        # their values preserved for use by later states
+            shift: <constant>
+                # number of bytes to shift out
+        buf_req: <constant>
+        # number bytes that must be in the input buffer to not stall
+            next: <name> | <match-constant>
+                # next state -- match-constant takes don't care bits
+                # from current state
+            [rotate] <constant> : [offset] <phv_location> 
+            [rotate] <range> : [offset] <phv_location> 
+                # write the specifed byte (or range) to named phv slot
+            [offset] <phv_location>: [rotate] <constant>
+                # write the specified constant to the phv location
+        default:
+            # actions to perform regardless of the match
+        # if there is no 'default' tag in a state, anything that is not
+        # recognized as a valid state tag is treated as part of an implicit
+        # default
+    counter_init:
+        - { add: <int>, max: <int>, mask: <int>, src: <matcher>, rot: <int> }
+        # intial values for the counter init ram
+    hdr_len_adj: <constant>
+    # value for the hdr_len_adj register
+    init_zero: [ <phv_location>,... ]
+    # list of phv slots that should be initialized to (valid) zero
+    meta_opt: <constant>
+    # value for the meta_opt register
+    multi_write: [ <phv_location>,... ]
+        # list of phv slots that the parser may write multiple times
+        # values OR'd with previous values
+    parser_error: <phv_location>
+        # define a phv location to receive parser error codes
+stage <constant> <thread>:
+    # Defines a single stage of the MAU.  The order of the tables within the
+    # stage is the logical table ordering, so order matters
+    exact_match <name> [<logical_id>]:
+        # Exact match table
+        row: <vector>
+            # one or more physical ram rows the table uses
+        column: <vector> | '[' <vector>, ... ']'
+            # May be a single vector or a list of vectors.  If a list, length
+            # must match the number of rows specified
+        bus: 0 | 1 | '[' 0 | 1, ... ']'
+            # Exact match bus(es) to use.  If a list, must match the number
+            # of rows
+    vpns: <vector>
+        # vpn values to use for rams
+        input_xbar:
+            # Input xbar config for this table
+            group <constant>: <phv-location> | '[' <phv_location>, ... ']' |
+                { <int>: <phv_location> | <int>..<int>: <phv_location>,... }
+                # One or more registers to be mapped into the specified
+                # exact match group in order or at the locations specified,
+                # and then routed to the proper exact match bus.  If multiple
+                # groups are used, must match the number of rows.
+            hash <constant>:
+                # specify the hash table for the input group
+                <int>: <hash>
+                    # specify one column of the table -- hash is a 64-bit constant
+                <int> | <range>: <expression>
+                    # specify one or more columns according to expression.  Phv refs
+                    # must be in the corresponding input group of this input_xbar
+                    <phv-location>
+                        # identity copy of phv (must match width of range)
+                    random(<phv-location>, ...)
+                        # random hash of the given phv locations.  We generate
+                        # with random(3) and we do NOT call srand, so the hash
+                        # for a given program is repeatable.
+                    crc(<int>, <phv-location>, ...)
+                        # crc hash of the given phv locations -- first arg is integer
+                        # constant denoting polynomial (Koopman notation) 
+                    <expression> ^ <expression>
+                        # xor of other expressions.
+                    stripe(<expression>, ...)
+                        # stripe other expressions across the width required,
+                        # repeating as necessary
+                valid <int>: <int>
+                    # specifies the 16-bit valid hash for one column of the table
+            hash group <constant>:
+                # specify the hash group
+                table: <vector>
+                    # one or more hash tables to xor together for this group
+                seed: <hash>
+                    # 52-bit hash seed value
+                <int>
+                    # a single table to use for the group
+            group <constant>: '[]'
+            - group <constant>
+                # use an xbar group configured elsewhere
+        gateway:
+            # gateway table on this table -- see below
+        match: <phv-location> | '[' <phv-location>, ... ']'
+            # value(s) to match against the 'match' field(s) in the format
+    ways:
+        - '[' <int>,<int>,<int>, '[' <row>,<col> ']',... ']'
+        # description of one way of the table
+        # initial 3 values are hash group, 10-bit slice from group, and
+        # mask of upper 12 bits from the group.
+        # FIXME -- needs to be done as a more descriptive map?
+    match_group_map: '[' '[' <int>,... ']',... ']'
+        # map from per-word match groups to overall match groups
+        # one row for each word in the width of the table with up to
+        # 5 values for up to 5 match groups in that word.  Values are
+        # match groups in the format
+        format: { <name>: <range>, <name>: <size> ... }
+            # format of data in the table, mapping names to ranges of bits.
+            # some names have predefined meanings:
+            #   match or match(0) match(1)..
+            #       exact match groups to match against
+            # fields with sizes instead of explicit ranges will be laid out
+            # by the assembler following preceeding fields
+        hash_dist: <hash_distribution>
+            # see hash_action hash_dist
+        action: <table-name>(<action> [, <index>])
+            # Action table to use -- action is a named field from the format
+            # that determines which action to do.  Index is optional (for
+            # indirect action), named field from format.  If not present use
+            # direct action (index is match address).
+        action_enable: <int>
+    enable_action_data_enable: true | false
+    enable_action_instruction_enable: true | false
+    action_bus: { <int> : <name> | <int>..<int> : <name>, ... }
+        # immediate actions data
+    actions: { <name> [<index>] : '[' [<address>,] [<data map>,] <instructions>, ... ']', ... }
+        # immediate actions if the is no action table (details in action table entry)
+        selector: <table-name>(<index-field> [ , <length-field> [ , <shift-field> ] ] )
+            # selection table to use
+        stats: <table-name> [ (<index-field>) ]
+            # statistics table to use
+        meter: <table-name> [ (<index-field>) ]
+            # meter table to use
+        idletime:
+            # idletime table
+            row: <vector>
+            column: <vector> | '[' <vector>, ... ']'
+            bus: <int>
+            precision: 1 | 2 | 3 | 6
+            sweep_interval: <int>
+            notification: enable | disable | two_way
+            per_flow_enable: true | false
+    table_counter: disable | table_miss | table_hit | gateway_miss |
+               gateway_hit | gateway_inhibit
+        # event type to count in per-table event counter
+    hit: <table-name> | '[' <table-name>, ... ']'
+        # next table on table hit.  If a list, 'format' must contain a
+        # 'next' field that determines which next table to use
+        miss: <table-name>
+        # next table on table miss
+        next: <table-name>
+            # default (unconditional) next table.  Exclusive with hit/miss
+        p4: # information about P4 level tables and control plane API
+            name: <name>
+                # P4 table name
+            handle: <int>
+                # runtime API handle for the table
+            size: <int>
+                # table size specified in P4 -- may be smaller than the actual
+                # table size, as table is rounded up to fill memories
+            match_type: exact | ternary | lpm | ...
+            action_profile: <name>
+    ternary_match <name> [<logical_id>]:
+        # Ternary match table
+        p4: # information about P4 level tables and control plane API
+            # same as exact_match p4 info
+        p4_param_order: # order of match params as seen in p4 program
+                        # PD generated has same order and needs to match context
+                        # json output
+            <name>: { type: <table-type>, size: <int> } ...
+            # param names with their types and size info
+        row: <vector> | '[' <vector>, ... ']'
+        column: <vector> | '[' <vector>, ... ']'
+            # tcam rows and columns to use
+        input_xbar:
+            # Input xbar config for this table
+            group <constant>: <phv-location> | '[' <phv_location>, ... ']'
+                # Registers to map into the specified ternary match group
+                # odd groups are 5 bytes wide, even groups 6 -- the extra byte
+                # is the byte group n/2
+                # TBD -- Need a way to explicitly set byte swizzler?
+        match:
+            # Input xbar group(s) to match against -- may be a vector of maps for wide
+            # matches using multiple groups
+            group: <int>
+                # Match group to match against (placed on tcam bus)
+            byte_group: <int>
+                # byte group to use for top 4 bits of tcam bus
+            byte_config: <int>
+                # value for tcams.vh_data_xbar.tcam_vh_xbar.tcam_row_halfbyte_mux_ctl
+                #                             .tcam_row_halfbyte_mux_ctl_select
+            dirtcam: <int>
+                # dirtcam control bits for the group; used to set
+                # tcams.col.tcam_mode.tcam_data_dirtcam_mode (bits 0..9)
+                # and tcams.col.tcam_mode.tcam_vbit_dirtcam_mode (bits 10..11)
+        gateway:
+            # gateway table on this table -- see below
+        indirect: <table-name>
+            # ternary indirection table to use with this table
+            # if there's an indirection table, it should contain all the table refs
+        indirect_bus: <int>
+            # which indirect bus to use for ternary tables with no indirection table
+        hash_dist: <hash_distribution>
+            # see hash_action hash_dist
+        action: <table-name>
+            # Action table to use -- direct only, no indirection table
+        selector: <table-name>(<index-field>)
+            # selection table to use (only if no indirection table)
+        stats: <table-name> [ (<index-field>) ]
+            # statistics table to use (only if no indirection table)
+        meter: <table-name> [ (<index-field>) ]
+            # meter table to use (only if no indirection table)
+        idletime:
+            # idletime table
+    hit: <table-name>
+        # next table on table hit.
+        miss: <table-name>
+        # next table on table miss
+        next: <table-name>
+            # default (unconditional) next table.  Exclusive with hit/miss
+        p4: # information about P4 level tables and control plane API
+            # same as exact_match p4 info
+    ternary_indirect <name>:
+        # Ternary indirection table
+        row: <vector>
+        column: <vector> | '[' <vector>, ... ']'
+            # srams to use
+        bus: 0 | 1 | '[' 0 | 1, ... ']'
+            # ternary indirection bus to use.  List must match rows
+        format: { <name>: <range-or-constant>, ... }
+            # fields in the ram record, sized in bits
+        hash_dist: <hash_distribution>
+            # see hash_action hash_dist
+        action: <table-name>(<index>)
+            # Action table to use -- index is optional (for indirect action),
+            # named field from format.  If not present use direct action
+    action_bus: { <int> : <name> | <int>..<int> : <name>, ... }
+        # immediate actions data
+    actions: { <name> [<index>] : '[' [<address>,] [<data map>,] <instructions>, ... ']', ... }
+        # immediate actions if the is no action table (details in action table entry)
+        selector: <table-name>(<index-field>)
+            # selection table to use
+        stats: <table-name> [ (<index-field>) ]
+            # statistics table to use
+        meter: <table-name> [ (<index-field>) ]
+            # meter table to use
+    hit: <table-name> | '[' <table-name>,  ... ']'
+        # next table on table hit.  If a list, 'format' must contain a
+        # 'next' field that determines which next table to use
+        miss: <table-name>
+        # next table on table miss
+        next: <table-name>
+            # default (unconditional) next table.  Exclusive with hit/miss
+        p4: # information about P4 level tables and control plane API
+            # same as exact_match p4 info
+    hash_action <name> [<logical_id>]:
+        # hash-action table
+        row: <int>
+        bus: <int>
+            # specify which exact match bus to use
+        input_xbar:
+            # input xbar config (as exact match table)
+        hash_dist:
+            <int>: # hash distribution unit to config
+                hash: <int>
+                mask: <int>
+                shift: <int>
+                expand: <int>
+                    # hash distribution config params
+                output: <name> | '[' <name>,... ']'
+                    # outputs to enable for this hast_dist unit
+                    # 'lo' | 'hi' | 'meter' | 'stats' | 'action' | 'hashmod'
+        # rest of the keys are as exact_match
+        gateway:
+        idletime:
+        selector: <table-name>(<index-field> [ , <length-field> [ , <shift-field> ] ] )
+        stats: <table-name> [ (<index-field>) ]
+        meter: <table-name> [ (<index-field>) ]
+        action: <table-name>(<action> [, <index>])
+        action_enable: <int>
+        default_action: <action>
+        default_action_handle: <int>
+            # Specifies a unique integer for action handle, used to match glass
+            # If not present assembler generate handles
+        default_action_parameters: { <name> : <int>, ... }
+            # Specifies list of params and values
+    action_bus: { <int> : <name> | <int>..<int> : <name>, ... }
+    actions: { <name> [<index>] : '[' [<address>,] [<data map>,] <instructions>, ... ']', ... }
+    hit: <table-name> | '[' <table-name>, ... ']'
+        miss: <table-name>
+        next: <table-name>
+        p4: # information about P4 level tables and control plane API
+    phase0_match <name>
+        # special phase 0 match table before stage 0 (only in stage 0 ingress)
+        p4: # information about P4 level tables and control plane API
+        width: <int>
+    action <name>:
+        # Action table
+        logical_row: <vector>
+        column: <vector> | '[' <vector>, ... ']'
+            # srams to use -- in logical (16x6) coords, not physical (8x12)
+        home_row: <vector>
+            # row(s) to use as home rows for the table
+        format [<action>]: { <name>: <range-or-constant>, ... }
+            # fields in the ram record.  Different actions may have
+            # different formats (and different sizes)...
+    action_bus: { <int> : <name> | <int>..<int> : <name>, ... }
+        # mapping from action bus bytes to values in the table.  Names
+        # must be present in the 'format' for the table.
+        # Can be optional -- if not present, assembler will attempt to
+        # lay out fields in the action bus based on usage in actions.
+        actions:
+            # defines actions that can be used in the table
+            <name> [<index>]:
+                # the optional index is the index to use in the 8-entry
+                # instruction indirection map of the table.
+            [- <address>]   # constant imem address to use for this action
+            [- <data alias map>]        # map of aliases for data operands
+                <name> : <name> [ (<bit-range>) ]
+                # defines a name as an alias for (a slice of) something else
+            - <instruction> <operands>
+        p4: # information about P4 level tables and control plane API
+            # same as exact_match p4 info
+    gateway <name> [<logical_id>]:
+        # 'bare' Gateway table -- no corresponding match table, so must
+        # always specify next table
+        row: <constant>
+            # physical match row to use
+        bus: 0 | 1
+            # match bus to use
+        payload_row: <constant>
+        payload_bus: <constant>
+            # row/bus to use for payload -- can only be specified on a
+            # standalone gateway, as an attached gateway uses the row(s)
+            # specified by the table it is attached to
+        input_xbar:
+            # as for exact_match, but can only specify one group
+        match: <phv-location> | '[' <phv-location>, ... ']'
+            # value(s) to match against the match constants
+        xor: <phv-location> | '[' <phv-location>, ... ']'
+            # value(s) to xor against the match value
+        range: 2 | 4
+            # do 2 or 4 bit range matches in the upper 12 bits of the gateway
+        <match-constant>:
+            # match row for gateway.  Value may be <table-name> (for next table)
+            # or "run_table" or a map with either or both of these keys.
+            next: <table-name>
+                # next table for this match
+            run_table: <true> | <false>
+                # disable the gateway (run the logical match normally)
+                # not applicable to bare gateways
+        ? [ <int>, ..., <match-constant> ] :
+            # Range match row for gateway.  Each value except the ladt is a
+            # 2**n bit lookup table for a range match unit (so 4 bit values
+            # for range:2 and 16 bit values for range:4).  The last value is
+            # the normal tcam match for the bottm 32 bits of the gateway
+            # Same value options as normal match rows.  Big-endian order
+            # for units (last int is bottom 2 or 4 bits of upper 12 bits)
+        miss:
+            # behavior if no row matches (same options as match row above)
+        payload: <constant>
+            # payload data to use if gateway is not disabled (run_table is false)
+        match_address: <constant>
+            # gateway match address to use if the gateway is not disabled
+    selection <name> [<logical_id>]:
+        logical_row: <vector>
+        column: <vector> | '[' <vector>, ... ']'
+            # srams to use -- in logical (16x6) coords, not physical (8x12)
+        maprams: <vector> | '[' <vector>, ... ']'
+            # map rams to use
+        bus: <vector>
+        input_xbar:
+            # hash match groups on input xbar
+        mode: resilient <int> | fair <int>
+        non_linear: true | false
+        per_flow_enable: true | false
+        pool_sizes: <vector>
+        selection_hash: <int>
+        hash_dist: <hash_distribution>
+            # see hash_action hash_dist
+        p4: # information about P4 level tables and control plane API
+            # same as exact_match p4 info
+    counter <name> [<logical_id>]:
+        logical_row: <vector>
+        column: <vector> | '[' <vector>, ... ']'
+            # srams to use -- in logical (16x6) coords, not physical (8x12)
+        maprams: <vector> | '[' <vector>, ... ']'
+            # map rams to use
+        vpns: <vector>
+        format:
+        count: bytes | packets | both | packets_and_bytes
+        global_binding: true | false
+        per_flow_enable: true | false
+    meter <name> [<logical_id>]:
+        logical_row: <vector>
+        column: <vector> | '[' <vector>, ... ']'
+            # srams to use -- in logical (16x6) coords, not physical (8x12)
+        maprams: <vector> | '[' <vector>, ... ']'
+            # map rams to use
+        vpns: <vector>
+        bus: <vector>
+        input_xbar:
+            # hash match groups on input xbar
+        color_aware: true | false | per_flow
+        color_maprams:
+            row: <vector>
+                # logical rows
+            column: <vector> | '[' <vector>, ... ']'
+            bus: <vector>
+            vpns: <vector>
+        hash_dist: <hash_distribution>
+            # see hash_action hash_dist
+        type: standard | lpf | red
+        count: bytes | packets
+        sweep_interval: <int>
+        global_binding: true | false
+        per_flow_enable: true | false
+    stateful <name> [<logical_id>]:
+        logical_row: <vector>
+        column: <vector> | '[' <vector>, ... ']'
+            # srams to use -- in logical (16x6) coords, not physical (8x12)
+        maprams: <vector> | '[' <vector>, ... ']'
+            # map rams to use
+        vpns: <vector>
+        bus: <vector>
+        hash_dist: <hash_distribution>
+            # see hash_action hash_dist
+    actions: 
+        { <action name> : 
+            - { alias: <param/value>, ... }
+                # aliases used in instructions
+            - p4_param_order: { param_name : <int>, ... }
+                # Param order specifying param name and width for context json (p4_parameters)
+            - <instruction>
+                # SALU instructions to run for this table
+        }
+    dependency: concurrent | action | match
+        # set the interstage dependency between this stage and the
+        # previous stage.  Ignored in stage 0
+    error_mode: no_config | propagate | map_to_immediate | disable
+deparser <thread>:
+    # Defines a deparser.  <thread> must be 'ingress' or 'egress' 
+    dictionary:
+        # ordered list of phv locations to write out as the output deparser
+        - <phv-location> : <bit-location>
+            # single value to write iff the referred to bit is set
+        - checksum <int> : <bit-location>
+            # checksum result to write iff the referred to bit is set
+    pov: <phv-location> | '[' <phv-location>, ... ']'
+        # optional explicit use/ordering of phvs for POV.  All phvs used for POV bits
+        # in the dictionary will be added to the end of this, if not already present
+    checksum <int>: <phv-location> | '[' <phv-location>, ... ']'
+        # checksum unit programming
+    <name>: <phv-location> | <digest-params>
+        # more generally, any deparser param that comes from the phv is
+    # specified this way.  <digest-params> are as follows
+    select: <phv-location>
+            # controls which digest group is output
+    shift: <constant>
+        <int>: <phv-location> | '[' <phv-location>, ... ']'
+            # values for a single digest group
+    # ingress or egress params:
+    mirror: <digest-params>
+    egress_unicast_port: <phv-location>
+        # specifies the port to write to
+    drop_ctl: <phv-location>
+    # ingress only deparser params:
+    learning: <digest-params>
+    resubmit: <digest-params>
+    copy_to_cpu: <phv-location>
+    egress_multicast_group: <phv-location> | '[' <phv-location>, <phv-location ']'
+    hash_lag_ecmp_mcast: <phv-location> | '[' <phv-location>, <phv-location ']'
+    copy_to_cpu_cos: <phv-location>
+    ingress_port_source: <phv-location>
+    deflect_on_drop: <phv-location>
+    meter_color: <phv-location>
+    icos: <phv-location>
+    qid: <phv-location>
+    xid: <phv-location>
+    yid: <phv-location>
+    rid: <phv-location>
+    warp: <phv-location>
+    ct_disable: <phv-location>
+    ct_mcast: <phv-location>
+    # egress only deparser params:
+    force_tx_err: <phv-location>
+    tx_pkt_has_offsets: <phv-location>
+    capture_tx_ts: <phv-location>
+    coal: <phv-location>
+    ecos: <phv-location>
