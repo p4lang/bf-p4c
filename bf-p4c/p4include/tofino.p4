@@ -388,7 +388,7 @@ extern stateful_param<T> {
 
 /// StatefulALU
 extern stateful_alu<T, I, O, P> {
-    stateful_alu(register<T, I> reg, @optional stateful_param<P> param);
+    stateful_alu(@optional register<T, I> reg, @optional stateful_param<P> param);
     abstract void instruction(inout T value, @optional out O rv, @optional in P p);
     O execute(@optional in I index);
 }

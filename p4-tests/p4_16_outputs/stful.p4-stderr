@@ -1,0 +1,99 @@
+stful.p4(302): warning: bloom_filter_1 shadows bloom_filter_1
+    register<bit<1>, bit<18>>(262143) bloom_filter_1;
+                                      ^^^^^^^^^^^^^^
+stful.p4(114)
+register<bit<1>, bit<18>>(262143) bloom_filter_1;
+                                  ^^^^^^^^^^^^^^
+stful.p4(303): warning: bloom_filter_2 shadows bloom_filter_2
+    register<bit<1>, bit<18>>(262143) bloom_filter_2;
+                                      ^^^^^^^^^^^^^^
+stful.p4(115)
+register<bit<1>, bit<18>>(262143) bloom_filter_2;
+                                  ^^^^^^^^^^^^^^
+stful.p4(304): warning: bloom_filter_3 shadows bloom_filter_3
+    register<bit<1>, bit<18>>(262143) bloom_filter_3;
+                                      ^^^^^^^^^^^^^^
+stful.p4(116)
+register<bit<1>, bit<18>>(262143) bloom_filter_3;
+                                  ^^^^^^^^^^^^^^
+stful.p4(375): warning: bloom_filter_1 shadows bloom_filter_1
+    register<bit<1>, bit<18>>(262143) bloom_filter_1;
+                                      ^^^^^^^^^^^^^^
+stful.p4(114)
+register<bit<1>, bit<18>>(262143) bloom_filter_1;
+                                  ^^^^^^^^^^^^^^
+stful.p4(376): warning: bloom_filter_2 shadows bloom_filter_2
+    register<bit<1>, bit<18>>(262143) bloom_filter_2;
+                                      ^^^^^^^^^^^^^^
+stful.p4(115)
+register<bit<1>, bit<18>>(262143) bloom_filter_2;
+                                  ^^^^^^^^^^^^^^
+stful.p4(377): warning: bloom_filter_3 shadows bloom_filter_3
+    register<bit<1>, bit<18>>(262143) bloom_filter_3;
+                                      ^^^^^^^^^^^^^^
+stful.p4(116)
+register<bit<1>, bit<18>>(262143) bloom_filter_3;
+                                  ^^^^^^^^^^^^^^
+stful.p4(114): warning: bloom_filter_1: unused instance
+register<bit<1>, bit<18>>(262143) bloom_filter_1;
+                                  ^^^^^^^^^^^^^^
+stful.p4(115): warning: bloom_filter_2: unused instance
+register<bit<1>, bit<18>>(262143) bloom_filter_2;
+                                  ^^^^^^^^^^^^^^
+stful.p4(116): warning: bloom_filter_3: unused instance
+register<bit<1>, bit<18>>(262143) bloom_filter_3;
+                                  ^^^^^^^^^^^^^^
+stful.p4(465): warning: flowlet_inactive_timeout: unused instance
+    stateful_param<bit<32>>(5000) flowlet_inactive_timeout;
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^
+stful.p4(859): warning: one_bit_read: unused instance
+    OneBitRead() one_bit_read;
+                 ^^^^^^^^^^^^
+stful.p4(860): warning: sip_sampler: unused instance
+    SipSampler() sip_sampler;
+                 ^^^^^^^^^^^
+stful.p4(861): warning: bloom_filter: unused instance
+    BloomFilter() bloom_filter;
+                  ^^^^^^^^^^^^
+stful.p4(862): warning: flowlet: unused instance
+    Flowlet() flowlet;
+              ^^^^^^^
+stful.p4(118): warning: lag_reg: unused instance
+register<bit<1>, bit<17>>(131071) lag_reg;
+                                  ^^^^^^^
+stful.p4(119): warning: next_hop_ecmp_reg: unused instance
+register<bit<1>, bit<29>>(131072) next_hop_ecmp_reg;
+                                  ^^^^^^^^^^^^^^^^^
+stful.p4(216): warning: hdr may not be completely initialized
+        packet_parser.apply(pkt, hdr, md);
+                                 ^^^
+stful.p4(216): warning: md may not be completely initialized
+        packet_parser.apply(pkt, hdr, md);
+                                      ^^
+stful.p4(233): warning: hdr may not be completely initialized
+        packet_parser.apply(pkt, hdr, md);
+                                 ^^^
+stful.p4(233): warning: md may not be completely initialized
+        packet_parser.apply(pkt, hdr, md);
+                                      ^^
+stful.p4(419): warning: out parameter rv may be uninitialized when instruction terminates
+        void instruction(inout bit<32> v, out bit<1> rv) {
+                                                     ^^
+stful.p4(419)
+        void instruction(inout bit<32> v, out bit<1> rv) {
+             ^^^^^^^^^^^
+stful.p4(868): warning: ig_intr_md_for_tm may not be completely initialized
+            ifindex_counter.apply(hdr, md, ig_intr_md, ig_intr_md_for_tm);
+                                                       ^^^^^^^^^^^^^^^^^
+stful.p4(870): warning: ig_intr_md_for_tm may not be completely initialized
+            pgen_pass_1.apply(hdr, md, ig_intr_md_for_tm);
+                                       ^^^^^^^^^^^^^^^^^
+stful.p4(874): warning: ig_intr_md_for_tm may not be completely initialized
+            pgen_pass_2.apply(hdr, md, ig_intr_md_for_tm);
+                                       ^^^^^^^^^^^^^^^^^
+stful.p4(856): warning: out parameter ig_intr_md_for_tm may be uninitialized when SwitchIngress terminates
+        out ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm) {
+                                                ^^^^^^^^^^^^^^^^^
+stful.p4(851)
+control SwitchIngress(
+        ^^^^^^^^^^^^^

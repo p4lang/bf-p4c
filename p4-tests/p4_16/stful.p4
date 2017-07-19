@@ -6,7 +6,7 @@ typedef bit<16> ifindex_t;
 typedef bit<16> nexthop_t;
 
 typedef bit<48> mac_addr_t;
-typedef bit<32> ip_addr_t;
+typedef bit<30> ip_addr_t;
 
 #define RECIRC_TYPE_PG_PORT_DOWN 1
 #define RECIRC_TYPE_PG_RECIRC 2
@@ -30,7 +30,7 @@ header ipv4_h {
     bit<3> flags;
     bit<13> frag_offset;
     bit<8> ttl;
-    bit<8> protocol;
+    bit<8> proto;
     bit<16> hdr_checksum;
     ip_addr_t src_addr;
     ip_addr_t dst_addr;
@@ -77,21 +77,21 @@ struct user_metadata_t {
     ifindex_t ifindex;
     ifindex_t eg_ifindex;
     bit<48> timestamp;
-    int<32> offset;
-    bool bf_tmp;
+    bit<32> offset;
+    bool bf_temp;
     bit<8> flowlet_hash_input;
     nexthop_t nhop_id;
     bit<17> lag_tbl_bit_index;
     bit<17> ecmp_tbl_bit_index;
     bool pkt_gen_pkt;
     bool recirc_pkt;
-    bool one_bit_val_1;
-    bool one_bit_val_2;
+    bit<1> one_bit_val_1;
+    bit<1> one_bit_val_2;
 }
 
 
 struct headers_t {
-    recirc_h recirc;
+    recirc_h recirc_hdr;
     pktgen_generic_h pktgen_generic;
     pktgen_recirc_header_t  pktgen_recirc;
     pktgen_port_down_header_t pktgen_port_down;
@@ -200,7 +200,7 @@ parser SwitchIngressParser(
     PacketParser() packet_parser;
     state start {
         pkt.extract(ig_intr_md);
-        transition select(ig_intr_md.resubmit_flag) {
+        transition select((bool)ig_intr_md.resubmit_flag) {
             true : reject;
             false : parse_per_port_metadata;
         }
@@ -236,14 +236,14 @@ parser SwitchEgressParser(
 }
 
 control SwitchIngressDeparser(
-    packet_out pkt, headers_t hdr, user_metadata_t md) {
+    packet_out pkt, in headers_t hdr, in user_metadata_t md) {
     apply {
         pkt.emit(hdr);
     }
 }
 
 control SwitchEgressDeparser(
-    packet_out pkt, headers_t hdr, user_metadata_t md) {
+    packet_out pkt, in headers_t hdr, in user_metadata_t md) {
     apply {
         pkt.emit(hdr);
     }
@@ -253,7 +253,7 @@ control SwitchEgressDeparser(
 // Test one bit reads
 // ----------------------------------------------------------------------------
 control OneBitRead(inout user_metadata_t md,
-                   inout ingress_intrinsic_metadata_t ig_intr_md,
+                   in ingress_intrinsic_metadata_t ig_intr_md,
                    inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm) {
     register<bit<1>, bit<16>>(1000) ob1;
     register<bit<1>, bit<16>>(1000) ob2;
@@ -276,9 +276,9 @@ control OneBitRead(inout user_metadata_t md,
     }
 
     apply {
-        md.one_bit_val_1 = one_bit_alu_1.execute_stateful_alu(1);
-        md.one_bit_val_2 = one_bit_alu_2.execute_stateful_alu(2);
-        if (md.bf_one_bit_val_1 == 1 && md.bf_one_bit_val_2 == 1) {
+        md.one_bit_val_1 = one_bit_alu_1.execute(1);
+        md.one_bit_val_2 = one_bit_alu_2.execute(2);
+        if (md.one_bit_val_1 == 1 && md.one_bit_val_2 == 1) {
             do_undrop();
         }
      }
@@ -292,30 +292,37 @@ control OneBitRead(inout user_metadata_t md,
 control BloomFilter(inout headers_t hdr,
                     inout user_metadata_t md,
                     inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm) {
-    hash<bit<18>>(hash_algorithm_t.random) bf_hash_1;
-    hash<bit<18>>(hash_algorithm_t.random) bf_hash_2;
-    hash<bit<18>>(hash_algorithm_t.random) bf_hash_3;
-    
+    hash<bit<18>>(hash_algorithm_t.RANDOM) bf_hash_1;
+    hash<bit<18>>(hash_algorithm_t.RANDOM) bf_hash_2;
+    hash<bit<18>>(hash_algorithm_t.RANDOM) bf_hash_3;
+
+    // global extern is not accepted
+    // error: Cannot evaluate to a compile-time constant
+    // XXX(hanw): copy register here, but it is clearly not intended.
+    register<bit<1>, bit<18>>(262143) bloom_filter_1;
+    register<bit<1>, bit<18>>(262143) bloom_filter_2;
+    register<bit<1>, bit<18>>(262143) bloom_filter_3;
+
     // Three stateful ALU blackboxes running the bloom filter.
     // Output is 1 if the packet is not in the filter and 0 if it is in. */
-    stateful_alu<bit<1>, bit<16>, bit<1>, _>(bloom_filter_1) bloom_fiter_alu_1 = {
+    stateful_alu<bit<1>, bit<18>, bit<1>, _>(bloom_filter_1) bloom_fiter_alu_1 = {
         void instruction(inout bit<1> v, out bit<1> rv) {
-            v = true;
-            rv = !v;
+            v = (bit<1>)true;
+            rv = (bit<1>)!(bool)v;
         }
     };
 
-    stateful_alu<bit<1>, bit<16>, bit<1>, _>(bloom_filter_2) bloom_filter_alu_2 = {
+    stateful_alu<bit<1>, bit<18>, bit<1>, _>(bloom_filter_2) bloom_filter_alu_2 = {
         void instruction(inout bit<1> v, out bit<1> rv) {
-            v = true;
-            rv = !v;
+            v = (bit<1>)true;
+            rv = (bit<1>)!(bool)v;
         }
     };
 
-    stateful_alu<bit<1>, bit<16>, bit<1>, _>(bloom_filter_3) bloom_filter_alu_3 = {
+    stateful_alu<bit<1>, bit<18>, bit<1>, _>(bloom_filter_3) bloom_filter_alu_3 = {
         void instruction(inout bit<1> v, out bit<1> rv) {
-            v = true;
-            rv = !v;
+            v = (bit<1>)true;
+            rv = (bit<1>)!(bool)v;
         }
     };
 
@@ -324,7 +331,7 @@ control BloomFilter(inout headers_t hdr,
     }
 
     action  bloom_filter_mark_sample() {
-        ig_intr_md_for_tm.copy_to_cpu = true;    
+        ig_intr_md_for_tm.copy_to_cpu = 1;
     }
 
     apply {
@@ -349,8 +356,8 @@ control BloomFilter(inout headers_t hdr,
             hdr.tcp.src_port,
             hdr.tcp.dst_port});
 
-        md.bf_temp = bloom_fiter_alu_1.execute(index_1) | bloom_filter_alu_2.execure(index_2) | \
-            bloom_filter_alu_3.execure(index_3);
+        md.bf_temp = (bool)(bloom_fiter_alu_1.execute(index_1) | bloom_filter_alu_2.execute(index_2) | \
+            bloom_filter_alu_3.execute(index_3));
         if (md.bf_temp == true) {
             bloom_filter_mark_sample();
         }
@@ -364,21 +371,26 @@ control ClearBloomFilter(inout headers_t hdr,
     bit<18> index = bf_hash.get_hash({
             hdr.pktgen_generic.batch_id, hdr.pktgen_generic.packet_id});
 
-    stateful_alu<bit<1>, bit<16>, _, _>(bloom_filter_1) clr_bloom_filter_alu_1 = {
+    // XXX(hanw): copy register here, but it is clearly not intended.
+    register<bit<1>, bit<18>>(262143) bloom_filter_1;
+    register<bit<1>, bit<18>>(262143) bloom_filter_2;
+    register<bit<1>, bit<18>>(262143) bloom_filter_3;
+
+    stateful_alu<bit<1>, bit<18>, _, _>(bloom_filter_1) clr_bloom_filter_alu_1 = {
         void instruction(inout bit<1> v) {
-            v = false;
+            v = (bit<1>)false;
         }
     };
 
-    stateful_alu<bit<1>, bit<16>, _, _>(bloom_filter_2) clr_bloom_filter_alu_2 = {
+    stateful_alu<bit<1>, bit<18>, _, _>(bloom_filter_2) clr_bloom_filter_alu_2 = {
         void instruction(inout bit<1> v) {
-            v = false;
+            v = (bit<1>)false;
         }
     };
 
-    stateful_alu<bit<1>, bit<16>, _, _>(bloom_filter_3) clr_bloom_filter_alu_3 = {
+    stateful_alu<bit<1>, bit<18>, _, _>(bloom_filter_3) clr_bloom_filter_alu_3 = {
         void instruction(inout bit<1> v) {
-            v = false;
+            v = (bit<1>)false;
         }
     };
 
@@ -411,7 +423,7 @@ control SipSampler(in headers_t hdr,
                 v = v + 1;
             }
   
-            if (ig_intr_md_for_tm.copy_to_cpu == true) {
+            if (ig_intr_md_for_tm.copy_to_cpu == 1) {
               rv =  0; //FIXME
             }
         }
@@ -445,20 +457,21 @@ control SipSampler(in headers_t hdr,
 //     a dummy timestamp will be used.
 // ----------------------------------------------------------------------------
 struct flowlet_state_t {
-    bit<32> id;
-    bit<32> ts;
+    bit<16> id;
+    bit<48> ts;
 }
 
 control Flowlet(inout headers_t hdr, inout user_metadata_t md) {
     stateful_param<bit<32>>(5000) flowlet_inactive_timeout;
-    // FIXME the size should be 32768  
-    register<flowlet_state_t, bit<15>>(32767, {65535, 60000}) flowlet_reg;
+    // FIXME the size should be 32768
+    // XXX(hanw): initialize struct with {} causes a type_map error
+    // register<flowlet_state_t, bit<15>>(32767, (flowlet_state_t){65535, 6000}) flowlet_reg;
 
 // Flowlet lifetime is 50 microseconds.  Use 0xFFFF as un-initialized value
 // to signal no next hop has been stored yet.
 
-    stateful_alu<flowlet_state_t, bit<15>, bit<16>, bit<32>>() flowlet_alu = {
-        void instruction(inout flowlet_state_t v, out bit<16> rv, in bit<32> p) {
+    stateful_alu<flowlet_state_t, bit<15>, bit<16>, bit<48>>() flowlet_alu = {
+        void instruction(inout flowlet_state_t v, out bit<16> rv, in bit<48> p) {
             if (md.timestamp - v.ts > p && v.id != 65535) {
                 v.id = md.nhop_id;
             }
@@ -467,7 +480,7 @@ control Flowlet(inout headers_t hdr, inout user_metadata_t md) {
         }
     };
 
-    hash(hash_algorithm_t.crc16) flowlet_hash;
+    hash<bit<15>>(hash_algorithm_t.CRC16) flowlet_hash;
     
     bit<15> index = flowlet_hash.get_hash({
         hdr.ipv4.proto,
@@ -511,7 +524,7 @@ control IpRoute(in headers_t hdr, inout user_metadata_t md) {
                              0,
                              next_hop_ecmp_reg) next_hop_ecmp_selector = {
         bit<29> hash() {
-            hash<bit<29>>() nexthop_ecmp_hash;
+            hash<bit<29>>(hash_algorithm_t.CRC16) nexthop_ecmp_hash;
             return nexthop_ecmp_hash.get_hash({hdr.ipv4.proto,
                                                hdr.ipv4.src_addr,
                                                hdr.ipv4.dst_addr,
@@ -540,7 +553,7 @@ control EcmpFailover(inout headers_t hdr,
                      inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm) {
     stateful_alu<bit<1>, bit<17>, _, _>() next_hop_ecmp_alu = {
         void instruction(inout bit<1> v) {
-            v = false;
+            v = (bit<1>)false;
         }
     };
 
@@ -614,31 +627,31 @@ control Nexthop(inout headers_t hdr,
         md.eg_ifindex = ifindex;
     }
 
-    action scratch_add(bit <16> index, ifindex_t ifindex) {
+    action scratch_add(bit<12> index, ifindex_t ifindex) {
         set_eg_ifindex(ifindex);
-        scratch_alu_add.execute_stateful_alu(index);
+        scratch_alu_add.execute(index);
     }
 
-    action scratch_sub(bit<16> index, ifindex_t ifindex) {
+    action scratch_sub(bit<12> index, ifindex_t ifindex) {
         set_eg_ifindex(ifindex);
-        scratch_alu_sub.execute_stateful_alu(index);
+        scratch_alu_sub.execute(index);
     }
 
-    action scratch_zero(bit<16> index, ifindex_t ifindex) {
+    action scratch_zero(bit<12> index, ifindex_t ifindex) {
         set_eg_ifindex(ifindex);
-        scratch_alu_zero.execute_stateful_alu(index);
+        scratch_alu_zero.execute(index);
     }   
 
-    action scratch_invert(bit<16> index, ifindex_t ifindex) {
+    action scratch_invert(bit<12> index, ifindex_t ifindex) {
         set_eg_ifindex(ifindex);
-        scratch_alu_invert.execute_stateful_alu(index);
+        scratch_alu_invert.execute(index);
     }
 
     action next_hop_down(bit<16> mgid) {
         hdr.recirc_hdr.tag = 0xF;
         hdr.recirc_hdr.rtype = RECIRC_TYPE_PG_RECIRC;
         hdr.recirc_hdr.pad = 0;
-        hdr.recirc_hdr.key =  md.nh_id;
+        hdr.recirc_hdr.key =  md.nhop_id;
         ig_intr_md_for_tm.mcast_grp_b = mgid;
     }
 
@@ -665,7 +678,9 @@ control Nexthop(inout headers_t hdr,
 // ----------------------------------------------------------------------------
 control EgressIfindex(inout user_metadata_t md,
                       inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm) {
-    action_selector<bit<66>>(4096, selector_mode_t.FAIR, 128, 1200, lag_reg) lag_as;
+    action_selector<bit<66>>(4096, selector_mode_t.FAIR, 128, 1200, lag_reg) lag_as = {
+        bit<66> hash() { /* undefined */ }
+    };
     action set_eg_port(bit<9> port) {
         ig_intr_md_for_tm.ucast_egress_port = port;
     }
@@ -690,7 +705,7 @@ control LagFailover(inout headers_t hdr,
     
     stateful_alu<bit<1>, bit<17>, _, _>() lag_alu = {
         void instruction(inout bit<1> v) {
-            v = false;
+            v = (bit<1>)false;
         }
     };
 
@@ -734,7 +749,7 @@ control LagFailover(inout headers_t hdr,
 control IfindexCounter(
         inout headers_t hdr,
         inout user_metadata_t md,
-        inout ingress_intrinsic_metadata_t ig_intr_md,
+        in ingress_intrinsic_metadata_t ig_intr_md,
         inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm) {
     OneBitRead() one_bit_read;
     SipSampler() sip_sampler;
@@ -744,7 +759,7 @@ control IfindexCounter(
     register<bit<16>, _>() ifindex_ctr;
     stateful_alu<bit<16>, _, _, _>() ifindex_cntr_alu = {
         void instruction(inout bit<16> ctr) {
-            ctr = ctr + hdr.ipv4.ttl;
+            ctr = ctr + (bit<16>)hdr.ipv4.ttl;
         }
     };
     
@@ -789,17 +804,17 @@ control IfindexCounter(
 }
 
 
-control PgenPass1(headers_t hdr,
-                  user_metadata_t md,
-                  ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm) {
+control PgenPass1(inout headers_t hdr,
+                  inout user_metadata_t md,
+                  inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm) {
 
     ClearBloomFilter() clear_bloom_filter;
     EcmpFailover() ecmp_failover;
     
     action prepare(bit<4> rtype, bit<16> mgid) {
-        hdr.recirc.tag = 0xf;
-        hdr.recirc.rtype = rtype;
-        ig_intr_md_for_tm.macst_grp_b = mgid;
+        hdr.recirc_hdr.tag = 0xf;
+        hdr.recirc_hdr.rtype = rtype;
+        ig_intr_md_for_tm.mcast_grp_b = mgid;
     }
     
     table prepare_for_recirc {
@@ -821,14 +836,14 @@ control PgenPass1(headers_t hdr,
     }
 }
 
-control PgenPass2(headers_t hdr, user_metadata_t md,
-                  ingress_intrinsic_metadata_t ig_intr_md) {
+control PgenPass2(inout headers_t hdr, inout user_metadata_t md,
+                  inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm) {
     LagFailover() lag_failover;
     apply {
         if (hdr.recirc_hdr.rtype == RECIRC_TYPE_PG_RECIRC) {
             // do nothing
-        } else if (hdr.recirc.rtype == RECIRC_TYPE_PG_PORT_DOWN) {
-            lag_failover.apply();
+        } else if (hdr.recirc_hdr.rtype == (bit<4>)RECIRC_TYPE_PG_PORT_DOWN) {
+            lag_failover.apply(hdr, md, ig_intr_md_for_tm);
         }
     }
 }
@@ -836,8 +851,9 @@ control PgenPass2(headers_t hdr, user_metadata_t md,
 control SwitchIngress(
         inout headers_t hdr,
         inout user_metadata_t md,
-        inout ingress_intrinsic_metadata_t ig_intr_md,
-        inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm) {
+        in ingress_intrinsic_metadata_t ig_intr_md,
+        in ingress_intrinsic_metadata_from_parser_t ig_intr_md_from_prsr,
+        out ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm) {
     IfindexCounter() ifindex_counter;
     
     OneBitRead() one_bit_read;
@@ -851,7 +867,7 @@ control SwitchIngress(
         if (md.recirc_pkt == false && md.pkt_gen_pkt == false) {
             ifindex_counter.apply(hdr, md, ig_intr_md, ig_intr_md_for_tm);
         } else if (md.recirc_pkt == false && md.pkt_gen_pkt == true) {
-            pgen_pass_1.apply(hdr, md, ig_intr_md);
+            pgen_pass_1.apply(hdr, md, ig_intr_md_for_tm);
         } else if (md.recirc_pkt == true && md.pkt_gen_pkt == false) {
             /* Nothing to do let it go to the deparser and be dropped. */
         } else {
@@ -864,10 +880,12 @@ control SwitchIngress(
 control SwitchEgress(
         inout headers_t hdr,
         inout user_metadata_t md,
-        inout egress_intrinsic_metadata_t eg_intr_md) {
+        in egress_intrinsic_metadata_t eg_intr_md,
+        in egress_intrinsic_metadata_from_parser_t md_from_prsr) {
     apply {} 
 }
 
 Switch<headers_t, user_metadata_t, headers_t, user_metadata_t>(
-    IngressParser(), Ingress(), IngressDeparser(), EgressParser(), Egress(), EgressDeparser()) main;
+    SwitchIngressParser(), SwitchIngress(), SwitchIngressDeparser(), 
+    SwitchEgressParser(), SwitchEgress(), SwitchEgressDeparser()) main;
 
