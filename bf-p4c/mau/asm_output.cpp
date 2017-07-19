@@ -733,6 +733,22 @@ void MauAsmOutput::emit_table_format(std::ostream &out, indent_t indent,
     if (!first) out << " ]" << std::endl;
 }
 
+void MauAsmOutput::emit_ternary_match(std::ostream &out, indent_t indent,
+        const TableFormat::Use &use) const {
+    if (use.tcam_use.size() == 0)
+        return;
+    out << indent << "match:" << std::endl;
+    for (auto tcam_use : use.tcam_use) {
+        out << indent << "- { ";
+        out << "group: " << tcam_use.group << ", ";
+        if (tcam_use.byte_group != -1)
+            out << "byte_group: " << tcam_use.byte_group << ", ";
+        if (tcam_use.byte_config != -1)
+            out << "byte_config: " << tcam_use.byte_config << ", ";
+        out << "dirtcam: 0x" << tcam_use.dirtcam;
+        out << " }" << std::endl;
+    }
+}
 
 /* Adjusted to consider actions coming from hash distribution.  Now hash computation
    instructions have specific tags so that we can output the correct hash distribution
@@ -1146,6 +1162,9 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
         if (!tbl->layout.ternary && !tbl->layout.no_match_data()) {
             emit_table_format(out, indent, tbl->resources->table_format, &fmt, false);
         }
+
+        if (tbl->layout.ternary)
+            emit_ternary_match(out, indent, tbl->resources->table_format);
     }
 
     cstring next_hit = "";  cstring next_miss = "";

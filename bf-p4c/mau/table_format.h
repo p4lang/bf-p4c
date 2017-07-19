@@ -32,6 +32,9 @@ struct TableFormat {
     static constexpr int RAM_GHOST_BITS = 10;
     static constexpr int VERSION_BITS = 4;
     static constexpr int VERSION_NIBBLES = 4;
+    static constexpr int MID_BYTE_LO = 0;
+    static constexpr int MID_BYTE_HI = 1;
+    static constexpr int MID_BYTE_VERS = 3;
 
     enum type_t {MATCH, ACTION, IMMEDIATE, VERS, COUNTER, METER, INDIRECT_ACTION, ENTRY_TYPES };
 
@@ -48,12 +51,23 @@ struct TableFormat {
             bitvec allocated_bytes;
         };
 
+        struct TCAM_use {
+            int group;
+            int byte_group;
+            int byte_config;
+            bitvec dirtcam;
+            TCAM_use(int g, int bg, int bc, bitvec dc)
+                : group(g), byte_group(bg), byte_config(bc), dirtcam(dc) {}
+        };
+
         vector<match_group_use> match_groups;
+        vector<TCAM_use> tcam_use;
         // ghost bits should be the same for all match entries
         map<IXBar::Use::Byte, std::pair<int, bitvec>> ghost_bits;
         void clear() {
             ghost_bits.clear();
             match_groups.clear();
+            tcam_use.clear();
         }
         bitvec immed_mask;
     };
@@ -104,6 +118,8 @@ struct TableFormat {
     bool allocate_all_immediate();
     bool allocate_all_instr_selection();
     bool allocate_all_match();
+    bool allocate_all_ternary_match();
+
     void determine_byte_types(bitvec &unaligned_bytes, bitvec &chosen_ghost_bytes);
     bool allocate_easy_bytes(bitvec &unaligned_bytes, bitvec &chosen_ghost_bytes,
         int &easy_size);

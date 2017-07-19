@@ -151,6 +151,8 @@ bool TableFormat::find_format(Use *u) {
             return false;
         if (!allocate_all_instr_selection())
             return false;
+        if (!allocate_all_ternary_match())
+            return false;
         return true;
     }
 
@@ -646,6 +648,60 @@ bool TableFormat::allocate_all_match() {
     if (!allocate_difficult_bytes(unaligned_bytes, chosen_ghost_bytes, easy_size))
         return false;
 
+    return true;
+}
+
+bool TableFormat::allocate_all_ternary_match() {
+    bitvec used_groups;
+    bitvec used_midbyte;
+    std::map<int, int> byte_config;
+    std::map<int, bitvec> dirtcam;
+
+    for (auto &byte : match_ixbar.use) {
+        if (byte.loc.byte == IXBar::TERNARY_BYTES_PER_GROUP) {
+            // FIXME: This does not correctly handle PHV allocation, but should be a separate
+            // PR.  Will take a few more things into account.  Just an estimate of PHV
+            // allocation.  Would probably require a backtrack point
+            // Reserves groups and the mid bytes
+            if ((byte.lo % 8) <= 3) {
+                int group_used = byte.loc.group;
+                used_groups.setbit(group_used);
+                used_midbyte.setbit(group_used);
+                byte_config[group_used] = MID_BYTE_LO;
+                dirtcam[group_used].setbit(byte.loc.byte * 2);
+            }
+            if ((byte.hi % 8) >= 4) {
+                int group_used = byte.loc.group + 1;
+                used_groups.setbit(group_used);
+                used_midbyte.setbit(group_used);
+                byte_config[group_used] = MID_BYTE_HI;
+                dirtcam[group_used].setbit(byte.loc.byte * 2);
+            }
+        } else {
+            used_groups.setbit(byte.loc.group);
+            dirtcam[byte.loc.group].setbit(byte.loc.byte * 2);
+        }
+    }
+
+    // Determines a mid_byte for the version valid
+    bool version_set = false;
+    int version_group = 0;
+    for (auto group : used_groups) {
+        if (used_midbyte.getbit(group)) continue;
+        if (version_set) continue;
+        version_group = group;
+        byte_config[group] = MID_BYTE_VERS;
+    }
+
+    // Sets up the the TCAM_use with the four fields output to the assembler
+    for (auto group : used_groups) {
+        if (used_midbyte.getbit(group))
+            use->tcam_use.emplace_back(group, group / 2, byte_config[group], dirtcam[group]);
+        else if (version_group == group)
+            use->tcam_use.emplace_back(group, -1, byte_config[group], dirtcam[group]);
+        else
+            use->tcam_use.emplace_back(group, -1, -1, dirtcam[group]);
+    }
     return true;
 }
 

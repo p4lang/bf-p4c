@@ -52,6 +52,7 @@ class MauAsmOutput : public MauInspector {
     void emit_table_format(std::ostream &out, indent_t, const TableFormat::Use &use,
             const TableMatch *tm, bool ternary) const;
     void emit_table_context_json(std::ostream &out, indent_t, const IR::MAU::Table *tbl) const;
+    void emit_ternary_match(std::ostream &out, indent_t, const TableFormat::Use &use) const;
     void emit_table(std::ostream &out, const IR::MAU::Table *tbl) const;
     std::string find_indirect_index(const IR::MAU::Table *tbl, const IR::Attached *at) const;
     void emit_table_indir(std::ostream &out, indent_t, const IR::MAU::Table *tbl) const;
