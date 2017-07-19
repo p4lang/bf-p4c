@@ -41,8 +41,8 @@ set (TOFINO_TEST_SUITES
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c2/*/*.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c3/*/*.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c4/*/*.p4
+  # switch DC_BASIC_PROFILE
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch/p4src/switch.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch_profiles/*/*.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/jenkins/*/*.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch_*/switch.p4
   ${v1tests}
@@ -50,6 +50,50 @@ set (TOFINO_TEST_SUITES
 
 p4c_add_tests("tofino" ${P4C_TOFINO_RUNTEST} "${TOFINO_TEST_SUITES}"
   "${TOFINO_XFAIL_TESTS}")
+
+set  (SWITCH_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch/p4src/switch.p4)
+set  (isXFail TRUE)
+file (RELATIVE_PATH switchtest ${P4C_SOURCE_DIR} ${SWITCH_P4})
+p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
+  "switch_acl_ip4v" ${switchtest} "-DACL_IPV4_PROFILE")
+p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
+  "switch_bfd_offload" ${switchtest} "-DBFD_OFFLOAD_PROFILE")
+p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
+  "switch_dc_maxsizes" ${switchtest} "-DDC_MAXSIZES_PROFILE")
+p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
+  "switch_egress_acl" ${switchtest} "-DEGRESS_ACL_PROFILE")
+p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
+  "switch_fabric" ${switchtest} "-DFABRIC_PROFILE")
+p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
+  "switch_fabric_maxsizes" ${switchtest} "-DFABRIC_MAXSIZES_PROFILE")
+p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
+  "switch_ila" ${switchtest} "-DILA_PROFILE")
+p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
+  "switch_ila_ipv6" ${switchtest} "-DILA_IPV6_PROFILE")
+p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
+  "switch_ent_fin_leaf" ${switchtest} "-DENT_FIN_LEAF_PROFILE")
+p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
+  "switch_ent_fin_spine" ${switchtest} "-DENT_FIN_SPINE_PROFILE")
+p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
+  "switch_ent_fin_postcard" ${switchtest} "-DENT_FIN_POSTCARD_PROFILE")
+p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
+  "switch_l2" ${switchtest} "-DL2_PROFILE")
+p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
+  "switch_l3_ipv4_fib_clpm" ${switchtest} "-DL3_IPV4_FIB_CLPM_PROFILE")
+p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
+  "switch_mpls_udp" ${switchtest} "-DMPLS_UDP_PROFILE")
+p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
+  "switch_nat" ${switchtest} "-DNAT_PROFILE")
+p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
+  "switch_qos" ${switchtest} "-DQOS_PROFILE")
+p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
+  "switch_sflow" ${switchtest} "-DSFLOW_PROFILE")
+p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
+  "switch_test_int_vxlan_ep" ${switchtest} "-DTEST_INT_VXLAN_EP_PROFILE")
+p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
+  "switch_test_int_vxlan_transit" ${switchtest} "-DTEST_INT_VXLAN_TRANSIT_PROFILE")
+p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
+  "switch_test_mirror_on_drop" ${switchtest} "-DTEST_MIRROR_ON_DROP_PROFILE")
 
 # We have additional test inputs that are used to test the other
 # (standard) back-ends These test input programs depend on Tofino in
@@ -64,7 +108,6 @@ set (P14_TEST_SUITES
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c3/*/*.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c4/*/*.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch/p4src/switch.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch_profiles/*/*.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/jenkins/*/*.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch_*/switch.p4
   )

@@ -402,9 +402,6 @@ set (TOFINO_XFAIL_TESTS
   extensions/p4_tests/p4_14/jenkins/drivers_test/drivers_test_one.p4
   extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case1.p4
   extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case2.p4
-  extensions/p4_tests/p4_14/switch_profiles/minsizes/switch_minsizes.p4
-  extensions/p4_tests/p4_14/switch_profiles/sflow_profile/switch_sflow_profile.p4
-  extensions/p4_tests/p4_14/switch_profiles/transit_post_l45/switch_TRANSIT_post_L45.p4
 #Need further discussion with Seth and Gana before JIRA ticket
   testdata/p4_14_samples/sai_p4.p4
 # uncharacterized failures
