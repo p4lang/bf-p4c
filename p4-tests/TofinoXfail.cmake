@@ -301,7 +301,7 @@ set (TOFINO_XFAIL_TESTS
   testdata/p4_14_samples/packet_redirect.p4
   extensions/p4_tests/p4_14/test_checksum.p4
   extensions/p4_tests/p4_14/test_config_102_clone.p4
-  testdata/p4_16_samples/issue430-1-bmv2.p4
+#  testdata/p4_16_samples/issue430-1-bmv2.p4
   extensions/p4_tests/p4_16/clone-bmv2.p4
 # BRIG_132
   testdata/p4_16_samples/union-bmv2.p4
@@ -403,7 +403,7 @@ set (TOFINO_XFAIL_TESTS
   extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case1.p4
   extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case2.p4
 #Need further discussion with Seth and Gana before JIRA ticket
-  testdata/p4_14_samples/sai_p4.p4
+# testdata/p4_14_samples/sai_p4.p4
 # uncharacterized failures
   extensions/p4_tests/p4_14/c1/COMPILER-133/full_tphv.p4
   extensions/p4_tests/p4_14/c1/COMPILER-228/case1644.p4
