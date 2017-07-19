@@ -292,6 +292,15 @@ add_dependencies(tofinobackend genIR)
 add_executable(p4c-tofino ${P4C_TOFINO_SRCS})
 target_link_libraries (p4c-tofino tofinobackend ${P4C_LIBRARIES} ${P4C_LIB_DEPS})
 
+install (TARGETS p4c-tofino
+  RUNTIME DESTINATION ${P4C_RUNTIME_OUTPUT_DIRECTORY})
+install (DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/p4include
+  DESTINATION ${P4C_ARTIFACTS_OUTPUT_DIRECTORY})
+install (DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/p4_14include
+  DESTINATION ${P4C_ARTIFACTS_OUTPUT_DIRECTORY})
+install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino.cfg
+  DESTINATION ${P4C_ARTIFACTS_OUTPUT_DIRECTORY}/p4c_src)
+
 # hack to get around the fact that the test scripts expect the backend
 # binary to be in the top level directory. This should go away when we
 # remove automake and fix the scripts.
