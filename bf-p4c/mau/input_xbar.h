@@ -103,7 +103,7 @@ struct IXBar {
                 if (field != b.field) return field < b.field;
                 if (lo != b.lo) return lo < b.lo;
                 if (hi != b.hi) return hi < b.hi;
-                return true;
+                return false;
             }
         };
         vector<Byte>    use;
