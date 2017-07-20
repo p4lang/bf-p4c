@@ -161,15 +161,21 @@ PHV_Container::taint(
     // cannot share container with Ingress fields & Egress fields
     // transition behavior for such sharing unclear
     //
-    // ignore gress of $tmp fields as cluster_phv sets its gress based on non-tmps
+    // gress of fields must agree with gress of MAU group
+    // "mixed-gress" arithmetic disallowed
     //
-    if (strncmp(field->name, "$tmp", strlen("$tmp"))) {
-        gress_i = gress(field);
-        if (phv_mau_group_i->gress() == Ingress_Egress::Ingress_Or_Egress) {
-            phv_mau_group_i->gress(gress_i);
-        } else {
-            assert(phv_mau_group_i->gress() == gress_i);
-        }
+    gress_i = gress(field);
+    if (phv_mau_group_i->gress() == Ingress_Egress::Ingress_Or_Egress) {
+        phv_mau_group_i->gress(gress_i);
+    } else {
+        BUG_CHECK(
+            phv_mau_group_i->gress() == gress_i,
+            "*****PHV_Container::taint()*****%s mau_group gress = %c, field = %d:%s, gress = %c",
+            phv_number_string(),
+            static_cast<char>(phv_mau_group_i->gress()),
+            field->id,
+            field->name,
+            static_cast<char>(gress_i));
     }
     sanity_check_container_ranges("PHV_Container::taint()..");
     return width;  // all bits of this field processed

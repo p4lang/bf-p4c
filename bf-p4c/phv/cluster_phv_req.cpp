@@ -249,20 +249,20 @@ void
 Cluster_PHV::set_gress() {
     //
     // set gress for this cluster
-    // ignore gress of temp vars ($tmp1, $tmp2, ....)
-    // consider gress of field vars in cluster
     //
     gress_i = PHV_Container::Ingress_Egress::Ingress_Or_Egress;
     for (auto &f : cluster_vec_i) {
-        // $tmp gress comes preset
-        if (strncmp(f->name, "$tmp", strlen("$tmp")) == 0) {
-            continue;
+        if (gress_i == PHV_Container::Ingress_Egress::Ingress_Or_Egress) {
+            gress_i = PHV_Container::gress(f);
         } else {
-            if (gress_i == PHV_Container::Ingress_Egress::Ingress_Or_Egress) {
-                gress_i = PHV_Container::gress(f);
-            } else {
-                assert(gress_i == PHV_Container::gress(f));
-            }
+            BUG_CHECK(
+                gress_i == PHV_Container::gress(f),
+                "*****Cluster_PHV::set_gress()*****%s gress = %c, field = %d:%s, gress = %c",
+                id_i,
+                static_cast<char>(gress_i),
+                f->id,
+                f->name,
+                static_cast<char>(PHV_Container::gress(f)));
         }
     }
 }  // set_gress

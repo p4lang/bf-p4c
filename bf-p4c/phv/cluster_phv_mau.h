@@ -167,7 +167,7 @@ class PHV_MAU_Group_Assignments : public Visitor {
  private:
     Cluster_PHV_Requirements &phv_requirements_i;  // reference to parent PHV Requirements
     //
-    enum Nibble {nibble = 4};
+    enum Constants {nibble = 4, num_collections = 8};
     //
     ordered_map<PHV_Container::PHV_Word, int> num_groups_i {
         {PHV_Container::PHV_Word::b32, 4},
@@ -323,6 +323,9 @@ class PHV_MAU_Group_Assignments : public Visitor {
     // cohabit_fields requests to TP to avoid single-write issue
     //
     std::vector<PHV_Container *>& cohabit_fields()        { return cohabit_fields_i; }
+
+    /** estimate ingress / egress ratio */
+    int num_ingress_collections(std::vector<Cluster_PHV *>&);
 
     /** Build PHV containers and groups. */
     void create_MAU_groups();

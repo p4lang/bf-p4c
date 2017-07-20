@@ -229,11 +229,19 @@ bool Cluster::preorder(const IR::Primitive* primitive) {
             //
             create_dst_map_entry(dst_i);
             //
+            LOG4("...dst... = " << dst_i);
+            auto gress = dst_i->gress;
             for (auto &operand : primitive->operands) {
                 auto field = phv_i.field(operand);
-                insert_cluster(dst_i, field);
-                set_field_range(*operand);
-                LOG4("...operand... = " << field);
+                if (field) {
+                    insert_cluster(dst_i, field);
+                    set_field_range(*operand);
+                    LOG4("...operand... = " << field);
+                    BUG_CHECK(gress == field->gress,
+                        "***** cluster.cpp: Operation ..... mixed gress !*****\n%d:%s,%s\n%d:%s,%s",
+                        dst_i->id, dst_i->name, (dst_i->gress ? " E" : " I"),
+                        field->id, field->name, (field->gress ? " E" : " I"));
+                }
             }
         }
     }

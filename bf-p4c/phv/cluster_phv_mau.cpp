@@ -330,6 +330,34 @@ PHV_MAU_Group_Assignments::phv_container(int phv_num) {
     return 0;
 }
 
+int
+PHV_MAU_Group_Assignments::num_ingress_collections(std::vector<Cluster_PHV *>& cluster_vec) {
+    //
+    assert(cluster_vec.size());
+    int ingress_and_egress = 0;
+    int ingress = 0;
+    for (auto &cl : cluster_vec) {
+        if (cl->exact_containers()) {
+            ingress_and_egress++;
+            if (cl->gress() == PHV_Container::Ingress_Egress::Ingress_Only) {
+                ingress++;
+            }
+        }
+    }
+    int ingress_collections = Constants::num_collections / 2;
+    if (ingress_and_egress) {
+        int value = (ingress * Constants::num_collections) / ingress_and_egress
+                      + ((ingress * Constants::num_collections) % ingress_and_egress ? 1 : 0);
+        if (abs(ingress_collections - value) > 1) {
+            ingress_collections = value;
+        }
+    }
+    LOG1("*****PHV_MAU_Group_Assignments: sanity_INFO*****....."
+        << ".....ingress = " << ingress << ", ingress_and_egress = " << ingress_and_egress
+        << ", ingress_collections = " << ingress_collections);
+    return ingress_collections;
+}
+
 void
 PHV_MAU_Group_Assignments::create_MAU_groups() {
     //
@@ -389,24 +417,19 @@ PHV_MAU_Group_Assignments::create_TPHV_collections() {
         true /* t_phv */);
     //
     // create TPHV collections
+    // T_PHV Collection = 4*32b, 4*8b, 6*16b container groups
+    // any TPHV collection can be Ingress_Only, Egress_Only but not both
+    // set gress for collection based on ingress / egress partition estimate
+    //
+    int ingress_collections = num_ingress_collections(phv_requirements_i.t_phv_fields());
     //
     for (auto &x : num_groups_i) {
         int phv_number = t_phv_number_start_i[x.first];
         std::stringstream ss;
         ss << phv_number;
         std::string asm_encoded = "T" + asm_prefix_i[x.first] + ss.str();
-        std::list<PHV_MAU_Group *> t_phv_groups;
-        //
-        // place 4(32b,8b), 6(16b) containers per "tphv group" corresponding to T_PHV Collections
-        // any TPHV collection can be Ingress, Egress but not both
-        // initialize 1/2 to Ingress, the other 1/2 to Egress
-        // fill T_PHV_groups_i list of T_PHV containers in order 32b, 16b, 8b
-        //
-        PHV_Container::Ingress_Egress gress = PHV_Container::Ingress_Egress::Ingress_Only;
-        for (int i=1; i <= x.second*2; i++) {
-            if (i > x.second) {
-                gress = PHV_Container::Ingress_Egress::Egress_Only;
-            }
+        PHV_Container::Ingress_Egress gress = PHV_Container::Ingress_Egress::Ingress_Or_Egress;
+        for (int i=1; i <= Constants::num_collections; i++) {
             PHV_MAU_Group *g = new PHV_MAU_Group(
                                             this,
                                             x.first,
@@ -414,22 +437,19 @@ PHV_MAU_Group_Assignments::create_TPHV_collections() {
                                             phv_number,
                                             asm_encoded,
                                             gress,
-                                            PHV_Container::Containers::MAX/4);
-            t_phv_groups.push_back(g);
-            T_PHV_groups_i.push_front(g);
-        }
-        // collections T_PHV_i
-        int collection = 0;
-        int i = 0;
-        for (auto &g : t_phv_groups) {
+                                            x.second);
             for (auto &c : g->phv_containers()) {
-                if (i++ % x.second == 0) {
-                    collection++;
-                }
-                T_PHV_i[collection][g->width()].push_back(c);
+                T_PHV_i[i][g->width()].push_back(c);
             }
+            if (i <= ingress_collections) {
+                g->gress(PHV_Container::Ingress_Egress::Ingress_Only);
+            } else {
+                g->gress(PHV_Container::Ingress_Egress::Egress_Only);
+            }
+            T_PHV_groups_i.push_front(g);  // list 8b,16b,32b used in container_no_pack()
         }
-    }
+    }  // for
+    //
     sanity_check_T_PHV_collections("PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments().....");
     //
 }  // PHV_MAU_Group_Assignments::create_TPHV_collections
@@ -490,7 +510,7 @@ void PHV_MAU_Group_Assignments::cluster_PHV_placements() {
         // it is beneficial to include contrained nibbles also, e.g., learning "bottom bits"
         // as packing smaller widths before larger widths restricts latter accommodation
         //
-        if (cl->max_width() <= Nibble::nibble) {
+        if (cl->max_width() <= Constants::nibble) {
             clusters_to_be_assigned_nibble_i.push_front(cl);
         } else {
             clusters_to_be_assigned_i.push_front(cl);
@@ -562,7 +582,7 @@ PHV_MAU_Group_Assignments::cluster_TPHV_placements() {
     // separate t_phv fields nibble
     //
     for (auto &cl : phv_requirements_i.t_phv_fields()) {
-        if (cl->max_width() <= Nibble::nibble) {
+        if (cl->max_width() <= Constants::nibble) {
             t_phv_fields_nibble_i.push_front(cl);
         } else {
             t_phv_fields_i.push_front(cl);
@@ -2522,10 +2542,10 @@ void PHV_MAU_Group_Assignments::sanity_check_T_PHV_collections(const std::string
             }
         }
         if (gress_set.size() != 1) {
-            LOG1("*****cluster_phv_mau.cpp:sanity_FAIL***** T_PHV Collection....."
-                    << coll.second
-                    << ".....containers have differing gress....."
-                    << msg);
+            LOG1("*****cluster_phv_mau.cpp:sanity_FAIL*****"
+                    << msg
+                    << ".....T_PHV Collection.....containers have differing gress....."
+                    << coll.second);
         }
     }
 }  // sanity_check_T_PHV_collections
