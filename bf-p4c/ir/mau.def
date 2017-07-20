@@ -315,9 +315,9 @@ class TypedPrimitive : Primitive {
     IR::Type method_type;
 
     TypedPrimitive(cstring name)
-    : method_type(nullptr), Primitive(name) { }
+    : Primitive(name), method_type(nullptr) { }
     TypedPrimitive(Util::SourceInfo srcInfo, const IR::Type* return_type, const IR::Type* m_type, cstring name)
-    : method_type(m_type), Primitive(srcInfo, return_type, name) { }
+    : Primitive(srcInfo, return_type, name), method_type(m_type) { }
 
     visit_children { Primitive::visit_children(v); }
 }
