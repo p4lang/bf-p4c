@@ -48,6 +48,19 @@ set (TOFINO_TEST_SUITES
   ${v1tests}
   )
 
+# if Harlyn is not present, all STF tests will fail, so we mark them XFAIL
+if (NOT HARLYN_STF)
+  foreach (ts "${TOFINO_TEST_SUITES}")
+    file (GLOB __testfiles RELATIVE ${P4C_SOURCE_DIR} ${ts})
+    foreach (__p4file ${__testfiles})
+      string (REGEX REPLACE ".p4$" ".stf" __stffile ${__p4file})
+      if (EXISTS ${P4C_SOURCE_DIR}/${__stffile})
+        set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS} ${__p4file})
+      endif()
+    endforeach() # __p4file
+  endforeach() # ts
+endif()
+
 p4c_add_tests("tofino" ${P4C_TOFINO_RUNTEST} "${TOFINO_TEST_SUITES}"
   "${TOFINO_XFAIL_TESTS}")
 
