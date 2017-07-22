@@ -189,10 +189,6 @@ set (TOFINO_XFAIL_TESTS
 # BRIG-99
   extensions/p4_tests/p4_14/test_config_123_meter_2.p4
   extensions/p4_tests/p4_14/test_config_86_multiple_action_widths_for_indirect_action.p4
-# BRIG-100
-  extensions/p4_tests/p4_14/test_config_119_tcam_range_3.p4
-  extensions/p4_tests/p4_14/test_config_85_table_ordering.p4
-  testdata/p4_14_samples/exact_match7.p4
 # BRIG-101
   extensions/p4_tests/p4_14/test_config_45_action_data_immediate_param_and_constant.p4
   extensions/p4_tests/p4_14/test_config_48_action_data_bit_masked_set.p4
@@ -276,8 +272,6 @@ set (TOFINO_XFAIL_TESTS
   extensions/p4_tests/p4_14/09-MatchNoDep.p4
   extensions/p4_tests/p4_14/10-MatchNoDep1.p4
   extensions/p4_tests/p4_14/test_config_129_various_exact_match_keys.p4
-# BRIG-115
-  extensions/p4_tests/p4_14/test_config_237_hash_action_17_bits.p4
 # BRIG-117
   extensions/p4_tests/p4_14/gateway_and_big_table.p4
 # BRIG-119
@@ -287,7 +281,6 @@ set (TOFINO_XFAIL_TESTS
   extensions/p4_tests/p4_14/hash_calculation_two_hash1.p4
   extensions/p4_tests/p4_14/hash_calculation_two_hash2.p4
   extensions/p4_tests/p4_14/test_config_209_pack_hash_dist.p4
-  testdata/p4_14_samples/hash_action_gateway2.p4
   extensions/p4_tests/p4_14/test_config_13_first_selection.p4
 # BRIG-124
   testdata/p4_16_samples/issue510-bmv2.p4
@@ -464,4 +457,6 @@ set (TOFINO_XFAIL_TESTS
   extensions/p4_tests/p4_14/test_config_297_big_metadata.p4
 # BRIG-183
   extensions/p4_tests/p4_14/test_config_303_static_table.p4
+# BRIG-192
+  extensions/p4_tests/p4_14/11-AssignChooseDest.p4
   )

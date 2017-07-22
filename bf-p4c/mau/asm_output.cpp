@@ -691,13 +691,13 @@ void MauAsmOutput::emit_table_format(std::ostream &out, indent_t indent,
         // For every single match byte information.  Have to understand the byte alignment in
         // PHV to understand exactly which bits to use
         for (auto match_byte : match_group.match) {
-            int byte_start = -1; int byte_end = -1;
-            const IXBar::Use::Byte &byte = match_byte.first;
-            const std::pair<int, bitvec> &byte_layout = match_byte.second;
-            Slice sl(phv, byte.field, byte.lo, byte.hi);
+            const bitvec &byte_layout = match_byte.second;
             // Byte start and byte end are the bitvec positions for this specific byte
-            byte_start = byte_layout.second.ffs() + sl.bytealign();
-            byte_end = byte_start + byte_layout.first - 1;
+            if (!byte_layout.is_contiguous())
+                BUG("Currently non contiguous byte allocation in table format?");
+
+            int byte_start = byte_layout.min().index();
+            int byte_end = byte_layout.max().index();
             if (start == -1) {
                 start = byte_start;
                 end = byte_end;
@@ -960,15 +960,25 @@ MauAsmOutput::TableMatch::TableMatch(const MauAsmOutput &, const PhvInfo &phv,
     // then this information is contained within the bitvec and the int of the match_info
     for (auto match_info : tbl->resources->table_format.match_groups[0].match) {
         const IXBar::Use::Byte &byte = match_info.first;
-        const std::pair<int, bitvec> &byte_layout = match_info.second;
-        int lowest_part = byte.lo;
+        const bitvec &byte_layout = match_info.second;
+        if (!byte_layout.is_contiguous()) {
+            BUG("Currently table format byte is not contiguous?");
+        }
         // If the vector is partially ghosted, then the ffs will be the first location of the
         // ghost.  If it is an unaligned bit, then the ffs will be 0, as we couldn't break
         // that bit up particularly easily
-        if (byte.hi - byte.lo + 1 > byte_layout.second.popcount()) {
-            lowest_part += byte_layout.second.ffs() % 8;
+        int lo = byte.lo;
+        int hi = byte.hi;
+        if (byte_layout.popcount() != hi - lo + 1) {
+            lo += ((byte_layout.min().index() % 8) - byte.bit_use.min().index());
         }
-        Slice sl(phv, byte.field, lowest_part, lowest_part + byte_layout.first - 1);
+
+        Slice sl(phv, byte.field, lo, hi);
+
+        if (sl.bytealign() != (byte_layout.min().index() % 8))
+            BUG("Byte alignment does not match up properly");
+
+
         match_fields.push_back(sl);
     }
 
@@ -977,25 +987,19 @@ MauAsmOutput::TableMatch::TableMatch(const MauAsmOutput &, const PhvInfo &phv,
     // matched and partially ghosted
     for (auto ghost_info : tbl->resources->table_format.ghost_bits) {
         const IXBar::Use::Byte &byte = ghost_info.first;
-        const std::pair<int, bitvec> &byte_layout = ghost_info.second;
-        if (byte_layout.second.popcount() != 8) {
-            // Ghosted bits from an 8-bit field may have multiple ghosting portions
-            int start = byte_layout.second.ffs();
-            do {
-                int end = byte_layout.second.ffz(start);
-                if (end == -1)
-                    end = byte_layout.second.max() + 1;
-                int start_byte = (start % 8) + byte.lo;
-                int end_byte = ((end - 1) % 8) + byte.lo;
-                Slice sl(phv, byte.field, start_byte, end_byte);
-                ghost_bits.push_back(sl);
-                start = byte_layout.second.ffs(end);
-            } while (start != -1);
-        } else {
-            int start = byte.hi - byte_layout.first + 1;
-            Slice sl(phv, byte.field, start, byte.hi);
-            ghost_bits.push_back(sl);
+        const bitvec &byte_layout = ghost_info.second;
+        if (!byte_layout.is_contiguous()) {
+            BUG("Currently ghosted format byte is not contiguous?");
         }
+        int lo = byte.lo;
+        int hi = byte.hi;
+        if (byte_layout.popcount() != hi - lo + 1) {
+            hi -= (byte.bit_use.max().index() - (byte_layout.max().index() % 8));
+        }
+        Slice sl(phv, byte.field, lo, hi);
+        if (sl.bytealign() != (byte_layout.min().index() % 8))
+            BUG("Byte alignment does not match up properly");
+        ghost_bits.push_back(sl);
     }
 
     // Link match data together for an easier to read asm

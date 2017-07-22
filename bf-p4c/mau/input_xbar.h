@@ -89,6 +89,7 @@ struct IXBar {
             cstring     field;
             int         lo, hi;
             Loc         loc;
+            bitvec      bit_use;  // the PHV container bits the match will be performed on
             int         flags = 0;  // flags describing alignment and gateway use/requirements
             Byte(cstring f, int l, int h) : field(f), lo(l), hi(h) {}
             Byte(cstring f, int l, int h, int g, int gb) : field(f), lo(l), hi(h), loc(g, gb) {}

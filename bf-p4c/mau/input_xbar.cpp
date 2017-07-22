@@ -524,7 +524,8 @@ int IXBar::free_bytes_big_group(big_grp_use *grp, vector<IXBar::Use::Byte*> &una
             if (free_bytes == 0)
                 break;
             auto &need = *(unalloced[i]);
-            if (need.hi / 4 != need.lo / 4) continue;
+            if (need.bit_use.getslice(4, 4).popcount() > 0 &&
+                need.bit_use.getslice(0, 4).popcount() > 0) continue;
             if (align_flags[(TERNARY_BYTES_PER_GROUP + align) & 3] & need.flags) continue;
             allocate_free_byte(nullptr, unalloced, alloced, need,
                                grp->big_group * 2, 5, i, free_bytes, bytes_placed);
@@ -826,6 +827,7 @@ static void add_use(IXBar::Use &alloc, const PhvInfo::Field *field,
     field->foreach_byte(bits, [&](const PhvInfo::Field::alloc_slice &sl) {
         ok = true;  // FIXME -- better sanity check?
         IXBar::Use::Byte byte(field->name, sl.field_bit, sl.field_hi());
+        byte.bit_use.setrange(sl.container_bit % 8, sl.width);
         byte.flags =
             flags | need_align_flags[sl.container.log2sz()][(sl.container_bit/8U) & 3];
         if (hash_dist)

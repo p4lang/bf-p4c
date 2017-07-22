@@ -214,6 +214,7 @@ bool TableFormat::allocate_next_table() {
             bitvec ptr_mask(start, next_table_bits);
             use->match_groups[group].mask[ACTION] |= ptr_mask;
             total_use |= ptr_mask;
+            group++;
         }
     }
     return true;
@@ -331,7 +332,6 @@ bool TableFormat::allocate_all_instr_selection() {
    are designated to be simple, essentialy bytes that 8 bits total and have no ghosting 
    issues.  Create a vector of these easy bytes and try to allocate them all at once */
 bool TableFormat::allocate_easy_bytes(bitvec &unaligned_bytes, bitvec &chosen_ghost_bytes,
-
     int &easy_size) {
     vector<ByteInfo> easy_match_bytes;
     bitvec difficult_bytes = unaligned_bytes | chosen_ghost_bytes;
@@ -339,11 +339,11 @@ bool TableFormat::allocate_easy_bytes(bitvec &unaligned_bytes, bitvec &chosen_gh
     for (auto &byte : single_match) {
         index++;
         if (difficult_bytes.getbit(index)) continue;
-        easy_match_bytes.emplace_back(byte, 8, index);
+        easy_match_bytes.emplace_back(byte, byte.bit_use, index);
     }
 
     easy_size = easy_match_bytes.size();
-    bool rv = allocate_byte_vector(easy_match_bytes, 0, false);
+    bool rv = allocate_byte_vector(easy_match_bytes, 0);
 
     // Potential for splits?
     if (!rv)
@@ -353,8 +353,7 @@ bool TableFormat::allocate_easy_bytes(bitvec &unaligned_bytes, bitvec &chosen_gh
     for (size_t i = 0; i < match_groups_per_RAM.size(); i++) {
         for (int j = 0; j < match_groups_per_RAM[i]; j++) {
             for (auto mg : use->match_groups[group].match) {
-                LOG4("Group " << group << " Byte " << mg.first << " location "
-                     << mg.second.second << " size " << mg.second.first);
+                LOG4("Group " << group << " Byte " << mg.first << " Allocation " << mg.second);
             }
             group = determine_next_group(group, i);
         }
@@ -364,8 +363,8 @@ bool TableFormat::allocate_easy_bytes(bitvec &unaligned_bytes, bitvec &chosen_gh
 
 /* Fills in the vectors used and dsecribed in the allocate_difficult_bytes function call. */
 void TableFormat::determine_difficult_vectors(vector<ByteInfo> &unaligned_match,
-    vector<ByteInfo> &unaligned_ghost, vector<ByteInfo> &ghost_anywhere,
-    bitvec &unaligned_bytes, bitvec &chosen_ghost_bytes, int ghosted_group) {
+    vector<ByteInfo> &unaligned_ghost, bitvec &unaligned_bytes,
+    bitvec &chosen_ghost_bytes, int ghosted_group) {
 
     int unaligned_ghost_bits = 0;
     int index = -1;
@@ -377,10 +376,10 @@ void TableFormat::determine_difficult_vectors(vector<ByteInfo> &unaligned_match,
         if (!unaligned_bytes.getbit(index)) continue;
         int size = byte.hi - byte.lo + 1;
         if (byte.loc.group == ghosted_group) {
-            unaligned_ghost.emplace_back(byte, size, index);
+            unaligned_ghost.emplace_back(byte, byte.bit_use, index);
             unaligned_ghost_bits += size;
         } else {
-            unaligned_match.emplace_back(byte, size, index);
+            unaligned_match.emplace_back(byte, byte.bit_use, index);
         }
     }
 
@@ -388,8 +387,8 @@ void TableFormat::determine_difficult_vectors(vector<ByteInfo> &unaligned_match,
     std::sort(unaligned_ghost.begin(), unaligned_ghost.end(),
         [=](const ByteInfo &a, const ByteInfo &b){
         int t;
-        if ((t = a.bit_count - b.bit_count) != 0)
-            return a.bit_count < b.bit_count;
+        if ((t = a.bit_use.popcount() - b.bit_use.popcount()) != 0)
+            return a.bit_use.popcount() < b.bit_use.popcount();
 
         return a.byte < b.byte;
     });
@@ -398,16 +397,24 @@ void TableFormat::determine_difficult_vectors(vector<ByteInfo> &unaligned_match,
     // this loop decides which fields must be actually matched upon, and how to split them up
     while (unaligned_ghost_bits > ghost_bits_allowed) {
         int difference = unaligned_ghost_bits - ghost_bits_allowed;
-        int match_added = unaligned_ghost.back().bit_count;
-        if (match_added < difference) {
+        int match_added = unaligned_ghost.back().bit_use.popcount();
+        if (match_added <= difference) {
             unaligned_match.push_back(unaligned_ghost.back());
             unaligned_ghost.pop_back();
             unaligned_ghost_bits -= match_added;
-        } else {
+        } else if (match_added > difference) {
             int ghosted_bits = match_added - difference;
             ByteInfo &last_ghost = unaligned_ghost.back();
-            last_ghost.bit_count = ghosted_bits;
-            unaligned_match.emplace_back(last_ghost.byte, difference, last_ghost.use_index);
+            bitvec ghost_mask;
+            int index = 0;
+            for (auto b : last_ghost.bit_use) {
+                ghost_mask.setbit(b);
+                index++;
+                if (index == ghosted_bits) break;
+            }
+            unaligned_match.push_back(unaligned_ghost.back());
+            unaligned_match.back().bit_use -= ghost_mask;
+            last_ghost.bit_use = ghost_mask;
             unaligned_ghost_bits -= ghosted_bits;
         }
     }
@@ -416,19 +423,22 @@ void TableFormat::determine_difficult_vectors(vector<ByteInfo> &unaligned_match,
     // this loop selects an 8 bit field to split into ghosted and non-ghosted
     if (unaligned_ghost_bits < ghost_bits_allowed) {
         int difference = ghost_bits_allowed - unaligned_ghost_bits;
-        int ghosted_bits = difference % 8;
+        int ghosted_bits = difference % 8 == 0 ? 8 : difference % 8;
 
         int index = -1;
         bool match_allocated = false;
         for (auto byte : single_match) {
             index++;
             if (!chosen_ghost_bytes.getbit(index)) continue;
+            bitvec byte_mask(0, 8);
             if (!match_allocated) {
-                unaligned_ghost.emplace_back(byte, ghosted_bits, index);
-                ghost_anywhere.emplace_back(byte, 8 - ghosted_bits, index);
+                bitvec ghost_mask(0, ghosted_bits);
+                unaligned_ghost.emplace_back(byte, ghost_mask, index);
+                if (ghosted_bits < 8)
+                    unaligned_match.emplace_back(byte, byte_mask - ghost_mask, index);
                 match_allocated = true;
             } else {
-                unaligned_ghost.emplace_back(byte, 8, index);
+                unaligned_ghost.emplace_back(byte, byte_mask, index);
             }
         }
     }
@@ -450,24 +460,16 @@ bool TableFormat::allocate_difficult_bytes(bitvec &unaligned_bytes, bitvec &chos
     vector<ByteInfo> ghost_anywhere;   // Specifically the 8 bit byte that can select any of its
                                        // bits to ghost
 
-    determine_difficult_vectors(unaligned_match, unaligned_ghost, ghost_anywhere,
-                                unaligned_bytes, chosen_ghost_bytes, ghosted_group);
+    determine_difficult_vectors(unaligned_match, unaligned_ghost, unaligned_bytes,
+                                chosen_ghost_bytes, ghosted_group);
 
-    bool rv = allocate_byte_vector(unaligned_match, easy_size, false);
-    if (!rv)
-        return false;
-
-    rv = allocate_byte_vector(ghost_anywhere, easy_size + unaligned_match.size(), true);
+    bool rv = allocate_byte_vector(unaligned_match, easy_size);
     if (!rv)
         return false;
 
     // Fill out ghost byte information
     for (auto byte : unaligned_ghost) {
-        if (ghost_anywhere.size() > 0 && ghost_anywhere[0].byte == byte.byte)
-            use->ghost_bits[byte.byte]
-                 = std::make_pair(byte.bit_count, bitvec(0, 8) - ghost_start);
-        else
-            use->ghost_bits[byte.byte] = std::make_pair(byte.bit_count, bitvec(0, 8));
+        use->ghost_bits[byte.byte] = byte.bit_use;
     }
     return true;
 }
@@ -477,7 +479,7 @@ bool TableFormat::allocate_difficult_bytes(bitvec &unaligned_bytes, bitvec &chos
    and the upper 2 bits for version information.  Ghost anywhere is specifically for the 8 bit
    value that has to determine a mask. */
 void TableFormat::easy_byte_fill(int RAM, int group, ByteInfo &byte, int &starting_byte,
-    bool protect, bool ghost_anywhere) {
+    bool protect) {
     int begin = starting_byte;
     int RAM_offset = SINGLE_RAM_BYTES * RAM;
     for (int i = begin; i < RAM_offset + SINGLE_RAM_BYTES; i++) {
@@ -488,35 +490,16 @@ void TableFormat::easy_byte_fill(int RAM, int group, ByteInfo &byte, int &starti
         // If the ghost anywhere is not set, we reserve the whole byte, as we do not know
         // the PHV alignment.  At some point we could combine this analysis after PHV allocation,
         // but this is probably not a limiting constraint currently
-        int bits_needed = ghost_anywhere ? byte.bit_count : 8;
-        if (8 - byte_use[byte_offset].popcount() < bits_needed) continue;
-        bitvec match_mask;
-        if (ghost_anywhere) {
-            // This is a very sub-optimal solution that determines the mask of the
-            // match for the ghost anywhere bits.  Could be done at a later point.
-            bitvec temp_mask;
-            temp_mask.setrange(byte_offset * 8, 8);
-            // FIXME: Global ghost start determined here.  Ghosted bits have to be the same
-            // for each match group.  Would be more optimal to do at a different place
-            if (ghost_start.popcount() == 0) {
-                 match_mask = temp_mask - byte_use[byte_offset];
-                 while (match_mask.popcount() > bits_needed) {
-                     match_mask.clrbit(match_mask.ffs());
-                 }
-                 ghost_start = match_mask >> (byte_offset * 8);
-            } else {
-                match_mask = ghost_start << (byte_offset * 8);
-                if ((match_mask & byte_use[byte_offset]).popcount() != 0) continue;
-            }
-        } else {
-            match_mask.setrange(byte_offset * 8, 8);
-        }
-        // Fill out the appropriate bit vectors
-        use->match_groups[group].match[byte.byte] = std::make_pair(byte.bit_count, match_mask);
+        if ((byte_use[byte_offset] & byte.bit_use).popcount() > 0) continue;
+        bitvec byte_mask(0, 8);
+        bitvec match_mask = byte_mask << (byte_offset * 8);
+        // Fill out the appropriate bit vectors, Only one byte per 8 bit section of table format
+        // Thus reserve the whole bit
         total_use |= match_mask;
         match_byte_use |= i;
-        byte_use[byte_offset] |= match_mask;
-        use->match_groups[group].mask[MATCH] |= match_mask;
+        byte_use[byte_offset] |= byte_mask;
+        use->match_groups[group].match[byte.byte] = byte.bit_use << (byte_offset * 8);
+        use->match_groups[group].mask[MATCH] |= byte.bit_use << (byte_offset * 8);
         use->match_groups[group].match_byte_mask |= i;
         use->match_groups[group].allocated_bytes.setbit(byte.use_index);
         return;
@@ -550,8 +533,7 @@ int TableFormat::determine_next_group(int current_group, int RAM) {
 /* For allocating every byte in the vector, which are filled by the allocation vectors.
    Bytes are coordinated to which IXBar groups as well as how many match groups are
    contained within the individual RAM */
-bool TableFormat::allocate_byte_vector(vector<ByteInfo> &bytes, int prev_allocated,
-    bool ghost_anywhere) {
+bool TableFormat::allocate_byte_vector(vector<ByteInfo> &bytes, int prev_allocated) {
     // Save space for the lower 4 bytes and upper 2 bytes for potential gateway allocation
     int group = 0;
     for (size_t i = 0; i < match_groups_per_RAM.size(); i++) {
@@ -561,7 +543,7 @@ bool TableFormat::allocate_byte_vector(vector<ByteInfo> &bytes, int prev_allocat
             for (auto byte : bytes) {
                 if (all_bits.getbit(byte.use_index)) continue;
                 if (byte.byte.loc.group != ixbar_group_per_width[i]) continue;
-                easy_byte_fill(i, group, byte, starting_byte, true, ghost_anywhere);
+                easy_byte_fill(i, group, byte, starting_byte, true);
             }
             group = determine_next_group(group, i);
         }
@@ -580,7 +562,7 @@ bool TableFormat::allocate_byte_vector(vector<ByteInfo> &bytes, int prev_allocat
             for (auto byte : bytes) {
                 if (all_bits.getbit(byte.use_index)) continue;
                 if (byte.byte.loc.group != ixbar_group_per_width[i]) continue;
-                easy_byte_fill(i, group, byte, starting_byte, false, ghost_anywhere);
+                easy_byte_fill(i, group, byte, starting_byte, false);
             }
             group = determine_next_group(group, i);
         }
@@ -612,23 +594,19 @@ void TableFormat::determine_byte_types(bitvec &unaligned_bytes, bitvec &chosen_g
     int unaligned_bits = 0;
     for (auto byte : single_match) {
         if (byte.loc.group != ghosted_group) continue;
-        int difference = byte.hi - byte.lo + 1;
-        if (difference != 8)
-            unaligned_bits += difference;
+        if (byte.bit_use.popcount() != 8)
+            unaligned_bits += byte.bit_use.popcount();
     }
 
     int full_bytes_ghosted = std::max((ghost_bits_count - unaligned_bits + 7) / 8, 0);
     int full_bytes_remain = full_bytes_ghosted;
 
     for (int i = single_match.size() - 1; i >= 0; i--) {
-        int difference = single_match[i].hi - single_match[i].lo;
-        if (difference == 7 && full_bytes_remain > 0) {
+        if (single_match[i].bit_use.popcount() == 8 && full_bytes_remain > 0) {
             if (single_match[i].loc.group != ghosted_group) continue;
             full_bytes_remain--;
             chosen_ghost_bytes.setbit(i);
-        }
-
-        if (difference != 7) {
+        } else if (single_match[i].bit_use.popcount() < 8) {
             unaligned_bytes.setbit(i);
         }
     }
@@ -659,18 +637,15 @@ bool TableFormat::allocate_all_ternary_match() {
 
     for (auto &byte : match_ixbar.use) {
         if (byte.loc.byte == IXBar::TERNARY_BYTES_PER_GROUP) {
-            // FIXME: This does not correctly handle PHV allocation, but should be a separate
-            // PR.  Will take a few more things into account.  Just an estimate of PHV
-            // allocation.  Would probably require a backtrack point
             // Reserves groups and the mid bytes
-            if ((byte.lo % 8) <= 3) {
+            if (byte.bit_use.min().index() <= 3) {
                 int group_used = byte.loc.group;
                 used_groups.setbit(group_used);
                 used_midbyte.setbit(group_used);
                 byte_config[group_used] = MID_BYTE_LO;
                 dirtcam[group_used].setbit(byte.loc.byte * 2);
             }
-            if ((byte.hi % 8) >= 4) {
+            if (byte.bit_use.max().index() >= 4) {
                 int group_used = byte.loc.group + 1;
                 used_groups.setbit(group_used);
                 used_midbyte.setbit(group_used);
@@ -754,10 +729,10 @@ void TableFormat::verify() {
 
     for (int i = 0; i < layout_option.way.match_groups; i++) {
         for (auto byte_info : use->match_groups[i].match) {
-            std::pair<int, bitvec> &byte_mask = byte_info.second;
-            if ((verify_mask & byte_mask.second).popcount() != 0)
+            bitvec &byte_mask = byte_info.second;
+            if ((verify_mask & byte_mask).popcount() != 0)
                 BUG("Overlap of a match byte in the format");
-            verify_mask |= byte_mask.second;
+            verify_mask |= byte_mask;
         }
     }
 }

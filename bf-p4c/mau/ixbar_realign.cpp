@@ -76,7 +76,7 @@ IXBarRealign::Realign::Realign(const PhvInfo &phv, int stage, const IXBar &ixbar
             unsigned mask = (1 << alloc.container.log2sz()) - 1;
             int byte = (use.second - alloc.field_bit + alloc.container_bit)/8;
             if ((((i + off) ^ byte) & mask) != 0) {
-                LOG1("Ternary ixbar needs realignment stage " << stage << " group " << grp);
+                LOG2("Ternary ixbar needs realignment stage " << stage << " group " << grp);
                 LOG2("......field = " << field << " " << alloc);
                 throw IXBar::failure(stage, grp); } } }
 }
@@ -92,6 +92,24 @@ bool IXBarRealign::Realign::remap_use(IXBar::Use &use) {
     return rv;
 }
 
+void IXBarRealign::verify_format(const IXBar::Use &use) {
+    for (auto &byte : use.use) {
+        auto *field = phv.field(byte.field);
+        bool valid_byte = false;
+        field->foreach_byte([&](const PhvInfo::Field::alloc_slice &alloc) {
+            if (byte.lo < alloc.field_bit || byte.hi > alloc.field_hi())
+                return;
+            int container_start = (alloc.container_bit % 8) + byte.lo - alloc.field_bit;
+            bitvec cont_use(container_start, byte.hi - byte.lo + 1);
+            LOG1("We are here " << cont_use << " " << byte.bit_use << " " << byte.field);
+            if (cont_use == byte.bit_use)
+                valid_byte = true;
+        });
+        if (!valid_byte)
+            throw IXBar::failure(-1, byte.loc.group);
+    }
+}
+
 Visitor::profile_t IXBarRealign::init_apply(const IR::Node *root) {
     auto rv = MauModifier::init_apply(root);
     stage.clear();
@@ -105,10 +123,14 @@ Visitor::profile_t IXBarRealign::init_apply(const IR::Node *root) {
 
 void IXBarRealign::postorder(IR::MAU::Table *tbl) {
     auto &remap = stage_fix[tbl->stage()];
+    verify_format(tbl->resources->gateway_ixbar);
+    verify_format(tbl->resources->match_ixbar);
+    verify_format(tbl->resources->selector_ixbar);
+    verify_format(tbl->resources->salu_ixbar);
     if (remap.need_remap) {
         auto rsrc = new TableResourceAlloc(*tbl->resources);
-        if (remap.remap_use(rsrc->gateway_ixbar) | remap.remap_use(rsrc->match_ixbar)
-            | remap.remap_use(rsrc->selector_ixbar) | remap.remap_use(rsrc->salu_ixbar))
+        if (remap.remap_use(rsrc->gateway_ixbar) || remap.remap_use(rsrc->match_ixbar)
+            || remap.remap_use(rsrc->selector_ixbar) || remap.remap_use(rsrc->salu_ixbar))
             tbl->resources = rsrc;
     }
 }

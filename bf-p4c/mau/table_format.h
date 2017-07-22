@@ -11,14 +11,14 @@
 struct ByteInfo {
  public:
     IXBar::Use::Byte byte;  // Obviously the byte
-    int bit_count;          // Number of bits in the byte, not ghosted
+    bitvec bit_use;   // Relevant bits of the byte
     int use_index;          // What number it is in the vector
 
-    explicit ByteInfo(const IXBar::Use::Byte b, int bc, int ui)
-        : byte(b), bit_count(bc), use_index(ui) {}
+    explicit ByteInfo(const IXBar::Use::Byte b, bitvec bu, int ui)
+        : byte(b), bit_use(bu), use_index(ui) {}
 
     void dbprint(std::ostream &out) const {
-        out << "Byte " << byte << " bit_count " << bit_count << " use_index " << use_index;
+        out << "Byte " << byte << " bit_use " << bit_use << " use_index " << use_index;
     }
 };
 
@@ -45,9 +45,9 @@ struct TableFormat {
             // an 8 bit field that's partially ghosted,
             // if bitvec.popcount() > byte.hi - byte.lo then it is
             // a misaligned field where the mask was not known until PHV allocation
-            map<IXBar::Use::Byte, std::pair<int, bitvec>> match;
+            map<IXBar::Use::Byte, bitvec> match;  // The byte and byte_mask location in the format
             bitvec mask[ENTRY_TYPES];
-            bitvec match_byte_mask;
+            bitvec match_byte_mask;  // The bytes that are allocaated for matching
             bitvec allocated_bytes;
         };
 
@@ -63,7 +63,7 @@ struct TableFormat {
         vector<match_group_use> match_groups;
         vector<TCAM_use> tcam_use;
         // ghost bits should be the same for all match entries
-        map<IXBar::Use::Byte, std::pair<int, bitvec>> ghost_bits;
+        map<IXBar::Use::Byte, bitvec> ghost_bits;  // The byte and individual bits to be ghosted
         void clear() {
             ghost_bits.clear();
             match_groups.clear();
@@ -102,7 +102,7 @@ struct TableFormat {
     int ghost_bits_count = 0;
     bool next_table = false;
     const bitvec immediate_mask;
-    bitvec ghost_start;
+    // bitvec ghost_start;
 
  public:
     TableFormat(const LayoutOption &l, const IXBar::Use &mi, const IR::MAU::Table *t,
@@ -126,11 +126,11 @@ struct TableFormat {
     bool allocate_difficult_bytes(bitvec &unaligned_bytes, bitvec &chosen_ghost_bytes,
         int easy_size);
     void determine_difficult_vectors(vector<ByteInfo> &unaligned_match,
-        vector<ByteInfo> &unaligned_ghost, vector<ByteInfo> &ghost_anywhere,
-        bitvec &unaligned_bits, bitvec &chosen_ghost_bits, int ghosted_group);
-    bool allocate_byte_vector(vector<ByteInfo> &bytes, int prev_allocated, bool ghost_anywhere);
+        vector<ByteInfo> &unaligned_ghost, bitvec &unaligned_bits,
+        bitvec &chosen_ghost_bits, int ghosted_group);
+    bool allocate_byte_vector(vector<ByteInfo> &bytes, int prev_allocated);
     void easy_byte_fill(int RAM, int group, ByteInfo &byte, int &starting_byte,
-        bool protect, bool ghost_anywhere);
+        bool protect);
     int determine_next_group(int current_group, int RAM);
     bool allocate_one_version(int starting_byte, int group);
     bool allocate_all_version();

@@ -9,6 +9,7 @@ class IXBarRealign : public MauModifier {
     profile_t init_apply(const IR::Node *) override;
     bool preorder(IR::Expression *) override { return false; }
     void postorder(IR::MAU::Table *) override;
+    void verify_format(const IXBar::Use &);
     class GetCurrentUse;
     struct Realign {
         bool need_remap = false;
