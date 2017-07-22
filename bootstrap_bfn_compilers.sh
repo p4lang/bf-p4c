@@ -35,7 +35,7 @@ if [ ! -e p4_tests ]; then ln -sf ../../p4-tests p4_tests; fi
 popd # p4c/extensions
 
 mkdir -p build && cd build
-cmake .. $*
+cmake .. -DCMAKE_BUILD_TYPE=DEBUG $*
 
 cd p4c
 if [ ! -e p4c-tofino-gdb.gdb ]; then ln -sf ../../bf-p4c/.gdbinit p4c-tofino-gdb.gdb; fi

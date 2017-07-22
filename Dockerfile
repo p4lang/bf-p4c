@@ -58,6 +58,6 @@ RUN git clone --recursive https://github.com/google/protobuf.git && \
 COPY . /bfn/bf-p4c-compilers/
 WORKDIR /bfn/bf-p4c-compilers
 RUN pip install pyinstaller
-RUN ./bootstrap_bfn_compilers.sh --use-cmake && \
+RUN ./bootstrap_bfn_compilers.sh -DCMAKE_BUILD_TYPE=RELEASE && \
     cd build && \
     make && make install
