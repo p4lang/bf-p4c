@@ -6,7 +6,9 @@ env:
   - DOCKER_USERNAME="bfndocker"
 
 before_install:
-- docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
+# - docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
+# get token to be able to talk to Docker Hub
+TOKEN=$(curl -s -H "Content-Type: application/json" -X POST -d '{"username": "'${DOCKER_USERNAME}'", "password": "'${DOCKER_PASSWORD}'"}' https://hub.docker.com/v2/users/login/ | jq -r .token)
 
 install:
 - docker build -t bf-p4c-compilers .
