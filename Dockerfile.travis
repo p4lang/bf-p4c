@@ -1,4 +1,4 @@
-FROM ubuntu:16.04
+FROM p4lang/pi:latest
 
 MAINTAINER bfn-docker <bfn-docker@barefootnetworks.com>
 
@@ -44,20 +44,9 @@ RUN apt-get install -y $PROTOBUF_DEPS
 # override this.
 ARG MAKEFLAGS=-j2
 
-# install protobuf
-WORKDIR /bfn/
-RUN git clone --recursive https://github.com/google/protobuf.git && \
-    cd protobuf && \
-    git checkout v3.0.2 && \
-    ./autogen.sh && \
-    ./configure && \
-    make && make install-strip && \
-    ldconfig && \
-    rm -rf /bfn/protobuf
-
 COPY . /bfn/bf-p4c-compilers/
 WORKDIR /bfn/bf-p4c-compilers
 RUN pip install pyinstaller
-RUN ./bootstrap_bfn_compilers.sh --use-cmake && \
+RUN ./bootstrap_bfn_compilers.sh && \
     cd build && \
     make && make install
