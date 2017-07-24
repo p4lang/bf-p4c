@@ -31,10 +31,12 @@ class AddBridgedMetadata::AddBridge : public PardeModifier {
         if (deparser->gress != INGRESS) return false;
         if (!self.packing.containsFields()) return false;
 
-        IR::Vector<IR::Expression> bridge;
+        auto alwaysDeparseBit =
+            new IR::TempVar(IR::Type::Bits::get(1), true, "$always_deparse");
+        IR::Vector<IR::Tofino::DeparserPrimitive> bridge;
         for (auto& item : self.packing.fields) {
             if (item.isPadding()) continue;
-            bridge.push_back(new IR::Primitive("emit", item.field));
+            bridge.push_back(new IR::Tofino::Emit(item.field, alwaysDeparseBit));
         }
 
         deparser->emits.insert(deparser->emits.begin(),
@@ -54,7 +56,7 @@ class AddBridgedMetadata::AddBridge : public PardeModifier {
             // that extracts the bridged metadata.
             auto next = state->match[0]->next;
             cstring stateName = "$bridge_metadata_extract";
-            return self.packing.createExtractionStates(EGRESS, stateName, next);
+            return self.packing.createExtractionState(EGRESS, stateName, next);
         });
 
         parser->start = start->to<IR::Tofino::ParserState>();

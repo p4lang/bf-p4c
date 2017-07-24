@@ -89,6 +89,7 @@ set (TOFINO_BACKEND_COMMON_HDRS
   common/header_stack.h
   common/live_at_entry.h
   common/live_range_overlay.h
+  common/machine_description.h
   common/metadata_constant_propagation.h
   common/remap_intrin.h
   common/param_binding.h

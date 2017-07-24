@@ -1,40 +1,51 @@
 #include "match_keys.h"
 
-namespace {
+#include <boost/optional.hpp>
 
-class FindExtractOffset : public Inspector {
-    const PhvInfo               &phv;
-    const PhvInfo::Field        *field;
-    int                         bit_offset, &out_offset;
-    bool preorder(const IR::Primitive *prim) override {
-        if (prim->name != "extract") return true;
-        int size = prim->operands[0]->type->width_bits();
-        if (phv.field(prim->operands[0]) == field)
-            out_offset = bit_offset / 8U;
-        bit_offset += size;
-        return true; }
+#include <algorithm>
 
- public:
-    FindExtractOffset(const PhvInfo &phv, const PhvInfo::Field *field, int *offset)
-    : phv(phv), field(field), bit_offset(0), out_offset(*offset) {} };
-
-}  // end of anon namespace
-
+#include "lib/cstring.h"
+#include "tofino/ir/bitrange.h"
 
 bool LoadMatchKeys::preorder(IR::Tofino::ParserState *st) {
-    for (auto &sel : st->select)
-        if (auto field = phv.field(sel)) {
-            int offset = -1;
-            for (auto match : st->match) {
-                match->stmts.apply(FindExtractOffset(phv, field, &offset));
-                if (offset >= 0)
-                    break; }
-            if (offset >= 0) {
-                int size = (sel->type->width_bits() + 7) / 8U;
-                sel = new IR::Constant(offset);
-                if (size > 1)
-                    sel = new IR::Range(sel, new IR::Constant(offset+size-1));
-            } else {
-                warning("%s not extracted in state %s", sel, st); } }
+    for (auto &sel : st->select) {
+        auto field = phv.field(sel);
+        if (!field) continue;
+
+        boost::optional<nw_bitrange> selectorBitRange;
+        forAllMatching<IR::Tofino::Extract>(st, [&](const IR::Tofino::Extract* e) {
+            if (phv.field(e->dest) != field) return false;
+            if (!e->is<IR::Tofino::ExtractBuffer>()) {
+                ::warning("Match selector %s in state %s cannot be mapped to a "
+                          "definite input buffer range from primitive: %3%",
+                          sel, st, e);
+                return false;
+            }
+
+            auto extractRange = e->to<IR::Tofino::ExtractBuffer>()->extractedBits();
+            if (selectorBitRange && *selectorBitRange != extractRange) {
+                ::warning("Match selector %s in state %s was already mapped to "
+                          "input buffer range %3%, but it would be mapped to "
+                          "offset %4% by primitive: %5%", sel, st,
+                          cstring::to_cstring(*selectorBitRange),
+                          cstring::to_cstring(extractRange), e);
+                return false;
+            }
+
+            selectorBitRange = extractRange;
+            return false;
+        });
+
+        if (!selectorBitRange) {
+            ::warning("Match selector %s is not extracted in state %s; can't "
+                      "map it to an input buffer range", sel, st);
+            continue;
+        }
+
+        sel = new IR::Constant(selectorBitRange->loByte());
+        if (selectorBitRange->loByte() != selectorBitRange->hiByte())
+            sel = new IR::Range(sel, new IR::Constant(selectorBitRange->hiByte()));
+    }
+
     return true;
 }

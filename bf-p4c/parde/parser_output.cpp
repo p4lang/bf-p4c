@@ -3,42 +3,68 @@
 #include "lib/log.h"
 #include "lib/range.h"
 
+struct ExtractDestFormatter {
+    const PhvInfo::Field* dest;
+    bitrange bits;
+};
+
+
+std::ostream& operator<<(std::ostream& out, const ExtractDestFormatter& format) {
+    out << canon_name(format.dest->name);
+    if (format.bits.lo != 0 || format.bits.hi + 1 != format.dest->size)
+        out << '.' << format.bits.lo << '-' << format.bits.hi;
+    return out;
+}
+
 class OutputExtracts : public Inspector {
     std::ostream        &out;
     const PhvInfo       &phv;
     indent_t            indent;
-    int                 offset = 0;
     PHV::Container      last;
-    bool preorder(const IR::Primitive *prim) {
-        if (prim->operands[0]->type->is<IR::Type::Varbits>()) {
-            WARNING("ignoring varbits type in parser");
-            return false; }
-        PhvInfo::Field::bitrange bits;
-        auto dest = phv.field(prim->operands[0], &bits);
-        if (dest && prim->name == "extract") {
-            auto &alloc = dest->for_bit(bits.lo);
-            if (alloc.container == last)
-                return false;
-            last = alloc.container;
-            int size = alloc.container.size() / 8;
-            out << indent << Range(offset, offset+size-1) << ": ";
-            if (bits.size() != size * 8) {
-                out << alloc.container;
-            } else {
-                out << canon_name(dest->name);
-                if (bits.lo != 0 || bits.hi + 1 != dest->size)
-                    out << '.' << bits.lo << '-' << bits.hi; }
-            offset += size;
-        } else if (dest && prim->name == "set_metadata") {
-            out << indent << canon_name(dest->name) << ": ";
-            if (auto val = prim->operands[1]->to<IR::Constant>())
-                out << val->value;
-            else
-                out << "0 /* " << *prim->operands[1] << " */";
-        } else {
-            out << indent << "/* " << *prim << " */"; }
-        out << std::endl;
-        return false; }
+
+    bool preorder(const IR::Tofino::ExtractBuffer* extract) {
+        bitrange bits;
+        auto dest = phv.field(extract->dest, &bits);
+        if (!dest) {
+            out << indent << "# no phv: " << *extract << std::endl;
+            return false;
+        }
+
+        auto &alloc = dest->for_bit(bits.lo);
+        if (alloc.container == last) {
+            out << indent << "    # - " << alloc.container_bits() << " "
+                << ExtractDestFormatter{dest, bits} << std::endl;
+            return false;
+        }
+        last = alloc.container;
+
+        const int byteOffset = extract->bitInterval().loByte();
+        const int byteSize = alloc.container.size() / 8U;
+        out << indent << Range(byteOffset, byteOffset + byteSize - 1) << ": ";
+        if (unsigned(bits.size()) != alloc.container.size()) {
+            out << alloc.container << std::endl;
+            out << indent << "    # - " << alloc.container_bits() << " ";
+        }
+        out << ExtractDestFormatter{dest, bits} << std::endl;
+        return false;
+    }
+
+    bool preorder(const IR::Tofino::ExtractConstant* extract) {
+        bitrange bits;
+        auto dest = phv.field(extract->dest, &bits);
+        if (!dest) {
+            out << indent << "# no phv: " << *extract << std::endl;
+            return false;
+        }
+        out << indent << canon_name(dest->name) << ": "
+            << extract->constant->value << std::endl;
+        return false;
+    }
+
+    bool preorder(const IR::Tofino::ParserPrimitive* primitive) {
+        out << indent << "# unsupported: " << *primitive << std::endl;
+        return false;
+    }
 
  public:
     OutputExtracts(std::ostream &o, const PhvInfo &phv, indent_t i) : out(o), phv(phv), indent(i) {}

@@ -386,22 +386,21 @@ class AddPhase0Parser : public Modifier {
 
   const IR::Tofino::ParserState*
   addPhase0State(const IR::Tofino::ParserState* finalState) {
+      // Generate a state that extracts the packed fields.
       auto nextState =
-        packing->createExtractionStates(INGRESS, "$phase0_extract", finalState);
+        packing->createExtractionState(INGRESS, "$phase0_extract", finalState);
 
-      // This state handles constants; they just turn into 'set_metadata' calls.
-      IR::Vector<IR::Expression> statements;
+      // Generate a state which extracts the constants.
+      IR::Vector<IR::Tofino::ParserPrimitive> extracts;
       for (auto constantItem : *constants) {
           auto dest = constantItem.first;
           auto constant = constantItem.second;
-          auto setMetadata = new IR::Primitive("set_metadata", dest, constant);
-          statements.push_back(setMetadata);
+          auto extract = new IR::Tofino::ExtractConstant(dest, constant);
+          extracts.push_back(extract);
       }
 
-      auto phase0Match = new IR::Tofino::ParserMatch(match_t(), statements);
-      phase0Match->shift = 0;
-      phase0Match->next = nextState;
-
+      auto phase0Match =
+          new IR::Tofino::ParserMatch(match_t(), 0, extracts, nextState);
       return new IR::Tofino::ParserState("$phase0", INGRESS, { }, { phase0Match });
   }
 

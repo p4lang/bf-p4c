@@ -23,11 +23,14 @@ bool TofinoWriteContext::isWrite(bool root_value) {
     const Context *ctxt = getContext();
     if (!ctxt || !ctxt->node || !current)
         return rv;
+
+    const IR::Node* contextChild = current;
     while (ctxt->child_index == 0 &&
             (ctxt->node->is<IR::ArrayIndex>() ||
              ctxt->node->is<IR::HeaderStackItemRef>() ||
              ctxt->node->is<IR::Slice>() ||
              ctxt->node->is<IR::Member>())) {
+        contextChild = ctxt->node;
         ctxt = ctxt->parent;
         if (!ctxt || !ctxt->node)
             return rv; }
@@ -35,6 +38,12 @@ bool TofinoWriteContext::isWrite(bool root_value) {
     auto *salu = findContext<IR::MAU::SaluAction>();
     if (salu && current == salu->output_dst) {
         return true; }
+
+    // The destination of an Extract is written to, but the other fields aren't.
+    // This is just a roundabout way to check that we reached the Extract by
+    // walking upwards via the destination and not via some other route.
+    if (ctxt->node->is<IR::Tofino::Extract>())
+        return contextChild == ctxt->node->to<IR::Tofino::Extract>()->dest;
 
     // TODO: Does C++ support monads?  The following if statements are nested
     // because C++ only supports declaring variables in if predicates if the
@@ -45,7 +54,7 @@ bool TofinoWriteContext::isWrite(bool root_value) {
     if (tm->parameters) {
     if (const IR::IndexedVector<IR::Parameter> *params = &tm->parameters->parameters) {
     if (ctxt->child_index >= 0) {
-    if ((size_t)(ctxt->child_index) < params->size()) {
+    if (static_cast<size_t>(ctxt->child_index) < params->size()) {
         const IR::Direction d = params->at(ctxt->child_index)->direction;
         if (d == IR::Direction::Out || d == IR::Direction::InOut)
             return true;
@@ -79,6 +88,18 @@ bool TofinoWriteContext::isRead(bool root_value) {
     auto *salu = findContext<IR::MAU::SaluAction>();
     if (salu && current == salu->output_dst) {
         return false; }
+
+    // XXX(seth): This treats both the destination and the source of the extract
+    // as read. This is a hack intended to capture the fact that parser writes
+    // OR the destination PHV container with its existing contents. Ideally,
+    // we'd be more precise about this, and only treat the destination as read
+    // if the container is marked multiwrite.
+    if (ctxt->node->is<IR::Tofino::Extract>())
+        return true;
+
+    // An Emit reads both the emitted field and the POV bit.
+    if (ctxt->node->is<IR::Tofino::Emit>())
+        return true;
 
     if (auto *match = ctxt->node->to<IR::Tofino::ParserMatch>()) {
         return (size_t)(ctxt->child_index) < match->stmts.size(); }

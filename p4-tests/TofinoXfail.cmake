@@ -366,7 +366,12 @@ set (TOFINO_XFAIL_TESTS
   extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
   extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
   extensions/p4_tests/p4_14/c1/COMPILER-235/vag1662.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-242/case1679.p4
+# XXX(seth): I haven't investigated why this was intended to be a negative test,
+# but the actual previous cause of failure was that we generated invalid
+# assembly for a set_metadata() call we currently don't support, which is now
+# moot both because we no longer generate invalid assembly in that situation,
+# and because we dead code eliminate the problematic code totally anyway.
+# extensions/p4_tests/p4_14/c1/COMPILER-242/case1679.p4
   extensions/p4_tests/p4_14/c1/COMPILER-254/case1744.p4
 # XFAIL_DOES_NOT_FIT in c1 c2 c3
   extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
@@ -459,4 +464,20 @@ set (TOFINO_XFAIL_TESTS
   extensions/p4_tests/p4_14/test_config_303_static_table.p4
 # BRIG-192
   extensions/p4_tests/p4_14/11-AssignChooseDest.p4
+
+# The PHV allocator places h.v and h.$valid in the same container, even though
+# one is metadata and one is not, and moreover one is deparsed and one is not.
+# ValidateAllocation reports this problem:
+#     warning: Deparsed container B15 contains some non-deparsed fields: ( 22:ingress::h.v<1> I off=0 ref deparsed /phv_4,PHV-79;/|phv_4,0..0|[0:0]->[B15](6);, 45:ingress::h.$valid<1> I off=0 ref pov /pov_7,PHV-79;/|pov_7,0..0|[0:0]->[B15](7); )
+#     warning: Deparsed container B15 contains non-bridged metadata fields: ( 22:ingress::h.v<1> I off=0 ref deparsed /phv_4,PHV-79;/|phv_4,0..0|[0:0]->[B15](6);, 45:ingress::h.$valid<1> I off=0 ref pov /pov_7,PHV-79;/|pov_7,0..0|[0:0]->[B15](7); )
+#     warning: Deparsed container B15 contains a mix of metadata and non-metadata fields: ( 22:ingress::h.v<1> I off=0 ref deparsed /phv_4,PHV-79;/|phv_4,0..0|[0:0]->[B15](6);, 45:ingress::h.$valid<1> I off=0 ref pov /pov_7,PHV-79;/|pov_7,0..0|[0:0]->[B15](7); )
+#     warning: Container B15 contains deparsed header fields, but it has unused bits: ( 22:ingress::h.v<1> I off=0 ref deparsed /phv_4,PHV-79;/|phv_4,0..0|[0:0]->[B15](6);, 45:ingress::h.$valid<1> I off=0 ref pov /pov_7,PHV-79;/|pov_7,0..0|[0:0]->[B15](7); )
+# This causes the parser code to be unable to find a valid extractor allocation.
+  testdata/p4_16_samples/table-entries-valid-bmv2.p4
+
+# Assertion failed: (start >= 1 && start < width_i), function taint_ccgf, file phv/cluster_phv_container.cpp, line 282.
+# It's suggestive that these all involve header stacks.
+  testdata/p4_14_samples/instruct5.p4
+  extensions/p4_tests/p4_14/test_config_93_push_and_pop.p4
+  extensions/p4_tests/p4_14/test_config_222_small_tag_stack.p4
   )

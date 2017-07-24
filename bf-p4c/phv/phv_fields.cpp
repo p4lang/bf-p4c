@@ -73,9 +73,7 @@ bool PhvInfo::preorder(const IR::Metadata *h) {
 }
 
 bool PhvInfo::preorder(const IR::TempVar *tv) {
-    BUG_CHECK(tv->type->is<IR::Type::Bits>() || tv->type->is<IR::Type::Boolean>(),
-              "Can't create temp of type %s", tv->type);
-    add(tv->name, tv->type->width_bits(), 0, true, tv->POV);
+    addTempVar(tv);
     return false;
 }
 

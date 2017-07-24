@@ -7,26 +7,35 @@ class ComputeShifts : public PardeModifier {
     void postorder(IR::Tofino::ParserMatch* match) override {
         if (match->shift >= 0) return;  // We already computed the shift.
 
-        unsigned bits = 0;
-        forAllMatching<IR::Primitive>(&match->stmts, [&](const IR::Primitive* p) {
-            if (p->name == "extract")
-                bits += p->operands[0]->type->width_bits();
+        auto stateName = findContext<IR::Tofino::ParserState>()->name;
+
+        nw_bitinterval bits;
+        forAllMatching<IR::Tofino::ExtractBuffer>(&match->stmts,
+                      [&](const IR::Tofino::ExtractBuffer* extract) {
+            if (extract->isShiftedOut()) {
+                ::warning("Ignoring offset of shifted-out extraction in "
+                          "state %1%: %2%", stateName, extract);
+                return false;
+            }
+            bits = bits.unionWith(extract->bitInterval());
             return false;
         });
 
-        // On Tofino we can't parse or deparse headers correctly if they aren't
-        // byte-aligned. Practically speaking, that means that the extractions
-        // in a ParserMatch must be byte-aligned as well; we're careful not to
-        // violate this requirement in compiler-generated code, and user
-        // generated code always extracts entire headers. If this is violated,
-        // the resulting program is unlikely to work correctly, though we'll
-        // round up and soldier on in the interest of producing some sort of
-        // output.
-        if (bits % 8 != 0)
-            ::warning("Parser extractions are not byte-aligned in state %1%",
-                      findContext<IR::Tofino::ParserState>());
+        // XXX(seth): If the high bit of the interval isn't byte-aligned, it
+        // *may* indicate an issue in the original source program (e.g., a
+        // non-byte-aligned header). On the other hand, it may just indicate
+        // that we dead code eliminated some of the fields that were extracted
+        // here. Because we can't tell the difference at this layer, we can't
+        // report an error. We really need to detect non-byte-aligned headers
+        // earlier. For now, we just warn.
+        if (!bits.isHiAligned())
+            ::warning("Parser extractions are not byte-aligned in "
+                      "state %1% match %2%", stateName, match);
 
-        match->shift = (bits + 7) / 8U;
+        match->shift = bits.nextByte();
+
+        LOG1("Computed shift " << match->shift << " for state " << stateName
+              << " match " << match);
     }
 };
 

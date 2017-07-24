@@ -44,7 +44,7 @@ class TestRead : public Inspector, TofinoWriteContext {
 TEST(TofinoWriteContext, Read) {
     match_t m = match_t(0, 0, 0);
 
-    auto *match = new IR::Tofino::ParserMatch(m, 0, {zero, one}, nullptr, nullptr);
+    auto *match = new IR::Tofino::ParserMatch(m, {});
     auto *state = new IR::Tofino::ParserState("foo", INGRESS, {zero, one}, {match});
 
     state->apply(TestRead());

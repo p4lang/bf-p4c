@@ -3,13 +3,35 @@
 #include "frontends/p4/callGraph.h"
 #include "ir/ir.h"
 
+namespace {
+
+template <typename Func>
+void generateEmits(const IR::Expression* expression, Func func) {
+    auto* header = expression->to<IR::HeaderRef>();
+    BUG_CHECK(header != nullptr,
+              "Emitting something other than a header: %1%", expression);
+    auto* headerType = header->type->to<IR::Type_StructLike>();
+    BUG_CHECK(headerType != nullptr,
+              "Emitting header with non-structlike type: %1%", headerType);
+
+    auto* povBit = new IR::Member(IR::Type::Bits::get(1), header, "$valid");
+    for (auto field : headerType->fields) {
+        IR::Expression* fieldRef = new IR::Member(field->type, header, field->name);
+        func(fieldRef, povBit);
+    }
+}
+
+}  // namespace
 IR::Tofino::Deparser::Deparser(gress_t gr, const IR::P4Control* dp) : gress(gr) {
     CHECK_NULL(dp);
     forAllMatching<IR::MethodCallExpression>(dp,
                   [&](const IR::MethodCallExpression* mc) {
         auto method = mc->method->to<IR::Member>();
         if (!method || method->member != "emit") return true;
-        emits.push_back(new IR::Primitive(mc->srcInfo, "emit", mc->arguments));
+        generateEmits((*mc->arguments)[0], [&](const IR::Expression* field,
+                                               const IR::Expression* povBit) {
+            emits.push_back(new IR::Tofino::Emit(mc->srcInfo, field, povBit));
+        });
         return false;
     });
 }
@@ -34,11 +56,10 @@ IR::Tofino::Deparser::Deparser(gress_t gr, const IR::Tofino::Parser* p) : gress(
         for (auto match : s->match) {
             const IR::Node* lastExtract = s;
             for (auto stmt : match->stmts) {
-                if (!stmt->is<IR::Primitive>()) continue;
-                auto prim = stmt->to<IR::Primitive>();
-                if (prim->name != "extract") continue;
-                extractOrder.calls(lastExtract, prim->operands[0]);
-                lastExtract = prim->operands[0];
+                if (!stmt->is<IR::Tofino::Extract>()) continue;
+                auto extract = stmt->to<IR::Tofino::Extract>();
+                extractOrder.calls(lastExtract, extract->dest);
+                lastExtract = extract->dest;
             }
             if (match->next) {
                 states.insert(match->next);
@@ -69,8 +90,11 @@ IR::Tofino::Deparser::Deparser(gress_t gr, const IR::Tofino::Parser* p) : gress(
     // Generate the emit calls.
     for (auto extract : boost::adaptors::reverse(sortedExtracts)) {
         if (extract->is<IR::Tofino::Parser>()) continue;
-        auto expr = extract->to<IR::Expression>();
-        BUG_CHECK(expr, "Extract is not expression?");
-        emits.push_back(new IR::Primitive("emit", expr));
+        if (!extract->is<IR::Member>()) continue;
+        auto* field = extract->to<IR::Member>();
+        if (field->member == "$valid") continue;
+        auto* header = field->expr;
+        auto* povBit = new IR::Member(IR::Type::Bits::get(1), header, "$valid");
+        emits.push_back(new IR::Tofino::Emit(field, povBit));
     }
 }

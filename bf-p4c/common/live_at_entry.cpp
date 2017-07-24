@@ -23,13 +23,7 @@ bool LiveAtEntry::preorder(const IR::Expression *e) {
             LOG3((void *)this << ": [" << e->id << "] read unwritten " << f->name <<
                  "(" << f->id << ")");
             result[f->id] = 1; }
-    } else if (auto *hr = e->to<IR::HeaderRef>()) {
-        auto *p = getParent<IR::Primitive>();
-        if (p && p->name == "extract") {
-            auto ids = *phv.header(hr);
-            LOG4((void *)this << ": [" << e->id << "] extract to " << hr->toString() <<
-                 "(" << ids.first << ".." << ids.second << ")");
-            written.setrange(ids.first, ids.second - ids.first + 1); } }
+    }
     return true;
 }
 

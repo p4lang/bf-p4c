@@ -13,13 +13,20 @@ IR::Member *gen_fieldref(const IR::HeaderOrMetadata *hdr, cstring field) {
 
 bool AddMetadataShims::preorder(IR::Tofino::Parser *parser) {
     if (parser->gress == INGRESS) {
+        auto alwaysDeparseBit =
+            new IR::TempVar(IR::Type::Bits::get(1), true, "$always_deparse");
+
         auto* meta = pipe->metadata["standard_metadata"];
         if (!meta || !meta->type->getField("ingress_port") ||
                      !meta->type->getField("resubmit_flag")) {
             // There's not really much we can do in this case; just skip over
             // the intrinsic metadata.
+            IR::Vector<IR::Tofino::ParserPrimitive> init = {
+                new IR::Tofino::ExtractConstant(alwaysDeparseBit,
+                                                new IR::Constant(IR::Type::Bits::get(1), 1))
+            };
             auto match =
-                new IR::Tofino::ParserMatch(match_t(), 16, { }, parser->start);
+                new IR::Tofino::ParserMatch(match_t(), 16, {init}, parser->start);
             parser->start =
                 new IR::Tofino::ParserState("$skip_metadata", INGRESS, { }, { match });
             return false;
@@ -36,7 +43,7 @@ bool AddMetadataShims::preorder(IR::Tofino::Parser *parser) {
         // than the resubmit flag.
         auto igPort = gen_fieldref(meta, "ingress_port");
         auto intrinsicMatch = new IR::Tofino::ParserMatch(match_t(), 8, {
-                new IR::Primitive("extract", igPort),
+                new IR::Tofino::ExtractBuffer(igPort, 7, 9),
             }, phase0State);
         auto intrinsicState =
             new IR::Tofino::ParserState("$ingress_metadata", INGRESS,
@@ -49,11 +56,10 @@ bool AddMetadataShims::preorder(IR::Tofino::Parser *parser) {
         // XXX(seth): For now, we just skip directly to the start state when we
         // encounter a resubmitted packet, but we probably need to do more.
         auto resubmitFlag = gen_fieldref(meta, "resubmit_flag");
-        IR::Vector<IR::Expression> init = {
-            new IR::Primitive("set_metadata",
-                new IR::TempVar(IR::Type::Bits::get(1), true, "$always_deparse"),
-                new IR::Constant(IR::Type::Bits::get(1), 1)),
-            new IR::Primitive("extract", resubmitFlag)
+        IR::Vector<IR::Tofino::ParserPrimitive> init = {
+            new IR::Tofino::ExtractBuffer(resubmitFlag, 0, 1),
+            new IR::Tofino::ExtractConstant(alwaysDeparseBit,
+                                            new IR::Constant(IR::Type::Bits::get(1), 1))
         };
         auto normalMatch = new IR::Tofino::ParserMatch(match_t(8, 0, 0x80), 0,
                                                        init, intrinsicState);
@@ -90,7 +96,7 @@ bool AddMetadataShims::preorder(IR::Tofino::Parser *parser) {
         parser->start = new IR::Tofino::ParserState(
             "$egress_metadata_shim", parser->gress, {}, {
             new IR::Tofino::ParserMatch(match_t(), 2, {
-                new IR::Primitive("extract", gen_fieldref(meta, "egress_port"))
+                new IR::Tofino::ExtractBuffer(gen_fieldref(meta, "egress_port"), 7, 9)
             }, bridgedMetadataState) });
     }
     return false;

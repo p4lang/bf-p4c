@@ -1,33 +1,254 @@
 #include "split_big_states.h"
 
-bool SplitBigStates::preorder(IR::Tofino::ParserMatch *state) {
-    int use[3] = { 0, 0, 0 };
-    int size = 0;
-    PHV::Container last;
-    auto it = state->stmts.begin();
-    for (; it != state->stmts.end(); ++it) {
-        auto *prim = (*it)->to<IR::Primitive>();
-        if (!prim) BUG("Non primitive %s in parser state", *it);
-        if (prim->operands[0]->type->is<IR::Type::Varbits>())
-            P4C_UNIMPLEMENTED("Parser writes to varbits values are not yet supported.");
-        PhvInfo::Field::bitrange bits;
-        auto dest = phv.field(prim->operands[0], &bits);
-        if (!dest) BUG("%s not in phv?", prim->operands[0]);
-        auto &alloc = dest->for_bit(bits.lo);
-        if (alloc.container == last) continue;
-        if (!(last = alloc.container)) BUG("Not a valid PHV container: %1%", dest);
-        if (use[last.log2sz()] >= 4) break;
-        use[last.log2sz()]++;
-        size += last.size() / 8U; }
-    if (it == state->stmts.end())
-        return true;  // No splitting needed.
-    auto *rest = new IR::Tofino::ParserMatch(match_t(), state->shift - size, {},
-                                             state->next, state->except);
-    rest->stmts.insert(rest->stmts.begin(), it, state->stmts.end());
-    state->stmts.erase(it, state->stmts.end());
-    auto name = names.newname(findContext<IR::Tofino::ParserState>()->name);
-    state->next = new IR::Tofino::ParserState(name, VisitingThread(this), {}, { rest });
-    state->except = nullptr;
-    state->shift = size;
+#include <boost/range/adaptor/map.hpp>
+
+#include <algorithm>
+#include <array>
+#include <deque>
+#include <map>
+#include <utility>
+#include <vector>
+
+#include "tofino/common/machine_description.h"
+#include "tofino/phv/phv.h"
+
+namespace {
+
+/// A predicate which orders input buffer bit intervals by where their input
+/// data ends. Empty intervals are ordered last.
+static bool isIntervalEarlierInBuffer(nw_bitinterval a,
+                                      nw_bitinterval b) {
+    if (a.empty()) return false;
+    if (b.empty()) return true;
+    return a.hi != b.hi ? a.hi < b.hi
+                        : a.lo < a.lo;
+}
+
+/// A predicate which extracts by where their input data ends. Extracts which
+/// don't come from the buffer are ordered last - they're lowest priority, since
+/// we can execute them at any time without delaying other extracts.
+static bool isExtractEarlierInBuffer(const IR::Tofino::Extract* a,
+                                     const IR::Tofino::Extract* b) {
+    auto* aFromBuffer = a->to<IR::Tofino::ExtractBuffer>();
+    auto* bFromBuffer = b->to<IR::Tofino::ExtractBuffer>();
+    if (aFromBuffer && bFromBuffer)
+        return isIntervalEarlierInBuffer(aFromBuffer->bitInterval(),
+                                         bFromBuffer->bitInterval());
+    return aFromBuffer;
+}
+
+/// A sequence of extract operations.
+struct ExtractorSequence {
+    /// The extract operations.
+    std::vector<const IR::Tofino::Extract*> extracts;
+
+    /// The range of input buffer bits the extracts touch.
+    nw_bitinterval bits;
+
+    /// Add a new extract operation to the sequence.
+    void add(const IR::Tofino::Extract* extract) {
+        extracts.push_back(extract);
+        if (!extract->is<IR::Tofino::ExtractBuffer>()) return;
+        auto extractBuffer = extract->to<IR::Tofino::ExtractBuffer>();
+        bits = bits.unionWith(extractBuffer->bitInterval());
+    }
+
+    /// Shift all extracts in the sequence to the left by the given amount.
+    void shift(int delta) {
+        if (!bits.empty()) {
+            bits.lo -= delta;
+            bits.hi -= delta;
+        }
+        BUG_CHECK(bits.lo >= 0 && bits.hi >= 0, "Shifted interval too much?");
+        std::transform(extracts.begin(), extracts.end(), extracts.begin(),
+                       [&](const IR::Tofino::Extract* extract) {
+            if (!extract->is<IR::Tofino::ExtractBuffer>()) return extract;
+            auto clone = extract->to<IR::Tofino::ExtractBuffer>()->clone();
+            clone->bitOffset -= delta;
+            BUG_CHECK(!clone->isShiftedOut(), "Shifted extract too much?");
+            return clone->to<IR::Tofino::Extract>();
+        });
+    }
+};
+
+/// Allocate sequences of parser primitives to one or more states while
+/// satisfying hardware constraints on the number of extractors available in a
+/// state.
+class ExtractorAllocator {
+ public:
+    /**
+     * Create a new extractor allocator.
+     *
+     * @param phv  PHV allocation information.
+     * @param stateName  The name of the parser state we're allocating for.
+     * @param byteDesiredShift  The total number of bytes we want to shift in
+     *                          this state. Needs to be provided separately
+     *                          because we may shift over data that doesn't get
+     *                          extracted.
+     */
+    ExtractorAllocator(const PhvInfo& phv, cstring stateName, int byteDesiredShift)
+        : phv(phv), stateName(stateName), byteDesiredShift(byteDesiredShift) {
+        BUG_CHECK(byteDesiredShift >= 0,
+                  "Splitting state %1% with negative shift", stateName);
+    }
+
+    /// Add a new parser primitive that will be included in the state.
+    void add(const IR::Tofino::ParserPrimitive* primitive) {
+        auto* extract = primitive->to<IR::Tofino::Extract>();
+        if (!extract) {
+            nonExtractPrimitives.push_back(primitive);
+            return;
+        }
+
+        bitrange bits;
+        auto dest = phv.field(extract->dest, &bits);
+        if (!dest)
+            BUG("State %1% extracts field %2% with no PHV allocation",
+                stateName, extract->dest);
+
+        auto container = dest->for_bit(bits.lo).container;
+        if (!container)
+            BUG("State %1% extracts field %2% into invalid PHV container %3%",
+                stateName, extract->dest, container);
+
+        extractionsByContainer[container].add(extract);
+    }
+
+    /// @return true if we haven't allocated everything yet.
+    bool hasMore() const {
+        return byteDesiredShift > 0 || hasMorePrimitives();
+    }
+
+    /**
+     * Allocate as many parser primitives as will fit into a single state,
+     * respecting hardware limits.
+     *
+     * Keep calling this until hasMore() returns false.
+     *
+     * @return a pair containing (1) the parser primitives that were allocated,
+     * and (2) the shift that the new state should have.
+     */
+    std::pair<IR::Vector<IR::Tofino::ParserPrimitive>, int> allocateOneState() {
+        using namespace Tofino::Description;
+        std::array<std::deque<PHV::Container>,
+                   ExtractorKinds.size()> extractorQueues;
+
+        // Partition the remaining extractions by extractor size.
+        for (auto container : extractionsByContainer | boost::adaptors::map_keys)
+            extractorQueues[container.log2sz()].push_back(container);
+
+        // Sort the extractions associated with each extractor size according to
+        // their position in the input buffer.
+        for (auto& queue : extractorQueues) {
+            std::sort(queue.begin(), queue.end(),
+                      [&](PHV::Container a, PHV::Container b) {
+                return isIntervalEarlierInBuffer(extractionsByContainer[a].bits,
+                                                 extractionsByContainer[b].bits);
+            });
+        }
+
+        // Allocate. We have four extractions of each size per state. We also
+        // ensure that we don't overflow the input buffer.
+        LOG3("Allocating extracts for state " << stateName);
+        std::vector<const IR::Tofino::Extract*> allocatedExtractions;
+        for (auto& queue : extractorQueues) {
+            LOG3(" - Begin extractor queue");
+            for (unsigned i = 0; i < ExtractorCount && !queue.empty(); ++i) {
+                auto container = queue.front();
+                queue.pop_front();
+                if (extractionsByContainer[container].bits.hi >= BitInputBufferSize)
+                    break;
+                for (auto* extract : extractionsByContainer[container].extracts) {
+                    LOG3("   - " << extract);
+                    allocatedExtractions.push_back(extract);
+                }
+                extractionsByContainer.erase(container);
+            }
+        }
+        std::sort(allocatedExtractions.begin(), allocatedExtractions.end(),
+                  isExtractEarlierInBuffer);
+
+        // Collect the extractions we allocated.
+        IR::Vector<IR::Tofino::ParserPrimitive> primitives;
+        primitives.insert(primitives.end(), allocatedExtractions.begin(),
+                                            allocatedExtractions.end());
+
+        // Collect all non-extract primitives. (For now, at least, these are all
+        // unsupported, so they obviously don't consume extraction bandwidth.)
+        primitives.insert(primitives.end(), nonExtractPrimitives.begin(),
+                                            nonExtractPrimitives.end());
+        nonExtractPrimitives.clear();
+
+        // Compute the actual shift for this state. If we allocated everything,
+        // we use the desired shift. Otherwise, we want to shift enough to bring
+        // the first remaining extraction to the beginning of the input buffer.
+        int byteActualShift = byteDesiredShift;
+        if (hasMorePrimitives()) {
+            nw_bitinterval remainingBits;
+            for (auto& seq : extractionsByContainer | boost::adaptors::map_values)
+                remainingBits = remainingBits.unionWith(seq.bits);
+            byteActualShift = remainingBits.loByte();
+        }
+
+        BUG_CHECK(byteActualShift >= 0,
+                  "Computed invalid shift %1% when splitting state %2%",
+                  byteActualShift, stateName);
+        byteDesiredShift -= byteActualShift;
+
+        // Shift up all the remaining extractions.
+        const int bitActualShift = byteActualShift * 8;
+        for (auto& seq : extractionsByContainer | boost::adaptors::map_values)
+            seq.shift(bitActualShift);
+
+        BUG_CHECK(!primitives.empty() || byteActualShift > 0 || !hasMore(),
+                  "Have more to allocate in state %1%, but couldn't take "
+                  "any action?", stateName);
+
+        LOG3("Created split state for " << stateName << " with shift "
+              << byteActualShift << ":");
+        for (auto prim : primitives)
+            LOG3(" - " << prim);
+
+        return std::make_pair(primitives, byteActualShift);
+    }
+
+ private:
+    bool hasMorePrimitives() const {
+        return !extractionsByContainer.empty() ||
+               !nonExtractPrimitives.empty();
+    }
+
+    std::map<PHV::Container, ExtractorSequence> extractionsByContainer;
+    std::vector<const IR::Tofino::ParserPrimitive*> nonExtractPrimitives;
+    const PhvInfo& phv;
+    cstring stateName;
+    int byteDesiredShift;
+};
+
+}  // namespace
+
+bool SplitBigStates::preorder(IR::Tofino::ParserMatch* match) {
+    auto stateName = findContext<IR::Tofino::ParserState>()->name;
+    ExtractorAllocator allocator(phv, stateName, match->shift);
+    for (auto* prim : match->stmts)
+        allocator.add(prim);
+
+    // Allocate whatever we can fit into this match.
+    std::tie(match->stmts, match->shift) = allocator.allocateOneState();
+
+    // If there's still more, allocate as many followup states as we need.
+    auto* finalState = match->next;
+    auto* currentMatch = match;
+    while (allocator.hasMore()) {
+        auto newMatch =
+          new IR::Tofino::ParserMatch(match_t(), -1, {}, finalState, match->except);
+        std::tie(newMatch->stmts, newMatch->shift) = allocator.allocateOneState();
+        auto name = names.newname(stateName + ".$split");
+        currentMatch->next =
+          new IR::Tofino::ParserState(name, VisitingThread(this), {}, { newMatch });
+        currentMatch->except = nullptr;
+        currentMatch = newMatch;
+    }
+
     return true;
 }

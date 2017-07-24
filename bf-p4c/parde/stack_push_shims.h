@@ -11,7 +11,7 @@ class StackPushShims : public PardeModifier {
             if (stack.maxpush == 0 || stack.gress != p->gress) continue;
             p->start = new IR::Tofino::ParserState(stack.name + "$shim", stack.gress, {},
                 { new IR::Tofino::ParserMatch(match_t(), 0, {
-                    new IR::Primitive("set_metadata",
+                    new IR::Tofino::ExtractConstant(
                         new IR::Member(IR::Type::Bits::get(stack.maxpush),
                                        new IR::PathExpression(stack.name), "$push"),
                         new IR::Constant((1U << stack.maxpush) - 1)) }, p->start) } ); }

@@ -5,10 +5,14 @@ class OutputDictionary : public Inspector {
     const PhvInfo       &phv;
     indent_t            indent;
     PHV::Container      last;
-    bool preorder(const IR::Primitive *prim) {
-        if (prim->name != "emit") return true;
-        PhvInfo::Field::bitrange bits;
-        auto field = phv.field(prim->operands[0], &bits);
+    bool preorder(const IR::Tofino::Emit* emit) {
+        bitrange bits;
+        auto field = phv.field(emit->source, &bits);
+        if (!field) {
+            out << indent << "# no phv: " << *emit << std::endl;
+            return false;
+        }
+
         if (!field->size) {
             /* varbits? not supported */
             LOG3("skipping varbits? " << field->name);
@@ -25,12 +29,13 @@ class OutputDictionary : public Inspector {
             out << indent << canon_name(field->name);
             if (bits.lo != 0 || bits.hi + 1 != field->size)
                 out << '.' << bits.lo << '-' << bits.hi; }
-        out << ": ";
-        if (field->metadata)
-            out << "$always_deparse";
-        else
-            out << canon_name(trim_asm_name(field->header())) << ".$valid";
-        out << std::endl;
+
+        auto povBit = phv.field(emit->povBit, &bits);
+        if (!povBit) {
+            out << indent << " # no phv for pov: " << *emit->povBit << std::endl;
+            return false;
+        }
+        out << ": " << canon_name(trim_asm_name(povBit->name)) << std::endl;
         return false; }
 
  public:

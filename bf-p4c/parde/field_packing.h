@@ -97,20 +97,19 @@ struct FieldPacking {
     bool isAlignedTo(unsigned alignment) const;
 
     /**
-     * Create parser states that extract the fields in this sequence from the
+     * Creates a parser state that extract the fields in this sequence from the
      * input buffer and into the destination specified by each packed item's
      * 'field' member.
      *
      * @param gress  Which thread these states are intended for.
-     * @param baseStateName  A name prefix which will be used for the generated
-     *                       parser states.
+     * @param stateName  The name to use for the generated state.
      * @param finalState  The state the generated parser should branch to after
      *                    its work is complete.
      * @return the root of the resulting parser program.
      */
     const IR::Tofino::ParserState*
-    createExtractionStates(gress_t gress, cstring baseStateName,
-                           const IR::Tofino::ParserState* finalState) const;
+    createExtractionState(gress_t gress, cstring stateName,
+                          const IR::Tofino::ParserState* finalState) const;
 
     /// The sequence of packed items (fields and padding).
     std::vector<PackedItem> fields;

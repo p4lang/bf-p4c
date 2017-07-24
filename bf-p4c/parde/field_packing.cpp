@@ -16,8 +16,6 @@ limitations under the License.
 
 #include "tofino/parde/field_packing.h"
 
-#include <boost/range/iterator_range_core.hpp>
-
 #include "ir/ir.h"
 #include "lib/cstring.h"
 
@@ -72,77 +70,26 @@ bool FieldPacking::isAlignedTo(unsigned alignment) const {
     return totalWidth % alignment == 0;
 }
 
-namespace {
-
-struct FieldGroupParser {
-  FieldGroupParser(const FieldPacking* packing, gress_t gress,
-                   cstring baseStateName,
-                   const IR::Tofino::ParserState* finalState)
-    : packing(packing), gress(gress), baseStateName(baseStateName),
-      finalState(finalState)
-  { }
-
-  const IR::Tofino::ParserState* create() {
-      return createStateForGroup(packing->begin());
-  }
-
- private:
-  const IR::Tofino::ParserState*
-  createStateForGroup(FieldPacking::const_iterator groupBegin) {
-      // If we've extracted all of the packed fields, we're done; just return
-      // the final state of the chain, which is normally 'start$'.
-      if (groupBegin == packing->end()) return finalState;
-
-      auto stateName = cstring::make_unique(uniqueStateNames, baseStateName);
-      uniqueStateNames.insert(stateName);
-
-      // This state will extract a group of packed fields. Consume fields until
-      // we encounter padding.
-      unsigned shiftBits = 0;
-      auto groupIter = groupBegin;
-      while (groupIter != packing->end() && !groupIter->isPadding()) {
-          shiftBits += groupIter->width;
-          ++groupIter;
-      }
-      auto groupEnd = groupIter;
-
-      // Consume padding. We don't need to extract it, but we do need to shift
-      // over it when we transition to the next state.
-      while (groupIter != packing->end() && groupIter->isPadding()) {
-          shiftBits += groupIter->width;
-          ++groupIter;
-      }
-      auto nextGroupBegin = groupIter;
-      BUG_CHECK(shiftBits % 8 == 0, "Non-byte-aligned shift?");
-
-      // There may be more groups. Recursively construct the states for those
-      // groups first so we can hook them into the chain of states.
-      auto nextState = createStateForGroup(nextGroupBegin);
-
-      // Generate a state that extracts all the fields in the group.
-      IR::Vector<IR::Expression> statements;
-      for (auto& item : boost::make_iterator_range(groupBegin, groupEnd))
-          statements.push_back(new IR::Primitive("extract", item.field));
-
-      auto match = new IR::Tofino::ParserMatch(match_t(), statements);
-      match->shift = shiftBits / 8;
-      match->next = nextState;
-      return new IR::Tofino::ParserState(stateName, gress, { }, { match });
-  }
-
-  const FieldPacking* packing;
-  gress_t gress;
-  cstring baseStateName;
-  const IR::Tofino::ParserState* finalState;
-  set<cstring> uniqueStateNames;
-};
-
-}  // namespace
-
 const IR::Tofino::ParserState*
-FieldPacking::createExtractionStates(gress_t gress, cstring baseStateName,
-                                     const IR::Tofino::ParserState* finalState) const {
-    return FieldGroupParser(this, gress, baseStateName, finalState).create();
+FieldPacking::createExtractionState(gress_t gress, cstring stateName,
+                                    const IR::Tofino::ParserState* finalState) const {
+    BUG_CHECK(totalWidth % 8 == 0,
+              "Creating extraction states for non-byte-aligned field packing?");
+
+    IR::Vector<IR::Tofino::ParserPrimitive> extracts;
+    unsigned currentBit = 0;
+    for (auto& item : fields) {
+        if (!item.isPadding()) {
+            auto extract =
+                new IR::Tofino::ExtractBuffer(item.field, currentBit, item.width);
+            extracts.push_back(extract);
+        }
+        currentBit += item.width;
+    }
+
+    auto match = new IR::Tofino::ParserMatch(match_t(), totalWidth / 8,
+                                             extracts, finalState);
+    return new IR::Tofino::ParserState(stateName, gress, { }, { match });
 }
 
 }  // namespace Tofino

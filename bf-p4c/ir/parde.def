@@ -1,19 +1,128 @@
+#emit
+#include "tofino/ir/bitrange.h"
+#end
+
 namespace Tofino {
 
-class ParserMatch {
-    match_t                     value;
-    int                         shift;
-    inline Vector<Expression>   stmts;
-    NullOK ParserState          next;
-    NullOK ParserException      except;
+/// Supertype for all parser primitives - i.e., actions that can be executed in
+/// parser states.
+abstract ParserPrimitive { }
+
+/// A parser extraction operation, representing a write by the parser into some
+/// location which will be ultimately backed by a PHV container.
+abstract Extract : ParserPrimitive {
+    validate { CHECK_NULL(dest); }
+
+    // XXX(seth): It'd be ideal to constrain the type of `dest` a little more.
+    // It's normally a field, represented by an Member, but right now we
+    // sometimes extract into TempVars, and we represent partial writes using an
+    // Slice, so we need a more general type.
+
+    /// The location to be written to. Must be backed by a PHV container.
+    Expression dest;
+}
+
+/// An extraction from the input buffer.
+class ExtractBuffer : Extract {
 #noconstructor
-    ParserMatch(match_t v, const Vector<Expression> &e)
+    ExtractBuffer(Util::SourceInfo si, Expression dest, int bitOffset, unsigned bitWidth)
+        : Extract(si, dest), bitOffset(bitOffset), bitWidth(bitWidth) { }
+    ExtractBuffer(Expression dest, int bitOffset, unsigned bitWidth)
+        : Extract(dest), bitOffset(bitOffset), bitWidth(bitWidth) { }
+
+    validate { BUG_CHECK(bitWidth > 0, "Must extract at least one bit"); }
+    dbprint {
+        out << "extract bits " << bitInterval() << "(" << bitWidth
+            << "b) to " << dest;
+    }
+
+    /// @return true if some of the bits being extracted were already shifted
+    /// out of the input buffer.
+    bool isShiftedOut() const { return bitOffset < 0; }
+
+    /// @return the half-open range of bits being extracted, in *network order*.
+    /// If you need a closed range, use extractedBits().
+    nw_bitinterval bitInterval() const {
+        return { bitOffset, bitOffset + int(bitWidth) };
+    }
+
+    /// @return the closed range of bits being extracted, in *network order*.
+    /// If you need a half-open range, use bitInterval().
+    nw_bitrange extractedBits() const {
+        return { bitOffset, bitOffset + int(bitWidth) - 1 };
+    }
+
+    /// The offset into the input buffer at which extraction will begin.
+    /// Expressed in bits in *network order*; lower numbers are earlier in the
+    /// input stream.
+    int bitOffset;
+
+    /// The number of bits which will be extracted. Must be strictly positive.
+    unsigned bitWidth;
+}
+
+/// An extraction of a constant.
+class ExtractConstant : Extract {
+#noconstructor
+    ExtractConstant(Util::SourceInfo si, Expression dest, Constant constant)
+        : Extract(si, dest), constant(constant) { }
+    ExtractConstant(Expression dest, Constant constant)
+        : Extract(dest), constant(constant) { }
+
+    validate { CHECK_NULL(constant); }
+    dbprint { out << "extract constant " << constant << " to " << dest; }
+
+    /// The constant to extract.
+    Constant constant;
+}
+
+/// An extraction of some computed value. The source may be an arbitrary
+/// expression. These can't be implemented directly on Tofino, so if the
+/// compiler can't optimize them out, compilation will fail.
+class ExtractComputed : Extract {
+#noconstructor
+    ExtractComputed(Util::SourceInfo si, Expression dest, Expression source)
+        : Extract(si, dest), source(source) { }
+    ExtractComputed(Expression dest, Expression source)
+        : Extract(dest), source(source) { }
+
+    validate { CHECK_NULL(source); }
+    dbprint { out << "extract computed value " << source << " to " << dest; }
+
+    /// An expression which computes the value to be extracted.
+    Expression source;
+}
+
+/// A parser primitive we don't handle. This is used to propagate knowledge of
+/// the failure through the compiler.
+class UnhandledParserPrimitive : ParserPrimitive {
+#noconstructor
+    UnhandledParserPrimitive(Util::SourceInfo si, Node unhandled)
+        : ParserPrimitive(si), unhandled(unhandled) { }
+
+    validate { CHECK_NULL(unhandled); }
+    dbprint { out << "unhandled parser primitive: " << unhandled ; }
+
+#emit
+    /// The primitive we didn't recognize or couldn't handle. Not visited.
+    const Node* unhandled;
+#end
+}
+
+class ParserMatch {
+    match_t                        value;
+    int                            shift;
+    inline Vector<ParserPrimitive> stmts;
+    NullOK ParserState             next;
+    NullOK ParserException         except;
+#noconstructor
+    ParserMatch(match_t v, const Vector<ParserPrimitive> &e)
     : value(v), shift(-1), stmts(e), next(0), except(0) {}
 #emit
-    ParserMatch(match_t v, int sh, std::initializer_list<const Expression *> st,
+    ParserMatch(match_t v, int sh, std::initializer_list<const ParserPrimitive *> st,
                 const ParserState *n, const ParserException *ex = nullptr)
     : value(v), shift(sh), stmts(st), next(n), except(ex) {}
-    ParserMatch(match_t v, int sh, const Vector<Expression> &st,
+    ParserMatch(match_t v, int sh, const Vector<ParserPrimitive> &st,
                 const ParserState *n, const ParserException *ex = nullptr)
     : value(v), shift(sh), stmts(st), next(n), except(ex) {}
 #end
@@ -63,9 +172,32 @@ class Digest {
             v.visit(s, "set"); }
 }
 
+/// Supertype for all deparser primitives - i.e., actions that can be executed
+/// in a deparser control.
+abstract DeparserPrimitive { }
+
+/// A deparser emit operation, representing a copy by the deparser of the
+/// contents of some location (ultimately backed by a PHV container) to the
+/// output packet.
+class Emit : DeparserPrimitive {
+    dbprint { out << "emit " << source << " if " << povBit; }
+
+    // XXX(seth): Just like for Extracts, it'd be ideal to constrain the type of
+    // `source` and `povBit` a little more, but for now we need to support
+    // TempVars and Slices in addition to Members.
+
+    /// The location to be copied into the output packet. Must be backed by a
+    /// PHV container.
+    Expression source;
+
+    /// The POV bit controlling whether the copy happens. Must be backed by a
+    /// PHV container.
+    Expression povBit;
+}
+
 class Deparser : Unit {
     gress_t                             gress;
-    inline Vector<Expression>           emits;
+    inline Vector<DeparserPrimitive>    emits;
     NullOK Expression                   egress_port;
     inline NameMap<Digest>              digests;
 #noconstructor
