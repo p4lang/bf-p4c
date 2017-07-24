@@ -14,7 +14,11 @@
 
 MESSAGE("-- Adding BFN Compiler test suite")
 
-set(STF_SEARCH_PATHS ${CMAKE_INSTALL_PREFIX}/bin ${BFN_P4C_SOURCE_DIR}/../model/build/tests/simple_test_harness)
+set(STF_SEARCH_PATHS
+    ${CMAKE_INSTALL_PREFIX}/bin
+    ${BFN_P4C_SOURCE_DIR}/../model/tests/simple_test_harness
+    ${BFN_P4C_SOURCE_DIR}/../model/build/tests/simple_test_harness
+    ${BFN_P4C_SOURCE_DIR}/../model/debug/tests/simple_test_harness)
 find_program(HARLYN_STF simple_test_harness
   PATHS ${STF_SEARCH_PATHS})
 if (NOT HARLYN_STF)
