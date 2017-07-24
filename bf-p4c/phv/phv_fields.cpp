@@ -189,7 +189,13 @@ const PhvInfo::Field *PhvInfo::field(const IR::Member *fr, Field::bitrange *bits
         name = name.after(p+2);
         if (auto *rv = getref(all_fields, name))
             return rv; }
-    warning("can't find field '%s'", name);
+
+    // XXX(seth): The warning spew from POV bits prior to allocatePOV() being
+    // called is just too great. We need to improve how that's handled, but for
+    // now, silence those warnings.
+    if (!name.toString().endsWith(".$valid"))
+        warning("can't find field '%s'", name);
+
     return nullptr;
 }
 
