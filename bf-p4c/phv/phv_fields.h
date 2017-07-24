@@ -7,8 +7,9 @@
 #include "lib/ordered_map.h"
 #include "lib/ordered_set.h"
 #include "lib/range.h"
-#include "tofino/ir/thread_visitor.h"
 #include "tofino/common/header_stack.h"
+#include "tofino/ir/thread_visitor.h"
+#include "tofino/ir/bitrange.h"
 
 namespace PHV {
 class ManualAlloc;
@@ -97,22 +98,6 @@ class PhvInfo : public Inspector {
         // begin phv_assignment (phv_bind) interface
         // ****************************************************************************************
         //
-        struct bitrange {
-            int lo, hi;                       // range of bits within a container or field
-            int size() const                  { return hi - lo + 1; }
-            operator std::pair<int, int>()    { return std::make_pair(lo, hi); }
-            bool contains(int bit) const      { return bit >= lo && bit <= hi; }
-            bool overlaps(bitrange a) const   { return contains(a.lo) || a.contains(lo); }
-            bool overlaps(int l, int h) const { return contains(l) || (lo >= l && lo <= h); }
-            bitrange intersect(bitrange a) const {
-                bitrange rv = { std::min(lo, a.lo), std::max(hi, a.hi) };
-                BUG_CHECK(rv.lo <= rv.hi, "invalid bitrange::intersect");
-                return rv; }
-            bitrange intersect(int l, int h) const {
-                bitrange rv = { std::min(lo, l), std::max(hi, h) };
-                BUG_CHECK(rv.lo <= rv.hi, "invalid bitrange::intersect");
-                return rv; } };
-        //
         struct alloc_slice {
             const Field*           field;
             PHV::Container         container;
@@ -152,7 +137,7 @@ class PhvInfo : public Inspector {
         void foreach_alloc(const bitrange *r, std::function<void(const alloc_slice &)> fn) const {
             foreach_alloc(r ? r->lo : 0, r ? r->hi : size-1, fn); }
                 // e.g., foreach_alloc function with bitrange to only iterate over part of field
-                // PhvInfo::Field::bitrange  bits;        // local var (on stack)
+                // bitrange  bits;        // local var (on stack)
                 // auto *field = phv.field(expr, &bits);  // pointer to bits, phv.field fills it
                 // field->foreach_alloc(bits, [&](const PhvInfo::Field::alloc_slice &alloc) {
                 //     LOG1("Alloc slice of write " << alloc); }
@@ -468,13 +453,13 @@ class PhvInfo : public Inspector {
     const Field *field(int idx) const { return (size_t)idx < by_id.size() ? by_id.at(idx) : 0; }
     const Field *field(cstring name) const {
         return all_fields.count(name) ? &all_fields.at(name) : 0; }
-    const Field *field(const IR::Expression *, Field::bitrange *bits = 0) const;
-    const Field *field(const IR::Member *, Field::bitrange *bits = 0) const;
+    const Field *field(const IR::Expression *, bitrange *bits = 0) const;
+    const Field *field(const IR::Member *, bitrange *bits = 0) const;
     Field *field(int idx) { return (size_t)idx < by_id.size() ? by_id.at(idx) : 0; }
     Field *field(cstring name) { return all_fields.count(name) ? &all_fields.at(name) : 0; }
-    Field *field(const IR::Expression *e, Field::bitrange *bits = 0) {
+    Field *field(const IR::Expression *e, bitrange *bits = 0) {
         return const_cast<Field *>(const_cast<const PhvInfo *>(this)->field(e, bits)); }
-    Field *field(const IR::Member *fr, Field::bitrange *bits = 0) {
+    Field *field(const IR::Member *fr, bitrange *bits = 0) {
         return const_cast<Field *>(const_cast<const PhvInfo *>(this)->field(fr, bits)); }
     vector<Field::alloc_slice> *alloc(const IR::Member *member);
     const std::pair<int, int> *header(cstring name) const;
@@ -508,7 +493,6 @@ extern void repack_metadata(PhvInfo &phv);
 void dump(const PhvInfo *);
 void dump(const PhvInfo::Field *);
 //
-std::ostream &operator<<(std::ostream &, const PhvInfo::Field::bitrange &);
 std::ostream &operator<<(std::ostream &, const PhvInfo::Field::alloc_slice &);
 std::ostream &operator<<(std::ostream &, const vector<PhvInfo::Field::alloc_slice> &);
 std::ostream &operator<<(std::ostream &, const ordered_map<Cluster_PHV *, std::pair<int, int>>&);

@@ -226,7 +226,7 @@ void ActionFormat::create_placement_phv(ActionAnalysis::ContainerActionsMap &con
         // in the same action data slot
         bool initialized = false;
         for (auto &field_action : cont_action.field_actions) {
-            PhvInfo::Field::bitrange bits;
+            bitrange bits;
             auto *write_field = phv.field(field_action.write.expr, &bits);
             int container_bit = 0;
             int write_count = 0;

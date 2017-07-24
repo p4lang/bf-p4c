@@ -24,6 +24,7 @@ set (P4C_LIB_DEPS "${P4C_LIB_DEPS};${Boost_GRAPH_LIBRARY}")
 
 set (TOFINO_IR_SRCS
   ir/dbprint-tofino.cpp
+  ir/bitrange.cpp
   ir/gress.cpp
   ir/mau.cpp
   ir/parde.cpp
@@ -33,6 +34,7 @@ set (TOFINO_IR_SRCS
   )
 
 set (TOFINO_IR_HDRS
+  ir/bitrange.h
   ir/gress.h
   ir/thread_visitor.h
   ir/tofino_write_context.h

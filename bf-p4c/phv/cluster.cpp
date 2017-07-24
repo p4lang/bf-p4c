@@ -789,7 +789,7 @@ void Cluster::create_dst_map_entry(PhvInfo::Field *field) {
 //***********************************************************************************
 
 void Cluster::set_field_range(const IR::Expression& expression) {
-    PhvInfo::Field::bitrange bits;
+    bitrange bits;
     bits.lo = bits.hi = 0;
     auto field = phv_i.field(&expression, &bits);
     if (field) {

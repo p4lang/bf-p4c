@@ -42,7 +42,7 @@ void DeparserAsmOutput::emit_fieldlist(std::ostream &out, const IR::Vector<IR::E
                                        const char *sep) const {
     PHV::Container last;
     for (auto f : *list) {
-        PhvInfo::Field::bitrange bits;
+        bitrange bits;
         if (auto field = phv.field(f, &bits)) {
             auto &alloc = field->for_bit(bits.lo);
             if (last && alloc.container == last)

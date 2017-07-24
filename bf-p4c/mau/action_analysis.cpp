@@ -26,8 +26,8 @@ void ActionAnalysis::initialize_action_data(const IR::Expression *expr) {
  *  If it is an ActionDataConstant, then the type is CONSTANT
  */
 const IR::Expression *ActionAnalysis::isActionParam(const IR::Expression *e,
-        PhvInfo::Field::bitrange *bits_out, ActionParam::type_t *type) {
-    PhvInfo::Field::bitrange bits = { 0, e->type->width_bits() - 1};
+        bitrange *bits_out, ActionParam::type_t *type) {
+    bitrange bits = { 0, e->type->width_bits() - 1};
     if (auto *sl = e->to<IR::Slice>()) {
         bits.lo = sl->getL();
         bits.hi = sl->getH();
@@ -141,7 +141,7 @@ void ActionAnalysis::postorder(const IR::MAU::Instruction *instr) {
     }
 
     if (phv_alloc) {
-        PhvInfo::Field::bitrange bits;
+        bitrange bits;
 
         auto *field = phv.field(field_action.write.expr, &bits);
         int split_count = 0;
@@ -228,8 +228,8 @@ bool ActionAnalysis::verify_phv_read_instr(const ActionParam &write, const Actio
         return false;
     }
 
-    PhvInfo::Field::bitrange read_range;
-    PhvInfo::Field::bitrange write_range;
+    bitrange read_range;
+    bitrange write_range;
 
 
     auto *read_field = phv.field(read.expr, &read_range);
@@ -299,7 +299,7 @@ bool ActionAnalysis::verify_action_data_instr(const ActionParam &write, const Ac
     if (tbl->layout.action_data_bytes_in_overhead > 0)
         immediate_format = &(action_format.immediate_format.at(action_name));
 
-    PhvInfo::Field::bitrange read_range;
+    bitrange read_range;
     ActionParam::type_t type = ActionParam::ACTIONDATA;
     auto action_arg = isActionParam(read.expr, &read_range, &type);
     if (action_arg == nullptr)
@@ -318,7 +318,7 @@ bool ActionAnalysis::verify_action_data_instr(const ActionParam &write, const Ac
     bool is_immediate;
 
 
-    PhvInfo::Field::bitrange write_range;
+    bitrange write_range;
     bitvec write_bits;
     int write_count = 0;
     auto *write_field = phv.field(write.expr, &write_range);
@@ -379,7 +379,7 @@ bool ActionAnalysis::verify_constant_instr(const ActionParam &write, const Actio
         return true;
     }
 
-    PhvInfo::Field::bitrange write_range;
+    bitrange write_range;
     bitvec write_bits;
     int write_count = 0;
     auto *write_field = phv.field(write.expr, &write_range);
@@ -412,7 +412,7 @@ bool ActionAnalysis::verify_constant_instr(const ActionParam &write, const Actio
  *  the ability to do Tofino compliance.
  */
 void ActionAnalysis::action_data_align(const ActionParam &write, ContainerAction &cont_action) {
-    PhvInfo::Field::bitrange write_range;
+    bitrange write_range;
     bitvec write_bits;
     int write_count = 0;
     auto *write_field = phv.field(write.expr, &write_range);

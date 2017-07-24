@@ -48,7 +48,7 @@ void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::M
         for (auto el : key->keyElements) {
             if (el->matchType->path->name == "selector") continue;
             auto r = el->expression;
-            PhvInfo::Field::bitrange bits = { 0, 0 };
+            bitrange bits = { 0, 0 };
             auto *field = phv.field(r, &bits);
             if (auto mask = r->to<IR::Mask>()) {
                 if (auto mval = mask->right->to<IR::Constant>()) {
@@ -77,7 +77,7 @@ void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::M
                          * is consistent.  Should fix PHV alloc to not make such bad allocations */
                         if (sl.field_bit > bits.hi) continue;
                         if (sl.field_hi() < bits.lo) break;
-                        PhvInfo::Field::bitrange cbits = { sl.container_bit, sl.container_hi() };
+                        bitrange cbits = { sl.container_bit, sl.container_hi() };
                         if (bits.hi < sl.field_hi())
                             cbits.hi -= sl.field_hi() - bits.hi;
                         if (bits.lo > sl.field_bit)

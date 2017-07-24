@@ -5,14 +5,6 @@
 using namespace DBPrint;
 using namespace IndentCtl;
 
-std::ostream &operator<<(std::ostream &out, const PhvInfo::Field::bitrange &bits) {
-    if (bits.lo >= 0) {
-        out << '(' << bits.lo;
-        if (bits.hi != bits.lo) out << ".." << bits.hi;
-        out <<')'; }
-    return out;
-}
-
 std::ostream &operator<<(std::ostream &out, const CollectGatewayFields::info_t &info) {
     out << info.bits;
     if (info.need_range) out << " range";

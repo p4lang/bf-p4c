@@ -4,6 +4,7 @@
 #include <map>
 #include "lib/ordered_map.h"
 #include "lib/stringref.h"
+#include "tofino/ir/bitrange.h"
 #include "tofino/phv/phv_fields.h"
 
 StringRef trim_asm_name(StringRef name);
@@ -29,7 +30,7 @@ class Slice {
     Slice(const PhvInfo::Field *f) : field(f), lo(0), hi(f->size-1) {}
     Slice(const PhvInfo::Field *f, int bit) : field(f), lo(bit), hi(bit) {}
     Slice(const PhvInfo::Field *f, int l, int h) : field(f), lo(l), hi(h) {}
-    Slice(const PhvInfo::Field *f, PhvInfo::Field::bitrange r) : field(f), lo(r.lo), hi(r.hi) {}
+    Slice(const PhvInfo::Field *f, bitrange r) : field(f), lo(r.lo), hi(r.hi) {}
     Slice(const PhvInfo &phv, cstring n)
     : field(phv.field(n)), lo(0), hi(field->size-1) {}
     Slice(const PhvInfo &phv, cstring n, int bit)

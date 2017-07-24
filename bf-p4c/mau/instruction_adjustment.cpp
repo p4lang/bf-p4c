@@ -188,7 +188,7 @@ const IR::Constant *ConstantsToActionData::preorder(IR::Constant *constant) {
 }
 
 void ConstantsToActionData::analyze_phv_field(IR::Expression *expr) {
-    PhvInfo::Field::bitrange bits;
+    bitrange bits;
     auto *field = phv.field(expr, &bits);
 
     if (field == nullptr)
@@ -322,7 +322,7 @@ const IR::MAU::Instruction *MergeInstructions::preorder(IR::MAU::Instruction *in
 }
 
 void MergeInstructions::analyze_phv_field(IR::Expression *expr) {
-    PhvInfo::Field::bitrange bits;
+    bitrange bits;
     auto *field = phv.field(expr, &bits);
     if (field != nullptr && isWrite()) {
         if (merged_location != merged_fields.end())
@@ -468,7 +468,7 @@ void MergeInstructions::build_multi_operand_info(PHV::Container container,
             ///> lookup_name corresponds to PHV::Container name/Action Data Name
             cstring lookup_name;
             if (read.type == ActionAnalysis::ActionParam::PHV) {
-                PhvInfo::Field::bitrange bits;
+                bitrange bits;
                 auto *field = phv.field(read.expr, &bits);
                 int split_count = 0;
                 field->foreach_alloc(bits, [&](const PhvInfo::Field::alloc_slice &) {

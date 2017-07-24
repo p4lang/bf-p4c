@@ -2,8 +2,9 @@
 #define EXTENSIONS_TOFINO_MAU_ACTION_ANALYSIS_H_
 
 #include "mau_visitor.h"
-#include "tofino/phv/phv_fields.h"
+#include "tofino/ir/bitrange.h"
 #include "tofino/ir/tofino_write_context.h"
+#include "tofino/phv/phv_fields.h"
 
 struct TableResourceAlloc;
 
@@ -215,7 +216,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
     void initialize_phv_field(const IR::Expression *expr);
     void initialize_action_data(const IR::Expression *expr);
     const IR::Expression *isActionParam(const IR::Expression *expr,
-        PhvInfo::Field::bitrange *bits_out = nullptr, ActionParam::type_t *type = nullptr);
+        bitrange *bits_out = nullptr, ActionParam::type_t *type = nullptr);
 
     bool preorder(const IR::Slice *) override;
     bool preorder(const IR::ActionArg *) override;

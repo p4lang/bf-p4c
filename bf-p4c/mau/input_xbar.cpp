@@ -820,7 +820,7 @@ int need_align_flags[4][4] = { { 0, 0, 0, 0 },  // 8bit -- no alignment needed
 
 /* Add the pre-allocated bytes to the Use structure */
 static void add_use(IXBar::Use &alloc, const PhvInfo::Field *field,
-                    const PhvInfo::Field::bitrange *bits = nullptr, int flags = 0,
+                    const bitrange *bits = nullptr, int flags = 0,
                     bool hash_dist = false) {
     bool ok = false;
     int index = 0;
@@ -861,7 +861,7 @@ void IXBar::layout_option_calculation(const LayoutOption *layout_option,
 void IXBar::field_management(const IR::Expression *field, IXBar::Use &alloc,
     set<cstring> &fields_needed, bool hash_dist, cstring name, const PhvInfo &phv) {
     const PhvInfo::Field *finfo = nullptr;
-    PhvInfo::Field::bitrange bits = { };
+    bitrange bits = { };
     if (auto list = field->to<IR::ListExpression>()) {
         if (!hash_dist)
             BUG("A field list is somehow contained within the reads in table %s", name);
@@ -898,7 +898,7 @@ class FindFieldsToAlloc : public Inspector {
         visit(a->action, "action");  // just visit the action instructions
         return false; }
     bool preorder(const IR::Expression *e) override {
-        PhvInfo::Field::bitrange bits;
+        bitrange bits;
         if (auto *finfo = phv.field(e, &bits)) {
             if (!fields_needed.count(finfo->name)) {
                 fields_needed.insert(finfo->name);

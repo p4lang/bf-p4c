@@ -820,7 +820,7 @@ class MauAsmOutput::EmitAction : public Inspector {
     }
     void handle_phv_expr(const IR::Expression *expr) {
         if (sep) {
-            PhvInfo::Field::bitrange bits;
+            bitrange bits;
             if (auto field = self.phv.field(expr, &bits)) {
                 out << sep << canon_name(field->name);
                 int count = 0;

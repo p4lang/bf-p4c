@@ -41,7 +41,6 @@ class CollectGatewayFields : public Inspector {
         xor_match = nullptr; }
 
  public:
-    typedef PhvInfo::Field::bitrange    bitrange;
     struct info_t {
         const PhvInfo::Field    *xor_with = nullptr;
         bitrange                bits = { -1, -1 };
@@ -102,7 +101,7 @@ class BuildGatewayMatch : public Inspector {
     bool preorder(const IR::RangeMatch *) override;
     friend std::ostream &operator<<(std::ostream &, const BuildGatewayMatch &);
     const PhvInfo::Field        *match_field;
-    PhvInfo::Field::bitrange    match_field_bits;
+    bitrange                    match_field_bits;
     uint64_t                    andmask, ormask;
     int                         shift;
  public:
