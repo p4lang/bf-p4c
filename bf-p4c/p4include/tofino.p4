@@ -93,7 +93,7 @@ header pktgen_recirc_header_t {
 }
 
 /// Produced by Ingress Parser-Auxiliary
-struct ingress_intrinsic_metadata_from_parser_t {
+struct ingress_intrinsic_metadata_from_parser_aux_t {
     bit<48> ingress_global_tstamp;       // global timestamp (ns) taken upon
                                          // arrival at ingress.
     bit<32> ingress_global_ver;          // global version number taken upon
@@ -228,7 +228,7 @@ header egress_intrinsic_metadata_t {
     bit<16> pkt_length;                  // Packet length, in bytes
 }
 
-struct egress_intrinsic_metadata_from_parser_t {
+struct egress_intrinsic_metadata_from_parser_aux_t {
     bit<48> egress_global_tstamp;        // global time stamp (ns) taken at the
                                          // egress pipe.
 
@@ -430,20 +430,20 @@ parser IngressParser<H, M>(
     out H hdr,
     out M ig_md,
     out ingress_intrinsic_metadata_t ig_intr_md,
-    @optional out ingress_intrinsic_metadata_from_parser_t ig_intr_md_from_prsr);
+    @optional out ingress_intrinsic_metadata_from_parser_aux_t ig_intr_md_from_prsr);
 
 parser EgressParser<H, M>(
     packet_in pkt,
     out H hdr,
     out M eg_md,
     out egress_intrinsic_metadata_t eg_intr_md,
-    @optional out egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr);
+    @optional out egress_intrinsic_metadata_from_parser_aux_t eg_intr_md_from_prsr);
 
 control Ingress<H, M>(
     inout H hdr,
     inout M ig_md,
     in ingress_intrinsic_metadata_t ig_intr_md,
-    @optional in ingress_intrinsic_metadata_from_parser_t ig_intr_md_from_prsr,
+    @optional in ingress_intrinsic_metadata_from_parser_aux_t ig_intr_md_from_prsr,
     @optional out ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm,
     @optional out ingress_intrinsic_metadata_for_mirror_buffer_t ig_intr_md_for_mb);
 
@@ -451,7 +451,7 @@ control Egress<H, M>(
     inout H hdr,
     inout M eg_md,
     in egress_intrinsic_metadata_t eg_intr_md,
-    in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr,
+    in egress_intrinsic_metadata_from_parser_aux_t eg_intr_md_from_prsr,
     @optional out egress_intrinsic_metadata_for_mirror_buffer_t eg_intr_md_for_mb,
     @optional out egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport);
 

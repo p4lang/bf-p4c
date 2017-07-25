@@ -219,10 +219,14 @@ set (TOFINO_BACKEND_PHV_HDRS
   )
 
 set (TOFINO_BACKEND_ARCH_SRCS
+  arch/program_structure.cpp
+  arch/converters.cpp
   arch/simple_switch.cpp
   )
 
 set (TOFINO_BACKEND_ARCH_HDRS
+  arch/program_structure.h
+  arch/converters.h
   arch/simple_switch.h
   )
 
