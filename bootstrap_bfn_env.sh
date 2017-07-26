@@ -83,6 +83,26 @@ echo "Using $topdir as top level directory for git repositories"
 echo Using MAKEFLAGS=${MAKEFLAGS:=-j 4}
 export MAKEFLAGS
 
+echo "Checking for and installing protobuf 3.0.2"
+# yeah, 3.0.2 reports itself as libprotoc 3.0.0 ...
+if [[ ! `which protoc` || `protoc --version` != "libprotoc 3.0.0" ]]; then
+    pushd /tmp
+    sudo apt-get install -y curl unzip
+    git clone --recursive https://github.com/google/protobuf
+    cd protobuf
+    git checkout v3.0.2
+    ./autogen.sh && \
+    ./configure && \
+    make && \
+    sudo make install && \
+    sudo ldconfig || \
+    die "Failed to install protobuf"
+    cd ../
+    /bin/rm -rf protobuf
+    popd
+fi
+
+
 ### Behavioral Model setup
 if [ ! -d behavioral-model/.git ]; then
     gitclone git@github.com:p4lang/behavioral-model.git behavioral-model
