@@ -1537,6 +1537,50 @@ std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(const c
         return json::mkuniq<json::map>(std::move(mra)); }
 }
 
+void AttachedTable::pass1() {
+    // Per Flow Enable - Validate and Set pfe and address bits
+    bool pfe_set = false;
+    unsigned addr_bits = 0;
+    if (per_flow_enable && !per_flow_enable_param.empty()) {
+        for (auto m : match_tables) {
+            if (auto fmt = m->format) {
+                unsigned g = 0;
+                while (g < fmt->groups()) {
+                    if (auto f = fmt->field(per_flow_enable_param, g)) {   
+                        // Get pfe bit position from format entry
+                        // This value is then adjusted based on address
+                        unsigned pfe_bit = 0;
+                        if (f->bits[0].lo == f->bits[0].hi)
+                            pfe_bit = f->bits[0].lo;
+                        else
+                            error(lineno, "pfe bit %s is not a 1 bit value for entry in table format %s(%d)",
+                                    per_flow_enable_param.c_str(), per_flow_enable_param.c_str(), g);
+                        // Generate address field name based on pfe name
+                        std::string addr = per_flow_enable_param.substr(0, per_flow_enable_param.find("_pfe"));
+                        addr = addr + "_addr";
+                        // Find addr field in format and adjust pfe_bit
+                        if (auto a = fmt->field(addr, g)) {
+                            pfe_bit = pfe_bit - a->bits[0].lo;
+                            addr_bits = a->bits[0].hi - a->bits[0].lo + 1;
+                        } else
+                            error(lineno, "addr field not found in entry format for pfe %s(%i)",
+                                per_flow_enable_param.c_str(), g);
+                        if (pfe_set) {
+                            // For multiple entries check if each of the pfe bits are in the same position relative to address
+                            if (pfe_bit != per_flow_enable_bit)
+                                error(lineno, "PFE bit position not in the same relative location to address in other entries in table format - %s(%i)",
+                                        per_flow_enable_param.c_str(), g);
+                            // Also check for address bits having similar widths
+                            if (addr_bits != address_bits)
+                                error(lineno, "Address with different widths in other entries in table format - %s(%i)",
+                                        addr.c_str(), g);
+                        } else {
+                            per_flow_enable_bit = pfe_bit;
+                            address_bits = addr_bits;
+                            pfe_set = true; } }
+                    ++g; } } } }
+}
+
 SelectionTable *AttachedTables::get_selector() const {
     return dynamic_cast<SelectionTable *>((Table *)selector); }
 

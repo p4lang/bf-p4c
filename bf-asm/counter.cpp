@@ -45,40 +45,60 @@ void CounterTable::pass1() {
         for (int r = (row.row + 1) | 1; r < prev_row; r += 2)
             need_bus(lineno, stage->overflow_bus_use, r, "Overflow");
         prev_row = row.row; }
+    AttachedTable::pass1();
 }
 
 void CounterTable::pass2() {
     LOG1("### Counter table " << name() << " pass2");
 }
 
-static int counter_size[] = { 0, 0, 1, 2, 3, 0, 4 };
-static int counter_masks[] = { 0, 7, 3, 4, 1, 0, 0 };
-static int counter_shifts[] = { 0, 3, 2, 1, 1, 0, 0 };
+static int counter_size[]         = { 0, 0, 1, 2, 3, 0, 4 };
+static int counter_masks[]        = { 0, 7, 3, 4, 1, 0, 0 };
+static int counter_shifts[]       = { 0, 3, 2, 1, 1, 0, 0 };
 static int counter_hole_swizzle[] = { 0, 0, 0, 1, 0, 0, 2 };
 
 int CounterTable::direct_shiftcount() {
     return 64 + 7 - counter_shifts[format->groups()];
 }
 
+int CounterTable::indirect_shiftcount() {
+    return 7 - counter_shifts[format->groups()];
+}
+
 template<class REGS> void CounterTable::write_merge_regs(REGS &regs, MatchTable *match,
             int type, int bus, const std::vector<Call::Arg> &args) {
     auto &merge =  regs.rams.match.merge;
-    per_flow_enable_bit = 19;
-    /* FIXME -- This should be cleaner -- rather than checking the match table type, have
-     * the pfe bit stored in the CounterTable and hve the match table set it in some pass?
-     * Should be using the top bit from the counter index field in the match foramt?
-     * Or add a second arg to the stats/counter call in the match table specifying which bit?  */
-    if (per_flow_enable && dynamic_cast<HashActionTable *>(match)) {
-        per_flow_enable_bit = 7; }
-    if (options.match_compiler && dynamic_cast<HashActionTable *>(match)) {
-        /* FIXME -- for some reason the compiler does not set the stats_adr_mask
-         * for hash_action tables.  Is it not needed? */
-    } else
-        merge.mau_stats_adr_mask[type][bus] = 0xfffff & ~counter_masks[format->groups()];
+    //per_flow_enable_bit = 19;
+    ///* FIXME -- This should be cleaner -- rather than checking the match table type, have
+    // * the pfe bit stored in the CounterTable and hve the match table set it in some pass?
+    // * Should be using the top bit from the counter index field in the match foramt?
+    // * Or add a second arg to the stats/counter call in the match table specifying which bit?  */
+    //if (per_flow_enable && dynamic_cast<HashActionTable *>(match)) {
+    //    per_flow_enable_bit = 7; }
+    //if (options.match_compiler && dynamic_cast<HashActionTable *>(match)) {
+    //    /* FIXME -- for some reason the compiler does not set the stats_adr_mask
+    //     * for hash_action tables.  Is it not needed? */
+    //} else
+    //    merge.mau_stats_adr_mask[type][bus] = 0xfffff & ~counter_masks[format->groups()];
+    //merge.mau_stats_adr_hole_swizzle_mode[type][bus] = counter_hole_swizzle[format->groups()];
+    //merge.mau_stats_adr_default[type][bus] = per_flow_enable ? 0 : (1U << per_flow_enable_bit);
+    //if (per_flow_enable)
+    //    merge.mau_stats_adr_per_entry_en_mux_ctl[type][bus] = per_flow_enable_bit;
+
+    unsigned stats_adr_default = 0;
+    unsigned stats_adr_mask = (1U <<  STAT_ADDRESS_BITS) - 1;
+    unsigned pfe = per_flow_enable_bit;
+    if (per_flow_enable) {
+        stats_adr_mask = ((1U <<  address_bits) - 1) << (counter_shifts[format->groups()]);
+        pfe += counter_shifts[format->groups()];
+    } else {
+        //pfe = STATISTICS_PER_FLOW_ENABLE_START_BIT;
+        pfe = 0; // Does pfe value get picked up in default case?
+        stats_adr_default = 1U << (STAT_ADDRESS_BITS - 1); }
+    merge.mau_stats_adr_mask[type][bus] = stats_adr_mask;
+    merge.mau_stats_adr_default[type][bus] = stats_adr_default; 
+    merge.mau_stats_adr_per_entry_en_mux_ctl[type][bus] = pfe;
     merge.mau_stats_adr_hole_swizzle_mode[type][bus] = counter_hole_swizzle[format->groups()];
-    merge.mau_stats_adr_default[type][bus] = per_flow_enable ? 0 : (1U << per_flow_enable_bit);
-    if (per_flow_enable)
-        merge.mau_stats_adr_per_entry_en_mux_ctl[type][bus] = per_flow_enable_bit;
 }
 
 template<class REGS> void CounterTable::write_regs(REGS &regs) {
@@ -207,5 +227,5 @@ void CounterTable::gen_tbl_cfg(json::vector &out) {
         default: break; }
         tbl["lrt_enable"] = false;
         tbl["saturating"] = false;  // FIXME?
-        stage_tbl["default_lower_huffman_bits_included"] = 0; } 
+        stage_tbl["default_lower_huffman_bits_included"] = 0; }
 }

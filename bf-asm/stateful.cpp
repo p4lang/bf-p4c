@@ -151,6 +151,7 @@ void Stateful::pass1() {
     if (actions) actions->pass1(this);
     if (math_table)
         math_table.check();
+    AttachedTable::pass1();
 }
 
 int Stateful::get_const(long v) {
@@ -171,25 +172,94 @@ int Stateful::direct_shiftcount() {
     return 64;
 }
 
+int Stateful::indirect_shiftcount() {
+    return 7U - (64U/format->size);
+}
+
 template<class REGS> void Stateful::write_merge_regs(REGS &regs, MatchTable *match,
             int type, int bus, const std::vector<Call::Arg> &args) {
     auto &merge = regs.rams.match.merge;
     assert(args.size() <= 1);
+    //if (args.empty()) { // direct access
+    //    merge.mau_meter_adr_mask[type][bus] = 0x7fff80;
+    //} else if (args[0].type == Call::Arg::Field) {
+    //    // indirect access via overhead field
+    //    int bits = args[0].size() - 3;
+    //    if (per_flow_enable) --bits;
+    //    merge.mau_meter_adr_mask[type][bus] = 0x700000 | (~(~0u << bits) << 7);
+    //} else if (args[0].type == Call::Arg::HashDist) {
+    //    // indirect access via hash_dist
+    //    merge.mau_meter_adr_mask[type][bus] = 0x7fff80; }
+    //merge.mau_meter_adr_per_entry_en_mux_ctl[type][bus] = 16; // FIXME
+    //merge.mau_meter_adr_type_position[type][bus] = per_flow_enable ? 16 : 17;
+    //if (!per_flow_enable)
+    //    merge.mau_meter_adr_default[type][bus] |= 1 << 23;
+    //merge.mau_meter_adr_default[type][bus] |= 1 << 24;  // FIXME -- instruction number?
+
+    unsigned ptr_bits = 0;
+    unsigned entry_bit_width = format->size/(dual_mode ? 2 : 1);
+    unsigned bw_adjust = ceil_log2(entry_bit_width);
+    unsigned full_mask = (1U << METER_ADDRESS_BITS) - 1;
+    unsigned instr_slots = get_instruction_count();
     if (args.empty()) { // direct access
-        merge.mau_meter_adr_mask[type][bus] = 0x7fff80;
-    } else if (args[0].type == Call::Arg::Field) {
-        // indirect access via overhead field
-        int bits = args[0].size() - 3;
-        if (per_flow_enable) --bits;
-        merge.mau_meter_adr_mask[type][bus] = 0x700000 | (~(~0u << bits) << 7);
+        if (match->to<ExactMatchTable>()) {
+            if (entry_bit_width < 16)
+                ptr_bits = EXACT_VPN_BITS + EXACT_WORD_BITS;
+            else {
+                ptr_bits = METER_ADDRESS_BITS - METER_TYPE_BITS - 1 - bw_adjust; }
+        } else 
+            ptr_bits = TCAM_VPN_BITS + TCAM_WORD_BITS; 
     } else if (args[0].type == Call::Arg::HashDist) {
-        // indirect access via hash_dist
-        merge.mau_meter_adr_mask[type][bus] = 0x7fff80; }
-    merge.mau_meter_adr_per_entry_en_mux_ctl[type][bus] = 16; // FIXME
-    merge.mau_meter_adr_type_position[type][bus] = per_flow_enable ? 16 : 17;
+        // indirect access via hash dist
+        if (instr_slots > 1) 
+            ptr_bits = METER_TYPE_BITS - 1;
+        if (per_flow_enable) 
+            ptr_bits += 1;
+    } else {
+        ptr_bits = METER_ADDRESS_BITS - bw_adjust;
+        if (!per_flow_enable) 
+            ptr_bits -= 1;
+        if (instr_slots < 2) 
+            ptr_bits -= METER_TYPE_BITS;
+        else 
+            ptr_bits -= 1;
+    }
+
+    unsigned stateful_adr_default = 0x0;
     if (!per_flow_enable)
-        merge.mau_meter_adr_default[type][bus] |= 1 << 23;
-    merge.mau_meter_adr_default[type][bus] |= 1 << 24;  // FIXME -- instruction number?
+        stateful_adr_default |= (1U << METER_PER_FLOW_ENABLE_START_BIT);
+    // FIXME: Factor in stateful logging which is not currently supported in
+    // assembly?
+    //if (instr_slots == 1) -- encode instr number in type?
+    stateful_adr_default |= (1U << METER_TYPE_START_BIT);
+    // FIXME: Factor in index constants
+    // FIXME: Factor in when addr is OR'd from hash computation
+    merge.mau_meter_adr_default[type][bus] = stateful_adr_default;
+
+    unsigned stateful_adr_mask = 0x0;
+    unsigned base_width = 0;
+    unsigned base_mask = 0x0;
+    unsigned type_mask = (1U << (METER_TYPE_BITS - 1)) - 1;
+    if (instr_slots > 1) {
+        base_width = ptr_bits - METER_TYPE_BITS + 1;
+        if (per_flow_enable)
+            base_width -= 1;
+        base_mask = (1U << base_width) - 1;
+        stateful_adr_mask = base_mask << bw_adjust;
+        stateful_adr_mask |= (type_mask << (METER_TYPE_START_BIT + 1));
+    } else {
+        base_width = ptr_bits;
+        if (per_flow_enable)
+            base_width -= 1;
+        base_mask = (1U << base_width) - 1;
+        stateful_adr_mask = base_mask << bw_adjust; 
+    }
+    stateful_adr_mask &= full_mask;
+    merge.mau_meter_adr_mask[type][bus] = stateful_adr_mask;
+
+    if (!per_flow_enable)
+        per_flow_enable_bit = METER_ADDRESS_BITS - METER_TYPE_BITS - 1;
+    merge.mau_meter_adr_per_entry_en_mux_ctl[type][bus] = per_flow_enable_bit;
 }
 
 template<class REGS> void Stateful::write_regs(REGS &regs) {

@@ -325,6 +325,7 @@ public:
     virtual Stateful *get_stateful() const { return 0; }
     virtual const Call &get_action() const { return action; }
     virtual int direct_shiftcount() { assert(0); }
+    virtual int indirect_shiftcount() { assert(0); }
     virtual int home_row() const { assert(0); }
     /* row,col -> mem unitno mapping -- unitnumbers used in context json */
     virtual int memunit(int r, int c) { return r*12 + c; }
@@ -661,6 +662,10 @@ DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,
     /* table that can be attached to multiple match tables to do something */
     std::set<MatchTable *>      match_tables;
     bool                        direct = false, indirect = false;
+    bool                        per_flow_enable = false;
+    std::string                 per_flow_enable_param;
+    unsigned                    per_flow_enable_bit = 0;
+    unsigned                    address_bits;
     table_type_t set_match_table(MatchTable *m, bool indirect) {
         if ((indirect && direct) || (!indirect && this->indirect))
             error(lineno, "Table %s is accessed with direct and indirect indices", name());
@@ -679,6 +684,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,
     Call &action_call() {
         return match_tables.size() == 1 ? (*match_tables.begin())->action_call() : action; }
     int memunit(int r, int c) { return r*6 + c; }
+    void pass1();
 )
 
 DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",
@@ -827,9 +833,7 @@ public:
 DECLARE_ABSTRACT_TABLE_TYPE(Synth2Port, AttachedTable,
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) override {
         width = period = 1; depth = layout_size(); period_name = 0; }
-    bool                per_flow_enable = false;
     bool                global_binding = false;
-    unsigned            per_flow_enable_bit = 0;
     json::map *base_tbl_cfg(json::vector &out, const char *type, int size) override;
     json::map *add_stage_tbl_cfg(json::map &tbl, const char *type, int size) override;
 public:
@@ -844,7 +848,8 @@ public:
         write_regs<Target::JBay::mau_regs>(regs); }
     void common_init_setup(const VECTOR(pair_t) &, bool, P4Table::type) override;
     bool common_setup(pair_t &, const VECTOR(pair_t) &, P4Table::type) override;
-
+    void pass1() override;
+    void pass2() override;
 )
 
 DECLARE_TABLE_TYPE(CounterTable, Synth2Port, "counter",
@@ -860,6 +865,7 @@ DECLARE_TABLE_TYPE(CounterTable, Synth2Port, "counter",
         write_merge_regs<Target::JBay::mau_regs>(regs, match, type, bus, args); }
 public:
     int direct_shiftcount() override;
+    int indirect_shiftcount() override;
     bool run_at_eop() override { return (type&BYTES) != 0; }
     bool adr_mux_select_stats() override { return true; }
     int unitram_type() override { return UnitRam::STATISTICS; }
@@ -917,6 +923,13 @@ public:
     int get_const(long v);
     bool is_dual_mode() { return dual_mode; }
     int home_row() const override { return layout.at(0).row | 3; }
+    int indirect_shiftcount() override;
+    unsigned get_instruction_count() { 
+        unsigned instr_count = 0;
+        if (actions) {
+            for (auto &a : *actions) { //will have only 1 action
+                for (auto &i : a.instr) ++instr_count; } } 
+        return instr_count; }
 )
 
 #endif /* _tables_h_ */

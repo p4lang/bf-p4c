@@ -26,7 +26,9 @@ bool Synth2Port::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::t
     } else if (kv.key == "global_binding") {
         global_binding = get_bool(kv.value);
     } else if (kv.key == "per_flow_enable") {
-        per_flow_enable = get_bool(kv.value);
+        if (CHECKTYPE(kv.value, tSTR)) {
+            per_flow_enable = 1;
+            per_flow_enable_param = kv.value.s; }
     } else if (kv.key == "p4") {
         if (CHECKTYPE(kv.value, tMAP))
             p4_table = P4Table::get(p4type, kv.value.map);
@@ -36,6 +38,14 @@ bool Synth2Port::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::t
     } else
         return false;
     return true;
+}
+
+void Synth2Port::pass1() {
+    LOG1("### Synth2Port table " << name() << " pass1");
+}
+
+void Synth2Port::pass2() {
+    LOG1("### Synth2Port table " << name() << " pass2");
 }
 
 template<class REGS>

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "tofino.p4"
+#include "tofino_exm.p4"
 #include "tofino/intrinsic_metadata.p4"
 #include "tofino/constants.p4"
 

@@ -80,6 +80,7 @@ void MeterTable::pass1() {
         for (int r = (row.row + 1) | 1; r < prev_row; r += 2)
             need_bus(lineno, stage->overflow_bus_use, r, "Overflow");
         prev_row = row.row; }
+    AttachedTable::pass1();
 }
 
 void MeterTable::pass2() {
@@ -95,30 +96,95 @@ template<class REGS> void MeterTable::write_merge_regs(REGS &regs, MatchTable *m
             int type, int bus, const std::vector<Call::Arg> &args) {
     auto &merge = regs.rams.match.merge;
     assert(args.size() <= 1);
-    if (args.empty()) { // direct access
-        merge.mau_meter_adr_mask[type][bus] =  0x7fff80;
-    } else if (args[0].type == Call::Arg::Field) {
-        // indirect access via overhead field
-        int bits = args[0].size() - 3;
-        if (per_flow_enable) --bits;
-        merge.mau_meter_adr_mask[type][bus] = 0x700000 | (~(~0u << bits) << 7);
-    } else if (args[0].type == Call::Arg::HashDist) {
-        // indirect access via hash_dist
-        merge.mau_meter_adr_mask[type][bus] = 0x7fff80; }
+    //if (args.empty()) { // direct access
+    //    merge.mau_meter_adr_mask[type][bus] =  0x7fff80;
+    //} else if (args[0].type == Call::Arg::Field) {
+    //    // indirect access via overhead field
+    //    int bits = args[0].size() - 3;
+    //    if (per_flow_enable) --bits;
+    //    merge.mau_meter_adr_mask[type][bus] = 0x700000 | (~(~0u << bits) << 7);
+    //} else if (args[0].type == Call::Arg::HashDist) {
+    //    // indirect access via hash_dist
+    //    merge.mau_meter_adr_mask[type][bus] = 0x7fff80; }
+    //if (!color_aware)
+    //    merge.mau_meter_adr_default[type][bus] |= 2 << 24;
+    //else if (!color_aware_per_flow_enable)
+    //    merge.mau_meter_adr_default[type][bus] |= 6 << 24;
+    //if (!per_flow_enable)
+    //    merge.mau_meter_adr_default[type][bus] |= 1 << 23;
+    //if (per_flow_enable)
+    //    merge.mau_meter_adr_per_entry_en_mux_ctl[type][bus] = 16;
+    //if (color_aware && color_aware_per_flow_enable)
+    //    merge.mau_meter_adr_type_position[type][bus] = per_flow_enable ? 16 : 17;
+    //else
+    //    merge.mau_meter_adr_type_position[type][bus] = 24;
+    //merge.mau_idletime_adr_mask[type][bus] = type ? 0x7fff0 : 0xffff0;
+    //merge.mau_idletime_adr_default[type][bus] = per_flow_enable ? 0 : 0x100000;
+
+    // FIXME - Sets up the meter default regs, need to factor in index
+    // constants. Check glass code :
+    // (target/tofino/device/pipeline/mau/address_and_data_structures.py)
+    unsigned meter_adr = 0x0; 
     if (!color_aware)
-        merge.mau_meter_adr_default[type][bus] |= 2 << 24;
+        meter_adr |= (METER_LPF_COLOR_BLIND << METER_TYPE_START_BIT);
     else if (!color_aware_per_flow_enable)
-        merge.mau_meter_adr_default[type][bus] |= 6 << 24;
+        meter_adr |= (METER_COLOR_AWARE << METER_TYPE_START_BIT);
     if (!per_flow_enable)
-        merge.mau_meter_adr_default[type][bus] |= 1 << 23;
-    if (per_flow_enable)
-        merge.mau_meter_adr_per_entry_en_mux_ctl[type][bus] = 16;
-    if (color_aware && color_aware_per_flow_enable)
-        merge.mau_meter_adr_type_position[type][bus] = per_flow_enable ? 16 : 17;
-    else
-        merge.mau_meter_adr_type_position[type][bus] = 24;
-    merge.mau_idletime_adr_mask[type][bus] = type ? 0x7fff0 : 0xffff0;
-    merge.mau_idletime_adr_default[type][bus] = per_flow_enable ? 0 : 0x100000;
+        meter_adr |= (1U << METER_PER_FLOW_ENABLE_START_BIT);
+    merge.mau_meter_adr_default[type][bus] |= meter_adr;
+
+    unsigned meter_adr_mask = 0x0;
+    unsigned ptr_bits = 0;
+    unsigned base_width = 0;
+    unsigned base_mask = 0x0;
+    unsigned type_mask = (1U << METER_TYPE_BITS) - 1;
+    unsigned full_mask = (1U << METER_ADDRESS_BITS) - 1;
+    if (args.empty()) { // direct access
+        ptr_bits = METER_ADDRESS_BITS - METER_TYPE_BITS - 1 - METER_LOWER_HUFFMAN_BITS;
+        if (!match->to<ExactMatchTable>())
+            ptr_bits -= 1; // Ternary tables have one less address bit to consider for meters
+    } else {
+        ptr_bits = METER_ADDRESS_BITS - METER_LOWER_HUFFMAN_BITS;
+        if (!per_flow_enable)
+            ptr_bits -=1;
+        if ((!color_aware) || (!color_aware_per_flow_enable))
+            ptr_bits -= METER_TYPE_BITS; }
+
+    if (color_aware && color_aware_per_flow_enable) {
+        base_width = ptr_bits - METER_TYPE_BITS;
+        if (per_flow_enable)
+            base_width -= 1;
+        base_mask = (1U << base_width) - 1;
+        meter_adr_mask = base_mask << METER_LOWER_HUFFMAN_BITS;
+        meter_adr_mask |= (type_mask << METER_TYPE_START_BIT);
+        meter_adr_mask &= full_mask; 
+    } else {
+        base_width = ptr_bits;
+        if (per_flow_enable)
+            base_width -= 1;
+        base_mask = (1U << base_width) - 1;
+        meter_adr_mask = base_mask << METER_LOWER_HUFFMAN_BITS;
+        meter_adr_mask &= full_mask; }
+    merge.mau_meter_adr_mask[type][bus] |= meter_adr_mask;
+
+    if (!per_flow_enable) {
+        //ptr_bits += METER_LOWER_HUFFMAN_BITS; //When should these be added?
+        if (!color_aware)
+            per_flow_enable_bit = ptr_bits - 1;
+        else if (!color_aware_per_flow_enable) 
+            per_flow_enable_bit = ptr_bits - METER_TYPE_BITS - 1;
+        else
+            per_flow_enable_bit = ptr_bits - 1; }
+    merge.mau_meter_adr_per_entry_en_mux_ctl[type][bus] = per_flow_enable_bit;
+
+    unsigned meter_adr_type = 0;
+    if (!color_aware)
+        meter_adr_type = METER_ADDRESS_BITS - METER_TYPE_BITS;
+    else if (color_aware_per_flow_enable)
+        meter_adr_type = ptr_bits - METER_TYPE_BITS + METER_LOWER_HUFFMAN_BITS;
+    else meter_adr_type = METER_ADDRESS_BITS - METER_TYPE_BITS;
+    merge.mau_meter_adr_type_position[type][bus] = meter_adr_type;
+
 }
 
 template<class REGS>

@@ -679,7 +679,7 @@ template<class REGS> void ExactMatchTable::write_regs(REGS &regs) {
                 else if (group_info[group].overhead_word == (int)word) {
                     assert(st.args[0].field()->by_group[group]->bits[0].lo/128U == word);
                     merge.mau_stats_adr_exact_shiftcount[bus][word_group] =
-                        st.args[0].field()->by_group[group]->bits[0].lo%128U + 7;
+                        st.args[0].field()->by_group[group]->bits[0].lo%128U + st->indirect_shiftcount();
                 } else if (options.match_compiler) {
                     /* unused, so should not be set... */
                     merge.mau_stats_adr_exact_shiftcount[bus][word_group] = 7; }
