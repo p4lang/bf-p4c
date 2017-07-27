@@ -265,6 +265,7 @@ set (TOFINO_XFAIL_TESTS
   extensions/p4_tests/p4_16/clone-bmv2.p4
 # BRIG_132
   testdata/p4_16_samples/union-bmv2.p4
+  testdata/p4_16_samples/union4-bmv2.p4
 # BRIG-133
   extensions/p4_tests/p4_14/adjust_instr5.p4
 # BRIG-134
