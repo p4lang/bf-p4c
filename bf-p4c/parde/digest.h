@@ -50,7 +50,7 @@ class Digests : public Transform {
             if (VisitingThread(this) == EGRESS && m->member == "I2E")
                 error("%s: clone I2E not allowed in egress pipe", prim->srcInfo);
             if (!mirror_id)
-                mirror_id = new IR::TempVar(IR::Type::Bits::get(8), "$mirror_id");
+                mirror_id = new IR::TempVar(IR::Type::Bits::get(10), "$mirror_id");
             auto list = prim->operands.size() > 2 ? prim->operands[2] : nullptr;
             auto rv = new IR::Vector<IR::Primitive>;
             rv->push_back(new IR::Primitive("modify_field", mirror_id, prim->operands[1]));
