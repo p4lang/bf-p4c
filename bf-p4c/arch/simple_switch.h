@@ -18,10 +18,12 @@
 #define TOFINO_ARCH_SIMPLE_SWITCH_H_
 
 #include "ir/ir.h"
+#include "tofino/tofinoOptions.h"
+#include "frontends/p4/evaluator/evaluator.h"
 #include "tofino/arch/converters.h"
 #include "tofino/arch/program_structure.h"
 
-namespace P4 {
+namespace Tofino {
 
 /// A simple switch program uses 'v1model.p4' as target architecture, the following
 /// passes translate a v1model program to the equivalent program targeting tofino.p4.
@@ -29,9 +31,10 @@ namespace P4 {
 // translation pass, which should be added in public p4c code base.
 class SimpleSwitchTranslator : public PassManager {
     // the core data structure to run all transform passes on.
-    ProgramStructure structure;
+    ProgramStructure* structure = new ProgramStructure();
+
  public:
-    SimpleSwitchTranslator();
+    explicit SimpleSwitchTranslator(const Tofino_Options* options);
     Visitor::profile_t init_apply(const IR::Node* node) {
         BUG_CHECK(node->is<IR::P4Program>(),
                   "Simple switch translator only accepts IR::P4Program.");
@@ -42,6 +45,7 @@ class SimpleSwitchTranslator : public PassManager {
 /// translate extern
 class ConvertControl : public Transform {
     ProgramStructure* structure;
+
  public:
     explicit ConvertControl(ProgramStructure* structure)
         : structure(structure) { CHECK_NULL(structure); setName("ConvertControl"); }
@@ -58,6 +62,7 @@ class ConvertParser : public Transform {
  protected:
     ProgramStructure* structure;
     gress_t gress;
+
  public:
     explicit ConvertParser(ProgramStructure* structure, gress_t gress)
         : structure(structure), gress(gress)
@@ -82,18 +87,26 @@ class ConvertDeparser : public Transform {
 class ConvertMetadata : public Transform {
     ProgramStructure* structure;
     gress_t gress;
+    std::map<std::pair<cstring, cstring>, std::pair<cstring, cstring>> remap = {
+        { { "standard_metadata", "ingress_port" }, { "ig_intr_md", "ingress_port" } },
+        { { "standard_metadata", "resubmit_flag" }, { "ig_intr_md", "resubmit_flag" } },
+        { { "standard_metadata", "egress_spec" },
+            { "ig_intr_md_for_tm", "ucast_egress_port" } },
+        { { "standard_metadata", "egress_port" }, { "eg_intr_md", "egress_port" } },
+        // remap more standard_metadata
+    };
+
  public:
     explicit ConvertMetadata(ProgramStructure* structure)
         : structure(structure) { CHECK_NULL(structure); setName("ConvertMetadata"); }
-    const IR::Node* postorder(IR::Member* node);
     const IR::Node* postorder(IR::AssignmentStatement* node);
+    const IR::Node* preorder(IR::Member* node);
     const IR::Node* preorder(IR::StructField* node);
-    const IR::Node* preorder(IR::Type_Header* node);
-    const IR::Node* preorder(IR::Type_Struct* node);
 };
 
 const IR::P4Program* translateSimpleSwitch(const IR::P4Program* program,
+                                           const Tofino_Options* options,
                                            boost::optional<DebugHook> debugHook);
-}  // namespace P4
+}  // namespace Tofino
 
 #endif /* TOFINO_ARCH_SIMPLE_SWITCH_H_ */

@@ -17,7 +17,7 @@
 #include "ir/ir.h"
 #include "tofino/arch/converters.h"
 
-namespace P4 {
+namespace Tofino {
 
 std::map<cstring, ExternConverter *> *ExternConverter::cvtForType = nullptr;
 
@@ -79,4 +79,4 @@ const IR::Node* StatementConverter::postorder(IR::IfStatement* node) {
     return result;
 }
 
-}  // namespace P4
+}  // namespace Tofino

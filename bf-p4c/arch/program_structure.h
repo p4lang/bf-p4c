@@ -2,8 +2,10 @@
 #define EXTENSIONS_TOFINO_ARCH_PROGRAM_STRUCTURE_H_
 
 #include "ir/ir.h"
+#include "frontends/common/resolveReferences/resolveReferences.h"
+#include "frontends/p4/evaluator/evaluator.h"
 
-namespace P4 {
+namespace Tofino {
 
 /// Experimental implementation of programStructure to facilitate the
 /// translation between P4-16 program of different architecture.
@@ -22,9 +24,10 @@ class ProgramStructure {
 
     ProgramStructure();
     void include(cstring filename, IR::IndexedVector<IR::Node>* decls);
+    void include14(cstring filename, IR::IndexedVector<IR::Node>* decls);
     const IR::P4Program* translate(Util::SourceInfo info);
 
-    std::map<const IR::Node*, cstring>  metadataMap;
+    std::map<const IR::Member*, const IR::Member*>  metadataMap;
 
     std::vector<const IR::P4Control*>   controls;
     std::vector<const IR::P4Parser*>    parsers;
@@ -38,7 +41,7 @@ class ProgramStructure {
     /// user metadata is metadata defined in user program
     std::map<cstring, const IR::Node*> user_metadata;
 
-    bool is_old_system_metadata(cstring name) {
+    bool isOldSystemMetadata(cstring name) {
         auto it = system_metadata.find(name);
         return it != system_metadata.end();
     }
@@ -52,6 +55,6 @@ class ProgramStructure {
     }
 };
 
-}  // namespace P4
+}  // namespace Tofino
 
 #endif  /* EXTENSIONS_TOFINO_ARCH_PROGRAM_STRUCTURE_H_ */

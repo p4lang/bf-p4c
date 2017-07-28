@@ -20,7 +20,7 @@
 #include "ir/ir.h"
 #include "tofino/arch/program_structure.h"
 
-namespace P4 {
+namespace Tofino {
 
 // ExpressionConverter can be used in many places
 class ExpressionConverter : public Transform {
@@ -76,7 +76,7 @@ class CounterExternConverter : public ExternConverter {
             const IR::Type_Extern*, cstring) override;
 };
 
-}  // namespace P4
+}  // namespace Tofino
 
 #endif  /* EXTENSIONS_TOFINO_ARCH_CONVERTERS_H_ */
 

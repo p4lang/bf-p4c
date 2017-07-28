@@ -47,7 +47,7 @@ int main(int ac, char **av) {
     auto program = P4::parseP4File(options);
 
     if (options.target == "tofino-v1model-barefoot" && options.native_arch) {
-        program = P4::translateSimpleSwitch(program, hook);
+        program = Tofino::translateSimpleSwitch(program, &options, hook);
     }
 
     program = P4::FrontEnd(hook).run(options, program, true);

@@ -17,131 +17,119 @@
 #include "simple_switch.h"
 #include <boost/optional.hpp>
 #include "lib/path.h"
+#include "ir/ir.h"
 #include "frontends/p4/coreLibrary.h"
 #include "frontends/common/options.h"
+#include "frontends/p4/createBuiltins.h"
 #include "p4/typeChecking/typeChecker.h"
 
-namespace P4 {
+namespace Tofino {
 
-/// remove user architecture declarations, keep user program declarations
+/// When compiling a tofino-v1model program, the compiler by default
+/// includes tofino/intrinsic_metadata.p4 and v1model.p4 from the
+/// system path. Symbols in these system header files are reserved and
+/// cannot be used in user programs.
+/// @input: User P4 program with source architecture type declarations.
+/// @output: User P4 program w/o source architecture type declarations.
 class RemoveUserArchitecture : public Transform {
+    cstring target;
     ProgramStructure* structure;
+    // reservedNames is used to filter out system defined types.
+    std::set<cstring>* reservedNames;
+    IR::IndexedVector<IR::Node>* programDeclarations;
 
  public:
-    explicit RemoveUserArchitecture(ProgramStructure* structure)
-        : structure(structure) { CHECK_NULL(structure); setName("RemoveUserArchitecture"); }
-
-    // XXX(hanw): Use srcInfo to tell if a type declaration is defined by system or user.
-    // This is necessary because the tofino-specific metadata are defined in P4-14 in
-    // 'p4-14include/tofino/tofino_intrinsic_metadata.p4'. After the 14-to-16 translation,
-    // these type declarations are part of program declarations, and can only be distinguished
-    // from user types by checking the original srcInfo.
-    // TODO: avoid relying on file path to find out system file.
-    bool isSystemFile(cstring file) {
-        char p4includePath_canonicalized[PATH_MAX];
-        char p4_14includePath_canonicalized[PATH_MAX];
-        realpath(p4includePath, p4includePath_canonicalized);
-        realpath(p4_14includePath, p4_14includePath_canonicalized);
-        return (file.startsWith(p4includePath) ||
-                file.startsWith(p4includePath_canonicalized) ||
-                file.startsWith(p4_14includePath) ||
-                file.startsWith(p4_14includePath_canonicalized));
+    explicit RemoveUserArchitecture(ProgramStructure* structure, const Tofino_Options* options)
+        : structure(structure) {
+        setName("RemoveUserArchitecture");
+        CHECK_NULL(structure); CHECK_NULL(options);
+        target = options->target;
+        reservedNames = new std::set<cstring>();
+        programDeclarations = new IR::IndexedVector<IR::Node>();
     }
 
-    cstring ifSystemFile(const IR::Node* node) {
-        if (!node->srcInfo.isValid()) return nullptr;
-        unsigned line = node->srcInfo.getStart().getLineNumber();
-        auto sfl = Util::InputSources::instance->getSourceLine(line);
-        cstring sourceFile = sfl.fileName;
-        if (isSystemFile(sourceFile))
-            return sourceFile;
-        return nullptr;
+    template<typename T>
+    void setReservedName(const IR::Node* node) {
+        if (auto type = node->to<T>()) {
+            reservedNames->insert(type->name);
+        }
     }
 
-    bool isSystemType(cstring name, std::set<cstring>* type_names) {
-        auto it = type_names->find(name);
-        return (it != type_names->end());
-    }
-
-    void process_arch_types(const IR::Node* node, std::set<cstring>* type_names) {
-        cstring name;
-        if (node->is<IR::Type_Declaration>()) {
-            name = node->to<IR::Type_Declaration>()->name;
-            type_names->insert(name);
-            // add metadata defined in v1model.p4 to system_metadata
-            if (node->is<IR::Type_Struct>() || node->is<IR::Type_Header>()) {
-                structure->system_metadata.emplace(name, node);
-            }
-        } else if (node->is<IR::P4Action>()) {
-            name = node->to<IR::P4Action>()->name;
-            type_names->insert(name);
-        } else if (node->is<IR::Method>()) {
-            name = node->to<IR::Method>()->name;
-            type_names->insert(name);
-        } else if (node->is<IR::Declaration_MatchKind>()) {
-            for (auto member : node->to<IR::Declaration_MatchKind>()->members) {
-                name = member->name;
-                type_names->insert(name);
-            }
-        } else {
+    void processArchTypes(const IR::Node *node) {
+        if (node->is<IR::Type_Declaration>())
+            setReservedName<IR::Type_Declaration>(node);
+        else if (node->is<IR::P4Action>())
+            setReservedName<IR::Type_Declaration>(node);
+        else if (node->is<IR::Method>())
+            setReservedName<IR::Method>(node);
+        else if (node->is<IR::Declaration_MatchKind>())
+            for (auto member : node->to<IR::Declaration_MatchKind>()->members)
+                setReservedName<IR::Declaration_ID>(member);
+        else
             ::error("Unhandled declaration type %1%", node);
-        }
-    }
 
-    void add_system_defined_structs(const IR::Node* node, std::set<cstring>* type_names) {
-        cstring name;
+        /// store metadata defined in system header in program structure,
+        /// they are used for control block parameter translation
         if (node->is<IR::Type_Struct>()) {
-            name = node->to<IR::Type_Struct>()->name;
+            cstring name = node->to<IR::Type_Struct>()->name;
+            structure->system_metadata.emplace(name, node);
         } else if (node->is<IR::Type_Header>()) {
-            name = node->to<IR::Type_Header>()->name;
-        }
-        if (isSystemType(name, type_names)) {
-            type_names->insert(name);
+            cstring name = node->to<IR::Type_Header>()->name;
             structure->system_metadata.emplace(name, node);
         }
     }
 
-    void filter_arch_decls(const IR::Node* node, std::set<cstring>* type_names,
-                           IR::IndexedVector<IR::Node>* program_declarations) {
-        bool keep = true;
-        if (node->is<IR::Type_Declaration>()) {
-            auto name = node->to<IR::Type_Declaration>()->name;
-            keep = !isSystemType(name, type_names);
-        } else if (node->is<IR::P4Action>()) {
-            auto name = node->to<IR::P4Action>()->name;
-            keep = !isSystemType(name, type_names);
-        } else if (node->is<IR::Method>()) {
-            auto name = node->to<IR::Method>()->name;
-            keep = !isSystemType(name, type_names);
-        } else if (node->is<IR::Declaration_MatchKind>()) {
-            keep = false;
+    /// Helper function to decide if the type of IR::Node is a system defined type.
+    template<typename T>
+    bool isSystemType(const IR::Node* t) {
+        if (auto type = t->to<T>()) {
+            cstring name = type->name;
+            auto it = reservedNames->find(name);
+            return it != reservedNames->end();
         }
-        // XXX(hanw): sourceFile == nullptr if node is from user-defined program.
-        // ideally, we would like to not rely on srcInfo to decide the origin
-        // of a declaration, but for tofino_intrinsic_metadata from p4-14,
-        // there is no better way than comparing the srcInfo with nullptr.
-        cstring sourceFile = ifSystemFile(node);
-        keep = keep && (sourceFile == nullptr);
-        if (keep)
-            program_declarations->push_back(node);
+        return false;
+    }
+
+    void filterArchDecls(const IR::Node *node) {
+        bool filter = false;
+        if (node->is<IR::Type_Declaration>())
+            filter = isSystemType<IR::Type_Declaration>(node);
+        else if (node->is<IR::P4Action>())
+            filter = isSystemType<IR::P4Action>(node);
+        else if (node->is<IR::Method>())
+            filter = isSystemType<IR::Method>(node);
+        else if (node->is<IR::Declaration_MatchKind>())
+            filter = true;
+        if (!filter)
+            programDeclarations->push_back(node);
     }
 
     const IR::Node* postorder(IR::P4Program* program) override {
-        // type_names is used to filter out types defined in arch.p4
-        std::set<cstring> type_names;
-        IR::IndexedVector<IR::Node> user_arch_types;
-        IR::IndexedVector<IR::Node> program_declarations;
-        structure->include("v1model.p4", &user_arch_types);
-        for (auto node : user_arch_types) {
-            process_arch_types(node, &type_names);
+        IR::IndexedVector<IR::Node> baseArchTypes;
+        IR::IndexedVector<IR::Node> libArchTypes;
+
+        if (target == "tofino-v1model-barefoot") {
+            structure->include("v1model.p4", &baseArchTypes);
+            structure->include14("tofino/intrinsic_metadata.p4", &libArchTypes);
+        } else {
+            ::error("Unsupported target %1%", target);
         }
+        /// populate reservedNames from arch.p4 and include system headers
+        for (auto node : baseArchTypes) {
+            processArchTypes(node);
+        }
+        for (auto node : libArchTypes) {
+            processArchTypes(node);
+        }
+        // Debug only
+        for (auto name : *reservedNames) {
+            LOG3("Reserved: " << name);
+        }
+        /// filter system type declarations from pre-processed user programs
         for (auto node : program->declarations) {
-            filter_arch_decls(node, &type_names, &program_declarations);
+            filterArchDecls(node);
         }
-        for (auto node : program_declarations) {
-            add_system_defined_structs(node, &type_names);
-        }
-        return new IR::P4Program(program->srcInfo, program_declarations);
+        return new IR::P4Program(program->srcInfo, *programDeclarations);
     }
 };
 
@@ -178,6 +166,74 @@ class RemapStandardMetadata : public Modifier {
             mem->expr = new IR::PathExpression(to.first);
         LOG5("not remapping " << mname.first << '.' << mname.second);
         return false;
+    }
+};
+
+class RemoveIntrinsicMetadata : public Transform {
+    // following fields are showing up in struct H, because in P4-14
+    // these structs are declared as header type.
+    // In TNA, most of these metadata are individual parameter to
+    // the control block, and shall be removed from struct H.
+    std::set<cstring> structToRemove = {
+        "generator_metadata_t_0",
+        "ingress_parser_control_signals",
+        "standard_metadata_t",
+        "egress_intrinsic_metadata_t",
+        "egress_intrinsic_metadata_for_mirror_buffer_t",
+        "egress_intrinsic_metadata_for_output_port_t",
+        "egress_intrinsic_metadata_from_parser_aux_t",
+        "ingress_intrinsic_metadata_t",
+        "ingress_intrinsic_metadata_for_mirror_buffer_t",
+        "ingress_intrinsic_metadata_for_tm_t",
+        "ingress_intrinsic_metadata_from_parser_aux_t"};
+
+ public:
+    RemoveIntrinsicMetadata() { setName("RemoveIntrinsicMetadata"); }
+    const IR::Node* preorder(IR::StructField* node) {
+        auto header = findContext<IR::Type_Struct>();
+        if (!header) return node;
+
+        if (header->name == "headers") {
+            auto type = node->type->to<IR::Type_Name>();
+            if (!type) return node;
+
+            auto it = structToRemove.find(type->path->name);
+            if (it != structToRemove.end())
+                return nullptr;
+        }
+        return node;
+    }
+
+    /// Given a IR::Member of the following structure:
+    ///
+    /// Member member=mcast_grp_b
+    ///   type: Type_Bits size=16 isSigned=0
+    ///   expr: Member member=ig_intr_md_for_tm
+    ///     type: Type_Header name=ingress_intrinsic_metadata_for_tm_t
+    ///     expr: PathExpression
+    ///       type: Type_Name...
+    ///       path: Path name=hdr absolute=0
+    ///
+    /// transform it to the following:
+    ///
+    /// Member member=mcast_grp_b
+    ///   type: Type_Bits size=16 isSigned=0
+    ///   expr: PathExpression
+    ///     type: Type_Name...
+    ///     path: Path name=ig_intr_md_for_tm
+    const IR::Node* preorder(IR::Member* mem) {
+        auto submem = mem->expr->to<IR::Member>();
+        if (!submem) return mem;
+        auto submemType = submem->type->to<IR::Type_Header>();
+        if (!submemType) return mem;
+        auto it = structToRemove.find(submemType->name);
+        if (it == structToRemove.end()) return mem;
+
+        auto newType = new IR::Type_Name(submemType->name);
+        auto newName = new IR::Path(submem->member);
+        auto newExpr = new IR::PathExpression(newType, newName);
+        auto newMem = new IR::Member(mem->srcInfo, mem->type, newExpr, mem->member);
+        return newMem;
     }
 };
 
@@ -221,6 +277,8 @@ class TranslateSimpleSwitch : public Transform {
 
 class AppendSystemArchitecture : public Transform {
     ProgramStructure* structure;
+    std::set<IR::Type*> insertedType;
+
  public:
     explicit AppendSystemArchitecture(ProgramStructure* structure)
         : structure(structure) { CHECK_NULL(structure); setName("AppendSystemArchitecture"); }
@@ -234,20 +292,27 @@ class AppendSystemArchitecture : public Transform {
     }
 };
 
+class TranslationLast : public PassManager {
+ public:
+    TranslationLast() { setName("TranslationLast"); }
+};
+
 // simple switch to tofino converter
-SimpleSwitchTranslator::SimpleSwitchTranslator() {
+SimpleSwitchTranslator::SimpleSwitchTranslator(const Tofino_Options* options) {
     setName("SimpleSwitchTranslator");
-    passes.emplace_back(new RemoveUserArchitecture(&structure));
-    passes.emplace_back(new RemapStandardMetadata());
-    passes.emplace_back(new DiscoverProgramStructure(&structure));
-    passes.emplace_back(new TranslateSimpleSwitch(&structure));
-    passes.emplace_back(new AppendSystemArchitecture(&structure));
+    passes.emplace_back(new RemoveUserArchitecture(structure, options));
+    passes.emplace_back(new RemapStandardMetadata);
+    passes.emplace_back(new RemoveIntrinsicMetadata);
+    passes.emplace_back(new DiscoverProgramStructure(structure));
+    passes.emplace_back(new TranslateSimpleSwitch(structure));
+    passes.emplace_back(new AppendSystemArchitecture(structure));
+    passes.emplace_back(new TranslationLast());
 }
 
 const IR::P4Program*
-translateSimpleSwitch(const IR::P4Program* program,
+translateSimpleSwitch(const IR::P4Program* program, const Tofino_Options* options,
                       boost::optional<DebugHook> debugHook = boost::none) {
-    SimpleSwitchTranslator translator;
+    SimpleSwitchTranslator translator(options);
     if (debugHook) translator.addDebugHook(*debugHook);
     CHECK_NULL(program);
     return program->apply(translator);
@@ -316,7 +381,7 @@ ConvertControl::postorder(IR::P4Control* node) {
     auto paramList = new IR::ParameterList();
     for (auto p : node->type->applyParams->parameters) {
         auto type_name = p->type->to<IR::Type_Name>();
-        if (structure->is_old_system_metadata(type_name->path->name)) {
+        if (structure->isOldSystemMetadata(type_name->path->name)) {
             translateParam(p, name, paramList);
         } else {
             paramList->push_back(p);
@@ -438,30 +503,30 @@ const IR::Node* ConvertDeparser::postorder(IR::Type_Control* node) {
     return new IR::Type_Control(deparserName, new IR::TypeParameters(), paramList);
 }
 
-const IR::Node* ConvertMetadata::postorder(IR::Member* node) {
-    // XXX(hanw): TBD
-    return node;
+// XXX(hanw): intrinsic metadata is in headers
+const IR::Node* ConvertMetadata::preorder(IR::Member* mem) {
+    auto submem = mem->expr->to<IR::Member>();
+    std::pair<cstring, cstring> mname(submem ? submem->member.name : mem->expr->toString(),
+            mem->member);
+    if (remap.count(mname) == 0) return mem;
+
+    auto& to = remap.at(mname);
+    LOG3("remap " << mname.first << '.' << mname.second << " -> " <<
+            to.first << '.' << to.second);
+    mem->member = to.second;
+    if (submem) {
+        auto expr = new IR::Member(submem->srcInfo, submem->expr, to.first);
+        auto result = new IR::Member(mem->srcInfo, expr, mem->member);
+        return result;
+    } else {
+        auto expr = new IR::PathExpression(to.first);
+        auto result = new IR::Member(mem->srcInfo, expr, mem->member);
+        return result;
+    }
+    LOG5("not remapping " << mname.first << '.' << mname.second);
 }
 
 const IR::Node* ConvertMetadata::preorder(IR::StructField* node) {
-    if (node->type->is<IR::Type_Name>()) {
-        auto type = node->type->to<IR::Type_Name>();
-        auto name = type->path->name;
-        // XXX(hanw): convert following metadata
-        if (name == "generator_metadata_t_0" ||
-            name == "ingress_parser_control_signals" ||
-            name == "standard_metadata_t")
-            return nullptr;
-    }
-    return new IR::StructField(node->srcInfo, node->name, node->annotations, node->type);
-}
-
-const IR::Node* ConvertMetadata::preorder(IR::Type_Header* node) {
-    LOG1("header " << node);
-    return node;
-}
-
-const IR::Node* ConvertMetadata::preorder(IR::Type_Struct* node) {
     return node;
 }
 
@@ -470,4 +535,4 @@ const IR::Node* ConvertMetadata::postorder(IR::AssignmentStatement* node) {
     return node;
 }
 
-}  // namespace P4
+}  // namespace Tofino
