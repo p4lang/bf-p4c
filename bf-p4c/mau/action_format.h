@@ -219,8 +219,8 @@ struct ActionFormat {
             immediate_mask.clear();
         }
 
-        cstring get_format_name(int start_byte, cont_type_t type, bool immediate,
-            bool bitmasked_set = false) const;
+        cstring get_format_name(int start_byte, cont_type_t type, bool immediate, bitvec range,
+            bool use_range, bool bitmasked_set = false) const;
     };
 
     struct failure : public Backtrack::trigger {

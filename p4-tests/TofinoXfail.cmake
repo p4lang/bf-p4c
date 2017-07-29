@@ -132,6 +132,9 @@ set (TOFINO_XFAIL_TESTS
   testdata/p4_16_samples/table-entries-priority-bmv2.p4
   testdata/p4_16_samples/table-entries-range-bmv2.p4
   testdata/p4_16_samples/table-entries-ternary-bmv2.p4
+  testdata/p4_16_samples/union1-bmv2.p4
+  testdata/p4_16_samples/union2-bmv2.p4
+  testdata/p4_16_samples/union3-bmv2.p4
   testdata/p4_16_samples/verify-bmv2.p4
 # fail due to drop instead of output to port 0 when egress_spec not set
   testdata/p4_16_samples/issue635-bmv2.p4
@@ -394,7 +397,7 @@ set (TOFINO_XFAIL_TESTS
   extensions/p4_tests/p4_14/c1/COMPILER-385/case2247.p4
   extensions/p4_tests/p4_14/c1/COMPILER-386/test_config_286_stat_bugs.p4
   extensions/p4_tests/p4_14/c1/COMPILER-402/case2318.p4
-#  extensions/p4_tests/p4_14/c1/COMPILER-413/mirror_test.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-413/mirror_test.p4
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
   extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
   extensions/p4_tests/p4_14/c1/COMPILER-447/case2527.p4

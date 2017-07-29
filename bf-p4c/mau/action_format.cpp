@@ -42,7 +42,7 @@ int ActionFormat::ActionContainerInfo::find_maximum_immed() {
  *  table format, the action data bus, and the action format itself within the assembly code
  */
 cstring ActionFormat::Use::get_format_name(int start_byte, cont_type_t type,
-        bool immediate, bool bitmasked_set /* = false */) const {
+        bool immediate, bitvec range, bool use_range, bool bitmasked_set /* = false */) const {
     int byte_sz = CONTAINER_SIZES[type] / 8;
     // Based on assumption, immediate is contiguous.  May have to be changed later
     cstring ret_name;
@@ -53,10 +53,16 @@ cstring ActionFormat::Use::get_format_name(int start_byte, cont_type_t type,
         int lo = start_byte * 8;
         if (bitmasked_set)
             lo += CONTAINER_SIZES[type];
-        ret_name = "immediate(" +  std::to_string(lo) + "..";
         int hi = lo + CONTAINER_SIZES[type] - 1;
         if (lookup.max().index() < hi)
             hi = lookup.max().index();
+        if (use_range) {
+            if ((lo % CONTAINER_SIZES[type]) < range.min().index())
+                lo += range.min().index();
+            if ((hi % CONTAINER_SIZES[type]) > range.max().index())
+                hi -= (hi - range.max().index());
+        }
+        ret_name = "immediate(" +  std::to_string(lo) + "..";
         ret_name += std::to_string(hi) + ")";
     } else {
         bitvec lookup = total_layouts[type];
@@ -73,6 +79,13 @@ cstring ActionFormat::Use::get_format_name(int start_byte, cont_type_t type,
         else
             adf_offset = lookup.getslice(0, start_byte + byte_sz).popcount() / byte_sz;
         ret_name += std::to_string(adf_offset);
+        if (use_range) {
+            if (range.max().index() - range.min().index() + 1 < CONTAINER_SIZES[type]) {
+                int lo = range.min().index();
+                int hi = range.max().index();
+                ret_name += "(" + std::to_string(lo) + ".." + std::to_string(hi) + ")";
+            }
+        }
     }
     return ret_name;
 }

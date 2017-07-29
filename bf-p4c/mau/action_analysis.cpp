@@ -230,8 +230,6 @@ bool ActionAnalysis::verify_phv_read_instr(const ActionParam &write, const Actio
 
     bitrange read_range;
     bitrange write_range;
-
-
     auto *read_field = phv.field(read.expr, &read_range);
     auto *write_field = phv.field(write.expr, &write_range);
 
