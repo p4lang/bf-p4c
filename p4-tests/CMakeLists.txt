@@ -21,10 +21,40 @@ set(STF_SEARCH_PATHS
     ${BFN_P4C_SOURCE_DIR}/../model/debug/tests/simple_test_harness)
 find_program(HARLYN_STF simple_test_harness
   PATHS ${STF_SEARCH_PATHS})
-if (NOT HARLYN_STF)
-  MESSAGE ("STF tests need Harlyn simple_test_harness.\nLooked in ${STF_SEARCH_PATHS}.")
+if (HARLYN_STF)
+  MESSAGE (STATUS "STF binary found.")
+else()
+  MESSAGE (WARNING "STF tests need Harlyn simple_test_harness.\nLooked in ${STF_SEARCH_PATHS}.")
 endif()
 
+set (PTF_REQUIREMENTS_MET TRUE)
+# check for ptf
+find_program(PTF ptf
+  PATHS ${CMAKE_INSTALL_PREFIX}/bin)
+if (NOT PTF)
+  MESSAGE (WARNING "PTF tests need the ptf binary.")
+  set (PTF_REQUIREMENTS_MET FALSE)
+endif()
+# check for bf_switchd
+find_program(BF_SWITCHD bf_switchd
+  PATHS ${CMAKE_INSTALL_PREFIX}/bin)
+if (NOT BF_SWITCHD)
+  MESSAGE (WARNING "PTF tests need the bf_switchd binary.")
+  set (PTF_REQUIREMENTS_MET FALSE)
+endif()
+# check for tofino-model
+find_program(HARLYN_MODEL tofino-model
+  PATHS ${CMAKE_INSTALL_PREFIX}/bin)
+if (NOT HARLYN_MODEL)
+  MESSAGE (WARNING "PTF tests need the tofino-model binary.")
+  set (PTF_REQUIREMENTS_MET FALSE)
+endif()
+
+if (PTF_REQUIREMENTS_MET)
+  MESSAGE (STATUS "All PTF dependencies were found.")
+else()
+  MESSAGE (WARNING "PTF tests will not run as at least one requirement is not met.")
+endif()
 
 include(TofinoXfail.cmake)
 
@@ -52,65 +82,87 @@ set (TOFINO_TEST_SUITES
   ${v1tests}
   )
 
-# if Harlyn is not present, all STF tests will fail, so we mark them XFAIL
+set (testExtraArgs)
+# if STF is not found, disbale all stf tests
 if (NOT HARLYN_STF)
+  set (testExtraArgs ${testExtraArgs} -norun)
+endif()
+set (TOFINO_PTF_TESTS)
+if (PTF_REQUIREMENTS_MET)
+  set (testExtraArgs ${testExtraArgs} -ptf)
+endif()
+
+set (HARLYN_PTF_DRIVER ${CMAKE_CURRENT_SOURCE_DIR}/ptf_runner.py
+  CACHE FILEPATH "Path to PTF Harlyn runner")
+set (HARLYN_PTF_DRIVER_WRAPPER ${CMAKE_CURRENT_BINARY_DIR}/ptf_runner_wrapper
+  CACHE FILEPATH "Path to PTF Harlyn runner wrapper")
+
+configure_file ("src/ptf_runner_wrapper.c.in"
+  "${P4C_BINARY_DIR}/ptf_runner_wrapper.c" @ONLY)
+
+p4c_add_tests ("tofino" ${P4C_TOFINO_RUNTEST} "${TOFINO_TEST_SUITES}"
+  "${TOFINO_XFAIL_TESTS}" "${TOFINO_PTF_TESTS}" "${testExtraArgs}")
+
+if (PTF_REQUIREMENTS_MET)
+  # PTF tests cannot be run in parallel with other tests, so we set the SERIAL
+  # property for them
   foreach (ts "${TOFINO_TEST_SUITES}")
     file (GLOB __testfiles RELATIVE ${P4C_SOURCE_DIR} ${ts})
     foreach (__p4file ${__testfiles})
-      string (REGEX REPLACE ".p4$" ".stf" __stffile ${__p4file})
-      if (EXISTS ${P4C_SOURCE_DIR}/${__stffile})
-        set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS} ${__p4file})
+      string (REGEX REPLACE ".p4$" ".ptf" __ptffile ${__p4file})
+      if (EXISTS ${P4C_SOURCE_DIR}/${__ptffile})
+        p4c_test_set_name(__testname "tofino" ${__p4file})
+        set_tests_properties(${__testname} PROPERTIES SERIAL 1)
+        # add ptf label to test
+        set_property(TEST ${__testname} APPEND_STRING PROPERTY LABELS ";ptf")
       endif()
     endforeach() # __p4file
   endforeach() # ts
-endif()
-
-p4c_add_tests("tofino" ${P4C_TOFINO_RUNTEST} "${TOFINO_TEST_SUITES}"
-  "${TOFINO_XFAIL_TESTS}")
+endif() # PTF_REQUIREMENTS_MET
 
 set  (SWITCH_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch/p4src/switch.p4)
 set  (isXFail TRUE)
 file (RELATIVE_PATH switchtest ${P4C_SOURCE_DIR} ${SWITCH_P4})
 p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_acl_ip4v" ${switchtest} "-DACL_IPV4_PROFILE")
+  "switch_acl_ip4v" ${switchtest} "${testExtraArgs} -DACL_IPV4_PROFILE")
 p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_bfd_offload" ${switchtest} "-DBFD_OFFLOAD_PROFILE")
+  "switch_bfd_offload" ${switchtest} "${testExtraArgs} -DBFD_OFFLOAD_PROFILE")
 p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_dc_maxsizes" ${switchtest} "-DDC_MAXSIZES_PROFILE")
+  "switch_dc_maxsizes" ${switchtest} "${testExtraArgs} -DDC_MAXSIZES_PROFILE")
 p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_egress_acl" ${switchtest} "-DEGRESS_ACL_PROFILE")
+  "switch_egress_acl" ${switchtest} "${testExtraArgs} -DEGRESS_ACL_PROFILE")
 p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_fabric" ${switchtest} "-DFABRIC_PROFILE")
+  "switch_fabric" ${switchtest} "${testExtraArgs} -DFABRIC_PROFILE")
 p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_fabric_maxsizes" ${switchtest} "-DFABRIC_MAXSIZES_PROFILE")
+  "switch_fabric_maxsizes" ${switchtest} "${testExtraArgs} -DFABRIC_MAXSIZES_PROFILE")
 p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_ila" ${switchtest} "-DILA_PROFILE")
+  "switch_ila" ${switchtest} "${testExtraArgs} -DILA_PROFILE")
 p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_ila_ipv6" ${switchtest} "-DILA_IPV6_PROFILE")
+  "switch_ila_ipv6" ${switchtest} "${testExtraArgs} -DILA_IPV6_PROFILE")
 p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_ent_fin_leaf" ${switchtest} "-DENT_FIN_LEAF_PROFILE")
+  "switch_ent_fin_leaf" ${switchtest} "${testExtraArgs} -DENT_FIN_LEAF_PROFILE")
 p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_ent_fin_spine" ${switchtest} "-DENT_FIN_SPINE_PROFILE")
+  "switch_ent_fin_spine" ${switchtest} "${testExtraArgs} -DENT_FIN_SPINE_PROFILE")
 p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_ent_fin_postcard" ${switchtest} "-DENT_FIN_POSTCARD_PROFILE")
+  "switch_ent_fin_postcard" ${switchtest} "${testExtraArgs} -DENT_FIN_POSTCARD_PROFILE")
 p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_l2" ${switchtest} "-DL2_PROFILE")
+  "switch_l2" ${switchtest} "${testExtraArgs} -DL2_PROFILE")
 p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_l3_ipv4_fib_clpm" ${switchtest} "-DL3_IPV4_FIB_CLPM_PROFILE")
+  "switch_l3_ipv4_fib_clpm" ${switchtest} "${testExtraArgs} -DL3_IPV4_FIB_CLPM_PROFILE")
 p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_mpls_udp" ${switchtest} "-DMPLS_UDP_PROFILE")
+  "switch_mpls_udp" ${switchtest} "${testExtraArgs} -DMPLS_UDP_PROFILE")
 p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_nat" ${switchtest} "-DNAT_PROFILE")
+  "switch_nat" ${switchtest} "${testExtraArgs} -DNAT_PROFILE")
 p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_qos" ${switchtest} "-DQOS_PROFILE")
+  "switch_qos" ${switchtest} "${testExtraArgs} -DQOS_PROFILE")
 p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_sflow" ${switchtest} "-DSFLOW_PROFILE")
+  "switch_sflow" ${switchtest} "${testExtraArgs} -DSFLOW_PROFILE")
 p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_test_int_vxlan_ep" ${switchtest} "-DTEST_INT_VXLAN_EP_PROFILE")
+  "switch_test_int_vxlan_ep" ${switchtest} "${testExtraArgs} -DTEST_INT_VXLAN_EP_PROFILE")
 p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_test_int_vxlan_transit" ${switchtest} "-DTEST_INT_VXLAN_TRANSIT_PROFILE")
+  "switch_test_int_vxlan_transit" ${switchtest} "${testExtraArgs} -DTEST_INT_VXLAN_TRANSIT_PROFILE")
 p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_test_mirror_on_drop" ${switchtest} "-DTEST_MIRROR_ON_DROP_PROFILE")
+  "switch_test_mirror_on_drop" ${switchtest} "${testExtraArgs} -DTEST_MIRROR_ON_DROP_PROFILE")
 
 # We have additional test inputs that are used to test the other
 # (standard) back-ends These test input programs depend on Tofino in

@@ -7,3 +7,8 @@ configure
 install-sh
 missing
 tags
+
+# Emacs auto-save
+*~
+
+*.pyc

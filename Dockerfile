@@ -22,6 +22,7 @@ ENV P4C_DEPS automake \
              python-pip \
              python-scapy \
              python-yaml \
+             sudo \
              tcpdump
 
 RUN apt-get update && \

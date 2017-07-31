@@ -22,6 +22,7 @@ ENV P4C_DEPS automake \
              python-pip \
              python-scapy \
              python-yaml \
+             sudo \
              tcpdump
 
 ENV P4C_RUNTIME_DEPS cpp \

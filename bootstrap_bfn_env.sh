@@ -33,7 +33,7 @@ topdir=$(dirname $PWD)
 cd $topdir
 found=""
 
-for repo in behavioral-model model; do
+for repo in behavioral-model model bf-syslibs bf-utils bf-drivers PI; do
     if [ -d $repo ]; then
         if [ -d $repo/.git ]; then
             found=$found$'\n'"$repo in $topdir/$repo"
@@ -69,6 +69,10 @@ else
     fi
 fi
 
+# Separate var: if protobuf / grpc are re-installed for some reason, the PI
+# needs to be rebuilt from scratch
+PI_clean_before_rebuild=$clean_before_rebuild
+
 apt_packages="g++ git pkg-config automake libtool cmake python2.7 python cmake bison flex libboost-dev libboost-graph-dev libboost-test-dev libboost-program-options-dev libboost-system-dev libboost-filesystem-dev libboost-thread-dev libcli-dev libedit-dev libeditline-dev libevent-dev libjudy-dev libgc-dev libgmp-dev libjson0 libjson0-dev libmoose-perl libnl-route-3-dev libpcap0.8-dev libssl-dev autopoint doxygen texinfo python-scapy python-yaml python-ipaddr python-pip"
 
 echo "Need sudo privs to install apt packages"
@@ -83,14 +87,15 @@ echo "Using $topdir as top level directory for git repositories"
 echo Using MAKEFLAGS=${MAKEFLAGS:=-j 4}
 export MAKEFLAGS
 
-echo "Checking for and installing protobuf 3.0.2"
-# yeah, 3.0.2 reports itself as libprotoc 3.0.0 ...
-if [[ ! `which protoc` || `protoc --version` != "libprotoc 3.0.0" ]]; then
+function version_LT() { test "$(echo "$@" | tr " " "\n" | sort -rV | head -n 1)" != "$1"; }
+
+echo "Checking for and installing protobuf"
+if ! `pkg-config protobuf` || version_LT `pkg-config --modversion protobuf` "3.0.0"; then
     pushd /tmp
     sudo apt-get install -y curl unzip
     git clone --recursive https://github.com/google/protobuf
     cd protobuf
-    git checkout v3.0.2
+    git checkout tags/v3.2.0
     ./autogen.sh && \
     ./configure && \
     make && \
@@ -99,8 +104,27 @@ if [[ ! `which protoc` || `protoc --version` != "libprotoc 3.0.0" ]]; then
     die "Failed to install protobuf"
     cd ../
     /bin/rm -rf protobuf
+    PI_clean_before_rebuild=true
     popd
 fi
+
+echo "Checking for and installing grpc"
+if ! `pkg-config grpc++` || version_LT `pkg-config --modversion grpc++` "1.3.0"; then
+    pushd /tmp
+    git clone --recursive https://github.com/google/grpc.git
+    cd grpc
+    git checkout tags/v1.3.2
+    make && \
+    sudo make install && \
+    sudo ldconfig || \
+    die "Failed to install grpc"
+    cd ../
+    /bin/rm -rf grpc
+    PI_clean_before_rebuild=true
+    popd
+fi
+
+sudo pip install protobuf grpcio || die "Failed to install python grpc packages"
 
 
 ### Behavioral Model setup
@@ -159,6 +183,73 @@ else
     echo "libcli already installed"
 fi
 
+### Drivers and their dependencies
+
+install_bf_repo () {
+    name=$1
+    x_path_check=$2
+    configure_flags=$3
+    if [ ! -d $name/.git ]; then
+        gitclone git@github.com:barefootnetworks/$name.git $name
+    elif $pull_before_rebuild; then
+        pushd $name >/dev/null
+        git pull $rebase_option origin master
+        popd >/dev/null
+    fi
+    pushd $name >/dev/null
+    builddir="."
+    if $reuse_asis && [ -x $x_path_check ]; then
+        echo "Reusing $name as is"
+    else
+        cd $builddir
+        if [ ! -r Makefile ]; then
+            ./autogen.sh
+            ./configure $configure_flags
+        fi
+        if $clean_before_rebuild; then
+            make clean
+        fi
+        make && \
+        sudo make install && \
+        sudo ldconfig || \
+        die "Failed to install $name"
+    fi
+    popd >/dev/null
+    return 0
+}
+
+install_bf_repo "bf-syslibs" "/usr/local/lib/libbfsys.so" ""
+install_bf_repo "bf-utils" "/usr/local/lib/libbfutils.so" ""
+
+if [ ! -d PI/.git ]; then
+    gitclone git@github.com:p4lang/PI.git PI
+elif $pull_before_rebuild; then
+    pushd PI >/dev/null
+        git pull $rebase_option origin master
+    popd >/dev/null
+fi
+pushd PI >/dev/null
+    builddir="."
+    if $reuse_asis && [ -x /usr/local/lib/libpi.so ]; then
+        echo "Reusing PI as is"
+    else
+        cd $builddir
+        if [ ! -r Makefile ]; then
+            ./autogen.sh
+            ./configure --with-proto --without-internal-rpc --without-cli
+        fi
+        if $PI_clean_before_rebuild; then
+            make clean
+        fi
+        make && \
+        sudo make install && \
+        sudo ldconfig || \
+        die "Failed to install PI"
+    fi
+popd >/dev/null
+
+install_bf_repo "bf-drivers" "$(which bf_switchd)" "--disable-thrift --with-avago --without-kdrv --with-build-model --enable-pi"
+
 ### Model setup
 if [ ! -d model/.git ]; then
     gitclone git@github.com:barefootnetworks/model.git model
@@ -180,11 +271,26 @@ pushd model >/dev/null
         cd $builddir
         if [ ! -r Makefile ]; then
             ./autogen.sh
-            ./configure
+            ./configure --enable-runner
         fi
         if $clean_before_rebuild; then
             make clean
         fi
         make || die "harlyn model build failed"
+        sudo make install
+        sudo ldconfig
     fi
 popd >/dev/null
+
+if [ ! -x "$(which ptf)" ]; then
+    pushd /tmp
+    git clone https://github.com/p4lang/ptf.git
+    cd ptf
+    sudo python setup.py install
+    cd ..
+    sudo rm -rf ptf
+    popd
+fi
+
+echo "Checking for huge pages"
+sudo $curdir/scripts/ptf_hugepage_setup.sh

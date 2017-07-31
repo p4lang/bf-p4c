@@ -14,6 +14,7 @@ TIME_COMMAND="" # don't time commands
 verbose=false
 debug=false
 run_stf=true
+run_ptf=false
 
 die() {
     if [ $# -gt 0 ]; then
@@ -38,31 +39,39 @@ run() {
     return $status
 }
 
-findbin() {
-    dir=$(pwd -P)
-    while [ "$dir" != "/" ]; do
-        if [ -d "$dir/$1" ]; then
-            x=""
-            for f in $(find $($READLINK_COMMAND -f "$dir/$1") -name $2 -type f); do
-                if [ -z "$x" -o "$f" -nt "$x" ]; then
-                    x="$f"
-                fi
-            done
-            if [ -x "$x" ]; then
-                echo $x
-                return
-            fi
-        fi
-        dir=$(dirname $dir)
-    done
-    echo $2
-}
-
 srcdir=${1%/}
 if [ ! -d "$srcdir" ]; then
     die "Usage: $0 <srcdir> <test-source>"
 fi
 shift
+
+# Find the root of the cmake build directory, where the cache is located
+findcmakecache() {
+    dir=$(pwd -P)
+    while [ "$dir" != "/" ]; do
+        if [ -f "$dir/CMakeCache.txt" ]; then
+            echo $dir
+            return
+        fi
+        dir=$(dirname $dir)
+    done
+    echo >&2 "Cmake cache not found"
+    exit 1
+}
+
+findbin() {
+    bin=$(cmake -L -N $(findcmakecache) | grep "^$1" | cut -d "=" -f 2)
+    if [ "$bin" = "" ]; then
+        echo >&2 "Could not find $1 in cmake cache"
+        exit 1
+    fi
+    echo $bin
+}
+
+# Looks for path to simple_test_harness in cmake cache
+findstfbin() {
+    echo $(findbin HARLYN_STF)
+}
 
 P4C=./p4c
 testdir=tofino
@@ -70,6 +79,8 @@ filter_P4C_ARGS=""
 for p4c_arg in $P4C_ARGS; do
     if [ "$p4c_arg" = "-norun" ]; then
         run_stf=false
+    elif [ "$p4c_arg" = "-ptf" ]; then
+        run_ptf=true
     elif [ "$p4c_arg" = "-time" ]; then
         TIME_COMMAND="time"
     elif [ "$p4c_arg" = "-v" ]; then
@@ -91,6 +102,7 @@ while [ $# -gt 1 ]; do
         echo >&2 "   -gdb           run p4c-tofino under gdb"
         echo >&2 "   -time          time commands as they run"
         echo >&2 "   -to <sec>      timeout programs after <sec> seconds (default 30)"
+        echo >&2 "   -ptf           run PTF tests if available"
         echo >&2 "other arguments passed to p4c-tofino:"
         $P4C --help
         exit 0
@@ -110,6 +122,9 @@ while [ $# -gt 1 ]; do
         ;;
     -norun)
         run_stf=false
+        ;;
+    -ptf)
+        run_ptf=true
         ;;
     -v) if $verbose || $debug; then
             P4C_ARGS="$P4C_ARGS $1"
@@ -164,6 +179,11 @@ else
     fi
 fi
 
+if $run_ptf && [ -d ${file%.p4}.ptf ]; then
+    p4runtime_out=$testdir/${name}.out/p4info.proto.txt
+    P4C_ARGS="$P4C_ARGS --p4runtime-file $p4runtime_out --p4runtime-format text"
+fi
+
 if [ ! -x $P4C ]; then
     die "Can't find $P4C"
 fi
@@ -192,7 +212,7 @@ if [ ! -r $testdir/$name.out/$name.tfa ]; then
 fi
 
 if $run_stf && [ -r ${file%.p4}.stf ]; then
-    STF=$(findbin model simple_test_harness)
+    STF=$(findstfbin)
 
     if [[ "$file" =~ ^/ ]]; then
         test=${file%.p4}.stf
@@ -207,6 +227,12 @@ if $run_stf && [ -r ${file%.p4}.stf ]; then
     run $STF -l $name.out --observation-log $obsLog $test | \
         grep -v 'WARN MAU::[a-z_]* Time gone backwards!' \
         || die
+fi
+
+if $run_ptf && [ -d ${file%.p4}.ptf ]; then
+    PTF_RUNNER=$(findbin HARLYN_PTF_DRIVER_WRAPPER)
+    $PTF_RUNNER --testdir $testdir --name $name --ptfdir ${file%.p4}.ptf \
+                --top-builddir $(findcmakecache)
 fi
 
 if [[ " $IFAIL_TESTS " =~ " $testdir/$name.p4.test " ]]; then

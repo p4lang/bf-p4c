@@ -57,17 +57,11 @@ set (TOFINO_XFAIL_TESTS
   extensions/p4_tests/p4_14/test_config_236_stateful_read_bit.p4
   extensions/p4_tests/p4_14/test_config_95_first_meter_table.p4
   extensions/p4_tests/p4_14/jenkins/stats_pi/stats_pi.p4
-  extensions/p4_tests/p4_14/stateful2.p4
-  extensions/p4_tests/p4_14/stateful3.p4
   testdata/p4_14_samples/acl1.p4
-  testdata/p4_14_samples/counter3.p4
-  testdata/p4_14_samples/counter4.p4
 # These currently fail gateway check with 'expression too complex'
   testdata/p4_14_samples/flowlet_switching.p4
   extensions/p4_tests/p4_14/07-MacAddrCheck.p4
   extensions/p4_tests/p4_14/08-MacAddrCheck1.p4
-# Masked table keys ignoring mask in table layout?
-  testdata/p4_14_samples/exact_match_mask1.p4
 # Parser failure.
   testdata/p4_14_samples/parser_dc_full.p4
 # Fails due to complex expressions in the parser that our hardware can't support.
@@ -79,16 +73,12 @@ set (TOFINO_XFAIL_TESTS
 # Fail on purpose due to action profiles not being mutually exclusive
   extensions/p4_tests/p4_14/action_profile_not_shared.p4
   extensions/p4_tests/p4_14/action_profile_next_stage.p4
-# Hash Action Bugs within the ASM or Model
-  testdata/p4_14_samples/hash_action_gateway.p4
 # No support yet in assembler for hash calcuation
   extensions/p4_tests/p4_14/hash_calculation_32.p4
 # Failure for BRIG-44 in JIRA
   testdata/p4_14_samples/basic_conditionals.p4
 # Same Name Conversion Bug
   extensions/p4_tests/p4_14/shared_names.p4
-# These fail (or pass) intermittently on Jenkins; not sure why
-  testdata/p4_14_samples/basic_routing.p4
 # Fails with CompilerBug "Can't create temp of type bool"
   extensions/p4_tests/p4_16/apply_if.p4
   extensions/p4_tests/p4_16/depgraph2.p4
@@ -126,18 +116,10 @@ set (TOFINO_XFAIL_TESTS
   testdata/p4_16_samples/scalarmeta-bmv2.p4
   testdata/p4_16_samples/stack-bmv2.p4
   testdata/p4_16_samples/stack_complex-bmv2.p4
-  testdata/p4_16_samples/table-entries-exact-bmv2.p4
-  testdata/p4_16_samples/table-entries-exact-ternary-bmv2.p4
-  testdata/p4_16_samples/table-entries-lpm-bmv2.p4
-  testdata/p4_16_samples/table-entries-priority-bmv2.p4
-  testdata/p4_16_samples/table-entries-range-bmv2.p4
-  testdata/p4_16_samples/table-entries-ternary-bmv2.p4
   testdata/p4_16_samples/union1-bmv2.p4
   testdata/p4_16_samples/union2-bmv2.p4
   testdata/p4_16_samples/union3-bmv2.p4
   testdata/p4_16_samples/verify-bmv2.p4
-# fail due to drop instead of output to port 0 when egress_spec not set
-  testdata/p4_16_samples/issue635-bmv2.p4
 # varbit extracts don't work in parser
   testdata/p4_16_samples/issue447-bmv2.p4
   testdata/p4_16_samples/issue447-1-bmv2.p4
@@ -149,8 +131,6 @@ set (TOFINO_XFAIL_TESTS
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
 # error -- container allocated to both INGRESS and EGRESS
   extensions/p4_tests/p4_14/test_config_88_testing_action_data_allocation_3.p4
-# default drop packet instead of writing to port 0
-  testdata/p4_16_samples/issue655-bmv2.p4
 # failures due to parser error in the model from configuration
   extensions/p4_tests/p4_14/adb_shared2.p4
 # failure due to too restrictive constraint of full words in action data bus allocation
@@ -457,3 +437,28 @@ set (TOFINO_XFAIL_TESTS
   extensions/p4_tests/p4_14/test_config_93_push_and_pop.p4
   extensions/p4_tests/p4_14/test_config_222_small_tag_stack.p4
   )
+
+if (HARLYN_STF)
+set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
+  # Hash Action Bugs within the ASM or Model
+  testdata/p4_14_samples/hash_action_gateway.p4
+  # This fails (or pass) intermittently on Jenkins; not sure why
+  testdata/p4_14_samples/basic_routing.p4
+  testdata/p4_14_samples/counter3.p4
+  testdata/p4_14_samples/counter4.p4
+  # Masked table keys ignoring mask in table layout?
+  testdata/p4_14_samples/exact_match_mask1.p4
+  extensions/p4_tests/p4_14/stateful2.p4
+  extensions/p4_tests/p4_14/stateful3.p4
+  # default drop packet instead of writing to port 0
+  testdata/p4_16_samples/issue635-bmv2.p4
+  testdata/p4_16_samples/issue655-bmv2.p4
+  # no support for static entries
+  testdata/p4_16_samples/table-entries-exact-bmv2.p4
+  testdata/p4_16_samples/table-entries-exact-ternary-bmv2.p4
+  testdata/p4_16_samples/table-entries-lpm-bmv2.p4
+  testdata/p4_16_samples/table-entries-priority-bmv2.p4
+  testdata/p4_16_samples/table-entries-range-bmv2.p4
+  testdata/p4_16_samples/table-entries-ternary-bmv2.p
+  )
+endif() # HARLYN_STF

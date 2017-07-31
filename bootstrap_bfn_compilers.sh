@@ -22,7 +22,7 @@ set -e
 mydir=`dirname $0`
 cd $mydir
 
-if [ ! -r p4c/Makefile.am ]; then
+if [ ! -r p4c/CMakeLists.txt ]; then
     git submodule update --init --recursive
 fi
 
@@ -34,11 +34,16 @@ if [ ! -e tofino ]; then ln -sf ../../bf-p4c tofino; fi
 if [ ! -e p4_tests ]; then ln -sf ../../p4-tests p4_tests; fi
 popd # p4c/extensions
 
-mkdir -p build && cd build
+mkdir -p build
+pushd build
 cmake .. -DCMAKE_BUILD_TYPE=DEBUG $*
+popd # build
 
-cd p4c
+./bootstrap_ptf.sh `pwd`/build
+
+pushd build/p4c
 if [ ! -e p4c-tofino-gdb.gdb ]; then ln -sf ../../bf-p4c/.gdbinit p4c-tofino-gdb.gdb; fi
 if [ ! -e p4c-bm2-ss-gdb.gdb ]; then ln -sf ../../bf-p4c/.gdbinit p4c-bm2-ss-gdb.gdb; fi
+popd # build/p4c
 
 echo "Configured for build in build"
