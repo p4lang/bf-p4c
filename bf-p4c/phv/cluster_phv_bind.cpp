@@ -82,6 +82,7 @@ PHV_Bind::create_phv_asm_container_map() {
             for (auto &c : y->phv_containers()) {
                 phv_to_asm_map_i[c] =
                     new PHV::Container(c->asm_string().c_str());
+                asm_to_phv_map_i[phv_to_asm_map_i[c]] = c;
             }
         }
     }
@@ -91,6 +92,7 @@ PHV_Bind::create_phv_asm_container_map() {
             for (auto &c : y.second) {
                 phv_to_asm_map_i[c] =
                     new PHV::Container(c->asm_string().c_str());
+                asm_to_phv_map_i[phv_to_asm_map_i[c]] = c;
             }
         }
     }
@@ -241,7 +243,7 @@ PHV_Bind::bind_fields_to_containers() {
                 int field_bit = cc->field_bit_lo();
                 int container_bit = cc->lo();
                 int width_in_container = cc->width();
-                PHV::Container *asm_container = phv_to_asm_map_i[c];
+                const PHV::Container *asm_container = phv_to_asm_map_i[c];
                 //
                 // ignore allocation for owners of
                 // non-header stack ccgs
@@ -459,6 +461,36 @@ PHV_Bind::trivial_allocate(std::list<PhvInfo::Field *>& fields) {
         }
     }
 }  // trivial_allocate
+
+
+//***********************************************************************************
+//
+// PHV_Container <-> PHV::Container
+//
+//***********************************************************************************
+
+
+const PHV::Container *
+PHV_Bind::phv_container(const PHV_Container *p) {
+    assert(p);
+    if (phv_to_asm_map_i.count(p)) {
+        return phv_to_asm_map_i[p];
+    }
+    BUG("*****PHV_Bind::phv_container('%s') does not have an asm map yet*****",
+        p->phv_number_string());
+    return 0;
+}
+
+const PHV_Container *
+PHV_Bind::phv_container(const PHV::Container *p) {
+    assert(p);
+    if (asm_to_phv_map_i.count(p)) {
+        return asm_to_phv_map_i[p];
+    }
+    BUG("*****PHV_Bind::phv_container('%s') does not have an asm map yet*****",
+        p->toString());
+    return 0;
+}
 
 
 //***********************************************************************************

@@ -128,7 +128,8 @@ PHV_Container::taint(
     int width,
     PhvInfo::Field *field,
     int field_bit_lo,
-    Container_Content::Pass pass) {
+    Container_Content::Pass pass,
+    bool process_ccgf) {
     //
     BUG_CHECK((start+width <= width_i),
         "*****PHV_Container::taint()*****%s start=%d width=%d width_i=%d, field=%d:%s",
@@ -136,8 +137,8 @@ PHV_Container::taint(
     //
     // ccgf field processing
     //
-    if (!field->allocation_complete()) {
-        return taint_ccgf(start, width, field, field_bit_lo);
+    if (process_ccgf && !field->allocation_complete()) {
+        return taint_ccgf(start, width, field, field_bit_lo, pass);
     }
     //
     // non cluster_overlay fields
@@ -146,14 +147,7 @@ PHV_Container::taint(
     taint_bits(start, width, field, field_bit_lo, pass);
     //
     // if field has overlay fields after cluster's interference graph computation
-    // add those overlay fields to container's container_contents
-    // -- now performed after all phv/tphv allocation as a final pass in cluster_phv_mau.cpp
-    //
-    // field_overlays(
-        // field,
-        // start,
-        // width,
-        // field_bit_lo);
+    // overlay performed after all phv/tphv allocation as a final pass in cluster_phv_mau.cpp
     //
     // set gress for this container
     // container may be part of MAU group that is Ingress Or Egress
@@ -186,7 +180,8 @@ PHV_Container::taint_ccgf(
     int start,
     int width,
     PhvInfo::Field *field,
-    int field_bit_lo) {
+    int field_bit_lo,
+    Container_Content::Pass pass) {
     //
     // container contiguous groups
     // header fields allocation permits no holes in container
@@ -252,8 +247,8 @@ PHV_Container::taint_ccgf(
             member->set_phv_use_rem(0);
             processed_members++;
         }
-        member->set_ccgf(0);        // recursive taint call should skip ccgf
-        taint(start, use_width, member, member_bit_lo);
+        // recursive taint call, do not recursively process ccgf
+        taint(start, use_width, member, member_bit_lo, pass, false /* process_ccgf */);
         processed_width += constraint_no_cohabit(member)? width_i: use_width;
         if (start <= 0) {
             break;
@@ -305,10 +300,7 @@ PHV_Container::update_ccgf(
         field->ccgf_fields().begin(),
         field->ccgf_fields().begin() + processed_members);
     field->set_phv_use_hi(field->phv_use_hi() - processed_width);
-    if (field->ccgf_fields().size()) {
-        field->set_ccgf(field);
-    } else {
-        field->set_ccgf(0);
+    if (field->allocation_complete()) {
         // ccgf owners with no-pack constraint, set range to entire container
         Cluster::set_field_range(field, constraint_no_cohabit(field)? width_i: 0);
     }
@@ -318,7 +310,7 @@ void
 PHV_Container::overlay_ccgf_field(
     PhvInfo::Field *field,
     int start,
-    int width,
+    const int width,
     int field_bit_lo,
     Container_Content::Pass pass) {
     //
@@ -372,6 +364,9 @@ PHV_Container::overlay_ccgf_field(
     //       ][8..15]
     //       = 47:ingress::vlan_tag_[1].vid [4..11]  => PHV-97
     //
+    int processed_members = 0;
+    int processed_width = 0;
+    int width_remaining = width;
     int skip_member = 0;
     for (auto &member : field->ccgf_fields()) {
         skip_member += member->size;
@@ -380,16 +375,17 @@ PHV_Container::overlay_ccgf_field(
         }
         int member_bit_lo = member->phv_use_lo() + member->phv_use_rem();
         int use_width = member->size - member->phv_use_rem();
-        if (use_width > width) {
+        if (use_width > width_remaining) {
             //
             // member straddles containers
             // remainder bits processed in subsequent container allocated to owner
             //
-            use_width = width;
+            use_width = width_remaining;
             member->set_phv_use_rem(member->phv_use_rem() + use_width);
                                                 // spans several containers, aggregate used bits
         } else {
             member->set_phv_use_rem(0);
+            processed_members++;
         }
         fields_in_container(
             member,
@@ -401,12 +397,15 @@ PHV_Container::overlay_ccgf_field(
                member_bit_lo,
                taint_color(start, start + use_width - 1),
                pass /* pass that performs the overlay */));
-        width -= use_width;
-        if (width <= 0) {
+        processed_width += use_width;
+        width_remaining -= use_width;
+        if (width_remaining <= 0) {
             break;
         }
         start += use_width;
     }  // for ccgf members
+    //
+    update_ccgf(field, processed_members, processed_width);
 }  // overlay_ccgf_field
 
 void
@@ -482,18 +481,45 @@ PHV_Container::field_overlays(
     // f_ov's slice-width mimics substratum width in each container
     //
     if (field->field_overlay_map().size()) {
-        LOG3("\t.....PHV_Container::field_overlays.....for container " << phv_number_string());
+        LOG3("..........PHV_Container::field_overlays.....for container " << phv_number_string());
         LOG3("\t" << field);
         // consider overlayed fields, if any, for this container only
         ordered_set<PhvInfo::Field *> *set_of_f = field->field_overlay_map(phv_number_i);
         if (set_of_f) {
             for (auto &f : *set_of_f) {
-                single_field_overlay(
-                    f,
-                    start,
-                    width,
-                    field_bit_lo,
-                    Container_Content::Pass::Field_Interference);
+                //
+                // overlay ccgf on substratum ccgf
+                // substratum ccgf owner in single container but its members span several containers
+                // overlay ccgf spans these containers
+                //
+                if (f->is_ccgf() && f->phv_use_width() > static_cast<int>(width_i)) {
+                    for (auto &c : field->phv_containers()) {
+                        c->single_field_overlay(
+                            f,
+                            start,
+                            width,
+                            field_bit_lo,
+                            Container_Content::Pass::Field_Interference);
+                    }
+                } else {
+                    single_field_overlay(
+                        f,
+                        start,
+                        width,
+                        field_bit_lo,
+                        Container_Content::Pass::Field_Interference);
+                }
+                if (!f->allocation_complete()) {
+                    LOG1("*****cluster_phv_container.cpp: sanity_FAIL field_overlays*****"
+                        << "..........ccgf member(s) INCOMPLETE ALLOCATION");
+                    LOG1("..........overlay_field = ");
+                    LOG1(f);
+                    LOG1("..........substratum_field = ");
+                    LOG1(field);
+                    LOG1("..........substratum phv containers = "
+                        << &(field->phv_containers())
+                        << ".....");
+                }
             }
         }
     }
@@ -588,7 +614,7 @@ PHV_Container::taint_bits(
     avail_bits_i -= width;  // packing reduces available bits
     BUG_CHECK(
         avail_bits_i >= 0,
-        "*****PHV_Container::taint_bits()*****%s avail_bits = %d, field = %d:%s ",
+        "*****PHV_Container::taint_bits()*****%s avail_bits = %d, field = %d:%s",
         phv_number_string(),
         avail_bits_i,
         field->id,
@@ -1042,7 +1068,13 @@ void PHV_Container::sanity_check_overlayed_fields(const std::string& msg) {
             if (cc->overlayed()) {
                PhvInfo::Field *overlayed = cc->field();
                PhvInfo::Field *substratum = overlayed->overlay_substratum();
-               assert(substratum);
+               if (!substratum && overlayed->ccgf()) {
+                   substratum = overlayed->ccgf()->overlay_substratum();
+               }
+               BUG_CHECK(substratum,
+                    "*****cluster_phv_container.cpp:sanity_FAIL sanity_check_overlayed_fields*****"
+                    ".....substratum is nil.....\nphv_container=%s[%d..%d]= overlayed_field=%d:%s",
+                    phv_number_string(), cc->lo(), cc->hi(), cc->field()->id, cc->field()->name);
                // field lo's may disagree but cluster's low for ccgf fields can agree
                // PHV-123.B59.I.Fp        22222211
                // e.g.,
@@ -1378,9 +1410,21 @@ std::ostream &operator<<(std::ostream &out, PHV_Container &c) {
 }
 
 std::ostream &operator<<(std::ostream &out, ordered_set<PHV_Container *> &phv_containers) {
+    // detailed output for phv containers
     for (auto &c : phv_containers) {
         out << *c;
     }
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, ordered_set<PHV_Container *> *phv_containers) {
+    // terse output for phv containers
+    assert(phv_containers);
+    out << "[";
+    for (auto &c : *phv_containers) {
+        out << c->phv_number_string() << ';';
+    }
+    out << "]";
     return out;
 }
 

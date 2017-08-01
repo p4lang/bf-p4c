@@ -86,6 +86,7 @@ void PhvInfo::add(cstring name, int size, int offset, bool meta, bool pov) {
     info->id = by_id.size();
     info->gress = gress;
     info->size = size;
+    info->phv_use_hi_i = size - 1;  // default phv_use_hi, modifiable by cluster::set_field_range()
     info->offset = offset;
     info->metadata = meta;
     info->pov = pov;
@@ -540,11 +541,9 @@ PhvInfo::Field::is_ccgf() const {
 bool
 PhvInfo::Field::allocation_complete() const {
     //
-    // after phv container association for each member of ccgf, its ccgf parent pointer is removed
-    // finally ccgf owner's ccgf pointer is removed
-    // if pointer remains then its members are not yet completely associated w/ phv container space
+    // after phv container allocation, ccgf fields are removed by update_ccgf()
     //
-    return ccgf_i != this;
+    return ccgf_fields_i.size() == 0;
 }
 
 int
@@ -684,6 +683,11 @@ PhvInfo::Field::phv_containers(PHV_Container *c) {
     // actual phv container associated with field
     // field can have several phv containers, e.g, 24bF = 3*8bC
     phv_containers_i.insert(c);
+    // owner ccgf records container allocation of members
+    // used during ccgf overlay on ccgf substratum
+    if (ccgf_i && !is_ccgf()) {
+        ccgf_i->phv_containers().insert(c);
+    }
     if (field_overlay_map_i.size()) {
         //
         // field overlays exist, update field overlay map key with actual container number

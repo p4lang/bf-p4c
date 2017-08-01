@@ -435,7 +435,6 @@ set (TOFINO_XFAIL_TESTS
 # It's suggestive that these all involve header stacks.
   testdata/p4_14_samples/instruct5.p4
   extensions/p4_tests/p4_14/test_config_93_push_and_pop.p4
-  extensions/p4_tests/p4_14/test_config_222_small_tag_stack.p4
   )
 
 if (HARLYN_STF)

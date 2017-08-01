@@ -173,12 +173,14 @@ class PHV_Container {
         int width,
         PhvInfo::Field *field,
         int field_bit_lo = 0,
-        Container_Content::Pass pass = Container_Content::Pass::None);
+        Container_Content::Pass pass = Container_Content::Pass::None,
+        bool process_ccgf = true);
     int taint_ccgf(
         int start,
         int width,
         PhvInfo::Field *field,
-        int field_bit_lo);
+        int field_bit_lo,
+        Container_Content::Pass pass = Container_Content::Pass::None);
     void update_ccgf(
         PhvInfo::Field *f,
         int processed_members,
@@ -186,7 +188,7 @@ class PHV_Container {
     void overlay_ccgf_field(
         PhvInfo::Field *field,
         int start,
-        int width,
+        const int width,
         int field_bit_lo,
         Container_Content::Pass pass = Container_Content::Pass::Field_Interference);
     void single_field_overlay(
@@ -280,6 +282,7 @@ std::ostream &operator<<(std::ostream &, PHV_Container*);
 std::ostream &operator<<(std::ostream &, const PHV_Container*);
 std::ostream &operator<<(std::ostream &, PHV_Container&);
 std::ostream &operator<<(std::ostream &, ordered_set<PHV_Container *>&);
+std::ostream &operator<<(std::ostream &, ordered_set<PHV_Container *>*);
 std::ostream &operator<<(std::ostream &, std::vector<PHV_Container *>&);
 std::ostream &operator<<(std::ostream &, std::list<PHV_Container *>&);
 std::ostream &operator<<(

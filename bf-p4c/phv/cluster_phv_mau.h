@@ -207,6 +207,8 @@ class PHV_MAU_Group_Assignments : public Visitor {
     //
     ordered_map<int, PHV_Container *> phv_containers_i;
                                        // map phv_number to Container
+    ordered_map<std::string, int> asm_map_i;
+                                       // map asm string to phv_number
     ordered_map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>> PHV_MAU_i;
                                        // PHV MAU groups comprise 16 same-width containers
                                        // = 4g*32b + 4g*8b + 6g*16b = 64+64+96 = 224 containers
@@ -295,7 +297,9 @@ class PHV_MAU_Group_Assignments : public Visitor {
     std::pair<int, int> t_phv_container_numbers()         { return t_phv_container_numbers_i; }
     ordered_map<int, PHV_Container *>& phv_containers()   { return phv_containers_i; }
     void phv_containers(int n, PHV_Container *c);
+    void phv_containers(std::string asm_string, int phv_num);
     PHV_Container *phv_container(int phv_num);
+    PHV_Container *phv_container(std::string asm_string);
     ordered_map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>>&
         phv_mau_map() { return PHV_MAU_i; }
     ordered_map<int, ordered_map<PHV_Container::PHV_Word, std::vector<PHV_Container *>>>&

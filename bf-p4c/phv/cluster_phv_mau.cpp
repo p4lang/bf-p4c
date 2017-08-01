@@ -52,6 +52,7 @@ PHV_MAU_Group::PHV_MAU_Group(
         PHV_Container *c = new PHV_Container(this, width_i, phv_number, asm_reg_string, gress);
         phv_containers_i.push_back(c);
         owner->phv_containers(phv_number, c);
+        owner->phv_containers(asm_reg_string, phv_number);
         phv_number++;
     }
 }  // PHV_MAU_Group
@@ -305,28 +306,50 @@ PHV_MAU_Group_Assignments::clear() {
 
 void
 PHV_MAU_Group_Assignments::phv_containers(int phv_num, PHV_Container *c) {
+    BUG_CHECK(
+        (phv_num >= phv_container_numbers_i.first && phv_num <= phv_container_numbers_i.second)
+        ||
+        (phv_num >= t_phv_container_numbers_i.first && phv_num <= t_phv_container_numbers_i.second),
+        "*****PHV_MAU_Group_Assignments: sanity_FAIL.....PHV_Container number '%d' outside limits",
+        phv_num);
+    //
     assert(c);
-    if ((phv_num >= phv_container_numbers_i.first && phv_num <= phv_container_numbers_i.second)
-        || (phv_num >= t_phv_container_numbers_i.first
-            && phv_num <= t_phv_container_numbers_i.second)) {
-        //
-        phv_containers_i[phv_num] = c;
-    } else {
-        LOG1("*****PHV_MAU_Group_Assignments: sanity_FAIL*****....."
-            << ".....phv_container_number '" << phv_num << "' outside limits .....");
-    }
+    phv_containers_i[phv_num] = c;
+}
+
+void
+PHV_MAU_Group_Assignments::phv_containers(std::string asm_string, int phv_num) {
+    BUG_CHECK(
+        (phv_num >= phv_container_numbers_i.first && phv_num <= phv_container_numbers_i.second)
+        ||
+        (phv_num >= t_phv_container_numbers_i.first && phv_num <= t_phv_container_numbers_i.second),
+        "*****PHV_MAU_Group_Assignments: sanity_FAIL.....PHV_Container number '%d' outside limits",
+        phv_num);
+    //
+    asm_map_i[asm_string] = phv_num;
 }
 
 PHV_Container *
 PHV_MAU_Group_Assignments::phv_container(int phv_num) {
-    if ((phv_num >= phv_container_numbers_i.first && phv_num <= phv_container_numbers_i.second)
-        || (phv_num >= t_phv_container_numbers_i.first
-            && phv_num <= t_phv_container_numbers_i.second)) {
-        assert(phv_containers_i[phv_num]);
-        return phv_containers_i[phv_num];
+    BUG_CHECK(
+        (phv_num >= phv_container_numbers_i.first && phv_num <= phv_container_numbers_i.second)
+        ||
+        (phv_num >= t_phv_container_numbers_i.first && phv_num <= t_phv_container_numbers_i.second),
+        "*****PHV_MAU_Group_Assignments: sanity_FAIL.....PHV_Container number '%d' outside limits",
+        phv_num);
+    BUG_CHECK(phv_containers_i[phv_num],
+        "*****PHV_Container '%d' not created yet, internal phv allocation error*****", phv_num);
+    //
+    return phv_containers_i[phv_num];
+}
+
+PHV_Container *
+PHV_MAU_Group_Assignments::phv_container(std::string asm_string) {
+    if (asm_map_i.count(asm_string)) {
+        int phv_num = asm_map_i[asm_string];
+        return phv_container(phv_num);
     }
-    LOG1("*****PHV_MAU_Group_Assignments: sanity_FAIL*****....."
-        << ".....phv_container_number '" << phv_num << "' outside limits .....");
+    BUG("*****PHV_MAU_Group_Assignments::phv_container('%s') does not exist*****", asm_string);
     return 0;
 }
 
@@ -1258,7 +1281,9 @@ PHV_MAU_Group_Assignments::packing_predicates(
     }
     // TODO
     //
-    // field start restrictions, e.g., must start bits 0..7 in container
+    // do not put deparsed field in non-deparsed container & vice-versa
+    //
+    // field start restrictions, e.g., must start @ bit X in container, e.g., X=0,7
     //
     // field solitary: e.g., 7*1b can't be packed to 8b, use separate containers, albeit 2TCAMS, 88b
     //
@@ -2516,7 +2541,7 @@ void PHV_MAU_Group_Assignments::sanity_check_group_containers(
                         //
                         LOG1("-----cluster_phv_mau.cpp:sanity_WARN-----");
                         LOG1(msg);
-                        LOG1(".....allocated space in container exceeds field width.....");
+                        LOG1(".....allocated space in container does not match field width.....");
                         LOG1(".....non-uniform? cluster.....");
                         error = true;
                     }

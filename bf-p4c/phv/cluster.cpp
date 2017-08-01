@@ -793,6 +793,7 @@ void Cluster::set_field_range(const IR::Expression& expression) {
     bits.lo = bits.hi = 0;
     auto field = phv_i.field(&expression, &bits);
     if (field) {
+        // set range based on expression bit-slice use
         field->set_phv_use_lo(std::min(field->phv_use_lo(), bits.lo));
         if (field->metadata || field->pov) {
             field->set_phv_use_hi(std::max(field->phv_use_hi(), bits.hi));
@@ -808,9 +809,8 @@ void Cluster::set_field_range(PhvInfo::Field *field, int container_width) {
         BUG_CHECK(field->size,
             "***** cluster.cpp: set_field_range ..... field size is 0 *****%d:%s",
             field->id, field->name);
-        if (field->ccgf() != field) {
-            field->set_phv_use_hi(field->phv_use_lo() + std::max(field->size, container_width) - 1);
-        }
+        // set hi considering no-pack constraints
+        field->set_phv_use_hi(field->phv_use_lo() + std::max(field->size, container_width) - 1);
     }
 }
 
