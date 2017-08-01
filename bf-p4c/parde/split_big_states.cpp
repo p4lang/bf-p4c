@@ -147,8 +147,8 @@ class ExtractorAllocator {
             });
         }
 
-        // Allocate. We have four extractions of each size per state. We also
-        // ensure that we don't overflow the input buffer.
+        // Allocate. We have a limited number of extractions of each size per
+        // state. We also ensure that we don't overflow the input buffer.
         LOG3("Allocating extracts for state " << stateName);
         std::vector<const IR::Tofino::Extract*> allocatedExtractions;
         for (auto& queue : extractorQueues) {
@@ -187,13 +187,16 @@ class ExtractorAllocator {
             nw_bitinterval remainingBits;
             for (auto& seq : extractionsByContainer | boost::adaptors::map_values)
                 remainingBits = remainingBits.unionWith(seq.bits);
-            byteActualShift = remainingBits.loByte();
+            byteActualShift = std::min(byteDesiredShift, remainingBits.loByte());
         }
 
         BUG_CHECK(byteActualShift >= 0,
                   "Computed invalid shift %1% when splitting state %2%",
                   byteActualShift, stateName);
         byteDesiredShift -= byteActualShift;
+        BUG_CHECK(byteDesiredShift >= 0,
+                  "Computed shift %1% is too large when splitting state %2%",
+                  byteActualShift, stateName);
 
         // Shift up all the remaining extractions.
         const int bitActualShift = byteActualShift * 8;
@@ -229,7 +232,9 @@ class ExtractorAllocator {
 
 bool SplitBigStates::preorder(IR::Tofino::ParserMatch* match) {
     auto stateName = findContext<IR::Tofino::ParserState>()->name;
-    ExtractorAllocator allocator(phv, stateName, match->shift);
+    BUG_CHECK(match->shift, "Splitting a state %1% with an unknown shift",
+              stateName);
+    ExtractorAllocator allocator(phv, stateName, *match->shift);
     for (auto* prim : match->stmts)
         allocator.add(prim);
 
@@ -241,7 +246,7 @@ bool SplitBigStates::preorder(IR::Tofino::ParserMatch* match) {
     auto* currentMatch = match;
     while (allocator.hasMore()) {
         auto newMatch =
-          new IR::Tofino::ParserMatch(match_t(), -1, {}, finalState, match->except);
+          new IR::Tofino::ParserMatch(match_t(), {}, finalState, match->except);
         std::tie(newMatch->stmts, newMatch->shift) = allocator.allocateOneState();
         auto name = names.newname(stateName + ".$split");
         currentMatch->next =

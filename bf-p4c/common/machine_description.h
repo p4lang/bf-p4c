@@ -22,6 +22,9 @@ limitations under the License.
 namespace Tofino {
 namespace Description {
 
+/// The name of this machine, in a form suitable for display to end users.
+static constexpr const char* ModelName = "Tofino";
+
 /// The available kinds of extractors, specified as sizes in bits.
 static constexpr std::array<unsigned, 3> ExtractorKinds = {{ 8, 16, 32 }};
 

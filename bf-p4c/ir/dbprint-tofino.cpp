@@ -95,7 +95,17 @@ void IR::RangeMatch::dbprint(std::ostream &out) const {
 }
 
 void IR::Tofino::ParserMatch::dbprint(std::ostream &out) const {
-    (value ? out << "match " << value : out << "default") << ":  (shift=" << shift << ')' << indent;
+    if (value)
+        out << "match " << value << ": ";
+    else
+        out << "default: ";
+
+    if (shift)
+        out << "(shift=" << *shift << ')';
+    else
+        out << "(shift unknown)";
+
+    out << indent;
     for (auto st : stmts)
         out << endl << *st;
     if (next)

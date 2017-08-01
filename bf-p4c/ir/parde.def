@@ -1,8 +1,99 @@
 #emit
+#include <utility>
+#include <boost/optional.hpp>
 #include "tofino/ir/bitrange.h"
 #end
 
 namespace Tofino {
+
+/// An expression representing a `packet_in.lookahead()` call at the P4 level.
+/// The interface is very similar to ExtractBuffer, and that's not a
+/// coincidence, since the two concepts are very closely related.
+class LookaheadExpression : Expression {
+#noconstructor
+    LookaheadExpression(Util::SourceInfo si, int bitOffset, unsigned bitWidth)
+        : Expression(si), bitOffset(bitOffset), bitWidth(bitWidth) { }
+    LookaheadExpression(Util::SourceInfo si, nw_bitrange bits)
+        : LookaheadExpression(si, bits.lo, bits.size()) { }
+    LookaheadExpression(int bitOffset, unsigned bitWidth)
+        : bitOffset(bitOffset), bitWidth(bitWidth) { }
+    LookaheadExpression(nw_bitrange bits)
+        : LookaheadExpression(bits.lo, bits.size()) { }
+
+    validate { BUG_CHECK(bitWidth > 0, "Must extract at least one bit"); }
+    dbprint {
+        out << "lookahead " << bitInterval() << "(" << bitWidth << "b)";
+    }
+
+    void setBitRange(nw_bitrange range) {
+        bitOffset = range.lo;
+        bitWidth = range.size();
+    }
+
+    /// @return the half-open range of bits being extracted, in *network order*.
+    /// If you need a closed range, use extractedBits().
+    nw_bitinterval bitInterval() const {
+        return { bitOffset, bitOffset + int(bitWidth) };
+    }
+
+    /// @return the closed range of bits being extracted, in *network order*.
+    /// If you need a half-open range, use bitInterval().
+    nw_bitrange bitRange() const {
+        return { bitOffset, bitOffset + int(bitWidth) - 1 };
+    }
+
+    /// The offset into the input buffer at which extraction will begin.
+    /// Expressed in bits in *network order*; lower numbers are earlier in the
+    /// input stream.
+    int bitOffset;
+
+    /// The number of bits which will be extracted. Must be strictly positive.
+    unsigned bitWidth;
+}
+
+/// Superclass for all unresolved header stack indices.
+abstract UnresolvedStackRef : Expression {
+#emit
+    /// The next available id.
+    static size_t nextId;
+#end
+
+#noconstructor
+    UnresolvedStackRef(Util::SourceInfo si) : Expression(si), id(nextId++) { }
+    UnresolvedStackRef() : id(nextId++) { }
+
+    /// @return a clone of this UnresolvedStackRef which does not compare equal
+    /// to the original or to any other existing UnresolvedStackRef.
+    UnresolvedStackRef makeFresh() const {
+        auto* newRef = this->clone();
+        newRef->id = nextId++;
+        return newRef;
+    }
+
+    size_t id;
+}
+
+/// An unresolved reference to a header stack's '.next' property. This is a
+//placeholder until we can resolve it into a concrete index.
+class UnresolvedStackNext : UnresolvedStackRef {
+#noconstructor
+    UnresolvedStackNext(Util::SourceInfo si) : UnresolvedStackRef(si) { }
+    UnresolvedStackNext() { }
+
+    dbprint { out << "(unresolved next #" << id << ")"; }
+    toString { return "next"; }
+}
+
+/// An unresolved reference to a header stack's '.last' property. This is a
+//placeholder until we can resolve it into a concrete index.
+class UnresolvedStackLast : UnresolvedStackRef {
+#noconstructor
+    UnresolvedStackLast(Util::SourceInfo si) : UnresolvedStackRef(si) { }
+    UnresolvedStackLast() { }
+
+    dbprint { out << "(unresolved last #" << id << ")"; }
+    toString { return "last"; }
+}
 
 /// Supertype for all parser primitives - i.e., actions that can be executed in
 /// parser states.
@@ -27,8 +118,12 @@ class ExtractBuffer : Extract {
 #noconstructor
     ExtractBuffer(Util::SourceInfo si, Expression dest, int bitOffset, unsigned bitWidth)
         : Extract(si, dest), bitOffset(bitOffset), bitWidth(bitWidth) { }
+    ExtractBuffer(Util::SourceInfo si, Expression dest, nw_bitrange bits)
+        : ExtractBuffer(si, dest, bits.lo, bits.size()) { }
     ExtractBuffer(Expression dest, int bitOffset, unsigned bitWidth)
         : Extract(dest), bitOffset(bitOffset), bitWidth(bitWidth) { }
+    ExtractBuffer(Expression dest, nw_bitrange bits)
+        : ExtractBuffer(dest, bits.lo, bits.size()) { }
 
     validate { BUG_CHECK(bitWidth > 0, "Must extract at least one bit"); }
     dbprint {
@@ -99,6 +194,8 @@ class UnhandledParserPrimitive : ParserPrimitive {
 #noconstructor
     UnhandledParserPrimitive(Util::SourceInfo si, Node unhandled)
         : ParserPrimitive(si), unhandled(unhandled) { }
+    UnhandledParserPrimitive(Node unhandled)
+        : unhandled(unhandled) { }
 
     validate { CHECK_NULL(unhandled); }
     dbprint { out << "unhandled parser primitive: " << unhandled ; }
@@ -110,42 +207,154 @@ class UnhandledParserPrimitive : ParserPrimitive {
 }
 
 class ParserMatch {
+#noconstructor
+    ParserMatch(match_t v, int shift, const Vector<ParserPrimitive> &e)
+        : value(v), shift(shift), stmts(e), next(nullptr), except(nullptr) {}
+#emit
+    ParserMatch(match_t v, std::initializer_list<const ParserPrimitive *> st,
+                const ParserState *n, const ParserException *ex = nullptr)
+        : value(v), stmts(st), next(n), except(ex) {}
+    ParserMatch(match_t v, int sh, std::initializer_list<const ParserPrimitive *> st,
+                const ParserState *n, const ParserException *ex = nullptr)
+        : value(v), shift(sh), stmts(st), next(n), except(ex) {}
+    ParserMatch(match_t v, int sh, const Vector<ParserPrimitive> &st,
+                const ParserState *n, const ParserException *ex = nullptr)
+        : value(v), shift(sh), stmts(st), next(n), except(ex) {}
+#end
+
     match_t                        value;
-    int                            shift;
+    boost::optional<int>           shift;
     inline Vector<ParserPrimitive> stmts;
     NullOK ParserState             next;
     NullOK ParserException         except;
+}
+
+/// Supertype for all parser transition primitives. These are operations which
+/// are used by the parser to determine which state to transition to next.
+abstract TransitionPrimitive { }
+
+/// Supertype for all parser selection operations. These represent a load of a
+/// value from some source which will be compared against the ParserMatch values
+/// to select a transition.
+abstract Select : TransitionPrimitive { }
+
+/// A selection against a range of bits in the input buffer.
+// XXX(seth): It'd be nice to leave some record of how we arrived at these bits
+// - e.g., the field we were matching against. We should have a non-visited
+// expression to track that.
+class SelectBuffer : Select {
 #noconstructor
-    ParserMatch(match_t v, const Vector<ParserPrimitive> &e)
-    : value(v), shift(-1), stmts(e), next(0), except(0) {}
+    SelectBuffer(Util::SourceInfo si, int bitOffset, unsigned bitWidth, Node source)
+        : Select(si), bitOffset(bitOffset), bitWidth(bitWidth), source(source) { }
+    SelectBuffer(Util::SourceInfo si, int bitOffset, unsigned bitWidth)
+        : SelectBuffer(si, bitOffset, bitWidth, nullptr) { }
+    SelectBuffer(Util::SourceInfo si, nw_bitrange bits, Node source)
+        : SelectBuffer(si, bits.lo, bits.size(), source) { }
+    SelectBuffer(Util::SourceInfo si, nw_bitrange bits)
+        : SelectBuffer(si, bits.lo, bits.size()) { }
+    SelectBuffer(int bitOffset, unsigned bitWidth, Node source)
+        : bitOffset(bitOffset), bitWidth(bitWidth), source(source) { }
+    SelectBuffer(int bitOffset, unsigned bitWidth)
+        : SelectBuffer(bitOffset, bitWidth, nullptr) { }
+    SelectBuffer(nw_bitrange bits, Node source)
+        : SelectBuffer(bits.lo, bits.size(), source) { }
+    SelectBuffer(nw_bitrange bits)
+        : SelectBuffer(bits.lo, bits.size(), nullptr) { }
+
+    validate { BUG_CHECK(bitWidth > 0, "Must match against at least one bit"); }
+    dbprint {
+        out << "match bits " << bitInterval() << "(" << bitWidth << "b)";
+    }
+
+    /// @return true if some of the bits being selected were already shifted
+    /// out of the input buffer.
+    bool isShiftedOut() const { return bitOffset < 0; }
+
+    /// @return the half-open range of bits being selected, in *network order*.
+    /// If you need a closed range, use selectedBits().
+    nw_bitinterval bitInterval() const {
+        return { bitOffset, bitOffset + int(bitWidth) };
+    }
+
+    /// @return the closed range of bits being selected, in *network order*.
+    /// If you need a half-open range, use bitInterval().
+    nw_bitrange selectedBits() const {
+        return { bitOffset, bitOffset + int(bitWidth) - 1 };
+    }
+
+    /// The offset into the input buffer at which selection will begin.
+    /// Expressed in bits in *network order*; lower numbers are earlier in the
+    /// input stream.
+    int bitOffset;
+
+    /// The number of bits which will be selected. Must be strictly positive.
+    unsigned bitWidth;
+
 #emit
-    ParserMatch(match_t v, int sh, std::initializer_list<const ParserPrimitive *> st,
-                const ParserState *n, const ParserException *ex = nullptr)
-    : value(v), shift(sh), stmts(st), next(n), except(ex) {}
-    ParserMatch(match_t v, int sh, const Vector<ParserPrimitive> &st,
-                const ParserState *n, const ParserException *ex = nullptr)
-    : value(v), shift(sh), stmts(st), next(n), except(ex) {}
+    /// The higher-level expression we were selecting against. Not visited.
+    const Node* source;
+#end
+}
+
+/// A selection against a computed value. The source may be an arbitrary
+/// expression. These can't be implemented directly on Tofino, so if the
+/// compiler can't optimize them out, compilation will fail.
+class SelectComputed : Select {
+#noconstructor
+    SelectComputed(Util::SourceInfo si, Expression source)
+        : Select(si), source(source) { }
+    SelectComputed(Expression source) : source(source) { }
+
+    validate { CHECK_NULL(source); }
+    dbprint { out << "match computed value " << source; }
+
+    /// An expression which computes the value to be matched against.
+    Expression source;
+}
+
+/// A transition primitive that we don't handle. This is used to propagate
+/// knowledge of the failure through the compiler.
+class UnhandledTransitionPrimitive : TransitionPrimitive {
+#noconstructor
+    UnhandledTransitionPrimitive(Util::SourceInfo si, Node unhandled)
+        : TransitionPrimitive(si), unhandled(unhandled) { }
+    UnhandledTransitionPrimitive(Node unhandled)
+        : unhandled(unhandled) { }
+
+    validate { CHECK_NULL(unhandled); }
+    dbprint { out << "unhandled transition primitive: " << unhandled ; }
+
+#emit
+    /// The primitive we didn't recognize or couldn't handle. Not visited.
+    const Node* unhandled;
 #end
 }
 
 class ParserState : Unit {
-    cstring                     name;
-    gress_t                     gress;
-    inline Vector<Expression>   select;
-    inline Vector<ParserMatch>  match;
 #noconstructor
-    NullOK IR::ParserState p4state = 0; /* informational only! not visited or compared for equal */
-    ParserState(IR::ParserState n, gress_t gr);
+    ParserState(IR::ParserState p4State, cstring name, gress_t gr)
+        : p4State(p4State), name(name), gress(gr) { }
     ParserState(cstring n, gress_t gr,
-                const std::initializer_list<Expression> &sel,
-                const std::initializer_list<ParserMatch> &m)
-    : name(n), gress(gr), select(sel), match(m) {}
+                std::initializer_list<TransitionPrimitive> sel,
+                std::initializer_list<ParserMatch> m)
+        : name(n), gress(gr), select(sel), match(m) { }
     int stage() const override { return -1; }
     gress_t thread() const override { return gress; }
     toString { return name; }
     visit_children {
         select.visit_children(v);
         match.parallel_visit_children(v); }
+
+#emit
+    /// The original P4 state. Null if this is a generated state that doesn't
+    /// correspond to anything in the P4 program. Not visited.
+    const IR::ParserState* p4State = nullptr;
+#end
+
+    cstring                            name;
+    gress_t                            gress;
+    inline Vector<TransitionPrimitive> select;
+    inline Vector<ParserMatch>         match;
 }
 
 class Parser {

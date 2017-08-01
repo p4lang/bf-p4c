@@ -88,8 +88,12 @@ IR::Tofino::Deparser::Deparser(gress_t gr, const IR::Tofino::Parser* p) : gress(
         ::warning("The order of headers in deparser is not uniquely determined by parser!");
 
     // Generate the emit calls.
+    std::set<cstring> visitedExtracts;
     for (auto extract : boost::adaptors::reverse(sortedExtracts)) {
         if (extract->is<IR::Tofino::Parser>()) continue;
+        if (visitedExtracts.find(extract->toString()) != visitedExtracts.end())
+            continue;
+        visitedExtracts.insert(extract->toString());
         if (!extract->is<IR::Member>()) continue;
         auto* field = extract->to<IR::Member>();
         if (field->member == "$valid") continue;

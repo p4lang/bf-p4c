@@ -27,7 +27,6 @@ set (TOFINO_IR_SRCS
   ir/bitrange.cpp
   ir/gress.cpp
   ir/mau.cpp
-  ir/parde.cpp
   ir/thread_visitor.cpp
   ir/tofino.cpp
   ir/tofino_write_context.cpp
@@ -75,6 +74,7 @@ set (TOFINO_BACKEND_COMMON_SRCS
   common/live_range_overlay.cpp
   common/metadata_constant_propagation.cpp
   common/remap_intrin.cpp
+  common/rewrite.cpp
   common/param_binding.cpp
   common/parser_overlay.cpp
   common/slice.cpp
@@ -92,6 +92,7 @@ set (TOFINO_BACKEND_COMMON_HDRS
   common/machine_description.h
   common/metadata_constant_propagation.h
   common/remap_intrin.h
+  common/rewrite.h
   common/param_binding.h
   common/parser_overlay.h
   common/slice.h
@@ -156,9 +157,9 @@ set (TOFINO_BACKEND_PARDE_SRCS
   parde/extract_parser.cpp
   parde/field_packing.cpp
   parde/gen_deparser.cpp
-  parde/match_keys.cpp
   parde/parser_output.cpp
   parde/phase0.cpp
+  parde/resolve_computed.cpp
   parde/split_big_states.cpp
   )
 
@@ -166,11 +167,10 @@ set (TOFINO_BACKEND_PARDE_HDRS
   parde/add_parde_metadata.h
   parde/asm_output.h
   parde/bridge_metadata.h
-  parde/compute_shifts.h
   parde/extract_parser.h
   parde/field_packing.h
-  parde/match_keys.h
   parde/phase0.h
+  parde/resolve_computed.h
   parde/split_big_states.h
   )
 

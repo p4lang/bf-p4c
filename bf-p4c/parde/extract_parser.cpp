@@ -1,72 +1,166 @@
 #include "extract_parser.h"
 
-#include <boost/range/adaptor/reversed.hpp>
-
 #include <algorithm>
+#include <utility>
 #include <vector>
 
 #include "ir/ir.h"
 #include "lib/log.h"
+#include "tofino/common/machine_description.h"
 #include "tofino/parde/add_parde_metadata.h"
+#include "tofino/parde/resolve_computed.h"
 
 namespace Tofino {
 
 namespace {
 
-/// A helper type that represents a transitive predecessor of the current state
-/// in the parse graph.
-struct Ancestor {
-    Ancestor(const IR::Tofino::ParserState* state,
-             const IR::Tofino::ParserMatch* match);
+/// A helper type that represents a transition in the parse graph that led to
+/// the current state.
+struct Transition {
+    Transition(const IR::Tofino::ParserState* state,
+               const IR::Tofino::ParserMatch* match)
+        : state(state), match(match) { }
 
-    /// The ancestor state.
+    /// An ancestor state.
     const IR::Tofino::ParserState* state;
 
     /// The outgoing edge of the ancestor state that we traversed to reach the
     /// current state.
     const IR::Tofino::ParserMatch* match;
-    bool canBePartOfLoop;
+
+    /// A map from extract destination names to the number of times the
+    /// destination is extracted in this transition's ParserMatch.
+    std::map<cstring, unsigned> extracts;
+
+    /// True if this state contains at least some valid extracts.
+    bool isValid = true;
 };
 
-/// The stack of ancestors we traversed to reach the current state.
-typedef std::vector<Ancestor> AncestorStack;
+/// The stack of transitions we traversed to reach the current state.
+struct TransitionStack {
+    /// Push a new transition onto the stack.
+    /// @return true if this is a valid transition, or false if the transition
+    /// is invalid and we should stop generating the parse graph at this point.
+    bool push(const IR::Tofino::ParserState* state,
+              const IR::Tofino::ParserMatch* match) {
+        transitionStack.emplace_back(state, match);
+        auto& transition = transitionStack.back();
 
-Ancestor::Ancestor(const IR::Tofino::ParserState* state,
-                   const IR::Tofino::ParserMatch* match)
-        : state(state), match(match), canBePartOfLoop(true) {
-    // If a state extracts a header which isn't part of a header stack, we don't
-    // allow it to be part of a loop. Such a loop would trigger an error at
-    // runtime anyway since the parser can't overwrite a PHV container it has
-    // already written to.
-    forAllMatching<IR::Tofino::Extract>(&match->stmts,
-                  [&](const IR::Tofino::Extract* extract) {
-        if (!extract->dest->is<IR::Member>()) return;
-        auto header = extract->dest->to<IR::Member>()->expr;
-        if (!header->is<IR::HeaderRef>()) return;
-        if (header->is<IR::HeaderStackItemRef>()) return;
-        canBePartOfLoop = false;
-    });
-}
+        // If a state extracts a header which isn't part of a header stack, we don't
+        // allow it to be part of a loop. Such a loop would trigger an error at
+        // runtime anyway since the parser can't overwrite a PHV container it has
+        // already written to.
+        unsigned badExtractCount = 0;
+        unsigned goodExtractCount = 0;
+        unsigned extractCount = 0;
+        forAllMatching<IR::Tofino::Extract>(&match->stmts,
+                      [&](const IR::Tofino::Extract* extract) {
+            extractCount++;
+            cstring destName;
+            unsigned allowedExtracts;
+            std::tie(destName, allowedExtracts) = analyzeDest(extract->dest);
+            if (extractTotals[destName] >= allowedExtracts) {
+                LOG2(state->name << ": too many extracts for " << destName);
+                badExtractCount++;
+                return;
+            }
+            extractTotals[destName]++;
+            transition.extracts[destName]++;
+            goodExtractCount++;
+        });
+
+        BUG_CHECK(badExtractCount + goodExtractCount == extractCount,
+                  "Lost track of an extract?");
+
+        // If this transition contains extracts but none of them are legal, it's
+        // not a valid transition. The parser will stop here at runtime.
+        if (extractCount > 0 && goodExtractCount == 0)
+            transition.isValid = false;
+
+        // We'll also stop here if the stack has gotten too deep.
+        if (transitionStack.size() > 255)
+            transition.isValid = false;
+
+        return transition.isValid;
+    }
+
+    void pop() {
+        for (auto& extractItem : transitionStack.back().extracts) {
+            cstring destName = extractItem.first;
+            unsigned count = extractItem.second;
+            BUG_CHECK(extractTotals[destName] >= count,
+                      "Lost track of some extracts?");
+            extractTotals[destName] -= count;
+        }
+
+        transitionStack.pop_back();
+    }
+
+    const Transition& back() const {
+        BUG_CHECK(!transitionStack.empty(), "Peeking an empty TransitionStack?");
+        return transitionStack.back();
+    }
+
+    size_t size() const { return transitionStack.size(); }
+
+    bool alreadyVisited(const IR::Tofino::ParserState* state) const {
+        return std::any_of(transitionStack.begin(), transitionStack.end(),
+                           [&](const Transition& t) { return t.state == state; });
+    }
+
+ private:
+    /// @return a string representation of the provided extract destination and
+    /// the number of times that the destination may be extracted to on a given
+    /// path through the parse graph.
+    std::pair<cstring, unsigned> analyzeDest(const IR::Expression* dest) {
+        if (dest->is<IR::TempVar>())
+            return std::make_pair(dest->toString(), 1);
+        if (!dest->is<IR::Member>()) {
+            ::warning("Unexpected extract destination: %1%", dest);
+            return std::make_pair(dest->toString(), 1);
+        }
+        auto* member = dest->to<IR::Member>();
+        if (!member->expr->is<IR::HeaderStackItemRef>())
+            return std::make_pair(dest->toString(), 1);
+        auto* itemRef = member->expr->to<IR::HeaderStackItemRef>();
+        auto destName = itemRef->base()->toString() + "." + member->member;
+        auto allowedExtracts = itemRef->base()->type->to<IR::Type_Stack>()
+                                              ->size->to<IR::Constant>()->asInt();
+        return std::make_pair(destName, std::max(allowedExtracts, 0));
+    }
+
+    std::vector<Transition> transitionStack;
+    std::map<cstring, unsigned> extractTotals;
+};
+
+struct AutoPushTransition {
+    AutoPushTransition(TransitionStack& transitionStack,
+                       const IR::Tofino::ParserState* state,
+                       const IR::Tofino::ParserMatch* match)
+        : transitionStack(transitionStack)
+        , isValid(transitionStack.push(state, match))
+    { }
+
+    ~AutoPushTransition() { transitionStack.pop(); }
+
+    TransitionStack& transitionStack;
+    bool isValid;
+};
 
 }  // namespace
 
-class GetTofinoParser : public Inspector {
+class GetTofinoParser {
  public:
     static const IR::Tofino::Parser*
     extract(gress_t gress, const IR::P4Parser* parser,
             bool filterSetMetadata = false);
-
-    void addMatch(IR::Tofino::ParserState*, match_t,
-                  const IR::Vector<IR::Tofino::ParserPrimitive>&, const IR::ID&);
-    IR::Tofino::ParserState *state(cstring);
-
  private:
     GetTofinoParser(gress_t gress, bool filterSetMetadata)
         : gress(gress), filterSetMetadata(filterSetMetadata) { }
 
-    bool preorder(const IR::ParserState *) override;
+    IR::Tofino::ParserState* getState(cstring name);
 
-    AncestorStack                               ancestorStack;
+    TransitionStack                             transitionStack;
     gress_t                                     gress = INGRESS;
     map<cstring, IR::Tofino::ParserState *>     states;
     bool                                        filterSetMetadata;
@@ -76,8 +170,17 @@ class GetTofinoParser : public Inspector {
 GetTofinoParser::extract(gress_t gress, const IR::P4Parser* parser,
                          bool filterSetMetadata /* = false */) {
     GetTofinoParser getter(gress, filterSetMetadata);
-    parser->apply(getter);
-    auto startState = getter.state("start");
+
+    forAllMatching<IR::ParserState>(parser,
+                  [&](const IR::ParserState* state) {
+        if (state->name == "accept" || state->name == "reject")
+            return false;
+        getter.states[state->name] =
+          new IR::Tofino::ParserState(state, state->name, gress);
+        return true;
+    });
+
+    auto startState = getter.getState("start");
     return new IR::Tofino::Parser(gress, startState);
 }
 
@@ -86,131 +189,86 @@ ParserInfo extractParser(const IR::Tofino::Pipe* pipe,
                          const IR::P4Control* igDeparser,
                          const IR::P4Parser* egParser /* = nullptr */,
                          const IR::P4Control* egDeparser /* = nullptr */) {
-  CHECK_NULL(igParser);
-  CHECK_NULL(igDeparser);
+    CHECK_NULL(igParser);
+    CHECK_NULL(igDeparser);
 
-  // Convert the parsers. If no egress parser was provided, we generate one from
-  // the ingress parser by removing all 'set_metadata' primitives.
-  auto tofinoIgParser = GetTofinoParser::extract(INGRESS, igParser);
-  auto tofinoEgParser = egParser != nullptr
-      ? GetTofinoParser::extract(EGRESS, egParser)
-      : GetTofinoParser::extract(EGRESS, igParser, /* filterSetMetadata = */ true);
+    ParserInfo info;
 
-  // Convert the deparsers, generating the egress deparser if necessary.
-  const auto* tofinoIgDeparser = new IR::Tofino::Deparser(INGRESS, igDeparser);
-  const auto* tofinoEgDeparser = egDeparser != nullptr
-      ? new IR::Tofino::Deparser(EGRESS, egDeparser)
-      : new IR::Tofino::Deparser(EGRESS, tofinoEgParser);
+    // XXX(seth): Most of the stuff in this function should actually be handled
+    // during the conversion to Tofino Native Architecture.
 
-  AddMetadataShims addMetadataShims(pipe);
-  return {
-      tofinoIgParser->apply(addMetadataShims),
-      tofinoIgDeparser->apply(addMetadataShims),
-      tofinoEgParser->apply(addMetadataShims),
-      tofinoEgDeparser->apply(addMetadataShims)
-  };
+    // Convert the parsers. If no egress parser was provided, we generate one
+    // from the ingress parser by removing all 'set_metadata' primitives.
+    info.parsers[INGRESS] = GetTofinoParser::extract(INGRESS, igParser);
+    info.parsers[EGRESS] = egParser != nullptr
+        ? GetTofinoParser::extract(EGRESS, egParser)
+        : GetTofinoParser::extract(EGRESS, igParser,
+                                   /* filterSetMetadata = */ true);
+
+    // Attempt to resolve header stack ".next" and ".last" members.
+    // XXX(seth): In the long term we should run
+    // ResolveComputedParserExpressions here instead, but right now we can't
+    // because we haven't yet added bridged metadata, and without it the egress
+    // parser may fail because it tries to read ingress intrinsic metadata that
+    // isn't present natively in egress.
+    // XXX(seth): Also, generating the egress deparser from the egress parser
+    // correctly requires that we've resolved header stack indices, but that's
+    // an artifact of the IR conversion and it's not something that should not
+    // be happening at this layer anyway.
+    ResolveComputedHeaderStackExpressions resolveComputed;
+    for (auto gress : { INGRESS, EGRESS })
+        info.parsers[gress] = info.parsers[gress]->apply(resolveComputed);
+
+    // Convert the deparsers, generating the egress deparser if necessary.
+    info.deparsers[INGRESS] = new IR::Tofino::Deparser(INGRESS, igDeparser);
+    info.deparsers[EGRESS] = egDeparser != nullptr
+        ? new IR::Tofino::Deparser(EGRESS, egDeparser)
+        : new IR::Tofino::Deparser(EGRESS, info.parsers[EGRESS]);
+
+    // Add shims for intrinsic metadata.
+    AddMetadataShims addMetadataShims(pipe);
+    for (auto gress : { INGRESS, EGRESS }) {
+        info.parsers[gress] = info.parsers[gress]->apply(addMetadataShims);
+        info.deparsers[gress] = info.deparsers[gress]->apply(addMetadataShims);
+    }
+
+    return info;
 }
 
-bool GetTofinoParser::preorder(const IR::ParserState *p) {
-    if (p->name == "accept" || p->name == "reject")
-        return false;
-    auto *s = states[p->name] = new IR::Tofino::ParserState(p, gress);
-    if (s->name != p->name)
-        states[s->name] = s;
-    return true;
-}
+struct RewriteParserStatements : public Transform {
+    RewriteParserStatements(cstring stateName, bool filterSetMetadata)
+        : stateName(stateName), filterSetMetadata(filterSetMetadata) { }
 
-class FindStackExtract : public Inspector {
-    const IR::HeaderRef         *hdr;
-    int                         &index;
-    bool preorder(const IR::HeaderStackItemRef *hs) override {
-        if (!findContext<IR::Tofino::Extract>()) return true;
-        LOG3("   FindStackExtract(" << hs->toString() << ")  hdr=" << hdr->toString() <<
-             "  hs->base=" << hs->base()->toString());
-        if (hs->base()->toString() == hdr->toString()) {
-            auto idx = dynamic_cast<const IR::Constant *>(hs->index());
-            if (idx)
-                index = std::max(index, idx->asInt()); }
-        return true; }
- public:
-    FindStackExtract(const IR::HeaderRef *h, int &out) : hdr(h), index(out) {}
-    FindStackExtract(const IR::Expression *e, int &out)
-    : hdr(dynamic_cast<const IR::HeaderRef *>(e)), index(out) {
-        if (!hdr) BUG("not a valid header ref"); }
-};
-
-class RewriteExtractNext : public Transform {
-    AncestorStack&                ancestorStack;
-    std::map<cstring, int>        adjust;
-
-    const IR::Expression *preorder(IR::Member *name) override;
-
- public:
-    bool                        failed = false;
-    explicit RewriteExtractNext(AncestorStack& ancestorStack)
-        : ancestorStack(ancestorStack) { }
-};
-
-const IR::Expression *RewriteExtractNext::preorder(IR::Member *m) {
-    if (m->member != "next" && m->member != "last") return m;
-    int index = -1;
-    // XXX(seth): This isn't sound. There could be more than one path through
-    // the parse graph that reaches this point, and each path may have extracted
-    // this header stack a different number of times.
-    for (auto ancestor : boost::adaptors::reverse(ancestorStack)) {
-        ancestor.match->stmts.apply(FindStackExtract(m->expr, index));
-        if (index >= 0) break;
-    }
-    cstring hdrname = m->expr->toString();
-    index += adjust[hdrname];
-    if (m->member == "next")
-        ++index;
-    LOG2("   rewrite " << m << " => [" << index << "]");
-    if (index >= m->expr->type->to<IR::Type_Stack>()->size->to<IR::Constant>()->asInt()) {
-        failed = true;
-        return m; }
-    if (auto call = findContext<IR::MethodCallExpression>()) {
-        auto meth = call->method->to<IR::Member>();
-        if (meth == nullptr || meth->member != "extract" ||
-              call->arguments->size() != 1) {
-            ::warning("Unexpected method call in parser: %1%", call);
-            failed = true;
-            return m;
-        }
-        adjust[hdrname]++;
-    }
-    return new IR::HeaderStackItemRef(m->srcInfo,
-        m->expr->type->to<IR::Type_Stack>()->elementType->to<IR::Type_Header>(),
-        m->expr, new IR::Constant(index));
-}
-
-class RewriteParserStatements : public Transform {
-    unsigned                      currentBit = 0;
-    bool                          filterSetMetadata;
-
-    const IR::Expression *preorder(IR::Statement *s) override {
-        BUG("Unhandled statement kind: %1%", s);
+    /// @return the cumulative shift in bytes from all of the statements
+    /// rewritten up to this point. This includes both extracts and `advance()`
+    /// calls.
+    int byteTotalShift() const {
+        nw_bitinterval bitsAdvanced(0, currentBit);
+        if (!bitsAdvanced.isHiAligned())
+            ::warning("Parser state %1% does not end on a byte boundary; "
+                      "adding padding.", stateName);
+        return bitsAdvanced.nextByte();
     }
 
-    const IR::Node *preorder(IR::MethodCallStatement *s) override {
-        return transform_child(s->methodCall);
-    }
-
+ private:
     const IR::Vector<IR::Tofino::ParserPrimitive>*
-    preorder(IR::MethodCallExpression* e) override {
-        auto meth = e->method->to<IR::Member>();
-        if (meth == nullptr || meth->member != "extract" || e->arguments->size() != 1) {
-            BUG("Unexpected method call in parser: %1%", e);
-            return nullptr;
-        }
-
-        auto dest = (*e->arguments)[0];
+    rewriteExtract(Util::SourceInfo srcInfo, const IR::Expression* dest) {
         auto* hdr = dest->to<IR::HeaderRef>();
         BUG_CHECK(hdr != nullptr,
                   "Extracting something other than a header: %1%", dest);
         auto* hdr_type = hdr->type->to<IR::Type_StructLike>();
         BUG_CHECK(hdr_type != nullptr,
                   "Header type isn't a structlike: %1%", hdr_type);
+
+        // If a previous operation (e.g. an `advance()` call) left us in a
+        // non-byte-aligned position, we need to move up to the next byte; on
+        // Tofino, we can't support unaligned extracts.
+        if (currentBit % 8 != 0) {
+            ::warning("Can't extract header %1% from non-byte-aligned input "
+                      "buffer position on %2%; adding padding.", hdr,
+                      Tofino::Description::ModelName);
+            currentBit += 8 - currentBit % 8;
+        }
 
         // Generate an extract operation for each field.
         auto* rv = new IR::Vector<IR::Tofino::ParserPrimitive>;
@@ -220,24 +278,73 @@ class RewriteParserStatements : public Transform {
             IR::Expression* fref = new IR::Member(field->type, hdr, field->name);
             auto width = field->type->width_bits();
             auto extract =
-              new IR::Tofino::ExtractBuffer(meth->srcInfo, fref, currentBit, width);
+              new IR::Tofino::ExtractBuffer(srcInfo, fref, currentBit, width);
             currentBit += width;
             rv->push_back(extract);
         }
 
-        // On Tofino we can only extract with byte alignment, so if this header
-        // isn't aligned, we need to add padding.
+        // On Tofino we can only extract and deparse headers with byte
+        // alignment, so if this header isn't aligned, we need to add padding.
         // XXX(seth): We really should catch this error at a higher layer.
         if (currentBit % 8 != 0) {
-            ::warning("Header %1% isn't byte-aligned; adding padding", hdr);
+            ::warning("Can't extract non-byte-aligned header %1% on %2%; adding "
+                      "padding.", hdr, Tofino::Description::ModelName);
             currentBit += 8 - currentBit % 8;
         }
 
         // Generate an extract operation for the POV bit.
         auto validBit = new IR::Member(IR::Type::Bits::get(1), hdr, "$valid");
-        rv->push_back(new IR::Tofino::ExtractConstant(meth->srcInfo, validBit,
+        rv->push_back(new IR::Tofino::ExtractConstant(srcInfo, validBit,
                                                       new IR::Constant(1)));
         return rv;
+    }
+
+    const IR::Vector<IR::Tofino::ParserPrimitive>*
+    rewriteAdvance(const IR::Expression* bits) {
+        if (!bits->is<IR::Constant>()) {
+            ::error("Advancing by a non-constant distance is not supported on "
+                    "%1%: %2%", Tofino::Description::ModelName, bits);
+            return nullptr;
+        }
+
+        auto bitOffset = bits->to<IR::Constant>()->asInt();
+        if (bitOffset < 0) {
+            ::error("Advancing by a negative distance is not supported on "
+                    "%1%: %2%", Tofino::Description::ModelName, bits);
+            return nullptr;
+        }
+
+        currentBit += bitOffset;
+        return nullptr;
+    }
+
+    const IR::Vector<IR::Tofino::ParserPrimitive>*
+    preorder(IR::MethodCallStatement* statement) override {
+        auto* call = statement->methodCall;
+        auto* method = call->method->to<IR::Member>();
+        BUG_CHECK(method != nullptr, "Invalid method call: %1%", statement);
+
+        if (method->member == "extract") {
+            BUG_CHECK(call->arguments->size() == 1,
+                      "Wrong number of arguments for method call: %1%", statement);
+            return rewriteExtract(statement->srcInfo, (*call->arguments)[0]);
+        }
+        if (method->member == "advance") {
+            BUG_CHECK(call->arguments->size() == 1,
+                      "Wrong number of arguments for method call: %1%", statement);
+            return rewriteAdvance((*call->arguments)[0]);
+        }
+
+        ::error("Unexpected method call in parser: %1%", statement);
+        return nullptr;
+    }
+
+    bool canEvaluateInParser(const IR::Expression* expression) const {
+        // We can't evaluate complex expressions on current hardware.
+        return expression->is<IR::Constant>() ||
+               expression->is<IR::PathExpression>() ||
+               expression->is<IR::Member>() ||
+               expression->is<IR::HeaderStackItemRef>();
     }
 
     const IR::Tofino::ParserPrimitive*
@@ -257,6 +364,11 @@ class RewriteParserStatements : public Transform {
             return new IR::Tofino::ExtractConstant(s->srcInfo, s->left,
                                                    rhs->to<IR::Constant>());
 
+        if (auto* lookahead = rhs->to<IR::Tofino::LookaheadExpression>()) {
+            auto bits = lookahead->bitRange().shiftedBy(currentBit);
+            return new IR::Tofino::ExtractBuffer(s->srcInfo, s->left, bits);
+        }
+
         if (!canEvaluateInParser(rhs)) {
             ::error("Assignment cannot be supported in the parser: %1%", rhs);
             return new IR::Tofino::UnhandledParserPrimitive(s->srcInfo, s);
@@ -265,42 +377,14 @@ class RewriteParserStatements : public Transform {
         return new IR::Tofino::ExtractComputed(s->srcInfo, s->left, rhs);
     }
 
-    bool canEvaluateInParser(const IR::Expression* expression) const {
-        // We can't evaluate complex expressions on current hardware.
-        return expression->is<IR::Constant>() ||
-               expression->is<IR::PathExpression>() ||
-               expression->is<IR::Member>() ||
-               expression->is<IR::HeaderStackItemRef>() ||
-               expression->is<IR::ArrayIndex>();
+    const IR::Expression* preorder(IR::Statement* s) override {
+        BUG("Unhandled statement kind: %1%", s);
     }
 
- public:
-    explicit RewriteParserStatements(bool filterSetMetadata)
-        : filterSetMetadata(filterSetMetadata) { }
+    cstring stateName;
+    unsigned currentBit = 0;
+    bool filterSetMetadata;
 };
-
-void GetTofinoParser::addMatch(IR::Tofino::ParserState *s, match_t match_val,
-                               const IR::Vector<IR::Tofino::ParserPrimitive> &stmts,
-                               const IR::ID &action) {
-    LOG2("GetParser::addMatch(" << s->p4state->toString() << ", " << match_val <<
-         ", " << (ancestorStack.size() + 1) << ")");
-
-    auto match = new IR::Tofino::ParserMatch(match_val, stmts);
-    s->match.push_back(match);
-
-    ancestorStack.emplace_back(s, match);
-    match->next = state(action);
-    ancestorStack.pop_back();
-
-    // If there is a parser state with this name, but we couldn't generate it,
-    // its probably because we've unrolled a loop filling a header stack
-    // completely.
-    // XXX: Should we set some parser error code?
-    if (match->next != nullptr) return;
-    if (action == "accept" || action == "reject") return;
-    if (!states.count(action))
-        error("%s: No definition for %s", action.srcInfo, action);
-}
 
 static match_t buildListMatch(const IR::Vector<IR::Expression> *list) {
     match_t     rv;
@@ -340,72 +424,124 @@ static match_t buildMatch(int match_size, const IR::Expression *key) {
     return match_t();
 }
 
-IR::Tofino::ParserState *GetTofinoParser::state(cstring name) {
-    if (states.count(name) == 0) return nullptr;
-    if (ancestorStack.size() >= 256) return nullptr;
-    auto rv = states[name];
+namespace {
 
-    // Check if we've already reached this state on this path, and if so, make
-    // sure that the resulting loop is legal.
-    bool isLegalLoop = true;
-    for (auto ancestor : boost::adaptors::reverse(ancestorStack)) {
-        isLegalLoop &= ancestor.canBePartOfLoop;
-        if (ancestor.state != rv) continue;
-        if (!isLegalLoop) return nullptr;
-        rv = new IR::Tofino::ParserState(ancestor.state->p4state, gress);
-        rv->name = cstring::make_unique(states, name);
-        states[rv->name] = rv;
-        break;
+// XXX(seth): This would be better off living on IR::Vector itself.
+template <typename T>
+void pushOrAppendToVector(IR::Vector<T>& vec, const IR::Node* item) {
+    if (item == nullptr) return;
+    if (auto* itemAsVector = item->to<IR::Vector<T>>()) {
+        vec.append(*itemAsVector);
+        return;
+    }
+    BUG_CHECK(item->is<T>(), "Unexpected vector element: %1%", item);
+    vec.push_back(item->to<T>());
+}
+
+const IR::Node* rewriteSelect(const IR::Expression* component) {
+    // We can transform a LookaheadExpression immediately to a concrete select
+    // on bits in the input buffer.
+    if (auto* lookahead = component->to<IR::Tofino::LookaheadExpression>())
+        return new IR::Tofino::SelectBuffer(component->srcInfo,
+                                            lookahead->bitRange(),
+                                            lookahead);
+
+    // We can split a Concat into multiple selects. Note that this is quite
+    // unlike a Slice; the Concat operands may not even be adjacent in the input
+    // buffer, so this is really two primitive select operations.
+    if (auto* concat = component->to<IR::Concat>()) {
+        auto* rv = new IR::Vector<IR::Tofino::TransitionPrimitive>;
+        pushOrAppendToVector(*rv, rewriteSelect(concat->left));
+        pushOrAppendToVector(*rv, rewriteSelect(concat->right));
+        return rv;
     }
 
-    if (!rv->match.empty()) return rv;
+    // For anything else, we'll have to resolve it later.
+    return new IR::Tofino::SelectComputed(component->srcInfo, component);
+}
 
-    // Lower calls to "next" and "last" into references to a specific header
-    // stack index.
-    RewriteExtractNext rewriteExtractNext(ancestorStack);
-    auto components = rv->p4state->components.apply(rewriteExtractNext);
-    if (rewriteExtractNext.failed) {
-        // FIXME should be setting an appropriate parser exception?
+}  // namespace
+
+IR::Tofino::ParserState* GetTofinoParser::getState(cstring name) {
+    // If the state isn't found, immediately return null; at runtime, parsing
+    // will terminate here. That's normal if we're transitioning to a terminal
+    // state; otherwise, we'll report an error.
+    if (states.count(name) == 0) {
+        if (name != "accept" && name != "reject")
+            ::error("No definition for parser state %1%", name);
         return nullptr;
     }
 
-    // Lower the parser statements from the frontend IR to the Tofino IR.
-    RewriteParserStatements rewriteStatements(filterSetMetadata);
-    IR::Vector<IR::Tofino::ParserPrimitive> statements;
-    for (auto statement : *components) {
-        const IR::Node* rewritten = statement->apply(rewriteStatements);
-        if (rewritten == nullptr) continue;
-        if (rewritten->is<IR::Vector<IR::Tofino::ParserPrimitive>>()) {
-            auto v = rewritten->to<IR::Vector<IR::Tofino::ParserPrimitive>>();
-            statements.insert(statements.end(), v->begin(), v->end());
-            continue;
-        }
-        BUG_CHECK(rewritten->is<IR::Tofino::ParserPrimitive>(),
-                  "Unhandled parser statement: %1%", rewritten);
-        statements.push_back(rewritten->to<IR::Tofino::ParserPrimitive>());
+    // Check if we've already reached this state on this path, and if so, make
+    // sure that the resulting loop is legal.
+    auto* state = states[name];
+    if (transitionStack.alreadyVisited(state)) {
+        // We're inside a loop. We don't want loops in the actual IR graph, so
+        // we'll unroll the loop by creating a new, empty instance of this
+        // state, which we'll convert again.
+        auto originalName = state->p4State->name;
+        auto unrolledName = cstring::make_unique(states, originalName);
+        state = new IR::Tofino::ParserState(state->p4State, unrolledName, gress);
+        states[unrolledName] = state;
+    } else if (!state->match.empty()) {
+        // We've already generated the matches for this state, so we know we've
+        // already converted it; just return.
+        return state;
     }
 
-    // Lower the select expression to the Tofino IR.
-    // XXX(seth): This must happen after we've generated the statements above,
-    // because we may select against extracts that happen in this state.
-    rv->select = *rv->select.apply(rewriteExtractNext);
+    BUG_CHECK(state->p4State != nullptr,
+              "Converting a parser state that didn't come from the frontend?");
 
-    int match_size = 0;
-    for (auto s : rv->select)
-        match_size += s->type->width_bits();
+    // Lower the parser statements from the frontend IR to the Tofino IR.
+    RewriteParserStatements rewriteStatements(state->p4State->name, filterSetMetadata);
+    IR::Vector<IR::Tofino::ParserPrimitive> statements;
+    for (auto* statement : state->p4State->components)
+        pushOrAppendToVector(statements, statement->apply(rewriteStatements));
 
+    // Compute the new state's shift.
+    auto shift = rewriteStatements.byteTotalShift();
+
+    // Handle the simple cases: this state has no successor, or it transitions
+    // to a single successor state unconditionally.
     LOG2("GetParser::state(" << name << ")");
-    if (!rv->p4state->selectExpression) {
-    } else if (auto *path = rv->p4state->selectExpression->to<IR::PathExpression>()) {
-        addMatch(rv, match_t(), statements, path->path->name);
-    } else if (auto *sel = rv->p4state->selectExpression->to<IR::SelectExpression>()) {
-        for (auto ce : sel->selectCases)
-            addMatch(rv, buildMatch(match_size, ce->keyset), statements,
-                     ce->state->path->name);
-    } else {
-        BUG("Invalid select expression %1%", rv->p4state->selectExpression); }
+    if (!state->p4State->selectExpression) return state;
+    if (auto* path = state->p4State->selectExpression->to<IR::PathExpression>()) {
+        auto match = new IR::Tofino::ParserMatch(match_t(), shift, statements);
+        state->match.push_back(match);
 
-    return rv;
+        AutoPushTransition transition(transitionStack, state, match);
+        if (transition.isValid)
+            match->next = getState(path->path->name);
+        else
+            return nullptr;  // One bad transition means the whole state's bad.
+
+        return state;
+    }
+    if (!state->p4State->selectExpression->is<IR::SelectExpression>())
+        BUG("Invalid select expression %1%", state->p4State->selectExpression);
+
+    // We have a select expression. Lower it to Tofino IR.
+    int matchSize = 0;
+    auto selectExpr = state->p4State->selectExpression->to<IR::SelectExpression>();
+    for (auto* component : selectExpr->select->components) {
+        matchSize += component->type->width_bits();
+        pushOrAppendToVector(state->select, rewriteSelect(component));
+    }
+
+    // Generate a ParserMatch for each outgoing transition.
+    for (auto selectCase : selectExpr->selectCases) {
+        auto matchVal = buildMatch(matchSize, selectCase->keyset);
+        auto match = new IR::Tofino::ParserMatch(matchVal, shift, statements);
+        state->match.push_back(match);
+
+        AutoPushTransition transition(transitionStack, state, match);
+        if (transition.isValid)
+            match->next = getState(selectCase->state->path->name);
+        else
+            return nullptr;  // One bad transition means the whole state's bad.
+    }
+
+    return state;
 }
 
 }  // namespace Tofino

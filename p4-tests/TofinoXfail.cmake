@@ -304,8 +304,8 @@ set (TOFINO_XFAIL_TESTS
   extensions/p4_tests/p4_14/test_config_192_stateful_driven_by_hash.p4
   extensions/p4_tests/p4_14/test_config_195_stateful_predicate_output.p4
   extensions/p4_tests/p4_14/test_config_199_stateful_constant_index.p4
-# Google Tor - we know it fails for now
-  extensions/p4_tests/p4_16/google-tor/p4/spec/tor.p4
+# Google Tor - we know it *works*!
+# extensions/p4_tests/p4_16/google-tor/p4/spec/tor.p4
 # support for unions
   testdata/p4_16_samples/union-valid-bmv2.p4
 # Tofino expected failures (Glass fails as well)
@@ -318,7 +318,9 @@ set (TOFINO_XFAIL_TESTS
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
   extensions/p4_tests/p4_14/c2/COMPILER-379/case2210.p4
   extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-217/port_parser.p4
+# XXX(seth): Why is this a negative test? Passes now. Am I misunderstanding
+# what "XFAIL_NEGATIVE" is supposed to mean?
+# extensions/p4_tests/p4_14/c1/COMPILER-217/port_parser.p4
   extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
   extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
   extensions/p4_tests/p4_14/c1/COMPILER-235/vag1662.p4
@@ -433,8 +435,82 @@ set (TOFINO_XFAIL_TESTS
 
 # Assertion failed: (start >= 1 && start < width_i), function taint_ccgf, file phv/cluster_phv_container.cpp, line 282.
 # It's suggestive that these all involve header stacks.
+# XXX(seth): This problem was diagnosed, and the fix is known. We write to
+# `stack.$push`, but expect to read the result from `stack.$stkvalid`, a field
+# which is overlayed with `stack.$push`. Since nothing ever reads `stack.$push`,
+# we dead code eliminate the write, which breaks stuff. The fix is to totally
+# remove `stack.$push` and just write to `stack.$stkvalid` directly. Nobody has
+# had time to implement it yet, though.
   testdata/p4_14_samples/instruct5.p4
   extensions/p4_tests/p4_14/test_config_93_push_and_pop.p4
+
+# Assertion failed: (cluster_vec.size()), function num_ingress_collections, file /Users/sfowler/Code/bf-p4c-compilers/bf-p4c-compilers/p4c/extensions/tofino/phv/cluster_phv_mau.cpp, line 336.
+  testdata/p4_14_samples/issue604.p4
+  testdata/p4_14_samples/17-Minimal.p4
+  testdata/p4_14_samples/02-DeadMetadata2.p4
+  testdata/p4_14_samples/03-DeadMetadata3.p4
+  testdata/p4_14_samples/01-DeadMetadata1.p4
+  testdata/p4_14_samples/inline.p4
+  testdata/p4_14_samples/16-NoHeaders.p4
+  extensions/p4_tests/p4_14/c2/COMPILER-261/case1803.p4
+  testdata/p4_14_samples/issue638-2.p4
+  testdata/p4_14_samples/copy_to_cpu.p4
+  testdata/p4_14_samples/overflow.p4
+  extensions/p4_tests/p4_14/jenkins/pcie_pkt_test/pcie_pkt_test_one.p4
+  testdata/p4_16_samples/action-synth.p4
+  testdata/p4_16_samples/action_selector_unused-bmv2.p4
+  extensions/p4_tests/p4_14/c2/COMPILER-383/case2241.p4
+  testdata/p4_16_samples/clone-bmv2.p4
+  testdata/p4_16_samples/def-use.p4
+  testdata/p4_16_samples/hash-bmv2.p4
+  testdata/p4_16_samples/hit-expr.p4
+  testdata/p4_16_samples/drop-bmv2.p4
+  testdata/p4_16_samples/issue249.p4
+  testdata/p4_16_samples/intrinsic-bmv2.p4
+  testdata/p4_16_samples/issue134-bmv2.p4
+  testdata/p4_16_samples/issue270-bmv2.p4
+  testdata/p4_16_samples/issue272-1-bmv2.p4
+  testdata/p4_16_samples/issue272-2-bmv2.p4
+  testdata/p4_16_samples/issue430-1-bmv2.p4
+  testdata/p4_16_samples/issue496.p4
+  testdata/p4_16_samples/issue430-bmv2.p4
+  testdata/p4_16_samples/issue356-bmv2.p4
+  testdata/p4_16_samples/junk-prop-bmv2.p4
+  testdata/p4_16_samples/mux-bmv2.p4
+  testdata/p4_16_samples/slice-def-use.p4
+  testdata/p4_16_samples/slice-def-use1.p4
+  testdata/p4_16_samples/x-bmv2.p4
+  testdata/p4_14_samples/issue780-1.p4
+  testdata/p4_14_samples/issue780-2.p4
+  testdata/p4_14_samples/issue780-3.p4
+  testdata/p4_14_samples/issue780-5.p4
+  testdata/p4_14_samples/issue780-7.p4
+  testdata/p4_14_samples/issue780-9.p4
+  testdata/p4_14_samples/issue767.p4
+  testdata/p4_16_samples/table-entries-ternary-bmv2.p4
+
+# tofino/parde/extract_parser.cpp:192: Null igParser
+# XXX(seth): The extract_maupipe() code is actually passing a null ingress
+# parser into extractParser(). I'm not sure what's happening there, but
+# presumably it's happening at an earlier layer than the Tofino backend parser
+# stuff.
+  testdata/p4_14_samples/parser4.p4
+  testdata/p4_14_samples/parser2.p4
+  testdata/p4_14_samples/parser1.p4
+
+# p4c/testdata/p4_16_samples/issue355-bmv2.p4(23): error: Cannot resolve computed select:
+#   transition select(pkt.lookahead<ethernet_t>().etherType) {
+# XXX(seth): This code just uses packet_in.lookahead() in a way which isn't
+# supported yet.
+  testdata/p4_16_samples/issue355-bmv2.p4
+
+# The STF test fails due to malformed packet data.
+# XXX(seth): I haven't had a chance to deeply analyze the problem, but nothing
+# looks wrong in the parser or deparser program that we generate. The following
+# PHV allocation validation warnings are suggestive:
+# warning: Container TW3 contains deparsed header fields, but it has unused bits: ( 22:ingress::h.v<1> I off=0 ref deparsed /t_phv_8,PHV-259;/|t_phv_8,0..0|[0:0]->[TW3](31); )
+# warning: Container TW19 contains deparsed header fields, but it has unused bits: ( 44:egress::h.v<1> E off=0 ref deparsed /t_phv_13,PHV-275;/|t_phv_13,0..0|[0:0]->[TW19](31); )
+  testdata/p4_16_samples/table-entries-ternary-bmv2.p4
   )
 
 if (HARLYN_STF)

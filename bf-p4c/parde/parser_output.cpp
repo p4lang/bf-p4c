@@ -8,7 +8,6 @@ struct ExtractDestFormatter {
     bitrange bits;
 };
 
-
 std::ostream& operator<<(std::ostream& out, const ExtractDestFormatter& format) {
     out << canon_name(format.dest->name);
     if (format.bits.lo != 0 || format.bits.hi + 1 != format.dest->size)
@@ -78,8 +77,9 @@ static void output_match(std::ostream &out, const PhvInfo &phv, indent_t indent,
         out << indent << "0x*:" << std::endl;
     ++indent;
     match->stmts.apply(OutputExtracts(out, phv, indent));
-    if (match->shift)
-        out << indent << (match->shift < 0 ? "# " : "") << "shift: " << match->shift << std::endl;
+    if (match->shift && *match->shift != 0)
+        out << indent << (*match->shift < 0 ? "# " : "")
+            << "shift: " << *match->shift << std::endl;
     out << indent << "next: ";
     if (match->next)
         out << canon_name(match->next->name);
@@ -89,23 +89,56 @@ static void output_match(std::ostream &out, const PhvInfo &phv, indent_t indent,
     --indent;
 }
 
+class OutputSelect : public Inspector {
+ public:
+    explicit OutputSelect(std::ostream& out) : out(out) { }
+
+ private:
+    bool preorder(const IR::Tofino::SelectBuffer* select) {
+        auto bits = select->selectedBits();
+        if (bits.loByte() == bits.hiByte())
+            out << bits.loByte();
+        else
+            out << bits.loByte() << ".." << bits.hiByte();
+        return false;
+    }
+
+    bool preorder(const IR::Tofino::TransitionPrimitive*) {
+        out << "/* ??? */" << std::endl;
+        return false;
+    }
+
+    std::ostream& out;
+};
+
 static void output_state(std::ostream &out, const PhvInfo &phv, indent_t indent,
                          const IR::Tofino::ParserState *state) {
     out << indent++ << canon_name(state->name) << ':' << std::endl;
     if (!state->select.empty()) {
         out << indent << "match: ";
         const char *sep = "[ ";
-        for (auto e : state->select) {
-            if (auto field = phv.field(e))
-                out << sep << canon_name(field->name);
-            else if (e->is<IR::Constant>())
-                out << sep << e->toString();
-            else if (auto r = e->to<IR::Range>())
-                out << sep << r->left->toString() << ".." << r->right->toString();
-            else
-                out << sep << "/* " << *e << " */";
-            sep = ", "; }
-        out << " ]" << std::endl; }
+        for (auto* select : state->select) {
+            out << sep;
+            select->apply(OutputSelect(out));
+            sep = ", ";
+        }
+        out << " ]" << std::endl;
+
+        // Print human-friendly info about where the select offsets come from.
+        for (auto* select : state->select) {
+            out << indent << "      # - [";
+            select->apply(OutputSelect(out));
+            out << "] ";
+            if (auto* selectBuffer = select->to<IR::Tofino::SelectBuffer>()) {
+                if (selectBuffer->source)
+                    out << selectBuffer->source << std::endl;
+                else
+                    out << "(buffer)" << std::endl;
+            } else {
+                out << select << std::endl;
+            }
+        }
+    }
     for (auto m : state->match)
         output_match(out, phv, indent, m);
     --indent;

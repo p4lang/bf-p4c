@@ -101,6 +101,11 @@ bool TofinoWriteContext::isRead(bool root_value) {
     if (ctxt->node->is<IR::Tofino::Emit>())
         return true;
 
+    // A computed select reads its source.
+    if (ctxt->node->is<IR::Tofino::SelectComputed>())
+        return true;
+
+    // XXX(seth): Are these checks useful anymore?
     if (auto *match = ctxt->node->to<IR::Tofino::ParserMatch>()) {
         return (size_t)(ctxt->child_index) < match->stmts.size(); }
     if (auto *state = ctxt->node->to<IR::Tofino::ParserState>()) {

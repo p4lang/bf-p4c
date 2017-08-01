@@ -9,24 +9,10 @@ class ElimUnused::ParserMetadata : public Transform {
         prune();
         return salu; }
 
-    // XXX(seth): This is a gross hack. Right now, if we extract a field in a
-    // ParserMatch and the *only* use of that field is as part of the select
-    // expression in that ParserState, FieldDefUse doesn't consider the field
-    // used, because its traversal order means that it sees the read before the
-    // write. Until that's fixed, this check serves as a workaround.
-    bool usedInParserSelect(const PhvInfo::Field* field) {
-        auto* state = findContext<IR::Tofino::ParserState>();
-        if (state == nullptr) return false;
-        for (auto expr : state->select)
-            if (self.phv.field(expr) == field) return true;
-        return false;
-    }
-
     IR::Tofino::Extract* preorder(IR::Tofino::Extract* extract) override {
         auto field = self.phv.field(extract->dest);
         if (!field) return extract;
         if (!self.defuse.getUses(this, extract->dest).empty()) return extract;
-        if (usedInParserSelect(field)) return extract;
         LOG1("elim unused " << extract);
         return nullptr;
     }

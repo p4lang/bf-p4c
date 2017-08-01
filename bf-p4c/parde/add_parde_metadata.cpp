@@ -53,8 +53,8 @@ bool AddMetadataShims::preorder(IR::Tofino::Parser *parser) {
         // resubmit flag. If it's not set, we parse the ingress metadata and
         // transition to phase 0. If it is set, we have a resubmitted packet,
         // which we need to handle differently.
-        // XXX(seth): For now, we just skip directly to the start state when we
-        // encounter a resubmitted packet, but we probably need to do more.
+        // XXX(seth): For now, we check the resubmit flag but branch to the same
+        // place no matter what. We need to figure out what to do here.
         auto resubmitFlag = gen_fieldref(meta, "resubmit_flag");
         IR::Vector<IR::Tofino::ParserPrimitive> init = {
             new IR::Tofino::ExtractBuffer(resubmitFlag, 0, 1),
@@ -63,11 +63,11 @@ bool AddMetadataShims::preorder(IR::Tofino::Parser *parser) {
         };
         auto normalMatch = new IR::Tofino::ParserMatch(match_t(8, 0, 0x80), 0,
                                                        init, intrinsicState);
-        auto resubmitMatch = new IR::Tofino::ParserMatch(match_t(8, 0x80, 0x80), 16,
-                                                         init, parser->start);
+        auto resubmitMatch = new IR::Tofino::ParserMatch(match_t(8, 0x80, 0x80), 0,
+                                                         init, intrinsicState);
         parser->start =
             new IR::Tofino::ParserState("$ingress_metadata_shim", INGRESS,
-                                        { resubmitFlag },
+                                        { new IR::Tofino::SelectBuffer(0, 1) },
                                         { normalMatch, resubmitMatch });
     } else if (parser->gress == EGRESS) {
         // Add a state that parses bridged metadata. This is just a placeholder;

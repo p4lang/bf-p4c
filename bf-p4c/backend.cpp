@@ -50,9 +50,8 @@ limitations under the License.
 #include "tofino/mau/table_summary.h"
 #include "tofino/parde/asm_output.h"
 #include "tofino/parde/bridge_metadata.h"
-#include "tofino/parde/compute_shifts.h"
 #include "tofino/parde/digest.h"
-#include "tofino/parde/match_keys.h"
+#include "tofino/parde/resolve_computed.h"
 #include "tofino/parde/split_big_states.h"
 #include "tofino/parde/stack_push_shims.h"
 #include "tofino/phv/asm_output.h"
@@ -195,6 +194,7 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
         &phv,
         &defuse,
         new AddBridgedMetadata(phv, defuse),
+        new ResolveComputedParserExpressions,
         &phv,
         &defuse,
         new MetadataConstantPropagation(phv, defuse),
@@ -235,8 +235,6 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
         new CheckTableNameDuplicate,
         new TableFindSeqDependencies,  // not needed?
         new CheckTableNameDuplicate,
-        new ComputeShifts,
-        new DumpPipe("After ComputeShifts"),
         &defuse,
         new ElimUnused(phv, defuse),
         new PhvInfo::SetReferenced(phv),
@@ -249,7 +247,6 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
         new PHV::ValidateAllocation(phv),
         new IXBarRealign(phv),
         new TotalInstructionAdjustment(phv),
-        new LoadMatchKeys(phv),
         new SplitPhvUse(phv),
         new SplitBigStates(phv),  // depends on SplitPhvUse
         new DumpPipe("Final table graph"),

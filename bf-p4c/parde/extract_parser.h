@@ -37,26 +37,8 @@ class P4Parser;
 namespace Tofino {
 
 struct ParserInfo {
-  const IR::Tofino::Parser* ingressParser;
-  const IR::Tofino::Deparser* ingressDeparser;
-  const IR::Tofino::Parser* egressParser;
-  const IR::Tofino::Deparser* egressDeparser;
-
-  const IR::Tofino::Parser* parser(gress_t gress) {
-    switch (gress) {
-      case INGRESS: return ingressParser;
-      case EGRESS: return egressParser;
-    }
-    BUG("Unexpected *gress value");
-  }
-
-  const IR::Tofino::Deparser* deparser(gress_t gress) {
-    switch (gress) {
-      case INGRESS: return ingressDeparser;
-      case EGRESS: return egressDeparser;
-    }
-    BUG("Unexpected *gress value");
-  }
+  const IR::Tofino::Parser* parsers[2] = { nullptr, nullptr };
+  const IR::Tofino::Deparser* deparsers[2] = { nullptr, nullptr };
 };
 
 /**

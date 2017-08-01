@@ -514,7 +514,19 @@ class ConvertIndexToHeaderStackItemRef : public Transform {
     const IR::Expression *preorder(IR::ArrayIndex *idx) override {
         auto type = idx->type->to<IR::Type_Header>();
         if (!type) BUG("%1% is not a header stack ref", idx->type);
-        return new IR::HeaderStackItemRef(idx->srcInfo, type, idx->left, idx->right); }
+        return new IR::HeaderStackItemRef(idx->srcInfo, type, idx->left, idx->right);
+    }
+    const IR::Expression* preorder(IR::Member* member) override {
+        auto type = member->type->to<IR::Type_Header>();
+        if (!type) return member;
+        if (member->member == "next")
+            return new IR::HeaderStackItemRef(member->srcInfo, type, member->expr,
+                                              new IR::Tofino::UnresolvedStackNext);
+        if (member->member == "last")
+            return new IR::HeaderStackItemRef(member->srcInfo, type, member->expr,
+                                              new IR::Tofino::UnresolvedStackLast);
+        return member;
+    }
 };
 
 const IR::Tofino::Pipe* extract_v1model_arch(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
@@ -556,15 +568,15 @@ const IR::Tofino::Pipe* extract_v1model_arch(P4::ReferenceMap* refMap, P4::TypeM
         new SplitComplexInstanceRef,
         new RemoveInstanceRef,
         new ConvertIndexToHeaderStackItemRef,
-        new RewriteForTofino,
+        new RewriteForTofino(refMap, typeMap),
     };
     parser = parser->apply(fixups);
     deparser = deparser->apply(fixups);
 
     auto parserInfo = Tofino::extractParser(rv, parser, deparser);
     for (auto gress : { INGRESS, EGRESS }) {
-        rv->thread[gress].parser = parserInfo.parser(gress);
-        rv->thread[gress].deparser = parserInfo.deparser(gress);
+        rv->thread[gress].parser = parserInfo.parsers[gress];
+        rv->thread[gress].deparser = parserInfo.deparsers[gress];
     }
 
     // Check for a phase 0 table. If one exists, it'll be removed from the
@@ -650,7 +662,7 @@ const IR::Tofino::Pipe* extract_native_arch(P4::ReferenceMap* refMap, P4::TypeMa
         new SplitComplexInstanceRef,
         new RemoveInstanceRef,
         new ConvertIndexToHeaderStackItemRef,
-        new RewriteForTofino,
+        new RewriteForTofino(refMap, typeMap),
     };
     ingress_parser = ingress_parser->apply(fixups);
     ingress = ingress->apply(fixups);
@@ -662,8 +674,8 @@ const IR::Tofino::Pipe* extract_native_arch(P4::ReferenceMap* refMap, P4::TypeMa
     auto parserInfo = Tofino::extractParser(rv, ingress_parser, ingress_deparser,
                                                 egress_parser, egress_deparser);
     for (auto gress : { INGRESS, EGRESS }) {
-        rv->thread[gress].parser = parserInfo.parser(gress);
-        rv->thread[gress].deparser = parserInfo.deparser(gress);
+        rv->thread[gress].parser = parserInfo.parsers[gress];
+        rv->thread[gress].deparser = parserInfo.deparsers[gress];
     }
 
     ingress->apply(GetTofinoTables(refMap, typeMap, INGRESS, rv));

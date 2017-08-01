@@ -1,5 +1,19 @@
 #include "asm_output.h"
 
+// XXX(seth): This duplicates the very similar ExtractDestFormatter class in
+// parser_output.cpp; we need to combine them.
+struct DeparserSourceFormatter {
+    const PhvInfo::Field* dest;
+    bitrange bits;
+};
+
+std::ostream& operator<<(std::ostream& out, const DeparserSourceFormatter& format) {
+    out << canon_name(format.dest->name);
+    if (format.bits.lo != 0 || format.bits.hi + 1 != format.dest->size)
+        out << '.' << format.bits.lo << '-' << format.bits.hi;
+    return out;
+}
+
 class OutputDictionary : public Inspector {
     std::ostream        &out;
     const PhvInfo       &phv;
@@ -19,24 +33,32 @@ class OutputDictionary : public Inspector {
             return false; }
         auto &alloc = field->for_bit(bits.lo);
         if (last == alloc.container) {
-            LOG2("skipping repeat container " << alloc << " " << field->name);
-            return false; }
+            out << indent << "    # - " << alloc.container_bits() << " "
+                << DeparserSourceFormatter{field, bits} << std::endl;
+            return false;
+        }
         last = alloc.container;
         int size = alloc.container.size() / 8;
-        if (bits.size() != size * 8) {
+        if (bits.size() != size * 8)
             out << indent << alloc.container;
-        } else {
-            out << indent << canon_name(field->name);
-            if (bits.lo != 0 || bits.hi + 1 != field->size)
-                out << '.' << bits.lo << '-' << bits.hi; }
+        else
+            out << indent << DeparserSourceFormatter{field, bits};
 
-        auto povBit = phv.field(emit->povBit, &bits);
+        bitrange povAllocBits;
+        auto povBit = phv.field(emit->povBit, &povAllocBits);
         if (!povBit) {
             out << indent << " # no phv for pov: " << *emit->povBit << std::endl;
             return false;
         }
         out << ": " << canon_name(trim_asm_name(povBit->name)) << std::endl;
-        return false; }
+
+        if (bits.size() != size * 8) {
+            out << indent << "    # - " << alloc.container_bits() << " "
+                << DeparserSourceFormatter{field, bits} << std::endl;
+        }
+
+        return false;
+    }
 
  public:
     OutputDictionary(std::ostream &out, const PhvInfo &phv, indent_t indent)

@@ -17,6 +17,8 @@ limitations under the License.
 #ifndef _EXTENSIONS_TOFINO_IR_BITRANGE_H_
 #define _EXTENSIONS_TOFINO_IR_BITRANGE_H_
 
+#include <boost/optional.hpp>
+
 #include <algorithm>
 #include <iosfwd>
 #include <utility>
@@ -31,13 +33,20 @@ enum class Endian : uint8_t {
 };
 
 /// A closed range of bits specified in terms of a specific bit order.
-template <Endian _>
+template <Endian Order>
 struct bit_range {
     bit_range() : lo(0), hi(0) { }
     bit_range(int lo, int hi) : lo(lo), hi(hi) { }
 
     int size() const                  { return hi - lo + 1; }
     operator std::pair<int, int>()    { return std::make_pair(lo, hi); }
+
+    /// @return a new range with the same size, but shifted towards the
+    /// high-numbered bits by the provided amount. No rotation or clamping
+    /// to zero is applied.
+    bit_range shiftedBy(int offset) const {
+        return bit_range(lo + offset, hi + offset);
+    }
 
     /// @return the byte containing the lowest-numbered bit in this range.
     int loByte() const { return lo / 8U; }
@@ -66,6 +75,18 @@ struct bit_range {
     bool overlaps(bit_range a) const  { return contains(a.lo) || a.contains(lo); }
     bool overlaps(int l, int h) const { return contains(l) || (lo >= l && lo <= h); }
 
+    /// @return a range which contains all the bits which are included in both
+    /// this range and the provided range, or boost::none if there are no
+    /// bits in common.
+    boost::optional<bit_range> intersectWith(bit_range a) const {
+        return intersectWith(a.lo, a.hi);
+    }
+    boost::optional<bit_range> intersectWith(int l, int h) const {
+        bit_range rv = { std::max(lo, l), std::min(hi, h) };
+        if (rv.hi <= rv.lo) return boost::none;
+        return rv;
+    }
+
     /// @return the smallest range that contains all of the bits in both this
     /// range and the provided range.
     bit_range unionWith(bit_range a) const {
@@ -75,6 +96,23 @@ struct bit_range {
         bit_range rv = { std::min(lo, l), std::max(hi, h) };
         BUG_CHECK(rv.lo <= rv.hi, "invalid bit_range::unionWith");
         return rv;
+    }
+
+    /// @return this range, but reinterpreted as a region within a space of
+    /// the provided size and represented in the specified bit order.
+    template <Endian DestOrder>
+    bit_range<DestOrder> toSpace(int spaceSize) {
+        BUG_CHECK(spaceSize > 0, "Can't represent an empty range");
+        if (DestOrder == Order) return bit_range<DestOrder>(lo, hi);
+        switch (DestOrder) {
+            case Endian::Network:
+                return bit_range<DestOrder>((spaceSize - 1) - hi,
+                                            (spaceSize - 1) - lo);
+            case Endian::Little:
+                return bit_range<DestOrder>((spaceSize - 1) - hi,
+                                            (spaceSize - 1) - lo);
+        }
+        BUG("Unexpected bit order");
     }
 
     /// The lowest numbered bit in the range. For Endian::Network, this is the
@@ -87,13 +125,20 @@ struct bit_range {
 };
 
 /// A half-open range of bits specified in terms of a specific bit order.
-template <Endian _>
+template <Endian Order>
 struct bit_interval {
     bit_interval() : lo(0), hi(0) { }
     bit_interval(int lo, int hi) : lo(lo), hi(hi) { }
 
     int size() const                  { return hi - lo; }
     operator std::pair<int, int>()    { return std::make_pair(lo, hi); }
+
+    /// @return a new interval with the same size, but shifted towards the
+    /// high-numbered bits by the provided amount. No rotation or clamping
+    /// to zero is applied.
+    bit_interval shiftedBy(int offset) const {
+        return empty() ? bit_interval() : bit_interval(lo + offset, hi + offset);
+    }
 
     /// @return the byte containing the lowest-numbered bit in this interval.
     int loByte() const { return empty() ? 0 : lo / 8U; }
@@ -149,6 +194,20 @@ struct bit_interval {
         bit_interval rv = { std::min(lo, l), std::max(hi, h) };
         BUG_CHECK(rv.lo <= rv.hi, "invalid bit_interval::unionWith");
         return rv;
+    }
+
+    /// @return this interval, but reinterpreted as a region within a space of
+    /// the provided size and represented in the specified bit order.
+    template <Endian DestOrder>
+    bit_interval<DestOrder> toSpace(int spaceSize) {
+        if (DestOrder == Order) return bit_interval<DestOrder>(lo, hi);
+        switch (DestOrder) {
+            case Endian::Network:
+                return bit_interval<DestOrder>(spaceSize - hi, spaceSize - lo);
+            case Endian::Little:
+                return bit_interval<DestOrder>(spaceSize - hi, spaceSize - lo);
+        }
+        BUG("Unexpected bit order");
     }
 
     /// The lowest numbered bit in the range. For Endian::Network, this is the
