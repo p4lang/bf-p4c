@@ -356,7 +356,8 @@ PHV_MAU_Group_Assignments::phv_container(std::string asm_string) {
 int
 PHV_MAU_Group_Assignments::num_ingress_collections(std::vector<Cluster_PHV *>& cluster_vec) {
     //
-    assert(cluster_vec.size());
+    // assert(cluster_vec.size()); possible to have 0 fields alloc to TPHV
+    //
     int ingress_and_egress = 0;
     int ingress = 0;
     for (auto &cl : cluster_vec) {
