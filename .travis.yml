@@ -1,7 +1,7 @@
 services:
 - docker
 env:
-  matrix:
+  global:
   - MAKEFLAGS="-j2"
   - DOCKER_USERNAME="bfndocker"
 
