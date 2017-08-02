@@ -433,15 +433,6 @@ set (TOFINO_XFAIL_TESTS
 # This causes the parser code to be unable to find a valid extractor allocation.
   testdata/p4_16_samples/table-entries-valid-bmv2.p4
 
-# Assertion failed: (start >= 1 && start < width_i), function taint_ccgf, file phv/cluster_phv_container.cpp, line 282.
-# It's suggestive that these all involve header stacks.
-# XXX(seth): This problem was diagnosed, and the fix is known. We write to
-# `stack.$push`, but expect to read the result from `stack.$stkvalid`, a field
-# which is overlayed with `stack.$push`. Since nothing ever reads `stack.$push`,
-# we dead code eliminate the write, which breaks stuff. The fix is to totally
-# remove `stack.$push` and just write to `stack.$stkvalid` directly. Nobody has
-# had time to implement it yet, though.
-  testdata/p4_14_samples/instruct5.p4
   extensions/p4_tests/p4_14/test_config_93_push_and_pop.p4
 
 # Assertion failed: (cluster_vec.size()), function num_ingress_collections, file /Users/sfowler/Code/bf-p4c-compilers/bf-p4c-compilers/p4c/extensions/tofino/phv/cluster_phv_mau.cpp, line 336.
@@ -487,7 +478,6 @@ set (TOFINO_XFAIL_TESTS
   testdata/p4_14_samples/issue780-7.p4
   testdata/p4_14_samples/issue780-9.p4
   testdata/p4_14_samples/issue767.p4
-  testdata/p4_16_samples/table-entries-ternary-bmv2.p4
 
 # tofino/parde/extract_parser.cpp:192: Null igParser
 # XXX(seth): The extract_maupipe() code is actually passing a null ingress
@@ -504,13 +494,6 @@ set (TOFINO_XFAIL_TESTS
 # supported yet.
   testdata/p4_16_samples/issue355-bmv2.p4
 
-# The STF test fails due to malformed packet data.
-# XXX(seth): I haven't had a chance to deeply analyze the problem, but nothing
-# looks wrong in the parser or deparser program that we generate. The following
-# PHV allocation validation warnings are suggestive:
-# warning: Container TW3 contains deparsed header fields, but it has unused bits: ( 22:ingress::h.v<1> I off=0 ref deparsed /t_phv_8,PHV-259;/|t_phv_8,0..0|[0:0]->[TW3](31); )
-# warning: Container TW19 contains deparsed header fields, but it has unused bits: ( 44:egress::h.v<1> E off=0 ref deparsed /t_phv_13,PHV-275;/|t_phv_13,0..0|[0:0]->[TW19](31); )
-  testdata/p4_16_samples/table-entries-ternary-bmv2.p4
   )
 
 if (HARLYN_STF)
@@ -534,6 +517,21 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
   testdata/p4_16_samples/table-entries-lpm-bmv2.p4
   testdata/p4_16_samples/table-entries-priority-bmv2.p4
   testdata/p4_16_samples/table-entries-range-bmv2.p4
-  testdata/p4_16_samples/table-entries-ternary-bmv2.p
+# The STF test fails due to malformed packet data.
+# XXX(seth): I haven't had a chance to deeply analyze the problem, but nothing
+# looks wrong in the parser or deparser program that we generate. The following
+# PHV allocation validation warnings are suggestive:
+# warning: Container TW3 contains deparsed header fields, but it has unused bits: ( 22:ingress::h.v<1> I off=0 ref deparsed /t_phv_8,PHV-259;/|t_phv_8,0..0|[0:0]->[TW3](31); )
+# warning: Container TW19 contains deparsed header fields, but it has unused bits: ( 44:egress::h.v<1> E off=0 ref deparsed /t_phv_13,PHV-275;/|t_phv_13,0..0|[0:0]->[TW19](31); )
+  testdata/p4_16_samples/table-entries-ternary-bmv2.p4
+# Assertion failed: (start >= 1 && start < width_i), function taint_ccgf, file phv/cluster_phv_container.cpp, line 282.
+# It's suggestive that these all involve header stacks.
+# XXX(seth): This problem was diagnosed, and the fix is known. We write to
+# `stack.$push`, but expect to read the result from `stack.$stkvalid`, a field
+# which is overlayed with `stack.$push`. Since nothing ever reads `stack.$push`,
+# we dead code eliminate the write, which breaks stuff. The fix is to totally
+# remove `stack.$push` and just write to `stack.$stkvalid` directly. Nobody has
+# had time to implement it yet, though.
+  testdata/p4_14_samples/instruct5.p4
   )
 endif() # HARLYN_STF
