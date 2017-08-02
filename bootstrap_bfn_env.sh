@@ -89,9 +89,12 @@ export MAKEFLAGS
 
 function version_LT() { test "$(echo "$@" | tr " " "\n" | sort -rV | head -n 1)" != "$1"; }
 
+tmpdir=$(mktemp --directory)
+echo "Using $tmpdir for temporary build files"
+
 echo "Checking for and installing protobuf"
 if ! `pkg-config protobuf` || version_LT `pkg-config --modversion protobuf` "3.0.0"; then
-    pushd /tmp
+    pushd $tmpdir
     sudo apt-get install -y curl unzip
     git clone --recursive https://github.com/google/protobuf
     cd protobuf
@@ -105,12 +108,12 @@ if ! `pkg-config protobuf` || version_LT `pkg-config --modversion protobuf` "3.0
     cd ../
     /bin/rm -rf protobuf
     PI_clean_before_rebuild=true
-    popd
+    popd # tmpdir
 fi
 
 echo "Checking for and installing grpc"
 if ! `pkg-config grpc++` || version_LT `pkg-config --modversion grpc++` "1.3.0"; then
-    pushd /tmp
+    pushd $tmpdir
     git clone --recursive https://github.com/google/grpc.git
     cd grpc
     git checkout tags/v1.3.2
@@ -121,7 +124,7 @@ if ! `pkg-config grpc++` || version_LT `pkg-config --modversion grpc++` "1.3.0";
     cd ../
     /bin/rm -rf grpc
     PI_clean_before_rebuild=true
-    popd
+    popd # tmpdir
 fi
 
 sudo pip install protobuf grpcio || die "Failed to install python grpc packages"
@@ -283,14 +286,17 @@ pushd model >/dev/null
 popd >/dev/null
 
 if [ ! -x "$(which ptf)" ]; then
-    pushd /tmp
+    pushd $tmpdir
     git clone https://github.com/p4lang/ptf.git
     cd ptf
     sudo python setup.py install
     cd ..
     sudo rm -rf ptf
-    popd
+    popd # tmpdir
 fi
 
 echo "Checking for huge pages"
 sudo $curdir/scripts/ptf_hugepage_setup.sh
+
+echo "Removing $tmpdir"
+rm -rf $tmpdir
