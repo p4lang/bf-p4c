@@ -6,10 +6,11 @@
 // -----------------------------------------------------------------------------
 // COMMON TYPES
 // -----------------------------------------------------------------------------
-typedef bit<9> portid_t;  // Port ID -- ingress or egress port
-typedef bit<16> mgid_t;   // Multicast group id
-typedef bit<5> qid_t;     // Queue id
-typedef bit<4> cloneid_t; // Clone id
+typedef bit<9> portid_t;     // Port ID -- ingress or egress port
+typedef bit<16> mgid_t;      // Multicast group id
+typedef bit<5> qid_t;        // Queue id
+typedef bit<4> cloneid_t;    // Clone id
+typedef bit<10> mirrorid_t;  // Mirror id
 
 /// Meter types
 enum meter_type_t {
@@ -31,7 +32,7 @@ enum counter_type_t {
     PACKETS_AND_BYTES
 }
 
-/// Selector mode 
+/// Selector mode
 enum selector_mode_t {
     FAIR,
     RESILIENT
@@ -45,7 +46,23 @@ enum hash_algorithm_t {
 }
 
 match_kind {
+    // exact
+    // ternary
+    // lpm
     range
+}
+
+error {
+    // NoError,           // No error.
+    // PacketTooShort,    // Not enough bits in packet for 'extract'.
+    // NoMatch,           // 'select' expression has no matches.
+    // StackOutOfBounds,  // Reference to invalid element of a header stack.
+    // HeaderTooShort,    // Extracting too many bits into a varbit field.
+    // ParserTimeout      // Parser execution time limit exceeded.
+    CounterRange,
+    PhvOwner,
+    MultiWrite
+    // Add more errors here.
 }
 
 // -----------------------------------------------------------------------------
@@ -53,9 +70,11 @@ match_kind {
 // -----------------------------------------------------------------------------
 header ingress_intrinsic_metadata_t {
     bit<1> resubmit_flag;                // flag distinguising original packets
-                                         // from r9esubmitted packets.
+                                         // from resubmitted packets.
     bit<1> _pad1;
+
     bit<2> packet_version;               // packet version.
+
     bit<3> _pad2;
 
     portid_t ingress_port;               // ingress physical port id.
@@ -65,35 +84,8 @@ header ingress_intrinsic_metadata_t {
                                          // taken at the ingress MAC.
 }
 
-/// Produced by Packet Generator
-header pktgen_timer_header_t {
-    bit<3> _pad1;
-    bit<2> pipe_id;
-    bit<3> app_id;
-    bit<8> _pad2;
-    bit<16> batch_id;
-    bit<16> packet_id;
-}
-
-header pktgen_port_down_header_t {
-    bit<3> _pad1;
-    bit<2> pipe_id;
-    bit<3> app_id;
-    bit<15> _pad2;
-    bit<9> port_num;
-    bit<16> packet_id;
-}
-
-header pktgen_recirc_header_t {
-    bit<3> _pad1;
-    bit<2> pipe_id;
-    bit<3> app_id;
-    bit<24> key;
-    bit<16> packet_id;
-}
-
 /// Produced by Ingress Parser-Auxiliary
-struct ingress_intrinsic_metadata_from_parser_aux_t {
+struct ingress_intrinsic_metadata_from_parser_t {
     bit<48> ingress_global_tstamp;       // global timestamp (ns) taken upon
                                          // arrival at ingress.
     bit<32> ingress_global_ver;          // global version number taken upon
@@ -169,15 +161,10 @@ struct ingress_intrinsic_metadata_for_tm_t {
                                          // pruning.
 
     bit<16> rid;                         // L3 replication id for multicast.
-                                         // used for pruning.
-
-    bit<10> ingress_mirror_id;           // ingress mirror id. must be presented
-                                         // to mirror buffer for mirrored
-                                         // packets.
 }
 
 struct ingress_intrinsic_metadata_for_mirror_buffer_t {
-    bit<10> ingress_mirror_id;           // ingress mirror id. must be presented
+    bit<10> mirror_id;                   // ingress mirror id. must be presented
                                          // to mirror buffer for mirrored
                                          // packets.
 }
@@ -228,31 +215,20 @@ header egress_intrinsic_metadata_t {
     bit<16> pkt_length;                  // Packet length, in bytes
 }
 
-struct egress_intrinsic_metadata_from_parser_aux_t {
+struct egress_intrinsic_metadata_from_parser_t {
     bit<48> egress_global_tstamp;        // global time stamp (ns) taken at the
                                          // egress pipe.
 
     bit<32> egress_global_ver;           // global version number taken at the
                                          // egress pipe.
 
-    bit<16> egress_parser_err;           // error flags indicating error(s)
+  bit<16> egress_parser_err;             // error flags indicating error(s)
                                          // encountered at egress
                                          // parser.
-
-    cloneid_t clone_digest_id;           // value indicating the digest ID,
-                                         // based on the field list ID.
-
-    bit<4> clone_src;                    // value indicating whether or not a
-                                         // packet is a cloned copy
-                                         // (see #defines in constants.p4)
-
-    bit<8> coalesce_sample_count;        // if clone_src indicates this packet
-                                         // is coalesced, the number of samples
-                                         // taken from other packets
 }
 
 struct egress_intrinsic_metadata_for_mirror_buffer_t {
-    bit<10> egress_mirror_id;            // egress mirror id. must be presented to
+    bit<10> mirror_id;                   // egress mirror id. must be presented to
                                          // mirror buffer for mirrored packets.
 
     bit<1> coalesce_flush;               // flush the coalesced mirror buffer
@@ -286,7 +262,54 @@ struct egress_intrinsic_metadata_for_output_port_t {
                                          //       for egress?
 }
 
-/// Checksum
+
+// -----------------------------------------------------------------------------
+// PACKET GENERATION
+// -----------------------------------------------------------------------------
+// Packet generator supports up to 8 applications and a total of 16KB packet 
+// payload. Each application is associated with one of the four trigger types:
+// - One-time timer
+// - Periodic timer
+// - Port down
+// - Packet recirculation
+// For recirculated packets, the event fires when the first 32 bits of the
+// recirculated packet matches the application match value and mask.
+// A triggered event may generate programmable number of batches with
+// programmable packets per batch.
+
+header pktgen_timer_header_t {
+    bit<3> _pad1;
+    bit<2> pipe_id;     // Pipe id
+    bit<3> app_id;      // Application id 
+    bit<8> _pad2;
+    bit<16> batch_id;   // Start at 0 and increment to a programmed number
+    bit<16> packet_id;  // Start at 0 and increment to a programmed number
+}
+
+header pktgen_port_down_header_t {
+    bit<3> _pad1;
+    bit<2> pipe_id;     // Pipe id
+    bit<3> app_id;      // Application id
+    bit<15> _pad2;
+    bit<9> port_num;    // Port number
+    bit<16> packet_id;  // Start at 0 and increment to a programmed number
+}
+
+header pktgen_recirc_header_t {
+    bit<3> _pad1;
+    bit<2> pipe_id;     // Pipe id
+    bit<3> app_id;      // Application id
+    bit<24> key;        // key from the recirculated packet 
+    bit<16> packet_id;  // Start at 0 and increment to a programmed number
+}
+
+// -----------------------------------------------------------------------------
+// CHECKSUM
+// -----------------------------------------------------------------------------
+// Tofino checksum engine can verify the checksums for header-only checksums
+// and calculate the residual (checksum minus the header field
+// contribution) for checksums that include the payload.
+// Checksum engine only supports 16-bit ones' complement checksums.
 extern checksum<W> {
     checksum(hash_algorithm_t algorithm);
     bool verify<T>(in T data, in W value);
@@ -294,10 +317,11 @@ extern checksum<W> {
     W residual_checksum<T>(in T data);
 }
 
-/// Parser counter
+// -----------------------------------------------------------------------------
+// PARSER COUNTER/PRIORITY/VALUE SET
+// -----------------------------------------------------------------------------
 extern parser_counter {
     parser_counter();
-
     /// Load the counter with an immediate value or a header field.
     ///   @max : Maximum permitted value for counter (pre rotate/mask/add).
     ///   @rotate : Rotate the source field right by this number of bits.
@@ -315,22 +339,25 @@ extern parser_counter {
     bool is_neg();
 }
 
-/// Parser priority
-/// The ingress parser drops the packet based on priority if the input buffer is
-/// indicating congestion; egress parser does not perform any dropping.
+// Parser priority
+// The ingress parser drops the packet based on priority if the input buffer is
+// indicating congestion; egress parser does not perform any dropping.
 extern priority {
     priority();
     void set(bit<3> prio);
 }
 
-/// Parser value set
-/// The parser value set implements a run-time updatable values that is used to
-/// determine parser transition
+// Parser value set
+// The parser value set implements a run-time updatable values that is used to
+// determine parser transition
 extern value_set<D> {
     value_set(bit<8> size);
     bool is_member(in D data);
 }
 
+// -----------------------------------------------------------------------------
+// HASH ENGINE
+// -----------------------------------------------------------------------------
 extern hash<T> {
     /// Constructor
     hash(hash_algorithm_t algo);
@@ -361,7 +388,8 @@ extern counter<I> {
 /// Meter
 extern meter<I> {
     meter(meter_type_t type, @optional I instance_count);
-    meter_color_t execute(@optional in I index, @optional in meter_color_t color);
+    meter_color_t execute(@optional in I index,
+                          @optional in meter_color_t color);
 }
 
 /// Low pass filter (LPF)
@@ -388,17 +416,20 @@ extern stateful_param<T> {
 
 /// StatefulALU
 extern stateful_alu<T, I, O, P> {
-    stateful_alu(@optional register<T, I> reg, @optional stateful_param<P> param);
-    abstract void instruction(inout T value, @optional out O rv, @optional in P p);
+    stateful_alu(register<T, I> reg,
+                 @optional stateful_param<P> param);
+    abstract void instruction(inout T value,
+                              @optional out O rv,
+                              @optional in P p);
     O execute(@optional in I index);
 }
 
 extern action_selector<T> {
     action_selector(bit<32> size,
-            @optional selector_mode_t mode,
-            @optional bit<32> max_num_groups,
-            @optional bit<32> max_group_size,
-            @optional register<bit<1>, T> reg);
+                    @optional selector_mode_t mode,
+                    @optional bit<32> max_num_groups,
+                    @optional bit<32> max_group_size,
+                    @optional register<bit<1>, T> reg);
     abstract T hash();
 }
 
@@ -426,34 +457,36 @@ extern learn_filter_packet {
 }
 
 parser IngressParser<H, M>(
-    packet_in pkt,
-    out H hdr,
-    out M ig_md,
-    out ingress_intrinsic_metadata_t ig_intr_md,
-    @optional out ingress_intrinsic_metadata_from_parser_aux_t ig_intr_md_from_prsr);
+  packet_in pkt,
+  out H hdr,
+  out M ig_md,
+  out ingress_intrinsic_metadata_t ig_intr_md,
+  @optional in bit<48> global_tstamp,
+  @optional in bit<32> global_version);
 
 parser EgressParser<H, M>(
-    packet_in pkt,
-    out H hdr,
-    out M eg_md,
-    out egress_intrinsic_metadata_t eg_intr_md,
-    @optional out egress_intrinsic_metadata_from_parser_aux_t eg_intr_md_from_prsr);
+  packet_in pkt,
+  out H hdr,
+  out M eg_md,
+  out egress_intrinsic_metadata_t eg_intr_md,
+  @optional in bit<48> global_tstamp,
+  @optional in bit<32> global_version);
 
 control Ingress<H, M>(
     inout H hdr,
     inout M ig_md,
     in ingress_intrinsic_metadata_t ig_intr_md,
-    @optional in ingress_intrinsic_metadata_from_parser_aux_t ig_intr_md_from_prsr,
+    @optional in ingress_intrinsic_metadata_from_parser_t ig_intr_md_from_prsr,
     @optional out ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm,
     @optional out ingress_intrinsic_metadata_for_mirror_buffer_t ig_intr_md_for_mb);
 
 control Egress<H, M>(
-    inout H hdr,
-    inout M eg_md,
-    in egress_intrinsic_metadata_t eg_intr_md,
-    in egress_intrinsic_metadata_from_parser_aux_t eg_intr_md_from_prsr,
-    @optional out egress_intrinsic_metadata_for_mirror_buffer_t eg_intr_md_for_mb,
-    @optional out egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport);
+  inout H hdr,
+  inout M eg_md,
+  in egress_intrinsic_metadata_t eg_intr_md,
+  @optional in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr,
+  @optional out egress_intrinsic_metadata_for_mirror_buffer_t eg_intr_md_for_mb,
+  @optional out egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport);
 
 
 control IngressDeparser<H, M>(

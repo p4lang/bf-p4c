@@ -6,7 +6,7 @@ typedef bit<16> ifindex_t;
 typedef bit<16> nexthop_t;
 
 typedef bit<48> mac_addr_t;
-typedef bit<30> ip_addr_t;
+typedef bit<32> ip_addr_t;
 
 #define RECIRC_TYPE_PG_PORT_DOWN 1
 #define RECIRC_TYPE_PG_RECIRC 2
@@ -465,12 +465,12 @@ control Flowlet(inout headers_t hdr, inout user_metadata_t md) {
     stateful_param<bit<32>>(5000) flowlet_inactive_timeout;
     // FIXME the size should be 32768
     // XXX(hanw): initialize struct with {} causes a type_map error
-    // register<flowlet_state_t, bit<15>>(32767, (flowlet_state_t){65535, 6000}) flowlet_reg;
+    register<flowlet_state_t, bit<15>>(32767) flowlet_reg;
 
 // Flowlet lifetime is 50 microseconds.  Use 0xFFFF as un-initialized value
 // to signal no next hop has been stored yet.
 
-    stateful_alu<flowlet_state_t, bit<15>, bit<16>, bit<48>>() flowlet_alu = {
+    stateful_alu<flowlet_state_t, bit<15>, bit<16>, bit<48>>(flowlet_reg) flowlet_alu = {
         void instruction(inout flowlet_state_t v, out bit<16> rv, in bit<48> p) {
             if (md.timestamp - v.ts > p && v.id != 65535) {
                 v.id = md.nhop_id;
@@ -551,7 +551,9 @@ control IpRoute(in headers_t hdr, inout user_metadata_t md) {
 control EcmpFailover(inout headers_t hdr,
                      inout user_metadata_t md,
                      inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm) {
-    stateful_alu<bit<1>, bit<17>, _, _>() next_hop_ecmp_alu = {
+    // XXX(milad): FIXME.
+    register<bit<1>, bit<29>>(131072) next_hop_ecmp_reg;
+    stateful_alu<bit<1>, bit<17>, _, _>(next_hop_ecmp_reg) next_hop_ecmp_alu = {
         void instruction(inout bit<1> v) {
             v = (bit<1>)false;
         }
@@ -702,8 +704,9 @@ control EgressIfindex(inout user_metadata_t md,
 control LagFailover(inout headers_t hdr,
                     inout user_metadata_t md,
                     inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm) {
-    
-    stateful_alu<bit<1>, bit<17>, _, _>() lag_alu = {
+    //XXX(Milad) fix this. should not copy the register.
+    register<bit<1>, bit<17>>(131071) lag_reg; 
+    stateful_alu<bit<1>, bit<17>, _, _>(lag_reg) lag_alu = {
         void instruction(inout bit<1> v) {
             v = (bit<1>)false;
         }
@@ -757,7 +760,7 @@ control IfindexCounter(
     Flowlet() flowlet;
     
     register<bit<16>, _>() ifindex_ctr;
-    stateful_alu<bit<16>, _, _, _>() ifindex_cntr_alu = {
+    stateful_alu<bit<16>, _, _, _>(ifindex_ctr) ifindex_cntr_alu = {
         void instruction(inout bit<16> ctr) {
             ctr = ctr + (bit<16>)hdr.ipv4.ttl;
         }
