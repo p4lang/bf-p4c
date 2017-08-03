@@ -23,7 +23,7 @@
  *
  *  - t1 -- DATA -----> t2: Table t1 may write a field that t2 may read.
  *
- *  - t1 -- ANTI -----> t2: Table t1 may read a field that t1 may write.
+ *  - t1 -- ANTI -----> t2: Table t1 may read a field that t2 may write.
  */
 
 struct DependencyGraph {
@@ -46,8 +46,8 @@ struct DependencyGraph {
     // True once the graph has been fully constructed.
     bool finalized;
 
-    // happens_before[t1] = {t2, t3} means that t1 happens strictly before t1
-    // and t2: t1 MUST be placed in an earlier stage.
+    // happens_before[t1] = {t2, t3} means that t1 happens strictly before t2
+    // and t3: t1 MUST be placed in an earlier stage.
     map< const IR::MAU::Table*,
          set<const IR::MAU::Table*> > happens_before_map;
 
