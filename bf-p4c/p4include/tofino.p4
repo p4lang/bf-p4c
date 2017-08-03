@@ -405,8 +405,8 @@ extern wred<T, I> {
 }
 
 /// Register
-extern register<T, I> {
-    register(@optional I instance_count, @optional T initial_value);
+extern register<T> {
+    register(@optional bit<32> instance_count, @optional T initial_value);
 }
 
 extern stateful_param<T> {
@@ -415,13 +415,10 @@ extern stateful_param<T> {
 }
 
 /// StatefulALU
-extern stateful_alu<T, I, O, P> {
-    stateful_alu(register<T, I> reg,
-                 @optional stateful_param<P> param);
-    abstract void instruction(inout T value,
-                              @optional out O rv,
-                              @optional in P p);
-    O execute(@optional in I index);
+extern stateful_alu<T, O, P> {
+    stateful_alu(@optional register<T> reg, @optional stateful_param<P> param);
+    abstract void instruction(inout T value, @optional out O rv, @optional in P p);
+    O execute<I>(@optional in I index);
 }
 
 extern action_selector<T> {
@@ -429,7 +426,7 @@ extern action_selector<T> {
                     @optional selector_mode_t mode,
                     @optional bit<32> max_num_groups,
                     @optional bit<32> max_group_size,
-                    @optional register<bit<1>, T> reg);
+                    @optional register<bit<1>> reg);
     abstract T hash();
 }
 
