@@ -237,9 +237,6 @@ abstract TransitionPrimitive { }
 abstract Select : TransitionPrimitive { }
 
 /// A selection against a range of bits in the input buffer.
-// XXX(seth): It'd be nice to leave some record of how we arrived at these bits
-// - e.g., the field we were matching against. We should have a non-visited
-// expression to track that.
 class SelectBuffer : Select {
 #noconstructor
     SelectBuffer(Util::SourceInfo si, int bitOffset, unsigned bitWidth, Node source)
