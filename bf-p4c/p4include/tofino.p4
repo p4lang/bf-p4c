@@ -421,11 +421,13 @@ extern stateful_alu<T, O, P> {
     O execute<I>(@optional in I index);
 }
 
+/// Action Selector
 extern action_selector<T> {
+    /// Optional annotations to help with compiler fitting
+    /// @max_num_groups, max number of groups in a selector table
+    /// @max_group_size, max number of entries in a group
     action_selector(bit<32> size,
                     @optional selector_mode_t mode,
-                    @optional bit<32> max_num_groups,
-                    @optional bit<32> max_group_size,
                     @optional register<bit<1>> reg);
     abstract T hash();
 }
