@@ -56,7 +56,21 @@ else()
   MESSAGE (WARNING "PTF tests will not run as at least one requirement is not met.")
 endif()
 
-include(TofinoXfail.cmake)
+# if we have a reason for failure, then use that regular expression to
+# make the test succeed. If that changes, we know the test moved to a
+# different failure. Also turn off automatic ignoring of failures (WILL_FAIL).
+macro(p4c_add_xfail_reason tag test reason)
+  p4c_test_set_name(__testname ${tag} ${test})
+  if ( "${reason}" STREQUAL "")
+    set_tests_properties(${__testname} PROPERTIES
+      WILL_FAIL 1)
+  else ()
+    set_tests_properties(${__testname} PROPERTIES
+      PASS_REGULAR_EXPRESSION ${reason}
+      WILL_FAIL 0)
+  endif()
+  p4c_add_test_label(${tag} "XFAIL" ${test})
+endmacro()
 
 set (P4C_TOFINO_RUNTEST ${CMAKE_CURRENT_SOURCE_DIR}/runtest)
 
@@ -114,7 +128,7 @@ if (PTF_REQUIREMENTS_MET)
         p4c_test_set_name(__testname "tofino" ${__p4file})
         set_tests_properties(${__testname} PROPERTIES SERIAL 1)
         # add ptf label to test
-        set_property(TEST ${__testname} APPEND_STRING PROPERTY LABELS ";ptf")
+        p4c_add_test_label("tofino" "ptf" ${__p4file})
       endif()
     endforeach() # __p4file
   endforeach() # ts
@@ -163,6 +177,10 @@ p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
   "switch_test_int_vxlan_transit" ${switchtest} "${testExtraArgs} -DTEST_INT_VXLAN_TRANSIT_PROFILE")
 p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
   "switch_test_mirror_on_drop" ${switchtest} "${testExtraArgs} -DTEST_MIRROR_ON_DROP_PROFILE")
+
+# add xfails with reasons
+include(TofinoXfail.cmake)
+
 
 # We have additional test inputs that are used to test the other
 # (standard) back-ends These test input programs depend on Tofino in
