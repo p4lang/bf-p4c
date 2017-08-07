@@ -96,9 +96,10 @@ echo "Checking for and installing protobuf"
 if ! `pkg-config protobuf` || version_LT `pkg-config --modversion protobuf` "3.0.0"; then
     pushd $tmpdir
     sudo apt-get install -y curl unzip
-    git clone --recursive https://github.com/google/protobuf
+    git clone https://github.com/google/protobuf
     cd protobuf
     git checkout tags/v3.2.0
+    git submodule update --init --recursive
     ./autogen.sh && \
     ./configure && \
     make && \
@@ -114,9 +115,10 @@ fi
 echo "Checking for and installing grpc"
 if ! `pkg-config grpc++` || version_LT `pkg-config --modversion grpc++` "1.3.0"; then
     pushd $tmpdir
-    git clone --recursive https://github.com/google/grpc.git
+    git clone https://github.com/google/grpc.git
     cd grpc
     git checkout tags/v1.3.2
+    git submodule update --init --recursive
     make && \
     sudo make install && \
     sudo ldconfig || \
