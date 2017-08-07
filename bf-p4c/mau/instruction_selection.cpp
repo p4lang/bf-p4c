@@ -375,7 +375,12 @@ const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
     } else if (prim->name == "direct_counter.count" || prim->name == "direct_meter.read") {
         return nullptr;
     } else if (prim->name == "hash") {
-        int size = bitcount(prim->operands[4]->to<IR::Constant>()->asLong() - 1);
+        int size = 1;
+        if (prim->operands[4]->to<IR::Constant>()) {
+            size = bitcount(prim->operands[4]->to<IR::Constant>()->asLong() - 1);
+        } else {
+            WARNING("NULL operand 4 for " << *prim);
+        }
         /* FIXME -- is the above correct?  Or do we want ceil_log2? */
         IR::MAU::Instruction *instr =
             new IR::MAU::Instruction( prim->srcInfo, "set",

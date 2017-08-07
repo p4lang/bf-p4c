@@ -290,7 +290,7 @@ IXBar::grp_use::type_t IXBar::is_group_for_hash_dist(int hash_table) {
     return grp_use::FREE;
 }
 
-/* Determines if the byte within the crossbar has enough space within the hash table in 
+/* Determines if the byte within the crossbar has enough space within the hash table in
    order to be placed in that spot */
 bool IXBar::violates_hash_constraints(vector<big_grp_use> &order, bool hash_dist, int group,
                                       int byte) {
@@ -1320,7 +1320,12 @@ void IXBar::initialize_hash_dist(const HashDistReq &hash_dist_req, Use &alloc,
         else
             BUG("Unrecognized hash algorithm %s", algorithm);
 
-        long con = hash_dist_req.get_instr()->operands[4]->to<IR::Constant>()->asLong();
+        long con = 1;
+        if (hash_dist_req.get_instr()->operands[4]->to<IR::Constant>()) {
+            hash_dist_req.get_instr()->operands[4]->to<IR::Constant>()->asLong();
+        } else {
+            WARNING("NULL operand 4 for " << *hash_dist_req.get_instr());
+        }
         alloc.hash_dist_use.back().max_size = __builtin_popcount(con - 1);
         auto *fl = hash_dist_req.get_instr()->operands[3]->to<IR::ListExpression>();
         for (auto comp : fl->components) {

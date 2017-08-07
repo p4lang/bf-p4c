@@ -72,6 +72,8 @@ void FieldDefUse::read(const IR::HeaderRef *hr, const IR::Tofino::Unit *unit,
     auto hdr_ids = *phv.header(hr);
     for (int id : Range(hdr_ids))
         read(phv.field(id), unit, e);
+    if (!phv.field(hdr_ids.first))
+      return;
     if (!phv.field(hdr_ids.first)->metadata)
         read(phv.field(hr->toString() + ".$valid"), unit, e);
 }
