@@ -388,7 +388,7 @@ std::unique_ptr<json::map> TernaryMatchTable::gen_memory_resource_allocation_tbl
                     mem_units = json::vector();
                     word = 0; }
                 done = false; } }
-        mra["spare_bank_memory_unit"] = lrow; 
+        mra["spare_bank_memory_unit"] = lrow;
         return json::mkuniq<json::map>(std::move(mra));
     } else {
         assert(!skip_spare_bank); // never spares in tcam
@@ -415,99 +415,151 @@ std::unique_ptr<json::map> TernaryMatchTable::gen_memory_resource_allocation_tbl
         return json::mkuniq<json::map>(std::move(mra)); }
 }
 
+void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
+        unsigned lsb_offset, unsigned lsb_idx, unsigned msb_idx, \
+        std::string source, unsigned start_bit, unsigned field_width) {
+    out.push_back( json::map {
+        { "field_name", json::string(name) },
+        { "lsb_mem_word_offset", json::number(lsb_offset) },
+        { "lsb_mem_word_idx", json::number(lsb_idx) }, //FIXME-JSON
+        { "msb_mem_word_idx", json::number(msb_idx) }, //FIXME-JSON
+        { "source", json::string(source) },
+        { "start_bit", json::number(start_bit) },
+        { "field_width", json::number(field_width) }});
+}
+
 void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
     if (options.new_ctx_json) {
         unsigned number_entries = layout_size()/match.size() * 512;
         json::map &tbl = *base_tbl_cfg(out, "match_entry", number_entries);
+        bool uses_versioning = false;
+        for (auto &m : match)
+            if (m.byte_config == 3) {
+                uses_versioning = true;
+                break; }
         json::map &match_attributes = tbl["match_attributes"] = json::map();
         tbl.erase("stage_tables");
         json::vector stage_tables;
         json::map stage_tbl;
         stage_tbl["stage_number"] = stage->stageno;
+        stage_tbl["size"] = number_entries;
         stage_tbl["stage_table_type"] = "ternary_match";
         stage_tbl["logical_table_id"] = logical_id;
         json::map &pack_fmt = add_pack_format(stage_tbl, 47, match.size(), 1);
         stage_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg("tcam", layout);
+        stage_tbl["default_next_table"] = 255; //FIXME-JSON
         json::vector match_field_list, match_entry_list;
+        bitvec padbits;
+        // FIXME-JSON: Add payload on bit 0, verify functionality
+        gen_entry_cfg(match_field_list, "--tcam_payload_0--", 0, 0, 0, "payload", 0, 1);
+        padbits.setrange(0, 1);
         for (auto field : *input_xbar) {
             if (!field.first.ternary) continue;
             int word = match_word(field.first.index);
             if (word < 0) continue;
+            std::string source = "spec"; //FIXME-JSON
+            std::string field_name = field.second.what.name();
+            unsigned lsb_mem_word_offset = 0;
             if (field.second.hi > 43) {
                 // a field in the byte group, which is shared with the adjacent word group
                 // each word gets only 4 bits of the byte group
                 assert(field.second.hi < 48);
                 assert((field.first.index & 1) == 0);
                 int hwidth = 44 - field.second.lo;
-                match_field_list.push_back( json::map {
-                    { "field_name", json::string(field.second.what.name()) },
-                    { "start_offset", json::number(47*word + 2) },
-                    { "start_bit", json::number(field.second.what.lobit()) },
-                    { "bit_width", json::number(hwidth) }});
+                lsb_mem_word_offset = 47*word + 2;
+                gen_entry_cfg(match_field_list, field_name, \
+                        lsb_mem_word_offset, 0, 0, source, \
+                        field.second.what.lobit(), hwidth);
+                padbits.setrange(lsb_mem_word_offset, hwidth);
                 int adjword = match_word(field.first.index + 1);
                 if (adjword < 0) continue;
-                match_field_list.push_back( json::map {
-                    { "field_name", json::string(field.second.what.name()) },
-                    { "start_offset", json::number(47*adjword + 49 - field.second.hi) },
-                    { "start_bit", json::number(field.second.what.lobit() + hwidth) },
-                    { "bit_width", json::number(field.second.hi - 43) }});
+                //lsb_mem_word_offset = 47*adjword + 49 - field.second.hi;
+                lsb_mem_word_offset = 47*adjword + field.second.lo;
+                gen_entry_cfg(match_field_list, field_name, \
+                        lsb_mem_word_offset, 0, 0, source, \
+                        field.second.what.lobit() + hwidth, \
+                        field.second.hi - 43);
+                padbits.setrange(lsb_mem_word_offset, field.second.hi - 43);
             } else {
-                match_field_list.push_back( json::map {
-                    { "field_name", json::string(field.second.what.name()) },
-                    { "start_offset", json::number(47*word + 45 - field.second.hi) },
-                    { "start_bit", json::number(field.second.what.lobit()) },
-                    { "bit_width", json::number(field.second.hi - field.second.lo + 1) }}); } }
+                //lsb_mem_word_offset = 47*word + 45 - field.second.hi - 1;
+                // Add 1 bit payload offset
+                lsb_mem_word_offset = 1 + 47*word + field.second.lo;
+                //if (uses_versioning)
+                //    lsb_mem_word_offset = 47*word + 43 - field.second.hi - 1;
+                gen_entry_cfg(match_field_list, field_name, \
+                        lsb_mem_word_offset, 0, 0, source, \
+                        field.second.what.lobit(), \
+                        field.second.hi - field.second.lo + 1);
+                padbits.setrange(lsb_mem_word_offset, field.second.hi - field.second.lo + 1);
+            } }
+        //FIXME-JSON: Verify version bits are assigned correctly
+        if (uses_versioning) {
+            gen_entry_cfg(match_field_list, "--version--", \
+                    43, 0, 0, "version", 0, 2);
+            padbits.setrange(43, 2); }
+        //FIXME-JSON: Verify parity bits are assigned correctly
+        gen_entry_cfg(match_field_list, "--tcam_parity_0--", \
+                45, 0, 0, "parity", 0, 2);
+        padbits.setrange(45, 2);
+        //Add zero fields for unused bits
+        unsigned idx_lo = 0;
+        for (auto p : padbits) {
+            if (p > idx_lo) {
+                std::string pad_name = "--unused_" + std::to_string(idx_lo)
+                    + "_" + std::to_string(p - 1) + "--";
+                gen_entry_cfg(match_field_list, pad_name, \
+                        idx_lo, 0, 0, "zero", 0, p - idx_lo); }
+            idx_lo = p + 1 ; }
         canon_field_list(match_field_list);
-        pack_fmt["entry_list"] = json::vector {
+        pack_fmt["entries"] = json::vector {
             json::map {
                 { "entry_number",  json::number(0) },
-                { "field_list",  std::move(match_field_list) }}};
+                { "fields",  std::move(match_field_list) }}};
         if (indirect) {
             unsigned fmt_width = 1U << indirect->format->log2size;
             json::map tind;
             tind["stage_number"] = stage->stageno;
             tind["stage_table_type"] = "ternary_indirection";
+            tind["size"] = indirect->layout_size()*128/fmt_width * 1024;
             indirect->add_pack_format(tind, indirect->format);
             tind["memory_resource_allocation"] =
                 indirect->gen_memory_resource_allocation_tbl_cfg("sram", indirect->layout, true);
-            if (auto a = indirect->get_action()) {
-                auto *acts = a->get_actions();
-                acts->add_action_format(this, tind); 
-                if (acts->count() > 0) {
-                    auto &p4_params = tind["p4_parameters"] = json::vector();
-                for (auto act: *acts) acts->add_p4_params(act, p4_params); } }
+            // Add action formats for actions present in table or attached action table
+            auto *acts = indirect->get_actions();
+            if (auto a = indirect->get_action())
+              acts = a->get_actions();
+            acts->add_action_format(this, tind);
+                //if (acts->count() > 0) {
+                //    auto &p4_params = tind["p4_parameters"] = json::vector();
+                //for (auto act: *acts) acts->add_p4_params(act, p4_params); } }
             stage_tbl["ternary_indirection_stage_table"] = std::move(tind);
             if (auto a = indirect->get_attached()) {
-                if (a->selector) 
-                    add_reference_table((tbl["selection_table_refs"] = json::vector()), a->selector, "indirect");
+                json::vector &selection_table_refs = tbl["selection_table_refs"] = json::vector();
+                if (a->selector) {
+                    tbl["default_selector_mask"] = 0; //FIXME-JSON
+                    tbl["default_selector_value"] = 0; //FIXME-JSON
+                    add_reference_table(selection_table_refs, a->selector, "indirect"); }
                 json::vector &meter_table_refs = tbl["meter_table_refs"] = json::vector();
-                for (auto &m : a->meter) add_reference_table(meter_table_refs, m, "indirect"); 
-                json::vector &stats_table_refs = tbl["stats_table_refs"] = json::vector();
+                for (auto &m : a->meter) add_reference_table(meter_table_refs, m, "indirect");
+                json::vector &stats_table_refs = tbl["statistics_table_refs"] = json::vector();
                 for (auto &s : a->stats) add_reference_table(stats_table_refs, s, "indirect"); }
-            if (indirect->action) 
-                add_reference_table((tbl["action_data_table_refs"] = json::vector()), indirect->action, "indirect"); 
+            json::vector &action_data_table_refs = tbl["action_data_table_refs"] = json::vector();
+            if (indirect->action)
+                add_reference_table(action_data_table_refs, indirect->action, "indirect");
             if (indirect->actions) {
                 indirect->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
-                indirect->actions->add_immediate_mapping(stage_tbl);
                 indirect->actions->add_next_table_mapping(indirect, stage_tbl);
             } else if (indirect->action && indirect->action->actions) {
                 indirect->action->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
-                indirect->action->actions->add_immediate_mapping(stage_tbl);
-                indirect->action->actions->add_next_table_mapping(indirect, stage_tbl); } 
+                indirect->action->actions->add_next_table_mapping(indirect, stage_tbl); }
             indirect->common_tbl_cfg(tbl, "ternary"); }
         common_tbl_cfg(tbl, "ternary");
         if (actions)
             actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
         else if (action && action->actions)
             action->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
-        if(indirect)
         if (idletime)
             idletime->gen_stage_tbl_cfg(stage_tbl);
-        bool uses_versioning = false;
-        for (auto &m : match)
-            if (m.byte_config == 3) {
-                uses_versioning = true;
-                break; }
         stage_tables.push_back(std::move(stage_tbl));
         match_attributes["stage_tables"] = std::move(stage_tables);
         match_attributes["match_type"] = "ternary";
@@ -733,8 +785,9 @@ template<class REGS> void TernaryIndirectTable::write_regs(REGS &regs) {
                 /* FIXME -- support for multiple sizes of action data? */
                 merge.mau_actiondata_adr_mask[1][bus] =
                     ((1U << action.args[1].size()) - 1) << lo_huffman_bits;
-                merge.mau_actiondata_adr_tcam_shiftcount[bus] =
-                    action.args[1].field()->bits[0].lo + 5 - lo_huffman_bits; } }
+                //merge.mau_actiondata_adr_tcam_shiftcount[bus] =
+                //    action.args[1].field()->bits[0].lo + 5 - lo_huffman_bits; } }
+                merge.mau_actiondata_adr_tcam_shiftcount[bus] = lo_huffman_bits; } }
         if (attached.selector) {
             if (attached.selector.args.size() == 1)
                 merge.mau_selectorlength_default[1][bus] = 1;
@@ -773,6 +826,9 @@ void TernaryIndirectTable::add_field_to_pack_format(json::vector &field_list, in
                                 std::string name, const Table::Format::Field &field,
                                 const std::vector<Table::Actions::Action::alias_value_t *> &alias) {
     if (name == "action") name = "--instruction_address--";
+    if (name == "action_addr") name = "--action_data_pointer--";
+    if ((name == "meter_addr") && get_selector()) name = "--selection_base--";
+    if (name == "immediate") name = "--immediate--";
     Table::add_field_to_pack_format(field_list, basebit, name, field, alias);
 }
 

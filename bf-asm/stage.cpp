@@ -177,7 +177,7 @@ void AsmStage::output() {
         json::string json_build_date = "XX-XX-XXXX";
         json::string json_compiler_version = "v1.0";
         json::vector json_learn_quantas;
-        json::vector json_parser;
+        json::map    json_parser;
         json::vector json_phv_allocation;
         json::vector json_tables;
         json::string json_program_name = asmfile_name.substr(0, asmfile_name.find_last_of(".")); 
@@ -186,13 +186,15 @@ void AsmStage::output() {
             case TOFINO: stage[i].output<Target::Tofino>(json_tables); break;
             case JBAY: stage[i].output<Target::JBay>(json_tables); break;
             default: assert(0); } }
+        json_parser["ingress"] = json::vector();
+        json_parser["egress"] = json::vector();
         *json_out << '{' << std::endl;
         *json_out << "\t\"build_date\": "  << &json_build_date << "," << std::endl;
         *json_out << "\t\"compiler_version\": " << &json_compiler_version << "," << std::endl;
         *json_out << "\t\"program_name\": " << &json_program_name << "," << std::endl;
-        //*json_out << '[' << &json_learn_quantas << "]," << std::endl;
-        //*json_out << '[' << &json_parser << "]," << std::endl;
-        //*json_out << '[' << &json_phv_allocation << "]," << std::endl;
+        *json_out << "\t\"learn_quanta\": " << &json_learn_quantas<< "," << std::endl;
+        *json_out << "\t\"parser\": " << &json_parser<< "," << std::endl;
+        *json_out << "\t\"phv_allocation\": " << &json_phv_allocation<< "," << std::endl;
         *json_out << "\t\"tables\": " << &json_tables << std::endl;
         *json_out << '}' << std::endl;
     } else {

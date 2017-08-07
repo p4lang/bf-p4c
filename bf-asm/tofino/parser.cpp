@@ -365,12 +365,12 @@ template<> void Parser::write_config(Target::Tofino::parser_regs &regs) {
         if (!phv_allow_multi_write[256+i]) {
             regs.ingress.prsr_reg.no_multi_wr.t_nmw[i] = 1;
             regs.egress.prsr_reg.no_multi_wr.t_nmw[i] = 1; }
-    if (!options.match_compiler) {
-        regs.memory[INGRESS].disable_if_zero();
-        regs.memory[EGRESS].disable_if_zero();
-        regs.ingress.disable_if_zero();
-        regs.egress.disable_if_zero();
-        regs.merge.disable_if_zero(); }
+    //if (!options.match_compiler) {
+    //    regs.memory[INGRESS].disable_if_zero();
+    //    regs.memory[EGRESS].disable_if_zero();
+    //    regs.ingress.disable_if_zero();
+    //    regs.egress.disable_if_zero();
+    //    regs.merge.disable_if_zero(); }
     regs.memory[INGRESS].emit_json(*open_output("memories.all.parser.ingress.cfg.json"), "ingress");
     regs.memory[EGRESS].emit_json(*open_output("memories.all.parser.egress.cfg.json"), "egress");
     regs.ingress.emit_json(*open_output("regs.all.parser.ingress.cfg.json"));

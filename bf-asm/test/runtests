@@ -2,11 +2,13 @@
 
 fast=false
 brig=false
+glass=false
 outdir=false
 verbose=false
-nodiff=false
+diff=false
 newctxjson=false
 link=false
+clean=false
 TIME=false
 # parallel make arguments
 PARALLEL=1
@@ -50,15 +52,19 @@ while expr "$1" : - >/dev/null; do
     case $1 in
     -f) fast=true
         ;;
+    -c) clean=true
+        ;;
     -b) brig=true
+        ;;
+    -g) glass=true
         ;;
     -l) link=true
         ;;
     -t)
         TIME=true
         ;;
-    -n)
-        nodiff=true
+    -d)
+        diff=true
         ;;
     -N)
         newctxjson=true
@@ -89,8 +95,14 @@ while expr "$1" : - >/dev/null; do
     shift
 done
 
+# If neither '-b' or '-g' specified run for both brig and glass as default case
+if ! $brig && ! $glass; then
+    brig=true;
+    glass=true;
+fi
+
 #glsc_args="--placement-order ingress_before_egress --libpd --placement secret"
-glsc_args="--placement-order ingress_before_egress --no-bin"
+glsc_args="--verbose 2 -vl 2 -S -G --placement-order ingress_before_egress --no-bin --new_ctx_json"
 
 trap 'release_all_tokens; exit' 2
 
@@ -125,13 +137,15 @@ function searchdir () {
     for d in $TRY_BINDIRS; do
         if [[ $2 ]]; then
             if [ -d "$d/$2" ]; then
-                found=`find $d/$2 -executable -type f -name $1 -print -quit`
+                #found=`find $d/$2 -executable -type f -name $1 -print -quit`
+                found=`find $d/$2 -type f -name $1 -print -quit`
                 if [ -n "$found" ]; then
                     break;
                 fi
             fi
         else
-            found=`find $d -executable -type f -name $1 -print -quit`
+            #found=`find $d -executable -type f -name $1 -print -quit`
+            found=`find $d -name $1 -print -quit`
             if [ -n "$found" ]; then
                 break;
             fi
@@ -161,14 +175,16 @@ function findexec () {
     fi
 }
 
-#FINDFUNC  PARAM   EXECUTABLE              NAME                    OPTIONAL SEARCH DIR PREFIX
-findexec GLSC      "shell.py"              "glass"                 ""
-findexec BRIG      "p4c-tofino"            "brig"                  ""
-findexec STF       "simple_test_harness"   "simple_test_harness"   "model"
-findexec TFAS      "tfas"                  "tfas"                  ""
-findexec TFLINK    "tflink"                "tflink"                ""
-findexec REFLOW    "reflow"                "reflow"                ""
-findexec JSON_DIFF "json_diff"             "json_diff"             ""
+#FINDFUNC  PARAM        EXECUTABLE              NAME                    OPTIONAL SEARCH DIR PREFIX
+findexec GLSC           "shell.py"              "glass"                 ""
+findexec BRIG           "p4c-tofino"            "brig"                  ""
+findexec STF            "simple_test_harness"   "simple_test_harness"   "model"
+findexec TFAS           "tfas"                  "tfas"                  ""
+findexec TFLINK         "tflink"                "tflink"                ""
+findexec REFLOW         "reflow"                "reflow"                ""
+findexec JSON_DIFF      "json_diff"             "json_diff"             ""
+findexec SCHEMA         "gen_schema.py"         "gen_schema.py"         ""     
+findexec SCHEMA_VAL     "validate.py"           "validate.py"           ""     
 
 function not() { if "$@"; then return 1; else return 0; fi }
 
@@ -211,14 +227,15 @@ function link_json() {
     name=$(basename $p4file .p4)
     ok=true
     if [ -d $name.out ];then
-        bindir=$name.out
-        jsondir=$name.out
         cd $name.out
+        bindir=$PWD/glass
+        jsondir=$PWD/glass/cfg
         if $brig;then
-            if [ -d $name.out ];then
-                jsondir=$name.out/$name.out
+            if [ -d brig ];then
+                bindir=$PWD/brig
+                jsondir=$PWD/brig
             else
-                msg="$msg no $name.out/$name.out found"
+                msg="$msg no $jsondir/brig found"
                 ok=false
                 rv=1
             fi
@@ -238,6 +255,11 @@ function test_p4() {
     p4file="$1"
     pushd $(dirname $p4file) >/dev/null
     name=$(basename $p4file .p4)
+    if $clean; then
+        if [ -d $name.out ]; then
+            rm -rf $name.out
+        fi
+    fi
     mkdir -p $name.out
     expect_fail=$(sed -n "/^$name.p4/s/[^ ]* *//p" expected_failures.txt 2>/dev/null | head -1)
     cd $name.out
@@ -246,29 +268,40 @@ function test_p4() {
     fail_type=""
     #echo "about to run $name.p4, expecting ${expect_fail:-no} failure"
     msg="$p4file"
-
     start=`date +%s`
-    if $fast && [ -r $name.tfa ]; then
+    tfafile=""
+    if $brig; then
+        tfafile=brig/$name.tfa
+    else
+        tfafile=glass/$name.tfa 
+    fi
+    if $fast && [ -r $tfafile ]; then
         true
     else
-        rm -f $name.tfa
+        mkdir -p brig
+        mkdir -p glass
+        # Remove old assembly files
+        if [ -d glass ]; then
+            rm -f glass/$name.tfa
+            rm -f glass/out.tfa
+        fi
+        if [ -d brig ]; then
+            rm -f brig/$name.tfa
+            rm -f brig/out.tfa
+        fi
+        # Run both glass and brig if '-b' and '-g' not specified 
         if $brig; then
             clog='brig.log'
-            if not run $GLSC -o . --verbose 2 -vl 2 -G $glsc_args ../$name.p4 </dev/null >glsc.log 2>&1; then
-                ok=false
-            fi
-            if not $ok; then
-                msg="$msg p4 glass compile failed"
-            fi
-            if $ok && not run $BRIG -D__TARGET_TOFINO__ ../$name.p4 -o out.tfa </dev/null >brig.log 2>&1; then
+            if $ok && not run $BRIG -D__TARGET_TOFINO__ ../$name.p4 -o brig/out.tfa </dev/null >brig.log 2>&1; then
                 ok=false
             fi
             if not $ok; then
                 msg="$msg p4 brig compile failed"
             fi
-        else
+        fi
+        if $glass; then 
             clog='glsc.log'
-            if not run $GLSC -o . --verbose 2 -vl 2 -S -G $glsc_args ../$name.p4 </dev/null >glsc.log 2>&1; then
+            if not run $GLSC -o glass $glsc_args ../$name.p4 </dev/null >glsc.log 2>&1; then
                 ok=false
             fi
             if not $ok; then
@@ -279,12 +312,30 @@ function test_p4() {
             fail_type="compile"
             rv=1
         fi
-        if [ out.tfa -nt $name.tfa ]; then
-            rm -f $name.tfa
-            ln -s out.tfa $name.tfa
+        if [ -d glass ]; then
+            cd glass
+            if [ out.tfa -nt $name.tfa ]; then
+                rm -f $name.tfa
+                ln -s out.tfa $name.tfa
+            fi
+            cd ..
         fi
-        if [ ! -r $name.tfa ] && $ok; then
-            msg="$msg p4 compile failed to produce asm"
+        if [ -d brig ]; then
+            cd brig 
+            if [ out.tfa -nt $name.tfa ]; then
+                rm -f $name.tfa
+                ln -s out.tfa $name.tfa
+            fi
+            cd ..
+        fi
+        if $glass && [ ! -r glass/$name.tfa ] && $ok; then
+            msg="$msg p4 glass compile failed to produce asm"
+            fail_type="compile"
+            rv=1
+            ok=false
+        fi
+        if $brig && [ ! -r brig/$name.tfa ] && $ok; then
+            msg="$msg p4 brig compile failed to produce asm"
             fail_type="compile"
             rv=1
             ok=false
@@ -295,9 +346,9 @@ function test_p4() {
     fi
     glsc_cfg=.
     if $ok; then
-        rm -f $name.out/*.json
-        if [ -d cfg ]; then
-            glsc_cfg=cfg
+        rm -f $brig/*.json
+        if [ -d glass/cfg ]; then
+            glsc_cfg=glass/cfg
         fi
     fi
     for f in $glsc_cfg/*.json; do
@@ -305,22 +356,23 @@ function test_p4() {
             rm $f
         fi
     done
-    tfas_succeeded=false
     if $brig; then
         TFAS_OPTS="-vvvvl"
     fi
     if $newctxjson; then
         TFAS_OPTS="-N $TFAS_OPTS"
     fi
-    if $ok && run $TFAS $TFAS_OPTS tfas.config.log $name.tfa >tfas.log 2>&1; then
-        tfas_succeeded=true
+    if $ok && run $TFAS -o brig $TFAS_OPTS brig/tfas.config.log $tfafile >brig/tfas.log 2>&1; then
+        # Validate context json output from assembler
+        $SCHEMA > schema.json 
+        python $SCHEMA_VAL brig/tbl-cfg schema.json > context_json_schema_validate.log
         for f in $name.out/*.cfg.json; do
             if $REFLOW $f | gzip -9 > $f.gz; then
                 rm $f
             fi
         done
-        if ! $nodiff; then
-            for f in $name.out/*.cfg.json.gz; do
+        if $diff; then
+            for f in brig/*.cfg.json.gz; do
                 if zcmp -s $f $glsc_cfg/$(basename $f); then
                     continue
                 elif [ "$f" = "$name.out/regs.pipe.cfg.json.gz" ]; then
@@ -332,14 +384,14 @@ function test_p4() {
                 fi
                 $JSON_DIFF $f $glsc_cfg/$(basename $f)
             done > json_diff.txt
-            glsc_ctxt=${name}_context_llir.json
-            if [ -d context ]; then
-                glsc_ctxt=context/mau.context.json
+            glsc_ctxt=glass/${name}_context_llir.json
+            if [ -d glass/context ]; then
+                glsc_ctxt=glass/context/mau.context.json
                 if $newctxjson; then
-                    glsc_ctxt=context/context.json
+                    glsc_ctxt=glass/context/context.json
                 fi
             fi
-            brig_ctxt=$name.out/tbl-cfg
+            brig_ctxt=brig/tbl-cfg
             if [ -r $brig_ctxt ]; then
                 { $JSON_DIFF $CTXT_DIFFARGS $brig_ctxt $glsc_ctxt;
                   if [ $? -gt 128 ]; then echo "***json_diff crashed"; fi; } >> json_diff.txt
@@ -364,7 +416,7 @@ function test_p4() {
         fail_type="tfas"
         rv=1
         if [ $count -eq 1 ] || [ "$expect_fail" != "tfas" ]; then
-            flock $FAILLOG -c "echo '$p4file:' >>$FAILLOG; sed -e 's/^/ /' -e '/\n/!a\' tfas.log >>$FAILLOG"
+            flock $FAILLOG -c "echo '$p4file:' >>$FAILLOG; sed -e 's/^/ /' -e'/\n/!a\' brig/tfas.log >>$FAILLOG"
         fi
         ok=false
     fi
@@ -592,6 +644,7 @@ for file in "$@"; do
     else
         echo "unrecognized file type $file"
     fi
+    wait
     if $link; then
         link_json $file
     fi

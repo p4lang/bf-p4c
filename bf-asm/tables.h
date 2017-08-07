@@ -153,10 +153,11 @@ public:
                     if (bit >= chunk.lo && bit <= chunk.hi)
                         return chunk.hi;
                 assert(0); }
-            enum flags_t { USED_IMMED=1 };
+            enum flags_t { NONE=0, USED_IMMED=1, ZERO=3 };
             Field() {}
-            Field(unsigned size, enum flags_t fl) : size(size), flags(fl) {
-                if (size) bits.push_back({ 0, size-1 }); }
+            Field(unsigned size, unsigned lo = 0, enum flags_t fl = NONE) 
+                : size(size), flags(fl) {
+                if (size) bits.push_back({ lo, lo + size-1 }); }
         };
         Format() { fmt.resize(1); }
         Format(const VECTOR(pair_t) &data, bool may_overlap = false);
@@ -194,6 +195,7 @@ public:
                     if (field == &f.second)
                         return lineno;
             return -1; }
+        void add_field(Field &f, std::string name="dummy", int grp=0 ) { fmt[grp][name] = f; }
         decltype(fmt[0].begin()) begin(int grp=0) { return fmt[grp].begin(); }
         decltype(fmt[0].end()) end(int grp=0) { return fmt[grp].end(); }
         decltype(fmt[0].cbegin()) begin(int grp=0) const { return fmt[grp].begin(); }
@@ -353,7 +355,7 @@ public:
     Actions                     *actions = 0;
     ActionBus                   *action_bus = 0;
     std::string                 default_action;
-    unsigned                    default_action_handle = -1;
+    unsigned                    default_action_handle = 0;
     int                         default_action_lineno = -1;
     std::map<std::string,int>   default_action_parameters;
     bool                        default_only_action = false;
@@ -407,11 +409,12 @@ public:
     virtual Actions *get_actions() { return actions; }
     void add_reference_table(json::vector &table_refs, const Table::Call& c, const std::string& href); 
     json::map &add_pack_format(json::map &stage_tbl, int memword, int words, int entries = -1);
-    json::map &add_pack_format(json::map &stage_tbl, const Table::Format *format,
+    json::map &add_pack_format(json::map &stage_tbl, Table::Format *format,
                                Table::Actions::Action *act = nullptr);
     virtual void add_field_to_pack_format(json::vector &field_list, int basebit, std::string name,
                                           const Table::Format::Field &field,
                                           const std::vector<Actions::Action::alias_value_t *> &);
+    void add_zero_padding_fields(Table::Format *format, Table::Actions::Action *act = nullptr, unsigned format_width = 64); 
     void canon_field_list(json::vector &field_list);
     void check_next();
     void check_next(Ref &next);
@@ -610,6 +613,9 @@ public:
             return indirect->hit_next.size();
         return hit_next.size(); }
     table_type_t table_type() override { return TERNARY; }
+    void gen_entry_cfg(json::vector &out, std::string name, \
+        unsigned lsb_offset, unsigned lsb_idx, unsigned msb_idx, \
+        std::string source, unsigned start_bit, unsigned field_width); 
 )
 
 DECLARE_TABLE_TYPE(Phase0MatchTable, Table, "phase0_match",
@@ -663,7 +669,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,
     std::set<MatchTable *>      match_tables;
     bool                        direct = false, indirect = false;
     bool                        per_flow_enable = false;
-    std::string                 per_flow_enable_param;
+    std::string                 per_flow_enable_param = "";
     unsigned                    per_flow_enable_bit = 0;
     unsigned                    address_bits;
     table_type_t set_match_table(MatchTable *m, bool indirect) {
@@ -685,6 +691,8 @@ DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,
         return match_tables.size() == 1 ? (*match_tables.begin())->action_call() : action; }
     int memunit(int r, int c) { return r*6 + c; }
     void pass1();
+public: 
+    std::string get_per_flow_enable_param() { return per_flow_enable_param; }
 )
 
 DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",

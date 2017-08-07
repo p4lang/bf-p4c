@@ -8,19 +8,8 @@
 // Global defines
 //------------------------------------------------------------------------------
 
-#ifdef __TARGET_TOFINO__
-#include <tofino/intrinsic_metadata.p4>
-
-// Tofino compliance
-#define EGRESS_SPEC ig_intr_md_for_tm.ucast_egress_port
-#define INGRESS_PORT ig_intr_md.ingress_port
-#else
-#define EGRESS_SPEC standard_metadata.egress_spec
-#define INGRESS_PORT standard_metadata.ingress_port
-#endif  // __TARGET_TOFINO__
-
-#define CPU_PORT 320  // CPU port for Mavericks (pipe 3 - port 64)
-#define INITIAL_CPU_PACKET_OFFSET 32  // 64
+#define CPU_PORT 64
+#define INITIAL_CPU_PACKET_OFFSET 64
 
 #define ARP_REASON 1
 
@@ -154,7 +143,7 @@ header_type arp_t {
 
 header_type cpu_header_t {
   fields {
-    zeros : INITIAL_CPU_PACKET_OFFSET;
+    zeros : 64;
     reason : 16;
     port : 32;
   }
@@ -183,7 +172,7 @@ header_type local_metadata_t {
 // Field List for packets destined to CPU.
 field_list cpu_info {
   local_metadata.reason;
-  // INGRESS_PORT;
+  standard_metadata.ingress_port;
 }
 
 //------------------------------------------------------------------------------
@@ -317,7 +306,7 @@ action set_vrf(vrf_id) {
 }
 
 action set_ecmp_nexthop_info_port(port, smac, dmac) {
-  modify_field(EGRESS_SPEC, port);
+  modify_field(standard_metadata.egress_spec, port);
   modify_field(ethernet.srcAddr, smac);
   modify_field(ethernet.dstAddr, dmac);
 }
@@ -335,10 +324,9 @@ action set_queue_and_copy_to_cpu(qid, reason) {
 action set_queue_and_send_to_cpu(qid, reason) {
   modify_field(local_metadata.qid, qid);
   add_header(cpu_header);
-  modify_field(cpu_header.zeros, 0);
   modify_field(cpu_header.reason, reason);
-  modify_field(cpu_header.port, INGRESS_PORT);
-  modify_field(EGRESS_SPEC, CPU_PORT);
+  modify_field(cpu_header.port, standard_metadata.ingress_port);
+  modify_field(standard_metadata.egress_spec, CPU_PORT);
 }
 
 //------------------------------------------------------------------------------
@@ -346,7 +334,7 @@ action set_queue_and_send_to_cpu(qid, reason) {
 //------------------------------------------------------------------------------
 
 action set_egress_port_and_decap_cpu_header() {
-  modify_field(EGRESS_SPEC, cpu_header.port);
+  modify_field(standard_metadata.egress_spec, cpu_header.port);
   remove_header(cpu_header);
 }
 
@@ -403,7 +391,7 @@ table vrf_classifier_table {
     ethernet.etherType : exact;
     ethernet.srcAddr : exact;
     ethernet.dstAddr : exact;
-    INGRESS_PORT: exact;
+    standard_metadata.ingress_port: exact;
   }
   actions {
     set_vrf;
@@ -425,10 +413,7 @@ table l3_routing_classifier_table {
     nop;
     drop_packet;
   }
-  // TODO(antonin): I replaced the default action temporarily to avoid having to
-  // program the table properly in the demo
-  // default_action: drop_packet();
-  default_action: nop();
+  default_action: drop_packet();
 }
 
 //------------------------------------------------------------------------------
@@ -439,7 +424,6 @@ table l3_routing_classifier_table {
 // IPv4 L3 Forwarding
 //-----------------------------------
 
-@pragma stage 1
 table l3_ipv4_override_table {
   reads {
     ipv4_base.dstAddr : lpm;
@@ -464,23 +448,21 @@ table l3_ipv4_fallback_table {
 
 // LPM forwarding for IPV4 packets.
 control ingress_ipv4_l3_forwarding {
-  apply(l3_ipv4_vrf_table);
-  // apply(l3_ipv4_override_table) {
-  //   miss {
-  //     apply(l3_ipv4_vrf_table) {
-  //       miss {
-  //         apply(l3_ipv4_fallback_table);
-  //       }
-  //     }
-  //   }
-  // }
+  apply(l3_ipv4_override_table) {
+    miss {
+      apply(l3_ipv4_vrf_table) {
+        miss {
+          apply(l3_ipv4_fallback_table);
+        }
+      }
+    }
+  }
 }
 
 //-----------------------------------
 // IPv6 L3 Forwarding
 //-----------------------------------
 
-@pragma stage 1
 table l3_ipv6_override_table {
   reads {
     ipv6_base.dstAddr : lpm;
@@ -508,16 +490,10 @@ table l3_ipv6_fallback_table {
 // L3 ECMP nexthop selection
 //-----------------------------------
 
-// TODO get complete list of l3 hash fields v4/v6
-field_list l3_ipv6_hash_fields {
+field_list l3_ip_hash_fields {
   ipv6_base.dstAddr;
   ipv6_base.srcAddr;
   ipv6_base.flowLabel;
-  local_metadata.l4SrcPort;
-  local_metadata.l4DstPort;
-}
-
-field_list l3_ipv4_hash_fields {
   ipv4_base.dstAddr;
   ipv4_base.srcAddr;
   ipv4_base.protocol;
@@ -527,7 +503,7 @@ field_list l3_ipv4_hash_fields {
 
 field_list_calculation ecmp_hash {
     input {
-        l3_ipv4_hash_fields;
+        l3_ip_hash_fields;
     }
     algorithm : crc16;
     output_width : 14;
@@ -566,12 +542,11 @@ control ingress_ipv6_l3_forwarding {
 control ingress_lpm_forwarding {
   if (valid(ipv4_base)) {
     ingress_ipv4_l3_forwarding();
+  } else {
+    if (valid(ipv6_base)) {
+      ingress_ipv6_l3_forwarding();
+    }
   }
-  // } else {
-  //   if (valid(ipv6_base)) {
-  //     ingress_ipv6_l3_forwarding();
-  //   }
-  // }
 #ifdef P4_EXPLICIT_LAG
   lag_handling();
 #endif
@@ -581,11 +556,13 @@ control ingress_lpm_forwarding {
 // TODO(wmohsin): target_egress_port in punted packet-io.
 table punt_table {
   reads {
-    INGRESS_PORT: ternary;
-    EGRESS_SPEC: ternary;
+    standard_metadata.ingress_port: ternary;
+    standard_metadata.egress_spec: ternary;
 
     ethernet.etherType: ternary;
 
+    ipv4_base: valid;
+    ipv6_base: valid;
     ipv4_base.diffserv: ternary;
     ipv6_base.traffic_class: ternary;
     ipv4_base.ttl: ternary;
@@ -632,8 +609,8 @@ meter ingress_port_meter {
 // Per-port ingress packet rate limiting.
 table ingress_port_meter_table {
   reads {
-    INGRESS_PORT: exact;
-    EGRESS_SPEC: exact;
+    standard_metadata.ingress_port: exact;
+    standard_metadata.egress_spec: exact;
     ethernet.etherType: exact;
     ipv4_base.dstAddr: ternary;
     arp.protoDstAddr: ternary;

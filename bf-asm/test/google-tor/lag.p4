@@ -5,14 +5,14 @@
 //-----------------------------------
 
 action set_lag_egress_port(port) {
-  modify_field(EGRESS_SPEC, port);
+  modify_field(standard_metadata.egress_spec, port);
 }
 
 field_list lag_hash_fields {
   ethernet.dstAddr;
   ethernet.srcAddr;
   ethernet.etherType;
-  INGRESS_PORT;
+  standard_metadata.ingress_port;
 }
 
 field_list_calculation lag_hash {
@@ -37,7 +37,7 @@ action_profile lag_action_profile {
 
 table lag_resolve_table {
   reads {
-    EGRESS_SPEC: exact;
+    standard_metadata.egress_spec: exact;
   }
   action_profile: lag_action_profile;
 }

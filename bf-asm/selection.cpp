@@ -260,6 +260,11 @@ void SelectionTable::gen_tbl_cfg(json::vector &out) {
         tbl["how_referenced"] = indirect ? "indirect" : "direct";
         if (pool_sizes.size() > 0)
             tbl["max_port_pool_size"] = *std::max_element(std::begin(pool_sizes), std::end(pool_sizes));
+        for (MatchTable *m : match_tables)
+            if (auto &act = m->get_action())
+                if (auto at = dynamic_cast<ActionTable *>(&(*act))) {
+                    tbl["bound_to_action_data_table_handle"] = act->handle();
+                    break; }
         json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "selection", 1024);
         add_pack_format(stage_tbl, 128, 1, 1);
         stage_tbl["memory_resource_allocation"] =

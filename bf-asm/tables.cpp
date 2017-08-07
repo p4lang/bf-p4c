@@ -821,6 +821,9 @@ Table::Actions::Actions(Table *tbl, VECTOR(pair_t) &data) {
 
 void Table::Actions::pass1(Table *tbl) {
     for (auto &act : *this) {
+        if ((tbl->default_action == act.name) &&
+            (!tbl->default_action_handle))
+            tbl->default_action_handle = act.handle;
         /* SALU actions always have act.addr == -1 (so iaddr == -1) */
         int iaddr = -1;
         if (act.addr >= 0) {
@@ -1019,7 +1022,8 @@ void Table::Actions::gen_tbl_cfg(json::vector &cfg) {
                 action_cfg["disallowed_as_default_action_reason"] = "USES_HASH_DIST";
             } else if (act.has_rng()) {
                 action_cfg["disallowed_as_default_action_reason"] = "USES_RNG"; }
-            if (!act.alias.empty()) add_p4_params(act, action_cfg["p4_parameters"] = json::vector());
+            json::vector &p4_params = action_cfg["p4_parameters"] = json::vector();
+            if (!act.alias.empty()) add_p4_params(act, p4_params);
             action_cfg["override_meter_addr"] = false;
             action_cfg["override_meter_addr_pfe"] = false;
             action_cfg["override_meter_full_addr"] = 0;
@@ -1086,35 +1090,30 @@ void Table::Actions::add_action_format(Table *table, json::map &tbl) {
             action_format_per_action["next_table"] = 0;
             action_format_per_action["next_table_full"] = 0xff;
             action_format_per_action["action_name"] = act.name;
+            action_format_per_action["action_handle"] = act.handle;
             action_format_per_action["table_name"] = "--END_OF_PIPELINE--";
             action_format_per_action["vliw_instruction"] = act.code; 
-            action_format_per_action["immediate_fields"] = json::vector();
-            for (auto &a : act.alias) {
-                json::string name = a.first;
-                int lo = remove_name_tail_range(name);
-                action_format_per_action["immediate_fields"] = ( json::vector { json::map {
-                    { "param_name", std::move(name) },
-                    { "param_type", json::string("parameter") },
-                    { "param_shift", json::number(lo) },
-                    { "dest_start", json::number(a.second.lo) },
-                    { "dest_width", json::number(a.second.hi - a.second.lo + 1) } } } ); }
+            action_format_per_action["vliw_instruction_full"] = ACTION_INSTRUCTION_ADR_ENABLE | act.addr;//FIXME-JSON 
         } else {
             auto next = table->hit_next[hit_index++];
             action_format_per_action["next_table"] = next ? hit_index : 0;
             action_format_per_action["next_table_full"] = next ? next->table_id() : 0xff;
             action_format_per_action["action_name"] = act.name;
+            action_format_per_action["action_handle"] = act.handle;
             action_format_per_action["table_name"] = next ? next->name() : "--END_OF_PIPELINE--";
             action_format_per_action["vliw_instruction"] = act.code; 
-            if (act.alias.empty()) continue;
-            for (auto &a : act.alias) {
-                json::string name = a.first;
-                int lo = remove_name_tail_range(name);
-                action_format_per_action["immediate_fields"] = ( json::vector { json::map {
-                    { "param_name", std::move(name) },
-                    { "param_type", json::string("parameter") },
-                    { "param_shift", json::number(lo) },
-                    { "dest_start", json::number(a.second.lo) },
-                    { "dest_width", json::number(a.second.hi - a.second.lo + 1) } } } ); } }
+            action_format_per_action["vliw_instruction_full"] = ACTION_INSTRUCTION_ADR_ENABLE | act.addr;//FIXME-JSON 
+        }
+        json::vector &action_format_per_action_imm_fields = action_format_per_action["immediate_fields"] = json::vector();
+        for (auto &a : act.alias) {
+            json::string name = a.first;
+            int lo = remove_name_tail_range(name);
+            action_format_per_action_imm_fields.push_back( { json::map {
+                { "param_name", std::move(name) },
+                { "param_type", json::string("parameter") },
+                { "param_shift", json::number(lo) },
+                { "dest_start", json::number(a.second.lo) },
+                { "dest_width", json::number(a.second.hi - a.second.lo + 1) } } } ); }
         action_format.push_back(std::move(action_format_per_action)); }
 }
 
@@ -1652,6 +1651,7 @@ json::map *Table::add_stage_tbl_cfg(json::map &tbl, const char *type, int size) 
         stage_tables.push_back(json::map());
         auto &stage_tbl = dynamic_cast<json::map &>(*stage_tables.back());
         stage_tbl["stage_number"] = stage->stageno;
+        stage_tbl["size"] = size;
         stage_tbl["stage_table_type"] = type;
         stage_tbl["logical_table_id"] = logical_id;
         if (!strcmp(type, "selection") && get_stateful())
@@ -1713,50 +1713,48 @@ void Table::add_field_to_pack_format(json::vector &field_list, int basebit, std:
                                      const std::vector<Actions::Action::alias_value_t *> &alias) {
     if (options.new_ctx_json) {
         int lobit = 0;
+        bool has_alias = false;
+        std::string source = "";
+        for (auto a : alias) {
+            if (name == a->second.name) {
+               has_alias = true; 
+               source = "spec";
+               name = a->first; } }
         for (auto &bits : field.bits) {
-            std::string source = "spec"; //FIXME-JSON 
             std::string immediate_name = "";
             if (name == "--version_valid--")
                 source = "version";
             else if (name == "--immediate--") {
                 source = "immediate";
-                immediate_name = name; }
-            field_list.push_back( json::map {
-                { "field_name", json::string(name) },
-                { "source", json::string(source) },
-                { "lsb_mem_word_offset", json::number(bits.lo) },
-                { "start_bit", json::number(lobit) },
-                { "immediate_name", json::string(immediate_name) },
-                { "lsb_mem_word_idx", json::number(0) }, //FIXME-JSON 
-                { "match_mode", json::string("") }, //FIXME-JSON 
-                { "field_width", json::number(bits.size()) }});
+                immediate_name = name; 
+            } else if (name == "--instruction_address--") 
+                source = "instr";
+            else if (name == "--action_data_pointer--")
+                source = "adt_ptr";
+            else if (name == "--selection_base--")
+                source = "sel_ptr";
+            if (field.flags == Format::Field::ZERO)
+                source = "zero";
+            json::map field_entry;
+            field_entry["start_bit"] = lobit; 
+            field_entry["field_width"] = bits.size();
+            //FIXME-JSON: lsb_mem_word_idx can be evaluated by driver
+            field_entry["lsb_mem_word_idx"] = bits.lo/128U;
+            field_entry["msb_mem_word_idx"] = bits.hi/128U;
+            field_entry["source"] = json::string(source);
+            field_entry["lsb_mem_word_offset"] = basebit + bits.lo;
+            field_entry["field_name"] = json::string(name);
+            //field_entry["immediate_name"] = json::string(immediate_name);
+            if (this->to<ExactMatchTable>())
+                field_entry["match_mode"] = json::string("unused"); //FIXME-JSON 
+            if (this->to<ExactMatchTable>() || this->to<TernaryIndirectTable>()) {
+                field_entry["enable_pfe"] = false;
+                if (auto s = this->get_selector()) {
+                    field_entry["enable_pfe"] = s->per_flow_enable; 
+                    if (s->per_flow_enable && (s->get_per_flow_enable_param() == name))
+                        return; } } //Do not output per flow enable parameter 
+            field_list.push_back(std::move(field_entry));
             lobit += bits.size(); }
-        for (auto a : alias) {
-            Format::bitrange_t abits(a->second.lo, a->second.hi);
-            if (a->second.lo < 0) abits.lo = 0;
-            if (a->second.hi < 0) abits.hi = field.size;
-            lobit = 0;
-            std::string source = "spec"; //FIXME-JSON 
-            std::string immediate_name = "";
-            if (a->first == "--version_valid--")
-                source = "version";
-            else if (a->first == "--immediate--") {
-                source = "immediate";
-                immediate_name = name; }
-            for (auto &bits : field.bits) {
-                Format::bitrange_t fbits(lobit, lobit + bits.size() - 1);
-                lobit += bits.size();
-                if (fbits.disjoint(abits)) continue;
-                auto overlap = fbits.overlap(abits);
-                field_list.push_back( json::map {
-                    { "field_name", json::string(a->first) },
-                    { "source", json::string(source) },
-                    { "lsb_mem_word_offset", json::number(basebit - bits.hi - (overlap.hi - fbits.hi)) },
-                    { "start_bit", json::number(overlap.lo) },
-                    { "immediate_name", json::string(immediate_name) },
-                    { "lsb_mem_word_idx", json::number(0) }, //FIXME-JSON 
-                    { "match_mode", json::string("") }, //FIXME-JSON 
-                    { "field_width", json::number(overlap.size()) }}); } }
     } else {
         int lobit = 0;
         for (auto &bits : field.bits) {
@@ -1783,20 +1781,73 @@ void Table::add_field_to_pack_format(json::vector &field_list, int basebit, std:
                     { "bit_width", json::number(overlap.size()) }}); } } }
 }
 
-json::map &Table::add_pack_format(json::map &stage_tbl, const Table::Format *format,
+void Table::add_zero_padding_fields(Table::Format *format, Table::Actions::Action *act, unsigned format_width) {
+    if (!format) return;
+    // For an action with no format pad zeros per 64 bit entry
+    unsigned pad_count = 0;
+    if (format->log2size == 0) {
+        format->log2size = 6;
+        format->size = 64; 
+        // Add a flag type to specify padding?
+        Format::Field f(format->size, 0, Format::Field::ZERO);
+        format->add_field(f, "--padding_0_63--"); 
+        return; }
+    decltype(act->reverse_alias()) alias;
+    if (act) alias = act->reverse_alias();
+    // Loop through fields to find zero padding 
+    bitvec padbits;
+    for (auto &field : *format) {
+        unsigned alias_size = -1; 
+        auto k = get(alias, field.first);
+        if (k.size() > 0) {
+            for (auto a : k) {
+                if (a->second.name == field.first)
+                    alias_size = a->second.hi - a->second.lo + 1; } }
+        unsigned bits_size = 0;
+        for (auto &bits : field.second.bits) {
+            bits_size += bits.hi - bits.lo + 1;
+            if (alias_size < bits_size) {
+                bits_size = alias_size;
+                bits.hi = bits.lo + alias_size - 1; 
+                alias_size -= bits.hi - bits.lo + 1; }
+            padbits.setrange(bits.lo, bits_size); } } 
+    unsigned idx_lo = 0, idx_hi = 63;;
+    for (auto p : padbits) {
+        if (p > idx_lo) { 
+            Format::Field f(p - idx_lo, idx_lo, Format::Field::ZERO);
+            std::string pad_name = "--padding_" + std::to_string(idx_lo) 
+                + "_" + std::to_string(p - 1) + "--";
+            format->add_field(f, pad_name); }
+        idx_lo = p + 1 ; }
+    if (idx_lo < format_width) {
+            Format::Field f(format_width - idx_lo, idx_lo, Format::Field::ZERO);
+            std::string pad_name = "--padding_" + std::to_string(idx_lo) 
+                + "_" + std::to_string(format_width - 1) + "--";
+            format->add_field(f, pad_name); }
+}
+
+json::map &Table::add_pack_format(json::map &stage_tbl, Table::Format *format,
                                   Table::Actions::Action *act) {
     if (options.new_ctx_json) {
         //FIXME-JSON: Do not output entries if way tbls present
         decltype(act->reverse_alias()) alias;
         if (act) alias = act->reverse_alias();
-        json::map pack_fmt { { "memory_word_width", json::number(128) } };
+        // Add zero padding fields to format
+        // FIXME: Can this be moved to a format pass?
+        //unsigned format_width = 64;
+        unsigned format_width = 1U << format->log2size;
+        unsigned memory_word_width = 128;
+        if (stage_tbl["stage_table_type"]->to<json::string>() != "hash_way")
+            add_zero_padding_fields(format, act, format_width);
+        json::map pack_fmt { { "memory_word_width", json::number(memory_word_width) } };
         /* FIXME -- factor the two cases of this if better */
         if (format->log2size >= 7 || format->groups() > 1) {
             pack_fmt["table_word_width"] = ((format->size - 1) | 127) + 1;
             pack_fmt["entries_per_table_word"] = format->groups();
             pack_fmt["number_memory_units_per_table_word"] = (format->size - 1)/128U + 1;
             json::vector &entry_list = pack_fmt["entries"];
-            int basebit = (format->size - 1) | 127;
+            //int basebit = (format->size - 1) | 127;
+            int basebit = 128U - (1 << format->log2size);
             for (int i = format->groups()-1; i >= 0; --i) {
                 json::vector field_list;
                 for (auto it = format->begin(i); it != format->end(i); ++it)
@@ -1807,12 +1858,14 @@ json::map &Table::add_pack_format(json::map &stage_tbl, const Table::Format *for
                     { "entry_number", json::number(i) },
                     { "fields", std::move(field_list) }}); }
         } else {
-            int entries = format->log2size ? 1U << (7 - format->log2size) : 0;
+            // Determine no. of entries that can fit in 128 bits (format word)
+            unsigned log2size = 7;
+            int entries = format->log2size ? 1U << (log2size - format->log2size) : 0;
             pack_fmt["table_word_width"] = 128;
             pack_fmt["entries_per_table_word"] = entries;
             pack_fmt["number_memory_units_per_table_word"] = 1;
             json::vector &entry_list = pack_fmt["entries"];
-            int basebit = (1 << format->log2size) - 1;
+            int basebit = 128U - (1 << format->log2size);
             for (int i = entries-1; i >= 0; --i) {
                 json::vector field_list;
                 for (auto &field : *format)
@@ -1822,7 +1875,9 @@ json::map &Table::add_pack_format(json::map &stage_tbl, const Table::Format *for
                 entry_list.push_back( json::map {
                     { "entry_number", json::number(i) },
                     { "fields", std::move(field_list) }});
-                basebit += 1 << format->log2size; } }
+                basebit -= 1 << format->log2size; } }
+        if (act)
+            pack_fmt["action_handle"] = act->handle;
         json::vector &pack_format = stage_tbl["pack_format"];
         pack_format.push_back(std::move(pack_fmt));
         return pack_format.back()->to<json::map>();
@@ -1877,29 +1932,22 @@ void MatchTable::gen_name_lookup(json::map &out) {
 
 void Table::common_tbl_cfg(json::map &tbl, const char *default_match_type) {
     if (options.new_ctx_json) {
-        if (!default_action.empty()) {
-            tbl["default_action"] = json::map{
-                { "name", json::string(default_action) },
-                { "handle", json::number(default_action_handle) } };
-            tbl["default_action_parameters"] = nullptr;
-            if (!default_action_parameters.empty()) {
-                json::map &params = tbl["default_action_parameters"] = json::map();
-                for (auto val : default_action_parameters)
-                    params[val.first] = val.second; } }
-        if (!p4_table->action_profile.empty())
-            tbl["action_profile"] = p4_table->action_profile;
-        else
-            tbl["action_profile"] = nullptr;
+        if (!default_action.empty())
+            tbl["default_action_handle"] = default_action_handle;
+        tbl["action_profile"] = p4_table->action_profile;
+        tbl["default_next_table_mask"] = 0;// FIXME-JSON
         //tbl["dynamic_match_key_masks"] = json::map(); //FIXME-JSON: Need example
         //tbl["static_entries"] = json::vector(); //FIXME-JSON
         tbl["ap_bind_indirect_res_to_match"] = json::vector(); //FIXME-JSON: Need example
         tbl["is_resource_controllable"] = true; //FIXME-JSON: Need example for false
+        tbl["uses_range"] = false; //FIXME-JSON: Ranges not yet implemented by brig 
         if ((!p4_params_list.empty()) && (this->to<MatchTable>())) {
             json::vector &params = tbl["match_key_fields"] = json::vector();
             for (auto &p : p4_params_list) {
                 unsigned start_bit = 0;
                 params.push_back( json::map {
                     { "name", json::string(p.name) },
+                    { "position", json::number(p.position) },
                     { "match_type", json::string(p.type) },
                     { "start_bit", json::number(start_bit) },
                     { "bit_width", json::number(p.bit_width) },

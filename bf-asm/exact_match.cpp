@@ -868,7 +868,9 @@ void ExactMatchTable::add_field_to_pack_format(json::vector &field_list, int bas
                     { "start_bit", json::number(lo + mw->second.lobit()) },
                     { "immediate_name", json::string(immediate_name) },
                     { "lsb_mem_word_idx", json::number(0) }, //FIXME-JSON 
-                    { "match_mode", json::string("") }, //FIXME-JSON 
+                    { "msb_mem_word_idx", json::number(0) }, //FIXME-JSON 
+                    { "match_mode", json::string("unused") }, //FIXME-JSON 
+                    { "enable_pfe", json::False() }, //FIXME-JSON 
                     { "field_width", json::number(width) }});
                 lo = 0;
                 ++mw; }
@@ -912,6 +914,8 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
         stage_tbl["stage_number"] = stage->stageno;
         stage_tbl["stage_table_type"] = "hash_match";
         stage_tbl["logical_table_id"] = logical_id;
+        stage_tbl["memory_resource_allocation"] = nullptr;
+        stage_tbl["size"] = number_entries; 
         json::vector &hash_functions = stage_tbl["hash_functions"] = json::vector();
         for (auto &hash : input_xbar->get_hash_tables()) {
             json::map hash_function;
@@ -919,6 +923,7 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
             for (auto &col: hash.second) {
                 json::map hash_bit;
                 hash_bit["hash_bit"] = col.first; 
+                hash_bit["seed"] = input_xbar->get_seed_bit(hash.first, col.first); 
                 json::vector &bits_to_xor = hash_bit["bits_to_xor"] = json::vector();
                 for (const auto &bit: col.second.data) {
                     json::map field;
@@ -933,7 +938,7 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
                     bits_to_xor.push_back(std::move(field)); }
                 hash_bits.push_back(std::move(hash_bit)); } 
             hash_functions.push_back(std::move(hash_function)); }
-        stage_tbl["action_handles"] = json::vector();
+        //stage_tbl["action_handles"] = json::vector();
         if (actions) {
             actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
             actions->add_action_format(this, stage_tbl);
@@ -941,12 +946,15 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
             action->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
             action->actions->add_action_format(this, stage_tbl); }
         if (format)
-            add_pack_format(stage_tbl, format);
+            add_pack_format(stage_tbl, 128, 1, 1); 
         json::vector &way_stage_tables = stage_tbl["ways"] = json::vector();
         for (auto &way : ways) {
             json::map way_tbl;
+            unsigned way_number = 0;
             way_tbl["stage_number"] = stage->stageno;
+            way_tbl["way_number"] = way_number++;
             way_tbl["stage_table_type"] = "hash_way";
+            way_tbl["size"] = way.rams.size()/fmt_width * format->groups() * 1024;
             add_pack_format(way_tbl, format);
             way_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg(way);
             way_stage_tables.push_back(std::move(way_tbl)); }
@@ -956,6 +964,7 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
         tbl["meter_table_refs"] = json::vector();
         tbl["selection_table_refs"] = json::vector();
         tbl["stateful_table_refs"] = json::vector();
+        tbl["action_data_table_refs"] = json::vector();
     } else {
         unsigned fmt_width = format ? (format->size + 127)/128 : 0;
         unsigned number_entries = format ? layout_size()/fmt_width * format->groups() * 1024 : 0;

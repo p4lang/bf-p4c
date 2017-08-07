@@ -437,6 +437,8 @@ void ActionTable::gen_tbl_cfg(json::vector &out) {
             add_pack_format(stage_tbl, fmt ? fmt : format, &act); }
         stage_tbl["memory_resource_allocation"] =
                 gen_memory_resource_allocation_tbl_cfg("sram", layout, true);
+        if (actions)
+            actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
         tbl["how_referenced"] = indirect ? "indirect" : "direct";
         /* FIXME -- don't include ref to select table as compiler doesn't */
         tbl.erase("p4_selection_tables");
