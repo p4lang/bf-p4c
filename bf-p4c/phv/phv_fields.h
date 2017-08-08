@@ -78,6 +78,8 @@ class PhvInfo : public Inspector {
         /// True if this Field is metadata.
         bool            metadata;
         bool            bridged = false;
+        /// A mirror field points to its field list (one of eight)
+        Field           *mirror_field_list = nullptr;
 
         /// True if this Field is a validity bit.  Implies metadata.
         bool            pov;
@@ -219,7 +221,7 @@ class PhvInfo : public Inspector {
         //
         bool            header_stack_pov_ccgf_i = false;   /// header stack pov owner
         bool            simple_header_pov_ccgf_i = false;  /// simple header ccgf
-        Field *ccgf_i = 0;                 /// container contiguous group fields (ccgf)
+        Field *ccgf_i = nullptr;           /// container contiguous group fields (ccgf)
                                            // (i) header stack povs: container FULL, no holes
                                            //     only when .$push exists -- see allocatePOV()
                                            //     owner".$stkvalid"->ccgf = 0, member->ccgf = owner
@@ -273,7 +275,7 @@ class PhvInfo : public Inspector {
         //
         // field overlays
         //
-        Field *overlay_substratum_i = 0;   // substratum field on which this field overlayed
+        Field *overlay_substratum_i = nullptr;  // substratum field on which this field overlayed
         ordered_map<int, ordered_set<Field *> *> field_overlay_map_i;
                                            // liveness / interference graph related
                                            // fields (within cluster) overlay map
@@ -296,8 +298,8 @@ class PhvInfo : public Inspector {
         // tracks chain of "interference reduced" overlay fields to substratum field
         //
         void cl_id(std::string cl_p) const;
-        std::string cl_id(Cluster_PHV *cl = 0) const;
-        int cl_id_num(Cluster_PHV *cl = 0) const;
+        std::string cl_id(Cluster_PHV *cl = nullptr) const;
+        int cl_id_num(Cluster_PHV *cl = nullptr) const;
         //
         // constraints
         //
@@ -343,11 +345,11 @@ class PhvInfo : public Inspector {
         //
         // phv_widths
         //
-        int phv_use_width(Cluster_PHV *cl = 0) const;     // width of field needed in phv container
-        void set_ccgf_phv_use_width(int min_ceil = 0);    // set phv_use_width for ccgf owners
-        int phv_use_lo(Cluster_PHV *cl = 0) const;
+        int phv_use_width(Cluster_PHV *cl = nullptr) const;   // field width needed in phv container
+        void set_ccgf_phv_use_width(int min_ceil = 0);        // set phv_use_width for ccgf owners
+        int phv_use_lo(Cluster_PHV *cl = nullptr) const;
         void set_phv_use_lo(int value)                         { phv_use_lo_i = value; }
-        int phv_use_hi(Cluster_PHV *cl = 0) const;
+        int phv_use_hi(Cluster_PHV *cl = nullptr) const;
         void set_phv_use_hi(int value)                         { phv_use_hi_i = value; }
         int phv_use_rem() const                                { return phv_use_rem_i; }
         void set_phv_use_rem(int value)                        { phv_use_rem_i = value; }

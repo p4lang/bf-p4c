@@ -356,11 +356,9 @@ PHV_MAU_Group_Assignments::phv_container(std::string asm_string) {
 int
 PHV_MAU_Group_Assignments::num_ingress_collections(std::vector<Cluster_PHV *>& cluster_vec) {
     //
-    // assert(cluster_vec.size()); possible to have 0 fields alloc to TPHV
-    //
     int ingress_and_egress = 0;
     int ingress = 0;
-    for (auto &cl : cluster_vec) {
+    for (auto &cl : cluster_vec) {  // possible to have 0 fields alloc to TPHV
         if (cl->exact_containers()) {
             ingress_and_egress++;
             if (cl->gress() == PHV_Container::Ingress_Egress::Ingress_Only) {
@@ -1266,6 +1264,7 @@ PHV_MAU_Group_Assignments::packing_predicates(
     bool allow_deparsed_metadata) {
     //
     assert(cl);
+    assert(cl->cluster_vec().size() <= cc_set.size());
     assert(*(cc_set.begin()));
     PHV_Container::Ingress_Egress c_gress = (*(cc_set.begin()))->container()->gress();
     if (!gress_compatibility(c_gress, cl->gress())) {
@@ -1280,6 +1279,27 @@ PHV_MAU_Group_Assignments::packing_predicates(
     if (req && !num_containers_bottom_bits(cl, cc_set, req)) {
         return false;
     }
+    //
+    // cannot pack bridge metadata mirror & bridge metadata Not mirror
+    // packed bridge metadata must belong to same field list (one of eight field lists)
+    //
+    std::vector<PHV_MAU_Group::Container_Content *> cc_vec{ std::begin(cc_set), std::end(cc_set) };
+    int pos = 0;
+    for (auto &f : cl->cluster_vec()) {
+        if (f->bridged && f->mirror_field_list) {
+            PHV_Container *c = cc_vec[pos]->container();
+            BUG_CHECK(c, "*****PHV_MAU_Group_Assignments::b_meta_m packing, container null *****");
+            // for all fields in container, ensure mirror fields & same field list
+            for (auto &entry : c->fields_in_container()) {
+                PhvInfo::Field *cf = entry.first;
+                if (cf->mirror_field_list != f->mirror_field_list) {
+                    return false;
+                }
+            }  // for
+        }
+        pos++;
+    }  // for
+    //
     // TODO
     //
     // do not put deparsed field in non-deparsed container & vice-versa
@@ -1291,9 +1311,6 @@ PHV_MAU_Group_Assignments::packing_predicates(
     // checksum 16b..16b..8b in 16b or 8b container ?
     //
     // mutually_cohabit(f1, f2),
-    //
-    // bridge metadata mirror & bridge metadata Not mirror
-    // bridge metadata belong to same field list (they can be part of 8 field lists)
     //
     // learning digests: L1, L2 belong to same digest
     // mirror, resubmit digests no constraints ?

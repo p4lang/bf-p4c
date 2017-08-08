@@ -818,6 +818,8 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field &field) {
     if (field.referenced) out << " ref";
     if (field.bridged) out << " bridge";
     if (field.metadata) out << " meta";
+    if (field.mirror_field_list)
+        out << " m=%" << field.mirror_field_list->id << ":" << field.mirror_field_list->name << "%";
     if (field.pov) out << " pov";
     if (field.mau_write()) out << " mau_write";
     if (field.deparsed()) out << " deparsed";

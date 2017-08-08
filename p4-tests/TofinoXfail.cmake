@@ -379,7 +379,7 @@ set (TOFINO_XFAIL_TESTS
   extensions/p4_tests/p4_14/c1/COMPILER-385/case2247.p4
   extensions/p4_tests/p4_14/c1/COMPILER-386/test_config_286_stat_bugs.p4
   extensions/p4_tests/p4_14/c1/COMPILER-402/case2318.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-413/mirror_test.p4
+#  extensions/p4_tests/p4_14/c1/COMPILER-413/mirror_test.p4
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
   extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
   extensions/p4_tests/p4_14/c1/COMPILER-447/case2527.p4

@@ -1201,11 +1201,14 @@ std::ostream &operator<<(std::ostream &out, Cluster &cluster) {
 // Note 1
 // $mirror_id is a ‘special’ field.
 // it is introduced by the parser shims for parsing mirror packets.
-// for PHV allocation it should be treated like any other metadata field, how it is used in the IR.
+// for PHV allocation it should be treated like any other metadata field, as used in the IR.
 // in particular expect `$mirror_id` to often be “unused” and thus not need to be allocated to a PHV
 // it is extracted in the parser and used to switch parser states, but that it not actually a “use”
 // of PHV allocation, the parser accesses it from the input buffer directly,
 // so if no later use in MAU or deparser, the extract to PHV can be left as dead
+//
+// should have ingress::$mirror_id & egress::$mirror_id for phv allocation
+// otherwise assembler complaint "No phv record $mirror_id"
 //
 // Note 2
 // some fields e.g., egress_port (9 bits), egress_spec (9 bits)

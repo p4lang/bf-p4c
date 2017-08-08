@@ -167,18 +167,33 @@ class Cluster::Uses : public Inspector {
                 LOG1(".....Deparser Constraint 'egress port' on field..... " << field);
             }
         }
-        // TODO: we should extend the IR to distinguish between different kinds of digests,
-        // since different digests have different constraints---right now, there's only
-        // the IR::Tofino::Digest node, with a string field that distinguishes different kinds
-        // distinguish each digest as an enumeration: learning, mirror, resubmit
-        for (auto &entry : d->digests) {
-            const char *learning = "learning";
-            if (const char *s = strstr(entry.second->name.c_str(), learning)) {
-                if (strlen(s) == strlen(learning)) {
-                    PhvInfo::Field *field
-                        = const_cast<PhvInfo::Field *>(phv.field(entry.second->select));
-                    field->set_deparsed_bottom_bits(true);
-                    LOG1(".....Deparser Constraint 'learning digest' on field..... " << field);
+        // TODO:
+        // IR futures: distinguish each digest as an enumeration: learning, mirror, resubmit
+        // as they have differing constraints -- bottom-bits, bridge-metadata mirror packing
+        // learning, mirror field list in bottom bits of container, e.g.,
+        // 301:ingress::$learning<3:0..2>
+        // 590:egress::$mirror<3:0..2> specifies 1 of 8 field lists
+        // currently, IR::Tofino::Digest node has a string field to distinguish them by name
+        for (auto &entry : Values(d->digests)) {
+            if (entry->name == "learning" || entry->name == "mirror") {
+                PhvInfo::Field *field
+                    = const_cast<PhvInfo::Field *>(phv.field(entry->select));
+                field->set_deparsed_bottom_bits(true);
+                LOG1(".....Deparser Constraint "
+                    << entry->name
+                    << " 'digest' on field..... "
+                    << field);
+                // associating a mirror field with its field list
+                // used during constraint checks for bridge-metadata phv allocation
+                if (entry->name ==  "mirror") {
+                    LOG1(".....mirror fields in field list " << field->id << ":" << field->name);
+                    for (auto s : entry->sets) {
+                        for (auto m : *s) {
+                            PhvInfo::Field *mirror = const_cast<PhvInfo::Field *>(phv.field(m));
+                            mirror->mirror_field_list = field;
+                            LOG1("\t" << mirror);
+                        }
+                    }
                 }
             }
         }
