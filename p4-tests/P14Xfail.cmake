@@ -34,7 +34,6 @@ set (P14_XFAIL_TESTS
   extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
   extensions/p4_tests/p4_14/c1/COMPILER-482/case2622.p4
   extensions/p4_tests/p4_14/c2/COMPILER-408/case2364.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
   extensions/p4_tests/p4_14/c2/COMPILER-514/balancer_one.p4
   extensions/p4_tests/p4_14/c2/COMPILER-537/case2834.p4
   extensions/p4_tests/p4_14/c2/COMPILER-533/case2736.p4

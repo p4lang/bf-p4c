@@ -11,7 +11,7 @@ header hdr_t_2 {
 
 header hdr_t {
     bit<32>     useless;
-    @length(useless * 32w2) 
+    @length((bit<32>)useless * 32w2 * 8 - 32) 
     varbit<448> opts;
 }
 
@@ -28,7 +28,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     hdr_t_2 tmp_hdr_0;
     @name(".start") state start {
         packet.extract(tmp_hdr);
-        packet.extract(tmp_hdr_0, (bit<32>)(tmp_hdr.useless * 32w2));
+        packet.extract(tmp_hdr_0, (bit<32>)((bit<32>)tmp_hdr.useless * 32w2 * 8 - 32));
         hdr.hdr.setValid();
         hdr.hdr.useless = tmp_hdr.useless;
         hdr.hdr.opts = tmp_hdr_0.opts;

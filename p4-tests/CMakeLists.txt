@@ -205,6 +205,7 @@ set (V12_DRIVER ${CMAKE_CURRENT_SOURCE_DIR}/test-v12-sample.sh)
 p4c_add_tests("p14_to_16" ${V12_DRIVER} "${P14_TEST_SUITES}" "${P14_XFAIL_TESTS}")
 
 # P4_16 tests
+include (P16Xfail.cmake)
 set (P16_TEST_SUITES
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/*.p4
   )
