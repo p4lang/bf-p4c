@@ -101,8 +101,9 @@ def update_config(name, grpc_addr, p4info_path, tofino_bin_path, cxt_json_path):
     request.action = p4runtime_pb2.SetForwardingPipelineConfigRequest.VERIFY_AND_COMMIT
     try:
         response = stub.SetForwardingPipelineConfig(request)
-    except:
+    except Exception as e:
         print >> sys.stderr, "Error when trying to push config to bf_switchd"
+        print >> sys.stderr, e
         # TODO: uncomment when tests enabled
         # return False
     return True
@@ -233,7 +234,7 @@ def main():
     check_and_add_ifaces()
 
     dirname = tempfile.mkdtemp(prefix=args.name)
-    os.chmod(dirname, stat.S_IROTH | stat.S_IWOTH | stat.S_IXOTH)
+    os.chmod(dirname, 0o777)
     model_log_path = os.path.join(dirname, 'model.log')
     switchd_log_path = os.path.join(dirname, 'switchd.log')
 
@@ -274,7 +275,7 @@ def main():
 
     success = run()
     for f in os.listdir(dirname):
-        os.chmod(os.path.join(dirname, f), stat.S_IROTH | stat.S_IWOTH)
+        os.chmod(os.path.join(dirname, f), 0o666)
     for p in processes:
         p.terminate()
     if not success:
