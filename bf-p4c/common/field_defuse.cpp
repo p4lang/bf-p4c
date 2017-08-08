@@ -60,6 +60,7 @@ void FieldDefUse::read(const PhvInfo::Field *f, const IR::Tofino::Unit *unit,
     info.use.clear();
     locpair use(unit, e);
     info.use.emplace(use);
+    located_uses[f->id].emplace(use);
     check_conflicts(info, unit->stage());
     for (auto def : info.def) {
         LOG4("  " << use << " uses " << def);
@@ -93,6 +94,7 @@ void FieldDefUse::write(const PhvInfo::Field *f, const IR::Tofino::Unit *unit,
     } else {
         info.def.clear(); }
     info.def.emplace(unit, e);
+    located_defs[f->id].emplace(unit, e);
 }
 void FieldDefUse::write(const IR::HeaderRef *hr, const IR::Tofino::Unit *unit,
                         const IR::Expression *e) {

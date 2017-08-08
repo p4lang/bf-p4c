@@ -24,11 +24,11 @@ void LiveRangeOverlay::end_apply() {
         all_units = f.gress == INGRESS ? &all_ingress_units : &all_egress_units;
         for (const IR::Tofino::Unit *u : *all_units) {
             bool dead = true;
-            for (const FieldDefUse::locpair ur_loc : defuse.getUses(f.id)) {
+            for (const FieldDefUse::locpair ur_loc : defuse.getAllUses(f.id)) {
                 const IR::Tofino::Unit *ur = ur_loc.first;
                 if (!happens_before(ur, u)) {
                     dead = false;
-                    for (const FieldDefUse::locpair uw_loc : defuse.getDefs(f.id)) {
+                    for (const FieldDefUse::locpair uw_loc : defuse.getAllDefs(f.id)) {
                         const IR::Tofino::Unit *uw = uw_loc.first;
                         if (happens_before(u, uw) && happens_before(uw, ur)) {
                             dead = true;
@@ -112,7 +112,7 @@ void LiveRangeOverlay::get_uninitialized_reads(
     // If a field use does not have a def, then it is reading an unintialized
     // value.
     for (const PhvInfo::Field &f : phv) {
-        for (const FieldDefUse::locpair use : defuse.getUses(f.id)) {
+        for (const FieldDefUse::locpair use : defuse.getAllUses(f.id)) {
             if (!defuse.getDefs(use).size()) {
                 LOG4("uninitialized read of " << f.name <<
                      " at "<< DBPrint::Brief <<

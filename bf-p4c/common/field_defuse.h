@@ -12,7 +12,7 @@
 
 class FieldDefUse : public ControlFlowVisitor, public Inspector, TofinoWriteContext {
  public:
-    /* A given expression for a field might appear multiple places in the IR dag (eg, an
+    /** A given expression for a field might appear multiple places in the IR dag (eg, an
      * action used by mulitple tables), so we use a pair<Unit,Expr> to denote a particular
      * use or definition in the code */
     typedef std::pair<const IR::Tofino::Unit *, const IR::Expression*>  locpair;
@@ -21,12 +21,19 @@ class FieldDefUse : public ControlFlowVisitor, public Inspector, TofinoWriteCont
  private:
     const PhvInfo               &phv;
     SymBitMatrix                &conflict;
+
+    /// Maps uses to defs and vice versa.
     ordered_map<locpair, LocPairSet>  &uses, &defs;
 
+    /// All uses and all defs for each field.
+    ordered_map<int, LocPairSet>      &located_uses, &located_defs;
+
+    /// Intermediate data structure for computing def/use sets.
     struct info {
         const PhvInfo::Field    *field = 0;
         LocPairSet            def, use;
     };
+    /// Intermediate data structure for computing def/use sets.
     std::unordered_map<int, info> defuse;
     class ClearBeforeEgress;
     // class Init;
@@ -57,9 +64,13 @@ class FieldDefUse : public ControlFlowVisitor, public Inspector, TofinoWriteCont
     explicit FieldDefUse(const PhvInfo &p)
     : phv(p), conflict(*new SymBitMatrix),
       uses(*new std::remove_reference<decltype(uses)>::type),
-      defs(*new std::remove_reference<decltype(defs)>::type)
+      defs(*new std::remove_reference<decltype(defs)>::type),
+      located_uses(*new std::remove_reference<decltype(located_uses)>::type),
+      located_defs(*new std::remove_reference<decltype(located_defs)>::type)
     { joinFlows = true; visitDagOnce = false; }
-    const SymBitMatrix &conflicts() { return conflict; }
+
+    // TODO: unused?
+    // const SymBitMatrix &conflicts() { return conflict; }
 
     const LocPairSet &getDefs(locpair use) const {
         static const LocPairSet emptyset;
@@ -69,9 +80,9 @@ class FieldDefUse : public ControlFlowVisitor, public Inspector, TofinoWriteCont
     const LocPairSet &getDefs(const Visitor *v, const IR::Expression *e) const {
         return getDefs(locpair(v->findOrigCtxt<IR::Tofino::Unit>(), e)); }
     /** Get all defs of the PhvInfo::Field with ID @fid. */
-    const LocPairSet &getDefs(int fid) const {
+    const LocPairSet &getAllDefs(int fid) const {
         static const LocPairSet emptyset;
-        return defuse.count(fid) ? defuse.at(fid).def : emptyset; }
+        return located_defs.count(fid) ? located_defs.at(fid) : emptyset; }
 
     const LocPairSet &getUses(locpair def) const {
         static const LocPairSet emptyset;
@@ -81,9 +92,9 @@ class FieldDefUse : public ControlFlowVisitor, public Inspector, TofinoWriteCont
     const LocPairSet &getUses(const Visitor *v, const IR::Expression *e) const {
         return getUses(locpair(v->findOrigCtxt<IR::Tofino::Unit>(), e)); }
     /** Get all uses of the PhvInfo::Field with ID @fid. */
-    const LocPairSet &getUses(int fid) const {
+    const LocPairSet &getAllUses(int fid) const {
         static const LocPairSet emptyset;
-        return defuse.count(fid) ? defuse.at(fid).use : emptyset; }
+        return located_uses.count(fid) ? located_uses.at(fid) : emptyset; }
 };
 
 #endif /* _FIELD_DEFUSE_H_ */

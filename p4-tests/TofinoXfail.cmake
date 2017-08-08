@@ -63,7 +63,6 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     testdata/p4_14_samples/action_inline1.p4
     testdata/p4_14_samples/action_inline2.p4
     testdata/p4_14_samples/action_chain1.p4
-    testdata/p4_14_samples/basic_routing.p4
     testdata/p4_14_samples/hitmiss.p4
     testdata/p4_14_samples/ternary_match1.p4
     testdata/p4_14_samples/ternary_match3.p4
@@ -72,6 +71,11 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     testdata/p4_16_samples/ternary2-bmv2.p4
     extensions/p4_tests/p4_16/ternary1.p4
     extensions/p4_tests/p4_16/ternary2.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "no field nexthop_index related to table ipv4_fib_lpm"
+    testdata/p4_14_samples/basic_routing.p4
     )
 
   p4c_add_xfail_reason("tofino"
@@ -173,13 +177,19 @@ p4c_add_xfail_reason("tofino"
   "No format in action table"
   testdata/p4_14_samples/02-FullPHV1.p4
   testdata/p4_14_samples/03-FullPHV2.p4
-  testdata/p4_14_samples/05-FullTPHV.p4
   testdata/p4_14_samples/07-FullTPHV2.p4
-  testdata/p4_14_samples/08-FullTPHV3.p4
   testdata/p4_14_samples/selector0.p4
   testdata/p4_16_samples/action_profile-bmv2.p4
   testdata/p4_16_samples/issue297-bmv2.p4
   extensions/p4_tests/p4_14/c1/COMPILER-133/full_tphv.p4
+  )
+
+# BRIG-197
+p4c_add_xfail_reason("tofino"
+  "No register named"
+  testdata/p4_14_samples/05-FullTPHV.p4
+  testdata/p4_14_samples/06-FullTPHV1.p4
+  testdata/p4_14_samples/08-FullTPHV3.p4
   )
 
 # p4c_add_xfail_reason("tofino"
@@ -477,7 +487,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Assertion failed: (rv < 0 || rv == off)"
+  "(rv < 0 || rv == off)"
   extensions/p4_tests/p4_14/test_config_86_multiple_action_widths_for_indirect_action.p4
   )
 

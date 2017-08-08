@@ -28,7 +28,7 @@ Visitor::profile_t MetadataConstantPropagation::init_apply(const IR::Node *root)
     // Find first reads: if a field use does not have a def, then it is
     // reading an unintialized value.
     for (auto &f : phv) {
-        for (const FieldDefUse::locpair use : defuse.getUses(f.id)) {
+        for (const FieldDefUse::locpair use : defuse.getAllUses(f.id)) {
             if (!defuse.getDefs(use).size()) {
                 LOG4("uninitialized read of " <<
                      f.name << " at "<< DBPrint::Brief << use.first <<

@@ -64,7 +64,7 @@ class ElimUnused::Headers : public PardeTransform {
         // could be setting it to something other than zero.
         auto povField = self.phv.field(emit->povBit);
         if (!povField) return emit;
-        if (!self.defuse.getDefs(povField->id).empty()) return emit;
+        if (!self.defuse.getAllDefs(povField->id).empty()) return emit;
 
         LOG1("eliminating " << emit);
         return nullptr;

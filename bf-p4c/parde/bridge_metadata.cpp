@@ -5,7 +5,7 @@ class AddBridgedMetadata::FindFieldsToBridge : public ThreadVisitor, Inspector {
     AddBridgedMetadata &self;
     bool preorder(const IR::Expression *e) override {
         if (auto *field = self.phv.field(e)) {
-            for (auto &loc : self.defuse.getUses(field->id)) {
+            for (auto &loc : self.defuse.getAllUses(field->id)) {
                 if (loc.first->thread() == EGRESS && field->metadata) {
                     if (!field->bridged) {
                       LOG2("bridging field " << loc.second << " id=" << field->id);
