@@ -104,8 +104,7 @@ def update_config(name, grpc_addr, p4info_path, tofino_bin_path, cxt_json_path):
     except Exception as e:
         print >> sys.stderr, "Error when trying to push config to bf_switchd"
         print >> sys.stderr, e
-        # TODO: uncomment when tests enabled
-        # return False
+        return False
     return True
 
 def run_ptf_tests(PTF, ptfdir, p4info_path):
