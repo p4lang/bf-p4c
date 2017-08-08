@@ -32,6 +32,15 @@ from p4.tmp import p4config_pb2
 from p4.config import p4info_pb2
 import google.protobuf.text_format
 
+# Convert integer (with length) to binary byte string
+# Equivalent to Python 3.2 int.to_bytes
+# See
+# https://stackoverflow.com/questions/16022556/has-python-3-to-bytes-been-back-ported-to-python-2-7
+def stringify(n, length):
+    h = '%x' % n
+    s = ('0'*(len(h) % 2) + h).zfill(length*2).decode('hex')
+    return s
+
 # This code is common to all tests. setUp() is invoked at the beginning of the
 # test and tearDown is called at the end, no matter whether the test passed /
 # failed / errored.
@@ -134,3 +143,19 @@ class P4RuntimeTest(BaseTest):
     # be an iterable object of 2-tuples (<param_name>, <value>).
     def set_action_entry(self, table_entry, a_name, params):
         self.set_action(table_entry.action.action, a_name, params)
+
+    # iterates over all requests; if they are INSERT updates, replay them as
+    # DELETE updates; this is a convenient way to clean-up a lot of switch state
+    def undo_write_requests(self, reqs):
+        updates = []
+        for req in reqs:
+            for i in xrange(len(req.updates)):
+                update = req.updates.pop()
+                if update.type == p4runtime_pb2.Update.INSERT:
+                    updates.append(update)
+        new_req = p4runtime_pb2.WriteRequest()
+        new_req.device_id = self.device_id
+        for update in updates:
+            update.type = p4runtime_pb2.Update.DELETE
+            new_req.updates.add().CopyFrom(update)
+        rep = self.stub.Write(req)
