@@ -182,6 +182,9 @@ fi
 if $run_ptf && [ -d ${file%.p4}.ptf ]; then
     p4runtime_out=$testdir/${name}.out/p4info.proto.txt
     P4C_ARGS="$P4C_ARGS --p4runtime-file $p4runtime_out --p4runtime-format text"
+    # TODO(unknown): remove when -N (new context JSON format) becomes the
+    # default
+    P4C_ARGS="$P4C_ARGS -Xassembler '-N'"
 fi
 
 if [ ! -x $P4C ]; then
