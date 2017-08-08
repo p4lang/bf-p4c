@@ -233,6 +233,9 @@ if $run_ptf && [ -d ${file%.p4}.ptf ]; then
     PTF_RUNNER=$(findbin HARLYN_PTF_DRIVER_WRAPPER)
     $PTF_RUNNER --testdir $testdir --name $name --ptfdir ${file%.p4}.ptf \
                 --top-builddir $(findcmakecache)
+    if [ $? -ne 0 ]; then
+        exit 1
+    fi
 fi
 
 if [[ " $IFAIL_TESTS " =~ " $testdir/$name.p4.test " ]]; then
