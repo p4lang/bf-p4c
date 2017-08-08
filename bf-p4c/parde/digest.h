@@ -49,15 +49,20 @@ class Digests : public Transform {
                 error("%s: clone E2E not allowed in ingress pipe", prim->srcInfo);
             if (VisitingThread(this) == EGRESS && m->member == "I2E")
                 error("%s: clone I2E not allowed in egress pipe", prim->srcInfo);
-            if (!mirror_id)
+            bool insert_mirror_id = false;  // ensure $mirror_id not repeated in mirror field list
+            if (!mirror_id) {
                 mirror_id = new IR::TempVar(IR::Type::Bits::get(10), "$mirror_id");
+                insert_mirror_id = true;
+            }
             auto list = prim->operands.size() > 2 ? prim->operands[2] : nullptr;
             auto rv = new IR::Vector<IR::Primitive>;
             rv->push_back(new IR::Primitive("modify_field", mirror_id, prim->operands[1]));
             rv->push_back(add_to_digest(mirror, "mirror", list));
-            auto l = mirror->sets.back()->clone();
-            l->insert(l->begin(), mirror_id);
-            mirror->sets.back() = l;
+            if (insert_mirror_id) {
+                auto l = mirror->sets.back()->clone();
+                l->insert(l->begin(), mirror_id);
+                mirror->sets.back() = l;
+            }
             return rv; }
         return prim; }
     IR::Tofino::Deparser *postorder(IR::Tofino::Deparser *dp) override {
