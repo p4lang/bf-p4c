@@ -117,7 +117,7 @@ bool Cluster::preorder(const IR::HeaderRef *hr) {
     ordered_map<PhvInfo::Field *, int> ccgf;
     PhvInfo::Field *group_accumulator = 0;
     int accumulator_bits = 0;
-    for (auto fid : Range(*phv_i.header(hr))) {
+    for (auto fid : phv_i.struct_info(hr).field_ids()) {
         auto field = phv_i.field(fid);
         if (!uses_i->is_referenced(field)) {
             //
@@ -127,15 +127,17 @@ bool Cluster::preorder(const IR::HeaderRef *hr) {
         }
         set_field_range(field);
         LOG4(field);
-        //
+
         // accumulate sub-byte fields to group to a byte boundary
         // fields must be contiguous
         // aggregating beyond byte boundary can cause problems
         // e.g.,
-        //   {extra$0.x1: W0(0..23), extra$0.more: B1}               => 5 bytes  -- deparser problem
-        //   {extra$0.x1: W0(8..31), extra$0.more: W0(0..7)}         => 4 bytes -- ok
-        //   {extra$0.x1.16-23: B2,extra$0.x1.8-15: B1,extra$0.x1.0-7: B0,extra$0.more: B49} => 4B
-        //
+        //   {extra$0.x1: W0(0..23), extra$0.more: B1}
+        //      => 5 bytes  -- deparser problem
+        //   {extra$0.x1: W0(8..31), extra$0.more: W0(0..7)}
+        //      => 4 bytes -- ok
+        //   {extra$0.x1.16-23: B2,extra$0.x1.8-15: B1,extra$0.x1.0-7: B0,extra$0.more: B49}
+        //      => 4B
         if (!field->ccgf()) {
             bool byte_multiple = field->size % PHV_Container::PHV_Word::b8 == 0;
             if (group_accumulator || !byte_multiple) {
@@ -151,17 +153,12 @@ bool Cluster::preorder(const IR::HeaderRef *hr) {
                     LOG4("+++++PHV_container_contiguous_group....."
                         << accumulator_bits);
                     LOG4(group_accumulator);
-                    group_accumulator = 0;
-                }
-            }
-        }
-    }
+                    group_accumulator = 0; } } } }
     if (group_accumulator) {
        ccgf[group_accumulator] = accumulator_bits;
        LOG4("+++++PHV_container_contiguous_group....."
            << accumulator_bits);
-       LOG4(group_accumulator);
-    }
+       LOG4(group_accumulator); }
     // discard container contiguous groups with:
     // - only one member
     // - widths that are larger than one byte but not byte-multiples

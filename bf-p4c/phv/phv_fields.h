@@ -1,6 +1,7 @@
 #ifndef _TOFINO_PHV_PHV_FIELDS_H_
 #define _TOFINO_PHV_PHV_FIELDS_H_
 
+#include <boost/range/irange.hpp>
 #include "phv.h"
 #include "ir/ir.h"
 #include "lib/map.h"
@@ -410,22 +411,51 @@ class PhvInfo : public Inspector {
         //
     };  // class Field
 
+    /// PHV-related info about structs, i.e. collections of header or metadata fields.
+    struct StructInfo {
+        /// True if this is a metadata struct; false for headers.
+        bool metadata;
+
+        /// Gress of this struct.
+        gress_t gress;
+
+        /// PhvInfo::Field ID (i.e. index into `by_id`) of the first field of
+        /// this struct.  Struct fields are assigned contiguous IDs.  This field
+        /// is not valid when `size == 0`.
+        int first_field_id;
+
+        /// Number of fields in this struct. May be `0` for structs with no
+        /// fields.
+        int size;
+
+        StructInfo(bool metadata, gress_t gress)
+        : metadata(metadata), gress(gress), first_field_id(0), size(0) { }
+        StructInfo(bool metadata, gress_t gress, int first_field_id, int size)
+        : metadata(metadata), gress(gress), first_field_id(first_field_id), size(size) {
+            BUG_CHECK(0 <= size, "PhvInfo::StructInfo with negative size");
+            BUG_CHECK(size == 0 || 0 <= first_field_id,
+                "PhvInfo::StructInfo with negative first field offset");
+        }
+
+        /// Returns the half-open range of field IDs for this struct.
+        boost::integer_range<int> field_ids() const {
+            return boost::irange(first_field_id, first_field_id + size);
+        }
+    };
+
  private:  // class PhvInfo
     //
     map<cstring, Field>                 all_fields;
     /// Maps Field.id to Field.  Also used to generate fresh Field.id values.
     vector<Field *>                     by_id;
 
-    /** Maps names of headers to the range in `by_id` containing their fields.
-     * 
-     * Eg. a header `h` has three fields `f1`, `f2`, `f3`, which are located at
-     * `by_id[2]`, `by_id[3]`, and `by_id[4]` (fields are always placed
-     * contiguously, in order, in `by_id`).  In this example, `all_headers == (2,4)`.
-     */
-    map<cstring, std::pair<int, int>>   all_headers;
-    /// Like `all_headers`, but only headers, not header stacks.
+    /// Maps names of header or metadata structs to corresponding info objects.
+    map<cstring, StructInfo>            all_structs;
+
+    /// Tracks the subset of `all_structs` that are only headers, not header stacks.
     // TODO: what about header unions?
-    map<cstring, std::pair<int, int>>   simple_headers;
+    map<cstring, StructInfo>            simple_headers;
+
     gress_t                             gress;
     bool                                alloc_done_ = false;
     bool                                pov_alloc_done = false;
@@ -464,9 +494,9 @@ class PhvInfo : public Inspector {
     Field *field(const IR::Member *fr, bitrange *bits = 0) {
         return const_cast<Field *>(const_cast<const PhvInfo *>(this)->field(fr, bits)); }
     vector<Field::alloc_slice> *alloc(const IR::Member *member);
-    const std::pair<int, int> *header(cstring name) const;
-    const std::pair<int, int> *header(const IR::HeaderRef *hr) const {
-        return header(hr->toString()); }
+    const StructInfo struct_info(cstring name) const;
+    const StructInfo struct_info(const IR::HeaderRef *hr) const {
+        return struct_info(hr->toString()); }
     size_t num_fields() const { return all_fields.size(); }
     iterator<vector<Field *>::iterator> begin() { return by_id.begin(); }
     iterator<vector<Field *>::iterator> end() { return by_id.end(); }

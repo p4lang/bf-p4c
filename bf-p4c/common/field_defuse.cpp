@@ -16,7 +16,7 @@ class FieldDefUse::ClearBeforeEgress : public Inspector {
             return false; }
         return true; }
     bool preorder(const IR::HeaderRef *hr) override {
-        for (int id : Range(*self.phv.header(hr)))
+        for (int id : self.phv.struct_info(hr).field_ids())
             self.defuse.erase(id);
         return false; }
  public:
@@ -69,12 +69,10 @@ void FieldDefUse::read(const PhvInfo::Field *f, const IR::Tofino::Unit *unit,
 void FieldDefUse::read(const IR::HeaderRef *hr, const IR::Tofino::Unit *unit,
                        const IR::Expression *e) {
     if (!hr) return;
-    auto hdr_ids = *phv.header(hr);
-    for (int id : Range(hdr_ids))
+    PhvInfo::StructInfo info = phv.struct_info(hr);
+    for (int id : info.field_ids())
         read(phv.field(id), unit, e);
-    if (!phv.field(hdr_ids.first))
-      return;
-    if (!phv.field(hdr_ids.first)->metadata)
+    if (!info.metadata)
         read(phv.field(hr->toString() + ".$valid"), unit, e);
 }
 void FieldDefUse::write(const PhvInfo::Field *f, const IR::Tofino::Unit *unit,
@@ -99,10 +97,10 @@ void FieldDefUse::write(const PhvInfo::Field *f, const IR::Tofino::Unit *unit,
 void FieldDefUse::write(const IR::HeaderRef *hr, const IR::Tofino::Unit *unit,
                         const IR::Expression *e) {
     if (!hr) return;
-    auto hdr_ids = *phv.header(hr);
-    for (int id : Range(hdr_ids))
+    PhvInfo::StructInfo info = phv.struct_info(hr);
+    for (int id : info.field_ids())
         write(phv.field(id), unit, e);
-    if (!phv.field(hdr_ids.first)->metadata)
+    if (!info.metadata)
         write(phv.field(hr->toString() + ".$valid"), unit, e);
 }
 

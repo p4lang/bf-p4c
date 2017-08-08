@@ -42,8 +42,8 @@ class Uses : public Inspector {
         revisit_visited();
         return true; }
     bool preorder(const IR::HeaderRef *hr) {
-        if (auto head = phv.header(hr))
-            use[in_mau][thread].setrange(head->first, head->second - head->first + 1);
+        PhvInfo::StructInfo info = phv.struct_info(hr);
+        use[in_mau][thread].setrange(info.first_field_id, info.size);
         return false; }
     bool preorder(const IR::Expression *e) {
         if (auto info = phv.field(e)) {

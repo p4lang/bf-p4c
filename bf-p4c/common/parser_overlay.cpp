@@ -16,8 +16,7 @@ void ParserOverlay::mark(const PhvInfo::Field* f) {
 
 void ParserOverlay::mark(const IR::HeaderRef* hr) {
     if (!hr) return;
-    auto hdr_ids = *phv.header(hr);
-    for (int id : Range(hdr_ids))
+    for (int id : phv.struct_info(hr).field_ids())
         mark(phv.field(id));
 }
 

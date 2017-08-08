@@ -21,7 +21,7 @@ bool PhvInfo::SetReferenced::preorder(const IR::Expression *e) {
             povbit->referenced = true;
         return false; }
     if (auto *hr = e->to<IR::HeaderRef>()) {
-        for (auto id : Range(*self.header(hr)))
+        for (auto id : self.struct_info(hr).field_ids())
             self.field(id)->referenced = true;
         if (auto *povbit = self.field(hr->toString() + ".$valid"))
             povbit->referenced = true;
@@ -41,7 +41,7 @@ Visitor::profile_t PhvInfo::init_apply(const IR::Node *root) {
     auto rv = Inspector::init_apply(root);
     all_fields.clear();
     by_id.clear();
-    all_headers.clear();
+    all_structs.clear();
     simple_headers.clear();
     alloc_done_ = false;
     return rv;
@@ -50,8 +50,8 @@ Visitor::profile_t PhvInfo::init_apply(const IR::Node *root) {
 bool PhvInfo::preorder(const IR::Header *h) {
     int start = by_id.size();
     add_hdr(h->name, h->type, false);
-    int end = by_id.size() - 1;
-    simple_headers.emplace(h->name, std::make_pair(start, end));
+    int end = by_id.size();
+    simple_headers.emplace(h->name, StructInfo(false, gress, start, end - start));
     return false;
 }
 
@@ -62,8 +62,8 @@ bool PhvInfo::preorder(const IR::HeaderStack *h) {
     for (int i = 0; i < h->size; i++) {
         snprintf(buffer, sizeof(buffer), "[%d]", i);
         add_hdr(h->name + buffer, h->type, false); }
-    int end = by_id.size() - 1;
-    all_headers.emplace(h->name, std::make_pair(start, end));
+    int end = by_id.size();
+    all_structs.emplace(h->name, StructInfo(false, gress, start, end - start));
     return false;
 }
 
@@ -103,7 +103,7 @@ void PhvInfo::add_hdr(cstring name, const IR::Type_StructLike *type, bool meta) 
         LOG2("PhvInfo no type for " << name);
         return; }
     LOG2("PhvInfo adding " << (meta ? "metadata" : "header") << " " << name);
-    BUG_CHECK(all_headers.count(name) == 0, "phv_fields.cpp:add_hdr(): all_headers inconsistent");
+    BUG_CHECK(all_structs.count(name) == 0, "phv_fields.cpp:add_hdr(): all_structs inconsistent");
     int start = by_id.size();
     int offset = 0;
     for (auto f : type->fields)
@@ -111,8 +111,8 @@ void PhvInfo::add_hdr(cstring name, const IR::Type_StructLike *type, bool meta) 
     for (auto f : type->fields) {
         int size = f->type->width_bits();
         add(name + '.' + f->name, size, offset -= size, meta, false); }
-    int end = by_id.size() - 1;
-    all_headers.emplace(name, std::make_pair(start, end));
+    int end = by_id.size();
+    all_structs.emplace(name, StructInfo(meta, gress, start, end - start));
 }
 
 void PhvInfo::addTempVar(const IR::TempVar *tv) {
@@ -122,15 +122,15 @@ void PhvInfo::addTempVar(const IR::TempVar *tv) {
         add(tv->name, tv->type->width_bits(), 0, true, tv->POV);
 }
 
-const std::pair<int, int> *PhvInfo::header(cstring name_) const {
+const PhvInfo::StructInfo PhvInfo::struct_info(cstring name_) const {
     StringRef name = name_;
-    if (auto *rv = getref(all_headers, name))
-        return rv;
+    if (all_structs.find(name) != all_structs.end())
+        return all_structs.at(name);
     if (auto *p = name.findstr("::")) {
-        name = name.after(p+2);
-        if (auto *rv = getref(all_headers, name))
-            return rv; }
-    return nullptr;
+        name = name.after(p+2); }
+    if (all_structs.find(name) != all_structs.end())
+        return all_structs.at(name);
+    BUG("No PhvInfo::header for header named '%s'", name_);
 }
 
 //
@@ -214,15 +214,14 @@ void PhvInfo::allocatePOV(const HeaderStackInfo &stacks) {
     int size[2] = { 0, 0 };
     int stacks_num = 0;
     for (auto &stack : stacks) {
-        auto *ff = field(all_headers.at(stack.name).first);
-        BUG_CHECK(!ff->metadata, "metadata stack?");
-        size[ff->gress] += stack.size + stack.maxpush + stack.maxpop;
+        StructInfo info = struct_info(stack.name);
+        BUG_CHECK(!info.metadata, "metadata stack?");
+        size[info.gress] += stack.size + stack.maxpush + stack.maxpop;
         stacks_num++;
         /* FIXME all bits for a stack must end up in one container */ }
     for (auto &hdr : simple_headers) {
-        auto *ff = field(hdr.second.first);
-        if (!ff->metadata)
-            ++size[ff->gress]; }
+        auto hdr_info = hdr.second;
+            ++size[hdr_info.gress]; }
     for (auto &field : *this)
         if (field.pov && field.metadata)
             size[field.gress] += field.size;
@@ -235,14 +234,12 @@ void PhvInfo::allocatePOV(const HeaderStackInfo &stacks) {
                 field.offset = size[gress]; }
         Field *hdr_dd_valid = 0;  // header.$valid
         vector<Field *> pov_fields_h;  // accumulate member povs of simple headers
-        for (auto &hdr : simple_headers) {
-            auto *ff = field(hdr.second.first);
-            if (!ff->metadata && ff->gress == gress) {
+        for (auto hdr : simple_headers) {
+            auto hdr_info = hdr.second;
+            if (hdr_info.gress == gress) {
                 add(hdr.first + ".$valid", 1, --size[gress], false, true);
                 hdr_dd_valid = &all_fields[hdr.first + ".$valid"];
-                pov_fields_h.push_back(hdr_dd_valid);
-            }
-        }
+                pov_fields_h.push_back(hdr_dd_valid); } }
 
         // Accumulate member povs of simple headers into the same ccgf.
         //
@@ -276,8 +273,8 @@ void PhvInfo::allocatePOV(const HeaderStackInfo &stacks) {
                 pov_fields.push_back(hdr_dd_valid);
             }
             bool push_exists = false;
-            auto *ff = field(all_headers.at(stack.name).first);
-            if (ff->gress == gress) {
+            StructInfo info = struct_info(stack.name);
+            if (info.gress == gress) {
                 if (stack.maxpush) {
                     size[gress] -= stack.maxpush;
                     add(stack.name + ".$push", stack.maxpush, size[gress], true, true);

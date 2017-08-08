@@ -754,12 +754,6 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "unexpected field isValid"
-  testdata/p4_16_samples/inline-bmv2.p4
-  testdata/p4_16_samples/inline1-bmv2.p4
-  )
-
-p4c_add_xfail_reason("tofino"
   "Exiting with SIGSEGV"
   testdata/p4_14_samples/copy_to_cpu.p4
   testdata/p4_14_samples/packet_redirect.p4
