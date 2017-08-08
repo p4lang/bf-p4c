@@ -7,7 +7,8 @@
 int main(int argc, char *argv[]) {
   char args[1024] = {0};
   size_t pos = 0;
-  for (int i = 1; i < argc; i++) {
+  int i;
+  for (i = 1; i < argc; i++) {
     size_t s = strnlen(argv[i], sizeof(args));
     // make sure we have space for space and terminating character
     if (s > sizeof(args) - 2 - pos) return 1;
