@@ -1283,11 +1283,10 @@ PHV_MAU_Group_Assignments::packing_predicates(
     // cannot pack bridge metadata mirror & bridge metadata Not mirror
     // packed bridge metadata must belong to same field list (one of eight field lists)
     //
-    std::vector<PHV_MAU_Group::Container_Content *> cc_vec{ std::begin(cc_set), std::end(cc_set) };
-    int pos = 0;
+    auto cc_set_iter = cc_set.begin();
     for (auto &f : cl->cluster_vec()) {
         if (f->bridged && f->mirror_field_list) {
-            PHV_Container *c = cc_vec[pos]->container();
+            PHV_Container *c = (*cc_set_iter)->container();
             BUG_CHECK(c, "*****PHV_MAU_Group_Assignments::b_meta_m packing, container null *****");
             // for all fields in container, ensure mirror fields & same field list
             for (auto &entry : c->fields_in_container()) {
@@ -1297,7 +1296,7 @@ PHV_MAU_Group_Assignments::packing_predicates(
                 }
             }  // for
         }
-        pos++;
+        cc_set_iter++;
     }  // for
     //
     // TODO
