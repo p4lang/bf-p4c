@@ -59,18 +59,20 @@ endif()
 # if we have a reason for failure, then use that regular expression to
 # make the test succeed. If that changes, we know the test moved to a
 # different failure. Also turn off automatic ignoring of failures (WILL_FAIL).
-macro(p4c_add_xfail_reason tag test reason)
-  p4c_test_set_name(__testname ${tag} ${test})
-  if ( "${reason}" STREQUAL "")
-    set_tests_properties(${__testname} PROPERTIES
-      WILL_FAIL 1)
-  else ()
-    set_tests_properties(${__testname} PROPERTIES
-      PASS_REGULAR_EXPRESSION ${reason}
-      WILL_FAIL 0)
-  endif()
-  p4c_add_test_label(${tag} "XFAIL" ${test})
-endmacro()
+macro(p4c_add_xfail_reason tag reason)
+  set (__tests "${ARGN}")
+  foreach (test IN LISTS __tests)
+    p4c_test_set_name(__testname ${tag} ${test})
+    if ( "${reason}" STREQUAL "")
+      set_tests_properties(${__testname} PROPERTIES WILL_FAIL 1)
+    else ()
+      set_tests_properties(${__testname} PROPERTIES
+        PASS_REGULAR_EXPRESSION ${reason}
+        WILL_FAIL 0)
+    endif()
+    p4c_add_test_label(${tag} "XFAIL" ${test})
+  endforeach()
+endmacro(p4c_add_xfail_reason)
 
 set (P4C_TOFINO_RUNTEST ${CMAKE_CURRENT_SOURCE_DIR}/runtest)
 
