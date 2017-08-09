@@ -286,9 +286,9 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "No phv record"
   extensions/p4_tests/p4_16/clone-bmv2.p4
-#  extensions/p4_tests/p4_14/test_checksum.p4
-#  extensions/p4_tests/p4_14/test_config_102_clone.p4
-#  extensions/p4_tests/p4_14/test_config_303_static_table.p4
+  extensions/p4_tests/p4_14/test_checksum.p4
+  extensions/p4_tests/p4_14/test_config_102_clone.p4
+  extensions/p4_tests/p4_14/test_config_303_static_table.p4
   )
 
 p4c_add_xfail_reason("tofino"
