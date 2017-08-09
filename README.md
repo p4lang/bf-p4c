@@ -17,6 +17,22 @@ the compiler and assembler.
 bootstrap_bfn_env.sh -- used to checkout and build all dependent
 repositories and install dependent packages
 
+- some systems may see issues with conflicts between different versions
+  of libproto.so -- when running the above bootstrap_bfn_env.sh script you
+  may see warnings about conflicting libproto.so versions followed by
+  incomprehensible linking errors.  To fix this you need to remove the
+  symlinks/static libs for the old versions of libproto so only the newer
+  ones will be used by the linker.  On Ubuntu 16.04 you need:
+```
+    $ cd /usr/lib/x86_64-linux-gnu
+    $ sudo mkdir old
+    $ sudo mv libproto*.so old
+    $ sudo mv libproto*.a old
+```
+- you may choose to remove the files rather than just moving them, but DO NOT
+  remove the versioned .so files (libprotobuf.so.9.0.1 and others), as doing
+  so will break your system.
+
 bootstrap_bfn_compilers.sh -- bootstaps the configuration for p4c
 (with the Tofino extension) and assembler.
 
