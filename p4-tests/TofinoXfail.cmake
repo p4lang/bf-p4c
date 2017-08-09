@@ -764,11 +764,16 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Exiting with SIGSEGV"
+  "Null mirror"
   testdata/p4_14_samples/copy_to_cpu.p4
   testdata/p4_14_samples/packet_redirect.p4
   testdata/p4_14_samples/switch_20160512/switch.p4
   )
+
+
+# p4c_add_xfail_reason("tofino"
+#   "Exiting with SIGSEGV"
+#   )
 
 # Tofino expected failures (Glass fails as well)
 p4c_add_xfail_reason("tofino"

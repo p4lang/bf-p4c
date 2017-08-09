@@ -190,6 +190,7 @@ class Cluster::Uses : public Inspector {
                     for (auto s : entry->sets) {
                         for (auto m : *s) {
                             PhvInfo::Field *mirror = const_cast<PhvInfo::Field *>(phv.field(m));
+                            CHECK_NULL(mirror);
                             mirror->mirror_field_list = field;
                             LOG1("\t" << mirror);
                         }
