@@ -9,6 +9,13 @@ set -o pipefail
 TIMEOUT_COMMAND=$(which gtimeout || which timeout)
 READLINK_COMMAND=$(which greadlink || which readlink)
 
+# set the debugger based on platform: lldb on MacOS, gdb everywhere else
+if [ $(uname -s) == 'Darwin' ]; then
+    DEBUGGER_COMMAND="lldb --"
+else
+    DEBUGGER_COMMAND="gdb --args"
+fi
+
 TIMEOUT=${P4C_TIMEOUT:-300}
 TIME_COMMAND="" # don't time commands
 verbose=false
@@ -193,9 +200,9 @@ fi
 
 if $debug; then
     if $verbose; then
-        echo "gdb --args $P4C $P4C_ARGS $file -o $testdir/$name.tfa"
+        echo "$DEBUGGER_COMMAND $P4C $P4C_ARGS $file -o $testdir/$name.tfa"
     fi
-    exec gdb --args $P4C $P4C_ARGS $file -o $testdir/$name.tfa
+    exec $DEBUGGER_COMMAND $P4C $P4C_ARGS $file -o $testdir/$name.tfa
 fi
 
 if [ $(expr "$file" : ".*_errors") -gt 0 ]; then
