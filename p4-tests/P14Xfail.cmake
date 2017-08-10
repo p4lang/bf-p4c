@@ -49,8 +49,6 @@ set (P14_XFAIL_TESTS
   extensions/p4_tests/p4_14/jenkins/meters/meters_one.p4
   extensions/p4_tests/p4_14/jenkins/pgrs/pgrs_one.p4
   extensions/p4_tests/p4_14/jenkins/stful/stful.p4
-  extensions/p4_tests/p4_14/jenkins/mau_mem_test/mau_mem_test.p4
-  extensions/p4_tests/p4_14/jenkins/mau_tcam_test/mau_tcam_test.p4
   extensions/p4_tests/p4_14/jenkins/drivers_test/drivers_test_one.p4
   extensions/p4_tests/p4_14/jenkins/pvs/pvs.p4
   extensions/p4_tests/p4_14/jenkins/parser_intr_md/parser_intr_md.p4

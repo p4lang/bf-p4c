@@ -588,6 +588,8 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c2/COMPILER-533/case2736.p4
   extensions/p4_tests/p4_14/c2/COMPILER-537/case2834.p4
   extensions/p4_tests/p4_14/c3/COMPILER-393/case2277.p4
+  extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case1.p4
+  extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case2.p4
   extensions/p4_tests/p4_14/jenkins/drivers_test/drivers_test_one.p4
   extensions/p4_tests/p4_14/jenkins/meters/meters_one.p4
   )
@@ -648,9 +650,11 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_317_sym_hash_neg_test_3.p4
   extensions/p4_tests/p4_14/test_config_318_sym_hash_neg_test_4.p4
   extensions/p4_tests/p4_14/test_config_319_sym_hash_neg_test_5.p4
-  extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case1.p4
-  extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case2.p4
-  extensions/p4_tests/p4_14/jenkins/mau_mem_test/mau_mem_test.p4
+  )
+
+#BRIG-201
+p4c_add_xfail_reason("tofino"
+  "payload ... already in use"
   extensions/p4_tests/p4_14/jenkins/mau_tcam_test/mau_tcam_test.p4
   )
 
