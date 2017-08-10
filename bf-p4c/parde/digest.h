@@ -60,8 +60,17 @@ class Digests : public Transform {
             auto rv = new IR::Vector<IR::Primitive>;
             rv->push_back(new IR::Primitive("modify_field", mirror_id, prim->operands[1]));
             rv->push_back(add_to_digest(mirror, "mirror", list));
+            //
+            // each field list begins with mirror_id, mirror, ..... e.g.,
+            // 0: [ $mirror_id, $mirror, meta.i2e_0 ]
+            // 1: [ $mirror_id, $mirror, meta.i2e_1 ]
+            // .....
+            // 7: [ $mirror_id, $mirror, meta.i2e_7.96-127, meta.i2e_7.64-95, .., meta.i2e_7.0-31 ]
+            // select: $mirror
+            //
             auto l = mirror->sets.back()->clone();
-            l->insert(l->begin(), mirror_id);  // insert $mirror_id in every field list
+            l->insert(l->begin(), mirror->select);  // insert $mirror in every field list
+            l->insert(l->begin(), mirror_id);       // insert $mirror_id in every field list
             mirror->sets.back() = l;
             return rv; }
         return prim; }

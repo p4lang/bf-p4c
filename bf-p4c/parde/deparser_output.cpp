@@ -65,19 +65,10 @@ class OutputDictionary : public Inspector {
     : out(out), phv(phv), indent(indent) {}
 };
 
-void DeparserAsmOutput::emit_fieldlist(
-    std::ostream &out,
-    const IR::Vector<IR::Expression> *list,
-    const cstring *mirror_select,
-    const char *sep) const {
-    //
+void DeparserAsmOutput::emit_fieldlist(std::ostream &out, const IR::Vector<IR::Expression> *list,
+                                       const char *sep) const {
     PHV::Container last;
-    int seq = 0;
     for (auto f : *list) {
-        seq++;
-        if (seq == 2 && mirror_select) {
-            out << sep << canon_name(*mirror_select);  // 0: [ $mirror_id, $mirror, meta.i2e_0 ]
-        }
         bitrange bits;
         if (auto field = phv.field(f, &bits)) {
             auto &alloc = field->for_bit(bits.lo);
@@ -107,18 +98,11 @@ std::ostream &operator<<(std::ostream &out, const DeparserAsmOutput &d) {
             out << indent << "egress_unicast_port: "
                 << canon_name(d.phv.field(d.deparser->egress_port)->name) << std::endl;
         for (auto digest : Values(d.deparser->digests)) {
-            // 0: [ $mirror_id, $mirror, meta.i2e_0 ]
-            // 1: [ $mirror_id, $mirror, meta.i2e_1 ]
-            // .....
-            // 7: [ $mirror_id, $mirror, meta.i2e_7.96-127, meta.i2e_7.64-95, .., meta.i2e_7.0-31 ]
-            // select: $mirror
-            // digest->select->name = $mirror
-            //
             int idx = 0;
             out << indent++ << digest->name << ":" << std::endl;
             for (auto l : digest->sets) {
                 out << indent << idx++ << ": [ ";
-                d.emit_fieldlist(out, l, &digest->select->name);
+                d.emit_fieldlist(out, l);
                 out << " ]" << std::endl; }
             out << indent-- << "select: " << canon_name(digest->select->name) << std::endl; } }
     return out;
