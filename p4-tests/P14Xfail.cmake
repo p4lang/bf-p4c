@@ -29,7 +29,6 @@ set (P14_XFAIL_TESTS
   extensions/p4_tests/p4_14/test_config_247_first_clpm.p4
   extensions/p4_tests/p4_14/shared_names.p4
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-235/vag1662.p4
   extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
   extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
   extensions/p4_tests/p4_14/c1/COMPILER-482/case2622.p4
@@ -38,7 +37,6 @@ set (P14_XFAIL_TESTS
   extensions/p4_tests/p4_14/c2/COMPILER-537/case2834.p4
   extensions/p4_tests/p4_14/c2/COMPILER-533/case2736.p4
   extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-505/case2690.p4
   extensions/p4_tests/p4_14/c1/COMPILER-532/case2807.p4
   extensions/p4_tests/p4_14/c3/COMPILER-393/case2277.p4
   extensions/p4_tests/p4_14/jenkins/emulation/emulation.p4
@@ -80,7 +78,6 @@ set (P14_XFAIL_TESTS
   extensions/p4_tests/p4_14/c1/COMPILER-477/case2602.p4
   extensions/p4_tests/p4_14/c1/COMPILER-483/case2619.p4
   extensions/p4_tests/p4_14/c1/COMPILER-499/case2560_min_2.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-503/case2678.p4
   extensions/p4_tests/p4_14/c1/DRV-543/case2499.p4
   extensions/p4_tests/p4_14/c2/COMPILER-392/case2266.p4
   extensions/p4_tests/p4_14/c2/COMPILER-400/case2314.p4
@@ -113,7 +110,6 @@ set (P14_XFAIL_TESTS
   extensions/p4_tests/p4_14/test_config_277_meta_init.p4
   extensions/p4_tests/p4_14/test_config_278_meta_init2.p4
   extensions/p4_tests/p4_14/test_config_284_swap_primitive.p4
-  extensions/p4_tests/p4_14/test_config_291_default_action.p4
 # BRIG-28
   extensions/p4_tests/p4_14/switch/p4src/switch.p4
   )
