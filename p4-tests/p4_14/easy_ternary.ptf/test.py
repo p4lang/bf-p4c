@@ -8,6 +8,8 @@ from p4.config import p4info_pb2
 
 from base_test import P4RuntimeTest, stringify
 
+import random
+
 # Creates a dumbPacket corresponding to the header h_t.
 def dumbPacket(f1=0xabcd, f2=0xef, f3=0xaa):
     assert 0 <= f1 <= 0xffff
