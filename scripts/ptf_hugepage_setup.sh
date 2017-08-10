@@ -1,3 +1,5 @@
+#!/bin/bash
+
 if [ ! -d /mnt/huge ]; then
     echo "vm.nr_hugepages = 128" >> /etc/sysctl.conf
     sysctl -p /etc/sysctl.conf

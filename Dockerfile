@@ -34,13 +34,8 @@ RUN pip install pyinstaller
 # override this.
 ARG MAKEFLAGS=-j2
 
-COPY . /bfn/bf-p4c-compilers/
-WORKDIR /bfn/bf-p4c-compilers
-RUN ./bootstrap_bfn_compilers.sh -DCMAKE_BUILD_TYPE=RELEASE && \
-    cd build && \
-    make && make install
-WORKDIR /bfn/
-RUN rm -rf bf-p4c-compilers
+# Use 'test' if you wish to keep the build artifacts
+ARG IMAGE_TYPE=release
 
 # testing dependencies
 RUN apt-get install -y net-tools
@@ -51,5 +46,19 @@ RUN git clone https://github.com/p4lang/ptf.git && \
     cd /bfn && \
     rm -rf ptf
 
+COPY . /bfn/bf-p4c-compilers/
+COPY scripts/ptf_hugepage_setup.sh /bfn/ptf_hugepage_setup.sh
+COPY scripts/docker_entry_point.sh /bfn/docker_entry_point.sh
+WORKDIR /bfn/bf-p4c-compilers
+RUN ./bootstrap_bfn_compilers.sh -DCMAKE_BUILD_TYPE=RELEASE && \
+    cd build && \
+    make && make install
+WORKDIR /bfn/
+RUN (test "$IMAGE_TYPE" = "release" && rm -rf bf-p4c-compilers) || \
+    (test "$IMAGE_TYPE" = "test")
+
 # cleanup space on the image
 RUN apt-get clean -y && apt-get autoclean -y
+
+# setup huge pages
+ENTRYPOINT ["/bfn/docker_entry_point.sh"]
