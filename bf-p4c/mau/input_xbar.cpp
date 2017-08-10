@@ -1322,9 +1322,9 @@ void IXBar::initialize_hash_dist(const HashDistReq &hash_dist_req, Use &alloc,
 
         long con = 1;
         if (hash_dist_req.get_instr()->operands[4]->to<IR::Constant>()) {
-            hash_dist_req.get_instr()->operands[4]->to<IR::Constant>()->asLong();
+            con = hash_dist_req.get_instr()->operands[4]->to<IR::Constant>()->asLong();
         } else {
-            WARNING("NULL operand 4 for " << *hash_dist_req.get_instr());
+            error("NULL operand 4 for %s", *hash_dist_req.get_instr());
         }
         alloc.hash_dist_use.back().max_size = __builtin_popcount(con - 1);
         auto *fl = hash_dist_req.get_instr()->operands[3]->to<IR::ListExpression>();

@@ -379,7 +379,7 @@ const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
         if (prim->operands[4]->to<IR::Constant>()) {
             size = bitcount(prim->operands[4]->to<IR::Constant>()->asLong() - 1);
         } else {
-            WARNING("NULL operand 4 for " << *prim);
+            error("NULL operand 4 for %s", *prim);
         }
         /* FIXME -- is the above correct?  Or do we want ceil_log2? */
         IR::MAU::Instruction *instr =

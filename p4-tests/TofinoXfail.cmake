@@ -383,6 +383,9 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_129_various_exact_match_keys.p4
   extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
   extensions/p4_tests/p4_14/c1/COMPILER-235/vag1737_1.p4
+  extensions/p4_tests/p4_14/test_config_96_hash_data.p4
+  extensions/p4_tests/p4_14/hash_calculation_max_size.p4
+  extensions/p4_tests/p4_14/hash_calculation_multiple.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -397,7 +400,6 @@ p4c_add_xfail_reason("tofino"
   "error: : condition too complex"
   extensions/p4_tests/p4_14/07-MacAddrCheck.p4
   extensions/p4_tests/p4_14/08-MacAddrCheck1.p4
-  testdata/p4_14_samples/flowlet_switching.p4
   )
 
 # BRIG_132
@@ -475,10 +477,10 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/shared_names.p4
   )
 
-# p4c_add_xfail_reason("tofino"
-#   "(throwing|uncaught exception).*std::out_of_range"
-#   extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
-#   )
+p4c_add_xfail_reason("tofino"
+  "(throwing|uncaught exception).*std::out_of_range"
+  extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
+  )
 
 # BRIG-99
 p4c_add_xfail_reason("tofino"
@@ -487,7 +489,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "(rv < 0 || rv == off)"
+  "rv < 0 || rv == off"
   extensions/p4_tests/p4_14/test_config_86_multiple_action_widths_for_indirect_action.p4
   )
 
@@ -521,9 +523,9 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_169_stateful_sflow_sequence.p4
   )
 
-# p4c_add_xfail_reason("tofino"
-#   "must be at .* to be used in stateful table"
-#   extensions/p4_tests/p4_14/test_config_184_stateful_bug1.p4)
+p4c_add_xfail_reason("tofino"
+  "must be at .* to be used in stateful table"
+  extensions/p4_tests/p4_14/test_config_184_stateful_bug1.p4)
 
 p4c_add_xfail_reason("tofino"
   "Unrecognized AttribLocal combined_predicate"
@@ -552,6 +554,15 @@ p4c_add_xfail_reason("tofino"
   "hash_dist .* not defined in table"
   extensions/p4_tests/p4_14/test_config_192_stateful_driven_by_hash.p4
   )
+
+# BRIG-119
+p4c_add_xfail_reason("tofino"
+  "Can't combine hash_dist units"
+  extensions/p4_tests/p4_14/test_config_300_multi_hash.p4
+  extensions/p4_tests/p4_14/hash_calculation_two_hash2.p4
+  extensions/p4_tests/p4_14/hash_calculation_two_hash1.p4
+  extensions/p4_tests/p4_14/test_config_13_first_selection.p4
+  )  
 
 # COMPILER-329
 p4c_add_xfail_reason("tofino"
@@ -629,18 +640,6 @@ p4c_add_xfail_reason("tofino"
 #BRIG-139
 p4c_add_xfail_reason("tofino"
   "syntax error, unexpected"
-  extensions/p4_tests/p4_14/hash_calculation_16.p4
-  extensions/p4_tests/p4_14/hash_calculation_multiple.p4
-  extensions/p4_tests/p4_14/hash_calculation_max_size.p4
-  extensions/p4_tests/p4_14/hash_calculation_two_hash1.p4
-  extensions/p4_tests/p4_14/hash_calculation_two_hash2.p4
-  extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
-  extensions/p4_tests/p4_14/test_config_13_first_selection.p4
-  extensions/p4_tests/p4_14/test_config_96_hash_data.p4
-  extensions/p4_tests/p4_14/test_config_184_stateful_bug1.p4
-  extensions/p4_tests/p4_14/test_config_211_nested_field_list.p4
-  extensions/p4_tests/p4_14/test_config_299_write_hash_keyless_table.p4
-  extensions/p4_tests/p4_14/test_config_300_multi_hash.p4
   extensions/p4_tests/p4_14/test_config_307_dyn_selection.p4
   extensions/p4_tests/p4_14/test_config_309_wide_dyn_selection.p4
   extensions/p4_tests/p4_14/test_config_314_sym_hash.p4
@@ -653,7 +652,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case2.p4
   extensions/p4_tests/p4_14/jenkins/mau_mem_test/mau_mem_test.p4
   extensions/p4_tests/p4_14/jenkins/mau_tcam_test/mau_tcam_test.p4
-  testdata/p4_16_samples/flowlet_switching-bmv2.p4
   )
 
 #BRIG-142
@@ -719,6 +717,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/jenkins/stats_pi/stats_pi.p4
   )
 
+
 p4c_add_xfail_reason("tofino"
   "(throwing|uncaught exception).*Backtrack::trigger"
   testdata/p4_16_samples/arith-bmv2.p4
@@ -770,6 +769,11 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/switch_20160512/switch.p4
   )
 
+p4c_add_xfail_reason("tofino"
+  "NULL operand 4 for hash"
+  testdata/p4_14_samples/flowlet_switching.p4
+  testdata/p4_16_samples/flowlet_switching-bmv2.p4
+)
 
 # p4c_add_xfail_reason("tofino"
 #   "Exiting with SIGSEGV"
