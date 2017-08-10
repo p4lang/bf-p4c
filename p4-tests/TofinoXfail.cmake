@@ -562,7 +562,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/hash_calculation_two_hash2.p4
   extensions/p4_tests/p4_14/hash_calculation_two_hash1.p4
   extensions/p4_tests/p4_14/test_config_13_first_selection.p4
-  )  
+  )
 
 # COMPILER-329
 p4c_add_xfail_reason("tofino"
@@ -630,14 +630,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue512.p4
   )
 
-# BRIG-181
-p4c_add_xfail_reason("tofino"
-  "parameter .* must be bound"
-  extensions/p4_tests/p4_14/test_config_291_default_action.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-235/vag1662.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-503/case2678.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-505/case2690.p4
-  )
 
 #BRIG-139
 p4c_add_xfail_reason("tofino"
@@ -704,6 +696,8 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-477/case2602.p4
   extensions/p4_tests/p4_14/c1/COMPILER-482/case2622.p4
   extensions/p4_tests/p4_14/c1/COMPILER-483/case2619.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-503/case2678.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-505/case2690.p4
   extensions/p4_tests/p4_14/c1/DRV-543/case2499.p4
   extensions/p4_tests/p4_14/jenkins/iterator/iterator.p4
   )
@@ -782,6 +776,17 @@ p4c_add_xfail_reason("tofino"
 # p4c_add_xfail_reason("tofino"
 #   "Exiting with SIGSEGV"
 #   )
+
+
+# BRIG-181
+# These are invalid programs, simply because P4_14 is too lax
+# The solution is to fix the test cases and pass parameters
+# to the default actions.
+p4c_add_xfail_reason("tofino"
+  "parameter .* must be bound"
+#  extensions/p4_tests/p4_14/test_config_291_default_action.p4
+#  extensions/p4_tests/p4_14/c1/COMPILER-235/vag1662.p4
+  )
 
 # Tofino expected failures (Glass fails as well)
 p4c_add_xfail_reason("tofino"

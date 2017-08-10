@@ -1,5 +1,5 @@
 /*
-Copyright 2013-present Barefoot Networks, Inc. 
+Copyright 2013-present Barefoot Networks, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -141,7 +141,7 @@ table mac_based_vlan {
 table protocol_based_vlan {
     reads {
         m.etherType : exact;
-    } 
+    }
     action_profile : vlan_profile;
     size : 1024;
 }
@@ -190,7 +190,7 @@ table forward {
     actions {
         do_forward;
     }
-    default_action : do_forward;
+    default_action : do_forward(1);
     size : 1;
 }
 

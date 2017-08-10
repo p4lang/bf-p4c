@@ -2757,7 +2757,7 @@ table Grampian {
    actions {
       Seattle;
    }
-   default_action : Seattle;
+   default_action : Seattle(1,1);
    size : Casselman;
 }
 

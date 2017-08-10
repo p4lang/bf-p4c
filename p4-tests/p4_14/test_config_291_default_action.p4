@@ -31,7 +31,7 @@ action a3(x){ modify_field(hdr1.c, x); }
 action a4(x){ modify_field(hdr1.d, x); }
 
 table t1 {
-    reads { 
+    reads {
          hdr1.a : ternary;
     }
     actions {
@@ -40,12 +40,12 @@ table t1 {
          a2;
          do_nothing;
     }
-    default_action : a0;
+    default_action : a0(1);
     size : 256;
 }
 
 table t2 {
-    reads { 
+    reads {
          hdr1.a : ternary;
     }
     actions {
@@ -56,7 +56,7 @@ table t2 {
 }
 
 table t3 {
-    reads { 
+    reads {
          hdr1.a : ternary;
     }
     actions {
@@ -67,7 +67,7 @@ table t3 {
 }
 
 table t4 {
-    reads { 
+    reads {
          hdr1.a : ternary;
     }
     actions {

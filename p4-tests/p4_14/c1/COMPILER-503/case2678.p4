@@ -1969,7 +1969,7 @@ table LaSal {
    actions {
       Waubun;
    }
-   default_action: Waubun;
+   default_action: Waubun(2);
    size : 1;
 }
 
@@ -2795,7 +2795,7 @@ table Merrill {
    actions {
       Padonia;
    }
-   default_action : Padonia;
+   default_action : Padonia(1, 1);
    size : Hitchland;
 }
 
@@ -3055,4 +3055,3 @@ control egress {
    }
    Fieldon();
 }
-
