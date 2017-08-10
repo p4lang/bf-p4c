@@ -192,10 +192,11 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/08-FullTPHV3.p4
   )
 
-# p4c_add_xfail_reason("tofino"
-#   "State .* extracts field .* with no PHV allocation"
-#   testdata/p4_14_samples/packet_redirect.p4
-#   )
+p4c_add_xfail_reason("tofino"
+  "State .* extracts field .* with no PHV allocation"
+  testdata/p4_14_samples/packet_redirect.p4
+  )
+
 # BRIG-109
 p4c_add_xfail_reason("tofino"
   "error: Cannot resolve computed select"
@@ -758,9 +759,12 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Null mirror"
+  "Too much data for parse matcher"
   testdata/p4_14_samples/copy_to_cpu.p4
-  testdata/p4_14_samples/packet_redirect.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Two containers in the same action are at the same place"
   testdata/p4_14_samples/switch_20160512/switch.p4
   )
 

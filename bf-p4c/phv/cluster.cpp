@@ -21,14 +21,12 @@ Cluster::Cluster(PhvInfo &p) : phv_i(p), uses_i(new Uses(phv_i)) {
 //
 //***********************************************************************************
 
-
 bool Cluster::preorder(const IR::Tofino::Pipe *pipe) {
     //
     pipe->apply(*uses_i);
 
     return true;
 }
-
 
 bool Cluster::preorder(const IR::Member* expression) {
     // class Member : Operation_Unary
@@ -1084,7 +1082,109 @@ void Cluster::sanity_check_fields_use(const std::string& msg,
 //
 // Cluster::Uses
 //
+// preorder walk on IR tree to set use_i, field flags
+//
 //***********************************************************************************
+
+bool
+Cluster::Uses::preorder(const IR::Tofino::Parser *p) {
+    in_mau = false;
+    in_dep = false;
+    thread = p->gress;
+    revisit_visited();
+    return true;
+}
+
+bool
+Cluster::Uses::preorder(const IR::Tofino::Deparser *d) {
+    thread = d->gress;
+    in_mau = true;  // treat egress_port and digests as in mau as they can't go in TPHV
+    in_dep = true;
+    revisit_visited();
+    visit(d->egress_port);
+    d->digests.visit_children(*this);
+    in_mau = false;
+    revisit_visited();
+    d->emits.visit_children(*this);
+    // extract deparser constraints from Deparser & Digest IR nodes ref: bf-p4c/ir/parde.def
+    // set deparser constaints on field
+    if (d->egress_port) {
+        // IR::Tofino::Deparser has a field egress_port which points to
+        // egress port in the egress pipeline and
+        // egress spec in the ingress pipeline
+        PhvInfo::Field *field = const_cast<PhvInfo::Field *>(phv.field(d->egress_port));
+        if (field) {
+            field->set_deparsed_no_pack(true);
+            LOG1(".....Deparser Constraint 'egress port' on field..... " << field);
+        }
+    }
+    // TODO:
+    // IR futures: distinguish each digest as an enumeration: learning, mirror, resubmit
+    // as they have differing constraints -- bottom-bits, bridge-metadata mirror packing
+    // learning, mirror field list in bottom bits of container, e.g.,
+    // 301:ingress::$learning<3:0..2>
+    // 590:egress::$mirror<3:0..2> specifies 1 of 8 field lists
+    // currently, IR::Tofino::Digest node has a string field to distinguish them by name
+    for (auto &entry : Values(d->digests)) {
+        if (entry->name == "learning" || entry->name == "mirror") {
+            PhvInfo::Field *field
+                = const_cast<PhvInfo::Field *>(phv.field(entry->select));
+            field->set_deparsed_bottom_bits(true);
+            LOG1(".....Deparser Constraint "
+                << entry->name
+                << " 'digest' on field..... "
+                << field);
+            // associating a mirror field with its field list
+            // used during constraint checks for bridge-metadata phv allocation
+            if (entry->name ==  "mirror") {
+                LOG1(".....mirror field lists selected by  " << field->id << ":" << field->name);
+                int fl = 0;
+                for (auto s : entry->sets) {
+                    LOG1("\t.....field list....." << fl);
+                    for (auto m : *s) {
+                        PhvInfo::Field *m_f = const_cast<PhvInfo::Field *>(phv.field(m));
+                        if (m_f) {
+                            m_f->mirror_field_list = {field, fl};
+                            LOG1("\t\t" << m_f);
+                        } else {
+                            LOG1("\t\t" << "-f?");
+                        }
+                    }
+                    fl++;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+bool Cluster::Uses::preorder(const IR::MAU::TableSeq *) {
+    in_mau = true;
+    in_dep = false;
+    revisit_visited();
+    return true;
+}
+
+bool Cluster::Uses::preorder(const IR::HeaderRef *hr) {
+    PhvInfo::StructInfo info = phv.struct_info(hr);
+    use_i[in_mau][thread].setrange(info.first_field_id, info.size);
+    deparser_i[thread].setrange(info.first_field_id, info.size);
+    return false;
+}
+
+bool Cluster::Uses::preorder(const IR::Expression *e) {
+    if (auto info = phv.field(e)) {
+        LOG5("use " << info->name << " in " << thread << (in_mau ? " mau" : ""));
+        use_i[in_mau][thread][info->id] = true;
+        LOG5("dep " << info->name << " in " << thread << (in_dep ? " dep" : ""));
+        deparser_i[thread][info->id] = in_dep? true: false;
+        return false;
+    }
+    return true;
+}
+
+//
+// Cluster::Uses routines that check use_i[]
 //
 
 bool

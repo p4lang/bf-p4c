@@ -1285,14 +1285,14 @@ PHV_MAU_Group_Assignments::packing_predicates(
     //
     auto cc_set_iter = cc_set.begin();
     for (auto &f : cl->cluster_vec()) {
-        if (f->bridged && f->mirror_field_list) {
+        if (f->bridged && f->mirror_field_list.first) {
             PHV_Container *c = (*cc_set_iter)->container();
             BUG_CHECK(c, "*****PHV_MAU_Group_Assignments::b_meta_m packing, container null *****");
             // for all fields in container, ensure mirror fields & same field list
             for (auto &entry : c->fields_in_container()) {
                 PhvInfo::Field *cf = entry.first;
                 if (cf->mirror_field_list != f->mirror_field_list) {
-                    return false;
+                    return false;  // mirror_field_lists disagree, cannot pack
                 }
             }  // for
         }

@@ -139,84 +139,11 @@ class Cluster::Uses : public Inspector {
     gress_t             thread;
     bool                in_mau;
     bool                in_dep;
-    bool preorder(const IR::Tofino::Parser *p) {
-        in_mau = false;
-        in_dep = false;
-        thread = p->gress;
-        revisit_visited();
-        return true; }
-    bool preorder(const IR::Tofino::Deparser *d) {
-        thread = d->gress;
-        in_mau = true;  // treat egress_port and digests as in mau as they can't go in TPHV
-        in_dep = true;
-        revisit_visited();
-        visit(d->egress_port);
-        d->digests.visit_children(*this);
-        in_mau = false;
-        revisit_visited();
-        d->emits.visit_children(*this);
-        // extract deparser constraints from Deparser & Digest IR nodes ref: bf-p4c/ir/parde.def
-        // set deparser constaints on field
-        if (d->egress_port) {
-            // IR::Tofino::Deparser has a field egress_port which points to
-            // egress port in the egress pipeline and
-            // egress spec in the ingress pipeline
-            PhvInfo::Field *field = const_cast<PhvInfo::Field *>(phv.field(d->egress_port));
-            if (field) {
-                field->set_deparsed_no_pack(true);
-                LOG1(".....Deparser Constraint 'egress port' on field..... " << field);
-            }
-        }
-        // TODO:
-        // IR futures: distinguish each digest as an enumeration: learning, mirror, resubmit
-        // as they have differing constraints -- bottom-bits, bridge-metadata mirror packing
-        // learning, mirror field list in bottom bits of container, e.g.,
-        // 301:ingress::$learning<3:0..2>
-        // 590:egress::$mirror<3:0..2> specifies 1 of 8 field lists
-        // currently, IR::Tofino::Digest node has a string field to distinguish them by name
-        for (auto &entry : Values(d->digests)) {
-            if (entry->name == "learning" || entry->name == "mirror") {
-                PhvInfo::Field *field
-                    = const_cast<PhvInfo::Field *>(phv.field(entry->select));
-                field->set_deparsed_bottom_bits(true);
-                LOG1(".....Deparser Constraint "
-                    << entry->name
-                    << " 'digest' on field..... "
-                    << field);
-                // associating a mirror field with its field list
-                // used during constraint checks for bridge-metadata phv allocation
-                if (entry->name ==  "mirror") {
-                    LOG1(".....mirror fields in field list " << field->id << ":" << field->name);
-                    for (auto s : entry->sets) {
-                        for (auto m : *s) {
-                            PhvInfo::Field *mirror = const_cast<PhvInfo::Field *>(phv.field(m));
-                            CHECK_NULL(mirror);
-                            mirror->mirror_field_list = field;
-                            LOG1("\t" << mirror);
-                        }
-                    }
-                }
-            }
-        }
-        return false; }
-    bool preorder(const IR::MAU::TableSeq *) {
-        in_mau = true;
-        in_dep = false;
-        revisit_visited();
-        return true; }
-    bool preorder(const IR::HeaderRef *hr) {
-        PhvInfo::StructInfo info = phv.struct_info(hr);
-        use_i[in_mau][thread].setrange(info.first_field_id, info.size);
-        deparser_i[thread].setrange(info.first_field_id, info.size);
-        return false; }
-    bool preorder(const IR::Expression *e) {
-        if (auto info = phv.field(e)) {
-            LOG3("use " << info->name << " in " << thread << (in_mau ? " mau" : ""));
-            use_i[in_mau][thread][info->id] = true;
-            LOG3("dep " << info->name << " in " << thread << (in_dep ? " dep" : ""));
-            deparser_i[thread][info->id] = in_dep? true: false;
-            return false; }
-        return true; }
+    bool preorder(const IR::Tofino::Parser *p);
+    bool preorder(const IR::Tofino::Deparser *d);
+    bool preorder(const IR::MAU::TableSeq *);
+    bool preorder(const IR::HeaderRef *hr);
+    bool preorder(const IR::Expression *e);
 };
 //
 //
