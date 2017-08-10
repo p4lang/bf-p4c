@@ -18,6 +18,7 @@ class Digests : public Transform {
     IR::Tofino::Digest *learn = nullptr;
     IR::Tofino::Digest *mirror = nullptr;
     IR::TempVar *mirror_id = nullptr;
+    gress_t mirror_id_gress = INGRESS;
 
     IR::Primitive *add_to_digest(IR::Tofino::Digest *&digest, const char *name,
                                  const IR::Expression *expr) {
@@ -49,14 +50,18 @@ class Digests : public Transform {
                 error("%s: clone E2E not allowed in ingress pipe", prim->srcInfo);
             if (VisitingThread(this) == EGRESS && m->member == "I2E")
                 error("%s: clone I2E not allowed in egress pipe", prim->srcInfo);
-            if (!mirror_id)
-                mirror_id = new IR::TempVar(IR::Type::Bits::get(10), "$mirror_id");
+            // need $mirror_id for ingress and another for egress
+            if (!mirror_id || mirror_id_gress != VisitingThread(this)) {
+                std::string name = cstring::to_cstring(VisitingThread(this)) + "::" + "$mirror_id";
+                mirror_id = new IR::TempVar(IR::Type::Bits::get(10), name.c_str());
+                mirror_id_gress = VisitingThread(this);
+            }
             auto list = prim->operands.size() > 2 ? prim->operands[2] : nullptr;
             auto rv = new IR::Vector<IR::Primitive>;
             rv->push_back(new IR::Primitive("modify_field", mirror_id, prim->operands[1]));
             rv->push_back(add_to_digest(mirror, "mirror", list));
             auto l = mirror->sets.back()->clone();
-            l->insert(l->begin(), mirror_id);
+            l->insert(l->begin(), mirror_id);  // insert $mirror_id in every field list
             mirror->sets.back() = l;
             return rv; }
         return prim; }
