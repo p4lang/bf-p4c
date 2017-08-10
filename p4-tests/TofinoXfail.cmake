@@ -229,7 +229,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/24-SimpleTrillThreeStep2.p4
   extensions/p4_tests/p4_14/test_config_216_phv_aff.p4
   extensions/p4_tests/p4_14/test_config_217_gateway_non_determin.p4
-  extensions/p4_tests/p4_14/test_config_92_bit_xor_10_bits.p4
   testdata/p4_16_samples/issue414-bmv2.p4
   testdata/p4_16_samples/parser-locals2.p4
   extensions/p4_tests/p4_14/c1/COMPILER-228/case1644.p4
@@ -359,7 +358,8 @@ p4c_add_xfail_reason("tofino"
 # BRIG-105
 p4c_add_xfail_reason("tofino"
   "No register named"
-  extensions/p4_tests/p4_14/04-FullPHV3.p4
+  # Should still fail; see BRIG-198.
+  # extensions/p4_tests/p4_14/04-FullPHV3.p4
   extensions/p4_tests/p4_14/switch_l2_profile.p4
   extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
   extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4

@@ -3,16 +3,47 @@
 #include "ir/ir.h"
 #include "tofino/ir/gress.h"
 
+// happens_before(x, y) means x MUST happen before Y.  Hence,
+// !happens_before(y, x) implies that x MAY happen before Y.
+bool LiveRangeOverlay::may_happen_before(
+    const IR::Tofino::Unit *x,
+    const IR::Tofino::Unit *y) const {
+    return !happens_before(y, x);
+}
+
+// Field f is definitely dead at unit u if there does not exist a
+// read-after-write dependence from uw to ur such that uw may happen before
+// u and ur may happen after.
+bool LiveRangeOverlay::is_dead_at(const PhvInfo::Field &f, const IR::Tofino::Unit *u) const {
+    for (const FieldDefUse::locpair ur_loc : defuse.getAllUses(f.id)) {
+        const IR::Tofino::Unit *ur = ur_loc.first;
+        if (defuse.getDefs(ur_loc).size() == 0) {
+            // Uninitialized read---live range begins "before" the parser, when
+            // the hardware implicitly initializes all metadata to zero.
+            // Hence, this field may be live if u may happen before ur.
+
+            // TODO: egress_spec is special and considered uninitialized until
+            // writen.  This should be changed to use Tofino native names.
+            if (strstr(f.name, "egress_spec"))
+                continue;
+
+            if (may_happen_before(u, ur))
+                return false; }
+        for (auto uw_loc : defuse.getDefs(ur_loc)) {
+            const IR::Tofino::Unit *uw = uw_loc.first;
+            // If uw may happen before u and u may happen before ur, then f may
+            // be live.
+            if (may_happen_before(uw, u) && may_happen_before(u, ur))
+                return false; } }
+    return true;
+}
+
 void LiveRangeOverlay::end_apply() {
     LOG4("---------------------------------------------------");
     LOG4("Live Range Analysis");
 
     // NB: Fields/units are matched by gress.
     // NB: Only metadata fields are considered.
-
-    // Find all units in which each field is definitely dead.  Field f is dead
-    // at unit u if, for every read of f that happens after u at u', there
-    // exists a u'' that writes f that happens between u and u'.
 
     // Fields that are not definitely dead are possibly live.
     map<int, ordered_set<const IR::Tofino::Unit *>> livemap;
@@ -23,21 +54,10 @@ void LiveRangeOverlay::end_apply() {
         ordered_set<const IR::Tofino::Unit *> *all_units;
         all_units = f.gress == INGRESS ? &all_ingress_units : &all_egress_units;
         for (const IR::Tofino::Unit *u : *all_units) {
-            bool dead = true;
-            for (const FieldDefUse::locpair ur_loc : defuse.getAllUses(f.id)) {
-                const IR::Tofino::Unit *ur = ur_loc.first;
-                if (!happens_before(ur, u)) {
-                    dead = false;
-                    for (const FieldDefUse::locpair uw_loc : defuse.getAllDefs(f.id)) {
-                        const IR::Tofino::Unit *uw = uw_loc.first;
-                        if (happens_before(u, uw) && happens_before(uw, ur)) {
-                            dead = true;
-                            break; } } }
-                if (!dead) break; }
-            if (dead) {
+            if (is_dead_at(f, u)) {
                 LOG4("    dead at " << DBPrint::Brief << u);
             } else {
-                LOG4("    live at " << DBPrint::Brief << u);
+                LOG4("    maybe live at " << DBPrint::Brief << u);
                 livemap[f.id].insert(u); } } }
 
     // Fields can be overlaid if they may never be live in the same
@@ -56,7 +76,7 @@ void LiveRangeOverlay::end_apply() {
 
 bool LiveRangeOverlay::happens_before(
     const IR::Tofino::Unit *u1,
-    const IR::Tofino::Unit *u2) {
+    const IR::Tofino::Unit *u2) const {
     // This relation is not reflexive.
     if (u1 == u2)
         return false;
@@ -108,7 +128,7 @@ bool LiveRangeOverlay::happens_before(
 }
 
 void LiveRangeOverlay::get_uninitialized_reads(
-    ordered_map<int, FieldDefUse::LocPairSet> &out) {
+    ordered_map<int, FieldDefUse::LocPairSet> &out) const {
     // If a field use does not have a def, then it is reading an unintialized
     // value.
     for (const PhvInfo::Field &f : phv) {

@@ -74,12 +74,20 @@ class LiveRangeOverlay : public Inspector {
      *    stage
      *  - deparsers happen at the same time.
      */
-    bool happens_before(const IR::Tofino::Unit *u1, const IR::Tofino::Unit *u2);
+    bool happens_before(const IR::Tofino::Unit *u1, const IR::Tofino::Unit *u2) const;
+
+    /** The `happens_before` method is conservative before table placement.  Hence,
+     * `happens_before(x, y)` if and only if x definitely happens before y.
+     * `may_happen_before(y, x)` iff `!happens_before(x, y)`.
+     */
+    bool may_happen_before(const IR::Tofino::Unit *x, const IR::Tofino::Unit *y) const;
+
+    bool is_dead_at(const PhvInfo::Field &f, const IR::Tofino::Unit *u) const;
 
     /** Get the set of (unit, expr) locations where each field is read before
      * being written.  Fields that are not read before written do not appear in
      * this map. */
-    void get_uninitialized_reads(ordered_map<int, FieldDefUse::LocPairSet> &out);
+    void get_uninitialized_reads(ordered_map<int, FieldDefUse::LocPairSet> &out) const;
 
  public:
     /** Build a LiveRangeOverlay Inspector.
