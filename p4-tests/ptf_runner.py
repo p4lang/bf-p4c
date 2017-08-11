@@ -214,23 +214,27 @@ def main():
     BF_SWITCHD = findbin(args.top_builddir, 'BF_SWITCHD')
     HARLYN_MODEL = findbin(args.top_builddir, 'HARLYN_MODEL')
 
-    p4info_path = os.path.join(args.testdir, '{}.out'.format(args.name),
-                               'p4info.proto.txt')
+    compiler_out_dir = os.path.join(args.testdir, '{}.out'.format(args.name))
+
+    p4info_path = os.path.join(compiler_out_dir, 'p4info.proto.txt')
     if not os.path.exists(p4info_path):
-        print >> sys.stderr, "P4Info file", p4info_path, " not found"
+        print >> sys.stderr, "P4Info file", p4info_path, "not found"
         sys.exit(1)
 
-    tofino_bin_path = os.path.join(args.testdir, '{}.out'.format(args.name),
-                                   'tofino.bin')
+    tofino_bin_path = os.path.join(compiler_out_dir, 'tofino.bin')
     if not os.path.exists(tofino_bin_path):
-        print >> sys.stderr, "Binary config file", tofino_bin_path, " not found"
+        print >> sys.stderr, "Binary config file", tofino_bin_path, "not found"
         sys.exit(1)
 
-    cxt_json_path = os.path.join(args.testdir, '{}.out'.format(args.name),
-                                 'tbl-cfg')
+    cxt_json_path = os.path.join(compiler_out_dir, 'tbl-cfg')
     if not os.path.exists(cxt_json_path):
-        print >> sys.stderr, "Context json file", cxt_json_path, " not found"
+        print >> sys.stderr, "Context json file", cxt_json_path, "not found"
         sys.exit(1)
+
+    lookup_json_path = os.path.join(compiler_out_dir, 'p4_name_lookup.json')
+    if not os.path.exists(lookup_json_path):
+        print >> sys.stderr, "Name lookup json", lookup_json_path,
+        print >> sys.stderr, "not found; debugging will be harder"
 
     check_and_add_ifaces()
 
@@ -245,7 +249,8 @@ def main():
     def run():
         with open(model_log_path, 'w') as model_out, \
              open(switchd_log_path, 'w') as switchd_out:
-            model_p = start_model(HARLYN_MODEL, out=model_out)
+            model_p = start_model(HARLYN_MODEL, out=model_out,
+                                  lookup_json=lookup_json_path)
             processes.append(model_p)
 
             conf_path = os.path.join(
