@@ -35,6 +35,8 @@ def get_parser():
                         'P4Runtime gRPC server',
                         type=str, action="store",
                         default='localhost:50051')
+    parser.add_argument('--keep-logs', help='Keep logs even if test passes',
+                        action='store_true', default=False)
     return parser
 
 NUM_IFACES = 4
@@ -273,16 +275,28 @@ def main():
         return True
 
     success = run()
+
+    # move bf_drivers log to log file directory
+    if os.path.exists('bf_drivers.log'):
+        shutil.move('bf_drivers.log', dirname)
+    else:
+        print >> sys.stderr, "Could not find 'bf_drivers.log' in CWD"
+
     for f in os.listdir(dirname):
         os.chmod(os.path.join(dirname, f), 0o666)
+
     for p in processes:
         p.terminate()
+
     if not success:
         print >> sys.stderr, "See logfiles under", dirname
         sys.exit(1)
     else:
         print "SUCCESS"
-        shutil.rmtree(dirname)
+        if args.keep_logs:
+            print "Log files are under", dirname
+        else:
+            shutil.rmtree(dirname)
         sys.exit(0)
 
 if __name__ == '__main__':

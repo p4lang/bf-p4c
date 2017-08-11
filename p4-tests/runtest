@@ -241,8 +241,12 @@ fi
 
 if $run_ptf && [ -d ${file%.p4}.ptf ]; then
     PTF_RUNNER=$(findbin HARLYN_PTF_DRIVER_WRAPPER)
-    $PTF_RUNNER --testdir $testdir --name $name --ptfdir ${file%.p4}.ptf \
-                --top-builddir $(findcmakecache)
+    PTF_CMD="$PTF_RUNNER --testdir $testdir --name $name \
+        --ptfdir ${file%.p4}.ptf --top-builddir $(findcmakecache)"
+    if $verbose; then
+        echo $PTF_CMD
+    fi
+    $PTF_CMD
     if [ $? -ne 0 ]; then
         exit 1
     fi
