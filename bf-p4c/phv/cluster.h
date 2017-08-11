@@ -127,7 +127,7 @@ class Cluster::Uses : public Inspector {
     /*                |    ^- gress               */
     /*                 == use in deparser         */
     //
-    explicit Uses(const PhvInfo &p) : phv(p) { }
+    explicit Uses(PhvInfo &p) : phv(p) { }
     //
     bool is_referenced(PhvInfo::Field *f);
     bool is_deparsed(PhvInfo::Field *f);
@@ -135,7 +135,7 @@ class Cluster::Uses : public Inspector {
     bool is_used_parde(PhvInfo::Field *f);
     //
  private:
-    const PhvInfo       &phv;
+    PhvInfo       &phv;
     gress_t             thread;
     bool                in_mau;
     bool                in_dep;

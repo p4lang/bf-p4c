@@ -1112,7 +1112,7 @@ Cluster::Uses::preorder(const IR::Tofino::Deparser *d) {
         // IR::Tofino::Deparser has a field egress_port which points to
         // egress port in the egress pipeline and
         // egress spec in the ingress pipeline
-        PhvInfo::Field *field = const_cast<PhvInfo::Field *>(phv.field(d->egress_port));
+        auto field = phv.field(d->egress_port);
         if (field) {
             field->set_deparsed_no_pack(true);
             LOG1(".....Deparser Constraint 'egress port' on field..... " << field);
@@ -1129,8 +1129,7 @@ Cluster::Uses::preorder(const IR::Tofino::Deparser *d) {
         if (entry->name != "learning" && entry->name != "mirror") {
             continue;
         }
-        PhvInfo::Field *field
-            = const_cast<PhvInfo::Field *>(phv.field(entry->select));
+        auto field = phv.field(entry->select);
         field->set_deparsed_bottom_bits(true);
         LOG1(".....Deparser Constraint "
             << entry->name
@@ -1146,7 +1145,7 @@ Cluster::Uses::preorder(const IR::Tofino::Deparser *d) {
         for (auto s : entry->sets) {
             LOG1("\t.....field list....." << fl);
             for (auto m : *s) {
-                PhvInfo::Field *m_f = const_cast<PhvInfo::Field *>(phv.field(m));
+                auto m_f = phv.field(m);
                 if (m_f) {
                     m_f->mirror_field_list = {field, fl};
                     LOG1("\t\t" << m_f);
