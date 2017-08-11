@@ -80,7 +80,16 @@ class PhvInfo : public Inspector {
         bool            metadata;
         bool            bridged = false;
         /// A mirror field points to its field list (one of eight)
-        std::pair<Field*, int> mirror_field_list = {nullptr, -1};
+        struct mirror_field_list_t {
+            Field *member_field;
+            int   field_list;
+            bool operator==(const mirror_field_list_t& rhs) const {
+                return rhs.member_field == this->member_field && rhs.field_list == this->field_list;
+            }
+            bool operator!=(const mirror_field_list_t& rhs) const {
+                return rhs.member_field != this->member_field || rhs.field_list != this->field_list;
+            }
+        } mirror_field_list = {nullptr, -1};
 
         /// True if this Field is a validity bit.  Implies metadata.
         bool            pov;

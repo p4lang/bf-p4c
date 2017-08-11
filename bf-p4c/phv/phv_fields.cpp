@@ -815,10 +815,11 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field &field) {
     if (field.referenced) out << " ref";
     if (field.bridged) out << " bridge";
     if (field.metadata) out << " meta";
-    if (field.mirror_field_list.first)
+    if (field.mirror_field_list.member_field)
         out << " mirror%{"
-            << field.mirror_field_list.first->id << ":" << field.mirror_field_list.first->name
-            << "#" << field.mirror_field_list.second
+            << field.mirror_field_list.member_field->id
+            << ":" << field.mirror_field_list.member_field->name
+            << "#" << field.mirror_field_list.field_list
             << "}%";
     if (field.pov) out << " pov";
     if (field.mau_write()) out << " mau_write";
