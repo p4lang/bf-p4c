@@ -3,11 +3,13 @@
 #include "ir/ir.h"
 #include "tofino/ir/thread_visitor.h"
 
-// This Visitor creates a thread-local instance of every metadata and header
-// instance. The name of the new instance is gress-name::instance-name.
+// This Visitor creates a thread-local instance of every metadata, header
+// instance and TempVars. The name of the new instance is gress-name::instance-name.
+//
 // TODO: When header/metadata instances are added to MAU_Pipe, this class must
 // create 2 copies (one for each thread) of every header/metadata instance
 // object.
+//
 class CreateThreadLocalInstances : public Modifier, ThreadVisitor {
  public:
     explicit CreateThreadLocalInstances(gress_t th) : ThreadVisitor(th), gress_(th) {}
@@ -19,6 +21,10 @@ class CreateThreadLocalInstances : public Modifier, ThreadVisitor {
     bool preorder(IR::Tofino::ParserState *ps) override {
         ps->name = cstring::to_cstring(gress_) + "::" + ps->name;
         return true; }
+    // prepend "thread-name::" to TempVars
+    bool preorder(IR::TempVar *var) override {
+        var->name = cstring::to_cstring(gress_) + "::" + var->name;
+        return false; }
  private:
     gress_t gress_;
 };

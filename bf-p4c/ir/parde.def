@@ -373,8 +373,7 @@ class Digest {
     std::vector<Vector<Expression>>     sets;
 #noconstructor
     Digest(gress_t gress, cstring name) : gress(gress), name(name),
-        select(new TempVar(Type::Bits::get(3),
-                           cstring((gress ? "egress::$" : "ingress::$") + name))) {}
+        select(new TempVar(Type::Bits::get(3), cstring("$" + name))) {}
     visit_children {
         v.visit(select, "select");
         for (auto &s : sets)
