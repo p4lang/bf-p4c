@@ -1102,10 +1102,10 @@ Cluster::Uses::preorder(const IR::Tofino::Deparser *d) {
     in_dep = true;
     revisit_visited();
     visit(d->egress_port);
-    d->digests.visit_children(*this);
+    visit(d->digests, "digests");
     in_mau = false;
     revisit_visited();
-    d->emits.visit_children(*this);
+    visit(d->emits, "emits");
     // extract deparser constraints from Deparser & Digest IR nodes ref: bf-p4c/ir/parde.def
     // set deparser constaints on field
     if (d->egress_port) {

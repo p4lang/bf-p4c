@@ -87,7 +87,7 @@ class PhvInfo : public Inspector {
                 return rhs.member_field == this->member_field && rhs.field_list == this->field_list;
             }
             bool operator!=(const mirror_field_list_t& rhs) const {
-                return rhs.member_field != this->member_field || rhs.field_list != this->field_list;
+                return !(*this == rhs);
             }
         } mirror_field_list = {nullptr, -1};
 
