@@ -155,7 +155,7 @@ public:
                 assert(0); }
             enum flags_t { NONE=0, USED_IMMED=1, ZERO=3 };
             Field() {}
-            Field(unsigned size, unsigned lo = 0, enum flags_t fl = NONE) 
+            Field(unsigned size, unsigned lo = 0, enum flags_t fl = NONE)
                 : size(size), flags(fl) {
                 if (size) bits.push_back({ lo, lo + size-1 }); }
         };
@@ -232,7 +232,7 @@ public:
         unsigned bit_width;
         unsigned bit_width_full;
         std::string type;
-        p4_param(std::string n = "", unsigned p = 0, unsigned bw = 0, unsigned bwf = 0, std::string t = "") : 
+        p4_param(std::string n = "", unsigned p = 0, unsigned bw = 0, unsigned bwf = 0, std::string t = "") :
             name(n), position(p), bit_width(bw), bit_width_full(bwf), type(t) {}
     };
     typedef std::vector<p4_param>  p4_params;
@@ -293,8 +293,8 @@ public:
     };
 public:
     const char *name() const { return name_.c_str(); }
-    const char *p4_name() const { return p4_table->p4_name(); }
-    unsigned handle() const { return p4_table->get_handle(); }
+    const char *p4_name() const { if(p4_table) return p4_table->p4_name(); return ""; }
+    unsigned handle() const { if(p4_table) return p4_table->get_handle(); return -1; }
     int table_id() const;
     virtual void pass1() = 0;
     virtual void pass2() = 0;
@@ -407,21 +407,21 @@ public:
     virtual void need_on_actionbus(HashDistribution *hd, int off, int size);
     virtual Call &action_call() { return action; }
     virtual Actions *get_actions() { return actions; }
-    void add_reference_table(json::vector &table_refs, const Table::Call& c, const std::string& href); 
+    void add_reference_table(json::vector &table_refs, const Table::Call& c, const std::string& href);
     json::map &add_pack_format(json::map &stage_tbl, int memword, int words, int entries = -1);
     json::map &add_pack_format(json::map &stage_tbl, Table::Format *format,
                                Table::Actions::Action *act = nullptr);
     virtual void add_field_to_pack_format(json::vector &field_list, int basebit, std::string name,
                                           const Table::Format::Field &field,
                                           const std::vector<Actions::Action::alias_value_t *> &);
-    void add_zero_padding_fields(Table::Format *format, Table::Actions::Action *act = nullptr, unsigned format_width = 64); 
+    void add_zero_padding_fields(Table::Format *format, Table::Actions::Action *act = nullptr, unsigned format_width = 64);
     void canon_field_list(json::vector &field_list);
     void check_next();
     void check_next(Ref &next);
     bool choose_logical_id(const slist<Table *> *work = nullptr);
     virtual int hit_next_size() const { return hit_next.size(); }
-    p4_param *find_p4_param(value_t &v, p4_params &l) { 
-        for (auto &p : l) 
+    p4_param *find_p4_param(value_t &v, p4_params &l) {
+        for (auto &p : l)
             if (p.name == v.s) return &p;
         return nullptr;
     }
@@ -527,6 +527,11 @@ DECLARE_TABLE_TYPE(ExactMatchTable, MatchTable, "exact_match",
     std::vector<Way>                      ways;
     struct WayRam { int way, index, word, bank; };
     std::map<std::pair<int, int>, WayRam> way_map;
+    std::map<unsigned, unsigned> hash_fn_ids;
+    bool isindirect() {
+        if (action)
+            if (action.args.size() > 1) return true;
+        return false; }
     void setup_ways();
     void alloc_vpns() override;
     std::vector<Phv::Ref>                 match;
@@ -615,7 +620,7 @@ public:
     table_type_t table_type() override { return TERNARY; }
     void gen_entry_cfg(json::vector &out, std::string name, \
         unsigned lsb_offset, unsigned lsb_idx, unsigned msb_idx, \
-        std::string source, unsigned start_bit, unsigned field_width); 
+        std::string source, unsigned start_bit, unsigned field_width);
 )
 
 DECLARE_TABLE_TYPE(Phase0MatchTable, Table, "phase0_match",
@@ -662,6 +667,8 @@ DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
                                   const Table::Format::Field &field,
                                   const std::vector<Actions::Action::alias_value_t *> &) override;
     int unitram_type() override { return UnitRam::TERNARY_INDIRECTION; }
+public:
+    unsigned address_shift() const { return std::min(5U, format->log2size - 2); }
 )
 
 DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,
@@ -691,8 +698,9 @@ DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,
         return match_tables.size() == 1 ? (*match_tables.begin())->action_call() : action; }
     int memunit(int r, int c) { return r*6 + c; }
     void pass1();
-public: 
+public:
     std::string get_per_flow_enable_param() { return per_flow_enable_param; }
+    bool get_per_flow_enable() { return per_flow_enable; }
 )
 
 DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",
@@ -700,7 +708,7 @@ DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",
     std::vector<int>                    home_rows;
     int                                 home_lineno = -1;
     std::map<std::string, Format *>     action_formats;
-    static const std::map<unsigned, std::vector<std::string>> action_data_address_huffman_encoding; 
+    static const std::map<unsigned, std::vector<std::string>> action_data_address_huffman_encoding;
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) override;
     std::string find_field(Format::Field *field) override;
     int find_field_lineno(Format::Field *field) override;
@@ -712,9 +720,19 @@ DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",
     int unitram_type() override { return UnitRam::ACTION; }
     void pad_format_fields();
     unsigned get_do_care_count(std::string bstring);
-    unsigned get_lower_huffman_encoding_bits (unsigned width); 
+    unsigned get_lower_huffman_encoding_bits (unsigned width);
 public:
     std::map<std::string, Format *>& get_action_formats() { return action_formats; }
+    unsigned get_size() {
+        unsigned size = 0;
+        if (format) size = format->size;
+        for (auto f: get_action_formats()) {
+            unsigned fsize = f.second->size;
+            if (fsize > size) size = fsize; }
+        return size; }
+    unsigned get_log2size() {
+        unsigned size = get_size();
+        return ceil_log2(size); }
 )
 
 DECLARE_TABLE_TYPE(GatewayTable, Table, "gateway",
@@ -776,7 +794,6 @@ DECLARE_TABLE_TYPE(SelectionTable, AttachedTable, "selection",
     int                 selection_hash = -1;
 public:
     Stateful*           bound_stateful = nullptr;
-    bool                per_flow_enable;
     table_type_t table_type() override { return SELECTION; }
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) override {
         width = period = 1; depth = layout_size(); period_name = 0; }
@@ -932,11 +949,11 @@ public:
     bool is_dual_mode() { return dual_mode; }
     int home_row() const override { return layout.at(0).row | 3; }
     int indirect_shiftcount() override;
-    unsigned get_instruction_count() { 
+    unsigned get_instruction_count() {
         unsigned instr_count = 0;
         if (actions) {
             for (auto &a : *actions) { //will have only 1 action
-                for (auto &i : a.instr) ++instr_count; } } 
+                for (auto &i : a.instr) ++instr_count; } }
         return instr_count; }
 )
 

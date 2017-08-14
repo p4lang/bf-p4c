@@ -388,6 +388,11 @@ void ExactMatchTable::setup_ways() {
             if (++word == fmt_width) { word = 0; bank++; } }
         ++way; }
     // FIXME -- check to ensure that ways that share a bus use the same hash group?
+    //Setup unique hash_function_id for each way group
+    unsigned hash_fn_id = 0;
+    for (auto &w : ways) {
+        if (hash_fn_ids.count(w.group) == 0)
+            hash_fn_ids[w.group] = hash_fn_id++; }
 }
 
 void ExactMatchTable::alloc_vpns() {
@@ -741,18 +746,10 @@ template<class REGS> void ExactMatchTable::write_regs(REGS &regs) {
 std::unique_ptr<json::map> ExactMatchTable::gen_memory_resource_allocation_tbl_cfg(Way &way) {
     if (options.new_ctx_json) {
         json::map mra;
-        int hash_id = -1;
-        unsigned hash_groups = 0, vpn_ctr = 0;
+        unsigned vpn_ctr = 0;
         unsigned fmt_width = format ? (format->size + 127)/128 : 0;
-        if (options.match_compiler) {
-            for (auto &w : ways) {
-                if (!((hash_groups >> w.group) & 1)) {
-                    ++hash_id;
-                    hash_groups |= 1 << w.group; }
-                if (&w == &way) break; }
-        } else
-            hash_id = way.group;
-        mra["hash_function_id"] = hash_id;
+        if (hash_fn_ids.count(way.group) > 0)
+            mra["hash_function_id"] = hash_fn_ids[way.group];
         mra["hash_entry_bit_lo"] = way.subgroup*10;
         mra["hash_entry_bit_hi"] = way.subgroup*10 + 9;
         mra["number_entry_bits"] = 10;
@@ -964,7 +961,12 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
         tbl["meter_table_refs"] = json::vector();
         tbl["selection_table_refs"] = json::vector();
         tbl["stateful_table_refs"] = json::vector();
-        tbl["action_data_table_refs"] = json::vector();
+        json::vector &action_data_table_refs = tbl["action_data_table_refs"] = json::vector();
+        if (action) {
+            if (isindirect()) 
+                add_reference_table(action_data_table_refs, action, "indirect");
+            else
+                add_reference_table(action_data_table_refs, action, "direct"); }
     } else {
         unsigned fmt_width = format ? (format->size + 127)/128 : 0;
         unsigned number_entries = format ? layout_size()/fmt_width * format->groups() * 1024 : 0;

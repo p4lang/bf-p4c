@@ -98,10 +98,11 @@ public:
                 if (bit <= p.hi && bit >= p.lo)
                     return p.what.name(); } } 
         return ""; }
+    //FIXME
     unsigned get_seed_bit(unsigned group, unsigned bit) { 
         if (group < hash_groups.size())
             return ((hash_groups[group].seed >> bit) & 0x1);
-        return -1; }
+        return 0; }
 
     class all_iter {
         decltype(groups)::const_iterator        outer, outer_end;

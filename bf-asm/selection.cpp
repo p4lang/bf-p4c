@@ -31,7 +31,7 @@ void SelectionTable::setup(VECTOR(pair_t) &data) {
             non_linear_hash = get_bool(kv.value);
         } else if (kv.key == "per_flow_enable") {
             if (CHECKTYPE(kv.value, tSTR)) {
-                per_flow_enable = 1;
+                per_flow_enable = true;
                 per_flow_enable_param = kv.value.s; }
         } else if (kv.key == "pool_sizes") {
             if (CHECKTYPE(kv.value, tVEC))
@@ -124,6 +124,9 @@ template<class REGS> void SelectionTable::write_merge_regs(REGS &regs, MatchTabl
     auto &merge = regs.rams.match.merge;
     merge.mau_physical_to_meter_alu_ixbar_map[type][bus/8U].set_subfield(
         4 | meter_group(), 3*(bus%8U), 3);
+    if (!per_flow_enable)
+        per_flow_enable_bit = SELECTOR_PER_FLOW_ENABLE_START_BIT;
+    merge.mau_meter_adr_per_entry_en_mux_ctl[type][bus] = per_flow_enable_bit; 
     //if (match->action_call())
     //    /*merge.mau_selector_action_entry_size[type][bus] = match->action_call()->format->log2size - 3*/;
     //else if (options.match_compiler)
@@ -132,23 +135,12 @@ template<class REGS> void SelectionTable::write_merge_regs(REGS &regs, MatchTabl
     //if (args.size() > 1)
     //    merge.mau_bus_hash_group_ctl[type][bus/4].set_subfield(
     //        1 << BusHashGroup::SELECTOR_MOD, 5 * (bus%4), 5);
-    //merge.mau_meter_adr_type_position[type][bus] = 24;
     merge.mau_meter_adr_type_position[type][bus] = SELECTOR_METER_TYPE_START_BIT;
     if (match->action_call().args.size() > 1) {
-        //int bits = per_flow_enable ? 17 : 16;
-        int bits = per_flow_enable ? per_flow_enable_bit : SELECTOR_PER_FLOW_ENABLE_START_BIT;
         /* FIXME -- regs need to stabilize */
-        merge.mau_meter_adr_mask[type][bus] = ((1U << bits) - 1) << 7; }
-    //merge.mau_meter_adr_default[type][bus] = (4U << 24) | (per_flow_enable ? 0 : (1U << 23));
+        merge.mau_meter_adr_mask[type][bus] = ((1U << per_flow_enable_bit) - 1) << 7; }
     merge.mau_meter_adr_default[type][bus] = (METER_SELECTOR << SELECTOR_METER_TYPE_START_BIT) 
         | (per_flow_enable ? 0 : (1U << SELECTOR_PER_FLOW_ENABLE_START_BIT));
-    //if (per_flow_enable) {
-    //    /* FIXME -- regs need to stabilize */
-    //    merge.mau_meter_adr_per_entry_en_mux_ctl[type][bus] = 23; }
-    //FIXME -- Factor in exclude bits?
-    if (!per_flow_enable)
-        per_flow_enable_bit = SELECTOR_PER_FLOW_ENABLE_START_BIT;
-    merge.mau_meter_adr_per_entry_en_mux_ctl[type][bus] = per_flow_enable_bit; 
     //if (!hash_dist.empty()) {
     //    /* from HashDistributionResourceAllocation.write_config: */
     //    merge.mau_bus_hash_group_sel[type][bus/8].set_subfield(hash_dist[0].id | 8, 4*(bus%8), 4); }

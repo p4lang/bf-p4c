@@ -782,12 +782,10 @@ template<class REGS> void TernaryIndirectTable::write_regs(REGS &regs) {
                 merge.mau_actiondata_adr_vpn_shiftcount[1][bus] =
                     std::max(0, (int)action->format->log2size - 7);
             } else {
-                /* FIXME -- support for multiple sizes of action data? */
                 merge.mau_actiondata_adr_mask[1][bus] =
                     ((1U << action.args[1].size()) - 1) << lo_huffman_bits;
-                //merge.mau_actiondata_adr_tcam_shiftcount[bus] =
-                //    action.args[1].field()->bits[0].lo + 5 - lo_huffman_bits; } }
-                merge.mau_actiondata_adr_tcam_shiftcount[bus] = lo_huffman_bits; } }
+                merge.mau_actiondata_adr_tcam_shiftcount[bus] =
+                    action.args[1].field()->bits[0].lo + 5 - lo_huffman_bits; } }
         if (attached.selector) {
             if (attached.selector.args.size() == 1)
                 merge.mau_selectorlength_default[1][bus] = 1;

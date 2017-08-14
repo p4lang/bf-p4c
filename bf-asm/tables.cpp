@@ -334,9 +334,10 @@ bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p
             p4_table = P4Table::get(p4type, kv.value.map);
     } else if (kv.key == "p4_param_order") {
         if (CHECKTYPE(kv.value, tMAP)) {
+            unsigned position = 0;
             for (auto &v : kv.value.map) {
                 if ((CHECKTYPE(v.key, tSTR)) && (CHECKTYPE(v.value, tMAP))) {
-                    p4_param p(v.key.s);
+                    p4_param p(v.key.s, position++);
                     for (auto &w : v.value.map) {
                         if (CHECKTYPE(w.key, tSTR) && CHECKTYPE2(w.value, tSTR, tINT)) {
                             if (w.key == "type") p.type = w.value.s;
@@ -1072,7 +1073,7 @@ void Table::Actions::add_p4_params(const Action &act, json::vector &cfg) {
             { "name", json::string(a.name) },
             { "start_bit", json::number(start_bit) },
             { "position", json::number(a.position) },
-            { "bit_width", json::number(a.bit_width) } } ); 
+            { "bit_width", json::number(a.bit_width) } } );
         start_bit += a.bit_width;
     }
 }
@@ -1085,15 +1086,15 @@ void Table::Actions::add_action_format(Table *table, json::map &tbl) {
     json::vector &action_format = tbl["action_format"] = json::vector();
     for (auto &act : *this) {
         json::map action_format_per_action;
-        if ((hit_index >= table->hit_next.size()) || 
+        if ((hit_index >= table->hit_next.size()) ||
                 ((table->hit_next.size() == 1) && (table->hit_next[0].name == "END"))){
             action_format_per_action["next_table"] = 0;
             action_format_per_action["next_table_full"] = 0xff;
             action_format_per_action["action_name"] = act.name;
             action_format_per_action["action_handle"] = act.handle;
             action_format_per_action["table_name"] = "--END_OF_PIPELINE--";
-            action_format_per_action["vliw_instruction"] = act.code; 
-            action_format_per_action["vliw_instruction_full"] = ACTION_INSTRUCTION_ADR_ENABLE | act.addr;//FIXME-JSON 
+            action_format_per_action["vliw_instruction"] = act.code;
+            action_format_per_action["vliw_instruction_full"] = ACTION_INSTRUCTION_ADR_ENABLE | act.addr;//FIXME-JSON
         } else {
             auto next = table->hit_next[hit_index++];
             action_format_per_action["next_table"] = next ? hit_index : 0;
@@ -1101,8 +1102,8 @@ void Table::Actions::add_action_format(Table *table, json::map &tbl) {
             action_format_per_action["action_name"] = act.name;
             action_format_per_action["action_handle"] = act.handle;
             action_format_per_action["table_name"] = next ? next->name() : "--END_OF_PIPELINE--";
-            action_format_per_action["vliw_instruction"] = act.code; 
-            action_format_per_action["vliw_instruction_full"] = ACTION_INSTRUCTION_ADR_ENABLE | act.addr;//FIXME-JSON 
+            action_format_per_action["vliw_instruction"] = act.code;
+            action_format_per_action["vliw_instruction_full"] = ACTION_INSTRUCTION_ADR_ENABLE | act.addr;//FIXME-JSON
         }
         json::vector &action_format_per_action_imm_fields = action_format_per_action["immediate_fields"] = json::vector();
         for (auto &a : act.alias) {
@@ -1167,7 +1168,7 @@ void MatchTable::pass1(int type) {
     //FIXME-JSON -- determine param full width from phv container size
     if (!p4_params_list.empty()){
         for (auto &p : p4_params_list) {
-            if (!p.bit_width_full) 
+            if (!p.bit_width_full)
                 p.bit_width_full = p.bit_width;
             auto n = p.name.find(".$valid");
             if (n != std::string::npos) {
@@ -1239,10 +1240,10 @@ template<class REGS> void MatchTable::write_regs(REGS &regs, int type, Table *re
             if (idletime)
                 idletime->write_merge_regs(regs, type, bus);
             if (result->action) {
-                /* FIXME -- deal with variable-sized actions */
-                merge.mau_actiondata_adr_default[type][bus] =
-                    get_address_mau_actiondata_adr_default(result->action->format->log2size,
-                                                           result->enable_action_data_enable);
+                if (auto adt = result->action->to<ActionTable>()) {
+                    merge.mau_actiondata_adr_default[type][bus] =
+                        get_address_mau_actiondata_adr_default(adt->get_log2size(),
+                                                               result->enable_action_data_enable); }
                 if (enable_action_data_enable || !dynamic_cast<HashActionTable *>(this))
                     /* HACK -- HashAction tables with no action data don't need this? */
                     shift_en.actiondata_adr_payload_shifter_en = 1; }
@@ -1474,11 +1475,11 @@ std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(const c
             if (skip_spare_bank && &mem == &mem_units.back()) {
                 if (mem.size() == 1)
                     mra["spare_bank_memory_unit"] = mem[0]->clone();
-                else 
-                    mra["spare_bank_memory_unit"] = mem.clone(); 
+                else
+                    mra["spare_bank_memory_unit"] = mem.clone();
             if (table_type() == SELECTION) break; }
             //FIXME-JSON -- Hack to match glass json
-            //if (table_type() != ACTION) break; } 
+            //if (table_type() != ACTION) break; }
             std::sort(mem.begin(), mem.end(), json::obj::ptrless());
             json::map tmp;
             tmp["memory_units"] = std::move(mem);
@@ -1542,10 +1543,13 @@ void AttachedTable::pass1() {
     unsigned addr_bits = 0;
     if (per_flow_enable && !per_flow_enable_param.empty()) {
         for (auto m : match_tables) {
-            if (auto fmt = m->format) {
+            auto fmt = m->format;
+            if (auto t = m->to<TernaryMatchTable>())
+                if (t->indirect) fmt = t->indirect->format;
+            if (fmt) {
                 unsigned g = 0;
                 while (g < fmt->groups()) {
-                    if (auto f = fmt->field(per_flow_enable_param, g)) {   
+                    if (auto f = fmt->field(per_flow_enable_param, g)) {
                         // Get pfe bit position from format entry
                         // This value is then adjusted based on address
                         unsigned pfe_bit = 0;
@@ -1577,7 +1581,9 @@ void AttachedTable::pass1() {
                             per_flow_enable_bit = pfe_bit;
                             address_bits = addr_bits;
                             pfe_set = true; } }
-                    ++g; } } } }
+                    ++g; }
+            } else {
+                error(lineno, "no format found for per_flow_enable param %s", per_flow_enable_param.c_str()); } } }
 }
 
 SelectionTable *AttachedTables::get_selector() const {
@@ -1678,9 +1684,9 @@ void Table::add_reference_table(json::vector &table_refs, const Table::Call& c, 
     table_ref["how_referenced"] = href;
     table_ref["handle"] = c->handle();
     table_ref["name"] = c->name();
-    table_refs.push_back(std::move(table_ref)); 
+    table_refs.push_back(std::move(table_ref));
 }
-                    
+
 json::map &Table::add_pack_format(json::map &stage_tbl, int memword, int words, int entries) {
     json::map pack_fmt;
     pack_fmt["table_word_width"] = memword * words;
@@ -1717,7 +1723,7 @@ void Table::add_field_to_pack_format(json::vector &field_list, int basebit, std:
         std::string source = "";
         for (auto a : alias) {
             if (name == a->second.name) {
-               has_alias = true; 
+               has_alias = true;
                source = "spec";
                name = a->first; } }
         for (auto &bits : field.bits) {
@@ -1726,8 +1732,8 @@ void Table::add_field_to_pack_format(json::vector &field_list, int basebit, std:
                 source = "version";
             else if (name == "--immediate--") {
                 source = "immediate";
-                immediate_name = name; 
-            } else if (name == "--instruction_address--") 
+                immediate_name = name;
+            } else if (name == "--instruction_address--")
                 source = "instr";
             else if (name == "--action_data_pointer--")
                 source = "adt_ptr";
@@ -1736,7 +1742,13 @@ void Table::add_field_to_pack_format(json::vector &field_list, int basebit, std:
             if (field.flags == Format::Field::ZERO)
                 source = "zero";
             json::map field_entry;
-            field_entry["start_bit"] = lobit; 
+            field_entry["start_bit"] = lobit;
+            if (auto t = this->to<TernaryIndirectTable>()) {
+                if (name == "--selection_base--")
+                    field_entry["start_bit"] = SELECTOR_LOWER_HUFFMAN_BITS;
+                if (name == "--action_data_pointer--")
+                    if (auto adt = t->action->to<ActionTable>()) {
+                        field_entry["start_bit"] = std::min(5U, adt->get_log2size() - 2); } }
             field_entry["field_width"] = bits.size();
             //FIXME-JSON: lsb_mem_word_idx can be evaluated by driver
             field_entry["lsb_mem_word_idx"] = bits.lo/128U;
@@ -1746,13 +1758,14 @@ void Table::add_field_to_pack_format(json::vector &field_list, int basebit, std:
             field_entry["field_name"] = json::string(name);
             //field_entry["immediate_name"] = json::string(immediate_name);
             if (this->to<ExactMatchTable>())
-                field_entry["match_mode"] = json::string("unused"); //FIXME-JSON 
+                field_entry["match_mode"] = json::string("unused"); //FIXME-JSON
             if (this->to<ExactMatchTable>() || this->to<TernaryIndirectTable>()) {
                 field_entry["enable_pfe"] = false;
                 if (auto s = this->get_selector()) {
-                    field_entry["enable_pfe"] = s->per_flow_enable; 
-                    if (s->per_flow_enable && (s->get_per_flow_enable_param() == name))
-                        return; } } //Do not output per flow enable parameter 
+                    if (name == "--selection_base--")
+                        field_entry["enable_pfe"] = s->get_per_flow_enable();
+                    if (s->get_per_flow_enable_param() == name)
+                        return; } } //Do not output per flow enable parameter
             field_list.push_back(std::move(field_entry));
             lobit += bits.size(); }
     } else {
@@ -1787,17 +1800,17 @@ void Table::add_zero_padding_fields(Table::Format *format, Table::Actions::Actio
     unsigned pad_count = 0;
     if (format->log2size == 0) {
         format->log2size = 6;
-        format->size = 64; 
+        format->size = 64;
         // Add a flag type to specify padding?
         Format::Field f(format->size, 0, Format::Field::ZERO);
-        format->add_field(f, "--padding_0_63--"); 
+        format->add_field(f, "--padding_0_63--");
         return; }
     decltype(act->reverse_alias()) alias;
     if (act) alias = act->reverse_alias();
-    // Loop through fields to find zero padding 
+    // Loop through fields to find zero padding
     bitvec padbits;
     for (auto &field : *format) {
-        unsigned alias_size = -1; 
+        unsigned alias_size = -1;
         auto k = get(alias, field.first);
         if (k.size() > 0) {
             for (auto a : k) {
@@ -1808,20 +1821,20 @@ void Table::add_zero_padding_fields(Table::Format *format, Table::Actions::Actio
             bits_size += bits.hi - bits.lo + 1;
             if (alias_size < bits_size) {
                 bits_size = alias_size;
-                bits.hi = bits.lo + alias_size - 1; 
+                bits.hi = bits.lo + alias_size - 1;
                 alias_size -= bits.hi - bits.lo + 1; }
-            padbits.setrange(bits.lo, bits_size); } } 
+            padbits.setrange(bits.lo, bits_size); } }
     unsigned idx_lo = 0, idx_hi = 63;;
     for (auto p : padbits) {
-        if (p > idx_lo) { 
+        if (p > idx_lo) {
             Format::Field f(p - idx_lo, idx_lo, Format::Field::ZERO);
-            std::string pad_name = "--padding_" + std::to_string(idx_lo) 
+            std::string pad_name = "--padding_" + std::to_string(idx_lo)
                 + "_" + std::to_string(p - 1) + "--";
             format->add_field(f, pad_name); }
         idx_lo = p + 1 ; }
     if (idx_lo < format_width) {
             Format::Field f(format_width - idx_lo, idx_lo, Format::Field::ZERO);
-            std::string pad_name = "--padding_" + std::to_string(idx_lo) 
+            std::string pad_name = "--padding_" + std::to_string(idx_lo)
                 + "_" + std::to_string(format_width - 1) + "--";
             format->add_field(f, pad_name); }
 }
@@ -1928,6 +1941,14 @@ void MatchTable::gen_name_lookup(json::map &out) {
         out["table_name"] = p4_table->p4_name();
     else
         out["table_name"] = name();
+    json::map &actions_map = out["actions"] = json::map();
+    if (auto acts = get_actions()) {
+        for (auto a : *acts) {
+            json::map &action_map = actions_map[a.name] = json::map();
+            action_map["direction"] = logical_id;
+            action_map["primitives"] = json::vector();
+        }
+    }
 }
 
 void Table::common_tbl_cfg(json::map &tbl, const char *default_match_type) {
@@ -1940,7 +1961,7 @@ void Table::common_tbl_cfg(json::map &tbl, const char *default_match_type) {
         //tbl["static_entries"] = json::vector(); //FIXME-JSON
         tbl["ap_bind_indirect_res_to_match"] = json::vector(); //FIXME-JSON: Need example
         tbl["is_resource_controllable"] = true; //FIXME-JSON: Need example for false
-        tbl["uses_range"] = false; //FIXME-JSON: Ranges not yet implemented by brig 
+        tbl["uses_range"] = false; //FIXME-JSON: Ranges not yet implemented by brig
         if ((!p4_params_list.empty()) && (this->to<MatchTable>())) {
             json::vector &params = tbl["match_key_fields"] = json::vector();
             for (auto &p : p4_params_list) {
