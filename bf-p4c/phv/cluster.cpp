@@ -1135,7 +1135,18 @@ Cluster::Uses::preorder(const IR::Tofino::Deparser *d) {
             << entry->name
             << " 'digest' on field..... "
             << field);
-        if (entry->name !=  "mirror") {
+        if (entry->name ==  "learning") {
+            for (auto s : entry->sets) {
+                LOG1("\t.....learning field list..... ");
+                for (auto l : *s) {
+                    auto l_f = phv.field(l);
+                    if (l_f) {
+                        LOG1("\t\t" << l_f);
+                    } else {
+                        LOG1("\t\t" << "-f?");
+                    }
+                }
+            }
             continue;
         }
         // associating a mirror field with its field list
@@ -1143,7 +1154,7 @@ Cluster::Uses::preorder(const IR::Tofino::Deparser *d) {
         LOG1(".....mirror field lists selected by  " << field->id << ":" << field->name);
         int fl = 0;
         for (auto s : entry->sets) {
-            LOG1("\t.....field list....." << fl);
+            LOG1("\t.....mirror field list....." << fl);
             for (auto m : *s) {
                 auto m_f = phv.field(m);
                 if (m_f) {

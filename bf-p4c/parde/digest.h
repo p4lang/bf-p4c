@@ -39,7 +39,17 @@ class Digests : public Transform {
             if (VisitingThread(this) == EGRESS)
                 error("%s: learning not supported in egress", prim->srcInfo);
             // FIXME -- what to do with the digest 'channel' -- prim->operands[0]?
-            return add_to_digest(learn, "learning", prim->operands[1]);
+            auto ir_prim = add_to_digest(learn, "learning", prim->operands[1]);
+            //
+            // learn field list begins with $learning, e.g.,
+            // learning:
+            //   0: [$learning, meta.bd, meta.ifindex, meta.sa.32-47, meta.sa.16-31, meta.sa.0-15]
+            //   select: $learning
+            //
+            auto l = learn->sets.back()->clone();
+            l->insert(l->begin(), learn->select);  // insert $learn in field list
+            learn->sets.back() = l;
+            return ir_prim;
         } else if (prim->name == "clone" || prim->name == "clone3") {
             LOG2("clone:" << prim);
             auto m = prim->operands[0]->to<IR::Member>();
@@ -58,11 +68,12 @@ class Digests : public Transform {
             rv->push_back(add_to_digest(mirror, "mirror", list));
             //
             // each field list begins with mirror_id, mirror, ..... e.g.,
-            // 0: [ $mirror_id, $mirror, meta.i2e_0 ]
-            // 1: [ $mirror_id, $mirror, meta.i2e_1 ]
-            // .....
-            // 7: [ $mirror_id, $mirror, meta.i2e_7.96-127, meta.i2e_7.64-95, .., meta.i2e_7.0-31 ]
-            // select: $mirror
+            // mirror:
+            //   0: [ $mirror_id, $mirror, meta.i2e_0 ]
+            //   1: [ $mirror_id, $mirror, meta.i2e_1 ]
+            //   .....
+            //   7: [ $mirror_id, $mirror, meta.i2e_7.96-127, meta.i2e_7.64-95, .., meta.i2e_7.0-31 ]
+            //   select: $mirror
             //
             auto l = mirror->sets.back()->clone();
             l->insert(l->begin(), mirror->select);  // insert $mirror in every field list
