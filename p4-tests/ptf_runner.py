@@ -188,8 +188,10 @@ def wait_for_switchd(model_p, switchd_p, status_port, timeout_s=100):
     def wait():
         while True:
             if model_p.poll() is not None:
+                print >> sys.stderr, "Model is not running"
                 return False
             if switchd_p.poll() is not None:
+                print >> sys.stderr, "Switchd is not running"
                 return False
             if poll_device(status_port):
                 return True
@@ -197,6 +199,7 @@ def wait_for_switchd(model_p, switchd_p, status_port, timeout_s=100):
     try:
         return wait()
     except TimeoutError:
+        print >> sys.stderr, "Timed out while waiting for switchd to be ready"
         return False
     return True
 
@@ -245,13 +248,13 @@ def main():
 
     # TODO(antonin): in the future, do not restart model and switchd between
     # tests to speed-up testing
-    processes = []
+    processes = {}
     def run():
         with open(model_log_path, 'w') as model_out, \
              open(switchd_log_path, 'w') as switchd_out:
             model_p = start_model(HARLYN_MODEL, out=model_out,
                                   lookup_json=lookup_json_path)
-            processes.append(model_p)
+            processes["model"] = model_p
 
             conf_path = os.path.join(
                 os.path.dirname(os.path.realpath(__file__)), 'dummy.conf')
@@ -260,7 +263,7 @@ def main():
             switchd_status_port = 6789
             switchd_p = start_switchd(
                 BF_SWITCHD, switchd_status_port, conf_path, out=switchd_out)
-            processes.append(switchd_p)
+            processes["switchd"] = switchd_p
 
             success = wait_for_switchd(model_p, switchd_p, switchd_status_port)
             if not success:
@@ -281,17 +284,23 @@ def main():
 
     success = run()
 
+    for pname, p in processes.items():
+        try:
+            p.terminate()
+        except:
+            print >> sys.stderr, "Error when trying to terminate", pname
+
     # move bf_drivers log to log file directory
     if os.path.exists('bf_drivers.log'):
-        shutil.move('bf_drivers.log', dirname)
+        try:
+            shutil.move('bf_drivers.log', dirname)
+        except:
+            print >> sys.stderr, "Error when copying 'bf_drivers.log'"
     else:
         print >> sys.stderr, "Could not find 'bf_drivers.log' in CWD"
 
     for f in os.listdir(dirname):
         os.chmod(os.path.join(dirname, f), 0o666)
-
-    for p in processes:
-        p.terminate()
 
     if not success:
         print >> sys.stderr, "See logfiles under", dirname
