@@ -426,18 +426,6 @@ static match_t buildMatch(int match_size, const IR::Expression *key) {
 
 namespace {
 
-// XXX(seth): This would be better off living on IR::Vector itself.
-template <typename T>
-void pushOrAppendToVector(IR::Vector<T>& vec, const IR::Node* item) {
-    if (item == nullptr) return;
-    if (auto* itemAsVector = item->to<IR::Vector<T>>()) {
-        vec.append(*itemAsVector);
-        return;
-    }
-    BUG_CHECK(item->is<T>(), "Unexpected vector element: %1%", item);
-    vec.push_back(item->to<T>());
-}
-
 const IR::Node* rewriteSelect(const IR::Expression* component) {
     // We can transform a LookaheadExpression immediately to a concrete select
     // on bits in the input buffer.
@@ -451,8 +439,8 @@ const IR::Node* rewriteSelect(const IR::Expression* component) {
     // buffer, so this is really two primitive select operations.
     if (auto* concat = component->to<IR::Concat>()) {
         auto* rv = new IR::Vector<IR::Tofino::TransitionPrimitive>;
-        pushOrAppendToVector(*rv, rewriteSelect(concat->left));
-        pushOrAppendToVector(*rv, rewriteSelect(concat->right));
+        rv->pushBackOrAppend(rewriteSelect(concat->left));
+        rv->pushBackOrAppend(rewriteSelect(concat->right));
         return rv;
     }
 
@@ -496,7 +484,7 @@ IR::Tofino::ParserState* GetTofinoParser::getState(cstring name) {
     RewriteParserStatements rewriteStatements(state->p4State->name, filterSetMetadata);
     IR::Vector<IR::Tofino::ParserPrimitive> statements;
     for (auto* statement : state->p4State->components)
-        pushOrAppendToVector(statements, statement->apply(rewriteStatements));
+        statements.pushBackOrAppend(statement->apply(rewriteStatements));
 
     // Compute the new state's shift.
     auto shift = rewriteStatements.byteTotalShift();
@@ -525,7 +513,7 @@ IR::Tofino::ParserState* GetTofinoParser::getState(cstring name) {
     auto selectExpr = state->p4State->selectExpression->to<IR::SelectExpression>();
     for (auto* component : selectExpr->select->components) {
         matchSize += component->type->width_bits();
-        pushOrAppendToVector(state->select, rewriteSelect(component));
+        state->select.pushBackOrAppend(rewriteSelect(component));
     }
 
     // Generate a ParserMatch for each outgoing transition.
