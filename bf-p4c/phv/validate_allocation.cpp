@@ -117,6 +117,9 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe*) {
 
     auto isDeparsed = [](const PhvInfo::Field* f) { return f->deparsed_i; };
     auto isMetadata = [](const PhvInfo::Field* f) { return f->metadata || f->pov; };
+    auto hasOverlay = [](const PhvInfo::Field* f) {
+        return !f->field_overlay_map().empty();
+    };
 
     // Check that the allocation for each container is valid.
     for (auto& allocation : allocations) {
@@ -150,8 +153,7 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe*) {
         // entire container exactly. Unfortunately, determining what those
         // groups are is currently hard, so for now we skip most checks when
         // overlaying is present.
-        for (auto field : fields)
-            if (!field->field_overlay_map().empty()) return false;
+        if (std::any_of(fields.begin(), fields.end(), hasOverlay)) continue;
 
         // Verify that if a container contains any deparsed fields, it consists
         // only of deparsed fields.
