@@ -335,7 +335,7 @@ extern parser_counter {
             @optional in int<8> add);
 
     /// Add an immediate value to the parser counter.
-    void increment(int<8> value);
+    void increment(in int<8> value);
     bool is_zero();
     bool is_neg();
 }
@@ -345,7 +345,7 @@ extern parser_counter {
 // indicating congestion; egress parser does not perform any dropping.
 extern priority {
     priority();
-    void set(bit<3> prio);
+    void set(in bit<3> prio);
 }
 
 // Parser value set
@@ -383,7 +383,7 @@ extern idle_timeout<N, T> {
 /// Counter
 extern counter<I> {
     counter(counter_type_t type, @optional I instance_count);
-    void count(@optional I index);
+    void count(@optional in I index);
 }
 
 /// Meter
