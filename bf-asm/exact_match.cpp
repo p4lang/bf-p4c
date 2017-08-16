@@ -875,7 +875,7 @@ void ExactMatchTable::add_field_to_pack_format(json::vector &field_list, int bas
     } else {
         if (name == "action") name = "--instruction_address--";
         if (name == "version") name = "--version_valid--";
-        // if (name == "immediate") name = "--immediate--";
+        if (name == "immediate") name = "--immediate--";
         if (name != "match") {
             Table::add_field_to_pack_format(field_list, basebit, name, field, alias);
             return; }

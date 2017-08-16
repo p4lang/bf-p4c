@@ -1124,6 +1124,8 @@ void Table::Actions::add_immediate_mapping(json::map &tbl) {
         json::vector &map = tbl["action_to_immediate_mapping"][act.name];
         for (auto &a : act.alias) {
             json::string name = a.first;
+            json::string immed_name = a.second.name;
+            if (immed_name == "immediate") immed_name = "--immediate--";
             int lo = remove_name_tail_range(name);
             map.push_back( json::vector { json::map {
                 { "name", std::move(name) },
@@ -1131,7 +1133,7 @@ void Table::Actions::add_immediate_mapping(json::map &tbl) {
                 { "parameter_most_significant_bit", json::number(lo + a.second.hi - a.second.lo) },
                 { "immediate_least_significant_bit", json::number(a.second.lo) },
                 { "immediate_most_significant_bit", json::number(a.second.hi) },
-                { "field_called", json::string(a.second.name) } } } ); } }
+                { "field_called", std::move(immed_name) } } } ); } }
 }
 
 void Table::Actions::add_next_table_mapping(Table *table, json::map &tbl) {

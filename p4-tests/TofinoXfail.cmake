@@ -23,7 +23,6 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
   extensions/p4_tests/p4_14/hash_calculation_32.p4
   # Hash Action Bugs within the ASM or Model
   testdata/p4_14_samples/hash_action_gateway.p4
-  testdata/p4_14_samples/counter2.p4
   testdata/p4_14_samples/counter3.p4
   testdata/p4_14_samples/counter4.p4
   # Masked table keys ignoring mask in table layout?
@@ -59,28 +58,12 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
   )
 
   p4c_add_xfail_reason("tofino"
-    "unexpected packet output on port"
-    testdata/p4_14_samples/action_inline1.p4
-    testdata/p4_14_samples/action_inline2.p4
-    testdata/p4_14_samples/action_chain1.p4
-    testdata/p4_14_samples/hitmiss.p4
-    testdata/p4_14_samples/ternary_match1.p4
-    testdata/p4_14_samples/ternary_match3.p4
-    testdata/p4_14_samples/ternary_match4.p4
-    testdata/p4_14_samples/tmvalid.p4
-    testdata/p4_16_samples/ternary2-bmv2.p4
-    extensions/p4_tests/p4_16/ternary1.p4
-    extensions/p4_tests/p4_16/ternary2.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "no field nexthop_index related to table ipv4_fib_lpm"
+    "expected packet on port .* not seen"
     testdata/p4_14_samples/basic_routing.p4
     )
 
   p4c_add_xfail_reason("tofino"
     "mismatch from expected.*at byte 0x"
-    extensions/p4_tests/p4_16/depgraph1.p4
     extensions/p4_tests/p4_16/stack_valid.p4
     )
 endif() # HARLYN_STF
