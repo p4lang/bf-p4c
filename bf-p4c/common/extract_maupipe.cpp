@@ -8,6 +8,7 @@
 #include "tofino/common/param_binding.h"
 #include "tofino/mau/stateful_alu.h"
 #include "tofino/mau/table_dependency_graph.h"
+#include "tofino/parde/checksum.h"
 #include "tofino/parde/extract_parser.h"
 #include "tofino/parde/phase0.h"
 #include "tofino/tofinoOptions.h"
@@ -533,17 +534,27 @@ const IR::Tofino::Pipe* extract_v1model_arch(P4::ReferenceMap* refMap, P4::TypeM
                                              const IR::PackageBlock* top) {
     auto parser_blk = top->getParameterValue("p");
     auto parser = parser_blk->to<IR::ParserBlock>()->container;
+    auto verify_checksum_blk = top->findParameterValue("vr");
+    auto verify_checksum = verify_checksum_blk
+                         ? verify_checksum_blk->to<IR::ControlBlock>()->container
+                         : nullptr;
     auto ingress_blk = top->getParameterValue("ig");
     auto ingress = ingress_blk->to<IR::ControlBlock>()->container;
     auto egress_blk = top->getParameterValue("eg");
     auto egress = egress_blk->to<IR::ControlBlock>()->container;
+    auto compute_checksum_blk = top->findParameterValue("ck");
+    auto compute_checksum = compute_checksum_blk
+                          ? compute_checksum_blk->to<IR::ControlBlock>()->container
+                          : nullptr;
     auto deparser_blk = top->getParameterValue("dep");
     auto deparser = deparser_blk->to<IR::ControlBlock>()->container;
 
-    LOG1("parser:" << parser);
-    LOG1("ingress:" << ingress);
-    LOG1("egress:" << egress);
-    LOG1("deparser:" << deparser);
+    LOG1("parser: " << parser);
+    LOG1("verify checksum: " << verify_checksum);
+    LOG1("ingress: " << ingress);
+    LOG1("egress: " << egress);
+    LOG1("compute checksum: " << compute_checksum);
+    LOG1("deparser: " << deparser);
     // FIXME add consistency/sanity checks to make sure arch is well-formed.
 
     auto rv = new IR::Tofino::Pipe();
@@ -552,10 +563,18 @@ const IR::Tofino::Pipe* extract_v1model_arch(P4::ReferenceMap* refMap, P4::TypeM
 
     for (auto param : *parser->type->applyParams->getEnumerator())
         bindings.bind(param);
+    if (verify_checksum) {
+        for (auto param : *verify_checksum->type->applyParams->getEnumerator())
+            bindings.bind(param);
+    }
     for (auto param : *ingress->type->applyParams->getEnumerator())
         bindings.bind(param);
     for (auto param : *egress->type->applyParams->getEnumerator())
         bindings.bind(param);
+    if (compute_checksum) {
+        for (auto param : *compute_checksum->type->applyParams->getEnumerator())
+            bindings.bind(param);
+    }
     for (auto param : *deparser->type->applyParams->getEnumerator())
         bindings.bind(param);
     auto it = ingress->type->applyParams->parameters.rbegin();
@@ -570,7 +589,12 @@ const IR::Tofino::Pipe* extract_v1model_arch(P4::ReferenceMap* refMap, P4::TypeM
         new ConvertIndexToHeaderStackItemRef,
         new RewriteForTofino(refMap, typeMap),
     };
+
     parser = parser->apply(fixups);
+    if (verify_checksum)
+        verify_checksum = verify_checksum->apply(fixups);
+    if (compute_checksum)
+        compute_checksum = compute_checksum->apply(fixups);
     deparser = deparser->apply(fixups);
 
     auto parserInfo = Tofino::extractParser(rv, parser, deparser);
@@ -581,7 +605,12 @@ const IR::Tofino::Pipe* extract_v1model_arch(P4::ReferenceMap* refMap, P4::TypeM
 
     // Check for a phase 0 table. If one exists, it'll be removed from the
     // ingress pipeline and converted to a parser program.
+    // XXX(seth): We should be able to move this into the midend now.
     std::tie(ingress, rv) = Tofino::extractPhase0(ingress, rv, refMap, typeMap);
+
+    // Convert the contents of the ComputeChecksum control, if any, into
+    // deparser primitives.
+    rv = Tofino::extractComputeChecksum(compute_checksum, rv);
 
     ingress = ingress->apply(fixups);
     egress = egress->apply(fixups);

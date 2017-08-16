@@ -17,6 +17,7 @@ std::ostream& operator<<(std::ostream& out, const DeparserSourceFormatter& forma
 class OutputDictionary : public Inspector {
     std::ostream        &out;
     const PhvInfo       &phv;
+    unsigned            checksumIndex = 0;
     indent_t            indent;
     PHV::Container      last;
     bool preorder(const IR::Tofino::Emit* emit) {
@@ -60,9 +61,74 @@ class OutputDictionary : public Inspector {
         return false;
     }
 
+    bool preorder(const IR::Tofino::EmitChecksum* emit) {
+        out << indent << "checksum " << checksumIndex;
+
+        bitrange povAllocBits;
+        auto povBit = phv.field(emit->povBit, &povAllocBits);
+        if (!povBit) {
+            out << indent << " # no phv for pov: " << *emit->povBit << std::endl;
+            return false;
+        }
+        out << ": " << canon_name(trim_asm_name(povBit->name)) << std::endl;
+
+        checksumIndex++;
+        return false;
+    }
+
  public:
     OutputDictionary(std::ostream &out, const PhvInfo &phv, indent_t indent)
     : out(out), phv(phv), indent(indent) {}
+};
+
+/// Generates the list of input PHV containers for each deparser checksum
+/// computation.
+class OutputChecksums : public Inspector {
+    std::ostream        &out;
+    const PhvInfo       &phv;
+    unsigned            checksumIndex;
+    indent_t            indent;
+
+    bool preorder(const IR::Tofino::EmitChecksum* emit) {
+        out << indent << "checksum " << checksumIndex << ":" << std::endl;
+
+        indent++;
+        PHV::Container lastContainer;
+        for (auto* source : emit->sources) {
+            bitrange bits;
+            auto* field = phv.field(source, &bits);
+            if (!field) {
+                out << indent << "# no phv: " << source->toString() << std::endl;
+                continue;
+            }
+
+            auto& alloc = field->for_bit(bits.lo);
+            if (alloc.container == lastContainer) {
+                out << indent << "    # - " << DeparserSourceFormatter{field, bits}
+                    << std::endl;
+                continue;
+            }
+
+            out << indent << "- " << alloc.container;
+
+            int size = alloc.container.size() / 8;
+            if (bits.size() != size * 8)
+                out << std::endl << indent << "    # - ";
+            else
+                out << "  # ";
+
+            out << DeparserSourceFormatter{field, bits} << std::endl;
+            lastContainer = alloc.container;
+        }
+        indent--;
+
+        checksumIndex++;
+        return false;
+    }
+
+ public:
+    OutputChecksums(std::ostream &out, const PhvInfo &phv, indent_t indent)
+    : out(out), phv(phv), checksumIndex(0), indent(indent) {}
 };
 
 void DeparserAsmOutput::emit_fieldlist(std::ostream &out, const IR::Vector<IR::Expression> *list,
@@ -104,6 +170,9 @@ std::ostream &operator<<(std::ostream &out, const DeparserAsmOutput &d) {
                 out << indent << idx++ << ": [ ";
                 d.emit_fieldlist(out, l);
                 out << " ]" << std::endl; }
-            out << indent-- << "select: " << canon_name(digest->select->name) << std::endl; } }
+            out << indent-- << "select: " << canon_name(digest->select->name) << std::endl;
+        }
+        d.deparser->emits.apply(OutputChecksums(out, d.phv, indent));
+    }
     return out;
 }

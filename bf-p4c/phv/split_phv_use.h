@@ -12,6 +12,7 @@ class SplitPhvUse : public Transform {
     const IR::Node *preorder(IR::Tofino::Deparser *d) override { gress = d->gress; return d; }
     const IR::Node *preorder(IR::Tofino::Extract *e) override;
     const IR::Node *preorder(IR::Tofino::Emit *e) override;
+    const IR::Node *preorder(IR::Tofino::EmitChecksum *e) override;
     const IR::Node *preorder(IR::Expression *p) override;
     const IR::Node *preorder(IR::KeyElement *ke) override { return ke->transform_visit(*this); }
     const IR::Property *preorder(IR::Property *prop) override { prune(); return prop; }

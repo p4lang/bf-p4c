@@ -101,6 +101,10 @@ bool TofinoWriteContext::isRead(bool root_value) {
     if (ctxt->node->is<IR::Tofino::Emit>())
         return true;
 
+    // An EmitChecksum reads the POV bit and all checksummed fields.
+    if (ctxt->node->is<IR::Tofino::EmitChecksum>())
+        return true;
+
     // A computed select reads its source.
     if (ctxt->node->is<IR::Tofino::SelectComputed>())
         return true;

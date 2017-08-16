@@ -154,6 +154,7 @@ set (TOFINO_BACKEND_MAU_HDRS
 set (TOFINO_BACKEND_PARDE_SRCS
   parde/add_parde_metadata.cpp
   parde/bridge_metadata.cpp
+  parde/checksum.cpp
   parde/deparser_output.cpp
   parde/extract_parser.cpp
   parde/field_packing.cpp
@@ -168,6 +169,7 @@ set (TOFINO_BACKEND_PARDE_HDRS
   parde/add_parde_metadata.h
   parde/asm_output.h
   parde/bridge_metadata.h
+  parde/checksum.h
   parde/extract_parser.h
   parde/field_packing.h
   parde/phase0.h

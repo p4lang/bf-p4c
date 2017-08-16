@@ -56,16 +56,28 @@ class ElimUnused::Headers : public PardeTransform {
         LOG1("eliminating parser state " << state->name);
         return nullptr; }
 
+    bool isPovBitUsed(const IR::Expression* povBit) const {
+        // XXX(seth): We should really be checking if any reaching definition
+        // could be setting it to something other than zero.
+        auto povField = self.phv.field(povBit);
+        if (!povField) return true;
+        return !self.defuse.getAllDefs(povField->id).empty();
+    }
+
     IR::Tofino::Emit* preorder(IR::Tofino::Emit* emit) override {
         prune();
 
         // The emit primitive is used if the POV bit being set somewhere.
-        // XXX(seth): We should really be checking if any reaching definition
-        // could be setting it to something other than zero.
-        auto povField = self.phv.field(emit->povBit);
-        if (!povField) return emit;
-        if (!self.defuse.getAllDefs(povField->id).empty()) return emit;
+        if (isPovBitUsed(emit->povBit)) return emit;
+        LOG1("eliminating " << emit);
+        return nullptr;
+    }
 
+    IR::Tofino::EmitChecksum* preorder(IR::Tofino::EmitChecksum* emit) override {
+        prune();
+
+        // The emit checksum primitive is used if the POV bit being set somewhere.
+        if (isPovBitUsed(emit->povBit)) return emit;
         LOG1("eliminating " << emit);
         return nullptr;
     }

@@ -111,5 +111,46 @@ TEST(TofinoWriteContext, Write) {
     inst->apply(TestWrite());
 }
 
+TEST(TofinoWriteContext, DeparserEmit) {
+    auto* header = new IR::Header("foo", new IR::Type_Header("foo_t"));
+    auto* field = new IR::Member(new IR::ConcreteHeaderRef(header), "bar");
+    auto* povBit = new IR::Member(new IR::ConcreteHeaderRef(header), "$valid");
+
+    auto* deparserControlType = new IR::Type_Control("dp", new IR::ParameterList);
+    auto* deparserControl =
+      new IR::P4Control("dp", deparserControlType, new IR::BlockStatement);
+    auto* deparser = new IR::Tofino::Deparser(INGRESS, deparserControl);
+    deparser->emits.push_back(new IR::Tofino::Emit(field, povBit));
+
+    struct CheckEmit : public Inspector, TofinoWriteContext {
+        bool preorder(const IR::Member*) override {
+            EXPECT_TRUE(isRead());
+            EXPECT_FALSE(isWrite());
+            return true;
+        }
+    };
+    deparser->apply(CheckEmit());
+}
+
+TEST(TofinoWriteContext, DeparserEmitChecksum) {
+    auto* header = new IR::Header("foo", new IR::Type_Header("foo_t"));
+    auto* field = new IR::Member(new IR::ConcreteHeaderRef(header), "bar");
+    auto* povBit = new IR::Member(new IR::ConcreteHeaderRef(header), "$valid");
+
+    auto* deparserControlType = new IR::Type_Control("dp", new IR::ParameterList);
+    auto* deparserControl =
+      new IR::P4Control("dp", deparserControlType, new IR::BlockStatement);
+    auto* deparser = new IR::Tofino::Deparser(INGRESS, deparserControl);
+    deparser->emits.push_back(new IR::Tofino::EmitChecksum({ field }, povBit));
+
+    struct CheckEmitChecksum : public Inspector, TofinoWriteContext {
+        bool preorder(const IR::Member*) override {
+            EXPECT_TRUE(isRead());
+            EXPECT_FALSE(isWrite());
+            return true;
+        }
+    };
+    deparser->apply(CheckEmitChecksum());
+}
 
 }  // namespace Test

@@ -111,6 +111,32 @@ const IR::Node* SplitPhvUse::preorder(IR::Tofino::Emit* emit) {
     return splitEmit(emit, bits, slices);
 }
 
+const IR::Node* SplitPhvUse::preorder(IR::Tofino::EmitChecksum* emit) {
+    prune();
+
+    // A checksum uses a list of fields as input, and we need to split each
+    // field individually.
+    IR::Vector<IR::Expression> sources;
+    for (auto* source : emit->sources) {
+        bitrange bits;
+        auto* field = phv.field(source, &bits);
+        if (!field) {
+            sources.push_back(source);
+            continue;
+        }
+
+        std::vector<bitrange> slices;
+        field->foreach_alloc(bits, [&](const PhvInfo::Field::alloc_slice& alloc) {
+            slices.push_back(alloc.field_bits());
+        });
+
+        sources.pushBackOrAppend(splitExpression(source, bits, slices));
+    }
+
+    emit->sources = sources;
+    return emit;
+}
+
 const IR::Node* SplitPhvUse::preorder(IR::Expression* expr) {
     bitrange bits;
     auto* field = phv.field(expr, &bits);

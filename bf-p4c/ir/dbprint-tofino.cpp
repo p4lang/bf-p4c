@@ -154,6 +154,18 @@ void IR::Tofino::Digest::dbprint(std::ostream &out) const {
     out << unindent;
 }
 
+void IR::Tofino::EmitChecksum::dbprint(std::ostream &out) const {
+    out << "emit checksum { ";
+
+    const char* sep = "";
+    for (auto* source : sources) {
+        out << sep << source->toString();
+        sep = ", ";
+    }
+
+    out << " } if " << povBit->toString();
+}
+
 void IR::Tofino::Deparser::dbprint(std::ostream &out) const {
     out << gress << " deparser";
     if (dbgetflags(out) & Brief)
