@@ -31,7 +31,7 @@ limitations under the License.
 
 namespace PHV {
 
-bool ValidateAllocation::preorder(const IR::Tofino::Pipe*) {
+bool ValidateAllocation::preorder(const IR::Tofino::Pipe* pipe) {
     BUG_CHECK(phv.alloc_done(),
               "Calling ValidateAllocation without performing PHV allocation");
 
@@ -223,6 +223,45 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe*) {
                         cstring::to_cstring(fields));
         }
     }
+
+    // Check that the allocation respects parser alignment limitations.
+    forAllMatching<IR::Tofino::ExtractBuffer>(pipe,
+                  [&](const IR::Tofino::ExtractBuffer* extract) {
+        unsigned requiredAlignment = extract->bitOffset % 8;
+        bitrange bits;
+        auto* field = phv.field(extract->dest, &bits);
+        if (!field) {
+            ::error("No PHV allocation for field extracted by the "
+                    "parser: %1%", extract->dest);
+            return;
+        }
+
+        field->foreach_alloc(bits, [&](const PhvInfo::Field::alloc_slice& alloc) {
+            nw_bitrange fieldSlice =
+              alloc.field_bits().toSpace<Endian::Network>(field->size);
+            nw_bitrange containerSlice =
+              alloc.container_bits().toSpace<Endian::Network>(alloc.container.size());
+
+            // The first bit of the field must have the same alignment in the
+            // container as it does in the input buffer.
+            if (fieldSlice.lo == 0) {
+                ERROR_CHECK(containerSlice.lo % 8 == requiredAlignment,
+                            "Field is extracted in the parser, but its "
+                            "first container slice has an incompatible "
+                            "alignment: %1%", cstring::to_cstring(field));
+                return;
+            }
+
+            // Other slices (which represent a continuation of the same field
+            // into other containers) must be byte aligned, since container
+            // boundaries must always correspond with input buffer byte
+            // boundaries.
+            ERROR_CHECK(containerSlice.isLoAligned(),
+                        "Field is extracted in the parser into multiple "
+                        "containers, but the container slices after the first "
+                        "aren't byte aligned: %1%", cstring::to_cstring(field));
+        });
+    });
 
     return false;
 }
