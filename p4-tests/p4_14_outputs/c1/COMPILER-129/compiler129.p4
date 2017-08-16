@@ -559,7 +559,8 @@ header coal_sample_hdr_t {
 }
 
 header egress_intrinsic_metadata_t {
-    bit<16> egress_port;
+    bit<7>  _pad0;
+    bit<9>  egress_port;
     bit<5>  _pad1;
     bit<19> enq_qdepth;
     bit<6>  _pad2;
@@ -776,6 +777,7 @@ header ingress_intrinsic_metadata_from_parser_aux_t {
 header ingress_parser_control_signals {
     bit<3> priority;
     bit<5> _pad;
+    bit<8> parser_counter;
 }
 
 header ipv4_t {

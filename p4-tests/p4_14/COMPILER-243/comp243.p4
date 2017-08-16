@@ -1,713 +1,14 @@
 /*
 gcc -E -x c -w -I/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib -D__TARGET_TOFINO__ -Itarget/tofino/p4_lib/ -I/usr/local/lib/python2.7/dist-packages/p4_hlir-0.9.61-py2.7.egg/p4_hlir/p4_lib /vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4
 */
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4"
-# 1 "<built-in>"
-# 1 "<command-line>"
-# 1 "/usr/include/stdc-predef.h" 1 3 4
-# 1 "<command-line>" 2
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4"
-# 29 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4"
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/constants.p4" 1
-# 30 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4" 2
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/intrinsic_metadata.p4" 1
-# 10 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/intrinsic_metadata.p4"
-header_type ingress_parser_control_signals {
-    fields {
-        priority : 3;
-        _pad1 : 5;
-        parser_counter : 8;
-    }
-}
+#include "tofino/constants.p4"
+#include "tofino/primitives.p4"
+#include "tofino/pktgen_headers.p4"
+#include "tofino/stateful_alu_blackbox.p4"
 
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-@pragma pa_intrinsic_header ingress ig_prsr_ctrl
-header ingress_parser_control_signals ig_prsr_ctrl;
 
 
 
-header_type ingress_intrinsic_metadata_t {
-    fields {
-
-        resubmit_flag : 1;
-
-
-        _pad1 : 1;
-
-        _pad2 : 2;
-
-        _pad3 : 3;
-
-        ingress_port : 9;
-
-
-        ingress_mac_tstamp : 48;
-
-    }
-}
-
-@pragma dont_trim
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-@pragma pa_intrinsic_header ingress ig_intr_md
-@pragma pa_mandatory_intrinsic_field ingress ig_intr_md.ingress_port
-header ingress_intrinsic_metadata_t ig_intr_md;
-
-
-
-header_type generator_metadata_t {
-    fields {
-
-        app_id : 16;
-
-        batch_id: 16;
-
-        instance_id: 16;
-    }
-}
-
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-header generator_metadata_t ig_pg_md;
-
-
-
-header_type ingress_intrinsic_metadata_from_parser_aux_t {
-    fields {
-        ingress_global_tstamp : 48;
-
-
-        ingress_global_ver : 32;
-
-
-        ingress_parser_err : 16;
-
-    }
-}
-
-@pragma pa_fragment ingress ig_intr_md_from_parser_aux.ingress_parser_err
-@pragma pa_atomic ingress ig_intr_md_from_parser_aux.ingress_parser_err
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-@pragma pa_intrinsic_header ingress ig_intr_md_from_parser_aux
-header ingress_intrinsic_metadata_from_parser_aux_t ig_intr_md_from_parser_aux;
-
-
-
-header_type ingress_intrinsic_metadata_for_tm_t {
-    fields {
-
-
-
-
-        _pad1 : 7;
-        ucast_egress_port : 9;
-
-
-
-
-        drop_ctl : 3;
-
-
-
-
-        bypass_egress : 1;
-
-        deflect_on_drop : 1;
-
-
-
-        ingress_cos : 3;
-
-
-
-
-
-        qid : 5;
-
-        icos_for_copy_to_cpu : 3;
-
-
-
-
-
-        _pad2: 3;
-
-        copy_to_cpu : 1;
-
-        packet_color : 2;
-
-
-
-        disable_ucast_cutthru : 1;
-
-        enable_mcast_cutthru : 1;
-
-
-
-
-        mcast_grp_a : 16;
-
-
-
-
-
-        mcast_grp_b : 16;
-
-
-
-
-        _pad3 : 3;
-        level1_mcast_hash : 13;
-
-
-
-
-
-
-
-        _pad4 : 3;
-        level2_mcast_hash : 13;
-
-
-
-
-
-
-
-        level1_exclusion_id : 16;
-
-
-
-
-
-        _pad5 : 7;
-        level2_exclusion_id : 9;
-
-
-
-
-
-        rid : 16;
-
-
-
-    }
-}
-
-@pragma pa_atomic ingress ig_intr_md_for_tm.ucast_egress_port
-
-@pragma pa_fragment ingress ig_intr_md_for_tm.drop_ctl
-@pragma pa_fragment ingress ig_intr_md_for_tm.qid
-@pragma pa_fragment ingress ig_intr_md_for_tm._pad2
-
-@pragma pa_atomic ingress ig_intr_md_for_tm.mcast_grp_a
-@pragma pa_fragment ingress ig_intr_md_for_tm.mcast_grp_a
-@pragma pa_mandatory_intrinsic_field ingress ig_intr_md_for_tm.mcast_grp_a
-
-@pragma pa_atomic ingress ig_intr_md_for_tm.mcast_grp_b
-@pragma pa_fragment ingress ig_intr_md_for_tm.mcast_grp_b
-@pragma pa_mandatory_intrinsic_field ingress ig_intr_md_for_tm.mcast_grp_b
-
-@pragma pa_atomic ingress ig_intr_md_for_tm.level1_mcast_hash
-@pragma pa_fragment ingress ig_intr_md_for_tm._pad3
-
-@pragma pa_atomic ingress ig_intr_md_for_tm.level2_mcast_hash
-@pragma pa_fragment ingress ig_intr_md_for_tm._pad4
-
-@pragma pa_atomic ingress ig_intr_md_for_tm.level1_exclusion_id
-@pragma pa_fragment ingress ig_intr_md_for_tm.level1_exclusion_id
-
-@pragma pa_atomic ingress ig_intr_md_for_tm.level2_exclusion_id
-@pragma pa_fragment ingress ig_intr_md_for_tm._pad5
-
-@pragma pa_atomic ingress ig_intr_md_for_tm.rid
-@pragma pa_fragment ingress ig_intr_md_for_tm.rid
-
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-@pragma pa_intrinsic_header ingress ig_intr_md_for_tm
-@pragma dont_trim
-@pragma pa_mandatory_intrinsic_field ingress ig_intr_md_for_tm.drop_ctl
-header ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm;
-
-
-header_type ingress_intrinsic_metadata_for_mirror_buffer_t {
-    fields {
-        _pad1 : 6;
-        ingress_mirror_id : 10;
-
-
-    }
-}
-
-@pragma dont_trim
-@pragma pa_intrinsic_header ingress ig_intr_md_for_mb
-@pragma pa_atomic ingress ig_intr_md_for_mb.ingress_mirror_id
-@pragma pa_mandatory_intrinsic_field ingress ig_intr_md_for_mb.ingress_mirror_id
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-header ingress_intrinsic_metadata_for_mirror_buffer_t ig_intr_md_for_mb;
-
-
-header_type egress_intrinsic_metadata_t {
-    fields {
-
-        _pad0 : 7;
-        egress_port : 9;
-
-
-        _pad1: 5;
-        enq_qdepth : 19;
-
-
-        _pad2: 6;
-        enq_congest_stat : 2;
-
-
-        enq_tstamp : 32;
-
-
-        _pad3: 5;
-        deq_qdepth : 19;
-
-
-        _pad4: 6;
-        deq_congest_stat : 2;
-
-
-        app_pool_congest_stat : 8;
-
-
-
-        deq_timedelta : 32;
-
-
-        egress_rid : 16;
-
-
-        _pad5: 7;
-        egress_rid_first : 1;
-
-
-        _pad6: 3;
-        egress_qid : 5;
-
-
-        _pad7: 5;
-        egress_cos : 3;
-
-
-        _pad8: 7;
-        deflection_flag : 1;
-
-
-        pkt_length : 16;
-    }
-}
-
-@pragma dont_trim
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-@pragma pa_intrinsic_header egress eg_intr_md
-
-@pragma pa_atomic egress eg_intr_md.egress_port
-@pragma pa_fragment egress eg_intr_md._pad1
-@pragma pa_fragment egress eg_intr_md._pad7
-@pragma pa_fragment egress eg_intr_md._pad8
-@pragma pa_mandatory_intrinsic_field egress eg_intr_md.egress_port
-@pragma pa_mandatory_intrinsic_field egress eg_intr_md.egress_cos
-
-header egress_intrinsic_metadata_t eg_intr_md;
-
-
-header_type egress_intrinsic_metadata_from_parser_aux_t {
-    fields {
-        egress_global_tstamp : 48;
-
-
-        egress_global_ver : 32;
-
-
-        egress_parser_err : 16;
-
-
-        clone_digest_id : 4;
-        clone_src : 4;
-
-
-
-        coalesce_sample_count : 8;
-
-
-    }
-}
-
-@pragma pa_fragment egress eg_intr_md_from_parser_aux.coalesce_sample_count
-@pragma pa_fragment egress eg_intr_md_from_parser_aux.clone_src
-@pragma pa_fragment egress eg_intr_md_from_parser_aux.egress_parser_err
-@pragma pa_atomic egress eg_intr_md_from_parser_aux.egress_parser_err
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-@pragma pa_intrinsic_header egress eg_intr_md_from_parser_aux
-header egress_intrinsic_metadata_from_parser_aux_t eg_intr_md_from_parser_aux;
-# 379 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/intrinsic_metadata.p4"
-header_type egress_intrinsic_metadata_for_mirror_buffer_t {
-    fields {
-        _pad1 : 6;
-        egress_mirror_id : 10;
-
-
-        coalesce_flush: 1;
-        coalesce_length: 7;
-
-
-    }
-}
-
-@pragma dont_trim
-@pragma pa_intrinsic_header egress eg_intr_md_for_mb
-@pragma pa_atomic egress eg_intr_md_for_mb.egress_mirror_id
-@pragma pa_fragment egress eg_intr_md_for_mb.coalesce_flush
-@pragma pa_mandatory_intrinsic_field egress eg_intr_md_for_mb.egress_mirror_id
-@pragma pa_mandatory_intrinsic_field egress eg_intr_md_for_mb.coalesce_flush
-@pragma pa_mandatory_intrinsic_field egress eg_intr_md_for_mb.coalesce_length
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-header egress_intrinsic_metadata_for_mirror_buffer_t eg_intr_md_for_mb;
-
-
-
-header_type egress_intrinsic_metadata_for_output_port_t {
-    fields {
-
-        _pad1 : 2;
-        capture_tstamp_on_tx : 1;
-
-
-        update_delay_on_tx : 1;
-# 422 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/intrinsic_metadata.p4"
-        force_tx_error : 1;
-
-        drop_ctl : 3;
-
-
-
-
-
-
-
-    }
-}
-
-@pragma dont_trim
-@pragma pa_mandatory_intrinsic_field egress eg_intr_md_for_oport.drop_ctl
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-@pragma pa_intrinsic_header egress eg_intr_md_for_oport
-header egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport;
-# 31 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4" 2
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/primitives.p4" 1
-# 10 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/primitives.p4"
-action deflect_on_drop(enable_dod) {
-    modify_field(ig_intr_md_for_tm.deflect_on_drop, enable_dod);
-}
-# 32 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4" 2
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/pktgen_headers.p4" 1
-# 9 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/pktgen_headers.p4"
-header_type pktgen_generic_header_t {
-    fields {
-        _pad0 : 3;
-        pipe_id : 2;
-        app_id : 3;
-        key_msb : 8;
-        batch_id : 16;
-
-        packet_id : 16;
-    }
-}
-header pktgen_generic_header_t pktgen_generic;
-
-header_type pktgen_timer_header_t {
-    fields {
-        _pad0 : 3;
-        pipe_id : 2;
-        app_id : 3;
-        _pad1 : 8;
-        batch_id : 16;
-        packet_id : 16;
-    }
-}
-header pktgen_timer_header_t pktgen_timer;
-
-header_type pktgen_port_down_header_t {
-    fields {
-        _pad0 : 3;
-        pipe_id : 2;
-        app_id : 3;
-        _pad1 : 15;
-        port_num : 9;
-        packet_id : 16;
-    }
-}
-header pktgen_port_down_header_t pktgen_port_down;
-
-header_type pktgen_recirc_header_t {
-    fields {
-        _pad0 : 3;
-        pipe_id : 2;
-        app_id : 3;
-        key : 24;
-        packet_id : 16;
-    }
-}
-header pktgen_recirc_header_t pktgen_recirc;
-# 33 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4" 2
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/stateful_alu_blackbox.p4" 1
-
-
-blackbox_type stateful_alu {
-
-    attribute reg {
-
-        type: register;
-    }
-
-    attribute selector_binding {
-
-        type: table;
-        optional;
-    }
-
-    attribute initial_register_lo_value {
-
-
-
-        type: int;
-        optional;
-    }
-
-    attribute initial_register_hi_value {
-
-
-
-        type: int;
-        optional;
-    }
-
-    attribute condition_hi {
-
-
-
-
-        type: expression;
-        expression_local_variables {register_lo, register_hi}
-        optional;
-    }
-
-    attribute condition_lo {
-
-
-
-
-        type: expression;
-        expression_local_variables {register_lo, register_hi}
-        optional;
-    }
-
-
-    attribute update_lo_1_predicate {
-
-        type: expression;
-        expression_local_variables {condition_lo, condition_hi}
-        optional;
-    }
-
-    attribute update_lo_1_value {
-# 81 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/stateful_alu_blackbox.p4"
-        type: expression;
-        expression_local_variables {register_lo, register_hi,
-                                    set_bit, set_bitc, clr_bit, clr_bitc, read_bit, read_bitc}
-        optional;
-    }
-
-    attribute update_lo_2_predicate {
-
-        type: expression;
-        expression_local_variables {condition_lo, condition_hi}
-        optional;
-    }
-
-    attribute update_lo_2_value {
-
-        type: expression;
-        expression_local_variables {register_lo, register_hi, math_unit}
-        optional;
-    }
-
-    attribute update_hi_1_predicate {
-
-        type: expression;
-        expression_local_variables {condition_lo, condition_hi}
-        optional;
-    }
-
-    attribute update_hi_1_value {
-
-        type: expression;
-        expression_local_variables {register_lo, register_hi}
-        optional;
-    }
-
-    attribute update_hi_2_predicate {
-
-        type: expression;
-        expression_local_variables {condition_lo, condition_hi}
-        optional;
-    }
-
-    attribute update_hi_2_value {
-
-        type: expression;
-        expression_local_variables {register_lo, register_hi}
-        optional;
-    }
-
-    attribute output_predicate {
-
-
-
-
-        type: expression;
-        expression_local_variables {condition_lo, condition_hi}
-        optional;
-    }
-
-    attribute output_value {
-
-
-
-
-
-
-
-        type: expression;
-        expression_local_variables {alu_lo, alu_hi, register_lo, register_hi, predicate, combined_predicate}
-        optional;
-    }
-
-    attribute output_dst {
-
-        type: bit<0>;
-        optional;
-    }
-
-    attribute math_unit_input {
-
-
-
-        type: expression;
-        expression_local_variables {register_lo, register_hi}
-        optional;
-    }
-    attribute math_unit_output_scale {
-
-
-
-
-        type: int;
-        optional;
-    }
-    attribute math_unit_exponent_shift {
-
-
-
-
-
-
-        type: int;
-        optional;
-    }
-    attribute math_unit_exponent_invert {
-
-
-
-
-        type: string;
-        optional;
-    }
-
-    attribute math_unit_lookup_table {
-
-
-
-
-
-
-
-        type: string;
-        optional;
-    }
-
-    attribute reduction_or_group {
-# 214 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/stateful_alu_blackbox.p4"
-        type: string;
-        optional;
-    }
-
-    attribute stateful_logging_mode {
-# 228 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/stateful_alu_blackbox.p4"
-        type: string;
-        optional;
-    }
-# 246 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/stateful_alu_blackbox.p4"
-    method execute_stateful_alu(optional in bit<0> index){
-        reads {condition_hi, condition_lo,
-               update_lo_1_predicate, update_lo_1_value,
-               update_lo_2_predicate, update_lo_2_value,
-               update_hi_1_predicate, update_hi_1_value,
-               update_hi_2_predicate, update_hi_2_value,
-               math_unit_input}
-        writes {output_dst}
-    }
-
-    method execute_stateful_alu_from_hash(in field_list_calculation hash_field_list){
-        reads {condition_hi, condition_lo,
-               update_lo_1_predicate, update_lo_1_value,
-               update_lo_2_predicate, update_lo_2_value,
-               update_hi_1_predicate, update_hi_1_value,
-               update_hi_2_predicate, update_hi_2_value,
-               math_unit_input}
-        writes {output_dst}
-    }
-
-    method execute_stateful_log(){
-        reads {condition_hi, condition_lo,
-               update_lo_1_predicate, update_lo_1_value,
-               update_lo_2_predicate, update_lo_2_value,
-               update_hi_1_predicate, update_hi_1_value,
-               update_hi_2_predicate, update_hi_2_value,
-               math_unit_input}
-    }
-}
-# 34 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4" 2
-
-
-
-
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/includes/p4features.h" 1
-# 39 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4" 2
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/includes/drop_reason_codes.h" 1
-# 40 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4" 2
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/includes/cpu_reason_codes.h" 1
-# 41 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4" 2
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/includes/p4_pktgen.h" 1
-# 42 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4" 2
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/includes/defines.p4" 1
-# 43 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4" 2
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/includes/headers.p4" 1
-# 24 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/includes/headers.p4"
 header_type ethernet_t {
     fields {
         dstAddr : 48;
@@ -890,10 +191,8 @@ header_type erspan_header_t3_t {
         timestamp : 32;
         sgt : 16;
         ft_d_other: 16;
-# 214 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/includes/headers.p4"
     }
 }
-# 228 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/includes/headers.p4"
 header_type ipsec_esp_t {
     fields {
         spi : 32;
@@ -1080,7 +379,6 @@ header_type bfd_t {
         version : 3;
         diag : 5;
         state_flags : 8;
-# 423 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/includes/headers.p4"
         detectMult : 8;
         len : 8;
         myDiscriminator : 32;
@@ -1149,7 +447,6 @@ header_type sflow_sample_cpu_t {
         pipe_id : 2;
     }
 }
-# 499 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/includes/headers.p4"
 header_type fabric_header_t {
     fields {
         packetType : 3;
@@ -1363,9 +660,6 @@ header_type ipv6_srh_segment_t {
         sid : 128;
     }
 }
-# 44 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4" 2
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/includes/parser.p4" 1
-# 112 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/includes/parser.p4"
 parser start {
     return select(current(96, 16)) {
 
@@ -1374,7 +668,6 @@ parser start {
         default : parse_ethernet;
     }
 }
-# 206 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/includes/parser.p4"
 header ethernet_t ethernet;
 
 parser parse_ethernet {
@@ -1465,7 +758,6 @@ parser parse_mpls {
 }
 
 parser parse_mpls_bos {
-# 310 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/includes/parser.p4"
     return select(current(0, 4)) {
 
         0x4 : parse_mpls_inner_ipv4;
@@ -1498,7 +790,6 @@ parser parse_vpls {
 parser parse_pw {
     return ingress;
 }
-# 381 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/includes/parser.p4"
 @pragma pa_fragment ingress ipv4.hdrChecksum
 @pragma pa_fragment egress ipv4.hdrChecksum
 header ipv4_t ipv4;
@@ -1534,7 +825,6 @@ calculated_field ipv4.hdrChecksum {
 
 
 }
-# 433 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/includes/parser.p4"
 parser parse_ipv4 {
 
     extract(ipv4);
@@ -1569,7 +859,6 @@ parser parse_ipv6_in_ip {
                  3);
     return parse_inner_ipv6;
 }
-# 487 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/includes/parser.p4"
 @pragma overlay_subheader egress inner_ipv6 srcAddr dstAddr
 
 header ipv6_t ipv6;
@@ -1630,7 +919,6 @@ parser parse_ipv6 {
 
 
 }
-# 594 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/includes/parser.p4"
 header icmp_t icmp;
 
 parser parse_icmp {
@@ -1651,7 +939,6 @@ parser parse_icmp {
 @pragma pa_fragment egress tcp.checksum
 @pragma pa_fragment egress tcp.urgentPtr
 header tcp_t tcp;
-# 647 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/includes/parser.p4"
 parser parse_tcp {
     extract(tcp);
     set_metadata(l3_metadata.lkp_outer_l4_sport, latest.srcPort);
@@ -1674,7 +961,6 @@ parser parse_roce_v2 {
 
 
 header udp_t udp;
-# 700 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/includes/parser.p4"
 parser parse_udp {
     extract(udp);
     set_metadata(l3_metadata.lkp_outer_l4_sport, latest.srcPort);
@@ -1683,7 +969,6 @@ parser parse_udp {
 
         4789 : parse_vxlan;
         6081: parse_geneve;
-# 720 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/includes/parser.p4"
         67 : parse_set_prio_med;
         68 : parse_set_prio_med;
         546 : parse_set_prio_med;
@@ -1798,11 +1083,9 @@ parser parse_erspan_t3 {
     return select(latest.ft_d_other) {
         0 mask 0x7c01: parse_inner_ethernet;
     0x800 mask 0x7c01: parse_inner_ipv4;
-# 846 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/includes/parser.p4"
         default : ingress;
     }
 }
-# 884 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/includes/parser.p4"
 parser parse_arp_rarp {
     return parse_set_prio_med;
 }
@@ -1824,7 +1107,6 @@ parser parse_vxlan {
     set_metadata(tunnel_metadata.tunnel_vni, latest.vni);
     return parse_inner_ethernet;
 }
-# 926 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/includes/parser.p4"
 header genv_t genv;
 
 parser parse_geneve {
@@ -1864,7 +1146,6 @@ parser parse_lisp {
         default : ingress;
     }
 }
-# 978 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/includes/parser.p4"
 parser parse_inner_ipv4 {
 
     extract(inner_ipv4);
@@ -1909,7 +1190,6 @@ parser parse_inner_tcp {
 
 
 header udp_t inner_udp;
-# 1053 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/includes/parser.p4"
 parser parse_inner_udp {
     extract(inner_udp);
     set_metadata(l3_metadata.lkp_l4_sport, latest.srcPort);
@@ -1968,7 +1248,6 @@ parser parse_vntag {
     extract(vntag);
     return parse_inner_ethernet;
 }
-# 1121 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/includes/parser.p4"
 header sflow_hdr_t sflow;
 header sflow_sample_t sflow_sample;
 header sflow_raw_hdr_record_t sflow_raw_hdr_record;
@@ -2031,7 +1310,6 @@ parser parse_fabric_header_cpu {
         default : parse_fabric_payload_header;
     }
 }
-# 1198 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/includes/parser.p4"
 parser parse_fabric_payload_header {
     extract(fabric_payload_header);
     return select(latest.etherType) {
@@ -2040,7 +1318,6 @@ parser parse_fabric_payload_header {
         0x8100 : parse_vlan; 0x9100 : parse_qinq; 0x8847 : parse_mpls; 0x0800 : parse_ipv4; 0x86dd : parse_ipv6; 0x0806 : parse_arp_rarp; 0x88cc : parse_set_prio_high; 0x8809 : parse_set_prio_high; default: ingress;
     }
 }
-# 1216 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/includes/parser.p4"
 parser parse_set_prio_med {
     set_metadata(ig_prsr_ctrl.priority, 3);
     return ingress;
@@ -2055,11 +1332,6 @@ parser parse_set_prio_max {
     set_metadata(ig_prsr_ctrl.priority, 7);
     return ingress;
 }
-# 45 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4" 2
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/includes/p4_table_sizes.h" 1
-# 46 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4" 2
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/includes/mirror_on_drop.h" 1
-# 47 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4" 2
 
 @pragma pa_alias ingress ig_intr_md.ingress_port ingress_metadata.ingress_port
 
@@ -2137,11 +1409,8 @@ metadata egress_metadata_t egress_metadata;
 metadata intrinsic_metadata_t intrinsic_metadata;
 metadata global_config_metadata_t global_config_metadata;
 
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch_config.p4" 1
-# 28 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch_config.p4"
 action set_config_parameters(enable_dod, enable_flowlet, switch_id) {
     deflect_on_drop(enable_dod);
-# 39 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch_config.p4"
     modify_field(i2e_metadata.ingress_tstamp, ig_intr_md_from_parser_aux.ingress_global_tstamp);
     modify_field(ingress_metadata.ingress_port, ig_intr_md.ingress_port);
     modify_field(l2_metadata.same_if_check, ingress_metadata.ifindex);
@@ -2163,12 +1432,9 @@ control process_global_params {
 
     apply(switch_config_params);
 }
-# 125 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4" 2
 
 
 
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/port.p4" 1
-# 31 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/port.p4"
 action set_valid_outer_unicast_packet_untagged() {
     modify_field(l2_metadata.lkp_pkt_type, 1);
     modify_field(l2_metadata.lkp_mac_type, ethernet.etherType);
@@ -2502,7 +1768,6 @@ action_selector lag_selector {
     selection_mode : fair;
 
 }
-# 378 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/port.p4"
 action set_lag_port(port) {
     modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 }
@@ -2622,9 +1887,6 @@ table egress_vlan_xlate {
 control process_vlan_xlate {
     apply(egress_vlan_xlate);
 }
-# 129 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4" 2
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/l2.p4" 1
-# 28 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/l2.p4"
 header_type l2_metadata_t {
     fields {
         lkp_mac_sa : 48;
@@ -2973,9 +2235,6 @@ table vlan_decap {
 control process_vlan_decap {
     apply(vlan_decap);
 }
-# 130 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4" 2
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/l3.p4" 1
-# 32 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/l3.p4"
 header_type l3_metadata_t {
     fields {
         lkp_ip_type : 2;
@@ -3231,9 +2490,6 @@ control process_mtu {
     apply(mtu);
 
 }
-# 131 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4" 2
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/ipv4.p4" 1
-# 31 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/ipv4.p4"
 header_type ipv4_metadata_t {
     fields {
         lkp_ipv4_sa : 32;
@@ -3297,7 +2553,6 @@ table ipv4_fib {
     }
     size : 1024;
 }
-# 133 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/ipv4.p4"
 table ipv4_fib_lpm {
     reads {
 
@@ -3375,9 +2630,6 @@ control process_ipv4_urpf {
     }
 
 }
-# 132 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4" 2
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/ipv6.p4" 1
-# 31 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/ipv6.p4"
 header_type ipv6_metadata_t {
     fields {
         lkp_ipv6_sa : 128;
@@ -3438,7 +2690,6 @@ control validate_outer_ipv6_header {
     apply(validate_outer_ipv6_packet);
 
 }
-# 131 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/ipv6.p4"
 table ipv6_fib_lpm {
     reads {
 
@@ -3541,9 +2792,6 @@ control process_ipv6_urpf {
     }
 
 }
-# 133 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4" 2
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/tunnel.p4" 1
-# 31 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/tunnel.p4"
 header_type tunnel_metadata_t {
     fields {
         ingress_tunnel_type : 5;
@@ -3611,7 +2859,6 @@ action src_vtep_hit(ifindex) {
     modify_field(ingress_metadata.ifindex, ifindex);
     modify_field(tunnel_metadata.src_vtep_hit, 1);
 }
-# 110 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/tunnel.p4"
 table ipv4_dest_vtep {
     reads {
         l3_metadata.vrf : exact;
@@ -3641,7 +2888,6 @@ table ipv4_src_vtep {
     }
     size : 1024;
 }
-# 156 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/tunnel.p4"
 table ipv6_dest_vtep {
     reads {
         l3_metadata.vrf : exact;
@@ -4474,7 +3720,6 @@ table egress_vni {
     }
     size: 1024;
 }
-# 996 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/tunnel.p4"
 action inner_ipv4_udp_rewrite() {
     copy_header(inner_ipv4, ipv4);
     copy_header(inner_udp, udp);
@@ -4941,7 +4186,6 @@ action ipv6_erspan_t3_rewrite() {
     f_insert_ipv6_header(47);
     add(ipv6.payloadLen, egress_metadata.payload_length, 26);
 }
-# 1488 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/tunnel.p4"
 @pragma ternary 1
 table tunnel_encap_process_outer {
     reads {
@@ -4976,11 +4220,9 @@ table tunnel_encap_process_outer {
         mpls_ip_push2_rewrite;
         mpls_ethernet_push3_rewrite;
         mpls_ip_push3_rewrite;
-# 1543 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/tunnel.p4"
         ipv4_erspan_t3_rewrite;
 
         ipv6_erspan_t3_rewrite;
-# 1554 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/tunnel.p4"
     }
     size : 1024;
 }
@@ -5083,7 +4325,6 @@ table tunnel_rewrite {
         set_mpls_rewrite_push1;
         set_mpls_rewrite_push2;
         set_mpls_rewrite_push3;
-# 1669 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/tunnel.p4"
     }
     size : 1024;
 }
@@ -5246,9 +4487,6 @@ control process_tunnel_encap {
 
     }
 }
-# 134 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4" 2
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/acl.p4" 1
-# 31 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/acl.p4"
 header_type acl_metadata_t {
     fields {
         acl_deny : 1;
@@ -5282,13 +4520,11 @@ header_type i2e_metadata_t {
 
     }
 }
-# 75 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/acl.p4"
 @pragma pa_solitary ingress acl_metadata.if_label
 @pragma pa_atomic ingress acl_metadata.if_label
 
 metadata acl_metadata_t acl_metadata;
 metadata i2e_metadata_t i2e_metadata;
-# 148 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/acl.p4"
 control process_egress_l4port {
 
 
@@ -5473,7 +4709,6 @@ control process_mac_acl {
     }
 
 }
-# 370 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/acl.p4"
 table ip_acl {
     reads {
 
@@ -5503,7 +4738,6 @@ table ip_acl {
     }
     size : 512;
 }
-# 440 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/acl.p4"
 table ipv6_acl {
     reads {
 
@@ -5732,7 +4966,6 @@ counter drop_stats_2 {
     type : packets;
     instance_count : 1024;
 }
-# 692 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/acl.p4"
 action redirect_to_cpu_with_reason(reason_code, qid, meter_id, icos) {
     copy_to_cpu_with_reason(reason_code, qid, meter_id, icos);
     drop();
@@ -5859,9 +5092,7 @@ control process_system_acl {
         }
     }
 }
-# 910 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/acl.p4"
 control process_egress_acl {
-# 926 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/acl.p4"
 }
 
 action egress_mirror(session_id) {
@@ -5939,9 +5170,6 @@ control process_egress_system_acl {
         apply(egress_system_acl);
     }
 }
-# 135 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4" 2
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/nat.p4" 1
-# 28 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/nat.p4"
 header_type nat_metadata_t {
     fields {
         ingress_nat_mode : 2;
@@ -5960,11 +5188,8 @@ header_type nat_metadata_t {
 }
 
 metadata nat_metadata_t nat_metadata;
-# 146 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/nat.p4"
 control process_ingress_nat {
-# 162 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/nat.p4"
 }
-# 292 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/nat.p4"
 control process_egress_nat {
 
 
@@ -5979,9 +5204,6 @@ control process_l4_checksum {
 
 
 }
-# 136 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4" 2
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/multicast.p4" 1
-# 28 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/multicast.p4"
 header_type multicast_metadata_t {
     fields {
         ipv4_mcast_key_type : 1;
@@ -6604,9 +5826,6 @@ control process_replication {
     }
 
 }
-# 137 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4" 2
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/nexthop.p4" 1
-# 31 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/nexthop.p4"
 header_type nexthop_metadata_t {
     fields {
         nexthop_type : 1;
@@ -6752,7 +5971,6 @@ control process_fwd_results {
         apply(fwd_result);
     }
 }
-# 185 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/nexthop.p4"
 action set_ecmp_nexthop_details_for_post_routed_flood(bd, uuc_mc_index,
                                                       nhop_index) {
     modify_field(ig_intr_md_for_tm.mcast_grp_b, uuc_mc_index);
@@ -6831,7 +6049,6 @@ table ecmp_group {
     action_profile: ecmp_action_profile;
     size : 1024;
 }
-# 298 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/nexthop.p4"
 action set_nexthop_details_for_post_routed_flood(bd, uuc_mc_index) {
     modify_field(ig_intr_md_for_tm.mcast_grp_b, uuc_mc_index);
     modify_field(ingress_metadata.egress_ifindex, 0);
@@ -6865,7 +6082,6 @@ table nexthop {
 
 control process_nexthop {
     if (nexthop_metadata.nexthop_type == 1) {
-# 346 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/nexthop.p4"
             apply(ecmp_group);
 
 
@@ -6878,9 +6094,6 @@ control process_nexthop {
         apply(nexthop);
     }
 }
-# 138 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4" 2
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/rewrite.p4" 1
-# 32 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/rewrite.p4"
 action set_l2_rewrite_with_tunnel(tunnel_index, tunnel_type) {
     modify_field(egress_metadata.routed, 0);
     modify_field(egress_metadata.bd, ingress_metadata.bd);
@@ -7015,7 +6228,6 @@ table rewrite {
         set_mpls_push_rewrite_l2;
         set_mpls_swap_push_rewrite_l3;
         set_mpls_push_rewrite_l3;
-# 175 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/rewrite.p4"
     }
     size : 1024;
 }
@@ -7055,9 +6267,6 @@ control process_rewrite {
 
     }
 }
-# 139 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4" 2
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/security.p4" 1
-# 31 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/security.p4"
 header_type security_metadata_t {
     fields {
         ipsg_enabled : 1;
@@ -7134,13 +6343,8 @@ control process_storm_control_stats {
 
 
 }
-# 143 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/security.p4"
 control process_ip_sourceguard {
-# 155 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/security.p4"
 }
-# 140 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4" 2
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/fabric.p4" 1
-# 29 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/fabric.p4"
 header_type fabric_metadata_t {
     fields {
         packetType : 3;
@@ -7169,7 +6373,6 @@ action terminate_cpu_packet() {
     remove_header(fabric_header_cpu);
     remove_header(fabric_payload_header);
 }
-# 119 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/fabric.p4"
 @pragma ternary 1
 table fabric_ingress_dst_lkp {
     reads {
@@ -7178,10 +6381,8 @@ table fabric_ingress_dst_lkp {
     actions {
         nop;
         terminate_cpu_packet;
-# 135 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/fabric.p4"
     }
 }
-# 158 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/fabric.p4"
 action non_ip_over_fabric() {
     modify_field(l2_metadata.lkp_mac_sa, ethernet.srcAddr);
     modify_field(l2_metadata.lkp_mac_da, ethernet.dstAddr);
@@ -7229,10 +6430,8 @@ table native_packet_over_fabric {
 control process_ingress_fabric {
     if (ingress_metadata.port_type != 0) {
         apply(fabric_ingress_dst_lkp);
-# 215 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/fabric.p4"
     }
 }
-# 282 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/fabric.p4"
 control process_fabric_lag {
 
 
@@ -7262,15 +6461,8 @@ action cpu_rx_rewrite() {
 action fabric_rewrite(tunnel_index) {
     modify_field(tunnel_metadata.tunnel_index, tunnel_index);
 }
-# 141 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4" 2
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/egress_filter.p4" 1
-# 66 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/egress_filter.p4"
 control process_egress_filter {
-# 81 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/egress_filter.p4"
 }
-# 142 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4" 2
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/mirror.p4" 1
-# 28 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/mirror.p4"
 action set_mirror_nhop(nhop_idx, session_id) {
     modify_field(l3_metadata.nexthop_index, nhop_idx);
     modify_field(i2e_metadata.mirror_session_id, session_id);
@@ -7302,15 +6494,10 @@ control process_mirroring {
     apply(mirror);
 
 }
-# 143 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4" 2
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/int_plt.p4" 1
-# 1267 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/int_plt.p4"
 control process_int_endpoint{
-# 1294 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/int_plt.p4"
 }
 
 control process_int_upstream_report {
-# 1311 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/int_plt.p4"
 }
 
 control process_int_sink_update_outer {
@@ -7318,29 +6505,16 @@ control process_int_sink_update_outer {
 
 
 }
-# 1476 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/int_plt.p4"
 control process_int_egress_prep {
-# 1509 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/int_plt.p4"
 }
-# 1617 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/int_plt.p4"
 control process_int_insertion {
-# 1639 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/int_plt.p4"
 }
-# 1675 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/int_plt.p4"
 control process_plt_insertion {
-# 1692 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/int_plt.p4"
 }
-# 1853 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/int_plt.p4"
 control process_int_egress {
-# 1891 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/int_plt.p4"
 }
-# 2075 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/int_plt.p4"
 control process_int_outer_encap {
-# 2092 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/int_plt.p4"
 }
-# 144 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4" 2
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/hashes.p4" 1
-# 27 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/hashes.p4"
 header_type hash_metadata_t {
     fields {
         hash1 : 16;
@@ -7545,9 +6719,6 @@ control process_hashes {
 
     apply(compute_other_hashes);
 }
-# 145 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4" 2
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/meter.p4" 1
-# 31 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/meter.p4"
  header_type meter_metadata_t {
      fields {
          packet_color : 2;
@@ -7629,18 +6800,12 @@ control process_meter_action {
     }
 
 }
-# 146 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4" 2
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/sflow.p4" 1
-# 94 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/sflow.p4"
 control process_ingress_sflow {
 
 
 
 
 }
-# 147 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4" 2
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/bfd.p4" 1
-# 484 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/bfd.p4"
 control process_bfd_mirror_to_cpu {
 }
 control process_egress_bfd_packet {
@@ -7655,8 +6820,6 @@ control process_bfd_tx_packet {
 }
 control process_bfd_recirc {
 }
-# 148 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4" 2
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/qos.p4" 1
 
 
 
@@ -7674,17 +6837,13 @@ header_type qos_metadata_t {
 }
 
 metadata qos_metadata_t qos_metadata;
-# 70 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/qos.p4"
 control process_ingress_qos_map {
-# 82 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/qos.p4"
 }
-# 119 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/qos.p4"
 control process_traffic_class{
 
 
 
 }
-# 157 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/qos.p4"
 control process_egress_qos_map {
 
 
@@ -7692,9 +6851,6 @@ control process_egress_qos_map {
 
 
 }
-# 149 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4" 2
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/sr.p4" 1
-# 131 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/sr.p4"
 control process_sr_rewrite {
 
 
@@ -7707,12 +6863,6 @@ control process_ipv6_sr {
 
 
 }
-# 150 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4" 2
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/flowlet.p4" 1
-# 28 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/flowlet.p4"
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/flowlet_bmv2.p4" 1
-# 29 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/flowlet.p4" 2
-# 41 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/flowlet.p4"
 header_type flowlet_metadata_t {
     fields {
         id : 16;
@@ -7769,17 +6919,9 @@ table flowlet {
 }
 
 control process_flowlet {
-# 108 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/flowlet.p4"
 }
-# 151 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4" 2
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/pktgen.p4" 1
-# 29 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/pktgen.p4"
 control process_pktgen {
-# 46 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/pktgen.p4"
 }
-# 152 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4" 2
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/failover.p4" 1
-# 182 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/failover.p4"
 control process_pktgen_port_down {
 
 
@@ -7799,9 +6941,6 @@ control process_lag_fallback {
 
 
 }
-# 153 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4" 2
-# 1 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/ila.p4" 1
-# 154 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4" 2
 
 action nop() {
 }
@@ -7829,7 +6968,6 @@ control ingress {
 
 
         process_bfd_rx_packet();
-# 189 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4"
         process_port_vlan_mapping();
 
 
@@ -7967,7 +7105,6 @@ control ingress {
 }
 
 control egress {
-# 336 "/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../switch/p4src/switch.p4"
         process_bfd_recirc();
 
 

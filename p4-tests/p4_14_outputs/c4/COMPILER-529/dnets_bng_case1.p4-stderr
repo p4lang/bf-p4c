@@ -1,0 +1,18 @@
+dnets_bng_case1.p4(609): warning: -5: negative value with unsigned type
+ add(pppoe.totalLength, ipv4.totalLen, -5);
+                                        ^
+dnets_bng_case1.p4(624): warning: -8: negative value with unsigned type
+ add(pppoe.totalLength, ipv6.payloadLen, -8);
+                                          ^
+dnets_bng_case1.p4(357): warning: Could not infer type for lawf_int, using bit<8>
+action a_antispoof_mac_pass(subsc_id, lawf_int, ctr_bucket) {
+                                      ^^^^^^^^
+dnets_bng_case1.p4(512): warning: Could not infer type for lawf_int, using bit<8>
+    pppoe_session_id, out_port, inner_cpe_mac, lawf_int, ctr_bucket) {
+                                               ^^^^^^^^
+dnets_bng_case1.p4(307): warning: Could not infer type for lawf_int, using bit<8>
+action a_line_map_pass(line_id, lawf_int) {
+                                ^^^^^^^^
+dnets_bng_case1.p4(335): warning: Could not infer type for version, using bit<8>
+action a_pppoe_cpdp_pass_ip(version) {
+                            ^^^^^^^

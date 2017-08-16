@@ -1,764 +1,19 @@
 /*
 gcc -E -x c -w -I/home/jklee/workspace/l4l/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib -D__TARGET_TOFINO__ -DL4L_PROFILE -I/usr/local/lib/python2.7/dist-packages/p4_hlir-0.9.67-py2.7.egg/p4_hlir/p4_lib /home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4
 */
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4"
-# 1 "<built-in>"
-# 1 "<command-line>"
-# 1 "/usr/include/stdc-predef.h" 1 3 4
-# 1 "<command-line>" 2
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4"
-# 29 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4"
-# 1 "/home/jklee/workspace/l4l/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/constants.p4" 1
-# 30 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/intrinsic_metadata.p4" 1
-# 10 "/home/jklee/workspace/l4l/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/intrinsic_metadata.p4"
-header_type ingress_parser_control_signals {
-    fields {
-        priority : 3;
-        _pad1 : 5;
-        parser_counter : 8;
-    }
-}
-
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-@pragma pa_intrinsic_header ingress ig_prsr_ctrl
-header ingress_parser_control_signals ig_prsr_ctrl;
-
-
-
-header_type ingress_intrinsic_metadata_t {
-    fields {
-
-        resubmit_flag : 1;
-
-
-        _pad1 : 1;
-
-        _pad2 : 2;
-
-        _pad3 : 3;
-
-        ingress_port : 9;
-
-
-        ingress_mac_tstamp : 48;
-
-    }
-}
-
-@pragma dont_trim
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-@pragma pa_intrinsic_header ingress ig_intr_md
-@pragma pa_mandatory_intrinsic_field ingress ig_intr_md.ingress_port
-header ingress_intrinsic_metadata_t ig_intr_md;
-
-
-
-header_type generator_metadata_t {
-    fields {
-
-        app_id : 16;
-
-        batch_id: 16;
-
-        instance_id: 16;
-    }
-}
-
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-header generator_metadata_t ig_pg_md;
-
-
-
-header_type ingress_intrinsic_metadata_from_parser_aux_t {
-    fields {
-        ingress_global_tstamp : 48;
-
-
-        ingress_global_ver : 32;
-
-
-        ingress_parser_err : 16;
-
-    }
-}
-
-@pragma pa_fragment ingress ig_intr_md_from_parser_aux.ingress_parser_err
-@pragma pa_atomic ingress ig_intr_md_from_parser_aux.ingress_parser_err
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-@pragma pa_intrinsic_header ingress ig_intr_md_from_parser_aux
-header ingress_intrinsic_metadata_from_parser_aux_t ig_intr_md_from_parser_aux;
-
-
-
-header_type ingress_intrinsic_metadata_for_tm_t {
-    fields {
-
-
-
-
-        _pad1 : 7;
-        ucast_egress_port : 9;
-
-
-
-
-        drop_ctl : 3;
-
-
-
-
-        bypass_egress : 1;
-
-        deflect_on_drop : 1;
-
-
-
-        ingress_cos : 3;
-
-
-
-
-
-        qid : 5;
-
-        icos_for_copy_to_cpu : 3;
-
-
-
-
-
-        _pad2: 3;
-
-        copy_to_cpu : 1;
-
-        packet_color : 2;
-
-
-
-        disable_ucast_cutthru : 1;
-
-        enable_mcast_cutthru : 1;
-
-
-
-
-        mcast_grp_a : 16;
-
-
-
-
-
-        mcast_grp_b : 16;
-
-
-
-
-        _pad3 : 3;
-        level1_mcast_hash : 13;
-
-
-
-
-
-
-
-        _pad4 : 3;
-        level2_mcast_hash : 13;
-
-
-
-
-
-
-
-        level1_exclusion_id : 16;
-
-
-
-
-
-        _pad5 : 7;
-        level2_exclusion_id : 9;
-
-
-
-
-
-        rid : 16;
-
-
-
-    }
-}
-
-@pragma pa_atomic ingress ig_intr_md_for_tm.ucast_egress_port
-
-@pragma pa_fragment ingress ig_intr_md_for_tm.drop_ctl
-@pragma pa_fragment ingress ig_intr_md_for_tm.qid
-@pragma pa_fragment ingress ig_intr_md_for_tm._pad2
-
-@pragma pa_atomic ingress ig_intr_md_for_tm.mcast_grp_a
-@pragma pa_fragment ingress ig_intr_md_for_tm.mcast_grp_a
-@pragma pa_mandatory_intrinsic_field ingress ig_intr_md_for_tm.mcast_grp_a
-
-@pragma pa_atomic ingress ig_intr_md_for_tm.mcast_grp_b
-@pragma pa_fragment ingress ig_intr_md_for_tm.mcast_grp_b
-@pragma pa_mandatory_intrinsic_field ingress ig_intr_md_for_tm.mcast_grp_b
-
-@pragma pa_atomic ingress ig_intr_md_for_tm.level1_mcast_hash
-@pragma pa_fragment ingress ig_intr_md_for_tm._pad3
-
-@pragma pa_atomic ingress ig_intr_md_for_tm.level2_mcast_hash
-@pragma pa_fragment ingress ig_intr_md_for_tm._pad4
-
-@pragma pa_atomic ingress ig_intr_md_for_tm.level1_exclusion_id
-@pragma pa_fragment ingress ig_intr_md_for_tm.level1_exclusion_id
-
-@pragma pa_atomic ingress ig_intr_md_for_tm.level2_exclusion_id
-@pragma pa_fragment ingress ig_intr_md_for_tm._pad5
-
-@pragma pa_atomic ingress ig_intr_md_for_tm.rid
-@pragma pa_fragment ingress ig_intr_md_for_tm.rid
-
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-@pragma pa_intrinsic_header ingress ig_intr_md_for_tm
-@pragma dont_trim
-@pragma pa_mandatory_intrinsic_field ingress ig_intr_md_for_tm.drop_ctl
-header ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm;
-
-
-header_type ingress_intrinsic_metadata_for_mirror_buffer_t {
-    fields {
-        _pad1 : 6;
-        ingress_mirror_id : 10;
-
-
-    }
-}
-
-@pragma dont_trim
-@pragma pa_intrinsic_header ingress ig_intr_md_for_mb
-@pragma pa_atomic ingress ig_intr_md_for_mb.ingress_mirror_id
-@pragma pa_mandatory_intrinsic_field ingress ig_intr_md_for_mb.ingress_mirror_id
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-header ingress_intrinsic_metadata_for_mirror_buffer_t ig_intr_md_for_mb;
-
-
-header_type egress_intrinsic_metadata_t {
-    fields {
-
-        _pad0 : 7;
-        egress_port : 9;
-
-
-        _pad1: 5;
-        enq_qdepth : 19;
-
-
-        _pad2: 6;
-        enq_congest_stat : 2;
-
-
-        enq_tstamp : 32;
-
-
-        _pad3: 5;
-        deq_qdepth : 19;
-
-
-        _pad4: 6;
-        deq_congest_stat : 2;
-
-
-        app_pool_congest_stat : 8;
-
-
-
-        deq_timedelta : 32;
-
-
-        egress_rid : 16;
-
-
-        _pad5: 7;
-        egress_rid_first : 1;
-
-
-        _pad6: 3;
-        egress_qid : 5;
-
-
-        _pad7: 5;
-        egress_cos : 3;
-
-
-        _pad8: 7;
-        deflection_flag : 1;
-
-
-        pkt_length : 16;
-    }
-}
-
-@pragma dont_trim
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-@pragma pa_intrinsic_header egress eg_intr_md
-
-@pragma pa_atomic egress eg_intr_md.egress_port
-@pragma pa_fragment egress eg_intr_md._pad1
-@pragma pa_fragment egress eg_intr_md._pad7
-@pragma pa_fragment egress eg_intr_md._pad8
-@pragma pa_mandatory_intrinsic_field egress eg_intr_md.egress_port
-@pragma pa_mandatory_intrinsic_field egress eg_intr_md.egress_cos
-
-header egress_intrinsic_metadata_t eg_intr_md;
-
-
-header_type egress_intrinsic_metadata_from_parser_aux_t {
-    fields {
-        egress_global_tstamp : 48;
-
-
-        egress_global_ver : 32;
-
-
-        egress_parser_err : 16;
-
-
-
-        clone_digest_id : 4;
-
-
-        clone_src : 4;
-
-
-
-        coalesce_sample_count : 8;
-
-
-    }
-}
-
-@pragma pa_fragment egress eg_intr_md_from_parser_aux.coalesce_sample_count
-@pragma pa_fragment egress eg_intr_md_from_parser_aux.clone_src
-@pragma pa_fragment egress eg_intr_md_from_parser_aux.egress_parser_err
-@pragma pa_atomic egress eg_intr_md_from_parser_aux.egress_parser_err
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-@pragma pa_intrinsic_header egress eg_intr_md_from_parser_aux
-header egress_intrinsic_metadata_from_parser_aux_t eg_intr_md_from_parser_aux;
-# 382 "/home/jklee/workspace/l4l/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/intrinsic_metadata.p4"
-header_type egress_intrinsic_metadata_for_mirror_buffer_t {
-    fields {
-        _pad1 : 6;
-        egress_mirror_id : 10;
-
-
-        coalesce_flush: 1;
-        coalesce_length: 7;
-
-
-    }
-}
-
-@pragma dont_trim
-@pragma pa_intrinsic_header egress eg_intr_md_for_mb
-@pragma pa_atomic egress eg_intr_md_for_mb.egress_mirror_id
-@pragma pa_fragment egress eg_intr_md_for_mb.coalesce_flush
-@pragma pa_mandatory_intrinsic_field egress eg_intr_md_for_mb.egress_mirror_id
-@pragma pa_mandatory_intrinsic_field egress eg_intr_md_for_mb.coalesce_flush
-@pragma pa_mandatory_intrinsic_field egress eg_intr_md_for_mb.coalesce_length
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-header egress_intrinsic_metadata_for_mirror_buffer_t eg_intr_md_for_mb;
-
-
-
-header_type egress_intrinsic_metadata_for_output_port_t {
-    fields {
-
-        _pad1 : 2;
-        capture_tstamp_on_tx : 1;
-
-
-        update_delay_on_tx : 1;
-# 425 "/home/jklee/workspace/l4l/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/intrinsic_metadata.p4"
-        force_tx_error : 1;
-
-        drop_ctl : 3;
-
-
-
-
-
-
-
-    }
-}
-
-@pragma dont_trim
-@pragma pa_mandatory_intrinsic_field egress eg_intr_md_for_oport.drop_ctl
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-@pragma pa_intrinsic_header egress eg_intr_md_for_oport
-header egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport;
-# 31 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/primitives.p4" 1
-# 10 "/home/jklee/workspace/l4l/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/primitives.p4"
+#include "tofino/constants.p4"
+#include "tofino/intrinsic_metadata.p4"
+#include "tofino/primitives.p4"
 action deflect_on_drop(enable_dod) {
     modify_field(ig_intr_md_for_tm.deflect_on_drop, enable_dod);
 }
-# 32 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/pktgen_headers.p4" 1
-# 9 "/home/jklee/workspace/l4l/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/pktgen_headers.p4"
-header_type pktgen_generic_header_t {
-    fields {
-        _pad0 : 3;
-        pipe_id : 2;
-        app_id : 3;
-        key_msb : 8;
-        batch_id : 16;
+#include "tofino/pktgen_headers.p4"
+#include "tofino/stateful_alu_blackbox.p4"
+#include "tofino/wred_blackbox.p4"
 
-        packet_id : 16;
-    }
-}
-header pktgen_generic_header_t pktgen_generic;
 
-header_type pktgen_timer_header_t {
-    fields {
-        _pad0 : 3;
-        pipe_id : 2;
-        app_id : 3;
-        _pad1 : 8;
-        batch_id : 16;
-        packet_id : 16;
-    }
-}
-header pktgen_timer_header_t pktgen_timer;
 
-header_type pktgen_port_down_header_t {
-    fields {
-        _pad0 : 3;
-        pipe_id : 2;
-        app_id : 3;
-        _pad1 : 15;
-        port_num : 9;
-        packet_id : 16;
-    }
-}
-header pktgen_port_down_header_t pktgen_port_down;
 
-header_type pktgen_recirc_header_t {
-    fields {
-        _pad0 : 3;
-        pipe_id : 2;
-        app_id : 3;
-        key : 24;
-        packet_id : 16;
-    }
-}
-header pktgen_recirc_header_t pktgen_recirc;
-# 33 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/stateful_alu_blackbox.p4" 1
-
-
-blackbox_type stateful_alu {
-
-    attribute reg {
-
-        type: register;
-    }
-
-    attribute selector_binding {
-
-        type: table;
-        optional;
-    }
-
-    attribute initial_register_lo_value {
-
-
-
-        type: int;
-        optional;
-    }
-
-    attribute initial_register_hi_value {
-
-
-
-        type: int;
-        optional;
-    }
-
-    attribute condition_hi {
-
-
-
-
-        type: expression;
-        expression_local_variables {register_lo, register_hi}
-        optional;
-    }
-
-    attribute condition_lo {
-
-
-
-
-        type: expression;
-        expression_local_variables {register_lo, register_hi}
-        optional;
-    }
-
-
-    attribute update_lo_1_predicate {
-
-        type: expression;
-        expression_local_variables {condition_lo, condition_hi}
-        optional;
-    }
-
-    attribute update_lo_1_value {
-# 81 "/home/jklee/workspace/l4l/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/stateful_alu_blackbox.p4"
-        type: expression;
-        expression_local_variables {register_lo, register_hi,
-                                    set_bit, set_bitc, clr_bit, clr_bitc, read_bit, read_bitc}
-        optional;
-    }
-
-    attribute update_lo_2_predicate {
-
-        type: expression;
-        expression_local_variables {condition_lo, condition_hi}
-        optional;
-    }
-
-    attribute update_lo_2_value {
-
-        type: expression;
-        expression_local_variables {register_lo, register_hi, math_unit}
-        optional;
-    }
-
-    attribute update_hi_1_predicate {
-
-        type: expression;
-        expression_local_variables {condition_lo, condition_hi}
-        optional;
-    }
-
-    attribute update_hi_1_value {
-
-        type: expression;
-        expression_local_variables {register_lo, register_hi}
-        optional;
-    }
-
-    attribute update_hi_2_predicate {
-
-        type: expression;
-        expression_local_variables {condition_lo, condition_hi}
-        optional;
-    }
-
-    attribute update_hi_2_value {
-
-        type: expression;
-        expression_local_variables {register_lo, register_hi}
-        optional;
-    }
-
-    attribute output_predicate {
-
-
-
-
-        type: expression;
-        expression_local_variables {condition_lo, condition_hi}
-        optional;
-    }
-
-    attribute output_value {
-
-
-
-
-
-
-
-        type: expression;
-        expression_local_variables {alu_lo, alu_hi, register_lo, register_hi, predicate, combined_predicate}
-        optional;
-    }
-
-    attribute output_dst {
-
-        type: bit<0>;
-        optional;
-    }
-
-    attribute math_unit_input {
-
-
-
-        type: expression;
-        expression_local_variables {register_lo, register_hi}
-        optional;
-    }
-    attribute math_unit_output_scale {
-
-
-
-
-        type: int;
-        optional;
-    }
-    attribute math_unit_exponent_shift {
-
-
-
-
-
-
-        type: int;
-        optional;
-    }
-    attribute math_unit_exponent_invert {
-
-
-
-
-        type: string;
-        optional;
-    }
-
-    attribute math_unit_lookup_table {
-
-
-
-
-
-
-
-        type: string;
-        optional;
-    }
-
-    attribute reduction_or_group {
-# 214 "/home/jklee/workspace/l4l/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/stateful_alu_blackbox.p4"
-        type: string;
-        optional;
-    }
-
-    attribute stateful_logging_mode {
-# 228 "/home/jklee/workspace/l4l/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/stateful_alu_blackbox.p4"
-        type: string;
-        optional;
-    }
-# 246 "/home/jklee/workspace/l4l/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/stateful_alu_blackbox.p4"
-    method execute_stateful_alu(optional in bit<0> index){
-        reads {condition_hi, condition_lo,
-               update_lo_1_predicate, update_lo_1_value,
-               update_lo_2_predicate, update_lo_2_value,
-               update_hi_1_predicate, update_hi_1_value,
-               update_hi_2_predicate, update_hi_2_value,
-               math_unit_input}
-        writes {output_dst}
-    }
-
-    method execute_stateful_alu_from_hash(in field_list_calculation hash_field_list){
-        reads {condition_hi, condition_lo,
-               update_lo_1_predicate, update_lo_1_value,
-               update_lo_2_predicate, update_lo_2_value,
-               update_hi_1_predicate, update_hi_1_value,
-               update_hi_2_predicate, update_hi_2_value,
-               math_unit_input}
-        writes {output_dst}
-    }
-
-    method execute_stateful_log(){
-        reads {condition_hi, condition_lo,
-               update_lo_1_predicate, update_lo_1_value,
-               update_lo_2_predicate, update_lo_2_value,
-               update_hi_1_predicate, update_hi_1_value,
-               update_hi_2_predicate, update_hi_2_value,
-               math_unit_input}
-    }
-}
-# 34 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/wred_blackbox.p4" 1
-
-
-blackbox_type wred {
-
-    attribute wred_input {
-
-
-        type: bit<0>;
-    }
-
-    attribute direct {
-
-
-        type: table;
-        optional;
-    }
-
-    attribute static {
-
-
-        type: table;
-        optional;
-    }
-
-    attribute instance_count {
-
-        type: int;
-        optional;
-    }
-
-    attribute drop_value {
-
-        type: int;
-        optional;
-    }
-
-    attribute no_drop_value {
-
-        type: int;
-        optional;
-    }
-# 59 "/home/jklee/workspace/l4l/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/wred_blackbox.p4"
-    method execute (out bit<0> destination, optional in int index){
-        reads {wred_input}
-    }
-}
-# 35 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-
-
-
-
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/includes/p4features.h" 1
-# 40 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/includes/drop_reason_codes.h" 1
-# 41 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/includes/cpu_reason_codes.h" 1
-# 42 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/includes/p4_pktgen.h" 1
-# 43 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/includes/defines.p4" 1
-# 44 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/includes/headers.p4" 1
-# 24 "/home/jklee/workspace/l4l/submodules/switch/p4src/includes/headers.p4"
 header_type ethernet_t {
     fields {
         dstAddr : 48;
@@ -945,10 +200,8 @@ header_type erspan_header_t3_t {
         timestamp : 32;
         sgt : 16;
         ft_d_other: 16;
-# 218 "/home/jklee/workspace/l4l/submodules/switch/p4src/includes/headers.p4"
     }
 }
-# 232 "/home/jklee/workspace/l4l/submodules/switch/p4src/includes/headers.p4"
 header_type ipsec_esp_t {
     fields {
         spi : 32;
@@ -1135,7 +388,6 @@ header_type bfd_t {
         version : 3;
         diag : 5;
         state_flags : 8;
-# 427 "/home/jklee/workspace/l4l/submodules/switch/p4src/includes/headers.p4"
         detectMult : 8;
         len : 8;
         myDiscriminator : 32;
@@ -1204,7 +456,6 @@ header_type sflow_sample_cpu_t {
         pipe_id : 2;
     }
 }
-# 503 "/home/jklee/workspace/l4l/submodules/switch/p4src/includes/headers.p4"
 header_type fabric_header_t {
     fields {
         packetType : 3;
@@ -1416,9 +667,6 @@ header_type ipv6_srh_segment_t {
         sid : 128;
     }
 }
-# 45 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/includes/parser.p4" 1
-# 113 "/home/jklee/workspace/l4l/submodules/switch/p4src/includes/parser.p4"
 parser start {
     return select(current(96, 16)) {
 
@@ -1427,7 +675,6 @@ parser start {
         default : parse_ethernet;
     }
 }
-# 222 "/home/jklee/workspace/l4l/submodules/switch/p4src/includes/parser.p4"
 header ethernet_t ethernet;
 
 parser parse_ethernet {
@@ -1505,13 +752,11 @@ header mpls_t mpls[3];
 
 
 parser parse_mpls {
-# 307 "/home/jklee/workspace/l4l/submodules/switch/p4src/includes/parser.p4"
     return ingress;
 
 }
 
 parser parse_mpls_bos {
-# 326 "/home/jklee/workspace/l4l/submodules/switch/p4src/includes/parser.p4"
     return select(current(0, 4)) {
 
 
@@ -1544,7 +789,6 @@ parser parse_vpls {
 parser parse_pw {
     return ingress;
 }
-# 398 "/home/jklee/workspace/l4l/submodules/switch/p4src/includes/parser.p4"
 @pragma pa_fragment ingress ipv4.hdrChecksum
 @pragma pa_fragment egress ipv4.hdrChecksum
 header ipv4_t ipv4;
@@ -1580,7 +824,6 @@ calculated_field ipv4.hdrChecksum {
 
 
 }
-# 450 "/home/jklee/workspace/l4l/submodules/switch/p4src/includes/parser.p4"
 parser parse_ipv4 {
 
     extract(ipv4);
@@ -1615,7 +858,6 @@ parser parse_ipv6_in_ip {
                  3);
     return parse_inner_ipv6;
 }
-# 509 "/home/jklee/workspace/l4l/submodules/switch/p4src/includes/parser.p4"
 header ipv6_t ipv6;
 
 parser parse_udp_v6 {
@@ -1644,11 +886,9 @@ parser parse_gre_v6 {
 }
 
 parser parse_ipv6 {
-# 564 "/home/jklee/workspace/l4l/submodules/switch/p4src/includes/parser.p4"
     return ingress;
 
 }
-# 663 "/home/jklee/workspace/l4l/submodules/switch/p4src/includes/parser.p4"
 header icmp_t icmp;
 
 parser parse_icmp {
@@ -1760,7 +1000,6 @@ parser parse_udp {
     set_metadata(l3_metadata.lkp_outer_l4_sport, latest.srcPort);
     set_metadata(l3_metadata.lkp_outer_l4_dport, latest.dstPort);
     return select(latest.dstPort) {
-# 791 "/home/jklee/workspace/l4l/submodules/switch/p4src/includes/parser.p4"
         67 : parse_set_prio_med;
         68 : parse_set_prio_med;
         546 : parse_set_prio_med;
@@ -1876,7 +1115,6 @@ parser parse_erspan_t3 {
         0x000 mask 0x7c01: parse_inner_ethernet;
         0x800 mask 0x7c01: parse_inner_ipv4;
         default : ingress;
-# 916 "/home/jklee/workspace/l4l/submodules/switch/p4src/includes/parser.p4"
     }
 }
 
@@ -1901,7 +1139,6 @@ parser parse_vxlan {
     set_metadata(tunnel_metadata.tunnel_vni, latest.vni);
     return parse_inner_ethernet;
 }
-# 961 "/home/jklee/workspace/l4l/submodules/switch/p4src/includes/parser.p4"
 header genv_t genv;
 
 parser parse_geneve {
@@ -2036,7 +1273,6 @@ parser parse_inner_sctp {
 }
 
 parser parse_inner_ipv6 {
-# 1108 "/home/jklee/workspace/l4l/submodules/switch/p4src/includes/parser.p4"
     return ingress;
 
 }
@@ -2069,7 +1305,6 @@ parser parse_vntag {
     extract(vntag);
     return parse_inner_ethernet;
 }
-# 1150 "/home/jklee/workspace/l4l/submodules/switch/p4src/includes/parser.p4"
 header sflow_hdr_t sflow;
 header sflow_sample_t sflow_sample;
 header sflow_raw_hdr_record_t sflow_raw_hdr_record;
@@ -2138,7 +1373,6 @@ parser parse_fabric_header_cpu {
         default : parse_fabric_payload_header;
     }
 }
-# 1233 "/home/jklee/workspace/l4l/submodules/switch/p4src/includes/parser.p4"
 parser parse_fabric_payload_header {
     extract(fabric_payload_header);
     return select(latest.etherType) {
@@ -2147,7 +1381,6 @@ parser parse_fabric_payload_header {
         0x8100 : parse_vlan; 0x9100 : parse_qinq; 0x8847 : parse_mpls; 0x0800 : parse_ipv4; 0x86dd : parse_ipv6; 0x0806 : parse_arp_rarp; 0x88cc : parse_set_prio_high; 0x8809 : parse_set_prio_high; default: ingress;
     }
 }
-# 1251 "/home/jklee/workspace/l4l/submodules/switch/p4src/includes/parser.p4"
 parser parse_set_prio_med {
     set_metadata(ig_prsr_ctrl.priority, 3);
     return ingress;
@@ -2162,14 +1395,6 @@ parser parse_set_prio_max {
     set_metadata(ig_prsr_ctrl.priority, 7);
     return ingress;
 }
-# 1277 "/home/jklee/workspace/l4l/submodules/switch/p4src/includes/parser.p4"
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/includes/telemetry_parser.p4" 1
-# 1277 "/home/jklee/workspace/l4l/submodules/switch/p4src/includes/parser.p4" 2
-# 46 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/includes/p4_table_sizes.h" 1
-# 47 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/includes/mirror_on_drop.h" 1
-# 48 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
 
 
 header_type ingress_metadata_t {
@@ -2238,14 +1463,11 @@ header_type global_config_metadata_t {
 @pragma pa_solitary ingress ingress_metadata.ifindex
 @pragma pa_atomic egress ingress_metadata.bd
 @pragma pa_solitary egress ingress_metadata.bd
-# 129 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4"
 metadata ingress_metadata_t ingress_metadata;
 metadata egress_metadata_t egress_metadata;
 metadata intrinsic_metadata_t intrinsic_metadata;
 metadata global_config_metadata_t global_config_metadata;
 
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch_config.p4" 1
-# 28 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch_config.p4"
 action set_config_parameters(enable_flowlet, switch_id) {
 
     modify_field(i2e_metadata.ingress_tstamp, ig_intr_md_from_parser_aux.ingress_global_tstamp);
@@ -2256,7 +1478,6 @@ action set_config_parameters(enable_flowlet, switch_id) {
 
     modify_field(global_config_metadata.switch_id, switch_id);
 }
-# 46 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch_config.p4"
 table switch_config_params {
     actions {
         set_config_parameters;
@@ -2271,12 +1492,9 @@ control process_global_params {
 
 
 }
-# 135 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
 
 
 
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/port.p4" 1
-# 31 "/home/jklee/workspace/l4l/submodules/switch/p4src/port.p4"
 action set_valid_outer_unicast_packet_untagged() {
     modify_field(l2_metadata.lkp_pkt_type, 1);
     modify_field(l2_metadata.lkp_mac_type, ethernet.etherType);
@@ -2675,7 +1893,6 @@ action_selector lag_selector {
     selection_mode : fair;
 
 }
-# 443 "/home/jklee/workspace/l4l/submodules/switch/p4src/port.p4"
 action set_lag_port(port) {
     modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 }
@@ -2833,9 +2050,6 @@ table egress_vlan_xlate {
 control process_vlan_xlate {
     apply(egress_vlan_xlate);
 }
-# 139 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/l2.p4" 1
-# 28 "/home/jklee/workspace/l4l/submodules/switch/p4src/l2.p4"
 header_type l2_metadata_t {
     fields {
         lkp_mac_sa : 48;
@@ -3202,9 +2416,6 @@ table vlan_decap {
 control process_vlan_decap {
     apply(vlan_decap);
 }
-# 140 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/l3.p4" 1
-# 32 "/home/jklee/workspace/l4l/submodules/switch/p4src/l3.p4"
 header_type l3_metadata_t {
     fields {
         lkp_ip_type : 2;
@@ -3302,7 +2513,6 @@ action fib_hit_ecmp(ecmp_index) {
     modify_field(l3_metadata.fib_nexthop, ecmp_index);
     modify_field(l3_metadata.fib_nexthop_type, 1);
 }
-# 156 "/home/jklee/workspace/l4l/submodules/switch/p4src/l3.p4"
 control process_urpf_bd {
 
 
@@ -3385,7 +2595,6 @@ table l3_rewrite {
     actions {
         nop;
         ipv4_unicast_rewrite;
-# 250 "/home/jklee/workspace/l4l/submodules/switch/p4src/l3.p4"
     }
 }
 
@@ -3438,9 +2647,6 @@ control process_mtu {
     apply(mtu);
 
 }
-# 141 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/ipv4.p4" 1
-# 31 "/home/jklee/workspace/l4l/submodules/switch/p4src/ipv4.p4"
 header_type ipv4_metadata_t {
     fields {
         lkp_ipv4_sa : 32;
@@ -3487,7 +2693,6 @@ control validate_outer_ipv4_header {
     apply(validate_outer_ipv4_packet);
 
 }
-# 86 "/home/jklee/workspace/l4l/submodules/switch/p4src/ipv4.p4"
 table ipv4_fib {
     reads {
         l3_metadata.vrf : exact;
@@ -3501,7 +2706,6 @@ table ipv4_fib {
     }
     size : 1024;
 }
-# 140 "/home/jklee/workspace/l4l/submodules/switch/p4src/ipv4.p4"
 table ipv4_fib_lpm {
     reads {
 
@@ -3531,13 +2735,8 @@ control process_ipv4_fib {
     }
 
 }
-# 205 "/home/jklee/workspace/l4l/submodules/switch/p4src/ipv4.p4"
 control process_ipv4_urpf {
-# 216 "/home/jklee/workspace/l4l/submodules/switch/p4src/ipv4.p4"
 }
-# 142 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/ipv6.p4" 1
-# 31 "/home/jklee/workspace/l4l/submodules/switch/p4src/ipv6.p4"
 header_type ipv6_metadata_t {
     fields {
         lkp_ipv6_sa : 128;
@@ -3555,23 +2754,15 @@ header_type ipv6_metadata_t {
 
 
 metadata ipv6_metadata_t ipv6_metadata;
-# 83 "/home/jklee/workspace/l4l/submodules/switch/p4src/ipv6.p4"
 control validate_outer_ipv6_header {
 
 
 
 }
-# 174 "/home/jklee/workspace/l4l/submodules/switch/p4src/ipv6.p4"
 control process_ipv6_fib {
-# 185 "/home/jklee/workspace/l4l/submodules/switch/p4src/ipv6.p4"
 }
-# 222 "/home/jklee/workspace/l4l/submodules/switch/p4src/ipv6.p4"
 control process_ipv6_urpf {
-# 233 "/home/jklee/workspace/l4l/submodules/switch/p4src/ipv6.p4"
 }
-# 143 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/tunnel.p4" 1
-# 31 "/home/jklee/workspace/l4l/submodules/switch/p4src/tunnel.p4"
 header_type tunnel_metadata_t {
     fields {
         ingress_tunnel_type : 5;
@@ -3596,14 +2787,12 @@ header_type tunnel_metadata_t {
         vtep_ifindex : 16;
     }
 }
-# 63 "/home/jklee/workspace/l4l/submodules/switch/p4src/tunnel.p4"
 @pragma pa_container_size ingress tunnel_metadata.tunnel_lookup 8
 
 @pragma pa_container_size ingress tunnel_metadata.tunnel_vni 8
 
 @pragma pa_do_not_bridge ingress tunnel_metadata.tunnel_index
 metadata tunnel_metadata_t tunnel_metadata;
-# 199 "/home/jklee/workspace/l4l/submodules/switch/p4src/tunnel.p4"
 control process_ipv4_vtep {
 
 
@@ -3617,7 +2806,6 @@ control process_ipv6_vtep {
 
 
 }
-# 470 "/home/jklee/workspace/l4l/submodules/switch/p4src/tunnel.p4"
 action ipv4_lkp() {
     modify_field(l2_metadata.lkp_mac_sa, ethernet.srcAddr);
     modify_field(l2_metadata.lkp_mac_da, ethernet.dstAddr);
@@ -3699,19 +2887,14 @@ control process_tunnel {
 
 
     process_ingress_fabric();
-# 592 "/home/jklee/workspace/l4l/submodules/switch/p4src/tunnel.p4"
 }
-# 643 "/home/jklee/workspace/l4l/submodules/switch/p4src/tunnel.p4"
 control validate_mpls_header {
 
 
 
 }
-# 989 "/home/jklee/workspace/l4l/submodules/switch/p4src/tunnel.p4"
 control process_tunnel_decap {
-# 999 "/home/jklee/workspace/l4l/submodules/switch/p4src/tunnel.p4"
 }
-# 1032 "/home/jklee/workspace/l4l/submodules/switch/p4src/tunnel.p4"
 action inner_ipv4_udp_rewrite() {
     copy_header(inner_ipv4, ipv4);
     copy_header(inner_udp, udp);
@@ -3814,7 +2997,6 @@ table tunnel_encap_process_inner {
     }
     size : 1024;
 }
-# 1436 "/home/jklee/workspace/l4l/submodules/switch/p4src/tunnel.p4"
 action f_insert_ipv4_header(proto) {
     add_header(ipv4);
     modify_field(ipv4.protocol, proto);
@@ -3897,7 +3079,6 @@ table tunnel_encap_process_outer {
     actions {
         nop;
         fabric_rewrite;
-# 1570 "/home/jklee/workspace/l4l/submodules/switch/p4src/tunnel.p4"
         ipv4_erspan_t3_rewrite;
 
 
@@ -3927,7 +3108,6 @@ action set_ip_index(sip_index, dip_index) {
     modify_field(tunnel_metadata.tunnel_src_index, sip_index);
     modify_field(tunnel_metadata.tunnel_dst_index, dip_index);
 }
-# 1693 "/home/jklee/workspace/l4l/submodules/switch/p4src/tunnel.p4"
 table tunnel_rewrite {
     reads {
         tunnel_metadata.tunnel_index : exact;
@@ -3938,7 +3118,6 @@ table tunnel_rewrite {
 
         set_tunnel_rewrite_details;
         set_tunnel_rewrite_details_with_dmac;
-# 1727 "/home/jklee/workspace/l4l/submodules/switch/p4src/tunnel.p4"
     }
     size : 1024;
 }
@@ -4070,7 +3249,6 @@ control process_tunnel_encap {
 
     if ((fabric_metadata.fabric_header_present == 0) and
         (tunnel_metadata.egress_tunnel_type != 0)) {
-# 1872 "/home/jklee/workspace/l4l/submodules/switch/p4src/tunnel.p4"
         if ((tunnel_metadata.egress_tunnel_type != 15) and
             (tunnel_metadata.egress_tunnel_type != 16)) {
 
@@ -4097,15 +3275,11 @@ control process_tunnel_encap {
 
     }
 }
-# 1922 "/home/jklee/workspace/l4l/submodules/switch/p4src/tunnel.p4"
 control process_tunnel_id {
 
 
 
 }
-# 144 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/acl.p4" 1
-# 31 "/home/jklee/workspace/l4l/submodules/switch/p4src/acl.p4"
 header_type acl_metadata_t {
     fields {
         acl_deny : 1;
@@ -4142,13 +3316,11 @@ header_type i2e_metadata_t {
 
     }
 }
-# 78 "/home/jklee/workspace/l4l/submodules/switch/p4src/acl.p4"
 @pragma pa_solitary ingress acl_metadata.port_lag_label
 @pragma pa_atomic ingress acl_metadata.port_lag_label
 
 metadata acl_metadata_t acl_metadata;
 metadata i2e_metadata_t i2e_metadata;
-# 151 "/home/jklee/workspace/l4l/submodules/switch/p4src/acl.p4"
 control process_egress_l4port {
 
 
@@ -4158,7 +3330,6 @@ control process_egress_l4port {
 
 
 }
-# 196 "/home/jklee/workspace/l4l/submodules/switch/p4src/acl.p4"
 control process_ingress_l4port {
 
 
@@ -4296,7 +3467,6 @@ control process_mac_acl {
     }
 
 }
-# 375 "/home/jklee/workspace/l4l/submodules/switch/p4src/acl.p4"
 table ip_acl {
     reads {
 
@@ -4327,7 +3497,6 @@ table ip_acl {
     }
     size : 512;
 }
-# 486 "/home/jklee/workspace/l4l/submodules/switch/p4src/acl.p4"
 control process_ip_acl {
     if (((ingress_metadata.bypass_lookups & 0x0004) == 0)) {
         if (l3_metadata.lkp_ip_type == 1) {
@@ -4437,7 +3606,6 @@ control process_ipv4_racl {
     apply(ipv4_racl);
 
 }
-# 621 "/home/jklee/workspace/l4l/submodules/switch/p4src/acl.p4"
 control process_ipv6_racl {
 
 
@@ -4496,7 +3664,6 @@ counter drop_stats_2 {
     type : packets;
     instance_count : 1024;
 }
-# 703 "/home/jklee/workspace/l4l/submodules/switch/p4src/acl.p4"
 action redirect_to_cpu_with_reason(reason_code, qid, meter_id, icos) {
     copy_to_cpu_with_reason(reason_code, qid, meter_id, icos);
     drop();
@@ -4627,9 +3794,7 @@ control process_system_acl {
         }
     }
 }
-# 935 "/home/jklee/workspace/l4l/submodules/switch/p4src/acl.p4"
 control process_egress_acl {
-# 953 "/home/jklee/workspace/l4l/submodules/switch/p4src/acl.p4"
 }
 
 action egress_mirror(session_id) {
@@ -4709,9 +3874,6 @@ control process_egress_system_acl {
         apply(egress_system_acl);
     }
 }
-# 145 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/nat.p4" 1
-# 28 "/home/jklee/workspace/l4l/submodules/switch/p4src/nat.p4"
 header_type nat_metadata_t {
     fields {
         ingress_nat_mode : 2;
@@ -4730,7 +3892,6 @@ header_type nat_metadata_t {
 }
 
 metadata nat_metadata_t nat_metadata;
-# 55 "/home/jklee/workspace/l4l/submodules/switch/p4src/nat.p4"
 action set_src_nat_rewrite_index(nat_rewrite_index) {
     modify_field(nat_metadata.nat_rewrite_index, nat_rewrite_index);
 }
@@ -4982,16 +4143,12 @@ control process_l4_checksum {
     apply(update_l4_checksum);
 
 }
-# 146 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/l4l.p4" 1
-# 54 "/home/jklee/workspace/l4l/submodules/switch/p4src/l4l.p4"
 header_type l4l_metadata_t {
     fields {
         update_status : 2;
         cache_status : 1;
         pool_id : 8;
         old_id : 8;
-# 68 "/home/jklee/workspace/l4l/submodules/switch/p4src/l4l.p4"
     }
 }
 
@@ -5318,17 +4475,14 @@ blackbox stateful_alu l4l_filter_read_alu3{
 action read_l4l_filter1() {
 
     l4l_filter_read_alu1.execute_stateful_alu_from_hash(l4l_filter_hash1);
-# 402 "/home/jklee/workspace/l4l/submodules/switch/p4src/l4l.p4"
 }
 action read_l4l_filter2() {
 
     l4l_filter_read_alu2.execute_stateful_alu_from_hash(l4l_filter_hash2);
-# 414 "/home/jklee/workspace/l4l/submodules/switch/p4src/l4l.p4"
 }
 action read_l4l_filter3() {
 
     l4l_filter_read_alu3.execute_stateful_alu_from_hash(l4l_filter_hash3);
-# 426 "/home/jklee/workspace/l4l/submodules/switch/p4src/l4l.p4"
 }
 
 table l4l_read_bloom_filter1 {
@@ -5359,9 +4513,6 @@ control process_l4l_conn_cache {
         apply(l4l_read_bloom_filter3);
     }
 }
-# 147 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/multicast.p4" 1
-# 28 "/home/jklee/workspace/l4l/submodules/switch/p4src/multicast.p4"
 header_type multicast_metadata_t {
     fields {
         ipv4_mcast_key_type : 1;
@@ -5391,11 +4542,9 @@ header_type multicast_metadata_t {
 
     }
 }
-# 75 "/home/jklee/workspace/l4l/submodules/switch/p4src/multicast.p4"
 @pragma pa_container_size ingress ig_intr_md_for_tm.mcast_grp_a 16
 
 metadata multicast_metadata_t multicast_metadata;
-# 101 "/home/jklee/workspace/l4l/submodules/switch/p4src/multicast.p4"
 control process_outer_multicast_rpf {
 
 
@@ -5404,13 +4553,9 @@ control process_outer_multicast_rpf {
 
 
 }
-# 220 "/home/jklee/workspace/l4l/submodules/switch/p4src/multicast.p4"
 control process_outer_ipv4_multicast {
-# 236 "/home/jklee/workspace/l4l/submodules/switch/p4src/multicast.p4"
 }
-# 287 "/home/jklee/workspace/l4l/submodules/switch/p4src/multicast.p4"
 control process_outer_ipv6_multicast {
-# 302 "/home/jklee/workspace/l4l/submodules/switch/p4src/multicast.p4"
 }
 
 
@@ -5418,9 +4563,7 @@ control process_outer_ipv6_multicast {
 
 
 control process_outer_multicast {
-# 321 "/home/jklee/workspace/l4l/submodules/switch/p4src/multicast.p4"
 }
-# 353 "/home/jklee/workspace/l4l/submodules/switch/p4src/multicast.p4"
 control process_multicast_rpf {
 
 
@@ -5428,13 +4571,9 @@ control process_multicast_rpf {
 
 
 }
-# 478 "/home/jklee/workspace/l4l/submodules/switch/p4src/multicast.p4"
 control process_ipv4_multicast {
-# 500 "/home/jklee/workspace/l4l/submodules/switch/p4src/multicast.p4"
 }
-# 577 "/home/jklee/workspace/l4l/submodules/switch/p4src/multicast.p4"
 control process_ipv6_multicast {
-# 598 "/home/jklee/workspace/l4l/submodules/switch/p4src/multicast.p4"
 }
 
 
@@ -5442,7 +4581,6 @@ control process_ipv6_multicast {
 
 
 control process_multicast {
-# 615 "/home/jklee/workspace/l4l/submodules/switch/p4src/multicast.p4"
 }
 
 
@@ -5470,7 +4608,6 @@ control process_multicast_flooding {
 
 
 }
-# 735 "/home/jklee/workspace/l4l/submodules/switch/p4src/multicast.p4"
 control process_rid {
 
 
@@ -5489,9 +4626,6 @@ control process_replication {
 
 
 }
-# 148 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/nexthop.p4" 1
-# 31 "/home/jklee/workspace/l4l/submodules/switch/p4src/nexthop.p4"
 header_type nexthop_metadata_t {
     fields {
         nexthop_type : 1;
@@ -5646,7 +4780,6 @@ control process_fwd_results {
         apply(fwd_result);
     }
 }
-# 194 "/home/jklee/workspace/l4l/submodules/switch/p4src/nexthop.p4"
 action set_ecmp_nexthop_details_for_post_routed_flood(bd, uuc_mc_index,
                                                       nhop_index) {
     modify_field(ig_intr_md_for_tm.mcast_grp_b, uuc_mc_index);
@@ -5738,7 +4871,6 @@ table ecmp_group {
     action_profile: ecmp_action_profile;
     size : 1024;
 }
-# 321 "/home/jklee/workspace/l4l/submodules/switch/p4src/nexthop.p4"
 action set_nexthop_details_for_post_routed_flood(bd, uuc_mc_index) {
     modify_field(ig_intr_md_for_tm.mcast_grp_b, uuc_mc_index);
     modify_field(ingress_metadata.egress_ifindex, 0);
@@ -5785,7 +4917,6 @@ table nexthop {
 
 control process_nexthop {
     if (nexthop_metadata.nexthop_type == 1) {
-# 382 "/home/jklee/workspace/l4l/submodules/switch/p4src/nexthop.p4"
             apply(ecmp_group);
 
 
@@ -5798,9 +4929,6 @@ control process_nexthop {
         apply(nexthop);
     }
 }
-# 149 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/rewrite.p4" 1
-# 32 "/home/jklee/workspace/l4l/submodules/switch/p4src/rewrite.p4"
 action set_l2_rewrite_with_tunnel(tunnel_index, tunnel_type) {
     modify_field(egress_metadata.routed, 0);
     modify_field(egress_metadata.bd, ingress_metadata.bd);
@@ -5830,7 +4958,6 @@ action set_l3_rewrite(bd, dmac) {
     modify_field(egress_metadata.bd, bd);
     modify_field(egress_metadata.outer_bd, bd);
 }
-# 149 "/home/jklee/workspace/l4l/submodules/switch/p4src/rewrite.p4"
 table rewrite {
     reads {
         l3_metadata.nexthop_index : exact;
@@ -5845,7 +4972,6 @@ table rewrite {
         set_l3_rewrite;
 
         set_l3_rewrite_with_tunnel;
-# 178 "/home/jklee/workspace/l4l/submodules/switch/p4src/rewrite.p4"
     }
     size : 1024;
 }
@@ -5888,9 +5014,6 @@ control process_rewrite {
         apply(rewrite);
     }
 }
-# 150 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/security.p4" 1
-# 31 "/home/jklee/workspace/l4l/submodules/switch/p4src/security.p4"
 header_type security_metadata_t {
     fields {
         ipsg_enabled : 1;
@@ -5899,7 +5022,6 @@ header_type security_metadata_t {
 }
 
 metadata security_metadata_t security_metadata;
-# 92 "/home/jklee/workspace/l4l/submodules/switch/p4src/security.p4"
 control process_storm_control {
 
 
@@ -5915,13 +5037,8 @@ control process_storm_control_stats {
 
 
 }
-# 143 "/home/jklee/workspace/l4l/submodules/switch/p4src/security.p4"
 control process_ip_sourceguard {
-# 155 "/home/jklee/workspace/l4l/submodules/switch/p4src/security.p4"
 }
-# 151 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/fabric.p4" 1
-# 29 "/home/jklee/workspace/l4l/submodules/switch/p4src/fabric.p4"
 header_type fabric_metadata_t {
     fields {
         packetType : 3;
@@ -5934,7 +5051,6 @@ header_type fabric_metadata_t {
 
     }
 }
-# 50 "/home/jklee/workspace/l4l/submodules/switch/p4src/fabric.p4"
 @pragma pa_solitary ingress fabric_metadata.reason_code
 metadata fabric_metadata_t fabric_metadata;
 
@@ -5951,7 +5067,6 @@ action terminate_cpu_packet() {
     remove_header(fabric_header_cpu);
     remove_header(fabric_payload_header);
 }
-# 128 "/home/jklee/workspace/l4l/submodules/switch/p4src/fabric.p4"
 @pragma ternary 1
 table fabric_ingress_dst_lkp {
     reads {
@@ -5960,10 +5075,8 @@ table fabric_ingress_dst_lkp {
     actions {
         nop;
         terminate_cpu_packet;
-# 144 "/home/jklee/workspace/l4l/submodules/switch/p4src/fabric.p4"
     }
 }
-# 167 "/home/jklee/workspace/l4l/submodules/switch/p4src/fabric.p4"
 action non_ip_over_fabric() {
     modify_field(l2_metadata.lkp_mac_sa, ethernet.srcAddr);
     modify_field(l2_metadata.lkp_mac_da, ethernet.dstAddr);
@@ -6011,10 +5124,8 @@ table native_packet_over_fabric {
 control process_ingress_fabric {
     if (ingress_metadata.port_type != 0) {
         apply(fabric_ingress_dst_lkp);
-# 224 "/home/jklee/workspace/l4l/submodules/switch/p4src/fabric.p4"
     }
 }
-# 291 "/home/jklee/workspace/l4l/submodules/switch/p4src/fabric.p4"
 control process_fabric_lag {
 
 
@@ -6044,15 +5155,8 @@ action cpu_rx_rewrite() {
 action fabric_rewrite(tunnel_index) {
     modify_field(tunnel_metadata.tunnel_index, tunnel_index);
 }
-# 152 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/egress_filter.p4" 1
-# 66 "/home/jklee/workspace/l4l/submodules/switch/p4src/egress_filter.p4"
 control process_egress_filter {
-# 81 "/home/jklee/workspace/l4l/submodules/switch/p4src/egress_filter.p4"
 }
-# 153 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/mirror.p4" 1
-# 28 "/home/jklee/workspace/l4l/submodules/switch/p4src/mirror.p4"
 action set_mirror_nhop(nhop_idx, session_id) {
     modify_field(l3_metadata.nexthop_index, nhop_idx);
     modify_field(i2e_metadata.mirror_session_id, session_id);
@@ -6085,9 +5189,6 @@ control process_mirroring {
     apply(mirror);
 
 }
-# 154 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/hashes.p4" 1
-# 27 "/home/jklee/workspace/l4l/submodules/switch/p4src/hashes.p4"
 header_type hash_metadata_t {
     fields {
         hash1 : 16;
@@ -6292,9 +5393,6 @@ control process_hashes {
 
     apply(compute_other_hashes);
 }
-# 155 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/meter.p4" 1
-# 31 "/home/jklee/workspace/l4l/submodules/switch/p4src/meter.p4"
  header_type meter_metadata_t {
      fields {
          packet_color : 2;
@@ -6376,17 +5474,11 @@ control process_meter_action {
     }
 
 }
-# 156 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/sflow.p4" 1
-# 88 "/home/jklee/workspace/l4l/submodules/switch/p4src/sflow.p4"
 control process_ingress_sflow {
 
 
 
 }
-# 157 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/bfd.p4" 1
-# 485 "/home/jklee/workspace/l4l/submodules/switch/p4src/bfd.p4"
 control process_bfd_mirror_to_cpu {
 }
 control process_egress_bfd_packet {
@@ -6401,8 +5493,6 @@ control process_bfd_tx_packet {
 }
 control process_bfd_recirc {
 }
-# 158 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/qos.p4" 1
 
 
 
@@ -6420,17 +5510,13 @@ header_type qos_metadata_t {
 }
 
 metadata qos_metadata_t qos_metadata;
-# 126 "/home/jklee/workspace/l4l/submodules/switch/p4src/qos.p4"
 control process_ingress_qos_map {
-# 142 "/home/jklee/workspace/l4l/submodules/switch/p4src/qos.p4"
 }
-# 179 "/home/jklee/workspace/l4l/submodules/switch/p4src/qos.p4"
 control process_traffic_class{
 
 
 
 }
-# 217 "/home/jklee/workspace/l4l/submodules/switch/p4src/qos.p4"
 control process_egress_qos_map {
 
 
@@ -6438,9 +5524,6 @@ control process_egress_qos_map {
 
 
 }
-# 159 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/sr.p4" 1
-# 216 "/home/jklee/workspace/l4l/submodules/switch/p4src/sr.p4"
 control process_srv6_rewrite {
 
 
@@ -6455,12 +5538,6 @@ control process_srv6 {
 
 
 }
-# 160 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/flowlet.p4" 1
-# 28 "/home/jklee/workspace/l4l/submodules/switch/p4src/flowlet.p4"
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/flowlet_bmv2.p4" 1
-# 29 "/home/jklee/workspace/l4l/submodules/switch/p4src/flowlet.p4" 2
-# 41 "/home/jklee/workspace/l4l/submodules/switch/p4src/flowlet.p4"
 header_type flowlet_metadata_t {
     fields {
         id : 16;
@@ -6516,17 +5593,9 @@ table flowlet {
 }
 
 control process_flowlet {
-# 107 "/home/jklee/workspace/l4l/submodules/switch/p4src/flowlet.p4"
 }
-# 161 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/pktgen.p4" 1
-# 29 "/home/jklee/workspace/l4l/submodules/switch/p4src/pktgen.p4"
 control process_pktgen {
-# 46 "/home/jklee/workspace/l4l/submodules/switch/p4src/pktgen.p4"
 }
-# 162 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/failover.p4" 1
-# 182 "/home/jklee/workspace/l4l/submodules/switch/p4src/failover.p4"
 control process_pktgen_port_down {
 
 
@@ -6546,20 +5615,12 @@ control process_lag_fallback {
 
 
 }
-# 163 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/ila.p4" 1
-# 164 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/wred.p4" 1
-# 107 "/home/jklee/workspace/l4l/submodules/switch/p4src/wred.p4"
 control process_wred {
 
 
 
 
 }
-# 165 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/telemetry.p4" 1
-# 34 "/home/jklee/workspace/l4l/submodules/switch/p4src/telemetry.p4"
 header_type telemetry_metadata_t {
     fields {
 
@@ -6606,11 +5667,9 @@ metadata telemetry_metadata_t telemetry_md;
 
 
 control process_telemetry_ingress_prepare {
-# 90 "/home/jklee/workspace/l4l/submodules/switch/p4src/telemetry.p4"
 }
 
 control process_telemetry_watchlist {
-# 102 "/home/jklee/workspace/l4l/submodules/switch/p4src/telemetry.p4"
 }
 
 control process_telemetry_queue_alert {
@@ -6637,7 +5696,6 @@ control process_telemetry_insert {
 }
 
 control process_telemetry_report_encap {
-# 144 "/home/jklee/workspace/l4l/submodules/switch/p4src/telemetry.p4"
 }
 
 control process_telemetry_outer_encap {
@@ -6647,7 +5705,6 @@ control process_telemetry_outer_encap {
 
 
 }
-# 231 "/home/jklee/workspace/l4l/submodules/switch/p4src/telemetry.p4"
 field_list telemetry_flow_hash_fields_outer {
     ipv4.srcAddr;
     ipv4.dstAddr;
@@ -6750,19 +5807,10 @@ table telemetry_mirror_session {
 
     size: 2;
 }
-# 166 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/telemetry_int.p4" 1
-# 78 "/home/jklee/workspace/l4l/submodules/switch/p4src/telemetry_int.p4"
 control process_telemetry_int_sink{
-# 102 "/home/jklee/workspace/l4l/submodules/switch/p4src/telemetry_int.p4"
 }
-# 219 "/home/jklee/workspace/l4l/submodules/switch/p4src/telemetry_int.p4"
 control process_telemetry_int_upstream_report {
-# 229 "/home/jklee/workspace/l4l/submodules/switch/p4src/telemetry_int.p4"
 }
-# 167 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/jklee/workspace/l4l/submodules/switch/p4src/telemetry_postcard.p4" 1
-# 28 "/home/jklee/workspace/l4l/submodules/switch/p4src/telemetry_postcard.p4"
 header_type postcard_metadata_t {
     fields {
         report : 1;
@@ -6772,7 +5820,6 @@ header_type postcard_metadata_t {
     }
 }
 metadata postcard_metadata_t postcard_md;
-# 168 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4" 2
 
 action nop() {
 }
@@ -6800,7 +5847,6 @@ control ingress {
 
 
         process_bfd_rx_packet();
-# 203 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4"
         process_port_vlan_mapping();
 
 
@@ -6924,7 +5970,6 @@ control ingress {
 
 
  process_ingress_qos_map();
-# 335 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4"
         process_flowlet();
 
 
@@ -6967,7 +6012,6 @@ control ingress {
 }
 
 control egress {
-# 387 "/home/jklee/workspace/l4l/submodules/switch/p4src/switch.p4"
         process_bfd_recirc();
 
 

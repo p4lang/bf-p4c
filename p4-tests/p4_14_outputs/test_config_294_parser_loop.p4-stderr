@@ -1,22 +1,22 @@
-/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../../programs/srv6/rewrite.p4(39): warning: -1: negative value with unsigned type
+test_config_294_parser_loop.p4(1193): warning: -1: negative value with unsigned type
   add_to_field(ipv4.ttl, -1);
                           ^
-/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../../programs/srv6/rewrite.p4(43): warning: -1: negative value with unsigned type
+test_config_294_parser_loop.p4(1197): warning: -1: negative value with unsigned type
   add_to_field(ipv6.hopLimit, -1);
                                ^
-/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../../programs/srv6/sr.p4(304): warning: -14: negative value with unsigned type
+test_config_294_parser_loop.p4(1084): warning: -14: negative value with unsigned type
   add(egress_metadata.payload_length, eg_intr_md.pkt_length, -14);
                                                               ^^
-/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../../programs/srv6/sr.p4(111): warning: -1: negative value with unsigned type
+test_config_294_parser_loop.p4(891): warning: -1: negative value with unsigned type
   add_to_field(ipv6_srh.segLeft, -1);
                                   ^
-/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../../programs/srv6/sr.p4(119): warning: -1: negative value with unsigned type
+test_config_294_parser_loop.p4(899): warning: -1: negative value with unsigned type
   add_to_field(ipv6_srh.segLeft, -1);
                                   ^
-/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../../programs/srv6/sr.p4(184): warning: -1: negative value with unsigned type
+test_config_294_parser_loop.p4(964): warning: -1: negative value with unsigned type
   add_to_field(ipv6_srh.segLeft, -1);
                                   ^
-/vagrant/p4factory/submodules/p4c-tofino/p4c_tofino/../../../programs/srv6/forwarding.p4(114): warning: Could not infer type for index, using bit<8>
+test_config_294_parser_loop.p4(413): warning: Could not infer type for index, using bit<8>
 action dmac_redirect(index) {
                      ^^^^^
 warning: The order of headers in deparser is not uniquely determined by parser!

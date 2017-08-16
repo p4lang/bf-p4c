@@ -1,0 +1,208 @@
+switch_bug.p4(2334): warning: -1: negative value with unsigned type
+    add_to_field(ipv4.ttl, -1);
+                            ^
+switch_bug.p4(2342): warning: -1: negative value with unsigned type
+    add_to_field(ipv4.ttl, -1);
+                            ^
+switch_bug.p4(2350): warning: -1: negative value with unsigned type
+    add_to_field(ipv6.hopLimit, -1);
+                                 ^
+switch_bug.p4(2358): warning: -1: negative value with unsigned type
+    add_to_field(ipv6.hopLimit, -1);
+                                 ^
+switch_bug.p4(2366): warning: -1: negative value with unsigned type
+    add_to_field(mpls[0].ttl, -1);
+                               ^
+switch_bug.p4(3754): warning: -14: negative value with unsigned type
+    add(egress_metadata.payload_length, eg_intr_md.pkt_length, -14);
+                                                                ^^
+switch_bug.p4(5098): warning: Could not infer type for session_id, using bit<8>
+action egress_mirror_coal_hdr(session_id, id) {
+                              ^^^^^^^^^^
+switch_bug.p4(5098): warning: Could not infer type for id, using bit<8>
+action egress_mirror_coal_hdr(session_id, id) {
+                                          ^^
+switch_bug.p4(5066): warning: Could not infer type for reason_code, using bit<8>
+action egress_mirror_drop(reason_code, platform_id) {
+                          ^^^^^^^^^^^
+switch_bug.p4(5066): warning: Could not infer type for platform_id, using bit<8>
+action egress_mirror_drop(reason_code, platform_id) {
+                                       ^^^^^^^^^^^
+switch_bug.p4(1393): warning: Could not infer type for enable_flowlet, using bit<8>
+action set_config_parameters(enable_dod, enable_flowlet, switch_id) {
+                                         ^^^^^^^^^^^^^^
+switch_bug.p4(4545): warning: Could not infer type for ingress_cos, using bit<8>
+                nat_mode, ingress_cos, tc, color) {
+                          ^^^^^^^^^^^
+switch_bug.p4(4545): warning: Could not infer type for tc, using bit<8>
+                nat_mode, ingress_cos, tc, color) {
+                                       ^^
+switch_bug.p4(4545): warning: Could not infer type for color, using bit<8>
+                nat_mode, ingress_cos, tc, color) {
+                                           ^^^^^
+switch_bug.p4(4560): warning: Could not infer type for ingress_cos, using bit<8>
+                  nat_mode, ingress_cos, tc, color) {
+                            ^^^^^^^^^^^
+switch_bug.p4(4560): warning: Could not infer type for tc, using bit<8>
+                  nat_mode, ingress_cos, tc, color) {
+                                         ^^
+switch_bug.p4(4560): warning: Could not infer type for color, using bit<8>
+                  nat_mode, ingress_cos, tc, color) {
+                                             ^^^^^
+switch_bug.p4(4605): warning: Could not infer type for ingress_cos, using bit<8>
+                            ingress_cos, tc, color) {
+                            ^^^^^^^^^^^
+switch_bug.p4(4605): warning: Could not infer type for tc, using bit<8>
+                            ingress_cos, tc, color) {
+                                         ^^
+switch_bug.p4(4605): warning: Could not infer type for color, using bit<8>
+                            ingress_cos, tc, color) {
+                                             ^^^^^
+switch_bug.p4(4622): warning: Could not infer type for ingress_cos, using bit<8>
+                         ingress_cos, tc, color) {
+                         ^^^^^^^^^^^
+switch_bug.p4(4622): warning: Could not infer type for tc, using bit<8>
+                         ingress_cos, tc, color) {
+                                      ^^
+switch_bug.p4(4622): warning: Could not infer type for color, using bit<8>
+                         ingress_cos, tc, color) {
+                                          ^^^^^
+switch_bug.p4(4590): warning: Could not infer type for ingress_cos, using bit<8>
+                  ingress_cos, tc, color) {
+                  ^^^^^^^^^^^
+switch_bug.p4(4590): warning: Could not infer type for tc, using bit<8>
+                  ingress_cos, tc, color) {
+                               ^^
+switch_bug.p4(4590): warning: Could not infer type for color, using bit<8>
+                  ingress_cos, tc, color) {
+                                   ^^^^^
+switch_bug.p4(4545): warning: Could not infer type for ingress_cos, using bit<8>
+                nat_mode, ingress_cos, tc, color) {
+                          ^^^^^^^^^^^
+switch_bug.p4(4545): warning: Could not infer type for tc, using bit<8>
+                nat_mode, ingress_cos, tc, color) {
+                                       ^^
+switch_bug.p4(4545): warning: Could not infer type for color, using bit<8>
+                nat_mode, ingress_cos, tc, color) {
+                                           ^^^^^
+switch_bug.p4(4560): warning: Could not infer type for ingress_cos, using bit<8>
+                  nat_mode, ingress_cos, tc, color) {
+                            ^^^^^^^^^^^
+switch_bug.p4(4560): warning: Could not infer type for tc, using bit<8>
+                  nat_mode, ingress_cos, tc, color) {
+                                         ^^
+switch_bug.p4(4560): warning: Could not infer type for color, using bit<8>
+                  nat_mode, ingress_cos, tc, color) {
+                                             ^^^^^
+switch_bug.p4(4605): warning: Could not infer type for ingress_cos, using bit<8>
+                            ingress_cos, tc, color) {
+                            ^^^^^^^^^^^
+switch_bug.p4(4605): warning: Could not infer type for tc, using bit<8>
+                            ingress_cos, tc, color) {
+                                         ^^
+switch_bug.p4(4605): warning: Could not infer type for color, using bit<8>
+                            ingress_cos, tc, color) {
+                                             ^^^^^
+switch_bug.p4(4622): warning: Could not infer type for ingress_cos, using bit<8>
+                         ingress_cos, tc, color) {
+                         ^^^^^^^^^^^
+switch_bug.p4(4622): warning: Could not infer type for tc, using bit<8>
+                         ingress_cos, tc, color) {
+                                      ^^
+switch_bug.p4(4622): warning: Could not infer type for color, using bit<8>
+                         ingress_cos, tc, color) {
+                                          ^^^^^
+switch_bug.p4(4590): warning: Could not infer type for ingress_cos, using bit<8>
+                  ingress_cos, tc, color) {
+                  ^^^^^^^^^^^
+switch_bug.p4(4590): warning: Could not infer type for tc, using bit<8>
+                  ingress_cos, tc, color) {
+                               ^^
+switch_bug.p4(4590): warning: Could not infer type for color, using bit<8>
+                  ingress_cos, tc, color) {
+                                   ^^^^^
+switch_bug.p4(4765): warning: Could not infer type for ingress_cos, using bit<8>
+                 ingress_cos, tc, color) {
+                 ^^^^^^^^^^^
+switch_bug.p4(4765): warning: Could not infer type for tc, using bit<8>
+                 ingress_cos, tc, color) {
+                              ^^
+switch_bug.p4(4765): warning: Could not infer type for color, using bit<8>
+                 ingress_cos, tc, color) {
+                                  ^^^^^
+switch_bug.p4(4777): warning: Could not infer type for ingress_cos, using bit<8>
+                   ingress_cos, tc, color) {
+                   ^^^^^^^^^^^
+switch_bug.p4(4777): warning: Could not infer type for tc, using bit<8>
+                   ingress_cos, tc, color) {
+                                ^^
+switch_bug.p4(4777): warning: Could not infer type for color, using bit<8>
+                   ingress_cos, tc, color) {
+                                    ^^^^^
+switch_bug.p4(4789): warning: Could not infer type for ingress_cos, using bit<8>
+                             ingress_cos, tc, color) {
+                             ^^^^^^^^^^^
+switch_bug.p4(4789): warning: Could not infer type for tc, using bit<8>
+                             ingress_cos, tc, color) {
+                                          ^^
+switch_bug.p4(4789): warning: Could not infer type for color, using bit<8>
+                             ingress_cos, tc, color) {
+                                              ^^^^^
+switch_bug.p4(4804): warning: Could not infer type for ingress_cos, using bit<8>
+                          ingress_cos, tc, color) {
+                          ^^^^^^^^^^^
+switch_bug.p4(4804): warning: Could not infer type for tc, using bit<8>
+                          ingress_cos, tc, color) {
+                                       ^^
+switch_bug.p4(4804): warning: Could not infer type for color, using bit<8>
+                          ingress_cos, tc, color) {
+                                           ^^^^^
+switch_bug.p4(4765): warning: Could not infer type for ingress_cos, using bit<8>
+                 ingress_cos, tc, color) {
+                 ^^^^^^^^^^^
+switch_bug.p4(4765): warning: Could not infer type for tc, using bit<8>
+                 ingress_cos, tc, color) {
+                              ^^
+switch_bug.p4(4765): warning: Could not infer type for color, using bit<8>
+                 ingress_cos, tc, color) {
+                                  ^^^^^
+switch_bug.p4(4777): warning: Could not infer type for ingress_cos, using bit<8>
+                   ingress_cos, tc, color) {
+                   ^^^^^^^^^^^
+switch_bug.p4(4777): warning: Could not infer type for tc, using bit<8>
+                   ingress_cos, tc, color) {
+                                ^^
+switch_bug.p4(4777): warning: Could not infer type for color, using bit<8>
+                   ingress_cos, tc, color) {
+                                    ^^^^^
+switch_bug.p4(4789): warning: Could not infer type for ingress_cos, using bit<8>
+                             ingress_cos, tc, color) {
+                             ^^^^^^^^^^^
+switch_bug.p4(4789): warning: Could not infer type for tc, using bit<8>
+                             ingress_cos, tc, color) {
+                                          ^^
+switch_bug.p4(4789): warning: Could not infer type for color, using bit<8>
+                             ingress_cos, tc, color) {
+                                              ^^^^^
+switch_bug.p4(4804): warning: Could not infer type for ingress_cos, using bit<8>
+                          ingress_cos, tc, color) {
+                          ^^^^^^^^^^^
+switch_bug.p4(4804): warning: Could not infer type for tc, using bit<8>
+                          ingress_cos, tc, color) {
+                                       ^^
+switch_bug.p4(4804): warning: Could not infer type for color, using bit<8>
+                          ingress_cos, tc, color) {
+                                           ^^^^^
+switch_bug.p4(4955): warning: Could not infer type for meter_id, using bit<8>
+action copy_to_cpu(qid, meter_id, icos) {
+                        ^^^^^^^^
+switch_bug.p4(4940): warning: Could not infer type for meter_id, using bit<8>
+action redirect_to_cpu(qid, meter_id, icos) {
+                            ^^^^^^^^
+switch_bug.p4(4968): warning: Could not infer type for meter_id, using bit<8>
+action copy_to_cpu_with_reason(reason_code, qid, meter_id, icos) {
+                                                 ^^^^^^^^
+switch_bug.p4(4932): warning: Could not infer type for meter_id, using bit<8>
+action redirect_to_cpu_with_reason(reason_code, qid, meter_id, icos) {
+                                                     ^^^^^^^^
+warning: The order of headers in deparser is not uniquely determined by parser!

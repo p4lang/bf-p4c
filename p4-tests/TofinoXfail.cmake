@@ -180,6 +180,16 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_295_polynomial_hash.p4
   extensions/p4_tests/p4_14/test_config_308_hash_96b.p4
   extensions/p4_tests/p4_14/test_config_311_hash_adb.p4
+  #extensions/p4_tests/p4_14/c2/COMPILER-408/case2364.p4
+  #extensions/p4_tests/p4_14/c2/COMPILER-443/case2514.p4
+  #extensions/p4_tests/p4_14/c2/COMPILER-466/case2563_with_nop.p4
+  #extensions/p4_tests/p4_14/c2/COMPILER-466/case2563_without_nop.p4
+  #extensions/p4_tests/p4_14/c2/COMPILER-475/case2600.p4
+  #extensions/p4_tests/p4_14/c2/COMPILER-510/case2682.p4
+  #extensions/p4_tests/p4_14/c2/COMPILER-514/balancer_one.p4
+  #extensions/p4_tests/p4_14/c2/COMPILER-533/case2736.p4
+  #extensions/p4_tests/p4_14/c2/COMPILER-537/case2834.p4
+  #extensions/p4_tests/p4_14/c2/COMPILER-502/case2675.p4
   )
 
 # BRIG-102
@@ -261,6 +271,11 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_160_stateful_single_bit_mode.p4
   )
 
+p4c_add_xfail_reason("tofino"
+  "Unrecognized AttribLocal combined_predicate"
+  #extensions/p4_tests/p4_14/c1/COMPILER-355/netchain_two.p4
+  )
+
 # conflict between blackbox meter and builtin meter
 p4c_add_xfail_reason("tofino"
   "P4_14 extern type not fully supported"
@@ -268,35 +283,16 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_201_meter_constant_index.p4
   )
 
-# # COMPILER-329
-# p4c_add_xfail_reason("tofino"
-#   "error: : Width cannot be negative or zero"
-#   extensions/p4_tests/p4_14/c1/COMPILER-347/switch_bug.p4
-#   extensions/p4_tests/p4_14/c1/COMPILER-352/netchain_one.p4
-#   extensions/p4_tests/p4_14/c1/COMPILER-355/netchain_two.p4
-#   extensions/p4_tests/p4_14/c1/COMPILER-385/case2247.p4
-#   extensions/p4_tests/p4_14/c2/COMPILER-392/case2266.p4
-#   extensions/p4_tests/p4_14/c2/COMPILER-400/case2314.p4
-#   extensions/p4_tests/p4_14/c2/COMPILER-401/case2308_bugged.p4
-#   extensions/p4_tests/p4_14/c2/COMPILER-408/case2364.p4
-#   extensions/p4_tests/p4_14/c2/COMPILER-420/case2433.p4
-#   extensions/p4_tests/p4_14/c2/COMPILER-421/case2434.p4
-#   extensions/p4_tests/p4_14/c2/COMPILER-426/case2475.p4
-#   extensions/p4_tests/p4_14/c2/COMPILER-443/case2514.p4
-#   extensions/p4_tests/p4_14/c2/COMPILER-466/case2563_with_nop.p4
-#   extensions/p4_tests/p4_14/c2/COMPILER-466/case2563_without_nop.p4
-#   extensions/p4_tests/p4_14/c2/COMPILER-475/case2600.p4
-#   extensions/p4_tests/p4_14/c2/COMPILER-502/case2675.p4
-#   extensions/p4_tests/p4_14/c2/COMPILER-510/case2682.p4
-#   extensions/p4_tests/p4_14/c2/COMPILER-514/balancer_one.p4
-#   extensions/p4_tests/p4_14/c2/COMPILER-533/case2736.p4
-#   extensions/p4_tests/p4_14/c2/COMPILER-537/case2834.p4
-#   extensions/p4_tests/p4_14/c2/COMPILER-599/case3230.p4
-#   extensions/p4_tests/p4_14/c3/COMPILER-393/case2277.p4
-#   extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case1.p4
-#   extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case2.p4
-#   extensions/p4_tests/p4_14/c5/COMPILER-594/comp594.p4
-#   )
+p4c_add_xfail_reason("tofino"
+  "" # TIMEOUT -- appears to hang in parser unrolling.
+  # FIXME -- how to have an expected timeout?
+  #extensions/p4_tests/p4_14/c1/COMPILER-385/case2247.p4
+  #extensions/p4_tests/p4_14/c2/COMPILER-392/case2266.p4
+  #extensions/p4_tests/p4_14/c2/COMPILER-420/case2433.p4
+  #extensions/p4_tests/p4_14/c2/COMPILER-421/case2434.p4
+  #extensions/p4_tests/p4_14/c2/COMPILER-426/case2475.p4
+  #extensions/p4_tests/p4_14/c2/COMPILER-599/case3230.p4
+  )
 
 # COMPILER-540
 p4c_add_xfail_reason("tofino"
@@ -509,6 +505,11 @@ p4c_add_xfail_reason("tofino"
 # due to action analysis working correctly
   extensions/p4_tests/p4_14/action_conflict_1.p4
   extensions/p4_tests/p4_14/action_conflict_2.p4
+  #extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case1.p4
+  #extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case2.p4
+  #extensions/p4_tests/p4_14/c5/COMPILER-594/comp594.p4
+  #extensions/p4_tests/p4_14/c3/COMPILER-393/case2277.p4
+  #extensions/p4_tests/p4_14/c1/COMPILER-347/switch_bug.p4
   )
 
 # We can't (without some complex acrobatics) support conditional computed
@@ -574,6 +575,10 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "expected packet on port .* not seen"
   testdata/p4_16_samples/issue774-4-bmv2.p4
+)
+p4c_add_xfail_reason("tofino"
+  " Encountered invalid code in computed checksum control"
+  #extensions/p4_tests/p4_14/switch_l2_profile.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1054,4 +1059,14 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Extracted range .* with size .* doesn't match destination container .* with size"
   switch_l2
+  )
+
+p4c_add_xfail_reason("tofino"
+  "error: Can't find .* on the input xbar"
+  #extensions/p4_tests/p4_14/c1/COMPILER-352/netchain_one.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Trying to accumulate too many fields in CCGF"
+  #extensions/p4_tests/p4_14/c2/COMPILER-401/case2308_bugged.p4
   )

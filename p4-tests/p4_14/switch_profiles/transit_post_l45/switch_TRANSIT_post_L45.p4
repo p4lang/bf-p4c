@@ -1,714 +1,15 @@
 /*
 gcc -E -x c -w -I/home/yiorgos/p4factory/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib -D__TARGET_TOFINO__ -DINT_TRANSIT_PLT_WITH_MCAST_PROFILE -DTUNNEL_DISABLE -DTUNNEL_OVER_IPV6_DISABLE -I/usr/local/lib/python2.7/dist-packages/p4_hlir-0.9.60-py2.7.egg/p4_hlir/p4_lib /home/yiorgos/p4factory/submodules/switch/p4src/switch.p4
 */
-# 1 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4"
-# 1 "<built-in>"
-# 1 "<command-line>"
-# 1 "/usr/include/stdc-predef.h" 1 3 4
-# 1 "<command-line>" 2
-# 1 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4"
-# 29 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4"
-# 1 "/home/yiorgos/p4factory/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/constants.p4" 1
-# 30 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/yiorgos/p4factory/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/intrinsic_metadata.p4" 1
-# 10 "/home/yiorgos/p4factory/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/intrinsic_metadata.p4"
-header_type ingress_parser_control_signals {
-    fields {
-        priority : 3;
-        _pad1 : 5;
-        parser_counter : 8;
-    }
-}
+#include "tofino/constants.p4"
+#include "tofino/intrinsic_metadata.p4"
+#include "tofino/primitives.p4"
+#include "tofino/pktgen_headers.p4"
+#include "tofino/stateful_alu_blackbox.p4"
 
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-@pragma pa_intrinsic_header ingress ig_prsr_ctrl
-header ingress_parser_control_signals ig_prsr_ctrl;
 
 
 
-header_type ingress_intrinsic_metadata_t {
-    fields {
-
-        resubmit_flag : 1;
-
-
-        _pad1 : 1;
-
-        _pad2 : 2;
-
-        _pad3 : 3;
-
-        ingress_port : 9;
-
-
-        ingress_mac_tstamp : 48;
-
-    }
-}
-
-@pragma dont_trim
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-@pragma pa_intrinsic_header ingress ig_intr_md
-@pragma pa_mandatory_intrinsic_field ingress ig_intr_md.ingress_port
-header ingress_intrinsic_metadata_t ig_intr_md;
-
-
-
-header_type generator_metadata_t {
-    fields {
-
-        app_id : 16;
-
-        batch_id: 16;
-
-        instance_id: 16;
-    }
-}
-
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-header generator_metadata_t ig_pg_md;
-
-
-
-header_type ingress_intrinsic_metadata_from_parser_aux_t {
-    fields {
-        ingress_global_tstamp : 48;
-
-
-        ingress_global_ver : 32;
-
-
-        ingress_parser_err : 16;
-
-    }
-}
-
-@pragma pa_fragment ingress ig_intr_md_from_parser_aux.ingress_parser_err
-@pragma pa_atomic ingress ig_intr_md_from_parser_aux.ingress_parser_err
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-@pragma pa_intrinsic_header ingress ig_intr_md_from_parser_aux
-header ingress_intrinsic_metadata_from_parser_aux_t ig_intr_md_from_parser_aux;
-
-
-
-header_type ingress_intrinsic_metadata_for_tm_t {
-    fields {
-
-
-
-
-        _pad1 : 7;
-        ucast_egress_port : 9;
-
-
-
-
-        drop_ctl : 3;
-
-
-
-
-        bypass_egress : 1;
-
-        deflect_on_drop : 1;
-
-
-
-        ingress_cos : 3;
-
-
-
-
-
-        qid : 5;
-
-        icos_for_copy_to_cpu : 3;
-
-
-
-
-
-        _pad2: 3;
-
-        copy_to_cpu : 1;
-
-        packet_color : 2;
-
-
-
-        disable_ucast_cutthru : 1;
-
-        enable_mcast_cutthru : 1;
-
-
-
-
-        mcast_grp_a : 16;
-
-
-
-
-
-        mcast_grp_b : 16;
-
-
-
-
-        _pad3 : 3;
-        level1_mcast_hash : 13;
-
-
-
-
-
-
-
-        _pad4 : 3;
-        level2_mcast_hash : 13;
-
-
-
-
-
-
-
-        level1_exclusion_id : 16;
-
-
-
-
-
-        _pad5 : 7;
-        level2_exclusion_id : 9;
-
-
-
-
-
-        rid : 16;
-
-
-
-    }
-}
-
-@pragma pa_atomic ingress ig_intr_md_for_tm.ucast_egress_port
-
-@pragma pa_fragment ingress ig_intr_md_for_tm.drop_ctl
-@pragma pa_fragment ingress ig_intr_md_for_tm.qid
-@pragma pa_fragment ingress ig_intr_md_for_tm._pad2
-
-@pragma pa_atomic ingress ig_intr_md_for_tm.mcast_grp_a
-@pragma pa_fragment ingress ig_intr_md_for_tm.mcast_grp_a
-@pragma pa_mandatory_intrinsic_field ingress ig_intr_md_for_tm.mcast_grp_a
-
-@pragma pa_atomic ingress ig_intr_md_for_tm.mcast_grp_b
-@pragma pa_fragment ingress ig_intr_md_for_tm.mcast_grp_b
-@pragma pa_mandatory_intrinsic_field ingress ig_intr_md_for_tm.mcast_grp_b
-
-@pragma pa_atomic ingress ig_intr_md_for_tm.level1_mcast_hash
-@pragma pa_fragment ingress ig_intr_md_for_tm._pad3
-
-@pragma pa_atomic ingress ig_intr_md_for_tm.level2_mcast_hash
-@pragma pa_fragment ingress ig_intr_md_for_tm._pad4
-
-@pragma pa_atomic ingress ig_intr_md_for_tm.level1_exclusion_id
-@pragma pa_fragment ingress ig_intr_md_for_tm.level1_exclusion_id
-
-@pragma pa_atomic ingress ig_intr_md_for_tm.level2_exclusion_id
-@pragma pa_fragment ingress ig_intr_md_for_tm._pad5
-
-@pragma pa_atomic ingress ig_intr_md_for_tm.rid
-@pragma pa_fragment ingress ig_intr_md_for_tm.rid
-
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-@pragma pa_intrinsic_header ingress ig_intr_md_for_tm
-@pragma dont_trim
-@pragma pa_mandatory_intrinsic_field ingress ig_intr_md_for_tm.drop_ctl
-header ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm;
-
-
-header_type ingress_intrinsic_metadata_for_mirror_buffer_t {
-    fields {
-        _pad1 : 6;
-        ingress_mirror_id : 10;
-
-
-    }
-}
-
-@pragma dont_trim
-@pragma pa_intrinsic_header ingress ig_intr_md_for_mb
-@pragma pa_atomic ingress ig_intr_md_for_mb.ingress_mirror_id
-@pragma pa_mandatory_intrinsic_field ingress ig_intr_md_for_mb.ingress_mirror_id
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-header ingress_intrinsic_metadata_for_mirror_buffer_t ig_intr_md_for_mb;
-
-
-header_type egress_intrinsic_metadata_t {
-    fields {
-
-        _pad0 : 7;
-        egress_port : 9;
-
-
-        _pad1: 5;
-        enq_qdepth : 19;
-
-
-        _pad2: 6;
-        enq_congest_stat : 2;
-
-
-        enq_tstamp : 32;
-
-
-        _pad3: 5;
-        deq_qdepth : 19;
-
-
-        _pad4: 6;
-        deq_congest_stat : 2;
-
-
-        app_pool_congest_stat : 8;
-
-
-
-        deq_timedelta : 32;
-
-
-        egress_rid : 16;
-
-
-        _pad5: 7;
-        egress_rid_first : 1;
-
-
-        _pad6: 3;
-        egress_qid : 5;
-
-
-        _pad7: 5;
-        egress_cos : 3;
-
-
-        _pad8: 7;
-        deflection_flag : 1;
-
-
-        pkt_length : 16;
-    }
-}
-
-@pragma dont_trim
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-@pragma pa_intrinsic_header egress eg_intr_md
-
-@pragma pa_atomic egress eg_intr_md.egress_port
-@pragma pa_fragment egress eg_intr_md._pad1
-@pragma pa_fragment egress eg_intr_md._pad7
-@pragma pa_fragment egress eg_intr_md._pad8
-@pragma pa_mandatory_intrinsic_field egress eg_intr_md.egress_port
-@pragma pa_mandatory_intrinsic_field egress eg_intr_md.egress_cos
-
-header egress_intrinsic_metadata_t eg_intr_md;
-
-
-header_type egress_intrinsic_metadata_from_parser_aux_t {
-    fields {
-        egress_global_tstamp : 48;
-
-
-        egress_global_ver : 32;
-
-
-        egress_parser_err : 16;
-
-
-
-        clone_digest_id : 4;
-        clone_src : 4;
-
-
-
-        coalesce_sample_count : 8;
-
-
-    }
-}
-
-@pragma pa_fragment egress eg_intr_md_from_parser_aux.coalesce_sample_count
-@pragma pa_fragment egress eg_intr_md_from_parser_aux.clone_src
-@pragma pa_fragment egress eg_intr_md_from_parser_aux.egress_parser_err
-@pragma pa_atomic egress eg_intr_md_from_parser_aux.egress_parser_err
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-@pragma pa_intrinsic_header egress eg_intr_md_from_parser_aux
-header egress_intrinsic_metadata_from_parser_aux_t eg_intr_md_from_parser_aux;
-# 379 "/home/yiorgos/p4factory/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/intrinsic_metadata.p4"
-header_type egress_intrinsic_metadata_for_mirror_buffer_t {
-    fields {
-        _pad1 : 6;
-        egress_mirror_id : 10;
-
-
-        coalesce_flush: 1;
-        coalesce_length: 7;
-
-
-    }
-}
-
-@pragma dont_trim
-@pragma pa_intrinsic_header egress eg_intr_md_for_mb
-@pragma pa_atomic egress eg_intr_md_for_mb.egress_mirror_id
-@pragma pa_fragment egress eg_intr_md_for_mb.coalesce_flush
-@pragma pa_mandatory_intrinsic_field egress eg_intr_md_for_mb.egress_mirror_id
-@pragma pa_mandatory_intrinsic_field egress eg_intr_md_for_mb.coalesce_flush
-@pragma pa_mandatory_intrinsic_field egress eg_intr_md_for_mb.coalesce_length
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-header egress_intrinsic_metadata_for_mirror_buffer_t eg_intr_md_for_mb;
-
-
-
-header_type egress_intrinsic_metadata_for_output_port_t {
-    fields {
-
-        _pad1 : 2;
-        capture_tstamp_on_tx : 1;
-
-
-        update_delay_on_tx : 1;
-# 422 "/home/yiorgos/p4factory/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/intrinsic_metadata.p4"
-        force_tx_error : 1;
-
-        drop_ctl : 3;
-
-
-
-
-
-
-
-    }
-}
-
-@pragma dont_trim
-@pragma pa_mandatory_intrinsic_field egress eg_intr_md_for_oport.drop_ctl
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-@pragma pa_intrinsic_header egress eg_intr_md_for_oport
-header egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport;
-# 31 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/yiorgos/p4factory/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/primitives.p4" 1
-# 10 "/home/yiorgos/p4factory/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/primitives.p4"
-action deflect_on_drop(enable_dod) {
-    modify_field(ig_intr_md_for_tm.deflect_on_drop, enable_dod);
-}
-# 32 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/yiorgos/p4factory/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/pktgen_headers.p4" 1
-# 9 "/home/yiorgos/p4factory/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/pktgen_headers.p4"
-header_type pktgen_generic_header_t {
-    fields {
-        _pad0 : 3;
-        pipe_id : 2;
-        app_id : 3;
-        key_msb : 8;
-        batch_id : 16;
-
-        packet_id : 16;
-    }
-}
-header pktgen_generic_header_t pktgen_generic;
-
-header_type pktgen_timer_header_t {
-    fields {
-        _pad0 : 3;
-        pipe_id : 2;
-        app_id : 3;
-        _pad1 : 8;
-        batch_id : 16;
-        packet_id : 16;
-    }
-}
-header pktgen_timer_header_t pktgen_timer;
-
-header_type pktgen_port_down_header_t {
-    fields {
-        _pad0 : 3;
-        pipe_id : 2;
-        app_id : 3;
-        _pad1 : 15;
-        port_num : 9;
-        packet_id : 16;
-    }
-}
-header pktgen_port_down_header_t pktgen_port_down;
-
-header_type pktgen_recirc_header_t {
-    fields {
-        _pad0 : 3;
-        pipe_id : 2;
-        app_id : 3;
-        key : 24;
-        packet_id : 16;
-    }
-}
-header pktgen_recirc_header_t pktgen_recirc;
-# 33 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/yiorgos/p4factory/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/stateful_alu_blackbox.p4" 1
-
-
-blackbox_type stateful_alu {
-
-    attribute reg {
-
-        type: register;
-    }
-
-    attribute selector_binding {
-
-        type: table;
-        optional;
-    }
-
-    attribute initial_register_lo_value {
-
-
-
-        type: int;
-        optional;
-    }
-
-    attribute initial_register_hi_value {
-
-
-
-        type: int;
-        optional;
-    }
-
-    attribute condition_hi {
-
-
-
-
-        type: expression;
-        expression_local_variables {register_lo, register_hi}
-        optional;
-    }
-
-    attribute condition_lo {
-
-
-
-
-        type: expression;
-        expression_local_variables {register_lo, register_hi}
-        optional;
-    }
-
-
-    attribute update_lo_1_predicate {
-
-        type: expression;
-        expression_local_variables {condition_lo, condition_hi}
-        optional;
-    }
-
-    attribute update_lo_1_value {
-# 81 "/home/yiorgos/p4factory/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/stateful_alu_blackbox.p4"
-        type: expression;
-        expression_local_variables {register_lo, register_hi,
-                                    set_bit, set_bitc, clr_bit, clr_bitc, read_bit, read_bitc}
-        optional;
-    }
-
-    attribute update_lo_2_predicate {
-
-        type: expression;
-        expression_local_variables {condition_lo, condition_hi}
-        optional;
-    }
-
-    attribute update_lo_2_value {
-
-        type: expression;
-        expression_local_variables {register_lo, register_hi, math_unit}
-        optional;
-    }
-
-    attribute update_hi_1_predicate {
-
-        type: expression;
-        expression_local_variables {condition_lo, condition_hi}
-        optional;
-    }
-
-    attribute update_hi_1_value {
-
-        type: expression;
-        expression_local_variables {register_lo, register_hi}
-        optional;
-    }
-
-    attribute update_hi_2_predicate {
-
-        type: expression;
-        expression_local_variables {condition_lo, condition_hi}
-        optional;
-    }
-
-    attribute update_hi_2_value {
-
-        type: expression;
-        expression_local_variables {register_lo, register_hi}
-        optional;
-    }
-
-    attribute output_predicate {
-
-
-
-
-        type: expression;
-        expression_local_variables {condition_lo, condition_hi}
-        optional;
-    }
-
-    attribute output_value {
-
-
-
-
-
-
-
-        type: expression;
-        expression_local_variables {alu_lo, alu_hi, register_lo, register_hi, predicate, combined_predicate}
-        optional;
-    }
-
-    attribute output_dst {
-
-        type: bit<0>;
-        optional;
-    }
-
-    attribute math_unit_input {
-
-
-
-        type: expression;
-        expression_local_variables {register_lo, register_hi}
-        optional;
-    }
-    attribute math_unit_output_scale {
-
-
-
-
-        type: int;
-        optional;
-    }
-    attribute math_unit_exponent_shift {
-
-
-
-
-
-
-        type: int;
-        optional;
-    }
-    attribute math_unit_exponent_invert {
-
-
-
-
-        type: string;
-        optional;
-    }
-
-    attribute math_unit_lookup_table {
-
-
-
-
-
-
-
-        type: string;
-        optional;
-    }
-
-    attribute reduction_or_group {
-# 214 "/home/yiorgos/p4factory/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/stateful_alu_blackbox.p4"
-        type: string;
-        optional;
-    }
-
-    attribute stateful_logging_mode {
-# 228 "/home/yiorgos/p4factory/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/stateful_alu_blackbox.p4"
-        type: string;
-        optional;
-    }
-# 246 "/home/yiorgos/p4factory/submodules/p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/stateful_alu_blackbox.p4"
-    method execute_stateful_alu(optional in bit<0> index){
-        reads {condition_hi, condition_lo,
-               update_lo_1_predicate, update_lo_1_value,
-               update_lo_2_predicate, update_lo_2_value,
-               update_hi_1_predicate, update_hi_1_value,
-               update_hi_2_predicate, update_hi_2_value,
-               math_unit_input}
-        writes {output_dst}
-    }
-
-    method execute_stateful_alu_from_hash(in field_list_calculation hash_field_list){
-        reads {condition_hi, condition_lo,
-               update_lo_1_predicate, update_lo_1_value,
-               update_lo_2_predicate, update_lo_2_value,
-               update_hi_1_predicate, update_hi_1_value,
-               update_hi_2_predicate, update_hi_2_value,
-               math_unit_input}
-        writes {output_dst}
-    }
-
-    method execute_stateful_log(){
-        reads {condition_hi, condition_lo,
-               update_lo_1_predicate, update_lo_1_value,
-               update_lo_2_predicate, update_lo_2_value,
-               update_hi_1_predicate, update_hi_1_value,
-               update_hi_2_predicate, update_hi_2_value,
-               math_unit_input}
-    }
-}
-# 34 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4" 2
-
-
-
-
-# 1 "/home/yiorgos/p4factory/submodules/switch/p4src/includes/p4features.h" 1
-# 39 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/yiorgos/p4factory/submodules/switch/p4src/includes/drop_reason_codes.h" 1
-# 40 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/yiorgos/p4factory/submodules/switch/p4src/includes/cpu_reason_codes.h" 1
-# 41 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/yiorgos/p4factory/submodules/switch/p4src/includes/p4_pktgen.h" 1
-# 42 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/yiorgos/p4factory/submodules/switch/p4src/includes/defines.p4" 1
-# 43 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/yiorgos/p4factory/submodules/switch/p4src/includes/headers.p4" 1
-# 24 "/home/yiorgos/p4factory/submodules/switch/p4src/includes/headers.p4"
 header_type ethernet_t {
     fields {
         dstAddr : 48;
@@ -891,7 +192,6 @@ header_type erspan_header_t3_t {
         timestamp : 32;
         sgt : 16;
         ft_d_other: 16;
-# 214 "/home/yiorgos/p4factory/submodules/switch/p4src/includes/headers.p4"
     }
 }
 
@@ -1092,7 +392,6 @@ header_type bfd_t {
         version : 3;
         diag : 5;
         state_flags : 8;
-# 423 "/home/yiorgos/p4factory/submodules/switch/p4src/includes/headers.p4"
         detectMult : 8;
         len : 8;
         myDiscriminator : 32;
@@ -1161,7 +460,6 @@ header_type sflow_sample_cpu_t {
         pipe_id : 2;
     }
 }
-# 499 "/home/yiorgos/p4factory/submodules/switch/p4src/includes/headers.p4"
 header_type fabric_header_t {
     fields {
         packetType : 3;
@@ -1375,9 +673,6 @@ header_type ipv6_srh_segment_t {
         sid : 128;
     }
 }
-# 44 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/yiorgos/p4factory/submodules/switch/p4src/includes/parser.p4" 1
-# 112 "/home/yiorgos/p4factory/submodules/switch/p4src/includes/parser.p4"
 parser start {
     return select(current(96, 16)) {
 
@@ -1386,7 +681,6 @@ parser start {
         default : parse_ethernet;
     }
 }
-# 206 "/home/yiorgos/p4factory/submodules/switch/p4src/includes/parser.p4"
 header ethernet_t ethernet;
 
 parser parse_ethernet {
@@ -1464,13 +758,11 @@ header mpls_t mpls[3];
 
 
 parser parse_mpls {
-# 291 "/home/yiorgos/p4factory/submodules/switch/p4src/includes/parser.p4"
     return ingress;
 
 }
 
 parser parse_mpls_bos {
-# 310 "/home/yiorgos/p4factory/submodules/switch/p4src/includes/parser.p4"
     return select(current(0, 4)) {
 
 
@@ -1503,7 +795,6 @@ parser parse_vpls {
 parser parse_pw {
     return ingress;
 }
-# 381 "/home/yiorgos/p4factory/submodules/switch/p4src/includes/parser.p4"
 @pragma pa_fragment ingress ipv4.hdrChecksum
 @pragma pa_fragment egress ipv4.hdrChecksum
 header ipv4_t ipv4;
@@ -1539,7 +830,6 @@ calculated_field ipv4.hdrChecksum {
 
 
 }
-# 433 "/home/yiorgos/p4factory/submodules/switch/p4src/includes/parser.p4"
 parser parse_ipv4 {
 
     extract(ipv4);
@@ -1574,7 +864,6 @@ parser parse_ipv6_in_ip {
                  3);
     return parse_inner_ipv6;
 }
-# 489 "/home/yiorgos/p4factory/submodules/switch/p4src/includes/parser.p4"
 header ipv6_t ipv6;
 
 parser parse_udp_v6 {
@@ -1608,7 +897,6 @@ parser parse_ipv6 {
         58 : parse_icmp;
         6 : parse_tcp;
         4 : parse_ipv4_in_ip;
-# 535 "/home/yiorgos/p4factory/submodules/switch/p4src/includes/parser.p4"
         88 : parse_set_prio_med;
         89 : parse_set_prio_med;
         103 : parse_set_prio_med;
@@ -1617,7 +905,6 @@ parser parse_ipv6 {
         default: ingress;
     }
 }
-# 590 "/home/yiorgos/p4factory/submodules/switch/p4src/includes/parser.p4"
 header icmp_t icmp;
 
 parser parse_icmp {
@@ -1638,7 +925,6 @@ parser parse_icmp {
 @pragma pa_fragment egress tcp.checksum
 @pragma pa_fragment egress tcp.urgentPtr
 header tcp_t tcp;
-# 643 "/home/yiorgos/p4factory/submodules/switch/p4src/includes/parser.p4"
 parser parse_tcp {
     extract(tcp);
     set_metadata(l3_metadata.lkp_outer_l4_sport, latest.srcPort);
@@ -1661,13 +947,11 @@ parser parse_roce_v2 {
 
 
 header udp_t udp;
-# 696 "/home/yiorgos/p4factory/submodules/switch/p4src/includes/parser.p4"
 parser parse_udp {
     extract(udp);
     set_metadata(l3_metadata.lkp_outer_l4_sport, latest.srcPort);
     set_metadata(l3_metadata.lkp_outer_l4_dport, latest.dstPort);
     return select(latest.dstPort) {
-# 710 "/home/yiorgos/p4factory/submodules/switch/p4src/includes/parser.p4"
         4790 : parse_vxlan_gpe;
 
 
@@ -1791,7 +1075,6 @@ parser parse_erspan_t3 {
 
 
     0x3C01 mask 0x7c01: parse_mirror_on_drop_ethernet;
-# 842 "/home/yiorgos/p4factory/submodules/switch/p4src/includes/parser.p4"
         default : ingress;
     }
 }
@@ -1911,7 +1194,6 @@ parser parse_lisp {
         default : ingress;
     }
 }
-# 974 "/home/yiorgos/p4factory/submodules/switch/p4src/includes/parser.p4"
 parser parse_inner_ipv4 {
 
     extract(inner_ipv4);
@@ -1956,7 +1238,6 @@ parser parse_inner_tcp {
 
 
 header udp_t inner_udp;
-# 1049 "/home/yiorgos/p4factory/submodules/switch/p4src/includes/parser.p4"
 parser parse_inner_udp {
     extract(inner_udp);
     set_metadata(l3_metadata.lkp_l4_sport, latest.srcPort);
@@ -2013,7 +1294,6 @@ parser parse_vntag {
     extract(vntag);
     return parse_inner_ethernet;
 }
-# 1115 "/home/yiorgos/p4factory/submodules/switch/p4src/includes/parser.p4"
 header sflow_hdr_t sflow;
 header sflow_sample_t sflow_sample;
 header sflow_raw_hdr_record_t sflow_raw_hdr_record;
@@ -2076,7 +1356,6 @@ parser parse_fabric_header_cpu {
         default : parse_fabric_payload_header;
     }
 }
-# 1192 "/home/yiorgos/p4factory/submodules/switch/p4src/includes/parser.p4"
 parser parse_fabric_payload_header {
     extract(fabric_payload_header);
     return select(latest.etherType) {
@@ -2085,7 +1364,6 @@ parser parse_fabric_payload_header {
         0x8100 : parse_vlan; 0x9100 : parse_qinq; 0x8847 : parse_mpls; 0x0800 : parse_ipv4; 0x86dd : parse_ipv6; 0x0806 : parse_arp_rarp; 0x88cc : parse_set_prio_high; 0x8809 : parse_set_prio_high; default: ingress;
     }
 }
-# 1210 "/home/yiorgos/p4factory/submodules/switch/p4src/includes/parser.p4"
 parser parse_set_prio_med {
     set_metadata(ig_prsr_ctrl.priority, 3);
     return ingress;
@@ -2100,8 +1378,6 @@ parser parse_set_prio_max {
     set_metadata(ig_prsr_ctrl.priority, 7);
     return ingress;
 }
-# 1238 "/home/yiorgos/p4factory/submodules/switch/p4src/includes/parser.p4"
-# 1 "/home/yiorgos/p4factory/submodules/switch/p4src/includes/parser_int.p4" 1
 header int_header_t int_header;
 header int_switch_id_header_t int_switch_id_header;
 header int_port_ids_header_t int_port_ids_header;
@@ -2118,7 +1394,6 @@ header int_egress_port_tx_utilization_header_t
 header vxlan_gpe_int_header_t vxlan_gpe_int_header;
 
 header int_plt_header_t int_plt_header;
-# 22 "/home/yiorgos/p4factory/submodules/switch/p4src/includes/parser_int.p4"
 parser parse_plt_int_header {
     extract(int_plt_header);
     return parse_int_header;
@@ -2137,7 +1412,6 @@ parser parse_int_vxlan_header {
         default: parse_int_header;
     }
 }
-# 49 "/home/yiorgos/p4factory/submodules/switch/p4src/includes/parser_int.p4"
 parser parse_int_header {
     extract(int_header);
 
@@ -2156,7 +1430,6 @@ parser parse_int_header {
         default: parse_all_int_meta_value_heders;
     }
 }
-# 102 "/home/yiorgos/p4factory/submodules/switch/p4src/includes/parser_int.p4"
 parser parse_all_int_meta_value_heders {
 
 
@@ -2171,12 +1444,6 @@ parser parse_all_int_meta_value_heders {
     return ingress;
 
 }
-# 1239 "/home/yiorgos/p4factory/submodules/switch/p4src/includes/parser.p4" 2
-# 45 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/yiorgos/p4factory/submodules/switch/p4src/includes/p4_table_sizes.h" 1
-# 46 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/yiorgos/p4factory/submodules/switch/p4src/includes/mirror_on_drop.h" 1
-# 47 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4" 2
 
 @pragma pa_alias ingress ig_intr_md.ingress_port ingress_metadata.ingress_port
 
@@ -2254,11 +1521,8 @@ metadata egress_metadata_t egress_metadata;
 metadata intrinsic_metadata_t intrinsic_metadata;
 metadata global_config_metadata_t global_config_metadata;
 
-# 1 "/home/yiorgos/p4factory/submodules/switch/p4src/switch_config.p4" 1
-# 28 "/home/yiorgos/p4factory/submodules/switch/p4src/switch_config.p4"
 action set_config_parameters(enable_dod, enable_flowlet, switch_id) {
     deflect_on_drop(enable_dod);
-# 39 "/home/yiorgos/p4factory/submodules/switch/p4src/switch_config.p4"
     modify_field(i2e_metadata.ingress_tstamp, ig_intr_md_from_parser_aux.ingress_global_tstamp);
     modify_field(ingress_metadata.ingress_port, ig_intr_md.ingress_port);
     modify_field(l2_metadata.same_if_check, ingress_metadata.ifindex);
@@ -2280,12 +1544,9 @@ control process_global_params {
 
     apply(switch_config_params);
 }
-# 125 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4" 2
 
 
 
-# 1 "/home/yiorgos/p4factory/submodules/switch/p4src/port.p4" 1
-# 31 "/home/yiorgos/p4factory/submodules/switch/p4src/port.p4"
 action set_valid_outer_unicast_packet_untagged() {
     modify_field(l2_metadata.lkp_pkt_type, 1);
     modify_field(l2_metadata.lkp_mac_type, ethernet.etherType);
@@ -2598,7 +1859,6 @@ action_selector lag_selector {
     selection_mode : fair;
 
 }
-# 357 "/home/yiorgos/p4factory/submodules/switch/p4src/port.p4"
 action set_lag_port(port) {
     modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 }
@@ -2718,9 +1978,6 @@ table egress_vlan_xlate {
 control process_vlan_xlate {
     apply(egress_vlan_xlate);
 }
-# 129 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/yiorgos/p4factory/submodules/switch/p4src/l2.p4" 1
-# 28 "/home/yiorgos/p4factory/submodules/switch/p4src/l2.p4"
 header_type l2_metadata_t {
     fields {
         lkp_mac_sa : 48;
@@ -3067,9 +2324,6 @@ table vlan_decap {
 control process_vlan_decap {
     apply(vlan_decap);
 }
-# 130 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/yiorgos/p4factory/submodules/switch/p4src/l3.p4" 1
-# 32 "/home/yiorgos/p4factory/submodules/switch/p4src/l3.p4"
 header_type l3_metadata_t {
     fields {
         lkp_ip_type : 2;
@@ -3152,7 +2406,6 @@ action fib_hit_ecmp(ecmp_index) {
     modify_field(l3_metadata.fib_nexthop, ecmp_index);
     modify_field(l3_metadata.fib_nexthop_type, 1);
 }
-# 141 "/home/yiorgos/p4factory/submodules/switch/p4src/l3.p4"
 control process_urpf_bd {
 
 
@@ -3237,7 +2490,6 @@ table l3_rewrite {
         ipv4_unicast_rewrite;
 
         ipv4_multicast_rewrite;
-# 235 "/home/yiorgos/p4factory/submodules/switch/p4src/l3.p4"
     }
 }
 
@@ -3290,9 +2542,6 @@ control process_mtu {
     apply(mtu);
 
 }
-# 131 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/yiorgos/p4factory/submodules/switch/p4src/ipv4.p4" 1
-# 31 "/home/yiorgos/p4factory/submodules/switch/p4src/ipv4.p4"
 header_type ipv4_metadata_t {
     fields {
         lkp_ipv4_sa : 32;
@@ -3356,10 +2605,8 @@ table ipv4_fib {
     }
     size : 4096;
 }
-# 113 "/home/yiorgos/p4factory/submodules/switch/p4src/ipv4.p4"
 @pragma alpm 1
 @pragma ways 6
-# 133 "/home/yiorgos/p4factory/submodules/switch/p4src/ipv4.p4"
 table ipv4_fib_lpm {
     reads {
 
@@ -3389,13 +2636,8 @@ control process_ipv4_fib {
     }
 
 }
-# 198 "/home/yiorgos/p4factory/submodules/switch/p4src/ipv4.p4"
 control process_ipv4_urpf {
-# 209 "/home/yiorgos/p4factory/submodules/switch/p4src/ipv4.p4"
 }
-# 132 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/yiorgos/p4factory/submodules/switch/p4src/ipv6.p4" 1
-# 31 "/home/yiorgos/p4factory/submodules/switch/p4src/ipv6.p4"
 header_type ipv6_metadata_t {
     fields {
         lkp_ipv6_sa : 128;
@@ -3406,25 +2648,16 @@ header_type ipv6_metadata_t {
         ipv6_urpf_mode : 2;
     }
 }
-# 50 "/home/yiorgos/p4factory/submodules/switch/p4src/ipv6.p4"
 metadata ipv6_metadata_t ipv6_metadata;
-# 86 "/home/yiorgos/p4factory/submodules/switch/p4src/ipv6.p4"
 control validate_outer_ipv6_header {
 
 
 
 }
-# 173 "/home/yiorgos/p4factory/submodules/switch/p4src/ipv6.p4"
 control process_ipv6_fib {
-# 184 "/home/yiorgos/p4factory/submodules/switch/p4src/ipv6.p4"
 }
-# 221 "/home/yiorgos/p4factory/submodules/switch/p4src/ipv6.p4"
 control process_ipv6_urpf {
-# 232 "/home/yiorgos/p4factory/submodules/switch/p4src/ipv6.p4"
 }
-# 133 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/yiorgos/p4factory/submodules/switch/p4src/tunnel.p4" 1
-# 31 "/home/yiorgos/p4factory/submodules/switch/p4src/tunnel.p4"
 header_type tunnel_metadata_t {
     fields {
         ingress_tunnel_type : 5;
@@ -3457,7 +2690,6 @@ header_type tunnel_metadata_t {
     }
 }
 metadata tunnel_metadata_t tunnel_metadata;
-# 193 "/home/yiorgos/p4factory/submodules/switch/p4src/tunnel.p4"
 control process_ipv4_vtep {
 
 
@@ -3471,7 +2703,6 @@ control process_ipv6_vtep {
 
 
 }
-# 454 "/home/yiorgos/p4factory/submodules/switch/p4src/tunnel.p4"
 action ipv4_lkp() {
     modify_field(l2_metadata.lkp_mac_sa, ethernet.srcAddr);
     modify_field(l2_metadata.lkp_mac_da, ethernet.dstAddr);
@@ -3553,19 +2784,14 @@ control process_tunnel {
 
 
     process_ingress_fabric();
-# 576 "/home/yiorgos/p4factory/submodules/switch/p4src/tunnel.p4"
 }
-# 627 "/home/yiorgos/p4factory/submodules/switch/p4src/tunnel.p4"
 control validate_mpls_header {
 
 
 
 }
-# 935 "/home/yiorgos/p4factory/submodules/switch/p4src/tunnel.p4"
 control process_tunnel_decap {
-# 945 "/home/yiorgos/p4factory/submodules/switch/p4src/tunnel.p4"
 }
-# 975 "/home/yiorgos/p4factory/submodules/switch/p4src/tunnel.p4"
 action inner_ipv4_udp_rewrite() {
     copy_header(inner_ipv4, ipv4);
     copy_header(inner_udp, udp);
@@ -3664,7 +2890,6 @@ table tunnel_encap_process_inner {
     }
     size : 256;
 }
-# 1373 "/home/yiorgos/p4factory/submodules/switch/p4src/tunnel.p4"
 action f_insert_ipv4_header(proto) {
     add_header(ipv4);
     modify_field(ipv4.protocol, proto);
@@ -3769,7 +2994,6 @@ table tunnel_encap_process_outer {
     actions {
         nop;
         fabric_rewrite;
-# 1520 "/home/yiorgos/p4factory/submodules/switch/p4src/tunnel.p4"
         ipv4_erspan_t3_rewrite;
 
 
@@ -3801,7 +3025,6 @@ action set_ip_index(sip_index, dip_index) {
     modify_field(tunnel_metadata.tunnel_src_index, sip_index);
     modify_field(tunnel_metadata.tunnel_dst_index, dip_index);
 }
-# 1619 "/home/yiorgos/p4factory/submodules/switch/p4src/tunnel.p4"
 table tunnel_rewrite {
     reads {
         tunnel_metadata.tunnel_index : exact;
@@ -3811,7 +3034,6 @@ table tunnel_rewrite {
         cpu_rx_rewrite;
 
         set_tunnel_rewrite_details;
-# 1646 "/home/yiorgos/p4factory/submodules/switch/p4src/tunnel.p4"
     }
     size : 16384;
 }
@@ -3942,7 +3164,6 @@ table tunnel_dmac_rewrite {
 control process_tunnel_encap {
     if ((fabric_metadata.fabric_header_present == 0) and
         (tunnel_metadata.egress_tunnel_type != 0)) {
-# 1786 "/home/yiorgos/p4factory/submodules/switch/p4src/tunnel.p4"
         if ((tunnel_metadata.egress_tunnel_type != 15) and
             (tunnel_metadata.egress_tunnel_type != 16)) {
                 apply(tunnel_encap_process_inner);
@@ -3965,9 +3186,6 @@ control process_tunnel_encap {
 
     }
 }
-# 134 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/yiorgos/p4factory/submodules/switch/p4src/acl.p4" 1
-# 31 "/home/yiorgos/p4factory/submodules/switch/p4src/acl.p4"
 header_type acl_metadata_t {
     fields {
         acl_deny : 1;
@@ -4001,13 +3219,11 @@ header_type i2e_metadata_t {
 
     }
 }
-# 75 "/home/yiorgos/p4factory/submodules/switch/p4src/acl.p4"
 @pragma pa_solitary ingress acl_metadata.if_label
 @pragma pa_atomic ingress acl_metadata.if_label
 
 metadata acl_metadata_t acl_metadata;
 metadata i2e_metadata_t i2e_metadata;
-# 148 "/home/yiorgos/p4factory/submodules/switch/p4src/acl.p4"
 control process_egress_l4port {
 
 
@@ -4017,7 +3233,6 @@ control process_egress_l4port {
 
 
 }
-# 193 "/home/yiorgos/p4factory/submodules/switch/p4src/acl.p4"
 control process_ingress_l4port {
 
 
@@ -4157,7 +3372,6 @@ control process_mac_acl {
     }
 
 }
-# 370 "/home/yiorgos/p4factory/submodules/switch/p4src/acl.p4"
 table ip_acl {
     reads {
 
@@ -4187,7 +3401,6 @@ table ip_acl {
     }
     size : 1024;
 }
-# 475 "/home/yiorgos/p4factory/submodules/switch/p4src/acl.p4"
 control process_ip_acl {
     if (((ingress_metadata.bypass_lookups & 0x0004) == 0)) {
         if (l3_metadata.lkp_ip_type == 1) {
@@ -4199,7 +3412,6 @@ control process_ip_acl {
 
         } else {
             if (l3_metadata.lkp_ip_type == 2) {
-# 494 "/home/yiorgos/p4factory/submodules/switch/p4src/acl.p4"
             }
         }
     }
@@ -4292,7 +3504,6 @@ control process_ipv4_racl {
     apply(ipv4_racl);
 
 }
-# 612 "/home/yiorgos/p4factory/submodules/switch/p4src/acl.p4"
 control process_ipv6_racl {
 
 
@@ -4501,9 +3712,7 @@ control process_system_acl {
         }
     }
 }
-# 912 "/home/yiorgos/p4factory/submodules/switch/p4src/acl.p4"
 control process_egress_acl {
-# 928 "/home/yiorgos/p4factory/submodules/switch/p4src/acl.p4"
 }
 
 action egress_mirror(session_id) {
@@ -4581,9 +3790,6 @@ control process_egress_system_acl {
         apply(egress_system_acl);
     }
 }
-# 135 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/yiorgos/p4factory/submodules/switch/p4src/nat.p4" 1
-# 28 "/home/yiorgos/p4factory/submodules/switch/p4src/nat.p4"
 header_type nat_metadata_t {
     fields {
         ingress_nat_mode : 2;
@@ -4602,11 +3808,8 @@ header_type nat_metadata_t {
 }
 
 metadata nat_metadata_t nat_metadata;
-# 146 "/home/yiorgos/p4factory/submodules/switch/p4src/nat.p4"
 control process_ingress_nat {
-# 162 "/home/yiorgos/p4factory/submodules/switch/p4src/nat.p4"
 }
-# 292 "/home/yiorgos/p4factory/submodules/switch/p4src/nat.p4"
 control process_egress_nat {
 
 
@@ -4621,9 +3824,6 @@ control process_l4_checksum {
 
 
 }
-# 136 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/yiorgos/p4factory/submodules/switch/p4src/multicast.p4" 1
-# 28 "/home/yiorgos/p4factory/submodules/switch/p4src/multicast.p4"
 header_type multicast_metadata_t {
     fields {
         ipv4_mcast_key_type : 1;
@@ -4662,7 +3862,6 @@ header_type multicast_metadata_t {
 
 
 metadata multicast_metadata_t multicast_metadata;
-# 89 "/home/yiorgos/p4factory/submodules/switch/p4src/multicast.p4"
 control process_outer_multicast_rpf {
 
 
@@ -4671,13 +3870,9 @@ control process_outer_multicast_rpf {
 
 
 }
-# 193 "/home/yiorgos/p4factory/submodules/switch/p4src/multicast.p4"
 control process_outer_ipv4_multicast {
-# 202 "/home/yiorgos/p4factory/submodules/switch/p4src/multicast.p4"
 }
-# 241 "/home/yiorgos/p4factory/submodules/switch/p4src/multicast.p4"
 control process_outer_ipv6_multicast {
-# 250 "/home/yiorgos/p4factory/submodules/switch/p4src/multicast.p4"
 }
 
 
@@ -4685,7 +3880,6 @@ control process_outer_ipv6_multicast {
 
 
 control process_outer_multicast {
-# 267 "/home/yiorgos/p4factory/submodules/switch/p4src/multicast.p4"
 }
 
 
@@ -4866,9 +4060,7 @@ control process_ipv4_multicast {
     }
 
 }
-# 517 "/home/yiorgos/p4factory/submodules/switch/p4src/multicast.p4"
 control process_ipv6_multicast {
-# 538 "/home/yiorgos/p4factory/submodules/switch/p4src/multicast.p4"
 }
 
 
@@ -4981,9 +4173,6 @@ control process_replication {
     }
 
 }
-# 137 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/yiorgos/p4factory/submodules/switch/p4src/nexthop.p4" 1
-# 31 "/home/yiorgos/p4factory/submodules/switch/p4src/nexthop.p4"
 header_type nexthop_metadata_t {
     fields {
         nexthop_type : 1;
@@ -5129,7 +4318,6 @@ control process_fwd_results {
         apply(fwd_result);
     }
 }
-# 185 "/home/yiorgos/p4factory/submodules/switch/p4src/nexthop.p4"
 action set_ecmp_nexthop_details_for_post_routed_flood(bd, uuc_mc_index,
                                                       nhop_index) {
     modify_field(ig_intr_md_for_tm.mcast_grp_b, uuc_mc_index);
@@ -5208,7 +4396,6 @@ table ecmp_group {
     action_profile: ecmp_action_profile;
     size : 1024;
 }
-# 298 "/home/yiorgos/p4factory/submodules/switch/p4src/nexthop.p4"
 action set_nexthop_details_for_post_routed_flood(bd, uuc_mc_index) {
     modify_field(ig_intr_md_for_tm.mcast_grp_b, uuc_mc_index);
     modify_field(ingress_metadata.egress_ifindex, 0);
@@ -5242,7 +4429,6 @@ table nexthop {
 
 control process_nexthop {
     if (nexthop_metadata.nexthop_type == 1) {
-# 346 "/home/yiorgos/p4factory/submodules/switch/p4src/nexthop.p4"
             apply(ecmp_group);
 
 
@@ -5255,9 +4441,6 @@ control process_nexthop {
         apply(nexthop);
     }
 }
-# 138 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/yiorgos/p4factory/submodules/switch/p4src/rewrite.p4" 1
-# 32 "/home/yiorgos/p4factory/submodules/switch/p4src/rewrite.p4"
 action set_l2_rewrite_with_tunnel(tunnel_index, tunnel_type) {
     modify_field(egress_metadata.routed, 0);
     modify_field(egress_metadata.bd, ingress_metadata.bd);
@@ -5287,7 +4470,6 @@ action set_l3_rewrite(bd, dmac) {
     modify_field(egress_metadata.bd, bd);
     modify_field(egress_metadata.outer_bd, bd);
 }
-# 146 "/home/yiorgos/p4factory/submodules/switch/p4src/rewrite.p4"
 table rewrite {
     reads {
         l3_metadata.nexthop_index : exact;
@@ -5302,7 +4484,6 @@ table rewrite {
         set_l3_rewrite;
 
         set_l3_rewrite_with_tunnel;
-# 175 "/home/yiorgos/p4factory/submodules/switch/p4src/rewrite.p4"
     }
     size : 49152;
 }
@@ -5342,9 +4523,6 @@ control process_rewrite {
 
     }
 }
-# 139 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/yiorgos/p4factory/submodules/switch/p4src/security.p4" 1
-# 31 "/home/yiorgos/p4factory/submodules/switch/p4src/security.p4"
 header_type security_metadata_t {
     fields {
         ipsg_enabled : 1;
@@ -5353,7 +4531,6 @@ header_type security_metadata_t {
 }
 
 metadata security_metadata_t security_metadata;
-# 92 "/home/yiorgos/p4factory/submodules/switch/p4src/security.p4"
 control process_storm_control {
 
 
@@ -5369,13 +4546,8 @@ control process_storm_control_stats {
 
 
 }
-# 143 "/home/yiorgos/p4factory/submodules/switch/p4src/security.p4"
 control process_ip_sourceguard {
-# 155 "/home/yiorgos/p4factory/submodules/switch/p4src/security.p4"
 }
-# 140 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/yiorgos/p4factory/submodules/switch/p4src/fabric.p4" 1
-# 29 "/home/yiorgos/p4factory/submodules/switch/p4src/fabric.p4"
 header_type fabric_metadata_t {
     fields {
         packetType : 3;
@@ -5404,7 +4576,6 @@ action terminate_cpu_packet() {
     remove_header(fabric_header_cpu);
     remove_header(fabric_payload_header);
 }
-# 119 "/home/yiorgos/p4factory/submodules/switch/p4src/fabric.p4"
 @pragma ternary 1
 table fabric_ingress_dst_lkp {
     reads {
@@ -5413,10 +4584,8 @@ table fabric_ingress_dst_lkp {
     actions {
         nop;
         terminate_cpu_packet;
-# 135 "/home/yiorgos/p4factory/submodules/switch/p4src/fabric.p4"
     }
 }
-# 158 "/home/yiorgos/p4factory/submodules/switch/p4src/fabric.p4"
 action non_ip_over_fabric() {
     modify_field(l2_metadata.lkp_mac_sa, ethernet.srcAddr);
     modify_field(l2_metadata.lkp_mac_da, ethernet.dstAddr);
@@ -5464,10 +4633,8 @@ table native_packet_over_fabric {
 control process_ingress_fabric {
     if (ingress_metadata.port_type != 0) {
         apply(fabric_ingress_dst_lkp);
-# 215 "/home/yiorgos/p4factory/submodules/switch/p4src/fabric.p4"
     }
 }
-# 282 "/home/yiorgos/p4factory/submodules/switch/p4src/fabric.p4"
 control process_fabric_lag {
 
 
@@ -5497,15 +4664,8 @@ action cpu_rx_rewrite() {
 action fabric_rewrite(tunnel_index) {
     modify_field(tunnel_metadata.tunnel_index, tunnel_index);
 }
-# 141 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/yiorgos/p4factory/submodules/switch/p4src/egress_filter.p4" 1
-# 66 "/home/yiorgos/p4factory/submodules/switch/p4src/egress_filter.p4"
 control process_egress_filter {
-# 81 "/home/yiorgos/p4factory/submodules/switch/p4src/egress_filter.p4"
 }
-# 142 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/yiorgos/p4factory/submodules/switch/p4src/mirror.p4" 1
-# 28 "/home/yiorgos/p4factory/submodules/switch/p4src/mirror.p4"
 action set_mirror_nhop(nhop_idx, session_id) {
     modify_field(l3_metadata.nexthop_index, nhop_idx);
     modify_field(i2e_metadata.mirror_session_id, session_id);
@@ -5537,9 +4697,6 @@ control process_mirroring {
     apply(mirror);
 
 }
-# 143 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/yiorgos/p4factory/submodules/switch/p4src/int_plt.p4" 1
-# 58 "/home/yiorgos/p4factory/submodules/switch/p4src/int_plt.p4"
 header_type int_metadata_i2e_t {
     fields {
 
@@ -5562,9 +4719,7 @@ header_type int_metadata_t {
         remove_byte_cnt : 16;
         insert_byte_cnt : 16;
         int_hdr_word_len : 8;
-# 93 "/home/yiorgos/p4factory/submodules/switch/p4src/int_plt.p4"
         quantized_latency : 32;
-# 126 "/home/yiorgos/p4factory/submodules/switch/p4src/int_plt.p4"
         hit_state : 2;
     }
 }
@@ -5573,7 +4728,6 @@ header_type int_metadata_t {
 
 
 metadata int_metadata_t int_metadata;
-# 153 "/home/yiorgos/p4factory/submodules/switch/p4src/int_plt.p4"
 field_list switch_and_port_ids {
     global_config_metadata.switch_id;
 
@@ -5808,13 +4962,10 @@ table int_meta_header_update {
     }
     size : 2;
 }
-# 1267 "/home/yiorgos/p4factory/submodules/switch/p4src/int_plt.p4"
 control process_int_endpoint{
-# 1294 "/home/yiorgos/p4factory/submodules/switch/p4src/int_plt.p4"
 }
 
 control process_int_upstream_report {
-# 1311 "/home/yiorgos/p4factory/submodules/switch/p4src/int_plt.p4"
 }
 
 control process_int_sink_update_outer {
@@ -5822,7 +4973,6 @@ control process_int_sink_update_outer {
 
 
 }
-# 1339 "/home/yiorgos/p4factory/submodules/switch/p4src/int_plt.p4"
 action copy_latency() {
     modify_field(int_metadata.quantized_latency, eg_intr_md.deq_timedelta, 0x1FFFF);}
 action quantize_latency_1() {
@@ -5908,12 +5058,10 @@ table plt_scramble_latency {
     actions {scramble_latency;}
     size : 1;
 }
-# 1476 "/home/yiorgos/p4factory/submodules/switch/p4src/int_plt.p4"
 control process_int_egress_prep {
 
 
     apply(plt_quantize_latency);
-# 1503 "/home/yiorgos/p4factory/submodules/switch/p4src/int_plt.p4"
     if (int_metadata_i2e.sink == 0) {
 
         apply(plt_scramble_latency);
@@ -5921,7 +5069,6 @@ control process_int_egress_prep {
 
 
 }
-# 1518 "/home/yiorgos/p4factory/submodules/switch/p4src/int_plt.p4"
 action int_transit() {
     modify_field(int_metadata.hit_state, 1);
     subtract(int_metadata.insert_cnt, int_header.max_hop_cnt,
@@ -5941,9 +5088,7 @@ action int_reset() {
     modify_field(int_metadata.insert_cnt, 0);
     modify_field(int_metadata.int_hdr_word_len, 0);
 }
-# 1566 "/home/yiorgos/p4factory/submodules/switch/p4src/int_plt.p4"
 table int_insert {
-# 1578 "/home/yiorgos/p4factory/submodules/switch/p4src/int_plt.p4"
     reads {
         int_metadata_i2e.source : ternary;
         int_metadata_i2e.sink : ternary;
@@ -6021,7 +5166,6 @@ action add_int_plt_header() {
 
     update_int_plt_header();
 }
-# 1666 "/home/yiorgos/p4factory/submodules/switch/p4src/int_plt.p4"
 table int_plt_encode {
     actions {
         update_int_plt_header;
@@ -6032,7 +5176,6 @@ table int_plt_encode {
 
 
 control process_plt_insertion {
-# 1685 "/home/yiorgos/p4factory/submodules/switch/p4src/int_plt.p4"
     if (int_metadata_i2e.source == 0 and int_metadata_i2e.sink == 0
             and valid(int_plt_header)) {
 
@@ -6041,11 +5184,9 @@ control process_plt_insertion {
 
 
 }
-# 1853 "/home/yiorgos/p4factory/submodules/switch/p4src/int_plt.p4"
 control process_int_egress {
 
     if (int_metadata_i2e.sink == 1 and not (eg_intr_md_from_parser_aux.clone_src != 0)) {
-# 1869 "/home/yiorgos/p4factory/submodules/switch/p4src/int_plt.p4"
     }
     else {
 
@@ -6069,15 +5210,12 @@ control process_int_egress {
     }
 
 }
-# 1984 "/home/yiorgos/p4factory/submodules/switch/p4src/int_plt.p4"
 action int_update_vxlan_gpe_ipv4() {
     add_to_field(ipv4.totalLen, int_metadata.insert_byte_cnt);
     add_to_field(udp.length_, int_metadata.insert_byte_cnt);
     add_to_field(vxlan_gpe_int_header.len, int_metadata.int_hdr_word_len);
 }
-# 2017 "/home/yiorgos/p4factory/submodules/switch/p4src/int_plt.p4"
 table int_outer_encap {
-# 2028 "/home/yiorgos/p4factory/submodules/switch/p4src/int_plt.p4"
     reads {
         ipv4 : valid;
         int_metadata_i2e.source : exact;
@@ -6092,12 +5230,10 @@ table int_outer_encap {
 
 
         int_update_vxlan_gpe_ipv4;
-# 2055 "/home/yiorgos/p4factory/submodules/switch/p4src/int_plt.p4"
         nop;
     }
     size : 8;
 }
-# 2075 "/home/yiorgos/p4factory/submodules/switch/p4src/int_plt.p4"
 control process_int_outer_encap {
 
     if ((int_metadata.insert_cnt != 0)
@@ -6105,13 +5241,9 @@ control process_int_outer_encap {
     {
 
         apply(int_outer_encap);
-# 2090 "/home/yiorgos/p4factory/submodules/switch/p4src/int_plt.p4"
     }
 
 }
-# 144 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/yiorgos/p4factory/submodules/switch/p4src/hashes.p4" 1
-# 27 "/home/yiorgos/p4factory/submodules/switch/p4src/hashes.p4"
 header_type hash_metadata_t {
     fields {
         hash1 : 16;
@@ -6316,9 +5448,6 @@ control process_hashes {
 
     apply(compute_other_hashes);
 }
-# 145 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/yiorgos/p4factory/submodules/switch/p4src/meter.p4" 1
-# 31 "/home/yiorgos/p4factory/submodules/switch/p4src/meter.p4"
  header_type meter_metadata_t {
      fields {
          packet_color : 2;
@@ -6400,18 +5529,12 @@ control process_meter_action {
     }
 
 }
-# 146 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/yiorgos/p4factory/submodules/switch/p4src/sflow.p4" 1
-# 94 "/home/yiorgos/p4factory/submodules/switch/p4src/sflow.p4"
 control process_ingress_sflow {
 
 
 
 
 }
-# 147 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/yiorgos/p4factory/submodules/switch/p4src/bfd.p4" 1
-# 484 "/home/yiorgos/p4factory/submodules/switch/p4src/bfd.p4"
 control process_bfd_mirror_to_cpu {
 }
 control process_egress_bfd_packet {
@@ -6426,8 +5549,6 @@ control process_bfd_tx_packet {
 }
 control process_bfd_recirc {
 }
-# 148 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/yiorgos/p4factory/submodules/switch/p4src/qos.p4" 1
 
 
 
@@ -6445,17 +5566,13 @@ header_type qos_metadata_t {
 }
 
 metadata qos_metadata_t qos_metadata;
-# 70 "/home/yiorgos/p4factory/submodules/switch/p4src/qos.p4"
 control process_ingress_qos_map {
-# 82 "/home/yiorgos/p4factory/submodules/switch/p4src/qos.p4"
 }
-# 119 "/home/yiorgos/p4factory/submodules/switch/p4src/qos.p4"
 control process_traffic_class{
 
 
 
 }
-# 157 "/home/yiorgos/p4factory/submodules/switch/p4src/qos.p4"
 control process_egress_qos_map {
 
 
@@ -6463,9 +5580,6 @@ control process_egress_qos_map {
 
 
 }
-# 149 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/yiorgos/p4factory/submodules/switch/p4src/sr.p4" 1
-# 131 "/home/yiorgos/p4factory/submodules/switch/p4src/sr.p4"
 control process_sr_rewrite {
 
 
@@ -6478,12 +5592,6 @@ control process_ipv6_sr {
 
 
 }
-# 150 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/yiorgos/p4factory/submodules/switch/p4src/flowlet.p4" 1
-# 28 "/home/yiorgos/p4factory/submodules/switch/p4src/flowlet.p4"
-# 1 "/home/yiorgos/p4factory/submodules/switch/p4src/flowlet_bmv2.p4" 1
-# 29 "/home/yiorgos/p4factory/submodules/switch/p4src/flowlet.p4" 2
-# 41 "/home/yiorgos/p4factory/submodules/switch/p4src/flowlet.p4"
 header_type flowlet_metadata_t {
     fields {
         id : 16;
@@ -6539,17 +5647,9 @@ table flowlet {
 }
 
 control process_flowlet {
-# 107 "/home/yiorgos/p4factory/submodules/switch/p4src/flowlet.p4"
 }
-# 151 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/yiorgos/p4factory/submodules/switch/p4src/pktgen.p4" 1
-# 29 "/home/yiorgos/p4factory/submodules/switch/p4src/pktgen.p4"
 control process_pktgen {
-# 46 "/home/yiorgos/p4factory/submodules/switch/p4src/pktgen.p4"
 }
-# 152 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/yiorgos/p4factory/submodules/switch/p4src/failover.p4" 1
-# 182 "/home/yiorgos/p4factory/submodules/switch/p4src/failover.p4"
 control process_pktgen_port_down {
 
 
@@ -6569,9 +5669,6 @@ control process_lag_fallback {
 
 
 }
-# 153 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4" 2
-# 1 "/home/yiorgos/p4factory/submodules/switch/p4src/ila.p4" 1
-# 154 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4" 2
 
 action nop() {
 }
@@ -6604,7 +5701,6 @@ control ingress {
 
 
         process_bfd_rx_packet();
-# 199 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4"
         process_spanning_tree();
 
 
@@ -6739,7 +5835,6 @@ control ingress {
 }
 
 control egress {
-# 343 "/home/yiorgos/p4factory/submodules/switch/p4src/switch.p4"
         process_bfd_recirc();
 
 

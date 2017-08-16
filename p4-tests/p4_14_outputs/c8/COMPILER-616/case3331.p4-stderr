@@ -1,12 +1,12 @@
-dnets_bng_tofino.p4(188): warning: Could not infer type for lawf_int, using bit<8>
+case3331.p4(336): warning: Could not infer type for lawf_int, using bit<8>
 action a_antispoof_mac_pass(subsc_id, lawf_int, ctr_bucket) {
                                       ^^^^^^^^
-dnets_bng_tofino.p4(329): warning: Could not infer type for lawf_int, using bit<8>
+case3331.p4(465): warning: Could not infer type for lawf_int, using bit<8>
                                 pppoe_session_id, out_port, inner_cpe_mac, lawf_int, ctr_bucket) {
                                                                            ^^^^^^^^
-dnets_bng_tofino.p4(134): warning: Could not infer type for lawf_int, using bit<8>
+case3331.p4(282): warning: Could not infer type for lawf_int, using bit<8>
 action a_line_map_pass(line_id, lawf_int) {
                                 ^^^^^^^^
-dnets_bng_tofino.p4(166): warning: Could not infer type for version, using bit<8>
+case3331.p4(314): warning: Could not infer type for version, using bit<8>
 action a_pppoe_cpdp_pass_ip(version) {
                             ^^^^^^^

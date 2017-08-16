@@ -1,0 +1,51 @@
+case2277.p4:907:6: warning: missing terminating ' character
+     8'0;
+      ^
+case2277.p4:962:6: warning: missing terminating ' character
+     8'0;
+      ^
+case2277.p4:1230:6: warning: missing terminating ' character
+     8'0;
+      ^
+case2277.p4(2393): warning: -1: negative value with unsigned type
+    add_to_field(ipv4.ttl, -1);
+                            ^
+case2277.p4(2401): warning: -1: negative value with unsigned type
+    add_to_field(ipv4.ttl, -1);
+                            ^
+case2277.p4(2409): warning: -1: negative value with unsigned type
+    add_to_field(ipv6.hopLimit, -1);
+                                 ^
+case2277.p4(2417): warning: -1: negative value with unsigned type
+    add_to_field(ipv6.hopLimit, -1);
+                                 ^
+case2277.p4(4459): warning: Could not infer type for session_id, using bit<8>
+action egress_mirror_coal_hdr(session_id, id) {
+                              ^^^^^^^^^^
+case2277.p4(4459): warning: Could not infer type for id, using bit<8>
+action egress_mirror_coal_hdr(session_id, id) {
+                                          ^^
+case2277.p4(4427): warning: Could not infer type for reason_code, using bit<8>
+action egress_mirror_drop(reason_code, platform_id) {
+                          ^^^^^^^^^^^
+case2277.p4(4427): warning: Could not infer type for platform_id, using bit<8>
+action egress_mirror_drop(reason_code, platform_id) {
+                                       ^^^^^^^^^^^
+case2277.p4(1473): warning: Could not infer type for enable_flowlet, using bit<8>
+action set_config_parameters(enable_dod, enable_flowlet, switch_id) {
+                                         ^^^^^^^^^^^^^^
+case2277.p4(5768): warning: Could not infer type for meter_idx, using bit<8>
+action set_storm_control_meter(meter_idx) {
+                               ^^^^^^^^^
+case2277.p4(4316): warning: Could not infer type for meter_id, using bit<8>
+action copy_to_cpu(qid, meter_id, icos) {
+                        ^^^^^^^^
+case2277.p4(4301): warning: Could not infer type for meter_id, using bit<8>
+action redirect_to_cpu(qid, meter_id, icos) {
+                            ^^^^^^^^
+case2277.p4(4329): warning: Could not infer type for meter_id, using bit<8>
+action copy_to_cpu_with_reason(reason_code, qid, meter_id, icos) {
+                                                 ^^^^^^^^
+case2277.p4(4293): warning: Could not infer type for meter_id, using bit<8>
+action redirect_to_cpu_with_reason(reason_code, qid, meter_id, icos) {
+                                                     ^^^^^^^^

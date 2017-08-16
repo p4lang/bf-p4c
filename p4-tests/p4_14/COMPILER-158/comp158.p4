@@ -1,420 +1,11 @@
-# 1 "switch.p4"
-# 1 "<built-in>"
-# 1 "<command-line>"
-# 1 "switch.p4"
 
-# 1 "/home/vgurevich/sw_drops/p4c/share/p4_lib/tofino/constants.p4" 1 3 4
-# 3 "switch.p4" 2
-# 1 "/home/vgurevich/sw_drops/p4c/share/p4_lib/tofino/intrinsic_metadata.p4" 1 3 4
-# 10 "/home/vgurevich/sw_drops/p4c/share/p4_lib/tofino/intrinsic_metadata.p4" 3 4
-header_type ingress_parser_control_signals {
-    fields {
-        priority : 3;
-    }
-}
+#include "tofino/constants.p4"
+#include "tofino/intrinsic_metadata.p4"
+#include "tofino/primitives.p4"
 
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-@pragma pa_intrinsic_header ingress ig_prsr_ctrl
-header ingress_parser_control_signals ig_prsr_ctrl;
 
 
 
-header_type ingress_intrinsic_metadata_t {
-    fields {
-
-        resubmit_flag : 1;
-
-
-        _pad1 : 1;
-
-        _pad2 : 2;
-
-        _pad3 : 3;
-
-        ingress_port : 9;
-
-
-        ingress_mac_tstamp : 48;
-
-    }
-}
-
-@pragma dont_trim
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-@pragma pa_intrinsic_header ingress ig_intr_md
-@pragma pa_mandatory_intrinsic_field ingress ig_intr_md.ingress_port
-header ingress_intrinsic_metadata_t ig_intr_md;
-
-
-
-header_type generator_metadata_t {
-    fields {
-
-        app_id : 16;
-
-        batch_id: 16;
-
-        instance_id: 16;
-    }
-}
-
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-header generator_metadata_t ig_pg_md;
-
-
-
-header_type ingress_intrinsic_metadata_from_parser_aux_t {
-    fields {
-        ingress_global_tstamp : 48;
-
-
-        ingress_global_ver : 32;
-
-
-        ingress_parser_err : 16;
-
-    }
-}
-
-@pragma pa_fragment ingress ig_intr_md_from_parser_aux.ingress_parser_err
-@pragma pa_atomic ingress ig_intr_md_from_parser_aux.ingress_parser_err
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-@pragma pa_intrinsic_header ingress ig_intr_md_from_parser_aux
-header ingress_intrinsic_metadata_from_parser_aux_t ig_intr_md_from_parser_aux;
-
-
-
-header_type ingress_intrinsic_metadata_for_tm_t {
-    fields {
-
-
-
-
-        _pad1 : 7;
-        ucast_egress_port : 9;
-
-
-
-
-        drop_ctl : 3;
-
-
-
-
-        bypass_egress : 1;
-
-        deflect_on_drop : 1;
-
-
-
-        ingress_cos : 3;
-
-
-
-
-
-        qid : 5;
-
-        icos_for_copy_to_cpu : 3;
-
-
-
-
-
-        _pad2: 3;
-
-        copy_to_cpu : 1;
-
-        packet_color : 2;
-
-
-
-        disable_ucast_cutthru : 1;
-
-        enable_mcast_cutthru : 1;
-
-
-
-
-        mcast_grp_a : 16;
-
-
-
-
-
-        mcast_grp_b : 16;
-
-
-
-
-        _pad3 : 3;
-        level1_mcast_hash : 13;
-
-
-
-
-
-
-
-        _pad4 : 3;
-        level2_mcast_hash : 13;
-
-
-
-
-
-
-
-        level1_exclusion_id : 16;
-
-
-
-
-
-        _pad5 : 7;
-        level2_exclusion_id : 9;
-
-
-
-
-
-        rid : 16;
-
-
-
-    }
-}
-
-@pragma pa_atomic ingress ig_intr_md_for_tm.ucast_egress_port
-
-@pragma pa_fragment ingress ig_intr_md_for_tm.drop_ctl
-@pragma pa_fragment ingress ig_intr_md_for_tm.qid
-@pragma pa_fragment ingress ig_intr_md_for_tm._pad2
-
-@pragma pa_atomic ingress ig_intr_md_for_tm.mcast_grp_a
-@pragma pa_fragment ingress ig_intr_md_for_tm.mcast_grp_a
-@pragma pa_mandatory_intrinsic_field ingress ig_intr_md_for_tm.mcast_grp_a
-
-@pragma pa_atomic ingress ig_intr_md_for_tm.mcast_grp_b
-@pragma pa_fragment ingress ig_intr_md_for_tm.mcast_grp_b
-@pragma pa_mandatory_intrinsic_field ingress ig_intr_md_for_tm.mcast_grp_b
-
-@pragma pa_atomic ingress ig_intr_md_for_tm.level1_mcast_hash
-@pragma pa_fragment ingress ig_intr_md_for_tm._pad3
-
-@pragma pa_atomic ingress ig_intr_md_for_tm.level2_mcast_hash
-@pragma pa_fragment ingress ig_intr_md_for_tm._pad4
-
-@pragma pa_atomic ingress ig_intr_md_for_tm.level1_exclusion_id
-@pragma pa_fragment ingress ig_intr_md_for_tm.level1_exclusion_id
-
-@pragma pa_atomic ingress ig_intr_md_for_tm.level2_exclusion_id
-@pragma pa_fragment ingress ig_intr_md_for_tm._pad5
-
-@pragma pa_atomic ingress ig_intr_md_for_tm.rid
-@pragma pa_fragment ingress ig_intr_md_for_tm.rid
-
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-@pragma pa_intrinsic_header ingress ig_intr_md_for_tm
-@pragma dont_trim
-@pragma pa_mandatory_intrinsic_field ingress ig_intr_md_for_tm.drop_ctl
-header ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm;
-
-
-header_type ingress_intrinsic_metadata_for_mirror_buffer_t {
-    fields {
-        _pad1 : 6;
-        ingress_mirror_id : 10;
-
-
-    }
-}
-
-@pragma dont_trim
-@pragma pa_intrinsic_header ingress ig_intr_md_for_mb
-@pragma pa_atomic ingress ig_intr_md_for_mb.ingress_mirror_id
-@pragma pa_mandatory_intrinsic_field ingress ig_intr_md_for_mb.ingress_mirror_id
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-header ingress_intrinsic_metadata_for_mirror_buffer_t ig_intr_md_for_mb;
-
-
-header_type egress_intrinsic_metadata_t {
-    fields {
-
-        egress_port : 16;
-
-
-        _pad1: 5;
-        enq_qdepth : 19;
-
-
-        _pad2: 6;
-        enq_congest_stat : 2;
-
-
-        enq_tstamp : 32;
-
-
-        _pad3: 5;
-        deq_qdepth : 19;
-
-
-        _pad4: 6;
-        deq_congest_stat : 2;
-
-
-        app_pool_congest_stat : 8;
-
-
-
-        deq_timedelta : 32;
-
-
-        egress_rid : 16;
-
-
-        _pad5: 7;
-        egress_rid_first : 1;
-
-
-        _pad6: 3;
-        egress_qid : 5;
-
-
-        _pad7: 5;
-        egress_cos : 3;
-
-
-        _pad8: 7;
-        deflection_flag : 1;
-
-
-        pkt_length : 16;
-    }
-}
-
-@pragma dont_trim
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-@pragma pa_intrinsic_header egress eg_intr_md
-
-@pragma pa_atomic egress eg_intr_md.egress_port
-@pragma pa_fragment egress eg_intr_md._pad1
-@pragma pa_fragment egress eg_intr_md._pad7
-@pragma pa_fragment egress eg_intr_md._pad8
-@pragma pa_mandatory_intrinsic_field egress eg_intr_md.egress_port
-@pragma pa_mandatory_intrinsic_field egress eg_intr_md.egress_cos
-
-header egress_intrinsic_metadata_t eg_intr_md;
-
-
-header_type egress_intrinsic_metadata_from_parser_aux_t {
-    fields {
-        egress_global_tstamp : 48;
-
-
-        egress_global_ver : 32;
-
-
-        egress_parser_err : 16;
-
-
-
-        clone_src : 8;
-
-
-
-        coalesce_sample_count : 8;
-
-
-    }
-}
-
-@pragma pa_fragment egress eg_intr_md_from_parser_aux.coalesce_sample_count
-@pragma pa_fragment egress eg_intr_md_from_parser_aux.clone_src
-@pragma pa_fragment egress eg_intr_md_from_parser_aux.egress_parser_err
-@pragma pa_atomic egress eg_intr_md_from_parser_aux.egress_parser_err
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-@pragma pa_intrinsic_header egress eg_intr_md_from_parser_aux
-header egress_intrinsic_metadata_from_parser_aux_t eg_intr_md_from_parser_aux;
-# 376 "/home/vgurevich/sw_drops/p4c/share/p4_lib/tofino/intrinsic_metadata.p4" 3 4
-header_type egress_intrinsic_metadata_for_mirror_buffer_t {
-    fields {
-        _pad1 : 6;
-        egress_mirror_id : 10;
-
-
-        coalesce_flush: 1;
-        coalesce_length: 7;
-
-
-    }
-}
-
-@pragma dont_trim
-@pragma pa_intrinsic_header egress eg_intr_md_for_mb
-@pragma pa_atomic egress eg_intr_md_for_mb.egress_mirror_id
-@pragma pa_fragment egress eg_intr_md_for_mb.coalesce_flush
-@pragma pa_mandatory_intrinsic_field egress eg_intr_md_for_mb.egress_mirror_id
-@pragma pa_mandatory_intrinsic_field egress eg_intr_md_for_mb.coalesce_flush
-@pragma pa_mandatory_intrinsic_field egress eg_intr_md_for_mb.coalesce_length
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-header egress_intrinsic_metadata_for_mirror_buffer_t eg_intr_md_for_mb;
-
-
-
-header_type egress_intrinsic_metadata_for_output_port_t {
-    fields {
-
-        _pad1 : 2;
-        capture_tstamp_on_tx : 1;
-
-
-        update_delay_on_tx : 1;
-# 419 "/home/vgurevich/sw_drops/p4c/share/p4_lib/tofino/intrinsic_metadata.p4" 3 4
-        force_tx_error : 1;
-
-        drop_ctl : 3;
-
-
-
-
-
-
-
-    }
-}
-
-@pragma dont_trim
-@pragma pa_mandatory_intrinsic_field egress eg_intr_md_for_oport.drop_ctl
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-@pragma pa_intrinsic_header egress eg_intr_md_for_oport
-header egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport;
-# 4 "switch.p4" 2
-# 1 "/home/vgurevich/sw_drops/p4c/share/p4_lib/tofino/primitives.p4" 1 3 4
-# 10 "/home/vgurevich/sw_drops/p4c/share/p4_lib/tofino/primitives.p4" 3 4
-action deflect_on_drop(enable_dod) {
-    modify_field(ig_intr_md_for_tm.deflect_on_drop, enable_dod);
-}
-# 5 "switch.p4" 2
-
-
-
-
-# 1 "includes/p4features.h" 1
-# 10 "switch.p4" 2
-# 1 "includes/drop_reasons.h" 1
-# 11 "switch.p4" 2
-# 1 "includes/headers.p4" 1
 header_type ethernet_t {
     fields {
         dstAddr : 48;
@@ -863,7 +454,6 @@ header_type sflow_record_t {
         headerSize : 32;
     }
 }
-# 457 "includes/headers.p4"
 header_type fabric_header_t {
     fields {
         packetType : 3;
@@ -1012,15 +602,12 @@ header_type int_value_t {
         val : 31;
     }
 }
-# 12 "switch.p4" 2
-# 1 "includes/parser.p4" 1
 
 
 
 parser start {
     return parse_ethernet;
 }
-# 68 "includes/parser.p4"
 header ethernet_t ethernet;
 
 parser parse_ethernet {
@@ -1096,7 +683,6 @@ parser parse_mpls {
 }
 
 parser parse_mpls_bos {
-# 157 "includes/parser.p4"
     return select(current(0, 4)) {
         0x4 : parse_mpls_inner_ipv4;
         0x6 : parse_mpls_inner_ipv6;
@@ -1124,7 +710,6 @@ parser parse_vpls {
 parser parse_pw {
     return ingress;
 }
-# 211 "includes/parser.p4"
 header ipv4_t ipv4;
 
 field_list ipv4_checksum_list {
@@ -1193,7 +778,6 @@ parser parse_ipv6_in_ip {
                  3);
     return parse_inner_ipv6;
 }
-# 296 "includes/parser.p4"
 header ipv6_t ipv6;
 
 parser parse_udp_v6 {
@@ -1296,7 +880,6 @@ parser parse_udp {
     return select(latest.dstPort) {
         4789 : parse_vxlan;
         6081: parse_geneve;
-# 408 "includes/parser.p4"
         67 : parse_set_prio_med;
         68 : parse_set_prio_med;
         546 : parse_set_prio_med;
@@ -1307,7 +890,6 @@ parser parse_udp {
         default: ingress;
     }
 }
-# 493 "includes/parser.p4"
 header sctp_t sctp;
 
 parser parse_sctp {
@@ -1437,7 +1019,6 @@ parser parse_vxlan {
     set_metadata(tunnel_metadata.tunnel_vni, latest.vni);
     return parse_inner_ethernet;
 }
-# 638 "includes/parser.p4"
 header genv_t genv;
 
 parser parse_geneve {
@@ -1632,7 +1213,6 @@ parser parse_fabric_payload_header {
         0x8100, 0x9100 : parse_vlan; 0x8847 : parse_mpls; 0x0800 : parse_ipv4; 0x86dd : parse_ipv6; 0x0806 : parse_arp_rarp; 0x88cc : parse_set_prio_high; 0x8809 : parse_set_prio_high; default: ingress;
     }
 }
-# 842 "includes/parser.p4"
 parser parse_set_prio_med {
     set_metadata(ig_prsr_ctrl.priority, 3);
     return ingress;
@@ -1647,11 +1227,6 @@ parser parse_set_prio_max {
     set_metadata(ig_prsr_ctrl.priority, 7);
     return ingress;
 }
-# 13 "switch.p4" 2
-# 1 "includes/p4_table_sizes.h" 1
-# 14 "switch.p4" 2
-# 1 "includes/defines.p4" 1
-# 15 "switch.p4" 2
 
 @pragma pa_alias ingress ig_intr_md.ingress_port ingress_metadata.ingress_port
 
@@ -1700,7 +1275,6 @@ header_type egress_metadata_t {
 metadata ingress_metadata_t ingress_metadata;
 metadata egress_metadata_t egress_metadata;
 
-# 1 "port.p4" 1
 
 
 
@@ -2638,7 +2212,6 @@ table pbb_tunnel_not_ipv4 {
   pbb_tunnel_not_ipv4;
  }
 }
-# 958 "port.p4"
 action ivsi_comm_set(vsi_valid, vlanlrn_mode, vlanlrn_lmt, stg_id, class_id, vlan_mac_lmt_dlf, vlan_lmt_num, vrfid, car_cnt_en, ivsi_carid, unuc_en, bc_en, mgid, bypass_chk) {
  modify_field(l2_metadata.vsi_valid, vsi_valid);
  modify_field(l2_metadata.vlanlrn_mode, vlanlrn_mode);
@@ -3036,7 +2609,6 @@ table ivsi_bypass_chk {
   ttflagFalse_srctrunkflagTrue_ipv4FragFalse_ipv4OptionFalse_icmp;
   ttflagFalse_srctrunkflagTrue_ipv4FragFalse_ipv4OptionFalse_igmp;
   ttflagFalse_srctrunkflagTrue_ipv4FragFalse_ipv4OptionFalse_tcp;
-# 1386 "port.p4"
   nop;
   ttflagFalse_srctrunkflagFalse_default;
  }
@@ -3374,7 +2946,6 @@ control process_inner_mystation {
  if((ingress_metadata.fwd_type == 1) or (ingress_metadata.fwd_type == 19)) {
   apply(maclrn);
  }
-# 1739 "port.p4"
 }
 
 action be_invalid_drop() {
@@ -3457,7 +3028,6 @@ action trunk_hash_pro() {
 
  drop();
 }
-# 1834 "port.p4"
 action dvp_invalid_drop() {
  drop();
 }
@@ -3508,7 +3078,6 @@ table trunk_hash {
  }
     size : 1024;
 }
-# 1902 "port.p4"
 control process_befwd {
  apply(befwd) ;
 }
@@ -3763,7 +3332,6 @@ action_selector lag_selector {
     selection_key : lag_hash;
     selection_mode : fair;
 }
-# 2164 "port.p4"
 action set_lag_port(port) {
     modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 }
@@ -4183,8 +3751,6 @@ control process_oportinfo {
   }
  }
 }
-# 64 "switch.p4" 2
-# 1 "l2.p4" 1
 
 
 
@@ -4601,9 +4167,6 @@ table vlan_decap {
 control process_vlan_decap {
     apply(vlan_decap);
 }
-# 65 "switch.p4" 2
-# 1 "l3.p4" 1
-# 9 "l3.p4"
 header_type l3_metadata_t {
     fields {
         lkp_ip_type : 2;
@@ -4700,7 +4263,6 @@ action fib_terminate_tunnel() {
  modify_field(ingress_metadata.resubmit_serv_type, 11);
  resubmit(resubmit_cwp);
 }
-# 131 "l3.p4"
 control process_urpf_bd {
 
 
@@ -4771,7 +4333,6 @@ control process_mac_rewrite {
         apply(mac_rewrite);
     }
 }
-# 229 "l3.p4"
 control process_mtu {
 
 
@@ -4779,8 +4340,6 @@ control process_mtu {
 
 
 }
-# 66 "switch.p4" 2
-# 1 "ipv4.p4" 1
 
 
 
@@ -4934,12 +4493,8 @@ control process_fibv4 {
         }
     }
 }
-# 190 "ipv4.p4"
 control process_ipv4_urpf {
-# 201 "ipv4.p4"
 }
-# 67 "switch.p4" 2
-# 1 "ipv6.p4" 1
 
 
 
@@ -5004,7 +4559,6 @@ control validate_outer_ipv6_header {
     apply(validate_outer_ipv6_packet);
 
 }
-# 80 "ipv6.p4"
 table ipv6_fib_lpm {
     reads {
         l3_metadata.vrf : exact;
@@ -5047,12 +4601,8 @@ control process_ipv6_fib {
     }
 
 }
-# 158 "ipv6.p4"
 control process_ipv6_urpf {
-# 169 "ipv6.p4"
 }
-# 68 "switch.p4" 2
-# 1 "tunnel.p4" 1
 
 
 
@@ -6939,9 +6489,6 @@ table cwp_terminate {
   cwp_terminate_process;
  }
 }
-# 69 "switch.p4" 2
-# 1 "acl.p4" 1
-# 9 "acl.p4"
 header_type acl_metadata_t {
     fields {
         acl_deny : 1;
@@ -7039,7 +6586,6 @@ header_type i2e_metadata_t {
         mirror_session_id : 16;
     }
 }
-# 118 "acl.p4"
 @pragma pa_solitary ingress acl_metadata.if_label
 
 metadata acl_metadata_t acl_metadata;
@@ -7067,7 +6613,6 @@ field_list i2e_mirror_info {
     i2e_metadata.ingress_tstamp;
     i2e_metadata.mirror_session_id;
 }
-# 156 "acl.p4"
 field_list e2e_mirror_info {
     i2e_metadata.mirror_session_id;
 }
@@ -7098,7 +6643,6 @@ action acl_redirect_ecmp(ecmp_index) {
 action acl_dod_en() {
     modify_field(ingress_metadata.enable_dod, 1);
 }
-# 202 "acl.p4"
 table mac_acl {
     reads {
         acl_metadata.if_label : ternary;
@@ -7124,7 +6668,6 @@ control process_mac_acl {
     apply(mac_acl);
 
 }
-# 242 "acl.p4"
 table ip_acl {
     reads {
         acl_metadata.if_label : ternary;
@@ -7184,7 +6727,6 @@ table ip_acl_1 {
     }
     size : 2048;
 }
-# 317 "acl.p4"
 table ipv6_acl {
     reads {
         acl_metadata.if_label : ternary;
@@ -7265,7 +6807,6 @@ control process_ip_acl {
     }
 
 }
-# 441 "acl.p4"
 control process_qos {
 
 
@@ -7302,7 +6843,6 @@ action racl_redirect_ecmp(ecmp_index) {
     modify_field(acl_metadata.racl_nexthop, ecmp_index);
     modify_field(acl_metadata.racl_nexthop_type, 1);
 }
-# 492 "acl.p4"
 table ipv4_racl {
     reads {
         acl_metadata.bd_label : ternary;
@@ -7513,7 +7053,6 @@ action egress_port_mirror_drop(session_id) {
     egress_port_mirror(session_id);
     drop();
 }
-# 713 "acl.p4"
 table egress_acl {
     reads {
         eg_intr_md.egress_port : ternary;
@@ -7537,8 +7076,6 @@ control process_egress_acl {
     apply(egress_acl);
 
 }
-# 70 "switch.p4" 2
-# 1 "nat.p4" 1
 
 
 
@@ -7554,16 +7091,10 @@ header_type nat_metadata_t {
 }
 
 metadata nat_metadata_t nat_metadata;
-# 86 "nat.p4"
 control process_nat {
-# 101 "nat.p4"
 }
-# 120 "nat.p4"
 control process_egress_nat {
-# 130 "nat.p4"
 }
-# 71 "switch.p4" 2
-# 1 "multicast.p4" 1
 
 
 
@@ -8297,9 +7828,7 @@ table compute_multicast_hashes {
     actions {
         nop;
         compute_lkp_ipv4_hash;
-# 743 "multicast.p4"
     }
-# 760 "multicast.p4"
 }
 
 control process_multicast_hashes {
@@ -8423,8 +7952,6 @@ control process_replication {
     }
 
 }
-# 72 "switch.p4" 2
-# 1 "nexthop.p4" 1
 
 
 
@@ -8599,7 +8126,6 @@ action set_ecmp_nexthop_details(ifindex, bd, nhop_index, tunnel) {
     bit_xor(tunnel_metadata.tunnel_if_check,
             tunnel_metadata.tunnel_terminate, tunnel);
 }
-# 184 "nexthop.p4"
 action set_nexthop_details_for_post_routed_flood(bd, uuc_mc_index) {
     modify_field(ig_intr_md_for_tm.mcast_grp_b, uuc_mc_index);
     modify_field(ingress_metadata.egress_ifindex, 0);
@@ -8641,9 +8167,6 @@ control process_nexthop {
         apply(nexthop);
     }
 }
-# 73 "switch.p4" 2
-# 1 "rewrite.p4" 1
-# 9 "rewrite.p4"
 action set_l2_rewrite_with_tunnel(tunnel_index, tunnel_type) {
     modify_field(egress_metadata.routed, 0);
     modify_field(egress_metadata.bd, ingress_metadata.bd);
@@ -8677,7 +8200,6 @@ action set_l3_rewrite(bd, mtu_index, smac_idx, dmac) {
     modify_field(egress_metadata.outer_bd, bd);
     modify_field(l3_metadata.mtu_index, mtu_index);
 }
-# 93 "rewrite.p4"
 action set_mpls_swap_push_rewrite_l2(label, tunnel_index, header_count) {
     modify_field(egress_metadata.routed, l3_metadata.routed);
     modify_field(egress_metadata.bd, ingress_metadata.bd);
@@ -8738,7 +8260,6 @@ table rewrite {
         set_mpls_push_rewrite_l2;
         set_mpls_swap_push_rewrite_l3;
         set_mpls_push_rewrite_l3;
-# 165 "rewrite.p4"
     }
     size : 43000;
 }
@@ -8746,8 +8267,6 @@ table rewrite {
 control process_rewrite {
     apply(rewrite);
 }
-# 74 "switch.p4" 2
-# 1 "security.p4" 1
 
 
 
@@ -8764,18 +8283,13 @@ header_type security_metadata_t {
 }
 
 metadata security_metadata_t security_metadata;
-# 46 "security.p4"
 control process_storm_control {
 
 
 
 }
-# 86 "security.p4"
 control process_ip_sourceguard {
-# 97 "security.p4"
 }
-# 75 "switch.p4" 2
-# 1 "fabric.p4" 1
 
 
 
@@ -8808,7 +8322,6 @@ action terminate_cpu_packet() {
     remove_header(fabric_header_cpu);
     remove_header(fabric_payload_header);
 }
-# 96 "fabric.p4"
 @pragma ternary 1
 table fabric_ingress_dst_lkp {
 
@@ -8818,17 +8331,14 @@ table fabric_ingress_dst_lkp {
 
     actions {
         terminate_cpu_packet;
-# 114 "fabric.p4"
     }
 }
-# 142 "fabric.p4"
 control process_ingress_fabric {
 
 
 
 
 }
-# 220 "fabric.p4"
 control process_fabric_lag {
 
 
@@ -8858,14 +8368,8 @@ action cpu_rx_rewrite() {
 action fabric_rewrite(tunnel_index) {
     modify_field(tunnel_metadata.tunnel_index, tunnel_index);
 }
-# 76 "switch.p4" 2
-# 1 "egress_filter.p4" 1
-# 47 "egress_filter.p4"
 control process_egress_filter {
-# 58 "egress_filter.p4"
 }
-# 77 "switch.p4" 2
-# 1 "mirror.p4" 1
 
 
 
@@ -8890,17 +8394,10 @@ table mirror {
     }
     size : 1024;
 }
-# 78 "switch.p4" 2
-# 1 "int_transit.p4" 1
-# 523 "int_transit.p4"
 control process_int_endpoint {
-# 532 "int_transit.p4"
 }
-# 607 "int_transit.p4"
 control process_int_insertion {
-# 627 "int_transit.p4"
 }
-# 682 "int_transit.p4"
 control process_int_outer_encap {
 
 
@@ -8908,7 +8405,6 @@ control process_int_outer_encap {
 
 
 }
-# 79 "switch.p4" 2
 
 action nop() {
 }

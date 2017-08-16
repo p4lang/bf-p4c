@@ -12,17 +12,6 @@ set (P14_XFAIL_TESTS
   extensions/p4_tests/p4_14/c2/COMPILER-514/balancer_one.p4
   extensions/p4_tests/p4_14/c2/COMPILER-537/case2834.p4
   extensions/p4_tests/p4_14/c2/COMPILER-533/case2736.p4
-  extensions/p4_tests/p4_14/c3/COMPILER-393/case2277.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-347/switch_bug.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-352/netchain_one.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-355/netchain_two.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-385/case2247.p4
-  extensions/p4_tests/p4_14/c2/COMPILER-392/case2266.p4
-  extensions/p4_tests/p4_14/c2/COMPILER-400/case2314.p4
-  extensions/p4_tests/p4_14/c2/COMPILER-401/case2308_bugged.p4
-  extensions/p4_tests/p4_14/c2/COMPILER-420/case2433.p4
-  extensions/p4_tests/p4_14/c2/COMPILER-421/case2434.p4
-  extensions/p4_tests/p4_14/c2/COMPILER-426/case2475.p4
   extensions/p4_tests/p4_14/c2/COMPILER-443/case2514.p4
   extensions/p4_tests/p4_14/c2/COMPILER-466/case2563_with_nop.p4
   extensions/p4_tests/p4_14/c2/COMPILER-466/case2563_without_nop.p4
@@ -34,8 +23,6 @@ set (P14_XFAIL_TESTS
   extensions/p4_tests/p4_14/test_config_311_hash_adb.p4
   extensions/p4_tests/p4_14/test_config_309_wide_dyn_selection.p4
   extensions/p4_tests/p4_14/test_config_314_sym_hash.p4
-  extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case1.p4
-  extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case2.p4
   extensions/p4_tests/p4_14/c1/COMPILER-548/case2895.p4
   extensions/p4_tests/p4_14/c1/COMPILER-637/case3478.p4
   extensions/p4_tests/p4_14/c1/COMPILER-635/case3468.p4
