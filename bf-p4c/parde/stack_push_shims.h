@@ -4,17 +4,39 @@
 #include "parde_visitor.h"
 #include "tofino/common/header_stack.h"
 
+/**
+ * Adds parser states to initialize the `$stkvalid` fields that are used to
+ * handle the `push_front` and `pop_front` primitives for header stacks.
+ *
+ * @see HeaderPushPop for more discussion.
+ */
 class StackPushShims : public PardeModifier {
     const HeaderStackInfo &stacks;
     bool preorder(IR::Tofino::Parser *p) override {
         for (auto &stack : stacks) {
             if (stack.maxpush == 0 || stack.gress != p->gress) continue;
+
+            // The layout of `$stkvalid` is an overlay over a header stack's
+            // `$push` field, its entry POV bits, and its `$pop` field:
+            //
+            // [ 1 1 .. $push .. 1 1 ] [ .. entry POVs .. ] [ 0 0 .. $pop .. 0 0 ]
+            //
+            // We need to initialize all of the `$push` bits to 1, but we need to
+            // do it using a write to `$stkvalid`, because in the MAU we'll
+            // access these bits only through `$stkvalid` and if we write to
+            // `$push` we'll end up thinking that write is dead and eliminate
+            // it.
+            const unsigned pushValue = (1U << stack.maxpush) - 1;
+            const unsigned stkValidSize = stack.size + stack.maxpush + stack.maxpop;
+            const unsigned stkValidValue = pushValue << (stack.size + stack.maxpop);
+
             p->start = new IR::Tofino::ParserState(stack.name + "$shim", stack.gress, {},
                 { new IR::Tofino::ParserMatch(match_t(), 0, {
                     new IR::Tofino::ExtractConstant(
-                        new IR::Member(IR::Type::Bits::get(stack.maxpush),
-                                       new IR::PathExpression(stack.name), "$push"),
-                        new IR::Constant((1U << stack.maxpush) - 1)) }, p->start) } ); }
+                        new IR::Member(IR::Type::Bits::get(stkValidSize),
+                                       new IR::PathExpression(stack.name), "$stkvalid"),
+                        new IR::Constant(stkValidValue)) }, p->start) } );
+        }
         return false; }
 
  public:
