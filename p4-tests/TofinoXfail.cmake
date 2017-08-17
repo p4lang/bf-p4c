@@ -45,16 +45,6 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
 # warning: Container TW3 contains deparsed header fields, but it has unused bits: ( 22:ingress::h.v<1> I off=0 ref deparsed /t_phv_8,PHV-259;/|t_phv_8,0..0|[0:0]->[TW3](31); )
 # warning: Container TW19 contains deparsed header fields, but it has unused bits: ( 44:egress::h.v<1> E off=0 ref deparsed /t_phv_13,PHV-275;/|t_phv_13,0..0|[0:0]->[TW19](31); )
   testdata/p4_16_samples/table-entries-ternary-bmv2.p4
-# Assertion failed: (start >= 1 && start < width_i), function taint_ccgf, file phv/cluster_phv_container.cpp, line 282.
-# It's suggestive that these all involve header stacks.
-# XXX(seth): This problem was diagnosed, and the fix is known. We write to
-# `stack.$push`, but expect to read the result from `stack.$stkvalid`, a field
-# which is overlayed with `stack.$push`. Since nothing ever reads `stack.$push`,
-# we dead code eliminate the write, which breaks stuff. The fix is to totally
-# remove `stack.$push` and just write to `stack.$stkvalid` directly. Nobody has
-# had time to implement it yet, though.
-  testdata/p4_14_samples/instruct5.p4
-  extensions/p4_tests/p4_14/test_config_93_push_and_pop.p4
   )
 
   p4c_add_xfail_reason("tofino"
@@ -111,6 +101,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_48_action_data_bit_masked_set.p4
   extensions/p4_tests/p4_14/test_config_49_action_data_bit_masked_set_immediate.p4
   extensions/p4_tests/p4_14/jenkins/pgrs/pgrs_one.p4
+  extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
   )
 
 # BRIG-103
@@ -127,8 +118,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Unhandled action bitmask constraint"
   testdata/p4_14_samples/mac_rewrite.p4
-  testdata/p4_14_samples/switch_20160226/switch.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   )
 
 # Incorrect P4_14->16 conversion for varbit extract
@@ -175,10 +164,11 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/05-FullTPHV.p4
   testdata/p4_14_samples/06-FullTPHV1.p4
   testdata/p4_14_samples/08-FullTPHV3.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
   )
 
 p4c_add_xfail_reason("tofino"
-  "State .* extracts field .* with no PHV allocation"
+  "No PHV allocation for field extracted by the parser"
   testdata/p4_14_samples/packet_redirect.p4
   )
 
@@ -213,7 +203,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/20-SimpleTrillTwoStep.p4
   extensions/p4_tests/p4_14/21-SimpleTrillThreeStep.p4
   extensions/p4_tests/p4_14/24-SimpleTrillThreeStep2.p4
-  extensions/p4_tests/p4_14/test_config_216_phv_aff.p4
   extensions/p4_tests/p4_14/test_config_217_gateway_non_determin.p4
   testdata/p4_16_samples/issue414-bmv2.p4
   testdata/p4_16_samples/parser-locals2.p4
@@ -259,14 +248,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/jenkins/pctr/pctr.p4
   )
 
-# BRIG-192
-# extensions/p4_tests/p4_14/11-AssignChooseDest.p4
-p4c_add_xfail_reason("tofino"
-  "What happened here.*64"
-  extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
-  extensions/p4_tests/p4_14/switch_20160602/switch.p4
-  )
-
 # used to be: BRIG-129 & BRIG-183
 p4c_add_xfail_reason("tofino"
   "No phv record"
@@ -310,7 +291,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: .*: Cannot unify bit"
   extensions/p4_tests/p4_14/test_config_214_full_stats.p4
-  extensions/p4_tests/p4_14/test_config_244_gateway_compare.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -329,7 +309,6 @@ p4c_add_xfail_reason("tofino"
   "No register named"
   # Should still fail; see BRIG-198.
   # extensions/p4_tests/p4_14/04-FullPHV3.p4
-  extensions/p4_tests/p4_14/switch_l2_profile.p4
   extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
   extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
   )
@@ -337,7 +316,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "tofino only supports 12 stages"
   extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
   extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
   extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
   extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
@@ -447,11 +425,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "boost::too_few_args: format-string referred to more arguments than were passed"
   extensions/p4_tests/p4_14/shared_names.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "(throwing|uncaught exception).*std::out_of_range"
-  extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
   )
 
 # BRIG-99
@@ -613,6 +586,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "payload ... already in use"
   extensions/p4_tests/p4_14/jenkins/mau_tcam_test/mau_tcam_test.p4
+  extensions/p4_tests/p4_16/google-tor/p4/spec/tor.p4
   )
 
 #BRIG-142
@@ -730,11 +704,6 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Two containers in the same action are at the same place"
-  testdata/p4_14_samples/switch_20160512/switch.p4
-  )
-
-p4c_add_xfail_reason("tofino"
   "NULL operand 4 for hash"
   testdata/p4_14_samples/flowlet_switching.p4
   testdata/p4_16_samples/flowlet_switching-bmv2.p4
@@ -769,4 +738,53 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Constant lookup does not match the ActionFormat"
   testdata/p4_14_samples/action_inline.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Overlapping field slices in allocation for field"
+  extensions/p4_tests/p4_14/switch_l2_profile.p4
+  extensions/p4_tests/p4_14/switch_20160602/switch.p4
+  testdata/p4_14_samples/switch_20160226/switch.p4
+  testdata/p4_14_samples/switch_20160512/switch.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
+  extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "syntax error, unexpected '-', expecting INT"
+  extensions/p4_tests/p4_14/test_config_216_phv_aff.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Unhandled case of sharing constants"
+  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "No write within a split instruction"
+  testdata/p4_16_samples/mux-bmv2.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Tofino action has repeated lvalue"
+  testdata/p4_16_samples/slice-def-use.p4
+  testdata/p4_16_samples/slice-def-use1.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "No PHV allocation for referenced field"
+  testdata/p4_14_samples/copy_to_cpu.p4
+  testdata/p4_14_samples/resubmit.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
+  extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
   )
