@@ -848,7 +848,7 @@ bool Parser::State::Match::Set::merge(const Set &a) {
     if (!(where->hi < a.where->lo || a.where->hi < where->lo)) {
         warning(where.lineno, "Phv slices %s and %s overlapping"
                 , where.name(), a.where.name()); }
-    unsigned what = ((what << where->lo) | (a.what << a.where->lo))
+    what = ((what << where->lo) | (a.what << a.where->lo))
         >> (std::min(where->lo, a.where->lo));
     where = Phv::Ref(where->reg, std::min(where->lo, a.where->lo), std::max(where->hi, a.where->hi));
     LOG1("Merging phv slices " << orig << " + " << a.where << " = " << where);
