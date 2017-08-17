@@ -24,10 +24,11 @@ limitations under the License.
 #include "tofino/phv/phv.h"
 #include "tofino/phv/validate_allocation.h"
 
-#if 1
-#undef ERROR_CHECK
-#define ERROR_CHECK WARN_CHECK
-#endif
+// Currently we fail a lot of these checks, so to prevent mass XFAIL'ing a lot
+// of the tests, we treat the checks as warning instead of errors. This macro
+// indicates cases that *should* use ERROR_CHECK but are currently downgraded to
+// a warning.
+#define ERROR_WARN_ WARN_CHECK
 
 namespace PHV {
 
@@ -81,14 +82,14 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe* pipe) {
         // Verify that we didn't overflow the PHV space which is actually
         // available on the hardware.
         for (auto id : assignedContainers - PHV::Container::physicalContainers())
-            ERROR_CHECK(false, "Allocated overflow (non-physical) container %1% to field %2%",
+            ERROR_WARN_(false, "Allocated overflow (non-physical) container %1% to field %2%",
                         PHV::Container::fromId(id), cstring::to_cstring(field));
 
         // Verify that all bits in the field are allocated.
         // XXX(seth): Long term it would be ideal to only allocate the bits we
         // actually need, but this will help us find bugs in the short term.
         bitvec allBitsInField(0, field.size);
-        ERROR_CHECK(allocatedBits == allBitsInField,
+        ERROR_WARN_(allocatedBits == allBitsInField,
                     "Not all bits are allocated for field %1%",
                     cstring::to_cstring(field));
     }
@@ -140,7 +141,7 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe* pipe) {
         // that feature is implemented.
         if (container.tagalong()) {
             for (auto field : fields)
-                ERROR_CHECK(!isMetadata(field) || field->bridged,
+                ERROR_WARN_(!isMetadata(field) || field->bridged,
                             "Tagalong container %1% contains non-bridged metadata "
                             "field %2%", container, cstring::to_cstring(field));
         }
@@ -159,7 +160,7 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe* pipe) {
         // only of deparsed fields.
         bool deparsed = std::any_of(fields.begin(), fields.end(), isDeparsed);
         if (deparsed)
-            ERROR_CHECK(std::all_of(fields.begin(), fields.end(), isDeparsed),
+            ERROR_WARN_(std::all_of(fields.begin(), fields.end(), isDeparsed),
                         "Deparsed container %1% contains some non-deparsed "
                         "fields: %2%", container, cstring::to_cstring(fields));
 
@@ -167,7 +168,7 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe* pipe) {
         // bridged.
         if (deparsed) {
             for (auto field : fields)
-                ERROR_CHECK(!isMetadata(field) || field->bridged,
+                ERROR_WARN_(!isMetadata(field) || field->bridged,
                             "Deparsed container %1% contains non-bridged "
                             "metadata fields: %2%", container,
                             cstring::to_cstring(fields));
@@ -181,7 +182,7 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe* pipe) {
         bool anyMetadata = std::any_of(fields.begin(), fields.end(), isMetadata);
         bool allMetadata = std::all_of(fields.begin(), fields.end(), isMetadata);
         if (deparsed)
-            ERROR_CHECK(allMetadata || !anyMetadata,
+            ERROR_WARN_(allMetadata || !anyMetadata,
                         "Deparsed container %1% contains a mix of metadata and "
                         "non-metadata fields: %2%", container,
                         cstring::to_cstring(fields));
@@ -206,7 +207,7 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe* pipe) {
                 allocatedBitsForField |= sliceBits;
             }
 
-            ERROR_CHECK(!allocatedBitsForField.intersects(allocatedBitsForContainer),
+            ERROR_WARN_(!allocatedBitsForField.intersects(allocatedBitsForContainer),
                         "Container %1% contains fields which overlap: %2%",
                         container, cstring::to_cstring(fields));
             allocatedBitsForContainer |= allocatedBitsForField;
@@ -217,7 +218,7 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe* pipe) {
         // to leave some bits in the container unused.
         if (deparsed && !allMetadata) {
             bitvec allBitsInContainer(0, container.size());
-            ERROR_CHECK(allocatedBitsForContainer == allBitsInContainer,
+            ERROR_WARN_(allocatedBitsForContainer == allBitsInContainer,
                         "Container %1% contains deparsed header fields, but "
                         "it has unused bits: %2%", container,
                         cstring::to_cstring(fields));
@@ -245,7 +246,7 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe* pipe) {
             // The first bit of the field must have the same alignment in the
             // container as it does in the input buffer.
             if (fieldSlice.lo == 0) {
-                ERROR_CHECK(containerSlice.lo % 8 == requiredAlignment,
+                ERROR_WARN_(containerSlice.lo % 8 == requiredAlignment,
                             "Field is extracted in the parser, but its "
                             "first container slice has an incompatible "
                             "alignment: %1%", cstring::to_cstring(field));
@@ -256,7 +257,7 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe* pipe) {
             // into other containers) must be byte aligned, since container
             // boundaries must always correspond with input buffer byte
             // boundaries.
-            ERROR_CHECK(containerSlice.isLoAligned(),
+            ERROR_WARN_(containerSlice.isLoAligned(),
                         "Field is extracted in the parser into multiple "
                         "containers, but the container slices after the first "
                         "aren't byte aligned: %1%", cstring::to_cstring(field));
