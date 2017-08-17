@@ -51,9 +51,9 @@ header egress_intrinsic_metadata_from_parser_aux_t {
 }
 
 header h_t {
-    bit<9> f1;
-    bit<7> f2;
-    bit<8> f3;
+    bit<16> f1;
+    bit<8>  f2;
+    bit<8>  f3;
 }
 
 header ingress_intrinsic_metadata_t {
@@ -153,7 +153,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".nop") action nop_0() {
     }
-    @name(".do") action do_0(bit<7> val, bit<9> port) {
+    @name(".do") action do_0(bit<8> val, bit<9> port) {
         hdr.h.f2 = val;
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }

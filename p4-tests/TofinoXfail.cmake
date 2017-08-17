@@ -171,6 +171,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/acl1.p4
   testdata/p4_16_samples/action_profile-bmv2.p4
   testdata/p4_16_samples/issue297-bmv2.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-386/test_config_286_stat_bugs.p4
   )
 
 # BRIG-108
@@ -288,6 +289,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "No phv record"
   extensions/p4_tests/p4_16/clone-bmv2.p4
+  extensions/p4_tests/p4_14/test_config_245_alias_test.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -295,12 +297,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/bloom_filter.p4
   extensions/p4_tests/p4_16/flowlet_switching.p4
   extensions/p4_tests/p4_16/stateful_alu.p4
-  )
-
-# BRIG-179
-p4c_add_xfail_reason("tofino"
-  "Could not find type of"
-  extensions/p4_tests/p4_14/c1/COMPILER-386/test_config_286_stat_bugs.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -336,16 +332,8 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "error: .*: not defined on bool and int"
+  "Gateway xor key .* misaligned"
   extensions/p4_tests/p4_14/test_config_244_gateway_compare.p4
-  extensions/p4_tests/p4_14/test_config_245_alias_test.p4
-  extensions/p4_tests/p4_14/test_config_246_fill_stage.p4
-  extensions/p4_tests/p4_14/test_config_247_first_clpm.p4
-  extensions/p4_tests/p4_14/test_config_261_mutually_exclusive_src_ops.p4
-  extensions/p4_tests/p4_14/test_config_262_req_packing.p4
-  extensions/p4_tests/p4_14/test_config_277_meta_init.p4
-  extensions/p4_tests/p4_14/test_config_278_meta_init2.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-386/test_config_286_stat_bugs.p4
   )
 
 # BRIG-102

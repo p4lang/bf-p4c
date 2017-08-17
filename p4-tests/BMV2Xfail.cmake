@@ -17,11 +17,6 @@ set (BMV2_XFAIL_TESTS
   extensions/p4_tests/p4_14/test_config_182_warp_primitive.p4
   extensions/p4_tests/p4_14/test_config_183_sample_e2e.p4
   extensions/p4_tests/p4_14/test_config_191_invalidate.p4
-  extensions/p4_tests/p4_14/test_config_244_gateway_compare.p4
-  extensions/p4_tests/p4_14/test_config_245_alias_test.p4
-  extensions/p4_tests/p4_14/test_config_246_fill_stage.p4
-  extensions/p4_tests/p4_14/test_config_247_first_clpm.p4
-  extensions/p4_tests/p4_14/test_config_278_meta_init2.p4
   extensions/p4_tests/p4_14/test_config_284_swap_primitive.p4
   extensions/p4_tests/p4_16/stack_valid.p4
   extensions/p4_tests/p4_14/shared_names.p4
@@ -37,7 +32,4 @@ set (BMV2_XFAIL_TESTS
   extensions/p4_tests/p4_14/test_config_317_sym_hash_neg_test_3.p4
   extensions/p4_tests/p4_14/test_config_318_sym_hash_neg_test_4.p4
   extensions/p4_tests/p4_14/test_config_319_sym_hash_neg_test_5.p4
-  extensions/p4_tests/p4_14/test_config_261_mutually_exclusive_src_ops.p4
-  extensions/p4_tests/p4_14/test_config_262_req_packing.p4
-  extensions/p4_tests/p4_14/test_config_277_meta_init.p4
   )

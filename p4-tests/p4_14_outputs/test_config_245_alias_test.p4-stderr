@@ -1,0 +1,9 @@
+test_config_245_alias_test.p4(41): warning: Could not infer type for p, using bit<8>
+action action_0(p){
+                ^
+test_config_245_alias_test.p4(44): warning: Could not infer type for p, using bit<8>
+action action_1(p){
+                ^
+test_config_245_alias_test.p4(48): warning: Could not infer type for p, using bit<8>
+action action_2(p){
+                ^

@@ -19,10 +19,6 @@ set (P14_XFAIL_TESTS
   extensions/p4_tests/p4_14/test_config_206_stateful_logging.p4
   extensions/p4_tests/p4_14/test_config_205_modify_field_from_hash.p4
   extensions/p4_tests/p4_14/test_config_214_full_stats.p4
-  extensions/p4_tests/p4_14/test_config_244_gateway_compare.p4
-  extensions/p4_tests/p4_14/test_config_245_alias_test.p4
-  extensions/p4_tests/p4_14/test_config_246_fill_stage.p4
-  extensions/p4_tests/p4_14/test_config_247_first_clpm.p4
   extensions/p4_tests/p4_14/shared_names.p4
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
   extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
@@ -63,7 +59,6 @@ set (P14_XFAIL_TESTS
   extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
   extensions/p4_tests/p4_14/c1/COMPILER-384/case2240.p4
   extensions/p4_tests/p4_14/c1/COMPILER-385/case2247.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-386/test_config_286_stat_bugs.p4
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
   extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
   extensions/p4_tests/p4_14/c1/COMPILER-447/case2527.p4
@@ -99,9 +94,6 @@ set (P14_XFAIL_TESTS
   extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case1.p4
   extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case2.p4
   extensions/p4_tests/p4_14/test_config_261_mutually_exclusive_src_ops.p4
-  extensions/p4_tests/p4_14/test_config_262_req_packing.p4
-  extensions/p4_tests/p4_14/test_config_277_meta_init.p4
-  extensions/p4_tests/p4_14/test_config_278_meta_init2.p4
   extensions/p4_tests/p4_14/test_config_284_swap_primitive.p4
 # BRIG-28
   extensions/p4_tests/p4_14/switch/p4src/switch.p4

@@ -1,6 +1,11 @@
 #include <core.p4>
 #include <v1model.p4>
 
+struct meta_t {
+    bit<8> x_8;
+    bit<8> y_8;
+}
+
 header egress_intrinsic_metadata_t {
     bit<7>  _pad0;
     bit<9>  egress_port;
@@ -50,10 +55,11 @@ header egress_intrinsic_metadata_from_parser_aux_t {
     bit<8>  coalesce_sample_count;
 }
 
-header h_t {
-    bit<16> f1;
-    bit<8>  f2;
-    bit<8>  f3;
+header hdr1_t {
+    bit<8> a_8;
+    bit<8> b_8;
+    bit<8> c_8;
+    bit<8> d_8;
 }
 
 header ingress_intrinsic_metadata_t {
@@ -113,6 +119,8 @@ header ingress_parser_control_signals {
 }
 
 struct metadata {
+    @name("meta") 
+    meta_t meta;
 }
 
 struct headers {
@@ -124,8 +132,8 @@ struct headers {
     egress_intrinsic_metadata_for_output_port_t    eg_intr_md_for_oport;
     @pa_fragment("egress", "eg_intr_md_from_parser_aux.coalesce_sample_count") @pa_fragment("egress", "eg_intr_md_from_parser_aux.clone_src") @pa_fragment("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @pa_atomic("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md_from_parser_aux") @name("eg_intr_md_from_parser_aux") 
     egress_intrinsic_metadata_from_parser_aux_t    eg_intr_md_from_parser_aux;
-    @name("h") 
-    h_t                                            h;
+    @name("hdr1") 
+    hdr1_t                                         hdr1;
     @dont_trim @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md.ingress_port") @name("ig_intr_md") 
     ingress_intrinsic_metadata_t                   ig_intr_md;
     @dont_trim @pa_intrinsic_header("ingress", "ig_intr_md_for_mb") @pa_atomic("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @not_deparsed("ingress") @not_deparsed("egress") @name("ig_intr_md_for_mb") 
@@ -141,34 +149,13 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".parse_h") state parse_h {
-        packet.extract<h_t>(hdr.h);
+    @name(".parse_pkt") state parse_pkt {
+        packet.extract<hdr1_t>(hdr.hdr1);
+        meta.meta.x_8 = hdr.hdr1.a_8;
         transition accept;
     }
     @name(".start") state start {
-        transition parse_h;
-    }
-}
-
-control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".nop") action nop_0() {
-    }
-    @name(".do") action do_0(bit<8> val, bit<9> port) {
-        hdr.h.f2 = val;
-        hdr.ig_intr_md_for_tm.ucast_egress_port = port;
-    }
-    @name(".t") table t_0 {
-        actions = {
-            nop_0();
-            do_0();
-        }
-        key = {
-            hdr.h.f1: exact @name("hdr.h.f1") ;
-        }
-        default_action = nop_0();
-    }
-    apply {
-        t_0.apply();
+        transition parse_pkt;
     }
 }
 
@@ -177,9 +164,182 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
 }
 
+control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("NoAction") action NoAction_0() {
+    }
+    @name("NoAction") action NoAction_9() {
+    }
+    @name("NoAction") action NoAction_10() {
+    }
+    @name("NoAction") action NoAction_11() {
+    }
+    @name("NoAction") action NoAction_12() {
+    }
+    @name("NoAction") action NoAction_13() {
+    }
+    @name("NoAction") action NoAction_14() {
+    }
+    @name("NoAction") action NoAction_15() {
+    }
+    @name(".a0") action a0_0(bit<8> x) {
+        meta.meta.x_8 = x;
+    }
+    @name(".do_nothing") action do_nothing_0() {
+    }
+    @name(".do_nothing") action do_nothing_8() {
+    }
+    @name(".do_nothing") action do_nothing_9() {
+    }
+    @name(".do_nothing") action do_nothing_10() {
+    }
+    @name(".do_nothing") action do_nothing_11() {
+    }
+    @name(".do_nothing") action do_nothing_12() {
+    }
+    @name(".do_nothing") action do_nothing_13() {
+    }
+    @name(".do_nothing") action do_nothing_14() {
+    }
+    @name(".a1") action a1_0(bit<8> a) {
+        hdr.hdr1.a_8 = a;
+    }
+    @name(".a2") action a2_0(bit<8> b) {
+        hdr.hdr1.b_8 = b;
+    }
+    @name(".a3") action a3_0(bit<8> c) {
+        hdr.hdr1.c_8 = c;
+    }
+    @name(".a4") action a4_0(bit<8> y) {
+        meta.meta.y_8 = y;
+    }
+    @name(".a5") action a5_0(bit<8> a) {
+        hdr.hdr1.a_8 = a;
+    }
+    @name(".a6") action a6_0(bit<8> b) {
+        hdr.hdr1.b_8 = b;
+    }
+    @name(".a7") action a7_0(bit<8> d) {
+        hdr.hdr1.d_8 = d;
+    }
+    @name(".t0") table t0 {
+        actions = {
+            a0_0();
+            do_nothing_0();
+            @defaultonly NoAction_0();
+        }
+        key = {
+            meta.meta.x_8: ternary @name("meta.meta.x_8") ;
+        }
+        size = 256;
+        default_action = NoAction_0();
+    }
+    @name(".t1") table t1 {
+        actions = {
+            a1_0();
+            do_nothing_8();
+            @defaultonly NoAction_9();
+        }
+        key = {
+            meta.meta.x_8: ternary @name("meta.meta.x_8") ;
+        }
+        size = 256;
+        default_action = NoAction_9();
+    }
+    @name(".t2") table t2 {
+        actions = {
+            a2_0();
+            do_nothing_9();
+            @defaultonly NoAction_10();
+        }
+        key = {
+            meta.meta.x_8: ternary @name("meta.meta.x_8") ;
+        }
+        size = 256;
+        default_action = NoAction_10();
+    }
+    @name(".t3") table t3 {
+        actions = {
+            a3_0();
+            do_nothing_10();
+            @defaultonly NoAction_11();
+        }
+        key = {
+            hdr.hdr1.a_8: ternary @name("hdr.hdr1.a_8") ;
+            hdr.hdr1.b_8: ternary @name("hdr.hdr1.b_8") ;
+        }
+        size = 256;
+        default_action = NoAction_11();
+    }
+    @name(".t4") table t4 {
+        actions = {
+            a4_0();
+            do_nothing_11();
+            @defaultonly NoAction_12();
+        }
+        key = {
+            hdr.hdr1.a_8: ternary @name("hdr.hdr1.a_8") ;
+            hdr.hdr1.b_8: ternary @name("hdr.hdr1.b_8") ;
+        }
+        size = 256;
+        default_action = NoAction_12();
+    }
+    @name(".t5") table t5 {
+        actions = {
+            a5_0();
+            do_nothing_12();
+            @defaultonly NoAction_13();
+        }
+        key = {
+            meta.meta.y_8: ternary @name("meta.meta.y_8") ;
+        }
+        size = 256;
+        default_action = NoAction_13();
+    }
+    @name(".t6") table t6 {
+        actions = {
+            a6_0();
+            do_nothing_13();
+            @defaultonly NoAction_14();
+        }
+        key = {
+            meta.meta.y_8: ternary @name("meta.meta.y_8") ;
+            hdr.hdr1.c_8 : ternary @name("hdr.hdr1.c_8") ;
+        }
+        size = 256;
+        default_action = NoAction_14();
+    }
+    @name(".t7") table t7 {
+        actions = {
+            a7_0();
+            do_nothing_14();
+            @defaultonly NoAction_15();
+        }
+        key = {
+            meta.meta.y_8: ternary @name("meta.meta.y_8") ;
+            hdr.hdr1.a_8 : ternary @name("hdr.hdr1.a_8") ;
+        }
+        size = 256;
+        default_action = NoAction_15();
+    }
+    apply {
+        t0.apply();
+        if (hdr.hdr1.isValid()) {
+            t1.apply();
+            t4.apply();
+            t5.apply();
+        }
+        else {
+            t2.apply();
+            t3.apply();
+            t6.apply();
+        }
+        t7.apply();
+    }
+}
+
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        packet.emit<h_t>(hdr.h);
+        packet.emit<hdr1_t>(hdr.hdr1);
     }
 }
 

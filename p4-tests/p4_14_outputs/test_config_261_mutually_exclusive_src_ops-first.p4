@@ -1,6 +1,11 @@
 #include <core.p4>
 #include <v1model.p4>
 
+struct meta_t {
+    bit<8> x;
+    bit<8> y;
+}
+
 header egress_intrinsic_metadata_t {
     bit<7>  _pad0;
     bit<9>  egress_port;
@@ -50,10 +55,10 @@ header egress_intrinsic_metadata_from_parser_aux_t {
     bit<8>  coalesce_sample_count;
 }
 
-header h_t {
-    bit<16> f1;
-    bit<8>  f2;
-    bit<8>  f3;
+header eth_t {
+    bit<32> blah1;
+    bit<32> blah2;
+    bit<16> etype;
 }
 
 header ingress_intrinsic_metadata_t {
@@ -112,7 +117,15 @@ header ingress_parser_control_signals {
     bit<3> priority;
 }
 
+header pkt_t {
+    bit<8> a;
+    bit<8> b;
+    bit<8> c;
+}
+
 struct metadata {
+    @name("meta") 
+    meta_t meta;
 }
 
 struct headers {
@@ -124,8 +137,8 @@ struct headers {
     egress_intrinsic_metadata_for_output_port_t    eg_intr_md_for_oport;
     @pa_fragment("egress", "eg_intr_md_from_parser_aux.coalesce_sample_count") @pa_fragment("egress", "eg_intr_md_from_parser_aux.clone_src") @pa_fragment("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @pa_atomic("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md_from_parser_aux") @name("eg_intr_md_from_parser_aux") 
     egress_intrinsic_metadata_from_parser_aux_t    eg_intr_md_from_parser_aux;
-    @name("h") 
-    h_t                                            h;
+    @name("eth") 
+    eth_t                                          eth;
     @dont_trim @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md.ingress_port") @name("ig_intr_md") 
     ingress_intrinsic_metadata_t                   ig_intr_md;
     @dont_trim @pa_intrinsic_header("ingress", "ig_intr_md_for_mb") @pa_atomic("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @not_deparsed("ingress") @not_deparsed("egress") @name("ig_intr_md_for_mb") 
@@ -138,37 +151,30 @@ struct headers {
     generator_metadata_t_0                         ig_pg_md;
     @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_prsr_ctrl") @name("ig_prsr_ctrl") 
     ingress_parser_control_signals                 ig_prsr_ctrl;
+    @pa_solitary("ingress", "pkt_a.a") @pa_container_size("ingress", "pkt_a.b", 16) @name("pkt_a") 
+    pkt_t                                          pkt_a;
+    @pa_solitary("ingress", "pkt_b.a") @name("pkt_b") 
+    pkt_t                                          pkt_b;
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".parse_h") state parse_h {
-        packet.extract<h_t>(hdr.h);
+    @name(".parse_a") state parse_a {
+        packet.extract<pkt_t>(hdr.pkt_a);
         transition accept;
     }
+    @name(".parse_b") state parse_b {
+        packet.extract<pkt_t>(hdr.pkt_b);
+        transition accept;
+    }
+    @name(".parse_eth") state parse_eth {
+        packet.extract<eth_t>(hdr.eth);
+        transition select(hdr.eth.etype) {
+            16w0: parse_a;
+            default: parse_b;
+        }
+    }
     @name(".start") state start {
-        transition parse_h;
-    }
-}
-
-control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".nop") action nop_0() {
-    }
-    @name(".do") action do_0(bit<8> val, bit<9> port) {
-        hdr.h.f2 = val;
-        hdr.ig_intr_md_for_tm.ucast_egress_port = port;
-    }
-    @name(".t") table t_0 {
-        actions = {
-            nop_0();
-            do_0();
-        }
-        key = {
-            hdr.h.f1: exact @name("hdr.h.f1") ;
-        }
-        default_action = nop_0();
-    }
-    apply {
-        t_0.apply();
+        transition parse_eth;
     }
 }
 
@@ -177,9 +183,74 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
 }
 
+control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name(".set_a") action set_a() {
+        meta.meta.x = hdr.pkt_a.b;
+    }
+    @name(".do_nothing") action do_nothing() {
+    }
+    @name(".set_b") action set_b() {
+        meta.meta.x = hdr.pkt_b.b;
+        meta.meta.y = hdr.pkt_a.c;
+    }
+    @name(".set_blah") action set_blah(bit<16> x) {
+        hdr.eth.etype = x;
+    }
+    @name(".set_hash") action set_hash() {
+        hash<bit<32>, bit<32>, tuple<bit<8>>, bit<64>>(hdr.eth.blah1, HashAlgorithm.crc32, 32w0, { meta.meta.x }, 64w4294967296);
+    }
+    @name(".t_a") table t_a {
+        actions = {
+            set_a();
+            do_nothing();
+            @defaultonly NoAction();
+        }
+        key = {
+            hdr.pkt_a.a: exact @name("hdr.pkt_a.a") ;
+        }
+        size = 4096;
+        default_action = NoAction();
+    }
+    @name(".t_b") table t_b {
+        actions = {
+            set_b();
+            do_nothing();
+            @defaultonly NoAction();
+        }
+        key = {
+            hdr.pkt_b.a: exact @name("hdr.pkt_b.a") ;
+        }
+        size = 4096;
+        default_action = NoAction();
+    }
+    @name(".t_last") table t_last {
+        actions = {
+            set_blah();
+            set_hash();
+            do_nothing();
+            @defaultonly NoAction();
+        }
+        key = {
+            meta.meta.x: ternary @name("meta.meta.x") ;
+            meta.meta.y: exact @name("meta.meta.y") ;
+        }
+        size = 512;
+        default_action = NoAction();
+    }
+    apply {
+        if (hdr.pkt_a.isValid() == 1) 
+            t_a.apply();
+        else 
+            t_b.apply();
+        t_last.apply();
+    }
+}
+
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        packet.emit<h_t>(hdr.h);
+        packet.emit<eth_t>(hdr.eth);
+        packet.emit<pkt_t>(hdr.pkt_b);
+        packet.emit<pkt_t>(hdr.pkt_a);
     }
 }
 
