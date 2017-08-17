@@ -280,7 +280,6 @@ p4c_add_xfail_reason("tofino"
 # extensions/p4_tests/p4_14/11-AssignChooseDest.p4
 p4c_add_xfail_reason("tofino"
   "What happened here.*64"
-  extensions/p4_tests/p4_14/11-AssignChooseDest.p4
   extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
   extensions/p4_tests/p4_14/switch_20160602/switch.p4
   )
@@ -348,6 +347,12 @@ p4c_add_xfail_reason("tofino"
   # Should still fail; see BRIG-198.
   # extensions/p4_tests/p4_14/04-FullPHV3.p4
   extensions/p4_tests/p4_14/switch_l2_profile.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "tofino only supports 12 stages"
   extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
   extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
   extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
@@ -357,9 +362,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
   extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
   )
 
 # BRIG-113
@@ -414,7 +417,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_236_stateful_read_bit.p4
   extensions/p4_tests/p4_14/test_config_93_push_and_pop.p4
   extensions/p4_tests/p4_14/test_config_95_first_meter_table.p4
-  testdata/p4_16_samples/table-entries-valid-bmv2.p4
   )
 
 # failure due to too restrictive constraint of full words in action data bus allocation
@@ -621,6 +623,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_317_sym_hash_neg_test_3.p4
   extensions/p4_tests/p4_14/test_config_318_sym_hash_neg_test_4.p4
   extensions/p4_tests/p4_14/test_config_319_sym_hash_neg_test_5.p4
+  testdata/p4_14_samples/hash_action_gateway2.p4
   )
 
 #BRIG-201

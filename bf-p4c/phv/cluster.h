@@ -142,9 +142,8 @@ class Cluster::Uses : public Inspector {
     bool preorder(const IR::Tofino::Parser *p);
     bool preorder(const IR::Tofino::Deparser *d);
     bool preorder(const IR::MAU::TableSeq *);
-    bool preorder(const IR::HeaderRef *hr);
     bool preorder(const IR::Expression *e);
-};
+};  // Uses
 //
 //
 std::ostream &operator<<(std::ostream &, ordered_set<PhvInfo::Field *>*);

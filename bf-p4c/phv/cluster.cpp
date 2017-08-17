@@ -1177,13 +1177,6 @@ bool Cluster::Uses::preorder(const IR::MAU::TableSeq *) {
     return true;
 }
 
-bool Cluster::Uses::preorder(const IR::HeaderRef *hr) {
-    PhvInfo::StructInfo info = phv.struct_info(hr);
-    use_i[in_mau][thread].setrange(info.first_field_id, info.size);
-    deparser_i[thread].setrange(info.first_field_id, info.size);
-    return false;
-}
-
 bool Cluster::Uses::preorder(const IR::Expression *e) {
     if (auto info = phv.field(e)) {
         LOG5("use " << info->name << " in " << thread << (in_mau ? " mau" : ""));

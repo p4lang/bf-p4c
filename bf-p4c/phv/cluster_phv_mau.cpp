@@ -578,7 +578,6 @@ void PHV_MAU_Group_Assignments::cluster_POV_placements() {
     //   PHV_groups_i,
     //   "POV_any_container_width",
     //   false/*smallest_container_width*/);
-    //
     // container_no_pack(pov_fields_i, PHV_groups_i, "POV_smallest_container_width");
     //
     if (pov_fields_i.size()) {
@@ -646,6 +645,13 @@ PHV_MAU_Group_Assignments::cluster_TPHV_placements() {
 void
 PHV_MAU_Group_Assignments::cluster_PHV_nibble_placements() {
     //
+    // placement in byte containers preferred to larger containers
+    // as it avoids gateway matching issues, bit_masked set generation etc by other phases
+    //
+    container_no_pack(
+        clusters_to_be_assigned_nibble_i,
+        PHV_groups_i,
+        "PHV_Nibble_smallest_container_width");
     if (clusters_to_be_assigned_nibble_i.size()) {
         //
         // pack remaining clusters to partially filled containers
@@ -1415,8 +1421,7 @@ PHV_MAU_Group_Assignments::packing_predicates(
 
 void PHV_MAU_Group_Assignments::container_pack_cohabit(
     std::list<Cluster_PHV *>& clusters_to_be_assigned,
-    ordered_map<int, ordered_map<int, std::list<std::list<PHV_MAU_Group::Container_Content *>>>>&
-        aligned_slices,
+    PHV_MAU_Group::Aligned_Container_Slices_t& aligned_slices,
     const char *msg,
     bool allow_deparsed_metadata) {
     //
@@ -1722,7 +1727,7 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
     //
     // update groups with Empty containers
     //
-    std::list<PHV_MAU_Group *>& phv_groups = PHV_groups_i;
+    std::list<PHV_MAU_Group *> phv_groups = PHV_groups_i;
     if (&aligned_slices != &aligned_container_slices_i) {
         phv_groups = T_PHV_groups_i;
     }
@@ -1980,10 +1985,7 @@ PHV_MAU_Group_Assignments::num_containers_bottom_bits(
 }  // num_containers_bottom_bits
 
 std::pair<int, int>
-PHV_MAU_Group_Assignments::gress(
-    ordered_map<int,
-        ordered_map<int,
-            std::list<std::list<PHV_MAU_Group::Container_Content *>>>>& aligned_slices) {
+PHV_MAU_Group_Assignments::gress(PHV_MAU_Group::Aligned_Container_Slices_t& aligned_slices) {
     //
     std::pair<int, int> gress_pair = {0, 0};  // count of ingress, egress
     for (auto &w : aligned_slices) {
@@ -2209,8 +2211,7 @@ bool PHV_MAU_Group_Assignments::status(
 }  // status clusters_to_be_assigned
 
 bool PHV_MAU_Group_Assignments::status(
-    ordered_map<int, ordered_map<int, std::list<std::list<PHV_MAU_Group::Container_Content *>>>>&
-        aligned_slices,
+    PHV_MAU_Group::Aligned_Container_Slices_t& aligned_slices,
     const char *msg) {
     //
     if (aligned_slices.empty()) {
@@ -2721,22 +2722,11 @@ std::ostream &operator<<(
 //
 std::ostream &operator<<(
     std::ostream &out,
-    ordered_map<int, ordered_map<int, std::list<std::list<PHV_MAU_Group::Container_Content *>>>>&
-    all_container_packs) {
+    PHV_MAU_Group::Aligned_Container_Slices_t& all_container_packs) {
     //
     // map[w][n] --> <set of <set of container_packs>>
     //
-    // output in sorted order, not in map insertion order
-    //
-    ordered_map<int,
-        ordered_map<int,
-            std::list<std::list<PHV_MAU_Group::Container_Content *>>>> cpks;
     for (auto &w : all_container_packs) {
-        for (auto &n : w.second) {
-            cpks[w.first][n.first] = all_container_packs[w.first][n.first];
-        }
-    }
-    for (auto &w : cpks) {
         for (auto &n : w.second) {
             out << std::endl << "\t" << "[w" << w.first << "](n" << n.first << ')';
             if (n.second.size() > 1) {

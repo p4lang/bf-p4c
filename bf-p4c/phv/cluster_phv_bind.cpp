@@ -147,7 +147,7 @@ PHV_Bind::collect_containers_with_fields() {
     ordered_set<PhvInfo::Field *> all_phv_fields;
     // All Fields
     for (auto &field : phv_i) {
-        if (uses_i->is_referenced(&field)) {  // disregard unreferenced fields
+        if (uses_i->is_used_mau(&field) || uses_i->is_used_parde(&field)) {  // discount unused
             all_phv_fields.insert(&field);
         } else {
             LOG3("PHV_Bind::collect_containers.....discarding unreferenced field....."

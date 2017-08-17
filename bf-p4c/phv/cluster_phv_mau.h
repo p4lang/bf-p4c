@@ -63,6 +63,11 @@ class PHV_MAU_Group {
         //
         void sanity_check_container(const std::string&);
     };
+    // slices must be sorted order, use std::map, not ordered_map
+    typedef
+        std::map<int,
+            std::map<int,
+                std::list<std::list<Container_Content *>>>> Aligned_Container_Slices_t;
     //
  private:
     //
@@ -74,9 +79,7 @@ class PHV_MAU_Group {
     size_t empty_containers_i;                          // number of containers that remain Empty
     std::vector<PHV_Container *> phv_containers_i;      // containers in this MAU group
     std::vector<Cluster_PHV *> cluster_phv_i;           // clusters in this MAU group
-    ordered_map<int,
-        ordered_map<int,
-            std::list<std::list<Container_Content *>>>> aligned_container_slices_i;
+    Aligned_Container_Slices_t aligned_container_slices_i;
                                               // [8..15] [3..15] => 2[8..15] [3..7]
                                               // map[8][2] --> (Cx[8..15], Cy[8..15]
                                               // map[5][1]--> (Cy[3..7]
@@ -152,10 +155,7 @@ class PHV_MAU_Group {
     void create_aligned_container_slices_per_range(std::list<PHV_Container *>&);
     void create_aligned_container_slices(std::list<PHV_Container *>&);
     void create_aligned_container_slices();
-    ordered_map<int,
-        ordered_map<int,
-            std::list<std::list<Container_Content *>>>>&
-                aligned_container_slices()              { return aligned_container_slices_i; }
+    Aligned_Container_Slices_t& aligned_container_slices() { return aligned_container_slices_i; }
 
     void sanity_check_container_packs(const std::string&);
     void sanity_check_container_fields_gress(const std::string&);
@@ -233,16 +233,12 @@ class PHV_MAU_Group_Assignments : public Visitor {
     std::list<Cluster_PHV *> substratum_phv_clusters_i;         // allocated substratum phv clusters
     std::list<Cluster_PHV *> substratum_t_phv_clusters_i;       // alloc'd substratum t_phv clusters
     //
-    ordered_map<int,
-        ordered_map<int,
-            std::list<std::list<PHV_MAU_Group::Container_Content *>>>> aligned_container_slices_i;
+    PHV_MAU_Group::Aligned_Container_Slices_t aligned_container_slices_i;
                                        // for all PHV_MAU_Groups
                                        // sorted map <width increasing, num increasing>
                                        // containing <set of <set of container_packs>>
     //
-    ordered_map<int,
-        ordered_map<int,
-            std::list<std::list<PHV_MAU_Group::Container_Content *>>>> T_PHV_container_slices_i;
+    PHV_MAU_Group::Aligned_Container_Slices_t T_PHV_container_slices_i;
                                        // for all T_PHV
                                        // sorted map <width increasing, num increasing>
                                        // containing <set of <set of container_packs>>
@@ -307,9 +303,9 @@ class PHV_MAU_Group_Assignments : public Visitor {
     //
     // remaining container slices available
     //
-    ordered_map<int, ordered_map<int, std::list<std::list<PHV_MAU_Group::Container_Content *>>>>&
+    PHV_MAU_Group::Aligned_Container_Slices_t&
         aligned_container_slices() { return aligned_container_slices_i; }
-    ordered_map<int, ordered_map<int, std::list<std::list<PHV_MAU_Group::Container_Content *>>>>&
+    PHV_MAU_Group::Aligned_Container_Slices_t&
         T_PHV_container_slices()   { return T_PHV_container_slices_i; }
     //
     // remaining clusters to be processed
@@ -368,8 +364,7 @@ class PHV_MAU_Group_Assignments : public Visitor {
     //
     void container_pack_cohabit(
         std::list<Cluster_PHV *>& clusters_to_be_assigned,
-        ordered_map<int,
-        ordered_map<int, std::list<std::list<PHV_MAU_Group::Container_Content *>>>>&,
+        PHV_MAU_Group::Aligned_Container_Slices_t&,
         const char *msg = "",
         bool allow_deparsed_metadata = false);  // default disallow metadata in deparsed container
     //
@@ -384,10 +379,7 @@ class PHV_MAU_Group_Assignments : public Visitor {
         std::list<PHV_MAU_Group::Container_Content *>& cc_set,
         int num_c);
     std::pair<int, int>
-        gress(
-            ordered_map<int,
-                ordered_map<int,
-                    std::list<std::list<PHV_MAU_Group::Container_Content *>>>>&);
+        gress(PHV_MAU_Group::Aligned_Container_Slices_t&);
     //
     void container_population_density(
         std::map<PHV_Container::PHV_Word,
@@ -402,9 +394,7 @@ class PHV_MAU_Group_Assignments : public Visitor {
         std::list<PHV_MAU_Group *>&,
         const char *msg = "");
     bool status(
-        ordered_map<int,
-        ordered_map<int,
-        std::list<std::list<PHV_MAU_Group::Container_Content *>>>>&,
+        PHV_MAU_Group::Aligned_Container_Slices_t&,
         const char *msg = "");
     //
     void sanity_check(
@@ -450,7 +440,7 @@ std::ostream &operator<<(
     std::list<std::list<PHV_MAU_Group::Container_Content *>>&);
 std::ostream &operator<<(
     std::ostream &,
-    ordered_map<int, ordered_map<int, std::list<std::list<PHV_MAU_Group::Container_Content *>>>>&);
+    PHV_MAU_Group::Aligned_Container_Slices_t&);
 std::ostream &operator<<(
     std::ostream &,
     PHV_MAU_Group&);
