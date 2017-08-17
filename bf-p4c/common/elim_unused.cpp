@@ -12,16 +12,20 @@ class ElimUnused::ParserMetadata : public Transform {
     IR::Tofino::Extract* preorder(IR::Tofino::Extract* extract) override {
         auto field = self.phv.field(extract->dest);
         if (!field) return extract;
-        if (!self.defuse.getUses(this, extract->dest).empty()) return extract;
+        if (!self.defuse.getAllUses(field->id).empty()) return extract;
         LOG1("elim unused " << extract);
         return nullptr;
     }
 
     IR::MAU::Instruction *preorder(IR::MAU::Instruction *i) override {
-        if (i->operands[0] && self.defuse.getUses(this, i->operands[0]).empty()) {
-            LOG1("elim unused instruction " << i);
-            return nullptr; }
-        return i; }
+        if (!i->operands[0]) return i;
+        auto field = self.phv.field(i->operands[0]);
+        if (!field) return i;
+        if (!self.defuse.getAllUses(field->id).empty()) return i;
+        LOG1("elim unused instruction " << i);
+        return nullptr;
+    }
+
     IR::GlobalRef *preorder(IR::GlobalRef *gr) override {
         prune();  // don't go through these.
         return gr; }
