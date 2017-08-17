@@ -480,6 +480,7 @@ class PhvInfo : public Inspector, TofinoWriteContext {
     bool preorder(const IR::HeaderStack *) override;
     bool preorder(const IR::Metadata *h) override;
     bool preorder(const IR::TempVar *h) override;
+    bool preorder(const IR::Tofino::ParserState *state) override;
 
     /** Set constraints for deparser fields, including mirror fields in field
       * list for mirror digest fields. */

@@ -147,6 +147,19 @@ void PhvInfo::postorder(const IR::Expression *e) {
 }
 
 
+bool PhvInfo::preorder(const IR::Tofino::ParserState* state) {
+    if (state->name != "$bridged_metadata_extract") return true;
+    for (auto* match : state->match) {
+        forAllMatching<IR::Tofino::Extract>(&match->stmts,
+                      [&](const IR::Tofino::Extract* extract) {
+            auto* fieldInfo = field(extract->dest);
+            if (!fieldInfo) return;
+            fieldInfo->bridged = true;
+        });
+    }
+    return true;
+}
+
 void PhvInfo::add(cstring name, int size, int offset, bool meta, bool pov) {
     LOG3("PhvInfo adding " << (meta ? "metadata" : "header") << " field " << name <<
          " size " << size);

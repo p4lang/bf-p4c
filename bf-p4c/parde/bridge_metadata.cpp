@@ -1,15 +1,20 @@
 #include "bridge_metadata.h"
+
+#include <set>
+
 #include "parde_visitor.h"
 
 class AddBridgedMetadata::FindFieldsToBridge : public ThreadVisitor, Inspector {
     AddBridgedMetadata &self;
+    std::set<const PhvInfo::Field*> bridgedFields;
+
     bool preorder(const IR::Expression *e) override {
         if (auto *field = self.phv.field(e)) {
             for (auto &loc : self.defuse.getAllUses(field->id)) {
                 if (loc.first->thread() == EGRESS && field->metadata) {
-                    if (!field->bridged) {
+                    if (bridgedFields.find(field) == bridgedFields.end()) {
                       LOG2("bridging field " << loc.second << " id=" << field->id);
-                      field->bridged = true;
+                      bridgedFields.insert(field);
                       // XXX(seth): We should pack these fields more efficiently...
                       self.packing.appendField(loc.second,
                                                loc.second->type->width_bits());
