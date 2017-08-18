@@ -61,6 +61,10 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe* pipe) {
                     "No PHV allocation for referenced field %1%",
                     cstring::to_cstring(field));
 
+        ERROR_CHECK(!field.bridged || field.deparsed_i,
+                    "Field is bridged, but not deparsed: %1%",
+                    cstring::to_cstring(field));
+
         bitvec assignedContainers;
         bitvec allocatedBits;
         for (auto& slice : field.alloc_i) {
@@ -117,6 +121,7 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe* pipe) {
     }
 
     auto isDeparsed = [](const PhvInfo::Field* f) { return f->deparsed_i; };
+    auto isBridged = [](const PhvInfo::Field* f) { return f->bridged; };
     auto isMetadata = [](const PhvInfo::Field* f) { return f->metadata || f->pov; };
     auto hasOverlay = [](const PhvInfo::Field* f) {
         return !f->field_overlay_map().empty();
@@ -141,7 +146,7 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe* pipe) {
         // that feature is implemented.
         if (container.tagalong()) {
             for (auto field : fields)
-                ERROR_CHECK(!isMetadata(field) || field->bridged,
+                ERROR_WARN_(!isMetadata(field) || field->bridged,
                             "Tagalong container %1% contains non-bridged metadata "
                             "field %2%", container, cstring::to_cstring(field));
         }
@@ -156,36 +161,43 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe* pipe) {
         // overlaying is present.
         if (std::any_of(fields.begin(), fields.end(), hasOverlay)) continue;
 
-        // Verify that if a container contains any deparsed fields, it consists
-        // only of deparsed fields.
-        bool deparsed = std::any_of(fields.begin(), fields.end(), isDeparsed);
-        if (deparsed)
-            ERROR_WARN_(std::all_of(fields.begin(), fields.end(), isDeparsed),
-                        "Deparsed container %1% contains some non-deparsed "
-                        "fields: %2%", container, cstring::to_cstring(fields));
-
-        // Verify that any metadata field in a deparsed container is marked as
-        // bridged.
-        if (deparsed) {
-            for (auto field : fields)
-                ERROR_CHECK(!isMetadata(field) || field->bridged,
-                            "Deparsed container %1% contains non-bridged "
-                            "metadata fields: %2%", container,
-                            cstring::to_cstring(fields));
+        // Collect information about which fields in this container are
+        // deparsed, so we can verify that the allocation is reasonable. Header
+        // fields are the constrained case: if a container contains deparsed
+        // header fields, it must contain *only* deparsed header fields and they
+        // must completely fill the container. Several checks below combine to
+        // verify that. We're much less restrictive for bridged metadata fields,
+        // since they don't end up on the wire and they're not visible to the
+        // programmer.
+        bool hasDeparsedHeaderFields = false;
+        bool hasDeparsedMetadataFields = false;
+        for (auto* field : fields) {
+            if (!isDeparsed(field)) continue;
+            if (isMetadata(field))
+                hasDeparsedMetadataFields = true;
+            else
+                hasDeparsedHeaderFields = true;
         }
 
-        // If any fields in a container are deparsed, it must contain either all
-        // metadata fields, or all header fields.
-        // XXX(seth): In theory we could place bridged metadata fields in the
-        // same container as header fields in ingress and fix them up in egress,
-        // but we don't currently support that.
-        bool anyMetadata = std::any_of(fields.begin(), fields.end(), isMetadata);
-        bool allMetadata = std::all_of(fields.begin(), fields.end(), isMetadata);
-        if (deparsed)
-            ERROR_WARN_(allMetadata || !anyMetadata,
-                        "Deparsed container %1% contains a mix of metadata and "
-                        "non-metadata fields: %2%", container,
+
+        ERROR_CHECK(!(hasDeparsedHeaderFields && hasDeparsedMetadataFields),
+                    "Deparsed container %1% contains both deparsed header "
+                    "fields and deparsed metadata fields: %2%", container,
+                    cstring::to_cstring(fields));
+
+        if (hasDeparsedHeaderFields) {
+            ERROR_WARN_(std::all_of(fields.begin(), fields.end(), isDeparsed),
+                        "Deparsed container %1% mixes deparsed header "
+                        "fields with non-deparsed fields: %2%", container,
                         cstring::to_cstring(fields));
+        }
+
+        if (hasDeparsedMetadataFields) {
+            ERROR_CHECK(std::any_of(fields.begin(), fields.end(), isBridged),
+                        "Deparsed container %1% contains deparsed metadata "
+                        "fields, but none of them are bridged: %2%",
+                        container, cstring::to_cstring(fields));
+        }
 
         // Verify that the allocations for each field don't overlap. (Note that
         // this is checking overlapping with respect to the *container*; we
@@ -213,10 +225,11 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe* pipe) {
             allocatedBitsForContainer |= allocatedBitsForField;
         }
 
-        // Verify that deparsed header fields allocate every bit in the
-        // container. We allow deparsed metadata fields (i.e., bridged metadata)
-        // to leave some bits in the container unused.
-        if (deparsed && !allMetadata) {
+        // Verify that if this container has deparsed header fields, every bit
+        // in the container is allocated.  Deparsed metadata fields (i.e.,
+        // bridged metadata) don't have this restriction. If this container has
+        // a mixed of both, we'll already have reported an error above.
+        if (hasDeparsedHeaderFields) {
             bitvec allBitsInContainer(0, container.size());
             ERROR_WARN_(allocatedBitsForContainer == allBitsInContainer,
                         "Container %1% contains deparsed header fields, but "
