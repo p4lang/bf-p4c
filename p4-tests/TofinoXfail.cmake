@@ -101,7 +101,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_48_action_data_bit_masked_set.p4
   extensions/p4_tests/p4_14/test_config_49_action_data_bit_masked_set_immediate.p4
   extensions/p4_tests/p4_14/jenkins/pgrs/pgrs_one.p4
-  extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
   )
 
 # BRIG-103
@@ -203,6 +202,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/20-SimpleTrillTwoStep.p4
   extensions/p4_tests/p4_14/21-SimpleTrillThreeStep.p4
   extensions/p4_tests/p4_14/24-SimpleTrillThreeStep2.p4
+  extensions/p4_tests/p4_14/test_config_92_bit_xor_10_bits.p4
   extensions/p4_tests/p4_14/test_config_217_gateway_non_determin.p4
   testdata/p4_16_samples/issue414-bmv2.p4
   testdata/p4_16_samples/parser-locals2.p4
@@ -307,8 +307,8 @@ p4c_add_xfail_reason("tofino"
 # BRIG-105
 p4c_add_xfail_reason("tofino"
   "No register named"
-  # Should still fail; see BRIG-198.
-  # extensions/p4_tests/p4_14/04-FullPHV3.p4
+  extensions/p4_tests/p4_14/04-FullPHV3.p4
+  extensions/p4_tests/p4_14/switch_l2_profile.p4
   extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
   extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
   )
@@ -376,7 +376,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Ran out of phv output slots"
   extensions/p4_tests/p4_14/test_config_236_stateful_read_bit.p4
-  extensions/p4_tests/p4_14/test_config_93_push_and_pop.p4
+  # extensions/p4_tests/p4_14/test_config_93_push_and_pop.p4
   extensions/p4_tests/p4_14/test_config_95_first_meter_table.p4
   )
 
@@ -425,6 +425,11 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "boost::too_few_args: format-string referred to more arguments than were passed"
   extensions/p4_tests/p4_14/shared_names.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "(throwing|uncaught exception).*std::out_of_range"
+  extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
   )
 
 # BRIG-99

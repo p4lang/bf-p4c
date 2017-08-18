@@ -27,10 +27,6 @@ class Cluster_PHV {
     int num_containers_i = 0;               // number of containers
     int num_constraints_i = 0;              // number of constrained fields, e.g., no cohabit
 
-    /// See documentation for field_overlay_map.
-    ordered_map<PhvInfo::Field *,
-        ordered_map<int, std::vector<PhvInfo::Field *> *>> field_overlay_map_i;
-
     bool sliced_i = false;                  // sliced cluster, move-based ops only
     bool exact_containers_i = false;        // true => single field must exact match container width
 
@@ -46,7 +42,7 @@ class Cluster_PHV {
     Cluster_PHV(
         Cluster_PHV *cl,                               // cluster slicing interface
         bool lo = true);                               // NOLINT(runtime/explicit)
-    //
+
     void set_gress();                                  // set gress
     void insert_field_clusters(Cluster_PHV *parent = 0, bool slice_lo = true);
                                                        // field's list of clusters
@@ -56,13 +52,13 @@ class Cluster_PHV {
     int compute_max_width();                           // determines max_width of field in cluster
                                                        // which can be ccgf "no-pack" constrained
     PHV_Container::PHV_Word container_width(int field_width);
-    //
+
     ordered_set<PhvInfo::Field *> *field_set(PhvInfo::Field *f) {
         ordered_set<PhvInfo::Field *> *s = new ordered_set<PhvInfo::Field *>;
         s->insert(f);
         return s;
     }
-    //
+
     std::vector<PhvInfo::Field *>& cluster_vec()        { return cluster_vec_i; }
     int id_num()                                        { return id_num_i; }
     std::string id()                                    { return id_i; }
@@ -89,19 +85,11 @@ class Cluster_PHV {
     int num_containers(std::vector<PhvInfo::Field *>&, PHV_Container::PHV_Word);
     int num_constraints()                               { return num_constraints_i; }
 
-    /** A field overlay map maps each "owner" field to the virtual containers
-     * it owns and the other non-owner fields in them.  Fields that are too
-     * wide will own more than one virtual container.
-     */
-    ordered_map<PhvInfo::Field *,
-        ordered_map<int, std::vector<PhvInfo::Field *> *>>&
-            field_overlay_map()                         { return field_overlay_map_i; }
-    //
     bool sliced()                                       { return sliced_i; }
     int req_containers_bottom_bits();  // number of fields that must be in bottom bits of container
     bool exact_containers()                             { return exact_containers_i; }
     void set_exact_containers();                        // set exact_containers
-};  // Cluster_PHV
+};
 
 
 //***********************************************************************************

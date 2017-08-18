@@ -25,7 +25,6 @@
  * fields computed by PhvInfo phv, these field pointers are not part of IR
  *
  * This pass also fills in the following PhvInfo::Field fields:
- *  - mau_write
  *  - phv_use_lo
  *  - phv_use_hi
  *  - ccgf
@@ -69,7 +68,6 @@ class Cluster : public Inspector, TofinoWriteContext {
     bool preorder(const IR::HeaderRef*) override;
     bool preorder(const IR::Primitive*) override;
     bool preorder(const IR::Operation*) override;
-    bool preorder(const IR::Expression*) override;
     void postorder(const IR::Primitive*) override;
     void end_apply() override;
     //
@@ -112,13 +110,9 @@ class Cluster : public Inspector, TofinoWriteContext {
     std::list<PhvInfo::Field *>& fields_no_use_mau()        { return fields_no_use_mau_i; }
     void compute_fields_no_use_mau();
     void sort_fields_remove_non_determinism();
-    //
-    Uses* uses()  { return uses_i; }
 };
-//
-//
+
 class Cluster::Uses : public Inspector {
- public:
     bitvec      use_i[2][2];
     /*                |  ^- gress                 */
     /*                0 == use in parser/deparser */
@@ -126,19 +120,21 @@ class Cluster::Uses : public Inspector {
     bitvec      deparser_i[2];
     /*                |    ^- gress               */
     /*                 == use in deparser         */
-    //
-    explicit Uses(PhvInfo &p) : phv(p) { }
-    //
+
+ public:
+    explicit Uses(const PhvInfo &p) : phv(p) { }
+
     bool is_referenced(PhvInfo::Field *f);
     bool is_deparsed(PhvInfo::Field *f);
     bool is_used_mau(PhvInfo::Field *f);
     bool is_used_parde(PhvInfo::Field *f);
-    //
+
  private:
-    PhvInfo       &phv;
+    const PhvInfo       &phv;
     gress_t             thread;
     bool                in_mau;
     bool                in_dep;
+
     bool preorder(const IR::Tofino::Parser *p);
     bool preorder(const IR::Tofino::Deparser *d);
     bool preorder(const IR::MAU::TableSeq *);

@@ -77,6 +77,72 @@ bool PhvInfo::preorder(const IR::TempVar *tv) {
     return false;
 }
 
+void PhvInfo::postorder(const IR::Tofino::Deparser *d) {
+    // extract deparser constraints from Deparser & Digest IR nodes ref: bf-p4c/ir/parde.def
+    // set deparser constaints on field
+    if (d->egress_port) {
+        // IR::Tofino::Deparser has a field egress_port which points to
+        // egress port in the egress pipeline and
+        // egress spec in the ingress pipeline
+        Field *f = field(d->egress_port);
+        BUG_CHECK(f != nullptr, "Field not created in PhvInfo");
+        f->set_deparsed_no_pack(true);
+        LOG1(".....Deparser Constraint 'egress port' on field..... " << f); }
+
+    // TODO:
+    // IR futures: distinguish each digest as an enumeration: learning, mirror, resubmit
+    // as they have differing constraints -- bottom-bits, bridge-metadata mirror packing
+    // learning, mirror field list in bottom bits of container, e.g.,
+    // 301:ingress::$learning<3:0..2>
+    // 590:egress::$mirror<3:0..2> specifies 1 of 8 field lists
+    // currently, IR::Tofino::Digest node has a string field to distinguish them by name
+    for (auto &entry : Values(d->digests)) {
+        if (entry->name != "learning" && entry->name != "mirror")
+            continue;
+
+        Field *f = field(entry->select);
+        BUG_CHECK(f != nullptr, "Field not created in PhvInfo");
+        f->set_deparsed_bottom_bits(true);
+        LOG1(".....Deparser Constraint "
+            << entry->name
+            << " 'digest' on field..... "
+            << f);
+
+        if (entry->name ==  "learning") {
+            for (auto s : entry->sets) {
+                LOG1("\t.....learning field list..... ");
+                for (auto l : *s) {
+                    auto l_f = field(l);
+                    if (l_f)
+                        LOG1("\t\t" << l_f);
+                    else
+                        LOG1("\t\t" <<"-f?"); } }
+            continue; }
+
+        // associating a mirror field with its field list
+        // used during constraint checks for bridge-metadata phv allocation
+        LOG1(".....mirror fields in field list " << f->id << ":" << f->name);
+        int fl = 0;
+        for (auto s : entry->sets) {
+            LOG1("\t.....field list....." << fl);
+            for (auto m : *s) {
+                Field *mirror = field(m);
+                if (mirror) {
+                    mirror->mirror_field_list = {f, fl};
+                    LOG1("\t\t" << mirror);
+                } else {
+                    LOG1("\t\t" << "-f?"); }
+                fl++; } } }
+}
+
+void PhvInfo::postorder(const IR::Expression *e) {
+    Field *f = field(e);
+    if (f && isWrite()) {
+        f->set_mau_write(true);
+        LOG4(".....MAU_write....." << f); }
+}
+
+
 void PhvInfo::add(cstring name, int size, int offset, bool meta, bool pov) {
     LOG3("PhvInfo adding " << (meta ? "metadata" : "header") << " field " << name <<
          " size " << size);

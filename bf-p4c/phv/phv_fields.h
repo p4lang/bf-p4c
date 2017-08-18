@@ -11,6 +11,7 @@
 #include "tofino/common/header_stack.h"
 #include "tofino/ir/thread_visitor.h"
 #include "tofino/ir/bitrange.h"
+#include "tofino/ir/tofino_write_context.h"
 
 namespace PHV {
 class ManualAlloc;
@@ -42,7 +43,7 @@ class Slice;
  * @post This object contains a PhvInfo::Field for each header and metadata
  * field, but not POV fields.
  */
-class PhvInfo : public Inspector {
+class PhvInfo : public Inspector, TofinoWriteContext {
  public:
     /** @brief For each field `f` in an expression, set the "referenced" member
      * of the Field struct for `f` and for the Field struct of `f`'s "valid"
@@ -470,6 +471,7 @@ class PhvInfo : public Inspector {
     bool                                pov_alloc_done = false;
     void add(cstring, int, int, bool, bool);
     void add_hdr(cstring, const IR::Type_StructLike *, bool);
+
     profile_t init_apply(const IR::Node *root) override;
     bool preorder(const IR::Tofino::Parser *) override {
         gress = VisitingThread(this); return true; }
@@ -477,6 +479,14 @@ class PhvInfo : public Inspector {
     bool preorder(const IR::HeaderStack *) override;
     bool preorder(const IR::Metadata *h) override;
     bool preorder(const IR::TempVar *h) override;
+
+    /** Set constraints for deparser fields, including mirror fields in field
+      * list for mirror digest fields. */
+    void postorder(const IR::Tofino::Deparser *d) override;
+
+    /// Set `mau_write` constraint on fields written in the MAU.
+    void postorder(const IR::Expression *e) override;
+
     template<typename Iter>
     class iterator {
         Iter    it;

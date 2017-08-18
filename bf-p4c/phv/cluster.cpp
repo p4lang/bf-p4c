@@ -22,9 +22,7 @@ Cluster::Cluster(PhvInfo &p) : phv_i(p), uses_i(new Uses(phv_i)) {
 //***********************************************************************************
 
 bool Cluster::preorder(const IR::Tofino::Pipe *pipe) {
-    //
     pipe->apply(*uses_i);
-
     return true;
 }
 
@@ -249,23 +247,6 @@ bool Cluster::preorder(const IR::Operation* operation) {
     LOG1("*****cluster.cpp: sanity_FAIL Operation*****" << operation->toString());
     BUG("*****cluster.cpp: should not invoke preorder(IR::Operation*)*****%s",
         operation->toString());
-
-    return true;
-}
-
-// TODO: Perhaps separate different analyses into different passes.  Eg. set
-// mau_write elsewhere, since it doesn't have to do with clustering?
-bool Cluster::preorder(const IR::Expression* expression) {
-    LOG4(".....Expression.....");
-    auto field = phv_i.field(expression);
-    if (field) {
-        LOG4(field);
-    }
-    if (field && isWrite()) {
-        field->set_mau_write(true);
-        LOG4(".....MAU_write....." << field);
-        return false;  // prune children below, e.g., complicated slice expression
-    }
 
     return true;
 }
@@ -1086,8 +1067,7 @@ void Cluster::sanity_check_fields_use(const std::string& msg,
 //
 //***********************************************************************************
 
-bool
-Cluster::Uses::preorder(const IR::Tofino::Parser *p) {
+bool Cluster::Uses::preorder(const IR::Tofino::Parser *p) {
     in_mau = false;
     in_dep = false;
     thread = p->gress;
@@ -1095,8 +1075,7 @@ Cluster::Uses::preorder(const IR::Tofino::Parser *p) {
     return true;
 }
 
-bool
-Cluster::Uses::preorder(const IR::Tofino::Deparser *d) {
+bool Cluster::Uses::preorder(const IR::Tofino::Deparser *d) {
     thread = d->gress;
     in_mau = true;  // treat egress_port and digests as in mau as they can't go in TPHV
     in_dep = true;
@@ -1106,67 +1085,6 @@ Cluster::Uses::preorder(const IR::Tofino::Deparser *d) {
     in_mau = false;
     revisit_visited();
     visit(d->emits, "emits");
-    // extract deparser constraints from Deparser & Digest IR nodes ref: bf-p4c/ir/parde.def
-    // set deparser constaints on field
-    if (d->egress_port) {
-        // IR::Tofino::Deparser has a field egress_port which points to
-        // egress port in the egress pipeline and
-        // egress spec in the ingress pipeline
-        auto field = phv.field(d->egress_port);
-        if (field) {
-            field->set_deparsed_no_pack(true);
-            LOG1(".....Deparser Constraint 'egress port' on field..... " << field);
-        }
-    }
-    // TODO:
-    // IR futures: distinguish each digest as an enumeration: learning, mirror, resubmit
-    // as they have differing constraints -- bottom-bits, bridge-metadata mirror packing
-    // learning, mirror field list in bottom bits of container, e.g.,
-    // 301:ingress::$learning<3:0..2>
-    // 590:egress::$mirror<3:0..2> specifies 1 of 8 field lists
-    // currently, IR::Tofino::Digest node has a string field to distinguish them by name
-    for (auto &entry : Values(d->digests)) {
-        if (entry->name != "learning" && entry->name != "mirror") {
-            continue;
-        }
-        auto field = phv.field(entry->select);
-        field->set_deparsed_bottom_bits(true);
-        LOG1(".....Deparser Constraint "
-            << entry->name
-            << " 'digest' on field..... "
-            << field);
-        if (entry->name ==  "learning") {
-            for (auto s : entry->sets) {
-                LOG1("\t.....learning field list..... ");
-                for (auto l : *s) {
-                    auto l_f = phv.field(l);
-                    if (l_f) {
-                        LOG1("\t\t" << l_f);
-                    } else {
-                        LOG1("\t\t" << "-f?");
-                    }
-                }
-            }
-            continue;
-        }
-        // associating a mirror field with its field list
-        // used during constraint checks for bridge-metadata phv allocation
-        LOG1(".....mirror field lists selected by  " << field->id << ":" << field->name);
-        int fl = 0;
-        for (auto s : entry->sets) {
-            LOG1("\t.....mirror field list....." << fl);
-            for (auto m : *s) {
-                auto m_f = phv.field(m);
-                if (m_f) {
-                    m_f->mirror_field_list = {field, fl};
-                    LOG1("\t\t" << m_f);
-                } else {
-                    LOG1("\t\t" << "-f?");
-                }
-            }
-            fl++;
-        }
-    }
     return false;
 }
 
