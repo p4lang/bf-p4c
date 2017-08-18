@@ -194,23 +194,24 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
         new DumpPipe("Initial table graph"),
         new RemoveEmptyControls,
         new CheckStatefulAlu,
-        &phv,
+        new CollectPhvInfo(phv),
         &defuse,
         new AddBridgedMetadata(phv, defuse),
         new ResolveComputedParserExpressions,
-        &phv,
+        new CollectPhvInfo(phv),
         &defuse,
         new MetadataConstantPropagation(phv, defuse),
-        &phv,
+        new CollectPhvInfo(phv),
         &defuse,
         new Digests,
-        &phv,  // only needed to avoid warnings about otherwise unused ingress/egress_port?
+        // only needed to avoid warnings about otherwise unused ingress/egress_port?
+        new CollectPhvInfo(phv),
         new LiveAtEntry(phv),
         new CreateThreadLocalInstances(INGRESS),
         new CreateThreadLocalInstances(EGRESS),
         &stacks,
         new StackPushShims(stacks),
-        &phv,
+        new CollectPhvInfo(phv),
         new VisitFunctor([&phv, &stacks]() { phv.allocatePOV(stacks); }),
         new HeaderPushPop(stacks),
         new CopyHeaderEliminator,   // needs to be after POV alloc and before InstSel
@@ -220,7 +221,7 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
         new ElimUnused(phv, defuse),  // ElimUnused may have eliminated all references to a field
         new PhvInfo::SetReferenced(phv),  // ElimUnused can cause field unreferenced
         new DumpPipe("Before phv_analysis"),
-        phv_analysis,               // phv analysis after last &phv pass
+        phv_analysis,               // phv analysis after last CollectPhvInfo pass
         new GatewayOpt(phv),   // must be before TableLayout?  or just TablePlacement?
         new TableLayout(phv, lc),
         new TableFindSeqDependencies,

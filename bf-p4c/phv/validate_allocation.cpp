@@ -141,7 +141,7 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe* pipe) {
         // that feature is implemented.
         if (container.tagalong()) {
             for (auto field : fields)
-                ERROR_WARN_(!isMetadata(field) || field->bridged,
+                ERROR_CHECK(!isMetadata(field) || field->bridged,
                             "Tagalong container %1% contains non-bridged metadata "
                             "field %2%", container, cstring::to_cstring(field));
         }
@@ -168,7 +168,7 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe* pipe) {
         // bridged.
         if (deparsed) {
             for (auto field : fields)
-                ERROR_WARN_(!isMetadata(field) || field->bridged,
+                ERROR_CHECK(!isMetadata(field) || field->bridged,
                             "Deparsed container %1% contains non-bridged "
                             "metadata fields: %2%", container,
                             cstring::to_cstring(fields));

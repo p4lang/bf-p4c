@@ -4,7 +4,6 @@
 #include "ir/ir.h"
 #include "lib/log.h"
 #include "lib/stringref.h"
-#include "lib/range.h"
 
 //
 //***********************************************************************************
@@ -41,126 +40,15 @@ bool PhvInfo::SetReferenced::preorder(const IR::Expression *e) {
 //***********************************************************************************
 //
 
-Visitor::profile_t PhvInfo::init_apply(const IR::Node *root) {
-    auto rv = Inspector::init_apply(root);
+void PhvInfo::clear() {
     all_fields.clear();
     by_id.clear();
     all_structs.clear();
     simple_headers.clear();
     alloc_done_ = false;
-    return rv;
 }
 
-bool PhvInfo::preorder(const IR::Header *h) {
-    int start = by_id.size();
-    add_hdr(h->name, h->type, false);
-    int end = by_id.size();
-    simple_headers.emplace(h->name, StructInfo(false, gress, start, end - start));
-    return false;
-}
-
-bool PhvInfo::preorder(const IR::HeaderStack *h) {
-    if (!h->type) return false;
-    char buffer[16];
-    int start = by_id.size();
-    for (int i = 0; i < h->size; i++) {
-        snprintf(buffer, sizeof(buffer), "[%d]", i);
-        add_hdr(h->name + buffer, h->type, false); }
-    int end = by_id.size();
-    all_structs.emplace(h->name, StructInfo(false, gress, start, end - start));
-    return false;
-}
-
-bool PhvInfo::preorder(const IR::Metadata *h) {
-    add_hdr(h->name, h->type, true);
-    return false;
-}
-
-bool PhvInfo::preorder(const IR::TempVar *tv) {
-    addTempVar(tv);
-    return false;
-}
-
-void PhvInfo::postorder(const IR::Tofino::Deparser *d) {
-    // extract deparser constraints from Deparser & Digest IR nodes ref: bf-p4c/ir/parde.def
-    // set deparser constaints on field
-    if (d->egress_port) {
-        // IR::Tofino::Deparser has a field egress_port which points to
-        // egress port in the egress pipeline and
-        // egress spec in the ingress pipeline
-        Field *f = field(d->egress_port);
-        BUG_CHECK(f != nullptr, "Field not created in PhvInfo");
-        f->set_deparsed_no_pack(true);
-        LOG1(".....Deparser Constraint 'egress port' on field..... " << f); }
-
-    // TODO:
-    // IR futures: distinguish each digest as an enumeration: learning, mirror, resubmit
-    // as they have differing constraints -- bottom-bits, bridge-metadata mirror packing
-    // learning, mirror field list in bottom bits of container, e.g.,
-    // 301:ingress::$learning<3:0..2>
-    // 590:egress::$mirror<3:0..2> specifies 1 of 8 field lists
-    // currently, IR::Tofino::Digest node has a string field to distinguish them by name
-    for (auto &entry : Values(d->digests)) {
-        if (entry->name != "learning" && entry->name != "mirror")
-            continue;
-
-        Field *f = field(entry->select);
-        BUG_CHECK(f != nullptr, "Field not created in PhvInfo");
-        f->set_deparsed_bottom_bits(true);
-        LOG1(".....Deparser Constraint "
-            << entry->name
-            << " 'digest' on field..... "
-            << f);
-
-        if (entry->name ==  "learning") {
-            for (auto s : entry->sets) {
-                LOG1("\t.....learning field list..... ");
-                for (auto l : *s) {
-                    auto l_f = field(l);
-                    if (l_f)
-                        LOG1("\t\t" << l_f);
-                    else
-                        LOG1("\t\t" <<"-f?"); } }
-            continue; }
-
-        // associating a mirror field with its field list
-        // used during constraint checks for bridge-metadata phv allocation
-        LOG1(".....mirror fields in field list " << f->id << ":" << f->name);
-        int fl = 0;
-        for (auto s : entry->sets) {
-            LOG1("\t.....field list....." << fl);
-            for (auto m : *s) {
-                Field *mirror = field(m);
-                if (mirror) {
-                    mirror->mirror_field_list = {f, fl};
-                    LOG1("\t\t" << mirror);
-                } else {
-                    LOG1("\t\t" << "-f?"); }
-                fl++; } } }
-}
-
-void PhvInfo::postorder(const IR::Expression *e) {
-    Field *f = field(e);
-    if (f && isWrite()) {
-        f->set_mau_write(true);  // note: this can be a parser write only
-        LOG4(".....MAU_write....." << f); }
-}
-
-
-bool PhvInfo::preorder(const IR::Tofino::ParserState* state) {
-    if (state->name != "$bridged_metadata_extract") return true;
-    for (auto* match : state->match) {
-        forAllMatching<IR::Tofino::Extract>(&match->stmts,
-                      [&](const IR::Tofino::Extract* extract) {
-            auto* fieldInfo = field(extract->dest);
-            if (!fieldInfo) return;
-            fieldInfo->bridged = true;
-        });
-    }
-    return true;
-}
-
-void PhvInfo::add(cstring name, int size, int offset, bool meta, bool pov) {
+void PhvInfo::add(cstring name, gress_t gress, int size, int offset, bool meta, bool pov) {
     LOG3("PhvInfo adding " << (meta ? "metadata" : "header") << " field " << name <<
          " size " << size);
     assert(all_fields.count(name) == 0);
@@ -181,7 +69,7 @@ void PhvInfo::add(cstring name, int size, int offset, bool meta, bool pov) {
     info->phv_assignment_api(new PHV_Assignment_API(info));
 }
 
-void PhvInfo::add_hdr(cstring name, const IR::Type_StructLike *type, bool meta) {
+void PhvInfo::add_hdr(cstring name, const IR::Type_StructLike *type, gress_t gress, bool meta) {
     if (!type) {
         LOG2("PhvInfo no type for " << name);
         return; }
@@ -193,16 +81,16 @@ void PhvInfo::add_hdr(cstring name, const IR::Type_StructLike *type, bool meta) 
         offset += f->type->width_bits();
     for (auto f : type->fields) {
         int size = f->type->width_bits();
-        add(name + '.' + f->name, size, offset -= size, meta, false); }
+        add(name + '.' + f->name, gress, size, offset -= size, meta, false); }
     int end = by_id.size();
     all_structs.emplace(name, StructInfo(meta, gress, start, end - start));
 }
 
-void PhvInfo::addTempVar(const IR::TempVar *tv) {
+void PhvInfo::addTempVar(const IR::TempVar *tv, gress_t gress) {
     BUG_CHECK(tv->type->is<IR::Type::Bits>() || tv->type->is<IR::Type::Boolean>(),
               "Can't create temp of type %s", tv->type);
     if (all_fields.count(tv->name) == 0)
-        add(tv->name, tv->type->width_bits(), 0, true, tv->POV);
+        add(tv->name, gress, tv->type->width_bits(), 0, true, tv->POV);
 }
 
 const PhvInfo::StructInfo PhvInfo::struct_info(cstring name_) const {
@@ -308,9 +196,8 @@ void PhvInfo::allocatePOV(const HeaderStackInfo &stacks) {
     for (auto &field : *this)
         if (field.pov && field.metadata)
             size[field.gress] += field.size;
-    for (auto gress : Range(INGRESS, EGRESS)) {
+    for (auto gress : { INGRESS, EGRESS }) {
         if (size[gress] == 0) continue;
-        this->gress = gress;
         for (auto &field : *this)
             if (field.pov && field.metadata && field.gress == gress) {
                 size[gress] -= field.size;
@@ -320,7 +207,7 @@ void PhvInfo::allocatePOV(const HeaderStackInfo &stacks) {
         for (auto hdr : simple_headers) {
             auto hdr_info = hdr.second;
             if (hdr_info.gress == gress) {
-                add(hdr.first + ".$valid", 1, --size[gress], false, true);
+                add(hdr.first + ".$valid", gress, 1, --size[gress], false, true);
                 hdr_dd_valid = &all_fields[hdr.first + ".$valid"];
                 pov_fields_h.push_back(hdr_dd_valid); } }
 
@@ -360,22 +247,22 @@ void PhvInfo::allocatePOV(const HeaderStackInfo &stacks) {
             if (info.gress == gress) {
                 if (stack.maxpush) {
                     size[gress] -= stack.maxpush;
-                    add(stack.name + ".$push", stack.maxpush, size[gress], true, true);
+                    add(stack.name + ".$push", gress, stack.maxpush, size[gress], true, true);
                     pov_fields.push_back(&all_fields[stack.name + ".$push"]);
                     push_exists = true;
                 }
                 char buffer[16];
                 for (int i = 0; i < stack.size; ++i) {
                     snprintf(buffer, sizeof(buffer), "[%d]", i);
-                    add(stack.name + buffer + ".$valid", 1, --size[gress], false, true);
+                    add(stack.name + buffer + ".$valid", gress, 1, --size[gress], false, true);
                     pov_fields.push_back(&all_fields[stack.name + buffer + ".$valid"]);
                 }
                 if (stack.maxpop) {
                     size[gress] -= stack.maxpop;
                     // TODO FIXME should this be stack.maxpop?
-                    add(stack.name + ".$pop", stack.maxpush, size[gress], true, true);
+                    add(stack.name + ".$pop", gress, stack.maxpush, size[gress], true, true);
                 }
-                add(stack.name + ".$stkvalid", stack.size + stack.maxpush + stack.maxpop,
+                add(stack.name + ".$stkvalid", gress, stack.size + stack.maxpush + stack.maxpop,
                     size[gress], true, true);
                 // do not push ".$stkvalid" as a member
                 // members are slices of owner ".stkvalid"'s allocation span
@@ -850,6 +737,154 @@ PhvInfo::Field::field_overlay(Field *overlay, int phv_number) {
     overlay->overlay_substratum(overlay_substratum_i? overlay_substratum_i: this);
     overlay->overlay_substratum()->field_overlay_map(overlay, phv_number);
 }
+
+
+//***********************************************************************************
+//
+// CollectPhvInfo implementation.
+//
+//***********************************************************************************
+
+Visitor::profile_t CollectPhvInfo::init_apply(const IR::Node *root) {
+    auto rv = Inspector::init_apply(root);
+    phv.clear();
+    return rv;
+}
+
+bool CollectPhvInfo::preorder(const IR::Header *h) {
+    auto gress = VisitingThread(this);
+    int start = phv.by_id.size();
+    phv.add_hdr(h->name, h->type, gress, false);
+    int end = phv.by_id.size();
+    phv.simple_headers.emplace(h->name,
+                               PhvInfo::StructInfo(false, gress, start, end - start));
+    return false;
+}
+
+bool CollectPhvInfo::preorder(const IR::HeaderStack *h) {
+    if (!h->type) return false;
+    auto gress = VisitingThread(this);
+    char buffer[16];
+    int start = phv.by_id.size();
+    for (int i = 0; i < h->size; i++) {
+        snprintf(buffer, sizeof(buffer), "[%d]", i);
+        phv.add_hdr(h->name + buffer, h->type, gress, false); }
+    int end = phv.by_id.size();
+    phv.all_structs.emplace(h->name, PhvInfo::StructInfo(false, gress, start, end - start));
+    return false;
+}
+
+bool CollectPhvInfo::preorder(const IR::Metadata *h) {
+    auto gress = VisitingThread(this);
+    phv.add_hdr(h->name, h->type, gress, true);
+    return false;
+}
+
+bool CollectPhvInfo::preorder(const IR::TempVar *tv) {
+    auto gress = VisitingThread(this);
+    phv.addTempVar(tv, gress);
+    return false;
+}
+
+bool CollectPhvInfo::preorder(const IR::Tofino::ParserState* state) {
+    // Mark fields as bridged if they're written to in the special
+    // `$bridged_metadata_extract` state that we generate in AddBridgedMetadata.
+    // Using this approach ensures that fields are marked as bridged even if we
+    // rebuild the PhvInfo data structure after AddBridgedMetadata has run.
+    if (!state->name.endsWith("$bridge_metadata_extract")) return true;
+    for (auto* match : state->match) {
+        forAllMatching<IR::Tofino::Extract>(&match->stmts,
+                      [&](const IR::Tofino::Extract* extract) {
+            auto* fieldInfo = phv.field(extract->dest);
+            if (!fieldInfo) return;
+
+            // Prior to CreateThreadLocalInstances, a P4 field is represented by
+            // the same PhvInfo::Field object in both ingress and egress. After
+            // that pass runs, there are two PhvInfo::Field objects. The extract
+            // will write to the *egress* version, but the one we actually want
+            // to mark as bridged is the *ingress* version.
+            if (!fieldInfo->name.startsWith("egress::")) {
+                fieldInfo->bridged = true;
+                return;
+            }
+
+            // XXX(seth): Yuck.
+            cstring ingressFieldName = cstring("ingress::")
+                                     + fieldInfo->name.substr(strlen("egress::"));
+            auto* ingressFieldInfo = phv.field(ingressFieldName);
+            BUG_CHECK(ingressFieldInfo != nullptr,
+                      "No ingress version of egress bridged metadata field?");
+            ingressFieldInfo->bridged = true;
+        });
+    }
+    return true;
+}
+
+void CollectPhvInfo::postorder(const IR::Tofino::Deparser *d) {
+    // extract deparser constraints from Deparser & Digest IR nodes ref: bf-p4c/ir/parde.def
+    // set deparser constaints on field
+    if (d->egress_port) {
+        // IR::Tofino::Deparser has a field egress_port which points to
+        // egress port in the egress pipeline and
+        // egress spec in the ingress pipeline
+        PhvInfo::Field* f = phv.field(d->egress_port);
+        BUG_CHECK(f != nullptr, "Field not created in PhvInfo");
+        f->set_deparsed_no_pack(true);
+        LOG1(".....Deparser Constraint 'egress port' on field..... " << f); }
+
+    // TODO:
+    // IR futures: distinguish each digest as an enumeration: learning, mirror, resubmit
+    // as they have differing constraints -- bottom-bits, bridge-metadata mirror packing
+    // learning, mirror field list in bottom bits of container, e.g.,
+    // 301:ingress::$learning<3:0..2>
+    // 590:egress::$mirror<3:0..2> specifies 1 of 8 field lists
+    // currently, IR::Tofino::Digest node has a string field to distinguish them by name
+    for (auto &entry : Values(d->digests)) {
+        if (entry->name != "learning" && entry->name != "mirror")
+            continue;
+
+        PhvInfo::Field* f = phv.field(entry->select);
+        BUG_CHECK(f != nullptr, "Field not created in PhvInfo");
+        f->set_deparsed_bottom_bits(true);
+        LOG1(".....Deparser Constraint "
+            << entry->name
+            << " 'digest' on field..... "
+            << f);
+
+        if (entry->name ==  "learning") {
+            for (auto s : entry->sets) {
+                LOG1("\t.....learning field list..... ");
+                for (auto l : *s) {
+                    auto l_f = phv.field(l);
+                    if (l_f)
+                        LOG1("\t\t" << l_f);
+                    else
+                        LOG1("\t\t" <<"-f?"); } }
+            continue; }
+
+        // associating a mirror field with its field list
+        // used during constraint checks for bridge-metadata phv allocation
+        LOG1(".....mirror fields in field list " << f->id << ":" << f->name);
+        int fl = 0;
+        for (auto s : entry->sets) {
+            LOG1("\t.....field list....." << fl);
+            for (auto m : *s) {
+                PhvInfo::Field* mirror = phv.field(m);
+                if (mirror) {
+                    mirror->mirror_field_list = {f, fl};
+                    LOG1("\t\t" << mirror);
+                } else {
+                    LOG1("\t\t" << "-f?"); }
+                fl++; } } }
+}
+
+void CollectPhvInfo::postorder(const IR::Expression *e) {
+    PhvInfo::Field* f = phv.field(e);
+    if (f && isWrite()) {
+        f->set_mau_write(true);  // note: this can be a parser write only
+        LOG4(".....MAU_write....." << f); }
+}
+
 
 //
 //

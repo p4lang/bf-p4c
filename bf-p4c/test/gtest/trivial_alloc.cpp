@@ -177,7 +177,7 @@ TYPED_TEST(TofinoPHVTrivialAllocators, AutomaticAllocation) {
     // Perform PHV analysis and run the allocator.
     PhvInfo phv;
     PassManager passes = {
-        &phv,
+        new CollectPhvInfo(phv),
         new VisitFunctor([&]{ phv.allocatePOV(HeaderStackInfo()); }),
         new TypeParam(phv)  // TypeParam is either TrivialAlloc or ManualAlloc.
     };
@@ -324,7 +324,7 @@ class TofinoPHVManualAlloc : public ::testing::Test {
         // Perform PHV analysis and run the allocator.
         PhvInfo phv;
         PassManager passes = {
-            &phv,
+            new CollectPhvInfo(phv),
             new VisitFunctor([&]{ phv.allocatePOV(HeaderStackInfo()); }),
             new PHV::ManualAlloc(phv, assignments)
         };
@@ -419,7 +419,7 @@ TEST_F(TofinoPHVManualAlloc, ReservedContainerAllocation) {
     // Perform PHV analysis.
     PhvInfo phv;
     PassManager passes = {
-        &phv,
+        new CollectPhvInfo(phv),
         new VisitFunctor([&]{ phv.allocatePOV(HeaderStackInfo()); })
     };
     auto program = testcase->pipe->apply(passes);
