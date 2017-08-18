@@ -165,7 +165,7 @@ class PhvInfo {
         //
         // friends of phv_assignment interface
         //
-        friend struct CollectPhvInfo;
+        friend struct CollectPhvFields;
         friend class SplitPhvUse;             // phv/split_phv_use
         friend class PHV::ManualAlloc;        // phv/trivial_alloc
         friend class PHV::TrivialAlloc;       // phv/trivial_alloc
@@ -478,7 +478,8 @@ class PhvInfo {
         decltype(**it) operator*() { return **it; }
         decltype(*it) operator->() { return *it; } };
 
-    friend struct CollectPhvInfo;
+    friend struct CollectPhvFields;
+    friend struct MarkBridgedMetadataFields;
 
  public:  // class PhvInfo
     const Field *field(int idx) const { return (size_t)idx < by_id.size() ? by_id.at(idx) : 0; }
@@ -519,12 +520,12 @@ class PhvInfo {
     void set_done() { alloc_done_ = true; }
 };  // class PhvInfo
 
-
-/** @brief Create and store a PhvInfo::Field for each header and metadata
- * field.
+/**
+ * @brief Create and store a PhvInfo::Field for each header and metadata
+ * field, and for TempVars.
  *
  * Does not allocate POV fields---that must be done with a separate invocation
- * of PhvInfo::allocatePOV.  All fields are cleared each time this pass is
+ * of PhvInfo::allocatePOV. All fields are cleared each time this pass is
  * applied.
  *
  * @pre None.
@@ -532,25 +533,8 @@ class PhvInfo {
  * @post This object contains a PhvInfo::Field for each header and metadata
  * field, but not POV fields.
  */
-struct CollectPhvInfo : public Inspector, public TofinoWriteContext {
-    explicit CollectPhvInfo(PhvInfo& phv) : phv(phv) { }
-
- private:
-    profile_t init_apply(const IR::Node *root) override;
-    bool preorder(const IR::Header *h) override;
-    bool preorder(const IR::HeaderStack *) override;
-    bool preorder(const IR::Metadata *h) override;
-    bool preorder(const IR::TempVar *h) override;
-    bool preorder(const IR::Tofino::ParserState *state) override;
-
-    /** Set constraints for deparser fields, including mirror fields in field
-      * list for mirror digest fields. */
-    void postorder(const IR::Tofino::Deparser *d) override;
-
-    /// Set `mau_write` constraint on fields written in the MAU.
-    void postorder(const IR::Expression *e) override;
-
-    PhvInfo& phv;
+struct CollectPhvInfo : public PassManager {
+    explicit CollectPhvInfo(PhvInfo& phv);
 };
 
 extern void repack_metadata(PhvInfo &phv);
