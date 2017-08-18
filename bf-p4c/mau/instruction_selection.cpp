@@ -41,20 +41,17 @@ const IR::MAU::Action *InstructionSelection::preorder(IR::MAU::Action *af) {
 }
 
 class InstructionSelection::SplitInstructions : public Transform {
-    InstructionSelection &self;
     IR::Vector<IR::Primitive> &split;
     const IR::Expression *postorder(IR::MAU::Instruction *inst) override {
         if (inst->operands.empty()) return inst;
         if (auto *tv = inst->operands[0]->to<IR::TempVar>()) {
-            self.phv.addTempVar(tv);
             if (getContext() != nullptr) {
                 LOG3("splitting instruction " << inst);
                 split.push_back(inst);
                 return tv; } }
         return inst; }
  public:
-    SplitInstructions(InstructionSelection &self, IR::Vector<IR::Primitive> &s)
-    : self(self), split(s) {}
+    explicit SplitInstructions(IR::Vector<IR::Primitive> &s) : split(s) {}
 };
 
 const IR::MAU::Action *InstructionSelection::postorder(IR::MAU::Action *af) {
@@ -62,7 +59,7 @@ const IR::MAU::Action *InstructionSelection::postorder(IR::MAU::Action *af) {
     this->af = nullptr;
     IR::Vector<IR::Primitive> split;
     for (auto *p : af->action)
-        split.push_back(p->apply(SplitInstructions(*this, split)));
+        split.push_back(p->apply(SplitInstructions(split)));
     if (split.size() > af->action.size())
         af->action = std::move(split);
     af->stateful.append(stateful);
