@@ -12,6 +12,8 @@
 #include "lib/exceptions.h"
 #include "lib/nullstream.h"
 #include "frontends/p4/frontend.h"
+#include "frontends/p4/createBuiltins.h"
+#include "frontends/p4/validateParsedProgram.h"
 #include "frontends/common/constantFolding.h"
 #include "frontends/p4-14/header_type.h"
 #include "frontends/p4-14/typecheck.h"
@@ -23,6 +25,18 @@
 #include "version.h"
 #include "control-plane/p4RuntimeSerializer.h"
 #include "arch/simple_switch.h"
+
+static void log_dump(const IR::Node *node, const char *head) {
+    if (!node || !LOGGING(1)) return;
+    if (head)
+        std::cout << '+' << std::setw(strlen(head)+6) << std::setfill('-') << "+\n| "
+                  << head << " |\n" << '+' << std::setw(strlen(head)+3) << "+"
+                  << std::endl << std::setfill(' ');
+    if (LOGGING(2))
+        dump(node);
+    else
+        std::cout << *node << std::endl;
+}
 
 int main(int ac, char **av) {
     vector<cstring> supported_arch = { "tofino-v1model-barefoot", "tofino-native-barefoot" };
@@ -46,34 +60,26 @@ int main(int ac, char **av) {
 
     auto program = P4::parseP4File(options);
 
-    if (options.target == "tofino-v1model-barefoot" && options.native_arch) {
-        program = Tofino::translateSimpleSwitch(program, &options, hook);
-    }
-
     program = P4::FrontEnd(hook).run(options, program, true);
     if (!program)
         return 1;
-    if (Log::verbose()) {
-        std::cout << "-------------------------------------------------" << std::endl
-                  << "Initial program" << std::endl
-                  << "-------------------------------------------------" << std::endl;
-        if (Log::verbosity() > 1)
-            dump(program);
-        else
-            std::cout << *program << std::endl; }
+    log_dump(program, "Initial program");
+
+    if (options.target == "tofino-v1model-barefoot" && options.native_arch) {
+        Tofino::SimpleSwitchTranslation translation(options);
+        translation.addDebugHook(hook);
+        program = program->apply(translation);
+        if (!program)
+            return 1;
+        log_dump(program, "After TNA translation");
+    }
+
     Tofino::MidEnd midend(options);
     midend.addDebugHook(hook);
     program = program->apply(midend);
     if (!program)
         return 1;
-    if (Log::verbose()) {
-        std::cout << "-------------------------------------------------" << std::endl
-                  << "After midend" << std::endl
-                  << "-------------------------------------------------" << std::endl;
-        if (Log::verbosity() > 1)
-            dump(program);
-        else
-            std::cout << *program << std::endl; }
+    log_dump(program, "After midend");
 
     if (!options.p4RuntimeFile.isNullOrEmpty()) {
         if (Log::verbose())

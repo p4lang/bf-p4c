@@ -156,6 +156,8 @@ static void setup_hash_dist(IR::MAU::Table *tbl, const PhvInfo &phv, LayoutChoic
     for (const IR::MAU::Action *action : Values(tbl->actions)) {
         action->apply(hdrv);
         for (auto instr : action->stateful) {
+            // XXX(hanw): skip when counter operands is less than 1 (direct counter).
+            if (instr->operands.size() < 2) continue;
             if (phv.field(instr->operands[1]) == nullptr) continue;
             hash_dist_reqs.emplace_back(true, instr); } }
     lc.total_hash_dist_reqs[tbl->name] = hash_dist_reqs;

@@ -223,13 +223,11 @@ set (TOFINO_BACKEND_PHV_HDRS
 
 set (TOFINO_BACKEND_ARCH_SRCS
   arch/program_structure.cpp
-  arch/converters.cpp
   arch/simple_switch.cpp
   )
 
 set (TOFINO_BACKEND_ARCH_HDRS
   arch/program_structure.h
-  arch/converters.h
   arch/simple_switch.h
   )
 
@@ -256,6 +254,8 @@ set (p4include_HEADERS
   p4include/tofino_model.p4
   p4include/tofino.p4
   p4include/tofino/p4_14_prim.p4
+  p4include/tofino/p4_16_prim.p4
+  p4include/tofino/v1model.p4
   p4include/tofino/stateful_alu.p4
   )
 

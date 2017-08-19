@@ -14,9 +14,9 @@
   limitations under the License.
 */
 
+#include "program_structure.h"
 #include <boost/iostreams/device/file_descriptor.hpp>
 #include <boost/iostreams/stream.hpp>
-
 #include <set>
 #include <algorithm>
 
@@ -36,16 +36,7 @@
 #include "frontends/p4-14/header_type.h"
 #include "frontends/p4-14/typecheck.h"
 
-#include "tofino/arch/simple_switch.h"
-#include "tofino/arch/converters.h"
-#include "tofino/arch/program_structure.h"
-
 namespace Tofino {
-
-ProgramStructure::ProgramStructure() {
-    declarations = new IR::IndexedVector<IR::Node>();
-    tofinoArchTypes = new IR::IndexedVector<IR::Node>();
-}
 
 // append target architecture to declaration
 void ProgramStructure::include(cstring filename, IR::IndexedVector<IR::Node>* vector) {
@@ -74,7 +65,7 @@ void ProgramStructure::include(cstring filename, IR::IndexedVector<IR::Node>* ve
 }
 
 /// Following is a simplified version of P4-14 to P4-16 converter that just
-/// converts included headers files.
+/// converts included header files.
 namespace {
 class V1DiscoverStructure : public Inspector {
     P4V1::ProgramStructure *structure;
@@ -104,7 +95,9 @@ class V1Rewrite : public Transform {
         prune();
         structure->createTypes();
         structure->createExterns();
-        return new IR::P4Program(global->srcInfo, *structure->declarations);
+        auto result = new IR::P4Program(global->srcInfo, *structure->declarations);
+        LOG1("V1Rewrite " << result);
+        return result;
     }
 };
 
@@ -150,107 +143,6 @@ void ProgramStructure::include14(cstring filename, IR::IndexedVector<IR::Node>* 
             vector->push_back(decl);
         options.closeInput(file);
     }
-}
-// replace occurrence of v1model intrinsic metadata with tofino metadata
-void ProgramStructure::mkTypes() {
-    ConvertMetadata cvt(this);
-    for (auto h : headers) {
-        auto hdr = h->apply(cvt);
-        if (hdr->to<IR::Type_Header>())
-            declarations->push_back(hdr); }
-    for (auto s : structs) {
-        auto st = s->apply(cvt);
-        if (st->to<IR::Type_Struct>())
-            declarations->push_back(st); }
-}
-
-// XXX(hanw): only create ingress and egress control block,
-// verifyChecksum and updateChecksum is TBD.
-void ProgramStructure::mkControls() {
-    ConvertControl cvt(this);
-    ConvertMetadata mcvt(this);
-
-    for (auto node : controls) {
-        node = node->apply(cvt);
-        if (!node) continue;
-        node = node->apply(mcvt);
-        declarations->push_back(node);
-    }
-}
-
-void ProgramStructure::mkParsers() {
-    if (parsers.size() != 1) {
-        ::error("V1model program has more than one parser.");
-    }
-    auto parser = parsers.at(0);
-
-    // the ClonePathExpression pass is necessary to avoid the error in
-    // referenceMap where a path is mapped to multiple declarations because
-    // ParserConverter create two IR::P4Parser nodes from the same IR::P4Parser
-    // node in v1model, and both IR nodes are initialized with the same
-    // sub-IR tree.
-    P4::ClonePathExpressions cloner;
-
-    // ingress
-    ConvertParser icvt(this, gress_t::INGRESS);
-    auto igParser = parser->apply(cloner);
-    igParser = igParser->apply(icvt);
-    declarations->push_back(igParser);
-
-    // egress
-    ConvertParser ecvt(this, gress_t::EGRESS);
-    auto egParser = parser->apply(cloner);
-    egParser = egParser->apply(ecvt);
-    declarations->push_back(egParser);
-}
-
-// convert deparser to tofino.p4
-void ProgramStructure::mkDeparsers() {
-    P4::ClonePathExpressions cloner;
-
-    const IR::P4Control* deparser = nullptr;
-    for (auto p : controls) {
-        // XXX(hanw): name is assumed to be fixed
-        if (p->name != "DeparserImpl") continue;
-        deparser = p;
-        break;
-    }
-    BUG_CHECK(deparser != nullptr, "Deparser block not implemented.");
-
-    ConvertDeparser icvt(this, gress_t::INGRESS);
-    auto igDeparser = deparser->apply(cloner);
-    igDeparser = igDeparser->apply(icvt);
-    declarations->push_back(igDeparser);
-
-    ConvertDeparser ecvt(this, gress_t::EGRESS);
-    auto egDeparser = deparser->apply(cloner);
-    egDeparser = egDeparser->apply(ecvt);
-    declarations->push_back(egDeparser);
-}
-
-void ProgramStructure::mkMain() {
-    auto name = IR::ID(IR::P4Program::main);
-    auto typepath = new IR::Path("Switch");
-    auto type = new IR::Type_Name(typepath);
-    auto args = new IR::Vector<IR::Expression>();
-    args->push_back(mkConstructorCallExpression("IngressParserImpl"));
-    args->push_back(mkConstructorCallExpression("ingress"));
-    args->push_back(mkConstructorCallExpression("IngressDeparserImpl"));
-    args->push_back(mkConstructorCallExpression("EgressParserImpl"));
-    args->push_back(mkConstructorCallExpression("egress"));
-    args->push_back(mkConstructorCallExpression("EgressDeparserImpl"));
-    auto result = new IR::Declaration_Instance(name, type, args, nullptr);
-    declarations->push_back(result);
-}
-
-const IR::P4Program* ProgramStructure::translate(Util::SourceInfo info) {
-    mkTypes();
-    mkParsers();
-    mkDeparsers();
-    mkControls();
-    mkMain();
-    auto result = new IR::P4Program(info, *declarations);
-    return result;
 }
 
 }  // namespace Tofino

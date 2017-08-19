@@ -10,7 +10,7 @@ struct packet_t {
     data_h      data;
 }
 
-parser Parser(packet_in b, out packet_t hdrs, inout standard_metadata meta)
+parser TopParser(packet_in b, out packet_t hdrs, inout standard_metadata meta)
 {
     state start {
         b.extract(hdrs.data);

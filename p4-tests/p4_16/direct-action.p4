@@ -11,4 +11,4 @@ control c(inout packet_t hdrs, inout standard_metadata meta) {
     }
 }
 
-Switch(Parser(), c(), egress(), deparser()) main;
+Switch(TopParser(), c(), egress(), deparser()) main;

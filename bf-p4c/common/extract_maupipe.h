@@ -3,6 +3,7 @@
 
 #include "ir/ir.h"
 #include "frontends/common/resolveReferences/referenceMap.h"
+#include "frontends/p4/typeMap.h"
 
 class Tofino_Options;
 

@@ -10,19 +10,14 @@ namespace Tofino {
 /// Experimental implementation of programStructure to facilitate the
 /// translation between P4-16 program of different architecture.
 class ProgramStructure {
- protected:
-    void mkTypes();
-    void mkControls();
-    void mkExterns();
-    void mkParsers();
-    void mkDeparsers();
-    void mkMain();
-
  public:
     IR::IndexedVector<IR::Node>* declarations;
     IR::IndexedVector<IR::Node>* tofinoArchTypes;
 
-    ProgramStructure();
+    ProgramStructure() {
+        declarations = new IR::IndexedVector<IR::Node>();
+        tofinoArchTypes = new IR::IndexedVector<IR::Node>();
+    }
     void include(cstring filename, IR::IndexedVector<IR::Node>* decls);
     void include14(cstring filename, IR::IndexedVector<IR::Node>* decls);
     const IR::P4Program* translate(Util::SourceInfo info);
@@ -32,14 +27,17 @@ class ProgramStructure {
     std::vector<const IR::P4Control*>   controls;
     std::vector<const IR::P4Parser*>    parsers;
     std::vector<const IR::Type_Extern*> externs;
-    std::vector<const IR::Type_Header*> headers;
+    std::map<cstring, const IR::Type_Header*> headers;
     std::vector<const IR::Type_Struct*> structs;
     std::vector<const IR::Declaration_Instance*> declaration_instances;
 
+    // XXX(hanw): create an IR::Tofino primitve type for resubmit.
+    std::vector<const IR::Type_Header*> extern_resubmit;
+    std::vector<const IR::Type_Header*> extern_recirculate;
+    std::vector<const IR::Type_Header*> extern_clone;
+
     /// system metadata is metadata from v1model or p4-14 intrinsic_metadata
     std::map<cstring, const IR::Node*> system_metadata;
-    /// user metadata is metadata defined in user program
-    std::map<cstring, const IR::Node*> user_metadata;
 
     bool isOldSystemMetadata(cstring name) {
         auto it = system_metadata.find(name);
