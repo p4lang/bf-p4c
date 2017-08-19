@@ -27,7 +27,7 @@ struct packet_t {
     data_h data;
 }
 
-parser Parser(packet_in b, out packet_t hdrs, inout standard_metadata meta) {
+parser TopParser(packet_in b, out packet_t hdrs, inout standard_metadata meta) {
     state start {
         b.extract<data_h>(hdrs.data);
         transition accept;
@@ -54,4 +54,4 @@ control c(inout packet_t hdrs, inout standard_metadata meta) {
     }
 }
 
-Switch<packet_t>(Parser(), c(), egress(), deparser()) main;
+Switch<packet_t>(TopParser(), c(), egress(), deparser()) main;
