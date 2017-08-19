@@ -17,7 +17,6 @@ set (TOFINO_XFAIL_TESTS
 # the reasons need more characterization
 if (HARLYN_STF)
 set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
-  extensions/p4_tests/p4_16/apply_if.p4
   extensions/p4_tests/p4_14/adb_shared2.p4
   extensions/p4_tests/p4_14/adjust_instr4.p4
   extensions/p4_tests/p4_14/hash_calculation_32.p4

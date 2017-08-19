@@ -66,7 +66,7 @@ control ingress(inout packet_t hdrs, inout standard_metadata meta) {
     }
     apply {
         t1_0.apply();
-        if (hdrs.data.f1 == 32w0) 
+        if (hdrs.data.f2 == 32w0) 
             t2_0.apply();
     }
 }
