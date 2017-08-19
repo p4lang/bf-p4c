@@ -90,8 +90,25 @@ class Table : Tofino::Unit {
                 return false;
             return action_data_bytes != action_data_bytes_in_overhead;
         }
-        bool ternary_indirect_required() const { return ternary && overhead_bits > 0; }
-        bool no_match_data() const { return match_width_bits == 0; }
+        bool ternary_indirect_required() const { return ternary; }
+        bool no_match_data() const { 
+            return match_width_bits == 0;
+        }
+        /** Currently hash action tables and default action tables that cannot be adapted by
+         *  runtime go through the hit pathway in Glass, so allocating accordingly.
+         */
+        bool no_match_hit_path() const {
+            return no_match_data() && ((overhead_bits == 0 && action_data_bytes == 0)
+                                       || hash_action);
+        }
+        /** Any keyless table that has parameters that can be adjusted during runtime, such
+         *  as action or action data must go through the miss pathway, as those are the registers
+         *  configured by the driver when the control plane requests a change
+         */
+        bool no_match_miss_path() const {
+            return no_match_data() && (overhead_bits > 0 || action_data_bytes > 0) && !hash_action;
+        }
+
 #emit
         Layout &operator+=(const Layout &a);
 #end

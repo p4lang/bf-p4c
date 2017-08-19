@@ -47,7 +47,7 @@ class MauAsmOutput : public MauInspector {
     void emit_memory(std::ostream &out, indent_t, const Memories::Use &) const;
     void emit_gateway(std::ostream &out, indent_t gw_indent, const IR::MAU::Table *tbl,
              bool hash_action, cstring next_hit, cstring &gw_miss) const;
-    void emit_hash_action_gateway(std::ostream &out, indent_t gw_indent,
+    void emit_no_match_gateway(std::ostream &out, indent_t gw_indent,
             const IR::MAU::Table *tbl) const;
     void emit_table_format(std::ostream &out, indent_t, const TableFormat::Use &use,
             const TableMatch *tm, bool ternary) const;

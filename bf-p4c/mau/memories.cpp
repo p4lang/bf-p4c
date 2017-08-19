@@ -10,8 +10,9 @@ void Memories::clear_uses() {
     sram_use.clear();
     tcam_use.clear();
     mapram_use.clear();
+    sram_search_bus.clear();
     sram_match_bus.clear();
-    sram_print_match_bus.clear();
+    sram_print_search_bus.clear();
     tind_bus.clear();
     action_data_bus.clear();
     stateful_bus.clear();
@@ -44,7 +45,11 @@ void Memories::clear_table_vectors() {
     action_bus_users.clear();
     suppl_bus_users.clear();
     gw_tables.clear();
-    no_match_tables.clear();
+    no_match_hit_tables.clear();
+    no_match_miss_tables.clear();
+    payload_gws.clear();
+    normal_gws.clear();
+    no_match_gws.clear();
 }
 
 /* Creates a new table_alloc object for each of the taibles within the memory allocation */
@@ -60,6 +65,7 @@ void Memories::add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
     if (gw != nullptr)  {
         auto *ta_gw = new table_alloc(gw, &resources->gateway_ixbar, &resources->memuse, lo, -1);
         ta_gw->link_table(ta);
+        ta->link_table(ta_gw);
         tables.push_back(ta_gw);
     }
 }
@@ -109,8 +115,8 @@ bool Memories::allocate_all() {
         return false;
     }
 
-    LOG3("Allocating all no match tables");
-    if (!allocate_all_no_match()) {
+    LOG3("Allocate all no match miss");
+    if (!allocate_all_no_match_miss()) {
         return false;
     }
 
@@ -316,11 +322,14 @@ bool Memories::analyze_tables(mem_info &mi) {
         auto table = ta->table;
         int entries = ta->provided_entries;
         if (ta->layout_option->layout.no_match_data()) {
-            ta->calculated_entries = 512;
-            if (ta->table->layout.hash_action)
-                hash_action_tables.push_back(ta);
-            else
-                no_match_tables.push_back(ta);
+            if (ta->layout_option->layout.no_match_hit_path()) {
+                no_match_hit_tables.push_back(ta);
+            } else {
+                // In order to potentially provide potential sizes for attached tables,
+                // must at least have a size of 1
+                ta->calculated_entries = 1;
+                no_match_miss_tables.push_back(ta);
+            }
             mi.no_match_tables++;
         } else if (!table->layout.ternary) {
             auto name = ta->table->get_use_name();
@@ -414,7 +423,7 @@ vector<std::pair<int, int>> Memories::available_SRAMs_per_row(unsigned mask, tab
     vector<std::pair<int, int>> available_rams;
     auto name = ta->table->get_use_name();
     for (int i = 0; i < SRAM_ROWS; i++) {
-        auto bus = sram_match_bus[i];
+        auto bus = sram_search_bus[i];
         // if the first bus or the second bus match up to what is
         if (!(!bus[0].first || !bus[1].first ||
             (bus[0].first == name && bus[0].second == width_sect) ||
@@ -439,7 +448,7 @@ vector<int> Memories::available_match_SRAMs_per_row(unsigned row_mask, unsigned 
     vector<int> matching_rows;
     auto name = ta->table->get_use_name();
     for (int i = 0; i < SRAM_ROWS; i++) {
-        auto bus = sram_match_bus[i];
+        auto bus = sram_search_bus[i];
         if (row == i) continue;
         if (!(!bus[0].first || !bus[1].second ||
             (bus[0].first == name && bus[0].second == width_sect) ||
@@ -456,13 +465,13 @@ vector<int> Memories::available_match_SRAMs_per_row(unsigned row_mask, unsigned 
                  __builtin_popcount(~sram_inuse[b] & total_mask)) != 0)
             return t < 0;
 
-        auto bus = sram_match_bus[a];
+        auto bus = sram_search_bus[a];
 
         if ((bus[0].first && bus[0].first == name && bus[0].second == width_sect) ||
             (bus[1].first && bus[1].first == name && bus[1].second == width_sect))
             return true;
 
-        bus = sram_match_bus[b];
+        bus = sram_search_bus[b];
 
         if ((bus[0].first && bus[0].first == name && bus[0].second == width_sect) ||
             (bus[1].first && bus[1].first == name && bus[1].second == width_sect))
@@ -511,7 +520,7 @@ void Memories::break_exact_tables_into_ways() {
 */
 Memories::SRAM_group * Memories::find_best_candidate(SRAM_group *placed_wa, int row, int &loc) {
     if (exact_match_ways.empty()) return nullptr;
-    auto bus = sram_match_bus[row];
+    auto bus = sram_search_bus[row];
 
     loc = 0;
     for (auto emw : exact_match_ways) {
@@ -563,8 +572,8 @@ bool Memories::fill_out_row(SRAM_group *placed_wa, int row, unsigned column_mask
 /* Returns the match bus that we are selecting on this row */
 int Memories::match_bus_available(table_alloc *ta, int width, int row) {
      auto name = ta->table->get_use_name();
-     if (!sram_match_bus[row][0].first
-         || (sram_match_bus[row][0].first == name && sram_match_bus[row][0].second == width))
+     if (!sram_search_bus[row][0].first
+         || (sram_search_bus[row][0].first == name && sram_search_bus[row][0].second == width))
          return 0;
      else
          return 1;
@@ -630,10 +639,13 @@ bool Memories::pack_way_into_RAMs(SRAM_group *wa, int row, int &cols, unsigned c
         }
 
         sram_inuse[selected_rows[i]] |= row_mask;
-        if (!sram_match_bus[selected_rows[i]][bus].first) {
-            sram_match_bus[selected_rows[i]][bus]
+        if (!sram_search_bus[selected_rows[i]][bus].first) {
+            sram_search_bus[selected_rows[i]][bus]
                 = std::make_pair(name, wa->unique_bus(width));
-            sram_print_match_bus[selected_rows[i]][bus] = name;
+            sram_print_search_bus[selected_rows[i]][bus] = name;
+            // FIXME: Too heavily constrained, as the match bus should only be on the one of the
+            // rows, not several
+            sram_match_bus[selected_rows[i]][bus] = name;
         }
     }
     for (size_t j = 0; j < selected_cols.size(); j++) {
@@ -2041,235 +2053,293 @@ bool Memories::gw_search_bus_fit(table_alloc *ta, table_alloc *exact_ta, int wid
     return true;
 }
 
-/* Allocates all gateways with a payload.  Because it has a payload, it requires a result
-   bus, and thus needs to find an original bus.  The hash action table shares this bus
-   with the gateway, in order to shrink this to one logical table */
-bool Memories::allocate_all_payload_gw() {
-    size_t action_payload_index = 0;
-    for (auto *ta : action_payload_gws) {
-        bool found = false;
-        auto name = ta->table->get_use_name(nullptr, true);
-        cstring link_name;
-        if (ta->table_link != nullptr) {
-            name = ta->table_link->table->get_use_name(nullptr, true);
-            link_name = ta->table_link->table->get_use_name();
-        }
-        auto &alloc = (*ta->memuse)[name];
-        for (int i = 0; i < SRAM_ROWS; i++) {
-            if (gateway_use[i][0] && gateway_use[i][1]) continue;
-            for (int j = 0; j < BUS_COUNT; j++) {
-                if (sram_match_bus[i][j].first || tind_bus[i][j]) continue;
+/** This algorithm looks for the first free available gateway.  The gateway may need a search
+ *  bus as well, so the algorithm looks for that too. 
+ */
+bool Memories::find_unit_gw(Memories::Use &alloc, cstring name, bool requires_search_bus) {
+    for (int i = 0; i < SRAM_ROWS; i++) {
+        for (int j = 0; j < GATEWAYS_PER_ROW; j++) {
+            if (gateway_use[i][j]) continue;
+            for (int k = 0; k < BUS_COUNT; k++) {
+                if (requires_search_bus && sram_search_bus[i][k].first) continue;
+                alloc.row.emplace_back(i, k);
+                alloc.gateway.unit = j;
                 gateway_use[i][j] = name;
-                alloc.row.emplace_back(i, j);
-                alloc.row.back().col.push_back(j);
-                action_payload_index++;
-                if (link_name) {
-                    sram_match_bus[i][j] = std::make_pair(link_name, 0);
-                    allocate_one_no_match(ta->table_link, i);
-                    alloc.payload |= 1;
-                } else {
-                    sram_match_bus[i][j] = std::make_pair(name, 0);
-                }
-                found = true;
-                break;
+                if (requires_search_bus)
+                    sram_search_bus[i][k] = std::make_pair(name, 0);
+                return true;
             }
-            if (found) break;
+        }
+    }
+    return false;
+}
+
+/** Finds a search bus for the gateway.  The alogrithm first looks at all used search buses,
+ *  to see if it can reuse a search bus on the table.  If it cannot find a search bus to
+ *  share, then it finds the first free search bus to use
+ */
+bool Memories::find_search_bus_gw(table_alloc *ta, Memories::Use &alloc, cstring name) {
+    for (int i = 0; i < SRAM_ROWS; i++) {
+        for (int j = 0; j < GATEWAYS_PER_ROW; j++) {
+            if (gateway_use[i][j]) continue;
+            for (int k = 0; k < BUS_COUNT; k++) {
+                auto search = sram_search_bus[i][k];
+                if (search.first.isNull()) continue;
+                table_alloc *exact_ta = find_corresponding_exact_match(search.first);
+                if (exact_ta == nullptr) continue;
+                // FIXME: currently we have to fold in the table format to this equation
+                // in order to share a format
+                if (ta->match_ixbar->gw_search_bus) {
+                    continue;
+                    // if (!gw_search_bus_fit(ta, exact_ta, bus.second, i, j)) continue;
+                }
+                // Because multiple ways could have different hash groups, this check is no
+                // longer valid
+                if (ta->match_ixbar->gw_hash_group) {
+                    continue;
+                    // FIXME: Currently all ways do not share the same hash_group
+                    // if (ta->match_ixbar->bit_use[0].group
+                       //  != exact_ta->match_ixbar->way_use[0].group)
+                         // continue;
+                }
+                exact_ta->attached_gw_bytes += ta->match_ixbar->gw_search_bus_bytes;
+                gw_bytes_per_sb[i][k] += ta->match_ixbar->gw_search_bus_bytes;
+                alloc.row.emplace_back(i, k);
+                alloc.gateway.unit = j;
+                gateway_use[i][j] = name;
+                return true;
+            }
         }
     }
 
-    if (action_payload_index != action_payload_gws.size())
-        return false;
+    return find_unit_gw(alloc, name, true);
+}
+
+/** Finding a result bus for the gateway.  Will save associated information, such as payload
+ *  row, bus, and value, as well as link no match tables if necessary
+ */
+bool Memories::find_match_bus_gw(Memories::Use &alloc, int payload, cstring name,
+                                 table_alloc *ta_no_match) {
+    for (int i = 0; i < SRAM_ROWS; i++) {
+        for (int j = 0; j < BUS_COUNT; j++) {
+            if (payload_use[i][j]) continue;
+            if (payload == 0) {
+               // FIXME: Add ability to handle tind outputs from payload
+               if (sram_match_bus[i][j]) continue;
+            } else {
+                if (sram_match_bus[i][j] || tind_bus[i][j]) continue;
+            }
+            alloc.gateway.payload_row = i;
+            alloc.gateway.payload_bus = j;
+            alloc.gateway.payload_value = payload;
+            // FIXME: again allow tind busses to potentially be used
+            alloc.gateway.bus_type = Use::EXACT;
+            if (payload != 0)
+                payload_use[i][j] = name;
+            if (ta_no_match) {
+                cstring no_match_name = ta_no_match->table->get_use_name();
+                auto &no_match_alloc = (*ta_no_match->memuse)[no_match_name];
+                no_match_alloc.row.emplace_back(i, j);
+                no_match_alloc.type = Use::EXACT;
+                sram_match_bus[i][j] = no_match_name;
+            } else {
+                sram_match_bus[i][j] = name;
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
+
+/** Allocates all gateways with a payload, which is a conditional linked to a no match table.
+ *  Thus it needs a payload, result bus, and search bus.
+ */
+bool Memories::allocate_all_payload_gw() {
+    for (auto *ta : payload_gws) {
+        cstring name;
+        if (ta->table_link) {
+            name = ta->table_link->table->get_use_name(nullptr, true);
+        } else {
+            BUG("Payload requiring gw has no linked table");
+        }
+        auto &alloc = (*ta->memuse)[name];
+        alloc.type = Use::GATEWAY;
+        bool search_bus_found = find_search_bus_gw(ta, alloc, name);
+        bool match_bus_found = find_match_bus_gw(alloc, 1, name, ta->table_link);
+        if (!(search_bus_found && match_bus_found))
+            return false;
+    }
     return true;
 }
 
-/* Allocation of a standard gateway.  Has search bus requirements and thus can potentially
-   share with exact match search buses.  If no search bus is found, it just finds the first
-   open search bus to use.  */
+/** Allocation of a conditional gateway that does not map to a no match hit path table.
+ * Conditional gateways require a search bus and result bus.  If the table is linked to another
+ * table, then the result bus will be the same as the result bus of the linked table.
+ */
 bool Memories::allocate_all_normal_gw() {
-    size_t normal_index = 0;
     for (auto *ta : normal_gws) {
         auto name = ta->table->get_use_name(nullptr, true);
         if (ta->table_link != nullptr)
             name = ta->table_link->table->get_use_name(nullptr, true);
         auto &alloc = (*ta->memuse)[name];
-        bool found = false;
-        // Tries to find a bus to share with the current table
-        for (int i = 0; i < SRAM_ROWS; i++) {
-            if (gateway_use[i][0] && gateway_use[i][1]) continue;
-            int current_gw = 0;
-            if (gateway_use[i][0])
-                current_gw = 1;
-            for (int j = 0; j < BUS_COUNT; j++) {
-                auto bus = sram_match_bus[i][j];
-                // FIXME: This is the punt based on the layout issues, later remove
-                // the gateway_use[i][j]
-                if (!bus.first || gateway_use[i][j]) continue;
-                table_alloc *exact_ta = find_corresponding_exact_match(bus.first);
-                if (exact_ta == nullptr) continue;
-                // FIXME: this is just a temporary patch
-                if (ta->match_ixbar->gw_search_bus) {
-                    continue;
-                    // if (!gw_search_bus_fit(ta, exact_ta, bus.second, i, j)) continue;
-                }
-                if (ta->match_ixbar->gw_hash_group) {
-                    // FIXME: Currently all ways shared the same hash_group
-                    if (ta->match_ixbar->bit_use[0].group
-                        != exact_ta->match_ixbar->way_use[0].group)
-                         continue;
-                }
-                exact_ta->attached_gw_bytes += ta->match_ixbar->gw_search_bus_bytes;
-                gw_bytes_per_sb[i][j] += ta->match_ixbar->gw_search_bus_bytes;
-                gateway_use[i][current_gw] = name;
-                alloc.row.emplace_back(i, j);
-                alloc.row.back().col.push_back(current_gw);
-                found = true;
-                normal_index++;
-                break;
-            }
-            if (found) break;
+        alloc.type = Use::GATEWAY;
+        bool search_bus_found = find_search_bus_gw(ta, alloc, name);
+        bool match_bus_found;
+        if (ta->table_link) {
+            // FIXME: Must use table format in order to instantiate payload bus location properly.
+            // However, the payload buses can be inferred from the location of the table
+            alloc.gateway.payload_value = -1;
+            alloc.gateway.payload_bus = -1;
+            alloc.gateway.payload_row = -1;
+            if (ta->table_link->table->layout.ternary)
+                alloc.gateway.bus_type = Use::TERNARY;
+            else
+                alloc.gateway.bus_type = Use::EXACT;
+            match_bus_found = true;
+        } else {
+            match_bus_found = find_match_bus_gw(alloc, 0, name, nullptr);
         }
-        if (found) continue;
-        // No bus could be shared, just look for an open bus!
-        for (int i = 0; i < SRAM_ROWS; i++) {
-            if (gateway_use[i][0] && gateway_use[i][1]) continue;
-            int current_gw = 0;
-            if (gateway_use[i][0])
-                current_gw = 1;
-            // FIXME: When layout info is added, we can potentially change this
-            for (int j = 0; j < BUS_COUNT; j++) {
-                if (!gateway_use[i][j]) {
-                    alloc.row.emplace_back(i, j);
-                    gateway_use[i][current_gw] = name;
-                    alloc.row.back().col.push_back(current_gw);
-                    normal_index++;
-                    found = true;
-                    break;
-                }
-            }
-            if (found) break;
-        }
-        if (!found) break;
+        if (!(search_bus_found && match_bus_found))
+            return false;
     }
 
-    if (normal_index != normal_gws.size())
-        return false;
     return true;
 }
 
-/* Creating a gateway table for a hash action table that has no gateway.  The gateway has no
-   search bus requirements, and the hash action table itself just needs an empty gw bus */
-bool Memories::allocate_all_hash_action_gw() {
-    size_t hash_action_index = 0;
-    for (auto *ta : hash_action_gws) {
+/** This function call allocates no match hit tables that don't require a payload.  This means
+ *  only a result bus is needed
+ */
+bool Memories::allocate_all_no_match_gw() {
+    for (auto *ta : no_match_gws) {
         auto name = ta->table->get_use_name(nullptr, true);
         auto &alloc = (*ta->memuse)[name];
         alloc.type = Use::GATEWAY;
-        bool found = false;
-
-        for (int i = 0; i < SRAM_ROWS; i++) {
-            if (gateway_use[i][0] && gateway_use[i][1]) continue;
-            for (int j = 0; j < BUS_COUNT; j++) {
-                if (gateway_use[i][j]) continue;
-                // FIXME: Can gw bus and match bus be separate or nah?
-                alloc.row.emplace_back(i, j);
-                gateway_use[i][j] = name;
-                alloc.row.back().col.push_back(j);
-                found = true;
-                break;
-            }
-            if (found) break;
-        }
-        if (!found) break;
-        found = false;
-        // Bus and gateway bus do not have to be mixed
-        for (int i = 0; i < SRAM_ROWS; i++) {
-            for (int j = 0; j < BUS_COUNT; j++) {
-                if (sram_match_bus[i][j].first) continue;
-                allocate_one_no_match(ta, i);
-                hash_action_index++;
-                found = true;
-                break;
-            }
-            if (found) break;
-        }
-        if (!found) break;
+        bool unit_found = find_unit_gw(alloc, name, false);
+        bool match_bus_found = find_match_bus_gw(alloc, 0, name, ta);
+        if (!(unit_found && match_bus_found))
+            return false;
     }
 
-    if (hash_action_index != hash_action_gws.size())
-        return false;
     return true;
 }
 
-/* Allocates all gateways.  Specifically 3 types.  Gateways which require a payload,
-   as they are done through hash action, normal gateways, and gateways that are created
-   specifically for a hash action table.  Each of these are different */
+/** The two allocation schemes allocate_all_gw and allocate_all_no_match_miss are responsible for
+ *  the allocation of both all gateways and all no match tables.  Keyless tables can go through
+ *  two pathways within match central, through the hit path or the miss path.
+ *
+ *  There are two types of standard no match tables.  Currently keyless tables that can have
+ *  no action data, and only one action are allocated to go through the hit path, which is what
+ *  glass does.  The tables that require action data or have multiple potential actions have
+ *  to go through the miss path, as those values are configurable by the driver, and currently
+ *  the driver can only rewrite the miss registers, even though these registers are completely
+ *  configurable through the hit path.  Lastly, all keyless tables that require hash distribution
+ *  require the hit path, as anything needed with hash distribution goes through the format
+ *  and merge block.
+ *
+ *  A gateway is the hardware block for handling a conditional block.  There are 16 gateways per
+ *  stage, two per rows.  Gateways are 4 row, 44 bit TCAMs, and can bring there comparison data
+ *  in two ways.  The lower 32 bits are brought in through the lower 32 bits of an 128 bit
+ *  search bus, while the upper 12 bits come from the upper 12 bits of a 52 bit hash.  The
+ *  necessary gateway resources are known at this point, so it's a matter of reserving either
+ *  a search bus, a hash bus or both.
+ *
+ *  Keyless table that go through the hit path must initialize a gateway to always hit, and thus
+ *  must find a gateway.  However, if the no match table through the hit path has a gateway
+ *  attached to it, this must use a payload in order for the gateway to be configured correctly.
+ *  The details of why this is necessary are contained within the asm_output, which talks about
+ *  the initialization of gateways.
+ *
+ *  Out of this comes three reservations of gateways.
+ *  1. Gateways that require payloads, which are conditionals linked to no match hit path tables.
+ *     In this case, a payload is required be resereved.  
+ *  2. Gateways that are conditionals.  These conditionals can be paired with a match table or
+ *     exist by themselves.
+ *  3. Gateways that are no match tables alone.  Due to the nature of the hit path, the gateway
+ *     is an always true gateway that always hits, and does not need to search
+ *
+ *  This list goes from least to most complex, specifically:
+ *  1.  Reserve gateway unit, search bus, result bus, payload
+ *  2.  Reserve gateway unit, search bus, result bus
+ *  3.  Reserve gateway unit, result bus
+ */
 bool Memories::allocate_all_gw() {
     for (auto *ta_gw : gw_tables) {
         bool pushed_back = false;
-        for (auto *ta_ha : hash_action_tables) {
-            if (ta_gw->table_link == ta_ha) {
-                action_payload_gws.push_back(ta_gw);
+        for (auto *ta_nm : no_match_hit_tables) {
+            if (ta_gw->table_link == ta_nm) {
+                payload_gws.push_back(ta_gw);
                 pushed_back = true;
                 break;
             }
         }
+
         if (!pushed_back)
             normal_gws.push_back(ta_gw);
     }
 
-    for (auto *ta_ha : hash_action_tables) {
+    for (auto *ta_nm : no_match_hit_tables) {
         bool linked = false;
         for (auto &ta_gw : gw_tables) {
-            if (ta_gw->table_link == ta_ha) {
+            if (ta_gw->table_link == ta_nm) {
                 linked = true;
                 break;
             }
         }
         if (!linked) {
-            hash_action_gws.push_back(ta_ha);
+            no_match_gws.push_back(ta_nm);
         }
     }
 
     if (!allocate_all_payload_gw()) return false;
     if (!allocate_all_normal_gw()) return false;
-    if (!allocate_all_hash_action_gw()) return false;
+    if (!allocate_all_no_match_gw()) return false;
     return true;
 }
 
-void Memories::allocate_one_no_match(table_alloc *ta, int row) {
-    auto name = ta->table->get_use_name();
-    auto &alloc = (*ta->memuse)[name];
-    int available_bus = match_bus_available(ta, 0, row);
-    sram_match_bus[row][available_bus] = std::make_pair(name, 0);
-    alloc.type = Use::EXACT;
-    sram_print_match_bus[row][available_bus] = name;
-    alloc.row.emplace_back(row, available_bus);
-}
-
-/* Allocate an individual no match talb */
-bool Memories::allocate_all_no_match() {
-    size_t finished_tables = 0;
-    for (auto ta : no_match_tables) {
+/** This allocates all tables that currently take the miss path information.  The miss path
+ *  is how action data information can be configured by runtime.  This would be necessary
+ *  if multiple actions are needed/action data is changeable.  Just reserved a result bus
+ *  for the time being.
+ */
+bool Memories::allocate_all_no_match_miss() {
+    // FIXME: Currently the assembler supports exact match to make calls to immediate here,
+    // so this is essentially what I'm doing.  More discussion is needed with the driver
+    // team in order to determine if this is correct, or if this has to go through ternary and
+    // tind tables
+    size_t no_match_tables_allocated = 0;
+    for (auto *ta : no_match_miss_tables) {
+        auto name = ta->table->get_use_name();
+        auto &alloc = (*ta->memuse)[name];
+        bool found = false;
         for (int i = 0; i < SRAM_ROWS; i++) {
-            if (!sram_match_bus[i][0].first.isNull() && !sram_match_bus[i][1].first.isNull())
-                continue;
-            allocate_one_no_match(ta, i);
-            finished_tables++;
-            break;
+            for (int j = 0; j < BUS_COUNT; j++) {
+                if (payload_use[i][j]) continue;
+                if (sram_match_bus[i][j]) continue;
+                alloc.type = Use::EXACT;
+                sram_match_bus[i][j] = name;
+                alloc.row.emplace_back(i, j);
+                no_match_tables_allocated++;
+                found = true;
+                break;
+            }
+            if (found) break;
         }
     }
 
-    if (finished_tables != no_match_tables.size())
+    if (no_match_tables_allocated != no_match_miss_tables.size())
         return false;
     return true;
 }
+
+
 
 void Memories::Use::visit(Memories &mem, std::function<void(cstring &)> fn) const {
     Alloc2Dbase<cstring> *use = 0, *mapuse = 0, *bus = 0;
     switch (type) {
     case EXACT:
         use = &mem.sram_use;
-        bus = &mem.sram_print_match_bus;
+        bus = &mem.sram_print_search_bus;
         break;
     case TERNARY:
         use = &mem.tcam_use;
@@ -2330,7 +2400,7 @@ void Memories::remove(const map<cstring, Use> &alloc) {
 
 /* MemoriesPrinter in .gdbinit should match this */
 std::ostream &operator<<(std::ostream &out, const Memories &mem) {
-    const Alloc2Dbase<cstring> *arrays[] = { &mem.tcam_use, &mem.sram_print_match_bus,
+    const Alloc2Dbase<cstring> *arrays[] = { &mem.tcam_use, &mem.sram_print_search_bus,
                    &mem.tind_bus, &mem.action_data_bus, &mem.sram_use, &mem.mapram_use,
                    &mem.gateway_use };
     std::map<cstring, char>     tables;

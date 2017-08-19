@@ -1032,9 +1032,66 @@ static cstring next_for(const IR::MAU::Table *tbl, cstring what, const DefaultNe
     return def.next_in_thread(tbl);
 }
 
-
+/** Gateways in Tofino are 4 44 bit TCAM rows used to compare conditionals.  A comparison will
+ *  be done on a row by row basis.  If that row hits, then the gateway matches on that particular
+ *  row.  Lastly all gateways have a miss row, which will automatically match if the none of the
+ *  programmed gateway rows match
+ *
+ *  Gateways rows have the following strucure:
+ *  - A match to compare the search bus/hash bus
+ *  - An inhibit bit
+ *  - A next table lookup
+ *  - A payload shared between all 5 rows.
+ *
+ *  If the row is inhibited, this means when the row matches, the payload is placed onto the
+ *  match result bus, overriding whatever was previously on the result bus.  This could have
+ *  been the result of a match table.  The next table is then used in the predication vector.
+ *  However, if the row is not inhibited, the gateway does nothing to the match bus, and the
+ *  next table comes from either the hit or miss path.  Inhibit is turned on by providing
+ *  a next table for a gateway row.
+ *
+ *  Let me provide two examples.  The first is a gateway table using the same logical table
+ *  as an exact match table:
+ *
+ *  if (f == 2) {
+ *      apply(exact_match);
+ *      apply(x);
+ *  }
+ *  apply(y);
+ *
+ *  Let's take a look at the gateway:
+ *
+ *  ____match____|__inhibit__|__next_table__|__payload___
+ *      f == 2       false        N/A           N/A       (0x2 : run_table)
+ *      miss         true         y             0x0       (miss : y)
+ *
+ *  In this case, if f == 1, then we want the exact_match table to use it's results to determine
+ *  what to do.  By not inhibiting, the exact_match table will determine what happens, including
+ *  the next table.
+ *
+ *  However, the case is actual reversed when we need a table with no match data linked with
+ *  a gateway:
+ *
+ *  if (f == 2) {
+ *      apply(no_match_hit_path);
+ *      apply(x);
+ *  }
+ *  apply(y);
+ *
+ *  ____match____|__inhibit__|__next_table__|__payload___
+ *      f == 2       true         x             0x1       (0x2 : x)
+ *      miss         false        N/A           0x0       (miss : run_table)
+ *
+ *  A table with no match will always go down the miss path, as the result bus will be labeled
+ *  a miss coming out of the RAM array.  The only way to go down the hit path is to inhibit the
+ *  gateway.  Thus if the f == 1, the result bus goes through the hit bus with the payload 0x1.
+ *  This bit is then used a per flow enable bit, for things like finding the action instruction
+ *  address or an address from hash distribution.  It will then use next table in the gateway.
+ *  When f != 1, the gateway will not override, and the table will automatically miss.  Then,
+ *  the miss next table is used to determine where to go next
+ */
 void MauAsmOutput::emit_gateway(std::ostream &out, indent_t gw_indent,
-        const IR::MAU::Table *tbl, bool hash_action, cstring next_hit, cstring &gw_miss) const {
+        const IR::MAU::Table *tbl, bool no_match, cstring next_hit, cstring &gw_miss) const {
     CollectGatewayFields collect(phv, &tbl->resources->gateway_ixbar);
     tbl->apply(collect);
     if (collect.compute_offsets()) {
@@ -1077,14 +1134,14 @@ void MauAsmOutput::emit_gateway(std::ostream &out, indent_t gw_indent,
                 out << "miss: ";
             }
             if (line.second) {
-                if (hash_action) {
+                if (no_match) {
                     out << "run_table";
                     gw_miss = next_for(tbl, line.second, default_next);
                 } else {
                     out << next_for(tbl, line.second, default_next);
                 }
             } else {
-                if (hash_action)
+                if (no_match)
                     out << next_hit;
                 else
                     out << "run_table";
@@ -1099,7 +1156,10 @@ void MauAsmOutput::emit_gateway(std::ostream &out, indent_t gw_indent,
     }
 }
 
-void MauAsmOutput::emit_hash_action_gateway(std::ostream &out, indent_t gw_indent,
+/** This allocates a gateway that always hits, in order for the table to always go through the
+ *  the hit pathway.
+ */
+void MauAsmOutput::emit_no_match_gateway(std::ostream &out, indent_t gw_indent,
         const IR::MAU::Table *tbl) const {
     out << gw_indent << "0x0: " << next_for(tbl, "", default_next) << std::endl;
     out << gw_indent << "miss: " << next_for(tbl, "", default_next) << std::endl;
@@ -1151,12 +1211,14 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
 
 void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) const {
     /* FIXME -- some of this should be method(s) in IR::MAU::Table? */
+    LOG1("Emit table " << tbl->name);
     TableMatch fmt(*this, phv, tbl);
     const char *tbl_type = "gateway";
     indent_t    indent(1);
+    bool no_match_hit = tbl->layout.no_match_hit_path() && tbl->match_table;
     if (tbl->match_table)
         tbl_type = tbl->layout.ternary ? "ternary_match" : "exact_match";
-    if (tbl->layout.hash_action)
+    if (no_match_hit && tbl->match_table)
         tbl_type = "hash_action";
     out << indent++ << tbl_type << ' '<< tbl->name << ' ' << tbl->logical_id % 16U << ':'
         << std::endl;
@@ -1167,6 +1229,8 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
         emit_ixbar(out, indent, tbl->resources->match_ixbar,
                    &tbl->resources->memuse.at(memuse_name), &fmt, tbl->layout.ternary,
                    tbl->layout.hash_action);
+        LOG1("Layout ternary " << tbl->layout.ternary << " " << tbl->layout.no_match_data()
+             <<  " " << tbl->layout.gateway);
         if (!tbl->layout.ternary && !tbl->layout.no_match_data()) {
             emit_table_format(out, indent, tbl->resources->table_format, &fmt, false);
         }
@@ -1191,24 +1255,31 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
         }
     }
 
-    if (tbl->uses_gateway() || tbl->layout.hash_action) {
+
+    if (tbl->uses_gateway() || (tbl->layout.no_match_hit_path())) {
         indent_t gw_indent = indent;
         if (tbl->match_table)
             out << gw_indent++ << "gateway:" << std::endl;
         emit_ixbar(out, gw_indent, tbl->resources->gateway_ixbar, 0, &fmt, false,
                    tbl->layout.hash_action);
-        for (auto &use : Values(tbl->resources->memuse))
+        for (auto &use : Values(tbl->resources->memuse)) {
+            LOG1("Use types " << use.type);
             if (use.type == Memories::Use::GATEWAY) {
                 out << gw_indent << "row: " << use.row[0].row << std::endl;
                 out << gw_indent << "bus: " << use.row[0].bus << std::endl;
-                if (use.payload != 0)
-                    out << gw_indent << "payload: " << use.payload << std::endl;
+                out << gw_indent << "unit: " << use.gateway.unit << std::endl;
+                // FIXME: This is the case for a gateway attached to a ternary or exact match
+                if (use.gateway.payload_value == 1) {
+                    out << gw_indent << "payload: " << use.gateway.payload_value << std::endl;
+                    // FIXME: Assembler doesn't yet support payload bus/row for every table
+                }
                 break;
             }
-        if (!tbl->layout.hash_action || tbl->uses_gateway())
-            emit_gateway(out, gw_indent, tbl, tbl->layout.hash_action, next_hit, gw_miss);
+        }
+        if (!tbl->layout.no_match_data() || tbl->uses_gateway())
+            emit_gateway(out, gw_indent, tbl, no_match_hit, next_hit, gw_miss);
         else
-            emit_hash_action_gateway(out, gw_indent, tbl);
+            emit_no_match_gateway(out, gw_indent, tbl);
         if (!tbl->match_table)
             return;
     }
@@ -1248,7 +1319,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
         } else if (at->is<IR::MAU::ActionData>()) {
             assert(tbl->layout.action_data_bytes > tbl->layout.action_data_bytes_in_overhead);
             have_action = true; } }
-    assert(have_indirect == (tbl->layout.ternary && (tbl->layout.overhead_bits > 0)));
+    assert(have_indirect == (tbl->layout.ternary));
     assert(have_action || (tbl->layout.action_data_bytes <=
                            tbl->layout.action_data_bytes_in_overhead));
 

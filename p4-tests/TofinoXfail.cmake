@@ -402,12 +402,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/adjust_instr7.p4
   )
 
-# BRIG-117
-p4c_add_xfail_reason("tofino"
-  "match bus conflict"
-  extensions/p4_tests/p4_14/gateway_and_big_table.p4
-  )
-
 # BRIG-119
 p4c_add_xfail_reason("tofino"
   "hash expression width mismatch"
@@ -591,7 +585,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "payload ... already in use"
   extensions/p4_tests/p4_14/jenkins/mau_tcam_test/mau_tcam_test.p4
-  extensions/p4_tests/p4_16/google-tor/p4/spec/tor.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-242/case1679.p4
   )
 
 #BRIG-142

@@ -17,6 +17,7 @@ struct Memories {
     static constexpr int TABLES_MAX = 16;
     static constexpr int TERNARY_TABLES_MAX = 8;
     static constexpr int ACTION_TABLES_MAX = 16;
+    static constexpr int GATEWAYS_PER_ROW = 2;
     static constexpr int BUS_COUNT = 2;
     static constexpr int STATS_ALUS = 4;
     static constexpr int METER_ALUS = 4;
@@ -27,10 +28,12 @@ struct Memories {
     unsigned                                           sram_inuse[SRAM_ROWS] = { 0 };
     Alloc2D<cstring, TCAM_ROWS, TCAM_COLUMNS>          tcam_use;
     Alloc2D<cstring, SRAM_ROWS, 2>                     gateway_use;
-    Alloc2D<std::pair<cstring, int>, SRAM_ROWS, 2>     sram_match_bus;
-    Alloc2D<cstring, SRAM_ROWS, 2>                     sram_print_match_bus;
-    Alloc2D<cstring, SRAM_ROWS, 2>                     action_data_bus;
+    Alloc2D<std::pair<cstring, int>, SRAM_ROWS, 2>     sram_search_bus;
+    Alloc2D<cstring, SRAM_ROWS, 2>                     sram_print_search_bus;
+    Alloc2D<cstring, SRAM_ROWS, 2>                     sram_match_bus;
     Alloc2D<cstring, SRAM_ROWS, 2>                     tind_bus;
+    Alloc2D<cstring, SRAM_ROWS, 2>                     payload_use;
+    Alloc2D<cstring, SRAM_ROWS, 2>                     action_data_bus;
     Alloc2D<cstring, SRAM_ROWS, 2>                     overflow_bus;
     Alloc1D<cstring, SRAM_ROWS>                        twoport_bus;
     Alloc1D<std::pair<cstring, int>, SRAM_ROWS - 1>    vert_overflow_bus;
@@ -98,11 +101,17 @@ struct Memories {
             vector<std::pair<int, int>> rams;
             explicit Way(int s, unsigned sm) : size(s), select_mask(sm) {}
         };
+        struct Gateway {
+            int payload_value = 0;
+            int payload_row, payload_bus;
+            int unit;
+            type_t bus_type;
+        };
         vector<Row>                          row;
         vector<Row>                          color_mapram;
         vector<std::pair<int, int>>          home_row;
         vector<Way>                          ways;
-        unsigned long                        payload = 0;
+        Gateway                              gateway;
         int                                  per_row;
         bool                                 unattached_profile = false;
         cstring                              profile_name;
@@ -121,6 +130,7 @@ struct Memories {
         int provided_entries;
         int calculated_entries;
         int attached_gw_bytes = 0;
+        // Linked gw/match table that uses the same result bus
         table_alloc *table_link = nullptr;
         explicit table_alloc(const IR::MAU::Table *t, const IXBar::Use *mi,
                              map<cstring, Memories::Use> *mu,
@@ -302,11 +312,11 @@ struct Memories {
     vector<SRAM_group *>        action_bus_users;
     vector<SRAM_group *>        suppl_bus_users;
     vector<table_alloc *>       gw_tables;
-    vector<table_alloc *>       no_match_tables;
-    vector<table_alloc *>       hash_action_tables;
-    vector<table_alloc *>       action_payload_gws;
+    vector<table_alloc *>       no_match_hit_tables;
+    vector<table_alloc *>       no_match_miss_tables;
+    vector<table_alloc *>       payload_gws;
     vector<table_alloc *>       normal_gws;
-    vector<table_alloc *>       hash_action_gws;
+    vector<table_alloc *>       no_match_gws;
 
     void clear();
     void clear_table_vectors();
@@ -388,15 +398,19 @@ struct Memories {
                                   action_fill &next_suppl, int order[3],
                                   int action_RAMs_available, int suppl_RAMs_available);
     void action_bus_users_log();
+    bool find_unit_gw(Memories::Use &alloc, cstring name, bool requires_search_bus);
+    bool find_search_bus_gw(table_alloc *ta, Memories::Use &alloc, cstring name);
+    bool find_match_bus_gw(Memories::Use &alloc, int payload, cstring name,
+                           table_alloc *ta_no_match);
     bool allocate_all_gw();
     bool allocate_all_payload_gw();
     bool allocate_all_normal_gw();
-    bool allocate_all_hash_action_gw();
+    bool allocate_all_no_match_gw();
     table_alloc *find_corresponding_exact_match(cstring name);
     bool gw_search_bus_fit(table_alloc *ta, table_alloc *exact_ta, int width_sect,
                            int row, int col);
-    bool allocate_all_no_match();
-    void allocate_one_no_match(table_alloc *ta, int row);
+    bool allocate_all_no_match_miss();
+
     void update(cstring table_name, const Use &alloc);
     void update(const map<cstring, Use> &alloc);
     void remove(cstring table_name, const Use &alloc);

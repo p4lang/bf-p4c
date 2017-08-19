@@ -141,27 +141,29 @@ bool TableFormat::find_format(Use *u) {
         LOG3("Ternary table?");
         overhead_groups_per_RAM.push_back(1);
         use->match_groups.emplace_back();
+        if (!allocate_all_ternary_match())
+            return false;
         if (!layout_option.layout.ternary_indirect_required())
             return true;
         if (!allocate_next_table())
+            return false;
+        if (!allocate_all_instr_selection())
             return false;
         if (!allocate_all_indirect_ptrs())
             return false;
         if (!allocate_all_immediate())
             return false;
-        if (!allocate_all_instr_selection())
-            return false;
-        if (!allocate_all_ternary_match())
-            return false;
         return true;
     }
 
-    if (layout_option.layout.no_match_data()) {
+    if (layout_option.layout.no_match_miss_path()) {
         overhead_groups_per_RAM.push_back(1);
         LOG3("No match table");
         use->match_groups.emplace_back();
         if (!allocate_all_immediate())
             return false;
+        return true;
+    } else if (layout_option.layout.no_match_hit_path()) {
         return true;
     }
 
@@ -171,15 +173,15 @@ bool TableFormat::find_format(Use *u) {
     if (!allocate_next_table())
         return false;
     LOG3("Next Table");
+    if (!allocate_all_instr_selection())
+        return false;
+    LOG3("Instruction Selection");
     if (!allocate_all_indirect_ptrs())
         return false;
     LOG3("Indirect Pointers");
     if (!allocate_all_immediate())
         return false;
     LOG3("Immediate");
-    if (!allocate_all_instr_selection())
-        return false;
-    LOG3("Instruction Selection");
     if (!allocate_all_match())
         return false;
     LOG3("Match");
@@ -195,6 +197,9 @@ bool TableFormat::find_format(Use *u) {
    of the overhead.  This is specifically to handle this corner case.  If this is run,
    then instruction selection does not necessarily need to be run */
 bool TableFormat::allocate_next_table() {
+    /** FIXME: Currently moving instruction address first, just to make life easier.  This
+               still needs to be done, but the current implementation is not doing anything
+               different than allocate_all_instr_selection.  Thus keeping the function for now.
     int group = 0;
 
     for (auto &next : tbl->next) {
@@ -217,6 +222,7 @@ bool TableFormat::allocate_next_table() {
             group++;
         }
     }
+    */
     return true;
 }
 
@@ -224,7 +230,7 @@ bool TableFormat::allocate_next_table() {
    number of bits needed */
 bool TableFormat::allocate_indirect_ptr(int total, type_t type, int group, int RAM) {
     size_t start = total_use.ffz(RAM * SINGLE_RAM_BITS);
-    if (start + total >= size_t(OVERHEAD_BITS + RAM * SINGLE_RAM_BITS))
+    if (start + total > size_t(OVERHEAD_BITS + RAM * SINGLE_RAM_BITS))
         return false;
     bitvec ptr_mask;
     ptr_mask.setrange(start, total);
@@ -267,7 +273,6 @@ bool TableFormat::allocate_all_indirect_ptrs() {
 bool TableFormat::allocate_all_immediate() {
     if (layout_option.layout.action_data_bytes_in_overhead == 0)
         return true;
-    int max_size = 0;
     use->immed_mask = immediate_mask;
 
     // Allocate the immediate mask for each overhead section
@@ -276,9 +281,8 @@ bool TableFormat::allocate_all_immediate() {
         size_t end = i * SINGLE_RAM_BITS;
         for (int j = 0; j < overhead_groups_per_RAM[i]; j++) {
             size_t start = total_use.ffz(end);
-            int shift = start + j * max_size;
-            bitvec immediate_shift = immediate_mask << shift;
-            if (start + max_size >= OVERHEAD_BITS + i * SINGLE_RAM_BITS)
+            bitvec immediate_shift = immediate_mask << start;
+            if (start >= OVERHEAD_BITS + i * SINGLE_RAM_BITS)
                 return false;
             total_use |= immediate_shift;
             use->match_groups[group].mask[IMMEDIATE] |= immediate_shift;
@@ -295,10 +299,11 @@ bool TableFormat::allocate_all_immediate() {
 bool TableFormat::allocate_all_instr_selection() {
     if (next_table)
         return true;
-    if (tbl->actions.size() == 1)
-        return true;
 
     int instr_select = ceil_log2(tbl->actions.size());
+    // FIXME: At least one action bit is currently needed in order for it to pass
+    if (instr_select == 0)
+        instr_select++;
     /* If actions cannot be fit inside a lookup table, the action instruction can be
        anywhere in the IMEM and will need entire imem bits. The assembler decides 
        based on color scheme allocations. Assembler will flag an error if it fails 
@@ -309,19 +314,15 @@ bool TableFormat::allocate_all_instr_selection() {
     instr_mask.setrange(0, instr_select);
     int group = 0;
     for (size_t i = 0; i < overhead_groups_per_RAM.size(); i++) {
+        size_t end = i * SINGLE_RAM_BITS;
         for (int j = 0; j < overhead_groups_per_RAM[i]; j++) {
-            int start = use->match_groups[group].mask[IMMEDIATE].ffs();
-            if (start == -1)
-                start = i * SINGLE_RAM_BITS;
-            int hole_start = total_use.ffz(start);
-            int hole_end = total_use.ffs(hole_start);
-            while (hole_end >= 0 && hole_end - hole_start < instr_select) {
-                hole_start = total_use.ffz(hole_end);
-                hole_end = total_use.ffs(hole_start);
-            }
-            bitvec instr_shift = instr_mask << hole_start;
+            size_t start = total_use.ffz(end);
+            bitvec instr_shift = instr_mask << start;
             total_use |= instr_shift;
+            if (start >= OVERHEAD_BITS + i * SINGLE_RAM_BITS)
+                return false;
             use->match_groups[group].mask[ACTION] |= instr_shift;
+            end = instr_shift.max().index();
             group++;
         }
     }

@@ -1557,6 +1557,7 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
             return false;
         }
     }
+
     return true;
 }
 
