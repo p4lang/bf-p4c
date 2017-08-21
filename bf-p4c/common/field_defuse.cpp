@@ -8,16 +8,22 @@ static std::ostream &operator<<(std::ostream &out, const FieldDefUse::locpair &l
     return out << *loc.second << " [" << loc.second->id << " in " << *loc.first << "]";
 }
 
-class FieldDefUse::ClearBeforeEgress : public Inspector {
+class FieldDefUse::ClearBeforeEgress : public Inspector, TofinoWriteContext {
     FieldDefUse &self;
     bool preorder(const IR::Expression *e) override {
-        if (auto *f = self.phv.field(e)) {
+        auto *f = self.phv.field(e);
+        if (f && isWrite()) {
+            LOG4("CLEARING FIELD: " << e);
             self.defuse.erase(f->id);
             return false; }
+        if (e->is<IR::Member>())
+            return false;
         return true; }
     bool preorder(const IR::HeaderRef *hr) override {
-        for (int id : self.phv.struct_info(hr).field_ids())
-            self.defuse.erase(id);
+        for (int id : self.phv.struct_info(hr).field_ids()) {
+            if (isWrite()) {
+                self.defuse.erase(id);
+                LOG4("CLEARING HEADER REF: " << hr); } }
         return false; }
  public:
     explicit ClearBeforeEgress(FieldDefUse &self) : self(self) {}
@@ -119,7 +125,12 @@ bool FieldDefUse::preorder(const IR::Tofino::Parser *p) {
 bool FieldDefUse::preorder(const IR::Expression *e) {
     auto *f = phv.field(e);
     auto *hr = e->to<IR::HeaderRef>();
+
+    // Prevent visiting HeaderRefs in Members when PHV lookup fails, eg. for
+    // $valid fields before allocatePOV.
+    if (!f && e->is<IR::Member>()) return false;
     if (!f && !hr) return true;
+
     if (auto unit = findContext<IR::Tofino::Unit>()) {
         if (isWrite()) {
             write(f, unit, e);
