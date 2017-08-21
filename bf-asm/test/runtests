@@ -134,15 +134,21 @@ function searchdir () {
     for d in $TRY_BINDIRS; do
         if [[ $2 ]]; then
             if [ -d "$d/$2" ]; then
-                #found=`find $d/$2 -executable -type f -name $1 -print -quit`
-                found=`find $d/$2 -type f -name $1 -print -quit`
+                for f in $(find $d/$2 -executable -type f -name $1); do
+                    if [ "$f" -nt "$found" ]; then
+                        found="$f"
+                    fi
+                done
                 if [ -n "$found" ]; then
                     break;
                 fi
             fi
         else
-            #found=`find $d -executable -type f -name $1 -print -quit`
-            found=`find $d -name $1 -print -quit`
+            for f in $(find $d -executable -type f -name $1); do
+                if [ "$f" -nt "$found" ]; then
+                    found="$f"
+                fi
+            done
             if [ -n "$found" ]; then
                 break;
             fi
@@ -182,7 +188,7 @@ findexec REFLOW         "reflow"                "reflow"                ""
 findexec JSON_DIFF      "json_diff"             "json_diff"             ""
 findexec SCHEMA         "gen_schema.py"         "gen_schema.py"         ""
 findexec SCHEMA_VAL     "validate.py"           "validate.py"           ""
-findexec WALLE          "walle"                 "walle"                 "bf-asm/walle"
+findexec WALLE          "walle"                 "walle"                 ""
 
 function not() { if "$@"; then return 1; else return 0; fi }
 
@@ -580,8 +586,14 @@ function release_all_tokens() {
 }
 
 function wait_1() {
-    wait -n
-    case $? in
+    if [[ ${BASH_VERSINFO[0]} -lt 4 ]]; then
+        wait %1
+        rv=$?
+    else
+        wait -n
+        rv=$?
+    fi
+    case $rv in
     0)  let pass++
         ;;
     1)  let fail++
@@ -632,7 +644,9 @@ for file in "$@"; do
     else
         echo "unrecognized file type $file"
     fi
-    wait
+    if [[ ${BASH_VERSINFO[0]} -lt 4 ]]; then
+        wait_1
+    fi
     if $link; then
         link_json $file
     fi
