@@ -21,7 +21,7 @@
 class PHV_Assignment_Validate : public Visitor {
  private:
     PhvInfo &phv_i;                                   /// referenced through constructor
-    Cluster::Uses *uses_i;                            /// field used? in mau, parde
+    Phv_Parde_Mau_Use *uses_i;                        /// field used? in mau, parde
     ordered_map<std::pair<int, int>, const PhvInfo::Field::alloc_slice *> field_container_map_i;
                                                       /// field ranges to container bits
                                                       /// range does not straddle containers
@@ -33,10 +33,10 @@ class PHV_Assignment_Validate : public Visitor {
  public:
     PHV_Assignment_Validate(PhvInfo &phv_p)          // NOLINT(runtime/explicit)
       : phv_i(phv_p),
-        uses_i(new Cluster::Uses(phv_p)) { }
+        uses_i(new Phv_Parde_Mau_Use(phv_p)) { }
 
     PhvInfo& phv()                                        { return phv_i; }
-    Cluster::Uses *uses()                                 { return uses_i; }
+    Phv_Parde_Mau_Use *uses()                             { return uses_i; }
     ordered_map<std::pair<int, int>, const PhvInfo::Field::alloc_slice *>&
         field_container_map()                             { return field_container_map_i; }
     std::map<cstring, std::list<const PhvInfo::Field::alloc_slice *>>&

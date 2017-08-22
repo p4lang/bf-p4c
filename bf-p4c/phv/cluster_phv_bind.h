@@ -32,8 +32,8 @@ class PHV_Bind : public Visitor {
  private:
     //
     PhvInfo &phv_i;                                 // all fields in input
+    PhvUse &uses_i;                                 // field uses mau, I, E
     PHV_MAU_Group_Assignments &phv_mau_i;           // PHV MAU Group Assignments
-    Cluster::Uses *uses_i;                          // field uses mau, I, E
     std::list<const PHV_Container *> containers_i;  // all filled containers
     std::list<PhvInfo::Field *> allocated_fields_i;
                                                     // allocated fields to be finally bound
@@ -46,14 +46,10 @@ class PHV_Bind : public Visitor {
     //
  public:
     //
-    PHV_Bind(PhvInfo &phv_f, PHV_MAU_Group_Assignments &phv_m)
+    PHV_Bind(PhvInfo &phv_f, PhvUse &u, PHV_MAU_Group_Assignments &phv_m)
        : phv_i(phv_f),
-         phv_mau_i(phv_m),
-         uses_i(new Cluster::Uses(phv_f)) { }       // Cluster uses() not re-used
-                                                    // Uses recomputed
-                                                    // dead code elimination
-                                                    // happens after Phv Analysis
-                                                    // i.e., after Cluser Uses computation
+         uses_i(u),          // uses recomputed, dead code elimination after Cluster Use computation
+         phv_mau_i(phv_m) { }
     //
     std::list<const PHV_Container *> containers()         { return containers_i; }
     std::list<PhvInfo::Field *>& allocated_fields()       { return allocated_fields_i; }

@@ -303,11 +303,15 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_235_funnel_shift.p4
   )
 
+p4c_add_xfail_reason("tofino"
+  "byte_hi < container_hi"
+  extensions/p4_tests/p4_14/switch_l2_profile.p4
+  )
+
 # BRIG-105
 p4c_add_xfail_reason("tofino"
   "No register named"
   extensions/p4_tests/p4_14/04-FullPHV3.p4
-  extensions/p4_tests/p4_14/switch_l2_profile.p4
   extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
   extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
   )
@@ -376,7 +380,7 @@ p4c_add_xfail_reason("tofino"
   "Ran out of phv output slots"
   extensions/p4_tests/p4_14/test_config_236_stateful_read_bit.p4
   # extensions/p4_tests/p4_14/test_config_93_push_and_pop.p4
-  extensions/p4_tests/p4_14/test_config_95_first_meter_table.p4
+  # extensions/p4_tests/p4_14/test_config_95_first_meter_table.p4
   )
 
 # failure due to too restrictive constraint of full words in action data bus allocation
@@ -740,7 +744,6 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "Overlapping field slices in allocation for field"
-  extensions/p4_tests/p4_14/switch_l2_profile.p4
   extensions/p4_tests/p4_14/switch_20160602/switch.p4
   testdata/p4_14_samples/switch_20160226/switch.p4
   testdata/p4_14_samples/switch_20160512/switch.p4
@@ -770,9 +773,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "No PHV allocation for referenced field"
-  testdata/p4_14_samples/copy_to_cpu.p4
-  testdata/p4_14_samples/resubmit.p4
+  "tofino only supports 12 stages"
   extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
   extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
   extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4

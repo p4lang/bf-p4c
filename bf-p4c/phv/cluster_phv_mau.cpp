@@ -843,6 +843,11 @@ PHV_MAU_Group_Assignments::container_no_pack(
                     LOG1("*****cluster_phv_mau.cpp: sanity_WARN*****"
                         << ".....exact_containers MATCH NOT AVAILABLE");
                     LOG1(cl);
+                    // if T_PHV and exact container unavailable, later attempt T_PHV overflow => PHV
+                    if (&phv_groups_to_be_filled == &T_PHV_groups_i) {
+                        LOG1(".....deferring to TPHV overflow => PHV.....");
+                        continue;
+                    }
                 }
             }
             if (cl_g->width() < cl->width()) {
@@ -1285,15 +1290,16 @@ PHV_MAU_Group_Assignments::packing_predicates(
     if (req && !num_containers_bottom_bits(cl, cc_set, req)) {
         return false;
     }
-    //
-    // cannot pack bridge metadata mirror & bridge metadata Not mirror
-    // packed bridge metadata must belong to same field list (one of eight field lists)
-    //
     auto cc_set_iter = cc_set.begin();
     for (auto &f : cl->cluster_vec()) {
+        //
+        // bridge metadata considerations:
+        // cannot pack bridge metadata mirror & bridge metadata Not mirror
+        // packed bridge metadata must belong to same field list (one of eight field lists)
+        //
+        PHV_Container *c = (*cc_set_iter)->container();
+        BUG_CHECK(c, "*****PHV_MAU_Group_Assignments::packing_predicates, container null *****");
         if (f->bridged && f->mirror_field_list.member_field) {
-            PHV_Container *c = (*cc_set_iter)->container();
-            BUG_CHECK(c, "*****PHV_MAU_Group_Assignments::b_meta_m packing, container null *****");
             // for all fields in container, ensure mirror fields & same field list
             for (auto &entry : c->fields_in_container()) {
                 PhvInfo::Field *cf = entry.first;
@@ -1302,12 +1308,31 @@ PHV_MAU_Group_Assignments::packing_predicates(
                 }
             }  // for
         }
+        //
+        // TODO
+        // ingress_bridge_metadata starts at same bit as egress_bridge_metadata
+        // ensure start bit 0
+        // they should be allocated during initial container placement
+        // during packing, ensure start bit is 0, width accommodation checked prior
+        //
+        if (f->bridged && (*cc_set_iter)->lo()) {
+            return false;
+        }
+        // TODO
+        // learning digests: L1, L2 belong to same digest
+        // mirror, resubmit digests no constraints
+        //
+        // do not put non deparsed field (includes pov) in deparsed container
+        // c->deparsed set by taint_bits()...fields_in_container() after f alloc to c
+        //
+        if (c->deparsed() && !f->deparsed()) {
+            return false;
+        }
+        //
         cc_set_iter++;
     }  // for
     //
     // TODO
-    //
-    // do not put deparsed field in non-deparsed container & vice-versa
     //
     // field start restrictions, e.g., must start @ bit X in container, e.g., X=0,7
     //
@@ -1316,9 +1341,6 @@ PHV_MAU_Group_Assignments::packing_predicates(
     // checksum 16b..16b..8b in 16b or 8b container ?
     //
     // mutually_cohabit(f1, f2),
-    //
-    // learning digests: L1, L2 belong to same digest
-    // mirror, resubmit digests no constraints ?
     //
     return true;
 }  // packing_predicates

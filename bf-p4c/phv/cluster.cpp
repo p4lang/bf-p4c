@@ -9,7 +9,7 @@
 //
 //***********************************************************************************
 
-Cluster::Cluster(PhvInfo &p) : phv_i(p), uses_i(new Uses(phv_i)) {
+Cluster::Cluster(PhvInfo &p, PhvUse &u) : phv_i(p), uses_i(u) {
     for (auto &field : phv_i) {
         dst_map_i[&field] = nullptr;
     }
@@ -22,7 +22,7 @@ Cluster::Cluster(PhvInfo &p) : phv_i(p), uses_i(new Uses(phv_i)) {
 //***********************************************************************************
 
 bool Cluster::preorder(const IR::Tofino::Pipe *pipe) {
-    pipe->apply(*uses_i);
+    pipe->apply(uses_i);
     return true;
 }
 
@@ -115,7 +115,7 @@ bool Cluster::preorder(const IR::HeaderRef *hr) {
     int accumulator_bits = 0;
     for (auto fid : phv_i.struct_info(hr).field_ids()) {
         auto field = phv_i.field(fid);
-        if (!uses_i->is_referenced(field)) {
+        if (!uses_i.is_referenced(field)) {
             //
             // disregard unreferenced fields before ccgf accumulation
             //
@@ -350,16 +350,16 @@ void Cluster::end_apply() {
             // lhs should not be removed from dst_map_i as mau operation needed
             // parde (e.g., "extract", "emit") operands not used_mau should be removed from dst_map
             //
-            bool need_mau = uses_i->is_used_mau(lhs);
+            bool need_mau = uses_i.is_used_mau(lhs);
             if (!need_mau && entry.second) {
                 for (auto &f : *(entry.second)) {
-                    if (uses_i->is_used_mau(f)) {
+                    if (uses_i.is_used_mau(f)) {
                         need_mau = true;
                         break;
                     } else {
                         if (f->is_ccgf()) {
                             for (auto &m : f->ccgf_fields()) {
-                                if (uses_i->is_used_mau(m)) {
+                                if (uses_i.is_used_mau(m)) {
                                     need_mau = true;
                                     break;
                                 }
@@ -418,7 +418,7 @@ void Cluster::set_deparsed_flag() {
         //
         // set field's deparsed if used in deparser
         //
-        if (uses_i->is_deparsed(&f) && !(f.metadata && !f.bridged) && !f.pov) {
+        if (uses_i.is_deparsed(&f) && !(f.metadata && !f.bridged) && !f.pov) {
             //
             f.set_deparsed(true);
         }
@@ -537,14 +537,14 @@ void Cluster::compute_fields_no_use_mau() {
     // preprocess fields before accumulation
     //
     for (auto &field : phv_i) {
-        if (field.simple_header_pov_ccgf() && !uses_i->is_referenced(&field)) {
+        if (field.simple_header_pov_ccgf() && !uses_i.is_referenced(&field)) {
             //
             // if singleton member, grouping of pov bits not required
             // else appoint new owner of group
             //
             std::vector<PhvInfo::Field *> members;
             for (auto &m : field.ccgf_fields()) {
-                if (uses_i->is_referenced(m)) {
+                if (uses_i.is_referenced(m)) {
                     members.push_back(m);
                 }
                 m->set_ccgf(0);
@@ -566,7 +566,7 @@ void Cluster::compute_fields_no_use_mau() {
     // accumulation
     //
     for (auto &field : phv_i) {
-        if (!uses_i->is_referenced(&field)) {
+        if (!uses_i.is_referenced(&field)) {
             //
             // disregard unreferenced fields before all_fields accumulation
             //
@@ -675,7 +675,7 @@ void Cluster::compute_fields_no_use_mau() {
     //
     ordered_set<PhvInfo::Field *> delete_set;
     for (auto &f : not_used_mau) {
-        bool use_pd = uses_i->is_used_parde(f);  // used in parser / deparser
+        bool use_pd = uses_i.is_used_parde(f);  // used in parser / deparser
         //
         // metadata in T_PHV can be removed but bridge_metadata deparsed must be allocated
         //
@@ -1058,92 +1058,6 @@ void Cluster::sanity_check_fields_use(const std::string& msg,
         LOG1(msg << s_check);
     }
 }  // sanity_check_fields_use
-
-//***********************************************************************************
-//
-// Cluster::Uses
-//
-// preorder walk on IR tree to set use_i, field flags
-//
-//***********************************************************************************
-
-bool Cluster::Uses::preorder(const IR::Tofino::Parser *p) {
-    in_mau = false;
-    in_dep = false;
-    thread = p->gress;
-    revisit_visited();
-    return true;
-}
-
-bool Cluster::Uses::preorder(const IR::Tofino::Deparser *d) {
-    thread = d->gress;
-    in_mau = true;  // treat egress_port and digests as in mau as they can't go in TPHV
-    in_dep = true;
-    revisit_visited();
-    visit(d->egress_port);
-    visit(d->digests, "digests");
-    in_mau = false;
-    revisit_visited();
-    visit(d->emits, "emits");
-    return false;
-}
-
-bool Cluster::Uses::preorder(const IR::MAU::TableSeq *) {
-    in_mau = true;
-    in_dep = false;
-    revisit_visited();
-    return true;
-}
-
-bool Cluster::Uses::preorder(const IR::Expression *e) {
-    if (auto info = phv.field(e)) {
-        LOG5("use " << info->name << " in " << thread << (in_mau ? " mau" : ""));
-        use_i[in_mau][thread][info->id] = true;
-        LOG5("dep " << info->name << " in " << thread << (in_dep ? " dep" : ""));
-        deparser_i[thread][info->id] = in_dep;
-        return false;
-    }
-    return true;
-}
-
-//
-// Cluster::Uses routines that check use_i[]
-//
-
-bool
-Cluster::Uses::is_referenced(PhvInfo::Field *f) {      // use in mau or parde
-    assert(f);
-    if (f->referenced) {
-        // SetReferenced pass sets the referenced flag
-        return true;
-    }
-    if (f->bridged) {
-        // bridge metadata
-        return true;
-    }
-    return is_used_mau(f) || is_used_parde(f);
-}
-
-bool
-Cluster::Uses::is_deparsed(PhvInfo::Field *f) {      // use in deparser
-    assert(f);
-    bool use_deparser = deparser_i[f->gress][f->id];
-    return use_deparser;
-}
-
-bool
-Cluster::Uses::is_used_mau(PhvInfo::Field *f) {      // use in mau
-    assert(f);
-    bool use_mau = use_i[1][f->gress][f->id];
-    return use_mau;
-}
-
-bool
-Cluster::Uses::is_used_parde(PhvInfo::Field *f) {    // use in parser / deparser
-    assert(f);
-    bool use_pd = use_i[0][f->gress][f->id];
-    return use_pd;
-}
 
 //***********************************************************************************
 //

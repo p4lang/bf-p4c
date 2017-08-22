@@ -3,6 +3,7 @@
 
 #include "phv.h"
 #include "phv_fields.h"
+#include "phv_parde_mau_use.h"
 #include "ir/ir.h"
 #include "lib/map.h"
 #include "lib/ordered_map.h"
@@ -38,10 +39,10 @@ class Cluster : public Inspector, TofinoWriteContext {
                                 // parser: 4x8b,4x16b,4x32b extractors per parse state
                                 // metadata: extensive aggregation causes ccgf related cluster bloat
                                 //           consequent pressure on phv allocation
-    class Uses;
     //
  private:
     PhvInfo &phv_i;
+    PhvUse& uses_i;
 
     /// Map of field to cluster it belongs.
     ordered_map<PhvInfo::Field *, ordered_set<PhvInfo::Field *>*> dst_map_i;
@@ -58,7 +59,6 @@ class Cluster : public Inspector, TofinoWriteContext {
     std::list<PhvInfo::Field *> pov_fields_not_in_cluster_i;
     /// Fields that are not used through mau pipeline.
     std::list<PhvInfo::Field *> fields_no_use_mau_i;
-    Uses *uses_i;
 
     bool preorder(const IR::Tofino::Pipe *) override;
     bool preorder(const IR::Member*) override;
@@ -89,7 +89,7 @@ class Cluster : public Inspector, TofinoWriteContext {
     //
  public:
     //
-    Cluster(PhvInfo &p);                     // NOLINT(runtime/explicit)
+    Cluster(PhvInfo &p, PhvUse &u);
     //
     PhvInfo &phv()                                          { return phv_i; }
     //
@@ -110,38 +110,8 @@ class Cluster : public Inspector, TofinoWriteContext {
     std::list<PhvInfo::Field *>& fields_no_use_mau()        { return fields_no_use_mau_i; }
     void compute_fields_no_use_mau();
     void sort_fields_remove_non_determinism();
+    //
 };
-
-class Cluster::Uses : public Inspector {
-    bitvec      use_i[2][2];
-    /*                |  ^- gress                 */
-    /*                0 == use in parser/deparser */
-    /*                1 == use in mau             */
-    bitvec      deparser_i[2];
-    /*                |    ^- gress               */
-    /*                 == use in deparser         */
-
- public:
-    explicit Uses(const PhvInfo &p) : phv(p) { }
-
-    bool is_referenced(PhvInfo::Field *f);
-    bool is_deparsed(PhvInfo::Field *f);
-    bool is_used_mau(PhvInfo::Field *f);
-    bool is_used_parde(PhvInfo::Field *f);
-
- private:
-    const PhvInfo       &phv;
-    gress_t             thread;
-    bool                in_mau;
-    bool                in_dep;
-
-    bool preorder(const IR::Tofino::Parser *p);
-    bool preorder(const IR::Tofino::Deparser *d);
-    bool preorder(const IR::MAU::TableSeq *);
-    bool preorder(const IR::Expression *e);
-};  // Uses
-//
-//
 std::ostream &operator<<(std::ostream &, ordered_set<PhvInfo::Field *>*);
 std::ostream &operator<<(std::ostream &, std::vector<PhvInfo::Field *>&);
 std::ostream &operator<<(

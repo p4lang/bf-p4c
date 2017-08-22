@@ -392,6 +392,7 @@ class PhvInfo : public Inspector, TofinoWriteContext {
         // friends of phv_analysis interface
         //
         friend class PhvInfo;
+        friend class Phv_Parde_Mau_Use;
         friend class Cluster;
         friend class PHV_Bind;
         friend class PHV_Container;

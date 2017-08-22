@@ -19,7 +19,11 @@ bool PhvInfo::SetReferenced::preorder(const IR::Expression *e) {
         field->referenced = true;
         if (auto *povbit = self.field(field->header() + ".$valid"))
             povbit->referenced = true;
-        return false; }
+        return false;
+    } else if (e->is<IR::Member>()) {  // prevent descent into IR::Member objects
+        return false;
+    }
+    // IR::HeaderRef objects
     if (auto *hr = e->to<IR::HeaderRef>()) {
         for (auto id : self.struct_info(hr).field_ids())
             self.field(id)->referenced = true;
@@ -138,7 +142,7 @@ void PhvInfo::postorder(const IR::Tofino::Deparser *d) {
 void PhvInfo::postorder(const IR::Expression *e) {
     Field *f = field(e);
     if (f && isWrite()) {
-        f->set_mau_write(true);
+        f->set_mau_write(true);  // note: this can be a parser write only
         LOG4(".....MAU_write....." << f); }
 }
 

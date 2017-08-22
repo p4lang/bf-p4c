@@ -23,7 +23,7 @@ class PHV_Analysis_Validate : public Visitor {
  private:
     PhvInfo &phv_i;                                   /// referenced through constructor
     PHV_MAU_Group_Assignments *phv_mau_i;             /// PHV MAU Group Assignments
-    Cluster::Uses *uses_i;                            /// field used? in mau, parde
+    Phv_Parde_Mau_Use *uses_i;                        /// field used? in mau, parde
     std::map<int, std::list<PHV_Container::Container_Content *>>
         phv_name_cc_map_i;                            /// PHV_Container name to container content
 
@@ -33,12 +33,12 @@ class PHV_Analysis_Validate : public Visitor {
         PHV_MAU_Group_Assignments &phv_mau_p)
       : phv_i(phv_p),
         phv_mau_i(&phv_mau_p),
-        uses_i(new Cluster::Uses(phv_p)) { }
+        uses_i(new Phv_Parde_Mau_Use(phv_p)) { }
     //
     PhvInfo& phv()                                            { return phv_i; }
     PHV_MAU_Group_Assignments  *phv_mau()                     { return phv_mau_i; }
     void phv_mau(PHV_MAU_Group_Assignments *p)                { assert(p); phv_mau_i = p;}
-    Cluster::Uses *uses()                                     { return uses_i; }
+    Phv_Parde_Mau_Use *uses()                                 { return uses_i; }
     std::map<int, std::list<PHV_Container::Container_Content *>>&
         phv_name_cc_map()                                     { return phv_name_cc_map_i; }
     //

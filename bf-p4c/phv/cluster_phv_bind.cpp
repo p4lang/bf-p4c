@@ -16,7 +16,7 @@ PHV_Bind::apply_visitor(const IR::Node *node, const char *name) {
     if (name) {
         LOG1(name);
     }
-    node->apply(*uses_i);  // uses_i recomputed after dead-code elimination
+    node->apply(uses_i);  // uses_i recomputed after dead-code elimination
     //
     create_phv_asm_container_map();
     //
@@ -147,7 +147,7 @@ PHV_Bind::collect_containers_with_fields() {
     ordered_set<PhvInfo::Field *> all_phv_fields;
     // All Fields
     for (auto &field : phv_i) {
-        if (uses_i->is_used_mau(&field) || uses_i->is_used_parde(&field)) {  // discount unused
+        if (uses_i.is_used_mau(&field) || uses_i.is_used_parde(&field)) {  // discount unused
             all_phv_fields.insert(&field);
         } else {
             LOG3("PHV_Bind::collect_containers.....discarding unreferenced field....."
@@ -179,14 +179,14 @@ PHV_Bind::phv_tphv_allocate(std::list<PhvInfo::Field *>& fields) {
         }
         // at this allocation stage, fields are considered NOT sliced
         //
-        if (uses_i->is_used_mau(f)) {  // used in MAU
+        if (uses_i.is_used_mau(f)) {  // used in MAU
             phv_clusters.push_back(
                 new Cluster_PHV(
                     f,
                     std::string(1,
                         PHV_Container::Container_Content::Pass::Phv_Bind) + f->cl_id()));
         } else {
-            if (uses_i->is_used_parde(f)) {  // used in parser / deparser
+            if (uses_i.is_used_parde(f)) {  // used in parser / deparser
                 t_phv_clusters.push_back(
                     new Cluster_PHV(
                         f,
@@ -236,7 +236,7 @@ PHV_Bind::bind_fields_to_containers() {
         for (auto &cc_s : Values(c->fields_in_container())) {
             for (auto &cc : cc_s) {
                 PhvInfo::Field *f = cc->field();
-                if (!uses_i->is_referenced(f)) {
+                if (!uses_i.is_referenced(f)) {
                     // referenced @ phv_analysis but ElimUnused / unreferenced now @ phv_bind
                     continue;
                 }
@@ -394,7 +394,7 @@ PHV_Bind::trivial_allocate(std::list<PhvInfo::Field *>& fields) {
             continue;
         }
         std::string container_prefix = "";
-        if (!uses_i->is_used_mau(f) && uses_i->is_used_parde(f)) {  // not used mau but used parde
+        if (!uses_i.is_used_mau(f) && uses_i.is_used_parde(f)) {  // not used mau but used parde
             container_prefix = "T";
         }
         int field_bit = 0;

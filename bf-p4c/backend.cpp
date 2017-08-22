@@ -108,7 +108,8 @@ static void debug_hook(const char *, unsigned, const char *pass, const IR::Node 
 void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
     PhvInfo phv;
     SymBitMatrix mutually_exclusive_field_ids;
-    Cluster cluster(phv);                                        // cluster analysis
+    PhvUse uses(phv);                                            // is field used in mau, parde
+    Cluster cluster(phv, uses);                                  // cluster analysis
     Cluster_PHV_Requirements cluster_phv_req(cluster);           // cluster PHV requirements
     PHV_Field_Operations phv_field_ops(phv);                     // field operation analysis
     PHV_Interference cluster_phv_interference(cluster_phv_req, mutually_exclusive_field_ids);
@@ -123,7 +124,7 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
     PHV_Analysis_Validate phv_analysis_validate(phv, cluster_phv_mau);
                                                                  // phv_analysis validation
     PHV_Assignment_Validate phv_assignment_validate(phv);        // phv_assignment validation
-    PHV_Bind phv_bind(phv, cluster_phv_mau);                     // field binding to PHV Containers
+    PHV_Bind phv_bind(phv, uses, cluster_phv_mau);               // field binding to PHV Containers
     DependencyGraph deps;
     TablesMutuallyExclusive mutex;
     FieldDefUse defuse(phv);
@@ -143,6 +144,7 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
             // &cluster_phv_mau,       // cluster PHV container placements
                                        // second cut PHV MAU Group assignments
                                        // honor single write conflicts from Table Placement
+            &uses,                     // use of field in mau, parde
             &phv_bind,                 // fields bound to PHV containers
                                        // later passes assume that phv alloc info
                                        // is sorted in field bit order, msb first
@@ -152,6 +154,7 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
     }
 
     PassManager *phv_analysis = new PassManager({
+        &uses,                 // use of field in mau, parde
         &cluster,              // cluster analysis
         &parserOverlay,        // produce pairs of mutually exclusive header
                                // fields, eg. (arpSrc, ipSrc)

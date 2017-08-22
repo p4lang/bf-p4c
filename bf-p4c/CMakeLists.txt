@@ -194,6 +194,7 @@ set (TOFINO_BACKEND_PHV_SRCS
   phv/phv_assignment_api.cpp
   phv/phv_assignment_validate.cpp
   phv/phv_fields.cpp
+  phv/phv_parde_mau_use.cpp
   phv/repack_metadata.cpp
   phv/split_phv_use.cpp
   phv/trivial_alloc.cpp
@@ -215,6 +216,7 @@ set (TOFINO_BACKEND_PHV_HDRS
   phv/phv_assignment_api.h
   phv/phv_assignment_validate.h
   phv/phv_fields.h
+  phv/phv_parde_mau_use.h
   phv/phv.h
   phv/split_phv_use.h
   phv/trivial_alloc.h
