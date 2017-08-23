@@ -128,7 +128,7 @@ if (PTF_REQUIREMENTS_MET)
       string (REGEX REPLACE ".p4$" ".ptf" __ptffile ${__p4file})
       if (EXISTS ${P4C_SOURCE_DIR}/${__ptffile})
         p4c_test_set_name(__testname "tofino" ${__p4file})
-        set_tests_properties(${__testname} PROPERTIES SERIAL 1)
+        set_tests_properties(${__testname} PROPERTIES RUN_SERIAL TRUE)
         # add ptf label to test
         p4c_add_test_label("tofino" "ptf" ${__p4file})
       endif()
