@@ -3,15 +3,15 @@
 #include "bitvec.h"
 #include "bitops.h"
 
-static unsigned crc(unsigned poly, bitvec val) {
-    int poly_size = floor_log2(poly) + 1;
-    if (!poly_size) return 0;
+static bitvec crc(bitvec poly, bitvec val) {
+    int poly_size = poly.max() + 1;
+    if (!poly_size) return bitvec(0);
     val <<= poly_size;
     for (auto i = val.max(); i.index() >= (poly_size-1); --i) {
         assert(*i);
-        val ^= bitvec(poly) << (i.index() - (poly_size-1));
+        val ^= poly << (i.index() - (poly_size-1));
     }
-    return val.getrange(0, 32);
+    return val;
 }
 
 static bool check_ixbar(Phv::Ref &ref, InputXbar *ix, int grp) {
@@ -49,7 +49,7 @@ class HashExpr::Random : HashExpr {
 };
 
 class HashExpr::Crc : HashExpr {
-    unsigned                    poly;
+    bitvec                      poly;
     std::vector<Phv::Ref>       what;
     Crc(int lineno) : HashExpr(lineno) {}
     friend class HashExpr;
@@ -59,7 +59,7 @@ class HashExpr::Crc : HashExpr {
             rv |= ::check_ixbar(ref, ix, grp);
         return rv; }
     void gen_data(bitvec &data, int bit, InputXbar *ix, int grp) override;
-    int width() override { return floor_log2(poly) - 1; }
+    int width() override { return poly.max() - 1; }
 };
 
 class HashExpr::Xor : HashExpr {
@@ -100,9 +100,14 @@ HashExpr *HashExpr::create(gress_t gress, const value_t &what) {
             for (int i = 1; i < what.vec.size; i++)
                 rv->what.emplace_back(gress, what[i]);
             return rv;
-        } else if (what[0] == "crc" && CHECKTYPE(what[1], tINT)) {
+        } else if (what[0] == "crc" && CHECKTYPE2(what[1], tBIGINT, tINT)) {
             Crc *rv = new Crc(what.lineno);
-            rv->poly = what[1].i*2 + 1;
+            if (what[1].type == tBIGINT)
+                rv->poly.setraw(what[1].bigi.data, what[1].bigi.size);
+            else
+                rv->poly.setraw(what[1].i);
+            rv->poly <<= 1;
+            rv->poly[0] = 1;
             for (int i = 2; i < what.vec.size; i++)
                 rv->what.emplace_back(gress, what[i]);
             return rv;
@@ -150,7 +155,7 @@ void HashExpr::Crc::gen_data(bitvec &data, int bit, InputXbar *ix, int grp) {
         if (!in || in->lo < 0) break;
         int off = in->lo%64U - in->what->lo;
         for (int i = ref->lo; i <= ref->hi; i++, crcbit <<= 1)
-            data[i + off] = (crc(poly, crcbit) >> bit) & 1; }
+            data[i + off] = crc(poly, crcbit).getbit(bit); }
 }
 
 void HashExpr::Xor::gen_data(bitvec &data, int bit, InputXbar *ix, int grp) {
