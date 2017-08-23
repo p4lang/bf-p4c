@@ -9,6 +9,7 @@ class TablesMutuallyExclusive;
 struct StageUseEstimate;
 class PhvInfo;
 class LayoutChoices;
+class SharedActionProfileAnalysis;
 
 class TablePlacement : public MauTransform, public Backtrack {
  public:
@@ -27,6 +28,7 @@ class TablePlacement : public MauTransform, public Backtrack {
     const TablesMutuallyExclusive &mutex;
     const PhvInfo &phv;
     const LayoutChoices &lc;
+    SharedActionProfileAnalysis spaa;
     bool alloc_done = false;
     profile_t init_apply(const IR::Node *root) override;
     bool backtrack(trigger &) override {

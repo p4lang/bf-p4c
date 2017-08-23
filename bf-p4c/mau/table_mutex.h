@@ -59,7 +59,7 @@ class TablesMutuallyExclusive : public MauInspector {
         return action_mutex(table_ids.at(a), table_ids.at(b)); }
 };
 
-class DetermineActionProfileFaults : public MauInspector {
+class SharedActionProfileAnalysis : public MauInspector {
     profile_t init_apply(const IR::Node *root) override {
         profile_t rv = MauInspector::init_apply(root);
         ap_users.clear();
@@ -69,6 +69,12 @@ class DetermineActionProfileFaults : public MauInspector {
     const TablesMutuallyExclusive &mutex;
     bool preorder(const IR::MAU::Table *t) override;
  public:
-    explicit DetermineActionProfileFaults(const TablesMutuallyExclusive &m) : mutex(m) {}
+    vector<const IR::MAU::Table *> all_shared_tables(const IR::ActionProfile *ap) const {
+        vector<const IR::MAU::Table *> empty;
+        if (ap == nullptr || ap_users.find(ap) == ap_users.end())
+            return empty;
+        return ap_users.at(ap);
+    }
+    explicit SharedActionProfileAnalysis(const TablesMutuallyExclusive &m) : mutex(m) {}
 };
 #endif /* _TOFINO_MAU_TABLE_MUTEX_H_ */

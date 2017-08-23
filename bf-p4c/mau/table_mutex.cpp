@@ -71,7 +71,7 @@ void TablesMutuallyExclusive::postorder(const IR::Tofino::Pipe *pipe) {
                     mutex[t] |= other;
 }
 
-bool DetermineActionProfileFaults::preorder(const IR::MAU::Table *t) {
+bool SharedActionProfileAnalysis::preorder(const IR::MAU::Table *t) {
     const IR::ActionProfile *ap = nullptr;
     for (auto at : t->attached) {
         if ((ap = at->to<IR::ActionProfile>()) != nullptr)

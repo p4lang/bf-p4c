@@ -232,7 +232,7 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
         new CheckTableNameDuplicate,
         new FindDependencyGraph(phv, deps),
         &mutex,
-        new DetermineActionProfileFaults(mutex),
+        new SharedActionProfileAnalysis(mutex),
         new DumpPipe("Before TablePlacement"),
         new TablePlacement(&deps, mutex, phv, lc),
         new CheckTableNameDuplicate,
