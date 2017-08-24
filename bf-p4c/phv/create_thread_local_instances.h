@@ -1,32 +1,33 @@
+/*
+Copyright 2013-present Barefoot Networks, Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 #ifndef TOFINO_PHV_CREATE_THREAD_LOCAL_INSTANCES_H_
 #define TOFINO_PHV_CREATE_THREAD_LOCAL_INSTANCES_H_
-#include "ir/ir.h"
-#include "tofino/ir/thread_visitor.h"
 
-// This Visitor creates a thread-local instance of every metadata, header
-// instance and TempVars. The name of the new instance is gress-name::instance-name.
-//
-// TODO: When header/metadata instances are added to MAU_Pipe, this class must
-// create 2 copies (one for each thread) of every header/metadata instance
-// object.
-//
-class CreateThreadLocalInstances : public Modifier, ThreadVisitor {
- public:
-    explicit CreateThreadLocalInstances(gress_t th) : ThreadVisitor(th), gress_(th) {}
-    // Always returns false. It prepends "thread-name::" to named_ref->name.
-    bool preorder(IR::HeaderOrMetadata *hdr_ref) override {
-        hdr_ref->name = IR::ID(cstring::to_cstring(gress_) + "::" + hdr_ref->name);
-        return false; }
-    // It prepends "thread-name::" to every parse state.
-    bool preorder(IR::Tofino::ParserState *ps) override {
-        ps->name = cstring::to_cstring(gress_) + "::" + ps->name;
-        return true; }
-    // prepend "thread-name::" to TempVars
-    bool preorder(IR::TempVar *var) override {
-        var->name = cstring::to_cstring(gress_) + "::" + var->name;
-        return false; }
- private:
-    gress_t gress_;
+#include "ir/ir.h"
+
+/**
+ * This Visitor creates a thread-local instance of every metadata instance,
+ * header instance, parser state, and TempVar. The name of the new instance
+ * follows the pattern `gress-name::instance-name`.
+ *
+ * The set of metadata variables in Tofino::Pipe::metadata is also updated.
+ */
+struct CreateThreadLocalInstances : public PassManager {
+    CreateThreadLocalInstances();
 };
 
 #endif /* TOFINO_PHV_CREATE_THREAD_LOCAL_INSTANCES_H_ */

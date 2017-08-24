@@ -73,11 +73,7 @@ struct PhvTestCase {
             return boost::none;
         }
 
-        PassManager passes = {
-            new CreateThreadLocalInstances(INGRESS),
-            new CreateThreadLocalInstances(EGRESS),
-        };
-        pipe = pipe->apply(passes);
+        pipe = pipe->apply(CreateThreadLocalInstances());
         EXPECT_EQ(0u, ::ErrorReporter::instance.getDiagnosticCount());
         if (pipe == nullptr) {
             ADD_FAILURE() << "Inserting thread local instances failed";

@@ -207,8 +207,7 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
         // only needed to avoid warnings about otherwise unused ingress/egress_port?
         new CollectPhvInfo(phv),
         new LiveAtEntry(phv),
-        new CreateThreadLocalInstances(INGRESS),
-        new CreateThreadLocalInstances(EGRESS),
+        new CreateThreadLocalInstances,
         &stacks,
         new StackPushShims(stacks),
         new CollectPhvInfo(phv),

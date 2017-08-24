@@ -12,16 +12,12 @@ Visitor::profile_t InstructionSelection::init_apply(const IR::Node *root) {
 }
 
 IR::Member *InstructionSelection::gen_stdmeta(cstring field) {
-    // FIXME -- this seems like an ugly hack -- need to make it match up to the
-    // names created by CreateThreadLocalInstances.  Should have a better way of getting
-    // a handle on the standard metadata.
-    auto gress = VisitingThread(this);
-    auto *meta = findContext<IR::Tofino::Pipe>()->metadata["standard_metadata"]->clone();
-    meta->name = IR::ID(cstring::to_cstring(gress) + "::" + meta->name);
-    if (auto f = meta->type->getField(field))
+    cstring metadataName = cstring::to_cstring(VisitingThread(this)) +
+                           "::standard_metadata";
+    auto* meta = findContext<IR::Tofino::Pipe>()->metadata[metadataName];
+    if (auto* f = meta->type->getField(field))
         return new IR::Member(f->type, new IR::ConcreteHeaderRef(meta), field);
-    else
-        BUG("No field %s in standard_metadata", field);
+    BUG("No field %s in standard_metadata", field);
     return nullptr;
 }
 
