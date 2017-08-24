@@ -111,7 +111,7 @@ class NonMaskLeftValueOrIsValid : public P4::KeyIsComplex {
     }
 };
 
-MidEnd::MidEnd(CompilerOptions& options) {
+MidEnd::MidEnd(CompilerOptions&) {
     // we may come through this path even if the program is actually a P4 v1.0 program
     setName("MidEnd");
     refMap.setIsV1(true);
