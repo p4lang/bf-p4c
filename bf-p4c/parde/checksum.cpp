@@ -233,8 +233,8 @@ ChecksumSourceMap findChecksums(const IR::P4Control* control) {
     }
 
     if (::ErrorReporter::instance.getDiagnosticCount() > existingDiagnostics) {
-        ::warning("Encountered invalid code in computed checksum control: %1%",
-                  control);
+        ::error("Encountered invalid code in computed checksum control: %1%",
+                control);
         showComputeChecksumUsage();
     }
 

@@ -784,3 +784,22 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/switch_l2_profile.p4
   extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   )
+
+# We can't (without some complex acrobatics) support conditional computed
+# checksums on Tofino. In P4-14, these are operations of the form:
+#   update ipv4_checksum if(ipv4.ihl == 5);
+# Glass's Tofino backend rejects these programs as well; they're really designed
+# for BMV2.
+p4c_add_xfail_reason("tofino"
+  "Encountered invalid code in computed checksum control"
+  testdata/p4_14_samples/checksum.p4
+  testdata/p4_14_samples/sai_p4.p4
+  extensions/p4_tests/p4_14/test_checksum.p4
+  testdata/p4_16_samples/issue134-bmv2.p4
+  testdata/p4_16_samples/issue655.p4
+  testdata/p4_16_samples/issue655-bmv2.p4
+  testdata/p4_16_samples/issue270-bmv2.p4
+  extensions/p4_tests/p4_14/switch_l2_profile.p4
+  testdata/p4_14_samples/switch_20160226/switch.p4
+  testdata/p4_14_samples/switch_20160512/switch.p4
+)
