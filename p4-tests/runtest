@@ -192,6 +192,7 @@ if $run_ptf && [ -d ${file%.p4}.ptf ]; then
     # TODO(unknown): remove when -N (new context JSON format) becomes the
     # default
     P4C_ARGS="$P4C_ARGS -Xassembler '-N'"
+    P4C_ARGS="$P4C_ARGS -DCPU_PORT=320"
 fi
 
 if [ ! -x $P4C ]; then

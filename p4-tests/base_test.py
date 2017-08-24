@@ -125,6 +125,18 @@ class P4RuntimeTest(BaseTest):
             mf.lpm.prefix_len = self.pLen
             mf.lpm.value = self.v
 
+    class Ternary(MF):
+        def __init__(self, name, v, mask):
+            super(P4RuntimeTest.Ternary, self).__init__(name)
+            self.v = v
+            self.mask = mask
+
+        def add_to(self, mf_id, mk):
+            mf = mk.add()
+            mf.field_id = mf_id
+            mf.ternary.mask = self.mask
+            mf.ternary.value = self.v
+
     # Sets the match key for a p4::TableEntry object. mk needs to be an iterable
     # object of MF instances.
     def set_match_key(self, table_entry, t_name, mk):
