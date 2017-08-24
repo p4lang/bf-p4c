@@ -170,4 +170,4 @@ class P4RuntimeTest(BaseTest):
         for update in updates:
             update.type = p4runtime_pb2.Update.DELETE
             new_req.updates.add().CopyFrom(update)
-        rep = self.stub.Write(req)
+        rep = self.stub.Write(new_req)

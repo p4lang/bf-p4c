@@ -1123,12 +1123,17 @@ void Table::Actions::add_action_format(Table *table, json::map &tbl) {
         for (auto &a : act.alias) {
             json::string name = a.first;
             int lo = remove_name_tail_range(name);
-            action_format_per_action_imm_fields.push_back( { json::map {
-                { "param_name", std::move(name) },
-                { "param_type", json::string("parameter") },
-                { "param_shift", json::number(lo) },
-                { "dest_start", json::number(a.second.lo) },
-                { "dest_width", json::number(a.second.hi - a.second.lo + 1) } } } ); }
+            json::map action_format_per_action_imm_field;
+            action_format_per_action_imm_field["param_name"] = name;
+            action_format_per_action_imm_field["param_type"] = "parameter";
+            if (a.second.is_constant) {
+                action_format_per_action_imm_field["param_type"] = "constant";
+                action_format_per_action_imm_field["const_value"] = a.second.value;
+            } else
+                action_format_per_action_imm_field["param_shift"] = lo;
+            action_format_per_action_imm_field["dest_start"] = a.second.lo;
+            action_format_per_action_imm_field["dest_width"] = (a.second.hi - a.second.lo + 1);
+            action_format_per_action_imm_fields.push_back(std::move(action_format_per_action_imm_field)); }
         action_format.push_back(std::move(action_format_per_action)); }
 }
 
