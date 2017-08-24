@@ -33,10 +33,10 @@ class Phv_Parde_Mau_Use : public Inspector {
     //
  private:
     profile_t init_apply(const IR::Node *root) override;
-    bool preorder(const IR::Tofino::Parser *p);
-    bool preorder(const IR::Tofino::Deparser *d);
-    bool preorder(const IR::MAU::TableSeq *);
-    bool preorder(const IR::Expression *e);
+    bool preorder(const IR::Tofino::Parser *p) override;
+    bool preorder(const IR::Tofino::Deparser *d) override;
+    bool preorder(const IR::MAU::TableSeq *) override;
+    bool preorder(const IR::Expression *e) override;
 };  // Phv_Parde_Mau_Use
 
 //
