@@ -2,6 +2,7 @@
 #include "input_xbar.h"
 #include "stage.h"
 #include "tables.h"
+#include "misc.h"
 
 DEFINE_TABLE_TYPE(HashActionTable)
 
@@ -24,6 +25,8 @@ void HashActionTable::setup(VECTOR(pair_t) &data) {
 void HashActionTable::pass1() {
     LOG1("### Hash Action " << name() << " pass1");
     MatchTable::pass1(0);
+    if (!p4_table) p4_table = P4Table::alloc(P4Table::MatchEntry, this);
+    else p4_table->check(this);
     check_next();
     if (action.check() && action->set_match_table(this, action.args.size() > 1) != ACTION)
         error(action.lineno, "%s is not an action table", action->name());
@@ -122,24 +125,86 @@ void HashActionTable::gen_tbl_cfg(json::vector &out) {
     if (options.new_ctx_json) {
         int size = hash_dist.empty() ? 1 : 1 + hash_dist[0].mask;
         json::map &tbl = *base_tbl_cfg(out, "match_entry", size);
+        json::map &match_attributes = tbl["match_attributes"] = json::map();
         if (!tbl.count("preferred_match_type"))
             tbl["preferred_match_type"] = "exact";
         const char *stage_tbl_type = "hash_action";
         if (hash_dist.empty()) {
             stage_tbl_type = "match_with_no_key";
             size = 1; }
-        json::map &stage_tbl = *add_stage_tbl_cfg(tbl, stage_tbl_type, size);
+        json::vector stage_tables;
+        json::map stage_tbl;
+        stage_tbl["stage_number"] = stage->stageno;
+        stage_tbl["logical_table_id"] = logical_id;
+        stage_tbl["memory_resource_allocation"] = nullptr;
+        stage_tbl["size"] = size;
+        stage_tbl["stage_table_type"] = stage_tbl_type;
+        match_attributes["match_type"] = stage_tbl_type;
+        match_attributes["uses_dynamic_key_masks"] = false; //FIXME-JSON
+        // FIXME-JSON: If the next table is modifiable then we set it to what it's mapped
+        // to. Otherwise, set it to the default next table for this stage.
+        stage_tbl["default_next_table"] = 255;
         add_pack_format(stage_tbl, 0, 0, hash_dist.empty() ? 1 : 0);
-        if (options.match_compiler)
-            stage_tbl["memory_resource_allocation"] = nullptr;
-        if (actions)
+        if (actions) {
             actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
+            actions->add_action_format(this, stage_tbl);
+        } else if (action && action->actions) {
+            action->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
+            action->actions->add_action_format(this, stage_tbl); }
         common_tbl_cfg(tbl, "exact");
         if (idletime)
             idletime->gen_stage_tbl_cfg(stage_tbl);
         else if (options.match_compiler)
             stage_tbl["stage_idletime_table"] = nullptr;
         tbl["performs_hash_action"] = !hash_dist.empty();
+        json::vector &meter_table_refs = tbl["meter_table_refs"] = json::vector();
+        json::vector &selection_table_refs = tbl["selection_table_refs"] = json::vector();
+        json::vector &stateful_table_refs = tbl["stateful_table_refs"] = json::vector();
+        json::vector &action_data_table_refs = tbl["action_data_table_refs"] = json::vector();
+        if (auto a = get_attached()) {
+            if (a->meter.size() > 0) {
+                for (auto m : a->meter)
+                    add_reference_table(meter_table_refs, m, "direct"); }
+            if (auto s = a->get_selector())
+                add_reference_table(selection_table_refs, a->selector, "direct"); }
+        if (action)
+            add_reference_table(action_data_table_refs, action, "direct");
+        // Add hash functions
+        json::vector &hash_functions = stage_tbl["hash_functions"] = json::vector();
+        if (input_xbar) {
+            auto ht = input_xbar->get_hash_tables();
+            if (ht.size() > 0) {
+                // Merge all bits to xor across multiple hash ways in single
+                // json::vector for each hash bit
+                json::map hash_function;
+                json::vector &hash_bits = hash_function["hash_bits"] = json::vector();
+                for (auto &hash : input_xbar->get_hash_tables()) {
+                    for (auto &col: hash.second) {
+                        json::map hash_bit;
+                        bool hash_bit_added = false;
+                        json::vector *bits_to_xor_prev;
+                        for (auto &hb : hash_bits) {
+                            if (hb->to<json::map>()["hash_bit"]->to<json::number>() == json::number(col.first)) {
+                                bits_to_xor_prev = &(hb->to<json::map>()["bits_to_xor"]->to<json::vector>());
+                                hash_bit_added = true; } }
+                        hash_bit["hash_bit"] = col.first;
+                        hash_bit["seed"] = input_xbar->get_seed_bit(hash.first, col.first);
+                        json::vector &bits_to_xor = hash_bit["bits_to_xor"] = json::vector();
+                        for (const auto &bit: col.second.data) {
+                            json::map field;
+                            if (auto ref = input_xbar->get_group_bit(InputXbar::Group(false, hash.first/2), bit + 64*(hash.first&1))) {
+                                std::string field_name = ref.name();
+                                field["field_bit"] = remove_name_tail_range(field_name) + ref.lobit();
+                                field["field_name"] = field_name; }
+                            if (!hash_bit_added)
+                                bits_to_xor.push_back(std::move(field));
+                            else
+                                bits_to_xor_prev->push_back(std::move(field)); }
+                        if (!hash_bit_added)
+                            hash_bits.push_back(std::move(hash_bit)); } }
+                    hash_functions.push_back(std::move(hash_function)); } }
+        stage_tables.push_back(std::move(stage_tbl));
+        match_attributes["stage_tables"] = std::move(stage_tables);
     } else {
         int size = hash_dist.empty() ? 1 : 1 + hash_dist[0].mask;
         json::map &tbl = *base_tbl_cfg(out, "match_entry", size);

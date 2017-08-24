@@ -1576,6 +1576,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::ActionProfile *ap) {
     indent_t    indent(1);
     auto name = tbl->get_use_name(ap);
     out << indent++ << "action " << name << ':' << std::endl;
+    out << indent << "p4: { name: " << canon_name(ap->name) << " }" << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(name));
     for (auto act : Values(tbl->actions)) {
         if (act->args.empty()) continue;

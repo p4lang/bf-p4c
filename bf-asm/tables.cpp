@@ -804,6 +804,7 @@ Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv) {
             if (auto *p = Instruction::decode(tbl, this, i.vec))
                 instr.push_back(p); }
     handle = unique_action_handle++;
+    //FIXME: For shared actions across different stages, assign the same handle
 }
 
 Table::Actions::Actions(Table *tbl, VECTOR(pair_t) &data) {
@@ -875,7 +876,15 @@ void Table::Actions::pass1(Table *tbl) {
                     a.second.hi = f->size - 1;
             } else
                 error(a.second.lineno, "No field %s(%d:%d) in table %s",
-                        a.second.name.c_str(), a.second.lo, a.second.hi, tbl->name()); } }
+                        a.second.name.c_str(), a.second.lo, a.second.hi, tbl->name()); }
+        //Update default value for params if default action parameters present
+        for (auto &p : act.p4_params_list) {
+            if (tbl->default_action_parameters.count(p.name) > 0) {
+                p.default_value = tbl->default_action_parameters[p.name];
+                p.defaulted = true;
+            }
+        }
+    }
 }
 
 static void find_pred_in_stage(int stageno, std::set<MatchTable *> &pred, Table *tbl) {
@@ -1011,7 +1020,9 @@ void Table::Actions::gen_tbl_cfg(json::vector &cfg) {
             json::map action_cfg;
             action_cfg["name"] = act.name;
             action_cfg["handle"] = act.handle; //FIXME-JSON
-            action_cfg["indirect_resources"] = json::vector(); //FIXME-JSON
+            // FIXME-JSON - indirect_resources are generated in meters, check
+            // for glass examples
+            action_cfg["indirect_resources"] = json::vector();
             //FIXME: Check for random number generation must implement assembly
             //support in table to identify rng type and corresponding updates in
             //assembler to parse and set registers accordingly. Below checks should
@@ -1069,11 +1080,14 @@ void Table::Actions::add_p4_params(const Action &act, json::vector &cfg) {
     //        { "bit_width", json::number(a.second.hi - a.second.lo + 1) } } ); }
     for (auto &a : act.p4_params_list) {
         unsigned start_bit = 0;
-        cfg.push_back( json::map {
-            { "name", json::string(a.name) },
-            { "start_bit", json::number(start_bit) },
-            { "position", json::number(a.position) },
-            { "bit_width", json::number(a.bit_width) } } );
+        json::map param;
+        param["name"] = a.name;
+        param["start_bit"] = start_bit;
+        param["position"] = a.position;
+        if (a.defaulted)
+            param["default_value"] = a.default_value;
+        param["bit_width"] = a.bit_width;
+        cfg.push_back(std::move(param));
         start_bit += a.bit_width;
     }
 }
@@ -1094,7 +1108,7 @@ void Table::Actions::add_action_format(Table *table, json::map &tbl) {
             action_format_per_action["action_handle"] = act.handle;
             action_format_per_action["table_name"] = "--END_OF_PIPELINE--";
             action_format_per_action["vliw_instruction"] = act.code;
-            action_format_per_action["vliw_instruction_full"] = ACTION_INSTRUCTION_ADR_ENABLE | act.addr;//FIXME-JSON
+            action_format_per_action["vliw_instruction_full"] = ACTION_INSTRUCTION_ADR_ENABLE | act.addr;
         } else {
             auto next = table->hit_next[hit_index++];
             action_format_per_action["next_table"] = next ? hit_index : 0;
@@ -1103,7 +1117,7 @@ void Table::Actions::add_action_format(Table *table, json::map &tbl) {
             action_format_per_action["action_handle"] = act.handle;
             action_format_per_action["table_name"] = next ? next->name() : "--END_OF_PIPELINE--";
             action_format_per_action["vliw_instruction"] = act.code;
-            action_format_per_action["vliw_instruction_full"] = ACTION_INSTRUCTION_ADR_ENABLE | act.addr;//FIXME-JSON
+            action_format_per_action["vliw_instruction_full"] = ACTION_INSTRUCTION_ADR_ENABLE | act.addr;
         }
         json::vector &action_format_per_action_imm_fields = action_format_per_action["immediate_fields"] = json::vector();
         for (auto &a : act.alias) {
@@ -1167,7 +1181,8 @@ void MatchTable::pass1(int type) {
     if (table_counter >= GATEWAY_MISS && !gateway)
         error(lineno, "Can't count gateway events on table %s as it doesn't have a gateway",
               name());
-    //FIXME-JSON -- determine param full width from phv container size
+    //FIXME-JSON -- TBD - driver will need an 'is_valid' param set instead of
+    //setting name to --validity_check--
     if (!p4_params_list.empty()){
         for (auto &p : p4_params_list) {
             if (!p.bit_width_full)
@@ -1283,6 +1298,9 @@ template<class REGS> void MatchTable::write_regs(REGS &regs, int type, Table *re
         merge.mau_action_instruction_adr_miss_value[logical_id] =
             ACTION_INSTRUCTION_ADR_ENABLE + act->addr; }
 
+    if (this->to<HashActionTable>()) {
+        merge.mau_action_instruction_adr_miss_value[logical_id] = 0;
+    }
     /*------------------------
      * Next Table
      *-----------------------*/
@@ -1752,7 +1770,6 @@ void Table::add_field_to_pack_format(json::vector &field_list, int basebit, std:
                     if (auto adt = t->action->to<ActionTable>()) {
                         field_entry["start_bit"] = std::min(5U, adt->get_log2size() - 2); } }
             field_entry["field_width"] = bits.size();
-            //FIXME-JSON: lsb_mem_word_idx can be evaluated by driver
             field_entry["lsb_mem_word_idx"] = bits.lo/128U;
             field_entry["msb_mem_word_idx"] = bits.hi/128U;
             field_entry["source"] = json::string(source);
@@ -1760,7 +1777,9 @@ void Table::add_field_to_pack_format(json::vector &field_list, int basebit, std:
             field_entry["field_name"] = json::string(name);
             //field_entry["immediate_name"] = json::string(immediate_name);
             if (this->to<ExactMatchTable>())
-                field_entry["match_mode"] = json::string("unused"); //FIXME-JSON
+                //FIXME-JSON : match_mode only matters for ATCAM's not clear if
+                //'unused' or 'exact' is used by driver
+                field_entry["match_mode"] = json::string("unused");
             if (this->to<ExactMatchTable>() || this->to<TernaryIndirectTable>()) {
                 field_entry["enable_pfe"] = false;
                 if (auto s = this->get_selector()) {
@@ -1844,7 +1863,6 @@ void Table::add_zero_padding_fields(Table::Format *format, Table::Actions::Actio
 json::map &Table::add_pack_format(json::map &stage_tbl, Table::Format *format,
                                   Table::Actions::Action *act) {
     if (options.new_ctx_json) {
-        //FIXME-JSON: Do not output entries if way tbls present
         decltype(act->reverse_alias()) alias;
         if (act) alias = act->reverse_alias();
         // Add zero padding fields to format
@@ -1958,14 +1976,21 @@ void Table::common_tbl_cfg(json::map &tbl, const char *default_match_type) {
         if (!default_action.empty())
             tbl["default_action_handle"] = default_action_handle;
         tbl["action_profile"] = p4_table->action_profile;
-        tbl["default_next_table_mask"] = 0;// FIXME-JSON
-        //tbl["dynamic_match_key_masks"] = json::map(); //FIXME-JSON: Need example
-        //tbl["static_entries"] = json::vector(); //FIXME-JSON
-        tbl["ap_bind_indirect_res_to_match"] = json::vector(); //FIXME-JSON: Need example
-        tbl["is_resource_controllable"] = true; //FIXME-JSON: Need example for false
+        // FIXME-JSON : If next table is present, set default_next_table_mask to
+        // 2^(width of next table field called '--next_tbl--') - 1
+        // matters if test is changing default action
+        tbl["default_next_table_mask"] = 0;
+        //FIXME-JSON: No brig support yet, uncomment when driver support is
+        //added to validate json
+        //tbl["uses_dynamic_key_masks"] = false;
+        //tbl["static_entries"] = json::vector();
+        //FIXME-JSON: PD related pragma
+        tbl["ap_bind_indirect_res_to_match"] = json::vector();
+        //FIXME-JSON: PD related, check glass examples for false (ALPM)
+        tbl["is_resource_controllable"] = true;
         tbl["uses_range"] = false; //FIXME-JSON: Ranges not yet implemented by brig
+        json::vector &params = tbl["match_key_fields"] = json::vector();
         if ((!p4_params_list.empty()) && (this->to<MatchTable>())) {
-            json::vector &params = tbl["match_key_fields"] = json::vector();
             for (auto &p : p4_params_list) {
                 unsigned start_bit = 0;
                 params.push_back( json::map {

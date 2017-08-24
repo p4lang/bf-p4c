@@ -209,7 +209,11 @@ bool TableFormat::allocate_next_table() {
 
     if (!next_table)
         return true;
+
+    LOG1("Next table will be done here?");
     int next_table_bits = ceil_log2(tbl->actions.size());
+    if (next_table_bits == 0)
+        next_table_bits++;
 
     for (size_t i = 0; i < overhead_groups_per_RAM.size(); i++) {
         for (int j = 0; j < overhead_groups_per_RAM[i]; j++) {

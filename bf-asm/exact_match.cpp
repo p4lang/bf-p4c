@@ -845,11 +845,11 @@ void ExactMatchTable::add_field_to_pack_format(json::vector &field_list, int bas
         for (auto &piece : field.bits) {
             auto mw = --match_by_bit.upper_bound(bit);
             int lo = bit - mw->first;
-            int offset = piece.lo - 1;
+            int offset = piece.lo;
             while(mw != match_by_bit.end() &&  mw->first < bit + piece.size()) {
-                std::string source = "spec"; //FIXME-JSON 
+                std::string source = "spec";
                 std::string immediate_name = "";
-                std::string mw_name = mw->second.name(); 
+                std::string mw_name = mw->second.name();
                 if (mw_name == "--version_valid--")
                     source = "version";
                 else if (mw_name == "--immediate--") {
@@ -857,18 +857,18 @@ void ExactMatchTable::add_field_to_pack_format(json::vector &field_list, int bas
                     immediate_name = name; }
                 int hi = std::min((unsigned)mw->second->size()-1, bit+piece.size()-mw->first-1);
                 int width = hi - lo + 1;
-                offset += width;
                 field_list.push_back( json::map {
                     { "field_name", json::string(mw->second.name()) },
                     { "source", json::string(source) },
-                    { "lsb_mem_word_offset", json::number(piece.lo) },
+                    { "lsb_mem_word_offset", json::number(offset) },
                     { "start_bit", json::number(lo + mw->second.lobit()) },
                     { "immediate_name", json::string(immediate_name) },
-                    { "lsb_mem_word_idx", json::number(0) }, //FIXME-JSON 
-                    { "msb_mem_word_idx", json::number(0) }, //FIXME-JSON 
-                    { "match_mode", json::string("unused") }, //FIXME-JSON 
-                    { "enable_pfe", json::False() }, //FIXME-JSON 
+                    { "lsb_mem_word_idx", json::number(0) }, //FIXME-JSON
+                    { "msb_mem_word_idx", json::number(0) }, //FIXME-JSON
+                    { "match_mode", json::string("unused") }, //FIXME-JSON
+                    { "enable_pfe", json::False() }, //FIXME-JSON
                     { "field_width", json::number(width) }});
+                offset += width;
                 lo = 0;
                 ++mw; }
             bit += piece.size(); }
@@ -909,33 +909,48 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
         json::vector stage_tables;
         json::map stage_tbl;
         stage_tbl["stage_number"] = stage->stageno;
-        stage_tbl["stage_table_type"] = "hash_match";
         stage_tbl["logical_table_id"] = logical_id;
         stage_tbl["memory_resource_allocation"] = nullptr;
-        stage_tbl["size"] = number_entries; 
-        json::vector &hash_functions = stage_tbl["hash_functions"] = json::vector();
-        for (auto &hash : input_xbar->get_hash_tables()) {
+        stage_tbl["size"] = number_entries;
+        stage_tbl["stage_table_type"] = "hash_match";
+        match_attributes["match_type"] = "exact";
+        match_attributes["uses_dynamic_key_masks"] = false; //FIXME-JSON
+        if (number_entries == 0) {
+            stage_tbl["stage_table_type"] = "match_with_no_key";
+            match_attributes["match_type"] = "match_with_no_key";
+            stage_tbl["size"] = 1024; }
+        auto ht = input_xbar->get_hash_tables();
+        if (ht.size() > 0) {
+            // Merge all bits to xor across multiple hash ways in single
+            // json::vector for each hash bit
+            json::vector &hash_functions = stage_tbl["hash_functions"] = json::vector();
             json::map hash_function;
             json::vector &hash_bits = hash_function["hash_bits"] = json::vector();
-            for (auto &col: hash.second) {
-                json::map hash_bit;
-                hash_bit["hash_bit"] = col.first; 
-                hash_bit["seed"] = input_xbar->get_seed_bit(hash.first, col.first); 
-                json::vector &bits_to_xor = hash_bit["bits_to_xor"] = json::vector();
-                for (const auto &bit: col.second.data) {
-                    json::map field;
-                    //std::string field_name = input_xbar->get_field_name(bit);
-                    //if (!field_name.empty()) remove_name_tail_range(field_name);
-                    //field["field_name"] = field_name; 
-                    //field["field_bit"] = bit;
-                    if (auto ref = input_xbar->get_group_bit(InputXbar::Group(false, hash.first/2), bit + 64*(hash.first&1))) {
-                        std::string field_name = ref.name();
-                        field["field_bit"] = remove_name_tail_range(field_name) + ref.lobit();
-                        field["field_name"] = field_name; }
-                    bits_to_xor.push_back(std::move(field)); }
-                hash_bits.push_back(std::move(hash_bit)); } 
-            hash_functions.push_back(std::move(hash_function)); }
-        //stage_tbl["action_handles"] = json::vector();
+            for (auto &hash : input_xbar->get_hash_tables()) {
+                for (auto &col: hash.second) {
+                    json::map hash_bit;
+                    bool hash_bit_added = false;
+                    json::vector *bits_to_xor_prev;
+                    for (auto &hb : hash_bits) {
+                        if (hb->to<json::map>()["hash_bit"]->to<json::number>() == json::number(col.first)) {
+                            bits_to_xor_prev = &(hb->to<json::map>()["bits_to_xor"]->to<json::vector>());
+                            hash_bit_added = true; } }
+                    hash_bit["hash_bit"] = col.first;
+                    hash_bit["seed"] = input_xbar->get_seed_bit(hash.first, col.first);
+                    json::vector &bits_to_xor = hash_bit["bits_to_xor"] = json::vector();
+                    for (const auto &bit: col.second.data) {
+                        json::map field;
+                        if (auto ref = input_xbar->get_group_bit(InputXbar::Group(false, hash.first/2), bit + 64*(hash.first&1))) {
+                            std::string field_name = ref.name();
+                            field["field_bit"] = remove_name_tail_range(field_name) + ref.lobit();
+                            field["field_name"] = field_name; }
+                        if (!hash_bit_added)
+                            bits_to_xor.push_back(std::move(field));
+                        else
+                            bits_to_xor_prev->push_back(std::move(field)); }
+                    if (!hash_bit_added)
+                        hash_bits.push_back(std::move(hash_bit)); } }
+                hash_functions.push_back(std::move(hash_function)); }
         if (actions) {
             actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
             actions->add_action_format(this, stage_tbl);
@@ -943,27 +958,29 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
             action->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
             action->actions->add_action_format(this, stage_tbl); }
         if (format)
-            add_pack_format(stage_tbl, 128, 1, 1); 
-        json::vector &way_stage_tables = stage_tbl["ways"] = json::vector();
-        for (auto &way : ways) {
-            json::map way_tbl;
+            add_pack_format(stage_tbl, 128, 1, 1);
+        else
+            add_pack_format(stage_tbl, 0, 0, 1);
+        if (ways.size() > 0) {
+            json::vector &way_stage_tables = stage_tbl["ways"] = json::vector();
             unsigned way_number = 0;
-            way_tbl["stage_number"] = stage->stageno;
-            way_tbl["way_number"] = way_number++;
-            way_tbl["stage_table_type"] = "hash_way";
-            way_tbl["size"] = way.rams.size()/fmt_width * format->groups() * 1024;
-            add_pack_format(way_tbl, format);
-            way_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg(way);
-            way_stage_tables.push_back(std::move(way_tbl)); }
+            for (auto &way : ways) {
+                json::map way_tbl;
+                way_tbl["stage_number"] = stage->stageno;
+                way_tbl["way_number"] = way_number++;
+                way_tbl["stage_table_type"] = "hash_way";
+                way_tbl["size"] = way.rams.size()/fmt_width * format->groups() * 1024;
+                add_pack_format(way_tbl, format);
+                way_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg(way);
+                way_stage_tables.push_back(std::move(way_tbl)); } }
         stage_tables.push_back(std::move(stage_tbl));
         match_attributes["stage_tables"] = std::move(stage_tables);
-        match_attributes["match_type"] = "exact";
         tbl["meter_table_refs"] = json::vector();
         tbl["selection_table_refs"] = json::vector();
         tbl["stateful_table_refs"] = json::vector();
         json::vector &action_data_table_refs = tbl["action_data_table_refs"] = json::vector();
         if (action) {
-            if (isindirect()) 
+            if (isindirect())
                 add_reference_table(action_data_table_refs, action, "indirect");
             else
                 add_reference_table(action_data_table_refs, action, "direct"); }

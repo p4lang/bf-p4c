@@ -312,7 +312,7 @@ void MeterTable::write_regs(REGS &regs) {
             mapram_config.mapram_type = MapRam::COLOR;
             mapram_config.mapram_logical_table = logical_id;
             mapram_config.mapram_vpn = *vpn;
-            mapram_config.mapram_parity_generate = 1;
+            mapram_config.mapram_parity_generate = 0;
             mapram_config.mapram_parity_check = 0;
             mapram_config.mapram_ecc_check = 1;
             mapram_config.mapram_ecc_generate = 1;
@@ -407,6 +407,9 @@ void MeterTable::gen_tbl_cfg(json::vector &out) {
     case BYTES: tbl["meter_granularity"] = "bytes"; break;
     default: break; }
     tbl["enable_color_aware"] = color_aware;
-    tbl["enable_color_aware_per_flow_enable"] = color_aware_per_flow_enable;
+    tbl["enable_color_aware_pfe"] = color_aware_per_flow_enable;
+    tbl["enable_pfe"] = per_flow_enable;
+    tbl["pfe_bit_position"] = per_flow_enable_bit;
+    tbl["color_aware_pfe_address_type_bit_position"] = 0; //FIXME
     stage_tbl["default_lower_huffman_bits_included"] = METER_LOWER_HUFFMAN_BITS; 
 }

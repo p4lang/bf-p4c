@@ -231,9 +231,11 @@ public:
         unsigned position;
         unsigned bit_width;
         unsigned bit_width_full;
+        unsigned default_value;
+        bool defaulted;
         std::string type;
-        p4_param(std::string n = "", unsigned p = 0, unsigned bw = 0, unsigned bwf = 0, std::string t = "") :
-            name(n), position(p), bit_width(bw), bit_width_full(bwf), type(t) {}
+        p4_param(std::string n = "", unsigned p = 0, unsigned bw = 0, unsigned bwf = 0, std::string t = "",unsigned v = 0, bool d = false) :
+            name(n), position(p), bit_width(bw), bit_width_full(bwf), type(t) , default_value(v), defaulted(d) {}
     };
     typedef std::vector<p4_param>  p4_params;
 
@@ -357,7 +359,7 @@ public:
     std::string                 default_action;
     unsigned                    default_action_handle = 0;
     int                         default_action_lineno = -1;
-    std::map<std::string,int>   default_action_parameters;
+    std::map<std::string,unsigned>   default_action_parameters;
     bool                        default_only_action = false;
     std::vector<Ref>            hit_next;
     Ref                         miss_next;

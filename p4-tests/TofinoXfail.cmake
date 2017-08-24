@@ -116,6 +116,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Unhandled action bitmask constraint"
   testdata/p4_14_samples/mac_rewrite.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   )
 
 # Incorrect P4_14->16 conversion for varbit extract
@@ -128,9 +129,13 @@ p4c_add_xfail_reason("tofino"
 # Fails due to complex expressions in the parser that our hardware can't support.
 p4c_add_xfail_reason("tofino"
   "error: Assignment cannot be supported in the parser"
+  testdata/p4_16_samples/scalarmeta-bmv2.p4
+  testdata/p4_16_samples/issue281.p4
+  testdata/p4_16_samples/stack_complex-bmv2.p4
   testdata/p4_14_samples/TLV_parsing.p4
   testdata/p4_14_samples/axon.p4
   testdata/p4_14_samples/simple_nat.p4
+  testdata/p4_16_samples/stack_complex-bmv2.p4
   )
 
 # BRIG-107
@@ -225,13 +230,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/parser1.p4
   testdata/p4_14_samples/parser_dc_full.p4
   testdata/p4_14_samples/port_vlan_mapping.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "gen_deparser.cpp:40: Null p"
-  testdata/p4_16_samples/issue281.p4
-  testdata/p4_16_samples/scalarmeta-bmv2.p4
-  testdata/p4_16_samples/stack_complex-bmv2.p4
   )
 
 # parser verify not supported
@@ -335,8 +333,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/09-MatchNoDep.p4
   extensions/p4_tests/p4_14/10-MatchNoDep1.p4
   extensions/p4_tests/p4_14/test_config_129_various_exact_match_keys.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-235/vag1737_1.p4
   extensions/p4_tests/p4_14/test_config_96_hash_data.p4
   extensions/p4_tests/p4_14/hash_calculation_max_size.p4
   extensions/p4_tests/p4_14/hash_calculation_multiple.p4
@@ -422,11 +418,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "boost::too_few_args: format-string referred to more arguments than were passed"
   extensions/p4_tests/p4_14/shared_names.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "(throwing|uncaught exception).*std::out_of_range"
-  extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
   )
 
 # BRIG-99
@@ -740,25 +731,28 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Constant lookup does not match the ActionFormat"
   testdata/p4_14_samples/action_inline.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-235/vag1737_1.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
+  extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
+  )
+
+# Detailed error msg: bool PhvInfo::Field::is_ccgf() const: Assertion `ccgf_fields_i.size()' failed.
+p4c_add_xfail_reason("tofino"
+  "is_ccgf"
+  testdata/p4_14_samples/switch_20160226/switch.p4
+  testdata/p4_14_samples/switch_20160512/switch.p4
+  extensions/p4_tests/p4_14/switch_20160602/switch.p4
   )
 
 p4c_add_xfail_reason("tofino"
   "Overlapping field slices in allocation for field"
-  extensions/p4_tests/p4_14/switch_20160602/switch.p4
-  testdata/p4_14_samples/switch_20160226/switch.p4
-  testdata/p4_14_samples/switch_20160512/switch.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
   )
 
 p4c_add_xfail_reason("tofino"
   "syntax error, unexpected '-', expecting INT"
   extensions/p4_tests/p4_14/test_config_216_phv_aff.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "Unhandled case of sharing constants"
-  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -774,7 +768,7 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "tofino only supports 12 stages"
-  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
   extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
   extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
   extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
@@ -786,4 +780,9 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
   extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Error when running PTF tests"
+  extensions/p4_tests/p4_14/ecmp_pi.p4
   )

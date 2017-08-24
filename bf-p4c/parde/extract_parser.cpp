@@ -223,7 +223,7 @@ ParserInfo extractParser(const IR::Tofino::Pipe* pipe,
     info.deparsers[INGRESS] = new IR::Tofino::Deparser(INGRESS, igDeparser);
     info.deparsers[EGRESS] = egDeparser != nullptr
         ? new IR::Tofino::Deparser(EGRESS, egDeparser)
-        : new IR::Tofino::Deparser(EGRESS, info.parsers[EGRESS]);
+        : new IR::Tofino::Deparser(EGRESS, igDeparser);
 
     // Add shims for intrinsic metadata.
     AddMetadataShims addMetadataShims(pipe);
