@@ -136,7 +136,6 @@ static IR::Attached *createAttached(IR::MAU::Table *tt, Util::SourceInfo srcInfo
                                     const IR::Annotations *annot,
                                     map<cstring, IR::ActionProfile *> *shared_ap,
                                     map<cstring, IR::ActionSelector *> *shared_as) {
-    IR::CounterOrMeter *rv = nullptr;
     // FIXME -- this should be looking at the arch model, but the current arch model stuff
     // is too complex -- need a way of building this automatically from the arch.p4 file.
     // For now, hack just using the type name as a string.
