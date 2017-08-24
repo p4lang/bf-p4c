@@ -193,7 +193,7 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
         new DumpPipe("Initial table graph"),
         new RemoveEmptyControls,
         new CheckStatefulAlu,
-        new CollectHeaderStackInfo,
+        new CollectHeaderStackInfo,  // Needed by CollectPhvInfo.
         new CollectPhvInfo(phv),
         &defuse,
         new AddBridgedMetadata(phv, defuse),
@@ -208,9 +208,9 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
         new CollectPhvInfo(phv),
         new LiveAtEntry(phv),
         new CreateThreadLocalInstances,
-        new CollectHeaderStackInfo,
+        new CollectHeaderStackInfo,  // Needs to be rerun after CreateThreadLocalInstances.
         new StackPushShims,
-        new CollectPhvInfo(phv),
+        new CollectPhvInfo(phv),  // Needs to be rerun after CreateThreadLocalInstances.
         new HeaderPushPop,
         new CopyHeaderEliminator,   // needs to be after HeaderPushPop and before InstSel
         new CollectPhvInfo(phv),

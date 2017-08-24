@@ -30,6 +30,24 @@ class PHV_Assignment_API;
 class PHV_Bind;
 class Slice;
 
+/**
+ * PhvInfo stores information about the PHV-backed storage in the program -
+ * fields of header and metadata instances, header stacks, TempVars, and POV
+ * bits. These items are all represented as PhvInfo::Field objects.
+ *
+ * Prior to PHV allocation, PhvInfo provides a central place to discover
+ * information about Fields; this includes their name, size and
+ * alignment, the ways in which they're used in the program and the PHV
+ * allocation constraints that apply to them.
+ *
+ * After PHV allocation, PhvInfo additionally stores the allocation results for
+ * each Field.
+ *
+ * PhvInfo is read throughout the backend, but it should be written to only by
+ * CollectPhvInfo and the PHV analysis and PHV bind passes. If you need to store
+ * new information in PhvInfo, add a pass that collects it from the IR in
+ * CollectPhvInfo. @see CollectPhvInfo for more information.
+ */
 class PhvInfo {
  public:
     /** @brief For each field `f` in an expression, set the "referenced" member
@@ -525,7 +543,18 @@ class PhvInfo {
  * field, and for TempVars. Allocate POV fields for header and metadata
  * instances.
  *
- * @pre None.
+ * We want the information in PhvInfo to be reconstructible at any time in the
+ * backend prior to PHV binding. CollectPhvInfo inspects not only the variables
+ * and types used in the program, but also e.g. the parser states (to infer
+ * which metadata fields are bridged), the digest field lists (to discover PHV
+ * allocation constraints for fields which are used there), and general
+ * expression (to discover which fields are written). When adding new
+ * information to PhvInfo, it's important to *collect that information in
+ * CollectPhvInfo rather than adding it manually*; otherwise, it will be lost
+ * when CollectPhvInfo is rerun.
+ *
+ * @pre HeaderStackInfo has been run, so that `Tofino::Pipe::headerStackInfo` is
+ * available.
  *
  * @post This object contains a PhvInfo::Field for each header and metadata
  * field, and a POV field for each header and metadata instance.

@@ -227,8 +227,10 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe* pipe) {
 
         // Verify that if this container has deparsed header fields, every bit
         // in the container is allocated.  Deparsed metadata fields (i.e.,
-        // bridged metadata) don't have this restriction. If this container has
-        // a mixed of both, we'll already have reported an error above.
+        // bridged metadata) don't have this restriction because they don't end
+        // up on the wire (externally, at least) and we can ensure that garbage
+        // data isn't visible to the programmer. If this container has a mixed
+        // of both, we'll already have reported an error above.
         if (hasDeparsedHeaderFields) {
             bitvec allBitsInContainer(0, container.size());
             ERROR_WARN_(allocatedBitsForContainer == allBitsInContainer,
