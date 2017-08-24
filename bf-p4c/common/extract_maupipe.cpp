@@ -215,21 +215,31 @@ static IR::Attached *createAttached(IR::MAU::Table *tt, Util::SourceInfo srcInfo
                 mtr->implementation = anno->expr.at(0)->as<IR::StringLiteral>();
             else
                 WARNING("unknown annotation " << anno->name << " on " << tname); }
-        rv = mtr; }
-    if (rv) {
         switch (args->size()) {
-        case 1:
-            rv->settype(args->at(0)->as<IR::Member>().member.name);
-            rv->direct = true;
-            break;
-        case 2:
-            rv->instance_count = args->at(0)->as<IR::Constant>().asInt();
-            rv->settype(args->at(1)->as<IR::Member>().member.name);
-            break;
-        default:
-            BUG("wrong number of arguments to %s ctor %s", tname, args);
-            break; }
-        return rv; }
+            case 1:
+                mtr->settype(args->at(0)->as<IR::Member>().member.name);
+                mtr->direct = true;
+                break;
+            case 2:
+                // XXX(hanw) handles both (member, constant) and
+                // (constant, member) in meter constructor
+                // because we are in the transition from v1model.p4 to tofino.p4
+                if (args->at(0)->is<IR::Member>()) {
+                    mtr->settype(args->at(0)->as<IR::Member>().member.name);
+                    mtr->instance_count = args->at(1)->as<IR::Constant>().asInt();
+                } else if (args->at(0)->is<IR::Constant>()) {
+                    mtr->instance_count = args->at(0)->as<IR::Constant>().asInt();
+                    mtr->settype(args->at(1)->as<IR::Member>().member.name);
+                } else {
+                    BUG("unknown argument in meter %s", name);
+                }
+                break;
+            default:
+                BUG("wrong number of arguments to %s ctor %s", tname, args);
+                break; }
+        return mtr;
+    }
+
     LOG2("Failed to create attached table for " << type->toString());
     return nullptr;
 }

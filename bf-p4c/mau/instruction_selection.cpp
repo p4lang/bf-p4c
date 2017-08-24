@@ -362,7 +362,9 @@ const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
             return new IR::MAU::Instruction(prim->srcInfo, "set", out,
                                             new IR::MAU::AttachedOutput(salu));
         return nullptr;
-    } else if (prim->name == "counter.count" || prim->name == "meter.execute_meter") {
+    } else if (prim->name == "counter.count" || prim->name == "meter.execute_meter" ||
+               prim->name == "meter.execute") {
+        // XXX(hanw)
         stateful.push_back(prim);  // needed to setup the index
         return nullptr;
     } else if (prim->name == "direct_counter.count" || prim->name == "direct_meter.read") {
@@ -388,7 +390,8 @@ const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
 const IR::Type *stateful_type_for_primitive(const IR::Primitive *prim) {
     if (prim->name == "counter.count" || prim->name == "direct_counter.count")
         return IR::Type_Counter::get();
-    if (prim->name == "meter.execute_meter" || prim->name == "direct_meter.read")
+    if (prim->name == "meter.execute_meter" || prim->name == "direct_meter.read" ||
+        prim->name == "meter.execute")
         return IR::Type_Meter::get();
     if (prim->name.startsWith("stateful_alu_14.") || prim->name.startsWith("stateful_alu.") ||
         prim->name.startsWith("register_action."))

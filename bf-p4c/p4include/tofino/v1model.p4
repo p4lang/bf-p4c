@@ -73,9 +73,9 @@ enum counter_type_t {
     PACKETS_AND_BYTES
 }
 
-enum MeterType {
-    packets,
-    bytes
+enum meter_type_t {
+    PACKETS,
+    BYTES
 }
 
 /// Counter
@@ -84,14 +84,10 @@ extern counter<I> {
     void count(@optional in I index);
 }
 
-extern meter {
-    meter(bit<32> size, MeterType type);
-    void execute_meter<T>(in bit<32> index, out T result);
-}
-
-extern direct_meter<T> {
-    direct_meter(MeterType type);
-    void read(out T result);
+/// Meter
+extern meter<I> {
+    meter(meter_type_t type, @optional I instance_count);
+    bit<8> execute(@optional in I index, @optional in bit<8> color);
 }
 
 extern register<T> {
