@@ -24,6 +24,7 @@ limitations under the License.
 #include "lib/error.h"
 #include "test/gtest/helpers.h"
 #include "tofino/common/extract_maupipe.h"
+#include "tofino/common/header_stack.h"
 #include "tofino/midend.h"
 #include "tofino/phv/create_thread_local_instances.h"
 #include "tofino/phv/phv_fields.h"
@@ -173,8 +174,8 @@ TYPED_TEST(TofinoPHVTrivialAllocators, AutomaticAllocation) {
     // Perform PHV analysis and run the allocator.
     PhvInfo phv;
     PassManager passes = {
+        new CollectHeaderStackInfo,
         new CollectPhvInfo(phv),
-        new VisitFunctor([&]{ phv.allocatePOV(HeaderStackInfo()); }),
         new TypeParam(phv)  // TypeParam is either TrivialAlloc or ManualAlloc.
     };
     auto program = testcase->pipe->apply(passes);
@@ -320,8 +321,8 @@ class TofinoPHVManualAlloc : public ::testing::Test {
         // Perform PHV analysis and run the allocator.
         PhvInfo phv;
         PassManager passes = {
+            new CollectHeaderStackInfo,
             new CollectPhvInfo(phv),
-            new VisitFunctor([&]{ phv.allocatePOV(HeaderStackInfo()); }),
             new PHV::ManualAlloc(phv, assignments)
         };
         auto program = testcase->pipe->apply(passes);
@@ -415,8 +416,8 @@ TEST_F(TofinoPHVManualAlloc, ReservedContainerAllocation) {
     // Perform PHV analysis.
     PhvInfo phv;
     PassManager passes = {
-        new CollectPhvInfo(phv),
-        new VisitFunctor([&]{ phv.allocatePOV(HeaderStackInfo()); })
+        new CollectHeaderStackInfo,
+        new CollectPhvInfo(phv)
     };
     auto program = testcase->pipe->apply(passes);
     ASSERT_TRUE(program != nullptr);

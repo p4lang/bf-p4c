@@ -8,7 +8,6 @@
 #include "lib/ordered_map.h"
 #include "lib/ordered_set.h"
 #include "lib/range.h"
-#include "tofino/common/header_stack.h"
 #include "tofino/ir/thread_visitor.h"
 #include "tofino/ir/bitrange.h"
 #include "tofino/ir/tofino_write_context.h"
@@ -479,7 +478,21 @@ class PhvInfo {
         decltype(*it) operator->() { return *it; } };
 
     friend struct CollectPhvFields;
+    friend struct AllocatePOVBits;
     friend struct MarkBridgedMetadataFields;
+
+    /** Add a 1-bit "hdr.$valid" field for each simple header.  For each header stack, add:
+     *  - A "stack[x].$valid" field for each stack element.
+     *  - A "stack.$push" field if the push_front primitive is used.
+     *  - A "stack.$pop" field if the pop_front primitive is used.
+     *  - A "stack.$stkvalid" field.
+     *
+     * POV fields are grouped into container contiguous group fields (CCGFs) as follows:
+     *
+     * @pre CollectHeaderStackInfo and CollectPhvFields.
+     * @post POV fields for all headers added to PhvInfo.
+     */
+    void allocatePOV(const Tofino::HeaderStackInfo&);
 
  public:  // class PhvInfo
     const Field *field(int idx) const { return (size_t)idx < by_id.size() ? by_id.at(idx) : 0; }
@@ -503,35 +516,19 @@ class PhvInfo {
     iterator<vector<Field *>::const_iterator> begin() const { return by_id.begin(); }
     iterator<vector<Field *>::const_iterator> end() const { return by_id.end(); }
 
-    // TODO: This is its own pass---factor out?
-    /** Add a 1-bit "hdr.$valid" field for each simple header.  For each header stack, add:
-     *  - A "stack[x].$valid" field for each stack element.
-     *  - A "stack.$push" field if the push_front primitive is used.
-     *  - A "stack.$pop" field if the pop_front primitive is used.
-     *  - A "stack.$stkvalid" field.
-     *
-     * POV fields are grouped into container contiguous group fields (CCGFs) as follows:
-     *
-     * @pre PhvInfo and HeaderStackInfo.
-     * @post POV fields for all headers added to PhvInfo.
-     */
-    void allocatePOV(const HeaderStackInfo &);
     bool alloc_done() const { return alloc_done_; }
     void set_done() { alloc_done_ = true; }
 };  // class PhvInfo
 
 /**
  * @brief Create and store a PhvInfo::Field for each header and metadata
- * field, and for TempVars.
- *
- * Does not allocate POV fields---that must be done with a separate invocation
- * of PhvInfo::allocatePOV. All fields are cleared each time this pass is
- * applied.
+ * field, and for TempVars. Allocate POV fields for header and metadata
+ * instances.
  *
  * @pre None.
  *
  * @post This object contains a PhvInfo::Field for each header and metadata
- * field, but not POV fields.
+ * field, and a POV field for each header and metadata instance.
  */
 struct CollectPhvInfo : public PassManager {
     explicit CollectPhvInfo(PhvInfo& phv);

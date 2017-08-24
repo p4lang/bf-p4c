@@ -12,6 +12,7 @@ struct StageUse {
 };
 
 namespace Tofino {
+struct HeaderStackInfo;
 struct Phase0Info;
 }  // namespace Tofino
 #end
@@ -46,11 +47,17 @@ class Tofino::Pipe {
 #emit
     /// If non-null, the phase 0 metadata for this pipe.
     ::Tofino::Phase0Info* phase0Info = nullptr;
+
+    /// If non-null, information about header stack usage in this pipe.
+    ::Tofino::HeaderStackInfo* headerStackInfo = nullptr;
 #end
 
 #apply
     operator== { return metadata == a.metadata &&
-                        thread[0] == a.thread[0] && thread[1] == a.thread[1]; }
+                        phase0Info == a.phase0Info &&
+                        headerStackInfo == a.headerStackInfo &&
+                        thread[0] == a.thread[0] &&
+                        thread[1] == a.thread[1]; }
     visit_children {
         if (auto *th = dynamic_cast<ThreadVisitor *>(&v)) {
             v.visit(thread[th->thread].parser, "parser");

@@ -1,6 +1,7 @@
 #include "phv_fields.h"
 #include "phv_analysis_api.h"
 #include "phv_assignment_api.h"
+#include "tofino/common/header_stack.h"
 #include "ir/ir.h"
 #include "lib/log.h"
 #include "lib/stringref.h"
@@ -46,6 +47,7 @@ void PhvInfo::clear() {
     all_structs.clear();
     simple_headers.clear();
     alloc_done_ = false;
+    pov_alloc_done = false;
 }
 
 void PhvInfo::add(cstring name, gress_t gress, int size, int offset, bool meta, bool pov) {
@@ -178,7 +180,7 @@ const PhvInfo::Field *PhvInfo::field(const IR::Member *fr, bitrange *bits) const
 //***********************************************************************************
 //
 
-void PhvInfo::allocatePOV(const HeaderStackInfo &stacks) {
+void PhvInfo::allocatePOV(const Tofino::HeaderStackInfo& stacks) {
     if (pov_alloc_done) BUG("trying to reallocate POV");
     pov_alloc_done = true;
 
@@ -916,9 +918,27 @@ struct MarkBridgedMetadataFields : public Inspector {
     PhvInfo& phv;
 };
 
+/// Allocate POV bits for each header instance, metadata instance, or header
+/// stack that we visited in CollectPhvFields.
+struct AllocatePOVBits : public Inspector {
+    explicit AllocatePOVBits(PhvInfo& phv) : phv(phv) { }
+
+ private:
+    bool preorder(const IR::Tofino::Pipe* pipe) override {
+        BUG_CHECK(pipe->headerStackInfo != nullptr,
+                  "Running AllocatePOVBits without running "
+                  "CollectHeaderStackInfo first?");
+        phv.allocatePOV(*pipe->headerStackInfo);
+        return false;
+    }
+
+    PhvInfo& phv;
+};
+
 CollectPhvInfo::CollectPhvInfo(PhvInfo& phv) {
     addPasses({
         new CollectPhvFields(phv),
+        new AllocatePOVBits(phv),
         new MarkBridgedMetadataFields(phv)
     });
 }

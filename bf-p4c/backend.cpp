@@ -128,7 +128,6 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
     DependencyGraph deps;
     TablesMutuallyExclusive mutex;
     FieldDefUse defuse(phv);
-    HeaderStackInfo stacks;
     TableSummary summary;
     MauAsmOutput mauasm(phv);
     Visitor *phv_alloc;
@@ -194,6 +193,7 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
         new DumpPipe("Initial table graph"),
         new RemoveEmptyControls,
         new CheckStatefulAlu,
+        new CollectHeaderStackInfo,
         new CollectPhvInfo(phv),
         &defuse,
         new AddBridgedMetadata(phv, defuse),
@@ -208,14 +208,15 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
         new CollectPhvInfo(phv),
         new LiveAtEntry(phv),
         new CreateThreadLocalInstances,
-        &stacks,
-        new StackPushShims(stacks),
+        new CollectHeaderStackInfo,
+        new StackPushShims,
         new CollectPhvInfo(phv),
-        new VisitFunctor([&phv, &stacks]() { phv.allocatePOV(stacks); }),
-        new HeaderPushPop(stacks),
-        new CopyHeaderEliminator,   // needs to be after POV alloc and before InstSel
+        new HeaderPushPop,
+        new CopyHeaderEliminator,   // needs to be after HeaderPushPop and before InstSel
+        new CollectPhvInfo(phv),
         new InstructionSelection(phv),
         new DumpPipe("After InstructionSelection"),
+        new CollectPhvInfo(phv),
         &defuse,
         new ElimUnused(phv, defuse),  // ElimUnused may have eliminated all references to a field
         new PhvInfo::SetReferenced(phv),  // ElimUnused can cause field unreferenced

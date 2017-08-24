@@ -11,10 +11,21 @@
  * @see HeaderPushPop for more discussion.
  */
 class StackPushShims : public PardeModifier {
-    const HeaderStackInfo &stacks;
+    const Tofino::HeaderStackInfo* stacks = nullptr;
+
+    bool preorder(IR::Tofino::Pipe* pipe) override {
+        BUG_CHECK(pipe->headerStackInfo != nullptr,
+                  "Running StackPushShims without running "
+                  "CollectHeaderStackInfo first?");
+        stacks = pipe->headerStackInfo;
+        return true;
+    }
+
     bool preorder(IR::Tofino::Parser *p) override {
-        for (auto &stack : stacks) {
-            if (stack.maxpush == 0 || stack.gress != p->gress) continue;
+        BUG_CHECK(stacks != nullptr, "No HeaderStackInfo; was StackPushShims "
+                                     "applied to a non-Pipe node?");
+        for (auto &stack : *stacks) {
+            if (stack.maxpush == 0 || !stack.inThread[p->gress]) continue;
 
             // The layout of `$stkvalid` is an overlay over a header stack's
             // `$push` field, its entry POV bits, and its `$pop` field:
@@ -30,7 +41,7 @@ class StackPushShims : public PardeModifier {
             const unsigned stkValidSize = stack.size + stack.maxpush + stack.maxpop;
             const unsigned stkValidValue = pushValue << (stack.size + stack.maxpop);
 
-            p->start = new IR::Tofino::ParserState(stack.name + "$shim", stack.gress, {},
+            p->start = new IR::Tofino::ParserState(stack.name + "$shim", p->gress, {},
                 { new IR::Tofino::ParserMatch(match_t(), 0, {
                     new IR::Tofino::ExtractConstant(
                         new IR::Member(IR::Type::Bits::get(stkValidSize),
@@ -38,9 +49,6 @@ class StackPushShims : public PardeModifier {
                         new IR::Constant(stkValidValue)) }, p->start) } );
         }
         return false; }
-
- public:
-    explicit StackPushShims(const HeaderStackInfo &stacks) : stacks(stacks) {}
 };
 
 #endif /* TOFINO_PARDE_STACK_PUSH_SHIMS_H_ */

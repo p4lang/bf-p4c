@@ -93,7 +93,15 @@
  * the other fields by writing to that one.
  */
 class HeaderPushPop : public MauTransform {
-    const HeaderStackInfo &stacks;
+    const Tofino::HeaderStackInfo* stacks = nullptr;
+
+    IR::Tofino::Pipe* preorder(IR::Tofino::Pipe* pipe) override {
+        BUG_CHECK(pipe->headerStackInfo != nullptr,
+                  "Running HeaderPushPop without running "
+                  "CollectHeaderStackInfo first?");
+        stacks = pipe->headerStackInfo;
+        return pipe;
+    }
 
     void copy_hdr(IR::Vector<IR::Primitive> *rv, const IR::Type_StructLike *hdr,
                   const IR::HeaderRef *to, const IR::HeaderRef *from) {
@@ -102,7 +110,7 @@ class HeaderPushPop : public MauTransform {
             auto src = new IR::Member(field->type, from, field->name);
             rv->push_back(new IR::Primitive("modify_field", dst, src)); } }
     IR::Node *do_push(const IR::HeaderRef *stack, int count) {
-        auto &info = stacks.at(stack->toString());
+        auto &info = stacks->at(stack->toString());
         auto *rv = new IR::Vector<IR::Primitive>;
         for (int i = info.size-1; i >= count; --i)
             copy_hdr(rv, stack->baseRef()->type,
@@ -115,7 +123,7 @@ class HeaderPushPop : public MauTransform {
             MakeSlice(valid, info.maxpop + count, info.maxpop + info.size + count - 1)));
         return rv; }
     IR::Node *do_pop(const IR::HeaderRef *stack, int count) {
-        auto & info = stacks.at(stack->toString());
+        auto &info = stacks->at(stack->toString());
         auto *rv = new IR::Vector<IR::Primitive>;
         for (int i = count; i < info.size; ++i)
             copy_hdr(rv, stack->baseRef()->type,
@@ -129,6 +137,8 @@ class HeaderPushPop : public MauTransform {
         return rv; }
 
     IR::Node *preorder(IR::Primitive *prim) override {
+        BUG_CHECK(stacks != nullptr, "No HeaderStackInfo; was HeaderPushPop "
+                                     "applied to a non-Pipe node?");
         if (prim->name == "push_front")
             return do_push(prim->operands[0]->to<IR::HeaderRef>(),
                            prim->operands[1]->to<IR::Constant>()->asInt());
@@ -136,9 +146,6 @@ class HeaderPushPop : public MauTransform {
             return do_pop(prim->operands[0]->to<IR::HeaderRef>(),
                           prim->operands[1]->to<IR::Constant>()->asInt());
         return prim; }
-
- public:
-    explicit HeaderPushPop(const HeaderStackInfo &stacks) : stacks(stacks) {}
 };
 
 #endif /* TOFINO_MAU_PUSH_POP_H_ */
