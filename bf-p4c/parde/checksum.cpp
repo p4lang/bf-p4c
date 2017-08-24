@@ -17,15 +17,33 @@ limitations under the License.
 #include "tofino/parde/checksum.h"
 
 #include "ir/ir.h"
+#include "lib/error.h"
 
 namespace {
 
 using ChecksumSources = IR::Vector<IR::Expression>;
 using ChecksumSourceMap = std::map<cstring, const ChecksumSources*>;
 
+void showComputeChecksumUsage() {
+    ::warning("Computed checksum controls may include only code with this form:");
+    ::warning("  if (header.isValid()) {");
+    ::warning("    header.destField = checksumExternInstance.get({");
+    ::warning("       header.sourceField1,");
+    ::warning("       header.sourceField2");
+    ::warning("    });");
+    ::warning("  }");
+}
+
 ChecksumSourceMap findChecksums(const IR::P4Control* control) {
     CHECK_NULL(control);
     ChecksumSourceMap checksums;
+
+    // The code we allow in a computed checksum control is *very* constrained,
+    // so it may be nonobvious to the user how to write their code correctly.
+    // Record the existing diagnostic count so that if any warnings or errors
+    // are reported in the body of this function, we can print a usage message
+    // at the end.
+    const auto existingDiagnostics = ::ErrorReporter::instance.getDiagnosticCount();
 
     for (auto* statement : control->body->components) {
         // It only makes sense to compute a checksum against a valid header,
@@ -135,6 +153,12 @@ ChecksumSourceMap findChecksums(const IR::P4Control* control) {
 
         LOG1("Validated computed checksum for field: " << destField);
         checksums[destField->toString()] = sources;
+    }
+
+    if (::ErrorReporter::instance.getDiagnosticCount() > existingDiagnostics) {
+        ::warning("Encountered invalid code in computed checksum control: %1%",
+                  control);
+        showComputeChecksumUsage();
     }
 
     return checksums;
