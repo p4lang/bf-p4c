@@ -32,7 +32,7 @@ namespace Tofino {
  * v1model.p4's ComputeChecksum control.
  *
  * Only a very specific pattern is permitted. Each checksum computation must be
- * defined as:
+ * defined as either:
  * ```
  *   if (header.isValid()) {
  *     header.destField = checksumExternInstance.get({
@@ -41,11 +41,19 @@ namespace Tofino {
  *     });
  *   }
  * ```
+ * or (a bit less cleanly):
+ * ```
+ *   header.destField = checksumExternInstance.get({
+ *      header.sourceField1,
+ *      header.sourceField2
+ *   });
+ * ```
+ *
  * This pattern reflects the actual behavior of the hardware. Any deviation will
  * result in a warning and the computation will be ignored.
  *
- * It's important that the `isValid()` call, the destination field, and the list
- * of source fields all reference the same header instance.
+ * It's enforced that the `isValid()` call (if any), the destination field, and
+ * the list of source fields all reference the same header instance.
  *
  * @param computeChecksumControl  The P4 control which should be analyzed. May
  *                                be null, in which case the original pipe will
