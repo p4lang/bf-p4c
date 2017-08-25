@@ -458,7 +458,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Can't stripe unsized data"
+  "must be at 64 or 96 on ixbar to be used in stateful"
   extensions/p4_tests/p4_14/test_config_184_stateful_bug1.p4)
 
 p4c_add_xfail_reason("tofino"

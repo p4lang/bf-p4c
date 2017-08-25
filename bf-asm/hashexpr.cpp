@@ -4,7 +4,7 @@
 #include "bitops.h"
 
 static bitvec crc(bitvec poly, bitvec val) {
-    int poly_size = poly.max() + 1;
+    int poly_size = poly.max().index() + 1;
     if (!poly_size) return bitvec(0);
     val <<= poly_size;
     for (auto i = val.max(); i.index() >= (poly_size-1); --i) {
@@ -59,7 +59,7 @@ class HashExpr::Crc : HashExpr {
             rv |= ::check_ixbar(ref, ix, grp);
         return rv; }
     void gen_data(bitvec &data, int bit, InputXbar *ix, int grp) override;
-    int width() override { return poly.max() - 1; }
+    int width() override { return poly.max().index() - 1; }
 };
 
 class HashExpr::Xor : HashExpr {
