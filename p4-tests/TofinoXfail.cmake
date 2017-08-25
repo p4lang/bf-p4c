@@ -730,7 +730,7 @@ p4c_add_xfail_reason("tofino"
 
 # Detailed error msg: bool PhvInfo::Field::is_ccgf() const: Assertion `ccgf_fields_i.size()' failed.
 p4c_add_xfail_reason("tofino"
-  "is_ccgf"
+  "ccgf fields empty"
   testdata/p4_14_samples/switch_20160226/switch.p4
   testdata/p4_14_samples/switch_20160512/switch.p4
   extensions/p4_tests/p4_14/switch_20160602/switch.p4
