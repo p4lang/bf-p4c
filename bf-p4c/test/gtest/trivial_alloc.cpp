@@ -18,90 +18,22 @@ limitations under the License.
 #include <type_traits>
 #include "gtest/gtest.h"
 
-#include "frontends/common/parseInput.h"
-#include "frontends/p4/frontend.h"
 #include "ir/ir.h"
 #include "lib/error.h"
 #include "test/gtest/helpers.h"
-#include "tofino/common/extract_maupipe.h"
 #include "tofino/common/header_stack.h"
-#include "tofino/midend.h"
-#include "tofino/phv/create_thread_local_instances.h"
 #include "tofino/phv/phv_fields.h"
 #include "tofino/phv/trivial_alloc.h"
-#include "tofino/tofinoOptions.h"
+#include "tofino/test/gtest/tofino_gtest_utils.h"
 
 namespace Test {
-
-/// A utility class that handles the boilerplate of creating PHV-related test cases.
-struct PhvTestCase {
-    /**
-     * Create a PhvTestCase from P4 @source by parsing it and running the
-     * frontend, midend, and MAU pipe extraction passes over it.  Triggers a
-     * test failure if errors are encountered.
-     */
-    static boost::optional<PhvTestCase>
-    create(const std::string& source) {
-        auto program =
-          P4::parseP4String(source, CompilerOptions::FrontendVersion::P4_16);
-        EXPECT_EQ(0u, ::ErrorReporter::instance.getDiagnosticCount());
-        if (program == nullptr) {
-            ADD_FAILURE() << "Couldn't parse test case source";
-            return boost::none;
-        }
-
-        Tofino_Options options;
-        options.langVersion = CompilerOptions::FrontendVersion::P4_16;
-        program = P4::FrontEnd().run(options, program, true);
-        EXPECT_EQ(0u, ::ErrorReporter::instance.getDiagnosticCount());
-        if (program == nullptr) {
-            ADD_FAILURE() << "Frontend failed";
-            return boost::none;
-        }
-
-        Tofino::MidEnd midend(options);
-        auto midendProgram = program->apply(midend);
-        EXPECT_EQ(0u, ::ErrorReporter::instance.getDiagnosticCount());
-        if (midendProgram == nullptr) {
-            ADD_FAILURE() << "Midend failed";
-            return boost::none;
-        }
-
-        auto pipe = extract_maupipe(midendProgram, options);
-        EXPECT_EQ(0u, ::ErrorReporter::instance.getDiagnosticCount());
-        if (pipe == nullptr) {
-            ADD_FAILURE() << "Pipe extraction failed";
-            return boost::none;
-        }
-
-        pipe = pipe->apply(CreateThreadLocalInstances());
-        EXPECT_EQ(0u, ::ErrorReporter::instance.getDiagnosticCount());
-        if (pipe == nullptr) {
-            ADD_FAILURE() << "Inserting thread local instances failed";
-            return boost::none;
-        }
-
-        return PhvTestCase{program, pipe};
-    }
-
-    /// The test program, as represented in the frontend IR.
-    const IR::P4Program* program;
-
-    /// A Tofino Pipe containing the Tofino IR version of the program.
-    const IR::Tofino::Pipe* pipe;
-
- private:
-    PhvTestCase(const IR::P4Program* program, const IR::Tofino::Pipe* pipe)
-        : program(program), pipe(pipe)
-    { }
-};
 
 namespace SharedPhvTestCases {
 
 /// A simple P4 program with a variety of header fields.
-static boost::optional<PhvTestCase> trivialAlloc() {
+static boost::optional<TofinoPipeTestCase> trivialAlloc() {
     SCOPED_TRACE("PhvTestCase::trivialAlloc()");
-    return PhvTestCase::create(P4_SOURCE(P4Headers::CORE, R"(
+    return TofinoPipeTestCase::createWithThreadLocalInstances(P4_SOURCE(P4Headers::CORE, R"(
         header H1 { bit<8> field; }
         header H2 { bit<1> field1; bit<6> field2; bit<9> field3; }
         header H3 { bit<72> field; }
