@@ -76,6 +76,7 @@ findbin() {
 }
 
 # Looks for path to simple_test_harness in cmake cache
+# FIXME -- this is often wrong as the cmake cache frequently is out of date
 findstfbin() {
     echo $(findbin HARLYN_STF)
 }
@@ -214,8 +215,29 @@ if [ $(expr "$file" : ".*_errors") -gt 0 ]; then
     exit 0
 fi
 
+# delete old outputs so we don't get confused if they're not overwritten
 rm -f $testdir/$name.tfa
+rm -f $testdir/$name.out/tofino.bin
+rm -f $testdir/$name.out/tofino.bin.gz
 run $P4C $P4C_ARGS $file -o $testdir/${name}.out || die
+# FIXME -- p4c should not leave these laying about.  Should also compress tofino.bin?
+rm -f $testdir/$name.out/*.cfg.json
+if ! $run_ptf && [ -r $testdir/$name.out/tofino.bin ]; then
+    if $run_ptf; then
+        true # ptf requires uncompressed binary
+    elif $run_stf; then
+        true # stf can run compressed binaries with recent updates
+        #gzip -f $testdir/$name.out/tofino.bin
+    else
+        #binary not needed
+        rm $testdir/$name.out/tofino.bin
+    fi
+fi
+for f in $testdir/$name.out/*.log; do
+    if [ -r $f ]; then
+        gzip -f $f
+    fi
+done
 
 if [ ! -r $testdir/$name.out/$name.tfa ]; then
     echo >&2 "$P4C did not give an error but did not generate output either"
