@@ -54,6 +54,13 @@ namespace Tofino {
  *
  * It's enforced that the `isValid()` call (if any), the destination field, and
  * the list of source fields all reference the same header instance.
+ * XXX(seth): This doesn't reflect a real hardware restriction - it's just
+ * that ideally, we'd want to generate a warning or an error if the
+ * programmer doesn't check if all the headers involved are valid, and right
+ * now we can't compile that check, so there'd be no way to get rid of the
+ * warning. To make this work, we need to be able to generate a new POV bit
+ * field and MAU or parser code to set it in a way that matches the complex
+ * condition. Once we have that, we should remove this restriction.
  *
  * @param computeChecksumControl  The P4 control which should be analyzed. May
  *                                be null, in which case the original pipe will

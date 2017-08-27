@@ -83,7 +83,7 @@ analyzeComputedChecksumStatement(const IR::AssignmentStatement* assignment,
                   "16-bit field: %1%", destField);
         return boost::none;
     }
-    LOG1("Would write computed checksum to field: " << destField);
+    LOG2("Would write computed checksum to field: " << destField);
 
     // The source of the assignment must be the result of a call to
     // Checksum16's `get()` method.
@@ -116,9 +116,11 @@ analyzeComputedChecksumStatement(const IR::AssignmentStatement* assignment,
     // The get() method's argument must be a list of fields which are part
     // of the same source header as the destination field. These are the
     // fields that will be combined to produce the checksum.
+    // XXX(seth): Long term, we should eliminate this restriction; see the
+    // Doxygen comment for extractComputeChecksum() for discussion.
     auto* sources = new ChecksumSources;
     for (auto* source : sourceList->components) {
-        LOG1("Checksum would include field: " << source);
+        LOG2("Checksum would include field: " << source);
         auto* member = source->to<IR::Member>();
         if (!member || !member->expr->is<IR::HeaderRef>()) {
             ::warning("Expected field: %1%", source);
@@ -138,7 +140,7 @@ analyzeComputedChecksumStatement(const IR::AssignmentStatement* assignment,
         return boost::none;
     }
 
-    LOG1("Validated computed checksum for field: " << destField);
+    LOG2("Validated computed checksum for field: " << destField);
     return ChecksumSourceMap::value_type(destField->toString(), sources);
 }
 
@@ -167,7 +169,7 @@ analyzeComputedChecksumStatement(const IR::IfStatement* ifStatement) {
         }
         sourceHeader = prim->operands[0]->to<IR::HeaderRef>();
     }
-    LOG1("Considering computed checksum for header: " << sourceHeader);
+    LOG2("Considering computed checksum for header: " << sourceHeader);
 
     // The body of the `if` must assign the result to a field in the source
     // header.
@@ -257,7 +259,7 @@ struct SubstituteComputeChecksums : public Transform {
         // The source field of this Emit will get its value from a computed
         // checksum. Replace it with an EmitChecksum that computes that checksum
         // and writes it to the output packet in a single step.
-        LOG1("Substituting computed checksum for emitted value: " << emit);
+        LOG2("Substituting computed checksum for emitted value: " << emit);
         auto* sourceFields = checksums.at(source->toString());
         auto* emitChecksum =
           new IR::Tofino::EmitChecksum(*sourceFields, emit->povBit);
