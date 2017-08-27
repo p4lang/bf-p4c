@@ -101,8 +101,12 @@ extern action_profile {
     action_profile(bit<32> size);
 }
 
-// Get a random number in the range lo..hi
-extern void random(out bit<32> result, in bit<32> lo, in bit<32> hi);
+/// Random number generator
+extern random<T> {
+    random();
+    T get(@optional in T mask);
+}
+
 // If the type T is a named struct, the name is used
 // to generate the control-plane API.
 extern void digest<T>(in bit<32> receiver, in T data);

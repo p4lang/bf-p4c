@@ -42,6 +42,7 @@ static const cstring Counter = "counter";
 static const cstring PACKETS = "packets";
 static const cstring BYTES = "bytes";
 static const cstring PACKETS_AND_BYTES = "packets_and_bytes";
+static const cstring Random = "random";
 }  // namespace P4_14
 
 namespace P4_16 {
@@ -57,6 +58,8 @@ static const cstring PACKETS = "PACKETS";
 static const cstring BYTES = "BYTES";
 static const cstring PACKETS_AND_BYTES = "PACKETS_AND_BYTES";
 static const cstring BIT_OF_COLOR = "bit_of_color";
+static const cstring Random = "random";
+static const cstring RandomExec = "get";
 }  // namespace P4_16
 
 class SimpleSwitchTranslation : public PassManager {

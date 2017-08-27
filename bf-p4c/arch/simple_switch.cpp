@@ -345,6 +345,128 @@ class DoMeterTranslation : public Transform {
     }
 };
 
+using RandomUseMap = std::map<cstring, const IR::Declaration_Instance*>;
+using ActionUseMap = std::map<cstring, cstring>;
+
+class FindRandomUsage : public Inspector {
+    RandomUseMap* randUseMap;
+    ActionUseMap* actionUseMap;
+    set<cstring> unique_names;
+
+ public:
+    FindRandomUsage(RandomUseMap* map, ActionUseMap* actionMap)
+    : randUseMap(map), actionUseMap(actionMap) {
+        CHECK_NULL(map);
+        CHECK_NULL(actionMap);
+        unique_names.insert("random");  // exclude 'random' as instance name
+        setName("FindRandomUsage"); }
+
+    bool preorder(const IR::MethodCallExpression* node) override {
+        auto expr = node->method->to<IR::PathExpression>();
+        if (!expr)
+            return node;
+        if (expr->path->name == Tofino::P4_14::Random) {
+            auto control = findContext<IR::P4Control>();
+
+            // T at index 0
+            auto baseType = node->arguments->at(0);
+            auto typeArgs = new IR::Vector<IR::Type>();
+            typeArgs->push_back(baseType->type);
+            auto randType = new IR::Type_Specialized(new IR::Type_Name(Tofino::P4_16::Random),
+                                                     typeArgs);
+            cstring randName;
+            if (!randUseMap->count(control->name)) {
+                randName = cstring::make_unique(unique_names, "random", '_');
+                unique_names.insert(randName);
+            } else {
+                randName = randUseMap->at(control->name)->name;
+            }
+
+            auto randInst = new IR::Declaration_Instance(randName, randType,
+                                                         new IR::Vector<IR::Expression>());
+            randUseMap->emplace(control->name, randInst);
+
+            auto action = findContext<IR::P4Action>();
+            if (action)
+                actionUseMap->emplace(action->name, randName);
+            else
+                actionUseMap->emplace(control->name, randName);
+        }
+        return false;
+    }
+};
+
+class DoRandomTranslation : public Transform {
+    RandomUseMap* randUseMap;
+    ActionUseMap* actionUseMap;
+
+ public:
+    DoRandomTranslation(RandomUseMap* map, ActionUseMap* actionMap)
+    : randUseMap(map), actionUseMap(actionMap) {
+        CHECK_NULL(map);
+        CHECK_NULL(actionMap);
+        setName("DoRandomTranslation"); }
+
+    const IR::Node* postorder(IR::MethodCallStatement* node) override {
+        auto mc = node->methodCall->to<IR::MethodCallExpression>();
+        if (!mc)
+            return node;
+
+        auto expr = mc->method->to<IR::PathExpression>();
+        if (!expr)
+            return node;
+
+        if (expr->path->name == Tofino::P4_14::Random) {
+            auto dest = mc->arguments->at(0);
+            // ignore lower bound
+            auto hi = mc->arguments->at(2);
+            auto args = new IR::Vector<IR::Expression>();
+            args->push_back(hi);
+
+            cstring randName;
+            auto control = findContext<IR::P4Control>();
+            auto action = findContext<IR::P4Action>();
+            if (action)
+                randName = actionUseMap->at(action->name);
+            else
+                randName = actionUseMap->at(control->name);
+
+            auto method = new IR::PathExpression(randName);
+            auto member = new IR::Member(method, Tofino::P4_16::RandomExec);
+            auto call = new IR::MethodCallExpression(node->srcInfo, member,
+                                                     new IR::Vector<IR::Type>(), args);
+            auto assign = new IR::AssignmentStatement(dest, call);
+            return assign;
+        }
+        return node;
+    }
+
+    const IR::Node* preorder(IR::P4Control* control) override {
+        if (!randUseMap->count(control->name))
+            return control;
+        auto decl = randUseMap->at(control->name);
+        auto controlLocals = new IR::IndexedVector<IR::Declaration>();
+        controlLocals->push_back(decl);
+        controlLocals->append(control->controlLocals);
+        auto result = new IR::P4Control(control->srcInfo, control->name, control->type,
+                                        control->constructorParams, *controlLocals, control->body);
+        return result;
+    }
+};
+
+class RandomTranslation : public PassManager {
+    RandomUseMap map;
+    ActionUseMap actionMap;
+
+ public:
+    RandomTranslation() {
+        addPasses({
+            new FindRandomUsage(&map, &actionMap),
+            new DoRandomTranslation(&map, &actionMap),
+        });
+    }
+};
+
 class TranslationLast : public PassManager {
  public:
     TranslationLast() { setName("TranslationLast"); }
@@ -358,6 +480,7 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(Tofino_Options& options) {
         new RemoveUserArchitecture(&structure, &options),
         new DoCounterTranslation(),
         new DoMeterTranslation(&refMap, &typeMap),
+        new RandomTranslation(),
         new AppendSystemArchitecture(&structure),
         new TranslationLast(),
         new P4::ClearTypeMap(&typeMap),
