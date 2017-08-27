@@ -337,6 +337,7 @@ add_dependencies(p4c_driver linktofino)
 
 # # Tofino-specific GTests.
 set (GTEST_TOFINO_SOURCES
+  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/checksum.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/tofino_write_context.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/tofino_gtest_utils.cpp
