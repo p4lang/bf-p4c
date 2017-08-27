@@ -67,10 +67,6 @@ bool Phv_Parde_Mau_Use::preorder(const IR::Expression *e) {
 
 bool Phv_Parde_Mau_Use::is_referenced(const PhvInfo::Field *f) const {      // use in mau or parde
     assert(f);
-    if (f->referenced) {
-        // SetReferenced pass sets the referenced flag
-        return true;
-    }
     if (f->bridged) {
         // bridge metadata
         return true;

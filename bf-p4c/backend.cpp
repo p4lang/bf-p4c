@@ -270,7 +270,6 @@ class TableAllocPass : public PassManager {
                 new CheckTableNameDuplicate,
                 &defuse,
                 new ElimUnused(phv, defuse),
-                new PhvInfo::SetReferenced(phv),
                 &mutex,
                 new TableSummary} );
 
@@ -316,7 +315,6 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
         new CollectPhvInfo(phv),
         &defuse,
         new ElimUnused(phv, defuse),  // ElimUnused may have eliminated all references to a field
-        new PhvInfo::SetReferenced(phv),  // ElimUnused can cause field unreferenced
         new DumpPipe("Before phv_analysis"),
         &phv_analysis,                 // phv analysis after last CollectPhvInfo pass
         new TableAllocPass(phv, defuse, deps),
@@ -328,7 +326,6 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
         new SplitBigStates(phv),  // depends on SplitPhvUse
         new DumpPipe("Final table graph"),
         new CheckTableNameDuplicate,
-        new PhvInfo::SetReferenced(phv),
         new AsmOutput(phv, options.outputFile)
     };
     backend.setName("Tofino backend");

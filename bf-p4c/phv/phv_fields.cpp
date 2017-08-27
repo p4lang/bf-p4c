@@ -9,33 +9,6 @@
 //
 //***********************************************************************************
 //
-// PhvInfo::SetReferenced preorder
-//
-//***********************************************************************************
-//
-
-bool PhvInfo::SetReferenced::preorder(const IR::Expression *e) {
-    if (auto *field = self.field(e)) {
-        field->referenced = true;
-        if (auto *povbit = self.field(field->header() + ".$valid"))
-            povbit->referenced = true;
-        return false;
-    } else if (e->is<IR::Member>()) {  // prevent descent into IR::Member objects
-        return false;
-    }
-    // IR::HeaderRef objects
-    if (auto *hr = e->to<IR::HeaderRef>()) {
-        for (auto id : self.struct_info(hr).field_ids())
-            self.field(id)->referenced = true;
-        if (auto *povbit = self.field(hr->toString() + ".$valid"))
-            povbit->referenced = true;
-        return false; }
-    return true;
-}
-
-//
-//***********************************************************************************
-//
 // PhvInfo member functions
 //
 //***********************************************************************************
@@ -988,7 +961,6 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field &field) {
         out << ':' << field.phv_use_lo() << ".." << field.phv_use_hi();
     out << '>';
     out << (field.gress ? " E" : " I") << " off=" << field.offset;
-    if (field.referenced) out << " ref";
     if (field.bridged) out << " bridge";
     if (field.metadata) out << " meta";
     if (field.mirror_field_list.member_field)

@@ -50,20 +50,6 @@ class Slice;
  */
 class PhvInfo {
  public:
-    /** @brief For each field `f` in an expression, set the "referenced" member
-     * of the Field struct for `f` and for the Field struct of `f`'s "valid"
-     * bit.
-     */
-    class SetReferenced : public Inspector {
-        PhvInfo &self;
-        bool preorder(const IR::Expression *e) override;
-        profile_t init_apply(const IR::Node *root) override {
-            for (auto &field : self) field.referenced = false;
-            return Inspector::init_apply(root); }
-     public:
-        explicit SetReferenced(PhvInfo &phv) : self(phv) {}
-    };
-
     class Field {
      public:
         /** Field name, following this scheme:
@@ -80,8 +66,6 @@ class PhvInfo {
         int             size;
         /// Offset of lsb from lsb (last) bit of containing header.
         int             offset;
-        /// True if this Field is ever read.
-        bool            referenced;
         /// True if this Field is metadata.
         bool            metadata;
         bool            bridged = false;

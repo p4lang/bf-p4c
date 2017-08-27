@@ -22,6 +22,7 @@ limitations under the License.
 #include "lib/cstring.h"
 #include "ir/ir.h"
 #include "tofino/phv/phv.h"
+#include "tofino/phv/phv_parde_mau_use.h"
 #include "tofino/phv/validate_allocation.h"
 
 // Currently we fail a lot of these checks, so to prevent mass XFAIL'ing a lot
@@ -45,10 +46,14 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe* pipe) {
         PHV::Container::ingressOnly(), PHV::Container::egressOnly()
     };
 
+    // Collect information about which fields are referenced in the program.
+    Phv_Parde_Mau_Use uses(phv);
+    pipe->apply(uses);
+
     // Check that every bit in each field is allocated without overlap, and
     // collect information that we'll use to check container properties.
     for (auto& field : phv) {
-        if (!field.referenced) {
+        if (!uses.is_referenced(&field)) {
             WARN_CHECK(field.alloc_i.empty(),
                         "PHV allocation for unreferenced %1%field %2% (width %3%)",
                         field.bridged ? "bridged " : "",
