@@ -1,39 +1,79 @@
 # p4_tests
 
-This is the common repository for Glass and Brig compiler Testcases.  
-It includes two sub directories p4_14 and p4_16  
+This is the common repository for Glass and Brig compiler Testcases.
+It includes two sub directories p4_14 and p4_16
 
-How to Run tests:  
+How to Run tests:
 =================
 
-For Glass  
-==========
-1)Get p4c-tofino for glass compiler  
-   git clone git@github.com:barefootnetworks/p4c-tofino.git  
-2)Get the p4_tests  
-   git clone git@github.com:barefootnetworks/p4_tests  
-3)Start all the testcases  
-   autoreconf --install  
-   ./configure  
-   make -j8 check  
-   
-For Brig  
-==========
-1)Get and do make for barefoot repo tofino-asm, model, p4l-bmv2, p4l-p4c-bmv2  
-2)Get p4c from p4lang, create extensions directory inside p4c and get p4c-extension-tofino and p4_tests  
-   mkdir extensions  
-   cd extensions  
-   git clone git@github.com:barefootnetworks/p4c-extension-tofino.git tofino  
-   git clone git@github.com:barefootnetworks/p4_tests  
-   
-   cd $WORKSPACE/p4c  
-   ./bootstrap.sh  
- 3)Compile and run testcases  
-    cd build  
-    make -j8  
-    make -j8 check  
+  1) Run bootstrap_bfn_env.sh to install all dependencies.
 
-If this last step gives you the error "/usr/bin/make: Argument list too long", you can run tests by running "make -j8 test-suite.log"
+  2) Run bootstrap_bfn_compilers.sh to pull in submodules and bootstrap the
+  compiler.
+
+  3) Compile and run testcases
+
+    cd build
+    make -j8
+    make -j8 check
+
+Running PTF tests:
+==================
+
+All PTF tests are tagged with the 'ptf' label. Therefore, to run all PTF tests:
+
+    cd build/p4c
+    ctest -V -L ptf
+
+To run the PTF tests for a specific P4 program, use the '-R' option, with the
+name of your P4 program. For example:
+
+    cd build/p4c
+    ctest -V -L ptf -R easy_ternary
+
+Debugging a PTF test:
+=====================
+
+When you run a PTF test with `ctest`, log files are preserved in case of
+failure. Look at the test output for a message like this one:
+```
+Error when running PTF tests
+See logfiles under /tmp/easy_ternaryCB3hwv
+```
+Under that temporary directory you will find:
+  - the model console output
+  - the bf-drivers logs
+  - the bf_switchd console output
+  - the PTF logs
+
+In some cases, these logs are not enough and you want to have more control over
+the execution of a PTF test. In this case, you can run the test in "3-window
+mode", using a separate terminal window for the model, bf_switchd and PTF.
+Assuming the required binaries (tofino-model, bf_switchd, PTF) are in your PATH,
+you can run the following commands. Note that bootstrap_bfn_env.sh installs the
+binaries under /usr/local, so these binaries should be in your PATH by
+default. We use `$P4C_OUTPUT` to refer to the directory containing the compiler
+outputs for the P4 program. In general, `$P4C_OUTPUT` corresponds to
+`build/p4c/tofino/extensions/p4_tests/p4_<version>/<prog_name>.out`. We use
+`$PTF_DIR` for the directory containing the PTF tests for your P4 program. In
+general, `$PTF_DIR` corresponds to `p4-tests/p4_<version>/<prog_name>.ptf`.
+
+  1) Starting the Tofino model
+
+    sudo tofino-model -l $P4C_OUTPUT/p4_name_lookup.json
+
+  2) Starting bf_switchd
+
+    sudo bf_switchd --install-dir /tmp --conf-file p4-tests/dummy.conf --skip-p4
+
+  3) Pushing P4 config to model / drivers and running PTF tests
+
+    ./p4-tests/ptf_runner.py --testdir $P4C_OUTPUT/ --name <prog_name> --update-config-only
+    sudo ./p4-tests/ptf_runner.py --testdir $P4C_OUTPUT/ --name <prog_name> --ptfdir $PTF_DIR --test-only
+
+Often you may need to run bf_switchd in GDB. Because of the P4Runtime gRPC
+server, you will need to ignore `SIG36` by typing `handle SIG36 noprint nostop`
+at the GDB prompt.
 
 Adding a P4 test program:
 =========================

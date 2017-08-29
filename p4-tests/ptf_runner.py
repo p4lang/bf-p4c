@@ -28,14 +28,19 @@ def get_parser():
     parser.add_argument('--name', help='Name of P4 program under test',
                         type=str, action='store', required=True)
     parser.add_argument('--ptfdir', help='Directory containing PTF tests',
-                        type=str, action="store", required=True)
+                        type=str, action="store", required=False)
     parser.add_argument('--top-builddir', help='Build directory root',
-                        type=str, action="store", required=True)
+                        type=str, action="store", required=False)
     parser.add_argument('--grpc-addr', help='Address to use to connect to '
                         'P4Runtime gRPC server',
                         type=str, action="store",
                         default='localhost:50051')
     parser.add_argument('--keep-logs', help='Keep logs even if test passes',
+                        action='store_true', default=False)
+    parser.add_argument('--update-config-only',
+                        help='Only push the config to bf_switchd',
+                        action='store_true', default=False)
+    parser.add_argument('--test-only', help='Only run the PTF tests',
                         action='store_true', default=False)
     return parser
 
@@ -78,7 +83,7 @@ def findbin(cmake_dir, varname):
     return m.group(1)
 
 def update_config(name, grpc_addr, p4info_path, tofino_bin_path, cxt_json_path):
-    channel = grpc.insecure_channel('localhost:50051')
+    channel = grpc.insecure_channel(grpc_addr)
     stub = p4runtime_pb2.P4RuntimeStub(channel)
 
     print "Sending P4 config"
@@ -207,17 +212,22 @@ def sanitize_args(args):
     if os.path.split(args.name)[1] != args.name:
         print >> sys.stderr, "Invalid 'name' argument in PTF runner"
         sys.exit(1)
+    if args.test_only and args.update_config_only:
+        print >> sys.stderr, "Cannot use --test-only and --update-config-only"
+        sys.exit(1)
+    if (not args.update_config_only) and (args.ptfdir is None):
+        print >> sys.stderr, "Missing --ptfdir"
+        sys.exit(1)
+    if args.top_builddir is not None and not os.path.exists(args.top_builddir):
+        print >> sys.stderr, "Invalid --top-builddir"
+        sys.exit(1)
 
 def main():
     args = get_parser().parse_args()
 
     sanitize_args(args)
 
-    PTF = findbin(args.top_builddir, 'PTF')
-    BF_SWITCHD = findbin(args.top_builddir, 'BF_SWITCHD')
-    HARLYN_MODEL = findbin(args.top_builddir, 'HARLYN_MODEL')
-
-    compiler_out_dir = os.path.join(args.testdir, '{}.out'.format(args.name))
+    compiler_out_dir = args.testdir
 
     p4info_path = os.path.join(compiler_out_dir, 'p4info.proto.txt')
     if not os.path.exists(p4info_path):
@@ -238,6 +248,37 @@ def main():
     if not os.path.exists(lookup_json_path):
         print >> sys.stderr, "Name lookup json", lookup_json_path,
         print >> sys.stderr, "not found; debugging will be harder"
+
+    if args.update_config_only:
+        success = update_config(args.name, args.grpc_addr,
+                                p4info_path, tofino_bin_path, cxt_json_path)
+        if not success:
+            print >> sys.stderr, "Error when pushing P4 config to switchd"
+            return 1
+        return 0
+
+    if args.top_builddir is None:
+        top_builddir = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            os.pardir,
+            'build')
+        if not os.path.exists(top_builddir):
+            print >> sys.stderr, "Please provide --top-builddir"
+            return 1
+    else:
+        top_builddir = args.top_builddir
+
+    PTF = findbin(top_builddir, 'PTF')
+
+    if args.test_only:
+        success = run_ptf_tests(PTF, args.ptfdir, p4info_path)
+        if not success:
+            print >> sys.stderr, "Error when running PTF tests"
+            return 1
+        return 0
+
+    BF_SWITCHD = findbin(top_builddir, 'BF_SWITCHD')
+    HARLYN_MODEL = findbin(top_builddir, 'HARLYN_MODEL')
 
     check_and_add_ifaces()
 
