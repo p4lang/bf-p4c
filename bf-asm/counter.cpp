@@ -86,7 +86,7 @@ template<class REGS> void CounterTable::write_merge_regs(REGS &regs, MatchTable 
     //    merge.mau_stats_adr_per_entry_en_mux_ctl[type][bus] = per_flow_enable_bit;
 
     unsigned stats_adr_default = 0;
-    unsigned stats_adr_mask = (1U <<  STAT_ADDRESS_BITS) - 1;
+    unsigned stats_adr_mask = ((1U <<  STAT_ADDRESS_BITS) - 1) & ~counter_masks[format->groups()];
     unsigned pfe = per_flow_enable_bit;
     if (per_flow_enable) {
         stats_adr_mask = ((1U <<  address_bits) - 1) << (counter_shifts[format->groups()]);
