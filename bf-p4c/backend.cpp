@@ -15,16 +15,7 @@ limitations under the License.
 */
 
 #include "backend.h"
-
-#include <stdio.h>
-#include <iostream>
 #include <fstream>
-#include <string>
-#include "ir/ir.h"
-#include "ir/dbprint.h"
-#include "lib/log.h"
-#include "frontends/p4-14/typecheck.h"
-#include "tofinoOptions.h"
 #include "tofino/common/copy_header_eliminator.h"
 #include "tofino/common/extract_maupipe.h"
 #include "tofino/common/elim_unused.h"
@@ -32,6 +23,7 @@ limitations under the License.
 #include "tofino/common/header_stack.h"
 #include "tofino/common/live_at_entry.h"
 #include "tofino/common/live_range_overlay.h"
+#include "tofino/common/parser_overlay.h"
 #include "tofino/common/metadata_constant_propagation.h"
 #include "tofino/mau/asm_output.h"
 #include "tofino/mau/empty_controls.h"
@@ -66,7 +58,6 @@ limitations under the License.
 #include "tofino/phv/phv_analysis_validate.h"
 #include "tofino/phv/phv_assignment_validate.h"
 #include "tofino/phv/validate_allocation.h"
-#include "tofino/common/parser_overlay.h"
 
 namespace Tofino {
 
@@ -105,89 +96,195 @@ static void debug_hook(const char *, unsigned, const char *pass, const IR::Node 
     LOG4(pass << ": " << std::endl << *n << std::endl);
 }
 
-void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
-    PhvInfo phv;
+class AsmOutput : public Inspector {
+ private:
+    std::ostream* out = nullptr;
+    const PhvInfo &phv;
+
+ public:
+    AsmOutput(const PhvInfo &phv, cstring outputFile) : phv(phv) {
+        out = &std::cout;
+        if (outputFile)
+            out = new std::ofstream(outputFile); }
+
+    bool preorder(const IR::Tofino::Pipe* pipe) override {
+       MauAsmOutput mauasm(phv);
+       pipe->apply(mauasm);
+
+       if (ErrorReporter::instance.getErrorCount() > 0)
+           return false;
+
+       *out << "version: 1.0.0" << std::endl
+            << PhvAsmOutput(phv)
+            << ParserAsmOutput(pipe, phv, INGRESS)
+            << DeparserAsmOutput(pipe, phv, INGRESS)
+            << ParserAsmOutput(pipe, phv, EGRESS)
+            << DeparserAsmOutput(pipe, phv, EGRESS)
+            << mauasm
+            << std::flush;
+
+       return false; }
+};
+
+class PHV_AnalysisPass : public PassManager {
+ private:
+    const Tofino_Options      &options;
+    PhvInfo                   &phv;
+    PhvUse                    &uses;
+    FieldDefUse               &defuse;
+    DependencyGraph           &deps;
+
+ private:
     SymBitMatrix mutually_exclusive_field_ids;
-    PhvUse uses(phv);                                            // is field used in mau, parde
-    Cluster cluster(phv, uses);                                  // cluster analysis
-    Cluster_PHV_Requirements cluster_phv_req(cluster);           // cluster PHV requirements
-    PHV_Field_Operations phv_field_ops(phv);                     // field operation analysis
-    PHV_Interference cluster_phv_interference(cluster_phv_req, mutually_exclusive_field_ids);
-                                                                 // intra-cluster PHV Interference
-                                                                 // Graph
-    PHV_MAU_Group_Assignments cluster_phv_mau(cluster_phv_req);  // cluster PHV Container placements
-    Cluster_Slicing cluster_slicing(cluster_phv_mau);            // cluster slicing
-    Cluster_PHV_Overlay cluster_phv_overlay(cluster_phv_mau, cluster_phv_interference);
-                                                                 // overlay clusters to MAU groups
-                                                                 // need cluster_phv_interference
-                                                                 // func mutually_exclusive(f1, f2)
-    PHV_Analysis_Validate phv_analysis_validate(phv, cluster_phv_mau);
-                                                                 // phv_analysis validation
-    PHV_Assignment_Validate phv_assignment_validate(phv);        // phv_assignment validation
-    PHV_Bind phv_bind(phv, uses, cluster_phv_mau);               // field binding to PHV Containers
-    DependencyGraph deps;
-    TablesMutuallyExclusive mutex;
-    FieldDefUse defuse(phv);
-    TableSummary summary;
-    MauAsmOutput mauasm(phv);
-    Visitor *phv_alloc;
-    ParserOverlay parserOverlay(phv, mutually_exclusive_field_ids);
-    LiveRangeOverlay liveRangeOverlay(phv, deps, defuse, mutually_exclusive_field_ids);
-    LayoutChoices lc;
+    Cluster cluster;                            // cluster analysis
+    Cluster_PHV_Requirements cluster_phv_req;   // cluster PHV requirements
+    PHV_Interference cluster_phv_interference;  // intra-cluster PHV Interference Graph
+    PHV_MAU_Group_Assignments cluster_phv_mau;  // cluster PHV Container placements
 
-    if (options.trivial_phvalloc) {
-        phv_alloc = new PHV::TrivialAlloc(phv);
-    } else {
-        phv_alloc = new PassManager({
-            //
-            // &cluster_phv_mau,       // cluster PHV container placements
-                                       // second cut PHV MAU Group assignments
-                                       // honor single write conflicts from Table Placement
-            &uses,                     // use of field in mau, parde
-            &phv_bind,                 // fields bound to PHV containers
-                                       // later passes assume that phv alloc info
-                                       // is sorted in field bit order, msb first
-                                       // sorting done by phv_bind
-            &phv_assignment_validate,  // phv assignment results validation
-        });
-    }
+ public:
+    PHV_MAU_Group_Assignments& group_assignments() { return cluster_phv_mau; }
 
-    PassManager *phv_analysis = new PassManager({
-        &uses,                 // use of field in mau, parde
-        &cluster,              // cluster analysis
-        &parserOverlay,        // produce pairs of mutually exclusive header
-                               // fields, eg. (arpSrc, ipSrc)
-
-        new FindDependencyGraph(phv, deps),
-                               // refresh dependency graph for live range
-                               // analysis
-        &defuse,               // refresh defuse
-        &liveRangeOverlay,     // produce pairs of fields that are never live
-                               // in the same stage
-
-        &phv_field_ops,        // PHV field operations analysis
-        &cluster_phv_req,      // cluster PHV requirements analysis
-        options.phv_interference?
-            &cluster_phv_interference: nullptr,
+ public:
+    PHV_AnalysisPass(const Tofino_Options &options, PhvInfo &phv, PhvUse &uses,
+                     FieldDefUse &defuse, DependencyGraph &deps) :
+        options(options),
+        phv(phv),
+        uses(uses),
+        defuse(defuse),
+        deps(deps),
+        //
+        cluster(phv, uses),
+        cluster_phv_req(cluster),
+        cluster_phv_interference(cluster_phv_req, mutually_exclusive_field_ids),
+        cluster_phv_mau(cluster_phv_req) {
+            addPasses({
+                &uses,                 // use of field in mau, parde
+                &cluster,              // cluster analysis
+                new ParserOverlay(phv, mutually_exclusive_field_ids),
+                                       // produce pairs of mutually exclusive header
+                                       // fields, eg. (arpSrc, ipSrc)
+                new FindDependencyGraph(phv, deps),
+                                       // refresh dependency graph for live range
+                                       // analysis
+                &defuse,               // refresh defuse
+                new LiveRangeOverlay(phv, deps, defuse, mutually_exclusive_field_ids),
+                                       // produce pairs of fields that are never live
+                                       // in the same stage
+                new PHV_Field_Operations(phv),  // PHV field operations analysis
+                &cluster_phv_req,      // cluster PHV requirements analysis
+                options.phv_interference?
+                    &cluster_phv_interference: nullptr,
                                        // cluster PHV interference graph analysis
-        &cluster_phv_mau,              // cluster PHV container placements
+                &cluster_phv_mau,      // cluster PHV container placements
                                        // first cut PHV MAU Group assignments
                                        // produces cohabit fields for Table Placement
-        options.phv_slicing?
-            &cluster_slicing: nullptr,
+                options.phv_slicing?
+                    new Cluster_Slicing(cluster_phv_mau): nullptr,
                                        // slice clusters into smaller clusters
                                        // attempt packing with reduced width requirements
                                        // slicing improves overlay possibilities due to less width
                                        // although number & mutual exclusion of fields don't change
-        options.phv_slicing?
-            &cluster_slicing: nullptr,
+                options.phv_slicing?
+                    new Cluster_Slicing(cluster_phv_mau): nullptr,
                                        // repeat once more: unallocated clusters sliced further
                                        // further improves chances of packing and/or overlay
-        options.phv_overlay?
-            &cluster_phv_overlay: nullptr,
+                options.phv_overlay?
+                    new Cluster_PHV_Overlay(cluster_phv_mau, cluster_phv_interference): nullptr,
+                                       // overlay clusters to MAU groups
+                                       // need cluster_phv_interference
+                                       // func mutually_exclusive(f1, f2)
                                        // overlay unallocated clusters to clusters & MAU groups
-        &phv_analysis_validate,        // phv analysis results validation
-    });
+                new PHV_Analysis_Validate(phv, cluster_phv_mau)  // phv analysis results validation
+            });
+
+            setName("PHV Analysis");
+    }
+};
+
+class PHV_AllocPass : public PassManager {
+ private:
+    const Tofino_Options      &options;
+    PhvInfo                   &phv;
+    PhvUse                    &uses;
+    PHV_MAU_Group_Assignments &cluster_phv_mau;
+
+ public:
+    PHV_AllocPass(const Tofino_Options &options, PhvInfo &phv, PhvUse &uses,
+                  PHV_MAU_Group_Assignments &cluster_phv_mau) :
+        options(options), phv(phv), uses(uses), cluster_phv_mau(cluster_phv_mau) {
+            if (options.trivial_phvalloc) {
+                addPasses({
+                    new PHV::TrivialAlloc(phv)});
+            } else {
+                addPasses({
+                    //
+                    // &cluster_phv_mau,       // cluster PHV container placements
+                                               // second cut PHV MAU Group assignments
+                                               // honor single write conflicts from Table Placement
+                    &uses,                     // use of field in mau, parde
+                    new PHV_Bind(phv, uses, cluster_phv_mau),
+                                               // fields bound to PHV containers
+                                               // later passes assume that phv alloc info
+                                               // is sorted in field bit order, msb first
+                                               // sorting done by phv_bind
+                    new PHV_Assignment_Validate(phv)});  // phv assignment results validation
+            }
+            passes.push_back(new PHV::ValidateAllocation(phv));
+            setName("PHV Alloc");
+        }
+
+    void end_apply() override {
+        if (Log::verbose())
+            std::cout << phv; }
+};
+
+class TableAllocPass : public PassManager {
+ private:
+    PhvInfo                 &phv;
+    FieldDefUse             &defuse;
+    DependencyGraph         &deps;
+
+ private:
+    TablesMutuallyExclusive mutex;
+    LayoutChoices           lc;
+
+ public:
+    TableAllocPass(PhvInfo& phv, FieldDefUse &defuse, DependencyGraph &deps) :
+        phv(phv), defuse(defuse), deps(deps) {
+            addPasses({
+                new GatewayOpt(phv),   // must be before TableLayout?  or just TablePlacement?
+                new TableLayout(phv, lc),
+                new TableFindSeqDependencies,
+                new FindDependencyGraph(phv, deps),
+                new SpreadGatewayAcrossSeq,
+                new CheckTableNameDuplicate,
+                new TableFindSeqDependencies,
+                new CheckTableNameDuplicate,
+                new FindDependencyGraph(phv, deps),
+                &mutex,
+                new SharedActionProfileAnalysis(mutex),
+                new DumpPipe("Before TablePlacement"),
+                new TablePlacement(&deps, mutex, phv, lc),
+                new CheckTableNameDuplicate,
+                new TableFindSeqDependencies,  // not needed?
+                new CheckTableNameDuplicate,
+                &defuse,
+                new ElimUnused(phv, defuse),
+                new PhvInfo::SetReferenced(phv),
+                &mutex,
+                new TableSummary} );
+
+                setName("Table Alloc");
+            }
+};
+
+void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
+    PhvInfo phv;
+    PhvUse uses(phv);
+    DependencyGraph deps;
+    FieldDefUse defuse(phv);
+    PHV_AnalysisPass phv_analysis(options, phv, uses, defuse, deps);
+    PHV_AllocPass phv_alloc(options, phv, uses, phv_analysis.group_assignments());
 
     PassManager backend = {
         new DumpPipe("Initial table graph"),
@@ -221,34 +318,10 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
         new ElimUnused(phv, defuse),  // ElimUnused may have eliminated all references to a field
         new PhvInfo::SetReferenced(phv),  // ElimUnused can cause field unreferenced
         new DumpPipe("Before phv_analysis"),
-        phv_analysis,               // phv analysis after last CollectPhvInfo pass
-        new GatewayOpt(phv),   // must be before TableLayout?  or just TablePlacement?
-        new TableLayout(phv, lc),
-        new TableFindSeqDependencies,
-        new FindDependencyGraph(phv, deps),
-        Log::verbose() ? new VisitFunctor([&deps]() { std::cout << deps; }) : nullptr,
-        new SpreadGatewayAcrossSeq,
-        new CheckTableNameDuplicate,
-        new TableFindSeqDependencies,
-        new CheckTableNameDuplicate,
-        new FindDependencyGraph(phv, deps),
-        &mutex,
-        new SharedActionProfileAnalysis(mutex),
-        new DumpPipe("Before TablePlacement"),
-        new TablePlacement(&deps, mutex, phv, lc),
-        new CheckTableNameDuplicate,
-        new TableFindSeqDependencies,  // not needed?
-        new CheckTableNameDuplicate,
-        &defuse,
-        new ElimUnused(phv, defuse),
-        new PhvInfo::SetReferenced(phv),
-        &mutex,
-        &summary,
-        Log::verbose() ? new VisitFunctor([&summary]() { std::cout << summary; }) : nullptr,
+        &phv_analysis,                 // phv analysis after last CollectPhvInfo pass
+        new TableAllocPass(phv, defuse, deps),
         new DumpPipe("Before phv_alloc/bind"),
-        phv_alloc,                   // phv assignment / binding
-        Log::verbose() ? new VisitFunctor([&phv]() { std::cout << phv; }) : nullptr,
-        new PHV::ValidateAllocation(phv),
+        &phv_alloc,                 // phv assignment / binding
         new IXBarRealign(phv),
         new TotalInstructionAdjustment(phv),
         new SplitPhvUse(phv),
@@ -256,25 +329,12 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
         new DumpPipe("Final table graph"),
         new CheckTableNameDuplicate,
         new PhvInfo::SetReferenced(phv),
-        &mauasm
+        new AsmOutput(phv, options.outputFile)
     };
     backend.setName("Tofino backend");
     if (LOGGING(4))
         backend.addDebugHook(debug_hook);
     maupipe = maupipe->apply(backend);
-
-    if (ErrorReporter::instance.getErrorCount() > 0)
-        return;
-    std::ostream *out = &std::cout;
-    if (options.outputFile)
-        out = new std::ofstream(options.outputFile);
-    *out << "version: 1.0.0" << std::endl
-         << PhvAsmOutput(phv)
-         << ParserAsmOutput(maupipe, phv, INGRESS)
-         << DeparserAsmOutput(maupipe, phv, INGRESS)
-         << ParserAsmOutput(maupipe, phv, EGRESS)
-         << DeparserAsmOutput(maupipe, phv, EGRESS)
-         << mauasm << std::flush;
 }
 
 }  // namespace Tofino

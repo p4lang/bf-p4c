@@ -10,9 +10,12 @@
 class PhvInfo;
 
 class MauAsmOutput : public MauInspector {
+ protected:
     const PhvInfo       &phv;
-    DefaultNext         default_next;
     const IR::Tofino::Pipe *pipe;
+
+ private:
+    DefaultNext         default_next;
     std::map<std::pair<gress_t, int>, std::vector<const IR::MAU::Table *>>      by_stage;
     profile_t init_apply(const IR::Node *root) override {
         root->apply(default_next);
