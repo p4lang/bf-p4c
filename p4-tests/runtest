@@ -187,13 +187,21 @@ else
     fi
 fi
 
-if $run_ptf && [ -d ${file%.p4}.ptf ]; then
+ptftestdir=${file%.p4}.ptf
+# check for the ptf test dir in both the same directory as the
+# test (manually written tests), or in the $testdir/${name}.ptf where
+# we generated one from stf
+if [ ! -d ${ptftestdir} ]; then
+    ptftestdir=${testdir}/${name}.ptf
+fi
+if $run_ptf ; then
     p4runtime_out=$testdir/${name}.out/p4info.proto.txt
     P4C_ARGS="$P4C_ARGS --p4runtime-file $p4runtime_out --p4runtime-format text"
     # TODO(unknown): remove when -N (new context JSON format) becomes the
     # default
     P4C_ARGS="$P4C_ARGS -Xassembler '-N'"
     P4C_ARGS="$P4C_ARGS -DCPU_PORT=320"
+    run_stf=false
 fi
 
 if [ ! -x $P4C ]; then
@@ -262,18 +270,29 @@ if $run_stf && [ -r ${file%.p4}.stf ]; then
         || die
 fi
 
-if $run_ptf && [ -d ${file%.p4}.ptf ]; then
+if $run_ptf ; then
     PTF_RUNNER=$(findbin HARLYN_PTF_DRIVER_WRAPPER)
-    PTF_CMD="$PTF_RUNNER --testdir $testdir/$name.out --name $name \
-        --ptfdir ${file%.p4}.ptf --top-builddir $(findcmakecache)"
-    if $verbose; then
-        echo $PTF_CMD
+    if [ -d ${ptftestdir} ]; then
+        PTF_CMD="$PTF_RUNNER --testdir $testdir/$name.out --name $name \
+                --ptfdir ${ptftestdir} --top-builddir $(findcmakecache)"
+    elif [ $ENABLE_STF2PTF && -r ${file%.p4}.stf ]; then
+        mydir=$(dirname $0)
+        export PYTHONPATH=${PYTHONPATH}:${mydir}/tools/stf
+        if [[ "$file" =~ ^/ ]]; then
+            stftest=${file%.p4}.stf
+        else
+            stftest=`pwd`/${file%.p4}.stf
+        fi
+        PTF_CMD="$PTF_RUNNER --testdir $testdir --name $name \
+                --stftest ${stftest} \
+                --ptfdir ${mydir}/tools/stf --top-builddir $(findcmakecache)"
     fi
-    $PTF_CMD
-    if [ $? -ne 0 ]; then
-        exit 1
-    fi
+    run $PTF_CMD
 fi
+
+# cleanup
+rm -f $testdir/$name.out/tofino.bin
+rm -f $testdir/$name.out/*.json
 
 if [[ " $IFAIL_TESTS " =~ " $testdir/$name.p4.test " ]]; then
     echo "intermittent test PASSED"

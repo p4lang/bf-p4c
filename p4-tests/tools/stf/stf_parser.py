@@ -11,16 +11,20 @@ from stf_lexer import STFLexer
 
 # statement : ADD qualified_name priority match_list action [= ID]
 #           | ADD qualified_name match_list action [= ID]
+#           | REMOVE [ALL | entry]
 #           | CHECK_COUNTER ID(id_or_index) [count_type logical_cond number]
 #           | EXPECT port expect_data
 #           | EXPECT port
+#           | NO_PACKET
 #           | PACKET port packet_data
 #           | SETDEFAULT qualified_name action
 #           | WAIT
 #
 # match_list : match
 #            | match_list match
-# match : qualified_name COLON number
+# match : qualified_name COLON number_or_lpm
+# number_or_lpm: number SLASH number
+#              | number
 # number : INT_CONST_DEC
 #        | INT_CONST_BIN
 #        | INT_CONST_HEX
@@ -163,6 +167,12 @@ class STFParser:
         'statement : ADD qualified_name priority match_list action EQUAL ID'
         p[0] = (p[1].lower(), p[2], p[3], p[4], p[5], p[7])
 
+    # remove all entries.
+    # \TODO: removal of individual entries
+    def p_statement_remove(self, p):
+        'statement : REMOVE ALL'
+        p[0] = (p[1].lower(), p[2])
+
     def p_statement_check_counter(self, p):
         'statement : CHECK_COUNTER ID LPAREN id_or_index RPAREN'
         p[0] = (p[1].lower(), p[2], p[4], (None, '==', 0))
@@ -178,6 +188,10 @@ class STFParser:
     def p_statement_expect_data(self, p):
         'statement : EXPECT port expect_data'
         p[0] = (p[1].lower(), p[2], ''.join(p[3]))
+
+    def p_statement_no_packet(self, p):
+        'statement : NO_PACKET'
+        p[0] = ('expect', None, None)
 
     def p_statement_packet(self, p):
         'statement : PACKET port packet_data'
@@ -222,7 +236,7 @@ class STFParser:
         p[0] = p[1] + [p[2]]
 
     def p_match(self, p):
-        'match : qualified_name COLON number'
+        'match : qualified_name COLON number_or_lpm'
         p[0] = (p[1], p[3])
 
     def p_qualified_name_one(self, p):
@@ -259,6 +273,14 @@ class STFParser:
 
     def p_priority(self, p):
         'priority : INT_CONST_DEC'
+        p[0] = p[1]
+
+    def p_lpm(self, p):
+        'number_or_lpm : number SLASH number'
+        p[0] = (p[1], p[3])
+
+    def p_number_or_lpm(self, p):
+        'number_or_lpm : number'
         p[0] = p[1]
 
     def p_number(self, p):

@@ -31,6 +31,8 @@ def get_parser():
                         type=str, action="store", required=False)
     parser.add_argument('--top-builddir', help='Build directory root',
                         type=str, action="store", required=False)
+    parser.add_argument('--stftest', help='STF file',
+                        type=str, action="store", default=None)
     parser.add_argument('--grpc-addr', help='Address to use to connect to '
                         'P4Runtime gRPC server',
                         type=str, action="store",
@@ -44,7 +46,7 @@ def get_parser():
                         action='store_true', default=False)
     return parser
 
-NUM_IFACES = 4
+NUM_IFACES = 8
 
 def check_and_add_ifaces():
     ifconfig_out = subprocess.check_output(['ifconfig'])
@@ -64,7 +66,7 @@ def check_and_add_ifaces():
     veth_setup_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                    'tools', 'veth_setup.sh')
     try:
-        subprocess.check_call([veth_setup_path])
+        subprocess.check_call([veth_setup_path, str((NUM_IFACES + 1) * 2)])
     except subprocess.CalledProcessError:
         print >> sys.stderr, "Failed to create veth interfaces"
         sys.exit(1)
@@ -114,18 +116,23 @@ def update_config(name, grpc_addr, p4info_path, tofino_bin_path, cxt_json_path):
         return False
     return True
 
-def run_ptf_tests(PTF, ptfdir, p4info_path, extra_args=[]):
+def run_ptf_tests(PTF, ptfdir, p4info_path, stftest, extra_args=[]):
     ifaces = []
     # find base_test.py
     os.environ['PYTHONPATH'] = os.path.dirname(os.path.abspath(__file__))
     for i in xrange(NUM_IFACES):
-        iface_idx = i + 1
+        iface_idx = i
         ifaces.extend(['-i', '{}@veth{}'.format(iface_idx, 2 * iface_idx + 1)])
     cmd = [PTF]
     cmd.extend(['--test-dir', ptfdir])
     cmd.extend(ifaces)
-    cmd.append('--test-params=p4info=\'{}\''.format(p4info_path))
+    test_params = 'p4info=\'{}\''.format(p4info_path)
+    if stftest is not None:
+        test_params += ';stftest=\'{}\''.format(stftest)
+    cmd.append('--test-params={}'.format(test_params))
     cmd.extend(extra_args)
+    print >> sys.stderr, "Executing PTF command: ", ' '.join(cmd)
+
     try:
         # we want the ptf output to be sent to stdout
         p = subprocess.Popen(cmd)
@@ -249,6 +256,11 @@ def main():
         print >> sys.stderr, "Context json file", cxt_json_path, "not found"
         sys.exit(1)
 
+    if args.stftest is not None and not os.path.exists(args.stftest):
+        print >> sys.stderr, "STF test", args.stftest,
+        print >> sys.stderr, "requested and not found"
+        sys.exit(1)
+
     lookup_json_path = os.path.join(compiler_out_dir, 'p4_name_lookup.json')
     if not os.path.exists(lookup_json_path):
         print >> sys.stderr, "Name lookup json", lookup_json_path,
@@ -323,7 +335,7 @@ def main():
                 return False
 
             success = run_ptf_tests(PTF, args.ptfdir, p4info_path,
-                                    extra_ptf_args)
+                                    stftest=args.stftest, extra_ptf_args)
             if not success:
                 print >> sys.stderr, "Error when running PTF tests"
                 return False
@@ -345,6 +357,9 @@ def main():
             print >> sys.stderr, "Error when copying 'bf_drivers.log'"
     else:
         print >> sys.stderr, "Could not find 'bf_drivers.log' in CWD"
+
+    if os.path.exists('ptf.log'):
+        shutil.move('ptf.log', dirname)
 
     for f in os.listdir(dirname):
         os.chmod(os.path.join(dirname, f), 0o666)

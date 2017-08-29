@@ -80,6 +80,12 @@ class P4RuntimeTest(BaseTest):
     def get_action_id(self, name):
         return self.get_id(name, "actions")
 
+    def get_counter_id(self, name):
+        return self.get_id(name, "counters")
+
+    def get_direct_counter_id(self, name):
+        return self.get_id(name, "direct_counters")
+
     def get_param_id(self, action_name, name):
         for a in self.p4info.actions:
             pre = a.preamble
@@ -105,6 +111,7 @@ class P4RuntimeTest(BaseTest):
 
     class Exact(MF):
         def __init__(self, name, v):
+            logging.debug("Adding Exact match (%s, %s)", name, v)
             super(P4RuntimeTest.Exact, self).__init__(name)
             self.v = v
 

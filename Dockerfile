@@ -46,6 +46,7 @@ RUN git clone https://github.com/p4lang/ptf.git && \
     cd /bfn && \
     rm -rf ptf
 
+RUN pip install ply
 COPY . /bfn/bf-p4c-compilers/
 COPY scripts/ptf_hugepage_setup.sh /bfn/ptf_hugepage_setup.sh
 COPY scripts/docker_entry_point.sh /bfn/docker_entry_point.sh

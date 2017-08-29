@@ -122,18 +122,31 @@ p4c_add_tests ("tofino" ${P4C_TOFINO_RUNTEST} "${TOFINO_TEST_SUITES}"
 if (PTF_REQUIREMENTS_MET)
   # PTF tests cannot be run in parallel with other tests, so we set the SERIAL
   # property for them
+  set (__ptfCounter 0)
   foreach (ts "${TOFINO_TEST_SUITES}")
     file (GLOB __testfiles RELATIVE ${P4C_SOURCE_DIR} ${ts})
     foreach (__p4file ${__testfiles})
+      set(__havePTF 0)
       string (REGEX REPLACE ".p4$" ".ptf" __ptffile ${__p4file})
       if (EXISTS ${P4C_SOURCE_DIR}/${__ptffile})
+        set(__havePTF 1)
+      endif()
+      string (REGEX REPLACE ".p4$" ".stf" __stffile ${__p4file})
+      if (NOT ${__havePTF} AND EXISTS ${P4C_SOURCE_DIR}/${__stffile})
+        # Also add as PTF test the STF
+        # MESSAGE(STATUS "STF2PTF: Generating ${P4C_BINARY_DIR}/tofino/${__ptffile}/test.py")
+        set(__havePTF 1)
+      endif()
+      if (${__havePTF})
         p4c_test_set_name(__testname "tofino" ${__p4file})
-        set_tests_properties(${__testname} PROPERTIES RUN_SERIAL TRUE)
-        # add ptf label to test
+        set_tests_properties(${__testname} PROPERTIES RUN_SERIAL 1)
         p4c_add_test_label("tofino" "ptf" ${__p4file})
+        # MESSAGE(STATUS "Added PTF test: ${__testname}")
+        math (EXPR __ptfCounter "${__ptfCounter} + 1")
       endif()
     endforeach() # __p4file
   endforeach() # ts
+  MESSAGE(STATUS "Added ${__ptfCounter} PTF tests")
 endif() # PTF_REQUIREMENTS_MET
 
 set  (SWITCH_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch/p4src/switch.p4)

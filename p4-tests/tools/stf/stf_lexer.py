@@ -57,11 +57,14 @@ class STFLexer:
 
     keywords = (
         'ADD',
+        'ALL',
         'BYTES',
         'CHECK_COUNTER',
         'EXPECT',
+        'NO_PACKET',
         'PACKET',
         'PACKETS',
+        'REMOVE',
         'SETDEFAULT',
         'WAIT'
     )
@@ -87,6 +90,7 @@ class STFLexer:
         'INT_CONST_HEX',
         'LPAREN',
         'RPAREN',
+        'SLASH',
         'EQUAL',
         'EQEQ',
         'LE',
@@ -109,6 +113,7 @@ class STFLexer:
     t_LEQ       = r'<='
     t_GT        = r'>'
     t_GEQ       = r'>='
+    t_SLASH     = r'/'
 
     # binary constants with ternary (don't care) bits
     binary_constant     = r'(0[bB][*01]+)'
@@ -124,6 +129,10 @@ class STFLexer:
     dec_constant        = r'([0-9]+)'
 
     identifier          = r'([a-z$A-Z_][a-z$A-Z_0-9]*)'
+
+#    @TOKEN(NO_PACKET)
+#    def t_NO_PACKET(self, t):
+#        return t
 
     @TOKEN(hex_tern_constant)
     def t_TERN_CONST_HEX(self, t):
@@ -192,5 +201,3 @@ class STFLexer:
     # Error handling.
     def t_packetdata_error(self, t):
         self._error('invalid packet data', t)
-
-
