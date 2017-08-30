@@ -351,6 +351,9 @@ class StatefulAlu : Synth2Port {
     // The single register extern used in this stateful alu
     Declaration_Instance                                reg;
     bool                                                dual = false;  // dual mode
+        // if dual is true, the ALU width is half the Register width (field)
+        // if dual is false, the ALU width is equal to the Register width
+        // this means that ALU width can be calculated as `width >> dual`
     // The possible stateful_alu externs executed in this table
     inline NameMap<SaluAction, ordered_map>             instruction = {};
     // The stateful_alu externs executed for each action in the match table

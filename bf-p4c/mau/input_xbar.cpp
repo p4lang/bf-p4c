@@ -1777,7 +1777,7 @@ void IXBar::update(cstring name, const Use &alloc) {
             for (auto bit : bitvec(hdh.bit_mask)) {
                  if (!hash_dist_bit_use[i][bit]) {
                      hash_dist_bit_use[i][bit] = name;
-                 } else {
+                 } else if (hash_dist_bit_use[i][bit] != name) {
                      BUG("Conflicting hash distribution bit allocation %s and %s",
                          name, hash_dist_bit_use[i][bit]);
                  }

@@ -139,6 +139,7 @@ static IR::Attached *createAttached(IR::MAU::Table *tt, Util::SourceInfo srcInfo
     // FIXME -- this should be looking at the arch model, but the current arch model stuff
     // is too complex -- need a way of building this automatically from the arch.p4 file.
     // For now, hack just using the type name as a string.
+    IR::MAU::Synth2Port *rv = nullptr;
     cstring tname = type->toString();
     if (auto p = tname.find('<'))  // strip off type args (if any)
         tname = tname.before(p);
@@ -193,26 +194,7 @@ static IR::Attached *createAttached(IR::MAU::Table *tt, Util::SourceInfo srcInfo
                 ctr->min_width = anno->expr.at(0)->as<IR::Constant>().asInt();
             else
                 WARNING("unknown annotation " << anno->name << " on " << tname); }
-        switch (args->size()) {
-            case 1:
-                ctr->settype(args->at(0)->as<IR::Member>().member.name);
-                ctr->direct = true;
-                break;
-            case 2:
-                if (args->at(0)->is<IR::Member>()) {
-                    ctr->settype(args->at(0)->as<IR::Member>().member.name);
-                    ctr->size = args->at(1)->as<IR::Constant>().asInt();
-                } else if (args->at(0)->is<IR::Constant>()) {
-                    ctr->size = args->at(0)->as<IR::Constant>().asInt();
-                    ctr->settype(args->at(1)->as<IR::Member>().member.name);
-                } else {
-                    BUG("unknown argument in counter %s", name);
-                }
-                break;
-            default:
-                BUG("wrong number of arguments to %s ctor %s", tname, args);
-                break; }
-        return ctr;
+        rv = ctr;
     } else if (tname == "meter" || tname == "direct_meter") {
         auto mtr = new IR::MAU::Meter(srcInfo, name, annot);
         for (auto anno : annot->annotations) {
@@ -224,38 +206,38 @@ static IR::Attached *createAttached(IR::MAU::Table *tt, Util::SourceInfo srcInfo
                 mtr->implementation = anno->expr.at(0)->as<IR::StringLiteral>();
             else
                 WARNING("unknown annotation " << anno->name << " on " << tname); }
-        switch (args->size()) {
-            case 1:
-                mtr->settype(args->at(0)->as<IR::Member>().member.name);
-                mtr->direct = true;
-                break;
-            case 2:
-                // XXX(hanw) handles both (member, constant) and
-                // (constant, member) in meter constructor
-                // because we are in the transition from v1model.p4 to tofino.p4
-                if (args->at(0)->is<IR::Member>()) {
-                    mtr->settype(args->at(0)->as<IR::Member>().member.name);
-                    mtr->size = args->at(1)->as<IR::Constant>().asInt();
-                } else if (args->at(0)->is<IR::Constant>()) {
-                    mtr->size = args->at(0)->as<IR::Constant>().asInt();
-                    mtr->settype(args->at(1)->as<IR::Member>().member.name);
-                } else {
-                    BUG("unknown argument in meter %s", name);
-                }
-                break;
-            default:
-                BUG("wrong number of arguments to %s ctor %s", tname, args);
-                break; }
-        return mtr;
-    }
+        rv = mtr;
+    } else {
+        LOG2("Failed to create attached table for " << type->toString());
+        return nullptr; }
 
-    LOG2("Failed to create attached table for " << type->toString());
-    return nullptr;
+    switch (args->size()) {
+        case 1:
+            rv->settype(args->at(0)->as<IR::Member>().member.name);
+            rv->direct = true;
+            break;
+        case 2:
+            // XXX(hanw) handles both (member, constant) and
+            // (constant, member) in meter constructor
+            // because we are in the transition from v1model.p4 to tofino.p4
+            if (args->at(0)->is<IR::Member>()) {
+                rv->settype(args->at(0)->as<IR::Member>().member.name);
+                rv->size = args->at(1)->as<IR::Constant>().asInt();
+            } else if (args->at(0)->is<IR::Constant>()) {
+                rv->size = args->at(0)->as<IR::Constant>().asInt();
+                rv->settype(args->at(1)->as<IR::Member>().member.name);
+            } else {
+                BUG("unknown argument in meter %s", name);
+            }
+            break;
+        default:
+            BUG("wrong number of arguments to %s ctor %s", tname, args);
+            break; }
+    return rv;
 }
 
-static void updateAttachedSalu(const Util::SourceInfo &loc, const P4::ReferenceMap *refMap,
-                               IR::MAU::StatefulAlu *&salu, const IR::Declaration_Instance *ext,
-                               cstring action) {
+static void updateAttachedSalu(const P4::ReferenceMap *refMap, IR::MAU::StatefulAlu *&salu,
+                               const IR::Declaration_Instance *ext) {
     auto reg_arg = ext->arguments->size() > 0 ? ext->arguments->at(0) : nullptr;
     if (!reg_arg) {
         if (auto regprop = ext->properties["reg"]) {
@@ -283,12 +265,11 @@ static void updateAttachedSalu(const Util::SourceInfo &loc, const P4::ReferenceM
             salu->direct = true; }
         salu->width = regtype->arguments->at(0)->width_bits();
     } else if (salu->reg != reg) {
+        // FIXME -- allow multiple stateful alus in one table?  Must use the same index.
         error("%s: register actions in the same table must use the same underlying regster,"
               "trying to use %s", salu->srcInfo, reg); }
     LOG3("Adding " << ext->name << " to StatefulAlu " << reg->name);
     ext->apply(CreateSaluInstruction(salu));
-    if (!salu->action_map.emplace(action, ext->name).second)
-        error("%s: multiple calls to execute in action %s", loc, action);
 }
 
 namespace {
@@ -386,27 +367,39 @@ class FixP4Table : public Transform {
 struct AttachTables : public Modifier {
     const P4::ReferenceMap                      *refMap;
     map<cstring, vector<const IR::Attached *>>  attached;
-    map<cstring, IR::MAU::StatefulAlu *>        salu;
+    map<cstring, IR::MAU::StatefulAlu *>        all_salu;
     map<const IR::Declaration_Instance *, const IR::Attached *> converted;
 
 
+    bool preorder(IR::MAU::Table *tbl) override {
+        LOG3("AttachTables visiting table " << tbl->name);
+        return true; }
+    bool preorder(IR::MAU::Action *act) override {
+        LOG3("AttachTables visiting action " << act->name);
+        return true; }
     void postorder(IR::MAU::Table *tbl) override {
-        if (attached.count(tbl->name)) {
-            for (auto a : attached[tbl->name]) {
-                if (contains(tbl->attached, a)) {
-                    LOG3(a->name << " already attached to " << tbl->name);
-                } else {
-                    LOG3("attaching " << a->name << " to " << tbl->name);
-                    tbl->attached.push_back(a); } } }
-        if (salu.count(tbl->name)) {
-            BUG_CHECK(!contains(tbl->attached, salu.at(tbl->name)), "salu already attached?");
-            LOG3("attaching " << salu.at(tbl->name)->name << " to " << tbl->name);
-            tbl->attached.push_back(salu.at(tbl->name)); } }
+        for (auto a : attached[tbl->name]) {
+            if (contains(tbl->attached, a)) {
+                LOG3(a->name << " already attached to " << tbl->name);
+            } else {
+                LOG3("attaching " << a->name << " to " << tbl->name);
+                tbl->attached.push_back(a); } }
+        if (auto salu = all_salu[tbl->name]) {
+            if (contains(tbl->attached, salu)) {
+                LOG3(salu->name << " already attached to " << tbl->name);
+            } else {
+                LOG3("attaching " << salu->name << " to " << tbl->name);
+                tbl->attached.push_back(salu); } } }
+    // expressions might be in two actions (due to inlining), which need to
+    // be visited independently
+    void postorder(IR::Expression *) { visitAgain(); }
     void postorder(IR::GlobalRef *gref) override {
+        visitAgain();
         if (auto di = gref->obj->to<IR::Declaration_Instance>()) {
             auto tt = findContext<IR::MAU::Table>();
             cstring tname;
             BUG_CHECK(tt, "GlobalRef not in a table");
+            auto &salu = all_salu[tt->name];
             for (auto att : tt->attached) {
                 if (att->name == di->externalName()) {
                     gref->obj = converted[di] = att;
@@ -424,9 +417,13 @@ struct AttachTables : public Modifier {
             } else if ((tname = di->type->toString()) == "stateful_alu_14" ||
                        tname.startsWith("register_action<") ||
                        tname.startsWith("stateful_alu<")) {
+                updateAttachedSalu(refMap, salu, di);
+                gref->obj = converted[di] = salu; }
+            if (salu == gref->obj) {
                 auto act = findContext<IR::MAU::Action>();
-                updateAttachedSalu(gref->srcInfo, refMap, salu[tt->name], di, act->name);
-                gref->obj = converted[di] = salu[tt->name]; } } }
+                if (!salu->action_map.emplace(act->name, di->name).second) {
+                    error("%s: multiple calls to execute in action %s",
+                          gref->srcInfo, act->name); } } } }
     explicit AttachTables(const P4::ReferenceMap *refMap) : refMap(refMap) {}
 };
 
