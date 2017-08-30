@@ -260,8 +260,9 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/stateful_alu.p4
   )
 
+# Bugs in test source -- p4factory stful.p4 is fixed and working?
 p4c_add_xfail_reason("tofino"
-  "error: cast: Illegal cast from bit"
+  "error: : direct access to indirect register"
   extensions/p4_tests/p4_14/jenkins/stful/stful.p4
   )
 

@@ -1,0 +1,48 @@
+stful.p4(175): warning: ifid shadows .ifid
+action set_ifid(ifid) {
+                ^^^^
+stful.p4(258)
+table ifid {
+^
+stful.p4(668): warning: ifid shadows .ifid
+action set_egr_ifid(ifid) {
+                    ^^^^
+stful.p4(258)
+table ifid {
+^
+stful.p4(671): warning: ifid shadows .ifid
+action scratch_add(index, ifid) {
+                          ^^^^
+stful.p4(258)
+table ifid {
+^
+stful.p4(675): warning: ifid shadows .ifid
+action scratch_sub(index, ifid) {
+                          ^^^^
+stful.p4(258)
+table ifid {
+^
+stful.p4(679): warning: ifid shadows .ifid
+action scratch_zero(index, ifid) {
+                           ^^^^
+stful.p4(258)
+table ifid {
+^
+stful.p4(683): warning: ifid shadows .ifid
+action scratch_invert(index, ifid) {
+                             ^^^^
+stful.p4(258)
+table ifid {
+^
+warning: out parameter rv may be uninitialized when apply terminates
+warning: out parameter rv may be uninitialized when apply terminates
+warning: out parameter rv may be uninitialized when apply terminates
+warning: out parameter rv may be uninitialized when apply terminates
+warning: out parameter rv may be uninitialized when apply terminates
+warning: out parameter rv may be uninitialized when apply terminates
+warning: out parameter rv may be uninitialized when apply terminates
+warning: out parameter rv may be uninitialized when apply terminates
+warning: out parameter rv may be uninitialized when apply terminates
+warning: out parameter rv may be uninitialized when apply terminates
+warning: out parameter rv may be uninitialized when apply terminates
+warning: out parameter rv may be uninitialized when apply terminates
