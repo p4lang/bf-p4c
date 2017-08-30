@@ -134,6 +134,11 @@ while [ $# -gt 1 ]; do
     -ptf)
         run_ptf=true
         ;;
+    -stf2ptf)
+        run_stf2ptf=true
+        run_ptf=true
+        run_stf=false
+        ;;
     -v) if $verbose || $debug; then
             P4C_ARGS="$P4C_ARGS $1"
         fi
@@ -188,20 +193,13 @@ else
 fi
 
 ptftestdir=${file%.p4}.ptf
-# check for the ptf test dir in both the same directory as the
-# test (manually written tests), or in the $testdir/${name}.ptf where
-# we generated one from stf
-if [ ! -d ${ptftestdir} ]; then
-    ptftestdir=${testdir}/${name}.ptf
-fi
-if $run_ptf ; then
+if $run_ptf || $run_stf2ptf; then
     p4runtime_out=$testdir/${name}.out/p4info.proto.txt
     P4C_ARGS="$P4C_ARGS --p4runtime-file $p4runtime_out --p4runtime-format text"
     # TODO(unknown): remove when -N (new context JSON format) becomes the
     # default
     P4C_ARGS="$P4C_ARGS -Xassembler '-N'"
     P4C_ARGS="$P4C_ARGS -DCPU_PORT=320"
-    run_stf=false
 fi
 
 if [ ! -x $P4C ]; then
@@ -275,7 +273,7 @@ if $run_ptf ; then
     if [ -d ${ptftestdir} ]; then
         PTF_CMD="$PTF_RUNNER --testdir $testdir/$name.out --name $name \
                 --ptfdir ${ptftestdir} --top-builddir $(findcmakecache)"
-    elif [ $ENABLE_STF2PTF && -r ${file%.p4}.stf ]; then
+    elif $run_stf2ptf && [ -r ${file%.p4}.stf ]; then
         mydir=$(dirname $0)
         export PYTHONPATH=${PYTHONPATH}:${mydir}/tools/stf
         if [[ "$file" =~ ^/ ]]; then
@@ -283,7 +281,7 @@ if $run_ptf ; then
         else
             stftest=`pwd`/${file%.p4}.stf
         fi
-        PTF_CMD="$PTF_RUNNER --testdir $testdir --name $name \
+        PTF_CMD="$PTF_RUNNER --testdir $testdir/$name.out --name $name \
                 --stftest ${stftest} \
                 --ptfdir ${mydir}/tools/stf --top-builddir $(findcmakecache)"
     fi

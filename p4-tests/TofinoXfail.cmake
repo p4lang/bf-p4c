@@ -15,10 +15,8 @@ set (TOFINO_XFAIL_TESTS
 
 # These tests compile successfuly and fail in the model when running the STF test
 # the reasons need more characterization
-if (HARLYN_STF)
+if (HARLYN_STF AND NOT ENABLE_STF2PTF)
 set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
-  extensions/p4_tests/p4_14/adb_shared2.p4
-  extensions/p4_tests/p4_14/adjust_instr4.p4
   extensions/p4_tests/p4_14/hash_calculation_32.p4
   # Hash Action Bugs within the ASM or Model
   testdata/p4_14_samples/hash_action_gateway.p4
@@ -61,6 +59,50 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     testdata/p4_14_samples/counter1.p4
   )
 endif() # HARLYN_STF
+
+if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
+  # STF2PTF tests that fail
+  p4c_add_xfail_reason("tofino"
+    "AssertionError: Did not receive expected pkt"
+    testdata/p4_16_samples/table-entries-priority-bmv2.p4
+    testdata/p4_16_samples/table-entries-lpm-bmv2.p4
+    testdata/p4_16_samples/table-entries-ternary-bmv2.p4
+    testdata/p4_16_samples/table-entries-exact-ternary-bmv2.p4
+    testdata/p4_16_samples/table-entries-range-bmv2.p4
+    testdata/p4_16_samples/table-entries-exact-bmv2.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "AssertionError: Expected packet was not received"
+    testdata/p4_14_samples/counter3.p4
+    )
+
+  # STF lexer issues:
+  p4c_add_xfail_reason("tofino"
+    "LexError: Scanning error. Illegal character"
+    extensions/p4_tests/p4_16/stack_valid.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "_Rendezvous of RPC that terminated .*StatusCode.UNIMPLEMENTED"
+    testdata/p4_14_samples/basic_routing.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "error: Expression .* is too complicated to resolve to a header field"
+    testdata/p4_14_samples/exact_match_valid1.p4
+    testdata/p4_14_samples/tmvalid.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "Error when trying to push config to bf_switchd"
+    testdata/p4_14_samples/counter4.p4
+    testdata/p4_14_samples/hash_action_gateway.p4
+    extensions/p4_tests/p4_14/hash_calculation_32.p4
+    extensions/p4_tests/p4_14/stateful2.p4
+    extensions/p4_tests/p4_14/stateful3.p4
+    )
+endif() # PTF_REQUIREMENTS_MET
 
 # add the failures with no reason
 p4c_add_xfail_reason("tofino" "" ${TOFINO_XFAIL_TESTS})
@@ -360,11 +402,15 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/08-MacAddrCheck1.p4
   )
 
+
+p4c_add_xfail_reason("tofino"
+  "Table .*: Match field .* references a local"
+  testdata/p4_16_samples/union-valid-bmv2.p4
+  )
 # BRIG_132
 p4c_add_xfail_reason("tofino"
   "Unhandled InstanceRef type"
   testdata/p4_16_samples/union-bmv2.p4
-  testdata/p4_16_samples/union-valid-bmv2.p4
   testdata/p4_16_samples/union1-bmv2.p4
   testdata/p4_16_samples/union2-bmv2.p4
   testdata/p4_16_samples/union3-bmv2.p4

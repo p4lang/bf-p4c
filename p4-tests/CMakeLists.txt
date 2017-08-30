@@ -13,18 +13,22 @@
 # limitations under the License.
 
 MESSAGE("-- Adding BFN Compiler test suite")
+OPTION(ENABLE_STF2PTF "Run STF tests as PTF" OFF)
 
-set(STF_SEARCH_PATHS
+if (NOT ENABLE_STF2PTF)
+  # We run STF tests on the STF framework
+  set(STF_SEARCH_PATHS
     ${CMAKE_INSTALL_PREFIX}/bin
     ${BFN_P4C_SOURCE_DIR}/../model/tests/simple_test_harness
     ${BFN_P4C_SOURCE_DIR}/../model/build/tests/simple_test_harness
     ${BFN_P4C_SOURCE_DIR}/../model/debug/tests/simple_test_harness)
-find_program(HARLYN_STF simple_test_harness
-  PATHS ${STF_SEARCH_PATHS})
-if (HARLYN_STF)
-  MESSAGE (STATUS "STF binary found.")
-else()
-  MESSAGE (WARNING "STF tests need Harlyn simple_test_harness.\nLooked in ${STF_SEARCH_PATHS}.")
+  find_program(HARLYN_STF simple_test_harness
+    PATHS ${STF_SEARCH_PATHS})
+  if (HARLYN_STF)
+    MESSAGE (STATUS "STF binary found.")
+  else()
+    MESSAGE (WARNING "STF tests need Harlyn simple_test_harness.\nLooked in ${STF_SEARCH_PATHS}.")
+  endif()
 endif()
 
 set (PTF_REQUIREMENTS_MET TRUE)
@@ -106,6 +110,9 @@ endif()
 set (TOFINO_PTF_TESTS)
 if (PTF_REQUIREMENTS_MET)
   set (testExtraArgs ${testExtraArgs} -ptf)
+  if (ENABLE_STF2PTF)
+    set (testExtraArgs ${testExtraArgs} -stf2ptf)
+  endif()
 endif()
 
 set (HARLYN_PTF_DRIVER ${CMAKE_CURRENT_SOURCE_DIR}/ptf_runner.py
@@ -132,7 +139,7 @@ if (PTF_REQUIREMENTS_MET)
         set(__havePTF 1)
       endif()
       string (REGEX REPLACE ".p4$" ".stf" __stffile ${__p4file})
-      if (NOT ${__havePTF} AND EXISTS ${P4C_SOURCE_DIR}/${__stffile})
+      if (ENABLE_STF2PTF AND NOT ${__havePTF} AND EXISTS ${P4C_SOURCE_DIR}/${__stffile})
         # Also add as PTF test the STF
         # MESSAGE(STATUS "STF2PTF: Generating ${P4C_BINARY_DIR}/tofino/${__ptffile}/test.py")
         set(__havePTF 1)

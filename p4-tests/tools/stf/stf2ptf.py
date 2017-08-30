@@ -84,6 +84,8 @@ class stf2ptf (P4RuntimeTest):
         self._ast = ast
         self._requests = []
         self._namedEntries = {}
+        self._hasPadding = False
+        self._hasByteCounters = False
 
     def runTest(self):
         self._logger.info("Starting STF test")
@@ -132,10 +134,15 @@ class stf2ptf (P4RuntimeTest):
 
         except Exception as e:
             self._logger.exception(e)
+            print >> sys.stderr, traceback.format_exc()
+        else:
+            testutils.verify_no_other_packets(self)
 
         finally:
+            if self._hasPadding and self._hasByteCounters:
+                self._logger.warning("Mixing small packets and byte-counters produce incorrect results.\n" \
+                                     + "Please increase the size of your packets to be > 15 bytes")
             self._logger.info("Cleanup")
-            testutils.verify_no_other_packets(self)
             self.undo_write_requests(self._requests)
             self._logger.info("End STF Test")
 
@@ -238,6 +245,7 @@ class stf2ptf (P4RuntimeTest):
         self._logger.info("Expecting packet on port %d", port)
         if payload is None:
             testutils.verify_packet(self, None, port)
+            return
         elif orig_packet is None:
             expected = self.encodePacket(payload)
         else:
@@ -251,6 +259,7 @@ class stf2ptf (P4RuntimeTest):
         if pkt_pair[0] is not None: self.genSendPacket(pkt_pair[0])
         if pkt_pair[1] is not None: self.genExpectPacket(pkt_pair[1], pkt_pair[0])
 
+    # currently we support only direct counters
     def genCheckCounter(self, chk):
         """
            Generate a check counter request and verify
@@ -288,6 +297,7 @@ class stf2ptf (P4RuntimeTest):
                             self.assertTrue(counter.data.packet_count == val, "Wrong count of packet_count")
                         else:
                             self.assertTrue(counter.data.byte_count == val, "Wrong count of byte_count")
+                            self._hasByteCounters = True
                     else:
                         self.assertTrue(counter.data.packet_count == 0, "Wrong count of packets")
         except Exception as e:
@@ -381,6 +391,7 @@ class stf2ptf (P4RuntimeTest):
         if pLen < 20:
             # Pad the packet so that it is sent by the Linux kernel (15 bytes min size)
             pad = 20 - pLen
+            self._hasPadding = True
         self._logger.debug("encodePacket: 0x%x (%d len + %d padding)", p, pLen, pad)
         return str(stringify(p, pLen) + '0'*pad)
         # return ''.join('\\x' + x.encode('hex') for x in packet.decode('hex'))
