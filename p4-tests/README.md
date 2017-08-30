@@ -71,6 +71,14 @@ general, `$PTF_DIR` corresponds to `p4-tests/p4_<version>/<prog_name>.ptf`.
     ./p4-tests/ptf_runner.py --testdir $P4C_OUTPUT/ --name <prog_name> --update-config-only
     sudo ./p4-tests/ptf_runner.py --testdir $P4C_OUTPUT/ --name <prog_name> --ptfdir $PTF_DIR --test-only
 
+Any extra argument that you pass to ptf_runner.py will be forwarded to PTF. In
+practice this is convenient when you want to run a single PTF test in the
+test suite for that P4 program. For example:
+
+    sudo ./p4-tests/ptf_runner.py --testdir build/p4c/tofino/extensions/p4_tests/p4_14/easy_ternary.out \
+      --name easy_ternary --ptfdir p4-tests/p4_14/easy_ternary.ptf \
+      --test-only test.SimpleTest
+
 Often you may need to run bf_switchd in GDB. Because of the P4Runtime gRPC
 server, you will need to ignore `SIG36` by typing `handle SIG36 noprint nostop`
 at the GDB prompt.

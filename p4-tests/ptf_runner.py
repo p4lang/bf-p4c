@@ -114,7 +114,7 @@ def update_config(name, grpc_addr, p4info_path, tofino_bin_path, cxt_json_path):
         return False
     return True
 
-def run_ptf_tests(PTF, ptfdir, p4info_path):
+def run_ptf_tests(PTF, ptfdir, p4info_path, extra_args=[]):
     ifaces = []
     # find base_test.py
     os.environ['PYTHONPATH'] = os.path.dirname(os.path.abspath(__file__))
@@ -125,6 +125,7 @@ def run_ptf_tests(PTF, ptfdir, p4info_path):
     cmd.extend(['--test-dir', ptfdir])
     cmd.extend(ifaces)
     cmd.append('--test-params=p4info=\'{}\''.format(p4info_path))
+    cmd.extend(extra_args)
     try:
         # we want the ptf output to be sent to stdout
         p = subprocess.Popen(cmd)
@@ -223,9 +224,13 @@ def sanitize_args(args):
         sys.exit(1)
 
 def main():
-    args = get_parser().parse_args()
+    args, unknown_args = get_parser().parse_known_args()
 
     sanitize_args(args)
+
+    if unknown_args and args.update_config_only:
+        print >> sys.stderr, "Extra args not supported with --update-config-only and will be ignored"
+    extra_ptf_args = unknown_args
 
     compiler_out_dir = args.testdir
 
@@ -271,7 +276,7 @@ def main():
     PTF = findbin(top_builddir, 'PTF')
 
     if args.test_only:
-        success = run_ptf_tests(PTF, args.ptfdir, p4info_path)
+        success = run_ptf_tests(PTF, args.ptfdir, p4info_path, extra_ptf_args)
         if not success:
             print >> sys.stderr, "Error when running PTF tests"
             return 1
@@ -317,7 +322,8 @@ def main():
                 print >> sys.stderr, "Error when pushing P4 config to switchd"
                 return False
 
-            success = run_ptf_tests(PTF, args.ptfdir, p4info_path)
+            success = run_ptf_tests(PTF, args.ptfdir, p4info_path,
+                                    extra_ptf_args)
             if not success:
                 print >> sys.stderr, "Error when running PTF tests"
                 return False
