@@ -78,6 +78,7 @@ set (TOFINO_BACKEND_COMMON_SRCS
   common/rewrite.cpp
   common/param_binding.cpp
   common/parser_overlay.cpp
+  common/simplify_references.cpp
   common/slice.cpp
   )
 
@@ -96,6 +97,7 @@ set (TOFINO_BACKEND_COMMON_HDRS
   common/rewrite.h
   common/param_binding.h
   common/parser_overlay.h
+  common/simplify_references.h
   common/slice.h
   )
 

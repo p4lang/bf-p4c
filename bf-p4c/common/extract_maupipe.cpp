@@ -8,6 +8,7 @@
 #include "frontends/p4/evaluator/evaluator.h"
 #include "frontends/p4/methodInstance.h"
 #include "tofino/common/param_binding.h"
+#include "tofino/common/simplify_references.h"
 #include "tofino/mau/stateful_alu.h"
 #include "tofino/mau/table_dependency_graph.h"
 #include "tofino/parde/checksum.h"
@@ -16,7 +17,6 @@
 #include "tofino/tofinoOptions.h"
 #include "lib/algorithm.h"
 #include "lib/error.h"
-#include "rewrite.h"
 
 namespace {
 class ActionArgSetup : public Transform {
@@ -558,25 +558,6 @@ class GetTofinoTables : public Inspector {
 };
 }  // anonymous namespace
 
-class ConvertIndexToHeaderStackItemRef : public Transform {
-    const IR::Expression *preorder(IR::ArrayIndex *idx) override {
-        auto type = idx->type->to<IR::Type_Header>();
-        if (!type) BUG("%1% is not a header stack ref", idx->type);
-        return new IR::HeaderStackItemRef(idx->srcInfo, type, idx->left, idx->right);
-    }
-    const IR::Expression* preorder(IR::Member* member) override {
-        auto type = member->type->to<IR::Type_Header>();
-        if (!type) return member;
-        if (member->member == "next")
-            return new IR::HeaderStackItemRef(member->srcInfo, type, member->expr,
-                                              new IR::Tofino::UnresolvedStackNext);
-        if (member->member == "last")
-            return new IR::HeaderStackItemRef(member->srcInfo, type, member->expr,
-                                              new IR::Tofino::UnresolvedStackLast);
-        return member;
-    }
-};
-
 /// XXX(hanw) this function should be removed when TNA completes.
 const IR::Tofino::Pipe* extract_v1model_arch(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
                                              const IR::PackageBlock* top) {
@@ -607,7 +588,7 @@ const IR::Tofino::Pipe* extract_v1model_arch(P4::ReferenceMap* refMap, P4::TypeM
 
     auto rv = new IR::Tofino::Pipe();
 
-    ParamBinding bindings(refMap, typeMap);
+    ParamBinding bindings(typeMap);
 
     for (auto param : *parser->type->applyParams->getEnumerator())
         bindings.bind(param);
@@ -630,21 +611,13 @@ const IR::Tofino::Pipe* extract_v1model_arch(P4::ReferenceMap* refMap, P4::TypeM
     rv->metadata.addUnique("standard_metadata",
                            bindings.get(*it)->obj->to<IR::Metadata>());
 
-    PassManager fixups = {
-        &bindings,
-        new SplitComplexInstanceRef,
-        new RemoveInstanceRef,
-        new RemoveIsValid,
-        new ConvertIndexToHeaderStackItemRef,
-        new RewriteForTofino(refMap, typeMap),
-    };
-
-    parser = parser->apply(fixups);
+    SimplifyReferences simplifyReferences(&bindings, refMap, typeMap);
+    parser = parser->apply(simplifyReferences);
     if (verify_checksum)
-        verify_checksum = verify_checksum->apply(fixups);
+        verify_checksum = verify_checksum->apply(simplifyReferences);
     if (compute_checksum)
-        compute_checksum = compute_checksum->apply(fixups);
-    deparser = deparser->apply(fixups);
+        compute_checksum = compute_checksum->apply(simplifyReferences);
+    deparser = deparser->apply(simplifyReferences);
 
     auto parserInfo = Tofino::extractParser(rv, parser, deparser);
     for (auto gress : { INGRESS, EGRESS }) {
@@ -661,8 +634,8 @@ const IR::Tofino::Pipe* extract_v1model_arch(P4::ReferenceMap* refMap, P4::TypeM
     // deparser primitives.
     rv = Tofino::extractComputeChecksum(compute_checksum, rv);
 
-    ingress = ingress->apply(fixups);
-    egress = egress->apply(fixups);
+    ingress = ingress->apply(simplifyReferences);
+    egress = egress->apply(simplifyReferences);
 
     // ingress = ingress->apply(InlineControlFlow(blockMap));
     ingress->apply(GetTofinoTables(refMap, typeMap, INGRESS, rv));
@@ -674,7 +647,7 @@ const IR::Tofino::Pipe* extract_v1model_arch(P4::ReferenceMap* refMap, P4::TypeM
     for (auto &th : rv->thread)
         th.mau = th.mau->apply(toAttach);
 
-    return rv->apply(fixups);
+    return rv->apply(simplifyReferences);
 }
 
 
@@ -770,21 +743,14 @@ const IR::Tofino::Pipe* extract_native_arch(P4::ReferenceMap* refMap, P4::TypeMa
     pipes[INGRESS] = new TnaPipe(main, INGRESS, refMap, typeMap);
     pipes[EGRESS] = new TnaPipe(main, EGRESS, refMap, typeMap);
 
-    ParamBinding bindings(refMap, typeMap);
-    PassManager fixups = {
-            &bindings,
-            new SplitComplexInstanceRef,
-            new RemoveInstanceRef,
-            new RemoveIsValid,
-            new ConvertIndexToHeaderStackItemRef,
-            new RewriteForTofino(refMap, typeMap),
-    };
+    ParamBinding bindings(typeMap);
+    SimplifyReferences simplifyReferences(&bindings, refMap, typeMap);
 
     auto rv = new IR::Tofino::Pipe();
     for (auto gress : {INGRESS, EGRESS}) {
         pipes[gress]->bindParams(&bindings /* out */);
         pipes[gress]->extractMetadata(rv /* out */, &bindings /* in */, gress /* in */);
-        pipes[gress]->apply(fixups);
+        pipes[gress]->apply(simplifyReferences);
         pipes[gress]->extractTable(rv /* out */, gress /* in */);
         pipes[gress]->extractAttached(rv /* out */, gress);
     }
@@ -796,7 +762,7 @@ const IR::Tofino::Pipe* extract_native_arch(P4::ReferenceMap* refMap, P4::TypeMa
         rv->thread[gress].deparser = parserInfo.deparsers[gress];
     }
 
-    return rv->apply(fixups);
+    return rv->apply(simplifyReferences);
 }
 
 const IR::Tofino::Pipe *extract_maupipe(const IR::P4Program *program, Tofino_Options &options) {
