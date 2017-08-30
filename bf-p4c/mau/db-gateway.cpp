@@ -22,12 +22,6 @@ std::ostream &operator<<(std::ostream &out, const CollectGatewayFields &gwf) {
             out << gwf.info.at(i.second.xor_with).bits;
         else if (i.second.xor_with)
             out << "<invalid>"; }
-    if (!gwf.valid_offsets.empty()) {
-        out << endl;
-        const char *sep = "";
-        for (auto &vb : gwf.valid_offsets) {
-            out << sep << vb.first << '=' << vb.second;
-            sep = ", "; } }
     out << endl << "bytes=" << gwf.bytes << " bits=" << gwf.bits << unindent;
     return out;
 }

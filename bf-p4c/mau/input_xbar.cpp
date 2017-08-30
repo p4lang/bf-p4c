@@ -857,14 +857,7 @@ void IXBar::field_management(const IR::Expression *field, IXBar::Use &alloc,
     }
     if (auto mask = field->to<IR::Mask>())
         field = mask->left;
-    if (auto prim = field->to<IR::Primitive>()) {
-        if (prim->name == "isValid") {
-            auto hdr = prim->operands[0]->to<IR::HeaderRef>()->toString();
-            finfo = phv.field(hdr + ".$valid");
-        }
-    } else {
-        finfo = phv.field(field, &bits);
-    }
+    finfo = phv.field(field, &bits);
     BUG_CHECK(finfo, "unexpected field %s", field);
     if (fields_needed.count(finfo->name)) {
         warning("field %s read twice by table %s", finfo->name, name);
@@ -1121,7 +1114,7 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
     alloc.gw_search_bus_bytes = 0;
     CollectGatewayFields collect(phv);
     tbl->apply(collect);
-    if (collect.info.empty() && collect.valid_offsets.empty()) return true;
+    if (collect.info.empty()) return true;
     for (auto &info : collect.info) {
         int flags = 0;
         if (info.second.xor_with) {
@@ -1137,10 +1130,6 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
             alloc.gw_search_bus_bytes += (info.first->size + 7)/8;
         }
         add_use(alloc, info.first, &info.second.bits, flags); }
-    for (auto &valid : collect.valid_offsets) {
-        add_use(alloc, phv.field(valid.first + ".$valid"));
-        alloc.gw_hash_group = true;
-    }
     vector<IXBar::Use::Byte *> xbar_alloced;
     if (!find_alloc(alloc.use, false, second_try, xbar_alloced, 0)) {
         alloc.clear();
@@ -1179,11 +1168,6 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
                 offset.first += shift;
                 alloc.bit_use.emplace_back(info.first->name, hash_group, offset.second.lo,
                                            offset.first - 32, offset.second.size()); } }
-        for (auto &valid : collect.valid_offsets) {
-            if (valid.second < 32) continue;
-            valid.second += shift;
-            alloc.bit_use.emplace_back(valid.first + ".$valid", hash_group, 0,
-                                       valid.second - 32, 1); }
         for (auto ht : bitvec(hash_table_input))
             for (int i = 0; i < collect.bits; ++i)
                 hash_single_bit_use[ht][shift + i] = tbl->name + "$gw";

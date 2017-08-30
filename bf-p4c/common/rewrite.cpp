@@ -30,11 +30,6 @@ RewriteForTofino::postorder(IR::MethodCallExpression* call) {
     CHECK_NULL(refMap);
     auto* mem = call->method->to<IR::Member>();
     if (!mem) return call;
-    if (mem->member == "isValid") {
-        auto* v = new IR::Primitive(call->srcInfo, "isValid", mem->expr);
-        v->type = IR::Type::Boolean::get();
-        return v;
-    }
     if (mem->member == "lookahead") {
         BUG_CHECK(call->typeArguments->size() == 1,
                   "Expected 1 type parameter for %1%", call);
@@ -59,8 +54,6 @@ RewriteForTofino::postorder(IR::MethodCallExpression* call) {
     auto* instance = P4::MethodInstance::resolve(call, refMap, typeMap, true);
     if (instance->is<P4::ExternMethod>())
         return convertExternMethod(call, instance->to<P4::ExternMethod>());
-    if (instance->is<P4::BuiltInMethod>())
-        return convertBuiltInMethod(call, instance->to<P4::BuiltInMethod>());
     return call;
 }
 */
@@ -97,17 +90,6 @@ RewriteForTofino::convertExternMethod(const IR::MethodCallExpression* call,
         auto* lookahead = new IR::Tofino::LookaheadExpression(call->srcInfo, 0, width);
         lookahead->type = call->type;
         return lookahead;
-    }
-    return call;
-}
-
-const IR::Expression*
-RewriteForTofino::convertBuiltInMethod(const IR::MethodCallExpression* call,
-                                       const P4::BuiltInMethod* builtin) {
-    if (builtin->name == IR::Type_Header::isValid) {
-        auto* prim = new IR::Primitive(call->srcInfo, "isValid", builtin->appliedTo);
-        prim->type = IR::Type::Boolean::get();
-        return prim;
     }
     return call;
 }

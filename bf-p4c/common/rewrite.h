@@ -36,8 +36,6 @@ struct RewriteForTofino : public Transform {
 
     const IR::Expression* convertExternMethod(const IR::MethodCallExpression* call,
                                               const P4::ExternMethod* externMethod);
-    const IR::Expression* convertBuiltInMethod(const IR::MethodCallExpression* call,
-                                               const P4::BuiltInMethod* builtin);
 
     P4::ReferenceMap* refMap;
     P4::TypeMap* typeMap;

@@ -38,19 +38,10 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::Operation::Relation *e) {
         auto *t = e->left;
         e->left = e->right;
         e->right = t; }
-    if (auto prim = e->left->to<IR::Primitive>()) {
-        if (prim->name == "isValid") {
-            if (auto k = e->right->to<IR::Constant>()) {
-                if (k->value != 0 && k->value != 1)
-                    return new IR::Constant(e->is<IR::Neq>());
-                bool kval = (k->value != 0);
-                if (e->is<IR::Neq>())
-                    kval = !kval;
-                if (kval)
-                    return prim;
-                else
-                    return new IR::LNot(prim); } } }
-    return e; }
+
+    return e;
+}
+
 const IR::Expression *CanonGatewayExpr::postorder(IR::Leq *e) {
     if (e->left->is<IR::Constant>())
         return postorder(new IR::Geq(e->right, e->left));
@@ -225,13 +216,9 @@ bool CollectGatewayFields::preorder(const IR::Expression *e) {
             xor_match = finfo; } }
     return false; }
 
-bool CollectGatewayFields::preorder(const IR::Primitive *prim) {
-    if (prim->name != "isValid") return true;
-    if (auto *hdr = prim->operands[0]->to<IR::HeaderRef>())
-        valid_offsets[hdr->toString()] = -1;
-    else
-        Util::CompilationError("valid of non-header: %s", prim);
-    return false; }
+bool CollectGatewayFields::preorder(const IR::Primitive *) {
+    return false;
+}
 
 bool CollectGatewayFields::compute_offsets() {
     bytes = bits = 0;
@@ -273,19 +260,6 @@ bool CollectGatewayFields::compute_offsets() {
                 ++bytes;
             }); } }
     if (bytes > 4) return false;
-    for (auto &valid : valid_offsets) {
-        if (valid.second >= 0) continue;
-        const PhvInfo::Field *field = phv.field(valid.first + ".$valid");
-        BUG_CHECK(field, "Can't find POV bit for %s", valid.first);
-        if (ixbar) {
-            for (auto &f : ixbar->bit_use) {
-                if (f.field == field->name && f.lo == 0) {
-                    valid.second = f.bit + 32;
-                    if (f.bit >= bits)
-                        bits = f.bit + 1;
-                    break; } } }
-        if (valid.second >= 0) continue;
-        valid.second = bits++ + 32; }
     return bits <= 12;
 }
 
@@ -381,9 +355,6 @@ BuildGatewayMatch:: BuildGatewayMatch(const PhvInfo &phv, CollectGatewayFields &
         for (auto &off : info.second.offsets)
             if (off.first < shift)
                 shift = off.first;
-    for (auto &off : fields.valid_offsets)
-        if (off.second < shift)
-            shift = off.second;
 }
 
 
@@ -442,16 +413,7 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
     return false;
 }
 
-bool BuildGatewayMatch::preorder(const IR::Primitive *prim) {
-    if (prim->name != "isValid")
-        BUG("Unknown primitive in BuildGatewayMatch: %s", prim);
-    auto hdr = prim->operands[0]->to<IR::HeaderRef>()->toString();
-    if (!fields.valid_offsets.count(hdr))
-        BUG("Failed to get valid bit in BuildGatewayMatch");
-    if (getParent<IR::LNot>())
-        match.word1 &= ~(1ULL << fields.valid_offsets[hdr] >> shift);
-    else
-        match.word0 &= ~(1ULL << fields.valid_offsets[hdr] >> shift);
+bool BuildGatewayMatch::preorder(const IR::Primitive *) {
     return false;
 }
 

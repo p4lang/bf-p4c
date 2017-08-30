@@ -72,11 +72,6 @@ void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::M
                 layout.match_width_bits += bits.size();
                 if (!layout.ternary)
                     layout.ixbar_bytes += bytes;
-            } else if (auto prim = r->to<IR::Primitive>()) {
-                if (prim->name != "isValid")
-                    BUG("unexpected reads expression %s", r);
-                layout.match_bytes += 1;   // FIXME don't always need a whole byte
-                layout.match_width_bits += 1;
             } else {
                 BUG("unexpected reads expression %s", r); } } }
     layout.overhead_bits = ceil_log2(tbl->actions.size());

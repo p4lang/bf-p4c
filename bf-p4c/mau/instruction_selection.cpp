@@ -325,14 +325,6 @@ const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
             auto rv = new IR::MAU::Instruction(*prim);
             rv->name = rv->name + 4;  // strip off bit_ prefix
             return rv; }
-    } else if (prim->name == "isValid") {
-        auto hdr_ref = prim->operands[0]->to<const IR::HeaderRef>();
-        // tyepchecking should have caught these errors
-        BUG_CHECK(hdr_ref, "Invalid header operand in isValid");
-        BUG_CHECK(!hdr_ref->baseRef()->is<IR::Metadata>(), "Can't check validity of metadata");
-        auto bit1 = IR::Type::Bits::get(1);
-        return new IR::MAU::Instruction(prim->srcInfo, "set", new IR::TempVar(bit1),
-                                        new IR::Member(prim->srcInfo, bit1, hdr_ref, "$valid"));
     } else if (prim->name == "drop" || prim->name == "mark_to_drop") {
         return new IR::MAU::Instruction(prim->srcInfo, "invalidate",
             gen_stdmeta(VisitingThread(this) ? "egress_port" : "egress_spec"));

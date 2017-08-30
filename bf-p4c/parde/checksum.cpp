@@ -157,17 +157,30 @@ boost::optional<ChecksumSourceMap::value_type>
 analyzeComputedChecksumStatement(const IR::IfStatement* ifStatement) {
     const IR::HeaderRef* sourceHeader = nullptr;
     {
-        auto* prim = ifStatement->condition->to<IR::Primitive>();
-        if (!prim || prim->name != "isValid") {
+        // We desugar `if (foo.isValid())` into `if (foo.$valid == 1)`, so
+        // even though the code we're expecting is the former, we need to look
+        // for the IR structure of the latter.
+        auto* equalExpr = ifStatement->condition->to<IR::Equ>();
+        if (!equalExpr) {
             ::warning("Expected isValid() call: %1%", ifStatement->condition);
             return boost::none;
         }
-        if (!prim->operands[0]->is<IR::HeaderRef>()) {
-            ::warning("Expected isValid() operand to be a header: %1%",
-                      prim->operands[0]);
+        auto* constant = equalExpr->right->to<IR::Constant>();
+        if (!constant || constant->value != 1) {
+            ::warning("Expected isValid() call: %1%", equalExpr->right);
             return boost::none;
         }
-        sourceHeader = prim->operands[0]->to<IR::HeaderRef>();
+        auto* member = equalExpr->left->to<IR::Member>();
+        if (!member || member->member != "$valid") {
+            ::warning("Expected isValid() call: %1%", ifStatement->condition);
+            return boost::none;
+        }
+        if (!member->expr->is<IR::HeaderRef>()) {
+            ::warning("Expected isValid() operand to be a header: %1%",
+                      member->expr);
+            return boost::none;
+        }
+        sourceHeader = member->expr->to<IR::HeaderRef>();
     }
     LOG2("Considering computed checksum for header: " << sourceHeader);
 

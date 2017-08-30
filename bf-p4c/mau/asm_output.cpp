@@ -1098,9 +1098,6 @@ void MauAsmOutput::emit_gateway(std::ostream &out, indent_t gw_indent,
             for (auto &offset : f.second.offsets) {
                 out << sep << offset.first << ": " << Slice(f.first, offset.second);
                 sep = ", "; } }
-        for (auto &valid : collect.valid_offsets) {
-            out << sep << valid.second << ": " << canon_name(valid.first) << ".$valid";
-            sep = ", "; }
         out << (sep+1) << "}" << std::endl;
         if (have_xor) {
             out << gw_indent << "xor: {";
@@ -1183,12 +1180,7 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
         for (auto key : keys) {
             if (key->matchType->path->name == "selector") continue;
             if (auto prim = key->expression->to<IR::Primitive>()) {
-                if (prim->name == "isValid") {
-                    auto hdr = prim->operands[0]->to<IR::HeaderRef>()->toString();
-                    out << indent << canon_name(phv.field(hdr + ".$valid")->name) << ": ";
-                } else {
-                    BUG("Unrecognized primitive as match header");
-                }
+                BUG("Unexpected primitive as match header");
             } else if (auto mask = key->expression->to<IR::Mask>()) {
                 out << indent << canon_name(phv.field(mask->left)->name) << ": ";
             } else {

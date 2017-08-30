@@ -51,4 +51,48 @@ class RemoveInstanceRef : public Transform {
             return ir; } }
 };
 
+/**
+ * Remove calls to the `isValid()` method on headers and replace them with
+ * references to the header's `$valid` POV bit field.
+ *
+ * XXX(seth): It would be nicer to deal with this in terms of the
+ * frontend/midend IR, because then we could rerun type checking and resolve
+ * references to make sure everything is still correct. Doing it here feels a
+ * bit hacky by comparison. This is considerably simpler, though, so it makes
+ * sense as a first step.
+ */
+class RemoveIsValid : public Transform {
+ private:
+    const IR::Expression* preorder(IR::MethodCallExpression* call) override {
+        std::cerr << "[RemoveIsValid] considering call: " << call << std::endl;
+        auto* method = call->method->to<IR::Member>();
+        if (!method) return call;
+
+        if (method->member != "isValid") return call;
+        BUG_CHECK(call->arguments->size() == 0,
+                  "Wrong number of arguments for method call: %1%", call);
+        auto* target = method->expr;
+        BUG_CHECK(target != nullptr, "Method has no target: %1%", call);
+        BUG_CHECK(target->type->is<IR::Type_Header>(),
+                  "Invoking isValid() on unexpected type %1%", target->type);
+
+        // On Tofino, calling a header's `isValid()` method is implemented by
+        // reading the header's POV bit, which is a simple bit<1> value.
+        const cstring validField = "$valid";
+        auto* member = new IR::Member(call->srcInfo, target, validField);
+        member->type = IR::Type::Bits::get(1);
+
+        // If isValid() is being used as a table key element, it already behaves
+        // like a bit<1> value; just replace it with a reference to the valid bit.
+        if (getParent<IR::KeyElement>() != nullptr) return member;
+
+        // In other contexts, rewrite isValid() into a comparison with a constant.
+        // This maintains a boolean type for the overall expression.
+        auto* constant = new IR::Constant(IR::Type::Bits::get(1), 1);
+        auto* result = new IR::Equ(call->srcInfo, member, constant);
+        result->type = IR::Type::Boolean::get();
+        return result;
+    }
+};
+
 #endif /* _COMMON_PARAM_BINDING_H_ */

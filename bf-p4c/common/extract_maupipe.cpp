@@ -634,6 +634,7 @@ const IR::Tofino::Pipe* extract_v1model_arch(P4::ReferenceMap* refMap, P4::TypeM
         &bindings,
         new SplitComplexInstanceRef,
         new RemoveInstanceRef,
+        new RemoveIsValid,
         new ConvertIndexToHeaderStackItemRef,
         new RewriteForTofino(refMap, typeMap),
     };
@@ -774,6 +775,7 @@ const IR::Tofino::Pipe* extract_native_arch(P4::ReferenceMap* refMap, P4::TypeMa
             &bindings,
             new SplitComplexInstanceRef,
             new RemoveInstanceRef,
+            new RemoveIsValid,
             new ConvertIndexToHeaderStackItemRef,
             new RewriteForTofino(refMap, typeMap),
     };

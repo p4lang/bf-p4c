@@ -727,7 +727,6 @@ p4c_add_xfail_reason("tofino"
   "ccgf fields empty"
   testdata/p4_14_samples/switch_20160226/switch.p4
   testdata/p4_14_samples/switch_20160512/switch.p4
-  extensions/p4_tests/p4_14/switch_20160602/switch.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -764,16 +763,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
   extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "Trying to match on bits not in match of gateway"
-  extensions/p4_tests/p4_14/ecmp_pi.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "Deparsed container .* contains both deparsed header fields and deparsed metadata fields"
-  extensions/p4_tests/p4_14/switch_l2_profile.p4
   )
 
 # We can't (without some complex acrobatics) support conditional computed
