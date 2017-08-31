@@ -300,31 +300,17 @@ static bool try_alloc_ixbar(TablePlacement::Placed *next, const TablePlacement::
     resources->salu_ixbar.clear();
     IXBar current_ixbar;
     for (auto *p = done; p && p->stage == next->stage; p = p->prev) {
-        current_ixbar.update(p->name, p->resources->match_ixbar);
-        current_ixbar.update(p->name + "$gw", p->resources->gateway_ixbar);
-        for (auto *at : p->table->attached) {
-            if (auto as = at->to<IR::ActionSelector>()) {
-                if (!p->resources->selector_ixbar.use.empty()) {
-                    current_ixbar.update(p->name + "$selector", p->resources->selector_ixbar);
-                    current_ixbar.attached_tables.emplace(as); } }
-            if (auto salu = at->to<IR::MAU::StatefulAlu>()) {
-                if (!p->resources->salu_ixbar.use.empty()) {
-                    current_ixbar.update(p->name + "$stateful", p->resources->salu_ixbar);
-                    current_ixbar.attached_tables.emplace(salu); } }
-        }
+        current_ixbar.update(p->name, p->resources);
     }
 
-    const vector<HashDistReq> &hdr_match = lc.get_hash_dist_req(next->table);
-    const vector<HashDistReq> &hdr_gw = lc.get_hash_dist_req(next->gw);
-    if (!current_ixbar.allocTable(next->table, phv, *resources, sue.preferred(), hdr_match) ||
-        !current_ixbar.allocTable(next->gw, phv, *resources, sue.preferred(), hdr_gw)) {
+    if (!current_ixbar.allocTable(next->table, phv, *resources, sue.preferred()) ||
+        !current_ixbar.allocTable(next->gw, phv, *resources, sue.preferred())) {
         resources->clear_ixbar();
         return false; }
 
     const bitvec immediate_mask = lc.get_action_format(next->table).immediate_mask;
     if (!is_gw && !try_alloc_format(next, resources, sue, immediate_mask)) {
         resources->clear_ixbar();
-        LOG3("Could not allocate format for selected layout_option");
         return false;
     }
 
@@ -384,9 +370,9 @@ static void coord_selector_xbar(const TablePlacement::Placed *curr,
                                 const TablePlacement::Placed *done,
                                 TableResourceAlloc *resource,
                                 vector<TableResourceAlloc *> &prev_resources) {
-    const IR::ActionSelector *as = nullptr;
+    const IR::MAU::Selector *as = nullptr;
     for (auto at : curr->table->attached) {
-        if ((as = at->to<IR::ActionSelector>()) != nullptr) break;
+        if ((as = at->to<IR::MAU::Selector>()) != nullptr) break;
     }
     if (as == nullptr) return;
     auto loc = resource->memuse.find(curr->table->get_use_name(as));
@@ -395,13 +381,13 @@ static void coord_selector_xbar(const TablePlacement::Placed *curr,
         return;
     int j = 0;
     for (auto *p = done; p && p->stage == curr->stage; p = p->prev) {
-        const IR::ActionSelector *p_as = nullptr;
+        const IR::MAU::Selector *p_as = nullptr;
         if (p == curr) {
             j++;
             continue;
         }
         for (auto at : p->table->attached) {
-            if ((p_as = at->to<IR::ActionSelector>()) != nullptr)
+            if ((p_as = at->to<IR::MAU::Selector>()) != nullptr)
                 break;
         }
         if (p_as == as && !p->resources->selector_ixbar.use.empty()) {
@@ -961,6 +947,32 @@ IR::Node *TablePlacement::preorder(IR::MAU::TableSeq *seq) {
                 return find_placed(a->name)->second->logical_id <
                        find_placed(b->name)->second->logical_id; }); }
     return seq;
+}
+
+/** This is to specifically link up hash distribution input xbar information to
+ *  to the actual IR node, as the asm output looks directly at the IR node in order to understand
+ *  which actual hash distribution unit it needs to use
+ */
+IR::Expression *TablePlacement::preorder(IR::MAU::HashDist *hd) {
+    auto *tbl = findContext<IR::MAU::Table>();
+    auto hash_dists = tbl->resources->hash_dists;
+
+    IXBar::HashDistUse::HashDistType type = IXBar::HashDistUse::UNKNOWN;
+    if (findContext<IR::MAU::Counter>())
+        type = IXBar::HashDistUse::COUNTER_ADR;
+    else if (findContext<IR::MAU::Meter>())
+        type = IXBar::HashDistUse::METER_ADR;
+    else if (findContext<IR::MAU::StatefulAlu>())
+        type = IXBar::HashDistUse::METER_ADR;
+    else if (findContext<IR::MAU::Action>())
+        type = IXBar::HashDistUse::IMMEDIATE;
+
+    for (auto hash_dist : hash_dists) {
+        if (hash_dist.type != type) continue;
+        if (hash_dist.field_list != hd->field_list) continue;
+        hd->units.insert(hd->units.end(), hash_dist.slices.begin(), hash_dist.slices.end());
+    }
+    return hd;
 }
 
 std::multimap<cstring, const TablePlacement::Placed *>::const_iterator

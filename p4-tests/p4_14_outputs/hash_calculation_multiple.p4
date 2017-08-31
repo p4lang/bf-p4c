@@ -38,7 +38,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         standard_metadata.egress_spec = 9w1;
     }
     @name(".action1") action action1() {
-        hash(hdr.packet.hash_result1, HashAlgorithm.random, (bit<16>)0, { hdr.packet.hash_field1, hdr.packet.hash_field2 }, (bit<32>)63356);
+        hash(hdr.packet.hash_result1, HashAlgorithm.random, (bit<16>)0, { hdr.packet.hash_field1, hdr.packet.hash_field2 }, (bit<32>)65536);
     }
     @name(".action2") action action2() {
         hash(hdr.packet.hash_result2, HashAlgorithm.random, (bit<16>)0, { hdr.packet.hash_field1, hdr.packet.hash_field3 }, (bit<32>)65536);

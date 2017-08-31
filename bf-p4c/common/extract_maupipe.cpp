@@ -135,7 +135,7 @@ static IR::Attached *createAttached(IR::MAU::Table *tt, Util::SourceInfo srcInfo
                                     const IR::Type *type, const IR::Vector<IR::Expression> *args,
                                     const IR::Annotations *annot,
                                     map<cstring, IR::ActionProfile *> *shared_ap,
-                                    map<cstring, IR::ActionSelector *> *shared_as) {
+                                    map<cstring, IR::MAU::Selector*> *shared_as) {
     // FIXME -- this should be looking at the arch model, but the current arch model stuff
     // is too complex -- need a way of building this automatically from the arch.p4 file.
     // For now, hack just using the type name as a string.
@@ -152,9 +152,19 @@ static IR::Attached *createAttached(IR::MAU::Table *tt, Util::SourceInfo srcInfo
                  tt->attached.push_back(shared_ap->at(name));
             return shared_as->at(name);
         }
-        auto sel = new IR::ActionSelector(srcInfo, name, annot);
-        sel->mode = getAnnotID(annot, "mode");
+        auto sel = new IR::MAU::Selector(srcInfo, name, annot);
+        if (annot->getSingle("mode"))
+            sel->mode = getAnnotID(annot, "mode");
+        else
+            sel->mode = IR::ID("fair");
         sel->type = getAnnotID(annot, "type");
+        sel->num_groups = 4;
+        sel->group_size = 120;
+        if (!sel->mode.name)
+            sel->mode = IR::ID("fair");
+        BUG_CHECK(args->size() == 3, "%s Selector does not have the correct number of arguments",
+                  sel->srcInfo);
+        sel->algorithm = args->at(0)->to<IR::Member>()->member;
         auto ap = new IR::ActionProfile(srcInfo, name);
         ap->size = args->at(1)->as<IR::Constant>().asInt();
         ap->selector = name;
@@ -175,7 +185,7 @@ static IR::Attached *createAttached(IR::MAU::Table *tt, Util::SourceInfo srcInfo
         (*shared_ap)[name] = ap;
         return ap;
     } else if (tname == "counter" || tname == "direct_counter") {
-        auto ctr = new IR::Counter(srcInfo, name, annot);
+        auto ctr = new IR::MAU::Counter(srcInfo, name, annot);
         for (auto anno : annot->annotations) {
             if (anno->name == "max_width")
                 ctr->max_width = anno->expr.at(0)->as<IR::Constant>().asInt();
@@ -191,9 +201,9 @@ static IR::Attached *createAttached(IR::MAU::Table *tt, Util::SourceInfo srcInfo
             case 2:
                 if (args->at(0)->is<IR::Member>()) {
                     ctr->settype(args->at(0)->as<IR::Member>().member.name);
-                    ctr->instance_count = args->at(1)->as<IR::Constant>().asInt();
+                    ctr->size = args->at(1)->as<IR::Constant>().asInt();
                 } else if (args->at(0)->is<IR::Constant>()) {
-                    ctr->instance_count = args->at(0)->as<IR::Constant>().asInt();
+                    ctr->size = args->at(0)->as<IR::Constant>().asInt();
                     ctr->settype(args->at(1)->as<IR::Member>().member.name);
                 } else {
                     BUG("unknown argument in counter %s", name);
@@ -204,7 +214,7 @@ static IR::Attached *createAttached(IR::MAU::Table *tt, Util::SourceInfo srcInfo
                 break; }
         return ctr;
     } else if (tname == "meter" || tname == "direct_meter") {
-        auto mtr = new IR::Meter(srcInfo, name, annot);
+        auto mtr = new IR::MAU::Meter(srcInfo, name, annot);
         for (auto anno : annot->annotations) {
             if (anno->name == "result")
                 mtr->result = anno->expr.at(0);
@@ -225,9 +235,9 @@ static IR::Attached *createAttached(IR::MAU::Table *tt, Util::SourceInfo srcInfo
                 // because we are in the transition from v1model.p4 to tofino.p4
                 if (args->at(0)->is<IR::Member>()) {
                     mtr->settype(args->at(0)->as<IR::Member>().member.name);
-                    mtr->instance_count = args->at(1)->as<IR::Constant>().asInt();
+                    mtr->size = args->at(1)->as<IR::Constant>().asInt();
                 } else if (args->at(0)->is<IR::Constant>()) {
-                    mtr->instance_count = args->at(0)->as<IR::Constant>().asInt();
+                    mtr->size = args->at(0)->as<IR::Constant>().asInt();
                     mtr->settype(args->at(1)->as<IR::Member>().member.name);
                 } else {
                     BUG("unknown argument in meter %s", name);
@@ -268,7 +278,7 @@ static void updateAttachedSalu(const Util::SourceInfo &loc, const P4::ReferenceM
         salu = new IR::MAU::StatefulAlu(reg->srcInfo, reg->externalName(), reg->annotations, reg);
         if (auto size = reg->arguments->at(0)->to<IR::Constant>()->asInt()) {
             salu->direct = false;
-            salu->instance_count = size;
+            salu->size = size;
         } else {
             salu->direct = true; }
         salu->width = regtype->arguments->at(0)->width_bits();
@@ -287,7 +297,7 @@ class FixP4Table : public Transform {
     IR::MAU::Table *tt;
     set<cstring> &unique_names;
     map<cstring, IR::ActionProfile *> *shared_ap;
-    map<cstring, IR::ActionSelector *> *shared_as;
+    map<cstring, IR::MAU::Selector *> *shared_as;
     bool default_action_fix = false;
 
     const IR::P4Table *preorder(IR::P4Table *tc) override {
@@ -369,7 +379,7 @@ class FixP4Table : public Transform {
 
  public:
     FixP4Table(const P4::ReferenceMap *r, IR::MAU::Table *tt, set<cstring> &u,
-               map<cstring, IR::ActionProfile *> *ap, map<cstring, IR::ActionSelector *> *as)
+               map<cstring, IR::ActionProfile *> *ap, map<cstring, IR::MAU::Selector *> *as)
     : refMap(r), tt(tt), unique_names(u), shared_ap(ap), shared_as(as) {}
 };
 
@@ -444,7 +454,7 @@ class GetTofinoTables : public Inspector {
     map<const IR::Node *, IR::MAU::Table *>     tables;
     map<const IR::Node *, IR::MAU::TableSeq *>  seqs;
     map<cstring, IR::ActionProfile *> shared_ap;
-    map<cstring, IR::ActionSelector *> shared_as;
+    map<cstring, IR::MAU::Selector *> shared_as;
     IR::MAU::TableSeq *getseq(const IR::Node *n) {
         if (!seqs.count(n) && tables.count(n))
             seqs[n] = new IR::MAU::TableSeq(tables.at(n));

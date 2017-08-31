@@ -10,7 +10,6 @@
 class IXBarRealign;
 struct TableResourceAlloc;
 
-
 struct IXBar {
     static constexpr int EXACT_GROUPS = 8;
     static constexpr int EXACT_BYTES_PER_GROUP = 16;
@@ -18,7 +17,7 @@ struct IXBar {
     static constexpr int HASH_GROUPS = 8;
     static constexpr int HASH_INDEX_GROUPS = 4;  /* groups of 10 bits for indexing */
     static constexpr int HASH_SINGLE_BITS = 12;  /* top 12 bits of hash table individually */
-    static constexpr int HASH_DIST_GROUPS = 3;
+    static constexpr int HASH_DIST_SLICES = 3;
     static constexpr int HASH_DIST_BITS = 16;
     static constexpr int HASH_DIST_UNITS = 2;
     static constexpr int TERNARY_GROUPS = StageUse::MAX_TERNARY_GROUPS;
@@ -59,9 +58,9 @@ struct IXBar {
     unsigned                                    hash_single_bit_inuse[HASH_SINGLE_BITS] = { 0 };
     Alloc1D<cstring, HASH_GROUPS>                      hash_group_print_use;
     unsigned                                    hash_group_use[HASH_GROUPS] = { 0 };
-    Alloc2D<cstring, HASH_TABLES, HASH_DIST_GROUPS>     hash_dist_use;
+    Alloc2D<cstring, HASH_TABLES, HASH_DIST_SLICES>     hash_dist_use;
     unsigned                                    hash_dist_inuse[HASH_TABLES] = { 0 };
-    Alloc2D<cstring, HASH_TABLES, HASH_DIST_GROUPS * HASH_DIST_BITS>   hash_dist_bit_use;
+    Alloc2D<cstring, HASH_TABLES, HASH_DIST_SLICES * HASH_DIST_BITS>   hash_dist_bit_use;
     unsigned long                               hash_dist_bit_inuse[HASH_TABLES] = { 0 };
     int hash_dist_groups[HASH_DIST_UNITS] = {-1, -1};
     friend class IXBarRealign;
@@ -81,9 +80,8 @@ struct IXBar {
         bool            gw_search_bus;  int gw_search_bus_bytes;
         bool            gw_hash_group;
 
-        enum algorithm_t { ExactMatch, Random, CRC16, CRC32, Identity };
-        enum hash_dist_type_t { CounterPtr = 1, MeterPtr = 2, RegisterPtr = 4, Immediate = 8,
-                                MeterPre = 16, SelectMod = 32 };
+
+        // enum use_type_t { Match, Gateway, Selector, StatefulAlu, HashDist, NotSet } use_type;
         /* tracking individual bytes (or parts of bytes) placed on the ixbar */
         struct Byte {
             cstring     field;
@@ -131,33 +129,32 @@ struct IXBar {
         vector<Way>     way_use;
 
         struct Select {
-            int          group;
-            unsigned     bit_mask;
-            algorithm_t  alg;
+            int          group = -1;
+            unsigned     bit_mask = 0;
+            cstring      algorithm;
+            cstring      mode;
             explicit Select(int g) : group(g), bit_mask(0) {}
         };
         vector<Select> select_use;
 
-        struct HashDist {
-            vector<Byte>      use;
-            unsigned          hash_table_input;
-            int               unit = -1;
-            int               group = -1;
-            unsigned          slice = 0;
-            unsigned long     bit_mask = 0;
-            int               shift = 0;
-            int               max_size = 0;
-            algorithm_t       alg;
-            hash_dist_type_t  type;
-            HashDist() : use(), group(-1) {}
-        };
-        vector<HashDist> hash_dist_use;
+        struct HashDistHash {
+            bool allocated = false;
+            int unit = -1;  // which of the two hash
+            int group = -1;
+            unsigned slice = 0;  // bitmask of the 3 hash distributions pre-units
+            unsigned long bit_mask = 0;
+            cstring algorithm;
 
+            void clear() {
+                allocated = false;
+            }
+        };
+
+        HashDistHash hash_dist_hash;
         void clear() { use.clear(); memset(hash_table_inputs, 0, sizeof(hash_table_inputs));
                        bit_use.clear(); way_use.clear(); select_use.clear();
-                       hash_dist_use.clear(); }
+                       hash_dist_hash.clear(); }
         unsigned compute_hash_tables();
-        unsigned compute_hash_dist_tables(int i = -1);
         int groups() const;  // how many different groups in this use
         bool exact_comp(const IXBar::Use *exact_use, int width) const;
         void add(const Use &alloc);
@@ -166,6 +163,39 @@ struct IXBar {
         vector<std::pair<int, int>> bits_per_group_single() const;
         int groups_single() const;
     };
+
+    struct HashDistUse {
+        enum HashDistType { COUNTER_ADR, METER_ADR, ACTION_ADR, IMMEDIATE, PRECOLOR,
+                            HASHMOD, UNKNOWN } type = UNKNOWN;
+        IXBar::Use use;
+        /** The pre-slice number comes from the following calculation:
+         *      hash_dist_hash.unit * HASH_DIST_SLICES (3) + (bit position in) hash_dist_hash.slice
+         *  This gives each hash distribution slice coming from the input xbar a location within
+         *  hash distribution.
+         */
+        vector<int> pre_slices;
+        map<int, int> expand;  // Controls the mau_hash_group_expand register
+        /** The actual slices, which will be the output in the asm_output, which are the pre-slice
+         *  post expansion
+         */
+        vector<int> slices;
+        map<int, int> groups;  // Indicates which hash group the hash dist is linked to
+        map<int, int> shifts;  // Controls the mau_hash_group_shift register per unit
+        map<int, bitvec> masks;  // Control the mau_hash_group_mask register per unit
+        // Classification of what the hash distribution is used for
+        const IR::Expression *field_list;  // For a comparison between IR::HashDist and this
+
+        void clear() {
+            use.clear();
+            pre_slices.clear();
+            expand.clear();
+            slices.clear();
+            shifts.clear();
+            masks.clear();
+        }
+        explicit HashDistUse(const IR::Expression* fl) : use(), field_list(fl) {}
+    };
+
 
     /* A problem occurred with the way the IXbar was allocated that requires backtracking
      * and trying something else */
@@ -246,14 +276,13 @@ struct IXBar {
                       const LayoutOption *layout_option,
                       size_t index, size_t start, Use &alloc);
     bool allocGateway(const IR::MAU::Table *, const PhvInfo &phv, Use &alloc, bool second_try);
-    bool allocSelector(const IR::ActionSelector *, const IR::P4Table *, const PhvInfo &phv,
+    bool allocSelector(const IR::MAU::Selector *, const IR::P4Table *, const PhvInfo &phv,
                        Use &alloc, bool second_try, cstring name);
     bool allocStateful(const IR::MAU::StatefulAlu *, const PhvInfo &phv, Use &alloc, bool);
-    bool allocHashDist(const HashDistReq &hash_dist_req, const PhvInfo &phv, Use &alloc,
-                       bool second_try, cstring name);
+    bool allocHashDist(const IR::MAU::HashDist *hd, IXBar::HashDistUse::HashDistType hdt,
+                       const PhvInfo &phv, IXBar::Use &alloc, bool second_try, cstring name);
     bool allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResourceAlloc &alloc,
-                    const LayoutOption *lo, const vector<HashDistReq> &hash_dist_reqs);
-    void update_hash_dist(cstring name, const Use &alloc);
+                    const LayoutOption *lo);
     void update(cstring name, const Use &alloc);
     void update(cstring name, const TableResourceAlloc *alloc);
     void update(const IR::MAU::Table *tbl) {
@@ -304,16 +333,11 @@ struct IXBar {
                                    size_t &start, size_t &last);
     void field_management(const IR::Expression *field, IXBar::Use &alloc,
         set<cstring> &fields_needed, bool hash_dist, cstring name, const PhvInfo &phv);
-    void initialize_hash_dist(const HashDistReq &hash_dist_req, IXBar::Use &alloc,
-        const PhvInfo &phv, set<cstring> &fields_needed, cstring name);
-    bool allocHashDistAddress(const HashDistReq &hash_dist_req,
-        const unsigned used_hash_dist_groups, const unsigned long used_hash_dist_bits,
-        const unsigned &hash_table_input, unsigned &slice, unsigned long &bit_mask, cstring name,
-        const PhvInfo &phv);
-    bool allocHashDistImmediate(const HashDistReq &hash_dist_req,
-        const unsigned used_hash_dist_groups,
-        const unsigned &hash_table_input, unsigned &slice, unsigned long &bit_mask, cstring name,
-        const PhvInfo &phv);
+    bool allocHashDistAddress(const IR::MAU::HashDist *hd, const unsigned used_hash_dist_groups,
+        const unsigned long used_hash_dist_bits, const unsigned &hash_table_input,
+        unsigned &slice, unsigned long &bit_mask, cstring name);
+    bool allocHashDistImmediate(const IR::MAU::HashDist *hd, const unsigned used_hash_dist_slices,
+        const unsigned &hash_table_input, unsigned &slice, unsigned long &bit_mask, cstring name);
 };
 
 inline std::ostream &operator<<(std::ostream &out, const IXBar::Loc &l) {

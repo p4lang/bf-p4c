@@ -28,8 +28,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".action0") action action0() {
-        hash(hdr.packet.hash_result1, HashAlgorithm.crc16, (bit<16>)0, { hdr.packet.hash_field1, hdr.packet.hash_field2 }, (bit<32>)63356);
-        hash(hdr.packet.hash_result2, HashAlgorithm.crc16, (bit<16>)0, { hdr.packet.hash_field3, hdr.packet.hash_field4 }, (bit<32>)63356);
+        hash(hdr.packet.hash_result1, HashAlgorithm.crc16, (bit<16>)0, { hdr.packet.hash_field1, hdr.packet.hash_field2 }, (bit<32>)65536);
+        hash(hdr.packet.hash_result2, HashAlgorithm.crc16, (bit<16>)0, { hdr.packet.hash_field3, hdr.packet.hash_field4 }, (bit<32>)65536);
     }
     @name(".set_port") action set_port() {
         standard_metadata.egress_spec = 9w1;

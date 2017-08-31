@@ -51,8 +51,8 @@ field_list_calculation hash_1 {
 }
 
 action action0() {
-    modify_field_with_hash_based_offset(packet.hash_result1, 0, hash_0, 63356);
-    modify_field_with_hash_based_offset(packet.hash_result2, 0, hash_1, 63356);
+    modify_field_with_hash_based_offset(packet.hash_result1, 0, hash_0, 65536);
+    modify_field_with_hash_based_offset(packet.hash_result2, 0, hash_1, 65536);
 }
 
 action set_port() {

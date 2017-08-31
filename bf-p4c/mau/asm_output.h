@@ -25,25 +25,20 @@ class MauAsmOutput : public MauInspector {
         return true; }
     friend std::ostream &operator<<(std::ostream &, const MauAsmOutput &);
     class TableMatch;
-    // class ImmedFormat;
-    // class ActionDataFormat;
-    void emit_ixbar(std::ostream &out, indent_t, const IXBar::Use &,
-            const Memories::Use *, const TableMatch *, bool ternary, bool hash_action,
-            bool is_sel = false, const IR::ActionSelector *as = nullptr) const;
+    void emit_ixbar(std::ostream &out, indent_t, const IXBar::Use *,
+            const vector<IXBar::HashDistUse> *, const Memories::Use *, const TableMatch *) const;
+    void emit_ways(std::ostream &out, indent_t indent, const IXBar::Use *use,
+            const Memories::Use *mem) const;
+    void emit_hash_dist(std::ostream &out, indent_t indent,
+             const vector<IXBar::HashDistUse> *hash_dist_use) const;
     void emit_ixbar_gather_bytes(const vector<IXBar::Use::Byte> &use,
                                  map<int, map<int, Slice>> &sort, bool ternary) const;
-    void emit_ixbar_ways(std::ostream &out, indent_t indent,
-             const IXBar::Use &use, const Memories::Use *mem, bool is_sel) const;
-    void emit_ixbar_hash_dist(std::ostream &out, indent_t indent,
-             const IXBar::Use &use) const;
     void emit_ixbar_hash_table(int hash_table, vector<Slice> &match_data,
             vector<Slice> &ghost, const TableMatch *fmt, map<int, map<int, Slice>> &sort) const;
     void emit_ixbar_hash(std::ostream &out, indent_t indent, vector<Slice> &match_data,
-            vector<Slice> &ghost, const IXBar::Use &use, int hash_group,
-            const IR::ActionSelector *as) const;
-    void emit_ixbar_hash_dist_hash(std::ostream &out, indent_t indent,
-            vector<Slice> &match_data, vector<Slice> &ghost,
-            const IXBar::Use::HashDist &hash_dist) const;
+            vector<Slice> &ghost, const IXBar::Use *use, int hash_group) const;
+    void emit_single_ixbar(std::ostream& out, indent_t indent, const IXBar::Use *use,
+            const TableMatch *fmt) const;
     void emit_memory(std::ostream &out, indent_t, const Memories::Use &) const;
     void emit_gateway(std::ostream &out, indent_t gw_indent, const IR::MAU::Table *tbl,
              bool hash_action, cstring next_hit, cstring &gw_miss) const;
@@ -54,7 +49,7 @@ class MauAsmOutput : public MauInspector {
     void emit_table_context_json(std::ostream &out, indent_t, const IR::MAU::Table *tbl) const;
     void emit_ternary_match(std::ostream &out, indent_t, const TableFormat::Use &use) const;
     void emit_table(std::ostream &out, const IR::MAU::Table *tbl) const;
-    std::string find_indirect_index(const IR::MAU::Table *tbl, const IR::Attached *at) const;
+    std::string find_indirect_index(const IR::Attached *at) const;
     void emit_table_indir(std::ostream &out, indent_t, const IR::MAU::Table *tbl) const;
     void emit_action_data_format(std::ostream &out, indent_t, const IR::MAU::Table *tbl,
             const IR::MAU::Action *af) const;

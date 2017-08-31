@@ -37,6 +37,7 @@ class TablePlacement : public MauTransform, public Backtrack {
     IR::Node *preorder(IR::Tofino::Pipe *) override;
     IR::Node *preorder(IR::MAU::TableSeq *) override;
     IR::Node *preorder(IR::MAU::Table *) override;
+    IR::Expression *preorder(IR::MAU::HashDist *) override;
     IR::Node *postorder(IR::Tofino::Pipe *pipe) override;
     const Placed *placement;
     bool is_better(const Placed *a, const Placed *b);

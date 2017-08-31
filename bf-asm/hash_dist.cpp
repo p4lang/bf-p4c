@@ -80,17 +80,22 @@ void HashDistribution::pass1(Table *tbl) {
     if (expand >= 0) {
         int min_shift = 7, diff = 7, other = id-1;
         switch(id%3) {
-        case '0':
+        case 0:
             min_shift = 0; diff = -7; other = id+1;
             // fall through
-        case '1':
+        case 1:
             if (expand < min_shift || expand >= min_shift + 16) {
                 error(lineno, "hash_dist unit %d expand can't pull from bit %d", id, expand);
                 err = true; }
             break;
-        case '2':
+        case 2:
             error(lineno, "hash_dist unit %d cannot be expanded", id);
-            err = true; }
+            err = true;
+            break;
+        default:
+            error(lineno, "a mod 3 check should only hit these particular cases, of 0, 1, and 2");
+            assert(0);
+        }
         if (!err) {
             for (auto *use : tbl->stage->hash_dist_use[other])
                 if (use->expand != expand - diff) {

@@ -1,19 +1,19 @@
 #include "resource_estimate.h"
 #include "lib/bitops.h"
 
-int CounterPerWord(const IR::Counter *ctr) {
+int CounterPerWord(const IR::MAU::Counter *ctr) {
     switch (ctr->type) {
-    case IR::CounterType::PACKETS:
+    case IR::MAU::DataAggregation::PACKETS:
         if (ctr->min_width <= 32) return 4;
         if (ctr->min_width > 64)
             error("%s: Maximum width for counter %s is 64 bits", ctr->srcInfo, ctr->name);
         return 2;
-    case IR::CounterType::BYTES:
+    case IR::MAU::DataAggregation::BYTES:
         if (ctr->min_width <= 32) return 4;
         if (ctr->min_width > 64)
             error("%s: Maximum width for counter %s is 64 bits", ctr->srcInfo, ctr->name);
         return 2;
-    case IR::CounterType::BOTH:
+    case IR::MAU::DataAggregation::BOTH:
         if (ctr->min_width <= 64) return 2;
         if (ctr->min_width > 128)
             error("%s: Maximum width for counter %s is 128 bits", ctr->srcInfo, ctr->name);
@@ -23,7 +23,7 @@ int CounterPerWord(const IR::Counter *ctr) {
         return 1; }
 }
 
-int RegisterPerWord(const IR::Register *reg) {
+int RegisterPerWord(const IR::MAU::StatefulAlu *reg) {
     if (reg->width <= 0)
         warning("%s: No width in register %s, using 8", reg->srcInfo, reg->name);
     if (reg->width == 1) return 128;
@@ -137,17 +137,17 @@ void StageUseEstimate::calculate_attached_rams(const IR::MAU::Table *tbl,
         int width = 1;
         int attached_entries = lo->entries;
         bool need_maprams = false;
-        if (auto *ctr = dynamic_cast<const IR::Counter *>(at)) {
+        if (auto *ctr = dynamic_cast<const IR::MAU::Counter *>(at)) {
             per_word = CounterPerWord(ctr);
-            if (!ctr->direct) attached_entries = ctr->instance_count;
+            if (!ctr->direct) attached_entries = ctr->size;
             need_maprams = true;
-        } else if (auto *mtr = dynamic_cast<const IR::Meter *>(at)) {
+        } else if (auto *mtr = dynamic_cast<const IR::MAU::Meter *>(at)) {
             per_word = 1;
-            if (!mtr->direct) attached_entries = mtr->instance_count;
+            if (!mtr->direct) attached_entries = mtr->size;
             need_maprams = true;
-        } else if (auto *reg = dynamic_cast<const IR::Register *>(at)) {
+        } else if (auto *reg = dynamic_cast<const IR::MAU::StatefulAlu*>(at)) {
             per_word = RegisterPerWord(reg);
-            if (!reg->direct) attached_entries = reg->instance_count;
+            if (!reg->direct) attached_entries = reg->size;
             need_maprams = true;
         } else if (auto *ap = dynamic_cast<const IR::ActionProfile *>(at)) {
             per_word = ActionDataPerWord(&lo->layout, &width);
@@ -159,7 +159,7 @@ void StageUseEstimate::calculate_attached_rams(const IR::MAU::Table *tbl,
                 BUG("Action Data table exists before table placement occurs");
             width = 1;
             per_word = ActionDataPerWord(&lo->layout, &width);
-        } else if (/*auto *as = */dynamic_cast<const IR::ActionSelector *>(at)) {
+        } else if (/*auto *as = */dynamic_cast<const IR::MAU::Selector *>(at)) {
             // TODO(cdodd)
         } else if (/*auto *ti = */dynamic_cast<const IR::MAU::TernaryIndirect *>(at)) {
             if (!table_placement)
@@ -365,27 +365,27 @@ void StageUseEstimate::known_srams_needed(const IR::MAU::Table *tbl,
          int per_word = 0;
          int width = 1;
          bool need_maprams = false;
-         if (auto *ctr = dynamic_cast<const IR::Counter *>(at)) {
+         if (auto *ctr = dynamic_cast<const IR::MAU::Counter *>(at)) {
             if (ctr->direct) continue;
-            attached_entries  = ctr->instance_count;
+            attached_entries  = ctr->size;
             per_word = CounterPerWord(ctr);
             need_maprams = true;
-        } else if (auto *mtr = dynamic_cast<const IR::Meter *>(at)) {
+        } else if (auto *mtr = dynamic_cast<const IR::MAU::Meter *>(at)) {
             if (mtr->direct) continue;
             per_word = 1;
-            attached_entries = mtr->instance_count;
+            attached_entries = mtr->size;
             need_maprams = true;
-        } else if (auto *reg = dynamic_cast<const IR::Register *>(at)) {
+        } else if (auto *reg = dynamic_cast<const IR::MAU::StatefulAlu *>(at)) {
             if (reg->direct) continue;
             per_word = RegisterPerWord(reg);
-            attached_entries = reg->instance_count;
+            attached_entries = reg->size;
             need_maprams = true;
         } else if (auto *ap = dynamic_cast<const IR::ActionProfile *>(at)) {
             per_word = ActionDataPerWord(&lo->layout, &width);
             attached_entries = ap->size;
         } else if (/*auto *ad = */dynamic_cast<const IR::MAU::ActionData *>(at)) {
            continue;
-        } else if (/*auto *as = */dynamic_cast<const IR::ActionSelector *>(at)) {
+        } else if (/*auto *as = */dynamic_cast<const IR::MAU::Selector *>(at)) {
             // TODO(cdodd)
         } else if (dynamic_cast<const IR::MAU::TernaryIndirect *>(at)) {
             continue;
@@ -412,19 +412,19 @@ void StageUseEstimate::calculate_per_row_vector(vector<RAM_counter> &per_word_an
          int per_word = 0;
          int width = 1;
          bool need_maprams = false;
-         if (auto *ctr = at->to<IR::Counter>()) {
+         if (auto *ctr = at->to<IR::MAU::Counter>()) {
              if (!ctr->direct) continue;
              per_word = CounterPerWord(ctr);
              need_maprams = true;;
-         } else if (auto *mtr = at->to<IR::Meter>()) {
+         } else if (auto *mtr = at->to<IR::MAU::Meter>()) {
              if (!mtr->direct) continue;
              per_word = 1;
              need_maprams = true;
-         } else if (auto *reg = at->to<IR::Register>()) {
+         } else if (auto *reg = at->to<IR::MAU::StatefulAlu>()) {
              if (!reg->direct) continue;
              per_word = RegisterPerWord(reg);
              need_maprams = true;
-         } else if (at->is<IR::ActionProfile>() || at->is<IR::ActionSelector>()) {
+         } else if (at->is<IR::ActionProfile>() || at->is<IR::MAU::Selector>()) {
              continue;
          } else {
              BUG("Unrecognized table type");

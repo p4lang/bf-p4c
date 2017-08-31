@@ -77,8 +77,8 @@ struct StageUseEstimate {
 };
 
 
-int CounterPerWord(const IR::Counter *ctr);
-int RegisterPerWord(const IR::Register *reg);
+int CounterPerWord(const IR::MAU::Counter *ctr);
+int RegisterPerWord(const IR::MAU::StatefulAlu *reg);
 int ActionDataPerWord(const IR::MAU::Table::Layout *layout, int *width);
 int TernaryIndirectPerWord(const IR::MAU::Table::Layout *layout, const IR::MAU::Table *tbl);
 

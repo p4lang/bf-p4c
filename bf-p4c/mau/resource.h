@@ -11,6 +11,7 @@
 struct TableResourceAlloc {
     IXBar::Use                          match_ixbar, gateway_ixbar, selector_ixbar,
                                         salu_ixbar;
+    vector<IXBar::HashDistUse>          hash_dists;
     TableFormat::Use                    table_format;
     map<cstring, Memories::Use>         memuse;
     ActionFormat::Use                   action_format;
@@ -22,6 +23,7 @@ struct TableResourceAlloc {
         rv->selector_ixbar = selector_ixbar;
         rv->table_format = table_format;
         rv->action_format = action_format;
+        rv->hash_dists = hash_dists;
         rv->action_data_xbar = action_data_xbar;
         for (auto &use : memuse) {
             if (name == use.first) {
@@ -43,13 +45,16 @@ struct TableResourceAlloc {
         rv->salu_ixbar = salu_ixbar;
         rv->table_format = table_format;
         rv->action_format = action_format;
+        rv->hash_dists = hash_dists;
         rv->action_data_xbar = action_data_xbar;
         return rv; }
     void clear_ixbar() {
         match_ixbar.clear();
         gateway_ixbar.clear();
         selector_ixbar.clear();
-        salu_ixbar.clear(); }
+        salu_ixbar.clear();
+        hash_dists.clear();
+    }
     void clear() {
         clear_ixbar();
         table_format.clear();

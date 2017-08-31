@@ -214,7 +214,7 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
         new HeaderPushPop,
         new CopyHeaderEliminator,   // needs to be after HeaderPushPop and before InstSel
         new CollectPhvInfo(phv),
-        new InstructionSelection(phv),
+        new DoInstructionSelection(phv),
         new DumpPipe("After InstructionSelection"),
         new CollectPhvInfo(phv),
         &defuse,

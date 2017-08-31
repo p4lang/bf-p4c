@@ -369,23 +369,39 @@ const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
         return nullptr;
     } else if (prim->name == "direct_counter.count" || prim->name == "direct_meter.read") {
         return nullptr;
+    // Convert this hash to a set a PHV field to an IR::MAU::HashDist
     } else if (prim->name == "hash") {
-        int size = 1;
+        unsigned size = 1;
         if (prim->operands[4]->to<IR::Constant>()) {
             size = bitcount(prim->operands[4]->to<IR::Constant>()->asLong() - 1);
+            if ((1LL << size) != prim->operands[4]->to<IR::Constant>()->asLong())
+                error("%s: The hash offset must be a power of 2 in a hash calculation %s",
+                      prim->srcInfo, *prim);
         } else {
             error("NULL operand 4 for %s", *prim);
         }
-        /* FIXME -- is the above correct?  Or do we want ceil_log2? */
+        cstring algorithm;
+        if (auto *mem = prim->operands[1]->to<IR::Member>())
+            algorithm = mem->member;
+        vector<int> init_units;
+        auto *hd = new IR::MAU::HashDist(prim->srcInfo, prim->operands[3], algorithm,
+                                         init_units, prim);
+        hd->bit_width = size;
+        if (auto *constant = prim->operands[2]->to<IR::Constant>()) {
+            if (constant->asInt() != 0)
+                error("%s: The initial offset for a hash calculation function has to be zero %s",
+                       prim->srcInfo, *prim);
+        }
+
         IR::MAU::Instruction *instr =
             new IR::MAU::Instruction( prim->srcInfo, "set",
-                new IR::Slice(prim->operands[0], size-1, 0),
-                new IR::MAU::HashDist(prim->operands[3], prim));
+                new IR::Slice(prim->operands[0], size-1, 0), hd);
         return instr;
     } else {
         WARNING("unhandled in InstSel: " << *prim); }
     return prim;
 }
+
 
 const IR::Type *stateful_type_for_primitive(const IR::Primitive *prim) {
     if (prim->name == "counter.count" || prim->name == "direct_counter.count")
@@ -399,7 +415,79 @@ const IR::Type *stateful_type_for_primitive(const IR::Primitive *prim) {
     BUG("Not a stateful primitive %s", prim);
 }
 
-const IR::MAU::Table *InstructionSelection::postorder(IR::MAU::Table *tbl) {
+const IR::MAU::Action *StatefulHashDistSetup::preorder(IR::MAU::Action *act) {
+    remove_tempvars.clear();
+    if (act->stateful.empty())
+        prune();
+
+    for (auto prim : act->stateful) {
+        BUG_CHECK(prim->operands.size() >= 1, "Invalid primitive %s", prim);
+        auto gref = prim->operands[0]->to<IR::GlobalRef>();
+        BUG_CHECK(gref, "No object named %s", prim->operands[0]);
+        if (prim->operands.size() >= 2) {
+            if (auto *tv = prim->operands[1]->to<IR::TempVar>()) {
+                remove_tempvars.insert(tv->name);
+            }
+        }
+    }
+    return act;
+}
+
+const IR::MAU::Instruction *StatefulHashDistSetup::preorder(IR::MAU::Instruction *instr) {
+    saved_tempvar = nullptr;
+    saved_hashdist = nullptr;
+    return instr;
+}
+
+const IR::TempVar *StatefulHashDistSetup::preorder(IR::TempVar *tv) {
+    if (remove_tempvars.find(tv->name) != remove_tempvars.end())
+        saved_tempvar = tv;
+    return tv;
+}
+
+const IR::MAU::Instruction *StatefulHashDistSetup::postorder(IR::MAU::Instruction *instr) {
+    if (saved_tempvar && saved_hashdist) {
+        stateful_alu_from_hash_dists[saved_tempvar->name] = saved_hashdist;
+        return nullptr;
+    }
+    return instr;
+}
+
+const IR::MAU::HashDist *StatefulHashDistSetup::preorder(IR::MAU::HashDist *hd) {
+    saved_hashdist = hd;
+    return hd;
+}
+
+IR::MAU::HashDist *StatefulHashDistSetup::create_hash_dist(const IR::Expression *expr,
+                                                           const IR::Primitive *prim) {
+    vector<int> init_units;
+    cstring algorithm = "identity";
+    auto *hd = new IR::MAU::HashDist(prim->srcInfo, expr, algorithm, init_units, prim);
+    hd->algorithm = algorithm;
+    hd->bit_width = expr->type->width_bits();
+    return hd;
+}
+
+
+class InitializeHashDist : public MauTransform {
+    const IR::MAU::HashDist *hd;
+    const IR::MAU::Synth2Port *preorder(IR::MAU::Synth2Port *sp) {
+        sp->hash_dist = hd;
+        prune();
+        return sp;
+    }
+
+ public:
+    explicit InitializeHashDist(const IR::MAU::HashDist *h) : hd(h) {}
+};
+
+/** This pass was specifically created to deal with adding the HashDist object to different
+ *  stateful objects.  On one particular case, execute_stateful_alu_from_hash was creating
+ *  two separate instructions, a TempVar = hash function call, and an execute stateful call
+ *  addressed by this TempVar.  This pass combines these instructions into one instruction,
+ *  and correctly saves the HashDist IR into these attached tables
+ */
+const IR::MAU::Table *StatefulHashDistSetup::postorder(IR::MAU::Table *tbl) {
     for (auto act : Values(tbl->actions)) {
         for (auto prim : act->stateful) {
             // typechecking should have verified
@@ -407,18 +495,45 @@ const IR::MAU::Table *InstructionSelection::postorder(IR::MAU::Table *tbl) {
             auto gref = prim->operands[0]->to<IR::GlobalRef>();
             // typechecking should catch this too
             BUG_CHECK(gref, "No object named %s", prim->operands[0]);
-            auto stateful = gref->obj->to<IR::Stateful>();
+            auto synth2port = gref->obj->to<IR::MAU::Synth2Port>();
             auto type = stateful_type_for_primitive(prim);
-            if (!stateful || stateful->getType() != type) {
+            if (!synth2port || synth2port->getType() != type) {
                 // typechecking is unable to check this without a good bit more work
                 error("%s: %s is not a %s", prim->operands[0]->srcInfo, gref->obj, type);
-            } else if (!contains(tbl->attached, stateful)) {
+            }
+
+            if (!contains(tbl->attached, synth2port)) {
                 // FIXME -- Needed because extract_maupipe does not correctly attach tables to
                 // multiple match tables.
                 // BUG("%s not attached to %s", stateful->name, tbl->name);
-                tbl->attached.push_back(stateful);
+                tbl->attached.push_back(synth2port);
+            }
+
+            if (prim->operands.size() >= 2) {
+                IR::MAU::HashDist *hd = nullptr;
+                if (phv.field(prim->operands[1])) {
+                    hd = create_hash_dist(prim->operands[1], prim);
+                } else if (auto *tv = prim->operands[1]->to<IR::TempVar>()) {
+                    hd = stateful_alu_from_hash_dists.at(tv->name);
+                }
+                if (hd == nullptr) continue;
+                // Painful code as it is unclear what is visited first, the actions or the
+                // attached tables.  Probably should separate into multiple passes
+                auto synth2port_adjust = synth2port->apply(InitializeHashDist(hd))
+                                               ->to<IR::MAU::Synth2Port>();
+                for (size_t i = 0; i < tbl->attached.size(); i++) {
+                    if (tbl->attached[i] == synth2port) {
+                        tbl->attached[i] = synth2port_adjust;
+                        break;
+                    }
+                }
             }
         }
     }
     return tbl;
 }
+
+DoInstructionSelection::DoInstructionSelection(PhvInfo &phv) : PassManager {
+    new InstructionSelection(phv),
+    new StatefulHashDistSetup(phv)
+} {}

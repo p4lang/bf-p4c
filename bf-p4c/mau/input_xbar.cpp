@@ -18,9 +18,15 @@ void IXBar::clear() {
     ternary_fields.clear();
     hash_index_use.clear();
     hash_single_bit_use.clear();
+    hash_group_print_use.clear();
+    hash_dist_use.clear();
+    hash_dist_bit_use.clear();
     memset(hash_index_inuse, 0, sizeof(hash_index_inuse));
     memset(hash_single_bit_inuse, 0, sizeof(hash_single_bit_inuse));
     memset(hash_group_use, 0, sizeof(hash_group_use));
+    memset(hash_dist_inuse, 0, sizeof(hash_dist_inuse));
+    memset(hash_dist_bit_inuse, 0, sizeof(hash_dist_bit_inuse));
+    memset(hash_dist_groups, -1, sizeof(hash_dist_groups));
 }
 
 int IXBar::Use::groups() const {
@@ -119,22 +125,6 @@ bool IXBar::Use::exact_comp(const IXBar::Use *exact_use, int width) const {
 unsigned IXBar::Use::compute_hash_tables() {
     unsigned hash_table_input = 0;
     for (auto &b : use) {
-        assert(b.loc.group >= 0 && b.loc.group < HASH_TABLES/2);
-        unsigned grp = 1U << (b.loc.group * 2);
-        if (b.loc.byte >= 8) grp <<= 1;
-        hash_table_input |= grp; }
-    return hash_table_input;
-}
-
-unsigned IXBar::Use::compute_hash_dist_tables(int i /*= -1*/) {
-    unsigned hash_table_input = 0;
-    vector<Byte> hash_dist;
-    if (i == -1)
-        hash_dist = hash_dist_use.back().use;
-    else
-        hash_dist = hash_dist_use[i].use;
-
-    for (auto &b : hash_dist) {
         assert(b.loc.group >= 0 && b.loc.group < HASH_TABLES/2);
         unsigned grp = 1U << (b.loc.group * 2);
         if (b.loc.byte >= 8) grp <<= 1;
@@ -820,8 +810,7 @@ int need_align_flags[4][4] = { { 0, 0, 0, 0 },  // 8bit -- no alignment needed
 
 /* Add the pre-allocated bytes to the Use structure */
 static void add_use(IXBar::Use &alloc, const PhvInfo::Field *field,
-                    const bitrange *bits = nullptr, int flags = 0,
-                    bool hash_dist = false) {
+                    const bitrange *bits = nullptr, int flags = 0) {
     bool ok = false;
     int index = 0;
     field->foreach_byte(bits, [&](const PhvInfo::Field::alloc_slice &sl) {
@@ -830,10 +819,7 @@ static void add_use(IXBar::Use &alloc, const PhvInfo::Field *field,
         byte.bit_use.setrange(sl.container_bit % 8, sl.width);
         byte.flags =
             flags | need_align_flags[sl.container.log2sz()][(sl.container_bit/8U) & 3];
-        if (hash_dist)
-            alloc.hash_dist_use.back().use.push_back(byte);
-        else
-            alloc.use.push_back(byte);
+        alloc.use.push_back(byte);
         index++;
     });
     if (!ok)
@@ -885,7 +871,7 @@ void IXBar::field_management(const IR::Expression *field, IXBar::Use &alloc,
         return;
     }
     fields_needed.insert(finfo->name);
-    add_use(alloc, finfo, &bits, 0, hash_dist);
+    add_use(alloc, finfo, &bits, 0);
 }
 
 /* This visitor is used by stateful tables to find the fields needed and add them to the
@@ -905,6 +891,10 @@ class FindFieldsToAlloc : public Inspector {
                 add_use(alloc, finfo, &bits, 0); }
             return false; }
         return true; }
+    bool preorder(const IR::MAU::HashDist *) override {
+        // Handled in a different section
+        return false;
+    }
 
  public:
     FindFieldsToAlloc(const PhvInfo &phv, IXBar::Use &alloc, set<cstring> &fn)
@@ -928,6 +918,7 @@ bool IXBar::allocMatch(bool ternary, const IR::P4Table *tbl, const PhvInfo &phv,
     if (!ternary && rv)
         alloc.compute_hash_tables();
     if (!rv) alloc.clear();
+
     return rv;
 }
 
@@ -1208,8 +1199,10 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
     return true;
 }
 
-
-bool IXBar::allocSelector(const IR::ActionSelector *, const IR::P4Table *match_table,
+/** Selector allocation algorithm.  Currently reserves an entire section of hash matrix,
+ *  even if the selector is only on fair mode, rather than resilient
+ */
+bool IXBar::allocSelector(const IR::MAU::Selector *as, const IR::P4Table *match_table,
                           const PhvInfo &phv, Use &alloc, bool second_try, cstring name) {
     vector<IXBar::Use::Byte *>  alloced;
     set <cstring>               fields_needed;
@@ -1234,8 +1227,28 @@ bool IXBar::allocSelector(const IR::ActionSelector *, const IR::P4Table *match_t
         alloc.clear();
         return false;
     }
+    for (int i = 0; i < HASH_TABLES; i++) {
+        if ((1U << i) & hash_table_input) {
+            for (int j = 0; j < HASH_INDEX_GROUPS; j++) {
+                if (hash_index_use[i][j]) {
+                    alloc.clear();
+                    return false;
+                }
+            }
+            for (int j = 0; j < HASH_SINGLE_BITS; j++) {
+                if (hash_single_bit_use[i][j]) {
+                    alloc.clear();
+                    return false;
+                }
+            }
+        }
+    }
+
     alloc.select_use.emplace_back(hash_group);
-    fill_out_use(alloced, false);
+    alloc.select_use.back().algorithm = as->algorithm.name;
+    alloc.select_use.back().mode = as->mode.name;
+    if (as->algorithm.name == "identity")
+        alloc.select_use.back().algorithm = "selector_identity";
     for (int i = 0; i < HASH_TABLES; i++) {
         if ((1U << i) & hash_table_input) {
             for (int j = 0; j < HASH_INDEX_GROUPS; j++) {
@@ -1248,6 +1261,7 @@ bool IXBar::allocSelector(const IR::ActionSelector *, const IR::P4Table *match_t
             }
         }
     }
+    fill_out_use(alloced, false);
     hash_group_print_use[hash_group] = name + "$select";
     hash_group_use[hash_group] |= hash_table_input;
     alloc.hash_table_inputs[hash_group] = hash_table_input;
@@ -1262,9 +1276,7 @@ bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu,
     unsigned width = salu->width/8U;
     if (!salu->dual) width *= 2;
     unsigned byte_mask = ((1U << width) - 1) << 8;
-    LOG3("need " << alloc.use.size() << " bytes for stateful table " << salu->name);
     if (alloc.use.size() == 0) return true;
-    LOG3("need fields " << fields_needed);
     if (alloc.use.size() > width) {
         // can't possibly fit
         return false; }
@@ -1276,76 +1288,20 @@ bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu,
     return true;
 }
 
-/* Provide all necessary information to the IXBar::Use about this specific primitive */
-void IXBar::initialize_hash_dist(const HashDistReq &hash_dist_req, Use &alloc,
-                                 const PhvInfo &phv, set<cstring> &fields_needed,
-                                 cstring name) {
-    if (hash_dist_req.is_address()) {
-        const IR::Expression *field = hash_dist_req.get_instr()->operands.at(1);
-        auto sful = hash_dist_req.get_stateful();;
-        if (auto ctr = sful->to<IR::Counter>()) {
-            alloc.hash_dist_use.back().type = Use::CounterPtr;
-            alloc.hash_dist_use.back().alg = Use::Identity;
-            int per_word = CounterPerWord(ctr);
-            if (per_word == 4)
-                alloc.hash_dist_use.back().shift = 1;
-            else if (per_word == 2)
-                alloc.hash_dist_use.back().shift = 2;
-            else
-                alloc.hash_dist_use.back().shift = 3;
-        } else if (sful->is<IR::Meter>()) {
-            alloc.hash_dist_use.back().type = Use::MeterPtr;
-            alloc.hash_dist_use.back().alg = Use::Identity;
-            alloc.hash_dist_use.back().shift = 7;
-        } else if (auto reg = sful->to<IR::Register>()) {
-            alloc.hash_dist_use.back().type = Use::MeterPtr;
-            alloc.hash_dist_use.back().alg = Use::Identity;
-            alloc.hash_dist_use.back().shift = ceil_log2(reg->width);
-        } else {
-            BUG("Unrecognized stateful object %s", sful);
-        }
-        alloc.hash_dist_use.back().max_size = hash_dist_req.bits_required(phv);
-        field_management(field, alloc, fields_needed, true, name, phv);
-    } else if (hash_dist_req.is_immediate()) {
-        alloc.hash_dist_use.back().type = Use::Immediate;
-        cstring algorithm = hash_dist_req.algorithm();
-        if (algorithm == "crc32" || algorithm == "crc32_custom")
-            alloc.hash_dist_use.back().alg = Use::CRC32;
-        else if (algorithm == "crc16" || "crc16_custom")
-            alloc.hash_dist_use.back().alg = Use::CRC16;
-        else if (algorithm == "random")
-            alloc.hash_dist_use.back().alg = Use::Random;
-        else if (algorithm == "identity")
-            alloc.hash_dist_use.back().alg = Use::Identity;
-        else
-            BUG("Unrecognized hash algorithm %s", algorithm);
-
-        long con = 1;
-        if (hash_dist_req.get_instr()->operands[4]->to<IR::Constant>()) {
-            con = hash_dist_req.get_instr()->operands[4]->to<IR::Constant>()->asLong();
-        } else {
-            error("NULL operand 4 for %s", *hash_dist_req.get_instr());
-        }
-        alloc.hash_dist_use.back().max_size = __builtin_popcount(con - 1);
-        auto *fl = hash_dist_req.get_instr()->operands[3]->to<IR::ListExpression>();
-        for (auto comp : fl->components) {
-            field_management(comp, alloc, fields_needed, true, name, phv);
-        }
-    }
-}
-
-/* For any hash action tables that have an indirect counter or meter */
-bool IXBar::allocHashDistAddress(const HashDistReq &hash_dist_req,
-    const unsigned used_hash_dist_groups, const unsigned long used_hash_dist_bits,
-    const unsigned &hash_table_input, unsigned &slice, unsigned long &bit_mask, cstring name,
-    const PhvInfo &phv) {
+/** Allocating hash bits for an indirect address in the table.  Currently checks on a slice
+ *  by slice granularity, unless upper bits are required in a longer address, and then will
+ *  allocate those upper bits.
+ */
+bool IXBar::allocHashDistAddress(const IR::MAU::HashDist *hd, const unsigned used_hash_dist_slices,
+    const unsigned long used_hash_dist_bits, const unsigned &hash_table_input, unsigned &slice,
+    unsigned long &bit_mask, cstring name) {
     bool can_allocate = false;
     int address_group = -1;
-    for (int i = 0; i < HASH_DIST_GROUPS - 1; i++) {
+    for (int i = 0; i < HASH_DIST_SLICES - 1; i++) {
         bool collision = false;
-        if ((1 << i) & used_hash_dist_groups) continue;
+        if ((1 << i) & used_hash_dist_slices) continue;
         address_group = i;
-        int extra_addr = hash_dist_req.bits_required(phv) - HASH_DIST_BITS;
+        int extra_addr = hd->bit_width - HASH_DIST_BITS;
         for (int j = 0; j < extra_addr; j++) {
             int index = j + 2 * HASH_DIST_BITS + address_group * 7;
             if (used_hash_dist_bits & (1ULL << index)) {
@@ -1365,15 +1321,14 @@ bool IXBar::allocHashDistAddress(const HashDistReq &hash_dist_req,
         hash_dist_use[i][address_group] = name;
         hash_dist_inuse[i] |= (1 << address_group);
         slice |= (1 << address_group);
-        int addr_size = (HASH_DIST_BITS < hash_dist_req.bits_required(phv))
-                        ? HASH_DIST_BITS : hash_dist_req.bits_required(phv);
+        int addr_size = (HASH_DIST_BITS < hd->bit_width) ? HASH_DIST_BITS : hd->bit_width;
         for (int j = 0; j < addr_size; j++) {
             int index = address_group * HASH_DIST_BITS + j;
             hash_dist_bit_use[i][index] = name;
             hash_dist_bit_inuse[i] |= (1ULL << index);
             bit_mask |= (1ULL << index);
         }
-        int extra_addr = hash_dist_req.bits_required(phv) - HASH_DIST_BITS;
+        int extra_addr = hd->bit_width - HASH_DIST_BITS;
         if (extra_addr > 0) {
             hash_dist_use[i][2] = name;
             hash_dist_inuse[i] |= (1 << 2);
@@ -1389,19 +1344,20 @@ bool IXBar::allocHashDistAddress(const HashDistReq &hash_dist_req,
     return true;
 }
 
-/* Allocating hash bits for hash calculation */
-bool IXBar::allocHashDistImmediate(const HashDistReq &hash_dist_req,
-    const unsigned used_hash_dist_groups,
-    const unsigned &hash_table_input, unsigned &slice, unsigned long &bit_mask, cstring name,
-    const PhvInfo &phv) {
+/** Allocating hash bits for hash calculation.  Currently checks on a slice granularity.  Could
+ *  be further optimized for a bit by bit granularity
+ */
+bool IXBar::allocHashDistImmediate(const IR::MAU::HashDist *hd,
+    const unsigned used_hash_dist_slices, const unsigned &hash_table_input, unsigned &slice,
+    unsigned long &bit_mask, cstring name) {
     bool can_allocate = false;
-    int hash_dist_groups_needed =
-        (hash_dist_req.bits_required(phv) + HASH_DIST_BITS - 1) / HASH_DIST_BITS;
-    unsigned avail_groups = ((1 << HASH_DIST_GROUPS) - 1) & (~used_hash_dist_groups);
+
+    int hash_dist_groups_needed = (hd->bit_width + HASH_DIST_BITS - 1) / HASH_DIST_BITS;
+    unsigned avail_groups = ((1 << HASH_DIST_SLICES) - 1) & (~used_hash_dist_slices);
     int groups_left = __builtin_popcount(avail_groups);
     if (groups_left - hash_dist_groups_needed >= 0)
         can_allocate = true;
-    for (int i = 0; i < HASH_DIST_GROUPS; i++) {
+    for (int i = 0; i < HASH_DIST_SLICES; i++) {
         if ((groups_left - hash_dist_groups_needed) == 0) break;
         if (((1 << i) & avail_groups) == 0) continue;
         avail_groups &= ~(1 << i);
@@ -1413,14 +1369,14 @@ bool IXBar::allocHashDistImmediate(const HashDistReq &hash_dist_req,
     for (int i = 0; i < HASH_TABLES; i++) {
         int allocated_groups = 0;
         if ((hash_table_input & (1 << i)) == 0) continue;
-        for (int j = 0; j < HASH_DIST_GROUPS; j++) {
+        for (int j = 0; j < HASH_DIST_SLICES; j++) {
             if (((1 << j) & avail_groups) == 0) continue;
             hash_dist_use[i][j] = name;
             hash_dist_inuse[i] |= (1 << j);
             slice |= (1 << j);
-            int bits_needed = hash_dist_req.bits_required(phv) - allocated_groups * HASH_DIST_BITS;
+            int bits_needed = hd->bit_width - allocated_groups * HASH_DIST_BITS;
             bits_needed = (bits_needed <= HASH_DIST_BITS) ? bits_needed : HASH_DIST_BITS;
-            unsigned long bit_vector = (1 << bits_needed) - 1;
+            unsigned long bit_vector = (1ULL << bits_needed) - 1;
             bit_mask |= (bit_vector << (j * HASH_DIST_BITS));
             hash_dist_bit_inuse[i] |= bit_mask;
             allocated_groups++;
@@ -1429,71 +1385,249 @@ bool IXBar::allocHashDistImmediate(const HashDistReq &hash_dist_req,
     return true;
 }
 
-
-/* Allocation for an individual hash distribution requirement, both within the match and
-   hash crossbars. */
-bool IXBar::allocHashDist(const HashDistReq &hash_dist_req, const PhvInfo &phv, Use &alloc,
-                          bool second_try, cstring name) {
+/** Allocation for an individual hash distribution requirement.  Hash distribution is a piece of
+ *  match central that can take PHV information through the hash matrix/input xbar, where this
+ *  information can be used within the performatnce of the action.  The following uses are:
+ *      - Using a PHV field as an address for address distribution for a counter, meter, or
+ *        action data table
+ *      - Calculating a hash to be used as immediate data for the table.
+ *      - Providing a meter with a pre-color
+ *      - Providing a hash to a selector table to calculate a RAM line hash.  This can be used for
+ *        selector pools that require pool sizes > 120, as 120 is the max size for an individual
+ *        RAM line in Tofino
+ *      - Pulling in any PHV that can be used as immediate, in case the PHV field cannot fit
+ *        in a cluster with other PHV fields
+ *
+ *   Specifically, the hash distribution is described in MicroArch section 6.4.3.5.3.  I'll
+ *   outline the major constraints.  The hash distribution is broken into 2 units, of which
+ *   each unit has access to an individual hash group output from the hash matrix.  These 2 units
+ *   are 48 bits wide, and are broken into 3 16 bit slices, totalling to 96 bits of hash
+ *   distribution per stage.  These 16 bit slices can be reformed into addresses, immediate, etc,
+ *   through the hash distribution unit, but essentially it uses the same shift and mask procedures
+ *   used by match central.
+ *
+ *   In the case where an address is larger than 16 bits, i.e. for a large stateful table, one
+ *   has to use the expand block within hash distribution, which puts a weird restriction on the
+ *   bits on the hash bus the address needs.  This constraint is specified in the following Tofino
+ *   register: pipes.mau.rams.match.merge.mau_hash_group_expand.  Otherwise, the data can use
+ *   the hash bits as one would expect
+ *
+ *   The last thing is that hash distribution must always be enabled on, as per_flow_enable cannot
+ *   be brought through hash distribution.  The only place this doesn't apply is on a miss, where
+ *   the miss can actually override the results from hash distribution.
+ *
+ *   Like every other allocation, it first finds the locations on the input xbar, and then
+ *   tries to fit this into the hash matrix
+ */
+bool IXBar::allocHashDist(const IR::MAU::HashDist *hd, IXBar::HashDistUse::HashDistType hdt,
+                          const PhvInfo &phv, IXBar::Use &alloc, bool second_try, cstring name) {
     set <cstring>                   fields_needed;
     vector <IXBar::Use::Byte *> alloced;
     fields_needed.clear();
-    alloc.hash_dist_use.emplace_back();
-    initialize_hash_dist(hash_dist_req, alloc, phv, fields_needed, name);
-    bool rv = find_alloc(alloc.hash_dist_use.back().use, false, second_try, alloced,
-                         HASH_INDEX_GROUPS, true);
-    unsigned hash_table_input = 0;
-    if (rv) {
-        hash_table_input = alloc.compute_hash_dist_tables();
-    } else {
-        alloc.hash_dist_use.pop_back();
+
+    field_management(hd->field_list, alloc, fields_needed, true, name, phv);
+    bool rv = find_alloc(alloc.use, false, second_try, alloced, 0, true);
+    if (!rv) {
+        alloc.use.clear();
+        alloced.clear();
         return false;
     }
+    unsigned hash_table_input = alloc.compute_hash_tables();
     int used_hash_group = -1;
     int hash_group_opts[HASH_DIST_UNITS] = {-1, -1};
+
     getHashDistGroups(hash_table_input, hash_group_opts);
 
     bool can_allocate = false;
     unsigned long bit_mask = 0; unsigned slice = 0;
     int unit = -1;
+
     for (int i = 0; i < HASH_DIST_UNITS; i++) {
         if (hash_group_opts[i] == -1) continue;
         unit = i;
         used_hash_group = hash_group_opts[i];
+        // Determine which bits/slices are used on the hash group bus already
         unsigned long used_hash_dist_bits = 0;
-        unsigned used_hash_dist_groups = 0;
+        unsigned used_hash_dist_slices = 0;
         for (int j = 0; j < HASH_TABLES; j++) {
             if (((1 << j) & hash_group_use[hash_group_opts[i]]) == 0) continue;
             used_hash_dist_bits |= hash_dist_bit_inuse[j];
-            used_hash_dist_groups |= hash_dist_inuse[j];
+            used_hash_dist_slices |= hash_dist_inuse[j];
         }
-        if (hash_dist_req.is_address())
-            can_allocate = allocHashDistAddress(hash_dist_req, used_hash_dist_groups,
-                used_hash_dist_bits, hash_table_input, slice, bit_mask, name, phv);
-        else if (hash_dist_req.is_immediate())
-            can_allocate = allocHashDistImmediate(hash_dist_req, used_hash_dist_groups,
-                hash_table_input, slice, bit_mask, name, phv);
+        if (hdt == IXBar::HashDistUse::COUNTER_ADR || hdt == IXBar::HashDistUse::METER_ADR
+            || hdt == IXBar::HashDistUse::ACTION_ADR)
+            can_allocate = allocHashDistAddress(hd, used_hash_dist_slices,
+                used_hash_dist_bits, hash_table_input, slice, bit_mask, name);
+        else if (hdt == IXBar::HashDistUse::IMMEDIATE)
+            can_allocate = allocHashDistImmediate(hd, used_hash_dist_slices,
+                hash_table_input, slice, bit_mask, name);
         else
             BUG("Unknown hash dist requirement type for IXBar");
 
         if (can_allocate) break;
     }
     if (!can_allocate) {
-        alloc.hash_dist_use.pop_back();
+        alloc.use.clear();
+        alloced.clear();
         return false;
     }
     fill_out_use(alloced, false);
-    alloc.hash_dist_use.back().hash_table_input = hash_table_input;
+    alloc.hash_table_inputs[used_hash_group] = hash_table_input;
     hash_group_use[used_hash_group] |= hash_table_input;
     hash_dist_groups[unit] = used_hash_group;
-    alloc.hash_dist_use.back().unit = unit;
-    alloc.hash_dist_use.back().slice = slice;
-    alloc.hash_dist_use.back().bit_mask = bit_mask;
-    alloc.hash_dist_use.back().group = used_hash_group;
+
+    alloc.ternary = false;
+    alloc.hash_dist_hash.allocated = true;
+    alloc.hash_dist_hash.algorithm = hd->algorithm;
+    alloc.hash_dist_hash.unit = unit;
+    alloc.hash_dist_hash.slice = slice;
+    alloc.hash_dist_hash.bit_mask = bit_mask;
+    alloc.hash_dist_hash.group = used_hash_group;
     return rv;
 }
 
+class XBarHashDist : MauInspector {
+    friend struct IXBar;
+    IXBar &self;
+    const PhvInfo &phv;
+    TableResourceAlloc &alloc;
+    bool allocation_passed = true;
+    cstring name;
+
+    /** Configuring the match central configuration of a hash distribution unit.  Unfortunately
+     *  the hash distribution units set up the registers within the assembler on a register
+     *  by register basis.  This should probably be moved more into the assembler, but in the
+     *  meantime, the compiler is more responsible for these registers
+     *
+     *  Sets the values in the IXBar::HashDistUse struct, which describes what the individual
+     *  registers are for
+     */
+    void initialize_hash_dist_unit(const IR::MAU::HashDist *hd, IXBar::HashDistUse &hd_use) {
+        auto &hdh = hd_use.use.hash_dist_hash;
+        auto hdt = hd_use.type;
+        for (int i = 0; i < IXBar::HASH_DIST_SLICES; i++) {
+            if (hdh.slice & (1 << i))
+                hd_use.pre_slices.push_back(i + IXBar::HASH_DIST_SLICES * hdh.unit);
+        }
+
+        bool slices_set = false;
+
+        // Preslices refer to before expand block, Slices are after expand block
+        if (hdt == IXBar::HashDistUse::COUNTER_ADR || hdt == IXBar::HashDistUse::METER_ADR
+            || hdt == IXBar::HashDistUse::ACTION_ADR) {
+            if (hd_use.pre_slices.size() > 1) {
+                if (!(hd_use.pre_slices.size() == 2
+                    || (hd_use.pre_slices[1] % IXBar::HASH_DIST_SLICES) == 2))
+                    BUG("Wide hash distribution address doesn't fit in the table");
+                hd_use.expand[hd_use.pre_slices[0]] = 1;
+                hd_use.slices.push_back(hd_use.pre_slices[0]);
+                slices_set = true;
+            }
+        }
+
+        if (!slices_set) {
+            for (auto pre_slice : hd_use.pre_slices) {
+                hd_use.expand[pre_slice] = 0;
+                hd_use.slices.push_back(pre_slice);
+            }
+        }
+
+        /* Sets up the mask and shift portion of hash distribution.  Unlike every other part of
+           match central, hash distribution is mask then shift, rather than shift then mask
+           (of course it is) */
+        if (hdt == IXBar::HashDistUse::COUNTER_ADR) {
+            auto *counter = findContext<IR::MAU::Counter>();
+            int per_word = CounterPerWord(counter);
+            int shift = 3 - ceil_log2(per_word);
+            bitvec mask(0, hd->bit_width);
+            hd_use.shifts[hd_use.slices[0]] = shift;
+            hd_use.masks[hd_use.slices[0]] = mask;
+        } else if (hdt == IXBar::HashDistUse::METER_ADR) {
+            if (findContext<IR::MAU::Meter>()) {
+                int shift = 7;
+                bitvec mask(0, hd->bit_width);
+                hd_use.shifts[hd_use.slices[0]] = shift;
+                hd_use.masks[hd_use.slices[0]] = mask;
+            } else if (auto *salu = findContext<IR::MAU::StatefulAlu>()) {
+                int per_word = RegisterPerWord(salu);
+                int shift = 7 - ceil_log2(per_word);
+                bitvec mask(0, hd->bit_width);
+                hd_use.shifts[hd_use.slices[0]] = shift;
+                hd_use.masks[hd_use.slices[0]] = mask;
+            }
+        } else if (hdt == IXBar::HashDistUse::IMMEDIATE) {
+            for (auto slice : hd_use.slices) {
+                hd_use.shifts[slice] = 0;
+                // FIXME: Can we just have a full mask for immediate here, or do we have to
+                // adjust for the immediate size?
+                bitvec mask(0, IXBar::HASH_DIST_BITS);
+                hd_use.masks[slice] = mask;
+            }
+        }
+
+        int group = hd_use.use.hash_dist_hash.group;
+        for (auto slice : hd_use.slices)
+            hd_use.groups[slice] = group;
+    }
+
+    /** Passes over all hash distribution uses within the IR and determines what their
+     *  needs are.  Will allocate on the xbar, and setup the match central portion.
+     */
+    bool preorder(const IR::MAU::HashDist *hd) {
+        if (!allocation_passed)
+            return false;
+        IXBar::HashDistUse::HashDistType hdt = IXBar::HashDistUse::UNKNOWN;
+        if (findContext<IR::MAU::Instruction>()) {
+            hdt = IXBar::HashDistUse::IMMEDIATE;
+        } else if (auto at = findContext<IR::MAU::HashDistAttached>()) {
+            if (at->is<IR::MAU::Counter>())
+                hdt = IXBar::HashDistUse::COUNTER_ADR;
+            else if (at->is<IR::MAU::Meter>() || at->is<IR::MAU::StatefulAlu>())
+                hdt = IXBar::HashDistUse::METER_ADR;
+        }
+
+        IXBar::HashDistUse hd_use(hd->field_list);
+        hd_use.type = hdt;
+        if (!self.allocHashDist(hd, hdt, phv, hd_use.use, false, name) &&
+            !self.allocHashDist(hd, hdt, phv, hd_use.use, true, name)) {
+            allocation_passed = false;
+            return false;
+        }
+        initialize_hash_dist_unit(hd, hd_use);
+        alloc.hash_dists.push_back(hd_use);
+        return false;
+    }
+
+    void end_apply() {
+        if (!allocation_passed)
+            alloc.hash_dists.clear();
+    }
+
+    bool preorder(const IR::MAU::TableSeq *) {
+        return false;
+    }
+
+ public:
+    bool passed_allocation() { return allocation_passed; }
+
+    XBarHashDist(IXBar &i, const PhvInfo &p, TableResourceAlloc &a, cstring n)
+        : self(i), phv(p), alloc(a), name(n) {}
+};
+
+/** This is the general algorithm of the input xbar allocation.  This will allocate all
+ *  needs for a table's input xbar, specifically xbar needs for the match, the gateway,
+ *  selectors, stateful alu, and any hash distribution needs.  The allocation scheme is the
+ *  following:
+ *     - Find locations on the input xbar for bytes.
+ *     - Once those locations are chosen, then make reservations within the hash matrix (if search
+ *       data is on SRAM xbar) for these particular tables.
+ *
+ *  This occurs in two attempts.  First, attempt to share bytes on the ixbar wherever possible.
+ *  If this doesn't work, due to hash matrix constraint, redo the allocation with input xbar
+ *  locations that have no current hash matrix use
+ */
 bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResourceAlloc &alloc,
-                       const LayoutOption *lo, const vector<HashDistReq> &hash_dist_reqs) {
+                       const LayoutOption *lo) {
     if (!tbl) return true;
     /* Determine number of groups needed.  Loop through them, alloc match will be the same
        for these.  Alloc All Hash Ways will required multiple groups, and may need to change  */
@@ -1532,7 +1666,7 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
     }
 
     for (auto at : tbl->attached) {
-        if (auto as = at->to<IR::ActionSelector>()) {
+        if (auto as = at->to<IR::MAU::Selector>()) {
             if (!attached_tables.count(as) &&
                 !allocSelector(as, tbl->match_table, phv, alloc.selector_ixbar, false, tbl->name) &&
                 !allocSelector(as, tbl->match_table, phv, alloc.selector_ixbar, true, tbl->name)) {
@@ -1550,57 +1684,21 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
         alloc.clear_ixbar();
         return false; }
 
-    for (auto &hash_dist_req : hash_dist_reqs) {
-        if (!allocHashDist(hash_dist_req, phv, alloc.match_ixbar, false, tbl->name) &&
-            !allocHashDist(hash_dist_req, phv, alloc.match_ixbar, true, tbl->name)) {
-            alloc.clear_ixbar();
-            return false;
-        }
-    }
 
+    XBarHashDist xbar_hash_dist(*this, phv, alloc, tbl->name);
+    tbl->attached.apply(xbar_hash_dist);
+    tbl->actions.apply(xbar_hash_dist);
+    if (!xbar_hash_dist.passed_allocation()) {
+        alloc.clear_ixbar();
+        return false;
+    }
     return true;
 }
 
-/* Specifically for the update of hash distribution information for each individual
-   table.  Updates the exact match xbar and the hash xbar with the information.  */
-void IXBar::update_hash_dist(cstring name, const Use &alloc) {
-    auto &hd_use = exact_use.base();
-    auto &hd_fields = exact_fields;
-    for (auto &hash_dist : alloc.hash_dist_use) {
-        for (auto &byte : hash_dist.use) {
-            if (!byte.loc) continue;
-            if (byte == hd_use[byte.loc]) continue;
-            if (hd_use[byte.loc].first)
-                BUG("Conflicting hash dist ixbar allocation");
-            hd_use[byte.loc] = byte;
-            hd_fields.emplace(byte.field, byte.loc);
-        }
-        for (int i = 0; i < HASH_TABLES; i++) {
-            if (((1U << i) & hash_dist.hash_table_input) == 0) continue;
-            for (auto bit : bitvec(hash_dist.bit_mask)) {
-                 if (!hash_dist_bit_use[i][bit]) {
-                     hash_dist_bit_use[i][bit] = name;
-                 } else {
-                     BUG("Conflicting hash distribution bit allocation %s and %s",
-                         name, hash_dist_bit_use[i][bit]);
-                 }
-            }
-            hash_dist_bit_inuse[i] |= hash_dist.bit_mask;
-            for (auto slice : bitvec(hash_dist.slice)) {
-                if (!hash_dist_use[i][slice])
-                    hash_dist_use[i][slice] = name;
-            }
-            hash_dist_inuse[i] |= hash_dist.slice;
-        }
-        hash_group_print_use[hash_dist.group] = name;
-        hash_group_use[hash_dist.group] |= hash_dist.hash_table_input;
-        if (hash_dist_groups[hash_dist.unit] != hash_dist.group &&
-            hash_dist_groups[hash_dist.unit] != -1)
-            BUG("Conflicting hash distribution unit groups");
-        hash_dist_groups[hash_dist.unit] = hash_dist.group;
-    }
-}
-
+/** Fill in the information contained in the IXBar::Use object of a TableResourceAlloc into the
+ *  IXBar structure, so that when a new table is allocated to the IXBar, the previous stage table
+ *  resources are known
+ */
 void IXBar::update(cstring name, const Use &alloc) {
     auto &use = alloc.ternary ? ternary_use.base() : exact_use.base();
     auto &fields = alloc.ternary ? ternary_fields : exact_fields;
@@ -1616,8 +1714,9 @@ void IXBar::update(cstring name, const Use &alloc) {
             byte_group_use[byte_group] = byte;
         } else {
             if (byte == use[byte.loc]) continue;
-            if (use[byte.loc].first)
+            if (use[byte.loc].first) {
                 BUG("conflicting ixbar allocation");
+            }
             use[byte.loc] = byte; }
         fields.emplace(byte.field, byte.loc); }
     for (auto &bits : alloc.bit_use) {
@@ -1668,7 +1767,37 @@ void IXBar::update(cstring name, const Use &alloc) {
         hash_group_print_use[select.group] = name;
         hash_group_use[select.group] |= alloc.hash_table_inputs[select.group];
     }
-    update_hash_dist(name, alloc);
+    // If allocation uses hash distribution, update for hash distribution
+    if (alloc.hash_dist_hash.allocated) {
+        auto &hdh = alloc.hash_dist_hash;
+        for (int i = 0; i < HASH_TABLES; i++) {
+            if (((1U << i) & alloc.hash_table_inputs[hdh.group]) == 0) continue;
+
+            // Save the bitmasks in the hash_dist_bit_(in)use
+            for (auto bit : bitvec(hdh.bit_mask)) {
+                 if (!hash_dist_bit_use[i][bit]) {
+                     hash_dist_bit_use[i][bit] = name;
+                 } else {
+                     BUG("Conflicting hash distribution bit allocation %s and %s",
+                         name, hash_dist_bit_use[i][bit]);
+                 }
+            }
+            hash_dist_bit_inuse[i] |= hdh.bit_mask;
+
+            // Save the slice information inthe hash_dist_(in)use
+            for (auto slice : bitvec(hdh.slice)) {
+                if (!hash_dist_use[i][slice])
+                    hash_dist_use[i][slice] = name;
+            }
+            hash_dist_inuse[i] |= hdh.slice;
+        }
+
+        hash_group_print_use[hdh.group] = name;
+        hash_group_use[hdh.group] |= alloc.hash_table_inputs[hdh.group];
+        if (hash_dist_groups[hdh.unit] != hdh.group && hash_dist_groups[hdh.unit] != -1)
+            BUG("Conflicting hash distribution unit groups");
+        hash_dist_groups[hdh.unit] = hdh.group;
+    }
 }
 
 void IXBar::update(cstring name, const TableResourceAlloc *rsrc) {
@@ -1676,6 +1805,9 @@ void IXBar::update(cstring name, const TableResourceAlloc *rsrc) {
     update(name + "$select", rsrc->selector_ixbar);
     update(name + "$gw", rsrc->gateway_ixbar);
     update(name, rsrc->match_ixbar);
+    int index = 0;
+    for (auto hash_dist : rsrc->hash_dists)
+        update(name + "$hash_dist" + std::to_string(index++), hash_dist.use);
 }
 
 static void write_one(std::ostream &out, const std::pair<cstring, int> &f,

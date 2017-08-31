@@ -16,10 +16,10 @@ class MauAsmOutput::EmitAttached : public Inspector {
     const MauAsmOutput          &self;
     std::ostream                &out;
     const IR::MAU::Table        *tbl;
-    bool preorder(const IR::Counter *) override;
-    bool preorder(const IR::Meter *) override;
+    bool preorder(const IR::MAU::Counter *) override;
+    bool preorder(const IR::MAU::Meter *) override;
     bool preorder(const IR::ActionProfile *) override;
-    bool preorder(const IR::ActionSelector *) override;
+    bool preorder(const IR::MAU::Selector *) override;
     bool preorder(const IR::MAU::TernaryIndirect *) override;
     bool preorder(const IR::MAU::ActionData *) override;
     bool preorder(const IR::MAU::StatefulAlu *) override;
@@ -174,8 +174,8 @@ void MauAsmOutput::emit_action_data_format(std::ostream &out, indent_t indent,
 struct FormatHash {
     vector<Slice> match_data;
     vector<Slice> ghost;
-    const IXBar::Use::algorithm_t alg;
-    FormatHash(vector<Slice> md, vector<Slice> g, IXBar::Use::algorithm_t a)
+    cstring alg;
+    FormatHash(vector<Slice> md, vector<Slice> g, cstring a)
         : match_data(md), ghost(g), alg(a) {}
 };
 
@@ -189,7 +189,7 @@ static cstring inline crc_poly(int number) {
 }
 
 std::ostream &operator<<(std::ostream &out, const FormatHash &hash) {
-    if (hash.alg == IXBar::Use::ExactMatch) {
+    if (hash.alg == "exact_match") {
         if (!hash.match_data.empty()) {
             out << "random(" << emit_vector(hash.match_data, ", ") << ")";
             if (!hash.ghost.empty()) out << " ^ ";
@@ -197,14 +197,16 @@ std::ostream &operator<<(std::ostream &out, const FormatHash &hash) {
         if (!hash.ghost.empty()) {
             out << "stripe(" << emit_vector(hash.ghost, ", ") << ")";
         }
-    } else if (hash.alg == IXBar::Use::Random) {
+    } else if (hash.alg == "random") {
         out << "random(" << emit_vector(hash.match_data, ", ") << ")";
-    } else if (hash.alg == IXBar::Use::CRC16) {
+    } else if (hash.alg == "crc16") {
         out << "stripe(crc(" << crc_poly(16) << ", " << emit_vector(hash.match_data, ", ") << "))";
-    } else if (hash.alg == IXBar::Use::CRC32) {
-        out << "stripe(crc(" << crc_poly(16) << ", " << emit_vector(hash.match_data, ", ") << "))";
-    } else if (hash.alg == IXBar::Use::Identity) {
+    } else if (hash.alg == "crc32") {
+        out << "stripe(crc(" << crc_poly(32) << ", " << emit_vector(hash.match_data, ", ") << "))";
+    } else if (hash.alg == "identity") {
         out << hash.match_data[0];
+    } else if (hash.alg == "selector_identity") {
+        out << "stripe(" << hash.match_data[0] << ")";
     } else {
         BUG("Hashing Algorithm is not recognized");
     }
@@ -272,54 +274,44 @@ void MauAsmOutput::emit_ixbar_gather_bytes(const vector<IXBar::Use::Byte> &use,
 
 /* Generate asm for the way information, such as the size, select mask, and specifically which
    RAMs belong to a specific way */
-void MauAsmOutput::emit_ixbar_ways(std::ostream &out, indent_t indent,
-        const IXBar::Use &use, const Memories::Use *mem, bool is_sel) const {
-    if (!use.way_use.empty() && !is_sel) {
-        out << indent << "ways:" << std::endl;
-        auto memway = mem->ways.begin();
-        for (auto way : use.way_use) {
-            out << indent << "- [" << way.group << ", " << way.slice;
-            out << ", 0x" << hex(memway->select_mask) << ", ";
-            size_t index = 0;
-            for (auto ram : memway->rams) {
-                out << "[" << ram.first << ", " << (ram.second + 2) << "]";
-                if (index < memway->rams.size() - 1)
-                    out << ", ";
-                index++;
-            }
-            out  << "]" << std::endl;
-            ++memway;
+void MauAsmOutput::emit_ways(std::ostream &out, indent_t indent, const IXBar::Use *use,
+        const Memories::Use *mem) const {
+    if (use == nullptr || use->way_use.empty())
+        return;
+
+    out << indent << "ways:" << std::endl;
+    auto memway = mem->ways.begin();
+    for (auto way : use->way_use) {
+        out << indent << "- [" << way.group << ", " << way.slice;
+        out << ", 0x" << hex(memway->select_mask) << ", ";
+        size_t index = 0;
+        for (auto ram : memway->rams) {
+            out << "[" << ram.first << ", " << (ram.second + 2) << "]";
+            if (index < memway->rams.size() - 1)
+                out << ", ";
+            index++;
         }
+        out  << "]" << std::endl;
+        ++memway;
     }
 }
 
 /* Generate asm for the hash distribution unit, specifically the unit, group, mask and shift value
    found in each hash dist assembly */
-void MauAsmOutput::emit_ixbar_hash_dist(std::ostream &out, indent_t indent,
-        const IXBar::Use &use/*, const IR::MAU::Table *tbl*/) const {
-    if (use.hash_dist_use.empty())
+void MauAsmOutput::emit_hash_dist(std::ostream &out, indent_t indent,
+        const vector<IXBar::HashDistUse> *hash_dist_use) const {
+    if (hash_dist_use == nullptr || hash_dist_use->empty())
         return;
     out << indent++ << "hash_dist:" << std::endl;
-    for (auto &hash_dist : use.hash_dist_use) {
-        int bits_output = 0;  int first_slice = -1;
-        for (int i = 0; i < IXBar::HASH_DIST_GROUPS; i++) {
-            if (((1 << i) & hash_dist.slice) == 0) continue;
-            if (bits_output >= hash_dist.max_size) continue;
-            if (first_slice == -1)
-                first_slice = i;
-            int unit = IXBar::HASH_DIST_GROUPS * hash_dist.unit + i;
-            out << indent << unit << ": {";
-            out << "hash: " << hash_dist.group;
-            unsigned long max_size_mask = (1 << (hash_dist.max_size)) - 1;
-            max_size_mask <<= first_slice * IXBar::HASH_DIST_BITS;
-            unsigned long potential_mask = (1 << IXBar::HASH_DIST_BITS) - 1;
-            potential_mask <<= i * IXBar::HASH_DIST_BITS;
-            unsigned long mask = (hash_dist.bit_mask & potential_mask & max_size_mask);
-            mask >>= (IXBar::HASH_DIST_BITS * i);
-            bits_output += __builtin_popcount(mask);
-            out << ", mask: 0x" << hex(mask);
-            out << ", shift: " << hash_dist.shift;
-            out << "}" << std::endl;
+    for (auto &hash_dist : *hash_dist_use) {
+        for (auto slice : hash_dist.slices) {
+            out << indent <<  slice << ": { ";
+            out << "hash: " << hash_dist.groups.at(slice) << ", ";
+            out << "mask: 0x" << hash_dist.masks.at(slice) << ", ";
+            out << "shift: " << hash_dist.shifts.at(slice);
+            if (hash_dist.expand.at(slice) > 0)
+                out << ", expand: " << hash_dist.expand.at(slice);
+            out << " }" << std::endl;
         }
     }
     indent--;
@@ -355,30 +347,32 @@ void MauAsmOutput::emit_ixbar_hash_table(int hash_table, vector<Slice> &match_da
 /* Generate asm for the hash of a table, specifically either a match, gateway, or selector
    table.  Not used for hash distribution hash */
 void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent, vector<Slice> &match_data,
-        vector<Slice> &ghost, const IXBar::Use &use, int hash_group,
-        const IR::ActionSelector *as) const {
+        vector<Slice> &ghost, const IXBar::Use *use, int hash_group) const {
     unsigned done = 0; unsigned mask_bits = 0;
-    if (as != nullptr) {
-        if (as->mode == "resilient")
+
+    for (auto &select : use->select_use) {
+        if (select.mode == "resilient")
             out << indent << "0..50: "
-                << FormatHash(match_data, ghost, use.select_use.back().alg) << std::endl;
-        else
+                << FormatHash(match_data, ghost, select.algorithm) << std::endl;
+        else if (select.mode == "fair")
             out << indent << "0..13: "
-                << FormatHash(match_data, ghost, use.select_use.back().alg) << std::endl;
+                << FormatHash(match_data, ghost, select.algorithm) << std::endl;
+        else
+            BUG("Unrecognized mode of the action selector");
     }
-    for (auto &way : use.way_use) {
+    for (auto &way : use->way_use) {
         mask_bits |= way.mask;
         if (done & (1 << way.slice)) continue;
         done |= 1 << way.slice;
         out << indent << (way.slice*10) << ".." << (way.slice*10 + 9) << ": "
-            << FormatHash(match_data, ghost, IXBar::Use::ExactMatch) << std::endl;
+            << FormatHash(match_data, ghost, "exact_match") << std::endl;
     }
     for (auto range : bitranges(mask_bits)) {
         out << indent << (range.first+40);
         if (range.second != range.first) out << ".." << (range.second+40);
-        out << ": " << FormatHash(match_data, ghost, IXBar::Use::ExactMatch) << std::endl;
+        out << ": " << FormatHash(match_data, ghost, "exact_match") << std::endl;
     }
-    for (auto ident : use.bit_use) {
+    for (auto ident : use->bit_use) {
         out << indent << (40 + ident.bit);
         if (ident.width > 1)
             out << ".." << (39 + ident.bit + ident.width);
@@ -386,53 +380,50 @@ void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent, vector<Sl
             << std:: endl;
         assert(hash_group == -1 || hash_group == ident.group);
     }
-}
 
-/* Generate Assembly for an individual hash distribution P4 requirement, specifically the
-   hash tables and hash bits required on the hash input xbar */
-void MauAsmOutput::emit_ixbar_hash_dist_hash(std::ostream &out, indent_t indent,
-        vector<Slice> &match_data, vector<Slice> &ghost,
-        const IXBar::Use::HashDist &hash_dist) const {
-    for (int i = 0; i < IXBar::HASH_DIST_GROUPS; i++) {
-        if (((1 << i) & hash_dist.slice) == 0) continue;
-        int first_bit = i * IXBar::HASH_DIST_BITS;
-        int last_bit = -1;
-        bool last_bit_found = false;
-        for (int j = i * IXBar::HASH_DIST_BITS; j < (i + 1) * IXBar::HASH_DIST_BITS; j++) {
-            if (((1ULL << j) & hash_dist.bit_mask) == 0 && !last_bit_found) {
-                last_bit_found = true;
-                last_bit = j - 1;
+    if (use->hash_dist_hash.allocated) {
+        auto &hdh = use->hash_dist_hash;
+        for (int i = 0; i < IXBar::HASH_DIST_SLICES; i++) {
+            if (((1 << i) & hdh.slice) == 0) continue;
+            int first_bit = -1;
+            int last_bit = -1;
+            bool first_bit_found = false;
+            bool last_bit_found = false;
+            for (int j = i * IXBar::HASH_DIST_BITS; j < (i + 1) * IXBar::HASH_DIST_BITS; j++) {
+                if (!first_bit_found) {
+                    if (((1ULL << j) & hdh.bit_mask)) {
+                        first_bit_found = true;
+                        first_bit = j;
+                    }
+                    continue;
+                }
+                if (((1ULL << j) & hdh.bit_mask) == 0 && !last_bit_found) {
+                    last_bit_found = true;
+                    last_bit = j - 1;
+                }
+                if (((1ULL << j) & hdh.bit_mask) != 0 && last_bit_found) {
+                    BUG("Split in address bits for hash distribution");
+                }
             }
-            if (((1ULL << j) & hash_dist.bit_mask) != 0 && last_bit_found) {
-                BUG("Split in address bits for hash distribution");
-            }
+            // FIXME: this cannot work for larger than 16 bit addresses?
+            if (last_bit == -1)
+                last_bit = (i + 1) * IXBar::HASH_DIST_BITS - 1;
+            out << indent << first_bit << ".." << last_bit;
+            out << ": " << FormatHash(match_data, ghost, hdh.algorithm) << std::endl;
         }
-        if (last_bit == -1)
-            last_bit = (i + 1) * IXBar::HASH_DIST_BITS - 1;
-        out << indent << first_bit << ".." << last_bit;
-        out << ": " << FormatHash(match_data, ghost, hash_dist.alg) << std::endl;
     }
 }
 
-/* Emit the ixbar use for a particular type of table */
-void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent,
-        const IXBar::Use &use, const Memories::Use *mem, const TableMatch *fmt, bool ternary,
-        bool /*hash_action*/, bool is_sel /*= false*/,
-        const IR::ActionSelector *as /*= nullptr */) const {
+void MauAsmOutput::emit_single_ixbar(std::ostream &out, indent_t indent, const IXBar::Use *use,
+        const TableMatch *fmt) const {
     map<int, map<int, Slice>> sort;
-    map<int, map<int, Slice>> total_sort;
-    emit_ixbar_ways(out, indent, use, mem, is_sel);
-    emit_ixbar_hash_dist(out, indent, use);
-    emit_ixbar_gather_bytes(use.use, sort, ternary);
-    if (use.use.empty() && use.hash_dist_use.empty()) {
-        return;
-    }
-    out << indent++ << "input_xbar:" << std::endl;
+    emit_ixbar_gather_bytes(use->use, sort, use->ternary);
+    cstring group_type = use->ternary ? "ternary" : "exact";
     for (auto &group : sort)
-        out << indent << "group " << group.first << ": " << group.second << std::endl;
-    // Hash groups are now broguht out of the IXBar Use, rather than recalculated in asm_output
+        out << indent << group_type << " group " << group.first << ": "
+                      << group.second << std::endl;
     int hash_group = 0;
-    for (auto hash_table_input : use.hash_table_inputs) {
+    for (auto hash_table_input : use->hash_table_inputs) {
         if (hash_table_input) {
             for (int ht : bitvec(hash_table_input)) {
                 out << indent++ << "hash " << ht << ":" << std::endl;
@@ -441,7 +432,7 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent,
                 emit_ixbar_hash_table(ht, match_data, ghost, fmt, sort);
                 // FIXME: This is obviously an issue for larger selector tables,
                 //  whole function needs to be replaced
-                emit_ixbar_hash(out, indent, match_data, ghost, use, hash_group, as);
+                emit_ixbar_hash(out, indent, match_data, ghost, use, hash_group);
                 --indent;
             }
             out << indent++ << "hash group " << hash_group << ":" << std::endl;
@@ -451,23 +442,27 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent,
         }
         hash_group++;
     }
-    for (auto hash_dist : use.hash_dist_use) {
-        sort.clear();
-        emit_ixbar_gather_bytes(hash_dist.use, sort, false);
-        for (auto &group : sort)
-            out << indent << "exact group " << group.first << ": " << group.second << std::endl;
-        for (int ht : bitvec(hash_dist.hash_table_input)) {
-            out << indent++ << "hash " << ht << ":" << std::endl;
-            vector<Slice> match_data;
-            vector<Slice> ghost;
-            emit_ixbar_hash_table(ht, match_data, ghost, nullptr, sort);
-            emit_ixbar_hash_dist_hash(out, indent, match_data, ghost, hash_dist);
-            --indent;
+}
+
+/* Emit the ixbar use for a particular type of table */
+void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, const IXBar::Use *use,
+        const vector<IXBar::HashDistUse> *hash_dist_use, const Memories::Use *mem,
+        const TableMatch *fmt) const {
+    emit_ways(out, indent, use, mem);
+    emit_hash_dist(out, indent, hash_dist_use);
+    if ((use == nullptr || use->use.empty())
+        && (hash_dist_use == nullptr || hash_dist_use->empty())) {
+        return;
+    }
+    out << indent++ << "input_xbar:" << std::endl;
+    if (use) {
+        emit_single_ixbar(out, indent, use, fmt);
+    }
+
+    if (hash_dist_use) {
+        for (auto &hash_dist : *hash_dist_use) {
+            emit_single_ixbar(out, indent, &(hash_dist.use), nullptr);
         }
-        out << indent++ << "hash group " << hash_dist.group << ":" << std::endl;
-        out << indent  << "table: [" << emit_vector(bitvec(hash_dist.hash_table_input), ", ")
-            << "]" << std::endl;
-        --indent;
     }
 }
 
@@ -785,7 +780,7 @@ class MauAsmOutput::EmitAction : public Inspector {
             auto at = prim->operands.at(0)->to<IR::GlobalRef>()->obj->to<IR::Attached>();
             if (prim->operands.size() < 2) continue;
             if (auto aa = prim->operands.at(1)->to<IR::ActionArg>()) {
-                alias[aa->name] = self.find_indirect_index(table, at); } }
+                alias[aa->name] = self.find_indirect_index(at); } }
         out << indent << canon_name(act->name) << ":" << std::endl;
         action_context_json(act);
         is_empty = true;
@@ -906,17 +901,15 @@ class MauAsmOutput::EmitAction : public Inspector {
         out << sep << table->get_use_name(att->attached);
         sep = ", ";
         return false; }
-    bool preorder(const IR::MAU::HashDist *) override {
+    bool preorder(const IR::MAU::HashDist *hd) override {
         assert(sep);
         out << sep << "hash_dist(";
         sep = "";
-        const IXBar::Use use = table->resources->match_ixbar;
-        for (auto hash_dist : use.hash_dist_use) {
-            if (hash_dist.type == IXBar::Use::Immediate) {
-                for (int i = 0; i < IXBar::HASH_DIST_GROUPS; i++) {
-                     if (((1 << i) & hash_dist.slice) == 0) continue;
-                     out << sep << i;
-                     sep = ", "; } } }
+        for (size_t i = 0; i < hd->units.size(); i++) {
+            out << hd->units[i];
+            if (i != hd->units.size() - 1)
+                out << ",";
+        }
         out << ")";
         sep = ", ";
         return false; }
@@ -1211,7 +1204,6 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
 
 void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) const {
     /* FIXME -- some of this should be method(s) in IR::MAU::Table? */
-    LOG1("Emit table " << tbl->name);
     TableMatch fmt(*this, phv, tbl);
     const char *tbl_type = "gateway";
     indent_t    indent(1);
@@ -1226,11 +1218,8 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
         emit_table_context_json(out, indent, tbl);
         auto memuse_name = tbl->get_use_name();
         emit_memory(out, indent, tbl->resources->memuse.at(memuse_name));
-        emit_ixbar(out, indent, tbl->resources->match_ixbar,
-                   &tbl->resources->memuse.at(memuse_name), &fmt, tbl->layout.ternary,
-                   tbl->layout.hash_action);
-        LOG1("Layout ternary " << tbl->layout.ternary << " " << tbl->layout.no_match_data()
-             <<  " " << tbl->layout.gateway);
+        emit_ixbar(out, indent, &tbl->resources->match_ixbar, &tbl->resources->hash_dists,
+                   &tbl->resources->memuse.at(memuse_name), &fmt);
         if (!tbl->layout.ternary && !tbl->layout.no_match_data()) {
             emit_table_format(out, indent, tbl->resources->table_format, &fmt, false);
         }
@@ -1260,10 +1249,8 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
         indent_t gw_indent = indent;
         if (tbl->match_table)
             out << gw_indent++ << "gateway:" << std::endl;
-        emit_ixbar(out, gw_indent, tbl->resources->gateway_ixbar, 0, &fmt, false,
-                   tbl->layout.hash_action);
+        emit_ixbar(out, gw_indent, &tbl->resources->gateway_ixbar, nullptr, nullptr, &fmt);
         for (auto &use : Values(tbl->resources->memuse)) {
-            LOG1("Use types " << use.type);
             if (use.type == Memories::Use::GATEWAY) {
                 out << gw_indent << "row: " << use.row[0].row << std::endl;
                 out << gw_indent << "bus: " << use.row[0].bus << std::endl;
@@ -1363,45 +1350,28 @@ class MauAsmOutput::UnattachedName : public MauInspector {
     cstring name() { return return_name; }
 };
 
-// Figure out which overhead field in the table is being used to index an attached
-// indirect table (counter, meter, stateful, action data) and return its asm name.
-std::string MauAsmOutput::find_indirect_index(const IR::MAU::Table *tbl,
-                                              const IR::Attached *at) const {
-    cstring index_name = "";
-    IXBar::Use::hash_dist_type_t type;
-    if (at->is<IR::Counter>()) {
-        index_name = "counter_addr";
-        type = IXBar::Use::CounterPtr;
-    } else if (at->is<IR::Meter>()) {
-        index_name = "meter_addr";
-        type = IXBar::Use::MeterPtr;
+/** Figure out which overhead field in the table is being used to index an attached
+ *  indirect table (counter, meter, stateful, action data) and return its asm name.  Contained
+ *  now within the actual IR for Hash Distribution
+ */ 
+std::string MauAsmOutput::find_indirect_index(const IR::Attached *at) const {
+    cstring index_name;
+    if (auto hdat = at->to<IR::MAU::HashDistAttached>()) {
+        if (auto hash_dist = hdat->hash_dist) {
+            return "hash_dist " + std::to_string(hash_dist->units[0]);
+        }
+    }
+
+    if (at->is<IR::MAU::Counter>()) {
+        return "counter_addr";
+    } else if (at->is<IR::MAU::Meter>()) {
+        return "meter_addr";
     } else if (at->is<IR::MAU::StatefulAlu>()) {
-        index_name = "meter_addr";
-        type = IXBar::Use::MeterPtr;
+        return "meter_addr";
     } else {
         BUG("unsupported attached table type in find_indirect_index: %s", at);
     }
-
-    const IR::Expression *field = nullptr;
-    for (auto action : Values(tbl->actions)) {
-        for (auto instr : action->stateful) {
-            if (instr->operands[0]->to<IR::GlobalRef>()->obj != at) continue;
-            if (phv.field(instr->operands[1]) == nullptr)
-                return index_name.c_str();
-            field = instr->operands[1];
-            break; } }
-
-    BUG_CHECK(field, "Indirect %s does not have an indirect index", at->kind());
-
-    for (auto hash_dist : tbl->resources->match_ixbar.hash_dist_use) {
-        if (hash_dist.type == type) {
-            for (int i = 0; i < IXBar::HASH_DIST_GROUPS; i++) {
-                if (((1 << i) & hash_dist.slice) == 0) continue;
-                return "hash_dist " + std::to_string(IXBar::HASH_DIST_GROUPS * hash_dist.unit + i);
-            }
-        }
-    }
-    BUG("find_indirect_index failed");
+    return "";
 }
 
 void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
@@ -1425,7 +1395,7 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
             if (at->indexed())
                 out << "(action, action_addr)";
             out << std::endl;
-        } else if (auto *as = at->to<IR::ActionSelector>()) {
+        } else if (auto *as = at->to<IR::MAU::Selector>()) {
              auto &memuse = tbl->resources->memuse.at(match_name);
              out << indent << "selector: ";
              if (memuse.unattached_selector) {
@@ -1440,7 +1410,7 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
         } else {
             out << indent << at->kind() << ": " << tbl->get_use_name(at);
             if (at->indexed())
-                out << '(' << find_indirect_index(tbl, at) << ')';
+                out << '(' << find_indirect_index(at) << ')';
             out << std::endl; }
     }
 
@@ -1472,8 +1442,8 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
             --indent; } }
 }
 
-static void counter_format(std::ostream &out, const IR::CounterType type, int per_row) {
-    if (type == IR::CounterType::PACKETS) {
+static void counter_format(std::ostream &out, const IR::MAU::DataAggregation type, int per_row) {
+    if (type == IR::MAU::DataAggregation::PACKETS) {
         for (int i = 0; i < per_row; i++) {
             int first_bit = (per_row - i - 1) * 128/per_row;
             int last_bit = first_bit + 128/per_row - 1;
@@ -1481,7 +1451,7 @@ static void counter_format(std::ostream &out, const IR::CounterType type, int pe
             if (i != per_row - 1)
                 out << ", ";
         }
-    } else if (type == IR::CounterType::BYTES) {
+    } else if (type == IR::MAU::DataAggregation::BYTES) {
         for (int i = 0; i < per_row; i++) {
             int first_bit = (per_row - i - 1) * 128/per_row;
             int last_bit = first_bit + 128/per_row - 1;
@@ -1489,7 +1459,7 @@ static void counter_format(std::ostream &out, const IR::CounterType type, int pe
             if (i != per_row - 1)
                 out << ", ";
         }
-    } else if (type == IR::CounterType::BOTH) {
+    } else if (type == IR::MAU::DataAggregation::BOTH) {
         int packet_size, byte_size;
         switch (per_row) {
             case 1:
@@ -1513,7 +1483,7 @@ static void counter_format(std::ostream &out, const IR::CounterType type, int pe
     }
 }
 
-bool MauAsmOutput::EmitAttached::preorder(const IR::Counter *counter) {
+bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Counter *counter) {
     indent_t indent(1);
     auto name = tbl->get_use_name(counter);
     out << indent++ << "counter " << name << ":" << std::endl;
@@ -1521,11 +1491,11 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::Counter *counter) {
     self.emit_memory(out, indent, tbl->resources->memuse.at(name));
     cstring count_type;
     switch (counter->type) {
-        case IR::CounterType::PACKETS:
+        case IR::MAU::DataAggregation::PACKETS:
             count_type = "packets"; break;
-        case IR::CounterType::BYTES:
+        case IR::MAU::DataAggregation::BYTES:
             count_type = "bytes"; break;
-        case IR::CounterType::BOTH:
+        case IR::MAU::DataAggregation::BOTH:
             count_type = "packets_and_bytes"; break;
         default:
             count_type = "";
@@ -1539,7 +1509,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::Counter *counter) {
     return false;
 }
 
-bool MauAsmOutput::EmitAttached::preorder(const IR::Meter *meter) {
+bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Meter *meter) {
     indent_t indent(1);
     auto name = tbl->get_use_name(meter);
     out << indent++ << "meter " << name << ":" << std::endl;
@@ -1553,11 +1523,11 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::Meter *meter) {
     out << indent << "type: " << imp_type << std::endl;
     cstring count_type;
     switch (meter->type) {
-        case IR::CounterType::PACKETS:
+        case IR::MAU::DataAggregation::PACKETS:
             count_type = "packets"; break;
-        case IR::CounterType::BYTES:
+        case IR::MAU::DataAggregation::BYTES:
             count_type = "bytes"; break;
-        case IR::CounterType::BOTH:
+        case IR::MAU::DataAggregation::BOTH:
             count_type = "packets_and_bytes"; break;
         default:
             count_type = "";
@@ -1591,7 +1561,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::ActionProfile *ap) {
     return false;
 }
 
-bool MauAsmOutput::EmitAttached::preorder(const IR::ActionSelector *as) {
+bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Selector *as) {
     indent_t indent(1);
     auto match_name = tbl->get_use_name();
     if (tbl->resources->memuse.at(match_name).unattached_profile) {
@@ -1601,14 +1571,13 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::ActionSelector *as) {
     out << indent++ << "selection " << name << ":" << std::endl;
     out << indent << "p4: { name: " << canon_name(as->name) << " }" << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(name));
-    self.emit_ixbar(out, indent, tbl->resources->selector_ixbar,
-                    &tbl->resources->memuse.at(name), nullptr, false, false, true, as);
+    self.emit_ixbar(out, indent, &tbl->resources->selector_ixbar, nullptr, nullptr, nullptr);
     out << indent << "mode: " << (as->mode ? as->mode.name : "fair") << " 0" << std::endl;
     out << indent << "per_flow_enable: " << "meter_pfe" << std::endl;
     // FIXME: Currently outputting default values for now, these must be brought through
     // either the tofino native definitions or pragmas
     out << indent << "non_linear: true" << std::endl;
-    out << indent << "pool_sizes: [4, 120]" << std::endl;
+    out << indent << "pool_sizes: [" << as->group_size << "]" << std::endl;
     return false;
 }
 
@@ -1648,8 +1617,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
     out << indent++ << "stateful " << name << ':' << std::endl;
     out << indent << "p4: { name: " << canon_name(salu->name) << " }" << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(name));
-    self.emit_ixbar(out, indent, tbl->resources->salu_ixbar,
-                    &tbl->resources->memuse.at(name), nullptr, false, false);
+    self.emit_ixbar(out, indent, &tbl->resources->salu_ixbar, nullptr, nullptr, nullptr);
     out << indent << "format: { lo: ";
     if (salu->dual)
         out << salu->width/2 << ", hi:" << salu->width/2;

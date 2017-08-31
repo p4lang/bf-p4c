@@ -11,6 +11,44 @@ struct TableResourceAlloc;
 #include "extensions/tofino/mau/resource.h"
 #end
 
+
+#emit
+namespace IR {
+namespace MAU {
+enum class DataAggregation { NONE, PACKETS, BYTES, BOTH };
+}
+}
+
+inline std::ostream& operator<<(std::ostream &out, IR::MAU::DataAggregation d) {
+    switch (d) {
+        case IR::MAU::DataAggregation::NONE:
+            out << "NONE";
+            break;
+        case IR::MAU::DataAggregation::PACKETS:
+            out << "PACKETS";
+            break;
+        case IR::MAU::DataAggregation::BYTES:
+            out << "BYTES";
+            break;
+        case IR::MAU::DataAggregation::BOTH:
+            out << "BOTH";
+            break;
+        default:
+            BUG("Unhandled case");
+    }
+    return out;
+}
+
+inline bool operator>>(cstring s, IR::MAU::DataAggregation &d) {
+    if (!s || s == "" || s == "NONE") d = IR::MAU::DataAggregation::NONE;
+    else if (s == "PACKETS") d = IR::MAU::DataAggregation::PACKETS;
+    else if (s == "BYTES") d = IR::MAU::DataAggregation::BYTES;
+    else if (s == "BOTH") d = IR::MAU::DataAggregation::BOTH;
+    else return false;
+    return true;
+}
+#end
+
 namespace MAU {
 
 /** A Tofino logical table (group) -- a gateway and/or match table
@@ -152,15 +190,15 @@ class Table : Tofino::Unit {
                 return name + "$action";
             else
                 return name;
-        } else if (at->is<IR::Counter>()) {
+        } else if (at->is<IR::MAU::Counter>()) {
             return name + "$counter." + at->name;
-        } else if (at->is<IR::Meter>()) {
+        } else if (at->is<IR::MAU::Meter>()) {
             return name + "$meter." + at->name;
-        } else if (at->is<IR::Register>()) {
-            return name + "$register." + at->name;
+        } else if (at->is<IR::MAU::StatefulAlu>()) {
+            return name + "$salu." + at->name;
         } else if (at->is<IR::ActionProfile>()) {
             return name + "$act_prof." + at->name;
-        } else if (at->is<IR::ActionSelector>()) {
+        } else if (at->is<IR::MAU::Selector>()) {
             return name + "$act_sel." + at->name;
         } else if (at->is<IR::MAU::ActionData>()) {
             return name + "$action";
@@ -258,30 +296,58 @@ class Table : Tofino::Unit {
 #apply
 }
 
-/** Tofino-specific attached table type **/
-
-/** Ternary indirect table used to hold overhead (adressing pointers and next table info)
- * of ternary match tables */
-class TernaryIndirect : Attached {
-#noconstructor
-#nodbprint
-    TernaryIndirect(cstring tbl_name) { name = IR::ID(tbl_name + "$tind"); }
-    const char *kind() const override { return "indirect"; }
+abstract BackendAttached : Attached {
+    bool direct = false;
+    int size = 0;
+    virtual bool indexed() const override { return !direct; }
 }
 
-/** Action data table used to hold action parameters */
-class ActionData : Attached {
-    bool        direct = true;
-#noconstructor
-#nodbprint
-    ActionData(cstring tbl_name) { name = IR::ID(tbl_name + "$action"); }
-    const char *kind() const override { return "action"; }
-    bool indexed() const override { return !direct; }
+/** Specifically, Action Data, Counters, Meters, and Stateful can be addressed by hash
+ *  distribution, as indicated directly from a P4 program. 
+ *  FIXME: No support yet for Action Data tables with this linkage
+ */
+abstract HashDistAttached : BackendAttached {
+    NullOK HashDist hash_dist = nullptr;
 }
 
-/** Confugration for a stateful table -- a register object (for the memory) plus
+/** Any attached table that has a keeps stateful information about flows.
+ */
+abstract Synth2Port : HashDistAttached {
+    ID table = {};
+    bool saturating = false;
+    int width = 0;
+    DataAggregation type = DataAggregation::NONE;
+    void settype(cstring t) {
+        if (t == "packets") type = DataAggregation::PACKETS;
+        else if (t == "bytes") type = DataAggregation::BYTES;
+        else if (t == "packets_and_bytes") type = DataAggregation::BOTH;
+        else error("%s: Unknown type %s", srcInfo, t); }  // NOLINT
+}
+
+class Counter : Synth2Port {
+    int min_width = -1;
+    int max_width = -1; // Perhaps to play with a range of widths
+    const char *kind() const override { return "stats"; }
+#nodbprint
+    const Type *getType() const override { return Type_Counter::get(); }
+}
+
+class Meter : Synth2Port {
+    NullOK Expression  result = nullptr;     // Field which meter writes, eventually be deprecated
+                                             // as it should be contained in AttachedOutput
+    NullOK Expression  pre_color = nullptr;  // Field to pre-color the meter.  Eventually
+                                             // brought through hash distribution
+    ID                 implementation = {};  // Normal, LPF, WRED
+    const char *kind() const override { return "meter"; }
+    const Type *getType() const override { return Type_Meter::get(); }
+#nodbprint
+}
+
+/** Configuration for a stateful table -- a register object (for the memory) plus
  * the associated stateful alu instructions and config */
-class StatefulAlu : Register {
+class StatefulAlu : Synth2Port {
+    ID          layout = {};
+    bool        signed_ = false;
     // The single register extern used in this stateful alu
     Declaration_Instance                                reg;
     bool                                                dual = false;  // dual mode
@@ -303,7 +369,40 @@ class StatefulAlu : Register {
     MathUnit            math = MathUnit();
 
     const char *kind() const override { return "stateful"; }
+    const Type *getType() const override { return Type_Register::get(); }
 }
+
+class Selector : BackendAttached {
+    ID type = {};
+    ID mode = {};
+    ID algorithm = {};
+    const char *kind() const override { return "action_selector"; }
+    int num_groups = 0;
+    int group_size = 0;
+#nodbprint
+}
+
+
+/** Tofino-specific attached table type **/
+
+/** Ternary indirect table used to hold overhead (adressing pointers and next table info)
+ * of ternary match tables */
+class TernaryIndirect : BackendAttached {
+#noconstructor
+#nodbprint
+    TernaryIndirect(cstring tbl_name) { name = IR::ID(tbl_name + "$tind"); direct = true; }
+    const char *kind() const override { return "indirect"; }
+}
+
+/** Action data table used to hold action parameters */
+class ActionData : BackendAttached {
+#noconstructor
+#nodbprint
+    ActionData(cstring tbl_name) { name = IR::ID(tbl_name + "$action"); direct = true; }
+    const char *kind() const override { return "action"; }
+    bool indexed() const override { return !direct; }
+}
+
 
 // a sequence of tables -- may be reordered if deps allow.
 // deps(i,j) is true iff tables[i] is dependent on tables[j]
@@ -374,12 +473,17 @@ class SaluAction : ActionFunction {
 
 /** Tofino-specific expressions that may be present in various places */
 
-/// A use of one or two hash distribution units; an operand of an instruction
+/** Hash Distribution Unit, used to bring PHV information directly into Match Central for
+ *  action data lookup or action data itself.  Uses include addressing a table by a PHV field
+ *  as well as a calculated hash to be used by PHV
+ */
 class HashDist : Expression {
 #nodbprint
     // Fields read by this HashDist
     Expression           field_list;
-
+    cstring              algorithm;
+    int                  bit_width = 0;
+    vector<int>          units;
     // Pointer to the IR::Primitive that was used to generate this HashDist
     // (and then removed).  This is not visited as part of IR traversal.
     Primitive            prim;
@@ -387,9 +491,8 @@ class HashDist : Expression {
     visit_children {
         Expression::visit_children(v);
         v.visit(field_list, "field_list"); }
-// FIXME -- what info goes here?
-// Currently we reconstruct the unit id(s) in MauAsmOutput::EmitAction
 }
+
 
 class ActionDataConstant : Expression {
 #nodbprint

@@ -29,7 +29,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     tuple<bit<32>, bit<32>, bit<32>> tmp_0;
     @name(".action0") action action0_0() {
         tmp_0 = { hdr.packet.hash_field1, hdr.packet.hash_field2, hdr.packet.hash_field3 };
-        hash<bit<16>, bit<16>, tuple<bit<32>, bit<32>, bit<32>>, bit<32>>(tmp, HashAlgorithm.random, 16w0, tmp_0, 32w63356);
+        hash<bit<16>, bit<16>, tuple<bit<32>, bit<32>, bit<32>>, bit<32>>(tmp, HashAlgorithm.random, 16w0, tmp_0, 32w65536);
         hdr.packet.hash_result = tmp;
     }
     @name(".set_port") action set_port_0() {

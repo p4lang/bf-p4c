@@ -208,7 +208,7 @@ class SetupAttachedTables : public MauInspector {
         return false;
     }
 
-    bool preorder(const IR::Meter *mtr) {
+    bool preorder(const IR::MAU::Meter *mtr) {
         auto name = ta->table->get_use_name(mtr);
         (*ta->memuse)[name].type = Memories::Use::TWOPORT;
         if (!meter_pushed) {
@@ -219,11 +219,11 @@ class SetupAttachedTables : public MauInspector {
         if (mtr->direct)
             mi.meter_RAMs += (entries + 1023)/1024 + 1;
         else
-            mi.meter_RAMs += (mtr->instance_count + 1023)/1024 + 1;
+            mi.meter_RAMs += (mtr->size + 1023)/1024 + 1;
         return false;
     }
 
-    bool preorder(const IR::Counter *cnt) {
+    bool preorder(const IR::MAU::Counter *cnt) {
         auto name = ta->table->get_use_name(cnt);
         (*ta->memuse)[name].type = Memories::Use::TWOPORT;
         if (!stats_pushed) {
@@ -235,7 +235,7 @@ class SetupAttachedTables : public MauInspector {
         if (cnt->direct)
             mi.stats_RAMs += (entries + per_row * 1024 - 1) / (per_row * 1024) + 1;
         else
-            mi.stats_RAMs += (cnt->instance_count + per_row * 1024 - 1) / (per_row * 1024) + 1;
+            mi.stats_RAMs += (cnt->size + per_row * 1024 - 1) / (per_row * 1024) + 1;
         return false;
     }
 
@@ -251,7 +251,7 @@ class SetupAttachedTables : public MauInspector {
         if (salu->direct)
             mi.stateful_RAMs += (entries + per_row * 1024 - 1) / (per_row * 1024) + 1;
         else
-            mi.stateful_RAMs += (salu->instance_count + per_row * 1024 - 1) / (per_row * 1024) + 1;
+            mi.stateful_RAMs += (salu->size + per_row * 1024 - 1) / (per_row * 1024) + 1;
         return false;
     }
 
@@ -260,7 +260,7 @@ class SetupAttachedTables : public MauInspector {
     }
 
 
-    bool preorder(const IR::ActionSelector *as) {
+    bool preorder(const IR::MAU::Selector *as) {
         auto name = ta->table->get_use_name(as);
         auto table_name = ta->table->get_use_name();
         bool profile_first = false;
@@ -1009,8 +1009,8 @@ void Memories::action_bus_selectors_indirects() {
         for (auto at : ta->table->attached) {
             // FIXME: need to adjust if the action selector is larger than 2 RAMs, based
             // on the pragmas provided to the compiler
-            const IR::ActionSelector *as = nullptr;
-            if ((as = at->to<IR::ActionSelector>()) == nullptr)
+            const IR::MAU::Selector *as = nullptr;
+            if ((as = at->to<IR::MAU::Selector>()) == nullptr)
                 continue;
             suppl_bus_users.push_back(new SRAM_group(ta, 2, 0, SRAM_group::SELECTOR));
             suppl_bus_users.back()->attached = as;
@@ -1050,15 +1050,15 @@ void Memories::action_bus_selectors_indirects() {
 void Memories::action_bus_meters_counters() {
     for (auto *ta : stats_tables) {
         for (auto at : ta->table->attached) {
-            const IR::Counter *stats = nullptr;
-            if ((stats = at->to<IR::Counter>()) == nullptr)
+            const IR::MAU::Counter *stats = nullptr;
+            if ((stats = at->to<IR::MAU::Counter>()) == nullptr)
                 continue;
             int per_row = CounterPerWord(stats);
             int depth;
             if (stats->direct) {
                 depth = (ta->calculated_entries + per_row * 1024 - 1)/(per_row * 1024) + 1;
             } else {
-                depth = (stats->instance_count + per_row * 1024 + 1023)/(per_row * 1024) + 1;
+                depth = (stats->size + per_row * 1024 + 1023)/(per_row * 1024) + 1;
             }
             suppl_bus_users.push_back(new SRAM_group(ta, depth, 0, SRAM_group::STATS));
             suppl_bus_users.back()->attached = stats;
@@ -1069,22 +1069,22 @@ void Memories::action_bus_meters_counters() {
     }
 
     for (auto *ta : meter_tables) {
-        const IR::Meter *meter = nullptr;
+        const IR::MAU::Meter *meter = nullptr;
         for (auto at : ta->table->attached) {
-            if ((meter = at->to<IR::Meter>()) == nullptr)
+            if ((meter = at->to<IR::MAU::Meter>()) == nullptr)
                 continue;
             int depth;
             if (meter->direct)
                 depth = (ta->calculated_entries + 1023) / 1024 + 1;
             else
-                depth = (meter->instance_count + 1023)/1024 + 1;
+                depth = (meter->size + 1023)/1024 + 1;
 
             suppl_bus_users.push_back(new SRAM_group(ta, depth, 0, SRAM_group::METER));
             suppl_bus_users.back()->attached = meter;
             if (meter->direct)
                 suppl_bus_users.back()->cm.needed = (ta->calculated_entries + 4095)/4096;
             else
-                suppl_bus_users.back()->cm.needed = (meter->instance_count + 4095)/4096;
+                suppl_bus_users.back()->cm.needed = (meter->size + 4095)/4096;
             if (meter->implementation.name == "lpf" || meter->implementation.name == "wred") {
                 suppl_bus_users.back()->requires_ab = true;
             }
@@ -1101,7 +1101,7 @@ void Memories::action_bus_meters_counters() {
             if (salu->direct) {
                 depth = (ta->calculated_entries + per_row * 1024 - 1)/(per_row * 1024) + 1;
             } else {
-                depth = (salu->instance_count + per_row * 1024 + 1023)/(per_row * 1024) + 1;
+                depth = (salu->size + per_row * 1024 + 1023)/(per_row * 1024) + 1;
             }
             suppl_bus_users.push_back(new SRAM_group(ta, depth, 0, SRAM_group::REGISTER));
             suppl_bus_users.back()->attached = salu;
@@ -1863,8 +1863,8 @@ void Memories::action_bus_users_log() {
     // FIXME: Add extra meter pre-color maprams
     for (auto *ta : stats_tables) {
         for (auto at : ta->table->attached) {
-            const IR::Counter *stats = nullptr;
-            if ((stats = at->to<IR::Counter>()) == nullptr)
+            const IR::MAU::Counter *stats = nullptr;
+            if ((stats = at->to<IR::MAU::Counter>()) == nullptr)
                 continue;
             auto name = ta->table->get_use_name(stats);
             LOG4("Stats table for " << name);
@@ -1878,8 +1878,8 @@ void Memories::action_bus_users_log() {
     }
     for (auto *ta : meter_tables) {
         for (auto at : ta->table->attached) {
-            const IR::Meter *meter = nullptr;
-            if ((meter = at->to<IR::Meter>()) == nullptr)
+            const IR::MAU::Meter *meter = nullptr;
+            if ((meter = at->to<IR::MAU::Meter>()) == nullptr)
                 continue;
             auto name = ta->table->get_use_name(meter);
             LOG4("Meter table for " << name);
@@ -1909,8 +1909,8 @@ void Memories::action_bus_users_log() {
 
     for (auto *ta : selector_tables) {
         for (auto at : ta->table->attached) {
-            const IR::ActionSelector *as = nullptr;
-            if ((as = at->to<IR::ActionSelector>()) == nullptr)
+            const IR::MAU::Selector *as = nullptr;
+            if ((as = at->to<IR::MAU::Selector>()) == nullptr)
                 continue;
             auto name = ta->table->get_use_name(as);
             LOG4("Selector table for " << name);

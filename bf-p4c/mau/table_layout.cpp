@@ -14,24 +14,6 @@ bool TableLayout::backtrack(trigger &trig) {
     return (trig.is<IXBar::failure>() || trig.is<ActionFormat::failure>()) && !alloc_done;
 }
 
-cstring HashDistReq::algorithm() const {
-    if (instr != nullptr && instr->name == "hash") {
-        return instr->operands[1]->to<IR::Member>()->member;
-    }
-    return "";
-}
-
-int HashDistReq::bits_required(const PhvInfo &phv) const {
-    if (is_immediate()) {
-        return instr->operands[2]->type->width_bits();
-    }
-
-    if (is_address()) {
-        return phv.field(instr->operands[1])->size;
-    }
-    return -1;
-}
-
 void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl) {
     if (auto k = tbl->match_table->getConstantProperty("size"))
         layout.entries = k->asInt();
@@ -123,44 +105,11 @@ void TableLayout::setup_gateway_layout(IR::MAU::Table::Layout &layout, IR::MAU::
 static void setup_action_layout(IR::MAU::Table *tbl, LayoutChoices &lc, const PhvInfo &phv,
                                 bool alloc_done) {
     tbl->layout.action_data_bytes = 0;
-    /*
-    for (auto action : Values(tbl->actions)) {
-        int action_data_bytes = 0;
-        for (auto arg : action->args)
-            action_data_bytes += (arg->type->width_bits() + 7) / 8U;
-        if (action_data_bytes > tbl->layout.action_data_bytes)
-            tbl->layout.action_data_bytes = action_data_bytes; }
-    */
     ActionFormat::Use af_use;
     ActionFormat af(tbl, phv, alloc_done);
     af.allocate_format(&af_use);
     tbl->layout.action_data_bytes = af_use.action_data_bytes;
     lc.total_action_formats[tbl->name] = af_use;
-}
-
-/** Add the IR::Primitive `prim` field for each HashDist to @hash_dist_reqs. */
-class GetHashDistReqs : public Inspector {
-    vector<HashDistReq> &hash_dist_reqs;
-
-    bool preorder(const IR::MAU::HashDist *hd) {
-        hash_dist_reqs.emplace_back(true, hd->prim);
-        return false;}
-
- public:
-    explicit GetHashDistReqs(vector<HashDistReq> &hdr) : hash_dist_reqs(hdr) { }
-};
-
-static void setup_hash_dist(IR::MAU::Table *tbl, const PhvInfo &phv, LayoutChoices &lc) {
-    vector<HashDistReq> hash_dist_reqs;
-    GetHashDistReqs hdrv(hash_dist_reqs);
-    for (const IR::MAU::Action *action : Values(tbl->actions)) {
-        action->apply(hdrv);
-        for (auto instr : action->stateful) {
-            // XXX(hanw): skip when counter operands is less than 1 (direct counter).
-            if (instr->operands.size() < 2) continue;
-            if (phv.field(instr->operands[1]) == nullptr) continue;
-            hash_dist_reqs.emplace_back(true, instr); } }
-    lc.total_hash_dist_reqs[tbl->name] = hash_dist_reqs;
 }
 
 /* Setting up the potential layouts for ternary, either with or without immediate
@@ -216,14 +165,32 @@ void TableLayout::setup_layout_options(IR::MAU::Table *tbl, int immediate_bytes_
     setup_exact_match(tbl, tbl->layout.action_data_bytes);
 }
 
+/** Checks to see if the table has a hash distribution access somewhere */
+class GetHashDistReqs : public MauInspector {
+    bool _hash_dist_needed;
+    bool preorder(const IR::MAU::HashDist *) {
+        _hash_dist_needed = true;
+        return false;
+    }
+
+ public:
+    bool is_hash_dist_needed() { return _hash_dist_needed; }
+    GetHashDistReqs() : _hash_dist_needed(false) { }
+};
+
 /* FIXME: This function is for the setup of a table with no match data.  This is currently hacked
-   together in order to pass many of the test cases */
+   together in order to pass many of the test cases.  This needs to have some standardization
+   within the assembly so that all tables that do not require match can possibly work */
 void TableLayout::setup_layout_option_no_match(IR::MAU::Table *tbl, int immediate_bytes_reserved) {
     IR::MAU::Table::Layout layout = tbl->layout;
     if (layout.action_data_bytes - immediate_bytes_reserved <= 4) {
         layout.action_data_bytes_in_overhead = layout.action_data_bytes;
     }
-    if (!lc.get_hash_dist_req(tbl).empty()) {
+
+    GetHashDistReqs ghdr;
+    tbl->attached.apply(ghdr);
+    tbl->actions.apply(ghdr);
+    if (ghdr.is_hash_dist_needed()) {
         tbl->layout.hash_action = true;
         layout.hash_action = true;
     }
@@ -251,42 +218,42 @@ class VisitAttached : public Inspector {
      *    the same address in match central
      *  - Indirect addresses for twoport tables require a per flow enable bit as well
      */
-    void interpret_stateful(const IR::Stateful *st, cstring &st_addr_name, bool &st_set,
-                            int &st_addr_bits_needed, int *layout_addr_bits) {
-        if (st->direct) {
-            if (st_set && st_addr_bits_needed > 0)
-                BUG("Tofino does not allow counter to use different address schemes on one "
+    void interpret_stateful(const IR::MAU::Synth2Port *sp, cstring &sp_addr_name, bool &sp_set,
+                            int &sp_addr_bits_needed, int *layout_addr_bits) {
+        if (sp->direct) {
+            if (sp_set && sp_addr_bits_needed > 0)
+               error("Tofino does not allow counter to use different address schemes on one "
                     "table.  Counters %s and %s have different address schemes",
-                     st_addr_name, st->name);
+                     sp_addr_name, sp->name);
         } else {
-            if (st->instance_count <= 0)
-                error("%s: No instance count in indirect %s %s", st->srcInfo, st->kind(),
-                      st->name);
-            if (st_set && st_addr_bits_needed == 0)
-                BUG("Tofino does not allow meters to use different address schemes on one "
+            if (sp->size <= 0)
+                error("%s: No instance count in indirect %s %s", sp->srcInfo, sp->kind(),
+                      sp->name);
+            if (sp_set && sp_addr_bits_needed == 0)
+                error("Tofino does not allow meters to use different address schemes on one "
                     "table.  Meters %s and %s have different address schemes",
-                     st_addr_name, st->name);
+                     sp_addr_name, sp->name);
 
-            int addr_bits_needed = std::max(10, ceil_log2(st->instance_count)) + 1;
+            int addr_bits_needed = std::max(10, ceil_log2(sp->size)) + 1;
             int addition_to_overhead = addr_bits_needed;
             int diff;
-            if ((diff = addr_bits_needed - st_addr_bits_needed) > 0) {
+            if ((diff = addr_bits_needed - sp_addr_bits_needed) > 0) {
                 addition_to_overhead = diff;
                 *(layout_addr_bits) = addr_bits_needed;
             }
             layout.overhead_bits += addition_to_overhead;
         }
-        st_set = true;
-        st_addr_name = st->name;
+        sp_set = true;
+        sp_addr_name = sp->name;
     }
 
-    bool preorder(const IR::Counter *cnt) override {
+    bool preorder(const IR::MAU::Counter *cnt) override {
         interpret_stateful(cnt, counter_addr_name, counter_set, counter_addr_bits_needed,
                            &(layout.counter_addr_bits));
         return false;
     }
 
-    bool preorder(const IR::Meter *mtr) override {
+    bool preorder(const IR::MAU::Meter *mtr) override {
         if ((!meter_set && meter_addr_bits_needed > 0) || register_set) {
             BUG("Table cannot have both attached tables %s and %s as they use the same "
                 "address hardware", meter_addr_name, mtr->name);
@@ -317,7 +284,7 @@ class VisitAttached : public Inspector {
         return false;
     }
 
-    bool preorder(const IR::ActionSelector *as) override {
+    bool preorder(const IR::MAU::Selector *as) override {
         int vpn_bits_needed =  11;  // FIXME: Eventually based off of pool sizes
         if (meter_addr_bits_needed > 0 || meter_set || register_set)
             BUG("Table cannot have both attached tables %s and %s as they use the same "
@@ -354,7 +321,6 @@ bool TableLayout::preorder(IR::MAU::Table *tbl) {
     if ((tbl->layout.gateway = tbl->uses_gateway()))
         setup_gateway_layout(tbl->layout, tbl);
     setup_action_layout(tbl, lc, phv, alloc_done);
-    setup_hash_dist(tbl, phv, lc);
     VisitAttached attached(&tbl->layout);
     for (auto at : tbl->attached) {
         at->apply(attached);

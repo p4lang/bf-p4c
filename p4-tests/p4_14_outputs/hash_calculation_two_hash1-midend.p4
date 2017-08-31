@@ -41,11 +41,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".action0") action action0_0() {
         tmp_4.field = hdr.packet.hash_field1;
         tmp_4.field_0 = hdr.packet.hash_field2;
-        hash<bit<16>, bit<16>, tuple_0, bit<32>>(tmp_3, HashAlgorithm.crc16, 16w0, tmp_4, 32w63356);
+        hash<bit<16>, bit<16>, tuple_0, bit<32>>(tmp_3, HashAlgorithm.crc16, 16w0, tmp_4, 32w65536);
         hdr.packet.hash_result1 = tmp_3;
         tmp_6.field = hdr.packet.hash_field3;
         tmp_6.field_0 = hdr.packet.hash_field4;
-        hash<bit<16>, bit<16>, tuple_0, bit<32>>(tmp_5, HashAlgorithm.crc16, 16w0, tmp_6, 32w63356);
+        hash<bit<16>, bit<16>, tuple_0, bit<32>>(tmp_5, HashAlgorithm.crc16, 16w0, tmp_6, 32w65536);
         hdr.packet.hash_result2 = tmp_5;
     }
     @name(".set_port") action set_port_0() {

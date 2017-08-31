@@ -27,7 +27,6 @@ class InstructionSelection : public MauTransform {
     const IR::Expression *postorder(IR::BoolLiteral *) override;
     const IR::Primitive *postorder(IR::Primitive *) override;
     const IR::MAU::Instruction *postorder(IR::MAU::Instruction *i) override { return i; }
-    const IR::MAU::Table *postorder(IR::MAU::Table *) override;
 
     bool checkPHV(const IR::Expression *);
     bool checkSrc1(const IR::Expression *);
@@ -36,6 +35,29 @@ class InstructionSelection : public MauTransform {
 
  public:
     explicit InstructionSelection(PhvInfo &phv);
+};
+
+class StatefulHashDistSetup : public MauTransform, TofinoWriteContext {
+    const PhvInfo &phv;
+    IR::TempVar *saved_tempvar;
+    IR::MAU::HashDist *saved_hashdist;
+    ordered_set<cstring> remove_tempvars;
+    ordered_map<cstring, IR::MAU::HashDist *> stateful_alu_from_hash_dists;
+    const IR::MAU::Action *preorder(IR::MAU::Action *) override;
+    const IR::MAU::Instruction *preorder(IR::MAU::Instruction *) override;
+    const IR::TempVar *preorder(IR::TempVar *) override;
+    const IR::MAU::HashDist *preorder(IR::MAU::HashDist *) override;
+    const IR::MAU::Instruction *postorder(IR::MAU::Instruction *) override;
+    const IR::MAU::Table *postorder(IR::MAU::Table *) override;
+    IR::MAU::HashDist *create_hash_dist(const IR::Expression *e, const IR::Primitive *prim);
+
+ public:
+    explicit StatefulHashDistSetup(const PhvInfo &p) : phv(p) {}
+};
+
+class DoInstructionSelection : public PassManager {
+ public:
+     explicit DoInstructionSelection(PhvInfo &);
 };
 
 #endif /* _TOFINO_MAU_INSTRUCTION_SELECTION_H_ */

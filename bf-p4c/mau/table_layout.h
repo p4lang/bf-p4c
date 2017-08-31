@@ -4,28 +4,6 @@
 #include "mau_visitor.h"
 #include "action_format.h"
 
-class HashDistReq {
-    bool required = false;
-    const IR::Primitive *instr;
-
- public:
-    HashDistReq(bool r, const IR::Primitive *i)
-        : required(r), instr(i) {}
-    bool is_required() const { return required; }
-    const IR::Primitive *get_instr() const { return instr; }
-    const IR::Stateful *get_stateful() const {
-        auto glob = instr->operands.at(0)->to<IR::GlobalRef>();
-        return glob ? glob->obj->to<IR::Stateful>() : nullptr; }
-    bool is_address() const { return get_stateful() != nullptr; }
-    bool is_immediate() const {
-        if (instr && instr->name == "hash")
-            return true;
-        return false;
-    }
-    cstring algorithm() const;
-    int bits_required(const PhvInfo &phv) const;
-};
-
 class LayoutOption {
  public:
     IR::MAU::Table::Layout layout;
@@ -43,17 +21,7 @@ class LayoutOption {
 class LayoutChoices {
  public:
     ordered_map<cstring, vector<LayoutOption>> total_layout_options;
-    ordered_map<cstring, vector<HashDistReq>> total_hash_dist_reqs;
     ordered_map<cstring, ActionFormat::Use> total_action_formats;
-    vector<HashDistReq> get_hash_dist_req(const IR::MAU::Table *t) const {
-        vector<HashDistReq> empty;
-        if (t == nullptr)
-            return empty;
-        if (total_hash_dist_reqs.find(t->name) == total_hash_dist_reqs.end())
-            return empty;
-        return total_hash_dist_reqs.at(t->name);
-    }
-
     vector<LayoutOption> get_layout_options(const IR::MAU::Table *t) const {
         vector<LayoutOption> empty;
         if (t == nullptr)
@@ -74,7 +42,6 @@ class LayoutChoices {
 
     void clear() {
         total_layout_options.clear();
-        total_hash_dist_reqs.clear();
         total_action_formats.clear();
     }
 };

@@ -311,7 +311,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "No register named"
   extensions/p4_tests/p4_14/04-FullPHV3.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
   extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
   )
 
@@ -326,6 +325,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
   extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
   )
 
 # BRIG-113
@@ -487,17 +487,8 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "hash_dist .* not defined in table"
   extensions/p4_tests/p4_14/test_config_192_stateful_driven_by_hash.p4
-  extensions/p4_tests/p4_14/test_config_313_neg_test_addr_modes.p4
   )
 
-# BRIG-119
-p4c_add_xfail_reason("tofino"
-  "Can't combine hash_dist units"
-  extensions/p4_tests/p4_14/test_config_300_multi_hash.p4
-  extensions/p4_tests/p4_14/hash_calculation_two_hash2.p4
-  extensions/p4_tests/p4_14/hash_calculation_two_hash1.p4
-  extensions/p4_tests/p4_14/test_config_13_first_selection.p4
-  )
 
 # COMPILER-329
 p4c_add_xfail_reason("tofino"
@@ -717,6 +708,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Tofino does not allow meters to use different address schemes on one table"
   testdata/p4_14_samples/counter.p4
+  extensions/p4_tests/p4_14/test_config_313_neg_test_addr_modes.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -780,7 +772,6 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "Deparsed container .* contains both deparsed header fields and deparsed metadata fields"
-  extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
   extensions/p4_tests/p4_14/switch_l2_profile.p4
   extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   )

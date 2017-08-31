@@ -26,7 +26,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".action0") action action0() {
-        hash<bit<16>, bit<16>, tuple<bit<32>, bit<32>, bit<32>>, bit<32>>(hdr.packet.hash_result, HashAlgorithm.random, 16w0, { hdr.packet.hash_field1, hdr.packet.hash_field2, hdr.packet.hash_field3 }, 32w63356);
+        hash<bit<16>, bit<16>, tuple<bit<32>, bit<32>, bit<32>>, bit<32>>(hdr.packet.hash_result, HashAlgorithm.random, 16w0, { hdr.packet.hash_field1, hdr.packet.hash_field2, hdr.packet.hash_field3 }, 32w65536);
     }
     @name(".set_port") action set_port() {
         standard_metadata.egress_spec = 9w1;
