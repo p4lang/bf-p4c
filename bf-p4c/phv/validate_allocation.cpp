@@ -248,7 +248,7 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe* pipe) {
     // Check that the allocation respects parser alignment limitations.
     forAllMatching<IR::Tofino::ExtractBuffer>(pipe,
                   [&](const IR::Tofino::ExtractBuffer* extract) {
-        unsigned requiredAlignment = extract->bitOffset % 8;
+        int requiredAlignment = extract->bitOffset % 8;
         bitrange bits;
         auto* field = phv.field(extract->dest, &bits);
         if (!field) {

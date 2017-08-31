@@ -392,7 +392,7 @@ struct AttachTables : public Modifier {
                 tbl->attached.push_back(salu); } } }
     // expressions might be in two actions (due to inlining), which need to
     // be visited independently
-    void postorder(IR::Expression *) { visitAgain(); }
+    void postorder(IR::Expression *) override { visitAgain(); }
     void postorder(IR::GlobalRef *gref) override {
         visitAgain();
         if (auto di = gref->obj->to<IR::Declaration_Instance>()) {
