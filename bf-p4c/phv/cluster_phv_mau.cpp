@@ -1290,7 +1290,11 @@ PHV_MAU_Group_Assignments::packing_predicates(
     if (req && !num_containers_bottom_bits(cl, cc_set, req)) {
         return false;
     }
-    auto cc_set_iter = cc_set.begin();
+    // when x fields can be allocated to y ccs, x < y
+    // the top y-x is striped for reuse as a new set of aligned ccs, the bottom x allocated
+    // iterate through ccs in reverse, otherwise comparison is against the wrong set of containers
+    //
+    auto cc_set_iter = cc_set.rbegin();  // reverse, allocation stripe uses bottom for partial map
     for (auto &f : cl->cluster_vec()) {
         //
         // bridge metadata considerations:
@@ -1322,11 +1326,37 @@ PHV_MAU_Group_Assignments::packing_predicates(
         // learning digests: L1, L2 belong to same digest
         // mirror, resubmit digests no constraints
         //
-        // do not put non deparsed field (includes pov) in deparsed container
-        // c->deparsed set by taint_bits()...fields_in_container() after f alloc to c
+        // deparser container constraints related to packing
         //
-        if (c->deparsed() && !f->deparsed()) {
-            return false;
+        if (c->deparsed()) {  // set by taint_bits()..fields_in_container() after fd allocated to c
+            // disallow deparsed header w/ deparsed non-header
+            for (auto &entry : c->fields_in_container()) {
+                PhvInfo::Field *cf = entry.first;
+                // if deparsed header in c, disallow anything but another deparsed header
+                if (!cf->metadata && cf->deparsed() && (f->metadata || f->pov || !f->deparsed())) {
+                    return false;
+                }
+                // if deparsed bridge metadata in c, disallow deparsed header
+                if (cf->metadata && cf->deparsed() && !(f->metadata || f->pov) && f->deparsed()) {
+                    return false;
+                }
+            }  // for
+        }
+        // before placing deparsed f in c, ensure
+        // deparser container constraints related to packing
+        //
+        if (f->deparsed()) {
+            for (auto &entry : c->fields_in_container()) {
+                PhvInfo::Field *cf = entry.first;
+                // do not put deparsed header with non-deparsed field in container
+                if (!f->bridged && !cf->deparsed()) {
+                    return false;
+                }
+                // if container has deparsed header, disallow metadata
+                if (!cf->metadata && cf->deparsed() && f->metadata) {
+                    return false;
+                }
+            }  // for
         }
         //
         cc_set_iter++;

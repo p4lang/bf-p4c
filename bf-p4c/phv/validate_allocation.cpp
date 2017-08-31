@@ -186,7 +186,7 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe* pipe) {
                     cstring::to_cstring(fields));
 
         if (hasDeparsedHeaderFields) {
-            ERROR_WARN_(std::all_of(fields.begin(), fields.end(), isDeparsed),
+            ERROR_CHECK(std::all_of(fields.begin(), fields.end(), isDeparsed),
                         "Deparsed container %1% mixes deparsed header "
                         "fields with non-deparsed fields: %2%", container,
                         cstring::to_cstring(fields));

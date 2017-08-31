@@ -306,6 +306,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "byte_hi < container_hi"
   extensions/p4_tests/p4_14/switch_l2_profile.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
   )
 
 # BRIG-105
@@ -761,7 +762,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
   extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
   extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
   )
@@ -774,7 +774,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Deparsed container .* contains both deparsed header fields and deparsed metadata fields"
   extensions/p4_tests/p4_14/switch_l2_profile.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   )
 
 # We can't (without some complex acrobatics) support conditional computed
