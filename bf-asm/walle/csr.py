@@ -296,8 +296,14 @@ class address_map(csr_object):
                         root_parent = obj.parent
                         while type(root_parent) is not str:
                             root_parent = root_parent.parent
-                        if product(obj.count) > 4 and root_parent=="memories":
-                            mem = chip.dma_block(obj.offset, obj.width, src_key=obj.name)
+                        # DRV-655, Force the mapram_config register programming
+                        # on the DMA block write path to avoid a race during
+                        # chip init where the map ram is being written and the
+                        # ECC mode is also being configured.  Since the map ram
+                        # is written with block writes, forcing this register
+                        # configuration on the same path removes the race.
+                        if product(obj.count) > 4 and (root_parent=="memories" or obj.name=='mapram_config'):
+                            mem = chip.dma_block(obj.offset, obj.width, src_key=obj.name, is_reg=root_parent=="regs")
                             def mem_loop(sub_data, context):
                                 path[-1].path.append(context)
                                 for idx in range(0, obj.count[-1]):
@@ -734,6 +740,9 @@ def parse_csrcompiler_csv (filename, section_name):
                 if popped_group.stride == None:
                     popped_group.stride = popped_group.min_width()
             elif row["Type"] == "userdefined memory":
+                # ignore for now?
+                pass
+            elif row["Type"] == "reserved":
                 # ignore for now?
                 pass
             else:

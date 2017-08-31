@@ -85,7 +85,7 @@ class indirect_reg(chip_object):
 
 class dma_block(chip_object):
     """
-    A single DMA block write operation, of the format:
+    A single DMA block write operation in one of these two formats:
 
     4 bytes: "\0\0\0D"
     8 bytes: 42-bit chip address
@@ -93,12 +93,19 @@ class dma_block(chip_object):
     4 bytes: Number of words
     Following: Data, in 32-bit word chunks
 
+    4 bytes: "\0\0\0B"
+    8 bytes: 32-bit PCIe address
+    4 bytes: Bit-length of word
+    4 bytes: Number of words
+    Following: Data, in 32-bit word chunks
+
     All fields little-endian
     """
-    def __init__(self, addr, width, src_key=None):
+    def __init__(self, addr, width, src_key=None, is_reg=False):
         chip_object.__init__(self, addr, src_key)
         self.width=width
         self.values=[]
+        self.is_reg = is_reg
 
     def add_word(self, value):
         hexstr = hex(value).replace('0x','').replace('L','')
@@ -128,7 +135,11 @@ class dma_block(chip_object):
                 new_values.append(value[16:32].rjust(128/8,chr(0)))
             self.values = new_values
 
-        bytestr = "\0\0\0D" + struct.pack("<Q",self.addr) + struct.pack("<I",self.width) + struct.pack("<I",len(self.values))
+        if self.is_reg:
+            op_type = "\0\0\0B"
+        else:
+            op_type = "\0\0\0D"
+        bytestr = op_type + struct.pack("<Q",self.addr) + struct.pack("<I",self.width) + struct.pack("<I",len(self.values))
         for value in self.values:
             bytestr += value
         return bytestr
