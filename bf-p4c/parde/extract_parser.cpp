@@ -236,8 +236,10 @@ ParserInfo extractParser(const IR::Tofino::Pipe* pipe,
 }
 
 struct RewriteParserStatements : public Transform {
-    RewriteParserStatements(cstring stateName, bool filterSetMetadata)
-        : stateName(stateName), filterSetMetadata(filterSetMetadata) { }
+    RewriteParserStatements(cstring stateName, gress_t gress,
+                            bool filterSetMetadata)
+        : stateName(stateName), gress(gress),
+          filterSetMetadata(filterSetMetadata) { }
 
     /// @return the cumulative shift in bytes from all of the statements
     /// rewritten up to this point. This includes both extracts and `advance()`
@@ -259,6 +261,17 @@ struct RewriteParserStatements : public Transform {
         auto* hdr_type = hdr->type->to<IR::Type_StructLike>();
         BUG_CHECK(hdr_type != nullptr,
                   "Header type isn't a structlike: %1%", hdr_type);
+
+        // XXX(seth): We filter out extracts for types with this annotation.
+        // This is a hack to support some v1model programs in the short term;
+        // long term, the right solution is to use PSA or TNA, which allow the
+        // programmer to define separate ingress and egress parsers.
+        if (gress == EGRESS &&
+            hdr_type->getAnnotation("not_extracted_in_egress") != nullptr) {
+            ::warning("Ignoring egress extract of @not_extracted_in_egress "
+                      "header: %1%", dest);
+            return nullptr;
+        }
 
         // If a previous operation (e.g. an `advance()` call) left us in a
         // non-byte-aligned position, we need to move up to the next byte; on
@@ -381,9 +394,10 @@ struct RewriteParserStatements : public Transform {
         BUG("Unhandled statement kind: %1%", s);
     }
 
-    cstring stateName;
+    const cstring stateName;
+    const gress_t gress;
     unsigned currentBit = 0;
-    bool filterSetMetadata;
+    const bool filterSetMetadata;
 };
 
 static match_t buildListMatch(const IR::Vector<IR::Expression> *list) {
@@ -481,7 +495,8 @@ IR::Tofino::ParserState* GetTofinoParser::getState(cstring name) {
               "Converting a parser state that didn't come from the frontend?");
 
     // Lower the parser statements from the frontend IR to the Tofino IR.
-    RewriteParserStatements rewriteStatements(state->p4State->name, filterSetMetadata);
+    RewriteParserStatements rewriteStatements(state->p4State->name,
+                                              gress, filterSetMetadata);
     IR::Vector<IR::Tofino::ParserPrimitive> statements;
     for (auto* statement : state->p4State->components)
         statements.pushBackOrAppend(statement->apply(rewriteStatements));
