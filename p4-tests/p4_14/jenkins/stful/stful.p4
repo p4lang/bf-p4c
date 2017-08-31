@@ -175,6 +175,8 @@ parser parse_recirc_trigger_pkt {
 action set_ifid(ifid) {
     modify_field(md.ifid, ifid);
 }
+
+@pragma --metadata-overlay False
 table ing_port {
     reads   { ig_intr_md.ingress_port : exact; }
     actions { set_ifid; }
@@ -235,8 +237,7 @@ action do_undrop() {
  *****************************************************************************/
 register ifid_cntr {
     width: 16;
-    /* direct: ifid; */
-    instance_count : 25000;
+    direct: ifid;
     attributes: signed, saturating;
 }
 blackbox stateful_alu ifid_cntr_alu {
@@ -285,17 +286,29 @@ field_list bf_hash_fields {
  * now. */
 field_list_calculation bf_hash_1 {
     input { bf_hash_fields; }
+#ifdef BMV2TOFINO
+    algorithm: crc32;
+#else
     algorithm: random;
+#endif
     output_width: 18;
 }
 field_list_calculation bf_hash_2 {
     input { bf_hash_fields; }
+#ifdef BMV2TOFINO
+    algorithm: crc16;
+#else
     algorithm: random;
+#endif
     output_width: 18;
 }
 field_list_calculation bf_hash_3 {
     input { bf_hash_fields; }
+#ifdef BMV2TOFINO
+    algorithm: csum16;
+#else
     algorithm: random;
+#endif
     output_width: 18;
 }
 
@@ -569,8 +582,8 @@ field_list next_hop_ecmp_hash_fields {
 }
 field_list_calculation next_hop_ecmp_hash {
     input { next_hop_ecmp_hash_fields; }
-    algorithm : crc16;
-    output_width : 16;
+    algorithm : crc32;
+    output_width : 29;
 }
 register next_hop_ecmp_reg {
     width : 1;
@@ -591,6 +604,7 @@ action_profile next_hop_ecmp_ap {
     dynamic_action_selection : next_hop_ecmp_selector;
 }
 @pragma stage 6
+@pragma selector_max_group_size 200
 table next_hop_ecmp {
     reads { md.nh_id : exact; }
     action_profile : next_hop_ecmp_ap;
@@ -738,7 +752,11 @@ action_selector lag_as {
 }
 field_list_calculation lag_hash {
     input { lag_fields; }
+#ifdef BMV2TOFINO
+    algorithm: xxh64;
+#else
     algorithm: random;
+#endif
     output_width: 66;
 }
 field_list lag_fields {
@@ -799,8 +817,7 @@ action drop_ifid_update_pkt() {
  *****************************************************************************/
 register port_cntr {
     width: 64;
-    /* direct: egr_port; */
-    instance_count : 16384;
+    direct: egr_port;
     attributes: signed;
 }
 blackbox stateful_alu counter_alu {
