@@ -151,7 +151,6 @@ class RemoveInstanceRef : public Transform {
 class RemoveIsValid : public Transform {
  private:
     const IR::Expression* preorder(IR::MethodCallExpression* call) override {
-        std::cerr << "[RemoveIsValid] considering call: " << call << std::endl;
         auto* method = call->method->to<IR::Member>();
         if (!method) return call;
 

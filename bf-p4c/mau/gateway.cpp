@@ -216,10 +216,6 @@ bool CollectGatewayFields::preorder(const IR::Expression *e) {
             xor_match = finfo; } }
     return false; }
 
-bool CollectGatewayFields::preorder(const IR::Primitive *) {
-    return false;
-}
-
 bool CollectGatewayFields::compute_offsets() {
     bytes = bits = 0;
     std::vector<decltype(info)::value_type *> sort_by_size;

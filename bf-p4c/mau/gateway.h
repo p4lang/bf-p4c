@@ -36,7 +36,6 @@ class CollectGatewayFields : public Inspector {
             visit(gw.first, "gateway_row"); }
         return false; }
     bool preorder(const IR::Expression *e) override;
-    bool preorder(const IR::Primitive *prim) override;
     void postorder(const IR::Operation::Relation *) override {
         xor_match = nullptr; }
 
