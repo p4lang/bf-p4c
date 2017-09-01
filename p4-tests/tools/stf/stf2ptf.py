@@ -4,6 +4,7 @@ import logging
 import traceback
 import unittest
 import random
+import math
 from ptf import config
 from ptf.testutils import *
 
@@ -134,7 +135,7 @@ class stf2ptf (P4RuntimeTest):
 
         except Exception as e:
             self._logger.exception(e)
-            print >> sys.stderr, traceback.format_exc()
+            raise
         else:
             testutils.verify_no_other_packets(self)
 
