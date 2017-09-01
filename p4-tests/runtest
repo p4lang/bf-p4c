@@ -285,7 +285,7 @@ if $run_ptf ; then
                 --stftest ${stftest} \
                 --ptfdir ${mydir}/tools/stf --top-builddir $(findcmakecache)"
     fi
-    run $PTF_CMD
+    run $PTF_CMD || die
 fi
 
 # cleanup
