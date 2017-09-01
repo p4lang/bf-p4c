@@ -125,6 +125,97 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe* pipe) {
                 container, message.str());
     }
 
+    // Verify that we allocate PHV space for all fields which are emitted or
+    // used as POV bits in the deparser, and that POV bits don't end up in TPHV.
+    // We also check that each byte in a container used in a computed checksum
+    // consists either entirely of checksummed fields or entirely of ignored
+    // fields.
+    forAllMatching<IR::Tofino::DeparserPrimitive>(pipe,
+                  [&](const IR::Tofino::DeparserPrimitive* prim) {
+        const IR::Expression* povFieldSource;
+
+        if (auto* emit = prim->to<IR::Tofino::Emit>()) {
+            auto* sourceField = phv.field(emit->source, nullptr);
+            ERROR_CHECK(sourceField != nullptr, "No PHV allocation for field "
+                        "emitted by the deparser: %1%", emit->source);
+            povFieldSource = emit->povBit;
+        } else if (auto* emitChecksum = prim->to<IR::Tofino::EmitChecksum>()) {
+            // Verify that every source field for this computed checksum is
+            // allocated, and collect all of the allocations used in this
+            // computed checksum.
+            std::map<PHV::Container, std::vector<Slice>> checksumAllocations;
+            for (auto* source : emitChecksum->sources) {
+                bitrange sourceFieldBits;
+                auto* sourceField = phv.field(source, &sourceFieldBits);
+                if (!sourceField) {
+                    ::error("No PHV allocation for field used in computed "
+                            "checksum: %1%", source);
+                    continue;
+                }
+
+                sourceField->foreach_alloc(sourceFieldBits,
+                             [&](const PhvInfo::Field::alloc_slice& alloc) {
+                    checksumAllocations[alloc.container].push_back(alloc);
+                });
+            }
+
+            // Verify that for every container which contributes to this
+            // computed checksum, each byte either contains *only* fields which
+            // contribute to the checksum (and no empty space) or contains *no*
+            // fields which contribute to the checksum.
+            for (auto& allocation : checksumAllocations) {
+                auto& slices = allocation.second;
+
+                bitvec allocatedBits;
+                for (auto& slice : slices)
+                    allocatedBits.setrange(slice.container_bit, slice.width);
+
+                for (auto byte : { 0, 1, 2, 3}) {
+                    auto bitsInByte = allocatedBits.getslice(byte * 8, 8);
+                    auto numSetBits = bitsInByte.popcount();
+                    ERROR_WARN_(numSetBits == 0 || numSetBits == 8,
+                                "Byte %1% of container contains a mix of "
+                                "checksum fields and non-checksum fields or "
+                                "empty space: %2%", byte,
+                                cstring::to_cstring(slices));
+                }
+            }
+
+            povFieldSource = emitChecksum->povBit;
+        } else {
+            BUG("Unexpected deparser primitive");
+        }
+
+        BUG_CHECK(povFieldSource != nullptr, "No POV bit field for %1%", prim);
+
+        bitrange povFieldBits;
+        auto* povField = phv.field(povFieldSource, &povFieldBits);
+        if (!povField) {
+            ::error("No PHV allocation for field used as a POV bit in the "
+                    "deparser: %1%", povFieldSource);
+            return;
+        }
+
+        ERROR_CHECK(povFieldBits.size() == 1, "Allocated %1% bits for POV bit "
+                    "field, which should use only one bit: %2%",
+                    povFieldBits.size(), cstring::to_cstring(povField));
+
+
+        // Verify that POV bit are not be placed in TPHV.
+        povField->foreach_alloc(povFieldBits,
+                  [&](const PhvInfo::Field::alloc_slice& alloc) {
+            ERROR_CHECK(!alloc.container.tagalong(), "POV bit field was placed "
+                        "in TPHV: %1%", cstring::to_cstring(povField));
+        });
+    });
+
+    // XXX(seth): There are some additional deparser constraints that we aren't
+    // checking yet. Some known examples:
+    //   - Special fields used by the deparser hardware (e.g. egress_spec) must
+    //     not be in TPHV.
+    //   - Fields in digests may only be packed with other fields in the same
+    //     digest.
+
     auto isDeparsed = [](const PhvInfo::Field* f) { return f->deparsed_i; };
     auto isBridged = [](const PhvInfo::Field* f) { return f->bridged; };
     auto isMetadata = [](const PhvInfo::Field* f) { return f->metadata || f->pov; };
@@ -183,7 +274,6 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe* pipe) {
             else
                 hasDeparsedHeaderFields = true;
         }
-
 
         ERROR_CHECK(!(hasDeparsedHeaderFields && hasDeparsedMetadataFields),
                     "Deparsed container %1% contains both deparsed header "
