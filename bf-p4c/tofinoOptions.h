@@ -10,6 +10,7 @@ class Tofino_Options : public CompilerOptions {
     bool phv_interference = true;
     bool phv_slicing = true;
     bool phv_overlay = true;
+    bool ignorePHVOverflow = false;
     bool native_arch = false;
 
     Tofino_Options() {
@@ -25,6 +26,9 @@ class Tofino_Options : public CompilerOptions {
         registerOption("--nophvover", nullptr,
             [this](const char *) { phv_overlay = false; return true; },
             "do not use cluster_phv_overlay based PHV overlays");
+        registerOption("--ignore-overflow", nullptr,
+            [this](const char *) { ignorePHVOverflow = true; return true; },
+            "attempt to continue compiling even if PHV space is exhausted");
         registerOption("--native", nullptr,
             [this](const char *) { native_arch = true; return true; },
             "use tofino native model as target architecture (experimental)");

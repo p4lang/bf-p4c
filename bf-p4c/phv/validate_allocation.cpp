@@ -37,6 +37,48 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe* pipe) {
     BUG_CHECK(phv.alloc_done(),
               "Calling ValidateAllocation without performing PHV allocation");
 
+    // Before we do anything else, we check if the program failed to fit - i.e.,
+    // if the PHV allocator ran out of real containers and had to allocate
+    // overflow containers. If so, we normally just report the error and skip
+    // all further checks, because the PHV allocator isn't guaranteed to satisfy
+    // its constraints when that happens. (There's a flag to disable this for
+    // debugging purposes.)
+    {
+        bitvec allContainersInProgram;
+        for (auto& field : phv)
+            for (auto& slice : field.alloc_i)
+                allContainersInProgram[slice.container.id()] = true;
+
+
+        auto overflowContainers =
+          allContainersInProgram - PHV::Container::physicalContainers();
+        if (!overflowContainers.empty()) {
+            ::warning("Couldn't fit program in the available PHV space!");
+
+            std::map<PHV::Container::Kind, size_t> overflowCountByKind;
+            for (auto id : overflowContainers)
+                overflowCountByKind[PHV::Container::fromId(id).kind()]++;
+
+            auto physicalContainers =
+              allContainersInProgram & PHV::Container::physicalContainers();
+            std::map<PHV::Container::Kind, size_t> physicalCountByKind;
+            for (auto id : physicalContainers)
+                physicalCountByKind[PHV::Container::fromId(id).kind()]++;
+
+            for (unsigned kind = 0; kind < PHV::Container::NumKinds; kind++) {
+                ::warning("Used %1% physical and %2% overflow %3% containers",
+                          physicalCountByKind[PHV::Container::Kind(kind)],
+                          overflowCountByKind[PHV::Container::Kind(kind)],
+                          cstring::to_cstring(PHV::Container::Kind(kind)));
+            }
+
+            if (!ignorePHVOverflow) {
+                ::error("PHV allocation was not successful.");
+                return false;  // Don't perform any more checks.
+            }
+        }
+    }
+
     // A mapping from PHV containers to the field slices that they contain.
     using Slice = PhvInfo::Field::alloc_slice;
     std::map<PHV::Container, std::vector<Slice>> allocations;

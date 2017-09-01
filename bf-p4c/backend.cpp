@@ -212,7 +212,7 @@ class PHV_AllocPass : public PassManager {
                                                // sorting done by phv_bind
                     new PHV_Assignment_Validate(phv)});  // phv assignment results validation
             }
-            passes.push_back(new PHV::ValidateAllocation(phv));
+            passes.push_back(new PHV::ValidateAllocation(phv, options.ignorePHVOverflow));
             setName("PHV Alloc");
         }
 
