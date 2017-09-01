@@ -111,7 +111,6 @@ class P4RuntimeTest(BaseTest):
 
     class Exact(MF):
         def __init__(self, name, v):
-            logging.debug("Adding Exact match (%s, %s)", name, v)
             super(P4RuntimeTest.Exact, self).__init__(name)
             self.v = v
 
