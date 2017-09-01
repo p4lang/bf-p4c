@@ -128,13 +128,6 @@ class AsmOutput : public Inspector {
 
 class PHV_AnalysisPass : public PassManager {
  private:
-    const Tofino_Options      &options;
-    PhvInfo                   &phv;
-    PhvUse                    &uses;
-    FieldDefUse               &defuse;
-    DependencyGraph           &deps;
-
- private:
     SymBitMatrix mutually_exclusive_field_ids;
     Cluster cluster;                            // cluster analysis
     Cluster_PHV_Requirements cluster_phv_req;   // cluster PHV requirements
@@ -147,12 +140,6 @@ class PHV_AnalysisPass : public PassManager {
  public:
     PHV_AnalysisPass(const Tofino_Options &options, PhvInfo &phv, PhvUse &uses,
                      FieldDefUse &defuse, DependencyGraph &deps) :
-        options(options),
-        phv(phv),
-        uses(uses),
-        defuse(defuse),
-        deps(deps),
-        //
         cluster(phv, uses),
         cluster_phv_req(cluster),
         cluster_phv_interference(cluster_phv_req, mutually_exclusive_field_ids),
@@ -203,15 +190,11 @@ class PHV_AnalysisPass : public PassManager {
 
 class PHV_AllocPass : public PassManager {
  private:
-    const Tofino_Options      &options;
     PhvInfo                   &phv;
-    PhvUse                    &uses;
-    PHV_MAU_Group_Assignments &cluster_phv_mau;
 
  public:
     PHV_AllocPass(const Tofino_Options &options, PhvInfo &phv, PhvUse &uses,
-                  PHV_MAU_Group_Assignments &cluster_phv_mau) :
-        options(options), phv(phv), uses(uses), cluster_phv_mau(cluster_phv_mau) {
+                  PHV_MAU_Group_Assignments &cluster_phv_mau) : phv(phv) {
             if (options.trivial_phvalloc) {
                 addPasses({
                     new PHV::TrivialAlloc(phv)});
@@ -240,17 +223,11 @@ class PHV_AllocPass : public PassManager {
 
 class TableAllocPass : public PassManager {
  private:
-    PhvInfo                 &phv;
-    FieldDefUse             &defuse;
-    DependencyGraph         &deps;
-
- private:
     TablesMutuallyExclusive mutex;
     LayoutChoices           lc;
 
  public:
-    TableAllocPass(PhvInfo& phv, FieldDefUse &defuse, DependencyGraph &deps) :
-        phv(phv), defuse(defuse), deps(deps) {
+    TableAllocPass(PhvInfo& phv, FieldDefUse &defuse, DependencyGraph &deps) {
             addPasses({
                 new GatewayOpt(phv),   // must be before TableLayout?  or just TablePlacement?
                 new TableLayout(phv, lc),
