@@ -105,11 +105,15 @@ template <> int Parser::State::Match::Save::write_output_config(Target::JBay::pa
         if (flags & OFFSET) row->phv_offset_add_dst[i] = 1;
         if (flags & ROTATE) error(where.lineno, "no rotate support in jbay");
         if (hi == lo) {
-            row->extract_is_8b[i] = 1;
+            row->extract_type[i] = 1;
         } else if (hi-lo == 3) {
+            row->extract_type[i] = 3;
             row->phv_dst[i+1] = where->reg.index;
             row->phv_src[i+1] = lo+2;
-            if (flags & OFFSET) row->phv_offset_add_dst[i+1] = 1; }
+            row->extract_type[i+1] = 3;
+            if (flags & OFFSET) row->phv_offset_add_dst[i+1] = 1;
+        } else {
+            row->extract_type[i] = 3; }
         used |= mask << i;
         return hi; }
     error(where.lineno, "Ran out of phv output slots");
@@ -138,7 +142,7 @@ template <> void Parser::mark_unused_output_map(Target::JBay::parser_regs &regs,
 template<> void Parser::State::Match::write_counter_config(
     Target::JBay::parser_regs::_memory::_ml_ea_row &ea_row) const {
     ea_row.ctr_amt_idx = counter;
-    ea_row.ctr_load = (counter_load ? 2 : 0) + counter_reset;
+    // FIXME -- counter stack config
 }
 
 template<> void Parser::write_config(Target::JBay::parser_regs &regs) {

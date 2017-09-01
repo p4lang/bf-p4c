@@ -13,8 +13,8 @@
 
 #if HAVE_JBAY
 #include "gen/jbay/memories.prsr_mem_main_rspec.h"
-#include "gen/jbay/regs.ipb_csr_regs.h"
-#include "gen/jbay/regs.epb_regs.h"
+#include "gen/jbay/regs.ipb_prsr4_reg.h"
+#include "gen/jbay/regs.epb_prsr4_reg.h"
 #include "gen/jbay/regs.prsr_reg_main_rspec.h"
 #include "gen/jbay/regs.pmerge_reg.h"
 #include "gen/jbay/regs.mau_addrmap.h"
@@ -63,14 +63,14 @@ class Target::JBay : public Target {
  public:
     struct                                          parser_regs {
         typedef ::JBay::memories_prsr_mem_main_rspec    _memory;
-        typedef ::JBay::regs_ipb_csr_regs               _ingress;
-        typedef ::JBay::regs_epb_regs                   _egress;
+        typedef ::JBay::regs_ipb_prsr4_reg              _ingress;
+        typedef ::JBay::regs_epb_prsr4_reg              _egress;
         typedef ::JBay::regs_prsr_reg_main_rspec        _main;
         typedef ::JBay::regs_pmerge_reg                 _merge;
 
         ::JBay::memories_prsr_mem_main_rspec            memory[2];
-        ::JBay::regs_ipb_csr_regs                       ingress;
-        ::JBay::regs_epb_regs                           egress;
+        ::JBay::regs_ipb_prsr4_reg                      ingress;
+        ::JBay::regs_epb_prsr4_reg                      egress;
         ::JBay::regs_prsr_reg_main_rspec                main[2];
         ::JBay::regs_pmerge_reg                         merge;
     };

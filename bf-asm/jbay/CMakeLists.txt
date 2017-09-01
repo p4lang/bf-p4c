@@ -2,8 +2,8 @@ set (GEN_JBAY
   memories.jbay_mem
   memories.pipe_addrmap
   memories.prsr_mem_main_rspec
-  regs.epb_regs
-  regs.ipb_csr_regs
+  regs.epb_prsr4_reg
+  regs.ipb_prsr4_reg
   regs.prsr_reg_main_rspec
   regs.pipe_addrmap regs.pmerge_reg
   regs.mau_addrmap

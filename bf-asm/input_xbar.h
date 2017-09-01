@@ -31,7 +31,8 @@ class InputXbar {
         HashExpr                *fn = 0;
         int                     bit = 0;
         bitvec                  data;
-        unsigned                valid = 0;
+        unsigned                valid = 0;  // FIXME jbay valid bits are gone; should
+                        // issue an error if one tries to use them.  For now just ignored.
     };
     struct HashGrp {
         int             lineno = -1;
@@ -64,6 +65,8 @@ public:
     void pass1();
     void pass2();
     template<class REGS> void write_regs(REGS &regs);
+    template<class REGS> void write_galois_matrix(REGS &regs,
+            int id, const std::map<int, HashCol> &mat);
 
     bool have_exact() const {
         for (auto &grp : groups) if (!grp.first.ternary) return true;
