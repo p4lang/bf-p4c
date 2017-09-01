@@ -335,7 +335,7 @@ def main():
                 return False
 
             success = run_ptf_tests(PTF, args.ptfdir, p4info_path,
-                                    stftest=args.stftest, extra_ptf_args)
+                                    args.stftest, extra_ptf_args)
             if not success:
                 print >> sys.stderr, "Error when running PTF tests"
                 return False
