@@ -115,10 +115,13 @@ class RemoveUserArchitecture : public Transform {
 
         if (target == "tofino-v1model-barefoot") {
             structure->include("v1model.p4", &baseArchTypes);
+            structure->include("tofino/stateful_alu.p4", &libArchTypes);
         } else {
             ::error("Unsupported target %1%", target); }
         /// populate reservedNames from arch.p4 and include system headers
         for (auto node : baseArchTypes) {
+            processArchTypes(node); }
+        for (auto node : libArchTypes) {
             processArchTypes(node); }
         // Debug only
         for (auto name : *reservedNames) {

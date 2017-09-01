@@ -90,10 +90,44 @@ extern meter<I> {
     bit<8> execute(@optional in I index, @optional in bit<8> color);
 }
 
+/// Register
 extern register<T> {
-    register(bit<32> size);
+    register(@optional bit<32> instance_count, @optional T initial_value);
+
+    ///XXX(hanw): BRIG-212
+    /// following two methods are not supported in brig backend
+    /// they are present to help with the transition from v1model to tofino.p4
+    /// after the transition, these two methods should be removed
+    /// and the corresponding test cases should be marked as XFAILs.
     void read(out T result, in bit<32> index);
     void write(in bit<32> index, in T value);
+}
+
+extern register_params<T> {
+    register_params();
+    register_params(T value);
+    register_params(T v1, T v2);
+    register_params(T v1, T v2, T v3);
+    register_params(T v1, T v2, T v3, T v4);
+    T read(bit<2> index);
+}
+
+extern math_unit<T, U> {
+    math_unit(bool invert, int<2> shift, int<6> scale, U data);
+    T execute(in T x);
+}
+
+extern register_action<T, U> {
+    register_action(register<T> reg, @optional math_unit<U, _> math,
+                                     @optional register_params<U> params);
+    abstract void apply(inout T value, @optional out U rv, @optional register_params<U> params);
+    U execute(@optional in bit<32> index); /* {
+        U rv;
+        T value = reg.read(index);
+        apply(value, rv);
+        reg.write(index, value);
+        return rv;
+    } */
 }
 
 // used as table implementation attribute

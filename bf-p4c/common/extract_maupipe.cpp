@@ -397,7 +397,6 @@ struct AttachTables : public Modifier {
         visitAgain();
         if (auto di = gref->obj->to<IR::Declaration_Instance>()) {
             auto tt = findContext<IR::MAU::Table>();
-            cstring tname;
             BUG_CHECK(tt, "GlobalRef not in a table");
             auto &salu = all_salu[tt->name];
             for (auto att : tt->attached) {
@@ -414,9 +413,7 @@ struct AttachTables : public Modifier {
                 LOG3("Created " << att->node_type_name() << ' ' << att->name << " (pt 3)");
                 gref->obj = converted[di] = att;
                 attached[tt->name].push_back(att);
-            } else if ((tname = di->type->toString()) == "stateful_alu_14" ||
-                       tname.startsWith("register_action<") ||
-                       tname.startsWith("stateful_alu<")) {
+            } else if (di->type->toString().startsWith("register_action<")) {
                 updateAttachedSalu(refMap, salu, di);
                 gref->obj = converted[di] = salu; }
             if (salu == gref->obj) {
