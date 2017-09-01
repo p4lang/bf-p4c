@@ -31,6 +31,22 @@ name of your P4 program. For example:
     cd build/p4c
     ctest -V -L ptf -R easy_ternary
 
+
+Running STF tests:
+==================
+
+STF tests can run both as STF (default) and as PTF. To enable the
+latter, the PTF dependencies must be met, and you need to configure
+as follows:
+
+    cd build
+    cmake .. -DENABLE_STF2PTF=ON
+    make -j4
+    ctest -V -L ptf [-R <test>]
+
+Note that the re-configuration should not affect any dependencies, and
+thus, there should be no recompilation.
+
 Debugging a PTF test:
 =====================
 
