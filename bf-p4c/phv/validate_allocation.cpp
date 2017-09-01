@@ -73,6 +73,18 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe* pipe) {
         bitvec assignedContainers;
         bitvec allocatedBits;
         for (auto& slice : field.alloc_i) {
+            // XXX(seth): For fields which are parsed or deparsed, this can
+            // never work, but there are some odd situations in which it could
+            // in theory be useful (e.g. we can rotate containers in the MAU in
+            // some scenarios, so we could allocate the field to both the top
+            // and the bottom of the container, with something else in the
+            // middle, and then rotate it into place when needed). However,
+            // until we make the PHV allocator more sophisticated, this is
+            // probably just a bug.
+            ERROR_CHECK(!assignedContainers[slice.container.id()],
+                        "Multiple slices in the same container are allocated "
+                        "to field %1%", cstring::to_cstring(field));
+
             assignedContainers[slice.container.id()] = true;
             allocations[slice.container].emplace_back(slice);
             threadAssignments[field.gress] |= slice.container.group();
@@ -125,6 +137,9 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe* pipe) {
                 container, message.str());
     }
 
+    std::vector<const PhvInfo::Field*> deparseSequence;
+    std::map<const PhvInfo::Field*, std::vector<size_t>> deparseOccurrences;
+
     // Verify that we allocate PHV space for all fields which are emitted or
     // used as POV bits in the deparser, and that POV bits don't end up in TPHV.
     // We also check that each byte in a container used in a computed checksum
@@ -139,6 +154,11 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe* pipe) {
             ERROR_CHECK(sourceField != nullptr, "No PHV allocation for field "
                         "emitted by the deparser: %1%", emit->source);
             povFieldSource = emit->povBit;
+
+            if (sourceField) {
+                deparseSequence.push_back(sourceField);
+                deparseOccurrences[sourceField].push_back(deparseSequence.size());
+            }
         } else if (auto* emitChecksum = prim->to<IR::Tofino::EmitChecksum>()) {
             // Verify that every source field for this computed checksum is
             // allocated, and collect all of the allocations used in this
@@ -223,6 +243,19 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe* pipe) {
         return !f->field_overlay_map().empty();
     };
 
+    // Check that we've marked a field as deparsed if and only if it's actually
+    // emitted in the deparser.
+    for (auto& field : phv) {
+        if (isDeparsed(&field))
+            ERROR_CHECK(deparseOccurrences.find(&field) != deparseOccurrences.end(),
+                        "Field is marked as deparsed, but the deparser doesn't "
+                        "emit it: %1%", cstring::to_cstring(field));
+        else
+            ERROR_CHECK(deparseOccurrences.find(&field) == deparseOccurrences.end(),
+                        "Field is not marked as deparsed, but the deparser "
+                        "emits it: %1%", cstring::to_cstring(field));
+    }
+
     // Check that the allocation for each container is valid.
     for (auto& allocation : allocations) {
         auto container = allocation.first;
@@ -267,12 +300,50 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe* pipe) {
         // programmer.
         bool hasDeparsedHeaderFields = false;
         bool hasDeparsedMetadataFields = false;
-        for (auto* field : fields) {
-            if (!isDeparsed(field)) continue;
-            if (isMetadata(field))
-                hasDeparsedMetadataFields = true;
-            else
-                hasDeparsedHeaderFields = true;
+        {
+            const PhvInfo::Field* previousField;
+            std::vector<size_t> previousFieldOccurrences;
+
+            // Because we want to check that the fields in this container are
+            // placed in the order in which they're emitted in the deparser, we
+            // need to walk over them in network order.
+            std::vector<Slice> slicesInNetworkOrder(slices.begin(), slices.end());
+            std::sort(slicesInNetworkOrder.begin(), slicesInNetworkOrder.end(),
+                      [](const Slice& a, const Slice& b) {
+                return a.container_bits().toSpace<Endian::Network>(a.container.size()).lo
+                     < b.container_bits().toSpace<Endian::Network>(b.container.size()).lo;
+            });
+
+            for (auto& slice : slicesInNetworkOrder) {
+                auto* field = slice.field;
+                if (!isDeparsed(field)) continue;
+                if (isMetadata(field))
+                    hasDeparsedMetadataFields = true;
+                else
+                    hasDeparsedHeaderFields = true;
+
+                // Validate that the ordering of these fields in the container
+                // matches their ordering in the deparser everywhere that they
+                // appear.
+                bool orderingIsCorrect = true;
+                auto& fieldOccurrences = deparseOccurrences[field];
+                for (auto previousFieldOccurrence : previousFieldOccurrences) {
+                    auto expectedOccurrence = previousFieldOccurrence + 1;
+                    if (std::find(fieldOccurrences.begin(), fieldOccurrences.end(),
+                                  expectedOccurrence) == fieldOccurrences.end())
+                        orderingIsCorrect = false;
+                }
+
+                ERROR_CHECK(orderingIsCorrect,
+                            "Field %1% and field %2% are adjacent in container "
+                            "%3% but aren't adjacent in the deparser",
+                            cstring::to_cstring(previousField),
+                            cstring::to_cstring(field),
+                            cstring::to_cstring(container));
+
+                previousField = field;
+                previousFieldOccurrences = fieldOccurrences;
+            }
         }
 
         ERROR_CHECK(!(hasDeparsedHeaderFields && hasDeparsedMetadataFields),
