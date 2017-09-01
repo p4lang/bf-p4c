@@ -55,6 +55,11 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     "mismatch from expected.*at byte 0x"
     extensions/p4_tests/p4_16/stack_valid.p4
     )
+
+  p4c_add_xfail_reason("tofino"
+    "counter cnt virtual value .*, expected 1"
+    testdata/p4_14_samples/counter1.p4
+  )
 endif() # HARLYN_STF
 
 # add the failures with no reason
@@ -732,6 +737,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Overlapping field slices in allocation for field"
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
+  extensions/p4_tests/p4_14/switch_20160602/switch.p4
   )
 
 p4c_add_xfail_reason("tofino"
