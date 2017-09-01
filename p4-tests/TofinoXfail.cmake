@@ -782,7 +782,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Encountered invalid code in computed checksum control"
   testdata/p4_14_samples/checksum.p4
-  testdata/p4_14_samples/sai_p4.p4
   extensions/p4_tests/p4_14/test_checksum.p4
   testdata/p4_16_samples/issue134-bmv2.p4
   testdata/p4_16_samples/issue655.p4
@@ -793,15 +792,42 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/switch_20160512/switch.p4
 )
 
+p4c_add_xfail_reason("tofino"
+  "error: struct .*: Expected type name"
+  testdata/p4_14_samples/sai_p4.p4
+  extensions/p4_tests/p4_14/test_config_55_generate_digest.p4
+  testdata/p4_16_samples/issue430-1-bmv2.p4
+  )
+
+
+# --p4runtime
+p4c_add_xfail_reason("tofino"
+  "error: Expression .* is too complicated to resolve to a header field"
+  testdata/p4_14_samples/exact_match_valid1.p4
+  testdata/p4_14_samples/tmvalid.p4
+  testdata/p4_14_samples/validate_outer_ethernet.p4
+  testdata/p4_14_samples/checksum1.p4
+  testdata/p4_14_samples/port_vlan_mapping.p4
+  testdata/p4_14_samples/exact_match_mask1.p4
+  testdata/p4_14_samples/source_routing.p4
+  testdata/p4_14_samples/TLV_parsing.p4
+  testdata/p4_14_samples/axon.p4
+  testdata/p4_14_samples/mac_rewrite.p4
+  testdata/p4_14_samples/simple_nat.p4
+  testdata/p4_14_samples/switch_20160512/switch.p4
+  testdata/p4_14_samples/switch_20160226/switch.p4
+  testdata/p4_16_samples/table-entries-valid-bmv2.p4
+  testdata/p4_16_samples/inline-bmv2.p4
+  testdata/p4_16_samples/inline1-bmv2.p4
+  )
+
 if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
   # STF2PTF tests that fail
   p4c_add_xfail_reason("tofino"
     "AssertionError: Did not receive expected pkt"
     testdata/p4_16_samples/table-entries-priority-bmv2.p4
-    testdata/p4_16_samples/table-entries-lpm-bmv2.p4
     testdata/p4_16_samples/table-entries-ternary-bmv2.p4
     testdata/p4_16_samples/table-entries-exact-ternary-bmv2.p4
-    testdata/p4_16_samples/table-entries-range-bmv2.p4
     testdata/p4_16_samples/table-entries-exact-bmv2.p4
     )
 
@@ -821,23 +847,9 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     testdata/p4_14_samples/basic_routing.p4
     )
 
+  # --p4runtime
   p4c_add_xfail_reason("tofino"
     "error: Expression .* is too complicated to resolve to a header field"
-    testdata/p4_14_samples/exact_match_valid1.p4
-    testdata/p4_14_samples/tmvalid.p4
-
-    # --p4runtime
-    testdata/p4_14_samples/validate_outer_ethernet.p4
-    testdata/p4_14_samples/checksum1.p4
-    testdata/p4_14_samples/port_vlan_mapping.p4
-    testdata/p4_14_samples/exact_match_mask1.p4
-    testdata/p4_14_samples/source_routing.p4
-    testdata/p4_14_samples/TLV_parsing.p4
-    testdata/p4_14_samples/axon.p4
-    testdata/p4_14_samples/mac_rewrite.p4
-    testdata/p4_14_samples/simple_nat.p4
-    testdata/p4_14_samples/switch_20160512/switch.p4
-    testdata/p4_14_samples/switch_20160226/switch.p4
     extensions/p4_tests/p4_14/test_config_326_small_hash_act.p4
     extensions/p4_tests/p4_14/test_config_294_parser_loop.p4
     extensions/p4_tests/p4_14/test_config_234_ternary_valid.p4
@@ -884,18 +896,7 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     extensions/p4_tests/p4_14/jenkins/fast_reconfig/fast_reconfig.p4
     extensions/p4_tests/p4_14/jenkins/smoke_large_tbls/smoke_large_tbls.p4
     extensions/p4_tests/p4_14/switch_20160602/switch.p4
-    testdata/p4_16_samples/table-entries-valid-bmv2.p4
-    testdata/p4_16_samples/inline-bmv2.p4
-    testdata/p4_16_samples/inline1-bmv2.p4
     )
-
-  p4c_add_xfail_reason("tofino"
-    "error: struct .*: Expected type name"
-    testdata/p4_14_samples/sai_p4.p4
-    extensions/p4_tests/p4_14/test_config_55_generate_digest.p4
-    testdata/p4_16_samples/issue430-1-bmv2.p4
-    )
-
 
   p4c_add_xfail_reason("tofino"
     "Error when trying to push config to bf_switchd"
