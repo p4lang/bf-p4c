@@ -1,28 +1,32 @@
 #ifndef _target_h_
 #define _target_h_
 
+#include <config.h>
+
 #include "gen/tofino/memories.prsr_mem_main_rspec.h"
 #include "gen/tofino/regs.ibp_rspec.h"
 #include "gen/tofino/regs.ebp_rspec.h"
 #include "gen/tofino/regs.prsr_reg_merge_rspec.h"
+#include "gen/tofino/regs.mau_addrmap.h"
+#include "gen/tofino/regs.dprsr_hdr.h"
+#include "gen/tofino/regs.dprsr_inp.h"
+
+#if HAVE_JBAY
 #include "gen/jbay/memories.prsr_mem_main_rspec.h"
 #include "gen/jbay/regs.ipb_csr_regs.h"
 #include "gen/jbay/regs.epb_regs.h"
 #include "gen/jbay/regs.prsr_reg_main_rspec.h"
 #include "gen/jbay/regs.pmerge_reg.h"
-
-#include "gen/tofino/regs.mau_addrmap.h"
 #include "gen/jbay/regs.mau_addrmap.h"
-
-#include "gen/tofino/regs.dprsr_hdr.h"
-#include "gen/tofino/regs.dprsr_inp.h"
 #include "gen/jbay/regs.dprsr_reg.h"
-
+#endif // HAVE_JBAY
 
 class Target {
  public:
     class Tofino;
+#if HAVE_JBAY
     class JBay;
+#endif // HAVE_JBAY
 };
 
 class Target::Tofino : public Target {
@@ -48,6 +52,13 @@ class Target::Tofino : public Target {
     };
 };
 
+void declare_registers(const Target::Tofino::parser_regs *regs);
+void undeclare_registers(const Target::Tofino::parser_regs *regs);
+void declare_registers(const Target::Tofino::mau_regs *regs, int stage);
+void declare_registers(const Target::Tofino::deparser_regs *regs);
+void undeclare_registers(const Target::Tofino::deparser_regs *regs);
+
+#if HAVE_JBAY
 class Target::JBay : public Target {
  public:
     struct                                          parser_regs {
@@ -66,20 +77,19 @@ class Target::JBay : public Target {
     typedef ::JBay::regs_mau_addrmap                mau_regs;
     typedef ::JBay::regs_dprsr_reg                  deparser_regs;
 };
-
-void declare_registers(const Target::Tofino::parser_regs *regs);
-void undeclare_registers(const Target::Tofino::parser_regs *regs);
-void declare_registers(const Target::Tofino::mau_regs *regs, int stage);
-void declare_registers(const Target::Tofino::deparser_regs *regs);
-void undeclare_registers(const Target::Tofino::deparser_regs *regs);
-
 void declare_registers(const Target::JBay::parser_regs *regs);
 void undeclare_registers(const Target::JBay::parser_regs *regs);
 void declare_registers(const Target::JBay::mau_regs *regs, int stage);
 void declare_registers(const Target::JBay::deparser_regs *regs);
+#endif // HAVE_JBAY
 
+#if HAVE_JBAY
 #define FOR_ALL_TARGETS(M, ...) \
     M(Target::Tofino, ##__VA_ARGS) \
     M(Target::JBay, ##__VA_ARGS)
+#else
+#define FOR_ALL_TARGETS(M, ...) \
+    M(Target::Tofino, ##__VA_ARGS)
+#endif // HAVE_JBAY
 
 #endif /* _target_h_ */

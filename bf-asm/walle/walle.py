@@ -66,7 +66,7 @@ class CsrUnpickler(pickle.Unpickler):
     On system A, walle is a globally installed package via setup.py and can
     be accessed from the terminal with the command 'walle'
     On system B, walle is NOT globally installed and instead accessed locally
-    by directly pointing to walle.py    
+    by directly pointing to walle.py
 
     The chip.schema files generated on A and B will encode Python classes
     from two different module paths. A will have classes from "walle.csr" while
@@ -169,7 +169,7 @@ def build_binary_cache (args, schema):
                     sys.stderr.write("ERROR: Input file '"+config_filename+"' could not be decoded as JSON.\n")
                     sys.exit(1)
 
-                if (type(template) is not dict or 
+                if (type(template) is not dict or
                     "_name" not in template or
                     "_type" not in template):
                     sys.stderr.write("ERROR: Input file '"+config_filename+"' does not appear to be valid Walle configuration JSON.\n")
@@ -194,7 +194,7 @@ def dump_binary (args, binary_cache, out_file):
         "memories": lambda addr: addr >> 4,
 
         # TODO: use actual func once model+indirect writes are fixed
-        "regs": lambda addr: addr    
+        "regs": lambda addr: addr
         # # Regs are give in 32-bit PCIe address space and need to be
         # # converted to 42-bit chip address space
         # "regs": lambda addr: ((addr&0x0FF80000)<<14)|(addr&0x0007FFFF)
@@ -294,6 +294,12 @@ def main():
         help="Print metadata stored in the selected chip schema and exit"
     )
     parser.add_argument(
+        "--target", "-t",
+        help="The chip target",
+        type=str,
+        default="tofino"
+    )
+    parser.add_argument(
         "--dump-schema",
         action='store_true',
         help="Dump chip schema as yaml"
@@ -351,6 +357,9 @@ def main():
     )
 
     args = parser.parse_args()
+    if getattr( sys, 'frozen', False ) :
+        # running as a bundle: look for the schema in the bundled directory
+        args.schema = os.path.join(sys._MEIPASS, 'lib', args.target, 'chip.schema')
     walle_process(parser, args)
 
 

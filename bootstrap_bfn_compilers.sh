@@ -36,7 +36,7 @@ popd # p4c/extensions
 
 mkdir -p build
 pushd build
-cmake .. -DCMAKE_BUILD_TYPE=DEBUG $*
+cmake .. -DCMAKE_BUILD_TYPE=DEBUG -DENABLE_JBAY=ON $*
 popd # build
 
 ./bootstrap_ptf.sh `pwd`/build

@@ -47,10 +47,6 @@ add_registers ("tofino" "memories.pipe_addrmap" "memories.pipe" ${ARCH})
 include_directories (${BFASM_BINARY_DIR}/gen/tofino)
 add_library (regs_tofino ${GEN_TOFINO_SRCS} ${GEN_TOFINO_HDRS})
 
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/chip.schema
-  DESTINATION ${CMAKE_INSTALL_PREFIX}/share/p4c/tofino)
-
-
 # Do we still need this? What do we need to do?
 # # if there's a symlink 'p4c-templates' to somewhere with new reg schema, copy them
 # $(srcdir)/tofino/%: $(srcdir)/p4c-templates/%

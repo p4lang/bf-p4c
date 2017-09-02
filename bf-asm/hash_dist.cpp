@@ -1,3 +1,5 @@
+#include <config.h>
+
 #include "hash_dist.h"
 #include "stage.h"
 #include "range.h"
@@ -144,7 +146,7 @@ void HashDistribution::write_regs(REGS &regs, Table *tbl, int type, bool non_lin
         break;
     default: assert(0); }
     for (int oxbar : Range(0, 4))
-        if ((xbar_use >> oxbar) & 1) 
+        if ((xbar_use >> oxbar) & 1)
             merge.mau_hash_group_xbar_ctl[oxbar][tbl->logical_id/8U].set_subfield(
                 8|id, 4*(tbl->logical_id%8U), 4);
     if (xbar_use & HASHMOD_DIVIDEND) {
@@ -158,4 +160,6 @@ void HashDistribution::write_regs(REGS &regs, Table *tbl, int type, bool non_lin
             ctl, 5 * (tbl->logical_id%4U), 5); }
 }
 template void HashDistribution::write_regs(Target::Tofino::mau_regs &, Table *, int, bool);
+#if HAVE_JBAY
 template void HashDistribution::write_regs(Target::JBay::mau_regs &, Table *, int, bool);
+#endif // HAVE_JBAY

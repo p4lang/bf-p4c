@@ -6,6 +6,7 @@ project (BFASM)
 MESSAGE("-- Adding bf-asm")
 
 OPTION(ASAN_ENABLED "Enable ASAN checks" OFF)
+OPTION(ENABLE_JBAY "Enable JBay" OFF)
 
 set (BFASM_LIB_DEPS)
 
@@ -17,9 +18,6 @@ include (CheckLibraryExists)
 include (CheckIncludeFile)
 check_include_file (execinfo.h HAVE_EXECINFO_H)
 check_include_file (ucontext.h HAVE_UCONTEXT_H)
-
-# Other configuration files that need to be generated
-configure_file ("${BFASM_SOURCE_DIR}/cmake/config.h.cmake" "${BFASM_BINARY_DIR}/config.h")
 
 add_subdirectory (walle)
 
@@ -172,13 +170,22 @@ set (BFASM_WALLE ${BFASM_SOURCE_DIR}/walle/walle.py)
 include (cmake/BFNUtils.cmake) # for macros to generate registers
 
 add_subdirectory (tofino)
-add_subdirectory (jbay)
+set (HAVE_TOFINO 1)
+set (BFASM_LIBS regs_tofino)
+if (ENABLE_JBAY)
+  add_subdirectory (jbay)
+  set (HAVE_JBAY 1)
+  set (BFASM_LIBS ${BFASM_LIBS} regs_jbay)
+endif()
+
+# Other configuration files that need to be generated
+configure_file ("${BFASM_SOURCE_DIR}/cmake/config.h.cmake" "${BFASM_BINARY_DIR}/config.h")
 
 set_source_files_properties (${TFAS_GEN_SOURCES} ${BFASM_BINARY_DIR}/lex-yaml.c
   PROPERTIES GENERATED TRUE)
 set (TFAS_SOURCES ${TFAS_COMMON_SOURCES} ${TFAS_GEN_SOURCES})
 add_executable (tfas ${TFAS_SOURCES})
-target_link_libraries (tfas regs_tofino regs_jbay ${BFASM_LIB_DEPS})
+target_link_libraries (tfas ${BFASM_LIBS} ${BFASM_LIB_DEPS})
 
 install (TARGETS tfas
   RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)

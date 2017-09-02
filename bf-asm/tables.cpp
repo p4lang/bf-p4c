@@ -1,3 +1,5 @@
+#include <config.h>
+
 #include "action_bus.h"
 #include "algorithm.h"
 #include "input_xbar.h"
@@ -1012,7 +1014,9 @@ template<class REGS> void Table::Actions::write_regs(REGS &regs, Table *tbl) {
             inst->write_regs(regs, tbl, &act);
 }
 template void Table::Actions::write_regs(Target::Tofino::mau_regs &, Table *);
+#if HAVE_JBAY
 template void Table::Actions::write_regs(Target::JBay::mau_regs &, Table *);
+#endif // HAVE_JBAY
 
 void Table::Actions::gen_tbl_cfg(json::vector &cfg) {
     if (options.new_ctx_json) {
@@ -1391,7 +1395,9 @@ template<class REGS> void MatchTable::write_regs(REGS &regs, int type, Table *re
 
 }
 template void MatchTable::write_regs(Target::Tofino::mau_regs &, int, Table *);
+#if HAVE_JBAY
 template void MatchTable::write_regs(Target::JBay::mau_regs &, int, Table *);
+#endif // HAVE_JBAY
 
 template<class REGS>
 void Table::write_mapram_regs(REGS &regs, int row, int col, int vpn, int type) {
@@ -1415,7 +1421,9 @@ void Table::write_mapram_regs(REGS &regs, int row, int col, int vpn, int type) {
         regs.cfg_regs.mau_cfg_mram_thread[col/3U] |= 1U << (col%3U*8U + row);
 }
 template void Table::write_mapram_regs(Target::Tofino::mau_regs &, int, int, int, int);
+#if HAVE_JBAY
 template void Table::write_mapram_regs(Target::JBay::mau_regs &, int, int, int, int);
+#endif // HAVE_JBAY
 
 HashDistribution *Table::find_hash_dist(int unit) {
     for (auto &hd : hash_dist)
@@ -1670,7 +1678,9 @@ void AttachedTables::write_merge_regs(REGS &regs, MatchTable *self, int type, in
         get_selector()->write_merge_regs(regs, self, type, bus, selector.args);
 }
 template void AttachedTables::write_merge_regs(Target::Tofino::mau_regs &, MatchTable *, int, int);
+#if HAVE_JBAY
 template void AttachedTables::write_merge_regs(Target::JBay::mau_regs &, MatchTable *, int, int);
+#endif // HAVE_JBAY
 
 json::map *Table::base_tbl_cfg(json::vector &out, const char *type, int size) {
     return p4_table->base_tbl_cfg(out, size, this);

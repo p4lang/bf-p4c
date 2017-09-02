@@ -1,3 +1,5 @@
+#include <config.h>
+
 #include "action_bus.h"
 #include "instruction.h"
 #include "misc.h"
@@ -216,7 +218,7 @@ struct operand {
                     if (table->find_on_actionbus(hd, offset, size) < 0)
                         table->need_on_actionbus(hd, offset, size);
                     offset = 16; } } }
-        int bits(int group) override { 
+        int bits(int group) override {
             int size = group_size[group]/8U;
             auto hd = find_hash_dist(units.at(0));
             int offset = hd->xbar_use & HashDistribution::IMMEDIATE_LOW ? 0 : 16;
@@ -414,9 +416,11 @@ struct VLIWInstruction : Instruction {
     void write_regs(Target::Tofino::mau_regs &regs, Table *tbl,
                     Table::Actions::Action *act) override {
         write_regs<Target::Tofino::mau_regs>(regs, tbl, act); }
+#if HAVE_JBAY
     void write_regs(Target::JBay::mau_regs &regs, Table *tbl,
                     Table::Actions::Action *act) override {
         write_regs<Target::JBay::mau_regs>(regs, tbl, act); }
+#endif // HAVE_JBAY
 };
 
 struct AluOP : VLIWInstruction {

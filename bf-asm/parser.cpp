@@ -1,3 +1,5 @@
+#include <config.h>
+
 #include "algorithm.h"
 #include "parser.h"
 #include "phv.h"
@@ -6,7 +8,9 @@
 #include "top_level.h"
 
 #include "tofino/parser.cpp"    // tofino template specializations
+#if HAVE_JBAY
 #include "jbay/parser.cpp"      // jbay template specializations
+#endif // HAVE_JBAY
 
 Parser Parser::singleton_object;
 
@@ -215,12 +219,14 @@ void Parser::output() {
         write_config(regs);
         undeclare_registers(&regs);
         break; }
+#if HAVE_JBAY
     case JBAY: {
         Target::JBay::parser_regs       regs;
         declare_registers(&regs);
         write_config(regs);
         undeclare_registers(&regs);
         break; }
+#endif // HAVE_JBAY
     default: assert(0); }
 }
 

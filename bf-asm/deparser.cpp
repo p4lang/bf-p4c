@@ -1,3 +1,5 @@
+#include <config.h>
+
 #include "deparser.h"
 #include "phv.h"
 #include "range.h"
@@ -21,17 +23,29 @@ protected:
     ~Intrinsic() { all[gress].erase(name); }
 public:
     virtual void setregs(Target::Tofino::deparser_regs &regs, std::vector<Phv::Ref> &vals) = 0;
+#if HAVE_JBAY
     virtual void setregs(Target::JBay::deparser_regs &regs, std::vector<Phv::Ref> &vals) = 0;
+#endif // HAVE_JBAY
 };
+
+#if HAVE_JBAY
+#define INTRINSIC_SET_REGS \
+    void setregs(Target::Tofino::deparser_regs &regs, std::vector<Phv::Ref> &vals) {    \
+        setregs<Target::Tofino::deparser_regs>(regs, vals); }                           \
+    void setregs(Target::JBay::deparser_regs &regs, std::vector<Phv::Ref> &vals) {      \
+        /*setregs<Target::JBay::deparser_regs>(regs, vals);*/ assert(0); }
+#else
+#define INTRINSIC_SET_REGS \
+    void setregs(Target::Tofino::deparser_regs &regs, std::vector<Phv::Ref> &vals) {    \
+        setregs<Target::Tofino::deparser_regs>(regs, vals); }
+#endif // HAVE_JBAY
+
 std::map<std::string, Deparser::Intrinsic *> Deparser::Intrinsic::all[2];
 #define INTRINSIC(GR, NAME, MAX, CODE) \
 static struct INTRIN##GR##NAME : public Deparser::Intrinsic {           \
     INTRIN##GR##NAME() : Deparser::Intrinsic(GR, #NAME, MAX) {}         \
     template<class REGS> void setregs(REGS &regs, std::vector<Phv::Ref> &vals) { CODE; }  \
-    void setregs(Target::Tofino::deparser_regs &regs, std::vector<Phv::Ref> &vals) {    \
-        setregs<Target::Tofino::deparser_regs>(regs, vals); }                           \
-    void setregs(Target::JBay::deparser_regs &regs, std::vector<Phv::Ref> &vals) {      \
-        /*setregs<Target::JBay::deparser_regs>(regs, vals);*/ assert(0); }              \
+    INTRINSIC_SET_REGS                                                  \
 } INTRIN##GR##NAME##_singleton;
 #define YES(X)  X
 #define NO(X)
@@ -93,7 +107,9 @@ protected:
     ~Type() { all[gress].erase(name); }
 public:
     virtual void setregs(Target::Tofino::deparser_regs &regs, Deparser::Digest &data) = 0;
+#if HAVE_JBAY
     virtual void setregs(Target::JBay::deparser_regs &regs, Deparser::Digest &data) = 0;
+#endif // HAVE_JBAY
 };
 Deparser::Digest::Digest(Deparser::Digest::Type *t, int lineno, VECTOR(pair_t) &data) {
     type = t;
@@ -114,6 +130,18 @@ Deparser::Digest::Digest(Deparser::Digest::Type *t, int lineno, VECTOR(pair_t) &
     if (!select)
         error(lineno, "No select key in %s spec", t->name.c_str());
 }
+
+#if HAVE_JBAY
+#define DIGEST_SET_REGS \
+    void setregs(Target::Tofino::deparser_regs &regs, Deparser::Digest &data) { \
+        setregs<Target::Tofino::deparser_regs>(regs, data); }                   \
+    void setregs(Target::JBay::deparser_regs &regs, Deparser::Digest &data) {   \
+        /*setregs<Target::JBay::deparser_regs>(regs, data);*/ assert(0); }
+#else
+#define DIGEST_SET_REGS \
+    void setregs(Target::Tofino::deparser_regs &regs, Deparser::Digest &data) { \
+        setregs<Target::Tofino::deparser_regs>(regs, data); }
+#endif // HAVE_JBAY
 
 std::map<std::string, Deparser::Digest::Type *> Deparser::Digest::Type::all[2];
 #define DIGEST(GRESS, NAME, CFG, TBL, IFSHIFT, IFID, CNT)                       \
@@ -136,10 +164,7 @@ struct GRESS##NAME##Digest : public Deparser::Digest::Type {                    
                     TBL[id].phvs[idx++] = reg->reg.index; }                     \
             TBL[id].valid = 1;                                                  \
             TBL[id].len = idx; } }                                              \
-    void setregs(Target::Tofino::deparser_regs &regs, Deparser::Digest &data) { \
-        setregs<Target::Tofino::deparser_regs>(regs, data); }                   \
-    void setregs(Target::JBay::deparser_regs &regs, Deparser::Digest &data) {   \
-        /*setregs<Target::JBay::deparser_regs>(regs, data);*/ assert(0); }      \
+         DIGEST_SET_REGS                                                        \
 } GRESS##NAME##Digest_singleton;
 #define YES(X)        X
 #define NO(X)

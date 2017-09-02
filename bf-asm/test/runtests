@@ -164,7 +164,7 @@ function findexec () {
     evarref=\$"$1"
     evalue=`eval "expr \"$evarref\" "`
     if [ ! -x "$evalue" ]; then
-        e=$(searchdir $2 $4) 
+        e=$(searchdir $2 $4)
         eval "${1}=${e}"
         evalue=`eval "expr \"$evarref\" "`
         if [ -x "$evalue" ]; then
@@ -184,8 +184,9 @@ findexec TFAS           "tfas"                  "tfas"                  ""
 findexec TFLINK         "tflink"                "tflink"                ""
 findexec REFLOW         "reflow"                "reflow"                ""
 findexec JSON_DIFF      "json_diff"             "json_diff"             ""
-findexec SCHEMA         "gen_schema.py"         "gen_schema.py"         ""     
-findexec SCHEMA_VAL     "validate.py"           "validate.py"           ""     
+findexec SCHEMA         "gen_schema.py"         "gen_schema.py"         ""
+findexec SCHEMA_VAL     "validate.py"           "validate.py"           ""
+findexec WALLE          "walle"                 "walle"                 "bf-asm/walle"
 
 function not() { if "$@"; then return 1; else return 0; fi }
 
@@ -241,7 +242,7 @@ function link_json() {
                 rv=1
             fi
         fi
-        if $ok && run $TFLINK -o $bindir/tofino.bin $jsondir/*.cfg.json* >/dev/null 2>&1; then
+        if $ok && run $TFLINK --walle $WALLE --target tofino -o $bindir/tofino.bin $jsondir/*.cfg.json* >/dev/null 2>&1; then
             msg="$msg link pass"
         else
             msg="$msg link failed"
@@ -274,7 +275,7 @@ function test_p4() {
     if $brig; then
         tfafile=brig/$name.tfa
     else
-        tfafile=glass/$name.tfa 
+        tfafile=glass/$name.tfa
     fi
     if $fast && [ -r $tfafile ]; then
         true
@@ -290,7 +291,7 @@ function test_p4() {
             rm -f brig/$name.tfa
             rm -f brig/out.tfa
         fi
-        # Run both glass and brig if '-b' and '-g' not specified 
+        # Run both glass and brig if '-b' and '-g' not specified
         if $brig; then
             clog='brig.log'
             if $ok && not run $BRIG -D__TARGET_TOFINO__ ../$name.p4 -o brig/out.tfa </dev/null >brig.log 2>&1; then
@@ -300,7 +301,7 @@ function test_p4() {
                 msg="$msg p4 brig compile failed"
             fi
         fi
-        if $glass; then 
+        if $glass; then
             clog='glsc.log'
             if not run $GLSC -o glass $glsc_args ../$name.p4 </dev/null >glsc.log 2>&1; then
                 ok=false
@@ -322,7 +323,7 @@ function test_p4() {
             cd ..
         fi
         if [ -d brig ]; then
-            cd brig 
+            cd brig
             if [ out.tfa -nt $name.tfa ]; then
                 rm -f $name.tfa
                 ln -s out.tfa $name.tfa
@@ -365,7 +366,7 @@ function test_p4() {
     fi
     if $ok && run $TFAS -o brig $TFAS_OPTS brig/tfas.config.log $tfafile >brig/tfas.log 2>&1; then
         # Validate context json output from assembler
-        $SCHEMA > schema.json 
+        $SCHEMA > schema.json
         python $SCHEMA_VAL brig/tbl-cfg schema.json > context_json_schema_validate.log
         for f in $name.out/*.cfg.json; do
             if $REFLOW $f | gzip -9 > $f.gz; then

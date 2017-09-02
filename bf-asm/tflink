@@ -1,28 +1,7 @@
 #!/bin/sh
 
-READLINK=readlink
-if [ `uname -s` = "Darwin" ]; then
-    READLINK=greadlink
-fi
-
-script=$($READLINK -f $0)
-
-findfile () {
-    dir=$(dirname $script)
-    while [ "$dir" != "/" ]; do
-        if [ -f "$dir/$1" ]; then
-            echo "$dir/$1"
-            return
-        fi
-        if [ "$dir" = "." ]; then
-            dir=$(pwd -P)
-        fi
-        dir=$(dirname $dir)
-    done
-}
-
 WALLE=""
-SCHEMA=""
+CHIP="tofino"
 OUT="tofino.bin"
 objs=""
 tmpdir=""
@@ -43,11 +22,11 @@ while [ $# -gt 0 ]; do
     -o)
         OUT="$2"
         shift ; shift ;;
-    --schema|-s)
-        SCHEMA="$2"
-        shift ; shift ;;
     --walle|-w)
         WALLE="$2"
+        shift ; shift ;;
+    --target|-t)
+        CHIP="$2"
         shift ; shift ;;
     *.json.Z)
         if [ -z "$tmpdir" ]; then
@@ -91,32 +70,16 @@ while [ $# -gt 0 ]; do
 done
 
 if [ ! -x "$WALLE" ]; then
-    WALLE=$(findfile walle/walle.py)
-    if [ ! -x "$WALLE" ]; then
-        WALLE=$(findfile walle/walle/walle.py)
+    if [ -e "$WALLE" ]; then
+        echo "$WALLE must be executable"
+    else
+        echo "4: $WALLE"
+        echo >&2 "Can't find walle"
     fi
-    if [ ! -x "$WALLE" ]; then
-        if [ -e "$WALLE" ]; then
-            echo "$WALLE must be executable"
-        else
-            echo "4: $WALLE"
-            echo >&2 "Can't find walle"
-        fi
-        exit 1
-    fi
-fi
-if [ ! -r "$SCHEMA" ]; then
-    SCHEMA=$(findfile chip.schema)
-    if [ ! -r "$SCHEMA" ]; then
-        SCHEMA=$(findfile tofino/chip.schema)
-    fi
-    if [ ! -r "$SCHEMA" ]; then
-        echo >&2 "Can't find chip schema"
-        exit 1
-    fi
+    exit 1
 fi
 
-$WALLE --schema $SCHEMA -o $OUT $objs
+$WALLE --target $CHIP -o $OUT $objs
 
 if [ -d "$tmpdir" ]; then
     rm -rf $tmpdir

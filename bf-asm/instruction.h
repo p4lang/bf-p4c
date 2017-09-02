@@ -1,6 +1,8 @@
 #ifndef _instruction_h_
 #define _instruction_h_
 
+#include <config.h>
+
 #include <functional>
 #include "tables.h"
 
@@ -16,7 +18,9 @@ struct Instruction {
     virtual bool equiv(Instruction *a) = 0;
     virtual void phvRead(std::function<void (const Phv::Slice &sl)>) = 0;
     virtual void write_regs(Target::Tofino::mau_regs &, Table *, Table::Actions::Action *) = 0;
+#if HAVE_JBAY
     virtual void write_regs(Target::JBay::mau_regs &, Table *, Table::Actions::Action *) = 0;
+#endif // HAVE_JBAY
     static Instruction *decode(Table *, const Table::Actions::Action *, const VECTOR(value_t) &);
 
     enum instruction_set_t { VLIW_ALU=0, STATEFUL_ALU=1, NUM_SETS=2 };

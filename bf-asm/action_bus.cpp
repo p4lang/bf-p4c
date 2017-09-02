@@ -1,3 +1,5 @@
+#include <config.h>
+
 #include "action_bus.h"
 #include "hex.h"
 #include "misc.h"
@@ -648,7 +650,9 @@ template<class REGS> void ActionBus::write_action_regs(REGS &regs, Table *tbl,
     }
 }
 template void ActionBus::write_action_regs(Target::Tofino::mau_regs &, Table *, unsigned, unsigned);
+#if HAVE_JBAY
 template void ActionBus::write_action_regs(Target::JBay::mau_regs &, Table *, unsigned, unsigned);
+#endif // HAVE_JBAY
 
 template<class REGS> void ActionBus::write_immed_regs(REGS &regs, Table *tbl) {
     LOG2("--- ActionBus write_immed_regs(" << tbl->name() << ")");
@@ -686,7 +690,9 @@ template<class REGS> void ActionBus::write_immed_regs(REGS &regs, Table *tbl) {
             assert(0); } }
 }
 template void ActionBus::write_immed_regs(Target::Tofino::mau_regs &, Table *);
+#if HAVE_JBAY
 template void ActionBus::write_immed_regs(Target::JBay::mau_regs &, Table *);
+#endif // HAVE_JBAY
 
 ActionBus::MeterBus_t ActionBus::MeterBus;
 

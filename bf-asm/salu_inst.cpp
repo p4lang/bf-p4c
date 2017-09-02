@@ -1,3 +1,5 @@
+#include <config.h>
+
 #include "instruction.h"
 #include "phv.h"
 #include "tables.h"
@@ -228,9 +230,11 @@ struct AluOP : public SaluInstruction {
     void write_regs(Target::Tofino::mau_regs &regs, Table *tbl,
                     Table::Actions::Action *act) override {
         write_regs<Target::Tofino::mau_regs>(regs, tbl, act); }
+#if HAVE_JBAY
     void write_regs(Target::JBay::mau_regs &regs, Table *tbl,
                     Table::Actions::Action *act) override {
         write_regs<Target::JBay::mau_regs>(regs, tbl, act); }
+#endif // HAVE_JBAY
 };
 
 static AluOP::Decode opADD("add", 0x1c, true), opSUB("sub", 0x1e),
@@ -412,9 +416,11 @@ struct BitOP : public SaluInstruction {
     void write_regs(Target::Tofino::mau_regs &regs, Table *tbl,
                     Table::Actions::Action *act) override {
         write_regs<Target::Tofino::mau_regs>(regs, tbl, act); }
+#if HAVE_JBAY
     void write_regs(Target::JBay::mau_regs &regs, Table *tbl,
                     Table::Actions::Action *act) override {
         write_regs<Target::JBay::mau_regs>(regs, tbl, act); }
+#endif // HAVE_JBAY
 };
 
 static BitOP::Decode opSET_BIT("set_bit", 0x0), opSET_BITC("set_bitc", 0x1),
@@ -475,9 +481,11 @@ struct CmpOP : public SaluInstruction {
     void write_regs(Target::Tofino::mau_regs &regs, Table *tbl,
                     Table::Actions::Action *act) override {
         write_regs<Target::Tofino::mau_regs>(regs, tbl, act); }
+#if HAVE_JBAY
     void write_regs(Target::JBay::mau_regs &regs, Table *tbl,
                     Table::Actions::Action *act) override {
         write_regs<Target::JBay::mau_regs>(regs, tbl, act); }
+#endif // HAVE_JBAY
 };
 
 static CmpOP::Decode opEQU("equ", 0, false), opNEQ("neq", 1, false),
@@ -585,9 +593,11 @@ struct OutOP : public SaluInstruction {
     void write_regs(Target::Tofino::mau_regs &regs, Table *tbl,
                     Table::Actions::Action *act) override {
         write_regs<Target::Tofino::mau_regs>(regs, tbl, act); }
+#if HAVE_JBAY
     void write_regs(Target::JBay::mau_regs &regs, Table *tbl,
                     Table::Actions::Action *act) override {
         write_regs<Target::JBay::mau_regs>(regs, tbl, act); }
+#endif // HAVE_JBAY
 };
 
 const std::map<std::string, int> OutOP::ops_mux_lookup = {

@@ -1,3 +1,5 @@
+#include <config.h>
+
 #include "sections.h"
 #include "stage.h"
 #include "phv.h"
@@ -180,11 +182,13 @@ void AsmStage::output() {
         json::map    json_parser;
         json::vector json_phv_allocation;
         json::vector json_tables;
-        json::string json_program_name = asmfile_name.substr(0, asmfile_name.find_last_of(".")); 
+        json::string json_program_name = asmfile_name.substr(0, asmfile_name.find_last_of("."));
         for (unsigned i = 0; i < stage.size(); i++) {
             switch (options.target) {
             case TOFINO: stage[i].output<Target::Tofino>(json_tables); break;
+#if HAVE_JBAY
             case JBAY: stage[i].output<Target::JBay>(json_tables); break;
+#endif // HAVE_JBAY
             default: assert(0); } }
         json_parser["ingress"] = json::vector();
         json_parser["egress"] = json::vector();
@@ -202,7 +206,9 @@ void AsmStage::output() {
             // if  (stage[i].tables.empty()) continue;
             switch (options.target) {
             case TOFINO: stage[i].output<Target::Tofino>(tbl_cfg); break;
+#if HAVE_JBAY
             case JBAY: stage[i].output<Target::JBay>(tbl_cfg); break;
+#endif // HAVE_JBAY
             default: assert(0); } }
         if (options.match_compiler)
             *json_out << "{ \"ContextJsonNode\": ";

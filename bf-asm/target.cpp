@@ -1,3 +1,5 @@
+#include <config.h>
+
 #include "asm-types.h"
 #include "target.h"
 #include "ubits.h"
@@ -52,6 +54,7 @@ void undeclare_registers(const Target::Tofino::deparser_regs *regs) {
     undeclare_registers(&regs->header);
 }
 
+#if HAVE_JBAY
 void declare_registers(const Target::JBay::parser_regs *regs) {
     declare_registers(&regs->memory[INGRESS], sizeof regs->memory[INGRESS],
         [=](std::ostream &out, const char *addr, const void *end) {
@@ -103,4 +106,4 @@ void declare_registers(const Target::JBay::deparser_regs *regs) {
             out << "deparser.regs";
             regs->emit_fieldname(out, addr, end); });
 }
-
+#endif // HAVE_JBAY

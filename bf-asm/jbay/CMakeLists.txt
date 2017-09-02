@@ -37,10 +37,6 @@ add_custom_command(OUTPUT ${GEN_TEMPLATES_CFG} ${GEN_TEMPLATES_SIZE}
 include_directories (${BFASM_BINARY_DIR}/gen/jbay)
 add_library (regs_jbay ${GEN_JBAY_SRCS} ${GEN_JBAY_HDRS})
 
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/chip.schema
-  DESTINATION ${CMAKE_INSTALL_PREFIX}/share/p4c/jbay)
-
-
 # Do we still need this? What do we need to do?
 # # if there's a symlink 'p4c-templates' to somewhere with new reg schema, copy them
 # $(srcdir)/jbay/%: $(srcdir)/p4c-templates/%

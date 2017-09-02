@@ -1,3 +1,5 @@
+#include <config.h>
+
 #include "hashexpr.h"
 #include "input_xbar.h"
 #include "log.h"
@@ -512,7 +514,9 @@ void InputXbar::write_regs(REGS &regs) {
     }
 }
 template void InputXbar::write_regs(Target::Tofino::mau_regs &);
+#if HAVE_JBAY
 template void InputXbar::write_regs(Target::JBay::mau_regs &);
+#endif // HAVE_JBAY
 
 InputXbar::Input *InputXbar::find(Phv::Slice sl, Group grp) {
     InputXbar::Input *rv = nullptr;

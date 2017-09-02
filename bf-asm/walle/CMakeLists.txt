@@ -10,9 +10,19 @@ if (NOT PYINSTALLER)
 endif()
 
 set (WALLE_SRC ${WALLE_SOURCE_DIR}/walle.py)
+set (WALLE_SRCS chip.py csr.py walle.py)
+# \TODO: would be better if the chip.schema files were to live within
+# this project but for now, we leave them with the assembler templates
+set (CHIP_SCHEMA_FILES
+  ${BFASM_SOURCE_DIR}/tofino/chip.schema
+  ${BFASM_SOURCE_DIR}/jbay/chip.schema
+  )
 
 add_custom_command (OUTPUT ${WALLE_BINARY_DIR}/walle
   COMMAND ${PYINSTALLER} --distpath ${WALLE_BINARY_DIR} --onefile --strip ${WALLE_SRC}
+  --add-data '${BFASM_SOURCE_DIR}/tofino/chip.schema:lib/tofino'
+  --add-data '${BFASM_SOURCE_DIR}/jbay/chip.schema:lib/jbay'
+  DEPENDS ${WALLE_SRCS} ${CHIP_SCHEMA_FILES}
   COMMENT "Generating walle binary")
 
 add_custom_target (walle ALL
