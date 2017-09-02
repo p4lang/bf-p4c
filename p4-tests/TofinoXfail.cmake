@@ -768,7 +768,30 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Overlapping field slices in allocation for field"
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
-  extensions/p4_tests/p4_14/switch_20160602/switch.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "error: PHV allocation was not successful"
+  testdata/p4_14_samples/06-FullTPHV1.p4
+  testdata/p4_14_samples/07-FullTPHV2.p4
+  testdata/p4_14_samples/05-FullTPHV.p4
+  testdata/p4_14_samples/08-FullTPHV3.p4
+  extensions/p4_tests/p4_14/04-FullPHV3.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-133/full_tphv.p4
+  extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "error: Field .* and field .* are adjacent in container .* but aren't adjacent in the deparser"
+  extensions/p4_tests/p4_14/test_config_236_stateful_read_bit.p4
+  extensions/p4_tests/p4_14/test_config_273_bridged_and_phase0.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Conflicting hash distribution bit allocation"
+  extensions/p4_tests/p4_14/jenkins/stful/stful.p4
   )
 
 p4c_add_xfail_reason("tofino"
