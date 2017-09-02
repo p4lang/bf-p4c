@@ -101,6 +101,16 @@ set (TOFINO_BACKEND_COMMON_HDRS
   common/slice.h
   )
 
+set (TOFINO_BACKEND_CONTROL_PLANE_SRCS
+  control-plane/synthesize_valid_field.cpp
+  control-plane/tofino_p4runtime.cpp
+  )
+
+set (TOFINO_BACKEND_CONTROL_PLANE_HDRS
+  control-plane/synthesize_valid_field.h
+  control-plane/tofino_p4runtime.h
+  )
+
 set (TOFINO_BACKEND_MAU_SRCS
   mau/action_analysis.cpp
   mau/action_data_bus.cpp
@@ -278,6 +288,7 @@ set (p4_14include_HEADERS
 
 set (TOFINO_SOURCES
   ${TOFINO_BACKEND_COMMON_SRCS}
+  ${TOFINO_BACKEND_CONTROL_PLANE_SRCS}
   ${TOFINO_BACKEND_MAU_SRCS}
   ${TOFINO_BACKEND_PARDE_SRCS}
   ${TOFINO_BACKEND_PHV_SRCS}
@@ -287,6 +298,7 @@ set (TOFINO_SOURCES
 set (TOFINO_HEADERS
   ${TOFINO_IR_HDRS}
   ${TOFINO_BACKEND_COMMON_HDRS}
+  ${TOFINO_BACKEND_CONTROL_PLANE_HDRS}
   ${TOFINO_BACKEND_MAU_HDRS}
   ${TOFINO_BACKEND_PARDE_HDRS}
   ${TOFINO_BACKEND_PHV_HDRS}

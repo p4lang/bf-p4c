@@ -58,6 +58,35 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     "counter cnt virtual value .*, expected 1"
     testdata/p4_14_samples/counter1.p4
   )
+
+  p4c_add_xfail_reason("tofino"
+    "unhandled stage table type .*"
+    testdata/p4_14_samples/07-MultiProtocol.p4
+    testdata/p4_14_samples/basic_routing.p4
+    testdata/p4_14_samples/exact_match5.p4
+    testdata/p4_14_samples/exact_match3.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "unhandled stage table type .*"
+    testdata/p4_14_samples/07-MultiProtocol.p4
+    testdata/p4_14_samples/basic_routing.p4
+    testdata/p4_14_samples/exact_match5.p4
+    testdata/p4_14_samples/exact_match3.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "No field data.*\$valid in match_key_fields"
+    testdata/p4_14_samples/exact_match_valid1.p4
+    )
+
+  # STF itself crashes here. The full message is:
+  # Assertion failed: ((bit + field.bit_width - 1)/128U < data.size()), function get_sram_field, file table.cpp, line 60.
+  p4c_add_xfail_reason("tofino"
+    "Assertion failed: .* function get_sram_field"
+    testdata/p4_14_samples/exact_match4.p4
+    )
+
 endif() # HARLYN_STF
 
 
@@ -264,12 +293,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/stateful_alu.p4
   )
 
-# Bugs in test source -- p4factory stful.p4 is fixed and working?
-p4c_add_xfail_reason("tofino"
-  "error: : direct access to indirect register"
-  extensions/p4_tests/p4_14/jenkins/stful/stful.p4
-  )
-
 p4c_add_xfail_reason("tofino"
   "Type register has 1 type parameter.*, but it is specialized with 2"
   extensions/p4_tests/p4_16/stful.p4
@@ -322,7 +345,6 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "tofino only supports 12 stages"
-  extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
   extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
   extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
   extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
@@ -724,10 +746,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Constant lookup does not match the ActionFormat"
   testdata/p4_14_samples/action_inline.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-235/vag1737_1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
-  extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
   )
 
 # Detailed error msg: bool PhvInfo::Field::is_ccgf() const: Assertion `ccgf_fields_i.size()' failed.
@@ -797,28 +815,49 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/sai_p4.p4
   extensions/p4_tests/p4_14/test_config_55_generate_digest.p4
   testdata/p4_16_samples/issue430-1-bmv2.p4
+  extensions/p4_tests/p4_14/switch_20160602/switch.p4
+  testdata/p4_14_samples/switch_20160226/switch.p4
+  testdata/p4_14_samples/switch_20160512/switch.p4
+  extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-235/vag1737_1.p4
+  extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
+  extensions/p4_tests/p4_14/jenkins/stful/stful.p4
+  extensions/p4_tests/p4_14/switch_l2_profile.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-260/case1799.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-260/case1799_1.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-262/case1804.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-447/case2527.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-448/case2526.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-451/case2537.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-477/case2602.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-482/case2622.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-483/case2619.p4
+  extensions/p4_tests/p4_14/jenkins/basic_ipv4/basic_ipv4.p4
+  extensions/p4_tests/p4_14/jenkins/multi_device/multi_device.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-503/case2678.p4
+  extensions/p4_tests/p4_14/c1/DRV-543/case2499.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-505/case2690.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-532/case2807.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-254/case1744.p4
   )
-
 
 # --p4runtime
 p4c_add_xfail_reason("tofino"
   "error: Expression .* is too complicated to resolve to a header field"
-  testdata/p4_14_samples/exact_match_valid1.p4
-  testdata/p4_14_samples/tmvalid.p4
-  testdata/p4_14_samples/validate_outer_ethernet.p4
-  testdata/p4_14_samples/checksum1.p4
-  testdata/p4_14_samples/port_vlan_mapping.p4
   testdata/p4_14_samples/exact_match_mask1.p4
-  testdata/p4_14_samples/source_routing.p4
-  testdata/p4_14_samples/TLV_parsing.p4
-  testdata/p4_14_samples/axon.p4
-  testdata/p4_14_samples/mac_rewrite.p4
-  testdata/p4_14_samples/simple_nat.p4
-  testdata/p4_14_samples/switch_20160512/switch.p4
-  testdata/p4_14_samples/switch_20160226/switch.p4
-  testdata/p4_16_samples/table-entries-valid-bmv2.p4
-  testdata/p4_16_samples/inline-bmv2.p4
-  testdata/p4_16_samples/inline1-bmv2.p4
+  extensions/p4_tests/p4_14/test_config_326_small_hash_act.p4
   )
 
 if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
@@ -915,5 +954,4 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     testdata/p4_16_samples/table-entries-lpm-bmv2.p4
     testdata/p4_16_samples/table-entries-range-bmv2.p4
     )
-
 endif() # PTF_REQUIREMENTS_MET

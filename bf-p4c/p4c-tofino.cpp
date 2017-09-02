@@ -10,7 +10,6 @@
 #include "lib/gc.h"
 #include "lib/log.h"
 #include "lib/exceptions.h"
-#include "lib/nullstream.h"
 #include "frontends/p4/frontend.h"
 #include "frontends/p4/createBuiltins.h"
 #include "frontends/p4/validateParsedProgram.h"
@@ -23,7 +22,7 @@
 #include "midend/actionsInlining.h"
 #include "tofinoOptions.h"
 #include "version.h"
-#include "control-plane/p4RuntimeSerializer.h"
+#include "tofino/control-plane/tofino_p4runtime.h"
 #include "arch/simple_switch.h"
 
 static void log_dump(const IR::Node *node, const char *head) {
@@ -81,15 +80,11 @@ int main(int ac, char **av) {
         return 1;
     log_dump(program, "After midend");
 
-    if (!options.p4RuntimeFile.isNullOrEmpty()) {
-        if (Log::verbose())
-            std::cout << "Generating P4Runtime output" << std::endl;
-        std::ostream* out = openFile(options.p4RuntimeFile, false);
-        if (out != nullptr) {
-            serializeP4Runtime(out, program, midend.toplevel, &midend.refMap,
-                               &midend.typeMap, options.p4RuntimeFormat);
-        }
-    }
+    if (!options.p4RuntimeFile.isNullOrEmpty())
+        Tofino::serializeP4Runtime(program, options);
+
+    if (ErrorReporter::instance.getErrorCount() > 0)
+        return 1;
 
     auto maupipe = extract_maupipe(program, options);
 
