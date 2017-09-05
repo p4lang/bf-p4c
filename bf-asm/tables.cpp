@@ -805,8 +805,19 @@ Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv) {
         } else if (CHECKTYPE(i, tCMD))
             if (auto *p = Instruction::decode(tbl, this, i.vec))
                 instr.push_back(p); }
-    handle = unique_action_handle++;
-    //FIXME: For shared actions across different stages, assign the same handle
+    // For action tables shared in multiple stages, the same action handle must
+    // be assigned for that action in each stage. Action handles are stored in
+    // p4_table. Lookup action handles and assign handle if present else add a
+    // new handle
+    bool action_handle_present = false;
+    auto p4_table = tbl->p4_table;
+    if (p4_table) {
+        if (p4_table->action_handles.count(name) > 0) {
+            handle = p4_table->action_handles[name];
+            action_handle_present = true; } }
+    if (!action_handle_present) {
+        handle = unique_action_handle++;
+        if (p4_table) p4_table->action_handles[name] = handle; }
 }
 
 Table::Actions::Actions(Table *tbl, VECTOR(pair_t) &data) {
@@ -1719,6 +1730,8 @@ void Table::add_reference_table(json::vector &table_refs, const Table::Call& c, 
     table_ref["how_referenced"] = href;
     table_ref["handle"] = c->handle();
     table_ref["name"] = c->name();
+        if (c->p4_table)
+            table_ref["name"] = c->p4_table->p4_name();
     table_refs.push_back(std::move(table_ref));
 }
 
@@ -1755,6 +1768,7 @@ void Table::add_field_to_pack_format(json::vector &field_list, int basebit, std:
     if (options.new_ctx_json) {
         int lobit = 0;
         bool has_alias = false;
+        unsigned add_width = 0;
         std::string source = "";
         for (auto a : alias) {
             if (name == a->second.name) {
@@ -1762,6 +1776,7 @@ void Table::add_field_to_pack_format(json::vector &field_list, int basebit, std:
                source = "spec";
                name = a->first; } }
         for (auto &bits : field.bits) {
+            bool pfe_enable = false;
             std::string immediate_name = "";
             if (name == "--version_valid--")
                 source = "version";
@@ -1774,6 +1789,35 @@ void Table::add_field_to_pack_format(json::vector &field_list, int basebit, std:
                 source = "adt_ptr";
             else if (name == "--selection_base--")
                 source = "sel_ptr";
+            if (auto a = this->get_attached()) {
+                // If field is an attached table address specified by a pfe
+                // param, set source to "stats_ptr" and pfe_enable to true
+                // Discard pfe bit fields
+                if (a->stats.size() > 0) {
+                    auto s = a->stats[0]->to<Synth2Port>();
+                    std::string pfe_param = s->get_per_flow_enable_param();
+                    std::string pfe_name = pfe_param.substr(0, pfe_param.find("_pfe"));
+                    if (name == (pfe_name + "_pfe"))
+                        return; //Do not output per flow enable parameter
+                    if (name == (pfe_name + "_addr")) {
+                        source = "stats_ptr";
+                        // FIXME-DRIVER: Currently driver assumes pfe bit is at the MSB of
+                        // address. Hence the fields <field>_addr and
+                        // <field>_pfe should be merged in the context json
+                        // i.e. field_width should be incremented by 1
+                        // Once driver supports a new "source" type for a
+                        // separate pfe bit this hack will go away and pfe
+                        // fields wont be dropped from the entry format
+                        add_width = 1;
+                        pfe_enable = true;
+                        // FIXME-DRIVER: If the field does not start with a "--" or "$" driver
+                        // assumes it to be a spec field and tries to find it in
+                        // the match_key_fields which it wont and will complain
+                        // field is not in match spec. Driver needs to search on
+                        // the source type which is "spec" rather than
+                        // field_name. This hack will go away once driver
+                        // support is added
+                        name = "--" + name + "--"; } } }
             if (field.flags == Format::Field::ZERO)
                 source = "zero";
             json::map field_entry;
@@ -1784,7 +1828,7 @@ void Table::add_field_to_pack_format(json::vector &field_list, int basebit, std:
                 if (name == "--action_data_pointer--")
                     if (auto adt = t->action->to<ActionTable>()) {
                         field_entry["start_bit"] = std::min(5U, adt->get_log2size() - 2); } }
-            field_entry["field_width"] = bits.size();
+            field_entry["field_width"] = bits.size() + add_width;
             field_entry["lsb_mem_word_idx"] = bits.lo/128U;
             field_entry["msb_mem_word_idx"] = bits.hi/128U;
             field_entry["source"] = json::string(source);
@@ -1796,7 +1840,7 @@ void Table::add_field_to_pack_format(json::vector &field_list, int basebit, std:
                 //'unused' or 'exact' is used by driver
                 field_entry["match_mode"] = json::string("unused");
             if (this->to<ExactMatchTable>() || this->to<TernaryIndirectTable>()) {
-                field_entry["enable_pfe"] = false;
+                field_entry["enable_pfe"] = pfe_enable;
                 if (auto s = this->get_selector()) {
                     if (name == "--selection_base--")
                         field_entry["enable_pfe"] = s->get_per_flow_enable();
@@ -1895,7 +1939,8 @@ json::map &Table::add_pack_format(json::map &stage_tbl, Table::Format *format,
             pack_fmt["number_memory_units_per_table_word"] = (format->size - 1)/128U + 1;
             json::vector &entry_list = pack_fmt["entries"];
             //int basebit = (format->size - 1) | 127;
-            int basebit = 128U - (1 << format->log2size);
+            //int basebit = 128U - (1 << format->log2size);
+            int basebit = 0;
             for (int i = format->groups()-1; i >= 0; --i) {
                 json::vector field_list;
                 for (auto it = format->begin(i); it != format->end(i); ++it)

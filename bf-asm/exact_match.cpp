@@ -904,9 +904,8 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
         unsigned number_entries = format ? layout_size()/fmt_width * format->groups() * 1024 : 0;
         json::map &tbl = *base_tbl_cfg(out, "match", number_entries);
         common_tbl_cfg(tbl, "exact");
-        json::map &match_attributes = tbl["match_attributes"] = json::map();
-        tbl.erase("stage_tables");
-        json::vector stage_tables;
+        json::map &match_attributes = tbl["match_attributes"];
+        json::vector &stage_tables = match_attributes["stage_tables"];
         json::map stage_tbl;
         stage_tbl["stage_number"] = stage->stageno;
         stage_tbl["logical_table_id"] = logical_id;
@@ -974,7 +973,6 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
                 way_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg(way);
                 way_stage_tables.push_back(std::move(way_tbl)); } }
         stage_tables.push_back(std::move(stage_tbl));
-        match_attributes["stage_tables"] = std::move(stage_tables);
         tbl["meter_table_refs"] = json::vector();
         tbl["selection_table_refs"] = json::vector();
         tbl["stateful_table_refs"] = json::vector();

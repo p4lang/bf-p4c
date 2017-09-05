@@ -434,17 +434,6 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
                  && !mutex.action(p->table, rv->table)) {
              rv->stage++;
         }
-        // FIXME: Forces shared action profiles/shared action selectors to honor the dependencies
-        // for all of the tables using them.  Specifically designed for tor.p4, and suboptimal
-        for (auto at : rv->table->attached) {
-            if (!at->is<IR::ActionProfile>()) continue;
-            auto ap = at->to<IR::ActionProfile>();
-            for (auto *tbl : spaa.all_shared_tables(ap)) {
-                if (p->stage == rv->stage && deps->happens_before(p->table, tbl)
-                    && !mutex(p->table, tbl) && !mutex.action(p->table, rv->table))
-                    rv->stage++;
-            }
-        }
     }
     assert(!rv->placed[tblInfo.at(rv->table).uid]);
     min_resources->action_format = lc.get_action_format(t);

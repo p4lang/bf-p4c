@@ -171,7 +171,12 @@ void HashActionTable::gen_tbl_cfg(json::vector &out) {
             add_reference_table(action_data_table_refs, action, "direct");
         // Add hash functions
         json::vector &hash_functions = stage_tbl["hash_functions"] = json::vector();
-        if (input_xbar) {
+        // Emit hash info only if p4_param_order (match_key_fields) are present
+        // FIXME: This input_xbar is populated if its a part of the hash_action
+        // table or the hash_distribution which is incorrect. This should move
+        // inside the hash_dist so this condition does not occur in the
+        // hash_action table
+        if (!p4_params_list.empty() && input_xbar) {
             auto ht = input_xbar->get_hash_tables();
             if (ht.size() > 0) {
                 // Merge all bits to xor across multiple hash ways in single
