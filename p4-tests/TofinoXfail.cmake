@@ -23,7 +23,6 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
   testdata/p4_14_samples/counter3.p4
   testdata/p4_14_samples/counter4.p4
   # Masked table keys ignoring mask in table layout?
-  testdata/p4_14_samples/exact_match_mask1.p4
   extensions/p4_tests/p4_14/stateful2.p4
   extensions/p4_tests/p4_14/stateful3.p4
   # default drop packet instead of writing to port 0
@@ -42,56 +41,21 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
 # warning: Container TW3 contains deparsed header fields, but it has unused bits: ( 22:ingress::h.v<1> I off=0 ref deparsed /t_phv_8,PHV-259;/|t_phv_8,0..0|[0:0]->[TW3](31); )
 # warning: Container TW19 contains deparsed header fields, but it has unused bits: ( 44:egress::h.v<1> E off=0 ref deparsed /t_phv_13,PHV-275;/|t_phv_13,0..0|[0:0]->[TW19](31); )
   testdata/p4_16_samples/table-entries-ternary-bmv2.p4
-  # Untriaged. It would be good to bisect and determine when these started
-  # failing.
-  testdata/p4_14_samples/gateway4.p4
-  testdata/p4_14_samples/hitmiss.p4
   )
 
   p4c_add_xfail_reason("tofino"
     "expected packet on port .* not seen"
     testdata/p4_14_samples/basic_routing.p4
+    testdata/p4_14_samples/exact_match_mask1.p4
     )
 
   p4c_add_xfail_reason("tofino"
     "mismatch from expected.*at byte 0x"
     extensions/p4_tests/p4_16/stack_valid.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "unhandled stage table type .*"
-    testdata/p4_14_samples/07-MultiProtocol.p4
-    testdata/p4_14_samples/basic_routing.p4
-    testdata/p4_14_samples/exact_match5.p4
-    testdata/p4_14_samples/exact_match3.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "unhandled stage table type .*"
-    testdata/p4_14_samples/07-MultiProtocol.p4
-    testdata/p4_14_samples/basic_routing.p4
-    testdata/p4_14_samples/exact_match5.p4
-    testdata/p4_14_samples/exact_match3.p4
     extensions/p4_tests/p4_14/adjust_instr4.p4
     extensions/p4_tests/p4_14/adb_shared2.p4
     )
 
-  p4c_add_xfail_reason("tofino"
-    "No field data.*valid in match_key_fields"
-    testdata/p4_14_samples/exact_match_valid1.p4
-    )
-
-  # STF itself crashes here. The full message is:
-  # Assertion failed: ((bit + field.bit_width - 1)/128U < data.size()), function get_sram_field, file table.cpp, line 60.
-  p4c_add_xfail_reason("tofino"
-    "Assertion failed: .* function get_sram_field"
-    testdata/p4_14_samples/exact_match4.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "address too large for table"
-    testdata/p4_14_samples/ternary_match4.p4
-    )
 endif() # HARLYN_STF
 
 
@@ -205,7 +169,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/05-FullTPHV.p4
   testdata/p4_14_samples/06-FullTPHV1.p4
   testdata/p4_14_samples/08-FullTPHV3.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -304,11 +267,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/tna-salu.p4
   )
 
-# BRIG-67
-# was also BRIG-143
-# blackbox type unification failures (JIRA #BRIG-30, #COMPILER-341)
-#  extensions/p4_tests/p4_14/test_config_205_modify_field_from_hash.p4
-#
 p4c_add_xfail_reason("tofino"
   "Cannot unify Type"
   extensions/p4_tests/p4_14/02-FlexCounterActionProfile.p4
@@ -335,12 +293,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_235_funnel_shift.p4
   )
 
-p4c_add_xfail_reason("tofino"
-  "byte_hi < container_hi"
-  extensions/p4_tests/p4_14/switch_l2_profile.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
-  )
-
 # BRIG-105
 p4c_add_xfail_reason("tofino"
   "No register named"
@@ -350,15 +302,18 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "tofino only supports 12 stages"
+  extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
   extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
   extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
   extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
   extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
   extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
   extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
   )
 
 # BRIG-113
@@ -393,7 +348,7 @@ p4c_add_xfail_reason("tofino"
 
 
 p4c_add_xfail_reason("tofino"
-  "Table .*: Match field .* references a local"
+  "Unhandled InstanceRef type header_union"
   testdata/p4_16_samples/union-valid-bmv2.p4
   )
 # BRIG_132
@@ -418,8 +373,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Ran out of phv output slots"
   extensions/p4_tests/p4_14/test_config_236_stateful_read_bit.p4
-  # extensions/p4_tests/p4_14/test_config_93_push_and_pop.p4
-  # extensions/p4_tests/p4_14/test_config_95_first_meter_table.p4
   )
 
 # failure due to too restrictive constraint of full words in action data bus allocation
@@ -750,13 +703,10 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Constant lookup does not match the ActionFormat"
   testdata/p4_14_samples/action_inline.p4
-  )
-
-# Detailed error msg: bool PhvInfo::Field::is_ccgf() const: Assertion `ccgf_fields_i.size()' failed.
-p4c_add_xfail_reason("tofino"
-  "ccgf fields empty"
-  testdata/p4_14_samples/switch_20160226/switch.p4
-  testdata/p4_14_samples/switch_20160512/switch.p4
+  extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-235/vag1737_1.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -804,20 +754,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/slice-def-use1.p4
   )
 
-p4c_add_xfail_reason("tofino"
-  "tofino only supports 12 stages"
-  extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
-  extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
-  )
 
 # We can't (without some complex acrobatics) support conditional computed
 # checksums on Tofino. In P4-14, these are operations of the form:
@@ -835,56 +771,8 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/switch_l2_profile.p4
   testdata/p4_14_samples/switch_20160226/switch.p4
   testdata/p4_14_samples/switch_20160512/switch.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "error: struct .*: Expected type name"
   testdata/p4_14_samples/sai_p4.p4
-  extensions/p4_tests/p4_14/test_config_55_generate_digest.p4
-  testdata/p4_16_samples/issue430-1-bmv2.p4
-  extensions/p4_tests/p4_14/switch_20160602/switch.p4
-  testdata/p4_14_samples/switch_20160226/switch.p4
-  testdata/p4_14_samples/switch_20160512/switch.p4
-  extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-235/vag1737_1.p4
-  extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
-  extensions/p4_tests/p4_14/switch_l2_profile.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-260/case1799.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-260/case1799_1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-262/case1804.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-447/case2527.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-448/case2526.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-451/case2537.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-477/case2602.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-482/case2622.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-483/case2619.p4
-  extensions/p4_tests/p4_14/jenkins/basic_ipv4/basic_ipv4.p4
-  extensions/p4_tests/p4_14/jenkins/multi_device/multi_device.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-503/case2678.p4
-  extensions/p4_tests/p4_14/c1/DRV-543/case2499.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-505/case2690.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-532/case2807.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-254/case1744.p4
-  )
-
-# --p4runtime
-p4c_add_xfail_reason("tofino"
-  "error: Expression .* is too complicated to resolve to a header field"
-  testdata/p4_14_samples/exact_match_mask1.p4
-  extensions/p4_tests/p4_14/test_config_326_small_hash_act.p4
-  )
+)
 
 if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
   # STF2PTF tests that fail

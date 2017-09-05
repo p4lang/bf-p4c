@@ -21,6 +21,7 @@ TIME_COMMAND="" # don't time commands
 verbose=false
 debug=false
 run_stf=true
+run_stf2ptf=false
 run_ptf=false
 
 die() {
@@ -193,12 +194,18 @@ else
 fi
 
 ptftestdir=${file%.p4}.ptf
+if [ ! -d ${ptftestdir} ] && ! $run_stf2ptf; then
+    # no ptf to run
+    run_ptf=false
+fi
 if $run_ptf || $run_stf2ptf; then
     p4runtime_out=$testdir/${name}.out/p4info.proto.txt
     P4C_ARGS="$P4C_ARGS --p4runtime-file $p4runtime_out --p4runtime-format text"
     # TODO(unknown): remove when -N (new context JSON format) becomes the
     # default
-    P4C_ARGS="$P4C_ARGS -Xassembler '-N'"
+    if ! $debug; then
+        P4C_ARGS="$P4C_ARGS -Xassembler '-N'"
+    fi
     P4C_ARGS="$P4C_ARGS -DCPU_PORT=320"
 fi
 
@@ -228,12 +235,12 @@ rm -f $testdir/$name.out/tofino.bin.gz
 run $P4C $P4C_ARGS $file -o $testdir/${name}.out || die
 # FIXME -- p4c should not leave these laying about.  Should also compress tofino.bin?
 rm -f $testdir/$name.out/*.cfg.json
-if ! $run_ptf && [ -r $testdir/$name.out/tofino.bin ]; then
+if [ -r $testdir/$name.out/tofino.bin ]; then
     if $run_ptf; then
         true # ptf requires uncompressed binary
     elif $run_stf; then
-        true # stf can run compressed binaries with recent updates
-        #gzip -f $testdir/$name.out/tofino.bin
+        # stf can run compressed binaries with recent updates
+        gzip -f $testdir/$name.out/tofino.bin
     else
         #binary not needed
         rm $testdir/$name.out/tofino.bin
@@ -285,7 +292,9 @@ if $run_ptf ; then
                 --stftest ${stftest} \
                 --ptfdir ${mydir}/tools/stf --top-builddir $(findcmakecache)"
     fi
-    run $PTF_CMD || die
+    if [ -n "$PTF_CMD" ]; then
+        run $PTF_CMD || die
+    fi
 fi
 
 # cleanup

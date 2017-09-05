@@ -525,10 +525,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".bloom_filter_1") register<bit<1>>(32w262144) bloom_filter_1;
     @name(".bloom_filter_2") register<bit<1>>(32w262144) bloom_filter_2;
     @name(".bloom_filter_3") register<bit<1>>(32w262144) bloom_filter_3;
-    @name(".ifid_cntr") register<bit<16>>(32w25000) ifid_cntr;
+    @name(".ifid_cntr") register<bit<16>>(32w0) ifid_cntr;
     @name(".ob1") register<bit<1>>(32w1000) ob1;
     @name(".ob2") register<bit<1>>(32w1000) ob2;
-    @name(".port_cntr") register<bit<64>>(32w16384) port_cntr;
+    @name(".port_cntr") register<bit<64>>(32w0) port_cntr;
     @name(".sampling_cntr") register<bit<32>>(32w143360) sampling_cntr;
     @name(".scratch") register<bit<16>>(32w4096) scratch;
     register_action<bit<1>, bit<1>>(bloom_filter_1) bloom_filter_alu_1 = {
@@ -785,7 +785,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 25000;
         default_action = NoAction();
     }
-    @name(".ing_port") table ing_port {
+    @pragma("--metadata-overlay", "False") @name(".ing_port") table ing_port {
         actions = {
             set_ifid();
             @defaultonly NoAction();
@@ -824,7 +824,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction();
     }
-    @stage(6) @name(".next_hop_ecmp") table next_hop_ecmp {
+    @stage(6) @selector_max_group_size(200) @name(".next_hop_ecmp") table next_hop_ecmp {
         actions = {
             set_next_hop();
             @defaultonly NoAction();
@@ -839,7 +839,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.md.flowlet_hash_input: selector @name("meta.md.flowlet_hash_input") ;
         }
         size = 4096;
-        @name(".next_hop_ecmp_ap") @mode("fair") implementation = action_selector(HashAlgorithm.crc16, 32w4096, 32w16);
+        @name(".next_hop_ecmp_ap") @mode("fair") implementation = action_selector(HashAlgorithm.crc32, 32w4096, 32w29);
         default_action = NoAction();
     }
     @name(".one_bit_read_1") table one_bit_read_1 {

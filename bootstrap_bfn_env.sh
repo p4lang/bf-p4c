@@ -203,7 +203,7 @@ install_bf_repo () {
     fi
     pushd $name >/dev/null
     builddir="."
-    if $reuse_asis && [ -x $x_path_check ]; then
+    if $reuse_asis && [ -x "$x_path_check" ]; then
         echo "Reusing $name as is"
     else
         cd $builddir
@@ -282,6 +282,8 @@ pushd model >/dev/null
             make clean
         fi
         make || die "harlyn model build failed"
+        # FIXME -- should not need make install here!!!  Unless someone has previously
+        # done a make install of the model, in which case cmake will get the old one
         sudo make install
         sudo ldconfig
     fi
