@@ -80,7 +80,7 @@ general, `$PTF_DIR` corresponds to `p4-tests/p4_<version>/<prog_name>.ptf`.
 
   2) Starting bf_switchd
 
-    sudo bf_switchd --install-dir /tmp --conf-file p4-tests/dummy.conf --skip-p4
+    sudo bf_switchd --install-dir /usr/local --conf-file p4-tests/dummy.conf --skip-p4
 
   3) Pushing P4 config to model / drivers and running PTF tests
 

@@ -3,6 +3,7 @@
 import argparse
 import errno
 from functools import wraps
+import logging
 import os
 import re
 import shutil
@@ -20,6 +21,18 @@ from p4 import p4runtime_pb2
 from p4.config import p4info_pb2
 from p4.tmp import p4config_pb2
 import google.protobuf.text_format
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("PTF runner")
+
+def error(msg, *args, **kwargs):
+    logger.error(msg, *args, **kwargs)
+
+def warn(msg, *args, **kwargs):
+    logger.warn(msg, *args, **kwargs)
+
+def info(msg, *args, **kwargs):
+    logger.info(msg, *args, **kwargs)
 
 def get_parser():
     parser = argparse.ArgumentParser(description='PTF Test Runner for Harlyn')
@@ -62,13 +75,13 @@ def check_and_add_ifaces():
     if found:
         return
 
-    print >> sys.stderr, "Some veth interfaces missing, creating them"
+    warn("Some veth interfaces missing, creating them")
     veth_setup_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                    'tools', 'veth_setup.sh')
     try:
         subprocess.check_call([veth_setup_path, str((NUM_IFACES + 1) * 2)])
     except subprocess.CalledProcessError:
-        print >> sys.stderr, "Failed to create veth interfaces"
+        error("Failed to create veth interfaces")
         sys.exit(1)
 
 def findbin(cmake_dir, varname):
@@ -76,11 +89,11 @@ def findbin(cmake_dir, varname):
     try:
         out = subprocess.check_output(['cmake', '-L', '-N', cmake_dir])
     except subprocess.CalledProcessError:
-        print >> sys.stderr, "Unable to access CMake cache"
+        error("Unable to access CMake cache")
         sys.exit(1)
     m = re.search('^{}:FILEPATH=(.*)$'.format(varname), out, re.MULTILINE)
     if m is None:
-        print >> sys.stderr, "Unable to locate" , varname, "in CMake cache"
+        error("Unable to locate {} in CMake cache".format(varname))
         sys.exit(1)
     return m.group(1)
 
@@ -88,7 +101,7 @@ def update_config(name, grpc_addr, p4info_path, tofino_bin_path, cxt_json_path):
     channel = grpc.insecure_channel(grpc_addr)
     stub = p4runtime_pb2.P4RuntimeStub(channel)
 
-    print "Sending P4 config"
+    info("Sending P4 config")
     request = p4runtime_pb2.SetForwardingPipelineConfigRequest()
     config = request.configs.add()
     with open(p4info_path, 'r') as p4info_f:
@@ -111,8 +124,8 @@ def update_config(name, grpc_addr, p4info_path, tofino_bin_path, cxt_json_path):
     try:
         response = stub.SetForwardingPipelineConfig(request)
     except Exception as e:
-        print >> sys.stderr, "Error when trying to push config to bf_switchd"
-        print >> sys.stderr, e
+        error("Error when trying to push config to bf_switchd")
+        error(str(e))
         return False
     return True
 
@@ -131,14 +144,14 @@ def run_ptf_tests(PTF, ptfdir, p4info_path, stftest, extra_args=[]):
         test_params += ';stftest=\'{}\''.format(stftest)
     cmd.append('--test-params={}'.format(test_params))
     cmd.extend(extra_args)
-    print >> sys.stderr, "Executing PTF command: ", ' '.join(cmd)
+    info("Executing PTF command: {}".format(' '.join(cmd)))
 
     try:
         # we want the ptf output to be sent to stdout
         p = subprocess.Popen(cmd)
         p.wait()
     except:
-        print >> sys.stderr, "Error when running PTF tests"
+        error("Error when running PTF tests")
         return 1
     return p.returncode == 0
 
@@ -201,10 +214,10 @@ def wait_for_switchd(model_p, switchd_p, status_port, timeout_s=100):
     def wait():
         while True:
             if model_p.poll() is not None:
-                print >> sys.stderr, "Model is not running"
+                error("Model is not running")
                 return False
             if switchd_p.poll() is not None:
-                print >> sys.stderr, "Switchd is not running"
+                error("Switchd is not running")
                 return False
             if poll_device(status_port):
                 return True
@@ -212,22 +225,22 @@ def wait_for_switchd(model_p, switchd_p, status_port, timeout_s=100):
     try:
         return wait()
     except TimeoutError:
-        print >> sys.stderr, "Timed out while waiting for switchd to be ready"
+        error("Timed out while waiting for switchd to be ready")
         return False
     return True
 
 def sanitize_args(args):
     if os.path.split(args.name)[1] != args.name:
-        print >> sys.stderr, "Invalid 'name' argument in PTF runner"
+        error("Invalid 'name' argument in PTF runner")
         sys.exit(1)
     if args.test_only and args.update_config_only:
-        print >> sys.stderr, "Cannot use --test-only and --update-config-only"
+        error("Cannot use --test-only and --update-config-only")
         sys.exit(1)
     if (not args.update_config_only) and (args.ptfdir is None):
-        print >> sys.stderr, "Missing --ptfdir"
+        error("Missing --ptfdir")
         sys.exit(1)
     if args.top_builddir is not None and not os.path.exists(args.top_builddir):
-        print >> sys.stderr, "Invalid --top-builddir"
+        error("Invalid --top-builddir")
         sys.exit(1)
 
 def main():
@@ -236,41 +249,40 @@ def main():
     sanitize_args(args)
 
     if unknown_args and args.update_config_only:
-        print >> sys.stderr, "Extra args not supported with --update-config-only and will be ignored"
+        error("Extra args not supported with --update-config-only and will be ignored")
     extra_ptf_args = unknown_args
 
     compiler_out_dir = args.testdir
 
     p4info_path = os.path.join(compiler_out_dir, 'p4info.proto.txt')
     if not os.path.exists(p4info_path):
-        print >> sys.stderr, "P4Info file", p4info_path, "not found"
+        error("P4Info file {} not found".format(p4info_path))
         sys.exit(1)
 
     tofino_bin_path = os.path.join(compiler_out_dir, 'tofino.bin')
     if not os.path.exists(tofino_bin_path):
-        print >> sys.stderr, "Binary config file", tofino_bin_path, "not found"
+        error("Binary config file {} not found".format(tofino_bin_path))
         sys.exit(1)
 
     cxt_json_path = os.path.join(compiler_out_dir, 'tbl-cfg')
     if not os.path.exists(cxt_json_path):
-        print >> sys.stderr, "Context json file", cxt_json_path, "not found"
+        error("Context json file {} not found".format(cxt_json_path))
         sys.exit(1)
 
     if args.stftest is not None and not os.path.exists(args.stftest):
-        print >> sys.stderr, "STF test", args.stftest,
-        print >> sys.stderr, "requested and not found"
+        error("STF test {} requested and not found".format(args.stftest))
         sys.exit(1)
 
     lookup_json_path = os.path.join(compiler_out_dir, 'p4_name_lookup.json')
     if not os.path.exists(lookup_json_path):
-        print >> sys.stderr, "Name lookup json", lookup_json_path,
-        print >> sys.stderr, "not found; debugging will be harder"
+        warn("Name lookup json {} not found; debugging will be harder".format(
+            lookup_json_path))
 
     if args.update_config_only:
         success = update_config(args.name, args.grpc_addr,
                                 p4info_path, tofino_bin_path, cxt_json_path)
         if not success:
-            print >> sys.stderr, "Error when pushing P4 config to switchd"
+            error("Error when pushing P4 config to switchd")
             return 1
         return 0
 
@@ -280,7 +292,7 @@ def main():
             os.pardir,
             'build')
         if not os.path.exists(top_builddir):
-            print >> sys.stderr, "Please provide --top-builddir"
+            error("Please provide --top-builddir")
             return 1
     else:
         top_builddir = args.top_builddir
@@ -288,9 +300,10 @@ def main():
     PTF = findbin(top_builddir, 'PTF')
 
     if args.test_only:
-        success = run_ptf_tests(PTF, args.ptfdir, p4info_path, extra_ptf_args)
+        success = run_ptf_tests(PTF, args.ptfdir, p4info_path,
+                                args.stftest, extra_ptf_args)
         if not success:
-            print >> sys.stderr, "Error when running PTF tests"
+            error("Error when running PTF tests")
             return 1
         return 0
 
@@ -325,19 +338,19 @@ def main():
 
             success = wait_for_switchd(model_p, switchd_p, switchd_status_port)
             if not success:
-                print >> sys.stderr, "Error when starting model & switchd"
+                error("Error when starting model & switchd")
                 return False
 
             success = update_config(args.name, args.grpc_addr,
                                     p4info_path, tofino_bin_path, cxt_json_path)
             if not success:
-                print >> sys.stderr, "Error when pushing P4 config to switchd"
+                error("Error when pushing P4 config to switchd")
                 return False
 
             success = run_ptf_tests(PTF, args.ptfdir, p4info_path,
                                     args.stftest, extra_ptf_args)
             if not success:
-                print >> sys.stderr, "Error when running PTF tests"
+                error("Error when running PTF tests")
                 return False
         return True
 
@@ -347,16 +360,16 @@ def main():
         try:
             p.terminate()
         except:
-            print >> sys.stderr, "Error when trying to terminate", pname
+            error("Error when trying to terminate {}".format(pname))
 
     # move bf_drivers log to log file directory
     if os.path.exists('bf_drivers.log'):
         try:
             shutil.move('bf_drivers.log', dirname)
         except:
-            print >> sys.stderr, "Error when copying 'bf_drivers.log'"
+            error("Error when copying 'bf_drivers.log'")
     else:
-        print >> sys.stderr, "Could not find 'bf_drivers.log' in CWD"
+        error("Could not find 'bf_drivers.log' in CWD")
 
     if os.path.exists('ptf.log'):
         shutil.move('ptf.log', dirname)
@@ -365,12 +378,12 @@ def main():
         os.chmod(os.path.join(dirname, f), 0o666)
 
     if not success:
-        print >> sys.stderr, "See logfiles under", dirname
+        info("See logfiles under {}".format(dirname))
         sys.exit(1)
     else:
-        print "SUCCESS"
+        info("SUCCESS")
         if args.keep_logs:
-            print "Log files are under", dirname
+            info("Log files are under {}".format(dirname))
         else:
             shutil.rmtree(dirname)
         sys.exit(0)
