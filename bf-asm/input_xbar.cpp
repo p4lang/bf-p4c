@@ -402,6 +402,11 @@ static int tcam_swizzle_offset[4][4] = {
     { +1, +2, -1,  0 },
 };
 
+#include <tofino/input_xbar.cpp>        // tofino template specializations
+#if HAVE_JBAY
+#include <jbay/input_xbar.cpp>          // jbay template specializations
+#endif // HAVE_JBAY
+
 template<class REGS>
 void InputXbar::write_regs(REGS &regs) {
     auto &xbar = regs.dp.xbar_hash.xbar;
@@ -501,11 +506,6 @@ void InputXbar::write_regs(REGS &regs) {
             regs.dp.hashout_ctl.hash_group_egress_enable |= 1 << grp;
     }
 }
-
-#include <tofino/input_xbar.cpp>        // tofino template specializations
-#if HAVE_JBAY
-#include <jbay/input_xbar.cpp>          // jbay template specializations
-#endif // HAVE_JBAY
 
 InputXbar::Input *InputXbar::find(Phv::Slice sl, Group grp) {
     InputXbar::Input *rv = nullptr;
