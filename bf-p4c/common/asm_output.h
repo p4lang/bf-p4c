@@ -81,6 +81,8 @@ class Slice {
     int width() const { return hi - lo + 1; }
     int bytealign() const;
     Slice fullbyte() const;
+    int get_lo() { return lo; }
+    int get_hi() { return hi; }
 };
 
 /* The rest of this is pretty generic formatting stuff -- should be in lib somewhere? */

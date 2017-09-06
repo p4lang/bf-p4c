@@ -406,10 +406,19 @@ void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent, vector<Sl
                 }
             }
             // FIXME: this cannot work for larger than 16 bit addresses?
-            if (last_bit == -1)
+            if (hdh.algorithm == "identity") {
+                for (auto slice : match_data) {
+                    out << indent << (first_bit + slice.get_lo());
+                    if (slice.width() > 1)
+                        out << ".." << (first_bit + slice.get_hi());
+                    out << ": " << slice << std::endl;
+                }
+            } else {
+                if (last_bit == -1)
                 last_bit = (i + 1) * IXBar::HASH_DIST_BITS - 1;
-            out << indent << first_bit << ".." << last_bit;
-            out << ": " << FormatHash(match_data, ghost, hdh.algorithm) << std::endl;
+                out << indent << first_bit << ".." << last_bit;
+                out << ": " << FormatHash(match_data, ghost, hdh.algorithm) << std::endl;
+            }
         }
     }
 }
@@ -1179,7 +1188,7 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
         list_index = 0;
         for (auto key : keys) {
             if (key->matchType->path->name == "selector") continue;
-            if (auto prim = key->expression->to<IR::Primitive>()) {
+            if (key->expression->is<IR::Primitive>()) {
                 BUG("Unexpected primitive as match header");
             } else if (auto mask = key->expression->to<IR::Mask>()) {
                 out << indent << canon_name(phv.field(mask->left)->name) << ": ";

@@ -444,13 +444,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/adjust_instr7.p4
   )
 
-# BRIG-119
-p4c_add_xfail_reason("tofino"
-  "hash expression width mismatch"
-  extensions/p4_tests/p4_14/test_config_100_hash_action.p4
-  extensions/p4_tests/p4_14/test_config_209_pack_hash_dist.p4
-  )
-
 # New failures with action bus working in compiler
 p4c_add_xfail_reason("tofino"
   "Two containers in the same action are at the same place?"
@@ -529,6 +522,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "hash_dist .* not defined in table"
   extensions/p4_tests/p4_14/test_config_192_stateful_driven_by_hash.p4
+  extensions/p4_tests/p4_14/test_config_209_pack_hash_dist.p4
   )
 
 

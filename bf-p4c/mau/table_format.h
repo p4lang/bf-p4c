@@ -102,12 +102,13 @@ struct TableFormat {
     int ghost_bits_count = 0;
     bool next_table = false;
     const bitvec immediate_mask;
+    bool gw_linked;
     // bitvec ghost_start;
 
  public:
     TableFormat(const LayoutOption &l, const IXBar::Use &mi, const IR::MAU::Table *t,
-                const bitvec im)
-        : layout_option(l), match_ixbar(mi), tbl(t), immediate_mask(im) {}
+                const bitvec im, bool gl)
+        : layout_option(l), match_ixbar(mi), tbl(t), immediate_mask(im), gw_linked(gl) {}
     bool find_format(Use *u);
     bool analyze_layout_option();
     bool analyze_skinny_layout_option(int per_RAM, vector<std::pair<int, int>> &sizes);

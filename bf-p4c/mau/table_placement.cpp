@@ -278,10 +278,10 @@ TablePlacement::Placed *TablePlacement::Placed::gateway_merge() {
 }
 
 static bool try_alloc_format(TablePlacement::Placed *next, TableResourceAlloc *resources,
-                             StageUseEstimate &sue, const bitvec immediate_mask) {
+                             StageUseEstimate &sue, const bitvec immediate_mask, bool gw_linked) {
      resources->table_format.clear();
      TableFormat current_format(*sue.preferred(), resources->match_ixbar, next->table,
-                                immediate_mask);
+                                immediate_mask, gw_linked);
 
      if (!current_format.find_format(&resources->table_format)) {
          resources->table_format.clear();
@@ -309,7 +309,7 @@ static bool try_alloc_ixbar(TablePlacement::Placed *next, const TablePlacement::
         return false; }
 
     const bitvec immediate_mask = lc.get_action_format(next->table).immediate_mask;
-    if (!is_gw && !try_alloc_format(next, resources, sue, immediate_mask)) {
+    if (!is_gw && !try_alloc_format(next, resources, sue, immediate_mask, next->gw)) {
         resources->clear_ixbar();
         return false;
     }
