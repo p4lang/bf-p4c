@@ -536,9 +536,17 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
                     tbl["default_selector_value"] = 0; //FIXME-JSON
                     add_reference_table(selection_table_refs, a->selector, "indirect"); }
                 json::vector &meter_table_refs = tbl["meter_table_refs"] = json::vector();
-                for (auto &m : a->meter) add_reference_table(meter_table_refs, m, "indirect");
+                for (auto &m : a->meter) {
+                    std::string ref_type = "direct";
+                    if (m.args.size() > 0)
+                        ref_type = "indirect";
+                    add_reference_table(meter_table_refs, m, ref_type); }
                 json::vector &stats_table_refs = tbl["statistics_table_refs"] = json::vector();
-                for (auto &s : a->stats) add_reference_table(stats_table_refs, s, "indirect"); }
+                for (auto &s : a->stats) {
+                    std::string ref_type = "direct";
+                    if (s.args.size() > 0)
+                        ref_type = "indirect";
+                    add_reference_table(stats_table_refs, s, ref_type); } }
             json::vector &action_data_table_refs = tbl["action_data_table_refs"] = json::vector();
             if (indirect->action)
                 add_reference_table(action_data_table_refs, indirect->action, "indirect");

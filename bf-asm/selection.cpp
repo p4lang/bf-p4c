@@ -174,7 +174,7 @@ void SelectionTable::write_regs(REGS &regs) {
             ++mapram, ++vpn; }
         if (&logical_row == home) {
             auto &vh_adr_xbar = regs.rams.array.row[row].vh_adr_xbar;
-            setup_muxctl(vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[2 + logical_row.bus],
+            setup_muxctl(vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[SELECTOR_VHXBAR_HASH_BUS_INDEX],
                          selection_hash);
             vh_adr_xbar.alu_hashdata_bytemask.alu_hashdata_bytemask_right =
                 bitmask2bytemask(input_xbar->hash_group_bituse());
