@@ -46,12 +46,19 @@ class STFLexer:
     # Build the lexer
     def build(self,**kwargs):
         self.lexer = lex.lex(module=self, **kwargs)
+        # start the lexer looking for keywords
+        self.lexer.begin('keyword')
 
     def _error(self, s, token):
         print s, "in file", self.filename, "at line", self.get_lineno()
         self.errors_cnt += 1
 
     states = (
+        # add a state to lex only keywords. By default, all keywords
+        # are IDs. Fortunately, in the current grammar all keywords
+        # are commands at the beginning of a line (except for packets and bytes!).
+        ('keyword', 'inclusive'),
+        # lex only packet data
         ('packetdata', 'exclusive'),
     )
 
@@ -66,6 +73,7 @@ class STFLexer:
         'PACKETS',
         'REMOVE',
         'SETDEFAULT',
+        'TCAM_2BIT_MODE',
         'WAIT'
     )
 
@@ -88,6 +96,8 @@ class STFLexer:
         'INT_CONST_DEC',
         'TERN_CONST_HEX',
         'INT_CONST_HEX',
+        'LBRACKET',
+        'RBRACKET',
         'LPAREN',
         'RPAREN',
         'SLASH',
@@ -104,6 +114,8 @@ class STFLexer:
     t_COLON     = r':'
     t_COMMA     = r','
     t_DOT       = r'\.'
+    t_LBRACKET  = r'\['
+    t_RBRACKET  = r'\]'
     t_LPAREN    = r'\('
     t_RPAREN    = r'\)'
     t_EQUAL     = r'='
@@ -130,10 +142,6 @@ class STFLexer:
 
     identifier          = r'([a-z$A-Z_][a-z$A-Z_0-9]*)'
 
-#    @TOKEN(NO_PACKET)
-#    def t_NO_PACKET(self, t):
-#        return t
-
     @TOKEN(hex_tern_constant)
     def t_TERN_CONST_HEX(self, t):
         return t
@@ -150,12 +158,29 @@ class STFLexer:
     def t_INT_CONST_DEC(self, t):
         return t
 
+    # Identifiers in the keyword state should be checked against keywords.
+    # In fact, it should be an error not to find a keyword!!
+    # Throwing that as an error is left as an exercise for next time
+    # when we read the ply manual.
     @TOKEN(identifier)
-    def t_ID(self, t):
+    def t_keyword_ID(self, t):
         typ = self.keywords_map.get(t.value.lower(), "ID")
         t.type = typ
         if typ == 'EXPECT' or typ == 'PACKET':
             t.lexer.begin('packetdata')
+        else:
+            t.lexer.begin('INITIAL')
+        # print t, "pos:", t.lexpos, "col:", self.lexer.colno
+        return t
+
+    # All identifiers, including keywords are returned as ID outside
+    # the keyword state, except for PACKETS and BYTES (counter types)
+    @TOKEN(identifier)
+    def t_ID(self, t):
+        typ = self.keywords_map.get(t.value.lower(), "ID")
+        if typ == 'BYTES' or typ == 'PACKETS':
+            t.type = typ
+        # print t, "pos:", t.lexpos, "col:", self.lexer.colno
         return t
 
     # Discard comments.
@@ -168,6 +193,7 @@ class STFLexer:
         r'\n+'
         t.lexer.lineno += len(t.value)
         t.lexer.colno = 0
+        t.lexer.begin('keyword')
 
     # Ignore spaces and tabs.
     t_ignore = ' \t'
@@ -193,7 +219,7 @@ class STFLexer:
     def t_packetdata_newline(self, t):
         r'\n+'
         t.lexer.lineno += len(t.value)
-        t.lexer.begin('INITIAL')
+        t.lexer.begin('keyword')
 
     # Ignore spaces and tabs.
     t_packetdata_ignore = ' \t'

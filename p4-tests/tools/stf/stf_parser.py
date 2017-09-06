@@ -18,6 +18,7 @@ from stf_lexer import STFLexer
 #           | NO_PACKET
 #           | PACKET port packet_data
 #           | SETDEFAULT qualified_name action
+#           | TCAM_2BIT_MODE [TRUE|FALSE]
 #           | WAIT
 #
 # match_list : match
@@ -31,6 +32,7 @@ from stf_lexer import STFLexer
 #        | TERN_CONST_HEX
 #
 # qualified_name : ID
+#                | ID '[' INT_CONST_DEC ']'
 #                | qualified_name DOT ID
 #
 # id_or_index: ID
@@ -63,16 +65,16 @@ from stf_lexer import STFLexer
 # expect_datum : packet_datum | DATA_TERN
 # packet_datum : DATA_DEC | DATA_HEX
 
+# ##### tcam_2bit_mode true | false
+#
+# Enable (or disable) tcam_2bit_mode.  When enabled, non-range tcams are assumed
+# to be programmed in 2bit range mode rather than "normal" mode.
+#
 # Still to implement (from model/tests/simple_test_harness/README.md):
 # ##### sleep <seconds>
 #
 # Pause script processing for the specified time.  Packets will be processed by
 # the model threads.
-#
-# ##### tcam_2bit_mode true | false
-#
-# Enable (or disable) tcam_2bit_mode.  When enabled, non-range tcams are assumed
-# to be programmed in 2bit range mode rather than "normal" mode.
 #
 # ##### wire <port> -> <port>
 #
@@ -243,6 +245,12 @@ class STFParser:
         'qualified_name : ID'
         p[0] = p[1]
 
+    # \TODO: how do we handle stacks in either PD or PI??
+    # for now we escape the brackets ...
+    def p_qualified_name_array(self, p):
+        'qualified_name : ID LBRACKET INT_CONST_DEC RBRACKET'
+        p[0] = p[1] + '_' + p[3] + '_'
+
     def p_qualified_name_many(self, p):
         'qualified_name : qualified_name DOT ID'
         p[0] = p[1] + '.' + p[3]
@@ -319,6 +327,9 @@ class STFParser:
         '''expect_datum : packet_datum
                         | DATA_TERN'''
         p[0] = p[1]
+    def p_stmt_tcam_2bit_mode(self, p):
+        'statement : TCAM_2BIT_MODE ID'
+        p[0] = (p[1], p[2])
 
 
 # TESTING ---------------------------------------------------------------------

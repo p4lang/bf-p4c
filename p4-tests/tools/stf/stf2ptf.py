@@ -126,6 +126,9 @@ class stf2ptf (P4RuntimeTest):
                 elif s[0] == 'remove':
                     self._logger.info("Flushing table entries")
                     self.undo_write_requests(self._requests)
+                elif s[0] == 'tcam_2bit_mode':
+                    # ignored for now
+                    pass
                 else:
                     assert False, "Unknown statement %s" % s[0]
 

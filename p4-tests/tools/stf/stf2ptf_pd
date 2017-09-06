@@ -8,7 +8,13 @@ import abc
 from string import maketrans
 
 def encodePacket(packet):
-    return ''.join('\\x' + x.encode('hex') for x in packet.decode('hex'))
+    if len(packet) % 2 == 0:
+        return ''.join('\\x' + x.encode('hex') for x in packet.decode('hex'))
+    else:
+        packet += '0'
+        s = ''.join('\\x' + x.encode('hex') for x in packet.decode('hex'))
+        return s[:len(s)-1]
+
 
 class STF2PTF:
     __metaclass__ = abc.ABCMeta
@@ -91,6 +97,9 @@ class STF2PTF:
                 self.genCheckCounter(ptf, s)
             elif s[0] == 'remove':
                 self.genRemoveTableEntries(ptf)
+            elif s[0] == 'tcam_2bit_mode':
+                # ignored for now
+                pass
 
             else:
                 assert False, "Unknown statement %s" % s[0]
