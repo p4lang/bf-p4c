@@ -72,6 +72,7 @@ bool InstructionSelection::checkSrc1(const IR::Expression *e) {
     if (e->is<IR::BoolLiteral>()) return true;
     if (e->is<IR::ActionArg>()) return true;
     if (e->is<IR::Primitive>()) return true;
+    if (e->is<IR::MAU::HashDist>()) return true;
     if (auto slice = e->to<IR::Slice>())
         if (slice->e0->is<IR::ActionArg>()) return true;
     return phv.field(e);
@@ -243,7 +244,8 @@ static const IR::Primitive *makeDepositField(IR::Primitive *prim, long) {
     return prim;
 }
 
-const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
+const IR::Expression *InstructionSelection::postorder(IR::Primitive *prim) {
+    LOG1("prim " << prim);
     if (!af) return prim;
     const IR::Expression *dest = prim->operands.size() > 0 ? prim->operands[0] : nullptr;
     if (prim->name == "modify_field") {
@@ -382,6 +384,34 @@ const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
             new IR::MAU::Instruction( prim->srcInfo, "set",
                 new IR::Slice(prim->operands[0], size-1, 0), hd);
         return instr;
+    // Convert hash extern in tofino.p4
+    } else if (prim->name == "hash.get_hash") {
+        unsigned size = 1;
+        if (prim->operands[3]->to<IR::Constant>()) {
+            size = bitcount(prim->operands[3]->to<IR::Constant>()->asLong() - 1);
+            if ((1LL << size) != prim->operands[3]->to<IR::Constant>()->asLong())
+                error("%s: The hash offset must be a power of 2 in a hash calculation %s",
+                      prim->srcInfo, *prim);
+        } else {
+            error("NULL operand 3 for %s", *prim);
+        }
+
+        cstring algorithm;
+        auto glob = prim->operands.at(0)->to<IR::GlobalRef>();
+        auto decl = glob->obj->to<IR::Declaration_Instance>();
+        if (auto *mem = decl->arguments->at(0)->to<IR::Member>()) {
+            algorithm = mem->member;
+        }
+        vector<int> init_units;
+        auto *hd = new IR::MAU::HashDist(prim->srcInfo, prim->operands[1], algorithm,
+                                         init_units, prim);
+        hd->bit_width = size;
+        if (auto *constant = prim->operands[2]->to<IR::Constant>()) {
+            if (constant->asInt() != 0)
+                error("%s: The initial offset for a hash calculation function has to be zero %s",
+                      prim->srcInfo, *prim);
+        }
+        return hd;
     } else {
         WARNING("unhandled in InstSel: " << *prim); }
     return prim;

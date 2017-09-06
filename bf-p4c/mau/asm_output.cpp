@@ -188,8 +188,12 @@ static cstring inline crc_poly(int number) {
         return "0xe89061db";
 }
 
+static bool checkEqual(cstring a, cstring b) {
+    return (strcasecmp(a.c_str(), b.c_str()) == 0);
+}
+
 std::ostream &operator<<(std::ostream &out, const FormatHash &hash) {
-    if (hash.alg == "exact_match") {
+    if (checkEqual(hash.alg, "exact_match")) {
         if (!hash.match_data.empty()) {
             out << "random(" << emit_vector(hash.match_data, ", ") << ")";
             if (!hash.ghost.empty()) out << " ^ ";
@@ -197,15 +201,15 @@ std::ostream &operator<<(std::ostream &out, const FormatHash &hash) {
         if (!hash.ghost.empty()) {
             out << "stripe(" << emit_vector(hash.ghost, ", ") << ")";
         }
-    } else if (hash.alg == "random") {
+    } else if (checkEqual(hash.alg, "random")) {
         out << "random(" << emit_vector(hash.match_data, ", ") << ")";
-    } else if (hash.alg == "crc16") {
+    } else if (checkEqual(hash.alg, "crc16")) {
         out << "stripe(crc(" << crc_poly(16) << ", " << emit_vector(hash.match_data, ", ") << "))";
-    } else if (hash.alg == "crc32") {
+    } else if (checkEqual(hash.alg, "crc32")) {
         out << "stripe(crc(" << crc_poly(32) << ", " << emit_vector(hash.match_data, ", ") << "))";
-    } else if (hash.alg == "identity") {
+    } else if (checkEqual(hash.alg, "identity")) {
         out << hash.match_data[0];
-    } else if (hash.alg == "selector_identity") {
+    } else if (checkEqual(hash.alg, "selector_identity")) {
         out << "stripe(" << hash.match_data[0] << ")";
     } else {
         BUG("Hashing Algorithm is not recognized");

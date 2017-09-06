@@ -145,20 +145,26 @@ extern random<T> {
 // to generate the control-plane API.
 extern void digest<T>(in bit<32> receiver, in T data);
 
-enum HashAlgorithm {
-    crc32,
-    crc32_custom,
-    crc16,
-    crc16_custom,
-    random,
-    identity
+extern void mark_to_drop();
+
+enum hash_algorithm_t {
+    IDENTITY,
+    RANDOM,
+    CRC16,
+    CRC32
+}
+extern hash<D, T, M> {
+    /// Constructor
+    hash(hash_algorithm_t algo);
+
+    /// compute the hash for data
+    ///  @base :
+    ///  @max :
+    T get_hash(in D data, @optional in T base, @optional in M max);
 }
 
-extern void mark_to_drop();
-extern void hash<O, T, D, M>(out O result, in HashAlgorithm algo, in T base, in D data, in M max);
-
 extern action_selector {
-    action_selector(HashAlgorithm algorithm, bit<32> size, bit<32> outputWidth);
+    action_selector(hash_algorithm_t algorithm, bit<32> size, bit<32> outputWidth);
 }
 
 enum CloneType {

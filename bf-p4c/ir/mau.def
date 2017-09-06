@@ -318,9 +318,10 @@ abstract Synth2Port : HashDistAttached {
     int width = 0;
     DataAggregation type = DataAggregation::NONE;
     void settype(cstring t) {
-        if (t == "packets") type = DataAggregation::PACKETS;
-        else if (t == "bytes") type = DataAggregation::BYTES;
-        else if (t == "packets_and_bytes") type = DataAggregation::BOTH;
+        if (strcasecmp(t.c_str(), "packets") == 0) type = DataAggregation::PACKETS;
+        else if (strcasecmp(t.c_str(), "bytes") == 0) type = DataAggregation::BYTES;
+        else if (strcasecmp(t.c_str(), "packets_and_bytes") == 0 ||
+                 strcasecmp(t.c_str(), "packetsandbytes") == 0) type = DataAggregation::BOTH;
         else error("%s: Unknown type %s", srcInfo, t); }  // NOLINT
 }
 

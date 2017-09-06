@@ -302,7 +302,7 @@ class DoMeterTranslation : public Transform {
             else if (node->member.name == Tofino::P4_14::BYTES)
                 return new IR::Member(node->srcInfo, node->type, node->expr,
                                       Tofino::P4_16::BYTES);
-        } else if (auto pe = node->expr->to<IR::PathExpression>()) {
+        } else if (node->expr->to<IR::PathExpression>()) {
             if (node->member.name == "execute_meter")
                 return new IR::Member(node->srcInfo, node->type, node->expr, "execute");
             else if (node->member.name == "read")
@@ -316,7 +316,6 @@ class DoMeterTranslation : public Transform {
         if (auto em = mi->to<P4::ExternMethod>()) {
             if (em->originalExternType->name != Tofino::P4_14::Meter &&
                 em->originalExternType->name != Tofino::P4_14::DirectMeter) {
-                LOG1("skip " << em->originalExternType->name);
                 prune(); }}
         return node;
     }
@@ -470,6 +469,154 @@ class RandomTranslation : public PassManager {
     }
 };
 
+using HashUseMap = ordered_map<cstring, std::set<const IR::Declaration_Instance*>>;
+using HashNameMap = ordered_map<const IR::Node*, cstring>;
+
+class FindHashUsage : public Inspector {
+    HashUseMap* hashUseMap;
+    HashNameMap* hashNameMap;
+    set<cstring> unique_names;
+
+ public:
+    FindHashUsage(HashUseMap* map, HashNameMap* nameMap)
+    : hashUseMap(map), hashNameMap(nameMap) {
+        CHECK_NULL(map);
+        CHECK_NULL(hashNameMap);
+        unique_names.insert("hash");
+        setName("FindHashUsage"); }
+
+    bool preorder(const IR::MethodCallExpression* node) override {
+        auto expr = node->method->to<IR::PathExpression>();
+        if (!expr)
+            return false;
+
+        if (expr->path->name == Tofino::P4_14::Hash) {
+            auto pAlgo = node->arguments->at(1);
+            auto control = findContext<IR::P4Control>();
+            auto hashArgs = new IR::Vector<IR::Expression>();
+            hashArgs->push_back(pAlgo);
+
+            auto typeArgs = new IR::Vector<IR::Type>({
+                node->typeArguments->at(2),
+                node->typeArguments->at(1),
+                node->typeArguments->at(3) });
+
+            auto hashType = new IR::Type_Specialized(new IR::Type_Name("hash"), typeArgs);
+            auto hashName = cstring::make_unique(unique_names, "hash", '_');
+            unique_names.insert(hashName);
+
+            auto hashInst = new IR::Declaration_Instance(hashName, hashType, hashArgs);
+            hashNameMap->emplace(node, hashName);
+
+            if (hashUseMap->find(control->name) == hashUseMap->end()) {
+                std::set<const IR::Declaration_Instance *> set = {hashInst};
+                hashUseMap->emplace(control->name, set);
+            } else {
+                hashUseMap->at(control->name).insert(hashInst);
+            }
+        }
+        return false;
+    }
+};
+
+class DoHashTranslation : public Transform {
+    HashUseMap* hashUseMap;
+    HashNameMap* hashNameMap;
+
+ public:
+    DoHashTranslation(HashUseMap* map, HashNameMap* nameMap)
+    : hashUseMap(map), hashNameMap(nameMap) {
+        CHECK_NULL(map);
+        CHECK_NULL(nameMap);
+        setName("DoHashTranslation"); }
+
+    const IR::Node* preorder(IR::Type_Name* node) override {
+        if (node->path->name != Tofino::P4_14::HashAlgorithm) {
+            prune();
+            return node; }
+        return new IR::Type_Name(Tofino::P4_16::HashAlgorithm);
+    }
+
+    const IR::Node* postorder(IR::Member* node) override {
+        if (auto tnp = node->expr->to<IR::TypeNameExpression>())
+        if (auto tn = tnp->typeName->to<IR::Type_Name>())
+        if (tn->path->name != Tofino::P4_16::HashAlgorithm)
+            return node;
+
+        cstring name = node->member.name;
+        if (name == Tofino::P4_14::CRC16) {
+            name = Tofino::P4_16::CRC16;
+        } else if (name == Tofino::P4_14::CRC32) {
+            name = Tofino::P4_16::CRC32;
+        } else if (name == Tofino::P4_14::RANDOM) {
+            name = Tofino::P4_16::RANDOM;
+        } else if (name == Tofino::P4_14::IDENTITY) {
+            name = Tofino::P4_16::IDENTITY;
+        }
+        return new IR::Member(node->srcInfo, node->type, node->expr, name);
+    }
+
+    const IR::Node* preorder(IR::MethodCallStatement* node) override {
+        auto mc = node->methodCall->to<IR::MethodCallExpression>();
+        if (!mc)
+            return node;
+
+        auto expr = mc->method->to<IR::PathExpression>();
+        if (!expr)
+            return node;
+
+        if (expr->path->name == Tofino::P4_14::Hash) {
+            auto pDest = mc->arguments->at(0);
+            auto pBase = mc->arguments->at(2);
+            auto pData = mc->arguments->at(3);
+            auto pMax = mc->arguments->at(4);
+            auto args = new IR::Vector<IR::Expression>( { pData, pBase, pMax });
+
+            auto control = findContext<IR::P4Control>();
+            BUG_CHECK(control, "Method call %1% not in any control block", expr->path->name);
+
+            cstring hashName;
+            auto it = hashNameMap->find(mc);
+            if (it != hashNameMap->end()) {
+                hashName = it->second; }
+
+            auto method = new IR::PathExpression(hashName);
+            auto member = new IR::Member(method, Tofino::P4_16::Hash);
+            auto call = new IR::MethodCallExpression(node->srcInfo, member, args);
+            auto assign = new IR::AssignmentStatement(pDest, call);
+            return assign;
+        }
+        return node;
+    }
+
+    const IR::Node* preorder(IR::P4Control* control) override {
+        if (!hashUseMap->count(control->name))
+            return control;
+
+        auto controlLocals = new IR::IndexedVector<IR::Declaration>();
+        for (auto decl : hashUseMap->at(control->name))
+            controlLocals->push_back(decl);
+        controlLocals->append(control->controlLocals);
+
+        auto result = new IR::P4Control(control->srcInfo, control->name, control->type,
+                                        control->constructorParams, *controlLocals,
+                                        control->body);
+        return result;
+    }
+};
+
+class HashTranslation : public PassManager {
+    HashUseMap useMap;
+    HashNameMap nameMap;
+ public:
+    HashTranslation() {
+        addPasses({
+            new FindHashUsage(&useMap, &nameMap),
+            new DoHashTranslation(&useMap, &nameMap),
+        });
+    }
+};
+
 class TranslationLast : public PassManager {
  public:
     TranslationLast() { setName("TranslationLast"); }
@@ -484,6 +631,7 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(Tofino_Options& options) {
         new DoCounterTranslation(),
         new DoMeterTranslation(&refMap, &typeMap),
         new RandomTranslation(),
+        new HashTranslation(),
         new AppendSystemArchitecture(&structure),
         new TranslationLast(),
         new P4::ClearTypeMap(&typeMap),

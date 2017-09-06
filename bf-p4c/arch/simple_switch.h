@@ -43,6 +43,12 @@ static const cstring PACKETS = "packets";
 static const cstring BYTES = "bytes";
 static const cstring PACKETS_AND_BYTES = "packets_and_bytes";
 static const cstring Random = "random";
+static const cstring HashAlgorithm = "HashAlgorithm";
+static const cstring CRC16 = "crc16";
+static const cstring CRC32 = "crc32";
+static const cstring RANDOM = "random";
+static const cstring IDENTITY = "identity";
+static const cstring Hash = "hash";
 }  // namespace P4_14
 
 namespace P4_16 {
@@ -60,6 +66,12 @@ static const cstring PACKETS_AND_BYTES = "PACKETS_AND_BYTES";
 static const cstring BIT_OF_COLOR = "bit_of_color";
 static const cstring Random = "random";
 static const cstring RandomExec = "get";
+static const cstring HashAlgorithm = "hash_algorithm_t";
+static const cstring CRC16 = "CRC16";
+static const cstring CRC32 = "CRC32";
+static const cstring RANDOM = "RANDOM";
+static const cstring IDENTITY = "IDENTITY";
+static const cstring Hash = "get_hash";
 }  // namespace P4_16
 
 class SimpleSwitchTranslation : public PassManager {
