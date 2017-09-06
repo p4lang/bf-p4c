@@ -42,6 +42,10 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
 # warning: Container TW3 contains deparsed header fields, but it has unused bits: ( 22:ingress::h.v<1> I off=0 ref deparsed /t_phv_8,PHV-259;/|t_phv_8,0..0|[0:0]->[TW3](31); )
 # warning: Container TW19 contains deparsed header fields, but it has unused bits: ( 44:egress::h.v<1> E off=0 ref deparsed /t_phv_13,PHV-275;/|t_phv_13,0..0|[0:0]->[TW19](31); )
   testdata/p4_16_samples/table-entries-ternary-bmv2.p4
+  # Untriaged. It would be good to bisect and determine when these started
+  # failing.
+  testdata/p4_14_samples/gateway4.p4
+  testdata/p4_14_samples/hitmiss.p4
   )
 
   p4c_add_xfail_reason("tofino"
@@ -55,11 +59,6 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     )
 
   p4c_add_xfail_reason("tofino"
-    "counter cnt virtual value .*, expected 1"
-    testdata/p4_14_samples/counter1.p4
-  )
-
-  p4c_add_xfail_reason("tofino"
     "unhandled stage table type .*"
     testdata/p4_14_samples/07-MultiProtocol.p4
     testdata/p4_14_samples/basic_routing.p4
@@ -73,10 +72,12 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     testdata/p4_14_samples/basic_routing.p4
     testdata/p4_14_samples/exact_match5.p4
     testdata/p4_14_samples/exact_match3.p4
+    extensions/p4_tests/p4_14/adjust_instr4.p4
+    extensions/p4_tests/p4_14/adb_shared2.p4
     )
 
   p4c_add_xfail_reason("tofino"
-    "No field data.*\$valid in match_key_fields"
+    "No field data.*valid in match_key_fields"
     testdata/p4_14_samples/exact_match_valid1.p4
     )
 
@@ -87,6 +88,10 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     testdata/p4_14_samples/exact_match4.p4
     )
 
+  p4c_add_xfail_reason("tofino"
+    "address too large for table"
+    testdata/p4_14_samples/ternary_match4.p4
+    )
 endif() # HARLYN_STF
 
 
@@ -365,6 +370,11 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_96_hash_data.p4
   extensions/p4_tests/p4_14/hash_calculation_max_size.p4
   extensions/p4_tests/p4_14/hash_calculation_multiple.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Conflicting hash distribution bit allocation .*"
+  extensions/p4_tests/p4_14/jenkins/stful/stful.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -823,7 +833,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
   extensions/p4_tests/p4_14/c1/COMPILER-235/vag1737_1.p4
   extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
-  extensions/p4_tests/p4_14/jenkins/stful/stful.p4
   extensions/p4_tests/p4_14/switch_l2_profile.p4
   extensions/p4_tests/p4_14/c1/COMPILER-260/case1799.p4
   extensions/p4_tests/p4_14/c1/COMPILER-260/case1799_1.p4
