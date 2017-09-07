@@ -405,12 +405,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/adjust_instr7.p4
   )
 
-# New failures with action bus working in compiler
-p4c_add_xfail_reason("tofino"
-  "Two containers in the same action are at the same place?"
-  extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
-  )
-
 # Same Name Conversion Bug
 p4c_add_xfail_reason("tofino"
   "boost::too_few_args: format-string referred to more arguments than were passed"
@@ -707,10 +701,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
   )
 
-p4c_add_xfail_reason("tofino"
-  "Overlapping field slices in allocation for field"
-  extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
-  )
 
 p4c_add_xfail_reason("tofino"
   "Field is marked as deparsed, but the deparser doesn't emit it"
@@ -784,87 +774,151 @@ p4c_add_xfail_reason("tofino"
 if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
   # STF2PTF tests that fail
   p4c_add_xfail_reason("tofino"
-    "AssertionError: Did not receive expected pkt"
+    "AssertionError: Did not receive expected pkt on device"
+    extensions/p4_tests/p4_14/action_default_multiple.p4
+    extensions/p4_tests/p4_14/adb_shared2.p4
+    extensions/p4_tests/p4_14/adjust_instr3.p4
+    extensions/p4_tests/p4_14/adjust_instr4.p4
+    extensions/p4_tests/p4_14/counter_test1.p4
+    extensions/p4_tests/p4_16/depgraph1.p4
+    extensions/p4_tests/p4_16/parser_metadata_init.p4
+    extensions/p4_tests/p4_16/ternary1.p4
+    extensions/p4_tests/p4_16/ternary2.p4
+    testdata/p4_14_samples/action_chain1.p4
+    testdata/p4_14_samples/action_inline1.p4
+    testdata/p4_14_samples/action_inline2.p4
+    testdata/p4_14_samples/bigfield1.p4
+    testdata/p4_14_samples/bridge1.p4
+    testdata/p4_14_samples/exact_match1.p4
+    testdata/p4_14_samples/exact_match2.p4
+    testdata/p4_14_samples/exact_match3.p4
+    testdata/p4_14_samples/gateway1.p4
+    testdata/p4_14_samples/gateway2.p4
+    testdata/p4_14_samples/gateway3.p4
+    testdata/p4_14_samples/gateway4.p4
+    testdata/p4_14_samples/hitmiss.p4
+    testdata/p4_14_samples/ternary_match1.p4
+    testdata/p4_14_samples/ternary_match2.p4
+    testdata/p4_14_samples/ternary_match3.p4
+    testdata/p4_14_samples/ternary_match4.p4
+    testdata/p4_16_samples/issue635-bmv2.p4
     testdata/p4_16_samples/table-entries-priority-bmv2.p4
     testdata/p4_16_samples/table-entries-ternary-bmv2.p4
     testdata/p4_16_samples/table-entries-exact-ternary-bmv2.p4
     testdata/p4_16_samples/table-entries-exact-bmv2.p4
+    testdata/p4_16_samples/ternary2-bmv2.p4
     )
 
   p4c_add_xfail_reason("tofino"
     "AssertionError: Expected packet was not received"
+    testdata/p4_14_samples/counter1.p4
     testdata/p4_14_samples/counter3.p4
+    testdata/p4_14_samples/counter4.p4
     )
 
-  # STF lexer issues:
+  # STF test issues: non-qualified field names or such
   p4c_add_xfail_reason("tofino"
-    "LexError: Scanning error. Illegal character"
+    "self.get_mf_match"
     extensions/p4_tests/p4_16/stack_valid.p4
+    testdata/p4_14_samples/instruct5.p4
+    testdata/p4_14_samples/instruct6.p4
+    testdata/p4_14_samples/repeater.p4
     )
 
+  # P4Runtime UNIMPLEMENTED
   p4c_add_xfail_reason("tofino"
     "_Rendezvous of RPC that terminated .*StatusCode.UNIMPLEMENTED"
+    testdata/p4_14_samples/07-MultiProtocol.p4
     testdata/p4_14_samples/basic_routing.p4
     )
 
-  # --p4runtime
+  # P4Runtime code gen?
+  p4c_add_xfail_reason("tofino"
+    "_Rendezvous of RPC that terminated .*StatusCode.UNAVAILABLE"
+    extensions/p4_tests/p4_14/meter_test1.p4
+    testdata/p4_14_samples/exact_match4.p4
+    testdata/p4_14_samples/exact_match5.p4
+    )
+
+  # P4Runtime code gen?
+  p4c_add_xfail_reason("tofino"
+    "_Rendezvous of RPC that terminated .*StatusCode.INVALID_ARGUMENT, Cannot map table entry to handle"
+    testdata/p4_14_samples/counter2.p4
+    )
+
+  # P4runtime p4info.proto gen
+  p4c_add_xfail_reason("tofino"
+    "Match field .* is too complicated to represent in P4Runtime"
+    testdata/p4_14_samples/exact_match_mask1.p4
+    )
+
+
+  p4c_add_xfail_reason("tofino"
+    "error: struct .*: Expected type name"
+    extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-235/vag1737_1.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-254/case1744.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-260/case1799.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-260/case1799_1.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-262/case1804.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-447/case2527.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-448/case2526.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-451/case2537.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-477/case2602.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-482/case2622.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-483/case2619.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-503/case2678.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-505/case2690.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-532/case2807.p4
+    extensions/p4_tests/p4_14/c1/DRV-543/case2499.p4
+    extensions/p4_tests/p4_14/jenkins/basic_ipv4/basic_ipv4.p4
+    extensions/p4_tests/p4_14/jenkins/multi_device/multi_device.p4
+    extensions/p4_tests/p4_14/switch_20160602/switch.p4
+    extensions/p4_tests/p4_14/switch_l2_profile.p4
+    extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
+    extensions/p4_tests/p4_14/test_config_55_generate_digest.p4
+    testdata/p4_14_samples/sai_p4.p4
+    testdata/p4_14_samples/switch_20160226/switch.p4
+    testdata/p4_14_samples/switch_20160512/switch.p4
+    testdata/p4_16_samples/issue430-1-bmv2.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "error: Table .*: Match field .* references a local"
+    testdata/p4_16_samples/union-valid-bmv2.p4
+    )
+
   p4c_add_xfail_reason("tofino"
     "error: Expression .* is too complicated to resolve to a header field"
     extensions/p4_tests/p4_14/test_config_326_small_hash_act.p4
-    extensions/p4_tests/p4_14/test_config_294_parser_loop.p4
-    extensions/p4_tests/p4_14/test_config_234_ternary_valid.p4
-    extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
-    extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
-    extensions/p4_tests/p4_14/17-Vlantransform.p4
-    extensions/p4_tests/p4_14/vk_basic_ipv4_20150706.p4
-    extensions/p4_tests/p4_14/switch_l2_profile.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
-    extensions/p4_tests/p4_14/c1/DRV-543/case2499.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-262/case1804.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-448/case2526.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-532/case2807.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-242/case1679.p4
-    extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
     extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-505/case2690.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-447/case2527.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-260/case1799_1.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-260/case1799.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-477/case2602.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-254/case1744.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-451/case2537.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-503/case2678.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-483/case2619.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-413/mirror_test.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-235/vag1737_1.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-482/case2622.p4
-    extensions/p4_tests/p4_14/c4/COMPILER-523/vag2774.p4
-    extensions/p4_tests/p4_14/jenkins/multi_device/multi_device.p4
-    extensions/p4_tests/p4_14/jenkins/basic_ipv4/basic_ipv4.p4
-    extensions/p4_tests/p4_14/jenkins/multicast_test/multicast_test.p4
-    extensions/p4_tests/p4_14/jenkins/fast_reconfig/fast_reconfig.p4
-    extensions/p4_tests/p4_14/jenkins/smoke_large_tbls/smoke_large_tbls.p4
-    extensions/p4_tests/p4_14/switch_20160602/switch.p4
     )
 
   p4c_add_xfail_reason("tofino"
     "Error when trying to push config to bf_switchd"
-    testdata/p4_14_samples/counter4.p4
+    testdata/p4_14_samples/exact_match_valid1.p4
+    testdata/p4_14_samples/hash_action_basic.p4
     testdata/p4_14_samples/hash_action_gateway.p4
+    testdata/p4_14_samples/hash_action_two_separate.p4
+    testdata/p4_14_samples/tmvalid.p4
     extensions/p4_tests/p4_14/hash_calculation_32.p4
+    extensions/p4_tests/p4_14/stateful0.p4
+    extensions/p4_tests/p4_14/stateful1.p4
     extensions/p4_tests/p4_14/stateful2.p4
     extensions/p4_tests/p4_14/stateful3.p4
+    extensions/p4_tests/p4_16/stateful1.p4
+    extensions/p4_tests/p4_16/stateful2.p4
     )
 
   # insufficient interfaces in ptf_runner.
