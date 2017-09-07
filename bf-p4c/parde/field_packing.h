@@ -81,9 +81,17 @@ struct FieldPacking {
     /// Appends another sequence of packed items to this one.
     void append(const FieldPacking& packing);
 
-    /// Appends enough padding to make the total width of this sequence a
-    /// multiple of the provided alignment (in bits).
-    void padToAlignment(unsigned alignment);
+    /**
+     * Appends enough padding to make the total width of this sequence a
+     * multiple of the provided alignment (in bits).
+     *
+     * @param alignment  The desired alignment - e.g., 32 bits.
+     * @param phase      If provided, an additional offset to the alignment -
+     *                   e.g. a 32 bit alignment with a 2 bit phase would add
+     *                   padding until the total width was 2 bits after a
+     *                   multiple of 32 bits.
+     */
+    void padToAlignment(unsigned alignment, unsigned phase = 0);
 
     /// Removes all packed items from this sequence.
     void clear();
@@ -93,8 +101,9 @@ struct FieldPacking {
     bool containsFields() const;
 
     /// @return true if this sequence's total width is a multiple of the
-    /// provided alignment (in bits).
-    bool isAlignedTo(unsigned alignment) const;
+    /// provided alignment (in bits), possibly with an additional bit offset.
+    /// @see padToAlignment.
+    bool isAlignedTo(unsigned alignment, unsigned phase = 0) const;
 
     /**
      * Creates a parser state that extract the fields in this sequence from the

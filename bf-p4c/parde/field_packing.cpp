@@ -33,6 +33,7 @@ void FieldPacking::appendField(const IR::Expression* field, cstring source,
 }
 
 void FieldPacking::appendPadding(unsigned width) {
+    if (width == 0) return;
     if (!fields.empty() && fields.back().isPadding()) {
         fields.back().width += width;
     } else {
@@ -50,9 +51,13 @@ void FieldPacking::append(const FieldPacking& packing) {
     }
 }
 
-void FieldPacking::padToAlignment(unsigned alignment) {
-    if (isAlignedTo(alignment)) return;
-    appendPadding(alignment - totalWidth % alignment);
+void FieldPacking::padToAlignment(unsigned alignment, unsigned phase /* = 0 */) {
+    BUG_CHECK(alignment != 0, "Zero alignment is invalid");
+    const unsigned currentPhase = totalWidth % alignment;
+    unsigned desiredPhase = phase % alignment;
+    if (currentPhase > desiredPhase)
+        desiredPhase += alignment;  // Need to advance enough to "wrap around".
+    appendPadding(desiredPhase - currentPhase);
 }
 
 void FieldPacking::clear() {
@@ -66,8 +71,9 @@ bool FieldPacking::containsFields() const {
     return false;
 }
 
-bool FieldPacking::isAlignedTo(unsigned alignment) const {
-    return totalWidth % alignment == 0;
+bool FieldPacking::isAlignedTo(unsigned alignment, unsigned phase /* = 0 */) const {
+    BUG_CHECK(alignment != 0, "Zero alignment is invalid");
+    return totalWidth % alignment == phase % alignment;
 }
 
 const IR::Tofino::ParserState*
