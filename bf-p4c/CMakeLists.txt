@@ -115,6 +115,7 @@ set (TOFINO_BACKEND_MAU_SRCS
   mau/action_analysis.cpp
   mau/action_data_bus.cpp
   mau/action_format.cpp
+  mau/action_phv_constraints.cpp
   mau/asm_output.cpp
   mau/field_use.cpp
   mau/db-gateway.cpp
@@ -140,6 +141,7 @@ set (TOFINO_BACKEND_MAU_HDRS
   mau/action_analysis.h
   mau/action_data_bus.h
   mau/action_format.h
+  mau/action_phv_constraints.h
   mau/asm_output.h
   mau/default_next.h
   mau/field_use.h
@@ -356,6 +358,7 @@ set (GTEST_TOFINO_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/tofino_write_context.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/tofino_gtest_utils.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/trivial_alloc.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/action_phv.cpp
   )
 
 set (GTEST_SOURCES ${GTEST_SOURCES} ${GTEST_TOFINO_SOURCES} PARENT_SCOPE)
