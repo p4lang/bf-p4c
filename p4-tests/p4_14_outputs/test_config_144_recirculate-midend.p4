@@ -163,7 +163,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("NoAction") action NoAction_0() {
     }
     @name(".action_0") action action_1(bit<8> port) {
-        recirculate<bit<8>>(port);
+        recirculate<bit<9>>((bit<9>)port);
     }
     @name(".table_0") table table_0 {
         actions = {

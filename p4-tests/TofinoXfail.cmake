@@ -58,6 +58,10 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
 
 endif() # HARLYN_STF
 
+p4c_add_xfail_reason("tofino"
+  "error: Could not find declaration for verify_checksum"
+  testdata/p4_16_samples/checksum1-bmv2.p4
+  )
 
 # add the failures with no reason
 p4c_add_xfail_reason("tofino" "" ${TOFINO_XFAIL_TESTS})
@@ -385,6 +389,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/adb_shared3.p4
   extensions/p4_tests/p4_14/test_config_297_big_metadata.p4
   extensions/p4_tests/p4_14/jenkins/smoke_large_tbls/smoke_large_tbls.p4
+  extensions/p4_tests/p4_14/jenkins/emulation/emulation.p4
   )
 
 # BRIG-146 (also was BRIG-133)
@@ -429,6 +434,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_126_meter_pre_color_2.p4
   extensions/p4_tests/p4_14/test_config_127_meter_pre_color_3.p4
   extensions/p4_tests/p4_14/test_config_132_meter_pre_color_4.p4
+  extensions/p4_tests/p4_14/jenkins/mau_test/mau_test.p4
   )
 
 # various stateful
@@ -581,14 +587,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-276/case1844.p4
   extensions/p4_tests/p4_14/c1/COMPILER-282/case1864.p4
   extensions/p4_tests/p4_14/c1/COMPILER-499/case2560_min_2.p4
-  )
-
-# BRIG-137
-p4c_add_xfail_reason("tofino"
-  "error: : not enough operands for primitive"
-  extensions/p4_tests/p4_14/jenkins/emulation/emulation.p4
-  extensions/p4_tests/p4_14/jenkins/mau_test/mau_test.p4
-  extensions/p4_tests/p4_14/jenkins/resubmit/resubmit.p4
   )
 
 # BRIG-138

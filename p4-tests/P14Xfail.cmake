@@ -30,10 +30,7 @@ set (P14_XFAIL_TESTS
   extensions/p4_tests/p4_14/c2/COMPILER-533/case2736.p4
   extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
   extensions/p4_tests/p4_14/c3/COMPILER-393/case2277.p4
-  extensions/p4_tests/p4_14/jenkins/emulation/emulation.p4
   extensions/p4_tests/p4_14/jenkins/mau_test/mau_test.p4
-  extensions/p4_tests/p4_14/jenkins/emulation/emulation.p4
-  extensions/p4_tests/p4_14/jenkins/resubmit/resubmit.p4
   extensions/p4_tests/p4_14/jenkins/multi_device/multi_device.p4.p4
   extensions/p4_tests/p4_14/jenkins/meters/meters_one.p4
   extensions/p4_tests/p4_14/jenkins/drivers_test/drivers_test_one.p4

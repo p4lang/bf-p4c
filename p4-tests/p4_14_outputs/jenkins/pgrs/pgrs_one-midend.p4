@@ -265,7 +265,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("NoAction") action NoAction_9() {
     }
     @name(".local_recirc") action local_recirc_0(bit<8> local_port) {
-        recirculate<bit<8>>(local_port);
+        recirculate<bit<9>>((bit<9>)local_port);
     }
     @name(".port_down_ok") action port_down_ok_0() {
     }

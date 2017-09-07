@@ -255,7 +255,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".local_recirc") action local_recirc(bit<8> local_port) {
-        recirculate(local_port);
+        recirculate((bit<9>)local_port);
     }
     @name(".port_down_ok") action port_down_ok() {
     }

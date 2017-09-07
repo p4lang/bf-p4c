@@ -34,11 +34,9 @@ CONVERT_PRIMITIVE(recirculate, 5) {
     auto port = primitive->operands.at(0);
     if (!port->is<IR::Constant>() && !port->is<IR::ActionArg>()) return nullptr;
     port = conv.convert(port);
-    auto args = new IR::Vector<IR::Expression>();
-    args->push_back(port);
-    auto path = new IR::PathExpression(structure->v1model.recirculate.Id());
-    auto mc = new IR::MethodCallExpression(primitive->srcInfo, path, args);
-    return new IR::MethodCallStatement(mc->srcInfo, mc);
+    port = new IR::Cast(IR::Type::Bits::get(9), port);
+    return new IR::MethodCallStatement(primitive->srcInfo, structure->v1model.recirculate.Id(),
+                                       { port });
 }
 
 CONVERT_PRIMITIVE(sample_e2e) {
