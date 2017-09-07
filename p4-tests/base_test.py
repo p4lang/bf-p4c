@@ -19,6 +19,9 @@
 #
 
 import sys
+import threading
+import time
+import Queue
 
 import ptf
 from ptf.base_tests import BaseTest
@@ -62,8 +65,79 @@ class P4RuntimeTest(BaseTest):
         with open(proto_txt_path, "rb") as fin:
             google.protobuf.text_format.Merge(fin.read(), self.p4info)
 
+        self.set_up_stream()
+
+    def set_up_stream(self):
+        self.stream_out_q = Queue.Queue()
+        self.stream_in_q = Queue.Queue()
+        def stream_req_iterator():
+            while True:
+                p = self.stream_out_q.get()
+                if p is None:
+                    break
+                yield p
+
+        def stream_recv(stream):
+            for p in stream:
+                self.stream_in_q.put(p)
+
+        self.stream = self.stub.StreamChannel(stream_req_iterator())
+        self.stream_recv_thread = threading.Thread(
+            target=stream_recv, args=(self.stream,))
+        self.stream_recv_thread.start()
+
+        self.handshake()
+
+    def handshake(self):
+        req = p4runtime_pb2.StreamMessageRequest()
+        arbitration = req.arbitration
+        arbitration.device_id = self.device_id
+        # TODO(antonin): we currently allow 0 as the election id in P4Runtime;
+        # if this changes we will need to use an election id > 0 and update the
+        # Write message to include the election id
+        # election_id = arbitration.election_id
+        # election_id.high = 0
+        # election_id.low = 1
+        self.stream_out_q.put(req)
+
+        rep = self.get_stream_packet("arbitration", timeout=2)
+        if rep is None:
+            self.fail("Failed to establish handshake")
+
     def tearDown(self):
+        self.tear_down_stream()
         BaseTest.tearDown(self)
+
+    def tear_down_stream(self):
+        self.stream_out_q.put(None)
+        self.stream_recv_thread.join()
+
+    def get_packet_in(self, timeout=1):
+        msg = self.get_stream_packet("packet", timeout)
+        if msg is None:
+            self.fail("Packet in not received")
+        else:
+            return msg.packet
+
+    def get_stream_packet(self, type_, timeout=1):
+        start = time.time()
+        try:
+            while True:
+                remaining = timeout - (time.time() - start)
+                if remaining < 0:
+                    break
+                msg = self.stream_in_q.get(timeout=remaining)
+                if not msg.HasField(type_):
+                    continue
+                return msg
+        except:  # timeout expired
+            pass
+        return None
+
+    def send_packet_out(self, packet):
+        packet_out_req = p4runtime_pb2.StreamMessageRequest()
+        packet_out_req.packet.CopyFrom(packet)
+        self.stream_out_q.put(packet_out_req)
 
     def get_id(self, name, attr):
         for o in getattr(self.p4info, attr):
