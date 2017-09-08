@@ -201,11 +201,6 @@ fi
 if $run_ptf || $run_stf2ptf; then
     p4runtime_out=$testdir/${name}.out/p4info.proto.txt
     P4C_ARGS="$P4C_ARGS --p4runtime-file $p4runtime_out --p4runtime-format text"
-    # TODO(unknown): remove when -N (new context JSON format) becomes the
-    # default
-    if ! $debug; then
-        P4C_ARGS="$P4C_ARGS -Xassembler '-N'"
-    fi
     P4C_ARGS="$P4C_ARGS -DCPU_PORT=320"
 fi
 
