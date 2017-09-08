@@ -41,12 +41,20 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
 # warning: Container TW3 contains deparsed header fields, but it has unused bits: ( 22:ingress::h.v<1> I off=0 ref deparsed /t_phv_8,PHV-259;/|t_phv_8,0..0|[0:0]->[TW3](31); )
 # warning: Container TW19 contains deparsed header fields, but it has unused bits: ( 44:egress::h.v<1> E off=0 ref deparsed /t_phv_13,PHV-275;/|t_phv_13,0..0|[0:0]->[TW19](31); )
   testdata/p4_16_samples/table-entries-ternary-bmv2.p4
+
+  #Assertion failed: ((bit + field.bit_width - 1)/128U < data.size()), function get_sram_field, file table.cpp, line 60
+  testdata/p4_14_samples/exact_match4.p4
+  testdata/p4_14_samples/exact_match5.p4
   )
 
   p4c_add_xfail_reason("tofino"
     "expected packet on port .* not seen"
     testdata/p4_14_samples/basic_routing.p4
     testdata/p4_14_samples/exact_match_mask1.p4
+    testdata/p4_14_samples/07-MultiProtocol.p4
+    testdata/p4_14_samples/exact_match_valid1.p4
+    testdata/p4_14_samples/gateway4.p4
+    testdata/p4_14_samples/hitmiss.p4
     )
 
   p4c_add_xfail_reason("tofino"
@@ -54,6 +62,7 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     extensions/p4_tests/p4_16/stack_valid.p4
     extensions/p4_tests/p4_14/adjust_instr4.p4
     extensions/p4_tests/p4_14/adb_shared2.p4
+    testdata/p4_14_samples/ternary_match4.p4
     )
 
 endif() # HARLYN_STF
@@ -708,7 +717,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "error: PHV allocation was not successful"
+  "PHV allocation was not successful"
   testdata/p4_14_samples/06-FullTPHV1.p4
   testdata/p4_14_samples/07-FullTPHV2.p4
   testdata/p4_14_samples/05-FullTPHV.p4
@@ -718,6 +727,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
   extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
   extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
   extensions/p4_tests/p4_14/switch_20160602/switch.p4
   )

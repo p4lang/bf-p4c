@@ -18,7 +18,7 @@ option_t options = {
     .target = TOFINO,
     .match_compiler = false,
     .condense_json = true,
-    .new_ctx_json = false,
+    .new_ctx_json = true,
 };
 
 
@@ -129,6 +129,9 @@ int main(int ac, char **av) {
             options.target = TOFINO;
         } else if (!strcmp(av[i], "--jbay")) {
             options.target = JBAY;
+        } else if (!strcmp(av[i], "--old_json")) {
+            /* XXX(hanw): Temporary flag to use old ctxt json, to be removed */
+            options.new_ctx_json = false;
         } else if (av[i][0] == '-' || av[i][0] == '+') {
             bool flag = av[i][0] == '+';
             for (char *arg = av[i]+1; *arg;)
@@ -162,9 +165,6 @@ int main(int ac, char **av) {
                     break;
                 case 'C':
                     options.condense_json = true;
-                    break;
-                case 'N':
-                    options.new_ctx_json = true;
                     break;
                 case 'M':
                     options.match_compiler = true;
