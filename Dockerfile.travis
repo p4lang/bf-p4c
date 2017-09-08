@@ -50,4 +50,6 @@ WORKDIR /bfn/bf-p4c-compilers
 RUN pip install pyinstaller
 RUN ./bootstrap_bfn_compilers.sh && \
     cd build && \
-    make && make install
+    make && \
+    make install && \
+    /usr/local/bin/ccache -p -s
