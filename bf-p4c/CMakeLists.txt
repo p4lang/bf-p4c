@@ -205,6 +205,7 @@ set (TOFINO_BACKEND_PHV_SRCS
   phv/cluster_phv_req.cpp
   phv/cluster_phv_slicing.cpp
   phv/create_thread_local_instances.cpp
+  phv/field_alignment.cpp
   phv/phv.cpp
   phv/phv_analysis_api.cpp
   phv/phv_analysis_validate.cpp
@@ -230,6 +231,7 @@ set (TOFINO_BACKEND_PHV_HDRS
   phv/cluster_phv_req.h
   phv/cluster_phv_slicing.h
   phv/create_thread_local_instances.h
+  phv/field_alignment.h
   phv/phv_analysis_api.h
   phv/phv_assignment_api.h
   phv/phv_assignment_validate.h

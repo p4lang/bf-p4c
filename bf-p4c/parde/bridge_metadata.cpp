@@ -15,15 +15,20 @@ class AddBridgedMetadata::FindFieldsToBridge : public ThreadVisitor, Inspector {
                     if (bridgedFields.find(field) == bridgedFields.end()) {
                       LOG2("bridging field " << loc.second << " id=" << field->id);
                       bridgedFields.insert(field);
-                      // XXX(seth): We should pack these fields more efficiently...
+
+                      // If this field has an alignment constraint, make sure
+                      // that we generate a packing that respects it.
+                      if (field->alignment)
+                          self.packing.padToAlignment(8, field->alignment->network);
+
                       self.packing.appendField(loc.second,
                                                loc.second->type->width_bits());
-                      self.packing.padToAlignment(8);
                     }
                     break; } }
             return false;
         } else {
             return true; } }
+
  public:
     explicit FindFieldsToBridge(AddBridgedMetadata &self) : ThreadVisitor(INGRESS), self(self) {}
 };
@@ -55,6 +60,10 @@ class AddBridgedMetadata::AddBridge : public PardeModifier {
         auto start = transformAllMatching<IR::Tofino::ParserState>(parser->start,
                      [this](const IR::Tofino::ParserState* state) {
             if (state->name != "$bridged_metadata") return state;
+
+            // Pad the field packing out to a byte boundary so the resulting
+            // parser state will extract an integer number of bytes.
+            self.packing.padToAlignment(8);
 
             // Replace this placeholder state with a generated parser program
             // that extracts the bridged metadata.

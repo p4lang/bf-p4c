@@ -1,7 +1,9 @@
 #ifndef _TOFINO_PHV_PHV_FIELDS_H_
 #define _TOFINO_PHV_PHV_FIELDS_H_
 
+#include <boost/optional.hpp>
 #include <boost/range/irange.hpp>
+
 #include "phv.h"
 #include "ir/ir.h"
 #include "lib/map.h"
@@ -11,6 +13,7 @@
 #include "tofino/ir/thread_visitor.h"
 #include "tofino/ir/bitrange.h"
 #include "tofino/ir/tofino_write_context.h"
+#include "tofino/phv/field_alignment.h"
 
 namespace PHV {
 class ManualAlloc;
@@ -64,10 +67,14 @@ class PhvInfo {
         gress_t         gress;
         /// Total size of Field in bits.
         int             size;
+        /// The alignment requirement of this field. If boost::none, there is no
+        /// particular alignment requirement.
+        boost::optional<FieldAlignment> alignment;
         /// Offset of lsb from lsb (last) bit of containing header.
         int             offset;
         /// True if this Field is metadata.
         bool            metadata;
+        /// True if this Field is metadata bridged from ingress to egress.
         bool            bridged = false;
         /// A mirror field points to its field list (one of eight)
         struct mirror_field_list_t {
@@ -163,10 +170,16 @@ class PhvInfo {
             int hi,
             std::function<void(const alloc_slice &)> fn) const;
         void foreach_byte(int lo, int hi, std::function<void(const alloc_slice &)> fn) const;
+
+        /// Update the alignment requirement for this field. Reports an error if
+        /// conflicting requirements render the alignment unsatisfiable.
+        void updateAlignment(const FieldAlignment& newAlignment);
+
         //
         // friends of phv_assignment interface
         //
         friend struct CollectPhvFields;
+        friend struct ComputeFieldAlignments;
         friend class SplitPhvUse;             // phv/split_phv_use
         friend class PHV::ManualAlloc;        // phv/trivial_alloc
         friend class PHV::TrivialAlloc;       // phv/trivial_alloc

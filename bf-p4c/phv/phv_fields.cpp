@@ -713,6 +713,26 @@ PhvInfo::Field::field_overlay(Field *overlay, int phv_number) {
     overlay->overlay_substratum()->field_overlay_map(overlay, phv_number);
 }
 
+void PhvInfo::Field::updateAlignment(const FieldAlignment& newAlignment) {
+    LOG2("Inferred alignment " << newAlignment << " for field " << name);
+
+    // If there's no existing alignment for this field, just take this one.
+    if (!alignment) {
+        alignment = newAlignment;
+        return;
+    }
+
+    // If there is an existing alignment, it must agree with this new one.
+    // Otherwise the program is inconsistent and we can't compile it.
+    // XXX(seth): We actually could, in theory, handle such a situation by
+    // creating two different versions of the field with different alignments
+    // and copying between them as needed in the MAU. Not cheap, though.
+    ERROR_CHECK(*alignment == newAlignment,
+                "Inferred incompatible alignments for field %1%: %2% != %3%",
+                name, cstring::to_cstring(newAlignment),
+                cstring::to_cstring(*alignment));
+}
+
 
 //***********************************************************************************
 //
@@ -908,11 +928,77 @@ struct AllocatePOVBits : public Inspector {
     PhvInfo& phv;
 };
 
+/// Examine how fields are used in the parser and deparser to compute their
+/// alignment requirements.
+struct ComputeFieldAlignments : public Inspector {
+    explicit ComputeFieldAlignments(PhvInfo& phv) : phv(phv) { }
+
+ private:
+    bool preorder(const IR::Tofino::ExtractBuffer* extract) override {
+        auto* fieldInfo = phv.field(extract->dest);
+        if (!fieldInfo) {
+            ::warning("No allocation for field %1%", extract->dest);
+            return false;
+        }
+
+        // The alignment required for a parsed field is determined by the
+        // position from which it's read from the wire.
+        fieldInfo->updateAlignment(FieldAlignment(extract->extractedBits()));
+
+        return false;
+    }
+
+    bool preorder(const IR::Tofino::Deparser* deparser) override {
+        unsigned currentBit = 0;
+
+        for (auto* emitPrimitive : deparser->emits) {
+            // XXX(seth): Right now we treat EmitChecksum as not inducing any
+            // particular alignment, but we will need to revisit that.
+            auto* emit = emitPrimitive->to<IR::Tofino::Emit>();
+            if (!emit) continue;
+
+            auto* fieldInfo = phv.field(emit->source);
+            if (!fieldInfo) {
+                ::warning("No allocation for field %1%", emit->source);
+                currentBit = 0;
+                continue;
+            }
+
+            // We don't enforce any particular alignment for bridged metadata in
+            // the deparser, because we don't care about garbage bits being
+            // mixed in with bridged metadata; it won't be leave the
+            // device or be visible to P4. Just skip over it to the next
+            // byte-aligned position.
+            if (fieldInfo->metadata && fieldInfo->bridged) {
+                currentBit += fieldInfo->size;
+                if (currentBit % 8 != 0)
+                    currentBit += 8 - currentBit % 8;
+                continue;
+            }
+
+            // For other deparsed fields, the alignment requirement is induced
+            // by the position at which the field will be written on the wire.
+            // We can behave as if every field will be deparsed (i.e., all POV
+            // bits are set) because any sequential group of deparsed fields
+            // with the same POV bits must be byte-aligned in a valid Tofino P4
+            // program. (If not, you'd end up with garbage bits on the wire.)
+            nw_bitrange emittedBits(currentBit, currentBit + fieldInfo->size - 1);
+            fieldInfo->updateAlignment(FieldAlignment(emittedBits));
+            currentBit += fieldInfo->size;
+        }
+
+        return false;
+    }
+
+    PhvInfo& phv;
+};
+
 CollectPhvInfo::CollectPhvInfo(PhvInfo& phv) {
     addPasses({
         new CollectPhvFields(phv),
         new AllocatePOVBits(phv),
-        new MarkBridgedMetadataFields(phv)
+        new MarkBridgedMetadataFields(phv),
+        new ComputeFieldAlignments(phv)
     });
 }
 
