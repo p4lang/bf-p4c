@@ -535,15 +535,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/jenkins/multicast_scale/multicast_scale.p4
   )
 
-# BRIG-28
-# P4_14->16 unhandled primitives
-# also BRIG-180
-#  extensions/p4_tests/p4_14/test_config_284_swap_primitive.p4
-p4c_add_xfail_reason("tofino"
-  "Unsupported primitive"
-  extensions/p4_tests/p4_14/test_config_284_swap_primitive.p4
-  )
-
 p4c_add_xfail_reason("tofino"
   "error: : conditional assignment not supported"
   extensions/p4_tests/p4_14/test_config_219_modify_field_conditionally.p4
@@ -707,6 +698,10 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Constant lookup does not match the ActionFormat"
   testdata/p4_14_samples/action_inline.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Conflicting hash distribution unit groups"
   extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
   )
 

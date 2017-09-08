@@ -218,6 +218,10 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
     const IR::Expression *isActionParam(const IR::Expression *expr,
         bitrange *bits_out = nullptr, ActionParam::type_t *type = nullptr);
 
+    bool preorder(const IR::MAU::Action *) override { visitOnce(); return true; }
+    bool preorder(const IR::MAU::Table *) override { visitOnce(); return true; }
+    bool preorder(const IR::MAU::TableSeq *) override { visitOnce(); return true; }
+
     bool preorder(const IR::Slice *) override;
     bool preorder(const IR::ActionArg *) override;
     bool preorder(const IR::Expression *) override;
@@ -272,7 +276,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
     void set_verbose() { verbose = true; }
 
     ActionAnalysis(const PhvInfo &p, bool pa, bool aa, const IR::MAU::Table *t)
-        : phv(p), phv_alloc(pa), ad_alloc(aa), tbl(t) {}
+        : phv(p), phv_alloc(pa), ad_alloc(aa), tbl(t) { visitDagOnce = false; }
 };
 
 #endif /* EXTENSIONS_TOFINO_MAU_ACTION_ANALYSIS_H_ */

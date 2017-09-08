@@ -64,4 +64,18 @@ CONVERT_PRIMITIVE(sample_e2e) {
                         new IR::PathExpression(fn), args));
 }
 
+CONVERT_PRIMITIVE(swap) {
+    if (primitive->operands.size() != 2) return nullptr;
+    ExpressionConverter conv(structure);
+    auto temp = IR::ID(structure->makeUniqueName("temp"));
+    auto v1 = primitive->operands.at(0);
+    auto v2 = primitive->operands.at(1);
+    auto type = v1->type;
+    return new IR::BlockStatement({
+        new IR::Declaration_Variable(temp, type, conv.convert(v1)),
+        structure->assign(primitive->srcInfo, conv.convert(v1), conv.convert(v2), type),
+        structure->assign(primitive->srcInfo, conv.convert(v2), new IR::PathExpression(temp), type)
+    });
+}
+
 }  // end namespace P4V1
