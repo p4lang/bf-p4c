@@ -66,6 +66,7 @@ set(EXTENSION_P4_14_CONV_SOURCES ${EXTENSION_P4_14_CONV_SOURCES} ${QUAL_TOFINO_P
 
 set (TOFINO_BACKEND_COMMON_SRCS
   common/asm_output.cpp
+  common/check_header_alignment.cpp
   common/copy_header_eliminator.cpp
   common/elim_unused.cpp
   common/extract_maupipe.cpp
@@ -84,6 +85,7 @@ set (TOFINO_BACKEND_COMMON_SRCS
 
 set (TOFINO_BACKEND_COMMON_HDRS
   common/blockmap.h
+  common/check_header_alignment.h
   common/copy_header_eliminator.h
   common/elim_unused.h
   common/extract_maupipe.h

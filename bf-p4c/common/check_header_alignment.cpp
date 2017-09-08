@@ -1,0 +1,31 @@
+/*
+Copyright 2013-present Barefoot Networks, Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+#include "tofino/common/check_header_alignment.h"
+#include "tofino/common/machine_description.h"
+
+#include "ir/ir.h"
+
+namespace Tofino {
+
+bool CheckHeaderAlignment::preorder(const IR::Type_Header* header) {
+    ERROR_CHECK(header->width_bits() % 8 == 0,
+                "%1% requires byte-aligned headers, but header %2% is not "
+                "byte-aligned", Tofino::Description::ModelName, header->name);
+    return false;
+}
+
+}  // namespace Tofino

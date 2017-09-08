@@ -48,6 +48,7 @@ limitations under the License.
 #include "midend/tableHit.h"
 #include "midend/validateProperties.h"
 #include "common/blockmap.h"
+#include "common/check_header_alignment.h"
 #include "common/remap_intrin.h"
 
 namespace Tofino {
@@ -124,6 +125,7 @@ MidEnd::MidEnd(CompilerOptions&) {
         P4V1::V1Model::instance.sw.deparser.name };
 
     addPasses({
+        new Tofino::CheckHeaderAlignment,
         new P4::ConvertEnums(&refMap, &typeMap, new EnumOn32Bits()),
         new P4::RemoveReturns(&refMap),
         new P4::MoveConstructors(&refMap),

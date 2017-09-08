@@ -790,6 +790,27 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/table-entries-valid-bmv2.p4
   )
 
+# These programs include non-byte-aligned headers, which are not supported on
+# Tofino.
+# XXX(seth): We're obviously losing some test coverage here; perhaps we should
+# adjust some of these tests to not trigger this error?
+p4c_add_xfail_reason("tofino"
+  "header .* is not byte-aligned"
+  testdata/p4_14_samples/14-SplitEthernetVlan.p4
+  testdata/p4_14_samples/02-BadSizeField.p4
+  testdata/p4_14_samples/14-GatewayGreaterThan.p4
+  testdata/p4_16_samples/table-entries-priority-bmv2.p4
+  testdata/p4_16_samples/table-entries-valid-bmv2.p4
+  testdata/p4_16_samples/inline-stack-bmv2.p4
+  testdata/p4_16_samples/table-entries-range-bmv2.p4
+  testdata/p4_16_samples/table-entries-lpm-bmv2.p4
+  testdata/p4_16_samples/table-entries-exact-bmv2.p4
+  testdata/p4_16_samples/table-entries-ternary-bmv2.p4
+  testdata/p4_16_samples/table-entries-exact-ternary-bmv2.p4
+  testdata/p4_16_samples/issue134-bmv2.p4
+  extensions/p4_tests/p4_14/test_config_236_stateful_read_bit.p4
+)
+
 if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
   # STF2PTF tests that fail
   p4c_add_xfail_reason("tofino"
