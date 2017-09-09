@@ -784,7 +784,7 @@ p4c_add_xfail_reason("tofino"
 if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
   # STF2PTF tests that fail
   p4c_add_xfail_reason("tofino"
-    "AssertionError: Did not receive expected pkt on device"
+    "AssertionError: Expected packet was not received on device"
     extensions/p4_tests/p4_14/action_default_multiple.p4
     extensions/p4_tests/p4_14/adb_shared2.p4
     extensions/p4_tests/p4_14/adjust_instr3.p4
@@ -792,24 +792,17 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     extensions/p4_tests/p4_14/counter_test1.p4
     extensions/p4_tests/p4_16/depgraph1.p4
     extensions/p4_tests/p4_16/parser_metadata_init.p4
-    extensions/p4_tests/p4_16/ternary1.p4
+    extensions/p4_tests/p4_16/stack_valid.p4
     extensions/p4_tests/p4_16/ternary2.p4
     testdata/p4_14_samples/action_chain1.p4
-    testdata/p4_14_samples/action_inline1.p4
-    testdata/p4_14_samples/action_inline2.p4
-    testdata/p4_14_samples/bigfield1.p4
-    testdata/p4_14_samples/bridge1.p4
-    testdata/p4_14_samples/exact_match1.p4
-    testdata/p4_14_samples/exact_match2.p4
     testdata/p4_14_samples/exact_match3.p4
     testdata/p4_14_samples/gateway1.p4
     testdata/p4_14_samples/gateway2.p4
     testdata/p4_14_samples/gateway3.p4
     testdata/p4_14_samples/gateway4.p4
-    testdata/p4_14_samples/hitmiss.p4
-    testdata/p4_14_samples/ternary_match1.p4
+    testdata/p4_14_samples/instruct5.p4
+    testdata/p4_14_samples/repeater.p4
     testdata/p4_14_samples/ternary_match2.p4
-    testdata/p4_14_samples/ternary_match3.p4
     testdata/p4_14_samples/ternary_match4.p4
     testdata/p4_16_samples/issue635-bmv2.p4
     testdata/p4_16_samples/table-entries-priority-bmv2.p4
@@ -824,15 +817,6 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     testdata/p4_14_samples/counter1.p4
     testdata/p4_14_samples/counter3.p4
     testdata/p4_14_samples/counter4.p4
-    )
-
-  # STF test issues: non-qualified field names or such
-  p4c_add_xfail_reason("tofino"
-    "self.get_mf_match"
-    extensions/p4_tests/p4_16/stack_valid.p4
-    testdata/p4_14_samples/instruct5.p4
-    testdata/p4_14_samples/instruct6.p4
-    testdata/p4_14_samples/repeater.p4
     )
 
   # P4Runtime UNIMPLEMENTED

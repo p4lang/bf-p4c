@@ -19,7 +19,6 @@ from base_test import stringify
 
 from stf_parser import STFParser
 
-
 def protobuf_enum(type_name, protobuf_enum_type):
     enums = dict(protobuf_enum_type.items())
     reverse = dict((value, key) for key, value in enums.iteritems())
@@ -38,31 +37,6 @@ def protobuf_enum(type_name, protobuf_enum_type):
     return type(type_name, (), enums)
 
 MatchType = protobuf_enum('MatchType', p4info_pb2.MatchField.MatchType)
-
-def match_ternary(expected, received):
-    if len(expected) > len(received):
-        logging.debug("Received packet length %d shorter than expected %d", len(received), len(expected))
-        return False;
-    for (e, r) in zip(expected, str(received)):
-        if e != '*' and e != r:
-            return False
-    return True
-
-def check_packet(test, pkt, port_id):
-    """
-    Check that an expected packet is received
-    port_id can either be a single integer (port_number on default device 0)
-    or a tuple of 2 integers (device_number, port_number)
-    The packet matching is customized to compare against ternaries
-    """
-    device, port = port_to_tuple(port_id)
-    logging.debug("Checking for pkt on device %d, port %d", device, port)
-    (rcv_device, rcv_port, rcv_pkt, pkt_time) = dp_poll(
-        test, device_number=device, port_number=port, timeout=2, exp_pkt=None)
-    if pkt is not None and rcv_pkt is not None and not match_ternary(pkt, rcv_pkt):
-        rcv_pkt = None
-    test.assertTrue(rcv_pkt != None, "Did not receive expected pkt on device %d, port %r" % (device, port))
-
 
 class stf2ptf (P4RuntimeTest):
 
@@ -251,10 +225,10 @@ class stf2ptf (P4RuntimeTest):
             testutils.verify_packet(self, None, port)
             return
         elif orig_packet is None:
-            expected = self.encodePacket(payload)
+            expected = self.encodePacket(payload, padIt = False)
         else:
-            expected = self.encodePacket(self.setExpectTern(payload, orig_packet[2]))
-        check_packet(self, expected, port)
+            expected = self.encodePacket(self.setExpectTern(payload, orig_packet[2]), padIt = False)
+        testutils.verify_packet(self, expected, port)
 
     def genProcessPacket(self, pkt_pair):
         """
@@ -333,6 +307,11 @@ class stf2ptf (P4RuntimeTest):
             Returning a hasMask = False means there were no don't care symbols in the value
         """
         name = match_name.translate(self._transTable)
+        # STF also allows stacks to be expressed as name$index
+        def replStackIndex(matchobj):
+            if matchobj.group(2) is not None:
+                return matchobj.group(1) + '[' + matchobj.group(2) + ']' + matchobj.group(3)
+        name = re.sub(r"(\w+)\$(\d+)(.*)", replStackIndex, name)
         hasMask = False
         isBinary = False
         lpmLen = -1
@@ -386,13 +365,13 @@ class stf2ptf (P4RuntimeTest):
             return int(math.ceil(value.bit_length()/8.0))
 
 
-    def encodePacket(self, packet):
+    def encodePacket(self, packet, padIt = True):
         if packet is None:
             return None
         p = int(packet, base=16)
         pLen = len(packet)/2 + (len(packet) % 2)
         pad = 0
-        if pLen < 20:
+        if padIt and pLen < 20:
             # Pad the packet so that it is sent by the Linux kernel (15 bytes min size)
             pad = 20 - pLen
             self._hasPadding = True
@@ -432,7 +411,16 @@ class stf2ptf (P4RuntimeTest):
         return 0
 
     def get_mf_match(self, table_name, field, value, length_or_mask):
+        std_metadata = ["ingress_port", "egress_spec", "egress_port",
+                        "clone_spec", "instance_type", "drop",
+                        "recirculate_port", "packet_length"
+        ]
         match_type = self.get_mf_match_type(table_name, field)
+        # try as metadata if the field was not found
+        if match_type == MatchType.UNSPECIFIED and field in std_metadata:
+            field = "standard_metadata." + field
+            match_type = self.get_mf_match_type(table_name, field)
+
         val = self.match2int(value)
         valLen = int(math.ceil(self.get_mf_bitwidth(table_name, field)/8.0))
         if match_type == MatchType.EXACT:
@@ -447,6 +435,5 @@ class stf2ptf (P4RuntimeTest):
                                field, val, valLen, self.match2int(length_or_mask), valLen)
             return self.Ternary(field, stringify(val, valLen),
                                 stringify(self.match2int(length_or_mask), valLen))
-        self._logger.critical("Unsupported match type %s for field %s in table %s",
-                              MatchType.to_str(match_type), field, table_name)
-        sys.exit(1)
+        self.fail("Unsupported match type %s for field %s in table %s" % \
+                  (MatchType.to_str(match_type), field, table_name))

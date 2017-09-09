@@ -249,7 +249,7 @@ class STFParser:
     # for now we escape the brackets ...
     def p_qualified_name_array(self, p):
         'qualified_name : ID LBRACKET INT_CONST_DEC RBRACKET'
-        p[0] = p[1] + '_' + p[3] + '_'
+        p[0] = p[1] + '[' + p[3] + ']'
 
     def p_qualified_name_many(self, p):
         'qualified_name : qualified_name DOT ID'

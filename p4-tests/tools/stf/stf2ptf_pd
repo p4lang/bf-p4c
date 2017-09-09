@@ -20,7 +20,7 @@ class STF2PTF:
     __metaclass__ = abc.ABCMeta
 
     def __init__(self, ast, testname):
-        testNameEscapeChars = "-."
+        testNameEscapeChars = "-.[]"
         testNameEscapes = "_"*len(testNameEscapeChars)
         self._transTable = maketrans(testNameEscapeChars,testNameEscapes)
         self._ast = ast
