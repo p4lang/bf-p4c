@@ -73,6 +73,27 @@ class CheckTableNameDuplicate : public MauInspector {
         return true; }
 };
 
+/**
+ * A class to collect all currently unimplemented features
+ * and control whether we print an error (for debugging) or exit
+ */
+class CheckUnimplementedFeatures : public Inspector {
+  bool _printAndNotExit;
+public:
+  CheckUnimplementedFeatures(bool print = false) : _printAndNotExit(print) {}
+
+  bool preorder (const IR::EntriesList *entries) {
+    auto source = entries->getSourceInfo().toPosition();
+    if (_printAndNotExit)
+      ::warning("Table entries (%s) are not yet implemented in this backend",
+                source.toString());
+    else
+      throw Util::CompilerUnimplemented(source.sourceLine, source.fileName,
+                "Table entries are not yet implemented in this backend");
+    return false;
+  }
+};
+
 struct DumpPipe : public Inspector {
     const char *heading;
     DumpPipe() : heading(nullptr) {}
@@ -303,6 +324,7 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
         new SplitBigStates(phv),  // depends on SplitPhvUse
         new DumpPipe("Final table graph"),
         new CheckTableNameDuplicate,
+        new CheckUnimplementedFeatures(options.allowUnimplemented),
         new AsmOutput(phv, options.outputFile)
     };
     backend.setName("Tofino backend");

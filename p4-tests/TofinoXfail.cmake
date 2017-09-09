@@ -28,19 +28,12 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
   # default drop packet instead of writing to port 0
   testdata/p4_16_samples/issue635-bmv2.p4
   testdata/p4_16_samples/issue655-bmv2.p4
-  # no support for static entries
-  testdata/p4_16_samples/table-entries-exact-bmv2.p4
-  testdata/p4_16_samples/table-entries-exact-ternary-bmv2.p4
-  testdata/p4_16_samples/table-entries-lpm-bmv2.p4
-  testdata/p4_16_samples/table-entries-priority-bmv2.p4
-  testdata/p4_16_samples/table-entries-range-bmv2.p4
 # The STF test fails due to malformed packet data.
 # XXX(seth): I haven't had a chance to deeply analyze the problem, but nothing
 # looks wrong in the parser or deparser program that we generate. The following
 # PHV allocation validation warnings are suggestive:
 # warning: Container TW3 contains deparsed header fields, but it has unused bits: ( 22:ingress::h.v<1> I off=0 ref deparsed /t_phv_8,PHV-259;/|t_phv_8,0..0|[0:0]->[TW3](31); )
 # warning: Container TW19 contains deparsed header fields, but it has unused bits: ( 44:egress::h.v<1> E off=0 ref deparsed /t_phv_13,PHV-275;/|t_phv_13,0..0|[0:0]->[TW19](31); )
-  testdata/p4_16_samples/table-entries-ternary-bmv2.p4
 
   #Assertion failed: ((bit + field.bit_width - 1)/128U < data.size()), function get_sram_field, file table.cpp, line 60
   testdata/p4_14_samples/exact_match4.p4
@@ -785,6 +778,18 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_21_tcam_vpns.p4
 )
 
+# no support for static entries
+p4c_add_xfail_reason("tofino"
+  "Table entries are not yet implemented in this backend"
+  testdata/p4_16_samples/table-entries-exact-bmv2.p4
+  testdata/p4_16_samples/table-entries-exact-ternary-bmv2.p4
+  testdata/p4_16_samples/table-entries-lpm-bmv2.p4
+  testdata/p4_16_samples/table-entries-priority-bmv2.p4
+  testdata/p4_16_samples/table-entries-range-bmv2.p4
+  testdata/p4_16_samples/table-entries-ternary-bmv2.p4
+  testdata/p4_16_samples/table-entries-valid-bmv2.p4
+  )
+
 if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
   # STF2PTF tests that fail
   p4c_add_xfail_reason("tofino"
@@ -809,10 +814,6 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     testdata/p4_14_samples/ternary_match2.p4
     testdata/p4_14_samples/ternary_match4.p4
     testdata/p4_16_samples/issue635-bmv2.p4
-    testdata/p4_16_samples/table-entries-priority-bmv2.p4
-    testdata/p4_16_samples/table-entries-ternary-bmv2.p4
-    testdata/p4_16_samples/table-entries-exact-ternary-bmv2.p4
-    testdata/p4_16_samples/table-entries-exact-bmv2.p4
     testdata/p4_16_samples/ternary2-bmv2.p4
     )
 
@@ -821,27 +822,6 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     testdata/p4_14_samples/counter1.p4
     testdata/p4_14_samples/counter3.p4
     testdata/p4_14_samples/counter4.p4
-    )
-
-  # P4Runtime UNIMPLEMENTED
-  p4c_add_xfail_reason("tofino"
-    "_Rendezvous of RPC that terminated .*StatusCode.UNIMPLEMENTED"
-    testdata/p4_14_samples/07-MultiProtocol.p4
-    testdata/p4_14_samples/basic_routing.p4
-    )
-
-  # P4Runtime code gen?
-  p4c_add_xfail_reason("tofino"
-    "_Rendezvous of RPC that terminated .*StatusCode.UNAVAILABLE"
-    extensions/p4_tests/p4_14/meter_test1.p4
-    testdata/p4_14_samples/exact_match4.p4
-    testdata/p4_14_samples/exact_match5.p4
-    )
-
-  # P4Runtime code gen?
-  p4c_add_xfail_reason("tofino"
-    "_Rendezvous of RPC that terminated .*StatusCode.INVALID_ARGUMENT, Cannot map table entry to handle"
-    testdata/p4_14_samples/counter2.p4
     )
 
   # P4runtime p4info.proto gen
@@ -905,12 +885,18 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
 
   p4c_add_xfail_reason("tofino"
     "Error when trying to push config to bf_switchd"
+    testdata/p4_14_samples/07-MultiProtocol.p4
+    testdata/p4_14_samples/basic_routing.p4
+    testdata/p4_14_samples/counter2.p4
+    testdata/p4_14_samples/exact_match4.p4
+    testdata/p4_14_samples/exact_match5.p4
     testdata/p4_14_samples/exact_match_valid1.p4
     testdata/p4_14_samples/hash_action_basic.p4
     testdata/p4_14_samples/hash_action_gateway.p4
     testdata/p4_14_samples/hash_action_two_separate.p4
     testdata/p4_14_samples/tmvalid.p4
     extensions/p4_tests/p4_14/hash_calculation_32.p4
+    extensions/p4_tests/p4_14/meter_test1.p4
     extensions/p4_tests/p4_14/stateful0.p4
     extensions/p4_tests/p4_14/stateful1.p4
     extensions/p4_tests/p4_14/stateful2.p4
@@ -918,15 +904,6 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     extensions/p4_tests/p4_16/stateful1.p4
     extensions/p4_tests/p4_16/stateful2.p4
     extensions/p4_tests/p4_14/adb_multiple_size_immediates.p4
-    )
-
-  # insufficient interfaces in ptf_runner.
-  # Not worth fixing at this time, as static entries are not yet
-  # supported in the backend
-  p4c_add_xfail_reason("tofino"
-    "KeyError:"
-    testdata/p4_16_samples/table-entries-lpm-bmv2.p4
-    testdata/p4_16_samples/table-entries-range-bmv2.p4
     )
 
 endif() # PTF_REQUIREMENTS_MET

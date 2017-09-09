@@ -12,6 +12,7 @@ class Tofino_Options : public CompilerOptions {
     bool phv_overlay = true;
     bool ignorePHVOverflow = false;
     bool native_arch = false;
+    bool allowUnimplemented = false;
 
     Tofino_Options() {
         registerOption("--trivpa", nullptr,
@@ -32,6 +33,9 @@ class Tofino_Options : public CompilerOptions {
         registerOption("--native", nullptr,
             [this](const char *) { native_arch = true; return true; },
             "use tofino native model as target architecture (experimental)");
+        registerOption("--allowUnimplemented", nullptr,
+            [this](const char *) { allowUnimplemented = true; return true; },
+            "allow assemby generation even if there are unimplemented features in the P4 code");
         target = "tofino-v1model-barefoot";
     }
 };
