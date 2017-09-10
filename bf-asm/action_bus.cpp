@@ -143,11 +143,8 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
         if (kv.key.type == tRANGE) {
             idx = kv.key.lo;
             unsigned size = (kv.key.hi-idx+1) * 8;
-            if (!sz) sz = size;
-            //if (f && size != f->size) {
-            //    error(kv.key.lineno, "Byte range doesn't match size %d of %s",
-            //          f->size, name);
-            //    continue; }
+            // Make slot size (sz) same as no. of bytes allocated on action bus.
+            if (size > sz) sz = size;
         } else if (!sz)
             sz = idx < ACTION_DATA_8B_SLOTS ? 8 :
                  idx < ACTION_DATA_8B_SLOTS + 2*ACTION_DATA_16B_SLOTS ? 16 : 32;
@@ -484,6 +481,8 @@ int ActionBus::find(Table::Format::Field *f, int off, int size /* in bytes */) {
         /* FIXME -- see test/action_bus1.p4 */
         if (off < (int)f->size && off - slot.second.data[f] >= slot.second.size) continue;
         if (!(size & slot_sizes[slot.first/32U])) continue;
+        // Check if slot can accommodate the desired field size
+        if (std::min((int)f->size - off, size * 8) > slot.second.size) continue;
         return slot.first + (off - slot.second.data[f])/8U; }
     return -1;
 }

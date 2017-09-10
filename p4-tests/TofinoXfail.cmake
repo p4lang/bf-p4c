@@ -776,6 +776,15 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/sai_p4.p4
 )
 
+# BRIG-226
+# immediates are placed on disallowed bytes on the action bus
+p4c_add_xfail_reason("tofino"
+  "immediate is not on the action bus"
+  extensions/p4_tests/p4_14/test_config_87_share_parameter_for_different_containers.p4
+  extensions/p4_tests/p4_14/test_tp_1_one_table_spill.p4
+  extensions/p4_tests/p4_14/test_config_21_tcam_vpns.p4
+)
+
 if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
   # STF2PTF tests that fail
   p4c_add_xfail_reason("tofino"
@@ -908,6 +917,7 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     extensions/p4_tests/p4_14/stateful3.p4
     extensions/p4_tests/p4_16/stateful1.p4
     extensions/p4_tests/p4_16/stateful2.p4
+    extensions/p4_tests/p4_14/adb_multiple_size_immediates.p4
     )
 
   # insufficient interfaces in ptf_runner.
@@ -918,4 +928,5 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     testdata/p4_16_samples/table-entries-lpm-bmv2.p4
     testdata/p4_16_samples/table-entries-range-bmv2.p4
     )
+
 endif() # PTF_REQUIREMENTS_MET

@@ -692,7 +692,7 @@ void Table::Format::pass2(Table *tbl) {
     int word = -1;
     bool err = false;
     for (auto &f : fmt[0]) {
-        int byte_slot = tbl->find_on_actionbus(&f.second, 0, 7);
+        int byte_slot = tbl->find_on_actionbus(&f.second, 0, f.second.size);
         if (byte_slot < 0) continue;
         int slot = Stage::action_bus_slot_map[byte_slot];
         unsigned off = f.second.bits[0].lo - immed->bits[0].lo;
