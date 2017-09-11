@@ -954,6 +954,24 @@ void PHV_Container::Container_Content::sanity_check_container(
     }
 }  // Container_Content::sanity_check_container
 
+bool PHV_Container::sanity_check_deparsed_container_violation(
+    PhvInfo::Field *&deparsed_header,
+    PhvInfo::Field *&non_deparsed_field) {
+    // must not have deparsed header with non-deparsed field in container
+    deparsed_header = nullptr;
+    non_deparsed_field = nullptr;
+    for (auto &entry : fields_in_container_i) {
+        PhvInfo::Field *cf = entry.first;
+        if (!cf->deparsed()) {
+            non_deparsed_field = cf;
+        }
+        if (!cf->metadata && cf->deparsed()) {
+            deparsed_header = cf;
+        }
+    }  // for
+    return deparsed_header && non_deparsed_field;
+}
+
 void PHV_Container::sanity_check_container(const std::string& msg, bool check_deparsed) {
     const std::string msg_1 = msg + "..PHV_Container::sanity_check_container";
     //
@@ -964,16 +982,16 @@ void PHV_Container::sanity_check_container(const std::string& msg, bool check_de
     // arises in bridged metadata, where unused bits are padding on the wire
     //
     if (deparsed_i) {
-        for (auto &entry : fields_in_container_i) {
-            PhvInfo::Field *f = entry.first;
-            if (f->metadata && !f->bridged) {
-                LOG3("*****cluster_phv_container.cpp:sanity_FAIL*****....."
-                << msg_1
-                << " metadata field in deparsed container "
-                << this
-                << std::endl
-                << f);
-            }
+        PhvInfo::Field *deparsed_header = nullptr;
+        PhvInfo::Field *non_deparsed_field = nullptr;
+        if (sanity_check_deparsed_container_violation(deparsed_header, non_deparsed_field)) {
+            LOG3("*****cluster_phv_container.cpp:sanity_FAIL*****....."
+            << msg_1
+            << " non_deparsed_field with deparsed header in deparsed container "
+            << this
+            << std::endl
+            << "deparsed_header = " << deparsed_header
+            << "non_deparsed_field = " << non_deparsed_field);
         }
         if (check_deparsed && avail_bits_i != 0) {
             LOG3("*****cluster_phv_container.cpp:sanity_WARN*****....."

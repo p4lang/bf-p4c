@@ -355,8 +355,7 @@ class PHV_MAU_Group_Assignments : public Visitor {
     bool
     packing_predicates(
         Cluster_PHV *cl,
-        std::list<PHV_MAU_Group::Container_Content *>& cc_set,
-        bool allow_deparsed_metadata = false);  // default disallow metadata in deparsed container
+        std::list<PHV_MAU_Group::Container_Content *>& cc_set);
     //
     // public member
     // container_pack_cohabit also used by
@@ -365,13 +364,12 @@ class PHV_MAU_Group_Assignments : public Visitor {
     void container_pack_cohabit(
         std::list<Cluster_PHV *>& clusters_to_be_assigned,
         PHV_MAU_Group::Aligned_Container_Slices_t&,
-        const char *msg = "",
-        bool allow_deparsed_metadata = false);  // default disallow metadata in deparsed container
+        const char *msg = "");
     //
     bool gress_compatibility(
         PHV_Container::Ingress_Egress gc_gress,
         PHV_Container::Ingress_Egress cl_gress);
-    bool metadata_in_deparsed_container(
+    bool canonicalize_cc_set(
         Cluster_PHV *cl,
         std::list<PHV_MAU_Group::Container_Content *>& cc_set);
     bool num_containers_bottom_bits(

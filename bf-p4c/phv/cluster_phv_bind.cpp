@@ -205,15 +205,13 @@ PHV_Bind::phv_tphv_allocate(std::list<PhvInfo::Field *>& fields) {
         phv_mau_i.container_pack_cohabit(
             phv_clusters,
             phv_mau_i.aligned_container_slices(),
-            "PHV_Bind:PHV",
-            true /* allow deparsed metadata */);
+            "PHV_Bind:PHV");
     }
     if (t_phv_clusters.size()) {
         phv_mau_i.container_pack_cohabit(
             t_phv_clusters,
             phv_mau_i.T_PHV_container_slices(),
-            "PHV_Bind:T_PHV",
-            true /* allow deparsed metadata */);
+            "PHV_Bind:T_PHV");
     }
 }  // phv_tphv_allocate
 

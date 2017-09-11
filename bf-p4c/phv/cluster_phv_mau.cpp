@@ -1271,8 +1271,7 @@ void PHV_MAU_Group_Assignments::create_aligned_container_slices() {
 bool
 PHV_MAU_Group_Assignments::packing_predicates(
     Cluster_PHV *cl,
-    std::list<PHV_MAU_Group::Container_Content *>& cc_set,
-    bool allow_deparsed_metadata) {
+    std::list<PHV_MAU_Group::Container_Content *>& cc_set) {
     //
     assert(cl);
     assert(cl->cluster_vec().size() <= cc_set.size());
@@ -1281,10 +1280,9 @@ PHV_MAU_Group_Assignments::packing_predicates(
     if (!gress_compatibility(c_gress, cl->gress())) {
         return false;
     }
-    // metadata should be in deparsed container only as last resort
-    if (!allow_deparsed_metadata && metadata_in_deparsed_container(cl, cc_set)) {
-        return false;
-    }
+    // attempt to avoid non bridged metadata in deparsed container
+    canonicalize_cc_set(cl, cc_set);
+    //
     // constrained nibbles, e.g., learning digest, place in container's "bottom bits"
     int req = cl->req_containers_bottom_bits();
     if (req && !num_containers_bottom_bits(cl, cc_set, req)) {
@@ -1314,17 +1312,19 @@ PHV_MAU_Group_Assignments::packing_predicates(
         }
         //
         // TODO
-        // ingress_bridge_metadata starts at same bit as egress_bridge_metadata
-        // ensure start bit 0
-        // they should be allocated during initial container placement
-        // during packing, ensure start bit is 0, width accommodation checked prior
+        // bridge-metadata has alignment constraint between ingress and egress
+        // mirror field list members (whether bridged or not) have same alignment constraint
+        // ingress_bridge_metadata starts at same 'bit in byte' as egress_bridge_metadata
+        // temporarily we ensure start bit 0
+        // automatically ensured when allocated during initial container placement
+        // if allocated during packing, ensure start bit is 0, width accommodation checked apriori
         //
         if (f->bridged && (*cc_set_iter)->lo()) {
             return false;
         }
         // TODO
         // learning digests: L1, L2 belong to same digest
-        // mirror, resubmit digests no constraints
+        // mirror, resubmit digests do not have this constraint
         //
         // deparser container constraints related to packing
         //
@@ -1364,7 +1364,7 @@ PHV_MAU_Group_Assignments::packing_predicates(
     //
     // TODO
     //
-    // field start restrictions, e.g., must start @ bit X in container, e.g., X=0,7
+    // field start restrictions .. must start @X 'bit-in-byte' in container, e.g., X,X+8,X+16 etc.
     //
     // field solitary: e.g., 7*1b can't be packed to 8b, use separate containers, albeit 2TCAMS, 88b
     //
@@ -1474,8 +1474,7 @@ PHV_MAU_Group_Assignments::packing_predicates(
 void PHV_MAU_Group_Assignments::container_pack_cohabit(
     std::list<Cluster_PHV *>& clusters_to_be_assigned,
     PHV_MAU_Group::Aligned_Container_Slices_t& aligned_slices,
-    const char *msg,
-    bool allow_deparsed_metadata) {
+    const char *msg) {
     //
     // slice containers to form groups that can accommodate larger number for given width in <n:w>
     //
@@ -1552,7 +1551,7 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
                             = PHV_Container::Ingress_Egress::Ingress_Or_Egress;
                         for (auto &cc_set_x : j.second) {
                             c_gress = (*(cc_set_x.begin()))->container()->gress();
-                            if (packing_predicates(cl, cc_set_x, allow_deparsed_metadata)) {
+                            if (packing_predicates(cl, cc_set_x)) {
                                 //
                                 cc_set = cc_set_x;
                                 //
@@ -1657,16 +1656,19 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
                                 LOG1(f);
                                 LOG1(" slice width cl_w = " << cl_w);
                             }
-                            if (f->metadata && cc->container()->deparsed()) {
-                                //
-                                if (allow_deparsed_metadata) {
-                                    LOG1("cluster_phv_mau.cpp*****sanity_WARN*****");
-                                } else {
+                            if (f->metadata && !f->bridged && cc->container()->deparsed()) {
+                                PhvInfo::Field *deparsed_header = nullptr;
+                                PhvInfo::Field *non_deparsed_field = nullptr;
+                                cc->container()->sanity_check_deparsed_container_violation(
+                                        deparsed_header, non_deparsed_field);
+                                if (deparsed_header) {
+                                    //
                                     LOG1("cluster_phv_mau.cpp*****sanity_FAIL*****");
+                                    LOG1(".....metadata being placed w/ deparsed header .....");
+                                    LOG1(f);
+                                    LOG1(deparsed_header);
+                                    LOG1(cc->container());
                                 }
-                                LOG1(".....metadata being placed in deparsed container .....");
-                                LOG1(f);
-                                LOG1(cc->container());
                             }
                             // last alloc of field slice may be remainder of division by cl_w,
                             // e.g., 375bits mod 32b containers, last field slice = 23 bits
@@ -1888,18 +1890,18 @@ PHV_MAU_Group_Assignments::gress_compatibility(
 }  // gress_compatibility
 
 bool
-PHV_MAU_Group_Assignments::metadata_in_deparsed_container(
+PHV_MAU_Group_Assignments::canonicalize_cc_set(
     Cluster_PHV *cl,
     std::list<PHV_MAU_Group::Container_Content *>& cc_set) {
     //
-    // return true if metadata field will be mapped to deparsed container
+    // return true if non bridge metadata field will be mapped to deparsed container
     //
     assert(cl);
     assert(cc_set.size() >= cl->cluster_vec().size());
     //
     size_t metadata_fields = 0;
     for (auto &f : cl->cluster_vec()) {
-        if (f->metadata) {
+        if (f->metadata && !f->bridged) {
             metadata_fields++;
         }
     }
@@ -1945,14 +1947,16 @@ PHV_MAU_Group_Assignments::metadata_in_deparsed_container(
         //
         std::sort(cl->cluster_vec().begin(), cl->cluster_vec().end(),
             [](PhvInfo::Field *l, PhvInfo::Field *r) {
-            if (!l->metadata && !r->metadata) {
+            bool l_meta = l->metadata && !l->bridged;
+            bool r_meta = r->metadata && !r->bridged;
+            if (!l_meta && !r_meta) {
                 // sort by field id to prevent non-determinism
                 return l->id < r->id;
             }
-            if (!l->metadata && r->metadata) {
+            if (!l_meta && r_meta) {
                 return true;
             }
-            if (l->metadata && !r->metadata) {
+            if (l_meta && !r_meta) {
                 return false;
             }
             // sort by field id to prevent non-determinism
@@ -1963,7 +1967,7 @@ PHV_MAU_Group_Assignments::metadata_in_deparsed_container(
     }
     //
     return true;
-}  // metadata_in_deparsed_container
+}  // canonicalize_cc_set
 
 bool
 PHV_MAU_Group_Assignments::num_containers_bottom_bits(
