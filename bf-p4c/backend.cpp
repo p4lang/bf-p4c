@@ -79,10 +79,10 @@ class CheckTableNameDuplicate : public MauInspector {
  */
 class CheckUnimplementedFeatures : public Inspector {
   bool _printAndNotExit;
-public:
-  CheckUnimplementedFeatures(bool print = false) : _printAndNotExit(print) {}
+ public:
+  explicit CheckUnimplementedFeatures(bool print = false) : _printAndNotExit(print) {}
 
-  bool preorder (const IR::EntriesList *entries) {
+  bool preorder(const IR::EntriesList *entries) {
     auto source = entries->getSourceInfo().toPosition();
     if (_printAndNotExit)
       ::warning("Table entries (%s) are not yet implemented in this backend",
