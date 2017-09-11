@@ -1,0 +1,3 @@
+emulation.p4(113): warning: Could not infer type for qid, using bit<8>
+action qos_hit_e2e_mirror(qid, mirror_id) {
+                          ^^^
