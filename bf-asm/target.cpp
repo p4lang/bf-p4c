@@ -4,6 +4,31 @@
 #include "target.h"
 #include "ubits.h"
 
+void declare_registers(const Target::Tofino::top_level_regs *regs) {
+    declare_registers(&regs->mem_top, sizeof(regs->mem_top),
+        [=](std::ostream &out, const char *addr, const void *end) {
+            out << "memories.top";
+            regs->mem_top.emit_fieldname(out, addr, end); });
+    declare_registers(&regs->mem_pipe, sizeof(regs->mem_pipe),
+        [=](std::ostream &out, const char *addr, const void *end) {
+            out << "memories.pipe";
+            regs->mem_pipe.emit_fieldname(out, addr, end); });
+    declare_registers(&regs->regs_top, sizeof(regs->regs_top),
+        [=](std::ostream &out, const char *addr, const void *end) {
+            out << "registers.top";
+            regs->regs_top.emit_fieldname(out, addr, end); });
+    declare_registers(&regs->regs_pipe, sizeof(regs->regs_pipe),
+        [=](std::ostream &out, const char *addr, const void *end) {
+            out << "registers.pipe";
+            regs->regs_pipe.emit_fieldname(out, addr, end); });
+}
+void undeclare_registers(const Target::Tofino::top_level_regs *regs) {
+    undeclare_registers(&regs->mem_top);
+    undeclare_registers(&regs->mem_pipe);
+    undeclare_registers(&regs->regs_top);
+    undeclare_registers(&regs->regs_pipe);
+}
+
 void declare_registers(const Target::Tofino::parser_regs *regs) {
     declare_registers(&regs->memory[INGRESS], sizeof regs->memory[INGRESS],
         [=](std::ostream &out, const char *addr, const void *end) {
@@ -55,6 +80,30 @@ void undeclare_registers(const Target::Tofino::deparser_regs *regs) {
 }
 
 #if HAVE_JBAY
+void declare_registers(const Target::JBay::top_level_regs *regs) {
+    declare_registers(&regs->mem_top, sizeof(regs->mem_top),
+        [=](std::ostream &out, const char *addr, const void *end) {
+            out << "memories.top";
+            regs->mem_top.emit_fieldname(out, addr, end); });
+    declare_registers(&regs->mem_pipe, sizeof(regs->mem_pipe),
+        [=](std::ostream &out, const char *addr, const void *end) {
+            out << "memories.pipe";
+            regs->mem_pipe.emit_fieldname(out, addr, end); });
+    declare_registers(&regs->regs_top, sizeof(regs->regs_top),
+        [=](std::ostream &out, const char *addr, const void *end) {
+            out << "registers.top";
+            regs->regs_top.emit_fieldname(out, addr, end); });
+    declare_registers(&regs->regs_pipe, sizeof(regs->regs_pipe),
+        [=](std::ostream &out, const char *addr, const void *end) {
+            out << "registers.pipe";
+            regs->regs_pipe.emit_fieldname(out, addr, end); });
+}
+void undeclare_registers(const Target::JBay::top_level_regs *regs) {
+    undeclare_registers(&regs->mem_top);
+    undeclare_registers(&regs->mem_pipe);
+    undeclare_registers(&regs->regs_top);
+    undeclare_registers(&regs->regs_pipe);
+}
 void declare_registers(const Target::JBay::parser_regs *regs) {
     declare_registers(&regs->memory[INGRESS], sizeof regs->memory[INGRESS],
         [=](std::ostream &out, const char *addr, const void *end) {

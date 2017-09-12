@@ -194,33 +194,30 @@ void AsmStage::output() {
         json::string json_program_name = asmfile_name.substr(0, asmfile_name.find_last_of("."));
         for (unsigned i = 0; i < stage.size(); i++) {
             switch (options.target) {
-            case TOFINO: stage[i].output<Target::Tofino>(json_tables); break;
-#if HAVE_JBAY
-            case JBAY: stage[i].output<Target::JBay>(json_tables); break;
-#endif // HAVE_JBAY
+#define SWITCH_FOR_TARGET(ETAG, TTYPE) \
+            case ETAG: stage[i].output<TTYPE>(json_tables); break;
+            FOR_ALL_TARGETS(SWITCH_FOR_TARGET)
+#undef SWITCH_FOR_TARGET
             default: assert(0); } }
         json_parser["ingress"] = json::vector();
         json_parser["egress"] = json::vector();
         // Add configuration cache regs
         Parser& prsr = Parser::get_parser();
-        Target::Tofino::parser_regs tofino_regs;
-#if HAVE_JBAY
-        Target::JBay::parser_regs jbay_regs;
-#endif // HAVE_JBAY
         switch (options.target) {
-            case TOFINO: prsr.gen_configuration_cache(tofino_regs, json_configuration_cache);
-                         break;
-#if HAVE_JBAY
-            case JBAY: prsr.gen_configuration_cache(jbay_regs, json_configuration_cache);
-                       break;
-#endif // HAVE_JBAY
+#define SWITCH_FOR_TARGET(ETAG, TTYPE) \
+            case ETAG: {                                                        \
+                TTYPE::parser_regs regs;                                        \
+                prsr.gen_configuration_cache(regs, json_configuration_cache);   \
+                break; }
+            FOR_ALL_TARGETS(SWITCH_FOR_TARGET)
+#undef SWITCH_FOR_TARGET
             default: assert(0); }
         for (unsigned i = 0; i < stage.size(); i++) {
             switch (options.target) {
-            case TOFINO: stage[i].gen_configuration_cache<Target::Tofino>(json_configuration_cache); break;
-#if HAVE_JBAY
-            case JBAY: stage[i].gen_configuration_cache<Target::JBay>(json_configuration_cache); break;
-#endif // HAVE_JBAY
+#define SWITCH_FOR_TARGET(ETAG, TTYPE) \
+            case ETAG: stage[i].gen_configuration_cache<TTYPE>(json_configuration_cache); break;
+            FOR_ALL_TARGETS(SWITCH_FOR_TARGET)
+#undef SWITCH_FOR_TARGET
             default: assert(0); } }
 
         *json_out << '{' << std::endl;
@@ -237,10 +234,10 @@ void AsmStage::output() {
         for (unsigned i = 0; i < stage.size(); i++) {
             // if  (stage[i].tables.empty()) continue;
             switch (options.target) {
-            case TOFINO: stage[i].output<Target::Tofino>(tbl_cfg); break;
-#if HAVE_JBAY
-            case JBAY: stage[i].output<Target::JBay>(tbl_cfg); break;
-#endif // HAVE_JBAY
+#define SWITCH_FOR_TARGET(ETAG, TTYPE) \
+            case ETAG: stage[i].output<TTYPE>(tbl_cfg); break;
+            FOR_ALL_TARGETS(SWITCH_FOR_TARGET)
+#undef SWITCH_FOR_TARGET
             default: assert(0); } }
         if (options.match_compiler)
             *json_out << "{ \"ContextJsonNode\": ";

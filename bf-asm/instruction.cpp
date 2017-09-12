@@ -413,14 +413,7 @@ struct VLIWInstruction : Instruction {
         phvRead([&](const Phv::Slice &sl) {
             set_power_ctl_reg(power_ctl, sl.reg.index); });
     }
-    void write_regs(Target::Tofino::mau_regs &regs, Table *tbl,
-                    Table::Actions::Action *act) override {
-        write_regs<Target::Tofino::mau_regs>(regs, tbl, act); }
-#if HAVE_JBAY
-    void write_regs(Target::JBay::mau_regs &regs, Table *tbl,
-                    Table::Actions::Action *act) override {
-        write_regs<Target::JBay::mau_regs>(regs, tbl, act); }
-#endif // HAVE_JBAY
+    FOR_ALL_TARGETS(FORWARD_VIRTUAL_INSTRUCTION_WRITE_REGS)
 };
 
 struct AluOP : VLIWInstruction {

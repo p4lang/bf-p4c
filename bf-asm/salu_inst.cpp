@@ -227,14 +227,7 @@ struct AluOP : public SaluInstruction {
     void dbprint(std::ostream &out) const override {
         out << "INSTR: " << opc->name /*<< ' ' << dest << ", " << src1 << ", " << src2*/; }
     template<class REGS> void write_regs(REGS &regs, Table *tbl, Table::Actions::Action *act);
-    void write_regs(Target::Tofino::mau_regs &regs, Table *tbl,
-                    Table::Actions::Action *act) override {
-        write_regs<Target::Tofino::mau_regs>(regs, tbl, act); }
-#if HAVE_JBAY
-    void write_regs(Target::JBay::mau_regs &regs, Table *tbl,
-                    Table::Actions::Action *act) override {
-        write_regs<Target::JBay::mau_regs>(regs, tbl, act); }
-#endif // HAVE_JBAY
+    FOR_ALL_TARGETS(FORWARD_VIRTUAL_INSTRUCTION_WRITE_REGS)
 };
 
 static AluOP::Decode opADD("add", 0x1c, true), opSUB("sub", 0x1e),
@@ -413,14 +406,7 @@ struct BitOP : public SaluInstruction {
     void dbprint(std::ostream &out) const override{
         out << "INSTR: " << opc->name /*<< ' ' << dest << ", " << src1 << ", " << src2*/; }
     template<class REGS> void write_regs(REGS &regs, Table *tbl, Table::Actions::Action *act);
-    void write_regs(Target::Tofino::mau_regs &regs, Table *tbl,
-                    Table::Actions::Action *act) override {
-        write_regs<Target::Tofino::mau_regs>(regs, tbl, act); }
-#if HAVE_JBAY
-    void write_regs(Target::JBay::mau_regs &regs, Table *tbl,
-                    Table::Actions::Action *act) override {
-        write_regs<Target::JBay::mau_regs>(regs, tbl, act); }
-#endif // HAVE_JBAY
+    FOR_ALL_TARGETS(FORWARD_VIRTUAL_INSTRUCTION_WRITE_REGS)
 };
 
 static BitOP::Decode opSET_BIT("set_bit", 0x0), opSET_BITC("set_bitc", 0x1),
@@ -478,14 +464,7 @@ struct CmpOP : public SaluInstruction {
     void dbprint(std::ostream &out) const override{
         out << "INSTR: " << opc->name /*<< ' ' << dest << ", " << src1 << ", " << src2*/; }
     template<class REGS> void write_regs(REGS &regs, Table *tbl, Table::Actions::Action *act);
-    void write_regs(Target::Tofino::mau_regs &regs, Table *tbl,
-                    Table::Actions::Action *act) override {
-        write_regs<Target::Tofino::mau_regs>(regs, tbl, act); }
-#if HAVE_JBAY
-    void write_regs(Target::JBay::mau_regs &regs, Table *tbl,
-                    Table::Actions::Action *act) override {
-        write_regs<Target::JBay::mau_regs>(regs, tbl, act); }
-#endif // HAVE_JBAY
+    FOR_ALL_TARGETS(FORWARD_VIRTUAL_INSTRUCTION_WRITE_REGS)
 };
 
 static CmpOP::Decode opEQU("equ", 0, false), opNEQ("neq", 1, false),
@@ -590,14 +569,7 @@ struct OutOP : public SaluInstruction {
     void dbprint(std::ostream &out) const override {
         out << "INSTR: output " /*<< ' ' << dest << ", " << src1 << ", " << src2*/; }
     template<class REGS> void write_regs(REGS &regs, Table *tbl, Table::Actions::Action *act);
-    void write_regs(Target::Tofino::mau_regs &regs, Table *tbl,
-                    Table::Actions::Action *act) override {
-        write_regs<Target::Tofino::mau_regs>(regs, tbl, act); }
-#if HAVE_JBAY
-    void write_regs(Target::JBay::mau_regs &regs, Table *tbl,
-                    Table::Actions::Action *act) override {
-        write_regs<Target::JBay::mau_regs>(regs, tbl, act); }
-#endif // HAVE_JBAY
+    FOR_ALL_TARGETS(FORWARD_VIRTUAL_INSTRUCTION_WRITE_REGS)
 };
 
 const std::map<std::string, int> OutOP::ops_mux_lookup = {

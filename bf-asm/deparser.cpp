@@ -22,10 +22,10 @@ protected:
         all[gress][name] = this; }
     ~Intrinsic() { all[gress].erase(name); }
 public:
-    virtual void setregs(Target::Tofino::deparser_regs &regs, std::vector<Phv::Ref> &vals) = 0;
-#if HAVE_JBAY
-    virtual void setregs(Target::JBay::deparser_regs &regs, std::vector<Phv::Ref> &vals) = 0;
-#endif // HAVE_JBAY
+#define VIRTUAL_TARGET_METHODS(ETAG, TTYPE) \
+    virtual void setregs(TTYPE::deparser_regs &regs, std::vector<Phv::Ref> &vals) = 0;
+    FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
+#undef VIRTUAL_TARGET_METHODS
 };
 
 #if HAVE_JBAY
@@ -106,10 +106,10 @@ protected:
         assert(!all[gress].count(name)); all[gress][name] = this; }
     ~Type() { all[gress].erase(name); }
 public:
-    virtual void setregs(Target::Tofino::deparser_regs &regs, Deparser::Digest &data) = 0;
-#if HAVE_JBAY
-    virtual void setregs(Target::JBay::deparser_regs &regs, Deparser::Digest &data) = 0;
-#endif // HAVE_JBAY
+#define VIRTUAL_TARGET_METHODS(ETAG, TTYPE) \
+    virtual void setregs(TTYPE::deparser_regs &regs, Deparser::Digest &data) = 0;
+    FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
+#undef VIRTUAL_TARGET_METHODS
 };
 Deparser::Digest::Digest(Deparser::Digest::Type *t, int lineno, VECTOR(pair_t) &data) {
     type = t;

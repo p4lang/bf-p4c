@@ -1,16 +1,7 @@
-#include <config.h>
-
-#include "gen/tofino/memories.pipe_top_level.h"
-#include "gen/tofino/memories.pipe_addrmap.h"
-#include "gen/tofino/regs.tofino.h"
-#include "gen/tofino/regs.pipe_addrmap.h"
-#if HAVE_JBAY
-#include "gen/jbay/memories.jbay_mem.h"
-#include "gen/jbay/memories.pipe_addrmap.h"
-#include "gen/jbay/regs.jbay_reg.h"
-#include "gen/jbay/regs.pipe_addrmap.h"
-#endif  // HAVE_JBAY
+#include "target.h"
 #include "json.h"
+
+/* FIXME -- still hard-coded to tofino top-level -- need to use Target top level */
 
 class TopLevel {
 public:

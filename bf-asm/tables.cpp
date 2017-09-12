@@ -1024,10 +1024,7 @@ template<class REGS> void Table::Actions::write_regs(REGS &regs, Table *tbl) {
         for (auto *inst : act.instr)
             inst->write_regs(regs, tbl, &act);
 }
-template void Table::Actions::write_regs(Target::Tofino::mau_regs &, Table *);
-#if HAVE_JBAY
-template void Table::Actions::write_regs(Target::JBay::mau_regs &, Table *);
-#endif // HAVE_JBAY
+FOR_ALL_TARGETS(INSTANTIATE_TARGET_TEMPLATE, void Table::Actions::write_regs, mau_regs &, Table *)
 
 void Table::Actions::gen_tbl_cfg(json::vector &cfg) {
     if (options.new_ctx_json) {
@@ -1406,10 +1403,7 @@ template<class REGS> void MatchTable::write_regs(REGS &regs, int type, Table *re
             table_counter, 3 * (logical_id%8U), 3);
 
 }
-template void MatchTable::write_regs(Target::Tofino::mau_regs &, int, Table *);
-#if HAVE_JBAY
-template void MatchTable::write_regs(Target::JBay::mau_regs &, int, Table *);
-#endif // HAVE_JBAY
+FOR_ALL_TARGETS(INSTANTIATE_TARGET_TEMPLATE, void MatchTable::write_regs, mau_regs &, int, Table *)
 
 template<class REGS>
 void Table::write_mapram_regs(REGS &regs, int row, int col, int vpn, int type) {
@@ -1432,10 +1426,8 @@ void Table::write_mapram_regs(REGS &regs, int row, int col, int vpn, int type) {
     if (gress)
         regs.cfg_regs.mau_cfg_mram_thread[col/3U] |= 1U << (col%3U*8U + row);
 }
-template void Table::write_mapram_regs(Target::Tofino::mau_regs &, int, int, int, int);
-#if HAVE_JBAY
-template void Table::write_mapram_regs(Target::JBay::mau_regs &, int, int, int, int);
-#endif // HAVE_JBAY
+FOR_ALL_TARGETS(INSTANTIATE_TARGET_TEMPLATE,
+                void Table::write_mapram_regs, mau_regs &, int, int, int, int)
 
 HashDistribution *Table::find_hash_dist(int unit) {
     for (auto &hd : hash_dist)
@@ -1704,10 +1696,8 @@ void AttachedTables::write_merge_regs(REGS &regs, MatchTable *self, int type, in
     if (selector)
         get_selector()->write_merge_regs(regs, self, type, bus, selector.args);
 }
-template void AttachedTables::write_merge_regs(Target::Tofino::mau_regs &, MatchTable *, int, int);
-#if HAVE_JBAY
-template void AttachedTables::write_merge_regs(Target::JBay::mau_regs &, MatchTable *, int, int);
-#endif // HAVE_JBAY
+FOR_ALL_TARGETS(INSTANTIATE_TARGET_TEMPLATE,
+                void AttachedTables::write_merge_regs, mau_regs &, MatchTable *, int, int)
 
 json::map *Table::base_tbl_cfg(json::vector &out, const char *type, int size) {
     return p4_table->base_tbl_cfg(out, size, this);

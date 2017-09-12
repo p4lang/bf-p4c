@@ -648,10 +648,8 @@ template<class REGS> void ActionBus::write_action_regs(REGS &regs, Table *tbl,
                     " set in bytemask for " << el.second.name);
     }
 }
-template void ActionBus::write_action_regs(Target::Tofino::mau_regs &, Table *, unsigned, unsigned);
-#if HAVE_JBAY
-template void ActionBus::write_action_regs(Target::JBay::mau_regs &, Table *, unsigned, unsigned);
-#endif // HAVE_JBAY
+FOR_ALL_TARGETS(INSTANTIATE_TARGET_TEMPLATE,
+                void ActionBus::write_action_regs, mau_regs &, Table *, unsigned, unsigned)
 
 template<class REGS> void ActionBus::write_immed_regs(REGS &regs, Table *tbl) {
     LOG2("--- ActionBus write_immed_regs(" << tbl->name() << ")");
@@ -688,10 +686,7 @@ template<class REGS> void ActionBus::write_immed_regs(REGS &regs, Table *tbl) {
         default:
             assert(0); } }
 }
-template void ActionBus::write_immed_regs(Target::Tofino::mau_regs &, Table *);
-#if HAVE_JBAY
-template void ActionBus::write_immed_regs(Target::JBay::mau_regs &, Table *);
-#endif // HAVE_JBAY
+FOR_ALL_TARGETS(INSTANTIATE_TARGET_TEMPLATE, void ActionBus::write_immed_regs, mau_regs &, Table *)
 
 ActionBus::MeterBus_t ActionBus::MeterBus;
 

@@ -213,20 +213,15 @@ void Parser::output() {
     if (error_count > 0) return;
     tcam_row_use[INGRESS] = tcam_row_use[EGRESS] = PARSER_TCAM_DEPTH;
     switch (options.target) {
-    case TOFINO: {
-        Target::Tofino::parser_regs       regs;
-        declare_registers(&regs);
-        write_config(regs);
-        undeclare_registers(&regs);
+#define SWITCH_FOR_TARGET(ETAG, TTYPE)                                  \
+    case ETAG: {                                                        \
+        TTYPE::parser_regs       regs;                                  \
+        declare_registers(&regs);                                       \
+        write_config(regs);                                             \
+        undeclare_registers(&regs);                                     \
         break; }
-#if HAVE_JBAY
-    case JBAY: {
-        Target::JBay::parser_regs       regs;
-        declare_registers(&regs);
-        write_config(regs);
-        undeclare_registers(&regs);
-        break; }
-#endif // HAVE_JBAY
+    FOR_ALL_TARGETS(SWITCH_FOR_TARGET)
+#undef SWITCH_FOR_TARGET
     default: assert(0); }
 }
 
