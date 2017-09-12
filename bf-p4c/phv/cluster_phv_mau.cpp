@@ -1265,29 +1265,22 @@ void PHV_MAU_Group_Assignments::create_aligned_container_slices() {
     LOG3(T_PHV_container_slices_i);
 }  // PHV_MAU_Group_Assignments::create_aligned_container_slices()
 
+//***********************************************************************************
 //
-// ensure each predicate is satisfied before container packing
+// predicates for packing constraints
+//
+// PHV_MAU_Group_Assignments::match_cluster_to_cc_set()
+// PHV_MAU_Group_Assignments::packing_predicates()
+//
+//***********************************************************************************
+//
+// ensure each predicate is satisfied when matching cluster fields to cc_set
 //
 bool
-PHV_MAU_Group_Assignments::packing_predicates(
+PHV_MAU_Group_Assignments::match_cluster_to_cc_set(
     Cluster_PHV *cl,
     std::list<PHV_MAU_Group::Container_Content *>& cc_set) {
     //
-    assert(cl);
-    assert(cl->cluster_vec().size() <= cc_set.size());
-    assert(*(cc_set.begin()));
-    PHV_Container::Ingress_Egress c_gress = (*(cc_set.begin()))->container()->gress();
-    if (!gress_compatibility(c_gress, cl->gress())) {
-        return false;
-    }
-    // attempt to avoid non bridged metadata in deparsed container
-    canonicalize_cc_set(cl, cc_set);
-    //
-    // constrained nibbles, e.g., learning digest, place in container's "bottom bits"
-    int req = cl->req_containers_bottom_bits();
-    if (req && !num_containers_bottom_bits(cl, cc_set, req)) {
-        return false;
-    }
     // when x fields can be allocated to y ccs, x < y
     // the top y-x is striped for reuse as a new set of aligned ccs, the bottom x allocated
     // iterate through ccs in reverse, otherwise comparison is against the wrong set of containers
@@ -1361,6 +1354,49 @@ PHV_MAU_Group_Assignments::packing_predicates(
         //
         cc_set_iter++;
     }  // for
+    return true;
+}  // match_cluster_to_cc_set
+
+//
+// ensure each predicate is satisfied before container packing
+//
+bool
+PHV_MAU_Group_Assignments::packing_predicates(
+    Cluster_PHV *cl,
+    std::list<PHV_MAU_Group::Container_Content *>& cc_set) {
+    //
+    assert(cl);
+    assert(cl->cluster_vec().size() <= cc_set.size());
+    assert(*(cc_set.begin()));
+    PHV_Container::Ingress_Egress c_gress = (*(cc_set.begin()))->container()->gress();
+    if (!gress_compatibility(c_gress, cl->gress())) {
+        return false;
+    }
+    // attempt to avoid non bridged metadata in deparsed container
+    canonicalize_cc_set(cl, cc_set);
+    //
+    // constrained nibbles, e.g., learning digest, place in container's "bottom bits"
+    int req = cl->req_containers_bottom_bits();
+    if (req && !num_containers_bottom_bits(cl, cc_set, req)) {
+        return false;
+    }
+    // when cluster fields < slices try sliding window of cc_set
+    for (int slice_adjust = cc_set.size() - cl->cluster_vec().size() + 1;
+        slice_adjust;
+        slice_adjust--) {
+        //
+        if (match_cluster_to_cc_set(cl, cc_set)) {
+            break;
+        }
+        if (slice_adjust == 1) {
+            return false;
+        }
+        // rotate down cc_set by 1
+        // note ccs iterated in reverse -- match_cluster_cc_set()
+        //
+        cc_set.push_front(*(cc_set.rbegin()));
+        cc_set.pop_back();
+    }
     //
     // TODO
     //
