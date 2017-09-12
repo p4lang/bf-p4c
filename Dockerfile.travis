@@ -1,13 +1,11 @@
 FROM p4lang/pi:latest
 
 MAINTAINER bfn-docker <bfn-docker@barefootnetworks.com>
-
 ENV DEBIAN_FRONTEND noninteractive
 
-ENV P4C_DEPS automake \
+ENV P4C_DEPS autoconf \
+             automake \
              bison \
-             build-essential \
-             cmake \
              flex \
              g++ \
              libboost-dev \
@@ -18,27 +16,18 @@ ENV P4C_DEPS automake \
              libgmp-dev \
              libtool \
              pkg-config \
+             python-dev \
              python-ipaddr \
              python-pip \
-             python-scapy \
-             python-yaml \
-             sudo \
-             tcpdump
+             python-setuptools \
+             python-yaml
 
 ENV P4C_RUNTIME_DEPS cpp \
+                     cmake \
                      libboost-iostreams1.58.0 \
                      libgc1c2 \
                      libgmp10 \
-                     libgmpxx4ldbl \
-                     python
-
-ENV PROTOBUF_DEPS curl \
-                  git \
-                  unzip
-
-RUN apt-get update && \
-    apt-get install -y $P4C_DEPS $P4C_RUNTIME_DEPS
-RUN apt-get install -y $PROTOBUF_DEPS
+                     libgmpxx4ldbl
 
 # Default to using 2 make jobs, which is a good default for CI. If you're
 # building locally or you know there are more cores available, you may want to
@@ -47,9 +36,18 @@ ARG MAKEFLAGS=-j2
 
 COPY . /bfn/bf-p4c-compilers/
 WORKDIR /bfn/bf-p4c-compilers
-RUN pip install pyinstaller
-RUN ./bootstrap_bfn_compilers.sh && \
+ENV LDFLAGS="-Wl,-s"
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends $P4C_DEPS $P4C_RUNTIME_DEPS && \
+    pip install pyinstaller && \
+    ./bootstrap_bfn_compilers.sh --no-ptf && \
     cd build && \
     make && \
-    make install && \
-    /usr/local/bin/ccache -p -s
+    /usr/local/bin/ccache -p -s && \
+    pip uninstall -y pyinstaller && \
+    apt-get purge -y $P4C_DEPS && \
+    apt-get autoremove --purge -y && \
+    rm -rf ~/.cache/* ~/.ccache/* /var/cache/apt/* /var/lib/apt/lists/* && \
+    find . -name '*.o' -type f -delete && \
+    find . -name '*.a' -type f -delete && \
+    find . -name '*.json' -type f -delete
