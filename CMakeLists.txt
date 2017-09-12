@@ -31,6 +31,21 @@ execute_process (COMMAND git rev-parse --short HEAD
   RESULT_VARIABLE rc)
 MESSAGE(STATUS "p4c-tofino version: ${BFN_P4C_VERSION} (${BFN_P4C_GIT_SHA})")
 
+# If we're on GCC, use the gold linker if available.
+if (CMAKE_COMPILER_IS_GNUCC)
+    execute_process(
+            COMMAND ${CMAKE_C_COMPILER} -fuse-ld=gold -Wl,--version
+            ERROR_QUIET OUTPUT_VARIABLE LD_VERSION)
+    if ("${LD_VERSION}" MATCHES "GNU gold")
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fuse-ld=gold")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fuse-ld=gold")
+        message(STATUS "Using the GNU gold linker.")
+    else ()
+        message(STATUS "Using the default system linker.")
+    endif ()
+    unset(LD_VERSION)
+endif ()
+
 add_subdirectory(bf-asm)
 add_subdirectory(p4c)
 
