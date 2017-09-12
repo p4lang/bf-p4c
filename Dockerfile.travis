@@ -48,6 +48,7 @@ RUN apt-get update && \
     apt-get purge -y $P4C_DEPS && \
     apt-get autoremove --purge -y && \
     rm -rf ~/.cache/* ~/.ccache/* /var/cache/apt/* /var/lib/apt/lists/* && \
+    rm -rf bf-asm/walle/build/* && \
     find . -name '*.o' -type f -delete && \
     find . -name '*.a' -type f -delete && \
     find . -name '*.json' -type f -delete
