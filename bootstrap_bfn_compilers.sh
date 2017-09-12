@@ -22,6 +22,12 @@ set -e
 mydir=`dirname $0`
 cd $mydir
 
+RUN_BOOTSTRAP_PTF=yes
+if [ "$1" == "--no-ptf" ]; then
+    RUN_BOOTSTRAP_PTF=no
+    shift
+fi
+
 if [ ! -r p4c/CMakeLists.txt ]; then
     git submodule update --init --recursive
 fi
@@ -39,7 +45,9 @@ pushd build
 cmake .. -DCMAKE_BUILD_TYPE=DEBUG -DENABLE_JBAY=ON $*
 popd # build
 
-./bootstrap_ptf.sh `pwd`/build
+if [ "$RUN_BOOTSTRAP_PTF" == "yes" ]; then
+    ./bootstrap_ptf.sh `pwd`/build
+fi
 
 pushd build/p4c
 if [ ! -e p4c-tofino-gdb.gdb ]; then ln -sf ../../bf-p4c/.gdbinit p4c-tofino-gdb.gdb; fi
