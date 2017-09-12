@@ -1,6 +1,12 @@
 ####### Tofino assembler
 cmake_minimum_required (VERSION 3.0.2 FATAL_ERROR)
 
+find_program(CCACHE_PROGRAM ccache)
+if(CCACHE_PROGRAM)
+    MESSAGE("-- Enabling ccache")
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
+endif()
+
 project (BFASM)
 
 MESSAGE("-- Adding bf-asm")
