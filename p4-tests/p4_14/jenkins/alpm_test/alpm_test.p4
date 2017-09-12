@@ -116,6 +116,11 @@ action ipv4_lpm_hit(egress_port) {
     hop(ipv4.ttl, egress_port);
 }
 
+action ipv4_lpm_hit_change_dmac(egress_port, dstmac) {
+    hop(ipv4.ttl, egress_port);
+    modify_field(ethernet.dstAddr, dstmac);
+}
+
 action lpm_miss(){
     drop();
 }
@@ -130,6 +135,7 @@ table ipv4_alpm {
     }
     actions {
         ipv4_lpm_hit;
+        ipv4_lpm_hit_change_dmac;
         lpm_miss;
         nop;
     }

@@ -292,7 +292,6 @@ action modify_l2 (egress_port, srcAddr, dstAddr, tcp_sport, tcp_dport) {
     modify_field(tcp.srcPort, tcp_sport);
 }
 
-@pragma command_line --placement pragma
 @pragma command_line --no-dead-code-elimination
 @pragma immediate 1
 @pragma stage 0

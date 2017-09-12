@@ -50,6 +50,12 @@ header egress_intrinsic_metadata_from_parser_aux_t {
     bit<8>  coalesce_sample_count;
 }
 
+header ethernet_t {
+    bit<48> dstAddr;
+    bit<48> srcAddr;
+    bit<16> etherType;
+}
+
 header ingress_intrinsic_metadata_t {
     bit<1>  resubmit_flag;
     bit<1>  _pad1;
@@ -107,6 +113,17 @@ header ingress_parser_control_signals {
     bit<5> _pad;
 }
 
+header ipv6_t {
+    bit<4>   version;
+    bit<8>   trafficClass;
+    bit<20>  flowLabel;
+    bit<16>  payloadLen;
+    bit<8>   nextHdr;
+    bit<8>   hopLimit;
+    bit<128> srcAddr;
+    bit<128> dstAddr;
+}
+
 struct metadata {
 }
 
@@ -119,6 +136,8 @@ struct headers {
     egress_intrinsic_metadata_for_output_port_t    eg_intr_md_for_oport;
     @pa_fragment("egress", "eg_intr_md_from_parser_aux.coalesce_sample_count") @pa_fragment("egress", "eg_intr_md_from_parser_aux.clone_src") @pa_fragment("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @pa_atomic("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md_from_parser_aux") @name("eg_intr_md_from_parser_aux") 
     egress_intrinsic_metadata_from_parser_aux_t    eg_intr_md_from_parser_aux;
+    @name("ethernet") 
+    ethernet_t                                     ethernet;
     @dont_trim @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md.ingress_port") @name("ig_intr_md") 
     ingress_intrinsic_metadata_t                   ig_intr_md;
     @dont_trim @pa_intrinsic_header("ingress", "ig_intr_md_for_mb") @pa_atomic("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @not_deparsed("ingress") @not_deparsed("egress") @name("ig_intr_md_for_mb") 
@@ -131,20 +150,63 @@ struct headers {
     generator_metadata_t_0                         ig_pg_md;
     @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_prsr_ctrl") @name("ig_prsr_ctrl") 
     ingress_parser_control_signals                 ig_prsr_ctrl;
+    @name("ipv6") 
+    ipv6_t                                         ipv6;
 }
+#include <tofino/stateful_alu.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".start") state start {
+        packet.extract<ethernet_t>(hdr.ethernet);
+        packet.extract<ipv6_t>(hdr.ipv6);
         transition accept;
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".ha_cntr") direct_counter(CounterType.packets) ha_cntr_0;
+    @name(".cntr") @min_width(32) counter(32w1000, CounterType.packets_and_bytes) cntr_0;
+    @name(".r0") register<bit<32>>(32w0) r0_0;
+    @name("r0_alu") register_action<bit<32>, bit<32>>(r0_0) r0_alu_0 = {
+        void apply(inout bit<32> value, out bit<32> rv) {
+            value = value + 32w1;
+        }
+    };
     @name(".n") action n_1() {
+    }
+    @name(".set_dmac") action set_dmac_0(bit<48> d) {
+        hdr.ethernet.dstAddr = d;
+    }
+    @name(".a") action a_0(bit<9> x) {
+        hdr.ig_intr_md_for_tm.ucast_egress_port = x;
+    }
+    @name(".b") action b_0(bit<9> x, bit<32> i) {
+        hdr.ig_intr_md_for_tm.ucast_egress_port = x;
+        cntr_0.count(i);
+    }
+    @name(".c") action c_0(bit<9> x) {
+        a_0(x);
+        cntr_0.count(32w1);
+    }
+    @name(".d") action d_0(bit<128> x, bit<20> y, bit<32> i) {
+        hdr.ipv6.srcAddr = x;
+        hdr.ipv6.flowLabel = y;
+        cntr_0.count(i);
+    }
+    @name(".e") action e_0() {
+        cntr_0.count(32w0);
     }
     @name(".N") action N_0(bit<16> x) {
         hdr.ig_intr_md_for_tm.rid = x;
+    }
+    @name(".r0_inc") action r0_inc_0() {
+        r0_alu_0.execute();
+    }
+    @name(".r0_inc_duplicate") action r0_inc_duplicate_0() {
+        r0_alu_0.execute();
+    }
+    @name(".set_smac") action set_smac_0(bit<48> s) {
+        hdr.ethernet.srcAddr = s;
     }
     @alpm(1) @name(".alpm") table alpm_0 {
         actions = {
@@ -156,6 +218,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
+    @name(".e_keyless") table e_keyless_0 {
+        actions = {
+            set_dmac_0();
+            @defaultonly NoAction();
+        }
+        key = {
+            hdr.ethernet.dstAddr: exact @name("hdr.ethernet.dstAddr") ;
+        }
+        size = 10;
+        default_action = NoAction();
+    }
     @name(".exm") table exm_0 {
         actions = {
             n_1();
@@ -164,6 +237,42 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         key = {
             hdr.ig_intr_md.ingress_port: exact @name("hdr.ig_intr_md.ingress_port") ;
         }
+        default_action = NoAction();
+    }
+    @name(".exm_ap") table exm_ap_0 {
+        actions = {
+            a_0();
+            b_0();
+            c_0();
+            d_0();
+            e_0();
+            @defaultonly NoAction();
+        }
+        key = {
+            hdr.ipv6.isValid(): exact @name("hdr.ipv6.isValid()") ;
+            hdr.ipv6.srcAddr  : exact @name("hdr.ipv6.srcAddr") ;
+            hdr.ipv6.dstAddr  : exact @name("hdr.ipv6.dstAddr") ;
+        }
+        @name(".ap") implementation = action_profile(32w0);
+        default_action = NoAction();
+    }
+    @name(".exm_sel") table exm_sel_0 {
+        actions = {
+            a_0();
+            b_0();
+            c_0();
+            d_0();
+            e_0();
+            @defaultonly NoAction();
+        }
+        key = {
+            hdr.ipv6.isValid()  : exact @name("hdr.ipv6.isValid()") ;
+            hdr.ipv6.srcAddr    : exact @name("hdr.ipv6.srcAddr") ;
+            hdr.ipv6.dstAddr    : exact @name("hdr.ipv6.dstAddr") ;
+            hdr.ethernet.dstAddr: selector @name("hdr.ethernet.dstAddr") ;
+            hdr.ethernet.srcAddr: selector @name("hdr.ethernet.srcAddr") ;
+        }
+        @name(".sel_ap") implementation = action_selector(HashAlgorithm.crc32, 32w0, 32w29);
         default_action = NoAction();
     }
     @name(".n") action n_2() {
@@ -192,6 +301,25 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction();
     }
+    @name(".r") table r_0 {
+        actions = {
+            r0_inc_0();
+            r0_inc_duplicate_0();
+        }
+        size = 1;
+        default_action = r0_inc_0();
+    }
+    @name(".t_keyless") table t_keyless_0 {
+        actions = {
+            set_smac_0();
+            @defaultonly NoAction();
+        }
+        key = {
+            hdr.ethernet.srcAddr: ternary @name("hdr.ethernet.srcAddr") ;
+        }
+        size = 10;
+        default_action = NoAction();
+    }
     @name(".tcam") table tcam_0 {
         actions = {
             n_1();
@@ -202,6 +330,42 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
+    @name(".tcam_ap") table tcam_ap_0 {
+        actions = {
+            a_0();
+            b_0();
+            c_0();
+            d_0();
+            e_0();
+            @defaultonly NoAction();
+        }
+        key = {
+            hdr.ipv6.isValid(): exact @name("hdr.ipv6.isValid()") ;
+            hdr.ipv6.srcAddr  : exact @name("hdr.ipv6.srcAddr") ;
+            hdr.ipv6.dstAddr  : lpm @name("hdr.ipv6.dstAddr") ;
+        }
+        @name(".ap") implementation = action_profile(32w0);
+        default_action = NoAction();
+    }
+    @name(".tcam_sel") table tcam_sel_0 {
+        actions = {
+            a_0();
+            b_0();
+            c_0();
+            d_0();
+            e_0();
+            @defaultonly NoAction();
+        }
+        key = {
+            hdr.ipv6.isValid()  : exact @name("hdr.ipv6.isValid()") ;
+            hdr.ipv6.srcAddr    : exact @name("hdr.ipv6.srcAddr") ;
+            hdr.ipv6.dstAddr    : lpm @name("hdr.ipv6.dstAddr") ;
+            hdr.ethernet.dstAddr: selector @name("hdr.ethernet.dstAddr") ;
+            hdr.ethernet.srcAddr: selector @name("hdr.ethernet.srcAddr") ;
+        }
+        @name(".sel_ap") implementation = action_selector(HashAlgorithm.crc32, 32w0, 32w29);
+        default_action = NoAction();
+    }
     apply {
         if (1w0 == hdr.ig_intr_md.resubmit_flag) 
             p0_0.apply();
@@ -209,6 +373,20 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         tcam_0.apply();
         ha_0.apply();
         alpm_0.apply();
+        if (hdr.ig_intr_md.ingress_port == 9w0) 
+            exm_sel_0.apply();
+        else 
+            if (hdr.ig_intr_md.ingress_port == 9w1) 
+                tcam_sel_0.apply();
+            else 
+                if (hdr.ig_intr_md.ingress_port == 9w2) 
+                    exm_ap_0.apply();
+                else 
+                    if (hdr.ig_intr_md.ingress_port == 9w3) 
+                        tcam_ap_0.apply();
+        r_0.apply();
+        e_keyless_0.apply();
+        t_keyless_0.apply();
     }
 }
 
@@ -219,6 +397,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
+        packet.emit<ethernet_t>(hdr.ethernet);
+        packet.emit<ipv6_t>(hdr.ipv6);
     }
 }
 

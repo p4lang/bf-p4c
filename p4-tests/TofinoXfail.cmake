@@ -11,6 +11,43 @@ set (TOFINO_XFAIL_TESTS
   # this is intentionally empty because xfails should be added with a reason.
   # look for the failure message in this file and add to an existing ticket
   # or open a new one.
+  # Added new tests need furthur error categorization
+  extensions/p4_tests/p4_14/c1/COMPILER-532/case2807.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-505/case2690.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-503/case2678.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-632/case3459.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-608/case3263.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-593/case3011.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-589/comp589.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-588/comp588.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-588/comp588dce.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-585/comp585.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-579/case3085.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-577/comp577.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-576/case3042.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-575/case3041.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-568/case3026.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-568/case3026dce.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-567/case2807.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-562/case3005.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-559/case2987.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-548/case3011.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-548/case2895.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-637/case3478.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-635/case3468.p4
+  extensions/p4_tests/p4_14/c2/COMPILER-599/case3230.p4
+  extensions/p4_tests/p4_14/c4/COMPILER-591/case3176.p4
+  extensions/p4_tests/p4_14/c4/COMPILER-590/case3179.p4
+  extensions/p4_tests/p4_14/c4/COMPILER-549/case2898.p4
+  extensions/p4_tests/p4_14/c5/COMPILER-594/comp594.p4
+  extensions/p4_tests/p4_14/c6/COMPILER-604/new_parser.p4
+  extensions/p4_tests/p4_14/c6/COMPILER-603/loop.p4
+  extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
+  extensions/p4_tests/p4_14/c8/COMPILER-616/case3331.p4
+  extensions/p4_tests/p4_14/jenkins/dkm/dkm.p4
+  extensions/p4_tests/p4_14/jenkins/fr_test/fr_test.p4
+  extensions/p4_tests/p4_14/jenkins/mirror_test/mirror_test.p4
+  extensions/p4_tests/p4_14/jenkins/power/power.p4
   )
 
 # These tests compile successfuly and fail in the model when running the STF test
@@ -529,6 +566,10 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-260/case1799.p4
   extensions/p4_tests/p4_14/c1/COMPILER-260/case1799_1.p4
   extensions/p4_tests/p4_14/c1/COMPILER-262/case1804.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Can't have more than one constant operand to an SALU compare"
   extensions/p4_tests/p4_14/jenkins/multicast_scale/multicast_scale.p4
   )
 

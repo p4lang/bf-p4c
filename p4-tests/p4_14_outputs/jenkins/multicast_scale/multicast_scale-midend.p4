@@ -151,7 +151,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".cntr") @min_width(64) counter(32w2, CounterType.packets) cntr;
-    @name(".log") register<bit<16>>(32w64000) log;
+    @name(".log") register<bit<16>>(32w0) log;
     @name("salu") register_action<bit<16>, bit<16>>(log) salu = {
         void apply(inout bit<16> value, out bit<16> rv) {
             if (hdr.eg_intr_md.egress_rid_first == 1w1) 
@@ -178,7 +178,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             hdr.eg_intr_md.egress_port[6:0]: exact @name("hdr.eg_intr_md.egress_port[6:0]") ;
             hdr.eg_intr_md.egress_rid      : exact @name("hdr.eg_intr_md.egress_rid") ;
         }
-        size = 64000;
+        size = 1048576;
         default_action = on_miss_0();
     }
     apply {

@@ -206,8 +206,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     bit<8> ttl_0;
-    bit<8> ttl_2;
     bit<8> ttl_3;
+    bit<8> ttl_4;
+    bit<8> ttl_5;
     @name("NoAction") action NoAction_0() {
     }
     @name("NoAction") action NoAction_4() {
@@ -221,16 +222,23 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ipv4.ttl = ttl_0;
     }
     @name(".ipv4_lpm_hit") action ipv4_lpm_hit_3(bit<9> egress_port) {
-        ttl_2 = hdr.ipv4.ttl;
-        ttl_2 = hdr.ipv4.ttl + 8w255;
-        hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
-        hdr.ipv4.ttl = ttl_2;
-    }
-    @name(".ipv4_lpm_hit") action ipv4_lpm_hit_4(bit<9> egress_port) {
         ttl_3 = hdr.ipv4.ttl;
         ttl_3 = hdr.ipv4.ttl + 8w255;
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
         hdr.ipv4.ttl = ttl_3;
+    }
+    @name(".ipv4_lpm_hit") action ipv4_lpm_hit_4(bit<9> egress_port) {
+        ttl_4 = hdr.ipv4.ttl;
+        ttl_4 = hdr.ipv4.ttl + 8w255;
+        hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+        hdr.ipv4.ttl = ttl_4;
+    }
+    @name(".ipv4_lpm_hit_change_dmac") action ipv4_lpm_hit_change_dmac_0(bit<9> egress_port, bit<48> dstmac) {
+        ttl_5 = hdr.ipv4.ttl;
+        ttl_5 = hdr.ipv4.ttl + 8w255;
+        hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+        hdr.ipv4.ttl = ttl_5;
+        hdr.ethernet.dstAddr = dstmac;
     }
     @name(".lpm_miss") action lpm_miss_0() {
         mark_to_drop();
@@ -247,6 +255,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @alpm(1) @name(".ipv4_alpm") table ipv4_alpm {
         actions = {
             ipv4_lpm_hit_0();
+            ipv4_lpm_hit_change_dmac_0();
             lpm_miss_0();
             nop_0();
             @defaultonly NoAction_0();

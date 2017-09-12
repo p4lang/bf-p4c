@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "tofino/intrinsic_metadata.p4"
+#include "tofino/stateful_alu_blackbox.p4"
 
 action n() {}
 action N(x) {modify_field(ig_intr_md_for_tm.rid, x);}
@@ -60,7 +61,163 @@ table alpm {
   actions {n;}
 }
 
+/*
+ * Shared Counter
+ */
+counter cntr {
+    type: packets_and_bytes;
+    instance_count: 1000;
+    min_width : 32;
+}
+
+/*
+ * Shared Selection Table w/ Counter
+ */
+action a(x) {
+  modify_field(ig_intr_md_for_tm.ucast_egress_port, x);
+}
+action b(x,i) {
+  modify_field(ig_intr_md_for_tm.ucast_egress_port, x);
+  count(cntr, i);
+}
+action c(x) {
+  a(x);
+  count(cntr, 1);
+}
+action d(x,y,i) {
+  modify_field(ipv6.srcAddr, x);
+  modify_field(ipv6.flowLabel, y);
+  count(cntr, i);
+}
+action e() {
+  count(cntr, 0);
+}
+action_profile sel_ap {
+  actions { a;b;c;d;e; }
+  dynamic_action_selection : sel_as;
+}
+action_selector sel_as {
+  selection_key : sel_as_hash;
+}
+field_list_calculation sel_as_hash {
+    input { sel_as_hash_fields; }
+    algorithm : crc32;
+    output_width : 29;
+}
+field_list sel_as_hash_fields {
+    ethernet.dstAddr;
+    ethernet.srcAddr;
+}
+
+table exm_sel {
+  reads {
+    ipv6.valid : exact;
+    ipv6.srcAddr : exact;
+    ipv6.dstAddr : exact;
+  }
+  action_profile : sel_ap;
+}
+table tcam_sel {
+  reads {
+    ipv6.valid : exact;
+    ipv6.srcAddr : exact;
+    ipv6.dstAddr : lpm;
+  }
+  action_profile : sel_ap;
+}
+
+/*
+ * Shared Indirect Action w/ Counter
+ */
+action_profile ap {
+  actions { a;b;c;d;e; }
+}
+table exm_ap {
+  reads {
+    ipv6.valid : exact;
+    ipv6.srcAddr : exact;
+    ipv6.dstAddr : exact;
+  }
+  action_profile : ap;
+}
+table tcam_ap {
+  reads {
+    ipv6.valid : exact;
+    ipv6.srcAddr : exact;
+    ipv6.dstAddr : lpm;
+  }
+  action_profile : ap;
+}
+
+/*
+ * Keyless table with direct register.
+ */
+register r0 {
+  width : 32;
+  direct : r;
+}
+blackbox stateful_alu r0_alu {
+  reg: r0;
+  update_lo_1_value: register_lo + 1;
+}
+table r {
+  actions {r0_inc; r0_inc_duplicate;}
+  default_action: r0_inc;
+  size: 1;
+}
+action r0_inc() {
+  r0_alu.execute_stateful_alu();
+}
+action r0_inc_duplicate() {
+  r0_alu.execute_stateful_alu();
+}
+
+
+/*
+ * Keyless tables with action params.
+ */
+table e_keyless {
+  reads { ethernet.dstAddr : exact; }
+  actions { set_dmac; }
+  size : 10;
+}
+table t_keyless {
+  reads { ethernet.srcAddr : ternary; }
+  actions { set_smac; }
+  size : 10;
+}
+action set_dmac(d) {
+  modify_field(ethernet.dstAddr, d);
+}
+action set_smac(s) {
+  modify_field(ethernet.srcAddr, s);
+}
+
+
+header_type ethernet_t {
+  fields {
+    dstAddr : 48;
+    srcAddr : 48;
+    etherType : 16;
+  }
+}
+header_type ipv6_t {
+  fields {
+    version : 4;
+    trafficClass : 8;
+    flowLabel : 20;
+    payloadLen : 16;
+    nextHdr : 8;
+    hopLimit : 8;
+    srcAddr : 128;
+    dstAddr : 128;
+  }
+}
+header ethernet_t ethernet;
+header ipv6_t ipv6;
 parser start {
+  extract(ethernet);
+  extract(ipv6);
   return ingress;
 }
 control ingress {
@@ -71,4 +228,16 @@ control ingress {
   apply(tcam);
   apply(ha);
   apply(alpm);
+  if (ig_intr_md.ingress_port == 0) {
+    apply(exm_sel);
+  } else if (ig_intr_md.ingress_port == 1) {
+    apply(tcam_sel);
+  } else if (ig_intr_md.ingress_port == 2) {
+    apply(exm_ap);
+  } else if (ig_intr_md.ingress_port == 3) {
+    apply(tcam_ap);
+  }
+  apply(r);
+  apply(e_keyless);
+  apply(t_keyless);
 }

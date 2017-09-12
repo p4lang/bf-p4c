@@ -86,8 +86,7 @@ counter cntr {
 }
 register log {
     width : 16;
-    /* direct: egr; */
-    instance_count : 64000;
+    direct: egr;
 }
 blackbox stateful_alu salu {
     reg: log;
@@ -107,8 +106,7 @@ table egr {
         log_only;
     }
     default_action: on_miss;
-    /* size: 1048576; // Enough for 16384 RIDs on 64 ports */
-    size: 64000;  //Reduced due to needing indirect pointer
+    size: 1048576; // Enough for 16384 RIDs on 64 ports
 }
 
 control ingress {

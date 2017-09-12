@@ -212,6 +212,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".ipv4_lpm_hit") action ipv4_lpm_hit_0(bit<9> egress_port) {
         hop_0(hdr.ipv4.ttl, egress_port);
     }
+    @name(".ipv4_lpm_hit_change_dmac") action ipv4_lpm_hit_change_dmac_0(bit<9> egress_port, bit<48> dstmac) {
+        hop_0(hdr.ipv4.ttl, egress_port);
+        hdr.ethernet.dstAddr = dstmac;
+    }
     @name(".lpm_miss") action lpm_miss_0() {
         mark_to_drop();
     }
@@ -220,6 +224,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @alpm(1) @name(".ipv4_alpm") table ipv4_alpm_0 {
         actions = {
             ipv4_lpm_hit_0();
+            ipv4_lpm_hit_change_dmac_0();
             lpm_miss_0();
             nop_0();
             @defaultonly NoAction();

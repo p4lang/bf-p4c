@@ -125,8 +125,6 @@ action drop_count (count_idx) {
     drop();
 }
 
-@pragma command_line --placement pragma
-@pragma command_line --no-dead-code-elimination
 table idle_stats_tbl {
     reads {
         ipv4.dstAddr : exact;

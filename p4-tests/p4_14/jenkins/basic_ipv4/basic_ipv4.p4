@@ -240,6 +240,11 @@ action hop_ipv4(egress_port /*,srcmac, dstmac*/) {
 //    modify_field(ethernet.dstAddr, dstmac);
 }
 
+action hop_ipv4_change_dmac(egress_port, dstmac) {
+    hop(ipv4.ttl, egress_port);
+    modify_field(ethernet.dstAddr, dstmac);
+}
+
 action set_srange_mdata(index) {
     modify_field(range_mdata.src_range_index, index);
 }
@@ -327,7 +332,6 @@ action modify_l2 (egress_port, srcAddr, dstAddr, tcp_sport, tcp_dport) {
 }
 
 @pragma command_line --no-dead-code-elimination
-@pragma command_line --placement pragma
 @pragma immediate 1
 @pragma stage 0
 table ig_udp {
@@ -442,6 +446,7 @@ table ipv4_routing_stage_1 {
     actions {
       nop;
       hop_ipv4;
+      hop_ipv4_change_dmac;
     }
     size : 1024;
 }

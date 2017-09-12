@@ -90,6 +90,30 @@ set (P14_XFAIL_TESTS
   extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case1.p4
   extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case2.p4
   extensions/p4_tests/p4_14/test_config_261_mutually_exclusive_src_ops.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-532/case2807.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-632/case3459.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-608/case3263.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-593/case3011.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-589/comp589.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-588/comp588.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-588/comp588dce.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-585/comp585.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-579/case3085.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-577/comp577.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-576/case3042.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-575/case3041.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-568/case3026.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-568/case3026dce.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-567/case2807.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-562/case3005.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-559/case2987.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-548/case3011.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-548/case2895.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-637/case3478.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-635/case3468.p4
+  extensions/p4_tests/p4_14/c2/COMPILER-599/case3230.p4
+  extensions/p4_tests/p4_14/c5/COMPILER-594/comp594.p4
+  extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
 # BRIG-28
   extensions/p4_tests/p4_14/switch/p4src/switch.p4
   )

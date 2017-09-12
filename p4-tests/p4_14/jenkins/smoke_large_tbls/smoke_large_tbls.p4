@@ -156,6 +156,7 @@ action set_egress (egress_port) {
     modify_field(ig_intr_md_for_tm.ucast_egress_port, egress_port);
 }
 
+@pragma command_line --no-dead-code-elimination
 table idle_stats_tbl {
     reads {
         ethernet.dstAddr : ternary;
@@ -191,7 +192,6 @@ table idle_stats_tbl {
         udp.srcPort : ternary;
         udp.dstPort : ternary;
         udp.hdr_length : ternary;
-        // udp.checksum : ternary;  # Need to remove a field to make this fit
     }
     actions {
         set_egress;

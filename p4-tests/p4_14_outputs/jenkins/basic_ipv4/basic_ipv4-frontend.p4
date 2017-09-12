@@ -367,6 +367,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".nhop_set") action nhop_set_0(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
+    @name(".hop_ipv4_change_dmac") action hop_ipv4_change_dmac_0(bit<9> egress_port, bit<48> dstmac) {
+        hop_0(hdr.ipv4.ttl, egress_port);
+        hdr.ethernet.dstAddr = dstmac;
+    }
     @name(".set_mgid") action set_mgid_0() {
         hdr.ig_intr_md_for_tm.mcast_grp_a = 16w0xaaaa;
         hdr.ig_intr_md_for_tm.mcast_grp_b = 16w0x5555;
@@ -419,7 +423,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction();
     }
-    @command_line("--no-dead-code-elimination") @command_line("--placement", "pragma") @immediate(1) @stage(0) @name(".ig_udp") table ig_udp_0 {
+    @command_line("--no-dead-code-elimination") @immediate(1) @stage(0) @name(".ig_udp") table ig_udp_0 {
         actions = {
             nop_1();
             udp_set_dest_0();
@@ -610,6 +614,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop_1();
             hop_ipv4_0();
+            hop_ipv4_change_dmac_0();
             @defaultonly NoAction();
         }
         key = {

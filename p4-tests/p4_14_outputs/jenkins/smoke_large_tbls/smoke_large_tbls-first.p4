@@ -280,7 +280,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".nop") action nop_0() {
         dummy_cntr.count();
     }
-    @name(".idle_stats_tbl") table idle_stats_tbl {
+    @command_line("--no-dead-code-elimination") @name(".idle_stats_tbl") table idle_stats_tbl {
         support_timeout = true;
         actions = {
             set_egress_0();

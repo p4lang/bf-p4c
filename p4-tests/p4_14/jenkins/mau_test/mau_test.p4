@@ -115,8 +115,6 @@ action set_dest() {
     modify_field(ig_intr_md_for_tm.ucast_egress_port, ig_intr_md.ingress_port);
     shift_right(md.etherType_hi, ethernet.etherType, 8);
 }
-
-@pragma command_line --no-dead-code-elimination
 table dest {
     actions { set_dest; }
 }
@@ -233,28 +231,28 @@ table set_stats_key3 {
 
 
 @pragma lrt_enable 1
-@pragma lrt_scale 64
+//@pragma lrt_scale 64
 counter ig_cntr_1 {
     type : packets_and_bytes;
     instance_count : 32768;
     min_width : 32;
 }
 @pragma lrt_enable 1
-@pragma lrt_scale 65
+//@pragma lrt_scale 65
 counter ig_cntr_2 {
     type : packets_and_bytes;
     instance_count : 4096;
     min_width : 32;
 }
 @pragma lrt_enable 1
-@pragma lrt_scale 64
+//@pragma lrt_scale 64
 counter eg_cntr_1 {
     type : packets_and_bytes;
     instance_count : 32768;
     min_width : 32;
 }
 @pragma lrt_enable 1
-@pragma lrt_scale 65
+//@pragma lrt_scale 65
 counter eg_cntr_2 {
     type : packets_and_bytes;
     instance_count : 4096;
@@ -265,7 +263,7 @@ counter ig_cntr_3 {
     instance_count : 16384;
 }
 counter ig_cntr_4 {
-    type : packets_and_bytes;
+    type : packets;
     instance_count : 2048;
 }
 counter eg_cntr_3 {
@@ -273,7 +271,7 @@ counter eg_cntr_3 {
     instance_count : 16384;
 }
 counter eg_cntr_4 {
-    type : packets_and_bytes;
+    type : packets;
     instance_count : 2048;
 }
 
@@ -647,17 +645,16 @@ table t1 {
     actions { t1_action; }
     support_timeout: true;
 }
-@pragma lrt_enable 1
+@pragma lrt_enable 0
 @pragma lrt_scale 154
 counter t1_cntr {
-    type : bytes;
+    type : packets;
     direct: t1;
-    min_width : 32;
+    min_width : 64;
 }
 register t1_reg {
     width: 64;
-    /* direct: t1; */
-    instance_count : 1024;
+    direct: t1;
     attributes: signed;
 }
 blackbox stateful_alu t1_alu {
@@ -685,17 +682,16 @@ table e1 {
     size: 4096;
     support_timeout: true;
 }
-@pragma lrt_enable 1
+@pragma lrt_enable 0
 @pragma lrt_scale 154
 counter e1_cntr {
-    type : bytes;
+    type : packets;
     direct: e1;
-    min_width : 32;
+    min_width : 64;
 }
 register e1_reg {
     width: 64;
-    /* direct: e1; */
-    instance_count : 4096;
+    direct: e1;
     attributes: signed;
 }
 blackbox stateful_alu e1_alu {
@@ -730,7 +726,7 @@ table t2 {
     actions { t2_action; }
     support_timeout: true;
 }
-@pragma lrt_enable 1
+@pragma lrt_enable 0
 @pragma lrt_scale 15811
 counter t2_cntr {
     type : packets;
@@ -739,8 +735,7 @@ counter t2_cntr {
 }
 register t2_reg {
     width: 32;
-    /* direct: t2; */
-    instance_count : 1024;
+    direct: t2;
 }
 blackbox stateful_alu t2_alu {
     reg: t2_reg;
@@ -766,7 +761,7 @@ table e2 {
     size: 4096;
     support_timeout: true;
 }
-@pragma lrt_enable 1
+@pragma lrt_enable 0
 @pragma lrt_scale 15811
 counter e2_cntr {
     type : packets;
@@ -775,8 +770,7 @@ counter e2_cntr {
 }
 register e2_reg {
     width: 32;
-    /* direct: e2; */
-    instance_count : 1024;
+    direct: e2;
 }
 blackbox stateful_alu e2_alu {
     reg: e2_reg;
@@ -803,16 +797,16 @@ table t3 {
     reads { ethernet.etherType : ternary; }
     actions { t3_action; }
 }
-@pragma lrt_enable 1
+@pragma lrt_enable 0
 @pragma lrt_scale 154
 counter t3_cntr {
     type : bytes;
     direct : t3;
-    min_width : 32;
+    min_width : 64;
 }
 @pragma meter_sweep_interval 0
 meter t3_meter {
-    type: packets;
+    type: bytes;
     direct: t3;
     result: md.t3_meter;
     pre_color : md.mr_clr;
@@ -828,16 +822,16 @@ table e3 {
     actions { e3_action; }
     size: 4096;
 }
-@pragma lrt_enable 1
+@pragma lrt_enable 0
 @pragma lrt_scale 154
 counter e3_cntr {
     type : bytes;
     direct : e3;
-    min_width : 32;
+    min_width : 64;
 }
 @pragma meter_sweep_interval 0
 meter e3_meter {
-    type: packets;
+    type: bytes;
     direct: e3;
     result: md.e3_meter;
     pre_color : md.mr_clr;
@@ -852,12 +846,12 @@ table t4 {
     reads { ethernet.etherType : ternary; }
     actions { t4_action; }
 }
-@pragma lrt_enable 1
+@pragma lrt_enable 0
 @pragma lrt_scale 15811
 counter t4_cntr {
     type : packets;
     direct : t4;
-    min_width : 32;
+    //min_width : 32;
 }
 @pragma meter_sweep_interval 0
 meter t4_meter {
@@ -877,12 +871,12 @@ table e4 {
     actions { e4_action; }
     size: 4096;
 }
-@pragma lrt_enable 1
+@pragma lrt_enable 0
 @pragma lrt_scale 15811
 counter e4_cntr {
     type : packets;
     direct : e4;
-    min_width : 32;
+    //min_width : 32;
 }
 @pragma meter_sweep_interval 0
 meter e4_meter {
@@ -902,7 +896,7 @@ table t5 {
     reads { ethernet.etherType : ternary; }
     actions { t5_action; }
 }
-@pragma lrt_enable 1
+@pragma lrt_enable 0
 @pragma lrt_scale 154
 counter t5_cntr {
     type : bytes;
@@ -925,7 +919,7 @@ table e5 {
     actions { e5_action; }
     size: 4096;
 }
-@pragma lrt_enable 1
+@pragma lrt_enable 0
 @pragma lrt_scale 154
 counter e5_cntr {
     type : bytes;
@@ -947,12 +941,12 @@ table t6 {
     reads { ethernet.etherType : ternary; }
     actions { t6_action; }
 }
-@pragma lrt_enable 1
+@pragma lrt_enable 0
 @pragma lrt_scale 15811
 counter t6_cntr {
     type : packets;
     direct : t6;
-    min_width : 32;
+    //min_width : 32;
 }
 blackbox lpf t6_lpf {
     filter_input: ethernet.srcAddr;
@@ -970,12 +964,12 @@ table e6 {
     actions { e6_action; }
     size: 4096;
 }
-@pragma lrt_enable 1
+@pragma lrt_enable 0
 @pragma lrt_scale 15811
 counter e6_cntr {
     type : packets;
     direct : e6;
-    min_width : 32;
+    //min_width : 32;
 }
 blackbox lpf e6_lpf {
     filter_input: ethernet.srcAddr;
@@ -1040,8 +1034,7 @@ table v6 {
 
 register vp5_reg {
     width: 64;
-    /* direct: vp5; */
-    instance_count : 1024;
+    direct: vp5;
 }
 blackbox stateful_alu vp5_alu {
     reg: vp5_reg;
@@ -1060,8 +1053,7 @@ table vp5 {
 }
 register vp6_reg {
     width: 64;
-    /* direct: vp6; */
-    instance_count : 1024;
+    direct: vp6;
 }
 blackbox stateful_alu vp6_alu {
     reg: vp6_reg;
@@ -1080,8 +1072,7 @@ table vp6 {
 }
 register vpp5_reg {
     width: 64;
-    /* direct: vpp5; */
-    instance_count : 1024;
+    direct: vpp5;
 }
 blackbox stateful_alu vpp5_alu {
     reg: vpp5_reg;
@@ -1100,8 +1091,7 @@ table vpp5 {
 }
 register vpp6_reg {
     width: 64;
-    /* direct: vpp6; */
-    instance_count : 1024;
+    direct: vpp6;
 }
 blackbox stateful_alu vpp6_alu {
     reg: vpp6_reg;
@@ -1235,7 +1225,7 @@ control egress {
     if (1 == md.count_it or 2 == md.count_it or 3 == md.count_it or md.m1_drop == 1) {
         apply(eg_stat_1);
         apply(eg_stat_2);
-        apply(eg_discard);
+        //apply(eg_discard);
     }
 
     apply(eg_idle_1);
