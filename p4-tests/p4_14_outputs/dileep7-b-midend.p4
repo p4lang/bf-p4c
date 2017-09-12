@@ -241,7 +241,6 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<8> ttl_0;
     @name("NoAction") action NoAction_0() {
     }
     @name(".nop") action nop_0() {
@@ -249,10 +248,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".custom_action_3") action custom_action(bit<9> egress_port, bit<48> dstAddr, bit<32> dstIp) {
         hdr.ipv4.dstAddr = dstIp;
         hdr.ethernet.dstAddr = dstAddr;
-        ttl_0 = hdr.ipv4.ttl;
-        ttl_0 = hdr.ipv4.ttl + 8w255;
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
-        hdr.ipv4.ttl = ttl_0;
+        hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
     }
     @pack(1) @ways(5) @name(".exm_5ways_1Entries_stage_2") table exm_5ways_1Entries_stage_0 {
         actions = {

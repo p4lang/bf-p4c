@@ -159,10 +159,11 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
         transition parse_ethernet;
     }
 }
+#include <tofino/p4_14_prim.p4>
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".action_0") action action_1(bit<8> port) {
-        recirculate<bit<9>>((bit<9>)port);
+        recirculate_raw((bit<9>)port);
     }
     @name(".table_0") table table_1 {
         actions = {

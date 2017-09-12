@@ -211,24 +211,10 @@ if (NOT ENABLE_TNA)
   # was BRIG-134 for extensions/p4_tests/p4_14/jenkins/alpm_test/alpm_test.p4
   p4c_add_xfail_reason("tofino"
     "No write within a split instruction"
-    extensions/p4_tests/p4_14/dileep.p4
-    extensions/p4_tests/p4_14/dileep2.p4
-    extensions/p4_tests/p4_14/dileep3.p4
-    extensions/p4_tests/p4_14/dileep4.p4
-    extensions/p4_tests/p4_14/dileep7-b.p4
-    extensions/p4_tests/p4_14/dileep8.p4
-    extensions/p4_tests/p4_14/dileep10.p4
-    extensions/p4_tests/p4_14/dileep11.p4
-    extensions/p4_tests/p4_14/dileep12.p4
-    extensions/p4_tests/p4_14/vk_basic_ipv4_20150706.p4
-    extensions/p4_tests/p4_14/jenkins/action_spec_format/action_spec_format.p4
     extensions/p4_tests/p4_14/jenkins/alpm_test/alpm_test.p4
     extensions/p4_tests/p4_14/jenkins/basic_ipv4/basic_ipv4.p4
     extensions/p4_tests/p4_14/jenkins/exm_direct/exm_direct_one.p4
     extensions/p4_tests/p4_14/jenkins/exm_direct_1/exm_direct_1_one.p4
-    extensions/p4_tests/p4_14/jenkins/exm_indirect_1/exm_indirect_1_one.p4
-    extensions/p4_tests/p4_14/jenkins/exm_smoke_test/exm_smoke_test_one.p4
-    extensions/p4_tests/p4_14/jenkins/multi_device/multi_device.p4
     )
   #BRIG-201
   p4c_add_xfail_reason("tofino"
@@ -324,6 +310,22 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Unhandled expression in BuildGatewayMatch"
   testdata/p4_14_samples/basic_conditionals.p4
+  )
+
+# BRIG-136
+# was BRIG-134 for extensions/p4_tests/p4_14/jenkins/alpm_test/alpm_test.p4
+p4c_add_xfail_reason("tofino"
+  "No write within a split instruction"
+  extensions/p4_tests/p4_14/jenkins/action_spec_format/action_spec_format.p4
+  extensions/p4_tests/p4_14/jenkins/alpm_test/alpm_test.p4
+  extensions/p4_tests/p4_14/jenkins/basic_ipv4/basic_ipv4.p4
+  extensions/p4_tests/p4_14/jenkins/exm_direct/exm_direct_one.p4
+  extensions/p4_tests/p4_14/jenkins/exm_direct_1/exm_direct_1_one.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Unrecognized mode of the action selector"
+  extensions/p4_tests/p4_14/jenkins/exm_direct/exm_direct_one.p4
   )
 
 # BRIG-101
@@ -544,6 +546,10 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "tofino only supports 12 stages"
   extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
+  extensions/p4_tests/p4_14/jenkins/alpm_test/alpm_test.p4
+  extensions/p4_tests/p4_14/jenkins/basic_ipv4/basic_ipv4.p4
+  extensions/p4_tests/p4_14/jenkins/exm_direct_1/exm_direct_1_one.p4
+  extensions/p4_tests/p4_14/jenkins/basic_ipv4/basic_ipv4.p4
   )
 
 # BRIG-113
@@ -756,7 +762,6 @@ p4c_add_xfail_reason("tofino"
   "error: : conditional assignment not supported"
   extensions/p4_tests/p4_14/test_config_219_modify_field_conditionally.p4
   testdata/p4_16_samples/issue232-bmv2.p4
-  testdata/p4_16_samples/issue242.p4
   testdata/p4_16_samples/issue420.p4
   testdata/p4_16_samples/issue512.p4
   )
@@ -819,6 +824,7 @@ p4c_add_xfail_reason("tofino"
 # BRIG-186: per_flow_enable
 p4c_add_xfail_reason("tofino"
   "Field .* overlaps with .*"
+  extensions/p4_tests/p4_14/jenkins/action_spec_format/action_spec_format.p4
   extensions/p4_tests/p4_14/jenkins/stats_pi/stats_pi.p4
   )
 
@@ -896,6 +902,11 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Tofino does not allow meters to use different address schemes on one table"
   testdata/p4_14_samples/counter.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "ERROR: Sizing of the write and read do not match up"
+  extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
   )
 
 p4c_add_xfail_reason("tofino"

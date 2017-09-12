@@ -90,7 +90,6 @@ set (P14_XFAIL_TESTS
   extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case1.p4
   extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case2.p4
   extensions/p4_tests/p4_14/test_config_261_mutually_exclusive_src_ops.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-532/case2807.p4
   extensions/p4_tests/p4_14/c1/COMPILER-632/case3459.p4
   extensions/p4_tests/p4_14/c1/COMPILER-608/case3263.p4
   extensions/p4_tests/p4_14/c1/COMPILER-593/case3011.p4

@@ -1,14 +1,15 @@
 #include <core.p4>
 #include <v1model.p4>
 
+typedef bit<9> PortId_t;
 @controller_header("packet_in") header packet_in_header_t {
-    bit<9> ingress_port;
-    bit<7> _padding0;
+    PortId_t ingress_port;
+    bit<7>   _padding0;
 }
 
 @not_extracted_in_egress @controller_header("packet_out") header packet_out_header_t {
-    bit<9> egress_port;
-    bit<7> _padding0;
+    PortId_t egress_port;
+    bit<7>   _padding0;
 }
 
 struct metadata_t {
@@ -47,7 +48,7 @@ control ingress(inout headers_t hdr, inout metadata_t meta, inout standard_metad
     @name("send_to_cpu") action send_to_cpu_0() {
         standard_metadata.egress_spec = 9w320;
     }
-    @name("set_egress_port") action set_egress_port_0(bit<9> port) {
+    @name("set_egress_port") action set_egress_port_0(PortId_t port) {
         standard_metadata.egress_spec = port;
     }
     @name("table0") table table0 {

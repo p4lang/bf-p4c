@@ -2341,7 +2341,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".negative_mirror") action _negative_mirror(bit<32> clone_spec, bit<8> drop_reason) {
         meta.ingress_metadata.drop_reason = drop_reason;
-        clone3<tuple_0>(CloneType.I2E, clone_spec, { meta.ingress_metadata.ifindex, meta.ingress_metadata.drop_reason, meta.l3_metadata.lkp_ip_ttl });
+        clone3<tuple_0>(CloneType.I2E, clone_spec, { meta.ingress_metadata.ifindex, drop_reason, meta.l3_metadata.lkp_ip_ttl });
         mark_to_drop();
     }
     @name(".system_acl") table _system_acl_0 {

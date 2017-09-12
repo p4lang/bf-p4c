@@ -230,7 +230,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("conga_alu") register_action<conga_state_layout, bit<8>>(conga_state) conga_alu = {
         void apply(inout conga_state_layout value, out bit<8> rv) {
             value.next_hop = value.utilization;
-            rv = value.next_hop;
+            rv = value.utilization;
         }
     };
     @name("conga_update_alu") register_action<conga_state_layout, bit<8>>(conga_state) conga_update_alu = {

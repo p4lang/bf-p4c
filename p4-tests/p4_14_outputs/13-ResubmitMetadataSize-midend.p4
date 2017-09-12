@@ -189,7 +189,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.meta.f6 = d6;
         meta.meta.f7 = d7;
         meta.meta.f8 = d8;
-        resubmit<tuple_0>({ meta.meta.f1, meta.meta.f2, meta.meta.f3, meta.meta.f4, meta.meta.f5, meta.meta.f6, meta.meta.f7, meta.meta.f8 });
+        resubmit<tuple_0>({ d1, d2, d3, d4, d5, d6, d7, d8 });
     }
     @name(".t1") table t1 {
         actions = {

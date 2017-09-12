@@ -230,7 +230,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ig_intr_md_for_tm.packet_color = color;
     }
     @name(".do_recirc") action do_recirc() {
-        recirculate((bit<9>)68);
+        recirculate_raw((bit<9>)68);
         invalidate(hdr.ig_intr_md_for_tm.mcast_grp_a);
     }
     @name(".noop") action noop() {

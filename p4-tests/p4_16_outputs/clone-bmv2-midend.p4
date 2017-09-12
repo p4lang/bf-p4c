@@ -16,7 +16,7 @@ parser ParserI(packet_in pk, out H hdr, inout M meta, inout standard_metadata_t 
 control IngressI(inout H hdr, inout M meta, inout standard_metadata_t smeta) {
     @hidden action act() {
         smeta.clone_spec = 32w0;
-        clone(CloneType.I2E, smeta.clone_spec);
+        clone(CloneType.I2E, 32w0);
     }
     @hidden table tbl_act {
         actions = {

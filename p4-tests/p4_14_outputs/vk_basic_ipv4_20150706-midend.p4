@@ -267,16 +267,13 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<8> ttl_0;
     @name("NoAction") action NoAction_1() {
     }
     @name(".nop") action nop_1() {
     }
     @name(".hop_ipv4") action hop_ipv4_0(bit<9> egress_port) {
-        ttl_0 = hdr.ipv4.ttl;
-        ttl_0 = hdr.ipv4.ttl + 8w255;
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
-        hdr.ipv4.ttl = ttl_0;
+        hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
     }
     @stage(5) @name(".tcam_range") table tcam_range {
         actions = {

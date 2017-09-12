@@ -266,35 +266,35 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     @name(".ec0") action ec0_0() {
         meta.meta.e2e_0 = 8w0;
-        clone3<tuple_0>(CloneType.E2E, 32w0, { meta.meta.e2e_0 });
+        clone3<tuple_0>(CloneType.E2E, 32w0, { 8w0 });
     }
     @name(".ec1") action ec1_0() {
         meta.meta.e2e_1 = 16w1;
-        clone3<tuple_1>(CloneType.E2E, 32w1, { meta.meta.e2e_1 });
+        clone3<tuple_1>(CloneType.E2E, 32w1, { 16w1 });
     }
     @name(".ec2") action ec2_0() {
         meta.meta.e2e_2 = 32w2;
-        clone3<tuple_2>(CloneType.E2E, 32w2, { meta.meta.e2e_2 });
+        clone3<tuple_2>(CloneType.E2E, 32w2, { 32w2 });
     }
     @name(".ec3") action ec3_0() {
         meta.meta.e2e_3 = 48w3;
-        clone3<tuple_3>(CloneType.E2E, 32w3, { meta.meta.e2e_3 });
+        clone3<tuple_3>(CloneType.E2E, 32w3, { 48w3 });
     }
     @name(".ec4") action ec4_0() {
         meta.meta.e2e_4 = 64w4;
-        clone3<tuple_4>(CloneType.E2E, 32w4, { meta.meta.e2e_4 });
+        clone3<tuple_4>(CloneType.E2E, 32w4, { 64w4 });
     }
     @name(".ec5") action ec5_0() {
         meta.meta.e2e_5 = 80w5;
-        clone3<tuple_5>(CloneType.E2E, 32w5, { meta.meta.e2e_5 });
+        clone3<tuple_5>(CloneType.E2E, 32w5, { 80w5 });
     }
     @name(".ec6") action ec6_0() {
         meta.meta.e2e_6 = 96w6;
-        clone3<tuple_6>(CloneType.E2E, 32w6, { meta.meta.e2e_6 });
+        clone3<tuple_6>(CloneType.E2E, 32w6, { 96w6 });
     }
     @name(".ec7") action ec7_0() {
         meta.meta.e2e_7 = 128w7;
-        clone3<tuple_7>(CloneType.E2E, 32w7, { meta.meta.e2e_7 });
+        clone3<tuple_7>(CloneType.E2E, 32w7, { 128w7 });
     }
     @name(".et0") table et0 {
         actions = {
@@ -353,35 +353,35 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".ic0") action ic0_0() {
         meta.meta.i2e_0 = 8w0;
-        clone3<tuple_0>(CloneType.I2E, 32w0, { meta.meta.i2e_0 });
+        clone3<tuple_0>(CloneType.I2E, 32w0, { 8w0 });
     }
     @name(".ic1") action ic1_0() {
         meta.meta.i2e_1 = 16w1;
-        clone3<tuple_1>(CloneType.I2E, 32w1, { meta.meta.i2e_1 });
+        clone3<tuple_1>(CloneType.I2E, 32w1, { 16w1 });
     }
     @name(".ic2") action ic2_0() {
         meta.meta.i2e_2 = 32w2;
-        clone3<tuple_2>(CloneType.I2E, 32w2, { meta.meta.i2e_2 });
+        clone3<tuple_2>(CloneType.I2E, 32w2, { 32w2 });
     }
     @name(".ic3") action ic3_0() {
         meta.meta.i2e_3 = 48w3;
-        clone3<tuple_3>(CloneType.I2E, 32w3, { meta.meta.i2e_3 });
+        clone3<tuple_3>(CloneType.I2E, 32w3, { 48w3 });
     }
     @name(".ic4") action ic4_0() {
         meta.meta.i2e_4 = 64w4;
-        clone3<tuple_4>(CloneType.I2E, 32w4, { meta.meta.i2e_4 });
+        clone3<tuple_4>(CloneType.I2E, 32w4, { 64w4 });
     }
     @name(".ic5") action ic5_0() {
         meta.meta.i2e_5 = 80w5;
-        clone3<tuple_5>(CloneType.I2E, 32w5, { meta.meta.i2e_5 });
+        clone3<tuple_5>(CloneType.I2E, 32w5, { 80w5 });
     }
     @name(".ic6") action ic6_0() {
         meta.meta.i2e_6 = 96w6;
-        clone3<tuple_6>(CloneType.I2E, 32w6, { meta.meta.i2e_6 });
+        clone3<tuple_6>(CloneType.I2E, 32w6, { 96w6 });
     }
     @name(".ic7") action ic7_0() {
         meta.meta.i2e_7 = 128w7;
-        clone3<tuple_7>(CloneType.I2E, 32w7, { meta.meta.i2e_7 });
+        clone3<tuple_7>(CloneType.I2E, 32w7, { 128w7 });
     }
     @name(".it0") table it0 {
         actions = {

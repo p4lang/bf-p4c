@@ -190,7 +190,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".do_resubmit_with_fields") action do_resubmit_with_fields_0() {
         meta.test_metadata.field_C = 16w0x1234;
-        resubmit<tuple_1>({ meta.test_metadata.field_A, meta.test_metadata.field_C });
+        resubmit<tuple_1>({ meta.test_metadata.field_A, 16w0x1234 });
     }
     @name(".l2_nhop") table l2_nhop {
         actions = {

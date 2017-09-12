@@ -277,8 +277,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("flow_cache_1_way_1_alu") register_action<flow_cache_1_way_1_alu_layout, bit<32>>(flow_cache_1_way_1) flow_cache_1_way_1_alu = {
         void apply(inout flow_cache_1_way_1_alu_layout value, out bit<32> rv) {
             value.lo = 32w1;
-            if (value.lo == hdr.ipv4.dstAddr && value.hi == hdr.ipv4.srcAddr) 
-                rv = value.lo;
+            if (32w1 == hdr.ipv4.dstAddr && value.hi == hdr.ipv4.srcAddr) 
+                rv = 32w1;
         }
     };
     @name("flow_cache_1_way_1_learn_alu") register_action<flow_cache_1_way_1_learn_alu_layout, bit<32>>(flow_cache_1_way_1) flow_cache_1_way_1_learn_alu = {
@@ -292,8 +292,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("flow_cache_1_way_2_alu") register_action<flow_cache_1_way_2_alu_layout, bit<32>>(flow_cache_1_way_2) flow_cache_1_way_2_alu = {
         void apply(inout flow_cache_1_way_2_alu_layout value, out bit<32> rv) {
             value.lo = 32w1;
-            if (value.lo == hdr.ipv4.dstAddr && value.hi == hdr.ipv4.srcAddr) 
-                rv = value.lo;
+            if (32w1 == hdr.ipv4.dstAddr && value.hi == hdr.ipv4.srcAddr) 
+                rv = 32w1;
         }
     };
     @name("flow_cache_2_way_1_alu") register_action<bit<32>, bit<32>>(flow_cache_2_way_1) flow_cache_2_way_1_alu = {
