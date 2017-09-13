@@ -32,7 +32,7 @@
 #include "tofino/tofinoOptions.h"
 #include "program_structure.h"
 
-namespace Tofino {
+namespace BFN {
 
 namespace P4_14 {
 static const cstring MeterType = "MeterType";
@@ -82,6 +82,6 @@ class SimpleSwitchTranslation : public PassManager {
     explicit SimpleSwitchTranslation(Tofino_Options& options);
 };
 
-}  // namespace Tofino
+}  // namespace BFN
 
 #endif /* TOFINO_ARCH_SIMPLE_SWITCH_H_ */

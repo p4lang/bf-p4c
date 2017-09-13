@@ -1,5 +1,5 @@
-#ifndef _TOFINO_PHV_PHV_ANALYSIS_API_H_
-#define _TOFINO_PHV_PHV_ANALYSIS_API_H_
+#ifndef TOFINO_PHV_PHV_ANALYSIS_API_H_
+#define TOFINO_PHV_PHV_ANALYSIS_API_H_
 
 #include "ir/ir.h"
 #include "lib/map.h"
@@ -59,4 +59,4 @@ class PHV_Analysis_API {
 //
 std::ostream &operator<<(std::ostream &, PHV_Analysis_API &);
 //
-#endif /* _TOFINO_PHV_PHV_ANALYSIS_API_H_ */
+#endif /* TOFINO_PHV_PHV_ANALYSIS_API_H_ */

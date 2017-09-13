@@ -21,19 +21,19 @@ limitations under the License.
 #include "lib/map.h"
 
 /// Walk over the IR and collect metadata about the usage of header stacks in
-/// the program. The results are stored in `IR::Tofino::Pipe::headerStackInfo`.
+/// the program. The results are stored in `IR::BFN::Pipe::headerStackInfo`.
 struct CollectHeaderStackInfo : public Modifier {
     CollectHeaderStackInfo();
 
  private:
     void postorder(IR::HeaderStack* stack) override;
     void postorder(IR::Primitive* primitive) override;
-    void postorder(IR::Tofino::Pipe* pipe) override;
+    void postorder(IR::BFN::Pipe* pipe) override;
 
-    Tofino::HeaderStackInfo* stacks;
+    BFN::HeaderStackInfo* stacks;
 };
 
-namespace Tofino {
+namespace BFN {
 
 /// Metadata about how header stacks are used in the program.
 struct HeaderStackInfo {
@@ -71,6 +71,6 @@ struct HeaderStackInfo {
     auto at(cstring n) -> decltype(info.at(n)) { return info.at(n); }
 };
 
-}  // namespace Tofino
+}  // namespace BFN
 
 #endif /* TOFINO_COMMON_HEADER_STACK_H_ */

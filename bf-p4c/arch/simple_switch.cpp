@@ -16,7 +16,7 @@
 
 #include "simple_switch.h"
 
-namespace Tofino {
+namespace BFN {
 
 /// When compiling a tofino-v1model program, the compiler by default
 /// includes tofino/intrinsic_metadata.p4 and v1model.p4 from the
@@ -264,10 +264,10 @@ class DoMeterTranslation : public Transform {
         if (!typeName)
             return node;
 
-        if (typeName->path->name == Tofino::P4_14::DirectMeter)
-            return convertDirectCounterOrMeterInstance(node, Tofino::P4_16::Meter);
-        else if (typeName->path->name == Tofino::P4_14::Meter)
-            return convertIndirectCounterOrMeterInstance(node, Tofino::P4_16::Meter);
+        if (typeName->path->name == BFN::P4_14::DirectMeter)
+            return convertDirectCounterOrMeterInstance(node, BFN::P4_16::Meter);
+        else if (typeName->path->name == BFN::P4_14::Meter)
+            return convertIndirectCounterOrMeterInstance(node, BFN::P4_16::Meter);
 
         return node;
     }
@@ -275,8 +275,8 @@ class DoMeterTranslation : public Transform {
     const IR::Node* postorder(IR::ConstructorCallExpression* node) override {
         auto tn = node->constructedType->to<IR::Type_Name>();
         if (!tn) return node;
-        if (tn->path->name == Tofino::P4_14::DirectMeter) {
-            auto typeName = new IR::Type_Name(Tofino::P4_16::Meter);
+        if (tn->path->name == BFN::P4_14::DirectMeter) {
+            auto typeName = new IR::Type_Name(BFN::P4_16::Meter);
             auto dontcare = new IR::Type_Dontcare();
             auto args = new IR::Vector<IR::Type>( { dontcare } );
             auto specializedType = new IR::Type_Specialized(typeName, args);
@@ -286,22 +286,22 @@ class DoMeterTranslation : public Transform {
     }
 
     const IR::Node* postorder(IR::Type_Name* node) override {
-        if (node->path->name != Tofino::P4_14::MeterType)
+        if (node->path->name != BFN::P4_14::MeterType)
             return node;
-        return new IR::Type_Name(Tofino::P4_16::MeterType);
+        return new IR::Type_Name(BFN::P4_16::MeterType);
     }
 
     const IR::Node* postorder(IR::Member* node) override {
         if (auto tnp = node->expr->to<IR::TypeNameExpression>()) {
             if (auto tn = tnp->typeName->to<IR::Type_Name>())
-                if (tn->path->name != Tofino::P4_16::MeterType)
+                if (tn->path->name != BFN::P4_16::MeterType)
                     return node;
-            if (node->member.name == Tofino::P4_14::PACKETS)
+            if (node->member.name == BFN::P4_14::PACKETS)
                 return new IR::Member(node->srcInfo, node->type, node->expr,
-                                      Tofino::P4_16::PACKETS);
-            else if (node->member.name == Tofino::P4_14::BYTES)
+                                      BFN::P4_16::PACKETS);
+            else if (node->member.name == BFN::P4_14::BYTES)
                 return new IR::Member(node->srcInfo, node->type, node->expr,
-                                      Tofino::P4_16::BYTES);
+                                      BFN::P4_16::BYTES);
         } else if (node->expr->to<IR::PathExpression>()) {
             if (node->member.name == "execute_meter")
                 return new IR::Member(node->srcInfo, node->type, node->expr, "execute");
@@ -314,8 +314,8 @@ class DoMeterTranslation : public Transform {
     const IR::Node* preorder(IR::MethodCallExpression* node) override {
         auto mi = P4::MethodInstance::resolve(node, refMap, typeMap, true);
         if (auto em = mi->to<P4::ExternMethod>()) {
-            if (em->originalExternType->name != Tofino::P4_14::Meter &&
-                em->originalExternType->name != Tofino::P4_14::DirectMeter) {
+            if (em->originalExternType->name != BFN::P4_14::Meter &&
+                em->originalExternType->name != BFN::P4_14::DirectMeter) {
                 prune(); }}
         return node;
     }
@@ -367,14 +367,14 @@ class FindRandomUsage : public Inspector {
         auto expr = node->method->to<IR::PathExpression>();
         if (!expr)
             return node;
-        if (expr->path->name == Tofino::P4_14::Random) {
+        if (expr->path->name == BFN::P4_14::Random) {
             auto control = findContext<IR::P4Control>();
 
             // T at index 0
             auto baseType = node->arguments->at(0);
             auto typeArgs = new IR::Vector<IR::Type>();
             typeArgs->push_back(baseType->type);
-            auto randType = new IR::Type_Specialized(new IR::Type_Name(Tofino::P4_16::Random),
+            auto randType = new IR::Type_Specialized(new IR::Type_Name(BFN::P4_16::Random),
                                                      typeArgs);
             cstring randName;
             if (!randUseMap->count(control->name)) {
@@ -418,7 +418,7 @@ class DoRandomTranslation : public Transform {
         if (!expr)
             return node;
 
-        if (expr->path->name == Tofino::P4_14::Random) {
+        if (expr->path->name == BFN::P4_14::Random) {
             auto dest = mc->arguments->at(0);
             // ignore lower bound
             auto hi = mc->arguments->at(2);
@@ -434,7 +434,7 @@ class DoRandomTranslation : public Transform {
                 randName = actionUseMap->at(control->name);
 
             auto method = new IR::PathExpression(randName);
-            auto member = new IR::Member(method, Tofino::P4_16::RandomExec);
+            auto member = new IR::Member(method, BFN::P4_16::RandomExec);
             auto call = new IR::MethodCallExpression(node->srcInfo, member,
                                                      new IR::Vector<IR::Type>(), args);
             auto assign = new IR::AssignmentStatement(dest, call);
@@ -490,7 +490,7 @@ class FindHashUsage : public Inspector {
         if (!expr)
             return false;
 
-        if (expr->path->name == Tofino::P4_14::Hash) {
+        if (expr->path->name == BFN::P4_14::Hash) {
             auto pAlgo = node->arguments->at(1);
             auto control = findContext<IR::P4Control>();
             auto hashArgs = new IR::Vector<IR::Expression>();
@@ -531,27 +531,27 @@ class DoHashTranslation : public Transform {
         setName("DoHashTranslation"); }
 
     const IR::Node* preorder(IR::Type_Name* node) override {
-        if (node->path->name != Tofino::P4_14::HashAlgorithm) {
+        if (node->path->name != BFN::P4_14::HashAlgorithm) {
             prune();
             return node; }
-        return new IR::Type_Name(Tofino::P4_16::HashAlgorithm);
+        return new IR::Type_Name(BFN::P4_16::HashAlgorithm);
     }
 
     const IR::Node* postorder(IR::Member* node) override {
         if (auto tnp = node->expr->to<IR::TypeNameExpression>())
         if (auto tn = tnp->typeName->to<IR::Type_Name>())
-        if (tn->path->name != Tofino::P4_16::HashAlgorithm)
+        if (tn->path->name != BFN::P4_16::HashAlgorithm)
             return node;
 
         cstring name = node->member.name;
-        if (name == Tofino::P4_14::CRC16) {
-            name = Tofino::P4_16::CRC16;
-        } else if (name == Tofino::P4_14::CRC32) {
-            name = Tofino::P4_16::CRC32;
-        } else if (name == Tofino::P4_14::RANDOM) {
-            name = Tofino::P4_16::RANDOM;
-        } else if (name == Tofino::P4_14::IDENTITY) {
-            name = Tofino::P4_16::IDENTITY;
+        if (name == BFN::P4_14::CRC16) {
+            name = BFN::P4_16::CRC16;
+        } else if (name == BFN::P4_14::CRC32) {
+            name = BFN::P4_16::CRC32;
+        } else if (name == BFN::P4_14::RANDOM) {
+            name = BFN::P4_16::RANDOM;
+        } else if (name == BFN::P4_14::IDENTITY) {
+            name = BFN::P4_16::IDENTITY;
         }
         return new IR::Member(node->srcInfo, node->type, node->expr, name);
     }
@@ -565,7 +565,7 @@ class DoHashTranslation : public Transform {
         if (!expr)
             return node;
 
-        if (expr->path->name == Tofino::P4_14::Hash) {
+        if (expr->path->name == BFN::P4_14::Hash) {
             auto pDest = mc->arguments->at(0);
             auto pBase = mc->arguments->at(2);
             auto pData = mc->arguments->at(3);
@@ -581,7 +581,7 @@ class DoHashTranslation : public Transform {
                 hashName = it->second; }
 
             auto method = new IR::PathExpression(hashName);
-            auto member = new IR::Member(method, Tofino::P4_16::Hash);
+            auto member = new IR::Member(method, BFN::P4_16::Hash);
             auto call = new IR::MethodCallExpression(node->srcInfo, member, args);
             auto assign = new IR::AssignmentStatement(pDest, call);
             return assign;
@@ -640,4 +640,4 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(Tofino_Options& options) {
     });
 }
 
-}  // namespace Tofino
+}  // namespace BFN

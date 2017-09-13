@@ -19,7 +19,7 @@ limitations under the License.
 
 #include <array>
 
-namespace Tofino {
+namespace BFN {
 namespace Description {
 
 /// The name of this machine, in a form suitable for display to end users.
@@ -39,6 +39,6 @@ static constexpr int BitInputBufferSize = 256;
 static constexpr int ByteInputBufferSize = BitInputBufferSize / 8;
 
 }  // namespace Description
-}  // namespace Tofino
+}  // namespace BFN
 
 #endif /* _EXTENSIONS_TOFINO_COMMON_MACHINE_DESCRIPTION_H_ */

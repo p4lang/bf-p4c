@@ -77,7 +77,7 @@ createComputedChecksumTestCase(const std::string& computeChecksumSource,
     return TofinoPipeTestCase::create(source);
 }
 
-void checkComputedChecksum(const IR::Tofino::Pipe* pipe,
+void checkComputedChecksum(const IR::BFN::Pipe* pipe,
                            const std::vector<cstring>& expected) {
     for (auto gress : { INGRESS, EGRESS }) {
         auto& actual = pipe->thread[gress].deparser->emits;

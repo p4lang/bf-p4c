@@ -1,5 +1,5 @@
-#ifndef _TOFINO_LIB_PRIMITIVES
-#define _TOFINO_LIB_PRIMITIVES 1
+#ifndef TOFINO_LIB_PRIMITIVES
+#define TOFINO_LIB_PRIMITIVES 1
 
 /////////////////////////////////////////////////////////////
 // Primitive aliases

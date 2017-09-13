@@ -25,10 +25,10 @@ limitations under the License.
 namespace {
 
 class VerifyAssignedShifts : public ParserInspector {
-    bool preorder(const IR::Tofino::ParserMatch* match) override {
+    bool preorder(const IR::BFN::ParserMatch* match) override {
         BUG_CHECK(match->shift,
                   "Parser match in state %1% was not assigned a shift",
-                  findContext<IR::Tofino::ParserState>()->name);
+                  findContext<IR::BFN::ParserState>()->name);
         return true;
     }
 };
@@ -45,8 +45,8 @@ class VerifyAssignedShifts : public ParserInspector {
 // establishing this invariant is critical for the correctness of
 // ResolveStackRefs.
 class MakeUnresolvedStackRefsUnique : public ParserTransform {
-    const IR::Tofino::UnresolvedStackRef*
-    makeUniqueStackRef(const IR::Tofino::UnresolvedStackRef* ref) {
+    const IR::BFN::UnresolvedStackRef*
+    makeUniqueStackRef(const IR::BFN::UnresolvedStackRef* ref) {
         if (visitedRefIds.find(ref->id) == visitedRefIds.end()) {
             visitedRefIds.insert(ref->id);
             return ref;
@@ -57,26 +57,26 @@ class MakeUnresolvedStackRefsUnique : public ParserTransform {
         return freshRef;
     }
 
-    const IR::Tofino::ParserState*
-    preorder(IR::Tofino::ParserState* state) override {
+    const IR::BFN::ParserState*
+    preorder(IR::BFN::ParserState* state) override {
         for (unsigned i = 0; i < state->select.size(); i++) {
             state->select[i] =
-                transformAllMatching<IR::Tofino::UnresolvedStackRef>(state->select[i],
-                                    [&](IR::Tofino::UnresolvedStackRef* ref) {
+                transformAllMatching<IR::BFN::UnresolvedStackRef>(state->select[i],
+                                    [&](IR::BFN::UnresolvedStackRef* ref) {
                 return makeUniqueStackRef(ref);
-            })->to<IR::Tofino::TransitionPrimitive>();
+            })->to<IR::BFN::TransitionPrimitive>();
         }
         return state;
     }
 
-    const IR::Tofino::ParserMatch*
-    preorder(IR::Tofino::ParserMatch* match) override {
+    const IR::BFN::ParserMatch*
+    preorder(IR::BFN::ParserMatch* match) override {
         for (unsigned i = 0; i < match->stmts.size(); i++) {
             match->stmts[i] =
-                transformAllMatching<IR::Tofino::UnresolvedStackRef>(match->stmts[i],
-                                    [&](IR::Tofino::UnresolvedStackRef* ref) {
+                transformAllMatching<IR::BFN::UnresolvedStackRef>(match->stmts[i],
+                                    [&](IR::BFN::UnresolvedStackRef* ref) {
                 return makeUniqueStackRef(ref);
-            })->to<IR::Tofino::ParserPrimitive>();
+            })->to<IR::BFN::ParserPrimitive>();
         }
         return match;
     }
@@ -93,7 +93,7 @@ struct ResolveStackRefs : public ParserInspector {
  private:
     using ExtractedStackIndices = std::map<cstring, bitvec>;
 
-    bool preorder(const IR::Tofino::Parser* parser) override {
+    bool preorder(const IR::BFN::Parser* parser) override {
         ExtractedStackIndices initialMap;
         resolveForState(parser->start, initialMap);
         return false;
@@ -127,10 +127,10 @@ struct ResolveStackRefs : public ParserInspector {
         return *extractedIndices.max();
     }
 
-    void updateExtractedIndices(const IR::Tofino::Extract* extract,
+    void updateExtractedIndices(const IR::BFN::Extract* extract,
                                 ExtractedStackIndices& map) const {
         // Is this a write to a header stack item POV bit?
-        if (!extract->is<IR::Tofino::ExtractConstant>()) return;
+        if (!extract->is<IR::BFN::ExtractConstant>()) return;
         if (!extract->dest->is<IR::Member>()) return;
         auto* member = extract->dest->to<IR::Member>();
         if (member->member != "$valid") return;
@@ -153,15 +153,15 @@ struct ResolveStackRefs : public ParserInspector {
     void resolve(const IR::HeaderStackItemRef* ref, const ExtractedStackIndices& map) {
         // Explicit references to a specific header stack index are trivial; we
         // just resolve them to the specified index.
-        if (!ref->index()->is<IR::Tofino::UnresolvedStackRef>()) {
+        if (!ref->index()->is<IR::BFN::UnresolvedStackRef>()) {
             resolvedIndices[ref] = ref->index();
             return;
         }
 
         const IR::Constant* resolvedIndex = nullptr;
-        if (ref->index()->is<IR::Tofino::UnresolvedStackNext>()) {
+        if (ref->index()->is<IR::BFN::UnresolvedStackNext>()) {
             resolvedIndex = new IR::Constant(nextIndex(ref, map));
-        } else if (ref->index()->is<IR::Tofino::UnresolvedStackLast>()) {
+        } else if (ref->index()->is<IR::BFN::UnresolvedStackLast>()) {
             auto last = lastIndex(ref, map);
             if (!last) {
                 ::error("Calling .last method on unextracted header stack %1%", ref);
@@ -185,7 +185,7 @@ struct ResolveStackRefs : public ParserInspector {
         // index no matter what path we take to reach this point.
         auto* previousResolution = resolvedIndices[ref];
         if (!previousResolution->is<IR::Constant>()) {
-            BUG_CHECK(previousResolution->is<IR::Tofino::UnresolvedStackRef>(),
+            BUG_CHECK(previousResolution->is<IR::BFN::UnresolvedStackRef>(),
                       "Not a constant, but also not a resolution failure?");
             return;  // We already failed; keep it that way.
         }
@@ -197,7 +197,7 @@ struct ResolveStackRefs : public ParserInspector {
         }
     }
 
-    void resolveForState(const IR::Tofino::ParserState* state,
+    void resolveForState(const IR::BFN::ParserState* state,
                          const ExtractedStackIndices& map) {
         if (!state) return;
 
@@ -218,10 +218,10 @@ struct ResolveStackRefs : public ParserInspector {
         });
     }
 
-    void resolveForMatch(const IR::Tofino::ParserMatch* match,
+    void resolveForMatch(const IR::BFN::ParserMatch* match,
                          ExtractedStackIndices& map) {
-        forAllMatching<IR::Tofino::Extract>(&match->stmts,
-                      [&](const IR::Tofino::Extract* extract) {
+        forAllMatching<IR::BFN::Extract>(&match->stmts,
+                      [&](const IR::BFN::Extract* extract) {
             // Resolve any header stack item references lurking in either the
             // source or the destination of the extract.
             forAllMatching<IR::HeaderStackItemRef>(extract,
@@ -265,9 +265,9 @@ struct ResolveNextAndLast : public PassManager {
 };
 
 class VerifyParserPrimitivesAreUnique : public ParserInspector {
-    bool preorder(const IR::Tofino::ParserState* state) override {
-        forAllMatching<IR::Tofino::TransitionPrimitive>(&state->select,
-                      [&](const IR::Tofino::TransitionPrimitive* prim) {
+    bool preorder(const IR::BFN::ParserState* state) override {
+        forAllMatching<IR::BFN::TransitionPrimitive>(&state->select,
+                      [&](const IR::BFN::TransitionPrimitive* prim) {
             BUG_CHECK(visitedTransitionPrims.find(prim) == visitedTransitionPrims.end(),
                       "Transition primitive appears in more than one place: %1%",
                       prim);
@@ -281,10 +281,10 @@ class VerifyParserPrimitivesAreUnique : public ParserInspector {
         // state.
         // XXX(seth): We should probably rethink this design, or at least clone
         // the primitives for each ParserMatch.
-        std::set<const IR::Tofino::ParserPrimitive*> parserPrimsInState;
+        std::set<const IR::BFN::ParserPrimitive*> parserPrimsInState;
         for (auto* match : state->match) {
-            forAllMatching<IR::Tofino::ParserPrimitive>(&match->stmts,
-                          [&](const IR::Tofino::ParserPrimitive* prim) {
+            forAllMatching<IR::BFN::ParserPrimitive>(&match->stmts,
+                          [&](const IR::BFN::ParserPrimitive* prim) {
                 parserPrimsInState.insert(prim);
             });
         }
@@ -298,23 +298,23 @@ class VerifyParserPrimitivesAreUnique : public ParserInspector {
         return true;
     }
 
-    std::set<const IR::Tofino::TransitionPrimitive*> visitedTransitionPrims;
-    std::set<const IR::Tofino::ParserPrimitive*> visitedParserPrims;
+    std::set<const IR::BFN::TransitionPrimitive*> visitedTransitionPrims;
+    std::set<const IR::BFN::ParserPrimitive*> visitedParserPrims;
 };
 
-using ComputedExtractResolution = std::map<const IR::Tofino::ExtractComputed*,
-                                           const IR::Tofino::Extract*>;
-using ComputedSelectResolution = std::map<const IR::Tofino::SelectComputed*,
-                                          const IR::Tofino::Select*>;
+using ComputedExtractResolution = std::map<const IR::BFN::ExtractComputed*,
+                                           const IR::BFN::Extract*>;
+using ComputedSelectResolution = std::map<const IR::BFN::SelectComputed*,
+                                          const IR::BFN::Select*>;
 
 struct ResolveComputedParserPrimitives : public ParserInspector {
     ComputedExtractResolution resolvedExtracts;
     ComputedSelectResolution resolvedSelects;
 
  private:
-    using ExtractMap = std::map<cstring, const IR::Tofino::Extract*>;
+    using ExtractMap = std::map<cstring, const IR::BFN::Extract*>;
 
-    bool preorder(const IR::Tofino::Parser* parser) override {
+    bool preorder(const IR::BFN::Parser* parser) override {
         ExtractMap initialMap;
         resolveForState(parser->start, initialMap);
         return false;
@@ -329,7 +329,7 @@ struct ResolveComputedParserPrimitives : public ParserInspector {
             auto* extract = item.second;
 
             // Extracts that don't come from the buffer don't need to change.
-            if (!extract->is<IR::Tofino::ExtractBuffer>()) {
+            if (!extract->is<IR::BFN::ExtractBuffer>()) {
                 updated[dest] = extract;
                 continue;
             }
@@ -337,7 +337,7 @@ struct ResolveComputedParserPrimitives : public ParserInspector {
             // Extracts from the input buffer need their offsets to be shifted
             // to the left to compensate for the fact that the transition is
             // shifting the input buffer to the right.
-            auto* extractBuffer = extract->to<IR::Tofino::ExtractBuffer>();
+            auto* extractBuffer = extract->to<IR::BFN::ExtractBuffer>();
             auto* clone = extractBuffer->clone();
             clone->bitOffset -= byteShift * 8;
             updated[dest] = clone;
@@ -345,7 +345,7 @@ struct ResolveComputedParserPrimitives : public ParserInspector {
         return updated;
     }
 
-    void resolveExtract(const IR::Tofino::ExtractComputed* extract,
+    void resolveExtract(const IR::BFN::ExtractComputed* extract,
                         ExtractMap& map) {
         auto sourceName = extract->source->toString();
         if (map.find(sourceName) == map.end()) {
@@ -371,7 +371,7 @@ struct ResolveComputedParserPrimitives : public ParserInspector {
         // generated code to be correct, we need to ensure that we get the same
         // resolution no matter what path we take to reach this point.
         auto* previousResolution = resolvedExtracts[extract];
-        if (previousResolution->is<IR::Tofino::ExtractComputed>()) {
+        if (previousResolution->is<IR::BFN::ExtractComputed>()) {
             return;  // We already failed; keep it that way.
         }
 
@@ -384,9 +384,9 @@ struct ResolveComputedParserPrimitives : public ParserInspector {
         }
     }
 
-    void resolveSelect(const IR::Tofino::SelectComputed* select,
+    void resolveSelect(const IR::BFN::SelectComputed* select,
                        const ExtractMap& map) {
-        auto* resolvedSelect = [&]() -> const IR::Tofino::Select* {
+        auto* resolvedSelect = [&]() -> const IR::BFN::Select* {
             auto sourceName = select->source->toString();
             if (map.find(sourceName) == map.end()) {
                 ::error("Cannot resolve computed select: %1%", select);
@@ -395,14 +395,14 @@ struct ResolveComputedParserPrimitives : public ParserInspector {
             }
 
             // There's an existing extract for this source. Forward it here.
-            auto* resolvedExtract = map.at(sourceName)->to<IR::Tofino::ExtractBuffer>();
+            auto* resolvedExtract = map.at(sourceName)->to<IR::BFN::ExtractBuffer>();
             if (!resolvedExtract) {
                 ::warning("Couldn't resolve select %1% to unsupported source: %2%",
                           select, resolvedExtract);
                 // "Resolve" to the original SelectComputed, indicating failure.
                 return select;
             }
-            return new IR::Tofino::SelectBuffer(resolvedExtract->extractedBits(),
+            return new IR::BFN::SelectBuffer(resolvedExtract->extractedBits(),
                                                 resolvedExtract->dest);
         }();
 
@@ -424,7 +424,7 @@ struct ResolveComputedParserPrimitives : public ParserInspector {
         }
     }
 
-    void resolveForState(const IR::Tofino::ParserState* state,
+    void resolveForState(const IR::BFN::ParserState* state,
                          const ExtractMap& map) {
         if (!state) return;
 
@@ -439,18 +439,18 @@ struct ResolveComputedParserPrimitives : public ParserInspector {
             resolveForMatch(match, *newMap);
         }
 
-        forAllMatching<IR::Tofino::SelectComputed>(&state->select,
-                      [&](const IR::Tofino::SelectComputed* select) {
+        forAllMatching<IR::BFN::SelectComputed>(&state->select,
+                      [&](const IR::BFN::SelectComputed* select) {
             resolveSelect(select, newMap ? *newMap : map);
         });
     }
 
-    void resolveForMatch(const IR::Tofino::ParserMatch* match,
+    void resolveForMatch(const IR::BFN::ParserMatch* match,
                          ExtractMap& map) {
-        forAllMatching<IR::Tofino::Extract>(&match->stmts,
-                      [&](const IR::Tofino::Extract* extract) {
-            if (extract->is<IR::Tofino::ExtractComputed>()) {
-                resolveExtract(extract->to<IR::Tofino::ExtractComputed>(), map);
+        forAllMatching<IR::BFN::Extract>(&match->stmts,
+                      [&](const IR::BFN::Extract* extract) {
+            if (extract->is<IR::BFN::ExtractComputed>()) {
+                resolveExtract(extract->to<IR::BFN::ExtractComputed>(), map);
                 return;
             }
             map[extract->dest->toString()] = extract;
@@ -466,17 +466,17 @@ struct ApplyPrimitiveResolutions : public ParserTransform {
       : resolvedExtracts(resolvedExtracts), resolvedSelects(resolvedSelects) { }
 
  private:
-    IR::Tofino::Extract* preorder(IR::Tofino::ExtractComputed* extract) override {
+    IR::BFN::Extract* preorder(IR::BFN::ExtractComputed* extract) override {
         prune();
-        auto* original = getOriginal<IR::Tofino::ExtractComputed>();
+        auto* original = getOriginal<IR::BFN::ExtractComputed>();
         BUG_CHECK(resolvedExtracts.find(original) != resolvedExtracts.end(),
                   "No resolution for computed extract: %1%", extract);
         return resolvedExtracts.at(original)->clone();
     }
 
-    IR::Tofino::Select* preorder(IR::Tofino::SelectComputed* select) override {
+    IR::BFN::Select* preorder(IR::BFN::SelectComputed* select) override {
         prune();
-        auto* original = getOriginal<IR::Tofino::SelectComputed>();
+        auto* original = getOriginal<IR::BFN::SelectComputed>();
         BUG_CHECK(resolvedSelects.find(original) != resolvedSelects.end(),
                   "No resolution for computed select: %1%", select);
         return resolvedSelects.at(original)->clone();
@@ -499,7 +499,7 @@ class ResolveComputedExtracts : public PassManager {
 };
 
 using OffsetCorrections = std::map<const IR::Node*, int>;
-using ShiftCorrections = std::map<const IR::Tofino::ParserMatch*, int>;
+using ShiftCorrections = std::map<const IR::BFN::ParserMatch*, int>;
 
 class ComputeOffsetCorrections : public ParserInspector {
  public:
@@ -510,26 +510,26 @@ class ComputeOffsetCorrections : public ParserInspector {
 
  private:
     Visitor::profile_t init_apply(const IR::Node* node) override {
-        forAllMatching<IR::Tofino::ParserMatch>(node,
-                      [&](const IR::Tofino::ParserMatch* match) {
+        forAllMatching<IR::BFN::ParserMatch>(node,
+                      [&](const IR::BFN::ParserMatch* match) {
             if (match->next) transitions.calls(match, match->next);
         });
         return ParserInspector::init_apply(node);
     }
 
-    void postorder(const IR::Tofino::ParserState* state) override {
+    void postorder(const IR::BFN::ParserState* state) override {
         // Find the minimum negative offset used in this state. This tells us
         // how far back in the input buffer we need to move this state so that
         // all offsets are positive. Note that we take any shift corrections
         // that were already computed by our successor states into account.
         int bitMinOffset = 0;
-        forAllMatching<IR::Tofino::SelectBuffer>(&state->select,
-                      [&](const IR::Tofino::SelectBuffer* select) {
+        forAllMatching<IR::BFN::SelectBuffer>(&state->select,
+                      [&](const IR::BFN::SelectBuffer* select) {
             bitMinOffset = std::min(bitMinOffset, select->bitOffset);
         });
         for (auto* match : state->match) {
-            forAllMatching<IR::Tofino::ExtractBuffer>(&match->stmts,
-                          [&](const IR::Tofino::ExtractBuffer* extract) {
+            forAllMatching<IR::BFN::ExtractBuffer>(&match->stmts,
+                          [&](const IR::BFN::ExtractBuffer* extract) {
                 bitMinOffset = std::min(bitMinOffset, extract->bitOffset);
             });
             BUG_CHECK(byteShiftCorrections[match] <= 0,
@@ -567,9 +567,9 @@ class ComputeOffsetCorrections : public ParserInspector {
             return;
         }
         for (auto* caller : *callers) {
-            BUG_CHECK(caller->is<IR::Tofino::ParserMatch>(),
+            BUG_CHECK(caller->is<IR::BFN::ParserMatch>(),
                       "A non-ParserMatch calls a ParserState?");
-            auto* match = caller->to<IR::Tofino::ParserMatch>();
+            auto* match = caller->to<IR::BFN::ParserMatch>();
             BUG_CHECK(byteShiftCorrections[match] == 0,
                       "Already corrected this ParserMatch's shift?");
             byteShiftCorrections[match] = -byteShiftCorrection;
@@ -587,33 +587,33 @@ struct ApplyOffsetCorrections : public ParserModifier {
     { }
 
  private:
-    void postorder(IR::Tofino::SelectBuffer* select) override {
-        auto* state = findOrigCtxt<IR::Tofino::ParserState>();
+    void postorder(IR::BFN::SelectBuffer* select) override {
+        auto* state = findOrigCtxt<IR::BFN::ParserState>();
         BUG_CHECK(bitOffsetCorrections.find(state) != bitOffsetCorrections.end(),
                   "No offset correction entries for state %1%", state->name);
         select->bitOffset += bitOffsetCorrections.at(state);
         BUG_CHECK(select->bitOffset >= 0, "Failed to correct offset?");
     }
 
-    void postorder(IR::Tofino::ExtractBuffer* extract) override {
-        auto* state = findOrigCtxt<IR::Tofino::ParserState>();
+    void postorder(IR::BFN::ExtractBuffer* extract) override {
+        auto* state = findOrigCtxt<IR::BFN::ParserState>();
         BUG_CHECK(bitOffsetCorrections.find(state) != bitOffsetCorrections.end(),
                   "No offset correction entries for state %1%", state->name);
         extract->bitOffset += bitOffsetCorrections.at(state);
         BUG_CHECK(extract->bitOffset >= 0, "Failed to correct offset?");
     }
 
-    void postorder(IR::Tofino::ParserMatch* match) override {
-        auto* original = getOriginal<IR::Tofino::ParserMatch>();
+    void postorder(IR::BFN::ParserMatch* match) override {
+        auto* original = getOriginal<IR::BFN::ParserMatch>();
         BUG_CHECK(byteShiftCorrections.find(original) != byteShiftCorrections.end(),
                   "No shift correction entries for match in state %1%",
-                  findContext<IR::Tofino::ParserState>()->name);
+                  findContext<IR::BFN::ParserState>()->name);
         *match->shift += byteShiftCorrections.at(original);
         BUG_CHECK(*match->shift >= 0, "Failed to correct shift?");
     }
 
     const std::map<const IR::Node*, int>& bitOffsetCorrections;
-    const std::map<const IR::Tofino::ParserMatch*, int>& byteShiftCorrections;
+    const std::map<const IR::BFN::ParserMatch*, int>& byteShiftCorrections;
 };
 
 struct RemoveNegativeOffsets : public PassManager {
@@ -628,28 +628,28 @@ struct RemoveNegativeOffsets : public PassManager {
 };
 
 class CheckResolvedHeaderStackExpressions : public ParserInspector {
-    bool preorder(const IR::Tofino::UnresolvedStackRef* stackRef) {
+    bool preorder(const IR::BFN::UnresolvedStackRef* stackRef) {
         ::error("Couldn't resolve header stack reference in state %1%: %2%",
-                findContext<IR::Tofino::ParserState>()->name, stackRef);
+                findContext<IR::BFN::ParserState>()->name, stackRef);
         return false;
     }
 };
 
 class CheckResolvedParserExpressions : public ParserTransform {
-    const IR::Tofino::ParserPrimitive*
-    checkExtractDestination(IR::Tofino::Extract* extract) const {
+    const IR::BFN::ParserPrimitive*
+    checkExtractDestination(IR::BFN::Extract* extract) const {
         if (!extract->dest->is<IR::HeaderStackItemRef>()) return extract;
         auto* itemRef = extract->dest->to<IR::HeaderStackItemRef>();
-        if (itemRef->index()->is<IR::Tofino::UnresolvedStackRef>()) {
+        if (itemRef->index()->is<IR::BFN::UnresolvedStackRef>()) {
             ::error("Couldn't resolve header stack reference in state %1%: %2%",
-                    findContext<IR::Tofino::ParserState>()->name, extract);
-            return new IR::Tofino::UnhandledParserPrimitive(extract);
+                    findContext<IR::BFN::ParserState>()->name, extract);
+            return new IR::BFN::UnhandledParserPrimitive(extract);
         }
         if (!itemRef->index()->is<IR::Constant>()) {
             ::error("Extracting to non-constant header stack index in "
                     "state %1%: %2%",
-                    findContext<IR::Tofino::ParserState>()->name, extract);
-            return new IR::Tofino::UnhandledParserPrimitive(extract);
+                    findContext<IR::BFN::ParserState>()->name, extract);
+            return new IR::BFN::UnhandledParserPrimitive(extract);
         }
         auto* stack = extract->dest->to<IR::HeaderStackItemRef>()->base();
         auto stackSize = stack->type->to<IR::Type_Stack>()
@@ -659,7 +659,7 @@ class CheckResolvedParserExpressions : public ParserTransform {
             // that change we need to make loop unrolling handle header stacks
             // more precisely.
             ::warning("Extract overflows header stack in state %1%: %2%",
-                      findContext<IR::Tofino::ParserState>()->name, extract);
+                      findContext<IR::BFN::ParserState>()->name, extract);
             // Just clamp it; the hardware will report an error at runtime.
             auto* itemRefClone = itemRef->clone();
             itemRefClone->index_ = new IR::Constant(std::max(stackSize - 1, 0));
@@ -670,15 +670,15 @@ class CheckResolvedParserExpressions : public ParserTransform {
         return extract;
     }
 
-    const IR::Tofino::ParserPrimitive*
-    preorder(IR::Tofino::ExtractComputed* extract) override {
+    const IR::BFN::ParserPrimitive*
+    preorder(IR::BFN::ExtractComputed* extract) override {
         ::error("Couldn't resolve computed extract in state %1%: %2%",
-                findContext<IR::Tofino::ParserState>()->name, extract);
-        return new IR::Tofino::UnhandledParserPrimitive(extract);
+                findContext<IR::BFN::ParserState>()->name, extract);
+        return new IR::BFN::UnhandledParserPrimitive(extract);
     }
 
-    const IR::Tofino::ParserPrimitive*
-    preorder(IR::Tofino::ExtractBuffer* extract) override {
+    const IR::BFN::ParserPrimitive*
+    preorder(IR::BFN::ExtractBuffer* extract) override {
         // Check if this extract could possibly fit within the input buffer on
         // the hardware. We can split large states into smaller ones, but we're
         // limited by the fact that the total number of bytes we shift out of
@@ -689,35 +689,35 @@ class CheckResolvedParserExpressions : public ParserTransform {
         // XXX(seth): That doesn't mean that we couldn't produce a parser
         // program with the same behavior that *is* implementable; we could
         // support a lot more with some additional program transformations.
-        auto* match = findContext<IR::Tofino::ParserMatch>();
+        auto* match = findContext<IR::BFN::ParserMatch>();
         const int byteOverflow = extract->bitInterval().hiByte() - *match->shift;
-        if (byteOverflow < Tofino::Description::ByteInputBufferSize)
+        if (byteOverflow < BFN::Description::ByteInputBufferSize)
             return checkExtractDestination(extract);
 
         ::error("Extract in state %1% requires reading %2% bytes ahead, which "
                 "is beyond %3%'s limit of %4% bytes: %5%",
-                findContext<IR::Tofino::ParserState>()->name, byteOverflow,
-                Tofino::Description::ModelName,
-                Tofino::Description::ByteInputBufferSize, extract);
+                findContext<IR::BFN::ParserState>()->name, byteOverflow,
+                BFN::Description::ModelName,
+                BFN::Description::ByteInputBufferSize, extract);
 
         // The most likely cause is that RemoveNegativeOffsets had to put off
         // shifting so long that we ran out of runway in the input buffer.
         ::error("(Does your parser read or select on a value which originated "
                 "in a much earlier state?)");
 
-        return new IR::Tofino::UnhandledParserPrimitive(extract);
+        return new IR::BFN::UnhandledParserPrimitive(extract);
     }
 
-    const IR::Tofino::ParserPrimitive*
-    preorder(IR::Tofino::Extract* extract) override {
+    const IR::BFN::ParserPrimitive*
+    preorder(IR::BFN::Extract* extract) override {
         return checkExtractDestination(extract);
     }
 
-    const IR::Tofino::TransitionPrimitive*
-    preorder(IR::Tofino::SelectComputed* select) override {
+    const IR::BFN::TransitionPrimitive*
+    preorder(IR::BFN::SelectComputed* select) override {
         ::error("Couldn't resolve computed select in state %1%: %2%",
-                findContext<IR::Tofino::ParserState>()->name, select);
-        return new IR::Tofino::UnhandledTransitionPrimitive(select);
+                findContext<IR::BFN::ParserState>()->name, select);
+        return new IR::BFN::UnhandledTransitionPrimitive(select);
     }
 };
 

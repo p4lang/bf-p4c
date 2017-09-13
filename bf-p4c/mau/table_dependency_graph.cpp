@@ -120,7 +120,7 @@ class FindDependencyGraph::UpdateAttached : public Inspector {
 
 bool FindDependencyGraph::preorder(const IR::MAU::TableSeq *seq) {
     const Context *ctxt = getContext();
-    if (ctxt && ctxt->node->is<IR::Tofino::Pipe>()) {
+    if (ctxt && ctxt->node->is<IR::BFN::Pipe>()) {
         access.clear();
     } else if (ctxt && dynamic_cast<const IR::MAU::Table *>(ctxt->node)) {
         const IR::MAU::Table* parent;

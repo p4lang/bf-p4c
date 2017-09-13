@@ -1,5 +1,5 @@
-#ifndef _TOFINO_MAU_ACTION_DATA_BUS_H_
-#define _TOFINO_MAU_ACTION_DATA_BUS_H_
+#ifndef TOFINO_MAU_ACTION_DATA_BUS_H_
+#define TOFINO_MAU_ACTION_DATA_BUS_H_
 
 #include <lib/alloc.h>
 #include "tofino/mau/table_layout.h"
@@ -156,4 +156,4 @@ struct ActionDataBus {
         if (tbl->resources) update(tbl->name, tbl->resources); }
 };
 
-#endif /* _TOFINO_MAU_ACTION_DATA_BUS_H_*/
+#endif /* TOFINO_MAU_ACTION_DATA_BUS_H_*/

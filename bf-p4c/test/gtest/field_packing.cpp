@@ -19,7 +19,7 @@ limitations under the License.
 #include "ir/ir.h"
 #include "tofino/parde/field_packing.h"
 
-namespace Tofino {
+namespace BFN {
 
 TEST(TofinoFieldPacking, Fields) {
     FieldPacking packing;
@@ -251,7 +251,7 @@ TEST(TofinoFieldPacking, CreateExtractionState) {
 
     // Create a parser state to extract fields according to that packing.
     auto gress = INGRESS;
-    auto* finalState = new IR::Tofino::ParserState("final", gress, { }, { });
+    auto* finalState = new IR::BFN::ParserState("final", gress, { }, { });
     cstring extractionStateName = "extract";
     auto* extractionState =
       packing.createExtractionState(gress, extractionStateName, finalState);
@@ -265,7 +265,7 @@ TEST(TofinoFieldPacking, CreateExtractionState) {
     ASSERT_EQ(1u, extractionState->match.size());
     EXPECT_EQ(finalState, extractionState->match[0]->next);
     EXPECT_TRUE(extractionState->match[0]->shift);
-    EXPECT_EQ(int(packing.totalWidth / 8), *extractionState->match[0]->shift);
+    EXPECT_EQ(static_cast<int>((packing.totalWidth / 8)), *extractionState->match[0]->shift);
 
     // Verify that the state reproduces the packing and has the structure we
     // expect. Note that padding isn't represented as a separate IR object; it's
@@ -273,20 +273,20 @@ TEST(TofinoFieldPacking, CreateExtractionState) {
     auto& extracts = extractionState->match[0]->stmts;
     ASSERT_EQ(3u, extracts.size());
 
-    auto* field1Extract = extracts[0]->to<IR::Tofino::ExtractBuffer>();
+    auto* field1Extract = extracts[0]->to<IR::BFN::ExtractBuffer>();
     ASSERT_TRUE(field1Extract != nullptr);
     ASSERT_TRUE(field1Extract->dest == field1);
     ASSERT_TRUE(field1Extract->extractedBits() == nw_bitrange(3, 8));
 
-    auto* field2Extract = extracts[1]->to<IR::Tofino::ExtractBuffer>();
+    auto* field2Extract = extracts[1]->to<IR::BFN::ExtractBuffer>();
     ASSERT_TRUE(field2Extract != nullptr);
     ASSERT_TRUE(field2Extract->dest == field2);
     ASSERT_TRUE(field2Extract->extractedBits() == nw_bitrange(9, 23));
 
-    auto* field3Extract = extracts[2]->to<IR::Tofino::ExtractBuffer>();
+    auto* field3Extract = extracts[2]->to<IR::BFN::ExtractBuffer>();
     ASSERT_TRUE(field3Extract != nullptr);
     ASSERT_TRUE(field3Extract->dest == field3);
     ASSERT_TRUE(field3Extract->extractedBits() == nw_bitrange(33, 40));
 }
 
-}  // namespace Tofino
+}  // namespace BFN

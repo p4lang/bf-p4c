@@ -36,7 +36,7 @@
 #include "frontends/p4-14/header_type.h"
 #include "frontends/p4-14/typecheck.h"
 
-namespace Tofino {
+namespace BFN {
 
 // append target architecture to declaration
 void ProgramStructure::include(cstring filename, IR::IndexedVector<IR::Node>* vector) {
@@ -145,4 +145,4 @@ void ProgramStructure::include14(cstring filename, IR::IndexedVector<IR::Node>* 
     }
 }
 
-}  // namespace Tofino
+}  // namespace BFN

@@ -23,13 +23,13 @@ class P4Program;
 
 class Tofino_Options;
 
-namespace Tofino {
+namespace BFN {
 
 /// A wrapper for P4::serializeP4Runtime() that applies Tofino-specific
 /// transformations to the program before serialization.
 void serializeP4Runtime(const IR::P4Program* program,
                         const Tofino_Options& options);
 
-}  // namespace Tofino
+}  // namespace BFN
 
 #endif /* EXTENSIONS_TOFINO_CONTROL_PLANE_TOFINO_P4RUNTIME_H_ */

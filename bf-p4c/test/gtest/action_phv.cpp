@@ -81,7 +81,7 @@ createActionTest(const std::string& ingressPipeline,
     return TofinoPipeTestCase::createWithThreadLocalInstances(source);
 }
 
-const IR::Tofino::Pipe *runInitialPassManager(const IR::Tofino::Pipe* pipe, PhvInfo *phv) {
+const IR::BFN::Pipe *runInitialPassManager(const IR::BFN::Pipe* pipe, PhvInfo *phv) {
     PassManager quick_backend = {
         new CollectHeaderStackInfo,
         new CollectPhvInfo(*phv),

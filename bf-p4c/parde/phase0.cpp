@@ -24,7 +24,7 @@ limitations under the License.
 #include "lib/indent.h"
 #include "tofino/parde/field_packing.h"
 
-std::ostream& operator<<(std::ostream& out, const Tofino::Phase0Info* info) {
+std::ostream& operator<<(std::ostream& out, const BFN::Phase0Info* info) {
     if (info == nullptr) return out;
     CHECK_NULL(info->table);
     CHECK_NULL(info->packing);
@@ -77,7 +77,7 @@ std::ostream& operator<<(std::ostream& out, const Tofino::Phase0Info* info) {
     return out;
 }
 
-namespace Tofino {
+namespace BFN {
 
 typedef std::map<const IR::Member*, cstring> Phase0Extracts;
 typedef std::map<const IR::Member*, const IR::Constant*> Phase0Constants;
@@ -366,11 +366,11 @@ class AddPhase0Parser : public Modifier {
       : packing(packing), constants(constants)
   { }
 
-  bool preorder(IR::Tofino::Parser* parser) {
+  bool preorder(IR::BFN::Parser* parser) {
       if (parser->gress != INGRESS) return false;
 
-      auto start = transformAllMatching<IR::Tofino::ParserState>(parser->start,
-                   [this](const IR::Tofino::ParserState* state) {
+      auto start = transformAllMatching<IR::BFN::ParserState>(parser->start,
+                   [this](const IR::BFN::ParserState* state) {
           if (state->name != "$phase0") return state;
 
           // This is the '$phase0' placeholder state. We'll replace it with our
@@ -380,28 +380,28 @@ class AddPhase0Parser : public Modifier {
           return this->addPhase0State(state->match[0]->next);
       });
 
-      parser->start = start->to<IR::Tofino::ParserState>();
+      parser->start = start->to<IR::BFN::ParserState>();
       return false;
   }
 
-  const IR::Tofino::ParserState*
-  addPhase0State(const IR::Tofino::ParserState* finalState) {
+  const IR::BFN::ParserState*
+  addPhase0State(const IR::BFN::ParserState* finalState) {
       // Generate a state that extracts the packed fields.
       auto nextState =
         packing->createExtractionState(INGRESS, "$phase0_extract", finalState);
 
       // Generate a state which extracts the constants.
-      IR::Vector<IR::Tofino::ParserPrimitive> extracts;
+      IR::Vector<IR::BFN::ParserPrimitive> extracts;
       for (auto constantItem : *constants) {
           auto dest = constantItem.first;
           auto constant = constantItem.second;
-          auto extract = new IR::Tofino::ExtractConstant(dest, constant);
+          auto extract = new IR::BFN::ExtractConstant(dest, constant);
           extracts.push_back(extract);
       }
 
       auto phase0Match =
-          new IR::Tofino::ParserMatch(match_t(), 0, extracts, nextState);
-      return new IR::Tofino::ParserState("$phase0", INGRESS, { }, { phase0Match });
+          new IR::BFN::ParserMatch(match_t(), 0, extracts, nextState);
+      return new IR::BFN::ParserState("$phase0", INGRESS, { }, { phase0Match });
   }
 
  private:
@@ -409,8 +409,8 @@ class AddPhase0Parser : public Modifier {
   const Phase0Constants* constants;
 };
 
-std::pair<const IR::P4Control*, IR::Tofino::Pipe*>
-extractPhase0(const IR::P4Control* ingress, IR::Tofino::Pipe* pipe,
+std::pair<const IR::P4Control*, IR::BFN::Pipe*>
+extractPhase0(const IR::P4Control* ingress, IR::BFN::Pipe* pipe,
               P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {
     CHECK_NULL(ingress);
     CHECK_NULL(pipe);
@@ -439,4 +439,4 @@ extractPhase0(const IR::P4Control* ingress, IR::Tofino::Pipe* pipe,
     return std::make_pair(ingressWithoutPhase0, pipe);
 }
 
-}  // namespace Tofino
+}  // namespace BFN

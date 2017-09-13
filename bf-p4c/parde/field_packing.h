@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef _TOFINO_PARDE_FIELD_PACKING_H_
-#define _TOFINO_PARDE_FIELD_PACKING_H_
+#ifndef TOFINO_PARDE_FIELD_PACKING_H_
+#define TOFINO_PARDE_FIELD_PACKING_H_
 
 #include <vector>
 
@@ -23,13 +23,13 @@ limitations under the License.
 #include "tofino/ir/gress.h"
 
 namespace IR {
-namespace Tofino {
+namespace BFN {
 class ParserState;
-}  // namespace Tofino
+}  // namespace BFN
 class Expression;
 }  // namespace IR
 
-namespace Tofino {
+namespace BFN {
 
 /**
  * A field packing format, consisting of a sequence of spans of bits which are
@@ -116,9 +116,9 @@ struct FieldPacking {
      *                    its work is complete.
      * @return the root of the resulting parser program.
      */
-    const IR::Tofino::ParserState*
+    const IR::BFN::ParserState*
     createExtractionState(gress_t gress, cstring stateName,
-                          const IR::Tofino::ParserState* finalState) const;
+                          const IR::BFN::ParserState* finalState) const;
 
     /// The sequence of packed items (fields and padding).
     std::vector<PackedItem> fields;
@@ -127,8 +127,8 @@ struct FieldPacking {
     unsigned totalWidth = 0;
 };
 
-}  // namespace Tofino
+}  // namespace BFN
 
-std::ostream& operator<<(std::ostream& out, const Tofino::FieldPacking* packing);
+std::ostream& operator<<(std::ostream& out, const BFN::FieldPacking* packing);
 
-#endif /* _TOFINO_PARDE_FIELD_PACKING_H_ */
+#endif /* TOFINO_PARDE_FIELD_PACKING_H_ */

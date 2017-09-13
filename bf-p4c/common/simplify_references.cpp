@@ -192,10 +192,10 @@ class ConvertIndexToHeaderStackItemRef : public Transform {
         if (!type) return member;
         if (member->member == "next")
             return new IR::HeaderStackItemRef(member->srcInfo, type, member->expr,
-                                              new IR::Tofino::UnresolvedStackNext);
+                                              new IR::BFN::UnresolvedStackNext);
         if (member->member == "last")
             return new IR::HeaderStackItemRef(member->srcInfo, type, member->expr,
-                                              new IR::Tofino::UnresolvedStackLast);
+                                              new IR::BFN::UnresolvedStackLast);
         return member;
     }
 };

@@ -1,5 +1,5 @@
-#ifndef _TOFINO_COMMON_BLOCKMAP_H_
-#define _TOFINO_COMMON_BLOCKMAP_H_
+#ifndef TOFINO_COMMON_BLOCKMAP_H_
+#define TOFINO_COMMON_BLOCKMAP_H_
 
 #include "ir/ir.h"
 #include "frontends/p4/evaluator/evaluator.h"
@@ -42,4 +42,4 @@ class FillFromBlockMap : public Transform {
     : refMap(refMap), typeMap(typeMap) { dontForwardChildrenBeforePreorder = true; }
 };
 
-#endif /* _TOFINO_COMMON_BLOCKMAP_H_ */
+#endif /* TOFINO_COMMON_BLOCKMAP_H_ */

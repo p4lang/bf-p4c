@@ -1,5 +1,5 @@
-#ifndef _TOFINO_PHV_CLUSTER_PHV_BIND_H_
-#define _TOFINO_PHV_CLUSTER_PHV_BIND_H_
+#ifndef TOFINO_PHV_CLUSTER_PHV_BIND_H_
+#define TOFINO_PHV_CLUSTER_PHV_BIND_H_
 
 #include "phv.h"
 #include "phv_fields.h"
@@ -82,4 +82,4 @@ class PHV_Bind : public Visitor {
 //
 std::ostream &operator<<(std::ostream &, PHV_Bind&);
 //
-#endif /* _TOFINO_PHV_CLUSTER_PHV_BIND_H_ */
+#endif /* TOFINO_PHV_CLUSTER_PHV_BIND_H_ */

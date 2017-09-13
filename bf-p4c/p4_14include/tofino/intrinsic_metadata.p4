@@ -2,8 +2,8 @@
  *                      Intrinsic Metadata Definition for Tofino                *
  *******************************************************************************/
 
-#ifndef _TOFINO_LIB_INTRINSIC_METADATA
-#define _TOFINO_LIB_INTRINSIC_METADATA 1
+#ifndef TOFINO_LIB_INTRINSIC_METADATA
+#define TOFINO_LIB_INTRINSIC_METADATA 1
 
 /* Control signals for the Ingress Parser during parsing (not used in or
    passed to the MAU) */

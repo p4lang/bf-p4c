@@ -1,5 +1,5 @@
-#ifndef _TOFINO_MAU_TABLE_MUTEX_H_
-#define _TOFINO_MAU_TABLE_MUTEX_H_
+#ifndef TOFINO_MAU_TABLE_MUTEX_H_
+#define TOFINO_MAU_TABLE_MUTEX_H_
 
 #include "mau_visitor.h"
 #include "lib/symbitmatrix.h"
@@ -45,7 +45,7 @@ class TablesMutuallyExclusive : public MauInspector {
         table_ids.emplace(t, table_ids.size());
         return true; }
     void postorder(const IR::MAU::Table *tbl) override;
-    void postorder(const IR::Tofino::Pipe *pipe) override;
+    void postorder(const IR::BFN::Pipe *pipe) override;
     profile_t init_apply(const IR::Node *root) override {
         profile_t rv = MauInspector::init_apply(root);
         table_ids.clear();
@@ -77,4 +77,4 @@ class SharedActionProfileAnalysis : public MauInspector {
     }
     explicit SharedActionProfileAnalysis(const TablesMutuallyExclusive &m) : mutex(m) {}
 };
-#endif /* _TOFINO_MAU_TABLE_MUTEX_H_ */
+#endif /* TOFINO_MAU_TABLE_MUTEX_H_ */

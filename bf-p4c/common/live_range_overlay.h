@@ -33,8 +33,8 @@ class LiveRangeOverlay : public Inspector {
     FieldDefUse     &defuse;
     SymBitMatrix    &overlay;
 
-    ordered_set<const IR::Tofino::Unit *> all_ingress_units;
-    ordered_set<const IR::Tofino::Unit *> all_egress_units;
+    ordered_set<const IR::BFN::Unit *> all_ingress_units;
+    ordered_set<const IR::BFN::Unit *> all_egress_units;
 
     void postorder(const IR::MAU::Table *u) override {
         if (u->gress == INGRESS)
@@ -43,14 +43,14 @@ class LiveRangeOverlay : public Inspector {
             all_egress_units.insert(u);
         else
             BUG("Unexpected gress."); }
-    void postorder(const IR::Tofino::ParserState *u) override {
+    void postorder(const IR::BFN::ParserState *u) override {
         if (u->gress == INGRESS)
             all_ingress_units.insert(u);
         else if (u->gress == EGRESS)
             all_egress_units.insert(u);
         else
             BUG("Unexpected gress."); }
-    void postorder(const IR::Tofino::Deparser *u) override {
+    void postorder(const IR::BFN::Deparser *u) override {
         if (u->gress == INGRESS)
             all_ingress_units.insert(u);
         else if (u->gress == EGRESS)
@@ -74,15 +74,15 @@ class LiveRangeOverlay : public Inspector {
      *    stage
      *  - deparsers happen at the same time.
      */
-    bool happens_before(const IR::Tofino::Unit *u1, const IR::Tofino::Unit *u2) const;
+    bool happens_before(const IR::BFN::Unit *u1, const IR::BFN::Unit *u2) const;
 
     /** The `happens_before` method is conservative before table placement.  Hence,
      * `happens_before(x, y)` if and only if x definitely happens before y.
      * `may_happen_before(y, x)` iff `!happens_before(x, y)`.
      */
-    bool may_happen_before(const IR::Tofino::Unit *x, const IR::Tofino::Unit *y) const;
+    bool may_happen_before(const IR::BFN::Unit *x, const IR::BFN::Unit *y) const;
 
-    bool is_dead_at(const PhvInfo::Field &f, const IR::Tofino::Unit *u) const;
+    bool is_dead_at(const PhvInfo::Field &f, const IR::BFN::Unit *u) const;
 
     /** Get the set of (unit, expr) locations where each field is read before
      * being written.  Fields that are not read before written do not appear in

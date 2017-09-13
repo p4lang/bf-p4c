@@ -1,5 +1,5 @@
-#ifndef _TOFINO_PHV_PHV_FIELDS_H_
-#define _TOFINO_PHV_PHV_FIELDS_H_
+#ifndef TOFINO_PHV_PHV_FIELDS_H_
+#define TOFINO_PHV_PHV_FIELDS_H_
 
 #include <boost/optional.hpp>
 #include <boost/range/irange.hpp>
@@ -507,7 +507,7 @@ class PhvInfo {
      * @pre CollectHeaderStackInfo and CollectPhvFields.
      * @post POV fields for all headers added to PhvInfo.
      */
-    void allocatePOV(const Tofino::HeaderStackInfo&);
+    void allocatePOV(const BFN::HeaderStackInfo&);
 
  public:  // class PhvInfo
     const Field *field(int idx) const { return (size_t)idx < by_id.size() ? by_id.at(idx) : 0; }
@@ -550,7 +550,7 @@ class PhvInfo {
  * CollectPhvInfo rather than adding it manually*; otherwise, it will be lost
  * when CollectPhvInfo is rerun.
  *
- * @pre HeaderStackInfo has been run, so that `Tofino::Pipe::headerStackInfo` is
+ * @pre HeaderStackInfo has been run, so that `BFN::Pipe::headerStackInfo` is
  * available.
  *
  * @post This object contains a PhvInfo::Field for each header and metadata
@@ -574,4 +574,4 @@ std::ostream &operator<<(std::ostream &, const std::list<PhvInfo::Field *>&);
 std::ostream &operator<<(std::ostream &, const PhvInfo &);
 std::ostream &operator<<(std::ostream &, const PhvInfo::Field::Field_Ops &);
 //
-#endif /* _TOFINO_PHV_PHV_FIELDS_H_ */
+#endif /* TOFINO_PHV_PHV_FIELDS_H_ */

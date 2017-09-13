@@ -8,7 +8,7 @@
 class AddBridgedMetadata : public PassManager {
     PhvInfo       &phv;
     const FieldDefUse   &defuse;
-    Tofino::FieldPacking packing;
+    BFN::FieldPacking packing;
 
     class FindFieldsToBridge;
     class AddBridge;

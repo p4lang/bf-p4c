@@ -27,7 +27,7 @@ class TrivialAlloc final : public Inspector {
     PhvInfo                     &phv;
     static bool tagalong_full(int size, Regs *use);
     void do_alloc(const FieldGroup&, Regs *, Regs *);
-    bool preorder(const IR::Tofino::Pipe *p) override;
+    bool preorder(const IR::BFN::Pipe *p) override;
     void end_apply(const IR::Node *) override { phv.set_done(); }
 };
 
@@ -104,7 +104,7 @@ class ManualAlloc final : public Inspector {
 
  private:
     void allocateFieldGroup(const FieldGroup& group, ContainerAllocation& alloc);
-    bool preorder(const IR::Tofino::Pipe*) override;
+    bool preorder(const IR::BFN::Pipe*) override;
     void end_apply(const IR::Node*) override;
 
     PhvInfo& phv;

@@ -42,8 +42,8 @@ bool TofinoWriteContext::isWrite(bool root_value) {
     // The destination of an Extract is written to, but the other fields aren't.
     // This is just a roundabout way to check that we reached the Extract by
     // walking upwards via the destination and not via some other route.
-    if (ctxt->node->is<IR::Tofino::Extract>())
-        return contextChild == ctxt->node->to<IR::Tofino::Extract>()->dest;
+    if (ctxt->node->is<IR::BFN::Extract>())
+        return contextChild == ctxt->node->to<IR::BFN::Extract>()->dest;
 
     // TODO: Does C++ support monads?  The following if statements are nested
     // because C++ only supports declaring variables in if predicates if the
@@ -94,27 +94,27 @@ bool TofinoWriteContext::isRead(bool root_value) {
     // OR the destination PHV container with its existing contents. Ideally,
     // we'd be more precise about this, and only treat the destination as read
     // if the container is marked multiwrite.
-    if (ctxt->node->is<IR::Tofino::Extract>())
+    if (ctxt->node->is<IR::BFN::Extract>())
         return true;
 
     // An Emit reads both the emitted field and the POV bit.
-    if (ctxt->node->is<IR::Tofino::Emit>())
+    if (ctxt->node->is<IR::BFN::Emit>())
         return true;
 
     // An EmitChecksum reads the POV bit and all checksummed fields.
-    if (ctxt->node->is<IR::Tofino::EmitChecksum>())
+    if (ctxt->node->is<IR::BFN::EmitChecksum>())
         return true;
 
     // A computed select reads its source.
-    if (ctxt->node->is<IR::Tofino::SelectComputed>())
+    if (ctxt->node->is<IR::BFN::SelectComputed>())
         return true;
 
     // XXX(seth): Are these checks useful anymore?
-    if (auto *match = ctxt->node->to<IR::Tofino::ParserMatch>()) {
+    if (auto *match = ctxt->node->to<IR::BFN::ParserMatch>()) {
         return (size_t)(ctxt->child_index) < match->stmts.size(); }
-    if (auto *state = ctxt->node->to<IR::Tofino::ParserState>()) {
+    if (auto *state = ctxt->node->to<IR::BFN::ParserState>()) {
         return (size_t)(ctxt->child_index) < state->select.size(); }
-    if (auto *dep = ctxt->node->to<IR::Tofino::Deparser>()) {
+    if (auto *dep = ctxt->node->to<IR::BFN::Deparser>()) {
         return (size_t)(ctxt->child_index) < dep->emits.size(); }
 
     // TODO: Does C++ support monads?  The following if statements are nested

@@ -1,5 +1,5 @@
-#ifndef _TOFINO_PHV_CLUSTER_PHV_INTERFERENCE_H_
-#define _TOFINO_PHV_CLUSTER_PHV_INTERFERENCE_H_
+#ifndef TOFINO_PHV_CLUSTER_PHV_INTERFERENCE_H_
+#define TOFINO_PHV_CLUSTER_PHV_INTERFERENCE_H_
 
 #include "phv.h"
 #include "phv_fields.h"
@@ -193,4 +193,4 @@ std::ostream &operator<<(std::ostream &out,
             std::vector<Cluster_PHV *>>>&);
 std::ostream &operator<<(std::ostream &, PHV_Interference&);
 
-#endif /* _TOFINO_PHV_CLUSTER_PHV_INTERFERENCE_H_ */
+#endif /* TOFINO_PHV_CLUSTER_PHV_INTERFERENCE_H_ */

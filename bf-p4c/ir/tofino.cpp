@@ -1,6 +1,6 @@
 #include "ir/ir.h"
 
-/* static */ size_t IR::Tofino::UnresolvedStackRef::nextId = 0;
+/* static */ size_t IR::BFN::UnresolvedStackRef::nextId = 0;
 
 IR::InstanceRef::InstanceRef(cstring prefix, IR::ID name, const IR::Type *t, bool forceMeta)
 : HeaderRef(t), name(name) {

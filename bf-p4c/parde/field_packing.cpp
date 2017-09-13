@@ -19,7 +19,7 @@ limitations under the License.
 #include "ir/ir.h"
 #include "lib/cstring.h"
 
-namespace Tofino {
+namespace BFN {
 
 void FieldPacking::appendField(const IR::Expression* field, unsigned width) {
     appendField(field, cstring(), width);
@@ -76,31 +76,31 @@ bool FieldPacking::isAlignedTo(unsigned alignment, unsigned phase /* = 0 */) con
     return totalWidth % alignment == phase % alignment;
 }
 
-const IR::Tofino::ParserState*
+const IR::BFN::ParserState*
 FieldPacking::createExtractionState(gress_t gress, cstring stateName,
-                                    const IR::Tofino::ParserState* finalState) const {
+                                    const IR::BFN::ParserState* finalState) const {
     BUG_CHECK(totalWidth % 8 == 0,
               "Creating extraction states for non-byte-aligned field packing?");
 
-    IR::Vector<IR::Tofino::ParserPrimitive> extracts;
+    IR::Vector<IR::BFN::ParserPrimitive> extracts;
     unsigned currentBit = 0;
     for (auto& item : fields) {
         if (!item.isPadding()) {
             auto extract =
-                new IR::Tofino::ExtractBuffer(item.field, currentBit, item.width);
+                new IR::BFN::ExtractBuffer(item.field, currentBit, item.width);
             extracts.push_back(extract);
         }
         currentBit += item.width;
     }
 
-    auto match = new IR::Tofino::ParserMatch(match_t(), totalWidth / 8,
+    auto match = new IR::BFN::ParserMatch(match_t(), totalWidth / 8,
                                              extracts, finalState);
-    return new IR::Tofino::ParserState(stateName, gress, { }, { match });
+    return new IR::BFN::ParserState(stateName, gress, { }, { match });
 }
 
-}  // namespace Tofino
+}  // namespace BFN
 
-std::ostream& operator<<(std::ostream& out, const Tofino::FieldPacking* packing) {
+std::ostream& operator<<(std::ostream& out, const BFN::FieldPacking* packing) {
     if (packing == nullptr) {
         out << "(null field packing)" << std::endl;
         return out;

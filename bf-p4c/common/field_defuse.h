@@ -15,7 +15,7 @@ class FieldDefUse : public ControlFlowVisitor, public Inspector, TofinoWriteCont
     /** A given expression for a field might appear multiple places in the IR dag (eg, an
      * action used by mulitple tables), so we use a pair<Unit,Expr> to denote a particular
      * use or definition in the code */
-    typedef std::pair<const IR::Tofino::Unit *, const IR::Expression*>  locpair;
+    typedef std::pair<const IR::BFN::Unit *, const IR::Expression*>  locpair;
     typedef ordered_set<locpair> LocPairSet;
 
  private:
@@ -41,19 +41,19 @@ class FieldDefUse : public ControlFlowVisitor, public Inspector, TofinoWriteCont
     profile_t init_apply(const IR::Node *root) override;
     void end_apply(const IR::Node *root) override;
     void check_conflicts(const info &read, int when);
-    void read(const PhvInfo::Field *, const IR::Tofino::Unit *, const IR::Expression *);
-    void read(const IR::HeaderRef *, const IR::Tofino::Unit *, const IR::Expression *);
-    void write(const PhvInfo::Field *, const IR::Tofino::Unit *, const IR::Expression *);
-    void write(const IR::HeaderRef *, const IR::Tofino::Unit *, const IR::Expression *);
+    void read(const PhvInfo::Field *, const IR::BFN::Unit *, const IR::Expression *);
+    void read(const IR::HeaderRef *, const IR::BFN::Unit *, const IR::Expression *);
+    void write(const PhvInfo::Field *, const IR::BFN::Unit *, const IR::Expression *);
+    void write(const IR::HeaderRef *, const IR::BFN::Unit *, const IR::Expression *);
     info &field(const PhvInfo::Field *);
     info &field(int id) { return field(phv.field(id)); }
     void access_field(const PhvInfo::Field *);
-    bool preorder(const IR::Tofino::Parser *p) override;
+    bool preorder(const IR::BFN::Parser *p) override;
     bool preorder(const IR::Expression *e) override;
     FieldDefUse *clone() const override { return new FieldDefUse(*this); }
     void flow_merge(Visitor &) override;
     bool filter_join_point(const IR::Node *n) override {
-        return !n->is<IR::Tofino::ParserState>() && !n->is<IR::MAU::TableSeq>(); }
+        return !n->is<IR::BFN::ParserState>() && !n->is<IR::MAU::TableSeq>(); }
     FieldDefUse(const FieldDefUse &) = default;
     FieldDefUse(FieldDefUse &&) = default;
     friend std::ostream &operator<<(std::ostream &, const FieldDefUse::info &);
@@ -75,10 +75,10 @@ class FieldDefUse : public ControlFlowVisitor, public Inspector, TofinoWriteCont
     const LocPairSet &getDefs(locpair use) const {
         static const LocPairSet emptyset;
         return defs.count(use) ? defs.at(use) : emptyset; }
-    const LocPairSet &getDefs(const IR::Tofino::Unit *u, const IR::Expression *e) const {
+    const LocPairSet &getDefs(const IR::BFN::Unit *u, const IR::Expression *e) const {
         return getDefs(locpair(u, e)); }
     const LocPairSet &getDefs(const Visitor *v, const IR::Expression *e) const {
-        return getDefs(locpair(v->findOrigCtxt<IR::Tofino::Unit>(), e)); }
+        return getDefs(locpair(v->findOrigCtxt<IR::BFN::Unit>(), e)); }
     /** Get all defs of the PhvInfo::Field with ID @fid. */
     const LocPairSet &getAllDefs(int fid) const {
         static const LocPairSet emptyset;
@@ -87,10 +87,10 @@ class FieldDefUse : public ControlFlowVisitor, public Inspector, TofinoWriteCont
     const LocPairSet &getUses(locpair def) const {
         static const LocPairSet emptyset;
         return uses.count(def) ? uses.at(def) : emptyset; }
-    const LocPairSet &getUses(const IR::Tofino::Unit *u, const IR::Expression *e) const {
+    const LocPairSet &getUses(const IR::BFN::Unit *u, const IR::Expression *e) const {
         return getUses(locpair(u, e)); }
     const LocPairSet &getUses(const Visitor *v, const IR::Expression *e) const {
-        return getUses(locpair(v->findOrigCtxt<IR::Tofino::Unit>(), e)); }
+        return getUses(locpair(v->findOrigCtxt<IR::BFN::Unit>(), e)); }
     /** Get all uses of the PhvInfo::Field with ID @fid. */
     const LocPairSet &getAllUses(int fid) const {
         static const LocPairSet emptyset;

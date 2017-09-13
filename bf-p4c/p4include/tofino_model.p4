@@ -1,5 +1,5 @@
-#ifndef _TOFINO_MODEL_P4_
-#define _TOFINO_MODEL_P4_
+#ifndef TOFINO_MODEL_P4_
+#define TOFINO_MODEL_P4_
 
 #include "core.p4"
 
@@ -290,4 +290,4 @@ package SimplerSwitch<H>(
         EgressMatchAction<H> egress2,
         EgressMatchAction<H> egress3);
 
-#endif /* _TOFINO_MODEL_P4_ */
+#endif /* TOFINO_MODEL_P4_ */

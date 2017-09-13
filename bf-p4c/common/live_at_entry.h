@@ -18,7 +18,7 @@ class LiveAtEntry : public ControlFlowVisitor, public Inspector, TofinoWriteCont
     void flow_dead() override { flow_is_dead = true; }
     void flow_merge(Visitor &a) override;
     bool filter_join_point(const IR::Node *n) override {
-        return !n->is<IR::Tofino::ParserState>() && !n->is<IR::MAU::TableSeq>(); }
+        return !n->is<IR::BFN::ParserState>() && !n->is<IR::MAU::TableSeq>(); }
  public:
     explicit LiveAtEntry(const PhvInfo &phv) : phv(phv), result(*new bitvec) {
         joinFlows = true; visitDagOnce = false; }

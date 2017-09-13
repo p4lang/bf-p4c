@@ -1,5 +1,5 @@
-#ifndef _TOFINO_MAU_TABLE_DEPENDENCY_GRAPH_H_
-#define _TOFINO_MAU_TABLE_DEPENDENCY_GRAPH_H_
+#ifndef TOFINO_MAU_TABLE_DEPENDENCY_GRAPH_H_
+#define TOFINO_MAU_TABLE_DEPENDENCY_GRAPH_H_
 
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/transitive_closure.hpp>
@@ -172,4 +172,4 @@ class FindDependencyGraph : public MauInspector, ControlFlowVisitor {
     : phv(phv), dg(out) { joinFlows = true; }
 };
 
-#endif /* _TOFINO_MAU_TABLE_DEPENDENCY_GRAPH_H_ */
+#endif /* TOFINO_MAU_TABLE_DEPENDENCY_GRAPH_H_ */

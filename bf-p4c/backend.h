@@ -20,10 +20,10 @@ limitations under the License.
 #include "ir/ir.h"
 #include "tofinoOptions.h"
 
-namespace Tofino {
+namespace BFN {
 
-void backend(const IR::Tofino::Pipe* pipe, const Tofino_Options& options);
+void backend(const IR::BFN::Pipe* pipe, const Tofino_Options& options);
 
-}  // namespace Tofino
+}  // namespace BFN
 
 #endif /* TOFINO_BACKEND_H_ */

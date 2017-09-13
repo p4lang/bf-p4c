@@ -59,7 +59,7 @@ limitations under the License.
 #include "tofino/phv/phv_assignment_validate.h"
 #include "tofino/phv/validate_allocation.h"
 
-namespace Tofino {
+namespace BFN {
 
 class CheckTableNameDuplicate : public MauInspector {
     set<cstring>        names;
@@ -128,7 +128,7 @@ class AsmOutput : public Inspector {
         if (outputFile)
             out = new std::ofstream(outputFile); }
 
-    bool preorder(const IR::Tofino::Pipe* pipe) override {
+    bool preorder(const IR::BFN::Pipe* pipe) override {
        MauAsmOutput mauasm(phv);
        pipe->apply(mauasm);
 
@@ -275,7 +275,7 @@ class TableAllocPass : public PassManager {
             }
 };
 
-void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
+void backend(const IR::BFN::Pipe* maupipe, const Tofino_Options& options) {
     PhvInfo phv;
     PhvUse uses(phv);
     DependencyGraph deps;
@@ -333,4 +333,4 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
     maupipe = maupipe->apply(backend);
 }
 
-}  // namespace Tofino
+}  // namespace BFN

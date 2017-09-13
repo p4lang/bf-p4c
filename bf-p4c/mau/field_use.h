@@ -1,5 +1,5 @@
-#ifndef _TOFINO_MAU_FIELD_USE_H_
-#define _TOFINO_MAU_FIELD_USE_H_
+#ifndef TOFINO_MAU_FIELD_USE_H_
+#define TOFINO_MAU_FIELD_USE_H_
 
 #include <iostream>
 #include "mau_visitor.h"
@@ -33,4 +33,4 @@ class FieldUse : public MauInspector, TofinoWriteContext {
 };
 
 
-#endif /* _TOFINO_MAU_FIELD_USE_H_ */
+#endif /* TOFINO_MAU_FIELD_USE_H_ */

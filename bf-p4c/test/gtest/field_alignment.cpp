@@ -86,7 +86,7 @@ using ExpectedAlignmentMap = std::map<cstring, boost::optional<ExpectedAlignment
 
 /// Given a Tofino program, infer alignments for its fields and check that they
 /// agree with the alignments we expect.
-void checkFieldAlignment(const IR::Tofino::Pipe* pipe,
+void checkFieldAlignment(const IR::BFN::Pipe* pipe,
                          const ExpectedAlignmentMap& expected) {
     PhvInfo phv;
     PassManager computeAlignment = {
@@ -301,14 +301,14 @@ TEST(TofinoFieldAlignment, BridgedMetadataRespectsAlignment) {
     // Verify that the generated parser state contains an extract for
     // `meta.metadataField` with the correct alignment.
     bool foundBridgedMetadataState = false;
-    forAllMatching<IR::Tofino::ParserState>(pipe->thread[EGRESS].parser,
-                  [&](const IR::Tofino::ParserState* state) {
+    forAllMatching<IR::BFN::ParserState>(pipe->thread[EGRESS].parser,
+                  [&](const IR::BFN::ParserState* state) {
         if (state->name != "$bridge_metadata_extract") return;
         foundBridgedMetadataState = true;
 
         ASSERT_EQ(1u, state->match.size());
         ASSERT_EQ(1u, state->match[0]->stmts.size());
-        auto* extract = state->match[0]->stmts[0]->to<IR::Tofino::ExtractBuffer>();
+        auto* extract = state->match[0]->stmts[0]->to<IR::BFN::ExtractBuffer>();
         ASSERT_TRUE(extract != nullptr);
         EXPECT_EQ("meta.metadataField", extract->dest->toString());
         EXPECT_EQ(3, extract->extractedBits().lo % 8);

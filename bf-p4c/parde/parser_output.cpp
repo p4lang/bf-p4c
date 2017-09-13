@@ -21,7 +21,7 @@ class OutputExtracts : public Inspector {
     indent_t            indent;
     PHV::Container      last;
 
-    bool preorder(const IR::Tofino::ExtractBuffer* extract) {
+    bool preorder(const IR::BFN::ExtractBuffer* extract) {
         bitrange bits;
         auto dest = phv.field(extract->dest, &bits);
         if (!dest) {
@@ -48,7 +48,7 @@ class OutputExtracts : public Inspector {
         return false;
     }
 
-    bool preorder(const IR::Tofino::ExtractConstant* extract) {
+    bool preorder(const IR::BFN::ExtractConstant* extract) {
         bitrange bits;
         auto dest = phv.field(extract->dest, &bits);
         if (!dest) {
@@ -60,7 +60,7 @@ class OutputExtracts : public Inspector {
         return false;
     }
 
-    bool preorder(const IR::Tofino::ParserPrimitive* primitive) {
+    bool preorder(const IR::BFN::ParserPrimitive* primitive) {
         out << indent << "# unsupported: " << *primitive << std::endl;
         return false;
     }
@@ -70,7 +70,7 @@ class OutputExtracts : public Inspector {
 };
 
 static void output_match(std::ostream &out, const PhvInfo &phv, indent_t indent,
-                         const IR::Tofino::ParserMatch *match) {
+                         const IR::BFN::ParserMatch *match) {
     if (match->value)
         out << indent << match->value << ':' << std::endl;
     else
@@ -94,7 +94,7 @@ class OutputSelect : public Inspector {
     explicit OutputSelect(std::ostream& out) : out(out) { }
 
  private:
-    bool preorder(const IR::Tofino::SelectBuffer* select) {
+    bool preorder(const IR::BFN::SelectBuffer* select) {
         auto bits = select->selectedBits();
         if (bits.loByte() == bits.hiByte())
             out << bits.loByte();
@@ -103,7 +103,7 @@ class OutputSelect : public Inspector {
         return false;
     }
 
-    bool preorder(const IR::Tofino::TransitionPrimitive*) {
+    bool preorder(const IR::BFN::TransitionPrimitive*) {
         out << "/* ??? */" << std::endl;
         return false;
     }
@@ -112,7 +112,7 @@ class OutputSelect : public Inspector {
 };
 
 static void output_state(std::ostream &out, const PhvInfo &phv, indent_t indent,
-                         const IR::Tofino::ParserState *state) {
+                         const IR::BFN::ParserState *state) {
     out << indent++ << canon_name(state->name) << ':' << std::endl;
     if (!state->select.empty()) {
         out << indent << "match: ";
@@ -129,7 +129,7 @@ static void output_state(std::ostream &out, const PhvInfo &phv, indent_t indent,
             out << indent << "      # - [";
             select->apply(OutputSelect(out));
             out << "] ";
-            if (auto* selectBuffer = select->to<IR::Tofino::SelectBuffer>()) {
+            if (auto* selectBuffer = select->to<IR::BFN::SelectBuffer>()) {
                 if (selectBuffer->source)
                     out << selectBuffer->source << std::endl;
                 else

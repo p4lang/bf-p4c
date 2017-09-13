@@ -44,7 +44,7 @@ class ValidateAllocation final : public Inspector {
     PhvInfo& phv;
     bool ignorePHVOverflow;
 
-    bool preorder(const IR::Tofino::Pipe* pipe) override;
+    bool preorder(const IR::BFN::Pipe* pipe) override;
 };
 
 }  // namespace PHV

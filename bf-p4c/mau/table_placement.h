@@ -1,5 +1,5 @@
-#ifndef _TOFINO_MAU_TABLE_PLACEMENT_H_
-#define _TOFINO_MAU_TABLE_PLACEMENT_H_
+#ifndef TOFINO_MAU_TABLE_PLACEMENT_H_
+#define TOFINO_MAU_TABLE_PLACEMENT_H_
 
 #include "mau_visitor.h"
 #include "lib/ordered_set.h"
@@ -34,11 +34,11 @@ class TablePlacement : public MauTransform, public Backtrack {
     bool backtrack(trigger &) override {
         /* always back up to TableLayout -- don't catch here */
         return false;  /* trig.is<IXBar::failure>() && !alloc_done; */ }
-    IR::Node *preorder(IR::Tofino::Pipe *) override;
+    IR::Node *preorder(IR::BFN::Pipe *) override;
     IR::Node *preorder(IR::MAU::TableSeq *) override;
     IR::Node *preorder(IR::MAU::Table *) override;
     IR::Expression *preorder(IR::MAU::HashDist *) override;
-    IR::Node *postorder(IR::Tofino::Pipe *pipe) override;
+    IR::Node *postorder(IR::BFN::Pipe *pipe) override;
     const Placed *placement;
     bool is_better(const Placed *a, const Placed *b);
     Placed *try_place_table(const IR::MAU::Table *t, const Placed *done,
@@ -48,4 +48,4 @@ class TablePlacement : public MauTransform, public Backtrack {
     std::multimap<cstring, const Placed *>::const_iterator find_placed(cstring name) const;
 };
 
-#endif /* _TOFINO_MAU_TABLE_PLACEMENT_H_ */
+#endif /* TOFINO_MAU_TABLE_PLACEMENT_H_ */

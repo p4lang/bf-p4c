@@ -1,5 +1,5 @@
-#ifndef _TOFINO_PARDE_ASM_OUTPUT_H_
-#define _TOFINO_PARDE_ASM_OUTPUT_H_
+#ifndef TOFINO_PARDE_ASM_OUTPUT_H_
+#define TOFINO_PARDE_ASM_OUTPUT_H_
 
 #include <functional>
 #include "ir/ir.h"
@@ -9,14 +9,14 @@
 class ParserAsmOutput : public Inspector {
     gress_t                                     gress;
     const PhvInfo                               &phv;
-    const IR::Tofino::Parser                    *parser;
-    vector<const IR::Tofino::ParserState *>     states;
-    bool preorder(const IR::Tofino::ParserState *state) override {
+    const IR::BFN::Parser                    *parser;
+    vector<const IR::BFN::ParserState *>     states;
+    bool preorder(const IR::BFN::ParserState *state) override {
         states.push_back(state);
         return true; }
     friend std::ostream &operator<<(std::ostream &, const ParserAsmOutput &);
  public:
-    ParserAsmOutput(const IR::Tofino::Pipe *pipe, const PhvInfo &phv, gress_t gr)
+    ParserAsmOutput(const IR::BFN::Pipe *pipe, const PhvInfo &phv, gress_t gr)
     : gress(gr), phv(phv), parser(pipe->thread[gress].parser) {
         if (parser) parser->apply(*this); }
 };
@@ -24,14 +24,14 @@ class ParserAsmOutput : public Inspector {
 class DeparserAsmOutput {
     gress_t                     gress;
     const PhvInfo               &phv;
-    const IR::Tofino::Deparser  *deparser;
+    const IR::BFN::Deparser  *deparser;
     friend std::ostream &operator<<(std::ostream &, const DeparserAsmOutput &);
  public:
-    DeparserAsmOutput(const IR::Tofino::Pipe *pipe, const PhvInfo &phv, gress_t gr)
+    DeparserAsmOutput(const IR::BFN::Pipe *pipe, const PhvInfo &phv, gress_t gr)
     : gress(gr), phv(phv), deparser(pipe->thread[gress].deparser) {}
 
     void emit_fieldlist(std::ostream &out, const IR::Vector<IR::Expression> *list,
                         const char *sep = "") const;
 };
 
-#endif /* _TOFINO_PARDE_ASM_OUTPUT_H_ */
+#endif /* TOFINO_PARDE_ASM_OUTPUT_H_ */

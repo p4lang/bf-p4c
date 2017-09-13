@@ -55,7 +55,7 @@ void TablesMutuallyExclusive::postorder(const IR::MAU::Table *tbl) {
     }
 }
 
-void TablesMutuallyExclusive::postorder(const IR::Tofino::Pipe *pipe) {
+void TablesMutuallyExclusive::postorder(const IR::BFN::Pipe *pipe) {
     /* ingress and egress are mutually exclusive */
     vector<bitvec> sets;
     for (auto th : pipe->thread)

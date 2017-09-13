@@ -65,7 +65,7 @@ int main(int ac, char **av) {
     log_dump(program, "Initial program");
 
     if (options.target == "tofino-v1model-barefoot" && options.native_arch) {
-        Tofino::SimpleSwitchTranslation translation(options);
+        BFN::SimpleSwitchTranslation translation(options);
         translation.addDebugHook(hook);
         program = program->apply(translation);
         if (!program)
@@ -73,7 +73,7 @@ int main(int ac, char **av) {
         log_dump(program, "After TNA translation");
     }
 
-    Tofino::MidEnd midend(options);
+    BFN::MidEnd midend(options);
     midend.addDebugHook(hook);
     program = program->apply(midend);
     if (!program)
@@ -81,7 +81,7 @@ int main(int ac, char **av) {
     log_dump(program, "After midend");
 
     if (!options.p4RuntimeFile.isNullOrEmpty())
-        Tofino::serializeP4Runtime(program, options);
+        BFN::serializeP4Runtime(program, options);
 
     if (ErrorReporter::instance.getErrorCount() > 0)
         return 1;
@@ -96,7 +96,7 @@ int main(int ac, char **av) {
     if (Log::verbose())
         std::cout << "Compiling" << std::endl;
 
-    Tofino::backend(maupipe, options);
+    BFN::backend(maupipe, options);
 
     if (Log::verbose())
         std::cout << "Done." << std::endl;

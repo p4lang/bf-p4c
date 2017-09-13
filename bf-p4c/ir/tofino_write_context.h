@@ -1,5 +1,5 @@
-#ifndef _TOFINO_WRITE_CONTEXT_H_
-#define _TOFINO_WRITE_CONTEXT_H_
+#ifndef EXTENSIONS_TOFINO_IR_TOFINO_WRITE_CONTEXT_H_
+#define EXTENSIONS_TOFINO_IR_TOFINO_WRITE_CONTEXT_H_
 
 #include "ir/ir.h"
 
@@ -23,4 +23,4 @@ class TofinoWriteContext : public P4WriteContext {
      */
     bool isRead(bool root_value = false);};
 
-#endif /* _TOFINO_WRITE_CONTEXT_H_ */
+#endif /* EXTENSIONS_TOFINO_IR_TOFINO_WRITE_CONTEXT_H_ */

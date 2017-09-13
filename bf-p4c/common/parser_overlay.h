@@ -30,7 +30,7 @@ class ParserOverlay : public ControlFlowVisitor,
     void mark(const IR::HeaderRef*);
 
     bool preorder(const IR::Expression*) override;
-    bool preorder(const IR::Tofino::Deparser*) override { return false; }
+    bool preorder(const IR::BFN::Deparser*) override { return false; }
 
     void flow_merge(Visitor &) override;
 

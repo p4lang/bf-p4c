@@ -56,7 +56,7 @@ namespace MAU {
  * unit for tofino; there are 16 such 'logical' tables available in
  * each stage, which will run simultaneously and have their results
  * predicated by the predicate mask calculated from the next tables */
-class Table : Tofino::Unit {
+class Table : BFN::Unit {
     cstring                                     name;
     gress_t                                     gress;
     /** Each stage has 16 slots for tables.  Logical IDs are numbered from 0
@@ -213,10 +213,10 @@ class Table : Tofino::Unit {
 #noconstructor
     Table(cstring n, gress_t gr) : name(n), gress(gr) {}
     Table(cstring n, gress_t gr, IR::P4Table t)
-    : Tofino::Unit(t->srcInfo), name(n), gress(gr), match_table(t) {}
+    : BFN::Unit(t->srcInfo), name(n), gress(gr), match_table(t) {}
 #emit
     Table(cstring n, gress_t gr, const Expression *gw)
-    : Tofino::Unit(gw->srcInfo), name(n), gress(gr),
+    : BFN::Unit(gw->srcInfo), name(n), gress(gr),
       gateway_rows{ std::make_pair(gw, "$true"), std::make_pair(nullptr, "$false") } {}
     // ir-generator can't parse {}-initializer (thinks it is the ctor body
 #end

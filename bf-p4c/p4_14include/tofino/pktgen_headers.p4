@@ -3,8 +3,8 @@
  *                   Packet Generator Header Definition for Tofino              *
  *******************************************************************************/
 
-#ifndef _TOFINO_LIB_PKTGEN_HEADERS 
-#define _TOFINO_LIB_PKTGEN_HEADERS 1
+#ifndef TOFINO_LIB_PKTGEN_HEADERS 
+#define TOFINO_LIB_PKTGEN_HEADERS 1
 
 header_type pktgen_generic_header_t {
     fields {

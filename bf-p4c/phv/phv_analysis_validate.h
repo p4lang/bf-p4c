@@ -1,5 +1,5 @@
-#ifndef _TOFINO_PHV_PHV_ANALYSIS_VALIDATE_H_
-#define _TOFINO_PHV_PHV_ANALYSIS_VALIDATE_H_
+#ifndef TOFINO_PHV_PHV_ANALYSIS_VALIDATE_H_
+#define TOFINO_PHV_PHV_ANALYSIS_VALIDATE_H_
 
 #include "ir/ir.h"
 #include "lib/map.h"
@@ -254,4 +254,4 @@ std::ostream &operator<<(
     std::map<int, std::list<PHV_Container::Container_Content *>>&);
 std::ostream &operator<<(std::ostream &, PHV_Analysis_Validate &);
 //
-#endif /* _TOFINO_PHV_PHV_ANALYSIS_VALIDATE_H_ */
+#endif /* TOFINO_PHV_PHV_ANALYSIS_VALIDATE_H_ */

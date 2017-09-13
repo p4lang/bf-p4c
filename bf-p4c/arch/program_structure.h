@@ -5,7 +5,7 @@
 #include "frontends/common/resolveReferences/resolveReferences.h"
 #include "frontends/p4/evaluator/evaluator.h"
 
-namespace Tofino {
+namespace BFN {
 
 /// Experimental implementation of programStructure to facilitate the
 /// translation between P4-16 program of different architecture.
@@ -53,6 +53,6 @@ class ProgramStructure {
     }
 };
 
-}  // namespace Tofino
+}  // namespace BFN
 
 #endif  /* EXTENSIONS_TOFINO_ARCH_PROGRAM_STRUCTURE_H_ */

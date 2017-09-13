@@ -1,10 +1,10 @@
-#ifndef _TOFINO_IR_THREAD_VISITOR_H_
-#define _TOFINO_IR_THREAD_VISITOR_H_
+#ifndef TOFINO_IR_THREAD_VISITOR_H_
+#define TOFINO_IR_THREAD_VISITOR_H_
 
 #include "ir/ir.h"
 
 class ThreadVisitor : public virtual Visitor {
-    friend class  IR::Tofino::Pipe;
+    friend class  IR::BFN::Pipe;
     gress_t       thread;
  public:
     explicit ThreadVisitor(gress_t th) : thread(th) {}
@@ -13,4 +13,4 @@ class ThreadVisitor : public virtual Visitor {
 
 extern gress_t VisitingThread(Visitor *v);
 
-#endif /* _TOFINO_IR_THREAD_VISITOR_H_ */
+#endif /* TOFINO_IR_THREAD_VISITOR_H_ */

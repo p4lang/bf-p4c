@@ -1,5 +1,5 @@
-#ifndef _TOFINO_MAU_GATEWAY_H_
-#define _TOFINO_MAU_GATEWAY_H_
+#ifndef TOFINO_MAU_GATEWAY_H_
+#define TOFINO_MAU_GATEWAY_H_
 
 #include "mau_visitor.h"
 #include "tofino/phv/phv_fields.h"
@@ -111,4 +111,4 @@ class GatewayOpt : public PassManager {
     explicit GatewayOpt(const PhvInfo &);
 };
 
-#endif /* _TOFINO_MAU_GATEWAY_H_ */
+#endif /* TOFINO_MAU_GATEWAY_H_ */

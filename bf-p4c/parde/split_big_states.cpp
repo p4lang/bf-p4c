@@ -27,10 +27,10 @@ static bool isIntervalEarlierInBuffer(nw_bitinterval a,
 /// A predicate which extracts by where their input data ends. Extracts which
 /// don't come from the buffer are ordered last - they're lowest priority, since
 /// we can execute them at any time without delaying other extracts.
-static bool isExtractEarlierInBuffer(const IR::Tofino::Extract* a,
-                                     const IR::Tofino::Extract* b) {
-    auto* aFromBuffer = a->to<IR::Tofino::ExtractBuffer>();
-    auto* bFromBuffer = b->to<IR::Tofino::ExtractBuffer>();
+static bool isExtractEarlierInBuffer(const IR::BFN::Extract* a,
+                                     const IR::BFN::Extract* b) {
+    auto* aFromBuffer = a->to<IR::BFN::ExtractBuffer>();
+    auto* bFromBuffer = b->to<IR::BFN::ExtractBuffer>();
     if (aFromBuffer && bFromBuffer)
         return isIntervalEarlierInBuffer(aFromBuffer->bitInterval(),
                                          bFromBuffer->bitInterval());
@@ -40,16 +40,16 @@ static bool isExtractEarlierInBuffer(const IR::Tofino::Extract* a,
 /// A sequence of extract operations.
 struct ExtractorSequence {
     /// The extract operations.
-    std::vector<const IR::Tofino::Extract*> extracts;
+    std::vector<const IR::BFN::Extract*> extracts;
 
     /// The range of input buffer bits the extracts touch.
     nw_bitinterval bits;
 
     /// Add a new extract operation to the sequence.
-    void add(const IR::Tofino::Extract* extract) {
+    void add(const IR::BFN::Extract* extract) {
         extracts.push_back(extract);
-        if (!extract->is<IR::Tofino::ExtractBuffer>()) return;
-        auto extractBuffer = extract->to<IR::Tofino::ExtractBuffer>();
+        if (!extract->is<IR::BFN::ExtractBuffer>()) return;
+        auto extractBuffer = extract->to<IR::BFN::ExtractBuffer>();
         bits = bits.unionWith(extractBuffer->bitInterval());
     }
 
@@ -61,12 +61,12 @@ struct ExtractorSequence {
         }
         BUG_CHECK(bits.lo >= 0 && bits.hi >= 0, "Shifted interval too much?");
         std::transform(extracts.begin(), extracts.end(), extracts.begin(),
-                       [&](const IR::Tofino::Extract* extract) {
-            if (!extract->is<IR::Tofino::ExtractBuffer>()) return extract;
-            auto clone = extract->to<IR::Tofino::ExtractBuffer>()->clone();
+                       [&](const IR::BFN::Extract* extract) {
+            if (!extract->is<IR::BFN::ExtractBuffer>()) return extract;
+            auto clone = extract->to<IR::BFN::ExtractBuffer>()->clone();
             clone->bitOffset -= delta;
             BUG_CHECK(!clone->isShiftedOut(), "Shifted extract too much?");
-            return clone->to<IR::Tofino::Extract>();
+            return clone->to<IR::BFN::Extract>();
         });
     }
 };
@@ -93,8 +93,8 @@ class ExtractorAllocator {
     }
 
     /// Add a new parser primitive that will be included in the state.
-    void add(const IR::Tofino::ParserPrimitive* primitive) {
-        auto* extract = primitive->to<IR::Tofino::Extract>();
+    void add(const IR::BFN::ParserPrimitive* primitive) {
+        auto* extract = primitive->to<IR::BFN::Extract>();
         if (!extract) {
             nonExtractPrimitives.push_back(primitive);
             return;
@@ -128,8 +128,8 @@ class ExtractorAllocator {
      * @return a pair containing (1) the parser primitives that were allocated,
      * and (2) the shift that the new state should have.
      */
-    std::pair<IR::Vector<IR::Tofino::ParserPrimitive>, int> allocateOneState() {
-        using namespace Tofino::Description;
+    std::pair<IR::Vector<IR::BFN::ParserPrimitive>, int> allocateOneState() {
+        using namespace BFN::Description;
         std::array<std::deque<PHV::Container>,
                    ExtractorKinds.size()> extractorQueues;
 
@@ -150,7 +150,7 @@ class ExtractorAllocator {
         // Allocate. We have a limited number of extractions of each size per
         // state. We also ensure that we don't overflow the input buffer.
         LOG3("Allocating extracts for state " << stateName);
-        std::vector<const IR::Tofino::Extract*> allocatedExtractions;
+        std::vector<const IR::BFN::Extract*> allocatedExtractions;
         for (auto& queue : extractorQueues) {
             LOG3(" - Begin extractor queue");
             for (unsigned i = 0; i < ExtractorCount && !queue.empty(); ++i) {
@@ -169,7 +169,7 @@ class ExtractorAllocator {
                   isExtractEarlierInBuffer);
 
         // Collect the extractions we allocated.
-        IR::Vector<IR::Tofino::ParserPrimitive> primitives;
+        IR::Vector<IR::BFN::ParserPrimitive> primitives;
         primitives.insert(primitives.end(), allocatedExtractions.begin(),
                                             allocatedExtractions.end());
 
@@ -222,7 +222,7 @@ class ExtractorAllocator {
     }
 
     std::map<PHV::Container, ExtractorSequence> extractionsByContainer;
-    std::vector<const IR::Tofino::ParserPrimitive*> nonExtractPrimitives;
+    std::vector<const IR::BFN::ParserPrimitive*> nonExtractPrimitives;
     const PhvInfo& phv;
     cstring stateName;
     int byteDesiredShift;
@@ -230,8 +230,8 @@ class ExtractorAllocator {
 
 }  // namespace
 
-bool SplitBigStates::preorder(IR::Tofino::ParserMatch* match) {
-    auto stateName = findContext<IR::Tofino::ParserState>()->name;
+bool SplitBigStates::preorder(IR::BFN::ParserMatch* match) {
+    auto stateName = findContext<IR::BFN::ParserState>()->name;
     BUG_CHECK(match->shift, "Splitting a state %1% with an unknown shift",
               stateName);
     ExtractorAllocator allocator(phv, stateName, *match->shift);
@@ -246,11 +246,11 @@ bool SplitBigStates::preorder(IR::Tofino::ParserMatch* match) {
     auto* currentMatch = match;
     while (allocator.hasMore()) {
         auto newMatch =
-          new IR::Tofino::ParserMatch(match_t(), {}, finalState, match->except);
+          new IR::BFN::ParserMatch(match_t(), {}, finalState, match->except);
         std::tie(newMatch->stmts, newMatch->shift) = allocator.allocateOneState();
         auto name = names.newname(stateName + ".$split");
         currentMatch->next =
-          new IR::Tofino::ParserState(name, VisitingThread(this), {}, { newMatch });
+          new IR::BFN::ParserState(name, VisitingThread(this), {}, { newMatch });
         currentMatch->except = nullptr;
         currentMatch = newMatch;
     }

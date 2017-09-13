@@ -1,5 +1,5 @@
-#ifndef _TOFINO_PHV_CLUSTER_PHV_SLICING_H_
-#define _TOFINO_PHV_CLUSTER_PHV_SLICING_H_
+#ifndef TOFINO_PHV_CLUSTER_PHV_SLICING_H_
+#define TOFINO_PHV_CLUSTER_PHV_SLICING_H_
 
 #include "phv.h"
 #include "phv_fields.h"
@@ -57,4 +57,4 @@ class Cluster_Slicing : public Visitor {
 
 std::ostream &operator<<(std::ostream &, Cluster_Slicing &);
 
-#endif /* _TOFINO_PHV_CLUSTER_PHV_SLICING_H_ */
+#endif /* TOFINO_PHV_CLUSTER_PHV_SLICING_H_ */

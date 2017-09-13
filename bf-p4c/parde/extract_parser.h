@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef _TOFINO_PARDE_EXTRACT_PARSER_H_
-#define _TOFINO_PARDE_EXTRACT_PARSER_H_
+#ifndef TOFINO_PARDE_EXTRACT_PARSER_H_
+#define TOFINO_PARDE_EXTRACT_PARSER_H_
 
 #include "lib/cstring.h"
 #include "lib/exceptions.h"
@@ -23,22 +23,22 @@ limitations under the License.
 
 namespace IR {
 
-namespace Tofino {
+namespace BFN {
 class Deparser;
 class Parser;
 class Pipe;
-}  // namespace Tofino
+}  // namespace BFN
 
 class P4Control;
 class P4Parser;
 
 }  // namespace IR
 
-namespace Tofino {
+namespace BFN {
 
 struct ParserInfo {
-  const IR::Tofino::Parser* parsers[2] = { nullptr, nullptr };
-  const IR::Tofino::Deparser* deparsers[2] = { nullptr, nullptr };
+  const IR::BFN::Parser* parsers[2] = { nullptr, nullptr };
+  const IR::BFN::Deparser* deparsers[2] = { nullptr, nullptr };
 };
 
 /**
@@ -59,12 +59,12 @@ struct ParserInfo {
  *                    egress parser.
  * @return a ParserInfo object containing the Tofino IR parsers and deparsers.
  */
-ParserInfo extractParser(const IR::Tofino::Pipe* pipe,
+ParserInfo extractParser(const IR::BFN::Pipe* pipe,
                          const IR::P4Parser* igParser,
                          const IR::P4Control* igDeparser,
                          const IR::P4Parser* egParser = nullptr,
                          const IR::P4Control* egDeparser = nullptr);
 
-}  // namespace Tofino
+}  // namespace BFN
 
-#endif /* _TOFINO_PARDE_EXTRACT_PARSER_H_ */
+#endif /* TOFINO_PARDE_EXTRACT_PARSER_H_ */

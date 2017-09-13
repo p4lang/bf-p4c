@@ -4,7 +4,7 @@
 #include "tofino/ir/bitrange.h"
 #end
 
-namespace Tofino {
+namespace BFN {
 
 /// An expression representing a `packet_in.lookahead()` call at the P4 level.
 /// The interface is very similar to ExtractBuffer, and that's not a
@@ -432,4 +432,4 @@ class Deparser : Unit {
     toString { return gress ? "egress deparser" : "ingress deparser"; }
 }
 
-}  // end namespace Tofino
+}  // end namespace BFN

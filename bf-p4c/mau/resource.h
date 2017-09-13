@@ -1,5 +1,5 @@
-#ifndef _TOFINO_MAU_RESOURCE_H_
-#define _TOFINO_MAU_RESOURCE_H_
+#ifndef TOFINO_MAU_RESOURCE_H_
+#define TOFINO_MAU_RESOURCE_H_
 
 #include "ir/ir.h"
 #include "input_xbar.h"
@@ -66,4 +66,4 @@ struct TableResourceAlloc {
     static TableResourceAlloc *fromJSON(JSONLoader &) { return nullptr; }
 };
 
-#endif /* _TOFINO_MAU_RESOURCE_H_ */
+#endif /* TOFINO_MAU_RESOURCE_H_ */

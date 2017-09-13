@@ -1,5 +1,5 @@
-#ifndef _TOFINO_PHV_ASM_OUTPUT_H_
-#define _TOFINO_PHV_ASM_OUTPUT_H_
+#ifndef TOFINO_PHV_ASM_OUTPUT_H_
+#define TOFINO_PHV_ASM_OUTPUT_H_
 
 #include "phv_fields.h"
 #include "lib/stringref.h"
@@ -12,4 +12,4 @@ class PhvAsmOutput {
     explicit PhvAsmOutput(const PhvInfo &p) : phv(p) {}
 };
 
-#endif /* _TOFINO_PHV_ASM_OUTPUT_H_ */
+#endif /* TOFINO_PHV_ASM_OUTPUT_H_ */

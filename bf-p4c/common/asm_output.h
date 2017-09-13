@@ -1,5 +1,5 @@
-#ifndef _TOFINO_COMMON_ASM_OUTPUT_H_
-#define _TOFINO_COMMON_ASM_OUTPUT_H_
+#ifndef TOFINO_COMMON_ASM_OUTPUT_H_
+#define TOFINO_COMMON_ASM_OUTPUT_H_
 
 #include <map>
 #include "lib/ordered_map.h"
@@ -138,4 +138,4 @@ template<class T> inline auto operator<<(std::ostream &out, const T *obj) ->
     return out; }
 
 
-#endif /* _TOFINO_COMMON_ASM_OUTPUT_H_ */
+#endif /* TOFINO_COMMON_ASM_OUTPUT_H_ */

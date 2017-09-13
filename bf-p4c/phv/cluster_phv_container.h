@@ -1,5 +1,5 @@
-#ifndef _TOFINO_PHV_CLUSTER_PHV_CONTAINER_H_
-#define _TOFINO_PHV_CLUSTER_PHV_CONTAINER_H_
+#ifndef TOFINO_PHV_CLUSTER_PHV_CONTAINER_H_
+#define TOFINO_PHV_CLUSTER_PHV_CONTAINER_H_
 
 #include "phv.h"
 #include "phv_fields.h"
@@ -289,4 +289,4 @@ std::ostream &operator<<(
     std::ostream &,
     ordered_map<PhvInfo::Field *, std::list<PHV_Container::Container_Content *>>&);
 //
-#endif /* _TOFINO_PHV_CLUSTER_PHV_CONTAINER_H_ */
+#endif /* TOFINO_PHV_CLUSTER_PHV_CONTAINER_H_ */

@@ -15,13 +15,13 @@ class Digests : public Transform {
      * relying on the fact that the visitor traversal visits the threads in order and visits
      * the deparser after the MAU in each thread.
      */
-    IR::Tofino::Digest *learn = nullptr;
-    IR::Tofino::Digest *mirror = nullptr;
+    IR::BFN::Digest *learn = nullptr;
+    IR::BFN::Digest *mirror = nullptr;
     IR::TempVar *mirror_id = nullptr;
 
-    IR::Primitive *add_to_digest(IR::Tofino::Digest *&digest, const char *name,
+    IR::Primitive *add_to_digest(IR::BFN::Digest *&digest, const char *name,
                                  const IR::Expression *expr) {
-        if (!digest) digest = new IR::Tofino::Digest(VisitingThread(this), name);
+        if (!digest) digest = new IR::BFN::Digest(VisitingThread(this), name);
         auto list = dynamic_cast<const IR::Vector<IR::Expression> *>(expr);
         if (!list) {
             if (auto l = dynamic_cast<const IR::ListExpression *>(expr))
@@ -81,7 +81,7 @@ class Digests : public Transform {
             mirror->sets.back() = l;
             return rv; }
         return prim; }
-    IR::Tofino::Deparser *postorder(IR::Tofino::Deparser *dp) override {
+    IR::BFN::Deparser *postorder(IR::BFN::Deparser *dp) override {
         if (learn) {
             dp->digests.addUnique(learn->name, learn);
             learn = nullptr; }

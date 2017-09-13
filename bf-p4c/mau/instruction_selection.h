@@ -1,5 +1,5 @@
-#ifndef _TOFINO_MAU_INSTRUCTION_SELECTION_H_
-#define _TOFINO_MAU_INSTRUCTION_SELECTION_H_
+#ifndef TOFINO_MAU_INSTRUCTION_SELECTION_H_
+#define TOFINO_MAU_INSTRUCTION_SELECTION_H_
 
 #include "mau_visitor.h"
 #include "tofino/phv/phv_fields.h"
@@ -60,4 +60,4 @@ class DoInstructionSelection : public PassManager {
      explicit DoInstructionSelection(PhvInfo &);
 };
 
-#endif /* _TOFINO_MAU_INSTRUCTION_SELECTION_H_ */
+#endif /* TOFINO_MAU_INSTRUCTION_SELECTION_H_ */

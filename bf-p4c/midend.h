@@ -23,7 +23,7 @@ limitations under the License.
 #include "midend/actionsInlining.h"
 #include "midend/inlining.h"
 
-namespace Tofino {
+namespace BFN {
 
 class MidEnd : public PassManager {
     P4::InlineWorkList controlsToInline;
@@ -38,6 +38,6 @@ class MidEnd : public PassManager {
     explicit MidEnd(CompilerOptions& options);
 };
 
-}  // namespace Tofino
+}  // namespace BFN
 
 #endif /* TOFINO_MIDEND_H_ */

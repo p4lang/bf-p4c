@@ -1,5 +1,5 @@
-#ifndef _TOFINO_MAU_ASM_OUTPUT_H_
-#define _TOFINO_MAU_ASM_OUTPUT_H_
+#ifndef TOFINO_MAU_ASM_OUTPUT_H_
+#define TOFINO_MAU_ASM_OUTPUT_H_
 
 #include "default_next.h"
 #include "resource.h"
@@ -12,7 +12,7 @@ class PhvInfo;
 class MauAsmOutput : public MauInspector {
  protected:
     const PhvInfo       &phv;
-    const IR::Tofino::Pipe *pipe;
+    const IR::BFN::Pipe *pipe;
 
  private:
     DefaultNext         default_next;
@@ -20,7 +20,7 @@ class MauAsmOutput : public MauInspector {
     profile_t init_apply(const IR::Node *root) override {
         root->apply(default_next);
         return MauInspector::init_apply(root); }
-    bool preorder(const IR::Tofino::Pipe *p) override {
+    bool preorder(const IR::BFN::Pipe *p) override {
         pipe = p;
         return true; }
     bool preorder(const IR::MAU::Table *tbl) override {
@@ -67,4 +67,4 @@ class MauAsmOutput : public MauInspector {
     explicit MauAsmOutput(const PhvInfo &p) : phv(p) {}
 };
 
-#endif /* _TOFINO_MAU_ASM_OUTPUT_H_ */
+#endif /* TOFINO_MAU_ASM_OUTPUT_H_ */

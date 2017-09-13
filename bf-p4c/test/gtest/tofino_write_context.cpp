@@ -27,7 +27,7 @@ static IR::Constant *two = new IR::Constant(2);
 
 class TestRead : public Inspector, TofinoWriteContext {
     bool preorder(const IR::Expression *p) {
-        if (findContext<IR::Tofino::ParserState>() ||
+        if (findContext<IR::BFN::ParserState>() ||
            (findContext<IR::MAU::Instruction>() && p == one) ||
            (findContext<IR::MAU::TypedPrimitive>() && p == zero)) {
             EXPECT_TRUE(isRead());
@@ -44,15 +44,15 @@ class TestRead : public Inspector, TofinoWriteContext {
 TEST(TofinoWriteContext, Read) {
     match_t m = match_t(0, 0, 0);
 
-    auto *match = new IR::Tofino::ParserMatch(m, 0, {
-        new IR::Tofino::ExtractBuffer(zero, 0, 1),
-        new IR::Tofino::ExtractBuffer(one, 1, 2),
-        new IR::Tofino::ExtractComputed(zero, zero),
-        new IR::Tofino::ExtractComputed(one, one)
+    auto *match = new IR::BFN::ParserMatch(m, 0, {
+        new IR::BFN::ExtractBuffer(zero, 0, 1),
+        new IR::BFN::ExtractBuffer(one, 1, 2),
+        new IR::BFN::ExtractComputed(zero, zero),
+        new IR::BFN::ExtractComputed(one, one)
     });
-    auto *state = new IR::Tofino::ParserState("foo", INGRESS, {
-        new IR::Tofino::SelectComputed(zero),
-        new IR::Tofino::SelectComputed(one)
+    auto *state = new IR::BFN::ParserState("foo", INGRESS, {
+        new IR::BFN::SelectComputed(zero),
+        new IR::BFN::SelectComputed(one)
     }, {match});
 
     state->apply(TestRead());
@@ -119,8 +119,8 @@ TEST(TofinoWriteContext, DeparserEmit) {
     auto* deparserControlType = new IR::Type_Control("dp", new IR::ParameterList);
     auto* deparserControl =
       new IR::P4Control("dp", deparserControlType, new IR::BlockStatement);
-    auto* deparser = new IR::Tofino::Deparser(INGRESS, deparserControl);
-    deparser->emits.push_back(new IR::Tofino::Emit(field, povBit));
+    auto* deparser = new IR::BFN::Deparser(INGRESS, deparserControl);
+    deparser->emits.push_back(new IR::BFN::Emit(field, povBit));
 
     struct CheckEmit : public Inspector, TofinoWriteContext {
         bool preorder(const IR::Member*) override {
@@ -140,8 +140,8 @@ TEST(TofinoWriteContext, DeparserEmitChecksum) {
     auto* deparserControlType = new IR::Type_Control("dp", new IR::ParameterList);
     auto* deparserControl =
       new IR::P4Control("dp", deparserControlType, new IR::BlockStatement);
-    auto* deparser = new IR::Tofino::Deparser(INGRESS, deparserControl);
-    deparser->emits.push_back(new IR::Tofino::EmitChecksum({ field }, povBit));
+    auto* deparser = new IR::BFN::Deparser(INGRESS, deparserControl);
+    deparser->emits.push_back(new IR::BFN::EmitChecksum({ field }, povBit));
 
     struct CheckEmitChecksum : public Inspector, TofinoWriteContext {
         bool preorder(const IR::Member*) override {

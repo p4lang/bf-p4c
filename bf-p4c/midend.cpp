@@ -51,7 +51,7 @@ limitations under the License.
 #include "common/check_header_alignment.h"
 #include "common/remap_intrin.h"
 
-namespace Tofino {
+namespace BFN {
 
 /**
 This class implements a policy suitable for the ConvertEnums pass.
@@ -125,7 +125,7 @@ MidEnd::MidEnd(CompilerOptions&) {
         P4V1::V1Model::instance.sw.deparser.name };
 
     addPasses({
-        new Tofino::CheckHeaderAlignment,
+        new BFN::CheckHeaderAlignment,
         new P4::ConvertEnums(&refMap, &typeMap, new EnumOn32Bits()),
         new P4::RemoveReturns(&refMap),
         new P4::MoveConstructors(&refMap),
@@ -189,4 +189,4 @@ MidEnd::MidEnd(CompilerOptions&) {
     });
 }
 
-}  // namespace Tofino
+}  // namespace BFN

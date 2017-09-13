@@ -10,7 +10,7 @@
 
 namespace {
 
-const IR::Node* splitExtract(const IR::Tofino::Extract* extract,
+const IR::Node* splitExtract(const IR::BFN::Extract* extract,
                              const bitrange& extractBits,
                              const std::vector<bitrange>& slices) {
     if (slices.empty()) return extract;
@@ -19,11 +19,11 @@ const IR::Node* splitExtract(const IR::Tofino::Extract* extract,
         return extract;
     }
 
-    auto rv = new IR::Vector<IR::Tofino::ParserPrimitive>();
+    auto rv = new IR::Vector<IR::BFN::ParserPrimitive>();
 
     // For extracts that don't come from the input buffer, all we need to do is
     // split up the portion of the destination we're writing to.
-    if (!extract->is<IR::Tofino::ExtractBuffer>()) {
+    if (!extract->is<IR::BFN::ExtractBuffer>()) {
         for (auto slice : boost::adaptors::reverse(slices)) {
             auto* clone = extract->clone();
             clone->dest = MakeSlice(extract->dest, slice.lo, slice.hi);
@@ -36,7 +36,7 @@ const IR::Node* splitExtract(const IR::Tofino::Extract* extract,
     // If we're extracting from the input buffer, we also need to fix up the
     // range of bits we're reading from.
     for (auto slice : boost::adaptors::reverse(slices)) {
-        auto* clone = extract->to<IR::Tofino::ExtractBuffer>()->clone();
+        auto* clone = extract->to<IR::BFN::ExtractBuffer>()->clone();
         clone->dest = MakeSlice(extract->dest, slice.lo, slice.hi);
         LOG3("SplitPhvUse: rewriting slice " << slice << " of: " << clone);
         clone->bitOffset += extract->dest->type->width_bits() - (slice.hi + 1);
@@ -47,7 +47,7 @@ const IR::Node* splitExtract(const IR::Tofino::Extract* extract,
     return rv;
 }
 
-const IR::Node* splitEmit(const IR::Tofino::Emit* emit,
+const IR::Node* splitEmit(const IR::BFN::Emit* emit,
                           const bitrange& emitBits,
                           const std::vector<bitrange>& slices) {
     if (slices.empty()) return emit;
@@ -56,7 +56,7 @@ const IR::Node* splitEmit(const IR::Tofino::Emit* emit,
         return emit;
     }
 
-    auto rv = new IR::Vector<IR::Tofino::DeparserPrimitive>();
+    auto rv = new IR::Vector<IR::BFN::DeparserPrimitive>();
     for (auto slice : boost::adaptors::reverse(slices)) {
         auto* clone = emit->clone();
         clone->source = MakeSlice(emit->source, slice.lo, slice.hi);
@@ -86,7 +86,7 @@ const IR::Node* splitExpression(const IR::Expression* expr,
 
 }  // namespace
 
-const IR::Node* SplitPhvUse::preorder(IR::Tofino::Extract* extract) {
+const IR::Node* SplitPhvUse::preorder(IR::BFN::Extract* extract) {
     prune();
     bitrange bits;
     auto* field = phv.field(extract->dest, &bits);
@@ -99,7 +99,7 @@ const IR::Node* SplitPhvUse::preorder(IR::Tofino::Extract* extract) {
     return splitExtract(extract, bits, slices);
 }
 
-const IR::Node* SplitPhvUse::preorder(IR::Tofino::Emit* emit) {
+const IR::Node* SplitPhvUse::preorder(IR::BFN::Emit* emit) {
     prune();
     bitrange bits;
     auto* field = phv.field(emit->source, &bits);
@@ -111,7 +111,7 @@ const IR::Node* SplitPhvUse::preorder(IR::Tofino::Emit* emit) {
     return splitEmit(emit, bits, slices);
 }
 
-const IR::Node* SplitPhvUse::preorder(IR::Tofino::EmitChecksum* emit) {
+const IR::Node* SplitPhvUse::preorder(IR::BFN::EmitChecksum* emit) {
     prune();
 
     // A checksum uses a list of fields as input, and we need to split each

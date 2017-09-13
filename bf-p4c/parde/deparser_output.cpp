@@ -20,7 +20,7 @@ class OutputDictionary : public Inspector {
     unsigned            checksumIndex = 0;
     indent_t            indent;
     PHV::Container      last;
-    bool preorder(const IR::Tofino::Emit* emit) {
+    bool preorder(const IR::BFN::Emit* emit) {
         bitrange bits;
         auto field = phv.field(emit->source, &bits);
         if (!field) {
@@ -61,7 +61,7 @@ class OutputDictionary : public Inspector {
         return false;
     }
 
-    bool preorder(const IR::Tofino::EmitChecksum* emit) {
+    bool preorder(const IR::BFN::EmitChecksum* emit) {
         out << indent << "checksum " << checksumIndex;
 
         bitrange povAllocBits;
@@ -89,7 +89,7 @@ class OutputChecksums : public Inspector {
     unsigned            checksumIndex;
     indent_t            indent;
 
-    bool preorder(const IR::Tofino::EmitChecksum* emit) {
+    bool preorder(const IR::BFN::EmitChecksum* emit) {
         out << indent << "checksum " << checksumIndex << ":" << std::endl;
 
         indent++;

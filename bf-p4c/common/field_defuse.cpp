@@ -57,7 +57,7 @@ FieldDefUse::info &FieldDefUse::field(const PhvInfo::Field *f) {
     return info;
 }
 
-void FieldDefUse::read(const PhvInfo::Field *f, const IR::Tofino::Unit *unit,
+void FieldDefUse::read(const PhvInfo::Field *f, const IR::BFN::Unit *unit,
                        const IR::Expression *e) {
     if (!f) return;
     auto &info = field(f);
@@ -73,7 +73,7 @@ void FieldDefUse::read(const PhvInfo::Field *f, const IR::Tofino::Unit *unit,
         uses[def].emplace(use);
         defs[use].emplace(def); }
 }
-void FieldDefUse::read(const IR::HeaderRef *hr, const IR::Tofino::Unit *unit,
+void FieldDefUse::read(const IR::HeaderRef *hr, const IR::BFN::Unit *unit,
                        const IR::Expression *e) {
     if (!hr) return;
     PhvInfo::StructInfo info = phv.struct_info(hr);
@@ -82,13 +82,13 @@ void FieldDefUse::read(const IR::HeaderRef *hr, const IR::Tofino::Unit *unit,
     if (!info.metadata)
         read(phv.field(hr->toString() + ".$valid"), unit, e);
 }
-void FieldDefUse::write(const PhvInfo::Field *f, const IR::Tofino::Unit *unit,
+void FieldDefUse::write(const PhvInfo::Field *f, const IR::BFN::Unit *unit,
                         const IR::Expression *e) {
     if (!f) return;
     auto &info = field(f);
     LOG3("FieldDefUse(" << (void *)this << "): " << DBPrint::Brief << *unit <<
          " writing " << f->name << " [" << e->id << "]");
-    if (unit->is<IR::Tofino::ParserState>()) {
+    if (unit->is<IR::BFN::ParserState>()) {
         // parser can't rewrite PHV (it ors), so need to treat it as a read for conflicts, but
         // we don't mark it as a use of previous writes, and don't clobber those previous writes.
         info.use.clear();
@@ -102,7 +102,7 @@ void FieldDefUse::write(const PhvInfo::Field *f, const IR::Tofino::Unit *unit,
     info.def.emplace(unit, e);
     located_defs[f->id].emplace(unit, e);
 }
-void FieldDefUse::write(const IR::HeaderRef *hr, const IR::Tofino::Unit *unit,
+void FieldDefUse::write(const IR::HeaderRef *hr, const IR::BFN::Unit *unit,
                         const IR::Expression *e) {
     if (!hr) return;
     PhvInfo::StructInfo info = phv.struct_info(hr);
@@ -112,7 +112,7 @@ void FieldDefUse::write(const IR::HeaderRef *hr, const IR::Tofino::Unit *unit,
         write(phv.field(hr->toString() + ".$valid"), unit, e);
 }
 
-bool FieldDefUse::preorder(const IR::Tofino::Parser *p) {
+bool FieldDefUse::preorder(const IR::BFN::Parser *p) {
     if (p->gress == EGRESS) {
         /* after processing the ingress pipe, before proceeding to the egress pipe, we
          * clear everything mentioned in the egress parser.  We want to ensure that nothing
@@ -131,7 +131,7 @@ bool FieldDefUse::preorder(const IR::Expression *e) {
     if (!f && e->is<IR::Member>()) return false;
     if (!f && !hr) return true;
 
-    if (auto unit = findContext<IR::Tofino::Unit>()) {
+    if (auto unit = findContext<IR::BFN::Unit>()) {
         if (isWrite()) {
             write(f, unit, e);
             write(hr, unit, e);

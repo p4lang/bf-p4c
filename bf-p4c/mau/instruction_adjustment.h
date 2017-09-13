@@ -1,5 +1,5 @@
-#ifndef _TOFINO_MAU_INSTRUCTION_ADJUSTMENT_H_
-#define _TOFINO_MAU_INSTRUCTION_ADJUSTMENT_H_
+#ifndef TOFINO_MAU_INSTRUCTION_ADJUSTMENT_H_
+#define TOFINO_MAU_INSTRUCTION_ADJUSTMENT_H_
 
 #include "mau_visitor.h"
 #include "resource.h"
@@ -152,4 +152,4 @@ class TotalInstructionAdjustment : public MauTransform, TofinoWriteContext {
     explicit TotalInstructionAdjustment(const PhvInfo &p) : phv(p) {}
 };
 
-#endif /* _TOFINO_MAU_INSTRUCTION_ADJUSTMENT_H_ */
+#endif /* TOFINO_MAU_INSTRUCTION_ADJUSTMENT_H_ */

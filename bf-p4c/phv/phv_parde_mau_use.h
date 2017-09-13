@@ -1,5 +1,5 @@
-#ifndef _TOFINO_PHV_PHV_PARDE_MAU_USE_H_
-#define _TOFINO_PHV_PHV_PARDE_MAU_USE_H_
+#ifndef TOFINO_PHV_PHV_PARDE_MAU_USE_H_
+#define TOFINO_PHV_PHV_PARDE_MAU_USE_H_
 
 #include "phv.h"
 #include "phv_fields.h"
@@ -33,8 +33,8 @@ class Phv_Parde_Mau_Use : public Inspector {
     //
  private:
     profile_t init_apply(const IR::Node *root) override;
-    bool preorder(const IR::Tofino::Parser *p) override;
-    bool preorder(const IR::Tofino::Deparser *d) override;
+    bool preorder(const IR::BFN::Parser *p) override;
+    bool preorder(const IR::BFN::Deparser *d) override;
     bool preorder(const IR::MAU::TableSeq *) override;
     bool preorder(const IR::Expression *e) override;
 };  // Phv_Parde_Mau_Use
@@ -48,8 +48,8 @@ class PhvUse : public Phv_Parde_Mau_Use {
     explicit PhvUse(const PhvInfo &p) : Phv_Parde_Mau_Use(p) { }
     //
  private:
-    bool preorder(const IR::Tofino::Deparser *d) override;
+    bool preorder(const IR::BFN::Deparser *d) override;
 };
 //
 //
-#endif /* _TOFINO_PHV_PHV_PARDE_MAU_USE_H_ */
+#endif /* TOFINO_PHV_PHV_PARDE_MAU_USE_H_ */

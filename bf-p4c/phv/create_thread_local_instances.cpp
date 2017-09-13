@@ -42,7 +42,7 @@ struct CreateInstancesForThread : public Modifier, ThreadVisitor {
     }
 
     /// Prepend "thread-name::" to every parse state.
-    bool preorder(IR::Tofino::ParserState *ps) override {
+    bool preorder(IR::BFN::ParserState *ps) override {
         ps->name = cstring::to_cstring(VisitingThread(this)) + "::" + ps->name;
         return true;
     }
@@ -54,7 +54,7 @@ struct CreateInstancesForThread : public Modifier, ThreadVisitor {
     }
 };
 
-/// Update the set of metadata structs in `Tofino::Pipe::metadata` to refer to
+/// Update the set of metadata structs in `BFN::Pipe::metadata` to refer to
 /// the thread-local versions of the structs.
 struct CreateThreadLocalMetadata : public Modifier {
     CreateThreadLocalMetadata(const ThreadLocalMetadataMapping* ingressMetadata,
@@ -65,7 +65,7 @@ struct CreateThreadLocalMetadata : public Modifier {
     }
 
  private:
-    bool preorder(IR::Tofino::Pipe* pipe) override {
+    bool preorder(IR::BFN::Pipe* pipe) override {
         // Replace the global metadata variables in the program with
         // thread-local versions. There are at most two thread-local versions of
         // each variable; there may be fewer than two if the variable is only

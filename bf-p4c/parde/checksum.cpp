@@ -263,7 +263,7 @@ struct SubstituteComputeChecksums : public Transform {
         : checksums(checksums) { }
 
  private:
-    IR::Tofino::DeparserPrimitive* preorder(IR::Tofino::Emit* emit) override {
+    IR::BFN::DeparserPrimitive* preorder(IR::BFN::Emit* emit) override {
         prune();
         if (!emit->source->is<IR::Member>()) return emit;
         auto* source = emit->source->to<IR::Member>();
@@ -275,7 +275,7 @@ struct SubstituteComputeChecksums : public Transform {
         LOG2("Substituting computed checksum for emitted value: " << emit);
         auto* sourceFields = checksums.at(source->toString());
         auto* emitChecksum =
-          new IR::Tofino::EmitChecksum(*sourceFields, emit->povBit);
+          new IR::BFN::EmitChecksum(*sourceFields, emit->povBit);
 
         return emitChecksum;
     }
@@ -285,11 +285,11 @@ struct SubstituteComputeChecksums : public Transform {
 
 }  // namespace
 
-namespace Tofino {
+namespace BFN {
 
-IR::Tofino::Pipe*
+IR::BFN::Pipe*
 extractComputeChecksum(const IR::P4Control* computeChecksumControl,
-                       IR::Tofino::Pipe* pipe) {
+                       IR::BFN::Pipe* pipe) {
     CHECK_NULL(pipe);
 
     if (!computeChecksumControl) return pipe;
@@ -306,4 +306,4 @@ extractComputeChecksum(const IR::P4Control* computeChecksumControl,
     return pipe;
 }
 
-}  // namespace Tofino
+}  // namespace BFN

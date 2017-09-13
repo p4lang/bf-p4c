@@ -1,5 +1,5 @@
-#ifndef _TOFINO_PHV_PHV_ASSIGNMENT_VALIDATE_H_
-#define _TOFINO_PHV_PHV_ASSIGNMENT_VALIDATE_H_
+#ifndef TOFINO_PHV_PHV_ASSIGNMENT_VALIDATE_H_
+#define TOFINO_PHV_PHV_ASSIGNMENT_VALIDATE_H_
 
 #include "ir/ir.h"
 #include "lib/map.h"
@@ -263,4 +263,4 @@ std::ostream &operator<<(
     std::map<cstring, std::list<const PhvInfo::Field::alloc_slice *>>&);
 std::ostream &operator<<(std::ostream &, PHV_Assignment_Validate &);
 //
-#endif /* _TOFINO_PHV_PHV_ASSIGNMENT_VALIDATE_H_ */
+#endif /* TOFINO_PHV_PHV_ASSIGNMENT_VALIDATE_H_ */

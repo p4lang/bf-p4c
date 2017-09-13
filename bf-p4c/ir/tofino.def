@@ -11,31 +11,31 @@ struct StageUse {
     static constexpr int MAX_TERNARY_GROUPS = 12;
 };
 
-namespace Tofino {
+namespace BFN {
 struct HeaderStackInfo;
 struct Phase0Info;
-}  // namespace Tofino
+}  // namespace BFN
 #end
 
 #emit_impl
 #include "tofino/ir/thread_visitor.h"
 #end
 
-class Tofino::Pipe {
+class BFN::Pipe {
     inline NameMap<Metadata> metadata;  // not visited
 #noconstructor
     Pipe() = default;
     class thread_t {
-        Tofino::Parser    parser = nullptr;
+        BFN::Parser    parser = nullptr;
         MAU::TableSeq     mau = nullptr;
-        Tofino::Deparser  deparser = nullptr;
+        BFN::Deparser  deparser = nullptr;
         operator== { return parser == a.parser && mau == a.mau && deparser == a.deparser; }
         toJSON {
             json << json.indent << "\"parser\" : " << parser << "," << std::endl
                  << json.indent << "\"mau\" : " << mau << "," << std::endl
                  << json.indent << "\"deparser\" : " << deparser; }
         fromJSON {
-            IR::Tofino::Pipe::thread_t * thread = new IR::Tofino::Pipe::thread_t();
+            IR::BFN::Pipe::thread_t * thread = new IR::BFN::Pipe::thread_t();
             json.load("parser", thread->parser);
             json.load("mau", thread->mau);
             json.load("deparser", thread->deparser);
@@ -46,10 +46,10 @@ class Tofino::Pipe {
 
 #emit
     /// If non-null, the phase 0 metadata for this pipe.
-    ::Tofino::Phase0Info* phase0Info = nullptr;
+    ::BFN::Phase0Info* phase0Info = nullptr;
 
     /// If non-null, information about header stack usage in this pipe.
-    ::Tofino::HeaderStackInfo* headerStackInfo = nullptr;
+    ::BFN::HeaderStackInfo* headerStackInfo = nullptr;
 #end
 
 #apply
@@ -70,7 +70,7 @@ class Tofino::Pipe {
                 v.visit(th.deparser, "deparser"); } } }
 }
 
-abstract Tofino::Unit {
+abstract BFN::Unit {
     /* Abstract base class for any of
        - parser state
        - mau logical table

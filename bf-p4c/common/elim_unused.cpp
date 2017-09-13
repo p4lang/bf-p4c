@@ -9,7 +9,7 @@ class ElimUnused::ParserMetadata : public Transform {
         prune();
         return salu; }
 
-    IR::Tofino::Extract* preorder(IR::Tofino::Extract* extract) override {
+    IR::BFN::Extract* preorder(IR::BFN::Extract* extract) override {
         auto field = self.phv.field(extract->dest);
         if (!field) return extract;
         if (!self.defuse.getAllUses(field->id).empty()) return extract;
@@ -37,7 +37,7 @@ class ElimUnused::ParserMetadata : public Transform {
 class ElimUnused::Headers : public PardeTransform {
     ElimUnused &self;
 
-    IR::Tofino::ParserState *postorder(IR::Tofino::ParserState *state) override {
+    IR::BFN::ParserState *postorder(IR::BFN::ParserState *state) override {
         // XXX(seth): It's unclear to me whether there's any reason to maintain
         // these restrictions.
         if (state->name == "ingress::$ingress_metadata_shim" ||
@@ -68,7 +68,7 @@ class ElimUnused::Headers : public PardeTransform {
         return !self.defuse.getAllDefs(povField->id).empty();
     }
 
-    IR::Tofino::Emit* preorder(IR::Tofino::Emit* emit) override {
+    IR::BFN::Emit* preorder(IR::BFN::Emit* emit) override {
         prune();
 
         // The emit primitive is used if the POV bit being set somewhere.
@@ -77,7 +77,7 @@ class ElimUnused::Headers : public PardeTransform {
         return nullptr;
     }
 
-    IR::Tofino::EmitChecksum* preorder(IR::Tofino::EmitChecksum* emit) override {
+    IR::BFN::EmitChecksum* preorder(IR::BFN::EmitChecksum* emit) override {
         prune();
 
         // The emit checksum primitive is used if the POV bit being set somewhere.

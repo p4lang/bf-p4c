@@ -443,7 +443,7 @@ class GetTofinoTables : public Inspector {
     P4::ReferenceMap                            *refMap;
     P4::TypeMap                                 *typeMap;
     gress_t                                     gress;
-    IR::Tofino::Pipe                            *pipe;
+    IR::BFN::Pipe                            *pipe;
     set<cstring>                                unique_names;
     map<const IR::Node *, IR::MAU::Table *>     tables;
     map<const IR::Node *, IR::MAU::TableSeq *>  seqs;
@@ -456,7 +456,7 @@ class GetTofinoTables : public Inspector {
 
  public:
     GetTofinoTables(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
-                    gress_t gr, IR::Tofino::Pipe *p)
+                    gress_t gr, IR::BFN::Pipe *p)
     : refMap(refMap), typeMap(typeMap), gress(gr), pipe(p) {}
 
  private:
@@ -559,7 +559,7 @@ class GetTofinoTables : public Inspector {
 }  // anonymous namespace
 
 /// XXX(hanw) this function should be removed when TNA completes.
-const IR::Tofino::Pipe* extract_v1model_arch(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
+const IR::BFN::Pipe* extract_v1model_arch(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
                                              const IR::PackageBlock* top) {
     auto parser_blk = top->getParameterValue("p");
     auto parser = parser_blk->to<IR::ParserBlock>()->container;
@@ -586,7 +586,7 @@ const IR::Tofino::Pipe* extract_v1model_arch(P4::ReferenceMap* refMap, P4::TypeM
     LOG1("deparser: " << deparser);
     // FIXME add consistency/sanity checks to make sure arch is well-formed.
 
-    auto rv = new IR::Tofino::Pipe();
+    auto rv = new IR::BFN::Pipe();
 
     ParamBinding bindings(typeMap);
 
@@ -619,7 +619,7 @@ const IR::Tofino::Pipe* extract_v1model_arch(P4::ReferenceMap* refMap, P4::TypeM
         compute_checksum = compute_checksum->apply(simplifyReferences);
     deparser = deparser->apply(simplifyReferences);
 
-    auto parserInfo = Tofino::extractParser(rv, parser, deparser);
+    auto parserInfo = BFN::extractParser(rv, parser, deparser);
     for (auto gress : { INGRESS, EGRESS }) {
         rv->thread[gress].parser = parserInfo.parsers[gress];
         rv->thread[gress].deparser = parserInfo.deparsers[gress];
@@ -628,11 +628,11 @@ const IR::Tofino::Pipe* extract_v1model_arch(P4::ReferenceMap* refMap, P4::TypeM
     // Check for a phase 0 table. If one exists, it'll be removed from the
     // ingress pipeline and converted to a parser program.
     // XXX(seth): We should be able to move this into the midend now.
-    std::tie(ingress, rv) = Tofino::extractPhase0(ingress, rv, refMap, typeMap);
+    std::tie(ingress, rv) = BFN::extractPhase0(ingress, rv, refMap, typeMap);
 
     // Convert the contents of the ComputeChecksum control, if any, into
     // deparser primitives.
-    rv = Tofino::extractComputeChecksum(compute_checksum, rv);
+    rv = BFN::extractComputeChecksum(compute_checksum, rv);
 
     ingress = ingress->apply(simplifyReferences);
     egress = egress->apply(simplifyReferences);
@@ -698,7 +698,7 @@ class TnaPipe {
             bindings->bind(param);
     }
 
-    void extractMetadata(IR::Tofino::Pipe* rv, ParamBinding* bindings, gress_t gress) {
+    void extractMetadata(IR::BFN::Pipe* rv, ParamBinding* bindings, gress_t gress) {
         if (gress == INGRESS) {
             // XXX(hanw) index must be consistent with tofino.p4
             // intrinsic_metadata
@@ -725,11 +725,11 @@ class TnaPipe {
         deparser = deparser->apply(fixup);
     }
 
-    void extractTable(IR::Tofino::Pipe* rv, gress_t gress) {
+    void extractTable(IR::BFN::Pipe* rv, gress_t gress) {
         mau->apply(GetTofinoTables(refMap, typeMap, gress, rv));
     }
 
-    void extractAttached(IR::Tofino::Pipe* rv, gress_t gress) {
+    void extractAttached(IR::BFN::Pipe* rv, gress_t gress) {
         AttachTables toAttach(refMap);
         rv->thread[gress].mau = rv->thread[gress].mau->apply(toAttach);
     }
@@ -737,7 +737,7 @@ class TnaPipe {
 
 /// XXX(hanw): this function is currently not exercised by the translation path.
 /// We will use it once all the extern translations are completed.
-const IR::Tofino::Pipe* extract_native_arch(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
+const IR::BFN::Pipe* extract_native_arch(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
                                             const IR::PackageBlock* main) {
     TnaPipe* pipes[2];
     pipes[INGRESS] = new TnaPipe(main, INGRESS, refMap, typeMap);
@@ -746,7 +746,7 @@ const IR::Tofino::Pipe* extract_native_arch(P4::ReferenceMap* refMap, P4::TypeMa
     ParamBinding bindings(typeMap);
     SimplifyReferences simplifyReferences(&bindings, refMap, typeMap);
 
-    auto rv = new IR::Tofino::Pipe();
+    auto rv = new IR::BFN::Pipe();
     for (auto gress : {INGRESS, EGRESS}) {
         pipes[gress]->bindParams(&bindings /* out */);
         pipes[gress]->extractMetadata(rv /* out */, &bindings /* in */, gress /* in */);
@@ -755,7 +755,7 @@ const IR::Tofino::Pipe* extract_native_arch(P4::ReferenceMap* refMap, P4::TypeMa
         pipes[gress]->extractAttached(rv /* out */, gress);
     }
 
-    auto parserInfo = Tofino::extractParser(rv, pipes[INGRESS]->parser, pipes[INGRESS]->deparser,
+    auto parserInfo = BFN::extractParser(rv, pipes[INGRESS]->parser, pipes[INGRESS]->deparser,
                                             pipes[EGRESS]->parser, pipes[EGRESS]->deparser);
     for (auto gress : { INGRESS, EGRESS }) {
         rv->thread[gress].parser = parserInfo.parsers[gress];
@@ -765,7 +765,7 @@ const IR::Tofino::Pipe* extract_native_arch(P4::ReferenceMap* refMap, P4::TypeMa
     return rv->apply(simplifyReferences);
 }
 
-const IR::Tofino::Pipe *extract_maupipe(const IR::P4Program *program, Tofino_Options &options) {
+const IR::BFN::Pipe *extract_maupipe(const IR::P4Program *program, Tofino_Options &options) {
     P4::ReferenceMap  refMap;
     P4::TypeMap       typeMap;
     refMap.setIsV1(true);

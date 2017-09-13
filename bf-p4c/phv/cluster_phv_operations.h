@@ -1,5 +1,5 @@
-#ifndef _TOFINO_PHV_CLUSTER_PHV_OPERATIONS_H_
-#define _TOFINO_PHV_CLUSTER_PHV_OPERATIONS_H_
+#ifndef TOFINO_PHV_CLUSTER_PHV_OPERATIONS_H_
+#define TOFINO_PHV_CLUSTER_PHV_OPERATIONS_H_
 
 #include "phv.h"
 #include "phv_fields.h"
@@ -36,4 +36,4 @@ class PHV_Field_Operations : public Inspector {
 };
 //
 //
-#endif /* _TOFINO_PHV_CLUSTER_PHV_OPERATIONS_H_ */
+#endif /* TOFINO_PHV_CLUSTER_PHV_OPERATIONS_H_ */

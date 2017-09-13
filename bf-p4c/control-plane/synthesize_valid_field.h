@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef _TOFINO_CONTROL_PLANE_SYNTHESIZE_VALID_FIELD_H_
-#define _TOFINO_CONTROL_PLANE_SYNTHESIZE_VALID_FIELD_H_
+#ifndef TOFINO_CONTROL_PLANE_SYNTHESIZE_VALID_FIELD_H_
+#define TOFINO_CONTROL_PLANE_SYNTHESIZE_VALID_FIELD_H_
 
 #include "ir/ir.h"
 #include "ir/pass_manager.h"
@@ -25,7 +25,7 @@ class ReferenceMap;
 class TypeMap;
 }  // namespace P4
 
-namespace Tofino {
+namespace BFN {
 
 /**
  * Adds an explicit valid bit to each header type and replaces calls to
@@ -91,6 +91,6 @@ class SynthesizeValidField final : public PassManager {
     SynthesizeValidField(P4::ReferenceMap* refMap, P4::TypeMap* typeMap);
 };
 
-}  // namespace Tofino
+}  // namespace BFN
 
-#endif  /* _TOFINO_CONTROL_PLANE_SYNTHESIZE_VALID_FIELD_H_ */
+#endif  /* TOFINO_CONTROL_PLANE_SYNTHESIZE_VALID_FIELD_H_ */

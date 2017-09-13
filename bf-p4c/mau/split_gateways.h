@@ -1,5 +1,5 @@
-#ifndef _TOFINO_MAU_SPLIT_GATEWAYS_H_
-#define _TOFINO_MAU_SPLIT_GATEWAYS_H_
+#ifndef TOFINO_MAU_SPLIT_GATEWAYS_H_
+#define TOFINO_MAU_SPLIT_GATEWAYS_H_
 
 #include "mau_visitor.h"
 #include "field_use.h"
@@ -26,4 +26,4 @@ class SplitComplexGateways : public Transform {
 };
 
 
-#endif /* _TOFINO_MAU_SPLIT_GATEWAYS_H_ */
+#endif /* TOFINO_MAU_SPLIT_GATEWAYS_H_ */

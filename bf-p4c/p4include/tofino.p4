@@ -1,5 +1,5 @@
-#ifndef _TOFINO_P4_
-#define _TOFINO_P4_
+#ifndef TOFINO_P4_
+#define TOFINO_P4_
 
 #include "core.p4"
 
@@ -511,4 +511,4 @@ package Switch<IH, IM, EH, EM>(
     Egress<EH, EM> egress,
     EgressDeparser<EH, EM> egress_deparser);
 
-#endif  /* _TOFINO_P4_ */
+#endif  /* TOFINO_P4_ */

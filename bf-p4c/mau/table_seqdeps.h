@@ -1,5 +1,5 @@
-#ifndef _TOFINO_MAU_TABLE_SEQDEPS_H_
-#define _TOFINO_MAU_TABLE_SEQDEPS_H_
+#ifndef TOFINO_MAU_TABLE_SEQDEPS_H_
+#define TOFINO_MAU_TABLE_SEQDEPS_H_
 
 #include "mau_visitor.h"
 #include "field_use.h"
@@ -10,4 +10,4 @@ class TableFindSeqDependencies : public MauModifier {
     void postorder(IR::MAU::TableSeq *) override;
 };
 
-#endif /* _TOFINO_MAU_TABLE_SEQDEPS_H_ */
+#endif /* TOFINO_MAU_TABLE_SEQDEPS_H_ */

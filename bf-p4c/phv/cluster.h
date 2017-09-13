@@ -1,5 +1,5 @@
-#ifndef _TOFINO_PHV_CLUSTER_H_
-#define _TOFINO_PHV_CLUSTER_H_
+#ifndef TOFINO_PHV_CLUSTER_H_
+#define TOFINO_PHV_CLUSTER_H_
 
 #include "phv.h"
 #include "phv_fields.h"
@@ -60,7 +60,7 @@ class Cluster : public Inspector, TofinoWriteContext {
     /// Fields that are not used through mau pipeline.
     std::list<PhvInfo::Field *> fields_no_use_mau_i;
 
-    bool preorder(const IR::Tofino::Pipe *) override;
+    bool preorder(const IR::BFN::Pipe *) override;
     bool preorder(const IR::Member*) override;
     bool preorder(const IR::Operation_Unary*) override;
     bool preorder(const IR::Operation_Binary*) override;
@@ -119,4 +119,4 @@ std::ostream &operator<<(
     ordered_map<PhvInfo::Field *, ordered_set<PhvInfo::Field *>*>&);
 std::ostream &operator<<(std::ostream &, Cluster &);
 //
-#endif /* _TOFINO_PHV_CLUSTER_H_ */
+#endif /* TOFINO_PHV_CLUSTER_H_ */

@@ -9,7 +9,7 @@ in git@github.com:p4lang/p4c.  To use this repo:
     ./bootstrap.sh
 
 This will check out the p4lang/p4c repository, move the
-p4c-extension-tofino to `p4c/extensions/tofino`, install the
+p4c-extension-tofino to `p4c/extensions/bfn`, install the
 necessary dependences, and build the project.
 
 # Dependences
@@ -104,7 +104,7 @@ There are a variety of Tofino-specific IR classes used to hold information
 needed to track tofino resource use and manage the allocation of those
 resources.
 
-##### `IR::Tofino::Pipe`
+##### `IR::BFN::Pipe`
 
 An abstraction of a single Tofino pipeline, this object is basically
 just a container for other (Parser, Deparser, and MAU) specific objects.
@@ -116,7 +116,7 @@ just the MAU, or just the Parser), we define special visitor bases
 `PardeModifier`, and `PardeTransform` that visit just those parts of the
 tree of interest to Mau or Parde.  Other parts of the tree are skipped.
 
-##### `IR::Tofino::Unit`
+##### `IR::BFN::Unit`
 
 Abstract base class for parts of the pipe that access the PHV -- tables,
 parser states, and the deparser.  The `stage()` function returns an integer
@@ -124,8 +124,8 @@ associated with the order of the unit's execution -- the actual stage for
 tables, -1 for parser states (they come before stage 0), and a large
 number for the deparser (after all stages).
 
-##### `IR::Tofino::Parser`
-##### `IR::Tofino::Deparser`
+##### `IR::BFN::Parser`
+##### `IR::BFN::Deparser`
 
 ##### `IR::MAU::Table`
 

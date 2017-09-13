@@ -24,7 +24,7 @@ limitations under the License.
  * header instance, parser state, and TempVar. The name of the new instance
  * follows the pattern `gress-name::instance-name`.
  *
- * The set of metadata variables in Tofino::Pipe::metadata is also updated.
+ * The set of metadata variables in BFN::Pipe::metadata is also updated.
  */
 struct CreateThreadLocalInstances : public PassManager {
     CreateThreadLocalInstances();

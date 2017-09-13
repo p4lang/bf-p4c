@@ -1,5 +1,5 @@
-#ifndef _TOFINO_PHV_CLUSTER_PHV_REQ_H_
-#define _TOFINO_PHV_CLUSTER_PHV_REQ_H_
+#ifndef TOFINO_PHV_CLUSTER_PHV_REQ_H_
+#define TOFINO_PHV_CLUSTER_PHV_REQ_H_
 
 #include "phv.h"
 #include "phv_fields.h"
@@ -164,4 +164,4 @@ std::ostream &operator<<(std::ostream &,
     ordered_map<PHV_Container::PHV_Word, ordered_map<int, std::vector<Cluster_PHV *>>>&);
 std::ostream &operator<<(std::ostream &, Cluster_PHV_Requirements&);
 //
-#endif /* _TOFINO_PHV_CLUSTER_PHV_REQ_H_ */
+#endif /* TOFINO_PHV_CLUSTER_PHV_REQ_H_ */

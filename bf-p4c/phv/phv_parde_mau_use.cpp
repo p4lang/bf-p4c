@@ -19,7 +19,7 @@ Visitor::profile_t Phv_Parde_Mau_Use::init_apply(const IR::Node *root) {
     return rv;
 }
 
-bool Phv_Parde_Mau_Use::preorder(const IR::Tofino::Parser *p) {
+bool Phv_Parde_Mau_Use::preorder(const IR::BFN::Parser *p) {
     in_mau = false;
     in_dep = false;
     thread = p->gress;
@@ -27,7 +27,7 @@ bool Phv_Parde_Mau_Use::preorder(const IR::Tofino::Parser *p) {
     return true;
 }
 
-bool Phv_Parde_Mau_Use::preorder(const IR::Tofino::Deparser *d) {
+bool Phv_Parde_Mau_Use::preorder(const IR::BFN::Deparser *d) {
     thread = d->gress;
     in_mau = false;
     in_dep = true;
@@ -100,7 +100,7 @@ bool Phv_Parde_Mau_Use::is_used_parde(const PhvInfo::Field *f) const {    // use
 //
 //***********************************************************************************
 
-bool PhvUse::preorder(const IR::Tofino::Deparser *d) {
+bool PhvUse::preorder(const IR::BFN::Deparser *d) {
     thread = d->gress;
     in_mau = true;  // treat egress_port and digests as in mau as they can't go in TPHV
     in_dep = true;

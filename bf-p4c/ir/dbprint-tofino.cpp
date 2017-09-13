@@ -94,7 +94,7 @@ void IR::RangeMatch::dbprint(std::ostream &out) const {
     if (prec == 0) out << ';';
 }
 
-void IR::Tofino::ParserMatch::dbprint(std::ostream &out) const {
+void IR::BFN::ParserMatch::dbprint(std::ostream &out) const {
     if (value)
         out << "match " << value << ": ";
     else
@@ -115,7 +115,7 @@ void IR::Tofino::ParserMatch::dbprint(std::ostream &out) const {
     out << unindent;
 }
 
-void IR::Tofino::ParserState::dbprint(std::ostream &out) const {
+void IR::BFN::ParserState::dbprint(std::ostream &out) const {
     out << gress << " parser " << name;
     if (dbgetflags(out) & Brief)
         return;
@@ -133,19 +133,19 @@ void IR::Tofino::ParserState::dbprint(std::ostream &out) const {
 }
 
 struct FindStates : Inspector {
-    ordered_set<const IR::Tofino::ParserState *>        states;
-    bool preorder(const IR::Tofino::ParserState *s) override { states.insert(s); return true; }
+    ordered_set<const IR::BFN::ParserState *>        states;
+    bool preorder(const IR::BFN::ParserState *s) override { states.insert(s); return true; }
 };
 
 
-void IR::Tofino::Parser::dbprint(std::ostream &out) const {
+void IR::BFN::Parser::dbprint(std::ostream &out) const {
     FindStates states;
     apply(states);
     for (auto st : states.states)
         out << endl << *st;
 }
 
-void IR::Tofino::Digest::dbprint(std::ostream &out) const {
+void IR::BFN::Digest::dbprint(std::ostream &out) const {
     out << endl << gress << ' ' << name << ": " << indent << endl << "select: " << *select;
     int idx = 0;
     for (auto s : sets) {
@@ -154,7 +154,7 @@ void IR::Tofino::Digest::dbprint(std::ostream &out) const {
     out << unindent;
 }
 
-void IR::Tofino::EmitChecksum::dbprint(std::ostream &out) const {
+void IR::BFN::EmitChecksum::dbprint(std::ostream &out) const {
     out << "emit checksum { ";
 
     const char* sep = "";
@@ -166,7 +166,7 @@ void IR::Tofino::EmitChecksum::dbprint(std::ostream &out) const {
     out << " } if " << povBit->toString();
 }
 
-void IR::Tofino::Deparser::dbprint(std::ostream &out) const {
+void IR::BFN::Deparser::dbprint(std::ostream &out) const {
     out << gress << " deparser";
     if (dbgetflags(out) & Brief)
         return;
@@ -180,7 +180,7 @@ void IR::Tofino::Deparser::dbprint(std::ostream &out) const {
     out << unindent;
 }
 
-void IR::Tofino::Pipe::dbprint(std::ostream &out) const {
+void IR::BFN::Pipe::dbprint(std::ostream &out) const {
     out << "ingress:" << indent << thread[0].parser << endl << thread[0].mau << endl
                                 << thread[0].deparser << unindent << endl
         << "egress:" << indent << thread[1].parser << endl << thread[1].mau << endl

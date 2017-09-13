@@ -1,5 +1,5 @@
-#ifndef _TOFINO_PHV_CLUSTER_PHV_OVERLAY_H_
-#define _TOFINO_PHV_CLUSTER_PHV_OVERLAY_H_
+#ifndef TOFINO_PHV_CLUSTER_PHV_OVERLAY_H_
+#define TOFINO_PHV_CLUSTER_PHV_OVERLAY_H_
 
 #include "cluster_phv_interference.h"
 //
@@ -69,4 +69,4 @@ std::ostream &operator<<(
     std::ostream &,
     Cluster_PHV_Overlay&);
 
-#endif /* _TOFINO_PHV_CLUSTER_PHV_OVERLAY_H_ */
+#endif /* TOFINO_PHV_CLUSTER_PHV_OVERLAY_H_ */

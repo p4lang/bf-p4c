@@ -1,7 +1,7 @@
 // This file is to be kept in precise sync with constants.py
 
-#ifndef _TOFINO_LIB_CONSTANTS
-#define _TOFINO_LIB_CONSTANTS 1
+#ifndef TOFINO_LIB_CONSTANTS
+#define TOFINO_LIB_CONSTANTS 1
 
 /////////////////////////////////////////////////////////////
 // Parser hardware error codes

@@ -1,5 +1,5 @@
-#ifndef _TOFINO_MAU_RESOURCE_ESTIMATE_H_
-#define _TOFINO_MAU_RESOURCE_ESTIMATE_H_
+#ifndef TOFINO_MAU_RESOURCE_ESTIMATE_H_
+#define TOFINO_MAU_RESOURCE_ESTIMATE_H_
 
 #include "table_layout.h"
 
@@ -82,4 +82,4 @@ int RegisterPerWord(const IR::MAU::StatefulAlu *reg);
 int ActionDataPerWord(const IR::MAU::Table::Layout *layout, int *width);
 int TernaryIndirectPerWord(const IR::MAU::Table::Layout *layout, const IR::MAU::Table *tbl);
 
-#endif /* _TOFINO_MAU_RESOURCE_ESTIMATE_H_ */
+#endif /* TOFINO_MAU_RESOURCE_ESTIMATE_H_ */

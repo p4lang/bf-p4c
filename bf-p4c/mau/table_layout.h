@@ -1,5 +1,5 @@
-#ifndef _TOFINO_MAU_TABLE_LAYOUT_H_
-#define _TOFINO_MAU_TABLE_LAYOUT_H_
+#ifndef TOFINO_MAU_TABLE_LAYOUT_H_
+#define TOFINO_MAU_TABLE_LAYOUT_H_
 
 #include "mau_visitor.h"
 #include "action_format.h"
@@ -65,4 +65,4 @@ class TableLayout : public MauModifier, Backtrack {
     explicit TableLayout(const PhvInfo &p, LayoutChoices &l) : phv(p), lc(l) {}
 };
 
-#endif /* _TOFINO_MAU_TABLE_LAYOUT_H_ */
+#endif /* TOFINO_MAU_TABLE_LAYOUT_H_ */

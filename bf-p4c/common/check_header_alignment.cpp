@@ -19,13 +19,13 @@ limitations under the License.
 
 #include "ir/ir.h"
 
-namespace Tofino {
+namespace BFN {
 
 bool CheckHeaderAlignment::preorder(const IR::Type_Header* header) {
     ERROR_CHECK(header->width_bits() % 8 == 0,
                 "%1% requires byte-aligned headers, but header %2% is not "
-                "byte-aligned", Tofino::Description::ModelName, header->name);
+                "byte-aligned", Description::ModelName, header->name);
     return false;
 }
 
-}  // namespace Tofino
+}  // namespace BFN

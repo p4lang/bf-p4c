@@ -14,12 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef _TOFINO_COMMON_CHECK_HEADER_ALIGNMENT_H_
-#define _TOFINO_COMMON_CHECK_HEADER_ALIGNMENT_H_
+#ifndef TOFINO_COMMON_CHECK_HEADER_ALIGNMENT_H_
+#define TOFINO_COMMON_CHECK_HEADER_ALIGNMENT_H_
 
 #include "ir/ir.h"
 
-namespace Tofino {
+namespace BFN {
 
 /**
  * Check for non-byte-aligned header types and report an error if any are found.
@@ -36,6 +36,6 @@ class CheckHeaderAlignment final : public Inspector {
     bool preorder(const IR::Type_Header* header) override;
 };
 
-}  // namespace Tofino
+}  // namespace BFN
 
-#endif  /* _TOFINO_COMMON_CHECK_HEADER_ALIGNMENT_H_ */
+#endif  /* TOFINO_COMMON_CHECK_HEADER_ALIGNMENT_H_ */

@@ -153,7 +153,7 @@ class RewriteIsValidTableEntries final : public Transform {
 
 }  // namespace
 
-namespace Tofino {
+namespace BFN {
 
 SynthesizeValidField::SynthesizeValidField(P4::ReferenceMap* refMap,
                                            P4::TypeMap* typeMap) {
@@ -165,4 +165,4 @@ SynthesizeValidField::SynthesizeValidField(P4::ReferenceMap* refMap,
     passes.push_back(new RewriteIsValidTableEntries);
 }
 
-}  // namespace Tofino
+}  // namespace BFN

@@ -22,7 +22,7 @@ void generateEmits(const IR::Expression* expression, Func func) {
 }
 
 }  // namespace
-IR::Tofino::Deparser::Deparser(gress_t gr, const IR::P4Control* dp) : gress(gr) {
+IR::BFN::Deparser::Deparser(gress_t gr, const IR::P4Control* dp) : gress(gr) {
     CHECK_NULL(dp);
     forAllMatching<IR::MethodCallExpression>(dp,
                   [&](const IR::MethodCallExpression* mc) {
@@ -30,13 +30,13 @@ IR::Tofino::Deparser::Deparser(gress_t gr, const IR::P4Control* dp) : gress(gr) 
         if (!method || method->member != "emit") return true;
         generateEmits((*mc->arguments)[0], [&](const IR::Expression* field,
                                                const IR::Expression* povBit) {
-            emits.push_back(new IR::Tofino::Emit(mc->srcInfo, field, povBit));
+            emits.push_back(new IR::BFN::Emit(mc->srcInfo, field, povBit));
         });
         return false;
     });
 }
 
-IR::Tofino::Deparser::Deparser(gress_t gr, const IR::Tofino::Parser* p) : gress(gr) {
+IR::BFN::Deparser::Deparser(gress_t gr, const IR::BFN::Parser* p) : gress(gr) {
     CHECK_NULL(p);
     if (!p->start) return;
 
@@ -48,16 +48,16 @@ IR::Tofino::Deparser::Deparser(gress_t gr, const IR::Tofino::Parser* p) : gress(
     // sequence and the next parser state. We then contract away the parser
     // state nodes, leaving only the extract calls.
     P4::CallGraph<const IR::Node*> extractOrder("extractOrder");
-    std::set<const IR::Tofino::ParserState*> states;
+    std::set<const IR::BFN::ParserState*> states;
     extractOrder.calls(p, p->start);  // The parser object is the entry point.
     states.insert(p->start);
 
-    forAllMatching<IR::Tofino::ParserState>(p, [&](const IR::Tofino::ParserState* s) {
+    forAllMatching<IR::BFN::ParserState>(p, [&](const IR::BFN::ParserState* s) {
         for (auto match : s->match) {
             const IR::Node* lastExtract = s;
             for (auto stmt : match->stmts) {
-                if (!stmt->is<IR::Tofino::Extract>()) continue;
-                auto extract = stmt->to<IR::Tofino::Extract>();
+                if (!stmt->is<IR::BFN::Extract>()) continue;
+                auto extract = stmt->to<IR::BFN::Extract>();
                 extractOrder.calls(lastExtract, extract->dest);
                 lastExtract = extract->dest;
             }
@@ -90,7 +90,7 @@ IR::Tofino::Deparser::Deparser(gress_t gr, const IR::Tofino::Parser* p) : gress(
     // Generate the emit calls.
     std::set<cstring> visitedExtracts;
     for (auto extract : boost::adaptors::reverse(sortedExtracts)) {
-        if (extract->is<IR::Tofino::Parser>()) continue;
+        if (extract->is<IR::BFN::Parser>()) continue;
         if (visitedExtracts.find(extract->toString()) != visitedExtracts.end())
             continue;
         visitedExtracts.insert(extract->toString());
@@ -99,6 +99,6 @@ IR::Tofino::Deparser::Deparser(gress_t gr, const IR::Tofino::Parser* p) : gress(
         if (field->member == "$valid") continue;
         auto* header = field->expr;
         auto* povBit = new IR::Member(IR::Type::Bits::get(1), header, "$valid");
-        emits.push_back(new IR::Tofino::Emit(field, povBit));
+        emits.push_back(new IR::BFN::Emit(field, povBit));
     }
 }

@@ -1,5 +1,5 @@
-#ifndef _TOFINO_PHV_CLUSTER_PHV_MAU_H_
-#define _TOFINO_PHV_CLUSTER_PHV_MAU_H_
+#ifndef TOFINO_PHV_CLUSTER_PHV_MAU_H_
+#define TOFINO_PHV_CLUSTER_PHV_MAU_H_
 
 #include "phv.h"
 #include "phv_fields.h"
@@ -467,4 +467,4 @@ std::ostream &operator<<(
     ordered_map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>>&);
 std::ostream &operator<<(std::ostream &, PHV_MAU_Group_Assignments&);
 //
-#endif /* _TOFINO_PHV_CLUSTER_PHV_MAU_H_ */
+#endif /* TOFINO_PHV_CLUSTER_PHV_MAU_H_ */

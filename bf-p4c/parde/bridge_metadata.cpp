@@ -36,16 +36,16 @@ class AddBridgedMetadata::FindFieldsToBridge : public ThreadVisitor, Inspector {
 class AddBridgedMetadata::AddBridge : public PardeModifier {
     AddBridgedMetadata &self;
 
-    bool preorder(IR::Tofino::Deparser *deparser) override {
+    bool preorder(IR::BFN::Deparser *deparser) override {
         if (deparser->gress != INGRESS) return false;
         if (!self.packing.containsFields()) return false;
 
         auto alwaysDeparseBit =
             new IR::TempVar(IR::Type::Bits::get(1), true, "$always_deparse");
-        IR::Vector<IR::Tofino::DeparserPrimitive> bridge;
+        IR::Vector<IR::BFN::DeparserPrimitive> bridge;
         for (auto& item : self.packing.fields) {
             if (item.isPadding()) continue;
-            bridge.push_back(new IR::Tofino::Emit(item.field, alwaysDeparseBit));
+            bridge.push_back(new IR::BFN::Emit(item.field, alwaysDeparseBit));
         }
 
         deparser->emits.insert(deparser->emits.begin(),
@@ -53,12 +53,12 @@ class AddBridgedMetadata::AddBridge : public PardeModifier {
         return false;
     }
 
-    bool preorder(IR::Tofino::Parser *parser) override {
+    bool preorder(IR::BFN::Parser *parser) override {
         if (parser->gress != EGRESS) return false;
         if (!self.packing.containsFields()) return false;
 
-        auto start = transformAllMatching<IR::Tofino::ParserState>(parser->start,
-                     [this](const IR::Tofino::ParserState* state) {
+        auto start = transformAllMatching<IR::BFN::ParserState>(parser->start,
+                     [this](const IR::BFN::ParserState* state) {
             if (state->name != "$bridged_metadata") return state;
 
             // Pad the field packing out to a byte boundary so the resulting
@@ -72,7 +72,7 @@ class AddBridgedMetadata::AddBridge : public PardeModifier {
             return self.packing.createExtractionState(EGRESS, stateName, next);
         });
 
-        parser->start = start->to<IR::Tofino::ParserState>();
+        parser->start = start->to<IR::BFN::ParserState>();
         return false;
     }
 

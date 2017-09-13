@@ -1,5 +1,5 @@
-#ifndef _TOFINO_COMMON_TOFINO_MODEL_H_
-#define _TOFINO_COMMON_TOFINO_MODEL_H_
+#ifndef TOFINO_COMMON_TOFINO_MODEL_H_
+#define TOFINO_COMMON_TOFINO_MODEL_H_
 
 #include "lib/cstring.h"
 #include "frontends/common/model.h"
@@ -84,4 +84,4 @@ class TofinoModel : public ::Model::Model {
 
 }  // namespace P4
 
-#endif  /* _TOFINO_COMMON_TOFINO_MODEL_H_ */
+#endif  /* TOFINO_COMMON_TOFINO_MODEL_H_ */

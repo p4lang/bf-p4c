@@ -10,7 +10,7 @@ class UniqueStateNamer : public PardeInspector {
         names.clear();
         return PardeInspector::init_apply(root); }
     bool preorder(const IR::Expression *) override { return false; }
-    bool preorder(const IR::Tofino::ParserState *state) override {
+    bool preorder(const IR::BFN::ParserState *state) override {
         names.insert(state->name);
         return true; }
  public:
@@ -28,10 +28,10 @@ class UniqueStateNamer : public PardeInspector {
 class SplitBigStates : public PardeModifier {
     const PhvInfo       &phv;
     UniqueStateNamer    names;
-    bool preorder(IR::Tofino::Parser *p) override {
+    bool preorder(IR::BFN::Parser *p) override {
         p->apply(names);
         return true; }
-    bool preorder(IR::Tofino::ParserMatch *state) override;
+    bool preorder(IR::BFN::ParserMatch *state) override;
  public:
     explicit SplitBigStates(const PhvInfo &phv) : phv(phv) {}
 };

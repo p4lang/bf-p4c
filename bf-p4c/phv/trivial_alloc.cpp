@@ -22,12 +22,12 @@ class Uses : public Inspector {
     const PhvInfo       &phv;
     gress_t             thread;
     bool                in_mau;
-    bool preorder(const IR::Tofino::Parser *p) {
+    bool preorder(const IR::BFN::Parser *p) {
         in_mau = false;
         thread = p->gress;
         revisit_visited();
         return true; }
-    bool preorder(const IR::Tofino::Deparser *d) {
+    bool preorder(const IR::BFN::Deparser *d) {
         thread = d->gress;
         in_mau = true;  // treat egress_port and digests as in mau as they can't go in TPHV
         revisit_visited();
@@ -160,7 +160,7 @@ static void adjust_skip_for_egress(PHV::Container &reg, unsigned group_size,
         reg = skip1 = skip0; }
 }
 
-bool TrivialAlloc::preorder(const IR::Tofino::Pipe *pipe) {
+bool TrivialAlloc::preorder(const IR::BFN::Pipe *pipe) {
     if (phv.alloc_done()) return false;
     PHV::Uses uses(phv);
     Regs normal = { "B0", "H0", "W0" },
@@ -363,7 +363,7 @@ void ManualAlloc::allocateFieldGroup(const FieldGroup& group,
     BUG_CHECK(remainingBits == 0, "Didn't allocate entire group?");
 }
 
-bool ManualAlloc::preorder(const IR::Tofino::Pipe *pipe) {
+bool ManualAlloc::preorder(const IR::BFN::Pipe *pipe) {
     BUG_CHECK(!phv.alloc_done(), "PHV allocation was already performed");
 
     // Some containers are specific to a thread at the hardware level. Reserve

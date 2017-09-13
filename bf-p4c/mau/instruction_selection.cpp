@@ -14,7 +14,7 @@ Visitor::profile_t InstructionSelection::init_apply(const IR::Node *root) {
 IR::Member *InstructionSelection::gen_stdmeta(cstring field) {
     cstring metadataName = cstring::to_cstring(VisitingThread(this)) +
                            "::standard_metadata";
-    auto* meta = findContext<IR::Tofino::Pipe>()->metadata[metadataName];
+    auto* meta = findContext<IR::BFN::Pipe>()->metadata[metadataName];
     if (auto* f = meta->type->getField(field))
         return new IR::Member(f->type, new IR::ConcreteHeaderRef(meta), field);
     BUG("No field %s in standard_metadata", field);

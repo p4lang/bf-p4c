@@ -33,7 +33,7 @@ limitations under the License.
 
 namespace PHV {
 
-bool ValidateAllocation::preorder(const IR::Tofino::Pipe* pipe) {
+bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
     BUG_CHECK(phv.alloc_done(),
               "Calling ValidateAllocation without performing PHV allocation");
 
@@ -187,11 +187,11 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe* pipe) {
     // We also check that each byte in a container used in a computed checksum
     // consists either entirely of checksummed fields or entirely of ignored
     // fields.
-    forAllMatching<IR::Tofino::DeparserPrimitive>(pipe,
-                  [&](const IR::Tofino::DeparserPrimitive* prim) {
+    forAllMatching<IR::BFN::DeparserPrimitive>(pipe,
+                  [&](const IR::BFN::DeparserPrimitive* prim) {
         const IR::Expression* povFieldSource;
 
-        if (auto* emit = prim->to<IR::Tofino::Emit>()) {
+        if (auto* emit = prim->to<IR::BFN::Emit>()) {
             auto* sourceField = phv.field(emit->source, nullptr);
             ERROR_CHECK(sourceField != nullptr, "No PHV allocation for field "
                         "emitted by the deparser: %1%", emit->source);
@@ -201,7 +201,7 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe* pipe) {
                 deparseSequence.push_back(sourceField);
                 deparseOccurrences[sourceField].push_back(deparseSequence.size());
             }
-        } else if (auto* emitChecksum = prim->to<IR::Tofino::EmitChecksum>()) {
+        } else if (auto* emitChecksum = prim->to<IR::BFN::EmitChecksum>()) {
             // Verify that every source field for this computed checksum is
             // allocated, and collect all of the allocations used in this
             // computed checksum.
@@ -449,8 +449,8 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe* pipe) {
     }
 
     // Check that the allocation respects parser alignment limitations.
-    forAllMatching<IR::Tofino::ExtractBuffer>(pipe,
-                  [&](const IR::Tofino::ExtractBuffer* extract) {
+    forAllMatching<IR::BFN::ExtractBuffer>(pipe,
+                  [&](const IR::BFN::ExtractBuffer* extract) {
         int requiredAlignment = extract->bitOffset % 8;
         bitrange bits;
         auto* field = phv.field(extract->dest, &bits);

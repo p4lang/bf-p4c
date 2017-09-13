@@ -21,7 +21,7 @@ Cluster::Cluster(PhvInfo &p, PhvUse &u) : phv_i(p), uses_i(u) {
 //
 //***********************************************************************************
 
-bool Cluster::preorder(const IR::Tofino::Pipe *pipe) {
+bool Cluster::preorder(const IR::BFN::Pipe *pipe) {
     pipe->apply(uses_i);
     return true;
 }
@@ -1161,7 +1161,7 @@ std::ostream &operator<<(std::ostream &out, Cluster &cluster) {
 //
 // Note 4
 // ref: bf-p4c/ir/parde.def
-// IR::Tofino::Deparser has a field egress_port,
+// IR::BFN::Deparser has a field egress_port,
 // which points to the egress port in the egress pipeline & egress spec in the ingress pipeline
 // Each Deparser holds a vector of digests, one of which will be the learning digest if present
 //

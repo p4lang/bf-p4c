@@ -11,9 +11,9 @@
  * @see HeaderPushPop for more discussion.
  */
 class StackPushShims : public PardeModifier {
-    const Tofino::HeaderStackInfo* stacks = nullptr;
+    const BFN::HeaderStackInfo* stacks = nullptr;
 
-    bool preorder(IR::Tofino::Pipe* pipe) override {
+    bool preorder(IR::BFN::Pipe* pipe) override {
         BUG_CHECK(pipe->headerStackInfo != nullptr,
                   "Running StackPushShims without running "
                   "CollectHeaderStackInfo first?");
@@ -21,7 +21,7 @@ class StackPushShims : public PardeModifier {
         return true;
     }
 
-    bool preorder(IR::Tofino::Parser *p) override {
+    bool preorder(IR::BFN::Parser *p) override {
         BUG_CHECK(stacks != nullptr, "No HeaderStackInfo; was StackPushShims "
                                      "applied to a non-Pipe node?");
         for (auto &stack : *stacks) {
@@ -41,9 +41,9 @@ class StackPushShims : public PardeModifier {
             const unsigned stkValidSize = stack.size + stack.maxpush + stack.maxpop;
             const unsigned stkValidValue = pushValue << (stack.size + stack.maxpop);
 
-            p->start = new IR::Tofino::ParserState(stack.name + "$shim", p->gress, {},
-                { new IR::Tofino::ParserMatch(match_t(), 0, {
-                    new IR::Tofino::ExtractConstant(
+            p->start = new IR::BFN::ParserState(stack.name + "$shim", p->gress, {},
+                { new IR::BFN::ParserMatch(match_t(), 0, {
+                    new IR::BFN::ExtractConstant(
                         new IR::Member(IR::Type::Bits::get(stkValidSize),
                                        new IR::PathExpression(stack.name), "$stkvalid"),
                         new IR::Constant(stkValidValue)) }, p->start) } );

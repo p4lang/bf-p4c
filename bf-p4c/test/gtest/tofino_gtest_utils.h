@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef _TOFINO_TEST_GTEST_TOFINO_GTEST_UTILS_H_
-#define _TOFINO_TEST_GTEST_TOFINO_GTEST_UTILS_H_
+#ifndef TOFINO_TEST_GTEST_TOFINO_GTEST_UTILS_H_
+#define TOFINO_TEST_GTEST_TOFINO_GTEST_UTILS_H_
 
 #include <boost/optional.hpp>
 #include <string>
@@ -23,9 +23,9 @@ limitations under the License.
 #include "tofino/tofinoOptions.h"
 
 namespace IR {
-namespace Tofino {
+namespace BFN {
 class Pipe;
-}  // namespace Tofino
+}  // namespace BFN
 class P4Program;
 }  // namespace IR
 
@@ -71,7 +71,7 @@ struct TofinoPipeTestCase {
                                      = CompilerOptions::FrontendVersion::P4_16);
 
     /// The output of extract_maupipe().
-    const IR::Tofino::Pipe* pipe;
+    const IR::BFN::Pipe* pipe;
 
     /// The output of the frontend.
     const IR::P4Program* frontendProgram;
@@ -79,4 +79,4 @@ struct TofinoPipeTestCase {
 
 }  // namespace Test
 
-#endif /* _TOFINO_TEST_GTEST_TOFINO_GTEST_UTILS_H_ */
+#endif /* TOFINO_TEST_GTEST_TOFINO_GTEST_UTILS_H_ */

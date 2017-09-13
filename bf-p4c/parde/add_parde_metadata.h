@@ -1,5 +1,5 @@
-#ifndef _TOFINO_PARDE_ADD_PARDE_METADATA_H_
-#define _TOFINO_PARDE_ADD_PARDE_METADATA_H_
+#ifndef TOFINO_PARDE_ADD_PARDE_METADATA_H_
+#define TOFINO_PARDE_ADD_PARDE_METADATA_H_
 
 #include "parde_visitor.h"
 
@@ -12,14 +12,14 @@
 
 class AddMetadataShims : public PardeModifier {
  public:
-    explicit AddMetadataShims(const IR::Tofino::Pipe* pipe) : pipe(pipe)
+    explicit AddMetadataShims(const IR::BFN::Pipe* pipe) : pipe(pipe)
     { CHECK_NULL(pipe); }
 
  private:
-    bool preorder(IR::Tofino::Parser *) override;
-    bool preorder(IR::Tofino::Deparser *) override;
+    bool preorder(IR::BFN::Parser *) override;
+    bool preorder(IR::BFN::Deparser *) override;
 
-    const IR::Tofino::Pipe* pipe;
+    const IR::BFN::Pipe* pipe;
 };
 
-#endif /* _TOFINO_PARDE_ADD_PARDE_METADATA_H_ */
+#endif /* TOFINO_PARDE_ADD_PARDE_METADATA_H_ */

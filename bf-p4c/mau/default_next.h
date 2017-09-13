@@ -1,5 +1,5 @@
-#ifndef _TOFINO_MAU_DEFAULT_NEXT_H_
-#define _TOFINO_MAU_DEFAULT_NEXT_H_
+#ifndef TOFINO_MAU_DEFAULT_NEXT_H_
+#define TOFINO_MAU_DEFAULT_NEXT_H_
 
 #include "mau_visitor.h"
 
@@ -37,4 +37,4 @@ class DefaultNext : public MauInspector, ControlFlowVisitor {
         return "END"; }
 };
 
-#endif /* _TOFINO_MAU_DEFAULT_NEXT_H_ */
+#endif /* TOFINO_MAU_DEFAULT_NEXT_H_ */

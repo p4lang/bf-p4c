@@ -685,7 +685,7 @@ std::ostream &operator<<(std::ostream &out, const DumpSeqTables &s) {
     return out;
 }
 
-IR::Node *TablePlacement::preorder(IR::Tofino::Pipe *pipe) {
+IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
     LOG1("table placement starting");
     LOG3(TableTree("ingress", pipe->thread[INGRESS].mau) <<
          TableTree("egress", pipe->thread[EGRESS].mau));
@@ -780,7 +780,7 @@ IR::Node *TablePlacement::preorder(IR::Tofino::Pipe *pipe) {
     return pipe;
 }
 
-IR::Node *TablePlacement::postorder(IR::Tofino::Pipe *pipe) {
+IR::Node *TablePlacement::postorder(IR::BFN::Pipe *pipe) {
     tblInfo.clear();
     seqInfo.clear();
     table_placed.clear();

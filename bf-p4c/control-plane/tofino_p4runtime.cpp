@@ -26,7 +26,7 @@ limitations under the License.
 #include "tofino/control-plane/synthesize_valid_field.h"
 #include "tofino/tofinoOptions.h"
 
-namespace Tofino {
+namespace BFN {
 
 void serializeP4Runtime(const IR::P4Program* program,
                         const Tofino_Options& options) {
@@ -60,4 +60,4 @@ void serializeP4Runtime(const IR::P4Program* program,
                        &refMap, &typeMap, options.p4RuntimeFormat);
 }
 
-}  // namespace Tofino
+}  // namespace BFN

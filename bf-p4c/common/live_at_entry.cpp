@@ -10,7 +10,7 @@ Visitor::profile_t LiveAtEntry::init_apply(const IR::Node *root) {
 }
 
 bool LiveAtEntry::preorder(const IR::Expression *e) {
-    if (getParent<IR::Tofino::ParserState>()) {
+    if (getParent<IR::BFN::ParserState>()) {
         /* Only expression child of ParserState is the select expression, which never actually
          * accesses the fields it refers to -- they're converted into references into the
          * input buffer at a later point.  For here, ignore them */

@@ -1,5 +1,5 @@
-#ifndef _TOFINO_MAU_INPUT_XBAR_H_
-#define _TOFINO_MAU_INPUT_XBAR_H_
+#ifndef TOFINO_MAU_INPUT_XBAR_H_
+#define TOFINO_MAU_INPUT_XBAR_H_
 
 #include <unordered_set>
 #include "lib/alloc.h"
@@ -349,4 +349,4 @@ inline std::ostream &operator<<(std::ostream &out, const IXBar::Use::Byte &b) {
     if (b.flags) out << " flags=" << hex(b.flags);
     return out; }
 
-#endif /* _TOFINO_MAU_INPUT_XBAR_H_ */
+#endif /* TOFINO_MAU_INPUT_XBAR_H_ */

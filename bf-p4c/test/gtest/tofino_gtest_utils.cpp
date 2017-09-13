@@ -71,7 +71,7 @@ MidendTestCase::create(const std::string& source,
 
     Tofino_Options options;
     options.langVersion = langVersion;
-    Tofino::MidEnd midend(options);
+    BFN::MidEnd midend(options);
     auto* midendProgram = frontendTestCase->program->apply(midend);
     if (midendProgram == nullptr) {
         std::cerr << "Midend failed" << std::endl;

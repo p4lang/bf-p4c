@@ -14,17 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef _TOFINO_PARDE_CHECKSUM_H_
-#define _TOFINO_PARDE_CHECKSUM_H_
+#ifndef TOFINO_PARDE_CHECKSUM_H_
+#define TOFINO_PARDE_CHECKSUM_H_
 
 namespace IR {
-namespace Tofino {
+namespace BFN {
 class Pipe;
-}  // namespace Tofino
+}  // namespace BFN
 class P4Control;
 }  // namespace IR
 
-namespace Tofino {
+namespace BFN {
 
 /**
  * Attempts to convert the P4 code in the provided control into deparser
@@ -71,9 +71,9 @@ namespace Tofino {
  *         checksum computations were discovered, the original pipe is returned
  *         unaltered.
  */
-IR::Tofino::Pipe*
+IR::BFN::Pipe*
 extractComputeChecksum(const IR::P4Control* computeChecksumControl,
-                       IR::Tofino::Pipe* pipe);
+                       IR::BFN::Pipe* pipe);
 
-}  // namespace Tofino
-#endif /* _TOFINO_PARDE_CHECKSUM_H_ */
+}  // namespace BFN
+#endif /* TOFINO_PARDE_CHECKSUM_H_ */

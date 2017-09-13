@@ -17,7 +17,7 @@ limitations under the License.
 #include "header_stack.h"
 
 CollectHeaderStackInfo::CollectHeaderStackInfo()
-  : stacks(new Tofino::HeaderStackInfo) { }
+  : stacks(new BFN::HeaderStackInfo) { }
 
 void CollectHeaderStackInfo::postorder(IR::HeaderStack* hs) {
     auto &i = stacks->info[hs->name];
@@ -54,8 +54,8 @@ void CollectHeaderStackInfo::postorder(IR::Primitive* prim) {
             error("%s: %s amount must be constant", prim->operands[1]->srcInfo, prim->name); } }
 }
 
-void CollectHeaderStackInfo::postorder(IR::Tofino::Pipe* pipe) {
+void CollectHeaderStackInfo::postorder(IR::BFN::Pipe* pipe) {
     // Store the information we've collected in
-    // `IR::Tofino::Pipe::headerStackInfo` so other passes can access it.
+    // `IR::BFN::Pipe::headerStackInfo` so other passes can access it.
     pipe->headerStackInfo = stacks;
 }

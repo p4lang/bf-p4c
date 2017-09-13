@@ -153,7 +153,7 @@ const PhvInfo::Field *PhvInfo::field(const IR::Member *fr, bitrange *bits) const
 //***********************************************************************************
 //
 
-void PhvInfo::allocatePOV(const Tofino::HeaderStackInfo& stacks) {
+void PhvInfo::allocatePOV(const BFN::HeaderStackInfo& stacks) {
     if (pov_alloc_done) BUG("trying to reallocate POV");
     pov_alloc_done = true;
 
@@ -795,11 +795,11 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
         return false;
     }
 
-    void postorder(const IR::Tofino::Deparser* d) override {
+    void postorder(const IR::BFN::Deparser* d) override {
         // extract deparser constraints from Deparser & Digest IR nodes ref: bf-p4c/ir/parde.def
         // set deparser constaints on field
         if (d->egress_port) {
-            // IR::Tofino::Deparser has a field egress_port which points to
+            // IR::BFN::Deparser has a field egress_port which points to
             // egress port in the egress pipeline and
             // egress spec in the ingress pipeline
             PhvInfo::Field* f = phv.field(d->egress_port);
@@ -813,7 +813,7 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
         // learning, mirror field list in bottom bits of container, e.g.,
         // 301:ingress::$learning<3:0..2>
         // 590:egress::$mirror<3:0..2> specifies 1 of 8 field lists
-        // currently, IR::Tofino::Digest node has a string field to distinguish them by name
+        // currently, IR::BFN::Digest node has a string field to distinguish them by name
         for (auto &entry : Values(d->digests)) {
             if (entry->name != "learning" && entry->name != "mirror")
                 continue;
@@ -877,12 +877,12 @@ struct MarkBridgedMetadataFields : public Inspector {
     explicit MarkBridgedMetadataFields(PhvInfo& phv) : phv(phv) { }
 
  private:
-    bool preorder(const IR::Tofino::ParserState* state) override {
+    bool preorder(const IR::BFN::ParserState* state) override {
         if (!state->name.endsWith("$bridge_metadata_extract")) return true;
 
         for (auto* match : state->match) {
-            forAllMatching<IR::Tofino::Extract>(&match->stmts,
-                          [&](const IR::Tofino::Extract* extract) {
+            forAllMatching<IR::BFN::Extract>(&match->stmts,
+                          [&](const IR::BFN::Extract* extract) {
                 auto* fieldInfo = phv.field(extract->dest);
                 if (!fieldInfo) return;
 
@@ -917,7 +917,7 @@ struct AllocatePOVBits : public Inspector {
     explicit AllocatePOVBits(PhvInfo& phv) : phv(phv) { }
 
  private:
-    bool preorder(const IR::Tofino::Pipe* pipe) override {
+    bool preorder(const IR::BFN::Pipe* pipe) override {
         BUG_CHECK(pipe->headerStackInfo != nullptr,
                   "Running AllocatePOVBits without running "
                   "CollectHeaderStackInfo first?");
@@ -934,7 +934,7 @@ struct ComputeFieldAlignments : public Inspector {
     explicit ComputeFieldAlignments(PhvInfo& phv) : phv(phv) { }
 
  private:
-    bool preorder(const IR::Tofino::ExtractBuffer* extract) override {
+    bool preorder(const IR::BFN::ExtractBuffer* extract) override {
         auto* fieldInfo = phv.field(extract->dest);
         if (!fieldInfo) {
             ::warning("No allocation for field %1%", extract->dest);
@@ -948,13 +948,13 @@ struct ComputeFieldAlignments : public Inspector {
         return false;
     }
 
-    bool preorder(const IR::Tofino::Deparser* deparser) override {
+    bool preorder(const IR::BFN::Deparser* deparser) override {
         unsigned currentBit = 0;
 
         for (auto* emitPrimitive : deparser->emits) {
             // XXX(seth): Right now we treat EmitChecksum as not inducing any
             // particular alignment, but we will need to revisit that.
-            auto* emit = emitPrimitive->to<IR::Tofino::Emit>();
+            auto* emit = emitPrimitive->to<IR::BFN::Emit>();
             if (!emit) continue;
 
             auto* fieldInfo = phv.field(emit->source);

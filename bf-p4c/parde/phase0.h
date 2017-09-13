@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef _TOFINO_PARDE_PHASE0_H_
-#define _TOFINO_PARDE_PHASE0_H_
+#ifndef TOFINO_PARDE_PHASE0_H_
+#define TOFINO_PARDE_PHASE0_H_
 
 #include <utility>
 #include <vector>
@@ -23,9 +23,9 @@ limitations under the License.
 #include "lib/cstring.h"
 
 namespace IR {
-namespace Tofino {
+namespace BFN {
 class Pipe;
-}  // namespace Tofino
+}  // namespace BFN
 class P4Control;
 class P4Table;
 }  // namespace IR
@@ -35,7 +35,7 @@ class ReferenceMap;
 class TypeMap;
 }  // namespace P4
 
-namespace Tofino {
+namespace BFN {
 
 struct FieldPacking;
 
@@ -59,12 +59,12 @@ struct Phase0Info {
  *         includes the phase 0 parser. If there is no phase 0 table, the
  *         original ingress control and pipe are returned unaltered.
  */
-std::pair<const IR::P4Control*, IR::Tofino::Pipe*>
-extractPhase0(const IR::P4Control* ingress, IR::Tofino::Pipe* pipe,
+std::pair<const IR::P4Control*, IR::BFN::Pipe*>
+extractPhase0(const IR::P4Control* ingress, IR::BFN::Pipe* pipe,
               P4::ReferenceMap* refMap, P4::TypeMap* typeMap);
 
-}  // namespace Tofino
+}  // namespace BFN
 
-std::ostream& operator<<(std::ostream& out, const Tofino::Phase0Info* info);
+std::ostream& operator<<(std::ostream& out, const BFN::Phase0Info* info);
 
-#endif /* _TOFINO_PARDE_PHASE0_H_ */
+#endif /* TOFINO_PARDE_PHASE0_H_ */

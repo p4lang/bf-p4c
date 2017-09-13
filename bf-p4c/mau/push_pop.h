@@ -93,9 +93,9 @@
  * the other fields by writing to that one.
  */
 class HeaderPushPop : public MauTransform {
-    const Tofino::HeaderStackInfo* stacks = nullptr;
+    const BFN::HeaderStackInfo* stacks = nullptr;
 
-    IR::Tofino::Pipe* preorder(IR::Tofino::Pipe* pipe) override {
+    IR::BFN::Pipe* preorder(IR::BFN::Pipe* pipe) override {
         BUG_CHECK(pipe->headerStackInfo != nullptr,
                   "Running HeaderPushPop without running "
                   "CollectHeaderStackInfo first?");
