@@ -77,8 +77,8 @@ for f1 in $dir1/*.cfg.json*; do
     $JSON_DIFF $f1 $f2 >> $json_diff_file
 done
 
-if [ -r $dir1/tbl-cfg ]; then
-    { $JSON_DIFF $CTXT_DIFFARGS $dir1/tbl-cfg $dir2/tbl-cfg;
+if [ -r $dir1/context.json ]; then
+    { $JSON_DIFF $CTXT_DIFFARGS $dir1/context.json $dir2/context.json;
       if [ $? -gt 128 ]; then echo "***json_diff crashed"; fi; } >> \
-          $json_diff_file 
+          $json_diff_file
 fi

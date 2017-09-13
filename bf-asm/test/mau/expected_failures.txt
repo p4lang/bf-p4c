@@ -35,7 +35,7 @@ test_config_140_table_counter.p4 mismatch
 test_config_182_warp_primitive.p4 mismatch
 test_config_208_table_no_key.p4 mismatch
 test_config_25_no_reads_for_table.p4 mismatch
-- missing default_action.allowed_to_be_default_action in tbl-cfg
+- missing default_action.allowed_to_be_default_action in context.json
 
 - uncharacterized failures (FIXME)
 01-FlexCounter.p4 compile

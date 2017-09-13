@@ -103,7 +103,7 @@ fi
 
 #glsc_args="--placement-order ingress_before_egress --libpd --placement secret"
 #glsc_args="--verbose 2 -vl 2 -S -G --placement-order ingress_before_egress --no-bin --new_ctx_json"
-glsc_args="--verbose 2 -vl 2 -S -G --placement-order ingress_before_egress --new_ctx_json"
+glsc_args="--verbose 2 -vl 2 -S -G --placement-order ingress_before_egress"
 
 trap 'release_all_tokens; exit' 2
 
@@ -367,7 +367,7 @@ function test_p4() {
     if $ok && run $TFAS -o brig $TFAS_OPTS brig/tfas.config.log $tfafile >brig/tfas.log 2>&1; then
         # Validate context json output from assembler
         $SCHEMA > schema.json
-        python $SCHEMA_VAL brig/tbl-cfg schema.json > context_json_schema_validate.log
+        python $SCHEMA_VAL brig/context.json schema.json > context_json_schema_validate.log
         for f in $name.out/*.cfg.json; do
             if $REFLOW $f | gzip -9 > $f.gz; then
                 rm $f
@@ -393,7 +393,7 @@ function test_p4() {
                     glsc_ctxt=glass/context/context.json
                 fi
             fi
-            brig_ctxt=brig/tbl-cfg
+            brig_ctxt=brig/context.json
             if [ -r $brig_ctxt ]; then
                 { $JSON_DIFF $CTXT_DIFFARGS $brig_ctxt $glsc_ctxt;
                   if [ $? -gt 128 ]; then echo "***json_diff crashed"; fi; } >> json_diff.txt
@@ -536,7 +536,7 @@ function test_stf() {
         fi
         if $linked || run $TFLINK -o $bindir/tofino.bin $jsondir/*.cfg.json* >/dev/null 2>&1; then
             export TOFINO_BIN=$bindir/tofino.bin
-            export TABLE_CONFIG=$bindir/tbl-cfg
+            export TABLE_CONFIG=$bindir/context.json
             if run "$STF" -l $bindir $name.stf >$name.out/stf.txt 2>&1; then
                 msg="$msg pass"
             else

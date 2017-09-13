@@ -1,12 +1,17 @@
 #include <config.h>
+#include <time.h>
 
 #include "sections.h"
 #include "stage.h"
 #include "phv.h"
 #include "deparser.h"
+#include "parser.h"
 #include "range.h"
 #include "input_xbar.h"
 #include "top_level.h"
+#include "target.h"
+#include "misc.h"
+#include "../bf-p4c/version.h" // for P4C_TOFINO_VERSION
 
 extern std::string asmfile_name;
 
@@ -174,14 +179,18 @@ void AsmStage::output() {
             if (stage[i].stage_dep[gress] != Stage::MATCH_DEP)
                 stage[i-1].group_table_use[gress] |= stage[i].group_table_use[gress]; }
     // Also output new context json schema.
-    auto json_out = open_output("tbl-cfg");
+    auto json_out = open_output("context.json");
     if (options.new_ctx_json) {
-        json::string json_build_date = "XX-XX-XXXX";
-        json::string json_compiler_version = "v1.0";
+        const time_t now = time(NULL);
+        char build_date[1024];
+        strftime(build_date, 1024, "%x %X", localtime(&now));
+        json::string json_build_date = build_date;
+        json::string json_compiler_version = P4C_TOFINO_VERSION;
         json::vector json_learn_quantas;
         json::map    json_parser;
         json::vector json_phv_allocation;
         json::vector json_tables;
+        json::vector json_configuration_cache;
         json::string json_program_name = asmfile_name.substr(0, asmfile_name.find_last_of("."));
         for (unsigned i = 0; i < stage.size(); i++) {
             switch (options.target) {
@@ -192,6 +201,28 @@ void AsmStage::output() {
             default: assert(0); } }
         json_parser["ingress"] = json::vector();
         json_parser["egress"] = json::vector();
+        // Add configuration cache regs
+        Parser& prsr = Parser::get_parser();
+        Target::Tofino::parser_regs tofino_regs;
+#if HAVE_JBAY
+        Target::JBay::parser_regs jbay_regs;
+#endif // HAVE_JBAY
+        switch (options.target) {
+            case TOFINO: prsr.gen_configuration_cache(tofino_regs, json_configuration_cache);
+                         break;
+#if HAVE_JBAY
+            case JBAY: prsr.gen_configuration_cache(jbay_regs, json_configuration_cache);
+                       break;
+#endif // HAVE_JBAY
+            default: assert(0); }
+        for (unsigned i = 0; i < stage.size(); i++) {
+            switch (options.target) {
+            case TOFINO: stage[i].gen_configuration_cache<Target::Tofino>(json_configuration_cache); break;
+#if HAVE_JBAY
+            case JBAY: stage[i].gen_configuration_cache<Target::JBay>(json_configuration_cache); break;
+#endif // HAVE_JBAY
+            default: assert(0); } }
+
         *json_out << '{' << std::endl;
         *json_out << "\t\"build_date\": "  << &json_build_date << "," << std::endl;
         *json_out << "\t\"compiler_version\": " << &json_compiler_version << "," << std::endl;
@@ -199,7 +230,8 @@ void AsmStage::output() {
         *json_out << "\t\"learn_quanta\": " << &json_learn_quantas<< "," << std::endl;
         *json_out << "\t\"parser\": " << &json_parser<< "," << std::endl;
         *json_out << "\t\"phv_allocation\": " << &json_phv_allocation<< "," << std::endl;
-        *json_out << "\t\"tables\": " << &json_tables << std::endl;
+        *json_out << "\t\"tables\": " << &json_tables << "," << std::endl;
+        *json_out << "\t\"configuration_cache\": " << &json_configuration_cache << std::endl;
         *json_out << '}' << std::endl;
     } else {
         for (unsigned i = 0; i < stage.size(); i++) {
@@ -455,3 +487,73 @@ void Stage::output(json::vector &tbl_cfg) {
         TopLevel::all.reg_pipe.mau[stageno] = buf;
     undeclare_registers(&regs);
 }
+
+template<class TARGET>
+void Stage::gen_configuration_cache(json::vector &cfg_cache) {
+    typename TARGET::mau_regs regs;
+    std::string reg_fqname;
+    std::string reg_name;
+    unsigned reg_value;
+    std::string reg_value_str;
+    unsigned reg_width = 8;
+
+    // meter_sweep_ctl
+    auto &meter_sweep_ctl = regs.rams.match.adrdist.meter_sweep_ctl;
+    for (int i = 0; i < 4; i++) {
+        reg_fqname = "mau[" + std::to_string(stageno)
+            + "].rams.match.adrdist.meter_sweep_ctl["
+            + std::to_string(i) + "]";
+        reg_name = "stage_" + std::to_string(stageno) + "_meter_sweep_ctl_" + std::to_string(i);
+        reg_value = (meter_sweep_ctl[i].meter_sweep_en              & 0x00000001)
+                 | ((meter_sweep_ctl[i].meter_sweep_offset          & 0x0000003F) << 1)
+                 | ((meter_sweep_ctl[i].meter_sweep_size            & 0x0000003F) << 7)
+                 | ((meter_sweep_ctl[i].meter_sweep_remove_hole_pos & 0x00000003) << 13)
+                 | ((meter_sweep_ctl[i].meter_sweep_remove_hole_en  & 0x00000001) << 16)
+                 | ((meter_sweep_ctl[i].meter_sweep_interval        & 0x0000001F) << 17);
+        if (reg_value != 0) {
+            reg_value_str = int_to_hex_string(reg_value, reg_width);
+            add_cfg_reg(cfg_cache, reg_fqname, reg_name, reg_value_str); } }
+
+    // match_input_xbar_din_power_ctl
+    auto &mixdpctl = regs.dp.match_input_xbar_din_power_ctl;
+    reg_value_str = "";
+    for (int i = 0; i < 2; i++) {
+        for (int j = 0; j < 16; j++) {
+            reg_value = mixdpctl[i][j];
+            reg_value_str =
+                int_to_hex_string(reg_value, reg_width) + reg_value_str; } }
+     if (!check_zero_string(reg_value_str)) {
+         reg_fqname = "mau[" + std::to_string(stageno)
+             + "].dp.match_input_xbar_din_power_ctl";
+         reg_name = "stage_" + std::to_string(stageno)
+             + "_match_input_xbar_din_power_ctl";
+         add_cfg_reg(cfg_cache, reg_fqname, reg_name, reg_value_str); }
+
+    // hash_seed
+    auto &hash_seed = regs.dp.xbar_hash.hash.hash_seed;
+    reg_value_str = "";
+    for (int i = 0; i < 52; i++) {
+       reg_value = hash_seed[i];
+       reg_value_str =
+           int_to_hex_string(reg_value, reg_width) + reg_value_str; }
+    if (!check_zero_string(reg_value_str)) {
+        reg_fqname = "mau[" + std::to_string(stageno)
+            + "].dp.xbar_hash.hash.hash_seed";
+        reg_name = "stage_" + std::to_string(stageno) + "_hash_seed";
+        add_cfg_reg(cfg_cache, reg_fqname, reg_name, reg_value_str); }
+
+    // parity_group_mask
+    auto &parity_group_mask = regs.dp.xbar_hash.hash.parity_group_mask;
+    reg_value_str = "";
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 2; j++) {
+            reg_value = parity_group_mask[i][j];
+            reg_value_str =
+                int_to_hex_string(reg_value, reg_width) + reg_value_str; } }
+    if (!check_zero_string(reg_value_str)) {
+        reg_fqname = "mau[" + std::to_string(stageno)
+            + "].dp.xbar_hash.hash.parity_group_mask";
+        reg_name = "stage_" + std::to_string(stageno) + "_parity_group_mask";
+        add_cfg_reg(cfg_cache, reg_fqname, reg_name, reg_value_str); }
+}
+

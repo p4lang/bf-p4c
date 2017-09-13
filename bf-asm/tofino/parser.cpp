@@ -1,5 +1,7 @@
 /* parser template specializations for tofino -- #included directly in top-level parser.cpp */
 
+#include "misc.h"
+
 template <> void Parser::CounterInit::write_config(Target::Tofino::parser_regs &regs,
                                                    gress_t gress, int idx) {
     auto &ctr_init_ram = regs.memory[gress].ml_ctr_init_ram[idx];
@@ -386,5 +388,45 @@ template<> void Parser::write_config(Target::Tofino::parser_regs &regs) {
     for (auto st : all)
         TopLevel::all.name_lookup["directions"][st->gress ? "1" : "0"]
                 ["parser_states"][std::to_string(st->stateno.word1)] = st->name;
+}
+
+template<> 
+void Parser::gen_configuration_cache(Target::Tofino::parser_regs &regs, json::vector &cfg_cache) {
+    std::string reg_fqname;
+    std::string reg_name;
+    unsigned reg_value;
+    std::string reg_value_str;
+    unsigned reg_width = 8;
+
+    // epb_prsr_port_regs.chnl_ctrl
+    for (int i = 0; i < 4; i++) {
+        reg_fqname = "pmarb.ebp18_reg.ebp_reg[0].epb_prsr_port_regs.chnl_ctrl[" 
+            + std::to_string(i) + "]"; 
+        reg_name = "parser0.chnl_ctrl_" + std::to_string(i);
+        reg_value =
+               (regs.egress.epb_prsr_port_regs.chnl_ctrl[i].meta_opt        & 0x000001FF)  
+            | ((regs.egress.epb_prsr_port_regs.chnl_ctrl[i].chnl_ena        & 0x00000001)  << 16)
+            | ((regs.egress.epb_prsr_port_regs.chnl_ctrl[i].afull_thr       & 0x00000007)  << 17)
+            | ((regs.egress.epb_prsr_port_regs.chnl_ctrl[i].aemp_thr        & 0x00000007)  << 20)
+            | ((regs.egress.epb_prsr_port_regs.chnl_ctrl[i].prsr_stall_full & 0x00000001)  << 23)
+            | ((regs.egress.epb_prsr_port_regs.chnl_ctrl[i].timestamp_shift & 0x0000000F)  << 24)
+            | ((regs.egress.epb_prsr_port_regs.chnl_ctrl[i].pipeid_ovr      & 0x00000007)  << 28); 
+        if (reg_value != 0) {
+            reg_value_str = int_to_hex_string(reg_value, reg_width);
+            add_cfg_reg(cfg_cache, reg_fqname, reg_name, reg_value_str); } }
+     
+    // epb_prsr_port_regs.multi_threading
+    reg_fqname = "pmarb.ebp18_reg.ebp_reg[0].epb_prsr_port_regs.multi_threading"; 
+    reg_name = "parser0.multi_threading";
+    reg_value = 
+               (regs.egress.epb_prsr_port_regs.multi_threading.prsr_dph_max    & 0x000003FF) 
+            | ((regs.egress.epb_prsr_port_regs.multi_threading.stall_thr       & 0x00000007) << 12)
+            | ((regs.egress.epb_prsr_port_regs.multi_threading.mult_thrd       & 0x00000001) << 16)
+            | ((regs.egress.epb_prsr_port_regs.multi_threading.sngl_thrd       & 0x00000001) << 17)
+            | ((regs.egress.epb_prsr_port_regs.multi_threading.mthrd_afull_pkt & 0x0000000F) << 20)
+            | ((regs.egress.epb_prsr_port_regs.multi_threading.mthrd_afull_ent & 0x0000003F) << 24);
+    if (reg_value != 0) {
+        reg_value_str = int_to_hex_string(reg_value, reg_width);
+        add_cfg_reg(cfg_cache, reg_fqname, reg_name, reg_value_str); }
 }
 

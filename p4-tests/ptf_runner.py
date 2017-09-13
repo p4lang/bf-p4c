@@ -264,7 +264,7 @@ def main():
         error("Binary config file {} not found".format(tofino_bin_path))
         sys.exit(1)
 
-    cxt_json_path = os.path.join(compiler_out_dir, 'tbl-cfg')
+    cxt_json_path = os.path.join(compiler_out_dir, 'context.json')
     if not os.path.exists(cxt_json_path):
         error("Context json file {} not found".format(cxt_json_path))
         sys.exit(1)

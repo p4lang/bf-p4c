@@ -46,4 +46,15 @@ T join(const std::vector<T> &vec, U sep) {
 
 extern int remove_name_tail_range(std::string &, int *size = nullptr);
 
+#include <iomanip>
+
+// Convert an integer to hex string of specified width (in bytes)
+std::string int_to_hex_string(unsigned val, unsigned width);
+
+// Add a reg to CJSON Configuration Cache
+#include "json.h"
+void add_cfg_reg(json::vector &cfg_cache, std::string full_name,
+        std::string name, std::string val);
+
+bool check_zero_string(const std::string& s);
 #endif /* _misc_h_ */

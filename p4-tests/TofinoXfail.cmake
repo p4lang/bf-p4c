@@ -773,7 +773,6 @@ p4c_add_xfail_reason("tofino"
 # immediates are placed on disallowed bytes on the action bus
 p4c_add_xfail_reason("tofino"
   "immediate is not on the action bus"
-  extensions/p4_tests/p4_14/test_config_87_share_parameter_for_different_containers.p4
   extensions/p4_tests/p4_14/test_tp_1_one_table_spill.p4
   extensions/p4_tests/p4_14/test_config_21_tcam_vpns.p4
 )
@@ -824,6 +823,7 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     extensions/p4_tests/p4_16/parser_metadata_init.p4
     extensions/p4_tests/p4_16/stack_valid.p4
     extensions/p4_tests/p4_16/ternary2.p4
+    extensions/p4_tests/p4_16/google-tor/p4/spec/tor.p4
     testdata/p4_14_samples/action_chain1.p4
     testdata/p4_14_samples/exact_match3.p4
     testdata/p4_14_samples/gateway1.p4
@@ -904,27 +904,41 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
     )
 
+#  "<_Rendezvous of RPC that terminated with (StatusCode.UNIMPLEMENTED, Resetting default entry not supported yet)>"
   p4c_add_xfail_reason("tofino"
-    "Error when trying to push config to bf_switchd"
+    "StatusCode.UNIMPLEMENTED, Resetting default entry not supported yet"
     testdata/p4_14_samples/07-MultiProtocol.p4
     testdata/p4_14_samples/basic_routing.p4
+    )
+
+# Detailed error  "<_Rendezvous of RPC that terminated with (StatusCode.INVALID_ARGUMENT, Cannot map table entry to handle)>"
+  p4c_add_xfail_reason("tofino"
+    "StatusCode.INVALID_ARGUMENT, Cannot map table entry to handle"
     testdata/p4_14_samples/counter2.p4
-    testdata/p4_14_samples/exact_match4.p4
+    )
+
+# Detailed error "<_Rendezvous of RPC that terminated with (StatusCode.UNAVAILABLE, Connect Failed)>"
+  p4c_add_xfail_reason("tofino"
+    "StatusCode.UNAVAILABLE, Connect Failed"
     testdata/p4_14_samples/exact_match5.p4
+    testdata/p4_14_samples/exact_match4.p4
+    extensions/p4_tests/p4_14/meter_test1.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "Error when trying to push config to bf_switchd"
     testdata/p4_14_samples/exact_match_valid1.p4
     testdata/p4_14_samples/hash_action_basic.p4
     testdata/p4_14_samples/hash_action_gateway.p4
     testdata/p4_14_samples/hash_action_two_separate.p4
     testdata/p4_14_samples/tmvalid.p4
     extensions/p4_tests/p4_14/hash_calculation_32.p4
-    extensions/p4_tests/p4_14/meter_test1.p4
     extensions/p4_tests/p4_14/stateful0.p4
     extensions/p4_tests/p4_14/stateful1.p4
     extensions/p4_tests/p4_14/stateful2.p4
     extensions/p4_tests/p4_14/stateful3.p4
     extensions/p4_tests/p4_16/stateful1.p4
     extensions/p4_tests/p4_16/stateful2.p4
-    extensions/p4_tests/p4_14/adb_multiple_size_immediates.p4
     )
 
 endif() # PTF_REQUIREMENTS_MET

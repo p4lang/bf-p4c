@@ -61,6 +61,7 @@ public:
     Stage(Stage &&);
     ~Stage();
     template<class TARGET> void output(json::vector &tbl_cfg);
+    template<class TARGET> void gen_configuration_cache(json::vector &cfg_cache);
     template<class REGS> void write_regs(REGS &regs);
     int adr_dist_delay(gress_t gress);
     int pipelength(gress_t gress);

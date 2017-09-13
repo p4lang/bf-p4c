@@ -1209,7 +1209,8 @@ void MatchTable::pass1(int type) {
                 p.bit_width_full = p.bit_width;
             auto n = p.name.find(".$valid");
             if (n != std::string::npos) {
-                p.name = "--validity_check--" + p.name.substr(0,n); } } }
+                p.name = "--validity_check--" + p.name.substr(0,n); 
+                p.is_valid = true;  } } }
 }
 
 template<class REGS> void MatchTable::write_regs(REGS &regs, int type, Table *result) {
@@ -1628,6 +1629,21 @@ void AttachedTable::pass1() {
                     ++g; }
             } else {
                 error(lineno, "no format found for per_flow_enable param %s", per_flow_enable_param.c_str()); } } }
+}
+
+// ---------------
+// Meter ALU | Row   
+// Used      |
+// ---------------
+// 0         | 1
+// 1         | 3
+// 2         | 5
+// 3         | 7
+// ---------------
+void AttachedTable::add_meter_alu_index(json::map &stage_tbl) {
+    if (layout.size() <= 0)
+        error(lineno, "Invalid meter alu setup. A meter ALU should be allocated for table %s", name());
+    stage_tbl["meter_alu_index"] = get_meter_alu_index();
 }
 
 SelectionTable *AttachedTables::get_selector() const {
@@ -2053,13 +2069,15 @@ void Table::common_tbl_cfg(json::map &tbl, const char *default_match_type) {
         if ((!p4_params_list.empty()) && (this->to<MatchTable>())) {
             for (auto &p : p4_params_list) {
                 unsigned start_bit = 0;
-                params.push_back( json::map {
-                    { "name", json::string(p.name) },
-                    { "position", json::number(p.position) },
-                    { "match_type", json::string(p.type) },
-                    { "start_bit", json::number(start_bit) },
-                    { "bit_width", json::number(p.bit_width) },
-                    { "bit_width_full", json::number(p.bit_width_full) }} );
+                json::map param;
+                param["name"] = p.name;
+                param["position"] = p.position;
+                param["match_type"] = p.type;
+                param["start_bit"] = start_bit;
+                param["bit_width"] = p.bit_width;
+                param["bit_width_full"] = p.bit_width_full;
+                param["is_valid"] = p.is_valid;
+                params.push_back(std::move(param));
                 start_bit += p.bit_width_full; } }
     } else {
         if (!default_action.empty()) {

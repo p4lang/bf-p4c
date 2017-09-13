@@ -235,9 +235,10 @@ public:
         unsigned bit_width_full;
         unsigned default_value;
         bool defaulted;
+        bool is_valid;
         std::string type;
-        p4_param(std::string n = "", unsigned p = 0, unsigned bw = 0, unsigned bwf = 0, std::string t = "",unsigned v = 0, bool d = false) :
-            name(n), position(p), bit_width(bw), bit_width_full(bwf), type(t) , default_value(v), defaulted(d) {}
+        p4_param(std::string n = "", unsigned p = 0, unsigned bw = 0, unsigned bwf = 0, std::string t = "",unsigned v = 0, bool d = false, bool i = false) :
+            name(n), position(p), bit_width(bw), bit_width_full(bwf), type(t) , default_value(v), defaulted(d), is_valid(i) {}
     };
     typedef std::vector<p4_param>  p4_params;
 
@@ -721,6 +722,12 @@ DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,
         return match_tables.size() == 1 ? (*match_tables.begin())->action_call() : action; }
     int memunit(int r, int c) { return r*6 + c; }
     void pass1();
+    unsigned get_meter_alu_index() { 
+        if(layout.size() > 0) return layout[0].row/4U; 
+        error(lineno, "Cannot determine Meter ALU Index for table %s", name()); }
+protected:
+    // Accessed by Meter/Selection/Stateful Tables
+    void add_meter_alu_index(json::map &stage_tbl);
 public:
     std::string get_per_flow_enable_param() { return per_flow_enable_param; }
     bool get_per_flow_enable() { return per_flow_enable; }
@@ -950,6 +957,7 @@ public:
     bool run_at_eop() override { return type == STANDARD; }
     int unitram_type() override { return UnitRam::METER; }
     int home_row() const override { return layout.at(0).row | 3; }
+    void add_cfg_reg(json::vector &cfg_cache, std::string full_name, std::string name, unsigned val, unsigned width); 
 )
 
 DECLARE_TABLE_TYPE(Stateful, Synth2Port, "stateful",

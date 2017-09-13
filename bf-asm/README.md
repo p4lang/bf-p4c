@@ -37,8 +37,8 @@ Assembler executable `tfas` is created in the build directory on running make. T
 chip schema binary in tofino & jbay directories are used to generate backend
 files and compiled in gen/tofino or gen/jbay
 
-json2cpp program is used to compile the backend files which contain register, 
-memory and pipe stages resource information. 
+json2cpp program is used to compile the backend files which contain register,
+memory and pipe stages resource information.
 
 ## **Address Sanitizer checks**
 
@@ -59,7 +59,7 @@ You can disable it by setting environment variable ASAN\_OPTIONS with
 
 ### **Make Targets**
 
-user@box$ make check 
+user@box$ make check
 
 Runs tests/runtests script on all .p4 files in the tests and tests/mau
 directories and .tfa files in tests/asm directory. This script can run one or
@@ -173,7 +173,7 @@ exact\_match0.p4.out
 ```
 ##### **Context Json**
 ```
-│   └── tbl-cfg
+│   └── context.json
 ```
 ##### **Symlink to Glass Assembly File**
 ```
@@ -237,12 +237,12 @@ exact\_match0.p4.out
 
 ## **Backends (Tofino/JBay)**
 Assembler currently supports Tofino backend but code is generic enough to be
-ported to a different backend like JBay. Architecture specific constants must be 
+ported to a different backend like JBay. Architecture specific constants must be
 parameterized and placed in the constants.h file
 
 "tofino" and "jbay" directories hold the chip schema to be used by the
 assembler. The chip schema contains register information and is a binary
-(python pickle file) generated from csv file in bfnregs repository. 
+(python pickle file) generated from csv file in bfnregs repository.
 
 The chip schema for tofino is copied from the glass compiler repository to align
 with comparing glass output jsons.  To ensure glass and assembler are always pointing

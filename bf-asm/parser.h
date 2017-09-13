@@ -180,7 +180,8 @@ public:
     int                                 hdr_len_adj[2], meta_opt;
     Alloc1D<Checksum *, PARSER_CHECKSUM_ROWS>   checksum_use[2];
     Alloc1D<CounterInit *, PARSER_CTRINIT_ROWS> counter_init[2];
-
+    static Parser& get_parser() { return singleton_object; }
+    template<class REGS> void gen_configuration_cache(REGS &, json::vector &cfg_cache);
 private:
     template<class REGS> void *setup_phv_output_map(REGS &, gress_t, int);
     template<class REGS> void mark_unused_output_map(REGS &, void *, unsigned);

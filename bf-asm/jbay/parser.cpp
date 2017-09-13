@@ -157,3 +157,7 @@ template<> void Parser::write_config(Target::JBay::parser_regs &regs) {
             if (csum) csum->write_config(regs, this); }
 }
 
+template<> 
+void Parser::gen_configuration_cache(Target::JBay::parser_regs &regs, json::vector &cfg_cache) {
+}
+
