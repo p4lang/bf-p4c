@@ -809,6 +809,13 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/table-entries-exact-ternary-bmv2.p4
   testdata/p4_16_samples/issue134-bmv2.p4
   extensions/p4_tests/p4_14/test_config_236_stateful_read_bit.p4
+  extensions/p4_tests/p4_14/11-MinimalL2.p4
+  extensions/p4_tests/p4_14/12-MaxEnriesSRAM.p4
+  extensions/p4_tests/p4_14/test_config_38_action_data_field_same_container.p4
+  extensions/p4_tests/p4_14/test_config_95_first_meter_table.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-227/case1642.p4
+  extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
 )
 
 
