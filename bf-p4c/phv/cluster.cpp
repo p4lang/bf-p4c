@@ -681,7 +681,7 @@ void Cluster::compute_fields_no_use_mau() {
         //
         if (!use_pd
             || f->pov
-            || (f->metadata && !f->bridged && !uses_i.is_referenced(f))
+            || (f->metadata && !f->bridged)  // non-bridge metadata should not be in TPHV
             || (f->ccgf() && f->ccgf() != f)) {
             //
             delete_set.insert(f);
