@@ -497,6 +497,17 @@ PhvInfo::Field::phv_use_width(Cluster_PHV *cl) const {
     return phv_use_hi_i - phv_use_lo_i + 1;
 }
 
+int
+PhvInfo::Field::phv_alignment() const {
+    int start = 0;
+    if (alignment && !is_ccgf()
+        && (alignment->littleEndian + phv_use_width() <= PHV_Container::PHV_Word::b32)) {
+        //
+        start = alignment->littleEndian;
+    }
+    return start;
+}
+
 void
 PhvInfo::Field::set_ccgf_phv_use_width(int min_ceil) {
     // compute ccgf width, need PHV container(s) of this width
@@ -1047,6 +1058,7 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field &field) {
         out << ':' << field.phv_use_lo() << ".." << field.phv_use_hi();
     out << '>';
     out << (field.gress ? " E" : " I") << " off=" << field.offset;
+    if (field.alignment) out << " ^" << field.alignment->littleEndian;
     if (field.bridged) out << " bridge";
     if (field.metadata) out << " meta";
     if (field.mirror_field_list.member_field)

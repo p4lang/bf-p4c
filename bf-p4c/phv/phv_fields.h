@@ -368,6 +368,10 @@ class PhvInfo {
         int phv_use_rem() const                                { return phv_use_rem_i; }
         void set_phv_use_rem(int value)                        { phv_use_rem_i = value; }
         //
+        // phv_alignment
+        //
+        int phv_alignment() const;                            // alignment consideration in phv container
+        //
         // field slices
         //
         bool sliced() const;

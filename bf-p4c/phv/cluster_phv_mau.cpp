@@ -719,7 +719,7 @@ PHV_MAU_Group_Assignments::field_overlays() {
 // 2. each CLUSTER FIELD in SEPARATE containers
 //    addresses
 //        surround effects within container
-//        alignment issues (start @ 0)
+//        alignment issues (default start @ 0 unless alignment dictated by parser)
 //        single-write constraint
 //        deparser egress_port constraint (no cohabit)
 //
@@ -888,7 +888,7 @@ PHV_MAU_Group_Assignments::container_no_pack(
                         }
                         int processed_bits =
                             container->taint(
-                                0,
+                                field->phv_alignment(),
                                 taint_bits,
                                 field,
                                 field_bit_lo);

@@ -346,6 +346,13 @@ Cluster_PHV::compute_requirements() {
             scale_down = 0;
             break;
         }
+        if (pfield->phv_alignment()) {
+            if (pfield->phv_alignment() + pfield->phv_use_width() == width_req) {
+                // cannot scale down below minimum requirement
+                scale_down = 0;
+                break;
+            }
+        }
         if (pfield->phv_use_width() * 2 <= container_width(width_req)) {
             scale_down++;
         }
@@ -445,7 +452,7 @@ Cluster_PHV::compute_width_req() {
                 max_width = std::max(max_width, field->phv_use_width());
             }
         } else {
-            max_width = std::max(max_width, field->phv_use_width());
+            max_width = std::max(max_width, field->phv_use_width() + field->phv_alignment());
         }
     }
     return max_width;
