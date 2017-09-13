@@ -353,6 +353,7 @@ p4c_add_xfail_reason("tofino"
   "error: : condition too complex"
   extensions/p4_tests/p4_14/07-MacAddrCheck.p4
   extensions/p4_tests/p4_14/08-MacAddrCheck1.p4
+  testdata/p4_14_samples/issue894.p4
   )
 
 
@@ -808,6 +809,18 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/table-entries-exact-ternary-bmv2.p4
   testdata/p4_16_samples/issue134-bmv2.p4
   extensions/p4_tests/p4_14/test_config_236_stateful_read_bit.p4
+)
+
+
+p4c_add_xfail_reason("tofino"
+  "visitor returned non-Statement type"
+  testdata/p4_16_samples/issue887.p4
+)
+
+# Extracting '_' - i.e., `p.extract<Header>(_)`.
+p4c_add_xfail_reason("tofino"
+  "Extracting something other than a header"
+  testdata/p4_16_samples/issue774-4-bmv2.p4
 )
 
 if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
