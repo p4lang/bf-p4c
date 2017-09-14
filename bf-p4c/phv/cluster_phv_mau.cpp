@@ -886,10 +886,10 @@ PHV_MAU_Group_Assignments::container_no_pack(
                             LOG1(field);
                             assert(container);
                         }
-                        auto start_with_alignment = field->phv_alignment();
+                        const int align_start = field->phv_alignment().get_value_or(0);
                         int processed_bits =
                             container->taint(
-                                start_with_alignment? *start_with_alignment: 0,
+                                align_start,
                                 taint_bits,
                                 field,
                                 field_bit_lo);
@@ -1727,8 +1727,8 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
                                 LOG1(" slice width cl_w = " << cl_w);
                             }
                             if (f->metadata && !f->bridged && cc->container()->deparsed()) {
-                                PhvInfo::Field *deparsed_header = nullptr;
-                                PhvInfo::Field *non_deparsed_field = nullptr;
+                                const PhvInfo::Field *deparsed_header = nullptr;
+                                const PhvInfo::Field *non_deparsed_field = nullptr;
                                 cc->container()->sanity_check_deparsed_container_violation(
                                         deparsed_header, non_deparsed_field);
                                 if (deparsed_header) {
@@ -1738,6 +1738,7 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
                                     LOG1(f);
                                     LOG1(deparsed_header);
                                     LOG1(cc->container());
+                                    BUG("*****metadata being placed w/ deparsed header*****");
                                 }
                             }
                             // last alloc of field slice may be remainder of division by cl_w,

@@ -453,11 +453,7 @@ Cluster_PHV::compute_width_req() {
                 max_width = std::max(max_width, field->phv_use_width());
             }
         } else {
-            int align_start = 0;
-            auto start_with_alignment = field->phv_alignment();
-            if (start_with_alignment) {
-                align_start = *start_with_alignment;
-            }
+            const int align_start = field->phv_alignment().get_value_or(0);
             max_width = std::max(max_width, field->phv_use_width() + align_start);
         }
     }

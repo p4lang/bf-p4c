@@ -955,8 +955,8 @@ void PHV_Container::Container_Content::sanity_check_container(
 }  // Container_Content::sanity_check_container
 
 bool PHV_Container::sanity_check_deparsed_container_violation(
-    PhvInfo::Field *&deparsed_header,
-    PhvInfo::Field *&non_deparsed_field) const {
+    const PhvInfo::Field *&deparsed_header,
+    const PhvInfo::Field *&non_deparsed_field) const {
     // must not have deparsed header with non-deparsed field in container
     deparsed_header = nullptr;
     non_deparsed_field = nullptr;
@@ -982,8 +982,8 @@ void PHV_Container::sanity_check_container(const std::string& msg, bool check_de
     // arises in bridged metadata, where unused bits are padding on the wire
     //
     if (deparsed_i) {
-        PhvInfo::Field *deparsed_header = nullptr;
-        PhvInfo::Field *non_deparsed_field = nullptr;
+        const PhvInfo::Field *deparsed_header = nullptr;
+        const PhvInfo::Field *non_deparsed_field = nullptr;
         if (sanity_check_deparsed_container_violation(deparsed_header, non_deparsed_field)) {
             LOG3("*****cluster_phv_container.cpp:sanity_FAIL*****....."
             << msg_1
@@ -992,6 +992,7 @@ void PHV_Container::sanity_check_container(const std::string& msg, bool check_de
             << std::endl
             << "deparsed_header = " << deparsed_header
             << "non_deparsed_field = " << non_deparsed_field);
+            BUG("cluster_phv_container.cpp:*****non_deparsed_field w/ deparsed header*****");
         }
         if (check_deparsed && avail_bits_i != 0) {
             LOG3("*****cluster_phv_container.cpp:sanity_WARN*****....."
