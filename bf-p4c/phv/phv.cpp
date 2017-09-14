@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "tofino/phv/phv.h"
+#include "bf-p4c/phv/phv.h"
 
 #include <array>
 #include <cstring>

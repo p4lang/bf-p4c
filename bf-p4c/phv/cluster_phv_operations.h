@@ -1,5 +1,5 @@
-#ifndef TOFINO_PHV_CLUSTER_PHV_OPERATIONS_H_
-#define TOFINO_PHV_CLUSTER_PHV_OPERATIONS_H_
+#ifndef BF_P4C_PHV_CLUSTER_PHV_OPERATIONS_H_
+#define BF_P4C_PHV_CLUSTER_PHV_OPERATIONS_H_
 
 #include "phv.h"
 #include "phv_fields.h"
@@ -7,7 +7,7 @@
 #include "lib/map.h"
 #include "lib/ordered_map.h"
 #include "lib/range.h"
-#include "tofino/ir/thread_visitor.h"
+#include "bf-p4c/ir/thread_visitor.h"
 
 /** @brief Annotate each Field in PhvInfo with the instructions it's involved
  * in.
@@ -36,4 +36,4 @@ class PHV_Field_Operations : public Inspector {
 };
 //
 //
-#endif /* TOFINO_PHV_CLUSTER_PHV_OPERATIONS_H_ */
+#endif /* BF_P4C_PHV_CLUSTER_PHV_OPERATIONS_H_ */

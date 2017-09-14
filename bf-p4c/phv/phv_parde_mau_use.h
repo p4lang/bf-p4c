@@ -1,11 +1,11 @@
-#ifndef TOFINO_PHV_PHV_PARDE_MAU_USE_H_
-#define TOFINO_PHV_PHV_PARDE_MAU_USE_H_
+#ifndef BF_P4C_PHV_PHV_PARDE_MAU_USE_H_
+#define BF_P4C_PHV_PHV_PARDE_MAU_USE_H_
 
 #include "phv.h"
 #include "phv_fields.h"
 #include "ir/ir.h"
-#include "tofino/ir/thread_visitor.h"
-#include "tofino/ir/tofino_write_context.h"
+#include "bf-p4c/ir/thread_visitor.h"
+#include "bf-p4c/ir/tofino_write_context.h"
 
 //
 class Phv_Parde_Mau_Use : public Inspector {
@@ -52,4 +52,4 @@ class PhvUse : public Phv_Parde_Mau_Use {
 };
 //
 //
-#endif /* TOFINO_PHV_PHV_PARDE_MAU_USE_H_ */
+#endif /* BF_P4C_PHV_PHV_PARDE_MAU_USE_H_ */

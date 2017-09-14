@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "tofino/common/check_header_alignment.h"
-#include "tofino/common/machine_description.h"
+#include "bf-p4c/common/check_header_alignment.h"
+#include "bf-p4c/common/machine_description.h"
 
 #include "ir/ir.h"
 

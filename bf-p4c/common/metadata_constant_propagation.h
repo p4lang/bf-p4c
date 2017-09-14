@@ -1,9 +1,9 @@
-#ifndef EXTENSIONS_TOFINO_COMMON_METADATA_CONSTANT_PROPAGATION_H_
-#define EXTENSIONS_TOFINO_COMMON_METADATA_CONSTANT_PROPAGATION_H_
+#ifndef EXTENSIONS_BF_P4C_COMMON_METADATA_CONSTANT_PROPAGATION_H_
+#define EXTENSIONS_BF_P4C_COMMON_METADATA_CONSTANT_PROPAGATION_H_
 
 #include "ir/ir.h"
 #include "lib/log.h"
-#include "tofino/common/field_defuse.h"
+#include "bf-p4c/common/field_defuse.h"
 
 /** @brief Replace the first reads of uninitialized metadata fields in actions
  * with zero.
@@ -35,4 +35,4 @@ class MetadataConstantPropagation : public Transform {
     : phv(phv), defuse(defuse) { }
 };
 
-#endif /* EXTENSIONS_TOFINO_COMMON_METADATA_CONSTANT_PROPAGATION_H_ */
+#endif /* EXTENSIONS_BF_P4C_COMMON_METADATA_CONSTANT_PROPAGATION_H_ */

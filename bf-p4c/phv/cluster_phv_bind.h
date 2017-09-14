@@ -1,12 +1,12 @@
-#ifndef TOFINO_PHV_CLUSTER_PHV_BIND_H_
-#define TOFINO_PHV_CLUSTER_PHV_BIND_H_
+#ifndef BF_P4C_PHV_CLUSTER_PHV_BIND_H_
+#define BF_P4C_PHV_CLUSTER_PHV_BIND_H_
 
 #include "phv.h"
 #include "phv_fields.h"
 #include "ir/ir.h"
 #include "lib/map.h"
 #include "lib/range.h"
-#include "tofino/ir/thread_visitor.h"
+#include "bf-p4c/ir/thread_visitor.h"
 #include "cluster_phv_mau.h"
 //
 //
@@ -82,4 +82,4 @@ class PHV_Bind : public Visitor {
 //
 std::ostream &operator<<(std::ostream &, PHV_Bind&);
 //
-#endif /* TOFINO_PHV_CLUSTER_PHV_BIND_H_ */
+#endif /* BF_P4C_PHV_CLUSTER_PHV_BIND_H_ */

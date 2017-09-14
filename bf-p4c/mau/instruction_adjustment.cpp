@@ -1,5 +1,5 @@
 #include "instruction_adjustment.h"
-#include "tofino/common/slice.h"
+#include "bf-p4c/common/slice.h"
 
 /** SplitInstructions */
 

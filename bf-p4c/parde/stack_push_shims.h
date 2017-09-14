@@ -1,8 +1,8 @@
-#ifndef TOFINO_PARDE_STACK_PUSH_SHIMS_H_
-#define TOFINO_PARDE_STACK_PUSH_SHIMS_H_
+#ifndef BF_P4C_PARDE_STACK_PUSH_SHIMS_H_
+#define BF_P4C_PARDE_STACK_PUSH_SHIMS_H_
 
 #include "parde_visitor.h"
-#include "tofino/common/header_stack.h"
+#include "bf-p4c/common/header_stack.h"
 
 /**
  * Adds parser states to initialize the `$stkvalid` fields that are used to
@@ -51,4 +51,4 @@ class StackPushShims : public PardeModifier {
         return false; }
 };
 
-#endif /* TOFINO_PARDE_STACK_PUSH_SHIMS_H_ */
+#endif /* BF_P4C_PARDE_STACK_PUSH_SHIMS_H_ */

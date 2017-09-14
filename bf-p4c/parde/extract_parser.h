@@ -14,12 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef TOFINO_PARDE_EXTRACT_PARSER_H_
-#define TOFINO_PARDE_EXTRACT_PARSER_H_
+#ifndef BF_P4C_PARDE_EXTRACT_PARSER_H_
+#define BF_P4C_PARDE_EXTRACT_PARSER_H_
 
 #include "lib/cstring.h"
 #include "lib/exceptions.h"
-#include "tofino/ir/gress.h"
+#include "bf-p4c/ir/gress.h"
 
 namespace IR {
 
@@ -67,4 +67,4 @@ ParserInfo extractParser(const IR::BFN::Pipe* pipe,
 
 }  // namespace BFN
 
-#endif /* TOFINO_PARDE_EXTRACT_PARSER_H_ */
+#endif /* BF_P4C_PARDE_EXTRACT_PARSER_H_ */

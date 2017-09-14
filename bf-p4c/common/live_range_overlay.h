@@ -4,8 +4,8 @@
 #include "ir/ir.h"
 #include "lib/log.h"
 #include "lib/symbitmatrix.h"
-#include "tofino/common/field_defuse.h"
-#include "tofino/mau/table_dependency_graph.h"
+#include "bf-p4c/common/field_defuse.h"
+#include "bf-p4c/mau/table_dependency_graph.h"
 
 /** @brief Find fields that have mutually exclusive live ranges.
  *

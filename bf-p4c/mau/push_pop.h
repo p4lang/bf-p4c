@@ -1,9 +1,9 @@
-#ifndef TOFINO_MAU_PUSH_POP_H_
-#define TOFINO_MAU_PUSH_POP_H_
+#ifndef BF_P4C_MAU_PUSH_POP_H_
+#define BF_P4C_MAU_PUSH_POP_H_
 
-#include "tofino/common/header_stack.h"
+#include "bf-p4c/common/header_stack.h"
 #include "mau_visitor.h"
-#include "tofino/common/slice.h"
+#include "bf-p4c/common/slice.h"
 
 /**
  * Lowers `push_front` and `pop_front` primitives to a sequence of
@@ -148,4 +148,4 @@ class HeaderPushPop : public MauTransform {
         return prim; }
 };
 
-#endif /* TOFINO_MAU_PUSH_POP_H_ */
+#endif /* BF_P4C_MAU_PUSH_POP_H_ */

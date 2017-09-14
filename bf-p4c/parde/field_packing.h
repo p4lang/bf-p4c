@@ -14,13 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef TOFINO_PARDE_FIELD_PACKING_H_
-#define TOFINO_PARDE_FIELD_PACKING_H_
+#ifndef BF_P4C_PARDE_FIELD_PACKING_H_
+#define BF_P4C_PARDE_FIELD_PACKING_H_
 
 #include <vector>
 
 #include "lib/cstring.h"
-#include "tofino/ir/gress.h"
+#include "bf-p4c/ir/gress.h"
 
 namespace IR {
 namespace BFN {
@@ -131,4 +131,4 @@ struct FieldPacking {
 
 std::ostream& operator<<(std::ostream& out, const BFN::FieldPacking* packing);
 
-#endif /* TOFINO_PARDE_FIELD_PACKING_H_ */
+#endif /* BF_P4C_PARDE_FIELD_PACKING_H_ */

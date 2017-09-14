@@ -1,7 +1,7 @@
 #include "lib/ordered_set.h"
 #include "live_range_overlay.h"
 #include "ir/ir.h"
-#include "tofino/ir/gress.h"
+#include "bf-p4c/ir/gress.h"
 
 // happens_before(x, y) means x MUST happen before Y.  Hence,
 // !happens_before(y, x) implies that x MAY happen before Y.

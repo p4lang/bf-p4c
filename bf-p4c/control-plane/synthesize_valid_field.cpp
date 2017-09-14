@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "tofino/control-plane/synthesize_valid_field.h"
+#include "bf-p4c/control-plane/synthesize_valid_field.h"
 
 #include <boost/range/combine.hpp>
 #include <boost/range/irange.hpp>

@@ -1,7 +1,7 @@
 #emit
 #include <utility>
 #include <boost/optional.hpp>
-#include "tofino/ir/bitrange.h"
+#include "bf-p4c/ir/bitrange.h"
 #end
 
 namespace BFN {

@@ -4,8 +4,8 @@
 #include "lib/bitvec.h"
 #include "lib/exceptions.h"
 #include "lib/range.h"
-#include "tofino/phv/phv.h"
-#include "tofino/ir/gress.h"
+#include "bf-p4c/phv/phv.h"
+#include "bf-p4c/ir/gress.h"
 
 namespace PHV {
 namespace {

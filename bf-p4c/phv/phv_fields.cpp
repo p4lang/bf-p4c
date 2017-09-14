@@ -1,7 +1,7 @@
 #include "phv_fields.h"
 #include "phv_analysis_api.h"
 #include "phv_assignment_api.h"
-#include "tofino/common/header_stack.h"
+#include "bf-p4c/common/header_stack.h"
 #include "ir/ir.h"
 #include "lib/log.h"
 #include "lib/stringref.h"

@@ -20,7 +20,7 @@ limitations under the License.
 #include <boost/optional.hpp>
 #include <string>
 
-#include "tofino/tofinoOptions.h"
+#include "bf-p4c/tofinoOptions.h"
 
 namespace IR {
 namespace BFN {

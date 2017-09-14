@@ -1,5 +1,5 @@
-#ifndef TOFINO_PHV_CLUSTER_H_
-#define TOFINO_PHV_CLUSTER_H_
+#ifndef BF_P4C_PHV_CLUSTER_H_
+#define BF_P4C_PHV_CLUSTER_H_
 
 #include "phv.h"
 #include "phv_fields.h"
@@ -9,8 +9,8 @@
 #include "lib/ordered_map.h"
 #include "lib/ordered_set.h"
 #include "lib/range.h"
-#include "tofino/ir/thread_visitor.h"
-#include "tofino/ir/tofino_write_context.h"
+#include "bf-p4c/ir/thread_visitor.h"
+#include "bf-p4c/ir/tofino_write_context.h"
 
 /** @brief Builds "clusters" of PHV fields that must be placed in the same
  * group.
@@ -119,4 +119,4 @@ std::ostream &operator<<(
     ordered_map<PhvInfo::Field *, ordered_set<PhvInfo::Field *>*>&);
 std::ostream &operator<<(std::ostream &, Cluster &);
 //
-#endif /* TOFINO_PHV_CLUSTER_H_ */
+#endif /* BF_P4C_PHV_CLUSTER_H_ */

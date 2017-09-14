@@ -14,13 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "tofino/common/simplify_references.h"
+#include "bf-p4c/common/simplify_references.h"
 
 #include "frontends/common/resolveReferences/referenceMap.h"
 #include "frontends/p4/evaluator/evaluator.h"
 #include "frontends/p4/typeMap.h"
-#include "tofino/common/param_binding.h"
-#include "tofino/common/rewrite.h"
+#include "bf-p4c/common/param_binding.h"
+#include "bf-p4c/common/rewrite.h"
 
 namespace {
 

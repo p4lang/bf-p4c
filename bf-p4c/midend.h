@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef TOFINO_MIDEND_H_
-#define TOFINO_MIDEND_H_
+#ifndef BF_P4C_MIDEND_H_
+#define BF_P4C_MIDEND_H_
 
 #include "ir/ir.h"
 #include "frontends/common/options.h"
@@ -40,4 +40,4 @@ class MidEnd : public PassManager {
 
 }  // namespace BFN
 
-#endif /* TOFINO_MIDEND_H_ */
+#endif /* BF_P4C_MIDEND_H_ */

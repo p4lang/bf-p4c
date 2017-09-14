@@ -1,5 +1,5 @@
-#ifndef TOFINO_IR_THREAD_VISITOR_H_
-#define TOFINO_IR_THREAD_VISITOR_H_
+#ifndef BF_P4C_IR_THREAD_VISITOR_H_
+#define BF_P4C_IR_THREAD_VISITOR_H_
 
 #include "ir/ir.h"
 
@@ -13,4 +13,4 @@ class ThreadVisitor : public virtual Visitor {
 
 extern gress_t VisitingThread(Visitor *v);
 
-#endif /* TOFINO_IR_THREAD_VISITOR_H_ */
+#endif /* BF_P4C_IR_THREAD_VISITOR_H_ */

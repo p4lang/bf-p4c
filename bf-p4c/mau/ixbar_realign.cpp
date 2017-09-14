@@ -1,5 +1,5 @@
 #include "ixbar_realign.h"
-#include "tofino/phv/phv_fields.h"
+#include "bf-p4c/phv/phv_fields.h"
 #include "lib/hex.h"
 
 class IXBarRealign::GetCurrentUse : public MauInspector {

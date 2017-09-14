@@ -1,5 +1,5 @@
-#ifndef TOFINO_PHV_CLUSTER_PHV_CONTAINER_H_
-#define TOFINO_PHV_CLUSTER_PHV_CONTAINER_H_
+#ifndef BF_P4C_PHV_CLUSTER_PHV_CONTAINER_H_
+#define BF_P4C_PHV_CLUSTER_PHV_CONTAINER_H_
 
 #include "phv.h"
 #include "phv_fields.h"
@@ -7,7 +7,7 @@
 #include "lib/map.h"
 #include "lib/ordered_map.h"
 #include "lib/range.h"
-#include "tofino/ir/thread_visitor.h"
+#include "bf-p4c/ir/thread_visitor.h"
 //
 //
 //***********************************************************************************
@@ -289,4 +289,4 @@ std::ostream &operator<<(
     std::ostream &,
     ordered_map<PhvInfo::Field *, std::list<PHV_Container::Container_Content *>>&);
 //
-#endif /* TOFINO_PHV_CLUSTER_PHV_CONTAINER_H_ */
+#endif /* BF_P4C_PHV_CLUSTER_PHV_CONTAINER_H_ */

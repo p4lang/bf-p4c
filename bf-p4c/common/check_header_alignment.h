@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef TOFINO_COMMON_CHECK_HEADER_ALIGNMENT_H_
-#define TOFINO_COMMON_CHECK_HEADER_ALIGNMENT_H_
+#ifndef BF_P4C_COMMON_CHECK_HEADER_ALIGNMENT_H_
+#define BF_P4C_COMMON_CHECK_HEADER_ALIGNMENT_H_
 
 #include "ir/ir.h"
 
@@ -38,4 +38,4 @@ class CheckHeaderAlignment final : public Inspector {
 
 }  // namespace BFN
 
-#endif  /* TOFINO_COMMON_CHECK_HEADER_ALIGNMENT_H_ */
+#endif  /* BF_P4C_COMMON_CHECK_HEADER_ALIGNMENT_H_ */

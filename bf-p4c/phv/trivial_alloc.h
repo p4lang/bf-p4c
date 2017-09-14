@@ -1,5 +1,5 @@
-#ifndef TOFINO_PHV_TRIVIAL_ALLOC_H_
-#define TOFINO_PHV_TRIVIAL_ALLOC_H_
+#ifndef BF_P4C_PHV_TRIVIAL_ALLOC_H_
+#define BF_P4C_PHV_TRIVIAL_ALLOC_H_
 
 #include <map>
 #include <vector>
@@ -115,4 +115,4 @@ class ManualAlloc final : public Inspector {
 }  // namespace PHV
 
 
-#endif /* TOFINO_PHV_TRIVIAL_ALLOC_H_ */
+#endif /* BF_P4C_PHV_TRIVIAL_ALLOC_H_ */

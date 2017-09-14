@@ -1,5 +1,5 @@
-#ifndef TOFINO_MAU_IXBAR_REALIGN_H_
-#define TOFINO_MAU_IXBAR_REALIGN_H_
+#ifndef BF_P4C_MAU_IXBAR_REALIGN_H_
+#define BF_P4C_MAU_IXBAR_REALIGN_H_
 
 #include "resource.h"
 #include "mau_visitor.h"
@@ -24,4 +24,4 @@ class IXBarRealign : public MauModifier {
     explicit IXBarRealign(const PhvInfo &phv) : phv(phv) {}
 };
 
-#endif /* TOFINO_MAU_IXBAR_REALIGN_H_ */
+#endif /* BF_P4C_MAU_IXBAR_REALIGN_H_ */

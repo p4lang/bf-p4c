@@ -1,10 +1,10 @@
-#ifndef TOFINO_MAU_TABLE_DEPENDENCY_GRAPH_H_
-#define TOFINO_MAU_TABLE_DEPENDENCY_GRAPH_H_
+#ifndef BF_P4C_MAU_TABLE_DEPENDENCY_GRAPH_H_
+#define BF_P4C_MAU_TABLE_DEPENDENCY_GRAPH_H_
 
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/transitive_closure.hpp>
 #include "mau_visitor.h"
-#include "tofino/phv/phv_fields.h"
+#include "bf-p4c/phv/phv_fields.h"
 
 /* The DependencyGraph data structure is a directed graph in which tables are
  * vertices and edges are dependencies.  An edge from t1 to t2 means that t2
@@ -172,4 +172,4 @@ class FindDependencyGraph : public MauInspector, ControlFlowVisitor {
     : phv(phv), dg(out) { joinFlows = true; }
 };
 
-#endif /* TOFINO_MAU_TABLE_DEPENDENCY_GRAPH_H_ */
+#endif /* BF_P4C_MAU_TABLE_DEPENDENCY_GRAPH_H_ */

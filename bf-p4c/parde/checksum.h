@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef TOFINO_PARDE_CHECKSUM_H_
-#define TOFINO_PARDE_CHECKSUM_H_
+#ifndef BF_P4C_PARDE_CHECKSUM_H_
+#define BF_P4C_PARDE_CHECKSUM_H_
 
 namespace IR {
 namespace BFN {
@@ -76,4 +76,4 @@ extractComputeChecksum(const IR::P4Control* computeChecksumControl,
                        IR::BFN::Pipe* pipe);
 
 }  // namespace BFN
-#endif /* TOFINO_PARDE_CHECKSUM_H_ */
+#endif /* BF_P4C_PARDE_CHECKSUM_H_ */

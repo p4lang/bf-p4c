@@ -17,7 +17,7 @@ limitations under the License.
 #include "gtest/gtest.h"
 
 #include "ir/ir.h"
-#include "tofino/parde/field_packing.h"
+#include "bf-p4c/parde/field_packing.h"
 
 namespace BFN {
 

@@ -1,11 +1,11 @@
-#ifndef TOFINO_MAU_INPUT_XBAR_H_
-#define TOFINO_MAU_INPUT_XBAR_H_
+#ifndef BF_P4C_MAU_INPUT_XBAR_H_
+#define BF_P4C_MAU_INPUT_XBAR_H_
 
 #include <unordered_set>
 #include "lib/alloc.h"
 #include "lib/hex.h"
 #include "ir/ir.h"
-#include "tofino/mau/table_layout.h"
+#include "bf-p4c/mau/table_layout.h"
 
 class IXBarRealign;
 struct TableResourceAlloc;
@@ -349,4 +349,4 @@ inline std::ostream &operator<<(std::ostream &out, const IXBar::Use::Byte &b) {
     if (b.flags) out << " flags=" << hex(b.flags);
     return out; }
 
-#endif /* TOFINO_MAU_INPUT_XBAR_H_ */
+#endif /* BF_P4C_MAU_INPUT_XBAR_H_ */

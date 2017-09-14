@@ -1,5 +1,5 @@
-#ifndef EXTENSIONS_TOFINO_ARCH_PROGRAM_STRUCTURE_H_
-#define EXTENSIONS_TOFINO_ARCH_PROGRAM_STRUCTURE_H_
+#ifndef EXTENSIONS_BF_P4C_ARCH_PROGRAM_STRUCTURE_H_
+#define EXTENSIONS_BF_P4C_ARCH_PROGRAM_STRUCTURE_H_
 
 #include "ir/ir.h"
 #include "frontends/common/resolveReferences/resolveReferences.h"
@@ -55,4 +55,4 @@ class ProgramStructure {
 
 }  // namespace BFN
 
-#endif  /* EXTENSIONS_TOFINO_ARCH_PROGRAM_STRUCTURE_H_ */
+#endif  /* EXTENSIONS_BF_P4C_ARCH_PROGRAM_STRUCTURE_H_ */

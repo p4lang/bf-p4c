@@ -15,8 +15,8 @@
 #include "lib/log.h"
 #include "lib/set.h"
 #include "field_use.h"
-#include "tofino/ir/table_tree.h"
-#include "tofino/phv/phv_fields.h"
+#include "bf-p4c/ir/table_tree.h"
+#include "bf-p4c/phv/phv_fields.h"
 
 TablePlacement::TablePlacement(const DependencyGraph* d, const TablesMutuallyExclusive &m,
                                const PhvInfo &p, const LayoutChoices &l)

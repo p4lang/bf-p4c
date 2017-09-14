@@ -1,5 +1,5 @@
-#ifndef TOFINO_MAU_EMPTY_CONTROLS_H_
-#define TOFINO_MAU_EMPTY_CONTROLS_H_
+#ifndef BF_P4C_MAU_EMPTY_CONTROLS_H_
+#define BF_P4C_MAU_EMPTY_CONTROLS_H_
 
 #include "mau_visitor.h"
 
@@ -19,4 +19,4 @@ class RemoveEmptyControls : public MauTransform {
         return tbl; }
 };
 
-#endif /* TOFINO_MAU_EMPTY_CONTROLS_H_ */
+#endif /* BF_P4C_MAU_EMPTY_CONTROLS_H_ */

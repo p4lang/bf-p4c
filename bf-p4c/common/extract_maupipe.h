@@ -1,5 +1,5 @@
-#ifndef TOFINO_COMMON_EXTRACT_MAUPIPE_H_
-#define TOFINO_COMMON_EXTRACT_MAUPIPE_H_
+#ifndef BF_P4C_COMMON_EXTRACT_MAUPIPE_H_
+#define BF_P4C_COMMON_EXTRACT_MAUPIPE_H_
 
 #include "ir/ir.h"
 #include "frontends/common/resolveReferences/referenceMap.h"
@@ -13,4 +13,4 @@ const IR::BFN::Pipe *extract_v1model_arch(P4::ReferenceMap* refMap, P4::TypeMap*
 const IR::BFN::Pipe *extract_native_arch(P4::ReferenceMap* refMap, P4::TypeMap* type,
                                             const IR::PackageBlock* top);
 
-#endif /* TOFINO_COMMON_EXTRACT_MAUPIPE_H_ */
+#endif /* BF_P4C_COMMON_EXTRACT_MAUPIPE_H_ */

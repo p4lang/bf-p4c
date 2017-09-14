@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef EXTENSIONS_TOFINO_CONTROL_PLANE_TOFINO_P4RUNTIME_H_
-#define EXTENSIONS_TOFINO_CONTROL_PLANE_TOFINO_P4RUNTIME_H_
+#ifndef EXTENSIONS_BF_P4C_CONTROL_PLANE_TOFINO_P4RUNTIME_H_
+#define EXTENSIONS_BF_P4C_CONTROL_PLANE_TOFINO_P4RUNTIME_H_
 
 namespace IR {
 class P4Program;
@@ -32,4 +32,4 @@ void serializeP4Runtime(const IR::P4Program* program,
 
 }  // namespace BFN
 
-#endif /* EXTENSIONS_TOFINO_CONTROL_PLANE_TOFINO_P4RUNTIME_H_ */
+#endif /* EXTENSIONS_BF_P4C_CONTROL_PLANE_TOFINO_P4RUNTIME_H_ */

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "tofino/parde/field_packing.h"
+#include "bf-p4c/parde/field_packing.h"
 
 #include "ir/ir.h"
 #include "lib/cstring.h"

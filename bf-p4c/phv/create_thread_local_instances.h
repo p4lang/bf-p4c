@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef TOFINO_PHV_CREATE_THREAD_LOCAL_INSTANCES_H_
-#define TOFINO_PHV_CREATE_THREAD_LOCAL_INSTANCES_H_
+#ifndef BF_P4C_PHV_CREATE_THREAD_LOCAL_INSTANCES_H_
+#define BF_P4C_PHV_CREATE_THREAD_LOCAL_INSTANCES_H_
 
 #include "ir/ir.h"
 
@@ -30,4 +30,4 @@ struct CreateThreadLocalInstances : public PassManager {
     CreateThreadLocalInstances();
 };
 
-#endif /* TOFINO_PHV_CREATE_THREAD_LOCAL_INSTANCES_H_ */
+#endif /* BF_P4C_PHV_CREATE_THREAD_LOCAL_INSTANCES_H_ */

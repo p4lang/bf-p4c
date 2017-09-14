@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "tofino/test/gtest/tofino_gtest_utils.h"
+#include "bf-p4c/test/gtest/tofino_gtest_utils.h"
 
 #include "gtest/gtest.h"
 
@@ -23,10 +23,10 @@ limitations under the License.
 #include "lib/error.h"
 #include "ir/ir.h"
 #include "test/gtest/helpers.h"
-#include "tofino/common/extract_maupipe.h"
-#include "tofino/common/header_stack.h"
-#include "tofino/midend.h"
-#include "tofino/phv/create_thread_local_instances.h"
+#include "bf-p4c/common/extract_maupipe.h"
+#include "bf-p4c/common/header_stack.h"
+#include "bf-p4c/midend.h"
+#include "bf-p4c/phv/create_thread_local_instances.h"
 
 namespace Test {
 

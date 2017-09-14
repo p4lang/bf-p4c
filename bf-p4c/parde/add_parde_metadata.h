@@ -1,5 +1,5 @@
-#ifndef TOFINO_PARDE_ADD_PARDE_METADATA_H_
-#define TOFINO_PARDE_ADD_PARDE_METADATA_H_
+#ifndef BF_P4C_PARDE_ADD_PARDE_METADATA_H_
+#define BF_P4C_PARDE_ADD_PARDE_METADATA_H_
 
 #include "parde_visitor.h"
 
@@ -22,4 +22,4 @@ class AddMetadataShims : public PardeModifier {
     const IR::BFN::Pipe* pipe;
 };
 
-#endif /* TOFINO_PARDE_ADD_PARDE_METADATA_H_ */
+#endif /* BF_P4C_PARDE_ADD_PARDE_METADATA_H_ */

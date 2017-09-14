@@ -1,5 +1,5 @@
-#ifndef TOFINO_PHV_PHV_FIELDS_H_
-#define TOFINO_PHV_PHV_FIELDS_H_
+#ifndef BF_P4C_PHV_PHV_FIELDS_H_
+#define BF_P4C_PHV_PHV_FIELDS_H_
 
 #include <boost/optional.hpp>
 #include <boost/range/irange.hpp>
@@ -10,10 +10,10 @@
 #include "lib/ordered_map.h"
 #include "lib/ordered_set.h"
 #include "lib/range.h"
-#include "tofino/ir/thread_visitor.h"
-#include "tofino/ir/bitrange.h"
-#include "tofino/ir/tofino_write_context.h"
-#include "tofino/phv/field_alignment.h"
+#include "bf-p4c/ir/thread_visitor.h"
+#include "bf-p4c/ir/bitrange.h"
+#include "bf-p4c/ir/tofino_write_context.h"
+#include "bf-p4c/phv/field_alignment.h"
 
 namespace PHV {
 class ManualAlloc;
@@ -574,4 +574,4 @@ std::ostream &operator<<(std::ostream &, const std::list<PhvInfo::Field *>&);
 std::ostream &operator<<(std::ostream &, const PhvInfo &);
 std::ostream &operator<<(std::ostream &, const PhvInfo::Field::Field_Ops &);
 //
-#endif /* TOFINO_PHV_PHV_FIELDS_H_ */
+#endif /* BF_P4C_PHV_PHV_FIELDS_H_ */

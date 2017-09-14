@@ -14,13 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "tofino/parde/resolve_computed.h"
+#include "bf-p4c/parde/resolve_computed.h"
 
 #include <boost/optional.hpp>
 
 #include "frontends/p4/callGraph.h"
-#include "tofino/common/machine_description.h"
-#include "tofino/parde/parde_visitor.h"
+#include "bf-p4c/common/machine_description.h"
+#include "bf-p4c/parde/parde_visitor.h"
 
 namespace {
 

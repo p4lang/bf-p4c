@@ -1,11 +1,11 @@
-#ifndef TOFINO_MAU_INSTRUCTION_ADJUSTMENT_H_
-#define TOFINO_MAU_INSTRUCTION_ADJUSTMENT_H_
+#ifndef BF_P4C_MAU_INSTRUCTION_ADJUSTMENT_H_
+#define BF_P4C_MAU_INSTRUCTION_ADJUSTMENT_H_
 
 #include "mau_visitor.h"
 #include "resource.h"
 #include "action_analysis.h"
-#include "tofino/phv/phv.h"
-#include "tofino/ir/tofino_write_context.h"
+#include "bf-p4c/phv/phv.h"
+#include "bf-p4c/ir/tofino_write_context.h"
 
 /** The purpose of these classes is to adjust the instructions in a single action that perform on
  *  multiple containers into one single action for the entire container.  The pass also
@@ -152,4 +152,4 @@ class TotalInstructionAdjustment : public MauTransform, TofinoWriteContext {
     explicit TotalInstructionAdjustment(const PhvInfo &p) : phv(p) {}
 };
 
-#endif /* TOFINO_MAU_INSTRUCTION_ADJUSTMENT_H_ */
+#endif /* BF_P4C_MAU_INSTRUCTION_ADJUSTMENT_H_ */

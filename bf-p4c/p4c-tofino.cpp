@@ -22,7 +22,7 @@
 #include "midend/actionsInlining.h"
 #include "tofinoOptions.h"
 #include "version.h"
-#include "tofino/control-plane/tofino_p4runtime.h"
+#include "bf-p4c/control-plane/tofino_p4runtime.h"
 #include "arch/simple_switch.h"
 
 static void log_dump(const IR::Node *node, const char *head) {

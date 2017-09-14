@@ -1,7 +1,7 @@
 #include "gateway.h"
 #include <deque>
 #include "split_gateways.h"
-#include "tofino/common/slice.h"
+#include "bf-p4c/common/slice.h"
 
 class CanonGatewayExpr::NeedNegate : public Inspector {
     bool        rv = false;

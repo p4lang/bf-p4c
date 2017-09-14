@@ -2,8 +2,8 @@
 #define LIVE_AT_ENTRY_H_
 
 #include "ir/ir.h"
-#include "tofino/phv/phv_fields.h"
-#include "tofino/ir/tofino_write_context.h"
+#include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/ir/tofino_write_context.h"
 #include "lib/bitvec.h"
 
 class LiveAtEntry : public ControlFlowVisitor, public Inspector, TofinoWriteContext {

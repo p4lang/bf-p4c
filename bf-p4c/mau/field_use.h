@@ -1,10 +1,10 @@
-#ifndef TOFINO_MAU_FIELD_USE_H_
-#define TOFINO_MAU_FIELD_USE_H_
+#ifndef BF_P4C_MAU_FIELD_USE_H_
+#define BF_P4C_MAU_FIELD_USE_H_
 
 #include <iostream>
 #include "mau_visitor.h"
 #include "lib/bitvec.h"
-#include "tofino/ir/tofino_write_context.h"
+#include "bf-p4c/ir/tofino_write_context.h"
 
 class FieldUse : public MauInspector, TofinoWriteContext {
     vector<cstring>             field_names;
@@ -33,4 +33,4 @@ class FieldUse : public MauInspector, TofinoWriteContext {
 };
 
 
-#endif /* TOFINO_MAU_FIELD_USE_H_ */
+#endif /* BF_P4C_MAU_FIELD_USE_H_ */

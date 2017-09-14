@@ -1,4 +1,4 @@
-#include "tofino_model.h"
+#include "bf-p4c_model.h"
 
 namespace P4 {
 

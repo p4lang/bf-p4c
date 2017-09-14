@@ -1,8 +1,8 @@
-#ifndef TOFINO_PARDE_SPLIT_BIG_STATES_H_
-#define TOFINO_PARDE_SPLIT_BIG_STATES_H_
+#ifndef BF_P4C_PARDE_SPLIT_BIG_STATES_H_
+#define BF_P4C_PARDE_SPLIT_BIG_STATES_H_
 
 #include "parde_visitor.h"
-#include "tofino/phv/phv_fields.h"
+#include "bf-p4c/phv/phv_fields.h"
 
 class UniqueStateNamer : public PardeInspector {
     std::set<cstring>   names;
@@ -36,4 +36,4 @@ class SplitBigStates : public PardeModifier {
     explicit SplitBigStates(const PhvInfo &phv) : phv(phv) {}
 };
 
-#endif /* TOFINO_PARDE_SPLIT_BIG_STATES_H_ */
+#endif /* BF_P4C_PARDE_SPLIT_BIG_STATES_H_ */

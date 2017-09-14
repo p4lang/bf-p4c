@@ -1,5 +1,5 @@
-#ifndef TOFINO_PHV_CLUSTER_PHV_MAU_H_
-#define TOFINO_PHV_CLUSTER_PHV_MAU_H_
+#ifndef BF_P4C_PHV_CLUSTER_PHV_MAU_H_
+#define BF_P4C_PHV_CLUSTER_PHV_MAU_H_
 
 #include "phv.h"
 #include "phv_fields.h"
@@ -7,7 +7,7 @@
 #include "lib/map.h"
 #include "lib/ordered_map.h"
 #include "lib/range.h"
-#include "tofino/ir/thread_visitor.h"
+#include "bf-p4c/ir/thread_visitor.h"
 #include "cluster_phv_req.h"
 
 /** @brief PHV_MAU_Group_Assignments computes MAU Group Assignments to clusters.
@@ -467,4 +467,4 @@ std::ostream &operator<<(
     ordered_map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>>&);
 std::ostream &operator<<(std::ostream &, PHV_MAU_Group_Assignments&);
 //
-#endif /* TOFINO_PHV_CLUSTER_PHV_MAU_H_ */
+#endif /* BF_P4C_PHV_CLUSTER_PHV_MAU_H_ */

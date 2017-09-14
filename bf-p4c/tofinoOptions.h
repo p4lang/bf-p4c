@@ -1,5 +1,5 @@
-#ifndef TOFINO_TOFINOOPTIONS_H_
-#define TOFINO_TOFINOOPTIONS_H_
+#ifndef BF_P4C_TOFINOOPTIONS_H_
+#define BF_P4C_TOFINOOPTIONS_H_
 
 #include <getopt.h>
 #include "frontends/common/options.h"
@@ -40,4 +40,4 @@ class Tofino_Options : public CompilerOptions {
     }
 };
 
-#endif /* TOFINO_TOFINOOPTIONS_H_ */
+#endif /* BF_P4C_TOFINOOPTIONS_H_ */

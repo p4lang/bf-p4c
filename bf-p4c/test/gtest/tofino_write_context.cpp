@@ -17,7 +17,7 @@ limitations under the License.
 #include "gtest/gtest.h"
 
 #include "ir/ir.h"
-#include "tofino/ir/tofino_write_context.h"
+#include "bf-p4c/ir/tofino_write_context.h"
 #include "test/gtest/helpers.h"
 
 namespace Test {

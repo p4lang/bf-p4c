@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef _EXTENSIONS_TOFINO_IR_BITRANGE_H_
-#define _EXTENSIONS_TOFINO_IR_BITRANGE_H_
+#ifndef EXTENSIONS_BF_P4C_IR_BITRANGE_H_
+#define EXTENSIONS_BF_P4C_IR_BITRANGE_H_
 
 #include <boost/optional.hpp>
 
@@ -233,4 +233,4 @@ std::ostream& operator<<(std::ostream&, const bit_range<Endian::Little>&);
 std::ostream& operator<<(std::ostream&, const bit_interval<Endian::Network>&);
 std::ostream& operator<<(std::ostream&, const bit_interval<Endian::Little>&);
 
-#endif /* _EXTENSIONS_TOFINO_IR_BITRANGE_H_ */
+#endif /* EXTENSIONS_BF_P4C_IR_BITRANGE_H_ */

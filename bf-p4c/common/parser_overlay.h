@@ -6,9 +6,9 @@
 #include "lib/cstring.h"
 #include "lib/bitvec.h"
 #include "lib/symbitmatrix.h"
-#include "tofino/phv/phv_fields.h"
-#include "tofino/parde/parde_visitor.h"
-#include "tofino/ir/tofino_write_context.h"
+#include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/parde/parde_visitor.h"
+#include "bf-p4c/ir/tofino_write_context.h"
 
 /* Produces a SymBitMatrix where keys are PhvInfo::Field ids and values
  * indicate whether two fields are mutually exclusive.

@@ -2,7 +2,7 @@
 #include "lib/bitops.h"
 #include "lib/log.h"
 #include "input_xbar.h"
-#include "tofino/phv/phv_fields.h"
+#include "bf-p4c/phv/phv_fields.h"
 
 Visitor::profile_t TableLayout::init_apply(const IR::Node *root) {
     alloc_done = phv.alloc_done();

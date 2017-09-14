@@ -1,9 +1,9 @@
-#ifndef TOFINO_PARDE_BRIDGE_METADATA_H_
-#define TOFINO_PARDE_BRIDGE_METADATA_H_
+#ifndef BF_P4C_PARDE_BRIDGE_METADATA_H_
+#define BF_P4C_PARDE_BRIDGE_METADATA_H_
 
 #include "ir/ir.h"
-#include "tofino/common/field_defuse.h"
-#include "tofino/parde/field_packing.h"
+#include "bf-p4c/common/field_defuse.h"
+#include "bf-p4c/parde/field_packing.h"
 
 class AddBridgedMetadata : public PassManager {
     PhvInfo       &phv;
@@ -16,4 +16,4 @@ class AddBridgedMetadata : public PassManager {
     AddBridgedMetadata(PhvInfo &phv, const FieldDefUse &defuse);
 };
 
-#endif /* TOFINO_PARDE_BRIDGE_METADATA_H_ */
+#endif /* BF_P4C_PARDE_BRIDGE_METADATA_H_ */

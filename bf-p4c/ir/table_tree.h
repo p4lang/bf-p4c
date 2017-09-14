@@ -1,5 +1,5 @@
-#ifndef TOFINO_IR_TABLE_TREE_H_
-#define TOFINO_IR_TABLE_TREE_H_
+#ifndef BF_P4C_IR_TABLE_TREE_H_
+#define BF_P4C_IR_TABLE_TREE_H_
 
 #include "ir/ir.h"
 #include "lib/indent.h"
@@ -51,4 +51,4 @@ class TableTree {
         return out; }
 };
 
-#endif /* TOFINO_IR_TABLE_TREE_H_ */
+#endif /* BF_P4C_IR_TABLE_TREE_H_ */

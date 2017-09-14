@@ -36,7 +36,7 @@ fi
 mkdir -p p4c/extensions
 
 pushd p4c/extensions
-if [ ! -e tofino ]; then ln -sf ../../bf-p4c tofino; fi
+if [ ! -e bf-p4c ]; then ln -sf ../../bf-p4c bf-p4c; fi
 if [ ! -e p4_tests ]; then ln -sf ../../p4-tests p4_tests; fi
 popd # p4c/extensions
 

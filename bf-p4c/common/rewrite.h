@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef TOFINO_COMMON_REWRITE_H_
-#define TOFINO_COMMON_REWRITE_H_
+#ifndef BF_P4C_COMMON_REWRITE_H_
+#define BF_P4C_COMMON_REWRITE_H_
 
 #include "ir/ir.h"
 
@@ -41,4 +41,4 @@ struct RewriteForTofino : public Transform {
     P4::TypeMap* typeMap;
 };
 
-#endif /* TOFINO_COMMON_REWRITE_H_ */
+#endif /* BF_P4C_COMMON_REWRITE_H_ */

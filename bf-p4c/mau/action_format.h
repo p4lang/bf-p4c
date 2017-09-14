@@ -1,5 +1,5 @@
-#ifndef EXTENSIONS_TOFINO_MAU_ACTION_FORMAT_H_
-#define EXTENSIONS_TOFINO_MAU_ACTION_FORMAT_H_
+#ifndef EXTENSIONS_BF_P4C_MAU_ACTION_FORMAT_H_
+#define EXTENSIONS_BF_P4C_MAU_ACTION_FORMAT_H_
 
 #include "action_analysis.h"
 #include "ir/ir.h"
@@ -8,7 +8,7 @@
 #include "lib/cstring.h"
 #include "lib/ordered_map.h"
 #include "mau_visitor.h"
-#include "tofino/phv/phv_fields.h"
+#include "bf-p4c/phv/phv_fields.h"
 
 /** Different Constraints
  *  # Not handled yet
@@ -277,4 +277,4 @@ struct ActionFormat {
     void allocate_format(Use *use);
 };
 
-#endif /* EXTENSIONS_TOFINO_MAU_ACTION_FORMAT_H_ */
+#endif /* EXTENSIONS_BF_P4C_MAU_ACTION_FORMAT_H_ */

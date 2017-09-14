@@ -1,10 +1,10 @@
-#ifndef TOFINO_PARDE_ASM_OUTPUT_H_
-#define TOFINO_PARDE_ASM_OUTPUT_H_
+#ifndef BF_P4C_PARDE_ASM_OUTPUT_H_
+#define BF_P4C_PARDE_ASM_OUTPUT_H_
 
 #include <functional>
 #include "ir/ir.h"
-#include "tofino/common/asm_output.h"
-#include "tofino/phv/phv_fields.h"
+#include "bf-p4c/common/asm_output.h"
+#include "bf-p4c/phv/phv_fields.h"
 
 class ParserAsmOutput : public Inspector {
     gress_t                                     gress;
@@ -34,4 +34,4 @@ class DeparserAsmOutput {
                         const char *sep = "") const;
 };
 
-#endif /* TOFINO_PARDE_ASM_OUTPUT_H_ */
+#endif /* BF_P4C_PARDE_ASM_OUTPUT_H_ */

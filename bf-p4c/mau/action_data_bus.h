@@ -1,9 +1,9 @@
-#ifndef TOFINO_MAU_ACTION_DATA_BUS_H_
-#define TOFINO_MAU_ACTION_DATA_BUS_H_
+#ifndef BF_P4C_MAU_ACTION_DATA_BUS_H_
+#define BF_P4C_MAU_ACTION_DATA_BUS_H_
 
 #include <lib/alloc.h>
-#include "tofino/mau/table_layout.h"
-#include "tofino/mau/action_format.h"
+#include "bf-p4c/mau/table_layout.h"
+#include "bf-p4c/mau/action_format.h"
 
 /** Algorithm for the allocation of the action data bus.  The action data bus is broken into
  *  3 parts, a BYTE, HALF, and FULL region.  The byte and half regions are mutually exclusive,
@@ -156,4 +156,4 @@ struct ActionDataBus {
         if (tbl->resources) update(tbl->name, tbl->resources); }
 };
 
-#endif /* TOFINO_MAU_ACTION_DATA_BUS_H_*/
+#endif /* BF_P4C_MAU_ACTION_DATA_BUS_H_*/

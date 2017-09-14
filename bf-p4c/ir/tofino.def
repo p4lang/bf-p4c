@@ -1,5 +1,5 @@
 #emit
-#include "tofino/ir/gress.h"
+#include "bf-p4c/ir/gress.h"
 
 struct StageUse {
     static constexpr int MAX_STAGES = 12;
@@ -18,7 +18,7 @@ struct Phase0Info;
 #end
 
 #emit_impl
-#include "tofino/ir/thread_visitor.h"
+#include "bf-p4c/ir/thread_visitor.h"
 #end
 
 class BFN::Pipe {

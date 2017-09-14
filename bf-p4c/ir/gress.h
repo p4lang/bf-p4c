@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef TOFINO_IR_GRESS_H_
-#define TOFINO_IR_GRESS_H_
+#ifndef BF_P4C_IR_GRESS_H_
+#define BF_P4C_IR_GRESS_H_
 
 #include <iosfwd>
 
@@ -33,4 +33,4 @@ inline gress_t operator~(const gress_t& gress) { return gress_t(gress ^ 1); }
 std::ostream& operator<<(std::ostream& out, gress_t gress);
 bool operator>>(cstring s, gress_t& gressOut);
 
-#endif /* TOFINO_IR_GRESS_H_ */
+#endif /* BF_P4C_IR_GRESS_H_ */

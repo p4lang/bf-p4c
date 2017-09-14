@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "tofino/control-plane/tofino_p4runtime.h"
+#include "bf-p4c/control-plane/tofino_p4runtime.h"
 
 #include "control-plane/p4RuntimeSerializer.h"
 #include "frontends/common/resolveReferences/referenceMap.h"
@@ -23,8 +23,8 @@ limitations under the License.
 #include "frontends/p4/typeMap.h"
 #include "ir/ir.h"
 #include "lib/nullstream.h"
-#include "tofino/control-plane/synthesize_valid_field.h"
-#include "tofino/tofinoOptions.h"
+#include "bf-p4c/control-plane/synthesize_valid_field.h"
+#include "bf-p4c/tofinoOptions.h"
 
 namespace BFN {
 

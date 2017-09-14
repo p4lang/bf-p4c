@@ -1,5 +1,5 @@
-#ifndef TOFINO_MAU_TABLE_SUMMARY_H_
-#define TOFINO_MAU_TABLE_SUMMARY_H_
+#ifndef BF_P4C_MAU_TABLE_SUMMARY_H_
+#define BF_P4C_MAU_TABLE_SUMMARY_H_
 
 #include <iostream>
 #include "mau_visitor.h"
@@ -31,4 +31,4 @@ class TableSummary: public MauInspector {
     friend std::ostream &operator<<(std::ostream &out, const TableSummary &ts);
 };
 
-#endif /* TOFINO_MAU_TABLE_SUMMARY_H_ */
+#endif /* BF_P4C_MAU_TABLE_SUMMARY_H_ */

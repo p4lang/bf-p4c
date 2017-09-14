@@ -8,7 +8,7 @@
 #include "lib/hex.h"
 #include "lib/range.h"
 #include "lib/log.h"
-#include "tofino/phv/phv_fields.h"
+#include "bf-p4c/phv/phv_fields.h"
 
 void IXBar::clear() {
     exact_use.clear();

@@ -1,11 +1,11 @@
-#ifndef TOFINO_PHV_PHV_ANALYSIS_VALIDATE_H_
-#define TOFINO_PHV_PHV_ANALYSIS_VALIDATE_H_
+#ifndef BF_P4C_PHV_PHV_ANALYSIS_VALIDATE_H_
+#define BF_P4C_PHV_PHV_ANALYSIS_VALIDATE_H_
 
 #include "ir/ir.h"
 #include "lib/map.h"
 #include "lib/ordered_map.h"
 #include "lib/range.h"
-#include "tofino/ir/thread_visitor.h"
+#include "bf-p4c/ir/thread_visitor.h"
 #include "cluster_phv_container.h"
 #include "cluster_phv_mau.h"
 //
@@ -254,4 +254,4 @@ std::ostream &operator<<(
     std::map<int, std::list<PHV_Container::Container_Content *>>&);
 std::ostream &operator<<(std::ostream &, PHV_Analysis_Validate &);
 //
-#endif /* TOFINO_PHV_PHV_ANALYSIS_VALIDATE_H_ */
+#endif /* BF_P4C_PHV_PHV_ANALYSIS_VALIDATE_H_ */

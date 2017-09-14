@@ -1,10 +1,10 @@
-#ifndef EXTENSIONS_TOFINO_MAU_ACTION_ANALYSIS_H_
-#define EXTENSIONS_TOFINO_MAU_ACTION_ANALYSIS_H_
+#ifndef EXTENSIONS_BF_P4C_MAU_ACTION_ANALYSIS_H_
+#define EXTENSIONS_BF_P4C_MAU_ACTION_ANALYSIS_H_
 
 #include "mau_visitor.h"
-#include "tofino/ir/bitrange.h"
-#include "tofino/ir/tofino_write_context.h"
-#include "tofino/phv/phv_fields.h"
+#include "bf-p4c/ir/bitrange.h"
+#include "bf-p4c/ir/tofino_write_context.h"
+#include "bf-p4c/phv/phv_fields.h"
 
 struct TableResourceAlloc;
 
@@ -279,4 +279,4 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         : phv(p), phv_alloc(pa), ad_alloc(aa), tbl(t) { visitDagOnce = false; }
 };
 
-#endif /* EXTENSIONS_TOFINO_MAU_ACTION_ANALYSIS_H_ */
+#endif /* EXTENSIONS_BF_P4C_MAU_ACTION_ANALYSIS_H_ */

@@ -1,5 +1,5 @@
-#ifndef TOFINO_PHV_SPLIT_PHV_USE_H_
-#define TOFINO_PHV_SPLIT_PHV_USE_H_
+#ifndef BF_P4C_PHV_SPLIT_PHV_USE_H_
+#define BF_P4C_PHV_SPLIT_PHV_USE_H_
 
 #include "ir/ir.h"
 
@@ -20,4 +20,4 @@ class SplitPhvUse : public Transform {
     explicit SplitPhvUse(const PhvInfo &phv) : phv(phv) {}
 };
 
-#endif /* TOFINO_PHV_SPLIT_PHV_USE_H_ */
+#endif /* BF_P4C_PHV_SPLIT_PHV_USE_H_ */

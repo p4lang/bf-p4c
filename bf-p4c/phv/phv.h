@@ -1,5 +1,5 @@
-#ifndef TOFINO_PHV_PHV_H_
-#define TOFINO_PHV_PHV_H_
+#ifndef BF_P4C_PHV_PHV_H_
+#define BF_P4C_PHV_PHV_H_
 
 #include <iosfwd>
 #include "lib/ordered_set.h"
@@ -134,4 +134,4 @@ std::ostream &operator<<(std::ostream &out, const PHV::Container::Kind k);
 
 }  // namespace PHV
 
-#endif /* TOFINO_PHV_PHV_H_ */
+#endif /* BF_P4C_PHV_PHV_H_ */

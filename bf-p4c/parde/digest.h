@@ -1,8 +1,8 @@
-#ifndef TOFINO_PARDE_DIGEST_H_
-#define TOFINO_PARDE_DIGEST_H_
+#ifndef BF_P4C_PARDE_DIGEST_H_
+#define BF_P4C_PARDE_DIGEST_H_
 
 #include "ir/ir.h"
-#include "tofino/ir/thread_visitor.h"
+#include "bf-p4c/ir/thread_visitor.h"
 
 /** Convert various primitves that need deparser digests into deparser digests + whatever
  * setup is needed to enable those digests.
@@ -91,4 +91,4 @@ class Digests : public Transform {
         return dp; }
 };
 
-#endif /* TOFINO_PARDE_DIGEST_H_ */
+#endif /* BF_P4C_PARDE_DIGEST_H_ */

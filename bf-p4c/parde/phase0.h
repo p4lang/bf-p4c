@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef TOFINO_PARDE_PHASE0_H_
-#define TOFINO_PARDE_PHASE0_H_
+#ifndef BF_P4C_PARDE_PHASE0_H_
+#define BF_P4C_PARDE_PHASE0_H_
 
 #include <utility>
 #include <vector>
@@ -67,4 +67,4 @@ extractPhase0(const IR::P4Control* ingress, IR::BFN::Pipe* pipe,
 
 std::ostream& operator<<(std::ostream& out, const BFN::Phase0Info* info);
 
-#endif /* TOFINO_PARDE_PHASE0_H_ */
+#endif /* BF_P4C_PARDE_PHASE0_H_ */

@@ -1,8 +1,8 @@
-#ifndef TOFINO_MAU_INSTRUCTION_SELECTION_H_
-#define TOFINO_MAU_INSTRUCTION_SELECTION_H_
+#ifndef BF_P4C_MAU_INSTRUCTION_SELECTION_H_
+#define BF_P4C_MAU_INSTRUCTION_SELECTION_H_
 
 #include "mau_visitor.h"
-#include "tofino/phv/phv_fields.h"
+#include "bf-p4c/phv/phv_fields.h"
 
 class InstructionSelection : public MauTransform {
     PhvInfo &phv;
@@ -60,4 +60,4 @@ class DoInstructionSelection : public PassManager {
      explicit DoInstructionSelection(PhvInfo &);
 };
 
-#endif /* TOFINO_MAU_INSTRUCTION_SELECTION_H_ */
+#endif /* BF_P4C_MAU_INSTRUCTION_SELECTION_H_ */

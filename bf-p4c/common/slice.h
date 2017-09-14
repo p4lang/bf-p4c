@@ -1,5 +1,5 @@
-#ifndef TOFINO_COMMON_SLICE_H_
-#define TOFINO_COMMON_SLICE_H_
+#ifndef BF_P4C_COMMON_SLICE_H_
+#define BF_P4C_COMMON_SLICE_H_
 
 #include "ir/ir.h"
 
@@ -12,4 +12,4 @@
  */
 const IR::Expression *MakeSlice(const IR::Expression *e, int lo, int hi);
 
-#endif /* TOFINO_COMMON_SLICE_H_ */
+#endif /* BF_P4C_COMMON_SLICE_H_ */

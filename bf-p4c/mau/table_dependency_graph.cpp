@@ -4,7 +4,7 @@
 #include <algorithm>
 #include "ir/ir.h"
 #include "lib/log.h"
-#include "tofino/ir/tofino_write_context.h"
+#include "bf-p4c/ir/tofino_write_context.h"
 
 
 static const char *dep_types[] = { "CONTROL", "DATA", "ANTI", "OUTPUT" };

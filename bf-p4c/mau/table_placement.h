@@ -1,5 +1,5 @@
-#ifndef TOFINO_MAU_TABLE_PLACEMENT_H_
-#define TOFINO_MAU_TABLE_PLACEMENT_H_
+#ifndef BF_P4C_MAU_TABLE_PLACEMENT_H_
+#define BF_P4C_MAU_TABLE_PLACEMENT_H_
 
 #include "mau_visitor.h"
 #include "lib/ordered_set.h"
@@ -48,4 +48,4 @@ class TablePlacement : public MauTransform, public Backtrack {
     std::multimap<cstring, const Placed *>::const_iterator find_placed(cstring name) const;
 };
 
-#endif /* TOFINO_MAU_TABLE_PLACEMENT_H_ */
+#endif /* BF_P4C_MAU_TABLE_PLACEMENT_H_ */

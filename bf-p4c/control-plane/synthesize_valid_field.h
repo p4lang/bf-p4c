@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef TOFINO_CONTROL_PLANE_SYNTHESIZE_VALID_FIELD_H_
-#define TOFINO_CONTROL_PLANE_SYNTHESIZE_VALID_FIELD_H_
+#ifndef BF_P4C_CONTROL_PLANE_SYNTHESIZE_VALID_FIELD_H_
+#define BF_P4C_CONTROL_PLANE_SYNTHESIZE_VALID_FIELD_H_
 
 #include "ir/ir.h"
 #include "ir/pass_manager.h"
@@ -93,4 +93,4 @@ class SynthesizeValidField final : public PassManager {
 
 }  // namespace BFN
 
-#endif  /* TOFINO_CONTROL_PLANE_SYNTHESIZE_VALID_FIELD_H_ */
+#endif  /* BF_P4C_CONTROL_PLANE_SYNTHESIZE_VALID_FIELD_H_ */

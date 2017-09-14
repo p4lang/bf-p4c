@@ -14,8 +14,8 @@
   limitations under the License.
 */
 
-#ifndef TOFINO_ARCH_SIMPLE_SWITCH_H_
-#define TOFINO_ARCH_SIMPLE_SWITCH_H_
+#ifndef BF_P4C_ARCH_SIMPLE_SWITCH_H_
+#define BF_P4C_ARCH_SIMPLE_SWITCH_H_
 
 #include <boost/algorithm/string.hpp>
 #include <boost/optional.hpp>
@@ -29,7 +29,7 @@
 #include "frontends/p4/sideEffects.h"
 #include "midend/actionsInlining.h"
 #include "midend/localizeActions.h"
-#include "tofino/tofinoOptions.h"
+#include "bf-p4c/tofinoOptions.h"
 #include "program_structure.h"
 
 namespace BFN {
@@ -84,4 +84,4 @@ class SimpleSwitchTranslation : public PassManager {
 
 }  // namespace BFN
 
-#endif /* TOFINO_ARCH_SIMPLE_SWITCH_H_ */
+#endif /* BF_P4C_ARCH_SIMPLE_SWITCH_H_ */

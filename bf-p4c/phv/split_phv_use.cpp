@@ -4,9 +4,9 @@
 
 #include <vector>
 
-#include "tofino/common/slice.h"
-#include "tofino/ir/bitrange.h"
-#include "tofino/phv/phv_fields.h"
+#include "bf-p4c/common/slice.h"
+#include "bf-p4c/ir/bitrange.h"
+#include "bf-p4c/phv/phv_fields.h"
 
 namespace {
 

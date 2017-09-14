@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "tofino/parde/phase0.h"
+#include "bf-p4c/parde/phase0.h"
 
 #include <algorithm>
 #include "frontends/p4/coreLibrary.h"
@@ -22,7 +22,7 @@ limitations under the License.
 #include "ir/ir.h"
 #include "lib/cstring.h"
 #include "lib/indent.h"
-#include "tofino/parde/field_packing.h"
+#include "bf-p4c/parde/field_packing.h"
 
 std::ostream& operator<<(std::ostream& out, const BFN::Phase0Info* info) {
     if (info == nullptr) return out;

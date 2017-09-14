@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef _EXTENSIONS_TOFINO_COMMON_MACHINE_DESCRIPTION_H_
-#define _EXTENSIONS_TOFINO_COMMON_MACHINE_DESCRIPTION_H_
+#ifndef EXTENSIONS_BF_P4C_COMMON_MACHINE_DESCRIPTION_H_
+#define EXTENSIONS_BF_P4C_COMMON_MACHINE_DESCRIPTION_H_
 
 #include <array>
 
@@ -41,4 +41,4 @@ static constexpr int ByteInputBufferSize = BitInputBufferSize / 8;
 }  // namespace Description
 }  // namespace BFN
 
-#endif /* _EXTENSIONS_TOFINO_COMMON_MACHINE_DESCRIPTION_H_ */
+#endif /* EXTENSIONS_BF_P4C_COMMON_MACHINE_DESCRIPTION_H_ */

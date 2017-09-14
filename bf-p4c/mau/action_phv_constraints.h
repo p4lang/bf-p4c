@@ -1,8 +1,8 @@
-#ifndef TOFINO_MAU_ACTION_PHV_CONSTRAINTS_H_
-#define TOFINO_MAU_ACTION_PHV_CONSTRAINTS_H_
+#ifndef BF_P4C_MAU_ACTION_PHV_CONSTRAINTS_H_
+#define BF_P4C_MAU_ACTION_PHV_CONSTRAINTS_H_
 
 #include "mau_visitor.h"
-#include "tofino/phv/phv_fields.h"
+#include "bf-p4c/phv/phv_fields.h"
 
 /** This class is meant to gather action information as well as provide information to
  *  PHV analysis through function calls.  This must be run after InstructionSelection, as
@@ -44,4 +44,4 @@ class ActionPhvConstraints : public MauInspector {
 };
 
 
-#endif  /* TOFINO_MAU_ACTION_PHV_CONSTRAINTS_H_ */
+#endif  /* BF_P4C_MAU_ACTION_PHV_CONSTRAINTS_H_ */

@@ -21,9 +21,9 @@ limitations under the License.
 
 #include "lib/cstring.h"
 #include "ir/ir.h"
-#include "tofino/phv/phv.h"
-#include "tofino/phv/phv_parde_mau_use.h"
-#include "tofino/phv/validate_allocation.h"
+#include "bf-p4c/phv/phv.h"
+#include "bf-p4c/phv/phv_parde_mau_use.h"
+#include "bf-p4c/phv/validate_allocation.h"
 
 // Currently we fail a lot of these checks, so to prevent mass XFAIL'ing a lot
 // of the tests, we treat the checks as warning instead of errors. This macro

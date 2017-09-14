@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef TOFINO_PARDE_RESOLVE_COMPUTED_H_
-#define TOFINO_PARDE_RESOLVE_COMPUTED_H_
+#ifndef BF_P4C_PARDE_RESOLVE_COMPUTED_H_
+#define BF_P4C_PARDE_RESOLVE_COMPUTED_H_
 
 #include "ir/ir.h"
 
@@ -68,4 +68,4 @@ struct ResolveComputedHeaderStackExpressions : public PassManager {
     ResolveComputedHeaderStackExpressions();
 };
 
-#endif /* TOFINO_PARDE_RESOLVE_COMPUTED_H_ */
+#endif /* BF_P4C_PARDE_RESOLVE_COMPUTED_H_ */

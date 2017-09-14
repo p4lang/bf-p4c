@@ -4,11 +4,11 @@
 struct TableResourceAlloc;
 #end
 #emit_impl
-#include "tofino/mau/resource.h"
+#include "bf-p4c/mau/resource.h"
 #end
 
 #emit_impl
-#include "extensions/tofino/mau/resource.h"
+#include "extensions/bf-p4c/mau/resource.h"
 #end
 
 

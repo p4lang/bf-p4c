@@ -1,5 +1,5 @@
-#include "tofino/mau/action_data_bus.h"
-#include "tofino/mau/resource.h"
+#include "bf-p4c/mau/action_data_bus.h"
+#include "bf-p4c/mau/resource.h"
 
 constexpr int ActionDataBus::ADB_STARTS[];
 

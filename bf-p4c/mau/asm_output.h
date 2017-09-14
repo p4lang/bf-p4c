@@ -1,10 +1,10 @@
-#ifndef TOFINO_MAU_ASM_OUTPUT_H_
-#define TOFINO_MAU_ASM_OUTPUT_H_
+#ifndef BF_P4C_MAU_ASM_OUTPUT_H_
+#define BF_P4C_MAU_ASM_OUTPUT_H_
 
 #include "default_next.h"
 #include "resource.h"
 #include "lib/log.h"
-#include "tofino/common/asm_output.h"
+#include "bf-p4c/common/asm_output.h"
 #include "memories.h"
 
 class PhvInfo;
@@ -67,4 +67,4 @@ class MauAsmOutput : public MauInspector {
     explicit MauAsmOutput(const PhvInfo &p) : phv(p) {}
 };
 
-#endif /* TOFINO_MAU_ASM_OUTPUT_H_ */
+#endif /* BF_P4C_MAU_ASM_OUTPUT_H_ */

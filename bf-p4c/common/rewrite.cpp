@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "tofino/common/rewrite.h"
+#include "bf-p4c/common/rewrite.h"
 
 #include <boost/optional.hpp>
 

@@ -15,7 +15,7 @@ limitations under the License.
 */
 
 #include "lib/log.h"
-#include "tofino/ir/tofino_write_context.h"
+#include "bf-p4c/ir/tofino_write_context.h"
 
 bool TofinoWriteContext::isWrite(bool root_value) {
     bool rv = P4WriteContext::isWrite(root_value);

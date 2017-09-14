@@ -7,8 +7,8 @@
 #include "lib/indent.h"
 #include "lib/log.h"
 #include "lib/stringref.h"
-#include "tofino/parde/phase0.h"
-#include "tofino/phv/asm_output.h"
+#include "bf-p4c/parde/phase0.h"
+#include "bf-p4c/phv/asm_output.h"
 #include "resource.h"
 
 class MauAsmOutput::EmitAttached : public Inspector {

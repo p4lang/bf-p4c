@@ -6,9 +6,9 @@
 
 #include "ir/ir.h"
 #include "lib/log.h"
-#include "tofino/common/machine_description.h"
-#include "tofino/parde/add_parde_metadata.h"
-#include "tofino/parde/resolve_computed.h"
+#include "bf-p4c/common/machine_description.h"
+#include "bf-p4c/parde/add_parde_metadata.h"
+#include "bf-p4c/parde/resolve_computed.h"
 
 namespace BFN {
 

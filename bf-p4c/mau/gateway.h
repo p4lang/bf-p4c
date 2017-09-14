@@ -1,8 +1,8 @@
-#ifndef TOFINO_MAU_GATEWAY_H_
-#define TOFINO_MAU_GATEWAY_H_
+#ifndef BF_P4C_MAU_GATEWAY_H_
+#define BF_P4C_MAU_GATEWAY_H_
 
 #include "mau_visitor.h"
-#include "tofino/phv/phv_fields.h"
+#include "bf-p4c/phv/phv_fields.h"
 #include "input_xbar.h"
 
 class CanonGatewayExpr : public MauTransform {
@@ -111,4 +111,4 @@ class GatewayOpt : public PassManager {
     explicit GatewayOpt(const PhvInfo &);
 };
 
-#endif /* TOFINO_MAU_GATEWAY_H_ */
+#endif /* BF_P4C_MAU_GATEWAY_H_ */

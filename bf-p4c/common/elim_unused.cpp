@@ -1,7 +1,7 @@
 #include "lib/log.h"
 #include "elim_unused.h"
-#include "tofino/ir/thread_visitor.h"
-#include "tofino/parde/parde_visitor.h"
+#include "bf-p4c/ir/thread_visitor.h"
+#include "bf-p4c/parde/parde_visitor.h"
 
 class ElimUnused::ParserMetadata : public Transform {
     ElimUnused &self;

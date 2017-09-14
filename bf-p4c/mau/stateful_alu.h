@@ -1,5 +1,5 @@
-#ifndef EXTENSIONS_TOFINO_MAU_STATEFUL_ALU_H_
-#define EXTENSIONS_TOFINO_MAU_STATEFUL_ALU_H_
+#ifndef EXTENSIONS_BF_P4C_MAU_STATEFUL_ALU_H_
+#define EXTENSIONS_BF_P4C_MAU_STATEFUL_ALU_H_
 
 #include "ir/ir.h"
 #include "frontends/common/resolveReferences/referenceMap.h"
@@ -99,4 +99,4 @@ class CheckStatefulAlu : public MauModifier {
     bool preorder(IR::MAU::StatefulAlu *) override;
 };
 
-#endif /* EXTENSIONS_TOFINO_MAU_STATEFUL_ALU_H_ */
+#endif /* EXTENSIONS_BF_P4C_MAU_STATEFUL_ALU_H_ */

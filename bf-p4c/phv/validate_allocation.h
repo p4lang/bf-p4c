@@ -14,11 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef TOFINO_PHV_VALIDATE_ALLOCATION_H_
-#define TOFINO_PHV_VALIDATE_ALLOCATION_H_
+#ifndef BF_P4C_PHV_VALIDATE_ALLOCATION_H_
+#define BF_P4C_PHV_VALIDATE_ALLOCATION_H_
 
 #include "ir/visitor.h"
-#include "tofino/phv/phv_fields.h"
+#include "bf-p4c/phv/phv_fields.h"
 
 namespace PHV {
 
@@ -49,4 +49,4 @@ class ValidateAllocation final : public Inspector {
 
 }  // namespace PHV
 
-#endif /* TOFINO_PHV_VALIDATE_ALLOCATION_H_ */
+#endif /* BF_P4C_PHV_VALIDATE_ALLOCATION_H_ */

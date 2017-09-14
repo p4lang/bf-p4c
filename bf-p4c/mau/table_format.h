@@ -1,5 +1,5 @@
-#ifndef TOFINO_MAU_TABLE_FORMAT_H_
-#define TOFINO_MAU_TABLE_FORMAT_H_
+#ifndef BF_P4C_MAU_TABLE_FORMAT_H_
+#define BF_P4C_MAU_TABLE_FORMAT_H_
 
 #include "lib/bitvec.h"
 #include "lib/bitops.h"
@@ -138,4 +138,4 @@ struct TableFormat {
     void verify();
 };
 
-#endif /* TOFINO_MAU_TABLE_FORMAT_H_ */
+#endif /* BF_P4C_MAU_TABLE_FORMAT_H_ */

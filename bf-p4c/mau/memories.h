@@ -1,5 +1,5 @@
-#ifndef TOFINO_MAU_MEMORIES_H_
-#define TOFINO_MAU_MEMORIES_H_
+#ifndef BF_P4C_MAU_MEMORIES_H_
+#define BF_P4C_MAU_MEMORIES_H_
 
 #include <algorithm>
 #include "lib/alloc.h"
@@ -418,4 +418,4 @@ struct Memories {
     friend std::ostream &operator<<(std::ostream &, const Memories &);
 };
 
-#endif /* TOFINO_MAU_MEMORIES_H_ */
+#endif /* BF_P4C_MAU_MEMORIES_H_ */

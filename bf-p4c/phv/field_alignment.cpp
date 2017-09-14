@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "tofino/phv/field_alignment.h"
+#include "bf-p4c/phv/field_alignment.h"
 #include <iostream>
 
 FieldAlignment::FieldAlignment(nw_bitrange bitLayout)

@@ -1,5 +1,5 @@
-#ifndef TOFINO_COMMON_ELIM_UNUSED_H_
-#define TOFINO_COMMON_ELIM_UNUSED_H_
+#ifndef BF_P4C_COMMON_ELIM_UNUSED_H_
+#define BF_P4C_COMMON_ELIM_UNUSED_H_
 
 #include "field_defuse.h"
 
@@ -13,4 +13,4 @@ class ElimUnused : public PassManager {
     ElimUnused(const PhvInfo &phv, const FieldDefUse &defuse);
 };
 
-#endif /* TOFINO_COMMON_ELIM_UNUSED_H_ */
+#endif /* BF_P4C_COMMON_ELIM_UNUSED_H_ */

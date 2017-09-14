@@ -14,11 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef EXTENSIONS_TOFINO_PHV_FIELD_ALIGNMENT_H_
-#define EXTENSIONS_TOFINO_PHV_FIELD_ALIGNMENT_H_
+#ifndef EXTENSIONS_BF_P4C_PHV_FIELD_ALIGNMENT_H_
+#define EXTENSIONS_BF_P4C_PHV_FIELD_ALIGNMENT_H_
 
 #include <iosfwd>
-#include "tofino/ir/bitrange.h"
+#include "bf-p4c/ir/bitrange.h"
 
 /// A helper type that represents the alignment of a field (or more generally,
 /// of some object which is stored in a PHV container).
@@ -42,4 +42,4 @@ struct FieldAlignment {
 
 std::ostream& operator<<(std::ostream&, const FieldAlignment&);
 
-#endif /* EXTENSIONS_TOFINO_PHV_FIELD_ALIGNMENT_H_ */
+#endif /* EXTENSIONS_BF_P4C_PHV_FIELD_ALIGNMENT_H_ */

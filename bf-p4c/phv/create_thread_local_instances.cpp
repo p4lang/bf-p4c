@@ -14,9 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "tofino/phv/create_thread_local_instances.h"
+#include "bf-p4c/phv/create_thread_local_instances.h"
 
-#include "tofino/ir/thread_visitor.h"
+#include "bf-p4c/ir/thread_visitor.h"
 
 namespace {
 

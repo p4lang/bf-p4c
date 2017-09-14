@@ -9,8 +9,8 @@
 #include <utility>
 #include <vector>
 
-#include "tofino/common/machine_description.h"
-#include "tofino/phv/phv.h"
+#include "bf-p4c/common/machine_description.h"
+#include "bf-p4c/phv/phv.h"
 
 namespace {
 

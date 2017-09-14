@@ -19,7 +19,7 @@ limitations under the License.
 #include "lib/bitvec.h"
 #include "lib/error.h"
 #include "test/gtest/helpers.h"
-#include "tofino/phv/phv.h"
+#include "bf-p4c/phv/phv.h"
 
 namespace Test {
 

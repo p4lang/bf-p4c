@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef TOFINO_BACKEND_H_
-#define TOFINO_BACKEND_H_
+#ifndef BF_P4C_BACKEND_H_
+#define BF_P4C_BACKEND_H_
 
 #include "ir/ir.h"
 #include "tofinoOptions.h"
@@ -26,4 +26,4 @@ void backend(const IR::BFN::Pipe* pipe, const Tofino_Options& options);
 
 }  // namespace BFN
 
-#endif /* TOFINO_BACKEND_H_ */
+#endif /* BF_P4C_BACKEND_H_ */

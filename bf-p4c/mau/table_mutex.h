@@ -1,5 +1,5 @@
-#ifndef TOFINO_MAU_TABLE_MUTEX_H_
-#define TOFINO_MAU_TABLE_MUTEX_H_
+#ifndef BF_P4C_MAU_TABLE_MUTEX_H_
+#define BF_P4C_MAU_TABLE_MUTEX_H_
 
 #include "mau_visitor.h"
 #include "lib/symbitmatrix.h"
@@ -77,4 +77,4 @@ class SharedActionProfileAnalysis : public MauInspector {
     }
     explicit SharedActionProfileAnalysis(const TablesMutuallyExclusive &m) : mutex(m) {}
 };
-#endif /* TOFINO_MAU_TABLE_MUTEX_H_ */
+#endif /* BF_P4C_MAU_TABLE_MUTEX_H_ */
