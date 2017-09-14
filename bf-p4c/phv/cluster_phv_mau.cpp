@@ -1274,6 +1274,28 @@ void PHV_MAU_Group_Assignments::create_aligned_container_slices() {
 //
 //***********************************************************************************
 //
+// ensure each field's alignment start is satisfied before container packing
+//
+bool
+PHV_MAU_Group_Assignments::phv_alignment(
+    Cluster_PHV *cl,
+    int lo,
+    int hi) {
+    //
+    for (auto &f : cl->cluster_vec()) {
+        if (int start = f->phv_alignment()) {
+            if (start < lo || start > hi) {
+                return false;
+            }
+            int end = start + f->phv_use_width();
+            if (end < lo || end > hi) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+//
 // ensure each predicate is satisfied when matching cluster fields to cc_set
 //
 bool
@@ -1380,6 +1402,15 @@ PHV_MAU_Group_Assignments::packing_predicates(
     if (req && !num_containers_bottom_bits(cl, cc_set, req)) {
         return false;
     }
+    //
+    // TODO
+    //
+    // field start restrictions .. must start @X 'bit-in-byte' in container, e.g., X,X+8,X+16 etc.
+    //
+    if (!phv_alignment(cl, (*(cc_set.rbegin()))->lo(), (*(cc_set.rbegin()))->hi())) {
+        return false;
+    }
+    //
     // when cluster fields < slices try sliding window of cc_set
     for (int slice_adjust = cc_set.size() - cl->cluster_vec().size() + 1;
         slice_adjust;
@@ -1400,13 +1431,13 @@ PHV_MAU_Group_Assignments::packing_predicates(
     //
     // TODO
     //
-    // field start restrictions .. must start @X 'bit-in-byte' in container, e.g., X,X+8,X+16 etc.
-    //
     // field solitary: e.g., 7*1b can't be packed to 8b, use separate containers, albeit 2TCAMS, 88b
     //
     // checksum 16b..16b..8b in 16b or 8b container ?
     //
     // mutually_cohabit(f1, f2),
+    //
+    // instruction adjustment related constraints from TP / Instruction Selection
     //
     return true;
 }  // packing_predicates
