@@ -956,7 +956,7 @@ void PHV_Container::Container_Content::sanity_check_container(
 
 bool PHV_Container::sanity_check_deparsed_container_violation(
     PhvInfo::Field *&deparsed_header,
-    PhvInfo::Field *&non_deparsed_field) {
+    PhvInfo::Field *&non_deparsed_field) const {
     // must not have deparsed header with non-deparsed field in container
     deparsed_header = nullptr;
     non_deparsed_field = nullptr;

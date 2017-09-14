@@ -267,7 +267,7 @@ class PHV_Container {
     //
     bool sanity_check_deparsed_container_violation(
         PhvInfo::Field *&deparsed_header,
-        PhvInfo::Field *&non_deparsed_field);
+        PhvInfo::Field *&non_deparsed_field) const;
     void sanity_check_container(const std::string& msg, bool check_deparsed = true);
     void sanity_check_overlayed_fields(const std::string& msg);
     void sanity_check_container_avail(int lo, int hi, const std::string&);
