@@ -346,8 +346,9 @@ Cluster_PHV::compute_requirements() {
             scale_down = 0;
             break;
         }
-        if (pfield->phv_alignment()) {
-            if (pfield->phv_alignment() + pfield->phv_use_width() == width_req) {
+        auto start_with_alignment = pfield->phv_alignment();
+        if (start_with_alignment) {
+            if (*start_with_alignment + pfield->phv_use_width() == width_req) {
                 // cannot scale down below minimum requirement
                 scale_down = 0;
                 break;
@@ -452,7 +453,12 @@ Cluster_PHV::compute_width_req() {
                 max_width = std::max(max_width, field->phv_use_width());
             }
         } else {
-            max_width = std::max(max_width, field->phv_use_width() + field->phv_alignment());
+            int align_start = 0;
+            auto start_with_alignment = field->phv_alignment();
+            if (start_with_alignment) {
+                align_start = *start_with_alignment;
+            }
+            max_width = std::max(max_width, field->phv_use_width() + align_start);
         }
     }
     return max_width;

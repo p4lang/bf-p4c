@@ -497,15 +497,14 @@ PhvInfo::Field::phv_use_width(Cluster_PHV *cl) const {
     return phv_use_hi_i - phv_use_lo_i + 1;
 }
 
-int
+boost::optional<int>
 PhvInfo::Field::phv_alignment() const {
-    int start = 0;
     if (alignment && !is_ccgf()
         && (alignment->littleEndian + phv_use_width() <= PHV_Container::PHV_Word::b32)) {
         //
-        start = alignment->littleEndian;
+        return alignment->littleEndian;
     }
-    return start;
+    return boost::none;
 }
 
 void

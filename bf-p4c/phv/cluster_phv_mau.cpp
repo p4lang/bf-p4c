@@ -886,9 +886,10 @@ PHV_MAU_Group_Assignments::container_no_pack(
                             LOG1(field);
                             assert(container);
                         }
+                        auto start_with_alignment = field->phv_alignment();
                         int processed_bits =
                             container->taint(
-                                field->phv_alignment(),
+                                start_with_alignment? *start_with_alignment: 0,
                                 taint_bits,
                                 field,
                                 field_bit_lo);
@@ -1283,7 +1284,9 @@ PHV_MAU_Group_Assignments::phv_alignment(
     int hi) {
     //
     for (auto &f : cl->cluster_vec()) {
-        if (int start = f->phv_alignment()) {
+        auto start_with_alignment = f->phv_alignment();
+        if (start_with_alignment) {
+            int start = *start_with_alignment;
             if (start < lo || start > hi) {
                 return false;
             }
@@ -1407,9 +1410,9 @@ PHV_MAU_Group_Assignments::packing_predicates(
     //
     // field start restrictions .. must start @X 'bit-in-byte' in container, e.g., X,X+8,X+16 etc.
     //
-    if (!phv_alignment(cl, (*(cc_set.rbegin()))->lo(), (*(cc_set.rbegin()))->hi())) {
-        return false;
-    }
+    //if (!phv_alignment(cl, (*(cc_set.rbegin()))->lo(), (*(cc_set.rbegin()))->hi())) {
+        //return false;
+    //}
     //
     // when cluster fields < slices try sliding window of cc_set
     for (int slice_adjust = cc_set.size() - cl->cluster_vec().size() + 1;
