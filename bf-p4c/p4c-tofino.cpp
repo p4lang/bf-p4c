@@ -3,6 +3,7 @@
 #include <string>
 #include <iostream>
 
+#include "device.h"
 #include "backend.h"
 #include "ir/ir.h"
 #include "ir/dbprint.h"
@@ -50,6 +51,9 @@ int main(int ac, char **av) {
     auto hook = options.getDebugHook();
     if (ErrorReporter::instance.getErrorCount() > 0)
         return 1;
+
+    Device::init("Tofino");  // TODO this should come from options
+
     options.preprocessor_options += " -D__TARGET_TOFINO__";
 
     auto it = std::find(supported_arch.begin(), supported_arch.end(), options.target);

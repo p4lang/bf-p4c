@@ -59,35 +59,13 @@ Container::Container(Kind kind, unsigned index) {
     BUG("Unexpected kind");
 }
 
-Container::Kind Container::kind() const {
+Kind Container::kind() const {
     switch (log2sz_) {
       case 0: return tagalong_ ? Kind::TB : Kind::B;
       case 1: return tagalong_ ? Kind::TH : Kind::H;
       case 2: return tagalong_ ? Kind::TW : Kind::W;
       default: BUG("Called kind() on an invalid container");
     }
-}
-
-/* static */ bitvec
-Container::range(Kind kind, unsigned start, unsigned length) {
-    bitvec containers;
-    for (unsigned index = start; index < start + length; ++index)
-        containers.setbit(index * 6 + unsigned(kind));
-    return containers;
-}
-
-/* static */ const bitvec& Container::ingressOnly() {
-    static const bitvec containers = range(Kind::B, 0, 16)
-                                   | range(Kind::H, 0, 16)
-                                   | range(Kind::W, 0, 16);
-    return containers;
-}
-
-/* static */ const bitvec& Container::egressOnly() {
-    static const bitvec containers = range(Kind::B, 16, 16)
-                                   | range(Kind::H, 16, 16)
-                                   | range(Kind::W, 16, 16);
-    return containers;
 }
 
 bitvec Container::group() const {
@@ -123,29 +101,6 @@ bitvec Container::group() const {
     BUG("Unexpected PHV container kind %1%", containerKind);
 }
 
-/* static */ bitvec Container::tagalongGroup(unsigned groupIndex) {
-    return range(Kind::TB, groupIndex * 4, 4)
-         | range(Kind::TW, groupIndex * 4, 4)
-         | range(Kind::TH, groupIndex * 6, 6);
-}
-
-/* static */ const bitvec& Container::individuallyAssignedContainers() {
-    static const bitvec containers = range(Kind::B, 56, 8)
-                                   | range(Kind::H, 88, 8)
-                                   | range(Kind::W, 60, 4);
-    return containers;
-}
-
-/* static */ const bitvec& Container::physicalContainers() {
-    static const bitvec containers = range(Kind::B, 0, 64)
-                                   | range(Kind::H, 0, 96)
-                                   | range(Kind::W, 0, 64)
-                                   | range(Kind::TB, 0, 32)
-                                   | range(Kind::TH, 0, 48)
-                                   | range(Kind::TW, 0, 32);
-    return containers;
-}
-
 cstring Container::toString() const {
     std::stringstream tmp;
     tmp << *this;
@@ -164,7 +119,7 @@ cstring Container::toString() const {
 }
 
 std::ostream& operator<<(std::ostream& out, const PHV::Container c) {
-    return out << (c.tagalong_ ? "T" : "") << "BHW?"[c.log2sz_] << c.index_;
+    return out << c.kind() << c.index_;
 }
 
 std::ostream& operator<<(std::ostream& out, ordered_set<const PHV::Container *>& c_set) {
@@ -174,11 +129,6 @@ std::ostream& operator<<(std::ostream& out, ordered_set<const PHV::Container *>&
     }
     out << "}";
     return out;
-}
-
-std::ostream& operator<<(std::ostream& out, const PHV::Container::Kind k) {
-    PHV::Container c(k, 0);
-    return out << (c.tagalong_ ? "T" : "") << "BHW?"[c.log2sz_];
 }
 
 }  // namespace PHV

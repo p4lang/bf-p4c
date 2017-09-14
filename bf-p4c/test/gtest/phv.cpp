@@ -25,13 +25,14 @@ namespace Test {
 
 // Test that each kind of PHV::Container has the expected properties.
 TEST(TofinoPhvContainer, Kinds) {
-    using Kind = PHV::Container::Kind;
+    Device::init("Tofino");  // TODO move this to a test fixture base class
+    using Kind = PHV::Kind;
 
     auto checkRange = [](PHV::Container c) {
         SCOPED_TRACE(c);
         auto begin = c.index() / 2;
         auto length = std::max(c.index() * 2, 128u);
-        for (unsigned kindId = 0; kindId < PHV::Container::NumKinds; ++kindId) {
+        for (unsigned kindId = 0; kindId < PHV::NumKinds; ++kindId) {
             auto range = PHV::Container::range(Kind(kindId), begin, length);
             if (kindId == unsigned(c.kind()))
                 EXPECT_TRUE(range.getbit(c.id()));

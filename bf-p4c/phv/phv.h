@@ -3,6 +3,7 @@
 
 #include <iosfwd>
 #include "lib/ordered_set.h"
+#include "tofino/device.h"
 
 class bitvec;
 class cstring;
@@ -16,17 +17,6 @@ class Container {
     Container(bool t, unsigned ls, unsigned i) : tagalong_(t), log2sz_(ls), index_(i) {}
 
  public:
-    /// An enumeration of the possible PHV container types.
-    enum class Kind : unsigned {
-        B = 0,   /// 8-bit
-        H = 1,   /// 16-bit
-        W = 2,   /// 32-bit
-        TB = 3,  /// 8-bit tagalong
-        TH = 4,  /// 16-bit tagalong
-        TW = 5   /// 32-bit tagalong
-    };
-    static constexpr unsigned NumKinds = 6;
-
     /// Construct an empty container. Most operations aren't defined on empty
     /// containers. (Use `operator bool()` to check if a container is empty.)
     Container() : tagalong_(false), log2sz_(3), index_(0) {}
@@ -60,7 +50,7 @@ class Container {
         const unsigned kindId = log2sz_ + (tagalong_ ? 3 : 0);
         // Ids are assigned in ascending order by index, with kinds interleaved.
         // For example: B0, H0, W0, TB0, TH0, TW0, B1, H1, W1, ...
-        return index_ * 6 + kindId;
+        return index_ * NumKinds + kindId;
     }
 
     /// @return true if this container is nonempty (i.e., refers to an actual
@@ -88,38 +78,25 @@ class Container {
     static Container TH(unsigned idx) { return Container(true, 1, idx); }
     static Container TW(unsigned idx) { return Container(true, 2, idx); }
 
-    /**
-     * Generates a bitvec containing a range of containers. This kind of bitvec
-     * can be used to implement efficient set operations on large numbers of
-     * containers.
-     *
-     * To generate the range [B10, B16), use `range(Kind::B, 10, 6)`.
-     *
-     * @param kind The type of container.
-     * @param start The index of first container in the range.
-     * @param length The number of containers in the range. May be zero.
-     */
-    static bitvec range(Kind kind, unsigned start, unsigned length);
-
-    /// @return a bitvec of the containers which are hard-wired to ingress.
-    static const bitvec& ingressOnly();
-
-    /// @return a bitvec of the containers which are hard-wired to egress.
-    static const bitvec& egressOnly();
-
-    /// @return the ids of every container in the same group as this container.
     bitvec group() const;
 
-    /// @return the ids of every container in the given tagalong group.
-    static bitvec tagalongGroup(unsigned groupIndex);
+    static bitvec range(Kind kind, unsigned start, unsigned length) {
+        return Device::phvSpec().range(kind, start, length); }
 
-    /// @return the ids of containers that can be assigned to a thread
-    /// individually.
-    static const bitvec& individuallyAssignedContainers();
+    static const bitvec& ingressOnly() {
+        return Device::phvSpec().ingressOnly(); }
 
-    /// @return the ids of all containers which actually exist on the Tofino
-    /// hardware - i.e., all non-overflow containers.
-    static const bitvec& physicalContainers();
+    static const bitvec& egressOnly() {
+        return Device::phvSpec().egressOnly(); }
+
+    static bitvec tagalongGroup(unsigned groupIndex) {
+        return Device::phvSpec().tagalongGroup(groupIndex); }
+
+    static const bitvec& individuallyAssignedContainers() {
+        return Device::phvSpec().individuallyAssignedContainers(); }
+
+    static const bitvec& physicalContainers() {
+        return Device::phvSpec().physicalContainers(); }
 
     /// @return a string representation of this container.
     cstring toString() const;
@@ -130,7 +107,6 @@ class Container {
 
 std::ostream &operator<<(std::ostream &out, const PHV::Container c);
 std::ostream& operator<<(std::ostream &out, ordered_set<const PHV::Container *>& c_set);
-std::ostream &operator<<(std::ostream &out, const PHV::Container::Kind k);
 
 }  // namespace PHV
 

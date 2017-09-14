@@ -249,7 +249,7 @@ struct ContainerAllocation final {
      * Allocates a container of size and category @kind for thread @gress.
      * @return the newly allocated container.
      */
-    PHV::Container allocateNext(gress_t gress, PHV::Container::Kind kind) {
+    PHV::Container allocateNext(gress_t gress, PHV::Kind kind) {
         auto container = next[gress][unsigned(kind)];
         allocate(gress, container);
         return container;
@@ -285,7 +285,7 @@ struct ContainerAllocation final {
      */
     void updateNext() {
         for (gress_t gress : { INGRESS, EGRESS }) {
-            for (unsigned kindId = 0; kindId < PHV::Container::NumKinds; kindId++) {
+            for (unsigned kindId = 0; kindId < PHV::NumKinds; kindId++) {
                 PHV::Container& nextContainer = next[gress][kindId];
                 while (allocatedContainers[nextContainer.id()] ||
                        threadAssignments[~gress][nextContainer.id()])
@@ -299,7 +299,7 @@ struct ContainerAllocation final {
     /// The set of reserved container ids for each thread.
     bitvec threadAssignments[2];
     /// The next available container for each (thread, kind) combination.
-    PHV::Container next[2][PHV::Container::NumKinds] = {
+    PHV::Container next[2][NumKinds] = {
         { "B0", "H0", "W0", "TB0", "TH0", "TW0" },
         { "B0", "H0", "W0", "TB0", "TH0", "TW0" }
     };
@@ -327,7 +327,7 @@ void ManualAlloc::allocateFieldGroup(const FieldGroup& group,
             if (!container || containerBit == 0) {
                 // Choose the next container size such that it contains as many
                 // bits as possible without introducing unnecessary wasted bits.
-                using Kind = PHV::Container::Kind;
+                using Kind = PHV::Kind;
                 Kind kind;
                 if (remainingBits > 24)
                     kind = group.tagalong ? Kind::TW : Kind::W;
