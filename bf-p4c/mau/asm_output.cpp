@@ -1286,7 +1286,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
         out << " ]" << std::endl;
         out << indent << "miss: " << next_for(tbl, "$miss", default_next)  << std::endl;
     } else {
-        if (tbl->layout.hash_action && gw_miss) {
+        if (no_match_hit && gw_miss) {
             out << indent << "next: " << gw_miss << std::endl;
         } else if (next_miss != next_hit) {
             out << indent << "hit: " << next_hit << std::endl;

@@ -10,7 +10,7 @@ import google.protobuf.text_format
 
 from base_test import P4RuntimeTest
 
-@testutils.disabled
+#@testutils.disabled
 class PacketInTest(P4RuntimeTest):
     def runTest(self):
         req = p4runtime_pb2.WriteRequest()
@@ -33,7 +33,7 @@ class PacketInTest(P4RuntimeTest):
                 break
         self.assertEqual(ingress_port, "\x00\x03")
 
-# @testutils.disabled
+#@testutils.disabled
 class PacketOutTest(P4RuntimeTest):
     def runTest(self):
         payload = 'a' * 20
