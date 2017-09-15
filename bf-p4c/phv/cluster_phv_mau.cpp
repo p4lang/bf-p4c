@@ -1410,9 +1410,9 @@ PHV_MAU_Group_Assignments::packing_predicates(
     //
     // field start restrictions .. must start @X 'bit-in-byte' in container, e.g., X,X+8,X+16 etc.
     //
-    //if (!phv_alignment(cl, (*(cc_set.rbegin()))->lo(), (*(cc_set.rbegin()))->hi())) {
-        //return false;
-    //}
+    // if (!phv_alignment(cl, (*(cc_set.rbegin()))->lo(), (*(cc_set.rbegin()))->hi())) {
+        // return false;
+    // }
     //
     // when cluster fields < slices try sliding window of cc_set
     for (int slice_adjust = cc_set.size() - cl->cluster_vec().size() + 1;
