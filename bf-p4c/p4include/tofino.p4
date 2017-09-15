@@ -97,7 +97,7 @@ struct ingress_intrinsic_metadata_from_parser_t {
 struct ingress_intrinsic_metadata_for_tm_t {
     // The ingress physical port id is passed to the TM directly from
     // ig_intr_md.ingress_port
-
+    bit<7> _pad1;
     portid_t ucast_egress_port;          // egress port for unicast packets. must
                                          // be presented to TM for unicast.
 
@@ -121,7 +121,7 @@ struct ingress_intrinsic_metadata_for_tm_t {
     bit<3> icos_for_copy_to_cpu;         // ingress cos for the copy to CPU. must
                                          // be presented to TM if copy_to_cpu ==
                                          // 1.
-
+    bit<3> _pad2;
     bit<1> copy_to_cpu;                  // request for copy to cpu.
 
     bit<2> packet_color;                 // packet color (G,Y,R) that is
@@ -140,12 +140,13 @@ struct ingress_intrinsic_metadata_for_tm_t {
     mgid_t  mcast_grp_b;                 // 2nd multicast group (i.e., tree) id;
                                          // a tree can have two levels.
 
+    bit<3> _pad3;
     bit<13> level1_mcast_hash;           // source of entropy for multicast
                                          // replication-tree level1 (i.e., L3
                                          // replication). must be presented to TM
                                          // for L3 dynamic member selection
                                          // (e.g., ECMP) for multicast.
-
+    bit<3> _pad4;
     bit<13> level2_mcast_hash;           // source of entropy for multicast
                                          // replication-tree level2 (i.e., L2
                                          // replication). must be presented to TM
@@ -156,6 +157,7 @@ struct ingress_intrinsic_metadata_for_tm_t {
                                          // replication-tree level1. used for
                                          // pruning.
 
+    bit<7> _pad5;
     bit<9> level2_exclusion_id;          // exclusion id for multicast
                                          // replication-tree level2. used for
                                          // pruning.
@@ -179,21 +181,22 @@ struct ingress_intrinsic_metadata_for_mirror_buffer_t {
 // EGRESS INTRINSIC METADATA
 // -----------------------------------------------------------------------------
 header egress_intrinsic_metadata_t {
+    bit<7> _pad0;
     bit<9> egress_port;                  // egress port id.
                                          // this field is passed to the deparser
-
+    bit<5> _pad1;
     bit<19> enq_qdepth;                  // queue depth at the packet enqueue
                                          // time.
-
+    bit<6> _pad2;
     bit<2> enq_congest_stat;             // queue congestion status at the packet
                                          // enqueue time.
 
     bit<32> enq_tstamp;                  // time snapshot taken when the packet
                                          // is enqueued (in nsec).
-
+    bit<5> _pad3;
     bit<19> deq_qdepth;                  // queue depth at the packet dequeue
                                          // time.
-
+    bit<6> _pad4;
     bit<2> deq_congest_stat;             // queue congestion status at the packet
                                          // dequeue time.
 
@@ -206,15 +209,16 @@ header egress_intrinsic_metadata_t {
 
     bit<16> egress_rid;                  // L3 replication id for multicast
                                          // packets.
-
+    bit<7> _pad5;
     bit<1> egress_rid_first;             // flag indicating the first replica for
                                          // the given multicast group.
-
+    bit<3> _pad6;
     bit<5> egress_qid;                   // egress (physical) queue id via which
                                          // this packet was served.
-
+    bit<5> _pad7;
     bit<3> egress_cos;                   // egress cos (eCoS) value.
 
+    bit<7> _pad8;
     bit<1> deflection_flag;              // flag indicating whether a packet is
                                          // deflected due to deflect_on_drop.
 
