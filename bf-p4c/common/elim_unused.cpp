@@ -1,27 +1,33 @@
-#include "lib/log.h"
 #include "elim_unused.h"
+#include <string.h>
 #include "bf-p4c/ir/thread_visitor.h"
 #include "bf-p4c/parde/parde_visitor.h"
+#include "lib/log.h"
 
-class ElimUnused::ParserMetadata : public Transform {
+class ElimUnused::Instructions : public Transform {
     ElimUnused &self;
     IR::MAU::StatefulAlu *preorder(IR::MAU::StatefulAlu *salu) override {
         prune();
         return salu; }
 
     IR::BFN::Extract* preorder(IR::BFN::Extract* extract) override {
-        auto field = self.phv.field(extract->dest);
-        if (!field) return extract;
-        if (!self.defuse.getAllUses(field->id).empty()) return extract;
+        auto unit = findOrigCtxt<IR::BFN::Unit>();
+        if (!unit) return extract;
+        if (!self.defuse.getUses(unit, extract->dest).empty()) return extract;
+
+        // XXX(cole): We should find a better mechanism rather than overlaying stkvalid.
+        if (strstr(extract->dest->toString().c_str(), "$stkvalid")) return extract;
+
         LOG1("elim unused " << extract);
         return nullptr;
     }
 
     IR::MAU::Instruction *preorder(IR::MAU::Instruction *i) override {
+        auto unit = findOrigCtxt<IR::BFN::Unit>();
+        if (!unit) return i;
         if (!i->operands[0]) return i;
-        auto field = self.phv.field(i->operands[0]);
-        if (!field) return i;
-        if (!self.defuse.getAllUses(field->id).empty()) return i;
+        if (!self.defuse.getUses(unit, i->operands[0]).empty()) return i;
+        LOG1("elim unused instruction " << i << " IN UNIT " << DBPrint::Brief << unit);
         LOG1("elim unused instruction " << i);
         return nullptr;
     }
@@ -31,7 +37,7 @@ class ElimUnused::ParserMetadata : public Transform {
         return gr; }
 
  public:
-    explicit ParserMetadata(ElimUnused &self) : self(self) {}
+    explicit Instructions(ElimUnused &self) : self(self) {}
 };
 
 class ElimUnused::Headers : public PardeTransform {
@@ -90,9 +96,11 @@ class ElimUnused::Headers : public PardeTransform {
     explicit Headers(ElimUnused &self) : self(self) { }
 };
 
-ElimUnused::ElimUnused(const PhvInfo &phv, const FieldDefUse &defuse) : phv(phv), defuse(defuse) {
-    addPasses({
-        new ParserMetadata(*this),
-        new Headers(*this)
-    });
+ElimUnused::ElimUnused(const PhvInfo &phv, FieldDefUse &defuse) : phv(phv), defuse(defuse) {
+    addPasses({ new PassRepeated({
+        new Instructions(*this),
+        &defuse,
+        new Headers(*this),
+        &defuse
+    })});
 }

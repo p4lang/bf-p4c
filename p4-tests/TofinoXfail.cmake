@@ -251,6 +251,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/21-SimpleTrillThreeStep.p4
   extensions/p4_tests/p4_14/24-SimpleTrillThreeStep2.p4
   extensions/p4_tests/p4_14/test_config_92_bit_xor_10_bits.p4
+  extensions/p4_tests/p4_14/test_config_216_phv_aff.p4
   extensions/p4_tests/p4_14/test_config_217_gateway_non_determin.p4
   testdata/p4_16_samples/issue414-bmv2.p4
   testdata/p4_16_samples/parser-locals2.p4
@@ -343,22 +344,18 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "non_deparsed_field .* deparsed header"
-  extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
-  )
-
-p4c_add_xfail_reason("tofino"
   "Multiple slices in the same container are allocated to field"
+  extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
   extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
   extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
-  extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
   extensions/p4_tests/p4_14/c1/COMPILER-235/vag1737_1.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -379,6 +376,7 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "Conflicting hash distribution bit allocation .*"
+  extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
   extensions/p4_tests/p4_14/jenkins/stful/stful.p4
   )
 
@@ -735,14 +733,9 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "Constant lookup does not match the ActionFormat"
+  extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
   testdata/p4_14_samples/action_inline.p4
   )
-
-p4c_add_xfail_reason("tofino"
-  "Conflicting hash distribution unit groups"
-  extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
-  )
-
 
 p4c_add_xfail_reason("tofino"
   "Field is marked as deparsed, but the deparser doesn't emit it"
@@ -775,27 +768,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Conflicting hash distribution bit allocation"
   extensions/p4_tests/p4_14/jenkins/stful/stful.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "syntax error, unexpected '-', expecting INT"
-  extensions/p4_tests/p4_14/test_config_216_phv_aff.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "No write within a split instruction"
-  testdata/p4_16_samples/mux-bmv2.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "Tofino action has repeated lvalue"
-  testdata/p4_16_samples/slice-def-use.p4
-  testdata/p4_16_samples/slice-def-use1.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "No action data for setting the mirror id"
-  extensions/p4_tests/p4_16/clone-bmv2.p4
   )
 
 # We can't (without some complex acrobatics) support conditional computed

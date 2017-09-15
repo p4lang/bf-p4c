@@ -5,12 +5,12 @@
 
 class ElimUnused : public PassManager {
     const PhvInfo       &phv;
-    const FieldDefUse   &defuse;
+    FieldDefUse   &defuse;
 
-    class ParserMetadata;
+    class Instructions;
     class Headers;
  public:
-    ElimUnused(const PhvInfo &phv, const FieldDefUse &defuse);
+    ElimUnused(const PhvInfo &phv, FieldDefUse &defuse);
 };
 
 #endif /* BF_P4C_COMMON_ELIM_UNUSED_H_ */
