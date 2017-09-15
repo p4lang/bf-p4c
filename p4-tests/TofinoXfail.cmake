@@ -256,7 +256,6 @@ p4c_add_xfail_reason("tofino"
 # used to be: BRIG-129 & BRIG-183
 p4c_add_xfail_reason("tofino"
   "No phv record"
-  extensions/p4_tests/p4_16/clone-bmv2.p4
   extensions/p4_tests/p4_14/test_config_245_alias_test.p4
   )
 
@@ -397,7 +396,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/adb_shared3.p4
   extensions/p4_tests/p4_14/test_config_297_big_metadata.p4
   extensions/p4_tests/p4_14/jenkins/smoke_large_tbls/smoke_large_tbls.p4
-  extensions/p4_tests/p4_14/jenkins/emulation/emulation.p4
   )
 
 # BRIG-146 (also was BRIG-133)
@@ -754,6 +752,10 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/slice-def-use1.p4
   )
 
+p4c_add_xfail_reason("tofino"
+  "No action data for setting the mirror id"
+  extensions/p4_tests/p4_16/clone-bmv2.p4
+  )
 
 # We can't (without some complex acrobatics) support conditional computed
 # checksums on Tofino. In P4-14, these are operations of the form:

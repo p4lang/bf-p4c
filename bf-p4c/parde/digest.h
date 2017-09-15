@@ -64,7 +64,27 @@ class Digests : public Transform {
                 mirror_id = new IR::TempVar(IR::Type::Bits::get(10), "$mirror_id");
             auto list = prim->operands.size() > 2 ? prim->operands[2] : nullptr;
             auto rv = new IR::Vector<IR::Primitive>;
-            rv->push_back(new IR::Primitive("modify_field", mirror_id, prim->operands[1]));
+            
+            // FIXME: Not to Han.  This issue is because the V1model expects the parameter to be
+            // 32 bits, when Tofino only has 10 bits for mirror id.  Thus, the converter should
+            // guarantee that this argument gets converted properly
+            //
+            // At the same time, InstructionSelection/ActionAnalysis don't really handle IR::Cast
+            // yet, resulting in a conversion from individual IR data structures to the correct
+            // type.
+            if (prim->operands[1] == nullptr || !(prim->operands[1]->is<IR::ActionArg>()
+                || prim->operands[1]->is<IR::Constant>()))
+                BUG("No action data for setting the mirror id");
+            IR::Expression *new_aa;
+            if (auto *orig_aa = prim->operands[1]->to<IR::ActionArg>()) {
+                auto act = findContext<IR::MAU::Action>();
+                new_aa = new IR::ActionArg(orig_aa->srcInfo, IR::Type::Bits::get(10), act->name,
+                                        orig_aa->name);
+            } else if (auto *orig_constant = prim->operands[1]->to<IR::Constant>()) {
+                new_aa = new IR::Constant(orig_constant->srcInfo, IR::Type::Bits::get(10),
+                                          orig_constant->value);
+            }
+            rv->push_back(new IR::Primitive("modify_field", mirror_id, new_aa)); 
             rv->push_back(add_to_digest(mirror, "mirror", list));
             //
             // each field list begins with mirror_id, mirror, ..... e.g.,
