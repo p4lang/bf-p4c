@@ -132,7 +132,11 @@ def update_config(name, grpc_addr, p4info_path, tofino_bin_path, cxt_json_path):
 def run_ptf_tests(PTF, ptfdir, p4info_path, stftest, extra_args=[]):
     ifaces = []
     # find base_test.py
-    os.environ['PYTHONPATH'] = os.path.dirname(os.path.abspath(__file__))
+    pypath = os.path.dirname(os.path.abspath(__file__))
+    if 'PYTHONPATH' in os.environ:
+        os.environ['PYTHONPATH'] += ":" + pypath
+    else:
+        os.environ['PYTHONPATH'] = pypath
     for i in xrange(NUM_IFACES):
         iface_idx = i
         ifaces.extend(['-i', '{}@veth{}'.format(iface_idx, 2 * iface_idx + 1)])
