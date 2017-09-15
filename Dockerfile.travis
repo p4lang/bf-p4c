@@ -40,10 +40,11 @@ ENV LDFLAGS="-Wl,-s"
 RUN apt-get update && \
     apt-get install -y --no-install-recommends $P4C_DEPS $P4C_RUNTIME_DEPS && \
     pip install pyinstaller && \
+    /usr/local/bin/ccache --zero-stats && \
     ./bootstrap_bfn_compilers.sh --no-ptf && \
     cd build && \
     make && \
-    /usr/local/bin/ccache -p -s && \
+    /usr/local/bin/ccache -p --show-stats && \
     pip uninstall -y pyinstaller && \
     apt-get purge -y $P4C_DEPS && \
     apt-get autoremove --purge -y && \
