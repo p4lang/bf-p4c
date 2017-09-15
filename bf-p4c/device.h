@@ -1,8 +1,8 @@
-#ifndef EXTENSIONS_TOFINO_DEVICE_H_
-#define EXTENSIONS_TOFINO_DEVICE_H_
+#ifndef EXTENSIONS_BF_P4C_DEVICE_H_
+#define EXTENSIONS_BF_P4C_DEVICE_H_
 
-#include "lib/exceptions.h"
 #include "lib/cstring.h"
+#include "lib/exceptions.h"
 #include "phv/phv_spec.h"
 
 
@@ -15,14 +15,14 @@ class Device {
        return *instance_;
     }
 
-    static const PhvSpec& phvSpec() { return *(Device::get().phv_); }
+    static const PhvSpec& phvSpec() { return Device::get().getPhvSpec(); }
 
  protected:
     explicit Device(cstring name) : name_(name) {}
 
     cstring name() { return name_; }
 
-    PhvSpec *phv_ = nullptr;
+    virtual const PhvSpec& getPhvSpec() const = 0;
 
     cstring name_;
 
@@ -32,10 +32,12 @@ class Device {
 
 
 class TofinoDevice : public Device {
+    const TofinoPhvSpec phv_;
+
  public:
-    TofinoDevice() : Device("Tofino") {
-        phv_ = new TofinoPhvSpec;
-    }
+    TofinoDevice() : Device("Tofino") {}
+
+    const PhvSpec& getPhvSpec() const { return phv_; }
 };
 
-#endif /* EXTENSIONS_TOFINO_DEVICE_H_ */
+#endif /* EXTENSIONS_BF_P4C_DEVICE_H_ */

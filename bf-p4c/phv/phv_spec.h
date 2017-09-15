@@ -1,5 +1,5 @@
-#ifndef EXTENSIONS_TOFINO_PHV_PHV_SPEC_H_
-#define EXTENSIONS_TOFINO_PHV_PHV_SPEC_H_
+#ifndef EXTENSIONS_BF_P4C_PHV_PHV_SPEC_H_
+#define EXTENSIONS_BF_P4C_PHV_PHV_SPEC_H_
 
 #include "lib/bitvec.h"
 
@@ -31,28 +31,40 @@ class PhvSpec {
      * @param start The index of first container in the range.
      * @param length The number of containers in the range. May be zero.
      */
-    bitvec range(PHV::Kind kind, unsigned start, unsigned length) const;
+    virtual bitvec range(PHV::Kind kind, unsigned start, unsigned length) const = 0;
 
     /// @return a bitvec of the containers which are hard-wired to ingress.
-    const bitvec& ingressOnly() const;
+    virtual const bitvec& ingressOnly() const = 0;
 
     /// @return a bitvec of the containers which are hard-wired to egress.
-    const bitvec& egressOnly() const;
+    virtual const bitvec& egressOnly() const = 0;
 
     /// @return the ids of every container in the given tagalong group.
-    bitvec tagalongGroup(unsigned groupIndex) const;
+    virtual bitvec tagalongGroup(unsigned groupIndex) const = 0;
 
     /// @return the ids of containers that can be assigned to a thread
     /// individually.
-    const bitvec& individuallyAssignedContainers() const;
+    virtual const bitvec& individuallyAssignedContainers() const = 0;
 
     /// @return the ids of all containers which actually exist on the Tofino
     /// hardware - i.e., all non-overflow containers.
-    const bitvec& physicalContainers() const;
+    virtual const bitvec& physicalContainers() const = 0;
 };
 
 
 class TofinoPhvSpec : public PhvSpec {
+ public:
+    bitvec range(PHV::Kind kind, unsigned start, unsigned length) const override;
+
+    const bitvec& ingressOnly() const override;
+
+    const bitvec& egressOnly() const override;
+
+    bitvec tagalongGroup(unsigned groupIndex) const override;
+
+    const bitvec& individuallyAssignedContainers() const override;
+
+    const bitvec& physicalContainers() const override;
 };
 
-#endif /* EXTENSIONS_TOFINO_PHV_PHV_SPEC_H_ */
+#endif /* EXTENSIONS_BF_P4C_PHV_PHV_SPEC_H_ */

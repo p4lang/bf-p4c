@@ -299,7 +299,7 @@ struct ContainerAllocation final {
     /// The set of reserved container ids for each thread.
     bitvec threadAssignments[2];
     /// The next available container for each (thread, kind) combination.
-    PHV::Container next[2][NumKinds] = {
+    PHV::Container next[2][PHV::NumKinds] = {
         { "B0", "H0", "W0", "TB0", "TH0", "TW0" },
         { "B0", "H0", "W0", "TB0", "TH0", "TW0" }
     };

@@ -3,8 +3,8 @@
 #include <string>
 #include <iostream>
 
-#include "device.h"
 #include "backend.h"
+#include "device.h"
 #include "ir/ir.h"
 #include "ir/dbprint.h"
 #include "lib/crash.h"

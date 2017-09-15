@@ -46,24 +46,24 @@ Container::Container(const char *name) {
         BUG("Invalid register '%s'", name);
 }
 
-Container::Container(Kind kind, unsigned index) {
+Container::Container(PHV::Kind kind, unsigned index) {
     index_ = index;
     switch (kind) {
-      case Kind::B: log2sz_ = 0; tagalong_ = false; return;
-      case Kind::H: log2sz_ = 1; tagalong_ = false; return;
-      case Kind::W: log2sz_ = 2; tagalong_ = false; return;
-      case Kind::TB: log2sz_ = 0; tagalong_ = true; return;
-      case Kind::TH: log2sz_ = 1; tagalong_ = true; return;
-      case Kind::TW: log2sz_ = 2; tagalong_ = true; return;
+      case PHV::Kind::B: log2sz_ = 0; tagalong_ = false; return;
+      case PHV::Kind::H: log2sz_ = 1; tagalong_ = false; return;
+      case PHV::Kind::W: log2sz_ = 2; tagalong_ = false; return;
+      case PHV::Kind::TB: log2sz_ = 0; tagalong_ = true; return;
+      case PHV::Kind::TH: log2sz_ = 1; tagalong_ = true; return;
+      case PHV::Kind::TW: log2sz_ = 2; tagalong_ = true; return;
     }
     BUG("Unexpected kind");
 }
 
-Kind Container::kind() const {
+PHV::Kind Container::kind() const {
     switch (log2sz_) {
-      case 0: return tagalong_ ? Kind::TB : Kind::B;
-      case 1: return tagalong_ ? Kind::TH : Kind::H;
-      case 2: return tagalong_ ? Kind::TW : Kind::W;
+      case 0: return tagalong_ ? PHV::Kind::TB : PHV::Kind::B;
+      case 1: return tagalong_ ? PHV::Kind::TH : PHV::Kind::H;
+      case 2: return tagalong_ ? PHV::Kind::TW : PHV::Kind::W;
       default: BUG("Called kind() on an invalid container");
     }
 }
@@ -83,18 +83,18 @@ bitvec Container::group() const {
     // Outside of the exceptional cases above, containers are assigned to
     // threads in groups. The grouping depends on the type of container.
     switch (containerKind) {
-      case Kind::B:
-      case Kind::H:
+      case PHV::Kind::B:
+      case PHV::Kind::H:
         return range(containerKind, (index_ / 8) * 8, 8);
 
-      case Kind::W:
+      case PHV::Kind::W:
         return range(containerKind, (index_ / 4) * 4, 4);
 
-      case Kind::TB:
-      case Kind::TW:
+      case PHV::Kind::TB:
+      case PHV::Kind::TW:
         return tagalongGroup(index_ / 4);
 
-      case Kind::TH:
+      case PHV::Kind::TH:
         return tagalongGroup(index_ / 6);
     }
 

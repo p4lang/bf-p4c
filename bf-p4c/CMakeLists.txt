@@ -256,14 +256,14 @@ set (TOFINO_BACKEND_ARCH_HDRS
   )
 
 set (TOFINO_BACKEND_MAIN_SRCS
-  device.cpp
   backend.cpp
+  device.cpp
   midend.cpp
   )
 
 set (TOFINO_BACKEND_MAIN_HDRS
-  device.h
   backend.h
+  device.h
   midend.h
   tofinoOptions.h
   )
