@@ -9,6 +9,7 @@
 #include <vector>
 #include <sys/stat.h>
 #include <unistd.h>
+#include "../bf-p4c/version.h" // for P4C_TOFINO_VERSION
 
 #define MAJOR_VERSION   1
 #define MINOR_VERSION   0
@@ -99,6 +100,34 @@ std::string usage(std::string tfas) {
     u.append(tfas);
     u.append(" [-l:Mo:qtvh] file...");
     return u; }
+
+void output_all() {
+    json::map ctxtJson;
+    const time_t now = time(NULL);
+    char build_date[1024];
+    strftime(build_date, 1024, "%x %X", localtime(&now));
+    ctxtJson["build_date"] = build_date;
+    ctxtJson["compiler_version"] = P4C_TOFINO_VERSION;
+    ctxtJson["program_name"] = asmfile_name.substr(0, asmfile_name.find_last_of("."));
+    ctxtJson["learn_quanta"] = json::vector();
+    ctxtJson["parser"] = json::map();
+    ctxtJson["phv_allocation"] = json::vector();
+    ctxtJson["tables"] = json::vector();
+    ctxtJson["configuration_cache"] = json::vector();
+    Section::output_all(ctxtJson);
+    TopLevel::output_all(ctxtJson);
+    auto json_out = open_output("context.json");
+    if (options.new_ctx_json) {
+        *json_out << &ctxtJson;
+    } else {
+        // old context json only outputs the tables -- the rest is ignored
+        if (options.match_compiler)
+            *json_out << "{ \"ContextJsonNode\": ";
+        *json_out << '[' << ctxtJson["tables"] << (options.match_compiler ? ",\n[] " : "")
+                  << ']' << std::endl;
+        if (options.match_compiler)
+            *json_out << '}' << std::endl; }
+}
 
 int main(int ac, char **av) {
     int srcfiles = 0;
@@ -247,8 +276,7 @@ int main(int ac, char **av) {
             if (stat(output_dir.c_str(), &st) ? mkdir(output_dir.c_str(), 0777)
                                               : !S_ISDIR(st.st_mode))
                 output_dir.clear(); }
-        Section::output_all();
-        TopLevel::output_all(); }
+        output_all(); }
     return error_count > 0 ? 1 : 0;
 }
 
@@ -268,6 +296,6 @@ class Version : public Section {
             error(data.lineno, "Version not understood");
     }
     void process() {}
-    void output() {}
+    void output(json::map &) {}
     static Version singleton_version;
 } Version::singleton_version;

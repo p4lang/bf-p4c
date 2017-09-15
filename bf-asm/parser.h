@@ -27,7 +27,7 @@ class Parser : public Section {
     void start(int lineno, VECTOR(value_t) args);
     void input(VECTOR(value_t) args, value_t data);
     void process();
-    void output();
+    void output(json::map &);
     template<class REGS> void write_config(REGS &);
     static Parser singleton_object;
 

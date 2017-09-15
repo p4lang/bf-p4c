@@ -474,7 +474,7 @@ void output_phv_ownership(bitvec phv_use[2],
     eg_split.val = phv_use[EGRESS].getrange(reg, group_size);
 }
 
-void Deparser::output() {
+void Deparser::output(json::map &) {
     if (dictionary[INGRESS].empty() && dictionary[EGRESS].empty())
         return;
     Target::Tofino::deparser_regs regs;

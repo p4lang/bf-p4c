@@ -15,6 +15,6 @@ private:
     ~TopLevel();
 public:
     static TopLevel     all;
-    void output();
-    static void output_all() { all.output(); }
+    void output(json::map &);
+    static void output_all(json::map &ctxtJson) { all.output(ctxtJson); }
 };

@@ -27,7 +27,7 @@ enum {
 class Phv : public Section {
     void start(int lineno, VECTOR(value_t) args);
     void input(VECTOR(value_t) args, value_t data);
-    void output() {}
+    void output(json::map &) {}
     Phv();
     ~Phv() {}
     static Phv phv;

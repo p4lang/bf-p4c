@@ -11,7 +11,6 @@
 #include "top_level.h"
 #include "target.h"
 #include "misc.h"
-#include "../bf-p4c/version.h" // for P4C_TOFINO_VERSION
 
 extern std::string asmfile_name;
 
@@ -22,7 +21,7 @@ class AsmStage : public Section {
     void start(int lineno, VECTOR(value_t) args);
     void input(VECTOR(value_t) args, value_t data);
     void process();
-    void output();
+    void output(json::map &);
     AsmStage();
     ~AsmStage() {}
     std::vector<Stage>  stage;
@@ -145,8 +144,7 @@ void AsmStage::process() {
     }
 }
 
-void AsmStage::output() {
-    json::vector        tbl_cfg;
+void AsmStage::output(json::map &ctxtJson) {
     for (unsigned i = 0; i < stage.size(); i++) {
         //if  (stage[i].tables.empty()) continue;
         for (auto table : stage[i].tables)
@@ -178,72 +176,36 @@ void AsmStage::output() {
         for (int i = stage.size()-1; i > 0; i--)
             if (stage[i].stage_dep[gress] != Stage::MATCH_DEP)
                 stage[i-1].group_table_use[gress] |= stage[i].group_table_use[gress]; }
-    // Also output new context json schema.
-    auto json_out = open_output("context.json");
-    if (options.new_ctx_json) {
-        const time_t now = time(NULL);
-        char build_date[1024];
-        strftime(build_date, 1024, "%x %X", localtime(&now));
-        json::string json_build_date = build_date;
-        json::string json_compiler_version = P4C_TOFINO_VERSION;
-        json::vector json_learn_quantas;
-        json::map    json_parser;
-        json::vector json_phv_allocation;
-        json::vector json_tables;
-        json::vector json_configuration_cache;
-        json::string json_program_name = asmfile_name.substr(0, asmfile_name.find_last_of("."));
-        for (unsigned i = 0; i < stage.size(); i++) {
-            switch (options.target) {
-#define SWITCH_FOR_TARGET(ETAG, TTYPE) \
-            case ETAG: stage[i].output<TTYPE>(json_tables); break;
-            FOR_ALL_TARGETS(SWITCH_FOR_TARGET)
-#undef SWITCH_FOR_TARGET
-            default: assert(0); } }
-        json_parser["ingress"] = json::vector();
-        json_parser["egress"] = json::vector();
-        // Add configuration cache regs
-        Parser& prsr = Parser::get_parser();
+
+    for (unsigned i = 0; i < stage.size(); i++) {
         switch (options.target) {
 #define SWITCH_FOR_TARGET(ETAG, TTYPE) \
-            case ETAG: {                                                        \
-                TTYPE::parser_regs regs;                                        \
-                prsr.gen_configuration_cache(regs, json_configuration_cache);   \
-                break; }
-            FOR_ALL_TARGETS(SWITCH_FOR_TARGET)
+        case ETAG: stage[i].output<TTYPE>(ctxtJson["tables"]); break;
+        FOR_ALL_TARGETS(SWITCH_FOR_TARGET)
 #undef SWITCH_FOR_TARGET
-            default: assert(0); }
-        for (unsigned i = 0; i < stage.size(); i++) {
-            switch (options.target) {
-#define SWITCH_FOR_TARGET(ETAG, TTYPE) \
-            case ETAG: stage[i].gen_configuration_cache<TTYPE>(json_configuration_cache); break;
-            FOR_ALL_TARGETS(SWITCH_FOR_TARGET)
+        default: assert(0); } }
+    ctxtJson["parser"]["ingress"] = json::vector();
+    ctxtJson["parser"]["egress"] = json::vector();
+    // Add configuration cache regs -- FIXME -- move into output
+    Parser& prsr = Parser::get_parser();
+    switch (options.target) {
+#define SWITCH_FOR_TARGET(ETAG, TTYPE)                                                  \
+        case ETAG: {                                                                    \
+            TTYPE::parser_regs regs;                                                    \
+            prsr.gen_configuration_cache(regs, ctxtJson["configuration_cache"]);        \
+            break; }
+        FOR_ALL_TARGETS(SWITCH_FOR_TARGET)
 #undef SWITCH_FOR_TARGET
-            default: assert(0); } }
-
-        *json_out << '{' << std::endl;
-        *json_out << "\t\"build_date\": "  << &json_build_date << "," << std::endl;
-        *json_out << "\t\"compiler_version\": " << &json_compiler_version << "," << std::endl;
-        *json_out << "\t\"program_name\": " << &json_program_name << "," << std::endl;
-        *json_out << "\t\"learn_quanta\": " << &json_learn_quantas<< "," << std::endl;
-        *json_out << "\t\"parser\": " << &json_parser<< "," << std::endl;
-        *json_out << "\t\"phv_allocation\": " << &json_phv_allocation<< "," << std::endl;
-        *json_out << "\t\"tables\": " << &json_tables << "," << std::endl;
-        *json_out << "\t\"configuration_cache\": " << &json_configuration_cache << std::endl;
-        *json_out << '}' << std::endl;
-    } else {
-        for (unsigned i = 0; i < stage.size(); i++) {
-            // if  (stage[i].tables.empty()) continue;
-            switch (options.target) {
-#define SWITCH_FOR_TARGET(ETAG, TTYPE) \
-            case ETAG: stage[i].output<TTYPE>(tbl_cfg); break;
-            FOR_ALL_TARGETS(SWITCH_FOR_TARGET)
+        default: assert(0); }
+    for (unsigned i = 0; i < stage.size(); i++) {
+        switch (options.target) {
+#define SWITCH_FOR_TARGET(ETAG, TTYPE)                                                  \
+        case ETAG:                                                                      \
+            stage[i].gen_configuration_cache<TTYPE>(ctxtJson["configuration_cache"]);   \
+            break;
+        FOR_ALL_TARGETS(SWITCH_FOR_TARGET)
 #undef SWITCH_FOR_TARGET
-            default: assert(0); } }
-        if (options.match_compiler)
-            *json_out << "{ \"ContextJsonNode\": ";
-        *json_out << '[' << &tbl_cfg << (options.match_compiler ? ",\n[] " : "") << ']' << std::endl;
-        if (options.match_compiler)
-            *json_out << '}' << std::endl; }
+        default: assert(0); } }
     TopLevel::all.mem_pipe.mau.disable();
 }
 

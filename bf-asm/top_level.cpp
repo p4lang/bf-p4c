@@ -29,7 +29,7 @@ TopLevel::~TopLevel() {
     undeclare_registers(&reg_pipe);
 }
 
-void TopLevel::output() {
+void TopLevel::output(json::map &) {
     for (int i = 0; i < 4; i++) {
         mem_top.pipes[i] = "memories.pipe";
         reg_top.pipes[i] = "regs.pipe"; }

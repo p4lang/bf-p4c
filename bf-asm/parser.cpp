@@ -207,7 +207,7 @@ void Parser::process() {
         Phv::setuse(EGRESS, phv_use[EGRESS]); }
 }
 
-void Parser::output() {
+void Parser::output(json::map &) {
     if (all.empty()) return;
     for (auto st : all) st->pass2(this);
     if (error_count > 0) return;

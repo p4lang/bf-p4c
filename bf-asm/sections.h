@@ -2,6 +2,7 @@
 #define _sections_h_
 
 #include "asm-types.h"
+#include "json.h"
 #include "map.h"
 #include <string>
 #include <stdarg.h>
@@ -26,7 +27,7 @@ protected:
     virtual void start(int lineno, VECTOR(value_t) args) { }
     virtual void input(VECTOR(value_t) args, value_t data) = 0;
     virtual void process() {}
-    virtual void output() = 0;
+    virtual void output(json::map &ctxtJson) = 0;
 public:
     static int start_section(int lineno, char *name, VECTOR(value_t) args) {
         if (Section *sec = get(name)) {
@@ -42,10 +43,10 @@ public:
         if (sections)
             for (auto &it : *sections)
                 it.second->process(); }
-    static void output_all() {
+    static void output_all(json::map &ctxtJson) {
         if (sections)
             for (auto &it : *sections)
-                it.second->output(); }
+                it.second->output(ctxtJson); }
 };
 
 #endif /* _sections_h_ */

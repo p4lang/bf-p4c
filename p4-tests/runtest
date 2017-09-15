@@ -294,7 +294,7 @@ fi
 
 # cleanup
 rm -f $testdir/$name.out/tofino.bin
-rm -f $testdir/$name.out/*.json
+rm -f $testdir/$name.out/*.cfg.json
 
 if [[ " $IFAIL_TESTS " =~ " $testdir/$name.p4.test " ]]; then
     echo "intermittent test PASSED"

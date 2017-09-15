@@ -11,4 +11,7 @@ tags
 # Emacs auto-save
 *~
 
+#vim savefiles
+.*.swp
+
 *.pyc

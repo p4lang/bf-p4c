@@ -44,7 +44,7 @@ public:
     void start(int lineno, VECTOR(value_t) args);
     void input(VECTOR(value_t) args, value_t data);
     void process();
-    void output();
+    void output(json::map &);
     template<class REGS> void write_config(REGS &);
     static const bitvec &PhvUse(gress_t gr) {
         return singleton_object.phv_use[gr]; }
