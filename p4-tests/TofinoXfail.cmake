@@ -307,8 +307,13 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Multiple slices in the same container are allocated to field"
+  "non_deparsed_field .* deparsed header"
   extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Multiple slices in the same container are allocated to field"
   extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
   extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
   extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
@@ -725,7 +730,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_273_bridged_and_phase0.p4
   extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
   extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
   )
 
@@ -871,7 +875,6 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     testdata/p4_14_samples/exact_match_mask1.p4
     )
 
-
   p4c_add_xfail_reason("tofino"
     "error: struct .*: Expected type name"
     extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
@@ -882,8 +885,6 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     extensions/p4_tests/p4_14/c1/COMPILER-260/case1799.p4
     extensions/p4_tests/p4_14/c1/COMPILER-260/case1799_1.p4
     extensions/p4_tests/p4_14/c1/COMPILER-262/case1804.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
     extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
     extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
     extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
