@@ -163,6 +163,12 @@ struct ingress_intrinsic_metadata_for_tm_t {
     bit<16> rid;                         // L3 replication id for multicast.
 }
 
+struct ingress_intrinsic_metadata_for_deparser_t {
+    bit<3> learn_idx;
+    bit<3> resubmit_idx;
+    bit<3> mirror_idx;
+}
+
 struct ingress_intrinsic_metadata_for_mirror_buffer_t {
     bit<10> mirror_id;                   // ingress mirror id. must be presented
                                          // to mirror buffer for mirrored
@@ -225,6 +231,10 @@ struct egress_intrinsic_metadata_from_parser_t {
   bit<16> egress_parser_err;             // error flags indicating error(s)
                                          // encountered at egress
                                          // parser.
+}
+
+struct egress_intrinsic_metadata_for_deparser_t {
+    bit<3> mirror_idx;
 }
 
 struct egress_intrinsic_metadata_for_mirror_buffer_t {
@@ -477,22 +487,25 @@ control Ingress<H, M>(
     inout M ig_md,
     in ingress_intrinsic_metadata_t ig_intr_md,
     @optional in ingress_intrinsic_metadata_from_parser_t ig_intr_md_from_prsr,
-    @optional out ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm,
-    @optional out ingress_intrinsic_metadata_for_mirror_buffer_t ig_intr_md_for_mb);
+    @optional inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm,
+    @optional inout ingress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
+    @optional inout ingress_intrinsic_metadata_for_mirror_buffer_t ig_intr_md_for_mb);
 
 control Egress<H, M>(
   inout H hdr,
   inout M eg_md,
   in egress_intrinsic_metadata_t eg_intr_md,
   @optional in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr,
-  @optional out egress_intrinsic_metadata_for_mirror_buffer_t eg_intr_md_for_mb,
-  @optional out egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport);
+  @optional inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
+  @optional inout egress_intrinsic_metadata_for_mirror_buffer_t eg_intr_md_for_mb,
+  @optional inout egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport);
 
 
 control IngressDeparser<H, M>(
     packet_out pkt,
     in H hdr,
     @optional in M metadata,
+    @optional in ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
     @optional mirror_packet mirror,
     @optional resubmit_packet resubmit,
     @optional learn_filter_packet lf);
@@ -501,6 +514,7 @@ control EgressDeparser<H, M>(
     packet_out pkt,
     in H hdr,
     @optional in M metadata,
+    @optional in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
     @optional mirror_packet mirror);
 
 package Switch<IH, IM, EH, EM>(
