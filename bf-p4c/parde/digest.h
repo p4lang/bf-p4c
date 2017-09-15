@@ -72,10 +72,9 @@ class Digests : public Transform {
             // At the same time, InstructionSelection/ActionAnalysis don't really handle IR::Cast
             // yet, resulting in a conversion from individual IR data structures to the correct
             // type.
-            if (prim->operands[1] == nullptr || !(prim->operands[1]->is<IR::ActionArg>()
-                || prim->operands[1]->is<IR::Constant>()))
+            if (prim->operands[1] == nullptr)
                 BUG("No action data for setting the mirror id");
-            IR::Expression *new_aa;
+            IR::Expression *new_aa = nullptr;
             if (auto *orig_aa = prim->operands[1]->to<IR::ActionArg>()) {
                 auto act = findContext<IR::MAU::Action>();
                 new_aa = new IR::ActionArg(orig_aa->srcInfo, IR::Type::Bits::get(10), act->name,
@@ -83,6 +82,8 @@ class Digests : public Transform {
             } else if (auto *orig_constant = prim->operands[1]->to<IR::Constant>()) {
                 new_aa = new IR::Constant(orig_constant->srcInfo, IR::Type::Bits::get(10),
                                           orig_constant->value);
+            } else {
+                BUG("Unexpected mirror id: %1%", prim->operands[1]);
             }
             rv->push_back(new IR::Primitive("modify_field", mirror_id, new_aa)); 
             rv->push_back(add_to_digest(mirror, "mirror", list));
