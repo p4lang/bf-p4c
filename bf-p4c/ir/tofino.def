@@ -109,3 +109,11 @@ class TempVar : Expression {
     dbprint { out << name; }
 }
 
+class MetadataInfo {
+    bool forTM;
+    gress_t gress;
+    cstring type_name;
+    cstring instance_name;
+    cstring field_name;
+    dbprint { out << instance_name << "." << field_name; }
+}

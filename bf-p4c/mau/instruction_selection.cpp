@@ -15,9 +15,31 @@ IR::Member *InstructionSelection::gen_stdmeta(cstring field) {
     cstring metadataName = cstring::to_cstring(VisitingThread(this)) +
                            "::standard_metadata";
     auto* meta = findContext<IR::BFN::Pipe>()->metadata[metadataName];
+    if (!meta) return nullptr;
     if (auto* f = meta->type->getField(field))
         return new IR::Member(f->type, new IR::ConcreteHeaderRef(meta), field);
     BUG("No field %s in standard_metadata", field);
+    return nullptr;
+}
+
+IR::Member *InstructionSelection::gen_intrinsic_metadata(gress_t gress, cstring field) {
+    cstring metadataName;
+    if (gress == gress_t::INGRESS)
+        metadataName = cstring::to_cstring(gress) + "::" + "ingress_intrinsic_metadata";
+    else
+        metadataName = cstring::to_cstring(gress) + "::" + "egress_intrinsic_metadata";
+
+    auto* meta = findContext<IR::BFN::Pipe>()->metadata[metadataName];
+    for (auto& m : findContext<IR::BFN::Pipe>()->metadata) {
+        LOG1("metadata " << m.first << " " << m.second);
+    }
+    if (!meta) {
+        BUG("Unable to find metadata %s", metadataName);
+        return nullptr;
+    }
+    if (auto* f = meta->type->getField(field))
+        return new IR::Member(f->type, new IR::ConcreteHeaderRef(meta), field);
+    BUG("No field %s in %s", field, metadataName);
     return nullptr;
 }
 
@@ -245,7 +267,6 @@ static const IR::Primitive *makeDepositField(IR::Primitive *prim, long) {
 }
 
 const IR::Expression *InstructionSelection::postorder(IR::Primitive *prim) {
-    LOG1("prim " << prim);
     if (!af) return prim;
     const IR::Expression *dest = prim->operands.size() > 0 ? prim->operands[0] : nullptr;
     if (prim->name == "modify_field") {
@@ -328,8 +349,17 @@ const IR::Expression *InstructionSelection::postorder(IR::Primitive *prim) {
             rv->name = rv->name + 4;  // strip off bit_ prefix
             return rv; }
     } else if (prim->name == "drop" || prim->name == "mark_to_drop") {
-        return new IR::MAU::Instruction(prim->srcInfo, "invalidate",
-            gen_stdmeta(VisitingThread(this) ? "egress_port" : "egress_spec"));
+        // XXX(hanw) instead of invalidating egress_port container, we should set drop_ctrl bit.
+        auto member = gen_stdmeta(VisitingThread(this) ? "egress_port" : "egress_spec");
+        if (member)
+            return new IR::MAU::Instruction(prim->srcInfo, "invalidate", member);
+        if (VisitingThread(this) == gress_t::INGRESS) {
+            auto member = gen_intrinsic_metadata(VisitingThread(this), "ucast_egress_port");
+            return new IR::MAU::Instruction(prim->srcInfo, "invalidate", member);
+        } else {
+            auto member = gen_intrinsic_metadata(VisitingThread(this), "egress_port");
+            return new IR::MAU::Instruction(prim->srcInfo, "invalidate", member);
+        }
     } else if (prim->name == "register_action.execute") {
         bool direct_access = false;
         if (prim->operands.size() > 1)
@@ -351,7 +381,6 @@ const IR::Expression *InstructionSelection::postorder(IR::Primitive *prim) {
         return nullptr;
     } else if (prim->name == "counter.count" || prim->name == "meter.execute_meter" ||
                prim->name == "meter.execute") {
-        // XXX(hanw)
         stateful.push_back(prim);  // needed to setup the index
         return nullptr;
     } else if (prim->name == "direct_counter.count" || prim->name == "direct_meter.read") {

@@ -123,7 +123,7 @@ class FindPhase0Table : public Inspector {
   }
 
   bool hasCorrectKey(const IR::P4Table* table) const {
-      // The phase 0 table must match against 'standard_metadata.ingress_port'.
+      // The phase 0 table must match against 'ingress_intrinsic_metadata.ingress_port'.
       auto key = table->getKey();
       if (key == nullptr) return false;
       if (key->keyElements.size() != 1) return false;
@@ -133,7 +133,11 @@ class FindPhase0Table : public Inspector {
       auto containingType = typeMap->getType(member->expr, true);
       if (!containingType->is<IR::Type_Declaration>()) return false;
       auto containingTypeDecl = containingType->to<IR::Type_Declaration>();
-      if (containingTypeDecl->name != "standard_metadata_t") return false;
+      if (useTna) {
+          if (containingTypeDecl->name != "ingress_intrinsic_metadata") return false;
+      } else {
+          if (containingTypeDecl->name != "standard_metadata_t") return false;
+      }
       if (member->member != "ingress_port") return false;
 
       // The match type must be 'exact'.
@@ -230,7 +234,7 @@ class FindPhase0Table : public Inspector {
       if (!ifStatement->condition->is<IR::Equ>()) return false;
       auto equ = ifStatement->condition->to<IR::Equ>();
 
-      // The 'if' should check that 'standard_metadata.resubmit_flag' is 0.
+      // The 'if' should check that 'ingress_intrinsic_metadata.resubmit_flag' is 0.
       auto member = equ->left->to<IR::Member>()
                   ? equ->left->to<IR::Member>()
                   : equ->right->to<IR::Member>();
@@ -241,7 +245,12 @@ class FindPhase0Table : public Inspector {
       auto containingType = typeMap->getType(member->expr, true);
       if (!containingType->is<IR::Type_Declaration>()) return false;
       auto containingTypeDecl = containingType->to<IR::Type_Declaration>();
-      if (containingTypeDecl->name != "standard_metadata_t") return false;
+      // XXX(hanw): remove check on 'standard_metadata_t' when tna translation is done
+      if (useTna) {
+          if (containingTypeDecl->name != "ingress_intrinsic_metadata") return false;
+      } else {
+          if (containingTypeDecl->name != "standard_metadata_t") return false;
+      }
       if (member->member != "resubmit_flag") return false;
       if (!constant->fitsInt() || constant->asInt() != 0) return false;
 
@@ -286,8 +295,8 @@ class FindPhase0Table : public Inspector {
   }
 
  public:
-  FindPhase0Table(P4::ReferenceMap* refMap, P4::TypeMap* typeMap)
-      : refMap(refMap), typeMap(typeMap) { }
+  FindPhase0Table(P4::ReferenceMap* refMap, P4::TypeMap* typeMap, bool useTna)
+      : refMap(refMap), typeMap(typeMap), useTna(useTna) { }
 
   /// If non-null, the phase 0 table we found.
   const IR::P4Table* table = nullptr;
@@ -301,6 +310,7 @@ class FindPhase0Table : public Inspector {
  private:
   P4::ReferenceMap* refMap;
   P4::TypeMap* typeMap;
+  bool useTna;
 };
 
 /**
@@ -411,14 +421,14 @@ class AddPhase0Parser : public Modifier {
 
 std::pair<const IR::P4Control*, IR::BFN::Pipe*>
 extractPhase0(const IR::P4Control* ingress, IR::BFN::Pipe* pipe,
-              P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {
+              P4::ReferenceMap* refMap, P4::TypeMap* typeMap, bool useTna /* = false */) {
     CHECK_NULL(ingress);
     CHECK_NULL(pipe);
     CHECK_NULL(refMap);
     CHECK_NULL(typeMap);
 
     // Find and remove the phase 0 table, if it's present.
-    FindPhase0Table findPhase0(refMap, typeMap);
+    FindPhase0Table findPhase0(refMap, typeMap, useTna);
     ingress->apply(findPhase0);
     if (findPhase0.table == nullptr) return std::make_pair(ingress, pipe);
     auto ingressWithoutPhase0 =

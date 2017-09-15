@@ -650,6 +650,73 @@ const IR::BFN::Pipe* extract_v1model_arch(P4::ReferenceMap* refMap, P4::TypeMap*
     return rv->apply(simplifyReferences);
 }
 
+/// XXX(hanw) I had to duplicate this function to help with the transition from v1model to tofino
+/// will remove it once the transition is done.
+const IR::BFN::Pipe* extract_modified_v1model_arch(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
+                                                      const IR::PackageBlock* top) {
+    auto parser_blk = top->getParameterValue("p");
+    auto parser = parser_blk->to<IR::ParserBlock>()->container;
+    auto ingress_blk = top->getParameterValue("ig");
+    auto ingress = ingress_blk->to<IR::ControlBlock>()->container;
+    auto egress_blk = top->getParameterValue("eg");
+    auto egress = egress_blk->to<IR::ControlBlock>()->container;
+    auto deparser_blk = top->getParameterValue("dep");
+    auto deparser = deparser_blk->to<IR::ControlBlock>()->container;
+
+    auto rv = new IR::BFN::Pipe();
+
+    ParamBinding bindings(typeMap);
+    for (auto param : *parser->type->applyParams->getEnumerator())
+        bindings.bind(param);
+    for (auto param : *ingress->type->applyParams->getEnumerator())
+        bindings.bind(param);
+    for (auto param : *egress->type->applyParams->getEnumerator())
+        bindings.bind(param);
+    for (auto param : *deparser->type->applyParams->getEnumerator())
+        bindings.bind(param);
+
+    auto ig_md = ingress->type->applyParams->parameters.at(2);
+    auto ig_intr_md = bindings.get(ig_md)->obj->to<IR::Metadata>();
+    BUG_CHECK(ig_intr_md != nullptr, "%1% not defined as struct", bindings.get(ig_md)->name);
+    rv->metadata.addUnique("ingress_intrinsic_metadata", ig_intr_md);
+
+    auto eg_md = egress->type->applyParams->parameters.at(2);
+    auto eg_intr_md = bindings.get(eg_md)->obj->to<IR::Metadata>();
+    BUG_CHECK(eg_intr_md != nullptr, "%1% not defined as struct", bindings.get(eg_md)->name);
+    rv->metadata.addUnique("egress_intrinsic_metadata", eg_intr_md);
+
+    SimplifyReferences simplifyReferences(&bindings, refMap, typeMap);
+    parser = parser->apply(simplifyReferences);
+    deparser = deparser->apply(simplifyReferences);
+
+    auto parserInfo = BFN::extractParser(rv, parser, deparser, nullptr, nullptr, true);
+    for (auto gress : { INGRESS, EGRESS }) {
+        rv->thread[gress].parser = parserInfo.parsers[gress];
+        rv->thread[gress].deparser = parserInfo.deparsers[gress];
+    }
+
+    // Check for a phase 0 table. If one exists, it'll be removed from the
+    // ingress pipeline and converted to a parser program.
+    // XXX(seth): We should be able to move this into the midend now.
+    std::tie(ingress, rv) = BFN::extractPhase0(ingress, rv, refMap, typeMap, true);
+
+    // Convert the contents of the ComputeChecksum control, if any, into
+    // deparser primitives.
+    // rv = BFN::extractComputeChecksum(compute_checksum, rv);
+
+    ingress = ingress->apply(simplifyReferences);
+    egress = egress->apply(simplifyReferences);
+
+    ingress->apply(GetTofinoTables(refMap, typeMap, INGRESS, rv));
+    egress->apply(GetTofinoTables(refMap, typeMap, EGRESS, rv));
+
+    // AttachTables...
+    AttachTables toAttach(refMap);
+    for (auto &th : rv->thread)
+        th.mau = th.mau->apply(toAttach);
+
+    return rv->apply(simplifyReferences);
+}
 
 // model tofino native pipeline using frontend IR
 class TnaPipe {
@@ -777,12 +844,17 @@ const IR::BFN::Pipe *extract_maupipe(const IR::P4Program *program, Tofino_Option
         error("No main switch");
         return nullptr; }
 
-    if (options.target == "tofino-v1model-barefoot") {
+    bool needTranslation = options.native_arch &&
+            (options.langVersion == CompilerOptions::FrontendVersion::P4_14);
+
+    if (options.target == "tofino-v1model-barefoot" && !needTranslation) {
         return extract_v1model_arch(&refMap, &typeMap, top);
-    }
-    if (options.target == "tofino-native-barefoot") {
+    } else if (options.target == "tofino-native-barefoot") {
         return extract_native_arch(&refMap, &typeMap, top);
+    } else if (options.target == "tofino-v1model-barefoot" && needTranslation) {
+        return extract_modified_v1model_arch(&refMap, &typeMap, top);
+    } else {
+        error("Unknown architecture %s", options.target);
+        return nullptr;
     }
-    error("Unknown architecture %s", options.target);
-    return nullptr;
 }

@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "midend.h"
+#include "arch/simple_switch.h"
 #include "frontends/common/constantFolding.h"
 #include "frontends/common/resolveReferences/resolveReferences.h"
 #include "frontends/p4/evaluator/evaluator.h"
@@ -112,7 +113,7 @@ class NonMaskLeftValueOrIsValid : public P4::KeyIsComplex {
     }
 };
 
-MidEnd::MidEnd(CompilerOptions&) {
+MidEnd::MidEnd(Tofino_Options& options) {
     // we may come through this path even if the program is actually a P4 v1.0 program
     setName("MidEnd");
     refMap.setIsV1(true);
@@ -123,6 +124,14 @@ MidEnd::MidEnd(CompilerOptions&) {
         P4V1::V1Model::instance.sw.verify.name,
         P4V1::V1Model::instance.sw.update.name,
         P4V1::V1Model::instance.sw.deparser.name };
+
+    BFN::Target target = BFN::Target::Unknown;
+    if (options.target == "tofino-v1model-barefoot")
+        target = BFN::Target::Simple;
+    else if (options.target == "tofino-native-barefoot")
+        target = BFN::Target::Tofino;
+    bool needTranslation = options.native_arch &&
+                           (options.langVersion == CompilerOptions::FrontendVersion::P4_14);
 
     addPasses({
         new P4::TypeChecking(&refMap, &typeMap, true),
@@ -145,10 +154,18 @@ MidEnd::MidEnd(CompilerOptions&) {
                     continue;
                 if (auto a = main->getParameterValue(arg))
                     if (auto ctrl = a->to<IR::ControlBlock>())
-                        skip_controls->emplace(ctrl->container->name); }
-            return root; }),
+                        skip_controls->emplace(ctrl->container->name);
+            }
+            return root;
+        }),
 
         new P4::Inline(&refMap, &typeMap, evaluator),
+        // perform architecture translation after the program is normalized by inline to
+        // only contain one ingress and one egress control block.
+        // Otherwise, the translator has to transform all parameters in all custom control
+        // blocks, which is unattainable.
+        (target == BFN::Target::Simple && needTranslation) ?
+                new BFN::SimpleSwitchTranslation(&refMap, &typeMap, target) : nullptr,
         new P4::InlineActions(&refMap, &typeMap),
         new P4::LocalizeAllActions(&refMap),
         new P4::UniqueNames(&refMap),
@@ -174,15 +191,14 @@ MidEnd::MidEnd(CompilerOptions&) {
         new P4::LocalCopyPropagation(&refMap, &typeMap),
         new P4::ConstantFolding(&refMap, &typeMap),
         new P4::MoveDeclarations(),
-        new P4::ValidateTableProperties({ "implementation", "size", "counters",
-                                          "meters", "size", "support_timeout" }),
+        new P4::ValidateTableProperties({"implementation", "size", "counters",
+                                         "meters", "size", "support_timeout"}),
         new P4::SimplifyControlFlow(&refMap, &typeMap),
         new P4::CompileTimeOperations(),
         new P4::TableHit(&refMap, &typeMap),
         new P4::SynthesizeActions(&refMap, &typeMap, new SkipControls(skip_controls)),
         new P4::MoveActionsToTables(&refMap, &typeMap),
-
-        new RemapIntrinsics,
+        (needTranslation) ? nullptr : new RemapIntrinsics,
         new P4::TypeChecking(&refMap, &typeMap, true),
         new FillFromBlockMap(&refMap, &typeMap),
         evaluator,

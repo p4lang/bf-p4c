@@ -437,14 +437,14 @@ extern stateful_alu<T, O, P> {
 }
 
 /// Action Selector
-extern action_selector<T> {
+extern action_selector {
     /// Optional annotations to help with compiler fitting
     /// @max_num_groups, max number of groups in a selector table
     /// @max_group_size, max number of entries in a group
     action_selector(bit<32> size,
                     @optional selector_mode_t mode,
                     @optional register<bit<1>> reg);
-    abstract T hash();
+    abstract T hash<T>();
 }
 
 extern action_profile {

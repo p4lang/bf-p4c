@@ -97,42 +97,233 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
 
 endif() # HARLYN_STF
 
+# add the failures with no reason
+p4c_add_xfail_reason("tofino" "" ${TOFINO_XFAIL_TESTS})
+
+if (ENABLE_TNA)
+  # clone/resubmit the entire standard_metadata struct in ingress
+  # fail reason: not all fields in standard metadata are defined in ingress
+  p4c_add_xfail_reason("tofino"
+    "Could not find declaration for standard_metadata_t"
+    testdata/p4_14_samples/packet_redirect.p4
+    testdata/p4_14_samples/resubmit.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "Could not find declaration for standard_metadata"
+    testdata/p4_14_samples/simple_nat.p4
+    # access stdmeta.egress_spec in egress pipeline
+    extensions/p4_tests/p4_14/test_config_6_sram_and_tcam_allocation.p4
+    # writes to egress_port which is a read-only field in ingress
+    # A better error message should be
+    # "Unable to write to read-only field standard_metadata.egress_port"
+    testdata/p4_14_samples/simple_router.p4
+    testdata/p4_14_samples/issue767.p4
+    # A better error message should be
+    # "Attempt to access undefined metadata field egress_port in ingress"
+    testdata/p4_14_samples/copy_to_cpu.p4
+    )
+
+  # accessing ingress_intrinsic_metadata in egress
+  # failed because there is no implicit bridged metadata in tofino.p4
+  p4c_add_xfail_reason("tofino"
+    "Could not find declaration for ig_intr_md"
+    extensions/p4_tests/p4_14/test_config_301_bridge_intrinsic.p4
+    extensions/p4_tests/p4_14/c2/COMPILER-261/vag2241.p4
+    )
+
+  # program tries to use pkt_length in standard_metadata in ingress parser,
+  # but the information is not available until egress in tofino.p4
+  p4c_add_xfail_reason("tofino"
+    "struct ingress_intrinsic_metadata_t does not have a field packet_legnth"
+    testdata/p4_14_samples/queueing.p4)
+
+  #
+  p4c_add_xfail_reason("tofino"
+    "Unrecognized mode of the action selector"
+    extensions/p4_tests/p4_14/jenkins/exm_direct/exm_direct_one.p4
+    )
+
+  # hash function that return a data width that is different from 'base'
+  p4c_add_xfail_reason("tofino"
+    "Cannot unify bit"
+    testdata/p4_14_samples/flowlet_switching.p4
+    extensions/p4_tests/p4_14/test_config_96_hash_data.p4
+    extensions/p4_tests/p4_14/test_config_13_first_selection.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "Cannot resolve computed select: BFN::SelectComputed"
+    extensions/p4_tests/p4_14/c1/COMPILER-217/port_parser.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "does not have a PHV allocation though it is used in an action"
+    extensions/p4_tests/p4_14/test_config_157_random_number_generator.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "Could not find declaration for ig_intr_md_for_tm"
+    extensions/p4_tests/p4_14/test_config_306_no_mirror_share.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "Field counter_pfe overlaps with meter_pfe"
+    extensions/p4_tests/p4_14/jenkins/action_spec_format/action_spec_format.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "Could not find declaration for ig_prsr_ctrl"
+    extensions/p4_tests/p4_14/test_config_294_parser_loop.p4
+    extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "Duplicates declaration struct"
+    extensions/p4_tests/p4_14/switch_l2_profile.p4
+    testdata/p4_14_samples/switch_20160226/switch.p4
+    testdata/p4_14_samples/switch_20160512/switch.p4
+    testdata/p4_14_samples/sai_p4.p4
+    extensions/p4_tests/p4_14/switch_20160602/switch.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "Cannot unify Type"
+    testdata/p4_14_samples/issue894.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "src2 must be phv register"
+    extensions/p4_tests/p4_14/test_config_313_neg_test_addr_modes.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "No field named counter_addr in format for simple_table_ingress"
+    extensions/p4_tests/p4_14/jenkins/mau_mem_test/mau_mem_test.p4
+    extensions/p4_tests/p4_14/jenkins/mau_tcam_test/mau_tcam_test.p4
+    )
+endif()  # ENABLE_TNA
+
+# tests that no longer fail when enable TNA translation
+# possibly due to different PHV allocation
+if (NOT ENABLE_TNA)
+  # BRIG-136
+  # was BRIG-134 for extensions/p4_tests/p4_14/jenkins/alpm_test/alpm_test.p4
+  p4c_add_xfail_reason("tofino"
+    "No write within a split instruction"
+    extensions/p4_tests/p4_14/dileep.p4
+    extensions/p4_tests/p4_14/dileep2.p4
+    extensions/p4_tests/p4_14/dileep3.p4
+    extensions/p4_tests/p4_14/dileep4.p4
+    extensions/p4_tests/p4_14/dileep7-b.p4
+    extensions/p4_tests/p4_14/dileep8.p4
+    extensions/p4_tests/p4_14/dileep10.p4
+    extensions/p4_tests/p4_14/dileep11.p4
+    extensions/p4_tests/p4_14/dileep12.p4
+    extensions/p4_tests/p4_14/vk_basic_ipv4_20150706.p4
+    extensions/p4_tests/p4_14/jenkins/action_spec_format/action_spec_format.p4
+    extensions/p4_tests/p4_14/jenkins/alpm_test/alpm_test.p4
+    extensions/p4_tests/p4_14/jenkins/basic_ipv4/basic_ipv4.p4
+    extensions/p4_tests/p4_14/jenkins/exm_direct/exm_direct_one.p4
+    extensions/p4_tests/p4_14/jenkins/exm_direct_1/exm_direct_1_one.p4
+    extensions/p4_tests/p4_14/jenkins/exm_indirect_1/exm_indirect_1_one.p4
+    extensions/p4_tests/p4_14/jenkins/exm_smoke_test/exm_smoke_test_one.p4
+    extensions/p4_tests/p4_14/jenkins/multi_device/multi_device.p4
+    )
+  #BRIG-201
+  p4c_add_xfail_reason("tofino"
+    "payload ... already in use"
+    extensions/p4_tests/p4_14/jenkins/mau_tcam_test/mau_tcam_test.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-242/case1679.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "Too much data for parse matcher"
+    testdata/p4_14_samples/copy_to_cpu.p4
+    )
+
+  # BRIG-109
+  p4c_add_xfail_reason("tofino"
+    "error: Cannot resolve computed select"
+    testdata/p4_14_samples/queueing.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "Encountered invalid code in computed checksum control"
+    testdata/p4_14_samples/checksum.p4
+    extensions/p4_tests/p4_14/test_checksum.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "NULL operand 4 for hash"
+    testdata/p4_14_samples/flowlet_switching.p4
+  )
+
+  p4c_add_xfail_reason("tofino"
+    "error: Field .* and field .* are adjacent in container .* but aren't adjacent in the deparser"
+    extensions/p4_tests/p4_14/test_config_273_bridged_and_phase0.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "Input xbar hash.*conflict in"
+    extensions/p4_tests/p4_14/test_config_96_hash_data.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "Encountered invalid code in computed checksum control"
+    extensions/p4_tests/p4_14/switch_l2_profile.p4
+    testdata/p4_14_samples/switch_20160226/switch.p4
+    testdata/p4_14_samples/switch_20160512/switch.p4
+    testdata/p4_14_samples/sai_p4.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "No PHV allocation for field extracted by the parser"
+    testdata/p4_14_samples/packet_redirect.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "error: Assignment cannot be supported in the parser"
+    testdata/p4_14_samples/simple_nat.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "PHV allocation was not successful"
+    extensions/p4_tests/p4_14/switch_20160602/switch.p4
+    )
+
+  # BRIG-109
+  p4c_add_xfail_reason("tofino"
+    "error: Cannot resolve computed select"
+    extensions/p4_tests/p4_14/test_config_294_parser_loop.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "Conflicting hash distribution unit groups"
+    extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "error: : condition too complex"
+    testdata/p4_14_samples/issue894.p4
+    )
+
+
+  p4c_add_xfail_reason("tofino"
+    "Tofino does not allow meters to use different address schemes on one table"
+    extensions/p4_tests/p4_14/test_config_313_neg_test_addr_modes.p4
+    )
+endif() # ENABLE_TNA
+
 p4c_add_xfail_reason("tofino"
   "error: Could not find declaration for verify_checksum"
   testdata/p4_16_samples/checksum1-bmv2.p4
   )
 
-# add the failures with no reason
-p4c_add_xfail_reason("tofino" "" ${TOFINO_XFAIL_TESTS})
-
 # Failure for BRIG-44 in JIRA
 p4c_add_xfail_reason("tofino"
   "Unhandled expression in BuildGatewayMatch"
   testdata/p4_14_samples/basic_conditionals.p4
-  )
-
-# BRIG-136
-# was BRIG-134 for extensions/p4_tests/p4_14/jenkins/alpm_test/alpm_test.p4
-p4c_add_xfail_reason("tofino"
-  "No write within a split instruction"
-  extensions/p4_tests/p4_14/dileep.p4
-  extensions/p4_tests/p4_14/dileep2.p4
-  extensions/p4_tests/p4_14/dileep3.p4
-  extensions/p4_tests/p4_14/dileep4.p4
-  extensions/p4_tests/p4_14/dileep7-b.p4
-  extensions/p4_tests/p4_14/dileep8.p4
-  extensions/p4_tests/p4_14/dileep10.p4
-  extensions/p4_tests/p4_14/dileep11.p4
-  extensions/p4_tests/p4_14/dileep12.p4
-  extensions/p4_tests/p4_14/vk_basic_ipv4_20150706.p4
-  extensions/p4_tests/p4_14/jenkins/action_spec_format/action_spec_format.p4
-  extensions/p4_tests/p4_14/jenkins/alpm_test/alpm_test.p4
-  extensions/p4_tests/p4_14/jenkins/basic_ipv4/basic_ipv4.p4
-  extensions/p4_tests/p4_14/jenkins/exm_direct/exm_direct_one.p4
-  extensions/p4_tests/p4_14/jenkins/exm_direct_1/exm_direct_1_one.p4
-  extensions/p4_tests/p4_14/jenkins/exm_indirect_1/exm_indirect_1_one.p4
-  extensions/p4_tests/p4_14/jenkins/exm_smoke_test/exm_smoke_test_one.p4
-  extensions/p4_tests/p4_14/jenkins/multi_device/multi_device.p4
   )
 
 # BRIG-101
@@ -179,7 +370,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/stack_complex-bmv2.p4
   testdata/p4_14_samples/TLV_parsing.p4
   testdata/p4_14_samples/axon.p4
-  testdata/p4_14_samples/simple_nat.p4
   testdata/p4_16_samples/stack_complex-bmv2.p4
   )
 
@@ -214,18 +404,11 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/08-FullTPHV3.p4
   )
 
-p4c_add_xfail_reason("tofino"
-  "No PHV allocation for field extracted by the parser"
-  testdata/p4_14_samples/packet_redirect.p4
-  )
-
 # BRIG-109
 p4c_add_xfail_reason("tofino"
   "error: Cannot resolve computed select"
-  testdata/p4_14_samples/queueing.p4
   # XXX(seth): This code just uses packet_in.lookahead() in a way which isn't supported yet.
   testdata/p4_16_samples/issue355-bmv2.p4
-  extensions/p4_tests/p4_14/test_config_294_parser_loop.p4
   )
 
 # varbit extracts don't work in parser
@@ -369,7 +552,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/09-MatchNoDep.p4
   extensions/p4_tests/p4_14/10-MatchNoDep1.p4
   extensions/p4_tests/p4_14/test_config_129_various_exact_match_keys.p4
-  extensions/p4_tests/p4_14/test_config_96_hash_data.p4
   extensions/p4_tests/p4_14/hash_calculation_max_size.p4
   extensions/p4_tests/p4_14/hash_calculation_multiple.p4
   )
@@ -392,7 +574,6 @@ p4c_add_xfail_reason("tofino"
   "error: : condition too complex"
   extensions/p4_tests/p4_14/07-MacAddrCheck.p4
   extensions/p4_tests/p4_14/08-MacAddrCheck1.p4
-  testdata/p4_14_samples/issue894.p4
   )
 
 
@@ -595,13 +776,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/hash_action_gateway2.p4
   )
 
-#BRIG-201
-p4c_add_xfail_reason("tofino"
-  "payload ... already in use"
-  extensions/p4_tests/p4_14/jenkins/mau_tcam_test/mau_tcam_test.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-242/case1679.p4
-  )
-
 p4c_add_xfail_reason("tofino"
   "constant value .* out of range for immediate"
   extensions/p4_tests/p4_14/c1/COMPILER-402/case2318.p4
@@ -694,13 +868,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Too much data for parse matcher"
-  testdata/p4_14_samples/copy_to_cpu.p4
-  )
-
-p4c_add_xfail_reason("tofino"
   "NULL operand 4 for hash"
-  testdata/p4_14_samples/flowlet_switching.p4
   testdata/p4_16_samples/flowlet_switching-bmv2.p4
 )
 
@@ -728,12 +896,10 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Tofino does not allow meters to use different address schemes on one table"
   testdata/p4_14_samples/counter.p4
-  extensions/p4_tests/p4_14/test_config_313_neg_test_addr_modes.p4
   )
 
 p4c_add_xfail_reason("tofino"
   "Constant lookup does not match the ActionFormat"
-  extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
   testdata/p4_14_samples/action_inline.p4
   )
 
@@ -753,13 +919,12 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
   extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
-  extensions/p4_tests/p4_14/switch_20160602/switch.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
   )
 
 p4c_add_xfail_reason("tofino"
   "error: Field .* and field .* are adjacent in container .* but aren't adjacent in the deparser"
   extensions/p4_tests/p4_14/test_config_236_stateful_read_bit.p4
-  extensions/p4_tests/p4_14/test_config_273_bridged_and_phase0.p4
   extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
   extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
@@ -777,16 +942,10 @@ p4c_add_xfail_reason("tofino"
 # for BMV2.
 p4c_add_xfail_reason("tofino"
   "Encountered invalid code in computed checksum control"
-  testdata/p4_14_samples/checksum.p4
-  extensions/p4_tests/p4_14/test_checksum.p4
   testdata/p4_16_samples/issue134-bmv2.p4
   testdata/p4_16_samples/issue655.p4
   testdata/p4_16_samples/issue655-bmv2.p4
   testdata/p4_16_samples/issue270-bmv2.p4
-  extensions/p4_tests/p4_14/switch_l2_profile.p4
-  testdata/p4_14_samples/switch_20160226/switch.p4
-  testdata/p4_14_samples/switch_20160512/switch.p4
-  testdata/p4_14_samples/sai_p4.p4
 )
 
 # BRIG-226

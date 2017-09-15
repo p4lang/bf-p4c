@@ -14,6 +14,7 @@
 
 MESSAGE("-- Adding BFN Compiler test suite")
 OPTION(ENABLE_STF2PTF "Run STF tests as PTF" OFF)
+OPTION(ENABLE_TNA "Enable v1model.p4 to tofino.p4 translation" OFF)
 
 if (NOT ENABLE_STF2PTF)
   # We run STF tests on the STF framework
@@ -117,6 +118,10 @@ if (PTF_REQUIREMENTS_MET)
   if (ENABLE_STF2PTF)
     set (testExtraArgs ${testExtraArgs} -stf2ptf)
   endif()
+endif()
+
+if (ENABLE_TNA)
+  set (testExtraArgs ${testExtraArgs} -Xp4c=--native)
 endif()
 
 set (HARLYN_PTF_DRIVER ${CMAKE_CURRENT_SOURCE_DIR}/ptf_runner.py

@@ -22,6 +22,7 @@ limitations under the License.
 #include "frontends/p4/evaluator/evaluator.h"
 #include "midend/actionsInlining.h"
 #include "midend/inlining.h"
+#include "tofinoOptions.h"
 
 namespace BFN {
 
@@ -35,7 +36,7 @@ class MidEnd : public PassManager {
     P4::TypeMap         typeMap;
     IR::ToplevelBlock   *toplevel = nullptr;  // Should this be const?
 
-    explicit MidEnd(CompilerOptions& options);
+    explicit MidEnd(Tofino_Options& options);
 };
 
 }  // namespace BFN

@@ -12,11 +12,22 @@ IR::Member *gen_fieldref(const IR::HeaderOrMetadata *hdr, cstring field) {
 }
 
 bool AddMetadataShims::preorder(IR::BFN::Parser *parser) {
+    // XXX(hanw): remove after tna translation for p16 is done
+    cstring ingress_intrinsic_metadata;
+    cstring egress_intrinsic_metadata;
+    if (useTna) {
+        ingress_intrinsic_metadata = "ingress_intrinsic_metadata";
+        egress_intrinsic_metadata = "egress_intrinsic_metadata";
+    } else {
+        ingress_intrinsic_metadata = "standard_metadata";
+        egress_intrinsic_metadata = "standard_metadata";
+    }
+
     if (parser->gress == INGRESS) {
         auto alwaysDeparseBit =
             new IR::TempVar(IR::Type::Bits::get(1), true, "$always_deparse");
 
-        auto* meta = pipe->metadata["standard_metadata"];
+        auto* meta = pipe->metadata[ingress_intrinsic_metadata];
         if (!meta || !meta->type->getField("ingress_port") ||
                      !meta->type->getField("resubmit_flag")) {
             // There's not really much we can do in this case; just skip over
@@ -78,7 +89,7 @@ bool AddMetadataShims::preorder(IR::BFN::Parser *parser) {
             new IR::BFN::ParserState("$bridged_metadata", EGRESS, { },
                                         { bridgedMetadataMatch });
 
-        auto* meta = pipe->metadata["standard_metadata"];
+        auto* meta = pipe->metadata[egress_intrinsic_metadata];
         if (!meta || !meta->type->getField("egress_port")) {
             // There's not really much we can do in this case; just skip over
             // the intrinsic metadata.
@@ -103,13 +114,27 @@ bool AddMetadataShims::preorder(IR::BFN::Parser *parser) {
 }
 
 bool AddMetadataShims::preorder(IR::BFN::Deparser *d) {
+    // XXX(hanw): remove after tna translation for p16 is done
+    cstring ingress_intrinsic_metadata;
+    cstring egress_intrinsic_metadata;
+    cstring ingress_egress_port;
+    if (useTna) {
+        ingress_intrinsic_metadata = "ingress_intrinsic_metadata";
+        egress_intrinsic_metadata = "egress_intrinsic_metadata";
+        ingress_egress_port = "ucast_egress_port";
+    } else {
+        ingress_intrinsic_metadata = "standard_metadata";
+        egress_intrinsic_metadata = "standard_metadata";
+        ingress_egress_port = "egress_spec";
+    }
+
     if (d->gress == INGRESS) {
-        auto *meta = pipe->metadata["standard_metadata"];
-        if (!meta || !meta->type->getField("egress_spec")) return false;
-        d->egress_port = gen_fieldref(meta, "egress_spec");
+        auto *meta = pipe->metadata[ingress_intrinsic_metadata];
+        if (!meta || !meta->type->getField(ingress_egress_port)) return false;
+        d->egress_port = gen_fieldref(meta, ingress_egress_port);
     } else if (d->gress == EGRESS) {
         // egress_port is read-only
-        auto *meta = pipe->metadata["standard_metadata"];
+        auto *meta = pipe->metadata[egress_intrinsic_metadata];
         if (!meta || !meta->type->getField("egress_port")) return false;
         d->egress_port = gen_fieldref(meta, "egress_port");
     }

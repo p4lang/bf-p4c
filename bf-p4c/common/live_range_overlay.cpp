@@ -22,6 +22,7 @@ bool LiveRangeOverlay::is_dead_at(const PhvInfo::Field &f, const IR::BFN::Unit *
             // the hardware implicitly initializes all metadata to zero.
             // Hence, this field may be live if u may happen before ur.
 
+            // XXX(hanw): remove this..
             // TODO: egress_spec is special and considered uninitialized until
             // writen.  This should be changed to use Tofino native names.
             if (strstr(f.name, "egress_spec"))

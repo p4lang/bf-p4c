@@ -18,6 +18,110 @@
 
 namespace BFN {
 
+/// helpers
+
+/// TODO(hanw): following three helpers can be improved with auto-generated v1model object
+const IR::P4Control* SimpleSwitchTranslation::getIngress(const IR::ToplevelBlock* blk) {
+    auto main = blk->getMain();
+    auto ctrl = main->findParameterValue("ig");
+    if (ctrl == nullptr)
+        return nullptr;
+    if (!ctrl->is<IR::ControlBlock>()) {
+        ::error("%1%: main package  match the expected model", main);
+        return nullptr;
+    }
+    return ctrl->to<IR::ControlBlock>()->container;
+}
+
+const IR::P4Control* SimpleSwitchTranslation::getEgress(const IR::ToplevelBlock* blk) {
+    auto main = blk->getMain();
+    auto ctrl = main->findParameterValue("eg");
+    if (ctrl == nullptr)
+        return nullptr;
+    if (!ctrl->is<IR::ControlBlock>()) {
+        ::error("%1%: main package  match the expected model", main);
+        return nullptr;
+    }
+    return ctrl->to<IR::ControlBlock>()->container;
+}
+
+const IR::P4Parser* SimpleSwitchTranslation::getParser(const IR::ToplevelBlock* blk) {
+    auto main = blk->getMain();
+    auto ctrl = main->findParameterValue("p");
+    if (ctrl == nullptr)
+        return nullptr;
+    if (!ctrl->is<IR::ParserBlock>()) {
+        ::error("%1%: main package  match the expected model", main);
+        return nullptr;
+    }
+    return ctrl->to<IR::ParserBlock>()->container;
+}
+
+bool SimpleSwitchTranslation::isStandardMetadataParameter(const IR::Parameter* param) {
+    if (target != Target::Simple)
+        return false;
+    auto blk = getToplevelBlock();
+    auto parser = getParser(blk);
+    auto params = parser->getApplyParameters();
+    if (params->size() != 4) {
+        ::error("%1%: Expected 4 parameters for parser", parser);
+        return false;
+    }
+    if (*params->parameters.at(3) == *param) {
+        return true;
+    }
+
+    auto ingress = getIngress(blk);
+    params = ingress->getApplyParameters();
+    if (params->size() != 3) {
+        ::error("%1%: Expected 3 parameters for ingress", ingress);
+        return false;
+    }
+    if (*params->parameters.at(2) == *param) {
+        return true;
+    }
+
+    auto egress = getEgress(blk);
+    params = egress->getApplyParameters();
+    if (params->size() != 3) {
+        ::error("%1%: Expected 3 parameters for egress", egress);
+        return false;
+    }
+    if (*params->parameters.at(2) == *param) {
+        return true;
+    }
+    return false;
+}
+
+static cstring toString(BlockType block) {
+    switch (block) {
+        case BlockType::Unknown: return "unknown";
+        case BlockType::Parser: return "parser";
+        case BlockType::Ingress: return "ingress";
+        case BlockType::Egress: return "egress";
+        case BlockType::Deparser: return "deparser";
+    }
+    BUG("Unexpected *block value");
+}
+
+std::ostream& operator<<(std::ostream& out, BlockType block) {
+    return out << toString(block);
+}
+
+bool operator>>(cstring s, BlockType& blockType) {
+    if (s == "ingress")
+        blockType = BlockType::Ingress;
+    else if (s == "egress")
+        blockType = BlockType::Egress;
+    else if (s == "parser")
+        blockType = BlockType::Parser;
+    else if (s == "deparser")
+        blockType = BlockType::Deparser;
+    else
+        return false;
+    return true;
+}
+
 /// When compiling a tofino-v1model program, the compiler by default
 /// includes tofino/intrinsic_metadata.p4 and v1model.p4 from the
 /// system path. Symbols in these system header files are reserved and
@@ -25,19 +129,19 @@ namespace BFN {
 /// @input: User P4 program with source architecture type declarations.
 /// @output: User P4 program w/o source architecture type declarations.
 class RemoveUserArchitecture : public Transform {
-    cstring target;
     ProgramStructure* structure;
+    Target    target;
     // reservedNames is used to filter out system defined types.
     std::set<cstring>* reservedNames;
     IR::IndexedVector<IR::Node>* programDeclarations;
 
  public:
-    explicit RemoveUserArchitecture(ProgramStructure* structure, const Tofino_Options* options)
+    RemoveUserArchitecture(ProgramStructure* structure, Target arch)
         : structure(structure) {
         setName("RemoveUserArchitecture");
-        CHECK_NULL(structure); CHECK_NULL(options);
-        target = options->target;
+        CHECK_NULL(structure);
         reservedNames = new std::set<cstring>();
+        target = arch;
         programDeclarations = new IR::IndexedVector<IR::Node>();
     }
 
@@ -113,11 +217,10 @@ class RemoveUserArchitecture : public Transform {
         IR::IndexedVector<IR::Node> baseArchTypes;
         IR::IndexedVector<IR::Node> libArchTypes;
 
-        if (target == "tofino-v1model-barefoot") {
+        if (target == Target::Simple) {
             structure->include("v1model.p4", &baseArchTypes);
             structure->include("tofino/stateful_alu.p4", &libArchTypes);
-        } else {
-            ::error("Unsupported target %1%", target); }
+        }
         /// populate reservedNames from arch.p4 and include system headers
         for (auto node : baseArchTypes) {
             processArchTypes(node); }
@@ -622,21 +725,348 @@ class TranslationLast : public PassManager {
     TranslationLast() { setName("TranslationLast"); }
 };
 
-SimpleSwitchTranslation::SimpleSwitchTranslation(Tofino_Options& options) {
+// clean up p14 v1model
+class CleanP14V1model : public Transform {
+    // following fields are showing up in struct H, because in P4-14
+    // these structs are declared as header type.
+    // In TNA, most of these metadata are individual parameter to
+    // the control block, and shall be removed from struct H.
+    // XXX(hanw): these hard-coded name should be auto-generated from include files.
+    std::set<cstring> structToRemove = {
+            "generator_metadata_t_0",
+            "ingress_parser_control_signals",
+            "standard_metadata_t",
+            "egress_intrinsic_metadata_t",
+            "egress_intrinsic_metadata_for_mirror_buffer_t",
+            "egress_intrinsic_metadata_for_output_port_t",
+            "egress_intrinsic_metadata_from_parser_aux_t",
+            "ingress_intrinsic_metadata_t",
+            "ingress_intrinsic_metadata_for_mirror_buffer_t",
+            "ingress_intrinsic_metadata_for_tm_t",
+            "ingress_intrinsic_metadata_from_parser_aux_t"};
+
+ public:
+    CleanP14V1model() { setName("CleanP14V1model"); }
+
+    const IR::Node* preorder(IR::Type_Header* node) {
+        auto it = structToRemove.find(node->name);
+        if (it != structToRemove.end()) {
+            return nullptr; }
+        return node; }
+
+    const IR::Node* preorder(IR::StructField* node) {
+        auto header = findContext<IR::Type_Struct>();
+        if (!header) return node;
+        if (header->name != "headers") return node;
+
+        auto type = node->type->to<IR::Type_Name>();
+        if (!type) return node;
+
+        auto it = structToRemove.find(type->path->name);
+        if (it != structToRemove.end())
+            return nullptr;
+        return node;
+    }
+
+    /// Given a IR::Member of the following structure:
+    ///
+    /// Member member=mcast_grp_b
+    ///   type: Type_Bits size=16 isSigned=0
+    ///   expr: Member member=ig_intr_md_for_tm
+    ///     type: Type_Header name=ingress_intrinsic_metadata_for_tm_t
+    ///     expr: PathExpression
+    ///       type: Type_Name...
+    ///       path: Path name=hdr absolute=0
+    ///
+    /// transform it to the following:
+    ///
+    /// Member member=mcast_grp_b
+    ///   type: Type_Bits size=16 isSigned=0
+    ///   expr: PathExpression
+    ///     type: Type_Name...
+    ///     path: Path name=ig_intr_md_for_tm
+    const IR::Node* preorder(IR::Member* mem) {
+        auto submem = mem->expr->to<IR::Member>();
+        if (!submem) return mem;
+        auto submemType = submem->type->to<IR::Type_Header>();
+        if (!submemType) return mem;
+        auto it = structToRemove.find(submemType->name);
+        if (it == structToRemove.end()) return mem;
+
+        auto newType = new IR::Type_Name(submemType->name);
+        auto newName = new IR::Path(submem->member);
+        auto newExpr = new IR::PathExpression(newType, newName);
+        auto newMem = new IR::Member(mem->srcInfo, mem->type, newExpr, mem->member);
+        return newMem; }
+};
+
+using MetadataMap = ordered_map<cstring, IR::MetadataInfo*>;
+class SetupMetadataMap : public Inspector {
+    MetadataMap* translationMap;
+
+ public:
+    explicit SetupMetadataMap(MetadataMap* map)
+        : translationMap(map) { setName("SetupMetadataMap"); }
+
+    void remap_ingress_intrinsic_metadata(cstring key, cstring inst, cstring name) {
+        auto metainfo = new IR::MetadataInfo(false, gress_t::INGRESS,
+                                             P4_16::IngressIntrinsics, inst, name);
+        translationMap->emplace(key, metainfo);
+    }
+
+    void remap_egress_intrinsic_metadata(cstring key, cstring inst, cstring name) {
+        auto metainfo = new IR::MetadataInfo(false, gress_t::EGRESS,
+                                             P4_16::EgressIntrinsics, inst, name);
+        translationMap->emplace(key, metainfo);
+    }
+
+    void remap_ingress_parser_metadata(cstring key, cstring inst, cstring name) {
+        auto metainfo = new IR::MetadataInfo(false, gress_t::INGRESS,
+                                             P4_16::IngressIntrinsicsFromParser, inst, name);
+        translationMap->emplace(key, metainfo);
+    }
+
+    void remap_egress_parser_metadata(cstring key, cstring inst, cstring name) {
+        auto metainfo = new IR::MetadataInfo(false, gress_t::EGRESS,
+                                             P4_16::EgressIntrinsicsFromParser, inst, name);
+        translationMap->emplace(key, metainfo);
+    }
+
+    profile_t init_apply(const IR::Node* root) {
+        // ingress
+        remap_ingress_intrinsic_metadata("ingress::ingress_port", "ig_intr_md", "ingress_port");
+        remap_ingress_intrinsic_metadata("ingress::resubmit_flag", "ig_intr_md", "resubmit_flag");
+        // XXX(hanw): move ucast_egress_port to tm metadata
+        remap_ingress_intrinsic_metadata("ingress::egress_spec", "ig_intr_md", "ucast_egress_port");
+        remap_ingress_intrinsic_metadata("ingress::ucast_egress_port",
+                                         "ig_intr_md", "ucast_egress_port");
+        remap_ingress_parser_metadata("ingress::ingress_parser_err",
+                                      "ig_intr_md_from_parser", "ingress_parser_err");
+        remap_ingress_intrinsic_metadata("ingress::instance_type", "ig_intr_md", "instance_type");
+        remap_ingress_parser_metadata("ingress::ingress_global_tstamp",
+                                      "ig_intr_md_from_parser", "ingress_global_tstamp");
+
+        // egress
+        remap_egress_intrinsic_metadata("egress::egress_port", "eg_intr_md", "egress_port");
+        remap_egress_parser_metadata("egress::egress_parser_err",
+                                     "eg_intr_md_from_parser", "egress_parser_err");
+        remap_egress_intrinsic_metadata("egress::instance_type", "eg_intr_md", "instance_type");
+        remap_egress_intrinsic_metadata("egress::clone_src", "eg_intr_md", "clone_src");
+
+        // parser metadata
+        remap_ingress_intrinsic_metadata("parser::ingress_port", "ig_intr_md", "ingress_port");
+        remap_ingress_intrinsic_metadata("parser::packet_length", "ig_intr_md", "packet_legnth");
+
+        auto rv = Inspector::init_apply(root);
+        return rv;
+    }
+};
+
+class DoMetadataTranslation : public Transform {
+    SimpleSwitchTranslation* translator;
+    MetadataMap* translationMap;
+
+ public:
+    DoMetadataTranslation(SimpleSwitchTranslation* translator, MetadataMap* map)
+    : translator(translator), translationMap(map) { setName("DoMetadataTranslation"); }
+
+    BlockType getInstantiatedBlockType() {
+        auto blk = translator->getToplevelBlock();
+        auto control = findOrigCtxt<IR::P4Control>();
+        if (control) {
+            auto ingress = translator->getIngress(blk);
+            if (*ingress == *control) {
+                return BlockType::Ingress;
+            }
+            auto egress = translator->getEgress(blk);
+            if (*egress == *control) {
+                return BlockType::Egress;
+            }
+        }
+        auto p4parser = findOrigCtxt<IR::P4Parser>();
+        if (p4parser) {
+            auto parser = translator->getParser(blk);
+            if (*p4parser == *parser) {
+                return BlockType::Parser;
+            }
+        }
+        return BlockType::Unknown;
+    }
+
+    const IR::Member* translate(const IR::Member* mem) {
+        auto blockType = getInstantiatedBlockType();
+        auto metadata = cstring::to_cstring(blockType) + "::" + mem->member;
+        if (translationMap->count(metadata) == 0) return mem;
+        auto &to = translationMap->at(metadata);
+        auto expr = new IR::PathExpression(to->instance_name);
+        auto result = new IR::Member(mem->srcInfo, expr, to->field_name);
+        LOG3("map " << mem << " to " << result);
+        return result;
+    }
+
+    const IR::Node* postorder(IR::Member* mem) override {
+        auto submem = mem->expr->to<IR::Member>();
+        if (submem) {
+            auto name = submem->member.name;
+            if (name == P4_14::StandardMetadata) {
+               return translate(mem);
+            } else if (name == P4_14::IntrinsicMetadataForTM) {
+                return translate(mem);
+            } else if (name == P4_14::IngressIntrinsicMetadataFromParser) {
+                return translate(mem);
+            } else if (name == P4_14::EgressIntrinsicMetadataFromParser) {
+                return translate(mem);
+            }
+        }
+        auto expr = mem->expr->to<IR::PathExpression>();
+        if (expr) {
+            auto path = expr->path->to<IR::Path>();
+            if (!path)
+                return mem;
+            if (path->name == P4_14::StandardMetadata) {
+                return translate(mem);
+            } else if (path->name == P4_14::IntrinsicMetadataForTM) {
+                return translate(mem);
+            }
+            return mem;
+        }
+        return mem;
+    }
+
+    const IR::Node* postorder(IR::Parameter* param) override {
+        if (!translator->isStandardMetadataParameter(param)) {
+            return param;
+        }
+        auto blockType = getInstantiatedBlockType();
+        if (blockType == BlockType::Ingress) {
+            auto path = new IR::Path(P4_16::IngressIntrinsics);
+            auto type = new IR::Type_Name(path);
+            auto meta = new IR::Parameter("ig_intr_md", IR::Direction::InOut, type);
+            return meta;
+        } else if (blockType == BlockType::Egress) {
+            auto path = new IR::Path(P4_16::EgressIntrinsics);
+            auto type = new IR::Type_Name(path);
+            auto meta = new IR::Parameter("eg_intr_md", IR::Direction::InOut, type);
+            return meta;
+        } else if (blockType == BlockType::Parser) {
+            auto path = new IR::Path(P4_16::IngressIntrinsics);
+            auto type = new IR::Type_Name(path);
+            auto meta = new IR::Parameter("ig_intr_md", IR::Direction::InOut, type);
+            return meta;
+        }
+        return param;
+    }
+
+    const IR::Node* preorder(IR::P4Control* node) override {
+        auto blk = translator->getToplevelBlock();
+        auto ingress = translator->getIngress(blk);
+        if (*ingress == *node) {
+            auto paramList = new IR::ParameterList({node->type->applyParams->parameters.at(0),
+                                                    node->type->applyParams->parameters.at(1),
+                                                    node->type->applyParams->parameters.at(2)});
+            // add ig_intr_md_from_prsr
+            auto path = new IR::Path(P4_16::IngressIntrinsicsFromParser);
+            auto type = new IR::Type_Name(path);
+            auto param = new IR::Parameter("ig_intr_md_from_parser", IR::Direction::In, type);
+            paramList->push_back(param);
+
+            // add ig_intr_md_for_tm
+            path = new IR::Path(P4_16::IngressIntrinsicsForTM);
+            type = new IR::Type_Name(path);
+            param = new IR::Parameter("ig_intr_md_for_tm", IR::Direction::Out, type);
+            paramList->push_back(param);
+
+            // add ig_intr_md_for_mb
+            path = new IR::Path(P4_16::IngressIntrinsicsForMirror);
+            type = new IR::Type_Name(path);
+            param = new IR::Parameter("ig_intr_md_for_mb", IR::Direction::Out, type);
+            paramList->push_back(param);
+
+            auto control_type = new IR::Type_Control(node->name, paramList);
+
+            auto result = new IR::P4Control(node->srcInfo, node->name, control_type,
+                                            node->constructorParams, node->controlLocals,
+                                            node->body);
+            return result;
+        }
+
+        auto egress = translator->getEgress(blk);
+        if (*egress == *node) {
+            auto paramList = new IR::ParameterList({node->type->applyParams->parameters.at(0),
+                                                    node->type->applyParams->parameters.at(1),
+                                                    node->type->applyParams->parameters.at(2)});
+            // add eg_intr_md_from_prsr
+            auto path = new IR::Path(P4_16::EgressIntrinsicsFromParser);
+            auto type = new IR::Type_Name(path);
+            auto param = new IR::Parameter("eg_intr_md_from_parser", IR::Direction::In, type);
+            paramList->push_back(param);
+
+            // add eg_intr_md_for_mb
+            path = new IR::Path(P4_16::EgressIntrinsicsForMirror);
+            type = new IR::Type_Name(path);
+            param = new IR::Parameter("eg_intr_md_for_mb", IR::Direction::Out, type);
+            paramList->push_back(param);
+
+            // add eg_intr_md_for_oport
+            path = new IR::Path(P4_16::EgressIntrinsicsForOutputPort);
+            type = new IR::Type_Name(path);
+            param = new IR::Parameter("eg_intr_md_for_oport", IR::Direction::Out, type);
+            paramList->push_back(param);
+
+            auto control_type = new IR::Type_Control(node->name, paramList);
+
+            auto result = new IR::P4Control(node->srcInfo, node->name, control_type,
+                                            node->constructorParams, node->controlLocals,
+                                            node->body);
+            return result;
+        }
+        return node;
+    }
+};
+
+/**
+ * This pass translates standard_metadata_t to [ingress/egress]_intrinsic_metadata_t.
+ * It also translates the path to member of standard_metadata_t to the corresponding
+ * member in intrinsic metadata.
+ *
+ * @pre: assume no Transform pass between the most recent EvaluatorPass and this pass.
+ *      i.e., no modification is applied to the IR tree, and pointer equality is
+ *      sufficient to check equality.
+ * @post: standard_metadata_t in control block parameters and reference to
+ *      standard_metadata fields are translated to tofino intrinsic metadata.
+ */
+class MetadataTranslation : public PassManager {
+    MetadataMap translationMap;
+
+ public:
+    explicit MetadataTranslation(SimpleSwitchTranslation* translator) {
+        addPasses({
+            new SetupMetadataMap(&translationMap),
+            new DoMetadataTranslation(translator, &translationMap),
+        });
+    }
+};
+
+SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
+                                                 P4::TypeMap* typeMap, Target arch) {
     setName("Translation");
-    refMap.setIsV1(true);
+    auto evaluator = new P4::EvaluatorPass(refMap, typeMap);
+    target = arch;
     addPasses({
-        new P4::TypeChecking(&refMap, &typeMap, true),
-        new RemoveUserArchitecture(&structure, &options),
+        new P4::TypeChecking(refMap, typeMap, true),
+        evaluator,
+        new VisitFunctor([this, evaluator]() { toplevel = evaluator->getToplevelBlock(); }),
+        new MetadataTranslation(this),
+        new RemoveUserArchitecture(&structure, target),
+        new CleanP14V1model(),
         new DoCounterTranslation(),
-        new DoMeterTranslation(&refMap, &typeMap),
+        new DoMeterTranslation(refMap, typeMap),
         new RandomTranslation(),
         new HashTranslation(),
         new AppendSystemArchitecture(&structure),
         new TranslationLast(),
-        new P4::ClearTypeMap(&typeMap),
-        new P4::ResolveReferences(&refMap),
-        new P4::TypeInference(&refMap, &typeMap, false),  // insert casts
+        new P4::ClearTypeMap(typeMap),
+        new P4::TypeChecking(refMap, typeMap, false),
     });
 }
 

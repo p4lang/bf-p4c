@@ -12,14 +12,15 @@
 
 class AddMetadataShims : public PardeModifier {
  public:
-    explicit AddMetadataShims(const IR::BFN::Pipe* pipe) : pipe(pipe)
-    { CHECK_NULL(pipe); }
+    explicit AddMetadataShims(const IR::BFN::Pipe* pipe, bool useTna = false)
+            : pipe(pipe), useTna(useTna) { CHECK_NULL(pipe); }
 
  private:
     bool preorder(IR::BFN::Parser *) override;
     bool preorder(IR::BFN::Deparser *) override;
 
     const IR::BFN::Pipe* pipe;
+    const bool useTna;
 };
 
 #endif /* BF_P4C_PARDE_ADD_PARDE_METADATA_H_ */

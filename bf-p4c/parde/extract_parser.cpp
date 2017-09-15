@@ -188,7 +188,8 @@ ParserInfo extractParser(const IR::BFN::Pipe* pipe,
                          const IR::P4Parser* igParser,
                          const IR::P4Control* igDeparser,
                          const IR::P4Parser* egParser /* = nullptr */,
-                         const IR::P4Control* egDeparser /* = nullptr */) {
+                         const IR::P4Control* egDeparser /* = nullptr */,
+                         bool useTna) {
     CHECK_NULL(igParser);
     CHECK_NULL(igDeparser);
 
@@ -226,7 +227,7 @@ ParserInfo extractParser(const IR::BFN::Pipe* pipe,
         : new IR::BFN::Deparser(EGRESS, igDeparser);
 
     // Add shims for intrinsic metadata.
-    AddMetadataShims addMetadataShims(pipe);
+    AddMetadataShims addMetadataShims(pipe, useTna);
     for (auto gress : { INGRESS, EGRESS }) {
         info.parsers[gress] = info.parsers[gress]->apply(addMetadataShims);
         info.deparsers[gress] = info.deparsers[gress]->apply(addMetadataShims);

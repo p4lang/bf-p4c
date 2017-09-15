@@ -20,29 +20,15 @@ class ProgramStructure {
     }
     void include(cstring filename, IR::IndexedVector<IR::Node>* decls);
     void include14(cstring filename, IR::IndexedVector<IR::Node>* decls);
-    const IR::P4Program* translate(Util::SourceInfo info);
-
-    std::map<const IR::Member*, const IR::Member*>  metadataMap;
 
     std::vector<const IR::P4Control*>   controls;
     std::vector<const IR::P4Parser*>    parsers;
     std::vector<const IR::Type_Extern*> externs;
     std::map<cstring, const IR::Type_Header*> headers;
     std::vector<const IR::Type_Struct*> structs;
-    std::vector<const IR::Declaration_Instance*> declaration_instances;
-
-    // XXX(hanw): create an IR::Tofino primitve type for resubmit.
-    std::vector<const IR::Type_Header*> extern_resubmit;
-    std::vector<const IR::Type_Header*> extern_recirculate;
-    std::vector<const IR::Type_Header*> extern_clone;
 
     /// system metadata is metadata from v1model or p4-14 intrinsic_metadata
     std::map<cstring, const IR::Node*> system_metadata;
-
-    bool isOldSystemMetadata(cstring name) {
-        auto it = system_metadata.find(name);
-        return it != system_metadata.end();
-    }
 
     IR::ConstructorCallExpression* mkConstructorCallExpression(cstring name) {
         auto args = new IR::Vector<IR::Expression>();

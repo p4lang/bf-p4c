@@ -64,15 +64,6 @@ int main(int ac, char **av) {
         return 1;
     log_dump(program, "Initial program");
 
-    if (options.target == "tofino-v1model-barefoot" && options.native_arch) {
-        BFN::SimpleSwitchTranslation translation(options);
-        translation.addDebugHook(hook);
-        program = program->apply(translation);
-        if (!program)
-            return 1;
-        log_dump(program, "After TNA translation");
-    }
-
     BFN::MidEnd midend(options);
     midend.addDebugHook(hook);
     program = program->apply(midend);
@@ -94,7 +85,7 @@ int main(int ac, char **av) {
         return 1;
 
     if (Log::verbose())
-        std::cout << "Compiling" << std::endl;
+    std::cout << "Compiling" << std::endl;
 
     BFN::backend(maupipe, options);
 
