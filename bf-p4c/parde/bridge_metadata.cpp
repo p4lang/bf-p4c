@@ -16,13 +16,37 @@ class AddBridgedMetadata::FindFieldsToBridge : public ThreadVisitor, Inspector {
                       LOG2("bridging field " << loc.second << " id=" << field->id);
                       bridgedFields.insert(field);
 
-                      // If this field has an alignment constraint, make sure
-                      // that we generate a packing that respects it.
-                      if (field->alignment)
+                      // Decide on an alignment to use for this field. If it has
+                      // an alignment constraint, we just use that. Otherwise,
+                      // we align it enough so that its LSB lines up with a byte
+                      // boundary, which reproduces the behavior of the PHV
+                      // allocator.
+                      // XXX(seth): In practice, that should match the current
+                      // behavior of the PHV allocator most of the time. The
+                      // right solution is to actually use the *output* of the
+                      // PHV allocator to determine the packing.
+                      if (field->alignment) {
+                          LOG3("using alignment " << field->alignment->network
+                                 << " from constraint for field " << field->name);
                           self.packing.padToAlignment(8, field->alignment->network);
+                      } else {
+                          const int nextByteBoundary = 8 * ((field->size + 7) / 8);
+                          const int alignment = nextByteBoundary - field->size;
+                          LOG3("using default alignment " << alignment
+                                 << " for field " << field->name);
+                          self.packing.padToAlignment(8, alignment);
+                      }
 
                       self.packing.appendField(loc.second,
                                                loc.second->type->width_bits());
+
+                      // Pad out to the next byte boundary.
+                      // XXX(seth): Again, this is just an attempt to match the
+                      // behavior of the PHV allocator, which uses a strategy
+                      // that usually looks like "use the smallest container
+                      // that can hold the metadata field and whatever padding
+                      // is necessary to align it".
+                      self.packing.padToAlignment(8);
                     }
                     break; } }
             return false;
@@ -60,10 +84,6 @@ class AddBridgedMetadata::AddBridge : public PardeModifier {
         auto start = transformAllMatching<IR::BFN::ParserState>(parser->start,
                      [this](const IR::BFN::ParserState* state) {
             if (state->name != "$bridged_metadata") return state;
-
-            // Pad the field packing out to a byte boundary so the resulting
-            // parser state will extract an integer number of bytes.
-            self.packing.padToAlignment(8);
 
             // Replace this placeholder state with a generated parser program
             // that extracts the bridged metadata.
