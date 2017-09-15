@@ -21,17 +21,19 @@
 #define CPU_PORT 320
 #endif
 
+typedef bit<9> PortId_t;
+
 // ---------------------- HEADERS ----------------------
 @controller_header("packet_in")
 header packet_in_header_t {
-    bit<9> ingress_port;
+    PortId_t ingress_port;
     bit<7> _padding0;
 }
 
 @not_extracted_in_egress
 @controller_header("packet_out")
 header packet_out_header_t {
-    bit<9> egress_port;
+    PortId_t egress_port;
     bit<7> _padding0;
 }
 
@@ -80,7 +82,7 @@ control ingress(inout headers_t hdr, inout metadata_t meta, inout standard_metad
         standard_metadata.egress_spec = CPU_PORT;
     }
     
-    action set_egress_port(bit<9> port) {
+    action set_egress_port(PortId_t port) {
         standard_metadata.egress_spec = port;
     }
 

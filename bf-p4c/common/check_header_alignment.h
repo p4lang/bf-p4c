@@ -19,6 +19,10 @@ limitations under the License.
 
 #include "ir/ir.h"
 
+namespace P4 {
+class TypeMap;
+}  // namespace P4
+
 namespace BFN {
 
 /**
@@ -32,8 +36,13 @@ namespace BFN {
  * confusing for the P4 programmer to have a simple and clear rule.
  */
 class CheckHeaderAlignment final : public Inspector {
+    P4::TypeMap* typeMap;
+
  private:
     bool preorder(const IR::Type_Header* header) override;
+
+ public:
+    explicit CheckHeaderAlignment(P4::TypeMap* typeMap) : typeMap(typeMap) {}
 };
 
 }  // namespace BFN
