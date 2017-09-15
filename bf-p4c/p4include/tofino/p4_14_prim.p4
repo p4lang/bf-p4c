@@ -6,6 +6,8 @@ extern CloneType;  // "forward" declaration -- so parser recognizes it as a type
 
 extern void bypass_egress();
 
+extern void recirculate_raw(in bit<9> port);
+
 extern void invalidate<T>(in T field);
 extern void invalidate_raw(in bit<9> field);
 

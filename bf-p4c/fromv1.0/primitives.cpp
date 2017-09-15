@@ -29,14 +29,14 @@ CONVERT_PRIMITIVE(invalidate) {
 }
 
 CONVERT_PRIMITIVE(recirculate, 5) {
-    ExpressionConverter conv(structure);
     if (primitive->operands.size() != 1) return nullptr;
+    structure->include("tofino/p4_14_prim.p4");
+    ExpressionConverter conv(structure);
     auto port = primitive->operands.at(0);
     if (!port->is<IR::Constant>() && !port->is<IR::ActionArg>()) return nullptr;
     port = conv.convert(port);
     port = new IR::Cast(IR::Type::Bits::get(9), port);
-    return new IR::MethodCallStatement(primitive->srcInfo, structure->v1model.recirculate.Id(),
-                                       { port });
+    return new IR::MethodCallStatement(primitive->srcInfo, "recirculate_raw", { port });
 }
 
 CONVERT_PRIMITIVE(sample_e2e) {
