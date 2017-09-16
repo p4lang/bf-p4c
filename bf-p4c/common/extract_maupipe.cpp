@@ -14,7 +14,7 @@
 #include "bf-p4c/parde/checksum.h"
 #include "bf-p4c/parde/extract_parser.h"
 #include "bf-p4c/parde/phase0.h"
-#include "bf-p4c/tofinoOptions.h"
+#include "bf-p4c/bf-p4c-options.h"
 #include "lib/algorithm.h"
 #include "lib/error.h"
 
@@ -832,7 +832,7 @@ const IR::BFN::Pipe* extract_native_arch(P4::ReferenceMap* refMap, P4::TypeMap* 
     return rv->apply(simplifyReferences);
 }
 
-const IR::BFN::Pipe *extract_maupipe(const IR::P4Program *program, Tofino_Options &options) {
+const IR::BFN::Pipe *extract_maupipe(const IR::P4Program *program, const BFN_Options &options) {
     P4::ReferenceMap  refMap;
     P4::TypeMap       typeMap;
     refMap.setIsV1(true);
@@ -847,11 +847,12 @@ const IR::BFN::Pipe *extract_maupipe(const IR::P4Program *program, Tofino_Option
     bool needTranslation = options.native_arch &&
             (options.langVersion == CompilerOptions::FrontendVersion::P4_14);
 
-    if (options.target == "tofino-v1model-barefoot" && !needTranslation) {
+    // XXX(zma) : assuming tofino & jbay have same arch for now
+    if (options.arch() == "v1model" && !needTranslation) {
         return extract_v1model_arch(&refMap, &typeMap, top);
-    } else if (options.target == "tofino-native-barefoot") {
+    } else if (options.arch() == "native") {
         return extract_native_arch(&refMap, &typeMap, top);
-    } else if (options.target == "tofino-v1model-barefoot" && needTranslation) {
+    } else if (options.arch() == "v1model" && needTranslation) {
         return extract_modified_v1model_arch(&refMap, &typeMap, top);
     } else {
         error("Unknown architecture %s", options.target);

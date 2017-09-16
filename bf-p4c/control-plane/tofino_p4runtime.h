@@ -21,14 +21,14 @@ namespace IR {
 class P4Program;
 }  // namespace IR
 
-class Tofino_Options;
+class BFN_Options;
 
 namespace BFN {
 
 /// A wrapper for P4::serializeP4Runtime() that applies Tofino-specific
 /// transformations to the program before serialization.
 void serializeP4Runtime(const IR::P4Program* program,
-                        const Tofino_Options& options);
+                        const BFN_Options& options);
 
 }  // namespace BFN
 

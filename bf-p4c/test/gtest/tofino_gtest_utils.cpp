@@ -46,7 +46,7 @@ FrontendTestCase::create(const std::string& source,
         return boost::none;
     }
 
-    Tofino_Options options;
+    BFN_Options options;
     options.langVersion = langVersion;
     program = P4::FrontEnd().run(options, program, true);
     if (program == nullptr) {
@@ -69,7 +69,7 @@ MidendTestCase::create(const std::string& source,
     auto frontendTestCase = FrontendTestCase::create(source, langVersion);
     if (!frontendTestCase) return boost::none;
 
-    Tofino_Options options;
+    BFN_Options options;
     options.langVersion = langVersion;
     BFN::MidEnd midend(options);
     auto* midendProgram = frontendTestCase->program->apply(midend);
@@ -93,7 +93,7 @@ TofinoPipeTestCase::create(const std::string& source,
     auto midendTestCase = MidendTestCase::create(source, langVersion);
     if (!midendTestCase) return boost::none;
 
-    Tofino_Options options;
+    BFN_Options options;
     options.langVersion = langVersion;
     auto* pipe = extract_maupipe(midendTestCase->program, options);
     if (pipe == nullptr) {

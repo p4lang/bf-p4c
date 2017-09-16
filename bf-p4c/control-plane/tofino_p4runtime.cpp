@@ -24,12 +24,12 @@ limitations under the License.
 #include "ir/ir.h"
 #include "lib/nullstream.h"
 #include "bf-p4c/control-plane/synthesize_valid_field.h"
-#include "bf-p4c/tofinoOptions.h"
+#include "bf-p4c/bf-p4c-options.h"
 
 namespace BFN {
 
 void serializeP4Runtime(const IR::P4Program* program,
-                        const Tofino_Options& options) {
+                        const BFN_Options& options) {
     if (Log::verbose())
         std::cout << "Generating P4Runtime output" << std::endl;
 

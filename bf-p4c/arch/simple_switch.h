@@ -29,7 +29,7 @@
 #include "frontends/p4/sideEffects.h"
 #include "midend/actionsInlining.h"
 #include "midend/localizeActions.h"
-#include "bf-p4c/tofinoOptions.h"
+#include "bf-p4c/bf-p4c-options.h"
 #include "program_structure.h"
 
 namespace BFN {

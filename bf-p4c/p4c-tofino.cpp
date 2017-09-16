@@ -21,8 +21,7 @@
 #include "common/extract_maupipe.h"
 #include "midend.h"
 #include "midend/actionsInlining.h"
-#include "tofinoOptions.h"
-#include "version.h"
+#include "bf-p4c-options.h"
 #include "bf-p4c/control-plane/tofino_p4runtime.h"
 #include "arch/simple_switch.h"
 
@@ -39,27 +38,24 @@ static void log_dump(const IR::Node *node, const char *head) {
 }
 
 int main(int ac, char **av) {
-    vector<cstring> supported_arch = { "tofino-v1model-barefoot", "tofino-native-barefoot" };
     setup_gc_logging();
     setup_signals();
 
-    Tofino_Options options;
-    options.compilerVersion = P4C_TOFINO_VERSION;
+    BFN_Options options;
 
     if (options.process(ac, av) != nullptr)
         options.setInputFile();
-    auto hook = options.getDebugHook();
+
     if (ErrorReporter::instance.getErrorCount() > 0)
         return 1;
 
     Device::init("Tofino");  // TODO this should come from options
 
-    options.preprocessor_options += " -D__TARGET_TOFINO__";
+    if (!options.targetSupported()) {
+         error("target '%s' not supported", options.target);
+         return 1; }
 
-    auto it = std::find(supported_arch.begin(), supported_arch.end(), options.target);
-    if (it == supported_arch.end()) {
-        error("target '%s' not supported", options.target);
-        return 1; }
+    auto hook = options.getDebugHook();
 
     auto program = P4::parseP4File(options);
 
@@ -91,7 +87,8 @@ int main(int ac, char **av) {
     if (Log::verbose())
     std::cout << "Compiling" << std::endl;
 
-    BFN::backend(maupipe, options);
+    BFN::Backend backend(options);
+    maupipe = maupipe->apply(backend);
 
     if (Log::verbose())
         std::cout << "Done." << std::endl;

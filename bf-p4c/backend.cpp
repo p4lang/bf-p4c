@@ -19,7 +19,6 @@ limitations under the License.
 #include "bf-p4c/common/copy_header_eliminator.h"
 #include "bf-p4c/common/extract_maupipe.h"
 #include "bf-p4c/common/elim_unused.h"
-#include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/common/live_at_entry.h"
 #include "bf-p4c/common/live_range_overlay.h"
@@ -34,7 +33,6 @@ limitations under the License.
 #include "bf-p4c/mau/push_pop.h"
 #include "bf-p4c/mau/split_gateways.h"
 #include "bf-p4c/mau/stateful_alu.h"
-#include "bf-p4c/mau/table_dependency_graph.h"
 #include "bf-p4c/mau/table_layout.h"
 #include "bf-p4c/mau/table_mutex.h"
 #include "bf-p4c/mau/table_placement.h"
@@ -50,7 +48,6 @@ limitations under the License.
 #include "bf-p4c/phv/trivial_alloc.h"
 #include "bf-p4c/phv/split_phv_use.h"
 #include "bf-p4c/phv/create_thread_local_instances.h"
-#include "bf-p4c/phv/cluster_phv_interference.h"
 #include "bf-p4c/phv/cluster_phv_bind.h"
 #include "bf-p4c/phv/cluster_phv_operations.h"
 #include "bf-p4c/phv/cluster_phv_slicing.h"
@@ -147,100 +144,77 @@ class AsmOutput : public Inspector {
        return false; }
 };
 
-class PHV_AnalysisPass : public PassManager {
- private:
-    SymBitMatrix mutually_exclusive_field_ids;
-    Cluster cluster;                            // cluster analysis
-    Cluster_PHV_Requirements cluster_phv_req;   // cluster PHV requirements
-    PHV_Interference cluster_phv_interference;  // intra-cluster PHV Interference Graph
-    PHV_MAU_Group_Assignments cluster_phv_mau;  // cluster PHV Container placements
+PHV_AnalysisPass::PHV_AnalysisPass(const BFN_Options &options, PhvInfo &phv, PhvUse &uses,
+                                   FieldDefUse &defuse, DependencyGraph &deps) :
+    cluster(phv, uses),
+    cluster_phv_req(cluster),
+    cluster_phv_interference(cluster_phv_req, mutually_exclusive_field_ids),
+    cluster_phv_mau(cluster_phv_req) {
+    addPasses({
+        &uses,                 // use of field in mau, parde
+        &cluster,              // cluster analysis
+        new ParserOverlay(phv, mutually_exclusive_field_ids),
+                               // produce pairs of mutually exclusive header
+                               // fields, eg. (arpSrc, ipSrc)
+        new FindDependencyGraph(phv, deps),
+                               // refresh dependency graph for live range
+                               // analysis
+        &defuse,               // refresh defuse
+        new LiveRangeOverlay(phv, deps, defuse, mutually_exclusive_field_ids),
+                               // produce pairs of fields that are never live
+                               // in the same stage
+        new PHV_Field_Operations(phv),  // PHV field operations analysis
+        &cluster_phv_req,      // cluster PHV requirements analysis
+        options.phv_interference?
+            &cluster_phv_interference: nullptr,
+                               // cluster PHV interference graph analysis
+        &cluster_phv_mau,      // cluster PHV container placements
+                               // first cut PHV MAU Group assignments
+                               // produces cohabit fields for Table Placement
+        options.phv_slicing?
+            new Cluster_Slicing(cluster_phv_mau): nullptr,
+                               // slice clusters into smaller clusters
+                               // attempt packing with reduced width requirements
+                               // slicing improves overlay possibilities due to less width
+                               // although number & mutual exclusion of fields don't change
+        options.phv_slicing?
+            new Cluster_Slicing(cluster_phv_mau): nullptr,
+                               // repeat once more: unallocated clusters sliced further
+                               // further improves chances of packing and/or overlay
+        options.phv_overlay?
+            new Cluster_PHV_Overlay(cluster_phv_mau, cluster_phv_interference): nullptr,
+                               // overlay clusters to MAU groups
+                               // need cluster_phv_interference
+                               // func mutually_exclusive(f1, f2)
+                               // overlay unallocated clusters to clusters & MAU groups
+        new PHV_Analysis_Validate(phv, cluster_phv_mau)  // phv analysis results validation
+    });
 
- public:
-    PHV_MAU_Group_Assignments& group_assignments() { return cluster_phv_mau; }
+    setName("PHV Analysis");
+}
 
- public:
-    PHV_AnalysisPass(const Tofino_Options &options, PhvInfo &phv, PhvUse &uses,
-                     FieldDefUse &defuse, DependencyGraph &deps) :
-        cluster(phv, uses),
-        cluster_phv_req(cluster),
-        cluster_phv_interference(cluster_phv_req, mutually_exclusive_field_ids),
-        cluster_phv_mau(cluster_phv_req) {
-            addPasses({
-                &uses,                 // use of field in mau, parde
-                &cluster,              // cluster analysis
-                new ParserOverlay(phv, mutually_exclusive_field_ids),
-                                       // produce pairs of mutually exclusive header
-                                       // fields, eg. (arpSrc, ipSrc)
-                new FindDependencyGraph(phv, deps),
-                                       // refresh dependency graph for live range
-                                       // analysis
-                &defuse,               // refresh defuse
-                new LiveRangeOverlay(phv, deps, defuse, mutually_exclusive_field_ids),
-                                       // produce pairs of fields that are never live
-                                       // in the same stage
-                new PHV_Field_Operations(phv),  // PHV field operations analysis
-                &cluster_phv_req,      // cluster PHV requirements analysis
-                options.phv_interference?
-                    &cluster_phv_interference: nullptr,
-                                       // cluster PHV interference graph analysis
-                &cluster_phv_mau,      // cluster PHV container placements
-                                       // first cut PHV MAU Group assignments
-                                       // produces cohabit fields for Table Placement
-                options.phv_slicing?
-                    new Cluster_Slicing(cluster_phv_mau): nullptr,
-                                       // slice clusters into smaller clusters
-                                       // attempt packing with reduced width requirements
-                                       // slicing improves overlay possibilities due to less width
-                                       // although number & mutual exclusion of fields don't change
-                options.phv_slicing?
-                    new Cluster_Slicing(cluster_phv_mau): nullptr,
-                                       // repeat once more: unallocated clusters sliced further
-                                       // further improves chances of packing and/or overlay
-                options.phv_overlay?
-                    new Cluster_PHV_Overlay(cluster_phv_mau, cluster_phv_interference): nullptr,
-                                       // overlay clusters to MAU groups
-                                       // need cluster_phv_interference
-                                       // func mutually_exclusive(f1, f2)
-                                       // overlay unallocated clusters to clusters & MAU groups
-                new PHV_Analysis_Validate(phv, cluster_phv_mau)  // phv analysis results validation
-            });
-
-            setName("PHV Analysis");
+PHV_AllocPass::PHV_AllocPass(const BFN_Options &options, PhvInfo &phv, PhvUse &uses,
+                             PHV_MAU_Group_Assignments &cluster_phv_mau) : phv(phv) {
+    if (options.trivial_phvalloc) {
+        addPasses({
+            new PHV::TrivialAlloc(phv)});
+    } else {
+        addPasses({
+            //
+            // &cluster_phv_mau,       // cluster PHV container placements
+                                       // second cut PHV MAU Group assignments
+                                       // honor single write conflicts from Table Placement
+            &uses,                     // use of field in mau, parde
+            new PHV_Bind(phv, uses, cluster_phv_mau),
+                                       // fields bound to PHV containers
+                                       // later passes assume that phv alloc info
+                                       // is sorted in field bit order, msb first
+                                       // sorting done by phv_bind
+            new PHV_Assignment_Validate(phv)});  // phv assignment results validation
     }
-};
-
-class PHV_AllocPass : public PassManager {
- private:
-    PhvInfo                   &phv;
-
- public:
-    PHV_AllocPass(const Tofino_Options &options, PhvInfo &phv, PhvUse &uses,
-                  PHV_MAU_Group_Assignments &cluster_phv_mau) : phv(phv) {
-            if (options.trivial_phvalloc) {
-                addPasses({
-                    new PHV::TrivialAlloc(phv)});
-            } else {
-                addPasses({
-                    //
-                    // &cluster_phv_mau,       // cluster PHV container placements
-                                               // second cut PHV MAU Group assignments
-                                               // honor single write conflicts from Table Placement
-                    &uses,                     // use of field in mau, parde
-                    new PHV_Bind(phv, uses, cluster_phv_mau),
-                                               // fields bound to PHV containers
-                                               // later passes assume that phv alloc info
-                                               // is sorted in field bit order, msb first
-                                               // sorting done by phv_bind
-                    new PHV_Assignment_Validate(phv)});  // phv assignment results validation
-            }
-            passes.push_back(new PHV::ValidateAllocation(phv, options.ignorePHVOverflow));
-            setName("PHV Alloc");
-        }
-
-    void end_apply() override {
-        if (Log::verbose())
-            std::cout << phv; }
-};
+    passes.push_back(new PHV::ValidateAllocation(phv, options.ignorePHVOverflow));
+    setName("PHV Alloc");
+}
 
 class TableAllocPass : public PassManager {
  private:
@@ -275,15 +249,12 @@ class TableAllocPass : public PassManager {
             }
 };
 
-void backend(const IR::BFN::Pipe* maupipe, const Tofino_Options& options) {
-    PhvInfo phv;
-    PhvUse uses(phv);
-    DependencyGraph deps;
-    FieldDefUse defuse(phv);
-    PHV_AnalysisPass phv_analysis(options, phv, uses, defuse, deps);
-    PHV_AllocPass phv_alloc(options, phv, uses, phv_analysis.group_assignments());
-
-    PassManager backend = {
+Backend::Backend(const BFN_Options& options) :
+    uses(phv),
+    defuse(phv),
+    phv_analysis(options, phv, uses, defuse, deps),
+    phv_alloc(options, phv, uses, phv_analysis.group_assignments()) {
+    addPasses({
         new DumpPipe("Initial table graph"),
         new RemoveEmptyControls,
         new CheckStatefulAlu,
@@ -326,11 +297,11 @@ void backend(const IR::BFN::Pipe* maupipe, const Tofino_Options& options) {
         new CheckTableNameDuplicate,
         new CheckUnimplementedFeatures(options.allowUnimplemented),
         new AsmOutput(phv, options.outputFile)
-    };
-    backend.setName("Tofino backend");
+    });
+    setName("Tofino backend");
+
     if (LOGGING(4))
-        backend.addDebugHook(debug_hook);
-    maupipe = maupipe->apply(backend);
+        addDebugHook(debug_hook);
 }
 
 }  // namespace BFN

@@ -259,13 +259,14 @@ set (TOFINO_BACKEND_MAIN_SRCS
   backend.cpp
   device.cpp
   midend.cpp
+  bf-p4c-options.cpp
   )
 
 set (TOFINO_BACKEND_MAIN_HDRS
   backend.h
   device.h
   midend.h
-  tofinoOptions.h
+  bf-p4c-options.h
   )
 
 set (TOFINO_IR_DEF_FILES

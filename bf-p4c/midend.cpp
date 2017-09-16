@@ -113,7 +113,7 @@ class NonMaskLeftValueOrIsValid : public P4::KeyIsComplex {
     }
 };
 
-MidEnd::MidEnd(Tofino_Options& options) {
+MidEnd::MidEnd(BFN_Options& options) {
     // we may come through this path even if the program is actually a P4 v1.0 program
     setName("MidEnd");
     refMap.setIsV1(true);

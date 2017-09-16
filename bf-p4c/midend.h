@@ -17,12 +17,12 @@ limitations under the License.
 #ifndef BF_P4C_MIDEND_H_
 #define BF_P4C_MIDEND_H_
 
+#include "bf-p4c/bf-p4c-options.h"
 #include "ir/ir.h"
 #include "frontends/common/options.h"
 #include "frontends/p4/evaluator/evaluator.h"
 #include "midend/actionsInlining.h"
 #include "midend/inlining.h"
-#include "tofinoOptions.h"
 
 namespace BFN {
 
@@ -36,7 +36,7 @@ class MidEnd : public PassManager {
     P4::TypeMap         typeMap;
     IR::ToplevelBlock   *toplevel = nullptr;  // Should this be const?
 
-    explicit MidEnd(Tofino_Options& options);
+    explicit MidEnd(BFN_Options& options);
 };
 
 }  // namespace BFN
