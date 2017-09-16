@@ -15,6 +15,7 @@ env:
   - MAKEFLAGS="-j2"
   - DOCKER_USERNAME="bfndocker"
   - CTEST_OUTPUT_ON_FAILURE="true"
+  - CTEST_PARALLEL_LEVEL=2
 
 before_install:
 # - docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
@@ -26,9 +27,9 @@ install:
   - docker build --network ccache_network -t bf-p4c-compilers -f Dockerfile.travis .
 
 script:
-- docker run -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_OUTPUT_ON_FAILURE -e MAKEFLAGS bf-p4c-compilers ctest -R cpplint
-- docker run -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_OUTPUT_ON_FAILURE -e MAKEFLAGS bf-p4c-compilers ctest -R gtest
-- docker run -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_OUTPUT_ON_FAILURE -e MAKEFLAGS bf-p4c-compilers ctest -L tofino -LE ptf -R "testdata|stateful"
+- docker run -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_PARALLEL_LEVEL -e CTEST_OUTPUT_ON_FAILURE -e MAKEFLAGS bf-p4c-compilers ctest -R cpplint
+- docker run -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_PARALLEL_LEVEL -e CTEST_OUTPUT_ON_FAILURE -e MAKEFLAGS bf-p4c-compilers ctest -R gtest
+- docker run -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_PARALLEL_LEVEL -e CTEST_OUTPUT_ON_FAILURE -e MAKEFLAGS bf-p4c-compilers ctest -L tofino -LE ptf -R "testdata|stateful"
 
 addons:
   jwt:
