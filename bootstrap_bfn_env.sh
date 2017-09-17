@@ -73,7 +73,9 @@ fi
 # needs to be rebuilt from scratch
 PI_clean_before_rebuild=$clean_before_rebuild
 
-apt_packages="g++ git pkg-config automake libtool cmake python2.7 python cmake bison flex libboost-dev libboost-graph-dev libboost-test-dev libboost-program-options-dev libboost-system-dev libboost-filesystem-dev libboost-thread-dev libcli-dev libedit-dev libeditline-dev libevent-dev libjudy-dev libgc-dev libgmp-dev libjson0 libjson0-dev libmoose-perl libnl-route-3-dev libpcap0.8-dev libssl-dev autopoint doxygen texinfo python-scapy python-yaml python-ipaddr python-pip rapidjson-dev"
+ubuntu_release=$(lsb_release -r | cut -f 2)
+
+apt_packages="g++ git pkg-config automake libtool cmake python2.7 python cmake bison flex libboost-dev libboost-graph-dev libboost-test-dev libboost-program-options-dev libboost-system-dev libboost-filesystem-dev libboost-thread-dev libcli-dev libedit-dev libeditline-dev libevent-dev libjudy-dev libgc-dev libgmp-dev libjson0 libjson0-dev libmoose-perl libnl-route-3-dev libpcap0.8-dev libssl-dev autopoint doxygen texinfo python-scapy python-yaml python-ipaddr python-pip"
 
 echo "Need sudo privs to install apt packages"
 sudo apt-get update || die "Failed to update apt"
@@ -81,7 +83,22 @@ sudo apt-get install -y $apt_packages || die "Failed to install needed packages"
 sudo pip install pyinstaller || die "Failed to install needed packages"
 sudo apt-get remove -y python-thrift    # remove this broken package in case it was installed
 sudo pip install thrift || die "Failed to install needed packages"  # need this one instead
-sudo apt-get install libboost-iostreams-dev || die "Failed to update boost-iostream"
+sudo apt-get install -y libboost-iostreams-dev || die "Failed to update boost-iostream"
+
+# rapidjson is not available on Ubuntu 14.04, so we build from source
+if [[ $ubuntu_release =~ "14.04" ]]; then
+    builddir=$(mktemp --directory -t rjson_XXXXXX)
+    cd $builddir && \
+    git clone --recursive https://github.com/miloyip/rapidjson.git --branch "v1.1.0" && \
+    cd rapidjson && \
+    mkdir build && cd build && \
+    cmake .. && \
+    make install && \
+    cd /tmp && \
+    rm -rf $builddir || die "Failed to install rapidjson"
+else
+    sudo apt-get install -y rapidjson-dev || die "Failed to update rapidjson-dev"
+fi
 
 echo "Using $topdir as top level directory for git repositories"
 echo Using MAKEFLAGS=${MAKEFLAGS:=-j 4}
