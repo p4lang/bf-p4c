@@ -439,6 +439,18 @@ void Stage::output(json::vector &tbl_cfg) {
     write_regs(regs);
     if (options.condense_json)
         regs.disable_if_zero();
+    // Enable mapram_config and imem regs -
+    // These are cached by the driver, so if they are disabled they wont go
+    // into tofino.bin as dma block writes and driver will complain
+    // The driver needs the regs to do parity error correction at runtime and it
+    // checks for the base address of the register blocks to do a block DMA
+    // during tofino.bin download
+    regs.dp.imem.imem_subword8.enable();
+    regs.dp.imem.imem_subword16.enable();
+    regs.dp.imem.imem_subword32.enable();
+    for(int row = 0; row < SRAM_ROWS; row++)
+        for(int col = 0; col < MAPRAM_UNITS_PER_ROW; col++)
+            regs.rams.map_alu.row[row].adrmux.mapram_config[col].enable();
     regs.emit_json(*open_output("regs.match_action_stage.%02x.cfg.json", stageno) , stageno);
     char buf[64];
     sprintf(buf, "regs.match_action_stage.%02x", stageno);

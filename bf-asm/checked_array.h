@@ -21,8 +21,9 @@ public:
     virtual T *end() = 0;
     virtual bool modified() const = 0;
     virtual bool disabled() const = 0;
-    virtual void disable() = 0;
+    virtual bool disable() = 0;
     virtual bool disable_if_zero() = 0;
+    virtual void enable() = 0;
 };
 
 template<size_t S, typename T>
@@ -52,9 +53,16 @@ public:
             if (data[i].modified()) return true;
         return false; }
     bool disabled() const { return disabled_; }
-    void disable() {
-        if (modified()) ERROR("Disabling modified record " << this);
-        disabled_ = true; }
+    bool disable() {
+        bool rv = true;
+        for (size_t i = 0; i < S; i++)
+            if (!data[i].disable()) rv = false;
+        if (rv) disabled_ = true;
+        return rv; }
+    void enable() {
+        disabled_ = false;
+        for (size_t i = 0; i < S; i++)
+            data[i].enable(); }
     bool disable_if_zero() {
         bool rv = true;
         for (size_t i = 0; i < S; i++)

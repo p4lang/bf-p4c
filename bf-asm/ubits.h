@@ -16,12 +16,20 @@ struct ubits_base;
 struct ubits_base {
     unsigned long       value;
     mutable bool        read, write;
+    mutable bool        disabled;
 
-    ubits_base() : value(0), read(false), write(false) {}
-    ubits_base(unsigned long v) : value(v), read(false), write(false) {}
+    ubits_base() : value(0), read(false), write(false), disabled(false) {}
+    ubits_base(unsigned long v) : value(v), read(false), write(false), disabled(false) {}
     operator unsigned long() const { read = true; return value; }
     bool modified() const { return write; }
     bool disable_if_zero() const { return value == 0; }
+    bool disable() const {
+        if (write) {
+            ERROR("Disabling modified register in " << this);
+            return false; }
+        disabled = true;
+        return disabled; }
+    void enable() const { disabled = false; };
     void rewrite() { write = false; }
     virtual unsigned long operator=(unsigned long v) = 0;
     virtual unsigned size() = 0;
@@ -46,6 +54,8 @@ template<int N> struct ubits : ubits_base {
     ubits(const ubits &) = delete;
     ubits(ubits &&) = default;
     unsigned long operator=(unsigned long v) {
+        if (disabled)
+            ERROR("Writing disabled register value in " << this);
         if (write)
             ERRWARN(value != v, "Overwriting " << value << " with " << v << " in " << this);
         value = v;
@@ -57,6 +67,8 @@ template<int N> struct ubits : ubits_base {
     const ubits_base &operator=(const ubits_base &v) { *this = v.value; v.read = true; return v; }
     unsigned size() { return N; }
     const ubits &operator|=(unsigned long v) {
+        if (disabled)
+            ERROR("Writing disabled register value in " << this);
         if (write && (value & v))
             ERRWARN(value != (v|value), "Overwriting " << value << " with " << (v|value) <<
                     " in " << this);
@@ -65,11 +77,15 @@ template<int N> struct ubits : ubits_base {
         log("|=", v);
         return check(); }
     const ubits &operator+=(unsigned long v) {
+        if (disabled)
+            ERROR("Overwriting disabled register value in " << this);
         value += v;
         write = true;
         log("+=", v);
         return check(); }
     const ubits &set_subfield(unsigned long v, unsigned bit, unsigned size) {
+        if (disabled)
+            ERROR("Overwriting disabled register value in " << this);
         if (bit + size > N)
             ERROR("subfield " << bit << ".." << (bit+size-1) <<
                   " out of range in " << this);
@@ -104,7 +120,7 @@ std::ostream &operator<<(std::ostream &out, const ustring *u);
 class ustring {
     std::string         value;
 public:
-    mutable bool        read = false, write = false;
+    mutable bool        read = false, write = false, disabled = false;
     ustring() {}
     ustring(const ustring &) = default;
     ustring(ustring &&) = default;
@@ -114,6 +130,8 @@ public:
 
     ustring(const std::string &a) : value(a) {}
     ustring &operator=(const std::string &a) {
+        if (disabled)
+            ERROR("Writing disabled register value in " << this);
         if (write)
             ERRWARN(value != a, "Overwriting \"" << value << "\" with \"" << a <<
                     "\" in " << this);
@@ -122,6 +140,8 @@ public:
         write = true;
         return *this; }
     ustring &operator=(const char *a) {
+        if (disabled)
+            ERROR("Writing disabled register value in " << this);
         if (write)
             ERRWARN(value != a, "Overwriting \"" << value << "\" with \"" << a <<
                     "\" in " << this);
@@ -135,6 +155,13 @@ public:
     void rewrite() { write = false; }
     friend std::ostream &operator<<(std::ostream &out, const ustring &u);
     bool disable_if_zero() { return false; }
+    bool disable() {
+        if (write) {
+            ERROR("Disabling modified register in " << this);
+            return false; }
+        disabled = true;
+        return disabled; }
+    void enable() { disabled = false; };
     void log() const;
 };
 

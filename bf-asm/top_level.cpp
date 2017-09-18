@@ -35,7 +35,7 @@ void TopLevel::output(json::map &) {
         reg_top.pipes[i] = "regs.pipe"; }
     //reg_top.macs.disable();
     //reg_top.serdes.disable();
-    if (!options.match_compiler) {
+    if (options.condense_json) {
         mem_top.disable_if_zero();
         mem_pipe.disable_if_zero();
         reg_top.disable_if_zero();

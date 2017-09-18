@@ -532,7 +532,7 @@ template<class REGS> void Deparser::write_config(REGS &regs) {
     for (auto &digest : digests)
         digest.type->setregs(regs, digest);
 
-    if (!options.match_compiler) {
+    if (options.condense_json) {
         regs.input.disable_if_zero();
         regs.header.disable_if_zero(); }
     regs.input.emit_json(*open_output("regs.all.deparser.input_phase.cfg.json"));

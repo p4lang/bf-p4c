@@ -27,7 +27,7 @@ static bool test_sanity(json::obj *data, std::string name, bool sizes=true) {
                 if (!sizes && data->is<json::number>())
                     break;
             } else if (*data != *a) {
-                std::cerr << "array element mismatch: " << name << std::endl;
+                std::clog << "array element mismatch: " << name << std::endl;
                 return false; } }
         return test_sanity(data, name+"[]", sizes); }
     if (json::map *m = dynamic_cast<json::map *>(data)) {
@@ -39,10 +39,10 @@ static bool test_sanity(json::obj *data, std::string name, bool sizes=true) {
                 child += *key;
                 for (char ch : *key)
                     if (!isalnum(ch) && ch != '_') {
-                        std::cerr << "field not identifier: " << name << child << std::endl;
+                        std::clog << "field not identifier: " << name << child << std::endl;
                         return false; }
             } else {
-                std::cerr << "field not string: " << name << std::endl;
+                std::clog << "field not string: " << name << std::endl;
                 return false; }
             if (!test_sanity(a.second.get(), name+child, sizes)) return false; }
         return true; }
@@ -52,7 +52,7 @@ static bool test_sanity(json::obj *data, std::string name, bool sizes=true) {
         if (!sizes || (n->val >= 0 && n->val <= 1024))
             // FIXME -- arbitrary cutoff for 'reasonable' widereg
             return true;
-        std::cerr << "size out of range: " << name << " " << n->val << std::endl; }
+        std::clog << "size out of range: " << name << " " << n->val << std::endl; }
     if (dynamic_cast<json::string *>(data))
         return true;
     return false;
@@ -417,18 +417,43 @@ static void gen_modified_method(std::ostream &out, json::map *m, indent_t indent
 static void gen_disable_method(std::ostream &out, json::map *m, indent_t indent,
                                const std::string &classname)
 {
-    out << indent++ << "void ";
+    out << indent++ << "bool ";
     if (gen_definitions == DEFN_ONLY) out << classname << "::";
     out << "disable()";
     if (gen_definitions == DECL_ONLY) {
         out << ";" << std::endl;
         return; }
     out << " {" << std::endl;
+    out << indent << "bool rv = true;" << std::endl;
     out << indent++ << "if (modified()) {" << std::endl;
-    out << indent << "std::cerr << \"Disabling modified record \";" << std::endl;
-    out << indent << "print_regname(std::cerr, this, this+1);" << std::endl;
-    out << indent-- << "std::cerr << std::endl; }" << std::endl;
-    out << indent << "disabled_ = true;" << std::endl;
+    out << indent << "std::clog << \"ERROR: Disabling modified record \";" << std::endl;
+    out << indent << "print_regname(std::clog, this, this+1);" << std::endl;
+    out << indent << "std::clog << std::endl; " << std::endl;
+    out << indent-- << "return false; }" << std::endl;
+    for (auto &a : *m) {
+        json::string *name = dynamic_cast<json::string *>(a.first);
+        if ((*name)[0] == '_') continue;
+        std::vector<int> indexes;
+        auto type = get_indexes(a.second.get(), indexes);
+        if (*type == +0L) continue;
+        std::string field_name = *name;
+        if (reserved.count(field_name)) field_name += '_';
+        if (!checked_array) {
+            if (!indexes.empty()) {
+                int index_num = 0;
+                for (int idx : indexes) {
+                    out << indent++ << "for (int i" << index_num << " = 0; i" << index_num << " < "
+                        << idx << "; i" << index_num << "++)" << std::endl;
+                    index_num++; }
+                out << indent << "if (!" << field_name;
+                for (unsigned i = 0; i < indexes.size(); i++)
+                    out << "[i" << i << ']';
+                out << ".disable()) rv = true; " << std::endl;
+                indent -= indexes.size();
+                continue; } }
+        out << indent << "if (" << field_name << ".disable()) rv = true;" << std::endl; }
+    out << indent << "if (rv) disabled_ = true;" << std::endl;
+    out << indent << "return rv;" << std::endl;
     out << --indent << '}' << std::endl;
 }
 
@@ -465,8 +490,49 @@ static void gen_disable_if_zero_method(std::ostream &out, json::map *m, indent_t
                 indent -= indexes.size();
                 continue; } }
         out << indent << "if (!" << field_name << ".disable_if_zero()) rv = false;" << std::endl; }
+    out << indent++ << "if (rv && modified()) {" << std::endl;
+    out << indent << "std::clog << \"Disabling modified zero record \";" << std::endl;
+    out << indent << "print_regname(std::clog, this, this+1);" << std::endl;
+    out << indent << "std::clog << std::endl;" << std::endl;
+    out << indent-- << "rv = false; }" << std::endl;
     out << indent << "if (rv) disabled_ = true;" << std::endl;
     out << indent << "return rv;" << std::endl;
+    out << --indent << '}' << std::endl;
+}
+
+static void gen_enable_method(std::ostream &out, json::map *m, indent_t indent,
+                                       const std::string &classname)
+{
+    out << indent++ << "void ";
+    if (gen_definitions == DEFN_ONLY) out << classname << "::";
+    out << "enable()";
+    if (gen_definitions == DECL_ONLY) {
+        out << ";" << std::endl;
+        return; }
+    out << " {" << std::endl;
+    for (auto &a : *m) {
+        json::string *name = dynamic_cast<json::string *>(a.first);
+        if ((*name)[0] == '_') continue;
+        std::vector<int> indexes;
+        auto type = get_indexes(a.second.get(), indexes);
+        if (*type == +0L) continue;
+        std::string field_name = *name;
+        if (reserved.count(field_name)) field_name += '_';
+        if (!checked_array) {
+            if (!indexes.empty()) {
+                int index_num = 0;
+                for (int idx : indexes) {
+                    out << indent++ << "for (int i" << index_num << " = 0; i" << index_num << " < "
+                        << idx << "; i" << index_num << "++)" << std::endl;
+                    index_num++; }
+                out << indent << field_name;
+                for (unsigned i = 0; i < indexes.size(); i++)
+                    out << "[i" << i << ']';
+                out << ".enable() " << std::endl;
+                indent -= indexes.size();
+                continue; } }
+        out << indent << field_name << ".enable();" << std::endl; }
+    out << indent << "disabled_ = false;" << std::endl;
     out << --indent << '}' << std::endl;
 }
 
@@ -534,11 +600,11 @@ static void gen_type(std::ostream &out, const std::string &parent,
                         nameargs.push_back("const char *");
                         break;
                     default:
-                        std::cerr << "Unknown conversion '%" << *c << "' in name format string "
+                        std::clog << "Unknown conversion '%" << *c << "' in name format string "
                                   << "-- ignoring" << std::endl;
                         break; }
                 } else
-                    std::cerr << "Bogus character '" << *c << "' in name format string "
+                    std::clog << "Bogus character '" << *c << "' in name format string "
                               << "-- ignoring" << std::endl; } }
         std::string classname = parent;
         if (!classname.empty()) classname += "::";
@@ -597,7 +663,8 @@ static void gen_type(std::ostream &out, const std::string &parent,
         if (enable_disable) {
             gen_modified_method(out, m, indent, classname);
             gen_disable_method(out, m, indent, classname);
-            gen_disable_if_zero_method(out, m, indent, classname); }
+            gen_disable_if_zero_method(out, m, indent, classname);
+            gen_enable_method(out, m, indent, classname); }
         if (gen_definitions != DEFN_ONLY) {
             out << --indent << '}'; }
     } else if (json::number *n = dynamic_cast<json::number *>(t)) {
@@ -637,7 +704,7 @@ static int gen_global_types(std::ostream &out, json::obj *t, const json::obj *in
                     continue;
                 if (it->second) {
                     if (*it->second != *cl) {
-                        std::cerr << "Inconsitent definition of type " << name << std::endl;
+                        std::clog << "Inconsitent definition of type " << name << std::endl;
                         rv = -1; }
                 } else {
                     it->second = cl;
@@ -666,7 +733,7 @@ int main(int ac, char **av) {
                     delete initvals;
                     file >> initvals;
                     if (!file || !test_sanity(initvals, "", false)) {
-                        std::cerr << av[i] << ": not valid template" << std::endl;
+                        std::clog << av[i] << ": not valid template" << std::endl;
                         error = 1; }
                     break; }
                 case 'd': declare = av[++i]; break;
@@ -691,8 +758,8 @@ int main(int ac, char **av) {
                             break; } }
                     // fall through
                 default:
-                    std::cerr << "Unknown option -" << arg[-1] << std::endl;
-                    std::cerr << "usage: " << av[0]
+                    std::clog << "Unknown option -" << arg[-1] << std::endl;
+                    std::clog << "usage: " << av[0]
                               << " -/+dDefg:hi?I:n:N:rut?uxX files"
                               << std::endl;
                     exit(1); }
@@ -708,7 +775,8 @@ int main(int ac, char **av) {
         if (enable_disable) {
             reserved.insert("disable");
             reserved.insert("disable_if_zero");
-            reserved.insert("modified"); }
+            reserved.insert("modified");
+            reserved.insert("enable"); }
         if (gen_emit) reserved.insert("emit_json");
         if (gen_fieldname) reserved.insert("emit_fieldname");
         if (gen_unpack) reserved.insert("unpack_json");
@@ -717,7 +785,7 @@ int main(int ac, char **av) {
         json::obj *data = 0;
         file >> data;
         if (!file || !test_sanity(data, "")) {
-            std::cerr << av[i] << ": not valid template" << std::endl;
+            std::clog << av[i] << ": not valid template" << std::endl;
             name = declare = 0;
             error = 1;
             continue; }
@@ -789,7 +857,7 @@ int main(int ac, char **av) {
             std::cout << "}" << std::endl;
             break;
         default:
-            std::cerr << "Unknown test -t" << (char)test << std::endl;
+            std::clog << "Unknown test -t" << (char)test << std::endl;
             break; }
         global_types.clear();
         delete data;

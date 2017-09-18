@@ -15,13 +15,18 @@ struct widereg_base;
 struct widereg_base {
     bitvec              value;
     mutable bool        read, write;
+    mutable bool        disabled;
 
-    widereg_base() : read(false), write(false) {}
-    widereg_base(bitvec v) : value(v), read(false), write(false) {}
-    widereg_base(uintptr_t v) : value(v), read(false), write(false) {}
+    widereg_base() : read(false), write(false), disabled(false) {}
+    widereg_base(bitvec v) : value(v), read(false), write(false), disabled(false) {}
+    widereg_base(uintptr_t v) : value(v), read(false), write(false), disabled(false) {}
     operator bitvec() const { read = true; return value; }
     bool modified() const { return write; }
     bool disable_if_zero() const { return value.empty(); }
+    void disable() const {
+        if (write) ERROR("Disabling modified register in " << this);
+        disabled = true; };
+    bool enable_reg() const { disabled = false; }
     void rewrite() { write = false; }
     virtual bitvec operator=(bitvec v) = 0;
     virtual unsigned size() = 0;
@@ -45,6 +50,8 @@ template<int N> struct widereg : widereg_base {
     widereg(const widereg &) = delete;
     widereg(widereg &&) = default;
     bitvec operator=(bitvec v) {
+        if (disabled)
+            ERROR("Writing disabled register value in " << this);
         if (write)
             ERRWARN(value != v, "Overwriting " << value << " with " << v << " in " << this);
         value = v;
@@ -57,6 +64,8 @@ template<int N> struct widereg : widereg_base {
         *this = v.value; v.read = true; return v; }
     unsigned size() { return N; }
     const widereg &operator|=(bitvec v) {
+        if (disabled)
+            ERROR("Writing disabled register value in " << this);
         if (write && (value & v))
             ERRWARN(value != (v|value), "Overwriting " << value << " with " << (v|value) <<
                     " in " << this);
@@ -65,6 +74,8 @@ template<int N> struct widereg : widereg_base {
         log("|=", v);
         return check(); }
     const widereg &set_subfield(uintptr_t v, unsigned bit, unsigned size) {
+        if (disabled)
+            ERROR("Writing disabled register value in " << this);
         if (bit + size > N)
             ERROR("subfield " << bit << ".." << (bit+size-1) <<
                   " out of range in " << this);

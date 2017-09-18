@@ -293,7 +293,7 @@ template <class COMMON> void init_common_regs(Parser *p, COMMON &regs, gress_t g
     for (int i = 0; i < 4; i++) {
         if (p->start_state[gress][i]) {
             regs.start_state.state[i] = p->start_state[gress][i]->stateno.word1;
-            regs.enable.enable[i] = 1; }
+            regs.enable_.enable_[i] = 1; }
         regs.pri_start.pri[i] = p->priority[gress][i];
         regs.pri_thresh.pri[i] = p->pri_thresh[gress][i]; }
     regs.mode = 4;
