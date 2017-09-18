@@ -285,7 +285,7 @@ if (NOT ENABLE_TNA)
     )
 
   p4c_add_xfail_reason("tofino"
-    "Conflicting hash distribution unit groups"
+    "error: Field .* and field .* are adjacent in container .* but aren't adjacent in the deparser"
     extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
     )
 
@@ -637,12 +637,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "boost::too_few_args: format-string referred to more arguments than were passed"
   extensions/p4_tests/p4_14/shared_names.p4
-  )
-
-# BRIG-99
-p4c_add_xfail_reason("tofino"
-  "Missing color_maprams in meter table"
-  extensions/p4_tests/p4_14/test_config_123_meter_2.p4
   )
 
 p4c_add_xfail_reason("tofino"

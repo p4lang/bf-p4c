@@ -12,8 +12,10 @@ struct Memories {
     static constexpr int SRAM_COLUMNS = 10;
     static constexpr int LEFT_SIDE_COLUMNS = 4;
     static constexpr int MAPRAM_COLUMNS = 6;
+    static constexpr int SRAM_DEPTH = 1024;
     static constexpr int TCAM_ROWS = 12;
     static constexpr int TCAM_COLUMNS = 2;
+    static constexpr int TCAM_DEPTH = 512;
     static constexpr int TABLES_MAX = 16;
     static constexpr int TERNARY_TABLES_MAX = 8;
     static constexpr int ACTION_TABLES_MAX = 16;
@@ -21,9 +23,12 @@ struct Memories {
     static constexpr int BUS_COUNT = 2;
     static constexpr int STATS_ALUS = 4;
     static constexpr int METER_ALUS = 4;
+    static constexpr int MAX_DATA_SWBOX_ROWS = 5;
+    static constexpr int COLOR_MAPRAM_PER_ROW = 4;
     static constexpr int IMEM_ADDRESS_BITS = 6;
     static constexpr int IMEM_LOOKUP_BITS = 3;
 
+ private:
     Alloc2D<cstring, SRAM_ROWS, SRAM_COLUMNS>          sram_use;
     unsigned                                           sram_inuse[SRAM_ROWS] = { 0 };
     Alloc2D<cstring, TCAM_ROWS, TCAM_COLUMNS>          tcam_use;
@@ -80,8 +85,9 @@ struct Memories {
         bool constraint_check();
     };
 
+    friend class SetupAttachedTables;
 
-
+ public:
     /* Memories::Use tracks memory use of a single table */
     struct Use {
         enum type_t { EXACT, TERNARY, GATEWAY, TIND, TWOPORT, ACTIONDATA } type;
@@ -121,7 +127,7 @@ struct Memories {
         void visit(Memories &mem, std::function<void(cstring &)>) const;
     };
 
-
+ private:
     struct table_alloc {
         const IR::MAU::Table *table;
         const IXBar::Use *match_ixbar;
@@ -140,28 +146,31 @@ struct Memories {
         void link_table(table_alloc *ta) {table_link = ta;}
     };
 
+    /** Information on a particular table that is to be allocated in the RAM array */
     struct SRAM_group {
-        table_alloc *ta;
-        int depth;
-        int width;
-        int placed;
-        int number;
-        int hash_group;
-        const IR::Attached *attached;
-        int recent_home_row;
+        table_alloc *ta;  // Link to the table alloc to be generated
+        int depth;  // Individual number of RAMs required for a group
+        int width = 0;  // How wide an individual group is, only needed for exact match
+        int placed = 0;  // How many have been allocated so far
+        int number;  // Used to keep track of wide action tables and way numbers in exact match
+        int hash_group = -1;  // Which hash group the exact match way is using
+        const IR::Attached *attached = nullptr;
+        int recent_home_row = -1;  // For swbox users, most recent row to oflow to
         enum type_t { EXACT, ACTION, STATS, METER, REGISTER, SELECTOR, TIND } type;
+
+        // Color Mapram Requirements, necessary for METER groups
         struct color_mapram_group {
-            int needed;
-            int placed;
-            bool required;
+            int needed = 0;
+            int placed = 0;
             bool all_placed() { return needed == placed; }
             int left_to_place() { return needed - placed; }
-            color_mapram_group() : needed(0), placed(0), required(false) {}
         };
+
+        // Linkage between selectors and the corresponding action table in order to prevent
+        // a collision on the selector overflow
         struct selector_info {
-            SRAM_group *sel_group;
+            SRAM_group *sel_group = nullptr;
             unordered_set<SRAM_group *> action_groups;
-            selector_info() : sel_group(nullptr) {}
             bool sel_linked() { return sel_group != nullptr; }
             bool act_linked() { return !action_groups.empty(); }
             bool sel_all_placed() { return sel_group->all_placed(); }
@@ -216,16 +225,14 @@ struct Memories {
         };
         selector_info sel;
         color_mapram_group cm;
-        bool requires_ab;
-        explicit SRAM_group(table_alloc *t, int d, int w, int n, type_t ty)
-            : ta(t), depth(d), width(w), placed(0), number(n), hash_group(0), attached(nullptr),
-              type(ty), sel(), cm(), requires_ab(false) {}
-        explicit SRAM_group(table_alloc *t, int d, int n, type_t ty)
-            : ta(t), depth(d), width(0), placed(0), number(n), hash_group(0), attached(nullptr),
-              type(ty), sel(), cm(), requires_ab(false) {}
-        explicit SRAM_group(table_alloc *t, int d, int w, int n, int h, type_t ty)
-            : ta(t), depth(d), width(w), placed(0), number(n), hash_group(h), attached(nullptr),
-              type(ty), sel(), cm(), requires_ab(false) {}
+        bool requires_ab = false;  // LPF and WRED meters require synth and action bus
+
+        SRAM_group(table_alloc *t, int d, int w, int n, type_t ty)
+            : ta(t), depth(d), width(w), number(n), type(ty) {}
+        SRAM_group(table_alloc *t, int d, int n, type_t ty)
+            : ta(t), depth(d), number(n), type(ty) {}
+        SRAM_group(table_alloc *t, int d, int w, int n, int h, type_t ty)
+            : ta(t), depth(d), width(w), number(n), hash_group(h), type(ty) {}
         void dbprint(std::ostream &out) const {
             out << ta->table->name << " way #" << number << " depth: " << depth
                 << " width: " << width << " placed: " << placed;
@@ -235,6 +242,8 @@ struct Memories {
         bool all_placed() { return (depth == placed); }
         bool any_placed() { return (placed != 0); }
         bool needs_ab() { return requires_ab && !all_placed(); }
+        bool is_synth_type() { return type == STATS || type == METER || type == REGISTER
+                                      || type == SELECTOR; }
         bool sel_act_placed(SRAM_group *corr) {
             if (type == ACTION && sel.sel_linked() && sel.is_sel_corr_group(corr)
                 && corr->sel.action_all_placed())
@@ -272,13 +281,14 @@ struct Memories {
         }
     };
 
-    struct action_fill {
-        SRAM_group *group;
-        unsigned mask;
-        unsigned mapram_mask;
-        size_t index;
-        action_fill() : group(nullptr), mask(0), mapram_mask(0), index(0) {}
-        void clear() { group = nullptr; mask = 0; mapram_mask = 0; index = 0; }
+    /** Information about particular use on a row during allocate_all_swbox_users */
+    struct swbox_fill {
+        SRAM_group *group = nullptr;
+        unsigned mask = 0;
+        unsigned mapram_mask = 0;
+        operator bool() const { return group != nullptr; }
+        swbox_fill() {}
+        void clear() { group = nullptr; mask = 0; mapram_mask = 0; }
         void clear_masks() {mask = 0; mapram_mask = 0; }
     };
 
@@ -291,10 +301,9 @@ struct Memories {
     };
 
 
-
-    static constexpr int ACTION_IND = 0;
-    static constexpr int SUPPL_IND = 1;
-    static constexpr int OFLOW_IND = 2;
+    // Used for array indices in allocate_all_action
+    enum RAM_side_t { LEFT = 0, RIGHT, RAM_SIDES };
+    enum switchbox_t { ACTION = 0, SYNTH, OFLOW, SWBOX_TYPES };
 
     vector<table_alloc *>       tables;
     vector<table_alloc *>       exact_tables;
@@ -309,8 +318,8 @@ struct Memories {
     vector<table_alloc *>       stats_tables;
     vector<table_alloc *>       meter_tables;
     vector<table_alloc *>       stateful_tables;
-    vector<SRAM_group *>        action_bus_users;
-    vector<SRAM_group *>        suppl_bus_users;
+    ordered_set<SRAM_group *>   action_bus_users;
+    ordered_set<SRAM_group *>   synth_bus_users;
     vector<table_alloc *>       gw_tables;
     vector<table_alloc *>       no_match_hit_tables;
     vector<table_alloc *>       no_match_miss_tables;
@@ -318,16 +327,13 @@ struct Memories {
     vector<table_alloc *>       normal_gws;
     vector<table_alloc *>       no_match_gws;
 
-    void clear();
+    unsigned side_mask(RAM_side_t side);
+    int mems_needed(int entries, int depth, int per_mem_row, bool is_twoport);
     void clear_table_vectors();
     void clear_uses();
-    void add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
-                   TableResourceAlloc *resources, const LayoutOption *lo,
-                   int entries);
     bool analyze_tables(mem_info &mi);
     void calculate_column_balance(mem_info &mi, unsigned &row);
     bool cut_from_left_side(mem_info &mi, int left_given_columns, int right_given_columns);
-    bool allocate_all();
     bool allocate_all_exact(unsigned column_mask);
     vector<int> way_size_calculator(int ways, int RAMs_needed);
     vector<std::pair<int, int>> available_SRAMs_per_row(unsigned mask, table_alloc *ta,
@@ -351,52 +357,47 @@ struct Memories {
     int find_best_tind_row(SRAM_group *tg, int &bus);
     void compress_tind_groups();
 
-    bool allocate_all_action();
-    void find_action_bus_users();
-    void action_bus_selectors_indirects();
-    void action_bus_meters_counters();
-    void find_action_candidates(int row, int mask, action_fill &action, action_fill &suppl,
-                                action_fill &oflow, bool stats_available, bool meter_available,
-                                action_fill &curr_oflow, action_fill &sel_unplaced);
-    void adjust_RAMs_available(action_fill &curr_oflow, int &suppl_RAMs_available,
-                               int action_RAMs_available, int row, bool left_side);
-    void best_candidates(action_fill &best_fit_action, action_fill &best_fit_suppl,
-                         action_fill &next_action, action_fill &next_suppl,
-                         action_fill &curr_oflow, int action_RAMs_available,
-                         int suppl_RAMs_available, bool stats_available,
-                         bool meter_available, unsigned mask, action_fill &sel_unplaced);
-    void fill_out_masks(unsigned suppl_masks[3], unsigned action_masks[3], int RAMs[3],
-                        int RAMs_filled[3], bool is_suppl[3], int row, unsigned mask,
-                        int suppl_RAMs_available, int action_RAMs_available);
-    void action_row_trip(action_fill &action, action_fill &suppl, action_fill &oflow,
-                         action_fill &best_fit_action, action_fill &best_fit_suppl,
-                         action_fill &curr_oflow, action_fill &next_action,
-                         action_fill &next_suppl, int action_RAMs_available,
-                         int suppl_RAMs_available, bool left_side, int order[3]);
-    void action_oflow_only(action_fill &action, action_fill &oflow,
-                           action_fill &best_fit_action, action_fill &next_action,
-                           action_fill &curr_oflow, int RAMs_available, int order[3]);
-    void set_up_RAM_counts(action_fill &action, action_fill &suppl, action_fill &oflow,
-                           int order[3], int RAMs[3], bool is_suppl[3],
-                           int suppl_RAMs_available);
-    void color_mapram_candidates(action_fill &suppl, action_fill &oflow, unsigned mask);
-    void fill_out_color_mapram(action_fill &action, int row, unsigned mask, bool is_oflow);
-    bool fill_out_action_row(action_fill &action, int row, int side, unsigned mask,
-                             bool is_oflow, bool is_twoport);
-    void action_side(action_fill &action, action_fill &suppl, action_fill &oflow,
-                     bool removed[3], int row, int side, unsigned mask);
-    void calculate_curr_oflow(action_fill &action, action_fill &suppl, action_fill &oflow,
-                              bool removed[3], action_fill &curr_oflow,
-                              action_fill &twoport_oflow, bool right_side);
-    void calculate_sel_unplaced(action_fill &action, action_fill &suppl, action_fill &oflow,
-                                action_fill &sel_unplaced);
+    bool allocate_all_swbox_users();
+    void find_swbox_bus_users();
+    void swbox_bus_selectors_indirects();
+    void swbox_bus_meters_counters();
+    void find_action_candidates(int row, RAM_side_t side, swbox_fill candidates[SWBOX_TYPES],
+                                bool stats_available, bool meter_available,
+                                swbox_fill &curr_oflow, swbox_fill &sel_oflow);
+    void adjust_RAMs_available(swbox_fill &curr_oflow, int RAMs_avail[OFLOW], int row,
+                               RAM_side_t side);
+    void best_candidates(swbox_fill best_fits[OFLOW], swbox_fill nexts[OFLOW],
+                         swbox_fill &curr_oflow, swbox_fill &sel_oflow,
+                         bool stats_available, bool meter_available, RAM_side_t side,
+                         int RAMs_avail[OFLOW]);
+    void fill_out_masks(swbox_fill candidates[SWBOX_TYPES], switchbox_t order[SWBOX_TYPES],
+                        int RAMs[SWBOX_TYPES], int row, RAM_side_t side);
+    void init_candidate(swbox_fill candidates[SWBOX_TYPES], switchbox_t order[SWBOX_TYPES],
+                        bool bus_used[SWBOX_TYPES], switchbox_t type, int &order_index,
+                        swbox_fill choice, bool test_action_bus);
+    void determine_cand_order(swbox_fill candidates[SWBOX_TYPES], swbox_fill best_fits[OFLOW],
+                              swbox_fill &curr_oflow, swbox_fill nexts[OFLOW],
+                              int RAMs_avail[OFLOW], RAM_side_t side,
+                              switchbox_t order[SWBOX_TYPES]);
+    void set_up_RAM_counts(swbox_fill candidates[SWBOX_TYPES], switchbox_t order[SWBOX_TYPES],
+                           int RAMs_avail[OFLOW], int RAMs[SWBOX_TYPES]);
+    void color_mapram_candidates(swbox_fill candidates[SWBOX_TYPES], RAM_side_t side);
+    void set_color_maprams(swbox_fill &candidate, unsigned &avail_maprams);
+    void fill_color_mapram_use(swbox_fill &candidate, int row, RAM_side_t side);
+    void fill_RAM_use(swbox_fill &candidate, int row, RAM_side_t side, switchbox_t type);
+    void remove_placed_group(swbox_fill &candidate, RAM_side_t side);
+    void swbox_side(swbox_fill candidates[SWBOX_TYPES], int row, RAM_side_t side);
+    void calculate_curr_oflow(swbox_fill candidates[SWBOX_TYPES], swbox_fill &curr_oflow,
+                              swbox_fill &synth_oflow, RAM_side_t side);
+    void calculate_sel_oflow(swbox_fill candidates[SWBOX_TYPES], swbox_fill &sel_oflow);
+    /**
     bool can_place_selector(action_fill &curr_oflow, SRAM_group *curr_check,
                             int suppl_RAMs_available, int action_RAMs_available,
                             action_fill &sel_unplaced);
-    void selector_candidate_setup(action_fill &action, action_fill &suppl, action_fill &oflow,
-                                  action_fill &curr_oflow, action_fill &sel_unplaced,
-                                  action_fill &next_suppl, int order[3],
-                                  int action_RAMs_available, int suppl_RAMs_available);
+    void selector_candidate_setup(action_fill candidates[SWBOX_TYPES], action_fill &curr_oflow,
+                                  action_fill &sel_unplaced, action_fill nexts[OFLOW],
+                                  int order[SWBOX_TYPES], int RAMs_avail[OFLOW]);
+    */
     void action_bus_users_log();
     bool find_unit_gw(Memories::Use &alloc, cstring name, bool requires_search_bus);
     bool find_search_bus_gw(table_alloc *ta, Memories::Use &alloc, cstring name);
@@ -411,10 +412,15 @@ struct Memories {
                            int row, int col);
     bool allocate_all_no_match_miss();
 
+ public:
+    bool allocate_all();
     void update(cstring table_name, const Use &alloc);
     void update(const map<cstring, Use> &alloc);
     void remove(cstring table_name, const Use &alloc);
     void remove(const map<cstring, Use> &alloc);
+    void clear();
+    void add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
+                   TableResourceAlloc *resources, const LayoutOption *lo, int entries);
     friend std::ostream &operator<<(std::ostream &, const Memories &);
 };
 

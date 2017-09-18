@@ -552,7 +552,6 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
         }
         if (color_mapram_row.size() > 1) {
             out << indent << "row: " << color_mapram_row << std::endl;
-            out << indent << "bus: " << color_mapram_bus << std::endl;
             out << indent << "column:" << std::endl;
             for (auto &r : mem.color_mapram)
                 out << indent << "- " << memory_vector(r.col, mem.type, true) << std::endl;
