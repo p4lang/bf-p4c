@@ -125,11 +125,6 @@ MidEnd::MidEnd(BFN_Options& options) {
         P4V1::V1Model::instance.sw.update.name,
         P4V1::V1Model::instance.sw.deparser.name };
 
-    BFN::Target target = BFN::Target::Unknown;
-    if (options.target == "tofino-v1model-barefoot")
-        target = BFN::Target::Simple;
-    else if (options.target == "tofino-native-barefoot")
-        target = BFN::Target::Tofino;
     bool needTranslation = options.native_arch &&
                            (options.langVersion == CompilerOptions::FrontendVersion::P4_14);
 
@@ -164,8 +159,8 @@ MidEnd::MidEnd(BFN_Options& options) {
         // only contain one ingress and one egress control block.
         // Otherwise, the translator has to transform all parameters in all custom control
         // blocks, which is unattainable.
-        (target == BFN::Target::Simple && needTranslation) ?
-                new BFN::SimpleSwitchTranslation(&refMap, &typeMap, target) : nullptr,
+        (options.target == "tofino-v1model-barefoot" && needTranslation) ?
+                new BFN::SimpleSwitchTranslation(&refMap, &typeMap, options) : nullptr,
         new P4::InlineActions(&refMap, &typeMap),
         new P4::LocalizeAllActions(&refMap),
         new P4::UniqueNames(&refMap),

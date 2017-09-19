@@ -57,42 +57,6 @@ const IR::P4Parser* SimpleSwitchTranslation::getParser(const IR::ToplevelBlock* 
     return ctrl->to<IR::ParserBlock>()->container;
 }
 
-bool SimpleSwitchTranslation::isStandardMetadataParameter(const IR::Parameter* param) {
-    if (target != Target::Simple)
-        return false;
-    auto blk = getToplevelBlock();
-    auto parser = getParser(blk);
-    auto params = parser->getApplyParameters();
-    if (params->size() != 4) {
-        ::error("%1%: Expected 4 parameters for parser", parser);
-        return false;
-    }
-    if (*params->parameters.at(3) == *param) {
-        return true;
-    }
-
-    auto ingress = getIngress(blk);
-    params = ingress->getApplyParameters();
-    if (params->size() != 3) {
-        ::error("%1%: Expected 3 parameters for ingress", ingress);
-        return false;
-    }
-    if (*params->parameters.at(2) == *param) {
-        return true;
-    }
-
-    auto egress = getEgress(blk);
-    params = egress->getApplyParameters();
-    if (params->size() != 3) {
-        ::error("%1%: Expected 3 parameters for egress", egress);
-        return false;
-    }
-    if (*params->parameters.at(2) == *param) {
-        return true;
-    }
-    return false;
-}
-
 static cstring toString(BlockType block) {
     switch (block) {
         case BlockType::Unknown: return "unknown";
@@ -933,41 +897,25 @@ class DoMetadataTranslation : public Transform {
         return mem;
     }
 
-    const IR::Node* postorder(IR::Parameter* param) override {
-        if (!translator->isStandardMetadataParameter(param)) {
-            return param;
-        }
-        auto blockType = getInstantiatedBlockType();
-        if (blockType == BlockType::Ingress) {
-            auto path = new IR::Path(P4_16::IngressIntrinsics);
-            auto type = new IR::Type_Name(path);
-            auto meta = new IR::Parameter("ig_intr_md", IR::Direction::InOut, type);
-            return meta;
-        } else if (blockType == BlockType::Egress) {
-            auto path = new IR::Path(P4_16::EgressIntrinsics);
-            auto type = new IR::Type_Name(path);
-            auto meta = new IR::Parameter("eg_intr_md", IR::Direction::InOut, type);
-            return meta;
-        } else if (blockType == BlockType::Parser) {
-            auto path = new IR::Path(P4_16::IngressIntrinsics);
-            auto type = new IR::Type_Name(path);
-            auto meta = new IR::Parameter("ig_intr_md", IR::Direction::InOut, type);
-            return meta;
-        }
-        return param;
-    }
-
     const IR::Node* preorder(IR::P4Control* node) override {
         auto blk = translator->getToplevelBlock();
         auto ingress = translator->getIngress(blk);
+        auto params = node->type->getApplyParameters();
+
         if (*ingress == *node) {
+            BUG_CHECK(params->size() == 3, "%1% Expected 3 parameters for ingress", ingress);
             auto paramList = new IR::ParameterList({node->type->applyParams->parameters.at(0),
-                                                    node->type->applyParams->parameters.at(1),
-                                                    node->type->applyParams->parameters.at(2)});
-            // add ig_intr_md_from_prsr
-            auto path = new IR::Path(P4_16::IngressIntrinsicsFromParser);
+                                                    node->type->applyParams->parameters.at(1)});
+            // add ig_intr_md
+            auto path = new IR::Path(P4_16::IngressIntrinsics);
             auto type = new IR::Type_Name(path);
-            auto param = new IR::Parameter("ig_intr_md_from_parser", IR::Direction::In, type);
+            auto param = new IR::Parameter("ig_intr_md", IR::Direction::In, type);
+            paramList->push_back(param);
+
+            // add ig_intr_md_from_prsr
+            path = new IR::Path(P4_16::IngressIntrinsicsFromParser);
+            type = new IR::Type_Name(path);
+            param = new IR::Parameter("ig_intr_md_from_parser", IR::Direction::In, type);
             paramList->push_back(param);
 
             // add ig_intr_md_for_tm
@@ -992,13 +940,19 @@ class DoMetadataTranslation : public Transform {
 
         auto egress = translator->getEgress(blk);
         if (*egress == *node) {
+            BUG_CHECK(params->size() == 3, "%1% Expected 3 parameters for egress", egress);
             auto paramList = new IR::ParameterList({node->type->applyParams->parameters.at(0),
-                                                    node->type->applyParams->parameters.at(1),
-                                                    node->type->applyParams->parameters.at(2)});
-            // add eg_intr_md_from_prsr
-            auto path = new IR::Path(P4_16::EgressIntrinsicsFromParser);
+                                                    node->type->applyParams->parameters.at(1)});
+            // add eg_intr_md
+            auto path = new IR::Path(P4_16::EgressIntrinsics);
             auto type = new IR::Type_Name(path);
-            auto param = new IR::Parameter("eg_intr_md_from_parser", IR::Direction::In, type);
+            auto param = new IR::Parameter("eg_intr_md", IR::Direction::In, type);
+            paramList->push_back(param);
+
+            // add eg_intr_md_from_prsr
+            path = new IR::Path(P4_16::EgressIntrinsicsFromParser);
+            type = new IR::Type_Name(path);
+            param = new IR::Parameter("eg_intr_md_from_parser", IR::Direction::In, type);
             paramList->push_back(param);
 
             // add eg_intr_md_for_mb
@@ -1018,6 +972,31 @@ class DoMetadataTranslation : public Transform {
             auto result = new IR::P4Control(node->srcInfo, node->name, control_type,
                                             node->constructorParams, node->controlLocals,
                                             node->body);
+            return result;
+        }
+        return node;
+    }
+
+    const IR::Node* preorder(IR::P4Parser* node) override {
+        auto blk = translator->getToplevelBlock();
+        auto parser = translator->getParser(blk);
+        auto params = node->type->getApplyParameters();
+        if (*parser == *node) {
+            BUG_CHECK(params->size() == 4, "%1%: Expected 4 parameters for parser", parser);
+            auto paramList = new IR::ParameterList({node->type->applyParams->parameters.at(0),
+                                                    node->type->applyParams->parameters.at(1),
+                                                    node->type->applyParams->parameters.at(2)});
+            // add ig_intr_md
+            auto path = new IR::Path(P4_16::IngressIntrinsics);
+            auto type = new IR::Type_Name(path);
+            auto param = new IR::Parameter("ig_intr_md", IR::Direction::Out, type);
+            paramList->push_back(param);
+
+            auto parser_type = new IR::Type_Parser(node->name, paramList);
+
+            auto result = new IR::P4Parser(node->srcInfo, node->name, parser_type,
+                                           node->constructorParams, node->parserLocals,
+                                           node->states);
             return result;
         }
         return node;
@@ -1048,10 +1027,15 @@ class MetadataTranslation : public PassManager {
 };
 
 SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
-                                                 P4::TypeMap* typeMap, Target arch) {
+                                                 P4::TypeMap* typeMap, BFN_Options& options) {
     setName("Translation");
+    BFN::Target target = BFN::Target::Unknown;
+    if (options.target == "tofino-v1model-barefoot")
+        target = BFN::Target::Simple;
+    else if (options.target == "tofino-native-barefoot")
+        target = BFN::Target::Tofino;
+    addDebugHook(options.getDebugHook());
     auto evaluator = new P4::EvaluatorPass(refMap, typeMap);
-    target = arch;
     addPasses({
         new P4::TypeChecking(refMap, typeMap, true),
         evaluator,

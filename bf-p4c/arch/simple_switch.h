@@ -101,12 +101,11 @@ class SimpleSwitchTranslation : public PassManager {
     Target   target;
     const IR::ToplevelBlock   *toplevel = nullptr;
 
-    SimpleSwitchTranslation(P4::ReferenceMap* refMap, P4::TypeMap* typeMap, Target target);
+    SimpleSwitchTranslation(P4::ReferenceMap* refMap, P4::TypeMap* typeMap, BFN_Options& options);
 
     const IR::P4Control* getIngress(const IR::ToplevelBlock* blk);
     const IR::P4Control* getEgress(const IR::ToplevelBlock* blk);
     const IR::P4Parser*  getParser(const IR::ToplevelBlock* blk);
-    bool isStandardMetadataParameter(const IR::Parameter* param);
 
     const IR::ToplevelBlock* getToplevelBlock() { CHECK_NULL(toplevel); return toplevel; }
 };
