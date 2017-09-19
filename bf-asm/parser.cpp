@@ -207,18 +207,21 @@ void Parser::process() {
         Phv::setuse(EGRESS, phv_use[EGRESS]); }
 }
 
-void Parser::output(json::map &) {
+void Parser::output(json::map & ctxt_json) {
+    ctxt_json["parser"]["ingress"] = json::vector();
+    ctxt_json["parser"]["egress"] = json::vector();
     if (all.empty()) return;
     for (auto st : all) st->pass2(this);
     if (error_count > 0) return;
     tcam_row_use[INGRESS] = tcam_row_use[EGRESS] = PARSER_TCAM_DEPTH;
     switch (options.target) {
-#define SWITCH_FOR_TARGET(ETAG, TTYPE)                                  \
-    case ETAG: {                                                        \
-        TTYPE::parser_regs       regs;                                  \
-        declare_registers(&regs);                                       \
-        write_config(regs);                                             \
-        undeclare_registers(&regs);                                     \
+#define SWITCH_FOR_TARGET(ETAG, TTYPE)                                   \
+    case ETAG: {                                                         \
+        TTYPE::parser_regs       regs;                                   \
+        declare_registers(&regs);                                        \
+        write_config(regs);                                              \
+        undeclare_registers(&regs);                                      \
+        gen_configuration_cache(regs, ctxt_json["configuration_cache"]); \
         break; }
     FOR_ALL_TARGETS(SWITCH_FOR_TARGET)
 #undef SWITCH_FOR_TARGET

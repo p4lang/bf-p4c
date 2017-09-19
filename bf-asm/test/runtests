@@ -6,7 +6,6 @@ glass=false
 outdir=false
 verbose=false
 diff=false
-newctxjson=false
 link=false
 clean=false
 TIME=false
@@ -65,9 +64,6 @@ while expr "$1" : - >/dev/null; do
         ;;
     -d)
         diff=true
-        ;;
-    -N)
-        newctxjson=true
         ;;
     -j)
         shift
@@ -190,14 +186,12 @@ findexec WALLE          "walle"                 "walle"                 "bf-asm/
 
 function not() { if "$@"; then return 1; else return 0; fi }
 
-ctxt_json_ignore=$TESTDIR/ctxt_json_ignore
-if $newctxjson; then
-    ctxt_json_ignore=$TESTDIR/ctxt_json_ignore_new
-fi
+ctxt_json_ignore=$TESTDIR/ctxt_json_ignore_new
 echo "Using context json ignore file - $ctxt_json_ignore"
 
+# -l specifies the key 'field' the vector will be sorted before comparison
 if [ -r $ctxt_json_ignore ]; then
-    CTXT_DIFFARGS="-l handle -l start_offset -l entry_number -i @$ctxt_json_ignore"
+    CTXT_DIFFARGS="-l start_offset -l entry_number -l name -l field_name -i @$ctxt_json_ignore"
 else
     CTXT_DIFFARGS="-al handle -i table_type"
 fi
@@ -271,10 +265,8 @@ function test_p4() {
     #echo "about to run $name.p4, expecting ${expect_fail:-no} failure"
     msg="$p4file"
     start=`date +%s`
-    tfafile=""
-    if $brig; then
-        tfafile=brig/$name.tfa
-    else
+    tfafile=brig/$name.tfa
+    if $diff; then
         tfafile=glass/$name.tfa
     fi
     if $fast && [ -r $tfafile ]; then
@@ -358,11 +350,8 @@ function test_p4() {
             rm $f
         fi
     done
-    if $brig; then
+    if $brig && ! $diff; then
         TFAS_OPTS="-vvvvl"
-    fi
-    if $newctxjson; then
-        TFAS_OPTS="-N $TFAS_OPTS"
     fi
     if $ok && run $TFAS -o brig $TFAS_OPTS brig/tfas.config.log $tfafile >brig/tfas.log 2>&1; then
         # Validate context json output from assembler
@@ -388,10 +377,7 @@ function test_p4() {
             done > json_diff.txt
             glsc_ctxt=glass/${name}_context_llir.json
             if [ -d glass/context ]; then
-                glsc_ctxt=glass/context/mau.context.json
-                if $newctxjson; then
-                    glsc_ctxt=glass/context/context.json
-                fi
+                glsc_ctxt=glass/context/context.json
             fi
             brig_ctxt=brig/context.json
             if [ -r $brig_ctxt ]; then
@@ -422,7 +408,7 @@ function test_p4() {
         fi
         ok=false
     fi
-    if [ "$expect_fail" != "" ]; then
+    if [ "$expect_fail" != "" ] && $diff; then
         if $ok; then
             msg="$msg (UNEXPECTED PASS -- expected $expect_fail failure)"
             rv=3

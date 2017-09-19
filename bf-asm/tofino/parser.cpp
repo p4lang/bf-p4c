@@ -402,7 +402,7 @@ void Parser::gen_configuration_cache(Target::Tofino::parser_regs &regs, json::ve
     for (int i = 0; i < 4; i++) {
         reg_fqname = "pmarb.ebp18_reg.ebp_reg[0].epb_prsr_port_regs.chnl_ctrl[" 
             + std::to_string(i) + "]"; 
-        reg_name = "parser0.chnl_ctrl_" + std::to_string(i);
+        reg_name = "parser0_chnl_ctrl_" + std::to_string(i);
         reg_value =
                (regs.egress.epb_prsr_port_regs.chnl_ctrl[i].meta_opt        & 0x000001FF)  
             | ((regs.egress.epb_prsr_port_regs.chnl_ctrl[i].chnl_ena        & 0x00000001)  << 16)
@@ -411,13 +411,13 @@ void Parser::gen_configuration_cache(Target::Tofino::parser_regs &regs, json::ve
             | ((regs.egress.epb_prsr_port_regs.chnl_ctrl[i].prsr_stall_full & 0x00000001)  << 23)
             | ((regs.egress.epb_prsr_port_regs.chnl_ctrl[i].timestamp_shift & 0x0000000F)  << 24)
             | ((regs.egress.epb_prsr_port_regs.chnl_ctrl[i].pipeid_ovr      & 0x00000007)  << 28); 
-        if (reg_value != 0) {
+        if ((reg_value != 0) || (options.match_compiler)) {
             reg_value_str = int_to_hex_string(reg_value, reg_width);
             add_cfg_reg(cfg_cache, reg_fqname, reg_name, reg_value_str); } }
      
     // epb_prsr_port_regs.multi_threading
     reg_fqname = "pmarb.ebp18_reg.ebp_reg[0].epb_prsr_port_regs.multi_threading"; 
-    reg_name = "parser0.multi_threading";
+    reg_name = "parser0_multi_threading";
     reg_value = 
                (regs.egress.epb_prsr_port_regs.multi_threading.prsr_dph_max    & 0x000003FF) 
             | ((regs.egress.epb_prsr_port_regs.multi_threading.stall_thr       & 0x00000007) << 12)
@@ -425,7 +425,7 @@ void Parser::gen_configuration_cache(Target::Tofino::parser_regs &regs, json::ve
             | ((regs.egress.epb_prsr_port_regs.multi_threading.sngl_thrd       & 0x00000001) << 17)
             | ((regs.egress.epb_prsr_port_regs.multi_threading.mthrd_afull_pkt & 0x0000000F) << 20)
             | ((regs.egress.epb_prsr_port_regs.multi_threading.mthrd_afull_ent & 0x0000003F) << 24);
-    if (reg_value != 0) {
+    if ((reg_value != 0) || (options.match_compiler)) {
         reg_value_str = int_to_hex_string(reg_value, reg_width);
         add_cfg_reg(cfg_cache, reg_fqname, reg_name, reg_value_str); }
 }

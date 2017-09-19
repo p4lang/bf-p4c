@@ -144,7 +144,7 @@ void AsmStage::process() {
     }
 }
 
-void AsmStage::output(json::map &ctxtJson) {
+void AsmStage::output(json::map &ctxt_json) {
     for (unsigned i = 0; i < stage.size(); i++) {
         //if  (stage[i].tables.empty()) continue;
         for (auto table : stage[i].tables)
@@ -180,29 +180,7 @@ void AsmStage::output(json::map &ctxtJson) {
     for (unsigned i = 0; i < stage.size(); i++) {
         switch (options.target) {
 #define SWITCH_FOR_TARGET(ETAG, TTYPE) \
-        case ETAG: stage[i].output<TTYPE>(ctxtJson["tables"]); break;
-        FOR_ALL_TARGETS(SWITCH_FOR_TARGET)
-#undef SWITCH_FOR_TARGET
-        default: assert(0); } }
-    ctxtJson["parser"]["ingress"] = json::vector();
-    ctxtJson["parser"]["egress"] = json::vector();
-    // Add configuration cache regs -- FIXME -- move into output
-    Parser& prsr = Parser::get_parser();
-    switch (options.target) {
-#define SWITCH_FOR_TARGET(ETAG, TTYPE)                                                  \
-        case ETAG: {                                                                    \
-            TTYPE::parser_regs regs;                                                    \
-            prsr.gen_configuration_cache(regs, ctxtJson["configuration_cache"]);        \
-            break; }
-        FOR_ALL_TARGETS(SWITCH_FOR_TARGET)
-#undef SWITCH_FOR_TARGET
-        default: assert(0); }
-    for (unsigned i = 0; i < stage.size(); i++) {
-        switch (options.target) {
-#define SWITCH_FOR_TARGET(ETAG, TTYPE)                                                  \
-        case ETAG:                                                                      \
-            stage[i].gen_configuration_cache<TTYPE>(ctxtJson["configuration_cache"]);   \
-            break;
+        case ETAG: stage[i].output<TTYPE>(ctxt_json); break;
         FOR_ALL_TARGETS(SWITCH_FOR_TARGET)
 #undef SWITCH_FOR_TARGET
         default: assert(0); } }
@@ -425,7 +403,7 @@ template<class REGS> void Stage::write_regs(REGS &regs) {
 }
 
 template<class TARGET>
-void Stage::output(json::vector &tbl_cfg) {
+void Stage::output(json::map &ctxt_json) {
     typename TARGET::mau_regs regs;
     declare_registers(&regs, stageno);
     json::map &names = TopLevel::all.name_lookup["stages"][std::to_string(stageno)];
@@ -433,7 +411,7 @@ void Stage::output(json::vector &tbl_cfg) {
     json::map &table_names = names["logical_tables"];
     for (auto table : tables) {
         table->write_regs(regs);
-        table->gen_tbl_cfg(tbl_cfg);
+        table->gen_tbl_cfg(ctxt_json["tables"]);
         if (table->logical_id >= 0)
             table->gen_name_lookup(table_names[std::to_string(table->logical_id)]); }
     write_regs(regs);
@@ -457,11 +435,11 @@ void Stage::output(json::vector &tbl_cfg) {
     if (stageno < NUM_MAU_STAGES)
         TopLevel::all.reg_pipe.mau[stageno] = buf;
     undeclare_registers(&regs);
+    gen_configuration_cache(regs, ctxt_json["configuration_cache"]);
 }
 
-template<class TARGET>
-void Stage::gen_configuration_cache(json::vector &cfg_cache) {
-    typename TARGET::mau_regs regs;
+template<class REGS>
+void Stage::gen_configuration_cache(REGS &regs, json::vector &cfg_cache) {
     std::string reg_fqname;
     std::string reg_name;
     unsigned reg_value;
@@ -474,6 +452,10 @@ void Stage::gen_configuration_cache(json::vector &cfg_cache) {
         reg_fqname = "mau[" + std::to_string(stageno)
             + "].rams.match.adrdist.meter_sweep_ctl["
             + std::to_string(i) + "]";
+        if (options.match_compiler) { //FIXME: Temp fix to match glass typo
+            reg_fqname = "mau[" + std::to_string(stageno)
+                + "].rams.match.adrdist.meter_sweep_ctl.meter_sweep_ctl["
+                + std::to_string(i) + "]"; }
         reg_name = "stage_" + std::to_string(stageno) + "_meter_sweep_ctl_" + std::to_string(i);
         reg_value = (meter_sweep_ctl[i].meter_sweep_en              & 0x00000001)
                  | ((meter_sweep_ctl[i].meter_sweep_offset          & 0x0000003F) << 1)
@@ -481,7 +463,7 @@ void Stage::gen_configuration_cache(json::vector &cfg_cache) {
                  | ((meter_sweep_ctl[i].meter_sweep_remove_hole_pos & 0x00000003) << 13)
                  | ((meter_sweep_ctl[i].meter_sweep_remove_hole_en  & 0x00000001) << 16)
                  | ((meter_sweep_ctl[i].meter_sweep_interval        & 0x0000001F) << 17);
-        if (reg_value != 0) {
+        if ((reg_value != 0) || (options.match_compiler)) {
             reg_value_str = int_to_hex_string(reg_value, reg_width);
             add_cfg_reg(cfg_cache, reg_fqname, reg_name, reg_value_str); } }
 
@@ -491,9 +473,9 @@ void Stage::gen_configuration_cache(json::vector &cfg_cache) {
     for (int i = 0; i < 2; i++) {
         for (int j = 0; j < 16; j++) {
             reg_value = mixdpctl[i][j];
-            reg_value_str =
-                int_to_hex_string(reg_value, reg_width) + reg_value_str; } }
-     if (!check_zero_string(reg_value_str)) {
+            reg_value_str = reg_value_str +
+                int_to_hex_string(reg_value, reg_width); } }
+     if (!check_zero_string(reg_value_str) || options.match_compiler) {
          reg_fqname = "mau[" + std::to_string(stageno)
              + "].dp.match_input_xbar_din_power_ctl";
          reg_name = "stage_" + std::to_string(stageno)
@@ -505,9 +487,9 @@ void Stage::gen_configuration_cache(json::vector &cfg_cache) {
     reg_value_str = "";
     for (int i = 0; i < 52; i++) {
        reg_value = hash_seed[i];
-       reg_value_str =
-           int_to_hex_string(reg_value, reg_width) + reg_value_str; }
-    if (!check_zero_string(reg_value_str)) {
+       reg_value_str = reg_value_str +
+           int_to_hex_string(reg_value, reg_width); }
+    if (!check_zero_string(reg_value_str) || options.match_compiler) {
         reg_fqname = "mau[" + std::to_string(stageno)
             + "].dp.xbar_hash.hash.hash_seed";
         reg_name = "stage_" + std::to_string(stageno) + "_hash_seed";
@@ -519,9 +501,9 @@ void Stage::gen_configuration_cache(json::vector &cfg_cache) {
     for (int i = 0; i < 8; i++) {
         for (int j = 0; j < 2; j++) {
             reg_value = parity_group_mask[i][j];
-            reg_value_str =
-                int_to_hex_string(reg_value, reg_width) + reg_value_str; } }
-    if (!check_zero_string(reg_value_str)) {
+            reg_value_str = reg_value_str +
+                int_to_hex_string(reg_value, reg_width); } }
+    if (!check_zero_string(reg_value_str) || options.match_compiler) {
         reg_fqname = "mau[" + std::to_string(stageno)
             + "].dp.xbar_hash.hash.parity_group_mask";
         reg_name = "stage_" + std::to_string(stageno) + "_parity_group_mask";

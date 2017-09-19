@@ -124,7 +124,7 @@ template<class REGS> void MeterTable::write_merge_regs(REGS &regs, MatchTable *m
     // FIXME - Sets up the meter default regs, need to factor in index
     // constants. Check glass code :
     // (target/tofino/device/pipeline/mau/address_and_data_structures.py)
-    unsigned meter_adr = 0x0; 
+    unsigned meter_adr = 0x0;
     if (!color_aware)
         meter_adr |= (METER_LPF_COLOR_BLIND << METER_TYPE_START_BIT);
     else if (!color_aware_per_flow_enable)
@@ -157,7 +157,7 @@ template<class REGS> void MeterTable::write_merge_regs(REGS &regs, MatchTable *m
         base_mask = (1U << base_width) - 1;
         meter_adr_mask = base_mask << METER_LOWER_HUFFMAN_BITS;
         meter_adr_mask |= (type_mask << METER_TYPE_START_BIT);
-        meter_adr_mask &= full_mask; 
+        meter_adr_mask &= full_mask;
     } else {
         base_width = ptr_bits;
         if (per_flow_enable)
@@ -171,7 +171,7 @@ template<class REGS> void MeterTable::write_merge_regs(REGS &regs, MatchTable *m
         //ptr_bits += METER_LOWER_HUFFMAN_BITS; //When should these be added?
         if (!color_aware)
             per_flow_enable_bit = ptr_bits - 1;
-        else if (!color_aware_per_flow_enable) 
+        else if (!color_aware_per_flow_enable)
             per_flow_enable_bit = ptr_bits - METER_TYPE_BITS - 1;
         else
             per_flow_enable_bit = ptr_bits - 1; }
@@ -243,7 +243,10 @@ void MeterTable::write_regs(REGS &regs) {
             error_ctl.meter_alu_group_ecc_error_enable = 1;
             error_ctl.meter_alu_group_thread = gress;
             auto &meter_sweep_ctl = adrdist.meter_sweep_ctl[meter_group_index];
-            meter_sweep_ctl.meter_sweep_en = 1;
+            // The driver will manage turning on the meter sweep enable,
+            // so the compiler should not configure this value (check glass
+            // code)
+            //meter_sweep_ctl.meter_sweep_en = 1;
             meter_sweep_ctl.meter_sweep_offset = minvpn;
             meter_sweep_ctl.meter_sweep_size = maxvpn;
             meter_sweep_ctl.meter_sweep_remove_hole_pos = 0; // FIXME
@@ -411,7 +414,7 @@ void MeterTable::gen_tbl_cfg(json::vector &out) {
     tbl["enable_pfe"] = per_flow_enable;
     tbl["pfe_bit_position"] = per_flow_enable_bit;
     tbl["color_aware_pfe_address_type_bit_position"] = 0; //FIXME
-    stage_tbl["default_lower_huffman_bits_included"] = METER_LOWER_HUFFMAN_BITS; 
+    stage_tbl["default_lower_huffman_bits_included"] = METER_LOWER_HUFFMAN_BITS;
     add_meter_alu_index(stage_tbl);
 }
 

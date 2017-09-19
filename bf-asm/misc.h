@@ -57,4 +57,7 @@ void add_cfg_reg(json::vector &cfg_cache, std::string full_name,
         std::string name, std::string val);
 
 bool check_zero_string(const std::string& s);
+
+// Get filename
+std::string get_filename(const char *s);
 #endif /* _misc_h_ */

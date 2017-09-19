@@ -33,3 +33,9 @@ bool check_zero_string(const std::string& s) {
     return s.find_first_not_of(zero) == std::string::npos; 
 }
 
+std::string get_filename(const char* s) {
+    std::string fname = s;
+    fname = fname.substr(fname.find_last_of("/") + 1);
+    fname = fname.substr(0,fname.find_last_of("."));
+    return fname;
+}
