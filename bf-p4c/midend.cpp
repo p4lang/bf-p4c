@@ -193,9 +193,11 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::TableHit(&refMap, &typeMap),
         new P4::SynthesizeActions(&refMap, &typeMap, new SkipControls(skip_controls)),
         new P4::MoveActionsToTables(&refMap, &typeMap),
-        (needTranslation) ? nullptr : new RemapIntrinsics,
+        (needTranslation || options.target == "tofino-native-barefoot") ?
+                nullptr : new RemapIntrinsics,
         new P4::TypeChecking(&refMap, &typeMap, true),
-        new FillFromBlockMap(&refMap, &typeMap),
+        (options.target == "tofino-native-barefoot") ?
+                nullptr : new FillFromBlockMap(&refMap, &typeMap),
         evaluator,
         new VisitFunctor([this, evaluator]() { toplevel = evaluator->getToplevelBlock(); }),
     });

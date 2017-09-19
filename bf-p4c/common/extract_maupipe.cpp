@@ -768,21 +768,30 @@ class TnaPipe {
     void extractMetadata(IR::BFN::Pipe* rv, ParamBinding* bindings, gress_t gress) {
         if (gress == INGRESS) {
             // XXX(hanw) index must be consistent with tofino.p4
-            // intrinsic_metadata
-            auto mdi = mau->getApplyParameters()->parameters.at(2);
-            rv->metadata.addUnique("ingress_intrinsic_metadata_t",
-                                    bindings->get(mdi)->obj->to<IR::Metadata>());
-            // intrinsic_metadata_from_parser
-            auto mdp = mau->getApplyParameters()->parameters.at(3);
-            rv->metadata.addUnique("ingress_intrinsic_metadata_from_parser_t",
-                                    bindings->get(mdp)->obj->to<IR::Metadata>());
+            int size = mau->getApplyParameters()->parameters.size();
+            if (size > 2) {
+                auto mdi = mau->getApplyParameters()->parameters.at(2);
+                rv->metadata.addUnique("ingress_intrinsic_metadata_t",
+                                       bindings->get(mdi)->obj->to<IR::Metadata>());
+            }
+            if (size > 3) {
+                // intrinsic_metadata_from_parser
+                auto mdp = mau->getApplyParameters()->parameters.at(3);
+                rv->metadata.addUnique("ingress_intrinsic_metadata_from_parser_t",
+                                       bindings->get(mdp)->obj->to<IR::Metadata>());
+            }
         } else if (gress == EGRESS) {
-            auto mdi = mau->getApplyParameters()->parameters.at(2);
-            rv->metadata.addUnique("egress_intrinsic_metadata_t",
-                                    bindings->get(mdi)->obj->to<IR::Metadata>());
-            auto mdp = mau->getApplyParameters()->parameters.at(3);
-            rv->metadata.addUnique("egress_intrinsic_metadata_from_parser_t",
-                                    bindings->get(mdp)->obj->to<IR::Metadata>());
+            int size = mau->getApplyParameters()->parameters.size();
+            if (size > 2) {
+                auto mdi = mau->getApplyParameters()->parameters.at(2);
+                rv->metadata.addUnique("egress_intrinsic_metadata_t",
+                                       bindings->get(mdi)->obj->to<IR::Metadata>());
+            }
+            if (size > 3) {
+                auto mdp = mau->getApplyParameters()->parameters.at(3);
+                rv->metadata.addUnique("egress_intrinsic_metadata_from_parser_t",
+                                       bindings->get(mdp)->obj->to<IR::Metadata>());
+            }
         }
     }
 

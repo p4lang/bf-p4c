@@ -437,14 +437,14 @@ extern stateful_alu<T, O, P> {
 }
 
 /// Action Selector
-extern action_selector {
+extern action_selector<T> {
     /// Optional annotations to help with compiler fitting
     /// @max_num_groups, max number of groups in a selector table
     /// @max_group_size, max number of entries in a group
     action_selector(bit<32> size,
                     @optional selector_mode_t mode,
                     @optional register<bit<1>> reg);
-    abstract T hash<T>();
+    abstract T hash();
 }
 
 extern action_profile {
@@ -492,7 +492,7 @@ control Ingress<H, M>(
     in ingress_intrinsic_metadata_t ig_intr_md,
     @optional in ingress_intrinsic_metadata_from_parser_t ig_intr_md_from_prsr,
     @optional inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm,
-    @optional inout ingress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
+    @optional inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
     @optional inout ingress_intrinsic_metadata_for_mirror_buffer_t ig_intr_md_for_mb);
 
 control Egress<H, M>(
