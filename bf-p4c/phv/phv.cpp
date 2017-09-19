@@ -28,77 +28,14 @@ limitations under the License.
 namespace PHV {
 
 Container::Container(const char *name) {
-    const char *n = name;
-    if (*name == 'T') {
-        tagalong_ = true;
-        n++;
-    } else {
-        tagalong_ = false; }
-    switch (*n++) {
-    case 'B': log2sz_ = 0; break;
-    case 'H': log2sz_ = 1; break;
-    case 'W': log2sz_ = 2; break;
-    default: BUG("Invalid register '%s'", name); }
+    const char *n = name + strcspn(name, "0123456789");
+    type_ = Type(std::string(name, n - name).c_str());
+
     char *end = nullptr;
-    int v = strtol(n, &end, 10);
+    auto v = strtol(n, &end, 10);
     index_ = v;
     if (end == n || *end || index_ != v)
         BUG("Invalid register '%s'", name);
-}
-
-Container::Container(PHV::Kind kind, unsigned index) {
-    index_ = index;
-    switch (kind) {
-      case PHV::Kind::B: log2sz_ = 0; tagalong_ = false; return;
-      case PHV::Kind::H: log2sz_ = 1; tagalong_ = false; return;
-      case PHV::Kind::W: log2sz_ = 2; tagalong_ = false; return;
-      case PHV::Kind::TB: log2sz_ = 0; tagalong_ = true; return;
-      case PHV::Kind::TH: log2sz_ = 1; tagalong_ = true; return;
-      case PHV::Kind::TW: log2sz_ = 2; tagalong_ = true; return;
-    }
-    BUG("Unexpected kind");
-}
-
-PHV::Kind Container::kind() const {
-    switch (log2sz_) {
-      case 0: return tagalong_ ? PHV::Kind::TB : PHV::Kind::B;
-      case 1: return tagalong_ ? PHV::Kind::TH : PHV::Kind::H;
-      case 2: return tagalong_ ? PHV::Kind::TW : PHV::Kind::W;
-      default: BUG("Called kind() on an invalid container");
-    }
-}
-
-bitvec Container::group() const {
-    const auto containerKind = kind();
-
-    // Individually assigned containers aren't part of a group, by definition.
-    if (individuallyAssignedContainers()[id()])
-        return range(containerKind, index_, 1);
-
-    // We also treat overflow containers (i.e., containers which don't exist in
-    // hardware) as being individually assigned.
-    if (!physicalContainers()[id()])
-        return range(containerKind, index_, 1);
-
-    // Outside of the exceptional cases above, containers are assigned to
-    // threads in groups. The grouping depends on the type of container.
-    switch (containerKind) {
-      case PHV::Kind::B:
-      case PHV::Kind::H:
-        return range(containerKind, (index_ / 8) * 8, 8);
-
-      case PHV::Kind::W:
-        return range(containerKind, (index_ / 4) * 4, 4);
-
-      case PHV::Kind::TB:
-      case PHV::Kind::TW:
-        return tagalongGroup(index_ / 4);
-
-      case PHV::Kind::TH:
-        return tagalongGroup(index_ / 6);
-    }
-
-    BUG("Unexpected PHV container kind %1%", containerKind);
 }
 
 cstring Container::toString() const {
@@ -119,7 +56,7 @@ cstring Container::toString() const {
 }
 
 std::ostream& operator<<(std::ostream& out, const PHV::Container c) {
-    return out << c.kind() << c.index_;
+    return out << c.type() << c.index();
 }
 
 std::ostream& operator<<(std::ostream& out, ordered_set<const PHV::Container *>& c_set) {

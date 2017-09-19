@@ -345,7 +345,7 @@ void PhvInfo::Field::foreach_byte(int lo, int hi,
                         << " tmp.container_bit = " << tmp.container_bit
                         << std::endl
                         << " field = " << this
-                        << " container = " << it->container.kind() << it->container.index());
+                        << " container = " << it->container);
                     BUG("phv_fields.cpp:foreach_byte(): byte_hi < container_hi");
                 }
                 if (byte_hi > tmp.container_hi())
@@ -376,7 +376,7 @@ void PhvInfo::Field::foreach_alloc(
                 << " lo = " << lo
                 << std::endl
                 << " field = " << this
-                << " container = " << it->container.kind() << it->container.index());
+                << " container = " << it->container);
             BUG("phv_fields.cpp:foreach_alloc(): field_bit in alloc_slice not less than lo");
         }
         tmp = *it;
@@ -391,7 +391,7 @@ void PhvInfo::Field::foreach_alloc(
                 << " tmp.container_bit = " << tmp.container_bit
                 << std::endl
                 << " field = " << this
-                << " container = " << it->container.kind() << it->container.index());
+                << " container = " << it->container);
             BUG("phv_fields.cpp:foreach_alloc(): container_bit negative in alloc_slice");
         }
         tmp.field_bit = lo;

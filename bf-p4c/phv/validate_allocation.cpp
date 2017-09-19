@@ -51,25 +51,26 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
 
 
         auto overflowContainers =
-          allContainersInProgram - PHV::Container::physicalContainers();
+          allContainersInProgram - Device::phvSpec().physicalContainers();
         if (!overflowContainers.empty()) {
             ::warning("Couldn't fit program in the available PHV space!");
 
-            std::map<PHV::Kind, size_t> overflowCountByKind;
+            std::map<PHV::Type, size_t> overflowCountByType;
             for (auto id : overflowContainers)
-                overflowCountByKind[PHV::Container::fromId(id).kind()]++;
+                overflowCountByType[PHV::Container::fromId(id).type()]++;
 
             auto physicalContainers =
-              allContainersInProgram & PHV::Container::physicalContainers();
-            std::map<PHV::Kind, size_t> physicalCountByKind;
+              allContainersInProgram & Device::phvSpec().physicalContainers();
+            std::map<PHV::Type, size_t> physicalCountByType;
             for (auto id : physicalContainers)
-                physicalCountByKind[PHV::Container::fromId(id).kind()]++;
+                physicalCountByType[PHV::Container::fromId(id).type()]++;
 
-            for (unsigned kind = 0; kind < PHV::NumKinds; kind++) {
+            for (unsigned typeId = 0; typeId < Device::phvSpec().numTypes(); typeId++) {
+                PHV::Type type(typeId);
                 ::warning("Used %1% physical and %2% overflow %3% containers",
-                          physicalCountByKind[PHV::Kind(kind)],
-                          overflowCountByKind[PHV::Kind(kind)],
-                          cstring::to_cstring(PHV::Kind(kind)));
+                          physicalCountByType[type],
+                          overflowCountByType[type],
+                          cstring::to_cstring(type));
             }
 
             if (!ignorePHVOverflow) {
@@ -85,7 +86,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
 
     // The set of reserved container ids for each thread.
     bitvec threadAssignments[2] = {
-        PHV::Container::ingressOnly(), PHV::Container::egressOnly()
+        Device::phvSpec().ingressOnly(), Device::phvSpec().egressOnly()
     };
 
     // Collect information about which fields are referenced in the program.
@@ -144,7 +145,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
 
         // Verify that we didn't overflow the PHV space which is actually
         // available on the hardware.
-        for (auto id : assignedContainers - PHV::Container::physicalContainers())
+        for (auto id : assignedContainers - Device::phvSpec().physicalContainers())
             ERROR_WARN_(false, "Allocated overflow (non-physical) container %1% to field %2%",
                         PHV::Container::fromId(id), cstring::to_cstring(field));
 

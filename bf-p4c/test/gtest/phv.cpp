@@ -23,26 +23,26 @@ limitations under the License.
 
 namespace Test {
 
-// Test that each kind of PHV::Container has the expected properties.
-TEST(TofinoPhvContainer, Kinds) {
+// Test that each type of PHV::Container has the expected properties.
+TEST(TofinoPhvContainer, Types) {
     Device::init("Tofino");  // TODO move this to a test fixture base class
-    using Kind = PHV::Kind;
+    using Type = PHV::Type;
 
     auto checkRange = [](PHV::Container c) {
         SCOPED_TRACE(c);
         auto begin = c.index() / 2;
         auto length = std::max(c.index() * 2, 128u);
-        for (unsigned kindId = 0; kindId < PHV::NumKinds; ++kindId) {
-            auto range = PHV::Container::range(Kind(kindId), begin, length);
-            if (kindId == unsigned(c.kind()))
+        for (unsigned typeId = 0; typeId < Device::phvSpec().numTypes(); ++typeId) {
+            auto range = Device::phvSpec().range(Type(typeId), begin, length);
+            if (typeId == c.type().id())
                 EXPECT_TRUE(range.getbit(c.id()));
             else
                 EXPECT_FALSE(range.getbit(c.id()));
         }
 
-        auto rangeBefore = PHV::Container::range(c.kind(), 0, c.index());
+        auto rangeBefore = Device::phvSpec().range(c.type(), 0, c.index());
         EXPECT_FALSE(rangeBefore.getbit(c.id()));
-        auto rangeAfter = PHV::Container::range(c.kind(), c.index() + 1, 64);
+        auto rangeAfter = Device::phvSpec().range(c.type(), c.index() + 1, 64);
         EXPECT_FALSE(rangeAfter.getbit(c.id()));
     };
 
@@ -51,63 +51,63 @@ TEST(TofinoPhvContainer, Kinds) {
 
     c = "B0";
     EXPECT_TRUE(static_cast<bool>(c));
-    EXPECT_EQ(Kind::B, c.kind());
+    EXPECT_EQ(Type("B"), c.type());
     EXPECT_EQ(0u, c.log2sz());
     EXPECT_EQ(0u, c.index());
     EXPECT_FALSE(c.tagalong());
-    EXPECT_EQ(c, PHV::Container(Kind::B, 0));
+    EXPECT_EQ(c, PHV::Container(Type("B"), 0));
     EXPECT_EQ(c, PHV::Container::fromId(c.id()));
-    EXPECT_TRUE(PHV::Container::range(Kind::B, 0, 16).getbit(c.id()));
-    EXPECT_TRUE(PHV::Container::range(Kind::B, 0, 16).getbit(c.id()));
+    EXPECT_TRUE(Device::phvSpec().range(Type("B"), 0, 16).getbit(c.id()));
+    EXPECT_TRUE(Device::phvSpec().range(Type("B"), 0, 16).getbit(c.id()));
     checkRange(c);
 
     c = "H15";
     EXPECT_TRUE(static_cast<bool>(c));
-    EXPECT_EQ(Kind::H, c.kind());
+    EXPECT_EQ(Type("H"), c.type());
     EXPECT_EQ(1u, c.log2sz());
     EXPECT_EQ(15u, c.index());
     EXPECT_FALSE(c.tagalong());
-    EXPECT_EQ(c, PHV::Container(Kind::H, 15));
+    EXPECT_EQ(c, PHV::Container(Type("H"), 15));
     EXPECT_EQ(c, PHV::Container::fromId(c.id()));
     checkRange(c);
 
     c = "W3157";
     EXPECT_TRUE(static_cast<bool>(c));
-    EXPECT_EQ(Kind::W, c.kind());
+    EXPECT_EQ(Type("W"), c.type());
     EXPECT_EQ(2u, c.log2sz());
     EXPECT_EQ(3157u, c.index());
     EXPECT_FALSE(c.tagalong());
-    EXPECT_EQ(c, PHV::Container(Kind::W, 3157));
+    EXPECT_EQ(c, PHV::Container(Type("W"), 3157));
     EXPECT_EQ(c, PHV::Container::fromId(c.id()));
     checkRange(c);
 
     c = "TB0";
     EXPECT_TRUE(static_cast<bool>(c));
-    EXPECT_EQ(Kind::TB, c.kind());
+    EXPECT_EQ(Type("TB"), c.type());
     EXPECT_EQ(0u, c.log2sz());
     EXPECT_EQ(0u, c.index());
     EXPECT_TRUE(c.tagalong());
-    EXPECT_EQ(c, PHV::Container(Kind::TB, 0));
+    EXPECT_EQ(c, PHV::Container(Type("TB"), 0));
     EXPECT_EQ(c, PHV::Container::fromId(c.id()));
     checkRange(c);
 
     c = "TH15";
     EXPECT_TRUE(static_cast<bool>(c));
-    EXPECT_EQ(Kind::TH, c.kind());
+    EXPECT_EQ(Type("TH"), c.type());
     EXPECT_EQ(1u, c.log2sz());
     EXPECT_EQ(15u, c.index());
     EXPECT_TRUE(c.tagalong());
-    EXPECT_EQ(c, PHV::Container(Kind::TH, 15));
+    EXPECT_EQ(c, PHV::Container(Type("TH"), 15));
     EXPECT_EQ(c, PHV::Container::fromId(c.id()));
     checkRange(c);
 
     c = "TW3157";
     EXPECT_TRUE(static_cast<bool>(c));
-    EXPECT_EQ(Kind::TW, c.kind());
+    EXPECT_EQ(Type("TW"), c.type());
     EXPECT_EQ(2u, c.log2sz());
     EXPECT_EQ(3157u, c.index());
     EXPECT_TRUE(c.tagalong());
-    EXPECT_EQ(c, PHV::Container(Kind::TW, 3157));
+    EXPECT_EQ(c, PHV::Container(Type("TW"), 3157));
     EXPECT_EQ(c, PHV::Container::fromId(c.id()));
     checkRange(c);
 

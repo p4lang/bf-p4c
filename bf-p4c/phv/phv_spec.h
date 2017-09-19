@@ -2,24 +2,96 @@
 #define EXTENSIONS_BF_P4C_PHV_PHV_SPEC_H_
 
 #include "lib/bitvec.h"
+#include "lib/ordered_map.h"
 
 namespace PHV {
-    /// An enumeration of the possible PHV container types.
-    enum class Kind : unsigned {
-        B = 0,   /// 8-bit
-        H = 1,   /// 16-bit
-        W = 2,   /// 32-bit
-        TB = 3,  /// 8-bit tagalong
-        TH = 4,  /// 16-bit tagalong
-        TW = 5   /// 32-bit tagalong
-    };
-    static constexpr unsigned NumKinds = 6;
 
-    std::ostream &operator<<(std::ostream &out, const Kind k);
+enum class Kind : unsigned short {  // all possible PHV kinds in BFN devices
+    normal   = 0,
+    tagalong = 1
+};
+
+enum class Size : unsigned short {  // all possible PHV sizes in BFN devices
+    null = 0,
+    b8   = 8,
+    b16  = 16,
+    b32  = 32
+};
+
+class Type {
+    Kind        kind_;
+    Size        size_;
+
+ public:
+    enum TypeEnum {  // Enumeration of all possible types in BFN devices:
+        B,           //     8-bit  normal
+        H,           //     16-bit normal
+        W,           //     32-bit normal
+        TB,          //     8-bit  tagalong
+        TH,          //     16-bit tagalong
+        TW           //     32-bit tagalong
+    };
+
+    Type() : kind_(Kind::normal), size_(Size::null) {}
+    Type(Kind k, Size s) : kind_(k), size_(s) {}
+    Type(const Type& t) : kind_(t.kind_), size_(t.size_) {}
+
+    explicit Type(unsigned typeId);
+
+    Type(TypeEnum te);       // NOLINT(runtime/explicit)
+    Type(const char* name);  // NOLINT(runtime/explicit)
+
+    unsigned id() const;
+    bool tagalong() const      { return kind_ == Kind::tagalong; }
+
+    unsigned log2sz() const {  // TODO(zma) get rid of this function
+         switch (size_) {
+             case Size::b8:   return 0;
+             case Size::b16:  return 1;
+             case Size::b32:  return 2;
+             case Size::null: return 3;
+             default: BUG("Called log2sz() on an invalid container"); }
+     }
+
+    Kind kind() const { return kind_; }
+    Size size() const { return size_; }
+
+    Type& operator=(const Type& t) {
+        kind_ = t.kind_;
+        size_ = t.size_;
+        return *this; }
+
+    bool operator==(Type c) const {
+        return kind_ == c.kind_ && size_ == c.size_; }
+
+    bool operator<(Type c) const {
+        if (kind_ < c.kind_) return true;
+        if (c.kind_ < kind_) return false;
+        if (size_ < c.size_) return true;
+        if (size_ > c.size_) return false;
+        return false; }
+
+    bool valid() const { return size_ != Size::null; }
+};
+
+std::ostream &operator<<(std::ostream &out, const Type& t);
+
 }  // namespace PHV
 
 class PhvSpec {
+    friend class PHV::Type;
+
+ protected:
+    static ordered_map<PHV::Type, unsigned> typeIdMap;
+    static ordered_map<unsigned, PHV::Type> idTypeMap;
+
+    static void addType(PHV::Type t);
+
  public:
+    static unsigned numTypes() { return typeIdMap.size(); }
+
+    virtual void defineTypes() const = 0;
+
     /**
      * Generates a bitvec containing a range of containers. This kind of bitvec
      * can be used to implement efficient set operations on large numbers of
@@ -31,7 +103,9 @@ class PhvSpec {
      * @param start The index of first container in the range.
      * @param length The number of containers in the range. May be zero.
      */
-    virtual bitvec range(PHV::Kind kind, unsigned start, unsigned length) const = 0;
+    virtual bitvec group(unsigned id) const = 0;
+
+    virtual bitvec range(PHV::Type t, unsigned start, unsigned length) const = 0;
 
     /// @return a bitvec of the containers which are hard-wired to ingress.
     virtual const bitvec& ingressOnly() const = 0;
@@ -54,7 +128,15 @@ class PhvSpec {
 
 class TofinoPhvSpec : public PhvSpec {
  public:
-    bitvec range(PHV::Kind kind, unsigned start, unsigned length) const override;
+    TofinoPhvSpec() {
+        defineTypes();
+    }
+
+    void defineTypes() const override;
+
+    bitvec group(unsigned id) const override;
+
+    bitvec range(PHV::Type t, unsigned start, unsigned length) const override;
 
     const bitvec& ingressOnly() const override;
 

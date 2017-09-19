@@ -128,8 +128,8 @@ TYPED_TEST(TofinoPHVTrivialAllocators, AutomaticAllocation) {
 
         // Check that the provided container can be allocated to this thread.
         auto okForCurrentThread = [=](PHV::Container container) {
-            return gress == INGRESS ? !PHV::Container::egressOnly()[container.id()]
-                                    : !PHV::Container::ingressOnly()[container.id()];
+            return gress == INGRESS ? !Device::phvSpec().egressOnly()[container.id()]
+                                    : !Device::phvSpec().ingressOnly()[container.id()];
         };
 
         // A helper that checks that the given field's allocation maps the given
@@ -166,7 +166,7 @@ TYPED_TEST(TofinoPHVTrivialAllocators, AutomaticAllocation) {
         // header H1 { bit<8> field; }
         checkMapping("h1.field", { bitrange(0, 7) }, { bitrange(0, 7) });
         auto h1Container = containers[SliceId("h1.field", 0)];
-        EXPECT_EQ(PHV::Kind::B, h1Container.kind());
+        EXPECT_EQ(PHV::Type("B"), h1Container.type());
         EXPECT_TRUE(uniqueContainers.insert(h1Container).second);
 
         // header H2 { bit<1> field1; bit<6> field2; bit<9> field3; }
@@ -176,7 +176,7 @@ TYPED_TEST(TofinoPHVTrivialAllocators, AutomaticAllocation) {
         auto h2Container = containers[SliceId("h2.field1", 0)];
         EXPECT_EQ(h2Container, containers[SliceId("h2.field2", 0)]);
         EXPECT_EQ(h2Container, containers[SliceId("h2.field3", 0)]);
-        EXPECT_EQ(PHV::Kind::H, h2Container.kind());
+        EXPECT_EQ(PHV::Type("H"), h2Container.type());
         EXPECT_TRUE(uniqueContainers.insert(h2Container).second);
 
         // header H3 { bit<72> field; }
@@ -184,13 +184,13 @@ TYPED_TEST(TofinoPHVTrivialAllocators, AutomaticAllocation) {
                      { bitrange(40, 71), bitrange(8, 39), bitrange(0, 7) },
                      { bitrange(0, 31), bitrange(0, 31), bitrange(0, 7) });
         auto h3Slice0Container = containers[SliceId("h3.field", 0)];
-        EXPECT_EQ(PHV::Kind::W, h3Slice0Container.kind());
+        EXPECT_EQ(PHV::Type("W"), h3Slice0Container.type());
         EXPECT_TRUE(uniqueContainers.insert(h3Slice0Container).second);
         auto h3Slice1Container = containers[SliceId("h3.field", 1)];
-        EXPECT_EQ(PHV::Kind::W, h3Slice1Container.kind());
+        EXPECT_EQ(PHV::Type("W"), h3Slice1Container.type());
         EXPECT_TRUE(uniqueContainers.insert(h3Slice1Container).second);
         auto h3Slice2Container = containers[SliceId("h3.field", 2)];
-        EXPECT_EQ(PHV::Kind::B, h3Slice2Container.kind());
+        EXPECT_EQ(PHV::Type("B"), h3Slice2Container.type());
         EXPECT_TRUE(uniqueContainers.insert(h3Slice2Container).second);
 
         // header H4 { bit<16> field; }
@@ -198,7 +198,7 @@ TYPED_TEST(TofinoPHVTrivialAllocators, AutomaticAllocation) {
         // to a tagalong container below.)
         checkMapping("h4.field", { bitrange(0, 15) }, { bitrange(0, 15) });
         auto h4Container = containers[SliceId("h4.field", 0)];
-        EXPECT_EQ(PHV::Kind::TH, h4Container.kind());
+        EXPECT_EQ(PHV::Type("TH"), h4Container.type());
         EXPECT_TRUE(uniqueContainers.insert(h4Container).second);
 
         // header H5 { bit<32> field; }
@@ -240,7 +240,7 @@ TYPED_TEST(TofinoPHVTrivialAllocators, AutomaticAllocation) {
         EXPECT_EQ(povContainer, containers[SliceId("h4.$valid", 0)]);
         if (gress == INGRESS)
             EXPECT_EQ(povContainer, containers[SliceId("$always_deparse", 0)]);
-        EXPECT_EQ(PHV::Kind::B, povContainer.kind());
+        EXPECT_EQ(PHV::Type("B"), povContainer.type());
         EXPECT_TRUE(uniqueContainers.insert(povContainer).second);
     }
 }
