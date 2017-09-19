@@ -435,6 +435,44 @@ bool Parser::CounterInit::parse(value_t &exp, int what) {
     return false;
 }
 
+Parser::PriorityUpdate::PriorityUpdate(const value_t &exp) {
+    lineno = exp.lineno;
+    if (!parse(exp))
+        error(lineno, "syntax error in priority expression");
+}
+
+bool Parser::PriorityUpdate::parse(const value_t &exp, int what) {
+    enum { START, MASK, SHIFT, LOAD };
+    if (exp.type == tCMD) {
+        if (exp[0] == ">>") {
+            return what < SHIFT && parse(exp[1], LOAD) && parse(exp[2], SHIFT);
+        } else if (exp[0] == "&") {
+            return what < SHIFT && parse(exp[1], MASK) && parse(exp[2], MASK);
+        }
+    } else if (exp.type == tINT) {
+        switch (what) {
+        case START: case MASK:
+            if (mask >= 0) return false;
+            if ((mask = exp.i) < 0 || mask > 7) {
+                error(exp.lineno, "priority mask %d out of range", mask);
+                return false; }
+            return true;
+        case SHIFT:
+            if (shift >= 0) return false;
+            if ((shift = exp.i) < 0 || shift > 15) {
+                error(exp.lineno, "priority shift %d out of range", shift);
+                return false; }
+            return true;
+        default:
+            return false; }
+    } else if (exp.type == tSTR && exp.s[0] == '@' && isdigit(exp.s[1])) {
+        char *end;
+        if (what == SHIFT || offset >= 0 || (offset = strtol(exp.s+1, &end, 10)) < 0 || *end)
+            return false;
+        return true; }
+    return false;
+}
+
 Parser::State::Ref &Parser::State::Ref::operator=(const value_t &v) {
     lineno = v.lineno;
     ptr.clear();
@@ -644,6 +682,11 @@ Parser::State::Match::Match(int l, gress_t gress, match_t m, VECTOR(pair_t) &dat
                     offset_reset = true;
                 else if (kv.value[0] != "inc" && kv.value[0] != "increment")
                     error(kv.value.lineno, "Syntax error, expecting set or inc value"); }
+        } else if (kv.key == "priority") {
+            if (priority)
+                error(kv.key.lineno, "Mulitple priority updates in match");
+            else
+                priority = PriorityUpdate(kv.value);
         } else if (kv.key == "shift") {
             if (shift)
                 error(kv.key.lineno, "Multiple shift settings in match");
@@ -1016,6 +1059,20 @@ void Parser::State::pass2(Parser *pa) {
 /********* output *********/
 
 template <class REGS>
+void Parser::PriorityUpdate::write_config(REGS &action_row) {
+    if (offset >= 0) {
+        action_row.pri_upd_type = 1;
+        action_row.pri_upd_src = offset;
+        action_row.pri_upd_en_shr = shift;
+        action_row.pri_upd_val_mask = mask;
+    } else {
+        action_row.pri_upd_type = 0;
+        action_row.pri_upd_en_shr = 1;
+        action_row.pri_upd_val_mask = mask;
+    }
+}
+
+template <class REGS>
 void Parser::State::Match::write_config(REGS &regs, Parser *pa, State *state, Match *def) {
     int row;
     int max_off = -1;
@@ -1058,6 +1115,8 @@ void Parser::State::Match::write_config(REGS &regs, Parser *pa, State *state, Ma
     } else if (def) {
         action_row.dst_offset_inc = def->offset;
         action_row.dst_offset_rst = def->offset_reset; }
+    if (priority)
+        priority.write_config(action_row);
     void *output_map = pa->setup_phv_output_map(regs, state->gress, row);
     unsigned used = 0;
     for (auto &s : set) s.write_output_config(regs, output_map, used);

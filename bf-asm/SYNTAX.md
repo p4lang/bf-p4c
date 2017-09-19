@@ -57,21 +57,23 @@ parser [<thread>]:
         <match-constant>:
             # actions to perform when the match matches this match constant
             # this is a tcam priority match, so only the first match triggers
+            buf_req: <constant>
+                # number bytes that must be in the input buffer to not stall
             counter: [set] <constant> | inc <constant> | dec <constant> | load <expression>
                 # modification of the counter
-            offset: [set] <constant> | inc <constant>
-                # modificate to the offset
-        save: { <matcher> : <byte-loc>, ... } | <matcher>
-        # specifies one or more values from the input stream to be
-        # loaded into specific matchers or specific matchers to have
-        # their values preserved for use by later states
-            shift: <constant>
-                # number of bytes to shift out
-        buf_req: <constant>
-        # number bytes that must be in the input buffer to not stall
             next: <name> | <match-constant>
                 # next state -- match-constant takes don't care bits
                 # from current state
+            offset: [set] <constant> | inc <constant>
+                # modificate to the offset
+            priority: <constant> | @ <offset> [ >> <constant> ] [ & <constant> ]
+                # update the packet priority
+            save: { <matcher> : <byte-loc>, ... } | <matcher>
+                # specifies one or more values from the input stream to be
+                # loaded into specific matchers or specific matchers to have
+                # their values preserved for use by later states
+            shift: <constant>
+                # number of bytes to shift out
             [rotate] <constant> : [offset] <phv_location> 
             [rotate] <range> : [offset] <phv_location> 
                 # write the specifed byte (or range) to named phv slot

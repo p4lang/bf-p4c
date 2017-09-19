@@ -55,6 +55,14 @@ class Parser : public Section {
             /* ignoring lineno and offset fields */
             return add == a.add && mask == a.mask && rot == a.rot && max == a.max && src == a.src; }
     };
+    struct PriorityUpdate {
+        int             lineno = -1, offset = -1, shift = -1, mask = -1;
+        PriorityUpdate() {}
+        PriorityUpdate(const value_t &data);
+        bool parse(const value_t &exp, int what = 0);
+        explicit operator bool() const { return lineno >= 0; }
+        template<class REGS> void write_config(REGS &);
+    };
     struct State {
         struct Ref {
             int                         lineno;
@@ -102,6 +110,7 @@ class Parser : public Section {
             int         counter = 0, offset = 0, shift = 0, buf_req = -1;
             bool        counter_load = false, counter_reset = false, offset_reset = false;
             CounterInit *counter_exp;
+            PriorityUpdate      priority;
 
             //int         load_offset = -1, load_unit = -1, load_add = 0, load_shift = 0,
             //            load_mask = 0xff, load_max = 0xff;
