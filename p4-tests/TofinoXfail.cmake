@@ -525,31 +525,16 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "No register named"
   extensions/p4_tests/p4_14/04-FullPHV3.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "Multiple slices in the same container are allocated to field"
-  extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-235/vag1737_1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
   )
 
 p4c_add_xfail_reason("tofino"
   "tofino only supports 12 stages"
-  extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
   extensions/p4_tests/p4_14/jenkins/alpm_test/alpm_test.p4
   extensions/p4_tests/p4_14/jenkins/basic_ipv4/basic_ipv4.p4
   extensions/p4_tests/p4_14/jenkins/exm_direct_1/exm_direct_1_one.p4
   extensions/p4_tests/p4_14/jenkins/basic_ipv4/basic_ipv4.p4
+  extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
   )
 
 # BRIG-113
@@ -694,7 +679,6 @@ p4c_add_xfail_reason("tofino"
   "P4_14 extern type not fully supported"
   extensions/p4_tests/p4_14/test_config_185_first_lpf.p4
   extensions/p4_tests/p4_14/test_config_201_meter_constant_index.p4
-  extensions/p4_tests/p4_14/switch/p4src/switch.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -906,6 +890,9 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Constant lookup does not match the ActionFormat"
   testdata/p4_14_samples/action_inline.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-235/vag1737_1.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -919,20 +906,29 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/07-FullTPHV2.p4
   testdata/p4_14_samples/05-FullTPHV.p4
   testdata/p4_14_samples/08-FullTPHV3.p4
+  testdata/p4_14_samples/01-BigMatch.p4
   extensions/p4_tests/p4_14/04-FullPHV3.p4
   extensions/p4_tests/p4_14/c1/COMPILER-133/full_tphv.p4
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
+  extensions/p4_tests/p4_14/switch_20160602/switch.p4
+  extensions/p4_tests/p4_14/switch/p4src/switch.p4
   )
 
 p4c_add_xfail_reason("tofino"
   "error: Field .* and field .* are adjacent in container .* but aren't adjacent in the deparser"
   extensions/p4_tests/p4_14/test_config_236_stateful_read_bit.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
+  extensions/p4_tests/p4_14/test_config_273_bridged_and_phase0.p4
+  extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
   extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
   )
 
 p4c_add_xfail_reason("tofino"

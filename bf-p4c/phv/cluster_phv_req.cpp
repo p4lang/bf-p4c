@@ -239,8 +239,11 @@ Cluster_PHV::set_exact_containers() {
             //     can happen when packing attempted on field before placement attempt
             //     e.g., when PHV <== TPHV_Overflow
             //
-            exact_containers_i = true;
-            field->set_exact_containers(true);
+            const int align_start = field->phv_alignment().get_value_or(0);
+            if (align_start == 0) {
+                exact_containers_i = true;
+                field->set_exact_containers(true);
+            }
         }
     }
 }  // set_exact_containers
@@ -437,6 +440,7 @@ int
 Cluster_PHV::compute_width_req() {
     int max_width = 0;
     for (auto &field : cluster_vec_i) {
+        const int align_start = field->phv_alignment().get_value_or(0);
         if (field->is_ccgf()) {
             bool phv_no_pack = false;
             for (auto &m : field->ccgf_fields()) {
@@ -450,10 +454,9 @@ Cluster_PHV::compute_width_req() {
                 }
             }
             if (!phv_no_pack) {
-                max_width = std::max(max_width, field->phv_use_width());
+                max_width = std::max(max_width, field->phv_use_width() + align_start);
             }
         } else {
-            const int align_start = field->phv_alignment().get_value_or(0);
             max_width = std::max(max_width, field->phv_use_width() + align_start);
         }
     }

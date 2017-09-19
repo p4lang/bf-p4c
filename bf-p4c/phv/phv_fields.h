@@ -370,7 +370,7 @@ class PhvInfo {
         //
         // phv_alignment
         //
-        boost::optional<int> phv_alignment() const;            // alignment in phv container
+        boost::optional<int> phv_alignment() const;           // alignment in phv container
         //
         // field slices
         //

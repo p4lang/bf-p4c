@@ -886,7 +886,13 @@ PHV_MAU_Group_Assignments::container_no_pack(
                             LOG1(field);
                             assert(container);
                         }
-                        const int align_start = field->phv_alignment().get_value_or(0);
+                        int align_start = 0;
+                        if (field_bit_lo == 0) {  // consider alignment only @ start of field
+                            align_start = field->phv_alignment().get_value_or(0);
+                        }
+                        if (taint_bits + align_start > container->width()) {
+                            taint_bits = container->width() - align_start;
+                        }
                         int processed_bits =
                             container->taint(
                                 align_start,
@@ -1278,21 +1284,23 @@ void PHV_MAU_Group_Assignments::create_aligned_container_slices() {
 // ensure each field's alignment start is satisfied before container packing
 //
 bool
-PHV_MAU_Group_Assignments::phv_alignment(
+PHV_MAU_Group_Assignments::satisfies_phv_alignment(
     Cluster_PHV *cl,
     int lo,
     int hi) {
     //
     for (auto &f : cl->cluster_vec()) {
-        auto start_with_alignment = f->phv_alignment();
-        if (start_with_alignment) {
-            int start = *start_with_alignment;
-            if (start < lo || start > hi) {
-                return false;
-            }
-            int end = start + f->phv_use_width();
-            if (end < lo || end > hi) {
-                return false;
+        if (f->phv_use_lo() == 0) {
+            // need to consider alignment only @ start bit of field
+            // if field sliced, consider slice that has start bit 0
+            if (auto align_start = f->phv_alignment()) {
+                // TODO:
+                // also should try as bit-in-byte, a+8, a+16 etc.
+                if (*align_start < lo || *align_start > hi)
+                    return false;
+                const int end = *align_start + f->phv_use_width() - 1;
+                if (end < lo || end > hi)
+                    return false;
             }
         }
     }
@@ -1410,9 +1418,9 @@ PHV_MAU_Group_Assignments::packing_predicates(
     //
     // field start restrictions .. must start @X 'bit-in-byte' in container, e.g., X,X+8,X+16 etc.
     //
-    // if (!phv_alignment(cl, (*(cc_set.rbegin()))->lo(), (*(cc_set.rbegin()))->hi())) {
-    //     return false;
-    // }
+    if (!satisfies_phv_alignment(cl, (*(cc_set.rbegin()))->lo(), (*(cc_set.rbegin()))->hi())) {
+        return false;
+    }
     //
     // when cluster fields < slices try sliding window of cc_set
     for (int slice_adjust = cc_set.size() - cl->cluster_vec().size() + 1;
@@ -1746,7 +1754,14 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
                             //
                             int remaining_field_width = f->phv_use_hi(cl) - field_bit_lo + 1;
                             int width_in_container = std::min(cl_w, remaining_field_width);
-                            cc->container()->taint(start,                     // start
+                            int align_start = start;
+                            if (field_bit_lo == 0) {  // consider alignment only @ start of field
+                                align_start = f->phv_alignment().get_value_or(start);
+                            }
+                            if (width_in_container + align_start > cc->container()->width()) {
+                                width_in_container = cc->container()->width() - align_start;
+                            }
+                            cc->container()->taint(align_start,               // start
                                                    width_in_container,        // width
                                                    f,                         // field
                                                    field_bit_lo);             // field_bit_lo

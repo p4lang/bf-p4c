@@ -499,9 +499,12 @@ PhvInfo::Field::phv_use_width(Cluster_PHV *cl) const {
 
 boost::optional<int>
 PhvInfo::Field::phv_alignment() const {
-    if (alignment && !is_ccgf()
-        && (alignment->littleEndian + phv_use_width() <= PHV_Container::PHV_Word::b32)) {
-        //
+    // call this function only @ start of a field to obtain parde alignment need
+    if (alignment) {
+        if (is_ccgf()) {
+            // return alignment of last field of ccgf as [m1,m2,m3] placed m3.m2.m1 in phv[0..w]
+            return ccgf_fields_i.back()->phv_alignment();
+        }
         return alignment->littleEndian;
     }
     return boost::none;

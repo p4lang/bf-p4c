@@ -353,7 +353,7 @@ class PHV_MAU_Group_Assignments : public Visitor {
     const IR::Node *apply_visitor(const IR::Node *, const char *name = 0) override;
     //
     bool
-    phv_alignment(
+    satisfies_phv_alignment(
         Cluster_PHV *cl,
         int lo,
         int hi);

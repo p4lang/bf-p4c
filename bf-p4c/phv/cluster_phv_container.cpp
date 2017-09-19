@@ -131,6 +131,9 @@ PHV_Container::taint(
     Container_Content::Pass pass,
     bool process_ccgf) {
     //
+    BUG_CHECK(width > 0,
+        "*****PHV_Container::taint()*****%s start=%d NEGATIVE width=%d width_i=%d, field=%d:%s",
+        phv_number_string(), start, width, width_i, field->id, field->name);
     BUG_CHECK((start+width <= width_i),
         "*****PHV_Container::taint()*****%s start=%d width=%d width_i=%d, field=%d:%s",
         phv_number_string(), start, width, width_i, field->id, field->name);

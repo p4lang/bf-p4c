@@ -177,10 +177,10 @@ PHV_AnalysisPass::PHV_AnalysisPass(const BFN_Options &options, PhvInfo &phv, Phv
                                // attempt packing with reduced width requirements
                                // slicing improves overlay possibilities due to less width
                                // although number & mutual exclusion of fields don't change
-        options.phv_slicing?
-            new Cluster_Slicing(cluster_phv_mau): nullptr,
-                               // repeat once more: unallocated clusters sliced further
-                               // further improves chances of packing and/or overlay
+                               // TODO: Cluster Slicing should recursively slice further as needed
+                               // unallocated clusters when sliced further
+                               // improves chances of packing and/or overlay
+                               // implement as {(Slicing)+,Overlay} or {Slicing,Overlay}+
         options.phv_overlay?
             new Cluster_PHV_Overlay(cluster_phv_mau, cluster_phv_interference): nullptr,
                                // overlay clusters to MAU groups
