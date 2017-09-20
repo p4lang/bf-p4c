@@ -158,7 +158,7 @@ class SetupAttachedTables : public MauInspector {
             mi.tind_RAMs += mem.mems_needed(entries, Memories::SRAM_DEPTH, 1, false);
         }
 
-        if (ta->layout_option->layout.action_data_required()) {
+        if (ta->layout_option->layout.direct_ad_required()) {
             auto name = ta->table->get_use_name(nullptr, false, IR::MAU::Table::AD_NAME);
             (*ta->memuse)[name].type = Memories::Use::ACTIONDATA;
             mem.action_tables.push_back(ta);
@@ -175,12 +175,9 @@ class SetupAttachedTables : public MauInspector {
     bool preorder(const IR::MAU::TableSeq *) { return false; }
     bool preorder(const IR::MAU::Action *) { return false; }
 
-    bool preorder(const IR::MAU::ActionData *) {
-        BUG("Shouldn't have an action data table before table placement");
-    }
-
-    bool preorder(const IR::ActionProfile *ap) {
-        auto name = ta->table->get_use_name(ap);
+    bool preorder(const IR::MAU::ActionData *ad) {
+        BUG_CHECK(!ad->direct, "No direct action data tables before table placement");
+        auto name = ta->table->get_use_name(ad);
         auto table_name = ta->table->get_use_name();
         LOG4("Action profile for table " << table_name);
         bool selector_first = false;
@@ -188,25 +185,23 @@ class SetupAttachedTables : public MauInspector {
            the profile of a separate table */
         Memories::profile_info *linked_pi = nullptr;
         for (auto *pi : mem.action_profiles) {
-            if (pi->ap == ap) {
+            if (pi->ad == ad) {
                 linked_pi = pi;
                 break;
             }
             if (pi->linked_ta == ta) {
-                if (ap->selector.name != pi->as->name)
-                    BUG("Alignment of selector and action profile in memory allocation");
                 selector_first = true;
                 linked_pi = pi;
                 break;
             }
         }
         if (selector_first) {
-            linked_pi->ap = ap;
+            linked_pi->ad = ad;
             (*ta->memuse)[name].type = Memories::Use::ACTIONDATA;
             mem.indirect_action_tables.push_back(ta);
         } else if (linked_pi == nullptr) {
             mem.indirect_action_tables.push_back(ta);
-            mem.action_profiles.push_back(new Memories::profile_info(ap, ta));
+            mem.action_profiles.push_back(new Memories::profile_info(ad, ta));
             (*ta->memuse)[name].type = Memories::Use::ACTIONDATA;
         } else {
             auto linked_name = linked_pi->linked_ta->table->get_use_name();
@@ -217,7 +212,7 @@ class SetupAttachedTables : public MauInspector {
         mi.action_tables++;
         int width = 1;
         int per_row = ActionDataPerWord(&ta->table->layout, &width);
-        int depth = mem.mems_needed(ap->size, Memories::SRAM_DEPTH, per_row, false);
+        int depth = mem.mems_needed(ad->size, Memories::SRAM_DEPTH, per_row, false);
         mi.action_bus_min += width; mi.action_RAMs += depth * width;
         return false;
     }
@@ -287,8 +282,6 @@ class SetupAttachedTables : public MauInspector {
                 break;
             }
             if (pi->linked_ta == ta) {
-                if (pi->ap->selector.name != as->name)
-                    BUG("Alignment of selector and action profile in memory allocation");
                 profile_first = true;
                 linked_pi = pi;
                 break;
@@ -1034,12 +1027,12 @@ void Memories::swbox_bus_selectors_indirects() {
 
     for (auto *ta : indirect_action_tables) {
         for (auto at : ta->table->attached) {
-            const IR::ActionProfile *ap = nullptr;
-            if ((ap = at->to<IR::ActionProfile>()) == nullptr)
+            const IR::MAU::ActionData *ad = nullptr;
+            if ((ad = at->to<IR::MAU::ActionData>()) == nullptr)
                 continue;
             int width = 1;
             int per_row = ActionDataPerWord(&ta->table->layout, &width);
-            int depth = mems_needed(ap->size, SRAM_DEPTH, per_row, false);
+            int depth = mems_needed(ad->size, SRAM_DEPTH, per_row, false);
             SRAM_group *selector = nullptr;
 
             for (auto grp : synth_bus_users) {
@@ -1050,7 +1043,7 @@ void Memories::swbox_bus_selectors_indirects() {
             }
             for (int i = 0; i < width; i++) {
                 auto action_group = new SRAM_group(ta, depth, i, SRAM_group::ACTION);
-                action_group->attached = ap;
+                action_group->attached = ad;
                 if (selector != nullptr) {
                     action_group->sel.sel_group = selector;
                     selector->sel.action_groups.insert(action_group);
@@ -1897,10 +1890,10 @@ void Memories::action_bus_users_log() {
 
     for (auto *ta : indirect_action_tables) {
         for (auto at : ta->table->attached) {
-            const IR::ActionProfile *ap = nullptr;
-            if ((ap = at->to<IR::ActionProfile>()) == nullptr)
+            const IR::MAU::ActionData *ad = nullptr;
+            if ((ad = at->to<IR::MAU::ActionData>()) == nullptr)
                 continue;
-            auto name = ta->table->get_use_name(ap);
+            auto name = ta->table->get_use_name(ad);
             LOG4("Action profile allocation for " << name);
             auto alloc = (*ta->memuse)[name];
             for (auto row : alloc.row) {

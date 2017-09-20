@@ -293,10 +293,10 @@ struct Memories {
     };
 
     struct profile_info {
-        const IR::ActionProfile *ap;
+        const IR::MAU::ActionData *ad;
         const IR::MAU::Selector *as;
         table_alloc *linked_ta;
-        explicit profile_info(const IR::ActionProfile *a, table_alloc *t) : ap(a), linked_ta(t) {}
+        explicit profile_info(const IR::MAU::ActionData *a, table_alloc *t) : ad(a), linked_ta(t) {}
         explicit profile_info(const IR::MAU::Selector *a, table_alloc *t) : as(a), linked_ta(t) {}
     };
 

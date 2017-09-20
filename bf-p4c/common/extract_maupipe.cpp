@@ -131,11 +131,10 @@ static IR::ID getAnnotID(const IR::Annotations *annot, cstring name) {
     return IR::ID();
 }
 
-static IR::Attached *createAttached(IR::MAU::Table *tt, Util::SourceInfo srcInfo, cstring name,
-                                    const IR::Type *type, const IR::Vector<IR::Expression> *args,
-                                    const IR::Annotations *annot,
-                                    map<cstring, IR::ActionProfile *> *shared_ap,
-                                    map<cstring, IR::MAU::Selector*> *shared_as) {
+static IR::MAU::BackendAttached *createAttached(IR::MAU::Table *tt, Util::SourceInfo srcInfo,
+        cstring name, const IR::Type *type, const IR::Vector<IR::Expression> *args,
+        const IR::Annotations *annot, map<cstring, IR::MAU::ActionData *> *shared_ap,
+        map<cstring, IR::MAU::Selector*> *shared_as) {
     // FIXME -- this should be looking at the arch model, but the current arch model stuff
     // is too complex -- need a way of building this automatically from the arch.p4 file.
     // For now, hack just using the type name as a string.
@@ -166,9 +165,9 @@ static IR::Attached *createAttached(IR::MAU::Table *tt, Util::SourceInfo srcInfo
         BUG_CHECK(args->size() == 3, "%s Selector does not have the correct number of arguments",
                   sel->srcInfo);
         sel->algorithm = args->at(0)->to<IR::Member>()->member;
-        auto ap = new IR::ActionProfile(srcInfo, name);
+        auto ap = new IR::MAU::ActionData(srcInfo, IR::ID(name));
+        ap->direct = false;
         ap->size = args->at(1)->as<IR::Constant>().asInt();
-        ap->selector = name;
         // FIXME Need to reconstruct the field list from the table key?
         (*shared_ap)[name] = ap;
         (*shared_as)[name] = sel;
@@ -181,7 +180,7 @@ static IR::Attached *createAttached(IR::MAU::Table *tt, Util::SourceInfo srcInfo
         if (shared_ap->find(name) != shared_ap->end()) {
             return shared_ap->at(name);
         }
-        auto ap = new IR::ActionProfile(srcInfo, name);
+        auto ap = new IR::MAU::ActionData(srcInfo, IR::ID(name));
         ap->size = args->at(0)->as<IR::Constant>().asInt();
         (*shared_ap)[name] = ap;
         return ap;
@@ -277,7 +276,7 @@ class FixP4Table : public Transform {
     const P4::ReferenceMap *refMap;
     IR::MAU::Table *tt;
     set<cstring> &unique_names;
-    map<cstring, IR::ActionProfile *> *shared_ap;
+    map<cstring, IR::MAU::ActionData *> *shared_ap;
     map<cstring, IR::MAU::Selector *> *shared_as;
     bool default_action_fix = false;
 
@@ -297,7 +296,7 @@ class FixP4Table : public Transform {
             // meters: direct meters
             // implementation: action profile and action selector
             auto pval = ev->expression;
-            IR::Attached *obj = nullptr;
+            IR::MAU::BackendAttached *obj = nullptr;
             if (auto cc = pval->to<IR::ConstructorCallExpression>()) {
                 cstring tname;
                 if (auto type = cc->type->to<IR::Type_SpecializedCanonical>()) {
@@ -360,15 +359,15 @@ class FixP4Table : public Transform {
 
  public:
     FixP4Table(const P4::ReferenceMap *r, IR::MAU::Table *tt, set<cstring> &u,
-               map<cstring, IR::ActionProfile *> *ap, map<cstring, IR::MAU::Selector *> *as)
+               map<cstring, IR::MAU::ActionData *> *ap, map<cstring, IR::MAU::Selector *> *as)
     : refMap(r), tt(tt), unique_names(u), shared_ap(ap), shared_as(as) {}
 };
 
 struct AttachTables : public Modifier {
-    const P4::ReferenceMap                      *refMap;
-    map<cstring, vector<const IR::Attached *>>  attached;
-    map<cstring, IR::MAU::StatefulAlu *>        all_salu;
-    map<const IR::Declaration_Instance *, const IR::Attached *> converted;
+    const P4::ReferenceMap                                  *refMap;
+    map<cstring, vector<const IR::MAU::BackendAttached *>>  attached;
+    map<cstring, IR::MAU::StatefulAlu *>                    all_salu;
+    map<const IR::Declaration_Instance *, const IR::MAU::BackendAttached *> converted;
 
 
     bool preorder(IR::MAU::Table *tbl) override {
@@ -447,7 +446,7 @@ class GetTofinoTables : public Inspector {
     set<cstring>                                unique_names;
     map<const IR::Node *, IR::MAU::Table *>     tables;
     map<const IR::Node *, IR::MAU::TableSeq *>  seqs;
-    map<cstring, IR::ActionProfile *> shared_ap;
+    map<cstring, IR::MAU::ActionData *> shared_ap;
     map<cstring, IR::MAU::Selector *> shared_as;
     IR::MAU::TableSeq *getseq(const IR::Node *n) {
         if (!seqs.count(n) && tables.count(n))

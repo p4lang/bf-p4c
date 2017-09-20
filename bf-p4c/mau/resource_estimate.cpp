@@ -137,31 +137,30 @@ void StageUseEstimate::calculate_attached_rams(const IR::MAU::Table *tbl,
         int width = 1;
         int attached_entries = lo->entries;
         bool need_maprams = false;
-        if (auto *ctr = dynamic_cast<const IR::MAU::Counter *>(at)) {
+        if (auto *ctr = at->to<IR::MAU::Counter>()) {
             per_word = CounterPerWord(ctr);
             if (!ctr->direct) attached_entries = ctr->size;
             need_maprams = true;
-        } else if (auto *mtr = dynamic_cast<const IR::MAU::Meter *>(at)) {
+        } else if (auto *mtr = at->to<IR::MAU::Meter>()) {
             per_word = 1;
             if (!mtr->direct) attached_entries = mtr->size;
             need_maprams = true;
-        } else if (auto *reg = dynamic_cast<const IR::MAU::StatefulAlu*>(at)) {
+        } else if (auto *reg = at->to<IR::MAU::StatefulAlu>()) {
             per_word = RegisterPerWord(reg);
             if (!reg->direct) attached_entries = reg->size;
             need_maprams = true;
-        } else if (auto *ap = dynamic_cast<const IR::ActionProfile *>(at)) {
-            per_word = ActionDataPerWord(&lo->layout, &width);
-            attached_entries = ap->size;
-        } else if (/*auto *ad = */dynamic_cast<const IR::MAU::ActionData *>(at)) {
+        } else if (auto *ad = at->to<IR::MAU::ActionData>()) {
             // FIXME: in theory, the table should not have an action data table,
             // as that is decided after the table layout is picked
-            if (!table_placement)
-                BUG("Action Data table exists before table placement occurs");
+            if (!table_placement && ad->direct)
+                BUG("Direct Action Data table exists before table placement occurs");
             width = 1;
             per_word = ActionDataPerWord(&lo->layout, &width);
-        } else if (/*auto *as = */dynamic_cast<const IR::MAU::Selector *>(at)) {
+            if (!ad->direct)
+                attached_entries = ad->size;
+        } else if (at->is<IR::MAU::Selector>()) {
             // TODO(cdodd)
-        } else if (/*auto *ti = */dynamic_cast<const IR::MAU::TernaryIndirect *>(at)) {
+        } else if (at->is<IR::MAU::TernaryIndirect>()) {
             if (!table_placement)
                 BUG("Ternary Indirect Data table exists before table placement occurs");
             per_word = TernaryIndirectPerWord(&lo->layout, tbl);
@@ -178,7 +177,7 @@ void StageUseEstimate::calculate_attached_rams(const IR::MAU::Table *tbl,
     }
     // Before table placment, tables do not have attached Ternary Indirect or
     // Action Data Tables
-    if (lo->layout.action_data_required() && !table_placement) {
+    if (lo->layout.direct_ad_required() && !table_placement) {
         int width = 1;
         int per_word = ActionDataPerWord(&lo->layout, &width);
         int attached_entries = lo->entries;
@@ -222,15 +221,15 @@ void StageUseEstimate::select_best_option(const IR::MAU::Table *tbl) {
             int t;
             // The first two lines are to prevent sharing a group across multiple widths,
             // as the asm doesn't yet handle this
-            if (prev_placed && has_action_data != a.layout.action_data_required()) return false;
-            if (prev_placed && has_action_data != b.layout.action_data_required()) return true;
+            if (prev_placed && has_action_data != a.layout.direct_ad_required()) return false;
+            if (prev_placed && has_action_data != b.layout.direct_ad_required()) return true;
             if ((t = a.way.match_groups % a.way.width) != 0) return false;
             if ((t = b.way.match_groups % b.way.width) != 0) return true;
             if ((t = a.srams - b.srams) != 0) return t < 0;
             if ((t = a.way.width - b.way.width) != 0) return t < 0;
             if ((t = a.way.match_groups - b.way.match_groups) != 0) return t < 0;
-            if (!a.layout.action_data_required()) return true;
-            if (!b.layout.action_data_required()) return false;
+            if (!a.layout.direct_ad_required()) return true;
+            if (!b.layout.direct_ad_required()) return false;
             return true;
         });
     } else {
@@ -239,15 +238,15 @@ void StageUseEstimate::select_best_option(const IR::MAU::Table *tbl) {
             int t;
             // The first two lines are to prevent sharing a group across multiple widths,
             // as the asm doesn't yet handle this
-            if (prev_placed && has_action_data != a.layout.action_data_required()) return false;
-            if (prev_placed && has_action_data != b.layout.action_data_required()) return true;
+            if (prev_placed && has_action_data != a.layout.direct_ad_required()) return false;
+            if (prev_placed && has_action_data != b.layout.direct_ad_required()) return true;
             if ((t = a.way.match_groups % a.way.width) != 0) return false;
             if ((t = b.way.match_groups % b.way.width) != 0) return true;
             if ((t = a.srams - b.srams) != 0) return t < 0;
             if ((t = a.way.width - b.way.width) != 0) return t < 0;
             if ((t = a.way.match_groups - b.way.match_groups) != 0) return t > 0;
-            if (!a.layout.action_data_required()) return true;
-            if (!b.layout.action_data_required()) return false;
+            if (!a.layout.direct_ad_required()) return true;
+            if (!b.layout.direct_ad_required()) return false;
             return true;
         });
     }
@@ -259,7 +258,7 @@ void StageUseEstimate::select_best_option(const IR::MAU::Table *tbl) {
     for (auto &lo : layout_options) {
         LOG3("layout option width " << lo.way.width << " match groups " << lo.way.match_groups
               << " entries " << lo.entries << " srams " << lo.srams
-              << " action data " << lo.layout.action_data_required());
+              << " action data " << lo.layout.direct_ad_required());
         LOG3("Layout option way sizes " << lo.way_sizes);
     }
 
@@ -272,19 +271,19 @@ void StageUseEstimate::select_best_option_ternary() {
     std::sort(layout_options.begin(), layout_options.end(),
         [=](const LayoutOption &a, const LayoutOption &b) {
         int t;
-        if (prev_placed && has_action_data != a.layout.action_data_required()) return false;
-        if (prev_placed && has_action_data != b.layout.action_data_required()) return true;
+        if (prev_placed && has_action_data != a.layout.direct_ad_required()) return false;
+        if (prev_placed && has_action_data != b.layout.direct_ad_required()) return true;
         if ((t = a.srams - b.srams) != 0) return t < 0;
         if (!a.layout.ternary_indirect_required()) return true;
         if (!b.layout.ternary_indirect_required()) return false;
-        if (!a.layout.action_data_required()) return true;
-        if (!b.layout.action_data_required()) return false;
+        if (!a.layout.direct_ad_required()) return true;
+        if (!b.layout.direct_ad_required()) return false;
         return false;
     });
 
     for (auto &lo : layout_options) {
         LOG3("entries " << lo.entries << " srams " << lo.srams << " tcams " << lo.tcams
-              << " action data " << lo.layout.action_data_required()
+              << " action data " << lo.layout.direct_ad_required()
               << " ternary indirect " << lo.layout.ternary_indirect_required());
     }
 
@@ -365,29 +364,30 @@ void StageUseEstimate::known_srams_needed(const IR::MAU::Table *tbl,
          int per_word = 0;
          int width = 1;
          bool need_maprams = false;
-         if (auto *ctr = dynamic_cast<const IR::MAU::Counter *>(at)) {
+         if (auto *ctr = at->to<IR::MAU::Counter>()) {
             if (ctr->direct) continue;
             attached_entries  = ctr->size;
             per_word = CounterPerWord(ctr);
             need_maprams = true;
-        } else if (auto *mtr = dynamic_cast<const IR::MAU::Meter *>(at)) {
+        } else if (auto *mtr = at->to<IR::MAU::Meter>()) {
             if (mtr->direct) continue;
             per_word = 1;
             attached_entries = mtr->size;
             need_maprams = true;
-        } else if (auto *reg = dynamic_cast<const IR::MAU::StatefulAlu *>(at)) {
+        } else if (auto *reg = at->to<IR::MAU::StatefulAlu>()) {
             if (reg->direct) continue;
             per_word = RegisterPerWord(reg);
             attached_entries = reg->size;
             need_maprams = true;
-        } else if (auto *ap = dynamic_cast<const IR::ActionProfile *>(at)) {
+        } else if (auto *ad = at->to<IR::MAU::ActionData>()) {
+            // Because this is called before and after table placement
+            if (ad->direct) continue;
             per_word = ActionDataPerWord(&lo->layout, &width);
-            attached_entries = ap->size;
-        } else if (/*auto *ad = */dynamic_cast<const IR::MAU::ActionData *>(at)) {
-           continue;
-        } else if (/*auto *as = */dynamic_cast<const IR::MAU::Selector *>(at)) {
+            attached_entries = ad->size;
+        } else if (at->is<IR::MAU::Selector>()) {
             // TODO(cdodd)
-        } else if (dynamic_cast<const IR::MAU::TernaryIndirect *>(at)) {
+        } else if (at->is<IR::MAU::TernaryIndirect>()) {
+            // Again, because this is called before and after table placement
             continue;
         } else {
             BUG("Unrecognized table type");
@@ -424,14 +424,17 @@ void StageUseEstimate::calculate_per_row_vector(vector<RAM_counter> &per_word_an
              if (!reg->direct) continue;
              per_word = RegisterPerWord(reg);
              need_maprams = true;
-         } else if (at->is<IR::ActionProfile>() || at->is<IR::MAU::Selector>()) {
+         } else if (auto ad = at->to<IR::MAU::ActionData>()) {
+             BUG_CHECK(!ad->direct, "Cannot have an action data table before table placement");
+             continue;
+         } else if (at->is<IR::MAU::Selector>()) {
              continue;
          } else {
              BUG("Unrecognized table type");
          }
          per_word_and_width.emplace_back(per_word, width, need_maprams);
     }
-    if (lo->layout.action_data_required()) {
+    if (lo->layout.direct_ad_required()) {
         int width = 1;
         int per_word = ActionDataPerWord(&lo->layout, &width);
         per_word_and_width.emplace_back(per_word, width, false);
@@ -509,20 +512,20 @@ void StageUseEstimate::srams_left_best_option() {
     std::sort(layout_options.begin(), layout_options.end(),
         [=](const LayoutOption &a, const LayoutOption &b) {
         int t;
-        if (prev_placed && has_action_data != a.layout.action_data_required()) return false;
-        if (prev_placed && has_action_data != b.layout.action_data_required()) return true;
+        if (prev_placed && has_action_data != a.layout.direct_ad_required()) return false;
+        if (prev_placed && has_action_data != b.layout.direct_ad_required()) return true;
         if ((t = a.way.match_groups % a.way.width) != 0) return false;
         if ((t = b.way.match_groups % b.way.width) != 0) return true;
         if ((t = a.entries - b.entries) != 0) return t > 0;
         if ((t = a.way.width - b.way.width) != 0) return t < 0;
-        if (!a.layout.action_data_required()) return true;
-        if (!b.layout.action_data_required()) return false;
+        if (!a.layout.direct_ad_required()) return true;
+        if (!b.layout.direct_ad_required()) return false;
         return true;
     });
     for (auto &lo : layout_options) {
         LOG3("layout option width " << lo.way.width << " match groups " << lo.way.match_groups
               << " entries " << lo.entries << " srams " << lo.srams
-              << " action data " << lo.layout.action_data_required());
+              << " action data " << lo.layout.direct_ad_required());
         LOG3("Layout option way sizes " << lo.way_sizes);
     }
     preferred_index = 0;
@@ -575,21 +578,21 @@ void StageUseEstimate::tcams_left_best_option() {
     std::sort(layout_options.begin(), layout_options.end(),
         [=](const LayoutOption &a, const LayoutOption &b) {
         int t;
-        if (prev_placed && has_action_data != a.layout.action_data_required()) return false;
-        if (prev_placed && has_action_data != b.layout.action_data_required()) return true;
+        if (prev_placed && has_action_data != a.layout.direct_ad_required()) return false;
+        if (prev_placed && has_action_data != b.layout.direct_ad_required()) return true;
         if ((t = a.entries - b.entries) != 0) return t > 0;
         if ((t = a.srams - b.srams) != 0) return t < 0;
         if (!a.layout.ternary_indirect_required()) return true;
         if (!b.layout.ternary_indirect_required()) return false;
-        if (!a.layout.action_data_required()) return true;
-        if (!b.layout.action_data_required()) return false;
+        if (!a.layout.direct_ad_required()) return true;
+        if (!b.layout.direct_ad_required()) return false;
         return true;
     });
     preferred_index = 0;
 
     for (auto &lo : layout_options) {
         LOG3("entries " << lo.entries << " srams " << lo.srams << " tcams " << lo.tcams
-              << " action data " << lo.layout.action_data_required()
+              << " action data " << lo.layout.direct_ad_required()
               << " ternary indirect " << lo.layout.ternary_indirect_required());
     }
 }

@@ -109,17 +109,18 @@ static void setup_action_layout(IR::MAU::Table *tbl, LayoutChoices &lc, const Ph
 
 /* Setting up the potential layouts for ternary, either with or without immediate
    data if immediate is possible */
-void TableLayout::setup_ternary_layout_options(IR::MAU::Table *tbl, int immediate_bytes_reserved,
-                                               bool has_action_profile) {
+void TableLayout::setup_ternary_layout_options(IR::MAU::Table *tbl, int immediate_bytes_reserved) {
     bool no_action_data = (tbl->layout.action_data_bytes == 0);
 
     IR::MAU::Table::Layout layout = tbl->layout;
     LayoutOption lo(layout);
     lc.total_layout_options[tbl->name].push_back(lo);
-    if (no_action_data || has_action_profile
+
+    if (no_action_data || tbl->layout.indirect_action_addr_bits > 0
         || tbl->layout.action_data_bytes > 4 - immediate_bytes_reserved)
         return;
 
+    // Potential layout with immediate data
     layout.action_data_bytes_in_overhead = tbl->layout.action_data_bytes;
     layout.overhead_bits += tbl->layout.action_data_bytes * 8;
     LayoutOption lo_tern(layout);
@@ -150,13 +151,13 @@ void TableLayout::setup_exact_match(IR::MAU::Table *tbl, int action_data_bytes) 
 
 /* Setting up the potential layouts for exact match, with different numbers of entries per row,
    different ram widths, and immediate data on and off */
-void TableLayout::setup_layout_options(IR::MAU::Table *tbl, int immediate_bytes_reserved,
-                                       bool has_action_profile) {
+void TableLayout::setup_layout_options(IR::MAU::Table *tbl, int immediate_bytes_reserved) {
     bool no_action_data = (tbl->layout.action_data_bytes == 0);
     setup_exact_match(tbl, 0);
-    if (no_action_data || has_action_profile
+    if (no_action_data || tbl->layout.indirect_action_addr_bits > 0
         || tbl->layout.action_data_bytes > 4 - immediate_bytes_reserved)
         return;
+    // Potential layouts with immediate data
     setup_exact_match(tbl, tbl->layout.action_data_bytes);
 }
 
@@ -267,18 +268,6 @@ class VisitAttached : public Inspector {
                            &(layout.meter_addr_bits));
         return false;
     }
-
-    bool preorder(const IR::ActionProfile *ap) override {
-        have_action_data = true;
-        have_action_profile = true;
-        if (ap->size <= 0)
-            error("%s: No size count in %s %s", ap->srcInfo, ap->kind(), ap->name);
-        int vpn_bits_needed = std::max(10, ceil_log2(ap->size)) + 1;
-        layout.overhead_bits += vpn_bits_needed;
-        layout.indirect_action_addr_bits = vpn_bits_needed;
-        return false;
-    }
-
     bool preorder(const IR::MAU::Selector *as) override {
         int vpn_bits_needed =  11;  // FIXME: Eventually based off of pool sizes
         if (meter_addr_bits_needed > 0 || meter_set || register_set)
@@ -289,11 +278,17 @@ class VisitAttached : public Inspector {
         layout.meter_addr_bits = vpn_bits_needed;
         return false; }
     bool preorder(const IR::MAU::TernaryIndirect *) override {
-        have_ternary_indirect = true;
+        BUG("No ternary indirect should exist before table placement");
         return false; }
-    bool preorder(const IR::MAU::ActionData *) override {
-        have_action_data = true;
-        return false; }
+    bool preorder(const IR::MAU::ActionData *ad) override {
+        BUG_CHECK(!ad->direct, "Cannot have a direct action data table before table placement");
+        if (ad->size <= 0)
+            error("%s: No size count in %s %s", ad->srcInfo, ad->kind(), ad->name);
+        int vpn_bits_needed = std::max(10, ceil_log2(ad->size)) + 1;
+        layout.overhead_bits += vpn_bits_needed;
+        layout.indirect_action_addr_bits = vpn_bits_needed;
+        return false;
+    }
     bool preorder(const IR::Attached *att) override {
         BUG("Unknown attached table type %s", typeid(*att).name()); }
 
@@ -301,8 +296,6 @@ class VisitAttached : public Inspector {
     explicit VisitAttached(IR::MAU::Table::Layout *l) : layout(*l),
         immediate_bytes_needed(0) {}
     bool have_ternary_indirect = false;
-    bool have_action_data = false;
-    bool have_action_profile = false;
     int immediate_reserved() { return immediate_bytes_needed; }
 };
 }  // namespace
@@ -326,8 +319,8 @@ bool TableLayout::preorder(IR::MAU::Table *tbl) {
     else if (tbl->layout.match_width_bits == 0)
         setup_layout_option_no_match(tbl, immediate_bytes_reserved);
     else if (tbl->layout.ternary)
-        setup_ternary_layout_options(tbl, immediate_bytes_reserved, attached.have_action_profile);
+        setup_ternary_layout_options(tbl, immediate_bytes_reserved);
     else
-        setup_layout_options(tbl, immediate_bytes_reserved, attached.have_action_profile);
+        setup_layout_options(tbl, immediate_bytes_reserved);
     return true;
 }

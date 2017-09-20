@@ -20,11 +20,10 @@
 
 TablePlacement::TablePlacement(const DependencyGraph* d, const TablesMutuallyExclusive &m,
                                const PhvInfo &p, const LayoutChoices &l)
-: deps(d), mutex(m), phv(p), lc(l), spaa(m) {}
+: deps(d), mutex(m), phv(p), lc(l) {}
 
 Visitor::profile_t TablePlacement::init_apply(const IR::Node *root) {
     alloc_done = phv.alloc_done();
-    root->apply(spaa);
     return MauTransform::init_apply(root);
 }
 
@@ -424,7 +423,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
     for (auto *p = done; p; p = p->prev) {
         if (p->name == rv->name) {
             prev_placed = true;
-            has_action_data = p->use.preferred()->layout.action_data_required();
+            has_action_data = p->use.preferred()->layout.direct_ad_required();
             if (p->need_more == false) {
                 LOG2(" - can't place as its already done");
                 return nullptr; }
@@ -824,9 +823,11 @@ static void add_attached_tables(IR::MAU::Table *tbl, const LayoutOption *layout_
         auto *tern_indir = new IR::MAU::TernaryIndirect(tbl->name);
         tbl->attached.push_back(tern_indir);
     }
-    if (layout_option->layout.action_data_required()) {
+    if (layout_option->layout.direct_ad_required()) {
         LOG3("  Adding Action Data Table to " << tbl->name);
-        auto *act_data = new IR::MAU::ActionData(tbl->name);
+        cstring ad_name = tbl->name + "$action";
+        auto *act_data = new IR::MAU::ActionData(IR::ID(ad_name));
+        act_data->direct = true;
         tbl->attached.push_back(act_data);
     }
 }
