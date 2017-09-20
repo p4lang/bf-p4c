@@ -267,7 +267,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         // Verify that POV bit are not be placed in TPHV.
         povField->foreach_alloc(povFieldBits,
                   [&](const PhvInfo::Field::alloc_slice& alloc) {
-            ERROR_CHECK(!alloc.container.tagalong(), "POV bit field was placed "
+            ERROR_CHECK(!alloc.container.is(PHV::Kind::tagalong), "POV bit field was placed "
                         "in TPHV: %1%", cstring::to_cstring(povField));
         });
     });
@@ -316,7 +316,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         // and hence must be deparsed.
         // XXX(seth): We'll have to add a check for mirrored metadata below when
         // that feature is implemented.
-        if (container.tagalong()) {
+        if (container.is(PHV::Kind::tagalong)) {
             for (auto field : fields)
                 ERROR_CHECK(!isMetadata(field) || field->bridged,
                             "Tagalong container %1% contains non-bridged metadata "

@@ -21,6 +21,8 @@ limitations under the License.
 #include <string>
 
 #include "bf-p4c/bf-p4c-options.h"
+#include "bf-p4c/device.h"
+#include "gtest/gtest.h"
 
 namespace IR {
 namespace BFN {
@@ -75,6 +77,13 @@ struct TofinoPipeTestCase {
 
     /// The output of the frontend.
     const IR::P4Program* frontendProgram;
+};
+
+class TofinoBackendTest : public ::testing::Test {
+ public:
+    static void SetUpTestCase() {
+        Device::init("Tofino");
+    }
 };
 
 }  // namespace Test

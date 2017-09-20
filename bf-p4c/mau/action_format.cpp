@@ -247,7 +247,7 @@ void ActionFormat::create_placement_phv(ActionAnalysis::ContainerActionsMap &con
             write_field->foreach_alloc(bits, [&](const PhvInfo::Field::alloc_slice &alloc) {
                 write_count++;
                 BUG_CHECK(alloc.container_bit >= 0, "Invalid negative container bit");
-                if (alloc.container.log2sz() == 3)
+                if (!alloc.container)
                     ERROR("Phv field " << write_field->name << " written in action "
                           << action_name << " is not allocated?");
                 container_bit = alloc.container_bit;

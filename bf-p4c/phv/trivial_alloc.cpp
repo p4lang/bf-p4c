@@ -176,9 +176,9 @@ bool TrivialAlloc::preorder(const IR::BFN::Pipe *pipe) {
             adjust_skip_for_egress(normal.W, 4, skip[0].W, skip[1].W);
             unsigned tagalong_group = std::max((tagalong.B.index() + 3)/4,
                     std::max((tagalong.H.index() + 5)/6, (tagalong.W.index() + 3)/4));
-            tagalong.B = PHV::Container::TB(tagalong_group * 4);
-            tagalong.H = PHV::Container::TH(tagalong_group * 6);
-            tagalong.W = PHV::Container::TW(tagalong_group * 4); }
+            tagalong.B = PHV::Container(PHV::Type::TB, tagalong_group * 4);
+            tagalong.H = PHV::Container(PHV::Type::TH, tagalong_group * 6);
+            tagalong.W = PHV::Container(PHV::Type::TW, tagalong_group * 4); }
 
         FieldGroup pov_fields(gr);
         for (auto &field : phv) {

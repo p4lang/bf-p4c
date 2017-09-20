@@ -49,7 +49,7 @@ int main(int ac, char **av) {
     if (ErrorReporter::instance.getErrorCount() > 0)
         return 1;
 
-    Device::init("Tofino");  // TODO this should come from options
+    Device::init(options.device());
 
     if (!options.targetSupported()) {
          error("target '%s' not supported", options.target);

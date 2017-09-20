@@ -85,7 +85,7 @@ static boost::optional<TofinoPipeTestCase> trivialAlloc() {
 }  // namespace SharedPhvTestCases
 
 template <typename T>
-class TofinoPHVTrivialAllocators : public ::testing::Test {
+class TofinoPHVTrivialAllocators : public TofinoBackendTest {
  protected:
     // This class is a friend of PhvInfo::Field, so it has access to
     // Field::alloc_i; this helper makes that member available to subclasses.
@@ -100,8 +100,6 @@ TYPED_TEST_CASE(TofinoPHVTrivialAllocators, TrivialAllocators);
 // produce the expected results. (And, implicitly, that they both produce the
 // *same* results.)
 TYPED_TEST(TofinoPHVTrivialAllocators, AutomaticAllocation) {
-    Device::init("Tofino");  // TODO move this to a test fixture base class
-
     auto testcase = SharedPhvTestCases::trivialAlloc();
     ASSERT_TRUE(testcase);
 
@@ -245,7 +243,7 @@ TYPED_TEST(TofinoPHVTrivialAllocators, AutomaticAllocation) {
     }
 }
 
-class TofinoPHVManualAlloc : public ::testing::Test {
+class TofinoPHVManualAlloc : public TofinoBackendTest {
  protected:
     static void
     runManualAllocTest(const PHV::ManualAlloc::AssignmentMap& assignments) {
@@ -284,8 +282,6 @@ class TofinoPHVManualAlloc : public ::testing::Test {
 };
 
 TEST_F(TofinoPHVManualAlloc, SimpleAllocation) {
-    Device::init("Tofino");  // TODO move this to a test fixture base class
-
     runManualAllocTest({
         { "ingress::h1.field", { PHV::ManualAlloc::Slice{"B48", 0, 0, 8} } }
     });
@@ -294,8 +290,6 @@ TEST_F(TofinoPHVManualAlloc, SimpleAllocation) {
 TEST_F(TofinoPHVManualAlloc, WidthMismatch) {
     // A set of assignments with mismatches between the width of the container
     // and the width of the field.
-
-    Device::init("Tofino");  // TODO move this to a test fixture base class
 
     runManualAllocTest({
         // Map h1.field (8 bits) into the upper 8 bits of a 16-bit container.
@@ -317,8 +311,6 @@ TEST_F(TofinoPHVManualAlloc, WidthMismatch) {
 TEST_F(TofinoPHVManualAlloc, SplitAllocation) {
     // A set of assignments that split fields between multiple containers or
     // containers between multiple fields.
-
-    Device::init("Tofino");  // TODO move this to a test fixture base class
 
     runManualAllocTest({
         // Split the two nibbles in h1.field into two different containers.
@@ -351,8 +343,6 @@ TEST_F(TofinoPHVManualAlloc, ReservedContainerAllocation) {
     // if they originate in the manual allocations requested by the user; for
     // this test, we explicitly enable error checking for manual allocations by
     // constructing ManualAlloc instances with  `/* checked = */ true`.
-
-    Device::init("Tofino");  // TODO move this to a test fixture base class
 
     auto testcase = SharedPhvTestCases::trivialAlloc();
     ASSERT_TRUE(testcase);

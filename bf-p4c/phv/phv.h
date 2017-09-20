@@ -54,9 +54,10 @@ class Container {
     size_t lsb() const { return 0; }
 
     PHV::Type type() const { return type_; }
-
     unsigned index() const { return index_; }
-    bool tagalong() const { return type_.tagalong(); }
+
+    bool is(PHV::Kind k) const { return k == type_.kind(); }
+    bool is(PHV::Size sz) const { return sz == type_.size(); }
 
     /// @return true if this container is nonempty (i.e., refers to an actual
     /// PHV container).
@@ -75,13 +76,6 @@ class Container {
         if (index_ < c.index_) return true;
         if (c.index_ < index_) return false;
         return false; }
-
-    static Container B(unsigned idx) { return Container(Kind::normal, Size::b8, idx); }
-    static Container H(unsigned idx) { return Container(Kind::normal, Size::b16, idx); }
-    static Container W(unsigned idx) { return Container(Kind::normal, Size::b32, idx); }
-    static Container TB(unsigned idx) { return Container(Kind::tagalong, Size::b8, idx); }
-    static Container TH(unsigned idx) { return Container(Kind::tagalong, Size::b16, idx); }
-    static Container TW(unsigned idx) { return Container(Kind::tagalong, Size::b32, idx); }
 
     bitvec group() const { return Device::phvSpec().group(id()); }
 

@@ -317,9 +317,10 @@ void PhvInfo::Field::foreach_byte(int lo, int hi,
             tmp.width = 8; }
         return; }
     auto it = alloc_i.rbegin();
-    while (it != alloc_i.rend() && (it->container.tagalong() || it->field_hi() < lo)) ++it;
+    while (it != alloc_i.rend() && (it->container.is(PHV::Kind::tagalong) ||
+           it->field_hi() < lo)) ++it;
     while (it != alloc_i.rend() && it->field_bit <= hi) {
-        if (it->container.tagalong()) continue;
+        if (it->container.is(PHV::Kind::tagalong)) continue;
         unsigned clo = it->container_bit, chi = it->container_hi();
         for (unsigned cbyte = clo/8U; cbyte <= chi/8U; ++cbyte) {
             if (it->container != tmp.container || cbyte != tmp.container_bit/8U) {

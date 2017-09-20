@@ -42,7 +42,6 @@ class Type {
     Type(const char* name);  // NOLINT(runtime/explicit)
 
     unsigned id() const;
-    bool tagalong() const      { return kind_ == Kind::tagalong; }
 
     unsigned log2sz() const {  // TODO(zma) get rid of this function
          switch (size_) {
@@ -129,6 +128,29 @@ class PhvSpec {
 class TofinoPhvSpec : public PhvSpec {
  public:
     TofinoPhvSpec() {
+        defineTypes();
+    }
+
+    void defineTypes() const override;
+
+    bitvec group(unsigned id) const override;
+
+    bitvec range(PHV::Type t, unsigned start, unsigned length) const override;
+
+    const bitvec& ingressOnly() const override;
+
+    const bitvec& egressOnly() const override;
+
+    bitvec tagalongGroup(unsigned groupIndex) const override;
+
+    const bitvec& individuallyAssignedContainers() const override;
+
+    const bitvec& physicalContainers() const override;
+};
+
+class JBayPhvSpec : public PhvSpec {
+ public:
+    JBayPhvSpec() {
         defineTypes();
     }
 

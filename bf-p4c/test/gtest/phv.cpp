@@ -14,18 +14,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "bf-p4c/phv/phv.h"
 #include "gtest/gtest.h"
 
 #include "lib/bitvec.h"
 #include "lib/error.h"
 #include "test/gtest/helpers.h"
-#include "bf-p4c/phv/phv.h"
+#include "tofino_gtest_utils.h"
 
 namespace Test {
 
+class TofinoPhvContainer : public TofinoBackendTest {};
+
 // Test that each type of PHV::Container has the expected properties.
-TEST(TofinoPhvContainer, Types) {
-    Device::init("Tofino");  // TODO move this to a test fixture base class
+TEST_F(TofinoPhvContainer, Types) {
     using Type = PHV::Type;
 
     auto checkRange = [](PHV::Container c) {
@@ -54,7 +56,7 @@ TEST(TofinoPhvContainer, Types) {
     EXPECT_EQ(Type("B"), c.type());
     EXPECT_EQ(0u, c.log2sz());
     EXPECT_EQ(0u, c.index());
-    EXPECT_FALSE(c.tagalong());
+    EXPECT_FALSE(c.is(PHV::Kind::tagalong));
     EXPECT_EQ(c, PHV::Container(Type("B"), 0));
     EXPECT_EQ(c, PHV::Container::fromId(c.id()));
     EXPECT_TRUE(Device::phvSpec().range(Type("B"), 0, 16).getbit(c.id()));
@@ -66,7 +68,7 @@ TEST(TofinoPhvContainer, Types) {
     EXPECT_EQ(Type("H"), c.type());
     EXPECT_EQ(1u, c.log2sz());
     EXPECT_EQ(15u, c.index());
-    EXPECT_FALSE(c.tagalong());
+    EXPECT_FALSE(c.is(PHV::Kind::tagalong));
     EXPECT_EQ(c, PHV::Container(Type("H"), 15));
     EXPECT_EQ(c, PHV::Container::fromId(c.id()));
     checkRange(c);
@@ -76,7 +78,7 @@ TEST(TofinoPhvContainer, Types) {
     EXPECT_EQ(Type("W"), c.type());
     EXPECT_EQ(2u, c.log2sz());
     EXPECT_EQ(3157u, c.index());
-    EXPECT_FALSE(c.tagalong());
+    EXPECT_FALSE(c.is(PHV::Kind::tagalong));
     EXPECT_EQ(c, PHV::Container(Type("W"), 3157));
     EXPECT_EQ(c, PHV::Container::fromId(c.id()));
     checkRange(c);
@@ -86,7 +88,7 @@ TEST(TofinoPhvContainer, Types) {
     EXPECT_EQ(Type("TB"), c.type());
     EXPECT_EQ(0u, c.log2sz());
     EXPECT_EQ(0u, c.index());
-    EXPECT_TRUE(c.tagalong());
+    EXPECT_TRUE(c.is(PHV::Kind::tagalong));
     EXPECT_EQ(c, PHV::Container(Type("TB"), 0));
     EXPECT_EQ(c, PHV::Container::fromId(c.id()));
     checkRange(c);
@@ -96,7 +98,7 @@ TEST(TofinoPhvContainer, Types) {
     EXPECT_EQ(Type("TH"), c.type());
     EXPECT_EQ(1u, c.log2sz());
     EXPECT_EQ(15u, c.index());
-    EXPECT_TRUE(c.tagalong());
+    EXPECT_TRUE(c.is(PHV::Kind::tagalong));
     EXPECT_EQ(c, PHV::Container(Type("TH"), 15));
     EXPECT_EQ(c, PHV::Container::fromId(c.id()));
     checkRange(c);
@@ -106,7 +108,7 @@ TEST(TofinoPhvContainer, Types) {
     EXPECT_EQ(Type("TW"), c.type());
     EXPECT_EQ(2u, c.log2sz());
     EXPECT_EQ(3157u, c.index());
-    EXPECT_TRUE(c.tagalong());
+    EXPECT_TRUE(c.is(PHV::Kind::tagalong));
     EXPECT_EQ(c, PHV::Container(Type("TW"), 3157));
     EXPECT_EQ(c, PHV::Container::fromId(c.id()));
     checkRange(c);
