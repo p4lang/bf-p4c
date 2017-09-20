@@ -47,8 +47,8 @@ class Target::Tofino : public Target {
 
         ::Tofino::memories_top                          mem_top;
         ::Tofino::memories_pipe                         mem_pipe;
-        ::Tofino::regs_top                              regs_top;
-        ::Tofino::regs_pipe                             regs_pipe;
+        ::Tofino::regs_top                              reg_top;
+        ::Tofino::regs_pipe                             reg_pipe;
     };
     struct                                          parser_regs {
         typedef ::Tofino::memories_all_parser_          _memory;
@@ -83,30 +83,30 @@ void undeclare_registers(const Target::Tofino::deparser_regs *regs);
 class Target::JBay : public Target {
  public:
     struct                                          top_level_regs {
-        typedef ::JBay::memories_jbay_mem               _mem_top;
-        typedef ::JBay::memories_pipe_addrmap           _mem_pipe;
-        typedef ::JBay::regs_jbay_reg                   _regs_top;
-        typedef ::JBay::regs_pipe_addrmap               _regs_pipe;
+        typedef ::JBay::memories_top                    _mem_top;
+        typedef ::JBay::memories_pipe                   _mem_pipe;
+        typedef ::JBay::regs_top                        _regs_top;
+        typedef ::JBay::regs_pipe                       _regs_pipe;
 
-        ::JBay::memories_jbay_mem                       mem_top;
-        ::JBay::memories_pipe_addrmap                   mem_pipe;
-        ::JBay::regs_jbay_reg                           regs_top;
-        ::JBay::regs_pipe_addrmap                       regs_pipe;
+        ::JBay::memories_top                            mem_top;
+        ::JBay::memories_pipe                           mem_pipe;
+        ::JBay::regs_top                                reg_top;
+        ::JBay::regs_pipe                               reg_pipe;
     };
     struct                                          parser_regs {
-        typedef ::JBay::memories_prsr_mem_main_rspec    _memory;
+        typedef ::JBay::memories_all_parser_            _memory;
         typedef ::JBay::regs_ipb_prsr4_reg              _ingress;
         typedef ::JBay::regs_epb_prsr4_reg              _egress;
-        typedef ::JBay::regs_prsr_reg_main_rspec        _main;
+        typedef ::JBay::regs_parser_main_               _main;
         typedef ::JBay::regs_pmerge_reg                 _merge;
 
-        ::JBay::memories_prsr_mem_main_rspec            memory[2];
+        ::JBay::memories_all_parser_                    memory[2];
         ::JBay::regs_ipb_prsr4_reg                      ingress;
         ::JBay::regs_epb_prsr4_reg                      egress;
-        ::JBay::regs_prsr_reg_main_rspec                main[2];
+        ::JBay::regs_parser_main_                       main[2];
         ::JBay::regs_pmerge_reg                         merge;
     };
-    typedef ::JBay::regs_mau_addrmap                mau_regs;
+    typedef ::JBay::regs_match_action_stage_        mau_regs;
     typedef ::JBay::regs_dprsr_reg                  deparser_regs;
 };
 void declare_registers(const Target::JBay::top_level_regs *regs);

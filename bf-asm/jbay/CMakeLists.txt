@@ -2,13 +2,14 @@ set (GEN_JBAY
   memories.jbay_mem
   memories.pipe_addrmap
   memories.prsr_mem_main_rspec
+  regs.dprsr_reg
   regs.epb_prsr4_reg
   regs.ipb_prsr4_reg
-  regs.prsr_reg_main_rspec
-  regs.pipe_addrmap regs.pmerge_reg
-  regs.mau_addrmap
-  regs.dprsr_reg
   regs.jbay_reg
+  regs.mau_addrmap
+  regs.pipe_addrmap
+  regs.pmerge_reg
+  regs.prsr_reg_main_rspec
   )
 
 set (ARCH "JBay")
@@ -18,8 +19,18 @@ foreach(f IN LISTS GEN_JBAY)
   list (APPEND GEN_JBAY_HDRS ${BFASM_BINARY_DIR}/gen/jbay/${f}.h)
   list (APPEND GEN_TEMPLATES_CFG  ${BFASM_BINARY_DIR}/templates/jbay/${f}.cfg.json)
   list (APPEND GEN_TEMPLATES_SIZE ${BFASM_BINARY_DIR}/templates/jbay/${f}.size.json)
-  add_registers ("jbay" ${f} ${f} ${ARCH})
 endforeach()
+add_registers ("jbay" "memories.jbay_mem" "memories.top" ${ARCH})
+add_registers ("jbay" "memories.pipe_addrmap" "memories.pipe" ${ARCH})
+add_registers ("jbay" "memories.prsr_mem_main_rspec" "memories.all.parser.%s" ${ARCH})
+add_registers ("jbay" "regs.dprsr_reg" "regs.dprsr_reg" ${ARCH})
+add_registers ("jbay" "regs.epb_prsr4_reg" "regs.epb_prsr4_reg" ${ARCH})
+add_registers ("jbay" "regs.ipb_prsr4_reg" "regs.ipb_prsr4_reg" ${ARCH})
+add_registers ("jbay" "regs.jbay_reg" "regs.top" ${ARCH})
+add_registers ("jbay" "regs.mau_addrmap" "regs.match_action_stage.%02x" ${ARCH})
+add_registers ("jbay" "regs.pipe_addrmap" "regs.pipe" ${ARCH})
+add_registers ("jbay" "regs.pmerge_reg" "regs.pmerge_reg" ${ARCH})
+add_registers ("jbay" "regs.prsr_reg_main_rspec" "regs.parser.main.%s" ${ARCH})
 
 set_source_files_properties(
   ${GEN_JBAY_SRCS} ${GEN_JBAY_HDRS}

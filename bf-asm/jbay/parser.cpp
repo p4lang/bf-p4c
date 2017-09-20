@@ -123,7 +123,7 @@ template <> int Parser::State::Match::Save::write_output_config(Target::JBay::pa
 template <> void Parser::State::Match::Set::write_output_config(Target::JBay::parser_regs &regs,
             void *_row, unsigned &used) const
 {
-    error(where.lineno, "no constant output support in jbay");
+    ERROR(SrcInfo(where.lineno) << ": no constant output support for jbay in master branch");
 }
 
 template <> void *Parser::setup_phv_output_map(Target::JBay::parser_regs &regs,

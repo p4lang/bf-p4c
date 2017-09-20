@@ -104,6 +104,10 @@ std::string usage(std::string tfas) {
     return u; }
 
 void output_all() {
+    switch (options.target) {
+    case TOFINO: new TopLevelTarget<Target::Tofino>;  break;
+    case JBAY:   new TopLevelTarget<Target::JBay>;    break;
+    }
     json::map ctxtJson;
     const time_t now = time(NULL);
     char build_date[1024];
@@ -129,6 +133,7 @@ void output_all() {
                   << ']' << std::endl;
         if (options.match_compiler)
             *json_out << '}' << std::endl; }
+    delete TopLevel::all;
 }
 
 int main(int ac, char **av) {

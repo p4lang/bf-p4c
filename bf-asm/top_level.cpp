@@ -1,49 +1,64 @@
 #include "tfas.h"
 #include "top_level.h"
 
-TopLevel TopLevel::all;
+TopLevel *TopLevel::all = nullptr;
 
 TopLevel::TopLevel() {
-    declare_registers(&mem_top, sizeof(mem_top),
-        [this](std::ostream &out, const char *addr, const void *end) {
-            out << "memories.top";
-            mem_top.emit_fieldname(out, addr, end); });
-    declare_registers(&mem_pipe, sizeof(mem_pipe),
-        [this](std::ostream &out, const char *addr, const void *end) {
-            out << "memories.pipe";
-            mem_pipe.emit_fieldname(out, addr, end); });
-    declare_registers(&reg_top, sizeof(reg_top),
-        [this](std::ostream &out, const char *addr, const void *end) {
-            out << "registers.top";
-            reg_top.emit_fieldname(out, addr, end); });
-    declare_registers(&reg_pipe, sizeof(reg_pipe),
-        [this](std::ostream &out, const char *addr, const void *end) {
-            out << "registers.pipe";
-            reg_pipe.emit_fieldname(out, addr, end); });
+    assert(!all);
+    all = this;
 }
 
 TopLevel::~TopLevel() {
-    undeclare_registers(&mem_top);
-    undeclare_registers(&mem_pipe);
-    undeclare_registers(&reg_top);
-    undeclare_registers(&reg_pipe);
+    all = nullptr;
 }
 
-void TopLevel::output(json::map &) {
+template<class TARGET>
+TopLevelTarget<TARGET>::TopLevelTarget() {
+    declare_registers(&this->mem_top, sizeof(this->mem_top),
+        [this](std::ostream &out, const char *addr, const void *end) {
+            out << "memories.top";
+            this->mem_top.emit_fieldname(out, addr, end); });
+    declare_registers(&this->mem_pipe, sizeof(this->mem_pipe),
+        [this](std::ostream &out, const char *addr, const void *end) {
+            out << "memories.pipe";
+            this->mem_pipe.emit_fieldname(out, addr, end); });
+    declare_registers(&this->reg_top, sizeof(this->reg_top),
+        [this](std::ostream &out, const char *addr, const void *end) {
+            out << "registers.top";
+            this->reg_top.emit_fieldname(out, addr, end); });
+    declare_registers(&this->reg_pipe, sizeof(this->reg_pipe),
+        [this](std::ostream &out, const char *addr, const void *end) {
+            out << "registers.pipe";
+            this->reg_pipe.emit_fieldname(out, addr, end); });
+}
+
+template<class TARGET>
+TopLevelTarget<TARGET>::~TopLevelTarget() {
+    undeclare_registers(&this->mem_top);
+    undeclare_registers(&this->mem_pipe);
+    undeclare_registers(&this->reg_top);
+    undeclare_registers(&this->reg_pipe);
+}
+
+template<class TARGET>
+void TopLevelTarget<TARGET>::output(json::map &) {
     for (int i = 0; i < 4; i++) {
-        mem_top.pipes[i] = "memories.pipe";
-        reg_top.pipes[i] = "regs.pipe"; }
-    //reg_top.macs.disable();
-    //reg_top.serdes.disable();
+        this->mem_top.pipes[i] = "memories.pipe";
+        this->reg_top.pipes[i] = "regs.pipe"; }
+    //this->reg_top.macs.disable();
+    //this->reg_top.serdes.disable();
     if (options.condense_json) {
-        mem_top.disable_if_zero();
-        mem_pipe.disable_if_zero();
-        reg_top.disable_if_zero();
-        reg_pipe.disable_if_zero(); }
-    mem_top.emit_json(*open_output("memories.top.cfg.json"));
-    mem_pipe.emit_json(*open_output("memories.pipe.cfg.json"));
-    reg_top.emit_json(*open_output("regs.top.cfg.json"));
-    reg_pipe.emit_json(*open_output("regs.pipe.cfg.json"));
+        this->mem_top.disable_if_zero();
+        this->mem_pipe.disable_if_zero();
+        this->reg_top.disable_if_zero();
+        this->reg_pipe.disable_if_zero(); }
+    this->mem_top.emit_json(*open_output("memories.top.cfg.json"));
+    this->mem_pipe.emit_json(*open_output("memories.pipe.cfg.json"));
+    this->reg_top.emit_json(*open_output("regs.top.cfg.json"));
+    this->reg_pipe.emit_json(*open_output("regs.pipe.cfg.json"));
     if (!name_lookup.empty())
         *open_output("p4_name_lookup.json") <<  &name_lookup << std::endl;
 }
+
+template class TopLevelTarget<Target::Tofino>;
+template class TopLevelTarget<Target::JBay>;

@@ -184,7 +184,7 @@ void AsmStage::output(json::map &ctxt_json) {
         FOR_ALL_TARGETS(SWITCH_FOR_TARGET)
 #undef SWITCH_FOR_TARGET
         default: assert(0); } }
-    TopLevel::all.mem_pipe.mau.disable();
+    // TopLevel::all.mem_pipe.mau.disable(); -- FIXME differs between tofino/jbay
 }
 
 static FakeTable invalid_rams("RAMS NOT PRESENT");
@@ -406,7 +406,7 @@ template<class TARGET>
 void Stage::output(json::map &ctxt_json) {
     typename TARGET::mau_regs regs;
     declare_registers(&regs, stageno);
-    json::map &names = TopLevel::all.name_lookup["stages"][std::to_string(stageno)];
+    json::map &names = TopLevel::all->name_lookup["stages"][std::to_string(stageno)];
     Phv::output_names(names["containers"]);
     json::map &table_names = names["logical_tables"];
     for (auto table : tables) {
@@ -433,7 +433,7 @@ void Stage::output(json::map &ctxt_json) {
     char buf[64];
     sprintf(buf, "regs.match_action_stage.%02x", stageno);
     if (stageno < NUM_MAU_STAGES)
-        TopLevel::all.reg_pipe.mau[stageno] = buf;
+        TopLevel::all->set_mau_stage(stageno, buf);
     undeclare_registers(&regs);
     gen_configuration_cache(regs, ctxt_json["configuration_cache"]);
 }
