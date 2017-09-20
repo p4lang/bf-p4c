@@ -1198,15 +1198,11 @@ void MatchTable::pass1(int type) {
     if (table_counter >= GATEWAY_MISS && !gateway)
         error(lineno, "Can't count gateway events on table %s as it doesn't have a gateway",
               name());
-    //FIXME-JSON -- TBD - driver will need an 'is_valid' param set instead of
-    //setting name to --validity_check--
     if (!p4_params_list.empty()){
         for (auto &p : p4_params_list) {
             if (!p.bit_width_full)
                 p.bit_width_full = p.bit_width;
-            auto n = p.name.find(".$valid");
-            if (n != std::string::npos) {
-                p.name = "--validity_check--" + p.name.substr(0,n); 
+            if (p.name.find(".$valid") != std::string::npos) {
                 p.is_valid = true;  } } }
 }
 
