@@ -9,6 +9,7 @@ extern struct option_t {
     bool                match_compiler;
     bool                condense_json;
     bool                new_ctx_json;
+    bool                werror;
 } options;
 
 extern unsigned unique_action_handle;
@@ -23,7 +24,7 @@ extern std::string asmfile_name;
 
 int asm_parse_file(const char *name, FILE *in);
 
-extern int error_count;
+extern int error_count, warn_count;
 extern void error(int lineno, const char *fmt, va_list);
 void error(int lineno, const char *fmt, ...) __attribute__((format(printf, 2, 3)));
 inline void error(int lineno, const char *fmt, ...) {

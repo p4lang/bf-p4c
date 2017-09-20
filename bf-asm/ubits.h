@@ -22,7 +22,7 @@ struct ubits_base {
     ubits_base(unsigned long v) : value(v), read(false), write(false), disabled(false) {}
     operator unsigned long() const { read = true; return value; }
     bool modified() const { return write; }
-    bool disable_if_zero() const { return value == 0; }
+    bool disable_if_zero() const { return value == 0 && !write; }
     bool disable() const {
         if (write) {
             ERROR("Disabling modified register in " << this);

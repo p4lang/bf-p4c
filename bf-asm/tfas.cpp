@@ -21,6 +21,7 @@ option_t options = {
     .match_compiler = false,
     .condense_json = true,
     .new_ctx_json = true,
+    .werror = false,
 };
 
 
@@ -28,7 +29,7 @@ option_t options = {
 unsigned unique_action_handle = ACTION_HANDLE_START + 2; //FIXME-JSON +2 to match glass
 std::string asmfile_name;
 
-int verbose = 0;
+int verbose = 0, log_error = 0;
 static std::vector<std::string> debug_specs;
 static std::string output_dir;
 int indent_t::tabsz = 2;
@@ -242,6 +243,13 @@ int main(int ac, char **av) {
                     std::cout << usage(av[0]) << std::endl;
                     return 0;
                     break;
+                case 'W':
+                    if (strcmp(arg, "error"))
+                        options.werror = true;
+                    else
+                        std::cout << "Unknown warning option -W" << arg << std::endl;
+                    arg += strlen(arg);
+                    break;
                 default:
                     std::cerr << "Unknown option " << (flag ? '+' : '-')
                               << arg[-1] << std::endl;
@@ -278,7 +286,9 @@ int main(int ac, char **av) {
                                               : !S_ISDIR(st.st_mode))
                 output_dir.clear(); }
         output_all(); }
-    return error_count > 0 ? 1 : 0;
+    if (log_error > 0)
+        warning(0, "%d config errors in log file", log_error);
+    return error_count > 0 || (options.werror && warn_count > 0) ? 1 : 0;
 }
 
 class Version : public Section {
