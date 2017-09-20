@@ -78,7 +78,7 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
   )
 
   p4c_add_xfail_reason("tofino"
-    "expected packet on port .* not seen"
+    "expected packet([s])* on port .* not seen"
     testdata/p4_14_samples/basic_routing.p4
     testdata/p4_14_samples/exact_match_mask1.p4
     testdata/p4_14_samples/07-MultiProtocol.p4
@@ -657,7 +657,8 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "must be at 64 or 96 on ixbar to be used in stateful"
-  extensions/p4_tests/p4_14/test_config_184_stateful_bug1.p4)
+  extensions/p4_tests/p4_14/test_config_184_stateful_bug1.p4
+  )
 
 p4c_add_xfail_reason("tofino"
   "Unrecognized AttribLocal combined_predicate"
@@ -1034,7 +1035,6 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     testdata/p4_14_samples/ternary_match2.p4
     testdata/p4_14_samples/ternary_match4.p4
     testdata/p4_16_samples/issue635-bmv2.p4
-    testdata/p4_16_samples/ternary2-bmv2.p4
     )
 
   p4c_add_xfail_reason("tofino"

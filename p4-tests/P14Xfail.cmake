@@ -108,6 +108,7 @@ set (P14_XFAIL_TESTS
   extensions/p4_tests/p4_14/c1/COMPILER-559/case2987.p4
   extensions/p4_tests/p4_14/c1/COMPILER-548/case3011.p4
   extensions/p4_tests/p4_14/c1/COMPILER-548/case2895.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-532/case2807.p4
   extensions/p4_tests/p4_14/c1/COMPILER-637/case3478.p4
   extensions/p4_tests/p4_14/c1/COMPILER-635/case3468.p4
   extensions/p4_tests/p4_14/c2/COMPILER-599/case3230.p4
