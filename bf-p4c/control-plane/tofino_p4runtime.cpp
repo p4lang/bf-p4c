@@ -30,14 +30,13 @@ namespace BFN {
 
 void serializeP4Runtime(const IR::P4Program* program,
                         const BFN_Options& options) {
+    // If the user didn't ask for us to generate P4Runtime, skip the analysis.
+    if (options.p4RuntimeFile.isNullOrEmpty() &&
+        options.p4RuntimeEntriesFile.isNullOrEmpty())
+        return;
+
     if (Log::verbose())
         std::cout << "Generating P4Runtime output" << std::endl;
-
-    std::ostream* out = openFile(options.p4RuntimeFile, false);
-    if (!out) {
-        ::error("Couldn't open %1%", options.p4RuntimeFile);
-        return;
-    }
 
     // Generate a new version of the program that replaces all references to
     // `isValid()` with references to a BMV2-like `$valid$` field.
@@ -49,15 +48,41 @@ void serializeP4Runtime(const IR::P4Program* program,
     refMap.setIsV1(true);
     P4::TypeMap typeMap;
     auto* evaluator = new P4::EvaluatorPass(&refMap, &typeMap);
-    PassManager p4runtimeFixups = {
+    PassManager p4RuntimeFixups = {
         new SynthesizeValidField(&refMap, &typeMap),
         new P4::TypeChecking(&refMap, &typeMap),
         evaluator
     };
-    auto* p4runtimeProgram = program->apply(p4runtimeFixups);
+    auto* p4RuntimeProgram = program->apply(p4RuntimeFixups);
+    auto* evaluatedProgram = evaluator->getToplevelBlock();
 
-    serializeP4Runtime(out, p4runtimeProgram, evaluator->getToplevelBlock(),
-                       &refMap, &typeMap, options.p4RuntimeFormat);
+    BUG_CHECK(p4RuntimeProgram && evaluatedProgram,
+              "Failed to transform the program into a "
+              "P4Runtime-compatible form");
+
+    auto p4Runtime =
+      generateP4Runtime(p4RuntimeProgram, evaluatedProgram, &refMap, &typeMap);
+
+    if (!options.p4RuntimeFile.isNullOrEmpty()) {
+        std::ostream* out = openFile(options.p4RuntimeFile, false);
+        if (!out) {
+            ::error("Couldn't open P4Runtime API file: %1%", options.p4RuntimeFile);
+            return;
+        }
+
+        p4Runtime.serializeP4InfoTo(out, options.p4RuntimeFormat);
+    }
+
+    if (!options.p4RuntimeEntriesFile.isNullOrEmpty()) {
+        std::ostream* out = openFile(options.p4RuntimeEntriesFile, false);
+        if (!out) {
+            ::error("Couldn't open P4Runtime static entries file: %1%",
+                    options.p4RuntimeEntriesFile);
+            return;
+        }
+
+        p4Runtime.serializeEntriesTo(out, options.p4RuntimeFormat);
+    }
 }
 
 }  // namespace BFN

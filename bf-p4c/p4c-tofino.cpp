@@ -71,9 +71,7 @@ int main(int ac, char **av) {
         return 1;
     log_dump(program, "After midend");
 
-    if (!options.p4RuntimeFile.isNullOrEmpty())
-        BFN::serializeP4Runtime(program, options);
-
+    BFN::serializeP4Runtime(program, options);
     if (ErrorReporter::instance.getErrorCount() > 0)
         return 1;
 

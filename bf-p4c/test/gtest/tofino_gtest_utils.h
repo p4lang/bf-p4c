@@ -33,17 +33,6 @@ class P4Program;
 
 namespace Test {
 
-struct FrontendTestCase {
-    /// Create a test case that only requires the frontend to run.
-    static boost::optional<FrontendTestCase>
-    create(const std::string& source,
-           CompilerOptions::FrontendVersion langVersion
-              = CompilerOptions::FrontendVersion::P4_16);
-
-    /// The output of the frontend.
-    const IR::P4Program* program;
-};
-
 struct MidendTestCase {
     /// Create a test case that requires the frontend and the midend to run.
     static boost::optional<MidendTestCase>

@@ -30,38 +30,6 @@ limitations under the License.
 
 namespace Test {
 
-/* static */ boost::optional<FrontendTestCase>
-FrontendTestCase::create(const std::string& source,
-                         CompilerOptions::FrontendVersion langVersion
-                            /* = CompilerOptions::FrontendVersion::P4_16 */) {
-    auto* program =
-      P4::parseP4String(source, langVersion);
-    if (program == nullptr) {
-        std::cerr << "Couldn't parse test case source" << std::endl;
-        return boost::none;
-    }
-    if (::ErrorReporter::instance.getDiagnosticCount() > 0) {
-        std::cerr << "Encountered " << ::ErrorReporter::instance.getDiagnosticCount()
-                  << " errors while parsing test case" << std::endl;
-        return boost::none;
-    }
-
-    BFN_Options options;
-    options.langVersion = langVersion;
-    program = P4::FrontEnd().run(options, program, true);
-    if (program == nullptr) {
-        std::cerr << "Frontend failed" << std::endl;
-        return boost::none;
-    }
-    if (::ErrorReporter::instance.getDiagnosticCount() > 0) {
-        std::cerr << "Encountered " << ::ErrorReporter::instance.getDiagnosticCount()
-                  << " errors while executing frontend" << std::endl;
-        return boost::none;
-    }
-
-    return FrontendTestCase{program};
-}
-
 /* static */ boost::optional<MidendTestCase>
 MidendTestCase::create(const std::string& source,
                        CompilerOptions::FrontendVersion langVersion

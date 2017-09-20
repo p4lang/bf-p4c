@@ -198,9 +198,11 @@ if [ ! -d ${ptftestdir} ] && ! $run_stf2ptf; then
     # no ptf to run
     run_ptf=false
 fi
+
+p4runtime_out=$testdir/${name}.out/p4info.proto.txt
+P4C_ARGS="$P4C_ARGS --p4runtime-file $p4runtime_out --p4runtime-format text"
+
 if $run_ptf || $run_stf2ptf; then
-    p4runtime_out=$testdir/${name}.out/p4info.proto.txt
-    P4C_ARGS="$P4C_ARGS --p4runtime-file $p4runtime_out --p4runtime-format text"
     P4C_ARGS="$P4C_ARGS -DCPU_PORT=320"
 fi
 
