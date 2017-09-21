@@ -18,9 +18,9 @@ struct metadata {
 }
 
 struct headers {
-    @name("pkt") 
+    @name(".pkt") 
     pkt_t  pkt;
-    @name("pkt2") 
+    @name(".pkt2") 
     pkt2_t pkt2;
 }
 

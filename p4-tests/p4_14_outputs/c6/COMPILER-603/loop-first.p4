@@ -12,7 +12,7 @@ struct metadata {
 }
 
 struct headers {
-    @name("mpls_bos") 
+    @name(".mpls_bos") 
     mpls_t    mpls_bos;
     @name(".mpls") 
     mpls_t[4] mpls;
@@ -51,7 +51,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.mpls_bos.isValid(): exact @name("hdr.mpls_bos.isValid()") ;
+            hdr.mpls_bos.isValid(): exact @name("mpls_bos.$valid$") ;
         }
         default_action = NoAction();
     }

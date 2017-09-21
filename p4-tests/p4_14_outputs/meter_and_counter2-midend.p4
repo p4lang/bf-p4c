@@ -22,7 +22,7 @@ struct metadata {
 }
 
 struct headers {
-    @name("data") 
+    @name(".data") 
     data_t data;
 }
 
@@ -61,7 +61,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_0();
         }
         key = {
-            hdr.data.f1: exact @name("hdr.data.f1") ;
+            hdr.data.f1: exact @name("data.f1") ;
         }
         size = 32000;
         default_action = NoAction_0();
@@ -78,7 +78,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_4();
         }
         key = {
-            hdr.data.f2: exact @name("hdr.data.f2") ;
+            hdr.data.f2: exact @name("data.f2") ;
         }
         size = 2048;
         @name(".counter2") counters = direct_counter(CounterType.packets);
@@ -90,7 +90,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_5();
         }
         key = {
-            hdr.data.f3: exact @name("hdr.data.f3") ;
+            hdr.data.f3: exact @name("data.f3") ;
         }
         size = 10000;
         default_action = NoAction_5();

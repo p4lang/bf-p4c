@@ -9,7 +9,7 @@ struct metadata {
 }
 
 struct headers {
-    @name("one") 
+    @name(".one") 
     one_byte_t one;
 }
 

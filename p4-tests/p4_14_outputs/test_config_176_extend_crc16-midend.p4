@@ -22,12 +22,12 @@ header pkt_t {
 }
 
 struct metadata {
-    @name("meta") 
+    @name(".meta") 
     meta_t meta;
 }
 
 struct headers {
-    @name("pkt") 
+    @name(".pkt") 
     pkt_t pkt;
 }
 
@@ -61,7 +61,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_0();
         }
         key = {
-            hdr.pkt.field_g_16: ternary @name("hdr.pkt.field_g_16") ;
+            hdr.pkt.field_g_16: ternary @name("pkt.field_g_16") ;
         }
         default_action = NoAction_0();
     }

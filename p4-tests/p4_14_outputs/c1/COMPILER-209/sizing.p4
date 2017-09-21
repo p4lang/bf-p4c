@@ -41,16 +41,16 @@ header vlan_tag_t {
 }
 
 struct metadata {
-    @name("ing_md") 
+    @name(".ing_md") 
     ing_md_t ing_md;
 }
 
 struct headers {
-    @name("ethernet") 
+    @name(".ethernet") 
     ethernet_t ethernet;
-    @name("ipv4") 
+    @name(".ipv4") 
     ipv4_t     ipv4;
-    @name("vlan_tag_") 
+    @name(".vlan_tag_") 
     vlan_tag_t vlan_tag_;
 }
 

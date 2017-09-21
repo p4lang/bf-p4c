@@ -29,7 +29,7 @@ struct metadata {
 }
 
 struct headers {
-    @name("data") 
+    @name(".data") 
     data_t data;
 }
 
@@ -85,7 +85,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.data.f1: exact @name("hdr.data.f1") ;
+            hdr.data.f1: exact @name("data.f1") ;
         }
         size = 6000;
         meters = meter_1;
@@ -103,7 +103,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.data.f2: exact @name("hdr.data.f2") ;
+            hdr.data.f2: exact @name("data.f2") ;
         }
         size = 10000;
         meters = meter_2;
@@ -115,7 +115,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.data.f3: exact @name("hdr.data.f3") ;
+            hdr.data.f3: exact @name("data.f3") ;
         }
         size = 2000;
         default_action = NoAction();
@@ -126,7 +126,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.data.f4: exact @name("hdr.data.f4") ;
+            hdr.data.f4: exact @name("data.f4") ;
         }
         size = 8192;
         default_action = NoAction();
@@ -137,8 +137,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.data.color_1: ternary @name("hdr.data.color_1") ;
-            hdr.data.color_2: ternary @name("hdr.data.color_2") ;
+            hdr.data.color_1: ternary @name("data.color_1") ;
+            hdr.data.color_2: ternary @name("data.color_2") ;
         }
         default_action = NoAction();
     }
@@ -148,8 +148,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.data.color_3: ternary @name("hdr.data.color_3") ;
-            hdr.data.color_4: ternary @name("hdr.data.color_4") ;
+            hdr.data.color_3: ternary @name("data.color_3") ;
+            hdr.data.color_4: ternary @name("data.color_4") ;
         }
         default_action = NoAction();
     }

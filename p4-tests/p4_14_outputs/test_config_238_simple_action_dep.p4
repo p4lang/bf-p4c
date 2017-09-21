@@ -23,11 +23,11 @@ struct metadata {
 }
 
 struct headers {
-    @name("hdr0") 
+    @name(".hdr0") 
     hdr0_t hdr0;
-    @name("hdr1") 
+    @name(".hdr1") 
     hdr1_t hdr1;
-    @name("hdr2") 
+    @name(".hdr2") 
     hdr2_t hdr2;
 }
 

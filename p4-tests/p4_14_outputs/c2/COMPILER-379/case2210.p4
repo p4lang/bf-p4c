@@ -19,7 +19,7 @@ struct metadata {
 }
 
 struct headers {
-    @name("hdr") 
+    @name(".hdr") 
     hdr_t hdr;
 }
 

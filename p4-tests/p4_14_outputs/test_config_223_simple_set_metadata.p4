@@ -17,14 +17,14 @@ header zero_byte_t {
 }
 
 struct metadata {
-    @name("meta") 
+    @name(".meta") 
     meta_t meta;
 }
 
 struct headers {
-    @name("one") 
+    @name(".one") 
     one_byte_t  one;
-    @name("zero") 
+    @name(".zero") 
     zero_byte_t zero;
 }
 

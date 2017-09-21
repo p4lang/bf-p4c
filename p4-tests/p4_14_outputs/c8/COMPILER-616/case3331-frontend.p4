@@ -177,50 +177,50 @@ header vlan_t {
 }
 
 struct metadata {
-    @name("ingress_md") 
+    @name(".ingress_md") 
     ingress_md_t ingress_md;
 }
 
 struct headers {
-    @name("cpu_header") 
+    @name(".cpu_header") 
     cpu_header_t                                   cpu_header;
-    @dont_trim @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md") @pa_atomic("egress", "eg_intr_md.egress_port") @pa_fragment("egress", "eg_intr_md._pad1") @pa_fragment("egress", "eg_intr_md._pad7") @pa_fragment("egress", "eg_intr_md._pad8") @pa_mandatory_intrinsic_field("egress", "eg_intr_md.egress_port") @pa_mandatory_intrinsic_field("egress", "eg_intr_md.egress_cos") @name("eg_intr_md") 
+    @dont_trim @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md") @pa_atomic("egress", "eg_intr_md.egress_port") @pa_fragment("egress", "eg_intr_md._pad1") @pa_fragment("egress", "eg_intr_md._pad7") @pa_fragment("egress", "eg_intr_md._pad8") @pa_mandatory_intrinsic_field("egress", "eg_intr_md.egress_port") @pa_mandatory_intrinsic_field("egress", "eg_intr_md.egress_cos") @name(".eg_intr_md") 
     egress_intrinsic_metadata_t                    eg_intr_md;
-    @dont_trim @pa_intrinsic_header("egress", "eg_intr_md_for_mb") @pa_atomic("egress", "eg_intr_md_for_mb.egress_mirror_id") @pa_fragment("egress", "eg_intr_md_for_mb.coalesce_flush") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.egress_mirror_id") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.coalesce_flush") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.coalesce_length") @not_deparsed("ingress") @not_deparsed("egress") @name("eg_intr_md_for_mb") 
+    @dont_trim @pa_intrinsic_header("egress", "eg_intr_md_for_mb") @pa_atomic("egress", "eg_intr_md_for_mb.egress_mirror_id") @pa_fragment("egress", "eg_intr_md_for_mb.coalesce_flush") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.egress_mirror_id") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.coalesce_flush") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.coalesce_length") @not_deparsed("ingress") @not_deparsed("egress") @name(".eg_intr_md_for_mb") 
     egress_intrinsic_metadata_for_mirror_buffer_t  eg_intr_md_for_mb;
-    @dont_trim @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_oport.drop_ctl") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md_for_oport") @name("eg_intr_md_for_oport") 
+    @dont_trim @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_oport.drop_ctl") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md_for_oport") @name(".eg_intr_md_for_oport") 
     egress_intrinsic_metadata_for_output_port_t    eg_intr_md_for_oport;
-    @pa_fragment("egress", "eg_intr_md_from_parser_aux.coalesce_sample_count") @pa_fragment("egress", "eg_intr_md_from_parser_aux.clone_src") @pa_fragment("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @pa_atomic("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md_from_parser_aux") @name("eg_intr_md_from_parser_aux") 
+    @pa_fragment("egress", "eg_intr_md_from_parser_aux.coalesce_sample_count") @pa_fragment("egress", "eg_intr_md_from_parser_aux.clone_src") @pa_fragment("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @pa_atomic("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md_from_parser_aux") @name(".eg_intr_md_from_parser_aux") 
     egress_intrinsic_metadata_from_parser_aux_t    eg_intr_md_from_parser_aux;
-    @name("ethernet_inner") 
+    @name(".ethernet_inner") 
     ethernet_t                                     ethernet_inner;
-    @name("ethernet_outer") 
+    @name(".ethernet_outer") 
     ethernet_t                                     ethernet_outer;
-    @dont_trim @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md.ingress_port") @name("ig_intr_md") 
+    @dont_trim @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md.ingress_port") @name(".ig_intr_md") 
     ingress_intrinsic_metadata_t                   ig_intr_md;
-    @dont_trim @pa_intrinsic_header("ingress", "ig_intr_md_for_mb") @pa_atomic("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @not_deparsed("ingress") @not_deparsed("egress") @name("ig_intr_md_for_mb") 
+    @dont_trim @pa_intrinsic_header("ingress", "ig_intr_md_for_mb") @pa_atomic("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @not_deparsed("ingress") @not_deparsed("egress") @name(".ig_intr_md_for_mb") 
     ingress_intrinsic_metadata_for_mirror_buffer_t ig_intr_md_for_mb;
-    @pa_atomic("ingress", "ig_intr_md_for_tm.ucast_egress_port") @pa_fragment("ingress", "ig_intr_md_for_tm.drop_ctl") @pa_fragment("ingress", "ig_intr_md_for_tm.qid") @pa_fragment("ingress", "ig_intr_md_for_tm._pad2") @pa_atomic("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_fragment("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_atomic("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_fragment("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_atomic("ingress", "ig_intr_md_for_tm.level1_mcast_hash") @pa_fragment("ingress", "ig_intr_md_for_tm._pad3") @pa_atomic("ingress", "ig_intr_md_for_tm.level2_mcast_hash") @pa_fragment("ingress", "ig_intr_md_for_tm._pad4") @pa_atomic("ingress", "ig_intr_md_for_tm.level1_exclusion_id") @pa_fragment("ingress", "ig_intr_md_for_tm.level1_exclusion_id") @pa_atomic("ingress", "ig_intr_md_for_tm.level2_exclusion_id") @pa_fragment("ingress", "ig_intr_md_for_tm._pad5") @pa_atomic("ingress", "ig_intr_md_for_tm.rid") @pa_fragment("ingress", "ig_intr_md_for_tm.rid") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md_for_tm") @dont_trim @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.drop_ctl") @name("ig_intr_md_for_tm") 
+    @pa_atomic("ingress", "ig_intr_md_for_tm.ucast_egress_port") @pa_fragment("ingress", "ig_intr_md_for_tm.drop_ctl") @pa_fragment("ingress", "ig_intr_md_for_tm.qid") @pa_fragment("ingress", "ig_intr_md_for_tm._pad2") @pa_atomic("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_fragment("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_atomic("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_fragment("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_atomic("ingress", "ig_intr_md_for_tm.level1_mcast_hash") @pa_fragment("ingress", "ig_intr_md_for_tm._pad3") @pa_atomic("ingress", "ig_intr_md_for_tm.level2_mcast_hash") @pa_fragment("ingress", "ig_intr_md_for_tm._pad4") @pa_atomic("ingress", "ig_intr_md_for_tm.level1_exclusion_id") @pa_fragment("ingress", "ig_intr_md_for_tm.level1_exclusion_id") @pa_atomic("ingress", "ig_intr_md_for_tm.level2_exclusion_id") @pa_fragment("ingress", "ig_intr_md_for_tm._pad5") @pa_atomic("ingress", "ig_intr_md_for_tm.rid") @pa_fragment("ingress", "ig_intr_md_for_tm.rid") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md_for_tm") @dont_trim @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.drop_ctl") @name(".ig_intr_md_for_tm") 
     ingress_intrinsic_metadata_for_tm_t            ig_intr_md_for_tm;
-    @pa_fragment("ingress", "ig_intr_md_from_parser_aux.ingress_parser_err") @pa_atomic("ingress", "ig_intr_md_from_parser_aux.ingress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md_from_parser_aux") @name("ig_intr_md_from_parser_aux") 
+    @pa_fragment("ingress", "ig_intr_md_from_parser_aux.ingress_parser_err") @pa_atomic("ingress", "ig_intr_md_from_parser_aux.ingress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md_from_parser_aux") @name(".ig_intr_md_from_parser_aux") 
     ingress_intrinsic_metadata_from_parser_aux_t   ig_intr_md_from_parser_aux;
-    @not_deparsed("ingress") @not_deparsed("egress") @name("ig_pg_md") 
+    @not_deparsed("ingress") @not_deparsed("egress") @name(".ig_pg_md") 
     generator_metadata_t_0                         ig_pg_md;
-    @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_prsr_ctrl") @name("ig_prsr_ctrl") 
+    @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_prsr_ctrl") @name(".ig_prsr_ctrl") 
     ingress_parser_control_signals                 ig_prsr_ctrl;
-    @name("ipv4") 
+    @name(".ipv4") 
     ipv4_t                                         ipv4;
-    @name("ipv6") 
+    @name(".ipv6") 
     ipv6_t                                         ipv6;
-    @name("mpls0") 
+    @name(".mpls0") 
     mpls_t                                         mpls0;
-    @name("mpls1") 
+    @name(".mpls1") 
     mpls_t                                         mpls1;
-    @name("pppoe") 
+    @name(".pppoe") 
     pppoe_t                                        pppoe;
-    @name("vlan_service") 
+    @name(".vlan_service") 
     vlan_t                                         vlan_service;
-    @name("vlan_subsc") 
+    @name(".vlan_subsc") 
     vlan_t                                         vlan_subsc;
 }
 
@@ -324,8 +324,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             @defaultonly NoAction();
         }
         key = {
-            hdr.ig_intr_md_for_tm.ucast_egress_port: exact @name("hdr.ig_intr_md_for_tm.ucast_egress_port") ;
-            hdr.mpls0.label                        : exact @name("hdr.mpls0.label") ;
+            hdr.ig_intr_md_for_tm.ucast_egress_port: exact @name("ig_intr_md_for_tm.ucast_egress_port") ;
+            hdr.mpls0.label                        : exact @name("mpls0.label") ;
         }
         max_size = 256;
         default_action = NoAction();
@@ -337,8 +337,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             @defaultonly NoAction();
         }
         key = {
-            hdr.ig_intr_md_for_tm.ucast_egress_port: exact @name("hdr.ig_intr_md_for_tm.ucast_egress_port") ;
-            hdr.mpls0.label                        : exact @name("hdr.mpls0.label") ;
+            hdr.ig_intr_md_for_tm.ucast_egress_port: exact @name("ig_intr_md_for_tm.ucast_egress_port") ;
+            hdr.mpls0.label                        : exact @name("mpls0.label") ;
         }
         default_action = NoAction();
     }
@@ -438,9 +438,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            meta.ingress_md.line_id : exact @name("meta.ingress_md.line_id") ;
-            meta.ingress_md.subsc_id: exact @name("meta.ingress_md.subsc_id") ;
-            hdr.ipv4.srcAddr        : lpm @name("hdr.ipv4.srcAddr") ;
+            meta.ingress_md.line_id : exact @name("ingress_md.line_id") ;
+            meta.ingress_md.subsc_id: exact @name("ingress_md.subsc_id") ;
+            hdr.ipv4.srcAddr        : lpm @name("ipv4.srcAddr") ;
         }
         max_size = 4096;
         default_action = NoAction();
@@ -452,9 +452,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            meta.ingress_md.line_id : exact @name("meta.ingress_md.line_id") ;
-            meta.ingress_md.subsc_id: exact @name("meta.ingress_md.subsc_id") ;
-            hdr.ipv6.srcAddr        : lpm @name("hdr.ipv6.srcAddr") ;
+            meta.ingress_md.line_id : exact @name("ingress_md.line_id") ;
+            meta.ingress_md.subsc_id: exact @name("ingress_md.subsc_id") ;
+            hdr.ipv6.srcAddr        : lpm @name("ipv6.srcAddr") ;
         }
         max_size = 4096;
         default_action = NoAction();
@@ -466,10 +466,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            meta.ingress_md.line_id   : exact @name("meta.ingress_md.line_id") ;
-            hdr.vlan_service.vlanID   : exact @name("hdr.vlan_service.vlanID") ;
-            hdr.ethernet_inner.srcAddr: exact @name("hdr.ethernet_inner.srcAddr") ;
-            hdr.pppoe.sessionID       : exact @name("hdr.pppoe.sessionID") ;
+            meta.ingress_md.line_id   : exact @name("ingress_md.line_id") ;
+            hdr.vlan_service.vlanID   : exact @name("vlan_service.vlanID") ;
+            hdr.ethernet_inner.srcAddr: exact @name("ethernet_inner.srcAddr") ;
+            hdr.pppoe.sessionID       : exact @name("pppoe.sessionID") ;
         }
         max_size = 4096;
         default_action = NoAction();
@@ -495,7 +495,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.ipv4.dstAddr: lpm @name("hdr.ipv4.dstAddr") ;
+            hdr.ipv4.dstAddr: lpm @name("ipv4.dstAddr") ;
         }
         max_size = 256;
         default_action = NoAction();
@@ -507,7 +507,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.ipv6.dstAddr: lpm @name("hdr.ipv6.dstAddr") ;
+            hdr.ipv6.dstAddr: lpm @name("ipv6.dstAddr") ;
         }
         max_size = 256;
         default_action = NoAction();
@@ -519,10 +519,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.ig_intr_md.ingress_port: exact @name("hdr.ig_intr_md.ingress_port") ;
-            hdr.mpls0.label            : exact @name("hdr.mpls0.label") ;
-            hdr.mpls1.label            : exact @name("hdr.mpls1.label") ;
-            hdr.vlan_subsc.vlanID      : exact @name("hdr.vlan_subsc.vlanID") ;
+            hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
+            hdr.mpls0.label            : exact @name("mpls0.label") ;
+            hdr.mpls1.label            : exact @name("mpls1.label") ;
+            hdr.vlan_subsc.vlanID      : exact @name("vlan_subsc.vlanID") ;
         }
         max_size = 4096;
         default_action = NoAction();
@@ -534,7 +534,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            meta.ingress_md.meter_result: exact @name("meta.ingress_md.meter_result") ;
+            meta.ingress_md.meter_result: exact @name("ingress_md.meter_result") ;
         }
         max_size = 16;
         default_action = NoAction();
@@ -547,9 +547,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.ethernet_inner.dstAddr: exact @name("hdr.ethernet_inner.dstAddr") ;
-            hdr.vlan_service.etherType: exact @name("hdr.vlan_service.etherType") ;
-            hdr.pppoe.protocol        : exact @name("hdr.pppoe.protocol") ;
+            hdr.ethernet_inner.dstAddr: exact @name("ethernet_inner.dstAddr") ;
+            hdr.vlan_service.etherType: exact @name("vlan_service.etherType") ;
+            hdr.pppoe.protocol        : exact @name("pppoe.protocol") ;
         }
         max_size = 16;
         default_action = NoAction();
@@ -561,8 +561,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.vlan_service.vlanID: exact @name("hdr.vlan_service.vlanID") ;
-            hdr.ipv4.dstAddr       : lpm @name("hdr.ipv4.dstAddr") ;
+            hdr.vlan_service.vlanID: exact @name("vlan_service.vlanID") ;
+            hdr.ipv4.dstAddr       : lpm @name("ipv4.dstAddr") ;
         }
         max_size = 256;
         default_action = NoAction();
@@ -574,8 +574,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.vlan_service.vlanID: exact @name("hdr.vlan_service.vlanID") ;
-            hdr.ipv6.dstAddr       : lpm @name("hdr.ipv6.dstAddr") ;
+            hdr.vlan_service.vlanID: exact @name("vlan_service.vlanID") ;
+            hdr.ipv6.dstAddr       : lpm @name("ipv6.dstAddr") ;
         }
         max_size = 256;
         default_action = NoAction();
@@ -588,9 +588,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.ethernet_outer.dstAddr : exact @name("hdr.ethernet_outer.dstAddr") ;
-            hdr.ig_intr_md.ingress_port: exact @name("hdr.ig_intr_md.ingress_port") ;
-            hdr.mpls0.label            : exact @name("hdr.mpls0.label") ;
+            hdr.ethernet_outer.dstAddr : exact @name("ethernet_outer.dstAddr") ;
+            hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
+            hdr.mpls0.label            : exact @name("mpls0.label") ;
         }
         max_size = 256;
         default_action = NoAction();

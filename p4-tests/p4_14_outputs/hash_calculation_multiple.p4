@@ -22,7 +22,7 @@ struct metadata {
 }
 
 struct headers {
-    @name("packet") 
+    @name(".packet") 
     packet_t packet;
 }
 

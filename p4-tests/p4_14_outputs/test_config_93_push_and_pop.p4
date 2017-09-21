@@ -27,7 +27,7 @@ struct metadata {
 }
 
 struct headers {
-    @name("pkt") 
+    @name(".pkt") 
     pkt_t     pkt;
     @name(".tags") 
     tags_t[5] tags;

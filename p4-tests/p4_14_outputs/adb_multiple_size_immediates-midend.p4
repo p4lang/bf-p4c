@@ -13,7 +13,7 @@ struct metadata {
 }
 
 struct headers {
-    @name("pkt") 
+    @name(".pkt") 
     pkt_t pkt;
 }
 
@@ -56,7 +56,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_0();
         }
         key = {
-            hdr.pkt.a: exact @name("hdr.pkt.a") ;
+            hdr.pkt.a: exact @name("pkt.a") ;
         }
         default_action = NoAction_0();
     }
@@ -68,7 +68,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_3();
         }
         key = {
-            hdr.pkt.b: exact @name("hdr.pkt.b") ;
+            hdr.pkt.b: exact @name("pkt.b") ;
         }
         size = 1024;
         default_action = NoAction_3();

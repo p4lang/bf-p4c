@@ -29,14 +29,14 @@ header ipv4_t {
 }
 
 struct metadata {
-    @name("m") 
+    @name(".m") 
     M m;
 }
 
 struct headers {
-    @name("eth") 
+    @name(".eth") 
     EthernetHdr_0 eth;
-    @name("ipv4") 
+    @name(".ipv4") 
     ipv4_t        ipv4;
 }
 

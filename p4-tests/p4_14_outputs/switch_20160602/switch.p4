@@ -603,146 +603,146 @@ header vlan_tag_t {
 }
 
 struct metadata {
-    @pa_solitary("ingress", "acl_metadata.if_label") @pa_atomic("ingress", "acl_metadata.if_label") @name("acl_metadata") 
+    @pa_solitary("ingress", "acl_metadata.if_label") @pa_atomic("ingress", "acl_metadata.if_label") @name(".acl_metadata") 
     acl_metadata_t                              acl_metadata;
-    @name("eg_intr_md") 
+    @name(".eg_intr_md") 
     egress_intrinsic_metadata_t                 eg_intr_md;
-    @name("eg_intr_md_from_parser_aux") 
+    @name(".eg_intr_md_from_parser_aux") 
     egress_intrinsic_metadata_from_parser_aux_t eg_intr_md_from_parser_aux;
-    @name("egress_metadata") 
+    @name(".egress_metadata") 
     egress_metadata_t                           egress_metadata;
-    @name("fabric_metadata") 
+    @name(".fabric_metadata") 
     fabric_metadata_t                           fabric_metadata;
-    @name("flowlet_metadata") 
+    @name(".flowlet_metadata") 
     flowlet_metadata_t                          flowlet_metadata;
-    @name("global_config_metadata") 
+    @name(".global_config_metadata") 
     global_config_metadata_t                    global_config_metadata;
-    @pa_atomic("ingress", "hash_metadata.hash1") @pa_solitary("ingress", "hash_metadata.hash1") @pa_atomic("ingress", "hash_metadata.hash2") @pa_solitary("ingress", "hash_metadata.hash2") @name("hash_metadata") 
+    @pa_atomic("ingress", "hash_metadata.hash1") @pa_solitary("ingress", "hash_metadata.hash1") @pa_atomic("ingress", "hash_metadata.hash2") @pa_solitary("ingress", "hash_metadata.hash2") @name(".hash_metadata") 
     hash_metadata_t                             hash_metadata;
-    @name("i2e_metadata") 
+    @name(".i2e_metadata") 
     i2e_metadata_t                              i2e_metadata;
-    @name("ig_intr_md") 
+    @name(".ig_intr_md") 
     ingress_intrinsic_metadata_t                ig_intr_md;
-    @name("ig_intr_md_for_tm") 
+    @name(".ig_intr_md_for_tm") 
     ingress_intrinsic_metadata_for_tm_t         ig_intr_md_for_tm;
-    @name("ig_prsr_ctrl") 
+    @name(".ig_prsr_ctrl") 
     ingress_parser_control_signals              ig_prsr_ctrl;
-    @pa_atomic("ingress", "ingress_metadata.port_type") @pa_solitary("ingress", "ingress_metadata.port_type") @pa_atomic("ingress", "ingress_metadata.ifindex") @pa_solitary("ingress", "ingress_metadata.ifindex") @pa_atomic("egress", "ingress_metadata.bd") @pa_solitary("egress", "ingress_metadata.bd") @name("ingress_metadata") 
+    @pa_atomic("ingress", "ingress_metadata.port_type") @pa_solitary("ingress", "ingress_metadata.port_type") @pa_atomic("ingress", "ingress_metadata.ifindex") @pa_solitary("ingress", "ingress_metadata.ifindex") @pa_atomic("egress", "ingress_metadata.bd") @pa_solitary("egress", "ingress_metadata.bd") @name(".ingress_metadata") 
     ingress_metadata_t                          ingress_metadata;
-    @name("intrinsic_metadata") 
+    @name(".intrinsic_metadata") 
     intrinsic_metadata_t                        intrinsic_metadata;
-    @name("ipv4_metadata") 
+    @name(".ipv4_metadata") 
     ipv4_metadata_t                             ipv4_metadata;
-    @pa_alias("ingress", "ipv4_metadata.lkp_ipv4_sa", "ipv6_metadata.lkp_ipv6_sa") @pa_alias("ingress", "ipv4_metadata.lkp_ipv4_da", "ipv6_metadata.lkp_ipv6_da") @name("ipv6_metadata") 
+    @pa_alias("ingress", "ipv4_metadata.lkp_ipv4_sa", "ipv6_metadata.lkp_ipv6_sa") @pa_alias("ingress", "ipv4_metadata.lkp_ipv4_da", "ipv6_metadata.lkp_ipv6_da") @name(".ipv6_metadata") 
     ipv6_metadata_t                             ipv6_metadata;
-    @name("l2_metadata") 
+    @name(".l2_metadata") 
     l2_metadata_t                               l2_metadata;
-    @name("l3_metadata") 
+    @name(".l3_metadata") 
     l3_metadata_t                               l3_metadata;
-    @pa_atomic("ingress", "meter_metadata.meter_color") @pa_solitary("ingress", "meter_metadata.meter_color") @pa_atomic("ingress", "meter_metadata.meter_index") @pa_solitary("ingress", "meter_metadata.meter_index") @name("meter_metadata") 
+    @pa_atomic("ingress", "meter_metadata.meter_color") @pa_solitary("ingress", "meter_metadata.meter_color") @pa_atomic("ingress", "meter_metadata.meter_index") @pa_solitary("ingress", "meter_metadata.meter_index") @name(".meter_metadata") 
     meter_metadata_t                            meter_metadata;
-    @pa_solitary("ingress", "multicast_metadata.multicast_route_mc_index") @pa_atomic("ingress", "multicast_metadata.multicast_route_mc_index") @pa_solitary("ingress", "multicast_metadata.multicast_bridge_mc_index") @pa_atomic("ingress", "multicast_metadata.multicast_bridge_mc_index") @name("multicast_metadata") 
+    @pa_solitary("ingress", "multicast_metadata.multicast_route_mc_index") @pa_atomic("ingress", "multicast_metadata.multicast_route_mc_index") @pa_solitary("ingress", "multicast_metadata.multicast_bridge_mc_index") @pa_atomic("ingress", "multicast_metadata.multicast_bridge_mc_index") @name(".multicast_metadata") 
     multicast_metadata_t                        multicast_metadata;
-    @name("nat_metadata") 
+    @name(".nat_metadata") 
     nat_metadata_t                              nat_metadata;
-    @name("nexthop_metadata") 
+    @name(".nexthop_metadata") 
     nexthop_metadata_t                          nexthop_metadata;
-    @name("qos_metadata") 
+    @name(".qos_metadata") 
     qos_metadata_t                              qos_metadata;
-    @name("security_metadata") 
+    @name(".security_metadata") 
     security_metadata_t                         security_metadata;
-    @name("tunnel_metadata") 
+    @name(".tunnel_metadata") 
     tunnel_metadata_t                           tunnel_metadata;
 }
 
 struct headers {
-    @name("arp_rarp") 
+    @name(".arp_rarp") 
     arp_rarp_t                arp_rarp;
-    @name("arp_rarp_ipv4") 
+    @name(".arp_rarp_ipv4") 
     arp_rarp_ipv4_t           arp_rarp_ipv4;
-    @name("bfd") 
+    @name(".bfd") 
     bfd_t                     bfd;
-    @name("eompls") 
+    @name(".eompls") 
     eompls_t                  eompls;
-    @name("erspan_t3_header") 
+    @name(".erspan_t3_header") 
     erspan_header_t3_t_0      erspan_t3_header;
-    @name("ethernet") 
+    @name(".ethernet") 
     ethernet_t                ethernet;
-    @name("fabric_header") 
+    @name(".fabric_header") 
     fabric_header_t           fabric_header;
-    @name("fabric_header_cpu") 
+    @name(".fabric_header_cpu") 
     fabric_header_cpu_t       fabric_header_cpu;
-    @name("fabric_header_mirror") 
+    @name(".fabric_header_mirror") 
     fabric_header_mirror_t    fabric_header_mirror;
-    @name("fabric_header_multicast") 
+    @name(".fabric_header_multicast") 
     fabric_header_multicast_t fabric_header_multicast;
-    @name("fabric_header_sflow") 
+    @name(".fabric_header_sflow") 
     fabric_header_sflow_t     fabric_header_sflow;
-    @name("fabric_header_unicast") 
+    @name(".fabric_header_unicast") 
     fabric_header_unicast_t   fabric_header_unicast;
-    @name("fabric_payload_header") 
+    @name(".fabric_payload_header") 
     fabric_payload_header_t   fabric_payload_header;
-    @name("fcoe") 
+    @name(".fcoe") 
     fcoe_header_t             fcoe;
-    @name("genv") 
+    @name(".genv") 
     genv_t                    genv;
-    @name("gre") 
+    @name(".gre") 
     gre_t                     gre;
-    @name("icmp") 
+    @name(".icmp") 
     icmp_t                    icmp;
-    @name("inner_ethernet") 
+    @name(".inner_ethernet") 
     ethernet_t                inner_ethernet;
-    @name("inner_icmp") 
+    @name(".inner_icmp") 
     icmp_t                    inner_icmp;
-    @pa_fragment("ingress", "inner_ipv4.hdrChecksum") @pa_fragment("egress", "inner_ipv4.hdrChecksum") @name("inner_ipv4") 
+    @pa_fragment("ingress", "inner_ipv4.hdrChecksum") @pa_fragment("egress", "inner_ipv4.hdrChecksum") @name(".inner_ipv4") 
     ipv4_t                    inner_ipv4;
-    @name("inner_ipv6") 
+    @name(".inner_ipv6") 
     ipv6_t                    inner_ipv6;
-    @name("inner_sctp") 
+    @name(".inner_sctp") 
     sctp_t                    inner_sctp;
-    @pa_alias("egress", "inner_tcp", "tcp") @name("inner_tcp") 
+    @pa_alias("egress", "inner_tcp", "tcp") @name(".inner_tcp") 
     tcp_t                     inner_tcp;
-    @name("inner_udp") 
+    @name(".inner_udp") 
     udp_t                     inner_udp;
-    @pa_fragment("ingress", "ipv4.hdrChecksum") @pa_fragment("egress", "ipv4.hdrChecksum") @name("ipv4") 
+    @pa_fragment("ingress", "ipv4.hdrChecksum") @pa_fragment("egress", "ipv4.hdrChecksum") @name(".ipv4") 
     ipv4_t                    ipv4;
-    @overlay_subheader("egress", "inner_ipv6", "srcAddr", "dstAddr") @name("ipv6") 
+    @overlay_subheader("egress", "inner_ipv6", "srcAddr", "dstAddr") @name(".ipv6") 
     ipv6_t                    ipv6;
-    @name("lisp") 
+    @name(".lisp") 
     lisp_t                    lisp;
-    @name("llc_header") 
+    @name(".llc_header") 
     llc_header_t              llc_header;
-    @name("nsh") 
+    @name(".nsh") 
     nsh_t                     nsh;
-    @name("nsh_context") 
+    @name(".nsh_context") 
     nsh_context_t             nsh_context;
-    @name("nvgre") 
+    @name(".nvgre") 
     nvgre_t                   nvgre;
-    @name("outer_udp") 
+    @name(".outer_udp") 
     udp_t                     outer_udp;
-    @name("roce") 
+    @name(".roce") 
     roce_header_t             roce;
-    @name("roce_v2") 
+    @name(".roce_v2") 
     roce_v2_header_t          roce_v2;
-    @name("sctp") 
+    @name(".sctp") 
     sctp_t                    sctp;
-    @name("sflow") 
+    @name(".sflow") 
     sflow_hdr_t               sflow;
-    @name("sflow_raw_hdr_record") 
+    @name(".sflow_raw_hdr_record") 
     sflow_raw_hdr_record_t    sflow_raw_hdr_record;
-    @name("sflow_sample") 
+    @name(".sflow_sample") 
     sflow_sample_t            sflow_sample;
-    @name("snap_header") 
+    @name(".snap_header") 
     snap_header_t             snap_header;
-    @name("tcp") 
+    @name(".tcp") 
     tcp_t                     tcp;
-    @name("trill") 
+    @name(".trill") 
     trill_t                   trill;
-    @name("udp") 
+    @name(".udp") 
     udp_t                     udp;
-    @name("vntag") 
+    @name(".vntag") 
     vntag_t                   vntag;
-    @name("vxlan") 
+    @name(".vxlan") 
     vxlan_t                   vxlan;
     @name(".mpls") 
     mpls_t[3]                 mpls;

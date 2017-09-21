@@ -22,7 +22,7 @@ struct metadata {
 }
 
 struct headers {
-    @name("data") 
+    @name(".data") 
     data_t data;
 }
 
@@ -60,10 +60,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.data.f1: exact @name("hdr.data.f1") ;
-            hdr.data.h1: selector @name("hdr.data.h1") ;
-            hdr.data.h2: selector @name("hdr.data.h2") ;
-            hdr.data.h3: selector @name("hdr.data.h3") ;
+            hdr.data.f1: exact @name("data.f1") ;
+            hdr.data.h1: selector @name("data.h1") ;
+            hdr.data.h2: selector @name("data.h2") ;
+            hdr.data.h3: selector @name("data.h3") ;
         }
         size = 10000;
         @name(".set_b1_3") @mode("fair") implementation = action_selector(HashAlgorithm.crc16, 32w160000, 32w14);
@@ -77,10 +77,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.data.f2: exact @name("hdr.data.f2") ;
-            hdr.data.h4: selector @name("hdr.data.h4") ;
-            hdr.data.h5: selector @name("hdr.data.h5") ;
-            hdr.data.h6: selector @name("hdr.data.h6") ;
+            hdr.data.f2: exact @name("data.f2") ;
+            hdr.data.h4: selector @name("data.h4") ;
+            hdr.data.h5: selector @name("data.h5") ;
+            hdr.data.h6: selector @name("data.h6") ;
         }
         size = 5000;
         @name(".set_b4_6") @mode("fair") implementation = action_selector(HashAlgorithm.random, 32w1024, 32w14);

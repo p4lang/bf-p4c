@@ -34,16 +34,16 @@ header hdr2_t {
 }
 
 struct metadata {
-    @name("meta") 
+    @name(".meta") 
     meta_t meta;
 }
 
 struct headers {
-    @name("hdr0") 
+    @name(".hdr0") 
     hdr0_t hdr0;
-    @name("hdr1") 
+    @name(".hdr1") 
     hdr1_t hdr1;
-    @name("hdr2") 
+    @name(".hdr2") 
     hdr2_t hdr2;
 }
 
@@ -107,8 +107,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.hdr0.a    : ternary @name("hdr.hdr0.a") ;
-            meta.meta.tbl0: exact @name("meta.meta.tbl0") ;
+            hdr.hdr0.a    : ternary @name("hdr0.a") ;
+            meta.meta.tbl0: exact @name("meta.tbl0") ;
         }
         size = 512;
         default_action = NoAction();
@@ -120,9 +120,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.hdr0.a         : ternary @name("hdr.hdr0.a") ;
-            meta.meta.tbl1     : exact @name("meta.meta.tbl1") ;
-            meta.meta.tbl0_tbl1: exact @name("meta.meta.tbl0_tbl1") ;
+            hdr.hdr0.a         : ternary @name("hdr0.a") ;
+            meta.meta.tbl1     : exact @name("meta.tbl1") ;
+            meta.meta.tbl0_tbl1: exact @name("meta.tbl0_tbl1") ;
         }
         size = 512;
         default_action = NoAction();
@@ -134,10 +134,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.hdr0.a         : ternary @name("hdr.hdr0.a") ;
-            meta.meta.tbl2     : exact @name("meta.meta.tbl2") ;
-            meta.meta.tbl0_tbl2: exact @name("meta.meta.tbl0_tbl2") ;
-            meta.meta.tbl1_tbl2: exact @name("meta.meta.tbl1_tbl2") ;
+            hdr.hdr0.a         : ternary @name("hdr0.a") ;
+            meta.meta.tbl2     : exact @name("meta.tbl2") ;
+            meta.meta.tbl0_tbl2: exact @name("meta.tbl0_tbl2") ;
+            meta.meta.tbl1_tbl2: exact @name("meta.tbl1_tbl2") ;
         }
         size = 512;
         default_action = NoAction();
@@ -149,11 +149,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.hdr0.a         : ternary @name("hdr.hdr0.a") ;
-            meta.meta.tbl3     : exact @name("meta.meta.tbl3") ;
-            meta.meta.tbl0_tbl3: exact @name("meta.meta.tbl0_tbl3") ;
-            meta.meta.tbl1_tbl3: exact @name("meta.meta.tbl1_tbl3") ;
-            meta.meta.tbl2_tbl3: exact @name("meta.meta.tbl2_tbl3") ;
+            hdr.hdr0.a         : ternary @name("hdr0.a") ;
+            meta.meta.tbl3     : exact @name("meta.tbl3") ;
+            meta.meta.tbl0_tbl3: exact @name("meta.tbl0_tbl3") ;
+            meta.meta.tbl1_tbl3: exact @name("meta.tbl1_tbl3") ;
+            meta.meta.tbl2_tbl3: exact @name("meta.tbl2_tbl3") ;
         }
         size = 512;
         default_action = NoAction();
@@ -165,9 +165,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.hdr0.a    : ternary @name("hdr.hdr0.a") ;
-            hdr.hdr1.b    : exact @name("hdr.hdr1.b") ;
-            meta.meta.tbl4: exact @name("meta.meta.tbl4") ;
+            hdr.hdr0.a    : ternary @name("hdr0.a") ;
+            hdr.hdr1.b    : exact @name("hdr1.b") ;
+            meta.meta.tbl4: exact @name("meta.tbl4") ;
         }
         size = 512;
         default_action = NoAction();

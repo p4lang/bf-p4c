@@ -17,11 +17,11 @@ struct metadata {
 }
 
 struct headers {
-    @pa_container_size("ingress", "one.a", 8) @name("one") 
+    @pa_container_size("ingress", "one.a", 8) @name(".one") 
     one_t   one;
-    @name("three") 
+    @name(".three") 
     three_t three;
-    @name("two") 
+    @name(".two") 
     two_t   two;
 }
 
@@ -53,9 +53,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.one.a  : ternary @name("hdr.one.a") ;
-            hdr.two.a  : ternary @name("hdr.two.a") ;
-            hdr.three.a: ternary @name("hdr.three.a") ;
+            hdr.one.a  : ternary @name("one.a") ;
+            hdr.two.a  : ternary @name("two.a") ;
+            hdr.three.a: ternary @name("three.a") ;
         }
         size = 512;
         default_action = NoAction();

@@ -18,7 +18,7 @@ struct metadata {
 }
 
 struct headers {
-    @name("pkt") 
+    @name(".pkt") 
     pkt_t pkt;
 }
 
@@ -45,11 +45,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.pkt.srcAddr : exact @name("hdr.pkt.srcAddr") ;
-            hdr.pkt.dstAddr : exact @name("hdr.pkt.dstAddr") ;
-            hdr.pkt.protocol: exact @name("hdr.pkt.protocol") ;
-            hdr.pkt.srcPort : exact @name("hdr.pkt.srcPort") ;
-            hdr.pkt.dstPort : exact @name("hdr.pkt.dstPort") ;
+            hdr.pkt.srcAddr : exact @name("pkt.srcAddr") ;
+            hdr.pkt.dstAddr : exact @name("pkt.dstAddr") ;
+            hdr.pkt.protocol: exact @name("pkt.protocol") ;
+            hdr.pkt.srcPort : exact @name("pkt.srcPort") ;
+            hdr.pkt.dstPort : exact @name("pkt.dstPort") ;
         }
         size = 400000;
         default_action = NoAction();

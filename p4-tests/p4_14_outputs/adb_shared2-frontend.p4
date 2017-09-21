@@ -31,9 +31,9 @@ struct metadata {
 }
 
 struct headers {
-    @name("first_hdr") 
+    @name(".first_hdr") 
     first_hdr_t  first_hdr;
-    @name("second_hdr") 
+    @name(".second_hdr") 
     second_hdr_t second_hdr;
 }
 
@@ -75,7 +75,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.first_hdr.f1: exact @name("hdr.first_hdr.f1") ;
+            hdr.first_hdr.f1: exact @name("first_hdr.f1") ;
         }
         default_action = NoAction();
     }
@@ -86,7 +86,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.first_hdr.f1: exact @name("hdr.first_hdr.f1") ;
+            hdr.first_hdr.f1: exact @name("first_hdr.f1") ;
         }
         default_action = NoAction();
     }
@@ -97,7 +97,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.second_hdr.f1: exact @name("hdr.second_hdr.f1") ;
+            hdr.second_hdr.f1: exact @name("second_hdr.f1") ;
         }
         default_action = NoAction();
     }

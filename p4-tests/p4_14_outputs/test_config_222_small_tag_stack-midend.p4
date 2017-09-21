@@ -16,7 +16,7 @@ struct metadata {
 }
 
 struct headers {
-    @name("one") 
+    @name(".one") 
     one_byte_t     one;
     @name(".hdr_stack_") 
     hdr_stack_t[3] hdr_stack_;
@@ -71,7 +71,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_0();
         }
         key = {
-            hdr.one.a: ternary @name("hdr.one.a") ;
+            hdr.one.a: ternary @name("one.a") ;
         }
         size = 512;
         default_action = NoAction_0();

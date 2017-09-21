@@ -247,68 +247,68 @@ header PuEPIj {
 }
 
 struct metadata {
-    @name("BmGNnj") 
+    @name(".BmGNnj") 
     uAYuFB BmGNnj;
-    @name("DiLHQO") 
+    @name(".DiLHQO") 
     IyKHZu DiLHQO;
-    @name("ISBegy") 
+    @name(".ISBegy") 
     KXuvHH ISBegy;
-    @name("UEnfPN") 
+    @name(".UEnfPN") 
     CIhINR UEnfPN;
-    @name("WEiEAO") 
+    @name(".WEiEAO") 
     GTSivn WEiEAO;
-    @name("aiEvpD") 
+    @name(".aiEvpD") 
     OpLBCa aiEvpD;
-    @name("jwCLby") 
+    @name(".jwCLby") 
     egrogU jwCLby;
-    @name("rPaenA") 
+    @name(".rPaenA") 
     OPoGXQ rPaenA;
-    @name("svgufS") 
+    @name(".svgufS") 
     ywCrrX svgufS;
 }
 
 struct headers {
-    @name("Aeyzyj") 
+    @name(".Aeyzyj") 
     LSlzvW                                         Aeyzyj;
-    @name("BKUgda") 
+    @name(".BKUgda") 
     JpTLup                                         BKUgda;
-    @name("GcwzJG") 
+    @name(".GcwzJG") 
     LSlzvW                                         GcwzJG;
-    @name("NdxScV") 
+    @name(".NdxScV") 
     pOcNIq                                         NdxScV;
-    @name("YmdqVQ") 
+    @name(".YmdqVQ") 
     KkVXBX_0                                       YmdqVQ;
-    @name("YsFfOi") 
+    @name(".YsFfOi") 
     vtcowb                                         YsFfOi;
-    @dont_trim @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md") @pa_atomic("egress", "eg_intr_md.egress_port") @pa_fragment("egress", "eg_intr_md._pad1") @pa_fragment("egress", "eg_intr_md._pad7") @pa_fragment("egress", "eg_intr_md._pad8") @pa_mandatory_intrinsic_field("egress", "eg_intr_md.egress_port") @pa_mandatory_intrinsic_field("egress", "eg_intr_md.egress_cos") @name("eg_intr_md") 
+    @dont_trim @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md") @pa_atomic("egress", "eg_intr_md.egress_port") @pa_fragment("egress", "eg_intr_md._pad1") @pa_fragment("egress", "eg_intr_md._pad7") @pa_fragment("egress", "eg_intr_md._pad8") @pa_mandatory_intrinsic_field("egress", "eg_intr_md.egress_port") @pa_mandatory_intrinsic_field("egress", "eg_intr_md.egress_cos") @name(".eg_intr_md") 
     egress_intrinsic_metadata_t                    eg_intr_md;
-    @dont_trim @pa_intrinsic_header("egress", "eg_intr_md_for_mb") @pa_atomic("egress", "eg_intr_md_for_mb.egress_mirror_id") @pa_fragment("egress", "eg_intr_md_for_mb.coalesce_flush") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.egress_mirror_id") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.coalesce_flush") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.coalesce_length") @not_deparsed("ingress") @not_deparsed("egress") @name("eg_intr_md_for_mb") 
+    @dont_trim @pa_intrinsic_header("egress", "eg_intr_md_for_mb") @pa_atomic("egress", "eg_intr_md_for_mb.egress_mirror_id") @pa_fragment("egress", "eg_intr_md_for_mb.coalesce_flush") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.egress_mirror_id") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.coalesce_flush") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.coalesce_length") @not_deparsed("ingress") @not_deparsed("egress") @name(".eg_intr_md_for_mb") 
     egress_intrinsic_metadata_for_mirror_buffer_t  eg_intr_md_for_mb;
-    @dont_trim @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_oport.drop_ctl") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md_for_oport") @name("eg_intr_md_for_oport") 
+    @dont_trim @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_oport.drop_ctl") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md_for_oport") @name(".eg_intr_md_for_oport") 
     egress_intrinsic_metadata_for_output_port_t    eg_intr_md_for_oport;
-    @pa_fragment("egress", "eg_intr_md_from_parser_aux.coalesce_sample_count") @pa_fragment("egress", "eg_intr_md_from_parser_aux.clone_src") @pa_fragment("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @pa_atomic("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md_from_parser_aux") @name("eg_intr_md_from_parser_aux") 
+    @pa_fragment("egress", "eg_intr_md_from_parser_aux.coalesce_sample_count") @pa_fragment("egress", "eg_intr_md_from_parser_aux.clone_src") @pa_fragment("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @pa_atomic("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md_from_parser_aux") @name(".eg_intr_md_from_parser_aux") 
     egress_intrinsic_metadata_from_parser_aux_t    eg_intr_md_from_parser_aux;
-    @dont_trim @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md.ingress_port") @name("ig_intr_md") 
+    @dont_trim @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md.ingress_port") @name(".ig_intr_md") 
     ingress_intrinsic_metadata_t                   ig_intr_md;
-    @dont_trim @pa_intrinsic_header("ingress", "ig_intr_md_for_mb") @pa_atomic("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @not_deparsed("ingress") @not_deparsed("egress") @name("ig_intr_md_for_mb") 
+    @dont_trim @pa_intrinsic_header("ingress", "ig_intr_md_for_mb") @pa_atomic("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @not_deparsed("ingress") @not_deparsed("egress") @name(".ig_intr_md_for_mb") 
     ingress_intrinsic_metadata_for_mirror_buffer_t ig_intr_md_for_mb;
-    @pa_atomic("ingress", "ig_intr_md_for_tm.ucast_egress_port") @pa_fragment("ingress", "ig_intr_md_for_tm.drop_ctl") @pa_fragment("ingress", "ig_intr_md_for_tm.qid") @pa_fragment("ingress", "ig_intr_md_for_tm._pad2") @pa_atomic("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_fragment("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_atomic("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_fragment("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_atomic("ingress", "ig_intr_md_for_tm.level1_mcast_hash") @pa_fragment("ingress", "ig_intr_md_for_tm._pad3") @pa_atomic("ingress", "ig_intr_md_for_tm.level2_mcast_hash") @pa_fragment("ingress", "ig_intr_md_for_tm._pad4") @pa_atomic("ingress", "ig_intr_md_for_tm.level1_exclusion_id") @pa_fragment("ingress", "ig_intr_md_for_tm.level1_exclusion_id") @pa_atomic("ingress", "ig_intr_md_for_tm.level2_exclusion_id") @pa_fragment("ingress", "ig_intr_md_for_tm._pad5") @pa_atomic("ingress", "ig_intr_md_for_tm.rid") @pa_fragment("ingress", "ig_intr_md_for_tm.rid") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md_for_tm") @dont_trim @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.drop_ctl") @name("ig_intr_md_for_tm") 
+    @pa_atomic("ingress", "ig_intr_md_for_tm.ucast_egress_port") @pa_fragment("ingress", "ig_intr_md_for_tm.drop_ctl") @pa_fragment("ingress", "ig_intr_md_for_tm.qid") @pa_fragment("ingress", "ig_intr_md_for_tm._pad2") @pa_atomic("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_fragment("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_atomic("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_fragment("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_atomic("ingress", "ig_intr_md_for_tm.level1_mcast_hash") @pa_fragment("ingress", "ig_intr_md_for_tm._pad3") @pa_atomic("ingress", "ig_intr_md_for_tm.level2_mcast_hash") @pa_fragment("ingress", "ig_intr_md_for_tm._pad4") @pa_atomic("ingress", "ig_intr_md_for_tm.level1_exclusion_id") @pa_fragment("ingress", "ig_intr_md_for_tm.level1_exclusion_id") @pa_atomic("ingress", "ig_intr_md_for_tm.level2_exclusion_id") @pa_fragment("ingress", "ig_intr_md_for_tm._pad5") @pa_atomic("ingress", "ig_intr_md_for_tm.rid") @pa_fragment("ingress", "ig_intr_md_for_tm.rid") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md_for_tm") @dont_trim @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.drop_ctl") @name(".ig_intr_md_for_tm") 
     ingress_intrinsic_metadata_for_tm_t            ig_intr_md_for_tm;
-    @pa_fragment("ingress", "ig_intr_md_from_parser_aux.ingress_parser_err") @pa_atomic("ingress", "ig_intr_md_from_parser_aux.ingress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md_from_parser_aux") @name("ig_intr_md_from_parser_aux") 
+    @pa_fragment("ingress", "ig_intr_md_from_parser_aux.ingress_parser_err") @pa_atomic("ingress", "ig_intr_md_from_parser_aux.ingress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md_from_parser_aux") @name(".ig_intr_md_from_parser_aux") 
     ingress_intrinsic_metadata_from_parser_aux_t   ig_intr_md_from_parser_aux;
-    @not_deparsed("ingress") @not_deparsed("egress") @name("ig_pg_md") 
+    @not_deparsed("ingress") @not_deparsed("egress") @name(".ig_pg_md") 
     generator_metadata_t_0                         ig_pg_md;
-    @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_prsr_ctrl") @name("ig_prsr_ctrl") 
+    @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_prsr_ctrl") @name(".ig_prsr_ctrl") 
     ingress_parser_control_signals                 ig_prsr_ctrl;
-    @name("jEKMBL") 
+    @name(".jEKMBL") 
     PuEPIj                                         jEKMBL;
-    @name("uzTPDs") 
+    @name(".uzTPDs") 
     JpTLup                                         uzTPDs;
-    @name("vJDCOF") 
+    @name(".vJDCOF") 
     vtcowb                                         vJDCOF;
-    @name("wTmLsD") 
+    @name(".wTmLsD") 
     pOcNIq                                         wTmLsD;
-    @name("wWygMU") 
+    @name(".wWygMU") 
     LVrPBB_0                                       wWygMU;
 }
 #include <tofino/stateful_alu.p4>
@@ -565,8 +565,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            meta.DiLHQO.pdXGWn: exact @name("meta.DiLHQO.pdXGWn") ;
-            meta.rPaenA.AzzIVF: exact @name("meta.rPaenA.AzzIVF") ;
+            meta.DiLHQO.pdXGWn: exact @name("DiLHQO.pdXGWn") ;
+            meta.rPaenA.AzzIVF: exact @name("rPaenA.AzzIVF") ;
         }
         size = 65536;
         default_action = NoAction();
@@ -577,9 +577,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            meta.ISBegy.SByXeq: ternary @name("meta.ISBegy.SByXeq") ;
-            meta.ISBegy.fBlaNb: exact @name("meta.ISBegy.fBlaNb") ;
-            meta.ISBegy.iyhgyP: exact @name("meta.ISBegy.iyhgyP") ;
+            meta.ISBegy.SByXeq: ternary @name("ISBegy.SByXeq") ;
+            meta.ISBegy.fBlaNb: exact @name("ISBegy.fBlaNb") ;
+            meta.ISBegy.iyhgyP: exact @name("ISBegy.iyhgyP") ;
         }
         size = 512;
         default_action = NoAction();
@@ -592,9 +592,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            meta.UEnfPN.aReYBT: exact @name("meta.UEnfPN.aReYBT") ;
-            meta.UEnfPN.kecNpA: exact @name("meta.UEnfPN.kecNpA") ;
-            meta.UEnfPN.jRFjiT: exact @name("meta.UEnfPN.jRFjiT") ;
+            meta.UEnfPN.aReYBT: exact @name("UEnfPN.aReYBT") ;
+            meta.UEnfPN.kecNpA: exact @name("UEnfPN.kecNpA") ;
+            meta.UEnfPN.jRFjiT: exact @name("UEnfPN.jRFjiT") ;
         }
         size = 65536;
         default_action = NoAction();
@@ -605,7 +605,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.wTmLsD.Xotmsw: exact @name("hdr.wTmLsD.Xotmsw") ;
+            hdr.wTmLsD.Xotmsw: exact @name("wTmLsD.Xotmsw") ;
         }
         size = 4096;
         default_action = NoAction();
@@ -616,7 +616,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            meta.jwCLby.bwlvkO: exact @name("meta.jwCLby.bwlvkO") ;
+            meta.jwCLby.bwlvkO: exact @name("jwCLby.bwlvkO") ;
         }
         size = 4096;
         default_action = NoAction();
@@ -628,10 +628,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.BKUgda.kqQake : exact @name("hdr.BKUgda.kqQake") ;
-            hdr.BKUgda.lafbST : exact @name("hdr.BKUgda.lafbST") ;
-            hdr.YsFfOi.qsmkxH : exact @name("hdr.YsFfOi.qsmkxH") ;
-            meta.ISBegy.Bogpst: exact @name("meta.ISBegy.Bogpst") ;
+            hdr.BKUgda.kqQake : exact @name("BKUgda.kqQake") ;
+            hdr.BKUgda.lafbST : exact @name("BKUgda.lafbST") ;
+            hdr.YsFfOi.qsmkxH : exact @name("YsFfOi.qsmkxH") ;
+            meta.ISBegy.Bogpst: exact @name("ISBegy.Bogpst") ;
         }
         size = 1024;
         default_action = NoAction();
@@ -650,8 +650,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.BKUgda.kqQake: exact @name("hdr.BKUgda.kqQake") ;
-            hdr.BKUgda.lafbST: exact @name("hdr.BKUgda.lafbST") ;
+            hdr.BKUgda.kqQake: exact @name("BKUgda.kqQake") ;
+            hdr.BKUgda.lafbST: exact @name("BKUgda.lafbST") ;
         }
         size = 64;
         default_action = NoAction();
@@ -695,8 +695,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            meta.DiLHQO.pdXGWn: exact @name("meta.DiLHQO.pdXGWn") ;
-            meta.BmGNnj.RzMwNx: exact @name("meta.BmGNnj.RzMwNx") ;
+            meta.DiLHQO.pdXGWn: exact @name("DiLHQO.pdXGWn") ;
+            meta.BmGNnj.RzMwNx: exact @name("BmGNnj.RzMwNx") ;
         }
         size = 65536;
         default_action = NoAction();
@@ -715,7 +715,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            meta.jwCLby.ZmhYkw: exact @name("meta.jwCLby.ZmhYkw") ;
+            meta.jwCLby.ZmhYkw: exact @name("jwCLby.ZmhYkw") ;
         }
         size = 512;
         default_action = NoAction();
@@ -727,10 +727,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            meta.ISBegy.PypKpF: exact @name("meta.ISBegy.PypKpF") ;
-            meta.ISBegy.gRXamj: exact @name("meta.ISBegy.gRXamj") ;
-            meta.ISBegy.CykjqF: exact @name("meta.ISBegy.CykjqF") ;
-            meta.ISBegy.OzuGhp: exact @name("meta.ISBegy.OzuGhp") ;
+            meta.ISBegy.PypKpF: exact @name("ISBegy.PypKpF") ;
+            meta.ISBegy.gRXamj: exact @name("ISBegy.gRXamj") ;
+            meta.ISBegy.CykjqF: exact @name("ISBegy.CykjqF") ;
+            meta.ISBegy.OzuGhp: exact @name("ISBegy.OzuGhp") ;
         }
         size = 65536;
         default_action = NoAction();
@@ -742,7 +742,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.YmdqVQ.GpgeBz: exact @name("hdr.YmdqVQ.GpgeBz") ;
+            hdr.YmdqVQ.GpgeBz: exact @name("YmdqVQ.GpgeBz") ;
         }
         size = 4096;
         default_action = NoAction();
@@ -754,8 +754,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            meta.UEnfPN.aReYBT: exact @name("meta.UEnfPN.aReYBT") ;
-            meta.UEnfPN.kecNpA: exact @name("meta.UEnfPN.kecNpA") ;
+            meta.UEnfPN.aReYBT: exact @name("UEnfPN.aReYBT") ;
+            meta.UEnfPN.kecNpA: exact @name("UEnfPN.kecNpA") ;
         }
         size = 1;
         default_action = NoAction();
@@ -766,8 +766,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            meta.DiLHQO.pdXGWn: exact @name("meta.DiLHQO.pdXGWn") ;
-            meta.rPaenA.AzzIVF: lpm @name("meta.rPaenA.AzzIVF") ;
+            meta.DiLHQO.pdXGWn: exact @name("DiLHQO.pdXGWn") ;
+            meta.rPaenA.AzzIVF: lpm @name("rPaenA.AzzIVF") ;
         }
         size = 16384;
         default_action = NoAction();
@@ -786,7 +786,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.ig_intr_md.ingress_port: exact @name("hdr.ig_intr_md.ingress_port") ;
+            hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 288;
         default_action = NoAction();
@@ -798,7 +798,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.YsFfOi.gnQHPE: exact @name("hdr.YsFfOi.gnQHPE") ;
+            hdr.YsFfOi.gnQHPE: exact @name("YsFfOi.gnQHPE") ;
         }
         size = 4096;
         default_action = NoAction();
@@ -810,8 +810,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            meta.jwCLby.IZubMG: exact @name("meta.jwCLby.IZubMG") ;
-            hdr.wTmLsD.Xotmsw : exact @name("hdr.wTmLsD.Xotmsw") ;
+            meta.jwCLby.IZubMG: exact @name("jwCLby.IZubMG") ;
+            hdr.wTmLsD.Xotmsw : exact @name("wTmLsD.Xotmsw") ;
         }
         size = 1024;
         default_action = NoAction();
@@ -822,8 +822,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            meta.rPaenA.KDRpzh: exact @name("meta.rPaenA.KDRpzh") ;
-            meta.rPaenA.AzzIVF: lpm @name("meta.rPaenA.AzzIVF") ;
+            meta.rPaenA.KDRpzh: exact @name("rPaenA.KDRpzh") ;
+            meta.rPaenA.AzzIVF: lpm @name("rPaenA.AzzIVF") ;
         }
         size = 147456;
         default_action = NoAction();
@@ -836,9 +836,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            meta.jwCLby.IZubMG  : ternary @name("meta.jwCLby.IZubMG") ;
-            hdr.wTmLsD.isValid(): exact @name("hdr.wTmLsD.isValid()") ;
-            hdr.wTmLsD.Xotmsw   : ternary @name("hdr.wTmLsD.Xotmsw") ;
+            meta.jwCLby.IZubMG  : ternary @name("jwCLby.IZubMG") ;
+            hdr.wTmLsD.isValid(): exact @name("wTmLsD.$valid$") ;
+            hdr.wTmLsD.Xotmsw   : ternary @name("wTmLsD.Xotmsw") ;
         }
         size = 4096;
         default_action = NoAction();

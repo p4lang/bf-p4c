@@ -22,7 +22,7 @@ struct metadata {
 }
 
 struct headers {
-    @name("packet") 
+    @name(".packet") 
     packet_t packet;
 }
 
@@ -39,56 +39,26 @@ struct tuple_0 {
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<16> tmp_11;
-    tuple_0 tmp_12;
-    bit<16> tmp_13;
-    tuple_0 tmp_14;
-    bit<16> tmp_15;
-    tuple_0 tmp_16;
-    bit<16> tmp_17;
-    tuple_0 tmp_18;
-    bit<16> tmp_19;
-    tuple_0 tmp_20;
-    bit<16> tmp_21;
-    tuple_0 tmp_22;
     @name(".set_port") action set_port_0() {
         standard_metadata.egress_spec = 9w1;
     }
     @name(".action1") action action1_0() {
-        tmp_12.field = hdr.packet.hash_field1;
-        tmp_12.field_0 = hdr.packet.hash_field2;
-        hash<bit<16>, bit<16>, tuple_0, bit<32>>(tmp_11, HashAlgorithm.random, 16w0, tmp_12, 32w65536);
-        hdr.packet.hash_result1 = tmp_11;
+        hash<bit<16>, bit<16>, tuple_0, bit<32>>(hdr.packet.hash_result1, HashAlgorithm.random, 16w0, { hdr.packet.hash_field1, hdr.packet.hash_field2 }, 32w65536);
     }
     @name(".action2") action action2_0() {
-        tmp_14.field = hdr.packet.hash_field1;
-        tmp_14.field_0 = hdr.packet.hash_field3;
-        hash<bit<16>, bit<16>, tuple_0, bit<32>>(tmp_13, HashAlgorithm.random, 16w0, tmp_14, 32w65536);
-        hdr.packet.hash_result2 = tmp_13;
+        hash<bit<16>, bit<16>, tuple_0, bit<32>>(hdr.packet.hash_result2, HashAlgorithm.random, 16w0, { hdr.packet.hash_field1, hdr.packet.hash_field3 }, 32w65536);
     }
     @name(".action3") action action3_0() {
-        tmp_16.field = hdr.packet.hash_field1;
-        tmp_16.field_0 = hdr.packet.hash_field4;
-        hash<bit<16>, bit<16>, tuple_0, bit<32>>(tmp_15, HashAlgorithm.crc16, 16w0, tmp_16, 32w65536);
-        hdr.packet.hash_result3 = tmp_15;
+        hash<bit<16>, bit<16>, tuple_0, bit<32>>(hdr.packet.hash_result3, HashAlgorithm.crc16, 16w0, { hdr.packet.hash_field1, hdr.packet.hash_field4 }, 32w65536);
     }
     @name(".action4") action action4_0() {
-        tmp_18.field = hdr.packet.hash_field1;
-        tmp_18.field_0 = hdr.packet.hash_field5;
-        hash<bit<16>, bit<16>, tuple_0, bit<32>>(tmp_17, HashAlgorithm.random, 16w0, tmp_18, 32w65536);
-        hdr.packet.hash_result4 = tmp_17;
+        hash<bit<16>, bit<16>, tuple_0, bit<32>>(hdr.packet.hash_result4, HashAlgorithm.random, 16w0, { hdr.packet.hash_field1, hdr.packet.hash_field5 }, 32w65536);
     }
     @name(".action5") action action5_0() {
-        tmp_20.field = hdr.packet.hash_field1;
-        tmp_20.field_0 = hdr.packet.hash_field6;
-        hash<bit<16>, bit<16>, tuple_0, bit<32>>(tmp_19, HashAlgorithm.random, 16w0, tmp_20, 32w65536);
-        hdr.packet.hash_result5 = tmp_19;
+        hash<bit<16>, bit<16>, tuple_0, bit<32>>(hdr.packet.hash_result5, HashAlgorithm.random, 16w0, { hdr.packet.hash_field1, hdr.packet.hash_field6 }, 32w65536);
     }
     @name(".action6") action action6_0() {
-        tmp_22.field = hdr.packet.hash_field1;
-        tmp_22.field_0 = hdr.packet.hash_field7;
-        hash<bit<16>, bit<16>, tuple_0, bit<32>>(tmp_21, HashAlgorithm.crc16, 16w0, tmp_22, 32w65536);
-        hdr.packet.hash_result6 = tmp_21;
+        hash<bit<16>, bit<16>, tuple_0, bit<32>>(hdr.packet.hash_result6, HashAlgorithm.crc16, 16w0, { hdr.packet.hash_field1, hdr.packet.hash_field7 }, 32w65536);
     }
     @name(".port") table port {
         actions = {

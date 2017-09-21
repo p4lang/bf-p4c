@@ -26,9 +26,9 @@ struct M2 {
 }
 
 struct metadata {
-    @name("m1") 
+    @name(".m1") 
     M1 m1;
-    @name("m2") 
+    @name(".m2") 
     M2 m2;
 }
 
@@ -100,7 +100,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_7();
         }
         key = {
-            meta.m1.f4: exact @name("meta.m1.f4") ;
+            meta.m1.f4: exact @name("m1.f4") ;
         }
         size = 1;
         default_action = NoAction_7();
@@ -121,8 +121,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_9();
         }
         key = {
-            meta.m1.f4: exact @name("meta.m1.f4") ;
-            meta.m1.f1: exact @name("meta.m1.f1") ;
+            meta.m1.f4: exact @name("m1.f4") ;
+            meta.m1.f1: exact @name("m1.f1") ;
         }
         size = 64;
         default_action = NoAction_9();
@@ -143,7 +143,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_11();
         }
         key = {
-            meta.m2.f16: exact @name("meta.m2.f16") ;
+            meta.m2.f16: exact @name("m2.f16") ;
         }
         size = 1;
         default_action = NoAction_11();

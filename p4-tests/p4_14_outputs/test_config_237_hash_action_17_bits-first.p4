@@ -22,7 +22,7 @@ struct metadata {
 }
 
 struct headers {
-    @name("pkt") 
+    @name(".pkt") 
     pkt_t pkt;
 }
 
@@ -49,7 +49,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.pkt.field_m_18: exact @name("hdr.pkt.field_m_18") ;
+            hdr.pkt.field_m_18: exact @name("pkt.field_m_18") ;
         }
         size = 262144;
         default_action = NoAction();
@@ -60,7 +60,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.pkt.field_j_8: exact @name("hdr.pkt.field_j_8") ;
+            hdr.pkt.field_j_8: exact @name("pkt.field_j_8") ;
         }
         size = 256;
         default_action = NoAction();

@@ -20,7 +20,7 @@ struct metadata {
 }
 
 struct headers {
-    @name("pkt") 
+    @name(".pkt") 
     pkt_t pkt;
 }
 
@@ -138,7 +138,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_0();
         }
         key = {
-            hdr.pkt.field_i_8: exact @name("hdr.pkt.field_i_8") ;
+            hdr.pkt.field_i_8: exact @name("pkt.field_i_8") ;
         }
         size = 256;
         default_action = NoAction_0();
@@ -150,7 +150,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_17();
         }
         key = {
-            hdr.pkt.field_i_8: exact @name("hdr.pkt.field_i_8") ;
+            hdr.pkt.field_i_8: exact @name("pkt.field_i_8") ;
         }
         size = 256;
         default_action = NoAction_17();
@@ -162,7 +162,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_18();
         }
         key = {
-            hdr.pkt.field_i_8: exact @name("hdr.pkt.field_i_8") ;
+            hdr.pkt.field_i_8: exact @name("pkt.field_i_8") ;
         }
         size = 256;
         default_action = NoAction_18();
@@ -174,7 +174,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_19();
         }
         key = {
-            hdr.pkt.field_i_8: exact @name("hdr.pkt.field_i_8") ;
+            hdr.pkt.field_i_8: exact @name("pkt.field_i_8") ;
         }
         size = 256;
         default_action = NoAction_19();
@@ -186,7 +186,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_20();
         }
         key = {
-            hdr.pkt.field_i_8: exact @name("hdr.pkt.field_i_8") ;
+            hdr.pkt.field_i_8: exact @name("pkt.field_i_8") ;
         }
         size = 256;
         default_action = NoAction_20();
@@ -198,7 +198,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_21();
         }
         key = {
-            hdr.pkt.field_i_8: exact @name("hdr.pkt.field_i_8") ;
+            hdr.pkt.field_i_8: exact @name("pkt.field_i_8") ;
         }
         size = 256;
         default_action = NoAction_21();
@@ -210,7 +210,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_22();
         }
         key = {
-            hdr.pkt.field_i_8: exact @name("hdr.pkt.field_i_8") ;
+            hdr.pkt.field_i_8: exact @name("pkt.field_i_8") ;
         }
         size = 256;
         default_action = NoAction_22();
@@ -222,7 +222,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_23();
         }
         key = {
-            hdr.pkt.field_i_8: exact @name("hdr.pkt.field_i_8") ;
+            hdr.pkt.field_i_8: exact @name("pkt.field_i_8") ;
         }
         size = 256;
         default_action = NoAction_23();
@@ -234,7 +234,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_24();
         }
         key = {
-            hdr.pkt.field_i_8: exact @name("hdr.pkt.field_i_8") ;
+            hdr.pkt.field_i_8: exact @name("pkt.field_i_8") ;
         }
         size = 256;
         default_action = NoAction_24();
@@ -246,7 +246,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_25();
         }
         key = {
-            hdr.pkt.field_a_32: exact @name("hdr.pkt.field_a_32") ;
+            hdr.pkt.field_a_32: exact @name("pkt.field_a_32") ;
         }
         size = 512;
         default_action = NoAction_25();
@@ -258,7 +258,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_26();
         }
         key = {
-            hdr.pkt.field_a_32: exact @name("hdr.pkt.field_a_32") ;
+            hdr.pkt.field_a_32: exact @name("pkt.field_a_32") ;
         }
         size = 1024;
         default_action = NoAction_26();
@@ -270,7 +270,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_27();
         }
         key = {
-            hdr.pkt.field_j_8: exact @name("hdr.pkt.field_j_8") ;
+            hdr.pkt.field_j_8: exact @name("pkt.field_j_8") ;
         }
         size = 256;
         default_action = NoAction_27();
@@ -282,7 +282,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_28();
         }
         key = {
-            hdr.pkt.field_k_8: exact @name("hdr.pkt.field_k_8") ;
+            hdr.pkt.field_k_8: exact @name("pkt.field_k_8") ;
         }
         size = 256;
         default_action = NoAction_28();
@@ -294,7 +294,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_29();
         }
         key = {
-            hdr.pkt.field_b_32: exact @name("hdr.pkt.field_b_32") ;
+            hdr.pkt.field_b_32: exact @name("pkt.field_b_32") ;
         }
         size = 1024;
         default_action = NoAction_29();
@@ -306,7 +306,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_30();
         }
         key = {
-            hdr.pkt.field_j_8: exact @name("hdr.pkt.field_j_8") ;
+            hdr.pkt.field_j_8: exact @name("pkt.field_j_8") ;
         }
         size = 256;
         default_action = NoAction_30();
@@ -318,7 +318,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_31();
         }
         key = {
-            hdr.pkt.field_k_8: exact @name("hdr.pkt.field_k_8") ;
+            hdr.pkt.field_k_8: exact @name("pkt.field_k_8") ;
         }
         size = 256;
         default_action = NoAction_31();

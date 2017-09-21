@@ -31,9 +31,9 @@ struct metadata {
 }
 
 struct headers {
-    @name("first_hdr") 
+    @name(".first_hdr") 
     first_hdr_t  first_hdr;
-    @name("second_hdr") 
+    @name(".second_hdr") 
     second_hdr_t second_hdr;
 }
 

@@ -15,7 +15,7 @@ struct metadata {
 }
 
 struct headers {
-    @name("packet") 
+    @name(".packet") 
     packet_t packet;
 }
 
@@ -27,17 +27,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<16> tmp;
-    tuple<bit<16>, bit<16>> tmp_0;
-    bit<16> tmp_1;
-    tuple<bit<16>, bit<16>> tmp_2;
     @name(".action0") action action0_0() {
-        tmp_0 = { hdr.packet.hash_field1, hdr.packet.hash_field2 };
-        hash<bit<16>, bit<16>, tuple<bit<16>, bit<16>>, bit<32>>(tmp, HashAlgorithm.crc16, 16w0, tmp_0, 32w65536);
-        hdr.packet.hash_result1 = tmp;
-        tmp_2 = { hdr.packet.hash_field3, hdr.packet.hash_field4 };
-        hash<bit<16>, bit<16>, tuple<bit<16>, bit<16>>, bit<32>>(tmp_1, HashAlgorithm.crc16, 16w0, tmp_2, 32w65536);
-        hdr.packet.hash_result2 = tmp_1;
+        hash<bit<16>, bit<16>, tuple<bit<16>, bit<16>>, bit<32>>(hdr.packet.hash_result1, HashAlgorithm.crc16, 16w0, { hdr.packet.hash_field1, hdr.packet.hash_field2 }, 32w65536);
+        hash<bit<16>, bit<16>, tuple<bit<16>, bit<16>>, bit<32>>(hdr.packet.hash_result2, HashAlgorithm.crc16, 16w0, { hdr.packet.hash_field3, hdr.packet.hash_field4 }, 32w65536);
     }
     @name(".set_port") action set_port_0() {
         standard_metadata.egress_spec = 9w1;
@@ -48,7 +40,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.packet.packet_read: exact @name("hdr.packet.packet_read") ;
+            hdr.packet.packet_read: exact @name("packet.packet_read") ;
         }
         default_action = NoAction();
     }

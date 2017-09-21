@@ -19,12 +19,12 @@ header hdr_t {
 }
 
 struct metadata {
-    @name("offset_meta") 
+    @name(".offset_meta") 
     offset_meta_t offset_meta;
 }
 
 struct headers {
-    @name("hdr") 
+    @name(".hdr") 
     hdr_t hdr;
 }
 
@@ -68,7 +68,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_0();
         }
         key = {
-            hdr.hdr.f2: exact @name("hdr.hdr.f2") ;
+            hdr.hdr.f2: exact @name("hdr.f2") ;
         }
         default_action = NoAction_0();
     }
@@ -78,7 +78,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_4();
         }
         key = {
-            hdr.hdr.f3: exact @name("hdr.hdr.f3") ;
+            hdr.hdr.f3: exact @name("hdr.f3") ;
         }
         default_action = NoAction_4();
     }
@@ -88,7 +88,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_5();
         }
         key = {
-            hdr.hdr.f1: exact @name("hdr.hdr.f1") ;
+            hdr.hdr.f1: exact @name("hdr.f1") ;
         }
         default_action = NoAction_5();
     }

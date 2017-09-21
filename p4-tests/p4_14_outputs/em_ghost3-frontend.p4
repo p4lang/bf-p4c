@@ -20,7 +20,7 @@ struct metadata {
 }
 
 struct headers {
-    @name("data") 
+    @name(".data") 
     data_t data;
 }
 
@@ -45,11 +45,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.data.n1: exact @name("hdr.data.n1") ;
-            hdr.data.n2: exact @name("hdr.data.n2") ;
-            hdr.data.n3: exact @name("hdr.data.n3") ;
-            hdr.data.b1: exact @name("hdr.data.b1") ;
-            hdr.data.b2: exact @name("hdr.data.b2") ;
+            hdr.data.n1: exact @name("data.n1") ;
+            hdr.data.n2: exact @name("data.n2") ;
+            hdr.data.n3: exact @name("data.n3") ;
+            hdr.data.b1: exact @name("data.b1") ;
+            hdr.data.b2: exact @name("data.b2") ;
         }
         default_action = NoAction();
     }

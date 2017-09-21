@@ -13,7 +13,7 @@ struct metadata {
 }
 
 struct headers {
-    @name("pkt") 
+    @name(".pkt") 
     pkt_t pkt;
 }
 
@@ -49,7 +49,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_0();
         }
         key = {
-            hdr.pkt.srcPort: ternary @name("hdr.pkt.srcPort") ;
+            hdr.pkt.srcPort: ternary @name("pkt.srcPort") ;
         }
         default_action = NoAction_0();
     }
@@ -60,7 +60,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_3();
         }
         key = {
-            hdr.pkt.dstPort: exact @name("hdr.pkt.dstPort") ;
+            hdr.pkt.dstPort: exact @name("pkt.dstPort") ;
         }
         default_action = NoAction_3();
     }

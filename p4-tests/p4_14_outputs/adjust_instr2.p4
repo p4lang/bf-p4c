@@ -21,12 +21,12 @@ header hdr_t {
 }
 
 struct metadata {
-    @name("nibble_meta") 
+    @name(".nibble_meta") 
     nibble_meta_t nibble_meta;
 }
 
 struct headers {
-    @name("hdr") 
+    @name(".hdr") 
     hdr_t hdr;
 }
 

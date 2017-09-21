@@ -160,35 +160,35 @@ struct metadata {
 }
 
 struct headers {
-    @dont_trim @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md") @pa_atomic("egress", "eg_intr_md.egress_port") @pa_fragment("egress", "eg_intr_md._pad1") @pa_fragment("egress", "eg_intr_md._pad7") @pa_fragment("egress", "eg_intr_md._pad8") @pa_mandatory_intrinsic_field("egress", "eg_intr_md.egress_port") @pa_mandatory_intrinsic_field("egress", "eg_intr_md.egress_cos") @name("eg_intr_md") 
+    @dont_trim @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md") @pa_atomic("egress", "eg_intr_md.egress_port") @pa_fragment("egress", "eg_intr_md._pad1") @pa_fragment("egress", "eg_intr_md._pad7") @pa_fragment("egress", "eg_intr_md._pad8") @pa_mandatory_intrinsic_field("egress", "eg_intr_md.egress_port") @pa_mandatory_intrinsic_field("egress", "eg_intr_md.egress_cos") @name(".eg_intr_md") 
     egress_intrinsic_metadata_t                    eg_intr_md;
-    @dont_trim @pa_intrinsic_header("egress", "eg_intr_md_for_mb") @pa_atomic("egress", "eg_intr_md_for_mb.egress_mirror_id") @pa_fragment("egress", "eg_intr_md_for_mb.coalesce_flush") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.egress_mirror_id") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.coalesce_flush") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.coalesce_length") @not_deparsed("ingress") @not_deparsed("egress") @name("eg_intr_md_for_mb") 
+    @dont_trim @pa_intrinsic_header("egress", "eg_intr_md_for_mb") @pa_atomic("egress", "eg_intr_md_for_mb.egress_mirror_id") @pa_fragment("egress", "eg_intr_md_for_mb.coalesce_flush") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.egress_mirror_id") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.coalesce_flush") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.coalesce_length") @not_deparsed("ingress") @not_deparsed("egress") @name(".eg_intr_md_for_mb") 
     egress_intrinsic_metadata_for_mirror_buffer_t  eg_intr_md_for_mb;
-    @dont_trim @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_oport.drop_ctl") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md_for_oport") @name("eg_intr_md_for_oport") 
+    @dont_trim @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_oport.drop_ctl") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md_for_oport") @name(".eg_intr_md_for_oport") 
     egress_intrinsic_metadata_for_output_port_t    eg_intr_md_for_oport;
-    @pa_fragment("egress", "eg_intr_md_from_parser_aux.coalesce_sample_count") @pa_fragment("egress", "eg_intr_md_from_parser_aux.clone_src") @pa_fragment("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @pa_atomic("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md_from_parser_aux") @name("eg_intr_md_from_parser_aux") 
+    @pa_fragment("egress", "eg_intr_md_from_parser_aux.coalesce_sample_count") @pa_fragment("egress", "eg_intr_md_from_parser_aux.clone_src") @pa_fragment("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @pa_atomic("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md_from_parser_aux") @name(".eg_intr_md_from_parser_aux") 
     egress_intrinsic_metadata_from_parser_aux_t    eg_intr_md_from_parser_aux;
-    @name("ethernet") 
+    @name(".ethernet") 
     ethernet_t                                     ethernet;
-    @dont_trim @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md.ingress_port") @name("ig_intr_md") 
+    @dont_trim @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md.ingress_port") @name(".ig_intr_md") 
     ingress_intrinsic_metadata_t                   ig_intr_md;
-    @dont_trim @pa_intrinsic_header("ingress", "ig_intr_md_for_mb") @pa_atomic("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @not_deparsed("ingress") @not_deparsed("egress") @name("ig_intr_md_for_mb") 
+    @dont_trim @pa_intrinsic_header("ingress", "ig_intr_md_for_mb") @pa_atomic("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @not_deparsed("ingress") @not_deparsed("egress") @name(".ig_intr_md_for_mb") 
     ingress_intrinsic_metadata_for_mirror_buffer_t ig_intr_md_for_mb;
-    @pa_atomic("ingress", "ig_intr_md_for_tm.ucast_egress_port") @pa_fragment("ingress", "ig_intr_md_for_tm.drop_ctl") @pa_fragment("ingress", "ig_intr_md_for_tm.qid") @pa_fragment("ingress", "ig_intr_md_for_tm._pad2") @pa_atomic("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_fragment("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_atomic("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_fragment("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_atomic("ingress", "ig_intr_md_for_tm.level1_mcast_hash") @pa_fragment("ingress", "ig_intr_md_for_tm._pad3") @pa_atomic("ingress", "ig_intr_md_for_tm.level2_mcast_hash") @pa_fragment("ingress", "ig_intr_md_for_tm._pad4") @pa_atomic("ingress", "ig_intr_md_for_tm.level1_exclusion_id") @pa_fragment("ingress", "ig_intr_md_for_tm.level1_exclusion_id") @pa_atomic("ingress", "ig_intr_md_for_tm.level2_exclusion_id") @pa_fragment("ingress", "ig_intr_md_for_tm._pad5") @pa_atomic("ingress", "ig_intr_md_for_tm.rid") @pa_fragment("ingress", "ig_intr_md_for_tm.rid") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md_for_tm") @dont_trim @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.drop_ctl") @name("ig_intr_md_for_tm") 
+    @pa_atomic("ingress", "ig_intr_md_for_tm.ucast_egress_port") @pa_fragment("ingress", "ig_intr_md_for_tm.drop_ctl") @pa_fragment("ingress", "ig_intr_md_for_tm.qid") @pa_fragment("ingress", "ig_intr_md_for_tm._pad2") @pa_atomic("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_fragment("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_atomic("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_fragment("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_atomic("ingress", "ig_intr_md_for_tm.level1_mcast_hash") @pa_fragment("ingress", "ig_intr_md_for_tm._pad3") @pa_atomic("ingress", "ig_intr_md_for_tm.level2_mcast_hash") @pa_fragment("ingress", "ig_intr_md_for_tm._pad4") @pa_atomic("ingress", "ig_intr_md_for_tm.level1_exclusion_id") @pa_fragment("ingress", "ig_intr_md_for_tm.level1_exclusion_id") @pa_atomic("ingress", "ig_intr_md_for_tm.level2_exclusion_id") @pa_fragment("ingress", "ig_intr_md_for_tm._pad5") @pa_atomic("ingress", "ig_intr_md_for_tm.rid") @pa_fragment("ingress", "ig_intr_md_for_tm.rid") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md_for_tm") @dont_trim @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.drop_ctl") @name(".ig_intr_md_for_tm") 
     ingress_intrinsic_metadata_for_tm_t            ig_intr_md_for_tm;
-    @pa_fragment("ingress", "ig_intr_md_from_parser_aux.ingress_parser_err") @pa_atomic("ingress", "ig_intr_md_from_parser_aux.ingress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md_from_parser_aux") @name("ig_intr_md_from_parser_aux") 
+    @pa_fragment("ingress", "ig_intr_md_from_parser_aux.ingress_parser_err") @pa_atomic("ingress", "ig_intr_md_from_parser_aux.ingress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md_from_parser_aux") @name(".ig_intr_md_from_parser_aux") 
     ingress_intrinsic_metadata_from_parser_aux_t   ig_intr_md_from_parser_aux;
-    @not_deparsed("ingress") @not_deparsed("egress") @name("ig_pg_md") 
+    @not_deparsed("ingress") @not_deparsed("egress") @name(".ig_pg_md") 
     generator_metadata_t_0                         ig_pg_md;
-    @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_prsr_ctrl") @name("ig_prsr_ctrl") 
+    @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_prsr_ctrl") @name(".ig_prsr_ctrl") 
     ingress_parser_control_signals                 ig_prsr_ctrl;
-    @name("ipv4") 
+    @name(".ipv4") 
     ipv4_t                                         ipv4;
-    @name("tcp") 
+    @name(".tcp") 
     tcp_t                                          tcp;
-    @name("udp") 
+    @name(".udp") 
     udp_t                                          udp;
-    @name("vlan_tag") 
+    @name(".vlan_tag") 
     vlan_tag_t                                     vlan_tag;
 }
 
@@ -252,8 +252,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.vlan_tag.vlan_id: exact @name("hdr.vlan_tag.vlan_id") ;
-            hdr.ipv4.srcAddr    : ternary @name("hdr.ipv4.srcAddr") ;
+            hdr.vlan_tag.vlan_id: exact @name("vlan_tag.vlan_id") ;
+            hdr.ipv4.srcAddr    : ternary @name("ipv4.srcAddr") ;
         }
         size = 100000;
         @name(".atcam_action_profile") implementation = action_profile(32w65536);
@@ -266,9 +266,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.tcp.isValid()   : ternary @name("hdr.tcp.isValid()") ;
-            hdr.vlan_tag.vlan_id: exact @name("hdr.vlan_tag.vlan_id") ;
-            hdr.ipv4.dstAddr    : ternary @name("hdr.ipv4.dstAddr") ;
+            hdr.tcp.isValid()   : ternary @name("tcp.$valid$") ;
+            hdr.vlan_tag.vlan_id: exact @name("vlan_tag.vlan_id") ;
+            hdr.ipv4.dstAddr    : ternary @name("ipv4.dstAddr") ;
         }
         size = 500000;
         default_action = NoAction();
@@ -288,39 +288,39 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.ethernet.dstAddr   : ternary @name("hdr.ethernet.dstAddr") ;
-            hdr.ethernet.srcAddr   : ternary @name("hdr.ethernet.srcAddr") ;
-            hdr.ethernet.etherType : ternary @name("hdr.ethernet.etherType") ;
-            hdr.vlan_tag.pri       : ternary @name("hdr.vlan_tag.pri") ;
-            hdr.vlan_tag.cfi       : ternary @name("hdr.vlan_tag.cfi") ;
-            hdr.vlan_tag.vlan_id   : ternary @name("hdr.vlan_tag.vlan_id") ;
-            hdr.vlan_tag.etherType : ternary @name("hdr.vlan_tag.etherType") ;
-            hdr.ipv4.version       : ternary @name("hdr.ipv4.version") ;
-            hdr.ipv4.ihl           : ternary @name("hdr.ipv4.ihl") ;
-            hdr.ipv4.diffserv      : ternary @name("hdr.ipv4.diffserv") ;
-            hdr.ipv4.totalLen      : ternary @name("hdr.ipv4.totalLen") ;
-            hdr.ipv4.identification: ternary @name("hdr.ipv4.identification") ;
-            hdr.ipv4.flags         : ternary @name("hdr.ipv4.flags") ;
-            hdr.ipv4.fragOffset    : ternary @name("hdr.ipv4.fragOffset") ;
-            hdr.ipv4.ttl           : ternary @name("hdr.ipv4.ttl") ;
-            hdr.ipv4.protocol      : ternary @name("hdr.ipv4.protocol") ;
-            hdr.ipv4.hdrChecksum   : ternary @name("hdr.ipv4.hdrChecksum") ;
-            hdr.ipv4.dstAddr       : lpm @name("hdr.ipv4.dstAddr") ;
-            hdr.ipv4.srcAddr       : ternary @name("hdr.ipv4.srcAddr") ;
-            hdr.tcp.srcPort        : ternary @name("hdr.tcp.srcPort") ;
-            hdr.tcp.dstPort        : ternary @name("hdr.tcp.dstPort") ;
-            hdr.tcp.seqNo          : ternary @name("hdr.tcp.seqNo") ;
-            hdr.tcp.ackNo          : ternary @name("hdr.tcp.ackNo") ;
-            hdr.tcp.dataOffset     : ternary @name("hdr.tcp.dataOffset") ;
-            hdr.tcp.res            : ternary @name("hdr.tcp.res") ;
-            hdr.tcp.ecn            : ternary @name("hdr.tcp.ecn") ;
-            hdr.tcp.ctrl           : ternary @name("hdr.tcp.ctrl") ;
-            hdr.tcp.window         : ternary @name("hdr.tcp.window") ;
-            hdr.tcp.checksum       : ternary @name("hdr.tcp.checksum") ;
-            hdr.tcp.urgentPtr      : ternary @name("hdr.tcp.urgentPtr") ;
-            hdr.udp.srcPort        : ternary @name("hdr.udp.srcPort") ;
-            hdr.udp.dstPort        : ternary @name("hdr.udp.dstPort") ;
-            hdr.udp.hdr_length     : ternary @name("hdr.udp.hdr_length") ;
+            hdr.ethernet.dstAddr   : ternary @name("ethernet.dstAddr") ;
+            hdr.ethernet.srcAddr   : ternary @name("ethernet.srcAddr") ;
+            hdr.ethernet.etherType : ternary @name("ethernet.etherType") ;
+            hdr.vlan_tag.pri       : ternary @name("vlan_tag.pri") ;
+            hdr.vlan_tag.cfi       : ternary @name("vlan_tag.cfi") ;
+            hdr.vlan_tag.vlan_id   : ternary @name("vlan_tag.vlan_id") ;
+            hdr.vlan_tag.etherType : ternary @name("vlan_tag.etherType") ;
+            hdr.ipv4.version       : ternary @name("ipv4.version") ;
+            hdr.ipv4.ihl           : ternary @name("ipv4.ihl") ;
+            hdr.ipv4.diffserv      : ternary @name("ipv4.diffserv") ;
+            hdr.ipv4.totalLen      : ternary @name("ipv4.totalLen") ;
+            hdr.ipv4.identification: ternary @name("ipv4.identification") ;
+            hdr.ipv4.flags         : ternary @name("ipv4.flags") ;
+            hdr.ipv4.fragOffset    : ternary @name("ipv4.fragOffset") ;
+            hdr.ipv4.ttl           : ternary @name("ipv4.ttl") ;
+            hdr.ipv4.protocol      : ternary @name("ipv4.protocol") ;
+            hdr.ipv4.hdrChecksum   : ternary @name("ipv4.hdrChecksum") ;
+            hdr.ipv4.dstAddr       : lpm @name("ipv4.dstAddr") ;
+            hdr.ipv4.srcAddr       : ternary @name("ipv4.srcAddr") ;
+            hdr.tcp.srcPort        : ternary @name("tcp.srcPort") ;
+            hdr.tcp.dstPort        : ternary @name("tcp.dstPort") ;
+            hdr.tcp.seqNo          : ternary @name("tcp.seqNo") ;
+            hdr.tcp.ackNo          : ternary @name("tcp.ackNo") ;
+            hdr.tcp.dataOffset     : ternary @name("tcp.dataOffset") ;
+            hdr.tcp.res            : ternary @name("tcp.res") ;
+            hdr.tcp.ecn            : ternary @name("tcp.ecn") ;
+            hdr.tcp.ctrl           : ternary @name("tcp.ctrl") ;
+            hdr.tcp.window         : ternary @name("tcp.window") ;
+            hdr.tcp.checksum       : ternary @name("tcp.checksum") ;
+            hdr.tcp.urgentPtr      : ternary @name("tcp.urgentPtr") ;
+            hdr.udp.srcPort        : ternary @name("udp.srcPort") ;
+            hdr.udp.dstPort        : ternary @name("udp.dstPort") ;
+            hdr.udp.hdr_length     : ternary @name("udp.hdr_length") ;
         }
         size = 2048;
         @name(".dummy_cntr") counters = direct_counter(CounterType.packets);

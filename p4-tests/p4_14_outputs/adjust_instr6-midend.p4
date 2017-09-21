@@ -16,7 +16,7 @@ struct metadata {
 }
 
 struct headers {
-    @name("data") 
+    @name(".data") 
     data_t data;
 }
 
@@ -59,7 +59,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_0();
         }
         key = {
-            hdr.data.read: exact @name("hdr.data.read") ;
+            hdr.data.read: exact @name("data.read") ;
         }
         default_action = NoAction_0();
     }
@@ -69,7 +69,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_4();
         }
         key = {
-            hdr.data.read: exact @name("hdr.data.read") ;
+            hdr.data.read: exact @name("data.read") ;
         }
         default_action = NoAction_4();
     }
@@ -80,7 +80,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_5();
         }
         key = {
-            hdr.data.read: exact @name("hdr.data.read") ;
+            hdr.data.read: exact @name("data.read") ;
         }
         default_action = NoAction_5();
     }

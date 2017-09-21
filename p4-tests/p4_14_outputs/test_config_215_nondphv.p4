@@ -37,14 +37,14 @@ header hdr_1_t {
 }
 
 struct metadata {
-    @name("meta") 
+    @name(".meta") 
     meta_t meta;
 }
 
 struct headers {
-    @name("hdr_0") 
+    @name(".hdr_0") 
     hdr_0_t hdr_0;
-    @name("hdr_1") 
+    @name(".hdr_1") 
     hdr_1_t hdr_1;
 }
 

@@ -17,11 +17,11 @@ struct metadata {
 }
 
 struct headers {
-    @pa_container_size("ingress", "one.a", 8) @name("one") 
+    @pa_container_size("ingress", "one.a", 8) @name(".one") 
     one_t   one;
-    @name("three") 
+    @name(".three") 
     three_t three;
-    @name("two") 
+    @name(".two") 
     two_t   two;
 }
 

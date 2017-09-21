@@ -17,14 +17,14 @@ header zero_byte_t {
 }
 
 struct metadata {
-    @name("meta") 
+    @name(".meta") 
     meta_t meta;
 }
 
 struct headers {
-    @name("one") 
+    @name(".one") 
     one_byte_t  one;
-    @name("zero") 
+    @name(".zero") 
     zero_byte_t zero;
 }
 
@@ -68,11 +68,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.one.a  : ternary @name("hdr.one.a") ;
-            meta.meta.a: exact @name("meta.meta.a") ;
-            meta.meta.b: exact @name("meta.meta.b") ;
-            meta.meta.c: exact @name("meta.meta.c") ;
-            meta.meta.d: exact @name("meta.meta.d") ;
+            hdr.one.a  : ternary @name("one.a") ;
+            meta.meta.a: exact @name("meta.a") ;
+            meta.meta.b: exact @name("meta.b") ;
+            meta.meta.c: exact @name("meta.c") ;
+            meta.meta.d: exact @name("meta.d") ;
         }
         size = 512;
         default_action = NoAction();

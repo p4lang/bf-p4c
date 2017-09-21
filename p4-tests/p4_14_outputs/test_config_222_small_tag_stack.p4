@@ -16,7 +16,7 @@ struct metadata {
 }
 
 struct headers {
-    @name("one") 
+    @name(".one") 
     one_byte_t     one;
     @name(".hdr_stack_") 
     hdr_stack_t[3] hdr_stack_;

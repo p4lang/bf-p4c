@@ -14,12 +14,12 @@ header hdr0_t {
 }
 
 struct metadata {
-    @pa_container_size("ingress", "meta.a", 16) @name("meta") 
+    @pa_container_size("ingress", "meta.a", 16) @name(".meta") 
     meta_t meta;
 }
 
 struct headers {
-    @pa_container_size("ingress", "hdr0.b", 32) @name("hdr0") 
+    @pa_container_size("ingress", "hdr0.b", 32) @name(".hdr0") 
     hdr0_t hdr0;
 }
 
@@ -43,8 +43,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.hdr0.a : ternary @name("hdr.hdr0.a") ;
-            meta.meta.c: exact @name("meta.meta.c") ;
+            hdr.hdr0.a : ternary @name("hdr0.a") ;
+            meta.meta.c: exact @name("meta.c") ;
         }
         size = 512;
         default_action = NoAction();

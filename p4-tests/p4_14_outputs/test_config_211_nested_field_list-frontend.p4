@@ -20,7 +20,7 @@ struct metadata {
 }
 
 struct headers {
-    @name("pkt") 
+    @name(".pkt") 
     pkt_t pkt;
 }
 
@@ -35,12 +35,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<8> tmp;
-    tuple<tuple<bit<16>>, bit<16>, bit<32>> tmp_0;
     @name(".action_0") action action_1() {
-        tmp_0 = { { hdr.pkt.field_e_16 }, hdr.pkt.field_f_16, hdr.pkt.field_a_32 };
-        hash<bit<8>, bit<8>, tuple<tuple<bit<16>>, bit<16>, bit<32>>, bit<16>>(tmp, HashAlgorithm.crc16, 8w0, tmp_0, 16w256);
-        hdr.pkt.field_i_8 = tmp;
+        hash<bit<8>, bit<8>, tuple<tuple<bit<16>>, bit<16>, bit<32>>, bit<16>>(hdr.pkt.field_i_8, HashAlgorithm.crc16, 8w0, { { hdr.pkt.field_e_16 }, hdr.pkt.field_f_16, hdr.pkt.field_a_32 }, 16w256);
     }
     @name(".do_nothing") action do_nothing_0() {
     }
@@ -51,7 +47,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.pkt.field_a_32: ternary @name("hdr.pkt.field_a_32") ;
+            hdr.pkt.field_a_32: ternary @name("pkt.field_a_32") ;
         }
         default_action = NoAction();
     }

@@ -17,7 +17,7 @@ struct metadata {
 }
 
 struct headers {
-    @name("data") 
+    @name(".data") 
     data_t data;
 }
 
@@ -37,7 +37,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.data.b1: exact @name("hdr.data.b1") ;
+            hdr.data.b1: exact @name("data.b1") ;
         }
         default_action = NoAction();
     }
@@ -47,7 +47,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.data.b2: exact @name("hdr.data.b2") ;
+            hdr.data.b2: exact @name("data.b2") ;
         }
         default_action = NoAction();
     }
@@ -57,7 +57,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.data.b3: exact @name("hdr.data.b3") ;
+            hdr.data.b3: exact @name("data.b3") ;
         }
         default_action = NoAction();
     }
@@ -67,7 +67,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.data.b4: exact @name("hdr.data.b4") ;
+            hdr.data.b4: exact @name("data.b4") ;
         }
         default_action = NoAction();
     }
@@ -77,7 +77,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.data.b5: exact @name("hdr.data.b5") ;
+            hdr.data.b5: exact @name("data.b5") ;
         }
         default_action = NoAction();
     }
@@ -87,7 +87,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.data.b6: exact @name("hdr.data.b6") ;
+            hdr.data.b6: exact @name("data.b6") ;
         }
         default_action = NoAction();
     }
@@ -97,7 +97,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.data.b7: exact @name("hdr.data.b7") ;
+            hdr.data.b7: exact @name("data.b7") ;
         }
         default_action = NoAction();
     }
@@ -107,8 +107,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.data.b8: exact @name("hdr.data.b8") ;
-            hdr.data.b9: exact @name("hdr.data.b9") ;
+            hdr.data.b8: exact @name("data.b8") ;
+            hdr.data.b9: exact @name("data.b9") ;
         }
         default_action = NoAction();
     }

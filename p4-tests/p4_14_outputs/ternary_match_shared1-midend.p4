@@ -14,7 +14,7 @@ struct metadata {
 }
 
 struct headers {
-    @name("data") 
+    @name(".data") 
     data_t data;
 }
 
@@ -44,8 +44,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_0();
         }
         key = {
-            hdr.data.b1: ternary @name("hdr.data.b1") ;
-            hdr.data.b2: ternary @name("hdr.data.b2") ;
+            hdr.data.b1: ternary @name("data.b1") ;
+            hdr.data.b2: ternary @name("data.b2") ;
         }
         default_action = NoAction_0();
     }
@@ -55,9 +55,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_4();
         }
         key = {
-            hdr.data.b3: ternary @name("hdr.data.b3") ;
-            hdr.data.b4: ternary @name("hdr.data.b4") ;
-            hdr.data.b5: ternary @name("hdr.data.b5") ;
+            hdr.data.b3: ternary @name("data.b3") ;
+            hdr.data.b4: ternary @name("data.b4") ;
+            hdr.data.b5: ternary @name("data.b5") ;
         }
         default_action = NoAction_4();
     }
@@ -67,11 +67,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_5();
         }
         key = {
-            hdr.data.b1: ternary @name("hdr.data.b1") ;
-            hdr.data.b2: ternary @name("hdr.data.b2") ;
-            hdr.data.b3: ternary @name("hdr.data.b3") ;
-            hdr.data.b4: ternary @name("hdr.data.b4") ;
-            hdr.data.b7: ternary @name("hdr.data.b7") ;
+            hdr.data.b1: ternary @name("data.b1") ;
+            hdr.data.b2: ternary @name("data.b2") ;
+            hdr.data.b3: ternary @name("data.b3") ;
+            hdr.data.b4: ternary @name("data.b4") ;
+            hdr.data.b7: ternary @name("data.b7") ;
         }
         default_action = NoAction_5();
     }

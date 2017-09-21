@@ -13,7 +13,7 @@ struct metadata {
 }
 
 struct headers {
-    @name("packet") 
+    @name(".packet") 
     packet_t packet;
 }
 
@@ -37,7 +37,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.packet.packet_read: exact @name("hdr.packet.packet_read") ;
+            hdr.packet.packet_read: exact @name("packet.packet_read") ;
         }
         default_action = NoAction();
     }

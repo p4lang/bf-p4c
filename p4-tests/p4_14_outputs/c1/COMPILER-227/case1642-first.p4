@@ -10,7 +10,7 @@ struct metadata {
 }
 
 struct headers {
-    @name("x") 
+    @name(".x") 
     XHdr_0 x;
 }
 

@@ -370,86 +370,86 @@ header Crossett {
 }
 
 struct metadata {
-    @name("Carver") 
+    @name(".Carver") 
     Wynnewood Carver;
-    @name("Clarion") 
+    @name(".Clarion") 
     Tindall   Clarion;
-    @name("Deeth") 
+    @name(".Deeth") 
     Kingsdale Deeth;
-    @name("Holliday") 
+    @name(".Holliday") 
     Fordyce   Holliday;
-    @name("Lakin") 
+    @name(".Lakin") 
     Reidville Lakin;
-    @name("Lemoyne") 
+    @name(".Lemoyne") 
     Verdemont Lemoyne;
-    @name("Redmon") 
+    @name(".Redmon") 
     McManus   Redmon;
-    @name("Rillton") 
+    @name(".Rillton") 
     Range     Rillton;
-    @name("Swisher") 
+    @name(".Swisher") 
     Centre    Swisher;
-    @name("Terral") 
+    @name(".Terral") 
     Lennep    Terral;
-    @name("Terrytown") 
+    @name(".Terrytown") 
     Forman    Terrytown;
-    @name("Weinert") 
+    @name(".Weinert") 
     Seibert   Weinert;
-    @name("WildRose") 
+    @name(".WildRose") 
     Wayland   WildRose;
 }
 
 struct headers {
-    @name("Bairoil") 
+    @name(".Bairoil") 
     Davant                                         Bairoil;
-    @name("Fennimore") 
+    @name(".Fennimore") 
     Blossom_0                                      Fennimore;
-    @name("Filley") 
+    @name(".Filley") 
     Ellisburg                                      Filley;
-    @name("Gibson") 
+    @name(".Gibson") 
     Toxey                                          Gibson;
-    @name("Inverness") 
+    @name(".Inverness") 
     Monmouth                                       Inverness;
-    @name("Jerico") 
+    @name(".Jerico") 
     Woodcrest                                      Jerico;
-    @name("Joslin") 
+    @name(".Joslin") 
     Davant                                         Joslin;
-    @pa_fragment("ingress", "Longford.McGovern") @pa_fragment("egress", "Longford.McGovern") @name("Longford") 
+    @pa_fragment("ingress", "Longford.McGovern") @pa_fragment("egress", "Longford.McGovern") @name(".Longford") 
     Oshoto                                         Longford;
-    @name("Makawao") 
+    @name(".Makawao") 
     Sanchez                                        Makawao;
-    @name("Renfroe") 
+    @name(".Renfroe") 
     Sanchez                                        Renfroe;
-    @name("RiceLake") 
+    @name(".RiceLake") 
     Ellisburg                                      RiceLake;
-    @name("Rosburg") 
+    @name(".Rosburg") 
     Toxey                                          Rosburg;
-    @name("Toano") 
+    @name(".Toano") 
     Pacifica                                       Toano;
-    @name("Trooper") 
+    @name(".Trooper") 
     Ellisburg                                      Trooper;
-    @pa_fragment("ingress", "Uniopolis.McGovern") @pa_fragment("egress", "Uniopolis.McGovern") @name("Uniopolis") 
+    @pa_fragment("ingress", "Uniopolis.McGovern") @pa_fragment("egress", "Uniopolis.McGovern") @name(".Uniopolis") 
     Oshoto                                         Uniopolis;
-    @name("Wenden") 
+    @name(".Wenden") 
     Macksburg_0                                    Wenden;
-    @dont_trim @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md") @pa_atomic("egress", "eg_intr_md.egress_port") @pa_fragment("egress", "eg_intr_md._pad1") @pa_fragment("egress", "eg_intr_md._pad7") @pa_fragment("egress", "eg_intr_md._pad8") @pa_mandatory_intrinsic_field("egress", "eg_intr_md.egress_port") @pa_mandatory_intrinsic_field("egress", "eg_intr_md.egress_cos") @name("eg_intr_md") 
+    @dont_trim @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md") @pa_atomic("egress", "eg_intr_md.egress_port") @pa_fragment("egress", "eg_intr_md._pad1") @pa_fragment("egress", "eg_intr_md._pad7") @pa_fragment("egress", "eg_intr_md._pad8") @pa_mandatory_intrinsic_field("egress", "eg_intr_md.egress_port") @pa_mandatory_intrinsic_field("egress", "eg_intr_md.egress_cos") @name(".eg_intr_md") 
     egress_intrinsic_metadata_t                    eg_intr_md;
-    @dont_trim @pa_intrinsic_header("egress", "eg_intr_md_for_mb") @pa_atomic("egress", "eg_intr_md_for_mb.egress_mirror_id") @pa_fragment("egress", "eg_intr_md_for_mb.coalesce_flush") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.egress_mirror_id") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.coalesce_flush") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.coalesce_length") @not_deparsed("ingress") @not_deparsed("egress") @name("eg_intr_md_for_mb") 
+    @dont_trim @pa_intrinsic_header("egress", "eg_intr_md_for_mb") @pa_atomic("egress", "eg_intr_md_for_mb.egress_mirror_id") @pa_fragment("egress", "eg_intr_md_for_mb.coalesce_flush") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.egress_mirror_id") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.coalesce_flush") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.coalesce_length") @not_deparsed("ingress") @not_deparsed("egress") @name(".eg_intr_md_for_mb") 
     egress_intrinsic_metadata_for_mirror_buffer_t  eg_intr_md_for_mb;
-    @dont_trim @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_oport.drop_ctl") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md_for_oport") @name("eg_intr_md_for_oport") 
+    @dont_trim @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_oport.drop_ctl") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md_for_oport") @name(".eg_intr_md_for_oport") 
     egress_intrinsic_metadata_for_output_port_t    eg_intr_md_for_oport;
-    @pa_fragment("egress", "eg_intr_md_from_parser_aux.coalesce_sample_count") @pa_fragment("egress", "eg_intr_md_from_parser_aux.clone_src") @pa_fragment("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @pa_atomic("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md_from_parser_aux") @name("eg_intr_md_from_parser_aux") 
+    @pa_fragment("egress", "eg_intr_md_from_parser_aux.coalesce_sample_count") @pa_fragment("egress", "eg_intr_md_from_parser_aux.clone_src") @pa_fragment("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @pa_atomic("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md_from_parser_aux") @name(".eg_intr_md_from_parser_aux") 
     egress_intrinsic_metadata_from_parser_aux_t    eg_intr_md_from_parser_aux;
-    @dont_trim @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md.ingress_port") @name("ig_intr_md") 
+    @dont_trim @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md.ingress_port") @name(".ig_intr_md") 
     ingress_intrinsic_metadata_t                   ig_intr_md;
-    @dont_trim @pa_intrinsic_header("ingress", "ig_intr_md_for_mb") @pa_atomic("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @not_deparsed("ingress") @not_deparsed("egress") @name("ig_intr_md_for_mb") 
+    @dont_trim @pa_intrinsic_header("ingress", "ig_intr_md_for_mb") @pa_atomic("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @not_deparsed("ingress") @not_deparsed("egress") @name(".ig_intr_md_for_mb") 
     ingress_intrinsic_metadata_for_mirror_buffer_t ig_intr_md_for_mb;
-    @pa_atomic("ingress", "ig_intr_md_for_tm.ucast_egress_port") @pa_fragment("ingress", "ig_intr_md_for_tm.drop_ctl") @pa_fragment("ingress", "ig_intr_md_for_tm.qid") @pa_fragment("ingress", "ig_intr_md_for_tm._pad2") @pa_atomic("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_fragment("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_atomic("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_fragment("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_atomic("ingress", "ig_intr_md_for_tm.level1_mcast_hash") @pa_fragment("ingress", "ig_intr_md_for_tm._pad3") @pa_atomic("ingress", "ig_intr_md_for_tm.level2_mcast_hash") @pa_fragment("ingress", "ig_intr_md_for_tm._pad4") @pa_atomic("ingress", "ig_intr_md_for_tm.level1_exclusion_id") @pa_fragment("ingress", "ig_intr_md_for_tm.level1_exclusion_id") @pa_atomic("ingress", "ig_intr_md_for_tm.level2_exclusion_id") @pa_fragment("ingress", "ig_intr_md_for_tm._pad5") @pa_atomic("ingress", "ig_intr_md_for_tm.rid") @pa_fragment("ingress", "ig_intr_md_for_tm.rid") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md_for_tm") @dont_trim @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.drop_ctl") @name("ig_intr_md_for_tm") 
+    @pa_atomic("ingress", "ig_intr_md_for_tm.ucast_egress_port") @pa_fragment("ingress", "ig_intr_md_for_tm.drop_ctl") @pa_fragment("ingress", "ig_intr_md_for_tm.qid") @pa_fragment("ingress", "ig_intr_md_for_tm._pad2") @pa_atomic("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_fragment("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_atomic("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_fragment("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_atomic("ingress", "ig_intr_md_for_tm.level1_mcast_hash") @pa_fragment("ingress", "ig_intr_md_for_tm._pad3") @pa_atomic("ingress", "ig_intr_md_for_tm.level2_mcast_hash") @pa_fragment("ingress", "ig_intr_md_for_tm._pad4") @pa_atomic("ingress", "ig_intr_md_for_tm.level1_exclusion_id") @pa_fragment("ingress", "ig_intr_md_for_tm.level1_exclusion_id") @pa_atomic("ingress", "ig_intr_md_for_tm.level2_exclusion_id") @pa_fragment("ingress", "ig_intr_md_for_tm._pad5") @pa_atomic("ingress", "ig_intr_md_for_tm.rid") @pa_fragment("ingress", "ig_intr_md_for_tm.rid") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md_for_tm") @dont_trim @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.drop_ctl") @name(".ig_intr_md_for_tm") 
     ingress_intrinsic_metadata_for_tm_t            ig_intr_md_for_tm;
-    @pa_fragment("ingress", "ig_intr_md_from_parser_aux.ingress_parser_err") @pa_atomic("ingress", "ig_intr_md_from_parser_aux.ingress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md_from_parser_aux") @name("ig_intr_md_from_parser_aux") 
+    @pa_fragment("ingress", "ig_intr_md_from_parser_aux.ingress_parser_err") @pa_atomic("ingress", "ig_intr_md_from_parser_aux.ingress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md_from_parser_aux") @name(".ig_intr_md_from_parser_aux") 
     ingress_intrinsic_metadata_from_parser_aux_t   ig_intr_md_from_parser_aux;
-    @not_deparsed("ingress") @not_deparsed("egress") @name("ig_pg_md") 
+    @not_deparsed("ingress") @not_deparsed("egress") @name(".ig_pg_md") 
     generator_metadata_t_0                         ig_pg_md;
-    @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_prsr_ctrl") @name("ig_prsr_ctrl") 
+    @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_prsr_ctrl") @name(".ig_prsr_ctrl") 
     ingress_parser_control_signals                 ig_prsr_ctrl;
     @name(".Dougherty") 
     Crossett[2]                                    Dougherty;
@@ -613,8 +613,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             _Elmore();
         }
         key = {
-            hdr.eg_intr_md.egress_port: exact @name("hdr.eg_intr_md.egress_port") ;
-            meta.Carver.Suarez        : exact @name("meta.Carver.Suarez") ;
+            hdr.eg_intr_md.egress_port: exact @name("eg_intr_md.egress_port") ;
+            meta.Carver.Suarez        : exact @name("Carver.Suarez") ;
         }
         size = 4096;
         default_action = _Elmore();
@@ -716,7 +716,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             @defaultonly NoAction_0();
         }
         key = {
-            meta.Carver.Perrytown: exact @name("meta.Carver.Perrytown") ;
+            meta.Carver.Perrytown: exact @name("Carver.Perrytown") ;
         }
         size = 8;
         default_action = NoAction_0();
@@ -727,7 +727,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             @defaultonly NoAction_1();
         }
         key = {
-            meta.Carver.Dunken: exact @name("meta.Carver.Dunken") ;
+            meta.Carver.Dunken: exact @name("Carver.Dunken") ;
         }
         size = 256;
         default_action = NoAction_1();
@@ -747,13 +747,13 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             @defaultonly NoAction_42();
         }
         key = {
-            meta.Carver.Botna      : exact @name("meta.Carver.Botna") ;
-            meta.Carver.Perrytown  : exact @name("meta.Carver.Perrytown") ;
-            meta.Carver.WindGap    : exact @name("meta.Carver.WindGap") ;
-            hdr.Uniopolis.isValid(): ternary @name("hdr.Uniopolis.isValid()") ;
-            hdr.Bairoil.isValid()  : ternary @name("hdr.Bairoil.isValid()") ;
-            hdr.Longford.isValid() : ternary @name("hdr.Longford.isValid()") ;
-            hdr.Joslin.isValid()   : ternary @name("hdr.Joslin.isValid()") ;
+            meta.Carver.Botna      : exact @name("Carver.Botna") ;
+            meta.Carver.Perrytown  : exact @name("Carver.Perrytown") ;
+            meta.Carver.WindGap    : exact @name("Carver.WindGap") ;
+            hdr.Uniopolis.isValid(): ternary @name("Uniopolis.$valid$") ;
+            hdr.Bairoil.isValid()  : ternary @name("Bairoil.$valid$") ;
+            hdr.Longford.isValid() : ternary @name("Longford.$valid$") ;
+            hdr.Joslin.isValid()   : ternary @name("Joslin.$valid$") ;
         }
         size = 512;
         default_action = NoAction_42();
@@ -774,8 +774,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             _Fonda_0();
         }
         key = {
-            meta.Carver.Iroquois      : exact @name("meta.Carver.Iroquois") ;
-            hdr.eg_intr_md.egress_port: exact @name("hdr.eg_intr_md.egress_port") ;
+            meta.Carver.Iroquois      : exact @name("Carver.Iroquois") ;
+            hdr.eg_intr_md.egress_port: exact @name("eg_intr_md.egress_port") ;
         }
         size = 128;
         default_action = _Fonda_0();
@@ -789,7 +789,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             @defaultonly NoAction_43();
         }
         key = {
-            meta.Carver.WestPike: exact @name("meta.Carver.WestPike") ;
+            meta.Carver.WestPike: exact @name("Carver.WestPike") ;
         }
         size = 64;
         default_action = NoAction_43();
@@ -804,8 +804,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             @defaultonly NoAction_44();
         }
         key = {
-            hdr.eg_intr_md.egress_port[6:0]: exact @name("hdr.eg_intr_md.egress_port[6:0]") ;
-            hdr.eg_intr_md.egress_qid[2:0] : exact @name("hdr.eg_intr_md.egress_qid[2:0]") ;
+            hdr.eg_intr_md.egress_port[6:0]: exact @name("eg_intr_md.egress_port[6:0]") ;
+            hdr.eg_intr_md.egress_qid[2:0] : exact @name("eg_intr_md.egress_qid[2:0]") ;
         }
         size = 1024;
         @name(".FlatLick") counters = direct_counter(CounterType.packets_and_bytes);
@@ -948,7 +948,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_45();
         }
         key = {
-            hdr.ig_intr_md.ingress_port: exact @name("hdr.ig_intr_md.ingress_port") ;
+            hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 288;
         default_action = NoAction_45();
@@ -963,8 +963,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_46();
         }
         key = {
-            hdr.Filley.Husum : ternary @name("hdr.Filley.Husum") ;
-            hdr.Filley.Kinard: ternary @name("hdr.Filley.Kinard") ;
+            hdr.Filley.Husum : ternary @name("Filley.Husum") ;
+            hdr.Filley.Kinard: ternary @name("Filley.Kinard") ;
         }
         size = 512;
         default_action = NoAction_46();
@@ -1002,9 +1002,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_47();
         }
         key = {
-            meta.Weinert.Raceland: exact @name("meta.Weinert.Raceland") ;
-            hdr.Filley.CassCity  : ternary @name("hdr.Filley.CassCity") ;
-            hdr.Filley.LaMoille  : ternary @name("hdr.Filley.LaMoille") ;
+            meta.Weinert.Raceland: exact @name("Weinert.Raceland") ;
+            hdr.Filley.CassCity  : ternary @name("Filley.CassCity") ;
+            hdr.Filley.LaMoille  : ternary @name("Filley.LaMoille") ;
         }
         size = 512;
         @name(".Hobergs") counters = direct_counter(CounterType.packets_and_bytes);
@@ -1129,10 +1129,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             _Struthers();
         }
         key = {
-            hdr.Filley.CassCity  : exact @name("hdr.Filley.CassCity") ;
-            hdr.Filley.LaMoille  : exact @name("hdr.Filley.LaMoille") ;
-            hdr.Uniopolis.Kinross: exact @name("hdr.Uniopolis.Kinross") ;
-            meta.Deeth.Honalo    : exact @name("meta.Deeth.Honalo") ;
+            hdr.Filley.CassCity  : exact @name("Filley.CassCity") ;
+            hdr.Filley.LaMoille  : exact @name("Filley.LaMoille") ;
+            hdr.Uniopolis.Kinross: exact @name("Uniopolis.Kinross") ;
+            meta.Deeth.Honalo    : exact @name("Deeth.Honalo") ;
         }
         size = 1024;
         default_action = _Struthers();
@@ -1144,7 +1144,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_48();
         }
         key = {
-            meta.Weinert.Wataga: exact @name("meta.Weinert.Wataga") ;
+            meta.Weinert.Wataga: exact @name("Weinert.Wataga") ;
         }
         size = 4096;
         default_action = NoAction_48();
@@ -1156,7 +1156,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_49();
         }
         key = {
-            hdr.Dougherty[0].Yakima: exact @name("hdr..Dougherty[0].Yakima") ;
+            hdr.Dougherty[0].Yakima: exact @name("Dougherty[0].Yakima") ;
         }
         size = 4096;
         default_action = NoAction_49();
@@ -1169,9 +1169,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_50();
         }
         key = {
-            meta.Weinert.Flats        : ternary @name("meta.Weinert.Flats") ;
-            hdr.Dougherty[0].isValid(): exact @name("hdr..Dougherty[0].isValid()") ;
-            hdr.Dougherty[0].Yakima   : ternary @name("hdr..Dougherty[0].Yakima") ;
+            meta.Weinert.Flats        : ternary @name("Weinert.Flats") ;
+            hdr.Dougherty[0].isValid(): exact @name("Dougherty[0].$valid$") ;
+            hdr.Dougherty[0].Yakima   : ternary @name("Dougherty[0].Yakima") ;
         }
         size = 4096;
         default_action = NoAction_50();
@@ -1183,8 +1183,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_51();
         }
         key = {
-            meta.Weinert.Flats     : exact @name("meta.Weinert.Flats") ;
-            hdr.Dougherty[0].Yakima: exact @name("hdr..Dougherty[0].Yakima") ;
+            meta.Weinert.Flats     : exact @name("Weinert.Flats") ;
+            hdr.Dougherty[0].Yakima: exact @name("Dougherty[0].Yakima") ;
         }
         size = 1024;
         default_action = NoAction_51();
@@ -1195,7 +1195,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             _Almedia();
         }
         key = {
-            hdr.Uniopolis.Sedan: exact @name("hdr.Uniopolis.Sedan") ;
+            hdr.Uniopolis.Sedan: exact @name("Uniopolis.Sedan") ;
         }
         size = 4096;
         default_action = _Almedia();
@@ -1207,7 +1207,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_52();
         }
         key = {
-            hdr.Inverness.Seabrook: exact @name("hdr.Inverness.Seabrook") ;
+            hdr.Inverness.Seabrook: exact @name("Inverness.Seabrook") ;
         }
         size = 4096;
         default_action = NoAction_52();
@@ -1251,7 +1251,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_53();
         }
         key = {
-            meta.Weinert.Raceland: exact @name("meta.Weinert.Raceland") ;
+            meta.Weinert.Raceland: exact @name("Weinert.Raceland") ;
         }
         size = 64;
         default_action = NoAction_53();
@@ -1305,10 +1305,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             _Wauregan();
         }
         key = {
-            meta.Deeth.Angwin  : exact @name("meta.Deeth.Angwin") ;
-            meta.Deeth.Wondervu: exact @name("meta.Deeth.Wondervu") ;
-            meta.Deeth.Catlin  : exact @name("meta.Deeth.Catlin") ;
-            meta.Deeth.Seagrove: exact @name("meta.Deeth.Seagrove") ;
+            meta.Deeth.Angwin  : exact @name("Deeth.Angwin") ;
+            meta.Deeth.Wondervu: exact @name("Deeth.Wondervu") ;
+            meta.Deeth.Catlin  : exact @name("Deeth.Catlin") ;
+            meta.Deeth.Seagrove: exact @name("Deeth.Seagrove") ;
         }
         size = 65536;
         default_action = _Wauregan();
@@ -1319,9 +1319,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_56();
         }
         key = {
-            meta.Deeth.Corbin  : ternary @name("meta.Deeth.Corbin") ;
-            meta.Deeth.Cochrane: exact @name("meta.Deeth.Cochrane") ;
-            meta.Deeth.Swenson : exact @name("meta.Deeth.Swenson") ;
+            meta.Deeth.Corbin  : ternary @name("Deeth.Corbin") ;
+            meta.Deeth.Cochrane: exact @name("Deeth.Cochrane") ;
+            meta.Deeth.Swenson : exact @name("Deeth.Swenson") ;
         }
         size = 512;
         default_action = NoAction_56();
@@ -1341,12 +1341,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly _Scherr_2();
         }
         key = {
-            meta.Weinert.Raceland : exact @name("meta.Weinert.Raceland") ;
-            meta.Swisher.Larchmont: ternary @name("meta.Swisher.Larchmont") ;
-            meta.Swisher.ElkFalls : ternary @name("meta.Swisher.ElkFalls") ;
-            meta.Deeth.CoalCity   : ternary @name("meta.Deeth.CoalCity") ;
-            meta.Deeth.Wartrace   : ternary @name("meta.Deeth.Wartrace") ;
-            meta.Deeth.Paradise   : ternary @name("meta.Deeth.Paradise") ;
+            meta.Weinert.Raceland : exact @name("Weinert.Raceland") ;
+            meta.Swisher.Larchmont: ternary @name("Swisher.Larchmont") ;
+            meta.Swisher.ElkFalls : ternary @name("Swisher.ElkFalls") ;
+            meta.Deeth.CoalCity   : ternary @name("Deeth.CoalCity") ;
+            meta.Deeth.Wartrace   : ternary @name("Deeth.Wartrace") ;
+            meta.Deeth.Paradise   : ternary @name("Deeth.Paradise") ;
         }
         size = 512;
         default_action = _Scherr_2();
@@ -1375,8 +1375,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_57();
         }
         key = {
-            meta.Deeth.Caulfield: exact @name("meta.Deeth.Caulfield") ;
-            meta.Deeth.Rosario  : exact @name("meta.Deeth.Rosario") ;
+            meta.Deeth.Caulfield: exact @name("Deeth.Caulfield") ;
+            meta.Deeth.Rosario  : exact @name("Deeth.Rosario") ;
         }
         size = 3;
         default_action = NoAction_57();
@@ -1388,7 +1388,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_58();
         }
         key = {
-            meta.Deeth.Kentwood: exact @name("meta.Deeth.Kentwood") ;
+            meta.Deeth.Kentwood: exact @name("Deeth.Kentwood") ;
         }
         size = 2;
         default_action = NoAction_58();
@@ -1415,7 +1415,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_60();
         }
         key = {
-            meta.Weinert.Flats: exact @name("meta.Weinert.Flats") ;
+            meta.Weinert.Flats: exact @name("Weinert.Flats") ;
         }
         size = 64;
         meters = _Tatum_0;
@@ -1533,8 +1533,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_64();
         }
         key = {
-            meta.Rillton.Epsie  : exact @name("meta.Rillton.Epsie") ;
-            meta.Holliday.Huttig: lpm @name("meta.Holliday.Huttig") ;
+            meta.Rillton.Epsie  : exact @name("Rillton.Epsie") ;
+            meta.Holliday.Huttig: lpm @name("Holliday.Huttig") ;
         }
         size = 1024;
         default_action = NoAction_64();
@@ -1547,8 +1547,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             _Scherr_4();
         }
         key = {
-            meta.Rillton.Epsie  : exact @name("meta.Rillton.Epsie") ;
-            meta.Holliday.Huttig: exact @name("meta.Holliday.Huttig") ;
+            meta.Rillton.Epsie  : exact @name("Rillton.Epsie") ;
+            meta.Holliday.Huttig: exact @name("Holliday.Huttig") ;
         }
         size = 65536;
         default_action = _Scherr_4();
@@ -1560,8 +1560,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_65();
         }
         key = {
-            meta.Rillton.Epsie              : exact @name("meta.Rillton.Epsie") ;
-            meta.Terrytown.Clearlake[127:64]: lpm @name("meta.Terrytown.Clearlake[127:64]") ;
+            meta.Rillton.Epsie              : exact @name("Rillton.Epsie") ;
+            meta.Terrytown.Clearlake[127:64]: lpm @name("Terrytown.Clearlake[127:64]") ;
         }
         size = 8192;
         default_action = NoAction_65();
@@ -1573,8 +1573,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_66();
         }
         key = {
-            meta.Rillton.Epsie      : exact @name("meta.Rillton.Epsie") ;
-            meta.Terrytown.Clearlake: lpm @name("meta.Terrytown.Clearlake") ;
+            meta.Rillton.Epsie      : exact @name("Rillton.Epsie") ;
+            meta.Terrytown.Clearlake: lpm @name("Terrytown.Clearlake") ;
         }
         size = 2048;
         default_action = NoAction_66();
@@ -1586,8 +1586,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_67();
         }
         key = {
-            meta.Rillton.Epsie  : exact @name("meta.Rillton.Epsie") ;
-            meta.Holliday.Huttig: lpm @name("meta.Holliday.Huttig") ;
+            meta.Rillton.Epsie  : exact @name("Rillton.Epsie") ;
+            meta.Holliday.Huttig: lpm @name("Holliday.Huttig") ;
         }
         size = 16384;
         default_action = NoAction_67();
@@ -1599,8 +1599,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             _Scherr_22();
         }
         key = {
-            meta.Terrytown.Roswell        : exact @name("meta.Terrytown.Roswell") ;
-            meta.Terrytown.Clearlake[63:0]: lpm @name("meta.Terrytown.Clearlake[63:0]") ;
+            meta.Terrytown.Roswell        : exact @name("Terrytown.Roswell") ;
+            meta.Terrytown.Clearlake[63:0]: lpm @name("Terrytown.Clearlake[63:0]") ;
         }
         size = 16384;
         default_action = _Scherr_22();
@@ -1612,8 +1612,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             _Scherr_23();
         }
         key = {
-            meta.Holliday.Dresden     : exact @name("meta.Holliday.Dresden") ;
-            meta.Holliday.Huttig[19:0]: lpm @name("meta.Holliday.Huttig[19:0]") ;
+            meta.Holliday.Dresden     : exact @name("Holliday.Dresden") ;
+            meta.Holliday.Huttig[19:0]: lpm @name("Holliday.Huttig[19:0]") ;
         }
         size = 131072;
         default_action = _Scherr_23();
@@ -1626,8 +1626,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             _Scherr_24();
         }
         key = {
-            meta.Rillton.Epsie      : exact @name("meta.Rillton.Epsie") ;
-            meta.Terrytown.Clearlake: exact @name("meta.Terrytown.Clearlake") ;
+            meta.Rillton.Epsie      : exact @name("Rillton.Epsie") ;
+            meta.Terrytown.Clearlake: exact @name("Terrytown.Clearlake") ;
         }
         size = 65536;
         default_action = _Scherr_24();
@@ -1639,8 +1639,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             _Scherr_25();
         }
         key = {
-            meta.Terrytown.Mahomet          : exact @name("meta.Terrytown.Mahomet") ;
-            meta.Terrytown.Clearlake[106:64]: lpm @name("meta.Terrytown.Clearlake[106:64]") ;
+            meta.Terrytown.Mahomet          : exact @name("Terrytown.Mahomet") ;
+            meta.Terrytown.Clearlake[106:64]: lpm @name("Terrytown.Clearlake[106:64]") ;
         }
         size = 65536;
         default_action = _Scherr_25();
@@ -1670,16 +1670,16 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_68();
         }
         key = {
-            hdr.Gibson.isValid()   : ternary @name("hdr.Gibson.isValid()") ;
-            hdr.Renfroe.isValid()  : ternary @name("hdr.Renfroe.isValid()") ;
-            hdr.Longford.isValid() : ternary @name("hdr.Longford.isValid()") ;
-            hdr.Joslin.isValid()   : ternary @name("hdr.Joslin.isValid()") ;
-            hdr.Trooper.isValid()  : ternary @name("hdr.Trooper.isValid()") ;
-            hdr.Rosburg.isValid()  : ternary @name("hdr.Rosburg.isValid()") ;
-            hdr.Makawao.isValid()  : ternary @name("hdr.Makawao.isValid()") ;
-            hdr.Uniopolis.isValid(): ternary @name("hdr.Uniopolis.isValid()") ;
-            hdr.Bairoil.isValid()  : ternary @name("hdr.Bairoil.isValid()") ;
-            hdr.Filley.isValid()   : ternary @name("hdr.Filley.isValid()") ;
+            hdr.Gibson.isValid()   : ternary @name("Gibson.$valid$") ;
+            hdr.Renfroe.isValid()  : ternary @name("Renfroe.$valid$") ;
+            hdr.Longford.isValid() : ternary @name("Longford.$valid$") ;
+            hdr.Joslin.isValid()   : ternary @name("Joslin.$valid$") ;
+            hdr.Trooper.isValid()  : ternary @name("Trooper.$valid$") ;
+            hdr.Rosburg.isValid()  : ternary @name("Rosburg.$valid$") ;
+            hdr.Makawao.isValid()  : ternary @name("Makawao.$valid$") ;
+            hdr.Uniopolis.isValid(): ternary @name("Uniopolis.$valid$") ;
+            hdr.Bairoil.isValid()  : ternary @name("Bairoil.$valid$") ;
+            hdr.Filley.isValid()   : ternary @name("Filley.$valid$") ;
         }
         size = 256;
         default_action = NoAction_68();
@@ -1691,10 +1691,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_69();
         }
         key = {
-            hdr.Gibson.isValid() : ternary @name("hdr.Gibson.isValid()") ;
-            hdr.Renfroe.isValid(): ternary @name("hdr.Renfroe.isValid()") ;
-            hdr.Rosburg.isValid(): ternary @name("hdr.Rosburg.isValid()") ;
-            hdr.Makawao.isValid(): ternary @name("hdr.Makawao.isValid()") ;
+            hdr.Gibson.isValid() : ternary @name("Gibson.$valid$") ;
+            hdr.Renfroe.isValid(): ternary @name("Renfroe.$valid$") ;
+            hdr.Rosburg.isValid(): ternary @name("Rosburg.$valid$") ;
+            hdr.Makawao.isValid(): ternary @name("Makawao.$valid$") ;
         }
         size = 6;
         default_action = NoAction_69();
@@ -1717,11 +1717,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             _Mapleview();
         }
         key = {
-            meta.Weinert.Flats    : ternary @name("meta.Weinert.Flats") ;
-            meta.Holliday.Philippi: ternary @name("meta.Holliday.Philippi") ;
-            meta.Holliday.Huttig  : ternary @name("meta.Holliday.Huttig") ;
-            hdr.Jerico.Hopland    : ternary @name("hdr.Jerico.Hopland") ;
-            hdr.Jerico.Bonney     : ternary @name("hdr.Jerico.Bonney") ;
+            meta.Weinert.Flats    : ternary @name("Weinert.Flats") ;
+            meta.Holliday.Philippi: ternary @name("Holliday.Philippi") ;
+            meta.Holliday.Huttig  : ternary @name("Holliday.Huttig") ;
+            hdr.Jerico.Hopland    : ternary @name("Jerico.Hopland") ;
+            hdr.Jerico.Bonney     : ternary @name("Jerico.Bonney") ;
         }
         size = 256;
         default_action = _Mapleview();
@@ -1732,11 +1732,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             _Mapleview_2();
         }
         key = {
-            meta.Weinert.Flats      : ternary @name("meta.Weinert.Flats") ;
-            meta.Terrytown.Kennebec : ternary @name("meta.Terrytown.Kennebec") ;
-            meta.Terrytown.Clearlake: ternary @name("meta.Terrytown.Clearlake") ;
-            hdr.Jerico.Hopland      : ternary @name("hdr.Jerico.Hopland") ;
-            hdr.Jerico.Bonney       : ternary @name("hdr.Jerico.Bonney") ;
+            meta.Weinert.Flats      : ternary @name("Weinert.Flats") ;
+            meta.Terrytown.Kennebec : ternary @name("Terrytown.Kennebec") ;
+            meta.Terrytown.Clearlake: ternary @name("Terrytown.Clearlake") ;
+            hdr.Jerico.Hopland      : ternary @name("Jerico.Hopland") ;
+            hdr.Jerico.Bonney       : ternary @name("Jerico.Bonney") ;
         }
         size = 256;
         default_action = _Mapleview_2();
@@ -1750,8 +1750,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_70();
         }
         key = {
-            meta.Clarion.Cordell: exact @name("meta.Clarion.Cordell") ;
-            meta.Lakin.Bluewater: selector @name("meta.Lakin.Bluewater") ;
+            meta.Clarion.Cordell: exact @name("Clarion.Cordell") ;
+            meta.Lakin.Bluewater: selector @name("Lakin.Bluewater") ;
         }
         size = 2048;
         @name(".Basalt") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w51);
@@ -1783,9 +1783,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             _Falmouth();
         }
         key = {
-            meta.Deeth.Seagrove: ternary @name("meta.Deeth.Seagrove") ;
-            meta.Deeth.Corbin  : ternary @name("meta.Deeth.Corbin") ;
-            meta.Rillton.Dizney: ternary @name("meta.Rillton.Dizney") ;
+            meta.Deeth.Seagrove: ternary @name("Deeth.Seagrove") ;
+            meta.Deeth.Corbin  : ternary @name("Deeth.Corbin") ;
+            meta.Rillton.Dizney: ternary @name("Rillton.Dizney") ;
         }
         size = 512;
         default_action = _Falmouth();
@@ -1813,7 +1813,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_71();
         }
         key = {
-            meta.Clarion.Muenster: exact @name("meta.Clarion.Muenster") ;
+            meta.Clarion.Muenster: exact @name("Clarion.Muenster") ;
         }
         size = 65536;
         default_action = NoAction_71();
@@ -1907,12 +1907,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             _Pendleton();
         }
         key = {
-            meta.Redmon.Lehigh             : exact @name("meta.Redmon.Lehigh") ;
-            meta.Terrytown.Clearlake[31:16]: ternary @name("meta.Terrytown.Clearlake[31:16]") ;
-            meta.Deeth.Elderon             : ternary @name("meta.Deeth.Elderon") ;
-            meta.Deeth.Dutton              : ternary @name("meta.Deeth.Dutton") ;
-            meta.Redmon.Telida             : ternary @name("meta.Redmon.Telida") ;
-            meta.Clarion.Muenster          : ternary @name("meta.Clarion.Muenster") ;
+            meta.Redmon.Lehigh             : exact @name("Redmon.Lehigh") ;
+            meta.Terrytown.Clearlake[31:16]: ternary @name("Terrytown.Clearlake[31:16]") ;
+            meta.Deeth.Elderon             : ternary @name("Deeth.Elderon") ;
+            meta.Deeth.Dutton              : ternary @name("Deeth.Dutton") ;
+            meta.Redmon.Telida             : ternary @name("Redmon.Telida") ;
+            meta.Clarion.Muenster          : ternary @name("Clarion.Muenster") ;
         }
         size = 512;
         default_action = _Pendleton();
@@ -1925,12 +1925,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             _Pendleton_3();
         }
         key = {
-            meta.Redmon.Lehigh         : exact @name("meta.Redmon.Lehigh") ;
-            meta.Holliday.Huttig[31:16]: ternary @name("meta.Holliday.Huttig[31:16]") ;
-            meta.Deeth.Elderon         : ternary @name("meta.Deeth.Elderon") ;
-            meta.Deeth.Dutton          : ternary @name("meta.Deeth.Dutton") ;
-            meta.Redmon.Telida         : ternary @name("meta.Redmon.Telida") ;
-            meta.Clarion.Muenster      : ternary @name("meta.Clarion.Muenster") ;
+            meta.Redmon.Lehigh         : exact @name("Redmon.Lehigh") ;
+            meta.Holliday.Huttig[31:16]: ternary @name("Holliday.Huttig[31:16]") ;
+            meta.Deeth.Elderon         : ternary @name("Deeth.Elderon") ;
+            meta.Deeth.Dutton          : ternary @name("Deeth.Dutton") ;
+            meta.Redmon.Telida         : ternary @name("Redmon.Telida") ;
+            meta.Clarion.Muenster      : ternary @name("Clarion.Muenster") ;
         }
         size = 512;
         default_action = _Pendleton_3();
@@ -1943,10 +1943,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             _Pendleton_4();
         }
         key = {
-            meta.Redmon.Lehigh  : exact @name("meta.Redmon.Lehigh") ;
-            meta.Deeth.Cochrane : ternary @name("meta.Deeth.Cochrane") ;
-            meta.Deeth.Swenson  : ternary @name("meta.Deeth.Swenson") ;
-            meta.Deeth.Barksdale: ternary @name("meta.Deeth.Barksdale") ;
+            meta.Redmon.Lehigh  : exact @name("Redmon.Lehigh") ;
+            meta.Deeth.Cochrane : ternary @name("Deeth.Cochrane") ;
+            meta.Deeth.Swenson  : ternary @name("Deeth.Swenson") ;
+            meta.Deeth.Barksdale: ternary @name("Deeth.Barksdale") ;
         }
         size = 512;
         default_action = _Pendleton_4();
@@ -1999,8 +1999,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             _BirchBay();
         }
         key = {
-            meta.Carver.Boerne : exact @name("meta.Carver.Boerne") ;
-            meta.Carver.Miltona: exact @name("meta.Carver.Miltona") ;
+            meta.Carver.Boerne : exact @name("Carver.Boerne") ;
+            meta.Carver.Miltona: exact @name("Carver.Miltona") ;
         }
         size = 1;
         default_action = _BirchBay();
@@ -2012,9 +2012,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             _Eddington();
         }
         key = {
-            meta.Carver.Boerne : exact @name("meta.Carver.Boerne") ;
-            meta.Carver.Miltona: exact @name("meta.Carver.Miltona") ;
-            meta.Carver.Suarez : exact @name("meta.Carver.Suarez") ;
+            meta.Carver.Boerne : exact @name("Carver.Boerne") ;
+            meta.Carver.Miltona: exact @name("Carver.Miltona") ;
+            meta.Carver.Suarez : exact @name("Carver.Suarez") ;
         }
         size = 65536;
         default_action = _Eddington();
@@ -2029,11 +2029,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_73();
         }
         key = {
-            meta.Weinert.ElmGrove: ternary @name("meta.Weinert.ElmGrove") ;
-            meta.Weinert.Wanatah : ternary @name("meta.Weinert.Wanatah") ;
-            meta.Redmon.Hamburg  : ternary @name("meta.Redmon.Hamburg") ;
-            meta.Redmon.Telida   : ternary @name("meta.Redmon.Telida") ;
-            meta.Redmon.Hayward  : ternary @name("meta.Redmon.Hayward") ;
+            meta.Weinert.ElmGrove: ternary @name("Weinert.ElmGrove") ;
+            meta.Weinert.Wanatah : ternary @name("Weinert.Wanatah") ;
+            meta.Redmon.Hamburg  : ternary @name("Redmon.Hamburg") ;
+            meta.Redmon.Telida   : ternary @name("Redmon.Telida") ;
+            meta.Redmon.Hayward  : ternary @name("Redmon.Hayward") ;
         }
         size = 80;
         default_action = NoAction_73();
@@ -2070,10 +2070,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             _Hiseville();
         }
         key = {
-            hdr.Toano.Telegraph: exact @name("hdr.Toano.Telegraph") ;
-            hdr.Toano.Anchorage: exact @name("hdr.Toano.Anchorage") ;
-            hdr.Toano.Clearmont: exact @name("hdr.Toano.Clearmont") ;
-            hdr.Toano.Alvord   : exact @name("hdr.Toano.Alvord") ;
+            hdr.Toano.Telegraph: exact @name("Toano.Telegraph") ;
+            hdr.Toano.Anchorage: exact @name("Toano.Anchorage") ;
+            hdr.Toano.Clearmont: exact @name("Toano.Clearmont") ;
+            hdr.Toano.Alvord   : exact @name("Toano.Alvord") ;
         }
         size = 256;
         default_action = _Hiseville();
@@ -2094,9 +2094,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_74();
         }
         key = {
-            meta.Rillton.Dizney: exact @name("meta.Rillton.Dizney") ;
-            meta.Weinert.Bowlus: ternary @name("meta.Weinert.Bowlus") ;
-            meta.Carver.Dyess  : ternary @name("meta.Carver.Dyess") ;
+            meta.Rillton.Dizney: exact @name("Rillton.Dizney") ;
+            meta.Weinert.Bowlus: ternary @name("Weinert.Bowlus") ;
+            meta.Carver.Dyess  : ternary @name("Carver.Dyess") ;
         }
         size = 512;
         default_action = NoAction_74();
@@ -2123,10 +2123,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_75();
         }
         key = {
-            meta.Weinert.ElmGrove            : exact @name("meta.Weinert.ElmGrove") ;
-            meta.Redmon.Germano              : exact @name("meta.Redmon.Germano") ;
-            meta.Redmon.Fredonia             : exact @name("meta.Redmon.Fredonia") ;
-            hdr.ig_intr_md_for_tm.ingress_cos: exact @name("hdr.ig_intr_md_for_tm.ingress_cos") ;
+            meta.Weinert.ElmGrove            : exact @name("Weinert.ElmGrove") ;
+            meta.Redmon.Germano              : exact @name("Redmon.Germano") ;
+            meta.Redmon.Fredonia             : exact @name("Redmon.Fredonia") ;
+            hdr.ig_intr_md_for_tm.ingress_cos: exact @name("ig_intr_md_for_tm.ingress_cos") ;
         }
         size = 512;
         default_action = NoAction_75();
@@ -2151,11 +2151,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_76();
         }
         key = {
-            meta.Redmon.Whitlash: ternary @name("meta.Redmon.Whitlash") ;
-            meta.Deeth.Seagrove : ternary @name("meta.Deeth.Seagrove") ;
-            meta.Deeth.Corbin   : ternary @name("meta.Deeth.Corbin") ;
-            meta.Rillton.Dizney : ternary @name("meta.Rillton.Dizney") ;
-            meta.Redmon.Onava   : ternary @name("meta.Redmon.Onava") ;
+            meta.Redmon.Whitlash: ternary @name("Redmon.Whitlash") ;
+            meta.Deeth.Seagrove : ternary @name("Deeth.Seagrove") ;
+            meta.Deeth.Corbin   : ternary @name("Deeth.Corbin") ;
+            meta.Rillton.Dizney : ternary @name("Rillton.Dizney") ;
+            meta.Redmon.Onava   : ternary @name("Redmon.Onava") ;
         }
         size = 1024;
         default_action = NoAction_76();
@@ -2172,8 +2172,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_77();
         }
         key = {
-            meta.Carver.WestPike: exact @name("meta.Carver.WestPike") ;
-            meta.Lakin.Bammel   : selector @name("meta.Lakin.Bammel") ;
+            meta.Carver.WestPike: exact @name("Carver.WestPike") ;
+            meta.Lakin.Bammel   : selector @name("Lakin.Bammel") ;
         }
         size = 1024;
         @name(".Taconite") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
@@ -2199,7 +2199,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_78();
         }
         key = {
-            hdr.ig_intr_md.ingress_port: exact @name("hdr.ig_intr_md.ingress_port") ;
+            hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 512;
         default_action = NoAction_78();
@@ -2213,8 +2213,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_79();
         }
         key = {
-            meta.Deeth.Hildale: exact @name("meta.Deeth.Hildale") ;
-            meta.Deeth.Alamota: exact @name("meta.Deeth.Alamota") ;
+            meta.Deeth.Hildale: exact @name("Deeth.Hildale") ;
+            meta.Deeth.Alamota: exact @name("Deeth.Alamota") ;
         }
         size = 2;
         default_action = NoAction_79();

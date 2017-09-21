@@ -12,7 +12,7 @@ struct metadata {
 }
 
 struct headers {
-    @name("mpls_bos") 
+    @name(".mpls_bos") 
     mpls_t    mpls_bos;
     @name(".mpls") 
     mpls_t[4] mpls;

@@ -14,7 +14,7 @@ struct metadata {
 }
 
 struct headers {
-    @name("pkt") 
+    @name(".pkt") 
     pkt_t pkt;
 }
 
@@ -33,14 +33,10 @@ struct tuple_0 {
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<16> tmp_1;
-    tuple_0 tmp_2;
     @name("NoAction") action NoAction_0() {
     }
     @name(".action_0") action action_1() {
-        tmp_2.field = hdr.pkt.field_f_16;
-        hash<bit<16>, bit<16>, tuple_0, bit<32>>(tmp_1, HashAlgorithm.identity, 16w0, tmp_2, 32w65536);
-        hdr.pkt.field_e_16 = tmp_1;
+        hash<bit<16>, bit<16>, tuple_0, bit<32>>(hdr.pkt.field_e_16, HashAlgorithm.identity, 16w0, { hdr.pkt.field_f_16 }, 32w65536);
     }
     @name(".table_0") table table_0 {
         actions = {

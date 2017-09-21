@@ -26,9 +26,9 @@ struct M2 {
 }
 
 struct metadata {
-    @name("m1") 
+    @name(".m1") 
     M1 m1;
-    @name("m2") 
+    @name(".m2") 
     M2 m2;
 }
 

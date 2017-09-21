@@ -13,9 +13,9 @@ struct metadata {
 }
 
 struct headers {
-    @name("x1") 
+    @name(".x1") 
     XHdr1_0 x1;
-    @name("x2") 
+    @name(".x2") 
     XHdr2_0 x2;
 }
 

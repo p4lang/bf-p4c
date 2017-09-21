@@ -19,7 +19,7 @@ struct metadata {
 }
 
 struct headers {
-    @name("hdr") 
+    @name(".hdr") 
     hdr_t hdr;
 }
 
@@ -52,7 +52,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_0();
         }
         key = {
-            hdr.hdr.useless: lpm @name("hdr.hdr.useless") ;
+            hdr.hdr.useless: lpm @name("hdr.useless") ;
         }
         default_action = NoAction_0();
     }

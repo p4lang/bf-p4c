@@ -14,14 +14,14 @@ header hdr0_t {
 }
 
 struct metadata {
-    @pa_container_size("ingress", "meta.a", 16) @name("meta") 
+    @pa_container_size("ingress", "meta.a", 16) @name(".meta") 
     meta_t meta;
 }
 
 struct headers {
-    @pa_container_size("ingress", "hdr0.a", 16) @name("hdr0") 
+    @pa_container_size("ingress", "hdr0.a", 16) @name(".hdr0") 
     hdr0_t hdr0;
-    @name("hdr1") 
+    @name(".hdr1") 
     hdr0_t hdr1;
 }
 

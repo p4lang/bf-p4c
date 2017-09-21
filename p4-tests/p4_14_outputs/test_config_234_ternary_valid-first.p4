@@ -12,12 +12,12 @@ header ethernet_t {
 }
 
 struct metadata {
-    @name("meta") 
+    @name(".meta") 
     meta_t meta;
 }
 
 struct headers {
-    @name("ethernet") 
+    @name(".ethernet") 
     ethernet_t ethernet;
 }
 
@@ -43,10 +43,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.ethernet.isValid(): ternary @name("hdr.ethernet.isValid()") ;
-            hdr.ethernet.isValid(): exact @name("hdr.ethernet.isValid()") ;
-            hdr.ethernet.isValid(): exact @name("hdr.ethernet.isValid()") ;
-            hdr.ethernet.etherType: exact @name("hdr.ethernet.etherType") ;
+            hdr.ethernet.isValid(): ternary @name("ethernet.$valid$") ;
+            hdr.ethernet.isValid(): exact @name("ethernet.$valid$") ;
+            hdr.ethernet.isValid(): exact @name("ethernet.$valid$") ;
+            hdr.ethernet.etherType: exact @name("ethernet.etherType") ;
         }
         size = 512;
         default_action = NoAction();

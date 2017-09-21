@@ -19,12 +19,12 @@ header hdr_t {
 }
 
 struct metadata {
-    @name("offset_meta") 
+    @name(".offset_meta") 
     offset_meta_t offset_meta;
 }
 
 struct headers {
-    @name("hdr") 
+    @name(".hdr") 
     hdr_t hdr;
 }
 

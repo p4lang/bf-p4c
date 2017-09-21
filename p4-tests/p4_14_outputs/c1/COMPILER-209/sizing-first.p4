@@ -41,16 +41,16 @@ header vlan_tag_t {
 }
 
 struct metadata {
-    @name("ing_md") 
+    @name(".ing_md") 
     ing_md_t ing_md;
 }
 
 struct headers {
-    @name("ethernet") 
+    @name(".ethernet") 
     ethernet_t ethernet;
-    @name("ipv4") 
+    @name(".ipv4") 
     ipv4_t     ipv4;
-    @name("vlan_tag_") 
+    @name(".vlan_tag_") 
     vlan_tag_t vlan_tag_;
 }
 
@@ -100,10 +100,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            meta.ing_md.field1: exact @name("meta.ing_md.field1") ;
-            meta.ing_md.field2: ternary @name("meta.ing_md.field2") ;
-            hdr.vlan_tag_.vid : ternary @name("hdr.vlan_tag_.vid") ;
-            meta.ing_md.field4: exact @name("meta.ing_md.field4") ;
+            meta.ing_md.field1: exact @name("ing_md.field1") ;
+            meta.ing_md.field2: ternary @name("ing_md.field2") ;
+            hdr.vlan_tag_.vid : ternary @name("vlan_tag_.vid") ;
+            meta.ing_md.field4: exact @name("ing_md.field4") ;
         }
         size = 4096;
         default_action = NoAction();
@@ -114,9 +114,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            meta.ing_md.partition_index: exact @name("meta.ing_md.partition_index") ;
-            meta.ing_md.vrf            : exact @name("meta.ing_md.vrf") ;
-            hdr.ipv4.dstAddr           : lpm @name("hdr.ipv4.dstAddr") ;
+            meta.ing_md.partition_index: exact @name("ing_md.partition_index") ;
+            meta.ing_md.vrf            : exact @name("ing_md.vrf") ;
+            hdr.ipv4.dstAddr           : lpm @name("ipv4.dstAddr") ;
         }
         size = 16384;
         default_action = NoAction();
@@ -127,8 +127,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            meta.ing_md.vrf       : exact @name("meta.ing_md.vrf") ;
-            hdr.ipv4.dstAddr[31:8]: lpm @name("hdr.ipv4.dstAddr[31:8]") ;
+            meta.ing_md.vrf       : exact @name("ing_md.vrf") ;
+            hdr.ipv4.dstAddr[31:8]: lpm @name("ipv4.dstAddr[31:8]") ;
         }
         size = 1024;
         default_action = NoAction();

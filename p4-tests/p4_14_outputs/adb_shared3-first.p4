@@ -12,7 +12,7 @@ struct metadata {
 }
 
 struct headers {
-    @name("data") 
+    @name(".data") 
     data_t data;
 }
 
@@ -35,7 +35,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.data.read: exact @name("hdr.data.read") ;
+            hdr.data.read: exact @name("data.read") ;
         }
         default_action = NoAction();
     }

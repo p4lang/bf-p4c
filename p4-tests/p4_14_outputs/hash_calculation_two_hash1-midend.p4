@@ -15,7 +15,7 @@ struct metadata {
 }
 
 struct headers {
-    @name("packet") 
+    @name(".packet") 
     packet_t packet;
 }
 
@@ -32,21 +32,11 @@ struct tuple_0 {
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<16> tmp_3;
-    tuple_0 tmp_4;
-    bit<16> tmp_5;
-    tuple_0 tmp_6;
     @name("NoAction") action NoAction_0() {
     }
     @name(".action0") action action0_0() {
-        tmp_4.field = hdr.packet.hash_field1;
-        tmp_4.field_0 = hdr.packet.hash_field2;
-        hash<bit<16>, bit<16>, tuple_0, bit<32>>(tmp_3, HashAlgorithm.crc16, 16w0, tmp_4, 32w65536);
-        hdr.packet.hash_result1 = tmp_3;
-        tmp_6.field = hdr.packet.hash_field3;
-        tmp_6.field_0 = hdr.packet.hash_field4;
-        hash<bit<16>, bit<16>, tuple_0, bit<32>>(tmp_5, HashAlgorithm.crc16, 16w0, tmp_6, 32w65536);
-        hdr.packet.hash_result2 = tmp_5;
+        hash<bit<16>, bit<16>, tuple_0, bit<32>>(hdr.packet.hash_result1, HashAlgorithm.crc16, 16w0, { hdr.packet.hash_field1, hdr.packet.hash_field2 }, 32w65536);
+        hash<bit<16>, bit<16>, tuple_0, bit<32>>(hdr.packet.hash_result2, HashAlgorithm.crc16, 16w0, { hdr.packet.hash_field3, hdr.packet.hash_field4 }, 32w65536);
     }
     @name(".set_port") action set_port_0() {
         standard_metadata.egress_spec = 9w1;
@@ -57,7 +47,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_0();
         }
         key = {
-            hdr.packet.packet_read: exact @name("hdr.packet.packet_read") ;
+            hdr.packet.packet_read: exact @name("packet.packet_read") ;
         }
         default_action = NoAction_0();
     }

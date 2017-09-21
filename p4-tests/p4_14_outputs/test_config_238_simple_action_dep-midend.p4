@@ -23,11 +23,11 @@ struct metadata {
 }
 
 struct headers {
-    @name("hdr0") 
+    @name(".hdr0") 
     hdr0_t hdr0;
-    @name("hdr1") 
+    @name(".hdr1") 
     hdr1_t hdr1;
-    @name("hdr2") 
+    @name(".hdr2") 
     hdr2_t hdr2;
 }
 
@@ -79,7 +79,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_0();
         }
         key = {
-            hdr.hdr0.a: ternary @name("hdr.hdr0.a") ;
+            hdr.hdr0.a: ternary @name("hdr0.a") ;
         }
         size = 512;
         default_action = NoAction_0();
@@ -91,7 +91,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction_3();
         }
         key = {
-            hdr.hdr0.a: ternary @name("hdr.hdr0.a") ;
+            hdr.hdr0.a: ternary @name("hdr0.a") ;
         }
         size = 512;
         default_action = NoAction_3();
