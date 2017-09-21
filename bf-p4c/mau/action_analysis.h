@@ -8,7 +8,7 @@
 
 struct TableResourceAlloc;
 
-/** The purpose of this class is to look through the actions specified by the table and 
+/** The purpose of this class is to look through the actions specified by the table and
  *  determine if they are Tofino compliant.  The analysis can be run before and after
  *  phv allocation, as well as before and after action data formats are decided.
  *
@@ -74,7 +74,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         void dbprint(std::ostream &out) const;
     };
 
-    /** Information on the PHV fields and action data that are read by an individual 
+    /** Information on the PHV fields and action data that are read by an individual
      *  field instruction.  write_bits correspond to the bits in the container being written
      *  and read_bits are the bits of one of the sources.  This information is used
      *  for verification and combining the PHV fields into MultiOperands.

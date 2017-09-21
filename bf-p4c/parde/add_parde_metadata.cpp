@@ -119,7 +119,7 @@ bool AddMetadataShims::preorder(IR::BFN::Deparser *d) {
     cstring egress_intrinsic_metadata;
     cstring ingress_egress_port;
     if (useTna) {
-        ingress_intrinsic_metadata = "ingress_intrinsic_metadata";
+        ingress_intrinsic_metadata = "ingress_intrinsic_metadata_for_tm";
         egress_intrinsic_metadata = "egress_intrinsic_metadata";
         ingress_egress_port = "ucast_egress_port";
     } else {

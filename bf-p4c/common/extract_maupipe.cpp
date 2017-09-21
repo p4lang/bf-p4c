@@ -649,74 +649,6 @@ const IR::BFN::Pipe* extract_v1model_arch(P4::ReferenceMap* refMap, P4::TypeMap*
     return rv->apply(simplifyReferences);
 }
 
-/// XXX(hanw) I had to duplicate this function to help with the transition from v1model to tofino
-/// will remove it once the transition is done.
-const IR::BFN::Pipe* extract_modified_v1model_arch(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
-                                                      const IR::PackageBlock* top) {
-    auto parser_blk = top->getParameterValue("p");
-    auto parser = parser_blk->to<IR::ParserBlock>()->container;
-    auto ingress_blk = top->getParameterValue("ig");
-    auto ingress = ingress_blk->to<IR::ControlBlock>()->container;
-    auto egress_blk = top->getParameterValue("eg");
-    auto egress = egress_blk->to<IR::ControlBlock>()->container;
-    auto deparser_blk = top->getParameterValue("dep");
-    auto deparser = deparser_blk->to<IR::ControlBlock>()->container;
-
-    auto rv = new IR::BFN::Pipe();
-
-    ParamBinding bindings(typeMap);
-    for (auto param : *parser->type->applyParams->getEnumerator())
-        bindings.bind(param);
-    for (auto param : *ingress->type->applyParams->getEnumerator())
-        bindings.bind(param);
-    for (auto param : *egress->type->applyParams->getEnumerator())
-        bindings.bind(param);
-    for (auto param : *deparser->type->applyParams->getEnumerator())
-        bindings.bind(param);
-
-    auto ig_md = ingress->type->applyParams->parameters.at(2);
-    auto ig_intr_md = bindings.get(ig_md)->obj->to<IR::Metadata>();
-    BUG_CHECK(ig_intr_md != nullptr, "%1% not defined as struct", bindings.get(ig_md)->name);
-    rv->metadata.addUnique("ingress_intrinsic_metadata", ig_intr_md);
-
-    auto eg_md = egress->type->applyParams->parameters.at(2);
-    auto eg_intr_md = bindings.get(eg_md)->obj->to<IR::Metadata>();
-    BUG_CHECK(eg_intr_md != nullptr, "%1% not defined as struct", bindings.get(eg_md)->name);
-    rv->metadata.addUnique("egress_intrinsic_metadata", eg_intr_md);
-
-    SimplifyReferences simplifyReferences(&bindings, refMap, typeMap);
-    parser = parser->apply(simplifyReferences);
-    deparser = deparser->apply(simplifyReferences);
-
-    auto parserInfo = BFN::extractParser(rv, parser, deparser, nullptr, nullptr, true);
-    for (auto gress : { INGRESS, EGRESS }) {
-        rv->thread[gress].parser = parserInfo.parsers[gress];
-        rv->thread[gress].deparser = parserInfo.deparsers[gress];
-    }
-
-    // Check for a phase 0 table. If one exists, it'll be removed from the
-    // ingress pipeline and converted to a parser program.
-    // XXX(seth): We should be able to move this into the midend now.
-    std::tie(ingress, rv) = BFN::extractPhase0(ingress, rv, refMap, typeMap, true);
-
-    // Convert the contents of the ComputeChecksum control, if any, into
-    // deparser primitives.
-    // rv = BFN::extractComputeChecksum(compute_checksum, rv);
-
-    ingress = ingress->apply(simplifyReferences);
-    egress = egress->apply(simplifyReferences);
-
-    ingress->apply(GetTofinoTables(refMap, typeMap, INGRESS, rv));
-    egress->apply(GetTofinoTables(refMap, typeMap, EGRESS, rv));
-
-    // AttachTables...
-    AttachTables toAttach(refMap);
-    for (auto &th : rv->thread)
-        th.mau = th.mau->apply(toAttach);
-
-    return rv->apply(simplifyReferences);
-}
-
 // model tofino native pipeline using frontend IR
 class TnaPipe {
  public:
@@ -764,32 +696,40 @@ class TnaPipe {
             bindings->bind(param);
     }
 
+    /// XXX(hanw): key to rv->metadata is used in add_parde_metadata.cpp
+    /// metadata_from_parser is currently not used anywhere.
     void extractMetadata(IR::BFN::Pipe* rv, ParamBinding* bindings, gress_t gress) {
         if (gress == INGRESS) {
             // XXX(hanw) index must be consistent with tofino.p4
             int size = mau->getApplyParameters()->parameters.size();
             if (size > 2) {
-                auto mdi = mau->getApplyParameters()->parameters.at(2);
-                rv->metadata.addUnique("ingress_intrinsic_metadata_t",
-                                       bindings->get(mdi)->obj->to<IR::Metadata>());
+                auto md = mau->getApplyParameters()->parameters.at(2);
+                rv->metadata.addUnique("ingress_intrinsic_metadata",
+                                       bindings->get(md)->obj->to<IR::Metadata>());
             }
             if (size > 3) {
                 // intrinsic_metadata_from_parser
-                auto mdp = mau->getApplyParameters()->parameters.at(3);
-                rv->metadata.addUnique("ingress_intrinsic_metadata_from_parser_t",
-                                       bindings->get(mdp)->obj->to<IR::Metadata>());
+                auto md = mau->getApplyParameters()->parameters.at(3);
+                rv->metadata.addUnique("ingress_intrinsic_metadata_from_parser",
+                                       bindings->get(md)->obj->to<IR::Metadata>());
+            }
+            if (size > 4) {
+                 // intrinsic_metadata_for_tm
+                auto md = mau->getApplyParameters()->parameters.at(4);
+                rv->metadata.addUnique("ingress_intrinsic_metadata_for_tm",
+                                       bindings->get(md)->obj->to<IR::Metadata>());
             }
         } else if (gress == EGRESS) {
             int size = mau->getApplyParameters()->parameters.size();
             if (size > 2) {
-                auto mdi = mau->getApplyParameters()->parameters.at(2);
-                rv->metadata.addUnique("egress_intrinsic_metadata_t",
-                                       bindings->get(mdi)->obj->to<IR::Metadata>());
+                auto md = mau->getApplyParameters()->parameters.at(2);
+                rv->metadata.addUnique("egress_intrinsic_metadata",
+                                       bindings->get(md)->obj->to<IR::Metadata>());
             }
             if (size > 3) {
-                auto mdp = mau->getApplyParameters()->parameters.at(3);
+                auto md = mau->getApplyParameters()->parameters.at(3);
                 rv->metadata.addUnique("egress_intrinsic_metadata_from_parser_t",
-                                       bindings->get(mdp)->obj->to<IR::Metadata>());
+                                       bindings->get(md)->obj->to<IR::Metadata>());
             }
         }
     }
@@ -831,7 +771,8 @@ const IR::BFN::Pipe* extract_native_arch(P4::ReferenceMap* refMap, P4::TypeMap* 
     }
 
     auto parserInfo = BFN::extractParser(rv, pipes[INGRESS]->parser, pipes[INGRESS]->deparser,
-                                            pipes[EGRESS]->parser, pipes[EGRESS]->deparser);
+                                         pipes[EGRESS]->parser, pipes[EGRESS]->deparser,
+                                         /* useTna = */ true);
     for (auto gress : { INGRESS, EGRESS }) {
         rv->thread[gress].parser = parserInfo.parsers[gress];
         rv->thread[gress].deparser = parserInfo.deparsers[gress];
@@ -861,7 +802,7 @@ const IR::BFN::Pipe *extract_maupipe(const IR::P4Program *program, const BFN_Opt
     } else if (options.arch() == "native") {
         return extract_native_arch(&refMap, &typeMap, top);
     } else if (options.arch() == "v1model" && needTranslation) {
-        return extract_modified_v1model_arch(&refMap, &typeMap, top);
+        return extract_native_arch(&refMap, &typeMap, top);
     } else {
         error("Unknown architecture %s", options.target);
         return nullptr;

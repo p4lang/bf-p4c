@@ -128,13 +128,8 @@ if (ENABLE_TNA)
     "Could not find declaration for ig_intr_md"
     extensions/p4_tests/p4_14/test_config_301_bridge_intrinsic.p4
     extensions/p4_tests/p4_14/c2/COMPILER-261/vag2241.p4
+    testdata/p4_14_samples/queueing.p4
     )
-
-  # program tries to use pkt_length in standard_metadata in ingress parser,
-  # but the information is not available until egress in tofino.p4
-  p4c_add_xfail_reason("tofino"
-    "struct ingress_intrinsic_metadata_t does not have a field packet_legnth"
-    testdata/p4_14_samples/queueing.p4)
 
   #
   p4c_add_xfail_reason("tofino"
@@ -174,10 +169,11 @@ if (ENABLE_TNA)
     "Could not find declaration for ig_prsr_ctrl"
     extensions/p4_tests/p4_14/test_config_294_parser_loop.p4
     extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
+    extensions/p4_tests/p4_14/switch/p4src/switch.p4
     )
 
   p4c_add_xfail_reason("tofino"
-    "Duplicates declaration struct"
+    "Duplicates declaration struct .*"
     extensions/p4_tests/p4_14/switch_l2_profile.p4
     testdata/p4_14_samples/switch_20160226/switch.p4
     testdata/p4_14_samples/switch_20160512/switch.p4
@@ -191,14 +187,21 @@ if (ENABLE_TNA)
     )
 
   p4c_add_xfail_reason("tofino"
-    "src2 must be phv register"
-    extensions/p4_tests/p4_14/test_config_313_neg_test_addr_modes.p4
+    "payload 0.0 already in use by table simple_table_0 gateway"
+    extensions/p4_tests/p4_14/jenkins/mau_tcam_test/mau_tcam_test.p4
     )
 
   p4c_add_xfail_reason("tofino"
-    "No field named counter_addr in format for simple_table_ingress"
-    extensions/p4_tests/p4_14/jenkins/mau_mem_test/mau_mem_test.p4
-    extensions/p4_tests/p4_14/jenkins/mau_tcam_test/mau_tcam_test.p4
+    "Expression .* cannot be the target of an assignment"
+    extensions/p4_tests/p4_14/test_config_249_simple_bridge.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "Could not find declaration for tmp_hdr.*"
+    testdata/p4_14_samples/issue781.p4
+    extensions/p4_tests/p4_14/c2/COMPILER-379/case2210.p4
+    testdata/p4_14_samples/09-IPv4OptionsUnparsed.p4
+    testdata/p4_14_samples/TLV_parsing.p4
     )
 endif()  # ENABLE_TNA
 
@@ -247,6 +250,7 @@ if (NOT ENABLE_TNA)
     "error: Field .* and field .* are adjacent in container .* but aren't adjacent in the deparser"
     extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
     extensions/p4_tests/p4_14/test_config_273_bridged_and_phase0.p4
+    extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
     )
 
   p4c_add_xfail_reason("tofino"
@@ -270,11 +274,13 @@ if (NOT ENABLE_TNA)
   p4c_add_xfail_reason("tofino"
     "error: Assignment cannot be supported in the parser"
     testdata/p4_14_samples/simple_nat.p4
+    testdata/p4_14_samples/TLV_parsing.p4
     )
 
   p4c_add_xfail_reason("tofino"
     "PHV allocation was not successful"
     extensions/p4_tests/p4_14/switch_20160602/switch.p4
+    extensions/p4_tests/p4_14/switch/p4src/switch.p4
     )
 
   # BRIG-109
@@ -293,10 +299,16 @@ if (NOT ENABLE_TNA)
     testdata/p4_14_samples/issue894.p4
     )
 
+  # Incorrect P4_14->16 conversion for varbit extract
+  p4c_add_xfail_reason("tofino"
+    "Wrong number of arguments for method call: packet.extract"
+    testdata/p4_14_samples/09-IPv4OptionsUnparsed.p4
+    testdata/p4_14_samples/issue781.p4
+    )
 
   p4c_add_xfail_reason("tofino"
-    "Tofino does not allow meters to use different address schemes on one table"
-    extensions/p4_tests/p4_14/test_config_313_neg_test_addr_modes.p4
+    "Wrong number of arguments for method call"
+    extensions/p4_tests/p4_14/c2/COMPILER-379/case2210.p4
     )
 endif() # ENABLE_TNA
 
@@ -355,20 +367,12 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   )
 
-# Incorrect P4_14->16 conversion for varbit extract
-p4c_add_xfail_reason("tofino"
-  "Wrong number of arguments for method call: packet.extract"
-  testdata/p4_14_samples/09-IPv4OptionsUnparsed.p4
-  testdata/p4_14_samples/issue781.p4
-  )
-
 # Fails due to complex expressions in the parser that our hardware can't support.
 p4c_add_xfail_reason("tofino"
   "error: Assignment cannot be supported in the parser"
   testdata/p4_16_samples/scalarmeta-bmv2.p4
   testdata/p4_16_samples/issue281.p4
   testdata/p4_16_samples/stack_complex-bmv2.p4
-  testdata/p4_14_samples/TLV_parsing.p4
   testdata/p4_14_samples/axon.p4
   testdata/p4_16_samples/stack_complex-bmv2.p4
   )
@@ -413,7 +417,6 @@ p4c_add_xfail_reason("tofino"
 # varbit extracts don't work in parser
 p4c_add_xfail_reason("tofino"
   "Wrong number of arguments for method call"
-  extensions/p4_tests/p4_14/c2/COMPILER-379/case2210.p4
   testdata/p4_16_samples/issue447-bmv2.p4
   testdata/p4_16_samples/issue447-1-bmv2.p4
   testdata/p4_16_samples/issue447-2-bmv2.p4
@@ -871,9 +874,9 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Tofino does not allow meters to use different address schemes on one table"
   testdata/p4_14_samples/counter.p4
+  extensions/p4_tests/p4_14/test_config_313_neg_test_addr_modes.p4
   )
 
-# This is also related to BRIG-218
 p4c_add_xfail_reason("tofino"
   "Constant lookup does not match the ActionFormat"
   testdata/p4_14_samples/action_inline.p4
@@ -897,16 +900,12 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/04-FullPHV3.p4
   extensions/p4_tests/p4_14/c1/COMPILER-133/full_tphv.p4
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
-  extensions/p4_tests/p4_14/switch/p4src/switch.p4
-  extensions/p4_tests/p4_14/switch_20160602/switch.p4
   )
 
 p4c_add_xfail_reason("tofino"
   "error: Field .* and field .* are adjacent in container .* but aren't adjacent in the deparser"
   extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
   extensions/p4_tests/p4_14/test_config_236_stateful_read_bit.p4
-  extensions/p4_tests/p4_14/test_config_273_bridged_and_phase0.p4
-  extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
   extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
   extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4

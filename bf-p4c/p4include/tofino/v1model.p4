@@ -55,8 +55,6 @@ struct ingress_intrinsic_metadata_t {
     bit<48> ingress_mac_tstamp;          // ingress IEEE 1588 timestamp (in nsec)
                                          // taken at the ingress MAC.
 
-    bit<9> ucast_egress_port;            // FIXME: move to md_for_tm
-
     bit<32> instance_type;               // FIXME: tofino does not have this metadata
 }
 
@@ -359,42 +357,56 @@ extern void clone3<T>(in CloneType type, in bit<32> session, in T data);
 
 extern void truncate(in bit<32> length);
 
-// The name 'standard_metadata' is reserved
+parser IngressParser<H, M>(
+    packet_in pkt,
+    out H hdr,
+    inout M ig_md,
+    out ingress_intrinsic_metadata_t ig_intr_md);
 
-// Architecture.
-// M should be a struct of structs
-// H should be a struct of headers or stacks
+parser EgressParser<H, M>(
+    packet_in pkt,
+    out H hdr,
+    inout M eg_md,
+    out egress_intrinsic_metadata_t eg_intr_md);
 
-parser Parser<H, M>(packet_in b,
-                    out H parsedHdr,
-                    inout M meta,
-                    inout ingress_intrinsic_metadata_t ig_intr_md);
-control VerifyChecksum<H, M>(in H hdr,
-                             inout M meta);
 control Ingress<H, M>(
     inout H hdr,
     inout M ig_md,
-    inout ingress_intrinsic_metadata_t ig_intr_md,
+    in ingress_intrinsic_metadata_t ig_intr_md,
     @optional in ingress_intrinsic_metadata_from_parser_t ig_intr_md_from_prsr,
     @optional out ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm,
     @optional out ingress_intrinsic_metadata_for_mirror_buffer_t ig_intr_md_for_mb);
-control Egress<H, M>(
-  inout H hdr,
-  inout M eg_md,
-  inout egress_intrinsic_metadata_t eg_intr_md,
-  @optional in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr,
-  @optional out egress_intrinsic_metadata_for_mirror_buffer_t eg_intr_md_for_mb,
-  @optional out egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport);
-control ComputeChecksum<H, M>(inout H hdr,
-                              inout M meta);
-control Deparser<H>(packet_out b, in H hdr);
 
-package V1Switch<H, M>(Parser<H, M> p,
-                       VerifyChecksum<H, M> vr,
-                       Ingress<H, M> ig,
-                       Egress<H, M> eg,
-                       ComputeChecksum<H, M> ck,
-                       Deparser<H> dep
-                       );
+control Egress<H, M>(
+    inout H hdr,
+    inout M eg_md,
+    in egress_intrinsic_metadata_t eg_intr_md,
+    @optional in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr,
+    @optional out egress_intrinsic_metadata_for_mirror_buffer_t eg_intr_md_for_mb,
+    @optional out egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport,
+    /// XXX(hanw): temporary solution for bridge metadata until we can use defuse
+    /// in midend to create bridge metadata.
+    @optional in ingress_intrinsic_metadata_t ig_intr_md,
+    @optional in ingress_intrinsic_metadata_from_parser_t ig_intr_md_from_prsr,
+    @optional in ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm,
+    @optional in ingress_intrinsic_metadata_for_mirror_buffer_t ig_intr_md_for_mb);
+
+control IngressDeparser<H, M>(
+    packet_out pkt,
+    in H hdr,
+    @optional in M metadata);
+
+control EgressDeparser<H, M>(
+    packet_out pkt,
+    in H hdr,
+    @optional in M metadata);
+
+package Switch<IH, IM, EH, EM>(
+    IngressParser<IH, IM> ingress_parser,
+    Ingress<IH, IM> ingress,
+    IngressDeparser<IH, IM> ingress_deparser,
+    EgressParser<EH, EM> egress_parser,
+    Egress<EH, EM> egress,
+    EgressDeparser<EH, EM> egress_deparser);
 
 #endif  /* _V1MODEL_P4_ */

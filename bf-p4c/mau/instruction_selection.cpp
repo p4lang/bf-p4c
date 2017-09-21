@@ -25,7 +25,7 @@ IR::Member *InstructionSelection::gen_stdmeta(cstring field) {
 IR::Member *InstructionSelection::gen_intrinsic_metadata(gress_t gress, cstring field) {
     cstring metadataName;
     if (gress == gress_t::INGRESS)
-        metadataName = cstring::to_cstring(gress) + "::" + "ingress_intrinsic_metadata";
+        metadataName = cstring::to_cstring(gress) + "::" + "ingress_intrinsic_metadata_for_tm";
     else
         metadataName = cstring::to_cstring(gress) + "::" + "egress_intrinsic_metadata";
 
@@ -416,13 +416,14 @@ const IR::Expression *InstructionSelection::postorder(IR::Primitive *prim) {
     // Convert hash extern in tofino.p4
     } else if (prim->name == "hash.get_hash") {
         unsigned size = 1;
-        if (prim->operands[3]->to<IR::Constant>()) {
-            size = bitcount(prim->operands[3]->to<IR::Constant>()->asLong() - 1);
-            if ((1LL << size) != prim->operands[3]->to<IR::Constant>()->asLong())
-                error("%s: The hash offset must be a power of 2 in a hash calculation %s",
-                      prim->srcInfo, *prim);
-        } else {
-            error("NULL operand 3 for %s", *prim);
+        int op_size = prim->operands.size();
+        if (op_size > 2) {
+            if (prim->operands[2]->to<IR::Constant>()) {
+                size = bitcount(prim->operands[2]->to<IR::Constant>()->asLong() - 1);
+                if ((1LL << size) != prim->operands[2]->to<IR::Constant>()->asLong())
+                    error("%s: The hash offset must be a power of 2 in a hash calculation %s",
+                          prim->srcInfo, *prim);
+            }
         }
 
         cstring algorithm;
@@ -435,10 +436,13 @@ const IR::Expression *InstructionSelection::postorder(IR::Primitive *prim) {
         auto *hd = new IR::MAU::HashDist(prim->srcInfo, prim->operands[1], algorithm,
                                          init_units, prim);
         hd->bit_width = size;
-        if (auto *constant = prim->operands[2]->to<IR::Constant>()) {
-            if (constant->asInt() != 0)
-                error("%s: The initial offset for a hash calculation function has to be zero %s",
-                      prim->srcInfo, *prim);
+        if (op_size > 1) {
+            if (auto *constant = prim->operands[1]->to<IR::Constant>()) {
+                if (constant->asInt() != 0)
+                    error("%s: The initial offset for a hash "
+                          "calculation function has to be zero %s",
+                          prim->srcInfo, *prim);
+            }
         }
         return hd;
     } else {

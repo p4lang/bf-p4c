@@ -19,42 +19,33 @@
 namespace BFN {
 
 /// helpers
-
-/// TODO(hanw): following three helpers can be improved with auto-generated v1model object
-const IR::P4Control* SimpleSwitchTranslation::getIngress(const IR::ToplevelBlock* blk) {
+template<class P4Type, class BlockType>
+const P4Type* getBlock(const IR::ToplevelBlock* blk, cstring name) {
     auto main = blk->getMain();
-    auto ctrl = main->findParameterValue("ig");
+    auto ctrl = main->findParameterValue(name);
     if (ctrl == nullptr)
         return nullptr;
-    if (!ctrl->is<IR::ControlBlock>()) {
+    if (!ctrl->is<BlockType>()) {
         ::error("%1%: main package  match the expected model", main);
         return nullptr;
     }
-    return ctrl->to<IR::ControlBlock>()->container;
+    return ctrl->to<BlockType>()->container;
+}
+
+const IR::P4Control* SimpleSwitchTranslation::getIngress(const IR::ToplevelBlock* blk) {
+    return getBlock<IR::P4Control, IR::ControlBlock>(blk, "ig");
 }
 
 const IR::P4Control* SimpleSwitchTranslation::getEgress(const IR::ToplevelBlock* blk) {
-    auto main = blk->getMain();
-    auto ctrl = main->findParameterValue("eg");
-    if (ctrl == nullptr)
-        return nullptr;
-    if (!ctrl->is<IR::ControlBlock>()) {
-        ::error("%1%: main package  match the expected model", main);
-        return nullptr;
-    }
-    return ctrl->to<IR::ControlBlock>()->container;
+    return getBlock<IR::P4Control, IR::ControlBlock>(blk, "eg");
+}
+
+const IR::P4Control* SimpleSwitchTranslation::getDeparser(const IR::ToplevelBlock* blk) {
+    return getBlock<IR::P4Control, IR::ControlBlock>(blk, "dep");
 }
 
 const IR::P4Parser* SimpleSwitchTranslation::getParser(const IR::ToplevelBlock* blk) {
-    auto main = blk->getMain();
-    auto ctrl = main->findParameterValue("p");
-    if (ctrl == nullptr)
-        return nullptr;
-    if (!ctrl->is<IR::ParserBlock>()) {
-        ::error("%1%: main package  match the expected model", main);
-        return nullptr;
-    }
-    return ctrl->to<IR::ParserBlock>()->container;
+    return getBlock<IR::P4Parser, IR::ParserBlock>(blk, "p");
 }
 
 static cstring toString(BlockType block) {
@@ -796,14 +787,13 @@ class SetupMetadataMap : public Inspector {
         translationMap->emplace(key, metainfo);
     }
 
+    // XXX(hanw): split to two maps: ingress and egress
     profile_t init_apply(const IR::Node* root) {
         // ingress
         remap_ingress_intrinsic_metadata("ingress::ingress_port", "ig_intr_md", "ingress_port");
         remap_ingress_intrinsic_metadata("ingress::resubmit_flag", "ig_intr_md", "resubmit_flag");
-        // XXX(hanw): move ucast_egress_port to tm metadata
-        remap_ingress_intrinsic_metadata("ingress::egress_spec", "ig_intr_md", "ucast_egress_port");
-        remap_ingress_intrinsic_metadata("ingress::ucast_egress_port",
-                                         "ig_intr_md", "ucast_egress_port");
+        remap_ingress_intrinsic_metadata("ingress::egress_spec", "ig_intr_md_for_tm",
+                                         "ucast_egress_port");
         remap_ingress_parser_metadata("ingress::ingress_parser_err",
                                       "ig_intr_md_from_parser", "ingress_parser_err");
         remap_ingress_intrinsic_metadata("ingress::instance_type", "ig_intr_md", "instance_type");
@@ -998,6 +988,22 @@ class DoMetadataTranslation : public Transform {
                                            node->constructorParams, node->parserLocals,
                                            node->states);
             return result;
+        } else {
+            /// assume we are dealing with egress parser
+            BUG_CHECK(params->size() == 4, "%1%: Expected 4 parameters for parser", parser);
+            auto paramList = new IR::ParameterList({node->type->applyParams->parameters.at(0),
+                                                    node->type->applyParams->parameters.at(1),
+                                                    node->type->applyParams->parameters.at(2)});
+            // add ig_intr_md
+            auto path = new IR::Path(P4_16::EgressIntrinsics);
+            auto type = new IR::Type_Name(path);
+            auto param = new IR::Parameter("eg_intr_md", IR::Direction::Out, type);
+            paramList->push_back(param);
+            auto parser_type = new IR::Type_Parser(node->name, paramList);
+            auto result = new IR::P4Parser(node->srcInfo, node->name, parser_type,
+                                           node->constructorParams, node->parserLocals,
+                                           node->states);
+            return result;
         }
         return node;
     }
@@ -1026,6 +1032,105 @@ class MetadataTranslation : public PassManager {
     }
 };
 
+/// package translation creates ingress deparser and egress parser
+/// XXX(hanw): do we add bridge metadata in this pass?
+
+class PackageTranslation : public Transform {
+    SimpleSwitchTranslation* translator;
+    IR::P4Control* ingressDeparser;
+    IR::P4Parser*  egressParser;
+
+ public:
+    explicit PackageTranslation(SimpleSwitchTranslation* translator)
+    : translator(translator) { CHECK_NULL(translator); setName("PackageTranslation"); }
+
+    const IR::Node* preorder(IR::P4Control* node) override {
+        auto blk = translator->getToplevelBlock();
+        auto deparser = translator->getDeparser(blk);
+        if (*deparser == *node) {
+            ingressDeparser = deparser->clone();
+            ingressDeparser->name = "IngressDeparserImpl";
+            auto controlType = ingressDeparser->type->to<IR::Type_Control>();
+            CHECK_NULL(controlType);
+            auto type = new IR::Type_Control(controlType->srcInfo, ingressDeparser->name,
+                                             controlType->annotations, controlType->typeParameters,
+                                             controlType->applyParams);
+            ingressDeparser->type = type;
+        }
+        return node;
+    }
+
+    const IR::Node* preorder(IR::P4Parser* node) override {
+        auto blk = translator->getToplevelBlock();
+        auto parser = translator->getParser(blk);
+        if (*parser == *node) {
+            egressParser = parser->clone();
+            egressParser->name = "EgressParserImpl";
+            auto parserType = egressParser->type->to<IR::Type_Parser>();
+            CHECK_NULL(parserType);
+            auto type = new IR::Type_Parser(parserType->srcInfo, egressParser->name,
+                                            parserType->annotations, parserType->typeParameters,
+                                            parserType->applyParams);
+            egressParser->type = type;
+        }
+        return node;
+    }
+
+    const IR::Node* postorder(IR::Declaration_Instance* node) override {
+        if (node->name != "main")
+            return node;
+
+        // Switch<H, M, H, M>
+        auto mainBaseType = new IR::Type_Name("Switch");
+        auto mainArgsType = node->type->to<IR::Type_Specialized>();
+        BUG_CHECK(mainArgsType != nullptr, "Unexpected type for main");
+        auto mainArgs = new IR::Vector<IR::Type>({mainArgsType->arguments->at(0),
+                                                  mainArgsType->arguments->at(1),
+                                                  mainArgsType->arguments->at(0),
+                                                  mainArgsType->arguments->at(1)});
+        auto mainType = new IR::Type_Specialized(mainBaseType, mainArgs);
+
+        CHECK_NULL(ingressDeparser);
+        CHECK_NULL(egressParser);
+        auto igDepConstructorType = new IR::Type_Name(ingressDeparser->type->name);
+        auto igDep = new IR::ConstructorCallExpression(igDepConstructorType,
+                                                       new IR::Vector<IR::Expression>());
+        auto egParConstructorType = new IR::Type_Name(egressParser->type->name);
+        auto egPar = new IR::ConstructorCallExpression(egParConstructorType,
+                                                       new IR::Vector<IR::Expression>());
+        // Switch<H, M, H, M>(parser, gress, deparser, ...)
+        auto arguments = new IR::Vector<IR::Expression>({ node->arguments->at(0),
+                                                          node->arguments->at(2),
+                                                          igDep,
+                                                          egPar,
+                                                          node->arguments->at(3),
+                                                          node->arguments->at(5)});
+        auto result = new IR::Declaration_Instance(node->srcInfo, node->name,
+                                                   node->annotations, mainType,
+                                                   arguments);
+        return result;
+    }
+
+    const IR::Node* postorder(IR::P4Program* program) override {
+        // add new parser.
+        // add new deparser.
+        CHECK_NULL(ingressDeparser);
+        CHECK_NULL(egressParser);
+
+        IR::IndexedVector<IR::Node> program_declarations;
+        for (auto decl : program->declarations) {
+            if (auto inst = decl->to<IR::Declaration_Instance>()) {
+                if (inst->name == "main") {
+                    program_declarations.push_back(ingressDeparser);
+                    program_declarations.push_back(egressParser);
+                }
+            }
+            program_declarations.push_back(decl);
+        }
+        return new IR::P4Program(program->srcInfo, program_declarations);
+    }
+};
+
 SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
                                                  P4::TypeMap* typeMap, BFN_Options& options) {
     setName("Translation");
@@ -1039,6 +1144,8 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
     addPasses({
         new P4::TypeChecking(refMap, typeMap, true),
         evaluator,
+        new VisitFunctor([this, evaluator]() { toplevel = evaluator->getToplevelBlock(); }),
+        new PackageTranslation(this),
         new VisitFunctor([this, evaluator]() { toplevel = evaluator->getToplevelBlock(); }),
         new MetadataTranslation(this),
         new RemoveUserArchitecture(&structure, target),

@@ -105,6 +105,7 @@ class SimpleSwitchTranslation : public PassManager {
 
     const IR::P4Control* getIngress(const IR::ToplevelBlock* blk);
     const IR::P4Control* getEgress(const IR::ToplevelBlock* blk);
+    const IR::P4Control* getDeparser(const IR::ToplevelBlock* blk);
     const IR::P4Parser*  getParser(const IR::ToplevelBlock* blk);
 
     const IR::ToplevelBlock* getToplevelBlock() { CHECK_NULL(toplevel); return toplevel; }
