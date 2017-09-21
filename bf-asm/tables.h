@@ -283,7 +283,9 @@ public:
         iterator end() { return iterator(actions.end()); }
         const_iterator end() const { return const_iterator(actions.end()); }
         int count() { return actions.size(); }
-        Action *action(const std::string &n) { return actions.getref(n); }
+        Action *action(const std::string &n) {
+            auto it = actions.find(n);
+            return it == actions.end() ? nullptr : &it->second; }
         bool exists(const std::string &n) { return actions.count(n) > 0; }
         void pass1(Table *);
         void pass2(Table *);
@@ -700,9 +702,10 @@ DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,
         return match_tables.size() == 1 ? (*match_tables.begin())->action_call() : action; }
     int memunit(int r, int c) { return r*6 + c; }
     void pass1();
-    unsigned get_meter_alu_index() { 
-        if(layout.size() > 0) return layout[0].row/4U; 
-        error(lineno, "Cannot determine Meter ALU Index for table %s", name()); }
+    unsigned get_meter_alu_index() {
+        if(layout.size() > 0) return layout[0].row/4U;
+        error(lineno, "Cannot determine Meter ALU Index for table %s", name());
+        return 0; }
 protected:
     // Accessed by Meter/Selection/Stateful Tables
     void add_meter_alu_index(json::map &stage_tbl);
@@ -898,7 +901,7 @@ public:
     bool run_at_eop() override { return type == STANDARD; }
     int unitram_type() override { return UnitRam::METER; }
     int home_row() const override { return layout.at(0).row | 3; }
-    void add_cfg_reg(json::vector &cfg_cache, std::string full_name, std::string name, unsigned val, unsigned width); 
+    void add_cfg_reg(json::vector &cfg_cache, std::string full_name, std::string name, unsigned val, unsigned width);
 )
 
 DECLARE_TABLE_TYPE(Stateful, Synth2Port, "stateful",

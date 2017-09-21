@@ -27,7 +27,8 @@ check_include_file (ucontext.h HAVE_UCONTEXT_H)
 
 add_subdirectory (walle)
 
-include_directories(${BFASM_SOURCE_DIR} ${BFASM_BINARY_DIR})
+set (BFN_P4C_LIB_DIR ${BFN_P4C_SOURCE_DIR}/p4c/lib)
+include_directories(${BFASM_SOURCE_DIR} ${BFASM_BINARY_DIR} ${BFN_P4C_LIB_DIR})
 
 # ASAN CHECKS
 if (ASAN_ENABLED)
@@ -64,7 +65,6 @@ set (TFAS_COMMON_SOURCES
   action_bus.cpp
   action_table.cpp
   asm-types.cpp
-  bitvec.cpp
   counter.cpp
   crash.cpp
   deparser.cpp
@@ -73,7 +73,6 @@ set (TFAS_COMMON_SOURCES
   hash_action.cpp
   hash_dist.cpp
   hashexpr.cpp
-  hex.cpp
   idletime.cpp
   input_xbar.cpp
   instruction.cpp
@@ -98,6 +97,9 @@ set (TFAS_COMMON_SOURCES
   ubits.cpp
   vector.c
   widereg.cpp
+  ${BFN_P4C_LIB_DIR}/hex.cpp
+  ${BFN_P4C_LIB_DIR}/bitvec.cpp
+  ${BFN_P4C_LIB_DIR}/log.cpp
   )
 
 SET (TFAS_COMMON_HEADERS
@@ -120,6 +122,7 @@ SET (TFAS_COMMON_HEADERS
   phv.h
   rvalue_reference_wrapper.h
   sections.h
+  slist.h
   stage.h
   tables.h
   target.h
@@ -131,17 +134,10 @@ SET (TFAS_COMMON_HEADERS
 
 # \TODO: use the headers from p4c/lib for utilities
 set (TFAS_UTIL_HEADERS
-  algorithm.h
-  alloc.h
   bitops.h
-  bitvec.h
-  hex.h
   indent.h
   log.h
   map.h
-  ordered_map.h
-  range.h
-  slist.h
   vector.h
   )
 
