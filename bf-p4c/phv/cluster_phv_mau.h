@@ -127,7 +127,10 @@ class PHV_MAU_Group {
         }
     }
     PHV_Container::Ingress_Egress gress()               { return gress_i; }
-    std::vector<PHV_Container *>& phv_containers()      { return phv_containers_i; }
+
+    std::vector<PHV_Container *>& phv_containers()             { return phv_containers_i; }
+    const std::vector<PHV_Container *>& phv_containers() const { return phv_containers_i; }
+
     size_t& empty_containers()                          { return empty_containers_i; }
     void inc_empty_containers() {
         if (empty_containers_i < phv_containers_i.size()) {
@@ -291,15 +294,15 @@ class PHV_MAU_Group_Assignments : public Visitor {
     //
     std::pair<int, int> phv_container_numbers()           { return phv_container_numbers_i; }
     std::pair<int, int> t_phv_container_numbers()         { return t_phv_container_numbers_i; }
-    ordered_map<int, PHV_Container *>& phv_containers()   { return phv_containers_i; }
+    const ordered_map<int, PHV_Container *>& phv_containers() const { return phv_containers_i; }
     void phv_containers(int n, PHV_Container *c);
-    void phv_containers(std::string asm_string, int phv_num);
-    PHV_Container *phv_container(int phv_num);
-    PHV_Container *phv_container(std::string asm_string);
-    ordered_map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>>&
-        phv_mau_map() { return PHV_MAU_i; }
-    ordered_map<int, ordered_map<PHV_Container::PHV_Word, std::vector<PHV_Container *>>>&
-        t_phv_map()   { return T_PHV_i; }
+    void phv_containers(const std::string asm_string, int phv_num);
+    const PHV_Container *phv_container(int phv_num) const;
+    const PHV_Container *phv_container(std::string asm_string) const;
+    const ordered_map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>>&
+        phv_mau_map() const { return PHV_MAU_i; }
+    const ordered_map<int, ordered_map<PHV_Container::PHV_Word, std::vector<PHV_Container *>>>&
+        t_phv_map() const { return T_PHV_i; }
     //
     // remaining container slices available
     //
@@ -310,12 +313,22 @@ class PHV_MAU_Group_Assignments : public Visitor {
     //
     // remaining clusters to be processed
     //
-    std::list<Cluster_PHV *>& phv_clusters()              { return clusters_to_be_assigned_i; }
-    std::list<Cluster_PHV *>& phv_clusters_nibble()       { return
-                                                              clusters_to_be_assigned_nibble_i; }
-    std::list<Cluster_PHV *>& pov_clusters()              { return pov_fields_i; }
-    std::list<Cluster_PHV *>& t_phv_clusters()            { return t_phv_fields_i; }
-    std::list<Cluster_PHV *>& t_phv_clusters_nibble()     { return t_phv_fields_nibble_i; }
+    std::list<Cluster_PHV *>& phv_clusters()          { return clusters_to_be_assigned_i; }
+    std::list<Cluster_PHV *>& phv_clusters_nibble()   { return clusters_to_be_assigned_nibble_i; }
+    std::list<Cluster_PHV *>& pov_clusters()          { return pov_fields_i; }
+    std::list<Cluster_PHV *>& t_phv_clusters()        { return t_phv_fields_i; }
+    std::list<Cluster_PHV *>& t_phv_clusters_nibble() { return t_phv_fields_nibble_i; }
+
+    const std::list<Cluster_PHV *>& phv_clusters() const {
+        return clusters_to_be_assigned_i; }
+    const std::list<Cluster_PHV *>& phv_clusters_nibble() const {
+        return clusters_to_be_assigned_nibble_i; }
+    const std::list<Cluster_PHV *>& pov_clusters() const {
+        return pov_fields_i; }
+    const std::list<Cluster_PHV *>& t_phv_clusters() const {
+        return t_phv_fields_i; }
+    const std::list<Cluster_PHV *>& t_phv_clusters_nibble() const {
+        return t_phv_fields_nibble_i; }
     //
     std::list<Cluster_PHV *>& substratum_phv_clusters()   { return substratum_phv_clusters_i; }
     std::list<Cluster_PHV *>& substratum_t_phv_clusters() { return substratum_t_phv_clusters_i; }

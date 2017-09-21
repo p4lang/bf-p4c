@@ -56,7 +56,29 @@ class PHV_Analysis_API {
             const std::pair<int, int>>>&);
     //
 };  // class PHV_Analysis_API
-//
+
 std::ostream &operator<<(std::ostream &, PHV_Analysis_API &);
-//
+
+class Build_PHV_Analysis_APIs : public Visitor {
+ private:
+    PhvInfo &phv_i;                                   /// referenced through constructor
+    const Phv_Parde_Mau_Use &uses_i;                  /// field used? in mau, parde
+
+    void create_field_container_map();
+
+    const IR::Node *apply_visitor(const IR::Node *node, const char *name) {
+        if (name)
+            LOG1(name);
+        create_field_container_map();
+        return node;
+    }
+
+ public:
+    Build_PHV_Analysis_APIs(
+        PhvInfo &phv_p,
+        const Phv_Parde_Mau_Use &uses_i)
+      : phv_i(phv_p),
+        uses_i(uses_i) { }
+};
+
 #endif /* BF_P4C_PHV_PHV_ANALYSIS_API_H_ */

@@ -5,7 +5,7 @@
 
 class ElimUnused : public PassManager {
     const PhvInfo       &phv;
-    FieldDefUse   &defuse;
+    FieldDefUse         &defuse;
 
     class Instructions;
     class Headers;

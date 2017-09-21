@@ -1,5 +1,7 @@
 #include "phv_analysis_api.h"
 #include "phv_analysis_validate.h"  // make_tuple()
+#include "phv_fields.h"
+
 #include "lib/log.h"
 #include "lib/stringref.h"
 
@@ -119,3 +121,20 @@ std::ostream &operator<<(std::ostream &out, PHV_Analysis_API &phv_analysis_api) 
         << std::endl;
     return out;
 }
+
+
+
+void Build_PHV_Analysis_APIs::create_field_container_map() {
+    for (auto &f : phv_i) {
+        // disregard unreferenced fields
+        if (!uses_i.is_referenced(&f))
+            continue;
+        BUG_CHECK(f.phv_analysis_api(), "PHV field with no Analysis API");
+        for (auto &c : f.phv_containers()) {
+            for (auto &cc : c->fields_in_container()[&f]) {
+                int field_bit_lo = cc->field_bit_lo();
+                int field_bit_hi = cc->field_bit_lo() + cc->width() - 1;
+                auto bit_pair = std::make_pair(field_bit_lo, field_bit_hi);
+                f.phv_analysis_api()->field_container_map()[bit_pair] = cc; } } }
+}
+

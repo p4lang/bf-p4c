@@ -360,11 +360,9 @@ void PhvInfo::Field::foreach_alloc(
     int lo,
     int hi,
     std::function<void(const alloc_slice &)> fn) const {
-    //
     alloc_slice tmp(this, PHV::Container(), lo, lo, hi-lo+1);
-    if (alloc_i.empty()) {
-        fn(tmp);
-        return; }
+
+    // Find first slice that includes @lo, and process it.
     auto it = alloc_i.rbegin();
     while (it != alloc_i.rend() && it->field_hi() < lo) ++it;
     if (it != alloc_i.rend() && it->field_bit != lo) {
@@ -402,6 +400,9 @@ void PhvInfo::Field::foreach_alloc(
             tmp.width -= abs(it->field_bit - lo);
         fn(tmp);
         ++it; }
+
+    // Process remaining slices until reaching the first slice that does not
+    // include any bits less than @hi.
     while (it != alloc_i.rend() && it->field_bit <= hi) {
         if (it->field_hi() > hi) {
             tmp = *it;
@@ -410,7 +411,7 @@ void PhvInfo::Field::foreach_alloc(
         } else {
             fn(*it); }
         ++it; }
-}  // foreach alloc
+}
 
 //
 //***********************************************************************************
@@ -1181,3 +1182,29 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field::Field_Ops &op)
 // for calling from the debugger
 void dump(const PhvInfo *phv) { std::cout << *phv; }
 void dump(const PhvInfo::Field *f) { std::cout << *f; }
+
+const IR::Node* PhvInfo::DumpPhvFields::apply_visitor(const IR::Node *n, const char *) {
+    LOG1("");
+    LOG1("--- PHV FIELDS -------------------------------------------");
+    LOG1("");
+    LOG1("P: used in parser/deparser");
+    LOG1("M: used in MAU");
+    LOG1("R: referenced anywhere");
+    LOG1("D: is deparsed");
+    for (auto f : phv) {
+        LOG1("(" <<
+              (uses.is_used_parde(&f) ? "P" : " ") <<
+              (uses.is_used_mau(&f) ? "M" : " ") <<
+              (uses.is_referenced(&f) ? "R" : " ") <<
+              (uses.is_deparsed(&f) ? "D" : " ") << ") " << f);
+
+        for (auto vreg : f.field_overlay_map_i) {
+            for (auto child : *vreg.second) {
+                LOG1("  -overlay-(" <<
+                      (uses.is_used_parde(child) ? "P" : " ") <<
+                      (uses.is_used_mau(child) ? "M" : " ") <<
+                      (uses.is_referenced(child) ? "R" : " ") <<
+                      (uses.is_deparsed(child) ? "D" : " ") << ") " << *child); } } }
+    LOG1("");
+    return n;
+}

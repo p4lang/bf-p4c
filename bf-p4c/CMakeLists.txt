@@ -86,6 +86,7 @@ set (TOFINO_BACKEND_COMMON_SRCS
 set (TOFINO_BACKEND_COMMON_HDRS
   common/blockmap.h
   common/check_header_alignment.h
+  common/check_header_refs.h
   common/copy_header_eliminator.h
   common/elim_unused.h
   common/extract_maupipe.h
@@ -194,6 +195,7 @@ set (TOFINO_BACKEND_PARDE_HDRS
   )
 
 set (TOFINO_BACKEND_PHV_SRCS
+  phv/allocate_virtual_containers.cpp
   phv/asm_output.cpp
   phv/cluster.cpp
   phv/cluster_phv_bind.cpp
@@ -207,6 +209,7 @@ set (TOFINO_BACKEND_PHV_SRCS
   phv/create_thread_local_instances.cpp
   phv/field_alignment.cpp
   phv/phv.cpp
+  phv/phv_analysis.cpp
   phv/phv_analysis_api.cpp
   phv/phv_analysis_validate.cpp
   phv/phv_assignment_api.cpp
@@ -221,7 +224,10 @@ set (TOFINO_BACKEND_PHV_SRCS
   )
 
 set (TOFINO_BACKEND_PHV_HDRS
+  phv/allocate_virtual_containers.h
   phv/asm_output.h
+  phv/check_fitting.h
+  phv/check_unallocated.h
   phv/cluster.h
   phv/cluster_phv_bind.h
   phv/cluster_phv_container.h
@@ -233,6 +239,7 @@ set (TOFINO_BACKEND_PHV_HDRS
   phv/cluster_phv_slicing.h
   phv/create_thread_local_instances.h
   phv/field_alignment.h
+  phv/phv_analysis.h
   phv/phv_analysis_api.h
   phv/phv_assignment_api.h
   phv/phv_assignment_validate.h

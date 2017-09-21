@@ -30,11 +30,12 @@
  */
 class Cluster_Slicing : public Visitor {
  private:
+    const PhvInfo &phv_l;
     PHV_MAU_Group_Assignments &phv_mau_i;              // PHV MAU Group Assignments
 
  public:
-    Cluster_Slicing(PHV_MAU_Group_Assignments &phv_m)  // NOLINT(runtime/explicit)
-        : phv_mau_i(phv_m) {}
+    Cluster_Slicing(const PhvInfo &phv_l, PHV_MAU_Group_Assignments &phv_m)
+        : phv_l(phv_l), phv_mau_i(phv_m) {}
     //
     PHV_MAU_Group_Assignments& phv_mau() { return phv_mau_i; }
     //

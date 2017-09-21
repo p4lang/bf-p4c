@@ -215,7 +215,6 @@ void
 Cluster_Slicing::sanity_check_cluster_slices(const std::string& msg) {
     //
     const std::string msg_1 = msg + "..Cluster_Slicing::sanity_check_cluster_slices";
-    PhvInfo &phv_l = phv_mau_i.phv_requirements().cluster().phv();
     for (auto &f : phv_l) {
         if (f.sliced()) {
             // there must be field slices

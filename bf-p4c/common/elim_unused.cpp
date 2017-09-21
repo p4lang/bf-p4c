@@ -18,7 +18,7 @@ class ElimUnused::Instructions : public Transform {
         // XXX(cole): We should find a better mechanism rather than overlaying stkvalid.
         if (strstr(extract->dest->toString().c_str(), "$stkvalid")) return extract;
 
-        LOG1("elim unused " << extract);
+        LOG1("ELIM UNUSED " << extract << " IN UNIT " << DBPrint::Brief << unit);
         return nullptr;
     }
 
@@ -28,7 +28,6 @@ class ElimUnused::Instructions : public Transform {
         if (!i->operands[0]) return i;
         if (!self.defuse.getUses(unit, i->operands[0]).empty()) return i;
         LOG1("elim unused instruction " << i << " IN UNIT " << DBPrint::Brief << unit);
-        LOG1("elim unused instruction " << i);
         return nullptr;
     }
 
@@ -63,7 +62,7 @@ class ElimUnused::Headers : public PardeTransform {
             if (match->next || match->except || match->shift ||
                 !match->stmts.empty())
                 return state;
-        LOG1("eliminating parser state " << state->name);
+        LOG1("ELIMINATING parser state " << state->name);
         return nullptr; }
 
     bool isPovBitUsed(const IR::Expression* povBit) const {
@@ -79,7 +78,8 @@ class ElimUnused::Headers : public PardeTransform {
 
         // The emit primitive is used if the POV bit being set somewhere.
         if (isPovBitUsed(emit->povBit)) return emit;
-        LOG1("eliminating " << emit);
+        LOG1("ELIMINATING emit " << emit << " IN UNIT " <<
+             DBPrint::Brief << findContext<IR::BFN::Unit>());
         return nullptr;
     }
 
@@ -88,7 +88,8 @@ class ElimUnused::Headers : public PardeTransform {
 
         // The emit checksum primitive is used if the POV bit being set somewhere.
         if (isPovBitUsed(emit->povBit)) return emit;
-        LOG1("eliminating " << emit);
+        LOG1("ELIMINATING emit checksum " << emit << " IN UNIT " <<
+             DBPrint::Brief << findContext<IR::BFN::Unit>());
         return nullptr;
     }
 

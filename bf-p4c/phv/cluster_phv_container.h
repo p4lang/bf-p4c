@@ -223,12 +223,14 @@ class PHV_Container {
     void fields_in_container(std::list<Container_Content *>& cc_list);
     void fields_in_container(PhvInfo::Field *f, Container_Content *cc);
     void fields_in_container(int start, int end, ordered_set<PhvInfo::Field *>& f_set);
-    //
+
     std::pair<int, int> start_bit_and_width(PhvInfo::Field *f);
-    static void
-        holes(std::vector<char>& bits, char empty, std::list<std::pair<int, int>>& holes_list);
-    void holes(std::list<std::pair<int, int>>& holes_list);
-    //
+    static void holes(
+        std::vector<char>& bits,
+        char empty,
+        std::list<std::pair<int, int>>& holes_list);
+    void holes(std::list<std::pair<int, int>>& holes_list) const;
+
     bool deparsed() const                                       { return deparsed_i; }
     void set_deparsed(bool b)                                   { deparsed_i = b; }
     //

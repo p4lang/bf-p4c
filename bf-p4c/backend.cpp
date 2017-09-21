@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "backend.h"
 #include <fstream>
+#include "bf-p4c/common/check_header_refs.h"
 #include "bf-p4c/common/copy_header_eliminator.h"
 #include "bf-p4c/common/extract_maupipe.h"
 #include "bf-p4c/common/elim_unused.h"
@@ -45,16 +46,10 @@ limitations under the License.
 #include "bf-p4c/parde/split_big_states.h"
 #include "bf-p4c/parde/stack_push_shims.h"
 #include "bf-p4c/phv/asm_output.h"
-#include "bf-p4c/phv/trivial_alloc.h"
-#include "bf-p4c/phv/split_phv_use.h"
+#include "bf-p4c/phv/check_unallocated.h"
 #include "bf-p4c/phv/create_thread_local_instances.h"
-#include "bf-p4c/phv/cluster_phv_bind.h"
-#include "bf-p4c/phv/cluster_phv_operations.h"
-#include "bf-p4c/phv/cluster_phv_slicing.h"
-#include "bf-p4c/phv/cluster_phv_overlay.h"
-#include "bf-p4c/phv/phv_analysis_validate.h"
-#include "bf-p4c/phv/phv_assignment_validate.h"
-#include "bf-p4c/phv/validate_allocation.h"
+#include "bf-p4c/phv/phv_analysis.h"
+#include "bf-p4c/phv/split_phv_use.h"
 
 namespace BFN {
 
@@ -144,78 +139,6 @@ class AsmOutput : public Inspector {
        return false; }
 };
 
-PHV_AnalysisPass::PHV_AnalysisPass(const BFN_Options &options, PhvInfo &phv, PhvUse &uses,
-                                   FieldDefUse &defuse, DependencyGraph &deps) :
-    cluster(phv, uses),
-    cluster_phv_req(cluster),
-    cluster_phv_interference(cluster_phv_req, mutually_exclusive_field_ids),
-    cluster_phv_mau(cluster_phv_req) {
-    addPasses({
-        &uses,                 // use of field in mau, parde
-        &cluster,              // cluster analysis
-        new ParserOverlay(phv, mutually_exclusive_field_ids),
-                               // produce pairs of mutually exclusive header
-                               // fields, eg. (arpSrc, ipSrc)
-        new FindDependencyGraph(phv, deps),
-                               // refresh dependency graph for live range
-                               // analysis
-        &defuse,               // refresh defuse
-        new LiveRangeOverlay(phv, deps, defuse, mutually_exclusive_field_ids),
-                               // produce pairs of fields that are never live
-                               // in the same stage
-        new PHV_Field_Operations(phv),  // PHV field operations analysis
-        &cluster_phv_req,      // cluster PHV requirements analysis
-        options.phv_interference?
-            &cluster_phv_interference: nullptr,
-                               // cluster PHV interference graph analysis
-        &cluster_phv_mau,      // cluster PHV container placements
-                               // first cut PHV MAU Group assignments
-                               // produces cohabit fields for Table Placement
-        options.phv_slicing?
-            new Cluster_Slicing(cluster_phv_mau): nullptr,
-                               // slice clusters into smaller clusters
-                               // attempt packing with reduced width requirements
-                               // slicing improves overlay possibilities due to less width
-                               // although number & mutual exclusion of fields don't change
-                               // TODO: Cluster Slicing should recursively slice further as needed
-                               // unallocated clusters when sliced further
-                               // improves chances of packing and/or overlay
-                               // implement as {(Slicing)+,Overlay} or {Slicing,Overlay}+
-        options.phv_overlay?
-            new Cluster_PHV_Overlay(cluster_phv_mau, cluster_phv_interference): nullptr,
-                               // overlay clusters to MAU groups
-                               // need cluster_phv_interference
-                               // func mutually_exclusive(f1, f2)
-                               // overlay unallocated clusters to clusters & MAU groups
-        new PHV_Analysis_Validate(phv, cluster_phv_mau)  // phv analysis results validation
-    });
-
-    setName("PHV Analysis");
-}
-
-PHV_AllocPass::PHV_AllocPass(const BFN_Options &options, PhvInfo &phv, PhvUse &uses,
-                             PHV_MAU_Group_Assignments &cluster_phv_mau) : phv(phv) {
-    if (options.trivial_phvalloc) {
-        addPasses({
-            new PHV::TrivialAlloc(phv)});
-    } else {
-        addPasses({
-            //
-            // &cluster_phv_mau,       // cluster PHV container placements
-                                       // second cut PHV MAU Group assignments
-                                       // honor single write conflicts from Table Placement
-            &uses,                     // use of field in mau, parde
-            new PHV_Bind(phv, uses, cluster_phv_mau),
-                                       // fields bound to PHV containers
-                                       // later passes assume that phv alloc info
-                                       // is sorted in field bit order, msb first
-                                       // sorting done by phv_bind
-            new PHV_Assignment_Validate(phv)});  // phv assignment results validation
-    }
-    passes.push_back(new PHV::ValidateAllocation(phv, options.ignorePHVOverflow));
-    setName("PHV Alloc");
-}
-
 class TableAllocPass : public PassManager {
  private:
     TablesMutuallyExclusive mutex;
@@ -251,9 +174,7 @@ class TableAllocPass : public PassManager {
 
 Backend::Backend(const BFN_Options& options) :
     uses(phv),
-    defuse(phv),
-    phv_analysis(options, phv, uses, defuse, deps),
-    phv_alloc(options, phv, uses, phv_analysis.group_assignments()) {
+    defuse(phv) {
     addPasses({
         new DumpPipe("Initial table graph"),
         new RemoveEmptyControls,
@@ -285,16 +206,17 @@ Backend::Backend(const BFN_Options& options) :
         &defuse,
         new ElimUnused(phv, defuse),  // ElimUnused may have eliminated all references to a field
         new DumpPipe("Before phv_analysis"),
-        &phv_analysis,                 // phv analysis after last CollectPhvInfo pass
+        new CheckForHeaders(),
+        new PHV_AnalysisPass(options, phv, uses, defuse, deps),  // phv analysis after last
+                                                                 // CollectPhvInfo pass
         new TableAllocPass(phv, defuse, deps),
-        new DumpPipe("Before phv_alloc/bind"),
-        &phv_alloc,                 // phv assignment / binding
         new IXBarRealign(phv),
         new TotalInstructionAdjustment(phv),
         new SplitPhvUse(phv),
         new SplitBigStates(phv),  // depends on SplitPhvUse
         new DumpPipe("Final table graph"),
         new CheckTableNameDuplicate,
+        new CheckForUnallocatedTemps(phv, uses),
         new CheckUnimplementedFeatures(options.allowUnimplemented),
         new AsmOutput(phv, options.outputFile)
     });

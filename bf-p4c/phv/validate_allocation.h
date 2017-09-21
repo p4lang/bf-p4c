@@ -37,13 +37,10 @@ namespace PHV {
  */
 class ValidateAllocation final : public Inspector {
  public:
-    explicit ValidateAllocation(PhvInfo& phv, bool ignorePHVOverflow = false)
-      : phv(phv), ignorePHVOverflow(ignorePHVOverflow) { }
+    explicit ValidateAllocation(PhvInfo& phv) : phv(phv) { }
 
  private:
     PhvInfo& phv;
-    bool ignorePHVOverflow;
-
     bool preorder(const IR::BFN::Pipe* pipe) override;
 };
 

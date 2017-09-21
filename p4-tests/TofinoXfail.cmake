@@ -79,10 +79,8 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
 
   p4c_add_xfail_reason("tofino"
     "expected packet([s])* on port .* not seen"
-    testdata/p4_14_samples/basic_routing.p4
     testdata/p4_14_samples/exact_match_mask1.p4
     testdata/p4_14_samples/07-MultiProtocol.p4
-    testdata/p4_14_samples/exact_match_valid1.p4
     testdata/p4_14_samples/gateway4.p4
     testdata/p4_14_samples/hitmiss.p4
     )
@@ -247,6 +245,7 @@ if (NOT ENABLE_TNA)
 
   p4c_add_xfail_reason("tofino"
     "error: Field .* and field .* are adjacent in container .* but aren't adjacent in the deparser"
+    extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
     extensions/p4_tests/p4_14/test_config_273_bridged_and_phase0.p4
     )
 
@@ -316,7 +315,6 @@ p4c_add_xfail_reason("tofino"
 # was BRIG-134 for extensions/p4_tests/p4_14/jenkins/alpm_test/alpm_test.p4
 p4c_add_xfail_reason("tofino"
   "No write within a split instruction"
-  extensions/p4_tests/p4_14/jenkins/action_spec_format/action_spec_format.p4
   extensions/p4_tests/p4_14/jenkins/alpm_test/alpm_test.p4
   extensions/p4_tests/p4_14/jenkins/basic_ipv4/basic_ipv4.p4
   extensions/p4_tests/p4_14/jenkins/exm_direct/exm_direct_one.p4
@@ -391,18 +389,17 @@ p4c_add_xfail_reason("tofino"
   "No format in action table"
   testdata/p4_14_samples/02-FullPHV1.p4
   testdata/p4_14_samples/03-FullPHV2.p4
-  testdata/p4_14_samples/07-FullTPHV2.p4
   testdata/p4_14_samples/selector0.p4
   testdata/p4_16_samples/action_profile-bmv2.p4
   testdata/p4_16_samples/issue297-bmv2.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-133/full_tphv.p4
   )
 
-# BRIG-197
 p4c_add_xfail_reason("tofino"
-  "No register named"
+  "PHV allocation failed"
+  # BRIG-197
   testdata/p4_14_samples/05-FullTPHV.p4
   testdata/p4_14_samples/06-FullTPHV1.p4
+  testdata/p4_14_samples/07-FullTPHV2.p4
   testdata/p4_14_samples/08-FullTPHV3.p4
   )
 
@@ -545,12 +542,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_129_various_exact_match_keys.p4
   extensions/p4_tests/p4_14/hash_calculation_max_size.p4
   extensions/p4_tests/p4_14/hash_calculation_multiple.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "Conflicting hash distribution bit allocation .*"
-  extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
-  extensions/p4_tests/p4_14/jenkins/stful/stful.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -757,7 +748,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_317_sym_hash_neg_test_3.p4
   extensions/p4_tests/p4_14/test_config_318_sym_hash_neg_test_4.p4
   extensions/p4_tests/p4_14/test_config_319_sym_hash_neg_test_5.p4
-  testdata/p4_14_samples/hash_action_gateway2.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -883,11 +873,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/counter.p4
   )
 
-p4c_add_xfail_reason("tofino"
-  "ERROR: Sizing of the write and read do not match up"
-  extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
-  )
-
+# This is also related to BRIG-218
 p4c_add_xfail_reason("tofino"
   "Constant lookup does not match the ActionFormat"
   testdata/p4_14_samples/action_inline.p4
@@ -911,12 +897,13 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/04-FullPHV3.p4
   extensions/p4_tests/p4_14/c1/COMPILER-133/full_tphv.p4
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
-  extensions/p4_tests/p4_14/switch_20160602/switch.p4
   extensions/p4_tests/p4_14/switch/p4src/switch.p4
+  extensions/p4_tests/p4_14/switch_20160602/switch.p4
   )
 
 p4c_add_xfail_reason("tofino"
   "error: Field .* and field .* are adjacent in container .* but aren't adjacent in the deparser"
+  extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
   extensions/p4_tests/p4_14/test_config_236_stateful_read_bit.p4
   extensions/p4_tests/p4_14/test_config_273_bridged_and_phase0.p4
   extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
@@ -932,10 +919,12 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
   )
 
-p4c_add_xfail_reason("tofino"
-  "Conflicting hash distribution bit allocation"
-  extensions/p4_tests/p4_14/jenkins/stful/stful.p4
-  )
+# Likely still has a bug; emits the following warning:
+# p4c_add_xfail_reason("tofino"
+#   "Field is extracted in the parser, but its first container slice has an incompatible alignment"
+#   testdata/p4_16_samples/slice-def-use.p4
+#   testdata/p4_16_samples/slice-def-use1.p4
+#  )
 
 # We can't (without some complex acrobatics) support conditional computed
 # checksums on Tofino. In P4-14, these are operations of the form:
@@ -1010,6 +999,24 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue774-4-bmv2.p4
 )
 
+p4c_add_xfail_reason("tofino"
+  "Header present in IR not under Member"
+  # TODO: What is the implementation status of the following externs?
+  # was passing
+  testdata/p4_14_samples/resubmit.p4
+  # was "No PHV allocation for field extracted by the parser"
+  testdata/p4_14_samples/packet_redirect.p4
+  # was "too much data for parser match"
+  testdata/p4_14_samples/copy_to_cpu.p4
+  testdata/p4_16_samples/issue907-bmv2.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Hash column out of range"
+  # was "Conflicting hash distribution bit allocation .*"
+  extensions/p4_tests/p4_14/jenkins/stful/stful.p4
+  )
+
 if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
   # STF2PTF tests that fail
   p4c_add_xfail_reason("tofino"
@@ -1063,10 +1070,7 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
     extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
     extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
     extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
     extensions/p4_tests/p4_14/c1/COMPILER-447/case2527.p4
     extensions/p4_tests/p4_14/c1/COMPILER-448/case2526.p4
     extensions/p4_tests/p4_14/c1/COMPILER-451/case2537.p4
@@ -1137,4 +1141,12 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     extensions/p4_tests/p4_16/stateful2.p4
     )
 
+  # insufficient interfaces in ptf_runner.
+  # Not worth fixing at this time, as static entries are not yet
+  # supported in the backend
+  p4c_add_xfail_reason("tofino"
+    "KeyError:"
+    testdata/p4_16_samples/table-entries-lpm-bmv2.p4
+    testdata/p4_16_samples/table-entries-range-bmv2.p4
+    )
 endif() # PTF_REQUIREMENTS_MET

@@ -3,106 +3,7 @@
 #include "lib/log.h"
 #include "lib/stringref.h"
 
-//***********************************************************************************
-//
-// Cluster::Cluster constructor
-//
-//***********************************************************************************
-
-Cluster::Cluster(PhvInfo &p, PhvUse &u) : phv_i(p), uses_i(u) {
-    for (auto &field : phv_i) {
-        dst_map_i[&field] = nullptr;
-    }
-}
-
-//***********************************************************************************
-//
-// preorder walk on IR tree to insert field operands in cluster set
-//
-//***********************************************************************************
-
-bool Cluster::preorder(const IR::BFN::Pipe *pipe) {
-    pipe->apply(uses_i);
-    return true;
-}
-
-bool Cluster::preorder(const IR::Member* expression) {
-    // class Member : Operation_Unary
-    // toString = expr->toString() + "." + member
-    //
-    // reads manifest as member
-    // if fields, they must be allocated to MAU pipe
-    // e.g.,
-    // table t3_1 {
-    //    reads {
-    //        m.field_32_33 : exact;
-    //        m.field_32_34 : exact;
-    // .....Member.....ingress::m.field_32_33
-    // .....Member.....ingress::m.field_32_34
-    //
-
-    LOG4(".....Member....." << expression->toString());
-    auto field = phv_i.field(expression);
-    if (field) {
-        //
-        // x must be allocated to PHV
-        // e.g., reads { x :
-        // dst_map[x] points to singleton cluster using MAU
-        //
-        create_dst_map_entry(field);
-    }
-    return true;
-}
-
-bool Cluster::preorder(const IR::Operation_Unary* expression) {
-    LOG4(".....Unary Operation....." << expression->toString()
-        << '(' << expression->expr->toString() << ')');
-    auto field = phv_i.field(expression->expr);
-    insert_cluster(dst_i, field);
-    set_field_range(*(expression->expr));
-    LOG4(field);
-
-    return true;
-}
-
-bool Cluster::preorder(const IR::Operation_Binary* expression) {
-    LOG4(".....Binary Operation....." << expression->toString()
-        << '(' << expression->left->toString() << ',' << expression->right->toString() << ')');
-    auto left = phv_i.field(expression->left);
-    auto right = phv_i.field(expression->right);
-    insert_cluster(dst_i, left);
-    insert_cluster(dst_i, right);
-    set_field_range(*(expression->left));
-    set_field_range(*(expression->right));
-    LOG4(left);
-    LOG4(right);
-
-    return true;
-}
-
-bool Cluster::preorder(const IR::Operation_Ternary* expression) {
-    LOG4(".....Ternary Operation....." << expression->toString()
-        << '(' << expression->e0->toString()
-        << ',' << expression->e1->toString()
-        << ',' << expression->e2->toString()
-        << ')');
-    auto e0 = phv_i.field(expression->e0);
-    auto e1 = phv_i.field(expression->e1);
-    auto e2 = phv_i.field(expression->e2);
-    insert_cluster(dst_i, e0);
-    insert_cluster(dst_i, e1);
-    insert_cluster(dst_i, e2);
-    set_field_range(*(expression->e0));
-    set_field_range(*(expression->e1));
-    set_field_range(*(expression->e2));
-    LOG4(e0);
-    LOG4(e1);
-    LOG4(e2);
-
-    return true;
-}
-
-bool Cluster::preorder(const IR::HeaderRef *hr) {
+bool Cluster::MakeCCGFs::preorder(const IR::HeaderRef *hr) {
     LOG4(".....Header Ref.....");
     //
     // parser extract, deparser emit
@@ -176,19 +77,19 @@ bool Cluster::preorder(const IR::HeaderRef *hr) {
         //
         bool discard = false;
         if (single_member) {
-            LOG1("*****cluster.cpp: ccgf fields not grouped *****"
+            LOG2("*****cluster.cpp: ccgf fields not grouped *****"
                 << "-----discarding PHV_container_contiguous_group....."
                 << "single member");
             discard = true;
         }
         if (!sub_byte && !byte_multiple) {
-            LOG1("*****cluster.cpp: ccgf fields not grouped *****"
+            LOG2("*****cluster.cpp: ccgf fields not grouped *****"
                 << "-----discarding PHV_container_contiguous_group....."
                 << "not byte_multiple");
             discard = true;
         }
         if (ccgf_width > contiguity_limit) {
-            LOG1("*****cluster.cpp: ccgf fields not grouped *****"
+            LOG2("*****cluster.cpp: ccgf fields not grouped *****"
                 << "-----discarding PHV_container_contiguous_group....."
                 << "ccgf_width=" << ccgf_width
                 << " > contiguity_limit=" << contiguity_limit);
@@ -199,155 +100,124 @@ bool Cluster::preorder(const IR::HeaderRef *hr) {
                 f->set_ccgf(0);
             }
             owner->ccgf_fields().clear();
+            BUG_CHECK(!owner->is_ccgf(), "Owner CCGF not cleared");
             //
-            LOG1(owner);
+            LOG2(owner);
             WARNING("*****cluster.cpp: ccgf fields not grouped *****"
                 << "-----discarded PHV_container_contiguous_group.....\n"
                 << owner);
-        }
+        } else {
+            LOG2("CCGF owner: " << owner);
+            for (auto child : owner->ccgf_fields())
+                LOG2("     child: " << child); }
     }
     return true;
 }
 
-bool Cluster::preorder(const IR::Primitive* primitive) {
+void Cluster::MakeCCGFs::end_apply() {
+    set_deparsed_flag();
+}
+
+bool Cluster::MakeClusters::preorder(const IR::Expression* e) {
+    LOG4(".....Field....." << e->toString());
+    if (auto f = phv_i.field(e)) {
+        create_dst_map_entry(f);
+        return false; }
+    return true;
+}
+
+// After InstructionSelection, only primitive operations should remain in
+// actions. (Except SALU operands, which may be wrapped in unary operations,
+// but we don't care about those here.)
+void Cluster::MakeClusters::postorder(const IR::Primitive* primitive) {
     LOG4(".....Primitive:Operation....." << primitive->name);
-    dst_i = nullptr;
-    if (!primitive->operands.empty()) {
-        dst_i = phv_i.field(primitive->operands[0]);
-        if (dst_i) {
-            //
-            // x must be allocated to PHV
-            // e.g., action a: - set x, 3
-            // dst_map[x] points to singleton cluster using MAU
-            //
-            create_dst_map_entry(dst_i);
-            //
-            LOG4("...dst... = " << dst_i);
-            auto gress = dst_i->gress;
-            for (auto &operand : primitive->operands) {
-                auto field = phv_i.field(operand);
-                if (field) {
-                    insert_cluster(dst_i, field);
-                    set_field_range(*operand);
-                    LOG4("...operand... = " << field);
-                    BUG_CHECK(gress == field->gress,
-                        "***** cluster.cpp: Operation ..... mixed gress !*****\n%d:%s,%s\n%d:%s,%s",
-                        dst_i->id, dst_i->name, (dst_i->gress ? " E" : " I"),
-                        field->id, field->name, (field->gress ? " E" : " I"));
-                }
-            }
-        }
-    }
-
-    return true;
+    if (primitive->operands.size() == 0)
+        return;
+    if (PhvInfo::Field* dst_i = phv_i.field(primitive->operands[0])) {
+        LOG4("...dst... = " << dst_i);
+        auto gress = dst_i->gress;
+        for (auto &operand : primitive->operands) {
+            if (auto field = phv_i.field(operand)) {
+                insert_cluster(dst_i, field);
+                set_field_range(phv_i, *operand);
+                LOG4("...operand... = " << field);
+                BUG_CHECK(gress == field->gress,
+                    "***** cluster.cpp: Operation ..... mixed gress !*****\n%d:%s,%s\n%d:%s,%s",
+                    dst_i->id, dst_i->name, (dst_i->gress ? " E" : " I"),
+                    field->id, field->name, (field->gress ? " E" : " I")); } }
+        sanity_check_clusters("postorder.." + primitive->name + "..", dst_i); }
 }
 
-bool Cluster::preorder(const IR::Operation* operation) {
-    // should not reach here
-    LOG1("*****cluster.cpp: sanity_FAIL Operation*****" << operation->toString());
-    BUG("*****cluster.cpp: should not invoke preorder(IR::Operation*)*****%s",
-        operation->toString());
+void Cluster::MakeClusters::end_apply() {
+    // Add fields used in MAU not part of primitive operations
+    for (auto &f : phv_i)
+        if (uses_i.is_used_mau(&f))
+            create_dst_map_entry(&f);
 
-    return true;
-}
-
-//***********************************************************************************
-//
-// postorder walk on IR tree
-//
-//***********************************************************************************
-
-void Cluster::postorder(const IR::Primitive* primitive) {
-    if (dst_i) {
-        sanity_check_clusters("postorder.."+primitive->name+"..", dst_i);
-    }
-    dst_i = nullptr;
-}
-
-//***********************************************************************************
-//
-// end of IR walk epilogue
-// perform sanity checks
-// obtain unique clusters
-//
-//***********************************************************************************
-
-void Cluster::end_apply() {
     sanity_check_field_range("end_apply..");
-    //
-    for (auto &entry : dst_map_i) {
+
+    for (auto &entry : self.dst_map_i) {
         auto lhs = entry.first;
-        sanity_check_clusters("end_apply..", lhs);
-    }
-    //
-    // ccgf owner field must be in dst_map_i
-    //
+        sanity_check_clusters("end_apply..", lhs); }
+
+    // ccgf owner field must be in self.dst_map_i
     for (auto &f : phv_i) {
-        if (dst_map_i.count(&f))  {
+        if (self.dst_map_i.count(&f))  {
             if (f.ccgf()
                 && !f.ccgf()->header_stack_pov_ccgf()  // not header stack pov
                 && !f.ccgf_fields().size()
-                && !dst_map_i.count(f.ccgf())) {  // current owner not in dst_map
+                && !self.dst_map_i.count(f.ccgf())) {  // current owner not in dst_map
                 //
                 create_dst_map_entry(f.ccgf());
-                insert_cluster(f.ccgf(), &f);
-            }
-        }
-    }
-    LOG4(".....After ccgf owner in dst_map_i.....");
-    LOG4(dst_map_i);
+                insert_cluster(f.ccgf(), &f); } } }
+
+    LOG4(".....After ccgf owner in self.dst_map_i.....");
+    LOG4(self.dst_map_i);
+
     for (auto &f : phv_i) {
-        if (dst_map_i.count(&f))  {
+        if (self.dst_map_i.count(&f))  {
             //
             // container contiguous group fields
             // cluster(a{a,b},x), cluster(b,y) => cluster(a{a,b},x,y)
             // a->ccgf_fields = {a,b,c}, a->ccgf=a, b->ccgf=a, c->ccgf=a
-            // dst_map_i[a]=(a), dst_map_i[b]=(b)
-            // (a) += (b); remove dst_map_i[b]
-            // b appearing in dst_map_i[y] :-
+            // self.dst_map_i[a]=(a), self.dst_map_i[b]=(b)
+            // (a) += (b); remove self.dst_map_i[b]
+            // b appearing in self.dst_map_i[y] :-
             //     cluster(a{a,b},x), cluster(y,b) => cluster(a{a,b},x,y)
             //
             if (f.is_ccgf()) {
-                for (auto &m : f.ccgf_fields()) {
-                    if (dst_map_i.count(m)) {
+                for (auto &m : f.ccgf_fields())
+                    if (self.dst_map_i.count(m))
                         insert_cluster(&f, m);
-                    }
-                }
+
                 // remove ccgf members duplicated as cluster members
                 // ccgf owners responsible for member allocation
                 // remove duplication as cluster members
-                //
-                ordered_set<PhvInfo::Field *> s1 = *(dst_map_i[&f]);
-                for (auto &c_e : s1) {
-                    for (auto &m : c_e->ccgf_fields()) {
-                        if (m != c_e && s1.count(m)) {
-                            dst_map_i[&f]->erase(m);
-                        }
-                    }
-                }
-            }
-        }
-    }
+                ordered_set<PhvInfo::Field *> s1 = *(self.dst_map_i[&f]);
+                for (auto &c_e : s1)
+                    for (auto &m : c_e->ccgf_fields())
+                        if (m != c_e && s1.count(m))
+                            self.dst_map_i[&f]->erase(m); } } }
+
     LOG4(".....After remove ccgf member duplication.....");
-    LOG4(dst_map_i);
-    //
+    LOG4(self.dst_map_i);
+
     // form unique clusters
-    // forall x not elem lhs_unique_i, dst_map_i[x] = 0
+    // forall x not elem self.lhs_unique_i, self.dst_map_i[x] = 0
     // do not remove singleton clusters as x needs MAU PHV, e.g., set x, 3
-    //
     std::list<PhvInfo::Field *> delete_list;
-    for (auto &entry : dst_map_i) {
+    for (auto &entry : self.dst_map_i) {
         auto lhs = entry.first;
         //
         // remove dst_map entry for fields absorbed in other clusters
         // remove singleton clusters (from headers) not used in mau
         //
-        if (lhs_unique_i.count(lhs) == 0) {
-            dst_map_i[lhs] = nullptr;
+        if (self.lhs_unique_i.count(lhs) == 0) {
+            self.dst_map_i[lhs] = nullptr;
             delete_list.push_back(lhs);
         } else {
             // set_metadata lhs, ....
-            // lhs should not be removed from dst_map_i as mau operation needed
+            // lhs should not be removed from self.dst_map_i as mau operation needed
             // parde (e.g., "extract", "emit") operands not used_mau should be removed from dst_map
             //
             bool need_mau = uses_i.is_used_mau(lhs);
@@ -361,181 +231,177 @@ void Cluster::end_apply() {
                             for (auto &m : f->ccgf_fields()) {
                                 if (uses_i.is_used_mau(m)) {
                                     need_mau = true;
-                                    break;
-                                }
-                            }  // for
-                        }
-                        if (need_mau) {
-                            break;
-                        }
-                    }
-                }  // for
-            }
+                                    break; } } }
+                        if (need_mau)
+                            break; } } }
+
             if (!need_mau) {
-                dst_map_i[lhs] = nullptr;
-                delete_list.push_back(lhs);
-            }
-        }
-    }
-    for (auto &fp : delete_list) {
-        dst_map_i.erase(fp);                                            // erase map key
-    }
+                self.dst_map_i[lhs] = nullptr;
+                delete_list.push_back(lhs); } } }
+
+    for (auto &fp : delete_list)
+        self.dst_map_i.erase(fp);
+
     LOG4(".....After form unique clusters.....");
-    LOG4(".....lhs_unique_i.....");
-    LOG4(&lhs_unique_i);
-    LOG4(".....dst_map_i.....");
-    LOG4(dst_map_i);
-    //
-    set_deparsed_flag();
-    //
+    LOG4(".....self.lhs_unique_i.....");
+    LOG4(&self.lhs_unique_i);
+    LOG4(".....self.dst_map_i.....");
+    LOG4(self.dst_map_i);
+
     deparser_ccgf_phv();
-    //
+
     // compute all fields that are not used through the MAU pipeline
     // potential candidates for T-PHV allocation
-    //
     compute_fields_no_use_mau();
-    //
     deparser_ccgf_t_phv();
-    //
     sort_fields_remove_non_determinism();
-    //
+
     sanity_check_clusters_unique("end_apply..");
-    //
-    // output logs
-    //
-    LOG3(phv_i);                                                        // all Fields
-    LOG3(*this);                                                        // all Clusters
-    //
-}  // end_apply
+
+    LOG1("--- ALL FIELD CLUSTERS --------------------------------------------------------");
+    for (PhvInfo::Field* unique_f : self.lhs_unique_i) {
+        // XXX(cole): This seems like it should be true, but it's not.
+        // BUG_CHECK(self.dst_map_i.count(unique_f),
+        //     "Cluster UnionFind key field not in map: %1%", unique_f->name);
+        if (!self.dst_map_i.count(unique_f)) {
+            LOG2("UnionFind unique (key) field '" << unique_f->name << "' not in dst_map");
+            continue; }
+        for (auto f : *self.dst_map_i.at(unique_f))
+            LOG1(f);
+        LOG1("--------"); }
+    LOG1("");
+
+    LOG1("--- TPHV CANDIDATES -----------------------------------------------------------");
+    for (auto f : self.fields_no_use_mau_i)
+        LOG1(f);
+    LOG1("-------------------------------------------------------------------------------");
+    LOG1("");
+
+    LOG1("--- POV FIELDS ----------------------------------------------------------------");
+    for (auto f : self.pov_fields_i)
+        LOG1(f);
+    LOG1("-------------------------------------------------------------------------------");
+    LOG1("");
+
+    LOG1("--- POV FIELDS (not in cluster) -----------------------------------------------");
+    for (auto f : self.pov_fields_not_in_cluster_i)
+        LOG1(f);
+    LOG1("-------------------------------------------------------------------------------");
+    LOG1("");
+
+    LOG3(phv_i);  // all Fields
+    LOG3(self);   // all Clusters
+}
 
 //
 // set deparsed flag on fields
 //
-
-void Cluster::set_deparsed_flag() {
-    //
-    for (auto &f : phv_i) {
-        //
+void Cluster::MakeCCGFs::set_deparsed_flag() {
+    for (auto &f : self.phv_i)
         // set field's deparsed if used in deparser
-        //
-        if (uses_i.is_deparsed(&f) && !(f.metadata && !f.bridged) && !f.pov) {
-            //
+        if (uses_i.is_deparsed(&f) && !(f.metadata && !f.bridged) && !f.pov)
             f.set_deparsed(true);
-        }
-    }
-}  // set_deparsed_flag
+}
 
 //
 // deparser ccgf accumulation
 //
-
-void Cluster::deparser_ccgf_phv() {
+void Cluster::MakeClusters::deparser_ccgf_phv() {
     //
-    // scan through dst_map_i => phv related fields as t_phv fields will not be in clusters
+    // scan through self.dst_map_i => phv related fields as t_phv fields will not be in clusters
     //
     ordered_map<gress_t, std::list<PhvInfo::Field *>> ccgf;
     ordered_map<gress_t, int> ccgf_width;
-    for (auto &entry : dst_map_i) {
+    for (auto &entry : self.dst_map_i) {
         PhvInfo::Field *f = entry.first;
         ordered_set<PhvInfo::Field *> *s = entry.second;
         if (s->size() == 1
             && !f->metadata && !f->pov && !f->is_ccgf() && f->size < PHV_Container::PHV_Word::b8) {
             //
             ccgf[f->gress].push_back(f);
-            ccgf_width[f->gress] += f->size;
-        }
-    }
+            ccgf_width[f->gress] += f->size; } }
+
     auto contiguity_limit = CCGF_contiguity_limit::Parser_Extract * PHV_Container::PHV_Word::b8;
     for (auto &entry : ccgf) {
         std::list<PhvInfo::Field *> member_list = entry.second;
         PhvInfo::Field *owner = member_list.front();
         if (ccgf_width[entry.first] > contiguity_limit) {
-            LOG1("*****cluster.cpp: ccgf fields not grouped *****"
+            LOG2("*****cluster.cpp: ccgf fields not grouped *****"
                 << "-----deparser_ccgf_phv....."
                 << "ccgf_width=" << ccgf_width[entry.first]
                 << " > contiguity_limit=" << contiguity_limit);
-            LOG1(owner);
-            continue;
-        }
+            LOG2(owner);
+            continue; }
+
         if (member_list.size() > 1) {
             for (auto &f : member_list) {
-                //
                 f->set_ccgf(owner);
                 owner->ccgf_fields().push_back(f);
-                //
-                dst_map_i.erase(f);
-            }
-            dst_map_i[owner] = new ordered_set<PhvInfo::Field *>;  // new set
-            dst_map_i[owner]->insert(owner);
-            LOG3("..........deparser_ccgf_phv..........");
-            LOG3(owner);
-        }
-    }
-}  // deparser_ccgf_phv
+                self.dst_map_i.erase(f); }
 
-void Cluster::deparser_ccgf_t_phv() {
+            self.dst_map_i[owner] = new ordered_set<PhvInfo::Field *>;  // new set
+            self.dst_map_i[owner]->insert(owner);
+
+            LOG3("..........deparser_ccgf_phv.........."); } }
+}
+
+void Cluster::MakeClusters::deparser_ccgf_t_phv() {
     //
-    // scan through fields_no_use_mau_i => t_phv fields
+    // scan through self.fields_no_use_mau_i => t_phv fields
     //
     ordered_map<gress_t, std::list<PhvInfo::Field *>> ccgf;
     ordered_map<gress_t, int> ccgf_width;
-    for (auto &f : fields_no_use_mau_i) {
+    for (auto &f : self.fields_no_use_mau_i) {
         if (!f->metadata && !f->pov && !f->is_ccgf() && f->size < PHV_Container::PHV_Word::b8) {
             //
             ccgf[f->gress].push_back(f);
-            ccgf_width[f->gress] += f->size;
-        }
-    }
+            ccgf_width[f->gress] += f->size; } }
+
     auto contiguity_limit = CCGF_contiguity_limit::Parser_Extract * PHV_Container::PHV_Word::b8;
     for (auto &entry : ccgf) {
         std::list<PhvInfo::Field *> member_list = entry.second;
         PhvInfo::Field *owner = member_list.front();
         if (ccgf_width[entry.first] > contiguity_limit) {
-            LOG1("*****cluster.cpp: ccgf fields not grouped *****"
+            LOG2("*****cluster.cpp: ccgf fields not grouped *****"
                 << "-----deparser_ccgf_t_phv....."
                 << "ccgf_width=" << ccgf_width[entry.first]
                 << " > contiguity_limit=" << contiguity_limit);
-            LOG1(owner);
-            continue;
-        }
+            LOG2(owner);
+            continue; }
+
         if (member_list.size() > 1) {
             for (auto &f : member_list) {
-                //
                 f->set_ccgf(owner);
                 owner->ccgf_fields().push_back(f);
-                //
-                fields_no_use_mau_i.remove(f);
-            }
-            fields_no_use_mau_i.push_back(owner);
+                self.fields_no_use_mau_i.remove(f); }
+
+            self.fields_no_use_mau_i.push_back(owner);
+
             LOG3("..........deparser_ccgf_t_phv..........");
-            LOG3(owner);
-        }
-    }
-}  // deparser_ccgf_t_phv
+            LOG3(owner); } }
+}
 
 //
 // compute fields that do not use mau pipeine, no MAU reads or writes
 // these fields do not participate as operands in MAU instructions
 // they can be placed in T_PHV, by-passing MAU
 //
-
-void Cluster::compute_fields_no_use_mau() {
+void Cluster::MakeClusters::compute_fields_no_use_mau() {
     //
     // clear all computed & exported lists
     //
-    pov_fields_i.clear();
-    pov_fields_not_in_cluster_i.clear();
-    fields_no_use_mau_i.clear();
-    //
+    self.pov_fields_i.clear();
+    self.pov_fields_not_in_cluster_i.clear();
+    self.fields_no_use_mau_i.clear();
+
     ordered_set<PhvInfo::Field *> all_fields;                          // all fields in phv_i
     ordered_set<PhvInfo::Field *> cluster_fields;                      // cluster fields
     ordered_set<PhvInfo::Field *> all_minus_cluster;                   // all - cluster fields
     ordered_set<PhvInfo::Field *> pov_fields;                          // pov fields
     ordered_set<PhvInfo::Field *> not_used_mau;                        // fields not used in MAU
                                                                        // all - cluster - pov_fields
-    //
+
     // preprocess fields before accumulation
-    //
     for (auto &field : phv_i) {
         if (field.simple_header_pov_ccgf() && !uses_i.is_referenced(&field)) {
             //
@@ -543,121 +409,98 @@ void Cluster::compute_fields_no_use_mau() {
             // else appoint new owner of group
             //
             std::vector<PhvInfo::Field *> members;
+
             for (auto &m : field.ccgf_fields()) {
-                if (uses_i.is_referenced(m)) {
+                if (uses_i.is_referenced(m))
                     members.push_back(m);
-                }
-                m->set_ccgf(0);
-            }
+                m->set_ccgf(0); }
+
             if (members.size() > 1) {
                 PhvInfo::Field *owner = members.front();
                 owner->set_simple_header_pov_ccgf(true);
                 for (auto &m : members) {
                     m->set_ccgf(owner);
-                    owner->ccgf_fields().push_back(m);
-                }
-            }
+                    owner->ccgf_fields().push_back(m); } }
+
             field.set_simple_header_pov_ccgf(false);
             field.set_ccgf(0);
-            field.ccgf_fields().clear();
-        }
-    }  // for all fields
-    //
+            field.ccgf_fields().clear(); } }
+
     // accumulation
-    //
     for (auto &field : phv_i) {
-        if (!uses_i.is_referenced(&field)) {
-            //
-            // disregard unreferenced fields before all_fields accumulation
-            //
+        // disregard unreferenced fields before all_fields accumulation
+        if (!uses_i.is_referenced(&field))
             continue;
-        }
+
         all_fields.insert(&field);
-        //
+
         // avoid duplicate allocation for povs that are
         // members of owners that represent header_stack_pov_ccgf
         // members of owners that represent simple_header_pov_ccgf
         // these members are part of owner container
         // owners if not part of MAU cluster, should be added to pov_fields
-        //
-        if (field.pov
-           && (!field.ccgf()
-              || (field.ccgf()
-              && !field.ccgf()->header_stack_pov_ccgf()
-              && !field.ccgf()->simple_header_pov_ccgf()))) {
-            //
-            pov_fields.insert(&field);                                 // pov field
-        }
+        bool is_stack_or_simple_ccgf =
+            field.ccgf() &&
+            (field.ccgf()->header_stack_pov_ccgf() || field.ccgf()->simple_header_pov_ccgf());
+        if (field.pov && !is_stack_or_simple_ccgf)
+            pov_fields.insert(&field);
+
         // pov owners not part of MAU cluster, must be added to pov_fields
-        //
-        if (field.pov
-           && (&field == field.ccgf() && !dst_map_i.count(field.ccgf()))) {
-            //
-            pov_fields.insert(&field);                                 // pov field
-        }
+        if (field.pov && (&field == field.ccgf() && !self.dst_map_i.count(field.ccgf())))
+            pov_fields.insert(&field);
+
         // compute width required for ccgf owner (responsible for its members)
         // need PHV container(s) space for ccgf_width
-        //
-        if (field.is_ccgf()) {
+        if (field.is_ccgf())
             field.set_ccgf_phv_use_width();
-        }
-        //
+
         // set deparsed for ccgf owner
         // if any member used in deparser, ccgf must be in exact containers
-        //
         if (field.ccgf()) {
             for (auto &m : field.ccgf_fields()) {
                 if (m->deparsed()) {
                     field.set_deparsed(true);
-                    break;
-                }
-            }
-        }
-    }  // for all fields
-    pov_fields_i.assign(pov_fields.begin(), pov_fields.end());         // pov_fields_i
+                    break; } } } }
+
+    self.pov_fields_i.assign(pov_fields.begin(), pov_fields.end());         // self.pov_fields_i
     LOG3(std::endl << "..........All fields (" << all_fields.size() << ")..........");
-    for (auto &entry : dst_map_i) {
+
+    // build cluster fields
+    for (auto &entry : self.dst_map_i)
         if (entry.second) {
             cluster_fields.insert(entry.first);
             for (auto entry_2 : *(entry.second)) {
                 cluster_fields.insert(entry_2);
-                if (entry_2->ccgf_fields().size()) {
-                    for (auto &member : entry_2->ccgf_fields()) {
-                        cluster_fields.insert(member);
-                    }
-                }
-            }
-        }
-    }
-    //
+                if (entry_2->ccgf_fields().size())
+                    for (auto &member : entry_2->ccgf_fields())
+                        cluster_fields.insert(member); } }
+
     LOG3("..........Cluster fields (" << cluster_fields.size() << ")..........");
-    LOG3("..........POV fields (" << pov_fields_i.size() << ")..........");
-    //
+    LOG3("..........POV fields (" << self.pov_fields_i.size() << ")..........");
+
     // all_minus_cluster = all_fields - cluster_fields
-    //
     all_minus_cluster = all_fields;
     all_minus_cluster -= cluster_fields;
-    //
+
     // not_used_mau = all_minus_cluster - pov_fields
-    //
     not_used_mau = all_minus_cluster;
     not_used_mau -= pov_fields;
-    //
+
     // pov_mau = pov intersect cluster fields
-    //
     ordered_set<PhvInfo::Field *> pov_mau = pov_fields;
     pov_mau &= cluster_fields;
+
     LOG3("..........POV fields in Cluster (" << pov_mau.size() << ")..........");
-    //
+
     // pov fields not in cluster
     // pov_no_mau = set_diff pov, pov_mau
-    //
     ordered_set<PhvInfo::Field *> pov_no_mau = pov_fields;
     pov_no_mau -= pov_mau;
+    self.pov_fields_not_in_cluster_i.assign(pov_no_mau.begin(), pov_no_mau.end());
+
     LOG3("..........POV fields not in Cluster (" << pov_no_mau.size() << ")..........");
-    pov_fields_not_in_cluster_i.assign(pov_no_mau.begin(), pov_no_mau.end());
     LOG3("..........Fields avoiding MAU pipe (" << not_used_mau.size() << ")..........");
-    //
+
     sanity_check_fields_use(
         "compute_fields_no_use_mau..",
         all_fields,
@@ -665,43 +508,39 @@ void Cluster::compute_fields_no_use_mau() {
         all_minus_cluster,
         pov_fields,
         not_used_mau);
-    //
-    // from T_PHV candidates,
-    // discard the following
-    // metadata & pov
-    // members of "container contiguous group" (owner accounts, avoid duplicate allocations)
-    // fields not used in ingress or egress
-    // set_field_range (entire field deparsed) for T_PHV fields_no_use_mau
-    //
+
+    /* From T_PHV candidates (fields not used in MAU):
+     *  - remove non-bridged metadata
+     *  - remove CCGF children---they will be allocated with their owner
+     *
+     * For remaining fields, set_field_range (entire field deparsed).
+     */
     ordered_set<PhvInfo::Field *> delete_set;
-    for (auto &f : not_used_mau) {
-        bool use_pd = uses_i.is_used_parde(f);  // used in parser / deparser
-        //
-        // metadata in T_PHV can be removed but bridge_metadata deparsed must be allocated
-        //
-        if (!use_pd
-            || f->pov
-            || (f->metadata && !f->bridged)  // non-bridge metadata should not be in TPHV
-            || (f->ccgf() && f->ccgf() != f)) {
-            //
+    for (auto f : not_used_mau) {
+        // Metadata in T_PHV can be removed but bridged metadata must
+        // be allocated.  CCGF children are also removed.
+        bool is_ccgf_child = f->ccgf() && f->ccgf() != f;
+        bool is_nonbridged_metadata = f->metadata && !f->bridged;
+        if (is_ccgf_child || is_nonbridged_metadata) {
             delete_set.insert(f);
         } else {
-            set_field_range(f);
-        }
-    }
+            BUG_CHECK(!f->pov, "POV field not clustered");
+            set_field_range(f); } }
+
     // s_diff = not_used_mau - delete_set
     ordered_set<PhvInfo::Field *> s_diff = not_used_mau;
     s_diff -= delete_set;
-    fields_no_use_mau_i.assign(s_diff.begin(), s_diff.end());  // fields_no_use_mau_i
+    self.fields_no_use_mau_i.assign(s_diff.begin(), s_diff.end());  // self.fields_no_use_mau_i
+
     LOG3("..........T_PHV Fields ("
-        << fields_no_use_mau_i.size()
+        << self.fields_no_use_mau_i.size()
         << ").........."
         << std::endl);
-    //
-}  // compute_fields_no_use_mau
+    for (auto f : self.fields_no_use_mau_i)
+        LOG4(f);
+}
 
-void
-Cluster::sort_fields_remove_non_determinism() {
+void Cluster::MakeClusters::sort_fields_remove_non_determinism() {
     //
     // sort fields by id so that future passes using these lists
     // produce determined output on each run
@@ -720,40 +559,40 @@ Cluster::sort_fields_remove_non_determinism() {
     //
     // sort exported list fields by id
     //
-    pov_fields_i.sort(
+    self.pov_fields_i.sort(
         [](PhvInfo::Field *l, PhvInfo::Field *r) {
             // sort by cluster id_num to prevent non-determinism
             return l->id < r->id;
         });
-    pov_fields_not_in_cluster_i.sort(
+    self.pov_fields_not_in_cluster_i.sort(
         [](PhvInfo::Field *l, PhvInfo::Field *r) {
             // sort by cluster id_num to prevent non-determinism
             return l->id < r->id;
         });
-    fields_no_use_mau_i.sort(
+    self.fields_no_use_mau_i.sort(
         [](PhvInfo::Field *l, PhvInfo::Field *r) {
             // sort by cluster id_num to prevent non-determinism
             return l->id < r->id;
         });
-}  // sort_fields_remove_non_determinism
+}
 
 //***********************************************************************************
 //
 // create dst map entry
-// create a dst_map_i entry for field
-// insert in lhs_unique_i
+// create a self.dst_map_i entry for field
+// insert in self.lhs_unique_i
 // insert_cluster
 //
 //***********************************************************************************
-void Cluster::create_dst_map_entry(PhvInfo::Field *field) {
+void Cluster::MakeClusters::create_dst_map_entry(PhvInfo::Field *field) {
     assert(field);
-    if (!dst_map_i[field]) {
-        dst_map_i[field] = new ordered_set<PhvInfo::Field *>;  // new set
-        lhs_unique_i.insert(field);  // lhs_unique set insert field
-        LOG5("lhs_unique..insert[" << std::endl << &lhs_unique_i << "lhs_unique..insert]");
+    if (!self.dst_map_i[field]) {
+        self.dst_map_i[field] = new ordered_set<PhvInfo::Field *>;  // new set
+        self.lhs_unique_i.insert(field);  // lhs_unique set insert field
+        LOG5("lhs_unique..insert[" << std::endl << &self.lhs_unique_i << "lhs_unique..insert]");
         insert_cluster(field, field);
         set_field_range(field);
-        LOG4(field);
+        LOG4("CREATE " << field << " for cluster");
     }
 }
 
@@ -764,21 +603,21 @@ void Cluster::create_dst_map_entry(PhvInfo::Field *field) {
 //
 //***********************************************************************************
 
-void Cluster::set_field_range(const IR::Expression& expression) {
+/* static */
+void Cluster::set_field_range(PhvInfo &phv, const IR::Expression& expression) {
     bitrange bits;
     bits.lo = bits.hi = 0;
-    auto field = phv_i.field(&expression, &bits);
-    if (field) {
+    if (auto field = phv.field(&expression, &bits)) {
         // set range based on expression bit-slice use
         field->set_phv_use_lo(std::min(field->phv_use_lo(), bits.lo));
-        if (field->metadata || field->pov) {
+        if (field->metadata || field->pov)
             field->set_phv_use_hi(std::max(field->phv_use_hi(), bits.hi));
-        } else {
+        else
             set_field_range(field);
-        }
     }
 }
 
+/* static */
 void Cluster::set_field_range(PhvInfo::Field *field, int container_width) {
     if (field) {
         field->set_phv_use_lo(0);
@@ -819,55 +658,56 @@ void Cluster::set_field_range(PhvInfo::Field *field, int container_width) {
 // Union: Join two subsets into a single subset
 // if rhs is ccgf member, check if rhs ccgf owner in lhs cluster
 
-void Cluster::insert_cluster(PhvInfo::Field *lhs, PhvInfo::Field *rhs) {
-    if (lhs && dst_map_i[lhs] && rhs) {
+void Cluster::MakeClusters::insert_cluster(PhvInfo::Field *lhs, PhvInfo::Field *rhs) {
+    if (lhs && self.dst_map_i[lhs] && rhs) {
         if (rhs == lhs) {   // b == a
-            dst_map_i[lhs]->insert(rhs);
+            self.dst_map_i[lhs]->insert(rhs);
         } else {
-            if (dst_map_i[rhs] != dst_map_i[lhs]) {   // [b]-->nullptr
+            if (self.dst_map_i[rhs] != self.dst_map_i[lhs]) {   // [b]-->nullptr
                 //
                 // ccgf owners will phv allocate for members
                 // recursively (PHV_Container::taint())
                 // avoid duplication
                 // e.g.,  owner's cluster as (lhs{lhs->ccgf_fields=(field,...)}, field)
                 //
-                if (!dst_map_i[rhs]) {
+                if (!self.dst_map_i[rhs]) {
+                    // XXX(cole): If CCGF owner is in a different cluster, don't we
+                    // need to union that cluster with this one?
+
                     if (!rhs->ccgf() || !is_ccgf_owner_in_cluster(lhs, rhs)) {
-                        dst_map_i[lhs]->insert(rhs);
-                        dst_map_i[rhs] = dst_map_i[lhs];
+                        self.dst_map_i[lhs]->insert(rhs);
+                        self.dst_map_i[rhs] = self.dst_map_i[lhs];
                     }
                 } else {   // [b]-->(b,d,x)
                     // [a]-->(a,u,v)U(b,d,x)
-                    for (auto field : *(dst_map_i[rhs])) {
-                        if (!field->ccgf() || !is_ccgf_owner_in_cluster(lhs, field)) {
-                            dst_map_i[lhs]->insert(field);
-                        }
-                    }
+                    for (auto field : *(self.dst_map_i[rhs]))
+                        if (!field->ccgf() || !is_ccgf_owner_in_cluster(lhs, field))
+                            self.dst_map_i[lhs]->insert(field);
+
                     // [b],[d],[x],[a],[u],[v]-->(a,u,v,b,d,x)
                     // lhs_unique set: -remove(b,d,x)
-                    for (auto field : *(dst_map_i[rhs])) {
-                        dst_map_i[field] = dst_map_i[lhs];
-                        lhs_unique_i.erase(field);                   // lhs_unique set erase field
-                    }
-                }
-            }
+                    for (auto field : *(self.dst_map_i[rhs])) {
+                        self.dst_map_i[field] = self.dst_map_i[lhs];
+                        self.lhs_unique_i.erase(field); } } }
+
             LOG4("..... insert_cluster ....." << lhs);
-            LOG4(dst_map_i[lhs]);
-            LOG5("lhs_unique..erase[" << std::endl << &lhs_unique_i << "lhs_unique..erase]");
+            LOG4(self.dst_map_i[lhs]);
+            LOG5("lhs_unique..erase[" << std::endl << &self.lhs_unique_i << "lhs_unique..erase]");
         }
     }
-}  // insert_cluster
+}
 
 
 /// @return true if the CCGF owner of @rhs is in the same cluster as @lhs.
-bool Cluster::is_ccgf_owner_in_cluster(PhvInfo::Field *lhs, PhvInfo::Field *rhs) {
+bool Cluster::MakeClusters::is_ccgf_owner_in_cluster(PhvInfo::Field *lhs, PhvInfo::Field *rhs) {
     //
     // return true if rhs' ccgf owner in cluster
     // i.e., rhs is not a member of f.ccgf_fields, f element of lhs cluster
-    // check rhs.ccgf in dst_map_i[lhs]
+    // check rhs.ccgf in self.dst_map_i[lhs]
     //
-    return lhs && rhs && rhs->ccgf() && dst_map_i[lhs] && dst_map_i[lhs]->count(rhs->ccgf());
-}  // is_ccgf_owner_in_cluster
+    return lhs && rhs && rhs->ccgf() &&
+           self.dst_map_i[lhs] && self.dst_map_i[lhs]->count(rhs->ccgf());
+}
 
 //***********************************************************************************
 //
@@ -875,7 +715,7 @@ bool Cluster::is_ccgf_owner_in_cluster(PhvInfo::Field *lhs, PhvInfo::Field *rhs)
 //
 //***********************************************************************************
 
-void Cluster::sanity_check_field_range(const std::string& msg) {
+void Cluster::MakeClusters::sanity_check_field_range(const std::string& msg) {
     // for all fields in phv_i, check size >= range
     for (auto field : phv_i) {
         if (field.phv_use_width() > field.size) {
@@ -896,18 +736,18 @@ void Cluster::sanity_check_field_range(const std::string& msg) {
     }
 }
 
-void Cluster::sanity_check_clusters(const std::string& msg, PhvInfo::Field *lhs) {
-    if (lhs && dst_map_i[lhs]) {
+void Cluster::MakeClusters::sanity_check_clusters(const std::string& msg, PhvInfo::Field *lhs) {
+    if (lhs && self.dst_map_i[lhs]) {
         // b --> (b,d,e); count b=1 in (b,d,e)
-        if (!dst_map_i[lhs]->count(lhs)) {
+        if (!self.dst_map_i[lhs]->count(lhs)) {
             // sets contain at most one of any element, sanity check non-zero
             LOG1("*****cluster.cpp:sanity_FAIL*****"
                 << msg << ".....cluster member does not exist in dst_map set");
-            LOG1(lhs << "-->" << dst_map_i[lhs]);
+            LOG1(lhs << "-->" << self.dst_map_i[lhs]);
         }
         // forall x elem (b,d,e), x-->(b,d,e)
-        for (auto rhs : *(dst_map_i[lhs])) {
-            if (dst_map_i[rhs] != dst_map_i[lhs]) {
+        for (auto rhs : *(self.dst_map_i[lhs])) {
+            if (self.dst_map_i[rhs] != self.dst_map_i[lhs]) {
                 LOG1("*****cluster.cpp:sanity_FAIL*****"
                     << msg << ".....cluster member pointers inconsistent");
                 LOG1(lhs << "-->" << rhs);
@@ -916,9 +756,9 @@ void Cluster::sanity_check_clusters(const std::string& msg, PhvInfo::Field *lhs)
     }
 }
 
-void Cluster::sanity_check_clusters_unique(const std::string& msg) {
+void Cluster::MakeClusters::sanity_check_clusters_unique(const std::string& msg) {
     //
-    // sanity check dst_map_i[] contains unique clusters only
+    // sanity check self.dst_map_i[] contains unique clusters only
     // forall clusters x,y
     //     x intersect y = 0
     //
@@ -928,7 +768,7 @@ void Cluster::sanity_check_clusters_unique(const std::string& msg) {
     //    header stack povs: m not member of m.ccgf
     //    sub-byte header fields: m member of m.ccgf
     //
-    for (auto entry : dst_map_i) {
+    for (auto entry : self.dst_map_i) {
         if (entry.first && entry.second) {
             ordered_set<PhvInfo::Field *> s1 = *(entry.second);
             //
@@ -970,7 +810,7 @@ void Cluster::sanity_check_clusters_unique(const std::string& msg) {
                 s1.insert(f);
             }
             //
-            for (auto entry_2 : dst_map_i) {
+            for (auto entry_2 : self.dst_map_i) {
                 if (entry_2.first && entry_2.second && entry_2.first != entry.first) {
                     ordered_set<PhvInfo::Field *> s2 = *(entry_2.second);
                     //
@@ -1008,12 +848,12 @@ void Cluster::sanity_check_clusters_unique(const std::string& msg) {
     }
 }  // sanity_check_clusters_unique
 
-void Cluster::sanity_check_fields_use(const std::string& msg,
-    ordered_set<PhvInfo::Field *> all,
-    ordered_set<PhvInfo::Field *> cluster,
-    ordered_set<PhvInfo::Field *> all_minus_cluster,
-    ordered_set<PhvInfo::Field *> pov,
-    ordered_set<PhvInfo::Field *> no_mau) {
+void Cluster::MakeClusters::sanity_check_fields_use(const std::string& msg,
+    ordered_set<PhvInfo::Field *>& all,
+    ordered_set<PhvInfo::Field *>& cluster,
+    ordered_set<PhvInfo::Field *>& all_minus_cluster,
+    ordered_set<PhvInfo::Field *>& pov,
+    ordered_set<PhvInfo::Field *>& no_mau) {
     //
     ordered_set<PhvInfo::Field *> s_check;
     //

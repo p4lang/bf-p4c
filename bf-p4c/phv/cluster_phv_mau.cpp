@@ -318,7 +318,7 @@ PHV_MAU_Group_Assignments::phv_containers(int phv_num, PHV_Container *c) {
 }
 
 void
-PHV_MAU_Group_Assignments::phv_containers(std::string asm_string, int phv_num) {
+PHV_MAU_Group_Assignments::phv_containers(const std::string asm_string, int phv_num) {
     BUG_CHECK(
         (phv_num >= phv_container_numbers_i.first && phv_num <= phv_container_numbers_i.second)
         ||
@@ -329,28 +329,26 @@ PHV_MAU_Group_Assignments::phv_containers(std::string asm_string, int phv_num) {
     asm_map_i[asm_string] = phv_num;
 }
 
-PHV_Container *
-PHV_MAU_Group_Assignments::phv_container(int phv_num) {
+const PHV_Container * PHV_MAU_Group_Assignments::phv_container(int phv_num) const {
     BUG_CHECK(
         (phv_num >= phv_container_numbers_i.first && phv_num <= phv_container_numbers_i.second)
         ||
         (phv_num >= t_phv_container_numbers_i.first && phv_num <= t_phv_container_numbers_i.second),
         "*****PHV_MAU_Group_Assignments: sanity_FAIL.....PHV_Container number '%d' outside limits",
         phv_num);
-    BUG_CHECK(phv_containers_i[phv_num],
+    BUG_CHECK(phv_containers_i.count(phv_num),
         "*****PHV_Container '%d' not created yet, internal phv allocation error*****", phv_num);
-    //
-    return phv_containers_i[phv_num];
+
+    return phv_containers_i.at(phv_num);
 }
 
-PHV_Container *
-PHV_MAU_Group_Assignments::phv_container(std::string asm_string) {
-    if (asm_map_i.count(asm_string)) {
-        int phv_num = asm_map_i[asm_string];
-        return phv_container(phv_num);
-    }
+const PHV_Container *
+PHV_MAU_Group_Assignments::phv_container(std::string asm_string) const {
+    if (asm_map_i.count(asm_string))
+        return phv_container(asm_map_i.at(asm_string));
+
     BUG("*****PHV_MAU_Group_Assignments::phv_container('%s') does not exist*****", asm_string);
-    return 0;
+    return nullptr;
 }
 
 int
@@ -788,12 +786,12 @@ PHV_MAU_Group_Assignments::container_no_pack(
         return l->width() > r->width();
     });
     //
-    LOG3(".......... PHV_Groups to be filled ("
+    LOG4(".......... PHV_Groups to be filled ("
          << phv_groups_to_be_filled.size()
          << ").........." << std::endl);
-    LOG3(phv_groups_to_be_filled);
+    LOG4(phv_groups_to_be_filled);
     //
-    LOG3(".......... No Pack Placements .........." << std::endl);
+    LOG4(".......... No Pack Placements .........." << std::endl);
     for (auto &g : phv_groups_to_be_filled) {
         std::list<Cluster_PHV *> clusters_remove;
         for (auto &cl : clusters_to_be_assigned) {
@@ -837,8 +835,8 @@ PHV_MAU_Group_Assignments::container_no_pack(
                                             phv_groups_to_be_filled)) {
                     //
                     cl_g = g_scale_down;
-                    LOG3("..... exact_containers ... downsizing MAU Group .....");
-                    LOG3(*cl_g);
+                    LOG4("..... exact_containers ... downsizing MAU Group .....");
+                    LOG4(*cl_g);
                 } else {
                     LOG1("*****cluster_phv_mau.cpp: sanity_WARN*****"
                         << ".....exact_containers MATCH NOT AVAILABLE");
@@ -1586,7 +1584,7 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
     //
     // pack sorted clusters<n,w> to containers[w][n]
     //
-    LOG3("..........Packing.........." << std::endl);
+    LOG4("..........Packing.........." << std::endl);
     //
     std::list<Cluster_PHV *> clusters_remove;
     for (auto &cl : clusters_to_be_assigned) {
@@ -1647,7 +1645,7 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
                             //
                             // not compatible, constraints not satisfied
                             //
-                            LOG3("-----"
+                            LOG4("-----"
                                 << cl->id()
                                 << "<"
                                 << cl_n
@@ -1665,7 +1663,7 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
                             continue;
                         }
                         //
-                        LOG3("....."
+                        LOG4("....."
                              << cl->id()
                              << "<"
                              << cl_n
@@ -1697,7 +1695,7 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
                                 cc_set.erase(cc_set.begin());
                             }
                             i.second[n].push_back(*cc_n);
-                            LOG3("\t==>["
+                            LOG4("\t==>["
                                  << m_w
                                  << "]-->["
                                  << m_w
@@ -1806,7 +1804,7 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
                             }
                             auto w = m_w - cl_w;
                             aligned_slices[w][cl_n].push_back(*cc_w);
-                            LOG3("\t==>("
+                            LOG4("\t==>("
                                 << cl_n
                                 << ")-->["
                                 << w

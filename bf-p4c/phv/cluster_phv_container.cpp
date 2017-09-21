@@ -813,8 +813,7 @@ PHV_Container::holes(
     }
 }  // holes vector bits
 
-void
-PHV_Container::holes(std::list<std::pair<int, int>>& holes_list) {
+void PHV_Container::holes(std::list<std::pair<int, int>>& holes_list) const {
     //
     // identify holes in container
     //

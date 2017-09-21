@@ -13,54 +13,15 @@
 //
 const IR::Node *
 PHV_Analysis_Validate::apply_visitor(const IR::Node *node, const char *name) {
-    //
-    if (name) {
+    if (name)
         LOG1(name);
-    }
-    node->apply(*uses_i);  // uses_i recomputed
-    //
-    // create map from field ranges to container bit ranges
-    //
-    create_field_container_map();
-    //
     return node;
-}  // apply_visitor
-
-void
-PHV_Analysis_Validate::end_apply() {
-    //
-    LOG3(*this);
-    //
-    sanity_check_fields("PHV_Analysis_Validate::end_apply()");
 }
 
 void
-PHV_Analysis_Validate::create_field_container_map() {
-    //
-    phv_name_cc_map_i.clear();
-    //
-    for (auto &f : phv_i) {
-        if (!uses_i->is_referenced(&f)) {  // disregard unreferenced fields
-            continue;
-        }
-        assert(f.phv_analysis_api());
-        for (auto &c : f.phv_containers()) {
-            for (auto &cc : c->fields_in_container()[&f]) {
-                int field_bit_lo = cc->field_bit_lo();
-                int field_bit_hi = cc->field_bit_lo() + cc->width() - 1;
-                f.phv_analysis_api()
-                    ->field_container_map()[std::make_pair(field_bit_lo, field_bit_hi)] = cc;
-                phv_name_cc_map_i[c->phv_number()].push_back(cc);
-            }
-        }
-    }  // for
-    // sort cc slices in phv_name_cc_map
-    for (auto &e : phv_name_cc_map_i) {
-        e.second.sort(
-            [](PHV_Container::Container_Content *l, PHV_Container::Container_Content *r) {
-                return l->lo() < r->lo();
-            });
-    }
+PHV_Analysis_Validate::end_apply() {
+    LOG3(*this);
+    sanity_check_fields("PHV_Analysis_Validate::end_apply()");
 }
 
 std::tuple<
@@ -100,18 +61,18 @@ PHV_Analysis_Validate::make_tuple(PHV_Container::Container_Content *cc) {
 //
 void
 PHV_Analysis_Validate::sanity_check_fields(const std::string& msg) {
-    //
     const std::string msg_1 = msg + ".....sanity_check_fields()";
     for (auto &f : phv_i) {
         if (!f.phv_analysis_api()) {
+            // TODO: This will never fail, because f.phv_analysis_api() is checked
+            // for NULL when constructing the field_container_map in the API.
             LOG1("*****phv_analysis_validate.cpp:sanity_FAIL*****....."
                 << "..... PHV_Analysis_Validate extended object not created for field ..... "
-                << f);
-        }
-    }
+                << f); } }
+
     sanity_check_fields_containers(msg);
     sanity_check_container_holes(msg);
-}  // sanity_check_fields
+}
 
 void
 PHV_Analysis_Validate::sanity_check_fields_containers(const std::string& msg) {
@@ -123,7 +84,7 @@ PHV_Analysis_Validate::sanity_check_fields_containers(const std::string& msg) {
         const PHV_Container *,
         const std::pair<int, int>>> tuple_list_f;
     for (auto &f : phv_i) {
-        if (!uses_i->is_referenced(&f)) {  // disregard unreferenced fields
+        if (!uses_i.is_referenced(&f)) {  // disregard unreferenced fields
             continue;
         }
         PHV_Analysis_API *f_api = f.phv_analysis_api();
@@ -248,7 +209,7 @@ PHV_Analysis_Validate::sanity_check_fields_containers(const std::string& msg) {
             prev_lo = lo;
             prev_hi = hi;
         }
-        if (field_size && uses_i->is_referenced(&f)) {  // disregard unreferenced fields)
+        if (field_size && uses_i.is_referenced(&f)) {  // disregard unreferenced fields)
             LOG1("*****phv_analysis_validate.cpp:sanity_FAIL*****....."
                 << "..... sanity_check_fields_containers: field_incomplete_allocation ..... "
                 << std::endl
@@ -268,7 +229,7 @@ PHV_Analysis_Validate::sanity_check_container_holes(const std::string& msg) {
     assert(phv_mau_i);
     for (auto &e : phv_mau_i->phv_containers()) {
         int phv_num = e.first;
-        PHV_Container *c = phv_mau_i->phv_container(phv_num);
+        const PHV_Container *c = phv_mau_i->phv_container(phv_num);
         assert(c);
         //
         std::list<std::tuple<
@@ -361,95 +322,6 @@ PHV_Analysis_Validate::field_allocated(
     bool allocated = allocated_width >= f->size? true: false;
     return allocated && (contiguously? contiguous: true);
 }  // field allocated
-//
-//
-//***********************************************************************************
-//
-// Fields to Containers
-//
-//***********************************************************************************
-//
-//
-// field to containers
-//
-bool
-PHV_Analysis_Validate::field_to_containers(
-    PhvInfo::Field *f,
-    std::list<std::tuple<
-        PhvInfo::Field *,
-        const std::pair<int, int>,
-        const PHV_Container *,
-        const std::pair<int, int>>>& tuple_list) {
-    //
-    assert(f);
-    PHV_Analysis_API *f_api = f->phv_analysis_api();
-    assert(f_api);
-    tuple_list.clear();
-    bool contiguous = true;
-    int next_start = -1;
-    std::list<int> phv_nums;
-    if (f_api->field_container_map().empty()) {
-        LOG1(
-            "*****phv_analysis_validate.cpp:sanity_WARN*****....."
-            << ".....field_to_containers(): field container map reveals unassigned field....."
-            << std::endl
-            << f);
-    }
-    for (auto &cc : Values(f_api->field_container_map())) {
-        tuple_list.push_back(make_tuple(cc));
-        const PHV_Container *c = cc->container();
-        int phv_num = c->phv_number();
-        if ((next_start != -1 && next_start != cc->lo())
-            || (phv_nums.size() && phv_nums.back() != phv_num - 1)) {
-            //
-            contiguous = false;
-        }
-        next_start = (cc->hi() + 1) % c->width();
-        phv_nums.push_back(phv_num);
-    }
-    return contiguous;
-}  // field_to_containers
-
-//
-// field ranges to containers
-//
-void
-PHV_Analysis_Validate::field_to_containers(
-    PhvInfo::Field *f,
-    std::pair<int, int>& f_range,
-    std::list<std::tuple<
-        PhvInfo::Field *,
-        const std::pair<int, int>,
-        const PHV_Container *,
-        const std::pair<int, int>>>& tuple_list) {
-    //
-    assert(f);
-    PHV_Analysis_API *f_api = f->phv_analysis_api();
-    assert(f_api);
-    int lo = f_range.first;
-    int hi = f_range.second;
-    assert(lo >= 0);
-    assert(hi >= 0);
-    tuple_list.clear();
-    if (f_api->field_container_map().empty()) {
-        LOG1(
-            "*****phv_analysis_validate.cpp:sanity_WARN*****....."
-            << ".....field_to_containers(ra): field container map reveals unassigned field....."
-            << std::endl
-            << f);
-    }
-    for (auto &e : f_api->field_container_map()) {
-        std::pair<int, int> range = e.first;
-        if (hi < range.first) {
-            break;
-        }
-        if (lo >= range.first && lo <= range.second) {
-            PHV_Container::Container_Content *cc = e.second;
-            tuple_list.push_back(make_tuple(cc));
-            lo += cc->width();
-        }
-    }
-}  // field(ranges)_to_containers
 
 //
 //
@@ -514,7 +386,7 @@ PHV_Analysis_Validate::container_holes(
     //
     tuple_list.clear();
     assert(phv_mau_i);
-    PHV_Container *c = phv_mau_i->phv_container(phv_num);
+    const PHV_Container *c = phv_mau_i->phv_container(phv_num);
     assert(c);
     std::list<std::pair<int, int>> holes_list;
     c->holes(holes_list);
@@ -540,7 +412,7 @@ PHV_Analysis_Validate::container_to_fields(
     //
     tuple_list.clear();
     assert(phv_mau_i);
-    PHV_Container *c = phv_mau_i->phv_container(phv_num);
+    const PHV_Container *c = phv_mau_i->phv_container(phv_num);
     assert(c);
     for (auto &cc_s : Values(c->fields_in_container())) {
         for (auto &cc : cc_s) {
@@ -582,7 +454,7 @@ PHV_Analysis_Validate::container_to_fields(
     //
     tuple_list.clear();
     assert(phv_mau_i);
-    PHV_Container *c = phv_mau_i->phv_container(phv_num);
+    const PHV_Container *c = phv_mau_i->phv_container(phv_num);
     assert(c);
     for (auto &cc_s : Values(c->fields_in_container())) {
         for (auto &cc : cc_s) {
@@ -778,36 +650,31 @@ PHV_Analysis_Validate::fields_overlayed(
         const std::pair<int, int>,
         const PHV_Container *,
         const std::pair<int, int>>>& tuple_list) {
-    //
     assert(field);
     tuple_list.clear();
-    //
+
     // all containers having field
-    //
     std::list<std::tuple<
         PhvInfo::Field *,
         const std::pair<int, int>,
         const PHV_Container *,
         const std::pair<int, int>>> tuple_list_c;
-    field_to_containers(
-        field,
-        tuple_list_c);
-    //
+    field->phv_analysis_api()->field_to_containers(field, tuple_list_c);
+
     // for all container ranges for this field, find all fields
-    //
     std::list<std::tuple<
         PhvInfo::Field *,
         const std::pair<int, int>,
         const PHV_Container *,
         const std::pair<int, int>>> tuple_list_f;
+
     for (auto &tuple : tuple_list_c) {
         const PHV_Container *c = get<2>(tuple);
         int phv_num = c->phv_number();
         std::pair<int, int> c_range = get<3>(tuple);
         container_to_fields(phv_num, c_range, tuple_list_f);
-        tuple_list.splice(tuple_list.end(), tuple_list_f);
-    }
-}  // fields_overlayed on field
+        tuple_list.splice(tuple_list.end(), tuple_list_f); }
+}
 
 //
 //
@@ -1026,8 +893,8 @@ std::ostream &operator<<(std::ostream &out, PHV_Analysis_Validate &phv_analysis_
         const std::pair<int, int>>> tuple_list;
     out << ".................... PHV Analysis Validate: Fields to Containers ......................"
         << std::endl;
-    for (auto &f : phv_analysis_validate.phv()) {
-        if (!phv_analysis_validate.uses()->is_referenced(&f)) {  // disregard unreferenced fields
+    for (auto &f : phv_analysis_validate.phv_i) {
+        if (!phv_analysis_validate.uses_i.is_referenced(&f)) {  // disregard unreferenced fields
             continue;
         }
         assert(f.phv_analysis_api());
@@ -1060,8 +927,6 @@ std::ostream &operator<<(std::ostream &out, PHV_Analysis_Validate &phv_analysis_
         }
     }
     out << ".................... PHV Analysis Validate: Containers to Fields ......................"
-        << std::endl;
-    out << phv_analysis_validate.phv_name_cc_map()
         << std::endl;
     out << "End+++++++++++++++++++++++++ PHV Analysis Validate ++++++++++++++++++++++++++++++"
         << std::endl;

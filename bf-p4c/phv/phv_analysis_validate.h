@@ -21,38 +21,29 @@
 //
 class PHV_Analysis_Validate : public Visitor {
  private:
-    PhvInfo &phv_i;                                   /// referenced through constructor
-    PHV_MAU_Group_Assignments *phv_mau_i;             /// PHV MAU Group Assignments
-    Phv_Parde_Mau_Use *uses_i;                        /// field used? in mau, parde
-    std::map<int, std::list<PHV_Container::Container_Content *>>
-        phv_name_cc_map_i;                            /// PHV_Container name to container content
+    const PhvInfo &phv_i;
+    const PHV_MAU_Group_Assignments *phv_mau_i;
+    const Phv_Parde_Mau_Use &uses_i;
 
  public:
     PHV_Analysis_Validate(
-        PhvInfo &phv_p,
-        PHV_MAU_Group_Assignments &phv_mau_p)
+        const PhvInfo &phv_p,
+        const PHV_MAU_Group_Assignments &phv_mau_p,
+        const Phv_Parde_Mau_Use &uses_i)
       : phv_i(phv_p),
         phv_mau_i(&phv_mau_p),
-        uses_i(new Phv_Parde_Mau_Use(phv_p)) { }
-    //
-    PhvInfo& phv()                                            { return phv_i; }
-    PHV_MAU_Group_Assignments  *phv_mau()                     { return phv_mau_i; }
-    void phv_mau(PHV_MAU_Group_Assignments *p)                { assert(p); phv_mau_i = p;}
-    Phv_Parde_Mau_Use *uses()                                 { return uses_i; }
-    std::map<int, std::list<PHV_Container::Container_Content *>>&
-        phv_name_cc_map()                                     { return phv_name_cc_map_i; }
-    //
+        uses_i(uses_i) { }
+
     const IR::Node *apply_visitor(const IR::Node *, const char *name = 0) override;
     void end_apply() override;
-    //
-    void create_field_container_map();
+
     static std::tuple<
         PhvInfo::Field *,
         const std::pair<int, int>,
         const PHV_Container *,
         const std::pair<int, int>>
             make_tuple(PHV_Container::Container_Content *cc);
-    //
+
     void sanity_check_fields(const std::string&);
     void sanity_check_fields_containers(const std::string&);
     void sanity_check_container_holes(const std::string&);
@@ -62,25 +53,6 @@ class PHV_Analysis_Validate : public Visitor {
     // field allocated, contiguously
     bool field_allocated(PhvInfo::Field *f, bool contiguously = false);
 
-    // fields to containers
-    //
-    bool
-    field_to_containers(
-        PhvInfo::Field *,
-        std::list<std::tuple<
-            PhvInfo::Field *,
-            const std::pair<int, int>,
-            const PHV_Container *,
-            const std::pair<int, int>>>&);
-    void
-    field_to_containers(
-        PhvInfo::Field *,
-        std::pair<int, int>&,
-        std::list<std::tuple<
-            PhvInfo::Field *,
-            const std::pair<int, int>,
-            const PHV_Container *,
-            const std::pair<int, int>>>&);
     //
     // containers to fields
     //
@@ -227,8 +199,9 @@ class PHV_Analysis_Validate : public Visitor {
         std::list<std::pair<
             PhvInfo::Field *,
             const std::pair<int, int>>>& tuple_list);
-    //
-};  // class PHV_Analysis_Validate
+
+    friend std::ostream &operator<<(std::ostream &, PHV_Analysis_Validate &);
+};
 //
 std::ostream &operator<<(
     std::ostream &,

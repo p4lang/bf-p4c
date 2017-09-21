@@ -32,8 +32,9 @@ class PHV_Bind : public Visitor {
  private:
     //
     PhvInfo &phv_i;                                 // all fields in input
-    PhvUse &uses_i;                                 // field uses mau, I, E
-    PHV_MAU_Group_Assignments &phv_mau_i;           // PHV MAU Group Assignments
+    const PhvUse &uses_i;                           // field uses mau, I, E
+    const PHV_MAU_Group_Assignments &phv_mau_i;     // PHV MAU Group Assignments
+
     std::list<const PHV_Container *> containers_i;  // all filled containers
     std::list<PhvInfo::Field *> allocated_fields_i;
                                                     // allocated fields to be finally bound
@@ -43,43 +44,33 @@ class PHV_Bind : public Visitor {
                                                     // PHV_Container = asm_container PHV::Container
     ordered_map<const PHV::Container*, const PHV_Container*> asm_to_phv_map_i;
                                                     // asm_container PHV::Container = PHV_Container
-    //
- public:
-    //
-    PHV_Bind(PhvInfo &phv_f, PhvUse &u, PHV_MAU_Group_Assignments &phv_m)
-       : phv_i(phv_f),
-         uses_i(u),          // uses recomputed, dead code elimination after Cluster Use computation
-         phv_mau_i(phv_m) { }
-    //
-    std::list<const PHV_Container *> containers()         { return containers_i; }
-    std::list<PhvInfo::Field *>& allocated_fields()       { return allocated_fields_i; }
-    std::list<PhvInfo::Field *>& fields_overflow()        { return fields_overflow_i; }
-    //
-    const IR::Node *apply_visitor(const IR::Node *, const char *name = 0) override;
-    void create_phv_asm_container_map();
-    void collect_containers_with_fields();
-    void phv_tphv_allocate(std::list<PhvInfo::Field *>& fields);
-    void bind_fields_to_containers();
-    void container_contiguous_alloc(               // backup for ccgf fields processing
-        PhvInfo::Field *,
-        int,
-        PHV::Container *,
-        int);
-    void trivial_allocate(std::list<PhvInfo::Field *>&);
-    //
-    // function to obtain PHV_Container from PHV::Container & vice-versa
-    const PHV::Container *phv_container(const PHV_Container *);
-    const PHV_Container *phv_container(const PHV::Container *);
-    //
+
     void sanity_check_field_duplicate_containers(const std::string&);
     void sanity_check_field_slices(ordered_set<PhvInfo::Field *>&, const std::string&);
     void sanity_check_all_fields_allocated(const std::string&);
-    //
+
+ public:
+    PHV_Bind(PhvInfo &phv_f, const PhvUse &u, const PHV_MAU_Group_Assignments &phv_m)
+       : phv_i(phv_f),
+         uses_i(u),          // uses recomputed, dead code elimination after Cluster Use computation
+         phv_mau_i(phv_m) { }
+
+    std::list<const PHV_Container *> containers()         { return containers_i; }
+    std::list<PhvInfo::Field *>& allocated_fields()       { return allocated_fields_i; }
+    std::list<PhvInfo::Field *>& fields_overflow()        { return fields_overflow_i; }
+
+    const IR::Node *apply_visitor(const IR::Node *, const char *name = 0) override;
     void end_apply(const IR::Node *) override { phv_i.set_done(); }
-    //
+
+    void create_phv_asm_container_map();
+    void collect_containers_with_fields();
+    void bind_fields_to_containers();
+
+    // function to obtain PHV_Container from PHV::Container & vice-versa
+    const PHV::Container *phv_container(const PHV_Container *) const;
+    const PHV_Container *phv_container(const PHV::Container *) const;
 };
-//
-//
+
 std::ostream &operator<<(std::ostream &, PHV_Bind&);
-//
+
 #endif /* BF_P4C_PHV_CLUSTER_PHV_BIND_H_ */

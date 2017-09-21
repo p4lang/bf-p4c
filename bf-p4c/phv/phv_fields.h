@@ -26,11 +26,15 @@ template <typename T> class TofinoPHVTrivialAllocators;
 class TofinoPHVManualAlloc;
 }  // namespace Test
 
+class AllocateVirtualContainers;
+class Build_PHV_Analysis_APIs;
+class CheckFitting;
 class Cluster_PHV;
 class PHV_Container;
 class PHV_Analysis_API;
 class PHV_Assignment_API;
 class PHV_Bind;
+class PhvUse;
 class Slice;
 
 /**
@@ -156,7 +160,9 @@ class PhvInfo {
         //
         PHV_Assignment_API *phv_assignment_api()        { return phv_assignment_api_i; }
         void phv_assignment_api(PHV_Assignment_API *p)  { phv_assignment_api_i = p; }
-        //
+
+        void clear_alloc() { alloc_i.clear(); }
+
      private:  // class Field
         //
         vector<alloc_slice> alloc_i;          // sorted MSB (field) first
@@ -180,6 +186,7 @@ class PhvInfo {
         //
         friend struct CollectPhvFields;
         friend struct ComputeFieldAlignments;
+        friend CheckFitting;
         friend class SplitPhvUse;             // phv/split_phv_use
         friend class PHV::ManualAlloc;        // phv/trivial_alloc
         friend class PHV::TrivialAlloc;       // phv/trivial_alloc
@@ -193,7 +200,9 @@ class PhvInfo {
         friend class ActionAnalysis;          // mau/action_analysis
         friend class MergeInstructions;       // mau/instruction_adjustment
         friend class PHV_Assignment_API;
+        friend Build_PHV_Analysis_APIs;
         friend class PHV_Assignment_Validate;
+        friend AllocateVirtualContainers;
         //
         friend void alloc_pov(PhvInfo::Field *i, PhvInfo::Field *pov);
         friend void repack_metadata(PhvInfo &phv);
@@ -348,6 +357,7 @@ class PhvInfo {
         void set_ccgf(Field *f)                                { ccgf_i = f; }
         vector<Field *>& ccgf_fields()                         { return ccgf_fields_i; }
         const vector<Field *>& ccgf_fields() const             { return ccgf_fields_i; }
+
         int ccgf_width() const;  // phv width = aggregate size of members
         //
         // phv_containers
@@ -428,6 +438,19 @@ class PhvInfo {
         // ****************************************************************************************
         //
     };  // class Field
+
+    /// Pretty-print all fields
+    struct DumpPhvFields : public Visitor {
+        const PhvInfo &phv;
+        const PhvUse &uses;
+
+        explicit DumpPhvFields(
+            const PhvInfo& phv,
+            const PhvUse &uses)
+          : phv(phv), uses(uses) { }
+
+        const IR::Node *apply_visitor(const IR::Node *n, const char *) override;
+    };
 
     /// PHV-related info about structs, i.e. collections of header or metadata fields.
     struct StructInfo {
