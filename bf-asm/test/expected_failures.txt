@@ -6,7 +6,7 @@ parser_dc_full.p4 compile
 port_vlan_mapping.p4 compile
 - glass fails to unroll parser loop properly (new problem with 3.3?)
 
-action_chain1.p4 tfas
+action_chain1.p4 bfas
 - asm gen fails to include 'next' field in ternary indirect
 
 counter4.p4 mismatch
@@ -37,5 +37,5 @@ meter_test1.p4 mismatch
 - synth2port fabric is different -- not clear if it is a bug or where
 - idletime missing from asm?
 
-mac_rewrite.p4 tfas
+mac_rewrite.p4 bfas
 - glass generates invalid slice of immediate for action_bus.

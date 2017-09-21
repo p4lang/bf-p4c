@@ -6,7 +6,7 @@
 #include "map.h"
 #include <string>
 #include <stdarg.h>
-#include "tfas.h"
+#include "bfas.h"
 
 class Section {
     static std::map<std::string, Section *>     *sections;

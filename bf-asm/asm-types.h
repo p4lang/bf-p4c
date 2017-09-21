@@ -177,7 +177,7 @@ inline const value_t *get(const VECTOR(pair_t) &map, const char *key) {
 #include <functional>
 #include <iostream>
 #include "map.h"
-#include "tfas.h"
+#include "bfas.h"
 #include "bitops.h"
 
 std::ostream &operator<<(std::ostream &out, match_t m);

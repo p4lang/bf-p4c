@@ -8,10 +8,10 @@ in [Google Drive > Barefoot shared > documents > Software > Assembler]
 
 ## **Setup**
 
-The repository contains code for the tofino assembler (tfas) and linker (walle).
+The repository contains code for the Barefoot assembler (bfas) and linker (walle).
 More info on walle can be found in walle/README.md.
 
-Assembler takes assembly files (.tfa) as input to generate output json which is
+Assembler takes assembly files (.bfa or .tfa) as input to generate output json which is
 then fed to walle to produce binary for tofino.
 
 ## **Dependencies**
@@ -33,7 +33,7 @@ of the script)
     user@box$ ./bootstrap.sh
     user@box$ make
 
-Assembler executable `tfas` is created in the build directory on running make. The
+Assembler executable `bfas` is created in the build directory on running make. The
 chip schema binary in tofino & jbay directories are used to generate backend
 files and compiled in gen/tofino or gen/jbay
 
@@ -62,7 +62,7 @@ You can disable it by setting environment variable ASAN\_OPTIONS with
 user@box$ make check
 
 Runs tests/runtests script on all .p4 files in the tests and tests/mau
-directories and .tfa files in tests/asm directory. This script can run one or
+directories and .bfa files in tests/asm directory. This script can run one or
 more tests specified on the command line, or will run all .p4 files in the
 current directory if run with no arguments.  Stf tests can be run if specified
 explicitly on the command line; they will not run by default.
@@ -75,7 +75,7 @@ directory which is a small subset for a quick sanity check.
 ### **Runtests Script**
 
 The ./tests/runtests script will first run glass compiler (p4c-tofino) on
-input .p4 file and then run the assembler (tfas) on generated assembly (.tfa)
+input .p4 file and then run the assembler (bfas) on generated assembly (.tfa)
 file.  Glass also generates output json which is then compared (by the script)
 to the json generated from assembler.
 
@@ -87,13 +87,13 @@ MAKEFLAGS to "-j <value>"
 ### **Expected Failures**
 
 expected\_failures.txt files are under tests & tests/mau directory which outline
-failing tests with cause (compile, tfas, mismatch). These files must be updated
+failing tests with cause (compile, bfas, mismatch). These files must be updated
 to reflect any new or fixed fails.
 
 | FAIL     |  TYPE        | CAUSE                                                   |
 |----------|--------------|---------------------------------------------------------|
 | compile  |  Glass       | Glass cannot compile input .p4 file                     |
-| tfas     |  Assembler   | Assembler error while running input assembly file (.tfa)|
+| bfas     |  Assembler   | Assembler error while running input assembly file (.bfa)|
 | mismatch |  Json output | Difference in json outputs for glass and assembler      |
 
 ### **Context Json Ignore**
@@ -220,8 +220,8 @@ exact\_match0.p4.out
 ```
 ##### **Assembler Run Log**
 ```
-├── tfas.config.log
-├── tfas.log
+├── bfas.config.log
+├── bfas.log
 ```
 ##### **Test visualization htmls**
 ```

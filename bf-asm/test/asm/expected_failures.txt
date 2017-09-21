@@ -1,7 +1,7 @@
 - assembler failures on assembly tests.
 
-stateful_multiple_output_error.tfa tfas
+stateful_multiple_output_error.tfa bfas
 - assembler must fail due to multiple output instructions in a stateful table
 
-table_alias_fields_error.tfa tfas
+table_alias_fields_error.tfa bfas
 - alias fields index are out of range with allowed values

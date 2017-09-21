@@ -1,5 +1,5 @@
-#ifndef _tfas_h_
-#define _tfas_h_
+#ifndef _bfas_h_
+#define _bfas_h_
 
 enum config_version_t { CONFIG_OLD=1, CONFIG_NEW=2, CONFIG_BOTH=3 };
 enum target_t { TOFINO=1, JBAY=2 };
@@ -55,4 +55,4 @@ public:
     VersionIter &operator++() { left &= ~1; check(); return *this; }
 };
 
-#endif /* _tfas_h_ */
+#endif /* _bfas_h_ */

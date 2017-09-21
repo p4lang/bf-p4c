@@ -212,9 +212,9 @@ fi
 
 if $debug; then
     if $verbose; then
-        echo "$DEBUGGER_COMMAND $P4C $P4C_ARGS $file -o $testdir/$name.tfa"
+        echo "$DEBUGGER_COMMAND $P4C $P4C_ARGS $file -o $testdir/$name.bfa"
     fi
-    exec $DEBUGGER_COMMAND $P4C $P4C_ARGS $file -o $testdir/$name.tfa
+    exec $DEBUGGER_COMMAND $P4C $P4C_ARGS $file -o $testdir/$name.bfa
 fi
 
 if [ $(expr "$file" : ".*_errors") -gt 0 ]; then
@@ -226,7 +226,7 @@ if [ $(expr "$file" : ".*_errors") -gt 0 ]; then
 fi
 
 # delete old outputs so we don't get confused if they're not overwritten
-rm -f $testdir/$name.tfa
+rm -f $testdir/$name.bfa
 rm -f $testdir/$name.out/tofino.bin
 rm -f $testdir/$name.out/tofino.bin.gz
 run $P4C $P4C_ARGS $file -o $testdir/${name}.out || die
@@ -249,7 +249,7 @@ for f in $testdir/$name.out/*.log; do
     fi
 done
 
-if [ ! -r $testdir/$name.out/$name.tfa ]; then
+if [ ! -r $testdir/$name.out/$name.bfa ]; then
     echo >&2 "$P4C did not give an error but did not generate output either"
     exit 1
 fi

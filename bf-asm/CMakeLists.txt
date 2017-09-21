@@ -40,7 +40,7 @@ set (CMAKE_CXX_STANDARD 11)
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
 
 
-install (PROGRAMS tflink
+install (PROGRAMS bflink
   DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 
 # json2cpp
@@ -61,10 +61,11 @@ add_executable (reflow ${REFLOW_SOURCES})
 set (MKSIZES_SOURCES mksizes.cpp)
 add_executable (mksizes ${MKSIZES_SOURCES})
 
-set (TFAS_COMMON_SOURCES
+set (BFAS_COMMON_SOURCES
   action_bus.cpp
   action_table.cpp
   asm-types.cpp
+  bfas.cpp
   counter.cpp
   crash.cpp
   deparser.cpp
@@ -91,7 +92,6 @@ set (TFAS_COMMON_SOURCES
   tables.cpp
   target.cpp
   ternary_match.cpp
-  tfas.cpp
   top_level.cpp
   ubits.cpp
   vector.c
@@ -101,9 +101,10 @@ set (TFAS_COMMON_SOURCES
   ${BFN_P4C_LIB_DIR}/log.cpp
   )
 
-SET (TFAS_COMMON_HEADERS
+SET (BFAS_COMMON_HEADERS
   action_bus.h
   asm-types.h
+  bfas.h
   checked_array.h
   constants.h
   data_switchbox.h
@@ -126,14 +127,13 @@ SET (TFAS_COMMON_HEADERS
   stage.h
   tables.h
   target.h
-  tfas.h
   top_level.h
   ubits.h
   widereg.h
   )
 
 # \TODO: use the headers from p4c/lib for utilities
-set (TFAS_UTIL_HEADERS
+set (BFAS_UTIL_HEADERS
   bitops.h
   indent.h
   log.h
@@ -141,7 +141,7 @@ set (TFAS_UTIL_HEADERS
   vector.h
   )
 
-set (TFAS_GEN_SOURCES
+set (BFAS_GEN_SOURCES
   ${BFASM_BINARY_DIR}/asm-parse.cpp
   ${BFASM_BINARY_DIR}/gen/uptr_sizes.h)
 
@@ -152,10 +152,10 @@ set (CPPLINT_FILES
   ${JSON2CPP_SOURCES}
   ${REFLOW_SOURCES}
   ${MKSIZE_SOURCES}
-  ${TFAS_COMMON_SOURCES}
+  ${BFAS_COMMON_SOURCES}
   asm-parse.ypp
-  ${TFAS_UTIL_HEADERS}
-  ${TFAS_COMMON_HEADERS}
+  ${BFAS_UTIL_HEADERS}
+  ${BFAS_COMMON_HEADERS}
   )
 
 add_custom_command(OUTPUT lex-yaml.c
@@ -183,13 +183,13 @@ endif()
 # Other configuration files that need to be generated
 configure_file ("${BFASM_SOURCE_DIR}/cmake/config.h.cmake" "${BFASM_BINARY_DIR}/config.h")
 
-set_source_files_properties (${TFAS_GEN_SOURCES} ${BFASM_BINARY_DIR}/lex-yaml.c
+set_source_files_properties (${BFAS_GEN_SOURCES} ${BFASM_BINARY_DIR}/lex-yaml.c
   PROPERTIES GENERATED TRUE)
-set (TFAS_SOURCES ${TFAS_COMMON_SOURCES} ${TFAS_GEN_SOURCES})
-add_executable (tfas ${TFAS_SOURCES})
-target_link_libraries (tfas ${BFASM_LIBS} ${BFASM_LIB_DEPS})
+set (BFAS_SOURCES ${BFAS_COMMON_SOURCES} ${BFAS_GEN_SOURCES})
+add_executable (bfas ${BFAS_SOURCES})
+target_link_libraries (bfas ${BFASM_LIBS} ${BFASM_LIB_DEPS})
 
-install (TARGETS tfas
+install (TARGETS bfas
   RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 
 # gen/disas.%.h: templates/%.size.json json2cpp
