@@ -28,11 +28,6 @@ template<class T, class Alloc>
 void append(std::vector<T, Alloc> &a, const std::vector<T, Alloc> &b) {
     for (auto &e : b) a.push_back(e); }
 
-#include "checked_array.h"
-#include "ubits.h"
-
-void set_power_ctl_reg(checked_array<2, checked_array<16, ubits<8>>> &power_ctl, int reg);
-
 template<class T, class U>
 T join(const std::vector<T> &vec, U sep) {
     T rv;

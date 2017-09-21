@@ -83,7 +83,6 @@ set (TFAS_COMMON_SOURCES
   parser.cpp
   phase0.cpp
   phv.cpp
-  power_ctl.cpp
   salu_inst.cpp
   selection.cpp
   stage.cpp
@@ -120,6 +119,7 @@ SET (TFAS_COMMON_HEADERS
   p4_table.h
   parser.h
   phv.h
+  power_ctl.h
   rvalue_reference_wrapper.h
   sections.h
   slist.h

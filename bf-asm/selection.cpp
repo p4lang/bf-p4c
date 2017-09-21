@@ -122,8 +122,7 @@ void SelectionTable::pass2() {
 template<class REGS> void SelectionTable::write_merge_regs(REGS &regs, MatchTable *match,
             int type, int bus, const std::vector<Call::Arg> &args) {
     auto &merge = regs.rams.match.merge;
-    merge.mau_physical_to_meter_alu_ixbar_map[type][bus/8U].set_subfield(
-        4 | meter_group(), 3*(bus%8U), 3);
+    setup_physical_alu_map(regs, type, bus, meter_group());
     if (!per_flow_enable)
         per_flow_enable_bit = SELECTOR_PER_FLOW_ENABLE_START_BIT;
     merge.mau_meter_adr_per_entry_en_mux_ctl[type][bus] = per_flow_enable_bit; 
@@ -145,6 +144,18 @@ template<class REGS> void SelectionTable::write_merge_regs(REGS &regs, MatchTabl
     //    /* from HashDistributionResourceAllocation.write_config: */
     //    merge.mau_bus_hash_group_sel[type][bus/8].set_subfield(hash_dist[0].id | 8, 4*(bus%8), 4); }
 }
+template<> void SelectionTable::setup_physical_alu_map(Target::Tofino::mau_regs &regs,
+                                                       int type, int bus, int alu) {
+    auto &merge = regs.rams.match.merge;
+    merge.mau_physical_to_meter_alu_ixbar_map[type][bus/8U].set_subfield(4 | alu, 3*(bus%8U), 3);
+}
+#if HAVE_JBAY
+template<> void SelectionTable::setup_physical_alu_map(Target::JBay::mau_regs &regs,
+                                                       int type, int bus, int alu) {
+    auto &merge = regs.rams.match.merge;
+    merge.mau_physical_to_meter_alu_icxbar_map[type][bus/8U] |= (1U << alu) << (4 * (bus%8U));
+}
+#endif // HAVE_JBAY
 
 template<class REGS>
 void SelectionTable::write_regs(REGS &regs) {
@@ -226,10 +237,7 @@ void SelectionTable::write_regs(REGS &regs) {
         adrdist.mau_ad_meter_virt_lt[meter_group] |= 1U << m->logical_id;
         adrdist.movereg_ad_meter_alu_to_logical_xbar_ctl[m->logical_id/8U].set_subfield(
             4 | meter_group, 3*(m->logical_id % 8U), 3);
-        if (max_words > 1)
-            merge.mau_logical_to_meter_alu_map.set_subfield( 16 | m->logical_id, 5*meter_group, 5);
-        merge.mau_meter_alu_to_logical_map[m->logical_id/8U].set_subfield(
-            4 | meter_group, 3*(m->logical_id % 8U), 3); }
+        setup_logical_alu_map(regs, m->logical_id, meter_group); }
     if (max_words == 1)
         adrdist.movereg_meter_ctl[meter_group].movereg_ad_meter_shift = 7;
     if (push_on_overflow)
@@ -244,6 +252,24 @@ void SelectionTable::write_regs(REGS &regs) {
         merge.meter_alu_thread[0].meter_alu_thread_egress |= 1U << meter_group;
         merge.meter_alu_thread[1].meter_alu_thread_egress |= 1U << meter_group; }
 }
+
+template<> void SelectionTable::setup_logical_alu_map(Target::Tofino::mau_regs &regs,
+                                                      int logical_id, int alu) {
+    auto &merge = regs.rams.match.merge;
+    if (max_words > 1)
+        merge.mau_logical_to_meter_alu_map.set_subfield( 16 | logical_id, 5*alu, 5);
+    merge.mau_meter_alu_to_logical_map[logical_id/8U].set_subfield(
+        4 | alu, 3*(logical_id % 8U), 3);
+}
+#if HAVE_JBAY
+template<> void SelectionTable::setup_logical_alu_map(Target::JBay::mau_regs &regs,
+                                                      int logical_id, int alu) {
+    auto &merge = regs.rams.match.merge;
+    merge.mau_logical_to_meter_alu_map[logical_id/8U] |= (1U << alu) << ((logical_id%8U) * 4);
+    merge.mau_meter_alu_to_logical_map[logical_id/8U].set_subfield(
+        4 | alu, 3*(logical_id % 8U), 3);
+}
+#endif // HAVE_JBAY
 
 void SelectionTable::gen_tbl_cfg(json::vector &out) {
     if (options.new_ctx_json) {

@@ -1,4 +1,5 @@
 #include "misc.h"
+#include <sstream>
 
 int remove_name_tail_range(std::string &name, int *size) {
     auto tail = name.rfind('.');

@@ -373,7 +373,7 @@ void MeterTable::write_regs(REGS &regs) {
             movereg_ad_ctl.movereg_ad_stats_as_mc = 1;
         movereg_ad_ctl.movereg_ad_direct_meter = direct;
         movereg_ad_ctl.movereg_ad_meter_shift = 7; */
-        setup_muxctl(adrdist.meter_color_logical_to_phys_ixbar_ctl[m->logical_id], home->row/4U);
+        meter_color_logical_to_phys(regs, m->logical_id, home->row/4U);
         adrdist.mau_ad_meter_virt_lt[home->row/4U] |= 1 << m->logical_id; }
     adrdist.deferred_ram_ctl[1][home->row/4U].deferred_ram_en = 1;
     adrdist.deferred_ram_ctl[1][home->row/4U].deferred_ram_thread = gress;
@@ -391,6 +391,20 @@ void MeterTable::write_regs(REGS &regs) {
         merge.meter_alu_thread[0].meter_alu_thread_egress |= 1U << home->row/4U;
         merge.meter_alu_thread[1].meter_alu_thread_egress |= 1U << home->row/4U; }
 }
+
+template<> void MeterTable::meter_color_logical_to_phys(Target::Tofino::mau_regs &regs,
+                                                        int logical_id, int alu) {
+    auto &adrdist = regs.rams.match.adrdist;
+    setup_muxctl(adrdist.meter_color_logical_to_phys_ixbar_ctl[logical_id], alu);
+}
+
+#if HAVE_JBAY
+template<> void MeterTable::meter_color_logical_to_phys(Target::JBay::mau_regs &regs,
+                                                        int logical_id, int alu) {
+    auto &adrdist = regs.rams.match.adrdist;
+    adrdist.meter_color_logical_to_phys_icxbar_ctl[logical_id] |= 1 << alu;
+}
+#endif // HAVE_JBAY
 
 void MeterTable::gen_tbl_cfg(json::vector &out) {
     // FIXME -- factor common Synth2Port stuff

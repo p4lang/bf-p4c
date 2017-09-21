@@ -17,7 +17,8 @@
  * CSR DESCRIPTION IS WRONG!!!
  */
 
-void set_power_ctl_reg(checked_array<2, checked_array<16, ubits<8>>> &power_ctl, int reg) {
+template <int I>
+void set_power_ctl_reg(checked_array<2, checked_array<16, ubits<I>>> &power_ctl, int reg) {
     int side;
     switch (reg >> 6) {
     case 1: // 8 bit

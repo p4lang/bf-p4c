@@ -3,7 +3,7 @@
 #include "hashexpr.h"
 #include "input_xbar.h"
 #include "log.h"
-#include "misc.h"
+#include "power_ctl.h"
 #include "stage.h"
 #include "range.h"
 #include <stdlib.h>

@@ -485,6 +485,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(MatchTable, Table,
     void pass1(int type);
     using Table::write_regs;
     template<class REGS> void write_regs(REGS &, int type, Table *result);
+    template<class REGS> void setup_next_table_map(REGS &, Table *);
     void common_init_setup(const VECTOR(pair_t) &, bool, P4Table::type) override;
     bool common_setup(pair_t &, const VECTOR(pair_t) &, P4Table::type) override;
 public:
@@ -811,6 +812,8 @@ public:
 
     template<class REGS> void write_merge_regs(REGS &regs, MatchTable *match, int type, int bus,
                           const std::vector<Call::Arg> &args);
+    template<class REGS> void setup_logical_alu_map(REGS &regs, int logical_id, int alu);
+    template<class REGS> void setup_physical_alu_map(REGS &regs, int type, int bus, int alu);
     FOR_ALL_TARGETS(FORWARD_VIRTUAL_TABLE_WRITE_MERGE_REGS_WITH_ARGS)
     unsigned address_shift() const { return 7 + ceil_log2(min_words); }
     unsigned meter_group() const { return layout.at(0).row/4U; }
@@ -892,6 +895,7 @@ DECLARE_TABLE_TYPE(MeterTable, Synth2Port, "meter",
     table_type_t table_type() override { return METER; }
     template<class REGS> void write_merge_regs(REGS &regs, MatchTable *match, int type, int bus,
                                                const std::vector<Call::Arg> &args);
+    template<class REGS> void meter_color_logical_to_phys(REGS &regs, int logical_id, int alu);
     FOR_ALL_TARGETS(FORWARD_VIRTUAL_TABLE_WRITE_MERGE_REGS_WITH_ARGS)
     int                 sweep_interval = 2;
 public:

@@ -1,3 +1,4 @@
+#include "log.h"
 #include "misc.h"
 #include "phv.h"
 #include <iostream>

@@ -23,10 +23,13 @@ struct widereg_base {
     operator bitvec() const { read = true; return value; }
     bool modified() const { return write; }
     bool disable_if_zero() const { return value.empty() && !write; }
-    void disable() const {
-        if (write) ERROR("Disabling modified register in " << this);
-        disabled = true; };
-    void enable() const { disabled = false; }
+    bool disable() const {
+        if (write) {
+            ERROR("Disabling modified register in " << this);
+            return false; }
+        disabled = true;
+        return disabled; };
+    bool enable() const { disabled = false; }
     void rewrite() { write = false; }
     virtual bitvec operator=(bitvec v) = 0;
     virtual unsigned size() = 0;

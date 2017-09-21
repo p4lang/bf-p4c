@@ -28,7 +28,7 @@
         # pipes
           "mau_addrmap",  # mau -- just a dummy reg
           # parde
-            "parde_pgr_mem_rspec",
+            "pgr_mem_rspec",
     ],
     "regs":[
       # jbay_reg
@@ -38,10 +38,10 @@
           # pardereg
             # parde_glue_stn_reg
               "parb_reg",
-              "pgr_reg",  # pgrreg
+              "pgr_reg_rspec",  # pgrreg
               "s2p_reg",
               "p2s_reg",
-              "parde_glue_reg",  #pgluereg
+              "parde_glue_reg_rspec",  #pgluereg
             "mirr_ebuf_reg",  # mirefreg
             # dprsr_reg
               # dprsr_reg_rspec
