@@ -1,5 +1,6 @@
 #include "bfas.h"
 #include "sections.h"
+#include "target.h"
 #include "top_level.h"
 #include <fstream>
 #include <iostream>
@@ -105,9 +106,12 @@ std::string usage(std::string tfas) {
 
 void output_all() {
     switch (options.target) {
-    case TOFINO: new TopLevelTarget<Target::Tofino>;  break;
-    case JBAY:   new TopLevelTarget<Target::JBay>;    break;
-    }
+#define SET_TOP_LEVEL(TARGET, TYPE) case TARGET: new TopLevelTarget<TYPE>; break;
+    FOR_ALL_TARGETS(SET_TOP_LEVEL)
+    default:
+        std::cerr << "No target set" << std::endl;
+        error_count++;
+        return; }
     json::map ctxtJson;
     const time_t now = time(NULL);
     char build_date[1024];
@@ -136,6 +140,12 @@ void output_all() {
     delete TopLevel::all;
 }
 
+
+
+#define MATCH_TARGET_OPTION(TARGET, TYPE, OPT) \
+    if (!strcasecmp(OPT, #TARGET)) options.target = TARGET; else
+#define OUTPUT_TARGET(TARGET, TYPE)     << " " << #TARGET
+
 int main(int ac, char **av) {
     int srcfiles = 0;
     const char *firstsrc = 0;
@@ -150,24 +160,20 @@ int main(int ac, char **av) {
         } else if (!strcmp(av[i], "--target")) {
             ++i;
             if (!av[i]) {
-                std::cerr << "No target specified '--target <tofino|jbay>'"
-                    << std::endl;
+                std::cerr << "No target specified '--target <target>'" << std::endl;
                 error_count++;
                 break;}
-            if (!strcmp(av[i], "tofino"))
-                options.target = TOFINO;
-            else if (!strcmp(av[i], "jbay"))
-                options.target = JBAY;
-            else {
-                std::cerr << "Unknown target " << av[i];
-                error_count++; }
-        } else if (!strcmp(av[i], "--tofino")) {
-            options.target = TOFINO;
-        } else if (!strcmp(av[i], "--jbay")) {
-            options.target = JBAY;
+            FOR_ALL_TARGETS(MATCH_TARGET_OPTION, av[i]) {
+                std::cerr << "Unknown target " << av[i] << std::endl;
+                error_count++;
+                std::cerr << "Supported targets:" FOR_ALL_TARGETS(OUTPUT_TARGET) << std::endl; }
         } else if (!strcmp(av[i], "--old_json")) {
             /* XXX(hanw): Temporary flag to use old ctxt json, to be removed */
             options.new_ctx_json = false;
+        } else if (av[i][0] == '-' && av[i][1] == '-') {
+            FOR_ALL_TARGETS(MATCH_TARGET_OPTION, av[i]+2) {
+                std::cerr << "Unrecognized option " << av[i] << std::endl;
+                error_count++; }
         } else if (av[i][0] == '-' || av[i][0] == '+') {
             bool flag = av[i][0] == '+';
             for (char *arg = av[i]+1; *arg;)
@@ -229,15 +235,10 @@ int main(int ac, char **av) {
                 case 't':
                     ++i;
                     if (!av[i]) {
-                        std::cerr << "No target specified '-t <tofino|jbay>'"
-                            << std::endl;
+                        std::cerr << "No target specified '-t <target>'" << std::endl;
                         error_count++;
                         break; }
-                    if (!strcmp(av[i], "tofino"))
-                        options.target = TOFINO;
-                    else if (!strcmp(av[i], "jbay"))
-                        options.target = JBAY;
-                    else {
+                    FOR_ALL_TARGETS(MATCH_TARGET_OPTION, av[i]) {
                         std::cerr << "Unknown target " << av[i];
                         error_count++; }
                     break;
