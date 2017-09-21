@@ -500,10 +500,11 @@ PhvInfo::Field::phv_use_width(Cluster_PHV *cl) const {
 }
 
 boost::optional<int>
-PhvInfo::Field::phv_alignment() const {
-    // call this function only @ start of a field to obtain parde alignment need
+PhvInfo::Field::phv_alignment(bool get_ccgf_alignment) const {
+    // the parameter get_ccgf_alignment distinguishes between requesting alignment
+    // of the CCGF as a whole vs the alignment of a ccgf member field
     if (alignment) {
-        if (is_ccgf()) {
+        if (get_ccgf_alignment && is_ccgf()) {
             // return alignment of last field of ccgf as [m1,m2,m3] placed m3.m2.m1 in phv[0..w]
             return ccgf_fields_i.back()->phv_alignment();
         }

@@ -380,7 +380,15 @@ class PhvInfo {
         //
         // phv_alignment
         //
-        boost::optional<int> phv_alignment() const;           // alignment in phv container
+        /** Returns alignment constraint (bit position within container) on this field, if any.
+         * 
+         * @param get_ccgf_alignment When `true`, returns the alignment constraint of the whole CCGF
+         * otherwise, returns the alignment constraint of the field which is a member of the CCGF. 
+         * for non-CCGF-related fields, it returns their alignment constraints, if any.
+         */
+        boost::optional<int> phv_alignment(bool get_ccgf_alignment = true) const;
+                                                              // alignment in phv container
+                                                              // ccgf as a whole vs ccgf member
         //
         // field slices
         //

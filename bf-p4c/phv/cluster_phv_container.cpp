@@ -326,19 +326,21 @@ PHV_Container::overlay_ccgf_field(
     //
     //
     // 1. if two ccgfs are overlayed, start from lowest phv_use bit of substratum
+    //    honor parde alignment
     // e.g.,
     // 25:ingress::hdr_1[0].d_0[4]{0..7}
-    // [  25:ingress::hdr_1[0].d_0[4]
-    //    26:ingress::hdr_1[0].d_1[4]
+    // [  25:ingress::hdr_1[0].d_0[4]   parde_align 4
+    //    26:ingress::hdr_1[0].d_1[4]   parde_align 0
     // :8]     [r0] = [13(12,13,);]
     // overlayed with
-    // 13:ingress::hdr_0.a_1[4]{0..7}
-    // [  12:ingress::hdr_0.a_0[4]
-    //    13:ingress::hdr_0.a_1[4]
+    // 13:ingress::hdr_0.a_0[4]{0..7}
+    // [  12:ingress::hdr_0.a_0[4]      parde_align 4
+    //    13:ingress::hdr_0.a_1[4]      parde_align 0
     // :8]
-    // d_1 = 0..3, d_0 = 4..7
-    // ccgf d_0(d_0,d_1) = ccgf a_1(a_0,a_1)
-    // a_0 start = 0, not owner d_0 start which is 4
+    // d_1 = 0..3, d_0 = 4..7    d1d1d1d1d0d0d0d0
+    // ccgf d_0(d_0,d_1) = ccgf a_0(a_0,a_1)
+    // a_0 start = 4, d_0 start = 4
+    // a_1 = 0..3, a_0 = 4..7    a1a1a1a1a0a0a0a0
     //
     // 2. same ccgf overlayed across containers
     // e.g.,
@@ -390,15 +392,17 @@ PHV_Container::overlay_ccgf_field(
             member->set_phv_use_rem(0);
             processed_members++;
         }
+        const int align_start
+            = member->phv_alignment(false /*need ccgf member alignment*/).get_value_or(start);
         fields_in_container(
             member,
             new Container_Content(
                this,
-               start,
+               align_start,
                use_width,
                member,
                member_bit_lo,
-               taint_color(start, start + use_width - 1),
+               taint_color(align_start, align_start + use_width - 1),
                pass /* pass that performs the overlay */));
         processed_width += use_width;
         width_remaining -= use_width;

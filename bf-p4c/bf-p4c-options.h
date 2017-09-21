@@ -27,7 +27,7 @@ class BFN_Options : public CompilerOptions {
         registerOption("--nophvintf", nullptr,
             [this](const char *) { phv_interference = false; return true; },
             "do not use cluster_phv_interference interference-graph based PHV reduction");
-        registerOption("--phvslice", nullptr,
+        registerOption("--nophvslice", nullptr,
             [this](const char *) { phv_slicing = false; return true; },
             "do not use cluster_phv_slicing based PHV slices");
         registerOption("--nophvover", nullptr,
