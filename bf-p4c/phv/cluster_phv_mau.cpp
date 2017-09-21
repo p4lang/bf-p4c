@@ -28,20 +28,14 @@ PHV_MAU_Group::PHV_MAU_Group(
     PHV_MAU_Group_Assignments *owner,
     PHV_Container::PHV_Word w,
     int n,
-    // TODO: It's surprising that a constructor also updates a reference.  Refactor?
-    int& phv_number,
-    std::string asm_encoded,
+    int phv_number,
+    const std::string& asm_encoded,
+    int asm_offset,
     PHV_Container::Ingress_Egress gress,
     const int containers_in_group)
     : width_i(w), number_i(n), gress_i(gress), empty_containers_i(containers_in_group) {
     //
     assert(owner);
-    //
-    // asm register offset encoded in asm_string "T?W|H|B...")
-    //
-    int offset_position = asm_encoded[0] == 'T'? 2: 1;
-    int asm_offset = std::stoi(asm_encoded.substr(offset_position));
-    asm_encoded.erase(offset_position);
     //
     // create containers within group
     for (int i=1; i <= containers_in_group; i++) {
@@ -378,6 +372,24 @@ PHV_MAU_Group_Assignments::num_ingress_collections(std::vector<Cluster_PHV *>& c
     return ingress_collections;
 }
 
+PHV_Container::Ingress_Egress
+PHV_MAU_Group_Assignments::MAU_group_gress(int phv_number) {
+    PHV_Container::Ingress_Egress gress = PHV_Container::Ingress_Egress::Ingress_Or_Egress;
+    for (auto ie : ingress_egress_i) {
+        std::pair<int, int> limits = ie.first;
+        if (phv_number < limits.first) {
+            // e.g., phv_number=32, limits.first=64
+            // no need to preset gress or search for preset range
+            break;
+        }
+        if (phv_number >= limits.first && phv_number <= limits.second) {
+            gress = ie.second;
+            break;
+        }
+    }
+    return gress;
+}
+
 void
 PHV_MAU_Group_Assignments::create_MAU_groups() {
     //
@@ -392,30 +404,27 @@ PHV_MAU_Group_Assignments::create_MAU_groups() {
     // create MAU Groups
     //
     for (auto &x : num_groups_i) {
-        int phv_number = phv_number_start_i[x.first];
-        std::stringstream ss;
-        ss << phv_number;
-        std::string asm_encoded = asm_prefix_i[x.first] + ss.str();
+        int phv_number_start = phv_number_start_i[x.first];
+        std::string asm_encoded = asm_prefix_i[x.first];
         //
+        int group_phv_number_start = phv_number_start;
         for (int i=1; i <= x.second; i++) {
             //
             // does this group phv containers fall in ingress_only or egress_only category
             //
-            PHV_Container::Ingress_Egress gress = PHV_Container::Ingress_Egress::Ingress_Or_Egress;
-            for (auto ie : ingress_egress_i) {
-                std::pair<int, int> limits = ie.first;
-                if (phv_number < limits.first) {
-                    // e.g., phv_number=32, limits.first=64
-                    // no need to preset gress or search for preset range
-                    break;
-                }
-                if (phv_number >= limits.first && phv_number <= limits.second) {
-                    gress = ie.second;
-                    break;
-                }
-            }
+            PHV_Container::Ingress_Egress gress = MAU_group_gress(group_phv_number_start);
             //
-            PHV_MAU_Group *g = new PHV_MAU_Group(this, x.first, i, phv_number, asm_encoded, gress);
+            PHV_MAU_Group *g = new PHV_MAU_Group(this,
+                                                 x.first,
+                                                 i,
+                                                 group_phv_number_start,
+                                                 asm_encoded,
+                                                 phv_number_start,
+                                                 gress,
+                                                 Constants::phv_mau_group_size);
+
+            group_phv_number_start += Constants::phv_mau_group_size;
+
             PHV_MAU_i[g->width()].push_back(g);
             //
             // fill PHV_groups_i list of MAU containers
@@ -424,6 +433,15 @@ PHV_MAU_Group_Assignments::create_MAU_groups() {
         }
     }
 }  // PHV_MAU_Group_Assignments::create_MAU_groups
+
+PHV_Container::Ingress_Egress
+PHV_MAU_Group_Assignments::TPHV_collection_gress(int collection_num) {
+    int ingress_collections = num_ingress_collections(phv_requirements_i.t_phv_fields());
+
+    return (collection_num <= ingress_collections) ?
+                PHV_Container::Ingress_Egress::Ingress_Only :
+                PHV_Container::Ingress_Egress::Egress_Only;
+}
 
 void
 PHV_MAU_Group_Assignments::create_TPHV_collections() {
@@ -441,30 +459,28 @@ PHV_MAU_Group_Assignments::create_TPHV_collections() {
     // any TPHV collection can be Ingress_Only, Egress_Only but not both
     // set gress for collection based on ingress / egress partition estimate
     //
-    int ingress_collections = num_ingress_collections(phv_requirements_i.t_phv_fields());
-    //
     for (auto &x : num_groups_i) {
-        int phv_number = t_phv_number_start_i[x.first];
-        std::stringstream ss;
-        ss << phv_number;
-        std::string asm_encoded = "T" + asm_prefix_i[x.first] + ss.str();
-        PHV_Container::Ingress_Egress gress = PHV_Container::Ingress_Egress::Ingress_Or_Egress;
+        int t_phv_number_start = t_phv_number_start_i[x.first];
+        std::string asm_encoded = "T" + asm_prefix_i[x.first];
+
+        int group_phv_number_start = t_phv_number_start;
         for (int i=1; i <= Constants::num_collections; i++) {
+            PHV_Container::Ingress_Egress gress = TPHV_collection_gress(i);
+
             PHV_MAU_Group *g = new PHV_MAU_Group(
                                             this,
                                             x.first,
                                             i,
-                                            phv_number,
+                                            group_phv_number_start,
                                             asm_encoded,
+                                            t_phv_number_start,
                                             gress,
                                             x.second);
+
+            group_phv_number_start += x.second;
+
             for (auto &c : g->phv_containers()) {
                 T_PHV_i[i][g->width()].push_back(c);
-            }
-            if (i <= ingress_collections) {
-                g->gress(PHV_Container::Ingress_Egress::Ingress_Only);
-            } else {
-                g->gress(PHV_Container::Ingress_Egress::Egress_Only);
             }
             T_PHV_groups_i.push_front(g);  // list 8b,16b,32b used in container_no_pack()
         }
@@ -485,12 +501,10 @@ void PHV_MAU_Group_Assignments::compute_substratum_clusters() {
     substratum_t_phv_clusters_i.clear();
     //
     ordered_set<Cluster_PHV *> all_phv;
-    all_phv.clear();
     for (auto &cl : phv_requirements_i.cluster_phv_fields()) {
         all_phv.insert(cl);
     }
     ordered_set<Cluster_PHV *> to_be_assigned_phv;
-    to_be_assigned_phv.clear();
     for (auto &cl : clusters_to_be_assigned_i) {
         to_be_assigned_phv.insert(cl);
     }
@@ -501,12 +515,10 @@ void PHV_MAU_Group_Assignments::compute_substratum_clusters() {
     substratum_phv_clusters_i.assign(all_phv.begin(), all_phv.end());
     //
     ordered_set<Cluster_PHV *> all_t_phv;
-    all_t_phv.clear();
     for (auto &cl : phv_requirements_i.t_phv_fields()) {
         all_t_phv.insert(cl);
     }
     ordered_set<Cluster_PHV *> to_be_assigned_t_phv;
-    to_be_assigned_t_phv.clear();
     for (auto &cl : t_phv_fields_i) {
         to_be_assigned_t_phv.insert(cl);
     }
@@ -2544,7 +2556,7 @@ void PHV_MAU_Group_Assignments::sanity_check(
             phv_number_start[PHV_Container::PHV_Word::b32],
             phv_number_start[PHV_Container::PHV_Word::b16]
                 + num_groups_i[PHV_Container::PHV_Word::b16]
-                * PHV_Container::Containers::MAX / (t_phv? 2: 1)
+                * PHV_MAU_Group_Assignments::Constants::phv_mau_group_size / (t_phv? 2: 1)
                 - 1);
     if (phv_container_numbers_l != phv_container_numbers) {
         LOG1(msg

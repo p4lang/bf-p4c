@@ -24,7 +24,6 @@ class PHV_MAU_Group;
 class PHV_Container {
  public:
     enum PHV_Word {b32 = 32, b16 = 16, b8 = 8};
-    enum Containers {MAX = 16};
     enum Container_status {EMPTY = 'V', PARTIAL = 'P', FULL = 'F'};  // V = Vacant, E = Egress_Only
     enum Ingress_Egress {Ingress_Only = 'I', Egress_Only = 'E', Ingress_Or_Egress = ' '};
 

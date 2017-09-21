@@ -1,4 +1,5 @@
 #include "cluster_phv_req.h"
+#include "cluster_phv_mau.h"
 #include "lib/log.h"
 #include "lib/stringref.h"
 
@@ -525,7 +526,7 @@ Cluster_PHV::num_containers(
             }
         }   // for
     }
-    if (num_containers > PHV_Container::Containers::MAX) {
+    if (num_containers > PHV_MAU_Group_Assignments::Constants::phv_mau_group_size) {
         LOG1(
             "*****Cluster_PHV::get_num_containers: "
             << "cluster "
@@ -533,7 +534,7 @@ Cluster_PHV::num_containers(
             << " requires num_containers = "
             << num_containers
             << " > "
-            << PHV_Container::Containers::MAX
+            << PHV_MAU_Group_Assignments::Constants::phv_mau_group_size
             << " of width "
             << width
             << " ******");

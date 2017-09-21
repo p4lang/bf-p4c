@@ -103,10 +103,11 @@ class PHV_MAU_Group {
         PHV_MAU_Group_Assignments *owner,
         PHV_Container::PHV_Word w,
         int n,
-        int& phv_number,
-        std::string asm_encoded,
+        int phv_number,
+        const std::string& asm_encoded,
+        int asm_offset,
         PHV_Container::Ingress_Egress gress,
-        const int containers_in_group = PHV_Container::Containers::MAX);
+        const int containers_in_group);
 
     void clear() {
         for (auto &c : phv_containers_i) {
@@ -167,10 +168,12 @@ class PHV_MAU_Group {
 //
 //
 class PHV_MAU_Group_Assignments : public Visitor {
+ public:
+    //
+    enum Constants {nibble = 4, num_collections = 8, phv_mau_group_size = 16};
+
  private:
     Cluster_PHV_Requirements &phv_requirements_i;  // reference to parent PHV Requirements
-    //
-    enum Constants {nibble = 4, num_collections = 8};
     //
     ordered_map<PHV_Container::PHV_Word, int> num_groups_i {
         {PHV_Container::PHV_Word::b32, 4},
@@ -345,6 +348,9 @@ class PHV_MAU_Group_Assignments : public Visitor {
 
     /** Build TPHV containers and collections. */
     void create_TPHV_collections();
+
+    PHV_Container::Ingress_Egress MAU_group_gress(int phv_number);
+    PHV_Container::Ingress_Egress TPHV_collection_gress(int collection_num);
 
     void cluster_PHV_placements();
     void cluster_TPHV_placements();
