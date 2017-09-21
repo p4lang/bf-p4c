@@ -9,9 +9,6 @@
  * been created afterwards and do not have a PHV allocation.
  */
 class CheckForUnallocatedTemps : public PassManager {
-    const PhvInfo& phv;
-    PhvUse &uses;
-
     struct RejectTemps : public Inspector {
         const PhvInfo& phv;
         const PhvUse &uses;
@@ -31,13 +28,13 @@ class CheckForUnallocatedTemps : public PassManager {
             return n;
         }
 
-        bool preorder(const IR::Member *e) {
+        bool preorder(const IR::Member *e) override {
             if (!phv.field(e))
                 BUG("Field added after PHV allocation: %1%", e->toString());
             return false;
         }
 
-        bool preorder(const IR::TempVar *v) {
+        bool preorder(const IR::TempVar *v) override {
             if (!phv.field(v))
                 BUG("TempVar added after PHV allocation: %1%", v->toString());
             return false;
@@ -45,8 +42,7 @@ class CheckForUnallocatedTemps : public PassManager {
     };
 
  public:
-    CheckForUnallocatedTemps(const PhvInfo &phv, PhvUse &uses)
-    : phv(phv), uses(uses) {
+    CheckForUnallocatedTemps(const PhvInfo &phv, PhvUse &uses) {
         addPasses({
             &uses,
             new RejectTemps(phv, uses) });
