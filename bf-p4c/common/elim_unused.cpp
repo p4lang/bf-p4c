@@ -59,8 +59,7 @@ class ElimUnused::Headers : public PardeTransform {
             return state;
 
         for (auto match : state->match)
-            if (match->next || match->except || match->shift ||
-                !match->stmts.empty())
+            if (match->next || match->shift || !match->stmts.empty())
                 return state;
         LOG1("ELIMINATING parser state " << state->name);
         return nullptr; }

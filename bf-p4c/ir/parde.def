@@ -209,24 +209,23 @@ class UnhandledParserPrimitive : ParserPrimitive {
 class ParserMatch {
 #noconstructor
     ParserMatch(match_t v, int shift, const Vector<ParserPrimitive> &e)
-        : value(v), shift(shift), stmts(e), next(nullptr), except(nullptr) {}
+        : value(v), shift(shift), stmts(e), next(nullptr) {}
 #emit
     ParserMatch(match_t v, std::initializer_list<const ParserPrimitive *> st,
-                const ParserState *n, const ParserException *ex = nullptr)
-        : value(v), stmts(st), next(n), except(ex) {}
+                const ParserState *n)
+        : value(v), stmts(st), next(n) {}
     ParserMatch(match_t v, int sh, std::initializer_list<const ParserPrimitive *> st,
-                const ParserState *n, const ParserException *ex = nullptr)
-        : value(v), shift(sh), stmts(st), next(n), except(ex) {}
+                const ParserState *n)
+        : value(v), shift(sh), stmts(st), next(n) {}
     ParserMatch(match_t v, int sh, const Vector<ParserPrimitive> &st,
-                const ParserState *n, const ParserException *ex = nullptr)
-        : value(v), shift(sh), stmts(st), next(n), except(ex) {}
+                const ParserState *n)
+        : value(v), shift(sh), stmts(st), next(n) {}
 #end
 
     match_t                        value;
     boost::optional<int>           shift;
     inline Vector<ParserPrimitive> stmts;
     NullOK ParserState             next;
-    NullOK ParserException         except;
 }
 
 /// Supertype for all parser transition primitives. These are operations which

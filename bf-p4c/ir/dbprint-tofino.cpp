@@ -110,8 +110,6 @@ void IR::BFN::ParserMatch::dbprint(std::ostream &out) const {
         out << endl << *st;
     if (next)
         out << endl << "goto " << next->name;
-    if (except)
-        out << endl << "exception";
     out << unindent;
 }
 
