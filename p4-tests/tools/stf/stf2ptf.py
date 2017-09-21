@@ -5,6 +5,7 @@ import traceback
 import unittest
 import random
 import math
+import re
 from ptf import config
 from ptf.testutils import *
 
