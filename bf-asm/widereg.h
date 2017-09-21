@@ -26,7 +26,7 @@ struct widereg_base {
     void disable() const {
         if (write) ERROR("Disabling modified register in " << this);
         disabled = true; };
-    bool enable_reg() const { disabled = false; }
+    void enable() const { disabled = false; }
     void rewrite() { write = false; }
     virtual bitvec operator=(bitvec v) = 0;
     virtual unsigned size() = 0;
