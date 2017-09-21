@@ -1,3 +1,6 @@
+#ifndef _data_switchbox_h_
+#define _data_switchbox_h_
+
 #include "stage.h"
 #include "tables.h"
 
@@ -94,3 +97,5 @@ public:
         syn2port_members |= 1U << logical_col;
     }
 };
+
+#endif /* _data_switchbox_h_ */

@@ -1,3 +1,6 @@
+#ifndef _fdstream_h_
+#define _fdstream_h_
+
 #include <iostream>
 #include <functional>
 #include <streambuf>
@@ -24,3 +27,5 @@ public:
     void connect(int fd) { flush(); buffer.reset(); buffer.fd = fd; }
     void setclose(std::function<void()> fn) { closefn = fn; }
 };
+
+#endif /* _fdstream_h_ */

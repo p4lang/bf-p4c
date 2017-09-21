@@ -1,3 +1,6 @@
+#ifndef _top_level_h_
+#define _top_level_h_
+
 #include "target.h"
 #include "json.h"
 
@@ -30,3 +33,5 @@ public:
 
 template<class T> TopLevelTarget<T> *TopLevel::regs() {
     return dynamic_cast<TopLevelTarget<T> *>(all); }
+
+#endif /* _top_level_h_ */
