@@ -1206,6 +1206,28 @@ void MatchTable::pass1(int type) {
                 p.is_valid = true;  } } }
 }
 
+template<> void MatchTable::setup_next_table_map(Target::Tofino::mau_regs &regs, Table *tbl) {
+    auto &merge = regs.rams.match.merge;
+    merge.next_table_map_en |= (1U << logical_id);
+    auto &mp = merge.next_table_map_data[logical_id];
+    ubits<8> *map_data[8] = { &mp[0].next_table_map_data0, &mp[0].next_table_map_data1,
+        &mp[0].next_table_map_data2, &mp[0].next_table_map_data3, &mp[1].next_table_map_data0,
+        &mp[1].next_table_map_data1, &mp[1].next_table_map_data2, &mp[1].next_table_map_data3 };
+    int i = 0;
+    for (auto &n : tbl->hit_next)
+        *map_data[i++] = n ? n->table_id() : 0xff;
+}
+
+#if HAVE_JBAY
+template<> void MatchTable::setup_next_table_map(Target::JBay::mau_regs &regs, Table *tbl) {
+    auto &merge = regs.rams.match.merge;
+    merge.next_table_map_en |= (1U << logical_id);
+    int i = 0;
+    for (auto &n : tbl->hit_next)
+        merge.pred_map_loca[logical_id][i++].pred_map_loca_next_table = n ? n->table_id() : 0x1ff;
+}
+#endif // HAVE_JBAY
+
 template<class REGS> void MatchTable::write_regs(REGS &regs, int type, Table *result) {
     /* this follows the order and behavior in stage_match_entry_table.py
      * it can be reorganized to be clearer */
@@ -1393,28 +1415,6 @@ template<class REGS> void MatchTable::write_regs(REGS &regs, int type, Table *re
 
 }
 FOR_ALL_TARGETS(INSTANTIATE_TARGET_TEMPLATE, void MatchTable::write_regs, mau_regs &, int, Table *)
-
-template<> void MatchTable::setup_next_table_map(Target::Tofino::mau_regs &regs, Table *tbl) {
-    auto &merge = regs.rams.match.merge;
-    merge.next_table_map_en |= (1U << logical_id);
-    auto &mp = merge.next_table_map_data[logical_id];
-    ubits<8> *map_data[8] = { &mp[0].next_table_map_data0, &mp[0].next_table_map_data1,
-        &mp[0].next_table_map_data2, &mp[0].next_table_map_data3, &mp[1].next_table_map_data0,
-        &mp[1].next_table_map_data1, &mp[1].next_table_map_data2, &mp[1].next_table_map_data3 };
-    int i = 0;
-    for (auto &n : tbl->hit_next)
-        *map_data[i++] = n ? n->table_id() : 0xff;
-}
-
-#if HAVE_JBAY
-template<> void MatchTable::setup_next_table_map(Target::JBay::mau_regs &regs, Table *tbl) {
-    auto &merge = regs.rams.match.merge;
-    merge.next_table_map_en |= (1U << logical_id);
-    int i = 0;
-    for (auto &n : tbl->hit_next)
-        merge.pred_map_loca[logical_id][i++].pred_map_loca_next_table = n ? n->table_id() : 0x1ff;
-}
-#endif // HAVE_JBAY
 
 template<class REGS>
 void Table::write_mapram_regs(REGS &regs, int row, int col, int vpn, int type) {

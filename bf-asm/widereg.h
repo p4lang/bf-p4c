@@ -29,7 +29,7 @@ struct widereg_base {
             return false; }
         disabled = true;
         return disabled; };
-    bool enable() const { disabled = false; }
+    void enable() const { disabled = false; }
     void rewrite() { write = false; }
     virtual bitvec operator=(bitvec v) = 0;
     virtual unsigned size() = 0;
