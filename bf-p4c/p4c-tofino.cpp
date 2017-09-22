@@ -64,16 +64,16 @@ int main(int ac, char **av) {
         return 1;
     log_dump(program, "Initial program");
 
+    BFN::serializeP4Runtime(program, options);
+    if (ErrorReporter::instance.getErrorCount() > 0)
+        return 1;
+
     BFN::MidEnd midend(options);
     midend.addDebugHook(hook);
     program = program->apply(midend);
     if (!program)
         return 1;
     log_dump(program, "After midend");
-
-    BFN::serializeP4Runtime(program, options);
-    if (ErrorReporter::instance.getErrorCount() > 0)
-        return 1;
 
     auto maupipe = extract_maupipe(program, options);
 
