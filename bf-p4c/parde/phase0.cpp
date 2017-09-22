@@ -393,8 +393,8 @@ class AddPhase0Parser : public Modifier {
           extracts.push_back(extract);
       }
 
-      auto phase0Match =
-          new IR::BFN::ParserMatch(match_t(), 0, extracts, nextState);
+      auto* phase0Match =
+          new IR::BFN::ParserMatch(match_t(), 0, nextState, extracts);
       return new IR::BFN::ParserState("$phase0", INGRESS, { }, { phase0Match });
   }
 

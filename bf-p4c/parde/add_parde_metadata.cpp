@@ -36,8 +36,8 @@ bool AddMetadataShims::preorder(IR::BFN::Parser *parser) {
                 new IR::BFN::ExtractConstant(alwaysDeparseBit,
                                                 new IR::Constant(IR::Type::Bits::get(1), 1))
             };
-            auto match =
-                new IR::BFN::ParserMatch(match_t(), 16, {init}, parser->start);
+            auto* match =
+                new IR::BFN::ParserMatch(match_t(), 16, parser->start, {init});
             parser->start =
                 new IR::BFN::ParserState("$skip_metadata", INGRESS, { }, { match });
             return false;
@@ -45,17 +45,17 @@ bool AddMetadataShims::preorder(IR::BFN::Parser *parser) {
 
         // Add a state that parses the phase 0 data. This is a placeholder that
         // just skips it; if we find a phase 0 table, it'll be replaced later.
-        auto phase0Match =
-            new IR::BFN::ParserMatch(match_t(), 8, { }, parser->start);
-        auto phase0State =
+        auto* phase0Match =
+            new IR::BFN::ParserMatch(match_t(), 8, parser->start);
+        auto* phase0State =
             new IR::BFN::ParserState("$phase0", INGRESS, { }, { phase0Match });
 
         // This state handles the extraction of all intrinsic metadata other
         // than the resubmit flag.
-        auto igPort = gen_fieldref(meta, "ingress_port");
-        auto intrinsicMatch = new IR::BFN::ParserMatch(match_t(), 8, {
-                new IR::BFN::ExtractBuffer(igPort, 7, 9),
-            }, phase0State);
+        auto* igPort = gen_fieldref(meta, "ingress_port");
+        auto* intrinsicMatch = new IR::BFN::ParserMatch(match_t(), 8, phase0State, {
+            new IR::BFN::ExtractBuffer(igPort, 7, 9),
+        });
         auto intrinsicState =
             new IR::BFN::ParserState("$ingress_metadata", INGRESS,
                                         { }, { intrinsicMatch });
@@ -72,10 +72,10 @@ bool AddMetadataShims::preorder(IR::BFN::Parser *parser) {
             new IR::BFN::ExtractConstant(alwaysDeparseBit,
                                             new IR::Constant(IR::Type::Bits::get(1), 1))
         };
-        auto normalMatch = new IR::BFN::ParserMatch(match_t(8, 0, 0x80), 0,
-                                                       init, intrinsicState);
-        auto resubmitMatch = new IR::BFN::ParserMatch(match_t(8, 0x80, 0x80), 0,
-                                                         init, intrinsicState);
+        auto* normalMatch =
+          new IR::BFN::ParserMatch(match_t(8, 0, 0x80), 0, intrinsicState, init);
+        auto* resubmitMatch =
+          new IR::BFN::ParserMatch(match_t(8, 0x80, 0x80), 0, intrinsicState, init);
         parser->start =
             new IR::BFN::ParserState("$ingress_metadata_shim", INGRESS,
                                         { new IR::BFN::SelectBuffer(0, 1) },
@@ -83,8 +83,8 @@ bool AddMetadataShims::preorder(IR::BFN::Parser *parser) {
     } else if (parser->gress == EGRESS) {
         // Add a state that parses bridged metadata. This is just a placeholder;
         // we'll replace it once we know which metadata need to be bridged.
-        auto bridgedMetadataMatch =
-            new IR::BFN::ParserMatch(match_t(), 0, { }, parser->start);
+        auto* bridgedMetadataMatch =
+            new IR::BFN::ParserMatch(match_t(), 0, parser->start, { });
         auto bridgedMetadataState =
             new IR::BFN::ParserState("$bridged_metadata", EGRESS, { },
                                         { bridgedMetadataMatch });
@@ -93,8 +93,8 @@ bool AddMetadataShims::preorder(IR::BFN::Parser *parser) {
         if (!meta || !meta->type->getField("egress_port")) {
             // There's not really much we can do in this case; just skip over
             // the intrinsic metadata.
-            auto match =
-                new IR::BFN::ParserMatch(match_t(), 2, { }, bridgedMetadataState);
+            auto* match =
+                new IR::BFN::ParserMatch(match_t(), 2, bridgedMetadataState, { });
             parser->start =
                 new IR::BFN::ParserState("$skip_metadata", EGRESS, { }, { match });
             return false;
@@ -104,11 +104,12 @@ bool AddMetadataShims::preorder(IR::BFN::Parser *parser) {
         // then begin processing bridged metadata.
         // XXX(seth): We'll eventually need to handle mirroring and coalescing
         // here, too.
-        parser->start = new IR::BFN::ParserState(
-            "$egress_metadata_shim", parser->gress, {}, {
-            new IR::BFN::ParserMatch(match_t(), 2, {
+        parser->start =
+          new IR::BFN::ParserState("$egress_metadata_shim", parser->gress, {}, {
+            new IR::BFN::ParserMatch(match_t(), 2, bridgedMetadataState, {
                 new IR::BFN::ExtractBuffer(gen_fieldref(meta, "egress_port"), 7, 9)
-            }, bridgedMetadataState) });
+            })
+          });
     }
     return false;
 }

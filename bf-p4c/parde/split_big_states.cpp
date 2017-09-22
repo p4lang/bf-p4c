@@ -246,7 +246,7 @@ bool SplitBigStates::preorder(IR::BFN::ParserMatch* match) {
     auto* currentMatch = match;
     while (allocator.hasMore()) {
         auto newMatch =
-          new IR::BFN::ParserMatch(match_t(), {}, finalState);
+          new IR::BFN::ParserMatch(match_t(), boost::none, finalState);
         std::tie(newMatch->stmts, newMatch->shift) = allocator.allocateOneState();
         auto name = names.newname(stateName + ".$split");
         currentMatch->next =
