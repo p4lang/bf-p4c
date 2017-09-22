@@ -76,10 +76,12 @@ class Table : BFN::Unit {
      * (taken if no gateway rows match).  If this last row NULL expression
      * is not present, the default action is to run the table. */
     NullOK Action                               gateway_payload;
-    NullOK IR::P4Table                          match_table;
+    // match_table never visited, keys are in match_key, default action also in action
+    NullOK IR::P4Table                          match_table; 
     inline Vector<BackendAttached>              attached;
     inline NameMap<Action, ordered_map>         actions;
     inline NameMap<TableSeq>                    next;
+    inline Vector<InputXBarRead>                match_key;
 
     class Layout {
         /* POD type */
@@ -229,6 +231,7 @@ class Table : BFN::Unit {
     bool operator==(const Table &a) const override;
 #end
     bool uses_gateway() const { return !gateway_rows.empty(); }
+    bool gateway_only() const { return match_key.empty() && actions.empty(); }
     int stage() const override {
         return logical_id < 0 ? -1 : logical_id / StageUse::MAX_LOGICAL_IDS; }
     gress_t thread() const override { return gress; }
@@ -240,11 +243,11 @@ class Table : BFN::Unit {
             else if (gw.first)
                 gw_next.emplace(cstring());
             gw_next.emplace(gw.second); }
-        if (!match_table && !uses_gateway())
+        if (gateway_only() && !uses_gateway())
             BUG("table with no gateway or match table");
-        if (!match_table && gw_next.count(cstring()))
+        if (gateway_only() && gw_next.count(cstring()))
             BUG("gateway with no match table wants to run match table");
-        if (match_table && uses_gateway() && !gw_next.count(cstring()))
+        if (!gateway_only() && uses_gateway() && !gw_next.count(cstring()))
             BUG("gateway always overrides match table");
         for (auto &nxt : next) {
             if (nxt.first == "$default") {
@@ -258,8 +261,8 @@ class Table : BFN::Unit {
             v.visit(gw.first, "gateway_row");
         auto &gateway_inhibit(v.flow_clone());
         gateway_inhibit.visit(gateway_payload, "gateway_payload");
-        v.visit(match_table, "match_table");
-        if (match_table) {
+        match_key.visit_children(v);
+        if (!gateway_only()) {
             auto &clone(v.flow_clone());
             v.flow_dead();
             auto &default_action(clone.flow_clone());
@@ -524,6 +527,14 @@ class MultiOperand : ListExpression {
      bool is_phv;
      MultiOperand(ListExpression &le, cstring n, bool ip)
         : ListExpression(le), name(n), is_phv(ip) {}
+}
+
+class InputXBarRead : Expression {
+    Expression expr;
+    ID match_type;
+    int p4_param_order = -1;
+    bool from_mask = false;
+#nodbprint
 }
 
 }  // end namespace MAU

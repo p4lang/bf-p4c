@@ -145,8 +145,8 @@ bool FindDependencyGraph::preorder(const IR::MAU::Table *t) {
     // Add data dependences induced by gateways, matches, and actions.
     for (auto &gw : t->gateway_rows)
         gw.first->apply(AddDependencies(*this, t));
-    if (t->match_table && t->match_table->getKey())
-        t->match_table->getKey()->apply(AddDependencies(*this, t));
+    for (auto ixbar_read : t->match_key)
+        ixbar_read->apply(AddDependencies(*this, t));
     for (auto &action : Values(t->actions))
         action->apply(AddDependencies(*this, t));
 

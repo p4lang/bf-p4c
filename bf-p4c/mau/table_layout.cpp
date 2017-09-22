@@ -19,61 +19,43 @@ void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::M
         layout.entries = k->asInt();
     else if (auto k = tbl->match_table->getConstantProperty("min_size"))
         layout.entries = k->asInt();
-    auto key = tbl->match_table->getKey();
-    if (key) {
-        for (auto t : key->keyElements)
-            if (t->matchType->path->name == "ternary" || t->matchType->path->name == "lpm") {
-                layout.ternary = true;
-                break; } }
     layout.match_width_bits = 0;
-    if (key) {
-        for (auto el : key->keyElements) {
-            if (el->matchType->path->name == "selector") continue;
-            auto r = el->expression;
-            bitrange bits = { 0, 0 };
-            auto *field = phv.field(r, &bits);
-            if (auto mask = r->to<IR::Mask>()) {
-                if (auto mval = mask->right->to<IR::Constant>()) {
-                    /* find highest and lowest set bit in the mask, and use them to slice
-                     * down the field */
-                    field = phv.field((r = mask->left), &bits);
-                    int hi = floor_log2(mval->value);
-                    if (hi >= 0 && hi < bits.size())
-                        bits.hi = bits.lo + hi;
-                    int lo = ffs(mval->value);
-                    if (lo > 0)
-                        bits.lo = lo; } }
-            if (field) {
-                int bytes = (bits.size() + 7)/8;
-                if (!field->alloc_i.empty()) {
-                    /* count the number of actual distinct PHV bytes alloced for these bits */
-                    /* FIXME -- factor this into a PhvInfo::Field method? or iterator? */
-                    bytes = 0;
-                    for (auto &sl : field->alloc_i) {
-                        /* we want to iterate over just the part of the allocation covered by
-                         * 'bits' (a slice), so we skip parts entirely above and chops down parts
-                         * that overlap as needed, so as to just count the bytes in the slice */
-                        /* FIXME -- if a field is allocated to non-contiguous bits of a byte,
-                         * this will count that byte twice, when it is only needed once.  The
-                         * match layout in asm_output will likewise lay it out twice, so this
-                         * is consistent.  Should fix PHV alloc to not make such bad allocations */
-                        if (sl.field_bit > bits.hi) continue;
-                        if (sl.field_hi() < bits.lo) break;
-                        bitrange cbits = { sl.container_bit, sl.container_hi() };
-                        if (bits.hi < sl.field_hi())
-                            cbits.hi -= sl.field_hi() - bits.hi;
-                        if (bits.lo > sl.field_bit)
-                            cbits.lo += bits.lo - sl.field_bit;
-                        assert(cbits.hi >= cbits.lo);
-                        bytes += cbits.hi/8U + 1 - cbits.lo/8U;
-                    }
-                }
-                layout.match_bytes += bytes;
-                layout.match_width_bits += bits.size();
-                if (!layout.ternary)
-                    layout.ixbar_bytes += bytes;
-            } else {
-                BUG("unexpected reads expression %s", r); } } }
+    if (tbl->match_key.empty())
+        return;
+
+    for (auto ixbar_read : tbl->match_key) {
+        if (ixbar_read->match_type.name == "ternary" || ixbar_read->match_type.name == "lpm") {
+            layout.ternary = true;
+            break;
+        }
+    }
+
+    for (auto ixbar_read : tbl->match_key) {
+        if (ixbar_read->match_type.name == "selector") continue;
+        bitrange bits = { 0, 0 };
+        auto *field = phv.field(ixbar_read->expr, &bits);
+        if (field) {
+            int bytes = 0;
+            /* FIXME -- if a field is allocated to non-contiguous bits of a byte,
+             * this will count that byte twice, when it is only needed once.  The
+             * match layout in asm_output will likewise lay it out twice, so this
+             * is consistent.  Should fix PHV alloc to not make such bad allocations */
+            field->foreach_byte(bits, [&](const PhvInfo::Field::alloc_slice &) {
+                bytes++;
+            });
+
+            if (bytes == 0)  // FIXME: Better sanity check needed?
+                ERROR("Field " << field->name << " allocated to tagalong but used in MAU pipe");
+
+            layout.match_bytes += bytes;
+            layout.match_width_bits += bits.size();
+            if (!layout.ternary)
+                layout.ixbar_bytes += bytes;
+        } else {
+            BUG("unexpected reads expression %s", ixbar_read->expr);
+        }
+    }
+
     layout.overhead_bits = ceil_log2(tbl->actions.size());
 }
 

@@ -14,7 +14,7 @@ class RemoveEmptyControls : public MauTransform {
                     it = tbl->next.erase(it);
                 else
                     ++it; } }
-        if (!tbl->match_table && tbl->next.empty())
+        if (tbl->gateway_only() && tbl->next.empty())
             return nullptr;
         return tbl; }
 };

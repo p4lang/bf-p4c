@@ -135,6 +135,9 @@ bool TofinoWriteContext::isRead(bool root_value) {
     if (ctxt->node->is<IR::MAU::Instruction>())
         return ctxt->child_index > 0;
 
+    if (ctxt->node->is<IR::MAU::InputXBarRead>())
+        return true;
+
     if (auto *hashdist = ctxt->node->to<IR::MAU::HashDist>()) {
         if (current == hashdist->field_list)
             return true;

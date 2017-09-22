@@ -79,7 +79,6 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
 
   p4c_add_xfail_reason("tofino"
     "expected packet([s])* on port .* not seen"
-    testdata/p4_14_samples/exact_match_mask1.p4
     testdata/p4_14_samples/07-MultiProtocol.p4
     testdata/p4_14_samples/gateway4.p4
     testdata/p4_14_samples/hitmiss.p4
@@ -406,6 +405,14 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/07-FullTPHV2.p4
   testdata/p4_14_samples/08-FullTPHV3.p4
   )
+
+# BRIG-240
+p4c_add_xfail_reason("tofino"
+  "Input xbar group.* conflict in stage"
+  extensions/p4_tests/p4_14/test_config_194_same_action_param.p4
+  extensions/p4_tests/p4_14/test_config_197_default_next_table.p4
+  extensions/p4_tests/p4_14/test_config_196_hit_miss.p4
+  ) 
 
 # BRIG-109
 p4c_add_xfail_reason("tofino"

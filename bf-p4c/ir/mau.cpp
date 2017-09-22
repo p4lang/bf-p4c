@@ -8,6 +8,7 @@ bool IR::MAU::Table::operator==(const IR::MAU::Table &a) const {
            gateway_rows == a.gateway_rows &&
            gateway_payload == a.gateway_payload &&
            match_table == a.match_table &&
+           match_key == a.match_key &&
            attached == a.attached &&
            actions == a.actions &&
            next == a.next &&

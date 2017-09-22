@@ -71,7 +71,7 @@ void Memories::add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
                          TableResourceAlloc *resources, const LayoutOption *lo,
                          int entries) {
     table_alloc *ta;
-    if (t->match_table)
+    if (!t->gateway_only())
         ta = new table_alloc(t, &resources->match_ixbar, &resources->memuse, lo, entries);
     else
         ta = new table_alloc(t, &resources->gateway_ixbar, &resources->memuse, lo, entries);

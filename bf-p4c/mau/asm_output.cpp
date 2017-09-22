@@ -1177,32 +1177,21 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
                 out << ", action_profile: " << canon_name(ap->name);
     out << " }" << std::endl;
 
-    if (tbl->match_table->getKey() == nullptr)
+    if (tbl->match_key.empty())
         return;
-    auto keys = tbl->match_table->getKey()->keyElements;
-    if (keys.size() > 0) {
-        size_t list_index = 0;
-        size_t match_key_count = 0;
-        for (auto key : keys) {
-             if (key->matchType->path->name == "selector") continue;
-             match_key_count++;
-        }
-        out << indent++ <<  "p4_param_order: " << std::endl;
-        list_index = 0;
-        for (auto key : keys) {
-            if (key->matchType->path->name == "selector") continue;
-            if (key->expression->is<IR::Primitive>()) {
-                BUG("Unexpected primitive as match header");
-            } else if (auto mask = key->expression->to<IR::Mask>()) {
-                out << indent << canon_name(phv.field(mask->left)->name) << ": ";
-            } else {
-                out << indent << canon_name(phv.field(key->expression)->name) << ": ";
-            }
-            cstring match_type = key->matchType->path->name;
-            out << "{ type: " << match_type << ",";
-            out << " size: " << key->expression->type->width_bits() << "}" << std::endl;
-            list_index++;
-        }
+
+    out << indent++ <<  "p4_param_order: " << std::endl;
+    int p4_param_index = 0;
+    for (auto ixbar_read : tbl->match_key) {
+        if (ixbar_read->match_type.name == "selector") continue;
+        if (p4_param_index != ixbar_read->p4_param_order) continue;
+        auto *expr = ixbar_read->expr;
+        if (ixbar_read->from_mask)
+            expr = expr->to<IR::Slice>()->e0;
+        out << indent << canon_name(phv.field(expr)->name) << ": ";
+        out << "{ type: " << ixbar_read->match_type.name << ", ";
+        out << "size: " << expr->type->width_bits() << " }" << std::endl;
+        p4_param_index++;
     }
 }
 
@@ -1211,14 +1200,14 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
     TableMatch fmt(*this, phv, tbl);
     const char *tbl_type = "gateway";
     indent_t    indent(1);
-    bool no_match_hit = tbl->layout.no_match_hit_path() && tbl->match_table;
-    if (tbl->match_table)
+    bool no_match_hit = tbl->layout.no_match_hit_path() && !tbl->gateway_only();
+    if (!tbl->gateway_only())
         tbl_type = tbl->layout.ternary ? "ternary_match" : "exact_match";
-    if (no_match_hit && tbl->match_table)
+    if (no_match_hit)
         tbl_type = "hash_action";
     out << indent++ << tbl_type << ' '<< tbl->name << ' ' << tbl->logical_id % 16U << ':'
         << std::endl;
-    if (tbl->match_table) {
+    if (!tbl->gateway_only()) {
         emit_table_context_json(out, indent, tbl);
         auto memuse_name = tbl->get_use_name();
         emit_memory(out, indent, tbl->resources->memuse.at(memuse_name));
@@ -1235,7 +1224,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
     cstring next_hit = "";  cstring next_miss = "";
     cstring gw_miss;
     bool need_next_hit_map = false;
-    if (tbl->match_table) {
+    if (!tbl->gateway_only()) {
         for (auto &next : tbl->next) {
             if (next.first[0] != '$') {
                 need_next_hit_map = true;
@@ -1251,7 +1240,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
 
     if (tbl->uses_gateway() || (tbl->layout.no_match_hit_path())) {
         indent_t gw_indent = indent;
-        if (tbl->match_table)
+        if (!tbl->gateway_only())
             out << gw_indent++ << "gateway:" << std::endl;
         emit_ixbar(out, gw_indent, &tbl->resources->gateway_ixbar, nullptr, nullptr, &fmt);
         for (auto &use : Values(tbl->resources->memuse)) {
@@ -1271,7 +1260,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
             emit_gateway(out, gw_indent, tbl, no_match_hit, next_hit, gw_miss);
         else
             emit_no_match_gateway(out, gw_indent, tbl);
-        if (!tbl->match_table)
+        if (tbl->gateway_only())
             return;
     }
 

@@ -322,18 +322,24 @@ void PhvInfo::Field::foreach_byte(int lo, int hi,
     while (it != alloc_i.rend() && it->field_bit <= hi) {
         if (it->container.is(PHV::Kind::tagalong)) continue;
         unsigned clo = it->container_bit, chi = it->container_hi();
+        if (lo > it->field_bit)
+            clo += lo - it->field_bit;
+        if (hi < it->field_hi())
+            chi -= it->field_hi() - hi;
+        BUG_CHECK(chi >= clo, "Impossible foreach_byte container slice");
         for (unsigned cbyte = clo/8U; cbyte <= chi/8U; ++cbyte) {
+            int byte_lo = std::max(cbyte*8, clo);
+            int byte_hi = std::min(cbyte*8+7, chi);
             if (it->container != tmp.container || cbyte != tmp.container_bit/8U) {
                 if (tmp.container) fn(tmp);
                 tmp = *it;
-                if (cbyte*8 > clo) {
-                    tmp.container_bit = cbyte*8;
-                    tmp.field_bit += cbyte*8 - clo;
-                    tmp.width -= cbyte*8 - clo; }
-                if (cbyte*8+7 < chi)
-                    tmp.width -= chi - (cbyte*8+7);
+                if (byte_lo > it->container_bit) {
+                    tmp.container_bit = byte_lo;
+                    tmp.field_bit += byte_lo - it->container_bit;
+                    tmp.width -= byte_lo - it->container_bit; }
+                if (byte_hi < it->container_hi())
+                    tmp.width -= it->container_hi() - byte_hi;
             } else {
-                int byte_hi = std::min(chi, cbyte*8+7);
                 if (byte_hi < tmp.container_hi()) {
                     LOG1("********** phv_fields.cpp:sanity_FAIL **********"
                         << ".....byte_hi <= container_hi....."

@@ -845,7 +845,7 @@ void IXBar::layout_option_calculation(const LayoutOption *layout_option,
 /* This is for adding fields to be allocated in the ixbar allocation scheme.  Used by
    match tables, selectors, and hash distribution */
 void IXBar::field_management(const IR::Expression *field, IXBar::Use &alloc,
-    set<cstring> &fields_needed, bool hash_dist, cstring name, const PhvInfo &phv) {
+    map<cstring, bitvec> &fields_needed, bool hash_dist, cstring name, const PhvInfo &phv) {
     const PhvInfo::Field *finfo = nullptr;
     bitrange bits = { };
     if (auto list = field->to<IR::ListExpression>()) {
@@ -855,15 +855,21 @@ void IXBar::field_management(const IR::Expression *field, IXBar::Use &alloc,
              field_management(comp, alloc, fields_needed, hash_dist, name, phv);
         return;
     }
-    if (auto mask = field->to<IR::Mask>())
-        field = mask->left;
+    if (field->is<IR::Mask>())
+        BUG("Masks should have been converted to Slices before input xbar allocation");
     finfo = phv.field(field, &bits);
     BUG_CHECK(finfo, "unexpected field %s", field);
+    bitvec field_bits(bits.lo, bits.hi - bits.lo + 1);
     if (fields_needed.count(finfo->name)) {
-        warning("field %s read twice by table %s", finfo->name, name);
-        return;
+        auto &allocated_bits = fields_needed.at(finfo->name);
+        if (allocated_bits.intersects(field_bits))
+            warning("a range of field %s read twice by table %s", finfo->name, name);
+        if ((allocated_bits & field_bits).popcount() == field_bits.popcount())
+            return;
+        fields_needed[finfo->name] |= field_bits;
+    } else {
+         fields_needed[finfo->name] = field_bits;
     }
-    fields_needed.insert(finfo->name);
     add_use(alloc, finfo, &bits, 0);
 }
 
@@ -894,18 +900,17 @@ class FindFieldsToAlloc : public Inspector {
     : phv(phv), alloc(alloc), fields_needed(fn) {}
 };
 
-bool IXBar::allocMatch(bool ternary, const IR::P4Table *tbl, const PhvInfo &phv, Use &alloc,
+bool IXBar::allocMatch(bool ternary, const IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc,
                        vector<IXBar::Use::Byte *> &alloced, bool second_try, int hash_groups) {
     alloc.ternary = ternary;
-    if (!tbl->getKey()) return true;
-    set<cstring>                        fields_needed;
+    if (tbl->match_key.empty()) return true;
+    map<cstring, bitvec>                        fields_needed;
     bool                                rv;
-    for (auto key : tbl->getKey()->keyElements) {
-        if (key->matchType->path->name == "selector") continue;
-        field_management(key->expression, alloc, fields_needed, false, tbl->name, phv);
+    for (auto ixbar_read : tbl->match_key) {
+        if (ixbar_read->match_type.name == "selector") continue;
+        field_management(ixbar_read->expr, alloc, fields_needed, false, tbl->name, phv);
     }
     LOG3("need " << alloc.use.size() << " bytes for table " << tbl->name);
-    LOG3("need fields " << fields_needed);
 
     rv = find_alloc(alloc.use, ternary, second_try, alloced, hash_groups);
     if (!ternary && rv)
@@ -1186,19 +1191,16 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
 /** Selector allocation algorithm.  Currently reserves an entire section of hash matrix,
  *  even if the selector is only on fair mode, rather than resilient
  */
-bool IXBar::allocSelector(const IR::MAU::Selector *as, const IR::P4Table *match_table,
+bool IXBar::allocSelector(const IR::MAU::Selector *as, const IR::MAU::Table *tbl,
                           const PhvInfo &phv, Use &alloc, bool second_try, cstring name) {
     vector<IXBar::Use::Byte *>  alloced;
-    set <cstring>               fields_needed;
-    for (auto key : match_table->getKey()->keyElements) {
-        // FIXME -- refactor this with the similar loop in allocMatch
-        if (key->matchType->path->name != "selector") continue;
-        auto *field = key->expression;
-        field_management(field, alloc, fields_needed, false, name, phv);
+    map<cstring, bitvec>        fields_needed;
+    for (auto ixbar_read : tbl->match_key) {
+        if (ixbar_read->match_type.name != "selector") continue;
+        field_management(ixbar_read->expr, alloc, fields_needed, false, tbl->name, phv);
     }
 
-    LOG3("need " << alloc.use.size() << " bytes for table " << match_table->name);
-    LOG3("need fields " << fields_needed);
+    LOG3("need " << alloc.use.size() << " bytes for table " << tbl->name);
     bool rv = find_alloc(alloc.use, false, second_try, alloced, HASH_INDEX_GROUPS);
     unsigned hash_table_input = 0;
     if (rv)
@@ -1405,7 +1407,7 @@ bool IXBar::allocHashDistImmediate(const IR::MAU::HashDist *hd,
  */
 bool IXBar::allocHashDist(const IR::MAU::HashDist *hd, IXBar::HashDistUse::HashDistType hdt,
                           const PhvInfo &phv, IXBar::Use &alloc, bool second_try, cstring name) {
-    set <cstring>                   fields_needed;
+    map<cstring, bitvec>        fields_needed;
     vector <IXBar::Use::Byte *> alloced;
     fields_needed.clear();
 
@@ -1616,7 +1618,7 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
     /* Determine number of groups needed.  Loop through them, alloc match will be the same
        for these.  Alloc All Hash Ways will required multiple groups, and may need to change  */
     LOG1("IXBar::allocTable(" << tbl->name << ")");
-    if (tbl->match_table && !lo->layout.no_match_data()) {
+    if (!tbl->gateway_only() && !lo->layout.no_match_data()) {
         bool ternary = tbl->layout.ternary;
         vector<IXBar::Use::Byte *> alloced;
         vector<Use> all_tbl_allocs;
@@ -1627,11 +1629,9 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
             layout_option_calculation(lo, start, last);
             /* Essentially a calculation of how much space is potentially available */
             int hash_groups = (last - start > 4) ? 4 : last - start;
-            if (!(allocMatch(ternary, tbl->match_table, phv, next_alloc,
-                             alloced, false, hash_groups)
+            if (!(allocMatch(ternary, tbl, phv, next_alloc, alloced, false, hash_groups)
                 && allocAllHashWays(ternary, tbl, next_alloc, lo, start, last))
-                && !(allocMatch(ternary, tbl->match_table, phv, next_alloc,
-                     alloced, true, hash_groups)
+                && !(allocMatch(ternary, tbl, phv, next_alloc, alloced, true, hash_groups)
                 && allocAllHashWays(ternary, tbl, next_alloc, lo, start, last))) {
                 next_alloc.clear();
                 alloc.match_ixbar.clear();
@@ -1652,8 +1652,8 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
     for (auto at : tbl->attached) {
         if (auto as = at->to<IR::MAU::Selector>()) {
             if (!attached_tables.count(as) &&
-                !allocSelector(as, tbl->match_table, phv, alloc.selector_ixbar, false, tbl->name) &&
-                !allocSelector(as, tbl->match_table, phv, alloc.selector_ixbar, true, tbl->name)) {
+                !allocSelector(as, tbl, phv, alloc.selector_ixbar, false, tbl->name) &&
+                !allocSelector(as, tbl, phv, alloc.selector_ixbar, true, tbl->name)) {
                 alloc.clear_ixbar();
                 return false; } }
         if (auto salu = at->to<IR::MAU::StatefulAlu>()) {

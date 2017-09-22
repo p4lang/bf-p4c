@@ -318,7 +318,7 @@ StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries, bool
         options_to_rams(tbl, table_placement);
         select_best_option_ternary();
         fill_estimate_from_option(entries);
-    } else if (tbl->match_table) {  // exact_match
+    } else if (!tbl->gateway_only()) {  // exact_match
         /* assuming all ways have the same format and width (only differ in depth) */
         options_to_ways(entries);
         options_to_rams(tbl, table_placement);

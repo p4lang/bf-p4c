@@ -1,6 +1,7 @@
 
 #include "extract_maupipe.h"
 #include <assert.h>
+#include "slice.h"
 #include "ir/ir.h"
 #include "ir/dbprint.h"
 #include "frontends/p4-14/inline_control_flow.h"
@@ -459,6 +460,34 @@ class GetTofinoTables : public Inspector {
     : refMap(refMap), typeMap(typeMap), gress(gr), pipe(p) {}
 
  private:
+    void setup_tt_match(IR::MAU::Table *tt, const IR::P4Table *table) {
+        auto *key = table->getKey();
+        if (key == nullptr)
+            return;
+        int p4_param_order = 0;
+        for (auto key_elem : key->keyElements) {
+            auto key_expr = key_elem->expression;
+            IR::ID match_id(key_elem->matchType->srcInfo, key_elem->matchType->path->name);
+            if (auto *mask = key_expr->to<IR::Mask>()) {
+                auto slices = convertMaskToSlices(mask);
+                for (auto slice : slices) {
+                    auto ixbar_read = new IR::MAU::InputXBarRead(slice, match_id);
+                    ixbar_read->from_mask = true;
+                    if (match_id.name != "selector")
+                        ixbar_read->p4_param_order = p4_param_order;
+                    tt->match_key.push_back(ixbar_read);
+                }
+            } else {
+                auto ixbar_read = new IR::MAU::InputXBarRead(key_expr, match_id);
+                if (match_id.name != "selector")
+                    ixbar_read->p4_param_order = p4_param_order;
+                tt->match_key.push_back(ixbar_read);
+            }
+            if (match_id.name != "selector")
+                p4_param_order++;
+        }
+    }
+
     void setup_tt_actions(IR::MAU::Table *tt, const IR::P4Table *table) {
         for (auto act : table->properties->getProperty("actions")->value
                               ->to<IR::ActionList>()->actionList) {
@@ -497,6 +526,7 @@ class GetTofinoTables : public Inspector {
             tt->match_table = table =
                 table->apply(FixP4Table(refMap, tt, unique_names,
                                         &shared_ap, &shared_as))->to<IR::P4Table>();
+            setup_tt_match(tt, table);
             setup_tt_actions(tt, table);
         } else {
             error("%s: Multiple applies of table %s not supported", m->srcInfo, table->name); }

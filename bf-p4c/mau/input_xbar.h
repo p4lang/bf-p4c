@@ -265,7 +265,7 @@ struct IXBar {
 
 
     void clear();
-    bool allocMatch(bool ternary, const IR::P4Table *tbl, const PhvInfo &phv, Use &alloc,
+    bool allocMatch(bool ternary, const IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc,
                     vector<IXBar::Use::Byte *> &alloced, bool second_try, int hash_groups);
     int getHashGroup(unsigned hash_table_input);
     void getHashDistGroups(unsigned hash_table_input, int hash_group_opt[2]);
@@ -276,7 +276,7 @@ struct IXBar {
                       const LayoutOption *layout_option,
                       size_t index, size_t start, Use &alloc);
     bool allocGateway(const IR::MAU::Table *, const PhvInfo &phv, Use &alloc, bool second_try);
-    bool allocSelector(const IR::MAU::Selector *, const IR::P4Table *, const PhvInfo &phv,
+    bool allocSelector(const IR::MAU::Selector *, const IR::MAU::Table *, const PhvInfo &phv,
                        Use &alloc, bool second_try, cstring name);
     bool allocStateful(const IR::MAU::StatefulAlu *, const PhvInfo &phv, Use &alloc, bool);
     bool allocHashDist(const IR::MAU::HashDist *hd, IXBar::HashDistUse::HashDistType hdt,
@@ -332,7 +332,7 @@ struct IXBar {
     void layout_option_calculation(const LayoutOption *layout_option,
                                    size_t &start, size_t &last);
     void field_management(const IR::Expression *field, IXBar::Use &alloc,
-        set<cstring> &fields_needed, bool hash_dist, cstring name, const PhvInfo &phv);
+        map<cstring, bitvec> &fields_needed, bool hash_dist, cstring name, const PhvInfo &phv);
     bool allocHashDistAddress(const IR::MAU::HashDist *hd, const unsigned used_hash_dist_groups,
         const unsigned long used_hash_dist_bits, const unsigned &hash_table_input,
         unsigned &slice, unsigned long &bit_mask, cstring name);

@@ -18,3 +18,22 @@ const IR::Expression *MakeSlice(const IR::Expression *e, int lo, int hi) {
         e = sl->e0; }
     return new IR::Slice(e, hi, lo);
 }
+
+vector<const IR::Expression *> convertMaskToSlices(const IR::Mask *mask) {
+    BUG_CHECK(mask != nullptr, "Cannot convert nullptr IR::Mask");
+    vector<const IR::Expression *> slice_vector;
+
+    auto value = mask->right->to<IR::Constant>()->value;
+    auto expr = mask->left;
+    mp_bitcnt_t zero_pos = 0;
+    mp_bitcnt_t one_pos = mpz_scan1(value.get_mpz_t(), zero_pos);
+    while (static_cast<size_t>(one_pos)
+           < static_cast<size_t>(expr->type->width_bits())) {
+        zero_pos = mpz_scan0(value.get_mpz_t(), one_pos);
+        auto slice = MakeSlice(mask->left, static_cast<size_t>(one_pos),
+                               static_cast<size_t>(zero_pos - 1));
+        slice_vector.push_back(slice);
+        one_pos = mpz_scan1(value.get_mpz_t(), zero_pos);
+    }
+    return slice_vector;
+}

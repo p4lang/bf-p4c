@@ -847,13 +847,14 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
     if (it->second->gw && it->second->gw->name == tbl->name) {
         /* fold gateway and match table together */
         auto match = it->second->table;
-        assert(match && !tbl->match_table && !match->uses_gateway());
+        assert(match && tbl->gateway_only() && !match->uses_gateway());
         LOG3("folding gateway " << tbl->name << " onto " << match->name);
         tbl->name = match->name;
         for (auto &gw : tbl->gateway_rows)
             if (gw.second == it->second->gw_result_tag)
                 gw.second = cstring();
         tbl->match_table = match->match_table;
+        tbl->match_key = match->match_key;
         tbl->actions = match->actions;
         tbl->attached = match->attached;
         /* Generate the correct table layout from the options */
