@@ -1,3 +1,6 @@
+#ifndef _power_ctl_h_
+#define _power_ctl_h_
+
 #include "misc.h"
 
 /* power_ctl is weirdly encoded!
@@ -39,3 +42,5 @@ void set_power_ctl_reg(checked_array<2, checked_array<16, ubits<I>>> &power_ctl,
         assert(0); }
     power_ctl[side][reg/8U] |= 1U << reg%8U;
 }
+
+#endif /* _power_ctl_h_ */

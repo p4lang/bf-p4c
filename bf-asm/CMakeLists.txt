@@ -135,7 +135,6 @@ SET (BFAS_COMMON_HEADERS
 set (BFAS_UTIL_HEADERS
   bitops.h
   indent.h
-  log.h
   map.h
   vector.h
   )
