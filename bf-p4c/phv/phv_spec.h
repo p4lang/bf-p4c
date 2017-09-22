@@ -104,6 +104,17 @@ class PhvSpec {
      */
     virtual bitvec group(unsigned id) const = 0;
 
+    /**
+     * Generates a bitvec containing a range of containers. This kind of bitvec
+     * can be used to implement efficient set operations on large numbers of
+     * containers.
+     *
+     * To generate the range [B10, B16), use `range(Kind::B, 10, 6)`.
+     *
+     * @param kind The type of container.
+     * @param start The index of first container in the range.
+     * @param length The number of containers in the range. May be zero.
+     */
     virtual bitvec range(PHV::Type t, unsigned start, unsigned length) const = 0;
 
     /// @return a bitvec of the containers which are hard-wired to ingress.
