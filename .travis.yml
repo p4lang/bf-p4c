@@ -28,8 +28,7 @@ install:
 
 script:
 - docker run -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_PARALLEL_LEVEL -e CTEST_OUTPUT_ON_FAILURE -e MAKEFLAGS bf-p4c-compilers ctest -R cpplint
-- docker run -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_PARALLEL_LEVEL -e CTEST_OUTPUT_ON_FAILURE -e MAKEFLAGS bf-p4c-compilers ctest -R gtest
-- docker run -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_PARALLEL_LEVEL -e CTEST_OUTPUT_ON_FAILURE -e MAKEFLAGS bf-p4c-compilers ctest -L tofino -LE ptf -R "testdata|stateful"
+- docker run -w /bfn/bf-p4c-compilers/build/p4c -e CTEST_PARALLEL_LEVEL -e CTEST_OUTPUT_ON_FAILURE -e MAKEFLAGS bf-p4c-compilers ctest -L 'tofino|gtest' -LE ptf -R "testdata|stateful|jenkins"
 
 addons:
   jwt:
