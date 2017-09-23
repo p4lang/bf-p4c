@@ -172,6 +172,9 @@ fi
 
 name=$(basename $file .p4)
 
+# turn on compiler debug info, regardless
+P4C_ARGS="$P4C_ARGS -g"
+
 if $debug; then
     # we need to invoke the debugger directly on the backend executable
     P4C=./p4c-tofino

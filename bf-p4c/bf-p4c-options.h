@@ -15,6 +15,7 @@ class BFN_Options : public CompilerOptions {
     bool ignorePHVOverflow = false;
     bool native_arch = false;
     bool allowUnimplemented = false;
+    bool debugInfo = false;
 
     BFN_Options() {
         target = "tofino-v1model-barefoot";
@@ -41,7 +42,10 @@ class BFN_Options : public CompilerOptions {
             "use tofino native model as target architecture (experimental)");
         registerOption("--allowUnimplemented", nullptr,
             [this](const char *) { allowUnimplemented = true; return true; },
-            "allow assemby generation even if there are unimplemented features in the P4 code");
+            "allow assembly generation even if there are unimplemented features in the P4 code");
+        registerOption("-g", nullptr,
+            [this](const char *) { debugInfo = true; return true; },
+            "generate debug information");
     }
 
     bool targetSupported() {

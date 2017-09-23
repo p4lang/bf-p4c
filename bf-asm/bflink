@@ -4,6 +4,9 @@ WALLE=""
 CHIP="tofino"
 OUT="tofino.bin"
 objs=""
+object_files=""
+base_program=""
+debug_info=false
 tmpdir=""
 
 tempfile() {
@@ -19,6 +22,12 @@ tempfile() {
 
 while [ $# -gt 0 ]; do
     case $1 in
+    -b)
+        base_program="$2"
+        shift ; shift;;
+    -g)
+        debug_info=true
+        shift;;
     -o)
         OUT="$2"
         shift ; shift ;;
@@ -35,6 +44,7 @@ while [ $# -gt 0 ]; do
         file=$(tempfile $1 .Z)
         gunzip -c $1 >$tmpdir/$file
         objs="$objs $tmpdir/$file"
+        object_files="$object_files $1"
         shift ;;
     *.json.gz)
         if [ -z "$tmpdir" ]; then
@@ -43,6 +53,7 @@ while [ $# -gt 0 ]; do
         file=$(tempfile $1 .gz)
         gunzip -c $1 >$tmpdir/$file
         objs="$objs $tmpdir/$file"
+        object_files="$object_files $1"
         shift ;;
     *.json.bz)
         if [ -z "$tmpdir" ]; then
@@ -51,6 +62,7 @@ while [ $# -gt 0 ]; do
         file=$(tempfile $1 .bz)
         bzcat $1 >$tmpdir/$file
         objs="$objs $tmpdir/$file"
+        object_files="$object_files $1"
         shift ;;
     *.json.bz2)
         if [ -z "$tmpdir" ]; then
@@ -59,9 +71,11 @@ while [ $# -gt 0 ]; do
         file=$(tempfile $1 .bz2)
         bzcat $1 >$tmpdir/$file
         objs="$objs $tmpdir/$file"
+        object_files="$object_files $1"
         shift ;;
     *.json)
         objs="$objs $1"
+        object_files="$object_files $1"
         shift ;;
     *)
         echo >&2 "Unknown argument $1"
@@ -81,6 +95,22 @@ fi
 
 $WALLE --target $CHIP -o $OUT $objs
 
+# cleanup
+output_dir=$(dirname $OUT)
+if [ -z "$output_dir" ]; then
+    output_dir="./"
+fi
+for f in $object_files ; do
+    if [ -e $f ]; then rm -f $f ; fi
+done
+if [ ! -z "$base_program" ] ; then
+    pp=$output_dir/${base_program}.p4i
+    if ! $debug_info && test -e $pp ; then rm -f $pp; fi
+fi
+if ! $debug_info && test -e $output_dir/bfas.config.log ; then
+    rm -f $output_dir/bfas.config.log
+fi
+# if we uncompressed, remove the directory
 if [ -d "$tmpdir" ]; then
     rm -rf $tmpdir
 fi

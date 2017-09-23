@@ -9,6 +9,7 @@ extern struct option_t {
     bool                match_compiler;
     bool                condense_json;
     bool                new_ctx_json;
+    bool                debug_info;
     bool                werror;
 } options;
 

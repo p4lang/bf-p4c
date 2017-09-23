@@ -22,6 +22,7 @@ option_t options = {
     .match_compiler = false,
     .condense_json = true,
     .new_ctx_json = true,
+    .debug_info = false,
     .werror = false,
 };
 
@@ -101,7 +102,7 @@ std::unique_ptr<std::ostream> open_output(const char *name, ...) {
 std::string usage(std::string tfas) {
     std::string u = "usage: ";
     u.append(tfas);
-    u.append(" [-l:Mo:qtvh] file...");
+    u.append(" [-l:Mo:gqtvh] file...");
     return u; }
 
 void output_all() {
@@ -188,6 +189,9 @@ int main(int ac, char **av) {
                         check_debug_spec(av[i]);
                         debug_specs.push_back(av[i]); }
                     break;
+                case 'g':
+                    options.debug_info = true;
+                    break;
                 case 'l':
                     ++i;
                     if (!av[i]) {
@@ -267,6 +271,11 @@ int main(int ac, char **av) {
             fclose(fp);
             asmfile = true;
             asmfile_name = get_filename(av[i]);
+            if (!options.debug_info) {
+                auto rc = unlink(av[i]);
+                if (rc != 0 && log_error > 0)
+                    warning(0, "failed to remove %s: %s", av[i], strerror(errno));
+            }
         } else {
             std::cerr << "Can't read " << av[i] << ": " << strerror(errno) << std::endl;
             error_count++; } }
