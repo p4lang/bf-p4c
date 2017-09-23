@@ -68,10 +68,28 @@ struct TofinoPipeTestCase {
     const IR::P4Program* frontendProgram;
 };
 
+/// A GTest fixture for Tofino tests.
 class TofinoBackendTest : public ::testing::Test {
  public:
     static void SetUpTestCase() {
-        Device::init("Tofino");
+        Device::reinitialize("Tofino");
+    }
+};
+
+/// A GTest fixture for JBay tests.
+class JBayBackendTest : public ::testing::Test {
+ public:
+    static void SetUpTestCase() {
+        Device::reinitialize("JBay");
+    }
+
+    static void TearDownTestCase() {
+        // XXX(seth): This is a safety net to reduce surprise in the short term,
+        // because right now it isn't too hard to create tests that aren't using
+        // one of these fixtures and work fine until a JBayBackendTest runs
+        // right before them. Long term we should make sure that this isn't
+        // needed.
+        Device::reinitialize("tofino");
     }
 };
 
