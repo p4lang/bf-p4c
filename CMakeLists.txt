@@ -29,7 +29,8 @@ execute_process (COMMAND git rev-parse --short HEAD
   OUTPUT_VARIABLE BFN_P4C_GIT_SHA
   OUTPUT_STRIP_TRAILING_WHITESPACE
   RESULT_VARIABLE rc)
-MESSAGE(STATUS "p4c-tofino version: ${BFN_P4C_VERSION} (${BFN_P4C_GIT_SHA})")
+set (ENV{P4C_VERSION} "${BFN_P4C_VERSION} (SHA: ${BFN_P4C_GIT_SHA})")
+MESSAGE(STATUS "p4c-tofino version: $ENV{P4C_VERSION}")
 
 # If we're on GCC, use the gold linker if available.
 if (CMAKE_COMPILER_IS_GNUCC)
