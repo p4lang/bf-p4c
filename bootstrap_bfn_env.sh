@@ -80,6 +80,8 @@ apt_packages="g++ git pkg-config automake libtool cmake python2.7 python cmake b
 echo "Need sudo privs to install apt packages"
 sudo apt-get update || die "Failed to update apt"
 sudo apt-get install -y $apt_packages || die "Failed to install needed packages"
+sudo pip install --upgrade pip
+sudo pip install ply || die "Failed to install needed packages"
 sudo pip install pyinstaller==3.2.1 || die "Failed to install needed packages"
 sudo apt-get remove -y python-thrift    # remove this broken package in case it was installed
 sudo pip install thrift || die "Failed to install needed packages"  # need this one instead
