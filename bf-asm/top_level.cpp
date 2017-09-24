@@ -61,4 +61,6 @@ void TopLevelTarget<TARGET>::output(json::map &) {
 }
 
 template class TopLevelTarget<Target::Tofino>;
+#if HAVE_JBAY
 template class TopLevelTarget<Target::JBay>;
+#endif
