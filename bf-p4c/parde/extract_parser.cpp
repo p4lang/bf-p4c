@@ -292,25 +292,22 @@ struct RewriteParserStatements : public Transform {
                 P4C_UNIMPLEMENTED("Parser writes to varbits values are not yet supported.");
             IR::Expression* fref = new IR::Member(field->type, hdr, field->name);
             auto width = field->type->width_bits();
-            auto extract =
-              new IR::BFN::ExtractBuffer(srcInfo, fref, currentBit, width);
+            auto* extract =
+              new IR::BFN::ExtractBuffer(srcInfo, fref, StartLen(currentBit, width));
             currentBit += width;
             rv->push_back(extract);
         }
 
         // On Tofino we can only extract and deparse headers with byte
-        // alignment, so if this header isn't aligned, we need to add padding.
-        // XXX(seth): We really should catch this error at a higher layer.
-        if (currentBit % 8 != 0) {
-            ::warning("Can't extract non-byte-aligned header %1% on %2%; adding "
-                      "padding.", hdr, BFN::Description::ModelName);
-            currentBit += 8 - currentBit % 8;
-        }
+        // alignment. Any non-byte-aligned headers should've been caught by
+        // BFN::CheckHeaderAlignment in the midend.
+        BUG_CHECK(currentBit % 8 == 0,
+                  "A non-byte-aligned header type reached the backend");
 
         // Generate an extract operation for the POV bit.
-        auto validBit = new IR::Member(IR::Type::Bits::get(1), hdr, "$valid");
+        auto* validBit = new IR::Member(IR::Type::Bits::get(1), hdr, "$valid");
         rv->push_back(new IR::BFN::ExtractConstant(srcInfo, validBit,
-                                                      new IR::Constant(1)));
+                                                   new IR::Constant(1)));
         return rv;
     }
 
@@ -380,7 +377,7 @@ struct RewriteParserStatements : public Transform {
                                                    rhs->to<IR::Constant>());
 
         if (auto* lookahead = rhs->to<IR::BFN::LookaheadExpression>()) {
-            auto bits = lookahead->bitRange().shiftedBy(currentBit);
+            auto bits = lookahead->bitRange().shiftedByBits(currentBit);
             return new IR::BFN::ExtractBuffer(s->srcInfo, s->left, bits);
         }
 

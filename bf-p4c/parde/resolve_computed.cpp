@@ -323,7 +323,7 @@ struct ResolveComputedParserPrimitives : public ParserInspector {
             // shifting the input buffer to the right.
             auto* extractBuffer = extract->to<IR::BFN::ExtractBuffer>();
             auto* clone = extractBuffer->clone();
-            clone->bitOffset -= byteShift * 8;
+            clone->range = clone->range.shiftedByBytes(-byteShift);
             updated[dest] = clone;
         }
         return updated;
@@ -509,12 +509,12 @@ class ComputeOffsetCorrections : public ParserInspector {
         int bitMinOffset = 0;
         forAllMatching<IR::BFN::SelectBuffer>(&state->select,
                       [&](const IR::BFN::SelectBuffer* select) {
-            bitMinOffset = std::min(bitMinOffset, select->bitOffset);
+            bitMinOffset = std::min(bitMinOffset, select->range.lo);
         });
         for (auto* match : state->match) {
             forAllMatching<IR::BFN::ExtractBuffer>(&match->stmts,
                           [&](const IR::BFN::ExtractBuffer* extract) {
-                bitMinOffset = std::min(bitMinOffset, extract->bitOffset);
+                bitMinOffset = std::min(bitMinOffset, extract->range.lo);
             });
             BUG_CHECK(byteShiftCorrections[match] <= 0,
                       "Computed a positive shift correction?");
@@ -575,16 +575,16 @@ struct ApplyOffsetCorrections : public ParserModifier {
         auto* state = findOrigCtxt<IR::BFN::ParserState>();
         BUG_CHECK(bitOffsetCorrections.find(state) != bitOffsetCorrections.end(),
                   "No offset correction entries for state %1%", state->name);
-        select->bitOffset += bitOffsetCorrections.at(state);
-        BUG_CHECK(select->bitOffset >= 0, "Failed to correct offset?");
+        select->range = select->range.shiftedByBits(bitOffsetCorrections.at(state));
+        BUG_CHECK(select->range.lo >= 0, "Failed to correct offset?");
     }
 
     void postorder(IR::BFN::ExtractBuffer* extract) override {
         auto* state = findOrigCtxt<IR::BFN::ParserState>();
         BUG_CHECK(bitOffsetCorrections.find(state) != bitOffsetCorrections.end(),
                   "No offset correction entries for state %1%", state->name);
-        extract->bitOffset += bitOffsetCorrections.at(state);
-        BUG_CHECK(extract->bitOffset >= 0, "Failed to correct offset?");
+        extract->range = extract->range.shiftedByBits(bitOffsetCorrections.at(state));
+        BUG_CHECK(extract->range.lo >= 0, "Failed to correct offset?");
     }
 
     void postorder(IR::BFN::ParserMatch* match) override {

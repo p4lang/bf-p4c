@@ -39,8 +39,9 @@ const IR::Node* splitExtract(const IR::BFN::Extract* extract,
         auto* clone = extract->to<IR::BFN::ExtractBuffer>()->clone();
         clone->dest = MakeSlice(extract->dest, slice.lo, slice.hi);
         LOG3("SplitPhvUse: rewriting slice " << slice << " of: " << clone);
-        clone->bitOffset += extract->dest->type->width_bits() - (slice.hi + 1);
-        clone->bitWidth = slice.size();
+        const auto destWidth = extract->dest->type->width_bits();
+        clone->range = clone->range.shiftedByBits(destWidth - (slice.hi + 1))
+                                   .resizedToBits(slice.size());
         LOG3("SplitPhvUse: rewrote to: " << clone);
         rv->push_back(clone);
     }

@@ -9,212 +9,563 @@
 
 #include "lib/exceptions.h"
 
-/// An ordering for bits or bytes.
-enum class Endian : uint8_t {
-    Network = 0,
-    Big = 0,      /// Most significant bit/byte first.
-    Little = 1    /// Least significant bit/byte first.
+class JSONGenerator;
+class JSONLoader;
+
+/**
+ * @return the result of dividing @dividend by @divisor, rounded towards
+ * negative infinity. This is different than normal C++ integer division, which
+ * rounds towards zero. For example, `-7 / 8 == 0`, but
+ * `divideFloor(-7, 8) == -1`.
+ */
+inline int divideFloor(int dividend, int divisor) {
+    const int quotient = dividend / divisor;
+    const int remainder = dividend % divisor;
+    if ((remainder != 0) && ((remainder < 0) != (divisor < 0)))
+        return quotient - 1;
+    return quotient;
+}
+
+/**
+ * @return @dividend modulo @divisor as distinct from C++'s
+ * `dividend % divisor`. The difference is that the result of
+ * `dividend % divisor` takes its sign from the dividend, but
+ * `modulo(dividend, divisor)` takes its sign from the divisor.
+ * For example, `-7 % 8 == -7`, but `modulo(-7, 8) == 7`.
+ */
+constexpr int modulo(int dividend, int divisor) {
+    return (dividend % divisor) * ((dividend < 0) != (divisor < 0) ? -1 : 1);
+}
+
+/**
+ * @return the remainder of dividing @dividend by @divisor, rounded towards
+ * negative infinity. This is different than the normal C++ `dividend % divisor` in
+ * two respects:
+ *   - As with `modulo(dividend, divisor)`, it takes its sign from the divisor.
+ *   - For all integers `D1`, `D2`, `D3`,
+ *     `divideFloor(D1, D3) == divideFloor(D2, D3) /\ D1 < D2
+ *          ==> moduloFloor(D1, D3) < moduloFloor(D2, D3)`.
+ *     This is not true for `%`, because due to C++'s round-towards-zero
+ *     behavior the remainders grow in different directions for positive
+ *     dividends than for negative dividends.
+ * To make this concrete, `-7 % 8 == -7`, but `moduloFloor(-7, 8) == 1`.
+ */
+inline int moduloFloor(const int dividend, const int divisor) {
+    const int remainder = modulo(dividend, divisor);
+    if (remainder == 0 || dividend >= 0) return remainder;
+    return divisor - remainder;
+}
+
+/// Units in which a range can be specified.
+enum class RangeUnit : uint8_t {
+    Bit = 0,
+    Byte = 1  /// 8-bit bytes (octets).
 };
 
-/// A closed range of bits specified in terms of a specific bit order.
-template <Endian Order>
-struct bit_range {
-    bit_range() : lo(0), hi(0) { }
-    bit_range(int lo, int hi) : lo(lo), hi(hi) { }
+/// An ordering for bits or bytes.
+enum class Endian : uint8_t {
+    Big = 0,        /// Most significant bit/byte first.
+    Little = 1,     /// Least significant bit/byte first.
+    Network = Big,  /// Network order is big endian.
+    Host = Little   /// Host order is little endian until we port this compiler
+                    /// to something that isn't. =)
+};
 
-    int size() const                  { return hi - lo + 1; }
-    operator std::pair<int, int>()    { return std::make_pair(lo, hi); }
+/**
+ * A helper type used to construct a range, specified as the closed interval
+ * between two bit indices. For example, `FromTo(6, 8)` denotes a range
+ * containing three bits: bit 6, bit 7, and bit 8.
+ *
+ * FromTo is only intended to be used as a constructor parameter, to allow
+ * creation of ranges in a more readable manner; use it to construct a
+ * HalfOpenRange or ClosedRange.
+ */
+struct FromTo {
+    FromTo(int from, int to) : from(from), to(to) { }
+    FromTo(const FromTo&) = delete;
+    FromTo& operator=(const FromTo&) = delete;
+    const int from;
+    const int to;
+};
+
+/**
+ * A helper type used to construct a range, specified as the region of a certain
+ * length beginning at a certain bit index. For example, `StartLen(6, 8)`
+ * denotes a range containing eight bits: bit 6, bit 7, bit 8, bit 9, bit 10,
+ * bit 11, bit 12, and bit 13.
+ *
+ * As with FromTo, StartLen is only meant to be used when constructing a
+ * HalfOpenRange or ClosedRange.
+ */
+struct StartLen {
+    StartLen(int start, int len) : start(start), len(len) { }
+    StartLen(const StartLen&) = delete;
+    StartLen& operator=(const StartLen&) = delete;
+    const int start;
+    const int len;
+};
+
+/// JSON serialization/deserialization helpers.
+void rangeToJSON(JSONGenerator& json, int lo, int hi);
+std::pair<int, int> rangeFromJSON(JSONLoader& json);
+
+/**
+ * A half-open range of bits or bytes - `[lo, hi)` - specified in terms of a
+ * specific endian order. Half-open ranges include `lo` but do not include `hi`,
+ * so `HalfOpenRange(3, 5)` contains `3` and `4` but not `5`.
+ *
+ * Use a half-open range when you want to allow for the possibility that the
+ * range may be empty, which may be represented by setting `lo` and `hi` to the
+ * same value. Using a half-open range may also make some algorithms more
+ * natural to express, and it may make working with external code easier since
+ * half-open ranges are idiomatic in C++.
+ *
+ * Note that there are many ways to represent an empty range - `(1, 1)` is
+ * empty, for example, but so is `(2, 2)`. Many operations on HalfOpenRanges
+ * will canonicalize the empty range representation, so don't rely on it - just
+ * call `empty()` to determine if a range is empty.
+ *
+ * XXX(seth): Currently, for backwards compatibility, it's possible to construct
+ * ranges where `lo` is greater than `hi`. We should enforce that ranges are
+ * consistent; we'll add the necessary checks after the existing code has been
+ * audited.
+ */
+template <RangeUnit Unit, Endian Order>
+struct HalfOpenRange {
+    static constexpr RangeUnit unit = Unit;
+    static constexpr Endian order = Order;
+
+    HalfOpenRange() : lo(0), hi(0) { }
+    HalfOpenRange(int lo, int hi) : lo(lo), hi(hi) { }
+    HalfOpenRange(FromTo&& fromTo) : lo(fromTo.from), hi(fromTo.to + 1) { }
+    HalfOpenRange(StartLen&& startLen)
+      : lo(startLen.start), hi(startLen.start + startLen.len) { }
+    explicit HalfOpenRange(std::pair<int, int> range)
+      : lo(range.first), hi(range.second) { }
+
+    /// @return the number of elements in this range.
+    int size() const { return hi - lo; }
+
+    /// @return a canonicalized version of this range. This only has an effect
+    /// for empty ranges, which will all be mapped to (0, 0).
+    HalfOpenRange canonicalize() const {
+        if (empty()) return HalfOpenRange(0, 0);
+        return *this;
+    }
+
+    /// @return a new range with the same starting index, but expanded or
+    /// contracted so that it has the provided size in bits. The end result is
+    /// always in bits.
+    HalfOpenRange<RangeUnit::Bit, Order> resizedToBits(int size) const {
+        if (empty()) return HalfOpenRange<RangeUnit::Bit, Order>(0, size);
+        auto asBits = toUnit<RangeUnit::Bit>();
+        return { asBits.lo, asBits.lo + size };
+    }
+
+    /// @return a new range with the same starting index, but expanded or
+    /// contracted so that it has the provided size in bytes.
+    HalfOpenRange resizedToBytes(int size) const {
+        const int resizedLo = empty() ? 0 : lo;
+        if (Unit == RangeUnit::Byte) return { resizedLo, resizedLo + size };
+        return { resizedLo, resizedLo + size * 8 };
+    }
 
     /// @return a new range with the same size, but shifted towards the
     /// high-numbered bits by the provided amount. No rotation or clamping
+    /// to zero is applied. The result is always in bits.
+    HalfOpenRange<RangeUnit::Bit, Order> shiftedByBits(int offset) const {
+        if (empty()) return HalfOpenRange<RangeUnit::Bit, Order>();
+        auto asBits = toUnit<RangeUnit::Bit>();
+        return { asBits.lo + offset, asBits.hi + offset };
+    }
+
+    /// @return a new range with the same size, but shifted towards the
+    /// high-numbered bytes by the provided amount. No rotation or clamping
     /// to zero is applied.
-    bit_range shiftedBy(int offset) const {
-        return bit_range(lo + offset, hi + offset);
-    }
-
-    /// @return the byte containing the lowest-numbered bit in this range.
-    int loByte() const { return lo / 8U; }
-
-    /// @return the byte containing the highest-numbered bit in this range.
-    int hiByte() const { return hi / 8U; }
-
-    /// @return the next byte that starts after the end of this interval.
-    int nextByte() const { return hiByte() + 1; }
-
-    /// @return true if the lowest-numbered bit in this range is
-    /// byte-aligned.
-    bool isLoAligned() const { return lo % 8 == 0; }
-
-    /// @return true if the highest-numbered bit in this range is
-    /// byte-aligned (meaning that this range stops right before the
-    /// beginning of a new byte).
-    bool isHiAligned() const { return hi % 8 == 7; }
-
-    bool operator==(const bit_range& other) const {
-        return other.lo == lo && other.hi == hi;
-    }
-    bool operator!=(const bit_range& other) const { return !(*this == other); }
-
-    bool contains(int bit) const      { return bit >= lo && bit <= hi; }
-    bool overlaps(bit_range a) const  { return contains(a.lo) || a.contains(lo); }
-    bool overlaps(int l, int h) const { return contains(l) || (lo >= l && lo <= h); }
-
-    /// @return a range which contains all the bits which are included in both
-    /// this range and the provided range, or boost::none if there are no
-    /// bits in common.
-    boost::optional<bit_range> intersectWith(bit_range a) const {
-        return intersectWith(a.lo, a.hi);
-    }
-    boost::optional<bit_range> intersectWith(int l, int h) const {
-        bit_range rv = { std::max(lo, l), std::min(hi, h) };
-        if (rv.hi <= rv.lo) return boost::none;
-        return rv;
-    }
-
-    /// @return the smallest range that contains all of the bits in both this
-    /// range and the provided range.
-    bit_range unionWith(bit_range a) const {
-        return unionWith(a.lo, a.hi);
-    }
-    bit_range unionWith(int l, int h) const {
-        bit_range rv = { std::min(lo, l), std::max(hi, h) };
-        BUG_CHECK(rv.lo <= rv.hi, "invalid bit_range::unionWith");
-        return rv;
-    }
-
-    /// @return this range, but reinterpreted as a region within a space of
-    /// the provided size and represented in the specified bit order.
-    template <Endian DestOrder>
-    bit_range<DestOrder> toSpace(int spaceSize) {
-        BUG_CHECK(spaceSize > 0, "Can't represent an empty range");
-        if (DestOrder == Order) return bit_range<DestOrder>(lo, hi);
-        switch (DestOrder) {
-            case Endian::Network:
-                return bit_range<DestOrder>((spaceSize - 1) - hi,
-                                            (spaceSize - 1) - lo);
-            case Endian::Little:
-                return bit_range<DestOrder>((spaceSize - 1) - hi,
-                                            (spaceSize - 1) - lo);
-        }
-        BUG("Unexpected bit order");
-    }
-
-    /// The lowest numbered bit in the range. For Endian::Network, this is the
-    /// most significant bit; for Endian::Little, it's the least significant.
-    int lo;
-
-    /// The highest numbered bit in the range. For Endian::Network, this is the
-    /// least significant bit; for Endian::Little, it's the most significant.
-    int hi;
-};
-
-/// A half-open range of bits specified in terms of a specific bit order.
-template <Endian Order>
-struct bit_interval {
-    bit_interval() : lo(0), hi(0) { }
-    bit_interval(int lo, int hi) : lo(lo), hi(hi) { }
-
-    int size() const                  { return hi - lo; }
-    operator std::pair<int, int>()    { return std::make_pair(lo, hi); }
-
-    /// @return a new interval with the same size, but shifted towards the
-    /// high-numbered bits by the provided amount. No rotation or clamping
-    /// to zero is applied.
-    bit_interval shiftedBy(int offset) const {
-        return empty() ? bit_interval() : bit_interval(lo + offset, hi + offset);
+    HalfOpenRange<Unit, Order> shiftedByBytes(int offset) const {
+        if (empty()) return HalfOpenRange();
+        if (Unit == RangeUnit::Byte) return { lo + offset, hi + offset };
+        return { lo + offset * 8, hi + offset * 8 };
     }
 
     /// @return the byte containing the lowest-numbered bit in this interval.
-    int loByte() const { return empty() ? 0 : lo / 8U; }
+    int loByte() const {
+        if (empty()) return 0;
+        return Unit == RangeUnit::Byte ? lo : divideFloor(lo, 8);
+    }
 
     /// @return the byte containing the highest-numbered bit in this interval.
-    int hiByte() const { return empty() ? 0 : (hi - 1) / 8U; }
+    int hiByte() const {
+        if (empty()) return 0;
+        return Unit == RangeUnit::Byte ? hi - 1 : divideFloor(hi - 1, 8);
+    }
 
     /// @return the next byte that starts after the end of this interval.
     int nextByte() const { return empty() ? 0 : hiByte() + 1; }
 
-    /// @return true if the lowest-numbered bit in this interval is
+    /// @return true if the lowest-numbered bit in this range is
     /// byte-aligned.
-    bool isLoAligned() const { return empty() ? true : lo % 8 == 0; }
+    bool isLoAligned() const {
+        return (empty() || Unit == RangeUnit::Byte) ? true : moduloFloor(lo, 8) == 0;
+    }
 
-    /// @return true if the highest-numbered bit in this interval is
-    /// byte-aligned (meaning that this interval stops right before the
+    /// @return true if the highest-numbered bit in this range is
+    /// byte-aligned (meaning that this range stops right before the
     /// beginning of a new byte).
-    bool isHiAligned() const { return empty() ? true : hi % 8 == 0; }
+    bool isHiAligned() const {
+        return (empty() || Unit == RangeUnit::Byte) ? true : moduloFloor(hi, 8) == 0;
+    }
 
-    bool operator==(const bit_interval& other) const {
+    bool operator==(HalfOpenRange other) const {
         if (empty()) return other.empty();
         return other.lo == lo && other.hi == hi;
     }
-    bool operator!=(const bit_interval& other) const { return !(*this == other); }
+    bool operator!=(HalfOpenRange other) const { return !(*this == other); }
 
-    bool empty() const                { return lo == hi; }
-    bool contains(int bit) const      { return bit >= lo && bit < hi; }
+    /// @return true if this range is empty - i.e., it contains no elements.
+    bool empty() const { return lo == hi; }
 
-    // XXX(seth): Do two empty bit_intervals overlap? Right now the answer is no.
-    bool overlaps(bit_interval a) const  { return contains(a.lo) || a.contains(lo); }
-    bool overlaps(int l, int h) const { return contains(l) || (lo >= l && lo <= h); }
+    /// @return true if this range includes the provided index.
+    bool contains(int index) const { return index >= lo && index < hi; }
 
-    /// @return an interval which contains all the bits which are included in both
-    /// this interval and the provided interval, or an empty interval if there
-    /// are no bits in common.
-    bit_interval intersectWith(bit_interval a) const {
+    /// @return true if this range has some bits in common with the provided
+    /// range. Note that an empty range never overlaps with any other range, so
+    /// `rangeA == rangeB` does not imply that `rangeA.overlaps(rangeB)`.
+    bool overlaps(HalfOpenRange a) const {
+        return !intersectWith(a).empty();
+    }
+    bool overlaps(int l, int h) const {
+        return !intersectWith(l, h).empty();
+    }
+
+    /// @return a range which contains all the bits which are included in both
+    /// this range and the provided range, or an empty range if there are no bits
+    /// in common.
+    HalfOpenRange intersectWith(HalfOpenRange a) const {
         return intersectWith(a.lo, a.hi);
     }
-    bit_interval intersectWith(int l, int h) const {
-        bit_interval rv = { std::max(lo, l), std::min(hi, h) };
+    HalfOpenRange intersectWith(int l, int h) const {
+        HalfOpenRange rv = { std::max(lo, l), std::min(hi, h) };
         if (rv.hi <= rv.lo) return {0, 0};
         return rv;
     }
 
-    /// @return the smallest interval that contains all of the bits in both this
-    /// interval and the provided interval.
-    bit_interval unionWith(bit_interval a) const {
+    /// @return the smallest range that contains all of the bits in both this
+    /// range and the provided range. Note that because ranges are contiguous,
+    /// the result may contain bits that are not in either of the original
+    /// ranges.
+    HalfOpenRange unionWith(HalfOpenRange a) const {
         return unionWith(a.lo, a.hi);
     }
-    bit_interval unionWith(int l, int h) const {
+    HalfOpenRange unionWith(int l, int h) const {
         if (empty()) return {l, h};
         if (l == h) return *this;
-        bit_interval rv = { std::min(lo, l), std::max(hi, h) };
-        BUG_CHECK(rv.lo <= rv.hi, "invalid bit_interval::unionWith");
-        return rv;
+        return HalfOpenRange(std::min(lo, l), std::max(hi, h));
     }
 
-    /// @return this interval, but reinterpreted as a region within a space of
-    /// the provided size and represented in the specified bit order.
+    /**
+     * Convert this range to a range with the specified endian order.
+     *
+     * Making this conversion requires specifying the size of the larger space
+     * that this range is embedded in. That's because the place we start
+     * numbering indices from (the origin, in other words) is changing.  For
+     * example, given a space with 10 elements, a range of 3 indices within that
+     * space may be numbered in two ways as follows:
+     *             Space:               [o o o o o o o o o o]
+     *             Big endian range:    --> [2 3 4]
+     *             Little endian range:     [7 6 5] <--------
+     * We couldn't switch between those numberings without knowing that the
+     * space has 10 elements.
+     *
+     * @tparam DestOrder  The endian order to convert to.
+     * @param spaceSize  The size of the space this range is embedded in.
+     * @return this range, but converted to the specified endian ordering.
+     */
     template <Endian DestOrder>
-    bit_interval<DestOrder> toSpace(int spaceSize) {
-        if (DestOrder == Order) return bit_interval<DestOrder>(lo, hi);
+    HalfOpenRange<Unit, DestOrder> toOrder(int spaceSize) const {
+        if (DestOrder == Order) return HalfOpenRange<Unit, DestOrder>(lo, hi);
         switch (DestOrder) {
             case Endian::Network:
-                return bit_interval<DestOrder>(spaceSize - hi, spaceSize - lo);
             case Endian::Little:
-                return bit_interval<DestOrder>(spaceSize - hi, spaceSize - lo);
+                return HalfOpenRange<Unit, DestOrder>(spaceSize - hi, spaceSize - lo);
         }
-        BUG("Unexpected bit order");
+        BUG("Unexpected ordering");
     }
 
-    /// The lowest numbered bit in the range. For Endian::Network, this is the
-    /// most significant bit; for Endian::Little, it's the least significant.
+    /**
+     * Convert this range to the smallest enclosing range with the specified unit.
+     *
+     * Conversion from bytes to bits is exact, but conversion from bits to bytes
+     * is lossy and may cause the size of the range to grow if the bits aren't
+     * byte-aligned. If that would be problematic, use `isLoAligned()` and
+     * `isHiAligned()` to check before converting, or just check that converting
+     * the result back to bits yields the original range.
+     *
+     * @tparam DestUnit  The unit to convert to.
+     * @return this range, but converted to the specified unit.
+     */
+    template <RangeUnit DestUnit>
+    HalfOpenRange<DestUnit, Order> toUnit() const {
+        if (DestUnit == Unit) return HalfOpenRange<DestUnit, Order>(lo, hi);
+        if (empty()) return HalfOpenRange<DestUnit, Order>();
+        switch (DestUnit) {
+            case RangeUnit::Bit:
+                return HalfOpenRange<DestUnit, Order>(lo * 8, hi * 8 - 7);
+            case RangeUnit::Byte:
+                return HalfOpenRange<DestUnit, Order>(loByte(), nextByte());
+        }
+        BUG("Unexpected unit");
+    }
+
+    /// JSON serialization/deserialization.
+    void toJSON(JSONGenerator& json) const { rangeToJSON(json, lo, hi); }
+    static HalfOpenRange fromJSON(JSONLoader& json) {
+        return HalfOpenRange(rangeFromJSON(json));
+    }
+
+    /// The lowest numbered index in the range. For Endian::Network, this is the
+    /// most significant bit or byte; for Endian::Little, it's the least
+    /// significant.
     int lo;
 
-    /// The highest numbered bit in the range. For Endian::Network, this is the
-    /// least significant bit; for Endian::Little, it's the most significant.
+    /// The highest numbered index in the range. For Endian::Network, this is the
+    /// least significant bit or byte; for Endian::Little, it's the most
+    /// significant. Because this is a half-open range, the range element this
+    /// index identifies is not included in the range.
     int hi;
 };
 
-/// Convenience typedefs.
-using nw_bitrange = bit_range<Endian::Network>;
-using le_bitrange = bit_range<Endian::Little>;
-using nw_bitinterval = bit_interval<Endian::Network>;
-using le_bitinterval = bit_interval<Endian::Little>;
+/**
+ * A closed range of bits or bytes - `[lo, hi]` specified in terms of a specific
+ * endian order. Closed ranges include both `lo` and `hi`, so
+ * `ClosedRange(3, 5)` contains `3`, `4`, and `5`.
+ *
+ * Use a closed range when you want to forbid the possibility of an empty range.
+ * Using a closed range may also make certain algorithms easier to express.
+ *
+ * XXX(seth): ClosedRange's interface is very similar to HalfOpenRange, but they
+ * have almost totally different implementations, and the limitations of C++
+ * templates make sharing the things they do have in common challenging. Most of
+ * the benefit would have come from sharing documentation; as a compromise, most
+ * of the methods in ClosedRange just reference HalfOpenRange's documentation.
+ *
+ * XXX(seth): Currently, for backwards compatibility, it's possible to construct
+ * ranges where `lo` is greater than or equal to `hi`. We should enforce that
+ * ranges are consistent; we'll add the necessary checks after the existing code
+ * has been audited.
+ */
+template <RangeUnit Unit, Endian Order>
+struct ClosedRange {
+    static constexpr RangeUnit unit = Unit;
+    static constexpr Endian order = Order;
 
-/// A compatibility typedef for old code which didn't specify units explicitly.
-using bitrange = bit_range<Endian::Little>;
+    ClosedRange() : lo(0), hi(0) { }
+    ClosedRange(int lo, int hi) : lo(lo), hi(hi) { }
+    ClosedRange(FromTo&& fromTo) : lo(fromTo.from), hi(fromTo.to) { }
+    ClosedRange(StartLen&& startLen)
+      : lo(startLen.start), hi(startLen.start + startLen.len - 1) { }
+    explicit ClosedRange(std::pair<int, int> range)
+      : lo(range.first), hi(range.second) { }
 
-std::ostream& operator<<(std::ostream&, const bit_range<Endian::Network>&);
-std::ostream& operator<<(std::ostream&, const bit_range<Endian::Little>&);
-std::ostream& operator<<(std::ostream&, const bit_interval<Endian::Network>&);
-std::ostream& operator<<(std::ostream&, const bit_interval<Endian::Little>&);
+    /// @see HalfOpenRange::size().
+    int size() const { return hi - lo + 1; }
+
+    /// @see HalfOpenRange::resizedToBits().
+    ClosedRange<RangeUnit::Bit, Order> resizedToBits(int size) const {
+        BUG_CHECK(size != 0, "Resizing ClosedRange to zero size");
+        auto asBits = toUnit<RangeUnit::Bit>();
+        return { asBits.lo, asBits.lo + size - 1 };
+    }
+
+    /// @see HalfOpenRange::resizedToBytes().
+    ClosedRange resizedToBytes(int size) const {
+        BUG_CHECK(size != 0, "Resizing ClosedRange to zero size");
+        if (Unit == RangeUnit::Byte) return { lo, lo + size - 1 };
+        return { lo, lo + size * 8 - 1 };
+    }
+
+    /// @see HalfOpenRange::shiftedByBits().
+    ClosedRange<RangeUnit::Bit, Order> shiftedByBits(int offset) const {
+        auto asBits = toUnit<RangeUnit::Bit>();
+        return { asBits.lo + offset, asBits.hi + offset };
+    }
+
+    /// @see HalfOpenRange::shiftedByBytes().
+    ClosedRange shiftedByBytes(int offset) const {
+        if (Unit == RangeUnit::Byte) return { lo + offset, hi + offset };
+        return { lo + offset * 8, hi + offset * 8 };
+    }
+
+    /// @see HalfOpenRange::loByte().
+    int loByte() const {
+        return Unit == RangeUnit::Byte ? lo : divideFloor(lo, 8);
+    }
+
+    /// @see HalfOpenRange::hiByte().
+    int hiByte() const {
+        return Unit == RangeUnit::Byte ? hi : divideFloor(hi, 8);
+    }
+
+    /// @see HalfOpenRange::nextByte().
+    int nextByte() const { return hiByte() + 1; }
+
+    /// @see HalfOpenRange::isLoAligned().
+    bool isLoAligned() const {
+        return Unit == RangeUnit::Byte ? true : moduloFloor(lo, 8) == 0;
+    }
+
+    /// @see HalfOpenRange::isHiAligned().
+    bool isHiAligned() const {
+        return Unit == RangeUnit::Byte ? true : moduloFloor(hi + 1, 8) == 0;
+    }
+
+    bool operator==(ClosedRange other) const {
+        return other.lo == lo && other.hi == hi;
+    }
+    bool operator!=(ClosedRange other) const { return !(*this == other); }
+
+    /// @see HalfOpenRange::contains().
+    bool contains(int index) const { return index >= lo && index <= hi; }
+
+    /// @see HalfOpenRange::overlaps().
+    bool overlaps(ClosedRange a) const {
+        return !intersectWith(a).empty();
+    }
+    bool overlaps(int l, int h) const {
+        return !intersectWith(l, h).empty();
+    }
+
+    /// @return a range which contains all the bits which are included in both
+    /// this range and the provided range, or an empty range if there are no bits
+    /// in common. Because the resulting range may be empty, this method returns
+    /// a HalfOpenRange.
+    HalfOpenRange<Unit, Order> intersectWith(ClosedRange a) const {
+        return intersectWith(a.lo, a.hi);
+    }
+    HalfOpenRange<Unit, Order> intersectWith(int l, int h) const {
+        return HalfOpenRange<Unit, Order>(lo, hi + 1)
+              .intersectWith(HalfOpenRange<Unit, Order>(l, h + 1));
+    }
+
+    /// @see HalfOpenRange::unionWith().
+    ClosedRange unionWith(ClosedRange a) const {
+        return unionWith(a.lo, a.hi);
+    }
+    ClosedRange unionWith(int l, int h) const {
+        return ClosedRange(std::min(lo, l), std::max(hi, h));
+    }
+
+    /// @see HalfOpenRange::toOrder().
+    template <Endian DestOrder>
+    ClosedRange<Unit, DestOrder> toOrder(int spaceSize) const {
+        BUG_CHECK(spaceSize > 0, "Can't represent an empty range");
+        if (DestOrder == Order) return ClosedRange<Unit, DestOrder>(lo, hi);
+        switch (DestOrder) {
+            case Endian::Network:
+            case Endian::Little:
+                return ClosedRange<Unit, DestOrder>((spaceSize - 1) - hi,
+                                                    (spaceSize - 1) - lo);
+        }
+        BUG("Unexpected ordering");
+    }
+
+    /// @see HalfOpenRange::toUnit().
+    template <RangeUnit DestUnit>
+    ClosedRange<DestUnit, Order> toUnit() const {
+        if (DestUnit == Unit) return ClosedRange<DestUnit, Order>(lo, hi);
+        switch (DestUnit) {
+            case RangeUnit::Bit:
+                return ClosedRange<DestUnit, Order>(lo * 8, hi * 8);
+            case RangeUnit::Byte:
+                return ClosedRange<DestUnit, Order>(loByte(), hiByte());
+        }
+        BUG("Unexpected unit");
+    }
+
+    /// JSON serialization/deserialization.
+    void toJSON(JSONGenerator& json) const { rangeToJSON(json, lo, hi); }
+    static ClosedRange fromJSON(JSONLoader& json) {
+        return ClosedRange(rangeFromJSON(json));
+    }
+
+    /// The lowest numbered index in the range. For Endian::Network, this is the
+    /// most significant bit or byte; for Endian::Little, it's the least
+    /// significant.
+    int lo;
+
+    /// The highest numbered index in the range. For Endian::Network, this is the
+    /// least significant bit or byte; for Endian::Little, it's the most
+    /// significant. Because this is a closed range, the range element this
+    /// index identifies is included in the range.
+    int hi;
+};
+
+/// @return a half-open range denoting the same elements as the provided closed
+/// range.
+template <RangeUnit Unit, Endian Order>
+HalfOpenRange<Unit, Order>
+toHalfOpenRange(ClosedRange<Unit, Order> closedRange) {
+    return HalfOpenRange<Unit, Order>(closedRange.lo, closedRange.hi + 1);
+}
+
+/// @return a closed range denoting the same elements as the provided half-open
+/// range, or boost::none if the provided range is empty.
+template <RangeUnit Unit, Endian Order>
+boost::optional<ClosedRange<Unit, Order>>
+toClosedRange(HalfOpenRange<Unit, Order> halfOpenRange) {
+    if (halfOpenRange.empty()) return boost::none;
+    return ClosedRange<Unit, Order>(halfOpenRange.lo, halfOpenRange.hi - 1);
+}
+
+/// Convenience typedefs for closed ranges in bits.
+using nw_bitrange = ClosedRange<RangeUnit::Bit, Endian::Network>;
+using host_bitrange = ClosedRange<RangeUnit::Bit, Endian::Host>;
+using be_bitrange = ClosedRange<RangeUnit::Bit, Endian::Big>;
+using le_bitrange = ClosedRange<RangeUnit::Bit, Endian::Little>;
+
+/// Convenience typedefs for closed ranges in bytes.
+using nw_byterange = ClosedRange<RangeUnit::Byte, Endian::Network>;
+using host_byterange = ClosedRange<RangeUnit::Byte, Endian::Host>;
+using be_byterange = ClosedRange<RangeUnit::Byte, Endian::Big>;
+using le_byterange = ClosedRange<RangeUnit::Byte, Endian::Little>;
+
+/// Convenience typedefs for half-open ranges in bits.
+using nw_bitinterval = HalfOpenRange<RangeUnit::Bit, Endian::Network>;
+using host_bitinterval = HalfOpenRange<RangeUnit::Bit, Endian::Host>;
+using be_bitinterval = HalfOpenRange<RangeUnit::Bit, Endian::Big>;
+using le_bitinterval = HalfOpenRange<RangeUnit::Bit, Endian::Little>;
+
+/// Convenience typedefs for half-open ranges in bytes.
+using nw_byteinterval = HalfOpenRange<RangeUnit::Byte, Endian::Network>;
+using host_byteinterval = HalfOpenRange<RangeUnit::Byte, Endian::Host>;
+using be_byteinterval = HalfOpenRange<RangeUnit::Byte, Endian::Big>;
+using le_byteinterval = HalfOpenRange<RangeUnit::Byte, Endian::Little>;
+
+// XXX(seth): This is a compatibility typedef for old code which didn't specify
+// units or order explicitly; this seems to have been the most frequently
+// intended interpretation. PLEASE DO NOT WRITE NEW CODE THAT USES THIS TYPE.
+using bitrange = ClosedRange<RangeUnit::Bit, Endian::Little>;
+
+/// A helper function that implements operator<<() for HalfOpenRanges, so that
+/// the entire implementation doesn't need to be in the header file.
+std::ostream& writeHalfOpenRangeToStream(std::ostream& out, RangeUnit unit,
+                                         Endian order, int lo, int hi);
+
+template <RangeUnit Unit, Endian Order>
+std::ostream& operator<<(std::ostream& out,
+                         const HalfOpenRange<Unit, Order>& range) {
+    return writeHalfOpenRangeToStream(out, Unit, Order, range.lo, range.hi);
+}
+
+/// A helper function that implements operator<<() for ClosedRanges, so that
+/// the entire implementation doesn't need to be in the header file.
+std::ostream& writeClosedRangeToStream(std::ostream& out, RangeUnit unit,
+                                       Endian order, int lo, int hi);
+
+template <RangeUnit Unit, Endian Order>
+std::ostream& operator<<(std::ostream& out,
+                         const ClosedRange<Unit, Order>& range) {
+    return writeClosedRangeToStream(out, Unit, Order, range.lo, range.hi);
+}
 
 #endif /* EXTENSIONS_BF_P4C_IR_BITRANGE_H_ */

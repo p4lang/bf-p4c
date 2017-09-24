@@ -11,44 +11,25 @@ namespace BFN {
 /// coincidence, since the two concepts are very closely related.
 class LookaheadExpression : Expression {
 #noconstructor
-    LookaheadExpression(Util::SourceInfo si, int bitOffset, unsigned bitWidth)
-        : Expression(si), bitOffset(bitOffset), bitWidth(bitWidth) { }
-    LookaheadExpression(Util::SourceInfo si, nw_bitrange bits)
-        : LookaheadExpression(si, bits.lo, bits.size()) { }
-    LookaheadExpression(int bitOffset, unsigned bitWidth)
-        : bitOffset(bitOffset), bitWidth(bitWidth) { }
-    LookaheadExpression(nw_bitrange bits)
-        : LookaheadExpression(bits.lo, bits.size()) { }
+    LookaheadExpression(Util::SourceInfo si, nw_bitrange range)
+        : Expression(si), range(range) { }
+    LookaheadExpression(nw_bitrange range) : range(range) { }
 
-    validate { BUG_CHECK(bitWidth > 0, "Must extract at least one bit"); }
     dbprint {
-        out << "lookahead " << bitInterval() << "(" << bitWidth << "b)";
+        out << "lookahead " << bitInterval() << "(" << range.size() << "b)";
     }
 
-    void setBitRange(nw_bitrange range) {
-        bitOffset = range.lo;
-        bitWidth = range.size();
-    }
+    void setBitRange(nw_bitrange newRange) { range = newRange; }
 
-    /// @return the half-open range of bits being extracted, in *network order*.
-    /// If you need a closed range, use extractedBits().
-    nw_bitinterval bitInterval() const {
-        return { bitOffset, bitOffset + int(bitWidth) };
-    }
+    /// @return the half-open range of bits being extracted, in network order.
+    nw_bitinterval bitInterval() const { return toHalfOpenRange(range); }
 
-    /// @return the closed range of bits being extracted, in *network order*.
-    /// If you need a half-open range, use bitInterval().
-    nw_bitrange bitRange() const {
-        return { bitOffset, bitOffset + int(bitWidth) - 1 };
-    }
+    /// @return the closed range of bits being extracted, in network order.
+    nw_bitrange bitRange() const { return range; }
 
-    /// The offset into the input buffer at which extraction will begin.
-    /// Expressed in bits in *network order*; lower numbers are earlier in the
-    /// input stream.
-    int bitOffset;
-
-    /// The number of bits which will be extracted. Must be strictly positive.
-    unsigned bitWidth;
+    /// The region of the input buffer which will be extracted, expressed in
+    /// bits in network order.
+    nw_bitrange range;
 }
 
 /// Superclass for all unresolved header stack indices.
@@ -74,7 +55,7 @@ abstract UnresolvedStackRef : Expression {
 }
 
 /// An unresolved reference to a header stack's '.next' property. This is a
-//placeholder until we can resolve it into a concrete index.
+/// placeholder until we can resolve it into a concrete index.
 class UnresolvedStackNext : UnresolvedStackRef {
 #noconstructor
     UnresolvedStackNext(Util::SourceInfo si) : UnresolvedStackRef(si) { }
@@ -85,7 +66,7 @@ class UnresolvedStackNext : UnresolvedStackRef {
 }
 
 /// An unresolved reference to a header stack's '.last' property. This is a
-//placeholder until we can resolve it into a concrete index.
+/// placeholder until we can resolve it into a concrete index.
 class UnresolvedStackLast : UnresolvedStackRef {
 #noconstructor
     UnresolvedStackLast(Util::SourceInfo si) : UnresolvedStackRef(si) { }
@@ -116,44 +97,29 @@ abstract Extract : ParserPrimitive {
 /// An extraction from the input buffer.
 class ExtractBuffer : Extract {
 #noconstructor
-    ExtractBuffer(Util::SourceInfo si, Expression dest, int bitOffset, unsigned bitWidth)
-        : Extract(si, dest), bitOffset(bitOffset), bitWidth(bitWidth) { }
-    ExtractBuffer(Util::SourceInfo si, Expression dest, nw_bitrange bits)
-        : ExtractBuffer(si, dest, bits.lo, bits.size()) { }
-    ExtractBuffer(Expression dest, int bitOffset, unsigned bitWidth)
-        : Extract(dest), bitOffset(bitOffset), bitWidth(bitWidth) { }
-    ExtractBuffer(Expression dest, nw_bitrange bits)
-        : ExtractBuffer(dest, bits.lo, bits.size()) { }
+    ExtractBuffer(Util::SourceInfo si, Expression dest, nw_bitrange range)
+        : Extract(si, dest), range(range) { }
+    ExtractBuffer(Expression dest, nw_bitrange range)
+        : Extract(dest), range(range) { }
 
-    validate { BUG_CHECK(bitWidth > 0, "Must extract at least one bit"); }
     dbprint {
-        out << "extract bits " << bitInterval() << "(" << bitWidth
+        out << "extract bits " << bitInterval() << "(" << range.size()
             << "b) to " << dest;
     }
 
     /// @return true if some of the bits being extracted were already shifted
     /// out of the input buffer.
-    bool isShiftedOut() const { return bitOffset < 0; }
+    bool isShiftedOut() const { return range.lo < 0; }
 
-    /// @return the half-open range of bits being extracted, in *network order*.
-    /// If you need a closed range, use extractedBits().
-    nw_bitinterval bitInterval() const {
-        return { bitOffset, bitOffset + int(bitWidth) };
-    }
+    /// @return the half-open range of bits being extracted, in network order.
+    nw_bitinterval bitInterval() const { return toHalfOpenRange(range); }
 
-    /// @return the closed range of bits being extracted, in *network order*.
-    /// If you need a half-open range, use bitInterval().
-    nw_bitrange extractedBits() const {
-        return { bitOffset, bitOffset + int(bitWidth) - 1 };
-    }
+    /// @return the closed range of bits being extracted, in network order.
+    nw_bitrange extractedBits() const { return range; }
 
-    /// The offset into the input buffer at which extraction will begin.
-    /// Expressed in bits in *network order*; lower numbers are earlier in the
-    /// input stream.
-    int bitOffset;
-
-    /// The number of bits which will be extracted. Must be strictly positive.
-    unsigned bitWidth;
+    /// The region of the input buffer which will be extracted, expressed in
+    /// bits in network order.
+    nw_bitrange range;
 }
 
 /// An extraction of a constant.
@@ -239,51 +205,32 @@ abstract Select : TransitionPrimitive { }
 /// A selection against a range of bits in the input buffer.
 class SelectBuffer : Select {
 #noconstructor
-    SelectBuffer(Util::SourceInfo si, int bitOffset, unsigned bitWidth, Node source)
-        : Select(si), bitOffset(bitOffset), bitWidth(bitWidth), source(source) { }
-    SelectBuffer(Util::SourceInfo si, int bitOffset, unsigned bitWidth)
-        : SelectBuffer(si, bitOffset, bitWidth, nullptr) { }
-    SelectBuffer(Util::SourceInfo si, nw_bitrange bits, Node source)
-        : SelectBuffer(si, bits.lo, bits.size(), source) { }
-    SelectBuffer(Util::SourceInfo si, nw_bitrange bits)
-        : SelectBuffer(si, bits.lo, bits.size()) { }
-    SelectBuffer(int bitOffset, unsigned bitWidth, Node source)
-        : bitOffset(bitOffset), bitWidth(bitWidth), source(source) { }
-    SelectBuffer(int bitOffset, unsigned bitWidth)
-        : SelectBuffer(bitOffset, bitWidth, nullptr) { }
-    SelectBuffer(nw_bitrange bits, Node source)
-        : SelectBuffer(bits.lo, bits.size(), source) { }
-    SelectBuffer(nw_bitrange bits)
-        : SelectBuffer(bits.lo, bits.size(), nullptr) { }
+    SelectBuffer(Util::SourceInfo si, nw_bitrange range, Node source)
+        : Select(si), range(range), source(source) { }
+    SelectBuffer(Util::SourceInfo si, nw_bitrange range)
+        : SelectBuffer(si, range, nullptr) { }
+    SelectBuffer(nw_bitrange range, Node source)
+        : range(range), source(source) { }
+    SelectBuffer(nw_bitrange range)
+        : SelectBuffer(range, nullptr) { }
 
-    validate { BUG_CHECK(bitWidth > 0, "Must match against at least one bit"); }
     dbprint {
-        out << "match bits " << bitInterval() << "(" << bitWidth << "b)";
+        out << "match bits " << bitInterval() << "(" << range.size() << "b)";
     }
 
     /// @return true if some of the bits being selected were already shifted
     /// out of the input buffer.
-    bool isShiftedOut() const { return bitOffset < 0; }
+    bool isShiftedOut() const { return range.lo < 0; }
 
-    /// @return the half-open range of bits being selected, in *network order*.
-    /// If you need a closed range, use selectedBits().
-    nw_bitinterval bitInterval() const {
-        return { bitOffset, bitOffset + int(bitWidth) };
-    }
+    /// @return the half-open range of bits being selected, in network order.
+    nw_bitinterval bitInterval() const { return toHalfOpenRange(range); }
 
-    /// @return the closed range of bits being selected, in *network order*.
-    /// If you need a half-open range, use bitInterval().
-    nw_bitrange selectedBits() const {
-        return { bitOffset, bitOffset + int(bitWidth) - 1 };
-    }
+    /// @return the closed range of bits being selected, in network order.
+    nw_bitrange selectedBits() const { return range; }
 
-    /// The offset into the input buffer at which selection will begin.
-    /// Expressed in bits in *network order*; lower numbers are earlier in the
-    /// input stream.
-    int bitOffset;
-
-    /// The number of bits which will be selected. Must be strictly positive.
-    unsigned bitWidth;
+    /// The region of the input buffer which will be selected against, expressed
+    /// in bits in network order.
+    nw_bitrange range;
 
 #emit
     /// The higher-level expression we were selecting against. Not visited.

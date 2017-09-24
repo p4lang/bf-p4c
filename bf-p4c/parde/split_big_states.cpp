@@ -64,7 +64,7 @@ struct ExtractorSequence {
                        [&](const IR::BFN::Extract* extract) {
             if (!extract->is<IR::BFN::ExtractBuffer>()) return extract;
             auto clone = extract->to<IR::BFN::ExtractBuffer>()->clone();
-            clone->bitOffset -= delta;
+            clone->range = clone->range.shiftedByBits(-delta);
             BUG_CHECK(!clone->isShiftedOut(), "Shifted extract too much?");
             return clone->to<IR::BFN::Extract>();
         });

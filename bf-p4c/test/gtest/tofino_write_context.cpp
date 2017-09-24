@@ -29,8 +29,8 @@ TEST(TofinoWriteContext, Read) {
     match_t m = match_t(0, 0, 0);
 
     auto *match = new IR::BFN::ParserMatch(m, 0, {
-        new IR::BFN::ExtractBuffer(zero, 0, 1),
-        new IR::BFN::ExtractBuffer(one, 1, 2),
+        new IR::BFN::ExtractBuffer(zero, StartLen(0, 1)),
+        new IR::BFN::ExtractBuffer(one, StartLen(1, 2)),
         new IR::BFN::ExtractComputed(zero, zero),
         new IR::BFN::ExtractComputed(one, one)
     });

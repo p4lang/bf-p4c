@@ -380,6 +380,7 @@ add_dependencies(p4c_driver linktofino)
 
 # # Tofino-specific GTests.
 set (GTEST_TOFINO_SOURCES
+  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/bitrange.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/checksum.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_alignment.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_packing.cpp

@@ -302,8 +302,8 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             std::vector<Slice> slicesInNetworkOrder(slices.begin(), slices.end());
             std::sort(slicesInNetworkOrder.begin(), slicesInNetworkOrder.end(),
                       [](const Slice& a, const Slice& b) {
-                return a.container_bits().toSpace<Endian::Network>(a.container.size()).lo
-                     < b.container_bits().toSpace<Endian::Network>(b.container.size()).lo;
+                return a.container_bits().toOrder<Endian::Network>(a.container.size()).lo
+                     < b.container_bits().toOrder<Endian::Network>(b.container.size()).lo;
             });
 
             for (auto& slice : slicesInNetworkOrder) {
@@ -410,7 +410,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
     // Check that the allocation respects parser alignment limitations.
     forAllMatching<IR::BFN::ExtractBuffer>(pipe,
                   [&](const IR::BFN::ExtractBuffer* extract) {
-        int requiredAlignment = extract->bitOffset % 8;
+        int requiredAlignment = extract->extractedBits().lo % 8;
         bitrange bits;
         auto* field = phv.field(extract->dest, &bits);
         if (!field) {
@@ -421,9 +421,9 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
 
         field->foreach_alloc(bits, [&](const PhvInfo::Field::alloc_slice& alloc) {
             nw_bitrange fieldSlice =
-              alloc.field_bits().toSpace<Endian::Network>(field->size);
+              alloc.field_bits().toOrder<Endian::Network>(field->size);
             nw_bitrange containerSlice =
-              alloc.container_bits().toSpace<Endian::Network>(alloc.container.size());
+              alloc.container_bits().toOrder<Endian::Network>(alloc.container.size());
 
             // The first bit of the field must have the same alignment in the
             // container as it does in the input buffer.

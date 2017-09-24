@@ -21,7 +21,8 @@ RewriteForTofino::postorder(IR::MethodCallExpression* call) {
         auto* typeArgType = typeMap->getTypeType(typeArg, true);
         int width = typeArgType->width_bits();
         BUG_CHECK(width > 0, "Nonpositive width for lookahead type %1%", typeArg);
-        auto* lookahead = new IR::BFN::LookaheadExpression(call->srcInfo, 0, width);
+        auto* lookahead =
+          new IR::BFN::LookaheadExpression(call->srcInfo, StartLen(0, width));
         lookahead->type = call->type;
         return lookahead;
     }
@@ -47,14 +48,14 @@ const IR::Expression* RewriteForTofino::postorder(IR::Slice* slice) {
     auto* lookahead =
       slice->e0->to<IR::BFN::LookaheadExpression>()->clone();
     le_bitrange sliceRange(slice->getL(), slice->getH());
-    boost::optional<nw_bitrange> lookaheadRange =
-      sliceRange.toSpace<Endian::Network>(lookahead->bitRange().size())
-                   .intersectWith(lookahead->bitRange());
-    if (!lookaheadRange) {
+    nw_bitinterval lookaheadRange =
+      sliceRange.toOrder<Endian::Network>(lookahead->bitRange().size())
+                .intersectWith(lookahead->bitRange());
+    if (lookaheadRange.empty()) {
         ::error("Slice is empty: %1%", slice);
         return slice;
     }
-    lookahead->setBitRange(*lookaheadRange);
+    lookahead->setBitRange(*toClosedRange(lookaheadRange));
     lookahead->type = slice->type;
     return lookahead;
 }
@@ -71,7 +72,8 @@ RewriteForTofino::convertExternMethod(const IR::MethodCallExpression* call,
         auto* typeArgType = typeMap->getTypeType(typeArg, true);
         int width = typeArgType->width_bits();
         BUG_CHECK(width > 0, "Nonpositive width for lookahead type %1%", typeArg);
-        auto* lookahead = new IR::BFN::LookaheadExpression(call->srcInfo, 0, width);
+        auto* lookahead =
+          new IR::BFN::LookaheadExpression(call->srcInfo, StartLen(0, width));
         lookahead->type = call->type;
         return lookahead;
     }
