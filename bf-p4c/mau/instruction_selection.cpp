@@ -417,10 +417,10 @@ const IR::Expression *InstructionSelection::postorder(IR::Primitive *prim) {
     } else if (prim->name == "hash.get_hash") {
         unsigned size = 1;
         int op_size = prim->operands.size();
-        if (op_size > 2) {
-            if (prim->operands[2]->to<IR::Constant>()) {
-                size = bitcount(prim->operands[2]->to<IR::Constant>()->asLong() - 1);
-                if ((1LL << size) != prim->operands[2]->to<IR::Constant>()->asLong())
+        if (op_size > 3) {
+            if (prim->operands[3]->to<IR::Constant>()) {
+                size = bitcount(prim->operands[3]->to<IR::Constant>()->asLong() - 1);
+                if ((1LL << size) != prim->operands[3]->to<IR::Constant>()->asLong())
                     error("%s: The hash offset must be a power of 2 in a hash calculation %s",
                           prim->srcInfo, *prim);
             }

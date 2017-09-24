@@ -97,113 +97,6 @@ endif() # HARLYN_STF
 # add the failures with no reason
 p4c_add_xfail_reason("tofino" "" ${TOFINO_XFAIL_TESTS})
 
-if (ENABLE_TNA)
-  # clone/resubmit the entire standard_metadata struct in ingress
-  # fail reason: not all fields in standard metadata are defined in ingress
-  p4c_add_xfail_reason("tofino"
-    "Could not find declaration for standard_metadata_t"
-    testdata/p4_14_samples/packet_redirect.p4
-    testdata/p4_14_samples/resubmit.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "Could not find declaration for standard_metadata"
-    testdata/p4_14_samples/simple_nat.p4
-    # access stdmeta.egress_spec in egress pipeline
-    extensions/p4_tests/p4_14/test_config_6_sram_and_tcam_allocation.p4
-    # writes to egress_port which is a read-only field in ingress
-    # A better error message should be
-    # "Unable to write to read-only field standard_metadata.egress_port"
-    testdata/p4_14_samples/simple_router.p4
-    testdata/p4_14_samples/issue767.p4
-    # A better error message should be
-    # "Attempt to access undefined metadata field egress_port in ingress"
-    testdata/p4_14_samples/copy_to_cpu.p4
-    )
-
-  # accessing ingress_intrinsic_metadata in egress
-  # failed because there is no implicit bridged metadata in tofino.p4
-  p4c_add_xfail_reason("tofino"
-    "Could not find declaration for ig_intr_md"
-    extensions/p4_tests/p4_14/test_config_301_bridge_intrinsic.p4
-    extensions/p4_tests/p4_14/c2/COMPILER-261/vag2241.p4
-    testdata/p4_14_samples/queueing.p4
-    )
-
-  #
-  p4c_add_xfail_reason("tofino"
-    "Unrecognized mode of the action selector"
-    extensions/p4_tests/p4_14/jenkins/exm_direct/exm_direct_one.p4
-    )
-
-  # hash function that return a data width that is different from 'base'
-  p4c_add_xfail_reason("tofino"
-    "Cannot unify bit"
-    testdata/p4_14_samples/flowlet_switching.p4
-    extensions/p4_tests/p4_14/test_config_96_hash_data.p4
-    extensions/p4_tests/p4_14/test_config_13_first_selection.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "Cannot resolve computed select: BFN::SelectComputed"
-    extensions/p4_tests/p4_14/c1/COMPILER-217/port_parser.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "does not have a PHV allocation though it is used in an action"
-    extensions/p4_tests/p4_14/test_config_157_random_number_generator.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "Could not find declaration for ig_intr_md_for_tm"
-    extensions/p4_tests/p4_14/test_config_306_no_mirror_share.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "Field counter_pfe overlaps with meter_pfe"
-    extensions/p4_tests/p4_14/jenkins/action_spec_format/action_spec_format.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "Could not find declaration for ig_prsr_ctrl"
-    extensions/p4_tests/p4_14/test_config_294_parser_loop.p4
-    extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
-    extensions/p4_tests/p4_14/switch/p4src/switch.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "Duplicates declaration struct .*"
-    extensions/p4_tests/p4_14/switch_l2_profile.p4
-    testdata/p4_14_samples/switch_20160226/switch.p4
-    testdata/p4_14_samples/switch_20160512/switch.p4
-    testdata/p4_14_samples/sai_p4.p4
-    extensions/p4_tests/p4_14/switch_20160602/switch.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "Cannot unify Type"
-    testdata/p4_14_samples/issue894.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "payload 0.0 already in use by table simple_table_0 gateway"
-    extensions/p4_tests/p4_14/jenkins/mau_tcam_test/mau_tcam_test.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "Expression .* cannot be the target of an assignment"
-    extensions/p4_tests/p4_14/test_config_249_simple_bridge.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "Could not find declaration for tmp_hdr.*"
-    testdata/p4_14_samples/issue781.p4
-    extensions/p4_tests/p4_14/c2/COMPILER-379/case2210.p4
-    testdata/p4_14_samples/09-IPv4OptionsUnparsed.p4
-    testdata/p4_14_samples/TLV_parsing.p4
-    )
-endif()  # ENABLE_TNA
-
 # tests that no longer fail when enable TNA translation
 # possibly due to different PHV allocation
 if (NOT ENABLE_TNA)
@@ -1156,3 +1049,228 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     testdata/p4_16_samples/table-entries-range-bmv2.p4
     )
 endif() # PTF_REQUIREMENTS_MET
+
+if (ENABLE_TNA)
+  # clone/resubmit the entire standard_metadata struct in ingress
+  # fail reason: not all fields in standard metadata are defined in ingress
+  p4c_add_xfail_reason("tofino"
+    "Could not find declaration for standard_metadata_t"
+    testdata/p4_14_samples/packet_redirect.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "Could not find declaration for standard_metadata"
+    testdata/p4_14_samples/simple_nat.p4
+    # access stdmeta.egress_spec in egress pipeline
+    extensions/p4_tests/p4_14/test_config_6_sram_and_tcam_allocation.p4
+    # writes to egress_port which is a read-only field in ingress
+    # A better error message should be
+    # "Unable to write to read-only field standard_metadata.egress_port"
+    testdata/p4_14_samples/simple_router.p4
+    testdata/p4_14_samples/issue767.p4
+    # A better error message should be
+    # "Attempt to access undefined metadata field egress_port in ingress"
+    testdata/p4_14_samples/copy_to_cpu.p4
+    )
+
+  # accessing ingress_intrinsic_metadata in egress
+  # failed because there is no implicit bridged metadata in tofino.p4
+  p4c_add_xfail_reason("tofino"
+    "Could not find declaration for ig_intr_md"
+    extensions/p4_tests/p4_14/test_config_301_bridge_intrinsic.p4
+    extensions/p4_tests/p4_14/c2/COMPILER-261/vag2241.p4
+    testdata/p4_14_samples/queueing.p4
+    )
+
+  #
+  p4c_add_xfail_reason("tofino"
+    "Unrecognized mode of the action selector"
+    extensions/p4_tests/p4_14/jenkins/exm_direct/exm_direct_one.p4
+    )
+
+  # hash function that return a data width that is different from 'base'
+  p4c_add_xfail_reason("tofino"
+    "Cannot unify bit"
+    testdata/p4_14_samples/flowlet_switching.p4
+    extensions/p4_tests/p4_14/test_config_96_hash_data.p4
+    extensions/p4_tests/p4_14/test_config_13_first_selection.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "Cannot resolve computed select: BFN::SelectComputed"
+    extensions/p4_tests/p4_14/c1/COMPILER-217/port_parser.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "does not have a PHV allocation though it is used in an action"
+    extensions/p4_tests/p4_14/test_config_157_random_number_generator.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "Could not find declaration for ig_intr_md_for_tm"
+    extensions/p4_tests/p4_14/test_config_306_no_mirror_share.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "Field counter_pfe overlaps with meter_pfe"
+    extensions/p4_tests/p4_14/jenkins/action_spec_format/action_spec_format.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "Could not find declaration for ig_prsr_ctrl"
+    extensions/p4_tests/p4_14/test_config_294_parser_loop.p4
+    extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
+    extensions/p4_tests/p4_14/switch/p4src/switch.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "Duplicates declaration struct .*"
+    extensions/p4_tests/p4_14/switch_l2_profile.p4
+    testdata/p4_14_samples/switch_20160226/switch.p4
+    testdata/p4_14_samples/switch_20160512/switch.p4
+    testdata/p4_14_samples/sai_p4.p4
+    extensions/p4_tests/p4_14/switch_20160602/switch.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "Cannot unify Type"
+    testdata/p4_14_samples/issue894.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "payload 0.0 already in use by table simple_table_0 gateway"
+    extensions/p4_tests/p4_14/jenkins/mau_tcam_test/mau_tcam_test.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "Expression .* cannot be the target of an assignment"
+    extensions/p4_tests/p4_14/test_config_249_simple_bridge.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "Could not find declaration for tmp_hdr.*"
+    testdata/p4_14_samples/issue781.p4
+    extensions/p4_tests/p4_14/c2/COMPILER-379/case2210.p4
+    testdata/p4_14_samples/09-IPv4OptionsUnparsed.p4
+    testdata/p4_14_samples/TLV_parsing.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "Checksum translation is not yet supported"
+    testdata/p4_14_samples/TLV_parsing.p4
+    testdata/p4_14_samples/basic_routing.p4
+    testdata/p4_14_samples/checksum.p4
+    testdata/p4_14_samples/checksum1.p4
+    testdata/p4_14_samples/flowlet_switching.p4
+    testdata/p4_14_samples/issue894.p4
+    testdata/p4_14_samples/parser_dc_full.p4
+    testdata/p4_14_samples/port_vlan_mapping.p4
+    testdata/p4_14_samples/sai_p4.p4
+    testdata/p4_14_samples/simple_nat.p4
+    testdata/p4_14_samples/simple_router.p4
+    testdata/p4_14_samples/switch_20160226/switch.p4
+    testdata/p4_14_samples/switch_20160512/switch.p4
+    extensions/p4_tests/p4_14/basic_ipv4_selection.p4
+    extensions/p4_tests/p4_14/dileep.p4
+    extensions/p4_tests/p4_14/dileep10.p4
+    extensions/p4_tests/p4_14/dileep11.p4
+    extensions/p4_tests/p4_14/dileep12.p4
+    extensions/p4_tests/p4_14/dileep2.p4
+    extensions/p4_tests/p4_14/dileep3.p4
+    extensions/p4_tests/p4_14/dileep4.p4
+    extensions/p4_tests/p4_14/dileep7-b.p4
+    extensions/p4_tests/p4_14/dileep8.p4
+    extensions/p4_tests/p4_14/ecmp_pi.p4
+    extensions/p4_tests/p4_14/switch_l2_profile.p4
+    extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
+    extensions/p4_tests/p4_14/test_checksum.p4
+    extensions/p4_tests/p4_14/vk_basic_ipv4_20150706.p4
+    extensions/p4_tests/p4_14/vk_basic_ipv4_subset.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-477/case2602.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-482/case2622.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-483/case2619.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-503/case2678.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-505/case2690.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-532/case2807.p4
+    extensions/p4_tests/p4_14/switch/p4src/switch.p4
+    extensions/p4_tests/p4_14/jenkins/action_spec_format/action_spec_format.p4
+    extensions/p4_tests/p4_14/jenkins/alpm_test/alpm_test.p4
+    extensions/p4_tests/p4_14/jenkins/basic_ipv4/basic_ipv4.p4
+    extensions/p4_tests/p4_14/jenkins/ecmp_pi/ecmp_pi.p4
+    extensions/p4_tests/p4_14/jenkins/exm_direct/exm_direct_one.p4
+    extensions/p4_tests/p4_14/jenkins/exm_direct_1/exm_direct_1_one.p4
+    extensions/p4_tests/p4_14/jenkins/exm_indirect_1/exm_indirect_1_one.p4
+    extensions/p4_tests/p4_14/jenkins/exm_smoke_test/exm_smoke_test_one.p4
+    extensions/p4_tests/p4_14/jenkins/fast_reconfig/fast_reconfig.p4
+    extensions/p4_tests/p4_14/jenkins/multi_device/multi_device.p4
+    extensions/p4_tests/p4_14/jenkins/multi_thread_test/multi_thread_test.p4
+    extensions/p4_tests/p4_14/jenkins/multicast_test/multicast_test.p4
+    extensions/p4_tests/p4_14/jenkins/perf_test/perf_test_one.p4
+    extensions/p4_tests/p4_14/jenkins/perf_test_alpm/perf_test_alpm_one.p4
+    extensions/p4_tests/p4_14/jenkins/smoke_large_tbls/smoke_large_tbls.p4
+    extensions/p4_tests/p4_14/switch_20160602/switch.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "Mirror translation is not yet supported"
+    testdata/p4_14_samples/copy_to_cpu.p4
+    testdata/p4_14_samples/packet_redirect.p4
+    extensions/p4_tests/p4_14/test_config_102_clone.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-413/mirror_test.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "Resubmit translation is not yet supported"
+    extensions/p4_tests/p4_14/jenkins/resubmit/resubmit.p4
+    testdata/p4_14_samples/resubmit.p4
+    extensions/p4_tests/p4_14/13-ResubmitMetadataSize.p4
+    extensions/p4_tests/p4_14/test_config_303_static_table.p4
+    extensions/p4_tests/p4_14/test_config_306_no_mirror_share.p4
+    extensions/p4_tests/p4_14/jenkins/emulation/emulation.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "Packet priority translation is not yet supported"
+    extensions/p4_tests/p4_14/test_config_248_pa_problem.p4
+    extensions/p4_tests/p4_14/test_config_252_pa_required_packing.p4
+    extensions/p4_tests/p4_14/test_config_253_pa_problem_2.p4
+    extensions/p4_tests/p4_14/test_config_255_pa_problem_3.p4
+    extensions/p4_tests/p4_14/test_config_257_pa_problem_5.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "Idle timeout translation is not yet supported"
+    extensions/p4_tests/p4_14/test_config_294_parser_loop.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-260/case1799.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-260/case1799_1.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-262/case1804.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-447/case2527.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-448/case2526.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-451/case2537.p4
+    extensions/p4_tests/p4_14/c1/DRV-543/case2499.p4
+    extensions/p4_tests/p4_14/jenkins/clpm/clpm.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "Digest translation is not yet supported"
+    extensions/p4_tests/p4_14/test_config_332_relax_digest_constraint.p4
+    extensions/p4_tests/p4_14/test_config_55_generate_digest.p4
+    extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-235/vag1737_1.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-254/case1744.p4
+    )
+
+endif()  # ENABLE_TNA

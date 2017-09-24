@@ -137,6 +137,12 @@ struct ingress_intrinsic_metadata_for_tm_t {
     bit<16> rid;                         // L3 replication id for multicast.
 }
 
+struct ingress_intrinsic_metadata_for_deparser_t {
+    bit<3> learn_idx;
+    bit<3> resubmit_idx;
+    bit<3> mirror_idx;
+}
+
 struct ingress_intrinsic_metadata_for_mirror_buffer_t {
     bit<10> mirror_id;                   // ingress mirror id. must be presented
                                          // to mirror buffer for mirrored
@@ -202,6 +208,10 @@ struct egress_intrinsic_metadata_from_parser_t {
   bit<16> egress_parser_err;             // error flags indicating error(s)
                                          // encountered at egress
                                          // parser.
+}
+
+struct egress_intrinsic_metadata_for_deparser_t {
+    bit<3> mirror_idx;
 }
 
 struct egress_intrinsic_metadata_for_mirror_buffer_t {

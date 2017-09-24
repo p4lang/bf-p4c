@@ -675,6 +675,111 @@ class HashTranslation : public PassManager {
     }
 };
 
+class ChecksumTranslation : public Transform {
+ public:
+    ChecksumTranslation() {
+        setName("ChecksumTranslation");
+    }
+    const IR::Node* postorder(IR::Declaration_Instance* node) override {
+        if (auto type = node->getType()->to<IR::Type_Name>()) {
+            if (type->path->name == P4_14::Checksum) {
+                P4C_UNIMPLEMENTED("Checksum translation is not yet supported.");
+            }
+        }
+        return node;
+    }
+};
+
+class ParserCounterTranslation : public Transform {
+ public:
+    ParserCounterTranslation() {
+        setName("ParserCounterTranslation");
+    }
+    const IR::Node* postorder(IR::Member* node) override {
+        if (node->member == "packet_counter") {
+            P4C_UNIMPLEMENTED("Parser counter translation is not yet supported.");
+        }
+        return node;
+    }
+};
+
+class PacketPriorityTranslation : public Transform {
+ public:
+    PacketPriorityTranslation() {
+        setName("PacketPriorityTranslation");
+    }
+    const IR::Node* postorder(IR::Member* node) override {
+        if (node->member == "priority") {
+            P4C_UNIMPLEMENTED("Packet priority translation is not yet supported.");
+        }
+        return node;
+    }
+};
+
+// There is no syntactically valid p4 program for parser_value_set.
+class ValueSetTranslation : public Transform {
+ public:
+    ValueSetTranslation() {
+        setName("ValueSetTranslation");
+    }
+};
+
+
+class IdleTimeoutTranslation : public Transform {
+ public:
+    IdleTimeoutTranslation() {
+        setName("IdleTimeoutTranslation");
+    }
+    const IR::Node* postorder(IR::Property* node) override {
+        if (node->name == "support_timeout") {
+            P4C_UNIMPLEMENTED("Idle timeout translation is not yet supported.");
+        }
+        return node;
+    }
+};
+
+class MirrorTranslation : public Transform {
+ public:
+    MirrorTranslation() {
+        setName("MirrorTranslation");
+    }
+
+    const IR::Node* postorder(IR::PathExpression* node) override {
+        if (node->path->name == "clone" || node->path->name == "clone3") {
+            P4C_UNIMPLEMENTED("Mirror translation is not yet supported.");
+        }
+        return node;
+    }
+};
+
+class ResubmitTranslation : public Transform {
+ public:
+    ResubmitTranslation() {
+        setName("ResubmitTranslation");
+    }
+
+    const IR::Node* postorder(IR::PathExpression* node) override {
+        if (node->path->name == "resubmit") {
+            P4C_UNIMPLEMENTED("Resubmit translation is not yet supported.");
+        }
+        return node;
+    }
+};
+
+class DigestTranslation : public Transform {
+ public:
+    DigestTranslation() {
+        setName("DigestTranslation");
+    }
+
+    const IR::Node* postorder(IR::PathExpression* node) override {
+        if (node->path->name == "digest") {
+            P4C_UNIMPLEMENTED("Digest translation is not yet supported.");
+        }
+        return node;
+    }
+};
+
 class TranslationLast : public PassManager {
  public:
     TranslationLast() { setName("TranslationLast"); }
@@ -1154,6 +1259,14 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
         new DoMeterTranslation(refMap, typeMap),
         new RandomTranslation(),
         new HashTranslation(),
+        new ChecksumTranslation(),
+        new ParserCounterTranslation(),
+        new PacketPriorityTranslation(),
+        new ValueSetTranslation(),
+        new IdleTimeoutTranslation(),
+        new MirrorTranslation(),
+        new ResubmitTranslation(),
+        new DigestTranslation(),
         new AppendSystemArchitecture(&structure),
         new TranslationLast(),
         new P4::ClearTypeMap(typeMap),

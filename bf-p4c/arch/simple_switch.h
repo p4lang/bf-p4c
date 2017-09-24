@@ -56,6 +56,7 @@ static const cstring CRC32 = "crc32";
 static const cstring RANDOM = "random";
 static const cstring IDENTITY = "identity";
 static const cstring Hash = "hash";
+static const cstring Checksum = "Checksum16";
 static const cstring StandardMetadata = "standard_metadata";
 static const cstring IntrinsicMetadataForTM = "ig_intr_md_for_tm";
 static const cstring IngressIntrinsicMetadataFromParser = "ig_intr_md_from_parser_aux";
