@@ -12,7 +12,6 @@ project (BFASM)
 MESSAGE("-- Adding bf-asm")
 
 OPTION(ASAN_ENABLED "Enable ASAN checks" OFF)
-OPTION(ENABLE_JBAY "Enable JBay" OFF)
 
 set (BFASM_LIB_DEPS)
 

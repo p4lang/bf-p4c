@@ -5,5 +5,5 @@ vector<cstring> BFN_Options::supported_targets =
       , "tofino-native-barefoot"
 #if HAVE_JBAY
       , "jbay-v1model-barefoot"
-#endif
+#endif /* HAVE_JBAY */
     };

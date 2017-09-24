@@ -156,6 +156,7 @@ const bitvec& TofinoPhvSpec::physicalContainers() const {
     return containers;
 }
 
+#if HAVE_JBAY
 // XXXX(zma) JBayPhvSpec is copied from Tofino for now, it will all be changed.
 void
 JBayPhvSpec::defineTypes() const {
@@ -239,3 +240,4 @@ const bitvec& JBayPhvSpec::physicalContainers() const {
                                    | range(PHV::Type::TW, 0, 32);
     return containers;
 }
+#endif /* HAVE_JBAY */

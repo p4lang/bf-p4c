@@ -148,6 +148,7 @@ class TofinoPhvSpec : public PhvSpec {
     const bitvec& physicalContainers() const override;
 };
 
+#if HAVE_JBAY
 class JBayPhvSpec : public PhvSpec {
  public:
     JBayPhvSpec() {
@@ -170,5 +171,6 @@ class JBayPhvSpec : public PhvSpec {
 
     const bitvec& physicalContainers() const override;
 };
+#endif /* HAVE_JBAY */
 
 #endif /* EXTENSIONS_BF_P4C_PHV_PHV_SPEC_H_ */

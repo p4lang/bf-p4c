@@ -40,6 +40,7 @@ class TofinoDevice : public Device {
     const PhvSpec& getPhvSpec() const { return phv_; }
 };
 
+#if HAVE_JBAY
 class JBayDevice : public Device {
     const JBayPhvSpec phv_;
 
@@ -48,5 +49,6 @@ class JBayDevice : public Device {
 
     const PhvSpec& getPhvSpec() const { return phv_; }
 };
+#endif /* HAVE_JBAY */
 
 #endif /* EXTENSIONS_BF_P4C_DEVICE_H_ */

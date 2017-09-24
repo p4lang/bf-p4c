@@ -18,9 +18,14 @@ MESSAGE("-- Adding p4c-tofino")
 
 find_package (Boost REQUIRED COMPONENTS graph)
 add_definitions("-DBOOST_NO_ARGUMENT_DEPENDENT_LOOKUP")
+if (ENABLE_JBAY)
+  add_definitions("-DHAVE_JBAY=1")
+endif()
 include_directories(${Boost_INCLUDE_DIRS})
 set (HAVE_LIBBOOST_GRAPH 1)
 set (P4C_LIB_DEPS "${P4C_LIB_DEPS};${Boost_GRAPH_LIBRARY}")
+
+
 
 set (TOFINO_IR_SRCS
   ir/dbprint-tofino.cpp

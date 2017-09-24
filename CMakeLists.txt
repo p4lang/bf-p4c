@@ -9,6 +9,8 @@ endif()
 
 project (BFN_P4C)
 
+OPTION(ENABLE_JBAY "Enable JBay" OFF)
+
 # Get the version from bf-p4c/version.h
 file (STRINGS "${BFN_P4C_SOURCE_DIR}/bf-p4c/version.h"
   __version
