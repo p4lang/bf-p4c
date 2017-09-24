@@ -851,9 +851,7 @@ p4c_add_xfail_reason("tofino"
   "Table entries are not yet implemented in this backend"
   testdata/p4_16_samples/table-entries-exact-bmv2.p4
   testdata/p4_16_samples/table-entries-exact-ternary-bmv2.p4
-  testdata/p4_16_samples/table-entries-lpm-bmv2.p4
   testdata/p4_16_samples/table-entries-priority-bmv2.p4
-  testdata/p4_16_samples/table-entries-range-bmv2.p4
   testdata/p4_16_samples/table-entries-ternary-bmv2.p4
   testdata/p4_16_samples/table-entries-valid-bmv2.p4
   )
@@ -925,11 +923,6 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     extensions/p4_tests/p4_14/adjust_instr3.p4
     extensions/p4_tests/p4_14/adjust_instr4.p4
     extensions/p4_tests/p4_14/counter_test1.p4
-    extensions/p4_tests/p4_16/depgraph1.p4
-    extensions/p4_tests/p4_16/parser_metadata_init.p4
-    extensions/p4_tests/p4_16/stack_valid.p4
-    extensions/p4_tests/p4_16/ternary2.p4
-    extensions/p4_tests/p4_16/google-tor/p4/spec/tor.p4
     testdata/p4_14_samples/action_chain1.p4
     testdata/p4_14_samples/exact_match3.p4
     testdata/p4_14_samples/gateway1.p4
@@ -993,11 +986,6 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     )
 
   p4c_add_xfail_reason("tofino"
-    "error: Table .*: Match field .* references a local"
-    testdata/p4_16_samples/union-valid-bmv2.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
     "error: Expression .* is too complicated to resolve to a header field"
     extensions/p4_tests/p4_14/test_config_326_small_hash_act.p4
     extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
@@ -1025,12 +1013,24 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     )
 
   p4c_add_xfail_reason("tofino"
-    "Error when trying to push config to bf_switchd"
+    "AssertionError: Unsupported match type Unspecified for field"
+    testdata/p4_14_samples/tmvalid.p4
+    testdata/p4_14_samples/exact_match_mask1.p4
     testdata/p4_14_samples/exact_match_valid1.p4
+    extensions/p4_tests/p4_16/apply_if.p4
+    extensions/p4_tests/p4_16/ternary1.p4
+    extensions/p4_tests/p4_16/parser_metadata_init.p4
+    extensions/p4_tests/p4_16/stack_valid.p4
+    extensions/p4_tests/p4_16/depgraph1.p4
+    extensions/p4_tests/p4_16/ternary2.p4
+    testdata/p4_16_samples/ternary2-bmv2.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "Error when trying to push config to bf_switchd"
     testdata/p4_14_samples/hash_action_basic.p4
     testdata/p4_14_samples/hash_action_gateway.p4
     testdata/p4_14_samples/hash_action_two_separate.p4
-    testdata/p4_14_samples/tmvalid.p4
     extensions/p4_tests/p4_14/hash_calculation_32.p4
     extensions/p4_tests/p4_14/stateful0.p4
     extensions/p4_tests/p4_14/stateful1.p4
@@ -1040,14 +1040,6 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     extensions/p4_tests/p4_16/stateful2.p4
     )
 
-  # insufficient interfaces in ptf_runner.
-  # Not worth fixing at this time, as static entries are not yet
-  # supported in the backend
-  p4c_add_xfail_reason("tofino"
-    "KeyError:"
-    testdata/p4_16_samples/table-entries-lpm-bmv2.p4
-    testdata/p4_16_samples/table-entries-range-bmv2.p4
-    )
 endif() # PTF_REQUIREMENTS_MET
 
 if (ENABLE_TNA)
