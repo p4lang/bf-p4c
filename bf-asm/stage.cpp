@@ -184,7 +184,6 @@ void AsmStage::output(json::map &ctxt_json) {
         FOR_ALL_TARGETS(SWITCH_FOR_TARGET)
 #undef SWITCH_FOR_TARGET
         default: assert(0); } }
-    // TopLevel::all.mem_pipe.mau.disable(); -- FIXME differs between tofino/jbay
 }
 
 static FakeTable invalid_rams("RAMS NOT PRESENT");

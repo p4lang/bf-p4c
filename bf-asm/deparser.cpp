@@ -333,7 +333,7 @@ void dump_checksum_units(checked_array_base<IPO> &main_csum_units,
     assert(phv2cksum[NUM_PHV_REGS-1][0] == 143);
     for (int i = 0; i < DEPARSER_CHECKSUM_UNITS; i++) {
         if (checksum[i].empty()) {
-            if (!options.match_compiler || gress == EGRESS || i > 1)
+            if (!options.match_compiler)
                 continue; }
         auto &main_unit = main_csum_units[i].csum_cfg_entry;
         auto &tagalong_unit = tagalong_csum_units[i].csum_cfg_entry;

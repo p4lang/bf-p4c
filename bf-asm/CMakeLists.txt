@@ -80,6 +80,7 @@ set (BFAS_COMMON_SOURCES
   action_table.cpp
   asm-types.cpp
   bfas.cpp
+  atcam_match.cpp
   counter.cpp
   crash.cpp
   deparser.cpp
@@ -100,6 +101,7 @@ set (BFAS_COMMON_SOURCES
   phv.cpp
   salu_inst.cpp
   selection.cpp
+  sram_match.cpp
   stage.cpp
   stateful.cpp
   synth2port.cpp

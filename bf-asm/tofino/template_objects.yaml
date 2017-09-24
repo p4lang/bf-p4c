@@ -23,6 +23,7 @@
 
     "ignore": {
         "memories":[
+            "mau_addrmap",
             # pipe_top_level
                 "tm_pre_mem_rspec",
                 "party_pgr_mem_rspec",

@@ -38,7 +38,7 @@ P4Table *P4Table::get(P4Table::type t, VECTOR(pair_t) &data) {
         error(data[0].key.lineno, "no handle or name in p4 info");
         return 0; }
     for (auto &kv : MapIterChecked(data)) {
-        if (rv->lineno == 0 || rv->lineno > kv.key.lineno)
+        if (rv->lineno <= 0 || rv->lineno > kv.key.lineno)
             rv->lineno = kv.key.lineno;
         if (kv.key == "handle") {
             ;

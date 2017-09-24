@@ -530,27 +530,8 @@ TYPE *TYPE::Type::create(int lineno, const char *name, gress_t gress,   \
     return rv;                                                          \
 }
 
-DECLARE_TABLE_TYPE(ExactMatchTable, MatchTable, "exact_match",
-    void vpn_params(int &width, int &depth, int &period, const char *&period_name) override {
-        width = (format->size-1)/128 + 1;
-        period = format->groups();
-        depth = period * layout_size() / width;
-        period_name = "match group size"; }
-    struct Way {
-        int                              lineno;
-        int                              group, subgroup, mask;
-        std::vector<std::pair<int, int>> rams;
-    };
-    std::vector<Way>                      ways;
-    struct WayRam { int way, index, word, bank; };
-    std::map<std::pair<int, int>, WayRam> way_map;
-    std::map<unsigned, unsigned> hash_fn_ids;
-    bool isindirect() {
-        if (action)
-            if (action.args.size() > 1) return true;
-        return false; }
-    void setup_ways();
-    void alloc_vpns() override;
+DECLARE_ABSTRACT_TABLE_TYPE(SRamMatchTable, MatchTable,         // exact or atcam match
+protected:
     std::vector<Phv::Ref>                 match;
     std::map<unsigned, Phv::Ref>          match_by_bit;
     std::vector<std::vector<Phv::Ref>>    match_in_word;
@@ -570,10 +551,36 @@ DECLARE_TABLE_TYPE(ExactMatchTable, MatchTable, "exact_match",
     int         mgm_lineno = -1;                /* match_group_map lineno */
 public:
     Format::Field *lookup_field(const std::string &n, const std::string &act = "") override;
-    SelectionTable *get_selector() const override { return attached.get_selector(); }
+    void setup_word_ixbar_group();
+    void verify_format();
+    void vpn_params(int &width, int &depth, int &period, const char *&period_name) override {
+        width = (format->size-1)/128 + 1;
+        period = format->groups();
+        depth = period * layout_size() / width;
+        period_name = "match group size"; }
     template<class REGS> void write_merge_regs(REGS &regs, int type, int bus) {
         attached.write_merge_regs(regs, this, type, bus); }
     FOR_ALL_TARGETS(FORWARD_VIRTUAL_TABLE_WRITE_MERGE_REGS)
+)
+
+DECLARE_TABLE_TYPE(ExactMatchTable, SRamMatchTable, "exact_match",
+    struct Way {
+        int                              lineno;
+        int                              group, subgroup, mask;
+        std::vector<std::pair<int, int>> rams;
+    };
+    std::vector<Way>                      ways;
+    struct WayRam { int way, index, word, bank; };
+    std::map<std::pair<int, int>, WayRam> way_map;
+    std::map<unsigned, unsigned> hash_fn_ids;
+    bool isindirect() {
+        if (action)
+            if (action.args.size() > 1) return true;
+        return false; }
+    void setup_ways();
+    void alloc_vpns() override;
+public:
+    SelectionTable *get_selector() const override { return attached.get_selector(); }
     using Table::gen_memory_resource_allocation_tbl_cfg;
     std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(Way &);
     void add_field_to_pack_format(json::vector &field_list, int basebit, std::string name,
@@ -581,6 +588,12 @@ public:
                                   const std::vector<Actions::Action::alias_value_t *> &) override;
     int unitram_type() override { return UnitRam::MATCH; }
     table_type_t table_type() override { return EXACT; }
+)
+
+DECLARE_TABLE_TYPE(AlgTcamMatchTable, SRamMatchTable, "atcam_match",
+    bitvec      s0q1_nibbles, s1q0_nibbles;
+    void alloc_vpns() override;
+    void find_tcam_match();
 )
 
 DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",

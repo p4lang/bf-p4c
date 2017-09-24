@@ -58,6 +58,15 @@ public:
         bool operator==(const Slice &s) const {
             return valid && s.valid && reg.index == s.reg.index &&
                    lo == s.lo && hi == s.hi; }
+        bool operator<(const Slice &a) const {
+            if (reg.index < a.reg.index) return true;
+            if (reg.index > a.reg.index) return false;
+            if (lo < a.lo) return true;
+            if (lo > a.lo) return false;
+            return (hi < a.hi); }
+        bool overlaps(const Slice &a) const {
+            return valid && a.valid && reg.index == a.reg.index &&
+                lo <= a.hi && a.lo <= hi; }
         unsigned size() const { return valid ? hi - lo + 1 : 0; }
         void dbprint(std::ostream &out) const;
     };

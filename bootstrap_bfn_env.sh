@@ -295,7 +295,7 @@ pushd model >/dev/null
         cd $builddir
         if [ ! -r Makefile ]; then
             ./autogen.sh
-            ./configure --enable-runner
+            ./configure --enable-runner --enable-simple-test-harness
         fi
         if $clean_before_rebuild; then
             make clean

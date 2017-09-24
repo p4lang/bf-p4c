@@ -92,9 +92,12 @@ while expr "$1" : - >/dev/null; do
 done
 
 # If neither '-b' or '-g' specified run for both brig and glass as default case
+# unless just -d specified -- then just run glass to do json_diff comparisons
 if ! $brig && ! $glass; then
-    brig=true;
     glass=true;
+    if ! $diff; then
+        brig=true;
+    fi
 fi
 
 #glsc_args="--placement-order ingress_before_egress --libpd --placement secret"
@@ -363,7 +366,7 @@ function test_p4() {
         # Validate context json output from assembler
         $SCHEMA > schema.json
         python $SCHEMA_VAL brig/context.json schema.json > context_json_schema_validate.log
-        for f in $name.out/*.cfg.json; do
+        for f in brig/*.cfg.json; do
             if $REFLOW $f | gzip -9 > $f.gz; then
                 rm $f
             fi
