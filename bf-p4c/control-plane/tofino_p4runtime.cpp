@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/control-plane/synthesize_valid_field.h"
+#include "bf-p4c/common/remap_intrin.h"
 #include "control-plane/p4RuntimeSerializer.h"
 #include "frontends/common/resolveReferences/referenceMap.h"
 #include "frontends/p4/evaluator/evaluator.h"
@@ -80,6 +81,7 @@ void serializeP4Runtime(const IR::P4Program* program,
         new SynthesizeValidField(&refMap, &typeMap),
         // We currently can't handle tuples.
         new P4::EliminateTuples(&refMap, &typeMap),
+        new RemapIntrinsics,
         // Update types and reevaluate the program.
         new P4::TypeChecking(&refMap, &typeMap, /* updateExpressions = */ true),
         evaluator

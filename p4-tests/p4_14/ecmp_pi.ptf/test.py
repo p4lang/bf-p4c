@@ -55,7 +55,7 @@ class EcmpPITest(P4RuntimeTest):
         table_entry.table_id = self.get_table_id("send_frame")
         self.set_match_key(
             table_entry, "send_frame",
-            [self.Exact("standard_metadata.egress_port", eg_port)])
+            [self.Exact("eg_intr_md.egress_port", eg_port)])
         self.set_action_entry(table_entry, "rewrite_mac", [("smac", smac)])
 
         rep = self.stub.Write(req)
