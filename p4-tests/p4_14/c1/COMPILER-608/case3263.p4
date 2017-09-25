@@ -1527,7 +1527,7 @@ table TroutRun {
    actions {
       Steger;
    }
-   default_action: Steger;
+   default_action: Steger(0);
    size : 1;
 }
 control Edroy {
@@ -2121,7 +2121,7 @@ table Eustis {
    actions {
       Wakefield;
    }
-   default_action : Wakefield;
+   default_action : Wakefield(0, 0);
    size : 1;
 }
 action Blakeley( Armijo ) {

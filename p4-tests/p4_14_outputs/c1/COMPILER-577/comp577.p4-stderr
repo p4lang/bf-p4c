@@ -1,0 +1,9 @@
+comp577.p4(1898): warning: -1: negative value with unsigned type
+   add_to_field(Klukwan.Ridgeland, -1);
+                                    ^
+comp577.p4(1903): warning: -1: negative value with unsigned type
+   add_to_field(Rehoboth.Sequim, -1);
+                                  ^
+comp577.p4(1514): warning: Could not infer type for Gumlog, using bit<8>
+action Bowlus(Gumlog) {
+              ^^^^^^

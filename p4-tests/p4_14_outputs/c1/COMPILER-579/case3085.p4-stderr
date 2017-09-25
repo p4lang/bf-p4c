@@ -1,0 +1,12 @@
+case3085.p4(1513): warning: Could not infer type for Gambrill, using bit<8>
+action Lilbert(Gambrill) {
+               ^^^^^^^^
+case3085.p4(2063): warning: Could not infer type for Hodges, using bit<8>
+action Turney( Hodges, Lostwood ) {
+               ^^^^^^
+case3085.p4(1897): warning: -1: negative value with unsigned type
+   add_to_field(Halley.Elsinore, -1);
+                                  ^
+case3085.p4(1902): warning: -1: negative value with unsigned type
+   add_to_field(Chubbuck.Fentress, -1);
+                                    ^

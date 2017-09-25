@@ -1525,7 +1525,7 @@ table SomesBar {
    actions {
       Tulalip;
    }
-   default_action: Tulalip;
+   default_action: Tulalip(0);
    size : 1;
 }
 control Carlsbad {
@@ -2062,7 +2062,7 @@ table Wesson {
    actions {
       Kneeland;
    }
-   default_action : Kneeland;
+   default_action : Kneeland(0, 0);
    size : 1;
 }
 action Bunker( Westhoff ) {
@@ -3730,4 +3730,3 @@ control egress {
    }
    McDermott();
 }
-

@@ -11,43 +11,6 @@ set (TOFINO_XFAIL_TESTS
   # this is intentionally empty because xfails should be added with a reason.
   # look for the failure message in this file and add to an existing ticket
   # or open a new one.
-  # Added new tests need furthur error categorization
-  extensions/p4_tests/p4_14/c1/COMPILER-532/case2807.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-505/case2690.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-503/case2678.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-632/case3459.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-608/case3263.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-593/case3011.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-589/comp589.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-588/comp588.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-588/comp588dce.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-585/comp585.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-579/case3085.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-577/comp577.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-576/case3042.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-575/case3041.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-568/case3026.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-568/case3026dce.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-567/case2807.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-562/case3005.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-559/case2987.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-548/case3011.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-548/case2895.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-637/case3478.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-635/case3468.p4
-  extensions/p4_tests/p4_14/c2/COMPILER-599/case3230.p4
-  extensions/p4_tests/p4_14/c4/COMPILER-591/case3176.p4
-  extensions/p4_tests/p4_14/c4/COMPILER-590/case3179.p4
-  extensions/p4_tests/p4_14/c4/COMPILER-549/case2898.p4
-  extensions/p4_tests/p4_14/c5/COMPILER-594/comp594.p4
-  extensions/p4_tests/p4_14/c6/COMPILER-604/new_parser.p4
-  extensions/p4_tests/p4_14/c6/COMPILER-603/loop.p4
-  extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
-  extensions/p4_tests/p4_14/c8/COMPILER-616/case3331.p4
-  extensions/p4_tests/p4_14/jenkins/dkm/dkm.p4
-  extensions/p4_tests/p4_14/jenkins/fr_test/fr_test.p4
-  extensions/p4_tests/p4_14/jenkins/mirror_test/mirror_test.p4
-  extensions/p4_tests/p4_14/jenkins/power/power.p4
   )
 
 # These tests compile successfuly and fail in the model when running the STF test
@@ -171,6 +134,7 @@ if (NOT ENABLE_TNA)
 
   p4c_add_xfail_reason("tofino"
     "PHV allocation was not successful"
+    extensions/p4_tests/p4_14/jenkins/power/power.p4
     extensions/p4_tests/p4_14/switch_20160602/switch.p4
     extensions/p4_tests/p4_14/switch/p4src/switch.p4
     )
@@ -236,6 +200,7 @@ p4c_add_xfail_reason("tofino"
   "src2 must be phv register"
   testdata/p4_14_samples/instruct3.p4
   extensions/p4_tests/p4_14/adjust_instr6.p4
+  extensions/p4_tests/p4_14/c4/COMPILER-549/case2898.p4
   extensions/p4_tests/p4_14/test_config_45_action_data_immediate_param_and_constant.p4
   extensions/p4_tests/p4_14/test_config_48_action_data_bit_masked_set.p4
   extensions/p4_tests/p4_14/test_config_49_action_data_bit_masked_set_immediate.p4
@@ -307,6 +272,12 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_196_hit_miss.p4
   )
 
+# BRIG-242
+p4c_add_xfail_reason("tofino"
+  "Unhandled case of sharing constants"
+  extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
+  )
+
 # BRIG-109
 p4c_add_xfail_reason("tofino"
   "error: Cannot resolve computed select"
@@ -361,6 +332,8 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/parser1.p4
   testdata/p4_14_samples/parser_dc_full.p4
   testdata/p4_14_samples/port_vlan_mapping.p4
+  extensions/p4_tests/p4_14/c6/COMPILER-603/loop.p4
+  extensions/p4_tests/p4_14/c6/COMPILER-604/new_parser.p4
   )
 
 # parser verify not supported
@@ -606,9 +579,11 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c2/COMPILER-514/balancer_one.p4
   extensions/p4_tests/p4_14/c2/COMPILER-533/case2736.p4
   extensions/p4_tests/p4_14/c2/COMPILER-537/case2834.p4
+  extensions/p4_tests/p4_14/c2/COMPILER-599/case3230.p4
   extensions/p4_tests/p4_14/c3/COMPILER-393/case2277.p4
   extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case1.p4
   extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case2.p4
+  extensions/p4_tests/p4_14/c5/COMPILER-594/comp594.p4
   extensions/p4_tests/p4_14/jenkins/drivers_test/drivers_test_one.p4
   extensions/p4_tests/p4_14/jenkins/meters/meters_one.p4
   )
@@ -682,6 +657,23 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-503/case2678.p4
   extensions/p4_tests/p4_14/c1/COMPILER-505/case2690.p4
   extensions/p4_tests/p4_14/c1/COMPILER-532/case2807.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-548/case3011.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-559/case2987.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-562/case3005.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-567/case2807.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-568/case3026.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-568/case3026dce.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-575/case3041.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-576/case3042.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-577/comp577.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-579/case3085.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-585/comp585.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-588/comp588.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-588/comp588dce.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-589/comp589.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-593/case3011.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-608/case3263.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-632/case3459.p4
   extensions/p4_tests/p4_14/c1/DRV-543/case2499.p4
   extensions/p4_tests/p4_14/jenkins/iterator/iterator.p4
   )
@@ -696,8 +688,27 @@ p4c_add_xfail_reason("tofino"
 # BRIG-186: per_flow_enable
 p4c_add_xfail_reason("tofino"
   "Field .* overlaps with .*"
+  extensions/p4_tests/p4_14/c8/COMPILER-616/case3331.p4
   extensions/p4_tests/p4_14/jenkins/action_spec_format/action_spec_format.p4
   extensions/p4_tests/p4_14/jenkins/stats_pi/stats_pi.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Action for .* has some unbound arguments"
+  # requires pragma action_default_only
+  extensions/p4_tests/p4_14/c1/COMPILER-548/case2895.p4
+  )
+
+# BRIG-243
+p4c_add_xfail_reason("tofino"
+  "Multiple synth2port require overflow"
+  extensions/p4_tests/p4_14/jenkins/fr_test/fr_test.p4
+  )
+
+# BRIG-244
+p4c_add_xfail_reason("tofino"
+  "error: Inferred incompatible alignments for field"
+  extensions/p4_tests/p4_14/jenkins/mirror_test/mirror_test.p4
   )
 
 
@@ -750,9 +761,11 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/flowlet_switching-bmv2.p4
 )
 
-# p4c_add_xfail_reason("tofino"
-#   "Exiting with SIGSEGV"
-#   )
+p4c_add_xfail_reason("tofino"
+  "Exiting with SIGSEGV"
+  extensions/p4_tests/p4_14/c1/COMPILER-635/case3468.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-637/case3478.p4
+  )
 
 
 # BRIG-181
@@ -816,6 +829,8 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
   extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
   extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
+  extensions/p4_tests/p4_14/c4/COMPILER-590/case3179.p4
+  extensions/p4_tests/p4_14/c4/COMPILER-591/case3176.p4
   )
 
 # Likely still has a bug; emits the following warning:
@@ -882,6 +897,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-227/case1642.p4
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
   extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
+  extensions/p4_tests/p4_14/jenkins/dkm/dkm.p4
 )
 
 

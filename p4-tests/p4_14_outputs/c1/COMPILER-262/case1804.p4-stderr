@@ -7,15 +7,4 @@ case1804.p4(1802): warning: -1: negative value with unsigned type
 case1804.p4(1182): warning: Could not infer type for Isabel, using bit<8>
 action Ingraham(Isabel) {
                 ^^^^^^
-stateful_alu_blackbox.p4(3): warning: stateful_alu: extern has attributes, which are not supported in P4-16, and thus are not emitted as P4-16
-blackbox_type stateful_alu {
-^
-stateful_alu_blackbox.p4(3): warning: stateful_alu: extern has attributes, which are not supported in P4-16, and thus are not emitted as P4-16
-blackbox_type stateful_alu {
-^
-stateful_alu_blackbox.p4(3): warning: stateful_alu: extern has attributes, which are not supported in P4-16, and thus are not emitted as P4-16
-blackbox_type stateful_alu {
-^
-stateful_alu_blackbox.p4(3): warning: stateful_alu: extern has attributes, which are not supported in P4-16, and thus are not emitted as P4-16
-blackbox_type stateful_alu {
-^
+warning: out parameter rv may be uninitialized when apply terminates

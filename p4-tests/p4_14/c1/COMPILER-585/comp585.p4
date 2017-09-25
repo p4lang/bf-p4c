@@ -1533,7 +1533,7 @@ table Pricedale {
    actions {
       Vernal;
    }
-   default_action: Vernal;
+   default_action: Vernal(0);
    size : 1;
 }
 control Bayshore {
@@ -2069,7 +2069,7 @@ table Quivero {
    actions {
       Levasy;
    }
-   default_action : Levasy;
+   default_action : Levasy(0, 0);
    size : 1;
 }
 action Taneytown( Topton ) {
@@ -3735,4 +3735,3 @@ control egress {
    }
    Orlinda();
 }
-

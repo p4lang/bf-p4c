@@ -2135,7 +2135,7 @@ table Bouse {
    actions {
       Parshall;
    }
-   default_action: Parshall;
+   default_action: Parshall(0);
    size : 1;
 }
 
@@ -2825,7 +2825,7 @@ table Yorklyn {
    actions {
       Stoystown;
    }
-   default_action : Stoystown;
+   default_action : Stoystown(0, 0);
    size : Halfa;
 }
 

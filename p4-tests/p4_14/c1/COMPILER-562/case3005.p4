@@ -1532,7 +1532,7 @@ table Carnation {
    actions {
       Rosebush;
    }
-   default_action: Rosebush;
+   default_action: Rosebush(0);
    size : 1;
 }
 control Strasburg {
@@ -2069,7 +2069,7 @@ table Eldred {
    actions {
       Enderlin;
    }
-   default_action : Enderlin;
+   default_action : Enderlin(0, 0);
    size : 1;
 }
 action Armagh( Pengilly ) {
@@ -3728,4 +3728,3 @@ control egress {
    }
    Hayfield();
 }
-

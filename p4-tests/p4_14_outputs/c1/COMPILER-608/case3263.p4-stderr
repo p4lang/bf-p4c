@@ -1,0 +1,66 @@
+case3263.p4(1948): warning: -1: negative value with unsigned type
+   add_to_field(Newcomb.Stambaugh, -1);
+                                    ^
+case3263.p4(1953): warning: -1: negative value with unsigned type
+   add_to_field(Vacherie.Cistern, -1);
+                                   ^
+case3263.p4(759): warning: >>: shifting value with 1 bits by 1
+   shift_right( Tingley.Lucas, Newcastle.Bodcaw, 1 );
+   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+case3263.p4(788): warning: >>: shifting value with 1 bits by 1
+   shift_right( Tingley.Lucas, Newcastle.Richvale, 1 );
+   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+case3263.p4(759): warning: >>: shifting value with 1 bits by 1
+   shift_right( Tingley.Lucas, Newcastle.Bodcaw, 1 );
+   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+case3263.p4(788): warning: >>: shifting value with 1 bits by 1
+   shift_right( Tingley.Lucas, Newcastle.Richvale, 1 );
+   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+case3263.p4(759): warning: >>: shifting value with 1 bits by 1
+   shift_right( Tingley.Lucas, Newcastle.Bodcaw, 1 );
+   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+case3263.p4(788): warning: >>: shifting value with 1 bits by 1
+   shift_right( Tingley.Lucas, Newcastle.Richvale, 1 );
+   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+case3263.p4(759): warning: >>: shifting value with 1 bits by 1
+   shift_right( Tingley.Lucas, Newcastle.Bodcaw, 1 );
+   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+case3263.p4(788): warning: >>: shifting value with 1 bits by 1
+   shift_right( Tingley.Lucas, Newcastle.Richvale, 1 );
+   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+case3263.p4(759): warning: >>: shifting value with 1 bits by 1
+   shift_right( Tingley.Lucas, Newcastle.Bodcaw, 1 );
+   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+case3263.p4(788): warning: >>: shifting value with 1 bits by 1
+   shift_right( Tingley.Lucas, Newcastle.Richvale, 1 );
+   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+case3263.p4(759): warning: >>: shifting value with 1 bits by 1
+   shift_right( Tingley.Lucas, Newcastle.Bodcaw, 1 );
+   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+case3263.p4(788): warning: >>: shifting value with 1 bits by 1
+   shift_right( Tingley.Lucas, Newcastle.Richvale, 1 );
+   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+case3263.p4(759): warning: >>: shifting value with 1 bits by 1
+   shift_right( Tingley.Lucas, Newcastle.Bodcaw, 1 );
+   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+case3263.p4(788): warning: >>: shifting value with 1 bits by 1
+   shift_right( Tingley.Lucas, Newcastle.Richvale, 1 );
+   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+case3263.p4(759): warning: >>: shifting value with 1 bits by 1
+   shift_right( Tingley.Lucas, Newcastle.Bodcaw, 1 );
+   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+case3263.p4(788): warning: >>: shifting value with 1 bits by 1
+   shift_right( Tingley.Lucas, Newcastle.Richvale, 1 );
+   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+case3263.p4(759): warning: >>: shifting value with 1 bits by 1
+   shift_right( Tingley.Lucas, Newcastle.Bodcaw, 1 );
+   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+case3263.p4(788): warning: >>: shifting value with 1 bits by 1
+   shift_right( Tingley.Lucas, Newcastle.Richvale, 1 );
+   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+case3263.p4(759): warning: >>: shifting value with 1 bits by 1
+   shift_right( Tingley.Lucas, Newcastle.Bodcaw, 1 );
+   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+case3263.p4(788): warning: >>: shifting value with 1 bits by 1
+   shift_right( Tingley.Lucas, Newcastle.Richvale, 1 );
+   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

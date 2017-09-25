@@ -1,0 +1,9 @@
+case3042.p4(1505): warning: Could not infer type for Osyka, using bit<8>
+action LaCenter(Osyka) {
+                ^^^^^
+case3042.p4(1890): warning: -1: negative value with unsigned type
+   add_to_field(Trotwood.Calimesa, -1);
+                                    ^
+case3042.p4(1895): warning: -1: negative value with unsigned type
+   add_to_field(Sopris.Twisp, -1);
+                               ^

@@ -1540,7 +1540,7 @@ table Poneto {
    actions {
       SnowLake;
    }
-   default_action: SnowLake;
+   default_action: SnowLake(0);
    size : 1;
 }
 control Joslin {
@@ -2076,7 +2076,7 @@ table ElToro {
    actions {
       Jefferson;
    }
-   default_action : Jefferson;
+   default_action : Jefferson(0, 0);
    size : 1;
 }
 action Achille( Aspetuck ) {
@@ -3744,4 +3744,3 @@ control egress {
    }
    Nankin();
 }
-

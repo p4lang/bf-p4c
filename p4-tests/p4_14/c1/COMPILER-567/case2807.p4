@@ -2273,7 +2273,7 @@ table Poynette {
    actions {
       Mendham;
    }
-   default_action: Mendham;
+   default_action: Mendham(0);
    size : 1;
 }
 
@@ -2941,7 +2941,7 @@ table Theta {
    actions {
       Corry;
    }
-   default_action : Corry;
+   default_action : Corry(0, 0);
    size : Petoskey;
 }
 
@@ -3838,4 +3838,3 @@ control egress {
    }
    Glentana();
 }
-

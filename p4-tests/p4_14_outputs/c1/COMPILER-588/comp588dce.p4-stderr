@@ -1,0 +1,6 @@
+comp588dce.p4(1881): warning: -1: negative value with unsigned type
+   add_to_field(Maybee.Weissert, -1);
+                                  ^
+comp588dce.p4(1886): warning: -1: negative value with unsigned type
+   add_to_field(Robbs.FortHunt, -1);
+                                 ^

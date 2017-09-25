@@ -1517,7 +1517,7 @@ table Peosta {
    actions {
       CityView;
    }
-   default_action: CityView;
+   default_action: CityView(0);
    size : 1;
 }
 control Metter {
@@ -2053,7 +2053,7 @@ table Norma {
    actions {
       Snowflake;
    }
-   default_action : Snowflake;
+   default_action : Snowflake(0, 0);
    size : 1;
 }
 action Levasy( Dollar ) {
@@ -3717,4 +3717,3 @@ control egress {
    }
    Cantwell();
 }
-

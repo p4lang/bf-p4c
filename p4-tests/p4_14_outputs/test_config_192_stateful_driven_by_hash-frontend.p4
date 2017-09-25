@@ -104,6 +104,7 @@ header ingress_intrinsic_metadata_from_parser_aux_t {
 
 header ingress_parser_control_signals {
     bit<3> priority;
+    bit<5> _pad;
 }
 
 header pkt_t {
@@ -125,36 +126,30 @@ struct metadata {
 }
 
 struct headers {
-    @dont_trim @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md") @pa_atomic("egress", "eg_intr_md.egress_port") @pa_fragment("egress", "eg_intr_md._pad1") @pa_fragment("egress", "eg_intr_md._pad7") @pa_fragment("egress", "eg_intr_md._pad8") @pa_mandatory_intrinsic_field("egress", "eg_intr_md.egress_port") @pa_mandatory_intrinsic_field("egress", "eg_intr_md.egress_cos") @name("eg_intr_md") 
+    @dont_trim @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md") @pa_atomic("egress", "eg_intr_md.egress_port") @pa_fragment("egress", "eg_intr_md._pad1") @pa_fragment("egress", "eg_intr_md._pad7") @pa_fragment("egress", "eg_intr_md._pad8") @pa_mandatory_intrinsic_field("egress", "eg_intr_md.egress_port") @pa_mandatory_intrinsic_field("egress", "eg_intr_md.egress_cos") @name(".eg_intr_md") 
     egress_intrinsic_metadata_t                    eg_intr_md;
-    @dont_trim @pa_intrinsic_header("egress", "eg_intr_md_for_mb") @pa_atomic("egress", "eg_intr_md_for_mb.egress_mirror_id") @pa_fragment("egress", "eg_intr_md_for_mb.coalesce_flush") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.egress_mirror_id") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.coalesce_flush") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.coalesce_length") @not_deparsed("ingress") @not_deparsed("egress") @name("eg_intr_md_for_mb") 
+    @dont_trim @pa_intrinsic_header("egress", "eg_intr_md_for_mb") @pa_atomic("egress", "eg_intr_md_for_mb.egress_mirror_id") @pa_fragment("egress", "eg_intr_md_for_mb.coalesce_flush") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.egress_mirror_id") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.coalesce_flush") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.coalesce_length") @not_deparsed("ingress") @not_deparsed("egress") @name(".eg_intr_md_for_mb") 
     egress_intrinsic_metadata_for_mirror_buffer_t  eg_intr_md_for_mb;
-    @dont_trim @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_oport.drop_ctl") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md_for_oport") @name("eg_intr_md_for_oport") 
+    @dont_trim @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_oport.drop_ctl") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md_for_oport") @name(".eg_intr_md_for_oport") 
     egress_intrinsic_metadata_for_output_port_t    eg_intr_md_for_oport;
-    @pa_fragment("egress", "eg_intr_md_from_parser_aux.coalesce_sample_count") @pa_fragment("egress", "eg_intr_md_from_parser_aux.clone_src") @pa_fragment("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @pa_atomic("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md_from_parser_aux") @name("eg_intr_md_from_parser_aux") 
+    @pa_fragment("egress", "eg_intr_md_from_parser_aux.coalesce_sample_count") @pa_fragment("egress", "eg_intr_md_from_parser_aux.clone_src") @pa_fragment("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @pa_atomic("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md_from_parser_aux") @name(".eg_intr_md_from_parser_aux") 
     egress_intrinsic_metadata_from_parser_aux_t    eg_intr_md_from_parser_aux;
-    @dont_trim @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md.ingress_port") @name("ig_intr_md") 
+    @dont_trim @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md.ingress_port") @name(".ig_intr_md") 
     ingress_intrinsic_metadata_t                   ig_intr_md;
-    @dont_trim @pa_intrinsic_header("ingress", "ig_intr_md_for_mb") @pa_atomic("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @not_deparsed("ingress") @not_deparsed("egress") @name("ig_intr_md_for_mb") 
+    @dont_trim @pa_intrinsic_header("ingress", "ig_intr_md_for_mb") @pa_atomic("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @not_deparsed("ingress") @not_deparsed("egress") @name(".ig_intr_md_for_mb") 
     ingress_intrinsic_metadata_for_mirror_buffer_t ig_intr_md_for_mb;
-    @pa_atomic("ingress", "ig_intr_md_for_tm.ucast_egress_port") @pa_fragment("ingress", "ig_intr_md_for_tm.drop_ctl") @pa_fragment("ingress", "ig_intr_md_for_tm.qid") @pa_fragment("ingress", "ig_intr_md_for_tm._pad2") @pa_atomic("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_fragment("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_atomic("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_fragment("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_atomic("ingress", "ig_intr_md_for_tm.level1_mcast_hash") @pa_fragment("ingress", "ig_intr_md_for_tm._pad3") @pa_atomic("ingress", "ig_intr_md_for_tm.level2_mcast_hash") @pa_fragment("ingress", "ig_intr_md_for_tm._pad4") @pa_atomic("ingress", "ig_intr_md_for_tm.level1_exclusion_id") @pa_fragment("ingress", "ig_intr_md_for_tm.level1_exclusion_id") @pa_atomic("ingress", "ig_intr_md_for_tm.level2_exclusion_id") @pa_fragment("ingress", "ig_intr_md_for_tm._pad5") @pa_atomic("ingress", "ig_intr_md_for_tm.rid") @pa_fragment("ingress", "ig_intr_md_for_tm.rid") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md_for_tm") @dont_trim @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.drop_ctl") @name("ig_intr_md_for_tm") 
+    @pa_atomic("ingress", "ig_intr_md_for_tm.ucast_egress_port") @pa_fragment("ingress", "ig_intr_md_for_tm.drop_ctl") @pa_fragment("ingress", "ig_intr_md_for_tm.qid") @pa_fragment("ingress", "ig_intr_md_for_tm._pad2") @pa_atomic("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_fragment("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_atomic("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_fragment("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_atomic("ingress", "ig_intr_md_for_tm.level1_mcast_hash") @pa_fragment("ingress", "ig_intr_md_for_tm._pad3") @pa_atomic("ingress", "ig_intr_md_for_tm.level2_mcast_hash") @pa_fragment("ingress", "ig_intr_md_for_tm._pad4") @pa_atomic("ingress", "ig_intr_md_for_tm.level1_exclusion_id") @pa_fragment("ingress", "ig_intr_md_for_tm.level1_exclusion_id") @pa_atomic("ingress", "ig_intr_md_for_tm.level2_exclusion_id") @pa_fragment("ingress", "ig_intr_md_for_tm._pad5") @pa_atomic("ingress", "ig_intr_md_for_tm.rid") @pa_fragment("ingress", "ig_intr_md_for_tm.rid") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md_for_tm") @dont_trim @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.drop_ctl") @name(".ig_intr_md_for_tm") 
     ingress_intrinsic_metadata_for_tm_t            ig_intr_md_for_tm;
-    @pa_fragment("ingress", "ig_intr_md_from_parser_aux.ingress_parser_err") @pa_atomic("ingress", "ig_intr_md_from_parser_aux.ingress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md_from_parser_aux") @name("ig_intr_md_from_parser_aux") 
+    @pa_fragment("ingress", "ig_intr_md_from_parser_aux.ingress_parser_err") @pa_atomic("ingress", "ig_intr_md_from_parser_aux.ingress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md_from_parser_aux") @name(".ig_intr_md_from_parser_aux") 
     ingress_intrinsic_metadata_from_parser_aux_t   ig_intr_md_from_parser_aux;
-    @not_deparsed("ingress") @not_deparsed("egress") @name("ig_pg_md") 
+    @not_deparsed("ingress") @not_deparsed("egress") @name(".ig_pg_md") 
     generator_metadata_t_0                         ig_pg_md;
-    @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_prsr_ctrl") @name("ig_prsr_ctrl") 
+    @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_prsr_ctrl") @name(".ig_prsr_ctrl") 
     ingress_parser_control_signals                 ig_prsr_ctrl;
-    @name("pkt") 
+    @name(".pkt") 
     pkt_t                                          pkt;
 }
-
-extern stateful_alu {
-    void execute_stateful_alu(@optional in bit<32> index);
-    void execute_stateful_alu_from_hash<FL>(in FL hash_field_list);
-    void execute_stateful_log();
-    stateful_alu();
-}
+#include <tofino/stateful_alu.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".parse_ethernet") state parse_ethernet {
@@ -167,37 +162,91 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    bit<12> temp_5;
+    bit<13> temp_6;
+    bit<10> temp_7;
+    bit<16> temp_8;
+    bit<12> temp_9;
+    bit<13> temp_10;
+    bit<16> tmp;
+    bit<16> tmp_0;
+    bit<8> tmp_1;
+    bit<16> tmp_2;
+    bit<16> tmp_3;
+    bit<16> tmp_4;
     @name(".r_em_direct") register<bit<16>>(32w2048) r_em_direct_0;
     @name(".r_em_indirect") register<bit<16>>(32w8192) r_em_indirect_0;
     @name(".r_hash_act") register<bit<8>>(32w256) r_hash_act_0;
     @name(".r_no_key") register<bit<16>>(32w1024) r_no_key_0;
     @name(".r_t_direct") register<bit<16>>(32w3072) r_t_direct_0;
     @name(".r_t_indirect") register<bit<16>>(32w8192) r_t_indirect_0;
-    @name("b_em_direct") stateful_alu() b_em_direct_0;
-    @name("b_em_indirect") stateful_alu() b_em_indirect_0;
-    @name("b_hash_act") stateful_alu() b_hash_act_0;
-    @name("b_no_key") stateful_alu() b_no_key_0;
-    @name("b_t_direct") stateful_alu() b_t_direct_0;
-    @name("b_t_indirect") stateful_alu() b_t_indirect_0;
+    @name("b_em_direct") register_action<bit<16>, bit<16>>(r_em_direct_0) b_em_direct_0 = {
+        void apply(inout bit<16> value, out bit<16> rv) {
+            value = value + 16w1;
+            rv = value;
+        }
+    };
+    @name("b_em_indirect") register_action<bit<16>, bit<16>>(r_em_indirect_0) b_em_indirect_0 = {
+        void apply(inout bit<16> value, out bit<16> rv) {
+            value = value + 16w5;
+            rv = value;
+        }
+    };
+    @name("b_hash_act") register_action<bit<8>, bit<8>>(r_hash_act_0) b_hash_act_0 = {
+        void apply(inout bit<8> value, out bit<8> rv) {
+            value = value + 8w5;
+            rv = value;
+        }
+    };
+    @name("b_no_key") register_action<bit<16>, bit<16>>(r_no_key_0) b_no_key_0 = {
+        void apply(inout bit<16> value, out bit<16> rv) {
+            value = value + 16w5;
+            rv = value;
+        }
+    };
+    @name("b_t_direct") register_action<bit<16>, bit<16>>(r_t_direct_0) b_t_direct_0 = {
+        void apply(inout bit<16> value, out bit<16> rv) {
+            value = value + 16w1;
+            rv = value;
+        }
+    };
+    @name("b_t_indirect") register_action<bit<16>, bit<16>>(r_t_indirect_0) b_t_indirect_0 = {
+        void apply(inout bit<16> value, out bit<16> rv) {
+            value = value + 16w5;
+            rv = value;
+        }
+    };
     @name(".a_em_direct") action a_em_direct_0() {
-        b_em_direct_0.execute_stateful_alu_from_hash<tuple<bit<32>, bit<32>>>({ hdr.pkt.field_a_32, hdr.pkt.field_b_32 });
+        hash<bit<12>, bit<12>, tuple<bit<32>, bit<32>>, bit<13>>(temp_5, HashAlgorithm.random, 12w0, { hdr.pkt.field_a_32, hdr.pkt.field_b_32 }, 13w4096);
+        tmp = b_em_direct_0.execute((bit<32>)temp_5);
+        hdr.pkt.field_e_16 = tmp;
     }
     @name(".a_em_indirect") action a_em_indirect_0() {
-        b_em_indirect_0.execute_stateful_alu_from_hash<tuple<bit<32>, bit<32>>>({ hdr.pkt.field_a_32, hdr.pkt.field_b_32 });
+        hash<bit<13>, bit<13>, tuple<bit<32>, bit<32>>, bit<14>>(temp_6, HashAlgorithm.random, 13w0, { hdr.pkt.field_a_32, hdr.pkt.field_b_32 }, 14w8192);
+        tmp_0 = b_em_indirect_0.execute((bit<32>)temp_6);
+        hdr.pkt.field_f_16 = tmp_0;
     }
     @name(".do_nothing") action do_nothing_0() {
     }
     @name(".a_hash_act") action a_hash_act_0() {
-        b_hash_act_0.execute_stateful_alu_from_hash<tuple<bit<32>, bit<32>>>({ hdr.pkt.field_a_32, hdr.pkt.field_b_32 });
+        hash<bit<10>, bit<10>, tuple<bit<32>, bit<32>>, bit<11>>(temp_7, HashAlgorithm.random, 10w0, { hdr.pkt.field_a_32, hdr.pkt.field_b_32 }, 11w1024);
+        tmp_1 = b_hash_act_0.execute((bit<32>)temp_7);
+        hdr.pkt.field_j_8 = tmp_1;
     }
     @name(".a_no_key") action a_no_key_0() {
-        b_no_key_0.execute_stateful_alu_from_hash<tuple<bit<32>, bit<32>>>({ hdr.pkt.field_a_32, hdr.pkt.field_b_32 });
+        hash<bit<16>, bit<16>, tuple<bit<32>, bit<32>>, bit<17>>(temp_8, HashAlgorithm.random, 16w0, { hdr.pkt.field_a_32, hdr.pkt.field_b_32 }, 17w65536);
+        tmp_2 = b_no_key_0.execute((bit<32>)temp_8);
+        hdr.pkt.field_i_8 = (bit<8>)tmp_2;
     }
     @name(".a_t_direct") action a_t_direct_0() {
-        b_t_direct_0.execute_stateful_alu_from_hash<tuple<bit<32>, bit<32>>>({ hdr.pkt.field_a_32, hdr.pkt.field_b_32 });
+        hash<bit<12>, bit<12>, tuple<bit<32>, bit<32>>, bit<13>>(temp_9, HashAlgorithm.random, 12w0, { hdr.pkt.field_a_32, hdr.pkt.field_b_32 }, 13w4096);
+        tmp_3 = b_t_direct_0.execute((bit<32>)temp_9);
+        hdr.pkt.field_g_16 = tmp_3;
     }
     @name(".a_t_indirect") action a_t_indirect_0() {
-        b_t_indirect_0.execute_stateful_alu_from_hash<tuple<bit<32>, bit<32>>>({ hdr.pkt.field_a_32, hdr.pkt.field_b_32 });
+        hash<bit<13>, bit<13>, tuple<bit<32>, bit<32>>, bit<14>>(temp_10, HashAlgorithm.random, 13w0, { hdr.pkt.field_a_32, hdr.pkt.field_b_32 }, 14w8192);
+        tmp_4 = b_t_indirect_0.execute((bit<32>)temp_10);
+        hdr.pkt.field_h_16 = tmp_4;
     }
     @name(".t_em_direct") table t_em_direct_0 {
         actions = {
@@ -205,7 +254,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.pkt.field_a_32: exact @name("hdr.pkt.field_a_32") ;
+            hdr.pkt.field_a_32: exact @name("pkt.field_a_32") ;
         }
         size = 4096;
         default_action = NoAction();
@@ -217,7 +266,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.pkt.field_a_32: exact @name("hdr.pkt.field_a_32") ;
+            hdr.pkt.field_a_32: exact @name("pkt.field_a_32") ;
         }
         size = 2048;
         default_action = NoAction();
@@ -228,7 +277,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.pkt.field_d_32[9:0]: exact @name("hdr.pkt.field_d_32[9:0]") ;
+            hdr.pkt.field_d_32[9:0]: exact @name("pkt.field_d_32[9:0]") ;
         }
         size = 1024;
         default_action = NoAction();
@@ -247,7 +296,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.pkt.field_a_32: ternary @name("hdr.pkt.field_a_32") ;
+            hdr.pkt.field_a_32: ternary @name("pkt.field_a_32") ;
         }
         size = 4096;
         default_action = NoAction();
@@ -259,7 +308,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly NoAction();
         }
         key = {
-            hdr.pkt.field_a_32: ternary @name("hdr.pkt.field_a_32") ;
+            hdr.pkt.field_a_32: ternary @name("pkt.field_a_32") ;
         }
         size = 2048;
         default_action = NoAction();

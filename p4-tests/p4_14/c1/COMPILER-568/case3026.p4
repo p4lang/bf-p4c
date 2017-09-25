@@ -1527,7 +1527,7 @@ table Arapahoe {
    actions {
       Servia;
    }
-   default_action: Servia;
+   default_action: Servia(0);
    size : 1;
 }
 control Radom {
@@ -2064,7 +2064,7 @@ table Kerby {
    actions {
       Koloa;
    }
-   default_action : Koloa;
+   default_action : Koloa(0,0);
    size : 1;
 }
 action Eddystone( Moultrie ) {

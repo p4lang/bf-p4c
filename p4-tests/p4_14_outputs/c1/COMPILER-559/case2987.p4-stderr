@@ -1,0 +1,12 @@
+case2987.p4(3386): warning: Could not infer type for Calcium, using bit<8>
+action Crane( Petroleum, Calcium ) {
+                         ^^^^^^^
+case2987.p4(2111): warning: Could not infer type for Topmost, using bit<8>
+action Tontogany(Topmost) {
+                 ^^^^^^^
+case2987.p4(2595): warning: -1: negative value with unsigned type
+   add_to_field(Sitka.Raeford, -1);
+                                ^
+case2987.p4(2601): warning: -1: negative value with unsigned type
+   add_to_field(Lundell.Tillson, -1);
+                                  ^

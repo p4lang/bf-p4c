@@ -1533,7 +1533,7 @@ table Weathers {
    actions {
       Frederika;
    }
-   default_action: Frederika;
+   default_action: Frederika(0);
    size : 1;
 }
 control Lemont {
@@ -2067,7 +2067,7 @@ table Dovray {
    actions {
       Turney;
    }
-   default_action : Turney;
+   default_action : Turney(0, 0);
    size : 1;
 }
 action Glazier( Rocklake ) {
@@ -3732,4 +3732,3 @@ control egress {
    }
    GunnCity();
 }
-

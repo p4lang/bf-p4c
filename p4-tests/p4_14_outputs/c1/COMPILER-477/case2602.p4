@@ -351,6 +351,7 @@ header ingress_intrinsic_metadata_from_parser_aux_t {
 
 header ingress_parser_control_signals {
     bit<3> priority;
+    bit<5> _pad;
 }
 
 @name("Bergton") header Bergton_0 {
@@ -361,97 +362,91 @@ header ingress_parser_control_signals {
 }
 
 struct metadata {
-    @name("Archer") 
+    @name(".Archer") 
     Mabana    Archer;
-    @name("Cannelton") 
+    @name(".Cannelton") 
     Larchmont Cannelton;
-    @name("Cherokee") 
+    @name(".Cherokee") 
     Enfield   Cherokee;
-    @name("Gibbstown") 
+    @name(".Gibbstown") 
     Mendota   Gibbstown;
-    @name("GlenRose") 
+    @name(".GlenRose") 
     Annette   GlenRose;
-    @name("GunnCity") 
+    @name(".GunnCity") 
     Henning   GunnCity;
-    @name("IttaBena") 
+    @name(".IttaBena") 
     TiffCity  IttaBena;
-    @name("Klawock") 
+    @name(".Klawock") 
     Sagamore  Klawock;
-    @name("Loyalton") 
+    @name(".Loyalton") 
     Lesley    Loyalton;
-    @name("Millhaven") 
+    @name(".Millhaven") 
     Cedonia   Millhaven;
-    @name("Owentown") 
+    @name(".Owentown") 
     Halltown  Owentown;
-    @name("Richlawn") 
+    @name(".Richlawn") 
     Moorewood Richlawn;
-    @name("Sigsbee") 
+    @name(".Sigsbee") 
     Mertens   Sigsbee;
 }
 
 struct headers {
-    @name("Auburn") 
+    @name(".Auburn") 
     PellCity                                       Auburn;
-    @name("Berlin") 
+    @name(".Berlin") 
     Choudrant                                      Berlin;
-    @name("Cadley") 
+    @name(".Cadley") 
     Taconite                                       Cadley;
-    @name("Chambers") 
+    @name(".Chambers") 
     Kerrville                                      Chambers;
-    @pa_fragment("ingress", "Denmark.Minneiska") @pa_fragment("egress", "Denmark.Minneiska") @name("Denmark") 
+    @pa_fragment("ingress", "Denmark.Minneiska") @pa_fragment("egress", "Denmark.Minneiska") @name(".Denmark") 
     ElLago                                         Denmark;
-    @name("Enderlin") 
+    @name(".Enderlin") 
     Ronneby                                        Enderlin;
-    @name("Ilwaco") 
+    @name(".Ilwaco") 
     FoxChase                                       Ilwaco;
-    @name("Kinsey") 
+    @name(".Kinsey") 
     Ronneby                                        Kinsey;
-    @name("Klukwan") 
+    @name(".Klukwan") 
     Kerrville                                      Klukwan;
-    @name("Linville") 
+    @name(".Linville") 
     Stonebank                                      Linville;
-    @name("Molino") 
+    @name(".Molino") 
     Amenia_0                                       Molino;
-    @pa_fragment("ingress", "Nutria.Minneiska") @pa_fragment("egress", "Nutria.Minneiska") @name("Nutria") 
+    @pa_fragment("ingress", "Nutria.Minneiska") @pa_fragment("egress", "Nutria.Minneiska") @name(".Nutria") 
     ElLago                                         Nutria;
-    @name("Thalia") 
+    @name(".Thalia") 
     Amenia_0                                       Thalia;
-    @name("Valders") 
+    @name(".Valders") 
     FoxChase                                       Valders;
-    @name("Wimbledon") 
+    @name(".Wimbledon") 
     Annawan_0                                      Wimbledon;
-    @name("Wondervu") 
+    @name(".Wondervu") 
     Amenia_0                                       Wondervu;
-    @dont_trim @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md") @pa_atomic("egress", "eg_intr_md.egress_port") @pa_fragment("egress", "eg_intr_md._pad1") @pa_fragment("egress", "eg_intr_md._pad7") @pa_fragment("egress", "eg_intr_md._pad8") @pa_mandatory_intrinsic_field("egress", "eg_intr_md.egress_port") @pa_mandatory_intrinsic_field("egress", "eg_intr_md.egress_cos") @name("eg_intr_md") 
+    @dont_trim @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md") @pa_atomic("egress", "eg_intr_md.egress_port") @pa_fragment("egress", "eg_intr_md._pad1") @pa_fragment("egress", "eg_intr_md._pad7") @pa_fragment("egress", "eg_intr_md._pad8") @pa_mandatory_intrinsic_field("egress", "eg_intr_md.egress_port") @pa_mandatory_intrinsic_field("egress", "eg_intr_md.egress_cos") @name(".eg_intr_md") 
     egress_intrinsic_metadata_t                    eg_intr_md;
-    @dont_trim @pa_intrinsic_header("egress", "eg_intr_md_for_mb") @pa_atomic("egress", "eg_intr_md_for_mb.egress_mirror_id") @pa_fragment("egress", "eg_intr_md_for_mb.coalesce_flush") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.egress_mirror_id") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.coalesce_flush") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.coalesce_length") @not_deparsed("ingress") @not_deparsed("egress") @name("eg_intr_md_for_mb") 
+    @dont_trim @pa_intrinsic_header("egress", "eg_intr_md_for_mb") @pa_atomic("egress", "eg_intr_md_for_mb.egress_mirror_id") @pa_fragment("egress", "eg_intr_md_for_mb.coalesce_flush") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.egress_mirror_id") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.coalesce_flush") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.coalesce_length") @not_deparsed("ingress") @not_deparsed("egress") @name(".eg_intr_md_for_mb") 
     egress_intrinsic_metadata_for_mirror_buffer_t  eg_intr_md_for_mb;
-    @dont_trim @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_oport.drop_ctl") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md_for_oport") @name("eg_intr_md_for_oport") 
+    @dont_trim @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_oport.drop_ctl") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md_for_oport") @name(".eg_intr_md_for_oport") 
     egress_intrinsic_metadata_for_output_port_t    eg_intr_md_for_oport;
-    @pa_fragment("egress", "eg_intr_md_from_parser_aux.coalesce_sample_count") @pa_fragment("egress", "eg_intr_md_from_parser_aux.clone_src") @pa_fragment("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @pa_atomic("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md_from_parser_aux") @name("eg_intr_md_from_parser_aux") 
+    @pa_fragment("egress", "eg_intr_md_from_parser_aux.coalesce_sample_count") @pa_fragment("egress", "eg_intr_md_from_parser_aux.clone_src") @pa_fragment("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @pa_atomic("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md_from_parser_aux") @name(".eg_intr_md_from_parser_aux") 
     egress_intrinsic_metadata_from_parser_aux_t    eg_intr_md_from_parser_aux;
-    @dont_trim @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md.ingress_port") @name("ig_intr_md") 
+    @dont_trim @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md.ingress_port") @name(".ig_intr_md") 
     ingress_intrinsic_metadata_t                   ig_intr_md;
-    @dont_trim @pa_intrinsic_header("ingress", "ig_intr_md_for_mb") @pa_atomic("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @not_deparsed("ingress") @not_deparsed("egress") @name("ig_intr_md_for_mb") 
+    @dont_trim @pa_intrinsic_header("ingress", "ig_intr_md_for_mb") @pa_atomic("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @not_deparsed("ingress") @not_deparsed("egress") @name(".ig_intr_md_for_mb") 
     ingress_intrinsic_metadata_for_mirror_buffer_t ig_intr_md_for_mb;
-    @pa_atomic("ingress", "ig_intr_md_for_tm.ucast_egress_port") @pa_fragment("ingress", "ig_intr_md_for_tm.drop_ctl") @pa_fragment("ingress", "ig_intr_md_for_tm.qid") @pa_fragment("ingress", "ig_intr_md_for_tm._pad2") @pa_atomic("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_fragment("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_atomic("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_fragment("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_atomic("ingress", "ig_intr_md_for_tm.level1_mcast_hash") @pa_fragment("ingress", "ig_intr_md_for_tm._pad3") @pa_atomic("ingress", "ig_intr_md_for_tm.level2_mcast_hash") @pa_fragment("ingress", "ig_intr_md_for_tm._pad4") @pa_atomic("ingress", "ig_intr_md_for_tm.level1_exclusion_id") @pa_fragment("ingress", "ig_intr_md_for_tm.level1_exclusion_id") @pa_atomic("ingress", "ig_intr_md_for_tm.level2_exclusion_id") @pa_fragment("ingress", "ig_intr_md_for_tm._pad5") @pa_atomic("ingress", "ig_intr_md_for_tm.rid") @pa_fragment("ingress", "ig_intr_md_for_tm.rid") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md_for_tm") @dont_trim @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.drop_ctl") @name("ig_intr_md_for_tm") 
+    @pa_atomic("ingress", "ig_intr_md_for_tm.ucast_egress_port") @pa_fragment("ingress", "ig_intr_md_for_tm.drop_ctl") @pa_fragment("ingress", "ig_intr_md_for_tm.qid") @pa_fragment("ingress", "ig_intr_md_for_tm._pad2") @pa_atomic("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_fragment("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_atomic("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_fragment("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_atomic("ingress", "ig_intr_md_for_tm.level1_mcast_hash") @pa_fragment("ingress", "ig_intr_md_for_tm._pad3") @pa_atomic("ingress", "ig_intr_md_for_tm.level2_mcast_hash") @pa_fragment("ingress", "ig_intr_md_for_tm._pad4") @pa_atomic("ingress", "ig_intr_md_for_tm.level1_exclusion_id") @pa_fragment("ingress", "ig_intr_md_for_tm.level1_exclusion_id") @pa_atomic("ingress", "ig_intr_md_for_tm.level2_exclusion_id") @pa_fragment("ingress", "ig_intr_md_for_tm._pad5") @pa_atomic("ingress", "ig_intr_md_for_tm.rid") @pa_fragment("ingress", "ig_intr_md_for_tm.rid") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md_for_tm") @dont_trim @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.drop_ctl") @name(".ig_intr_md_for_tm") 
     ingress_intrinsic_metadata_for_tm_t            ig_intr_md_for_tm;
-    @pa_fragment("ingress", "ig_intr_md_from_parser_aux.ingress_parser_err") @pa_atomic("ingress", "ig_intr_md_from_parser_aux.ingress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md_from_parser_aux") @name("ig_intr_md_from_parser_aux") 
+    @pa_fragment("ingress", "ig_intr_md_from_parser_aux.ingress_parser_err") @pa_atomic("ingress", "ig_intr_md_from_parser_aux.ingress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md_from_parser_aux") @name(".ig_intr_md_from_parser_aux") 
     ingress_intrinsic_metadata_from_parser_aux_t   ig_intr_md_from_parser_aux;
-    @not_deparsed("ingress") @not_deparsed("egress") @name("ig_pg_md") 
+    @not_deparsed("ingress") @not_deparsed("egress") @name(".ig_pg_md") 
     generator_metadata_t_0                         ig_pg_md;
-    @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_prsr_ctrl") @name("ig_prsr_ctrl") 
+    @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_prsr_ctrl") @name(".ig_prsr_ctrl") 
     ingress_parser_control_signals                 ig_prsr_ctrl;
     @name(".Trimble") 
     Bergton_0[2]                                   Trimble;
 }
-
-extern stateful_alu {
-    void execute_stateful_alu(@optional in bit<32> index);
-    void execute_stateful_alu_from_hash<FL>(in FL hash_field_list);
-    void execute_stateful_log();
-    stateful_alu();
-}
+#include <tofino/stateful_alu.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Almyra") state Almyra {
@@ -808,8 +803,18 @@ control Coventry(inout headers hdr, inout metadata meta, inout standard_metadata
 control Eastover(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Correo") register<bit<1>>(32w262144) Correo;
     @name(".Pierpont") register<bit<1>>(32w262144) Pierpont;
-    stateful_alu() Barney;
-    stateful_alu() Waxhaw;
+    register_action<bit<1>, bit<1>>(Pierpont) Barney = {
+        void apply(inout bit<1> value, out bit<1> rv) {
+            value = value;
+            rv = value;
+        }
+    };
+    register_action<bit<1>, bit<1>>(Correo) Waxhaw = {
+        void apply(inout bit<1> value, out bit<1> rv) {
+            value = value;
+            rv = value;
+        }
+    };
     @name(".NewSite") action NewSite(bit<1> Rohwer) {
         meta.Gibbstown.Maysfield = Rohwer;
     }
@@ -818,10 +823,18 @@ control Eastover(inout headers hdr, inout metadata meta, inout standard_metadata
         meta.Millhaven.Avondale = 1w1;
     }
     @name(".Tatum") action Tatum() {
-        Waxhaw.execute_stateful_alu_from_hash({ meta.Owentown.Lennep, hdr.Trimble[0].Frewsburg });
+        {
+            bit<18> temp;
+            hash(temp, HashAlgorithm.identity, 18w0, { meta.Owentown.Lennep, hdr.Trimble[0].Frewsburg }, 19w262144);
+            meta.Gibbstown.Elihu = Waxhaw.execute((bit<32>)temp);
+        }
     }
     @name(".Mendocino") action Mendocino() {
-        Barney.execute_stateful_alu_from_hash({ meta.Owentown.Lennep, hdr.Trimble[0].Frewsburg });
+        {
+            bit<18> temp_0;
+            hash(temp_0, HashAlgorithm.identity, 18w0, { meta.Owentown.Lennep, hdr.Trimble[0].Frewsburg }, 19w262144);
+            meta.Gibbstown.Maysfield = Barney.execute((bit<32>)temp_0);
+        }
     }
     @name(".Freeny") action Freeny() {
         meta.Millhaven.Kenton = meta.Owentown.Drifton;

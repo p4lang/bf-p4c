@@ -7,15 +7,4 @@ case1799.p4(1732): warning: -1: negative value with unsigned type
 case1799.p4(1737): warning: -1: negative value with unsigned type
    add_to_field(CsNnAq.zjHDzN, -1);
                                 ^
-stateful_alu_blackbox.p4(3): warning: stateful_alu: extern has attributes, which are not supported in P4-16, and thus are not emitted as P4-16
-blackbox_type stateful_alu {
-^
-stateful_alu_blackbox.p4(3): warning: stateful_alu: extern has attributes, which are not supported in P4-16, and thus are not emitted as P4-16
-blackbox_type stateful_alu {
-^
-stateful_alu_blackbox.p4(3): warning: stateful_alu: extern has attributes, which are not supported in P4-16, and thus are not emitted as P4-16
-blackbox_type stateful_alu {
-^
-stateful_alu_blackbox.p4(3): warning: stateful_alu: extern has attributes, which are not supported in P4-16, and thus are not emitted as P4-16
-blackbox_type stateful_alu {
-^
+warning: out parameter rv may be uninitialized when apply terminates

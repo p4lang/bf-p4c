@@ -1,0 +1,9 @@
+case3005.p4(1512): warning: Could not infer type for Arbyrd, using bit<8>
+action Chatfield(Arbyrd) {
+                 ^^^^^^
+case3005.p4(1897): warning: -1: negative value with unsigned type
+   add_to_field(Maljamar.Disney, -1);
+                                  ^
+case3005.p4(1902): warning: -1: negative value with unsigned type
+   add_to_field(Skyforest.Alberta, -1);
+                                    ^

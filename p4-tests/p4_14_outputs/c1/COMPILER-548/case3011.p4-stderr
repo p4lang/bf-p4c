@@ -1,0 +1,12 @@
+case3011.p4(3740): warning: Could not infer type for FlyingH, using bit<8>
+action Comal( Heads, FlyingH ) {
+                     ^^^^^^^
+case3011.p4(1542): warning: Could not infer type for Corder, using bit<8>
+action Donna(Corder) {
+             ^^^^^^
+case3011.p4(1946): warning: -1: negative value with unsigned type
+   add_to_field(Robert.Isleta, -1);
+                                ^
+case3011.p4(1951): warning: -1: negative value with unsigned type
+   add_to_field(Valencia.Windham, -1);
+                                   ^

@@ -1551,7 +1551,7 @@ table Chenequa {
    actions {
       Slagle;
    }
-   default_action: Slagle;
+   default_action: Slagle(0);
    size : 1;
 }
 control Fajardo {
@@ -2108,7 +2108,7 @@ table Blairsden {
    actions {
       Lindsborg;
    }
-   default_action : Lindsborg;
+   default_action : Lindsborg(0, 0);
    size : 1;
 }
 action Perdido( Duster ) {

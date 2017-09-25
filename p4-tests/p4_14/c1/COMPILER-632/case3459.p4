@@ -1,5 +1,5 @@
 // ver: 5.0.1 (f2fac13)
-// BUILD: p4c-tofino --verbose 3 --placement tp4 --no-dead-code-elimination --o bf_arista_switch_default_obfuscated/ --p4-name=arista_switch --p4-prefix=p4_arista_switch --pipe-mgr-path=pipe_mgr/ --mc-mgr-path=mc_mgr/ -S -DPROFILE_DEFAULT --parser-timing-reports --print-pa-constraints  bf_arista_switch_default_obfuscated/Switch.OBFUSCATED.p4 
+// BUILD: p4c-tofino --verbose 3 --placement tp4 --no-dead-code-elimination --o bf_arista_switch_default_obfuscated/ --p4-name=arista_switch --p4-prefix=p4_arista_switch --pipe-mgr-path=pipe_mgr/ --mc-mgr-path=mc_mgr/ -S -DPROFILE_DEFAULT --parser-timing-reports --print-pa-constraints  bf_arista_switch_default_obfuscated/Switch.OBFUSCATED.p4
 
 
 // Copyright (c) 2016 Arista Networks, Inc.  All rights reserved.
@@ -1503,7 +1503,7 @@ table Bevington {
    actions {
       Crouch;
    }
-   default_action: Crouch;
+   default_action: Crouch(0);
    size : 1;
 }
 control Brodnax {
@@ -2247,7 +2247,7 @@ table MoonRun {
    actions {
       Quinault;
    }
-   default_action : Quinault;
+   default_action : Quinault(0, 0);
    size : 1;
 }
 action Greenwood( SoapLake ) {
@@ -2311,7 +2311,7 @@ table RichHill {
    actions {
       PellLake;
    }
-   default_action: PellLake;
+   default_action: PellLake(0);
    size : 512;
 }
 table Everetts {
@@ -2332,7 +2332,7 @@ table Everetts {
    actions {
       PellLake;
    }
-   default_action: PellLake;
+   default_action: PellLake(0);
    size : 512;
 }
 meter Northome {

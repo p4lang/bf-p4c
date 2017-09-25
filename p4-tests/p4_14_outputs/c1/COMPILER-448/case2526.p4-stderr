@@ -7,15 +7,3 @@ case2526.p4(2266): warning: -1: negative value with unsigned type
 case2526.p4(2271): warning: -1: negative value with unsigned type
    add_to_field(Strasburg.Othello, -1);
                                     ^
-stateful_alu_blackbox.p4(3): warning: stateful_alu: extern has attributes, which are not supported in P4-16, and thus are not emitted as P4-16
-blackbox_type stateful_alu {
-^
-stateful_alu_blackbox.p4(3): warning: stateful_alu: extern has attributes, which are not supported in P4-16, and thus are not emitted as P4-16
-blackbox_type stateful_alu {
-^
-stateful_alu_blackbox.p4(3): warning: stateful_alu: extern has attributes, which are not supported in P4-16, and thus are not emitted as P4-16
-blackbox_type stateful_alu {
-^
-stateful_alu_blackbox.p4(3): warning: stateful_alu: extern has attributes, which are not supported in P4-16, and thus are not emitted as P4-16
-blackbox_type stateful_alu {
-^

@@ -1,12 +1,12 @@
-In file included from /home/cdodd/bf-p4c/p4c/extensions/p4_tests/p4_14/switch/p4src/switch.p4:44:0:
+In file included from /home/cascaval/Projects/P4/bf-p4c-compilers/p4c/extensions/p4_tests/p4_14/switch/p4src/switch.p4:44:0:
 headers.p4:754:0: warning: "CPU_REASON_CODE_SFLOW" redefined
  #define CPU_REASON_CODE_SFLOW       0x106 /* must match switch_hostif.h reson_code */
- 
-In file included from /home/cdodd/bf-p4c/p4c/extensions/p4_tests/p4_14/switch/p4src/switch.p4:41:0:
+ ^
+In file included from /home/cascaval/Projects/P4/bf-p4c-compilers/p4c/extensions/p4_tests/p4_14/switch/p4src/switch.p4:41:0:
 cpu_reason_codes.h:31:0: note: this is the location of the previous definition
  #define CPU_REASON_CODE_SFLOW            0x4
- 
-In file included from /home/cdodd/bf-p4c/p4c/extensions/p4_tests/p4_14/switch/p4src/switch.p4:45:0:
+ ^
+In file included from /home/cascaval/Projects/P4/bf-p4c-compilers/p4c/extensions/p4_tests/p4_14/switch/p4src/switch.p4:45:0:
 parser.p4:688:6: warning: missing terminating ' character
      8'0;
       ^

@@ -1,0 +1,9 @@
+case3041.p4(1484): warning: Could not infer type for Southdown, using bit<8>
+action Tununak(Southdown) {
+               ^^^^^^^^^
+case3041.p4(1869): warning: -1: negative value with unsigned type
+   add_to_field(Toccopola.Gonzalez, -1);
+                                     ^
+case3041.p4(1874): warning: -1: negative value with unsigned type
+   add_to_field(Linville.Olyphant, -1);
+                                    ^

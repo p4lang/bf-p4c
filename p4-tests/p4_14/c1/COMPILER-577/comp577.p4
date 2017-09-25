@@ -1534,7 +1534,7 @@ table NorthRim {
    actions {
       Tatum;
    }
-   default_action: Tatum;
+   default_action: Tatum(0);
    size : 1;
 }
 control Wyandanch {
@@ -2070,7 +2070,7 @@ table Macdona {
    actions {
       Palisades;
    }
-   default_action : Palisades;
+   default_action : Palisades(0, 0);
    size : 1;
 }
 action Corvallis( Aylmer ) {
@@ -3623,4 +3623,3 @@ control egress {
    Franklin();
    Dougherty();
 }
-

@@ -1,0 +1,9 @@
+comp589.p4(1520): warning: Could not infer type for RockPort, using bit<8>
+action Pittwood(RockPort) {
+                ^^^^^^^^
+comp589.p4(1904): warning: -1: negative value with unsigned type
+   add_to_field(CapRock.Weimar, -1);
+                                 ^
+comp589.p4(1909): warning: -1: negative value with unsigned type
+   add_to_field(Crossnore.Caulfield, -1);
+                                      ^

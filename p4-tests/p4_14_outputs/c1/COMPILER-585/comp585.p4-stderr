@@ -1,0 +1,9 @@
+comp585.p4(1513): warning: Could not infer type for Chamois, using bit<8>
+action Chewalla(Chamois) {
+                ^^^^^^^
+comp585.p4(1897): warning: -1: negative value with unsigned type
+   add_to_field(ElkRidge.Ignacio, -1);
+                                   ^
+comp585.p4(1902): warning: -1: negative value with unsigned type
+   add_to_field(Lafourche.Rosboro, -1);
+                                    ^

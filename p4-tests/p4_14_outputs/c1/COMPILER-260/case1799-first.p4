@@ -283,6 +283,7 @@ header ingress_intrinsic_metadata_from_parser_aux_t {
 
 header ingress_parser_control_signals {
     bit<3> priority;
+    bit<5> _pad;
 }
 
 header eWVqSp {
@@ -293,85 +294,79 @@ header eWVqSp {
 }
 
 struct metadata {
-    @name("CNpgHg") 
+    @name(".CNpgHg") 
     hDYMcY CNpgHg;
-    @name("QtOVAv") 
+    @name(".QtOVAv") 
     MyPNUO QtOVAv;
-    @name("lwmijB") 
+    @name(".lwmijB") 
     GSCxzi lwmijB;
-    @name("nMhNWt") 
+    @name(".nMhNWt") 
     vCHZaQ nMhNWt;
-    @name("njBqBq") 
+    @name(".njBqBq") 
     dWoWnP njBqBq;
-    @name("oApvsj") 
+    @name(".oApvsj") 
     uESsmr oApvsj;
-    @name("oXjFaB") 
+    @name(".oXjFaB") 
     ovbffT oXjFaB;
-    @name("ppHepP") 
+    @name(".ppHepP") 
     RFsRYU ppHepP;
-    @name("qVEGeY") 
+    @name(".qVEGeY") 
     dOnQOY qVEGeY;
-    @name("vgJNjT") 
+    @name(".vgJNjT") 
     WebmrG vgJNjT;
 }
 
 struct headers {
-    @name("CsNnAq") 
+    @name(".CsNnAq") 
     WRdjdw                                         CsNnAq;
-    @name("PeankK") 
+    @name(".PeankK") 
     iKXAgh                                         PeankK;
-    @name("SmkXZl") 
+    @name(".SmkXZl") 
     QWuYMi_0                                       SmkXZl;
-    @name("bsPHav") 
+    @name(".bsPHav") 
     wDhJWr                                         bsPHav;
-    @name("cIWcqc") 
+    @name(".cIWcqc") 
     ThhgVB                                         cIWcqc;
-    @name("dnOwUx") 
+    @name(".dnOwUx") 
     WRdjdw                                         dnOwUx;
-    @name("eBvgQa") 
+    @name(".eBvgQa") 
     rZHYZS                                         eBvgQa;
-    @dont_trim @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md") @pa_atomic("egress", "eg_intr_md.egress_port") @pa_fragment("egress", "eg_intr_md._pad1") @pa_fragment("egress", "eg_intr_md._pad7") @pa_fragment("egress", "eg_intr_md._pad8") @pa_mandatory_intrinsic_field("egress", "eg_intr_md.egress_port") @pa_mandatory_intrinsic_field("egress", "eg_intr_md.egress_cos") @name("eg_intr_md") 
+    @dont_trim @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md") @pa_atomic("egress", "eg_intr_md.egress_port") @pa_fragment("egress", "eg_intr_md._pad1") @pa_fragment("egress", "eg_intr_md._pad7") @pa_fragment("egress", "eg_intr_md._pad8") @pa_mandatory_intrinsic_field("egress", "eg_intr_md.egress_port") @pa_mandatory_intrinsic_field("egress", "eg_intr_md.egress_cos") @name(".eg_intr_md") 
     egress_intrinsic_metadata_t                    eg_intr_md;
-    @dont_trim @pa_intrinsic_header("egress", "eg_intr_md_for_mb") @pa_atomic("egress", "eg_intr_md_for_mb.egress_mirror_id") @pa_fragment("egress", "eg_intr_md_for_mb.coalesce_flush") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.egress_mirror_id") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.coalesce_flush") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.coalesce_length") @not_deparsed("ingress") @not_deparsed("egress") @name("eg_intr_md_for_mb") 
+    @dont_trim @pa_intrinsic_header("egress", "eg_intr_md_for_mb") @pa_atomic("egress", "eg_intr_md_for_mb.egress_mirror_id") @pa_fragment("egress", "eg_intr_md_for_mb.coalesce_flush") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.egress_mirror_id") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.coalesce_flush") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.coalesce_length") @not_deparsed("ingress") @not_deparsed("egress") @name(".eg_intr_md_for_mb") 
     egress_intrinsic_metadata_for_mirror_buffer_t  eg_intr_md_for_mb;
-    @dont_trim @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_oport.drop_ctl") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md_for_oport") @name("eg_intr_md_for_oport") 
+    @dont_trim @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_oport.drop_ctl") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md_for_oport") @name(".eg_intr_md_for_oport") 
     egress_intrinsic_metadata_for_output_port_t    eg_intr_md_for_oport;
-    @pa_fragment("egress", "eg_intr_md_from_parser_aux.coalesce_sample_count") @pa_fragment("egress", "eg_intr_md_from_parser_aux.clone_src") @pa_fragment("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @pa_atomic("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md_from_parser_aux") @name("eg_intr_md_from_parser_aux") 
+    @pa_fragment("egress", "eg_intr_md_from_parser_aux.coalesce_sample_count") @pa_fragment("egress", "eg_intr_md_from_parser_aux.clone_src") @pa_fragment("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @pa_atomic("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md_from_parser_aux") @name(".eg_intr_md_from_parser_aux") 
     egress_intrinsic_metadata_from_parser_aux_t    eg_intr_md_from_parser_aux;
-    @name("ejedVK") 
+    @name(".ejedVK") 
     fiSJdp                                         ejedVK;
-    @name("fpKWAU") 
+    @name(".fpKWAU") 
     bPnuBu                                         fpKWAU;
-    @name("hPVgfz") 
+    @name(".hPVgfz") 
     fiSJdp                                         hPVgfz;
-    @dont_trim @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md.ingress_port") @name("ig_intr_md") 
+    @dont_trim @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md.ingress_port") @name(".ig_intr_md") 
     ingress_intrinsic_metadata_t                   ig_intr_md;
-    @dont_trim @pa_intrinsic_header("ingress", "ig_intr_md_for_mb") @pa_atomic("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @not_deparsed("ingress") @not_deparsed("egress") @name("ig_intr_md_for_mb") 
+    @dont_trim @pa_intrinsic_header("ingress", "ig_intr_md_for_mb") @pa_atomic("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @not_deparsed("ingress") @not_deparsed("egress") @name(".ig_intr_md_for_mb") 
     ingress_intrinsic_metadata_for_mirror_buffer_t ig_intr_md_for_mb;
-    @pa_atomic("ingress", "ig_intr_md_for_tm.ucast_egress_port") @pa_fragment("ingress", "ig_intr_md_for_tm.drop_ctl") @pa_fragment("ingress", "ig_intr_md_for_tm.qid") @pa_fragment("ingress", "ig_intr_md_for_tm._pad2") @pa_atomic("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_fragment("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_atomic("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_fragment("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_atomic("ingress", "ig_intr_md_for_tm.level1_mcast_hash") @pa_fragment("ingress", "ig_intr_md_for_tm._pad3") @pa_atomic("ingress", "ig_intr_md_for_tm.level2_mcast_hash") @pa_fragment("ingress", "ig_intr_md_for_tm._pad4") @pa_atomic("ingress", "ig_intr_md_for_tm.level1_exclusion_id") @pa_fragment("ingress", "ig_intr_md_for_tm.level1_exclusion_id") @pa_atomic("ingress", "ig_intr_md_for_tm.level2_exclusion_id") @pa_fragment("ingress", "ig_intr_md_for_tm._pad5") @pa_atomic("ingress", "ig_intr_md_for_tm.rid") @pa_fragment("ingress", "ig_intr_md_for_tm.rid") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md_for_tm") @dont_trim @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.drop_ctl") @name("ig_intr_md_for_tm") 
+    @pa_atomic("ingress", "ig_intr_md_for_tm.ucast_egress_port") @pa_fragment("ingress", "ig_intr_md_for_tm.drop_ctl") @pa_fragment("ingress", "ig_intr_md_for_tm.qid") @pa_fragment("ingress", "ig_intr_md_for_tm._pad2") @pa_atomic("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_fragment("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.mcast_grp_a") @pa_atomic("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_fragment("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.mcast_grp_b") @pa_atomic("ingress", "ig_intr_md_for_tm.level1_mcast_hash") @pa_fragment("ingress", "ig_intr_md_for_tm._pad3") @pa_atomic("ingress", "ig_intr_md_for_tm.level2_mcast_hash") @pa_fragment("ingress", "ig_intr_md_for_tm._pad4") @pa_atomic("ingress", "ig_intr_md_for_tm.level1_exclusion_id") @pa_fragment("ingress", "ig_intr_md_for_tm.level1_exclusion_id") @pa_atomic("ingress", "ig_intr_md_for_tm.level2_exclusion_id") @pa_fragment("ingress", "ig_intr_md_for_tm._pad5") @pa_atomic("ingress", "ig_intr_md_for_tm.rid") @pa_fragment("ingress", "ig_intr_md_for_tm.rid") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md_for_tm") @dont_trim @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_tm.drop_ctl") @name(".ig_intr_md_for_tm") 
     ingress_intrinsic_metadata_for_tm_t            ig_intr_md_for_tm;
-    @pa_fragment("ingress", "ig_intr_md_from_parser_aux.ingress_parser_err") @pa_atomic("ingress", "ig_intr_md_from_parser_aux.ingress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md_from_parser_aux") @name("ig_intr_md_from_parser_aux") 
+    @pa_fragment("ingress", "ig_intr_md_from_parser_aux.ingress_parser_err") @pa_atomic("ingress", "ig_intr_md_from_parser_aux.ingress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md_from_parser_aux") @name(".ig_intr_md_from_parser_aux") 
     ingress_intrinsic_metadata_from_parser_aux_t   ig_intr_md_from_parser_aux;
-    @not_deparsed("ingress") @not_deparsed("egress") @name("ig_pg_md") 
+    @not_deparsed("ingress") @not_deparsed("egress") @name(".ig_pg_md") 
     generator_metadata_t_0                         ig_pg_md;
-    @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_prsr_ctrl") @name("ig_prsr_ctrl") 
+    @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_prsr_ctrl") @name(".ig_prsr_ctrl") 
     ingress_parser_control_signals                 ig_prsr_ctrl;
-    @name("oADQdp") 
+    @name(".oADQdp") 
     iKXAgh                                         oADQdp;
-    @name("pkBpIo") 
+    @name(".pkBpIo") 
     wDhJWr                                         pkBpIo;
-    @name("ubDSaI") 
+    @name(".ubDSaI") 
     bPnuBu                                         ubDSaI;
     @name(".UsqKHW") 
     eWVqSp[2]                                      UsqKHW;
 }
-
-extern stateful_alu {
-    void execute_stateful_alu(@optional in bit<32> index);
-    void execute_stateful_alu_from_hash<FL>(in FL hash_field_list);
-    void execute_stateful_log();
-    stateful_alu();
-}
+#include <tofino/stateful_alu.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Byuchi") state Byuchi {
@@ -467,9 +462,9 @@ control DRWcKf(inout headers hdr, inout metadata meta, inout standard_metadata_t
             @defaultonly NoAction();
         }
         key = {
-            meta.CNpgHg.aaxKVh: ternary @name("meta.CNpgHg.aaxKVh") ;
-            meta.CNpgHg.ZlKTpC: exact @name("meta.CNpgHg.ZlKTpC") ;
-            meta.CNpgHg.XULmvX: exact @name("meta.CNpgHg.XULmvX") ;
+            meta.CNpgHg.aaxKVh: ternary @name("CNpgHg.aaxKVh") ;
+            meta.CNpgHg.ZlKTpC: exact @name("CNpgHg.ZlKTpC") ;
+            meta.CNpgHg.XULmvX: exact @name("CNpgHg.XULmvX") ;
         }
         size = 512;
         default_action = NoAction();
@@ -514,8 +509,8 @@ control GDDPzq(inout headers hdr, inout metadata meta, inout standard_metadata_t
             toVrDX();
         }
         key = {
-            hdr.eg_intr_md.egress_port: exact @name("hdr.eg_intr_md.egress_port") ;
-            meta.qVEGeY.yWiZak        : exact @name("meta.qVEGeY.yWiZak") ;
+            hdr.eg_intr_md.egress_port: exact @name("eg_intr_md.egress_port") ;
+            meta.qVEGeY.yWiZak        : exact @name("qVEGeY.yWiZak") ;
         }
         size = 4096;
         default_action = toVrDX();
@@ -552,9 +547,13 @@ control HpHSVC(inout headers hdr, inout metadata meta, inout standard_metadata_t
 
 control IFycyA(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".QUINJI") register<bit<1>>(32w65536) QUINJI;
-    stateful_alu() tOUEnP;
+    register_action<bit<1>, bit<1>>(QUINJI) tOUEnP = {
+        void apply(inout bit<1> value, out bit<1> rv) {
+            value = 1w1;
+        }
+    };
     @name(".DURXNj") action DURXNj(bit<8> rEXFwh) {
-        tOUEnP.execute_stateful_alu();
+        tOUEnP.execute();
     }
     @name(".rCZnqI") action rCZnqI() {
         meta.CNpgHg.YpkCXt = 1w1;
@@ -567,10 +566,10 @@ control IFycyA(inout headers hdr, inout metadata meta, inout standard_metadata_t
             @defaultonly NoAction();
         }
         key = {
-            meta.CNpgHg.lDRqij: exact @name("meta.CNpgHg.lDRqij") ;
-            meta.CNpgHg.gzTogt: exact @name("meta.CNpgHg.gzTogt") ;
-            meta.CNpgHg.dnnZBE: exact @name("meta.CNpgHg.dnnZBE") ;
-            meta.CNpgHg.fxaceD: exact @name("meta.CNpgHg.fxaceD") ;
+            meta.CNpgHg.lDRqij: exact @name("CNpgHg.lDRqij") ;
+            meta.CNpgHg.gzTogt: exact @name("CNpgHg.gzTogt") ;
+            meta.CNpgHg.dnnZBE: exact @name("CNpgHg.dnnZBE") ;
+            meta.CNpgHg.fxaceD: exact @name("CNpgHg.fxaceD") ;
         }
         size = 65536;
         default_action = NoAction();
@@ -596,16 +595,16 @@ control OOyMfT(inout headers hdr, inout metadata meta, inout standard_metadata_t
             fZBoEc();
         }
         key = {
-            hdr.bsPHav.isValid(): ternary @name("hdr.bsPHav.isValid()") ;
-            hdr.ubDSaI.isValid(): ternary @name("hdr.ubDSaI.isValid()") ;
-            hdr.PeankK.isValid(): ternary @name("hdr.PeankK.isValid()") ;
-            hdr.dnOwUx.isValid(): ternary @name("hdr.dnOwUx.isValid()") ;
-            hdr.ejedVK.isValid(): ternary @name("hdr.ejedVK.isValid()") ;
-            hdr.pkBpIo.isValid(): ternary @name("hdr.pkBpIo.isValid()") ;
-            hdr.fpKWAU.isValid(): ternary @name("hdr.fpKWAU.isValid()") ;
-            hdr.oADQdp.isValid(): ternary @name("hdr.oADQdp.isValid()") ;
-            hdr.CsNnAq.isValid(): ternary @name("hdr.CsNnAq.isValid()") ;
-            hdr.hPVgfz.isValid(): ternary @name("hdr.hPVgfz.isValid()") ;
+            hdr.bsPHav.isValid(): ternary @name("bsPHav.$valid$") ;
+            hdr.ubDSaI.isValid(): ternary @name("ubDSaI.$valid$") ;
+            hdr.PeankK.isValid(): ternary @name("PeankK.$valid$") ;
+            hdr.dnOwUx.isValid(): ternary @name("dnOwUx.$valid$") ;
+            hdr.ejedVK.isValid(): ternary @name("ejedVK.$valid$") ;
+            hdr.pkBpIo.isValid(): ternary @name("pkBpIo.$valid$") ;
+            hdr.fpKWAU.isValid(): ternary @name("fpKWAU.$valid$") ;
+            hdr.oADQdp.isValid(): ternary @name("oADQdp.$valid$") ;
+            hdr.CsNnAq.isValid(): ternary @name("CsNnAq.$valid$") ;
+            hdr.hPVgfz.isValid(): ternary @name("hPVgfz.$valid$") ;
         }
         size = 256;
         default_action = fZBoEc();
@@ -702,7 +701,7 @@ control OqQwzQ(inout headers hdr, inout metadata meta, inout standard_metadata_t
             @defaultonly NoAction();
         }
         key = {
-            hdr.cIWcqc.buAbKG: exact @name("hdr.cIWcqc.buAbKG") ;
+            hdr.cIWcqc.buAbKG: exact @name("cIWcqc.buAbKG") ;
         }
         size = 4096;
         default_action = NoAction();
@@ -713,7 +712,7 @@ control OqQwzQ(inout headers hdr, inout metadata meta, inout standard_metadata_t
             @defaultonly NoAction();
         }
         key = {
-            meta.lwmijB.tcpbrh: exact @name("meta.lwmijB.tcpbrh") ;
+            meta.lwmijB.tcpbrh: exact @name("lwmijB.tcpbrh") ;
         }
         size = 4096;
         default_action = NoAction();
@@ -724,8 +723,8 @@ control OqQwzQ(inout headers hdr, inout metadata meta, inout standard_metadata_t
             fZBoEc();
         }
         key = {
-            meta.lwmijB.bBdRYe  : exact @name("meta.lwmijB.bBdRYe") ;
-            hdr.UsqKHW[0].SdLIvH: exact @name("hdr..UsqKHW[0].SdLIvH") ;
+            meta.lwmijB.bBdRYe  : exact @name("lwmijB.bBdRYe") ;
+            hdr.UsqKHW[0].SdLIvH: exact @name("UsqKHW[0].SdLIvH") ;
         }
         size = 1024;
         default_action = fZBoEc();
@@ -736,10 +735,10 @@ control OqQwzQ(inout headers hdr, inout metadata meta, inout standard_metadata_t
             MdZFPU();
         }
         key = {
-            hdr.hPVgfz.nfyWUz : exact @name("hdr.hPVgfz.nfyWUz") ;
-            hdr.hPVgfz.bbJqjF : exact @name("hdr.hPVgfz.bbJqjF") ;
-            hdr.oADQdp.QGkiWU : exact @name("hdr.oADQdp.QGkiWU") ;
-            meta.CNpgHg.MgCYWv: exact @name("meta.CNpgHg.MgCYWv") ;
+            hdr.hPVgfz.nfyWUz : exact @name("hPVgfz.nfyWUz") ;
+            hdr.hPVgfz.bbJqjF : exact @name("hPVgfz.bbJqjF") ;
+            hdr.oADQdp.QGkiWU : exact @name("oADQdp.QGkiWU") ;
+            meta.CNpgHg.MgCYWv: exact @name("CNpgHg.MgCYWv") ;
         }
         size = 1024;
         default_action = MdZFPU();
@@ -750,7 +749,7 @@ control OqQwzQ(inout headers hdr, inout metadata meta, inout standard_metadata_t
             LhuFvL();
         }
         key = {
-            hdr.oADQdp.nEWzFM: exact @name("hdr.oADQdp.nEWzFM") ;
+            hdr.oADQdp.nEWzFM: exact @name("oADQdp.nEWzFM") ;
         }
         size = 4096;
         default_action = LhuFvL();
@@ -763,9 +762,9 @@ control OqQwzQ(inout headers hdr, inout metadata meta, inout standard_metadata_t
             @defaultonly NoAction();
         }
         key = {
-            meta.lwmijB.bBdRYe     : ternary @name("meta.lwmijB.bBdRYe") ;
-            hdr.UsqKHW[0].isValid(): exact @name("hdr..UsqKHW[0].isValid()") ;
-            hdr.UsqKHW[0].SdLIvH   : ternary @name("hdr..UsqKHW[0].SdLIvH") ;
+            meta.lwmijB.bBdRYe     : ternary @name("lwmijB.bBdRYe") ;
+            hdr.UsqKHW[0].isValid(): exact @name("UsqKHW[0].$valid$") ;
+            hdr.UsqKHW[0].SdLIvH   : ternary @name("UsqKHW[0].SdLIvH") ;
         }
         size = 4096;
         default_action = NoAction();
@@ -776,7 +775,7 @@ control OqQwzQ(inout headers hdr, inout metadata meta, inout standard_metadata_t
             @defaultonly NoAction();
         }
         key = {
-            hdr.UsqKHW[0].SdLIvH: exact @name("hdr..UsqKHW[0].SdLIvH") ;
+            hdr.UsqKHW[0].SdLIvH: exact @name("UsqKHW[0].SdLIvH") ;
         }
         size = 4096;
         default_action = NoAction();
@@ -808,8 +807,18 @@ control OqQwzQ(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control TDPRYG(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".GBdGiH") register<bit<1>>(32w262144) GBdGiH;
     @name(".yevXhQ") register<bit<1>>(32w262144) yevXhQ;
-    stateful_alu() fcVprY;
-    stateful_alu() vOaDPT;
+    register_action<bit<1>, bit<1>>(GBdGiH) fcVprY = {
+        void apply(inout bit<1> value, out bit<1> rv) {
+            value = value;
+            rv = value;
+        }
+    };
+    register_action<bit<1>, bit<1>>(yevXhQ) vOaDPT = {
+        void apply(inout bit<1> value, out bit<1> rv) {
+            value = value;
+            rv = value;
+        }
+    };
     @name(".VslHWa") action VslHWa() {
         meta.CNpgHg.PlNxwi = hdr.UsqKHW[0].SdLIvH;
         meta.CNpgHg.GERUGL = 1w1;
@@ -822,10 +831,18 @@ control TDPRYG(inout headers hdr, inout metadata meta, inout standard_metadata_t
         meta.njBqBq.ymFIux = UZQlMJ;
     }
     @name(".HWMlwq") action HWMlwq() {
-        fcVprY.execute_stateful_alu_from_hash<tuple<bit<6>, bit<12>>>({ meta.lwmijB.qDdnCn, hdr.UsqKHW[0].SdLIvH });
+        {
+            bit<18> temp;
+            hash<bit<18>, bit<18>, tuple<bit<6>, bit<12>>, bit<19>>(temp, HashAlgorithm.identity, 18w0, { meta.lwmijB.qDdnCn, hdr.UsqKHW[0].SdLIvH }, 19w262144);
+            meta.njBqBq.ymFIux = fcVprY.execute((bit<32>)temp);
+        }
     }
     @name(".EAmgXn") action EAmgXn() {
-        vOaDPT.execute_stateful_alu_from_hash<tuple<bit<6>, bit<12>>>({ meta.lwmijB.qDdnCn, hdr.UsqKHW[0].SdLIvH });
+        {
+            bit<18> temp_0;
+            hash<bit<18>, bit<18>, tuple<bit<6>, bit<12>>, bit<19>>(temp_0, HashAlgorithm.identity, 18w0, { meta.lwmijB.qDdnCn, hdr.UsqKHW[0].SdLIvH }, 19w262144);
+            meta.njBqBq.sRUjfg = vOaDPT.execute((bit<32>)temp_0);
+        }
     }
     @name(".Qfopml") table Qfopml {
         actions = {
@@ -849,7 +866,7 @@ control TDPRYG(inout headers hdr, inout metadata meta, inout standard_metadata_t
             @defaultonly NoAction();
         }
         key = {
-            meta.lwmijB.qDdnCn: exact @name("meta.lwmijB.qDdnCn") ;
+            meta.lwmijB.qDdnCn: exact @name("lwmijB.qDdnCn") ;
         }
         size = 64;
         default_action = NoAction();
@@ -899,7 +916,7 @@ control TqpEwo(inout headers hdr, inout metadata meta, inout standard_metadata_t
             @defaultonly NoAction();
         }
         key = {
-            hdr.ig_intr_md.ingress_port: exact @name("hdr.ig_intr_md.ingress_port") ;
+            hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 288;
         default_action = NoAction();
@@ -970,11 +987,11 @@ control bUHekb(inout headers hdr, inout metadata meta, inout standard_metadata_t
             @defaultonly NoAction();
         }
         key = {
-            meta.qVEGeY.hGsdpN  : exact @name("meta.qVEGeY.hGsdpN") ;
-            meta.qVEGeY.WQEcHW  : exact @name("meta.qVEGeY.WQEcHW") ;
-            meta.qVEGeY.BxqzOJ  : exact @name("meta.qVEGeY.BxqzOJ") ;
-            hdr.oADQdp.isValid(): ternary @name("hdr.oADQdp.isValid()") ;
-            hdr.CsNnAq.isValid(): ternary @name("hdr.CsNnAq.isValid()") ;
+            meta.qVEGeY.hGsdpN  : exact @name("qVEGeY.hGsdpN") ;
+            meta.qVEGeY.WQEcHW  : exact @name("qVEGeY.WQEcHW") ;
+            meta.qVEGeY.BxqzOJ  : exact @name("qVEGeY.BxqzOJ") ;
+            hdr.oADQdp.isValid(): ternary @name("oADQdp.$valid$") ;
+            hdr.CsNnAq.isValid(): ternary @name("CsNnAq.$valid$") ;
         }
         size = 512;
         default_action = NoAction();
@@ -985,7 +1002,7 @@ control bUHekb(inout headers hdr, inout metadata meta, inout standard_metadata_t
             @defaultonly NoAction();
         }
         key = {
-            meta.qVEGeY.WQEcHW: exact @name("meta.qVEGeY.WQEcHW") ;
+            meta.qVEGeY.WQEcHW: exact @name("qVEGeY.WQEcHW") ;
         }
         size = 8;
         default_action = NoAction();
@@ -1011,8 +1028,8 @@ control skLrFB(inout headers hdr, inout metadata meta, inout standard_metadata_t
             qTumUl();
         }
         key = {
-            meta.qVEGeY.Crnury        : exact @name("meta.qVEGeY.Crnury") ;
-            hdr.eg_intr_md.egress_port: exact @name("hdr.eg_intr_md.egress_port") ;
+            meta.qVEGeY.Crnury        : exact @name("qVEGeY.Crnury") ;
+            hdr.eg_intr_md.egress_port: exact @name("eg_intr_md.egress_port") ;
         }
         size = 64;
         default_action = qTumUl();
@@ -1047,8 +1064,8 @@ control fVGlMw(inout headers hdr, inout metadata meta, inout standard_metadata_t
             @defaultonly NoAction();
         }
         key = {
-            meta.qVEGeY.FJaMhx: exact @name("meta.qVEGeY.FJaMhx") ;
-            meta.QtOVAv.CITpsH: selector @name("meta.QtOVAv.CITpsH") ;
+            meta.qVEGeY.FJaMhx: exact @name("qVEGeY.FJaMhx") ;
+            meta.QtOVAv.CITpsH: selector @name("QtOVAv.CITpsH") ;
         }
         size = 1024;
         @name(".JjjNMB") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
@@ -1088,8 +1105,8 @@ control kwNOmT(inout headers hdr, inout metadata meta, inout standard_metadata_t
             @defaultonly NoAction();
         }
         key = {
-            hdr.hPVgfz.guzLDR: ternary @name("hdr.hPVgfz.guzLDR") ;
-            hdr.hPVgfz.JAADXJ: ternary @name("hdr.hPVgfz.JAADXJ") ;
+            hdr.hPVgfz.guzLDR: ternary @name("hPVgfz.guzLDR") ;
+            hdr.hPVgfz.JAADXJ: ternary @name("hPVgfz.JAADXJ") ;
         }
         size = 512;
         default_action = NoAction();
@@ -1103,8 +1120,8 @@ control kwNOmT(inout headers hdr, inout metadata meta, inout standard_metadata_t
             lUnhrD();
         }
         key = {
-            hdr.hPVgfz.nfyWUz: ternary @name("hdr.hPVgfz.nfyWUz") ;
-            hdr.hPVgfz.bbJqjF: ternary @name("hdr.hPVgfz.bbJqjF") ;
+            hdr.hPVgfz.nfyWUz: ternary @name("hPVgfz.nfyWUz") ;
+            hdr.hPVgfz.bbJqjF: ternary @name("hPVgfz.bbJqjF") ;
         }
         size = 512;
         default_action = lUnhrD();
@@ -1131,8 +1148,8 @@ control vNcJYp(inout headers hdr, inout metadata meta, inout standard_metadata_t
             @defaultonly NoAction();
         }
         key = {
-            meta.nMhNWt.RimUZY: exact @name("meta.nMhNWt.RimUZY") ;
-            meta.oXjFaB.yFhASD: lpm @name("meta.oXjFaB.yFhASD") ;
+            meta.nMhNWt.RimUZY: exact @name("nMhNWt.RimUZY") ;
+            meta.oXjFaB.yFhASD: lpm @name("oXjFaB.yFhASD") ;
         }
         size = 16384;
         default_action = NoAction();
@@ -1144,8 +1161,8 @@ control vNcJYp(inout headers hdr, inout metadata meta, inout standard_metadata_t
             fZBoEc();
         }
         key = {
-            meta.nMhNWt.RimUZY: exact @name("meta.nMhNWt.RimUZY") ;
-            meta.oXjFaB.yFhASD: exact @name("meta.oXjFaB.yFhASD") ;
+            meta.nMhNWt.RimUZY: exact @name("nMhNWt.RimUZY") ;
+            meta.oXjFaB.yFhASD: exact @name("oXjFaB.yFhASD") ;
         }
         size = 65536;
         default_action = fZBoEc();
@@ -1157,8 +1174,8 @@ control vNcJYp(inout headers hdr, inout metadata meta, inout standard_metadata_t
             fZBoEc();
         }
         key = {
-            meta.nMhNWt.RimUZY: exact @name("meta.nMhNWt.RimUZY") ;
-            meta.ppHepP.tLRngq: exact @name("meta.ppHepP.tLRngq") ;
+            meta.nMhNWt.RimUZY: exact @name("nMhNWt.RimUZY") ;
+            meta.ppHepP.tLRngq: exact @name("ppHepP.tLRngq") ;
         }
         size = 65536;
         default_action = fZBoEc();
@@ -1169,8 +1186,8 @@ control vNcJYp(inout headers hdr, inout metadata meta, inout standard_metadata_t
             fZBoEc();
         }
         key = {
-            meta.oXjFaB.vHIEVR      : exact @name("meta.oXjFaB.vHIEVR") ;
-            meta.oXjFaB.yFhASD[19:0]: lpm @name("meta.oXjFaB.yFhASD[19:0]") ;
+            meta.oXjFaB.vHIEVR      : exact @name("oXjFaB.vHIEVR") ;
+            meta.oXjFaB.yFhASD[19:0]: lpm @name("oXjFaB.yFhASD[19:0]") ;
         }
         size = 131072;
         default_action = fZBoEc();
@@ -1205,7 +1222,7 @@ control pBYOhi(inout headers hdr, inout metadata meta, inout standard_metadata_t
             @defaultonly NoAction();
         }
         key = {
-            meta.oApvsj.KbmtfM: exact @name("meta.oApvsj.KbmtfM") ;
+            meta.oApvsj.KbmtfM: exact @name("oApvsj.KbmtfM") ;
         }
         size = 65536;
         default_action = NoAction();
@@ -1258,9 +1275,9 @@ control lrVCTN(inout headers hdr, inout metadata meta, inout standard_metadata_t
             IBmwsU();
         }
         key = {
-            meta.qVEGeY.XtjQOt: exact @name("meta.qVEGeY.XtjQOt") ;
-            meta.qVEGeY.phNuMP: exact @name("meta.qVEGeY.phNuMP") ;
-            meta.qVEGeY.yWiZak: exact @name("meta.qVEGeY.yWiZak") ;
+            meta.qVEGeY.XtjQOt: exact @name("qVEGeY.XtjQOt") ;
+            meta.qVEGeY.phNuMP: exact @name("qVEGeY.phNuMP") ;
+            meta.qVEGeY.yWiZak: exact @name("qVEGeY.yWiZak") ;
         }
         size = 65536;
         default_action = IBmwsU();
@@ -1278,8 +1295,8 @@ control lrVCTN(inout headers hdr, inout metadata meta, inout standard_metadata_t
             QEckLK();
         }
         key = {
-            meta.qVEGeY.XtjQOt: exact @name("meta.qVEGeY.XtjQOt") ;
-            meta.qVEGeY.phNuMP: exact @name("meta.qVEGeY.phNuMP") ;
+            meta.qVEGeY.XtjQOt: exact @name("qVEGeY.XtjQOt") ;
+            meta.qVEGeY.phNuMP: exact @name("qVEGeY.phNuMP") ;
         }
         size = 1;
         default_action = QEckLK();

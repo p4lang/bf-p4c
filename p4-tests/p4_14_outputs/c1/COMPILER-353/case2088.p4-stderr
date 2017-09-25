@@ -4,15 +4,3 @@ case2088.p4(2336): warning: -1: negative value with unsigned type
 case2088.p4(2341): warning: -1: negative value with unsigned type
    add_to_field(Shelbina.Alexis, -1);
                                   ^
-stateful_alu_blackbox.p4(3): warning: stateful_alu: extern has attributes, which are not supported in P4-16, and thus are not emitted as P4-16
-blackbox_type stateful_alu {
-^
-stateful_alu_blackbox.p4(3): warning: stateful_alu: extern has attributes, which are not supported in P4-16, and thus are not emitted as P4-16
-blackbox_type stateful_alu {
-^
-stateful_alu_blackbox.p4(3): warning: stateful_alu: extern has attributes, which are not supported in P4-16, and thus are not emitted as P4-16
-blackbox_type stateful_alu {
-^
-stateful_alu_blackbox.p4(3): warning: stateful_alu: extern has attributes, which are not supported in P4-16, and thus are not emitted as P4-16
-blackbox_type stateful_alu {
-^
