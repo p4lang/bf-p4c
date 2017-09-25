@@ -38,9 +38,9 @@ class PHV_MAU_Group {
     /** @brief Marks a contiguous bit segment @l to @h (inclusive) of a
      * PHV_Container.
      */
-    class Container_Content {
+    class Container_Slice {
      //
-     // PHV_MAU_Group Container_Content represents a container slice of contiguously available bits
+     // PHV_MAU_Group Container_Slice represents a container slice of contiguously available bits
      // a container's range of available bits can be partitioned into several slices
      // based on alignment with slices from other containers within the same MAU group
      // cluster of fields mapped to aligned container slices, <number, width>, within a MAU group
@@ -52,7 +52,7 @@ class PHV_MAU_Group {
         //
      public:
         //
-        Container_Content(int l, int h, PHV_Container *c);
+        Container_Slice(int l, int h, PHV_Container *c);
         //
         int lo() const                  { return lo_i; }
         void lo(int l)                  { lo_i = l; }
@@ -63,11 +63,24 @@ class PHV_MAU_Group {
         //
         void sanity_check_container(const std::string&);
     };
-    // slices must be sorted order, use std::map, not ordered_map
+
+    /** Groups container slices first by slice width and then by number of
+     * slices available of that width.  For example:
+     *
+     * ```
+     * Aligned_Container_Slices_t slices = {
+     *     { 8, // bit wide slices
+     *       { 2, // slices in this group
+     *         { new Container_Slice(...), new Container_Slice(...) } } } }
+     * ```
+     *
+     * Note that we use std::map and std::list rather than ordered_map in order
+     * to maintain a custom sorted order.
+     */
     typedef
         std::map<int,
             std::map<int,
-                std::list<std::list<Container_Content *>>>> Aligned_Container_Slices_t;
+                std::list<std::list<Container_Slice *>>>> Aligned_Container_Slices_t;
     //
  private:
     //
@@ -80,15 +93,16 @@ class PHV_MAU_Group {
     std::vector<PHV_Container *> phv_containers_i;      // containers in this MAU group
     std::vector<Cluster_PHV *> cluster_phv_i;           // clusters in this MAU group
     Aligned_Container_Slices_t aligned_container_slices_i;
-                                              // [8..15] [3..15] => 2[8..15] [3..7]
-                                              // map[8][2] --> (Cx[8..15], Cy[8..15]
-                                              // map[5][1]--> (Cy[3..7]
-                                              // [2..7] [1..7] [5..7] => 3[5..7] 2[2..4] [1..1]
-                                              // map[3][3] --> (Cx[5..7], Cy, Cz)
-                                              // map[3][2] --> (Cx[2..4], Cy)
-                                              // map[1][1] --> (Cy [1..1])
-                                              // ingress, egress slices having same width, num
-                                              // [w](n) --> ((Ingress set) (Egress set))
+                                          // See comment for the Aligned_Container_Slices_t type.
+                                          // [8..15] [3..15] => 2[8..15] [3..7]
+                                          // map[8][2] --> (Cx[8..15], Cy[8..15]
+                                          // map[5][1]--> (Cy[3..7]
+                                          // [2..7] [1..7] [5..7] => 3[5..7] 2[2..4] [1..1]
+                                          // map[3][3] --> (Cx[5..7], Cy, Cz)
+                                          // map[3][2] --> (Cx[2..4], Cy)
+                                          // map[1][1] --> (Cy [1..1])
+                                          // ingress, egress slices having same width, num
+                                          // [w](n) --> ((Ingress set) (Egress set))
  public:
     /** Create @containers_in_group PHV_Container containers of size @w and
      * gress @gress, numbered consecutively starting from @phv_number.  Update
@@ -276,7 +290,7 @@ class PHV_MAU_Group_Assignments : public Visitor {
     //
     void consolidate_slices_in_group(
         ordered_map<int,
-            ordered_map<int, std::list<std::list<PHV_MAU_Group::Container_Content *>>>>&);
+            ordered_map<int, std::list<std::list<PHV_MAU_Group::Container_Slice *>>>>&);
 
     /** Populate `cohabit_fields` with containers that contain more than one
      * field written to in the MAU pipeline.
@@ -379,11 +393,11 @@ class PHV_MAU_Group_Assignments : public Visitor {
     bool
     match_cluster_to_cc_set(
         Cluster_PHV *cl,
-        std::list<PHV_MAU_Group::Container_Content *>& cc_set);
+        std::list<PHV_MAU_Group::Container_Slice *>& cc_set);
     bool
     packing_predicates(
         Cluster_PHV *cl,
-        std::list<PHV_MAU_Group::Container_Content *>& cc_set);
+        std::list<PHV_MAU_Group::Container_Slice *>& cc_set);
     //
     // public member
     // container_pack_cohabit also used by
@@ -399,10 +413,10 @@ class PHV_MAU_Group_Assignments : public Visitor {
         PHV_Container::Ingress_Egress cl_gress);
     bool canonicalize_cc_set(
         Cluster_PHV *cl,
-        std::list<PHV_MAU_Group::Container_Content *>& cc_set);
+        std::list<PHV_MAU_Group::Container_Slice *>& cc_set);
     bool num_containers_bottom_bits(
         Cluster_PHV *cl,
-        std::list<PHV_MAU_Group::Container_Content *>& cc_set,
+        std::list<PHV_MAU_Group::Container_Slice *>& cc_set,
         int num_c);
     std::pair<int, int>
         gress(PHV_MAU_Group::Aligned_Container_Slices_t&);
@@ -451,19 +465,19 @@ class PHV_MAU_Group_Assignments : public Visitor {
 //
 std::ostream &operator<<(
     std::ostream &,
-    PHV_MAU_Group::Container_Content*);
+    PHV_MAU_Group::Container_Slice*);
 std::ostream &operator<<(
     std::ostream &,
-    std::list<PHV_MAU_Group::Container_Content *>&);
+    std::list<PHV_MAU_Group::Container_Slice *>&);
 std::ostream &operator<<(
     std::ostream &,
-    ordered_set<PHV_MAU_Group::Container_Content *>&);
+    ordered_set<PHV_MAU_Group::Container_Slice *>&);
 std::ostream &operator<<(
     std::ostream &,
-    std::list<PHV_MAU_Group::Container_Content *>&);
+    std::list<PHV_MAU_Group::Container_Slice *>&);
 std::ostream &operator<<(
     std::ostream &,
-    std::list<std::list<PHV_MAU_Group::Container_Content *>>&);
+    std::list<std::list<PHV_MAU_Group::Container_Slice *>>&);
 std::ostream &operator<<(
     std::ostream &,
     PHV_MAU_Group::Aligned_Container_Slices_t&);
