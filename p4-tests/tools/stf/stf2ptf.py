@@ -147,14 +147,15 @@ class stf2ptf (P4RuntimeTest):
         table_entry.table_id = self.get_table_id(table)
         if priority is not None: table_entry.priority = int(priority, base=10)
         self.set_match_key(table_entry, table, self.genMatchKey(table, match_list))
-        self.set_action_entry(table_entry, action, self.genActionParamList(action, action_params))
+        self.set_action_entry(table_entry, action,
+                              self.genActionParamList(action, action_params))
         # self._logger.debug("req: %s", str(req))
         reply = self.stub.Write(req)
         self._requests.append(req)
 
         # bookeeping for aliases (mainly used to name counters)
         if entry[5] is not None:
-            match_name, match, mask, hasMask = self.match2spec(match_list[0][0], match_list[0][1])
+            match_name, match, mask, hasMask = self.match2spec(table, match_list[0][0], match_list[0][1])
             self._namedEntries[entry[5]] = (table, match_name, match, mask)
 
     def genMatchKey(self, table, match_list):
@@ -163,7 +164,7 @@ class stf2ptf (P4RuntimeTest):
         """
         matches = []
         for match_spec in match_list:
-            match_name, match, mask, hasMask = self.match2spec(match_spec[0], match_spec[1])
+            match_name, match, mask, hasMask = self.match2spec(table, match_spec[0], match_spec[1])
             matches.append(self.get_mf_match(table, match_name, match, mask))
         return matches
 
@@ -173,7 +174,7 @@ class stf2ptf (P4RuntimeTest):
         """
         params = []
         for ap in action_params:
-            name, val, mask, hasMask = self.match2spec(ap[0], ap[1])
+            name, val, mask, hasMask = self.match2spec(None, ap[0], ap[1])
             value = self.match2int(val)
             valLen = self.get_ap_bytewidth(action, name)
             self._logger.debug('set_param: ("%s", stringfy(0x%x, %d))', name, value, valLen)
@@ -195,7 +196,8 @@ class stf2ptf (P4RuntimeTest):
         update.type = p4runtime_pb2.Update.INSERT
         table_entry = update.entity.table_entry
         table_entry.table_id = self.get_table_id(table)
-        self.set_action(table_entry.action.action, action, self.genActionParamList(action, action_params))
+        self.set_action(table_entry.action.action, action,
+                        self.genActionParamList(action, action_params))
         reply = self.stub.Write(req)
         self._requests.append(req)
 
@@ -302,7 +304,7 @@ class stf2ptf (P4RuntimeTest):
             else: val += e
         return val
 
-    def match2spec(self, match_name, match):
+    def match2spec(self, table_name, match_name, match):
         """
             Turns a match into (escaped name, value, mask, hasMask)
             Returning a hasMask = False means there were no don't care symbols in the value
@@ -313,6 +315,28 @@ class stf2ptf (P4RuntimeTest):
             if matchobj.group(2) is not None:
                 return matchobj.group(1) + '[' + matchobj.group(2) + ']' + matchobj.group(3)
         name = re.sub(r"(\w+)\$(\d+)(.*)", replStackIndex, name)
+        # The latest P4runtime serialization uses data.$valid$, so we convert
+        # $valid into $valid$
+        if re.match("[\.\w]+\$valid$", name):
+            name += "$"
+
+        # check that the name exists in p4info,
+        # and rename with fully qualified name or fail
+        if table_name is not None:
+            found = []
+            for t in self.p4info.tables:
+                if t.preamble.name == table_name:
+                    field_names = [ mf.name for mf in t.match_fields ]
+                    if name not in field_names:
+                        for x in field_names:
+                            if x.endswith(name):
+                                name = x
+                                found = True
+                    else:
+                        found = True
+            self.assertTrue(found, "Invalid match name %s for table %s" % \
+                            (match_name, table_name))
+
         hasMask = False
         isBinary = False
         lpmLen = -1
@@ -389,6 +413,7 @@ class stf2ptf (P4RuntimeTest):
                 for mf in t.match_fields:
                     if mf.name == field:
                         return mf.match_type
+
         return MatchType.UNSPECIFIED
 
     def get_mf_bitwidth(self, table_name, field):
@@ -396,9 +421,7 @@ class stf2ptf (P4RuntimeTest):
             if t.preamble.name == table_name:
                 for mf in t.match_fields:
                     if mf.name == field:
-                        self._logger.debug("get_mf_bitwidth(%s, %s) = %d", table_name, field, mf.bitwidth)
                         return mf.bitwidth
-        self._logger.debug("get_mf_bitwidth(%s, %s) = not found", table_name, field)
         return 0
 
     def get_ap_bytewidth(self, action, param):
@@ -406,9 +429,7 @@ class stf2ptf (P4RuntimeTest):
             if a.preamble.name == action:
                 for p in a.params:
                     if p.name == param:
-                        self._logger.debug("get_ap_bitwidth(%s, %s) = %d", action, param, p.bitwidth)
                         return int(math.ceil(p.bitwidth/8.0))
-        self._logger.debug("get_ap_bytewidth(%s, %s) = not found", action, param)
         return 0
 
     def get_mf_match(self, table_name, field, value, length_or_mask):

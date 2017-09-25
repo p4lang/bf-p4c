@@ -305,7 +305,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_194_same_action_param.p4
   extensions/p4_tests/p4_14/test_config_197_default_next_table.p4
   extensions/p4_tests/p4_14/test_config_196_hit_miss.p4
-  ) 
+  )
 
 # BRIG-109
 p4c_add_xfail_reason("tofino"
@@ -923,6 +923,10 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     extensions/p4_tests/p4_14/adjust_instr3.p4
     extensions/p4_tests/p4_14/adjust_instr4.p4
     extensions/p4_tests/p4_14/counter_test1.p4
+    extensions/p4_tests/p4_16/depgraph1.p4
+    extensions/p4_tests/p4_16/parser_metadata_init.p4
+    extensions/p4_tests/p4_16/stack_valid.p4
+    extensions/p4_tests/p4_16/ternary2.p4
     testdata/p4_14_samples/action_chain1.p4
     testdata/p4_14_samples/exact_match3.p4
     testdata/p4_14_samples/gateway1.p4
@@ -933,7 +937,9 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     testdata/p4_14_samples/repeater.p4
     testdata/p4_14_samples/ternary_match2.p4
     testdata/p4_14_samples/ternary_match4.p4
+    testdata/p4_14_samples/tmvalid.p4
     testdata/p4_16_samples/issue635-bmv2.p4
+    testdata/p4_16_samples/ternary2-bmv2.p4
     )
 
   p4c_add_xfail_reason("tofino"
@@ -1012,18 +1018,11 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     extensions/p4_tests/p4_14/meter_test1.p4
     )
 
+# BRIG-241
   p4c_add_xfail_reason("tofino"
-    "AssertionError: Unsupported match type Unspecified for field"
-    testdata/p4_14_samples/tmvalid.p4
+    "AssertionError: Invalid match name .* for table .*"
     testdata/p4_14_samples/exact_match_mask1.p4
     testdata/p4_14_samples/exact_match_valid1.p4
-    extensions/p4_tests/p4_16/apply_if.p4
-    extensions/p4_tests/p4_16/ternary1.p4
-    extensions/p4_tests/p4_16/parser_metadata_init.p4
-    extensions/p4_tests/p4_16/stack_valid.p4
-    extensions/p4_tests/p4_16/depgraph1.p4
-    extensions/p4_tests/p4_16/ternary2.p4
-    testdata/p4_16_samples/ternary2-bmv2.p4
     )
 
   p4c_add_xfail_reason("tofino"
