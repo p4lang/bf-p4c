@@ -16,7 +16,7 @@ file (STRINGS "${BFN_P4C_SOURCE_DIR}/bf-p4c/version.h"
   __version
   REGEX "#define P4C_TOFINO_VERSION.*"
   )
-string (REGEX MATCH ".*TOFINO_VERSION.*([0-9]+).([0-9]+).([0-9]+)([-0-9a-z]*).*"
+string (REGEX MATCH ".*TOFINO_VERSION.*([0-9]+)\\.([0-9]+)\\.([0-9]+)([-0-9a-z\\.]*).*"
   __bfn_p4c_version ${__version})
 set (BFN_P4C_VERSION_MAJOR ${CMAKE_MATCH_1})
 set (BFN_P4C_VERSION_MINOR ${CMAKE_MATCH_2})
