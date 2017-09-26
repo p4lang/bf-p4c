@@ -52,6 +52,7 @@ fi
 pushd build/p4c
 if [ ! -e p4c-tofino-gdb.gdb ]; then ln -sf ../../bf-p4c/.gdbinit p4c-tofino-gdb.gdb; fi
 if [ ! -e p4c-bm2-ss-gdb.gdb ]; then ln -sf ../../bf-p4c/.gdbinit p4c-bm2-ss-gdb.gdb; fi
+if [ ! -e .gdbinit ]; then ln -sf ../../bf-p4c/.gdbinit; fi
 popd # build/p4c
 
 echo "Configured for build in build"

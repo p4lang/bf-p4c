@@ -17,6 +17,7 @@ class Digests : public Transform {
      */
     IR::BFN::Digest *learn = nullptr;
     IR::BFN::Digest *mirror = nullptr;
+    IR::BFN::Digest *resubmit = nullptr;
     IR::TempVar *mirror_id = nullptr;
 
     IR::Primitive *add_to_digest(IR::BFN::Digest *&digest, const char *name,
@@ -100,7 +101,13 @@ class Digests : public Transform {
             l->insert(l->begin(), mirror->select);  // insert $mirror in every field list
             l->insert(l->begin(), mirror_id);       // insert $mirror_id in every field list
             mirror->sets.back() = l;
-            return rv; }
+            return rv;
+        } else if (prim->name == "resubmit") {
+            LOG2("resbumit:" << prim);
+            if (VisitingThread(this) == EGRESS)
+                error("%s: resubmit not supported in egress", prim->srcInfo);
+            auto ir_prim = add_to_digest(resubmit, "resubmit", prim->operands[0]);
+            return ir_prim; }
         return prim; }
     IR::BFN::Deparser *postorder(IR::BFN::Deparser *dp) override {
         if (learn) {
@@ -109,6 +116,9 @@ class Digests : public Transform {
         if (mirror) {
             dp->digests.addUnique(mirror->name, mirror);
             mirror = nullptr; }
+        if (resubmit) {
+            dp->digests.addUnique(resubmit->name, resubmit);
+            resubmit = nullptr; }
         return dp; }
 };
 

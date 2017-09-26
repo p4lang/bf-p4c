@@ -292,6 +292,15 @@ const IR::Expression *InstructionSelection::postorder(IR::Primitive *prim) {
             return makeDepositField(prim, mask);
         } else {
             return new IR::MAU::Instruction(prim->srcInfo, "bitmasked-set", &prim->operands); }
+    } else if (prim->name == "recirculate_raw") {
+        if (prim->operands.size() != 1) {
+            error("%s: wrong number of operands to %s", prim->srcInfo, prim->name);
+        } else {
+            auto rv = new IR::MAU::Instruction(prim->srcInfo, "bitmasked-set",
+                new IR::Vector<IR::Expression>({
+                    gen_stdmeta("egress_spec"), prim->operands.at(0), gen_stdmeta("ingress_port"),
+                    new IR::Constant(IR::Type::Bits::get(9), 0x7f) }) );
+            return rv; }
     } else if (prim->name == "add" || prim->name == "sub" || prim->name == "subtract") {
         if (prim->operands.size() != 3) {
             error("%s: wrong number of operands to %s", prim->srcInfo, prim->name);

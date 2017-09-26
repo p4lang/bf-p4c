@@ -930,6 +930,13 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/jenkins/stful/stful.p4
   )
 
+p4c_add_xfail_reason("tofino"
+  "bitmasked-set requires 2 or 3 operands"
+  extensions/p4_tests/p4_14/test_config_144_recirculate.p4
+  extensions/p4_tests/p4_14/jenkins/pgrs/pgrs_one.p4
+  extensions/p4_tests/p4_14/jenkins/emulation/emulation.p4
+  )
+
 if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
   # STF2PTF tests that fail
   p4c_add_xfail_reason("tofino"
