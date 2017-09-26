@@ -9,9 +9,20 @@ endif()
 
 project (BFASM)
 
+set (CMAKE_MODULE_PATH ${BFN_P4C_SOURCE_DIR}/p4c/cmake)
+
+include(UnifiedBuild)
+
 MESSAGE("-- Adding bf-asm")
 
 OPTION(ASAN_ENABLED "Enable ASAN checks" OFF)
+
+# An option to configure the chunk size we use for unified builds in bf-asm. By
+# default, this is tuned to use smaller chunks than the p4c repo uses. The goal
+# is to gain most of the benefit of unified builds when many files change, while
+# keeping the impact on recompilation time for individual files to a minimum.
+set(BF_ASM_UNIFIED_SOURCE_CHUNK_SIZE "5" CACHE STRING
+    "Target unified compilation chunk size for bf-asm (an integer or ALL)")
 
 set (BFASM_LIB_DEPS)
 
@@ -44,20 +55,24 @@ install (PROGRAMS bflink
 
 # json2cpp
 set (JSON2CPP_SOURCES json2cpp.cpp json.cpp)
+build_unified(JSON2CPP_SOURCES ALL)
 add_executable (json2cpp ${JSON2CPP_SOURCES})
 
 # json_diff
 set (JSONDIFF_SOURCES json_diff.cpp json.cpp fdstream.cpp)
+build_unified(JSONDIFF_SOURCES ALL)
 add_executable (json_diff ${JSONDIFF_SOURCES})
 
 #hashdump_SOURCES = hashdump.cpp json.cpp ubits.cpp
 
 # reflow
 set (REFLOW_SOURCES reflow.cpp)
+build_unified(REFLOW_SOURCES ALL)
 add_executable (reflow ${REFLOW_SOURCES})
 
 # mksizes
 set (MKSIZES_SOURCES mksizes.cpp)
+build_unified(MKSIZES ALL)
 add_executable (mksizes ${MKSIZES_SOURCES})
 
 set (BFAS_COMMON_SOURCES
@@ -184,6 +199,7 @@ configure_file ("${BFASM_SOURCE_DIR}/cmake/config.h.cmake" "${BFASM_BINARY_DIR}/
 set_source_files_properties (${BFAS_GEN_SOURCES} ${BFASM_BINARY_DIR}/lex-yaml.c
   PROPERTIES GENERATED TRUE)
 set (BFAS_SOURCES ${BFAS_COMMON_SOURCES} ${BFAS_GEN_SOURCES})
+build_unified(BFAS_SOURCES ${BF_ASM_UNIFIED_SOURCE_CHUNK_SIZE})
 add_executable (bfas ${BFAS_SOURCES})
 target_link_libraries (bfas ${BFASM_LIBS} ${BFASM_LIB_DEPS})
 
