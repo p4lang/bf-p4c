@@ -1,9 +1,11 @@
 #include "trivial_alloc.h"
 
 #include <algorithm>
+#include <boost/range/irange.hpp>  // NOLINT
 #include "lib/bitvec.h"
 #include "lib/exceptions.h"
 #include "lib/range.h"
+#include "bf-p4c/device.h"
 #include "bf-p4c/phv/phv.h"
 #include "bf-p4c/ir/gress.h"
 
@@ -231,9 +233,10 @@ struct ContainerAllocation final {
      */
     void allocate(gress_t gress, PHV::Container container,
                   AllocationSource source = AUTOMATIC) {
-        BUG_CHECK(source == MANUAL || !allocatedContainers[container.id()],
+        auto containerId = Device::phvSpec().containerToId(container);
+        BUG_CHECK(source == MANUAL || !allocatedContainers[containerId],
                   "Reallocating container %1%", container);
-        BUG_CHECK(source == MANUAL || !threadAssignments[~gress][container.id()],
+        BUG_CHECK(source == MANUAL || !threadAssignments[~gress][containerId],
                   "Container %1% is already assigned to %2%", container, ~gress);
 
         LOG3("Allocating container " << container << " to thread " << gress);
@@ -241,8 +244,8 @@ struct ContainerAllocation final {
         // Allocate this container and reserve its entire group for this thread.
         // reserveForThread() calls updateNext(), so we don't have to call it
         // directly here.
-        allocatedContainers[container.id()] = true;
-        reserveForThread(gress, container.group(), source);
+        allocatedContainers[containerId] = true;
+        reserveForThread(gress, Device::phvSpec().deparserGroup(containerId), source);
     }
 
     /**
@@ -250,7 +253,7 @@ struct ContainerAllocation final {
      * @return the newly allocated container.
      */
     PHV::Container allocateNext(gress_t gress, PHV::Type type) {
-        auto container = next[gress][type.id()];
+        auto container = next[gress][Device::phvSpec().containerTypeToId(type)];
         allocate(gress, container);
         return container;
     }
@@ -267,12 +270,13 @@ struct ContainerAllocation final {
                           AllocationSource source = AUTOMATIC) {
         BUG_CHECK(source == MANUAL || !threadAssignments[~gress].intersects(ids),
                   "Range (min %1%, max %2%) contains containers which are "
-                  "already assigned to %3%", PHV::Container::fromId(*ids.min()),
-                  PHV::Container::fromId(*ids.max()), ~gress);
+                  "already assigned to %3%",
+                  Device::phvSpec().idToContainer(*ids.min()),
+                  Device::phvSpec().idToContainer(*ids.max()), ~gress);
 
-        LOG3("Container range (min " << PHV::Container::fromId(*ids.min()) <<
-             ", max " << PHV::Container::fromId(*ids.max()) << ") " <<
-             "reserved for thread " << gress);
+        LOG3("Container range (min " << Device::phvSpec().idToContainer(*ids.min())
+             << ", max " << Device::phvSpec().idToContainer(*ids.max()) << ") "
+             << "reserved for thread " << gress);
         threadAssignments[gress] |= ids;
 
         updateNext();
@@ -284,11 +288,12 @@ struct ContainerAllocation final {
      * container type. Called when allocations or reservations change.
      */
     void updateNext() {
+        const auto& phvSpec = Device::phvSpec();
         for (gress_t gress : { INGRESS, EGRESS }) {
-            for (unsigned typeId = 0; typeId < Device::phvSpec().numTypes(); typeId++) {
+            for (auto typeId : boost::irange(0u, phvSpec.numContainerTypes())) {
                 PHV::Container& nextContainer = next[gress][typeId];
-                while (allocatedContainers[nextContainer.id()] ||
-                       threadAssignments[~gress][nextContainer.id()])
+                while (allocatedContainers[phvSpec.containerToId(nextContainer)] ||
+                       threadAssignments[~gress][phvSpec.containerToId(nextContainer)])
                     nextContainer++;
             }
         }

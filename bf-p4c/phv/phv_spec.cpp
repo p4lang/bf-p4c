@@ -1,80 +1,79 @@
-#include "bf-p4c/device.h"
-#include "phv.h"
-#include "phv_spec.h"
+/*
+Copyright 2013-present Barefoot Networks, Inc.
 
-namespace PHV {
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-Type::Type(unsigned typeId) {
-    Type t = Device::phvSpec().idTypeMap.at(typeId);
-    *this = t; }
+    http://www.apache.org/licenses/LICENSE-2.0
 
-Type::Type(Type::TypeEnum te) {
-    switch (te) {
-        case Type::B:  kind_ = Kind::normal;   size_ = Size::b8;  break;
-        case Type::H:  kind_ = Kind::normal;   size_ = Size::b16; break;
-        case Type::W:  kind_ = Kind::normal;   size_ = Size::b32; break;
-        case Type::TB: kind_ = Kind::tagalong; size_ = Size::b8;  break;
-        case Type::TH: kind_ = Kind::tagalong; size_ = Size::b16; break;
-        case Type::TW: kind_ = Kind::tagalong; size_ = Size::b32; break;
-        default: BUG("Unknown PHV type"); }
-}
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 
-Type::Type(const char* name) {
-    const char* n = name;
+#include "bf-p4c/phv/phv_spec.h"
 
-    switch (*n) {
-        case 'T': kind_ = Kind::tagalong; n++; break;
-        default:  kind_ = Kind::normal; }
-
-    switch (*n++) {
-        case 'B': size_ = Size::b8;  break;
-        case 'H': size_ = Size::b16; break;
-        case 'W': size_ = Size::b32; break;
-        default: BUG("Invalid PHV type '%s'", name); }
-
-    if (*n)
-        BUG("Invalid PHV type '%s'", name);
-}
-
-unsigned Type::id() const {
-    return Device::phvSpec().typeIdMap.at(*this); }
-
-std::ostream& operator<<(std::ostream& out, const PHV::Kind k) {
-    switch (k) {
-        case PHV::Kind::normal:   return out << "";
-        case PHV::Kind::tagalong: return out << "T";
-        default:    BUG("Unknown PHV container kind");
-    }
-}
-
-std::ostream& operator<<(std::ostream& out, const PHV::Size sz) {
-    switch (sz) {
-        case PHV::Size::b8:  return out << "B";
-        case PHV::Size::b16: return out << "H";
-        case PHV::Size::b32: return out << "W";
-        default:    BUG("Unknown PHV container size");
-    }
-}
-
-std::ostream& operator<<(std::ostream& out, const PHV::Type& t) {
-    return out << t.kind() << t.size();
-}
-
-}  // namespace PHV
-
-ordered_map<PHV::Type, unsigned> PhvSpec::typeIdMap;
-ordered_map<unsigned, PHV::Type> PhvSpec::idTypeMap;
+#include <sstream>
+#include "lib/bitvec.h"
+#include "lib/cstring.h"
+#include "lib/exceptions.h"
 
 void
 PhvSpec::addType(PHV::Type t) {
-    static unsigned typeId = 0;
+    const size_t typeId = definedTypes.size();
+    definedTypes.push_back(t);
     typeIdMap[t] = typeId;
-    idTypeMap[typeId] = t;
-    typeId++;
 }
 
-void
-TofinoPhvSpec::defineTypes() const {
+const std::vector<PHV::Type>& PhvSpec::containerTypes() const {
+    return definedTypes;
+}
+
+unsigned PhvSpec::numContainerTypes() const {
+    return definedTypes.size();
+}
+
+PHV::Type PhvSpec::idToContainerType(unsigned id) const {
+    BUG_CHECK(id < definedTypes.size(),
+              "Container type id %1% is out of range");
+    return definedTypes[id];
+}
+
+unsigned PhvSpec::containerTypeToId(PHV::Type type) const {
+    return typeIdMap.at(type);
+}
+
+PHV::Container PhvSpec::idToContainer(unsigned id) const {
+    // Ids are assigned to containers in ascending order by index, with the
+    // different container types interleaved. For example, on Tofino the
+    // sequence is as follows:
+    //   B0, H0, W0, TB0, TH0, TW0, B1, H1, W1, ...
+    const auto typeId = id % numContainerTypes();
+    const auto index = id / numContainerTypes();
+    return PHV::Container(idToContainerType(typeId), index);
+}
+
+unsigned PhvSpec::containerToId(PHV::Container container) const {
+    // See idToContainer() for the details of id assignment.
+    return container.index() * numContainerTypes() +
+           containerTypeToId(container.type());
+}
+
+cstring PhvSpec::containerSetToString(const bitvec& set) const {
+    bool first = true;
+    std::stringstream setAsString;
+    for (auto member : set) {
+        if (!first) setAsString << ", ";
+        first = false;
+        setAsString << idToContainer(member);
+    }
+    return cstring(setAsString);
+}
+
+TofinoPhvSpec::TofinoPhvSpec() {
     addType(PHV::Type::B);
     addType(PHV::Type::H);
     addType(PHV::Type::W);
@@ -84,17 +83,17 @@ TofinoPhvSpec::defineTypes() const {
 }
 
 bitvec
-TofinoPhvSpec::group(unsigned id) const {
-    const auto containerType = PHV::Type(id % Device::phvSpec().numTypes());
-    unsigned index =  id / Device::phvSpec().numTypes();
+TofinoPhvSpec::deparserGroup(unsigned id) const {
+    const auto containerType = idToContainerType(id % numContainerTypes());
+    const unsigned index =  id / numContainerTypes();
 
     // Individually assigned containers aren't part of a group, by definition.
-    if (Device::phvSpec().individuallyAssignedContainers()[id])
+    if (individuallyAssignedContainers()[id])
         return range(containerType, index, 1);
 
     // We also treat overflow containers (i.e., containers which don't exist in
     // hardware) as being individually assigned.
-    if (!Device::phvSpec().physicalContainers()[id])
+    if (!physicalContainers()[id])
         return range(containerType, index, 1);
 
     // Outside of the exceptional cases above, containers are assigned to
@@ -104,9 +103,9 @@ TofinoPhvSpec::group(unsigned id) const {
     else if (containerType == PHV::Type::W)
         return range(containerType, (index / 4) * 4, 4);
     else if (containerType == PHV::Type::TB || containerType == PHV::Type::TW)
-        return Device::phvSpec().tagalongGroup(index / 4);
+        return tagalongGroup(index / 4);
     else if (containerType == PHV::Type::TH)
-        return Device::phvSpec().tagalongGroup(index / 6);
+        return tagalongGroup(index / 6);
     else
         BUG("Unexpected PHV container type %1%", containerType);
 }
@@ -115,7 +114,7 @@ bitvec
 TofinoPhvSpec::range(PHV::Type t, unsigned start, unsigned length) const {
     bitvec containers;
     for (unsigned index = start; index < start + length; ++index)
-        containers.setbit(index * Device::phvSpec().numTypes() + t.id());
+        containers.setbit(index * numContainerTypes() + containerTypeToId(t));
     return containers;
 }
 
@@ -158,8 +157,7 @@ const bitvec& TofinoPhvSpec::physicalContainers() const {
 
 #if HAVE_JBAY
 // XXXX(zma) JBayPhvSpec is copied from Tofino for now, it will all be changed.
-void
-JBayPhvSpec::defineTypes() const {
+JBayPhvSpec::JBayPhvSpec() {
     addType(PHV::Type::B);
     addType(PHV::Type::H);
     addType(PHV::Type::W);
@@ -169,17 +167,17 @@ JBayPhvSpec::defineTypes() const {
 }
 
 bitvec
-JBayPhvSpec::group(unsigned id) const {
-    const auto containerType = PHV::Type(id % Device::phvSpec().numTypes());
-    unsigned index =  id / Device::phvSpec().numTypes();
+JBayPhvSpec::deparserGroup(unsigned id) const {
+    const auto containerType = idToContainerType(id % numContainerTypes());
+    const unsigned index =  id / numContainerTypes();
 
     // Individually assigned containers aren't part of a group, by definition.
-    if (Device::phvSpec().individuallyAssignedContainers()[id])
+    if (individuallyAssignedContainers()[id])
         return range(containerType, index, 1);
 
     // We also treat overflow containers (i.e., containers which don't exist in
     // hardware) as being individually assigned.
-    if (!Device::phvSpec().physicalContainers()[id])
+    if (!physicalContainers()[id])
         return range(containerType, index, 1);
 
     // Outside of the exceptional cases above, containers are assigned to
@@ -189,9 +187,9 @@ JBayPhvSpec::group(unsigned id) const {
     else if (containerType == PHV::Type::W)
         return range(containerType, (index / 4) * 4, 4);
     else if (containerType == PHV::Type::TB || containerType == PHV::Type::TW)
-        return Device::phvSpec().tagalongGroup(index / 4);
+        return tagalongGroup(index / 4);
     else if (containerType == PHV::Type::TH)
-        return Device::phvSpec().tagalongGroup(index / 6);
+        return tagalongGroup(index / 6);
     else
         BUG("Unexpected PHV container type %1%", containerType);
 }
@@ -200,7 +198,7 @@ bitvec
 JBayPhvSpec::range(PHV::Type t, unsigned start, unsigned length) const {
     bitvec containers;
     for (unsigned index = start; index < start + length; ++index)
-        containers.setbit(index * Device::phvSpec().numTypes() + t.id());
+        containers.setbit(index * numContainerTypes() + containerTypeToId(t));
     return containers;
 }
 

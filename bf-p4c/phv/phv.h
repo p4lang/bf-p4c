@@ -3,14 +3,76 @@
 
 #include <iosfwd>
 #include <limits>
-#include "bf-p4c/device.h"
 #include "lib/ordered_set.h"
-#include "phv_spec.h"
 
 class bitvec;
 class cstring;
+class JSONGenerator;
+class JSONLoader;
 
 namespace PHV {
+
+enum class Kind : unsigned short {  // all possible PHV kinds in BFN devices
+    normal   = 0,
+    tagalong = 1
+};
+
+enum class Size : unsigned short {  // all possible PHV sizes in BFN devices
+    null = 0,
+    b8   = 8,
+    b16  = 16,
+    b32  = 32
+};
+
+class Type {
+    Kind        kind_;
+    Size        size_;
+
+ public:
+    enum TypeEnum {  // Enumeration of all possible types in BFN devices:
+        B,           //     8-bit  normal
+        H,           //     16-bit normal
+        W,           //     32-bit normal
+        TB,          //     8-bit  tagalong
+        TH,          //     16-bit tagalong
+        TW           //     32-bit tagalong
+    };
+
+    Type() : kind_(Kind::normal), size_(Size::null) {}
+    Type(Kind k, Size s) : kind_(k), size_(s) {}
+    Type(const Type& t) : kind_(t.kind_), size_(t.size_) {}
+
+    Type(TypeEnum te);       // NOLINT(runtime/explicit)
+    Type(const char* name);  // NOLINT(runtime/explicit)
+
+    unsigned log2sz() const;
+    Kind kind() const { return kind_; }
+    Size size() const { return size_; }
+
+    Type& operator=(const Type& t) {
+        kind_ = t.kind_;
+        size_ = t.size_;
+        return *this;
+    }
+
+    bool operator==(Type c) const {
+        return kind_ == c.kind_ && size_ == c.size_;
+    }
+
+    bool operator!=(Type c) const {
+        return !(*this == c);
+    }
+
+    bool operator<(Type c) const {
+        if (kind_ < c.kind_) return true;
+        if (c.kind_ < kind_) return false;
+        if (size_ < c.size_) return true;
+        if (size_ > c.size_) return false;
+        return false;
+    }
+
+    bool valid() const { return size_ != Size::null; }
+};
 
 class Container {
     static constexpr unsigned MAX_INDEX = std::numeric_limits<unsigned>::max();
@@ -32,23 +94,7 @@ class Container {
     /// container B0.
     Container(PHV::Type t, unsigned index) : type_(t), index_(index) {}
 
-    /// @return the container with the given @id number, which you can obtain
-    /// from the id() method. Useful when storing containers in bitvecs.
-    static Container fromId(unsigned id) {
-        return Container(Type(id % Device::phvSpec().numTypes()),
-                         id / Device::phvSpec().numTypes());
-    }
-
-    /// @return a numerical id that uniquely identifies this container. Useful
-    /// when storing Containers in bitvecs.
-    unsigned id() const {
-        // There are six kinds: B, H, W, and the tagalong variants of each.
-        // Ids are assigned in ascending order by index, with kinds interleaved.
-        // For example: B0, H0, W0, TB0, TH0, TW0, B1, H1, W1, ...
-        return index_ * Device::phvSpec().numTypes() + type_.id();
-    }
-
-    size_t size() const { return (size_t)type_.size(); }
+    size_t size() const { return size_t(type_.size()); }
     unsigned log2sz() const { return type_.log2sz(); }
     size_t msb() const { return size() - 1; }
     size_t lsb() const { return 0; }
@@ -77,17 +123,18 @@ class Container {
         if (c.index_ < index_) return false;
         return false; }
 
-    bitvec group() const { return Device::phvSpec().group(id()); }
+    static Container fromJSON(JSONLoader& json);
 
     /// @return a string representation of this container.
     cstring toString() const;
-
-    /// @return a string representation of the provided @group of containers.
-    static cstring groupToString(const bitvec& group);
 };
 
-std::ostream &operator<<(std::ostream &out, const PHV::Container c);
-std::ostream &operator<<(std::ostream &out, ordered_set<const PHV::Container *>& c_set);
+std::ostream& operator<<(std::ostream& out, const PHV::Kind k);
+std::ostream& operator<<(std::ostream& out, const PHV::Size sz);
+std::ostream& operator<<(std::ostream& out, const PHV::Type t);
+std::ostream& operator<<(std::ostream& out, const PHV::Container c);
+JSONGenerator& operator<<(JSONGenerator& out, const PHV::Container c);
+std::ostream& operator<<(std::ostream& out, ordered_set<const PHV::Container *>& c_set);
 
 }  // namespace PHV
 

@@ -23,6 +23,7 @@ limitations under the License.
 #include "test/gtest/helpers.h"
 #include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/phv/phv_spec.h"
 #include "bf-p4c/phv/trivial_alloc.h"
 #include "bf-p4c/test/gtest/tofino_gtest_utils.h"
 
@@ -100,6 +101,8 @@ TYPED_TEST_CASE(TofinoPHVTrivialAllocators, TrivialAllocators);
 // produce the expected results. (And, implicitly, that they both produce the
 // *same* results.)
 TYPED_TEST(TofinoPHVTrivialAllocators, AutomaticAllocation) {
+    const auto& phvSpec = Device::phvSpec();
+
     auto testcase = SharedPhvTestCases::trivialAlloc();
     ASSERT_TRUE(testcase);
 
@@ -125,9 +128,10 @@ TYPED_TEST(TofinoPHVTrivialAllocators, AutomaticAllocation) {
         std::map<SliceId, PHV::Container> containers;
 
         // Check that the provided container can be allocated to this thread.
-        auto okForCurrentThread = [=](PHV::Container container) {
-            return gress == INGRESS ? !Device::phvSpec().egressOnly()[container.id()]
-                                    : !Device::phvSpec().ingressOnly()[container.id()];
+        auto okForCurrentThread = [&](PHV::Container container) {
+            return gress == INGRESS
+                 ? !phvSpec.egressOnly()[phvSpec.containerToId(container)]
+                 : !phvSpec.ingressOnly()[phvSpec.containerToId(container)];
         };
 
         // A helper that checks that the given field's allocation maps the given

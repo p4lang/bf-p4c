@@ -16,16 +16,53 @@ limitations under the License.
 
 #include "bf-p4c/phv/phv.h"
 
-#include <array>
 #include <cstring>
 #include <iostream>
 #include <sstream>
 
-#include "lib/bitvec.h"
 #include "lib/exceptions.h"
 #include "lib/cstring.h"
+#include "ir/ir.h"
+#include "ir/json_loader.h"
 
 namespace PHV {
+
+Type::Type(Type::TypeEnum te) {
+    switch (te) {
+        case Type::B:  kind_ = Kind::normal;   size_ = Size::b8;  break;
+        case Type::H:  kind_ = Kind::normal;   size_ = Size::b16; break;
+        case Type::W:  kind_ = Kind::normal;   size_ = Size::b32; break;
+        case Type::TB: kind_ = Kind::tagalong; size_ = Size::b8;  break;
+        case Type::TH: kind_ = Kind::tagalong; size_ = Size::b16; break;
+        case Type::TW: kind_ = Kind::tagalong; size_ = Size::b32; break;
+        default: BUG("Unknown PHV type"); }
+}
+
+Type::Type(const char* name) {
+    const char* n = name;
+
+    switch (*n) {
+        case 'T': kind_ = Kind::tagalong; n++; break;
+        default:  kind_ = Kind::normal; }
+
+    switch (*n++) {
+        case 'B': size_ = Size::b8;  break;
+        case 'H': size_ = Size::b16; break;
+        case 'W': size_ = Size::b32; break;
+        default: BUG("Invalid PHV type '%s'", name); }
+
+    if (*n)
+        BUG("Invalid PHV type '%s'", name);
+}
+
+unsigned Type::log2sz() const {  // TODO(zma) get rid of this function
+    switch (size_) {
+       case Size::b8:   return 0;
+       case Size::b16:  return 1;
+       case Size::b32:  return 2;
+       default: BUG("Called log2sz() on an invalid container");
+    }
+}
 
 Container::Container(const char *name) {
     const char *n = name + strcspn(name, "0123456789");
@@ -44,19 +81,40 @@ cstring Container::toString() const {
     return tmp.str();
 }
 
-/* static */ cstring Container::groupToString(const bitvec& group) {
-    bool first = true;
-    std::stringstream groupAsString;
-    for (auto member : group) {
-        if (!first) groupAsString << ", ";
-        first = false;
-        groupAsString << fromId(member);
+/* static */ Container Container::fromJSON(JSONLoader& json) {
+    if (auto* v = json.json->to<JsonString>())
+        return Container(v->c_str());
+    BUG("Couldn't decode JSON value to container");
+    return Container();
+}
+
+std::ostream& operator<<(std::ostream& out, const PHV::Kind k) {
+    switch (k) {
+        case PHV::Kind::normal:   return out << "";
+        case PHV::Kind::tagalong: return out << "T";
+        default:    BUG("Unknown PHV container kind");
     }
-    return cstring(groupAsString);
+}
+
+std::ostream& operator<<(std::ostream& out, const PHV::Size sz) {
+    switch (sz) {
+        case PHV::Size::b8:  return out << "B";
+        case PHV::Size::b16: return out << "H";
+        case PHV::Size::b32: return out << "W";
+        default:    BUG("Unknown PHV container size");
+    }
+}
+
+std::ostream& operator<<(std::ostream& out, PHV::Type t) {
+    return out << t.kind() << t.size();
 }
 
 std::ostream& operator<<(std::ostream& out, const PHV::Container c) {
     return out << c.type() << c.index();
+}
+
+JSONGenerator& operator<<(JSONGenerator& out, const PHV::Container c) {
+    return out << c.toString();
 }
 
 std::ostream& operator<<(std::ostream& out, ordered_set<const PHV::Container *>& c_set) {

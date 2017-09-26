@@ -21,6 +21,7 @@ limitations under the License.
 
 #include "lib/cstring.h"
 #include "ir/ir.h"
+#include "bf-p4c/device.h"
 #include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/validate_allocation.h"
@@ -37,13 +38,15 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
     BUG_CHECK(phv.alloc_done(),
               "Calling ValidateAllocation without performing PHV allocation");
 
+    const auto& phvSpec = Device::phvSpec();
+
     // A mapping from PHV containers to the field slices that they contain.
     using Slice = PhvInfo::Field::alloc_slice;
     std::map<PHV::Container, std::vector<Slice>> allocations;
 
     // The set of reserved container ids for each thread.
     bitvec threadAssignments[2] = {
-        Device::phvSpec().ingressOnly(), Device::phvSpec().egressOnly()
+        phvSpec.ingressOnly(), phvSpec.egressOnly()
     };
 
     // Collect information about which fields are referenced in the program.
@@ -81,13 +84,14 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             // middle, and then rotate it into place when needed). However,
             // until we make the PHV allocator more sophisticated, this is
             // probably just a bug.
-            ERROR_CHECK(!assignedContainers[slice.container.id()],
+            ERROR_CHECK(!assignedContainers[phvSpec.containerToId(slice.container)],
                         "Multiple slices in the same container are allocated "
                         "to field %1%", cstring::to_cstring(field));
 
-            assignedContainers[slice.container.id()] = true;
+            assignedContainers[phvSpec.containerToId(slice.container)] = true;
             allocations[slice.container].emplace_back(slice);
-            threadAssignments[field.gress] |= slice.container.group();
+            threadAssignments[field.gress] |=
+                phvSpec.deparserGroup(phvSpec.containerToId(slice.container));
 
             // Verify that the field doesn't contain any overlapping slices.
             // (Note that this is checking overlapping with respect to the
@@ -102,9 +106,9 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
 
         // Verify that we didn't overflow the PHV space which is actually
         // available on the hardware.
-        for (auto id : assignedContainers - Device::phvSpec().physicalContainers())
+        for (auto id : assignedContainers - phvSpec.physicalContainers())
             ERROR_WARN_(false, "Allocated overflow (non-physical) container %1% to field %2%",
-                        PHV::Container::fromId(id), cstring::to_cstring(field));
+                        phvSpec.idToContainer(id), cstring::to_cstring(field));
 
         // Verify that all bits in the field are allocated.
         // XXX(seth): Long term it would be ideal to only allocate the bits we
@@ -117,7 +121,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
 
     // Check that no container is assigned to both threads.
     for (auto id : threadAssignments[INGRESS] & threadAssignments[EGRESS]) {
-        auto container = PHV::Container::fromId(id);
+        auto container = phvSpec.idToContainer(id);
 
         std::set<const PhvInfo::Field*> fields[2];
         if (allocations.count(container))
@@ -126,11 +130,14 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
 
         std::stringstream message;
         for (gress_t gress : { INGRESS, EGRESS }) {
-            if (!fields[gress].empty())
+            if (!fields[gress].empty()) {
                 message << gress << " fields: " << fields[gress] << ". ";
-            else
-                message << "Part of container group assigned to " << gress << ": "
-                        << PHV::Container::groupToString(container.group()) << ". ";
+            } else {
+                auto group = phvSpec.deparserGroup(phvSpec.containerToId(container));
+                message << "Part of container deparser group assigned to "
+                        << gress << ": " << phvSpec.containerSetToString(group)
+                        << ". ";
+            }
         }
 
         ::error("Container %1% is assigned to both INGRESS and EGRESS. %2%",

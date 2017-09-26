@@ -1,108 +1,74 @@
+/*
+Copyright 2013-present Barefoot Networks, Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 #ifndef EXTENSIONS_BF_P4C_PHV_PHV_SPEC_H_
 #define EXTENSIONS_BF_P4C_PHV_PHV_SPEC_H_
 
-#include "lib/bitvec.h"
+#include <vector>
+#include "bf-p4c/phv/phv.h"
 #include "lib/ordered_map.h"
 
-namespace PHV {
-
-enum class Kind : unsigned short {  // all possible PHV kinds in BFN devices
-    normal   = 0,
-    tagalong = 1
-};
-
-enum class Size : unsigned short {  // all possible PHV sizes in BFN devices
-    null = 0,
-    b8   = 8,
-    b16  = 16,
-    b32  = 32
-};
-
-class Type {
-    Kind        kind_;
-    Size        size_;
-
- public:
-    enum TypeEnum {  // Enumeration of all possible types in BFN devices:
-        B,           //     8-bit  normal
-        H,           //     16-bit normal
-        W,           //     32-bit normal
-        TB,          //     8-bit  tagalong
-        TH,          //     16-bit tagalong
-        TW           //     32-bit tagalong
-    };
-
-    Type() : kind_(Kind::normal), size_(Size::null) {}
-    Type(Kind k, Size s) : kind_(k), size_(s) {}
-    Type(const Type& t) : kind_(t.kind_), size_(t.size_) {}
-
-    explicit Type(unsigned typeId);
-
-    Type(TypeEnum te);       // NOLINT(runtime/explicit)
-    Type(const char* name);  // NOLINT(runtime/explicit)
-
-    unsigned id() const;
-
-    unsigned log2sz() const {  // TODO(zma) get rid of this function
-         switch (size_) {
-             case Size::b8:   return 0;
-             case Size::b16:  return 1;
-             case Size::b32:  return 2;
-             case Size::null: return 3;
-             default: BUG("Called log2sz() on an invalid container"); }
-     }
-
-    Kind kind() const { return kind_; }
-    Size size() const { return size_; }
-
-    Type& operator=(const Type& t) {
-        kind_ = t.kind_;
-        size_ = t.size_;
-        return *this; }
-
-    bool operator==(Type c) const {
-        return kind_ == c.kind_ && size_ == c.size_; }
-
-    bool operator<(Type c) const {
-        if (kind_ < c.kind_) return true;
-        if (c.kind_ < kind_) return false;
-        if (size_ < c.size_) return true;
-        if (size_ > c.size_) return false;
-        return false; }
-
-    bool valid() const { return size_ != Size::null; }
-};
-
-std::ostream &operator<<(std::ostream &out, const Type& t);
-
-}  // namespace PHV
+class cstring;
 
 class PhvSpec {
-    friend class PHV::Type;
-
  protected:
-    static ordered_map<PHV::Type, unsigned> typeIdMap;
-    static ordered_map<unsigned, PHV::Type> idTypeMap;
+    std::vector<PHV::Type> definedTypes;
+    ordered_map<PHV::Type, unsigned> typeIdMap;
 
-    static void addType(PHV::Type t);
+    /// Add a PHV container type to the set of types which are available on this
+    /// device. This should only be called inside the constructor of subclasses
+    /// of PhvSpec; after a PhvSpec instance is constructed, its list of
+    /// container types is considered immutable.
+    void addType(PHV::Type t);
 
  public:
-    static unsigned numTypes() { return typeIdMap.size(); }
+    /// @return the PHV container types available on this device.
+    const std::vector<PHV::Type>& containerTypes() const;
 
-    virtual void defineTypes() const = 0;
+    /// @return the number of PHV container types available on this device.
+    /// Behaves the same as `containerTypes().size()`.
+    unsigned numContainerTypes() const;
 
-    /**
-     * Generates a bitvec containing a range of containers. This kind of bitvec
-     * can be used to implement efficient set operations on large numbers of
-     * containers.
-     *
-     * To generate the range [B10, B16), use `range(Kind::B, 10, 6)`.
-     *
-     * @param kind The type of container.
-     * @param start The index of first container in the range.
-     * @param length The number of containers in the range. May be zero.
-     */
-    virtual bitvec group(unsigned id) const = 0;
+    /// @return the PHV container type corresponding to the given numeric id.
+    /// Different devices may map the same id to different types. Behaves the
+    /// as `containerTypes()[id]`.
+    PHV::Type idToContainerType(unsigned id) const;
+
+    /// @return a numeric id that uniquely specifies the given PHV container
+    /// type on this device. Different devices may map the same type to
+    /// different ids. This behaves the same as using `std::find_if` to find the
+    /// index of the given type in `containerTypes()`.
+    unsigned containerTypeToId(PHV::Type type) const;
+
+    /// @return the PHV container corresponding to the given numeric id on this
+    /// device. Different devices have different PHV containers, so ids are not
+    /// consistent between devices.
+    PHV::Container idToContainer(unsigned id) const;
+
+    /// @return a numeric id that uniquely specifies the given PHV container on
+    /// this device. Different devices have different PHV containers, so ids are
+    /// not consistent between devices.
+    unsigned containerToId(PHV::Container container) const;
+
+    /// @return a string representation of the provided @set of containers.
+    cstring containerSetToString(const bitvec& set) const;
+
+    /// @return the ids of every container in the same deparser group as the
+    /// provided container.
+    virtual bitvec deparserGroup(unsigned id) const = 0;
 
     /**
      * Generates a bitvec containing a range of containers. This kind of bitvec
@@ -138,13 +104,9 @@ class PhvSpec {
 
 class TofinoPhvSpec : public PhvSpec {
  public:
-    TofinoPhvSpec() {
-        defineTypes();
-    }
+    TofinoPhvSpec();
 
-    void defineTypes() const override;
-
-    bitvec group(unsigned id) const override;
+    bitvec deparserGroup(unsigned id) const override;
 
     bitvec range(PHV::Type t, unsigned start, unsigned length) const override;
 
@@ -162,13 +124,9 @@ class TofinoPhvSpec : public PhvSpec {
 #if HAVE_JBAY
 class JBayPhvSpec : public PhvSpec {
  public:
-    JBayPhvSpec() {
-        defineTypes();
-    }
+    JBayPhvSpec();
 
-    void defineTypes() const override;
-
-    bitvec group(unsigned id) const override;
+    bitvec deparserGroup(unsigned id) const override;
 
     bitvec range(PHV::Type t, unsigned start, unsigned length) const override;
 
