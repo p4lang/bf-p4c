@@ -359,7 +359,7 @@ function test_p4() {
     if $brig && ! $diff; then
         BFAS_OPTS="-vvvvl"
     fi
-    if $ok && run $BFAS -o brig $BFAS_OPTS brig/bfas.config.log $tfafile >brig/bfas.log 2>&1; then
+    if $ok && run $BFAS -g -o brig $BFAS_OPTS brig/bfas.config.log $tfafile >brig/bfas.log 2>&1; then
         # Validate context json output from assembler
         $SCHEMA > schema.json
         python $SCHEMA_VAL brig/context.json schema.json > context_json_schema_validate.log
@@ -452,7 +452,7 @@ function test_tfa() {
     #cd $name.out
     ok=true
     rv=0
-    if not run $BFAS -Mvvvvl $name.out/bfas.config.log $name.tfa >$name.out/bfas.log 2>&1; then
+    if not run $BFAS -g -Mvvvvl $name.out/bfas.config.log $name.tfa >$name.out/bfas.log 2>&1; then
         msg="$msg bfas failed"
         fail_type="bfas"
         if [ $count -eq 1 ] || [ "$expect_fail" != "bfas" ]; then
@@ -498,7 +498,7 @@ function test_stf() {
     fi
     #if [[ -r `pwd`/$name.out/$name.tfa && ( ! -r `pwd`/$name.out/$name.out/tofino-bin || $fast = false ) ]]; then
     #    mkdir -p $name.out
-    #    if not run $BFAS -Mvvvvl $name.out/bfas.config.log $name.out/$name.tfa >$name.out/bfas.log 2>&1; then
+    #    if not run $BFAS -g -Mvvvvl $name.out/bfas.config.log $name.out/$name.tfa >$name.out/bfas.log 2>&1; then
     #        msg="$msg bfas failed"
     #        flock $FAILLOG -c "echo '$1:' >>$FAILLOG; sed -e 's/^/ /' -e '/\n/!a\' $name.out/bfas.log >>$FAILLOG"
     #        rv=1

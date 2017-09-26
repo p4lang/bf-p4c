@@ -155,6 +155,14 @@ int main(int ac, char **av) {
     extern void register_exit_signals();
     register_exit_signals();
     program_name = av[0];
+    std::vector<char *> arguments(av, av+ac);
+    if (auto opt = getenv("BFAS_OPTIONS")) {
+        int add_at = 1;
+        while (auto p = strsep(&opt, " \t\r\n")) {
+            if (!*p) continue;
+            arguments.insert(arguments.begin() + add_at++, p); }
+        av = &arguments[0];
+        ac = arguments.size(); }
     for (int i = 1; i < ac; i++) {
         if (av[i][0] == '-' && av[i][1] == 0) {
             asm_parse_file("<stdin>", stdin);
