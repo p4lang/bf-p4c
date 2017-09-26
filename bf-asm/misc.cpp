@@ -40,3 +40,17 @@ std::string get_filename(const char* s) {
     fname = fname.substr(0,fname.find_last_of("."));
     return fname;
 }
+
+/* Remove augmented names - These dont exist in user program and serve to say 
+ * something special about a name to the assembler. The right way to handle this 
+ * is to attach attributes to names. We should do that if this list gets longer
+ */
+bool remove_aug_names(std::string  &name) {
+    std::string dollarValid = ".$valid";
+    std::size_t found = name.find(dollarValid);
+    if (found != std::string::npos) {
+        name.erase(found, dollarValid.length());
+        return true;
+    }
+    return false;
+}

@@ -55,4 +55,7 @@ bool check_zero_string(const std::string& s);
 
 // Get filename
 std::string get_filename(const char *s);
+
+bool remove_aug_names(std::string& name);
+
 #endif /* _misc_h_ */

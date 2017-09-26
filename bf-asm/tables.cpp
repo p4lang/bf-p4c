@@ -1202,8 +1202,11 @@ void MatchTable::pass1(int type) {
         for (auto &p : p4_params_list) {
             if (!p.bit_width_full)
                 p.bit_width_full = p.bit_width;
-            if (p.name.find(".$valid") != std::string::npos) {
-                p.is_valid = true;  } } }
+            bool found = remove_aug_names(p.name);
+            if (found)
+                p.is_valid = true;
+            } 
+    }
 }
 
 template<> void MatchTable::setup_next_table_map(Target::Tofino::mau_regs &regs, Table *tbl) {

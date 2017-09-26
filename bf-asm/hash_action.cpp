@@ -200,6 +200,7 @@ void HashActionTable::gen_tbl_cfg(json::vector &out) {
                             if (auto ref = input_xbar->get_group_bit(InputXbar::Group(false, hash.first/2), bit + 64*(hash.first&1))) {
                                 std::string field_name = ref.name();
                                 field["field_bit"] = remove_name_tail_range(field_name) + ref.lobit();
+                                remove_aug_names(field_name);
                                 field["field_name"] = field_name; }
                             if (!hash_bit_added)
                                 bits_to_xor.push_back(std::move(field));
