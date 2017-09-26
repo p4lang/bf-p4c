@@ -217,6 +217,7 @@ void ActionTable::pass1() {
     action_bus->pass1(this);
     if (actions) actions->pass1(this);
 }
+
 void ActionTable::pass2() {
     LOG1("### Action table " << name() << " pass2");
     if (match_tables.empty())

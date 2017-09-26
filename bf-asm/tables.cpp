@@ -1205,7 +1205,7 @@ void MatchTable::pass1(int type) {
             bool found = remove_aug_names(p.name);
             if (found)
                 p.is_valid = true;
-            } 
+            }
     }
 }
 
@@ -1638,7 +1638,7 @@ void AttachedTable::pass1() {
 }
 
 // ---------------
-// Meter ALU | Row   
+// Meter ALU | Row
 // Used      |
 // ---------------
 // 0         | 1
@@ -1899,11 +1899,19 @@ void Table::add_zero_padding_fields(Table::Format *format, Table::Actions::Actio
     // For an action with no format pad zeros per 64 bit entry
     unsigned pad_count = 0;
     if (format->log2size == 0) {
-        format->log2size = 6;
-        format->size = 64;
-        // Add a flag type to specify padding?
-        Format::Field f(format->size, 0, Format::Field::ZERO);
-        format->add_field(f, "--padding_0_63--");
+        if (auto at = this->to<ActionTable>()) {
+            format->size = at->get_size();
+            format->log2size = at->get_log2size();
+            // For wide action formats, entries per word is 1, so plug in a
+            // single pad field of 256 bits
+            unsigned action_entries_per_word = std::max(1U, 128U/format->size);
+            // Add a flag type to specify padding?
+            Format::Field f(format->size, 0, Format::Field::ZERO);
+            for (int i = 0; i < action_entries_per_word; i++)
+                format->add_field(f, "--padding--");
+        } else {
+            error(lineno,
+                "Adding zero padding to a non action table which has no action entries in format"); }
         return; }
     decltype(act->reverse_alias()) alias;
     if (act) alias = act->reverse_alias();
