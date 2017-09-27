@@ -1,3 +1,20 @@
+/*
+Copyright (c) 2015-2017 Barefoot Networks, Inc.
+
+All Rights Reserved.
+
+NOTICE: All information contained herein is, and remains the property of
+Barefoot Networks, Inc. and its suppliers, if any. The intellectual and
+technical concepts contained herein are proprietary to Barefoot Networks, Inc.
+and its suppliers and may be covered by U.S. and Foreign Patents, patents in
+process, and are protected by trade secret or copyright law. Dissemination of
+this information or reproduction of this material is strictly forbidden unless
+prior written permission is obtained from Barefoot Networks, Inc.
+
+No warranty, explicit or implicit is provided, unless granted under a written
+agreement with Barefoot Networks, Inc.
+*/
+
 /********************************************************************************
  *                      Intrinsic Metadata Definition for Tofino                *
  *******************************************************************************/
@@ -39,7 +56,7 @@ header_type ingress_intrinsic_metadata_t {
         ingress_mac_tstamp : 48;        // ingress IEEE 1588 timestamp (in nsec)
                                         // taken at the ingress MAC.
     }
-} 
+}
 
 @pragma dont_trim
 @pragma not_deparsed ingress
@@ -66,7 +83,7 @@ header_type generator_metadata_t {
 header generator_metadata_t ig_pg_md;
 
 
-/* Produced by Ingress Parser-Auxiliary */ 
+/* Produced by Ingress Parser-Auxiliary */
 header_type ingress_intrinsic_metadata_from_parser_aux_t {
     fields {
         ingress_global_tstamp : 48;     // global timestamp (ns) taken upon
@@ -94,7 +111,7 @@ header_type ingress_intrinsic_metadata_for_tm_t {
 
         // The ingress physical port id is passed to the TM directly from
         // ig_intr_md.ingress_port
-        
+
         _pad1 : 7;
         ucast_egress_port : 9;          // egress port for unicast packets. must
                                         // be presented to TM for unicast.
@@ -249,7 +266,7 @@ header_type egress_intrinsic_metadata_t {
     fields {
 
         _pad0 : 7;
-        egress_port : 9;                // egress port id. 
+        egress_port : 9;                // egress port id.
                                         // this field is passed to the deparser
 
         _pad1: 5;
@@ -349,7 +366,7 @@ header egress_intrinsic_metadata_from_parser_aux_t eg_intr_md_from_parser_aux;
 
 
 /* Consumed by Egress Deparser */
-// egress_port and egress_cos are passed to the deparser directly from the 
+// egress_port and egress_cos are passed to the deparser directly from the
 // eg_intr_md header instance. The following commented out header is a
 // stand-alone definition of this data:
 /*

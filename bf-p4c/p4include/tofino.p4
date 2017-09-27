@@ -1,3 +1,20 @@
+/*
+Copyright (c) 2015-2017 Barefoot Networks, Inc.
+
+All Rights Reserved.
+
+NOTICE: All information contained herein is, and remains the property of
+Barefoot Networks, Inc. and its suppliers, if any. The intellectual and
+technical concepts contained herein are proprietary to Barefoot Networks, Inc.
+and its suppliers and may be covered by U.S. and Foreign Patents, patents in
+process, and are protected by trade secret or copyright law. Dissemination of
+this information or reproduction of this material is strictly forbidden unless
+prior written permission is obtained from Barefoot Networks, Inc.
+
+No warranty, explicit or implicit is provided, unless granted under a written
+agreement with Barefoot Networks, Inc.
+*/
+
 #ifndef TOFINO_P4_
 #define TOFINO_P4_
 
@@ -280,7 +297,7 @@ struct egress_intrinsic_metadata_for_output_port_t {
 // -----------------------------------------------------------------------------
 // PACKET GENERATION
 // -----------------------------------------------------------------------------
-// Packet generator supports up to 8 applications and a total of 16KB packet 
+// Packet generator supports up to 8 applications and a total of 16KB packet
 // payload. Each application is associated with one of the four trigger types:
 // - One-time timer
 // - Periodic timer
@@ -294,7 +311,7 @@ struct egress_intrinsic_metadata_for_output_port_t {
 header pktgen_timer_header_t {
     bit<3> _pad1;
     bit<2> pipe_id;     // Pipe id
-    bit<3> app_id;      // Application id 
+    bit<3> app_id;      // Application id
     bit<8> _pad2;
     bit<16> batch_id;   // Start at 0 and increment to a programmed number
     bit<16> packet_id;  // Start at 0 and increment to a programmed number
@@ -313,7 +330,7 @@ header pktgen_recirc_header_t {
     bit<3> _pad1;
     bit<2> pipe_id;     // Pipe id
     bit<3> app_id;      // Application id
-    bit<24> key;        // key from the recirculated packet 
+    bit<24> key;        // key from the recirculated packet
     bit<16> packet_id;  // Start at 0 and increment to a programmed number
 }
 
