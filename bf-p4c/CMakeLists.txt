@@ -110,12 +110,10 @@ add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_COMMON_SRCS} ${T
 build_unified(TOFINO_BACKEND_COMMON_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (TOFINO_BACKEND_CONTROL_PLANE_SRCS
-  control-plane/synthesize_valid_field.cpp
   control-plane/tofino_p4runtime.cpp
   )
 
 set (TOFINO_BACKEND_CONTROL_PLANE_HDRS
-  control-plane/synthesize_valid_field.h
   control-plane/tofino_p4runtime.h
   )
 

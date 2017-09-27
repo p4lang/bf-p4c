@@ -9,10 +9,9 @@ class BFN_Options;
 
 namespace BFN {
 
-/// A wrapper for P4::serializeP4Runtime() that applies Tofino-specific
-/// transformations to the program before serialization.
-void serializeP4Runtime(const IR::P4Program* program,
-                        const BFN_Options& options);
+/// A convenience wrapper for P4::generateP4Runtime().
+void generateP4Runtime(const IR::P4Program* program,
+                       const BFN_Options& options);
 
 }  // namespace BFN
 
