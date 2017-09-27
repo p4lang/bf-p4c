@@ -170,6 +170,12 @@ Cluster_Slicing::cluster_slice(
                 sliceable = false;
                 break;
             }
+            // do not slice deparsed fields as slices need contiguity
+            // need to place all bits contiguously so they can be (de)parsed
+            if (f->deparsed()) {
+                sliceable = false;
+                break;
+            }
             // "move"-based ops only -- don't care for T_PHV fields
             for (auto &op : f->operations()) {
                 // element 0 in tuple is 'is_move_op'

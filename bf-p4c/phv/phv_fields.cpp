@@ -519,6 +519,12 @@ PhvInfo::Field::phv_alignment(bool get_ccgf_alignment) const {
     return boost::none;
 }
 
+boost::optional<int> PhvInfo::Field::phv_alignment_network() const {
+    if (alignment)
+        return alignment->network;
+    return boost::none;
+}
+
 void
 PhvInfo::Field::set_ccgf_phv_use_width(int min_ceil) {
     // compute ccgf width, need PHV container(s) of this width
@@ -733,6 +739,47 @@ PhvInfo::Field::field_overlay(Field *overlay, int phv_number) {
     assert(overlay);
     overlay->overlay_substratum(overlay_substratum_i? overlay_substratum_i: this);
     overlay->overlay_substratum()->field_overlay_map(overlay, phv_number);
+}
+
+bool PhvInfo::Field::is_overlay(const Field *field) const {
+    // return true if field and this are overlays
+    if (!field) {
+        return false;
+    }
+    if (overlay_substratum_i == field->overlay_substratum()) {
+        return true;
+    }
+    for (auto &entry : field->field_overlay_map()) {
+        if (entry.second) {
+            for (Field *f : *(entry.second)) {
+                if (f->id == id) {
+                    return true;
+                }
+                for (Field *m : f->ccgf_fields()) {
+                    if (m->is_overlay(this)) {
+                        return true;
+                    }
+                }  // for
+            }  // for
+        }
+    }
+    for (auto &entry : field_overlay_map_i) {
+        if (entry.second) {
+            for (auto &f : *(entry.second)) {
+                if (f->id == field->id) {
+                    return true;
+                }
+                if (f->ccgf_fields().size()) {
+                    for (auto &m : f->ccgf_fields()) {
+                        if (m->is_overlay(field)) {
+                            return true;
+                        }
+                    }  // for
+                }
+            }  // for
+        }
+    }
+    return false;
 }
 
 void PhvInfo::Field::updateAlignment(const FieldAlignment& newAlignment) {

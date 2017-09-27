@@ -389,6 +389,7 @@ class PhvInfo {
         boost::optional<int> phv_alignment(bool get_ccgf_alignment = true) const;
                                                               // alignment in phv container
                                                               // ccgf as a whole vs ccgf member
+        boost::optional<int> phv_alignment_network() const;   // alignment in network order
         //
         // field slices
         //
@@ -413,6 +414,7 @@ class PhvInfo {
         ordered_set<Field *> *field_overlay_map(int r);
         void field_overlays(std::list<Field *>& fields_list);
         void field_overlay(Field *overlay, int phv_number);
+        bool is_overlay(const Field *field) const;
         //
         // friends of phv_analysis interface
         //

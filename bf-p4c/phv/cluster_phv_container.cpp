@@ -227,6 +227,27 @@ PHV_Container::taint_ccgf(
                     // width_i >= member->size)
                     int pad = width - member->size;
                     start -= pad;               // taint starts from RHS
+                    const int align_start =
+                        member->phv_alignment(false /*ccgf member alignment*/).get_value_or(start);
+                    // detect if the member cannot guarantee physical contiguity
+                    // note there is a check for this case in cluster.cpp during CCGF formation
+                    // but no-pack constraints can be introduced subsequently based on analysis of
+                    // MAU operations
+                    if (align_start % PHV_Container::PHV_Word::b8
+                        != start % PHV_Container::PHV_Word::b8) {
+                        //
+                        LOG3("*****cluster_phv_container.cpp:*****....."
+                            << "Physical Contiguity violated: "
+                            << "CCGF member expected alignment 'start'="
+                            << start
+                            << " does not match member's parde alignment 'align_start'="
+                            << align_start
+                            << std::endl
+                            << "member = "
+                            << member);
+                        ::error("CCGF alignment formation does not allow physical contiguity.");
+                        start += align_start;
+                    }
                 }
             }
         }
@@ -253,7 +274,15 @@ PHV_Container::taint_ccgf(
         // recursive taint call, do not recursively process ccgf
         taint(start, use_width, member, member_bit_lo, pass, false /* process_ccgf */);
         processed_width += constraint_no_cohabit(member)? width_i: use_width;
-        if (start <= 0) {
+        BUG_CHECK(
+            processed_width <= width_i,
+            "*****PHV_Container::taint_ccgf()*****%s, field=%d:%s, processed_width=%s > width_i=%d",
+            phv_number_string(),
+            field->id,
+            field->name,
+            processed_width,
+            width_i);
+        if (start <= 0 || processed_width == width_i) {
             break;
         }
     }  // for ccgf members
@@ -443,11 +472,13 @@ PHV_Container::single_field_overlay(
         if (f->ccgf_fields().size()) {
             overlay_ccgf_field(f, start, width, field_bit_lo, pass);
         } else {
+            const int align_start
+                = f->phv_alignment().get_value_or(start);
             fields_in_container(
                 f,
                 new Container_Content(
                     this,
-                    start,
+                    align_start,
                     width,
                     f,
                     field_bit_lo,
@@ -642,18 +673,9 @@ PHV_Container::taint_bits(
         if (constraint_no_cohabit(field)) {
             //
             // padding char for unoccupied but un-assignable bits
-            // occupation may start at LSb or MSb
             //
-            if (bits_i[0] != '0') {
-                // LSb occupied
-                for (auto i = width_i - avail_bits_i; i < width_i; i++) {
-                    bits_i[i] = '-';
-                }
-            } else {
-                // MSb occupied
-                for (auto i=0; i < avail_bits_i; i++) {
-                    bits_i[i] = '-';
-                }
+            for (int i=0; i < width_i; i++) {
+                if (bits_i[i] == '0') bits_i[i] = '-';
             }
             avail_bits_i = 0;
         }
@@ -817,7 +839,8 @@ PHV_Container::holes(
     }
 }  // holes vector bits
 
-void PHV_Container::holes(std::list<std::pair<int, int>>& holes_list) const {
+void
+PHV_Container::holes(std::list<std::pair<int, int>>& holes_list) const {
     //
     // identify holes in container
     //
@@ -975,7 +998,11 @@ bool PHV_Container::sanity_check_deparsed_container_violation(
             deparsed_header = cf;
         }
     }  // for
-    return deparsed_header && non_deparsed_field;
+    // ok if interference graph reduction overlays deparsed_header with non_deparsed_field
+    if (deparsed_header && non_deparsed_field) {
+        return !deparsed_header->is_overlay(non_deparsed_field);
+    }
+    return false;
 }
 
 void PHV_Container::sanity_check_container(const std::string& msg, bool check_deparsed) {
@@ -997,6 +1024,7 @@ void PHV_Container::sanity_check_container(const std::string& msg, bool check_de
             << this
             << std::endl
             << "deparsed_header = " << deparsed_header
+            << std::endl
             << "non_deparsed_field = " << non_deparsed_field);
             BUG("cluster_phv_container.cpp:*****non_deparsed_field w/ deparsed header*****");
         }

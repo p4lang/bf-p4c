@@ -280,6 +280,15 @@ class PHV_MAU_Group_Assignments : public Visitor {
         PHV_Container::Ingress_Egress,
         PHV_Container::Container_Content *,
         std::list<PHV_MAU_Group *>&);    // ensure parser fields in containers with no holes
+    size_t max_empty_containers(
+        PHV_Container::Ingress_Egress gress,
+        int width,
+        std::list<PHV_MAU_Group *> phv_groups_to_be_filled);
+    PHV_MAU_Group* upsize_mau_group(
+        PHV_Container::Ingress_Egress gress,
+        int width,
+        size_t required_containers,
+        std::list<PHV_MAU_Group *> phv_groups_to_be_filled);
     PHV_MAU_Group* downsize_mau_group(
         PHV_Container::Ingress_Egress gress,
         int width,

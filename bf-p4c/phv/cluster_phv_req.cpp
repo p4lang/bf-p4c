@@ -519,12 +519,6 @@ Cluster_PHV::num_containers(
         //
         int field_width = pfield->phv_use_width();
         num_containers += field_width / width + (field_width % width? 1 : 0);
-        // if any member of ccgf is no_pack constrained, need extra container
-        for (auto &m : pfield->ccgf_fields()) {
-            if (PHV_Container::constraint_no_cohabit(m)) {
-                num_containers++;
-            }
-        }   // for
     }
     if (num_containers > PHV_MAU_Group_Assignments::Constants::phv_mau_group_size) {
         LOG1(

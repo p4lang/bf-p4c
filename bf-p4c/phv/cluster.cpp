@@ -42,8 +42,33 @@ bool Cluster::MakeCCGFs::preorder(const IR::HeaderRef *hr) {
                     group_accumulator = field;
                     accumulator_bits = 0;
                 }
+                // check if current field requires alignment in network order
+                // that accumulator_bits will not satisfy
+                const int align_start =
+                    field->phv_alignment_network().get_value_or(accumulator_bits);
+                if (accumulator_bits) {
+                    if (accumulator_bits % PHV_Container::PHV_Word::b8 != align_start) {
+                        ccgf[group_accumulator] = accumulator_bits;
+                        LOG4("+++++PHV_container_contiguous_group.....parde_alignment cutoff....."
+                            << accumulator_bits);
+                        LOG4(group_accumulator);
+                        // TODO:
+                        // if the member cannot guarantee physical contiguity as required by parser
+                        // error message to bail out
+                        // metadata, especially bridge metadata need not satisfy contiguity
+                        // the parser can always extract more than once
+                        if (!group_accumulator->metadata)
+                            ::error("CCGF cannot be formed with parde_alignment constraints.");
+                        group_accumulator = field;  // begin new ccgf accumulation
+                        accumulator_bits = 0;
+                    }
+                }
                 field->set_ccgf(group_accumulator);
                 group_accumulator->ccgf_fields().push_back(field);
+                if (accumulator_bits == 0) {
+                    // first member of ccgf can have a parde-alignment constraint
+                    accumulator_bits += align_start;
+                }
                 accumulator_bits += field->size;
                 if (PHV_Container::exact_container(accumulator_bits)) {
                     ccgf[group_accumulator] = accumulator_bits;
@@ -198,7 +223,6 @@ void Cluster::MakeClusters::end_apply() {
                     for (auto &m : c_e->ccgf_fields())
                         if (m != c_e && s1.count(m))
                             self.dst_map_i[&f]->erase(m); } } }
-
     LOG4(".....After remove ccgf member duplication.....");
     LOG4(self.dst_map_i);
 
@@ -249,7 +273,6 @@ void Cluster::MakeClusters::end_apply() {
     LOG4(self.dst_map_i);
 
     deparser_ccgf_phv();
-
     // compute all fields that are not used through the MAU pipeline
     // potential candidates for T-PHV allocation
     compute_fields_no_use_mau();
@@ -453,7 +476,6 @@ void Cluster::MakeClusters::compute_fields_no_use_mau() {
         // need PHV container(s) space for ccgf_width
         if (field.is_ccgf())
             field.set_ccgf_phv_use_width();
-
         // set deparsed for ccgf owner
         // if any member used in deparser, ccgf must be in exact containers
         if (field.ccgf()) {
@@ -678,7 +700,8 @@ void Cluster::MakeClusters::insert_cluster(PhvInfo::Field *lhs, PhvInfo::Field *
                         self.dst_map_i[lhs]->insert(rhs);
                         self.dst_map_i[rhs] = self.dst_map_i[lhs];
                     }
-                } else {   // [b]-->(b,d,x)
+                } else {
+                    // [b]-->(b,d,x)
                     // [a]-->(a,u,v)U(b,d,x)
                     for (auto field : *(self.dst_map_i[rhs]))
                         if (!field->ccgf() || !is_ccgf_owner_in_cluster(lhs, field))
@@ -750,7 +773,18 @@ void Cluster::MakeClusters::sanity_check_clusters(const std::string& msg, PhvInf
             if (self.dst_map_i[rhs] != self.dst_map_i[lhs]) {
                 LOG1("*****cluster.cpp:sanity_FAIL*****"
                     << msg << ".....cluster member pointers inconsistent");
-                LOG1(lhs << "-->" << rhs);
+                LOG1(lhs);
+                LOG1("xx vs xx");
+                LOG1(rhs);
+                LOG1("-------------------");
+                LOG1(lhs);
+                LOG1("=");
+                LOG1(self.dst_map_i[lhs]);
+                LOG1("-------------------");
+                LOG1(rhs);
+                LOG1("=");
+                LOG1(self.dst_map_i[rhs]);
+                LOG1("-------------------");
             }
         }
     }

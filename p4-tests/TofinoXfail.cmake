@@ -104,7 +104,6 @@ if (NOT ENABLE_TNA)
   p4c_add_xfail_reason("tofino"
     "error: Field .* and field .* are adjacent in container .* but aren't adjacent in the deparser"
     extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
-    extensions/p4_tests/p4_14/test_config_273_bridged_and_phase0.p4
     extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
     )
 
@@ -137,6 +136,7 @@ if (NOT ENABLE_TNA)
     extensions/p4_tests/p4_14/jenkins/power/power.p4
     extensions/p4_tests/p4_14/switch_20160602/switch.p4
     extensions/p4_tests/p4_14/switch/p4src/switch.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
     )
 
   # BRIG-109
@@ -296,13 +296,18 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue447-5-bmv2.p4
   )
 
+# parde physical adjacency constraint violated by mau phv_no_pack constraint
+p4c_add_xfail_reason("tofino"
+  "CCGF alignment formation does not allow physical contiguity"
+  extensions/p4_tests/p4_14/01-FlexCounter.p4
+  extensions/p4_tests/p4_14/03-VlanProfile.p4
+  extensions/p4_tests/p4_14/19-SimpleTrill.p4
+  )
+
 # BRIG-112
 p4c_add_xfail_reason("tofino"
   "ALU ops cannot operate on slices"
-  extensions/p4_tests/p4_14/01-FlexCounter.p4
-  extensions/p4_tests/p4_14/03-VlanProfile.p4
   extensions/p4_tests/p4_14/06-MultiFieldAdd.p4
-  extensions/p4_tests/p4_14/19-SimpleTrill.p4
   extensions/p4_tests/p4_14/20-SimpleTrillTwoStep.p4
   extensions/p4_tests/p4_14/21-SimpleTrillThreeStep.p4
   extensions/p4_tests/p4_14/24-SimpleTrillThreeStep2.p4
@@ -407,6 +412,10 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/jenkins/exm_direct_1/exm_direct_1_one.p4
   extensions/p4_tests/p4_14/jenkins/basic_ipv4/basic_ipv4.p4
   extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
   extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
   )
 
@@ -822,12 +831,8 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
   extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
   extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
   extensions/p4_tests/p4_14/c4/COMPILER-590/case3179.p4
   extensions/p4_tests/p4_14/c4/COMPILER-591/case3176.p4
@@ -1016,7 +1021,6 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
   p4c_add_xfail_reason("tofino"
     "error: Expression .* is too complicated to resolve to a header field"
     extensions/p4_tests/p4_14/test_config_326_small_hash_act.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
     )
 
 #  "<_Rendezvous of RPC that terminated with (StatusCode.UNIMPLEMENTED, Resetting default entry not supported yet)>"
@@ -1267,7 +1271,6 @@ if (ENABLE_TNA)
     extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
     extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
     extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
     extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
     extensions/p4_tests/p4_14/c1/COMPILER-447/case2527.p4
     extensions/p4_tests/p4_14/c1/COMPILER-448/case2526.p4

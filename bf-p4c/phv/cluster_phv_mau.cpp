@@ -89,7 +89,6 @@ void PHV_MAU_Group::create_aligned_container_slices_per_range(
     // to consider other ranges
     // successively erase ranges().begin() & call this routine
     //
-
     /* Each container maintains a map of its free bit ranges.  For each
      * container in `container_list`, check whether the hi bit of the first
      * free range is the same.  If so, align on that hi bit.
@@ -840,32 +839,48 @@ PHV_MAU_Group_Assignments::container_no_pack(
             //
             PHV_MAU_Group *cl_g = g;
             size_t req_containers = cl->num_containers();
-            if (cl->exact_containers()
-                && cl->width() < static_cast<int>(cl_g->width())) {
-                //
-                if (auto g_scale_down = downsize_mau_group(
-                                            cl->gress(),
-                                            cl->width(),
-                                            req_containers,
-                                            phv_groups_to_be_filled)) {
-                    //
-                    cl_g = g_scale_down;
-                    LOG4("..... exact_containers ... downsizing MAU Group .....");
-                    LOG4(*cl_g);
+            if (cl->exact_containers()) {
+                if (cl->width() < static_cast<int>(cl_g->width())) {
+                    if (auto g_scale_down = downsize_mau_group(
+                                                cl->gress(),
+                                                cl->width(),
+                                                req_containers,
+                                                phv_groups_to_be_filled)) {
+                        //
+                        cl_g = g_scale_down;
+                        LOG4("..... exact_containers ... downsizing MAU Group .....");
+                        LOG4(*cl_g);
+                    } else {
+                        LOG1("*****cluster_phv_mau.cpp: sanity_WARN*****"
+                            << ".....downsize...exact_containers MATCH NOT AVAILABLE");
+                        LOG1(cl);
+                    }
                 } else {
-                    LOG1("*****cluster_phv_mau.cpp: sanity_WARN*****"
-                        << ".....exact_containers MATCH NOT AVAILABLE");
-                    LOG1(cl);
-                    // if T_PHV and exact container unavailable, later attempt T_PHV overflow => PHV
-                    if (&phv_groups_to_be_filled == &T_PHV_groups_i) {
-                        LOG1(".....deferring to TPHV overflow => PHV.....");
-                        continue;
+                    // upsize mau group if current width groups have insufficient empty containers
+                    if (req_containers >
+                        max_empty_containers(cl->gress(), cl_g->width(), phv_groups_to_be_filled)) {
+                        //
+                        if (auto g_scale_up = upsize_mau_group(
+                                                    cl->gress(),
+                                                    cl->width(),
+                                                    req_containers,
+                                                    phv_groups_to_be_filled)) {
+                            //
+                            cl_g = g_scale_up;
+                            LOG3("..... exact_containers ... upsizing MAU Group .....");
+                            LOG3(*cl_g);
+                        } else {
+                            LOG1("*****cluster_phv_mau.cpp: sanity_WARN*****"
+                                << ".....upsize...exact_containers MATCH NOT AVAILABLE");
+                            LOG1(cl);
+                        }
                     }
                 }
             }
-            if (cl_g->width() < cl->width()) {
-                // scale cl width down
+            if (cl_g->width() != cl->width()) {
+                // scale cl width down or up
                 // <2:_48_32>{3*32} => <2:_48_32>{5*16}
+                // <1:24>{3*8} => <1:24>{2*16} => <1:24>{1*32}
                 req_containers = cl->num_containers(cl->cluster_vec(), cl_g->width());
             }
             if (req_containers <= cl_g->empty_containers()) {  // attempt assigning cl to cl_g
@@ -886,6 +901,9 @@ PHV_MAU_Group_Assignments::container_no_pack(
                     // field constrained no_pack and not ccgf owner, use size
                     if (PHV_Container::constraint_no_cohabit(field)
                        && field->ccgf() != field) {
+                       // field->ccgf() should be null, no member of ccgf should reach here
+                       BUG_CHECK(field->ccgf() == nullptr,
+                           "cluster_phv_mau.cpp: no ccgf member should be present in cluster");
                        field_width = field->size;
                     } else {
                        field_width = field->phv_use_width();
@@ -1171,6 +1189,51 @@ PHV_MAU_Group_Assignments::parser_container_no_holes(
     return 0;
 }  // parser_container_no_holes
 
+size_t
+PHV_MAU_Group_Assignments::max_empty_containers(
+    PHV_Container::Ingress_Egress gress,
+    int width,
+    std::list<PHV_MAU_Group *> phv_groups_to_be_filled) {
+    //
+    size_t empty_containers = 0;
+    for (auto &g : phv_groups_to_be_filled) {
+        if (g->width() == width
+            && gress_compatibility(g->gress(), gress)) {
+            //
+            empty_containers = std::max(empty_containers, g->empty_containers());
+        }
+    }  // for
+    return empty_containers;
+}
+
+PHV_MAU_Group*
+PHV_MAU_Group_Assignments::upsize_mau_group(
+    PHV_Container::Ingress_Egress gress,
+    int width,
+    size_t required_containers,
+    std::list<PHV_MAU_Group *> phv_groups_to_be_filled) {
+    //
+    // find available MAU group w/ container width > width
+    // e.g., for width = 8, try 16b, then 32b
+    //
+    phv_groups_to_be_filled.sort([](PHV_MAU_Group *l, PHV_MAU_Group *r) {
+        if (l->width() == r->width()) {
+            return l->empty_containers() < r->empty_containers();
+        }
+        return l->width() < r->width();
+    });
+    for (auto &g : phv_groups_to_be_filled) {
+        if (gress_compatibility(g->gress(), gress)
+            && g->empty_containers() * g->width() >= required_containers * width) {
+            //
+            return g;
+        }
+    }  // for
+    LOG1("***** upsize_mau_group() FAILED for <gress,width,required_containers>  *****"
+        << "<" << required_containers << "*" << width << static_cast<char>(gress) << ">");
+    return 0;
+}  // upsize_mau_group
+
 PHV_MAU_Group*
 PHV_MAU_Group_Assignments::downsize_mau_group(
     PHV_Container::Ingress_Egress gress,
@@ -1188,9 +1251,9 @@ PHV_MAU_Group_Assignments::downsize_mau_group(
         return l->width() > r->width();
     });
     for (auto &g : phv_groups_to_be_filled) {
-        if (g->empty_containers() >= required_containers
-            && gress_compatibility(g->gress(), gress)
-            && g->width() <= width) {
+        if (gress_compatibility(g->gress(), gress)
+            && g->width() <= width
+            && g->empty_containers() * g->width() >= required_containers * width) {
             //
             return g;
         }
@@ -1309,7 +1372,8 @@ PHV_MAU_Group_Assignments::satisfies_phv_alignment(
                 // also should try as bit-in-byte, a+8, a+16 etc.
                 if (*align_start < lo || *align_start > hi)
                     return false;
-                const int end = *align_start + f->phv_use_width() - 1;
+                // to compute end, use container width, e.g., cl->width()=8, f->phv_use_width()=23
+                const int end = *align_start + cl->width() - 1;
                 if (end < lo || end > hi)
                     return false;
             }
@@ -1799,22 +1863,81 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
                         //
                         if (m_w > cl_w) {
                             //
-                            // create new container pack <mw-cw, cn>
-                            // new width w = m_w - cl_w;
-                            // insert in map[m_w-cl_w][cl_n]
+                            // set aligned slices with cc_set representing updated availability
+                            // if no disjoint available segments due to parde_alignment
+                            //     create new container pack <mw-cw, cn>
+                            //     new width w = m_w - cl_w;
+                            //     insert in map[m_w-cl_w][cl_n]
+                            // else
+                            //     create container packs representing availability
+                            //     to left and right of occupation
                             //
-                            auto* cc_w = new std::list<PHV_MAU_Group::Container_Slice *>;
-                            *cc_w = cc_set;
-                            for (auto &cc : *cc_w) {
-                                // usually top-bit occupation but check bottom bit, e.g., $learning
-                                if (cc->container()->bits()[cc->lo()] != '0') {
-                                    cc->lo(cc->lo() + cl_w);
-                                } else {
-                                    cc->hi(cc->hi() - cl_w);
+                            // usually top-bit occupation but check bottom bit, e.g., $learning
+                            // parde alignment can create disjoint partitions
+                            // vacancies before & after occupation width
+                            auto cc_b = *(cc_set.begin());
+                            bool lo_occupied = cc_b->container()->bits()[cc_b->lo()] != '0';
+                            bool hi_occupied = cc_b->container()->bits()[cc_b->hi()] != '0';
+                            //
+                            bool disjoint_segments = !lo_occupied && !hi_occupied;
+                            std::list<PHV_MAU_Group::Container_Slice *>* cc_d = nullptr;
+                            int lo_d = 0;
+                            int hi_d = 0;
+                            if (disjoint_segments) {
+                                cc_d = new std::list<PHV_MAU_Group::Container_Slice *>;
+                                for (auto i = cc_b->lo(); i <= cc_b->hi(); i++) {
+                                    if (cc_b->container()->bits()[i] != '0') {
+                                        lo_d = i - 1;
+                                        hi_d = lo_d + cl_w + 1;
+                                        BUG_CHECK(cc_b->container()->bits()[hi_d] == '0',
+                                            "*****PHV_MAU_Group_Assignments:: "
+                                            "disjoint availability inconsistent *****");
+                                        break;
+                                    }
+                                }
+                                for (auto &cc : cc_set) {
+                                    // disjoint available segments
+                                    // cc_d represents availability to right of occupation
+                                    cc_d->push_back(
+                                        new PHV_MAU_Group::Container_Slice(
+                                            hi_d, cc->hi() - hi_d + 1, cc->container()));
                                 }
                             }
-                            auto w = m_w - cl_w;
-                            aligned_slices[w][cl_n].push_back(*cc_w);
+                            auto *cc_w = new std::list<PHV_MAU_Group::Container_Slice *>;
+                            for (auto &cc : cc_set) {
+                                if (lo_occupied) {
+                                    cc_w->push_back(
+                                        new PHV_MAU_Group::Container_Slice(
+                                            cc->lo() + cl_w,
+                                            cc->hi() - cc->lo() - cl_w + 1,
+                                            cc->container()));
+                                } else {
+                                    if (hi_occupied) {
+                                        cc_w->push_back(
+                                            new PHV_MAU_Group::Container_Slice(
+                                                cc->lo(),
+                                                cc->hi() - cl_w - cc->lo() + 1,
+                                                cc->container()));
+                                    } else {
+                                        // disjoint available segments
+                                        // cc_w represents availability to left of occupation
+                                        cc_w->push_back(
+                                            new PHV_MAU_Group::Container_Slice(
+                                                cc->lo(), lo_d - cc->lo() + 1, cc->container()));
+                                    }
+                                }
+                            }
+                            int w_d_h = 0;
+                            int w = 0;
+                            if (disjoint_segments) {
+                                w_d_h = (*(cc_d->begin()))->width();
+                                w = (*(cc_w->begin()))->width();
+                                aligned_slices[w_d_h][cl_n].push_back(*cc_d);
+                                aligned_slices[w][cl_n].push_back(*cc_w);
+                            } else {
+                                w = m_w - cl_w;
+                                aligned_slices[w][cl_n].push_back(*cc_w);
+                            }
                             LOG4("\t==>("
                                 << cl_n
                                 << ")-->["
@@ -1825,7 +1948,19 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
                                 << std::endl
                                 << '\t'
                                 << *cc_w);
-                        }
+                            if (disjoint_segments) {
+                                LOG3("\t|==>|("
+                                    << cl_n
+                                    << ")-->["
+                                    << w_d_h
+                                    << "]("
+                                    << cl_n
+                                    << ')'
+                                    << std::endl
+                                    << '\t'
+                                    << *cc_d);
+                            }
+                        }  // m_w > cl_w
                         // remove cl
                         //
                         clusters_remove.push_back(cl);

@@ -392,9 +392,18 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
                 allocatedBitsForField |= sliceBits;
             }
 
-            ERROR_WARN_(!allocatedBitsForField.intersects(allocatedBitsForContainer),
-                        "Container %1% contains fields which overlap: %2%",
-                        container, cstring::to_cstring(fields));
+            // header stack pov ccgfs will have overlap
+            // if all overlapped fields point to owner header stack pov ccgf then ok
+            //
+            if (field->ccgf() && field->ccgf()->header_stack_pov_ccgf()) {
+                ERROR_WARN_(!allocatedBitsForField.intersects(allocatedBitsForContainer),
+                            "Container %1% contains fields which overlap: %2%",
+                            container, cstring::to_cstring(fields));
+            } else {
+                ERROR_CHECK(!allocatedBitsForField.intersects(allocatedBitsForContainer),
+                            "Container %1% contains fields which overlap: %2%",
+                            container, cstring::to_cstring(fields));
+            }
             allocatedBitsForContainer |= allocatedBitsForField;
         }
 
@@ -434,7 +443,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             // The first bit of the field must have the same alignment in the
             // container as it does in the input buffer.
             if (fieldSlice.lo == 0) {
-                ERROR_WARN_(containerSlice.lo % 8 == requiredAlignment,
+                ERROR_CHECK(containerSlice.lo % 8 == requiredAlignment,
                             "Field is extracted in the parser, but its "
                             "first container slice has an incompatible "
                             "alignment: %1%", cstring::to_cstring(field));
@@ -445,7 +454,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             // into other containers) must be byte aligned, since container
             // boundaries must always correspond with input buffer byte
             // boundaries.
-            ERROR_WARN_(containerSlice.isLoAligned(),
+            ERROR_CHECK(containerSlice.isLoAligned(),
                         "Field is extracted in the parser into multiple "
                         "containers, but the container slices after the first "
                         "aren't byte aligned: %1%", cstring::to_cstring(field));
