@@ -79,8 +79,8 @@ Slice Slice::fullbyte() const {
     return rv;
 }
 
-vector<Slice> Slice::split(const Slice &a, bool &split) {
-    vector<Slice> vec;
+safe_vector<Slice> Slice::split(const Slice &a, bool &split) {
+    safe_vector<Slice> vec;
     if (field != a.field) {
         vec.push_back(*this);
         split = false;
@@ -120,16 +120,17 @@ vector<Slice> Slice::split(const Slice &a, bool &split) {
    be sized about 12, and is almost entirely going to be sized 2-3 on pretty much every
    reasonable table 
 */
-vector<Slice> Slice::split(const vector<Slice> &vec, vector<Slice> &splitters) {
-    vector<Slice> rv;
+safe_vector<Slice> Slice::split(const safe_vector<Slice> &vec,
+                                safe_vector<Slice> &splitters) {
+    safe_vector<Slice> rv;
     rv.push_back(*this);
     for (auto mid_slice : vec) {
-        vector<Slice> temp;
+        safe_vector<Slice> temp;
         temp.clear();
         bool ever_split = false;
         for (auto whole_slice : rv) {
             bool split = false;
-            vector<Slice> single = whole_slice.split(mid_slice, split);
+            safe_vector<Slice> single = whole_slice.split(mid_slice, split);
             temp.insert(temp.end(), single.begin(), single.end());
             if (split)
                 ever_split = true;

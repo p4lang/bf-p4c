@@ -45,7 +45,8 @@ inline int ActionDataBus::find_byte_sz(ActionFormat::cont_type_t type) {
  */
 bool ActionDataBus::alloc_ad_table(const bitvec total_layouts[ActionFormat::CONTAINER_TYPES],
                                    const bitvec full_layout_bitmasked,
-                                   vector<Use::ReservedSpace> &reserved_spaces, cstring name) {
+                                   safe_vector<Use::ReservedSpace> &reserved_spaces,
+                                   cstring name) {
     LOG2("Total Layouts for Action Data Table");
     for (int i = 0; i < ActionFormat::CONTAINER_TYPES; i++) {
         LOG2("Layout for type " << i << " is " << total_layouts[i]);
@@ -173,7 +174,7 @@ bitvec ActionDataBus::paired_space(ActionFormat::cont_type_t type, bitvec adjace
  *  for the region.  Must only reserve the spaces for the actual bytes, and comes up with
  *  the correct name for the assembly output.
  */
-void ActionDataBus::reserve_space(vector<Use::ReservedSpace> &reserved_spaces,
+void ActionDataBus::reserve_space(safe_vector<Use::ReservedSpace> &reserved_spaces,
                                   ActionFormat::cont_type_t type, bitvec adjacent,
                                   int start_byte, int byte_offset, bool immed, cstring name) {
     // auto &use = cont_use[index];
@@ -215,7 +216,8 @@ void ActionDataBus::reserve_space(vector<Use::ReservedSpace> &reserved_spaces,
  *     - sec_begin - the byte offset within the 16 byte region that adjacent begins at
  *     - size - number of bytes to update by in the location algorithm
  */
-bool ActionDataBus::fit_adf_section(vector<Use::ReservedSpace> &reserved_spaces, bitvec adjacent,
+bool ActionDataBus::fit_adf_section(safe_vector<Use::ReservedSpace> &reserved_spaces,
+                                    bitvec adjacent,
                                     ActionFormat::cont_type_t type, loc_alg_t loc_alg,
                                     int init_byte_offset, int sec_begin, int size, cstring name) {
     bool found = false;
@@ -239,7 +241,7 @@ bool ActionDataBus::fit_adf_section(vector<Use::ReservedSpace> &reserved_spaces,
  *      - Depending on the needs, either a 4 byte alloc section for bytes 0-3, or two 2 byte
  *      - sections for bytes 0-1 and bytes 2-3, and allocates to a lower region
  */
-bool ActionDataBus::alloc_bytes(vector<Use::ReservedSpace> &reserved_spaces,
+bool ActionDataBus::alloc_bytes(safe_vector<Use::ReservedSpace> &reserved_spaces,
                                 bitvec layout, int init_byte_offset, cstring name) {
     ActionFormat::cont_type_t type = ActionFormat::BYTE;
     bitvec adjacent = layout.getslice(8, 8);
@@ -278,7 +280,7 @@ bool ActionDataBus::alloc_bytes(vector<Use::ReservedSpace> &reserved_spaces,
  *     - Depending on the halves needed, either an 8-byte alloc section for bytes 0-7, or two
  *       4 byte sections for bytes 0-3 and 4-7 respectively
  */
-bool ActionDataBus::alloc_halves(vector<Use::ReservedSpace> &reserved_spaces,
+bool ActionDataBus::alloc_halves(safe_vector<Use::ReservedSpace> &reserved_spaces,
                                  bitvec layout, int init_byte_offset, cstring name) {
     ActionFormat::cont_type_t type = ActionFormat::HALF;
     bitvec adjacent = layout.getslice(8, 8);
@@ -312,7 +314,7 @@ bool ActionDataBus::alloc_halves(vector<Use::ReservedSpace> &reserved_spaces,
  *  sections in order to determine if the bytes were to share, would they be properly aligned
  *  within the action data bus.
  */
-void ActionDataBus::analyze_full_share(vector<Use::ReservedSpace> &reserved_spaces,
+void ActionDataBus::analyze_full_share(safe_vector<Use::ReservedSpace> &reserved_spaces,
                                        bitvec layouts[ActionFormat::CONTAINER_TYPES],
                                        FullShare &full_share, int init_byte_offset,
                                        int add_byte_offset, bool immed) {
@@ -349,7 +351,7 @@ void ActionDataBus::analyze_full_share(vector<Use::ReservedSpace> &reserved_spac
 /** Essentially wrapper class to perform analysis on all possible full sections within a 16
  *  byte region
  */
-void ActionDataBus::analyze_full_shares(vector<Use::ReservedSpace> &reserved_spaces,
+void ActionDataBus::analyze_full_shares(safe_vector<Use::ReservedSpace> &reserved_spaces,
                                         bitvec layouts[ActionFormat::CONTAINER_TYPES],
                                         bitvec full_bitmasked, FullShare full_shares[4],
                                         int init_byte_offset) {
@@ -396,7 +398,7 @@ void ActionDataBus::analyze_full_shares(vector<Use::ReservedSpace> &reserved_spa
  *  Doesn't yet try to allocate within the byte and half region if no full space is available.
  *  Needs to be done shortly.
  */
-bool ActionDataBus::alloc_full_sect(vector<Use::ReservedSpace> &reserved_spaces,
+bool ActionDataBus::alloc_full_sect(safe_vector<Use::ReservedSpace> &reserved_spaces,
                                     FullShare full_shares[4], int begin, int init_byte_offset,
                                     cstring name, bitvec full_bitmasked) {
     bool fbi = full_bitmasked.popcount() > 0;
@@ -445,7 +447,7 @@ bool ActionDataBus::alloc_full_sect(vector<Use::ReservedSpace> &reserved_spaces,
  *  an action table.  Breaks the sections into two 8 byte sections, as this hits all possible
  *  constraints in this particular region.
  */
-bool ActionDataBus::alloc_fulls(vector<Use::ReservedSpace> &reserved_spaces,
+bool ActionDataBus::alloc_fulls(safe_vector<Use::ReservedSpace> &reserved_spaces,
                                 bitvec layouts[ActionFormat::CONTAINER_TYPES],
                                 bitvec full_bitmasked, int init_byte_offset, cstring name) {
     ActionFormat::cont_type_t type = ActionFormat::FULL;
@@ -477,7 +479,8 @@ bool ActionDataBus::alloc_fulls(vector<Use::ReservedSpace> &reserved_spaces,
  *  on the allocation section between bytes, halves, and full words, and is specified in the
  *  IMMED_SECT definition.
  */
-bool ActionDataBus::fit_immed_sect(vector<Use::ReservedSpace> &reserved_spaces, bitvec layout,
+bool ActionDataBus::fit_immed_sect(safe_vector<Use::ReservedSpace> &reserved_spaces,
+                                   bitvec layout,
                                    ActionFormat::cont_type_t type, loc_alg_t loc_alg,
                                    cstring name) {
     int start_byte = 0;
@@ -497,7 +500,7 @@ bool ActionDataBus::fit_immed_sect(vector<Use::ReservedSpace> &reserved_spaces, 
  *  by type.  Because of the nature of the mod 4 per byte on the action immediate constraint,
  *  the algorithms are extremely similar for halves and bytes
  */
-bool ActionDataBus::alloc_unshared_immed(vector<Use::ReservedSpace> &reserved_spaces,
+bool ActionDataBus::alloc_unshared_immed(safe_vector<Use::ReservedSpace> &reserved_spaces,
                                          ActionFormat::cont_type_t type, bitvec layout,
                                          cstring name) {
     int byte_sz = find_byte_sz(type);
@@ -532,7 +535,7 @@ bool ActionDataBus::alloc_unshared_immed(vector<Use::ReservedSpace> &reserved_sp
  *  TODO: Full sections being added to either the byte or half region as unshared is not yet
  *        possible
  */
-bool ActionDataBus::alloc_shared_immed(vector<Use::ReservedSpace> &reserved_spaces,
+bool ActionDataBus::alloc_shared_immed(safe_vector<Use::ReservedSpace> &reserved_spaces,
                                        bitvec layouts[ActionFormat::CONTAINER_TYPES],
                                        cstring name) {
     ActionFormat::cont_type_t type = ActionFormat::FULL;
@@ -563,7 +566,8 @@ bool ActionDataBus::alloc_shared_immed(vector<Use::ReservedSpace> &reserved_spac
  *  of potentially sharing bytes.
  */
 bool ActionDataBus::alloc_immediate(const bitvec total_layouts[ActionFormat::CONTAINER_TYPES],
-                                    vector<Use::ReservedSpace> &reserved_spaces, cstring name) {
+                                    safe_vector<Use::ReservedSpace> &reserved_spaces,
+                                    cstring name) {
     LOG2("Total Layouts for Action Format Immediate");
     for (int i = 0; i < ActionFormat::CONTAINER_TYPES; i++) {
         LOG2("Layout for type " << i << " is " << total_layouts[i]);

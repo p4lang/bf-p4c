@@ -1,4 +1,4 @@
-#include "instruction_adjustment.h"
+#include "bf-p4c/mau/instruction_adjustment.h"
 #include "bf-p4c/common/slice.h"
 
 /** SplitInstructions */
@@ -404,7 +404,7 @@ const IR::MAU::Instruction *MergeInstructions::postorder(IR::MAU::Instruction *i
     } else {
         auto container = *(merged_location);
         if (removed_instrs.find(container) == removed_instrs.end()) {
-            vector<IR::MAU::Instruction *> vec;
+            safe_vector<IR::MAU::Instruction *> vec;
             removed_instrs[container] = vec;
         }
         removed_instrs[container].push_back(instr);

@@ -2,6 +2,7 @@
 #define BF_P4C_COMMON_SLICE_H_
 
 #include "ir/ir.h"
+#include "lib/safe_vector.h"
 
 /**
  *  MakeSlice -- slice an expression.
@@ -16,6 +17,6 @@ const IR::Expression *MakeSlice(const IR::Expression *e, int lo, int hi);
  *  Changes an IR::Mask to a list of IR::Slices.  The phv.field function cannot interpret
  *  IR::Masks, as they can be non-contiguous, so this will convert that to a bunch of slices.
  */
-vector<const IR::Expression *> convertMaskToSlices(const IR::Mask *m);
+safe_vector<const IR::Expression *> convertMaskToSlices(const IR::Mask *m);
 
 #endif /* BF_P4C_COMMON_SLICE_H_ */

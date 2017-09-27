@@ -1,10 +1,11 @@
 #ifndef EXTENSIONS_BF_P4C_MAU_ACTION_ANALYSIS_H_
 #define EXTENSIONS_BF_P4C_MAU_ACTION_ANALYSIS_H_
 
-#include "mau_visitor.h"
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/ir/tofino_write_context.h"
+#include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "lib/safe_vector.h"
 
 struct TableResourceAlloc;
 
@@ -57,7 +58,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         bool write_found = false;
         cstring name;
         ActionParam write;
-        vector<ActionParam> reads;
+        safe_vector<ActionParam> reads;
         void clear() {
             write_found = false;
             reads.clear();
@@ -92,7 +93,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
      *  are possible/necessary
      */
     struct TotalAlignment {
-        vector<Alignment> indiv_alignments;
+        safe_vector<Alignment> indiv_alignments;
         bool aligned = false;
         bitvec write_bits;
         bitvec read_bits;
@@ -160,7 +161,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         std::map<PHV::Container, TotalAlignment> phv_alignment;
 
         int counts[ActionParam::TOTAL_TYPES] = {0, 0, 0};
-        vector<FieldAction> field_actions;
+        safe_vector<FieldAction> field_actions;
         int total_types() {
             return counts[ActionParam::PHV] + counts[ActionParam::ACTIONDATA]
                    + counts[ActionParam::CONSTANT];

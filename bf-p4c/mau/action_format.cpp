@@ -131,7 +131,7 @@ void ActionFormat::allocate_format(Use *u) {
 void ActionFormat::create_placement_non_phv(ActionAnalysis::FieldActionsMap &field_actions_map,
                                             cstring action_name) {
     // FIXME: Verification on some argument limitations still required
-    vector<ActionDataPlacement> adp_vector;
+    safe_vector<ActionDataPlacement> adp_vector;
     ConstantRenames constant_renames;
     for (auto &field_action_info : field_actions_map) {
         auto &field_action = field_action_info.second;
@@ -228,7 +228,7 @@ void ActionFormat::create_from_constant(ActionDataPlacement &adp,
  */
 void ActionFormat::create_placement_phv(ActionAnalysis::ContainerActionsMap &container_actions_map,
                                         cstring action_name) {
-    vector<ActionDataPlacement> adp_vector;
+    safe_vector<ActionDataPlacement> adp_vector;
     int constant_to_ad_count = 0;
     ConstantRenames constant_renames;
     for (auto &container_action_info : container_actions_map) {
@@ -785,7 +785,8 @@ void ActionFormat::align_immediate_layouts() {
  *  action data section, this must be renamed uniquely within the action for the assembler.
  *  Thus a unique asm_name could potentially be needed, and thus could be generated.
  */
-void ActionFormat::sort_and_asm_name(vector<ActionDataPlacement> &placement_vec, bool immediate) {
+void ActionFormat::sort_and_asm_name(safe_vector<ActionDataPlacement> &placement_vec,
+                                     bool immediate) {
     std::sort(placement_vec.begin(), placement_vec.end(),
             [](const ActionDataPlacement &a, const ActionDataPlacement &b) {
         // std::sort() in libc++ can compare an element with itself,
@@ -826,7 +827,7 @@ void ActionFormat::sort_and_asm_name(vector<ActionDataPlacement> &placement_vec,
 /** A way to perform an easy lookup of where the action data parameter is contained within the
  *  entire action data placement
  */
-void ActionFormat::calculate_placement_data(vector<ActionDataPlacement> &placement_vec,
+void ActionFormat::calculate_placement_data(safe_vector<ActionDataPlacement> &placement_vec,
                                             ArgPlacementData &apd, bool immediate) {
     int index = 0;
     for (auto &container : placement_vec) {

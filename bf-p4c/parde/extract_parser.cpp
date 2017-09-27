@@ -1,6 +1,7 @@
 #include "extract_parser.h"
 
 #include <algorithm>
+#include <map>
 #include <utility>
 #include <vector>
 
@@ -162,7 +163,7 @@ class GetTofinoParser {
 
     TransitionStack                             transitionStack;
     gress_t                                     gress = INGRESS;
-    map<cstring, IR::BFN::ParserState *>     states;
+    std::map<cstring, IR::BFN::ParserState *>   states;
     bool                                        filterSetMetadata;
 };
 

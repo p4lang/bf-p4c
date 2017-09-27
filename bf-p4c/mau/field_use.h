@@ -4,13 +4,14 @@
 #include <iostream>
 #include "mau_visitor.h"
 #include "lib/bitvec.h"
+#include "lib/safe_vector.h"
 #include "bf-p4c/ir/tofino_write_context.h"
 
 class FieldUse : public MauInspector, TofinoWriteContext {
-    vector<cstring>             field_names;
-    map<cstring, int>           field_index;
+    safe_vector<cstring>        field_names;
+    std::map<cstring, int>      field_index;
     struct rw_t { bitvec reads, writes; };
-    map<cstring, rw_t>          table_use;
+    std::map<cstring, rw_t>     table_use;
     void access_field(cstring field);
     bool preorder(const IR::MAU::Table *t) override;
     bool preorder(const IR::Member *f) override;

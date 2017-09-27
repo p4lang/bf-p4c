@@ -13,9 +13,9 @@ bool TableFormat::analyze_layout_option() {
 
     ghost_bits_count = RAM_GHOST_BITS + floor_log2(min_way_size);
     int per_RAM = layout_option.way.match_groups / layout_option.way.width;
-    vector<std::pair<int, int>> sizes = match_ixbar.bits_per_group_single();
+    safe_vector<std::pair<int, int>> sizes = match_ixbar.bits_per_group_single();
 
-    vector<int> empty;
+    safe_vector<int> empty;
     for (int i = 0; i < layout_option.way.match_groups; i++) {
         match_group_info.push_back(empty);
         use->match_groups.emplace_back();
@@ -37,7 +37,8 @@ bool TableFormat::analyze_layout_option() {
 
 /* Specifically for the allocation of groups that only require one RAM.  If it requires
    multiple match groups, then balance these match groups and corresponding overhead */
-bool TableFormat::analyze_skinny_layout_option(int per_RAM, vector<std::pair<int, int>> &sizes) {
+bool TableFormat::analyze_skinny_layout_option(int per_RAM,
+                                               safe_vector<std::pair<int, int>> &sizes) {
     if (match_ixbar.groups_single() > 1) {
         return false;  // FIXME: deal with this later, essentially potentially can ghost
                        // the extra group of if possible/have enough space
@@ -75,7 +76,7 @@ bool TableFormat::analyze_skinny_layout_option(int per_RAM, vector<std::pair<int
 
 /* Specifically for the allocation of groups that require multiple RAMs.  Determine where
    the overhead has to be, and which RAMs contain the particular match groups */
-bool TableFormat::analyze_wide_layout_option(vector<std::pair<int, int>> &sizes) {
+bool TableFormat::analyze_wide_layout_option(safe_vector<std::pair<int, int>> &sizes) {
     size_t RAM_per = layout_option.way.width / layout_option.way.match_groups;
     if (layout_option.way.width % layout_option.way.match_groups == 0
         && layout_option.way.match_groups != 1) {
@@ -342,7 +343,7 @@ bool TableFormat::allocate_all_instr_selection() {
    issues.  Create a vector of these easy bytes and try to allocate them all at once */
 bool TableFormat::allocate_easy_bytes(bitvec &unaligned_bytes, bitvec &chosen_ghost_bytes,
     int &easy_size) {
-    vector<ByteInfo> easy_match_bytes;
+    safe_vector<ByteInfo> easy_match_bytes;
     bitvec difficult_bytes = unaligned_bytes | chosen_ghost_bytes;
     int index = -1;
     for (auto &byte : single_match) {
@@ -371,10 +372,9 @@ bool TableFormat::allocate_easy_bytes(bitvec &unaligned_bytes, bitvec &chosen_gh
 }
 
 /* Fills in the vectors used and dsecribed in the allocate_difficult_bytes function call. */
-void TableFormat::determine_difficult_vectors(vector<ByteInfo> &unaligned_match,
-    vector<ByteInfo> &unaligned_ghost, bitvec &unaligned_bytes,
-    bitvec &chosen_ghost_bytes, int ghosted_group) {
-
+void TableFormat::determine_difficult_vectors(safe_vector<ByteInfo> &unaligned_match,
+        safe_vector<ByteInfo> &unaligned_ghost, bitvec &unaligned_bytes,
+        bitvec &chosen_ghost_bytes, int ghosted_group) {
     int unaligned_ghost_bits = 0;
     int index = -1;
 
@@ -464,10 +464,13 @@ bool TableFormat::allocate_difficult_bytes(bitvec &unaligned_bytes, bitvec &chos
                                    overhead_groups_per_RAM.end())
                       - overhead_groups_per_RAM.begin();
     int ghosted_group = ixbar_group_per_width[o_index];
-    vector<ByteInfo> unaligned_ghost;  // All non 8-bit IXBar Bytes we can ghost
-    vector<ByteInfo> unaligned_match;  // All non 8-bit IXBar Bytes we have to include in the match
-    vector<ByteInfo> ghost_anywhere;   // Specifically the 8 bit byte that can select any of its
-                                       // bits to ghost
+
+    // All non 8-bit IXBar Bytes we can ghost
+    safe_vector<ByteInfo> unaligned_ghost;
+    // All non 8-bit IXBar Bytes we have to include in the match
+    safe_vector<ByteInfo> unaligned_match;
+    // Specifically the 8 bit byte that can select any of its bits to ghost
+    safe_vector<ByteInfo> ghost_anywhere;
 
     determine_difficult_vectors(unaligned_match, unaligned_ghost, unaligned_bytes,
                                 chosen_ghost_bytes, ghosted_group);
@@ -542,7 +545,7 @@ int TableFormat::determine_next_group(int current_group, int RAM) {
 /* For allocating every byte in the vector, which are filled by the allocation vectors.
    Bytes are coordinated to which IXBar groups as well as how many match groups are
    contained within the individual RAM */
-bool TableFormat::allocate_byte_vector(vector<ByteInfo> &bytes, int prev_allocated) {
+bool TableFormat::allocate_byte_vector(safe_vector<ByteInfo> &bytes, int prev_allocated) {
     // Save space for the lower 4 bytes and upper 2 bytes for potential gateway allocation
     int group = 0;
     for (size_t i = 0; i < match_groups_per_RAM.size(); i++) {

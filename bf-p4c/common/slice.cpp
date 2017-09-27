@@ -19,9 +19,9 @@ const IR::Expression *MakeSlice(const IR::Expression *e, int lo, int hi) {
     return new IR::Slice(e, hi, lo);
 }
 
-vector<const IR::Expression *> convertMaskToSlices(const IR::Mask *mask) {
+safe_vector<const IR::Expression *> convertMaskToSlices(const IR::Mask *mask) {
     BUG_CHECK(mask != nullptr, "Cannot convert nullptr IR::Mask");
-    vector<const IR::Expression *> slice_vector;
+    safe_vector<const IR::Expression *> slice_vector;
 
     auto value = mask->right->to<IR::Constant>()->value;
     auto expr = mask->left;

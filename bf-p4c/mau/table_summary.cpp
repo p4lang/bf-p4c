@@ -1,12 +1,13 @@
-#include "table_summary.h"
-#include "resource_estimate.h"
+#include "bf-p4c/mau/table_summary.h"
+#include "bf-p4c/mau/resource_estimate.h"
 #include "lib/hex.h"
 #include "lib/map.h"
+#include "lib/safe_vector.h"
 
 std::ostream &operator<<(std::ostream &out, const TableSummary &ts) {
     out << " id G                     name       xb  hb g sr tc mr ab" << std::endl;
     for (auto *t : Values(ts.order)) {
-        vector<LayoutOption> lo;
+        safe_vector<LayoutOption> lo;
         if (t->layout.ternary || t->layout.no_match_data())
             lo.emplace_back(t->layout);
         else

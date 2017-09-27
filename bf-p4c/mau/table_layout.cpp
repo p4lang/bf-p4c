@@ -1,8 +1,10 @@
-#include "table_layout.h"
+#include "bf-p4c/mau/table_layout.h"
+
+#include <set>
+#include "bf-p4c/mau/input_xbar.h"
+#include "bf-p4c/phv/phv_fields.h"
 #include "lib/bitops.h"
 #include "lib/log.h"
-#include "input_xbar.h"
-#include "bf-p4c/phv/phv_fields.h"
 
 Visitor::profile_t TableLayout::init_apply(const IR::Node *root) {
     alloc_done = phv.alloc_done();
@@ -61,7 +63,7 @@ void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::M
 
 class GatewayLayout : public MauInspector {
     IR::MAU::Table::Layout &layout;
-    set<cstring> added;
+    std::set<cstring> added;
     bool preorder(const IR::Member *f) {
         cstring name = f->toString();
         if (!added.count(name)) {

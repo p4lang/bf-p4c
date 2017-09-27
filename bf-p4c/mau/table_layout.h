@@ -1,14 +1,15 @@
 #ifndef BF_P4C_MAU_TABLE_LAYOUT_H_
 #define BF_P4C_MAU_TABLE_LAYOUT_H_
 
-#include "mau_visitor.h"
-#include "action_format.h"
+#include "bf-p4c/mau/action_format.h"
+#include "bf-p4c/mau/mau_visitor.h"
+#include "lib/safe_vector.h"
 
 class LayoutOption {
  public:
     IR::MAU::Table::Layout layout;
     IR::MAU::Table::Way way;
-    vector<int> way_sizes;
+    safe_vector<int> way_sizes;
     int entries = 0;
     int srams = 0, maprams = 0, tcams = 0;
     LayoutOption() {}
@@ -20,10 +21,10 @@ class LayoutOption {
 
 class LayoutChoices {
  public:
-    ordered_map<cstring, vector<LayoutOption>> total_layout_options;
+    ordered_map<cstring, safe_vector<LayoutOption>> total_layout_options;
     ordered_map<cstring, ActionFormat::Use> total_action_formats;
-    vector<LayoutOption> get_layout_options(const IR::MAU::Table *t) const {
-        vector<LayoutOption> empty;
+    safe_vector<LayoutOption> get_layout_options(const IR::MAU::Table *t) const {
+        safe_vector<LayoutOption> empty;
         if (t == nullptr)
             return empty;
         if (total_layout_options.find(t->name) == total_layout_options.end())

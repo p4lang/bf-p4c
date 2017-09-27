@@ -1,9 +1,10 @@
 #ifndef BF_P4C_MAU_GATEWAY_H_
 #define BF_P4C_MAU_GATEWAY_H_
 
-#include "mau_visitor.h"
+#include "bf-p4c/mau/input_xbar.h"
+#include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/phv/phv_fields.h"
-#include "input_xbar.h"
+#include "lib/safe_vector.h"
 
 class CanonGatewayExpr : public MauTransform {
     IR::MAU::Action *preorder(IR::MAU::Action *af) override { prune(); return af; }
@@ -45,7 +46,7 @@ class CollectGatewayFields : public Inspector {
         bitrange                bits = { -1, -1 };
         bool                    need_range = false;
         uint64_t                need_mask = 0;
-        vector<std::pair<int, bitrange>>        offsets; };
+        safe_vector<std::pair<int, bitrange>> offsets; };
     ordered_map<const PhvInfo::Field *, info_t>       info;
     bool                                              need_range = false;
     int                                               bytes, bits;
@@ -86,7 +87,7 @@ class BuildGatewayMatch : public Inspector {
     const PhvInfo               &phv;
     CollectGatewayFields        &fields;
     match_t                     match;
-    vector<int>                 range_match;
+    safe_vector<int>            range_match;
     profile_t init_apply(const IR::Node *root) override;
     bool preorder(const IR::Expression *) override;
     bool preorder(const IR::Primitive *) override;

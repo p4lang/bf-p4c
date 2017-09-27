@@ -4,14 +4,17 @@
 #include "ir/ir.h"
 #include "lib/indent.h"
 #include "lib/ordered_map.h"
+#include "lib/safe_vector.h"
 
 class TableTree {
     mutable indent_t indent;
     mutable std::set<const IR::MAU::TableSeq *> done;
-    vector<cstring> name;
+    safe_vector<cstring> name;
     const IR::MAU::TableSeq *seq;
 
-    void print(std::ostream &out, const vector<cstring> &tag, const IR::MAU::TableSeq *s) const {
+    void print(std::ostream &out,
+               const safe_vector<cstring> &tag,
+               const IR::MAU::TableSeq *s) const {
         const char *sep = "";
         out << indent++;
         for (auto n : tag) {
@@ -26,7 +29,7 @@ class TableTree {
             for (auto tbl : s->tables) print(out, tbl); }
         --indent; }
     void print(std::ostream &out, const IR::MAU::Table *tbl) const {
-        ordered_map<const IR::MAU::TableSeq *, vector<cstring>> next;
+        ordered_map<const IR::MAU::TableSeq *, safe_vector<cstring>> next;
         out << indent++ << tbl->name;
         const char *sep = "(";
         for (auto &row : tbl->gateway_rows) {

@@ -1,7 +1,9 @@
 #ifndef BF_P4C_MAU_TABLE_MUTEX_H_
 #define BF_P4C_MAU_TABLE_MUTEX_H_
 
-#include "mau_visitor.h"
+#include <map>
+#include "bf-p4c/mau/mau_visitor.h"
+#include "lib/safe_vector.h"
 #include "lib/symbitmatrix.h"
 
 /** In order for tables to be considered mutually exclusive, the following premise can be
@@ -36,8 +38,8 @@
  */
 
 class TablesMutuallyExclusive : public MauInspector {
-    map<const IR::MAU::Table *, int>    table_ids;
-    map<const IR::MAU::Table *, bitvec> table_succ;
+    std::map<const IR::MAU::Table *, int>    table_ids;
+    std::map<const IR::MAU::Table *, bitvec> table_succ;
     SymBitMatrix                        mutex;
     SymBitMatrix                        action_mutex;
     bool preorder(const IR::MAU::Table *t) override {
@@ -60,7 +62,8 @@ class TablesMutuallyExclusive : public MauInspector {
 };
 
 class SharedIndirectActionAnalysis : public MauInspector {
-    map<const IR::MAU::ActionData *, vector<const IR::MAU::Table *>> ad_users;
+    std::map<const IR::MAU::ActionData *,
+             safe_vector<const IR::MAU::Table *>> ad_users;
     const TablesMutuallyExclusive &mutex;
 
     profile_t init_apply(const IR::Node *root) override {
@@ -70,8 +73,9 @@ class SharedIndirectActionAnalysis : public MauInspector {
     }
     bool preorder(const IR::MAU::Table *t) override;
  public:
-    vector<const IR::MAU::Table *> all_shared_tables(const IR::MAU::ActionData *ad) const {
-        vector<const IR::MAU::Table *> empty;
+    safe_vector<const IR::MAU::Table *>
+    all_shared_tables(const IR::MAU::ActionData *ad) const {
+        safe_vector<const IR::MAU::Table *> empty;
         if (ad == nullptr || ad_users.find(ad) == ad_users.end())
             return empty;
         return ad_users.at(ad);

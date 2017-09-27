@@ -47,7 +47,7 @@ void LiveRangeOverlay::end_apply() {
     // NB: Only metadata fields are considered.
 
     // Fields that are not definitely dead are possibly live.
-    map<int, ordered_set<const IR::BFN::Unit *>> livemap;
+    std::map<int, ordered_set<const IR::BFN::Unit *>> livemap;
     for (const PhvInfo::Field &f : phv) {
         if (!f.metadata)
             continue;

@@ -1,11 +1,10 @@
-#include "table_dependency_graph.h"
+#include "bf-p4c/mau/table_dependency_graph.h"
 #include <assert.h>
 #include <boost/graph/breadth_first_search.hpp>
 #include <algorithm>
+#include "bf-p4c/ir/tofino_write_context.h"
 #include "ir/ir.h"
 #include "lib/log.h"
-#include "bf-p4c/ir/tofino_write_context.h"
-
 
 static const char *dep_types[] = { "CONTROL", "DATA", "ANTI", "OUTPUT" };
 
@@ -160,7 +159,7 @@ bool FindDependencyGraph::preorder(const IR::MAU::Table *t) {
 }
 
 template<class T>
-inline set<T> &operator |=(set<T> &s, const set<T> &a) {
+inline std::set<T> &operator |=(std::set<T> &s, const std::set<T> &a) {
     s.insert(a.begin(), a.end());
     return s; }
 
@@ -175,19 +174,19 @@ void FindDependencyGraph::flow_merge(Visitor &v) {
 // starting at the leaves.
 class bfs_happens_before_visitor : public boost::default_bfs_visitor {
   // happens_before_map[t1] = {t2, t3} means t1 happens strictly before t2 and t3.
-  map< const IR::MAU::Table*,
-       set<const IR::MAU::Table*> >& happens_before_map;
+  std::map<const IR::MAU::Table*,
+           std::set<const IR::MAU::Table*>>& happens_before_map;
 
   // happens_not_after[t1] = {t2, t3} means t1 and t2 and/or t3 may happen in
   // the same stage, or t1 may happen first, but neither t2 nor t3 can happen
   // before t1.
-  map< const IR::MAU::Table*,
-       set<const IR::MAU::Table*> > happens_not_after;
+  std::map<const IR::MAU::Table*,
+           std::set<const IR::MAU::Table*>> happens_not_after;
 
  public:
     bfs_happens_before_visitor(
-        map< const IR::MAU::Table*,
-             set<const IR::MAU::Table*> >& happens_before_map)
+        std::map<const IR::MAU::Table*,
+             std::set<const IR::MAU::Table*>>& happens_before_map)
         : happens_before_map(happens_before_map)
     { }
 
@@ -197,9 +196,9 @@ class bfs_happens_before_visitor : public boost::default_bfs_visitor {
         const IR::MAU::Table* label = g[v];
 
         if (happens_before_map[label].size() == 0)
-            happens_before_map[label] = set<const IR::MAU::Table*>();
+            happens_before_map[label] = std::set<const IR::MAU::Table*>();
         if (happens_not_after[label].size() == 0)
-            happens_not_after[label] = set<const IR::MAU::Table*>();
+            happens_not_after[label] = std::set<const IR::MAU::Table*>();
     }
 
     template <typename Edge, typename Graph>
@@ -246,7 +245,7 @@ class bfs_depth_visitor : public boost::default_bfs_visitor {
 void FindDependencyGraph::finalize_dependence_graph(void) {
     typename DependencyGraph::Graph::vertex_iterator v, v_end;
     typename DependencyGraph::Graph::edge_iterator out, out_end;
-    set<typename DependencyGraph::Graph::vertex_descriptor> roots;
+    std::set<typename DependencyGraph::Graph::vertex_descriptor> roots;
 
     // Some operations need to be performed on the reversed graph.
     DependencyGraph::Graph rev_g = dg.g;

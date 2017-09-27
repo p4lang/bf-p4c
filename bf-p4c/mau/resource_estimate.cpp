@@ -300,7 +300,7 @@ void StageUseEstimate::fill_estimate_from_option(int &entries) {
 
 /* Constructor to estimate the number of srams, tcams, and maprams a table will require*/
 StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries, bool pp, bool had,
-                                   const vector<LayoutOption> &lo, bool table_placement) {
+                                   const safe_vector<LayoutOption> &lo, bool table_placement) {
     // Because the table is const, the layout options must be copied into the Object
     memset(this, 0, sizeof(*this));
     prev_placed = pp;
@@ -405,7 +405,7 @@ void StageUseEstimate::known_srams_needed(const IR::MAU::Table *tbl,
 
 /* Calculate the RAM_counter for each attached table.  This contains the entries per_row,
    the width, and the need of maprams */
-void StageUseEstimate::calculate_per_row_vector(vector<RAM_counter> &per_word_and_width,
+void StageUseEstimate::calculate_per_row_vector(safe_vector<RAM_counter> &per_word_and_width,
                                                 const IR::MAU::Table *tbl,
                                                 LayoutOption *lo) {
     for (auto at : tbl->attached) {
@@ -451,7 +451,7 @@ void StageUseEstimate::calculate_per_row_vector(vector<RAM_counter> &per_word_an
    to the number of entries from the srams */
 void StageUseEstimate::unknown_srams_needed(const IR::MAU::Table *tbl, LayoutOption *lo,
                                             int srams_left) {
-    vector<RAM_counter> per_word_and_width;
+    safe_vector<RAM_counter> per_word_and_width;
     calculate_per_row_vector(per_word_and_width, tbl, lo);
 
     // Shrink the available srams by the number of known srams needed
@@ -535,7 +535,7 @@ void StageUseEstimate::srams_left_best_option() {
    the number of entries until the available tcams or srams are full */
 void StageUseEstimate::unknown_tcams_needed(const IR::MAU::Table *tbl, LayoutOption *lo,
                                             int tcams_left, int srams_left) {
-    vector<RAM_counter> per_word_and_width;
+    safe_vector<RAM_counter> per_word_and_width;
     calculate_per_row_vector(per_word_and_width, tbl, lo);
 
     int available_srams = srams_left - lo->srams;

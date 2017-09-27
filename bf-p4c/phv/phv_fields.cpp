@@ -1,7 +1,7 @@
-#include "phv_fields.h"
-#include "phv_analysis_api.h"
-#include "phv_assignment_api.h"
+#include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/common/header_stack.h"
+#include "bf-p4c/phv/phv_analysis_api.h"
+#include "bf-p4c/phv/phv_assignment_api.h"
 #include "ir/ir.h"
 #include "lib/log.h"
 #include "lib/stringref.h"
@@ -178,7 +178,7 @@ void PhvInfo::allocatePOV(const BFN::HeaderStackInfo& stacks) {
                 size[gress] -= field.size;
                 field.offset = size[gress]; }
         Field *hdr_dd_valid = 0;  // header.$valid
-        vector<Field *> pov_fields_h;  // accumulate member povs of simple headers
+        safe_vector<Field *> pov_fields_h;  // accumulate member povs of simple headers
         for (auto hdr : simple_headers) {
             auto hdr_info = hdr.second;
             if (hdr_info.gress == gress) {
@@ -212,7 +212,7 @@ void PhvInfo::allocatePOV(const BFN::HeaderStackInfo& stacks) {
             pov_fields_h.clear();
         }
         for (auto &stack : stacks) {
-            vector<Field *> pov_fields;  // accumulate member povs of header stk pov
+            safe_vector<Field *> pov_fields;  // accumulate member povs of header stk pov
             // TODO: Why just push hdr_dd_valid?  Why not all of pov_fields_h?
             if (hdr_dd_valid) {
                 pov_fields.push_back(hdr_dd_valid);
@@ -290,7 +290,8 @@ int PhvInfo::Field::container_bytes(bitrange bits) const {
 //***********************************************************************************
 //
 
-vector<PhvInfo::Field::alloc_slice> *PhvInfo::alloc(const IR::Member *member) {
+safe_vector<PhvInfo::Field::alloc_slice> *
+PhvInfo::alloc(const IR::Member *member) {
     PhvInfo::Field *info = field(member);
     BUG_CHECK(nullptr != info, "; Cannot find PHV allocation for %s", member->toString());
     return &info->alloc_i;
@@ -1091,7 +1092,8 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field::alloc_slice &s
     return out;
 }
 
-std::ostream &operator<<(std::ostream &out, const vector<PhvInfo::Field::alloc_slice> &sl_vec) {
+std::ostream &operator<<(std::ostream &out,
+                         const safe_vector<PhvInfo::Field::alloc_slice> &sl_vec) {
     for (auto &sl : sl_vec) {
         out << sl << ';';
     }

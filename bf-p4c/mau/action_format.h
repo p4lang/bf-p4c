@@ -1,14 +1,15 @@
 #ifndef EXTENSIONS_BF_P4C_MAU_ACTION_FORMAT_H_
 #define EXTENSIONS_BF_P4C_MAU_ACTION_FORMAT_H_
 
-#include "action_analysis.h"
+#include "bf-p4c/mau/action_analysis.h"
+#include "bf-p4c/mau/mau_visitor.h"
+#include "bf-p4c/phv/phv_fields.h"
 #include "ir/ir.h"
 #include "lib/bitops.h"
 #include "lib/bitvec.h"
 #include "lib/cstring.h"
 #include "lib/ordered_map.h"
-#include "mau_visitor.h"
-#include "bf-p4c/phv/phv_fields.h"
+#include "lib/safe_vector.h"
 
 /** Different Constraints
  *  # Not handled yet
@@ -97,7 +98,7 @@ struct ActionFormat {
             }
         };
 
-        vector<ArgLoc> arg_locs;
+        safe_vector<ArgLoc> arg_locs;
         int size;          ///< Number of bits needed
         bitvec range;      ///< Total mask
         int start = -1;    ///< Byte offset within the action data table
@@ -186,11 +187,11 @@ struct ActionFormat {
     };
 
 
-    typedef std::map<cstring, vector<ActionDataPlacement>> ArgFormat;
-    typedef std::map<std::pair<cstring, int>, vector<std::pair<int, bool>>> ArgPlacementData;
+    typedef std::map<cstring, safe_vector<ActionDataPlacement>> ArgFormat;
+    typedef std::map<std::pair<cstring, int>, safe_vector<std::pair<int, bool>>> ArgPlacementData;
     typedef std::map<std::pair<cstring, int>, cstring> ConstantRenames;
     bool immediate_possible = false;
-    vector<ActionContainerInfo> action_counts;
+    safe_vector<ActionContainerInfo> action_counts;
 
 
     /** Contains all of the information on all the action data format and individual arguments
@@ -264,8 +265,8 @@ struct ActionFormat {
     void align_action_data_layouts();
     void space_all_immediate_containers();
     void align_immediate_layouts();
-    void sort_and_asm_name(vector<ActionDataPlacement> &placement_vec, bool immediate);
-    void calculate_placement_data(vector<ActionDataPlacement> &placement_vec,
+    void sort_and_asm_name(safe_vector<ActionDataPlacement> &placement_vec, bool immediate);
+    void calculate_placement_data(safe_vector<ActionDataPlacement> &placement_vec,
                                   ArgPlacementData &apd, bool immediate);
 
  public:

@@ -1,15 +1,14 @@
-#include "asm_output.h"
-#include "gateway.h"
+#include "bf-p4c/mau/asm_output.h"
+#include "bf-p4c/mau/gateway.h"
+#include "bf-p4c/mau/resource.h"
+#include "bf-p4c/parde/phase0.h"
+#include "bf-p4c/phv/asm_output.h"
 #include "lib/algorithm.h"
 #include "lib/bitops.h"
 #include "lib/bitrange.h"
 #include "lib/hex.h"
 #include "lib/indent.h"
-#include "lib/log.h"
 #include "lib/stringref.h"
-#include "bf-p4c/parde/phase0.h"
-#include "bf-p4c/phv/asm_output.h"
-#include "resource.h"
 
 class MauAsmOutput::EmitAttached : public Inspector {
     friend class MauAsmOutput;
@@ -40,8 +39,8 @@ std::ostream &operator<<(std::ostream &out, const MauAsmOutput &mauasm) {
 
 class MauAsmOutput::TableMatch {
  public:
-    vector<Slice>       match_fields;
-    vector<Slice>       ghost_bits;
+    safe_vector<Slice>       match_fields;
+    safe_vector<Slice>       ghost_bits;
 
     TableMatch(const MauAsmOutput &s, const PhvInfo &phv, const IR::MAU::Table *tbl);
 };
@@ -62,7 +61,7 @@ class MauAsmOutput::TableMatch {
 void MauAsmOutput::emit_action_data_alias(std::ostream &out, indent_t indent,
         const IR::MAU::Table *tbl, const IR::MAU::Action *af) const {
     bool is_immediate = tbl->layout.action_data_bytes_in_overhead > 0;
-    const vector<ActionFormat::ActionDataPlacement> *placement_vec = nullptr;
+    const safe_vector<ActionFormat::ActionDataPlacement> *placement_vec = nullptr;
     auto &use = tbl->resources->action_format;
     if (is_immediate)
         placement_vec = &(use.immediate_format.at(af->name));
@@ -171,10 +170,11 @@ void MauAsmOutput::emit_action_data_format(std::ostream &out, indent_t indent,
 
 
 struct FormatHash {
-    vector<Slice> match_data;
-    vector<Slice> ghost;
+    safe_vector<Slice> match_data;
+    safe_vector<Slice> ghost;
     cstring alg;
-    FormatHash(vector<Slice> md, vector<Slice> g, cstring a)
+    FormatHash(const safe_vector<Slice>& md, const safe_vector<Slice>& g,
+               cstring a)
         : match_data(md), ghost(g), alg(a) {}
 };
 
@@ -217,8 +217,8 @@ std::ostream &operator<<(std::ostream &out, const FormatHash &hash) {
 }
 
 /* Calculate the hash tables used by an individual P4 table in the IXBar */
-void MauAsmOutput::emit_ixbar_gather_bytes(const vector<IXBar::Use::Byte> &use,
-        map<int, map<int, Slice>> &sort, bool ternary) const {
+void MauAsmOutput::emit_ixbar_gather_bytes(const safe_vector<IXBar::Use::Byte> &use,
+        std::map<int, std::map<int, Slice>> &sort, bool ternary) const {
     for (auto &b : use) {
         int byte_loc = IXBar::TERNARY_BYTES_PER_GROUP;
         int split_byte = 4;
@@ -302,7 +302,7 @@ void MauAsmOutput::emit_ways(std::ostream &out, indent_t indent, const IXBar::Us
 /* Generate asm for the hash distribution unit, specifically the unit, group, mask and shift value
    found in each hash dist assembly */
 void MauAsmOutput::emit_hash_dist(std::ostream &out, indent_t indent,
-        const vector<IXBar::HashDistUse> *hash_dist_use) const {
+        const safe_vector<IXBar::HashDistUse> *hash_dist_use) const {
     if (hash_dist_use == nullptr || hash_dist_use->empty())
         return;
     out << indent++ << "hash_dist:" << std::endl;
@@ -322,8 +322,9 @@ void MauAsmOutput::emit_hash_dist(std::ostream &out, indent_t indent,
 
 /* Determine which bytes of a table's input xbar belong to an individual hash table,
    so that we can output the hash of this individual table. */
-void MauAsmOutput::emit_ixbar_hash_table(int hash_table, vector<Slice> &match_data,
-        vector<Slice> &ghost, const TableMatch *fmt, map<int, map<int, Slice>> &sort) const {
+void MauAsmOutput::emit_ixbar_hash_table(int hash_table, safe_vector<Slice> &match_data,
+        safe_vector<Slice> &ghost, const TableMatch *fmt,
+        std::map<int, std::map<int, Slice>> &sort) const {
     unsigned half = hash_table & 1;
     for (auto &match : sort.at(hash_table/2)) {
         Slice reg = match.second;
@@ -337,8 +338,8 @@ void MauAsmOutput::emit_ixbar_hash_table(int hash_table, vector<Slice> &match_da
             reg = reg(0, 63 - match.first); }
         if (!reg) continue;
         if (fmt != nullptr) {
-            vector<Slice> reg_ghost;
-            vector<Slice> reg_hash = reg.split(fmt->ghost_bits, reg_ghost);
+            safe_vector<Slice> reg_ghost;
+            safe_vector<Slice> reg_hash = reg.split(fmt->ghost_bits, reg_ghost);
             ghost.insert(ghost.end(), reg_ghost.begin(), reg_ghost.end());
             match_data.insert(match_data.end(), reg_hash.begin(), reg_hash.end());
         } else {
@@ -349,8 +350,10 @@ void MauAsmOutput::emit_ixbar_hash_table(int hash_table, vector<Slice> &match_da
 
 /* Generate asm for the hash of a table, specifically either a match, gateway, or selector
    table.  Not used for hash distribution hash */
-void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent, vector<Slice> &match_data,
-        vector<Slice> &ghost, const IXBar::Use *use, int hash_group) const {
+void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent,
+                                   safe_vector<Slice> &match_data,
+                                   safe_vector<Slice> &ghost,
+                                   const IXBar::Use *use, int hash_group) const {
     unsigned done = 0; unsigned mask_bits = 0;
 
     for (auto &select : use->select_use) {
@@ -428,7 +431,7 @@ void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent, vector<Sl
 
 void MauAsmOutput::emit_single_ixbar(std::ostream &out, indent_t indent, const IXBar::Use *use,
         const TableMatch *fmt) const {
-    map<int, map<int, Slice>> sort;
+    std::map<int, std::map<int, Slice>> sort;
     emit_ixbar_gather_bytes(use->use, sort, use->ternary);
     cstring group_type = use->ternary ? "ternary" : "exact";
     for (auto &group : sort)
@@ -439,8 +442,8 @@ void MauAsmOutput::emit_single_ixbar(std::ostream &out, indent_t indent, const I
         if (hash_table_input) {
             for (int ht : bitvec(hash_table_input)) {
                 out << indent++ << "hash " << ht << ":" << std::endl;
-                vector<Slice> match_data;
-                vector<Slice> ghost;
+                safe_vector<Slice> match_data;
+                safe_vector<Slice> ghost;
                 emit_ixbar_hash_table(ht, match_data, ghost, fmt, sort);
                 // FIXME: This is obviously an issue for larger selector tables,
                 //  whole function needs to be replaced
@@ -458,7 +461,7 @@ void MauAsmOutput::emit_single_ixbar(std::ostream &out, indent_t indent, const I
 
 /* Emit the ixbar use for a particular type of table */
 void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, const IXBar::Use *use,
-        const vector<IXBar::HashDistUse> *hash_dist_use, const Memories::Use *mem,
+        const safe_vector<IXBar::HashDistUse> *hash_dist_use, const Memories::Use *mem,
         const TableMatch *fmt) const {
     emit_ways(out, indent, use, mem);
     emit_hash_dist(out, indent, hash_dist_use);
@@ -479,13 +482,13 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, const IXBar::U
 }
 
 class memory_vector {
-    const vector<int>           &vec;
+    const safe_vector<int>     &vec;
     Memories::Use::type_t       type;
     bool                        is_mapcol;
     friend std::ostream &operator<<(std::ostream &, const memory_vector &);
  public:
-    memory_vector(const vector<int> &v, Memories::Use::type_t t, bool ism) : vec(v), type(t),
-                                                                             is_mapcol(ism) {}
+    memory_vector(const safe_vector<int> &v, Memories::Use::type_t t, bool ism)
+      : vec(v), type(t), is_mapcol(ism) {}
 };
 
 std::ostream &operator<<(std::ostream &out, const memory_vector &v) {
@@ -502,7 +505,7 @@ std::ostream &operator<<(std::ostream &out, const memory_vector &v) {
 }
 
 void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memories::Use &mem) const {
-    vector<int> row, bus, home_row;
+    safe_vector<int> row, bus, home_row;
     bool logical = mem.type >= Memories::Use::TWOPORT;
     bool have_bus = !logical;
     for (auto &r : mem.row) {
@@ -544,7 +547,7 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
     }
     if (!mem.color_mapram.empty()) {
         out << indent++ << "color_maprams:" << std::endl;
-        vector<int> color_mapram_row, color_mapram_bus;
+        safe_vector<int> color_mapram_row, color_mapram_bus;
         for (auto &r : mem.color_mapram) {
             color_mapram_row.push_back(r.row);
             color_mapram_bus.push_back(r.bus);
@@ -577,7 +580,7 @@ struct fmt_state {
         next = bit+width;
         sep = ", "; }
     void emit(std::ostream &out, const char *name, int group,
-              const vector<std::pair<int, int>> &bits) {
+              const safe_vector<std::pair<int, int>> &bits) {
         if (bits.size() == 1) {
             emit(out, name, group, bits[0].first, bits[0].second - bits[0].first + 1);
         } else if (bits.size() > 1) {
@@ -653,8 +656,8 @@ void MauAsmOutput::emit_table_format(std::ostream &out, indent_t indent,
 
     for (auto match_group : use.match_groups) {
         int type;
-        vector<std::pair<int, int>> bits;
-        vector<std::pair<int, int>> pfe_bits;
+        safe_vector<std::pair<int, int>> bits;
+        safe_vector<std::pair<int, int>> pfe_bits;
         // For table objects that are not match
         for (type = TableFormat::ACTION; type <= TableFormat::INDIRECT_ACTION; type++) {
             if (match_group.mask[type].popcount() == 0) continue;

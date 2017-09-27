@@ -2,15 +2,16 @@
 #define BF_P4C_PARDE_ASM_OUTPUT_H_
 
 #include <functional>
-#include "ir/ir.h"
 #include "bf-p4c/common/asm_output.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "ir/ir.h"
+#include "lib/safe_vector.h"
 
 class ParserAsmOutput : public Inspector {
     gress_t                                     gress;
     const PhvInfo                               &phv;
     const IR::BFN::Parser                    *parser;
-    vector<const IR::BFN::ParserState *>     states;
+    safe_vector<const IR::BFN::ParserState *> states;
     bool preorder(const IR::BFN::ParserState *state) override {
         states.push_back(state);
         return true; }

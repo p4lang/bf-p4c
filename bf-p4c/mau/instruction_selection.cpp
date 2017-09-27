@@ -1,5 +1,6 @@
-#include "instruction_selection.h"
+#include "bf-p4c/mau/instruction_selection.h"
 #include "lib/bitops.h"
+#include "lib/safe_vector.h"
 
 template<class T> static
 T *clone(const T *ir) { return ir ? ir->clone() : nullptr; }
@@ -408,7 +409,7 @@ const IR::Expression *InstructionSelection::postorder(IR::Primitive *prim) {
         cstring algorithm;
         if (auto *mem = prim->operands[1]->to<IR::Member>())
             algorithm = mem->member;
-        vector<int> init_units;
+        safe_vector<int> init_units;
         auto *hd = new IR::MAU::HashDist(prim->srcInfo, prim->operands[3], algorithm,
                                          init_units, prim);
         hd->bit_width = size;
@@ -441,7 +442,7 @@ const IR::Expression *InstructionSelection::postorder(IR::Primitive *prim) {
         if (auto *mem = decl->arguments->at(0)->to<IR::Member>()) {
             algorithm = mem->member;
         }
-        vector<int> init_units;
+        safe_vector<int> init_units;
         auto *hd = new IR::MAU::HashDist(prim->srcInfo, prim->operands[1], algorithm,
                                          init_units, prim);
         hd->bit_width = size;
@@ -516,7 +517,7 @@ const IR::MAU::HashDist *StatefulHashDistSetup::preorder(IR::MAU::HashDist *hd) 
 
 IR::MAU::HashDist *StatefulHashDistSetup::create_hash_dist(const IR::Expression *expr,
                                                            const IR::Primitive *prim) {
-    vector<int> init_units;
+    safe_vector<int> init_units;
     cstring algorithm = "identity";
     auto *hd = new IR::MAU::HashDist(prim->srcInfo, expr, algorithm, init_units, prim);
     hd->algorithm = algorithm;

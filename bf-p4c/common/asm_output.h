@@ -3,6 +3,7 @@
 
 #include <map>
 #include "lib/ordered_map.h"
+#include "lib/safe_vector.h"
 #include "lib/stringref.h"
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/phv/phv_fields.h"
@@ -76,8 +77,9 @@ class Slice {
         if (lo > hi) invalidate();
         return *this; }
     Slice operator&(const Slice &a) const { auto tmp = *this; tmp &= a; return tmp; }
-    vector<Slice> split(const Slice &a, bool &split);
-    vector<Slice> split(const vector<Slice> &vec, vector<Slice> &splitters);
+    safe_vector<Slice> split(const Slice &a, bool &split);
+    safe_vector<Slice> split(const safe_vector<Slice> &vec,
+                             safe_vector<Slice> &splitters);
     int width() const { return hi - lo + 1; }
     int bytealign() const;
     Slice fullbyte() const;

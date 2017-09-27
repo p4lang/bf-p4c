@@ -1,10 +1,9 @@
+#include "bf-p4c/mau/memories.h"
+#include "bf-p4c/mau/mau_visitor.h"
+#include "bf-p4c/mau/resource.h"
+#include "bf-p4c/mau/resource_estimate.h"
 #include "lib/bitops.h"
 #include "lib/range.h"
-#include "memories.h"
-#include "resource.h"
-#include "resource_estimate.h"
-#include "mau_visitor.h"
-
 
 unsigned Memories::side_mask(RAM_side_t side) {
      if (side == LEFT)
@@ -399,8 +398,8 @@ bool Memories::mem_info::constraint_check() {
 }
 
 /* Calculate the size of the ways given the number of RAMs necessary */
-vector<int> Memories::way_size_calculator(int ways, int RAMs_needed) {
-    vector<int> vec;
+safe_vector<int> Memories::way_size_calculator(int ways, int RAMs_needed) {
+    safe_vector<int> vec;
     if (ways == -1) {
     // FIXME: If the number of ways are not provided, not yet considered
 
@@ -425,9 +424,9 @@ vector<int> Memories::way_size_calculator(int ways, int RAMs_needed) {
 
 /* Find the rows of SRAMs that can hold the table, verified as well by the busses set in SRAM
 */
-vector<std::pair<int, int>> Memories::available_SRAMs_per_row(unsigned mask, table_alloc *ta,
-                                                                int width_sect) {
-    vector<std::pair<int, int>> available_rams;
+safe_vector<std::pair<int, int>>
+Memories::available_SRAMs_per_row(unsigned mask, table_alloc *ta, int width_sect) {
+    safe_vector<std::pair<int, int>> available_rams;
     auto name = ta->table->get_use_name();
     for (int i = 0; i < SRAM_ROWS; i++) {
         auto bus = sram_search_bus[i];
@@ -450,9 +449,10 @@ vector<std::pair<int, int>> Memories::available_SRAMs_per_row(unsigned mask, tab
 }
 
 /* Simple now.  Just find rows with the available RAMs that it is asking for */
-vector<int> Memories::available_match_SRAMs_per_row(unsigned row_mask, unsigned total_mask,
-                                                    int row, table_alloc *ta, int width_sect) {
-    vector<int> matching_rows;
+safe_vector<int>
+Memories::available_match_SRAMs_per_row(unsigned row_mask, unsigned total_mask,
+                                        int row, table_alloc *ta, int width_sect) {
+    safe_vector<int> matching_rows;
     auto name = ta->table->get_use_name();
     for (int i = 0; i < SRAM_ROWS; i++) {
         auto bus = sram_search_bus[i];
@@ -557,7 +557,7 @@ Memories::SRAM_group * Memories::find_best_candidate(SRAM_group *placed_wa, int 
 /* Fill out the remainder of the row with other ways! */
 bool Memories::fill_out_row(SRAM_group *placed_wa, int row, unsigned column_mask) {
     int loc = 0;
-    vector<std::pair<int, int>> buses;
+    safe_vector<std::pair<int, int>> buses;
     // FIXME: Need to adjust to the proper mask provided by earlier function
     while (bitcount(column_mask) - bitcount(sram_inuse[row]) > 0) {
         buses.clear();
@@ -588,10 +588,10 @@ int Memories::match_bus_available(table_alloc *ta, int width, int row) {
 
 /* Put the selected way group into the RAM row as much as possible */
 bool Memories::pack_way_into_RAMs(SRAM_group *wa, int row, int &cols, unsigned column_mask) {
-    vector<std::pair<int, int>> buses;
+    safe_vector<std::pair<int, int>> buses;
     buses.emplace_back(row, match_bus_available(wa->ta, wa->unique_bus(0), row));
     unsigned row_mask = 0;
-    vector<int> selected_cols;
+    safe_vector<int> selected_cols;
 
     for (int i = 0; i < SRAM_COLUMNS && cols < wa->depth - wa->placed; i++) {
         // FIXME: Path change
@@ -602,12 +602,13 @@ bool Memories::pack_way_into_RAMs(SRAM_group *wa, int row, int &cols, unsigned c
         }
     }
 
-    vector<int> selected_rows;
+    safe_vector<int> selected_rows;
     selected_rows.push_back(row);
     // Fairly simple stuff
     for (int i = 1; i < wa->width; i++) {
-        vector<int> matching_rows = available_match_SRAMs_per_row(row_mask, column_mask, row,
-                                                                  wa->ta, wa->unique_bus(i));
+        safe_vector<int> matching_rows =
+          available_match_SRAMs_per_row(row_mask, column_mask, row,
+                                        wa->ta, wa->unique_bus(i));
         size_t j = 0;
         while (j < matching_rows.size()) {
             int test_row = matching_rows[j];
@@ -667,7 +668,7 @@ bool Memories::pack_way_into_RAMs(SRAM_group *wa, int row, int &cols, unsigned c
 bool Memories::find_best_row_and_fill_out(unsigned column_mask) {
     SRAM_group *wa = exact_match_ways[0];
     // FIXME: Obviously the mask has to change
-    vector<std::pair<int, int>> available_rams
+    safe_vector<std::pair<int, int>> available_rams
         = available_SRAMs_per_row(column_mask, wa->ta, wa->unique_bus(0));
     // No memories left to place anything
     if (available_rams.size() == 0) {
@@ -903,7 +904,7 @@ void Memories::find_tind_groups() {
 int Memories::find_best_tind_row(SRAM_group *tg, int &bus) {
     int open_space = 0;
     unsigned left_mask = 0xf;
-    vector<int> available_rows;
+    safe_vector<int> available_rows;
     auto name = tg->ta->table->get_use_name(nullptr, false, IR::MAU::Table::TIND_NAME);
     for (int i = 0; i < SRAM_ROWS; i++) {
         open_space += bitcount(~sram_inuse[i] & left_mask);
@@ -2412,7 +2413,7 @@ void Memories::update(cstring name, const Memories::Use &alloc) {
             BUG("conflicting memory use between %s and %s", use, name);
         use = name; });
 }
-void Memories::update(const map<cstring, Use> &alloc) {
+void Memories::update(const std::map<cstring, Use> &alloc) {
     for (auto &a : alloc) update(a.first, a.second);
 }
 
@@ -2422,7 +2423,7 @@ void Memories::remove(cstring name, const Memories::Use &alloc) {
             BUG("Undo failure for %s", name);
         use = nullptr; });
 }
-void Memories::remove(const map<cstring, Use> &alloc) {
+void Memories::remove(const std::map<cstring, Use> &alloc) {
     for (auto &a : alloc) remove(a.first, a.second);
 }
 

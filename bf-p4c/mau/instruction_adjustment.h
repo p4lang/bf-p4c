@@ -1,11 +1,12 @@
 #ifndef BF_P4C_MAU_INSTRUCTION_ADJUSTMENT_H_
 #define BF_P4C_MAU_INSTRUCTION_ADJUSTMENT_H_
 
-#include "mau_visitor.h"
-#include "resource.h"
-#include "action_analysis.h"
-#include "bf-p4c/phv/phv.h"
 #include "bf-p4c/ir/tofino_write_context.h"
+#include "bf-p4c/mau/action_analysis.h"
+#include "bf-p4c/mau/mau_visitor.h"
+#include "bf-p4c/mau/resource.h"
+#include "bf-p4c/phv/phv.h"
+#include "lib/safe_vector.h"
 
 /** The purpose of these classes is to adjust the instructions in a single action that perform on
  *  multiple containers into one single action for the entire container.  The pass also
@@ -124,14 +125,14 @@ class MergeInstructions : public MauTransform, TofinoWriteContext {
     const IR::MAU::Action *postorder(IR::MAU::Action *) override;
 
     ordered_set<PHV::Container> merged_fields;
-    ordered_map<PHV::Container, vector<IR::MAU::Instruction *>> removed_instrs;
+    ordered_map<PHV::Container, safe_vector<IR::MAU::Instruction *>> removed_instrs;
 
     bool write_found = false;
     ordered_set<PHV::Container>::iterator merged_location;
 
     struct MultiOperandInfo {
         IR::MAU::MultiOperand *write = nullptr;
-        vector<std::pair<cstring, IR::MAU::MultiOperand *>> reads;
+        safe_vector<std::pair<cstring, IR::MAU::MultiOperand *>> reads;
     };
 
     void build_multi_operand_info(PHV::Container container,

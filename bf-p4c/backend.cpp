@@ -1,5 +1,6 @@
 #include "backend.h"
 #include <fstream>
+#include <set>
 #include "bf-p4c/common/check_header_refs.h"
 #include "bf-p4c/common/copy_header_eliminator.h"
 #include "bf-p4c/common/extract_maupipe.h"
@@ -38,7 +39,7 @@
 namespace BFN {
 
 class CheckTableNameDuplicate : public MauInspector {
-    set<cstring>        names;
+    std::set<cstring>        names;
     profile_t init_apply(const IR::Node *root) override {
         names.clear();
         return MauInspector::init_apply(root); }

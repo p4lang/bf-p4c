@@ -68,7 +68,7 @@ class Table : BFN::Unit {
      * `(int)(logical_id/16)`.
      */
     int                                         logical_id = -1;
-    vector<std::pair<Expression, cstring>>      gateway_rows;
+    safe_vector<std::pair<Expression, cstring>> gateway_rows;
     /** each gateway_row is a an expression for a single row of the gateway,
      * with the string being a tag to run in 'next' for next table, or null
      * if the match_table should run.  The last row (only) may have a NULL
@@ -175,7 +175,7 @@ class Table : BFN::Unit {
             json.load("width", way->width);
             return way; }
     }
-    vector<Way>    ways;
+    safe_vector<Way>    ways;
     const TableResourceAlloc            *resources = nullptr;
 
 #emit
@@ -486,7 +486,7 @@ class HashDist : Expression {
     Expression           field_list;
     cstring              algorithm;
     int                  bit_width = 0;
-    vector<int>          units;
+    safe_vector<int>     units;
     // Pointer to the IR::Primitive that was used to generate this HashDist
     // (and then removed).  This is not visited as part of IR traversal.
     Primitive            prim;

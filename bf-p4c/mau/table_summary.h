@@ -2,14 +2,15 @@
 #define BF_P4C_MAU_TABLE_SUMMARY_H_
 
 #include <iostream>
-#include "mau_visitor.h"
-#include "resource.h"
+#include <map>
+#include "bf-p4c/mau/mau_visitor.h"
+#include "bf-p4c/mau/resource.h"
 
 class TableSummary: public MauInspector {
-    map<int, const IR::MAU::Table *>    order;
-    map<int, IXBar>                     ixbar;
-    map<int, Memories>                  memory;
-    map<int, ActionDataBus>             action_data_bus;
+    std::map<int, const IR::MAU::Table *>    order;
+    std::map<int, IXBar>                     ixbar;
+    std::map<int, Memories>                  memory;
+    std::map<int, ActionDataBus>             action_data_bus;
     profile_t init_apply(const IR::Node *root) override {
         auto rv = MauInspector::init_apply(root);
         order.clear();

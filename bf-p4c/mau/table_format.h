@@ -1,11 +1,13 @@
 #ifndef BF_P4C_MAU_TABLE_FORMAT_H_
 #define BF_P4C_MAU_TABLE_FORMAT_H_
 
-#include "lib/bitvec.h"
-#include "lib/bitops.h"
+#include <map>
+#include "bf-p4c/mau/input_xbar.h"
+#include "bf-p4c/mau/resource_estimate.h"
 #include "ir/ir.h"
-#include "input_xbar.h"
-#include "resource_estimate.h"
+#include "lib/bitops.h"
+#include "lib/bitvec.h"
+#include "lib/safe_vector.h"
 
 // Info for the allocation scheme for individual byte off of the input crossbar
 struct ByteInfo {
@@ -45,7 +47,9 @@ struct TableFormat {
             // an 8 bit field that's partially ghosted,
             // if bitvec.popcount() > byte.hi - byte.lo then it is
             // a misaligned field where the mask was not known until PHV allocation
-            map<IXBar::Use::Byte, bitvec> match;  // The byte and byte_mask location in the format
+
+            /// The byte and byte_mask location in the format
+            std::map<IXBar::Use::Byte, bitvec> match;
             bitvec mask[ENTRY_TYPES];
             bitvec match_byte_mask;  // The bytes that are allocaated for matching
             bitvec allocated_bytes;
@@ -60,10 +64,13 @@ struct TableFormat {
                 : group(g), byte_group(bg), byte_config(bc), dirtcam(dc) {}
         };
 
-        vector<match_group_use> match_groups;
-        vector<TCAM_use> tcam_use;
-        // ghost bits should be the same for all match entries
-        map<IXBar::Use::Byte, bitvec> ghost_bits;  // The byte and individual bits to be ghosted
+        safe_vector<match_group_use> match_groups;
+        safe_vector<TCAM_use> tcam_use;
+
+        /// The byte and individual bits to be ghosted. Ghost bits should be the
+        /// same for all match entries.
+        std::map<IXBar::Use::Byte, bitvec> ghost_bits;
+
         void clear() {
             ghost_bits.clear();
             match_groups.clear();
@@ -79,16 +86,20 @@ struct TableFormat {
     const IR::MAU::Table *tbl;
 
     // Vector for a hash group, as large tables could potentially use multiple hash groups
-    vector<IXBar::Use::Byte> single_match;
+    safe_vector<IXBar::Use::Byte> single_match;
 
     bitvec total_use;  // Total bitvec for all entries in table format
     bitvec match_byte_use;   // Bytes used by all match byte masks
-    vector<bitvec> byte_use;  // Vector of individual byte by byte masks
+    safe_vector<bitvec> byte_use;  // Vector of individual byte by byte masks
 
     // Size of the following vectors is the layout_option.way->width
-    vector<int> match_groups_per_RAM;  // Which RAM sections contain the match groups
-    vector<int> overhead_groups_per_RAM;  // Which RAM sections contain overhead info
-    vector<int> ixbar_group_per_width;  // Specifically which ixbar group coordinates to which RAM
+
+    /// Which RAM sections contain the match groups
+    safe_vector<int> match_groups_per_RAM;
+    /// Which RAM sections contain overhead info
+    safe_vector<int> overhead_groups_per_RAM;
+    /// Specifically which ixbar group coordinates to which RAM
+    safe_vector<int> ixbar_group_per_width;
 
     // Match group index in use coordinate to whenever they are found in the match_groups_per_RAM
     // i.e. if the match_groups_per_RAM looks like [2, 2], then use->match_groups[0] and
@@ -96,7 +107,7 @@ struct TableFormat {
 
     // Size of outer vector is layout_option.way->match_groups.  Essentially which RAMs does
     // each match group use, for allocating version bits.
-    vector<vector<int>> match_group_info;
+    safe_vector<safe_vector<int>> match_group_info;
 
     bool balanced = true;
     int ghost_bits_count = 0;
@@ -111,8 +122,8 @@ struct TableFormat {
         : layout_option(l), match_ixbar(mi), tbl(t), immediate_mask(im), gw_linked(gl) {}
     bool find_format(Use *u);
     bool analyze_layout_option();
-    bool analyze_skinny_layout_option(int per_RAM, vector<std::pair<int, int>> &sizes);
-    bool analyze_wide_layout_option(vector<std::pair<int, int>> &sizes);
+    bool analyze_skinny_layout_option(int per_RAM, safe_vector<std::pair<int, int>> &sizes);
+    bool analyze_wide_layout_option(safe_vector<std::pair<int, int>> &sizes);
     bool allocate_next_table();
     bool allocate_indirect_ptr(int total, type_t type, int group, int RAM);
     bool allocate_all_indirect_ptrs();
@@ -126,10 +137,10 @@ struct TableFormat {
         int &easy_size);
     bool allocate_difficult_bytes(bitvec &unaligned_bytes, bitvec &chosen_ghost_bytes,
         int easy_size);
-    void determine_difficult_vectors(vector<ByteInfo> &unaligned_match,
-        vector<ByteInfo> &unaligned_ghost, bitvec &unaligned_bits,
+    void determine_difficult_vectors(safe_vector<ByteInfo> &unaligned_match,
+        safe_vector<ByteInfo> &unaligned_ghost, bitvec &unaligned_bits,
         bitvec &chosen_ghost_bits, int ghosted_group);
-    bool allocate_byte_vector(vector<ByteInfo> &bytes, int prev_allocated);
+    bool allocate_byte_vector(safe_vector<ByteInfo> &bytes, int prev_allocated);
     void easy_byte_fill(int RAM, int group, ByteInfo &byte, int &starting_byte,
         bool protect);
     int determine_next_group(int current_group, int RAM);

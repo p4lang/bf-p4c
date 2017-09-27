@@ -1,20 +1,22 @@
+#include "bf-p4c/mau/table_placement.h"
+
 #include <algorithm>
 #include <list>
+#include "bf-p4c/mau/action_data_bus.h"
+#include "bf-p4c/mau/field_use.h"
+#include "bf-p4c/mau/input_xbar.h"
+#include "bf-p4c/mau/memories.h"
+#include "bf-p4c/mau/resource.h"
+#include "bf-p4c/mau/resource_estimate.h"
+#include "bf-p4c/mau/table_dependency_graph.h"
+#include "bf-p4c/mau/table_mutex.h"
+#include "bf-p4c/mau/table_layout.h"
 #include "ir/ir.h"
-#include "action_data_bus.h"
-#include "resource_estimate.h"
-#include "input_xbar.h"
-#include "memories.h"
-#include "resource.h"
-#include "table_dependency_graph.h"
-#include "table_mutex.h"
-#include "table_layout.h"
-#include "table_placement.h"
 #include "lib/bitops.h"
 #include "lib/bitvec.h"
 #include "lib/log.h"
+#include "lib/safe_vector.h"
 #include "lib/set.h"
-#include "field_use.h"
 #include "bf-p4c/ir/table_tree.h"
 #include "bf-p4c/phv/phv_fields.h"
 
@@ -172,7 +174,8 @@ struct TablePlacement::Placed {
 
 
     TablePlacement::Placed *gateway_merge();
-    void set_prev(const Placed *p, bool make_new, vector<TableResourceAlloc *> &prev_resources) {
+    void set_prev(const Placed *p, bool make_new,
+                  safe_vector<TableResourceAlloc *> &prev_resources) {
         if (!make_new) {
             prev = p;
             if (p) {
@@ -318,7 +321,7 @@ static bool try_alloc_ixbar(TablePlacement::Placed *next, const TablePlacement::
 
 static bool try_alloc_mem(TablePlacement::Placed *next, const TablePlacement::Placed *done,
                           int &entries, TableResourceAlloc *resources, StageUseEstimate &sue,
-                          vector<TableResourceAlloc *> &prev_resources) {
+                          safe_vector<TableResourceAlloc *> &prev_resources) {
     Memories current_mem;
     int i = 0;
     for (auto *p = done; p && p->stage == next->stage; p = p->prev) {
@@ -368,7 +371,7 @@ static bool try_alloc_adb(TablePlacement::Placed *next, const TablePlacement::Pl
 static void coord_selector_xbar(const TablePlacement::Placed *curr,
                                 const TablePlacement::Placed *done,
                                 TableResourceAlloc *resource,
-                                vector<TableResourceAlloc *> &prev_resources) {
+                                safe_vector<TableResourceAlloc *> &prev_resources) {
     const IR::MAU::Selector *as = nullptr;
     for (auto at : curr->table->attached) {
         if ((as = at->to<IR::MAU::Selector>()) != nullptr) break;
@@ -405,7 +408,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
     TableResourceAlloc *resources = new TableResourceAlloc;
     TableResourceAlloc *min_resources = new TableResourceAlloc;
     rv->resources = resources;
-    vector<TableResourceAlloc *> prev_resources;
+    safe_vector<TableResourceAlloc *> prev_resources;
     for (auto *p = done; p && p->stage == done->stage; p = p->prev) {
         prev_resources.push_back(p->resources->clone_ixbar());
     }
@@ -437,7 +440,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
     assert(!rv->placed[tblInfo.at(rv->table).uid]);
     min_resources->action_format = lc.get_action_format(t);
     resources->action_format = lc.get_action_format(t);
-    const vector<LayoutOption> layout_options = lc.get_layout_options(t);
+    const safe_vector<LayoutOption> layout_options = lc.get_layout_options(t);
     StageUseEstimate min_use(t, min_entries, prev_placed, has_action_data, layout_options);
     StageUseEstimate stage_current = current;
     if (done && rv->stage != done->stage)
@@ -705,7 +708,7 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
         LOG3("stage " << (placed ? placed->stage : 0) << ", work: " << work <<
              ", partly placed " << partly_placed.size() << ", placed " << count(placed));
         StageUseEstimate current = get_current_stage_use(placed);
-        vector<const Placed *> trial;
+        safe_vector<const Placed *> trial;
         for (auto it = work.begin(); it != work.end();) {
             auto grp = *it;
             LOG4("group " << grp->seq->id << " depth=" << grp->depth);

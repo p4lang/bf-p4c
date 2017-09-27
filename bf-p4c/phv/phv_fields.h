@@ -4,16 +4,17 @@
 #include <boost/optional.hpp>
 #include <boost/range/irange.hpp>
 
-#include "phv.h"
+#include "bf-p4c/ir/thread_visitor.h"
+#include "bf-p4c/ir/bitrange.h"
+#include "bf-p4c/ir/tofino_write_context.h"
+#include "bf-p4c/phv/field_alignment.h"
+#include "bf-p4c/phv/phv.h"
 #include "ir/ir.h"
 #include "lib/map.h"
 #include "lib/ordered_map.h"
 #include "lib/ordered_set.h"
 #include "lib/range.h"
-#include "bf-p4c/ir/thread_visitor.h"
-#include "bf-p4c/ir/bitrange.h"
-#include "bf-p4c/ir/tofino_write_context.h"
-#include "bf-p4c/phv/field_alignment.h"
+#include "lib/safe_vector.h"
 
 namespace PHV {
 class ManualAlloc;
@@ -165,7 +166,7 @@ class PhvInfo {
 
      private:  // class Field
         //
-        vector<alloc_slice> alloc_i;          // sorted MSB (field) first
+        safe_vector<alloc_slice> alloc_i;  // sorted MSB (field) first
         //
         // API: phv assignment to rest of Compiler
         //
@@ -237,7 +238,7 @@ class PhvInfo {
         // operations on this field
         //
         bool            mau_write_i = false;               /// true when field Write in MAU
-        vector<std::tuple<bool, cstring, Field_Ops>> operations_i;
+        safe_vector<std::tuple<bool, cstring, Field_Ops>> operations_i;
                                                            /// all operations performed on field
         //
         // ccgf fields
@@ -272,8 +273,8 @@ class PhvInfo {
                                            //                                 -- deparser constraint
                                            //      owner->ccgf = owner, member->ccgf = owner
                                            //      owner->ccgf_fields = (owner + members)
-        vector<Field *> ccgf_fields_i;     // member fields of ccgfs
-                                           // members are in same container as owner
+        safe_vector<Field *> ccgf_fields_i;  // member fields of ccgfs
+                                             // members are in same container as owner
         //
         // phv container requirement of field
         //
@@ -342,7 +343,7 @@ class PhvInfo {
         //
         bool mau_write() const                                 { return mau_write_i; }
         void set_mau_write(bool b)                             { mau_write_i = b; }
-        vector<std::tuple<bool, cstring, Field_Ops>>&
+        safe_vector<std::tuple<bool, cstring, Field_Ops>>&
             operations()                                       { return  operations_i; }
         //
         // ccgf
@@ -355,8 +356,8 @@ class PhvInfo {
         void set_header_stack_pov_ccgf(bool b)                 { header_stack_pov_ccgf_i = b; }
         Field *ccgf() const                                    { return ccgf_i; }
         void set_ccgf(Field *f)                                { ccgf_i = f; }
-        vector<Field *>& ccgf_fields()                         { return ccgf_fields_i; }
-        const vector<Field *>& ccgf_fields() const             { return ccgf_fields_i; }
+        safe_vector<Field *>& ccgf_fields()                    { return ccgf_fields_i; }
+        const safe_vector<Field *>& ccgf_fields() const        { return ccgf_fields_i; }
 
         int ccgf_width() const;  // phv width = aggregate size of members
         //
@@ -496,16 +497,16 @@ class PhvInfo {
 
  private:  // class PhvInfo
     //
-    map<cstring, Field>                 all_fields;
+    std::map<cstring, Field>            all_fields;
     /// Maps Field.id to Field.  Also used to generate fresh Field.id values.
-    vector<Field *>                     by_id;
+    safe_vector<Field *>                by_id;
 
     /// Maps names of header or metadata structs to corresponding info objects.
-    map<cstring, StructInfo>            all_structs;
+    std::map<cstring, StructInfo>       all_structs;
 
     /// Tracks the subset of `all_structs` that are only headers, not header stacks.
     // TODO: what about header unions?
-    map<cstring, StructInfo>            simple_headers;
+    std::map<cstring, StructInfo>       simple_headers;
 
     bool                                alloc_done_ = false;
     bool                                pov_alloc_done = false;
@@ -558,15 +559,15 @@ class PhvInfo {
         return const_cast<Field *>(const_cast<const PhvInfo *>(this)->field(e, bits)); }
     Field *field(const IR::Member *fr, bitrange *bits = 0) {
         return const_cast<Field *>(const_cast<const PhvInfo *>(this)->field(fr, bits)); }
-    vector<Field::alloc_slice> *alloc(const IR::Member *member);
+    safe_vector<Field::alloc_slice> *alloc(const IR::Member *member);
     const StructInfo struct_info(cstring name) const;
     const StructInfo struct_info(const IR::HeaderRef *hr) const {
         return struct_info(hr->toString()); }
     size_t num_fields() const { return all_fields.size(); }
-    iterator<vector<Field *>::iterator> begin() { return by_id.begin(); }
-    iterator<vector<Field *>::iterator> end() { return by_id.end(); }
-    iterator<vector<Field *>::const_iterator> begin() const { return by_id.begin(); }
-    iterator<vector<Field *>::const_iterator> end() const { return by_id.end(); }
+    iterator<safe_vector<Field *>::iterator> begin() { return by_id.begin(); }
+    iterator<safe_vector<Field *>::iterator> end() { return by_id.end(); }
+    iterator<safe_vector<Field *>::const_iterator> begin() const { return by_id.begin(); }
+    iterator<safe_vector<Field *>::const_iterator> end() const { return by_id.end(); }
 
     bool alloc_done() const { return alloc_done_; }
     void set_done() { alloc_done_ = true; }
@@ -602,7 +603,7 @@ void dump(const PhvInfo *);
 void dump(const PhvInfo::Field *);
 //
 std::ostream &operator<<(std::ostream &, const PhvInfo::Field::alloc_slice &);
-std::ostream &operator<<(std::ostream &, const vector<PhvInfo::Field::alloc_slice> &);
+std::ostream &operator<<(std::ostream &, const safe_vector<PhvInfo::Field::alloc_slice> &);
 std::ostream &operator<<(std::ostream &, const ordered_map<Cluster_PHV *, std::pair<int, int>>&);
 std::ostream &operator<<(std::ostream &, const PhvInfo::Field &);
 std::ostream &operator<<(std::ostream &, const PhvInfo::Field *);

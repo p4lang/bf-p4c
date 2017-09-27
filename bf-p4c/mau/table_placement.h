@@ -1,7 +1,8 @@
 #ifndef BF_P4C_MAU_TABLE_PLACEMENT_H_
 #define BF_P4C_MAU_TABLE_PLACEMENT_H_
 
-#include "mau_visitor.h"
+#include <map>
+#include "bf-p4c/mau/mau_visitor.h"
 #include "lib/ordered_set.h"
 
 struct DependencyGraph;
@@ -19,9 +20,9 @@ class TablePlacement : public MauTransform, public Backtrack {
 
  private:
     struct TableInfo;
-    map<const IR::MAU::Table *, struct TableInfo> tblInfo;
+    std::map<const IR::MAU::Table *, struct TableInfo> tblInfo;
     struct TableSeqInfo;
-    map<const IR::MAU::TableSeq *, struct TableSeqInfo> seqInfo;
+    std::map<const IR::MAU::TableSeq *, struct TableSeqInfo> seqInfo;
     class SetupInfo;
     const DependencyGraph* deps;
     const TablesMutuallyExclusive &mutex;

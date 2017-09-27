@@ -1,7 +1,7 @@
 #ifndef BF_P4C_MAU_INSTRUCTION_SELECTION_H_
 #define BF_P4C_MAU_INSTRUCTION_SELECTION_H_
 
-#include "mau_visitor.h"
+#include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/phv/phv_fields.h"
 
 class InstructionSelection : public MauTransform {

@@ -3,8 +3,9 @@
 
 #include <getopt.h>
 #include <boost/algorithm/string.hpp>
-#include "version.h"
 #include "frontends/common/options.h"
+#include "lib/safe_vector.h"
+#include "version.h"
 
 class BFN_Options : public CompilerOptions {
  public:
@@ -75,7 +76,7 @@ class BFN_Options : public CompilerOptions {
     }
 
  private:
-    static vector<cstring> supported_targets;
+    static safe_vector<cstring> supported_targets;
 };
 
 #endif /* EXTENSIONS_BF_P4C_BF_P4C_OPTIONS_H_ */

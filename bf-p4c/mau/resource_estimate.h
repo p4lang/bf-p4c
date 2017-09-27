@@ -1,7 +1,8 @@
 #ifndef BF_P4C_MAU_RESOURCE_ESTIMATE_H_
 #define BF_P4C_MAU_RESOURCE_ESTIMATE_H_
 
-#include "table_layout.h"
+#include "bf-p4c/mau/table_layout.h"
+#include "lib/safe_vector.h"
 
 struct StageUseEstimate {
     int logical_ids;
@@ -9,7 +10,7 @@ struct StageUseEstimate {
     int exact_ixbar_bytes;
     int ternary_ixbar_groups;
     bool prev_placed; bool has_action_data;
-    vector<LayoutOption> layout_options;
+    safe_vector<LayoutOption> layout_options;
     int preferred_index;
     StageUseEstimate() { memset(this, 0, sizeof(*this)); }
     StageUseEstimate &operator+=(const StageUseEstimate &a) {
@@ -21,7 +22,8 @@ struct StageUseEstimate {
         ternary_ixbar_groups += a.ternary_ixbar_groups;
         return *this; }
     StageUseEstimate(const IR::MAU::Table *, int &, bool pp, bool had,
-                     const vector<LayoutOption> &lo, bool table_placement = false);
+                     const safe_vector<LayoutOption> &lo,
+                     bool table_placement = false);
     StageUseEstimate operator+(const StageUseEstimate &a) const {
         StageUseEstimate rv = *this; rv += a; return rv; }
     static StageUseEstimate max() {
@@ -72,7 +74,7 @@ struct StageUseEstimate {
         RAM_counter() : per_word(0), width(0), need_maprams(false) {}
         RAM_counter(int p, int w, bool nm) : per_word(p), width(w), need_maprams(nm) {}
     };
-    void calculate_per_row_vector(vector<RAM_counter> &per_word_and_width,
+    void calculate_per_row_vector(safe_vector<RAM_counter> &per_word_and_width,
                                   const IR::MAU::Table *tbl, LayoutOption *lo);
 };
 

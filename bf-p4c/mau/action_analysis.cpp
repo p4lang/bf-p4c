@@ -290,8 +290,8 @@ bool ActionAnalysis::verify_action_data_instr(const ActionParam &write, const Ac
     auto &action_format = tbl->resources->action_format;
 
     auto &placements = action_format.arg_placement.at(action_name);
-    const vector<ActionFormat::ActionDataPlacement> *action_data_format = nullptr;
-    const vector<ActionFormat::ActionDataPlacement> *immediate_format = nullptr;
+    const safe_vector<ActionFormat::ActionDataPlacement> *action_data_format = nullptr;
+    const safe_vector<ActionFormat::ActionDataPlacement> *immediate_format = nullptr;
     action_data_format = &(action_format.action_data_format.at(action_name));
 
     if (tbl->layout.action_data_bytes_in_overhead > 0)

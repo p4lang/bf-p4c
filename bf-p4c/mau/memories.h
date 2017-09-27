@@ -2,9 +2,11 @@
 #define BF_P4C_MAU_MEMORIES_H_
 
 #include <algorithm>
-#include "lib/alloc.h"
+#include <unordered_set>
+#include "bf-p4c/mau/input_xbar.h"
 #include "ir/ir.h"
-#include "input_xbar.h"
+#include "lib/alloc.h"
+#include "lib/safe_vector.h"
 
 struct Memories {
     /* track memory allocations within a single stage */
@@ -95,7 +97,7 @@ struct Memories {
          * each memory is allocated to?  For now, we do not. */
         struct Row {
             int         row, bus;
-            vector<int> col, mapcol;
+            safe_vector<int> col, mapcol;
             explicit Row(int r, int b = -1) : row(r), bus(b) {}
             void dbprint(std::ostream &out) const {
                 out << "Row " << row << " with bus " << bus;
@@ -104,7 +106,7 @@ struct Memories {
         struct Way {
             int size;
             unsigned select_mask;
-            vector<std::pair<int, int>> rams;
+            safe_vector<std::pair<int, int>> rams;
             explicit Way(int s, unsigned sm) : size(s), select_mask(sm) {}
         };
         struct Gateway {
@@ -113,10 +115,10 @@ struct Memories {
             int unit;
             type_t bus_type;
         };
-        vector<Row>                          row;
-        vector<Row>                          color_mapram;
-        vector<std::pair<int, int>>          home_row;
-        vector<Way>                          ways;
+        safe_vector<Row>                     row;
+        safe_vector<Row>                     color_mapram;
+        safe_vector<std::pair<int, int>>     home_row;
+        safe_vector<Way>                     ways;
         Gateway                              gateway;
         int                                  per_row;
         bool                                 unattached_profile = false;
@@ -131,7 +133,7 @@ struct Memories {
     struct table_alloc {
         const IR::MAU::Table *table;
         const IXBar::Use *match_ixbar;
-        map<cstring, Memories::Use>* memuse;
+        std::map<cstring, Memories::Use>* memuse;
         const LayoutOption *layout_option;
         int provided_entries;
         int calculated_entries;
@@ -139,7 +141,7 @@ struct Memories {
         // Linked gw/match table that uses the same result bus
         table_alloc *table_link = nullptr;
         explicit table_alloc(const IR::MAU::Table *t, const IXBar::Use *mi,
-                             map<cstring, Memories::Use> *mu,
+                             std::map<cstring, Memories::Use> *mu,
                              const LayoutOption *lo, const int e)
                 : table(t), match_ixbar(mi), memuse(mu), layout_option(lo), provided_entries(e),
                   calculated_entries(0), attached_gw_bytes(0), table_link(nullptr) {}
@@ -170,7 +172,7 @@ struct Memories {
         // a collision on the selector overflow
         struct selector_info {
             SRAM_group *sel_group = nullptr;
-            unordered_set<SRAM_group *> action_groups;
+            std::unordered_set<SRAM_group *> action_groups;
             bool sel_linked() { return sel_group != nullptr; }
             bool act_linked() { return !action_groups.empty(); }
             bool sel_all_placed() { return sel_group->all_placed(); }
@@ -305,27 +307,27 @@ struct Memories {
     enum RAM_side_t { LEFT = 0, RIGHT, RAM_SIDES };
     enum switchbox_t { ACTION = 0, SYNTH, OFLOW, SWBOX_TYPES };
 
-    vector<table_alloc *>       tables;
-    vector<table_alloc *>       exact_tables;
-    vector<SRAM_group *>        exact_match_ways;
-    vector<table_alloc *>       ternary_tables;
-    vector<table_alloc *>       tind_tables;
-    vector<SRAM_group *>        tind_groups;
-    vector<table_alloc *>       action_tables;
-    vector<table_alloc *>       indirect_action_tables;
-    vector<profile_info *>      action_profiles;
-    vector<table_alloc *>       selector_tables;
-    vector<table_alloc *>       stats_tables;
-    vector<table_alloc *>       meter_tables;
-    vector<table_alloc *>       stateful_tables;
-    ordered_set<SRAM_group *>   action_bus_users;
-    ordered_set<SRAM_group *>   synth_bus_users;
-    vector<table_alloc *>       gw_tables;
-    vector<table_alloc *>       no_match_hit_tables;
-    vector<table_alloc *>       no_match_miss_tables;
-    vector<table_alloc *>       payload_gws;
-    vector<table_alloc *>       normal_gws;
-    vector<table_alloc *>       no_match_gws;
+    safe_vector<table_alloc *>       tables;
+    safe_vector<table_alloc *>       exact_tables;
+    safe_vector<SRAM_group *>        exact_match_ways;
+    safe_vector<table_alloc *>       ternary_tables;
+    safe_vector<table_alloc *>       tind_tables;
+    safe_vector<SRAM_group *>        tind_groups;
+    safe_vector<table_alloc *>       action_tables;
+    safe_vector<table_alloc *>       indirect_action_tables;
+    safe_vector<profile_info *>      action_profiles;
+    safe_vector<table_alloc *>       selector_tables;
+    safe_vector<table_alloc *>       stats_tables;
+    safe_vector<table_alloc *>       meter_tables;
+    safe_vector<table_alloc *>       stateful_tables;
+    ordered_set<SRAM_group *>        action_bus_users;
+    ordered_set<SRAM_group *>        synth_bus_users;
+    safe_vector<table_alloc *>       gw_tables;
+    safe_vector<table_alloc *>       no_match_hit_tables;
+    safe_vector<table_alloc *>       no_match_miss_tables;
+    safe_vector<table_alloc *>       payload_gws;
+    safe_vector<table_alloc *>       normal_gws;
+    safe_vector<table_alloc *>       no_match_gws;
 
     unsigned side_mask(RAM_side_t side);
     int mems_needed(int entries, int depth, int per_mem_row, bool is_twoport);
@@ -335,11 +337,11 @@ struct Memories {
     void calculate_column_balance(mem_info &mi, unsigned &row);
     bool cut_from_left_side(mem_info &mi, int left_given_columns, int right_given_columns);
     bool allocate_all_exact(unsigned column_mask);
-    vector<int> way_size_calculator(int ways, int RAMs_needed);
-    vector<std::pair<int, int>> available_SRAMs_per_row(unsigned mask, table_alloc *ta,
-                                                        int depth);
-    vector<int> available_match_SRAMs_per_row(unsigned row_mask, unsigned total_mask, int row,
-                                                 table_alloc *ta, int width_sect);
+    safe_vector<int> way_size_calculator(int ways, int RAMs_needed);
+    safe_vector<std::pair<int, int>> available_SRAMs_per_row(unsigned mask, table_alloc *ta,
+                                                             int depth);
+    safe_vector<int> available_match_SRAMs_per_row(unsigned row_mask, unsigned total_mask, int row,
+                                                   table_alloc *ta, int width_sect);
     void break_exact_tables_into_ways();
     int match_bus_available(table_alloc *ta, int width, int row);
     bool find_best_row_and_fill_out(unsigned column_mask);
@@ -415,9 +417,9 @@ struct Memories {
  public:
     bool allocate_all();
     void update(cstring table_name, const Use &alloc);
-    void update(const map<cstring, Use> &alloc);
+    void update(const std::map<cstring, Use> &alloc);
     void remove(cstring table_name, const Use &alloc);
-    void remove(const map<cstring, Use> &alloc);
+    void remove(const std::map<cstring, Use> &alloc);
     void clear();
     void add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
                    TableResourceAlloc *resources, const LayoutOption *lo, int entries);

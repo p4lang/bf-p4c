@@ -1,11 +1,14 @@
 #ifndef BF_P4C_MAU_ASM_OUTPUT_H_
 #define BF_P4C_MAU_ASM_OUTPUT_H_
 
-#include "default_next.h"
-#include "resource.h"
-#include "lib/log.h"
+#include <map>
+#include <vector>
 #include "bf-p4c/common/asm_output.h"
-#include "memories.h"
+#include "bf-p4c/mau/default_next.h"
+#include "bf-p4c/mau/memories.h"
+#include "bf-p4c/mau/resource.h"
+#include "lib/log.h"
+#include "lib/safe_vector.h"
 
 class PhvInfo;
 
@@ -29,17 +32,19 @@ class MauAsmOutput : public MauInspector {
     friend std::ostream &operator<<(std::ostream &, const MauAsmOutput &);
     class TableMatch;
     void emit_ixbar(std::ostream &out, indent_t, const IXBar::Use *,
-            const vector<IXBar::HashDistUse> *, const Memories::Use *, const TableMatch *) const;
+            const safe_vector<IXBar::HashDistUse> *,
+            const Memories::Use *, const TableMatch *) const;
     void emit_ways(std::ostream &out, indent_t indent, const IXBar::Use *use,
             const Memories::Use *mem) const;
     void emit_hash_dist(std::ostream &out, indent_t indent,
-             const vector<IXBar::HashDistUse> *hash_dist_use) const;
-    void emit_ixbar_gather_bytes(const vector<IXBar::Use::Byte> &use,
-                                 map<int, map<int, Slice>> &sort, bool ternary) const;
-    void emit_ixbar_hash_table(int hash_table, vector<Slice> &match_data,
-            vector<Slice> &ghost, const TableMatch *fmt, map<int, map<int, Slice>> &sort) const;
-    void emit_ixbar_hash(std::ostream &out, indent_t indent, vector<Slice> &match_data,
-            vector<Slice> &ghost, const IXBar::Use *use, int hash_group) const;
+             const safe_vector<IXBar::HashDistUse> *hash_dist_use) const;
+    void emit_ixbar_gather_bytes(const safe_vector<IXBar::Use::Byte> &use,
+                                 std::map<int, std::map<int, Slice>> &sort, bool ternary) const;
+    void emit_ixbar_hash_table(int hash_table, safe_vector<Slice> &match_data,
+            safe_vector<Slice> &ghost, const TableMatch *fmt,
+            std::map<int, std::map<int, Slice>> &sort) const;
+    void emit_ixbar_hash(std::ostream &out, indent_t indent, safe_vector<Slice> &match_data,
+            safe_vector<Slice> &ghost, const IXBar::Use *use, int hash_group) const;
     void emit_single_ixbar(std::ostream& out, indent_t indent, const IXBar::Use *use,
             const TableMatch *fmt) const;
     void emit_memory(std::ostream &out, indent_t, const Memories::Use &) const;

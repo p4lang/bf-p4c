@@ -1,7 +1,7 @@
 #ifndef BF_P4C_MAU_ACTION_PHV_CONSTRAINTS_H_
 #define BF_P4C_MAU_ACTION_PHV_CONSTRAINTS_H_
 
-#include "mau_visitor.h"
+#include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/phv/phv_fields.h"
 
 /** This class is meant to gather action information as well as provide information to
@@ -28,7 +28,7 @@ class ActionPhvConstraints : public MauInspector {
     ordered_map<const PhvInfo::Field *, ordered_set<const PhvInfo::Field *>> shared_writes;
     // Any FieldRead in the vector will use the following as an operand in action where
     // the key is the field written in that action
-    ordered_map<const PhvInfo::Field *, vector<FieldRead>> write_to_reads;
+    ordered_map<const PhvInfo::Field *, safe_vector<FieldRead>> write_to_reads;
     // Any field within the set will have been written by the key field
     ordered_map<const PhvInfo::Field *, ordered_set<const PhvInfo::Field *>> read_to_writes;
     int current_action = 0;

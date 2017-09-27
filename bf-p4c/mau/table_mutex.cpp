@@ -1,10 +1,10 @@
-#include "table_mutex.h"
+#include "bf-p4c/mau/table_mutex.h"
 
 void TablesMutuallyExclusive::postorder(const IR::MAU::Table *tbl) {
     // FIXME: Doesn't take into account gateways and match tables merging after table placement
     assert(table_ids.count(tbl));
     table_succ[tbl][table_ids[tbl]] = true;
-    vector<bitvec> sets;
+    safe_vector<bitvec> sets;
     bitvec common;
     for (auto &n : tbl->next) {
         /* find the tables reachable via each next_table chain */
@@ -57,7 +57,7 @@ void TablesMutuallyExclusive::postorder(const IR::MAU::Table *tbl) {
 
 void TablesMutuallyExclusive::postorder(const IR::BFN::Pipe *pipe) {
     /* ingress and egress are mutually exclusive */
-    vector<bitvec> sets;
+    safe_vector<bitvec> sets;
     for (auto th : pipe->thread)
         if (th.mau) {
             bitvec set;

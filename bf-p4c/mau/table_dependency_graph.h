@@ -3,7 +3,9 @@
 
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/transitive_closure.hpp>
-#include "mau_visitor.h"
+#include <map>
+#include <set>
+#include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/phv/phv_fields.h"
 
 /* The DependencyGraph data structure is a directed graph in which tables are
@@ -48,18 +50,18 @@ struct DependencyGraph {
 
     // happens_before[t1] = {t2, t3} means that t1 happens strictly before t2
     // and t3: t1 MUST be placed in an earlier stage.
-    map< const IR::MAU::Table*,
-         set<const IR::MAU::Table*> > happens_before_map;
+    std::map<const IR::MAU::Table*,
+             std::set<const IR::MAU::Table*>> happens_before_map;
 
-    map<const IR::MAU::Table*,
-        typename Graph::vertex_descriptor> labelToVertex;
+    std::map<const IR::MAU::Table*,
+             typename Graph::vertex_descriptor> labelToVertex;
 
     struct StageInfo {
         int min_stage,      // Minimum stage at which a table can be placed.
         dep_stages;         // Number of tables that depend on this table and
                             // must be placed in a stage after it.
     };
-    map<const IR::MAU::Table*, StageInfo> stage_info;
+    std::map<const IR::MAU::Table*, StageInfo> stage_info;
 
     DependencyGraph(void) { finalized = false; }
 
@@ -125,7 +127,7 @@ struct DependencyGraph {
         return stage_info.at(t).min_stage;
     }
 
-    set<const IR::MAU::Table*>
+    std::set<const IR::MAU::Table*>
     happens_before_dependences(const IR::MAU::Table* t) const {
         if (!finalized)
             BUG("Dependence graph used before being fully constructed.");
@@ -142,7 +144,7 @@ class FindDependencyGraph : public MauInspector, ControlFlowVisitor {
  private:
     PhvInfo                                              &phv;
     DependencyGraph                                      &dg;
-    map<cstring, access_t>                               access;
+    std::map<cstring, access_t>                           access;
 
     void finalize_dependence_graph(void);
 

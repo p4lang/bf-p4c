@@ -1,19 +1,20 @@
 #ifndef BF_P4C_MAU_RESOURCE_H_
 #define BF_P4C_MAU_RESOURCE_H_
 
+#include <map>
+#include "bf-p4c/mau/action_data_bus.h"
+#include "bf-p4c/mau/input_xbar.h"
+#include "bf-p4c/mau/memories.h"
+#include "bf-p4c/mau/table_format.h"
 #include "ir/ir.h"
-#include "input_xbar.h"
-#include "memories.h"
-#include "table_format.h"
-#include "action_data_bus.h"
-
+#include "lib/safe_vector.h"
 
 struct TableResourceAlloc {
     IXBar::Use                          match_ixbar, gateway_ixbar, selector_ixbar,
                                         salu_ixbar;
-    vector<IXBar::HashDistUse>          hash_dists;
+    safe_vector<IXBar::HashDistUse>     hash_dists;
     TableFormat::Use                    table_format;
-    map<cstring, Memories::Use>         memuse;
+    std::map<cstring, Memories::Use>    memuse;
     ActionFormat::Use                   action_format;
     ActionDataBus::Use                  action_data_xbar;
     TableResourceAlloc *clone_rename(const char *ext, const cstring name) const {

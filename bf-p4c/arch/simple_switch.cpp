@@ -1,5 +1,7 @@
 #include "simple_switch.h"
 
+#include <set>
+
 namespace BFN {
 
 /// helpers
@@ -395,7 +397,7 @@ using ActionUseMap = std::map<cstring, cstring>;
 class FindRandomUsage : public Inspector {
     RandomUseMap* randUseMap;
     ActionUseMap* actionUseMap;
-    set<cstring> unique_names;
+    std::set<cstring> unique_names;
 
  public:
     FindRandomUsage(RandomUseMap* map, ActionUseMap* actionMap)
@@ -517,7 +519,7 @@ using HashNameMap = ordered_map<const IR::Node*, cstring>;
 class FindHashUsage : public Inspector {
     HashUseMap* hashUseMap;
     HashNameMap* hashNameMap;
-    set<cstring> unique_names;
+    std::set<cstring> unique_names;
 
  public:
     FindHashUsage(HashUseMap* map, HashNameMap* nameMap)

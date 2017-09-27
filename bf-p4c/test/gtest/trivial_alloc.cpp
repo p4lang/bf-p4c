@@ -2,14 +2,15 @@
 #include <type_traits>
 #include "gtest/gtest.h"
 
-#include "ir/ir.h"
-#include "lib/error.h"
-#include "test/gtest/helpers.h"
 #include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_spec.h"
 #include "bf-p4c/phv/trivial_alloc.h"
 #include "bf-p4c/test/gtest/tofino_gtest_utils.h"
+#include "ir/ir.h"
+#include "lib/error.h"
+#include "lib/safe_vector.h"
+#include "test/gtest/helpers.h"
 
 namespace Test {
 
@@ -74,7 +75,7 @@ class TofinoPHVTrivialAllocators : public TofinoBackendTest {
  protected:
     // This class is a friend of PhvInfo::Field, so it has access to
     // Field::alloc_i; this helper makes that member available to subclasses.
-    static const vector<PhvInfo::Field::alloc_slice>&
+    static const safe_vector<PhvInfo::Field::alloc_slice>&
         alloc(const PhvInfo::Field* field) { return field->alloc_i; }
 };
 
