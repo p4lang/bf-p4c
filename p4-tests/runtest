@@ -102,6 +102,7 @@ for p4c_arg in $P4C_ARGS; do
     fi
 done
 P4C_ARGS="$filter_P4C_ARGS"
+out_ext=""
 
 while [ $# -gt 1 ]; do
     case $1 in
@@ -149,6 +150,10 @@ while [ $# -gt 1 ]; do
         if [ -d $testdir${1#-} ]; then
             testdir="$testdir${1#-}"
         fi
+        P4C_ARGS="$P4C_ARGS $1"
+        ;;
+    -D*)
+        out_ext=$out_ext$1
         P4C_ARGS="$P4C_ARGS $1"
         ;;
     *)  P4C_ARGS="$P4C_ARGS $1"
@@ -202,7 +207,7 @@ if [ ! -d ${ptftestdir} ] && ! $run_stf2ptf; then
     run_ptf=false
 fi
 
-p4runtime_out=$testdir/${name}.out/p4info.proto.txt
+p4runtime_out=$testdir/${name}${out_ext}.out/p4info.proto.txt
 P4C_ARGS="$P4C_ARGS --p4runtime-file $p4runtime_out --p4runtime-format text"
 
 if $run_ptf || $run_stf2ptf; then
@@ -215,13 +220,13 @@ fi
 
 if $debug; then
     if $verbose; then
-        echo "$DEBUGGER_COMMAND $P4C $P4C_ARGS $file -o $testdir/$name.bfa"
+        echo "$DEBUGGER_COMMAND $P4C $P4C_ARGS $file -o $testdir/$name${out_ext}.bfa"
     fi
-    exec $DEBUGGER_COMMAND $P4C $P4C_ARGS $file -o $testdir/$name.bfa
+    exec $DEBUGGER_COMMAND $P4C $P4C_ARGS $file -o $testdir/$name${out_ext}.bfa
 fi
 
 if [ $(expr "$file" : ".*_errors") -gt 0 ]; then
-    if run $P4C $P4C_ARGS $file -o $testdir/${name}.out; then
+    if run $P4C $P4C_ARGS $file -o $testdir/${name}${out_ext}.out; then
         echo >&2 "$P4C did not give an error when expected"
         exit 1
     fi
@@ -229,30 +234,30 @@ if [ $(expr "$file" : ".*_errors") -gt 0 ]; then
 fi
 
 # delete old outputs so we don't get confused if they're not overwritten
-rm -f $testdir/$name.bfa
-rm -f $testdir/$name.out/tofino.bin
-rm -f $testdir/$name.out/tofino.bin.gz
-run $P4C $P4C_ARGS $file -o $testdir/${name}.out || die
+rm -f $testdir/$name${out_ext}.bfa
+rm -f $testdir/$name${out_ext}.out/tofino.bin
+rm -f $testdir/$name${out_ext}.out/tofino.bin.gz
+run $P4C $P4C_ARGS $file -o $testdir/${name}${out_ext}.out || die
 # FIXME -- p4c should not leave these laying about.  Should also compress tofino.bin?
-rm -f $testdir/$name.out/*.cfg.json
-if [ -r $testdir/$name.out/tofino.bin ]; then
+rm -f $testdir/$name${out_ext}.out/*.cfg.json
+if [ -r $testdir/$name${out_ext}.out/tofino.bin ]; then
     if $run_ptf; then
         true # ptf requires uncompressed binary
     elif $run_stf; then
         # stf can run compressed binaries with recent updates
-        gzip -f $testdir/$name.out/tofino.bin
+        gzip -f $testdir/$name${out_ext}.out/tofino.bin
     else
         #binary not needed
-        rm $testdir/$name.out/tofino.bin
+        rm $testdir/$name${out_ext}.out/tofino.bin
     fi
 fi
-for f in $testdir/$name.out/*.log; do
+for f in $testdir/$name${out_ext}.out/*.log; do
     if [ -r $f ]; then
         gzip -f $f
     fi
 done
 
-if [ ! -r $testdir/$name.out/$name.bfa ]; then
+if [ ! -r $testdir/$name${out_ext}.out/$name.bfa ]; then
     echo >&2 "$P4C did not give an error but did not generate output either"
     exit 1
 fi
@@ -266,11 +271,11 @@ if $run_stf && [ -r ${file%.p4}.stf ]; then
         test=`pwd`/${file%.p4}.stf
     fi
     cd $testdir
-    mkdir -p $name.out
+    mkdir -p $name${out_ext}.out
     obsLog=$name.p4.obs
 
-    rm -f $name.out/*.cfg.json
-    run $STF -l $name.out --observation-log $obsLog $test | \
+    rm -f $name${out_ext}.out/*.cfg.json
+    run $STF -l $name${out_ext}.out --observation-log $obsLog $test | \
         grep -v 'WARN MAU::[a-z_]* Time gone backwards!' \
         || die
 fi
@@ -278,7 +283,7 @@ fi
 if $run_ptf ; then
     PTF_RUNNER=$(findbin HARLYN_PTF_DRIVER_WRAPPER)
     if [ -d ${ptftestdir} ]; then
-        PTF_CMD="$PTF_RUNNER --testdir $testdir/$name.out --name $name \
+        PTF_CMD="$PTF_RUNNER --testdir $testdir/$name${out_ext}.out --name $name \
                 --ptfdir ${ptftestdir} --top-builddir $(findcmakecache)"
     elif $run_stf2ptf && [ -r ${file%.p4}.stf ]; then
         mydir=$(dirname $0)
@@ -288,7 +293,7 @@ if $run_ptf ; then
         else
             stftest=`pwd`/${file%.p4}.stf
         fi
-        PTF_CMD="$PTF_RUNNER --testdir $testdir/$name.out --name $name \
+        PTF_CMD="$PTF_RUNNER --testdir $testdir/$name${out_ext}.out --name $name \
                 --stftest ${stftest} \
                 --ptfdir ${mydir}/tools/stf --top-builddir $(findcmakecache)"
     fi
@@ -298,8 +303,8 @@ if $run_ptf ; then
 fi
 
 # cleanup
-rm -f $testdir/$name.out/tofino.bin
-rm -f $testdir/$name.out/*.cfg.json
+rm -f $testdir/$name${out_ext}.out/tofino.bin
+rm -f $testdir/$name${out_ext}.out/*.cfg.json
 
 if [[ " $IFAIL_TESTS " =~ " $testdir/$name.p4.test " ]]; then
     echo "intermittent test PASSED"
