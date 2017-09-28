@@ -66,7 +66,9 @@ public:
     template<class T> T &to() { return dynamic_cast<T &>(*this); }
     template<class T> const T &to() const { return dynamic_cast<const T &>(*this); }
     virtual std::unique_ptr<obj> copy() && = 0; //Creates a shallow copy of unique_ptr
-    virtual std::unique_ptr<obj> clone() { return nullptr; } //Creates a deep copy of obj
+    virtual std::unique_ptr<obj> clone() const = 0; //Creates a deep copy of obj
+    static std::unique_ptr<obj> clone_ptr(const std::unique_ptr<obj> &a) {
+        return a ? a->clone() : std::unique_ptr<obj>(); }
     std::string toString() const;
 };
 
@@ -78,6 +80,7 @@ class True : public obj {
         { out << "true"; }
     bool test_width(int &limit) const { limit -= 4; return limit >= 0; }
     std::unique_ptr<obj> copy() && { return mkuniq<True>(std::move(*this)); }
+    std::unique_ptr<obj> clone() const { return mkuniq<True>(); }
 };
 
 class False : public obj {
@@ -88,6 +91,7 @@ class False : public obj {
         { out << "false"; }
     bool test_width(int &limit) const { limit -= 5; return limit >= 0; }
     std::unique_ptr<obj> copy() && { return mkuniq<False>(std::move(*this)); }
+    std::unique_ptr<obj> clone() const { return mkuniq<False>(); }
 };
 
 class number : public obj {
@@ -109,7 +113,7 @@ public:
     number *as_number() override { return this; }
     const number *as_number() const override { return this; }
     std::unique_ptr<obj> copy() && override { return mkuniq<number>(std::move(*this)); }
-    std::unique_ptr<obj> clone() override { return std::unique_ptr<number>(new number(val)); }
+    std::unique_ptr<obj> clone() const override { return mkuniq<number>(val); }
 };
 
 class string : public obj, public std::string {
@@ -142,6 +146,7 @@ public:
     string *as_string() { return this; }
     const string *as_string() const { return this; }
     std::unique_ptr<obj> copy() && { return mkuniq<string>(std::move(*this)); }
+    std::unique_ptr<obj> clone() const override { return mkuniq<string>(*this); }
 };
 
 class map; // forward decl
@@ -201,9 +206,9 @@ public:
     vector *as_vector() override { return this; }
     const vector *as_vector() const override { return this; }
     std::unique_ptr<obj> copy() && override { return mkuniq<vector>(std::move(*this)); }
-    std::unique_ptr<obj> clone() override { 
-        vector *v = new vector(); 
-        for (auto &e: *this) v->push_back(e->clone());
+    std::unique_ptr<obj> clone() const override {
+        vector *v = new vector();
+        for (auto &e: *this) v->push_back(clone_ptr(e));
         return std::unique_ptr<vector>(v); }
 };
 
@@ -399,7 +404,11 @@ public:
     map *as_map() { return this; }
     const map *as_map() const { return this; }
     std::unique_ptr<obj> copy() && { return mkuniq<map>(std::move(*this)); }
-    //std::unique_ptr<obj> clone() override { }; //FIXME 
+    std::unique_ptr<obj> clone() const override {
+        map *m = new map();
+        for (auto &e: *this)
+            m->emplace(e.first ? e.first->clone().release() : nullptr, clone_ptr(e.second));
+        return std::unique_ptr<map>(m); }
 };
 
 inline void vector::push_back(map &&m) { emplace_back(mkuniq<map>(std::move(m))); }
