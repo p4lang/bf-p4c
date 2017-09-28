@@ -1412,10 +1412,12 @@ template<class REGS> void MatchTable::write_regs(REGS &regs, int type, Table *re
     if (options.match_compiler && dynamic_cast<HashActionTable *>(this))
         return; // skip the rest
 
-    if (table_counter)
+    if (table_counter) {
         merge.mau_table_counter_ctl[logical_id/8U].set_subfield(
             table_counter, 3 * (logical_id%8U), 3);
-
+    } else { // Set to TABLE_HIT by default
+        merge.mau_table_counter_ctl[logical_id/8U].set_subfield(
+            TABLE_HIT, 3 * (logical_id%8U), 3); }
 }
 FOR_ALL_TARGETS(INSTANTIATE_TARGET_TEMPLATE, void MatchTable::write_regs, mau_regs &, int, Table *)
 
@@ -2114,4 +2116,10 @@ void Table::common_tbl_cfg(json::map &tbl, const char *default_match_type) {
             tbl["action_profile"] = nullptr;
         tbl["dynamic_match_key_masks"] = false;
         tbl["uses_static_entries"] = false; }
+}
+
+void Table::add_result_physical_buses(json::map &stage_tbl) {
+    json::vector &result_physical_buses = stage_tbl["result_physical_buses"] = json::vector();
+    for (auto l : layout) {
+        result_physical_buses.push_back(l.row * 2 + l.bus); }
 }

@@ -961,6 +961,7 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
             add_pack_format(stage_tbl, 128, 1, 1);
         else
             add_pack_format(stage_tbl, 0, 0, 1);
+        add_result_physical_buses(stage_tbl);
         if (ways.size() > 0) {
             json::vector &way_stage_tables = stage_tbl["ways"] = json::vector();
             unsigned way_number = 0;

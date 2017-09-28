@@ -27,7 +27,7 @@ enum {
 class Phv : public Section {
     void start(int lineno, VECTOR(value_t) args);
     void input(VECTOR(value_t) args, value_t data);
-    void output(json::map &) {}
+    void output(json::map &);
     Phv();
     ~Phv() {}
     static Phv phv;
@@ -66,7 +66,10 @@ private:
     std::map<std::string, Slice> names[2];
     std::map<int, std::pair<gress_t, std::vector<std::string>>> user_defined;
     bitvec      phv_use[2];
+    std::map<std::string, int> phv_field_sizes [2];
+    void gen_phv_field_size_map();
     int addreg(gress_t gress, const char *name, const value_t &what);
+    int get_position_offset(gress_t gress, std::string name);
 public:
     static const Slice *get(gress_t gress, const std::string &name) {
         auto it = phv.names[gress].find(name);

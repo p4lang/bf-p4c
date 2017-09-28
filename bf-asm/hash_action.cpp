@@ -145,6 +145,7 @@ void HashActionTable::gen_tbl_cfg(json::vector &out) {
         // to. Otherwise, set it to the default next table for this stage.
         stage_tbl["default_next_table"] = 255;
         add_pack_format(stage_tbl, 0, 0, hash_dist.empty() ? 1 : 0);
+        add_result_physical_buses(stage_tbl);
         if (actions) {
             actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
             actions->add_action_format(this, stage_tbl);

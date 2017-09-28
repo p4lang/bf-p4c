@@ -434,6 +434,9 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
                                           const Table::Format::Field &field,
                                           const std::vector<Actions::Action::alias_value_t *> &);
     void add_zero_padding_fields(Table::Format *format, Table::Actions::Action *act = nullptr, unsigned format_width = 64);
+    // Result physical buses should be setup for
+    // Exact/Hash/MatchwithNoKey/ATCAM/Ternary tables
+    void add_result_physical_buses(json::map &stage_tbl);
     void canon_field_list(json::vector &field_list);
     void check_next();
     void check_next(Ref &next);

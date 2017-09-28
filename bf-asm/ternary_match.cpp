@@ -457,6 +457,7 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
         // FIXME-JSON: If the next table is modifiable then we set it to what it's mapped
         // to. Otherwise, set it to the default next table for this stage.
         stage_tbl["default_next_table"] = 255;
+        add_result_physical_buses(stage_tbl);
         json::vector match_field_list, match_entry_list;
         unsigned curWord = -1;
         for (auto field : *input_xbar) {
