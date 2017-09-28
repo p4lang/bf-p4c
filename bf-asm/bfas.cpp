@@ -31,58 +31,10 @@ option_t options = {
 unsigned unique_action_handle = ACTION_HANDLE_START + 2; //FIXME-JSON +2 to match glass
 std::string asmfile_name;
 
-int verbose = 0, log_error = 0;
-static std::vector<std::string> debug_specs;
+int log_error = 0;
 static std::string output_dir;
 int indent_t::tabsz = 2;
 extern char *program_name;
-
-static bool match(const char *pattern, const char *name) {
-    const char *pend = pattern + strcspn(pattern, ",:");
-    const char *pbackup = 0;
-    while(1) {
-        while(pattern < pend && *pattern == *name) {
-            pattern++;
-            name++; }
-        if (pattern == pend) {
-            if (!strcmp(name, ".cpp")) return true;
-            return *name == 0; }
-        if (*pattern++ != '*') return false;
-        if (pattern == pend) return true;
-        while (*name && *name != *pattern) {
-            if (pbackup && *name == *pbackup) {
-                pattern = pbackup;
-                break; }
-            name++; }
-        pbackup = pattern;
-    }
-}
-
-int get_file_log_level(const char *file, int *level) {
-    if (auto *p = strrchr(file, '/'))
-        file = p+1;
-    if (auto *p = strrchr(file, '.'))
-        if (!strcmp(p, ".h")) return verbose-1;
-    for (auto &s : debug_specs)
-        for (auto *p = s.c_str(); p; p = strchr(p, ',')) {
-            while (*p == ',') p++;
-            if (match(p, file))
-                if (auto *l = strchr(p, ':'))
-                    return *level = atoi(l+1); }
-    return *level = verbose > 0 ? verbose - 1 : 0;
-}
-
-static void check_debug_spec(const char *spec) {
-    bool ok = false;
-    for (const char *p = strchr(spec, ':'); p; p = strchr(p, ':')) {
-        ok = true;
-        strtol(p+1, const_cast<char **>(&p), 10);
-        if (*p && *p != ',') {
-            ok = false;
-            break; } }
-    if (!ok)
-        std::cerr << "Invalid debug trace spec '" << spec << "'" << std::endl;
-}
 
 std::unique_ptr<std::ostream> open_output(const char *name, ...) {
     char namebuf[1024], *p = namebuf, *end = namebuf + sizeof(namebuf);
@@ -190,12 +142,10 @@ int main(int ac, char **av) {
                 case 'T':
                     ++i;
                     if (*arg) {
-                        check_debug_spec(arg);
-                        debug_specs.push_back(arg);
+                        Log::addDebugSpec(arg);
                         arg += strlen(arg);
                     } else if (i < ac) {
-                        check_debug_spec(av[i]);
-                        debug_specs.push_back(av[i]); }
+                        Log::addDebugSpec(av[i]); }
                     break;
                 case 'g':
                     options.debug_info = true;
@@ -255,7 +205,7 @@ int main(int ac, char **av) {
                         error_count++; }
                     break;
                 case 'v':
-                    verbose++;
+                    Log::increaseVerbosity();
                     break;
                 case 'h':
                     std::cout << usage(av[0]) << std::endl;
