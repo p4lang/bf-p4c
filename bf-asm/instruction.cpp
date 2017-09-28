@@ -314,7 +314,7 @@ operand::operand(Table *tbl, const Table::Actions::Action *act, const value_t &v
             else {
                 lo = v[1].lo;
                 hi = v[1].hi; } }
-        if (act->alias.count(name)) {
+        while (act->alias.count(name)) {
             auto &alias = act->alias.at(name);
             if (lo >= 0) {
                 if (alias.lo >= 0) {
@@ -419,6 +419,20 @@ struct AluOP : VLIWInstruction {
         out << "INSTR: " << opc->name << ' ' << dest << ", " << src1 << ", " << src2; }
 };
 
+struct AluOP3Src : AluOP {
+    struct Decode : AluOP::Decode {
+        Decode(const char *n, unsigned opc) : AluOP::Decode(n, opc) {}
+        Instruction *decode(Table *tbl, const Table::Actions::Action *act,
+                            const VECTOR(value_t) &op) const override;
+    };
+    operand     src3;
+    AluOP3Src(const Decode *op, Table *tbl, const Table::Actions::Action *act, const value_t &d,
+              const value_t &s1, const value_t &s2, const value_t &s3)
+    : AluOP(op, tbl, act, d, s1, s2), src3(tbl, act, s3) {}
+    Instruction *pass1(Table *tbl, Table::Actions::Action *);
+    void pass2(Table *tbl, Table::Actions::Action *);
+};
+
 static AluOP::Decode opADD("add", 0x23e, true), opADDC("addc", 0x2be, true),
                      opSUB("sub", 0x33e), opSUBC("subc", 0x3be),
                      opSADDU("saddu", 0x03e), opSADDS("sadds", 0x07e),
@@ -432,8 +446,8 @@ static AluOP::Decode opADD("add", 0x23e, true), opADDC("addc", 0x2be, true),
                      opAND("and", 0x21e, true), opXNOR("xnor", 0x25e, true),
                      opB("alu_b", 0x29e), opORCA("orca", 0x29e),
                      opA("alu_a", 0x31e, &opB), opORCB("orcb", 0x35e, &opORCA),
-                     opOR("or", 0x39e, true), opSETHI("sethi", 0x39e, true),
-                     opBMSET("bitmasked-set", 0x2e); // FIXME -- make 3rd operand explicit?
+                     opOR("or", 0x39e, true), opSETHI("sethi", 0x39e, true);
+static AluOP3Src::Decode opBMSET("bitmasked-set", 0x2e);
 
 Instruction *AluOP::Decode::decode(Table *tbl, const Table::Actions::Action *act,
                                    const VECTOR(value_t) &op) const {
@@ -449,6 +463,26 @@ Instruction *AluOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
         error(op[2].lineno, "invalid src1");
     else if (!rv->src2.valid())
         error(op[3].lineno, "invalid src2");
+    else
+        return rv;
+    delete rv;
+    return 0;
+}
+Instruction *AluOP3Src::Decode::decode(Table *tbl, const Table::Actions::Action *act,
+                                       const VECTOR(value_t) &op) const {
+    if (op.size != 5) {
+        if (op.size < 3 || op.size > 5) {
+            error(op[0].lineno, "%s requires 2, 3 or 4 operands", op[0].s);
+            return 0;
+        } else { }
+            return AluOP::Decode::decode(tbl, act, op); }
+    auto rv = new AluOP3Src(this, tbl, act, op.data[1], op.data[2], op.data[3], op.data[4]);
+    if (!rv->src1.valid())
+        error(op[2].lineno, "invalid src1");
+    else if (!rv->src2.valid())
+        error(op[3].lineno, "invalid src2");
+    else if (!rv->src3.valid())
+        error(op[3].lineno, "invalid src3");
     else
         return rv;
     delete rv;
@@ -471,6 +505,24 @@ Instruction *AluOP::pass1(Table *tbl, Table::Actions::Action *) {
         error(lineno, "src2 must be phv register");
     return this;
 }
+Instruction *AluOP3Src::pass1(Table *tbl, Table::Actions::Action *act) {
+    AluOP::pass1(tbl, act);
+    src3.mark_use(tbl);
+    if (!src3.to<operand::Action>())
+        error(lineno, "src3 must be on the action bus");
+    return this;
+}
+void AluOP3Src::pass2(Table *tbl, Table::Actions::Action *act) {
+    AluOP::pass2(tbl, act);
+    src3->pass2(slot/16);
+    if (auto s1 = src1.to<operand::Action>()) {
+        auto s3 = src3.to<operand::Action>();
+        if (s1->bits(slot/16) + 1 != s3->bits(slot/16))
+            error(lineno, "src1 and src3 must be adjacent on the action bus");
+    } else {
+        error(lineno, "src1 must be on the action bus"); }
+}
+
 int AluOP::encode() {
     return (opc->opcode << 10) | (src1.bits(slot/16) << 4) | src2.bits(slot/16);
 }

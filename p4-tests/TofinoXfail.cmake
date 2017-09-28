@@ -936,7 +936,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "bitmasked-set requires 2 or 3 operands"
+  "ALU ops cannot operate on slices"
   extensions/p4_tests/p4_14/test_config_144_recirculate.p4
   extensions/p4_tests/p4_14/jenkins/pgrs/pgrs_one.p4
   extensions/p4_tests/p4_14/jenkins/emulation/emulation.p4
