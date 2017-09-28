@@ -29,6 +29,7 @@ set (TOFINO_IR_SRCS
   ir/tofino.cpp
   ir/tofino_write_context.cpp
   )
+add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_IR_SRCS}")
 
 set (TOFINO_IR_HDRS
   ir/bitrange.h
@@ -36,19 +37,18 @@ set (TOFINO_IR_HDRS
   ir/thread_visitor.h
   ir/tofino_write_context.h
   )
-
-add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_IR_SRCS} ${TOFINO_IR_HDRS}")
+add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_IR_HDRS}")
 
 set (TOFINO_BACKEND_CONV_SRCS
   fromv1.0/primitives.cpp
   fromv1.0/stateful_alu.cpp
   )
+add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_CONV_SRCS}")
 
 set (TOFINO_BACKEND_CONV_HDRS
   fromv1.0/stateful_alu.h
   )
-
-add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_CONV_SRCS} ${TOFINO_BACKEND_CONV_HDRS}")
+add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_CONV_HDRS}")
 
 # IR sources that need to go into the frontend library
 set(QUAL_TOFINO_IR_SRCS)
@@ -84,6 +84,8 @@ set (TOFINO_BACKEND_COMMON_SRCS
   common/simplify_references.cpp
   common/slice.cpp
   )
+add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_COMMON_SRCS}")
+build_unified(TOFINO_BACKEND_COMMON_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (TOFINO_BACKEND_COMMON_HDRS
   common/blockmap.h
@@ -105,20 +107,18 @@ set (TOFINO_BACKEND_COMMON_HDRS
   common/simplify_references.h
   common/slice.h
   )
-
-add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_COMMON_SRCS} ${TOFINO_BACKEND_COMMON_HDRS}")
-build_unified(TOFINO_BACKEND_COMMON_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
+add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_COMMON_HDRS}")
 
 set (TOFINO_BACKEND_CONTROL_PLANE_SRCS
   control-plane/tofino_p4runtime.cpp
   )
+add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_CONTROL_PLANE_SRCS}")
+build_unified(TOFINO_BACKEND_CONTROL_PLANE_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (TOFINO_BACKEND_CONTROL_PLANE_HDRS
   control-plane/tofino_p4runtime.h
   )
-
-add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_CONTROL_PLANE_SRCS} ${TOFINO_BACKEND_CONV_HDRS}")
-build_unified(TOFINO_BACKEND_CONTROL_PLANE_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
+add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_CONTROL_PLANE_HDRS}")
 
 set (TOFINO_BACKEND_MAU_SRCS
   mau/action_analysis.cpp
@@ -145,6 +145,8 @@ set (TOFINO_BACKEND_MAU_SRCS
   mau/table_seqdeps.cpp
   mau/table_summary.cpp
   )
+add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_MAU_SRCS}")
+build_unified(TOFINO_BACKEND_MAU_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (TOFINO_BACKEND_MAU_HDRS
   mau/action_analysis.h
@@ -173,9 +175,7 @@ set (TOFINO_BACKEND_MAU_HDRS
   mau/table_seqdeps.h
   mau/table_summary.h
   )
-
-add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_MAU_SRCS} ${TOFINO_BACKEND_MAU_HDRS}")
-build_unified(TOFINO_BACKEND_MAU_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
+add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_MAU_HDRS}")
 
 set (TOFINO_BACKEND_PARDE_SRCS
   parde/add_parde_metadata.cpp
@@ -190,6 +190,8 @@ set (TOFINO_BACKEND_PARDE_SRCS
   parde/resolve_computed.cpp
   parde/split_big_states.cpp
   )
+add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_PARDE_SRCS}")
+build_unified(TOFINO_BACKEND_PARDE_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (TOFINO_BACKEND_PARDE_HDRS
   parde/add_parde_metadata.h
@@ -202,9 +204,7 @@ set (TOFINO_BACKEND_PARDE_HDRS
   parde/resolve_computed.h
   parde/split_big_states.h
   )
-
-add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_PARDE_SRCS} ${TOFINO_BACKEND_PARDE_HDRS}")
-build_unified(TOFINO_BACKEND_PARDE_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
+add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_PARDE_HDRS}")
 
 set (TOFINO_BACKEND_PHV_SRCS
   phv/allocate_virtual_containers.cpp
@@ -234,6 +234,8 @@ set (TOFINO_BACKEND_PHV_SRCS
   phv/trivial_alloc.cpp
   phv/validate_allocation.cpp
   )
+add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_PHV_SRCS}")
+build_unified(TOFINO_BACKEND_PHV_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (TOFINO_BACKEND_PHV_HDRS
   phv/allocate_virtual_containers.h
@@ -263,22 +265,20 @@ set (TOFINO_BACKEND_PHV_HDRS
   phv/trivial_alloc.h
   phv/validate_allocation.h
   )
-
-add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_PHV_SRCS} ${TOFINO_BACKEND_PHV_HDRS}")
-build_unified(TOFINO_BACKEND_PHV_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
+add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_PHV_HDRS}")
 
 set (TOFINO_BACKEND_ARCH_SRCS
   arch/program_structure.cpp
   arch/simple_switch.cpp
   )
+add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_ARCH_SRCS}")
+build_unified(TOFINO_BACKEND_ARCH_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (TOFINO_BACKEND_ARCH_HDRS
   arch/program_structure.h
   arch/simple_switch.h
   )
-
-add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_ARCH_SRCS} ${TOFINO_BACKEND_ARCH_HDRS}")
-build_unified(TOFINO_BACKEND_ARCH_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
+add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_ARCH_HDRS}")
 
 set (TOFINO_BACKEND_MAIN_SRCS
   backend.cpp
@@ -286,6 +286,8 @@ set (TOFINO_BACKEND_MAIN_SRCS
   midend.cpp
   bf-p4c-options.cpp
   )
+add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_MAIN_SRCS}")
+build_unified(TOFINO_BACKEND_MAIN_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (TOFINO_BACKEND_MAIN_HDRS
   backend.h
@@ -293,9 +295,7 @@ set (TOFINO_BACKEND_MAIN_HDRS
   midend.h
   bf-p4c-options.h
   )
-
-add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_MAIN_SRCS} ${TOFIN_BACKEND_MAIN_HDRS}")
-build_unified(TOFINO_BACKEND_MAIN_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
+add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_MAIN_HDRS}")
 
 set (TOFINO_IR_DEF_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/ir/tofino.def
@@ -339,7 +339,6 @@ set (P4C_TOFINO_SRCS
   p4c-tofino.cpp
   ${TOFINO_BACKEND_CONV_SRCS}
   )
-
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${P4C_TOFINO_SRCS}")
 build_unified(P4C_TOFINO_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
