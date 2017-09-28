@@ -359,10 +359,12 @@ void TernaryMatchTable::write_regs(REGS &regs) {
     if (idletime) idletime->write_regs(regs);
     merge.exact_match_logical_result_delay |= 1 << logical_id;
     regs.cfg_regs.mau_cfg_movereg_tcam_only |= 1U << logical_id;
-    if (hit_next.size() > 1 && !indirect)
-        merge.next_table_tcam_actionbit_map_en |= 1 << logical_id;
-    if (!indirect)
-        merge.mau_action_instruction_adr_tcam_actionbit_map_en |= 1 << logical_id;
+
+    // FIXME -- this is wrong; when should we use the actionbit?  glass never does any more?
+    // if (hit_next.size() > 1 && !indirect)
+    //     merge.next_table_tcam_actionbit_map_en |= 1 << logical_id;
+    // if (!indirect)
+    //     merge.mau_action_instruction_adr_tcam_actionbit_map_en |= 1 << logical_id;
 }
 
 std::unique_ptr<json::map> TernaryMatchTable::gen_memory_resource_allocation_tbl_cfg(const char *type, std::vector<Layout> &, bool skip_spare_bank) {

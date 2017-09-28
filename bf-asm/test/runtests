@@ -8,6 +8,7 @@ verbose=false
 diff=false
 link=false
 clean=false
+skip_ctxtjson=false
 TIME=false
 # parallel make arguments
 PARALLEL=1
@@ -83,6 +84,9 @@ while expr "$1" : - >/dev/null; do
         ;;
     -v)
         verbose=true
+        ;;
+    --skip_ctxtjson)
+        skip_ctxtjson=true
         ;;
     -*)
         echo >&2 "unknown argument $1"
@@ -389,7 +393,7 @@ function test_p4() {
                 glsc_ctxt=glass/context/context.json
             fi
             brig_ctxt=brig/context.json
-            if [ -r $brig_ctxt ]; then
+            if ! $skip_ctxtjson && [ -r $brig_ctxt ]; then
                 { $JSON_DIFF $CTXT_DIFFARGS $brig_ctxt $glsc_ctxt;
                   if [ $? -gt 128 ]; then echo "***json_diff crashed"; fi; } >> json_diff.txt
                 #echo $JSON_DIFF $CTXT_DIFFARGS $brig_ctxt $glsc_ctxt;

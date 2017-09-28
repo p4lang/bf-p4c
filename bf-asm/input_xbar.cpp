@@ -415,6 +415,7 @@ void InputXbar::write_regs(REGS &regs) {
         LOG1("  # Input xbar group " << group.first);
         unsigned group_base;
         unsigned half_byte = 0;
+        unsigned bytes_used = 0;
         if (group.first.ternary) {
             group_base = 128 + (group.first.index*11 + 1)/2U;
             half_byte = 133 + 11*(group.first.index/2U);
@@ -451,6 +452,7 @@ void InputXbar::write_regs(REGS &regs) {
             unsigned phv_byte = input.what->lo/8U;
             unsigned phv_size = input.what->reg.size/8U;
             for (unsigned byte = input.lo/8U; byte <= input.hi/8U; byte++, phv_byte++) {
+                bytes_used |= 1U << byte;
                 unsigned i = group_base + byte;
                 if (half_byte && byte == 5) i = half_byte;
                 if (i%phv_size != phv_byte) {
@@ -482,7 +484,14 @@ void InputXbar::write_regs(REGS &regs) {
                 if ((i ^ phv_byte) & swizzle_mask)
                     LOG1("FIXME -- need swizzle for " << input.what); }
             auto &power_ctl = regs.dp.match_input_xbar_din_power_ctl;
-            set_power_ctl_reg(power_ctl, input.what->reg.mau_id()); } }
+            set_power_ctl_reg(power_ctl, input.what->reg.mau_id()); }
+        if (!group.first.ternary) {
+            unsigned enable = 0;
+            if (bytes_used & 0xff) enable |= 1;
+            if (bytes_used & 0xff00) enable |= 2;
+            enable <<= group.first.index * 2;
+            regs.dp.mau_match_input_xbar_exact_match_enable[table->gress].rewrite();
+            regs.dp.mau_match_input_xbar_exact_match_enable[table->gress] |= enable; } }
     auto &hash = regs.dp.xbar_hash.hash;
     for (auto &ht : hash_tables) {
         if (ht.second.empty()) continue;
