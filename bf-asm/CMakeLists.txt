@@ -160,8 +160,16 @@ set (BFAS_GEN_SOURCES
   ${BFASM_BINARY_DIR}/asm-parse.cpp
   ${BFASM_BINARY_DIR}/gen/uptr_sizes.h)
 
-
-BISON_TARGET (asm-parse asm-parse.ypp ${CMAKE_CURRENT_BINARY_DIR}/asm-parse.cpp)
+# Versions of CMake before 3.7.2 require a filename argument to BISON_TARGET's
+# VERBOSE option. Later versions "support" it, but they generate a file with
+# the same name automatically anyway, and then issue a warning because the
+# file gets overwritten, so we need this code to avoid warning spew during
+# compilation.
+if (CMAKE_VERSION VERSION_LESS "3.7.2")
+  BISON_TARGET (asm-parse asm-parse.ypp ${CMAKE_CURRENT_BINARY_DIR}/asm-parse.cpp VERBOSE ${CMAKE_CURRENT_BINARY_DIR}/asm-parse.output)
+else ()
+  BISON_TARGET (asm-parse asm-parse.ypp ${CMAKE_CURRENT_BINARY_DIR}/asm-parse.cpp VERBOSE)
+endif ()
 
 set (CPPLINT_FILES
   ${JSON2CPP_SOURCES}
