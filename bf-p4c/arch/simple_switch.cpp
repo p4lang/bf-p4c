@@ -748,26 +748,6 @@ class IdleTimeoutTranslation : public Transform {
     }
 };
 
-class MirrorTranslation : public Transform {
-    bool allowUnimplemented;
-
- public:
-    explicit MirrorTranslation(bool allowUnimplemented = false)
-    : allowUnimplemented(allowUnimplemented) {
-        setName("MirrorTranslation");
-    }
-
-    const IR::Node* postorder(IR::PathExpression* node) override {
-        if (node->path->name == "clone" || node->path->name == "clone3") {
-            if (allowUnimplemented)
-                ::warning("Mirror translation is not yet supported.");
-            else
-                P4C_UNIMPLEMENTED("Mirror translation is not yet supported.");
-        }
-        return node;
-    }
-};
-
 // map index to resubmit field list
 using DigestFieldMap = std::map<IR::Constant*, const IR::MethodCallExpression*>;
 
@@ -810,6 +790,88 @@ class CollectDigestFieldLists : public Transform {
             return stmt;
         }
         return node;
+    }
+};
+
+class DoMirrorTranslation : public Transform {
+    DigestFieldMap* map;
+    gress_t gress;
+
+ public:
+    DoMirrorTranslation(DigestFieldMap* map, gress_t gress)
+            : map(map), gress(gress) {
+        setName("DoMirrorTranslation");
+    }
+
+    /*
+     * generate statement in ingress/egress deparser to prepend mirror metadata
+     * if (ig_intr_md_for_dprsr.mirror_idx == N)
+     *    mirror.add_metadata({});
+     */
+    const IR::StatOrDecl* genMirrorStatement(cstring metaName, const IR::Constant* idx) {
+        auto path = new IR::Path("mirror");
+        auto expr = new IR::PathExpression(path);
+        auto args = new IR::Vector<IR::Expression>();
+        auto member = new IR::Member(expr, "add_metadata");
+        auto typeArgs = new IR::Vector<IR::Type>();
+        auto mce = new IR::MethodCallExpression(member, typeArgs, args);
+        auto mcs = new IR::MethodCallStatement(mce);
+
+        auto condExprPath = new IR::Member(
+                new IR::PathExpression(new IR::Path(metaName)),
+                "mirror_idx");
+        auto condExpr = new IR::Equ(condExprPath, idx);
+        auto cond = new IR::IfStatement(condExpr, mcs, nullptr);
+        return cond;
+    }
+
+    const IR::P4Control* genP4Control(const IR::P4Control* control, gress_t gress) {
+        auto stmts = new IR::IndexedVector<IR::StatOrDecl>();
+        if (gress == gress_t::INGRESS) {
+            for (auto it : *map) {
+                auto stmt = genMirrorStatement("ig_intr_md_for_dprsr", it.first);
+                stmts->push_back(stmt);
+            }
+        } else if (gress == gress_t::EGRESS) {
+            for (auto it : *map) {
+                auto stmt = genMirrorStatement("eg_intr_md_for_dprsr", it.first);
+                stmts->push_back(stmt);
+            }
+        }
+        // append other statements
+        for (auto st : control->body->components) {
+            stmts->push_back(st);
+        }
+        auto body = new IR::BlockStatement(control->body->srcInfo, *stmts);
+        return new IR::P4Control(control->srcInfo, control->name,
+                                 control->type, control->constructorParams,
+                                 control->controlLocals, body);
+    }
+
+    const IR::Node* postorder(IR::P4Control* control) override {
+        if (control->name == "IngressDeparserImpl" && gress == gress_t::INGRESS) {
+            return genP4Control(control, gress_t::INGRESS);
+        } else if (control->name == "DeparserImpl" && gress == gress_t::EGRESS) {
+            return genP4Control(control, gress_t::EGRESS);
+        }
+        return control;
+    }
+};
+
+class MirrorTranslation : public PassManager {
+    DigestFieldMap mirrorFieldLists;
+
+ public:
+    MirrorTranslation() {
+        addPasses({
+            new CollectDigestFieldLists(&mirrorFieldLists, {"mirror"},
+                                        gress_t::INGRESS, "mirror_idx"),
+            new DoMirrorTranslation(&mirrorFieldLists, gress_t::INGRESS),
+            new CollectDigestFieldLists(&mirrorFieldLists, {"mirror"},
+                                        gress_t::EGRESS, "mirror_idx"),
+            new DoMirrorTranslation(&mirrorFieldLists, gress_t::EGRESS),
+        });
+        setName("MirrorTranslation");
     }
 };
 
@@ -1415,7 +1477,7 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
         new PacketPriorityTranslation(options.allowUnimplemented),
         new ValueSetTranslation(),
         new IdleTimeoutTranslation(options.allowUnimplemented),
-        new MirrorTranslation(options.allowUnimplemented),
+        new MirrorTranslation(),
         new DigestTranslation(options.allowUnimplemented),
         new ResubmitTranslation(),
         new AppendSystemArchitecture(&structure),

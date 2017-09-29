@@ -1264,14 +1264,8 @@ if (ENABLE_TNA)
     )
 
   p4c_add_xfail_reason("tofino"
-    "Mirror translation is not yet supported"
-    testdata/p4_14_samples/copy_to_cpu.p4
-    testdata/p4_14_samples/packet_redirect.p4
-    extensions/p4_tests/p4_14/test_config_102_clone.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-413/mirror_test.p4
+    "Unexpected mirror id"
     extensions/p4_tests/p4_14/jenkins/mirror_test/mirror_test.p4
-    extensions/p4_tests/p4_14/jenkins/emulation/emulation.p4
-    extensions/p4_tests/p4_14/test_config_303_static_table.p4
     )
 
   p4c_add_xfail_reason("tofino"
@@ -1279,6 +1273,8 @@ if (ENABLE_TNA)
     extensions/p4_tests/p4_14/13-ResubmitMetadataSize.p4
     extensions/p4_tests/p4_14/jenkins/resubmit/resubmit.p4
     testdata/p4_14_samples/resubmit.p4
+    testdata/p4_14_samples/packet_redirect.p4
+    extensions/p4_tests/p4_14/jenkins/emulation/emulation.p4
     )
 
   p4c_add_xfail_reason("tofino"
