@@ -3,11 +3,13 @@
 #include <sstream>
 
 #include "lib/cstring.h"
+#include "lib/log.h"
 #include "ir/ir.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/validate_allocation.h"
+#include "bf-p4c/mau/action_analysis.h"
 
 // Currently we fail a lot of these checks, so to prevent mass XFAIL'ing a lot
 // of the tests, we treat the checks as warning instead of errors. This macro
@@ -446,5 +448,37 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
 
     return false;
 }
+
+
+bool ValidateActions::preorder(const IR::MAU::Action *act) {
+    auto tbl = findContext<IR::MAU::Table>();
+    ActionAnalysis::FieldActionsMap field_actions_map;
+    ActionAnalysis::ContainerActionsMap container_actions_map;
+    ActionAnalysis aa(phv, phv_alloc, ad_alloc, tbl);
+    if (phv_alloc)
+        aa.set_container_actions_map(&container_actions_map);
+    else
+        aa.set_field_actions_map(&field_actions_map);
+    aa.set_error_verbose();
+    act->apply(aa);
+    warning_found |= aa.warning_found();
+    return false;
+}
+
+void ValidateActions::end_apply() {
+    cstring error_message;
+    if (phv_alloc)
+        error_message = "PHV allocation creates a container action impossible within a Tofino ALU";
+    else
+        error_message = "Instruction selection creates an instruction that the rest of the "
+                        "compiler cannot correctly interpret";
+    if (warning_found) {
+        if (stop_compiler)
+            ::error(error_message);
+        else
+            ::warning(error_message);
+    }
+}
+
 
 }  // namespace PHV

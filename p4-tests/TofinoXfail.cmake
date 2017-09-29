@@ -220,6 +220,9 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/instruct1.p4
   extensions/p4_tests/p4_14/test_config_256_pa_problem_4.p4
   extensions/p4_tests/p4_14/adjust_instr1.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-235/vag1737_1.p4
   )
 
 # BRIG-104
@@ -258,6 +261,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/selector0.p4
   testdata/p4_16_samples/action_profile-bmv2.p4
   testdata/p4_16_samples/issue297-bmv2.p4
+  extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
   )
 
 # BRIG-240
@@ -266,12 +270,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_194_same_action_param.p4
   extensions/p4_tests/p4_14/test_config_197_default_next_table.p4
   extensions/p4_tests/p4_14/test_config_196_hit_miss.p4
-  )
-
-# BRIG-242
-p4c_add_xfail_reason("tofino"
-  "Unhandled case of sharing constants"
-  extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
   )
 
 # BRIG-109
@@ -710,10 +708,15 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/jenkins/mirror_test/mirror_test.p4
   )
 
-
+# Specifically to save the error message
 p4c_add_xfail_reason("tofino"
   "(throwing|uncaught exception).*Backtrack::trigger"
+)
+
+p4c_add_xfail_reason("tofino"
+  "PHV read has no allocation"
   testdata/p4_16_samples/arith-bmv2.p4
+  extensions/p4_tests/p4_14/13-IngressEgressConflict.p4 
   )
 
 #
@@ -792,9 +795,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Constant lookup does not match the ActionFormat"
   testdata/p4_14_samples/action_inline.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-235/vag1737_1.p4
   )
 
 p4c_add_xfail_reason("tofino"

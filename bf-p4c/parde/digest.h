@@ -32,8 +32,10 @@ class Digests : public Transform {
             else
                 list = new IR::Vector<IR::Expression>; }
         digest->sets.push_back(list);
+        int constant_size = digest->select->type->width_bits();
         return new IR::Primitive("modify_field", digest->select,
-                                 new IR::Constant(IR::Type::Bits::get(8), digest->sets.size())); }
+                                 new IR::Constant(IR::Type::Bits::get(constant_size),
+                                 digest->sets.size())); }
     IR::Node *postorder(IR::Primitive *prim) override {
         if (prim->name == "digest") {
             LOG2("digest:" << prim);

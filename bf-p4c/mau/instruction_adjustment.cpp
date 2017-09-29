@@ -270,7 +270,9 @@ const IR::MAU::Instruction *ConstantsToActionData::postorder(IR::MAU::Instructio
         const IR::Constant *c = instr->operands[i]->to<IR::Constant>();
         if (c == nullptr)
             continue;
-        auto *adc = new IR::MAU::ActionDataConstant(constant_name, c);
+        int size = c->type->width_bits();
+        auto *adc = new IR::MAU::ActionDataConstant(IR::Type::Bits::get(size),
+                                                    constant_name, c);
         instr->operands[i] = adc;
     }
     return instr;

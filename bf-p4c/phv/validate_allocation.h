@@ -2,6 +2,7 @@
 #define BF_P4C_PHV_VALIDATE_ALLOCATION_H_
 
 #include "ir/visitor.h"
+#include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/phv/phv_fields.h"
 
 namespace PHV {
@@ -26,6 +27,21 @@ class ValidateAllocation final : public Inspector {
  private:
     PhvInfo& phv;
     bool preorder(const IR::BFN::Pipe* pipe) override;
+};
+
+class ValidateActions final : public MauInspector {
+ private:
+    const PhvInfo &phv;
+    bool stop_compiler;
+    bool phv_alloc;
+    bool ad_alloc;
+    bool warning_found = false;
+    bool preorder(const IR::MAU::Action *act) override;
+    void end_apply() override;
+
+ public:
+    explicit ValidateActions(const PhvInfo &p, bool sc, bool pa, bool ad)
+        : phv(p), stop_compiler(sc), phv_alloc(pa), ad_alloc(ad) {}
 };
 
 }  // namespace PHV

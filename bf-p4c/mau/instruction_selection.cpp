@@ -1,6 +1,8 @@
 #include "bf-p4c/mau/instruction_selection.h"
 #include "lib/bitops.h"
 #include "lib/safe_vector.h"
+#include "action_analysis.h"
+#include "bf-p4c/phv/validate_allocation.h"
 
 template<class T> static
 T *clone(const T *ir) { return ir ? ir->clone() : nullptr; }
@@ -385,9 +387,12 @@ const IR::Expression *InstructionSelection::postorder(IR::Primitive *prim) {
         auto out = salu->instruction.at(salu->action_map.at(action))->output_dst;
         if (prim->name == "register_action.execute")
             out = new IR::TempVar(prim->type);
-        if (out)
+        if (out) {
+            int size = out->type->width_bits();
             return new IR::MAU::Instruction(prim->srcInfo, "set", out,
-                                            new IR::MAU::AttachedOutput(salu));
+                                            new IR::MAU::AttachedOutput(IR::Type::Bits::get(size),
+                                                                        salu));
+        }
         return nullptr;
     } else if (prim->name == "counter.count" || prim->name == "meter.execute_meter" ||
                prim->name == "meter.execute") {
@@ -443,8 +448,8 @@ const IR::Expression *InstructionSelection::postorder(IR::Primitive *prim) {
             algorithm = mem->member;
         }
         safe_vector<int> init_units;
-        auto *hd = new IR::MAU::HashDist(prim->srcInfo, prim->operands[1], algorithm,
-                                         init_units, prim);
+        auto *hd = new IR::MAU::HashDist(prim->srcInfo, IR::Type::Bits::get(size),
+                                         prim->operands[1], algorithm, init_units, prim);
         hd->bit_width = size;
         if (op_size > 1) {
             if (auto *constant = prim->operands[1]->to<IR::Constant>()) {
@@ -519,9 +524,11 @@ IR::MAU::HashDist *StatefulHashDistSetup::create_hash_dist(const IR::Expression 
                                                            const IR::Primitive *prim) {
     safe_vector<int> init_units;
     cstring algorithm = "identity";
-    auto *hd = new IR::MAU::HashDist(prim->srcInfo, expr, algorithm, init_units, prim);
+    int size = expr->type->width_bits();
+    auto *hd = new IR::MAU::HashDist(prim->srcInfo, IR::Type::Bits::get(size), expr,
+                                     algorithm, init_units, prim);
     hd->algorithm = algorithm;
-    hd->bit_width = expr->type->width_bits();
+    hd->bit_width = size;
     return hd;
 }
 
@@ -592,5 +599,7 @@ const IR::MAU::Table *StatefulHashDistSetup::postorder(IR::MAU::Table *tbl) {
 
 DoInstructionSelection::DoInstructionSelection(PhvInfo &phv) : PassManager {
     new InstructionSelection(phv),
-    new StatefulHashDistSetup(phv)
+    new StatefulHashDistSetup(phv),
+    new CollectPhvInfo(phv),
+    new PHV::ValidateActions(phv, false, false, false)
 } {}

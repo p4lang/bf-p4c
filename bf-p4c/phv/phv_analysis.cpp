@@ -84,7 +84,8 @@ PHV_AnalysisPass::PHV_AnalysisPass(
                                    // fail if there are clusters remaining that have not
                                    // been assigned to container groups; only warn if
                                    // options.ignorePHVOverflow == true.
-            new PHV::ValidateAllocation(phv)
+            new PHV::ValidateAllocation(phv),
+            new PHV::ValidateActions(phv, false, true, false)
         }); }
 
     setName("PHV Analysis");

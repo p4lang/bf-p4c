@@ -30,6 +30,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
  public:
     static constexpr int LOADCONST_MAX = 20;
     static constexpr int CONST_SRC_MAX = 3;
+    static constexpr int MAU_GROUP_SIZE = 16;
     /** A way to encapsulate the information contained within a single operand of an instruction,
      *  whether the instruction is read from or written to.  Also contains the information on
      *  what particular bits of the mask are encapsulated.
@@ -43,10 +44,13 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
             : type(t), expr(e) {}
 
         int size() const {
+            BUG_CHECK(expr->type, "Untyped expression in backend action");
             return expr->type->width_bits();
         }
 
-        void dbprint(std::ostream &out) const;
+        friend std::ostream &operator<<(std::ostream &out, const ActionParam &);
+
+        // void dbprint(std::ostream &out) const;
         const IR::Expression *unsliced_expr() const;
     };
 
@@ -72,7 +76,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         bool requires_split = false;
         bool constant_to_ad = false;
 
-        void dbprint(std::ostream &out) const;
+        friend std::ostream &operator<<(std::ostream &out, const FieldAction &);
     };
 
     /** Information on the PHV fields and action data that are read by an individual
@@ -153,7 +157,13 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
                             TOO_MANY_SOURCES = (1 << 4),
                             IMPOSSIBLE_ALIGNMENT = (1 << 5),
                             CONSTANT_TO_ACTION_DATA = (1 << 6),
-                            MULTIPLE_ACTION_DATA = (1 << 7) };
+                            MULTIPLE_ACTION_DATA = (1 << 7),
+                            PARTIAL_OVERWRITE = (1 << 8),
+                            BIT_COLLISION = (1 << 9),
+                            OPERAND_MISMATCH = (1 << 10),
+                            UNHANDLED_ACTION_DATA = (1 << 11),
+                            DIFFERENT_READ_SIZE = (1 << 12),
+                            MAU_GROUP_MISMATCH = (1 << 13) };
         unsigned error_code = NO_PROBLEM;
         cstring name;
         ActionDataInfo adi;
@@ -177,6 +187,18 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
             return name == "shru" || name == "shrs" || name == "shl";
         }
 
+        bool has_ad_or_constant() {
+            return (counts[ActionParam::ACTIONDATA] + counts[ActionParam::CONSTANT]) > 0;
+        }
+
+        void set_mismatch(ActionParam::type_t type) {
+            if (type == ActionParam::PHV)
+                error_code |= READ_PHV_MISMATCH;
+            else if (type == ActionParam::ACTIONDATA)
+                error_code |= ACTION_DATA_MISMATCH;
+            else
+                error_code |= CONSTANT_MISMATCH;
+        }
 
         bool constant_set = false;
         int constant_used = 0;
@@ -187,13 +209,23 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
 
         bool verify_one_alignment(TotalAlignment &tot_alignment, int size, int &unaligned_count,
             bool bitmasked_set = false);
-        bool total_overwritten(PHV::Container container);
-        bool verify_all_alignment(bool bitmasked_set = false);
+        void move_source_to_bit(safe_vector<int> &bit_uses, TotalAlignment &ta);
+        bool verify_source_to_bit(int operands, PHV::Container container);
+        bool verify_overwritten(PHV::Container container);
+        bool verify_possible(cstring &error_message, PHV::Container container,
+                             cstring action_name);
+        bool verify_alignment(int max_phv_unaligned, int max_ad_unaligned, bool bitmasked_set,
+                              PHV::Container container);
+        bool verify_phv_mau_group(PHV::Container container);
+
+
 
         bitvec total_write() const;
         bool convert_constant_to_actiondata() {
             return (error_code & CONSTANT_TO_ACTION_DATA) != 0;
         }
+
+        friend std::ostream &operator<<(std::ostream &out, const ContainerAction&);
     };
 
     typedef ordered_map<const IR::MAU::Instruction *, FieldAction> FieldActionsMap;
@@ -203,9 +235,11 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
     const PhvInfo &phv;
     bool phv_alloc = false;
     bool ad_alloc = false;
+    bool warning = false;
 
     bool action_data_misaligned = false;
     bool verbose = false;
+    bool error_verbose = false;
 
     FieldActionsMap *field_actions_map = nullptr;
     ContainerActionsMap *container_actions_map = nullptr;
@@ -236,25 +270,21 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
     void postorder(const IR::MAU::Instruction *) override;
     void postorder(const IR::MAU::Action *) override;
 
-    bool verify_phv_read_instr(const ActionParam &write, const ActionParam &read,
-            ContainerAction &cont_action);
-    bool verify_action_data_instr(const ActionParam &write, const ActionParam &read,
-            ContainerAction &cont_action, cstring action_name, PHV::Container container);
-    bool verify_constant_instr(const ActionParam &write, const ActionParam &read,
-            ContainerAction &cont_action);
-    void action_data_align(const ActionParam &write, ContainerAction &cont_action);
+    bool initialize_alignment(const ActionParam &write, const ActionParam &read,
+        ContainerAction &cont_action, cstring &error_message, PHV::Container container,
+        cstring action_name);
+    bool init_phv_alignment(const ActionParam &read, ContainerAction &cont_action,
+                            bitvec write_bits, cstring &error_message);
+    bool init_ad_alloc_alignment(const ActionParam &read, ContainerAction &cont_action,
+        bitvec write_bits, cstring action_name, PHV::Container container);
+    bool init_simple_alignment(const ActionParam &read, ContainerAction &cont_action,
+        bitvec write_bits);
 
     bool tofino_instruction_constant(int value, int max_shift, int container_size);
-    bool check_constant_to_actiondata(ContainerAction &cont_action, PHV::Container container);
-    bool check_container_instruction();
-    bool check_2_PHV_instruction(ContainerAction &cont_action, PHV::Container container);
-    bool check_1_PHV_instruction(ContainerAction &cont_action, PHV::Container container);
-    bool check_0_PHV_instruction(ContainerAction &cont_action);
+    void check_constant_to_actiondata(ContainerAction &cont_action, PHV::Container container);
 
-    bool verify_container_action(ContainerAction &cont_action, PHV::Container container);
     void verify_P4_action_for_tofino(cstring action_name);
-
-    bool verify_P4_action_without_phv();
+    bool verify_P4_action_without_phv(cstring action_name);
     bool verify_P4_action_with_phv(cstring action_name);
 
  public:
@@ -275,6 +305,8 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
     }
 
     void set_verbose() { verbose = true; }
+    void set_error_verbose() { error_verbose = true; }
+    bool warning_found() { return warning; }
 
     ActionAnalysis(const PhvInfo &p, bool pa, bool aa, const IR::MAU::Table *t)
         : phv(p), phv_alloc(pa), ad_alloc(aa), tbl(t) { visitDagOnce = false; }
