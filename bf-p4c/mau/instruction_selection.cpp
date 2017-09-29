@@ -300,9 +300,11 @@ const IR::Node *InstructionSelection::postorder(IR::Primitive *prim) {
             error("%s: wrong number of operands to %s", prim->srcInfo, prim->name);
         } else {
             auto egress_spec = gen_stdmeta("egress_spec");
-            auto s1 = new IR::MAU::Instruction(prim->srcInfo, "set", new IR::Slice(egress_spec,6,0), prim->operands.at(0));
-            auto s2 = new IR::MAU::Instruction(prim->srcInfo, "set", 
-                        new IR::Slice(egress_spec,8,7), new IR::Slice(gen_stdmeta("ingress_port"),8,7));
+            auto s1 = new IR::MAU::Instruction(prim->srcInfo, "set",
+                          new IR::Slice(egress_spec, 6, 0), prim->operands.at(0));
+            auto s2 = new IR::MAU::Instruction(prim->srcInfo, "set",
+                          new IR::Slice(egress_spec, 8, 7),
+                          new IR::Slice(gen_stdmeta("ingress_port"), 8, 7));
             return new IR::Vector<IR::Expression>({s1, s2}); }
     } else if (prim->name == "add" || prim->name == "sub" || prim->name == "subtract") {
         if (prim->operands.size() != 3) {

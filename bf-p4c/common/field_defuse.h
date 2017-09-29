@@ -43,7 +43,8 @@ class FieldDefUse : public ControlFlowVisitor, public Inspector, TofinoWriteCont
     void check_conflicts(const info &read, int when);
     void read(const PhvInfo::Field *, const IR::BFN::Unit *, const IR::Expression *);
     void read(const IR::HeaderRef *, const IR::BFN::Unit *, const IR::Expression *);
-    void write(const PhvInfo::Field *, const IR::BFN::Unit *, const IR::Expression *, bool partial = false);
+    void write(const PhvInfo::Field *, const IR::BFN::Unit *,
+               const IR::Expression *, bool partial = false);
     void write(const IR::HeaderRef *, const IR::BFN::Unit *, const IR::Expression *);
     info &field(const PhvInfo::Field *);
     info &field(int id) { return field(phv.field(id)); }
