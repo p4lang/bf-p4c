@@ -269,7 +269,7 @@ static const IR::Primitive *makeDepositField(IR::Primitive *prim, long) {
     return prim;
 }
 
-const IR::Expression *InstructionSelection::postorder(IR::Primitive *prim) {
+const IR::Node *InstructionSelection::postorder(IR::Primitive *prim) {
     if (!af) return prim;
     const IR::Expression *dest = prim->operands.size() > 0 ? prim->operands[0] : nullptr;
     if (prim->name == "modify_field") {
@@ -299,11 +299,11 @@ const IR::Expression *InstructionSelection::postorder(IR::Primitive *prim) {
         if (prim->operands.size() != 1) {
             error("%s: wrong number of operands to %s", prim->srcInfo, prim->name);
         } else {
-            auto rv = new IR::MAU::Instruction(prim->srcInfo, "bitmasked-set",
-                new IR::Vector<IR::Expression>({
-                    gen_stdmeta("egress_spec"), prim->operands.at(0), gen_stdmeta("ingress_port"),
-                    new IR::Constant(IR::Type::Bits::get(9), 0x7f) }) );
-            return rv; }
+            auto egress_spec = gen_stdmeta("egress_spec");
+            auto s1 = new IR::MAU::Instruction(prim->srcInfo, "set", new IR::Slice(egress_spec,6,0), prim->operands.at(0));
+            auto s2 = new IR::MAU::Instruction(prim->srcInfo, "set", 
+                        new IR::Slice(egress_spec,8,7), new IR::Slice(gen_stdmeta("ingress_port"),8,7));
+            return new IR::Vector<IR::Expression>({s1, s2}); }
     } else if (prim->name == "add" || prim->name == "sub" || prim->name == "subtract") {
         if (prim->operands.size() != 3) {
             error("%s: wrong number of operands to %s", prim->srcInfo, prim->name);

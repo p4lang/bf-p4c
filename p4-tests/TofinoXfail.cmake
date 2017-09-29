@@ -350,8 +350,11 @@ p4c_add_xfail_reason("tofino"
 
 # used to be: BRIG-129 & BRIG-183
 p4c_add_xfail_reason("tofino"
-  "No phv record"
+  "PHV allocation creates a container action impossible within a Tofino ALU"
   extensions/p4_tests/p4_14/test_config_245_alias_test.p4
+  extensions/p4_tests/p4_14/test_config_144_recirculate.p4
+  extensions/p4_tests/p4_14/jenkins/pgrs/pgrs_one.p4
+  extensions/p4_tests/p4_14/jenkins/emulation/emulation.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -829,11 +832,11 @@ p4c_add_xfail_reason("tofino"
   )
 
 # Likely still has a bug; emits the following warning:
-# p4c_add_xfail_reason("tofino"
-#   "Field is extracted in the parser, but its first container slice has an incompatible alignment"
-#   testdata/p4_16_samples/slice-def-use.p4
-#   testdata/p4_16_samples/slice-def-use1.p4
-#  )
+p4c_add_xfail_reason("tofino"
+   "Action argument is not found to be allocated in the action format"
+   testdata/p4_16_samples/slice-def-use.p4
+   testdata/p4_16_samples/slice-def-use1.p4
+  )
 
 # We can't (without some complex acrobatics) support conditional computed
 # checksums on Tofino. In P4-14, these are operations of the form:
@@ -920,13 +923,6 @@ p4c_add_xfail_reason("tofino"
   "Hash column out of range"
   # was "Conflicting hash distribution bit allocation .*"
   extensions/p4_tests/p4_14/jenkins/stful/stful.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "ALU ops cannot operate on slices"
-  extensions/p4_tests/p4_14/test_config_144_recirculate.p4
-  extensions/p4_tests/p4_14/jenkins/pgrs/pgrs_one.p4
-  extensions/p4_tests/p4_14/jenkins/emulation/emulation.p4
   )
 
 if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)

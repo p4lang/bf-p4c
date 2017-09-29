@@ -83,21 +83,22 @@ void FieldDefUse::read(const IR::HeaderRef *hr, const IR::BFN::Unit *unit,
         read(phv.field(hr->toString() + ".$valid"), unit, e);
 }
 void FieldDefUse::write(const PhvInfo::Field *f, const IR::BFN::Unit *unit,
-                        const IR::Expression *e) {
+                        const IR::Expression *e, bool partial) {
     if (!f) return;
     auto &info = field(f);
     LOG3("FieldDefUse(" << (void *)this << "): " << DBPrint::Brief << *unit <<
-         " writing " << f->name << " [" << e->id << "]");
+         " writing " << f->name << " [" << e->id << "]" << (partial ? " (partial)" : ""));
     if (unit->is<IR::BFN::ParserState>()) {
         // parser can't rewrite PHV (it ors), so need to treat it as a read for conflicts, but
         // we don't mark it as a use of previous writes, and don't clobber those previous writes.
-        info.use.clear();
+        if (!partial)
+            info.use.clear();
         info.use.emplace(unit, e);
         check_conflicts(info, unit->stage());
         for (auto def : info.def)
             LOG4("  " << e << " [" << e->id << "]" << " in " << *unit << " combines with " <<
                  def.second << " from " << *def.first << " [" << def.first->id << "]");
-    } else {
+    } else if (!partial) {
         info.def.clear(); }
     info.def.emplace(unit, e);
     located_defs[f->id].emplace(unit, e);
@@ -123,7 +124,8 @@ bool FieldDefUse::preorder(const IR::BFN::Parser *p) {
 }
 
 bool FieldDefUse::preorder(const IR::Expression *e) {
-    auto *f = phv.field(e);
+    bitrange bits;
+    auto *f = phv.field(e, &bits);
     auto *hr = e->to<IR::HeaderRef>();
 
     // Prevent visiting HeaderRefs in Members when PHV lookup fails, eg. for
@@ -133,7 +135,12 @@ bool FieldDefUse::preorder(const IR::Expression *e) {
 
     if (auto unit = findContext<IR::BFN::Unit>()) {
         if (isWrite()) {
-            write(f, unit, e);
+           /* this is a temporary fix to make sure that we dont overwrite the 
+            * previous assignment. This needs to be enhanced to deal with range
+            * being non-contiguous and overwrite if the range is contiguous
+            */
+            bool partial = (f && (bits.lo != 0 || bits.hi != f->size-1));
+            write(f, unit, e, partial);
             write(hr, unit, e);
         } else {
             read(f, unit, e);

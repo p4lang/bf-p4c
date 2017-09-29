@@ -25,7 +25,7 @@ class InstructionSelection : public MauTransform {
     const IR::Expression *postorder(IR::Cast *) override;
     const IR::Expression *postorder(IR::Mux *) override;
     const IR::Expression *postorder(IR::BoolLiteral *) override;
-    const IR::Expression *postorder(IR::Primitive *) override;
+    const IR::Node *postorder(IR::Primitive *) override;
     const IR::MAU::Instruction *postorder(IR::MAU::Instruction *i) override { return i; }
 
     bool checkPHV(const IR::Expression *);
