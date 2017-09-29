@@ -41,6 +41,7 @@ static const cstring RANDOM = "random";
 static const cstring IDENTITY = "identity";
 static const cstring Hash = "hash";
 static const cstring Checksum = "Checksum16";
+static const cstring RESUBMIT = "resubmit";
 static const cstring StandardMetadata = "standard_metadata";
 static const cstring IntrinsicMetadataForTM = "ig_intr_md_for_tm";
 static const cstring IngressIntrinsicMetadataFromParser = "ig_intr_md_from_parser_aux";
@@ -74,6 +75,7 @@ static const cstring IngressIntrinsics = "ingress_intrinsic_metadata_t";
 static const cstring IngressIntrinsicsForTM = "ingress_intrinsic_metadata_for_tm_t";
 static const cstring IngressIntrinsicsFromParser = "ingress_intrinsic_metadata_from_parser_t";
 static const cstring IngressIntrinsicsForMirror = "ingress_intrinsic_metadata_for_mirror_buffer_t";
+static const cstring IngressIntrinsicsForDeparser = "ingress_intrinsic_metadata_for_deparser_t";
 static const cstring EgressIntrinsics = "egress_intrinsic_metadata_t";
 static const cstring EgressIntrinsicsForMirror = "egress_intrinsic_metadata_for_mirror_buffer_t";
 static const cstring EgressIntrinsicsFromParser = "egress_intrinsic_metadata_from_parser_t";
@@ -92,6 +94,7 @@ class SimpleSwitchTranslation : public PassManager {
     const IR::P4Control* getEgress(const IR::ToplevelBlock* blk);
     const IR::P4Control* getDeparser(const IR::ToplevelBlock* blk);
     const IR::P4Parser*  getParser(const IR::ToplevelBlock* blk);
+    const IR::P4Control* getIngressDeparser(const IR::ToplevelBlock* blk);
 
     const IR::ToplevelBlock* getToplevelBlock() { CHECK_NULL(toplevel); return toplevel; }
 };

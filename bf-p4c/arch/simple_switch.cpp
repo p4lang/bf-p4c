@@ -662,14 +662,20 @@ class HashTranslation : public PassManager {
 };
 
 class ChecksumTranslation : public Transform {
+    bool allowUnimplemented;
+
  public:
-    ChecksumTranslation() {
+    explicit ChecksumTranslation(bool allowUnimplemented = false)
+    : allowUnimplemented(allowUnimplemented) {
         setName("ChecksumTranslation");
     }
     const IR::Node* postorder(IR::Declaration_Instance* node) override {
         if (auto type = node->getType()->to<IR::Type_Name>()) {
             if (type->path->name == P4_14::Checksum) {
-                P4C_UNIMPLEMENTED("Checksum translation is not yet supported.");
+                if (allowUnimplemented)
+                    ::warning("Checksum translation is not yet supported.");
+                else
+                    P4C_UNIMPLEMENTED("Checksum translation is not yet supported.");
             }
         }
         return node;
@@ -677,26 +683,38 @@ class ChecksumTranslation : public Transform {
 };
 
 class ParserCounterTranslation : public Transform {
+    bool allowUnimplemented;
+
  public:
-    ParserCounterTranslation() {
+    explicit ParserCounterTranslation(bool allowUnimplemented = false)
+    : allowUnimplemented(allowUnimplemented) {
         setName("ParserCounterTranslation");
     }
     const IR::Node* postorder(IR::Member* node) override {
         if (node->member == "packet_counter") {
-            P4C_UNIMPLEMENTED("Parser counter translation is not yet supported.");
+            if (allowUnimplemented)
+                ::warning("Parser counter translation is not yet supported.");
+            else
+                P4C_UNIMPLEMENTED("Parser counter translation is not yet supported.");
         }
         return node;
     }
 };
 
 class PacketPriorityTranslation : public Transform {
+    bool allowUnimplemented;
+
  public:
-    PacketPriorityTranslation() {
+    explicit PacketPriorityTranslation(bool allowUnimplemented = false)
+    : allowUnimplemented(allowUnimplemented) {
         setName("PacketPriorityTranslation");
     }
     const IR::Node* postorder(IR::Member* node) override {
         if (node->member == "priority") {
-            P4C_UNIMPLEMENTED("Packet priority translation is not yet supported.");
+            if (allowUnimplemented)
+                ::warning("Packet priority translation is not yet supported.");
+            else
+                P4C_UNIMPLEMENTED("Packet priority translation is not yet supported.");
         }
         return node;
     }
@@ -712,59 +730,173 @@ class ValueSetTranslation : public Transform {
 
 
 class IdleTimeoutTranslation : public Transform {
+    bool allowUnimplemented;
+
  public:
-    IdleTimeoutTranslation() {
+    explicit IdleTimeoutTranslation(bool allowUnimplemented = false)
+    : allowUnimplemented(allowUnimplemented) {
         setName("IdleTimeoutTranslation");
     }
     const IR::Node* postorder(IR::Property* node) override {
         if (node->name == "support_timeout") {
-            P4C_UNIMPLEMENTED("Idle timeout translation is not yet supported.");
+            if (allowUnimplemented)
+                ::warning("Idle timeout translation is not yet supported.");
+            else
+                P4C_UNIMPLEMENTED("Idle timeout translation is not yet supported.");
         }
         return node;
     }
 };
 
 class MirrorTranslation : public Transform {
+    bool allowUnimplemented;
+
  public:
-    MirrorTranslation() {
+    explicit MirrorTranslation(bool allowUnimplemented = false)
+    : allowUnimplemented(allowUnimplemented) {
         setName("MirrorTranslation");
     }
 
     const IR::Node* postorder(IR::PathExpression* node) override {
         if (node->path->name == "clone" || node->path->name == "clone3") {
-            P4C_UNIMPLEMENTED("Mirror translation is not yet supported.");
+            if (allowUnimplemented)
+                ::warning("Mirror translation is not yet supported.");
+            else
+                P4C_UNIMPLEMENTED("Mirror translation is not yet supported.");
         }
         return node;
     }
 };
 
-class ResubmitTranslation : public Transform {
+// map index to resubmit field list
+using DigestFieldMap = std::map<IR::Constant*, const IR::MethodCallExpression*>;
+
+class CollectDigestFieldLists : public Transform {
+    DigestFieldMap* map;
+    unsigned int index;
+    std::vector<cstring> digestName;
+    gress_t gress;
+    cstring metadata;
+
  public:
-    ResubmitTranslation() {
-        setName("ResubmitTranslation");
+    CollectDigestFieldLists(DigestFieldMap* map,
+                            std::initializer_list<cstring> name,
+                            gress_t gress,
+                            cstring metadata)
+    : map(map), index(0), digestName(name), gress(gress), metadata(metadata) {
+        CHECK_NULL(map);
+        setName("FindResubmitUseMap");
     }
 
-    const IR::Node* postorder(IR::PathExpression* node) override {
-        if (node->path->name == "resubmit") {
-            P4C_UNIMPLEMENTED("Resubmit translation is not yet supported.");
+    const IR::Node* postorder(IR::MethodCallStatement* node) override {
+        auto mc = node->methodCall->to<IR::MethodCallExpression>();
+        if (!mc) return node;
+
+        auto expr = mc->method->to<IR::PathExpression>();
+        if (!expr) return node;
+
+        auto it = find(digestName.begin(), digestName.end(), expr->path->name);
+        if (it != digestName.end()) {
+            if (mc->arguments->size() != 0) {
+                P4C_UNIMPLEMENTED("resubmit with field list is not supported");
+            }
+            auto path = (gress == gress_t::INGRESS) ?
+                        new IR::PathExpression("ig_intr_md_for_deparser") :
+                        new IR::PathExpression("eg_intr_md_for_deparser");
+            auto member = new IR::Member(path, metadata);
+            auto value = new IR::Constant(new IR::Type_Bits(3, false), index++);
+            auto stmt = new IR::AssignmentStatement(member, value);
+            map->emplace(value, mc);
+            return stmt;
         }
         return node;
+    }
+};
+
+class DoResubmitTranslation : public Transform {
+    DigestFieldMap* map;
+
+ public:
+    explicit DoResubmitTranslation(DigestFieldMap* map) : map(map) {
+        setName("DoResubmitTranslation");
+    }
+
+    const IR::Node* postorder(IR::P4Control* control) override {
+        if (control->name != "IngressDeparserImpl")
+            return control;
+
+        auto stmts = new IR::IndexedVector<IR::StatOrDecl>();
+
+        /*
+         * translate resubmit() in ingress pipeline to the following code
+         *
+         * if (ig_intr_md_for_dprsr.resubmit_idx == n)
+         *    resubmit.add_metadata({fields});
+         *
+         * in ingress deparser.
+         */
+        for (auto it : *map) {
+            auto path = new IR::Path("resubmit");
+            auto expr = new IR::PathExpression(path);
+            auto args = new IR::Vector<IR::Expression>();
+            auto member = new IR::Member(expr, "add_metadata");
+            auto typeArgs = new IR::Vector<IR::Type>();
+            auto mce = new IR::MethodCallExpression(member, typeArgs, args);
+            auto mcs = new IR::MethodCallStatement(mce);
+
+            auto condExprPath = new IR::Member(
+                    new IR::PathExpression(new IR::Path("ig_intr_md_for_dprsr")),
+                    "resubmit_idx");
+            auto condExpr = new IR::Equ(condExprPath, it.first);
+            auto cond = new IR::IfStatement(condExpr, mcs, nullptr);
+            stmts->push_back(cond);
+        }
+        // append other statements
+        for (auto st : control->body->components) {
+            stmts->push_back(st);
+        }
+        auto body = new IR::BlockStatement(control->body->srcInfo, *stmts);
+        auto result = new IR::P4Control(control->srcInfo, control->name,
+                                        control->type, control->constructorParams,
+                                        control->controlLocals, body);
+        return result;
+    }
+};
+
+class ResubmitTranslation : public PassManager {
+    DigestFieldMap resubmitFieldLists;
+
+ public:
+    ResubmitTranslation() {
+        addPasses({
+            new CollectDigestFieldLists(&resubmitFieldLists, {"resubmit"},
+                                        gress_t::INGRESS, "resubmit_idx"),
+            new DoResubmitTranslation(&resubmitFieldLists),
+        });
+        setName("ResubmitTranslation");
     }
 };
 
 class DigestTranslation : public Transform {
+    bool allowUnimplemented;
+
  public:
-    DigestTranslation() {
+    explicit DigestTranslation(bool allowUnimplemented = false)
+    : allowUnimplemented(allowUnimplemented) {
         setName("DigestTranslation");
     }
 
-    const IR::Node* postorder(IR::PathExpression* node) override {
+    const IR::Node *postorder(IR::PathExpression *node) override {
         if (node->path->name == "digest") {
-            P4C_UNIMPLEMENTED("Digest translation is not yet supported.");
+            if (allowUnimplemented)
+                ::warning("Digest translation is not yet supported.");
+            else
+                P4C_UNIMPLEMENTED("Digest translation is not yet supported.");
         }
         return node;
     }
 };
+
 
 class TranslationLast : public PassManager {
  public:
@@ -1011,6 +1143,12 @@ class DoMetadataTranslation : public Transform {
             param = new IR::Parameter("ig_intr_md_for_mb", IR::Direction::Out, type);
             paramList->push_back(param);
 
+            // add ig_intr_md_for_dprsr
+            path = new IR::Path(P4_16::IngressIntrinsicsForDeparser);
+            type = new IR::Type_Name(path);
+            param = new IR::Parameter("ig_intr_md_for_deparser", IR::Direction::Out, type);
+            paramList->push_back(param);
+
             auto control_type = new IR::Type_Control(node->name, paramList);
 
             auto result = new IR::P4Control(node->srcInfo, node->name, control_type,
@@ -1138,15 +1276,42 @@ class PackageTranslation : public Transform {
     const IR::Node* preorder(IR::P4Control* node) override {
         auto blk = translator->getToplevelBlock();
         auto deparser = translator->getDeparser(blk);
+        auto parser = translator->getParser(blk);
         if (*deparser == *node) {
             ingressDeparser = deparser->clone();
             ingressDeparser->name = "IngressDeparserImpl";
             auto controlType = ingressDeparser->type->to<IR::Type_Control>();
             CHECK_NULL(controlType);
-            auto type = new IR::Type_Control(controlType->srcInfo, ingressDeparser->name,
+            auto paramList = new IR::ParameterList({node->type->applyParams->parameters.at(0),
+                                                    node->type->applyParams->parameters.at(1)});
+            // add metadata
+            auto meta = parser->type->applyParams->parameters.at(2);
+            auto param = new IR::Parameter(meta->name, meta->annotations,
+                                           IR::Direction::In, meta->type);
+            paramList->push_back(param);
+
+            // add deparser intrinsic metadata
+            auto path = new IR::Path("ingress_intrinsic_metadata_for_deparser_t");
+            auto type = new IR::Type_Name(path);
+            param = new IR::Parameter("ig_intr_md_for_dprsr", IR::Direction::In, type);
+            paramList->push_back(param);
+
+            // add mirror
+            path = new IR::Path("mirror_packet");
+            type = new IR::Type_Name(path);
+            param = new IR::Parameter("mirror", IR::Direction::None, type);
+            paramList->push_back(param);
+
+            // add resubmit
+            path = new IR::Path("resubmit_packet");
+            type = new IR::Type_Name(path);
+            param = new IR::Parameter("resubmit", IR::Direction::None, type);
+            paramList->push_back(param);
+
+            auto typeControl = new IR::Type_Control(controlType->srcInfo, ingressDeparser->name,
                                              controlType->annotations, controlType->typeParameters,
-                                             controlType->applyParams);
-            ingressDeparser->type = type;
+                                             paramList);
+            ingressDeparser->type = typeControl;
         }
         return node;
     }
@@ -1245,14 +1410,14 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
         new DoMeterTranslation(refMap, typeMap),
         new RandomTranslation(),
         new HashTranslation(),
-        new ChecksumTranslation(),
-        new ParserCounterTranslation(),
-        new PacketPriorityTranslation(),
+        new ChecksumTranslation(options.allowUnimplemented),
+        new ParserCounterTranslation(options.allowUnimplemented),
+        new PacketPriorityTranslation(options.allowUnimplemented),
         new ValueSetTranslation(),
-        new IdleTimeoutTranslation(),
-        new MirrorTranslation(),
+        new IdleTimeoutTranslation(options.allowUnimplemented),
+        new MirrorTranslation(options.allowUnimplemented),
+        new DigestTranslation(options.allowUnimplemented),
         new ResubmitTranslation(),
-        new DigestTranslation(),
         new AppendSystemArchitecture(&structure),
         new TranslationLast(),
         new P4::ClearTypeMap(typeMap),

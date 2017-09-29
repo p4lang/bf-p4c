@@ -356,6 +356,27 @@ extern action_selector {
     action_selector(hash_algorithm_t algorithm, bit<32> size, bit<32> outputWidth);
 }
 
+/// XXX(hanw): avoid using 'emit' as method name to avoid issue in gen_deparser.cpp
+/// as 'emit' is treated as packet_out.emit(), and it does not handle empty parameter.
+extern mirror_packet {
+    /// Write @hdr into the ingress/egress mirror buffer.
+    /// @T can be a header type, a header stack, a header_union, or a struct
+    /// containing fields with such types.
+    void add_metadata<T>(in T hdr);
+}
+
+extern resubmit_packet {
+    /// Write @hdr into the in.
+    /// @T can be a header type, a header stack, a header_union, or a struct
+    /// containing fields with such types.
+    void add_metadata<T>(@optional in T hdr);
+}
+
+extern learn_filter_packet {
+    ///
+    void add_metadata<T>(in T hdr);
+}
+
 enum CloneType {
     I2E,
     E2E
@@ -386,7 +407,8 @@ control Ingress<H, M>(
     in ingress_intrinsic_metadata_t ig_intr_md,
     @optional in ingress_intrinsic_metadata_from_parser_t ig_intr_md_from_prsr,
     @optional out ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm,
-    @optional out ingress_intrinsic_metadata_for_mirror_buffer_t ig_intr_md_for_mb);
+    @optional out ingress_intrinsic_metadata_for_mirror_buffer_t ig_intr_md_for_mb,
+    @optional out ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr);
 
 control Egress<H, M>(
     inout H hdr,
@@ -405,12 +427,17 @@ control Egress<H, M>(
 control IngressDeparser<H, M>(
     packet_out pkt,
     in H hdr,
-    @optional in M metadata);
+    @optional in M metadata,
+    @optional in ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
+    @optional mirror_packet mirror,
+    @optional resubmit_packet resubmit);
 
 control EgressDeparser<H, M>(
     packet_out pkt,
     in H hdr,
-    @optional in M metadata);
+    @optional in M metadata,
+    @optional in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
+    @optional mirror_packet mirror);
 
 package Switch<IH, IM, EH, EM>(
     IngressParser<IH, IM> ingress_parser,

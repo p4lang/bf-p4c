@@ -166,6 +166,11 @@ if (NOT ENABLE_TNA)
     "Wrong number of arguments for method call"
     extensions/p4_tests/p4_14/c2/COMPILER-379/case2210.p4
     )
+
+  p4c_add_xfail_reason("tofino"
+    "Header present in IR not under Member"
+    testdata/p4_14_samples/resubmit.p4
+    )
 endif() # ENABLE_TNA
 
 p4c_add_xfail_reason("tofino"
@@ -919,9 +924,6 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "Header present in IR not under Member"
-  # TODO: What is the implementation status of the following externs?
-  # was passing
-  testdata/p4_14_samples/resubmit.p4
   # was "No PHV allocation for field extracted by the parser"
   testdata/p4_14_samples/packet_redirect.p4
   # was "too much data for parser match"
@@ -1098,6 +1100,8 @@ if (ENABLE_TNA)
     extensions/p4_tests/p4_14/test_config_301_bridge_intrinsic.p4
     extensions/p4_tests/p4_14/c2/COMPILER-261/vag2241.p4
     testdata/p4_14_samples/queueing.p4
+    extensions/p4_tests/p4_14/c4/COMPILER-590/case3179.p4
+    extensions/p4_tests/p4_14/c4/COMPILER-591/case3176.p4
     )
 
   #
@@ -1127,6 +1131,7 @@ if (ENABLE_TNA)
   p4c_add_xfail_reason("tofino"
     "Could not find declaration for ig_intr_md_for_tm"
     extensions/p4_tests/p4_14/test_config_306_no_mirror_share.p4
+    extensions/p4_tests/p4_14/c8/COMPILER-616/case3331.p4
     )
 
   p4c_add_xfail_reason("tofino"
@@ -1174,6 +1179,17 @@ if (ENABLE_TNA)
     )
 
   p4c_add_xfail_reason("tofino"
+    "PHV allocation was not successful"
+    extensions/p4_tests/p4_14/jenkins/power/power.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "Nothing written in the instruction"
+    extensions/p4_tests/p4_14/jenkins/pgrs/pgrs_one.p4
+    extensions/p4_tests/p4_14/test_config_144_recirculate.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
     "Checksum translation is not yet supported"
     testdata/p4_14_samples/TLV_parsing.p4
     testdata/p4_14_samples/basic_routing.p4
@@ -1211,6 +1227,23 @@ if (ENABLE_TNA)
     extensions/p4_tests/p4_14/c1/COMPILER-503/case2678.p4
     extensions/p4_tests/p4_14/c1/COMPILER-505/case2690.p4
     extensions/p4_tests/p4_14/c1/COMPILER-532/case2807.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-567/case2807.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-559/case2987.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-562/case3005.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-548/case3011.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-568/case3026.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-568/case3026dce.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-575/case3041.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-576/case3042.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-579/case3085.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-577/comp577.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-585/comp585.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-588/comp588.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-588/comp588dce.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-593/case3011.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-632/case3459.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-608/case3263.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-589/comp589.p4
     extensions/p4_tests/p4_14/switch/p4src/switch.p4
     extensions/p4_tests/p4_14/jenkins/action_spec_format/action_spec_format.p4
     extensions/p4_tests/p4_14/jenkins/alpm_test/alpm_test.p4
@@ -1236,16 +1269,16 @@ if (ENABLE_TNA)
     testdata/p4_14_samples/packet_redirect.p4
     extensions/p4_tests/p4_14/test_config_102_clone.p4
     extensions/p4_tests/p4_14/c1/COMPILER-413/mirror_test.p4
+    extensions/p4_tests/p4_14/jenkins/mirror_test/mirror_test.p4
+    extensions/p4_tests/p4_14/jenkins/emulation/emulation.p4
+    extensions/p4_tests/p4_14/test_config_303_static_table.p4
     )
 
   p4c_add_xfail_reason("tofino"
-    "Resubmit translation is not yet supported"
+    "resubmit with field list is not supported"
+    extensions/p4_tests/p4_14/13-ResubmitMetadataSize.p4
     extensions/p4_tests/p4_14/jenkins/resubmit/resubmit.p4
     testdata/p4_14_samples/resubmit.p4
-    extensions/p4_tests/p4_14/13-ResubmitMetadataSize.p4
-    extensions/p4_tests/p4_14/test_config_303_static_table.p4
-    extensions/p4_tests/p4_14/test_config_306_no_mirror_share.p4
-    extensions/p4_tests/p4_14/jenkins/emulation/emulation.p4
     )
 
   p4c_add_xfail_reason("tofino"
@@ -1269,6 +1302,7 @@ if (ENABLE_TNA)
     extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
     extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
     extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
     extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
     extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
     extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
@@ -1277,6 +1311,7 @@ if (ENABLE_TNA)
     extensions/p4_tests/p4_14/c1/COMPILER-451/case2537.p4
     extensions/p4_tests/p4_14/c1/DRV-543/case2499.p4
     extensions/p4_tests/p4_14/jenkins/clpm/clpm.p4
+    extensions/p4_tests/p4_14/jenkins/fr_test/fr_test.p4
     )
 
   p4c_add_xfail_reason("tofino"
