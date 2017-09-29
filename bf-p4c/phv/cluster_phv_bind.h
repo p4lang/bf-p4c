@@ -40,10 +40,6 @@ class PHV_Bind : public Visitor {
                                                     // allocated fields to be finally bound
     std::list<PhvInfo::Field *> fields_overflow_i;
                                                     // overflow fields =  All - PHV_Bind fields
-    ordered_map<const PHV_Container*, const PHV::Container*> phv_to_asm_map_i;
-                                                    // PHV_Container = asm_container PHV::Container
-    ordered_map<const PHV::Container*, const PHV_Container*> asm_to_phv_map_i;
-                                                    // asm_container PHV::Container = PHV_Container
 
     void sanity_check_field_duplicate_containers(const std::string&);
     void sanity_check_field_slices(ordered_set<PhvInfo::Field *>&, const std::string&);
@@ -62,7 +58,6 @@ class PHV_Bind : public Visitor {
     const IR::Node *apply_visitor(const IR::Node *, const char *name = 0) override;
     void end_apply(const IR::Node *) override { phv_i.set_done(); }
 
-    void create_phv_asm_container_map();
     void collect_containers_with_fields();
     void bind_fields_to_containers();
 

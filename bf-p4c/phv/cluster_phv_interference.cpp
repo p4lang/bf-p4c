@@ -263,7 +263,8 @@ void PHV_Interference::reduce_clusters(
             continue; }
 
         // Reduce non-singleton clusters.
-        ordered_set<PhvInfo::Field*> owners = reduce_cluster(cl->cluster_vec(), cl->width(), msg);
+        ordered_set<PhvInfo::Field*> owners =
+            reduce_cluster(cl->cluster_vec(), int(cl->width()), msg);
 
         // Recompute reduced cluster requirements.
         cl->cluster_vec().clear();

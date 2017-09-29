@@ -81,11 +81,10 @@ class PHV_MAU_Group {
         std::map<int,
             std::map<int,
                 std::list<std::list<Container_Slice *>>>> Aligned_Container_Slices_t;
-    //
+
  private:
-    //
-    PHV_Container::PHV_Word width_i;                    // container width in PHV group
-    int number_i;                                       // 1..4 [32], 1..6 [16], 1..4 [8]
+    PHV::Type type_i;
+    unsigned number_i;                                       // 1..4 [32], 1..6 [16], 1..4 [8]
     PHV_Container::Ingress_Egress gress_i;              // Ingress_Only,
                                                         // Egress_Only,
                                                         // Ingress_Or_Egress
@@ -104,24 +103,14 @@ class PHV_MAU_Group {
                                           // ingress, egress slices having same width, num
                                           // [w](n) --> ((Ingress set) (Egress set))
  public:
-    /** Create @containers_in_group PHV_Container containers of size @w and
-     * gress @gress, numbered consecutively starting from @phv_number.  Update
-     * @owner->phv_containers to map container number to each new container.
+    /** Create an empty MAU group of PHV containers.
      *
-     * Then, create a PHV_MAU_Group with these containers and assigned number
-     * @n.
-     *
-     * Afterwards, @phv_number = @phv_number + @containers_in_group.
+     * @param t container type.
+     * @param group_number unique number of this MAU group.
+     * @param gress whether this group is pinned to ingress/egress or can be assigned to either.
      */
-    PHV_MAU_Group(
-        PHV_MAU_Group_Assignments *owner,
-        PHV_Container::PHV_Word w,
-        int n,
-        int phv_number,
-        const std::string& asm_encoded,
-        int asm_offset,
-        PHV_Container::Ingress_Egress gress,
-        const int containers_in_group);
+    PHV_MAU_Group(PHV::Type t, unsigned group_number, PHV_Container::Ingress_Egress gress)
+    : type_i(t), number_i(group_number), gress_i(gress), empty_containers_i(0) { }
 
     void clear() {
         for (auto &c : phv_containers_i) {
@@ -132,8 +121,9 @@ class PHV_MAU_Group {
         aligned_container_slices_i.clear();
     }
 
-    PHV_Container::PHV_Word width()                     { return width_i; }
-    int number()                                        { return number_i; }
+    PHV::Type type()                                    { return type_i; }
+    PHV::Size width()                                   { return type_i.size(); }
+    unsigned number()                                   { return number_i; }
     void gress(PHV_Container::Ingress_Egress gress_p)   {
         gress_i = gress_p;
         // set gress for all containers in group
@@ -157,6 +147,11 @@ class PHV_MAU_Group {
             empty_containers_i--;
         }
     }
+
+    void add_empty_container(PHV_Container *c) {
+        phv_containers_i.push_back(c);
+        empty_containers_i++; }
+
     PHV_Container *empty_container() {
         // return next empty container in MAU group
         for (auto &c : phv_containers_i) {
@@ -188,52 +183,13 @@ class PHV_MAU_Group_Assignments : public Visitor {
 
  private:
     Cluster_PHV_Requirements &phv_requirements_i;  // reference to parent PHV Requirements
-    //
-    ordered_map<PHV_Container::PHV_Word, int> num_groups_i {
-        {PHV_Container::PHV_Word::b32, 4},
-        {PHV_Container::PHV_Word::b16, 6},
-        {PHV_Container::PHV_Word::b8,  4},
-    };
-    // PHV
-    ordered_map<PHV_Container::PHV_Word, int> phv_number_start_i {
-        {PHV_Container::PHV_Word::b32, 0},
-        {PHV_Container::PHV_Word::b16, 128},
-        {PHV_Container::PHV_Word::b8,  64},
-    };
-    // T_PHV
-    ordered_map<PHV_Container::PHV_Word, int> t_phv_number_start_i {
-        {PHV_Container::PHV_Word::b32, 256},
-        {PHV_Container::PHV_Word::b16, 320},
-        {PHV_Container::PHV_Word::b8,  288},
-    };
-    // ASM register name prefix
-    ordered_map<PHV_Container::PHV_Word, std::string> asm_prefix_i {
-        {PHV_Container::PHV_Word::b32, "W"},
-        {PHV_Container::PHV_Word::b16, "H"},
-        {PHV_Container::PHV_Word::b8,  "B"},
-    };
-    // Container ranges hard-wired to a specific gress.
-    const ordered_map<std::pair<int, int>, PHV_Container::Ingress_Egress> ingress_egress_i {
-        {std::make_pair(0, 15), PHV_Container::Ingress_Egress::Ingress_Only},
-        {std::make_pair(16, 31), PHV_Container::Ingress_Egress::Egress_Only},
-        {std::make_pair(64, 79), PHV_Container::Ingress_Egress::Ingress_Only},
-        {std::make_pair(80, 95), PHV_Container::Ingress_Egress::Egress_Only},
-        {std::make_pair(128, 143), PHV_Container::Ingress_Egress::Ingress_Only},
-        {std::make_pair(144, 159), PHV_Container::Ingress_Egress::Egress_Only},
-    };
-    //
-    std::pair<int, int> phv_container_numbers_i   = {0, 223};
-    std::pair<int, int> t_phv_container_numbers_i = {256, 367};
-    //
-    ordered_map<int, PHV_Container *> phv_containers_i;
+    ordered_map<unsigned, PHV_Container *> phv_containers_i;
                                        // map phv_number to Container
-    ordered_map<std::string, int> asm_map_i;
-                                       // map asm string to phv_number
-    ordered_map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>> PHV_MAU_i;
+    ordered_map<PHV::Size, std::vector<PHV_MAU_Group *>> PHV_MAU_i;
                                        // PHV MAU groups comprise 16 same-width containers
                                        // = 4g*32b + 4g*8b + 6g*16b = 64+64+96 = 224 containers
                                        // PHV_MAU_i[width] = vector of groups
-    ordered_map<int, ordered_map<PHV_Container::PHV_Word, std::vector<PHV_Container *>>> T_PHV_i;
+    ordered_map<unsigned, ordered_map<PHV::Size, std::vector<PHV_Container *>>> T_PHV_i;
                                        // TPHV Collections comprise 4*8b + 4*32b + 6+16b containers
                                        //  = 14 containers * 8 collections = 112 containers
                                        // T_PHV_i[collection][width] = vector of containers
@@ -312,22 +268,23 @@ class PHV_MAU_Group_Assignments : public Visitor {
         : phv_requirements_i(phv_r) {}
     //
     void clear();
-    //
-    Cluster_PHV_Requirements&
-        phv_requirements() { return phv_requirements_i; }
-    //
+    Cluster_PHV_Requirements& phv_requirements() { return phv_requirements_i; }
+
     // all PHV MAU groups, all TPHV collections
-    //
-    std::pair<int, int> phv_container_numbers()           { return phv_container_numbers_i; }
-    std::pair<int, int> t_phv_container_numbers()         { return t_phv_container_numbers_i; }
-    const ordered_map<int, PHV_Container *>& phv_containers() const { return phv_containers_i; }
-    void phv_containers(int n, PHV_Container *c);
-    void phv_containers(const std::string asm_string, int phv_num);
-    const PHV_Container *phv_container(int phv_num) const;
-    const PHV_Container *phv_container(std::string asm_string) const;
-    const ordered_map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>>&
+    const ordered_map<unsigned, PHV_Container *>& phv_containers() const {
+        return phv_containers_i;
+    }
+
+    /// Map a device-provided container ID (see phv_spec.h) to a PHV_Container
+    /// (aux. information for PHV allocation).
+    void phv_containers(unsigned container_id, PHV_Container *c);
+
+    /// Look up a PHV_Container given a device-provided container ID (see phv_spec.h).
+    const PHV_Container *phv_container(unsigned container_id) const;
+
+    const ordered_map<PHV::Size, std::vector<PHV_MAU_Group *>>&
         phv_mau_map() const { return PHV_MAU_i; }
-    const ordered_map<int, ordered_map<PHV_Container::PHV_Word, std::vector<PHV_Container *>>>&
+    const ordered_map<unsigned, ordered_map<PHV::Size, std::vector<PHV_Container *>>>&
         t_phv_map() const { return T_PHV_i; }
     //
     // remaining container slices available
@@ -364,7 +321,7 @@ class PHV_MAU_Group_Assignments : public Visitor {
     std::vector<PHV_Container *>& cohabit_fields()        { return cohabit_fields_i; }
 
     /** estimate ingress / egress ratio */
-    int num_ingress_collections(std::vector<Cluster_PHV *>&);
+    unsigned num_ingress_collections(std::vector<Cluster_PHV *>&);
 
     /** Build PHV containers and groups. */
     void create_MAU_groups();
@@ -372,8 +329,7 @@ class PHV_MAU_Group_Assignments : public Visitor {
     /** Build TPHV containers and collections. */
     void create_TPHV_collections();
 
-    PHV_Container::Ingress_Egress MAU_group_gress(int phv_number);
-    PHV_Container::Ingress_Egress TPHV_collection_gress(int collection_num);
+    PHV_Container::Ingress_Egress TPHV_collection_gress(unsigned collection_num);
 
     void cluster_PHV_placements();
     void cluster_TPHV_placements();
@@ -431,7 +387,7 @@ class PHV_MAU_Group_Assignments : public Visitor {
         gress(PHV_MAU_Group::Aligned_Container_Slices_t&);
     //
     void container_population_density(
-        std::map<PHV_Container::PHV_Word,
+        std::map<PHV::Size,
             std::map<PHV_Container::Container_status,
                 std::pair<int, int>>>&,
         bool phv = true);
@@ -448,7 +404,7 @@ class PHV_MAU_Group_Assignments : public Visitor {
     //
     void sanity_check(
         std::pair<int, int>& phv_container_numbers,
-        ordered_map<PHV_Container::PHV_Word, int>& phv_number_start,
+        ordered_map<PHV::Size, int>& phv_number_start,
         const std::string& msg,
         bool t_phv = false);
     void sanity_check_container_avail(const std::string&);
@@ -463,7 +419,7 @@ class PHV_MAU_Group_Assignments : public Visitor {
     //
     void statistics(
         std::ostream &out,
-        std::map<PHV_Container::PHV_Word,
+        std::map<PHV::Size,
             std::map<PHV_Container::Container_status,
                 std::pair<int, int>>>& c_bits_agg,
         const char *str);
@@ -507,13 +463,13 @@ std::ostream &operator<<(
     std::vector<PHV_MAU_Group *>*);
 std::ostream &operator<<(
     std::ostream &,
-    ordered_map<PHV_Container::PHV_Word, std::vector<PHV_Container *>>&);
+    ordered_map<PHV::Size, std::vector<PHV_Container *>>&);
 std::ostream &operator<<(
     std::ostream &out,
-    ordered_map<int, ordered_map<PHV_Container::PHV_Word, std::vector<PHV_Container *>>>&);
+    ordered_map<unsigned, ordered_map<PHV::Size, std::vector<PHV_Container *>>>&);
 std::ostream &operator<<(
     std::ostream &out,
-    ordered_map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>>&);
+    ordered_map<PHV::Size, std::vector<PHV_MAU_Group *>>&);
 std::ostream &operator<<(std::ostream &, PHV_MAU_Group_Assignments&);
 //
 #endif /* BF_P4C_PHV_CLUSTER_PHV_MAU_H_ */

@@ -1,6 +1,7 @@
 #ifndef EXTENSIONS_BF_P4C_PHV_PHV_SPEC_H_
 #define EXTENSIONS_BF_P4C_PHV_PHV_SPEC_H_
 
+#include <boost/optional.hpp>
 #include <vector>
 #include "bf-p4c/phv/phv.h"
 #include "lib/ordered_map.h"
@@ -73,8 +74,19 @@ class PhvSpec {
     /// @return a bitvec of the containers which are hard-wired to egress.
     virtual const bitvec& egressOnly() const = 0;
 
-    /// @return the ids of every container in the given tagalong group.
-    virtual bitvec tagalongGroup(unsigned groupIndex) const = 0;
+    /// @return MAU groups of a given type @t.
+    virtual const std::vector<bitvec>& mauGroups(PHV::Type t) const = 0;
+
+    /// @return the ids of every container in @container_id's MAU group, or
+    /// boost::none if @container_id is not part of any MAU group.
+    virtual boost::optional<bitvec> mauGroup(unsigned container_id) const = 0;
+
+    /// @return a bitvec of available tagalong collections.
+    virtual const std::vector<bitvec>& tagalongGroups() const = 0;
+
+    /// @return the ids of every container in @container_id's tagalong group, or
+    /// boost::none if @container_id is not part of any MAU group.
+    virtual boost::optional<bitvec> tagalongGroup(unsigned container_id) const = 0;
 
     /// @return the ids of containers that can be assigned to a thread
     /// individually.
@@ -98,7 +110,13 @@ class TofinoPhvSpec : public PhvSpec {
 
     const bitvec& egressOnly() const override;
 
-    bitvec tagalongGroup(unsigned groupIndex) const override;
+    const std::vector<bitvec>& mauGroups(PHV::Type t) const override;
+
+    boost::optional<bitvec> mauGroup(unsigned groupID) const override;
+
+    const std::vector<bitvec>& tagalongGroups() const override;
+
+    boost::optional<bitvec> tagalongGroup(unsigned groupIndex) const override;
 
     const bitvec& individuallyAssignedContainers() const override;
 
@@ -118,7 +136,13 @@ class JBayPhvSpec : public PhvSpec {
 
     const bitvec& egressOnly() const override;
 
-    bitvec tagalongGroup(unsigned groupIndex) const override;
+    const std::vector<bitvec>& mauGroups(PHV::Type t) const override;
+
+    boost::optional<bitvec> mauGroup(unsigned groupID) const override;
+
+    const std::vector<bitvec>& tagalongGroups() const override;
+
+    boost::optional<bitvec> tagalongGroup(unsigned groupIndex) const override;
 
     const bitvec& individuallyAssignedContainers() const override;
 

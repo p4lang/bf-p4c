@@ -247,7 +247,7 @@ PHV_Analysis_Validate::sanity_check_container_holes(const std::string& msg) {
         std::list<std::tuple<
             const PHV_Container *,
             const std::pair<int, int>>> holes_list_2;
-        int container_width = c->width();
+        int container_width = int(c->width());
         if (tuple_list.size()) {
             std::vector<char> bits(container_width, '0');
             for (auto &tuple : tuple_list) {

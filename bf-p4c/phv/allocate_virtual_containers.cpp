@@ -25,48 +25,39 @@ void AllocateVirtualContainers::trivial_allocate(ordered_set<PhvInfo::Field *>& 
     // trivially allocating overflow fields
     //
     LOG3("********** Overflow Allocation **********");
-    ordered_map<PHV_Container::PHV_Word, int> overflow_reg {
-        {PHV_Container::PHV_Word::b32, 64},
-        {PHV_Container::PHV_Word::b16, 224},
-        {PHV_Container::PHV_Word::b8,  128},
+    ordered_map<PHV::Size, int> overflow_reg {
+        {PHV::Size::b32, 64},
+        {PHV::Size::b16, 224},
+        {PHV::Size::b8,  128},
     };
 
-    PHV_Container::PHV_Word container_width = PHV_Container::PHV_Word::b8;
+    PHV::Size container_width = PHV::Size::b8;
     for (auto &f : fields) {
-        //
         // skip members of ccgfs as owners will allocate for them
-        //
-        if (f->ccgf() && !f->ccgf_fields().size()) {
+        if (f->ccgf() && !f->ccgf_fields().size())
             continue;
-        }
-        std::string container_prefix = "";
-        if (!uses_i.is_used_mau(f) && uses_i.is_used_parde(f)) {  // not used mau but used parde
-            container_prefix = "T";
-        }
+
+        // Fields not used mau but used parde can be placed in virtual TPHV containers
+        PHV::Kind kind = PHV::Kind::normal;
+        if (!uses_i.is_used_mau(f) && uses_i.is_used_parde(f))
+            kind = PHV::Kind::tagalong;
+
         int field_bit = 0;
         int container_bit = 0;
-        if (f->phv_use_width() > 16) {
-            container_width = PHV_Container::PHV_Word::b32;
-            container_prefix += "W";
-        } else if (f->phv_use_width() > 8) {
-            container_width = PHV_Container::PHV_Word::b16;
-            container_prefix += "H";
-        } else {
-            container_width = PHV_Container::PHV_Word::b8;
-            container_prefix += "B";
-        }
-        // TODO (cole): Update PHV_Bind to handle virtual containers
+        if (f->phv_use_width() > 16)
+            container_width = PHV::Size::b32;
+        else if (f->phv_use_width() > 8)
+            container_width = PHV::Size::b16;
+        else
+            container_width = PHV::Size::b8;
+
         PHV::Container *asm_container = nullptr;
         for (field_bit = 0; field_bit < f->phv_use_width(); /* nil */) {
-            std::stringstream ss;
-            ss << overflow_reg[container_width];
-            overflow_reg[container_width]++;
-            std::string reg_string = container_prefix + ss.str();
-            const char *reg_name = reg_string.c_str();
-            asm_container = new PHV::Container(reg_name);
+            int index = overflow_reg[container_width]++;
+            asm_container = new PHV::Container(PHV::Type(kind, container_width), index);
             int width_in_container = f->size - f->phv_use_rem();
-            if (width_in_container > container_width) {
-                width_in_container = container_width;
+            if (width_in_container > int(container_width)) {
+                width_in_container = int(container_width);
                 // spans several containers, aggregate used bits
                 // [width 20]= 12..19[8b] 4..11[8b] 0..3[4b]
                 f->set_phv_use_rem(f->phv_use_rem() + width_in_container);
@@ -75,7 +66,8 @@ void AllocateVirtualContainers::trivial_allocate(ordered_set<PhvInfo::Field *>& 
             }
             f->alloc_i.emplace_back(
                 f, *asm_container, field_bit, container_bit, width_in_container);
-            LOG3(f << '[' << field_bit << ".." << f->phv_use_width()-1 << "] ..... " << reg_name);
+            LOG3(f << '[' << field_bit << ".." << f->phv_use_width()-1 << "] ..... "
+                << asm_container->toString());
             field_bit += width_in_container;
         }
         // ccgf owners allocate for members
@@ -102,9 +94,9 @@ void AllocateVirtualContainers::trivial_allocate(ordered_set<PhvInfo::Field *>& 
             }
             assert(asm_container);
             container_contiguous_alloc(f,
-                                       container_width,
+                                       int(container_width),
                                        asm_container,
-                                       container_width);
+                                       int(container_width));
         }
     }
 }

@@ -1,5 +1,7 @@
 #include "cluster_phv_mau.h"
 #include "cluster_phv_operations.h"
+#include "phv_spec.h"
+#include "bf-p4c/device.h"
 #include "lib/log.h"
 #include "lib/stringref.h"
 
@@ -17,39 +19,6 @@ PHV_MAU_Group::Container_Slice::Container_Slice(int l, int w, PHV_Container *c)
     // container_i->ranges()[lo_i] = hi_i;
     container_i->sanity_check_container_ranges("PHV_MAU_Group::Container_Slice constructor");
 }
-
-//***********************************************************************************
-//
-// PHV_MAU_Group::PHV_MAU_Group
-//
-//***********************************************************************************
-
-PHV_MAU_Group::PHV_MAU_Group(
-    PHV_MAU_Group_Assignments *owner,
-    PHV_Container::PHV_Word w,
-    int n,
-    int phv_number,
-    const std::string& asm_encoded,
-    int asm_offset,
-    PHV_Container::Ingress_Egress gress,
-    const int containers_in_group)
-    : width_i(w), number_i(n), gress_i(gress), empty_containers_i(containers_in_group) {
-    //
-    assert(owner);
-    //
-    // create containers within group
-    for (int i=1; i <= containers_in_group; i++) {
-        std::stringstream ss;
-        ss << phv_number - asm_offset;
-        std::string asm_reg_string = asm_encoded + ss.str();
-        //
-        PHV_Container *c = new PHV_Container(this, width_i, phv_number, asm_reg_string, gress);
-        phv_containers_i.push_back(c);
-        owner->phv_containers(phv_number, c);
-        owner->phv_containers(asm_reg_string, phv_number);
-        phv_number++;
-    }
-}  // PHV_MAU_Group
 
 
 //***********************************************************************************
@@ -212,7 +181,7 @@ PHV_MAU_Group::container_population_density(
     c_bits.clear();
     for (PHV_Container *c : phv_containers_i) {
         c_bits[c->status()].first++;
-        c_bits[c->status()].second += c->width() - c->avail_bits();  // populated bits
+        c_bits[c->status()].second += int(c->width()) - c->avail_bits();  // populated bits
     }
 }  // container_population_density
 
@@ -300,58 +269,20 @@ PHV_MAU_Group_Assignments::clear() {
     cohabit_fields_i.clear();
 }
 
-void
-PHV_MAU_Group_Assignments::phv_containers(int phv_num, PHV_Container *c) {
-    BUG_CHECK(
-        (phv_num >= phv_container_numbers_i.first && phv_num <= phv_container_numbers_i.second)
-        ||
-        (phv_num >= t_phv_container_numbers_i.first && phv_num <= t_phv_container_numbers_i.second),
-        "*****PHV_MAU_Group_Assignments: sanity_FAIL.....PHV_Container number '%d' outside limits",
-        phv_num);
-    //
-    assert(c);
-    phv_containers_i[phv_num] = c;
+void PHV_MAU_Group_Assignments::phv_containers(unsigned container_id, PHV_Container *c) {
+    BUG_CHECK(c, "NULL container");
+    phv_containers_i[container_id] = c;
 }
 
-void
-PHV_MAU_Group_Assignments::phv_containers(const std::string asm_string, int phv_num) {
-    BUG_CHECK(
-        (phv_num >= phv_container_numbers_i.first && phv_num <= phv_container_numbers_i.second)
-        ||
-        (phv_num >= t_phv_container_numbers_i.first && phv_num <= t_phv_container_numbers_i.second),
-        "*****PHV_MAU_Group_Assignments: sanity_FAIL.....PHV_Container number '%d' outside limits",
-        phv_num);
-    //
-    asm_map_i[asm_string] = phv_num;
+const PHV_Container * PHV_MAU_Group_Assignments::phv_container(unsigned container_id) const {
+    return phv_containers_i.at(container_id);
 }
 
-const PHV_Container * PHV_MAU_Group_Assignments::phv_container(int phv_num) const {
-    BUG_CHECK(
-        (phv_num >= phv_container_numbers_i.first && phv_num <= phv_container_numbers_i.second)
-        ||
-        (phv_num >= t_phv_container_numbers_i.first && phv_num <= t_phv_container_numbers_i.second),
-        "*****PHV_MAU_Group_Assignments: sanity_FAIL.....PHV_Container number '%d' outside limits",
-        phv_num);
-    BUG_CHECK(phv_containers_i.count(phv_num),
-        "*****PHV_Container '%d' not created yet, internal phv allocation error*****", phv_num);
-
-    return phv_containers_i.at(phv_num);
-}
-
-const PHV_Container *
-PHV_MAU_Group_Assignments::phv_container(std::string asm_string) const {
-    if (asm_map_i.count(asm_string))
-        return phv_container(asm_map_i.at(asm_string));
-
-    BUG("*****PHV_MAU_Group_Assignments::phv_container('%s') does not exist*****", asm_string);
-    return nullptr;
-}
-
-int
+unsigned
 PHV_MAU_Group_Assignments::num_ingress_collections(std::vector<Cluster_PHV *>& cluster_vec) {
     //
-    int ingress_and_egress = 0;
-    int ingress = 0;
+    unsigned ingress_and_egress = 0;
+    unsigned ingress = 0;
     for (Cluster_PHV *cl : cluster_vec) {  // possible to have 0 fields alloc to TPHV
         if (cl->exact_containers()) {
             ingress_and_egress++;
@@ -360,7 +291,7 @@ PHV_MAU_Group_Assignments::num_ingress_collections(std::vector<Cluster_PHV *>& c
             }
         }
     }
-    int ingress_collections = Constants::num_collections / 2;
+    unsigned ingress_collections = Constants::num_collections / 2;
     if (ingress_and_egress) {
         int value = (ingress * Constants::num_collections) / ingress_and_egress
                       + ((ingress * Constants::num_collections) % ingress_and_egress ? 1 : 0);
@@ -374,123 +305,89 @@ PHV_MAU_Group_Assignments::num_ingress_collections(std::vector<Cluster_PHV *>& c
     return ingress_collections;
 }
 
-PHV_Container::Ingress_Egress
-PHV_MAU_Group_Assignments::MAU_group_gress(int phv_number) {
-    PHV_Container::Ingress_Egress gress = PHV_Container::Ingress_Egress::Ingress_Or_Egress;
-    for (auto ie : ingress_egress_i) {
-        std::pair<int, int> limits = ie.first;
-        if (phv_number < limits.first) {
-            // e.g., phv_number=32, limits.first=64
-            // no need to preset gress or search for preset range
-            break;
-        }
-        if (phv_number >= limits.first && phv_number <= limits.second) {
-            gress = ie.second;
-            break;
-        }
-    }
-    return gress;
-}
+void PHV_MAU_Group_Assignments::create_MAU_groups() {
+    const PhvSpec& phvSpec = Device::phvSpec();
+    // For each kind of PHV group...
+    for (const PHV::Type &t : Device::phvSpec().containerTypes()) {
+        // Create the number of groups of that kind...
+        unsigned group_num = 0;
+        for (auto group : Device::phvSpec().mauGroups(t)) {
+            // Is this group pinned to ingress/egress or can be assigned to either?
+            PHV_Container::Ingress_Egress gress;
+            bool ingressOnly = !(group & phvSpec.ingressOnly()).empty();
+            bool egressOnly = !(group & phvSpec.egressOnly()).empty();
+            if (ingressOnly && egressOnly)
+                P4C_UNIMPLEMENTED("Cannot mix ingress-only and egress-only "
+                                  "containers in MAU groups.");
+            else if (ingressOnly)
+                gress = PHV_Container::Ingress_Only;
+            else if (egressOnly)
+                gress = PHV_Container::Egress_Only;
+            else
+                gress = PHV_Container::Ingress_Or_Egress;
 
-void
-PHV_MAU_Group_Assignments::create_MAU_groups() {
-    //
-    // check specification: phv_container_numbers limits
-    //
-    sanity_check(
-        phv_container_numbers_i,
-        phv_number_start_i,
-        "create_MAU_groups"
-        /* phv */);
-    //
-    // create MAU Groups
-    //
-    for (auto &x : num_groups_i) {
-        int phv_number_start = phv_number_start_i[x.first];
-        std::string asm_encoded = asm_prefix_i[x.first];
-        //
-        int group_phv_number_start = phv_number_start;
-        for (int i=1; i <= x.second; i++) {
-            //
-            // does this group phv containers fall in ingress_only or egress_only category
-            //
-            PHV_Container::Ingress_Egress gress = MAU_group_gress(group_phv_number_start);
-            //
-            PHV_MAU_Group *g = new PHV_MAU_Group(this,
-                                                 x.first,
-                                                 i,
-                                                 group_phv_number_start,
-                                                 asm_encoded,
-                                                 phv_number_start,
-                                                 gress,
-                                                 Constants::phv_mau_group_size);
+            // Create empty group
+            PHV_MAU_Group *g = new PHV_MAU_Group(t, group_num++, gress);
 
-            group_phv_number_start += Constants::phv_mau_group_size;
+            // Add containers to group
+            for (auto container_id : group) {
+                // TODO: Do containers really need a back pointer to their
+                // enclosing group?
+                PHV_Container *c = new PHV_Container(g, t.size(), container_id, gress);
+                g->add_empty_container(c);
+
+                // TODO: Does this really need a separate map of containers?
+                this->phv_containers(container_id, c); }
 
             PHV_MAU_i[g->width()].push_back(g);
-            //
-            // fill PHV_groups_i list of MAU containers
-            //
-            PHV_groups_i.push_front(g);
-        }
-    }
-}  // PHV_MAU_Group_Assignments::create_MAU_groups
+            PHV_groups_i.push_front(g); } }
+}
 
 PHV_Container::Ingress_Egress
-PHV_MAU_Group_Assignments::TPHV_collection_gress(int collection_num) {
-    int ingress_collections = num_ingress_collections(phv_requirements_i.t_phv_fields());
+PHV_MAU_Group_Assignments::TPHV_collection_gress(unsigned collection_num) {
+    unsigned ingress_collections = num_ingress_collections(phv_requirements_i.t_phv_fields());
 
-    return (collection_num <= ingress_collections) ?
+    return (collection_num < ingress_collections) ?
                 PHV_Container::Ingress_Egress::Ingress_Only :
                 PHV_Container::Ingress_Egress::Egress_Only;
 }
 
-void
-PHV_MAU_Group_Assignments::create_TPHV_collections() {
-    //
-    // check specification: t_phv_container_numbers limits
-    //
-    sanity_check(
-        t_phv_container_numbers_i,
-        t_phv_number_start_i,
-        "create_TPHV_collections",
-        true /* t_phv */);
-    //
+void PHV_MAU_Group_Assignments::create_TPHV_collections() {
     // create TPHV collections
     // T_PHV Collection = 4*32b, 4*8b, 6*16b container groups
     // any TPHV collection can be Ingress_Only, Egress_Only but not both
     // set gress for collection based on ingress / egress partition estimate
-    //
-    for (auto &x : num_groups_i) {
-        int t_phv_number_start = t_phv_number_start_i[x.first];
-        std::string asm_encoded = "T" + asm_prefix_i[x.first];
+    const PhvSpec& phvSpec = Device::phvSpec();
+    int collection_num = 0;
+    for (auto collection : phvSpec.tagalongGroups()) {
+        // TODO: We seem to be pre-pinning TPHV collections to threads based.  Why?
+        PHV_Container::Ingress_Egress gress = TPHV_collection_gress(collection_num);
 
-        int group_phv_number_start = t_phv_number_start;
-        for (int i=1; i <= Constants::num_collections; i++) {
-            PHV_Container::Ingress_Egress gress = TPHV_collection_gress(i);
+        // Each PHV_MAU_Group holds containers of the same size.  Hence, TPHV
+        // collections are split into three groups, by size.
+        ordered_map<PHV::Size, PHV_MAU_Group *> groups_by_size;
+        for (PHV::Size size : { PHV::Size::b8, PHV::Size::b16, PHV::Size::b32 })
+            groups_by_size[size] =
+                new PHV_MAU_Group(PHV::Type(PHV::Kind::tagalong, size), collection_num, gress);
 
-            PHV_MAU_Group *g = new PHV_MAU_Group(
-                                            this,
-                                            x.first,
-                                            i,
-                                            group_phv_number_start,
-                                            asm_encoded,
-                                            t_phv_number_start,
-                                            gress,
-                                            x.second);
+        // Add containers to groups by size
+        for (auto container_id : collection) {
+            // TODO: see TODOs for mau group creation
+            PHV::Size size = phvSpec.idToContainer(container_id).type().size();
+            PHV_Container *c =
+                new PHV_Container(groups_by_size.at(size), size, container_id, gress);
+            groups_by_size.at(size)->add_empty_container(c);
+            this->phv_containers(container_id, c); }
 
-            group_phv_number_start += x.second;
+        for (PHV::Size size : { PHV::Size::b8, PHV::Size::b16, PHV::Size::b32 }) {
+            for (PHV_Container* c : groups_by_size.at(size)->phv_containers())
+                T_PHV_i[collection_num][size].push_back(c);
+            T_PHV_groups_i.push_front(groups_by_size.at(size)); }
 
-            for (auto &c : g->phv_containers()) {
-                T_PHV_i[i][g->width()].push_back(c);
-            }
-            T_PHV_groups_i.push_front(g);  // list 8b,16b,32b used in container_no_pack()
-        }
-    }  // for
-    //
+        ++collection_num; }
+
     sanity_check_T_PHV_collections("PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments().....");
-    //
-}  // PHV_MAU_Group_Assignments::create_TPHV_collections
+}
 
 void PHV_MAU_Group_Assignments::compute_substratum_clusters() {
     //
@@ -823,8 +720,8 @@ PHV_MAU_Group_Assignments::container_no_pack(
                 // try to exact match cl width to g width  -- parser placement contraints
                 // fields less than byte use byte
                 //
-                if (g->width() > PHV_Container::PHV_Word::b8
-                 && cl->width() * 2 <= g->width()) {
+                if (int(g->width()) > int(PHV::Size::b8)
+                 && int(cl->width()) * 2 <= int(g->width())) {
                     //
                     continue;
                 }
@@ -840,10 +737,10 @@ PHV_MAU_Group_Assignments::container_no_pack(
             PHV_MAU_Group *cl_g = g;
             size_t req_containers = cl->num_containers();
             if (cl->exact_containers()) {
-                if (cl->width() < static_cast<int>(cl_g->width())) {
+                if (int(cl->width()) < int(cl_g->width())) {
                     if (auto g_scale_down = downsize_mau_group(
                                                 cl->gress(),
-                                                cl->width(),
+                                                int(cl->width()),
                                                 req_containers,
                                                 phv_groups_to_be_filled)) {
                         //
@@ -857,12 +754,12 @@ PHV_MAU_Group_Assignments::container_no_pack(
                     }
                 } else {
                     // upsize mau group if current width groups have insufficient empty containers
-                    if (req_containers >
-                        max_empty_containers(cl->gress(), cl_g->width(), phv_groups_to_be_filled)) {
-                        //
+                    if (req_containers > max_empty_containers(cl->gress(),
+                                                              int(cl_g->width()),
+                                                              phv_groups_to_be_filled)) {
                         if (auto g_scale_up = upsize_mau_group(
                                                     cl->gress(),
-                                                    cl->width(),
+                                                    int(cl->width()),
                                                     req_containers,
                                                     phv_groups_to_be_filled)) {
                             //
@@ -909,7 +806,7 @@ PHV_MAU_Group_Assignments::container_no_pack(
                        field_width = field->phv_use_width();
                     }
                     for (auto field_bit_lo=0; field_width > 0;) {
-                        int taint_bits = std::min(field_width, static_cast<int>(cl_g->width()));
+                        int taint_bits = std::min(field_width, int(cl_g->width()));
                         PHV_Container *container = cl_g->empty_container();
                         if (!container) {
                             LOG1("*****cluster_phv_mau.cpp: sanity_FAIL*****"
@@ -921,8 +818,8 @@ PHV_MAU_Group_Assignments::container_no_pack(
                         if (field_bit_lo == 0) {  // consider alignment only @ start of field
                             align_start = field->phv_alignment().get_value_or(0);
                         }
-                        if (taint_bits + align_start > container->width()) {
-                            taint_bits = container->width() - align_start;
+                        if (taint_bits + align_start > int(container->width())) {
+                            taint_bits = int(container->width()) - align_start;
                         }
                         int processed_bits =
                             container->taint(
@@ -936,7 +833,7 @@ PHV_MAU_Group_Assignments::container_no_pack(
                         // taint() sets field's hi reflecting balance remaining,
                         // returns processed width
                         //
-                        field_bit_lo += cl_g->width();
+                        field_bit_lo += int(cl_g->width());
                         field_width -= processed_bits;  // loop termination
                         //
                         // check if this container is partially filled with parser field
@@ -1060,16 +957,16 @@ bool PHV_MAU_Group_Assignments::fix_parser_container(
     // transfer necessary for partially filled container only
     // needed width can never exceed largest container width = 32b
     //
-    if (cc->width() > PHV_Container::PHV_Word::b32) {
+    if (cc->width() > int(PHV::Size::b32)) {
         WARNING("parser_container width > PHV_Word::b32 " << cc);
         BUG_CHECK(0, "*****PHV_MAU_Group_Assignments::container_no_pack *****");
     } else {
-        if (cc->width() > PHV_Container::PHV_Word::b16) {
-            int width_diff = cc->width() - PHV_Container::PHV_Word::b16;
+        if (cc->width() > int(PHV::Size::b16)) {
+            int width_diff = cc->width() - int(PHV::Size::b16);
             cc_1 = new PHV_Container::Container_Content(
                 c,
                 0,
-                PHV_Container::PHV_Word::b16,
+                int(PHV::Size::b16),
                 cc->field(),
                 width_diff /* field_bit_lo */);
             //
@@ -1083,7 +980,7 @@ bool PHV_MAU_Group_Assignments::fix_parser_container(
                 cc->field_bit_lo());
         } else {
             // width < 16, <=> 8
-            if (cc->width() % PHV_Container::PHV_Word::b8) {
+            if (cc->width() % int(PHV::Size::b8)) {
                 LOG1("parser_container width % PHV_Word::b8 ..... pack@header_analysis?");
                 LOG1("cc_width = " << cc->width());
                 LOG1(cc);
@@ -1169,7 +1066,7 @@ PHV_MAU_Group_Assignments::parser_container_no_holes(
     //
     for (auto &g : phv_groups_to_be_filled) {
         if (g->empty_containers() == 0
-         || g->width() != cc->width()
+         || int(g->width()) != cc->width()
          || !gress_compatibility(g->gress(), gress)) {
             //
             // width or gress mismatch
@@ -1197,7 +1094,7 @@ PHV_MAU_Group_Assignments::max_empty_containers(
     //
     size_t empty_containers = 0;
     for (auto &g : phv_groups_to_be_filled) {
-        if (g->width() == width
+        if (int(g->width()) == width
             && gress_compatibility(g->gress(), gress)) {
             //
             empty_containers = std::max(empty_containers, g->empty_containers());
@@ -1224,7 +1121,7 @@ PHV_MAU_Group_Assignments::upsize_mau_group(
     });
     for (auto &g : phv_groups_to_be_filled) {
         if (gress_compatibility(g->gress(), gress)
-            && g->empty_containers() * g->width() >= required_containers * width) {
+            && g->empty_containers() * int(g->width()) >= required_containers * width) {
             //
             return g;
         }
@@ -1252,8 +1149,8 @@ PHV_MAU_Group_Assignments::downsize_mau_group(
     });
     for (auto &g : phv_groups_to_be_filled) {
         if (gress_compatibility(g->gress(), gress)
-            && g->width() <= width
-            && g->empty_containers() * g->width() >= required_containers * width) {
+            && int(g->width()) <= width
+            && g->empty_containers() * int(g->width()) >= required_containers * width) {
             //
             return g;
         }
@@ -1319,7 +1216,7 @@ void PHV_MAU_Group_Assignments::create_aligned_container_slices() {
                     set_cc->push_back(
                         new PHV_MAU_Group::Container_Slice(
                             0,
-                            c->width(),
+                            int(c->width()),
                             c));
                 } else if (c->status() == PHV_Container::Container_status::PARTIAL) {
                     //
@@ -1338,7 +1235,7 @@ void PHV_MAU_Group_Assignments::create_aligned_container_slices() {
             }
             if (set_cc->size()) {
                 T_PHV_container_slices_i
-                   [m.first][set_cc->size()].push_back(*set_cc);
+                   [int(m.first)][set_cc->size()].push_back(*set_cc);
             }
         }
     }
@@ -1373,7 +1270,7 @@ PHV_MAU_Group_Assignments::satisfies_phv_alignment(
                 if (*align_start < lo || *align_start > hi)
                     return false;
                 // to compute end, use container width, e.g., cl->width()=8, f->phv_use_width()=23
-                const int end = *align_start + cl->width() - 1;
+                const int end = *align_start + int(cl->width()) - 1;
                 if (end < lo || end > hi)
                     return false;
             }
@@ -1665,7 +1562,7 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
     //
     std::list<Cluster_PHV *> clusters_remove;
     for (auto &cl : clusters_to_be_assigned) {
-        int cl_w = std::min(cl->max_width(), static_cast<int>(cl->width()));
+        int cl_w = std::min(cl->max_width(), int(cl->width()));
             // exceed container_width => no match, e.g., cluster <1:160>{5*32}(pkt.pad_1{0..159})
         int cl_n = cl->num_containers();
         //
@@ -1684,8 +1581,8 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
                         }
                         std::list<PHV_MAU_Group::Container_Slice *>& cc_l = *(j.second.begin());
                         PHV_MAU_Group::Container_Slice *cc = *(cc_l.begin());
-                        auto c_width = cc->container()->width();
-                        if (m_w != c_width) {
+                        PHV::Size c_width = cc->container()->width();
+                        if (m_w != int(c_width)) {
                             continue;
                         }
                     }
@@ -1801,7 +1698,7 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
                                 start = cc->lo();
                             }
                             if (f->phv_use_width(cl) > cl_w
-                                && cl_w != cc->container()->width()) {       // 128b = 32*4
+                                && cl_w != int(cc->container()->width())) {       // 128b = 32*4
                                 //
                                 LOG1("cluster_phv_mau.cpp*****sanity_FAIL*****");
                                 LOG1(".....field width exceeds slice .....");
@@ -1832,8 +1729,8 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
                             if (field_bit_lo == 0) {  // consider alignment only @ start of field
                                 align_start = f->phv_alignment().get_value_or(start);
                             }
-                            if (width_in_container + align_start > cc->container()->width()) {
-                                width_in_container = cc->container()->width() - align_start;
+                            if (width_in_container + align_start > int(cc->container()->width())) {
+                                width_in_container = int(cc->container()->width()) - align_start;
                             }
                             cc->container()->taint(align_start,               // start
                                                    width_in_container,        // width
@@ -2332,7 +2229,7 @@ void PHV_MAU_Group_Assignments::container_cohabit_summary() {
 
 void
 PHV_MAU_Group_Assignments::container_population_density(
-    std::map<PHV_Container::PHV_Word,
+    std::map<PHV::Size,
         std::map<PHV_Container::Container_status,
             std::pair<int, int>>>& c_bits_agg,
     bool phv) {
@@ -2355,7 +2252,7 @@ PHV_MAU_Group_Assignments::container_population_density(
             for (auto &m : coll.second) {
                 for (auto &c : m.second) {
                     c_bits_agg[c->width()][c->status()].first++;
-                    c_bits_agg[c->width()][c->status()].second += c->width() - c->avail_bits();
+                    c_bits_agg[c->width()][c->status()].second += int(c->width()) - c->avail_bits();
                                                                                    // populated bits
                 }
             }
@@ -2382,7 +2279,7 @@ PHV_MAU_Group_Assignments::container_population_density(
 void
 PHV_MAU_Group_Assignments::statistics(
     std::ostream &out,
-    std::map<PHV_Container::PHV_Word,
+    std::map<PHV::Size,
         std::map<PHV_Container::Container_status,
             std::pair<int, int>>>& c_bits_agg,
     const char *str) {
@@ -2426,7 +2323,7 @@ PHV_MAU_Group_Assignments::statistics(std::ostream &out) {
     // to preserve order Full, Partial, Empty during output
     // do not want ordered_map / order of insertion
     //
-    std::map<PHV_Container::PHV_Word,
+    std::map<PHV::Size,
         std::map<PHV_Container::Container_status,
             std::pair<int, int>>> c_bits_agg;
     //
@@ -2451,11 +2348,11 @@ bool PHV_MAU_Group_Assignments::status(
     //
     if (clusters_to_be_assigned.size() > 0) {
         ordered_map<PHV_Container::Ingress_Egress,
-            ordered_map<PHV_Container::PHV_Word, int>> needed_containers;
+            ordered_map<PHV::Size, int>> needed_containers;
         //
-        for (auto &w : num_groups_i) {
-            needed_containers[PHV_Container::Ingress_Egress::Ingress_Only][w.first] = 0;
-            needed_containers[PHV_Container::Ingress_Egress::Egress_Only][w.first] = 0;
+        for (PHV::Size size : { PHV::Size::b8, PHV::Size::b16, PHV::Size::b32 }) {
+            needed_containers[PHV_Container::Ingress_Egress::Ingress_Only][size] = 0;
+            needed_containers[PHV_Container::Ingress_Egress::Egress_Only][size] = 0;
         }
         int needed_bits = 0;
         for (auto &cl : clusters_to_be_assigned) {
@@ -2676,29 +2573,6 @@ void PHV_MAU_Group::sanity_check_group_containers(
 // sanity checks PHV_MAU_Group_Assignments
 //
 //***********************************************************************************
-
-
-void PHV_MAU_Group_Assignments::sanity_check(
-    std::pair<int, int>& phv_container_numbers,
-    ordered_map<PHV_Container::PHV_Word, int>& phv_number_start,
-    const std::string& msg,
-    bool t_phv) {
-    //
-    std::pair<int, int> phv_container_numbers_l =
-        std::make_pair(
-            phv_number_start[PHV_Container::PHV_Word::b32],
-            phv_number_start[PHV_Container::PHV_Word::b16]
-                + num_groups_i[PHV_Container::PHV_Word::b16]
-                * PHV_MAU_Group_Assignments::Constants::phv_mau_group_size / (t_phv? 2: 1)
-                - 1);
-    if (phv_container_numbers_l != phv_container_numbers) {
-        LOG1(msg
-            << ": *****sanity_FAIL*****.....phv number ranges mismatch"
-            << "{" << phv_container_numbers_l.first << "," << phv_container_numbers_l.second << "}"
-            << " vs "
-            << "{" << phv_container_numbers.first << "," << phv_container_numbers.second << "}");
-    }
-}
 
 void PHV_MAU_Group_Assignments::sanity_check_container_avail(const std::string& msg) {
     //
@@ -3120,7 +2994,7 @@ std::ostream &operator<<(std::ostream &out, std::vector<PHV_MAU_Group *> &phv_ma
 
 std::ostream &operator<<(
     std::ostream &out,
-    ordered_map<PHV_Container::PHV_Word, std::vector<PHV_Container *>>& coll) {
+    ordered_map<PHV::Size, std::vector<PHV_Container *>>& coll) {
     //
     for (auto m : coll) {
         out << m.second;
@@ -3131,7 +3005,7 @@ std::ostream &operator<<(
 
 std::ostream &operator<<(
     std::ostream &out,
-    ordered_map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>>& phv_mau_map) {
+    ordered_map<PHV::Size, std::vector<PHV_MAU_Group *>>& phv_mau_map) {
     //
     for (auto &m : phv_mau_map) {
         out << m.second;
@@ -3142,7 +3016,7 @@ std::ostream &operator<<(
 
 std::ostream &operator<<(
     std::ostream &out,
-    ordered_map<int, ordered_map<PHV_Container::PHV_Word, std::vector<PHV_Container *>>>&
+    ordered_map<unsigned, ordered_map<PHV::Size, std::vector<PHV_Container *>>>&
         t_phv_mau_map) {
     //
     for (auto &m : t_phv_mau_map) {

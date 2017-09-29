@@ -43,14 +43,12 @@ PHV_Container::Container_Content::Container_Content(
 
 PHV_Container::PHV_Container(
     PHV_MAU_Group *g,
-    PHV_Word w,
-    int phv_n,
-    std::string asm_string,
+    PHV::Size w,
+    unsigned phv_n,
     Ingress_Egress gress)
     : phv_mau_group_i(g),
       width_i(w),
-      phv_number_i(phv_n),
-      asm_string_i(asm_string),
+      container_id_i(phv_n),
       gress_i(gress) {
     //
     clear();
@@ -64,12 +62,12 @@ PHV_Container::clear() {
     fields_in_container_i.clear();
     taint_color_i = "0";
     bits_i = new char[width_i];
-    for (auto i=0; i < width_i; i++) {
+    for (auto i=0; i < int(width_i); i++) {
         bits_i[i] = taint_color_i.back();
     }
-    avail_bits_i = width_i;
+    avail_bits_i = int(width_i);
     ranges_i.clear();
-    ranges_i[0] = width_i - 1;
+    ranges_i[0] = int(width_i) - 1;
 }  // clear
 
 void
@@ -98,18 +96,18 @@ PHV_Container::create_ranges() {
     //
     ranges_i.clear();  // status = FULL => ranges remains empty
     if (status_i == PHV_Container::Container_status::EMPTY) {
-        ranges_i[0] = width_i - 1;
+        ranges_i[0] = int(width_i) - 1;
     } else {
         if (status_i == PHV_Container::Container_status::PARTIAL) {
-            for (auto i=0; i < width_i ; i++) {
+            for (auto i=0; i < int(width_i) ; i++) {
                 if (bits_i[i] == '0') {
-                    for (auto j=i; j < width_i ; j++) {
+                    for (auto j=i; j < int(width_i) ; j++) {
                         if (bits_i[j] != '0') {
                             ranges_i[i] = j - 1;
                             i = j - 1;
                             break;
                         }
-                        if (j == width_i - 1) {
+                        if (j == int(width_i) - 1) {
                             ranges_i[i] = j;
                             i = j;
                         }
@@ -133,10 +131,10 @@ PHV_Container::taint(
     //
     BUG_CHECK(width > 0,
         "*****PHV_Container::taint()*****%s start=%d NEGATIVE width=%d width_i=%d, field=%d:%s",
-        phv_number_string(), start, width, width_i, field->id, field->name);
-    BUG_CHECK((start+width <= width_i),
+        phv_number_string(), start, width, int(width_i), field->id, field->name);
+    BUG_CHECK((start+width <= int(width_i)),
         "*****PHV_Container::taint()*****%s start=%d width=%d width_i=%d, field=%d:%s",
-        phv_number_string(), start, width, width_i, field->id, field->name);
+        phv_number_string(), start, width, int(width_i), field->id, field->name);
     //
     // ccgf field processing
     //
@@ -214,7 +212,7 @@ PHV_Container::taint_ccgf(
                 //
                 // account pad for no_pack constraint
                 //
-                if (width_i < member->size) {
+                if (int(width_i) < member->size) {
                     LOG1(
                         "*****cluster_phv_container.cpp:sanity_WARN*****....."
                         << " width_i of container "
@@ -233,9 +231,7 @@ PHV_Container::taint_ccgf(
                     // note there is a check for this case in cluster.cpp during CCGF formation
                     // but no-pack constraints can be introduced subsequently based on analysis of
                     // MAU operations
-                    if (align_start % PHV_Container::PHV_Word::b8
-                        != start % PHV_Container::PHV_Word::b8) {
-                        //
+                    if (align_start % int(PHV::Size::b8) != start % int(PHV::Size::b8)) {
                         LOG3("*****cluster_phv_container.cpp:*****....."
                             << "Physical Contiguity violated: "
                             << "CCGF member expected alignment 'start'="
@@ -273,16 +269,16 @@ PHV_Container::taint_ccgf(
         }
         // recursive taint call, do not recursively process ccgf
         taint(start, use_width, member, member_bit_lo, pass, false /* process_ccgf */);
-        processed_width += constraint_no_cohabit(member)? width_i: use_width;
+        processed_width += constraint_no_cohabit(member) ? int(width_i) : use_width;
         BUG_CHECK(
-            processed_width <= width_i,
+            processed_width <= int(width_i),
             "*****PHV_Container::taint_ccgf()*****%s, field=%d:%s, processed_width=%s > width_i=%d",
             phv_number_string(),
             field->id,
             field->name,
             processed_width,
-            width_i);
-        if (start <= 0 || processed_width == width_i) {
+            int(width_i));
+        if (start <= 0 || processed_width == int(width_i)) {
             break;
         }
     }  // for ccgf members
@@ -306,7 +302,7 @@ PHV_Container::taint_ccgf(
         // 7= 721:egress::mpls[2].$valid<1> E off=2 pov /phv_168,PHV-44;/[0..0]=PHV-44.W44<1:17..17>
         // 84^ 722:egress::mpls.$stkvalid<6:0..5> ..... /phv_168,PHV-44;/[0..6]=PHV-44.W44<7:16..22>
         //
-        assert(start >= 1 && start < width_i);
+        assert(start >= 1 && start < int(width_i));
         Container_Content *header_stack_cc = taint_bits(start - 1, 1, field, field_bit_lo);
         processed_width++;
         //
@@ -334,7 +330,7 @@ PHV_Container::update_ccgf(
     field->set_phv_use_hi(field->phv_use_hi() - processed_width);
     if (field->allocation_complete()) {
         // ccgf owners with no-pack constraint, set range to entire container
-        Cluster::set_field_range(field, constraint_no_cohabit(field)? width_i: 0);
+        Cluster::set_field_range(field, constraint_no_cohabit(field) ? int(width_i) : 0);
     }
 }  // update_ccgf
 
@@ -496,7 +492,7 @@ PHV_Container::single_field_overlay(
         ordered_set<PhvInfo::Field *> f_set;
         fields_in_container(start, start + width - 1, f_set);
         for (auto &f_s : f_set) {
-            f_s->field_overlay(f, phv_number_i);
+            f_s->field_overlay(f, container_id_i);
         }
     }
 }  // single_field_overlay
@@ -522,7 +518,7 @@ PHV_Container::field_overlays(
         LOG3("..........PHV_Container::field_overlays.....for container " << phv_number_string());
         LOG3("\t" << field);
         // consider overlayed fields, if any, for this container only
-        ordered_set<PhvInfo::Field *> *set_of_f = field->field_overlay_map(phv_number_i);
+        ordered_set<PhvInfo::Field *> *set_of_f = field->field_overlay_map(container_id_i);
         if (set_of_f) {
             for (auto &f : *set_of_f) {
                 //
@@ -530,7 +526,7 @@ PHV_Container::field_overlays(
                 // substratum ccgf owner in single container but its members span several containers
                 // overlay ccgf spans these containers
                 //
-                if (f->is_ccgf() && f->phv_use_width() > static_cast<int>(width_i)) {
+                if (f->is_ccgf() && f->phv_use_width() > int(width_i)) {
                     for (auto &c : field->phv_containers()) {
                         c->single_field_overlay(
                             f,
@@ -614,7 +610,7 @@ PHV_Container::lowest_bit_and_ccgf_width(bool by_cluster_id) {
             int width = cc->width();
             if (PHV_Container::constraint_no_cohabit(cc->field())) {
                 // entire container can be considered for overlay
-                width = static_cast<int>(width_i);
+                width = int(width_i);
             }
             if (lbcw->count(id)) {
                 lo = std::min(lo, lbcw->at(id).first);
@@ -624,7 +620,7 @@ PHV_Container::lowest_bit_and_ccgf_width(bool by_cluster_id) {
                 // having the same cluster_id_num
                 // double (multiple) counting their widths can exceed container width
                 //
-                width = std::min(width, static_cast<int>(width_i));
+                width = std::min(width, int(width_i));
             }
             (*lbcw)[id] = std::make_pair(lo, width);
         }
@@ -666,17 +662,15 @@ PHV_Container::taint_bits(
     // after packing, non contiguous availability
     // e.g., [15..15], [8..10] => ranges[15] = 15, ranges[8] = 10
     //
-    if (avail_bits_i == 0
-        || constraint_no_cohabit(field)) {
-        //
+    if (avail_bits_i == 0 || constraint_no_cohabit(field)) {
         status_i = Container_status::FULL;
         if (constraint_no_cohabit(field)) {
             //
             // padding char for unoccupied but un-assignable bits
             //
-            for (int i=0; i < width_i; i++) {
-                if (bits_i[i] == '0') bits_i[i] = '-';
-            }
+            for (int i=0; i < int(width_i); i++)
+                if (bits_i[i] == '0')
+                    bits_i[i] = '-';
             avail_bits_i = 0;
         }
     } else {
@@ -845,7 +839,7 @@ PHV_Container::holes(std::list<std::pair<int, int>>& holes_list) const {
     // identify holes in container
     //
     holes_list.clear();
-    int width = static_cast<int>(width_i);
+    int width = int(width_i);
     std::vector<char> bits_v(bits_i, bits_i + width);  // 2nd arg "ptr to ch after end" not last ch
     if (status_i == Container_status::EMPTY) {
         holes_list.push_back(std::make_pair(0, width - 1));
@@ -1078,9 +1072,9 @@ void PHV_Container::sanity_check_container(const std::string& msg, bool check_de
                 }
                 if (cc->overlayed()) {
                     // multiple
-                    overlayed_width = std::max(overlayed_width, static_cast<int>(width_i));
+                    overlayed_width = std::max(overlayed_width, int(width_i));
                 } else {
-                    occupation_width = width_i;
+                    occupation_width = int(width_i);
                 }
             }
             if (constraint_no_holes(cc->field())) {
@@ -1095,7 +1089,7 @@ void PHV_Container::sanity_check_container(const std::string& msg, bool check_de
         }  // for
     }  // for
     int fill = std::max(occupation_width, overlayed_width);
-    if (fill + avail_bits_i != width_i) {
+    if (fill + avail_bits_i != int(width_i)) {
         LOG1("*****cluster_phv_container.cpp:sanity_FAIL*****....."
         << msg_1
         << " max(occupation_width, overlayed_width) + available_bits != container_width "
@@ -1188,7 +1182,7 @@ void PHV_Container::sanity_check_container_avail(int lo, int hi, const std::stri
     //
     if ((avail_bits_i > 0 && status_i == Container_status::FULL)
      || (avail_bits_i == 0 && status_i != Container_status::FULL)
-     || (avail_bits_i == width_i && status_i != Container_status::EMPTY)
+     || (avail_bits_i == int(width_i) && status_i != Container_status::EMPTY)
      || (fields_in_container_i.size() && status_i == Container_status::EMPTY)
      || (fields_in_container_i.size() == 0 && status_i != Container_status::EMPTY)) {
         //
@@ -1421,7 +1415,6 @@ std::ostream &operator<<(std::ostream &out, PHV_Container *c) {
     if (c) {
         out << std::endl << '\t';
         out << c->phv_number_string()
-            << '.' << c->asm_string()
             << '.' << static_cast<char>(c->gress())
             << '.' << static_cast<char>(c->status());
         if (c->deparsed()) {
@@ -1444,9 +1437,7 @@ std::ostream &operator<<(std::ostream &out, PHV_Container *c) {
 
 std::ostream &operator<<(std::ostream &out, const PHV_Container *c) {
     if (c) {
-        out << c->phv_number_string()
-            << '.'
-            << c->asm_string();
+        out << c->phv_number_string();
     } else {
         out << "-c-";
     }

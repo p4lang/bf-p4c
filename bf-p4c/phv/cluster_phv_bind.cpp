@@ -1,4 +1,5 @@
 #include "cluster_phv_bind.h"
+#include "bf-p4c/device.h"
 #include "lib/log.h"
 #include "lib/stringref.h"
 #include "lib/error.h"
@@ -17,7 +18,6 @@ PHV_Bind::apply_visitor(const IR::Node *node, const char *name) {
     if (name)
         LOG1(name);
 
-    create_phv_asm_container_map();
     collect_containers_with_fields();
 
     if (fields_overflow_i.size()) {
@@ -43,33 +43,7 @@ PHV_Bind::apply_visitor(const IR::Node *node, const char *name) {
     return node;
 }
 
-void
-PHV_Bind::create_phv_asm_container_map() {
-    //
-    // PHV_MAU_i[width] = vector of groups
-    for (auto &x : phv_mau_i.phv_mau_map()) {
-        for (auto &y : x.second) {
-            for (auto &c : y->phv_containers()) {
-                phv_to_asm_map_i[c] =
-                    new PHV::Container(c->asm_string().c_str());
-                asm_to_phv_map_i[phv_to_asm_map_i[c]] = c;
-            }
-        }
-    }
-    // T_PHV_i[collection][width] = vector of containers
-    for (auto &x : phv_mau_i.t_phv_map()) {
-        for (auto &y : x.second) {
-            for (auto &c : y.second) {
-                phv_to_asm_map_i[c] =
-                    new PHV::Container(c->asm_string().c_str());
-                asm_to_phv_map_i[phv_to_asm_map_i[c]] = c;
-            }
-        }
-    }
-}
-
-void
-PHV_Bind::collect_containers_with_fields() {
+void PHV_Bind::collect_containers_with_fields() {
     //
     // collect all allocated containers from phv_mau_map, t_phv_map
     // accumulate containers_i, allocated_fields_i
@@ -127,9 +101,9 @@ PHV_Bind::bind_fields_to_containers() {
             }
         }
     }
-    for (auto &c : containers_i) {
-        for (auto &cc_s : Values(c->fields_in_container())) {
-            for (auto &cc : cc_s) {
+    for (const PHV_Container *c : containers_i) {
+        for (auto& cc_s : Values(c->fields_in_container())) {
+            for (auto* cc : cc_s) {
                 PhvInfo::Field *f = cc->field();
                 if (!uses_i.is_referenced(f)) {
                     // referenced @ phv_analysis but ElimUnused / unreferenced now @ phv_bind
@@ -138,7 +112,7 @@ PHV_Bind::bind_fields_to_containers() {
                 int field_bit = cc->field_bit_lo();
                 int container_bit = cc->lo();
                 int width_in_container = cc->width();
-                const PHV::Container *asm_container = phv_to_asm_map_i[c];
+                PHV::Container asm_container = Device::phvSpec().idToContainer(c->phv_number());
                 //
                 // ignore allocation for owners of
                 // non-header stack ccgs
@@ -146,7 +120,7 @@ PHV_Bind::bind_fields_to_containers() {
                 //
                 f->alloc_i.emplace_back(
                    f,
-                   *asm_container,
+                   asm_container,
                    field_bit,
                    container_bit,
                    width_in_container);
@@ -162,36 +136,6 @@ PHV_Bind::bind_fields_to_containers() {
             }
         }
     }
-}  // bind_fields_to_containers
-
-
-//***********************************************************************************
-//
-// PHV_Container <-> PHV::Container
-//
-//***********************************************************************************
-
-
-const PHV::Container *
-PHV_Bind::phv_container(const PHV_Container *p) const {
-    assert(p);
-    if (phv_to_asm_map_i.count(p)) {
-        return phv_to_asm_map_i.at(p);
-    }
-    BUG("*****PHV_Bind::phv_container('%s') does not have an asm map yet*****",
-        p->phv_number_string());
-    return 0;
-}
-
-const PHV_Container *
-PHV_Bind::phv_container(const PHV::Container *p) const {
-    assert(p);
-    if (asm_to_phv_map_i.count(p)) {
-        return asm_to_phv_map_i.at(p);
-    }
-    BUG("*****PHV_Bind::phv_container('%s') does not have an asm map yet*****",
-        p->toString());
-    return 0;
 }
 
 

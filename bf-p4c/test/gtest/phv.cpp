@@ -113,6 +113,56 @@ void CheckPhvContainerTypes() {
     EXPECT_ANY_THROW(PHV::Container("W-1"));
 }
 
+// Test that the device provides the resources we expect.
+// XXX(cole): This test is specific to Tofino, but a similar test should be
+// added once more JBay resources are defined.
+void CheckTofinoPhvContainerResources() {
+    const auto& phvSpec = Device::phvSpec();
+
+    // MAU and Tagalong containers should be subsets of the physical
+    // containers.
+    for (auto t : phvSpec.containerTypes()) {
+        for (auto mau_group : phvSpec.mauGroups(t)) {
+            EXPECT_NE(bitvec(), mau_group & phvSpec.physicalContainers()); } }
+    for (auto tagalong_group : phvSpec.tagalongGroups()) {
+        EXPECT_NE(bitvec(), tagalong_group & phvSpec.physicalContainers()); }
+    
+    // They should also be disjoint.
+    for (auto t : phvSpec.containerTypes()) {
+        for (auto mau_group : phvSpec.mauGroups(t)) {
+            for (auto tagalong_group : phvSpec.tagalongGroups()) {
+                EXPECT_EQ(bitvec(), mau_group & tagalong_group); } } }
+
+    // There should be eight tagalong groups of 4x8b containers, 6x16b
+    // containers, and 4x32b containers.
+    ordered_map<PHV::Size, int> collection_sizes;
+    for (auto collection : phvSpec.tagalongGroups()) {
+        for (auto cid : collection)
+            collection_sizes[phvSpec.idToContainer(cid).type().size()]++;
+        EXPECT_EQ(4, collection_sizes[PHV::Size::b8]);
+        EXPECT_EQ(6, collection_sizes[PHV::Size::b16]);
+        EXPECT_EQ(4, collection_sizes[PHV::Size::b32]);
+        collection_sizes.clear(); }
+    EXPECT_EQ(unsigned(8), phvSpec.tagalongGroups().size());
+
+    // There should be 4 MAU groups of size b8, 6 of b16, and 4 of b32.
+    ordered_map<PHV::Size, int> mau_group_sizes;
+    for (auto t : phvSpec.containerTypes()) {
+        for (auto containers : phvSpec.mauGroups(t)) {
+            // MAU groups should not be empty.
+            EXPECT_LE(0, containers.min());
+
+            // Containers in each group should have the same type.
+            for (auto cid : containers)
+                EXPECT_EQ(t, phvSpec.idToContainer(cid).type());
+
+            mau_group_sizes[t.size()]++; } }
+
+    EXPECT_EQ(4, mau_group_sizes[PHV::Size::b8]);
+    EXPECT_EQ(6, mau_group_sizes[PHV::Size::b16]);
+    EXPECT_EQ(4, mau_group_sizes[PHV::Size::b32]);
+}
+
 // Test that we can serialize PHV::Container objects to JSON.
 // XXX(seth): For now this is a shared test between Tofino and JBay, but
 // obviously that should change once JBay-specific PHV container types are
@@ -148,6 +198,11 @@ void CheckPhvContainerJSON() {
 TEST_F(TofinoPhvContainer, Types) {
     EXPECT_EQ(cstring("Tofino"), Device::currentDevice());
     CheckPhvContainerTypes();
+}
+
+TEST_F(TofinoPhvContainer, Resources) {
+    EXPECT_EQ(cstring("Tofino"), Device::currentDevice());
+    CheckTofinoPhvContainerResources();
 }
 
 TEST_F(TofinoPhvContainer, JSON) {

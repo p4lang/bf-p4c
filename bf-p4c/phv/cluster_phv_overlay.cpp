@@ -401,10 +401,10 @@ bool Cluster_PHV_Overlay::overlay_field_to_container(
     //
     assert(cl);
     assert(field);
-    assert(run_width <= c->width());
-    if (field->deparsed() && run_width != c->width()) {
+    BUG_CHECK(run_width <= int(c->width()), "Container too small for field overlay");
+    if (field->deparsed() && run_width != int(c->width()))
         return false;
-    }
+
     //
     // overlay field can be larger than one container: straddles containers if substratum straddles
     // (ii) if substratum field straddles containers, overlay field follows
@@ -433,7 +433,7 @@ bool Cluster_PHV_Overlay::overlay_field_to_container(
             //
             return true;
         }
-        if (start_bit + run_width > c->width()) {
+        if (start_bit + run_width > int(c->width())) {
             //
             // current start position + required width exceeds container limit
             // e.g., c<8> = ------11, width req = 3, start at bit 6
@@ -463,7 +463,7 @@ bool Cluster_PHV_Overlay::overlay_field_to_container(
             }
         }
     }  // for
-    if (start_bit + run_width <= c->width()) {
+    if (start_bit + run_width <= int(c->width())) {
         return true;
     }
     return false;

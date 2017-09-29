@@ -1,6 +1,7 @@
 #ifndef BF_P4C_PHV_CLUSTER_PHV_CONTAINER_H_
 #define BF_P4C_PHV_CLUSTER_PHV_CONTAINER_H_
 
+#include <limits>
 #include "phv.h"
 #include "phv_fields.h"
 #include "ir/ir.h"
@@ -23,7 +24,6 @@ class PHV_MAU_Group;
 //
 class PHV_Container {
  public:
-    enum PHV_Word {b32 = 32, b16 = 16, b8 = 8};
     enum Container_status {EMPTY = 'V', PARTIAL = 'P', FULL = 'F'};  // V = Vacant, E = Egress_Only
     enum Ingress_Egress {Ingress_Only = 'I', Egress_Only = 'E', Ingress_Or_Egress = ' '};
 
@@ -81,19 +81,20 @@ class PHV_Container {
     };
     //
  private:
+    /* how phv_mau_group_i is used:
+     * cluster_phv_container.cpp:
+     * - gress
+     * - inc_empty_containers() when container is cleared
+     * - dec_empty_containers() when container is used
+     * cluster_phv_mau.cpp:
+     * - to determine which containers are in the same group (i.e. group by container group)
+     * cluster_phv_overlay.cpp:
+     * - an indirect way to get a list of tphv groups to overlay
+     */
     PHV_MAU_Group *phv_mau_group_i;                          // parent PHV MAU Group
-    PHV_Word width_i;                                        // width of container
-    int phv_number_i;                                        // PHV_number 0..223
-                                                             // 32b:   0..63
-                                                             //  8b:  64..127
-                                                             // 16b: 128..223
-    std::string asm_string_i;                                // assembler syntax for this container
-                                                             // PHV-0   ..  63 =  W0 .. 63
-                                                             // PHV-64  .. 127 =  B0 .. 63
-                                                             // PHV-128 .. 223 =  H0 .. 95
-                                                             // PHV-256 .. 287 = TW0 .. 31
-                                                             // PHV-288 .. 319 = TB0 .. 31
-                                                             // PHV-320 .. 367 = TH0 .. 47
+    PHV::Size width_i;                                       // width of container
+    unsigned container_id_i;                                 // phv container id
+                                                             // see phv.h for details
     Ingress_Egress gress_i;                                  // Ingress_Only,
                                                              // Egress_Only,
                                                              // Ingress_Or_Egress
@@ -114,23 +115,26 @@ class PHV_Container {
  public:
     PHV_Container(
         PHV_MAU_Group *g,
-        PHV_Word w,
-        int phv_number,
-        std::string asm_string,
+        PHV::Size w,
+        unsigned phv_number,
         Ingress_Egress gress);
     //
     PHV_MAU_Group *phv_mau_group()                              { return phv_mau_group_i; }
-    PHV_Word width() const                                      { return width_i; }
+    PHV::Size width() const                                     { return width_i; }
+
+    /// @return true if width is exactly a (nonzero) container size, as defined in phv.h.
     static bool exact_container(int width) {
-        return width == PHV_Word::b32 || width == PHV_Word::b16 || width == PHV_Word::b8;
+        return width == int(PHV::Size::b32)
+            || width == int(PHV::Size::b16)
+            || width == int(PHV::Size::b8);
     }
-    int phv_number() const                                      { return phv_number_i; }
+
+    unsigned phv_number() const                                      { return container_id_i; }
     std::string phv_number_string() const {
         std::stringstream ss;
-        ss << phv_number_i;
+        ss << container_id_i;
         return "PHV-" + ss.str();
     }
-    const std::string& asm_string() const                       { return asm_string_i; }
     void
     gress(Ingress_Egress gress_p) {  // set when MAU group's gress is set
         gress_i = gress_p;
@@ -150,13 +154,13 @@ class PHV_Container {
     char *bits() const                                          { return bits_i; }
     char taint_color(int bit) {
         // taint color for bit in container
-        assert(bit >= 0 && bit < width_i);
+        BUG_CHECK(bit >= 0 && bit < int(width_i), "Bad range");
         return bits_i[bit];
     }
     std::string taint_color(int lo, int hi, bool overlayed = true) {
         // taint color for range of bits lo .. hi in container
-        assert(lo >= 0 && lo < width_i);
-        assert(hi >= 0 && hi < width_i);
+        BUG_CHECK(lo >= 0 && lo < int(width_i), "Bad range");
+        BUG_CHECK(hi >= 0 && hi < int(width_i), "Bad range");
         if (taint_color(lo) == taint_color(hi)) {
             return std::string(1, taint_color(lo));
         } else {
@@ -250,18 +254,13 @@ class PHV_Container {
         return field->deparsed_bottom_bits();
     }
     static int ceil_phv_use_width(PhvInfo::Field* f, int min_ceil = 0) {
-        assert(f);
-        //
-        if (f->size <= PHV_Word::b8 && PHV_Word::b8 >= min_ceil) {
-            return PHV_Word::b8;
-        } else {
-            if (f->size <= PHV_Word::b16 && PHV_Word::b16 >= min_ceil) {
-                return PHV_Word::b16;
-            } else {
-                if (f->size <= PHV_Word::b32 && PHV_Word::b32 >= min_ceil) {
-                    return PHV_Word::b32;
-                }
-            }
+        BUG_CHECK(f, "NULL field");
+        if (f->size <= int(PHV::Size::b8) && int(PHV::Size::b8) >= min_ceil) {
+            return int(PHV::Size::b8);
+        } else if (f->size <= int(PHV::Size::b16) && int(PHV::Size::b16) >= min_ceil) {
+            return int(PHV::Size::b16);
+        } else if (f->size <= int(PHV::Size::b32) && int(PHV::Size::b32) >= min_ceil) {
+            return int(PHV::Size::b32);
         }
         return std::max(f->size, min_ceil);
     }

@@ -36,7 +36,7 @@ bool Cluster::MakeCCGFs::preorder(const IR::HeaderRef *hr) {
         //   {extra$0.x1.16-23: B2,extra$0.x1.8-15: B1,extra$0.x1.0-7: B0,extra$0.more: B49}
         //      => 4B
         if (!field->ccgf()) {
-            bool byte_multiple = field->size % PHV_Container::PHV_Word::b8 == 0;
+            bool byte_multiple = field->size % int(PHV::Size::b8) == 0;
             if (group_accumulator || !byte_multiple) {
                 if (!group_accumulator) {
                     group_accumulator = field;
@@ -47,7 +47,7 @@ bool Cluster::MakeCCGFs::preorder(const IR::HeaderRef *hr) {
                 const int align_start =
                     field->phv_alignment_network().get_value_or(accumulator_bits);
                 if (accumulator_bits) {
-                    if (accumulator_bits % PHV_Container::PHV_Word::b8 != align_start) {
+                    if (accumulator_bits % int(PHV::Size::b8) != align_start) {
                         ccgf[group_accumulator] = accumulator_bits;
                         LOG4("+++++PHV_container_contiguous_group.....parde_alignment cutoff....."
                             << accumulator_bits);
@@ -94,11 +94,11 @@ bool Cluster::MakeCCGFs::preorder(const IR::HeaderRef *hr) {
         assert(ccgf_width > 0);
         //
         bool single_member = owner->ccgf_fields().size() == 1;
-        bool sub_byte = ccgf_width < PHV_Container::PHV_Word::b8;
-        bool byte_multiple = ccgf_width % PHV_Container::PHV_Word::b8 == 0;
+        bool sub_byte = ccgf_width < int(PHV::Size::b8);
+        bool byte_multiple = ccgf_width % int(PHV::Size::b8) == 0;
         auto contiguity_limit = owner->metadata?
-                                CCGF_contiguity_limit::Metadata * PHV_Container::PHV_Word::b8:
-                                CCGF_contiguity_limit::Parser_Extract * PHV_Container::PHV_Word::b8;
+                                CCGF_contiguity_limit::Metadata * int(PHV::Size::b8):
+                                CCGF_contiguity_limit::Parser_Extract * int(PHV::Size::b8);
         //
         bool discard = false;
         if (single_member) {
@@ -339,12 +339,12 @@ void Cluster::MakeClusters::deparser_ccgf_phv() {
         PhvInfo::Field *f = entry.first;
         ordered_set<PhvInfo::Field *> *s = entry.second;
         if (s->size() == 1
-            && !f->metadata && !f->pov && !f->is_ccgf() && f->size < PHV_Container::PHV_Word::b8) {
+            && !f->metadata && !f->pov && !f->is_ccgf() && f->size < int(PHV::Size::b8)) {
             //
             ccgf[f->gress].push_back(f);
             ccgf_width[f->gress] += f->size; } }
 
-    auto contiguity_limit = CCGF_contiguity_limit::Parser_Extract * PHV_Container::PHV_Word::b8;
+    auto contiguity_limit = CCGF_contiguity_limit::Parser_Extract * int(PHV::Size::b8);
     for (auto &entry : ccgf) {
         std::list<PhvInfo::Field *> member_list = entry.second;
         PhvInfo::Field *owner = member_list.front();
@@ -375,12 +375,12 @@ void Cluster::MakeClusters::deparser_ccgf_t_phv() {
     ordered_map<gress_t, std::list<PhvInfo::Field *>> ccgf;
     ordered_map<gress_t, int> ccgf_width;
     for (auto &f : self.fields_no_use_mau_i) {
-        if (!f->metadata && !f->pov && !f->is_ccgf() && f->size < PHV_Container::PHV_Word::b8) {
+        if (!f->metadata && !f->pov && !f->is_ccgf() && f->size < int(PHV::Size::b8)) {
             //
             ccgf[f->gress].push_back(f);
             ccgf_width[f->gress] += f->size; } }
 
-    auto contiguity_limit = CCGF_contiguity_limit::Parser_Extract * PHV_Container::PHV_Word::b8;
+    auto contiguity_limit = CCGF_contiguity_limit::Parser_Extract * int(PHV::Size::b8);
     for (auto &entry : ccgf) {
         std::list<PhvInfo::Field *> member_list = entry.second;
         PhvInfo::Field *owner = member_list.front();

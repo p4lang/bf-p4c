@@ -21,7 +21,7 @@ class Cluster_PHV {
     int id_num_i = cluster_id_g;            // number part of id_i
     std::string id_i;                       // cluster id
     PHV_Container::Ingress_Egress gress_i;  // ingress or egress
-    PHV_Container::PHV_Word width_i;        // container width in PHV group
+    PHV::Size width_i;        // container width in PHV group
     bool uniform_width_i = false;           // field widths differ in cluster
     int max_width_i = 0;                    // max width of field in cluster
     int num_containers_i = 0;               // number of containers
@@ -51,7 +51,7 @@ class Cluster_PHV {
                                                        // field = ccgf w/ constrained member no_pack
     int compute_max_width();                           // determines max_width of field in cluster
                                                        // which can be ccgf "no-pack" constrained
-    PHV_Container::PHV_Word container_width(int field_width);
+    PHV::Size container_width(int field_width);
 
     ordered_set<PhvInfo::Field *> *field_set(PhvInfo::Field *f) {
         ordered_set<PhvInfo::Field *> *s = new ordered_set<PhvInfo::Field *>;
@@ -64,8 +64,8 @@ class Cluster_PHV {
     std::string id()                                    { return id_i; }
     void id(std::string id_p)                           { id_i = id_p; }
     PHV_Container::Ingress_Egress gress()               { return gress_i; }
-    PHV_Container::PHV_Word width()                     { return width_i; }
-    void width(PHV_Container::PHV_Word w)               { width_i = w; }
+    PHV::Size width()                                   { return width_i; }
+    void width(PHV::Size w)                             { width_i = w; }
     bool uniform_width()                                { return uniform_width_i; }
     int max_width()                                     { return max_width_i; }
     void max_width(int i)                               { max_width_i = i; }
@@ -82,7 +82,7 @@ class Cluster_PHV {
     }
     int num_containers()                                { return num_containers_i; }
     void num_containers(int n)                          { num_containers_i = n; }
-    int num_containers(std::vector<PhvInfo::Field *>&, PHV_Container::PHV_Word);
+    int num_containers(std::vector<PhvInfo::Field *>&, PHV::Size);
     int num_constraints()                               { return num_constraints_i; }
 
     bool sliced()                                       { return sliced_i; }
@@ -161,7 +161,7 @@ std::ostream &operator<<(std::ostream &, std::vector<Cluster_PHV *>*);
 std::ostream &operator<<(std::ostream &, std::vector<Cluster_PHV *>&);
 std::ostream &operator<<(std::ostream &, ordered_map<int, std::vector<Cluster_PHV *>>&);
 std::ostream &operator<<(std::ostream &,
-    ordered_map<PHV_Container::PHV_Word, ordered_map<int, std::vector<Cluster_PHV *>>>&);
+    ordered_map<PHV::Size, ordered_map<int, std::vector<Cluster_PHV *>>>&);
 std::ostream &operator<<(std::ostream &, Cluster_PHV_Requirements&);
 //
 #endif /* BF_P4C_PHV_CLUSTER_PHV_REQ_H_ */

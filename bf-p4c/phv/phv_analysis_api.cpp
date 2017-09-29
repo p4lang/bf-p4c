@@ -47,7 +47,7 @@ PHV_Analysis_API::field_to_containers(
             //
             contiguous = false;
         }
-        next_start = (cc->hi() + 1) % c->width();
+        next_start = (cc->hi() + 1) % int(c->width());
         phv_nums.push_back(phv_num);
     }
     return contiguous;
