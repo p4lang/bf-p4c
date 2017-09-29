@@ -319,22 +319,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_88_testing_action_data_allocation_3.p4
   )
 
-# tofino/parde/extract_parser.cpp:192: Null igParser
-# XXX(seth): The extract_maupipe() code is actually passing a null ingress
-# parser into extractParser(). I'm not sure what's happening there, but
-# presumably it's happening at an earlier layer than the Tofino backend parser
-# stuff.
-p4c_add_xfail_reason("tofino"
-  "Null igParser"
-  testdata/p4_14_samples/parser4.p4
-  testdata/p4_14_samples/parser2.p4
-  testdata/p4_14_samples/parser1.p4
-  testdata/p4_14_samples/parser_dc_full.p4
-  testdata/p4_14_samples/port_vlan_mapping.p4
-  extensions/p4_tests/p4_14/c6/COMPILER-603/loop.p4
-  extensions/p4_tests/p4_14/c6/COMPILER-604/new_parser.p4
-  )
-
 # parser verify not supported
 p4c_add_xfail_reason("tofino"
   "Invalid method call: verify"
@@ -849,6 +833,8 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue655.p4
   testdata/p4_16_samples/issue655-bmv2.p4
   testdata/p4_16_samples/issue270-bmv2.p4
+  testdata/p4_14_samples/parser_dc_full.p4
+  testdata/p4_14_samples/port_vlan_mapping.p4
 )
 
 # BRIG-226
