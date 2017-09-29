@@ -1,4 +1,5 @@
 #include "cluster_phv_mau.h"
+#include <cstdlib>
 #include "cluster_phv_operations.h"
 #include "phv_spec.h"
 #include "bf-p4c/device.h"
@@ -280,29 +281,28 @@ const PHV_Container * PHV_MAU_Group_Assignments::phv_container(unsigned containe
 
 unsigned
 PHV_MAU_Group_Assignments::num_ingress_collections(std::vector<Cluster_PHV *>& cluster_vec) {
-    //
     unsigned ingress_and_egress = 0;
     unsigned ingress = 0;
+
     for (Cluster_PHV *cl : cluster_vec) {  // possible to have 0 fields alloc to TPHV
         if (cl->exact_containers()) {
             ingress_and_egress++;
-            if (cl->gress() == PHV_Container::Ingress_Egress::Ingress_Only) {
-                ingress++;
-            }
-        }
-    }
-    unsigned ingress_collections = Constants::num_collections / 2;
+            if (cl->gress() == PHV_Container::Ingress_Egress::Ingress_Only)
+                ingress++; } }
+
+    int ingress_collections = Constants::num_collections / 2;
     if (ingress_and_egress) {
         int value = (ingress * Constants::num_collections) / ingress_and_egress
                       + ((ingress * Constants::num_collections) % ingress_and_egress ? 1 : 0);
-        if (abs(ingress_collections - value) > 1) {
-            ingress_collections = value;
-        }
-    }
+        if (std::abs(ingress_collections - value) > 1)
+            ingress_collections = value; }
+
     LOG1("*****PHV_MAU_Group_Assignments: sanity_INFO*****....."
         << ".....ingress = " << ingress << ", ingress_and_egress = " << ingress_and_egress
         << ", ingress_collections = " << ingress_collections);
-    return ingress_collections;
+
+    BUG_CHECK(0 <= ingress_collections, "Negative number of ingress collections");
+    return unsigned(ingress_collections);
 }
 
 void PHV_MAU_Group_Assignments::create_MAU_groups() {

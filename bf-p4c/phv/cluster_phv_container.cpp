@@ -61,7 +61,7 @@ PHV_Container::clear() {
     phv_mau_group_i->inc_empty_containers();
     fields_in_container_i.clear();
     taint_color_i = "0";
-    bits_i = new char[width_i];
+    bits_i = new char[int(width_i)];
     for (auto i=0; i < int(width_i); i++) {
         bits_i[i] = taint_color_i.back();
     }
