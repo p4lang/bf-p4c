@@ -177,7 +177,7 @@ void Parser::process() {
                 all.insert(all.begin(), state); }
         if (parser_error[gress].lineno >= 0)
             if (parser_error[gress].check())
-                phv_use[gress][parser_error[gress]->reg.index] = 1; }
+                phv_use[gress][parser_error[gress]->reg.uid] = 1; }
     if (error_count > 0) return;
     int all_index = 0;
     for (auto st : all) st->all_idx = all_index++;
@@ -198,10 +198,10 @@ void Parser::process() {
                   Phv::reg(reg).name, reg); }
     for (auto &reg : multi_write)
         if (reg.check())
-            phv_allow_multi_write[reg->reg.index] = 1;
+            phv_allow_multi_write[reg->reg.parser_id()] = 1;
     for (auto &reg : init_zero)
         if (reg.check())
-            phv_init_valid[reg->reg.index] = 1;
+            phv_init_valid[reg->reg.parser_id()] = 1;
     if (options.match_compiler || 1) {  /* FIXME -- need proper liveness analysis */
         Phv::setuse(INGRESS, phv_use[INGRESS]);
         Phv::setuse(EGRESS, phv_use[EGRESS]); }
@@ -301,7 +301,7 @@ void Parser::Checksum::pass2(Parser *parser) {
 template<class ROW>
 void Parser::Checksum::write_row_config(ROW &row) {
     row.add = add;
-    if (dest) row.dst = dest->reg.index;
+    if (dest) row.dst = dest->reg.parser_id();
     row.dst_bit_hdr_end_pos = end_pos;
     row.hdr_end = end;
     int rsh = 0;
@@ -838,11 +838,12 @@ void Parser::State::Match::pass1(Parser *pa, State *state) {
     next.check(state->gress, pa, state);
     for (auto &s : save) {
         if (!s.where.check()) continue;
-        pa->phv_use[state->gress][s.where->reg.index] = 1;
+        pa->phv_use[state->gress][s.where->reg.uid] = 1;
         int size = s.where->reg.size;
         if (s.second) {
             if (!s.second.check()) continue;
-            if (s.second->reg.index != s.where->reg.index + 1 || (s.where->reg.index & 1))
+            if (s.second->reg.parser_id() != s.where->reg.parser_id() + 1 ||
+                (s.where->reg.parser_id() & 1))
                 error(s.second.lineno, "Can only write into even/odd register pair");
             else if (s.second->lo || s.second->hi != size-1)
                 error(s.second.lineno, "Can only write data into whole phv registers in parser");
@@ -873,9 +874,9 @@ void Parser::State::Match::pass1(Parser *pa, State *state) {
                         break; } } } } }
     for (auto &s : set) {
         if (!s.where.check()) continue;
-        pa->phv_use[state->gress][s.where->reg.index] = 1;
+        pa->phv_use[state->gress][s.where->reg.uid] = 1;
         if (s.where->lo || s.where->hi != s.where->reg.size-1) {
-            pa->phv_allow_multi_write[s.where->reg.index] = 1;
+            pa->phv_allow_multi_write[s.where->reg.parser_id()] = 1;
             if (s.what > ~(~1U << (s.where->hi - s.where->lo)))
                 error(s.where.lineno, "Can't fit value %d in a %d bit phv slice",
                         s.what, (s.where->hi - s.where->lo + 1)); } }
@@ -968,8 +969,8 @@ void Parser::State::Match::merge_outputs(OutputUse use) {
     for (unsigned i = 0; i+1 < save.size() && use.b32 < 4; ++i) {
         if (save[i].hi == save[i].lo + 1 && save[i+1].lo == save[i].hi + 1 &&
             save[i+1].hi == save[i+1].lo + 1 && !save[i].flags && !save[i+1].flags &&
-            (save[i].where->reg.index & 1) == 0 &&
-            save[i].where->reg.index + 1 == save[i+1].where->reg.index) {
+            (save[i].where->reg.parser_id() & 1) == 0 &&
+            save[i].where->reg.parser_id() + 1 == save[i+1].where->reg.parser_id()) {
             save[i].hi += 2;
             save.erase(save.begin()+i+1);
             use.b32++;
@@ -978,8 +979,8 @@ void Parser::State::Match::merge_outputs(OutputUse use) {
     for (unsigned i = 0; i+1 < save.size() && use.b16 < 4; ++i) {
         if (save[i].hi == save[i].lo && save[i+1].lo == save[i].hi + 1 &&
             save[i+1].hi == save[i+1].lo && !save[i].flags && !save[i+1].flags &&
-            (save[i].where->reg.index & 1) == 0 &&
-            save[i].where->reg.index + 1 == save[i+1].where->reg.index) {
+            (save[i].where->reg.parser_id() & 1) == 0 &&
+            save[i].where->reg.parser_id() + 1 == save[i+1].where->reg.parser_id()) {
             save[i].hi += 1;
             save.erase(save.begin()+i+1);
             use.b16++;
@@ -988,8 +989,8 @@ void Parser::State::Match::merge_outputs(OutputUse use) {
     for (unsigned i = 0; i+1 < save.size() && use.b32 < 4; ++i) {
         if (save[i].hi == save[i].lo + 1 && save[i+1].lo == save[i].hi + 1 &&
             save[i+1].hi == save[i+1].lo + 1 && !save[i].flags && !save[i+1].flags &&
-            (save[i].where->reg.index & 1) == 0 &&
-            save[i].where->reg.index + 1 == save[i+1].where->reg.index) {
+            (save[i].where->reg.parser_id() & 1) == 0 &&
+            save[i].where->reg.parser_id() + 1 == save[i+1].where->reg.parser_id()) {
             save[i].hi += 2;
             save.erase(save.begin()+i+1);
             use.b32++;

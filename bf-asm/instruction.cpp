@@ -74,15 +74,15 @@ struct operand {
             } else return false; }
         Phv *clone() override { return new Phv(*this); }
         bool check() override { return reg.check(true); }
-        int phvGroup() override { return reg->reg.index / 16; }
+        int phvGroup() override { return reg->reg.mau_id() / 16; }
         int bits(int group) override {
             if (group != phvGroup()) {
                 error(lineno, "registers in an instruction must all be in the same phv group");
                 return -1; }
-            return reg->reg.index % 16; }
+            return reg->reg.mau_id() % 16; }
         unsigned bitoffset(int group) const override { return reg->lo; }
         void mark_use(Table *tbl) override {
-            tbl->stage->action_use[tbl->gress][reg->reg.index] = true; }
+            tbl->stage->action_use[tbl->gress][reg->reg.uid] = true; }
         void dbprint(std::ostream &out) const override { out << reg; }
         void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) override { fn(*reg); }
     };
@@ -494,8 +494,8 @@ Instruction *AluOP::pass1(Table *tbl, Table::Actions::Action *) {
     if (dest->lo || dest->hi != dest->reg.size-1) {
         error(lineno, "ALU ops cannot operate on slices");
         return this; }
-    slot = dest->reg.index;
-    tbl->stage->action_set[tbl->gress][slot] = true;
+    slot = dest->reg.mau_id();
+    tbl->stage->action_set[tbl->gress][dest->reg.uid] = true;
     src1.mark_use(tbl);
     src2.mark_use(tbl);
     if (src2.phvGroup() < 0 && opc->swap_args) {
@@ -571,13 +571,13 @@ Instruction *LoadConst::pass1(Table *tbl, Table::Actions::Action *) {
     if (dest->lo || dest->hi != dest->reg.size-1) {
         error(lineno, "load-const cannot operate on slices");
         return this; }
-    slot = dest->reg.index;
+    slot = dest->reg.mau_id();
     int size = Phv::reg(slot).size;
     if (size > 23) size = 23;
     if (src >= (1 << size) || src < -(1 << (size-1)))
         error(lineno, "Constant value %d out of range", src);
     src &= (1 << size) - 1;
-    tbl->stage->action_set[tbl->gress][slot] = true;
+    tbl->stage->action_set[tbl->gress][dest->reg.uid] = true;
     return this;
 }
 int LoadConst::encode() {
@@ -658,8 +658,8 @@ Instruction *CondMoveMux::Decode::decode(Table *tbl, const Table::Actions::Actio
 
 Instruction *CondMoveMux::pass1(Table *tbl, Table::Actions::Action *) {
     if (!dest.check(true) || !src1.check() || !src2.check()) return this;
-    slot = dest->reg.index;
-    tbl->stage->action_set[tbl->gress][slot] = true;
+    slot = dest->reg.mau_id();
+    tbl->stage->action_set[tbl->gress][dest->reg.uid] = true;
     src1.mark_use(tbl);
     src2.mark_use(tbl);
     return this;
@@ -732,8 +732,8 @@ Instruction *DepositField::Decode::decode(Table *tbl, const Table::Actions::Acti
 
 Instruction *DepositField::pass1(Table *tbl, Table::Actions::Action *) {
     if (!dest.check(true) || !src1.check() || !src2.check()) return this;
-    slot = dest->reg.index;
-    tbl->stage->action_set[tbl->gress][slot] = true;
+    slot = dest->reg.mau_id();
+    tbl->stage->action_set[tbl->gress][dest->reg.uid] = true;
     src1.mark_use(tbl);
     src2.mark_use(tbl);
     return this;
@@ -814,8 +814,8 @@ Instruction *Set::pass1(Table *tbl, Table::Actions::Action *act) {
     if (auto *k = src.to<operand::Const>())
         if (k->value < -8 || k->value >= 8)
             return (new LoadConst(lineno, dest, k->value))->pass1(tbl, act);
-    slot = dest->reg.index;
-    tbl->stage->action_set[tbl->gress][slot] = true;
+    slot = dest->reg.mau_id();
+    tbl->stage->action_set[tbl->gress][dest->reg.uid] = true;
     src.mark_use(tbl);
     return this;
 }
@@ -862,9 +862,9 @@ Instruction *NulOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
 
 Instruction *NulOP::pass1(Table *tbl, Table::Actions::Action *) {
     if (!dest.check(true)) return this;
-    slot = dest->reg.index;
+    slot = dest->reg.mau_id();
     if (opc->opcode || !options.match_compiler) {
-        tbl->stage->action_set[tbl->gress][slot] = true; }
+        tbl->stage->action_set[tbl->gress][dest->reg.uid] = true; }
     return this;
 }
 int NulOP::encode() {
@@ -938,8 +938,8 @@ Instruction *ShiftOP::pass1(Table *tbl, Table::Actions::Action *) {
     if (dest->lo || dest->hi != dest->reg.size-1) {
         error(lineno, "shift ops cannot operate on slices");
         return this; }
-    slot = dest->reg.index;
-    tbl->stage->action_set[tbl->gress][slot] = true;
+    slot = dest->reg.mau_id();
+    tbl->stage->action_set[tbl->gress][dest->reg.uid] = true;
     src1.mark_use(tbl);
     src2.mark_use(tbl);
     if (src2.phvGroup() < 0)

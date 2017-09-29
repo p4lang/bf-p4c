@@ -170,7 +170,7 @@ int Parser::State::Match::Save::write_output_config(Target::Tofino::parser_regs 
             continue;
         int byte = lo;
         for (int i = slot.idx; slot.usemask & (1U << i); i++, byte += slot.size/8U) {
-            *map[i].dst = where->reg.index;
+            *map[i].dst = where->reg.parser_id();
             *map[i].src = byte;
             if (flags & OFFSET) *map[i].offset_add = 1;
             if (flags & ROTATE) *map[i].offset_rot = 1; }
@@ -228,7 +228,7 @@ void Parser::State::Match::Set::write_output_config(Target::Tofino::parser_regs 
             continue;
         unsigned shift = slot.shift;
         for (int i = slot.idx; slot.usemask & (1U << i); i++) {
-            *map[i].dst = where->reg.index;
+            *map[i].dst = where->reg.parser_id();
             *map[i].src_type = 1;
             *map[i].src = encode_constant_for_slot(i, (what << where->lo) >> shift);
             if (flags & OFFSET) *map[i].offset_add = 1;
@@ -299,7 +299,7 @@ template <class COMMON> void init_common_regs(Parser *p, COMMON &regs, gress_t g
     regs.mode = 4;
     regs.max_iter.max = 128;
     if (p->parser_error[gress].lineno >= 0) {
-        regs.err_phv_cfg.dst = p->parser_error[gress]->reg.index;
+        regs.err_phv_cfg.dst = p->parser_error[gress]->reg.parser_id();
         regs.err_phv_cfg.aram_mbe_en = 1;
         regs.err_phv_cfg.ctr_range_err_en = 1;
         regs.err_phv_cfg.dst_cont_err_en = 1;
@@ -346,14 +346,15 @@ template<> void Parser::write_config(Target::Tofino::parser_regs &regs) {
         phv_use[INGRESS] |= Phv::use(INGRESS);
         phv_use[EGRESS] |= Phv::use(EGRESS); }
     for (int i : phv_use[EGRESS]) {
-        if (i >= 256) {
-            regs.merge.phv_owner.t_owner[i-256] = 1;
-            regs.ingress.prsr_reg.phv_owner.t_owner[i-256] = 1;
-            regs.egress.prsr_reg.phv_owner.t_owner[i-256] = 1;
-        } else if (i < 224) {
-            regs.merge.phv_owner.owner[i] = 1;
-            regs.ingress.prsr_reg.phv_owner.owner[i] = 1;
-            regs.egress.prsr_reg.phv_owner.owner[i] = 1; } }
+        auto id = Phv::reg(i).parser_id();
+        if (id >= 256) {
+            regs.merge.phv_owner.t_owner[id-256] = 1;
+            regs.ingress.prsr_reg.phv_owner.t_owner[id-256] = 1;
+            regs.egress.prsr_reg.phv_owner.t_owner[id-256] = 1;
+        } else if (id < 224) {
+            regs.merge.phv_owner.owner[id] = 1;
+            regs.ingress.prsr_reg.phv_owner.owner[id] = 1;
+            regs.egress.prsr_reg.phv_owner.owner[id] = 1; } }
     for (int i = 0; i < 224; i++) {
         if (!phv_allow_multi_write[i]) {
             regs.ingress.prsr_reg.no_multi_wr.nmw[i] = 1;

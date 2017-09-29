@@ -50,7 +50,7 @@ static struct INTRIN##GR##NAME : public Deparser::Intrinsic {           \
 #define YES(X)  X
 #define NO(X)
 #define SIMPLE_INTRINSIC(GR, PFX, NAME, IF_SHIFT) INTRINSIC(GR, NAME, 1,\
-    PFX.NAME.phv = vals[0]->reg.index;                                  \
+    PFX.NAME.phv = vals[0]->reg.deparser_id();                          \
     IF_SHIFT( PFX.NAME.shft = vals[0]->lo; )                            \
     PFX.NAME.valid = 1; )
 #define IIR_MAIN_INTRINSIC(NAME, SHFT) SIMPLE_INTRINSIC(INGRESS, regs.input.iir.main_i, NAME, SHFT)
@@ -65,16 +65,16 @@ IIR_INTRINSIC(copy_to_cpu, YES)
 INTRINSIC(INGRESS, egress_multicast_group, 2,
     int i = 0;
     for (auto &el : vals) {
-        regs.header.hir.ingr.egress_multicast_group[i].phv = el->reg.index;
+        regs.header.hir.ingr.egress_multicast_group[i].phv = el->reg.deparser_id();
         regs.header.hir.ingr.egress_multicast_group[i++].valid = 1; } )
 INTRINSIC(INGRESS, hash_lag_ecmp_mcast, 2,
     int i = 0;
     for (auto &el : vals) {
-        regs.header.hir.ingr.hash_lag_ecmp_mcast[i].phv = el->reg.index;
+        regs.header.hir.ingr.hash_lag_ecmp_mcast[i].phv = el->reg.deparser_id();
         regs.header.hir.ingr.hash_lag_ecmp_mcast[i++].valid = 1; } )
 HIR_INTRINSIC(copy_to_cpu_cos, YES)
 INTRINSIC(INGRESS, ingress_port_source, 1,
-    regs.header.hir.ingr.ingress_port.phv = vals[0]->reg.index;
+    regs.header.hir.ingr.ingress_port.phv = vals[0]->reg.deparser_id();
     regs.header.hir.ingr.ingress_port.sel = 0; )
 HIR_INTRINSIC(deflect_on_drop, YES)
 HIR_INTRINSIC(meter_color, YES)
@@ -149,7 +149,7 @@ struct GRESS##NAME##Digest : public Deparser::Digest::Type {                    
     GRESS##NAME##Digest() : Deparser::Digest::Type(GRESS, #NAME, CNT) {         \
         IFSHIFT( can_shift = true; ) }                                          \
     template<class REGS> void setregs(REGS &regs, Deparser::Digest &data) {     \
-        CFG.phv = data.select->reg.index;                                       \
+        CFG.phv = data.select->reg.deparser_id();                               \
         IFSHIFT( CFG.shft = data.shift + data.select->lo; )                     \
         CFG.valid = 1;                                                          \
         for (auto &set : data.layout) {                                         \
@@ -159,9 +159,9 @@ struct GRESS##NAME##Digest : public Deparser::Digest::Type {                    
             for (auto &reg : set.second) {                                      \
                 if (first) {                                                    \
                     first = false;                                              \
-                    IFID( TBL[id].id_phv = reg->reg.index; continue; ) }        \
+                    IFID( TBL[id].id_phv = reg->reg.deparser_id(); continue; ) }\
                 for (int i = reg->reg.size/8; i > 0; i--)                       \
-                    TBL[id].phvs[idx++] = reg->reg.index; }                     \
+                    TBL[id].phvs[idx++] = reg->reg.deparser_id(); }             \
             TBL[id].valid = 1;                                                  \
             TBL[id].len = idx; } }                                              \
          DIGEST_SET_REGS                                                        \
@@ -231,15 +231,15 @@ void Deparser::process() {
     for (gress_t gress : Range(INGRESS, EGRESS)) {
         for (auto &ent : pov_order[gress])
             if (ent.check())
-                phv_use[gress][ent->reg.index] = 1;
+                phv_use[gress][ent->reg.uid] = 1;
         for (auto &ent : dictionary[gress]) {
             if (ent.first.check()) {
-                phv_use[gress][ent.first->reg.index] = 1;
+                phv_use[gress][ent.first->reg.uid] = 1;
                 if (ent.first->lo != 0 || ent.first->hi != ent.first->reg.size - 1)
                     error(ent.first.lineno, "Can only output full phv registers, not slices, "
                           "in deparser"); }
             if (ent.second.check()) {
-                phv_use[gress][ent.second->reg.index] = 1;
+                phv_use[gress][ent.second->reg.uid] = 1;
                 if (ent.second->lo != ent.second->hi)
                     error(ent.second.lineno, "POV bits should be single bits"); } }
         for (int i = 0; i < DEPARSER_CHECKSUM_UNITS; i++)
@@ -249,7 +249,7 @@ void Deparser::process() {
     for (auto &intrin : intrinsics) {
         for (auto &el : intrin.second)
             if (el.check())
-                phv_use[intrin.first->gress][el->reg.index] = 1;
+                phv_use[intrin.first->gress][el->reg.uid] = 1;
         if (intrin.second.size() > (size_t)intrin.first->max)
             error(intrin.second[0].lineno, "Too many values for %s", intrin.first->name.c_str()); }
     if (phv_use[INGRESS].intersects(phv_use[EGRESS]))
@@ -257,14 +257,14 @@ void Deparser::process() {
               Phv::db_regset(phv_use[INGRESS] & phv_use[EGRESS]).c_str());
     for (auto &digest : digests) {
         if (digest.select.check()) {
-            phv_use[digest.type->gress][digest.select->reg.index] = 1;
+            phv_use[digest.type->gress][digest.select->reg.uid] = 1;
             if (digest.select->lo > 0 && !digest.type->can_shift)
                 error(digest.select.lineno, "%s digest selector must be in bottom bits of phv",
                       digest.type->name.c_str()); }
         for (auto &set : digest.layout)
             for (auto &reg : set.second)
                 if (reg.check())
-                    phv_use[digest.type->gress][reg->reg.index] = 1; }
+                    phv_use[digest.type->gress][reg->reg.uid] = 1; }
     if (options.match_compiler || 1) {  /* FIXME -- need proper liveness analysis */
         Phv::setuse(INGRESS, phv_use[INGRESS]);
         Phv::setuse(EGRESS, phv_use[EGRESS]); }
@@ -351,7 +351,7 @@ void dump_checksum_units(checked_array_base<IPO> &main_csum_units,
             continue;
         int polarity = 0;
         for (auto &reg : checksum[i]) {
-            int idx = reg->reg.index;
+            int idx = reg->reg.deparser_id();
             assert(phv2cksum[idx][0] >= 0);
             if (reg->reg.size == 8)
                 polarity ^= 1;
@@ -387,23 +387,23 @@ void dump_field_dictionary(checked_array_base<fde_pov> &fde_control,
     std::map<unsigned, unsigned>        pov;
     unsigned pov_byte = 0, pov_size = 0;
     for (auto &ent : pov_order)
-        if (pov.count(ent->reg.index) == 0) {
-            pov[ent->reg.index] = pov_size;
+        if (pov.count(ent->reg.deparser_id()) == 0) {
+            pov[ent->reg.deparser_id()] = pov_size;
             pov_size += ent->reg.size;
             for (unsigned i = 0; i < ent->reg.size; i += 8) {
                 if (pov_byte >= DEPARSER_MAX_POV_BYTES) {
                     error(ent.lineno, "Ran out of space in POV in deparser");
                     return; }
-                pov_layout[pov_byte++] = ent->reg.index; } }
+                pov_layout[pov_byte++] = ent->reg.deparser_id(); } }
     for (auto &ent : dict)
-        if (pov.count(ent.second->reg.index) == 0) {
-            pov[ent.second->reg.index] = pov_size;
+        if (pov.count(ent.second->reg.deparser_id()) == 0) {
+            pov[ent.second->reg.deparser_id()] = pov_size;
             pov_size += ent.second->reg.size;
             for (unsigned i = 0; i < ent.second->reg.size; i += 8) {
                 if (pov_byte >= DEPARSER_MAX_POV_BYTES) {
                     error(ent.second.lineno, "Ran out of space in POV in deparser");
                     return; }
-                pov_layout[pov_byte++] = ent.second->reg.index; } }
+                pov_layout[pov_byte++] = ent.second->reg.deparser_id(); } }
     while (pov_byte < DEPARSER_MAX_POV_BYTES)
         pov_layout[pov_byte++] = 0xff;
 
@@ -412,9 +412,9 @@ void dump_field_dictionary(checked_array_base<fde_pov> &fde_control,
     unsigned pos = 0;
     for (auto &ent : dict) {
         unsigned size = ent.first->reg.size/8;
-        int pov_bit = pov[ent.second->reg.index] + ent.second->lo;
+        int pov_bit = pov[ent.second->reg.deparser_id()] + ent.second->lo;
         if (options.match_compiler) {
-            if (ent.first->reg.index >= 224 && ent.first->reg.index < 236) {
+            if (ent.first->reg.deparser_id() >= 224 && ent.first->reg.deparser_id() < 236) {
                 /* checksum unit -- make sure it gets its own dictionary line */
                 prev_pov = -1;
                 prev_is_checksum = true;
@@ -433,7 +433,7 @@ void dump_field_dictionary(checked_array_base<fde_pov> &fde_control,
                 fde_control[row].version = 0xf;
                 fde_control[row].valid = 1;
                 pos = 0; }
-            fde_data[row].phv[pos++] = ent.first->reg.index;
+            fde_data[row].phv[pos++] = ent.first->reg.deparser_id();
             prev_pov = pov_bit; } }
     if (pos) {
         fde_control[row].num_bytes = pos & 3;
@@ -450,6 +450,8 @@ void output_phv_ownership(bitvec phv_use[2],
     assert(in_split.val.size() == eg_split.val.size());
     assert((in_grp.val.size() + 1) * in_split.val.size() == count);
     unsigned group_size = in_split.val.size();
+    // FIXME -- this only works because tofino Phv::Register uids happend to match
+    // FIXME -- the deparser encoding of phv containers. (FIXME-PHV)
     unsigned reg = first;
     for (unsigned i = 0; i < in_grp.val.size(); i++, reg += group_size) {
         int count = 0;
@@ -504,10 +506,23 @@ bool Deparser::RefOrChksum::check() const {
     return Phv::Ref::check();
 }
 
+// FIXME -- we need to set the uid explicitly here so it matches the encoding of the
+// FIXME -- checksums.  This works for tofino, but will fail for jbay as they won't be
+// FIXME -- unique.  They also don't get installed properly in Phv::regs, but that is
+// FIXME -- ok as we never ask for them (FIXME-PHV)
 Phv::Register Deparser::RefOrChksum::checksum_units[12] = {
-    { "csum0", 224, 16 }, { "csum1", 225, 16 }, { "csum2", 226, 16 }, { "csum3", 227, 16 },
-    { "csum4", 228, 16 }, { "csum5", 229, 16 }, { "csum6", 230, 16 }, { "csum7", 231, 16 },
-    { "csum8", 232, 16 }, { "csum9", 233, 16 }, { "csum10", 234, 16 }, { "csum11", 235, 16 } };
+    { "csum0", Phv::Register::CHECKSUM, 224, 16 },
+    { "csum1", Phv::Register::CHECKSUM, 225, 16 },
+    { "csum2", Phv::Register::CHECKSUM, 226, 16 },
+    { "csum3", Phv::Register::CHECKSUM, 227, 16 },
+    { "csum4", Phv::Register::CHECKSUM, 228, 16 },
+    { "csum5", Phv::Register::CHECKSUM, 229, 16 },
+    { "csum6", Phv::Register::CHECKSUM, 230, 16 },
+    { "csum7", Phv::Register::CHECKSUM, 231, 16 },
+    { "csum8", Phv::Register::CHECKSUM, 232, 16 },
+    { "csum9", Phv::Register::CHECKSUM, 233, 16 },
+    { "csum10", Phv::Register::CHECKSUM, 234, 16 },
+    { "csum11", Phv::Register::CHECKSUM, 235, 16 } };
 
 Phv::Slice Deparser::RefOrChksum::operator *() const {
     if (name_ == "checksum") {

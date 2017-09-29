@@ -324,6 +324,8 @@ template<class REGS> void Stage::write_regs(REGS &regs) {
     static const int phv_use_transpose[2][14] = {
         {  0,  1,  2,  3,  8,  9, 10, 11, 16, 17, 18, 19, 20, 21 },
         {  4,  5,  6,  7, 12, 13, 14, 15, 22, 23, 24, 25, 26, 27 } };
+    // FIXME -- this code depends on the Phv::Register uids matching the
+    // FIXME -- mau encoding of phv containers. (FIXME-PHV)
     for (int i = 0; i < 2; i++) {
         for (int j = 0; j < 14; j++) {
             regs.dp.phv_ingress_thread_alu[i][j] = regs.dp.phv_ingress_thread_imem[i][j] =

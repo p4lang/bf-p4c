@@ -58,4 +58,14 @@ std::string get_filename(const char *s);
 
 bool remove_aug_names(std::string& name);
 
+#include <memory>
+/// Compare pointers based on the pointed at type
+/// For use as a Comparator for map/set types
+template<class T> struct ptrless {
+    bool operator()(const T *a, const T *b) const
+        { return b ? a ? *a < *b : true : false; }
+    bool operator()(const std::unique_ptr<T> &a, const std::unique_ptr<T> &b) const
+        { return b ? a ? *a < *b : true : false; }
+};
+
 #endif /* _misc_h_ */

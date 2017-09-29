@@ -4,6 +4,7 @@
 #include "sections.h"
 #include "bitvec.h"
 #include "json.h"
+#include "misc.h"
 #include <set>
 #include <vector>
 
@@ -29,14 +30,22 @@ class Phv : public Section {
     void input(VECTOR(value_t) args, value_t data);
     void output(json::map &);
     Phv();
+    Phv(const Phv &) = delete;
+    Phv &operator=(const Phv &) = delete;
     ~Phv() {}
-    static Phv phv;
+    static Phv phv;  // singleton class
 public:
     struct Register {
-        char            name[8];
-        unsigned short  index, size;
-        bool operator==(const Register &a) const { return index == a.index; }
-        bool operator!=(const Register &a) const { return index != a.index; }
+        char                                            name[8];
+        enum type_t { NORMAL, TAGALONG, CHECKSUM, MOCHA, DARK }   type;
+        // FIXME-PHV  various places depend on the uids matching container encoding
+        unsigned short                                  uid, size;
+        bool operator==(const Register &a) const { return uid == a.uid; }
+        bool operator!=(const Register &a) const { return uid != a.uid; }
+        bool operator<(const Register &a) const { return uid < a.uid; }
+        unsigned parser_id() const { return uid; }
+        unsigned mau_id() const { return uid; }
+        unsigned deparser_id() const { return uid; }
     };
     class Slice {
         static const Register invalid;
@@ -56,24 +65,25 @@ public:
         Slice &operator=(const Slice &a) { new(this) Slice(a.reg, a.lo, a.hi); return *this; }
         const Slice *operator->() const { return this; }
         bool operator==(const Slice &s) const {
-            return valid && s.valid && reg.index == s.reg.index &&
+            return valid && s.valid && reg.uid == s.reg.uid &&
                    lo == s.lo && hi == s.hi; }
         bool operator<(const Slice &a) const {
-            if (reg.index < a.reg.index) return true;
-            if (reg.index > a.reg.index) return false;
+            if (reg.uid < a.reg.uid) return true;
+            if (reg.uid > a.reg.uid) return false;
             if (lo < a.lo) return true;
             if (lo > a.lo) return false;
             return (hi < a.hi); }
         bool overlaps(const Slice &a) const {
-            return valid && a.valid && reg.index == a.reg.index &&
+            return valid && a.valid && reg.uid == a.reg.uid &&
                 lo <= a.hi && a.lo <= hi; }
         unsigned size() const { return valid ? hi - lo + 1 : 0; }
         void dbprint(std::ostream &out) const;
     };
 private:
-    Register regs[NUM_PHV_REGS];
+    std::vector<Register> regs;
     std::map<std::string, Slice> names[2];
-    std::map<int, std::pair<gress_t, std::vector<std::string>>> user_defined;
+    std::map<const Register *, std::pair<gress_t, std::vector<std::string>>, ptrless<Register>>
+                user_defined;
     bitvec      phv_use[2];
     std::map<std::string, int> phv_field_sizes [2];
     void gen_phv_field_size_map();
@@ -119,7 +129,7 @@ public:
                 if (hi >= 0 && !Slice(*s, lo, hi).valid) {
                     error(lineno, "Invalid slice of %s", name_.c_str());
                     return false; }
-                if (mau && s->reg.index >= FIRST_TPHV) {
+                if (mau && s->reg.uid >= FIRST_TPHV) {
                     error(lineno, "Can't access tagalong phv in mau: %s", name_.c_str());
                     return false; }
                 return true;

@@ -257,7 +257,7 @@ void InputXbar::pass1() {
         auto size = group.first.ternary ? TCAM_XBAR_GROUP_SIZE : EXACT_XBAR_GROUP_SIZE;
         for (auto &input : group.second) {
             if (!input.what.check(true)) continue;
-            table->stage->match_use[table->gress][input.what->reg.index] = 1;
+            table->stage->match_use[table->gress][input.what->reg.uid] = 1;
             if (input.lo >= 0) {
                 if (input.hi >= 0) {
                     if (input.hi - input.lo != input.what->hi - input.what->lo)
@@ -428,20 +428,20 @@ void InputXbar::write_regs(REGS &regs) {
             bool hi_enable = false;
             switch (input.what->reg.size) {
             case 8:
-                word_group = (input.what->reg.index-FIRST_8BIT_PHV) / 8U;
-                word_index = (input.what->reg.index-FIRST_8BIT_PHV) % 8U
+                word_group = (input.what->reg.mau_id()-FIRST_8BIT_PHV) / 8U;
+                word_index = (input.what->reg.mau_id()-FIRST_8BIT_PHV) % 8U
                            + (word_group & 4) * 2;
                 swizzle_mask = 0;
                 break;
             case 16:
-                word_group = (input.what->reg.index-FIRST_16BIT_PHV) / 12;
-                word_index = (input.what->reg.index-FIRST_16BIT_PHV) % 12 + 16
+                word_group = (input.what->reg.mau_id()-FIRST_16BIT_PHV) / 12;
+                word_index = (input.what->reg.mau_id()-FIRST_16BIT_PHV) % 12 + 16
                            + (word_group & 4) * 3;
                 swizzle_mask = 1;
                 break;
             case 32:
-                word_group = input.what->reg.index / 8U;
-                word_index = input.what->reg.index % 8U;
+                word_group = input.what->reg.mau_id() / 8U;
+                word_index = input.what->reg.mau_id() % 8U;
                 hi_enable = word_group & 4;
                 swizzle_mask = 3;
                 break;
@@ -464,7 +464,7 @@ void InputXbar::write_regs(REGS &regs) {
                             off&3U, 2*(i%4U), 2);
                         i += off;
                     } else error(input.what.lineno, "misaligned phv access on input_xbar"); }
-                if (input.what->reg.index < 64) {
+                if (input.what->reg.mau_id() < 64) {
                     assert(input.what->reg.size == 32);
                     xbar.match_input_xbar_32b_ctl[word_group][i]
                         .match_input_xbar_32b_ctl_address = word_index;
@@ -482,7 +482,7 @@ void InputXbar::write_regs(REGS &regs) {
                 if ((i ^ phv_byte) & swizzle_mask)
                     LOG1("FIXME -- need swizzle for " << input.what); }
             auto &power_ctl = regs.dp.match_input_xbar_din_power_ctl;
-            set_power_ctl_reg(power_ctl, input.what->reg.index); } }
+            set_power_ctl_reg(power_ctl, input.what->reg.mau_id()); } }
     auto &hash = regs.dp.xbar_hash.hash;
     for (auto &ht : hash_tables) {
         if (ht.second.empty()) continue;
@@ -512,7 +512,7 @@ InputXbar::Input *InputXbar::find(Phv::Slice sl, Group grp) {
     if (groups.count(grp))
         for (auto &in : groups[grp]) {
             if (in.lo < 0) continue;
-            if (in.what->reg.index != sl.reg.index) continue;
+            if (in.what->reg.mau_id() != sl.reg.mau_id()) continue;
             if (in.what->lo/8U > sl.lo/8U) continue;
             if (in.what->hi/8U < sl.hi/8U) continue;
             rv = &in;

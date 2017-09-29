@@ -100,7 +100,7 @@ template <> int Parser::State::Match::Save::write_output_config(Target::JBay::pa
         inc = 2; }
     for (int i = 0; i < 20; i += inc) {
         if (used & (mask << i)) continue;
-        row->phv_dst[i] = where->reg.index;
+        row->phv_dst[i] = where->reg.parser_id();
         row->phv_src[i] = lo;
         if (flags & OFFSET) row->phv_offset_add_dst[i] = 1;
         if (flags & ROTATE) error(where.lineno, "no rotate support in jbay");
@@ -108,7 +108,7 @@ template <> int Parser::State::Match::Save::write_output_config(Target::JBay::pa
             row->extract_type[i] = 1;
         } else if (hi-lo == 3) {
             row->extract_type[i] = 3;
-            row->phv_dst[i+1] = where->reg.index;
+            row->phv_dst[i+1] = where->reg.parser_id();
             row->phv_src[i+1] = lo+2;
             row->extract_type[i+1] = 3;
             if (flags & OFFSET) row->phv_offset_add_dst[i+1] = 1;

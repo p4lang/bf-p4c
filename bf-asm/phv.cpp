@@ -4,7 +4,7 @@
 #include <iostream>
 
 Phv Phv::phv;
-const Phv::Register Phv::Slice::invalid = { 0, 0 };
+const Phv::Register Phv::Slice::invalid = { "<bad>", Phv::Register::NORMAL, 0, 0 };
 
 static bitvec tagalong_group(int n) {
     bitvec rv;
@@ -20,11 +20,13 @@ Phv::Phv() : Section("phv") {
         { { "W", 32, 64 }, { "B", 8, 64 }, { "H", 16, 96 }, { "", 0, 32 },
           { "TW", 32, 32 }, { "TB", 8, 32 }, { "TH", 16, 48 } };
     int idx = 0;
+    regs.resize(NUM_PHV_REGS);
     for (unsigned i = 0; i < sizeof sizes/sizeof *sizes; i++) {
         for (unsigned j = 0; j < sizes[i].count; j++, idx++) {
             char buf[8];
             memset(regs[idx].name, 0, sizeof(regs[idx].name));
-            regs[idx].index = idx;
+            regs[idx].type = regs[idx].name[0] == 'T' ? Register::TAGALONG : Register::NORMAL;
+            regs[idx].uid = idx;
             regs[idx].size = sizes[i].size;
             if (sizes[i].size) {
                 sprintf(buf, "R%d", idx);
@@ -49,9 +51,9 @@ int Phv::addreg(gress_t gress, const char *name, const value_t &what) {
     auto reg = what.type == tSTR ? what.s : what[0].s;
     if (const Slice *sl = get(gress, reg)) {
         if (sl->valid) {
-            phv_use[gress][sl->reg.index] = true;
-            user_defined[sl->reg.index].first = gress;
-            user_defined[sl->reg.index].second.push_back(name); }
+            phv_use[gress][sl->reg.uid] = true;
+            user_defined[&sl->reg].first = gress;
+            user_defined[&sl->reg].second.push_back(name); }
         if (what.type == tSTR) {
             names[gress].emplace(name, *sl);
             return 0; }
@@ -87,7 +89,7 @@ void Phv::input(VECTOR(value_t) args, value_t data) {
 
 void Phv::output_names(json::map &out) {
     for (auto &slot : phv.user_defined)
-        out[std::to_string(slot.first)] = std::string(1, "IE"[slot.second.first])
+        out[std::to_string(slot.first->mau_id())] = std::string(1, "IE"[slot.second.first])
                 + " [" + join(slot.second.second, ", ") + "]";
 }
 
@@ -184,7 +186,7 @@ std::string Phv::Ref::desc() const {
 
 void Phv::Slice::dbprint(std::ostream &out) const {
     if (valid) {
-        out << "R" << reg.index;
+        out << reg.name;
         if (lo != 0 || hi != reg.size-1) {
             out << '(' << lo;
             if (hi != lo) out << ".." << hi;
@@ -221,7 +223,7 @@ int Phv::get_position_offset(gress_t gress, std::string name) {
 void Phv::gen_phv_field_size_map() {
     for (auto &slot : phv.user_defined) {
         gress_t gress = slot.second.first;
-        unsigned phv_container_size = regs[slot.first].size;
+        unsigned phv_container_size = slot.first->size;
         for (auto field_name : slot.second.second) {
             int field_size = 0, field_size_bytes = 0;
             unsigned field_lo = remove_name_tail_range(field_name, &field_size);
@@ -249,8 +251,8 @@ void Phv::output(json::map &ctxt_json) {
         json::vector &phv_alloc_stage_ingress = phv_alloc_stage["ingress"] = json::vector();
         json::vector &phv_alloc_stage_egress = phv_alloc_stage["egress"] = json::vector();
         for (auto &slot : phv.user_defined) {
-            unsigned phv_number = slot.first;
-            unsigned phv_container_size = regs[slot.first].size;
+            unsigned phv_number = slot.first->mau_id();
+            unsigned phv_container_size = slot.first->size;
             gress_t gress = slot.second.first;
             json::map phv_container;
             phv_container["phv_number"] = phv_number;
