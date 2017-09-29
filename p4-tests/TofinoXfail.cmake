@@ -260,15 +260,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue297-bmv2.p4
   )
 
-p4c_add_xfail_reason("tofino"
-  "PHV allocation failed"
-  # BRIG-197
-  testdata/p4_14_samples/05-FullTPHV.p4
-  testdata/p4_14_samples/06-FullTPHV1.p4
-  testdata/p4_14_samples/07-FullTPHV2.p4
-  testdata/p4_14_samples/08-FullTPHV3.p4
-  )
-
 # BRIG-240
 p4c_add_xfail_reason("tofino"
   "Input xbar group.* conflict in stage"
@@ -402,12 +393,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "syntax error, unexpected ','"
   extensions/p4_tests/p4_14/test_config_235_funnel_shift.p4
-  )
-
-# BRIG-105
-p4c_add_xfail_reason("tofino"
-  "No register named"
-  extensions/p4_tests/p4_14/04-FullPHV3.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -819,9 +804,9 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
+  testdata/p4_14_samples/05-FullTPHV.p4
   testdata/p4_14_samples/06-FullTPHV1.p4
   testdata/p4_14_samples/07-FullTPHV2.p4
-  testdata/p4_14_samples/05-FullTPHV.p4
   testdata/p4_14_samples/08-FullTPHV3.p4
   testdata/p4_14_samples/01-BigMatch.p4
   extensions/p4_tests/p4_14/04-FullPHV3.p4

@@ -324,6 +324,11 @@ void Cluster::MakeCCGFs::set_deparsed_flag() {
         // set field's deparsed if used in deparser
         if (uses_i.is_deparsed(&f) && !(f.metadata && !f.bridged) && !f.pov)
             f.set_deparsed(true);
+    //
+    // CCGF fields are either:
+    // all fields from the same header, in which case they're all deparsed or not as a group,
+    // or all metadata fields, in which case some may be deparsed (bridged) and some not.
+    // hence we do not to set the deparsed bit on an entire CCGF if any field is deparsed
 }
 
 //
@@ -476,13 +481,7 @@ void Cluster::MakeClusters::compute_fields_no_use_mau() {
         // need PHV container(s) space for ccgf_width
         if (field.is_ccgf())
             field.set_ccgf_phv_use_width();
-        // set deparsed for ccgf owner
-        // if any member used in deparser, ccgf must be in exact containers
-        if (field.ccgf()) {
-            for (auto &m : field.ccgf_fields()) {
-                if (m->deparsed()) {
-                    field.set_deparsed(true);
-                    break; } } } }
+    }
 
     self.pov_fields_i.assign(pov_fields.begin(), pov_fields.end());         // self.pov_fields_i
     LOG3(std::endl << "..........All fields (" << all_fields.size() << ")..........");

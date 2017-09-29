@@ -221,6 +221,8 @@ Cluster_PHV::set_exact_containers() {
             exact_containers_i = false;
             break;
         }
+        // deparsed header fields need exact containers as they go out on the wire
+        // metadata does not go on the wire so exactness can be relaxed
         if (field->deparsed()
             && !field->metadata
             && (field->phv_use_width() % int(PHV::Size::b8) == 0)) {
