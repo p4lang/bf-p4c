@@ -137,8 +137,9 @@ struct HalfOpenRange {
 
     HalfOpenRange() : lo(0), hi(0) { }
     HalfOpenRange(int lo, int hi) : lo(lo), hi(hi) { }
-    HalfOpenRange(FromTo&& fromTo) : lo(fromTo.from), hi(fromTo.to + 1) { }
-    HalfOpenRange(StartLen&& startLen)
+    HalfOpenRange(FromTo&& fromTo)  // NOLINT(runtime/explicit)
+      : lo(fromTo.from), hi(fromTo.to + 1) { }
+    HalfOpenRange(StartLen&& startLen)  // NOLINT(runtime/explicit)
       : lo(startLen.start), hi(startLen.start + startLen.len) { }
     explicit HalfOpenRange(std::pair<int, int> range)
       : lo(range.first), hi(range.second) { }
@@ -361,8 +362,9 @@ struct ClosedRange {
 
     ClosedRange() : lo(0), hi(0) { }
     ClosedRange(int lo, int hi) : lo(lo), hi(hi) { }
-    ClosedRange(FromTo&& fromTo) : lo(fromTo.from), hi(fromTo.to) { }
-    ClosedRange(StartLen&& startLen)
+    ClosedRange(FromTo&& fromTo)  // NOLINT(runtime/explicit)
+      : lo(fromTo.from), hi(fromTo.to) { }
+    ClosedRange(StartLen&& startLen)  // NOLINT(runtime/explicit)
       : lo(startLen.start), hi(startLen.start + startLen.len - 1) { }
     explicit ClosedRange(std::pair<int, int> range)
       : lo(range.first), hi(range.second) { }
