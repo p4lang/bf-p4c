@@ -195,7 +195,7 @@ void Parser::process() {
         tmp &= phv_use[EGRESS];
         for (int reg : tmp)
             error(lineno[0], "Phv register %s(R%d) used by both ingress and egress",
-                  Phv::reg(reg).name, reg); }
+                  Phv::reg(reg)->name, reg); }
     for (auto &reg : multi_write)
         if (reg.check())
             phv_allow_multi_write[reg->reg.parser_id()] = 1;
@@ -215,9 +215,9 @@ void Parser::output(json::map & ctxt_json) {
     if (error_count > 0) return;
     tcam_row_use[INGRESS] = tcam_row_use[EGRESS] = PARSER_TCAM_DEPTH;
     switch (options.target) {
-#define SWITCH_FOR_TARGET(ETAG, TTYPE)                                   \
-    case ETAG: {                                                         \
-        TTYPE::parser_regs       regs;                                   \
+#define SWITCH_FOR_TARGET(TARGET)                                        \
+    case Target::TARGET::tag: {                                          \
+        Target::TARGET::parser_regs       regs;                          \
         declare_registers(&regs);                                        \
         write_config(regs);                                              \
         undeclare_registers(&regs);                                      \

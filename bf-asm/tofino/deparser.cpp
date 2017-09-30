@@ -26,18 +26,20 @@ template<> void Deparser::write_config(Target::Tofino::deparser_regs &regs) {
 
     output_phv_ownership(phv_use, regs.input.iir.ingr.phv8_grp, regs.input.iir.ingr.phv8_split,
                          regs.input.ier.egr.phv8_grp, regs.input.ier.egr.phv8_split,
-                         FIRST_8BIT_PHV, COUNT_8BIT_PHV);
+                         Target::Tofino::Phv::FIRST_8BIT_PHV, Target::Tofino::Phv::COUNT_8BIT_PHV);
     output_phv_ownership(phv_use, regs.input.iir.ingr.phv16_grp, regs.input.iir.ingr.phv16_split,
                          regs.input.ier.egr.phv16_grp, regs.input.ier.egr.phv16_split,
-                         FIRST_16BIT_PHV, COUNT_16BIT_PHV);
+                         Target::Tofino::Phv::FIRST_16BIT_PHV,
+                         Target::Tofino::Phv::COUNT_16BIT_PHV);
     output_phv_ownership(phv_use, regs.input.iir.ingr.phv32_grp, regs.input.iir.ingr.phv32_split,
                          regs.input.ier.egr.phv32_grp, regs.input.ier.egr.phv32_split,
-                         FIRST_32BIT_PHV, COUNT_32BIT_PHV);
+                         Target::Tofino::Phv::FIRST_32BIT_PHV,
+                         Target::Tofino::Phv::COUNT_32BIT_PHV);
 
     for (unsigned i = 0; i < 8; i++) {
-        if (phv_use[EGRESS].intersects(Phv::tagalong_groups[i])) {
+        if (phv_use[EGRESS].intersects(Target::Tofino::Phv::tagalong_groups[i])) {
             regs.input.icr.tphv_cfg.i_e_assign |= 1 << i;
-            if (phv_use[INGRESS].intersects(Phv::tagalong_groups[i])) {
+            if (phv_use[INGRESS].intersects(Target::Tofino::Phv::tagalong_groups[i])) {
                 error(lineno[INGRESS], "tagalong group %d used in both ingress and "
                       "egress deparser", i); } } }
 

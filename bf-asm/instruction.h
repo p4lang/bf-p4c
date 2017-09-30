@@ -17,12 +17,13 @@ struct Instruction {
     virtual void dbprint(std::ostream &) const = 0;
     virtual bool equiv(Instruction *a) = 0;
     virtual void phvRead(std::function<void (const Phv::Slice &sl)>) = 0;
-#define VIRTUAL_TARGET_METHODS(ETAG, TTYPE) \
-    virtual void write_regs(TTYPE::mau_regs &, Table *, Table::Actions::Action *) = 0;
+#define VIRTUAL_TARGET_METHODS(TARGET) \
+    virtual void write_regs(Target::TARGET::mau_regs &, Table *, Table::Actions::Action *) = 0;
     FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
 #undef VIRTUAL_TARGET_METHODS
-#define DECLARE_FORWARD_VIRTUAL_INSTRUCTION_WRITE_REGS(ETAG, TTYPE)                             \
-    void write_regs(TTYPE::mau_regs &regs, Table *tbl, Table::Actions::Action *act) override;
+#define DECLARE_FORWARD_VIRTUAL_INSTRUCTION_WRITE_REGS(TARGET)                          \
+    void write_regs(Target::TARGET::mau_regs &regs, Table *tbl,                         \
+                    Table::Actions::Action *act) override;
     static Instruction *decode(Table *, const Table::Actions::Action *, const VECTOR(value_t) &);
 
     enum instruction_set_t { VLIW_ALU=0, STATEFUL_ALU=1, NUM_SETS=2 };

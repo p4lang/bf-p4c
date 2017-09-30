@@ -4,42 +4,26 @@
 #include <iostream>
 
 Phv Phv::phv;
-const Phv::Register Phv::Slice::invalid = { "<bad>", Phv::Register::NORMAL, 0, 0 };
+const Phv::Register Phv::Slice::invalid("<bad>", Phv::Register::NORMAL, 0, ~0, 0);
 
-static bitvec tagalong_group(int n) {
-    bitvec rv;
-    rv.setrange(FIRST_8BIT_TPHV + n*(COUNT_8BIT_TPHV/8), COUNT_8BIT_TPHV/8);
-    rv.setrange(FIRST_16BIT_TPHV + n*(COUNT_16BIT_TPHV/8), COUNT_16BIT_TPHV/8);
-    rv.setrange(FIRST_32BIT_TPHV + n*(COUNT_32BIT_TPHV/8), COUNT_32BIT_TPHV/8);
-    return rv; }
-const bitvec Phv::tagalong_groups[8] = { tagalong_group(0), tagalong_group(1), tagalong_group(2),
-    tagalong_group(3), tagalong_group(4), tagalong_group(5), tagalong_group(6), tagalong_group(7) };
-
-Phv::Phv() : Section("phv") {
-    static const struct { char code[4]; unsigned size, count; } sizes[] =
-        { { "W", 32, 64 }, { "B", 8, 64 }, { "H", 16, 96 }, { "", 0, 32 },
-          { "TW", 32, 32 }, { "TB", 8, 32 }, { "TH", 16, 48 } };
-    int idx = 0;
-    regs.resize(NUM_PHV_REGS);
-    for (unsigned i = 0; i < sizeof sizes/sizeof *sizes; i++) {
-        for (unsigned j = 0; j < sizes[i].count; j++, idx++) {
-            char buf[8];
-            memset(regs[idx].name, 0, sizeof(regs[idx].name));
-            regs[idx].type = regs[idx].name[0] == 'T' ? Register::TAGALONG : Register::NORMAL;
-            regs[idx].uid = idx;
-            regs[idx].size = sizes[i].size;
-            if (sizes[i].size) {
-                sprintf(buf, "R%d", idx);
-                names[INGRESS].emplace(buf, Slice(regs[idx], 0, sizes[i].size - 1));
-                names[EGRESS].emplace(buf, Slice(regs[idx], 0, sizes[i].size - 1));
-                sprintf(buf, "%s%d", sizes[i].code, j);
-                strcpy(regs[idx].name, buf);
-                names[INGRESS].emplace(buf, Slice(regs[idx], 0, sizes[i].size - 1));
-                names[EGRESS].emplace(buf, Slice(regs[idx], 0, sizes[i].size - 1)); } } }
-    assert(idx == NUM_PHV_REGS);
+void Phv::init_phv(target_t target_type) {
+    if (target) {
+        assert(target->type() == target_type);  // sanity check
+        return; }
+    switch (target_type) {
+#define INIT_FOR_TARGET(TARGET)                                         \
+    case Target::TARGET::tag:                                           \
+        target = new Target::TARGET::Phv;                               \
+        break;
+    FOR_ALL_TARGETS(INIT_FOR_TARGET)
+    default:
+        assert(0); }
+#undef INIT_FOR_TARGET
+    target->init_regs(*this);
 }
 
 void Phv::start(int lineno, VECTOR(value_t) args) {
+    init_phv(options.target);
     if (args.size > 1 ||
         (args.size == 1 && args[0] != "ingress" && args[0] != "egress"))
         error(lineno, "phv can only be ingress or egress");
@@ -199,7 +183,7 @@ std::string Phv::db_regset(const bitvec &s) {
     std::string rv;
     for (int reg : s) {
         if (!rv.empty()) rv += ", ";
-        rv += Phv::reg(reg).name; }
+        rv += Phv::reg(reg)->name; }
     return rv;
 }
 
@@ -308,3 +292,9 @@ void Phv::output(json::map &ctxt_json) {
     //    phv_alloc_stage["stage_number"] = i;
     //    phv_alloc.push_back(std::move(phv_alloc_stage.clone())); }
 }
+
+#include "tofino/phv.cpp"
+#if HAVE_JBAY
+#include "jbay/phv.cpp"
+#endif // HAVE_JBAY
+

@@ -16,7 +16,6 @@ class Deparser : public Section {
     static Deparser singleton_object;
 public:
     class RefOrChksum : public Phv::Ref {
-        static Phv::Register checksum_units[2*DEPARSER_CHECKSUM_UNITS];
     public:
         RefOrChksum(gress_t g, const value_t &v) : Phv::Ref(g, v) {}
         bool check() const;

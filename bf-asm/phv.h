@@ -2,50 +2,42 @@
 #define _phv_h_
 
 #include "sections.h"
+#include "bfas.h"
 #include "bitvec.h"
 #include "json.h"
 #include "misc.h"
+#include "target.h"
 #include <set>
 #include <vector>
-
-enum {
-    NUM_PHV_REGS = 368,
-    FIRST_8BIT_PHV = 64,
-    COUNT_8BIT_PHV = 64,
-    FIRST_16BIT_PHV = 128,
-    COUNT_16BIT_PHV = 96,
-    FIRST_32BIT_PHV = 0,
-    COUNT_32BIT_PHV = 64,
-    FIRST_TPHV = 256,
-    FIRST_8BIT_TPHV = 288,
-    COUNT_8BIT_TPHV = 32,
-    FIRST_16BIT_TPHV = 320,
-    COUNT_16BIT_TPHV = 48,
-    FIRST_32BIT_TPHV = 256,
-    COUNT_32BIT_TPHV = 32,
-};
 
 class Phv : public Section {
     void start(int lineno, VECTOR(value_t) args);
     void input(VECTOR(value_t) args, value_t data);
     void output(json::map &);
-    Phv();
+    Phv() : Section("phv") {}
     Phv(const Phv &) = delete;
     Phv &operator=(const Phv &) = delete;
     ~Phv() {}
     static Phv phv;  // singleton class
+    Target::Phv *target = nullptr;
+    FOR_ALL_TARGETS(FRIEND_TARGET_CLASS, ::Phv)
 public:
     struct Register {
         char                                            name[8];
         enum type_t { NORMAL, TAGALONG, CHECKSUM, MOCHA, DARK }   type;
         // FIXME-PHV  various places depend on the uids matching container encoding
-        unsigned short                                  uid, size;
+        unsigned short                                  index, uid, size;
+        Register() {}
+        Register(const Register &) = delete;
+        Register &operator=(const Register &) = delete;
+        Register(const char *n, type_t t, unsigned i, unsigned u, unsigned s)
+        : type(t), index(i), uid(u), size(s) { strncpy(name, n, sizeof(name)); name[7] = 0; }
         bool operator==(const Register &a) const { return uid == a.uid; }
         bool operator!=(const Register &a) const { return uid != a.uid; }
         bool operator<(const Register &a) const { return uid < a.uid; }
-        unsigned parser_id() const { return uid; }
-        unsigned mau_id() const { return uid; }
-        unsigned deparser_id() const { return uid; }
+        virtual int parser_id() const { return -1; }
+        virtual int mau_id() const { return -1; }
+        virtual int deparser_id() const { return -1; }
     };
     class Slice {
         static const Register invalid;
@@ -79,18 +71,21 @@ public:
         unsigned size() const { return valid ? hi - lo + 1 : 0; }
         void dbprint(std::ostream &out) const;
     };
-private:
-    std::vector<Register> regs;
+protected:
+    std::vector<Register *> regs;
     std::map<std::string, Slice> names[2];
+private:
     std::map<const Register *, std::pair<gress_t, std::vector<std::string>>, ptrless<Register>>
                 user_defined;
     bitvec      phv_use[2];
     std::map<std::string, int> phv_field_sizes [2];
+    void init_phv(target_t);
     void gen_phv_field_size_map();
     int addreg(gress_t gress, const char *name, const value_t &what);
     int get_position_offset(gress_t gress, std::string name);
 public:
     static const Slice *get(gress_t gress, const std::string &name) {
+        phv.init_phv(options.target);
         auto it = phv.names[gress].find(name);
         if (it == phv.names[gress].end()) return 0;
         return &it->second; }
@@ -124,13 +119,10 @@ public:
             if (name_ == a.name_ && lo == a.lo && hi == a.hi)
                 return true;
             return **this == *a; }
-        bool check(bool mau = false) const {
+        bool check() const {
             if (auto *s = phv.get(gress, name_)) {
                 if (hi >= 0 && !Slice(*s, lo, hi).valid) {
                     error(lineno, "Invalid slice of %s", name_.c_str());
-                    return false; }
-                if (mau && s->reg.uid >= FIRST_TPHV) {
-                    error(lineno, "Can't access tagalong phv in mau: %s", name_.c_str());
                     return false; }
                 return true;
             } else if (lineno >= 0)
@@ -146,19 +138,33 @@ public:
         bool merge(const Ref &r);
         void dbprint(std::ostream &out) const;
     };
-    static const Register &reg(int idx)
-        { assert(idx >= 0 && idx < NUM_PHV_REGS); return phv.regs[idx]; }
+    static const Register *reg(int idx)
+        { assert(idx >= 0 && size_t(idx) < phv.regs.size()); return phv.regs[idx]; }
     static const bitvec &use(gress_t gress) { return phv.phv_use[gress]; }
-    static const bitvec tagalong_groups[8];
     static void setuse(gress_t gress, const bitvec &u) { phv.phv_use[gress] |= u; }
     static void unsetuse(gress_t gress, const bitvec &u) { phv.phv_use[gress] -= u; }
     static void output_names(json::map &);
     static std::string db_regset(const bitvec &s);
+    static unsigned mau_groupsize();
 };
 
 extern void merge_phv_vec(std::vector<Phv::Ref> &vec, const Phv::Ref &r);
 extern void merge_phv_vec(std::vector<Phv::Ref> &v1, const std::vector<Phv::Ref> &v2);
 extern std::vector<Phv::Ref> split_phv_bytes(const Phv::Ref &r);
 extern std::vector<Phv::Ref> split_phv_bytes(const std::vector<Phv::Ref> &v);
+
+class Target::Phv {
+    friend class ::Phv;
+    virtual void init_regs(::Phv &) = 0;
+    virtual target_t type() const = 0;
+    virtual unsigned mau_groupsize() const = 0;
+};
+
+inline unsigned Phv::mau_groupsize() { return phv.target->mau_groupsize(); }
+
+#include "tofino/phv.h"
+#if HAVE_JBAY
+#include "jbay/phv.h"
+#endif // HAVE_JBAY
 
 #endif /* _phv_h_ */

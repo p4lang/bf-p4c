@@ -179,8 +179,8 @@ void AsmStage::output(json::map &ctxt_json) {
 
     for (unsigned i = 0; i < stage.size(); i++) {
         switch (options.target) {
-#define SWITCH_FOR_TARGET(ETAG, TTYPE) \
-        case ETAG: stage[i].output<TTYPE>(ctxt_json); break;
+#define SWITCH_FOR_TARGET(TARGET) \
+        case Target::TARGET::tag: stage[i].output<Target::TARGET>(ctxt_json); break;
         FOR_ALL_TARGETS(SWITCH_FOR_TARGET)
 #undef SWITCH_FOR_TARGET
         default: assert(0); } }

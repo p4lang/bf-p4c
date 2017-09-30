@@ -15,7 +15,7 @@ template<> void VLIWInstruction::write_regs(Target::Tofino::mau_regs &regs,
     unsigned bits = encode();
     assert(slot >= 0);
     LOG2(this);
-    switch (Phv::reg(slot).size) {
+    switch (Phv::reg(slot)->size) {
     case 8:
         imem.imem_subword8[slot-64][iaddr].imem_subword8_instr = bits;
         imem.imem_subword8[slot-64][iaddr].imem_subword8_color = color;

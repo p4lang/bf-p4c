@@ -15,7 +15,10 @@ static bitvec crc(bitvec poly, bitvec val) {
 }
 
 static bool check_ixbar(Phv::Ref &ref, InputXbar *ix, int grp) {
-    if (!ref.check(true)) return false;
+    if (!ref.check()) return false;
+    if (ref->reg.mau_id() < 0) {
+        error(ref.lineno, "%s not accessable in mau", ref->reg.name);
+        return false; }
     if (auto *in = ix->find_exact(*ref, grp))
         return in->lo >= 0;
     else error(ref.lineno, "%s not in group %d", ref.name(), grp);

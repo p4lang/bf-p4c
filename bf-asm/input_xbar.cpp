@@ -256,7 +256,9 @@ void InputXbar::pass1() {
     for (auto &group : groups) {
         auto size = group.first.ternary ? TCAM_XBAR_GROUP_SIZE : EXACT_XBAR_GROUP_SIZE;
         for (auto &input : group.second) {
-            if (!input.what.check(true)) continue;
+            if (!input.what.check()) continue;
+            if (input.what->reg.mau_id() < 0)
+                error(input.what.lineno, "%s not accessable in mau", input.what->reg.name);
             table->stage->match_use[table->gress][input.what->reg.uid] = 1;
             if (input.lo >= 0) {
                 if (input.hi >= 0) {
@@ -429,15 +431,15 @@ void InputXbar::write_regs(REGS &regs) {
             bool hi_enable = false;
             switch (input.what->reg.size) {
             case 8:
-                word_group = (input.what->reg.mau_id()-FIRST_8BIT_PHV) / 8U;
-                word_index = (input.what->reg.mau_id()-FIRST_8BIT_PHV) % 8U
+                word_group = (input.what->reg.mau_id()-Target::Tofino::Phv::FIRST_8BIT_PHV) / 8U;
+                word_index = (input.what->reg.mau_id()-Target::Tofino::Phv::FIRST_8BIT_PHV) % 8U
                            + (word_group & 4) * 2;
                 swizzle_mask = 0;
                 break;
             case 16:
-                word_group = (input.what->reg.mau_id()-FIRST_16BIT_PHV) / 12;
-                word_index = (input.what->reg.mau_id()-FIRST_16BIT_PHV) % 12 + 16
-                           + (word_group & 4) * 3;
+                word_group = (input.what->reg.mau_id()-Target::Tofino::Phv::FIRST_16BIT_PHV) / 12;
+                word_index = (input.what->reg.mau_id()-Target::Tofino::Phv::FIRST_16BIT_PHV) % 12
+                           + 16 + (word_group & 4) * 3;
                 swizzle_mask = 1;
                 break;
             case 32:

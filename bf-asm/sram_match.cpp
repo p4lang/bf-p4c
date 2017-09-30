@@ -166,7 +166,10 @@ void SRamMatchTable::verify_format() {
                                     continue; } }
                             group_info[group].tofino_mask[word] |= 1 << (14 + nibble);
                             LOG1("      adding to group " << group); } } } } }
-    for (auto &r : match) r.check(true);
+    for (auto &r : match) {
+        r.check();
+        if (r->reg.mau_id() < 0)
+            error(r.lineno, "%s not accessable in mau", r->reg.name); }
     if (error_count > 0) return;
     auto match_format = format->field("match");
     if (match_format && match.empty())

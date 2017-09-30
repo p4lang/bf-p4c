@@ -73,13 +73,19 @@ struct operand {
                 return reg == a->reg;
             } else return false; }
         Phv *clone() override { return new Phv(*this); }
-        bool check() override { return reg.check(true); }
-        int phvGroup() override { return reg->reg.mau_id() / 16; }
+        bool check() override {
+            if (!reg.check()) return false;
+            if (reg->reg.mau_id() < 0) {
+                error(reg.lineno, "%s not accessable in mau", reg->reg.name);
+                return false; }
+            return true;
+        }
+        int phvGroup() override { return reg->reg.mau_id() / ::Phv::mau_groupsize(); }
         int bits(int group) override {
             if (group != phvGroup()) {
                 error(lineno, "registers in an instruction must all be in the same phv group");
                 return -1; }
-            return reg->reg.mau_id() % 16; }
+            return reg->reg.mau_id() % ::Phv::mau_groupsize(); }
         unsigned bitoffset(int group) const override { return reg->lo; }
         void mark_use(Table *tbl) override {
             tbl->stage->action_use[tbl->gress][reg->reg.uid] = true; }
@@ -409,8 +415,8 @@ struct AluOP : VLIWInstruction {
     std::string name() { return opc->name; };
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
     void pass2(Table *tbl, Table::Actions::Action *) {
-        src1->pass2(slot/16);
-        src2->pass2(slot/16); }
+        src1->pass2(slot/Phv::mau_groupsize());
+        src2->pass2(slot/Phv::mau_groupsize()); }
     int encode();
     bool equiv(Instruction *a_);
     void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) {
@@ -490,7 +496,10 @@ Instruction *AluOP3Src::Decode::decode(Table *tbl, const Table::Actions::Action 
 }
 
 Instruction *AluOP::pass1(Table *tbl, Table::Actions::Action *) {
-    if (!dest.check(true) || !src1.check() || !src2.check()) return this;
+    if (!dest.check() || !src1.check() || !src2.check()) return this;
+    if (dest->reg.mau_id() < 0) {
+        error(dest.lineno, "%s not accessable in mau", dest->reg.name);
+        return this; }
     if (dest->lo || dest->hi != dest->reg.size-1) {
         error(lineno, "ALU ops cannot operate on slices");
         return this; }
@@ -514,17 +523,17 @@ Instruction *AluOP3Src::pass1(Table *tbl, Table::Actions::Action *act) {
 }
 void AluOP3Src::pass2(Table *tbl, Table::Actions::Action *act) {
     AluOP::pass2(tbl, act);
-    src3->pass2(slot/16);
+    src3->pass2(slot/Phv::mau_groupsize());
     if (auto s1 = src1.to<operand::Action>()) {
         auto s3 = src3.to<operand::Action>();
-        if (s1->bits(slot/16) + 1 != s3->bits(slot/16))
+        if (s1->bits(slot/Phv::mau_groupsize()) + 1 != s3->bits(slot/Phv::mau_groupsize()))
             error(lineno, "src1 and src3 must be adjacent on the action bus");
     } else {
         error(lineno, "src1 must be on the action bus"); }
 }
 
 int AluOP::encode() {
-    return (opc->opcode << 10) | (src1.bits(slot/16) << 4) | src2.bits(slot/16);
+    return (opc->opcode << 10) | (src1.bits(slot/Phv::mau_groupsize()) << 4) | src2.bits(slot/Phv::mau_groupsize());
 }
 bool AluOP::equiv(Instruction *a_) {
     if (auto *a = dynamic_cast<AluOP *>(a_)) {
@@ -567,12 +576,15 @@ Instruction *LoadConst::Decode::decode(Table *tbl, const Table::Actions::Action 
 }
 
 Instruction *LoadConst::pass1(Table *tbl, Table::Actions::Action *) {
-    if (!dest.check(true)) return this;
+    if (!dest.check()) return this;
+    if (dest->reg.mau_id() < 0) {
+        error(dest.lineno, "%s not accessable in mau", dest->reg.name);
+        return this; }
     if (dest->lo || dest->hi != dest->reg.size-1) {
         error(lineno, "load-const cannot operate on slices");
         return this; }
     slot = dest->reg.mau_id();
-    int size = Phv::reg(slot).size;
+    int size = Phv::reg(slot)->size;
     if (size > 23) size = 23;
     if (src >= (1 << size) || src < -(1 << (size-1)))
         error(lineno, "Constant value %d out of range", src);
@@ -615,8 +627,8 @@ struct CondMoveMux : VLIWInstruction {
     std::string name() { return opc->name; }
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
     void pass2(Table *tbl, Table::Actions::Action *) {
-        src1->pass2(slot/16);
-        src2->pass2(slot/16); }
+        src1->pass2(slot/Phv::mau_groupsize());
+        src2->pass2(slot/Phv::mau_groupsize()); }
     int encode();
     bool equiv(Instruction *a_);
     void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) {
@@ -657,7 +669,10 @@ Instruction *CondMoveMux::Decode::decode(Table *tbl, const Table::Actions::Actio
 }
 
 Instruction *CondMoveMux::pass1(Table *tbl, Table::Actions::Action *) {
-    if (!dest.check(true) || !src1.check() || !src2.check()) return this;
+    if (!dest.check() || !src1.check() || !src2.check()) return this;
+    if (dest->reg.mau_id() < 0) {
+        error(dest.lineno, "%s not accessable in mau", dest->reg.name);
+        return this; }
     slot = dest->reg.mau_id();
     tbl->stage->action_set[tbl->gress][dest->reg.uid] = true;
     src1.mark_use(tbl);
@@ -667,8 +682,8 @@ Instruction *CondMoveMux::pass1(Table *tbl, Table::Actions::Action *) {
 int CondMoveMux::encode() {
     /* funny cond test on src2 is to match the compiler output -- if we're not testing
      * src2 validity, what we specify as src2 is irrelevant */
-    return (cond << 15) | (opc->opcode << 10) | (src1.bits(slot/16) << 4) |
-        (cond & 0x40 ? src2.bits(slot/16) : 0);
+    return (cond << 15) | (opc->opcode << 10) | (src1.bits(slot/Phv::mau_groupsize()) << 4) |
+        (cond & 0x40 ? src2.bits(slot/Phv::mau_groupsize()) : 0);
 }
 bool CondMoveMux::equiv(Instruction *a_) {
     if (auto *a = dynamic_cast<CondMoveMux *>(a_)) {
@@ -698,8 +713,8 @@ struct DepositField : VLIWInstruction {
     std::string name() { return "deposit_field"; }
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
     void pass2(Table *tbl, Table::Actions::Action *) {
-        src1->pass2(slot/16);
-        src2->pass2(slot/16); }
+        src1->pass2(slot/Phv::mau_groupsize());
+        src2->pass2(slot/Phv::mau_groupsize()); }
     int encode();
     bool equiv(Instruction *a_);
     void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) {
@@ -731,7 +746,10 @@ Instruction *DepositField::Decode::decode(Table *tbl, const Table::Actions::Acti
 }
 
 Instruction *DepositField::pass1(Table *tbl, Table::Actions::Action *) {
-    if (!dest.check(true) || !src1.check() || !src2.check()) return this;
+    if (!dest.check() || !src1.check() || !src2.check()) return this;
+    if (dest->reg.mau_id() < 0) {
+        error(dest.lineno, "%s not accessable in mau", dest->reg.name);
+        return this; }
     slot = dest->reg.mau_id();
     tbl->stage->action_set[tbl->gress][dest->reg.uid] = true;
     src1.mark_use(tbl);
@@ -739,11 +757,11 @@ Instruction *DepositField::pass1(Table *tbl, Table::Actions::Action *) {
     return this;
 }
 int DepositField::encode() {
-    unsigned rot = (dest->reg.size - dest->lo + src1.bitoffset(slot/16)) % dest->reg.size;
-    int bits = (1 << 10) | (src1.bits(slot/16) << 4) | src2.bits(slot/16);
+    unsigned rot = (dest->reg.size - dest->lo + src1.bitoffset(slot/Phv::mau_groupsize())) % dest->reg.size;
+    int bits = (1 << 10) | (src1.bits(slot/Phv::mau_groupsize()) << 4) | src2.bits(slot/Phv::mau_groupsize());
     bits |= dest->hi << 11;
     bits |= rot << 16;
-    switch (Phv::reg(slot).size) {
+    switch (Phv::reg(slot)->size) {
     case 8:
         bits |= (dest->lo & 3) << 14;
         bits |= (dest->lo & ~3) << 17;
@@ -779,7 +797,7 @@ struct Set : VLIWInstruction {
         : VLIWInstruction(d.lineno), dest(tbl->gress, d), src(tbl, act, s) {}
     std::string name() { return "set"; };
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
-    void pass2(Table *tbl, Table::Actions::Action *) { src->pass2(slot/16); }
+    void pass2(Table *tbl, Table::Actions::Action *) { src->pass2(slot/Phv::mau_groupsize()); }
     int encode();
     bool equiv(Instruction *a_);
     void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) { src.phvRead(fn); }
@@ -808,7 +826,10 @@ Instruction *Set::Decode::decode(Table *tbl, const Table::Actions::Action *act,
 }
 
 Instruction *Set::pass1(Table *tbl, Table::Actions::Action *act) {
-    if (!dest.check(true) || !src.check()) return this;
+    if (!dest.check() || !src.check()) return this;
+    if (dest->reg.mau_id() < 0) {
+        error(dest.lineno, "%s not accessable in mau", dest->reg.name);
+        return this; }
     if (dest->lo || dest->hi != dest->reg.size-1)
         return (new DepositField(*this))->pass1(tbl, act);
     if (auto *k = src.to<operand::Const>())
@@ -820,7 +841,7 @@ Instruction *Set::pass1(Table *tbl, Table::Actions::Action *act) {
     return this;
 }
 int Set::encode() {
-    return (opA.opcode << 10) | (src.bits(slot/16) << 4) | (slot & 0xf);
+    return (opA.opcode << 10) | (src.bits(slot/Phv::mau_groupsize()) << 4) | (slot & 0xf);
 }
 bool Set::equiv(Instruction *a_) {
     if (auto *a = dynamic_cast<Set *>(a_)) {
@@ -861,7 +882,10 @@ Instruction *NulOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
 }
 
 Instruction *NulOP::pass1(Table *tbl, Table::Actions::Action *) {
-    if (!dest.check(true)) return this;
+    if (!dest.check()) return this;
+    if (dest->reg.mau_id() < 0) {
+        error(dest.lineno, "%s not accessable in mau", dest->reg.name);
+        return this; }
     slot = dest->reg.mau_id();
     if (opc->opcode || !options.match_compiler) {
         tbl->stage->action_set[tbl->gress][dest->reg.uid] = true; }
@@ -902,8 +926,8 @@ struct ShiftOP : VLIWInstruction {
     std::string name() { return opc->name; };
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
     void pass2(Table *tbl, Table::Actions::Action *) {
-        src1->pass2(slot/16);
-        src2->pass2(slot/16); }
+        src1->pass2(slot/Phv::mau_groupsize());
+        src2->pass2(slot/Phv::mau_groupsize()); }
     int encode();
     bool equiv(Instruction *a_);
     void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) {
@@ -934,7 +958,10 @@ Instruction *ShiftOP::Decode::decode(Table *tbl, const Table::Actions::Action *a
 }
 
 Instruction *ShiftOP::pass1(Table *tbl, Table::Actions::Action *) {
-    if (!dest.check(true) || !src1.check() || !src2.check()) return this;
+    if (!dest.check() || !src1.check() || !src2.check()) return this;
+    if (dest->reg.mau_id() < 0) {
+        error(dest.lineno, "%s not accessable in mau", dest->reg.name);
+        return this; }
     if (dest->lo || dest->hi != dest->reg.size-1) {
         error(lineno, "shift ops cannot operate on slices");
         return this; }
@@ -947,8 +974,8 @@ Instruction *ShiftOP::pass1(Table *tbl, Table::Actions::Action *) {
     return this;
 }
 int ShiftOP::encode() {
-    int rv = (shift << 16) | (opc->opcode << 10) | src2.bits(slot/16);
-    if (opc->use_src1 || options.match_compiler) rv |= src1.bits(slot/16) << 4;
+    int rv = (shift << 16) | (opc->opcode << 10) | src2.bits(slot/Phv::mau_groupsize());
+    if (opc->use_src1 || options.match_compiler) rv |= src1.bits(slot/Phv::mau_groupsize()) << 4;
     return rv;
 }
 bool ShiftOP::equiv(Instruction *a_) {

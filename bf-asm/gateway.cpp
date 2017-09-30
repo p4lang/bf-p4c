@@ -157,8 +157,10 @@ static void check_match_key(Table *tbl, std::vector<GatewayTable::MatchKey> &vec
                             const char *name, unsigned max)
 {
     for (unsigned i = 0; i < vec.size(); i++) {
-        if (!vec[i].val.check(true))
+        if (!vec[i].val.check())
             break;
+        if (vec[i].val->reg.mau_id() < 0)
+            error(vec[i].val.lineno, "%s not accessable in mau", vec[i].val->reg.name);
         if (vec[i].offset >= 0) {
             for (unsigned j = 0; j < i; ++j) {
                 if (vec[i].offset < vec[j].offset + (int)vec[j].val->size() &&

@@ -346,7 +346,7 @@ template<> void Parser::write_config(Target::Tofino::parser_regs &regs) {
         phv_use[INGRESS] |= Phv::use(INGRESS);
         phv_use[EGRESS] |= Phv::use(EGRESS); }
     for (int i : phv_use[EGRESS]) {
-        auto id = Phv::reg(i).parser_id();
+        auto id = Phv::reg(i)->parser_id();
         if (id >= 256) {
             regs.merge.phv_owner.t_owner[id-256] = 1;
             regs.ingress.prsr_reg.phv_owner.t_owner[id-256] = 1;

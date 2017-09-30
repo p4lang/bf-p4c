@@ -305,25 +305,26 @@ public:
     int table_id() const;
     virtual void pass1() = 0;
     virtual void pass2() = 0;
-#define VIRTUAL_TARGET_METHODS(ETAG, TTYPE) \
-    virtual void write_merge_regs(TTYPE::mau_regs &, int type, int bus) { assert(0); }          \
-    virtual void write_merge_regs(TTYPE::mau_regs &, MatchTable *match, int type, int bus,      \
-                                  const std::vector<Call::Arg> &args) { assert(0); }            \
-    virtual void write_regs(TTYPE::mau_regs &) = 0;
+#define VIRTUAL_TARGET_METHODS(TARGET) \
+    virtual void write_merge_regs(Target::TARGET::mau_regs &, int type, int bus) { assert(0); } \
+    virtual void write_merge_regs(Target::TARGET::mau_regs &, MatchTable *match, int type,      \
+                                  int bus, const std::vector<Call::Arg> &args) { assert(0); }   \
+    virtual void write_regs(Target::TARGET::mau_regs &) = 0;
 FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
 #undef VIRTUAL_TARGET_METHODS
-#define FORWARD_VIRTUAL_TABLE_WRITE_REGS(ETAG, TTYPE)                                           \
-    void write_regs(TTYPE::mau_regs &regs) override { write_regs<TTYPE::mau_regs>(regs); }
-#define FORWARD_VIRTUAL_TABLE_WRITE_MERGE_REGS(ETAG, TTYPE)                                     \
-    void write_merge_regs(TTYPE::mau_regs &regs, int type, int bus) override {                  \
-        write_merge_regs<TTYPE::mau_regs>(regs, type, bus); }
-#define FORWARD_VIRTUAL_TABLE_WRITE_MERGE_REGS_WITH_ARGS(ETAG, TTYPE)                           \
-    void write_merge_regs(TTYPE::mau_regs &regs, MatchTable *match, int type, int bus,          \
-                          const std::vector<Call::Arg> &args) override {                        \
-        write_merge_regs<TTYPE::mau_regs>(regs, match, type, bus, args); }
-#define MAKE_ABSTRACT_TABLE_WRITE_MERGE_REGS_WITH_ARGS(ETAG, TTYPE)                             \
-    void write_merge_regs(TTYPE::mau_regs &regs, MatchTable *match, int type, int bus,          \
-                          const std::vector<Call::Arg> &args) override = 0;
+#define FORWARD_VIRTUAL_TABLE_WRITE_REGS(TARGET)                                           \
+    void write_regs(Target::TARGET::mau_regs &regs) override {                             \
+                write_regs<Target::TARGET::mau_regs>(regs); }
+#define FORWARD_VIRTUAL_TABLE_WRITE_MERGE_REGS(TARGET)                                     \
+    void write_merge_regs(Target::TARGET::mau_regs &regs, int type, int bus) override {    \
+        write_merge_regs<Target::TARGET::mau_regs>(regs, type, bus); }
+#define FORWARD_VIRTUAL_TABLE_WRITE_MERGE_REGS_WITH_ARGS(TARGET)                           \
+    void write_merge_regs(Target::TARGET::mau_regs &regs, MatchTable *match, int type,     \
+                          int bus, const std::vector<Call::Arg> &args) override {          \
+        write_merge_regs<Target::TARGET::mau_regs>(regs, match, type, bus, args); }
+#define MAKE_ABSTRACT_TABLE_WRITE_MERGE_REGS_WITH_ARGS(TARGET)                             \
+    void write_merge_regs(Target::TARGET::mau_regs &regs, MatchTable *match, int type,     \
+                          int bus, const std::vector<Call::Arg> &args) override = 0;
 
     virtual void gen_tbl_cfg(json::vector &out) = 0;
     virtual void gen_name_lookup(json::map &out) {}

@@ -22,8 +22,8 @@ protected:
         all[gress][name] = this; }
     ~Intrinsic() { all[gress].erase(name); }
 public:
-#define VIRTUAL_TARGET_METHODS(ETAG, TTYPE) \
-    virtual void setregs(TTYPE::deparser_regs &regs, std::vector<Phv::Ref> &vals) = 0;
+#define VIRTUAL_TARGET_METHODS(TARGET) \
+    virtual void setregs(Target::TARGET::deparser_regs &regs, std::vector<Phv::Ref> &vals) = 0;
     FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
 #undef VIRTUAL_TARGET_METHODS
 };
@@ -106,8 +106,8 @@ protected:
         assert(!all[gress].count(name)); all[gress][name] = this; }
     ~Type() { all[gress].erase(name); }
 public:
-#define VIRTUAL_TARGET_METHODS(ETAG, TTYPE) \
-    virtual void setregs(TTYPE::deparser_regs &regs, Deparser::Digest &data) = 0;
+#define VIRTUAL_TARGET_METHODS(TARGET) \
+    virtual void setregs(Target::TARGET::deparser_regs &regs, Deparser::Digest &data) = 0;
     FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
 #undef VIRTUAL_TARGET_METHODS
 };
@@ -270,7 +270,7 @@ void Deparser::process() {
         Phv::setuse(EGRESS, phv_use[EGRESS]); }
 }
 
-static short phv2cksum[NUM_PHV_REGS][2] = {
+static short phv2cksum[Target::Tofino::Phv::NUM_PHV_REGS][2] = {
     {287, 286}, {283, 282}, {279, 278}, {275, 274}, {271, 270}, {267, 266}, {263, 262}, {259, 258},
     {255, 254}, {251, 250}, {247, 246}, {243, 242}, {239, 238}, {235, 234}, {231, 230}, {227, 226},
     {223, 222}, {219, 218}, {215, 214}, {211, 210}, {207, 206}, {203, 202}, {199, 198}, {195, 194},
@@ -322,7 +322,10 @@ static short phv2cksum[NUM_PHV_REGS][2] = {
     {136,  -1}, {137,  -1}, {138,  -1}, {139,  -1}, {140,  -1}, {141,  -1}, {142,  -1}, {143,  -1}
 };
 
-#define TAGALONG_THREAD_BASE    (COUNT_8BIT_TPHV + COUNT_16BIT_TPHV + 2*COUNT_32BIT_TPHV)
+#define TAGALONG_THREAD_BASE \
+    (Target::Tofino::Phv::COUNT_8BIT_TPHV + \
+     Target::Tofino::Phv::COUNT_16BIT_TPHV + \
+     2*Target::Tofino::Phv::COUNT_32BIT_TPHV)
 
 template<typename IPO, typename HPO> static
 void dump_checksum_units(checked_array_base<IPO> &main_csum_units,
@@ -330,7 +333,7 @@ void dump_checksum_units(checked_array_base<IPO> &main_csum_units,
                          gress_t gress,
                          std::vector<Phv::Ref> checksum[DEPARSER_CHECKSUM_UNITS])
 {
-    assert(phv2cksum[NUM_PHV_REGS-1][0] == 143);
+    assert(phv2cksum[Target::Tofino::Phv::NUM_PHV_REGS-1][0] == 143);
     for (int i = 0; i < DEPARSER_CHECKSUM_UNITS; i++) {
         if (checksum[i].empty()) {
             if (!options.match_compiler)
@@ -459,19 +462,19 @@ void output_phv_ownership(bitvec phv_use[2],
             in_grp.val |= 1U << i;
             if (i * group_size >= 16 && i * group_size < 32)
                 error(0, "%s..%s(R%d..R%d) used by ingress deparser but only available to egress",
-                      Phv::reg(reg).name, Phv::reg(reg+group_size-1).name, reg, reg+group_size-1);
+                      Phv::reg(reg)->name, Phv::reg(reg+group_size-1)->name, reg, reg+group_size-1);
             else
                 count++; }
         if (phv_use[EGRESS].getrange(reg, group_size)) {
             eg_grp.val |= 1U << i;
             if (i * group_size < 16)
                 error(0, "%s..%s(R%d..R%d) used by egress deparser but only available to ingress",
-                      Phv::reg(reg).name, Phv::reg(reg+group_size-1).name, reg, reg+group_size-1);
+                      Phv::reg(reg)->name, Phv::reg(reg+group_size-1)->name, reg, reg+group_size-1);
             else
                 count++; }
         if (count > 1)
             error(0, "%s..%s(R%d..R%d) used by both ingress and egress deparser",
-                  Phv::reg(reg).name, Phv::reg(reg+group_size-1).name, reg, reg+group_size-1); }
+                  Phv::reg(reg)->name, Phv::reg(reg+group_size-1)->name, reg, reg+group_size-1); }
     in_split.val = phv_use[INGRESS].getrange(reg, group_size);
     eg_split.val = phv_use[EGRESS].getrange(reg, group_size);
 }
@@ -485,9 +488,9 @@ void Deparser::output(json::map &) {
     if (dictionary[INGRESS].empty() && dictionary[EGRESS].empty())
         return;
     switch(options.target) {
-#define SWITCH_FOR_TARGET(ETAG, TTYPE)                                  \
-    case ETAG: {                                                        \
-        TTYPE::deparser_regs    regs;                                   \
+#define SWITCH_FOR_TARGET(TARGET)                                       \
+    case Target::TARGET::tag: {                                         \
+        Target::TARGET::deparser_regs    regs;                          \
         declare_registers(&regs);                                       \
         write_config(regs);                                             \
         undeclare_registers(&regs);                                     \
@@ -510,19 +513,13 @@ bool Deparser::RefOrChksum::check() const {
 // FIXME -- checksums.  This works for tofino, but will fail for jbay as they won't be
 // FIXME -- unique.  They also don't get installed properly in Phv::regs, but that is
 // FIXME -- ok as we never ask for them (FIXME-PHV)
-Phv::Register Deparser::RefOrChksum::checksum_units[12] = {
-    { "csum0", Phv::Register::CHECKSUM, 224, 16 },
-    { "csum1", Phv::Register::CHECKSUM, 225, 16 },
-    { "csum2", Phv::Register::CHECKSUM, 226, 16 },
-    { "csum3", Phv::Register::CHECKSUM, 227, 16 },
-    { "csum4", Phv::Register::CHECKSUM, 228, 16 },
-    { "csum5", Phv::Register::CHECKSUM, 229, 16 },
-    { "csum6", Phv::Register::CHECKSUM, 230, 16 },
-    { "csum7", Phv::Register::CHECKSUM, 231, 16 },
-    { "csum8", Phv::Register::CHECKSUM, 232, 16 },
-    { "csum9", Phv::Register::CHECKSUM, 233, 16 },
-    { "csum10", Phv::Register::CHECKSUM, 234, 16 },
-    { "csum11", Phv::Register::CHECKSUM, 235, 16 } };
+namespace {
+static struct ChecksumReg : public Phv::Register {
+    ChecksumReg(int unit) : Phv::Register("", Phv::Register::CHECKSUM, unit, unit+224, 16) {
+        sprintf(name, "csum%d", unit); }
+    int deparser_id() const override { return uid; }
+} checksum_units[12] = { {0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11} };
+}
 
 Phv::Slice Deparser::RefOrChksum::operator *() const {
     if (name_ == "checksum") {

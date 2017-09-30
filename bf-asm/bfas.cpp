@@ -59,7 +59,7 @@ std::string usage(std::string tfas) {
 
 void output_all() {
     switch (options.target) {
-#define SET_TOP_LEVEL(TARGET, TYPE) case TARGET: new TopLevelTarget<TYPE>; break;
+#define SET_TOP_LEVEL(TARGET) case Target::TARGET::tag: new TopLevelTarget<Target::TARGET>; break;
     FOR_ALL_TARGETS(SET_TOP_LEVEL)
     default:
         std::cerr << "No target set" << std::endl;
@@ -95,9 +95,9 @@ void output_all() {
 
 
 
-#define MATCH_TARGET_OPTION(TARGET, TYPE, OPT) \
-    if (!strcasecmp(OPT, #TARGET)) options.target = TARGET; else
-#define OUTPUT_TARGET(TARGET, TYPE)     << " " << #TARGET
+#define MATCH_TARGET_OPTION(TARGET, OPT) \
+    if (!strcmp(OPT, Target::TARGET::name)) options.target = Target::TARGET::tag; else
+#define OUTPUT_TARGET(TARGET)           << " " << Target::TARGET::name
 
 int main(int ac, char **av) {
     int srcfiles = 0;
