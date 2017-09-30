@@ -30,7 +30,7 @@ PHV_Analysis_API::field_to_containers(
     tuple_list.clear();
     bool contiguous = true;
     int next_start = -1;
-    std::list<int> phv_nums;
+    std::list<unsigned> phv_nums;
     if (f_api->field_container_map().empty()) {
         LOG1(
             "*****phv_analysis_api.cpp:sanity_WARN*****....."
@@ -41,7 +41,8 @@ PHV_Analysis_API::field_to_containers(
     for (auto &cc : Values(f_api->field_container_map())) {
         tuple_list.push_back(PHV_Analysis_Validate::make_tuple(cc));
         const PHV_Container *c = cc->container();
-        int phv_num = c->phv_number();
+        // XXX(cole): it's no longer correct to treat container IDs as numbers.
+        unsigned phv_num = c->container_id();
         if ((next_start != -1 && next_start != cc->lo())
             || (phv_nums.size() && phv_nums.back() != phv_num - 1)) {
             //

@@ -97,7 +97,7 @@ PHV_Analysis_Validate::sanity_check_fields_containers(const std::string& msg) {
             for (auto &tuple : tuple_list_f) {
                 const PHV_Container *c = get<2>(tuple);
                 PHV_Container *c1 = const_cast<PHV_Container *>(c);
-                int phv_num = c->phv_number();
+                unsigned phv_num = c->container_id();
                 if (container_holes(phv_num)) {
                     LOG1("*****phv_analysis_validate.cpp:sanity_FAIL*****....."
                         << "..... sanity_check_fields_containers: NOT exact_containers ..... "
@@ -125,7 +125,7 @@ PHV_Analysis_Validate::sanity_check_fields_containers(const std::string& msg) {
             const PHV_Container *c = std::get<2>(t);
             std::pair<int, int> container_range = std::get<3>(t);
             container_to_fields(
-                c->phv_number(),
+                c->container_id(),
                 container_range,
                 tuple_list_temp);
             //
@@ -367,8 +367,7 @@ PHV_Analysis_Validate::sort_container_ranges(
 //
 // holes in container
 //
-bool
-PHV_Analysis_Validate::container_holes(int phv_num) {
+bool PHV_Analysis_Validate::container_holes(unsigned phv_num) {
     // return true if container has holes
     std::list<std::tuple<
         const PHV_Container *,
@@ -377,16 +376,15 @@ PHV_Analysis_Validate::container_holes(int phv_num) {
     return tuple_list.size()? true: false;
 }
 
-void
-PHV_Analysis_Validate::container_holes(
-    int phv_num,
+void PHV_Analysis_Validate::container_holes(
+    unsigned container_id,
     std::list<std::tuple<
         const PHV_Container *,
         const std::pair<int, int>>>& tuple_list) {
     //
     tuple_list.clear();
     assert(phv_mau_i);
-    const PHV_Container *c = phv_mau_i->phv_container(phv_num);
+    const PHV_Container *c = phv_mau_i->phv_container(container_id);
     assert(c);
     std::list<std::pair<int, int>> holes_list;
     c->holes(holes_list);
@@ -670,7 +668,7 @@ PHV_Analysis_Validate::fields_overlayed(
 
     for (auto &tuple : tuple_list_c) {
         const PHV_Container *c = get<2>(tuple);
-        int phv_num = c->phv_number();
+        int phv_num = c->container_id();
         std::pair<int, int> c_range = get<3>(tuple);
         container_to_fields(phv_num, c_range, tuple_list_f);
         tuple_list.splice(tuple_list.end(), tuple_list_f); }
@@ -839,7 +837,7 @@ std::ostream &operator<<(
     const std::pair<int, int> container_range = std::get<3>(tuple);
     out << "\t" << f->id << ":" << f->name
         << "[" << field_range.first << ".." << field_range.second << "]"
-        << "\t-> " << c->phv_number_string()
+        << "\t-> " << c->toString()
         << "[" << container_range.first << ".." << container_range.second << "]"
         << std::endl;
     //
@@ -911,14 +909,14 @@ std::ostream &operator<<(std::ostream &out, PHV_Analysis_Validate &phv_analysis_
                 const std::pair<int, int>,
                 const PHV_Container *,
                 const std::pair<int, int>>> tuple_list_c;
-            phv_analysis_validate.container_to_fields(c->phv_number(), tuple_list_c);
+            phv_analysis_validate.container_to_fields(c->container_id(), tuple_list_c);
             for (auto &t_c : tuple_list_c) {
                 const PhvInfo::Field *field = std::get<0>(t_c);
                 const std::pair<int, int> field_range = std::get<1>(t_c);
                 const PHV_Container *container = std::get<2>(t_c);
                 const std::pair<int, int> container_range = std::get<3>(t_c);
                 out << "\t\t"
-                    << container->phv_number_string()
+                    << container->toString()
                     << "[" << container_range.first << ".." << container_range.second << "]"
                     << "\t-> " << field->id << ":" << field->name
                     << "[" << field_range.first << ".." << field_range.second << "]"

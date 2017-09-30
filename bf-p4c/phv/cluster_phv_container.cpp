@@ -131,10 +131,10 @@ PHV_Container::taint(
     //
     BUG_CHECK(width > 0,
         "*****PHV_Container::taint()*****%s start=%d NEGATIVE width=%d width_i=%d, field=%d:%s",
-        phv_number_string(), start, width, int(width_i), field->id, field->name);
+        this->toString(), start, width, int(width_i), field->id, field->name);
     BUG_CHECK((start+width <= int(width_i)),
         "*****PHV_Container::taint()*****%s start=%d width=%d width_i=%d, field=%d:%s",
-        phv_number_string(), start, width, int(width_i), field->id, field->name);
+        this->toString(), start, width, int(width_i), field->id, field->name);
     //
     // ccgf field processing
     //
@@ -166,7 +166,7 @@ PHV_Container::taint(
         BUG_CHECK(
             phv_mau_group_i->gress() == gress_i,
             "*****PHV_Container::taint()*****%s mau_group gress = %c, field = %d:%s, gress = %c",
-            phv_number_string(),
+            this->toString(),
             static_cast<char>(phv_mau_group_i->gress()),
             field->id,
             field->name,
@@ -273,7 +273,7 @@ PHV_Container::taint_ccgf(
         BUG_CHECK(
             processed_width <= int(width_i),
             "*****PHV_Container::taint_ccgf()*****%s, field=%d:%s, processed_width=%s > width_i=%d",
-            phv_number_string(),
+            this->toString(),
             field->id,
             field->name,
             processed_width,
@@ -515,7 +515,7 @@ PHV_Container::field_overlays(
     // f_ov's slice-width mimics substratum width in each container
     //
     if (field->field_overlay_map().size()) {
-        LOG3("..........PHV_Container::field_overlays.....for container " << phv_number_string());
+        LOG3("..........PHV_Container::field_overlays.....for container " << this->toString());
         LOG3("\t" << field);
         // consider overlayed fields, if any, for this container only
         ordered_set<PhvInfo::Field *> *set_of_f = field->field_overlay_map(container_id_i);
@@ -649,7 +649,7 @@ PHV_Container::taint_bits(
     BUG_CHECK(
         avail_bits_i >= 0,
         "*****PHV_Container::taint_bits()*****%s avail_bits = %d, field = %d:%s",
-        phv_number_string(),
+        this->toString(),
         avail_bits_i,
         field->id,
         field->name);
@@ -721,7 +721,7 @@ PHV_Container::fields_in_container(PhvInfo::Field *f, Container_Content *cc) {
                 cc_slice->lo(), cc_slice->hi(), cc->lo(), cc->hi(),
                 cc_slice->field()->id, cc_slice->field()->name,
                 cc->field()->id, cc->field()->name,
-                phv_number_string());
+                this->toString());
             BUG_CHECK(cc_slice->taint_color() != cc->taint_color(),
                 "*****PHV_Container::fields_in_container()*****"
                 ".....field slices taint colors should not be same.....\n"
@@ -732,7 +732,7 @@ PHV_Container::fields_in_container(PhvInfo::Field *f, Container_Content *cc) {
                 cc_slice->field()->id, cc_slice->field()->name,
                 cc->field()->id, cc->field()->name,
                 cc_slice->taint_color(), cc->taint_color(),
-                phv_number_string());
+                this->toString());
         }
     }
     fields_in_container_i[f].push_back(cc);
@@ -1120,7 +1120,7 @@ void PHV_Container::sanity_check_overlayed_fields(const std::string& msg) {
                BUG_CHECK(substratum,
                     "*****cluster_phv_container.cpp:sanity_FAIL sanity_check_overlayed_fields*****"
                     ".....substratum is nil.....\nphv_container=%s[%d..%d]= overlayed_field=%d:%s",
-                    phv_number_string(), cc->lo(), cc->hi(), cc->field()->id, cc->field()->name);
+                    this->toString(), cc->lo(), cc->hi(), cc->field()->id, cc->field()->name);
                // field lo's may disagree but cluster's low for ccgf fields can agree
                // PHV-123.B59.I.Fp        22222211
                // e.g.,
@@ -1413,7 +1413,7 @@ std::ostream &operator<<(std::ostream &out, PHV_Container *c) {
     //
     if (c) {
         out << std::endl << '\t';
-        out << c->phv_number_string()
+        out << c->toString()
             << '.' << static_cast<char>(c->gress())
             << '.' << static_cast<char>(c->status());
         if (c->deparsed()) {
@@ -1436,7 +1436,7 @@ std::ostream &operator<<(std::ostream &out, PHV_Container *c) {
 
 std::ostream &operator<<(std::ostream &out, const PHV_Container *c) {
     if (c) {
-        out << c->phv_number_string();
+        out << c->toString();
     } else {
         out << "-c-";
     }
@@ -1465,7 +1465,7 @@ std::ostream &operator<<(std::ostream &out, ordered_set<PHV_Container *> *phv_co
     assert(phv_containers);
     out << "[";
     for (auto &c : *phv_containers) {
-        out << c->phv_number_string() << ';';
+        out << c->toString() << ';';
     }
     out << "]";
     return out;

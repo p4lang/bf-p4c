@@ -1869,8 +1869,8 @@ PHV_MAU_Group_Assignments::canonicalize_cc_set(
     if (cc_set.size() - deparsed_containers > metadata_fields) {
         cc_set.sort([](PHV_MAU_Group::Container_Slice *l, PHV_MAU_Group::Container_Slice *r) {
             if (l->container()->deparsed() && r->container()->deparsed()) {
-                // sort by phv_number to prevent non-determinism
-                return l->container()->phv_number() < r->container()->phv_number();
+                // sort by container_id to prevent non-determinism
+                return l->container()->container_id() < r->container()->container_id();
             }
             if (l->container()->deparsed() && !r->container()->deparsed()) {
                 return true;
@@ -1878,8 +1878,8 @@ PHV_MAU_Group_Assignments::canonicalize_cc_set(
             if (!l->container()->deparsed() && r->container()->deparsed()) {
                 return false;
             }
-            // sort by phv_number to prevent non-determinism
-            return l->container()->phv_number() < r->container()->phv_number();
+            // sort by container_id to prevent non-determinism
+            return l->container()->container_id() < r->container()->container_id();
         });
         LOG3("..........Reordered non-deparsed containers to end ("
              << cc_set.size()
@@ -1941,8 +1941,8 @@ PHV_MAU_Group_Assignments::num_containers_bottom_bits(
     if (containers_bottom_avail >= num_c) {
         cc_set.sort([](PHV_MAU_Group::Container_Slice *l, PHV_MAU_Group::Container_Slice *r) {
             if (l->lo() && r->lo()) {
-                // sort by phv_number to prevent non-determinism
-                return l->container()->phv_number() < r->container()->phv_number();
+                // sort by container_id to prevent non-determinism
+                return l->container()->container_id() < r->container()->container_id();
             }
             if (l->lo() && !r->lo()) {
                 return true;
@@ -1950,8 +1950,8 @@ PHV_MAU_Group_Assignments::num_containers_bottom_bits(
             if (!l->lo() && r->lo()) {
                 return false;
             }
-            // sort by phv_number to prevent non-determinism
-            return l->container()->phv_number() < r->container()->phv_number();
+            // sort by container_id to prevent non-determinism
+            return l->container()->container_id() < r->container()->container_id();
         });
         LOG3("..........Reordered bottom-bit containers to end ("
              << cc_set.size()
@@ -2408,7 +2408,7 @@ void PHV_MAU_Group_Assignments::sanity_check_container_avail(const std::string& 
                     BUG_CHECK(cc->hi() >= cc->lo(),
                         "*****PHV_MAU_Group_Assignments::sanity_check_container_avail *****"
                         "PHV-%d, ranges[%d] = %d, should be %d",
-                        c->phv_number(), cc->lo(), c->ranges()[cc->lo()], cc->hi());
+                        c->container_id(), cc->lo(), c->ranges()[cc->lo()], cc->hi());
                     PHV_MAU_Group *g = c->phv_mau_group();
                     // container bits not yet fully assigned, premature to check_deparsed
                     g->sanity_check_group_containers(msg_1, false/*check_deparsed*/);

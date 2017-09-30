@@ -674,7 +674,7 @@ PhvInfo::Field::phv_containers(PHV_Container *c) {
         }
         if (set_of_f && set_of_f->size()) {
             // insert phv container entry
-            field_overlay_map_i[c->phv_number()] = set_of_f;
+            field_overlay_map_i[c->container_id()] = set_of_f;
         }
     }
 }
@@ -1139,7 +1139,7 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field &field) {
     if (field.ccgf()) out << " ccgf=" << field.ccgf()->id << ':' << field.ccgf()->name;
     out << " /" << field.cl_id() << ",";    // cluster id
     for (auto &c : field.phv_containers()) {
-        out << c->phv_number_string() << ";";  // phv number
+        out << c->toString() << ";";  // phv number
     }
     out << "/";
     out << field.field_slices();

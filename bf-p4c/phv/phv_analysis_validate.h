@@ -56,18 +56,15 @@ class PHV_Analysis_Validate : public Visitor {
     //
     // containers to fields
     //
-    void
-    sort_container_ranges(
+    void sort_container_ranges(
         std::list<std::tuple<
             PhvInfo::Field *,
             const std::pair<int, int>,
             const PHV_Container *,
             const std::pair<int, int>>>& tuple_list);
-    bool
-    container_holes(int phv_num);
-    void
-    container_holes(
-        int phv_num,
+    bool container_holes(unsigned phv_num);
+    void container_holes(
+        unsigned phv_num,
         std::list<std::tuple<
             const PHV_Container *,
             const std::pair<int, int>>>& tuple_list);

@@ -112,7 +112,7 @@ PHV_Bind::bind_fields_to_containers() {
                 int field_bit = cc->field_bit_lo();
                 int container_bit = cc->lo();
                 int width_in_container = cc->width();
-                PHV::Container asm_container = Device::phvSpec().idToContainer(c->phv_number());
+                PHV::Container asm_container = Device::phvSpec().idToContainer(c->container_id());
                 //
                 // ignore allocation for owners of
                 // non-header stack ccgs

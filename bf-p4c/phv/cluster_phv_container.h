@@ -4,11 +4,12 @@
 #include <limits>
 #include "phv.h"
 #include "phv_fields.h"
+#include "bf-p4c/device.h"
+#include "bf-p4c/ir/thread_visitor.h"
 #include "ir/ir.h"
 #include "lib/map.h"
 #include "lib/ordered_map.h"
 #include "lib/range.h"
-#include "bf-p4c/ir/thread_visitor.h"
 //
 //
 //***********************************************************************************
@@ -116,7 +117,7 @@ class PHV_Container {
     PHV_Container(
         PHV_MAU_Group *g,
         PHV::Size w,
-        unsigned phv_number,
+        unsigned container_id,
         Ingress_Egress gress);
     //
     PHV_MAU_Group *phv_mau_group()                              { return phv_mau_group_i; }
@@ -129,16 +130,16 @@ class PHV_Container {
             || width == int(PHV::Size::b8);
     }
 
-    unsigned phv_number() const                                      { return container_id_i; }
-    std::string phv_number_string() const {
-        std::stringstream ss;
-        ss << container_id_i;
-        return "PHV-" + ss.str();
+    unsigned container_id() const                               { return container_id_i; }
+
+    cstring toString() const {
+        return Device::phvSpec().idToContainer(container_id_i).toString();
     }
-    void
-    gress(Ingress_Egress gress_p) {  // set when MAU group's gress is set
+
+    void gress(Ingress_Egress gress_p) {  // set when MAU group's gress is set
         gress_i = gress_p;
     }
+
     Ingress_Egress gress()                                      { return gress_i; }
     static Ingress_Egress gress(PhvInfo::Field *field) {
         if (field->gress == INGRESS) {
