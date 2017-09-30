@@ -44,6 +44,8 @@ RUN apt-get update && \
     ./bootstrap_bfn_compilers.sh --no-ptf -DENABLE_P4C_GRAPHS=OFF -DENABLE_BMV2=OFF -DENABLE_P4TEST=OFF -DENABLE_EBPF=OFF && \
     cd build && \
     make && \
+    mkdir -p /usr/local/share/p4c/p4include && \
+    cp -R p4c/p4include/* /usr/local/share/p4c/p4include/ && \
     /usr/local/bin/ccache -p --show-stats && \
     pip uninstall -y pyinstaller && \
     apt-get purge -y $P4C_DEPS && \
