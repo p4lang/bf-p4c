@@ -232,6 +232,7 @@ class stf2ptf (P4RuntimeTest):
         else:
             expected = self.encodePacket(self.setExpectTern(payload, orig_packet[2]), padIt = False)
         testutils.verify_packet(self, expected, port)
+        self._logger.info("Expected packet received on port %d", port)
 
     def genProcessPacket(self, pkt_pair):
         """

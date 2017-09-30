@@ -10,7 +10,9 @@ wait
 
 add ex1 100 extra$0.h:0x25** act1(val:0x25)
 add tbl1 100 data.f2:0x0202**** setbyte(val:0x26)
-add ex1 110 extra$0.h:0x2525 act2(val:0x27)
+# for act2 to be executed, the priority of the entry should be higher
+# than 100
+add ex1 90 extra$0.h:0x2525 act2(val:0x27)
 add tbl2 100 data.f2:0x0202**** setbyte(val:0x28)
 
 packet 0 01010101 02020202 0303 55 66 2500 ff 7f 01020304
