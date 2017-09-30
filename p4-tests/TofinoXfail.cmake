@@ -1041,12 +1041,8 @@ if (ENABLE_TNA)
   # clone/resubmit the entire standard_metadata struct in ingress
   # fail reason: not all fields in standard metadata are defined in ingress
   p4c_add_xfail_reason("tofino"
-    "Could not find declaration for standard_metadata_t"
+    "Could not find declaration for"
     testdata/p4_14_samples/packet_redirect.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "Could not find declaration for standard_metadata"
     testdata/p4_14_samples/simple_nat.p4
     # access stdmeta.egress_spec in egress pipeline
     extensions/p4_tests/p4_14/test_config_6_sram_and_tcam_allocation.p4
@@ -1058,6 +1054,12 @@ if (ENABLE_TNA)
     # A better error message should be
     # "Attempt to access undefined metadata field egress_port in ingress"
     testdata/p4_14_samples/copy_to_cpu.p4
+    testdata/p4_14_samples/resubmit.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-413/mirror_test.p4
+    extensions/p4_tests/p4_14/jenkins/mirror_test/mirror_test.p4
+    extensions/p4_tests/p4_14/test_config_102_clone.p4
+    extensions/p4_tests/p4_14/jenkins/emulation/emulation.p4
+    extensions/p4_tests/p4_14/test_config_303_static_table.p4
     )
 
   # accessing ingress_intrinsic_metadata in egress
@@ -1231,17 +1233,8 @@ if (ENABLE_TNA)
     )
 
   p4c_add_xfail_reason("tofino"
-    "Unexpected mirror id"
-    extensions/p4_tests/p4_14/jenkins/mirror_test/mirror_test.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "resubmit with field list is not supported"
-    extensions/p4_tests/p4_14/13-ResubmitMetadataSize.p4
-    extensions/p4_tests/p4_14/jenkins/resubmit/resubmit.p4
-    testdata/p4_14_samples/resubmit.p4
-    testdata/p4_14_samples/packet_redirect.p4
-    extensions/p4_tests/p4_14/jenkins/emulation/emulation.p4
+    "src2 must be phv register"
+    extensions/p4_tests/p4_14/test_config_245_alias_test.p4
     )
 
   p4c_add_xfail_reason("tofino"
@@ -1275,17 +1268,6 @@ if (ENABLE_TNA)
     extensions/p4_tests/p4_14/c1/DRV-543/case2499.p4
     extensions/p4_tests/p4_14/jenkins/clpm/clpm.p4
     extensions/p4_tests/p4_14/jenkins/fr_test/fr_test.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "Digest translation is not yet supported"
-    extensions/p4_tests/p4_14/test_config_332_relax_digest_constraint.p4
-    extensions/p4_tests/p4_14/test_config_55_generate_digest.p4
-    extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-235/vag1737_1.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-254/case1744.p4
     )
 
 endif()  # ENABLE_TNA

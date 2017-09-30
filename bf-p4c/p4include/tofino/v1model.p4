@@ -206,7 +206,7 @@ struct egress_intrinsic_metadata_from_parser_t {
     bit<32> egress_global_ver;           // global version number taken at the
                                          // egress pipe.
 
-  bit<16> egress_parser_err;             // error flags indicating error(s)
+    bit<16> egress_parser_err;           // error flags indicating error(s)
                                          // encountered at egress
                                          // parser.
 }
@@ -248,6 +248,17 @@ struct egress_intrinsic_metadata_for_output_port_t {
                                          //    - bit 2 disables mirroring
                                          // TODO: which of these actually apply
                                          //       for egress?
+}
+
+// -----------------------------------------------------------------------------
+// PARSER COUNTER/PRIORITY/VALUE SET
+// -----------------------------------------------------------------------------
+// Parser value set
+// The parser value set implements a run-time updatable values that is used to
+// determine parser transition
+extern value_set<D> {
+    value_set(bit<8> size);
+    bool is_member(in D data);
 }
 
 extern Checksum16 {
@@ -330,10 +341,6 @@ extern random<T> {
     T get(@optional in T mask);
 }
 
-// If the type T is a named struct, the name is used
-// to generate the control-plane API.
-extern void digest<T>(in bit<32> receiver, in T data);
-
 extern void mark_to_drop();
 
 enum hash_algorithm_t {
@@ -372,21 +379,17 @@ extern resubmit_packet {
     void add_metadata<T>(@optional in T hdr);
 }
 
-extern learn_filter_packet {
-    ///
-    void add_metadata<T>(in T hdr);
-}
-
 enum CloneType {
     I2E,
     E2E
 }
 
-extern void resubmit<T>(in T data);
-extern void recirculate<T>(in T data);
-extern void clone(in CloneType type, in bit<32> session);
-extern void clone3<T>(in CloneType type, in bit<32> session, in T data);
+extern learn_filter_packet {
+    ///
+    void add_metadata<T>(in T hdr);
+}
 
+extern void recirculate<T>(in T data);
 extern void truncate(in bit<32> length);
 
 parser IngressParser<H, M>(

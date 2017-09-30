@@ -749,23 +749,35 @@ class IdleTimeoutTranslation : public Transform {
 };
 
 // map index to resubmit field list
-using DigestFieldMap = std::map<IR::Constant*, const IR::MethodCallExpression*>;
+using DigestFieldMap = std::map<IR::Constant*, const IR::Expression*>;
 
 class CollectDigestFieldLists : public Transform {
+    /// map digest field list to digest table index
     DigestFieldMap* map;
-    unsigned int index;
+    /// mirror_tbl, resub_tbl, learn_tbl indices
+    /// valid between 0 and 7.
+    unsigned int digestTableIndex;
+    /// digest name in P14. Using a vector because we need to map
+    /// multiple P14 primitives to the same P16 primitive (clone and clone3).
     std::vector<cstring> digestName;
+    /// current thread (ingress / egress).
     gress_t gress;
+    /// metadata name for table index in P16
     cstring metadata;
+    /// argument index for field lists in P14.
+    unsigned int fieldListIndex;
+    P4::ClonePathExpressions cloner;
 
  public:
     CollectDigestFieldLists(DigestFieldMap* map,
                             std::initializer_list<cstring> name,
                             gress_t gress,
-                            cstring metadata)
-    : map(map), index(0), digestName(name), gress(gress), metadata(metadata) {
+                            cstring metadata,
+                            int fl_idx)
+    : map(map), digestTableIndex(0), digestName(name),
+      gress(gress), metadata(metadata), fieldListIndex(fl_idx) {
         CHECK_NULL(map);
-        setName("FindResubmitUseMap");
+        setName("CollectDigestFieldLists");
     }
 
     const IR::Node* postorder(IR::MethodCallStatement* node) override {
@@ -777,16 +789,19 @@ class CollectDigestFieldLists : public Transform {
 
         auto it = find(digestName.begin(), digestName.end(), expr->path->name);
         if (it != digestName.end()) {
-            if (mc->arguments->size() != 0) {
-                P4C_UNIMPLEMENTED("resubmit with field list is not supported");
-            }
             auto path = (gress == gress_t::INGRESS) ?
                         new IR::PathExpression("ig_intr_md_for_deparser") :
                         new IR::PathExpression("eg_intr_md_for_deparser");
             auto member = new IR::Member(path, metadata);
-            auto value = new IR::Constant(new IR::Type_Bits(3, false), index++);
+            auto value = new IR::Constant(new IR::Type_Bits(3, false), digestTableIndex++);
             auto stmt = new IR::AssignmentStatement(member, value);
-            map->emplace(value, mc);
+            if (mc->arguments->size() > fieldListIndex) {
+                auto fieldList = mc->arguments->at(fieldListIndex);
+                auto clonedFieldList = fieldList->apply(cloner);
+                map->emplace(value, clonedFieldList);
+            } else {
+                map->emplace(value, mc);
+            }
             return stmt;
         }
         return node;
@@ -808,11 +823,14 @@ class DoMirrorTranslation : public Transform {
      * if (ig_intr_md_for_dprsr.mirror_idx == N)
      *    mirror.add_metadata({});
      */
-    const IR::StatOrDecl* genMirrorStatement(cstring metaName, const IR::Constant* idx) {
+    const IR::StatOrDecl* genMirrorStatement(cstring metaName, const IR::Constant* idx,
+                                             const IR::Expression* expr) {
         auto path = new IR::Path("mirror");
-        auto expr = new IR::PathExpression(path);
+        auto pathExpr = new IR::PathExpression(path);
         auto args = new IR::Vector<IR::Expression>();
-        auto member = new IR::Member(expr, "add_metadata");
+        if (auto fieldList = expr->to<IR::ListExpression>())
+            args->push_back(fieldList);
+        auto member = new IR::Member(pathExpr, "add_metadata");
         auto typeArgs = new IR::Vector<IR::Type>();
         auto mce = new IR::MethodCallExpression(member, typeArgs, args);
         auto mcs = new IR::MethodCallStatement(mce);
@@ -829,12 +847,12 @@ class DoMirrorTranslation : public Transform {
         auto stmts = new IR::IndexedVector<IR::StatOrDecl>();
         if (gress == gress_t::INGRESS) {
             for (auto it : *map) {
-                auto stmt = genMirrorStatement("ig_intr_md_for_dprsr", it.first);
+                auto stmt = genMirrorStatement("ig_intr_md_for_dprsr", it.first, it.second);
                 stmts->push_back(stmt);
             }
         } else if (gress == gress_t::EGRESS) {
             for (auto it : *map) {
-                auto stmt = genMirrorStatement("eg_intr_md_for_dprsr", it.first);
+                auto stmt = genMirrorStatement("eg_intr_md_for_dprsr", it.first, it.second);
                 stmts->push_back(stmt);
             }
         }
@@ -864,11 +882,13 @@ class MirrorTranslation : public PassManager {
  public:
     MirrorTranslation() {
         addPasses({
-            new CollectDigestFieldLists(&mirrorFieldLists, {"mirror"},
-                                        gress_t::INGRESS, "mirror_idx"),
+            new CollectDigestFieldLists(&mirrorFieldLists, {"clone", "clone3"},
+                                        gress_t::INGRESS, "mirror_idx",
+                                        /* fieldListIndex = */ 2),
             new DoMirrorTranslation(&mirrorFieldLists, gress_t::INGRESS),
-            new CollectDigestFieldLists(&mirrorFieldLists, {"mirror"},
-                                        gress_t::EGRESS, "mirror_idx"),
+            new CollectDigestFieldLists(&mirrorFieldLists, {"clone", "clone3"},
+                                        gress_t::EGRESS, "mirror_idx",
+                                        /* fieldListIndex = */ 2),
             new DoMirrorTranslation(&mirrorFieldLists, gress_t::EGRESS),
         });
         setName("MirrorTranslation");
@@ -901,6 +921,8 @@ class DoResubmitTranslation : public Transform {
             auto path = new IR::Path("resubmit");
             auto expr = new IR::PathExpression(path);
             auto args = new IR::Vector<IR::Expression>();
+            if (auto fieldList = it.second->to<IR::ListExpression>())
+                args->push_back(fieldList);
             auto member = new IR::Member(expr, "add_metadata");
             auto typeArgs = new IR::Vector<IR::Type>();
             auto mce = new IR::MethodCallExpression(member, typeArgs, args);
@@ -932,33 +954,76 @@ class ResubmitTranslation : public PassManager {
     ResubmitTranslation() {
         addPasses({
             new CollectDigestFieldLists(&resubmitFieldLists, {"resubmit"},
-                                        gress_t::INGRESS, "resubmit_idx"),
+                                        gress_t::INGRESS, "resubmit_idx",
+                                        /* fieldListIndex = */ 0),
             new DoResubmitTranslation(&resubmitFieldLists),
         });
         setName("ResubmitTranslation");
     }
 };
 
-class DigestTranslation : public Transform {
-    bool allowUnimplemented;
+class DoDigestTranslation : public Transform {
+    DigestFieldMap* map;
 
  public:
-    explicit DigestTranslation(bool allowUnimplemented = false)
-    : allowUnimplemented(allowUnimplemented) {
-        setName("DigestTranslation");
+    explicit DoDigestTranslation(DigestFieldMap* map) : map(map) {
+        setName("DoDigestTranslation");
     }
+    const IR::Node* postorder(IR::P4Control* control) override {
+        if (control->name != "IngressDeparserImpl")
+            return control;
+        auto stmts = new IR::IndexedVector<IR::StatOrDecl>();
+        /*
+         * translate digest() in ingress pipeline to the following code
+         *
+         * if (ig_intr_md_for_dprsr.learn_idx == n)
+         *    learn.add_metadata({fields});
+         *
+         * in ingress deparser.
+         */
+        for (auto it : *map) {
+            auto path = new IR::Path("learn");
+            auto expr = new IR::PathExpression(path);
+            auto args = new IR::Vector<IR::Expression>();
+            if (auto fieldList = it.second->to<IR::ListExpression>())
+                args->push_back(fieldList);
+            auto member = new IR::Member(expr, "add_metadata");
+            auto typeArgs = new IR::Vector<IR::Type>();
+            auto mce = new IR::MethodCallExpression(member, typeArgs, args);
+            auto mcs = new IR::MethodCallStatement(mce);
 
-    const IR::Node *postorder(IR::PathExpression *node) override {
-        if (node->path->name == "digest") {
-            if (allowUnimplemented)
-                ::warning("Digest translation is not yet supported.");
-            else
-                P4C_UNIMPLEMENTED("Digest translation is not yet supported.");
+            auto condExprPath = new IR::Member(
+                    new IR::PathExpression(new IR::Path("ig_intr_md_for_dprsr")),
+                    "learn_idx");
+            auto condExpr = new IR::Equ(condExprPath, it.first);
+            auto cond = new IR::IfStatement(condExpr, mcs, nullptr);
+            stmts->push_back(cond);
         }
-        return node;
+        // append other statements
+        for (auto st : control->body->components) {
+            stmts->push_back(st);
+        }
+        auto body = new IR::BlockStatement(control->body->srcInfo, *stmts);
+        auto result = new IR::P4Control(control->srcInfo, control->name,
+                                        control->type, control->constructorParams,
+                                        control->controlLocals, body);
+        return result;
     }
 };
 
+class DigestTranslation : public PassManager {
+    DigestFieldMap resubmitFieldLists;
+ public:
+    DigestTranslation() {
+        addPasses({
+            new CollectDigestFieldLists(&resubmitFieldLists, {"digest"},
+                                        gress_t::INGRESS, "learn_idx",
+                                        /* fieldListIndex = */ 1),
+            new DoResubmitTranslation(&resubmitFieldLists),
+        });
+        setName("DigestTranslation");
+    }
+};
 
 class TranslationLast : public PassManager {
  public:
@@ -1475,10 +1540,10 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
         new ChecksumTranslation(options.allowUnimplemented),
         new ParserCounterTranslation(options.allowUnimplemented),
         new PacketPriorityTranslation(options.allowUnimplemented),
-        new ValueSetTranslation(),
         new IdleTimeoutTranslation(options.allowUnimplemented),
+        new ValueSetTranslation(),
         new MirrorTranslation(),
-        new DigestTranslation(options.allowUnimplemented),
+        new DigestTranslation(),
         new ResubmitTranslation(),
         new AppendSystemArchitecture(&structure),
         new TranslationLast(),
