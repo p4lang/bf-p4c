@@ -266,6 +266,12 @@ extern Checksum16 {
     bit<16> get<D>(in D data);
 }
 
+/// idle timeout
+extern idle_timeout {
+    idle_timeout(bit<3> state_count, @optional bool two_way_notify /* = false */,
+                 @optional bool per_flow_enable /* = false */);
+}
+
 /// Counter
 enum counter_type_t {
     PACKETS,

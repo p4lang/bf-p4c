@@ -730,21 +730,81 @@ class ValueSetTranslation : public Transform {
 
 
 class IdleTimeoutTranslation : public Transform {
-    bool allowUnimplemented;
+    ordered_map<const IR::P4Table*, IR::Expression*> propertyMap;
 
  public:
-    explicit IdleTimeoutTranslation(bool allowUnimplemented = false)
-    : allowUnimplemented(allowUnimplemented) {
+    IdleTimeoutTranslation() {
         setName("IdleTimeoutTranslation");
     }
+
+    /*
+     * translate support_timeout = true and idletime pragma to extern in the form of
+     * implementation = idle_timeout(6, true, true);
+     * where the parameters are:
+     * - precision
+     * - two_way_notification
+     * - per_flow_idletime_enable
+     */
     const IR::Node* postorder(IR::Property* node) override {
         if (node->name == "support_timeout") {
-            if (allowUnimplemented)
-                ::warning("Idle timeout translation is not yet supported.");
-            else
-                P4C_UNIMPLEMENTED("Idle timeout translation is not yet supported.");
+            auto table = findContext<IR::P4Table>();
+            auto precision = table->getAnnotation("idletime_precision");
+            auto two_way_notify = table->getAnnotation("idletime_two_way_notification");
+            auto per_flow_enable = table->getAnnotation("idletime_per_flow_idletime");
+            auto type = new IR::Type_Name("idle_timeout");
+            auto param = new IR::Vector<IR::Expression>();
+            param->push_back(precision->expr.at(0));
+            param->push_back(new IR::BoolLiteral(two_way_notify));
+            param->push_back(new IR::BoolLiteral(per_flow_enable));
+            auto constructorExpr = new IR::ConstructorCallExpression(type, param);
+            propertyMap.emplace(table, constructorExpr);
         }
         return node;
+    }
+
+    const IR::Node* postorder(IR::P4Table* node) override {
+        auto it = propertyMap.find(node);
+        if (it == propertyMap.end())
+            return node;
+        auto impl = node->properties->getProperty("implementation");
+        if (impl) {
+            auto newProperties = new IR::IndexedVector<IR::Property>();
+            IR::ListExpression* newList = nullptr;
+            if (auto list = impl->to<IR::ListExpression>()) {
+                // if implementation already has a list of attached tables.
+                auto components = new IR::Vector<IR::Expression>(list);
+                components->push_back(it->second);
+                newList = new IR::ListExpression(*components);
+            } else {
+                // if implementation has only one attached table
+                auto components = new IR::Vector<IR::Expression>();
+                components->push_back(it->second);
+                newList = new IR::ListExpression(*components);
+            }
+            for (auto prop : node->properties->properties) {
+                if (prop->name == "implementation") {
+                    auto pv = new IR::ExpressionValue(newList);
+                    newProperties->push_back(new IR::Property("implementation", pv, true));
+                } else {
+                    newProperties->push_back(prop);
+                }
+            }
+        } else {
+            // if there is no attached table yet
+            auto newProperties = new IR::IndexedVector<IR::Property>();
+            for (auto prop : node->properties->properties) {
+                newProperties->push_back(prop);
+            }
+            auto components = new IR::Vector<IR::Expression>();
+            components->push_back(it->second);
+            auto newList = new IR::ListExpression(*components);
+            auto pv = new IR::ExpressionValue(newList);
+            newProperties->push_back(new IR::Property("implementation", pv, true));
+        }
+        auto allprops = new IR::IndexedVector<IR::Property>(node->properties->properties);
+        auto properties = new IR::TableProperties(*allprops);
+        auto table = new IR::P4Table(node->srcInfo, node->name, node->annotations, properties);
+        return table;
     }
 };
 
@@ -1540,8 +1600,8 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
         new ChecksumTranslation(options.allowUnimplemented),
         new ParserCounterTranslation(options.allowUnimplemented),
         new PacketPriorityTranslation(options.allowUnimplemented),
-        new IdleTimeoutTranslation(options.allowUnimplemented),
         new ValueSetTranslation(),
+        new IdleTimeoutTranslation(),
         new MirrorTranslation(),
         new DigestTranslation(),
         new ResubmitTranslation(),
