@@ -289,13 +289,8 @@ class DoCounterTranslation : public Transform {
 };
 
 class DoMeterTranslation : public Transform {
-    P4::ReferenceMap* refMap;
-    P4::TypeMap* typeMap;
-
  public:
-    DoMeterTranslation(P4::ReferenceMap* refMap, P4::TypeMap* typeMap)
-    : refMap(refMap), typeMap(typeMap) {
-        CHECK_NULL(refMap); CHECK_NULL(typeMap);
+    DoMeterTranslation() {
         setName("DoMeterTranslation"); }
 
     const IR::Node* postorder(IR::Declaration_Instance* node) override {
@@ -354,17 +349,6 @@ class DoMeterTranslation : public Transform {
         return node;
     }
 
-    // prune() all except meter->execute_meter()
-    const IR::Node* preorder(IR::MethodCallExpression* node) override {
-        auto mi = P4::MethodInstance::resolve(node, refMap, typeMap, true);
-        if (auto em = mi->to<P4::ExternMethod>()) {
-            if (em->originalExternType->name != BFN::P4_14::Meter &&
-                em->originalExternType->name != BFN::P4_14::DirectMeter) {
-                prune(); }}
-        return node;
-    }
-
-    // use bit_of_color() action to stop-gap lack of enum-to-bit<n> cast in P4-16
     const IR::Node* postorder(IR::MethodCallExpression* node) override {
         auto member = node->method->to<IR::Member>();
         if (!member)
@@ -372,14 +356,12 @@ class DoMeterTranslation : public Transform {
 
         if (member->member == "execute") {
             if (node->arguments->size() == 1) {
-                // auto dest = node->arguments->at(0);
                 auto args = new IR::Vector<IR::Expression>();
                 auto exec = new IR::MethodCallExpression(node->srcInfo, node->method,
                                                          new IR::Vector<IR::Type>(), args);
                 return exec;
             } else if (node->arguments->size() == 2) {
                 auto size = node->arguments->at(0);
-                // auto dest = node->arguments->at(1);
                 auto args = new IR::Vector<IR::Expression>();
                 args->push_back(size);
                 auto exec = new IR::MethodCallExpression(node->srcInfo, node->method,
@@ -702,19 +684,70 @@ class ParserCounterTranslation : public Transform {
 };
 
 class PacketPriorityTranslation : public Transform {
-    bool allowUnimplemented;
-
  public:
-    explicit PacketPriorityTranslation(bool allowUnimplemented = false)
-    : allowUnimplemented(allowUnimplemented) {
+    PacketPriorityTranslation() {
         setName("PacketPriorityTranslation");
     }
-    const IR::Node* postorder(IR::Member* node) override {
-        if (node->member == "priority") {
-            if (allowUnimplemented)
-                ::warning("Packet priority translation is not yet supported.");
-            else
-                P4C_UNIMPLEMENTED("Packet priority translation is not yet supported.");
+
+    const IR::Node* preorder(IR::Type_Header* node) override {
+        if (node->name == "ingress_parser_control_signals_0")
+            return nullptr;
+        return node;
+    }
+
+    const IR::Node* preorder(IR::StructField* node) override {
+        auto header = findContext<IR::Type_Struct>();
+        if (!header) return node;
+        if (header->name != "headers") return node;
+
+        auto type = node->type->to<IR::Type_Name>();
+        if (!type) return node;
+
+        if (type->path->name == "ingress_parser_control_signals_0")
+            return nullptr;
+        return node;
+    }
+
+    const IR::Node* postorder(IR::AssignmentStatement* node) override {
+        auto parser = findContext<IR::P4Parser>();
+        if (!parser) return node;
+
+        if (parser->type->name != "ParserImpl")
+            return node;
+
+        auto member = node->left->to<IR::Member>();
+        if (!member) return node;
+
+        auto submem = member->expr->to<IR::Member>();
+        if (!submem) return node;
+
+        auto submemType = submem->type->to<IR::Type_Header>();
+        if (!submemType) return node;
+
+        if (submemType->name != "ingress_parser_control_signals")
+            return node;
+
+        /*
+         * ig_prsr_ctrl.priority = 3w3;
+         * is converted to
+         * ig_prsr_ctrl_priority.set(3w3);
+         */
+        return new IR::MethodCallStatement(node->srcInfo,
+                   new IR::Member(new IR::PathExpression("ingress$priority"), "set"),
+                   { node->right });
+    }
+
+    const IR::Node* postorder(IR::P4Parser* node) override {
+        if (node->type->name == "ParserImpl") {
+            // add priority instance
+            auto type = new IR::Type_Name("priority");
+            auto inst = new IR::Declaration_Instance("ingress$priority", type,
+                                                     new IR::Vector<IR::Expression>());
+            auto parserLocals = new IR::IndexedVector<IR::Declaration>(node->parserLocals);
+            parserLocals->push_back(inst);
+            return new IR::P4Parser(node->srcInfo, node->name, node->type,
+                                    node->constructorParams, *parserLocals,
+                                    node->states);
         }
         return node;
     }
@@ -727,7 +760,6 @@ class ValueSetTranslation : public Transform {
         setName("ValueSetTranslation");
     }
 };
-
 
 class IdleTimeoutTranslation : public Transform {
     ordered_map<const IR::P4Table*, IR::Expression*> propertyMap;
@@ -1099,7 +1131,6 @@ class CleanP14V1model : public Transform {
     // XXX(hanw): these hard-coded name should be auto-generated from include files.
     std::set<cstring> structToRemove = {
             "generator_metadata_t_0",
-            "ingress_parser_control_signals",
             "standard_metadata_t",
             "egress_intrinsic_metadata_t",
             "egress_intrinsic_metadata_for_mirror_buffer_t",
@@ -1448,6 +1479,28 @@ class MetadataTranslation : public PassManager {
     }
 };
 
+/**
+ *  Fixup cloned egress parser to eliminate operation on metadata
+ *  that only exist in ingress parser.
+ */
+class ClonedParserFixup : public Transform {
+    std::set<cstring> structToRemove = {
+        "ingress_parser_control_signals"
+    };
+ public:
+    const IR::Node* postorder(IR::AssignmentStatement* node) override {
+        auto member = node->left->to<IR::Member>();
+        if (!member) return node;
+        auto submem = member->expr->to<IR::Member>();
+        if (!submem) return node;
+        auto submemType = submem->type->to<IR::Type_Header>();
+        if (!submemType) return node;
+        auto it = structToRemove.find(submemType->name);
+        if (it != structToRemove.end()) return nullptr;
+        return node;
+    }
+};
+
 /// package translation creates ingress deparser and egress parser
 /// XXX(hanw): do we add bridge metadata in this pass?
 
@@ -1455,6 +1508,7 @@ class PackageTranslation : public Transform {
     SimpleSwitchTranslation* translator;
     IR::P4Control* ingressDeparser;
     IR::P4Parser*  egressParser;
+    P4::ClonePathExpressions cloner;
 
  public:
     explicit PackageTranslation(SimpleSwitchTranslation* translator)
@@ -1565,7 +1619,9 @@ class PackageTranslation : public Transform {
             if (auto inst = decl->to<IR::Declaration_Instance>()) {
                 if (inst->name == "main") {
                     program_declarations.push_back(ingressDeparser);
-                    program_declarations.push_back(egressParser);
+                    auto ep = egressParser->apply(ClonedParserFixup());
+                    ep = ep->apply(cloner);
+                    program_declarations.push_back(ep);
                 }
             }
             program_declarations.push_back(decl);
@@ -1594,12 +1650,12 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
         new RemoveUserArchitecture(&structure, target),
         new CleanP14V1model(),
         new DoCounterTranslation(),
-        new DoMeterTranslation(refMap, typeMap),
+        new DoMeterTranslation(),
         new RandomTranslation(),
         new HashTranslation(),
         new ChecksumTranslation(options.allowUnimplemented),
         new ParserCounterTranslation(options.allowUnimplemented),
-        new PacketPriorityTranslation(options.allowUnimplemented),
+        new PacketPriorityTranslation(),
         new ValueSetTranslation(),
         new IdleTimeoutTranslation(),
         new MirrorTranslation(),

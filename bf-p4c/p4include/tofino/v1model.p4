@@ -261,6 +261,14 @@ extern value_set<D> {
     bool is_member(in D data);
 }
 
+// Parser priority
+// The ingress parser drops the packet based on priority if the input buffer is
+// indicating congestion; egress parser does not perform any dropping.
+extern priority {
+    priority();
+    void set(in bit<3> prio);
+}
+
 extern Checksum16 {
     Checksum16();
     bit<16> get<D>(in D data);
