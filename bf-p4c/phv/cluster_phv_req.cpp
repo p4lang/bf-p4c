@@ -114,9 +114,9 @@ Cluster_PHV_Requirements::apply_visitor(const IR::Node *node, const char *name) 
     // T_PHV Requirements from clusters
     // sort based on width requirement, greatest width first
     //
-    for (auto &p : cluster_i.fields_no_use_mau()) {
+    for (auto &p : cluster_i.fields_no_use_mau())
         t_phv_fields_i.push_back(new Cluster_PHV(p, "t_phv"));
-    }
+
     std::sort(t_phv_fields_i.begin(), t_phv_fields_i.end(),
         [](Cluster_PHV *l, Cluster_PHV *r) {
             PhvInfo::Field *fl =  *(l->cluster_vec().begin());
@@ -135,26 +135,24 @@ Cluster_PHV_Requirements::apply_visitor(const IR::Node *node, const char *name) 
             }
             return l_range > r_range;
         });
-    //
-    LOG3(*this);
-    //
-    return node;
-}  // apply_visitor
 
-std::pair<int, int>
-Cluster_PHV_Requirements::gress(std::list<Cluster_PHV *>& cluster_list) {
+    LOG3(*this);
+    return node;
+}
+
+std::pair<int, int> Cluster_PHV_Requirements::gress(std::list<Cluster_PHV *>& cluster_list) {
     std::pair<int, int> gress_pair = {0, 0};
     for (auto &cl : cluster_list) {
-        if (cl->gress() == PHV_Container::Ingress_Egress::Ingress_Only) {
+        switch (cl->gress()) {
+          case INGRESS:
             gress_pair.first++;
-        } else {
-            if (cl->gress() == PHV_Container::Ingress_Egress::Egress_Only) {
-                gress_pair.second++;
-            }
-        }
-    }
+            break;
+          case EGRESS:
+            gress_pair.second++;
+            break; } }
+
     return gress_pair;
-}  // gress()
+}
 
 //***********************************************************************************
 //
@@ -251,30 +249,22 @@ Cluster_PHV::set_exact_containers() {
     }
 }  // set_exact_containers
 
-void
-Cluster_PHV::set_gress() {
+void Cluster_PHV::set_gress() {
     //
     // set gress for this cluster
     //
-    gress_i = PHV_Container::Ingress_Egress::Ingress_Or_Egress;
-    for (auto &f : cluster_vec_i) {
-        if (gress_i == PHV_Container::Ingress_Egress::Ingress_Or_Egress) {
-            gress_i = PHV_Container::gress(f);
-        } else {
-            BUG_CHECK(
-                gress_i == PHV_Container::gress(f),
-                "*****Cluster_PHV::set_gress()*****%s gress = %c, field = %d:%s, gress = %c",
-                id_i,
-                static_cast<char>(gress_i),
-                f->id,
-                f->name,
-                static_cast<char>(PHV_Container::gress(f)));
-        }
-    }
-}  // set_gress
+    boost::optional<gress_t> gress_check = boost::none;
+    for (auto *f : cluster_vec_i) {
+        gress_i = f->gress;
+        if (!gress_check)
+            gress_check = f->gress;
+        BUG_CHECK(
+            *gress_check == f->gress,
+            "*****Cluster_PHV::set_gress()*****%s gress = %c, field = %d:%s, gress = %c",
+            id_i, gress_check, f->id, f->name, f->gress); }
+}
 
-void
-Cluster_PHV::insert_field_clusters(Cluster_PHV *parent_cl, bool slice_lo) {
+void Cluster_PHV::insert_field_clusters(Cluster_PHV *parent_cl, bool slice_lo) {
     //
     for (auto &f : cluster_vec_i) {
         // update field's list of clusters, keep child, remove parent_cl

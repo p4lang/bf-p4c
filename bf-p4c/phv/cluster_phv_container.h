@@ -1,10 +1,13 @@
 #ifndef BF_P4C_PHV_CLUSTER_PHV_CONTAINER_H_
 #define BF_P4C_PHV_CLUSTER_PHV_CONTAINER_H_
 
+#include <boost/optional.hpp>
+#include <boost/optional/optional_io.hpp>
 #include <limits>
 #include "phv.h"
 #include "phv_fields.h"
 #include "bf-p4c/device.h"
+#include "bf-p4c/ir/gress.h"
 #include "bf-p4c/ir/thread_visitor.h"
 #include "ir/ir.h"
 #include "lib/map.h"
@@ -26,7 +29,6 @@ class PHV_MAU_Group;
 class PHV_Container {
  public:
     enum Container_status {EMPTY = 'V', PARTIAL = 'P', FULL = 'F'};  // V = Vacant, E = Egress_Only
-    enum Ingress_Egress {Ingress_Only = 'I', Egress_Only = 'E', Ingress_Or_Egress = ' '};
 
     /** Marks the contents of a PHV container. */
     class Container_Content {
@@ -96,9 +98,13 @@ class PHV_Container {
     PHV::Size width_i;                                       // width of container
     unsigned container_id_i;                                 // phv container id
                                                              // see phv.h for details
-    Ingress_Egress gress_i;                                  // Ingress_Only,
-                                                             // Egress_Only,
-                                                             // Ingress_Or_Egress
+
+    /** Gress assignment, if any.  DO NOT ACCESS DIRECTLY; use the
+     * getter/setter methods, which guarantee that the gress assignment of this
+     * container matches the assignment of its deparser group.
+     */
+    boost::optional<gress_t> gress_i;
+
     Container_status status_i = Container_status::EMPTY;
     ordered_map<PhvInfo::Field *, std::list<Container_Content *>>
         fields_in_container_i;                               // fields binned in this container
@@ -118,7 +124,7 @@ class PHV_Container {
         PHV_MAU_Group *g,
         PHV::Size w,
         unsigned container_id,
-        Ingress_Egress gress);
+        boost::optional<gress_t> gress);
     //
     PHV_MAU_Group *phv_mau_group()                              { return phv_mau_group_i; }
     PHV::Size width() const                                     { return width_i; }
@@ -136,24 +142,33 @@ class PHV_Container {
         return Device::phvSpec().idToContainer(container_id_i).toString();
     }
 
-    void gress(Ingress_Egress gress_p) {  // set when MAU group's gress is set
-        gress_i = gress_p;
+    /** Sets gress of this container, as well as any other containers required
+     * to have the same gress assignment (eg. all containers in a deparser
+     * group).  Once a container is assigned, it cannot be reassigned.
+     *
+     * This method maintains the following invariant: All containers in a
+     * deparser group are assigned to the same gress, if any.
+     *
+     * Fails catastrophically (with BUG) if this container has already been
+     * assigned a gress---i.e. `this->gress() != boost::none`)---either
+     * directly or via its deparser group.
+     */
+    void gress(gress_t gress) {
+        // XXX(cole): Add this after fixing PHV_MAU_Group not to update the
+        // gress of its containers.
+        // BUG_CHECK(!gress_i, "Updating container gress assignment");
+
+        // TODO(cole): Pick up here---update deparser group.
+
+        gress_i = gress;
     }
 
-    Ingress_Egress gress()                                      { return gress_i; }
-    static Ingress_Egress gress(PhvInfo::Field *field) {
-        if (field->gress == INGRESS) {
-            return PHV_Container::Ingress_Egress::Ingress_Only;
-        } else {
-            if (field->gress == EGRESS) {
-                return PHV_Container::Ingress_Egress::Egress_Only;
-            }
-        }
-        return PHV_Container::Ingress_Egress::Ingress_Or_Egress;
-    }
-    Container_status status()                                   { return status_i; }
+    /// Gets gress.
+    boost::optional<gress_t> gress() const                      { return gress_i; }
+
+    Container_status status() const                             { return status_i; }
     char *bits() const                                          { return bits_i; }
-    char taint_color(int bit) {
+    char taint_color(int bit) const {
         // taint color for bit in container
         BUG_CHECK(bit >= 0 && bit < int(width_i), "Bad range");
         return bits_i[bit];

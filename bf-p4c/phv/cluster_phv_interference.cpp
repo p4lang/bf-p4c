@@ -19,8 +19,7 @@ PHV_Interference::apply_visitor(const IR::Node *node, const char *name) {
 }
 
 ordered_set<PhvInfo::Field*> PHV_Interference::reduce_singleton_clusters(
-    const ordered_map<PHV_Container::Ingress_Egress,
-        ordered_map<int, std::vector<Cluster_PHV *>>> singletons,
+    const ordered_map<gress_t, ordered_map<int, std::vector<Cluster_PHV *>>> singletons,
     const std::string& msg) {
     LOG3("..........Begin: PHV_Interference::reduction_singleton_clusters().........." << msg);
 
@@ -246,9 +245,7 @@ void PHV_Interference::reduce_clusters(
     const std::string& msg) {
     LOG3("..........Begin: PHV_Interference::interference_reduction().........." << msg);
 
-    ordered_map<PHV_Container::Ingress_Egress,
-        ordered_map<int,
-            std::vector<Cluster_PHV *>>> singletons;
+    ordered_map<gress_t, ordered_map<int, std::vector<Cluster_PHV *>>> singletons;
 
     // Reduce each non-singleton cluster and gather singleton clusters.
     for (auto &cl : clusters) {
@@ -382,9 +379,7 @@ std::ostream &operator<<(std::ostream &out, ordered_map<int, PhvInfo::Field*>& r
 }
 
 std::ostream &operator<<(std::ostream &out,
-    ordered_map<PHV_Container::Ingress_Egress,
-        ordered_map<int,
-            std::vector<Cluster_PHV *>>> &aggregates) {
+    ordered_map<gress_t, ordered_map<int, std::vector<Cluster_PHV *>>> &aggregates) {
     out << "Begin ....................Singleton cluster aggregates...................."
         << std::endl;
     for (auto &entry : aggregates) {

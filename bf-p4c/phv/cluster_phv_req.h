@@ -1,26 +1,27 @@
 #ifndef BF_P4C_PHV_CLUSTER_PHV_REQ_H_
 #define BF_P4C_PHV_CLUSTER_PHV_REQ_H_
 
+#include "cluster.h"
+#include "cluster_phv_container.h"
 #include "phv.h"
 #include "phv_fields.h"
+#include "bf-p4c/ir/gress.h"
+#include "bf-p4c/ir/thread_visitor.h"
 #include "ir/ir.h"
 #include "lib/map.h"
 #include "lib/ordered_map.h"
 #include "lib/ordered_set.h"
 #include "lib/range.h"
-#include "bf-p4c/ir/thread_visitor.h"
-#include "cluster.h"
-#include "cluster_phv_container.h"
 
 static int cluster_id_g = 0;                // global counter for assigning cluster ids
-//
+
 class Cluster_PHV {
  private:
     std::vector<PhvInfo::Field *> cluster_vec_i;
                                             // cluster vec sorted by decreasing field width
     int id_num_i = cluster_id_g;            // number part of id_i
     std::string id_i;                       // cluster id
-    PHV_Container::Ingress_Egress gress_i;  // ingress or egress
+    gress_t gress_i;                        // ingress or egress
     PHV::Size width_i;        // container width in PHV group
     bool uniform_width_i = false;           // field widths differ in cluster
     int max_width_i = 0;                    // max width of field in cluster
@@ -63,7 +64,7 @@ class Cluster_PHV {
     int id_num()                                        { return id_num_i; }
     std::string id()                                    { return id_i; }
     void id(std::string id_p)                           { id_i = id_p; }
-    PHV_Container::Ingress_Egress gress()               { return gress_i; }
+    gress_t gress()                                     { return gress_i; }
     PHV::Size width()                                   { return width_i; }
     void width(PHV::Size w)                             { width_i = w; }
     bool uniform_width()                                { return uniform_width_i; }

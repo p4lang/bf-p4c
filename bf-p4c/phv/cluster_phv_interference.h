@@ -1,14 +1,15 @@
 #ifndef BF_P4C_PHV_CLUSTER_PHV_INTERFERENCE_H_
 #define BF_P4C_PHV_CLUSTER_PHV_INTERFERENCE_H_
 
+#include "cluster_phv_req.h"
 #include "phv.h"
 #include "phv_fields.h"
+#include "bf-p4c/ir/gress.h"
+#include "bf-p4c/ir/thread_visitor.h"
 #include "ir/ir.h"
 #include "lib/map.h"
 #include "lib/range.h"
 #include "lib/symbitmatrix.h"
-#include "bf-p4c/ir/thread_visitor.h"
-#include "cluster_phv_req.h"
 
 /** @brief Reduce cluster requirements by identifying fields within a cluster
  * that can be overlaid.
@@ -100,9 +101,7 @@ class PHV_Interference : public Visitor {
      * @returns The set of owners (each corresponding to a singleton).
      */
     ordered_set<PhvInfo::Field*> reduce_singleton_clusters(
-        const ordered_map<PHV_Container::Ingress_Egress,
-            ordered_map<int,
-                std::vector<Cluster_PHV *>>>,
+        const ordered_map<gress_t, ordered_map<int, std::vector<Cluster_PHV *>>>,
         const std::string&);
 
     /** Helper function for `reduce_cluster`. Assigns sets of fields in @cluster
@@ -188,9 +187,7 @@ class PHV_Interference : public Visitor {
 
 std::ostream &operator<<(std::ostream &, ordered_map<int, PhvInfo::Field*>&);
 std::ostream &operator<<(std::ostream &out,
-    ordered_map<PHV_Container::Ingress_Egress,
-        ordered_map<int,
-            std::vector<Cluster_PHV *>>>&);
+    ordered_map<gress_t, ordered_map<int, std::vector<Cluster_PHV *>>>&);
 std::ostream &operator<<(std::ostream &, PHV_Interference&);
 
 #endif /* BF_P4C_PHV_CLUSTER_PHV_INTERFERENCE_H_ */

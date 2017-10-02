@@ -45,7 +45,7 @@ PHV_Container::PHV_Container(
     PHV_MAU_Group *g,
     PHV::Size w,
     unsigned phv_n,
-    Ingress_Egress gress)
+    boost::optional<gress_t> gress)
     : phv_mau_group_i(g),
       width_i(w),
       container_id_i(phv_n),
@@ -159,22 +159,22 @@ PHV_Container::taint(
     // gress of fields must agree with gress of MAU group
     // "mixed-gress" arithmetic disallowed
     //
-    gress_i = gress(field);
-    if (phv_mau_group_i->gress() == Ingress_Egress::Ingress_Or_Egress) {
-        phv_mau_group_i->gress(gress_i);
+    this->gress(field->gress);
+    if (!phv_mau_group_i->gress()) {
+        phv_mau_group_i->gress(field->gress);
     } else {
         BUG_CHECK(
-            phv_mau_group_i->gress() == gress_i,
+            phv_mau_group_i->gress() == gress(),
             "*****PHV_Container::taint()*****%s mau_group gress = %c, field = %d:%s, gress = %c",
             this->toString(),
-            static_cast<char>(phv_mau_group_i->gress()),
+            phv_mau_group_i->gress(),
             field->id,
             field->name,
-            static_cast<char>(gress_i));
+            gress_i);
     }
     sanity_check_container_ranges("PHV_Container::taint()..");
     return width;  // all bits of this field processed
-}  // taint()
+}
 
 int
 PHV_Container::taint_ccgf(
@@ -628,23 +628,21 @@ PHV_Container::lowest_bit_and_ccgf_width(bool by_cluster_id) {
     return lbcw;
 }  // lowest_bit_and_ccgf_width
 
-PHV_Container::Container_Content*
-PHV_Container::taint_bits(
-    int start,
-    int width,
-    PhvInfo::Field *field,
-    int field_bit_lo,
-    Container_Content::Pass pass) {
-    //
-    if (taint_color_i == "9") {
+PHV_Container::Container_Content* PHV_Container::taint_bits(
+        int start,
+        int width,
+        PhvInfo::Field *field,
+        int field_bit_lo,
+        Container_Content::Pass pass) {
+    // XXX(cole)? Where is this encoding documented?
+    if (taint_color_i == "9")
         taint_color_i = "a";
-    } else {
+    else
         taint_color_i = taint_color_i.back() + '1' - '0';
-    }
-    for (auto i=start; i < start+width; i++) {
+
+    for (auto i=start; i < start+width; i++)
          bits_i[i] = taint_color_i.back();
-    }
-    //
+
     avail_bits_i -= width;  // packing reduces available bits
     BUG_CHECK(
         avail_bits_i >= 0,
@@ -653,10 +651,10 @@ PHV_Container::taint_bits(
         avail_bits_i,
         field->id,
         field->name);
-    //
-    if (status_i == Container_status::EMPTY) {
+
+    if (status_i == Container_status::EMPTY)
         phv_mau_group_i->dec_empty_containers();
-    }
+
     //
     // first container placement, packing start lo = start + width
     // after packing, non contiguous availability
@@ -677,15 +675,20 @@ PHV_Container::taint_bits(
         status_i = Container_status::PARTIAL;
     }
     create_ranges();
-    //
+
+    // Update container gress, if unset
+    if (!this->gress())
+        this->gress(field->gress);
+    BUG_CHECK(this->gress() && *this->gress() == field->gress,
+        "Assigning field to container of wrong gress");
+
     // track fields in this container
-    //
     Container_Content *cc =
         new Container_Content(this, start, width, field, field_bit_lo, taint_color_i, pass);
     fields_in_container(field, cc);
-    //
+
     return cc;
-}  // taint_bits()
+}
 
 void
 PHV_Container::fields_in_container(std::list<Container_Content *>& cc_list) {
@@ -1413,21 +1416,15 @@ std::ostream &operator<<(std::ostream &out, PHV_Container *c) {
     //
     if (c) {
         out << std::endl << '\t';
-        out << c->toString()
-            << '.' << static_cast<char>(c->gress())
-            << '.' << static_cast<char>(c->status());
-        if (c->deparsed()) {
+        out << c->toString() << '.' << c->gress() << '.' << c->status();
+        if (c->deparsed())
             out << "d";
-        }
-        if (c->fields_in_container().size() > 1) {
+        if (c->fields_in_container().size() > 1)
             out << "p";
-        }
         for (auto r : c->ranges()) {
             // when container FULL, range[0] = -1
-            if (r.second != -1) {
-                out << '(' << r.first << ".." << r.second << ')';
-            }
-        }
+            if (r.second != -1)
+                out << '(' << r.first << ".." << r.second << ')'; }
     } else {
         out << "-c-";
     }

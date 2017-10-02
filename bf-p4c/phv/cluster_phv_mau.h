@@ -1,14 +1,17 @@
 #ifndef BF_P4C_PHV_CLUSTER_PHV_MAU_H_
 #define BF_P4C_PHV_CLUSTER_PHV_MAU_H_
 
+#include <boost/optional.hpp>
+#include <boost/optional/optional_io.hpp>
+#include "cluster_phv_req.h"
 #include "phv.h"
 #include "phv_fields.h"
+#include "bf-p4c/ir/gress.h"
+#include "bf-p4c/ir/thread_visitor.h"
 #include "ir/ir.h"
 #include "lib/map.h"
 #include "lib/ordered_map.h"
 #include "lib/range.h"
-#include "bf-p4c/ir/thread_visitor.h"
-#include "cluster_phv_req.h"
 
 /** @brief PHV_MAU_Group_Assignments computes MAU Group Assignments to clusters.
  *
@@ -85,9 +88,14 @@ class PHV_MAU_Group {
  private:
     PHV::Type type_i;
     unsigned number_i;                                       // 1..4 [32], 1..6 [16], 1..4 [8]
-    PHV_Container::Ingress_Egress gress_i;              // Ingress_Only,
-                                                        // Egress_Only,
-                                                        // Ingress_Or_Egress
+
+    /** Gress assignment for all containers in this MAU group, if any.
+     *
+     * XXX(cole): Containers should be assigned to threads by deparser group,
+     * not MAU group.
+     */
+    boost::optional<gress_t> gress_i;
+
     size_t empty_containers_i;                          // number of containers that remain Empty
     std::vector<PHV_Container *> phv_containers_i;      // containers in this MAU group
     std::vector<Cluster_PHV *> cluster_phv_i;           // clusters in this MAU group
@@ -109,7 +117,7 @@ class PHV_MAU_Group {
      * @param group_number unique number of this MAU group.
      * @param gress whether this group is pinned to ingress/egress or can be assigned to either.
      */
-    PHV_MAU_Group(PHV::Type t, unsigned group_number, PHV_Container::Ingress_Egress gress)
+    PHV_MAU_Group(PHV::Type t, unsigned group_number, boost::optional<gress_t> gress)
     : type_i(t), number_i(group_number), gress_i(gress), empty_containers_i(0) { }
 
     void clear() {
@@ -124,14 +132,16 @@ class PHV_MAU_Group {
     PHV::Type type()                                    { return type_i; }
     PHV::Size width()                                   { return type_i.size(); }
     unsigned number()                                   { return number_i; }
-    void gress(PHV_Container::Ingress_Egress gress_p)   {
+
+    /// Pin gress of this group.
+    void gress(gress_t gress_p)   {
         gress_i = gress_p;
+        // XXX(cole): guarantee this at the container level, not group level.
         // set gress for all containers in group
-        for (auto &c : phv_containers_i) {
-            c->gress(gress_i);
-        }
+        for (auto &c : phv_containers_i)
+            c->gress(gress_p);
     }
-    PHV_Container::Ingress_Egress gress()               { return gress_i; }
+    boost::optional<gress_t> gress()                    { return gress_i; }
 
     std::vector<PHV_Container *>& phv_containers()             { return phv_containers_i; }
     const std::vector<PHV_Container *>& phv_containers() const { return phv_containers_i; }
@@ -159,7 +169,7 @@ class PHV_MAU_Group {
                 return c;
             }
         }
-        return 0;
+        return nullptr;
     }
     void container_population_density(
         ordered_map<PHV_Container::Container_status, std::pair<int, int>>&);
@@ -230,16 +240,16 @@ class PHV_MAU_Group_Assignments : public Visitor {
         bool smallest_container_width = true);
 
     size_t max_empty_containers(
-        PHV_Container::Ingress_Egress gress,
+        boost::optional<gress_t> gress,
         int width,
         std::list<PHV_MAU_Group *> phv_groups_to_be_filled);
     PHV_MAU_Group* upsize_mau_group(
-        PHV_Container::Ingress_Egress gress,
+        gress_t gress,
         int width,
         size_t required_containers,
         std::list<PHV_MAU_Group *> phv_groups_to_be_filled);
     PHV_MAU_Group* downsize_mau_group(
-        PHV_Container::Ingress_Egress gress,
+        gress_t gress,
         int width,
         size_t required_containers,
         std::list<PHV_MAU_Group *> phv_groups_to_be_filled);
@@ -322,7 +332,12 @@ class PHV_MAU_Group_Assignments : public Visitor {
     /** Build TPHV containers and collections. */
     void create_TPHV_collections();
 
-    PHV_Container::Ingress_Egress TPHV_collection_gress(unsigned collection_num);
+    /** PHV allocation estimates and pins TPHV collections to threads based on
+     * estimated requirements.
+     *
+     * @returns the thread assignment for TPHV collection @collection_num.
+     */
+    gress_t TPHV_collection_gress(unsigned collection_num);
 
     void cluster_PHV_placements();
     void cluster_TPHV_placements();
@@ -366,9 +381,6 @@ class PHV_MAU_Group_Assignments : public Visitor {
         PHV_MAU_Group::Aligned_Container_Slices_t&,
         const char *msg = "");
     //
-    bool gress_compatibility(
-        PHV_Container::Ingress_Egress gc_gress,
-        PHV_Container::Ingress_Egress cl_gress);
     bool canonicalize_cc_set(
         Cluster_PHV *cl,
         std::list<PHV_MAU_Group::Container_Slice *>& cc_set);

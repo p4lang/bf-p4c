@@ -208,23 +208,18 @@ bool
 Cluster_PHV_Overlay::overlay_cluster_to_cluster(
     Cluster_PHV *cl_o,
     Cluster_PHV *cl_s) {
-    //
     // honor MAU group In/Egress only constraints
-    //
-    if (!phv_mau_i.gress_compatibility(cl_o->gress(), cl_s->gress())) {
-        //
-        // gress mismatch, skip cluster
-        //
+    if (cl_o->gress() != cl_s->gress())
         return false;
-    }
+
     LOG3("..... attempt to overlay Cluster to Cluster ....."
         << cl_o->id() << " -> " << cl_s->id());
+
     // LOG3(cl_o);
     // LOG3(cl_s);
     //
     // assumption
     // cluster of fields are sorted decreasing field width
-    //
     ordered_map<PhvInfo::Field *, PhvInfo::Field *> overlay_substratum_map;
     std::list<PhvInfo::Field *> substratum_fields(
         cl_s->cluster_vec().begin(),
@@ -486,7 +481,7 @@ Cluster_PHV_Overlay::overlay_cluster_to_mau_group(Cluster_PHV *cl, PHV_MAU_Group
     //
     // 3a.honor MAU group In/Egress only constraints
     //
-    if (!phv_mau_i.gress_compatibility(g->gress(), cl->gress())) {
+    if (g->gress() && *g->gress() != cl->gress()) {
         //
         // gress mismatch, skip cluster for this MAU group
         //
@@ -499,7 +494,7 @@ Cluster_PHV_Overlay::overlay_cluster_to_mau_group(Cluster_PHV *cl, PHV_MAU_Group
     // Phase 1: test if cluster can overlay to containers in the same group.
     LOG3("..... attempt to overlay Cluster to MAU group ....."
         << cl->id() << " -> "
-        << "G" << g->number() << "<" << g->width() << "b>" << '.' << static_cast<char>(g->gress()));
+        << "G" << g->number() << "<" << g->width() << "b>" << '.' << g->gress());
     // LOG3(cl);
     //
     ordered_map<PhvInfo::Field *,
@@ -607,46 +602,40 @@ Cluster_PHV_Overlay::overlay_clusters_to_mau_groups(
         }
         return l->num_containers() > r->num_containers();
     });
-    //
+
     LOG4("..........Overlay_clusters_to_MAU_Groups: Clusters to be assigned ("
          << clusters_to_be_assigned.size()
          << ").........."
          << msg
          << std::endl);
     LOG4(clusters_to_be_assigned);
-    //
+
     // sort PHV_Groups in order 32b, 16b, 8b
     // for given width, I/E tagged MAU groups first
-    //
     phv_groups_to_be_overlayed.sort([](PHV_MAU_Group *l, PHV_MAU_Group *r) {
-        if (l->width() == r->width()) {
-            return l->gress() == PHV_Container::Ingress_Egress::Ingress_Only
-                || l->gress() == PHV_Container::Ingress_Egress::Egress_Only;
-        }
-        return l->width() > r->width();
-    });
-    //
+        if (l->width() == r->width())
+            return l->gress() != boost::none;
+        return l->width() > r->width(); });
+
     LOG4("..........Overlay_clusters_to_MAU_Groups:  PHV_Groups to be filled ("
          << phv_groups_to_be_overlayed.size()
          << ").........." << std::endl);
     LOG4(phv_groups_to_be_overlayed);
+
     for (auto &g : phv_groups_to_be_overlayed) {
         std::list<Cluster_PHV *> clusters_remove;
         clusters_remove.clear();
         for (auto &cl : clusters_to_be_assigned) {
-            if (overlay_cluster_to_mau_group(cl, g)) {
-                clusters_remove.push_back(cl);
-            }
-        }  // for clusters
+            if (overlay_cluster_to_mau_group(cl, g))
+                clusters_remove.push_back(cl); }
+
         // remove clusters already assigned
-        for (auto &cl : clusters_remove) {
-            clusters_to_be_assigned.remove(cl);
-        }
-    }  // for phv groups
-    //
+        for (auto &cl : clusters_remove)
+            clusters_to_be_assigned.remove(cl); }
+
     phv_mau_i.status(clusters_to_be_assigned, msg);
     phv_mau_i.status(phv_groups_to_be_overlayed, msg);
-}  // overlay_clusters_to_mau_groups
+}
 
 //
 //***********************************************************************************
