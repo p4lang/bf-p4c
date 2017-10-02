@@ -20,12 +20,19 @@
 set -e
 
 mydir=`dirname $0`
-cd $mydir
+mydir=`realpath $mydir`
+pushd $mydir
 
 RUN_BOOTSTRAP_PTF=yes
 if [ "$1" == "--no-ptf" ]; then
     RUN_BOOTSTRAP_PTF=no
     shift
+fi
+
+builddir=${mydir}/build
+if [ "$1" == "--build-dir" ]; then
+    builddir="$2"
+    shift; shift;
 fi
 
 if [ ! -r p4c/CMakeLists.txt ]; then
@@ -40,19 +47,20 @@ if [ ! -e bf-p4c ]; then ln -sf ../../bf-p4c bf-p4c; fi
 if [ ! -e p4_tests ]; then ln -sf ../../p4-tests p4_tests; fi
 popd # p4c/extensions
 
-mkdir -p build
-pushd build
-cmake .. -DCMAKE_BUILD_TYPE=DEBUG -DENABLE_JBAY=ON $*
-popd # build
+mkdir -p ${builddir}
+pushd ${builddir}
+cmake ${mydir} -DCMAKE_BUILD_TYPE=DEBUG -DENABLE_JBAY=ON $*
+popd # builddir
 
 if [ "$RUN_BOOTSTRAP_PTF" == "yes" ]; then
-    ./bootstrap_ptf.sh `pwd`/build
+    ${mydir}/bootstrap_ptf.sh ${builddir}
 fi
 
-pushd build/p4c
-if [ ! -e p4c-tofino-gdb.gdb ]; then ln -sf ../../bf-p4c/.gdbinit p4c-tofino-gdb.gdb; fi
-if [ ! -e p4c-bm2-ss-gdb.gdb ]; then ln -sf ../../bf-p4c/.gdbinit p4c-bm2-ss-gdb.gdb; fi
-if [ ! -e .gdbinit ]; then ln -sf ../../bf-p4c/.gdbinit; fi
+pushd ${builddir}/p4c
+if [ ! -e p4c-tofino-gdb.gdb ]; then ln -sf ${mydir}/bf-p4c/.gdbinit p4c-tofino-gdb.gdb; fi
+if [ ! -e p4c-bm2-ss-gdb.gdb ]; then ln -sf ${mydir}/bf-p4c/.gdbinit p4c-bm2-ss-gdb.gdb; fi
+if [ ! -e .gdbinit ]; then ln -sf ${mydir}/bf-p4c/.gdbinit; fi
 popd # build/p4c
 
-echo "Configured for build in build"
+echo "Configured for build in ${builddir}"
+popd > /dev/null # $mydir
