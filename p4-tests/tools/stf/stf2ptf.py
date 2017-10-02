@@ -250,11 +250,11 @@ class stf2ptf (P4RuntimeTest):
         if pkt_pair[0] is not None: self.genSendPacket(pkt_pair[0])
         if pkt_pair[1] is not None: self.genExpectPacket(pkt_pair[1], pkt_pair[0])
 
-    # currently we support only direct counters
     def genCheckCounter(self, chk):
         """
            Generate a check counter request and verify
         """
+        isDirect = True
         counterName = chk[1]
         if str(chk[2]).startswith('$'):
             varName = chk[2][1:]
@@ -263,22 +263,33 @@ class stf2ptf (P4RuntimeTest):
             match_name = self._namedEntries[varName][1]
             counterIndex = self._namedEntries[varName][2]
             mask = self._namedEntries[varName][3]
+            isDirect = True
         else:
             counterIndex = chk[2]
+            isDirect = False
 
         self._logger.info("check_counter %s(%s)", counterName, counterIndex)
         rr = p4runtime_pb2.ReadRequest()
         rr.device_id = self.device_id
         reqCounter = rr.entities.add()
-        counter_entry = reqCounter.direct_counter_entry
-        counter_entry.counter_id = self.get_direct_counter_id(counterName)
-        counter_entry.table_entry.table_id = self.get_table_id(table)
-        self.set_match_key(counter_entry.table_entry, table,
-                           [self.get_mf_match(table, match_name, counterIndex, mask)])
+        if isDirect:
+            counter_entry = reqCounter.direct_counter_entry
+            counter_entry.counter_id = self.get_direct_counter_id(counterName)
+            counter_entry.table_entry.table_id = self.get_table_id(table)
+            self.set_match_key(counter_entry.table_entry, table,
+                               [self.get_mf_match(table, match_name, counterIndex, mask)])
+        else:
+            counter_entry = reqCounter.counter_entry
+            counter_entry.counter_id = self.get_counter_id(counterName)
+            counter_entry.index = int(counterIndex)
         try:
             for rep in self.stub.Read(rr):
                 for entity in rep.entities:
-                    counter = entity.direct_counter_entry
+                    counter = None
+                    if isDirect:
+                        counter = entity.direct_counter_entry
+                    else:
+                        counter = entity.counter_entry
                     if chk[3][0] is not None:
                         count_type = chk[3][0]
                         compare = chk[3][1]
