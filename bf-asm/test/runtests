@@ -106,7 +106,7 @@ fi
 
 #glsc_args="--placement-order ingress_before_egress --libpd --placement secret"
 #glsc_args="--verbose 2 -vl 2 -S -G --placement-order ingress_before_egress --no-bin --new_ctx_json"
-glsc_args="--verbose 2 -vl 2 -S -G --placement-order ingress_before_egress"
+glsc_args="--verbose 2 -vl 2 --gen_asm --gen_json --placement-order ingress_before_egress"
 
 trap 'release_all_tokens; exit' 2
 
