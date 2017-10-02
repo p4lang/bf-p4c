@@ -145,7 +145,15 @@ class stf2ptf (P4RuntimeTest):
         update.type = p4runtime_pb2.Update.INSERT
         table_entry = update.entity.table_entry
         table_entry.table_id = self.get_table_id(table)
-        if priority is not None: table_entry.priority = int(priority, base=10)
+        if priority is None:
+            priority = 100
+        else:
+            # STF defines priorities up to 9999 -- Tofino supports how many bits?
+            priority = int(priority, base=10)/10
+        # STF defines priorities inverted from hardware and BMV2: higher numbers
+        # mean higher priorities. However, 10000 - priority doesn't work (see adb_shared1)
+        # and thus we divide the priority by 10 and subtract it from 1000.
+        table_entry.priority = 1000 - priority
         self.set_match_key(table_entry, table, self.genMatchKey(table, match_list))
         self.set_action_entry(table_entry, action,
                               self.genActionParamList(action, action_params))
@@ -199,7 +207,8 @@ class stf2ptf (P4RuntimeTest):
         self.set_action(table_entry.action.action, action,
                         self.genActionParamList(action, action_params))
         reply = self.stub.Write(req)
-        self._requests.append(req)
+        # resetting default actions is not supported in P4Runtime
+        # self._requests.append(req)
 
     def genSendPacket(self, packet):
         """
@@ -368,6 +377,10 @@ class stf2ptf (P4RuntimeTest):
                 if isBinary: mask += '1'
                 else: mask += 'f'
         # print name, ',', val, ',', mask
+        isLpm = table_name is not None and \
+                self.get_mf_match_type(table_name, name) == MatchType.LPM
+        if isLpm:
+            lpmLen = bin(int(mask, base=0)).count('1')
         if lpmLen != -1:
             mask = lpmLen
         return name, val, mask, hasMask
@@ -447,15 +460,13 @@ class stf2ptf (P4RuntimeTest):
         val = self.match2int(value)
         valLen = int(math.ceil(self.get_mf_bitwidth(table_name, field)/8.0))
         if match_type == MatchType.EXACT:
-            self._logger.debug("self.Exact(%s, stringify(0x%x, %d))", field, val, valLen)
+            self._logger.debug("self.Exact({0}, stringify(0x{1:x}, {2}))".format(field, val, valLen))
             return self.Exact(field, stringify(val, valLen))
         if match_type == MatchType.LPM:
-            self._logger.debug("self.LPM(%s, stringify(0x%x, %d), %d)",
-                               field, val, valLen, length_or_mask)
+            self._logger.debug("self.LPM({}, stringify(0x{:x}, {}), {})".format(field, val, valLen, length_or_mask))
             return self.Lpm(field, stringify(val, valLen), length_or_mask)
         if match_type == MatchType.TERNARY:
-            self._logger.debug("self.Ternary(%s, stringify(0x%x, %d), stringify(0x%x, %d))",
-                               field, val, valLen, self.match2int(length_or_mask), valLen)
+            self._logger.debug("self.Ternary({}, stringify(0x{:x}, {}), stringify(0x{:x}, {}))".format(field, val, valLen, self.match2int(length_or_mask), valLen))
             return self.Ternary(field, stringify(val, valLen),
                                 stringify(self.match2int(length_or_mask), valLen))
         self.fail("Unsupported match type %s for field %s in table %s" % \

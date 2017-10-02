@@ -923,7 +923,8 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     extensions/p4_tests/p4_16/depgraph1.p4
     extensions/p4_tests/p4_16/parser_metadata_init.p4
     extensions/p4_tests/p4_16/stack_valid.p4
-    testdata/p4_14_samples/action_chain1.p4
+    testdata/p4_14_samples/07-MultiProtocol.p4
+    testdata/p4_14_samples/basic_routing.p4
     testdata/p4_14_samples/exact_match3.p4
     testdata/p4_14_samples/gateway1.p4
     testdata/p4_14_samples/gateway2.p4
@@ -932,9 +933,7 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     testdata/p4_14_samples/instruct5.p4
     testdata/p4_14_samples/repeater.p4
     testdata/p4_14_samples/ternary_match2.p4
-    testdata/p4_14_samples/ternary_match4.p4
     testdata/p4_16_samples/issue635-bmv2.p4
-    testdata/p4_16_samples/ternary2-bmv2.p4
     )
 
   p4c_add_xfail_reason("tofino"
@@ -953,13 +952,6 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
   p4c_add_xfail_reason("tofino"
     "error: Encountered invalid code in computed checksum control"
     testdata/p4_14_samples/sai_p4.p4
-    )
-
-#  "<_Rendezvous of RPC that terminated with (StatusCode.UNIMPLEMENTED, Resetting default entry not supported yet)>"
-  p4c_add_xfail_reason("tofino"
-    "StatusCode.UNIMPLEMENTED, Resetting default entry not supported yet"
-    testdata/p4_14_samples/07-MultiProtocol.p4
-    testdata/p4_14_samples/basic_routing.p4
     )
 
 # Detailed error  "<_Rendezvous of RPC that terminated with (StatusCode.INVALID_ARGUMENT, Cannot map table entry to handle)>"
