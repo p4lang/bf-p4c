@@ -145,15 +145,15 @@ class stf2ptf (P4RuntimeTest):
         update.type = p4runtime_pb2.Update.INSERT
         table_entry = update.entity.table_entry
         table_entry.table_id = self.get_table_id(table)
+        table_size = self.get_table_size(table)
         if priority is None:
-            priority = 100
+            priority = table_size/2
         else:
-            # STF defines priorities up to 9999 -- Tofino supports how many bits?
-            priority = int(priority, base=10)/10
-        # STF defines priorities inverted from hardware and BMV2: higher numbers
-        # mean higher priorities. However, 10000 - priority doesn't work (see adb_shared1)
-        # and thus we divide the priority by 10 and subtract it from 1000.
-        table_entry.priority = 1000 - priority
+            priority = int(priority, base=10)
+        # STF defines priorities as higher numbers mean higher priorities.
+        # However, the current bf-driver implementation interprets lower
+        # numbers as higher priorities.
+        table_entry.priority = table_size - priority
         self.set_match_key(table_entry, table, self.genMatchKey(table, match_list))
         self.set_action_entry(table_entry, action,
                               self.genActionParamList(action, action_params))
@@ -420,6 +420,12 @@ class stf2ptf (P4RuntimeTest):
         # return str(''.join(x for x in packet.decode('hex')))
         # return str(('0'*(len(packet) % 2) + packet).decode('hex'))
 
+
+    def get_table_size(self, table_name):
+        for t in self.p4info.tables:
+            if t.preamble.name == table_name:
+                return int(t.size)
+        return 1024
 
     def get_mf_match_type(self, table_name, field):
         for t in self.p4info.tables:
