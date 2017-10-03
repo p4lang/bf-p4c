@@ -351,8 +351,14 @@ class DoMeterTranslation : public Transform {
 
     const IR::Node* postorder(IR::MethodCallExpression* node) override {
         auto member = node->method->to<IR::Member>();
-        if (!member)
-            return node;
+        if (!member) return node;
+
+        auto pathExpr = member->expr->to<IR::PathExpression>();
+        if (!pathExpr) return node;
+
+        auto type = pathExpr->type->to<IR::Type_Extern>();
+        if (!type) return node;
+        if (type->name != "meter") return node;
 
         if (member->member == "execute") {
             if (node->arguments->size() == 1) {
@@ -785,9 +791,13 @@ class IdleTimeoutTranslation : public Transform {
             auto per_flow_enable = table->getAnnotation("idletime_per_flow_idletime");
             auto type = new IR::Type_Name("idle_timeout");
             auto param = new IR::Vector<IR::Expression>();
-            param->push_back(precision->expr.at(0));
-            param->push_back(new IR::BoolLiteral(two_way_notify));
-            param->push_back(new IR::BoolLiteral(per_flow_enable));
+            /// XXX(hanw): check default value for two_way_notify and per_flow_enable
+            param->push_back(precision ? precision->expr.at(0) :
+                                 new IR::Constant(new IR::Type_Bits(3, false), 3));
+            param->push_back(two_way_notify ? new IR::BoolLiteral(two_way_notify) :
+                                 new IR::BoolLiteral(false));
+            param->push_back(per_flow_enable ? new IR::BoolLiteral(per_flow_enable):
+                                 new IR::BoolLiteral(false));
             auto constructorExpr = new IR::ConstructorCallExpression(type, param);
             propertyMap.emplace(table, constructorExpr);
         }
@@ -872,29 +882,39 @@ class CollectDigestFieldLists : public Transform {
         setName("CollectDigestFieldLists");
     }
 
-    const IR::Node* postorder(IR::MethodCallStatement* node) override {
-        auto mc = node->methodCall->to<IR::MethodCallExpression>();
-        if (!mc) return node;
+    const IR::AssignmentStatement* convertDigest(const IR::MethodCallExpression* mce,
+                                                 cstring name) {
+        auto path = new IR::PathExpression(name);
+        auto member = new IR::Member(path, metadata);
+        auto value = new IR::Constant(new IR::Type_Bits(3, false), digestTableIndex++);
+        auto stmt = new IR::AssignmentStatement(member, value);
+        if (mce->arguments->size() > fieldListIndex) {
+            auto fieldList = mce->arguments->at(fieldListIndex);
+            auto clonedFieldList = fieldList->apply(cloner);
+            map->emplace(value, clonedFieldList);
+        } else {
+            map->emplace(value, new IR::ListExpression({}));
+        }
+        return stmt;
+    }
 
-        auto expr = mc->method->to<IR::PathExpression>();
+    const IR::Node* postorder(IR::MethodCallStatement* node) override {
+        auto control = findContext<IR::P4Control>();
+        if (!control) return node;
+
+        auto mce = node->methodCall->to<IR::MethodCallExpression>();
+        if (!mce) return node;
+
+        auto expr = mce->method->to<IR::PathExpression>();
         if (!expr) return node;
 
         auto it = find(digestName.begin(), digestName.end(), expr->path->name);
         if (it != digestName.end()) {
-            auto path = (gress == gress_t::INGRESS) ?
-                        new IR::PathExpression("ig_intr_md_for_deparser") :
-                        new IR::PathExpression("eg_intr_md_for_deparser");
-            auto member = new IR::Member(path, metadata);
-            auto value = new IR::Constant(new IR::Type_Bits(3, false), digestTableIndex++);
-            auto stmt = new IR::AssignmentStatement(member, value);
-            if (mc->arguments->size() > fieldListIndex) {
-                auto fieldList = mc->arguments->at(fieldListIndex);
-                auto clonedFieldList = fieldList->apply(cloner);
-                map->emplace(value, clonedFieldList);
-            } else {
-                map->emplace(value, mc);
+            if (control->name == "ingress" && gress == gress_t::INGRESS) {
+                return convertDigest(mce, "ig_intr_md_for_deparser");
+            } else if (control->name == "egress" && gress == gress_t::EGRESS) {
+                return convertDigest(mce, "eg_intr_md_for_deparser");
             }
-            return stmt;
         }
         return node;
     }
@@ -1260,6 +1280,7 @@ class SetupMetadataMap : public Inspector {
 class DoMetadataTranslation : public Transform {
     SimpleSwitchTranslation* translator;
     MetadataMap* translationMap;
+    P4::ClonePathExpressions cloner;
 
  public:
     DoMetadataTranslation(SimpleSwitchTranslation* translator, MetadataMap* map)
@@ -1402,6 +1423,45 @@ class DoMetadataTranslation : public Transform {
             path = new IR::Path(P4_16::EgressIntrinsicsForOutputPort);
             type = new IR::Type_Name(path);
             param = new IR::Parameter("eg_intr_md_for_oport", IR::Direction::Out, type);
+            paramList->push_back(param);
+
+            // add ig_intr_md_for_dprsr
+            path = new IR::Path(P4_16::EgressIntrinsicsForDeparser);
+            type = new IR::Type_Name(path);
+            param = new IR::Parameter("eg_intr_md_for_deparser", IR::Direction::Out, type);
+            paramList->push_back(param);
+
+            auto control_type = new IR::Type_Control(node->name, paramList);
+
+            auto result = new IR::P4Control(node->srcInfo, node->name, control_type,
+                                            node->constructorParams, node->controlLocals,
+                                            node->body);
+            return result;
+        }
+
+        auto parser = translator->getParser(blk);
+        auto deparser = translator->getDeparser(blk);
+        if (*deparser == *node) {
+            BUG_CHECK(params->size() == 2, "%1% Expected 2 parameters for deparser", deparser);
+            auto paramList = new IR::ParameterList({node->type->applyParams->parameters.at(0),
+                                                    node->type->applyParams->parameters.at(1)});
+
+            // add metadata
+            auto meta = parser->type->applyParams->parameters.at(2);
+            auto param = new IR::Parameter(meta->name, meta->annotations,
+                                           IR::Direction::In, meta->type);
+            paramList->push_back(param);
+
+            // add eg_intr_md_for_dprsr
+            auto path = new IR::Path(P4_16::EgressIntrinsicsForDeparser);
+            auto type = new IR::Type_Name(path);
+            param = new IR::Parameter("eg_intr_md_for_dprsr", IR::Direction::In, type);
+            paramList->push_back(param);
+
+            // add mirror
+            path = new IR::Path("mirror_packet");
+            type = new IR::Type_Name(path);
+            param = new IR::Parameter("mirror", IR::Direction::None, type);
             paramList->push_back(param);
 
             auto control_type = new IR::Type_Control(node->name, paramList);

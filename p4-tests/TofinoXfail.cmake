@@ -133,10 +133,8 @@ if (NOT ENABLE_TNA)
 
   p4c_add_xfail_reason("tofino"
     "PHV allocation was not successful"
-    extensions/p4_tests/p4_14/jenkins/power/power.p4
     extensions/p4_tests/p4_14/switch_20160602/switch.p4
     extensions/p4_tests/p4_14/switch/p4src/switch.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
     )
 
   # BRIG-109
@@ -171,6 +169,12 @@ if (NOT ENABLE_TNA)
     "Header present in IR not under Member"
     testdata/p4_14_samples/resubmit.p4
     )
+
+  # BRIG-244
+  p4c_add_xfail_reason("tofino"
+    "error: Inferred incompatible alignments for field"
+    extensions/p4_tests/p4_14/jenkins/mirror_test/mirror_test.p4
+  )
 endif() # ENABLE_TNA
 
 p4c_add_xfail_reason("tofino"
@@ -707,11 +711,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/jenkins/fr_test/fr_test.p4
   )
 
-# BRIG-244
-p4c_add_xfail_reason("tofino"
-  "error: Inferred incompatible alignments for field"
-  extensions/p4_tests/p4_14/jenkins/mirror_test/mirror_test.p4
-  )
+
 
 # Specifically to save the error message
 p4c_add_xfail_reason("tofino"
@@ -817,6 +817,8 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/04-FullPHV3.p4
   extensions/p4_tests/p4_14/c1/COMPILER-133/full_tphv.p4
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
+  extensions/p4_tests/p4_14/jenkins/power/power.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -1031,11 +1033,25 @@ if (ENABLE_TNA)
     # "Attempt to access undefined metadata field egress_port in ingress"
     testdata/p4_14_samples/copy_to_cpu.p4
     testdata/p4_14_samples/resubmit.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-413/mirror_test.p4
-    extensions/p4_tests/p4_14/jenkins/mirror_test/mirror_test.p4
+    testdata/p4_14_samples/queueing.p4
+    extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "meta already resolved to"
     extensions/p4_tests/p4_14/test_config_102_clone.p4
-    extensions/p4_tests/p4_14/jenkins/emulation/emulation.p4
     extensions/p4_tests/p4_14/test_config_303_static_table.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "Duplicate element meter"
+    extensions/p4_tests/p4_14/test_config_168_meter_bug.p4
+    extensions/p4_tests/p4_14/test_config_177_meter_test.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "Called .* on an invalid container"
+    extensions/p4_tests/p4_14/jenkins/emulation/emulation.p4
     )
 
   # accessing ingress_intrinsic_metadata in egress
@@ -1044,7 +1060,6 @@ if (ENABLE_TNA)
     "Could not find declaration for ig_intr_md"
     extensions/p4_tests/p4_14/test_config_301_bridge_intrinsic.p4
     extensions/p4_tests/p4_14/c2/COMPILER-261/vag2241.p4
-    testdata/p4_14_samples/queueing.p4
     extensions/p4_tests/p4_14/c4/COMPILER-590/case3179.p4
     extensions/p4_tests/p4_14/c4/COMPILER-591/case3176.p4
     )
@@ -1061,6 +1076,7 @@ if (ENABLE_TNA)
     testdata/p4_14_samples/flowlet_switching.p4
     extensions/p4_tests/p4_14/test_config_96_hash_data.p4
     extensions/p4_tests/p4_14/test_config_13_first_selection.p4
+    extensions/p4_tests/p4_14/test_config_294_parser_loop.p4
     )
 
   p4c_add_xfail_reason("tofino"
@@ -1086,7 +1102,6 @@ if (ENABLE_TNA)
 
   p4c_add_xfail_reason("tofino"
     "Could not find declaration for ig_prsr_ctrl"
-    extensions/p4_tests/p4_14/test_config_294_parser_loop.p4
     extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
     extensions/p4_tests/p4_14/switch/p4src/switch.p4
     )
@@ -1124,14 +1139,24 @@ if (ENABLE_TNA)
     )
 
   p4c_add_xfail_reason("tofino"
-    "PHV allocation was not successful"
-    extensions/p4_tests/p4_14/jenkins/power/power.p4
+    "Unexpected method call in parser"
+    extensions/p4_tests/p4_14/packet_priority_exact_match.p4
     )
 
   p4c_add_xfail_reason("tofino"
-    "Nothing written in the instruction"
-    extensions/p4_tests/p4_14/jenkins/pgrs/pgrs_one.p4
+    "Interface register does not have a method named execute with 2 argument"
+    testdata/p4_14_samples/register.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "Unknown PHV container size"
     extensions/p4_tests/p4_14/test_config_144_recirculate.p4
+    extensions/p4_tests/p4_14/jenkins/pgrs/pgrs_one.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "src2 must be phv register"
+    extensions/p4_tests/p4_14/test_config_245_alias_test.p4
     )
 
   p4c_add_xfail_reason("tofino"
@@ -1206,44 +1231,6 @@ if (ENABLE_TNA)
     extensions/p4_tests/p4_14/jenkins/perf_test_alpm/perf_test_alpm_one.p4
     extensions/p4_tests/p4_14/jenkins/smoke_large_tbls/smoke_large_tbls.p4
     extensions/p4_tests/p4_14/switch_20160602/switch.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "src2 must be phv register"
-    extensions/p4_tests/p4_14/test_config_245_alias_test.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "Packet priority translation is not yet supported"
-    extensions/p4_tests/p4_14/test_config_248_pa_problem.p4
-    extensions/p4_tests/p4_14/test_config_252_pa_required_packing.p4
-    extensions/p4_tests/p4_14/test_config_253_pa_problem_2.p4
-    extensions/p4_tests/p4_14/test_config_255_pa_problem_3.p4
-    extensions/p4_tests/p4_14/test_config_257_pa_problem_5.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "Idle timeout translation is not yet supported"
-    extensions/p4_tests/p4_14/test_config_294_parser_loop.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-260/case1799.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-260/case1799_1.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-262/case1804.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-447/case2527.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-448/case2526.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-451/case2537.p4
-    extensions/p4_tests/p4_14/c1/DRV-543/case2499.p4
-    extensions/p4_tests/p4_14/jenkins/clpm/clpm.p4
-    extensions/p4_tests/p4_14/jenkins/fr_test/fr_test.p4
     )
 
 endif()  # ENABLE_TNA

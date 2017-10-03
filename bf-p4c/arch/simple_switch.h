@@ -80,6 +80,7 @@ static const cstring EgressIntrinsics = "egress_intrinsic_metadata_t";
 static const cstring EgressIntrinsicsForMirror = "egress_intrinsic_metadata_for_mirror_buffer_t";
 static const cstring EgressIntrinsicsFromParser = "egress_intrinsic_metadata_from_parser_t";
 static const cstring EgressIntrinsicsForOutputPort = "egress_intrinsic_metadata_for_output_port_t";
+static const cstring EgressIntrinsicsForDeparser = "egress_intrinsic_metadata_for_deparser_t";
 }  // namespace P4_16
 
 class SimpleSwitchTranslation : public PassManager {

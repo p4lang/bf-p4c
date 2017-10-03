@@ -156,6 +156,8 @@ struct ingress_intrinsic_metadata_for_mirror_buffer_t {
 struct egress_intrinsic_metadata_t {
     bit<32> instance_type;               // TODO: tofino does not have this field
     bit<8> clone_src;                    // TODO: tofino does not have this field
+    PortId_t ingress_port;               // TODO(hanw): hack until ingress_port is part
+                                         // of bridged metadata.
 
     bit<9> egress_port;                  // egress port id.
                                          // this field is passed to the deparser
@@ -434,6 +436,7 @@ control Egress<H, M>(
     @optional in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr,
     @optional out egress_intrinsic_metadata_for_mirror_buffer_t eg_intr_md_for_mb,
     @optional out egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport,
+    @optional out egress_intrinsic_metadata_for_deparser_t g_intr_md_for_dprsr,
     /// XXX(hanw): temporary solution for bridge metadata until we can use defuse
     /// in midend to create bridge metadata.
     @optional in ingress_intrinsic_metadata_t ig_intr_md,
