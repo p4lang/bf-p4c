@@ -929,6 +929,14 @@ p4c_add_xfail_reason("tofino"
 
 if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
   # STF2PTF tests that fail
+
+  # Failing on stf2ptf.py as indirect counters is not supported
+  p4c_add_xfail_reason("tofino"
+    "ERROR: stf2ptf.stf2ptf"
+    testdata/p4_14_samples/hash_action_basic.p4
+    testdata/p4_14_samples/hash_action_gateway.p4
+    )
+
   p4c_add_xfail_reason("tofino"
     "AssertionError: Expected packet was not received on device"
     extensions/p4_tests/p4_14/action_default_multiple.p4
@@ -993,9 +1001,6 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
 
   p4c_add_xfail_reason("tofino"
     "Error when trying to push config to bf_switchd"
-    testdata/p4_14_samples/hash_action_basic.p4
-    testdata/p4_14_samples/hash_action_gateway.p4
-    testdata/p4_14_samples/hash_action_two_separate.p4
     testdata/p4_14_samples/tmvalid.p4
     extensions/p4_tests/p4_14/hash_calculation_32.p4
     extensions/p4_tests/p4_14/stateful0.p4

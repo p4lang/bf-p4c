@@ -485,8 +485,6 @@ void output_phv_ownership(bitvec phv_use[2],
 #endif // HAVE_JBAY
 
 void Deparser::output(json::map &) {
-    if (dictionary[INGRESS].empty() && dictionary[EGRESS].empty())
-        return;
     switch(options.target) {
 #define SWITCH_FOR_TARGET(TARGET)                                       \
     case Target::TARGET::tag: {                                         \

@@ -95,7 +95,11 @@ template<class REGS> void CounterTable::write_merge_regs(REGS &regs, MatchTable 
         //pfe = STATISTICS_PER_FLOW_ENABLE_START_BIT;
         pfe = 0; // Does pfe value get picked up in default case?
         stats_adr_default = 1U << (STAT_ADDRESS_BITS - 1); }
-    merge.mau_stats_adr_mask[type][bus] = stats_adr_mask;
+    // FIXME: Should be cleaner, separate function to indicate addressing 
+    if (match->to<HashActionTable>()) {
+        merge.mau_stats_adr_mask[type][bus] = 0;
+    } else
+        merge.mau_stats_adr_mask[type][bus] = stats_adr_mask;
     merge.mau_stats_adr_default[type][bus] = stats_adr_default; 
     merge.mau_stats_adr_per_entry_en_mux_ctl[type][bus] = pfe;
     merge.mau_stats_adr_hole_swizzle_mode[type][bus] = counter_hole_swizzle[format->groups()];
