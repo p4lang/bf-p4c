@@ -1,6 +1,7 @@
 #!/usr/bin/env python2
 
 import argparse
+from collections import OrderedDict
 import errno
 from functools import wraps
 import logging
@@ -57,9 +58,22 @@ def get_parser():
                         action='store_true', default=False)
     parser.add_argument('--test-only', help='Only run the PTF tests',
                         action='store_true', default=False)
+    parser.add_argument('--port-map',
+                        help='Use provided port mapping (in Harlyn format); '
+                        'when this file is provided, this script will not '
+                        'create the default veth ifaces and all the ifaces '
+                        'listed in the file must exist and be up',
+                        type=str, action='store', required=False)
     return parser
 
 NUM_IFACES = 8
+
+def check_ifaces(ifaces):
+    ifconfig_out = subprocess.check_output(['ifconfig'])
+    iface_list = re.findall(r'^(\S+)', ifconfig_out, re.S | re.M)
+    present_ifaces = set(iface_list)
+    ifaces = set(ifaces)
+    return ifaces <= present_ifaces
 
 def check_and_add_ifaces():
     ifconfig_out = subprocess.check_output(['ifconfig'])
@@ -129,7 +143,8 @@ def update_config(name, grpc_addr, p4info_path, tofino_bin_path, cxt_json_path):
         return False
     return True
 
-def run_ptf_tests(PTF, ptfdir, p4info_path, stftest, extra_args=[]):
+def run_ptf_tests(PTF, grpc_addr, ptfdir, p4info_path, port_map, stftest,
+                  extra_args=[]):
     ifaces = []
     # find base_test.py
     pypath = os.path.dirname(os.path.abspath(__file__))
@@ -137,13 +152,13 @@ def run_ptf_tests(PTF, ptfdir, p4info_path, stftest, extra_args=[]):
         os.environ['PYTHONPATH'] += ":" + pypath
     else:
         os.environ['PYTHONPATH'] = pypath
-    for i in xrange(NUM_IFACES):
-        iface_idx = i
-        ifaces.extend(['-i', '{}@veth{}'.format(iface_idx, 2 * iface_idx + 1)])
+    for iface_idx, iface_name in port_map.items():
+        ifaces.extend(['-i', '{}@{}'.format(iface_idx, iface_name)])
     cmd = [PTF]
     cmd.extend(['--test-dir', ptfdir])
     cmd.extend(ifaces)
     test_params = 'p4info=\'{}\''.format(p4info_path)
+    test_params += ';grpcaddr=\'{}\''.format(grpc_addr)
     if stftest is not None:
         test_params += ';stftest=\'{}\''.format(stftest)
     cmd.append('--test-params={}'.format(test_params))
@@ -159,10 +174,12 @@ def run_ptf_tests(PTF, ptfdir, p4info_path, stftest, extra_args=[]):
         return 1
     return p.returncode == 0
 
-def start_model(model, out=None, lookup_json=None):
+def start_model(model, out=None, lookup_json=None, port_map_path=None):
     cmd = [model]
     if lookup_json is not None:
         cmd.extend(['-l', lookup_json])
+    if port_map_path is not None:
+        cmd.extend(['-f', port_map_path])
     return subprocess.Popen(cmd, stdout=out, stderr=out)
 
 def start_switchd(switchd, status_port, conf_path, out=None):
@@ -282,6 +299,11 @@ def main():
         warn("Name lookup json {} not found; debugging will be harder".format(
             lookup_json_path))
 
+    port_map_path = args.port_map
+    if port_map_path is not None and not os.path.exists(port_map_path):
+        error("Provided port mapping file {} not found".format(port_map_path))
+        sys.exit(1)
+
     if args.update_config_only:
         success = update_config(args.name, args.grpc_addr,
                                 p4info_path, tofino_bin_path, cxt_json_path)
@@ -301,11 +323,33 @@ def main():
     else:
         top_builddir = args.top_builddir
 
+    port_map = OrderedDict()
+    if port_map_path is None:
+        for iface_idx in xrange(NUM_IFACES):
+            port_map[iface_idx] = 'veth{}'.format(2 * iface_idx + 1)
+        check_and_add_ifaces()
+    else:
+        import json
+        with open(port_map_path) as port_map_f:
+            try:
+                jdict = json.load(port_map_f)
+                for jentry in jdict['PortToIf']:
+                    iface_idx = jentry['device_port']
+                    iface_name = jentry['if']
+                    port_map[iface_idx] = iface_name
+            except:
+                error("Error when parsing JSON port mapping file {}".format(
+                    port_map_path))
+                sys.exit(1)
+        if not check_ifaces(port_map.values()):
+            error("Some interfaces referenced in the port mapping file don't exist")
+            sys.exit(1)
+
     PTF = findbin(top_builddir, 'PTF')
 
     if args.test_only:
-        success = run_ptf_tests(PTF, args.ptfdir, p4info_path,
-                                args.stftest, extra_ptf_args)
+        success = run_ptf_tests(PTF, args.grpc_addr, args.ptfdir, p4info_path,
+                                port_map, args.stftest, extra_ptf_args)
         if not success:
             error("Error when running PTF tests")
             return 1
@@ -313,8 +357,6 @@ def main():
 
     BF_SWITCHD = findbin(top_builddir, 'BF_SWITCHD')
     HARLYN_MODEL = findbin(top_builddir, 'HARLYN_MODEL')
-
-    check_and_add_ifaces()
 
     dirname = tempfile.mkdtemp(prefix=args.name)
     os.chmod(dirname, 0o777)
@@ -328,7 +370,8 @@ def main():
         with open(model_log_path, 'w') as model_out, \
              open(switchd_log_path, 'w') as switchd_out:
             model_p = start_model(HARLYN_MODEL, out=model_out,
-                                  lookup_json=lookup_json_path)
+                                  lookup_json=lookup_json_path,
+                                  port_map_path=port_map_path)
             processes["model"] = model_p
 
             conf_path = os.path.join(
@@ -351,7 +394,8 @@ def main():
                 error("Error when pushing P4 config to switchd")
                 return False
 
-            success = run_ptf_tests(PTF, args.ptfdir, p4info_path,
+            success = run_ptf_tests(PTF, args.grpc_addr, args.ptfdir,
+                                    p4info_path, port_map,
                                     args.stftest, extra_ptf_args)
             if not success:
                 error("Error when running PTF tests")

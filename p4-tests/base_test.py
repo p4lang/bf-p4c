@@ -56,7 +56,15 @@ class P4RuntimeTest(BaseTest):
         self.dataplane = ptf.dataplane_instance
         self.dataplane.flush()
 
-        self.channel = grpc.insecure_channel('localhost:50051')
+        self._swports = []
+        for device, port, ifname in config["interfaces"]:
+            self._swports.append(port)
+
+        grpc_addr = testutils.test_param_get("grpcaddr")
+        if grpc_addr is None:
+            grpc_addr = 'localhost:50051'
+
+        self.channel = grpc.insecure_channel(grpc_addr)
         self.stub = p4runtime_pb2.P4RuntimeStub(self.channel)
 
         proto_txt_path = testutils.test_param_get("p4info")
@@ -138,6 +146,12 @@ class P4RuntimeTest(BaseTest):
         packet_out_req = p4runtime_pb2.StreamMessageRequest()
         packet_out_req.packet.CopyFrom(packet)
         self.stream_out_q.put(packet_out_req)
+
+    def swports(self, idx):
+        if idx >= len(self._swports):
+            self.fail("Index {} is out-of-bound of port map".format(idx))
+            return None
+        return self._swports[idx]
 
     def get_id(self, name, attr):
         for o in getattr(self.p4info, attr):

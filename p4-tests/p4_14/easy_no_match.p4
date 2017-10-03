@@ -1,5 +1,9 @@
 #include "tofino/intrinsic_metadata.p4"
 
+#ifndef FP_PORT_1
+#define FP_PORT_1 1
+#endif
+
 header_type h_t {
   fields {
     f1 : 8;
@@ -21,7 +25,7 @@ parser parse_h {
 
 action do() {
   modify_field(h.f2, 5);
-  modify_field(ig_intr_md_for_tm.ucast_egress_port, 1);
+  modify_field(ig_intr_md_for_tm.ucast_egress_port, FP_PORT_1);
 }
 
 table t {

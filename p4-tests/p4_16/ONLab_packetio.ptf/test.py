@@ -5,7 +5,7 @@ import ptf.testutils as testutils
 
 from p4 import p4runtime_pb2
 
-from base_test import P4RuntimeTest
+from base_test import P4RuntimeTest, stringify
 
 #@testutils.disabled
 class PacketInTest(P4RuntimeTest):
@@ -20,7 +20,9 @@ class PacketInTest(P4RuntimeTest):
         response = self.stub.Write(req)
 
         payload = 'a' * 64
-        testutils.send_packet(self, 3, payload)
+        ingress_port = self.swports(3)
+        ingress_port_hex = stringify(ingress_port, 2)  # port is 9-bit so 2-byte
+        testutils.send_packet(self, ingress_port, payload)
         packet_in = self.get_packet_in()
         self.assertEqual(packet_in.payload, payload)
         ingress_port = None
@@ -28,22 +30,24 @@ class PacketInTest(P4RuntimeTest):
             if metadata.metadata_id == 1:
                 ingress_port = metadata.value
                 break
-        self.assertEqual(ingress_port, "\x00\x03")
+        self.assertEqual(ingress_port, ingress_port_hex)
 
 #@testutils.disabled
 class PacketOutTest(P4RuntimeTest):
     def runTest(self):
+        port = 3
+        port_hex = stringify(port, 2)
         payload = 'a' * 20
         packet_out = p4runtime_pb2.PacketOut()
         packet_out.payload = payload
         egress_port = packet_out.metadata.add()
         egress_port.metadata_id = 1  # egress_port
-        egress_port.value = "\x00\x03"
+        egress_port.value = port_hex
         submit_to_ingress = packet_out.metadata.add()
         submit_to_ingress.metadata_id = 2
         submit_to_ingress.value = "\x00"  # _padding0
 
         self.send_packet_out(packet_out)
 
-        testutils.verify_packet(self, payload, 3)
+        testutils.verify_packet(self, payload, port)
         testutils.verify_no_other_packets(self)

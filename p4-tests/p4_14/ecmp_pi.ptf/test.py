@@ -7,7 +7,7 @@ from p4 import p4runtime_pb2
 from p4.tmp import p4config_pb2
 from p4.config import p4info_pb2
 
-from base_test import P4RuntimeTest
+from base_test import P4RuntimeTest, stringify
 
 class EcmpPITest(P4RuntimeTest):
     def common_setup(self):
@@ -184,17 +184,19 @@ class OneMemberTest(EcmpPITest):
     def runTest(self):
         print "Running test"
 
+        ig_port = self.swports(1)
+
         nhop1 = "\x0a\x00\x01\x01"
         dmac1 = "\x00\x11\x11\x11\x11\x11"
         smac1 = "\x00\x22\x22\x22\x22\x22"
-        eg_port1 = 3
-        eg_port1_str = "\x00\x03"
+        eg_port1 = self.swports(3)
+        eg_port1_hex = stringify(eg_port1, 2)
 
         self.common_setup()
-        self.prog_other_ts(nhop1, dmac1, smac1, eg_port1_str)
+        self.prog_other_ts(nhop1, dmac1, smac1, eg_port1_hex)
 
         mbr1 = 1
-        mbr1_req = self.add_mbr(mbr1, nhop1, eg_port1_str)
+        mbr1_req = self.add_mbr(mbr1, nhop1, eg_port1_hex)
 
         entry_req = self.add_mat_entry_to_mbr("\x0a\x00\x00\x00", 8, mbr1)
 
@@ -204,23 +206,23 @@ class OneMemberTest(EcmpPITest):
             eth_dst=dmac1, eth_src=smac1, ip_dst='10.0.0.1', ip_ttl=63)
 
 
-        testutils.send_packet(self, 1, str(pkt))
+        testutils.send_packet(self, ig_port, str(pkt))
         print "Expecting packet on port", eg_port1
         testutils.verify_packets(self, exp_pkt, [eg_port1])
 
         nhop2 = "\x0a\x00\x01\x02"
         dmac2 = "\x00\x11\x11\x11\x11\x00"
         smac2 = "\x00\x22\x22\x22\x22\x00"
-        eg_port2 = 4
-        eg_port2_str = "\x00\x04"
+        eg_port2 = self.swports(4)
+        eg_port2_hex = stringify(eg_port2, 2)
 
-        self.prog_other_ts(nhop2, dmac2, smac2, eg_port2_str)
-        self.mod_mbr(mbr1, nhop2, eg_port2_str)
+        self.prog_other_ts(nhop2, dmac2, smac2, eg_port2_hex)
+        self.mod_mbr(mbr1, nhop2, eg_port2_hex)
 
         exp_pkt = testutils.simple_tcp_packet(
             eth_dst=dmac2, eth_src=smac2, ip_dst='10.0.0.1', ip_ttl=63)
 
-        testutils.send_packet(self, 1, str(pkt))
+        testutils.send_packet(self, ig_port, str(pkt))
         print "Expecting packet on port", eg_port2
         testutils.verify_packets(self, exp_pkt, [eg_port2])
 
@@ -237,25 +239,26 @@ class OneGroupTest(EcmpPITest):
     def runTest(self):
         print "Running test"
 
+        ig_port = self.swports(1)
         nhop1 = "\x0a\x00\x01\x01"
         dmac1 = "\x00\x11\x11\x11\x11\x11"
         smac1 = "\x00\x22\x22\x22\x22\x22"
-        eg_port1 = 3
-        eg_port1_str = "\x00\x03"
+        eg_port1 = self.swports(3)
+        eg_port1_hex = stringify(eg_port1, 2)
         nhop2 = "\x0a\x00\x01\x02"
         dmac2 = "\x00\x11\x11\x11\x11\x00"
         smac2 = "\x00\x22\x22\x22\x22\x00"
-        eg_port2 = 4
-        eg_port2_str = "\x00\x04"
+        eg_port2 = self.swports(4)
+        eg_port2_hex = stringify(eg_port2, 2)
 
         self.common_setup()
-        self.prog_other_ts(nhop1, dmac1, smac1, eg_port1_str)
-        self.prog_other_ts(nhop2, dmac2, smac2, eg_port2_str)
+        self.prog_other_ts(nhop1, dmac1, smac1, eg_port1_hex)
+        self.prog_other_ts(nhop2, dmac2, smac2, eg_port2_hex)
 
         mbr1 = 1
-        mbr1_req = self.add_mbr(mbr1, nhop1, eg_port1_str)
+        mbr1_req = self.add_mbr(mbr1, nhop1, eg_port1_hex)
         mbr2 = 2
-        mbr2_req = self.add_mbr(mbr2, nhop2, eg_port2_str)
+        mbr2_req = self.add_mbr(mbr2, nhop2, eg_port2_hex)
 
         grp = 1
         grp_req = self.create_empty_grp(grp)
@@ -270,7 +273,7 @@ class OneGroupTest(EcmpPITest):
         exp_pkt = testutils.simple_tcp_packet(
             eth_dst=dmac1, eth_src=smac1, ip_dst='10.0.0.1', ip_ttl=63)
 
-        testutils.send_packet(self, 1, str(pkt))
+        testutils.send_packet(self, ig_port, str(pkt))
         print "Expecting packet on port", eg_port1
         testutils.verify_packets(self, exp_pkt, [eg_port1])
 
@@ -289,7 +292,7 @@ class OneGroupTest(EcmpPITest):
             exp_pkt2 = testutils.simple_tcp_packet(
                 eth_dst=dmac2, eth_src=smac2,
                 ip_src=ip_src, ip_dst='10.0.0.1', ip_ttl=63)
-            testutils.send_packet(self, 1, str(pkt))
+            testutils.send_packet(self, ig_port, str(pkt))
             eg_idx = testutils.verify_any_packet_any_port(
                 self, pkts=[exp_pkt1, exp_pkt2], ports=[eg_port1, eg_port2])
             counts[eg_idx] += 1
@@ -305,7 +308,7 @@ class OneGroupTest(EcmpPITest):
         exp_pkt = testutils.simple_tcp_packet(
             eth_dst=dmac2, eth_src=smac2, ip_dst='10.0.0.1', ip_ttl=63)
 
-        testutils.send_packet(self, 1, str(pkt))
+        testutils.send_packet(self, ig_port, str(pkt))
         print "Expecting packet on port", eg_port2
         testutils.verify_packets(self, exp_pkt, [eg_port2])
 

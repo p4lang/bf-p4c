@@ -1,5 +1,8 @@
-
 #include "tofino/intrinsic_metadata.p4"
+
+#ifndef FP_PORT_3
+#define FP_PORT_3 3
+#endif
 
 header_type h_t {
   fields {
@@ -21,7 +24,7 @@ parser parse_h {
 action nop() { }
 action do() {
   modify_field(h.n1, 0xa);
-  modify_field(ig_intr_md_for_tm.ucast_egress_port, 3);
+  modify_field(ig_intr_md_for_tm.ucast_egress_port, FP_PORT_3);
 }
 table t {
     reads { h.f1 : lpm; }

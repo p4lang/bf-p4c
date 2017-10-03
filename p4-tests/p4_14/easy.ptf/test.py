@@ -12,11 +12,14 @@ class MyTest(P4RuntimeTest):
     def runTest(self):
         print "Running test"
 
+        ig_port = self.swports(1)
+        eg_port = self.swports(2)
+
         pkt = testutils.simple_tcp_packet()
 
         # default action (from P4 program) sends all packets to port 2
-        testutils.send_packet(self, 1, str(pkt))
-        testutils.verify_packet(self, pkt, 2)
+        testutils.send_packet(self, ig_port, str(pkt))
+        testutils.verify_packet(self, pkt, eg_port)
 
         req = p4runtime_pb2.WriteRequest()
         req.device_id = self.device_id
@@ -28,7 +31,7 @@ class MyTest(P4RuntimeTest):
 
         rep = self.stub.Write(req)
 
-        testutils.send_packet(self, 1, str(pkt))
+        testutils.send_packet(self, ig_port, str(pkt))
         testutils.verify_no_other_packets(self)
 
         # restore default action
@@ -37,7 +40,7 @@ class MyTest(P4RuntimeTest):
 
         rep = self.stub.Write(req)
 
-        testutils.send_packet(self, 1, str(pkt))
-        testutils.verify_packet(self, pkt, 2)
+        testutils.send_packet(self, ig_port, str(pkt))
+        testutils.verify_packet(self, pkt, eg_port)
 
         testutils.verify_no_other_packets(self)

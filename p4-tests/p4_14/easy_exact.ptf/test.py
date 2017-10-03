@@ -22,9 +22,10 @@ def dumbPacket(f1=0xabcd, f2=0xef, f3=0xaa):
 
 class SimpleTest(P4RuntimeTest):
     def runTest(self):
+        ig_port = self.swports(1)
         # Sending a packet when no entry is installed. Should miss.
         pkt = dumbPacket(0xdead, 0x00, 0x00)
-        testutils.send_packet(self, 1, str(pkt))
+        testutils.send_packet(self, ig_port, str(pkt))
         testutils.verify_no_other_packets(self)
 
         # Setup for adding a new entry.
@@ -40,7 +41,7 @@ class SimpleTest(P4RuntimeTest):
         # to 0x42.
         f1 = 0xdead
         val = 0x42
-        eg_port = 3
+        eg_port = self.swports(3)
         self.set_match_key(
             table_entry, "t",
             [self.Exact("h.f1", stringify(f1, 2))])
@@ -53,11 +54,11 @@ class SimpleTest(P4RuntimeTest):
         # Send a matching packet, with the exact value matching.
         # Expect packet on port 3, with a f2 field of 0x42.
         pkt = dumbPacket(f1=f1, f2=0x00, f3=0x00)
-        testutils.send_packet(self, 1, str(pkt))
+        testutils.send_packet(self, ig_port, str(pkt))
         exp_pkt = dumbPacket(f1=f1, f2=val, f3=0x00)
         testutils.verify_packet(self, exp_pkt, eg_port)
 
         # Send a non matching packet.
         pkt = dumbPacket(f1=0x00aa, f2=0x00, f3=0x00)
-        testutils.send_packet(self, 1, str(pkt))
+        testutils.send_packet(self, ig_port, str(pkt))
         testutils.verify_no_other_packets(self)

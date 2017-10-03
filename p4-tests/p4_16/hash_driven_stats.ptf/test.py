@@ -24,8 +24,8 @@ class CounterReadTest(P4RuntimeTest):
                     return counter_entry.data.byte_count
 
     def runTest(self):
-        ingress_port = 1
-        egress_port = 2
+        ingress_port = self.swports(1)
+        egress_port = self.swports(2)
 
         def get_counts():
             ingress_count = self.read_counter("ingress_port_counter", ingress_port)

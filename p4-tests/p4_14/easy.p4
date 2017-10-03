@@ -1,5 +1,9 @@
 #include "tofino/intrinsic_metadata.p4"
 
+#ifndef FP_PORT_2
+#define FP_PORT_2 2
+#endif
+
 header_type ethernet_t {
     fields {
         dstAddr : 48;
@@ -21,7 +25,7 @@ parser parse_ethernet {
 
 action nop() { }
 
-action do() { modify_field(ig_intr_md_for_tm.ucast_egress_port, 2); }
+action do() { modify_field(ig_intr_md_for_tm.ucast_egress_port, FP_PORT_2); }
 
 table t {
     reads { ig_intr_md.ingress_port : exact; }

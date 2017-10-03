@@ -1,6 +1,10 @@
 #include <core.p4>
 #include <v1model.p4>
 
+#ifndef FP_PORT_2
+#define FP_PORT_2 2
+#endif
+
 struct metadata_t { }
 struct headers_t { }
 
@@ -16,7 +20,7 @@ control ingress(inout headers_t hdr, inout metadata_t meta,
     counter(512, CounterType.bytes) ingress_port_counter;
 
     apply {
-        standard_metadata.egress_spec = 2;
+        standard_metadata.egress_spec = FP_PORT_2;
         if (standard_metadata.ingress_port < 511) {
             ingress_port_counter.count((bit<32>) standard_metadata.ingress_port);
         }
