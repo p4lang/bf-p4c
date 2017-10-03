@@ -601,9 +601,6 @@ void ExactMatchTable::add_field_to_pack_format(json::vector &field_list, int bas
                                 std::string name, const Table::Format::Field &field,
                                 const std::vector<Table::Actions::Action::alias_value_t *> &alias) {
     if (options.new_ctx_json) {
-        if (name == "action") name = "--instruction_address--";
-        if (name == "version") name = "--version_valid--";
-        if (name == "immediate") name = "--immediate--";
         if (name != "match") {
             Table::add_field_to_pack_format(field_list, basebit, name, field, alias);
             return; }
@@ -616,9 +613,9 @@ void ExactMatchTable::add_field_to_pack_format(json::vector &field_list, int bas
                 std::string source = "spec";
                 std::string immediate_name = "";
                 std::string mw_name = mw->second.name();
-                if (mw_name == "--version_valid--")
+                if (mw_name == "version")
                     source = "version";
-                else if (mw_name == "--immediate--") {
+                else if (mw_name == "immediate") {
                     source = "immediate";
                     immediate_name = name; }
                 int hi = std::min((unsigned)mw->second->size()-1, bit+piece.size()-mw->first-1);

@@ -1801,16 +1801,16 @@ void Table::add_field_to_pack_format(json::vector &field_list, int basebit, std:
         for (auto &bits : field.bits) {
             bool pfe_enable = false;
             std::string immediate_name = "";
-            if (name == "--version_valid--")
+            if (name == "version")
                 source = "version";
-            else if (name == "--immediate--") {
+            else if (name == "immediate") {
                 source = "immediate";
                 immediate_name = name;
-            } else if (name == "--instruction_address--")
+            } else if (name == "action")
                 source = "instr";
-            else if (name == "--action_data_pointer--")
+            else if (name == "action_addr")
                 source = "adt_ptr";
-            else if (name == "--selection_base--")
+            else if ((name == "meter_addr") && get_selector())
                 source = "sel_ptr";
             if (auto a = this->get_attached()) {
                 // If field is an attached table address specified by a pfe
@@ -1832,23 +1832,15 @@ void Table::add_field_to_pack_format(json::vector &field_list, int basebit, std:
                         // separate pfe bit this hack will go away and pfe
                         // fields wont be dropped from the entry format
                         add_width = 1;
-                        pfe_enable = true;
-                        // FIXME-DRIVER: If the field does not start with a "--" or "$" driver
-                        // assumes it to be a spec field and tries to find it in
-                        // the match_key_fields which it wont and will complain
-                        // field is not in match spec. Driver needs to search on
-                        // the source type which is "spec" rather than
-                        // field_name. This hack will go away once driver
-                        // support is added
-                        name = "--" + name + "--"; } } }
+                        pfe_enable = true; } } }
             if (field.flags == Format::Field::ZERO)
                 source = "zero";
             json::map field_entry;
             field_entry["start_bit"] = lobit;
             if (auto t = this->to<TernaryIndirectTable>()) {
-                if (name == "--selection_base--")
+                if ((name == "meter_addr") && get_selector())
                     field_entry["start_bit"] = SELECTOR_LOWER_HUFFMAN_BITS;
-                if (name == "--action_data_pointer--")
+                if (name == "action_addr")
                     if (auto adt = t->action->to<ActionTable>()) {
                         field_entry["start_bit"] = std::min(5U, adt->get_log2size() - 2); } }
             field_entry["field_width"] = bits.size() + add_width;
@@ -1865,7 +1857,7 @@ void Table::add_field_to_pack_format(json::vector &field_list, int basebit, std:
             if (this->to<ExactMatchTable>() || this->to<TernaryIndirectTable>()) {
                 field_entry["enable_pfe"] = pfe_enable;
                 if (auto s = this->get_selector()) {
-                    if (name == "--selection_base--")
+                    if (name == "meter_addr")
                         field_entry["enable_pfe"] = s->get_per_flow_enable();
                     if (s->get_per_flow_enable_param() == name)
                         return; } } //Do not output per flow enable parameter
