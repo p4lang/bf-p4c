@@ -3,6 +3,7 @@
 
 #include <boost/optional.hpp>
 #include <boost/optional/optional_io.hpp>
+#include "action_phv_constraints.h"
 #include "cluster_phv_req.h"
 #include "phv.h"
 #include "phv_fields.h"
@@ -183,6 +184,8 @@ class PHV_MAU_Group {
     void sanity_check_container_packs(const std::string&);
     void sanity_check_container_fields_gress(const std::string&);
     void sanity_check_group_containers(const std::string&, bool check_deparsed_no_hole = true);
+
+    friend class ActionPhvConstraints;
 };  // class PHV_MAU_Group
 //
 //
@@ -193,6 +196,7 @@ class PHV_MAU_Group_Assignments : public Visitor {
 
  private:
     Cluster_PHV_Requirements &phv_requirements_i;  // reference to parent PHV Requirements
+    ActionPhvConstraints &action_constraints;      // reference to action constraints
     ordered_map<unsigned, PHV_Container *> phv_containers_i;
                                        // map phv_number to Container
     ordered_map<PHV::Size, std::vector<PHV_MAU_Group *>> PHV_MAU_i;
@@ -267,8 +271,9 @@ class PHV_MAU_Group_Assignments : public Visitor {
 
  public:
     //
-    PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &phv_r)  // NOLINT(runtime/explicit)
-        : phv_requirements_i(phv_r) {}
+    PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &phv_r,
+                              ActionPhvConstraints &act_r)  // NOLINT(runtime/explicit)
+        : phv_requirements_i(phv_r), action_constraints(act_r) {}
     //
     void clear();
     Cluster_PHV_Requirements& phv_requirements() { return phv_requirements_i; }
@@ -340,6 +345,7 @@ class PHV_MAU_Group_Assignments : public Visitor {
     gress_t TPHV_collection_gress(unsigned collection_num);
 
     void cluster_PHV_placements();
+    void check_action_constraints();
     void cluster_TPHV_placements();
     void cluster_POV_placements();
     void cluster_PHV_nibble_placements();

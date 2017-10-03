@@ -5,6 +5,7 @@
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
+#include "bf-p4c/phv/action_phv_constraints.h"
 #include "bf-p4c/phv/cluster.h"
 #include "bf-p4c/phv/cluster_phv_req.h"
 #include "bf-p4c/phv/cluster_phv_interference.h"
@@ -18,6 +19,7 @@ class PHV_AnalysisPass : public PassManager {
     Cluster cluster;                            // cluster analysis
     Cluster_PHV_Requirements cluster_phv_req;   // cluster PHV requirements
     PHV_Interference cluster_phv_interference;  // intra-cluster PHV Interference Graph
+    ActionPhvConstraints action_constraints;    // constraints imposed by actions
     PHV_MAU_Group_Assignments cluster_phv_mau;  // cluster PHV Container placements
 
  public:

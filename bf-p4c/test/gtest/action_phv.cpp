@@ -10,7 +10,7 @@
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/test/gtest/tofino_gtest_utils.h"
-#include "bf-p4c/mau/action_phv_constraints.h"
+#include "bf-p4c/phv/action_phv_constraints.h"
 #include "bf-p4c/mau/instruction_selection.h"
 
 namespace Test {
@@ -112,10 +112,36 @@ TEST(ActionPhv, IngressSingleTableSharedWrites) {
     ActionPhvConstraints apc(phv);
     post_pm_pipe = post_pm_pipe->apply(apc);
 
-    EXPECT_TRUE(apc.is_in_shared_writes("ingress::h1.field1", "ingress::h1.field2"));
-    EXPECT_TRUE(apc.is_in_shared_writes("ingress::h1.field1", "ingress::h1.field3"));
-    EXPECT_TRUE(apc.is_in_shared_writes("ingress::h1.field1", "ingress::h1.field4"));
-    EXPECT_FALSE(apc.is_in_shared_writes("ingress::h1.field2", "ingress::h1.field4"));
+    std::vector<const IR::MAU::Action *> actionList;
+    forAllMatching<IR::MAU::Action>(post_pm_pipe, [&](const IR::MAU::Action* act) {
+            actionList.push_back(act);
+            });
+
+    EXPECT_TRUE(apc.is_in_field_writes_to_actions("ingress::h1.field1", actionList[0]));
+    EXPECT_TRUE(apc.is_in_field_writes_to_actions("ingress::h1.field1", actionList[1]));
+    EXPECT_FALSE(apc.is_in_field_writes_to_actions("ingress::h1.field1", actionList[2]));
+    EXPECT_TRUE(apc.is_in_field_writes_to_actions("ingress::h1.field2", actionList[0]));
+    EXPECT_FALSE(apc.is_in_field_writes_to_actions("ingress::h1.field2", actionList[1]));
+    EXPECT_FALSE(apc.is_in_field_writes_to_actions("ingress::h1.field2", actionList[2]));
+    EXPECT_FALSE(apc.is_in_field_writes_to_actions("ingress::h1.field3", actionList[0]));
+    EXPECT_TRUE(apc.is_in_field_writes_to_actions("ingress::h1.field3", actionList[1]));
+    EXPECT_FALSE(apc.is_in_field_writes_to_actions("ingress::h1.field3", actionList[2]));
+    EXPECT_FALSE(apc.is_in_field_writes_to_actions("ingress::h1.field4", actionList[0]));
+    EXPECT_TRUE(apc.is_in_field_writes_to_actions("ingress::h1.field4", actionList[1]));
+    EXPECT_FALSE(apc.is_in_field_writes_to_actions("ingress::h1.field4", actionList[2]));
+
+    EXPECT_TRUE(apc.is_in_action_to_writes(actionList[0], "ingress::h1.field1"));
+    EXPECT_TRUE(apc.is_in_action_to_writes(actionList[1], "ingress::h1.field1"));
+    EXPECT_FALSE(apc.is_in_action_to_writes(actionList[2], "ingress::h1.field1"));
+    EXPECT_TRUE(apc.is_in_action_to_writes(actionList[0], "ingress::h1.field2"));
+    EXPECT_FALSE(apc.is_in_action_to_writes(actionList[1], "ingress::h1.field2"));
+    EXPECT_FALSE(apc.is_in_action_to_writes(actionList[2], "ingress::h1.field2"));
+    EXPECT_FALSE(apc.is_in_action_to_writes(actionList[0], "ingress::h1.field3"));
+    EXPECT_TRUE(apc.is_in_action_to_writes(actionList[1], "ingress::h1.field3"));
+    EXPECT_FALSE(apc.is_in_action_to_writes(actionList[2], "ingress::h1.field3"));
+    EXPECT_FALSE(apc.is_in_action_to_writes(actionList[0], "ingress::h1.field4"));
+    EXPECT_TRUE(apc.is_in_action_to_writes(actionList[1], "ingress::h1.field4"));
+    EXPECT_FALSE(apc.is_in_action_to_writes(actionList[2], "ingress::h1.field4"));
 }
 
 TEST(ActionPhv, IngressMultipleTablesSharedWrites) {
@@ -168,13 +194,35 @@ TEST(ActionPhv, IngressMultipleTablesSharedWrites) {
     ActionPhvConstraints apc(phv);
     post_pm_pipe = post_pm_pipe->apply(apc);
 
-    EXPECT_TRUE(apc.is_in_shared_writes("ingress::h1.field1", "ingress::h2.field3"));
-    EXPECT_TRUE(apc.is_in_shared_writes("ingress::h1.field1", "ingress::h2.field4"));
-    EXPECT_TRUE(apc.is_in_shared_writes("ingress::h1.field4", "ingress::h2.field2"));
-    EXPECT_TRUE(apc.is_in_shared_writes("ingress::h1.field4", "ingress::h2.field3"));
+    std::vector<const IR::MAU::Action *> actionList;
+    forAllMatching<IR::MAU::Action>(post_pm_pipe, [&](const IR::MAU::Action* act) {
+            actionList.push_back(act);
+            });
 
-    EXPECT_FALSE(apc.is_in_shared_writes("ingress::h1.field1", "ingress::h2.field2"));
-    EXPECT_FALSE(apc.is_in_shared_writes("ingress::h1.field4", "ingress::h2.field4"));
+    EXPECT_TRUE(apc.is_in_field_writes_to_actions("ingress::h1.field1", actionList[0]));
+    EXPECT_TRUE(apc.is_in_field_writes_to_actions("ingress::h1.field1", actionList[2]));
+    EXPECT_FALSE(apc.is_in_field_writes_to_actions("ingress::h1.field1", actionList[1]));
+    EXPECT_TRUE(apc.is_in_field_writes_to_actions("ingress::h2.field2", actionList[3]));
+    EXPECT_FALSE(apc.is_in_field_writes_to_actions("ingress::h2.field2", actionList[1]));
+    EXPECT_FALSE(apc.is_in_field_writes_to_actions("ingress::h2.field2", actionList[0]));
+    EXPECT_TRUE(apc.is_in_field_writes_to_actions("ingress::h2.field3", actionList[2]));
+    EXPECT_TRUE(apc.is_in_field_writes_to_actions("ingress::h2.field3", actionList[3]));
+    EXPECT_FALSE(apc.is_in_field_writes_to_actions("ingress::h2.field3", actionList[4]));
+    EXPECT_TRUE(apc.is_in_field_writes_to_actions("ingress::h1.field4", actionList[0]));
+    EXPECT_TRUE(apc.is_in_field_writes_to_actions("ingress::h2.field4", actionList[2]));
+    EXPECT_TRUE(apc.is_in_field_writes_to_actions("ingress::h1.field4", actionList[3]));
+
+    EXPECT_TRUE(apc.is_in_action_to_writes(actionList[0], "ingress::h1.field1"));
+    EXPECT_TRUE(apc.is_in_action_to_writes(actionList[0], "ingress::h1.field4"));
+    EXPECT_TRUE(apc.is_in_action_to_writes(actionList[2], "ingress::h1.field1"));
+    EXPECT_TRUE(apc.is_in_action_to_writes(actionList[2], "ingress::h2.field3"));
+    EXPECT_TRUE(apc.is_in_action_to_writes(actionList[2], "ingress::h2.field4"));
+    EXPECT_TRUE(apc.is_in_action_to_writes(actionList[3], "ingress::h1.field4"));
+    EXPECT_TRUE(apc.is_in_action_to_writes(actionList[3], "ingress::h2.field2"));
+    EXPECT_TRUE(apc.is_in_action_to_writes(actionList[3], "ingress::h2.field3"));
+    EXPECT_FALSE(apc.is_in_action_to_writes(actionList[1], "ingress::h1.field1"));
+    EXPECT_FALSE(apc.is_in_action_to_writes(actionList[4], "ingress::h2.field4"));
+    EXPECT_FALSE(apc.is_in_action_to_writes(actionList[2], "ingress::h2.field2"));
 }
 
 TEST(ActionPhv, IngressMultipleTablesReads) {
@@ -227,22 +275,14 @@ TEST(ActionPhv, IngressMultipleTablesReads) {
     ActionPhvConstraints apc(phv);
     post_pm_pipe = post_pm_pipe->apply(apc);
 
-    EXPECT_TRUE(apc.is_in_read_to_writes("ingress::h2.field1", "ingress::h1.field1"));
-    EXPECT_TRUE(apc.is_in_read_to_writes("ingress::h2.field1", "ingress::h2.field4"));
-    EXPECT_TRUE(apc.is_in_read_to_writes("ingress::h2.field2", "ingress::h1.field4"));
-    EXPECT_TRUE(apc.is_in_read_to_writes("ingress::h1.field2", "ingress::h2.field2"));
-    EXPECT_TRUE(apc.is_in_read_to_writes("ingress::h1.field2", "ingress::h2.field3"));
+    std::vector<const IR::MAU::Action *> actionList;
+    forAllMatching<IR::MAU::Action>(post_pm_pipe, [&](const IR::MAU::Action* act) {
+            actionList.push_back(act);
+            });
 
-    EXPECT_FALSE(apc.is_in_read_to_writes("ingress::h2.field1", "ingress::h2.field3"));
-    EXPECT_FALSE(apc.is_in_read_to_writes("ingress::h2.field2", "ingress::h1.field1"));
-
-    EXPECT_TRUE(apc.is_in_write_to_reads("ingress::h1.field1", "ingress::h2.field1"));
-    EXPECT_TRUE(apc.is_in_write_to_reads("ingress::h1.field1", "ad_or_constant"));
-    EXPECT_TRUE(apc.is_in_write_to_reads("ingress::h2.field3", "ingress::h2.field4"));
-    EXPECT_TRUE(apc.is_in_write_to_reads("ingress::h2.field3", "ingress::h1.field2"));
-
-    EXPECT_FALSE(apc.is_in_write_to_reads("ingress::h1.field1", "ingress::h1.field2"));
-    EXPECT_FALSE(apc.is_in_write_to_reads("ingress::h2.field3", "ad_or_constant"));
+    EXPECT_TRUE(apc.is_in_write_to_reads("ingress::h1.field1", actionList[2], "ingress::h2.field1"));
+    EXPECT_FALSE(apc.is_in_write_to_reads("ingress::h1.field1", actionList[0], "ingress::h2.field2"));
+    EXPECT_TRUE(apc.is_in_write_to_reads("ingress::h2.field2", actionList[3], "ingress::h1.field2"));
+    //EXPECT_FALSE(apc.is_in_write_to_reads("ingress::h1.field1", actionList[3], "ingress::h2.field1"));
 }
-
 }  // namespace Test

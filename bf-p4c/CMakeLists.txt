@@ -124,7 +124,6 @@ set (TOFINO_BACKEND_MAU_SRCS
   mau/action_analysis.cpp
   mau/action_data_bus.cpp
   mau/action_format.cpp
-  mau/action_phv_constraints.cpp
   mau/asm_output.cpp
   mau/field_use.cpp
   mau/db-gateway.cpp
@@ -152,7 +151,6 @@ set (TOFINO_BACKEND_MAU_HDRS
   mau/action_analysis.h
   mau/action_data_bus.h
   mau/action_format.h
-  mau/action_phv_constraints.h
   mau/asm_output.h
   mau/default_next.h
   mau/field_use.h
@@ -207,6 +205,7 @@ set (TOFINO_BACKEND_PARDE_HDRS
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_PARDE_HDRS}")
 
 set (TOFINO_BACKEND_PHV_SRCS
+  phv/action_phv_constraints.cpp
   phv/allocate_virtual_containers.cpp
   phv/asm_output.cpp
   phv/cluster.cpp
@@ -238,6 +237,7 @@ add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_PHV_SRCS}")
 build_unified(TOFINO_BACKEND_PHV_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (TOFINO_BACKEND_PHV_HDRS
+  phv/action_phv_constraints.h
   phv/allocate_virtual_containers.h
   phv/asm_output.h
   phv/check_fitting.h

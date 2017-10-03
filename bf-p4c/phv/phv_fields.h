@@ -362,11 +362,14 @@ class PhvInfo {
         int ccgf_width() const;  // phv width = aggregate size of members
         //
         // phv_containers
+     public:
         //
         ordered_set<PHV_Container *>& phv_containers()         { return phv_containers_i; }
         const ordered_set<PHV_Container *>&
             phv_containers() const                             { return phv_containers_i; }
         void phv_containers(PHV_Container *c);
+
+     private:
         //
         // phv_widths
         //

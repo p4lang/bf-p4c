@@ -209,6 +209,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_45_action_data_immediate_param_and_constant.p4
   extensions/p4_tests/p4_14/test_config_48_action_data_bit_masked_set.p4
   extensions/p4_tests/p4_14/test_config_49_action_data_bit_masked_set_immediate.p4
+  extensions/p4_tests/p4_14/test_config_245_alias_test.p4
   extensions/p4_tests/p4_14/jenkins/pgrs/pgrs_one.p4
   )
 
@@ -218,10 +219,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/instruct1.p4
   extensions/p4_tests/p4_14/14-MultipleActionsInAContainer.p4
   extensions/p4_tests/p4_14/instruct1.p4
-  extensions/p4_tests/p4_14/test_config_256_pa_problem_4.p4
-  extensions/p4_tests/p4_14/adjust_instr1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
+  extensions/p4_tests/p4_14/action_conflict_2.p4
   extensions/p4_tests/p4_14/c1/COMPILER-235/vag1737_1.p4
   )
 
@@ -230,6 +228,26 @@ p4c_add_xfail_reason("tofino"
   "Unhandled action bitmask constraint"
   testdata/p4_14_samples/mac_rewrite.p4
   extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
+  )
+
+# Fails due to invalid action specification
+# BRIG-219
+p4c_add_xfail_reason("tofino"
+  "error: Only part of the container with fields"
+  extensions/p4_tests/p4_14/action_conflict_1.p4
+  extensions/p4_tests/p4_14/action_conflict_3.p4
+  extensions/p4_tests/p4_14/test_config_256_pa_problem_4.p4
+  extensions/p4_tests/p4_14/adjust_instr1.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
+  )
+
+# Fails due to use of more than two source containers
+# BRIG-219
+p4c_add_xfail_reason("tofino"
+  "uses more than two source containers."
+  extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
   )
 
 # Fails due to complex expressions in the parser that our hardware can't support.
@@ -808,9 +826,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
   extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
   extensions/p4_tests/p4_14/c4/COMPILER-590/case3179.p4
   extensions/p4_tests/p4_14/c4/COMPILER-591/case3176.p4
   )

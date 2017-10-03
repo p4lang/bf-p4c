@@ -22,7 +22,8 @@ PHV_AnalysisPass::PHV_AnalysisPass(
     : cluster(phv, uses),
       cluster_phv_req(cluster),
       cluster_phv_interference(cluster_phv_req, mutually_exclusive_field_ids),
-      cluster_phv_mau(cluster_phv_req) {
+      action_constraints(phv),
+      cluster_phv_mau(cluster_phv_req, action_constraints) {
     if (options.trivial_phvalloc) {
         addPasses({
             new PHV::TrivialAlloc(phv)});
@@ -46,6 +47,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
                 &cluster_phv_interference: nullptr,
                                    // cluster PHV interference graph analysis
             new PhvInfo::DumpPhvFields(phv, uses),
+            &action_constraints,   // collect constraints imposed by actions
             &cluster_phv_mau,      // cluster PHV container placements
                                    // first cut PHV MAU Group assignments
                                    // produces cohabit fields for Table Placement

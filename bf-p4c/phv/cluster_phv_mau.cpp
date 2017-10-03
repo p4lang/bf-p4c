@@ -1,6 +1,7 @@
 #include "cluster_phv_mau.h"
 #include <cstdlib>
 #include "cluster_phv_operations.h"
+#include "action_phv_constraints.h"
 #include "phv_spec.h"
 #include "bf-p4c/device.h"
 #include "lib/log.h"
@@ -447,14 +448,48 @@ void PHV_MAU_Group_Assignments::cluster_PHV_placements() {
             PHV_groups_i,
             "PHV_any_container_width",
             false/*smallest_container_width*/);
+        // Check allocation for action induced constraints
+        check_action_constraints();
         if (clusters_to_be_assigned_i.size()) {
             //
             // pack remaining clusters to partially filled containers
             //
             container_pack_cohabit(clusters_to_be_assigned_i, aligned_container_slices_i, "PHV");
         }
+    } else {
+        check_action_constraints();
     }
 }  // PHV_MAU_Group_Assignments::cluster_PHV_placements
+
+void PHV_MAU_Group_Assignments::check_action_constraints() {
+    // Check allocation for action induced constraints
+    for (auto entry : phv_containers()) {
+        if (entry.second->status() != PHV_Container::Container_status::EMPTY) {
+            std::vector<const PhvInfo::Field *> existing_packing;
+            if (entry.second->fields_in_container().size() < 2)
+                continue;
+            std::string packing_string;
+            for (auto field : entry.second->fields_in_container()) {
+                existing_packing.push_back(field.first);
+                packing_string.append(field.first->name);
+                packing_string.append(" ");
+                if (existing_packing.size() > 2) {
+                    unsigned error_code = action_constraints.can_cohabit(existing_packing);
+                    if (error_code == ActionAnalysis::ContainerAction::PARTIAL_OVERWRITE) {
+                        ::error("Only part of the container with fields %1% is written.",
+                                packing_string);
+                    } else if (error_code ==
+                            ActionAnalysis::ContainerAction::MULTIPLE_CONTAINER_ACTIONS) {
+                        ::error("Set and non-set operations cannot be performed in the same"
+                                "action.");
+                    } else if (error_code == ActionAnalysis::ContainerAction::TOO_MANY_SOURCES) {
+                        ::error("Operation on container with fields %1% uses more than two source "
+                                "containers.", packing_string); }
+                }
+            }
+        }
+    }
+}
 
 void PHV_MAU_Group_Assignments::cluster_POV_placements() {
     //
@@ -807,6 +842,21 @@ PHV_MAU_Group_Assignments::container_no_pack(
                         if (taint_bits + align_start > int(container->width())) {
                             taint_bits = int(container->width()) - align_start;
                         }
+                        // TODO: If fields write to a ccgf in the same action, we need extra code
+                        // here to ensure that the fields written into the ccgf destinations follow
+                        // the same packing as the ccgf.
+                        // metadata m {a, b, c, d, ...}
+                        // header vlan {bit<3> priority; bit<1> chi; bit<12> tag; }
+                        // Action {
+                        //   priority = m.c;
+                        //   tag = m.d;
+                        // }
+                        // Multiple fields may occupy a single container when they are part of a
+                        // ccgf. If ccgf is destination, then container_no_pack needs to place
+                        // operands of instructions writing to CCGF fields in the same container
+                        // according to action analysis. Hence, m.c and m.d must be in the same
+                        // container
+
                         int processed_bits =
                             container->taint(
                                 align_start,
@@ -814,7 +864,7 @@ PHV_MAU_Group_Assignments::container_no_pack(
                                 field,
                                 field_bit_lo);
                         LOG3(*container);
-                        //
+
                         // ccgf fields with members that have pack constraints may not be done yet
                         // taint() sets field's hi reflecting balance remaining,
                         // returns processed width
@@ -1155,7 +1205,20 @@ PHV_MAU_Group_Assignments::match_cluster_to_cc_set(
             }  // for
         }
         //
-        cc_set_iter++;
+
+        // Pass a vector to ActionPhvConstraints::can_cohabit to detect if any
+        // action constraints prevent packing within the same container
+        // 0th to (n-2)th elements of the n-element vector are the fields already
+        // present in the container.
+        // The last (n-1)th element is the field for which we are attempting to pack
+
+        std::vector<const PhvInfo::Field *> packing_candidates;
+        for (auto field : c->fields_in_container())
+            packing_candidates.push_back(field.first);
+        packing_candidates.push_back(f);
+        if (action_constraints.can_cohabit(packing_candidates) !=
+                ActionAnalysis::ContainerAction::NO_PROBLEM)
+            return false;
     }  // for
     return true;
 }  // match_cluster_to_cc_set
@@ -1221,6 +1284,7 @@ PHV_MAU_Group_Assignments::packing_predicates(
     //
     // instruction adjustment related constraints from TP / Instruction Selection
     //
+
     return true;
 }  // packing_predicates
 
