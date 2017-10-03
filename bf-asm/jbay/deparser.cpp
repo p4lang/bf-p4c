@@ -1,5 +1,16 @@
 /* deparser template specializations for jbay -- #included directly in top-level deparser.cpp */
 
+#define STUB_JBAY_DEPARSER_INTRINSIC(GR, NAME, MAX) \
+template<> void INTRIN##GR##NAME::setregs(Target::JBay::deparser_regs &, \
+                                          std::vector<Phv::Ref> &) { assert(0); }
+#define STUB_JBAY_DEPARSER_DIGEST(GR, NAME, MAX) \
+void GR##NAME##Digest::init(Target::JBay) {} \
+template<> void GR##NAME##Digest::setregs(Target::JBay::deparser_regs &, \
+                                          Deparser::Digest &) { assert(0); }
+
+ALL_DEPARSER_INTRINSICS(STUB_JBAY_DEPARSER_INTRINSIC)
+ALL_DEPARSER_DIGESTS(STUB_JBAY_DEPARSER_DIGEST)
+
 template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
     ERROR("JBay deparser support not yet implemented in master branch");
 #if 0
