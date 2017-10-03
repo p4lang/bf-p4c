@@ -6,9 +6,10 @@
 class Target::JBay::Phv : public Target::Phv {
     friend class ::Phv;
     struct Register : public ::Phv::Register {
-        int parser_id() const override;
+        short     parser_id_, deparser_id_;
+        int parser_id() const override { return parser_id_; } 
         int mau_id() const override { return uid; }
-        int deparser_id() const override;
+        int deparser_id() const override { return deparser_id_; }
     };
     void init_regs(::Phv &phv) override;
     target_t type() const override { return JBAY; }

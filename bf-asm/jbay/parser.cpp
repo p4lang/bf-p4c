@@ -24,8 +24,8 @@ template<> void Parser::State::Match::write_lookup_config(Target::JBay::parser_r
     lookup.word0 |= dont_care;
     lookup.word1 |= dont_care;
     for (int i = 3; i >= 0; i--) {
-        row.w0_lookup_8[1] = lookup.word0 & 0xff;
-        row.w1_lookup_8[1] = lookup.word1 & 0xff;
+        row.w0_lookup_8[i] = lookup.word0 & 0xff;
+        row.w1_lookup_8[i] = lookup.word1 & 0xff;
         lookup.word0 >>= 8;
         lookup.word1 >>= 8; }
     row.w0_curr_state = state->stateno.word0;
@@ -90,53 +90,92 @@ template <> int Parser::State::Match::write_future_config(Target::JBay::parser_r
     return max_off;
 }
 
+static void write_output_slot(int lineno, Target::JBay::parser_regs::_memory::_po_action_row *row,
+                              unsigned &used, int src, int dest, int bytemask, bool offset) {
+    for (int i = 0; i < 20; ++i) {
+        if (used & (1 << i)) continue;
+        row->phv_dst[i] = dest;
+        row->phv_src[i] = src;
+        if (offset) row->phv_offset_add_dst[i] = 1;
+        row->extract_type[i] = bytemask;
+        used |= 1 << i;
+        return; }
+    error(lineno, "Ran out of phv output slots");
+}
+
 template <> int Parser::State::Match::Save::write_output_config(Target::JBay::parser_regs &regs,
             void *_row, unsigned &used) const {
     Target::JBay::parser_regs::_memory::_po_action_row *row =
         (Target::JBay::parser_regs::_memory::_po_action_row *)_row;
-    unsigned mask = 1, inc = 1;
-    if (hi-lo == 3) {
-        mask = 3;
-        inc = 2; }
-    for (int i = 0; i < 20; i += inc) {
-        if (used & (mask << i)) continue;
-        row->phv_dst[i] = where->reg.parser_id();
-        row->phv_src[i] = lo;
-        if (flags & OFFSET) row->phv_offset_add_dst[i] = 1;
-        if (flags & ROTATE) error(where.lineno, "no rotate support in jbay");
-        if (hi == lo) {
-            row->extract_type[i] = 1;
-        } else if (hi-lo == 3) {
-            row->extract_type[i] = 3;
-            row->phv_dst[i+1] = where->reg.parser_id();
-            row->phv_src[i+1] = lo+2;
-            row->extract_type[i+1] = 3;
-            if (flags & OFFSET) row->phv_offset_add_dst[i+1] = 1;
-        } else {
-            row->extract_type[i] = 3; }
-        used |= mask << i;
-        return hi; }
-    error(where.lineno, "Ran out of phv output slots");
-    return -1;
+    int dest = where->reg.parser_id();
+    int mask = (1 << (1 + where->hi/8U)) - (1 << (where->lo/8U));
+    int lo = this->lo;
+    if (where->reg.size == 8 && mask == 1) {
+        if (where->reg.index & 1) {
+            mask <<= 1;
+            if (lo == 0)
+                error(where.lineno, "Can't extract byte 0 into an odd 8-bit PHV");
+            --lo; } }
+    if (flags & ROTATE) error(where.lineno, "no rotate support in jbay");
+    if (mask & 3)
+        write_output_slot(where.lineno, row, used, lo, dest, mask & 3, flags & OFFSET);
+    if (mask & 0xc)
+        write_output_slot(where.lineno, row, used, lo+2, dest+1, (mask>>2) & 3, flags & OFFSET);
+    return hi;
+}
+
+#define SAVE_ONLY_USED_SLOTS    0xffc00
+static void write_output_const_slot(
+        int lineno, Target::JBay::parser_regs::_memory::_po_action_row *row, unsigned &used,
+        unsigned src, int dest, int bytemask, int flags) {
+    // use bits 24..27 of 'used' to track the two constant slots
+    int cslot = 0;
+    for (; cslot < 2; cslot++)
+        if (0 == (used & (bytemask << (2*cslot + 24)))) break;
+    if (cslot >= 2) {
+        error(lineno, "Ran out of constant output slots");
+        return; }
+    row->val_const[cslot] |= src;
+    if (flags & 2 /*ROTATE*/) row->val_const_rot[cslot] = 1;
+    used |= bytemask << (2*cslot + 24);
+    unsigned tmpused = used | SAVE_ONLY_USED_SLOTS;
+    write_output_slot(lineno, row, tmpused, 2*cslot + 60, dest, bytemask, flags);
+    used |= tmpused &~ SAVE_ONLY_USED_SLOTS;
 }
 
 template <> void Parser::State::Match::Set::write_output_config(Target::JBay::parser_regs &regs,
             void *_row, unsigned &used) const
 {
-    ERROR(SrcInfo(where.lineno) << ": no constant output support for jbay in master branch");
+    Target::JBay::parser_regs::_memory::_po_action_row *row =
+        (Target::JBay::parser_regs::_memory::_po_action_row *)_row;
+    int dest = where->reg.parser_id();
+    int mask = (1 << (1 + where->hi/8U)) - (1 << (where->lo/8U));
+    unsigned what = this->what << where->lo;
+    for (unsigned i = 0; i < 4; ++i)
+        if (((what >> (8*i)) & 0xff) == 0)
+            mask &= ~(1 << i);
+    if (where->reg.size == 8) {
+        assert(mask == 1);
+        if (where->reg.index & 1) {
+            mask <<= 1;
+            what <<= 8; } }
+    if (mask & 3)
+        write_output_const_slot(where.lineno, row, used, what & 0xffff, dest,
+                                mask & 3, flags);
+    if (mask & 0xc) {
+        write_output_const_slot(where.lineno, row, used, (what >> 16) & 0xffff, dest+1,
+                                (mask>>2) & 3, flags);
+        if ((mask & 3) && (flags & ROTATE))
+            row->val_const_32b_bond = 1; }
 }
 
 template <> void *Parser::setup_phv_output_map(Target::JBay::parser_regs &regs,
             gress_t gress, int row) {
     return &regs.memory[gress].po_action_row[row];
 }
-template <> void Parser::mark_unused_output_map(Target::JBay::parser_regs &regs,
-            void *_row, unsigned used) {
-    Target::JBay::parser_regs::_memory::_po_action_row *row =
-        (Target::JBay::parser_regs::_memory::_po_action_row *)_row;
-    for (int i = 0; i < 20; ++i)
-        if (!(used & (1U << i)))
-            row->phv_dst[i] = 0xff;
+template <> void Parser::mark_unused_output_map(Target::JBay::parser_regs &,
+            void *, unsigned) {
+    // unneeded on jbay
 }
 
 template<> void Parser::State::Match::write_counter_config(

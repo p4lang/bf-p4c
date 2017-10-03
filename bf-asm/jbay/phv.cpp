@@ -7,19 +7,28 @@ void Target::JBay::Phv::init_regs(::Phv &phv) {
     static const struct { char code[2]; Register::type_t type; unsigned count; } types[] =
         { { "", Register::NORMAL, 12 }, { "M", Register::MOCHA, 4 }, { "D", Register::DARK, 4 } };
     unsigned uid = 0;
+    unsigned byte = 0;
+    unsigned deparser_id = 0;
     phv.regs.resize(280);
     for (unsigned i = 0; i < sizeof groups/sizeof *groups; i++) {
         unsigned idx[sizeof types/sizeof *types] = { 0 };
         for (unsigned j = 0; j < groups[i].count; j++) {
             for (unsigned k = 0; k < sizeof types/sizeof *types; k++) {
                 for (unsigned l = 0; l < types[k].count; l++, idx[k]++, uid++) {
-                    auto reg = phv.regs[uid] = new Register;
+                    auto reg = new Register;
+                    phv.regs[uid] = reg;
                     memset(reg->name, 0, sizeof(reg->name));
                     sprintf(reg->name, "%s%s%d", types[k].code, groups[i].code, idx[k]);
                     reg->type = types[k].type;
                     reg->index = idx[k];
                     reg->uid = uid;
                     reg->size = groups[i].size;
+                    if (reg->type == Register::DARK) {
+                        reg->parser_id_ = reg->deparser_id_ = -1;
+                    } else {
+                        reg->parser_id_ = byte/2U;
+                        reg->deparser_id_ = deparser_id++;
+                        byte += reg->size/8U; }
                     phv.names[INGRESS].emplace(reg->name, ::Phv::Slice(*reg, 0, reg->size - 1));
                     phv.names[EGRESS].emplace(reg->name, ::Phv::Slice(*reg, 0, reg->size - 1)); 
                 }
@@ -27,18 +36,6 @@ void Target::JBay::Phv::init_regs(::Phv &phv) {
         }
     }
     assert(uid == phv.regs.size());
-}
-
-int Target::JBay::Phv::Register::parser_id() const {
-    unsigned grp = uid / 20U;
-    unsigned off = uid % 20U;
-    if (off < 16) return grp * 16U + off;
-    return -1;
-}
-
-int Target::JBay::Phv::Register::deparser_id() const {
-    unsigned grp = uid / 20U;
-    unsigned off = uid % 20U;
-    if (off < 16) return grp * 16U + off;
-    return -1;
+    assert(deparser_id == 224);
+    assert(byte == 512);
 }
