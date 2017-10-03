@@ -14,12 +14,9 @@ parser ParserImpl(packet_in packet, out headers_t hdr, inout metadata_t meta, in
 }
 
 control ingress(inout headers_t hdr, inout metadata_t meta, inout standard_metadata_t standard_metadata) {
-    counter(512, CounterType.bytes) egress_port_counter;
     counter(512, CounterType.bytes) ingress_port_counter;
     apply {
-        if (standard_metadata.egress_port < 511) {
-            egress_port_counter.count((bit<32>)standard_metadata.egress_spec);
-        }
+        standard_metadata.egress_spec = 2;
         if (standard_metadata.ingress_port < 511) {
             ingress_port_counter.count((bit<32>)standard_metadata.ingress_port);
         }
@@ -27,7 +24,11 @@ control ingress(inout headers_t hdr, inout metadata_t meta, inout standard_metad
 }
 
 control egress(inout headers_t hdr, inout metadata_t meta, inout standard_metadata_t standard_metadata) {
+    counter(512, CounterType.bytes) egress_port_counter;
     apply {
+        if (standard_metadata.egress_port < 511) {
+            egress_port_counter.count((bit<32>)standard_metadata.egress_port);
+        }
     }
 }
 

@@ -24,8 +24,6 @@ set (P14_XFAIL_TESTS
   extensions/p4_tests/p4_14/jenkins/multi_device/multi_device.p4.p4
   extensions/p4_tests/p4_14/jenkins/meters/meters_one.p4
   extensions/p4_tests/p4_14/jenkins/drivers_test/drivers_test_one.p4
-  extensions/p4_tests/p4_14/jenkins/pvs/pvs.p4
-  extensions/p4_tests/p4_14/jenkins/parser_intr_md/parser_intr_md.p4
   extensions/p4_tests/p4_14/jenkins/pctr/pctr.p4
   extensions/p4_tests/p4_14/c1/COMPILER-263/case1795.p4
   extensions/p4_tests/p4_14/c1/COMPILER-264/case1822.p4

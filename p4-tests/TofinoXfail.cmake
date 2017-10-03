@@ -19,7 +19,6 @@ if (HARLYN_STF AND NOT ENABLE_STF2PTF)
 set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
   extensions/p4_tests/p4_14/hash_calculation_32.p4
   # Hash Action Bugs within the ASM or Model
-  testdata/p4_14_samples/hash_action_gateway.p4
   testdata/p4_14_samples/counter3.p4
   testdata/p4_14_samples/counter4.p4
   # Masked table keys ignoring mask in table layout?
@@ -682,13 +681,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-632/case3459.p4
   extensions/p4_tests/p4_14/c1/DRV-543/case2499.p4
   extensions/p4_tests/p4_14/jenkins/iterator/iterator.p4
-  )
-
-# BRIG-140
-p4c_add_xfail_reason("tofino"
-  "syntax error, unexpected IDENTIFIER"
-  extensions/p4_tests/p4_14/jenkins/parser_intr_md/parser_intr_md.p4
-  extensions/p4_tests/p4_14/jenkins/pvs/pvs.p4
   )
 
 # BRIG-186: per_flow_enable
