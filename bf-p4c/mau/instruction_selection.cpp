@@ -2,6 +2,7 @@
 #include "lib/bitops.h"
 #include "lib/safe_vector.h"
 #include "action_analysis.h"
+#include "bf-p4c/common/slice.h"
 #include "bf-p4c/phv/validate_allocation.h"
 
 template<class T> static
@@ -306,10 +307,11 @@ const IR::Node *InstructionSelection::postorder(IR::Primitive *prim) {
             if (!ingress_port)
                 ingress_port = gen_intrinsic_metadata(gress_t::EGRESS, "ingress_port");
             auto s1 = new IR::MAU::Instruction(prim->srcInfo, "set",
-                          new IR::Slice(egress_spec, 6, 0), prim->operands.at(0));
+                          MakeSlice(egress_spec, 0, 6),
+                          MakeSlice(prim->operands.at(0), 0, 6));
             auto s2 = new IR::MAU::Instruction(prim->srcInfo, "set",
-                          new IR::Slice(egress_spec, 8, 7),
-                          new IR::Slice(ingress_port, 8, 7));
+                          MakeSlice(egress_spec, 7, 8),
+                          MakeSlice(ingress_port, 7, 8));
             return new IR::Vector<IR::Expression>({s1, s2}); }
     } else if (prim->name == "add" || prim->name == "sub" || prim->name == "subtract") {
         if (prim->operands.size() != 3) {

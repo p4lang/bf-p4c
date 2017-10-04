@@ -125,22 +125,18 @@ class MergeInstructions : public MauTransform, TofinoWriteContext {
     const IR::MAU::Action *postorder(IR::MAU::Action *) override;
 
     ordered_set<PHV::Container> merged_fields;
-    ordered_map<PHV::Container, safe_vector<IR::MAU::Instruction *>> removed_instrs;
 
     bool write_found = false;
     ordered_set<PHV::Container>::iterator merged_location;
 
-    struct MultiOperandInfo {
-        IR::MAU::MultiOperand *write = nullptr;
-        safe_vector<std::pair<cstring, IR::MAU::MultiOperand *>> reads;
-    };
-
-    void build_multi_operand_info(PHV::Container container,
-        ActionAnalysis::ContainerAction &cont_action, MultiOperandInfo &mo);
-    IR::MAU::Instruction *make_multi_operand_set(PHV::Container container,
+    IR::MAU::Instruction *build_merge_instruction(PHV::Container container,
         ActionAnalysis::ContainerAction &cont_action);
-    IR::MAU::Instruction *make_bitmasked_set(PHV::Container container,
-        ActionAnalysis::ContainerAction &cont_action);
+    void fill_out_write_multi_operand(ActionAnalysis::ContainerAction &cont_action,
+        IR::MAU::MultiOperand *mo);
+    void fill_out_read_multi_operand(ActionAnalysis::ContainerAction &cont_action,
+        ActionAnalysis::ActionParam::type_t type, cstring match_name,
+        IR::MAU::MultiOperand *mo);
+    const IR::Constant *find_field_action_constant(ActionAnalysis::ContainerAction &cont_action);
 
  public:
     MergeInstructions(const PhvInfo &p, const IR::MAU::Table *t) : phv(p), tbl(t) {}

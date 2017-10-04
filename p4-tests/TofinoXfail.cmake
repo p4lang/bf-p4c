@@ -351,13 +351,10 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/jenkins/pctr/pctr.p4
   )
 
-# used to be: BRIG-129 & BRIG-183
+# WARNING: Currently, when this message is sent, the compiler does not stop.  Thus, it may not
+# be the right stop message for a particular message
 p4c_add_xfail_reason("tofino"
   "PHV allocation creates a container action impossible within a Tofino ALU"
-  extensions/p4_tests/p4_14/test_config_245_alias_test.p4
-  extensions/p4_tests/p4_14/test_config_144_recirculate.p4
-  extensions/p4_tests/p4_14/jenkins/pgrs/pgrs_one.p4
-  extensions/p4_tests/p4_14/jenkins/emulation/emulation.p4
   )
 
 p4c_add_xfail_reason("tofino"

@@ -4,7 +4,10 @@ const IR::Expression *MakeSlice(const IR::Expression *e, int lo, int hi) {
     if (e->is<IR::MAU::MultiOperand>())
         return new IR::Slice(e, hi, lo);
     if (auto k = e->to<IR::Constant>()) {
-        return ((*k >> lo) & IR::Constant((1U << (hi-lo+1)) - 1)).clone(); }
+        auto rv = ((*k >> lo) & IR::Constant((1U << (hi-lo+1)) - 1)).clone();
+        rv->type = IR::Type::Bits::get(hi-lo+1);
+        return rv;
+    }
     if (lo >= e->type->width_bits()) {
         return new IR::Constant(IR::Type::Bits::get(hi-lo+1), 0); }
     if (hi >= e->type->width_bits())

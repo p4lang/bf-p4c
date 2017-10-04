@@ -291,7 +291,6 @@ const IR::MAU::Action *ConstantsToActionData::postorder(IR::MAU::Action *act) {
  */
 const IR::MAU::Action *MergeInstructions::preorder(IR::MAU::Action *act) {
     container_actions_map.clear();
-    removed_instrs.clear();
     merged_fields.clear();
     ActionAnalysis aa(phv, true, true, tbl);
     aa.set_container_actions_map(&container_actions_map);
@@ -303,11 +302,8 @@ const IR::MAU::Action *MergeInstructions::preorder(IR::MAU::Action *act) {
         auto container = container_action.first;
         auto &cont_action = container_action.second;
         if (cont_action.field_actions.size() == 1) continue;
-        // FIXME: Give decent error messages as well
+        // Currently skip unresolved ActionAnalysis issues
         if (cont_action.error_code != ActionAnalysis::ContainerAction::NO_PROBLEM) continue;
-        // FIXME: To do these shortly
-        if (cont_action.to_deposit_field) continue;
-
         merged_fields.insert(container);
     }
 
@@ -404,12 +400,6 @@ const IR::MAU::Instruction *MergeInstructions::postorder(IR::MAU::Instruction *i
     if (merged_location == merged_fields.end()) {
         return instr;
     } else {
-        auto container = *(merged_location);
-        if (removed_instrs.find(container) == removed_instrs.end()) {
-            safe_vector<IR::MAU::Instruction *> vec;
-            removed_instrs[container] = vec;
-        }
-        removed_instrs[container].push_back(instr);
         return nullptr;
     }
 }
@@ -424,159 +414,158 @@ const IR::MAU::Action *MergeInstructions::postorder(IR::MAU::Action *act) {
         auto container = container_action_info.first;
         auto &cont_action = container_action_info.second;
         if (merged_fields.find(container) == merged_fields.end()) continue;
-        // FIXME: Obviously to do these shortly
-        if (cont_action.to_deposit_field) continue;
-        if (cont_action.to_bitmasked_set)
-            act->action.push_back(make_bitmasked_set(container, cont_action));
-        else
-            act->action.push_back(make_multi_operand_set(container, cont_action));
+        act->action.push_back(build_merge_instruction(container, cont_action));
     }
     return act;
 }
 
-/** Builds the different IR::MAU::MultiOperand structures for both the reads and the writes.
- *  Assumes at most that there are two reads, based on the ActionAnalysis pass.
- *  Has to go through all of the reads, and map directly to a PHV field.  The order of
- *  operands does not necessarily determine which PHV container an action is in.
- *  Thus, which MultiOperand the read goes to is compared by name, which requires an
- *  extra loop due to the name.  However, with the max size at 2, the looping is negligible.
+/** Given that a constant will only appear once, this will find the IR::Constant node within
+ *  the field actions.  Thus the size of the IR node is still maintained.
  */
-void MergeInstructions::build_multi_operand_info(PHV::Container container,
-        ActionAnalysis::ContainerAction &cont_action, MultiOperandInfo &mo) {
-    IR::Vector<IR::Expression> components;
-    mo.write = new IR::MAU::MultiOperand(components, container.toString(), true);
-
-    // FIXME: this should be handled as a separate case, as constants can be combined
-    if (cont_action.counts[ActionAnalysis::ActionParam::CONSTANT] > 0)
-        BUG("Unhandled case of sharing constants");
-
-    for (auto &tot_align_info : cont_action.phv_alignment) {
-        auto read_cont = tot_align_info.first;
-        mo.reads.emplace_back(read_cont.toString(),
-                              new IR::MAU::MultiOperand(components, read_cont.toString(), true));
+const IR::Constant *MergeInstructions::find_field_action_constant(
+         ActionAnalysis::ContainerAction &cont_action) {
+    for (auto &fa : cont_action.field_actions) {
+        for (auto read : fa.reads) {
+            if (read.type == ActionAnalysis::ActionParam::CONSTANT) {
+                BUG_CHECK(read.expr->is<IR::Constant>(), "Value incorrectly saved as a constant");
+                return read.expr->to<IR::Constant>();
+            }
+        }
     }
+    BUG("Should never reach this point in find_field_action_constant");
+    return nullptr;
+}
 
-    auto &adi = cont_action.adi;
-    if (adi.initialized)
-        mo.reads.emplace_back(adi.action_data_name,
-                              new IR::MAU::MultiOperand(components, adi.action_data_name, false));
-
-    for (auto &field_action : cont_action.field_actions) {
-        auto &write = field_action.write;
-
-        mo.write->push_back(write.expr);
-
-        for (auto &read : field_action.reads) {
-            ///> lookup_name corresponds to PHV::Container name/Action Data Name
-            cstring lookup_name;
-            if (read.type == ActionAnalysis::ActionParam::PHV) {
+/** In order to keep the IR holding the fields that are contained within the container, this
+ *  holds every single IR field within these individual container.  It walks over the reads of
+ *  field actions within the container action, and adds them to the list.  Currently we don't
+ *  use these fields in any way after this.  However, we may at some point.
+ */
+void MergeInstructions::fill_out_read_multi_operand(ActionAnalysis::ContainerAction &cont_action,
+        ActionAnalysis::ActionParam::type_t type, cstring match_name,
+        IR::MAU::MultiOperand *mo) {
+    for (auto &fa : cont_action.field_actions) {
+         for (auto read : fa.reads) {
+             if (read.type != type) continue;
+             if (type == ActionAnalysis::ActionParam::ACTIONDATA) {
+                 mo->push_back(read.expr);
+             } else if (type == ActionAnalysis::ActionParam::PHV) {
                 bitrange bits;
                 auto *field = phv.field(read.expr, &bits);
                 int split_count = 0;
-                field->foreach_alloc(bits, [&](const PhvInfo::Field::alloc_slice &) {
+                bool names_match = false;
+                field->foreach_alloc(bits, [&](const PhvInfo::Field::alloc_slice &alloc) {
                     split_count++;
+                    names_match = alloc.container.toString() == match_name;
                 });
                 if (split_count != 1)
                     BUG("Read variable cannot be used within a single action");
 
-                field->foreach_alloc(bits, [&](const PhvInfo::Field::alloc_slice &alloc) {
-                    lookup_name = alloc.container.toString();
-                });
-            } else {
-                lookup_name = cont_action.adi.action_data_name;
-            }
-
-            size_t index = -1;
-            // Finds the lookup name in the reads array and adds this individual expression to
-            // the MultiOperand
-            for (auto read_check : mo.reads) {
-                index++;
-                if (read_check.first == lookup_name)
-                    break;
-            }
-            if (index == mo.reads.size())
-                BUG("Naming mismatch within the make_multi_operand_set");
-
-
-            mo.reads[index].second->push_back(read.expr);
-        }
+                if (names_match)
+                    mo->push_back(read.expr);
+             }
+         }
     }
 }
 
-/** A simple merge of instructions.  Essentially turns multiple instructions into one, i.e.
- *  let's say two fields are within the same container, f1 and f2, and both are set by an
- *  action parameter:
- *     - set hdr.f1, param1
- *     - set hdr.f2, param2
- *  to:
- *     - set $(container), $(action_data_name)
+/** Fills out the IR::MAU::MultiOperand will all of the underlying fields that are part of a
+ *  write.
+ */
+void MergeInstructions::fill_out_write_multi_operand(ActionAnalysis::ContainerAction &cont_action,
+        IR::MAU::MultiOperand *mo) {
+    for (auto &fa : cont_action.field_actions) {
+        mo->push_back(fa.write.expr);
+    }
+}
+
+/** The purpose of this function is to morph together instructions over an individual container.
+ *  If multiple field actions are contained within an individual container action, then they
+ *  have to be merged into an individual ALU instruction.
+ *
+ *  This will have to happen to instructions like the following:
+ *    - set hdr.f1, param1
+ *    - set hdr.f2, param2
+ *
+ *  where hdr.f1 and hdr.f2 are contained within the same container.  This would be translated
+ *  to something along the lines of:
+ *    - set $(container), $(action_data_name)
  *
  *  where $(container) is the container in which f1 and f2 are in, and $(action_data_name)
  *  is the assembly name of this combined action data parameter.  This also works between
  *  instructions with PHVs, and can even slice PHVs
  *
- *  Deposit-field and bitmasked-set are more complicated, so they'll need separate
- *  function calls.
+ *  This will also directly convert into bitmasked-sets and deposit-field.  Bitmasked-set is
+ *  necessary, when the fields in the container are not contingous.  Deposit-field is necessary
+ *  when there are two sources.  In any other set case, the actual instruction encoding can be
+ *  directly translated from a set instruction.
+ *
+ *  The instruction formats are setup as a destination and two sources.  ActionAnalysis can
+ *  now determine which parameters go to which source.
  */
-IR::MAU::Instruction *MergeInstructions::make_multi_operand_set(PHV::Container container,
-        ActionAnalysis::ContainerAction &cont_action) {
-    MultiOperandInfo mo;
-    build_multi_operand_info(container, cont_action, mo);
+IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container container,
+         ActionAnalysis::ContainerAction &cont_action) {
+    const IR::Expression *dst = nullptr;
+    const IR::Expression *src1 = nullptr;
+    const IR::Expression *src2 = nullptr;
+    bitvec src1_writebits;
+    IR::Vector<IR::Expression> components;
+    BUG_CHECK(cont_action.counts[ActionAnalysis::ActionParam::ACTIONDATA]
+              + cont_action.counts[ActionAnalysis::ActionParam::CONSTANT] <= 1,
+              "When merging an instruction, at most either one action data or constant "
+              "value is allowed");
+    if (cont_action.counts[ActionAnalysis::ActionParam::ACTIONDATA] == 1) {
+        auto &adi = cont_action.adi;
+        auto mo = new IR::MAU::MultiOperand(components, adi.action_data_name, false);
+        fill_out_read_multi_operand(cont_action, ActionAnalysis::ActionParam::ACTIONDATA,
+                                    adi.action_data_name, mo);
+        src1 = mo;
+        src1_writebits = adi.ad_alignment.write_bits;
 
-    IR::MAU::Instruction *merged_instr = new IR::MAU::Instruction(cont_action.name);
+    } else if (cont_action.counts[ActionAnalysis::ActionParam::CONSTANT] == 1) {
+        src1 = find_field_action_constant(cont_action);
+        src1_writebits = cont_action.constant_alignment.write_bits;
+    }
 
-    bitvec tot_write = cont_action.total_write();
-    const IR::Expression *write_operand;
-    if (tot_write.popcount() != static_cast<int>(container.size()))
-        write_operand = MakeSlice(mo.write, tot_write.min().index(), tot_write.max().index());
-    else
-        write_operand = mo.write;
-    merged_instr->operands.push_back(write_operand);
-
-    for (auto &read_mo : mo.reads) {
-        bitvec tot_read;
-        bool found = false;
-        auto lookup_name = read_mo.first;
-        for (auto tot_align_info : cont_action.phv_alignment) {
-            if (tot_align_info.first.toString() == lookup_name) {
-                found = true;
-                tot_read = tot_align_info.second.read_bits;
-                break;
+    for (auto &phv_ta : cont_action.phv_alignment) {
+        auto read_container = phv_ta.first;
+        auto read_alignment = phv_ta.second;
+        if (read_alignment.is_src1) {
+            auto mo = new IR::MAU::MultiOperand(components, read_container.toString(), true);
+            fill_out_read_multi_operand(cont_action, ActionAnalysis::ActionParam::PHV,
+                                        read_container.toString(), mo);
+            src1 = mo;
+            src1_writebits = read_alignment.write_bits;
+            if (read_alignment.read_bits.popcount() != static_cast<int>(read_container.size())) {
+                src1 = MakeSlice(src1, read_alignment.read_bits.min().index(),
+                                 read_alignment.read_bits.max().index());
             }
+        } else {
+            auto mo = new IR::MAU::MultiOperand(components, read_container.toString(), true);
+            fill_out_read_multi_operand(cont_action, ActionAnalysis::ActionParam::PHV,
+                                        read_container.toString(), mo);
+            src2 = mo;
         }
-        if (!found) {
-            tot_read = cont_action.adi.ad_alignment.read_bits;
-        }
-
-        const IR::Expression *read_operand;
-        if (tot_read.popcount() != static_cast<int>(container.size()))
-            read_operand = MakeSlice(read_mo.second, tot_read.min().index(),
-                                     tot_read.max().index());
-        else
-            read_operand = read_mo.second;
-        merged_instr->operands.push_back(read_operand);
     }
 
-    return merged_instr;
-}
+    BUG_CHECK(src1 != nullptr, "No src1 in a merged instruction");
+    auto *dst_mo = new IR::MAU::MultiOperand(components, container.toString(), true);
+    fill_out_write_multi_operand(cont_action, dst_mo);
+    dst = dst_mo;
+    if (!cont_action.to_bitmasked_set && src1_writebits.popcount()
+                                         != static_cast<int>(container.size()))
+        dst = MakeSlice(dst, src1_writebits.min().index(), src1_writebits.max().index());
 
-/** Converts an instruction to a bitmasked-set.  Currently this makes the assumption that
- *  src1/background is the same as the destination.  Can be adapted eventually.  No slicing
- *  is needed within a bitmasked-set
- */
-IR::MAU::Instruction *MergeInstructions::make_bitmasked_set(PHV::Container container,
-        ActionAnalysis::ContainerAction &cont_action) {
-    MultiOperandInfo mo;
-    build_multi_operand_info(container, cont_action, mo);
-    IR::MAU::Instruction *merged_instr = new IR::MAU::Instruction("bitmasked-set");
+    cstring instr_name = cont_action.name;
+    if (cont_action.to_bitmasked_set)
+        instr_name = "bitmasked-set";
+    else if (cont_action.to_deposit_field)
+        instr_name = "deposit-field";
 
-    merged_instr->operands.push_back(mo.write);
-    if (mo.reads.size() != 1)
-        P4C_UNIMPLEMENTED("Unhandled bitmasked-set in instruction adjustment");
-    for (auto &read_mo : mo.reads) {
-        merged_instr->operands.push_back(read_mo.second);
-    }
-
+    IR::MAU::Instruction *merged_instr = new IR::MAU::Instruction(instr_name);
+    merged_instr->operands.push_back(dst);
+    merged_instr->operands.push_back(src1);
+    if (src2)
+        merged_instr->operands.push_back(src2);
     return merged_instr;
 }
 

@@ -516,7 +516,7 @@ bool ActionAnalysis::verify_P4_action_with_phv(cstring action_name) {
             continue;
 
        cstring error_message;
-       bool verify = cont_action.verify_possible(error_message, container, action_name);
+       bool verify = cont_action.verify_possible(error_message, container, action_name, phv);
        if (!verify && error_verbose) {
            ::warning("%s: %s", error_message, cstring::to_cstring(cont_action));
            warning = true;
@@ -625,6 +625,13 @@ bool ActionAnalysis::ContainerAction::verify_one_alignment(TotalAlignment &tot_a
  *
  *  Only in deposit-field can a portion of a source (PHV container or action data bus), can be
  *  shifted.
+ *
+ *  This function also saves which parameters get classified as a src1.  An instruction at most
+ *  can have two sources.  Src2 is always a PHV container.  Src1 can be much more loosely defined
+ *  Src1 can be from action data, a small constant, or a PHV alu.  Specifically in deposit-field
+ *  instruction, src1 is the only source that doesn't have to bit-aligned either.  This
+ *  information is used when creating instructions in InstructionAdjustment, specifically right
+ *  now MergeInstructions
  */
 bool ActionAnalysis::ContainerAction::verify_alignment(int max_phv_unaligned,
         int max_ad_unaligned, bool bitmasked_set, PHV::Container container) {
@@ -652,6 +659,39 @@ bool ActionAnalysis::ContainerAction::verify_alignment(int max_phv_unaligned,
         if (unaligned_count > max_ad_unaligned)
             return false;
     }
+
+    // If no src1 has been assigned, then PHV is the src1 information.  If a PHV write and read
+    // bits are unaligned, then that PHV field is src1, else either PHV source could be
+    // considered src1.
+    bool src1_assigned = false;
+    if (counts[ActionParam::CONSTANT] > 0) {
+        constant_alignment.is_src1 = true;
+        src1_assigned = true;
+    }
+    if (counts[ActionParam::ACTIONDATA] > 0) {
+        adi.ad_alignment.is_src1 = true;
+        src1_assigned = true;
+    }
+
+    if (!src1_assigned) {
+        for (auto &tot_align_info : phv_alignment) {
+            auto &tot_alignment = tot_align_info.second;
+            if (!tot_alignment.aligned()) {
+                tot_alignment.is_src1 = true;
+                src1_assigned = true;
+            }
+        }
+    }
+
+    if (!src1_assigned) {
+        for (auto &tot_align_info : phv_alignment) {
+            auto &tot_alignment = tot_align_info.second;
+            tot_alignment.is_src1 = true;
+            src1_assigned = true;
+            break;
+        }
+    }
+
     return true;
 }
 
@@ -666,7 +706,13 @@ bool ActionAnalysis::ContainerAction::verify_alignment(int max_phv_unaligned,
  *      any effect on the packet.  However, no API currently exists to go from container to
  *      field.  This may come up (i.e. resubmit)
  */
-bool ActionAnalysis::ContainerAction::verify_overwritten(PHV::Container container) {
+bool ActionAnalysis::ContainerAction::verify_overwritten(PHV::Container container,
+          const PhvInfo &phv) {
+    // FIXME: This is currently a hack to get recirculate to work properly.  Deep is working
+    // on an API function call to do this verification more correctly.
+    if (phv.field(field_actions[0].write.expr)->name == "ingress::standard_metadata.egress_spec")
+        return true;
+
     bitvec total_write_bits;
     for (auto &tot_align_info : phv_alignment) {
         total_write_bits |= tot_align_info.second.write_bits;
@@ -811,7 +857,7 @@ bool ActionAnalysis::ContainerAction::verify_phv_mau_group(PHV::Container contai
  *  If any of these are not true, then this instruction is not possible on Tofino.
  */
 bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
-        PHV::Container container, cstring action_name) {
+        PHV::Container container, cstring action_name, const PhvInfo &phv) {
     if (is_shift()) {
         return true;
     }
@@ -872,7 +918,7 @@ bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
 
 
     if (!(name == "set" && sources_needed < 2)) {
-        bool total_overwrite_possible = verify_overwritten(container);
+        bool total_overwrite_possible = verify_overwritten(container, phv);
         if (!total_overwrite_possible) {
             error_code |= PARTIAL_OVERWRITE;
             error_message += "the container is not completely overwritten when the operand is "
@@ -887,7 +933,7 @@ bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
 void ActionAnalysis::verify_P4_action_for_tofino(cstring action_name) {
     if (phv_alloc)
         verify_P4_action_with_phv(action_name);
-    else
+    else if (error_verbose)
         verify_P4_action_without_phv(action_name);
 }
 

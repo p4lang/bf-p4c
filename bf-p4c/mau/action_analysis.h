@@ -98,15 +98,18 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
      */
     struct TotalAlignment {
         safe_vector<Alignment> indiv_alignments;
-        bool aligned = false;
         bitvec write_bits;
         bitvec read_bits;
+        bool is_src1 = false;
 
         void add_alignment(const bitvec &wb, const bitvec &rb) {
             indiv_alignments.emplace_back(wb, rb);
             write_bits |= wb;
             read_bits |= rb;
         }
+
+        bool equiv_bit_totals() const { return write_bits.popcount() == read_bits.popcount(); }
+        bool aligned() const { return (write_bits & read_bits).popcount() == 0; }
     };
     /** Information on the action data field contained within the instruction.  The action data
      *  could be affected by multiple individual fields.  Assumes that only one action data field
@@ -211,14 +214,12 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
             bool bitmasked_set = false);
         void move_source_to_bit(safe_vector<int> &bit_uses, TotalAlignment &ta);
         bool verify_source_to_bit(int operands, PHV::Container container);
-        bool verify_overwritten(PHV::Container container);
+        bool verify_overwritten(PHV::Container container, const PhvInfo &phv);
         bool verify_possible(cstring &error_message, PHV::Container container,
-                             cstring action_name);
+                             cstring action_name, const PhvInfo &phv);
         bool verify_alignment(int max_phv_unaligned, int max_ad_unaligned, bool bitmasked_set,
                               PHV::Container container);
         bool verify_phv_mau_group(PHV::Container container);
-
-
 
         bitvec total_write() const;
         bool convert_constant_to_actiondata() {
