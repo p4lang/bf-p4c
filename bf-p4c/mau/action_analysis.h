@@ -247,8 +247,6 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
     const IR::MAU::Table *tbl;
     FieldAction field_action;
 
-    bool is_sliced = false;
-    int lo = -1; int hi = -1;
     void initialize_phv_field(const IR::Expression *expr);
     void initialize_action_data(const IR::Expression *expr);
     const IR::Expression *isActionParam(const IR::Expression *expr,
