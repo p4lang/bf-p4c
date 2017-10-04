@@ -511,6 +511,9 @@ class PhvInfo {
     // TODO: what about header unions?
     std::map<cstring, StructInfo>       simple_headers;
 
+    /// Mapping from containers to the fields using those containers
+    std::map<PHV::Container, ordered_set<const Field *>> container_to_fields;
+
     bool                                alloc_done_ = false;
     bool                                pov_alloc_done = false;
 
@@ -574,6 +577,20 @@ class PhvInfo {
 
     bool alloc_done() const { return alloc_done_; }
     void set_done() { alloc_done_ = true; }
+
+    /// Container_to_fields map related functions
+    /// Clear the container_to_fields map
+    void clear_container_to_fields() { container_to_fields.clear(); }
+    /** Add new field to a container
+      * @param f, field stored within container c
+      * @param c, container to store field f
+      */
+    void add_container_to_field_entry(const PHV::Container c, const Field *f);
+    /// @returns the set of fields assigned (partially or entirely) to @c
+    const ordered_set<const Field *>& fields_in_container(const PHV::Container c) const;
+
+    /// @returns true whenever field f is the only field present in container c
+    bool is_only_field_in_container(const PHV::Container c, const Field *f) const;
 };  // class PhvInfo
 
 /**

@@ -260,6 +260,33 @@ void PhvInfo::allocatePOV(const BFN::HeaderStackInfo& stacks) {
 //
 //***********************************************************************************
 //
+// PhvInfo::container_to_fields related functions
+//
+//***********************************************************************************
+//
+void PhvInfo::add_container_to_field_entry(const PHV::Container c, const Field *f) {
+    if (f == nullptr) return;
+    container_to_fields[c].insert(f);
+}
+
+const ordered_set<const PhvInfo::Field *>&
+PhvInfo::fields_in_container(const PHV::Container c) const {
+    static const ordered_set<const Field *> empty_list;
+    if (container_to_fields.count(c))
+        return container_to_fields.at(c);
+    return empty_list;
+}
+
+// XXX(deep): Currently, this analysis is conservative, in the sense that this does not take
+// overlaying into account
+bool PhvInfo::is_only_field_in_container(const PHV::Container c, const Field *f) const {
+    if (f == nullptr) return false;
+    auto& fields = fields_in_container(c);
+    return (fields.size() == 1 && fields.count(f));
+}
+//
+//***********************************************************************************
+//
 // PhvInfo::Field bitrange interface related member functions
 //
 //***********************************************************************************

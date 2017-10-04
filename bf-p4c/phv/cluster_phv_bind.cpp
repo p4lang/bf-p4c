@@ -92,6 +92,7 @@ PHV_Bind::bind_fields_to_containers() {
     // binding fields to containers
     // clear previous field alloc information if any
     //
+    phv_i.clear_container_to_fields();
     for (auto &f : allocated_fields_i) {
         f->alloc_i.clear();
         // ccgf members
@@ -124,6 +125,7 @@ PHV_Bind::bind_fields_to_containers() {
                    field_bit,
                    container_bit,
                    width_in_container);
+                phv_i.add_container_to_field_entry(asm_container, f);
                 //
                 // contiguous container group allocation
                 // in case bypassing MAU PHV allocation PHV_container::taint() recursion
@@ -133,9 +135,7 @@ PHV_Bind::bind_fields_to_containers() {
                 //                            container_width,
                 //                            asm_container,
                 //                            width_in_container);
-            }
-        }
-    }
+            } } }
 }
 
 
