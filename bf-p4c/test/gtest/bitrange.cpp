@@ -359,9 +359,9 @@ TYPED_TEST(TofinoByteRange, Shift) {
     // Check basic functionality.
     {
         ByteRangeType range(FromTo(5, 14));
-        EXPECT_EQ(BitRangeType(FromTo(44, 116)), range.shiftedByBits(4));
-        EXPECT_EQ(BitRangeType(FromTo(36, 108)), range.shiftedByBits(-4));
-        EXPECT_EQ(BitRangeType(FromTo(-79, -7)), range.shiftedByBits(-119));
+        EXPECT_EQ(BitRangeType(FromTo(44, 123)), range.shiftedByBits(4));
+        EXPECT_EQ(BitRangeType(FromTo(36, 115)), range.shiftedByBits(-4));
+        EXPECT_EQ(BitRangeType(FromTo(-79, 0)), range.shiftedByBits(-119));
         EXPECT_EQ(ByteRangeType(FromTo(7, 16)), range.shiftedByBytes(2));
         EXPECT_EQ(ByteRangeType(FromTo(-2, 7)), range.shiftedByBytes(-7));
     }
@@ -913,15 +913,16 @@ TYPED_TEST(TofinoByteRange, ToUnit) {
 
     const std::vector<ExpectedBitRange> unitMappings = {
         // Basic byte ranges.
-        { 0, FromTo(0, 0), FromTo(0, 0) },
-        { 1, FromTo(0, 5), FromTo(0, 40) },
-        { 2, FromTo(7, 22), FromTo(56, 176) },
+        { 0, FromTo(0, 0), FromTo(0, 7) },
+        { 1, FromTo(0, 5), FromTo(0, 47) },
+        { 2, FromTo(7, 22), FromTo(56, 183) },
+        { 3, FromTo(12, 12), StartLen(96, 8) },
 
         // Byte ranges with negative indices.
-        { 2, FromTo(-5, 3), FromTo(-40, 24) },
-        { 3, FromTo(-2, -1), FromTo(-16, -8) },
-        { 4, FromTo(-30, 0), FromTo(-240, 0) },
-        { 5, FromTo(-84, 7), FromTo(-672, 56) },
+        { 4, FromTo(-5, 3), FromTo(-40, 31) },
+        { 5, FromTo(-2, -1), StartLen(-16, 16) },
+        { 6, FromTo(-30, 0), FromTo(-240, 7) },
+        { 7, FromTo(-84, 7), FromTo(-672, 63) },
     };
 
     // Check that converting from byte ranges to bit ranges yields the results

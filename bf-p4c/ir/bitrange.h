@@ -311,7 +311,7 @@ struct HalfOpenRange {
         if (empty()) return HalfOpenRange<DestUnit, Order>();
         switch (DestUnit) {
             case RangeUnit::Bit:
-                return HalfOpenRange<DestUnit, Order>(lo * 8, hi * 8 - 7);
+                return HalfOpenRange<DestUnit, Order>(lo * 8, hi * 8);
             case RangeUnit::Byte:
                 return HalfOpenRange<DestUnit, Order>(loByte(), nextByte());
         }
@@ -477,7 +477,7 @@ struct ClosedRange {
         if (DestUnit == Unit) return ClosedRange<DestUnit, Order>(lo, hi);
         switch (DestUnit) {
             case RangeUnit::Bit:
-                return ClosedRange<DestUnit, Order>(lo * 8, hi * 8);
+                return ClosedRange<DestUnit, Order>(lo * 8, hi * 8 + 7);
             case RangeUnit::Byte:
                 return ClosedRange<DestUnit, Order>(loByte(), hiByte());
         }
