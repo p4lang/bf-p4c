@@ -34,7 +34,7 @@ createActionTest(const std::string& ingressPipeline,
             }
         }
 
-        control verifyChecksum(in Headers headers, inout Metadata meta) { apply { } }
+        control verifyChecksum(inout Headers headers, inout Metadata meta) { apply { } }
         control ingress(inout Headers headers, inout Metadata meta,
                         inout standard_metadata_t sm) {
 %INGRESS_PIPELINE%

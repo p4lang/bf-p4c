@@ -89,7 +89,6 @@ if (NOT ENABLE_TNA)
 
   p4c_add_xfail_reason("tofino"
     "Encountered invalid code in computed checksum control"
-    testdata/p4_14_samples/checksum.p4
     extensions/p4_tests/p4_14/test_checksum.p4
     )
 
@@ -107,14 +106,6 @@ if (NOT ENABLE_TNA)
   p4c_add_xfail_reason("tofino"
     "Input xbar hash.*conflict in"
     extensions/p4_tests/p4_14/test_config_96_hash_data.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "Encountered invalid code in computed checksum control"
-    extensions/p4_tests/p4_14/switch_l2_profile.p4
-    testdata/p4_14_samples/switch_20160226/switch.p4
-    testdata/p4_14_samples/switch_20160512/switch.p4
-    testdata/p4_14_samples/sai_p4.p4
     )
 
   p4c_add_xfail_reason("tofino"
@@ -175,7 +166,7 @@ if (NOT ENABLE_TNA)
 endif() # ENABLE_TNA
 
 p4c_add_xfail_reason("tofino"
-  "error: Could not find declaration for verify_checksum"
+  "Wrong number of arguments for method call"
   testdata/p4_16_samples/checksum1-bmv2.p4
   )
 
@@ -806,6 +797,8 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
   extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
   extensions/p4_tests/p4_14/jenkins/power/power.p4
+  testdata/p4_14_samples/parser_dc_full.p4
+  testdata/p4_14_samples/port_vlan_mapping.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -835,11 +828,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Encountered invalid code in computed checksum control"
   testdata/p4_16_samples/issue134-bmv2.p4
-  testdata/p4_16_samples/issue655.p4
-  testdata/p4_16_samples/issue655-bmv2.p4
-  testdata/p4_16_samples/issue270-bmv2.p4
-  testdata/p4_14_samples/parser_dc_full.p4
-  testdata/p4_14_samples/port_vlan_mapping.p4
 )
 
 # BRIG-226
@@ -914,6 +902,13 @@ p4c_add_xfail_reason("tofino"
   "Hash column out of range"
   # was "Conflicting hash distribution bit allocation .*"
   extensions/p4_tests/p4_14/jenkins/stful/stful.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Inferred incompatible alignments for field"
+  extensions/p4_tests/p4_14/switch_l2_profile.p4
+  testdata/p4_14_samples/switch_20160226/switch.p4
+  testdata/p4_14_samples/switch_20160512/switch.p4
   )
 
 if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)

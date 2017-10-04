@@ -74,7 +74,7 @@ control deparser(packet_out b, in packet_t hdrs) {
     }
 }
 
-control vck(in packet_t hdrs, inout user_metadata_t meta) {
+control vck(inout packet_t hdrs, inout user_metadata_t meta) {
     apply {}
 }
 

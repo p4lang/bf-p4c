@@ -33,13 +33,12 @@ createComputedChecksumTestCase(const std::string& computeChecksumSource,
             }
         }
 
-        control verifyChecksum(in Headers headers, inout Metadata meta) { apply { } }
+        control verifyChecksum(inout Headers headers, inout Metadata meta) { apply { } }
 
         control mau(inout Headers headers, inout Metadata meta,
                     inout standard_metadata_t sm) { apply { } }
 
         control computeChecksum(inout Headers headers, inout Metadata meta) {
-            Checksum16() checksum;
             apply {
 %COMPUTE_CHECKSUM_SOURCE%
             }
@@ -87,12 +86,11 @@ void checkComputedChecksum(const IR::BFN::Pipe* pipe,
 
 TEST(TofinoComputedChecksum, SimpleWithIsValid) {
     auto test = createComputedChecksumTestCase(P4_SOURCE(P4Headers::NONE, R"(
-        if (headers.h1.isValid()) {
-            headers.h1.checksum = checksum.get({
-                headers.h1.field1,
-                headers.h1.field3
-            });
-        }
+        update_checksum(true, {
+                        headers.h1.field1,
+                        headers.h1.field3 },
+                        headers.h1.checksum,
+                        HashAlgorithm.csum16);
     )"), P4_SOURCE(P4Headers::NONE, R"(
         packet.emit(headers.h1);
     )"));
@@ -109,10 +107,11 @@ TEST(TofinoComputedChecksum, SimpleWithIsValid) {
 
 TEST(TofinoComputedChecksum, SimpleWithoutIsValid) {
     auto test = createComputedChecksumTestCase(P4_SOURCE(P4Headers::NONE, R"(
-        headers.h1.checksum = checksum.get({
-            headers.h1.field1,
-            headers.h1.field3
-        });
+        update_checksum(true, {
+                        headers.h1.field1,
+                        headers.h1.field3 },
+                        headers.h1.checksum,
+                        HashAlgorithm.csum16);
     )"), P4_SOURCE(P4Headers::NONE, R"(
         packet.emit(headers.h1);
     )"));
@@ -129,10 +128,11 @@ TEST(TofinoComputedChecksum, SimpleWithoutIsValid) {
 
 TEST(TofinoComputedChecksum, DuplicateHeader) {
     auto test = createComputedChecksumTestCase(P4_SOURCE(P4Headers::NONE, R"(
-        headers.h2.checksum = checksum.get({
-            headers.h2.field1,
-            headers.h2.field3
-        });
+        update_checksum(true, {
+                        headers.h2.field1,
+                        headers.h2.field3},
+                        headers.h2.checksum,
+                        HashAlgorithm.csum16);
     )"), P4_SOURCE(P4Headers::NONE, R"(
         packet.emit(headers.h1);
         packet.emit(headers.h2);
@@ -155,14 +155,16 @@ TEST(TofinoComputedChecksum, DuplicateHeader) {
 
 TEST(TofinoComputedChecksum, DuplicateHeader2) {
     auto test = createComputedChecksumTestCase(P4_SOURCE(P4Headers::NONE, R"(
-        headers.h2.checksum = checksum.get({
-            headers.h2.field1,
-            headers.h2.field3
-        });
-        headers.h1.checksum = checksum.get({
-            headers.h1.field1,
-            headers.h1.field3
-        });
+        update_checksum(true, {
+                        headers.h2.field1,
+                        headers.h2.field3 },
+                        headers.h2.checksum,
+                        HashAlgorithm.csum16);
+        update_checksum(true, {
+                        headers.h1.field1,
+                        headers.h1.field3 },
+                        headers.h1.checksum,
+                        HashAlgorithm.csum16);
     )"), P4_SOURCE(P4Headers::NONE, R"(
         packet.emit(headers.h1);
         packet.emit(headers.h2);
@@ -185,10 +187,11 @@ TEST(TofinoComputedChecksum, DuplicateHeader2) {
 
 TEST(TofinoComputedChecksum, NotEmitted) {
     auto test = createComputedChecksumTestCase(P4_SOURCE(P4Headers::NONE, R"(
-        headers.h2.checksum = checksum.get({
-            headers.h2.field1,
-            headers.h2.field3
-        });
+        update_checksum(true, {
+                        headers.h2.field1,
+                        headers.h2.field3 },
+                        headers.h2.checksum,
+                        HashAlgorithm.csum16);
     )"), P4_SOURCE(P4Headers::NONE, R"(
         packet.emit(headers.h1);
     )"));
@@ -205,10 +208,11 @@ TEST(TofinoComputedChecksum, NotEmitted) {
 
 TEST(TofinoComputedChecksum, EmittedTwice) {
     auto test = createComputedChecksumTestCase(P4_SOURCE(P4Headers::NONE, R"(
-        headers.h1.checksum = checksum.get({
-            headers.h1.field1,
-            headers.h1.field3
-        });
+        update_checksum(true, {
+                        headers.h1.field1,
+                        headers.h1.field3 },
+                        headers.h1.checksum,
+                        HashAlgorithm.csum16);
     )"), P4_SOURCE(P4Headers::NONE, R"(
         packet.emit(headers.h1);
         packet.emit(headers.h1);
@@ -231,11 +235,12 @@ TEST(TofinoComputedChecksum, EmittedTwice) {
 
 TEST(TofinoComputedChecksum, ChecksumFieldInChecksum) {
     auto test = createComputedChecksumTestCase(P4_SOURCE(P4Headers::NONE, R"(
-        headers.h1.checksum = checksum.get({
-            headers.h1.field1,
-            headers.h1.checksum,
-            headers.h1.field3
-        });
+        update_checksum(true, {
+                        headers.h1.field1,
+                        headers.h1.checksum,
+                        headers.h1.field3 },
+                        headers.h1.checksum,
+                        HashAlgorithm.csum16);
     )"), P4_SOURCE(P4Headers::NONE, R"(
         packet.emit(headers.h1);
     )"));
@@ -252,14 +257,16 @@ TEST(TofinoComputedChecksum, ChecksumFieldInChecksum) {
 
 TEST(TofinoComputedChecksum, MultipleChecksumsInOneHeader) {
     auto test = createComputedChecksumTestCase(P4_SOURCE(P4Headers::NONE, R"(
-        headers.h1.checksum = checksum.get({
-            headers.h1.field2,
-            headers.h1.field3
-        });
-        headers.h1.field2 = checksum.get({
-            headers.h1.field1,
-            headers.h1.field3
-        });
+        update_checksum(true, {
+                        headers.h1.field2,
+                        headers.h1.field3 },
+                        headers.h1.checksum,
+                        HashAlgorithm.csum16);
+        update_checksum(true, {
+                        headers.h1.field1,
+                        headers.h1.field3 },
+                        headers.h1.field2,
+                        HashAlgorithm.csum16);
     )"), P4_SOURCE(P4Headers::NONE, R"(
         packet.emit(headers.h1);
     )"));
@@ -276,22 +283,9 @@ TEST(TofinoComputedChecksum, MultipleChecksumsInOneHeader) {
 
 TEST(TofinoComputedChecksum, ErrorEmptyChecksum) {
     auto test = createComputedChecksumTestCase(P4_SOURCE(P4Headers::NONE, R"(
-        headers.h1.checksum = checksum.get({});
-    )"), P4_SOURCE(P4Headers::NONE, R"(
-        packet.emit(headers.h1);
-    )"));
-
-    EXPECT_GT(::ErrorReporter::instance.getDiagnosticCount(), 0u);
-}
-
-TEST(TofinoComputedChecksum, ErrorIsValidMismatch) {
-    auto test = createComputedChecksumTestCase(P4_SOURCE(P4Headers::NONE, R"(
-        if (headers.h2.isValid()) {
-            headers.h1.checksum = checksum.get({
-                headers.h1.field1,
-                headers.h1.field3
-            });
-        }
+        update_checksum(true, {},
+                        headers.h1.checksum,
+                        HashAlgorithm.csum16);
     )"), P4_SOURCE(P4Headers::NONE, R"(
         packet.emit(headers.h1);
     )"));
@@ -301,12 +295,11 @@ TEST(TofinoComputedChecksum, ErrorIsValidMismatch) {
 
 TEST(TofinoComputedChecksum, ErrorDestFieldMismatch) {
     auto test = createComputedChecksumTestCase(P4_SOURCE(P4Headers::NONE, R"(
-        if (headers.h1.isValid()) {
-            headers.h2.checksum = checksum.get({
-                headers.h1.field1,
-                headers.h1.field3
-            });
-        }
+        update_checksum(true, {
+                        headers.h1.field1,
+                        headers.h1.field3 },
+                        headers.h2.checksum,
+                        HashAlgorithm.csum16);
     )"), P4_SOURCE(P4Headers::NONE, R"(
         packet.emit(headers.h1);
     )"));
@@ -316,12 +309,11 @@ TEST(TofinoComputedChecksum, ErrorDestFieldMismatch) {
 
 TEST(TofinoComputedChecksum, ErrorSourceFieldMismatch) {
     auto test = createComputedChecksumTestCase(P4_SOURCE(P4Headers::NONE, R"(
-        if (headers.h1.isValid()) {
-            headers.h1.checksum = checksum.get({
-                headers.h1.field1,
-                headers.h2.field3
-            });
-        }
+        update_checksum(true, {
+                        headers.h1.field1,
+                        headers.h2.field3 },
+                        headers.h1.checksum,
+                        HashAlgorithm.csum16);
     )"), P4_SOURCE(P4Headers::NONE, R"(
         packet.emit(headers.h1);
     )"));
@@ -331,10 +323,11 @@ TEST(TofinoComputedChecksum, ErrorSourceFieldMismatch) {
 
 TEST(TofinoComputedChecksum, ErrorSourceFieldMismatchWithoutIsValid) {
     auto test = createComputedChecksumTestCase(P4_SOURCE(P4Headers::NONE, R"(
-        headers.h1.checksum = checksum.get({
-            headers.h1.field1,
-            headers.h2.field3
-        });
+        update_checksum(true, {
+                        headers.h1.field1,
+                        headers.h2.field3 },
+                        headers.h1.checksum,
+                        HashAlgorithm.csum16);
     )"), P4_SOURCE(P4Headers::NONE, R"(
         packet.emit(headers.h1);
     )"));
@@ -344,10 +337,11 @@ TEST(TofinoComputedChecksum, ErrorSourceFieldMismatchWithoutIsValid) {
 
 TEST(TofinoComputedChecksum, ErrorDestFieldNot16Bit) {
     auto test = createComputedChecksumTestCase(P4_SOURCE(P4Headers::NONE, R"(
-        headers.h1.field1 = (bit<8>)checksum.get({
-            headers.h1.field1,
-            headers.h1.field3
-        });
+        update_checksum(true, {
+                        headers.h1.field1,
+                        headers.h1.field3 },
+                        (bit<8>) headers.h1.field1,
+                        HashAlgorithm.csum16);
     )"), P4_SOURCE(P4Headers::NONE, R"(
         packet.emit(headers.h1);
     )"));
@@ -357,26 +351,12 @@ TEST(TofinoComputedChecksum, ErrorDestFieldNot16Bit) {
 
 TEST(TofinoComputedChecksum, ErrorUnexpectedStatement) {
     auto test = createComputedChecksumTestCase(P4_SOURCE(P4Headers::NONE, R"(
-        headers.h1.checksum = checksum.get({
-            headers.h1.field1,
-            headers.h1.field3
-        });
+        update_checksum(true, {
+                        headers.h1.field1,
+                        headers.h1.field3 },
+                        headers.h1.checksum,
+                        HashAlgorithm.csum16);
         headers.h1.field2 = headers.h1.checksum;
-    )"), P4_SOURCE(P4Headers::NONE, R"(
-        packet.emit(headers.h1);
-    )"));
-
-    EXPECT_GT(::ErrorReporter::instance.getDiagnosticCount(), 0u);
-}
-
-TEST(TofinoComputedChecksum, ErrorUnexpectedCondition) {
-    auto test = createComputedChecksumTestCase(P4_SOURCE(P4Headers::NONE, R"(
-        if (headers.h1.field1 > 0) {
-            headers.h1.checksum = checksum.get({
-                headers.h1.field1,
-                headers.h1.field3
-            });
-        }
     )"), P4_SOURCE(P4Headers::NONE, R"(
         packet.emit(headers.h1);
     )"));
@@ -386,10 +366,11 @@ TEST(TofinoComputedChecksum, ErrorUnexpectedCondition) {
 
 TEST(TofinoComputedChecksum, ErrorUnexpectedSource) {
     auto test = createComputedChecksumTestCase(P4_SOURCE(P4Headers::NONE, R"(
-        headers.h1.checksum = checksum.get({
-            headers.h1.field1,
-            headers.h1.field3 + 1
-        });
+        update_checksum(true, {
+                        headers.h1.field1,
+                        headers.h1.field3 + 1 },
+                        headers.h1.checksum,
+                        HashAlgorithm.csum16);
     )"), P4_SOURCE(P4Headers::NONE, R"(
         packet.emit(headers.h1);
     )"));
@@ -399,10 +380,11 @@ TEST(TofinoComputedChecksum, ErrorUnexpectedSource) {
 
 TEST(TofinoComputedChecksum, ErrorNoDestField) {
     auto test = createComputedChecksumTestCase(P4_SOURCE(P4Headers::NONE, R"(
-        checksum.get({
-            headers.h1.field1,
-            headers.h1.field3
-        });
+        update_checksum(true, {
+                        headers.h1.field1,
+                        headers.h1.field3 },
+                        ,
+                        HashAlgorithm.csum16);
     )"), P4_SOURCE(P4Headers::NONE, R"(
         packet.emit(headers.h1);
     )"));

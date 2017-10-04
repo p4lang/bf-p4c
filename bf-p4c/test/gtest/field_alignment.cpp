@@ -34,7 +34,7 @@ createFieldAlignmentTestCase(const std::string& headerSource) {
             }
         }
 
-        control verifyChecksum(in Headers headers, inout Metadata meta) { apply { } }
+        control verifyChecksum(inout Headers headers, inout Metadata meta) { apply { } }
 
         control mau(inout Headers headers, inout Metadata meta,
                         inout standard_metadata_t sm) { apply { } }
@@ -183,7 +183,7 @@ TEST(TofinoFieldAlignment, NonPardeFieldsDoNotForceAlignment) {
             }
         }
 
-        control verifyChecksum(in Headers headers, inout Metadata meta) { apply { } }
+        control verifyChecksum(inout Headers headers, inout Metadata meta) { apply { } }
 
         control mau(inout Headers headers, inout Metadata meta,
                     inout standard_metadata_t sm) {
@@ -232,7 +232,7 @@ TEST(TofinoFieldAlignment, BridgedMetadataRespectsAlignment) {
             }
         }
 
-        control verifyChecksum(in Headers headers, inout Metadata meta) { apply { } }
+        control verifyChecksum(inout Headers headers, inout Metadata meta) { apply { } }
 
         control ingress(inout Headers headers, inout Metadata meta,
                     inout standard_metadata_t sm) { apply { } }

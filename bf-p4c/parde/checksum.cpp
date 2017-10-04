@@ -190,6 +190,88 @@ analyzeComputedChecksumStatement(const IR::IfStatement* ifStatement) {
 }
 
 /**
+ * Analyze an method call statement within a computed checksum control and try to
+ * extract the destination field and the source field list
+ *
+ * @param methodCallStatement The `compute_checksum` statement to analyze
+ * @return a ChecksumSourceMap entry containing the checksum destination field
+ * name and the source fields which will be used to compute the checksum, or
+ * boost::none if the checksum code was invalid.
+ */
+boost::optional<ChecksumSourceMap::value_type>
+analyzeComputedChecksumStatement(const IR::MethodCallStatement* statement) {
+    auto methodCall = statement->methodCall->to<IR::MethodCallExpression>();
+    if (!methodCall) {
+        ::warning("Expected a non-empty method call expression: %1%", statement);
+        return boost::none;
+    }
+    auto method = methodCall->method->to<IR::PathExpression>();
+    if (!method || method->path->name != "update_checksum")  {
+        ::warning("Expected an update_checksum statement in %1%", statement);
+        return boost::none;
+    }
+    if (methodCall->arguments->size() != 4) {
+        ::warning("Expected 4 arguments for update_checksum statement: %1%", statement);
+        return boost::none;
+    }
+    auto destField = (*methodCall->arguments)[2]->to<IR::Member>();
+    if (!destField || !destField->expr->is<IR::HeaderRef>()) {
+        ::warning("Expected argument %1% to be a header field", methodCall->arguments->at(3));
+        return boost::none;
+    }
+
+    const IR::HeaderRef* sourceHeader = nullptr;
+    if (!sourceHeader)
+        sourceHeader = destField->expr->to<IR::HeaderRef>();
+    if (!sourceHeader) {
+        ::warning("Expected destination of checksum to be a header field: %1%",
+                  destField);
+        return boost::none;
+    }
+
+    if (destField->type->width_bits() != 16) {
+        ::warning("Expected computed checksum output to be stored in a "
+                          "16-bit field: %1%", destField);
+        return boost::none;
+    }
+    LOG2("Would write computed checksum to field: " << destField);
+
+    const IR::ListExpression* sourceList = nullptr;
+    {
+        sourceList = (*methodCall->arguments)[1]->to<IR::ListExpression>();
+        if (!sourceList) {
+            ::warning("Expected list of fields: %1%", methodCall);
+            return boost::none;
+        }
+    }
+
+    auto* sources = new ChecksumSources;
+    for (auto* source : sourceList->components) {
+        LOG2("Checksum would include field: " << source);
+        auto* member = source->to<IR::Member>();
+        if (!member || !member->expr->is<IR::HeaderRef>()) {
+            ::warning("Expected field: %1%", source);
+            return boost::none;
+        }
+        auto* headerRef = member->expr->to<IR::HeaderRef>();
+        if (headerRef->toString() != sourceHeader->toString()) {
+            ::warning("Expected field of checksummed header %1%: %2%",
+                      sourceHeader, member);
+            return boost::none;
+        }
+        sources->push_back(member);
+    }
+
+    if (sources->empty()) {
+        ::warning("Expected at least one field: %1%", sources);
+        return boost::none;
+    }
+
+    LOG2("Validated computed checksum for field: " << destField);
+    return ChecksumSourceMap::value_type(destField->toString(), sources);
+}
+
+/**
  * Analyze the provided computed checksum control and determine the set of
  * checksums to be computed.
  *
@@ -212,6 +294,11 @@ ChecksumSourceMap findChecksums(const IR::P4Control* control) {
     for (auto* statement : control->body->components) {
         boost::optional<ChecksumSourceMap::value_type> checksum;
 
+        if (auto* method = statement->to<IR::MethodCallStatement>()) {
+            auto checksum = analyzeComputedChecksumStatement(method);
+            if (checksum) checksums.insert(*checksum);
+            continue;
+        }
         // It only makes sense to compute a checksum against a valid header, so
         // ideally the program will include a check of the form `if
         // (header.isValid())`. We also allow a bare assignment without the
@@ -228,6 +315,7 @@ ChecksumSourceMap findChecksums(const IR::P4Control* control) {
             if (checksum) checksums.insert(*checksum);
             continue;
         }
+
         ::warning("Unexpected statement: %1%", statement);
     }
 
