@@ -17,7 +17,7 @@ def dumbPacket(f1=0xabcd, f2=0xef, f3=0xaa):
     s = stringify(f1, 2) + stringify(f2, 1) + stringify(f3, 1)
 
     # Add fake payload.
-    s += '0' * 15
+    s += '0' * 100
     return s
 
 class SimpleTest(P4RuntimeTest):
