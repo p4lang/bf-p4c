@@ -1,6 +1,7 @@
 #include <config.h>
 
 #include "algorithm.h"
+#include "constants.h"
 #include "parser.h"
 #include "phv.h"
 #include "range.h"
@@ -16,8 +17,10 @@ Parser Parser::singleton_object;
 
 Parser::Parser() : Section("parser") {
     lineno[0] = lineno[1] = 0;
-    hdr_len_adj[INGRESS] = 0;
-    hdr_len_adj[EGRESS] = 2;
+    // FIXME-COMPILER: These values are currently hardcoded but should be passed
+    // through the parser assembly code
+    hdr_len_adj[INGRESS] = INGRESS_PARSER_HEADER_LENGTH_ADJUST;
+    hdr_len_adj[EGRESS] = EGRESS_PARSER_HEADER_LENGTH_ADJUST;
     meta_opt = 0;
 }
 Parser::~Parser() {

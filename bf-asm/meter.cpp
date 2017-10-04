@@ -165,7 +165,10 @@ template<class REGS> void MeterTable::write_merge_regs(REGS &regs, MatchTable *m
         base_mask = (1U << base_width) - 1;
         meter_adr_mask = base_mask << METER_LOWER_HUFFMAN_BITS;
         meter_adr_mask &= full_mask; }
-    merge.mau_meter_adr_mask[type][bus] |= meter_adr_mask;
+    if (match->to<HashActionTable>()) {
+        merge.mau_stats_adr_mask[type][bus] = 0;
+    } else
+        merge.mau_meter_adr_mask[type][bus] |= meter_adr_mask;
 
     if (!per_flow_enable) {
         //ptr_bits += METER_LOWER_HUFFMAN_BITS; //When should these be added?

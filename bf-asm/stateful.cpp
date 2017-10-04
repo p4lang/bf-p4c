@@ -255,7 +255,10 @@ template<class REGS> void Stateful::write_merge_regs(REGS &regs, MatchTable *mat
         stateful_adr_mask = base_mask << bw_adjust; 
     }
     stateful_adr_mask &= full_mask;
-    merge.mau_meter_adr_mask[type][bus] = stateful_adr_mask;
+    if (match->to<HashActionTable>()) {
+        merge.mau_stats_adr_mask[type][bus] = 0;
+    } else
+        merge.mau_meter_adr_mask[type][bus] = stateful_adr_mask;
 
     if (!per_flow_enable)
         per_flow_enable_bit = METER_ADDRESS_BITS - METER_TYPE_BITS - 1;

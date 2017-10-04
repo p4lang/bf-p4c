@@ -43,5 +43,5 @@ class CounterReadTest(P4RuntimeTest):
         print "Ingress Count: ", ingress_count
         print "Egress Count: ", egress_count
         #WIP: Working on bytecount adjust to account for additional 16 bytes
-        self.assertGreater(ingress_count, 0)
+        self.assertEqual(ingress_count, 70)
         self.assertEqual(egress_count, 70)
