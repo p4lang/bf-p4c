@@ -65,6 +65,10 @@ cstring Container::toString() const {
     return tmp.str();
 }
 
+void Container::toJSON(JSONGenerator& json) const {
+    json << *this;
+}
+
 /* static */ Container Container::fromJSON(JSONLoader& json) {
     if (auto* v = json.json->to<JsonString>())
         return Container(v->c_str());

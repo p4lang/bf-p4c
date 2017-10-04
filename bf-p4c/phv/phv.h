@@ -123,6 +123,8 @@ class Container {
         if (c.index_ < index_) return false;
         return false; }
 
+    /// JSON serialization/deserialization.
+    void toJSON(JSONGenerator& json) const;
     static Container fromJSON(JSONLoader& json);
 
     /// @return a string representation of this container.
