@@ -16,7 +16,7 @@ else
     DEBUGGER_COMMAND="gdb --args"
 fi
 
-TIMEOUT=${P4C_TIMEOUT:-300}
+TIMEOUT=${P4C_TIMEOUT:-500}
 TIME_COMMAND="" # don't time commands
 verbose=false
 debug=false

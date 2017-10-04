@@ -79,6 +79,8 @@ macro(p4c_add_xfail_reason tag reason)
   endforeach()
 endmacro(p4c_add_xfail_reason)
 
+set (tofino_timeout 500)
+
 set (P4C_TOFINO_RUNTEST ${CMAKE_CURRENT_SOURCE_DIR}/runtest)
 
 set (V1_SEARCH_PATTERNS "include.*(v1model|psa).p4" "main")
