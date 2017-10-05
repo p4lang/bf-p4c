@@ -958,6 +958,11 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
         }
     }
 
+    void postorder(const IR::BFN::LoweredParser*) override {
+        BUG("Running CollectPhvInfo after the parser IR has been lowered; "
+            "this will produce invalid results.");
+    }
+
     PhvInfo& phv;
 };
 

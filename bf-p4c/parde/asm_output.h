@@ -1,27 +1,20 @@
 #ifndef BF_P4C_PARDE_ASM_OUTPUT_H_
 #define BF_P4C_PARDE_ASM_OUTPUT_H_
 
-#include <functional>
-#include "bf-p4c/common/asm_output.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "ir/ir.h"
-#include "lib/safe_vector.h"
 
-class ParserAsmOutput : public Inspector {
-    gress_t                                     gress;
-    const PhvInfo                               &phv;
-    const IR::BFN::Parser                    *parser;
-    safe_vector<const IR::BFN::ParserState *> states;
-    bool preorder(const IR::BFN::ParserState *state) override {
-        states.push_back(state);
-        return true; }
-    friend std::ostream &operator<<(std::ostream &, const ParserAsmOutput &);
- public:
-    ParserAsmOutput(const IR::BFN::Pipe *pipe, const PhvInfo &phv, gress_t gr)
-    : gress(gr), phv(phv), parser(pipe->thread[gress].parser) {
-        if (parser) parser->apply(*this); }
+/// Helper that can generate parser assembly and write it to an output stream.
+struct ParserAsmOutput {
+    ParserAsmOutput(const IR::BFN::Pipe* pipe, gress_t gress);
+
+ private:
+    friend std::ostream& operator<<(std::ostream&, const ParserAsmOutput&);
+
+    const IR::BFN::LoweredParser* parser;
 };
 
+/// Helper that can generate deparser assembly and write it to an output stream.
 class DeparserAsmOutput {
     gress_t                     gress;
     const PhvInfo               &phv;

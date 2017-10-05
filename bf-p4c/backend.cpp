@@ -27,14 +27,13 @@
 #include "bf-p4c/parde/asm_output.h"
 #include "bf-p4c/parde/bridge_metadata.h"
 #include "bf-p4c/parde/digest.h"
+#include "bf-p4c/parde/lower_parser.h"
 #include "bf-p4c/parde/resolve_computed.h"
-#include "bf-p4c/parde/split_big_states.h"
 #include "bf-p4c/parde/stack_push_shims.h"
 #include "bf-p4c/phv/asm_output.h"
 #include "bf-p4c/phv/check_unallocated.h"
 #include "bf-p4c/phv/create_thread_local_instances.h"
 #include "bf-p4c/phv/phv_analysis.h"
-#include "bf-p4c/phv/split_phv_use.h"
 
 namespace BFN {
 
@@ -114,9 +113,9 @@ class AsmOutput : public Inspector {
 
        *out << "version: 1.0.0" << std::endl
             << PhvAsmOutput(phv)
-            << ParserAsmOutput(pipe, phv, INGRESS)
+            << ParserAsmOutput(pipe, INGRESS)
             << DeparserAsmOutput(pipe, phv, INGRESS)
-            << ParserAsmOutput(pipe, phv, EGRESS)
+            << ParserAsmOutput(pipe, EGRESS)
             << DeparserAsmOutput(pipe, phv, EGRESS)
             << mauasm
             << std::flush;
@@ -197,9 +196,15 @@ Backend::Backend(const BFN_Options& options) :
         new TableAllocPass(phv, defuse, deps),
         new IXBarRealign(phv),
         new TotalInstructionAdjustment(phv),
-        new SplitPhvUse(phv),
-        new SplitBigStates(phv),  // depends on SplitPhvUse
         new DumpPipe("Final table graph"),
+
+        // Lower the parser IR to a target-specific representation. This *loses
+        // information* about field reads and writes in the parser and depaser,
+        // so after this point it's not safe to run CollectPhvInfo, FieldDefUse,
+        // or any other pass that walks over the IR to find references to
+        // fields.
+        new LowerParser(phv),
+
         new CheckTableNameDuplicate,
         new CheckForUnallocatedTemps(phv, uses),
         new CheckUnimplementedFeatures(options.allowUnimplemented),

@@ -28,6 +28,7 @@ set (TOFINO_IR_SRCS
   ir/thread_visitor.cpp
   ir/tofino.cpp
   ir/tofino_write_context.cpp
+  phv/phv.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_IR_SRCS}")
 
@@ -37,6 +38,7 @@ set (TOFINO_IR_HDRS
   ir/gress.h
   ir/thread_visitor.h
   ir/tofino_write_context.h
+  phv/phv.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_IR_HDRS}")
 
@@ -93,6 +95,7 @@ set (TOFINO_BACKEND_COMMON_HDRS
   common/check_header_alignment.h
   common/check_header_refs.h
   common/copy_header_eliminator.h
+  common/debug_info.h
   common/elim_unused.h
   common/extract_maupipe.h
   common/field_defuse.h
@@ -184,10 +187,10 @@ set (TOFINO_BACKEND_PARDE_SRCS
   parde/extract_parser.cpp
   parde/field_packing.cpp
   parde/gen_deparser.cpp
+  parde/lower_parser.cpp
   parde/parser_output.cpp
   parde/phase0.cpp
   parde/resolve_computed.cpp
-  parde/split_big_states.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_PARDE_SRCS}")
 build_unified(TOFINO_BACKEND_PARDE_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
@@ -199,9 +202,9 @@ set (TOFINO_BACKEND_PARDE_HDRS
   parde/checksum.h
   parde/extract_parser.h
   parde/field_packing.h
+  parde/lower_parser.h
   parde/phase0.h
   parde/resolve_computed.h
-  parde/split_big_states.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_PARDE_HDRS}")
 
@@ -220,7 +223,6 @@ set (TOFINO_BACKEND_PHV_SRCS
   phv/cluster_phv_slicing.cpp
   phv/create_thread_local_instances.cpp
   phv/field_alignment.cpp
-  phv/phv.cpp
   phv/phv_analysis.cpp
   phv/phv_analysis_api.cpp
   phv/phv_analysis_validate.cpp
@@ -230,7 +232,6 @@ set (TOFINO_BACKEND_PHV_SRCS
   phv/phv_parde_mau_use.cpp
   phv/phv_spec.cpp
   phv/repack_metadata.cpp
-  phv/split_phv_use.cpp
   phv/trivial_alloc.cpp
   phv/validate_allocation.cpp
   )
@@ -261,8 +262,6 @@ set (TOFINO_BACKEND_PHV_HDRS
   phv/phv_fields.h
   phv/phv_parde_mau_use.h
   phv/phv_spec.h
-  phv/phv.h
-  phv/split_phv_use.h
   phv/trivial_alloc.h
   phv/validate_allocation.h
   )
@@ -302,6 +301,7 @@ set (TOFINO_IR_DEF_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/ir/tofino.def
   ${CMAKE_CURRENT_SOURCE_DIR}/ir/mau.def
   ${CMAKE_CURRENT_SOURCE_DIR}/ir/parde.def
+  ${CMAKE_CURRENT_SOURCE_DIR}/ir/parde-lowered.def
   )
 # publish IR_DEF_FILES upstream
 set (IR_DEF_FILES ${IR_DEF_FILES} ${TOFINO_IR_DEF_FILES} PARENT_SCOPE)

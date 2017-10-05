@@ -1,155 +1,173 @@
 #include "asm_output.h"
+
+#include "bf-p4c/common/asm_output.h"
+#include "bf-p4c/common/debug_info.h"
+#include "bf-p4c/parde/parde_visitor.h"
 #include "lib/match.h"
 #include "lib/log.h"
 #include "lib/range.h"
 
-struct ExtractDestFormatter {
-    const PhvInfo::Field* dest;
-    bitrange bits;
-};
+namespace {
 
-std::ostream& operator<<(std::ostream& out, const ExtractDestFormatter& format) {
-    out << canon_name(format.dest->name);
-    if (format.bits.lo != 0 || format.bits.hi + 1 != format.dest->size)
-        out << '.' << format.bits.lo << '-' << format.bits.hi;
-    return out;
-}
-
-class OutputExtracts : public Inspector {
-    std::ostream        &out;
-    const PhvInfo       &phv;
-    indent_t            indent;
-    PHV::Container      last;
-
-    bool preorder(const IR::BFN::ExtractBuffer* extract) {
-        bitrange bits;
-        auto dest = phv.field(extract->dest, &bits);
-        if (!dest) {
-            out << indent << "# no phv: " << *extract << std::endl;
-            return false;
-        }
-
-        auto &alloc = dest->for_bit(bits.lo);
-        if (alloc.container == last) {
-            out << indent << "    # - " << alloc.container_bits() << " "
-                << ExtractDestFormatter{dest, bits} << std::endl;
-            return false;
-        }
-        last = alloc.container;
-
-        const int byteOffset = extract->bitInterval().loByte();
-        const int byteSize = alloc.container.size() / 8U;
-        out << indent << Range(byteOffset, byteOffset + byteSize - 1) << ": ";
-        if (unsigned(bits.size()) != alloc.container.size()) {
-            out << alloc.container << std::endl;
-            out << indent << "    # - " << alloc.container_bits() << " ";
-        }
-        out << ExtractDestFormatter{dest, bits} << std::endl;
-        return false;
-    }
-
-    bool preorder(const IR::BFN::ExtractConstant* extract) {
-        bitrange bits;
-        auto dest = phv.field(extract->dest, &bits);
-        if (!dest) {
-            out << indent << "# no phv: " << *extract << std::endl;
-            return false;
-        }
-        out << indent << canon_name(dest->name) << ": "
-            << extract->constant->value << std::endl;
-        return false;
-    }
-
-    bool preorder(const IR::BFN::ParserPrimitive* primitive) {
-        out << indent << "# unsupported: " << *primitive << std::endl;
-        return false;
-    }
-
- public:
-    OutputExtracts(std::ostream &o, const PhvInfo &phv, indent_t i) : out(o), phv(phv), indent(i) {}
-};
-
-static void output_match(std::ostream &out, const PhvInfo &phv, indent_t indent,
-                         const IR::BFN::ParserMatch *match) {
-    if (match->value)
-        out << indent << match->value << ':' << std::endl;
-    else
-        out << indent << "0x*:" << std::endl;
-    ++indent;
-    match->stmts.apply(OutputExtracts(out, phv, indent));
-    if (match->shift && *match->shift != 0)
-        out << indent << (*match->shift < 0 ? "# " : "")
-            << "shift: " << *match->shift << std::endl;
-    out << indent << "next: ";
-    if (match->next)
-        out << canon_name(match->next->name);
-    else
-        out << "end";
-    out << std::endl;
-    --indent;
-}
-
-class OutputSelect : public Inspector {
- public:
-    explicit OutputSelect(std::ostream& out) : out(out) { }
+/// A RAII helper that indents when it's created and unindents by the same
+/// amount when it's destroyed.
+/// XXX(seth): This should live in indent.h.
+struct AutoIndent {
+    explicit AutoIndent(indent_t& indent, int indentBy = 1)
+      : indent(indent), indentBy(indentBy) { indent += indentBy; }
+    ~AutoIndent() { indent -= indentBy; }
 
  private:
-    bool preorder(const IR::BFN::SelectBuffer* select) {
-        auto bits = select->selectedBits();
-        if (bits.loByte() == bits.hiByte())
-            out << bits.loByte();
-        else
-            out << bits.loByte() << ".." << bits.hiByte();
-        return false;
+    indent_t& indent;
+    int indentBy;
+};
+
+/// Generates parser assembly by walking the IR and writes the result to an
+/// output stream. The parser IR must be in lowered form - i.e., the root must
+/// a LoweredParser rather than a Parser.
+struct ParserAsmSerializer : public ParserInspector {
+    explicit ParserAsmSerializer(std::ostream& out) : out(out) { }
+
+ private:
+    bool preorder(const IR::BFN::LoweredParser* parser) override {
+        AutoIndent indentParser(indent);
+
+        out << "parser " << parser->gress << ":" << std::endl;
+        if (parser->start)
+            out << indent << "start: " << canon_name(parser->start->name)
+                << std::endl;
+
+        if (!parser->multiwriteContainers.empty()) {
+            out << indent << "multi_write: ";
+            const char *sep = "[ ";
+            for (auto container : parser->multiwriteContainers) {
+                out << sep << container;
+                sep = ", ";
+            }
+            out << " ]" << std::endl;
+        }
+
+        out << indent << "hdr_len_adj: " << parser->prePacketDataLengthBytes
+            << std::endl;
+
+        return true;
     }
 
-    bool preorder(const IR::BFN::TransitionPrimitive*) {
-        out << "/* ??? */" << std::endl;
-        return false;
+    bool preorder(const IR::BFN::LoweredParserState* state) override {
+        AutoIndent indentState(indent);
+
+        out << indent << canon_name(state->name) << ':';
+
+        // Print human-friendly debug information about this state - any unhandled
+        // primitives it included, the higher-level states it may have been
+        // constructed from, etc.
+        for (auto& info : state->debug.info) {
+            if (state->debug.info.size() == 1)
+                out << "  # ";
+            else
+                out << std::endl << indent << "      # - ";
+            out << info;
+        }
+
+        out << std::endl;
+
+        if (!state->select.empty()) {
+            AutoIndent indentSelect(indent);
+
+            // Generate the assembly that actually implements the select.
+            out << indent << "match: ";
+            const char *sep = "[ ";
+            for (auto* select : state->select) {
+                auto bits = select->selectedBits();
+                out << sep << Range(bits.loByte(), bits.hiByte());
+                sep = ", ";
+            }
+            out << " ]" << std::endl;
+
+            // Print human-friendly info about where the select offsets come from.
+            for (auto* select : state->select) {
+                out << indent << "      # - " << select->selectedBits() << ": ";
+                if (select->source)
+                    out << canon_name(select->source->toString()) << std::endl;
+                else
+                    out << "(buffer)" << std::endl;
+            }
+        }
+
+        for (auto* match : state->match)
+            outputMatch(match);
+
+        return true;
+    }
+
+    void outputMatch(const IR::BFN::LoweredParserMatch* match) {
+        AutoIndent indentMatchPattern(indent);
+
+        if (match->value)
+            out << indent << match->value << ':' << std::endl;
+        else
+            out << indent << "0x*:" << std::endl;
+
+        AutoIndent indentMatch(indent);
+
+        for (auto* extract : match->statements)
+            outputExtract(extract);
+
+        if (match->shift != 0)
+            out << indent << "shift: " << match->shift << std::endl;
+
+        out << indent << "next: ";
+        if (match->next)
+            out << canon_name(match->next->name);
+        else
+            out << "end";
+
+        out << std::endl;
+    }
+
+    void outputExtract(const IR::BFN::LoweredExtract* extract) {
+        // Generate the assembly that actually implements the extract.
+        if (auto* extractBuffer = extract->to<IR::BFN::LoweredExtractBuffer>()) {
+            auto bytes = extractBuffer->extractedBytes();
+            out << indent << Range(bytes.lo, bytes.hi) << ": "
+                << extractBuffer->dest;
+        } else if (auto* extractConstant = extract->to<IR::BFN::LoweredExtractConstant>()) {
+            out << indent << extractConstant->dest << ": "
+                << extractConstant->constant;
+        } else {
+            BUG("Can't generate assembly for: %1%", extract);
+        }
+
+        // Print human-friendly debug info about the extract - what it's writing
+        // to, what higher-level extracts it may have been generated from, etc.
+        for (auto& info : extract->debug.info) {
+            if (extract->debug.info.size() == 1)
+                out << "  # ";
+            else
+                out << std::endl << indent << "    # - ";
+            out << info;
+        }
+
+        out << std::endl;
     }
 
     std::ostream& out;
+    indent_t indent;
 };
 
-static void output_state(std::ostream &out, const PhvInfo &phv, indent_t indent,
-                         const IR::BFN::ParserState *state) {
-    out << indent++ << canon_name(state->name) << ':' << std::endl;
-    if (!state->select.empty()) {
-        out << indent << "match: ";
-        const char *sep = "[ ";
-        for (auto* select : state->select) {
-            out << sep;
-            select->apply(OutputSelect(out));
-            sep = ", ";
-        }
-        out << " ]" << std::endl;
+}  // namespace
 
-        // Print human-friendly info about where the select offsets come from.
-        for (auto* select : state->select) {
-            out << indent << "      # - [";
-            select->apply(OutputSelect(out));
-            out << "] ";
-            if (auto* selectBuffer = select->to<IR::BFN::SelectBuffer>()) {
-                if (selectBuffer->source)
-                    out << selectBuffer->source << std::endl;
-                else
-                    out << "(buffer)" << std::endl;
-            } else {
-                out << select << std::endl;
-            }
-        }
-    }
-    for (auto m : state->match)
-        output_match(out, phv, indent, m);
-    --indent;
+ParserAsmOutput::ParserAsmOutput(const IR::BFN::Pipe* pipe,
+                                 gress_t gress)
+        : parser(nullptr) {
+    auto* abstractParser = pipe->thread[gress].parser;
+    BUG_CHECK(abstractParser != nullptr, "No parser?");
+    parser = abstractParser->to<IR::BFN::LoweredParser>();
+    BUG_CHECK(parser != nullptr, "Writing assembly for a non-lowered parser?");
 }
 
-std::ostream &operator<<(std::ostream &out, const ParserAsmOutput &parser) {
-    indent_t    indent(1);
-    out << "parser " << parser.gress << ":" << std::endl;
-    if (parser.parser && parser.parser->start)
-        out << indent << "start: " << canon_name(parser.parser->start->name) << std::endl;
-    for (auto state : parser.states)
-        output_state(out, parser.phv, indent, state);
+std::ostream& operator<<(std::ostream& out, const ParserAsmOutput& parserOut) {
+    ParserAsmSerializer serializer(out);
+    parserOut.parser->apply(serializer);
     return out;
 }

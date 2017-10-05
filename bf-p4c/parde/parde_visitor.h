@@ -14,8 +14,8 @@ class PardeModifier : public Modifier {
 };
 
 class PardeTransform : public Transform {
-    IR::MAU::Table *preorder(IR::MAU::Table *t) { prune(); return t; }
-    IR::MAU::TableSeq *preorder(IR::MAU::TableSeq *s) { prune(); return s; }
+    IR::MAU::Table *preorder(IR::MAU::Table *t) override { prune(); return t; }
+    IR::MAU::TableSeq *preorder(IR::MAU::TableSeq *s) override { prune(); return s; }
 };
 
 class ParserInspector : public Inspector {
@@ -31,9 +31,27 @@ class ParserModifier : public Modifier {
 };
 
 class ParserTransform : public Transform {
-    IR::BFN::Deparser *preorder(IR::BFN::Deparser *d) { prune(); return d; }
-    IR::MAU::Table *preorder(IR::MAU::Table *t) { prune(); return t; }
-    IR::MAU::TableSeq *preorder(IR::MAU::TableSeq *s) { prune(); return s; }
+    IR::BFN::Deparser *preorder(IR::BFN::Deparser *d) override { prune(); return d; }
+    IR::MAU::Table *preorder(IR::MAU::Table *t) override { prune(); return t; }
+    IR::MAU::TableSeq *preorder(IR::MAU::TableSeq *s) override { prune(); return s; }
+};
+
+class DeparserInspector : public Inspector {
+    bool preorder(const IR::BFN::AbstractParser *) override { return false; }
+    bool preorder(const IR::MAU::Table *) override { return false; }
+    bool preorder(const IR::MAU::TableSeq *) override { return false; }
+};
+
+class DeparserModifier : public Modifier {
+    bool preorder(IR::BFN::AbstractParser *) override { return false; }
+    bool preorder(IR::MAU::Table *) override { return false; }
+    bool preorder(IR::MAU::TableSeq *) override { return false; }
+};
+
+class DeparserTransform : public Transform {
+    IR::BFN::AbstractParser *preorder(IR::BFN::AbstractParser *p) override { prune(); return p; }
+    IR::MAU::Table *preorder(IR::MAU::Table *t) override { prune(); return t; }
+    IR::MAU::TableSeq *preorder(IR::MAU::TableSeq *s) override { prune(); return s; }
 };
 
 #endif /* _parde_visitor_h_ */

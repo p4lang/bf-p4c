@@ -1,5 +1,4 @@
 #emit
-#include <utility>
 #include <boost/optional.hpp>
 #include "bf-p4c/ir/bitrange.h"
 #end
@@ -172,6 +171,8 @@ class UnhandledParserPrimitive : ParserPrimitive {
 #end
 }
 
+/// The high-level representation of a parser state transition. Contains
+/// primitives which operate on fields and field-like objects.
 class ParserMatch {
 #noconstructor
     ParserMatch(match_t value, const Vector<ParserPrimitive>& statements)
@@ -272,6 +273,8 @@ class UnhandledTransitionPrimitive : TransitionPrimitive {
 #end
 }
 
+/// A high-level parser state. Contains primitives which operate on fields and
+/// field-like objects.
 class ParserState : Unit {
 #noconstructor
     ParserState(IR::ParserState p4State, cstring name, gress_t gr)
@@ -299,13 +302,27 @@ class ParserState : Unit {
     inline Vector<ParserMatch>         match;
 }
 
-class Parser {
-    gress_t     gress;
-    ParserState start;
+/// The supertype for all BFN IR parsers.
+abstract AbstractParser {
 #noconstructor
-    Parser(gress_t gr, ParserState s) : gress(gr), start(s) {}
+    AbstractParser(gress_t gr) : gress(gr) { }
+#apply
+
+    gress_t gress;
+}
+
+/// The high-level representation of a parser. This is the representation used
+/// prior to PHV allocation. It contains primitives which operate on fields and
+/// field-like objects; some operands may be expressions that can't yet be
+/// evaluated.
+class Parser : AbstractParser {
+#noconstructor
+    Parser(gress_t gress, ParserState start)
+        : AbstractParser(gress), start(start) {}
 #apply
     toString { return gress ? "egress parser" : "ingress parser"; }
+
+    ParserState start;
 }
 
 class Digest {

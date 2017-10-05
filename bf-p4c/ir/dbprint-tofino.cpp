@@ -113,6 +113,22 @@ void IR::BFN::ParserMatch::dbprint(std::ostream &out) const {
     out << unindent;
 }
 
+void IR::BFN::LoweredParserMatch::dbprint(std::ostream &out) const {
+    if (value)
+        out << "match " << value << ": ";
+    else
+        out << "default: ";
+
+    out << "(shift=" << shift << ')';
+
+    out << indent;
+    for (auto *st : statements)
+        out << endl << *st;
+    if (next)
+        out << endl << "goto " << next->name;
+    out << unindent;
+}
+
 void IR::BFN::ParserState::dbprint(std::ostream &out) const {
     out << gress << " parser " << name;
     if (dbgetflags(out) & Brief)
@@ -130,17 +146,35 @@ void IR::BFN::ParserState::dbprint(std::ostream &out) const {
     out << unindent;
 }
 
-struct FindStates : Inspector {
-    ordered_set<const IR::BFN::ParserState *>        states;
-    bool preorder(const IR::BFN::ParserState *s) override { states.insert(s); return true; }
-};
-
+void IR::BFN::LoweredParserState::dbprint(std::ostream &out) const {
+    out << gress << " parser " << name;
+    if (dbgetflags(out) & Brief)
+        return;
+    out << ':' << indent;
+    if (!select.empty()) {
+        out << endl << "select(" << setprec(Prec_Low);
+        const char *sep = "";
+        for (auto &e : select) {
+            out << sep << *e;
+            sep = ", "; }
+        out << ")" << setprec(0); }
+    for (auto *m : match)
+        out << endl << *m;
+    out << unindent;
+}
 
 void IR::BFN::Parser::dbprint(std::ostream &out) const {
-    FindStates states;
-    apply(states);
-    for (auto st : states.states)
-        out << endl << *st;
+    forAllMatching<IR::BFN::ParserState>(this,
+                  [&](const IR::BFN::ParserState* state) {
+        out << endl << *state;
+    });
+}
+
+void IR::BFN::LoweredParser::dbprint(std::ostream &out) const {
+    forAllMatching<IR::BFN::LoweredParserState>(this,
+                  [&](const IR::BFN::LoweredParserState* state) {
+        out << endl << *state;
+    });
 }
 
 void IR::BFN::Digest::dbprint(std::ostream &out) const {

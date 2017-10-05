@@ -1,0 +1,146 @@
+#emit
+#include <set>
+#include "bf-p4c/common/debug_info.h"
+#include "bf-p4c/ir/bitrange.h"
+#include "bf-p4c/phv/phv.h"
+#end
+
+namespace BFN {
+
+/// A lowered parser extraction operation, representing a write by the parser
+/// into a PHV container.
+abstract LoweredExtract {
+    validate { BUG_CHECK(bool(dest), "Invalid PHV container"); }
+
+#emit
+    /// Debugging information about the high-level operations that are
+    /// implemented by this low-level extract.
+    ::BFN::DebugInfo debug;
+#end
+
+    /// The PHV container this extract writes to.
+    PHV::Container dest;
+}
+
+/// An lowered extraction from the input buffer.
+class LoweredExtractBuffer : LoweredExtract {
+    validate {
+        BUG_CHECK(range.lo >= 0,
+                  "Extracting from offset before the start of the input buffer");
+    }
+    dbprint {
+        out << "extract bytes " << byteInterval() << "(" << range.size()
+            << "B) to " << dest;
+    }
+
+    /// @return the half-open range of bytes being extracted, in network order.
+    nw_byteinterval byteInterval() const { return toHalfOpenRange(range); }
+
+    /// @return the closed range of bytes being extracted, in network order.
+    nw_byterange extractedBytes() const { return range; }
+
+    /// The region of the input buffer which will be extracted, expressed in
+    /// bytes in network order.
+    nw_byterange range;
+}
+
+/// A lowered extraction of a constant.
+class LoweredExtractConstant : LoweredExtract {
+    dbprint { out << "extract constant " << constant << " to " << dest; }
+
+    /// The constant to extract.
+    int constant;
+}
+
+/// A lowered parser match construct. Each LoweredParserMatch logically
+/// represents a single row in the parser TCAM.
+class LoweredParserMatch {
+#noconstructor
+    LoweredParserMatch(match_t value, unsigned shift,
+                       const LoweredParserState* next)
+        : value(value), shift(shift), next(next) { }
+
+#emit
+    /// Debugging information about the high-level parser states that were used
+    /// to generate this low-level match construct.
+    ::BFN::DebugInfo debug;
+#end
+
+    /// The mask which will be matched against the value the containing state
+    /// selects against.
+    match_t value;
+
+    /// If the match is successful, the number of bytes to shift out before
+    /// transitioning to the next state.
+    unsigned shift;
+
+    /// If the match is successful, the extractions to perform.
+    inline Vector<LoweredExtract> statements;
+
+    /// If the match is successful, the next state to transition to, or null if
+    /// this is a terminal state in the parser program.
+    NullOK LoweredParserState next;
+}
+
+/// A lowered parser state, representing a group of related parser TCAM rows.
+/// We do not maintain a 1-to-1 mapping between LoweredParserStates and parser
+/// states in the original P4 program.
+class LoweredParserState : Unit {
+#noconstructor
+    LoweredParserState(cstring name, gress_t gress) : name(name), gress(gress) { }
+    int stage() const override { return -1; }
+    gress_t thread() const override { return gress; }
+    toString { return name; }
+    visit_children {
+        select.visit_children(v);
+        match.parallel_visit_children(v); }
+
+#emit
+    /// Debugging information about the high-level parser states that were used
+    /// to generate this low-level parser state.
+    ::BFN::DebugInfo debug;
+#end
+
+    /// The name of this state. This does not necessarily correspond to any
+    /// state name in the P4 program.
+    cstring name;
+
+    /// The thread to which this state is assigned.
+    gress_t gress;
+
+    /// The bytes from the input buffer which will be loaded into the match
+    /// registers and used to select a LoweredParserMatch transition to take.
+    inline Vector<SelectBuffer> select;
+
+    /// The possible transitions out of this state.
+    inline Vector<LoweredParserMatch> match;
+}
+
+
+/// The lowered representation of a parser. This is the representation used
+/// after PHV allocation. It contains primitives which operate on PHV containers
+/// and numeric constants.
+class LoweredParser : AbstractParser {
+#noconstructor
+    LoweredParser(gress_t gress, LoweredParserState start)
+        : AbstractParser(gress), start(start) {}
+#apply
+
+    toString {
+        return gress ? "lowered egress parser" : "lowered ingress parser";
+    }
+
+    /// The entry point to the parser.
+    LoweredParserState start;
+
+    /// The set of PHV containers which may legally be written more than once by
+    /// this parser.
+    std::vector<PHV::Container> multiwriteContainers;
+
+    /// The amount of data, in bytes, which this parser program expects to be
+    /// prepended to the packet by the hardware or by compiler-generated code,
+    /// but which is not part of the packet itself.
+    unsigned prePacketDataLengthBytes = 0;
+}
+
+}  // end namespace BFN

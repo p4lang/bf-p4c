@@ -924,6 +924,45 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/switch_20160512/switch.p4
   )
 
+# Tests where a field is placed into a container that's too big, causing us to
+# generate an extract that reads past the beginning of the input buffer.
+p4c_add_xfail_reason("tofino"
+  "Container .* contains deparsed header fields, but it has unused bits.* Extract field slice .* with a negative offset."
+  extensions/p4_tests/p4_14/22-BigToSmallFieldWithMask8.p4
+  extensions/p4_tests/p4_14/test_config_262_req_packing.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-242/case1679.p4
+  extensions/p4_tests/p4_14/c4/COMPILER-549/case2898.p4
+  extensions/p4_tests/p4_14/jenkins/range/range.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-235/vag1737_1.p4
+  testdata/p4_14_samples/parser2.p4
+  )
+
+# Tests where a field is placed correctly, but we still can't extract it without
+# reading past the beginning of the input buffer. Multiple fixes are needed
+# here; we need to be able to convey this constraint to PHV allocation, but in a
+# subset of cases we can handle this by adjusting the parser program and we
+# should do so if we can.
+p4c_add_xfail_reason("tofino"
+  "Extract field slice .* with a negative offset."
+  extensions/p4_tests/p4_14/test_config_273_bridged_and_phase0.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-217/port_parser.p4
+  extensions/p4_tests/p4_14/test_config_100_hash_action.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-295/vag1892.p4
+  extensions/p4_tests/p4_14/jenkins/pcie_pkt_test/pcie_pkt_test_one.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
+  )
+
+# For some reason we place `ingress::inner_ipv4.fragOffset` and
+# `ingress::inner_ipv4.flags` in overlapping slices in the same container, when
+# they're adjacent fields which are extracted in the same parser state. As a
+# result, we're unable to generate a valid extract. This looks like a bug
+# related to field overlaying (although these two fields are not overlaid), but
+# I'm not certain.
+p4c_add_xfail_reason("tofino"
+  "Extracted range .* with size 24 doesn't match destination container .* with size 16"
+  extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
+  )
+
 if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
   # STF2PTF tests that fail
 

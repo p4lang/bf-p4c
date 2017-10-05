@@ -123,6 +123,12 @@ bool FieldDefUse::preorder(const IR::BFN::Parser *p) {
     return true;
 }
 
+bool FieldDefUse::preorder(const IR::BFN::LoweredParser*) {
+    BUG("Running FieldDefUse after the parser IR has been lowered; "
+        "this will produce invalid results.");
+    return false;
+}
+
 bool FieldDefUse::preorder(const IR::Expression *e) {
     bitrange bits;
     auto *f = phv.field(e, &bits);
