@@ -273,6 +273,9 @@ class VisitAttached : public Inspector {
         layout.indirect_action_addr_bits = vpn_bits_needed;
         return false;
     }
+    bool preorder(const IR::MAU::IdleTime *) override {
+        return false;
+    }
     bool preorder(const IR::Attached *att) override {
         BUG("Unknown attached table type %s", typeid(*att).name()); }
 

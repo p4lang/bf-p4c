@@ -911,6 +911,10 @@ p4c_add_xfail_reason("tofino"
   "Hash column out of range"
   # was "Conflicting hash distribution bit allocation .*"
   extensions/p4_tests/p4_14/jenkins/stful/stful.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
   )
 
 p4c_add_xfail_reason("tofino"

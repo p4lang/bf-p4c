@@ -204,6 +204,8 @@ class Table : BFN::Unit {
             return name + "$action";
         } else if (at->is<IR::MAU::TernaryIndirect>()) {
             return name + "$tind";
+        } else if (at->is<IR::MAU::IdleTime>()) {
+            return name + "$idletime";
         } else {
             BUG("Unrecgonized attached table %s", at->name);
             return "";
@@ -406,6 +408,17 @@ class ActionData : HashDistAttached {
     bool indexed() const override { return !direct; }
 }
 
+/** Idletime table **/
+class IdleTime : BackendAttached {
+    int precision = 3;
+    int interval = 7;
+    cstring two_way_notification = "enable";
+    bool per_flow_idletime = true;
+#noconstructor
+#nodbprint
+    IdleTime(cstring tbl_name) { name = IR::ID(tbl_name + "$idletime"); direct = true; }
+    const char *kind() const override { return "idletime"; }
+}
 
 // a sequence of tables -- may be reordered if deps allow.
 // deps(i,j) is true iff tables[i] is dependent on tables[j]

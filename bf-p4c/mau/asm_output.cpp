@@ -21,6 +21,9 @@ class MauAsmOutput::EmitAttached : public Inspector {
     bool preorder(const IR::MAU::TernaryIndirect *) override;
     bool preorder(const IR::MAU::ActionData *) override;
     bool preorder(const IR::MAU::StatefulAlu *) override;
+    // XXX(zma) bfas does not recognize idletime as a table type,
+    // therefore we're emitting idletime inlined, see MauAsmOutput::emit_idletime
+    bool preorder(const IR::MAU::IdleTime *) override { return false; }
     bool preorder(const IR::Attached *att) override {
         BUG("unknown attached table type %s", typeid(*att).name()); }
     EmitAttached(const MauAsmOutput &s, std::ostream &o, const IR::MAU::Table *t)
@@ -508,6 +511,8 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
     safe_vector<int> row, bus, home_row;
     bool logical = mem.type >= Memories::Use::TWOPORT;
     bool have_bus = !logical;
+    bool have_mapcol = mem.type == Memories::Use::TWOPORT;
+
     for (auto &r : mem.row) {
         if (logical) {
             row.push_back(2*r.row + (r.col[0] >= Memories::LEFT_SIDE_COLUMNS));
@@ -515,13 +520,16 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
             row.push_back(r.row);
             bus.push_back(r.bus);
             if (r.bus < 0) have_bus = false; } }
+
     if (row.size() > 1) {
         out << indent << "row: " << row << std::endl;
         if (have_bus) out << indent << "bus: " << bus << std::endl;
-        out << indent << "column:" << std::endl;
-        for (auto &r : mem.row)
-            out << indent << "- " << memory_vector(r.col, mem.type, false) << std::endl;
-        if (mem.type == Memories::Use::TWOPORT) {
+        if (/*have_col*/ true) {
+            out << indent << "column:" << std::endl;
+            for (auto &r : mem.row)
+                out << indent << "- " << memory_vector(r.col, mem.type, false) << std::endl;
+        }
+        if (have_mapcol) {
             out << indent << "maprams: " << std::endl;
             for (auto &r : mem.row)
                 out << indent << "- " << memory_vector(r.mapcol, mem.type, true) << std::endl;
@@ -529,8 +537,11 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
     } else {
         out << indent << "row: " << row[0] << std::endl;
         if (have_bus) out << indent << "bus: " << bus[0] << std::endl;
-        out << indent << "column: " << memory_vector(mem.row[0].col, mem.type, false) << std::endl;
-        if (mem.type == Memories::Use::TWOPORT) {
+        if (/*have_col*/ true) {
+            out << indent << "column: " << memory_vector(mem.row[0].col, mem.type, false)
+            << std::endl;
+        }
+        if (have_mapcol) {
             out << indent << "maprams: " << memory_vector(mem.row[0].mapcol, mem.type, true)
                 << std::endl;
         }
@@ -1310,6 +1321,17 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
 
     if (!have_indirect)
         emit_table_indir(out, indent, tbl);
+
+    const IR::MAU::IdleTime* idletime = nullptr;
+    for (auto at : tbl->attached) {
+        if (auto *id = at->to<IR::MAU::IdleTime>()) {
+            idletime = id;
+            break;
+        }
+    }
+    if (idletime)
+        emit_idletime(out, indent, tbl, idletime);
+
     for (auto at : tbl->attached)
         at->apply(EmitAttached(*this, out, tbl));
 }
@@ -1378,6 +1400,7 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
     auto match_name = tbl->get_use_name();
     for (auto at : tbl->attached) {
         if (at->is<IR::MAU::TernaryIndirect>()) continue;
+        if (at->is<IR::MAU::IdleTime>()) continue;  // XXX(zma) idletime is inlined
         if (auto *ad = at->to<IR::MAU::ActionData>()) {
             have_action = true;
             out << indent << "action: ";
@@ -1621,5 +1644,17 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
         --indent; }
     if (salu->indexed() && !tbl->layout.hash_action)
         out << indent << "per_flow_enable: meter_pfe" << std::endl;
+    return false;
+}
+
+bool MauAsmOutput::emit_idletime(std::ostream &out, indent_t indent, const IR::MAU::Table *tbl,
+                                 const IR::MAU::IdleTime *id) const {
+    auto name = tbl->get_use_name(id);
+    out << indent++ << "idletime:" << std::endl;
+    emit_memory(out, indent, tbl->resources->memuse.at(name));
+    out << indent << "precision: " << id->precision << std::endl;
+    out << indent << "sweep_interval: " << id->interval << std::endl;
+    out << indent << "notification: " << id->two_way_notification << std::endl;
+    out << indent << "per_flow_enable: " << (id->per_flow_idletime ? "true" : "false") << std::endl;
     return false;
 }

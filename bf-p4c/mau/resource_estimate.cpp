@@ -54,6 +54,16 @@ int TernaryIndirectPerWord(const IR::MAU::Table::Layout *layout, const IR::MAU::
     return (128 >> indir_size);
 }
 
+int IdleTimePerWord(const IR::MAU::IdleTime *idletime) {
+    switch (idletime->precision) {
+        case 1:  return 8;
+        case 2:  return 4;
+        case 3:  return 2;
+        case 6:  return 1;
+        default: BUG("%s: Invalid idletime precision %s", idletime->precision);
+    }
+}
+
 /* Calculates the individual way sizes, given a total depth, i.e. 24 will become
    4 4 4 4 4 4 */
 void StageUseEstimate::calculate_way_sizes(LayoutOption *lo,
@@ -164,6 +174,8 @@ void StageUseEstimate::calculate_attached_rams(const IR::MAU::Table *tbl,
             if (!table_placement)
                 BUG("Ternary Indirect Data table exists before table placement occurs");
             per_word = TernaryIndirectPerWord(&lo->layout, tbl);
+        } else if (auto *idle = at->to<IR::MAU::IdleTime>()) {
+            per_word = IdleTimePerWord(idle);
         } else {
             BUG("unknown attached table type %s", at->kind()); }
         if (per_word > 0) {
@@ -389,6 +401,8 @@ void StageUseEstimate::known_srams_needed(const IR::MAU::Table *tbl,
         } else if (at->is<IR::MAU::TernaryIndirect>()) {
             // Again, because this is called before and after table placement
             continue;
+        } else if (at->is<IR::MAU::IdleTime>()) {
+           // TODO(zma)
         } else {
             BUG("Unrecognized table type");
         }
@@ -429,6 +443,9 @@ void StageUseEstimate::calculate_per_row_vector(safe_vector<RAM_counter> &per_wo
              continue;
          } else if (at->is<IR::MAU::Selector>()) {
              continue;
+         } else if (auto *idle = at->to<IR::MAU::IdleTime>()) {
+             per_word = IdleTimePerWord(idle);
+             need_maprams = true;
          } else {
              BUG("Unrecognized table type");
          }

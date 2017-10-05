@@ -29,6 +29,7 @@ struct Memories {
     static constexpr int COLOR_MAPRAM_PER_ROW = 4;
     static constexpr int IMEM_ADDRESS_BITS = 6;
     static constexpr int IMEM_LOOKUP_BITS = 3;
+    static constexpr int NUM_IDLETIME_BUS = 20;
 
  private:
     Alloc2D<cstring, SRAM_ROWS, SRAM_COLUMNS>          sram_use;
@@ -47,6 +48,7 @@ struct Memories {
     Alloc2D<cstring, SRAM_ROWS, MAPRAM_COLUMNS>        mapram_use;
     unsigned                                           mapram_inuse[SRAM_ROWS] = {0};
     Alloc1D<cstring, SRAM_ROWS>                        stateful_bus;
+    Alloc1D<cstring, NUM_IDLETIME_BUS>                 idletime_bus;
     int gw_bytes_per_sb[SRAM_ROWS][BUS_COUNT] = {{0}};
     Alloc1D<cstring, STATS_ALUS>                       stats_alus;
     Alloc1D<cstring, METER_ALUS>                       meter_alus;
@@ -71,20 +73,21 @@ struct Memories {
         int selector_RAMs = 0;
         int no_match_tables = 0;
         int independent_gw_tables = 0;
+        int idletime_RAMs = 0;
 
         void clear() {
             memset(this, 0, sizeof(mem_info));
         }
 
-        int total_RAMs() {
+        int total_RAMs() const {
             return match_RAMs + action_RAMs + stats_RAMs + meter_RAMs + selector_RAMs + tind_RAMs;
         }
 
-        int left_side_RAMs() { return tind_RAMs; }
-        int right_side_RAMs() { return meter_RAMs + stats_RAMs + selector_RAMs; }
-        int non_SRAM_RAMs() { return left_side_RAMs() + right_side_RAMs() + action_RAMs; }
-        int columns(int RAMs) { return (RAMs + SRAM_COLUMNS - 1) / SRAM_COLUMNS; }
-        bool constraint_check();
+        int left_side_RAMs() const { return tind_RAMs; }
+        int right_side_RAMs() const { return meter_RAMs + stats_RAMs + selector_RAMs; }
+        int non_SRAM_RAMs() const { return left_side_RAMs() + right_side_RAMs() + action_RAMs; }
+        int columns(int RAMs) const { return (RAMs + SRAM_COLUMNS - 1) / SRAM_COLUMNS; }
+        bool constraint_check() const;
     };
 
     friend class SetupAttachedTables;
@@ -92,7 +95,7 @@ struct Memories {
  public:
     /* Memories::Use tracks memory use of a single table */
     struct Use {
-        enum type_t { EXACT, TERNARY, GATEWAY, TIND, TWOPORT, ACTIONDATA } type;
+        enum type_t { EXACT, TERNARY, GATEWAY, TIND, IDLETIME, TWOPORT, ACTIONDATA } type;
         /* FIXME -- when tracking EXACT table memuse, do we need to track which way
          * each memory is allocated to?  For now, we do not. */
         struct Row {
@@ -151,14 +154,14 @@ struct Memories {
     /** Information on a particular table that is to be allocated in the RAM array */
     struct SRAM_group {
         table_alloc *ta;  // Link to the table alloc to be generated
-        int depth;  // Individual number of RAMs required for a group
-        int width = 0;  // How wide an individual group is, only needed for exact match
-        int placed = 0;  // How many have been allocated so far
-        int number;  // Used to keep track of wide action tables and way numbers in exact match
+        int depth = 0;    // Individual number of RAMs required for a group
+        int width = 0;    // How wide an individual group is, only needed for exact match
+        int placed = 0;   // How many have been allocated so far
+        int number = 0;   // Used to keep track of wide action tables and way numbers in exact match
         int hash_group = -1;  // Which hash group the exact match way is using
         const IR::Attached *attached = nullptr;
         int recent_home_row = -1;  // For swbox users, most recent row to oflow to
-        enum type_t { EXACT, ACTION, STATS, METER, REGISTER, SELECTOR, TIND } type;
+        enum type_t { EXACT, ACTION, STATS, METER, REGISTER, SELECTOR, TIND, IDLETIME } type;
 
         // Color Mapram Requirements, necessary for METER groups
         struct color_mapram_group {
@@ -273,7 +276,7 @@ struct Memories {
                 return left_to_place();
             }
         }
-        cstring get_name() {
+        cstring get_name() const {
             if (type == TIND)
                 return ta->table->get_use_name(nullptr, false, IR::MAU::Table::TIND_NAME);
             else if (type == ACTION && attached == nullptr)
@@ -328,14 +331,16 @@ struct Memories {
     safe_vector<table_alloc *>       payload_gws;
     safe_vector<table_alloc *>       normal_gws;
     safe_vector<table_alloc *>       no_match_gws;
+    safe_vector<table_alloc *>       idletime_tables;
+    safe_vector<SRAM_group *>        idletime_groups;
 
     unsigned side_mask(RAM_side_t side);
     int mems_needed(int entries, int depth, int per_mem_row, bool is_twoport);
     void clear_table_vectors();
     void clear_uses();
     bool analyze_tables(mem_info &mi);
-    void calculate_column_balance(mem_info &mi, unsigned &row);
-    bool cut_from_left_side(mem_info &mi, int left_given_columns, int right_given_columns);
+    void calculate_column_balance(const mem_info &mi, unsigned &row);
+    bool cut_from_left_side(const mem_info &mi, int left_given_columns, int right_given_columns);
     bool allocate_all_exact(unsigned column_mask);
     safe_vector<int> way_size_calculator(int ways, int RAMs_needed);
     safe_vector<std::pair<int, int>> available_SRAMs_per_row(unsigned mask, table_alloc *ta,
@@ -414,6 +419,11 @@ struct Memories {
                            int row, int col);
     bool allocate_all_no_match_miss();
 
+    bool find_mem_and_bus_for_idletime(std::vector<std::pair<int, std::vector<int>>>& mem_locs,
+                                    int& bus, int total_mem_required, bool top_half);
+    bool allocate_idletime(const SRAM_group* idletime_group);
+    bool allocate_all_idletime();
+
  public:
     bool allocate_all();
     void update(cstring table_name, const Use &alloc);
@@ -425,5 +435,8 @@ struct Memories {
                    TableResourceAlloc *resources, const LayoutOption *lo, int entries);
     friend std::ostream &operator<<(std::ostream &, const Memories &);
 };
+
+template<int R, int C>
+std::ostream &operator<<(std::ostream&, const Alloc2D<cstring, R, C>& alloc2d);
 
 #endif /* BF_P4C_MAU_MEMORIES_H_ */

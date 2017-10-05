@@ -63,9 +63,11 @@ void Memories::clear_table_vectors() {
     payload_gws.clear();
     normal_gws.clear();
     no_match_gws.clear();
+    idletime_tables.clear();
+    idletime_groups.clear();
 }
 
-/* Creates a new table_alloc object for each of the taibles within the memory allocation */
+/* Creates a new table_alloc object for each of the tables within the memory allocation */
 void Memories::add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
                          TableResourceAlloc *resources, const LayoutOption *lo,
                          int entries) {
@@ -123,6 +125,11 @@ bool Memories::allocate_all() {
         return false;
     }
 
+    LOG3("Allocating all idletime tables");
+    if (!allocate_all_idletime()) {
+        return false;
+    }
+
     LOG3("Allocating all gateway tables");
     if (!allocate_all_gw()) {
         return false;
@@ -141,7 +148,10 @@ bool Memories::allocate_all() {
    twoport tables, as well as getting the sharing of indirect action tables and selectors correct
 */
 class SetupAttachedTables : public MauInspector {
-    Memories &mem; Memories::table_alloc *ta; int entries; Memories::mem_info &mi;
+    Memories &mem;
+    Memories::table_alloc *ta;
+    int entries;
+    Memories::mem_info &mi;
     bool stats_pushed = false, meter_pushed = false, stateful_pushed = false;
 
     profile_t init_apply(const IR::Node *root) {
@@ -267,7 +277,6 @@ class SetupAttachedTables : public MauInspector {
         BUG("Should be no Ternary Indirect before table placement is complete");
     }
 
-
     bool preorder(const IR::MAU::Selector *as) {
         auto name = ta->table->get_use_name(as);
         auto table_name = ta->table->get_use_name();
@@ -300,6 +309,17 @@ class SetupAttachedTables : public MauInspector {
             (*ta->memuse)[table_name].selector_name = linked_name;
         }
         mi.selector_RAMs += 2;
+        return false;
+    }
+
+    bool preorder(const IR::MAU::IdleTime *idle) {
+        auto name = ta->table->get_use_name(idle);
+        (*ta->memuse)[name].type = Memories::Use::IDLETIME;
+
+        mem.idletime_tables.push_back(ta);
+
+        int per_row = IdleTimePerWord(idle);
+        mi.idletime_RAMs += mem.mems_needed(entries, Memories::SRAM_DEPTH, per_row, true);
         return false;
     }
 
@@ -378,7 +398,7 @@ bool Memories::analyze_tables(mem_info &mi) {
     return mi.constraint_check();
 }
 
-bool Memories::mem_info::constraint_check() {
+bool Memories::mem_info::constraint_check() const {
     if (match_tables + no_match_tables + ternary_tables + independent_gw_tables >
            Memories::TABLES_MAX
         || match_bus_min > Memories::SRAM_ROWS * Memories::BUS_COUNT
@@ -390,7 +410,7 @@ bool Memories::mem_info::constraint_check() {
         || ternary_TCAMs > Memories::TCAM_ROWS * Memories::TCAM_COLUMNS
         || stats_tables > Memories::STATS_ALUS
         || meter_tables + stateful_tables + selector_tables > Memories::METER_ALUS
-        || meter_RAMs + stats_RAMs + stateful_RAMs + selector_RAMs >
+        || meter_RAMs + stats_RAMs + stateful_RAMs + selector_RAMs + idletime_RAMs >
            Memories::MAPRAM_COLUMNS * Memories::SRAM_ROWS) {
         return false;
     }
@@ -697,7 +717,7 @@ bool Memories::find_best_row_and_fill_out(unsigned column_mask) {
 
 /* Determining if the side from which we want to give extra columns to the exact match
    allocation, potentially cutting room from either tind tables or twoport tables */
-bool Memories::cut_from_left_side(mem_info &mi, int left_given_columns,
+bool Memories::cut_from_left_side(const mem_info &mi, int left_given_columns,
                                           int right_given_columns) {
     if (right_given_columns > mi.columns(mi.right_side_RAMs())
         && left_given_columns <= mi.columns(mi.left_side_RAMs())) {
@@ -716,12 +736,11 @@ bool Memories::cut_from_left_side(mem_info &mi, int left_given_columns,
     } else {
         BUG("We have a problem in calculate column balance");
     }
-    return false;
 }
 
 /* Calculates the number of columns and the distribution of columns on the left and
    right side of the SRAM array in order to place all exact match tables */
-void Memories::calculate_column_balance(mem_info &mi, unsigned &row) {
+void Memories::calculate_column_balance(const mem_info &mi, unsigned &row) {
     int min_columns_required = (mi.match_RAMs + SRAM_COLUMNS - 1) / SRAM_COLUMNS;
     int left_given_columns = 0;
     int right_given_columns = 0;
@@ -2361,7 +2380,120 @@ bool Memories::allocate_all_no_match_miss() {
     return true;
 }
 
+bool Memories::find_mem_and_bus_for_idletime(
+        std::vector<std::pair<int, std::vector<int>>>& mem_locs,
+        int& bus, int total_mem_required, bool top_half) {
+    // find mapram locs
+    int total_requested = 0;
 
+    int mem_start_row = (top_half) ? SRAM_ROWS/2 : 0;
+    int mem_end_row = (top_half) ? SRAM_ROWS : SRAM_ROWS/2 - 1;
+
+    mem_locs.clear();
+
+    for (int i = mem_start_row; i < mem_end_row; i++) {
+        if (total_requested == total_mem_required)
+            break;
+
+        std::vector<int> cols;
+        for (int j = 0; j < MAPRAM_COLUMNS; j++) {
+            if (!mapram_use[i][j]) {
+                cols.push_back(j);
+
+                total_requested++;
+                if (total_requested == total_mem_required)
+                    break;
+            }
+        }
+        mem_locs.emplace_back(i, cols);
+    }
+
+    const char* which_half = top_half ? "top" : "bottom";
+
+    if (total_requested < total_mem_required) {
+        mem_locs.clear();
+        LOG4("Ran out of mapram in " << which_half << "half");
+        return false;
+    }
+
+    // find a bus
+    int bus_start_idx = (top_half) ? NUM_IDLETIME_BUS/2: 0;
+    int bus_end_idx = (top_half) ? NUM_IDLETIME_BUS : NUM_IDLETIME_BUS/2 - 1;
+
+    bool found_bus = false;
+    for (int i = bus_start_idx; i < bus_end_idx; i++) {
+        if (!idletime_bus[i]) {
+            bus = i;
+            found_bus = true;
+            break;
+        }
+    }
+
+    if (!found_bus) {
+        LOG4("Ran out of idletime bus in " << which_half << "half");
+        return false;
+    }
+
+    return true;
+}
+
+bool Memories::allocate_idletime(const SRAM_group* idletime_group) {
+    auto *ta = idletime_group->ta;
+    cstring name = ta->table->get_use_name(idletime_group->attached);
+
+    int depth = idletime_group->depth;
+    int width = idletime_group->width;
+    int total_required = width * depth;
+
+    std::vector<std::pair<int, std::vector<int>>> mem_locs;
+    int bus = -1;
+
+    // find mem and bus in top and bottom half of mapram
+    bool resource_available = find_mem_and_bus_for_idletime(mem_locs, bus, total_required, true);
+    if (!resource_available)
+        resource_available = find_mem_and_bus_for_idletime(mem_locs, bus, total_required, false);
+
+    if (!resource_available)
+        return false;
+
+    // update memuse and bus use
+    auto &alloc = (*ta->memuse)[name];
+
+    for (auto& loc : mem_locs) {
+        Memories::Use::Row row(loc.first, bus);
+        for (auto col : loc.second) {
+            mapram_use[loc.first][col] = name;
+            row.col.push_back(col);  // XXX(zma) use col as bfas expects "column" for idletime
+        }
+        alloc.row.push_back(row);
+    }
+
+    idletime_bus[bus] = name;
+
+    return true;
+}
+
+bool Memories::allocate_all_idletime() {
+    for (auto *ta : idletime_tables) {
+        for (auto at : ta->table->attached) {
+            const IR::MAU::IdleTime *id = nullptr;
+            if ((id = at->to<IR::MAU::IdleTime>()) == nullptr)
+                continue;
+
+            int per_row = IdleTimePerWord(id);
+            int depth = mems_needed(ta->calculated_entries, SRAM_DEPTH, per_row, true);
+            auto idletime_group = new SRAM_group(ta, depth, 1, 1, SRAM_group::IDLETIME);
+            idletime_group->attached = id;
+            idletime_groups.push_back(idletime_group);
+        }
+    }
+
+    for (auto* idletime_group : idletime_groups)
+        if (!allocate_idletime(idletime_group))
+            return false;
+
+    return true;
+}
 
 void Memories::Use::visit(Memories &mem, std::function<void(cstring &)> fn) const {
     Alloc2Dbase<cstring> *use = 0, *mapuse = 0, *bus = 0;
@@ -2388,6 +2520,9 @@ void Memories::Use::visit(Memories &mem, std::function<void(cstring &)> fn) cons
     case ACTIONDATA:
         use = &mem.sram_use;
         bus = &mem.action_data_bus;
+        break;
+    case IDLETIME:
+        use = &mem.mapram_use;
         break;
     default:
         BUG("Unhandled memory use type %d in Memories::Use::visit", type); }
@@ -2464,4 +2599,17 @@ std::ostream &operator<<(std::ostream &out, const Memories &mem) {
 
 void dump(const Memories *mem) {
     std::cout << *mem;
+}
+
+template<int R, int C>
+std::ostream &operator<<(std::ostream& out, const Alloc2D<cstring, R, C>& alloc2d) {
+    for (int i = 0; i < R; i++) {
+        for (int j = 0; j < C; j++) {
+            cstring val = alloc2d[i][j];
+            if (!val) val = "-";
+            out << std::setw(10) << val << " ";
+        }
+        out << std::endl;
+    }
+    return out;
 }
