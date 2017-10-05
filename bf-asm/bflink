@@ -110,7 +110,7 @@ if [ ! -x "$WALLE" ]; then
     exit 1
 fi
 
-$WALLE --target $CHIP -o $OUT $objs
+$WALLE --target $CHIP -o $OUT $objs --top memories.pipe --top regs.pipe
 
 # cleanup
 output_dir=$(dirname $OUT)
