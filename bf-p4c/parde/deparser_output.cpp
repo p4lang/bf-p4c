@@ -1,4 +1,5 @@
-#include "asm_output.h"
+#include "bf-p4c/parde/asm_output.h"
+#include "bf-p4c/common/asm_output.h"
 
 // XXX(seth): This duplicates the very similar ExtractDestFormatter class in
 // parser_output.cpp; we need to combine them.
@@ -34,7 +35,7 @@ class OutputDictionary : public Inspector {
             return false; }
         auto &alloc = field->for_bit(bits.lo);
         if (last == alloc.container) {
-            out << indent << "    # - " << alloc.container_bits() << " "
+            out << indent << "    # - " << alloc.container_bits() << ": "
                 << DeparserSourceFormatter{field, bits} << std::endl;
             return false;
         }
@@ -54,7 +55,7 @@ class OutputDictionary : public Inspector {
         out << ": " << canon_name(trim_asm_name(povBit->name)) << std::endl;
 
         if (bits.size() != size * 8) {
-            out << indent << "    # - " << alloc.container_bits() << " "
+            out << indent << "    # - " << alloc.container_bits() << ": "
                 << DeparserSourceFormatter{field, bits} << std::endl;
         }
 
