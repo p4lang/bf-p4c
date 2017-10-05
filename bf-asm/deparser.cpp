@@ -11,19 +11,20 @@ Deparser Deparser::singleton_object;
 Deparser::Deparser() : Section("deparser") { }
 Deparser::~Deparser() { }
 
-struct Deparser::Intrinsic {
+struct Deparser::Intrinsic::Type {
     gress_t     gress;
     std::string name;
     int         max;
-    static std::map<std::string, Intrinsic *> all[2];
+    static std::map<std::string, Type *> all[2];
 protected:
-    Intrinsic(gress_t gr, const char *n, int m) : gress(gr), name(n), max(m) {
+    Type(gress_t gr, const char *n, int m) : gress(gr), name(n), max(m) {
         assert(!all[gr].count(name));
         all[gress][name] = this; }
-    ~Intrinsic() { all[gress].erase(name); }
+    ~Type() { all[gress].erase(name); }
 public:
 #define VIRTUAL_TARGET_METHODS(TARGET) \
-    virtual void setregs(Target::TARGET::deparser_regs &regs, std::vector<Phv::Ref> &vals) = 0;
+    virtual void setregs(Target::TARGET::deparser_regs &regs, Deparser &deparser,       \
+                         Intrinsic &vals) = 0;
     FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
 #undef VIRTUAL_TARGET_METHODS
 };
@@ -54,22 +55,25 @@ public:
     M(EGRESS, coal, 1, ##__VA_ARGS__) \
     M(EGRESS, ecos, 1, ##__VA_ARGS__)
 
-#define DECLARE_DEPARSER_INTRINSIC(GR, NAME, MAX) \
-struct INTRIN##GR##NAME : public Deparser::Intrinsic {           \
-    INTRIN##GR##NAME() : Deparser::Intrinsic(GR, #NAME, MAX) {}         \
-    template<class REGS> void setregs(REGS &regs, std::vector<Phv::Ref> &vals); \
-    FOR_ALL_TARGETS(DECLARE_INTRINSIC_SETREGS_FORWARD) \
+#define DECLARE_DEPARSER_INTRINSIC(GR, NAME, MAX)                               \
+struct INTRIN##GR##NAME : public Deparser::Intrinsic::Type {                    \
+    INTRIN##GR##NAME() : Deparser::Intrinsic::Type(GR, #NAME, MAX) {}           \
+    template<class REGS> void setregs(REGS &regs, Deparser &deparser,           \
+                                      Deparser::Intrinsic &vals);               \
+    FOR_ALL_TARGETS(DECLARE_INTRINSIC_SETREGS_FORWARD)                          \
 };
-#define DECLARE_INTRINSIC_SETREGS_FORWARD(TARGET) \
-    void setregs(Target::TARGET::deparser_regs &regs, std::vector<Phv::Ref> &vals);
-#define DEFINE_INTRINSIC_SETREGS_FORWARD(TARGET, CLASS) \
-void CLASS::setregs(Target::TARGET::deparser_regs &regs, std::vector<Phv::Ref> &vals) { \
-    setregs<Target::TARGET::deparser_regs>(regs, vals); }
+#define DECLARE_INTRINSIC_SETREGS_FORWARD(TARGET)                               \
+    void setregs(Target::TARGET::deparser_regs &regs, Deparser &deparser,       \
+                 Deparser::Intrinsic &vals);
+#define DEFINE_INTRINSIC_SETREGS_FORWARD(TARGET, CLASS)                         \
+void CLASS::setregs(Target::TARGET::deparser_regs &regs, Deparser &deparser,    \
+                    Deparser::Intrinsic &vals) {                                \
+    setregs<Target::TARGET::deparser_regs>(regs, deparser, vals); }
 #define DEFINE_DEPARSER_INTRINSIC(GR, NAME, MAX) \
 FOR_ALL_TARGETS(DEFINE_INTRINSIC_SETREGS_FORWARD, INTRIN##GR##NAME) \
 static struct INTRIN##GR##NAME INTRIN##GR##NAME##_singleton;
 
-std::map<std::string, Deparser::Intrinsic *> Deparser::Intrinsic::all[2];
+std::map<std::string, Deparser::Intrinsic::Type *> Deparser::Intrinsic::Type::all[2];
 
 ALL_DEPARSER_INTRINSICS(DECLARE_DEPARSER_INTRINSIC)
 
@@ -84,8 +88,9 @@ protected:
         assert(!all[gress].count(name)); all[gress][name] = this; }
     ~Type() { all[gress].erase(name); }
 public:
-#define VIRTUAL_TARGET_METHODS(TARGET) \
-    virtual void setregs(Target::TARGET::deparser_regs &regs, Deparser::Digest &data) = 0; \
+#define VIRTUAL_TARGET_METHODS(TARGET)                                                  \
+    virtual void setregs(Target::TARGET::deparser_regs &regs, Deparser &deparser,       \
+                         Deparser::Digest &data) = 0;                                   \
     virtual void init(Target::TARGET) = 0;
     FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
 #undef VIRTUAL_TARGET_METHODS
@@ -98,8 +103,9 @@ public:
 #undef SWITCH_FOR_TARGET
                 default: assert(0); } } } }
 };
-Deparser::Digest::Digest(Deparser::Digest::Type *t, int lineno, VECTOR(pair_t) &data) {
+Deparser::Digest::Digest(Deparser::Digest::Type *t, int l, VECTOR(pair_t) &data) {
     type = t;
+    lineno = l;
     for (auto &l : data) {
         if (l.key == "select")
             select = Phv::Ref(t->gress, l.value);
@@ -124,21 +130,24 @@ Deparser::Digest::Digest(Deparser::Digest::Type *t, int lineno, VECTOR(pair_t) &
     M(EGRESS, mirror, 8)                \
     M(INGRESS, resubmit, 8)
 
-#define DECLARE_DEPARSER_DIGEST(GRESS, NAME, CNT)                       \
+#define DECLARE_DEPARSER_DIGEST(GRESS, NAME, CNT)                               \
 struct GRESS##NAME##Digest : public Deparser::Digest::Type {                    \
     GRESS##NAME##Digest() : Deparser::Digest::Type(GRESS, #NAME, CNT) {}        \
-    template<class REGS> void setregs(REGS &regs, Deparser::Digest &data);      \
+    template<class REGS> void setregs(REGS &regs, Deparser &deparser,           \
+                                      Deparser::Digest &data);                  \
     FOR_ALL_TARGETS(DECLARE_INIT_OVERRIDE)                                      \
     FOR_ALL_TARGETS(DECLARE_DIGEST_SETREGS_FORWARD)                             \
 };
 #define DECLARE_INIT_OVERRIDE(TARGET) void init(Target::TARGET) override;
-#define DECLARE_DIGEST_SETREGS_FORWARD(TARGET) \
-    void setregs(Target::TARGET::deparser_regs &regs, Deparser::Digest &data) override;
-#define DEFINE_DIGEST_SETREGS_FORWARD(TARGET, CLASS) \
-void CLASS::setregs(Target::TARGET::deparser_regs &regs, Deparser::Digest &data) { \
-    setregs<Target::TARGET::deparser_regs>(regs, data); }
-#define DEFINE_DEPARSER_DIGEST(GRESS, NAME, CNT) \
-FOR_ALL_TARGETS(DEFINE_DIGEST_SETREGS_FORWARD, GRESS##NAME##Digest) \
+#define DECLARE_DIGEST_SETREGS_FORWARD(TARGET)                                  \
+    void setregs(Target::TARGET::deparser_regs &regs, Deparser &deparser,       \
+                 Deparser::Digest &data) override;
+#define DEFINE_DIGEST_SETREGS_FORWARD(TARGET, CLASS)                            \
+void CLASS::setregs(Target::TARGET::deparser_regs &regs, Deparser &deparser,    \
+                    Deparser::Digest &data) {                                   \
+    setregs<Target::TARGET::deparser_regs>(regs, deparser, data); }
+#define DEFINE_DEPARSER_DIGEST(GRESS, NAME, CNT)                                \
+FOR_ALL_TARGETS(DEFINE_DIGEST_SETREGS_FORWARD, GRESS##NAME##Digest)             \
 static struct GRESS##NAME##Digest GRESS##NAME##Digest##_singleton;
 
 std::map<std::string, Deparser::Digest::Type *> Deparser::Digest::Type::all[2];
@@ -183,14 +192,17 @@ void Deparser::input(VECTOR(value_t) args, value_t data) {
                     int unit = kv.key[1].i;
                     for (auto &ent : kv.value.vec)
                         checksum[gress][unit].emplace_back(gress, ent); }
-            } else if (auto *intrin = ::get(Intrinsic::all[gress], value_desc(&kv.key))) {
-                intrinsics.emplace_back(intrin, std::vector<Phv::Ref>());
-                std::vector<Phv::Ref> &vec = intrinsics.back().second;
-                if (kv.value.type == tVEC)
+            } else if (auto *itype = ::get(Intrinsic::Type::all[gress], value_desc(&kv.key))) {
+                intrinsics.emplace_back(itype, kv.key.lineno);
+                auto &intrin = intrinsics.back();
+                if (kv.value.type == tVEC) {
                     for (auto &val : kv.value.vec)
-                        vec.emplace_back(gress, val);
-                else
-                    vec.emplace_back(gress, kv.value);
+                        intrin.vals.emplace_back(gress, val);
+                } else if (kv.value.type == tMAP) {
+                    for (auto &el : kv.value.map)
+                        intrin.vals.emplace_back(gress, el.key, el.value);
+                } else {
+                    intrin.vals.emplace_back(gress, kv.value); }
             } else if (auto *digest = ::get(Digest::Type::all[gress], value_desc(&kv.key))) {
                 if (CHECKTYPE(kv.value, tMAP))
                     digests.emplace_back(digest, kv.value.lineno, kv.value.map);
@@ -200,10 +212,12 @@ void Deparser::input(VECTOR(value_t) args, value_t data) {
     }
 }
 void Deparser::process() {
+    bitvec pov_use[2];
     for (gress_t gress : Range(INGRESS, EGRESS)) {
         for (auto &ent : pov_order[gress])
-            if (ent.check())
-                phv_use[gress][ent->reg.uid] = 1;
+            if (ent.check()) {
+                pov_use[gress][ent->reg.uid] = 1;
+                phv_use[gress][ent->reg.uid] = 1; }
         for (auto &ent : dictionary[gress]) {
             if (ent.first.check()) {
                 phv_use[gress][ent.first->reg.uid] = 1;
@@ -213,17 +227,27 @@ void Deparser::process() {
             if (ent.second.check()) {
                 phv_use[gress][ent.second->reg.uid] = 1;
                 if (ent.second->lo != ent.second->hi)
-                    error(ent.second.lineno, "POV bits should be single bits"); } }
+                    error(ent.second.lineno, "POV bits should be single bits");
+                if (!pov_use[gress][ent.second->reg.uid]) {
+                    pov_order[gress].emplace_back(ent.second->reg);
+                    pov_use[gress][ent.second->reg.uid] = 1; } } }
         for (int i = 0; i < DEPARSER_CHECKSUM_UNITS; i++)
             for (auto &ent : checksum[gress][i])
                 if (ent.check() && (ent->lo != 0 || ent->hi != ent->reg.size - 1))
                     error(ent.lineno, "Can only do checksums on full phv registers, not slices"); }
     for (auto &intrin : intrinsics) {
-        for (auto &el : intrin.second)
-            if (el.check())
-                phv_use[intrin.first->gress][el->reg.uid] = 1;
-        if (intrin.second.size() > (size_t)intrin.first->max)
-            error(intrin.second[0].lineno, "Too many values for %s", intrin.first->name.c_str()); }
+        for (auto &el : intrin.vals) {
+            if (el.val.check())
+                phv_use[intrin.type->gress][el.val->reg.uid] = 1;
+            if (el.pov.check()) {
+                phv_use[intrin.type->gress][el.pov->reg.uid] = 1;
+                if (el.pov->lo != el.pov->hi)
+                    error(el.pov.lineno, "POV bits should be single bits");
+                if (!pov_use[intrin.type->gress][el.pov->reg.uid]) {
+                    pov_order[intrin.type->gress].emplace_back(el.pov->reg);
+                    pov_use[intrin.type->gress][el.pov->reg.uid] = 1; } } }
+        if (intrin.vals.size() > (size_t)intrin.type->max)
+            error(intrin.lineno, "Too many values for %s", intrin.type->name.c_str()); }
     if (phv_use[INGRESS].intersects(phv_use[EGRESS]))
         error(lineno[INGRESS], "Registers used in both ingress and egress in deparser: %s",
               Phv::db_regset(phv_use[INGRESS] & phv_use[EGRESS]).c_str());
@@ -240,6 +264,14 @@ void Deparser::process() {
     if (options.match_compiler || 1) {  /* FIXME -- need proper liveness analysis */
         Phv::setuse(INGRESS, phv_use[INGRESS]);
         Phv::setuse(EGRESS, phv_use[EGRESS]); }
+    for (gress_t gress : Range(INGRESS, EGRESS)) {
+        unsigned pov_byte = 0, pov_size = 0;
+        for (auto &ent : pov_order[gress])
+            if (pov[gress].count(&ent->reg) == 0) {
+                pov[gress][&ent->reg] = pov_size;
+                pov_size += ent->reg.size; }
+        if (pov_size > 8*DEPARSER_MAX_POV_BYTES)
+            error(lineno[gress], "Ran out of space in POV in deparser"); }
 }
 
 void dump_field_dictionary(checked_array_base<fde_pov> &fde_control,
@@ -259,6 +291,7 @@ void dump_field_dictionary(checked_array_base<fde_pov> &fde_control,
                     error(ent.lineno, "Ran out of space in POV in deparser");
                     return; }
                 pov_layout[pov_byte++] = ent->reg.deparser_id(); } }
+#if 0
     for (auto &ent : dict)
         if (pov.count(ent.second->reg.deparser_id()) == 0) {
             pov[ent.second->reg.deparser_id()] = pov_size;
@@ -268,6 +301,7 @@ void dump_field_dictionary(checked_array_base<fde_pov> &fde_control,
                     error(ent.second.lineno, "Ran out of space in POV in deparser");
                     return; }
                 pov_layout[pov_byte++] = ent.second->reg.deparser_id(); } }
+#endif
     while (pov_byte < DEPARSER_MAX_POV_BYTES)
         pov_layout[pov_byte++] = 0xff;
 

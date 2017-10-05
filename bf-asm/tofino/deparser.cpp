@@ -1,15 +1,16 @@
 /* deparser template specializations for tofino -- #included directly in top-level deparser.cpp */
 
-#define TOFINO_INTRINSIC(GR, NAME, MAX, CODE) \
+#define TOFINO_INTRINSIC(GR, NAME, MAX) \
 template<> void INTRIN##GR##NAME::setregs(Target::Tofino::deparser_regs &regs, \
-                                          std::vector<Phv::Ref> &vals) { CODE; }
+                                          Deparser &, Deparser::Intrinsic &intrin)
 
 #define YES(X)  X
 #define NO(X)
-#define SIMPLE_INTRINSIC(GR, PFX, NAME, IF_SHIFT) TOFINO_INTRINSIC(GR, NAME, 1,\
-    PFX.NAME.phv = vals[0]->reg.deparser_id();                          \
-    IF_SHIFT( PFX.NAME.shft = vals[0]->lo; )                            \
-    PFX.NAME.valid = 1; )
+#define SIMPLE_INTRINSIC(GR, PFX, NAME, IF_SHIFT)                       \
+    TOFINO_INTRINSIC(GR, NAME, 1) {                                     \
+        PFX.NAME.phv = intrin.vals[0].val->reg.deparser_id();           \
+        IF_SHIFT( PFX.NAME.shft = intrin.vals[0].val->lo; )             \
+        PFX.NAME.valid = 1; }
 #define IIR_MAIN_INTRINSIC(NAME, SHFT) SIMPLE_INTRINSIC(INGRESS, regs.input.iir.main_i, NAME, SHFT)
 #define IIR_INTRINSIC(NAME, SHFT)      SIMPLE_INTRINSIC(INGRESS, regs.input.iir.ingr, NAME, SHFT)
 #define HIR_INTRINSIC(NAME, SHFT)      SIMPLE_INTRINSIC(INGRESS, regs.header.hir.ingr, NAME, SHFT)
@@ -19,20 +20,20 @@ template<> void INTRIN##GR##NAME::setregs(Target::Tofino::deparser_regs &regs, \
 IIR_MAIN_INTRINSIC(egress_unicast_port, NO)
 IIR_MAIN_INTRINSIC(drop_ctl, YES)
 IIR_INTRINSIC(copy_to_cpu, YES)
-TOFINO_INTRINSIC(INGRESS, egress_multicast_group, 2,
+TOFINO_INTRINSIC(INGRESS, egress_multicast_group, 2) {
     int i = 0;
-    for (auto &el : vals) {
-        regs.header.hir.ingr.egress_multicast_group[i].phv = el->reg.deparser_id();
-        regs.header.hir.ingr.egress_multicast_group[i++].valid = 1; } )
-TOFINO_INTRINSIC(INGRESS, hash_lag_ecmp_mcast, 2,
+    for (auto &el : intrin.vals) {
+        regs.header.hir.ingr.egress_multicast_group[i].phv = el.val->reg.deparser_id();
+        regs.header.hir.ingr.egress_multicast_group[i++].valid = 1; } }
+TOFINO_INTRINSIC(INGRESS, hash_lag_ecmp_mcast, 2) {
     int i = 0;
-    for (auto &el : vals) {
-        regs.header.hir.ingr.hash_lag_ecmp_mcast[i].phv = el->reg.deparser_id();
-        regs.header.hir.ingr.hash_lag_ecmp_mcast[i++].valid = 1; } )
+    for (auto &el : intrin.vals) {
+        regs.header.hir.ingr.hash_lag_ecmp_mcast[i].phv = el.val->reg.deparser_id();
+        regs.header.hir.ingr.hash_lag_ecmp_mcast[i++].valid = 1; } }
 HIR_INTRINSIC(copy_to_cpu_cos, YES)
-TOFINO_INTRINSIC(INGRESS, ingress_port_source, 1,
-    regs.header.hir.ingr.ingress_port.phv = vals[0]->reg.deparser_id();
-    regs.header.hir.ingr.ingress_port.sel = 0; )
+TOFINO_INTRINSIC(INGRESS, ingress_port_source, 1) {
+    regs.header.hir.ingr.ingress_port.phv = intrin.vals[0].val->reg.deparser_id();
+    regs.header.hir.ingr.ingress_port.sel = 0; }
 HIR_INTRINSIC(deflect_on_drop, YES)
 HIR_INTRINSIC(meter_color, YES)
 HIR_INTRINSIC(icos, YES)
@@ -52,10 +53,17 @@ HER_INTRINSIC(capture_tx_ts, YES)
 HER_INTRINSIC(coal, NO)
 HER_INTRINSIC(ecos, YES)
 
+#undef SIMPLE_INTRINSIC
+#undef IIR_MAIN_INTRINSIC
+#undef IIR_INTRINSIC
+#undef HIR_INTRINSIC
+#undef IER_INTRINSIC
+#undef HER_INTRINSIC
+
 #define TOFINO_DIGEST(GRESS, NAME, CFG, TBL, IFSHIFT, IFID, CNT)                        \
 void GRESS##NAME##Digest::init(Target::Tofino) { IFSHIFT( can_shift = true; ) }         \
 template<> void GRESS##NAME##Digest::setregs(Target::Tofino::deparser_regs &regs,       \
-                                             Deparser::Digest &data) {                  \
+                                             Deparser &, Deparser::Digest &data) {      \
         CFG.phv = data.select->reg.deparser_id();                                       \
         IFSHIFT( CFG.shft = data.shift + data.select->lo; )                             \
         CFG.valid = 1;                                                                  \
@@ -71,9 +79,6 @@ template<> void GRESS##NAME##Digest::setregs(Target::Tofino::deparser_regs &regs
                     TBL[id].phvs[idx++] = reg->reg.deparser_id(); }                     \
             TBL[id].valid = 1;                                                          \
             TBL[id].len = idx; } }
-
-#define YES(X)        X
-#define NO(X)
 
 TOFINO_DIGEST(INGRESS, learning, regs.input.iir.ingr.learn_cfg,
               regs.input.iir.ingr.learn_tbl, NO, NO, 8)
@@ -239,12 +244,12 @@ template<> void Deparser::write_config(Target::Tofino::deparser_regs &regs) {
                       "egress deparser", i); } } }
 
     for (auto &intrin : intrinsics)
-        intrin.first->setregs(regs, intrin.second);
+        intrin.type->setregs(regs, *this, intrin);
     if (!regs.header.hir.ingr.ingress_port.sel.modified())
         regs.header.hir.ingr.ingress_port.sel = 1;
 
     for (auto &digest : digests)
-        digest.type->setregs(regs, digest);
+        digest.type->setregs(regs, *this, digest);
 
     if (options.condense_json) {
         regs.input.disable_if_zero();
