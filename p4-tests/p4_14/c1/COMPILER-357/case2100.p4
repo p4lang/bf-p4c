@@ -32,7 +32,8 @@
 @pragma pa_solitary ingress Nashoba.Ekron
 @pragma pa_solitary ingress Nashoba.Kekoskee
 @pragma pa_solitary egress Barksdale.Range
-@pragma pa_solitary ig_intr_md_for_tm.ucast_egress_port
+@pragma pa_solitary ingress ig_intr_md_for_tm.ucast_egress_port
+@pragma pa_solitary egress ig_intr_md_for_tm.ucast_egress_port
 @pragma pa_atomic ingress Penrose.Philbrook
 @pragma pa_solitary ingress Penrose.Philbrook
 @pragma pa_atomic ingress Penrose.Lathrop
