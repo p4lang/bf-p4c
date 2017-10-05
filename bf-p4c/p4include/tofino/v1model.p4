@@ -72,6 +72,8 @@ struct ingress_intrinsic_metadata_from_parser_t {
 struct ingress_intrinsic_metadata_for_tm_t {
     // The ingress physical port id is passed to the TM directly from
     // ig_intr_md.ingress_port
+    PortId_t ingress_port;               // ingress physical port id.
+                                         // this field is passed to the deparser
 
     PortId_t ucast_egress_port;          // egress port for unicast packets. must
                                          // be presented to TM for unicast.

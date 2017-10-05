@@ -300,12 +300,14 @@ const IR::Node *InstructionSelection::postorder(IR::Primitive *prim) {
         if (prim->operands.size() != 1) {
             error("%s: wrong number of operands to %s", prim->srcInfo, prim->name);
         } else {
+            if (VisitingThread(this) != gress_t::INGRESS)
+                error("%s%: %s is only allowed in ingress", prim->srcInfo, prim->name);
             auto egress_spec = gen_stdmeta("egress_spec");
             auto ingress_port = gen_stdmeta("ingress_port");
             if (!egress_spec)
-                egress_spec = gen_intrinsic_metadata(gress_t::EGRESS, "egress_port");
+                egress_spec = gen_intrinsic_metadata(gress_t::INGRESS, "ucast_egress_port");
             if (!ingress_port)
-                ingress_port = gen_intrinsic_metadata(gress_t::EGRESS, "ingress_port");
+                ingress_port = gen_intrinsic_metadata(gress_t::INGRESS, "ingress_port");
             auto s1 = new IR::MAU::Instruction(prim->srcInfo, "set",
                           MakeSlice(egress_spec, 0, 6),
                           MakeSlice(prim->operands.at(0), 0, 6));
