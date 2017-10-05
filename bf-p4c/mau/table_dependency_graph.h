@@ -5,6 +5,7 @@
 #include <boost/graph/transitive_closure.hpp>
 #include <map>
 #include <set>
+#include "bf-p4c/ir/control_flow_visitor.h"
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/phv/phv_fields.h"
 
@@ -137,7 +138,7 @@ struct DependencyGraph {
     friend std::ostream &operator<<(std::ostream &, const DependencyGraph&);
 };
 
-class FindDependencyGraph : public MauInspector, ControlFlowVisitor {
+class FindDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
  public:
     typedef struct { ordered_set<const IR::MAU::Table*> read, write; } access_t;
 
@@ -162,7 +163,6 @@ class FindDependencyGraph : public MauInspector, ControlFlowVisitor {
     void flow_merge(Visitor &v) override;
 
     void all_bfs(boost::default_bfs_visitor* vis);
-    bool filter_join_point(const IR::Node *n) override { return !n->is<IR::MAU::TableSeq>(); }
     FindDependencyGraph *clone() const override { return new FindDependencyGraph(*this); }
 
     class AddDependencies;

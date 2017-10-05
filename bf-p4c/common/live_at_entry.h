@@ -3,10 +3,11 @@
 
 #include "ir/ir.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/ir/control_flow_visitor.h"
 #include "bf-p4c/ir/tofino_write_context.h"
 #include "lib/bitvec.h"
 
-class LiveAtEntry : public ControlFlowVisitor, public Inspector, TofinoWriteContext {
+class LiveAtEntry : public BFN::ControlFlowVisitor, public Inspector, TofinoWriteContext {
     const PhvInfo       &phv;
     bitvec              &result, written;
     bool                flow_is_dead = false;
@@ -17,8 +18,6 @@ class LiveAtEntry : public ControlFlowVisitor, public Inspector, TofinoWriteCont
     LiveAtEntry *clone() const override;
     void flow_dead() override { flow_is_dead = true; }
     void flow_merge(Visitor &a) override;
-    bool filter_join_point(const IR::Node *n) override {
-        return !n->is<IR::BFN::ParserState>() && !n->is<IR::MAU::TableSeq>(); }
  public:
     explicit LiveAtEntry(const PhvInfo &phv) : phv(phv), result(*new bitvec) {
         joinFlows = true; visitDagOnce = false; }

@@ -33,6 +33,7 @@ add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_IR_SRCS}")
 
 set (TOFINO_IR_HDRS
   ir/bitrange.h
+  ir/control_flow_visitor.h
   ir/gress.h
   ir/thread_visitor.h
   ir/tofino_write_context.h

@@ -2,8 +2,9 @@
 #define BF_P4C_MAU_DEFAULT_NEXT_H_
 
 #include "mau_visitor.h"
+#include "bf-p4c/ir/control_flow_visitor.h"
 
-class DefaultNext : public MauInspector, ControlFlowVisitor {
+class DefaultNext : public MauInspector, BFN::ControlFlowVisitor {
     std::map<const IR::MAU::Table *, const IR::MAU::Table *>    *default_next;
     std::set<const IR::MAU::Table *>    prev_tbls;
     bool preorder(const IR::Expression *) override { return false; }
@@ -22,7 +23,6 @@ class DefaultNext : public MauInspector, ControlFlowVisitor {
     void flow_merge(Visitor &a_) override {
         auto &a = dynamic_cast<DefaultNext &>(a_);
         prev_tbls.insert(a.prev_tbls.begin(), a.prev_tbls.end()); }
-    bool filter_join_point(const IR::Node *n) override { return !n->is<IR::MAU::TableSeq>(); }
     DefaultNext(const DefaultNext &) = default;
 
  public:

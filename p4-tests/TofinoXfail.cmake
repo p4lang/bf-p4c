@@ -99,9 +99,13 @@ if (NOT ENABLE_TNA)
 
   p4c_add_xfail_reason("tofino"
     "error: Field .* and field .* are adjacent in container .* but aren't adjacent in the deparser"
-    extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
     extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
     )
+
+  p4c_add_xfail_reason("tofino"
+    "Conflicting hash distribution bit allocation .*"
+    extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
+  )
 
   p4c_add_xfail_reason("tofino"
     "Input xbar hash.*conflict in"
@@ -119,11 +123,17 @@ if (NOT ENABLE_TNA)
     testdata/p4_14_samples/TLV_parsing.p4
     )
 
+  # BRIG-256
   p4c_add_xfail_reason("tofino"
-    "PHV allocation was not successful"
+    "metadata being placed w/ deparsed header"
     extensions/p4_tests/p4_14/switch_20160602/switch.p4
+  )
+
+  # BRIG-256
+  p4c_add_xfail_reason("tofino"
+    "field slices overlap"
     extensions/p4_tests/p4_14/switch/p4src/switch.p4
-    )
+  )
 
   # BRIG-109
   p4c_add_xfail_reason("tofino"
@@ -212,7 +222,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/14-MultipleActionsInAContainer.p4
   extensions/p4_tests/p4_14/instruct1.p4
   extensions/p4_tests/p4_14/action_conflict_2.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-235/vag1737_1.p4
   )
 
 # BRIG-104
@@ -394,7 +403,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/jenkins/exm_direct_1/exm_direct_1_one.p4
   extensions/p4_tests/p4_14/jenkins/basic_ipv4/basic_ipv4.p4
   extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
   extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
   extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
   extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
@@ -406,6 +414,7 @@ p4c_add_xfail_reason("tofino"
   "Input xbar hash.*conflict in"
   extensions/p4_tests/p4_14/09-MatchNoDep.p4
   extensions/p4_tests/p4_14/10-MatchNoDep1.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-235/vag1737_1.p4
   extensions/p4_tests/p4_14/test_config_129_various_exact_match_keys.p4
   extensions/p4_tests/p4_14/hash_calculation_max_size.p4
   extensions/p4_tests/p4_14/hash_calculation_multiple.p4
@@ -793,9 +802,11 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/08-FullTPHV3.p4
   testdata/p4_14_samples/01-BigMatch.p4
   extensions/p4_tests/p4_14/04-FullPHV3.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-133/full_tphv.p4
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-133/full_tphv.p4
   extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
+  extensions/p4_tests/p4_14/c4/COMPILER-590/case3179.p4
+  extensions/p4_tests/p4_14/c4/COMPILER-591/case3176.p4
   extensions/p4_tests/p4_14/jenkins/power/power.p4
   testdata/p4_14_samples/parser_dc_full.p4
   testdata/p4_14_samples/port_vlan_mapping.p4
@@ -809,8 +820,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
   extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
-  extensions/p4_tests/p4_14/c4/COMPILER-590/case3179.p4
-  extensions/p4_tests/p4_14/c4/COMPILER-591/case3176.p4
   )
 
 # Likely still has a bug; emits the following warning:

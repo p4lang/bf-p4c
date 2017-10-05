@@ -7,10 +7,11 @@
 #include "lib/ltbitmatrix.h"
 #include "lib/ordered_set.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/ir/control_flow_visitor.h"
 #include "bf-p4c/ir/tofino_write_context.h"
 
 
-class FieldDefUse : public ControlFlowVisitor, public Inspector, TofinoWriteContext {
+class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWriteContext {
  public:
     /** A given expression for a field might appear multiple places in the IR dag (eg, an
      * action used by mulitple tables), so we use a pair<Unit,Expr> to denote a particular
@@ -53,8 +54,6 @@ class FieldDefUse : public ControlFlowVisitor, public Inspector, TofinoWriteCont
     bool preorder(const IR::Expression *e) override;
     FieldDefUse *clone() const override { return new FieldDefUse(*this); }
     void flow_merge(Visitor &) override;
-    bool filter_join_point(const IR::Node *n) override {
-        return !n->is<IR::BFN::ParserState>() && !n->is<IR::MAU::TableSeq>(); }
     FieldDefUse(const FieldDefUse &) = default;
     FieldDefUse(FieldDefUse &&) = default;
     friend std::ostream &operator<<(std::ostream &, const FieldDefUse::info &);
