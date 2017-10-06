@@ -8,7 +8,7 @@ class Target::JBay::Phv : public Target::Phv {
     struct Register : public ::Phv::Register {
         short     parser_id_, deparser_id_;
         int parser_id() const override { return parser_id_; } 
-        int mau_id() const override { return uid; }
+        int mau_id() const override { return uid < 280 ? uid : -1; }
         int deparser_id() const override { return deparser_id_; }
     };
     void init_regs(::Phv &phv) override;

@@ -56,7 +56,8 @@ struct operand {
             int val = value;
             if (val > 0 && ((val >> (group_size[group] - 1)) & 1))
                 val |= ~0UL << group_size[group];
-            if (val >= -8 && val < 8)
+            int minconst = (options.target == JBAY) ? -4 : -8;
+            if (val >= minconst && val < 8)
                 return value+24;
             error(lineno, "constant value %ld out of range for immediate", value);
             return -1; }
@@ -500,6 +501,9 @@ Instruction *AluOP::pass1(Table *tbl, Table::Actions::Action *) {
     if (dest->reg.mau_id() < 0) {
         error(dest.lineno, "%s not accessable in mau", dest->reg.name);
         return this; }
+    if (dest->reg.type != Phv::Register::NORMAL) {
+        error(dest.lineno, "%s dest can't be dark or mocha phv", opc->name.c_str());
+        return this; }
     if (dest->lo || dest->hi != dest->reg.size-1) {
         error(lineno, "ALU ops cannot operate on slices");
         return this; }
@@ -533,7 +537,9 @@ void AluOP3Src::pass2(Table *tbl, Table::Actions::Action *act) {
 }
 
 int AluOP::encode() {
-    return (opc->opcode << 10) | (src1.bits(slot/Phv::mau_groupsize()) << 4) | src2.bits(slot/Phv::mau_groupsize());
+    int rv = (opc->opcode << 10) | (src1.bits(slot/Phv::mau_groupsize()) << 4);
+    if (options.target == JBAY) rv <<= 1;
+    return rv | src2.bits(slot/Phv::mau_groupsize());
 }
 bool AluOP::equiv(Instruction *a_) {
     if (auto *a = dynamic_cast<AluOP *>(a_)) {
@@ -579,6 +585,9 @@ Instruction *LoadConst::pass1(Table *tbl, Table::Actions::Action *) {
     if (!dest.check()) return this;
     if (dest->reg.mau_id() < 0) {
         error(dest.lineno, "%s not accessable in mau", dest->reg.name);
+        return this; }
+    if (dest->reg.type != Phv::Register::NORMAL) {
+        error(dest.lineno, "load-const dest can't be dark or mocha phv");
         return this; }
     if (dest->lo || dest->hi != dest->reg.size-1) {
         error(lineno, "load-const cannot operate on slices");
@@ -673,6 +682,9 @@ Instruction *CondMoveMux::pass1(Table *tbl, Table::Actions::Action *) {
     if (dest->reg.mau_id() < 0) {
         error(dest.lineno, "%s not accessable in mau", dest->reg.name);
         return this; }
+    if (dest->reg.type != Phv::Register::NORMAL) {
+        error(dest.lineno, "%s dest can't be dark or mocha phv", opc->name.c_str());
+        return this; }
     slot = dest->reg.mau_id();
     tbl->stage->action_set[tbl->gress][dest->reg.uid] = true;
     src1.mark_use(tbl);
@@ -680,10 +692,11 @@ Instruction *CondMoveMux::pass1(Table *tbl, Table::Actions::Action *) {
     return this;
 }
 int CondMoveMux::encode() {
+    int rv = (cond << 15) | (opc->opcode << 10) | (src1.bits(slot/Phv::mau_groupsize()) << 4);
+    if (options.target == JBAY) rv <<= 1;
     /* funny cond test on src2 is to match the compiler output -- if we're not testing
      * src2 validity, what we specify as src2 is irrelevant */
-    return (cond << 15) | (opc->opcode << 10) | (src1.bits(slot/Phv::mau_groupsize()) << 4) |
-        (cond & 0x40 ? src2.bits(slot/Phv::mau_groupsize()) : 0);
+    return rv | (cond & 0x40 ? src2.bits(slot/Phv::mau_groupsize()) : 0);
 }
 bool CondMoveMux::equiv(Instruction *a_) {
     if (auto *a = dynamic_cast<CondMoveMux *>(a_)) {
@@ -750,6 +763,9 @@ Instruction *DepositField::pass1(Table *tbl, Table::Actions::Action *) {
     if (dest->reg.mau_id() < 0) {
         error(dest.lineno, "%s not accessable in mau", dest->reg.name);
         return this; }
+    if (dest->reg.type != Phv::Register::NORMAL) {
+        error(dest.lineno, "deposit-field dest can't be dark or mocha phv");
+        return this; }
     slot = dest->reg.mau_id();
     tbl->stage->action_set[tbl->gress][dest->reg.uid] = true;
     src1.mark_use(tbl);
@@ -757,8 +773,9 @@ Instruction *DepositField::pass1(Table *tbl, Table::Actions::Action *) {
     return this;
 }
 int DepositField::encode() {
-    unsigned rot = (dest->reg.size - dest->lo + src1.bitoffset(slot/Phv::mau_groupsize())) % dest->reg.size;
-    int bits = (1 << 10) | (src1.bits(slot/Phv::mau_groupsize()) << 4) | src2.bits(slot/Phv::mau_groupsize());
+    unsigned rot = (dest->reg.size - dest->lo + src1.bitoffset(slot/Phv::mau_groupsize()))
+                    % dest->reg.size;
+    int bits = (1 << 10) | (src1.bits(slot/Phv::mau_groupsize()) << 4);
     bits |= dest->hi << 11;
     bits |= rot << 16;
     switch (Phv::reg(slot)->size) {
@@ -775,7 +792,8 @@ int DepositField::encode() {
         break;
     default:
         assert(0); }
-    return bits;
+    if (options.target == JBAY) bits <<= 1;
+    return bits | src2.bits(slot/Phv::mau_groupsize());
 }
 bool DepositField::equiv(Instruction *a_) {
     if (auto *a = dynamic_cast<DepositField *>(a_)) {
@@ -832,16 +850,35 @@ Instruction *Set::pass1(Table *tbl, Table::Actions::Action *act) {
         return this; }
     if (dest->lo || dest->hi != dest->reg.size-1)
         return (new DepositField(*this))->pass1(tbl, act);
-    if (auto *k = src.to<operand::Const>())
-        if (k->value < -8 || k->value >= 8)
-            return (new LoadConst(lineno, dest, k->value))->pass1(tbl, act);
+    if (auto *k = src.to<operand::Const>()) {
+        if (dest->reg.type == Phv::Register::DARK) {
+            error(dest.lineno, "can't set dark phv to a constant");
+            return this; }
+        int minconst = (options.target == JBAY) ? -4 : -8;
+        if (k->value < minconst || k->value >= 8)
+            return (new LoadConst(lineno, dest, k->value))->pass1(tbl, act); }
     slot = dest->reg.mau_id();
     tbl->stage->action_set[tbl->gress][dest->reg.uid] = true;
     src.mark_use(tbl);
     return this;
 }
 int Set::encode() {
-    return (opA.opcode << 10) | (src.bits(slot/Phv::mau_groupsize()) << 4) | (slot & 0xf);
+    int rv = src.bits(slot/Phv::mau_groupsize());
+    switch (dest->reg.type) {
+    case Phv::Register::NORMAL:
+        rv = (opA.opcode << 10) | (rv << 4);
+        if (options.target == JBAY) rv <<= 1;
+        rv |= (slot & 0xf);
+        break;
+    case Phv::Register::MOCHA:
+        rv |= 0x40;
+        break;
+    case Phv::Register::DARK:
+        rv |= 0x20;
+        break;
+    default:
+        assert(0); }
+    return rv;
 }
 bool Set::equiv(Instruction *a_) {
     if (auto *a = dynamic_cast<Set *>(a_)) {
@@ -962,6 +999,9 @@ Instruction *ShiftOP::pass1(Table *tbl, Table::Actions::Action *) {
     if (dest->reg.mau_id() < 0) {
         error(dest.lineno, "%s not accessable in mau", dest->reg.name);
         return this; }
+    if (dest->reg.type != Phv::Register::NORMAL) {
+        error(dest.lineno, "%s dest can't be dark or mocha phv", opc->name.c_str());
+        return this; }
     if (dest->lo || dest->hi != dest->reg.size-1) {
         error(lineno, "shift ops cannot operate on slices");
         return this; }
@@ -974,9 +1014,10 @@ Instruction *ShiftOP::pass1(Table *tbl, Table::Actions::Action *) {
     return this;
 }
 int ShiftOP::encode() {
-    int rv = (shift << 16) | (opc->opcode << 10) | src2.bits(slot/Phv::mau_groupsize());
+    int rv = (shift << 16) | (opc->opcode << 10);
     if (opc->use_src1 || options.match_compiler) rv |= src1.bits(slot/Phv::mau_groupsize()) << 4;
-    return rv;
+    if (options.target == JBAY) rv <<= 1;
+    return rv | src2.bits(slot/Phv::mau_groupsize());
 }
 bool ShiftOP::equiv(Instruction *a_) {
     if (auto *a = dynamic_cast<ShiftOP *>(a_)) {
