@@ -137,7 +137,7 @@ elif [ -r $execdir/$CHIP/chip.schema ]; then
     schema_arg="--schema $execdir/$CHIP/chip.schema"
 fi
 
-echo "$WALLE --target $CHIP $schema_arg -o $OUT $objs $pipe_args"
+#echo "$WALLE --target $CHIP $schema_arg -o $OUT $objs $pipe_args"
 $WALLE --target $CHIP $schema_arg -o $OUT $objs $pipe_args
 
 # cleanup
