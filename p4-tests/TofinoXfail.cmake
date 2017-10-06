@@ -280,7 +280,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/selector0.p4
   testdata/p4_16_samples/action_profile-bmv2.p4
   testdata/p4_16_samples/issue297-bmv2.p4
-  extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
   )
 
 # BRIG-240
@@ -402,11 +401,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/jenkins/basic_ipv4/basic_ipv4.p4
   extensions/p4_tests/p4_14/jenkins/exm_direct_1/exm_direct_1_one.p4
   extensions/p4_tests/p4_14/jenkins/basic_ipv4/basic_ipv4.p4
-  extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
   extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
   )
 
 # BRIG-113
@@ -911,9 +906,7 @@ p4c_add_xfail_reason("tofino"
   "Hash column out of range"
   # was "Conflicting hash distribution bit allocation .*"
   extensions/p4_tests/p4_14/jenkins/stful/stful.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
   extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
   extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
   )
 
@@ -935,6 +928,11 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/jenkins/range/range.p4
   extensions/p4_tests/p4_14/c1/COMPILER-235/vag1737_1.p4
   testdata/p4_14_samples/parser2.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
+  extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
+  extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
   )
 
 # Tests where a field is placed correctly, but we still can't extract it without
@@ -960,7 +958,7 @@ p4c_add_xfail_reason("tofino"
 # I'm not certain.
 p4c_add_xfail_reason("tofino"
   "Extracted range .* with size 24 doesn't match destination container .* with size 16"
-  extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
+  # extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
   )
 
 if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
