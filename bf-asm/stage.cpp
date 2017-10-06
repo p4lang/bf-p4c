@@ -235,6 +235,11 @@ int Stage::pred_cycle(gress_t gress) {
     return 11 + tcam_delay(gress);
 }
 
+#include "tofino/stage.cpp"
+#ifdef HAVE_JBAY
+#include "jbay/stage.cpp"
+#endif /* HAVE_JBAY */
+
 template<class REGS> void Stage::write_regs(REGS &regs) {
     /* FIXME -- most of the values set here are 'placeholder' constants copied
      * from build_pipeline_output_2.py in the compiler */
@@ -287,14 +292,7 @@ template<class REGS> void Stage::write_regs(REGS &regs) {
         deferred_eop_bus_delay.eop_delay_fifo_en = 1;
         regs.dp.action_output_delay[gress] = pipelength(gress) - 3;
         regs.dp.pipelength_added_stages[gress] = pipelength(gress) - 20;
-        if (stageno != 0) {
-            regs.dp.cur_stage_dependency_on_prev[gress] = MATCH_DEP - stage_dep[gress];
-            if (stage_dep[gress] == CONCURRENT)
-                regs.dp.stage_concurrent_with_prev |= 1U << gress; }
-        if (stageno != AsmStage::numstages()-1)
-            regs.dp.next_stage_dependency_on_cur[gress] = MATCH_DEP - this[1].stage_dep[gress];
-        else if (AsmStage::numstages() < NUM_MAU_STAGES)
-            regs.dp.next_stage_dependency_on_cur[gress] = 2;
+        write_concurrency_regs(regs, gress);
         if (stageno > 0 && stage_dep[gress] == MATCH_DEP)
             regs.dp.match_ie_input_mux_sel |= 1 << gress;
     }
