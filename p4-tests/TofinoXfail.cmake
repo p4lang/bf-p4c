@@ -219,7 +219,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "instruction slot [0-9]+ used multiple times in action"
   testdata/p4_14_samples/instruct1.p4
-  extensions/p4_tests/p4_14/14-MultipleActionsInAContainer.p4
   extensions/p4_tests/p4_14/instruct1.p4
   extensions/p4_tests/p4_14/action_conflict_2.p4
   )
@@ -234,21 +233,9 @@ p4c_add_xfail_reason("tofino"
 # Fails due to invalid action specification
 # BRIG-219
 p4c_add_xfail_reason("tofino"
-  "error: Only part of the container with fields"
-  extensions/p4_tests/p4_14/action_conflict_1.p4
-  extensions/p4_tests/p4_14/action_conflict_3.p4
+  "error: Only part of the container"
   extensions/p4_tests/p4_14/test_config_256_pa_problem_4.p4
   extensions/p4_tests/p4_14/adjust_instr1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
-  )
-
-# Fails due to use of more than two source containers
-# BRIG-219
-p4c_add_xfail_reason("tofino"
-  "uses more than two source containers."
-  extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
   )
 
 # Fails due to complex expressions in the parser that our hardware can't support.
@@ -960,6 +947,32 @@ p4c_add_xfail_reason("tofino"
   "Extracted range .* with size 24 doesn't match destination container .* with size 16"
   # extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
   )
+
+# BEGIN: XFAILS that match glass XFAILS
+
+p4c_add_xfail_reason("tofino"
+  "Action writes fields using the same assignment type but different source operands" 
+  extensions/p4_tests/p4_14/14-MultipleActionsInAContainer.p4
+  )
+
+# BRIG-219
+p4c_add_xfail_reason("tofino"
+  "error: Only part of the container"
+  extensions/p4_tests/p4_14/action_conflict_1.p4
+  extensions/p4_tests/p4_14/action_conflict_3.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
+  )
+
+# Fails due to use of more than two source containers
+# BRIG-219
+p4c_add_xfail_reason("tofino"
+  "uses more than two source containers."
+  extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
+  )
+
+#END: XFAILS that match glass XFAILS
 
 if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
   # STF2PTF tests that fail

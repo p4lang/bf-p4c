@@ -157,7 +157,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
                             READ_PHV_MISMATCH = (1 << 1),
                             ACTION_DATA_MISMATCH = (1 << 2),
                             CONSTANT_MISMATCH = (1 << 3),
-                            TOO_MANY_SOURCES = (1 << 4),
+                            TOO_MANY_PHV_SOURCES = (1 << 4),
                             IMPOSSIBLE_ALIGNMENT = (1 << 5),
                             CONSTANT_TO_ACTION_DATA = (1 << 6),
                             MULTIPLE_ACTION_DATA = (1 << 7),
@@ -166,7 +166,8 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
                             OPERAND_MISMATCH = (1 << 10),
                             UNHANDLED_ACTION_DATA = (1 << 11),
                             DIFFERENT_READ_SIZE = (1 << 12),
-                            MAU_GROUP_MISMATCH = (1 << 13) };
+                            MAU_GROUP_MISMATCH = (1 << 13),
+                            PHV_AND_ACTION_DATA = (1 << 14) };
         unsigned error_code = NO_PROBLEM;
         cstring name;
         ActionDataInfo adi;

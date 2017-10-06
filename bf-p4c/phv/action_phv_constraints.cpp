@@ -28,6 +28,7 @@ bool ActionPhvConstraints::preorder(const IR::MAU::Action *act) {
             fw.flags |= FieldOperation::MOVE;
         else
             fw.flags |= FieldOperation::WHOLE_CONTAINER;
+        fw.action_name = field_action.name;
         action_to_writes[act].insert(fw);
         for (auto &read : field_action.reads) {
             FieldOperation fr;
@@ -39,6 +40,7 @@ bool ActionPhvConstraints::preorder(const IR::MAU::Action *act) {
                 fr.ad = true;
             } else if (read.type == ActionAnalysis::ActionParam::CONSTANT) {
                 fr.constant = true;
+                LOG3("Action: " << act->name);
             } else {
                 BUG("Read must either be of a PHV, action data, or constant."); }
 
@@ -48,6 +50,7 @@ bool ActionPhvConstraints::preorder(const IR::MAU::Action *act) {
                 fr.flags |= FieldOperation::MOVE;
             else
                 fr.flags |= FieldOperation::WHOLE_CONTAINER;
+            fr.action_name = field_action.name;
             write_to_reads_per_action[write][act].push_back(fr); } }
 
     current_action++;
@@ -61,46 +64,49 @@ void ActionPhvConstraints::end_apply() {
 }
 
 // TODO: Account for multiple containers per field
-uint32_t ActionPhvConstraints::num_sources(std::vector <const PhvInfo::Field*> fields,
+uint32_t ActionPhvConstraints::num_container_sources(std::vector<const PhvInfo::Field*>& fields,
         const IR::MAU::Action* action) {
     ordered_set<PHV_Container *> containerList;
-    uint32_t num_ad_sources = 0;
     LOG3("Fields size: " << fields.size());
     for (auto field : fields) {
         LOG3("Field name: " << field->name);
         if (write_to_reads_per_action[field][action].size() == 0)
             LOG3("Not written in this action");
         for (auto operand : write_to_reads_per_action[field][action]) {
-            if (operand.ad) {
-                LOG3("Found action data source");
-                num_ad_sources++;
-            } else if (operand.constant) {
-                LOG3("Found constant");
-                num_ad_sources++;
-            } else {
+            if (!operand.ad && !operand.constant) {
                 const PhvInfo::Field* fieldRead = operand.phv_used;
-                    LOG3("Field read: " << fieldRead->name);
-                    // TODO: What if container has not yet been allocated?
-                    if (fieldRead->phv_containers().size() == 0)
-                        LOG3("Container not assigned to PHV.");
-                    LOG3("Number of containers read: " << fieldRead->phv_containers().size());
-                    for (auto container : fieldRead->phv_containers()) {
-                        LOG3("Inserting container " << container);
-                        containerList.insert(container); } } } }
-
-        // TODO: Take into account number of action data sources
+                LOG3("Field read: " << fieldRead->name);
+                // TODO: What if container has not yet been allocated?
+                if (fieldRead->phv_containers().size() == 0)
+                    LOG3("Container not assigned to PHV.");
+                LOG3("Number of containers read: " << fieldRead->phv_containers().size());
+                for (auto container : fieldRead->phv_containers()) {
+                    LOG3("Inserting container " << container);
+                    containerList.insert(container); } } } }
+    if (LOGGING(3)) {
         LOG3("Number of operands for " << action->name << ": " <<
                 (containerList.size()));
         for (auto container : containerList)
-            LOG3("Container: " << container);
-        LOG3("Number of action data or constant operands: " << num_ad_sources);
-        return (containerList.size());
-    }
+            LOG3("Container: " << container); }
+    return (containerList.size());
+}
+
+bool ActionPhvConstraints::has_ad_sources(std::vector<const PhvInfo::Field*>& fields, const
+        IR::MAU::Action* action) {
+    for (auto field : fields) {
+        if (write_to_reads_per_action[field][action].size() == 0)
+            LOG3("Not written in this action");
+        for (auto operand : write_to_reads_per_action[field][action]) {
+            if (operand.ad) {
+                return true;
+            } else if (operand.constant) {
+                // TODO: Evaluate constant
+                return false; } } }
+    return false;
+}
 
 // TODO: Alignment constraints on fields
 // TODO: Return constraints instead of boolean
-// TODO: Distinguish between various non-move operations (only one operation may
-// be performed on the same container)
 // TODO: Handle cases where fields span more than one container
 unsigned ActionPhvConstraints::can_cohabit(std::vector<const PhvInfo::Field*>& fields) {
     /* Merge actions for all the candidate fields into a set */
@@ -111,7 +117,8 @@ unsigned ActionPhvConstraints::can_cohabit(std::vector<const PhvInfo::Field*>& f
 
     for (auto &action : set_of_actions) {
         LOG3("Action: " << action->name);
-        uint32_t num_srcs = num_sources(fields, action);
+        uint32_t num_srcs = num_container_sources(fields, action);
+        bool has_ad_srcs = has_ad_sources(fields, action);
         if (num_srcs == 1) {
             LOG3("One source detected");
             // TODO: Add check for similarity of the set operations
@@ -120,11 +127,15 @@ unsigned ActionPhvConstraints::can_cohabit(std::vector<const PhvInfo::Field*>& f
             LOG3("Can there be zero sources?");
             continue;
         } else if (num_srcs > 2) {
-            LOG3("Action " << action->name << " uses more than two sources");
-            return ActionAnalysis::ContainerAction::TOO_MANY_SOURCES;
+            LOG3("Action " << action->name << " uses more than two phv sources");
+            return ActionAnalysis::ContainerAction::TOO_MANY_PHV_SOURCES;
+        } else if (num_srcs == 2 && has_ad_srcs) {
+            LOG3("Action " << action->name << " uses 2 PHV sources in addition to action data.");
+            return ActionAnalysis::ContainerAction::PHV_AND_ACTION_DATA;
         } else {
             LOG3("Two sources");
             unsigned type_of_operation = 0;
+            cstring non_move_action_type;
             for (auto field : fields) {
                 boost::optional<FieldOperation> fw = is_written(action, field);
                 if (!fw) {
@@ -142,11 +153,17 @@ unsigned ActionPhvConstraints::can_cohabit(std::vector<const PhvInfo::Field*>& f
                     } else if (fw->flags & FieldOperation::WHOLE_CONTAINER) {
                         // Operations on whole containers, so no partial
                         // container based operations possible
-                        // TODO: Finer granularity analysis based on which whole
-                        // container operation it is
-                        // For e.g. add and and cannot be part of an action on
-                        // the same container
                         type_of_operation |= FieldOperation::WHOLE_CONTAINER;
+                        if (non_move_action_type.size() == 0) {
+                            // First non-move action seen
+                            LOG3("Writing action_type " << fw->action_name);
+                            non_move_action_type == fw->action_name;
+                        } else {
+                            if (non_move_action_type != fw->action_name)
+                                // Note: PHV allocation ensures that this check for packing is never
+                                // exercised
+                                BUG("Found two different kinds of non-move operations on the same "
+                                    "container"); }
                         LOG3("Seeing non-move operation for field: " << field->name);
                     } else {
                         LOG3("Should this ever happen?" << field->name);

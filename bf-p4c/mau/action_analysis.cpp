@@ -870,9 +870,15 @@ bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
                     " in action " + action_name + ", ";
 
     if (sources_needed > 2) {
-        error_code |= TOO_MANY_SOURCES;
-        error_message += "over 2 sources for the ALU operation are required, thus rendering the "
-                         "action impossble";
+        if (actual_ad) {  // If action data as a source
+            error_code |= PHV_AND_ACTION_DATA;
+            error_message += "Action " + action_name + " writes fields using the same assignment "
+                "type but different source operands (both action parameter and phv)";
+        } else {          // no action data sources
+            error_code |= TOO_MANY_PHV_SOURCES;
+            error_message += "over 2 PHV sources for the ALU operation are required, thus rendering"
+                " the action impossible";
+        }
         return false;
     }
 

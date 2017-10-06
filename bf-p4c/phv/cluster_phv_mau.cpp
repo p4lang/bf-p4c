@@ -475,20 +475,24 @@ void PHV_MAU_Group_Assignments::check_action_constraints() {
                 packing_string.append(" ");
                 if (existing_packing.size() > 2) {
                     unsigned error_code = action_constraints.can_cohabit(existing_packing);
+                    std::stringstream msg;
+                    if (error_code != ActionAnalysis::ContainerAction::NO_PROBLEM)
+                        msg << entry.first;
                     if (error_code == ActionAnalysis::ContainerAction::PARTIAL_OVERWRITE) {
-                        ::error("Only part of the container with fields %1% is written.",
-                                packing_string);
+                        ::error("Only part of the container %1% with fields %2% is written.",
+                                msg.str(), packing_string);
                     } else if (error_code ==
                             ActionAnalysis::ContainerAction::MULTIPLE_CONTAINER_ACTIONS) {
                         ::error("Set and non-set operations cannot be performed in the same"
-                                "action.");
-                    } else if (error_code == ActionAnalysis::ContainerAction::TOO_MANY_SOURCES) {
-                        ::error("Operation on container with fields %1% uses more than two source "
-                                "containers.", packing_string); }
-                }
-            }
-        }
-    }
+                                "action for container %1%", msg.str());
+                    } else if (error_code == ActionAnalysis::ContainerAction::
+                            TOO_MANY_PHV_SOURCES) {
+                        ::error("Operation on container %1% with fields %2% uses more than two "
+                                "source containers.", msg.str(), packing_string);
+                    } else if (error_code == ActionAnalysis::ContainerAction::PHV_AND_ACTION_DATA) {
+                        ::error("Action writes fields using the same assignment type but different "
+                                "source operands (both action parameter and phv) for container %1%",
+                                msg.str()); } } } } }
 }
 
 void PHV_MAU_Group_Assignments::cluster_POV_placements() {

@@ -27,7 +27,9 @@ class ActionPhvConstraints : public Inspector {
         uint8_t flags = 0;
         bool ad = false;
         bool constant = false;
+        int64_t const_value = 0;
         const PhvInfo::Field *phv_used;
+        cstring action_name;
 
         bool operator < (FieldOperation other) const {
             return (phv_used->id < other.phv_used->id);
@@ -38,7 +40,7 @@ class ActionPhvConstraints : public Inspector {
         }
 
         bool operator == (const PhvInfo::Field* field) const {
-            return (strcmp(phv_used->name, field->name) == 0);
+            return (phv_used->id == field->id);
         }
 
         explicit FieldOperation(const PhvInfo::Field *field, int id = -1) : unique_action_id(id),
@@ -83,7 +85,10 @@ class ActionPhvConstraints : public Inspector {
       *     std::vector<PhvInfo::Field*>: that are candidates for sharing a container
       *     IR::MAU::Action *: action for which number of sources must be determined
       */
-    uint32_t num_sources(std::vector<const PhvInfo::Field *>, const IR::MAU::Action *);
+    uint32_t num_container_sources(std::vector<const PhvInfo::Field *>&, const IR::MAU::Action *);
+
+    /// @returns true if fields packed in the same container read from action data in action act
+    bool has_ad_sources(std::vector<const PhvInfo::Field *>& fields, const IR::MAU::Action *act);
 
     /** Check if two fields share the same container
       */
@@ -96,7 +101,6 @@ class ActionPhvConstraints : public Inspector {
 
  public:
     explicit ActionPhvConstraints(const PhvInfo &p) : phv(p) {}
-
 
     /** Print the state of the maps */
     void printMapStates();
@@ -120,7 +124,6 @@ class ActionPhvConstraints : public Inspector {
       * intermediate results (via the `PhvInfo` object). It may only be safely invoked *during* PHV
       * allocation.
       */
-    // TODO: Distinguish between non-move operations
     unsigned can_cohabit(std::vector<const PhvInfo::Field *>& fields);
 
     /** For GTest function.
