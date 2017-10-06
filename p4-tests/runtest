@@ -211,7 +211,7 @@ p4runtime_out=$testdir/${name}${out_ext}.out/p4info.proto.txt
 P4C_ARGS="$P4C_ARGS --p4runtime-file $p4runtime_out --p4runtime-format text"
 
 if $run_ptf || $run_stf2ptf; then
-    P4C_ARGS="$P4C_ARGS -DCPU_PORT=320"
+    P4C_ARGS="$P4C_ARGS -DCPU_PORT=320 -Xlinker='--singlepipe'"
     NUM_IFACES=8
     for ifaceIdx in $(seq 0 $(($NUM_IFACES-1))); do
         PORT_NAME="FP_PORT_${ifaceIdx}"

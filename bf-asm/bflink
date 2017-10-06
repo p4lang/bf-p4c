@@ -25,6 +25,7 @@ object_files=""
 base_program=""
 debug_info=false
 tmpdir=""
+pipe_args=""
 
 tempfile() {
     file=$(basename $1 $2)
@@ -54,6 +55,12 @@ while [ $# -gt 0 ]; do
     --target|-t)
         CHIP="$2"
         shift ; shift ;;
+    --singlepipe|-s)
+        pipe_args="--top memories.pipe --top regs.pipe"
+        shift ;;
+    --allpipes|-a)
+        pipe_args=""
+        shift ;;
     *.json.Z)
         if [ -z "$tmpdir" ]; then
             tmpdir=$(mktemp -d)
@@ -110,7 +117,7 @@ if [ ! -x "$WALLE" ]; then
     exit 1
 fi
 
-$WALLE --target $CHIP -o $OUT $objs --top memories.pipe --top regs.pipe
+$WALLE --target $CHIP -o $OUT $objs $pipe_args
 
 # cleanup
 output_dir=$(dirname $OUT)
