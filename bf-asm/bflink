@@ -26,6 +26,11 @@ base_program=""
 debug_info=false
 tmpdir=""
 pipe_args=""
+execdir=$(dirname $(readlink -f $0))
+
+if [ x"$BFAS_OPTIONS" = x"-g" ]; then
+    debug_info=true
+fi
 
 tempfile() {
     file=$(basename $1 $2)
@@ -54,6 +59,7 @@ while [ $# -gt 0 ]; do
         shift ; shift ;;
     --target|-t)
         CHIP="$2"
+        OUT="$2.bin"
         shift ; shift ;;
     --singlepipe|-s)
         pipe_args="--top memories.pipe --top regs.pipe"
@@ -108,25 +114,40 @@ while [ $# -gt 0 ]; do
 done
 
 if [ ! -x "$WALLE" ]; then
-    if [ -e "$WALLE" ]; then
+    if [ -f $execdir/walle -a -x $execdir/walle ]; then
+        WALLE=$execdir/walle
+    elif [ -x $execdir/walle.py ]; then
+        WALLE=$execdir/walle.py
+    elif [ -x $execdir/walle/walle.py ]; then
+        WALLE=$execdir/walle/walle.py
+    elif [ -e "$WALLE" ]; then
         echo "$WALLE must be executable"
+        exit 1
     else
         echo "4: $WALLE"
         echo >&2 "Can't find walle"
+        exit 1
     fi
-    exit 1
 fi
 
-$WALLE --target $CHIP -o $OUT $objs $pipe_args
+schema_arg=""
+if [ -r $CHIP/chip.schema ]; then
+    schema_arg="--schema $CHIP/chip.schema"
+elif [ -r $execdir/$CHIP/chip.schema ]; then
+    schema_arg="--schema $execdir/$CHIP/chip.schema"
+fi
+
+echo "$WALLE --target $CHIP $schema_arg -o $OUT $objs $pipe_args"
+$WALLE --target $CHIP $schema_arg -o $OUT $objs $pipe_args
 
 # cleanup
 output_dir=$(dirname $OUT)
 if [ -z "$output_dir" ]; then
     output_dir="./"
 fi
-for f in $object_files ; do
-    if [ -e $f ]; then rm -f $f ; fi
-done
+if ! $debug_info; then
+    rm -f $object_files
+fi
 if [ ! -z "$base_program" ] ; then
     pp=$output_dir/${base_program}.p4i
     if ! $debug_info && test -e $pp ; then rm -f $pp; fi

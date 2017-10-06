@@ -194,6 +194,29 @@ template<> void Parser::write_config(Target::JBay::parser_regs &regs) {
             ++i; }
         for (auto csum : checksum_use[gress])
             if (csum) csum->write_config(regs, this); }
+    for (auto &ref : regs.ingress.prsr)
+        ref = "regs.parser.main.ingress";
+    for (auto &ref : regs.egress.prsr)
+        ref = "regs.parser.main.egress";
+    regs.memory[INGRESS].emit_json(*open_output("memories.parser.ingress.cfg.json"), "ingress");
+    regs.memory[EGRESS].emit_json(*open_output("memories.parser.egress.cfg.json"), "egress");
+    regs.ingress.emit_json(*open_output("regs.parser.ingress.cfg.json"));
+    regs.egress.emit_json(*open_output("regs.parser.egress.cfg.json"));
+    regs.main[INGRESS].emit_json(*open_output("regs.parser.main.ingress.cfg.json"), "ingress");
+    regs.main[EGRESS].emit_json(*open_output("regs.parser.main.egress.cfg.json"), "egress");
+    regs.merge.emit_json(*open_output("regs.parse_merge.cfg.json"));
+    for (auto &ref : TopLevel::regs<Target::JBay>()->mem_pipe.parde.i_prsr_mem)
+        ref = "memories.parser.ingress";
+    for (auto &ref : TopLevel::regs<Target::JBay>()->mem_pipe.parde.e_prsr_mem)
+        ref = "memories.parser.egress";
+    for (auto &ref : TopLevel::regs<Target::JBay>()->reg_pipe.pardereg.pgstnreg.ipbprsr4reg)
+        ref = "regs.parser.ingress";
+    for (auto &ref : TopLevel::regs<Target::JBay>()->reg_pipe.pardereg.pgstnreg.epbprsr4reg)
+        ref = "regs.parser.egress";
+    TopLevel::regs<Target::JBay>()->reg_pipe.pardereg.pgstnreg.pmergereg = "regs.parse_merge";
+    for (auto st : all)
+        TopLevel::all->name_lookup["directions"][st->gress ? "1" : "0"]
+                ["parser_states"][std::to_string(st->stateno.word1)] = st->name;
 }
 
 template<> 

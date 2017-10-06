@@ -111,20 +111,20 @@ class Target::JBay : public Target {
         ::JBay::regs_pipe                               reg_pipe;
     };
     struct                                          parser_regs {
-        typedef ::JBay::memories_all_parser_            _memory;
-        typedef ::JBay::regs_ipb_prsr4_reg              _ingress;
-        typedef ::JBay::regs_epb_prsr4_reg              _egress;
+        typedef ::JBay::memories_parser_                _memory;
+        typedef ::JBay::regs_parser_ingress             _ingress;
+        typedef ::JBay::regs_parser_egress              _egress;
         typedef ::JBay::regs_parser_main_               _main;
-        typedef ::JBay::regs_pmerge_reg                 _merge;
+        typedef ::JBay::regs_parse_merge                _merge;
 
-        ::JBay::memories_all_parser_                    memory[2];
-        ::JBay::regs_ipb_prsr4_reg                      ingress;
-        ::JBay::regs_epb_prsr4_reg                      egress;
+        ::JBay::memories_parser_                        memory[2];
+        ::JBay::regs_parser_ingress                     ingress;
+        ::JBay::regs_parser_egress                      egress;
         ::JBay::regs_parser_main_                       main[2];
-        ::JBay::regs_pmerge_reg                         merge;
+        ::JBay::regs_parse_merge                        merge;
     };
     typedef ::JBay::regs_match_action_stage_        mau_regs;
-    typedef ::JBay::regs_dprsr_reg                  deparser_regs;
+    typedef ::JBay::regs_deparser                   deparser_regs;
 };
 void declare_registers(const Target::JBay::top_level_regs *regs);
 void undeclare_registers(const Target::JBay::top_level_regs *regs);
