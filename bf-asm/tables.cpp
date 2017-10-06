@@ -1142,6 +1142,7 @@ void Table::Actions::add_action_format(Table *table, json::map &tbl) {
             if (a.second.is_constant) {
                 action_format_per_action_imm_field["param_type"] = "constant";
                 action_format_per_action_imm_field["const_value"] = a.second.value;
+                action_format_per_action_imm_field["param_name"] = "constant_" + std::to_string(a.second.value);
             } else
                 action_format_per_action_imm_field["param_shift"] = lo;
             action_format_per_action_imm_field["dest_start"] = a.second.lo;

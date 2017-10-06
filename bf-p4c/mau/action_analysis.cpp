@@ -710,7 +710,9 @@ bool ActionAnalysis::ContainerAction::verify_overwritten(PHV::Container containe
           const PhvInfo &phv) {
     // FIXME: This is currently a hack to get recirculate to work properly.  Deep is working
     // on an API function call to do this verification more correctly.
-    if (phv.field(field_actions[0].write.expr)->name == "ingress::standard_metadata.egress_spec")
+    cstring wname = phv.field(field_actions[0].write.expr)->name;
+    if ((strcmp(wname, "ingress::standard_metadata.egress_spec") == 0) ||
+        (strcmp(wname, "ingress::ig_intr_md_for_tm.ucast_egress_port") == 0))
         return true;
 
     bitvec total_write_bits;
