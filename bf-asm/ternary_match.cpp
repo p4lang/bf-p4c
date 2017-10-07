@@ -422,6 +422,7 @@ std::unique_ptr<json::map> TernaryMatchTable::gen_memory_resource_allocation_tbl
 void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
         unsigned lsb_offset, unsigned lsb_idx, unsigned msb_idx, \
         std::string source, unsigned start_bit, unsigned field_width) {
+    remove_aug_names(name);
     out.push_back( json::map {
         { "field_name", json::string(name) },
         { "lsb_mem_word_offset", json::number(lsb_offset) },
@@ -479,6 +480,7 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
                 curWord = word; }
             std::string source = "spec";
             std::string field_name = field.second.what.name();
+            remove_aug_names(field_name);
             unsigned lsb_mem_word_offset = 0;
             if (field.second.hi > 43) {
                 // a field in the (mid) byte group, which is shared with the adjacent word group
