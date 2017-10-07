@@ -4,6 +4,7 @@
 #include "ir/visitor.h"
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "lib/symbitmatrix.h"
 
 namespace PHV {
 
@@ -22,10 +23,12 @@ namespace PHV {
  */
 class ValidateAllocation final : public Inspector {
  public:
-    explicit ValidateAllocation(PhvInfo& phv) : phv(phv) { }
+    ValidateAllocation(const PhvInfo& phv, const SymBitMatrix& mutually_exclusive_field_ids)
+        : phv(phv), mutually_exclusive_field_ids(mutually_exclusive_field_ids) { }
 
  private:
-    PhvInfo& phv;
+    const PhvInfo& phv;
+    const SymBitMatrix& mutually_exclusive_field_ids;
     bool preorder(const IR::BFN::Pipe* pipe) override;
 };
 

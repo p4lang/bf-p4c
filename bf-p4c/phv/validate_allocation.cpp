@@ -232,7 +232,25 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
     auto isBridged = [](const PhvInfo::Field* f) { return f->bridged; };
     auto isMetadata = [](const PhvInfo::Field* f) { return f->metadata || f->pov; };
     auto hasOverlay = [](const PhvInfo::Field* f) {
-        return !f->field_overlay_map().empty();
+        // XXX(cole): This misses the substratum fields themselves, as
+        // `f->overlay_substratum()` is a property of an overlaid field that
+        // points to the field it overlays.
+        return !f->field_overlay_map().empty() || f->overlay_substratum() != nullptr;
+    };
+    auto checkValidOverlay = [&](const PhvInfo::Field* f) {
+        // If this field is overlaid, check that every overlaid field is in
+        // fact mutually exclusive.
+        if (!f->field_overlay_map().empty()) {
+            for (auto overlaid_by_container : f->field_overlay_map()) {
+                for (auto* f_overlay : *overlaid_by_container.second) {
+                    if (f == f_overlay) continue;
+                    ERROR_CHECK(mutually_exclusive_field_ids(f->id, f_overlay->id),
+                        "Fields %1% and %2% are overlaid but not mutually exclusive.",
+                        cstring::to_cstring(f), cstring::to_cstring(f_overlay)); } } }
+        if (auto* substratum = f->overlay_substratum())
+            ERROR_CHECK(mutually_exclusive_field_ids(f->id, substratum->id),
+                "Field %1% is overlaid atop field %2% but is not mutually exclusive.",
+                cstring::to_cstring(f), cstring::to_cstring(substratum));
     };
 
     // Check that we've marked a field as deparsed if and only if it's actually
@@ -272,34 +290,137 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
                             "field %2%", container, cstring::to_cstring(field));
         }
 
-        // XXX(seth): When there are overlayed fields in a container, we'd
-        // ideally like to verify that each mutually exclusive group of
-        // overlayed fields satisfies our constraints independently - e.g., each
-        // group should consist of deparsed fields only or nondeparsed fields
-        // only, and if the group is deparsed, the fields should cover the
-        // entire container exactly. Unfortunately, determining what those
-        // groups are is currently hard, so for now we skip most checks when
-        // overlaying is present.
-        if (std::any_of(fields.begin(), fields.end(), hasOverlay)) continue;
+        // Check that every overlaid field is mutually exclusive with every
+        // other overlaid field.
+        std::for_each(fields.begin(), fields.end(), checkValidOverlay);
 
-        // Collect information about which fields in this container are
-        // deparsed, so we can verify that the allocation is reasonable. Header
-        // fields are the constrained case: if a container contains deparsed
-        // header fields, it must contain *only* deparsed header fields and they
-        // must completely fill the container. Several checks below combine to
-        // verify that. We're much less restrictive for bridged metadata fields,
-        // since they don't end up on the wire and they're not visible to the
-        // programmer.
-        bool hasDeparsedHeaderFields = false;
-        bool hasDeparsedMetadataFields = false;
-        {
+        // XXX(cole): Some of the deparser constraints, such as field ordering
+        // within a container, are still too difficult to check in the presence
+        // of overlaid fields.  Hopefully we can make this more precise in the
+        // future.  For now, skip those checks if fields are overlaid.
+        bool any_field_has_overlay = std::any_of(fields.begin(), fields.end(), hasOverlay);
+
+        // Test combinations of fields that are live at the same time.
+        std::set<std::set<const PhvInfo::Field*>> live_field_sets;
+        for (auto* f1 : fields) {
+            std::set<const PhvInfo::Field*> live_with_f1;
+            for (auto* f2 : fields) {
+                if (!mutually_exclusive_field_ids(f1->id, f2->id))
+                    live_with_f1.insert(f2); }
+            live_field_sets.emplace(std::move(live_with_f1));
+        }
+
+        for (auto& live_fields : live_field_sets) {
+            // Only consider sets of slices that may be live at the same time
+            // in this container.
+            std::vector<Slice> live_slices;
+            for (auto s : slices) {
+                if (live_fields.count(s.field))
+                    live_slices.push_back(s);
+            }
+
+            // Collect information about which fields in this container are
+            // deparsed, so we can verify that the allocation is reasonable. Header
+            // fields are the constrained case: if a container contains deparsed
+            // header fields, it must contain *only* deparsed header fields and they
+            // must completely fill the container. Several checks below combine to
+            // verify that. We're much less restrictive for bridged metadata fields,
+            // since they don't end up on the wire and they're not visible to the
+            // programmer.
+            bool hasDeparsedHeaderFields = false;
+            bool hasDeparsedMetadataFields = false;
+
+            for (auto& slice : live_slices) {
+                auto* field = slice.field;
+                if (!isDeparsed(field)) continue;
+                if (isMetadata(field))
+                    hasDeparsedMetadataFields = true;
+                else
+                    hasDeparsedHeaderFields = true;
+            }
+
+            ERROR_CHECK(!(hasDeparsedHeaderFields && hasDeparsedMetadataFields),
+                        "Deparsed container %1% contains both deparsed header "
+                        "fields and deparsed metadata fields: %2%", container,
+                        cstring::to_cstring(fields));
+
+            if (hasDeparsedHeaderFields) {
+                ERROR_CHECK(std::all_of(live_fields.begin(), live_fields.end(), isDeparsed),
+                            "Deparsed container %1% mixes deparsed header "
+                            "fields with non-deparsed fields: %2%", container,
+                            cstring::to_cstring(fields));
+            }
+
+            if (hasDeparsedMetadataFields) {
+                ERROR_CHECK(std::any_of(live_fields.begin(), live_fields.end(), isBridged),
+                            "Deparsed container %1% contains deparsed metadata "
+                            "fields, but none of them are bridged: %2%",
+                            container, cstring::to_cstring(fields));
+            }
+
+            // Verify that the allocations for each field don't overlap. (Note that
+            // this is checking overlapping with respect to the *container*; we
+            // check overlapping with respect to the *field* above.)
+            bitvec allocatedBitsForContainer;
+            for (auto field : live_fields) {
+                std::vector<Slice> slicesForField;
+                for (auto& slice : live_slices)
+                    if (slice.field == field) slicesForField.push_back(slice);
+
+                ERROR_CHECK(!slicesForField.empty(), "No slices for field?");
+
+                bitvec allocatedBitsForField;
+                for (auto& slice : slicesForField) {
+                    bitvec sliceBits(slice.container_bit, slice.width);
+                    ERROR_CHECK(!sliceBits.intersects(allocatedBitsForField),
+                                "Container %1% contains overlapping slices of field %2%",
+                                container, cstring::to_cstring(field));
+                    allocatedBitsForField |= sliceBits;
+                }
+
+                // header stack pov ccgfs will have overlap
+                // if all overlapped fields point to owner header stack pov ccgf then ok
+                //
+                if (field->ccgf() && field->ccgf()->header_stack_pov_ccgf()) {
+                    ERROR_WARN_(!allocatedBitsForField.intersects(allocatedBitsForContainer),
+                                "Container %1% contains fields which overlap: %2%",
+                                container, cstring::to_cstring(live_fields));
+                } else {
+                    ERROR_CHECK(!allocatedBitsForField.intersects(allocatedBitsForContainer),
+                                "Container %1% contains fields which overlap: %2%",
+                                container, cstring::to_cstring(live_fields));
+                }
+                allocatedBitsForContainer |= allocatedBitsForField;
+            }
+
+            // Verify that if this container has deparsed header fields, every bit
+            // in the container is allocated.  Deparsed metadata fields (i.e.,
+            // bridged metadata) don't have this restriction because they don't end
+            // up on the wire (externally, at least) and we can ensure that garbage
+            // data isn't visible to the programmer. If this container has a mixed
+            // of both, we'll already have reported an error above.
+            if (hasDeparsedHeaderFields) {
+                bitvec allBitsInContainer(0, container.size());
+                ERROR_WARN_(allocatedBitsForContainer == allBitsInContainer,
+                            "Container %1% contains deparsed header fields, but "
+                            "it has unused bits: %2%", container,
+                            cstring::to_cstring(live_fields));
+            }
+
+            // XXX(cole): Checking that deparsed fields adjacent in the
+            // container are adjacent in the deparser is still too complex to
+            // check directly, because the check is really over adjacent
+            // *valid* fields in the deparser, which we don't have a good way
+            // to determine precisely here.
+            if (any_field_has_overlay) continue;
+
             const PhvInfo::Field* previousField;
             std::vector<size_t> previousFieldOccurrences;
 
             // Because we want to check that the fields in this container are
             // placed in the order in which they're emitted in the deparser, we
             // need to walk over them in network order.
-            std::vector<Slice> slicesInNetworkOrder(slices.begin(), slices.end());
+            std::vector<Slice> slicesInNetworkOrder(live_slices.begin(), live_slices.end());
             std::sort(slicesInNetworkOrder.begin(), slicesInNetworkOrder.end(),
                       [](const Slice& a, const Slice& b) {
                 return a.container_bits().toOrder<Endian::Network>(a.container.size()).lo
@@ -309,10 +430,6 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             for (auto& slice : slicesInNetworkOrder) {
                 auto* field = slice.field;
                 if (!isDeparsed(field)) continue;
-                if (isMetadata(field))
-                    hasDeparsedMetadataFields = true;
-                else
-                    hasDeparsedHeaderFields = true;
 
                 // Validate that the ordering of these fields in the container
                 // matches their ordering in the deparser everywhere that they
@@ -336,74 +453,6 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
                 previousField = field;
                 previousFieldOccurrences = fieldOccurrences;
             }
-        }
-
-        ERROR_CHECK(!(hasDeparsedHeaderFields && hasDeparsedMetadataFields),
-                    "Deparsed container %1% contains both deparsed header "
-                    "fields and deparsed metadata fields: %2%", container,
-                    cstring::to_cstring(fields));
-
-        if (hasDeparsedHeaderFields) {
-            ERROR_CHECK(std::all_of(fields.begin(), fields.end(), isDeparsed),
-                        "Deparsed container %1% mixes deparsed header "
-                        "fields with non-deparsed fields: %2%", container,
-                        cstring::to_cstring(fields));
-        }
-
-        if (hasDeparsedMetadataFields) {
-            ERROR_CHECK(std::any_of(fields.begin(), fields.end(), isBridged),
-                        "Deparsed container %1% contains deparsed metadata "
-                        "fields, but none of them are bridged: %2%",
-                        container, cstring::to_cstring(fields));
-        }
-
-        // Verify that the allocations for each field don't overlap. (Note that
-        // this is checking overlapping with respect to the *container*; we
-        // check overlapping with respect to the *field* above.)
-        bitvec allocatedBitsForContainer;
-        for (auto field : fields) {
-            std::vector<Slice> slicesForField;
-            for (auto& slice : slices)
-                if (slice.field == field) slicesForField.push_back(slice);
-
-            ERROR_CHECK(!slicesForField.empty(), "No slices for field?");
-
-            bitvec allocatedBitsForField;
-            for (auto& slice : slicesForField) {
-                bitvec sliceBits(slice.container_bit, slice.width);
-                ERROR_CHECK(!sliceBits.intersects(allocatedBitsForField),
-                            "Container %1% contains overlapping slices of field %2%",
-                            container, cstring::to_cstring(field));
-                allocatedBitsForField |= sliceBits;
-            }
-
-            // header stack pov ccgfs will have overlap
-            // if all overlapped fields point to owner header stack pov ccgf then ok
-            //
-            if (field->ccgf() && field->ccgf()->header_stack_pov_ccgf()) {
-                ERROR_WARN_(!allocatedBitsForField.intersects(allocatedBitsForContainer),
-                            "Container %1% contains fields which overlap: %2%",
-                            container, cstring::to_cstring(fields));
-            } else {
-                ERROR_CHECK(!allocatedBitsForField.intersects(allocatedBitsForContainer),
-                            "Container %1% contains fields which overlap: %2%",
-                            container, cstring::to_cstring(fields));
-            }
-            allocatedBitsForContainer |= allocatedBitsForField;
-        }
-
-        // Verify that if this container has deparsed header fields, every bit
-        // in the container is allocated.  Deparsed metadata fields (i.e.,
-        // bridged metadata) don't have this restriction because they don't end
-        // up on the wire (externally, at least) and we can ensure that garbage
-        // data isn't visible to the programmer. If this container has a mixed
-        // of both, we'll already have reported an error above.
-        if (hasDeparsedHeaderFields) {
-            bitvec allBitsInContainer(0, container.size());
-            ERROR_WARN_(allocatedBitsForContainer == allBitsInContainer,
-                        "Container %1% contains deparsed header fields, but "
-                        "it has unused bits: %2%", container,
-                        cstring::to_cstring(fields));
         }
     }
 

@@ -804,6 +804,11 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
   )
 
+p4c_add_xfail_reason("tofino"
+  "Fields .* and .* are overlaid but not mutually exclusive"
+  extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
+)
+
 # Likely still has a bug; emits the following warning:
 p4c_add_xfail_reason("tofino"
    "Action argument is not found to be allocated in the action format"
@@ -918,8 +923,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
   extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
   extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
-  extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
   )
 
 # Tests where a field is placed correctly, but we still can't extract it without
@@ -935,6 +938,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-295/vag1892.p4
   extensions/p4_tests/p4_14/jenkins/pcie_pkt_test/pcie_pkt_test_one.p4
   extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
+  extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
   )
 
 # For some reason we place `ingress::inner_ipv4.fragOffset` and
