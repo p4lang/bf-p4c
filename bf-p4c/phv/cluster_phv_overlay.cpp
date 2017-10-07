@@ -193,6 +193,16 @@ Cluster_PHV_Overlay::overlay_field_to_field(
             << "not mutually exclusive");
         return false;
     }
+    // ensure parde alignment constraints match
+    // substratum consider ccgf member field's alignment position
+    // overlay consider entire ccgf as fields are laid from right to left
+    auto f_s_align = f_s->phv_alignment(false /*need ccgf member alignment*/).get_value_or(0);
+    auto f_o_align = f_o->phv_alignment().get_value_or(0);
+    if (f_s_align != f_o_align) {
+        LOG3(".....overlay_field_to_field....."
+            << "parde alignment does not match....." << f_s_align << " vs " << f_o_align);
+        return false;
+    }
     // field overlay acceptable
     return true;
 }

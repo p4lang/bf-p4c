@@ -123,18 +123,6 @@ if (NOT ENABLE_TNA)
     testdata/p4_14_samples/TLV_parsing.p4
     )
 
-  # BRIG-256
-  p4c_add_xfail_reason("tofino"
-    "metadata being placed w/ deparsed header"
-    extensions/p4_tests/p4_14/switch_20160602/switch.p4
-  )
-
-  # BRIG-256
-  p4c_add_xfail_reason("tofino"
-    "field slices overlap"
-    extensions/p4_tests/p4_14/switch/p4src/switch.p4
-  )
-
   # BRIG-109
   p4c_add_xfail_reason("tofino"
     "error: Cannot resolve computed select"
@@ -792,6 +780,8 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/jenkins/power/power.p4
   testdata/p4_14_samples/parser_dc_full.p4
   testdata/p4_14_samples/port_vlan_mapping.p4
+  extensions/p4_tests/p4_14/switch/p4src/switch.p4
+  extensions/p4_tests/p4_14/switch_20160602/switch.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -923,6 +913,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
   extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
   extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
   )
 
 # Tests where a field is placed correctly, but we still can't extract it without
@@ -939,17 +930,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/jenkins/pcie_pkt_test/pcie_pkt_test_one.p4
   extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
   extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
-  )
-
-# For some reason we place `ingress::inner_ipv4.fragOffset` and
-# `ingress::inner_ipv4.flags` in overlapping slices in the same container, when
-# they're adjacent fields which are extracted in the same parser state. As a
-# result, we're unable to generate a valid extract. This looks like a bug
-# related to field overlaying (although these two fields are not overlaid), but
-# I'm not certain.
-p4c_add_xfail_reason("tofino"
-  "Extracted range .* with size 24 doesn't match destination container .* with size 16"
-  # extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
   )
 
 # BEGIN: XFAILS that match glass XFAILS

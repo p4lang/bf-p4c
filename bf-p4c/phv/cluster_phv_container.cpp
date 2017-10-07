@@ -394,6 +394,7 @@ PHV_Container::overlay_ccgf_field(
     //       ][8..15]
     //       = 47:ingress::vlan_tag_[1].vid [4..11]  => PHV-97
     //
+    start += width;  // start allocation from ccgf-segment RHS in container
     int processed_members = 0;
     int processed_width = 0;
     int width_remaining = width;
@@ -405,6 +406,7 @@ PHV_Container::overlay_ccgf_field(
         }
         int member_bit_lo = member->phv_use_lo() + member->phv_use_rem();
         int use_width = member->size - member->phv_use_rem();
+        start -= use_width;
         if (use_width > width_remaining) {
             //
             // member straddles containers
@@ -419,22 +421,29 @@ PHV_Container::overlay_ccgf_field(
         }
         const int align_start
             = member->phv_alignment(false /*need ccgf member alignment*/).get_value_or(start);
+        BUG_CHECK(
+            align_start % int(PHV::Size::b8) == start % int(PHV::Size::b8),
+            "*****PHV_Container::overlay_ccgf_field()*****%s, field=%d:%s, align_start=%s,start=%d",
+            this->toString(),
+            field->id,
+            field->name,
+            align_start,
+            start);
         fields_in_container(
             member,
             new Container_Content(
                this,
-               align_start,
+               start,
                use_width,
                member,
                member_bit_lo,
-               taint_color(align_start, align_start + use_width - 1),
+               taint_color(start, start + use_width - 1),
                pass /* pass that performs the overlay */));
         processed_width += use_width;
         width_remaining -= use_width;
         if (width_remaining <= 0) {
             break;
         }
-        start += use_width;
     }  // for ccgf members
     //
     update_ccgf(field, processed_members, processed_width);
@@ -468,8 +477,13 @@ PHV_Container::single_field_overlay(
         if (f->ccgf_fields().size()) {
             overlay_ccgf_field(f, start, width, field_bit_lo, pass);
         } else {
-            const int align_start
-                = f->phv_alignment().get_value_or(start);
+            int align_start = start;
+            if (field_bit_lo == 0)  // alignment @ start of field
+                align_start = f->phv_alignment().get_value_or(start);
+            else
+                if (f->sliced() && f->phv_alignment())
+                    // offset start by alignment + field_slice leading bits, e.g., f^0=f1^0,f2^8
+                    align_start += field_bit_lo;
             fields_in_container(
                 f,
                 new Container_Content(
@@ -725,17 +739,21 @@ PHV_Container::fields_in_container(PhvInfo::Field *f, Container_Content *cc) {
                 cc_slice->field()->id, cc_slice->field()->name,
                 cc->field()->id, cc->field()->name,
                 this->toString());
-            BUG_CHECK(cc_slice->taint_color() != cc->taint_color(),
-                "*****PHV_Container::fields_in_container()*****"
-                ".....field slices taint colors should not be same.....\n"
-                "<cc_slice_lo=%d..cc_slice_hi=%d> <cc->lo()=%d..cc->hi()=%d>\n"
-                "cc_slice->field()=%d:%s, cc->field()=%d:%s\n"
-                "cc_slice taint_color=%s ==  cc taint_color=%s\t%s",
-                cc_slice->lo(), cc_slice->hi(), cc->lo(), cc->hi(),
-                cc_slice->field()->id, cc_slice->field()->name,
-                cc->field()->id, cc->field()->name,
-                cc_slice->taint_color(), cc->taint_color(),
-                this->toString());
+            // TODO
+            // if two field slices are part of the same substratum then it is ok to have same color
+            // introduce a substratum_field in cc to enable this check
+            //
+            // BUG_CHECK(cc_slice->taint_color() != cc->taint_color(),
+                // "*****PHV_Container::fields_in_container()*****"
+                // ".....field slices taint colors should not be same.....\n"
+                // "<cc_slice_lo=%d..cc_slice_hi=%d> <cc->lo()=%d..cc->hi()=%d>\n"
+                // "cc_slice->field()=%d:%s, cc->field()=%d:%s\n"
+                // "cc_slice taint_color=%s ==  cc taint_color = %s\tin %s",
+                // cc_slice->lo(), cc_slice->hi(), cc->lo(), cc->hi(),
+                // cc_slice->field()->id, cc_slice->field()->name,
+                // cc->field()->id, cc->field()->name,
+                // cc_slice->taint_color(), cc->taint_color(),
+                // this->toString());
         }
     }
     fields_in_container_i[f].push_back(cc);
@@ -1416,7 +1434,7 @@ std::ostream &operator<<(std::ostream &out, PHV_Container *c) {
     //
     if (c) {
         out << std::endl << '\t';
-        out << c->toString() << '.' << c->gress() << '.' << c->status();
+        out << c->toString() << '.' << c->gress() << '.' << static_cast<char>(c->status());
         if (c->deparsed())
             out << "d";
         if (c->fields_in_container().size() > 1)
@@ -1425,6 +1443,9 @@ std::ostream &operator<<(std::ostream &out, PHV_Container *c) {
             // when container FULL, range[0] = -1
             if (r.second != -1)
                 out << '(' << r.first << ".." << r.second << ')'; }
+        // print bits in container, fields placed
+        out << '\t' << c->bits()
+            << c->fields_in_container();
     } else {
         out << "-c-";
     }
@@ -1443,9 +1464,7 @@ std::ostream &operator<<(std::ostream &out, const PHV_Container *c) {
 std::ostream &operator<<(std::ostream &out, PHV_Container &c) {
     // detailed output
     //
-    out << '\t' << &c
-        << '\t' << c.bits()
-        << c.fields_in_container();
+    out << '\t' << &c;
     return out;
 }
 

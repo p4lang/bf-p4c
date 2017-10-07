@@ -455,6 +455,9 @@ void PHV_MAU_Group_Assignments::cluster_PHV_placements() {
             // pack remaining clusters to partially filled containers
             //
             container_pack_cohabit(clusters_to_be_assigned_i, aligned_container_slices_i, "PHV");
+            //
+            if (clusters_to_be_assigned_i.size())
+                LOG3("********** PHV placement + packing ***** DID NOT FIT ***** **********");
         }
     } else {
         check_action_constraints();
@@ -521,6 +524,9 @@ void PHV_MAU_Group_Assignments::cluster_POV_placements() {
         // pack remaining clusters to partially filled containers
         //
         container_pack_cohabit(pov_fields_i, aligned_container_slices_i, "POV");
+        //
+        if (pov_fields_i.size())
+            LOG3("********** POV packing ***** DID NOT FIT ***** **********");
     }
 }  // PHV_MAU_Group_Assignments::cluster_POV_placements
 
@@ -573,6 +579,9 @@ PHV_MAU_Group_Assignments::cluster_TPHV_placements() {
                     t_phv_fields_i,
                     aligned_container_slices_i,
                     "PHV <== TPHV_Overflow");
+                //
+                if (t_phv_fields_i.size())
+                    LOG3("********** T_PHV placement+packing+PHV_Overflow DID NOT FIT **********");
             }
         }
     }
@@ -596,6 +605,9 @@ PHV_MAU_Group_Assignments::cluster_PHV_nibble_placements() {
             clusters_to_be_assigned_nibble_i,
             aligned_container_slices_i,
             "PHV_Nibble");
+        //
+        if (clusters_to_be_assigned_nibble_i.size())
+            LOG3("********** PHV Nibble placement + packing ***** DID NOT FIT ***** **********");
     }
 }  // PHV_MAU_Group_Assignments::cluster_PHV_nibble_placements
 
@@ -621,6 +633,9 @@ PHV_MAU_Group_Assignments::cluster_T_PHV_nibble_placements() {
                 t_phv_fields_nibble_i,
                 aligned_container_slices_i,
                 "PHV <== TPHV_Nibble_Overflow");
+            //
+            if (t_phv_fields_nibble_i.size())
+                LOG3("********** T_PHV Nibble packing + PHV_Overflow ***** DID NOT FIT **********");
         }
     }
 }  // PHV_MAU_Group_Assignments::cluster_T_PHV_nibble_placements
@@ -690,10 +705,18 @@ PHV_MAU_Group_Assignments::container_no_pack(
     //        surround effects within container,
     //        alignment issues (start @ 0)
     //
-    // sort clusters number decreasing, width decreasing
-    // preference given to clusters with fields having no cohabit, e.g., deparser constraints
+    // sort clusters, number decreasing, width decreasing
+    // preference given to clusters with fields having
+    // exact_container requirement,
+    // higher number of constraints
     //
     clusters_to_be_assigned.sort([](Cluster_PHV *l, Cluster_PHV *r) {
+        if (l->exact_containers() && !r->exact_containers()) {
+            return true;
+        }
+        if (!l->exact_containers() && r->exact_containers()) {
+            return false;
+        }
         if (l->num_constraints() == r->num_constraints()) {
             if (l->num_containers() == r->num_containers()) {
                 //
