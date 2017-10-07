@@ -431,10 +431,11 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
                 LOG2(" - can't place as its already done");
                 return nullptr; }
             set_entries -= p->entries;
-        } else if (p->stage == rv->stage &&
-                 deps->happens_before(p->table, rv->table)
-                 && !mutex.action(p->table, rv->table)) {
-             rv->stage++;
+        } else if (p->stage == rv->stage) {
+             if (deps->happens_before(p->table, rv->table) && !mutex.action(p->table, rv->table))
+                 rv->stage++;
+             else if (rv->gw && deps->happens_before(p->table, rv->gw))
+                 rv->stage++;
         }
     }
     assert(!rv->placed[tblInfo.at(rv->table).uid]);
