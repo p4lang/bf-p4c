@@ -167,6 +167,18 @@ if (PTF_REQUIREMENTS_MET)
   MESSAGE(STATUS "Added ${__ptfCounter} PTF tests")
 endif() # PTF_REQUIREMENTS_MET
 
+if (HARLYN_STF)
+  foreach (ts "${TOFINO_TEST_SUITES}")
+    file (GLOB __testfiles RELATIVE ${P4C_SOURCE_DIR} ${ts})
+    foreach (__p4file ${__testfiles})
+      string (REGEX REPLACE ".p4$" ".stf" __stffile ${__p4file})
+      if (EXISTS ${P4C_SOURCE_DIR}/${__stffile})
+        p4c_add_test_label("tofino" "stf" ${__p4file})
+      endif()
+    endforeach() # __p4file
+  endforeach()   # ts
+endif(HARLYN_STF)
+
 set  (SWITCH_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch/p4src/switch.p4)
 set  (isXFail TRUE)
 file (RELATIVE_PATH switchtest ${P4C_SOURCE_DIR} ${SWITCH_P4})

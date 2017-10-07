@@ -127,26 +127,30 @@ public:
     string &operator=(const string &) & = default;
     string &operator=(string &&) & = default;
     ~string() {}
-    bool operator <(const obj &a) const {
+    bool operator <(const obj &a) const override {
         if (const string *b = dynamic_cast<const string *>(&a))
             return static_cast<const std::string &>(*this) <
                    static_cast<const std::string &>(*b);
         return std::type_index(typeid(*this)) < std::type_index(typeid(a)); }
-    bool operator ==(const obj &a) const {
+    bool operator ==(const obj &a) const override {
         if (const string *b = dynamic_cast<const string *>(&a))
             return static_cast<const std::string &>(*this) ==
                    static_cast<const std::string &>(*b);
         return false; }
-    bool operator ==(const char *str) const {
+    bool operator ==(const char *str) const override {
         return static_cast<const std::string &>(*this) == str; }
-    void print_on(std::ostream &out, int indent=0, int width=80, const char *pfx="") const {
+    void print_on(std::ostream &out, int indent=0,
+                  int width=80, const char *pfx="") const override {
         out << '"' << *this << '"'; }
-    bool test_width(int &limit) const { limit -= size()+2; return limit >= 0; }
-    const char *c_str() const { return std::string::c_str(); }
-    string *as_string() { return this; }
-    const string *as_string() const { return this; }
-    std::unique_ptr<obj> copy() && { return mkuniq<string>(std::move(*this)); }
-    std::unique_ptr<obj> clone() const override { return mkuniq<string>(*this); }
+    bool test_width(int &limit) const override {
+      limit -= size()+2; return limit >= 0; }
+    const char *c_str() const override { return std::string::c_str(); }
+    string *as_string() override { return this; }
+    const string *as_string() const override { return this; }
+    std::unique_ptr<obj> copy() && override {
+      return mkuniq<string>(std::move(*this)); }
+    std::unique_ptr<obj> clone() const override {
+      return mkuniq<string>(*this); }
 };
 
 class map; // forward decl
@@ -224,7 +228,7 @@ public:
     map &operator=(const map &) & = default;
     map &operator=(map &&) & = default;
     ~map() { for (auto &e : *this) delete e.first; }
-    bool operator <(const obj &a) const {
+    bool operator <(const obj &a) const override {
         if (const map *b = dynamic_cast<const map *>(&a)) {
             auto p1 = begin(), p2 = b->begin();
             while (p1 != end() && p2 != b->end()) {
@@ -238,7 +242,7 @@ public:
     using obj::operator <=;
     using obj::operator >=;
     using obj::operator >;
-    bool operator ==(const obj &a) const {
+    bool operator ==(const obj &a) const override {
         if (const map *b = dynamic_cast<const map *>(&a)) {
             auto p1 = begin(), p2 = b->begin();
             while (p1 != end() && p2 != b->end()) {
@@ -248,8 +252,9 @@ public:
             return (p1 == end() && p2 == b->end()); }
         return false; }
     using obj::operator !=;
-    void print_on(std::ostream &out, int indent=0, int width=80, const char *pfx="") const;
-    bool test_width(int &limit) const {
+    void print_on(std::ostream &out, int indent=0,
+                  int width=80, const char *pfx="") const override;
+    bool test_width(int &limit) const override {
         limit -= 2;
         for (auto &e : *this) {
             if (!e.first->test_width(limit)) return false;
@@ -401,9 +406,10 @@ public:
     map_base::size_type erase(long n) {
         number tmp(n);
         return map_base::erase(&tmp); }
-    map *as_map() { return this; }
-    const map *as_map() const { return this; }
-    std::unique_ptr<obj> copy() && { return mkuniq<map>(std::move(*this)); }
+    map *as_map() override { return this; }
+    const map *as_map() const override { return this; }
+    std::unique_ptr<obj> copy() && override {
+      return mkuniq<map>(std::move(*this)); }
     std::unique_ptr<obj> clone() const override {
         map *m = new map();
         for (auto &e: *this)

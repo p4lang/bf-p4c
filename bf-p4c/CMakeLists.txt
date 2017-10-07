@@ -355,7 +355,14 @@ install (DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/p4include
   DESTINATION ${P4C_ARTIFACTS_OUTPUT_DIRECTORY})
 install (DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/p4_14include
   DESTINATION ${P4C_ARTIFACTS_OUTPUT_DIRECTORY})
-install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino.cfg
+
+set (DRIVER_FILES ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino.cfg)
+if (ENABLE_JBAY)
+  set (DRIVER_FILES ${DRIVER_FILES}
+    ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.jbay.cfg)
+endif (ENABLE_JBAY)
+
+install (FILES ${DRIVER_FILES}
   DESTINATION ${P4C_ARTIFACTS_OUTPUT_DIRECTORY}/p4c_src)
 
 # hack to get around the fact that the test scripts expect the backend
@@ -371,7 +378,7 @@ add_custom_target(linktofino
      ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/\$$h ${P4C_BINARY_DIR}/\$$h \;
   done
   COMMAND ${CMAKE_COMMAND} -E make_directory ${P4C_BINARY_DIR}/p4c_src
-  COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino.cfg ${P4C_BINARY_DIR}/p4c_src
+  COMMAND ${CMAKE_COMMAND} -E copy ${DRIVER_FILES} ${P4C_BINARY_DIR}/p4c_src
   COMMAND ${CMAKE_COMMAND} -E create_symlink ${P4C_BINARY_DIR}/p4include ${CMAKE_CURRENT_BINARY_DIR}/p4include
   COMMAND ${CMAKE_COMMAND} -E create_symlink ${P4C_BINARY_DIR}/p4_14include ${CMAKE_CURRENT_BINARY_DIR}/p4_14include
   )
