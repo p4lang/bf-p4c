@@ -2,13 +2,16 @@
 #define EXTENSIONS_BF_P4C_BF_P4C_OPTIONS_H_
 
 #include <getopt.h>
-#include <boost/algorithm/string.hpp>
 #include "frontends/common/options.h"
 #include "lib/safe_vector.h"
 #include "version.h"
 
 class BFN_Options : public CompilerOptions {
  public:
+    cstring device = "tofino";
+    cstring arch   = "v1model";
+    cstring vendor = "barefoot";
+
     bool trivial_phvalloc = false;
     bool phv_interference = true;
     bool phv_slicing = true;
@@ -21,7 +24,6 @@ class BFN_Options : public CompilerOptions {
     BFN_Options() {
         target = "tofino-v1model-barefoot";
         compilerVersion = P4C_TOFINO_VERSION;
-        preprocessor_options += " -D__TARGET_TOFINO__";
 
         registerOption("--trivpa", nullptr,
             [this](const char *) { trivial_phvalloc = true; return true; },
@@ -54,26 +56,7 @@ class BFN_Options : public CompilerOptions {
         return it != supported_targets.end();
     }
 
-    static std::vector<std::string> parse_target(std::string target) {
-        std::vector<std::string> splits;
-        boost::split(splits, target, [](char c){return c == '-';});
-        return splits;
-    }
-
-    cstring device() const {
-        std::vector<std::string> splits = parse_target(target.c_str());
-        return splits[0];
-    }
-
-    cstring arch() const {
-        std::vector<std::string> splits = parse_target(target.c_str());
-        return splits[1];
-    }
-
-    cstring vendor() const {
-        std::vector<std::string> splits = parse_target(target.c_str());
-        return splits[2];
-    }
+    std::vector<const char*>* process(int argc, char* const argv[]);
 
  private:
     static safe_vector<cstring> supported_targets;

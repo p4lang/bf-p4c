@@ -140,7 +140,10 @@ boost::optional<bitvec> TofinoPhvSpec::mauGroup(unsigned container_id) const {
 
     const unsigned index = container_id / numContainerTypes();
     const unsigned mau_group_index = index / 16;
-    return mauGroups(containerType)[mau_group_index];
+    auto group = mauGroups(containerType);
+    if (mau_group_index < group.size())
+        return group[mau_group_index];
+    return boost::none;
 }
 
 const std::vector<bitvec>& TofinoPhvSpec::tagalongGroups() const {
@@ -198,14 +201,12 @@ const bitvec& TofinoPhvSpec::physicalContainers() const {
 }
 
 #if HAVE_JBAY
-// XXXX(zma) JBayPhvSpec is copied from Tofino for now, it will all be changed.
+// XXX(zma) JBayPhvSpec is TofinoPhvSpec minus tagalongs for now,
+// will need to add dark and mochas (TODO).
 JBayPhvSpec::JBayPhvSpec() {
     addType(PHV::Type::B);
     addType(PHV::Type::H);
     addType(PHV::Type::W);
-    addType(PHV::Type::TB);
-    addType(PHV::Type::TH);
-    addType(PHV::Type::TW);
 }
 
 bitvec
@@ -238,21 +239,40 @@ const bitvec& JBayPhvSpec::egressOnly() const {
     return containers;
 }
 
-const std::vector<bitvec>& JBayPhvSpec::mauGroups(PHV::Type) const {
-    P4C_UNIMPLEMENTED("JBay MAU groups");
+const std::vector<bitvec>& JBayPhvSpec::mauGroups(PHV::Type t) const {
+    static std::map<PHV::Type, std::vector<bitvec>> mau_groups;
+
+    // Initialize once
+    if (mau_groups.size() == 0) {
+        for (int index = 0; index < 4; ++index) {
+            mau_groups[PHV::Type::B].push_back(range(PHV::Type::B, index * 16, 16));
+            mau_groups[PHV::Type::W].push_back(range(PHV::Type::W, index * 16, 16)); }
+        for (int index = 0; index < 6; ++index)
+            mau_groups[PHV::Type::H].push_back(range(PHV::Type::H, index * 16, 16)); }
+
+    return mau_groups[t];
 }
 
-boost::optional<bitvec> JBayPhvSpec::mauGroup(unsigned) const {
-    P4C_UNIMPLEMENTED("JBay MAU groups");
-}
+boost::optional<bitvec> JBayPhvSpec::mauGroup(unsigned container_id) const {
+    const auto containerType = idToContainerType(container_id % numContainerTypes());
+    if (containerType.kind() != PHV::Kind::normal)
+        return boost::none;
 
+    const unsigned index = container_id / numContainerTypes();
+    const unsigned mau_group_index = index / 16;
+    auto group = mauGroups(containerType);
+    if (mau_group_index < group.size())
+        return group[mau_group_index];
+    return boost::none;
+}
 
 const std::vector<bitvec>& JBayPhvSpec::tagalongGroups() const {
-    P4C_UNIMPLEMENTED("JBay tagalong groups");
+    static std::vector<bitvec> tagalong_groups;
+    return tagalong_groups;
 }
 
 boost::optional<bitvec> JBayPhvSpec::tagalongGroup(unsigned) const {
-    P4C_UNIMPLEMENTED("JBay tagalong groups");
+    return boost::none;
 }
 
 const bitvec& JBayPhvSpec::individuallyAssignedContainers() const {
@@ -265,10 +285,7 @@ const bitvec& JBayPhvSpec::individuallyAssignedContainers() const {
 const bitvec& JBayPhvSpec::physicalContainers() const {
     static const bitvec containers = range(PHV::Type::B,  0, 64)
                                    | range(PHV::Type::H,  0, 96)
-                                   | range(PHV::Type::W,  0, 64)
-                                   | range(PHV::Type::TB, 0, 32)
-                                   | range(PHV::Type::TH, 0, 48)
-                                   | range(PHV::Type::TW, 0, 32);
+                                   | range(PHV::Type::W,  0, 64);
     return containers;
 }
 #endif /* HAVE_JBAY */

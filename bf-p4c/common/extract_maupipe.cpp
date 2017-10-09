@@ -906,11 +906,11 @@ const IR::BFN::Pipe *extract_maupipe(const IR::P4Program *program, const BFN_Opt
             (options.langVersion == CompilerOptions::FrontendVersion::P4_14);
 
     // XXX(zma) : assuming tofino & jbay have same arch for now
-    if (options.arch() == "v1model" && !needTranslation) {
+    if (options.arch == "v1model" && !needTranslation) {
         return extract_v1model_arch(&refMap, &typeMap, top);
-    } else if (options.arch() == "native") {
+    } else if (options.arch == "native") {
         return extract_native_arch(&refMap, &typeMap, top);
-    } else if (options.arch() == "v1model" && needTranslation) {
+    } else if (options.arch == "v1model" && needTranslation) {
         return extract_native_arch(&refMap, &typeMap, top);
     } else {
         error("Unknown architecture %s", options.target);

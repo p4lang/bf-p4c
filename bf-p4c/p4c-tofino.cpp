@@ -49,7 +49,7 @@ int main(int ac, char **av) {
     if (ErrorReporter::instance.getErrorCount() > 0)
         return 1;
 
-    Device::init(options.device());
+    Device::init(options.device);
 
     if (!options.targetSupported()) {
          error("target '%s' not supported", options.target);

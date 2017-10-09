@@ -18,9 +18,6 @@ class TofinoPhvContainer : public TofinoBackendTest {};
 namespace {
 
 // Test that each type of PHV::Container has the expected properties.
-// XXX(seth): For now this is a shared test between Tofino and JBay, but
-// obviously that should change once JBay-specific PHV container types are
-// implemented.
 void CheckPhvContainerTypes() {
     using Type = PHV::Type;
     const auto& phvSpec = Device::phvSpec();
@@ -164,9 +161,6 @@ void CheckTofinoPhvContainerResources() {
 }
 
 // Test that we can serialize PHV::Container objects to JSON.
-// XXX(seth): For now this is a shared test between Tofino and JBay, but
-// obviously that should change once JBay-specific PHV container types are
-// implemented.
 void CheckPhvContainerJSON() {
     std::vector<PHV::Container> inputs = {
         PHV::Container("B0"),
@@ -207,18 +201,6 @@ TEST_F(TofinoPhvContainer, Resources) {
 
 TEST_F(TofinoPhvContainer, JSON) {
     EXPECT_EQ(cstring("Tofino"), Device::currentDevice());
-    CheckPhvContainerJSON();
-}
-
-class JBayPhvContainer : public JBayBackendTest {};
-
-TEST_F(JBayPhvContainer, Types) {
-    EXPECT_EQ(cstring("JBay"), Device::currentDevice());
-    CheckPhvContainerTypes();
-}
-
-TEST_F(JBayPhvContainer, JSON) {
-    EXPECT_EQ(cstring("JBay"), Device::currentDevice());
     CheckPhvContainerJSON();
 }
 
