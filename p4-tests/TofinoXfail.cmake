@@ -214,6 +214,7 @@ p4c_add_xfail_reason("tofino"
 # BRIG-104
 p4c_add_xfail_reason("tofino"
   "Unhandled action bitmask constraint"
+  extensions/p4_tests/p4_14/13-IngressEgressConflict.p4
   testdata/p4_14_samples/mac_rewrite.p4
   extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   )
@@ -678,7 +679,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "PHV read has no allocation"
   testdata/p4_16_samples/arith-bmv2.p4
-  extensions/p4_tests/p4_14/13-IngressEgressConflict.p4
   )
 
 #
@@ -796,7 +796,7 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "Fields .* and .* are overlaid but not mutually exclusive"
-  extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
+  # extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
 )
 
 # Likely still has a bug; emits the following warning:
@@ -884,11 +884,16 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue907-bmv2.p4
   )
 
+# Hash distribution errors.  Zhao is looking at the following 2 errors currently
 p4c_add_xfail_reason("tofino"
   "Hash column out of range"
   # was "Conflicting hash distribution bit allocation .*"
   extensions/p4_tests/p4_14/jenkins/stful/stful.p4
   extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Hash table .* column .* duplicated"
   extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
   )
 
@@ -902,7 +907,7 @@ p4c_add_xfail_reason("tofino"
 # Tests where a field is placed into a container that's too big, causing us to
 # generate an extract that reads past the beginning of the input buffer.
 p4c_add_xfail_reason("tofino"
-  "Container .* contains deparsed header fields, but it has unused bits.* Extract field slice .* with a negative offset."
+  "Container .* contains deparsed header fields, but it has unused bits.*"
   extensions/p4_tests/p4_14/22-BigToSmallFieldWithMask8.p4
   extensions/p4_tests/p4_14/test_config_262_req_packing.p4
   extensions/p4_tests/p4_14/c1/COMPILER-242/case1679.p4

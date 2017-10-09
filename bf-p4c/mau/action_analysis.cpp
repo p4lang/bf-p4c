@@ -229,8 +229,8 @@ bool ActionAnalysis::verify_P4_action_without_phv(cstring action_name) {
         }
 
         bitrange bits = {0, 0};
-        bitvec write_bits(bits.lo, bits.size());
         auto field = phv.field(field_action.write.expr, &bits);
+        bitvec write_bits(bits.lo, bits.size());
         BUG_CHECK(field, "Cannot convert an instruction write to a PHV field reference");
         if (written_fields.find(field) != written_fields.end()) {
             if (written_fields[field].intersects(write_bits)) {

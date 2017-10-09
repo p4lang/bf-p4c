@@ -90,10 +90,14 @@ const IR::MAU::Action *InstructionSelection::postorder(IR::MAU::Action *af) {
 }
 
 bool InstructionSelection::checkPHV(const IR::Expression *e) {
+    if (auto *c = e->to<IR::Cast>())
+        return checkPHV(c->expr);
     return phv.field(e);
 }
 
 bool InstructionSelection::checkSrc1(const IR::Expression *e) {
+    if (auto *c = e->to<IR::Cast>())
+        return checkSrc1(c->expr);
     if (e->is<IR::Constant>()) return true;
     if (e->is<IR::BoolLiteral>()) return true;
     if (e->is<IR::ActionArg>()) return true;
@@ -113,15 +117,20 @@ bool InstructionSelection::checkConst(const IR::Expression *ex, long &value) {
     }
 }
 
+bool InstructionSelection::equiv(const IR::Expression *a, const IR::Expression *b) {
+    if (*a == *b) return true;
+    if (typeid(*a) != typeid(*b)) return false;
+    if (auto ca = a->to<IR::Cast>()) {
+        auto cb = b->to<IR::Cast>();
+        return ca->type == cb->type && equiv(ca->expr, cb->expr);
+    }
+    return false;
+}
+
 const IR::Expression *InstructionSelection::postorder(IR::BoolLiteral *bl) {
     if (!findContext<IR::MAU::Action>())
         return bl;
     return new IR::Constant(new IR::Type::Bits(1, false), static_cast<int>(bl->value));
-}
-
-const IR::Expression *InstructionSelection::postorder(IR::Cast *e) {
-    // FIXME -- just ignoring casts may be wrong if they actually do something
-    return e->expr;
 }
 
 const IR::Expression *InstructionSelection::postorder(IR::BAnd *e) {
@@ -236,9 +245,9 @@ const IR::Expression *InstructionSelection::postorder(IR::Mux *e) {
             isMin = true;
         else if (!r->is<IR::Grt>() && !r->is<IR::Geq>())
             return e;
-        if (*r->left == *e->e2 && *r->right == *e->e1)
+        if (equiv(r->left, e->e2) && equiv(r->right, e->e1))
             isMin = !isMin;
-        else if (*r->left != *e->e1 || *r->right != *e->e2)
+        else if (!equiv(r->left, e->e1) || !equiv(r->right, e->e2))
             return e;
         cstring op = isMin ? "minu" : "maxu";
         if (auto t = r->left->type->to<IR::Type::Bits>())
@@ -250,6 +259,8 @@ const IR::Expression *InstructionSelection::postorder(IR::Mux *e) {
 
 static const IR::MAU::Instruction *fillInstDest(const IR::Expression *in,
                                                 const IR::Expression *dest) {
+    if (auto *c = in->to<IR::Cast>())
+        return fillInstDest(c->expr, dest);
     auto *inst = in ? in->to<IR::MAU::Instruction>() : nullptr;
     auto *tv = inst ? inst->operands[0]->to<IR::TempVar>() : nullptr;
     if (tv) {
@@ -501,6 +512,10 @@ const IR::MAU::Action *StatefulHashDistSetup::preorder(IR::MAU::Action *act) {
             if (auto *tv = prim->operands[1]->to<IR::TempVar>()) {
                 remove_tempvars.insert(tv->name);
             }
+            if (auto *c = prim->operands[1]->to<IR::Cast>()) {
+                if (auto tv = c->expr->to<IR::TempVar>())
+                    remove_tempvars.insert(tv->name);
+            }
         }
     }
     return act;
@@ -535,8 +550,12 @@ IR::MAU::HashDist *StatefulHashDistSetup::create_hash_dist(const IR::Expression 
                                                            const IR::Primitive *prim) {
     safe_vector<int> init_units;
     cstring algorithm = "identity";
-    int size = expr->type->width_bits();
-    auto *hd = new IR::MAU::HashDist(prim->srcInfo, IR::Type::Bits::get(size), expr,
+    auto hash_field = expr;
+    if (auto c = expr->to<IR::Cast>())
+        hash_field = c->expr;
+
+    int size = hash_field->type->width_bits();
+    auto *hd = new IR::MAU::HashDist(prim->srcInfo, IR::Type::Bits::get(size), hash_field,
                                      algorithm, init_units, prim);
     hd->algorithm = algorithm;
     hd->bit_width = size;
@@ -555,6 +574,22 @@ class InitializeHashDist : public MauTransform {
  public:
     explicit InitializeHashDist(const IR::MAU::HashDist *h) : hd(h) {}
 };
+
+/** Either find or generate a Hash Distribution unit, given what IR::Node is in the primitive
+ *  FIXME: Currently v1model always casts these particular parameters to a size.  Perhaps
+ *  these casts will be gone by the time we reach extract_maupipe.
+ */
+IR::MAU::HashDist *StatefulHashDistSetup::find_hash_dist(const IR::Expression *expr,
+                                                         const IR::Primitive *prim) {
+    if (auto *c = expr->to<IR::Cast>())
+        return find_hash_dist(c->expr, prim);
+    IR::MAU::HashDist *hd = nullptr;
+    if (auto *tv = expr->to<IR::TempVar>())
+        hd = stateful_alu_from_hash_dists.at(tv->name);
+    else if (phv.field(expr))
+        hd = create_hash_dist(expr, prim);
+    return hd;
+}
 
 /** This pass was specifically created to deal with adding the HashDist object to different
  *  stateful objects.  On one particular case, execute_stateful_alu_from_hash was creating
@@ -585,12 +620,7 @@ const IR::MAU::Table *StatefulHashDistSetup::postorder(IR::MAU::Table *tbl) {
             }
 
             if (prim->operands.size() >= 2) {
-                IR::MAU::HashDist *hd = nullptr;
-                if (phv.field(prim->operands[1])) {
-                    hd = create_hash_dist(prim->operands[1], prim);
-                } else if (auto *tv = prim->operands[1]->to<IR::TempVar>()) {
-                    hd = stateful_alu_from_hash_dists.at(tv->name);
-                }
+                auto hd = find_hash_dist(prim->operands[1], prim);
                 if (hd == nullptr) continue;
                 // Painful code as it is unclear what is visited first, the actions or the
                 // attached tables.  Probably should separate into multiple passes
@@ -608,8 +638,107 @@ const IR::MAU::Table *StatefulHashDistSetup::postorder(IR::MAU::Table *tbl) {
     return tbl;
 }
 
+const IR::MAU::Instruction *ConvertCastToSlice::preorder(IR::MAU::Instruction *instr) {
+    BUG_CHECK(findContext<IR::MAU::Instruction>() == nullptr, "nested instructions");
+    contains_cast = false;
+    return instr;
+}
+
+/** Currently because of AttachedOutputs, StatefulAlus appear in the code.  Only changes
+ *  to the IR and TableDependency will elimintate the need for this preorder
+ */
+const IR::MAU::SaluAction *ConvertCastToSlice::preorder(IR::MAU::SaluAction *sact) {
+    prune();
+    return sact;
+}
+
+/**
+ *  FIXME: a small hack on converting casts in slices to just slices, which should have really
+ *  been taken care of in the midend
+ */
+const IR::Expression *ConvertCastToSlice::preorder(IR::Slice *sl) {
+    if (auto *c = sl->e0->to<IR::Cast>()) {
+        BUG_CHECK(c->expr->type->width_bits() >=  (sl->getH() - sl->getL() + 1), "Slice of a cast "
+                  "that is larger than the cast");
+        return MakeSlice(c->expr, sl->getL(), sl->getH());
+    }
+    return sl;
+}
+
+const IR::Cast *ConvertCastToSlice::preorder(IR::Cast *c) {
+    contains_cast = true;
+    return c;
+}
+
+/** The goal of this particular function is to remove all final casts from any particular backend
+ *  instruction, and if the particular instruction is an assignment of mismatched fields, then
+ *  properly convert this into the correct field by field instructions.  Currently the compiler
+ *  will print out a warning if the action contains fields and parameters that do not have the
+ *  same size, but will continue.  Unfortunately, I have to do this as switch-l2 will fail at
+ *  this point if this is not the case.
+ */
+const IR::Node *ConvertCastToSlice::postorder(IR::MAU::Instruction *instr) {
+    if (!contains_cast)
+        return instr;
+    auto converted_instrs = new IR::Vector<IR::Primitive>();
+
+    if (instr->name != "set") {
+        bool size_set = false;
+        bool all_equal = true;
+        auto s1 = new IR::MAU::Instruction(instr->srcInfo, instr->name);
+        int operand_size;
+        for (auto operand : instr->operands) {
+            auto expr = operand;
+            if (auto c = operand->to<IR::Cast>()) {
+                expr = c->expr;
+            }
+            if (!size_set) {
+                size_set = true;
+                operand_size = expr->type->width_bits();
+            } else if (operand_size != expr->type->width_bits()) {
+                all_equal = false;
+            }
+            s1->operands.push_back(expr);
+        }
+
+        WARN_CHECK(all_equal, "%s: Currently the Barefoot HW compiler cannot handle any non "
+                   "direct assignment instruction that has missized rvalues.  Please rewrite "
+                   "so that all parameters are of the same size -- %s", instr->srcInfo, instr);
+        return s1;
+    }
+    BUG_CHECK(instr->operands.size() == 2, "Set instruction does not two operands?");
+    auto write = instr->operands[0];
+    auto read_cast = instr->operands[1]->to<IR::Cast>();
+    BUG_CHECK(read_cast != nullptr, "%s: ConvertCastToSlice pass does not have read IR::Cast -- "
+                                    "%s", instr->srcInfo, instr);
+    auto read = read_cast->expr;
+    if (write->type->width_bits() == read->type->width_bits()) {
+        auto s1 = new IR::MAU::Instruction(instr->srcInfo, instr->name, write, read);
+        converted_instrs->push_back(s1);
+    } else if (write->type->width_bits() < read->type->width_bits()) {
+        auto s1 = new IR::MAU::Instruction(instr->srcInfo, instr->name, write,
+                                           MakeSlice(read, 0, write->type->width_bits() - 1));
+        converted_instrs->push_back(s1);
+    } else {
+        auto difference = write->type->width_bits() - read->type->width_bits();
+        auto s1 = new IR::MAU::Instruction(instr->srcInfo, instr->name,
+                                           MakeSlice(write, 0, read->type->width_bits() - 1),
+                                           read);
+        auto s2 = new IR::MAU::Instruction(instr->srcInfo, instr->name,
+                                           MakeSlice(write, read->type->width_bits(),
+                                                     write->type->width_bits() - 1),
+                                           new IR::Constant(IR::Type::Bits::get(difference), 0));
+        converted_instrs->push_back(s1);
+        converted_instrs->push_back(s2);
+    }
+    return converted_instrs;
+}
+
+
+
 DoInstructionSelection::DoInstructionSelection(PhvInfo &phv) : PassManager {
     new InstructionSelection(phv),
+    new ConvertCastToSlice(phv),
     new StatefulHashDistSetup(phv),
     new CollectPhvInfo(phv),
     new PHV::ValidateActions(phv, false, false, false)

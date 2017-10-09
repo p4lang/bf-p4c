@@ -34,30 +34,85 @@ class ActionArgSetup : public Transform {
     void add_arg(cstring name, const IR::Expression *e) { args[name] = e; }
 };
 
-class ActionBodySetup : public Inspector {
+class ConvertMethodCall : public Transform {
     P4::ReferenceMap        *refMap;
     P4::TypeMap             *typeMap;
-    IR::MAU::Action         *af;
-    ActionArgSetup          &setup;
 
-    const IR::Primitive *cvtMethodCall(const IR::MethodCallExpression *mc);
+    const IR::Primitive *preorder(IR::MethodCallExpression *mc) {
+        auto mi = P4::MethodInstance::resolve(mc, refMap, typeMap, true);
+        cstring name;
+        const IR::Expression *recv = nullptr;
+        if (auto bi = mi->to<P4::BuiltInMethod>()) {
+            name = bi->name;
+            recv = bi->appliedTo;
+        } else if (auto em = mi->to<P4::ExternMethod>()) {
+            name = em->actualExternType->name + "." + em->method->name;
+            auto n = em->object->getNode();
+            recv = new IR::GlobalRef(typeMap->getType(n), n);
+        } else if (auto ef = mi->to<P4::ExternFunction>()) {
+            name = ef->method->name;
+        } else {
+            BUG("method call %s not yet implemented", mc); }
+        auto prim = new IR::Primitive(mc->srcInfo, mc->type, name);
+        if (mc->method && mc->method->type)
+            prim = new IR::MAU::TypedPrimitive(mc->srcInfo, mc->type, mc->method->type, name);
+        if (recv) prim->operands.push_back(recv);
+        for (auto arg : *mc->arguments)
+            prim->operands.push_back(arg);
+        return prim;
+    }
+
+    const IR::Primitive *postorder(IR::Primitive *prim) {
+        if (prim->name == "method_call_init") {
+            BUG_CHECK(prim->operands.size() == 1, "method call initialization failed");
+            auto first_operand = prim->operands[0];
+            BUG_CHECK(first_operand->is<IR::Primitive>(), "method call initialization mismatch");
+            return first_operand->to<IR::Primitive>();
+        } else {
+            return prim;
+        }
+    }
+
+ public:
+    ConvertMethodCall(P4::ReferenceMap *rm, P4::TypeMap *tm) : refMap(rm), typeMap(tm) {}
+};
+
+/** Initial conversion of P4-16 action information to backend structures.  Converts all method
+ *  calls to primitive calls with operands, and also converts all parameters within an action
+ *  into IR::ActionArgs
+ */
+class ActionFunctionSetup : public PassManager {
+    P4::ReferenceMap        *refMap;
+    P4::TypeMap             *typeMap;
+    ActionArgSetup          *action_arg_setup;
+
+ public:
+    ActionFunctionSetup(P4::ReferenceMap *rm, P4::TypeMap *tm, ActionArgSetup *aas) :
+    refMap(rm), typeMap(tm), action_arg_setup(aas) {
+        addPasses({
+            new ConvertMethodCall(refMap, typeMap),
+            action_arg_setup
+        });
+    }
+};
+
+class ActionBodySetup : public Inspector {
+    IR::MAU::Action         *af;
+
     bool preorder(const IR::IndexedVector<IR::StatOrDecl> *) override { return true; }
     bool preorder(const IR::BlockStatement *) override { return true; }
     bool preorder(const IR::AssignmentStatement *assign) override {
         cstring pname = "modify_field";
         if (assign->left->type->is<IR::Type_Header>())
             pname = "copy_header";
-        auto right = assign->right;
-        if (auto cast = right->to<IR::Cast>())
-            right = cast->expr;
-        if (auto mc = right->to<IR::MethodCallExpression>())
-            right = cvtMethodCall(mc);
-        auto prim = new IR::Primitive(assign->srcInfo, pname, assign->left, right);
-        af->action.push_back(prim->apply(setup));
+        auto prim = new IR::Primitive(assign->srcInfo, pname, assign->left, assign->right);
+        af->action.push_back(prim);
         return false; }
     bool preorder(const IR::MethodCallStatement *mc) override {
-        af->action.push_back(cvtMethodCall(mc->methodCall)->apply(setup));
-        return false; }
+        auto mc_init = new IR::Primitive(mc->srcInfo, "method_call_init", mc->methodCall);
+        af->action.push_back(mc_init);
+        return false;
+    }
     bool preorder(const IR::Declaration *) override {
         // FIXME -- for now, ignoring local variables?  Need copy prop + dead code elim
         return false; }
@@ -69,60 +124,34 @@ class ActionBodySetup : public Inspector {
         return false; }
 
  public:
-    ActionBodySetup(P4::ReferenceMap *refMap, P4::TypeMap *typeMap, IR::MAU::Action *af,
-                    ActionArgSetup &setup)
-    : refMap(refMap), typeMap(typeMap), af(af), setup(setup) {}
+    explicit ActionBodySetup(IR::MAU::Action *af) : af(af) {}
 };
-
-const IR::Primitive *ActionBodySetup::cvtMethodCall(const IR::MethodCallExpression *mc) {
-    auto mi = P4::MethodInstance::resolve(mc, refMap, typeMap, true);
-    cstring name;
-    const IR::Expression *recv = nullptr;
-    if (auto bi = mi->to<P4::BuiltInMethod>()) {
-        name = bi->name;
-        recv = bi->appliedTo;
-    } else if (auto em = mi->to<P4::ExternMethod>()) {
-        name = em->actualExternType->name + "." + em->method->name;
-        auto n = em->object->getNode();
-        recv = new IR::GlobalRef(typeMap->getType(n), n);
-    } else if (auto ef = mi->to<P4::ExternFunction>()) {
-        name = ef->method->name;
-    } else {
-        BUG("method call %s not yet implemented", mc); }
-    auto prim = new IR::Primitive(mc->srcInfo, mc->type, name);
-    if (mc->method && mc->method->type)
-        prim = new IR::MAU::TypedPrimitive(mc->srcInfo, mc->type, mc->method->type, name);
-    if (recv) prim->operands.push_back(recv);
-    for (auto arg : *mc->arguments)
-        prim->operands.push_back(arg);
-    return prim;
-}
 
 }  // anonymous namespace
 
-static IR::MAU::Action *createActionFunction(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
-                                             const IR::P4Action *ac,
-                                             const IR::Vector<IR::Expression> *args) {
+static const IR::MAU::Action *createActionFunction(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
+    const IR::P4Action *ac, const IR::Vector<IR::Expression> *args) {
     auto rv = new IR::MAU::Action;
     rv->srcInfo = ac->srcInfo;
     rv->name = ac->externalName();
-    ActionArgSetup setup;
+    ActionArgSetup aas;
     size_t arg_idx = 0;
     for (auto param : *ac->parameters->getEnumerator()) {
         if ((param->direction == IR::Direction::None) ||
             ((!args || arg_idx >= args->size()) && param->direction == IR::Direction::In)) {
             auto arg = new IR::ActionArg(param->srcInfo, param->type, rv->name, param->name);
-            setup.add_arg(arg);
+            aas.add_arg(arg);
             rv->args.push_back(arg);
         } else {
             if (!args || arg_idx >= args->size())
                 error("%s: Not enough args for %s", args ? args->srcInfo : ac->srcInfo, ac);
             else
-                setup.add_arg(param->name, args->at(arg_idx++)); } }
+                aas.add_arg(param->name, args->at(arg_idx++)); } }
     if (arg_idx != (args ? args->size(): 0))
         error("%s: Too many args for %s", args->srcInfo, ac);
-    ac->body->apply(ActionBodySetup(refMap, typeMap, rv, setup));
-    return rv;
+    ac->body->apply(ActionBodySetup(rv));
+    ActionFunctionSetup afs(refMap, typeMap, &aas);
+    return rv->apply(afs)->to<IR::MAU::Action>();
 }
 
 static IR::ID getAnnotID(const IR::Annotations *annot, cstring name) {
