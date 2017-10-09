@@ -230,7 +230,7 @@ void Phv::gen_phv_field_size_map() {
 void Phv::output(json::map &ctxt_json) {
     json::vector &phv_alloc = ctxt_json["phv_allocation"];
     gen_phv_field_size_map();
-    for (int i = 0; i < NUM_MAU_STAGES; i++) {
+    for (int i = 0; i < Target::NUM_MAU_STAGES(); i++) {
         json::map phv_alloc_stage;
         json::vector &phv_alloc_stage_ingress = phv_alloc_stage["ingress"] = json::vector();
         json::vector &phv_alloc_stage_egress = phv_alloc_stage["egress"] = json::vector();
@@ -292,7 +292,7 @@ void Phv::output(json::map &ctxt_json) {
         phv_alloc_stage["stage_number"] = i;
         phv_alloc.push_back(std::move(phv_alloc_stage)); }
     // FIXME: Fix json clone method to do above loops more efficiently
-    //for (int i = 0; i < NUM_MAU_STAGES; i++) {
+    //for (int i = 0; i < Target::NUM_MAU_STAGES(); i++) {
     //    phv_alloc_stage["stage_number"] = i;
     //    phv_alloc.push_back(std::move(phv_alloc_stage.clone())); }
 }

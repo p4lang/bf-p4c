@@ -3,7 +3,6 @@
 
 enum {
     /* global constants related to MAU stage */
-    NUM_MAU_STAGES = 12,
     LOGICAL_TABLES_PER_STAGE = 16,
     TCAM_TABLES_PER_STAGE = 8,
     SRAM_ROWS = 8,

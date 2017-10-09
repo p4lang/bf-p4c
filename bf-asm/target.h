@@ -21,6 +21,8 @@ class Target {
  public:
     class Phv;
     FOR_ALL_TARGETS(DECLARE_TARGET_CLASS)
+    static int NUM_MAU_STAGES();
+    static const char *name();
 };
 
 #include "gen/tofino/memories.pipe_addrmap.h"
@@ -69,6 +71,9 @@ class Target::Tofino : public Target {
 
         ::Tofino::regs_all_deparser_input_phase         input;
         ::Tofino::regs_all_deparser_header_phase        header;
+    };
+    enum {
+        NUM_MAU_STAGES = 12,
     };
 };
 
@@ -125,6 +130,9 @@ class Target::JBay : public Target {
     };
     typedef ::JBay::regs_match_action_stage_        mau_regs;
     typedef ::JBay::regs_deparser                   deparser_regs;
+    enum {
+        NUM_MAU_STAGES = 20,
+    };
 };
 void declare_registers(const Target::JBay::top_level_regs *regs);
 void undeclare_registers(const Target::JBay::top_level_regs *regs);

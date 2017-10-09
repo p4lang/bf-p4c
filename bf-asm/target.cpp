@@ -156,3 +156,21 @@ void declare_registers(const Target::JBay::deparser_regs *regs) {
             regs->emit_fieldname(out, addr, end); });
 }
 #endif // HAVE_JBAY
+
+int Target::NUM_MAU_STAGES() {
+    switch (options.target) {
+#define SWITCH_FOR_TARGET(TARGET) case TARGET::tag: return TARGET::NUM_MAU_STAGES;
+    FOR_ALL_TARGETS(SWITCH_FOR_TARGET)
+#undef SWITCH_FOR_TARGET
+    default: assert(0); }
+    return -1;
+}
+
+const char *Target::name() {
+    switch (options.target) {
+#define SWITCH_FOR_TARGET(TARGET) case TARGET::tag: return TARGET::name;
+    FOR_ALL_TARGETS(SWITCH_FOR_TARGET)
+#undef SWITCH_FOR_TARGET
+    default: assert(0); }
+    return nullptr;
+}

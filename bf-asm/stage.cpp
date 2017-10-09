@@ -32,7 +32,7 @@ public:
 
 AsmStage::AsmStage() : Section("stage") {
     int slot = 0, byte = 0;
-    stage.resize(NUM_MAU_STAGES);
+    stage.resize(Target::NUM_MAU_STAGES());
     for (unsigned  i = 0; i < stage.size(); i++)
         stage[i].stageno = i;
     for (int i = 0; i < ACTION_DATA_8B_SLOTS; i++) {
@@ -58,9 +58,9 @@ void AsmStage::start(int lineno, VECTOR(value_t) args) {
     else if (args[0].i < 0)
         error(lineno, "invalid stage number");
     else if ((unsigned)args[0].i >= stage.size()) {
-        if (args[0].i >= NUM_MAU_STAGES)
-            warning(lineno, "tofino only supports %d stages, using %d",
-                    NUM_MAU_STAGES, args[0].i + 1);
+        if (args[0].i >= Target::NUM_MAU_STAGES())
+            warning(lineno, "%s only supports %d stages, using %d", Target::name(),
+                    Target::NUM_MAU_STAGES(), args[0].i + 1);
         stage.resize(args[0].i + 1);
         for (unsigned  i = 0; i < stage.size(); i++)
             stage[i].stageno = i; }
@@ -77,11 +77,11 @@ void AsmStage::input(VECTOR(value_t) args, value_t data) {
                 warning(kv.key.lineno, "Stage dependency in stage 0 will be ignored");
             if (kv.value == "concurrent") {
                 stage[stageno].stage_dep[gress] = Stage::CONCURRENT;
-                if (stageno == NUM_MAU_STAGES/2)
+                if (stageno == Target::NUM_MAU_STAGES()/2)
                     error(kv.value.lineno, "stage %d must be match dependent", stageno);
             } else if (kv.value == "action") {
                 stage[stageno].stage_dep[gress] = Stage::ACTION_DEP;
-                if (stageno == NUM_MAU_STAGES/2)
+                if (stageno == Target::NUM_MAU_STAGES()/2)
                     error(kv.value.lineno, "stage %d must be match dependent", stageno);
             } else if (kv.value == "match")
                 stage[stageno].stage_dep[gress] = Stage::MATCH_DEP;
@@ -127,7 +127,7 @@ void AsmStage::process() {
         stage[i].pass1_tcam_id = -1;
         for (auto table : stage[i].tables)
             table->pass1();
-        if (i == NUM_MAU_STAGES/2) {
+        if (i == Target::NUM_MAU_STAGES()/2) {
             /* to turn the corner, the middle stage must always be match dependent */
             for (gress_t gress : Range(INGRESS, EGRESS))
                 stage[i].stage_dep[gress] = Stage::MATCH_DEP; }
@@ -279,7 +279,7 @@ template<class REGS> void Stage::write_regs(REGS &regs) {
         deferred_eop_bus_delay.eop_internal_delay_fifo = pred_cycle(gress) + 3;
         /* FIXME -- making this depend on the dependecny of the next stage seems wrong */
         if (stageno == AsmStage::numstages()-1) {
-            if (AsmStage::numstages() < NUM_MAU_STAGES)
+            if (AsmStage::numstages() < Target::NUM_MAU_STAGES())
                 deferred_eop_bus_delay.eop_output_delay_fifo = 0;
             else
                 deferred_eop_bus_delay.eop_output_delay_fifo = pipelength(gress) - 1;
@@ -296,6 +296,8 @@ template<class REGS> void Stage::write_regs(REGS &regs) {
         if (stageno > 0 && stage_dep[gress] == MATCH_DEP)
             regs.dp.match_ie_input_mux_sel |= 1 << gress;
     }
+    write_dependency_regs(regs);
+
     /* FIXME -- need to set based on interstage dependencies */
     regs.dp.phv_fifo_enable.phv_fifo_ingress_action_output_enable = stage_dep[INGRESS] != ACTION_DEP;
     regs.dp.phv_fifo_enable.phv_fifo_egress_action_output_enable = stage_dep[EGRESS] != ACTION_DEP;
@@ -431,7 +433,7 @@ void Stage::output(json::map &ctxt_json) {
     regs.emit_json(*open_output("regs.match_action_stage.%02x.cfg.json", stageno) , stageno);
     char buf[64];
     sprintf(buf, "regs.match_action_stage.%02x", stageno);
-    if (stageno < NUM_MAU_STAGES)
+    if (stageno < Target::NUM_MAU_STAGES())
         TopLevel::all->set_mau_stage(stageno, buf);
     undeclare_registers(&regs);
     gen_configuration_cache(regs, ctxt_json["configuration_cache"]);

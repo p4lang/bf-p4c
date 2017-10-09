@@ -5,6 +5,14 @@ template<> void Stage::write_concurrency_regs(Target::JBay::mau_regs &regs, gres
         regs.dp.cur_stage_dependency_on_prev[gress] = stage_dep[gress] != MATCH_DEP;
     if (stageno != AsmStage::numstages()-1)
         regs.dp.next_stage_dependency_on_cur[gress] = this[1].stage_dep[gress] != MATCH_DEP;
-    else if (AsmStage::numstages() < NUM_MAU_STAGES)
+    else if (AsmStage::numstages() < Target::JBay::NUM_MAU_STAGES)
         regs.dp.next_stage_dependency_on_cur[gress] = 1;
+}
+
+template<> void Stage::write_dependency_regs(Target::JBay::mau_regs &regs) {
+    auto &merge = regs.rams.match.merge;
+    if (stageno != AsmStage::numstages()-1) {
+        merge.mpr_bus_dep.mpr_bus_dep_egress = this[1].stage_dep[EGRESS] != MATCH_DEP;
+        merge.mpr_bus_dep.mpr_bus_dep_ingress = this[1].stage_dep[INGRESS] != MATCH_DEP;
+    }
 }
