@@ -92,10 +92,11 @@ template <> int Parser::State::Match::write_future_config(Target::JBay::parser_r
 
 static void write_output_slot(int lineno, Target::JBay::parser_regs::_memory::_po_action_row *row,
                               unsigned &used, int src, int dest, int bytemask, bool offset) {
+    assert(bytemask > 0 && bytemask < 4);
     for (int i = 0; i < 20; ++i) {
         if (used & (1 << i)) continue;
         row->phv_dst[i] = dest;
-        row->phv_src[i] = src;
+        row->phv_src[i] = src + (bytemask == 2);
         if (offset) row->phv_offset_add_dst[i] = 1;
         row->extract_type[i] = bytemask;
         used |= 1 << i;
@@ -113,8 +114,6 @@ template <> int Parser::State::Match::Save::write_output_config(Target::JBay::pa
     if (where->reg.size == 8 && mask == 1) {
         if (where->reg.index & 1) {
             mask <<= 1;
-            if (lo == 0)
-                error(where.lineno, "Can't extract byte 0 into an odd 8-bit PHV");
             --lo; } }
     if (flags & ROTATE) error(where.lineno, "no rotate support in jbay");
     if (mask & 3)
@@ -129,6 +128,9 @@ static void write_output_const_slot(
         int lineno, Target::JBay::parser_regs::_memory::_po_action_row *row, unsigned &used,
         unsigned src, int dest, int bytemask, int flags) {
     // use bits 24..27 of 'used' to track the two constant slots
+    assert(bytemask > 0 && bytemask < 4);
+    // FIXME -- should be able to treat this as 4x8-bit rather than 2x16-bit slots, as long
+    // as the ROTATE flag is consistent for each half.
     int cslot = 0;
     for (; cslot < 2; cslot++)
         if (0 == (used & (bytemask << (2*cslot + 24)))) break;
@@ -139,7 +141,7 @@ static void write_output_const_slot(
     if (flags & 2 /*ROTATE*/) row->val_const_rot[cslot] = 1;
     used |= bytemask << (2*cslot + 24);
     unsigned tmpused = used | SAVE_ONLY_USED_SLOTS;
-    write_output_slot(lineno, row, tmpused, 2*cslot + 60, dest, bytemask, flags);
+    write_output_slot(lineno, row, tmpused, 2*cslot + 60 - (bytemask == 2), dest, bytemask, flags);
     used |= tmpused &~ SAVE_ONLY_USED_SLOTS;
 }
 
