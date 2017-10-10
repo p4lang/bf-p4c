@@ -26,7 +26,8 @@ base_program=""
 debug_info=false
 tmpdir=""
 pipe_args=""
-execdir=$(dirname $(readlink -f $0))
+READLINK_COMMAND=$(which greadlink || which readlink)
+execdir=$(dirname $($READLINK_COMMAND -f $0))
 
 if [ x"$BFAS_OPTIONS" = x"-g" ]; then
     debug_info=true
