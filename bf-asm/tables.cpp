@@ -1216,29 +1216,13 @@ void MatchTable::gen_idletime_tbl_cfg(json::map &stage_tbl) {
        idletime->gen_stage_tbl_cfg(stage_tbl);
 }
 
-template<> void MatchTable::setup_next_table_map(Target::Tofino::mau_regs &regs, Table *tbl) {
-    auto &merge = regs.rams.match.merge;
-    merge.next_table_map_en |= (1U << logical_id);
-    auto &mp = merge.next_table_map_data[logical_id];
-    ubits<8> *map_data[8] = { &mp[0].next_table_map_data0, &mp[0].next_table_map_data1,
-        &mp[0].next_table_map_data2, &mp[0].next_table_map_data3, &mp[1].next_table_map_data0,
-        &mp[1].next_table_map_data1, &mp[1].next_table_map_data2, &mp[1].next_table_map_data3 };
-    int i = 0;
-    for (auto &n : tbl->hit_next)
-        *map_data[i++] = n ? n->table_id() : 0xff;
-}
-
+#include "tofino/tables.cpp"
 #if HAVE_JBAY
-template<> void MatchTable::setup_next_table_map(Target::JBay::mau_regs &regs, Table *tbl) {
-    auto &merge = regs.rams.match.merge;
-    merge.next_table_map_en |= (1U << logical_id);
-    int i = 0;
-    for (auto &n : tbl->hit_next)
-        merge.pred_map_loca[logical_id][i++].pred_map_loca_next_table = n ? n->table_id() : 0x1ff;
-}
+#include "jbay/tables.cpp"
 #endif // HAVE_JBAY
 
-template<class REGS> void MatchTable::write_regs(REGS &regs, int type, Table *result) {
+template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_regs &regs,
+                                                          int type, Table *result) {
     /* this follows the order and behavior in stage_match_entry_table.py
      * it can be reorganized to be clearer */
 

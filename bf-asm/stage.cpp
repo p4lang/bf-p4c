@@ -240,7 +240,7 @@ int Stage::pred_cycle(gress_t gress) {
 #include "jbay/stage.cpp"
 #endif /* HAVE_JBAY */
 
-template<class REGS> void Stage::write_regs(REGS &regs) {
+template<class TARGET> void Stage::write_common_regs(typename TARGET::mau_regs &regs) {
     /* FIXME -- most of the values set here are 'placeholder' constants copied
      * from build_pipeline_output_2.py in the compiler */
     auto &merge = regs.rams.match.merge;
@@ -279,7 +279,7 @@ template<class REGS> void Stage::write_regs(REGS &regs) {
         deferred_eop_bus_delay.eop_internal_delay_fifo = pred_cycle(gress) + 3;
         /* FIXME -- making this depend on the dependecny of the next stage seems wrong */
         if (stageno == AsmStage::numstages()-1) {
-            if (AsmStage::numstages() < Target::NUM_MAU_STAGES())
+            if (AsmStage::numstages() < TARGET::NUM_MAU_STAGES)
                 deferred_eop_bus_delay.eop_output_delay_fifo = 0;
             else
                 deferred_eop_bus_delay.eop_output_delay_fifo = pipelength(gress) - 1;
@@ -292,11 +292,9 @@ template<class REGS> void Stage::write_regs(REGS &regs) {
         deferred_eop_bus_delay.eop_delay_fifo_en = 1;
         regs.dp.action_output_delay[gress] = pipelength(gress) - 3;
         regs.dp.pipelength_added_stages[gress] = pipelength(gress) - 20;
-        write_concurrency_regs(regs, gress);
         if (stageno > 0 && stage_dep[gress] == MATCH_DEP)
             regs.dp.match_ie_input_mux_sel |= 1 << gress;
     }
-    write_dependency_regs(regs);
 
     /* FIXME -- need to set based on interstage dependencies */
     regs.dp.phv_fifo_enable.phv_fifo_ingress_action_output_enable = stage_dep[INGRESS] != ACTION_DEP;

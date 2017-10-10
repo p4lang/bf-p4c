@@ -488,6 +488,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(MatchTable, Table,
     using Table::pass1;
     void pass1(int type);
     using Table::write_regs;
+    template<class TARGET> void write_common_regs(typename TARGET::mau_regs &, int, Table *);
     template<class REGS> void write_regs(REGS &, int type, Table *result);
     template<class REGS> void setup_next_table_map(REGS &, Table *);
     void common_init_setup(const VECTOR(pair_t) &, bool, P4Table::type) override;

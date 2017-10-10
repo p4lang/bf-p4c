@@ -63,9 +63,8 @@ public:
     template<class TARGET> void output(json::map &ctxt_json);
     template<class REGS>
         void gen_configuration_cache(REGS &regs, json::vector &cfg_cache);
-    template<class REGS> void write_concurrency_regs(REGS &regs, gress_t gress);
-    template<class REGS> void write_dependency_regs(REGS &regs);
     template<class REGS> void write_regs(REGS &regs);
+    template<class TARGET> void write_common_regs(typename TARGET::mau_regs &regs);
     int adr_dist_delay(gress_t gress);
     int pipelength(gress_t gress);
     int pred_cycle(gress_t gress);
