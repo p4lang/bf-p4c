@@ -398,11 +398,14 @@ template<class REGS> void ExactMatchTable::write_regs(REGS &regs) {
         unsigned bus = row.row*2 + row.bus;
         /* FIXME -- factor this where possible with ternary match code */
         if (action) {
-            int lo_huffman_bits = std::min(action->format->log2size-2, 5U);
+            unsigned action_log2size = 0;
+            if (auto adt = action->to<ActionTable>())
+                action_log2size = adt->get_log2size();
+            int lo_huffman_bits = std::min(action_log2size - 2, 5U);
             if (action.args.size() <= 1) {
                 merge.mau_actiondata_adr_mask[0][bus] = 0x3fffff & (~0U << lo_huffman_bits);
                 merge.mau_actiondata_adr_vpn_shiftcount[0][bus] =
-                    std::max(0, (int)action->format->log2size - 7);
+                    std::max(0, (int)action_log2size - 7);
             } else {
                 /* FIXME -- support for multiple sizes of action data? */
                 merge.mau_actiondata_adr_mask[0][bus] =
@@ -428,7 +431,10 @@ template<class REGS> void ExactMatchTable::write_regs(REGS &regs) {
                         action.args[0].field()->by_group[group]->bits[0].lo % 128; } }
             /* FIXME -- factor this where possible with ternary match code */
             if (action) {
-                int lo_huffman_bits = std::min(action->format->log2size-2, 5U);
+                unsigned action_log2size = 0;
+                if (auto adt = action->to<ActionTable>())
+                    action_log2size = adt->get_log2size();
+                int lo_huffman_bits = std::min(action_log2size - 2, 5U);
                 if (action.args.size() <= 1) {
                     merge.mau_actiondata_adr_exact_shiftcount[bus][word_group] =
                         69 - lo_huffman_bits;
