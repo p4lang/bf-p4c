@@ -32,9 +32,6 @@ public:
 
 AsmStage::AsmStage() : Section("stage") {
     int slot = 0, byte = 0;
-    stage.resize(Target::NUM_MAU_STAGES());
-    for (unsigned  i = 0; i < stage.size(); i++)
-        stage[i].stageno = i;
     for (int i = 0; i < ACTION_DATA_8B_SLOTS; i++) {
         Stage::action_bus_slot_map[byte++] = slot;
         Stage::action_bus_slot_size[slot++] = 8; }
@@ -53,6 +50,9 @@ AsmStage::AsmStage() : Section("stage") {
 }
 
 void AsmStage::start(int lineno, VECTOR(value_t) args) {
+    size_t oldsize = stage.size();
+    if (stage.size() < Target::NUM_MAU_STAGES())
+        stage.resize(Target::NUM_MAU_STAGES());
     if (args.size != 2 || args[0].type != tINT || (args[1] != "ingress" && args[1] != "egress"))
         error(lineno, "stage must specify number and ingress or egress");
     else if (args[0].i < 0)
@@ -61,9 +61,9 @@ void AsmStage::start(int lineno, VECTOR(value_t) args) {
         if (args[0].i >= Target::NUM_MAU_STAGES())
             warning(lineno, "%s only supports %d stages, using %d", Target::name(),
                     Target::NUM_MAU_STAGES(), args[0].i + 1);
-        stage.resize(args[0].i + 1);
-        for (unsigned  i = 0; i < stage.size(); i++)
-            stage[i].stageno = i; }
+        stage.resize(args[0].i + 1); }
+    for (size_t i = oldsize; i < stage.size(); i++)
+        stage[i].stageno = i;
 }
 
 void AsmStage::input(VECTOR(value_t) args, value_t data) {
@@ -154,6 +154,7 @@ void AsmStage::output(json::map &ctxt_json) {
         for (auto table : stage[i].tables)
             table->pass2(); }
     if (error_count > 0) return;
+    if (stage.empty()) return;
     for (gress_t gress : Range(INGRESS, EGRESS)) {
         bitvec set_regs = stage[0].action_set[gress];
         for (unsigned i = 1; i < stage.size(); i++) {
@@ -298,42 +299,9 @@ template<class TARGET> void Stage::write_common_regs(typename TARGET::mau_regs &
             this[1].stage_dep[INGRESS] == ACTION_DEP;
         regs.dp.phv_fifo_enable.phv_fifo_egress_final_output_enable =
             this[1].stage_dep[EGRESS] == ACTION_DEP; }
-    bitvec in_use = match_use[INGRESS] | action_use[INGRESS] | action_set[INGRESS];
-    bitvec eg_use = match_use[EGRESS] | action_use[EGRESS] | action_set[EGRESS];
-    if (options.match_compiler) {
-        /* the compiler occasionally programs extra uses of random registers on
-         * busses where it doesn't actually use them.  Sometimes, these regs
-         * are in use by the other thread, so rely on the deparser to correctly
-         * set the Phv::use info and strip out registers it says are used by
-         * the other thread */
-        in_use -= Deparser::PhvUse(EGRESS);
-        eg_use -= Deparser::PhvUse(INGRESS); }
-    /* FIXME -- if the regs are live across a stage (even if not used in that stage) they
-     * need to be set in the thread registers.  For now we just assume if they are used
-     * anywhere, they need to be marked as live */
-    in_use |= Phv::use(INGRESS);
-    eg_use |= Phv::use(EGRESS);
-    static const int phv_use_transpose[2][14] = {
-        {  0,  1,  2,  3,  8,  9, 10, 11, 16, 17, 18, 19, 20, 21 },
-        {  4,  5,  6,  7, 12, 13, 14, 15, 22, 23, 24, 25, 26, 27 } };
-    // FIXME -- this code depends on the Phv::Register uids matching the
-    // FIXME -- mau encoding of phv containers. (FIXME-PHV)
-    for (int i = 0; i < 2; i++) {
-        for (int j = 0; j < 14; j++) {
-            regs.dp.phv_ingress_thread_alu[i][j] = regs.dp.phv_ingress_thread_imem[i][j] =
-            regs.dp.phv_ingress_thread[i][j] = in_use.getrange(8*phv_use_transpose[i][j], 8);
-            regs.dp.phv_egress_thread_alu[i][j] = regs.dp.phv_egress_thread_imem[i][j] =
-            regs.dp.phv_egress_thread[i][j] = eg_use.getrange(8*phv_use_transpose[i][j], 8); } }
     for (gress_t gress : Range(INGRESS, EGRESS))
         if (table_use[gress] & USE_TCAM_PIPED)
             regs.tcams.tcam_piped |=  options.match_compiler ? 3 : 1 << gress;
-#if 0
-    /* FIXME - by default always enable slow mode (match compiler), but should be configurable */
-    for (int row = 0; row < SRAM_ROWS; row++)
-        regs.rams.map_alu.row[row].adrmux.adrmux_row_mem_slow_mode = 1;
-    regs.cfg_regs.mau_cfg_mem_slow_mode = 1;
-    regs.dp.imem_parity_ctl.imem_slow_mode = 1;
-#endif
 
     /* Error handling related */
     for (gress_t gress : Range(INGRESS, EGRESS)) {

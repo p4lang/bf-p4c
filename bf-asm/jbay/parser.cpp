@@ -196,6 +196,17 @@ template<> void Parser::write_config(Target::JBay::parser_regs &regs) {
             ++i; }
         for (auto csum : checksum_use[gress])
             if (csum) csum->write_config(regs, this); }
+
+    for (int i : phv_use[EGRESS]) {
+        auto id = Phv::reg(i)->parser_id();
+        regs.merge.lower.phv_owner.owner[id] = 1;
+        regs.main[INGRESS].phv_owner.owner[id] = 1;
+        regs.main[EGRESS].phv_owner.owner[id] = 1;
+        if (Phv::reg(i)->size == 32) {
+            regs.merge.lower.phv_owner.owner[++id] = 1;
+            regs.main[INGRESS].phv_owner.owner[id] = 1;
+            regs.main[EGRESS].phv_owner.owner[id] = 1; } }
+
     for (auto &ref : regs.ingress.prsr)
         ref = "regs.parser.main.ingress";
     for (auto &ref : regs.egress.prsr)

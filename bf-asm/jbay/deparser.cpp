@@ -182,6 +182,24 @@ void output_jbay_field_dictionary_slice(CHUNKS &chunk, CLOTS &clots, POV &pov, D
         chunk[ch].cfg.seg_sel = byte >> 3; }
 }
 
+static void setup_jbay_ownership(bitvec phv_use, ubits_base &phv8, ubits_base &phv16,
+                                 ubits_base &phv32) {
+    for (auto i : phv_use) {
+        auto *reg = Phv::reg(i);
+        switch (reg->size) {
+        case 8:
+            phv8 |= 1U << ((reg->deparser_id() - 64)/4U);
+            break;
+        case 16:
+            phv16 |= 1U << ((reg->deparser_id() - 128)/4U);
+            break;
+        case 32:
+            phv32 |= 1U << (reg->deparser_id()/2U);
+            break;
+        default:
+            assert(0); } }
+}
+
 template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
     regs.dprsrreg.dprsr_csr_ring.disable();
     regs.dprsrreg.dprsr_pbus.disable();
@@ -219,18 +237,13 @@ template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
         Phv::unsetuse(EGRESS, phv_use[INGRESS]);
     }
 
-#if 0
-    // FIXME -- this is old tofino code -- needs to be updated to jbay?
-    output_phv_ownership(phv_use, regs.input.iir.ingr.phv8_grp, regs.input.iir.ingr.phv8_split,
-                         regs.input.ier.egr.phv8_grp, regs.input.ier.egr.phv8_split,
-                         FIRST_8BIT_PHV, COUNT_8BIT_PHV);
-    output_phv_ownership(phv_use, regs.input.iir.ingr.phv16_grp, regs.input.iir.ingr.phv16_split,
-                         regs.input.ier.egr.phv16_grp, regs.input.ier.egr.phv16_split,
-                         FIRST_16BIT_PHV, COUNT_16BIT_PHV);
-    output_phv_ownership(phv_use, regs.input.iir.ingr.phv32_grp, regs.input.iir.ingr.phv32_split,
-                         regs.input.ier.egr.phv32_grp, regs.input.ier.egr.phv32_split,
-                         FIRST_32BIT_PHV, COUNT_32BIT_PHV);
-#endif
+    regs.dprsrreg.inp.icr.i_phv8_grp.val = 0;
+    regs.dprsrreg.inp.icr.i_phv16_grp.val = 0;
+    regs.dprsrreg.inp.icr.i_phv32_grp.val = 0;
+    setup_jbay_ownership(phv_use[INGRESS], regs.dprsrreg.inp.icr.i_phv8_grp.val,
+        regs.dprsrreg.inp.icr.i_phv16_grp.val, regs.dprsrreg.inp.icr.i_phv32_grp.val);
+    setup_jbay_ownership(phv_use[EGRESS], regs.dprsrreg.inp.icr.e_phv8_grp.val,
+        regs.dprsrreg.inp.icr.e_phv16_grp.val, regs.dprsrreg.inp.icr.e_phv32_grp.val);
 
     for (auto &intrin : intrinsics)
         intrin.type->setregs(regs, *this, intrin);

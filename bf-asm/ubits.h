@@ -32,6 +32,7 @@ struct ubits_base {
     void enable() const { disabled = false; };
     void rewrite() { write = false; }
     virtual unsigned long operator=(unsigned long v) = 0;
+    virtual const ubits_base &operator|=(unsigned long v) = 0;
     virtual unsigned size() = 0;
     void log(const char *op, unsigned long v) const;
 };
@@ -53,7 +54,7 @@ template<int N> struct ubits : ubits_base {
     ubits(unsigned long v) : ubits_base(v) { check(); }
     ubits(const ubits &) = delete;
     ubits(ubits &&) = default;
-    unsigned long operator=(unsigned long v) {
+    unsigned long operator=(unsigned long v) override {
         if (disabled)
             ERROR("Writing disabled register value in " << this);
         if (write)
@@ -66,7 +67,7 @@ template<int N> struct ubits : ubits_base {
     const ubits &operator=(const ubits &v) { *this = v.value; v.read = true; return v; }
     const ubits_base &operator=(const ubits_base &v) { *this = v.value; v.read = true; return v; }
     unsigned size() { return N; }
-    const ubits &operator|=(unsigned long v) {
+    const ubits &operator|=(unsigned long v) override {
         if (disabled)
             ERROR("Writing disabled register value in " << this);
         if (write && (value & v))

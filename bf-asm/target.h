@@ -74,6 +74,7 @@ class Target::Tofino : public Target {
     };
     enum {
         NUM_MAU_STAGES = 12,
+        ACTION_INSTRUCTION_MAP_WIDTH = 7,
     };
 };
 
@@ -132,6 +133,7 @@ class Target::JBay : public Target {
     typedef ::JBay::regs_deparser                   deparser_regs;
     enum {
         NUM_MAU_STAGES = 20,
+        ACTION_INSTRUCTION_MAP_WIDTH = 8,
     };
 };
 void declare_registers(const Target::JBay::top_level_regs *regs);

@@ -1021,9 +1021,10 @@ void Table::Actions::stateful_pass2(Table *tbl) {
 }
 
 template<class REGS> void Table::Actions::write_regs(REGS &regs, Table *tbl) {
-    for (auto &act : *this)
+    for (auto &act : *this) {
+        LOG2("# action " << act.name << " code=" << act.code << " addr=" << act.addr);
         for (auto *inst : act.instr)
-            inst->write_regs(regs, tbl, &act);
+            inst->write_regs(regs, tbl, &act); }
 }
 FOR_ALL_TARGETS(INSTANTIATE_TARGET_TEMPLATE, void Table::Actions::write_regs, mau_regs &, Table *)
 
@@ -1317,7 +1318,9 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
         for (auto &act : *actions)
             if ((act.name != default_action) || !default_only_action) {
                 merge.mau_action_instruction_adr_map_data[type][logical_id][act.code/4]
-                    .set_subfield(act.addr + ACTION_INSTRUCTION_ADR_ENABLE, (act.code%4) * 7, 7);
+                    .set_subfield(act.addr + ACTION_INSTRUCTION_ADR_ENABLE,
+                                  (act.code%4) * TARGET::ACTION_INSTRUCTION_MAP_WIDTH,
+                                  TARGET::ACTION_INSTRUCTION_MAP_WIDTH);
             } }
     if (!default_action.empty()) {
         auto *act = actions->action(default_action);
