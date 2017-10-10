@@ -79,6 +79,10 @@ void AsmStage::input(VECTOR(value_t) args, value_t data) {
                 stage[stageno].stage_dep[gress] = Stage::CONCURRENT;
                 if (stageno == Target::NUM_MAU_STAGES()/2)
                     error(kv.value.lineno, "stage %d must be match dependent", stageno);
+#ifdef HAVE_JBAY
+                else if (options.target == JBAY)
+                    error(kv.value.lineno, "no concurrent execution on jbay");
+#endif /* HAVE_JBAY */
             } else if (kv.value == "action") {
                 stage[stageno].stage_dep[gress] = Stage::ACTION_DEP;
                 if (stageno == Target::NUM_MAU_STAGES()/2)
@@ -162,7 +166,10 @@ void AsmStage::output(json::map &ctxt_json) {
                     stage[i].stage_dep[gress] = Stage::ACTION_DEP;
                 } else {
                     LOG1("stage " << i << " " << gress << " is concurrent with previous stage");
-                    stage[i].stage_dep[gress] = Stage::CONCURRENT; } }
+                    if (options.target == JBAY)
+                        stage[i].stage_dep[gress] = Stage::ACTION_DEP;
+                    else
+                        stage[i].stage_dep[gress] = Stage::CONCURRENT; } }
             if (stage[i].stage_dep[gress] == Stage::MATCH_DEP)
                 set_regs = stage[i].action_set[gress];
             else
@@ -277,19 +284,6 @@ template<class TARGET> void Stage::write_common_regs(typename TARGET::mau_regs &
         regs.rams.match.adrdist.adr_dist_pipe_delay[gress][1] = adr_dist_delay(gress);
         auto &deferred_eop_bus_delay = regs.rams.match.adrdist.deferred_eop_bus_delay[gress];
         deferred_eop_bus_delay.eop_internal_delay_fifo = pred_cycle(gress) + 3;
-        /* FIXME -- making this depend on the dependecny of the next stage seems wrong */
-        if (stageno == AsmStage::numstages()-1) {
-            if (AsmStage::numstages() < TARGET::NUM_MAU_STAGES)
-                deferred_eop_bus_delay.eop_output_delay_fifo = 0;
-            else
-                deferred_eop_bus_delay.eop_output_delay_fifo = pipelength(gress) - 1;
-        } else if (this[1].stage_dep[gress] == MATCH_DEP)
-            deferred_eop_bus_delay.eop_output_delay_fifo = pipelength(gress) - 1;
-        else if (this[1].stage_dep[gress] == ACTION_DEP)
-            deferred_eop_bus_delay.eop_output_delay_fifo = 1;
-        else
-            deferred_eop_bus_delay.eop_output_delay_fifo = 0;
-        deferred_eop_bus_delay.eop_delay_fifo_en = 1;
         regs.dp.action_output_delay[gress] = pipelength(gress) - 3;
         regs.dp.pipelength_added_stages[gress] = pipelength(gress) - 20;
         if (stageno > 0 && stage_dep[gress] == MATCH_DEP)

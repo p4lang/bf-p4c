@@ -11,5 +11,19 @@ template<> void Stage::write_regs(Target::Tofino::mau_regs &regs) {
             regs.dp.next_stage_dependency_on_cur[gress] = MATCH_DEP - this[1].stage_dep[gress];
         else if (AsmStage::numstages() < Target::Tofino::NUM_MAU_STAGES)
             regs.dp.next_stage_dependency_on_cur[gress] = 2;
+        /* FIXME -- making this depend on the dependency of the next stage seems wrong */
+        auto &deferred_eop_bus_delay = regs.rams.match.adrdist.deferred_eop_bus_delay[gress];
+        if (stageno == AsmStage::numstages()-1) {
+            if (AsmStage::numstages() < Target::Tofino::NUM_MAU_STAGES)
+                deferred_eop_bus_delay.eop_output_delay_fifo = 0;
+            else
+                deferred_eop_bus_delay.eop_output_delay_fifo = pipelength(gress) - 1;
+        } else if (this[1].stage_dep[gress] == MATCH_DEP)
+            deferred_eop_bus_delay.eop_output_delay_fifo = pipelength(gress) - 1;
+        else if (this[1].stage_dep[gress] == ACTION_DEP)
+            deferred_eop_bus_delay.eop_output_delay_fifo = 1;
+        else
+            deferred_eop_bus_delay.eop_output_delay_fifo = 0;
+        deferred_eop_bus_delay.eop_delay_fifo_en = 1;
     }
 }

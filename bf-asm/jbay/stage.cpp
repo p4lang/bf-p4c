@@ -3,12 +3,25 @@
 template<> void Stage::write_regs(Target::JBay::mau_regs &regs) {
     write_common_regs<Target::JBay>(regs);
     for (gress_t gress : Range(INGRESS, EGRESS)) {
+        assert(stage_dep[gress] != CONCURRENT);
         if (stageno != 0)
             regs.dp.cur_stage_dependency_on_prev[gress] = stage_dep[gress] != MATCH_DEP;
         if (stageno != AsmStage::numstages()-1)
             regs.dp.next_stage_dependency_on_cur[gress] = this[1].stage_dep[gress] != MATCH_DEP;
         else if (AsmStage::numstages() < Target::JBay::NUM_MAU_STAGES)
-            regs.dp.next_stage_dependency_on_cur[gress] = 1; }
+            regs.dp.next_stage_dependency_on_cur[gress] = 1;
+        /* FIXME -- making this depend on the dependency of the next stage seems wrong */
+        auto &deferred_eop_bus_delay = regs.rams.match.adrdist.deferred_eop_bus_delay[gress];
+        if (stageno == AsmStage::numstages()-1) {
+            if (AsmStage::numstages() < Target::JBay::NUM_MAU_STAGES)
+                deferred_eop_bus_delay.eop_output_delay_fifo = 1;
+            else
+                deferred_eop_bus_delay.eop_output_delay_fifo = pipelength(gress) - 1;
+        } else if (this[1].stage_dep[gress] == MATCH_DEP)
+            deferred_eop_bus_delay.eop_output_delay_fifo = pipelength(gress) - 1;
+        else
+            deferred_eop_bus_delay.eop_output_delay_fifo = 1;
+        deferred_eop_bus_delay.eop_delay_fifo_en = 1; }
     auto &merge = regs.rams.match.merge;
     merge.mpr_stage = stageno;
     merge.pred_stage_id = stageno;

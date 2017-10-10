@@ -141,7 +141,7 @@ static void write_output_const_slot(
     if (flags & 2 /*ROTATE*/) row->val_const_rot[cslot] = 1;
     used |= bytemask << (2*cslot + 24);
     unsigned tmpused = used | SAVE_ONLY_USED_SLOTS;
-    write_output_slot(lineno, row, tmpused, 2*cslot + 60 - (bytemask == 2), dest, bytemask, flags);
+    write_output_slot(lineno, row, tmpused, 62 - 2*cslot - (bytemask == 2), dest, bytemask, flags);
     used |= tmpused &~ SAVE_ONLY_USED_SLOTS;
 }
 
