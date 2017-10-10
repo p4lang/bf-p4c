@@ -796,11 +796,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
   )
 
-p4c_add_xfail_reason("tofino"
-  "Fields .* and .* are overlaid but not mutually exclusive"
-  # extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
-)
-
 # Likely still has a bug; emits the following warning:
 p4c_add_xfail_reason("tofino"
    "Action argument is not found to be allocated in the action format"

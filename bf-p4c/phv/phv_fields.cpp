@@ -704,6 +704,26 @@ PhvInfo::Field::phv_containers(PHV_Container *c) {
             field_overlay_map_i[c->container_id()] = set_of_f;
         }
     }
+    // sanity check this field's field_overlay_map
+    for (auto overlaid_by_field : field_overlay_map_i) {
+        for (auto* f_overlay : *overlaid_by_field.second) {
+            // field is never overlaid atop itself
+            // ensure this field is not present in field_overlay_map
+            BUG_CHECK(f_overlay != this,
+                      "field's %1% field_overlay_map contains itself",
+                      cstring::to_cstring(f_overlay));
+            // ccgf member can never be overlaid atop owner
+            // ensure this field's ccgf members are not in field's field_overlay_map
+            BUG_CHECK(f_overlay->ccgf() != this,
+                      "ccgf owner's %1% field_overlay_map contains ccgf member %2%",
+                      cstring::to_cstring(this), cstring::to_cstring(f_overlay));
+            // ccgf owner can never be overlaid atop its member
+            // ensure member's ccgf owner not in member's field_overlay_map
+            BUG_CHECK(this->ccgf() != f_overlay,
+                      "ccgf member's %1% field_overlay_map contains ccgf owner %2%",
+                      cstring::to_cstring(this), cstring::to_cstring(f_overlay));
+        }
+    }
 }
 
 void

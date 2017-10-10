@@ -506,6 +506,13 @@ PHV_Container::single_field_overlay(
         ordered_set<PhvInfo::Field *> f_set;
         fields_in_container(start, start + width - 1, f_set);
         for (auto &f_s : f_set) {
+            // f_s can be the same as f
+            // f_s can be ccgf member of f
+            // in these cases avoid inserting f in f_s field_overlay_map
+            // validate_allocation checks field_overlay_map
+            // to report "overlaid but not mutually exclusive"
+            if (f_s == f || f_s->ccgf() == f)
+                continue;
             f_s->field_overlay(f, container_id_i);
         }
     }
