@@ -434,5 +434,22 @@ template<class REGS> void AlgTcamMatchTable::write_regs(REGS &regs) {
     if (idletime) idletime->write_regs(regs);
 }
 
+// FIXME: Add tbl-cfg support for ATCAM tables
 void AlgTcamMatchTable::gen_tbl_cfg(json::vector &out) {
+    //json::map &tbl = *base_tbl_cfg(out, "match", number_entries);
+    //common_tbl_cfg(tbl, "exact");
+    //json::map &match_attributes = tbl["match_attributes"];
+    //json::map stage_tbl;
+    //stage_tbl["stage_table_type"] = "algorithmic_tcam_match";
+    // FIXME-JSON: If the next table is modifiable then we set it to what it's mapped
+    // to. Otherwise, set it to the default next table for this stage.
+    //stage_tbl["default_next_table"] = 255;
+    //stage_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg("tcam", layout);
+    //stage_tbl["logical_table_id"] = logical_id;
+    //stage_tbl["hash_functions"] = // TODO
+    //add_result_physical_buses(stage_tbl);
+    //stage_tbl["action_format"] = // TODO
+    //MatchTable::gen_idletime_tbl_cfg(stage_tbl);
+    //json::vector &stage_tables = match_attributes["stage_tables"];
+    //stage_tables.push_back(std::move(stage_tbl));
 }

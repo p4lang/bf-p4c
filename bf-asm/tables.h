@@ -500,6 +500,7 @@ public:
     void gen_name_lookup(json::map &out) override;
     bool run_at_eop() override { return attached.run_at_eop(); }
     virtual bool is_ternary() { return false; }
+    void gen_idletime_tbl_cfg(json::map &stage_tbl);
 )
 
 #define DECLARE_TABLE_TYPE(TYPE, PARENT, NAME, ...)                     \

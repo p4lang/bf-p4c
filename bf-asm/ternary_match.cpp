@@ -448,8 +448,7 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
                 break; }
             index++; }
         json::map &match_attributes = tbl["match_attributes"] = json::map();
-        tbl.erase("stage_tables");
-        json::vector stage_tables;
+        json::vector &stage_tables = match_attributes["stage_tables"];
         json::map stage_tbl;
         stage_tbl["stage_number"] = stage->stageno;
         stage_tbl["size"] = number_entries;
@@ -590,10 +589,8 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
             actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
         else if (action && action->actions)
             action->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
-        if (idletime)
-            idletime->gen_stage_tbl_cfg(stage_tbl);
+        MatchTable::gen_idletime_tbl_cfg(stage_tbl);
         stage_tables.push_back(std::move(stage_tbl));
-        match_attributes["stage_tables"] = std::move(stage_tables);
         match_attributes["match_type"] = "ternary";
         tbl["stateful_table_refs"] = json::vector();
     } else {

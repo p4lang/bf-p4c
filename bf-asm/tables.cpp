@@ -1211,6 +1211,11 @@ void MatchTable::pass1(int type) {
     }
 }
 
+void MatchTable::gen_idletime_tbl_cfg(json::map &stage_tbl) {
+   if (idletime)
+       idletime->gen_stage_tbl_cfg(stage_tbl);
+}
+
 template<> void MatchTable::setup_next_table_map(Target::Tofino::mau_regs &regs, Table *tbl) {
     auto &merge = regs.rams.match.merge;
     merge.next_table_map_en |= (1U << logical_id);

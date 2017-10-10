@@ -214,6 +214,7 @@ void HashActionTable::gen_tbl_cfg(json::vector &out) {
                         if (!hash_bit_added)
                             hash_bits.push_back(std::move(hash_bit)); } }
                     hash_functions.push_back(std::move(hash_function)); } }
+        MatchTable::gen_idletime_tbl_cfg(stage_tbl);
         stage_tables.push_back(std::move(stage_tbl));
         match_attributes["stage_tables"] = std::move(stage_tables);
     } else {
