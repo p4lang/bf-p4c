@@ -240,16 +240,16 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
     auto checkValidOverlay = [&](const PhvInfo::Field* f) {
         // If this field is overlaid, check that every overlaid field is in
         // fact mutually exclusive.
-        if (!f->field_overlay_map().empty()) {
-            for (auto overlaid_by_container : f->field_overlay_map()) {
-                for (auto* f_overlay : *overlaid_by_container.second) {
-                    if (f == f_overlay) continue;
-                    ERROR_CHECK(mutually_exclusive_field_ids(f->id, f_overlay->id),
-                        "Fields %1% and %2% are overlaid but not mutually exclusive.",
-                        cstring::to_cstring(f), cstring::to_cstring(f_overlay)); } } }
+        for (auto overlaid_by_container : f->field_overlay_map()) {
+            for (auto* f_overlay : *overlaid_by_container.second) {
+                if (f == f_overlay) continue;
+                ERROR_CHECK(mutually_exclusive_field_ids(f->id, f_overlay->id),
+                    "Field %1% contains %2% in its overlay map, "
+                    "but they are not mutually exclusive.",
+                    cstring::to_cstring(f), cstring::to_cstring(f_overlay)); } }
         if (auto* substratum = f->overlay_substratum())
             ERROR_CHECK(mutually_exclusive_field_ids(f->id, substratum->id),
-                "Field %1% is overlaid atop field %2% but is not mutually exclusive.",
+                "Field %1% is overlaid atop substratum field %2% but is not mutually exclusive.",
                 cstring::to_cstring(f), cstring::to_cstring(substratum));
     };
 
