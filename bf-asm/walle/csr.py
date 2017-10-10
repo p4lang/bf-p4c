@@ -745,6 +745,9 @@ def parse_csrcompiler_csv (filename, section_name):
             elif row["Type"] == "userdefined memory":
                 # ignore for now?
                 pass
+            elif row["Type"] == "reserved":
+                # ignore for now?
+                pass
             else:
                 raise CsrException("Unrecognized type '"+row["Type"]+"' in CSV file '"+filename+"' line "+str(row_num))
 

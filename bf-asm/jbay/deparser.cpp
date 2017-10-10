@@ -78,13 +78,14 @@ ALL_DEPARSER_DIGESTS(STUB_JBAY_DEPARSER_DIGEST)
     M(YES, regs.dprsrreg.ho_e, her.meta.m_capture_tx_ts, dis) \
     M(YES, regs.dprsrreg.ho_e, her.meta.m_force_tx_err, dis) \
     M(YES, regs.dprsrreg.ho_e, her.meta.m_mirr_c2c_ctrl, dis) \
-    M(YES, regs.dprsrreg.ho_e, her.meta.m_mirr_coal_out_len, dis) \
-    M(YES, regs.dprsrreg.ho_e, her.meta.m_mirr_coal_x_len, dis) \
-    M(YES, regs.dprsrreg.ho_e, her.meta.m_mirr_coal_x_off, dis) \
-    M(YES, regs.dprsrreg.ho_e, her.meta.m_mirr_epipe_p_vld, dis) \
+    M(YES, regs.dprsrreg.ho_e, her.meta.m_mirr_coal_smpl_len, dis) \
+    M(YES, regs.dprsrreg.ho_e, her.meta.m_mirr_dond_ctrl, dis) \
+    M(YES, regs.dprsrreg.ho_e, her.meta.m_mirr_epipe_port, dis) \
     M(YES, regs.dprsrreg.ho_e, her.meta.m_mirr_hash, dis) \
+    M(YES, regs.dprsrreg.ho_e, her.meta.m_mirr_icos, dis) \
     M(YES, regs.dprsrreg.ho_e, her.meta.m_mirr_io_sel, dis) \
     M(YES, regs.dprsrreg.ho_e, her.meta.m_mirr_mc_ctrl, dis) \
+    M(YES, regs.dprsrreg.ho_e, her.meta.m_mirr_qid, dis) \
     M(YES, regs.dprsrreg.ho_e, her.meta.m_mtu_trunc_err_f, dis) \
     M(YES, regs.dprsrreg.ho_e, her.meta.m_mtu_trunc_len, dis) \
     M(YES, regs.dprsrreg.ho_e, her.meta.m_tx_pkt_has_offsets, dis) \
@@ -98,13 +99,14 @@ ALL_DEPARSER_DIGESTS(STUB_JBAY_DEPARSER_DIGEST)
     M(YES, regs.dprsrreg.ho_i, hir.meta.m_hash2, dis) \
     M(YES, regs.dprsrreg.ho_i, hir.meta.m_icos, dis) \
     M(YES, regs.dprsrreg.ho_i, hir.meta.m_mirr_c2c_ctrl, dis) \
-    M(YES, regs.dprsrreg.ho_i, hir.meta.m_mirr_coal_out_len, dis) \
-    M(YES, regs.dprsrreg.ho_i, hir.meta.m_mirr_coal_x_len, dis) \
-    M(YES, regs.dprsrreg.ho_i, hir.meta.m_mirr_coal_x_off, dis) \
-    M(YES, regs.dprsrreg.ho_i, hir.meta.m_mirr_epipe_p_vld, dis) \
+    M(YES, regs.dprsrreg.ho_i, hir.meta.m_mirr_coal_smpl_len, dis) \
+    M(YES, regs.dprsrreg.ho_i, hir.meta.m_mirr_dond_ctrl, dis) \
+    M(YES, regs.dprsrreg.ho_i, hir.meta.m_mirr_epipe_port, dis) \
     M(YES, regs.dprsrreg.ho_i, hir.meta.m_mirr_hash, dis) \
+    M(YES, regs.dprsrreg.ho_i, hir.meta.m_mirr_icos, dis) \
     M(YES, regs.dprsrreg.ho_i, hir.meta.m_mirr_io_sel, dis) \
     M(YES, regs.dprsrreg.ho_i, hir.meta.m_mirr_mc_ctrl, dis) \
+    M(YES, regs.dprsrreg.ho_i, hir.meta.m_mirr_qid, dis) \
     M(YES, regs.dprsrreg.ho_i, hir.meta.m_mtu_trunc_err_f, dis) \
     M(YES, regs.dprsrreg.ho_i, hir.meta.m_mtu_trunc_len, dis) \
     M(YES, regs.dprsrreg.ho_i, hir.meta.m_pkt_color, dis) \
