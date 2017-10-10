@@ -70,9 +70,11 @@ struct StageUseEstimate {
     struct RAM_counter {
         int per_word;
         int width;
+        bool need_srams;
         bool need_maprams;
-        RAM_counter() : per_word(0), width(0), need_maprams(false) {}
-        RAM_counter(int p, int w, bool nm) : per_word(p), width(w), need_maprams(nm) {}
+        RAM_counter() : per_word(0), width(0), need_srams(false), need_maprams(false) {}
+        RAM_counter(int p, int w, bool ns, bool nm) : per_word(p), width(w), need_srams(ns),
+                                                      need_maprams(nm) {}
     };
     void calculate_per_row_vector(safe_vector<RAM_counter> &per_word_and_width,
                                   const IR::MAU::Table *tbl, LayoutOption *lo);

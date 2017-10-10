@@ -146,6 +146,7 @@ void StageUseEstimate::calculate_attached_rams(const IR::MAU::Table *tbl,
         int per_word = 0;
         int width = 1;
         int attached_entries = lo->entries;
+        bool need_srams = true;
         bool need_maprams = false;
         if (auto *ctr = at->to<IR::MAU::Counter>()) {
             per_word = CounterPerWord(ctr);
@@ -175,6 +176,8 @@ void StageUseEstimate::calculate_attached_rams(const IR::MAU::Table *tbl,
                 BUG("Ternary Indirect Data table exists before table placement occurs");
             per_word = TernaryIndirectPerWord(&lo->layout, tbl);
         } else if (auto *idle = at->to<IR::MAU::IdleTime>()) {
+            need_srams = false;
+            need_maprams = true;
             per_word = IdleTimePerWord(idle);
         } else {
             BUG("unknown attached table type %s", at->kind()); }
@@ -183,7 +186,7 @@ void StageUseEstimate::calculate_attached_rams(const IR::MAU::Table *tbl,
                 BUG("%s: no size in indirect %s %s", at->srcInfo, at->kind(), at->name);
             int entries_per_sram = 1024 * per_word;
             int units = (attached_entries + entries_per_sram - 1) / entries_per_sram;
-            lo->srams += units * width;
+            if (need_srams) lo->srams += units * width;
             if (need_maprams) lo->maprams += units;
         }
     }
@@ -402,7 +405,7 @@ void StageUseEstimate::known_srams_needed(const IR::MAU::Table *tbl,
             // Again, because this is called before and after table placement
             continue;
         } else if (at->is<IR::MAU::IdleTime>()) {
-           // TODO(zma)
+            continue;
         } else {
             BUG("Unrecognized table type");
         }
@@ -425,6 +428,7 @@ void StageUseEstimate::calculate_per_row_vector(safe_vector<RAM_counter> &per_wo
     for (auto at : tbl->attached) {
          int per_word = 0;
          int width = 1;
+         bool need_srams = true;
          bool need_maprams = false;
          if (auto *ctr = at->to<IR::MAU::Counter>()) {
              if (!ctr->direct) continue;
@@ -445,21 +449,22 @@ void StageUseEstimate::calculate_per_row_vector(safe_vector<RAM_counter> &per_wo
              continue;
          } else if (auto *idle = at->to<IR::MAU::IdleTime>()) {
              per_word = IdleTimePerWord(idle);
+             need_srams = false;
              need_maprams = true;
          } else {
              BUG("Unrecognized table type");
          }
-         per_word_and_width.emplace_back(per_word, width, need_maprams);
+         per_word_and_width.emplace_back(per_word, width, need_srams, need_maprams);
     }
     if (lo->layout.direct_ad_required()) {
         int width = 1;
         int per_word = ActionDataPerWord(&lo->layout, &width);
-        per_word_and_width.emplace_back(per_word, width, false);
+        per_word_and_width.emplace_back(per_word, width, true, false);
     }
     if (lo->layout.ternary_indirect_required()) {
         int width = 1;
         int per_word = TernaryIndirectPerWord(&lo->layout, tbl);
-        per_word_and_width.emplace_back(per_word, width, false);
+        per_word_and_width.emplace_back(per_word, width, true, false);
     }
 }
 
@@ -486,7 +491,8 @@ void StageUseEstimate::unknown_srams_needed(const IR::MAU::Table *tbl, LayoutOpt
         for (auto rc : per_word_and_width) {
             int entries_per_sram = 1024 * rc.per_word;
             int units = (attempted_entries + entries_per_sram - 1) / entries_per_sram;
-            sram_count += units * rc.width;
+            if (rc.need_srams)
+                sram_count += units * rc.width;
             if (rc.need_maprams)
                 mapram_count += units;
         }
@@ -510,7 +516,8 @@ void StageUseEstimate::unknown_srams_needed(const IR::MAU::Table *tbl, LayoutOpt
         for (auto rc : per_word_and_width) {
             int entries_per_sram = 1024 * rc.per_word;
             int units = (attempted_entries + entries_per_sram - 1) / entries_per_sram;
-            sram_count += units * rc.width;
+            if (rc.need_srams)
+                sram_count += units * rc.width;
             if (rc.need_maprams)
                 mapram_count += units;
         }
@@ -571,7 +578,8 @@ void StageUseEstimate::unknown_tcams_needed(const IR::MAU::Table *tbl, LayoutOpt
         for (auto rc : per_word_and_width) {
             int entries_per_sram = 1024 * rc.per_word;
             int units = (attempted_entries + entries_per_sram - 1) / entries_per_sram;
-            sram_count += units * rc.width;
+            if (rc.need_srams)
+                sram_count += units * rc.width;
             if (rc.need_maprams)
                 mapram_count += units;
         }

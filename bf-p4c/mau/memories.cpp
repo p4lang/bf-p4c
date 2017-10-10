@@ -2417,12 +2417,9 @@ bool Memories::find_mem_and_bus_for_idletime(
     }
 
     // find a bus
-    int bus_start_idx = (top_half) ? NUM_IDLETIME_BUS/2: 0;
-    int bus_end_idx = (top_half) ? NUM_IDLETIME_BUS : NUM_IDLETIME_BUS/2 - 1;
-
     bool found_bus = false;
-    for (int i = bus_start_idx; i < bus_end_idx; i++) {
-        if (!idletime_bus[i]) {
+    for (int i = 0; i < NUM_IDLETIME_BUS; i++) {
+        if (!idletime_bus[(unsigned)top_half][i]) {
             bus = i;
             found_bus = true;
             break;
@@ -2437,7 +2434,8 @@ bool Memories::find_mem_and_bus_for_idletime(
     return true;
 }
 
-bool Memories::allocate_idletime(const SRAM_group* idletime_group) {
+bool Memories::allocate_idletime_in_top_or_bottom_half(const SRAM_group* idletime_group,
+                                                       bool top_or_bottom) {
     auto *ta = idletime_group->ta;
     cstring name = ta->table->get_use_name(idletime_group->attached);
 
@@ -2449,9 +2447,8 @@ bool Memories::allocate_idletime(const SRAM_group* idletime_group) {
     int bus = -1;
 
     // find mem and bus in top and bottom half of mapram
-    bool resource_available = find_mem_and_bus_for_idletime(mem_locs, bus, total_required, true);
-    if (!resource_available)
-        resource_available = find_mem_and_bus_for_idletime(mem_locs, bus, total_required, false);
+    bool resource_available = find_mem_and_bus_for_idletime(mem_locs, bus, total_required,
+                                                            top_or_bottom);
 
     if (!resource_available)
         return false;
@@ -2468,9 +2465,20 @@ bool Memories::allocate_idletime(const SRAM_group* idletime_group) {
         alloc.row.push_back(row);
     }
 
-    idletime_bus[bus] = name;
-
+    idletime_bus[(unsigned)top_or_bottom][bus] = name;
     return true;
+}
+
+
+bool Memories::allocate_idletime(const SRAM_group* idletime_group) {
+    // try to allocate idletime in top and bottom half of the mapram array
+    // each half has its own 10 idletime buses
+    if (allocate_idletime_in_top_or_bottom_half(idletime_group, true))
+        return true;
+    else if (allocate_idletime_in_top_or_bottom_half(idletime_group, false))
+        return true;
+
+    return false;
 }
 
 bool Memories::allocate_all_idletime() {

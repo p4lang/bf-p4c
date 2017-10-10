@@ -497,7 +497,8 @@ class memory_vector {
 std::ostream &operator<<(std::ostream &out, const memory_vector &v) {
     if (v.vec.size() != 1) out << "[ ";
     const char *sep = "";
-    int col_adjust = (v.type == Memories::Use::TERNARY || v.is_mapcol)  ? 0 : 2;
+    int col_adjust = (v.type == Memories::Use::TERNARY  ||
+                      v.type == Memories::Use::IDLETIME || v.is_mapcol)  ? 0 : 2;
     bool logical = v.type >= Memories::Use::TWOPORT;
     int col_mod = logical ? 6 : 12;
     for (auto c : v.vec) {

@@ -29,7 +29,7 @@ struct Memories {
     static constexpr int COLOR_MAPRAM_PER_ROW = 4;
     static constexpr int IMEM_ADDRESS_BITS = 6;
     static constexpr int IMEM_LOOKUP_BITS = 3;
-    static constexpr int NUM_IDLETIME_BUS = 20;
+    static constexpr int NUM_IDLETIME_BUS = 10;
 
  private:
     Alloc2D<cstring, SRAM_ROWS, SRAM_COLUMNS>          sram_use;
@@ -48,7 +48,7 @@ struct Memories {
     Alloc2D<cstring, SRAM_ROWS, MAPRAM_COLUMNS>        mapram_use;
     unsigned                                           mapram_inuse[SRAM_ROWS] = {0};
     Alloc1D<cstring, SRAM_ROWS>                        stateful_bus;
-    Alloc1D<cstring, NUM_IDLETIME_BUS>                 idletime_bus;
+    Alloc2D<cstring, 2, NUM_IDLETIME_BUS>              idletime_bus;
     int gw_bytes_per_sb[SRAM_ROWS][BUS_COUNT] = {{0}};
     Alloc1D<cstring, STATS_ALUS>                       stats_alus;
     Alloc1D<cstring, METER_ALUS>                       meter_alus;
@@ -421,6 +421,8 @@ struct Memories {
 
     bool find_mem_and_bus_for_idletime(std::vector<std::pair<int, std::vector<int>>>& mem_locs,
                                     int& bus, int total_mem_required, bool top_half);
+    bool allocate_idletime_in_top_or_bottom_half(const SRAM_group* idletime_group,
+                                                 bool top_or_bottom);
     bool allocate_idletime(const SRAM_group* idletime_group);
     bool allocate_all_idletime();
 
