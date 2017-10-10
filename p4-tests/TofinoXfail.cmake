@@ -103,11 +103,6 @@ if (NOT ENABLE_TNA)
     )
 
   p4c_add_xfail_reason("tofino"
-    "Conflicting hash distribution bit allocation .*"
-    extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
-  )
-
-  p4c_add_xfail_reason("tofino"
     "Input xbar hash.*conflict in"
     extensions/p4_tests/p4_14/test_config_96_hash_data.p4
     )
@@ -161,12 +156,19 @@ if (NOT ENABLE_TNA)
     "error: Inferred incompatible alignments for field"
     extensions/p4_tests/p4_14/jenkins/mirror_test/mirror_test.p4
   )
-endif() # ENABLE_TNA
 
-p4c_add_xfail_reason("tofino"
-  "Wrong number of arguments for method call"
-  testdata/p4_16_samples/checksum1-bmv2.p4
+  p4c_add_xfail_reason("tofino"
+    "Wrong number of arguments for method call"
+    testdata/p4_16_samples/checksum1-bmv2.p4
   )
+
+  p4c_add_xfail_reason("tofino"
+    "Extract field slice .* with a negative offset."
+    extensions/p4_tests/p4_14/jenkins/pcie_pkt_test/pcie_pkt_test_one.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-295/vag1892.p4
+    extensions/p4_tests/p4_14/test_config_273_bridged_and_phase0.p4
+    )
+endif() # NOT ENABLE_TNA
 
 # Failure for BRIG-44 in JIRA
 p4c_add_xfail_reason("tofino"
@@ -893,6 +895,11 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
+  "Conflicting hash distribution bit allocation .*"
+  extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
+  )
+
+p4c_add_xfail_reason("tofino"
   "Hash table .* column .* duplicated"
   extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
   )
@@ -928,11 +935,8 @@ p4c_add_xfail_reason("tofino"
 # should do so if we can.
 p4c_add_xfail_reason("tofino"
   "Extract field slice .* with a negative offset."
-  extensions/p4_tests/p4_14/test_config_273_bridged_and_phase0.p4
   extensions/p4_tests/p4_14/c1/COMPILER-217/port_parser.p4
   extensions/p4_tests/p4_14/test_config_100_hash_action.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-295/vag1892.p4
-  extensions/p4_tests/p4_14/jenkins/pcie_pkt_test/pcie_pkt_test_one.p4
   extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
   extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
   )
@@ -1070,6 +1074,7 @@ if (ENABLE_TNA)
     testdata/p4_14_samples/resubmit.p4
     testdata/p4_14_samples/queueing.p4
     extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
+    extensions/p4_tests/p4_16/stful.p4
     )
 
   p4c_add_xfail_reason("tofino"
@@ -1084,11 +1089,6 @@ if (ENABLE_TNA)
     extensions/p4_tests/p4_14/test_config_177_meter_test.p4
     )
 
-  p4c_add_xfail_reason("tofino"
-    "Called .* on an invalid container"
-    extensions/p4_tests/p4_14/jenkins/emulation/emulation.p4
-    )
-
   # accessing ingress_intrinsic_metadata in egress
   # failed because there is no implicit bridged metadata in tofino.p4
   p4c_add_xfail_reason("tofino"
@@ -1097,6 +1097,7 @@ if (ENABLE_TNA)
     extensions/p4_tests/p4_14/c2/COMPILER-261/vag2241.p4
     extensions/p4_tests/p4_14/c4/COMPILER-590/case3179.p4
     extensions/p4_tests/p4_14/c4/COMPILER-591/case3176.p4
+    extensions/p4_tests/p4_14/jenkins/parser_intr_md/parser_intr_md.p4
     )
 
   #
@@ -1137,7 +1138,6 @@ if (ENABLE_TNA)
 
   p4c_add_xfail_reason("tofino"
     "Could not find declaration for ig_prsr_ctrl"
-    extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
     extensions/p4_tests/p4_14/switch/p4src/switch.p4
     )
 
@@ -1176,6 +1176,7 @@ if (ENABLE_TNA)
   p4c_add_xfail_reason("tofino"
     "Unexpected method call in parser"
     extensions/p4_tests/p4_14/packet_priority_exact_match.p4
+    extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
     )
 
   p4c_add_xfail_reason("tofino"
@@ -1184,88 +1185,33 @@ if (ENABLE_TNA)
     )
 
   p4c_add_xfail_reason("tofino"
-    "Unknown PHV container size"
-    extensions/p4_tests/p4_14/test_config_144_recirculate.p4
+    "src2 must be phv register"
+    extensions/p4_tests/p4_14/test_config_245_alias_test.p4
     extensions/p4_tests/p4_14/jenkins/pgrs/pgrs_one.p4
     )
 
   p4c_add_xfail_reason("tofino"
-    "src2 must be phv register"
-    extensions/p4_tests/p4_14/test_config_245_alias_test.p4
+    "Wrong number of arguments for method call"
+    testdata/p4_16_samples/checksum1-bmv2.p4
     )
 
   p4c_add_xfail_reason("tofino"
-    "Checksum translation is not yet supported"
-    testdata/p4_14_samples/TLV_parsing.p4
-    testdata/p4_14_samples/basic_routing.p4
-    testdata/p4_14_samples/checksum.p4
-    testdata/p4_14_samples/checksum1.p4
-    testdata/p4_14_samples/flowlet_switching.p4
-    testdata/p4_14_samples/issue894.p4
-    testdata/p4_14_samples/parser_dc_full.p4
-    testdata/p4_14_samples/port_vlan_mapping.p4
-    testdata/p4_14_samples/sai_p4.p4
-    testdata/p4_14_samples/simple_nat.p4
-    testdata/p4_14_samples/simple_router.p4
-    testdata/p4_14_samples/switch_20160226/switch.p4
-    testdata/p4_14_samples/switch_20160512/switch.p4
-    extensions/p4_tests/p4_14/basic_ipv4_selection.p4
-    extensions/p4_tests/p4_14/dileep.p4
-    extensions/p4_tests/p4_14/dileep10.p4
-    extensions/p4_tests/p4_14/dileep11.p4
-    extensions/p4_tests/p4_14/dileep12.p4
-    extensions/p4_tests/p4_14/dileep2.p4
-    extensions/p4_tests/p4_14/dileep3.p4
-    extensions/p4_tests/p4_14/dileep4.p4
-    extensions/p4_tests/p4_14/dileep7-b.p4
-    extensions/p4_tests/p4_14/dileep8.p4
-    extensions/p4_tests/p4_14/ecmp_pi.p4
-    extensions/p4_tests/p4_14/switch_l2_profile.p4
-    extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
-    extensions/p4_tests/p4_14/test_checksum.p4
-    extensions/p4_tests/p4_14/vk_basic_ipv4_20150706.p4
-    extensions/p4_tests/p4_14/vk_basic_ipv4_subset.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-477/case2602.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-482/case2622.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-483/case2619.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-503/case2678.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-505/case2690.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-532/case2807.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-567/case2807.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-559/case2987.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-562/case3005.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-548/case3011.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-568/case3026.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-568/case3026dce.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-575/case3041.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-576/case3042.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-579/case3085.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-577/comp577.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-585/comp585.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-588/comp588.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-588/comp588dce.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-593/case3011.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-632/case3459.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-608/case3263.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-589/comp589.p4
-    extensions/p4_tests/p4_14/switch/p4src/switch.p4
-    extensions/p4_tests/p4_14/jenkins/action_spec_format/action_spec_format.p4
-    extensions/p4_tests/p4_14/jenkins/alpm_test/alpm_test.p4
-    extensions/p4_tests/p4_14/jenkins/basic_ipv4/basic_ipv4.p4
-    extensions/p4_tests/p4_14/jenkins/ecmp_pi/ecmp_pi.p4
-    extensions/p4_tests/p4_14/jenkins/exm_direct/exm_direct_one.p4
-    extensions/p4_tests/p4_14/jenkins/exm_direct_1/exm_direct_1_one.p4
-    extensions/p4_tests/p4_14/jenkins/exm_indirect_1/exm_indirect_1_one.p4
-    extensions/p4_tests/p4_14/jenkins/exm_smoke_test/exm_smoke_test_one.p4
-    extensions/p4_tests/p4_14/jenkins/fast_reconfig/fast_reconfig.p4
-    extensions/p4_tests/p4_14/jenkins/multi_device/multi_device.p4
+    "NULL operand 4 for hash"
+    testdata/p4_16_samples/flowlet_switching-bmv2.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "Extract field slice .* resulted in buffer"
     extensions/p4_tests/p4_14/jenkins/multi_thread_test/multi_thread_test.p4
-    extensions/p4_tests/p4_14/jenkins/multicast_test/multicast_test.p4
     extensions/p4_tests/p4_14/jenkins/perf_test/perf_test_one.p4
-    extensions/p4_tests/p4_14/jenkins/perf_test_alpm/perf_test_alpm_one.p4
-    extensions/p4_tests/p4_14/jenkins/smoke_large_tbls/smoke_large_tbls.p4
-    extensions/p4_tests/p4_14/switch_20160602/switch.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "meta already resolved to"
+    extensions/p4_tests/p4_14/c1/COMPILER-548/case3011.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-593/case3011.p4
+    extensions/p4_tests/p4_14/switch/p4src/switch.p4
+    extensions/p4_tests/p4_14/test_checksum.p4
     )
 
 endif()  # ENABLE_TNA

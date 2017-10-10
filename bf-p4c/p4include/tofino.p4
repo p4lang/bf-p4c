@@ -23,39 +23,39 @@ agreement with Barefoot Networks, Inc.
 // -----------------------------------------------------------------------------
 // COMMON TYPES
 // -----------------------------------------------------------------------------
-typedef bit<9> portid_t;     // Port ID -- ingress or egress port
-typedef bit<16> mgid_t;      // Multicast group id
-typedef bit<5> qid_t;        // Queue id
-typedef bit<4> cloneid_t;    // Clone id
-typedef bit<10> mirrorid_t;  // Mirror id
+typedef bit<9> PortId_t;     // Port ID -- ingress or egress port
+typedef bit<16> MulticaseGroupId_t;      // Multicast group id
+typedef bit<5> QueueId_t;    // Queue id
+typedef bit<4> CloneId_t;    // Clone id
+typedef bit<10> MirrorId_t;  // Mirror id
 
 /// Meter types
-enum meter_type_t {
+enum MeterType_t {
     PACKETS,
     BYTES
 }
 
 /// Meter colors
-enum meter_color_t {
+enum MeterColor_t {
     RED,
     GREEN,
     YELLOW
 };
 
 /// Counter
-enum counter_type_t {
+enum CounterType_t {
     PACKETS,
     BYTES,
     PACKETS_AND_BYTES
 }
 
 /// Selector mode
-enum selector_mode_t {
+enum SelectorMode_t {
     FAIR,
     RESILIENT
 }
 
-enum hash_algorithm_t {
+enum HashAlgorithm_t {
     IDENTITY,
     RANDOM,
     CRC16,
@@ -94,7 +94,7 @@ header ingress_intrinsic_metadata_t {
 
     bit<3> _pad2;
 
-    portid_t ingress_port;               // ingress physical port id.
+    PortId_t ingress_port;               // ingress physical port id.
                                          // this field is passed to the deparser
 
     bit<48> ingress_mac_tstamp;          // ingress IEEE 1588 timestamp (in nsec)
@@ -113,9 +113,9 @@ struct ingress_intrinsic_metadata_from_parser_t {
 
 struct ingress_intrinsic_metadata_for_tm_t {
     // The ingress physical port id is passed to the TM directly from
-    // ig_intr_md.ingress_port
+
     bit<7> _pad1;
-    portid_t ucast_egress_port;          // egress port for unicast packets. must
+    PortId_t ucast_egress_port;          // egress port for unicast packets. must
                                          // be presented to TM for unicast.
 
     bit<3> drop_ctl;                     // disable packet replication:
@@ -133,7 +133,7 @@ struct ingress_intrinsic_metadata_for_tm_t {
                                          // ingress admission control, PFC,
                                          // etc.
 
-    qid_t qid;                           // egress (logical) queue id into which
+    QueueId_t qid;                       // egress (logical) queue id into which
                                          // this packet will be deposited.
     bit<3> icos_for_copy_to_cpu;         // ingress cos for the copy to CPU. must
                                          // be presented to TM if copy_to_cpu ==
@@ -150,11 +150,11 @@ struct ingress_intrinsic_metadata_for_tm_t {
     bit<1> enable_mcast_cutthru;         // enable cut-through forwarding for
                                          // multicast.
 
-    mgid_t  mcast_grp_a;                 // 1st multicast group (i.e., tree) id;
+    MulticaseGroupId_t  mcast_grp_a;     // 1st multicast group (i.e., tree) id;
                                          // a tree can have two levels. must be
                                          // presented to TM for multicast.
 
-    mgid_t  mcast_grp_b;                 // 2nd multicast group (i.e., tree) id;
+    MulticaseGroupId_t  mcast_grp_b;     // 2nd multicast group (i.e., tree) id;
                                          // a tree can have two levels.
 
     bit<3> _pad3;
@@ -342,7 +342,7 @@ header pktgen_recirc_header_t {
 // contribution) for checksums that include the payload.
 // Checksum engine only supports 16-bit ones' complement checksums.
 extern checksum<W> {
-    checksum(hash_algorithm_t algorithm);
+    checksum(HashAlgorithm_t algorithm);
     void add<T>(in T data);
     bool verify();
     void update<T>(in T data, out W csum, @optional in W residul_csum);
@@ -392,7 +392,7 @@ extern value_set<D> {
 // -----------------------------------------------------------------------------
 extern hash<T> {
     /// Constructor
-    hash(hash_algorithm_t algo);
+    hash(HashAlgorithm_t algo);
 
     /// compute the hash for data
     ///  @base :
@@ -413,15 +413,15 @@ extern idle_timeout<N, T> {
 
 /// Counter
 extern counter<I> {
-    counter(counter_type_t type, @optional I instance_count);
+    counter(CounterType_t type, @optional I instance_count);
     void count(@optional in I index);
 }
 
 /// Meter
 extern meter<I> {
-    meter(meter_type_t type, @optional I instance_count);
-    meter_color_t execute(@optional in I index,
-                          @optional in meter_color_t color);
+    meter(MeterType_t type, @optional I instance_count);
+    MeterColor_t execute(@optional in I index,
+                          @optional in MeterColor_t color);
 }
 
 /// Low pass filter (LPF)
@@ -459,7 +459,7 @@ extern action_selector<T> {
     /// @max_num_groups, max number of groups in a selector table
     /// @max_group_size, max number of entries in a group
     action_selector(bit<32> size,
-                    @optional selector_mode_t mode,
+                    @optional SelectorMode_t mode,
                     @optional register<bit<1>> reg);
     abstract T hash();
 }

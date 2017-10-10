@@ -34,6 +34,14 @@ const IR::P4Parser* SimpleSwitchTranslation::getParser(const IR::ToplevelBlock* 
     return getBlock<IR::P4Parser, IR::ParserBlock>(blk, "p");
 }
 
+const IR::P4Control* SimpleSwitchTranslation::getVerifyChecksum(const IR::ToplevelBlock* blk) {
+    return getBlock<IR::P4Control, IR::ControlBlock>(blk, "vr");
+}
+
+const IR::P4Control* SimpleSwitchTranslation::getUpdateChecksum(const IR::ToplevelBlock* blk) {
+    return getBlock<IR::P4Control, IR::ControlBlock>(blk, "ck");
+}
+
 static cstring toString(BlockType block) {
     switch (block) {
         case BlockType::Unknown: return "unknown";
@@ -649,24 +657,120 @@ class HashTranslation : public PassManager {
     }
 };
 
-class ChecksumTranslation : public Transform {
-    bool allowUnimplemented;
+using ChecksumSourceMap = ordered_map<const IR::Member*, const IR::MethodCallExpression*>;
+
+class AnalyzeUpdateChecksumStatement : public Inspector {
+    SimpleSwitchTranslation* translator;
+    ChecksumSourceMap*       checksums;
+    P4::ClonePathExpressions cloner;
 
  public:
-    explicit ChecksumTranslation(bool allowUnimplemented = false)
-    : allowUnimplemented(allowUnimplemented) {
-        setName("ChecksumTranslation");
+    explicit AnalyzeUpdateChecksumStatement(SimpleSwitchTranslation* translator,
+                                            ChecksumSourceMap* checksums)
+    : translator(translator), checksums(checksums) {
+        CHECK_NULL(translator);
     }
-    const IR::Node* postorder(IR::Declaration_Instance* node) override {
-        if (auto type = node->getType()->to<IR::Type_Name>()) {
-            if (type->path->name == P4_14::Checksum) {
-                if (allowUnimplemented)
-                    ::warning("Checksum translation is not yet supported.");
-                else
-                    P4C_UNIMPLEMENTED("Checksum translation is not yet supported.");
+
+    bool preorder(const IR::P4Control* control) override {
+        auto blk = translator->getToplevelBlock();
+        auto updateChecksum = translator->getUpdateChecksum(blk);
+
+        if (*updateChecksum == *control) {
+            findChecksums(control, checksums);
+            CHECK_NULL(checksums);
+            return false;
+        }
+        return false;
+    }
+
+ private:
+    boost::optional<ChecksumSourceMap::value_type>
+    analyzeComputedChecksumStatement(const IR::MethodCallStatement* statement) {
+        auto methodCall = statement->methodCall->to<IR::MethodCallExpression>();
+        methodCall = methodCall->apply(cloner)->to<IR::MethodCallExpression>();
+        if (!methodCall) {
+            ::warning("Expected a non-empty method call expression: %1%", statement);
+            return boost::none;
+        }
+        auto method = methodCall->method->to<IR::PathExpression>();
+        if (!method || method->path->name != "update_checksum")  {
+            ::warning("Expected an update_checksum statement in %1%", statement);
+            return boost::none;
+        }
+        if (methodCall->arguments->size() != 4) {
+            ::warning("Expected 4 arguments for update_checksum statement: %1%", statement);
+            return boost::none;
+        }
+        auto destField = (*methodCall->arguments)[2]->to<IR::Member>();
+        CHECK_NULL(destField);
+
+        return ChecksumSourceMap::value_type(destField, methodCall);
+    }
+
+    void findChecksums(const IR::P4Control* control, /* out */ ChecksumSourceMap* checksums) {
+        CHECK_NULL(control);
+        CHECK_NULL(checksums);
+
+        for (auto* statement : control->body->components) {
+            boost::optional<ChecksumSourceMap::value_type> checksum;
+            if (auto* method = statement->to<IR::MethodCallStatement>()) {
+                auto checksum = analyzeComputedChecksumStatement(method);
+                if (checksum) checksums->insert(*checksum);
+                continue;
             }
         }
-        return node;
+    }
+};
+
+class DoUpdateChecksumTranslation : public Transform {
+    const ChecksumSourceMap* checksums;
+    std::set<cstring> unique_names;
+
+ public:
+    explicit DoUpdateChecksumTranslation(const ChecksumSourceMap* checksums)
+    : checksums(checksums) {
+        CHECK_NULL(checksums);
+        unique_names.insert("checksum");
+        setName("DoUpdateChecksumTranslation");
+    }
+
+    const IR::Node* postorder(IR::P4Control* node) override {
+        prune();
+        if (node->name != "IngressDeparserImpl" && node->name != "DeparserImpl")
+            return node;
+
+        if (checksums->empty())
+            return node;
+
+        auto decls = new IR::IndexedVector<IR::Declaration>();
+        auto body = new IR::IndexedVector<IR::StatOrDecl>();
+        for (auto csum : *checksums) {
+            auto typeArgs = new IR::Vector<IR::Type>();
+            typeArgs->push_back(csum.second->arguments->at(2)->type);
+            auto inst = new IR::Type_Specialized(new IR::Type_Name("checksum"), typeArgs);
+
+            auto mc = csum.second;
+            auto csum_name = cstring::make_unique(unique_names, "checksum", '_');
+            unique_names.insert(csum_name);
+            auto args = new IR::Vector<IR::Expression>();
+            auto hashAlgo = new IR::Member(
+                    new IR::TypeNameExpression("hash_algorithm_t"), "CRC16");
+            args->push_back(hashAlgo);
+            auto decl = new IR::Declaration_Instance(mc->srcInfo, csum_name, inst, args);
+            decls->push_back(decl);
+
+            auto stmt = new IR::MethodCallStatement(mc->srcInfo,
+                            new IR::Member(new IR::PathExpression(csum_name), "update"),
+                            {csum.second->arguments->at(1), csum.second->arguments->at(2)});
+            body->push_back(stmt);
+        }
+        decls->append(node->controlLocals);
+        body->append(node->body->components);
+        auto stmts = new IR::BlockStatement(*body);
+
+        auto result = new IR::P4Control(node->srcInfo, node->name, node->type,
+                                        node->constructorParams, *decls, stmts);
+        return result;
     }
 };
 
@@ -1575,6 +1679,10 @@ class PackageTranslation : public Transform {
     : translator(translator) { CHECK_NULL(translator); setName("PackageTranslation"); }
 
     const IR::Node* preorder(IR::P4Control* node) override {
+        // remove computeChecksum and verifyChecksum control blocks
+        if (node->name == "computeChecksum" || node->name == "verifyChecksum")
+            return nullptr;
+
         auto blk = translator->getToplevelBlock();
         auto deparser = translator->getDeparser(blk);
         auto parser = translator->getParser(blk);
@@ -1585,10 +1693,11 @@ class PackageTranslation : public Transform {
             CHECK_NULL(controlType);
             auto paramList = new IR::ParameterList({node->type->applyParams->parameters.at(0),
                                                     node->type->applyParams->parameters.at(1)});
+
             // add metadata
             auto meta = parser->type->applyParams->parameters.at(2);
             auto param = new IR::Parameter(meta->name, meta->annotations,
-                                           IR::Direction::In, meta->type);
+                                      IR::Direction::In, meta->type);
             paramList->push_back(param);
 
             // add deparser intrinsic metadata
@@ -1690,6 +1799,34 @@ class PackageTranslation : public Transform {
     }
 };
 
+class FixParserParameterDirection : public Transform {
+    SimpleSwitchTranslation* translator;
+
+ public:
+    explicit FixParserParameterDirection(SimpleSwitchTranslation* translator)
+    : translator(translator) { setName("FixParserParameterDirection"); }
+
+    const IR::Node* preorder(IR::P4Control* node) override {
+        auto blk = translator->getToplevelBlock();
+        auto deparser = translator->getDeparser(blk);
+        if (*deparser == *node) {
+            auto ct = deparser->type->to<IR::Type_Control>();
+            auto hdr = deparser->type->applyParams->parameters[1];
+            auto param = new IR::Parameter(hdr->name, hdr->annotations,
+                                           IR::Direction::InOut, hdr->type);
+            auto paramList = new IR::ParameterList({node->type->applyParams->parameters[0], param});
+            auto control = new IR::Type_Control(ct->srcInfo, ct->name,
+                                                ct->annotations, ct->typeParameters,
+                                                paramList);
+            auto result = new IR::P4Control(node->srcInfo, node->name, control,
+                                            node->constructorParams, node->controlLocals,
+                                            node->body);
+            return result;
+        }
+        return node;
+    }
+};
+
 SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
                                                  P4::TypeMap* typeMap, BFN_Options& options) {
     setName("Translation");
@@ -1700,20 +1837,26 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
         target = BFN::Target::Tofino;
     addDebugHook(options.getDebugHook());
     auto evaluator = new P4::EvaluatorPass(refMap, typeMap);
+    auto checksums = new ChecksumSourceMap;
     addPasses({
+        evaluator,
+        new VisitFunctor([this, evaluator]() { toplevel = evaluator->getToplevelBlock(); }),
+        new FixParserParameterDirection(this),
         new P4::TypeChecking(refMap, typeMap, true),
         evaluator,
         new VisitFunctor([this, evaluator]() { toplevel = evaluator->getToplevelBlock(); }),
-        new PackageTranslation(this),
+        new AnalyzeUpdateChecksumStatement(this, checksums),
+        evaluator,
         new VisitFunctor([this, evaluator]() { toplevel = evaluator->getToplevelBlock(); }),
+        new PackageTranslation(this),
         new MetadataTranslation(this),
         new RemoveUserArchitecture(&structure, target),
         new CleanP14V1model(),
+        new DoUpdateChecksumTranslation(checksums),
         new DoCounterTranslation(),
         new DoMeterTranslation(),
         new RandomTranslation(),
         new HashTranslation(),
-        new ChecksumTranslation(options.allowUnimplemented),
         new ParserCounterTranslation(options.allowUnimplemented),
         new PacketPriorityTranslation(),
         new ValueSetTranslation(),

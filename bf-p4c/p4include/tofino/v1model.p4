@@ -15,14 +15,11 @@ No warranty, explicit or implicit is provided, unless granted under a written
 agreement with Barefoot Networks, Inc.
 */
 
-/// XXX(hanw): This is a temporary architecture file to assist the
-/// v1model to tofino translation, it will be removed once the
-/// translation to tofino native architeture is complete.
-
 #ifndef _V1MODEL_P4_
 #define _V1MODEL_P4_
 
 #include "core.p4"
+
 // -----------------------------------------------------------------------------
 // COMMON TYPES
 // -----------------------------------------------------------------------------
@@ -31,6 +28,30 @@ typedef bit<16> MulticastGroupId_t;   // Multicast group id
 typedef bit<5>  QueueId_t;    // Queue id
 typedef bit<4>  CloneId_t;    // Clone id
 typedef bit<10> MirrorId_t;   // Mirror id
+
+enum meter_type_t {
+    PACKETS,
+    BYTES
+}
+
+/// Counter
+enum counter_type_t {
+    PACKETS,
+    BYTES,
+    PACKETS_AND_BYTES
+}
+
+enum hash_algorithm_t {
+    IDENTITY,
+    RANDOM,
+    CRC16,
+    CRC32
+}
+
+enum CloneType {
+    I2E,
+    E2E
+}
 
 match_kind {
     range,
@@ -255,6 +276,21 @@ struct egress_intrinsic_metadata_for_output_port_t {
 }
 
 // -----------------------------------------------------------------------------
+// CHECKSUM
+// -----------------------------------------------------------------------------
+// Tofino checksum engine can verify the checksums for header-only checksums
+// and calculate the residual (checksum minus the header field
+// contribution) for checksums that include the payload.
+// Checksum engine only supports 16-bit ones' complement checksums.
+extern checksum<W> {
+    checksum(hash_algorithm_t algorithm);
+    void add<T>(in T data);
+    bool verify();
+    void update<T>(in T data, out W csum, @optional in W residul_csum);
+    W residual_checksum<T>(in T data);
+}
+
+// -----------------------------------------------------------------------------
 // PARSER COUNTER/PRIORITY/VALUE SET
 // -----------------------------------------------------------------------------
 // Parser value set
@@ -273,27 +309,29 @@ extern priority {
     void set(in bit<3> prio);
 }
 
-extern Checksum16 {
-    Checksum16();
-    bit<16> get<D>(in D data);
+// -----------------------------------------------------------------------------
+// HASH ENGINE
+// -----------------------------------------------------------------------------
+extern hash<D, T, M> {
+    /// Constructor
+    hash(hash_algorithm_t algo);
+
+    /// compute the hash for data
+    ///  @base :
+    ///  @max :
+    T get_hash(in D data, @optional in T base, @optional in M max);
+}
+
+/// Random number generator
+extern random<T> {
+    random();
+    T get(@optional in T mask);
 }
 
 /// idle timeout
 extern idle_timeout {
     idle_timeout(bit<3> state_count, @optional bool two_way_notify /* = false */,
                  @optional bool per_flow_enable /* = false */);
-}
-
-/// Counter
-enum counter_type_t {
-    PACKETS,
-    BYTES,
-    PACKETS_AND_BYTES
-}
-
-enum meter_type_t {
-    PACKETS,
-    BYTES
 }
 
 /// Counter
@@ -307,6 +345,10 @@ extern meter<I> {
     meter(meter_type_t type, @optional I instance_count);
     bit<8> execute(@optional in I index, @optional in bit<8> color);
 }
+
+/// LPF
+
+/// WRED
 
 /// Register
 extern register<T> {
@@ -348,37 +390,13 @@ extern register_action<T, U> {
     } */
 }
 
-// used as table implementation attribute
-extern action_profile {
-    action_profile(bit<32> size);
-}
-
-/// Random number generator
-extern random<T> {
-    random();
-    T get(@optional in T mask);
-}
-
-extern void mark_to_drop();
-
-enum hash_algorithm_t {
-    IDENTITY,
-    RANDOM,
-    CRC16,
-    CRC32
-}
-extern hash<D, T, M> {
-    /// Constructor
-    hash(hash_algorithm_t algo);
-
-    /// compute the hash for data
-    ///  @base :
-    ///  @max :
-    T get_hash(in D data, @optional in T base, @optional in M max);
-}
-
+/// XXX(hanw): convert
 extern action_selector {
     action_selector(hash_algorithm_t algorithm, bit<32> size, bit<32> outputWidth);
+}
+
+extern action_profile {
+    action_profile(bit<32> size);
 }
 
 /// XXX(hanw): avoid using 'emit' as method name to avoid issue in gen_deparser.cpp
@@ -397,16 +415,12 @@ extern resubmit_packet {
     void add_metadata<T>(@optional in T hdr);
 }
 
-enum CloneType {
-    I2E,
-    E2E
-}
-
 extern learn_filter_packet {
     ///
     void add_metadata<T>(in T hdr);
 }
 
+extern void mark_to_drop();
 extern void recirculate<T>(in T data);
 extern void truncate(in bit<32> length);
 
@@ -448,7 +462,7 @@ control Egress<H, M>(
 
 control IngressDeparser<H, M>(
     packet_out pkt,
-    in H hdr,
+    inout H hdr,
     @optional in M metadata,
     @optional in ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
     @optional mirror_packet mirror,
@@ -456,7 +470,7 @@ control IngressDeparser<H, M>(
 
 control EgressDeparser<H, M>(
     packet_out pkt,
-    in H hdr,
+    inout H hdr,
     @optional in M metadata,
     @optional in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
     @optional mirror_packet mirror);
