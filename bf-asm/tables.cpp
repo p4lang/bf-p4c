@@ -1049,7 +1049,7 @@ void Table::Actions::gen_tbl_cfg(json::vector &cfg) {
             } else if (act.has_rng()) {
                 action_cfg["disallowed_as_default_action_reason"] = "USES_RNG"; }
             json::vector &p4_params = action_cfg["p4_parameters"] = json::vector();
-            if (!act.alias.empty()) add_p4_params(act, p4_params);
+            add_p4_params(act, p4_params);
             action_cfg["override_meter_addr"] = false;
             action_cfg["override_meter_addr_pfe"] = false;
             action_cfg["override_meter_full_addr"] = 0;
@@ -1084,14 +1084,6 @@ void Table::Actions::gen_tbl_cfg(json::vector &cfg) {
 
 void Table::Actions::add_p4_params(const Action &act, json::vector &cfg) {
     int index = 0;
-    //for (auto &a : act.alias) {
-    //    json::string name = a.first;
-    //    int lo = remove_name_tail_range(name);
-    //    cfg.push_back( json::map {
-    //        { "name", std::move(name) },
-    //        { "start_bit", json::number(lo) },
-    //        { "position", json::number(index++) },
-    //        { "bit_width", json::number(a.second.hi - a.second.lo + 1) } } ); }
     for (auto &a : act.p4_params_list) {
         unsigned start_bit = 0;
         json::map param;
@@ -1102,8 +1094,7 @@ void Table::Actions::add_p4_params(const Action &act, json::vector &cfg) {
             param["default_value"] = a.default_value;
         param["bit_width"] = a.bit_width;
         cfg.push_back(std::move(param));
-        start_bit += a.bit_width;
-    }
+        start_bit += a.bit_width; }
 }
 
 void Table::Actions::add_action_format(Table *table, json::map &tbl) {
