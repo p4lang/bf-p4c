@@ -86,6 +86,8 @@ struct ActionFormat {
                 constant_value = cv;
             }
 
+            bool operator==(const ArgLoc &a) const;
+
             /** The alias needed for a single action parameter */
             cstring get_asm_name() const {
                 cstring ret_name = name;
@@ -101,9 +103,15 @@ struct ActionFormat {
         safe_vector<ArgLoc> arg_locs;
         int size;          ///< Number of bits needed
         bitvec range;      ///< Total mask
+        bool bitmasked_set = false;  ///< If the placement requires a mask as well
+
+        bool operator==(const ActionDataPlacement &a) const;
+
+        // Everything above is determined during initialization
+
+        // Everything below is determined during the action_format algorithm
         int start = -1;    ///< Byte offset within the action data table
         cstring action_name;  ///< Potential rename if multiple action args within one placement
-        bool bitmasked_set = false;  ///< If the placement requires a mask as well
         cstring mask_name;  ///< A name that coordinates the mask to be setup in asm_output
 
         int gen_index() const {

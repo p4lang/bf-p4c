@@ -37,6 +37,25 @@ int ActionFormat::ActionContainerInfo::find_maximum_immed() {
     return maximum;
 }
 
+bool ActionFormat::ActionDataPlacement::ArgLoc::operator==(
+        const ActionFormat::ActionDataPlacement::ArgLoc &a) const {
+    if (name != a.name) return false;
+    if (field_bit != a.field_bit) return false;
+    if (data_loc != a.data_loc) return false;
+    return true;
+}
+
+bool ActionFormat::ActionDataPlacement::operator==(
+        const ActionFormat::ActionDataPlacement &a) const {
+    if (size != a.size) return false;
+    if (range != a.range) return false;
+    for (auto arg_loc : arg_locs) {
+        if (std::find(a.arg_locs.begin(), a.arg_locs.end(), arg_loc) == a.arg_locs.end())
+            return false;
+    }
+    return true;
+}
+
 /** General naming scheme used for finding information on either immediate or action data
  *  table location of a particular field, which needs to be coordinated in the action data
  *  table format, the action data bus, and the action format itself within the assembly code
@@ -272,6 +291,10 @@ void ActionFormat::create_placement_phv(ActionAnalysis::ContainerActionsMap &con
             adp.size = container.size();
             if (cont_action.to_bitmasked_set)
                 adp.bitmasked_set = true;
+            // FIXME: This is a hack to get switch_l2 to fit quickly.  This could be done
+            // in a much better analysis of sharing action data
+            if (std::find(adp_vector.begin(), adp_vector.end(), adp) != adp_vector.end())
+                continue;
             adp_vector.push_back(adp);
         }
     }
