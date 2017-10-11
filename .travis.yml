@@ -15,7 +15,7 @@ env:
   - MAKEFLAGS="-j4"
   - DOCKER_USERNAME="bfndocker"
   - CTEST_OUTPUT_ON_FAILURE="true"
-  - CTEST_PARALLEL_LEVEL=2
+  - CTEST_PARALLEL_LEVEL=4
 
 before_install:
 # - docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
