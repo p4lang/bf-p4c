@@ -701,7 +701,8 @@ PHV_Container::Container_Content* PHV_Container::taint_bits(
 
     // track fields in this container
     Container_Content *cc =
-        new Container_Content(this, StartLen(start, width), field, field_bit_lo, taint_color_i, pass);
+        new Container_Content(this, StartLen(start, width), field,
+                              field_bit_lo, taint_color_i, pass);
     fields_in_container(field, cc);
 
     return cc;
