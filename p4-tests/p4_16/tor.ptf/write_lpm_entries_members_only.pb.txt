@@ -1,0 +1,257 @@
+# This file defines ::p4::WriteRequest RPC data for setting up
+# LPM forwarding pipeline for the hercules-one-node APES test-bed
+
+# TOR device_id
+device_id: 0
+
+# Set VRF ID for H1->H2
+updates {
+  type: INSERT
+  entity {
+    table_entry {
+      table_id: 33619357  # vrf_classifier
+      match {
+        field_id: 1  # hdr.ethernet.ether_type
+        exact {
+          value: "\x08\x00"
+        }
+      }
+      match {
+        field_id: 2  # hdr.ethernet.src_addr
+        ternary {
+	  mask: "\xff\xff\xff\xff\xff\xff" # Host1 mac
+          value: "\xee\x61\x23\xbc\xe5\x00" # ee:61:23:bc:e5:00
+        }
+      }
+      match {
+        field_id: 3  # hdr.ipv4_base.diffserv
+        ternary {
+	  mask: "\x00" # don't match
+          value: "\x00"
+        }
+      }
+      match {
+        field_id: 4  # "hdr.ipv4_base.dst_addr
+        ternary {
+	  mask: "\xff\xff\x00\x00" 
+          value: "\xac\x18\x00\x00" # 172.24.*.*
+        }
+      }
+      match {
+        field_id: 5  # standard_metadata.ingress_port
+        exact {
+          value: "\x00\x01" # packet from port 1
+        }
+      }
+      action {
+        action {
+          action_id: 16793447  # set_vrf
+	  params {
+	    param_id: 1 # vrf_id
+	    value: "\x00\x00\x00\x01" # vrf ID 1
+          }
+        }
+      }
+    }
+  }
+}
+
+# Set VRF ID for H2->H1
+updates {
+  type: INSERT
+  entity {
+    table_entry {
+      table_id: 33619357  # vrf_classifier
+      match {
+        field_id: 1  # hdr.ethernet.ether_type
+        exact {
+          value: "\x08\x00"
+        }
+      }
+      match {
+        field_id: 2  # hdr.ethernet.src_addr
+        ternary {
+	  mask: "\xff\xff\xff\xff\xff\xff"
+          value: "\xee\x30\xca\x9d\x1e\x00" # Host 2 mac ee:30:ca:9d:1e:00
+        }
+      }
+      match {
+        field_id: 3  # hdr.ipv4_base.diffserv
+        ternary {
+	  mask: "\x00" # don't match
+          value: "\x00"
+        }
+      }
+      match {
+        field_id: 4  # "hdr.ipv4_base.dst_addr
+        ternary {
+	  mask: "\xff\xff\x00\x00" 
+          value: "\xac\x18\x00\x00" # 172.24.*.*
+        }
+      }
+      match {
+        field_id: 5  # standard_metadata.ingress_port
+        exact {
+          value: "\x00\x02" # packet from Port 2
+        }
+      }
+      action {
+        action {
+          action_id: 16793447  # set_vrf
+	  params {
+	    param_id: 1 # vrf_id
+	    value: "\x00\x00\x00\x01" # vrf ID 1
+          }
+        }
+      }
+    }
+  }
+}
+
+# l3_routing_classifier to mimic the virtual host ARP table entries,
+
+updates {
+  type: INSERT
+  entity {
+    table_entry {
+      table_id: 33568218  # l3_routing_classifier
+      match {
+        field_id: 1  # ethernet.dstAddr
+        exact {
+          value: "\xee\xcd\x00\x7e\x70\x01" # softswitch Host1 facing mac EE:CD:00:7E:70:01
+        }
+      }
+      action {
+        action {
+          action_id: 16800567  # nop
+        }
+      }
+    }
+  }
+}
+
+updates {
+  type: INSERT
+  entity {
+    table_entry {
+      table_id: 33568218  # l3_routing_classifier
+      match {
+        field_id: 1  # ethernet.dstAddr
+        exact {
+          value: "\xee\xcd\x00\x7e\x70\x00" # softswitch Host2 facing mac EE:CD:00:7E:70:00
+        }
+      }
+      action {
+        action {
+          action_id: 16800567  # nop
+        }
+      }
+    }
+  }
+}
+
+# Member of H1->H2 WCMP (only one member)
+updates {
+  type: INSERT
+  entity {
+    action_profile_member {
+      action_profile_id: 285270769  # ecmp_action_profile
+      member_id: 1
+      action {
+        action_id: 16779406  # set_ecmp_nexthop_info_port
+        params {
+          param_id: 1        # port
+          value: "\x00\x02"  # softswitch port2
+        }
+        params {
+          param_id: 2  # smac
+          value: "\xee\xcd\x00\x7e\x70\x00"  # Softswitch Host2 facing MAC EE:CD:00:7E:70:00
+        }
+        params {
+          param_id: 3  # dmac
+          value: "\xee\x30\xca\x9d\x1e\x00" # Host 2 mac ee:30:ca:9d:1e:00
+        }
+      }
+    }
+  }
+}
+
+# Member of H2->H1 WCMP (only one member)
+updates {
+  type: INSERT
+  entity {
+    action_profile_member {
+      action_profile_id: 285270769  # ecmp_action_profile
+      member_id: 3
+      action {
+        action_id: 16779406  # set_ecmp_nexthop_info_port
+        params {
+          param_id: 1        # port
+          value: "\x00\x01"  # softswitch port1
+        }
+        params {
+          param_id: 2  # smac
+          value: "\xee\xcd\x00\x7e\x70\x01" # softswitch Host1 facing mac EE:CD:00:7E:70:01
+        }
+        params {
+          param_id: 3  # dmac
+          value: "\xee\x61\x23\xbc\xe5\x00" # Host1 MAC ee:61:23:bc:e5:00
+        }
+      }
+    }
+  }
+}
+
+# l3_ipv4_vrf_table to route from H1 to H2,
+
+updates {
+  type: INSERT
+  entity {
+    table_entry {
+      table_id: 33581631  # l3_ipv4_vrf_table
+      match {
+        field_id: 1  # local_metadata.vrf_id
+        exact {
+          value: "\x00\x00\x00\x01" # matches the set vrf ID 
+        }
+      }
+      match {
+        field_id: 2  # hdr.ipv4_base.dst_addr
+        lpm {
+	  prefix_len: 32 # defaults to exact match
+          value: "\xac\x18\x70\x01" # H2's IPv4 address 
+        }
+      }
+      action {
+        action_profile_member_id: 1
+      }
+    }
+  }
+}
+
+# l3_ipv4_vrf_table to route from H2 to H1,
+
+updates {
+  type: INSERT
+  entity {
+    table_entry {
+      table_id: 33581631  # l3_ipv4_vrf_table
+      match {
+        field_id: 1  # local_metadata.vrf_id
+        exact {
+          value: "\x00\x00\x00\x01" # matches the set vrf ID 
+        }
+      }
+      match {
+        field_id: 2  # hdr.ipv4_base.dst_addr
+        lpm {
+	  prefix_len: 32 # defaults to exact match
+          value: "\xac\x18\x6f\x01" # H1's IPv4 address 
+        }
+      }
+      action {
+        action_profile_member_id: 3
+      }
+    }
+  }
+}

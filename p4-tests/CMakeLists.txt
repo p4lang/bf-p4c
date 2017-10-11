@@ -92,7 +92,6 @@ set (TOFINO_TEST_SUITES
   ${P4C_SOURCE_DIR}/testdata/p4_14_samples/*.p4
   ${P4TESTDATA}/p4_14_samples/switch_*/switch.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/*.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/google-tor/p4/spec/tor.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/*.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c1/*/*.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c2/*/*.p4
@@ -114,7 +113,6 @@ set (testExtraArgs)
 if (NOT HARLYN_STF)
   set (testExtraArgs ${testExtraArgs} -norun)
 endif()
-set (TOFINO_PTF_TESTS)
 if (PTF_REQUIREMENTS_MET)
   set (testExtraArgs ${testExtraArgs} -ptf)
   if (ENABLE_STF2PTF)
@@ -134,8 +132,29 @@ set (HARLYN_PTF_DRIVER_WRAPPER ${CMAKE_CURRENT_BINARY_DIR}/ptf_runner_wrapper
 configure_file ("src/ptf_runner_wrapper.c.in"
   "${P4C_BINARY_DIR}/ptf_runner_wrapper.c" @ONLY)
 
+# xfail list is empty: tests which are expected to fail should be listed in
+# TofinoXfail.cmake with a reason
 p4c_add_tests ("tofino" ${P4C_TOFINO_RUNTEST} "${TOFINO_TEST_SUITES}"
-  "${TOFINO_XFAIL_TESTS}" "${TOFINO_PTF_TESTS}" "${testExtraArgs}")
+  "" "${testExtraArgs}")
+
+# call this macro to register a PTF test with a custom PTF test directory; by
+# default the behavior is to look for a directory with the same name as the P4
+# program and a .ptf extension, which may not always be convenient when adding
+# tests for third-party P4 programs.
+# if you need to mark this test as XFAIL, please edit TofinoXfail.cmake with the
+# appropriate call to p4c_add_xfail_reason.
+macro(p4c_add_ptf_test_with_ptfdir alias ts args ptfdir)
+  file (RELATIVE_PATH p4test ${P4C_SOURCE_DIR} ${ts})
+  p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} FALSE ${alias}
+    ${p4test} "${args} -ptfdir ${ptfdir}")
+  p4c_test_set_name(__testname "tofino" ${alias})
+  set_tests_properties(${__testname} PROPERTIES RUN_SERIAL 1)
+  p4c_add_test_label("tofino" "ptf" ${alias})
+endmacro(p4c_add_ptf_test_with_ptfdir)
+
+p4c_add_ptf_test_with_ptfdir (
+    tor.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/google-tor/p4/spec/tor.p4
+    ${testExtraArgs} ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/tor.ptf)
 
 if (PTF_REQUIREMENTS_MET)
   # PTF tests cannot be run in parallel with other tests, so we set the SERIAL
