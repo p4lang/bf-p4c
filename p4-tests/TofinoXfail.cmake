@@ -292,6 +292,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/01-FlexCounter.p4
   extensions/p4_tests/p4_14/03-VlanProfile.p4
   extensions/p4_tests/p4_14/19-SimpleTrill.p4
+  extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
   )
 
 # BRIG-112
@@ -788,12 +789,8 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "error: Field .* and field .* are adjacent in container .* but aren't adjacent in the deparser"
-  extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
   extensions/p4_tests/p4_14/test_config_236_stateful_read_bit.p4
   extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
   )
 
 # Likely still has a bug; emits the following warning:
@@ -934,6 +931,9 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_100_hash_action.p4
   extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
   extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
   )
 
 # BEGIN: XFAILS that match glass XFAILS

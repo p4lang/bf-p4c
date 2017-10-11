@@ -1065,7 +1065,26 @@ struct ComputeFieldAlignments : public Inspector {
 
         // The alignment required for a parsed field is determined by the
         // position from which it's read from the wire.
-        fieldInfo->updateAlignment(FieldAlignment(extract->extractedBits()));
+        const auto alignment = FieldAlignment(extract->extractedBits());
+        fieldInfo->updateAlignment(alignment);
+
+        // XXX(seth): This is a hack: if this field was bridged from ingress, we
+        // apply the same alignment constraint to the ingress version of the
+        // field. This ensures that the two allocations are compatible until
+        // we're ready to handle bridged metadata more intelligently. (Note that
+        // we don't even need to do this before CreateThreadLocalInstances has
+        // run, since before that there is just one version of the field; that's
+        // why we check for "egress::" below.)
+        auto* state = findContext<IR::BFN::ParserState>();
+        if (state->name.endsWith("$bridge_metadata_extract") &&
+                fieldInfo->name.startsWith("egress::")) {
+            cstring ingressFieldName = cstring("ingress::")
+                                     + fieldInfo->name.substr(strlen("egress::"));
+            auto* ingressFieldInfo = phv.field(ingressFieldName);
+            BUG_CHECK(ingressFieldInfo != nullptr,
+                      "No ingress version of egress bridged metadata field?");
+            ingressFieldInfo->updateAlignment(alignment);
+        }
 
         return false;
     }
@@ -1086,11 +1105,12 @@ struct ComputeFieldAlignments : public Inspector {
                 continue;
             }
 
-            // We don't enforce any particular alignment for bridged metadata in
-            // the deparser, because we don't care about garbage bits being
-            // mixed in with bridged metadata; it won't be leave the
-            // device or be visible to P4. Just skip over it to the next
-            // byte-aligned position.
+            // XXX(seth): We don't need to infer any constraints from the
+            // deparser for bridged metadata fields; they get their alignment
+            // from the hack in `preorder(ExtractBuffer)`. (We just duplicate
+            // the egress alignment constraints, which are inferred from the
+            // parser, for the ingress versions of the fields.) For now, we just
+            // skip to the next byte-aligned position.
             if (fieldInfo->metadata && fieldInfo->bridged) {
                 currentBit += fieldInfo->size;
                 if (currentBit % 8 != 0)
