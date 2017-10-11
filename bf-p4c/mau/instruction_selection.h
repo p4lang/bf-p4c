@@ -74,16 +74,12 @@ class StatefulHashDistSetup : public MauTransform, TofinoWriteContext {
 };
 
 class ConvertCastToSlice : public MauTransform, P4WriteContext {
-    const PhvInfo &phv;
     bool contains_cast = false;
     const IR::MAU::Instruction *preorder(IR::MAU::Instruction *) override;
     const IR::Expression *preorder(IR::Slice *) override;
     const IR::Cast *preorder(IR::Cast *) override;
     const IR::MAU::SaluAction *preorder(IR::MAU::SaluAction *) override;
     const IR::Node *postorder(IR::MAU::Instruction *) override;
-
- public:
-    explicit ConvertCastToSlice(const PhvInfo &p) : phv(p) {}
 };
 
 class DoInstructionSelection : public PassManager {

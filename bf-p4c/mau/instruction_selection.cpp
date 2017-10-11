@@ -738,7 +738,7 @@ const IR::Node *ConvertCastToSlice::postorder(IR::MAU::Instruction *instr) {
 
 DoInstructionSelection::DoInstructionSelection(PhvInfo &phv) : PassManager {
     new InstructionSelection(phv),
-    new ConvertCastToSlice(phv),
+    new ConvertCastToSlice,
     new StatefulHashDistSetup(phv),
     new CollectPhvInfo(phv),
     new PHV::ValidateActions(phv, false, false, false)
