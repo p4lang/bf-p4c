@@ -136,12 +136,17 @@ void IdletimeTable::write_regs(REGS &regs) {
 
 void IdletimeTable::gen_stage_tbl_cfg(json::map &out) {
     if (options.new_ctx_json) {
+        unsigned number_entries = layout_size() * (8U/precision) * 1024;
         json::map &tbl = out["idletime_stage_table"] = json::map();
+        tbl["stage_number"] = stage->stageno;
+        tbl["size"] = number_entries;
         tbl["stage_table_type"] = "idletime";
         tbl["precision"] = precision;
         tbl["disable_notification"] = disable_notification;
         tbl["two_way_notification"] = two_way_notification;
         tbl["enable_pfe"] = per_flow_enable;
+        add_pack_format(tbl, 11, 1, 8U/precision);
+        tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg("map_ram", layout);
     } else {
         unsigned number_entries = layout_size() * (8U/precision) * 1024;
         json::map &tbl = out["stage_idletime_table"] = json::map();
