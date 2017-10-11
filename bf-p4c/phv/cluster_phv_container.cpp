@@ -12,15 +12,13 @@
 
 PHV_Container::Container_Content::Container_Content(
     const PHV_Container *c,
-    const int l,
-    const int w,
+    const le_bitrange container_range,
     PhvInfo::Field *f,
     const int field_bit_lo,
     const std::string taint_color,
     Pass pass)
         : container_i(c),
-          lo_i(l),
-          hi_i(l+w-1),
+          container_range_i(container_range),
           field_i(f),
           field_bit_lo_i(field_bit_lo),
           taint_color_i(taint_color),
@@ -433,8 +431,7 @@ PHV_Container::overlay_ccgf_field(
             member,
             new Container_Content(
                this,
-               start,
-               use_width,
+               StartLen(start, use_width),
                member,
                member_bit_lo,
                taint_color(start, start + use_width - 1),
@@ -488,8 +485,7 @@ PHV_Container::single_field_overlay(
                 f,
                 new Container_Content(
                     this,
-                    align_start,
-                    width,
+                    StartLen(align_start, width),
                     f,
                     field_bit_lo,
                     taint_color(start, start + width - 1),
@@ -705,7 +701,7 @@ PHV_Container::Container_Content* PHV_Container::taint_bits(
 
     // track fields in this container
     Container_Content *cc =
-        new Container_Content(this, start, width, field, field_bit_lo, taint_color_i, pass);
+        new Container_Content(this, StartLen(start, width), field, field_bit_lo, taint_color_i, pass);
     fields_in_container(field, cc);
 
     return cc;
@@ -904,9 +900,7 @@ void PHV_Container::Container_Content::sanity_check_container(
             << " field width less than width allocated in container: "
             << field_i->phv_use_width()
             << " vs "
-            << lo_i
-            << ".."
-            << hi_i
+            << container_range_i
             << std::endl
             << field_i
             << *container);
@@ -936,19 +930,17 @@ void PHV_Container::Container_Content::sanity_check_container(
             << msg_1
             << std::endl
             << " overlayed field ahead of substratum field "
-            << lo_i
-            << ".."
-            << hi_i
+            << container_range_i
             << " taint_color_i "
             << taint_color_i
             << *container);
-        if (container->taint_color(hi_i) > container->taint_color(lo_i)) {
-            taint_color_i = container->taint_color(lo_i) + container->taint_color(hi_i);
+        if (container->taint_color(hi()) > container->taint_color(lo())) {
+            taint_color_i = container->taint_color(lo()) + container->taint_color(hi());
         } else {
-            taint_color_i = container->taint_color(lo_i);
+            taint_color_i = container->taint_color(lo());
         }
     }
-    for (auto i=lo_i; i <= hi_i; i++) {
+    for (auto i=lo(); i <= hi(); i++) {
         if (container->bits()[i] != taint_color_i.back()) {
             if (overlayed() || header_stack_overlayed()) {
                 //
@@ -957,8 +949,8 @@ void PHV_Container::Container_Content::sanity_check_container(
                 // they should have the concatenation of lowest+highest substratum taint number
                 //
                 if (taint_color_i !=
-                    std::string(1, container->bits()[lo_i]) +
-                    std::string(1, container->bits()[hi_i])) {
+                    std::string(1, container->bits()[lo()]) +
+                    std::string(1, container->bits()[hi()])) {
                     //
                     LOG1(
                         "*****cluster_phv_container.cpp:sanity_FAIL*****....."
@@ -968,14 +960,12 @@ void PHV_Container::Container_Content::sanity_check_container(
                         << std::endl
                         << field_i
                         << std::endl
-                        << lo_i
-                        << ".."
-                        << hi_i
+                        << container_range_i
                         << " taint_color_i "
                         << taint_color_i
                         << " should be "
-                        << container->bits()[lo_i]
-                        << container->bits()[hi_i]
+                        << container->bits()[lo()]
+                        << container->bits()[hi()]
                         << *container);
                 }
                 break;
@@ -989,14 +979,12 @@ void PHV_Container::Container_Content::sanity_check_container(
                     << std::endl
                     << field_i
                     << std::endl
-                    << lo_i
-                    << ".."
-                    << hi_i
+                    << container_range_i
                     << " taint_color_i "
                     << taint_color_i
                     << " should be "
-                    << container->bits()[lo_i]
-                    << container->bits()[hi_i]
+                    << container->bits()[lo()]
+                    << container->bits()[hi()]
                     << *container);
                 break;
             }

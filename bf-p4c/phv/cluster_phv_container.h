@@ -44,8 +44,7 @@ class PHV_Container {
 
      private:
         const PHV_Container *container_i;  // parent container
-        int lo_i;                          // low of bit range in container for field
-        int hi_i;                          // high of bit range in container for field
+        le_bitrange container_range_i;     // range of bits used in container for this field
         PhvInfo::Field *field_i;
         const int field_bit_lo_i;          // start of field bit in this container
         std::string taint_color_i = "?";   // taint color of this field in container
@@ -54,18 +53,17 @@ class PHV_Container {
      public:
         Container_Content(
             const PHV_Container *c,
-            const int l,
-            const int h,
+            const le_bitrange container_range,
             PhvInfo::Field *f,
             const int field_bit_lo = 0,
             const std::string taint_color = "?",
             Pass = None);
         //
-        int lo() const                   { return lo_i; }
-        void lo(int l)                   { lo_i = l; }
-        int hi() const                   { return hi_i; }
-        void hi(int h)                   { hi_i = h; }
-        int width() const                { return hi_i - lo_i + 1; }
+        int lo() const                   { return container_range_i.lo; }
+        void lo(int l)                   { container_range_i.lo = l; }
+        int hi() const                   { return container_range_i.hi; }
+        void hi(int h)                   { container_range_i.hi = h; }
+        int width() const                { return container_range_i.size(); }
         PhvInfo::Field *field()          { return field_i; }
         int field_bit_lo() const         { return field_bit_lo_i; }
         int field_bit_hi() const         { return field_bit_lo_i + width() - 1; }
