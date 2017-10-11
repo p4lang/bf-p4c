@@ -867,6 +867,22 @@ void PhvInfo::Field::updateAlignment(const FieldAlignment& newAlignment) {
                 cstring::to_cstring(*alignment));
 }
 
+void PhvInfo::Field::updateValidContainerRange(nw_bitrange newValidRange) {
+    LOG2("Inferred valid container range " << newValidRange <<
+         " for field " << name);
+
+    const auto intersection = validContainerRange.intersectWith(newValidRange);
+    if (intersection.empty() || intersection.size() < size) {
+        ::error("Inferred valid container ranges %1% and %2% for field %3% "
+                "which cannot both be satisfied for a field of size %4%b",
+                cstring::to_cstring(validContainerRange),
+                cstring::to_cstring(newValidRange), name, size);
+        return;
+    }
+
+    validContainerRange = *toClosedRange(intersection);
+}
+
 
 //***********************************************************************************
 //
@@ -1081,8 +1097,27 @@ struct ComputeFieldAlignments : public Inspector {
 
         // The alignment required for a parsed field is determined by the
         // position from which it's read from the wire.
-        const auto alignment = FieldAlignment(extract->extractedBits());
+        const auto extractedBits = extract->extractedBits();
+        const auto alignment = FieldAlignment(extractedBits);
         fieldInfo->updateAlignment(alignment);
+
+        // If a parsed field starts at a container bit index larger than the bit
+        // index at which it's located in the input buffer, we won't be able to
+        // extract it, because we'd have to read past the beginning of the input
+        // buffer. For example (all indices are in network order):
+        //
+        //   Container: [ 0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 ]
+        //                                      [       field      ]
+        //   Input buffer:                      [ 0  1  2  3  4  5 ]
+        //
+        // This field begins at position 0 in the input buffer, but because the
+        // parser has to write to the entire container, to place the field at
+        // position 8 in the container would require that bits [0, 7] of the
+        // container came from a negative position in the input buffer.
+        //
+        // To avoid this, we generate a constraint that prevents PHV allocation
+        // from placing the field in a problematic position in the container.
+        fieldInfo->updateValidContainerRange(FromTo(0, extractedBits.hi));
 
         // XXX(seth): This is a hack: if this field was bridged from ingress, we
         // apply the same alignment constraint to the ingress version of the

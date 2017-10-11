@@ -3,6 +3,7 @@
 
 #include <boost/optional.hpp>
 #include <boost/range/irange.hpp>
+#include <limits>
 
 #include "bf-p4c/ir/thread_visitor.h"
 #include "bf-p4c/ir/bitrange.h"
@@ -75,6 +76,12 @@ class PhvInfo {
         /// The alignment requirement of this field. If boost::none, there is no
         /// particular alignment requirement.
         boost::optional<FieldAlignment> alignment;
+        /// The range of possible bit positions at which this field can be
+        /// placed in a container, in network order. In other words, the low bit
+        /// index of the field's container range must be
+        /// `>= validContainerRange.lo`, and the high bit index must be
+        /// `<= validContainerRange.hi`.
+        nw_bitrange validContainerRange = ZeroToMax();
         /// Offset of lsb from lsb (last) bit of containing header.
         int             offset;
         /// True if this Field is metadata.
@@ -181,6 +188,18 @@ class PhvInfo {
         /// Update the alignment requirement for this field. Reports an error if
         /// conflicting requirements render the alignment unsatisfiable.
         void updateAlignment(const FieldAlignment& newAlignment);
+
+        /**
+         * Update the valid range of container positions for this field.
+         * Reports an error if conflicting requirements render the constraint
+         * unsatisfiable.
+         *
+         * @param newValidRange  A new valid range constraint. This is
+         *                       intersected with any existing valid range
+         *                       constraint to produce a new overall valid
+         *                       container range for this field.
+         */
+        void updateValidContainerRange(nw_bitrange newValidRange);
 
         //
         // friends of phv_assignment interface
@@ -384,11 +403,16 @@ class PhvInfo {
         //
         // phv_alignment
         //
-        /** Returns alignment constraint (bit position within container) on this field, if any.
-         * 
-         * @param get_ccgf_alignment When `true`, returns the alignment constraint of the whole CCGF
-         * otherwise, returns the alignment constraint of the field which is a member of the CCGF. 
-         * for non-CCGF-related fields, it returns their alignment constraints, if any.
+
+        /**
+         * Returns alignment constraint (bit position within container, mod 8)
+         * on this field, if any.
+         *
+         * @param get_ccgf_alignment  When `true`, returns the alignment
+         *                            constraint of the whole CCGF; otherwise,
+         *                            returns the alignment constraint of the
+         *                            member field within the CCGF. Has no
+         *                            effect for non-CCGF fields.
          */
         boost::optional<int> phv_alignment(bool get_ccgf_alignment = true) const;
                                                               // alignment in phv container
