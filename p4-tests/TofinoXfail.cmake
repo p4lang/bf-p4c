@@ -343,8 +343,12 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Type register has 1 type parameter.*, but it is specialized with 2"
+  "Could not find declaration for"
   extensions/p4_tests/p4_16/stful.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Type register has 1 type parameter.*, but it is specialized with 2"
   extensions/p4_tests/p4_16/tna-salu.p4
   )
 
