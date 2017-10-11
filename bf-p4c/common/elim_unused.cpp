@@ -58,9 +58,13 @@ class ElimUnused::Headers : public PardeTransform {
              * start state in egress triggers a NULL check in IR */
             return state;
 
-        for (auto match : state->match)
-            if (match->next || match->shift || !match->stmts.empty())
-                return state;
+        if (!state->statements.empty()) return state;
+
+        for (auto* transition : state->transitions) {
+            if (transition->next) return state;
+            if (transition->shift && *transition->shift == 0) return state;
+        }
+
         LOG1("ELIMINATING parser state " << state->name);
         return nullptr; }
 

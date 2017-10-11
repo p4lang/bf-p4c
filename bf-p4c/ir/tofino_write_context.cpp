@@ -93,14 +93,6 @@ bool TofinoWriteContext::isRead(bool root_value) {
     if (ctxt->node->is<IR::BFN::SelectComputed>())
         return true;
 
-    // XXX(seth): Are these checks useful anymore?
-    if (auto *match = ctxt->node->to<IR::BFN::ParserMatch>()) {
-        return (size_t)(ctxt->child_index) < match->stmts.size(); }
-    if (auto *state = ctxt->node->to<IR::BFN::ParserState>()) {
-        return (size_t)(ctxt->child_index) < state->select.size(); }
-    if (auto *dep = ctxt->node->to<IR::BFN::Deparser>()) {
-        return (size_t)(ctxt->child_index) < dep->emits.size(); }
-
     // TODO: Does C++ support monads?  The following if statements are nested
     // because C++ only supports declaring variables in if predicates if the
     // declaration is the only clause.

@@ -77,9 +77,9 @@ FieldPacking::createExtractionState(gress_t gress, cstring stateName,
         currentBit += item.width;
     }
 
-    auto* match =
-      new IR::BFN::ParserMatch(match_t(), totalWidth / 8, finalState, extracts);
-    return new IR::BFN::ParserState(stateName, gress, { }, { match });
+    return new IR::BFN::ParserState(stateName, gress, extracts, { }, {
+        new IR::BFN::Transition(match_t(), totalWidth / 8, finalState)
+    });
 }
 
 }  // namespace BFN

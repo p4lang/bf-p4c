@@ -235,7 +235,7 @@ TEST(TofinoFieldPacking, CreateExtractionState) {
 
     // Create a parser state to extract fields according to that packing.
     auto gress = INGRESS;
-    auto* finalState = new IR::BFN::ParserState("final", gress, { }, { });
+    auto* finalState = new IR::BFN::ParserState("final", gress, { }, { }, { });
     cstring extractionStateName = "extract";
     auto* extractionState =
       packing.createExtractionState(gress, extractionStateName, finalState);
@@ -245,16 +245,17 @@ TEST(TofinoFieldPacking, CreateExtractionState) {
     ASSERT_TRUE(extractionState != nullptr);
     EXPECT_EQ(extractionStateName, extractionState->name);
     EXPECT_EQ(gress, extractionState->gress);
-    EXPECT_EQ(0u, extractionState->select.size());
-    ASSERT_EQ(1u, extractionState->match.size());
-    EXPECT_EQ(finalState, extractionState->match[0]->next);
-    EXPECT_TRUE(extractionState->match[0]->shift);
-    EXPECT_EQ(static_cast<int>((packing.totalWidth / 8)), *extractionState->match[0]->shift);
+    EXPECT_EQ(0u, extractionState->selects.size());
+    ASSERT_EQ(1u, extractionState->transitions.size());
+    EXPECT_EQ(finalState, extractionState->transitions[0]->next);
+    EXPECT_TRUE(extractionState->transitions[0]->shift);
+    EXPECT_EQ(static_cast<int>((packing.totalWidth / 8)),
+              *extractionState->transitions[0]->shift);
 
     // Verify that the state reproduces the packing and has the structure we
     // expect. Note that padding isn't represented as a separate IR object; it's
     // implicit in the range of bits read by an ExtractBuffer.
-    auto& extracts = extractionState->match[0]->stmts;
+    auto& extracts = extractionState->statements;
     ASSERT_EQ(3u, extracts.size());
 
     auto* field1Extract = extracts[0]->to<IR::BFN::ExtractBuffer>();

@@ -342,11 +342,30 @@ struct ComputeLoweredParserIR : public ParserInspector {
         auto* loweredState =
           new IR::BFN::LoweredParserState(sanitizeName(state->name), state->gress);
 
-        // Report the original state name in the debug info.
+        // Report the original state name in the debug info, and merge in any
+        // debug information it had.
         loweredState->debug.info.push_back("from state " + state->name);
+        loweredState->debug.mergeWith(state->debug);
 
-        forAllMatching<IR::BFN::TransitionPrimitive>(&state->select,
-                      [&](const IR::BFN::TransitionPrimitive* select) {
+        // Collect all the extract operations; we'll lower them as a group so we
+        // can merge extracts that write to the same PHV containers.
+        ExtractSimplifier simplifier;
+        forAllMatching<IR::BFN::ParserPrimitive>(&state->statements,
+                      [&](const IR::BFN::ParserPrimitive* prim) {
+            if (auto* extract = prim->to<IR::BFN::Extract>()) {
+                simplifier.add(extract, phv);
+                return;
+            }
+
+            // Report other kinds of parser primitives, which we currently can't
+            // handle, in the debug info.
+            loweredState->debug.info.push_back("unhandled: " +
+                                               cstring::to_cstring(prim));
+        });
+        auto loweredStatements = simplifier.lowerExtracts();
+
+        forAllMatching<IR::BFN::Select>(&state->selects,
+                      [&](const IR::BFN::Select* select) {
             if (auto* selectBuffer = select->to<IR::BFN::SelectBuffer>()) {
                 loweredState->select.push_back(selectBuffer);
                 return;
@@ -358,35 +377,19 @@ struct ComputeLoweredParserIR : public ParserInspector {
                                                cstring::to_cstring(select));
         });
 
-        for (auto* match : state->match) {
-            BUG_CHECK(match->shift, "State %1% has unset shift?", state->name);
-            BUG_CHECK(*match->shift >= 0, "State %1% has negative shift %2%?",
-                                          state->name, *match->shift);
-            BUG_CHECK(loweredStates.find(match->next) != loweredStates.end(),
+        for (auto* transition : state->transitions) {
+            BUG_CHECK(transition->shift, "State %1% has unset shift?", state->name);
+            BUG_CHECK(*transition->shift >= 0, "State %1% has negative shift %2%?",
+                                               state->name, *transition->shift);
+            BUG_CHECK(loweredStates.find(transition->next) != loweredStates.end(),
                       "Didn't already lower state %1%?",
-                      match->next ? match->next->name : cstring("(null)"));
+                      transition->next ? transition->next->name : cstring("(null)"));
 
             auto* loweredMatch =
-              new IR::BFN::LoweredParserMatch(match->value, *match->shift,
-                                              loweredStates[match->next]);
-
-            // Collect all the extract operations; we'll lower them as a group
-            // so we can merge extracts that write to the same PHV containers.
-            ExtractSimplifier simplifier;
-            forAllMatching<IR::BFN::Extract>(&match->stmts,
-                          [&](const IR::BFN::Extract* extract) {
-                simplifier.add(extract, phv);
-                return false;
-            });
-
-            loweredMatch->statements = simplifier.lowerExtracts();
+              new IR::BFN::LoweredParserMatch(transition->value, *transition->shift,
+                                              loweredStatements,
+                                              loweredStates[transition->next]);
             loweredState->match.push_back(loweredMatch);
-
-            // Report unhandled parser primitives in the debug info.
-            forAllMatching<IR::BFN::UnhandledParserPrimitive>(&match->stmts,
-                          [&](const IR::BFN::UnhandledParserPrimitive* prim) {
-                loweredState->debug.info.push_back("unhandled: " + cstring::to_cstring(prim));
-            });
         }
 
         // Now that we've constructed a lowered version of this state, save it
@@ -568,8 +571,11 @@ class ExtractorAllocator {
 
         // Allocate. We have a limited number of extractions of each size per
         // state. We also ensure that we don't overflow the input buffer.
+        // XXX(seth): This code assumes that the set of container sizes and the
+        // set of extractor sizes are the same, but that isn't true on JBay, so
+        // this will require some rework.
         LOG3("Allocating extracts for state " << stateName);
-        unsigned allocatedExtractorsBySize[pardeSpec.extractorKinds().size()] = { 0 };
+        std::vector<unsigned> allocatedExtractorsBySize(pardeSpec.extractorKinds().size(), 0);
         IR::Vector<IR::BFN::LoweredExtract> allocatedExtractions;
         std::vector<const IR::BFN::LoweredExtract*> remainingExtractions;
         nw_byteinterval remainingBytes;
@@ -667,6 +673,7 @@ class SplitBigStates : public ParserModifier {
             stateNames.insert(newName);
             auto* newState =
               new IR::BFN::LoweredParserState(newName, state->gress);
+            newState->debug = state->debug;
             currentMatch->next = newState;
 
             // Create a new match node and place as many primitives in it as we can.

@@ -1,5 +1,6 @@
 #emit
 #include <boost/optional.hpp>
+#include "bf-p4c/common/debug_info.h"
 #include "bf-p4c/ir/bitrange.h"
 #end
 
@@ -153,55 +154,33 @@ class ExtractComputed : Extract {
     Expression source;
 }
 
-/// A parser primitive we don't handle. This is used to propagate knowledge of
-/// the failure through the compiler.
-class UnhandledParserPrimitive : ParserPrimitive {
+/// The high-level representation of a parser state transition.
+class Transition {
 #noconstructor
-    UnhandledParserPrimitive(Util::SourceInfo si, Node unhandled)
-        : ParserPrimitive(si), unhandled(unhandled) { }
-    UnhandledParserPrimitive(Node unhandled)
-        : unhandled(unhandled) { }
-
-    validate { CHECK_NULL(unhandled); }
-    dbprint { out << "unhandled parser primitive: " << unhandled ; }
-
+    Transition(match_t value) : value(value), next(nullptr) { }
 #emit
-    /// The primitive we didn't recognize or couldn't handle. Not visited.
-    const Node* unhandled;
-#end
-}
-
-/// The high-level representation of a parser state transition. Contains
-/// primitives which operate on fields and field-like objects.
-class ParserMatch {
-#noconstructor
-    ParserMatch(match_t value, const Vector<ParserPrimitive>& statements)
-        : value(value), stmts(statements), next(nullptr) {}
-#emit
-    ParserMatch(match_t value, boost::optional<int> shift,
-                const Vector<ParserPrimitive>& statements)
-        : value(value), shift(shift), stmts(statements), next(nullptr) { }
-    ParserMatch(match_t value, boost::optional<int> shift, const ParserState* next)
+    Transition(match_t value, boost::optional<int> shift)
+        : value(value), shift(shift), next(nullptr) { }
+    Transition(match_t value, boost::optional<int> shift, const ParserState* next)
         : value(value), shift(shift), next(next) { }
-    ParserMatch(match_t value, boost::optional<int> shift, const ParserState* next,
-                const Vector<ParserPrimitive>& statements)
-        : value(value), shift(shift), stmts(statements), next(next) { }
 #end
 
+    /// If the owning state's select expressions evaluate to a value which
+    /// matches this...
     match_t                        value;
+
+    /// ...then shift the input buffer by this number of bytes (or boost::none
+    /// if we don't know how many bytes we need to shift by yet)...
     boost::optional<int>           shift;
-    inline Vector<ParserPrimitive> stmts;
+
+    /// ...and transition to this state (or, if null, end the parser program).
     NullOK ParserState             next;
 }
 
-/// Supertype for all parser transition primitives. These are operations which
-/// are used by the parser to determine which state to transition to next.
-abstract TransitionPrimitive { }
-
 /// Supertype for all parser selection operations. These represent a load of a
-/// value from some source which will be compared against the ParserMatch values
-/// to select a transition.
-abstract Select : TransitionPrimitive { }
+/// value from some source which will be compared against the state's
+/// Transitions to select the next state to transition to.
+abstract Select { }
 
 /// A selection against a range of bits in the input buffer.
 class SelectBuffer : Select {
@@ -255,24 +234,6 @@ class SelectComputed : Select {
     Expression source;
 }
 
-/// A transition primitive that we don't handle. This is used to propagate
-/// knowledge of the failure through the compiler.
-class UnhandledTransitionPrimitive : TransitionPrimitive {
-#noconstructor
-    UnhandledTransitionPrimitive(Util::SourceInfo si, Node unhandled)
-        : TransitionPrimitive(si), unhandled(unhandled) { }
-    UnhandledTransitionPrimitive(Node unhandled)
-        : unhandled(unhandled) { }
-
-    validate { CHECK_NULL(unhandled); }
-    dbprint { out << "unhandled transition primitive: " << unhandled ; }
-
-#emit
-    /// The primitive we didn't recognize or couldn't handle. Not visited.
-    const Node* unhandled;
-#end
-}
-
 /// A high-level parser state. Contains primitives which operate on fields and
 /// field-like objects.
 class ParserState : Unit {
@@ -280,26 +241,40 @@ class ParserState : Unit {
     ParserState(IR::ParserState p4State, cstring name, gress_t gr)
         : p4State(p4State), name(name), gress(gr) { }
     ParserState(cstring n, gress_t gr,
-                std::initializer_list<TransitionPrimitive> sel,
-                std::initializer_list<ParserMatch> m)
-        : name(n), gress(gr), select(sel), match(m) { }
+                std::initializer_list<ParserPrimitive> statements,
+                std::initializer_list<Select> selects,
+                std::initializer_list<Transition> transitions)
+        : name(n), gress(gr), statements(statements), selects(selects),
+          transitions(transitions) { }
+    ParserState(cstring n, gress_t gr,
+                const Vector<ParserPrimitive>& statements,
+                std::initializer_list<Select> selects,
+                std::initializer_list<Transition> transitions)
+        : name(n), gress(gr), statements(statements), selects(selects),
+          transitions(transitions) { }
     int stage() const override { return -1; }
     gress_t thread() const override { return gress; }
     toString { return name; }
     visit_children {
-        select.visit_children(v);
-        match.parallel_visit_children(v); }
+        statements.visit_children(v);
+        selects.visit_children(v);
+        transitions.parallel_visit_children(v); }
 
 #emit
     /// The original P4 state. Null if this is a generated state that doesn't
     /// correspond to anything in the P4 program. Not visited.
     const IR::ParserState* p4State = nullptr;
+
+    /// Debugging information about the P4 state or states that were used to
+    /// generate this ParserState.
+    ::BFN::DebugInfo debug;
 #end
 
-    cstring                            name;
-    gress_t                            gress;
-    inline Vector<TransitionPrimitive> select;
-    inline Vector<ParserMatch>         match;
+    cstring name;
+    gress_t gress;
+    inline Vector<ParserPrimitive> statements;
+    inline Vector<Select> selects;
+    inline Vector<Transition> transitions;
 }
 
 /// The supertype for all BFN IR parsers.

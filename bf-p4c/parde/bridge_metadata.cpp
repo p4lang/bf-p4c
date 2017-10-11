@@ -87,7 +87,7 @@ class AddBridgedMetadata::AddBridge : public PardeModifier {
 
             // Replace this placeholder state with a generated parser program
             // that extracts the bridged metadata.
-            auto next = state->match[0]->next;
+            auto* next = state->transitions[0]->next;
             cstring stateName = "$bridge_metadata_extract";
             return self.packing.createExtractionState(EGRESS, stateName, next);
         });

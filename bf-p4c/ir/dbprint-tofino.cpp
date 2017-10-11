@@ -94,7 +94,7 @@ void IR::RangeMatch::dbprint(std::ostream &out) const {
     if (prec == 0) out << ';';
 }
 
-void IR::BFN::ParserMatch::dbprint(std::ostream &out) const {
+void IR::BFN::Transition::dbprint(std::ostream &out) const {
     if (value)
         out << "match " << value << ": ";
     else
@@ -105,11 +105,8 @@ void IR::BFN::ParserMatch::dbprint(std::ostream &out) const {
     else
         out << "(shift unknown)";
 
-    out << indent;
-    for (auto st : stmts)
-        out << endl << *st;
     if (next)
-        out << endl << "goto " << next->name;
+        out << " goto " << next->name;
     out << unindent;
 }
 
@@ -134,15 +131,21 @@ void IR::BFN::ParserState::dbprint(std::ostream &out) const {
     if (dbgetflags(out) & Brief)
         return;
     out << ':' << indent;
-    if (!select.empty()) {
+
+    for (auto *statement : statements)
+        out << endl << *statement;
+
+    if (!selects.empty()) {
         out << endl << "select(" << setprec(Prec_Low);
         const char *sep = "";
-        for (auto &e : select) {
+        for (auto &e : selects) {
             out << sep << *e;
             sep = ", "; }
         out << ")" << setprec(0); }
-    for (auto *m : match)
-        out << endl << *m;
+
+    for (auto *transition : transitions)
+        out << endl << *transition;
+
     out << unindent;
 }
 

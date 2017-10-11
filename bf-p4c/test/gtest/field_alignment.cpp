@@ -290,9 +290,8 @@ TEST(TofinoFieldAlignment, BridgedMetadataRespectsAlignment) {
         if (state->name != "$bridge_metadata_extract") return;
         foundBridgedMetadataState = true;
 
-        ASSERT_EQ(1u, state->match.size());
-        ASSERT_EQ(1u, state->match[0]->stmts.size());
-        auto* extract = state->match[0]->stmts[0]->to<IR::BFN::ExtractBuffer>();
+        ASSERT_EQ(1u, state->statements.size());
+        auto* extract = state->statements[0]->to<IR::BFN::ExtractBuffer>();
         ASSERT_TRUE(extract != nullptr);
         EXPECT_EQ("meta.metadataField", extract->dest->toString());
         EXPECT_EQ(3, extract->extractedBits().lo % 8);

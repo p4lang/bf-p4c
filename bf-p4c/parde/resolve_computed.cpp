@@ -1,6 +1,7 @@
 #include "bf-p4c/parde/resolve_computed.h"
 
 #include <boost/optional.hpp>
+#include <limits>
 
 #include "frontends/p4/callGraph.h"
 #include "bf-p4c/device.h"
@@ -9,9 +10,9 @@
 namespace {
 
 class VerifyAssignedShifts : public ParserInspector {
-    bool preorder(const IR::BFN::ParserMatch* match) override {
-        BUG_CHECK(match->shift,
-                  "Parser match in state %1% was not assigned a shift",
+    bool preorder(const IR::BFN::Transition* transition) override {
+        BUG_CHECK(transition->shift,
+                  "Parser transition in state %1% was not assigned a shift",
                   findContext<IR::BFN::ParserState>()->name);
         return true;
     }
@@ -43,26 +44,21 @@ class MakeUnresolvedStackRefsUnique : public ParserTransform {
 
     const IR::BFN::ParserState*
     preorder(IR::BFN::ParserState* state) override {
-        for (unsigned i = 0; i < state->select.size(); i++) {
-            state->select[i] =
-                transformAllMatching<IR::BFN::UnresolvedStackRef>(state->select[i],
-                                    [&](IR::BFN::UnresolvedStackRef* ref) {
-                return makeUniqueStackRef(ref);
-            })->to<IR::BFN::TransitionPrimitive>();
-        }
-        return state;
-    }
-
-    const IR::BFN::ParserMatch*
-    preorder(IR::BFN::ParserMatch* match) override {
-        for (unsigned i = 0; i < match->stmts.size(); i++) {
-            match->stmts[i] =
-                transformAllMatching<IR::BFN::UnresolvedStackRef>(match->stmts[i],
+        for (unsigned i = 0; i < state->statements.size(); i++) {
+            state->statements[i] =
+                transformAllMatching<IR::BFN::UnresolvedStackRef>(state->statements[i],
                                     [&](IR::BFN::UnresolvedStackRef* ref) {
                 return makeUniqueStackRef(ref);
             })->to<IR::BFN::ParserPrimitive>();
         }
-        return match;
+        for (unsigned i = 0; i < state->selects.size(); i++) {
+            state->selects[i] =
+                transformAllMatching<IR::BFN::UnresolvedStackRef>(state->selects[i],
+                                    [&](IR::BFN::UnresolvedStackRef* ref) {
+                return makeUniqueStackRef(ref);
+            })->to<IR::BFN::Select>();
+        }
+        return state;
     }
 
     std::set<size_t> visitedRefIds;
@@ -182,29 +178,12 @@ struct ResolveStackRefs : public ParserInspector {
     }
 
     void resolveForState(const IR::BFN::ParserState* state,
-                         const ExtractedStackIndices& map) {
+                         const ExtractedStackIndices& context) {
         if (!state) return;
 
-        // XXX(seth): It seems obvious to me that the contents of the matches
-        // should not logically be in scope for the select, but that's how the
-        // IR is currently designed. Saving `newMap` for use when resolving the
-        // selects below is just a hack until we've had a chance to rethink
-        // this.
-        ExtractedStackIndices* newMap = nullptr;
-        for (auto* match : state->match) {
-            newMap = new ExtractedStackIndices(map);
-            resolveForMatch(match, *newMap);
-        }
+        ExtractedStackIndices map(context);
 
-        forAllMatching<IR::HeaderStackItemRef>(&state->select,
-                      [&](const IR::HeaderStackItemRef* ref) {
-            resolve(ref, newMap ? *newMap : map);
-        });
-    }
-
-    void resolveForMatch(const IR::BFN::ParserMatch* match,
-                         ExtractedStackIndices& map) {
-        forAllMatching<IR::BFN::Extract>(&match->stmts,
+        forAllMatching<IR::BFN::Extract>(&state->statements,
                       [&](const IR::BFN::Extract* extract) {
             // Resolve any header stack item references lurking in either the
             // source or the destination of the extract.
@@ -218,7 +197,13 @@ struct ResolveStackRefs : public ParserInspector {
             updateExtractedIndices(extract, map);
         });
 
-        resolveForState(match->next, map);
+        forAllMatching<IR::HeaderStackItemRef>(&state->selects,
+                      [&](const IR::HeaderStackItemRef* ref) {
+            resolve(ref, map);
+        });
+
+        for (auto* transition : state->transitions)
+            resolveForState(transition->next, map);
     }
 };
 
@@ -250,39 +235,25 @@ struct ResolveNextAndLast : public PassManager {
 
 class VerifyParserPrimitivesAreUnique : public ParserInspector {
     bool preorder(const IR::BFN::ParserState* state) override {
-        forAllMatching<IR::BFN::TransitionPrimitive>(&state->select,
-                      [&](const IR::BFN::TransitionPrimitive* prim) {
-            BUG_CHECK(visitedTransitionPrims.find(prim) == visitedTransitionPrims.end(),
-                      "Transition primitive appears in more than one place: %1%",
-                      prim);
-            visitedTransitionPrims.insert(prim);
-        });
-
-        // We can't require that parser primitives are unique within a state,
-        // because every ParserMatch in a state contains the same sequence of
-        // primitives. (Before optimizations are applied, at least.) We *can*,
-        // however, require that no parser primitive appears in more than one
-        // state.
-        // XXX(seth): We should probably rethink this design, or at least clone
-        // the primitives for each ParserMatch.
-        std::set<const IR::BFN::ParserPrimitive*> parserPrimsInState;
-        for (auto* match : state->match) {
-            forAllMatching<IR::BFN::ParserPrimitive>(&match->stmts,
-                          [&](const IR::BFN::ParserPrimitive* prim) {
-                parserPrimsInState.insert(prim);
-            });
-        }
-        for (auto* prim : parserPrimsInState) {
+        for (auto* prim : state->statements) {
             BUG_CHECK(visitedParserPrims.find(prim) == visitedParserPrims.end(),
                       "Parser primitive appears in more than one place: %1%",
                       prim);
             visitedParserPrims.insert(prim);
         }
 
+        forAllMatching<IR::BFN::Select>(&state->selects,
+                      [&](const IR::BFN::Select* select) {
+            BUG_CHECK(visitedSelects.find(select) == visitedSelects.end(),
+                      "Select primitive appears in more than one place: %1%",
+                      select);
+            visitedSelects.insert(select);
+        });
+
         return true;
     }
 
-    std::set<const IR::BFN::TransitionPrimitive*> visitedTransitionPrims;
+    std::set<const IR::BFN::Select*> visitedSelects;
     std::set<const IR::BFN::ParserPrimitive*> visitedParserPrims;
 };
 
@@ -409,29 +380,12 @@ struct ResolveComputedParserPrimitives : public ParserInspector {
     }
 
     void resolveForState(const IR::BFN::ParserState* state,
-                         const ExtractMap& map) {
+                         const ExtractMap& context) {
         if (!state) return;
 
-        // XXX(seth): It seems obvious to me that the contents of the matches
-        // should not logically be in scope for the select, but that's how the
-        // IR is currently designed. Saving `newMap` for use when resolving the
-        // selects below is just a hack until we've had a chance to rethink
-        // this.
-        ExtractMap* newMap = nullptr;
-        for (auto* match : state->match) {
-            newMap = new ExtractMap(map);
-            resolveForMatch(match, *newMap);
-        }
+        ExtractMap map(context);
 
-        forAllMatching<IR::BFN::SelectComputed>(&state->select,
-                      [&](const IR::BFN::SelectComputed* select) {
-            resolveSelect(select, newMap ? *newMap : map);
-        });
-    }
-
-    void resolveForMatch(const IR::BFN::ParserMatch* match,
-                         ExtractMap& map) {
-        forAllMatching<IR::BFN::Extract>(&match->stmts,
+        forAllMatching<IR::BFN::Extract>(&state->statements,
                       [&](const IR::BFN::Extract* extract) {
             if (extract->is<IR::BFN::ExtractComputed>()) {
                 resolveExtract(extract->to<IR::BFN::ExtractComputed>(), map);
@@ -440,7 +394,15 @@ struct ResolveComputedParserPrimitives : public ParserInspector {
             map[extract->dest->toString()] = extract;
         });
 
-        resolveForState(match->next, updateOffsets(map, *match->shift));
+        forAllMatching<IR::BFN::SelectComputed>(&state->selects,
+                      [&](const IR::BFN::SelectComputed* select) {
+            resolveSelect(select, map);
+        });
+
+
+        for (auto* transition : state->transitions)
+            resolveForState(transition->next,
+                            updateOffsets(map, *transition->shift));
     }
 };
 
@@ -483,7 +445,7 @@ class ResolveComputedExtracts : public PassManager {
 };
 
 using OffsetCorrections = std::map<const IR::Node*, int>;
-using ShiftCorrections = std::map<const IR::BFN::ParserMatch*, int>;
+using ShiftCorrections = std::map<const IR::BFN::Transition*, int>;
 
 class ComputeOffsetCorrections : public ParserInspector {
  public:
@@ -494,9 +456,9 @@ class ComputeOffsetCorrections : public ParserInspector {
 
  private:
     Visitor::profile_t init_apply(const IR::Node* node) override {
-        forAllMatching<IR::BFN::ParserMatch>(node,
-                      [&](const IR::BFN::ParserMatch* match) {
-            if (match->next) transitions.calls(match, match->next);
+        forAllMatching<IR::BFN::Transition>(node,
+                      [&](const IR::BFN::Transition* transition) {
+            if (transition->next) transitions.calls(transition, transition->next);
         });
         return ParserInspector::init_apply(node);
     }
@@ -507,18 +469,19 @@ class ComputeOffsetCorrections : public ParserInspector {
         // all offsets are positive. Note that we take any shift corrections
         // that were already computed by our successor states into account.
         int bitMinOffset = 0;
-        forAllMatching<IR::BFN::SelectBuffer>(&state->select,
+        forAllMatching<IR::BFN::ExtractBuffer>(&state->statements,
+                      [&](const IR::BFN::ExtractBuffer* extract) {
+            bitMinOffset = std::min(bitMinOffset, extract->range.lo);
+        });
+        forAllMatching<IR::BFN::SelectBuffer>(&state->selects,
                       [&](const IR::BFN::SelectBuffer* select) {
             bitMinOffset = std::min(bitMinOffset, select->range.lo);
         });
-        for (auto* match : state->match) {
-            forAllMatching<IR::BFN::ExtractBuffer>(&match->stmts,
-                          [&](const IR::BFN::ExtractBuffer* extract) {
-                bitMinOffset = std::min(bitMinOffset, extract->range.lo);
-            });
-            BUG_CHECK(byteShiftCorrections[match] <= 0,
+        for (auto* transition : state->transitions) {
+            BUG_CHECK(byteShiftCorrections[transition] <= 0,
                       "Computed a positive shift correction?");
-            auto byteCorrectedShift = *match->shift + byteShiftCorrections[match];
+            auto byteCorrectedShift = *transition->shift +
+                                      byteShiftCorrections[transition];
             bitMinOffset = std::min(bitMinOffset, byteCorrectedShift * 8);
         }
 
@@ -528,18 +491,18 @@ class ComputeOffsetCorrections : public ParserInspector {
         //      in this state so that they'll refer to the correct range of bits
         //      in the input buffer after the correction is applied.
         //  (2) It tells us how much to *reduce* the shifts that are applied on
-        //      the transitions (i.e., ParserMatches) that lead into this state.
-        //      That reduction may actually make those shifts negative, requiring
-        //      us to fix the offsets in that state as well. That's why this is
-        //      a bottom-up analysis.
+        //      the transitions that lead into this state. That reduction may
+        //      actually make those shifts negative, requiring us to fix the
+        //      offsets in that state as well. That's why this is a bottom-up
+        //      analysis.
         // All of these changes will be applied in ApplyOffsetCorrections.
         const int byteShiftCorrection = (-bitMinOffset + 7) / 8;
         const int bitOffsetCorrection = byteShiftCorrection * 8;
 
         // Increase offsets and shifts.
         bitOffsetCorrections[state] = bitOffsetCorrection;
-        for (auto* match : state->match)
-            byteShiftCorrections[match] += byteShiftCorrection;
+        for (auto* transition : state->transitions)
+            byteShiftCorrections[transition] += byteShiftCorrection;
 
         // Reduce the shifts of callers.
         auto* callers = transitions.getCallers(state);
@@ -551,12 +514,12 @@ class ComputeOffsetCorrections : public ParserInspector {
             return;
         }
         for (auto* caller : *callers) {
-            BUG_CHECK(caller->is<IR::BFN::ParserMatch>(),
-                      "A non-ParserMatch calls a ParserState?");
-            auto* match = caller->to<IR::BFN::ParserMatch>();
-            BUG_CHECK(byteShiftCorrections[match] == 0,
-                      "Already corrected this ParserMatch's shift?");
-            byteShiftCorrections[match] = -byteShiftCorrection;
+            BUG_CHECK(caller->is<IR::BFN::Transition>(),
+                      "A non-Transition calls a ParserState?");
+            auto* transition = caller->to<IR::BFN::Transition>();
+            BUG_CHECK(byteShiftCorrections[transition] == 0,
+                      "Already corrected this Transition's shift?");
+            byteShiftCorrections[transition] = -byteShiftCorrection;
         }
     }
 
@@ -587,17 +550,17 @@ struct ApplyOffsetCorrections : public ParserModifier {
         BUG_CHECK(extract->range.lo >= 0, "Failed to correct offset?");
     }
 
-    void postorder(IR::BFN::ParserMatch* match) override {
-        auto* original = getOriginal<IR::BFN::ParserMatch>();
+    void postorder(IR::BFN::Transition* transition) override {
+        auto* original = getOriginal<IR::BFN::Transition>();
         BUG_CHECK(byteShiftCorrections.find(original) != byteShiftCorrections.end(),
-                  "No shift correction entries for match in state %1%",
+                  "No shift correction entries for transition in state %1%",
                   findContext<IR::BFN::ParserState>()->name);
-        *match->shift += byteShiftCorrections.at(original);
-        BUG_CHECK(*match->shift >= 0, "Failed to correct shift?");
+        *transition->shift += byteShiftCorrections.at(original);
+        BUG_CHECK(*transition->shift >= 0, "Failed to correct shift?");
     }
 
-    const std::map<const IR::Node*, int>& bitOffsetCorrections;
-    const std::map<const IR::BFN::ParserMatch*, int>& byteShiftCorrections;
+    const OffsetCorrections& bitOffsetCorrections;
+    const ShiftCorrections& byteShiftCorrections;
 };
 
 struct RemoveNegativeOffsets : public PassManager {
@@ -623,18 +586,21 @@ class CheckResolvedParserExpressions : public ParserTransform {
     const IR::BFN::ParserPrimitive*
     checkExtractDestination(IR::BFN::Extract* extract) const {
         if (!extract->dest->is<IR::HeaderStackItemRef>()) return extract;
+
         auto* itemRef = extract->dest->to<IR::HeaderStackItemRef>();
         if (itemRef->index()->is<IR::BFN::UnresolvedStackRef>()) {
             ::error("Couldn't resolve header stack reference in state %1%: %2%",
                     findContext<IR::BFN::ParserState>()->name, extract);
-            return new IR::BFN::UnhandledParserPrimitive(extract);
+            return nullptr;
         }
+
         if (!itemRef->index()->is<IR::Constant>()) {
             ::error("Extracting to non-constant header stack index in "
                     "state %1%: %2%",
                     findContext<IR::BFN::ParserState>()->name, extract);
-            return new IR::BFN::UnhandledParserPrimitive(extract);
+            return nullptr;
         }
+
         auto* stack = extract->dest->to<IR::HeaderStackItemRef>()->base();
         auto stackSize = stack->type->to<IR::Type_Stack>()
                               ->size->to<IR::Constant>()->asInt();
@@ -651,6 +617,7 @@ class CheckResolvedParserExpressions : public ParserTransform {
             clone->dest = itemRefClone;
             return clone;
         }
+
         return extract;
     }
 
@@ -658,12 +625,15 @@ class CheckResolvedParserExpressions : public ParserTransform {
     preorder(IR::BFN::ExtractComputed* extract) override {
         ::error("Couldn't resolve computed extract in state %1%: %2%",
                 findContext<IR::BFN::ParserState>()->name, extract);
-        return new IR::BFN::UnhandledParserPrimitive(extract);
+        return nullptr;
     }
 
     const IR::BFN::ParserPrimitive*
     preorder(IR::BFN::ExtractBuffer* extract) override {
         auto& pardeSpec = Device::pardeSpec();
+        auto* state = findContext<IR::BFN::ParserState>();
+        if (state->transitions.empty()) return checkExtractDestination(extract);
+
         // Check if this extract could possibly fit within the input buffer on
         // the hardware. We can split large states into smaller ones, but we're
         // limited by the fact that the total number of bytes we shift out of
@@ -674,8 +644,11 @@ class CheckResolvedParserExpressions : public ParserTransform {
         // XXX(seth): That doesn't mean that we couldn't produce a parser
         // program with the same behavior that *is* implementable; we could
         // support a lot more with some additional program transformations.
-        auto* match = findContext<IR::BFN::ParserMatch>();
-        const int byteOverflow = extract->bitInterval().hiByte() - *match->shift;
+        int worstCaseShift = std::numeric_limits<int>::max();
+        for (auto* transition : state->transitions)
+            worstCaseShift = std::min(worstCaseShift, *transition->shift);
+
+        const int byteOverflow = extract->bitInterval().hiByte() - worstCaseShift;
         if (byteOverflow < pardeSpec.byteInputBufferSize())
             return checkExtractDestination(extract);
 
@@ -690,7 +663,7 @@ class CheckResolvedParserExpressions : public ParserTransform {
         ::error("(Does your parser read or select on a value which originated "
                 "in a much earlier state?)");
 
-        return new IR::BFN::UnhandledParserPrimitive(extract);
+        return nullptr;
     }
 
     const IR::BFN::ParserPrimitive*
@@ -698,11 +671,11 @@ class CheckResolvedParserExpressions : public ParserTransform {
         return checkExtractDestination(extract);
     }
 
-    const IR::BFN::TransitionPrimitive*
+    const IR::BFN::Select*
     preorder(IR::BFN::SelectComputed* select) override {
         ::error("Couldn't resolve computed select in state %1%: %2%",
                 findContext<IR::BFN::ParserState>()->name, select);
-        return new IR::BFN::UnhandledTransitionPrimitive(select);
+        return nullptr;
     }
 };
 

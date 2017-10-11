@@ -371,7 +371,7 @@ class AddPhase0Parser : public Modifier {
           // generated parser program. After phase 0, we'll transition to the
           // same state that the placeholder state transitioned to, which is
           // normally 'start$'.
-          return this->addPhase0State(state->match[0]->next);
+          return this->addPhase0State(state->transitions[0]->next);
       });
 
       parser->start = start->to<IR::BFN::ParserState>();
@@ -381,7 +381,7 @@ class AddPhase0Parser : public Modifier {
   const IR::BFN::ParserState*
   addPhase0State(const IR::BFN::ParserState* finalState) {
       // Generate a state that extracts the packed fields.
-      auto nextState =
+      auto* nextState =
         packing->createExtractionState(INGRESS, "$phase0_extract", finalState);
 
       // Generate a state which extracts the constants.
@@ -393,9 +393,9 @@ class AddPhase0Parser : public Modifier {
           extracts.push_back(extract);
       }
 
-      auto* phase0Match =
-          new IR::BFN::ParserMatch(match_t(), 0, nextState, extracts);
-      return new IR::BFN::ParserState("$phase0", INGRESS, { }, { phase0Match });
+      return new IR::BFN::ParserState("$phase0", INGRESS, extracts, { }, {
+          new IR::BFN::Transition(match_t(), 0, nextState)
+      });
   }
 
  private:

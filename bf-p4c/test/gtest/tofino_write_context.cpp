@@ -11,14 +11,23 @@ static IR::Constant *two = new IR::Constant(2);
 
 class TestRead : public Inspector, TofinoWriteContext {
     bool preorder(const IR::Expression *p) {
-        if (findContext<IR::BFN::ParserState>() ||
-           (findContext<IR::MAU::Instruction>() && p == one) ||
-           (findContext<IR::MAU::TypedPrimitive>() && p == zero)) {
+        if (findContext<IR::BFN::Select>()) {
             EXPECT_TRUE(isRead());
-            EXPECT_FALSE(isWrite()); }
+            EXPECT_FALSE(isWrite());
+            return true; }
+        if (findContext<IR::BFN::Extract>()) {
+            EXPECT_TRUE(isRead());
+            EXPECT_TRUE(isWrite());
+            return true; }
+        if ((findContext<IR::MAU::Instruction>() && p == one) ||
+            (findContext<IR::MAU::TypedPrimitive>() && p == zero)) {
+            EXPECT_TRUE(isRead());
+            EXPECT_FALSE(isWrite());
+            return true; }
         if (findContext<IR::MAU::TypedPrimitive>() && p == two) {
             EXPECT_TRUE(isRead());
-            EXPECT_TRUE(isWrite()); }
+            EXPECT_TRUE(isWrite());
+            return true; }
         return true; }
 
  public:
@@ -26,18 +35,16 @@ class TestRead : public Inspector, TofinoWriteContext {
 };
 
 TEST(TofinoWriteContext, Read) {
-    match_t m = match_t(0, 0, 0);
-
-    auto *match = new IR::BFN::ParserMatch(m, 0, {
+    IR::Vector<IR::BFN::ParserPrimitive> statements = {
         new IR::BFN::ExtractBuffer(zero, StartLen(0, 1)),
         new IR::BFN::ExtractBuffer(one, StartLen(1, 2)),
         new IR::BFN::ExtractComputed(zero, zero),
         new IR::BFN::ExtractComputed(one, one)
-    });
-    auto *state = new IR::BFN::ParserState("foo", INGRESS, {
+    };
+    auto *state = new IR::BFN::ParserState("foo", INGRESS, statements, {
         new IR::BFN::SelectComputed(zero),
         new IR::BFN::SelectComputed(one)
-    }, {match});
+    }, { });
 
     state->apply(TestRead());
 

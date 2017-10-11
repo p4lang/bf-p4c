@@ -55,12 +55,11 @@ class LoweredExtractConstant : LoweredExtract {
 /// A lowered parser match construct. Each LoweredParserMatch logically
 /// represents a single row in the parser TCAM.
 class LoweredParserMatch {
-#noconstructor
+#emit
     LoweredParserMatch(match_t value, unsigned shift,
                        const LoweredParserState* next)
         : value(value), shift(shift), next(next) { }
 
-#emit
     /// Debugging information about the high-level parser states that were used
     /// to generate this low-level match construct.
     ::BFN::DebugInfo debug;

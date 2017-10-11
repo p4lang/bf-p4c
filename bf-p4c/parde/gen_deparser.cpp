@@ -53,18 +53,17 @@ IR::BFN::Deparser::Deparser(gress_t gr, const IR::BFN::Parser* p) : gress(gr) {
     states.insert(p->start);
 
     forAllMatching<IR::BFN::ParserState>(p, [&](const IR::BFN::ParserState* s) {
-        for (auto match : s->match) {
-            const IR::Node* lastExtract = s;
-            for (auto stmt : match->stmts) {
-                if (!stmt->is<IR::BFN::Extract>()) continue;
-                auto extract = stmt->to<IR::BFN::Extract>();
-                extractOrder.calls(lastExtract, extract->dest);
-                lastExtract = extract->dest;
-            }
-            if (match->next) {
-                states.insert(match->next);
-                extractOrder.calls(lastExtract, match->next);
-            }
+        const IR::Node* lastExtract = s;
+        for (auto* statement : s->statements) {
+            if (!statement->is<IR::BFN::Extract>()) continue;
+            auto* extract = statement->to<IR::BFN::Extract>();
+            extractOrder.calls(lastExtract, extract->dest);
+            lastExtract = extract->dest;
+        }
+        for (auto* transition : s->transitions) {
+            if (!transition->next) continue;
+            states.insert(transition->next);
+            extractOrder.calls(lastExtract, transition->next);
         }
     });
 

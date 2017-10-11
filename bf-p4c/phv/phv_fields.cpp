@@ -1002,31 +1002,30 @@ struct MarkBridgedMetadataFields : public Inspector {
     bool preorder(const IR::BFN::ParserState* state) override {
         if (!state->name.endsWith("$bridge_metadata_extract")) return true;
 
-        for (auto* match : state->match) {
-            forAllMatching<IR::BFN::Extract>(&match->stmts,
-                          [&](const IR::BFN::Extract* extract) {
-                auto* fieldInfo = phv.field(extract->dest);
-                if (!fieldInfo) return;
+        forAllMatching<IR::BFN::Extract>(&state->statements,
+                      [&](const IR::BFN::Extract* extract) {
+            auto* fieldInfo = phv.field(extract->dest);
+            if (!fieldInfo) return;
 
-                // Prior to CreateThreadLocalInstances, a P4 field is represented by
-                // the same PhvInfo::Field object in both ingress and egress. After
-                // that pass runs, there are two PhvInfo::Field objects. The extract
-                // will write to the *egress* version, but the one we actually want
-                // to mark as bridged is the *ingress* version.
-                if (!fieldInfo->name.startsWith("egress::")) {
-                    fieldInfo->bridged = true;
-                    return;
-                }
+            // Prior to CreateThreadLocalInstances, a P4 field is represented by
+            // the same PhvInfo::Field object in both ingress and egress. After
+            // that pass runs, there are two PhvInfo::Field objects. The extract
+            // will write to the *egress* version, but the one we actually want
+            // to mark as bridged is the *ingress* version.
+            if (!fieldInfo->name.startsWith("egress::")) {
+                fieldInfo->bridged = true;
+                return;
+            }
 
-                // XXX(seth): Yuck.
-                cstring ingressFieldName = cstring("ingress::")
-                                         + fieldInfo->name.substr(strlen("egress::"));
-                auto* ingressFieldInfo = phv.field(ingressFieldName);
-                BUG_CHECK(ingressFieldInfo != nullptr,
-                          "No ingress version of egress bridged metadata field?");
-                ingressFieldInfo->bridged = true;
-            });
-        }
+            // XXX(seth): Yuck.
+            cstring ingressFieldName = cstring("ingress::")
+                                     + fieldInfo->name.substr(strlen("egress::"));
+            auto* ingressFieldInfo = phv.field(ingressFieldName);
+            BUG_CHECK(ingressFieldInfo != nullptr,
+                      "No ingress version of egress bridged metadata field?");
+            ingressFieldInfo->bridged = true;
+        });
+
         return true;
     }
 

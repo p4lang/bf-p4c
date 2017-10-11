@@ -17,20 +17,20 @@ namespace {
 
 /// A helper type that represents a transition in the parse graph that led to
 /// the current state.
-struct Transition {
-    Transition(const IR::BFN::ParserState* state,
-               const IR::BFN::ParserMatch* match)
-        : state(state), match(match) { }
+struct AncestorTransition {
+    AncestorTransition(const IR::BFN::ParserState* state,
+                       const IR::BFN::Transition* transition)
+        : state(state), transition(transition) { }
 
     /// An ancestor state.
     const IR::BFN::ParserState* state;
 
     /// The outgoing edge of the ancestor state that we traversed to reach the
     /// current state.
-    const IR::BFN::ParserMatch* match;
+    const IR::BFN::Transition* transition;
 
     /// A map from extract destination names to the number of times the
-    /// destination is extracted in this transition's ParserMatch.
+    /// destination is extracted in this state.
     std::map<cstring, unsigned> extracts;
 
     /// True if this state contains at least some valid extracts.
@@ -43,9 +43,9 @@ struct TransitionStack {
     /// @return true if this is a valid transition, or false if the transition
     /// is invalid and we should stop generating the parse graph at this point.
     bool push(const IR::BFN::ParserState* state,
-              const IR::BFN::ParserMatch* match) {
-        transitionStack.emplace_back(state, match);
-        auto& transition = transitionStack.back();
+              const IR::BFN::Transition* transition) {
+        transitionStack.emplace_back(state, transition);
+        auto& newTransition = transitionStack.back();
 
         // If a state extracts a header which isn't part of a header stack, we don't
         // allow it to be part of a loop. Such a loop would trigger an error at
@@ -54,7 +54,7 @@ struct TransitionStack {
         unsigned badExtractCount = 0;
         unsigned goodExtractCount = 0;
         unsigned extractCount = 0;
-        forAllMatching<IR::BFN::Extract>(&match->stmts,
+        forAllMatching<IR::BFN::Extract>(&state->statements,
                       [&](const IR::BFN::Extract* extract) {
             extractCount++;
             cstring destName;
@@ -66,23 +66,23 @@ struct TransitionStack {
                 return;
             }
             extractTotals[destName]++;
-            transition.extracts[destName]++;
+            newTransition.extracts[destName]++;
             goodExtractCount++;
         });
 
         BUG_CHECK(badExtractCount + goodExtractCount == extractCount,
                   "Lost track of an extract?");
 
-        // If this transition contains extracts but none of them are legal, it's
-        // not a valid transition. The parser will stop here at runtime.
+        // If the new transition contains extracts but none of them are legal,
+        // it's not valid. The parser will stop here at runtime.
         if (extractCount > 0 && goodExtractCount == 0)
-            transition.isValid = false;
+            newTransition.isValid = false;
 
         // We'll also stop here if the stack has gotten too deep.
         if (transitionStack.size() > 255)
-            transition.isValid = false;
+            newTransition.isValid = false;
 
-        return transition.isValid;
+        return newTransition.isValid;
     }
 
     void pop() {
@@ -97,7 +97,7 @@ struct TransitionStack {
         transitionStack.pop_back();
     }
 
-    const Transition& back() const {
+    const AncestorTransition& back() const {
         BUG_CHECK(!transitionStack.empty(), "Peeking an empty TransitionStack?");
         return transitionStack.back();
     }
@@ -106,7 +106,7 @@ struct TransitionStack {
 
     bool alreadyVisited(const IR::BFN::ParserState* state) const {
         return std::any_of(transitionStack.begin(), transitionStack.end(),
-                           [&](const Transition& t) { return t.state == state; });
+                           [&](const AncestorTransition& t) { return t.state == state; });
     }
 
  private:
@@ -130,16 +130,16 @@ struct TransitionStack {
         return std::make_pair(destName, std::max(allowedExtracts, 0));
     }
 
-    std::vector<Transition> transitionStack;
+    std::vector<AncestorTransition> transitionStack;
     std::map<cstring, unsigned> extractTotals;
 };
 
 struct AutoPushTransition {
     AutoPushTransition(TransitionStack& transitionStack,
                        const IR::BFN::ParserState* state,
-                       const IR::BFN::ParserMatch* match)
+                       const IR::BFN::Transition* transition)
         : transitionStack(transitionStack)
-        , isValid(transitionStack.push(state, match))
+        , isValid(transitionStack.push(state, transition))
     { }
 
     ~AutoPushTransition() { transitionStack.pop(); }
@@ -383,7 +383,7 @@ struct RewriteParserStatements : public Transform {
 
         if (!canEvaluateInParser(rhs)) {
             ::error("Assignment cannot be supported in the parser: %1%", rhs);
-            return new IR::BFN::UnhandledParserPrimitive(s->srcInfo, s);
+            return nullptr;
         }
 
         return new IR::BFN::ExtractComputed(s->srcInfo, s->left, rhs);
@@ -451,7 +451,7 @@ const IR::Node* rewriteSelect(const IR::Expression* component) {
     // unlike a Slice; the Concat operands may not even be adjacent in the input
     // buffer, so this is really two primitive select operations.
     if (auto* concat = component->to<IR::Concat>()) {
-        auto* rv = new IR::Vector<IR::BFN::TransitionPrimitive>;
+        auto* rv = new IR::Vector<IR::BFN::Select>;
         rv->pushBackOrAppend(rewriteSelect(concat->left));
         rv->pushBackOrAppend(rewriteSelect(concat->right));
         return rv;
@@ -484,7 +484,7 @@ IR::BFN::ParserState* GetTofinoParser::getState(cstring name) {
         auto unrolledName = cstring::make_unique(states, originalName);
         state = new IR::BFN::ParserState(state->p4State, unrolledName, gress);
         states[unrolledName] = state;
-    } else if (!state->match.empty()) {
+    } else if (!state->transitions.empty()) {
         // We've already generated the matches for this state, so we know we've
         // already converted it; just return.
         return state;
@@ -496,9 +496,8 @@ IR::BFN::ParserState* GetTofinoParser::getState(cstring name) {
     // Lower the parser statements from the frontend IR to the Tofino IR.
     RewriteParserStatements rewriteStatements(state->p4State->name,
                                               gress, filterSetMetadata);
-    IR::Vector<IR::BFN::ParserPrimitive> statements;
     for (auto* statement : state->p4State->components)
-        statements.pushBackOrAppend(statement->apply(rewriteStatements));
+        state->statements.pushBackOrAppend(statement->apply(rewriteStatements));
 
     // Compute the new state's shift.
     auto shift = rewriteStatements.byteTotalShift();
@@ -508,12 +507,12 @@ IR::BFN::ParserState* GetTofinoParser::getState(cstring name) {
     LOG2("GetParser::state(" << name << ")");
     if (!state->p4State->selectExpression) return state;
     if (auto* path = state->p4State->selectExpression->to<IR::PathExpression>()) {
-        auto match = new IR::BFN::ParserMatch(match_t(), shift, statements);
-        state->match.push_back(match);
+        auto* transition = new IR::BFN::Transition(match_t(), shift);
+        state->transitions.push_back(transition);
 
-        AutoPushTransition transition(transitionStack, state, match);
-        if (transition.isValid)
-            match->next = getState(path->path->name);
+        AutoPushTransition newTransition(transitionStack, state, transition);
+        if (newTransition.isValid)
+            transition->next = getState(path->path->name);
         else
             return nullptr;  // One bad transition means the whole state's bad.
 
@@ -527,18 +526,18 @@ IR::BFN::ParserState* GetTofinoParser::getState(cstring name) {
     auto selectExpr = state->p4State->selectExpression->to<IR::SelectExpression>();
     for (auto* component : selectExpr->select->components) {
         matchSize += component->type->width_bits();
-        state->select.pushBackOrAppend(rewriteSelect(component));
+        state->selects.pushBackOrAppend(rewriteSelect(component));
     }
 
-    // Generate a ParserMatch for each outgoing transition.
+    // Generate the outgoing transitions.
     for (auto selectCase : selectExpr->selectCases) {
         auto matchVal = buildMatch(matchSize, selectCase->keyset);
-        auto match = new IR::BFN::ParserMatch(matchVal, shift, statements);
-        state->match.push_back(match);
+        auto* transition = new IR::BFN::Transition(matchVal, shift);
+        state->transitions.push_back(transition);
 
-        AutoPushTransition transition(transitionStack, state, match);
-        if (transition.isValid)
-            match->next = getState(selectCase->state->path->name);
+        AutoPushTransition newTransition(transitionStack, state, transition);
+        if (newTransition.isValid)
+            transition->next = getState(selectCase->state->path->name);
         else
             return nullptr;  // One bad transition means the whole state's bad.
     }
