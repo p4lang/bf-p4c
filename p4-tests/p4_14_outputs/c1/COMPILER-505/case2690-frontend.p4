@@ -2442,35 +2442,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    bit<16> tmp_2;
-    bool tmp_3;
-    bit<16> tmp_4;
-    bool tmp_5;
-    @name("Menifee") Checksum16() Menifee_0;
-    @name("Benonine") Checksum16() Benonine_0;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        tmp_2 = Menifee_0.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Longford.Lovett, hdr.Longford.Slagle, hdr.Longford.Titonka, hdr.Longford.Wyandanch, hdr.Longford.Warden, hdr.Longford.Tulia, hdr.Longford.Macon, hdr.Longford.Salamonia, hdr.Longford.Lindsborg, hdr.Longford.Brashear, hdr.Longford.Sedan, hdr.Longford.Kinross });
-        tmp_3 = hdr.Longford.McGovern == tmp_2;
-        if (tmp_3) 
-            mark_to_drop();
-        tmp_4 = Benonine_0.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Uniopolis.Lovett, hdr.Uniopolis.Slagle, hdr.Uniopolis.Titonka, hdr.Uniopolis.Wyandanch, hdr.Uniopolis.Warden, hdr.Uniopolis.Tulia, hdr.Uniopolis.Macon, hdr.Uniopolis.Salamonia, hdr.Uniopolis.Lindsborg, hdr.Uniopolis.Brashear, hdr.Uniopolis.Sedan, hdr.Uniopolis.Kinross });
-        tmp_5 = hdr.Uniopolis.McGovern == tmp_4;
-        if (tmp_5) 
-            mark_to_drop();
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Longford.Lovett, hdr.Longford.Slagle, hdr.Longford.Titonka, hdr.Longford.Wyandanch, hdr.Longford.Warden, hdr.Longford.Tulia, hdr.Longford.Macon, hdr.Longford.Salamonia, hdr.Longford.Lindsborg, hdr.Longford.Brashear, hdr.Longford.Sedan, hdr.Longford.Kinross }, hdr.Longford.McGovern, HashAlgorithm.csum16);
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Uniopolis.Lovett, hdr.Uniopolis.Slagle, hdr.Uniopolis.Titonka, hdr.Uniopolis.Wyandanch, hdr.Uniopolis.Warden, hdr.Uniopolis.Tulia, hdr.Uniopolis.Macon, hdr.Uniopolis.Salamonia, hdr.Uniopolis.Lindsborg, hdr.Uniopolis.Brashear, hdr.Uniopolis.Sedan, hdr.Uniopolis.Kinross }, hdr.Uniopolis.McGovern, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    bit<16> tmp_6;
-    bit<16> tmp_7;
-    @name("Menifee") Checksum16() Menifee_1;
-    @name("Benonine") Checksum16() Benonine_1;
     apply {
-        tmp_6 = Menifee_1.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Longford.Lovett, hdr.Longford.Slagle, hdr.Longford.Titonka, hdr.Longford.Wyandanch, hdr.Longford.Warden, hdr.Longford.Tulia, hdr.Longford.Macon, hdr.Longford.Salamonia, hdr.Longford.Lindsborg, hdr.Longford.Brashear, hdr.Longford.Sedan, hdr.Longford.Kinross });
-        hdr.Longford.McGovern = tmp_6;
-        tmp_7 = Benonine_1.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Uniopolis.Lovett, hdr.Uniopolis.Slagle, hdr.Uniopolis.Titonka, hdr.Uniopolis.Wyandanch, hdr.Uniopolis.Warden, hdr.Uniopolis.Tulia, hdr.Uniopolis.Macon, hdr.Uniopolis.Salamonia, hdr.Uniopolis.Lindsborg, hdr.Uniopolis.Brashear, hdr.Uniopolis.Sedan, hdr.Uniopolis.Kinross });
-        hdr.Uniopolis.McGovern = tmp_7;
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Longford.Lovett, hdr.Longford.Slagle, hdr.Longford.Titonka, hdr.Longford.Wyandanch, hdr.Longford.Warden, hdr.Longford.Tulia, hdr.Longford.Macon, hdr.Longford.Salamonia, hdr.Longford.Lindsborg, hdr.Longford.Brashear, hdr.Longford.Sedan, hdr.Longford.Kinross }, hdr.Longford.McGovern, HashAlgorithm.csum16);
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Uniopolis.Lovett, hdr.Uniopolis.Slagle, hdr.Uniopolis.Titonka, hdr.Uniopolis.Wyandanch, hdr.Uniopolis.Warden, hdr.Uniopolis.Tulia, hdr.Uniopolis.Macon, hdr.Uniopolis.Salamonia, hdr.Uniopolis.Lindsborg, hdr.Uniopolis.Brashear, hdr.Uniopolis.Sedan, hdr.Uniopolis.Kinross }, hdr.Uniopolis.McGovern, HashAlgorithm.csum16);
     }
 }
 

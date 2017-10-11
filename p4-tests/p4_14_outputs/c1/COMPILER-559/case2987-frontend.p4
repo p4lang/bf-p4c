@@ -2825,35 +2825,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    bit<16> tmp_2;
-    bool tmp_3;
-    bit<16> tmp_4;
-    bool tmp_5;
-    @name("Weatherby") Checksum16() Weatherby_0;
-    @name("Shelby") Checksum16() Shelby_0;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        tmp_2 = Weatherby_0.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Requa.Ottertail, hdr.Requa.Uniontown, hdr.Requa.Laplace, hdr.Requa.Newfane, hdr.Requa.Moclips, hdr.Requa.LaneCity, hdr.Requa.Emerado, hdr.Requa.Tappan, hdr.Requa.Raeford, hdr.Requa.Kupreanof, hdr.Requa.Graford, hdr.Requa.Lugert });
-        tmp_3 = hdr.Requa.Perdido == tmp_2;
-        if (tmp_3) 
-            mark_to_drop();
-        tmp_4 = Shelby_0.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Sitka.Ottertail, hdr.Sitka.Uniontown, hdr.Sitka.Laplace, hdr.Sitka.Newfane, hdr.Sitka.Moclips, hdr.Sitka.LaneCity, hdr.Sitka.Emerado, hdr.Sitka.Tappan, hdr.Sitka.Raeford, hdr.Sitka.Kupreanof, hdr.Sitka.Graford, hdr.Sitka.Lugert });
-        tmp_5 = hdr.Sitka.Perdido == tmp_4;
-        if (tmp_5) 
-            mark_to_drop();
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Requa.Ottertail, hdr.Requa.Uniontown, hdr.Requa.Laplace, hdr.Requa.Newfane, hdr.Requa.Moclips, hdr.Requa.LaneCity, hdr.Requa.Emerado, hdr.Requa.Tappan, hdr.Requa.Raeford, hdr.Requa.Kupreanof, hdr.Requa.Graford, hdr.Requa.Lugert }, hdr.Requa.Perdido, HashAlgorithm.csum16);
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Sitka.Ottertail, hdr.Sitka.Uniontown, hdr.Sitka.Laplace, hdr.Sitka.Newfane, hdr.Sitka.Moclips, hdr.Sitka.LaneCity, hdr.Sitka.Emerado, hdr.Sitka.Tappan, hdr.Sitka.Raeford, hdr.Sitka.Kupreanof, hdr.Sitka.Graford, hdr.Sitka.Lugert }, hdr.Sitka.Perdido, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    bit<16> tmp_6;
-    bit<16> tmp_7;
-    @name("Weatherby") Checksum16() Weatherby_1;
-    @name("Shelby") Checksum16() Shelby_1;
     apply {
-        tmp_6 = Weatherby_1.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Requa.Ottertail, hdr.Requa.Uniontown, hdr.Requa.Laplace, hdr.Requa.Newfane, hdr.Requa.Moclips, hdr.Requa.LaneCity, hdr.Requa.Emerado, hdr.Requa.Tappan, hdr.Requa.Raeford, hdr.Requa.Kupreanof, hdr.Requa.Graford, hdr.Requa.Lugert });
-        hdr.Requa.Perdido = tmp_6;
-        tmp_7 = Shelby_1.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Sitka.Ottertail, hdr.Sitka.Uniontown, hdr.Sitka.Laplace, hdr.Sitka.Newfane, hdr.Sitka.Moclips, hdr.Sitka.LaneCity, hdr.Sitka.Emerado, hdr.Sitka.Tappan, hdr.Sitka.Raeford, hdr.Sitka.Kupreanof, hdr.Sitka.Graford, hdr.Sitka.Lugert });
-        hdr.Sitka.Perdido = tmp_7;
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Requa.Ottertail, hdr.Requa.Uniontown, hdr.Requa.Laplace, hdr.Requa.Newfane, hdr.Requa.Moclips, hdr.Requa.LaneCity, hdr.Requa.Emerado, hdr.Requa.Tappan, hdr.Requa.Raeford, hdr.Requa.Kupreanof, hdr.Requa.Graford, hdr.Requa.Lugert }, hdr.Requa.Perdido, HashAlgorithm.csum16);
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Sitka.Ottertail, hdr.Sitka.Uniontown, hdr.Sitka.Laplace, hdr.Sitka.Newfane, hdr.Sitka.Moclips, hdr.Sitka.LaneCity, hdr.Sitka.Emerado, hdr.Sitka.Tappan, hdr.Sitka.Raeford, hdr.Sitka.Kupreanof, hdr.Sitka.Graford, hdr.Sitka.Lugert }, hdr.Sitka.Perdido, HashAlgorithm.csum16);
     }
 }
 

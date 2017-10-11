@@ -504,7 +504,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     bit<16> tmp_11;
     bit<32> tmp_12;
     bit<16> tmp_13;
-    bit<112> tmp_20;
+    bit<112> tmp_14;
     @name(".Advance") state Advance {
         meta.Newcastle.Rainsburg = 3w5;
         transition accept;
@@ -672,8 +672,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
         transition accept;
     }
     @name(".start") state start {
-        tmp_20 = packet.lookahead<bit<112>>();
-        transition select(tmp_20[15:0]) {
+        tmp_14 = packet.lookahead<bit<112>>();
+        transition select(tmp_14[15:0]) {
             16w0xbf00: Flats;
             default: Wheeler;
         }
@@ -3116,31 +3116,17 @@ struct tuple_5 {
     bit<32> field_29;
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    bit<16> tmp_21;
-    bit<16> tmp_23;
-    @name("Callimont") Checksum16() Callimont;
-    @name("McAlister") Checksum16() McAlister;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        tmp_21 = Callimont.get<tuple_5>({ hdr.Caspian.Eunice, hdr.Caspian.Yatesboro, hdr.Caspian.Philmont, hdr.Caspian.Vinita, hdr.Caspian.Hillside, hdr.Caspian.Wyarno, hdr.Caspian.Goosport, hdr.Caspian.Currie, hdr.Caspian.Stambaugh, hdr.Caspian.Ceiba, hdr.Caspian.Rochert, hdr.Caspian.Milbank });
-        if (hdr.Caspian.Gunder == tmp_21) 
-            mark_to_drop();
-        tmp_23 = McAlister.get<tuple_5>({ hdr.Newcomb.Eunice, hdr.Newcomb.Yatesboro, hdr.Newcomb.Philmont, hdr.Newcomb.Vinita, hdr.Newcomb.Hillside, hdr.Newcomb.Wyarno, hdr.Newcomb.Goosport, hdr.Newcomb.Currie, hdr.Newcomb.Stambaugh, hdr.Newcomb.Ceiba, hdr.Newcomb.Rochert, hdr.Newcomb.Milbank });
-        if (hdr.Newcomb.Gunder == tmp_23) 
-            mark_to_drop();
+        verify_checksum<tuple_5, bit<16>>(true, { hdr.Caspian.Eunice, hdr.Caspian.Yatesboro, hdr.Caspian.Philmont, hdr.Caspian.Vinita, hdr.Caspian.Hillside, hdr.Caspian.Wyarno, hdr.Caspian.Goosport, hdr.Caspian.Currie, hdr.Caspian.Stambaugh, hdr.Caspian.Ceiba, hdr.Caspian.Rochert, hdr.Caspian.Milbank }, hdr.Caspian.Gunder, HashAlgorithm.csum16);
+        verify_checksum<tuple_5, bit<16>>(true, { hdr.Newcomb.Eunice, hdr.Newcomb.Yatesboro, hdr.Newcomb.Philmont, hdr.Newcomb.Vinita, hdr.Newcomb.Hillside, hdr.Newcomb.Wyarno, hdr.Newcomb.Goosport, hdr.Newcomb.Currie, hdr.Newcomb.Stambaugh, hdr.Newcomb.Ceiba, hdr.Newcomb.Rochert, hdr.Newcomb.Milbank }, hdr.Newcomb.Gunder, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    bit<16> tmp_25;
-    bit<16> tmp_26;
-    @name("Callimont") Checksum16() Callimont_2;
-    @name("McAlister") Checksum16() McAlister_2;
     apply {
-        tmp_25 = Callimont_2.get<tuple_5>({ hdr.Caspian.Eunice, hdr.Caspian.Yatesboro, hdr.Caspian.Philmont, hdr.Caspian.Vinita, hdr.Caspian.Hillside, hdr.Caspian.Wyarno, hdr.Caspian.Goosport, hdr.Caspian.Currie, hdr.Caspian.Stambaugh, hdr.Caspian.Ceiba, hdr.Caspian.Rochert, hdr.Caspian.Milbank });
-        hdr.Caspian.Gunder = tmp_25;
-        tmp_26 = McAlister_2.get<tuple_5>({ hdr.Newcomb.Eunice, hdr.Newcomb.Yatesboro, hdr.Newcomb.Philmont, hdr.Newcomb.Vinita, hdr.Newcomb.Hillside, hdr.Newcomb.Wyarno, hdr.Newcomb.Goosport, hdr.Newcomb.Currie, hdr.Newcomb.Stambaugh, hdr.Newcomb.Ceiba, hdr.Newcomb.Rochert, hdr.Newcomb.Milbank });
-        hdr.Newcomb.Gunder = tmp_26;
+        update_checksum<tuple_5, bit<16>>(true, { hdr.Caspian.Eunice, hdr.Caspian.Yatesboro, hdr.Caspian.Philmont, hdr.Caspian.Vinita, hdr.Caspian.Hillside, hdr.Caspian.Wyarno, hdr.Caspian.Goosport, hdr.Caspian.Currie, hdr.Caspian.Stambaugh, hdr.Caspian.Ceiba, hdr.Caspian.Rochert, hdr.Caspian.Milbank }, hdr.Caspian.Gunder, HashAlgorithm.csum16);
+        update_checksum<tuple_5, bit<16>>(true, { hdr.Newcomb.Eunice, hdr.Newcomb.Yatesboro, hdr.Newcomb.Philmont, hdr.Newcomb.Vinita, hdr.Newcomb.Hillside, hdr.Newcomb.Wyarno, hdr.Newcomb.Goosport, hdr.Newcomb.Currie, hdr.Newcomb.Stambaugh, hdr.Newcomb.Ceiba, hdr.Newcomb.Rochert, hdr.Newcomb.Milbank }, hdr.Newcomb.Gunder, HashAlgorithm.csum16);
     }
 }
 

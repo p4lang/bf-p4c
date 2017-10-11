@@ -3229,35 +3229,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    bit<16> tmp_16;
-    bool tmp_17;
-    bit<16> tmp_18;
-    bool tmp_19;
-    @name("Newtonia") Checksum16() Newtonia_0;
-    @name("Ballville") Checksum16() Ballville_0;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        tmp_16 = Newtonia_0.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Glenside.Rumson, hdr.Glenside.Forkville, hdr.Glenside.Nutria, hdr.Glenside.Orrville, hdr.Glenside.Gresston, hdr.Glenside.Lebanon, hdr.Glenside.Mabana, hdr.Glenside.Lambrook, hdr.Glenside.Elsinore, hdr.Glenside.Century, hdr.Glenside.WolfTrap, hdr.Glenside.Trout });
-        tmp_17 = hdr.Glenside.Domingo == tmp_16;
-        if (tmp_17) 
-            mark_to_drop();
-        tmp_18 = Ballville_0.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Halley.Rumson, hdr.Halley.Forkville, hdr.Halley.Nutria, hdr.Halley.Orrville, hdr.Halley.Gresston, hdr.Halley.Lebanon, hdr.Halley.Mabana, hdr.Halley.Lambrook, hdr.Halley.Elsinore, hdr.Halley.Century, hdr.Halley.WolfTrap, hdr.Halley.Trout });
-        tmp_19 = hdr.Halley.Domingo == tmp_18;
-        if (tmp_19) 
-            mark_to_drop();
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Glenside.Rumson, hdr.Glenside.Forkville, hdr.Glenside.Nutria, hdr.Glenside.Orrville, hdr.Glenside.Gresston, hdr.Glenside.Lebanon, hdr.Glenside.Mabana, hdr.Glenside.Lambrook, hdr.Glenside.Elsinore, hdr.Glenside.Century, hdr.Glenside.WolfTrap, hdr.Glenside.Trout }, hdr.Glenside.Domingo, HashAlgorithm.csum16);
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Halley.Rumson, hdr.Halley.Forkville, hdr.Halley.Nutria, hdr.Halley.Orrville, hdr.Halley.Gresston, hdr.Halley.Lebanon, hdr.Halley.Mabana, hdr.Halley.Lambrook, hdr.Halley.Elsinore, hdr.Halley.Century, hdr.Halley.WolfTrap, hdr.Halley.Trout }, hdr.Halley.Domingo, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    bit<16> tmp_20;
-    bit<16> tmp_21;
-    @name("Newtonia") Checksum16() Newtonia_1;
-    @name("Ballville") Checksum16() Ballville_1;
     apply {
-        tmp_20 = Newtonia_1.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Glenside.Rumson, hdr.Glenside.Forkville, hdr.Glenside.Nutria, hdr.Glenside.Orrville, hdr.Glenside.Gresston, hdr.Glenside.Lebanon, hdr.Glenside.Mabana, hdr.Glenside.Lambrook, hdr.Glenside.Elsinore, hdr.Glenside.Century, hdr.Glenside.WolfTrap, hdr.Glenside.Trout });
-        hdr.Glenside.Domingo = tmp_20;
-        tmp_21 = Ballville_1.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Halley.Rumson, hdr.Halley.Forkville, hdr.Halley.Nutria, hdr.Halley.Orrville, hdr.Halley.Gresston, hdr.Halley.Lebanon, hdr.Halley.Mabana, hdr.Halley.Lambrook, hdr.Halley.Elsinore, hdr.Halley.Century, hdr.Halley.WolfTrap, hdr.Halley.Trout });
-        hdr.Halley.Domingo = tmp_21;
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Glenside.Rumson, hdr.Glenside.Forkville, hdr.Glenside.Nutria, hdr.Glenside.Orrville, hdr.Glenside.Gresston, hdr.Glenside.Lebanon, hdr.Glenside.Mabana, hdr.Glenside.Lambrook, hdr.Glenside.Elsinore, hdr.Glenside.Century, hdr.Glenside.WolfTrap, hdr.Glenside.Trout }, hdr.Glenside.Domingo, HashAlgorithm.csum16);
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Halley.Rumson, hdr.Halley.Forkville, hdr.Halley.Nutria, hdr.Halley.Orrville, hdr.Halley.Gresston, hdr.Halley.Lebanon, hdr.Halley.Mabana, hdr.Halley.Lambrook, hdr.Halley.Elsinore, hdr.Halley.Century, hdr.Halley.WolfTrap, hdr.Halley.Trout }, hdr.Halley.Domingo, HashAlgorithm.csum16);
     }
 }
 

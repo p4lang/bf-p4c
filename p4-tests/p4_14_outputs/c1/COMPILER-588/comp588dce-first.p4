@@ -4209,23 +4209,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    Checksum16() Rankin;
-    Checksum16() Nanakuli;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        if (hdr.Maybee.Chatanika == (Rankin.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Maybee.Venice, hdr.Maybee.Heizer, hdr.Maybee.Frederika, hdr.Maybee.Angus, hdr.Maybee.Vieques, hdr.Maybee.Fackler, hdr.Maybee.Belmond, hdr.Maybee.Parker, hdr.Maybee.Weissert, hdr.Maybee.Lolita, hdr.Maybee.Camanche, hdr.Maybee.Remsen }))) 
-            mark_to_drop();
-        if (hdr.Moorcroft.Chatanika == (Nanakuli.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Moorcroft.Venice, hdr.Moorcroft.Heizer, hdr.Moorcroft.Frederika, hdr.Moorcroft.Angus, hdr.Moorcroft.Vieques, hdr.Moorcroft.Fackler, hdr.Moorcroft.Belmond, hdr.Moorcroft.Parker, hdr.Moorcroft.Weissert, hdr.Moorcroft.Lolita, hdr.Moorcroft.Camanche, hdr.Moorcroft.Remsen }))) 
-            mark_to_drop();
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Maybee.Venice, hdr.Maybee.Heizer, hdr.Maybee.Frederika, hdr.Maybee.Angus, hdr.Maybee.Vieques, hdr.Maybee.Fackler, hdr.Maybee.Belmond, hdr.Maybee.Parker, hdr.Maybee.Weissert, hdr.Maybee.Lolita, hdr.Maybee.Camanche, hdr.Maybee.Remsen }, hdr.Maybee.Chatanika, HashAlgorithm.csum16);
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Moorcroft.Venice, hdr.Moorcroft.Heizer, hdr.Moorcroft.Frederika, hdr.Moorcroft.Angus, hdr.Moorcroft.Vieques, hdr.Moorcroft.Fackler, hdr.Moorcroft.Belmond, hdr.Moorcroft.Parker, hdr.Moorcroft.Weissert, hdr.Moorcroft.Lolita, hdr.Moorcroft.Camanche, hdr.Moorcroft.Remsen }, hdr.Moorcroft.Chatanika, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    Checksum16() Rankin;
-    Checksum16() Nanakuli;
     apply {
-        hdr.Maybee.Chatanika = Rankin.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Maybee.Venice, hdr.Maybee.Heizer, hdr.Maybee.Frederika, hdr.Maybee.Angus, hdr.Maybee.Vieques, hdr.Maybee.Fackler, hdr.Maybee.Belmond, hdr.Maybee.Parker, hdr.Maybee.Weissert, hdr.Maybee.Lolita, hdr.Maybee.Camanche, hdr.Maybee.Remsen });
-        hdr.Moorcroft.Chatanika = Nanakuli.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Moorcroft.Venice, hdr.Moorcroft.Heizer, hdr.Moorcroft.Frederika, hdr.Moorcroft.Angus, hdr.Moorcroft.Vieques, hdr.Moorcroft.Fackler, hdr.Moorcroft.Belmond, hdr.Moorcroft.Parker, hdr.Moorcroft.Weissert, hdr.Moorcroft.Lolita, hdr.Moorcroft.Camanche, hdr.Moorcroft.Remsen });
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Maybee.Venice, hdr.Maybee.Heizer, hdr.Maybee.Frederika, hdr.Maybee.Angus, hdr.Maybee.Vieques, hdr.Maybee.Fackler, hdr.Maybee.Belmond, hdr.Maybee.Parker, hdr.Maybee.Weissert, hdr.Maybee.Lolita, hdr.Maybee.Camanche, hdr.Maybee.Remsen }, hdr.Maybee.Chatanika, HashAlgorithm.csum16);
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Moorcroft.Venice, hdr.Moorcroft.Heizer, hdr.Moorcroft.Frederika, hdr.Moorcroft.Angus, hdr.Moorcroft.Vieques, hdr.Moorcroft.Fackler, hdr.Moorcroft.Belmond, hdr.Moorcroft.Parker, hdr.Moorcroft.Weissert, hdr.Moorcroft.Lolita, hdr.Moorcroft.Camanche, hdr.Moorcroft.Remsen }, hdr.Moorcroft.Chatanika, HashAlgorithm.csum16);
     }
 }
 

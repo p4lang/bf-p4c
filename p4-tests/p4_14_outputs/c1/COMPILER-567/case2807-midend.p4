@@ -2938,31 +2938,17 @@ struct tuple_5 {
     bit<32> field_29;
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    bit<16> tmp_17;
-    bit<16> tmp_19;
-    @name("Delmar") Checksum16() Delmar;
-    @name("Cataract") Checksum16() Cataract;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        tmp_17 = Delmar.get<tuple_5>({ hdr.Atlas.Sylva, hdr.Atlas.Fairhaven, hdr.Atlas.Achille, hdr.Atlas.Eolia, hdr.Atlas.Warba, hdr.Atlas.Dunbar, hdr.Atlas.McCaulley, hdr.Atlas.Newberg, hdr.Atlas.Mustang, hdr.Atlas.Keltys, hdr.Atlas.Sunman, hdr.Atlas.Melba });
-        if (hdr.Atlas.Berville == tmp_17) 
-            mark_to_drop();
-        tmp_19 = Cataract.get<tuple_5>({ hdr.FulksRun.Sylva, hdr.FulksRun.Fairhaven, hdr.FulksRun.Achille, hdr.FulksRun.Eolia, hdr.FulksRun.Warba, hdr.FulksRun.Dunbar, hdr.FulksRun.McCaulley, hdr.FulksRun.Newberg, hdr.FulksRun.Mustang, hdr.FulksRun.Keltys, hdr.FulksRun.Sunman, hdr.FulksRun.Melba });
-        if (hdr.FulksRun.Berville == tmp_19) 
-            mark_to_drop();
+        verify_checksum<tuple_5, bit<16>>(true, { hdr.Atlas.Sylva, hdr.Atlas.Fairhaven, hdr.Atlas.Achille, hdr.Atlas.Eolia, hdr.Atlas.Warba, hdr.Atlas.Dunbar, hdr.Atlas.McCaulley, hdr.Atlas.Newberg, hdr.Atlas.Mustang, hdr.Atlas.Keltys, hdr.Atlas.Sunman, hdr.Atlas.Melba }, hdr.Atlas.Berville, HashAlgorithm.csum16);
+        verify_checksum<tuple_5, bit<16>>(true, { hdr.FulksRun.Sylva, hdr.FulksRun.Fairhaven, hdr.FulksRun.Achille, hdr.FulksRun.Eolia, hdr.FulksRun.Warba, hdr.FulksRun.Dunbar, hdr.FulksRun.McCaulley, hdr.FulksRun.Newberg, hdr.FulksRun.Mustang, hdr.FulksRun.Keltys, hdr.FulksRun.Sunman, hdr.FulksRun.Melba }, hdr.FulksRun.Berville, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    bit<16> tmp_21;
-    bit<16> tmp_22;
-    @name("Delmar") Checksum16() Delmar_2;
-    @name("Cataract") Checksum16() Cataract_2;
     apply {
-        tmp_21 = Delmar_2.get<tuple_5>({ hdr.Atlas.Sylva, hdr.Atlas.Fairhaven, hdr.Atlas.Achille, hdr.Atlas.Eolia, hdr.Atlas.Warba, hdr.Atlas.Dunbar, hdr.Atlas.McCaulley, hdr.Atlas.Newberg, hdr.Atlas.Mustang, hdr.Atlas.Keltys, hdr.Atlas.Sunman, hdr.Atlas.Melba });
-        hdr.Atlas.Berville = tmp_21;
-        tmp_22 = Cataract_2.get<tuple_5>({ hdr.FulksRun.Sylva, hdr.FulksRun.Fairhaven, hdr.FulksRun.Achille, hdr.FulksRun.Eolia, hdr.FulksRun.Warba, hdr.FulksRun.Dunbar, hdr.FulksRun.McCaulley, hdr.FulksRun.Newberg, hdr.FulksRun.Mustang, hdr.FulksRun.Keltys, hdr.FulksRun.Sunman, hdr.FulksRun.Melba });
-        hdr.FulksRun.Berville = tmp_22;
+        update_checksum<tuple_5, bit<16>>(true, { hdr.Atlas.Sylva, hdr.Atlas.Fairhaven, hdr.Atlas.Achille, hdr.Atlas.Eolia, hdr.Atlas.Warba, hdr.Atlas.Dunbar, hdr.Atlas.McCaulley, hdr.Atlas.Newberg, hdr.Atlas.Mustang, hdr.Atlas.Keltys, hdr.Atlas.Sunman, hdr.Atlas.Melba }, hdr.Atlas.Berville, HashAlgorithm.csum16);
+        update_checksum<tuple_5, bit<16>>(true, { hdr.FulksRun.Sylva, hdr.FulksRun.Fairhaven, hdr.FulksRun.Achille, hdr.FulksRun.Eolia, hdr.FulksRun.Warba, hdr.FulksRun.Dunbar, hdr.FulksRun.McCaulley, hdr.FulksRun.Newberg, hdr.FulksRun.Mustang, hdr.FulksRun.Keltys, hdr.FulksRun.Sunman, hdr.FulksRun.Melba }, hdr.FulksRun.Berville, HashAlgorithm.csum16);
     }
 }
 

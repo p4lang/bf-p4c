@@ -4214,23 +4214,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    Checksum16() Newtonia;
-    Checksum16() Ballville;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        if (hdr.Glenside.Domingo == (Newtonia.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Glenside.Rumson, hdr.Glenside.Forkville, hdr.Glenside.Nutria, hdr.Glenside.Orrville, hdr.Glenside.Gresston, hdr.Glenside.Lebanon, hdr.Glenside.Mabana, hdr.Glenside.Lambrook, hdr.Glenside.Elsinore, hdr.Glenside.Century, hdr.Glenside.WolfTrap, hdr.Glenside.Trout }))) 
-            mark_to_drop();
-        if (hdr.Halley.Domingo == (Ballville.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Halley.Rumson, hdr.Halley.Forkville, hdr.Halley.Nutria, hdr.Halley.Orrville, hdr.Halley.Gresston, hdr.Halley.Lebanon, hdr.Halley.Mabana, hdr.Halley.Lambrook, hdr.Halley.Elsinore, hdr.Halley.Century, hdr.Halley.WolfTrap, hdr.Halley.Trout }))) 
-            mark_to_drop();
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Glenside.Rumson, hdr.Glenside.Forkville, hdr.Glenside.Nutria, hdr.Glenside.Orrville, hdr.Glenside.Gresston, hdr.Glenside.Lebanon, hdr.Glenside.Mabana, hdr.Glenside.Lambrook, hdr.Glenside.Elsinore, hdr.Glenside.Century, hdr.Glenside.WolfTrap, hdr.Glenside.Trout }, hdr.Glenside.Domingo, HashAlgorithm.csum16);
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Halley.Rumson, hdr.Halley.Forkville, hdr.Halley.Nutria, hdr.Halley.Orrville, hdr.Halley.Gresston, hdr.Halley.Lebanon, hdr.Halley.Mabana, hdr.Halley.Lambrook, hdr.Halley.Elsinore, hdr.Halley.Century, hdr.Halley.WolfTrap, hdr.Halley.Trout }, hdr.Halley.Domingo, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    Checksum16() Newtonia;
-    Checksum16() Ballville;
     apply {
-        hdr.Glenside.Domingo = Newtonia.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Glenside.Rumson, hdr.Glenside.Forkville, hdr.Glenside.Nutria, hdr.Glenside.Orrville, hdr.Glenside.Gresston, hdr.Glenside.Lebanon, hdr.Glenside.Mabana, hdr.Glenside.Lambrook, hdr.Glenside.Elsinore, hdr.Glenside.Century, hdr.Glenside.WolfTrap, hdr.Glenside.Trout });
-        hdr.Halley.Domingo = Ballville.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Halley.Rumson, hdr.Halley.Forkville, hdr.Halley.Nutria, hdr.Halley.Orrville, hdr.Halley.Gresston, hdr.Halley.Lebanon, hdr.Halley.Mabana, hdr.Halley.Lambrook, hdr.Halley.Elsinore, hdr.Halley.Century, hdr.Halley.WolfTrap, hdr.Halley.Trout });
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Glenside.Rumson, hdr.Glenside.Forkville, hdr.Glenside.Nutria, hdr.Glenside.Orrville, hdr.Glenside.Gresston, hdr.Glenside.Lebanon, hdr.Glenside.Mabana, hdr.Glenside.Lambrook, hdr.Glenside.Elsinore, hdr.Glenside.Century, hdr.Glenside.WolfTrap, hdr.Glenside.Trout }, hdr.Glenside.Domingo, HashAlgorithm.csum16);
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Halley.Rumson, hdr.Halley.Forkville, hdr.Halley.Nutria, hdr.Halley.Orrville, hdr.Halley.Gresston, hdr.Halley.Lebanon, hdr.Halley.Mabana, hdr.Halley.Lambrook, hdr.Halley.Elsinore, hdr.Halley.Century, hdr.Halley.WolfTrap, hdr.Halley.Trout }, hdr.Halley.Domingo, HashAlgorithm.csum16);
     }
 }
 

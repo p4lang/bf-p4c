@@ -822,31 +822,17 @@ struct tuple_0 {
     bit<32> field_10;
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    bit<16> tmp_7;
-    bit<16> tmp_9;
-    @name("Ojibwa") Checksum16() Ojibwa;
-    @name("Bardwell") Checksum16() Bardwell;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        tmp_7 = Ojibwa.get<tuple_0>({ hdr.Kinsley.Adair, hdr.Kinsley.Arcanum, hdr.Kinsley.Hewitt, hdr.Kinsley.Boysen, hdr.Kinsley.Pineridge, hdr.Kinsley.Dilia, hdr.Kinsley.Blunt, hdr.Kinsley.Clermont, hdr.Kinsley.DeepGap, hdr.Kinsley.Cuprum, hdr.Kinsley.Keachi, hdr.Kinsley.Finley });
-        if (hdr.Kinsley.Leola == tmp_7) 
-            mark_to_drop();
-        tmp_9 = Bardwell.get<tuple_0>({ hdr.Wauseon.Adair, hdr.Wauseon.Arcanum, hdr.Wauseon.Hewitt, hdr.Wauseon.Boysen, hdr.Wauseon.Pineridge, hdr.Wauseon.Dilia, hdr.Wauseon.Blunt, hdr.Wauseon.Clermont, hdr.Wauseon.DeepGap, hdr.Wauseon.Cuprum, hdr.Wauseon.Keachi, hdr.Wauseon.Finley });
-        if (hdr.Wauseon.Leola == tmp_9) 
-            mark_to_drop();
+        verify_checksum<tuple_0, bit<16>>(true, { hdr.Kinsley.Adair, hdr.Kinsley.Arcanum, hdr.Kinsley.Hewitt, hdr.Kinsley.Boysen, hdr.Kinsley.Pineridge, hdr.Kinsley.Dilia, hdr.Kinsley.Blunt, hdr.Kinsley.Clermont, hdr.Kinsley.DeepGap, hdr.Kinsley.Cuprum, hdr.Kinsley.Keachi, hdr.Kinsley.Finley }, hdr.Kinsley.Leola, HashAlgorithm.csum16);
+        verify_checksum<tuple_0, bit<16>>(true, { hdr.Wauseon.Adair, hdr.Wauseon.Arcanum, hdr.Wauseon.Hewitt, hdr.Wauseon.Boysen, hdr.Wauseon.Pineridge, hdr.Wauseon.Dilia, hdr.Wauseon.Blunt, hdr.Wauseon.Clermont, hdr.Wauseon.DeepGap, hdr.Wauseon.Cuprum, hdr.Wauseon.Keachi, hdr.Wauseon.Finley }, hdr.Wauseon.Leola, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    bit<16> tmp_11;
-    bit<16> tmp_12;
-    @name("Ojibwa") Checksum16() Ojibwa_2;
-    @name("Bardwell") Checksum16() Bardwell_2;
     apply {
-        tmp_11 = Ojibwa_2.get<tuple_0>({ hdr.Kinsley.Adair, hdr.Kinsley.Arcanum, hdr.Kinsley.Hewitt, hdr.Kinsley.Boysen, hdr.Kinsley.Pineridge, hdr.Kinsley.Dilia, hdr.Kinsley.Blunt, hdr.Kinsley.Clermont, hdr.Kinsley.DeepGap, hdr.Kinsley.Cuprum, hdr.Kinsley.Keachi, hdr.Kinsley.Finley });
-        hdr.Kinsley.Leola = tmp_11;
-        tmp_12 = Bardwell_2.get<tuple_0>({ hdr.Wauseon.Adair, hdr.Wauseon.Arcanum, hdr.Wauseon.Hewitt, hdr.Wauseon.Boysen, hdr.Wauseon.Pineridge, hdr.Wauseon.Dilia, hdr.Wauseon.Blunt, hdr.Wauseon.Clermont, hdr.Wauseon.DeepGap, hdr.Wauseon.Cuprum, hdr.Wauseon.Keachi, hdr.Wauseon.Finley });
-        hdr.Wauseon.Leola = tmp_12;
+        update_checksum<tuple_0, bit<16>>(true, { hdr.Kinsley.Adair, hdr.Kinsley.Arcanum, hdr.Kinsley.Hewitt, hdr.Kinsley.Boysen, hdr.Kinsley.Pineridge, hdr.Kinsley.Dilia, hdr.Kinsley.Blunt, hdr.Kinsley.Clermont, hdr.Kinsley.DeepGap, hdr.Kinsley.Cuprum, hdr.Kinsley.Keachi, hdr.Kinsley.Finley }, hdr.Kinsley.Leola, HashAlgorithm.csum16);
+        update_checksum<tuple_0, bit<16>>(true, { hdr.Wauseon.Adair, hdr.Wauseon.Arcanum, hdr.Wauseon.Hewitt, hdr.Wauseon.Boysen, hdr.Wauseon.Pineridge, hdr.Wauseon.Dilia, hdr.Wauseon.Blunt, hdr.Wauseon.Clermont, hdr.Wauseon.DeepGap, hdr.Wauseon.Cuprum, hdr.Wauseon.Keachi, hdr.Wauseon.Finley }, hdr.Wauseon.Leola, HashAlgorithm.csum16);
     }
 }
 

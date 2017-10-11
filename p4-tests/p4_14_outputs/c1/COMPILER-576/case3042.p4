@@ -4150,23 +4150,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    Checksum16() Ladoga;
-    Checksum16() Escondido;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        if (hdr.Challis.McKamie == Ladoga.get({ hdr.Challis.Alston, hdr.Challis.Casco, hdr.Challis.Boquet, hdr.Challis.BigArm, hdr.Challis.Muncie, hdr.Challis.Blackwood, hdr.Challis.Margie, hdr.Challis.Westline, hdr.Challis.Calimesa, hdr.Challis.Reedsport, hdr.Challis.Chehalis, hdr.Challis.Waterman })) 
-            mark_to_drop();
-        if (hdr.Trotwood.McKamie == Escondido.get({ hdr.Trotwood.Alston, hdr.Trotwood.Casco, hdr.Trotwood.Boquet, hdr.Trotwood.BigArm, hdr.Trotwood.Muncie, hdr.Trotwood.Blackwood, hdr.Trotwood.Margie, hdr.Trotwood.Westline, hdr.Trotwood.Calimesa, hdr.Trotwood.Reedsport, hdr.Trotwood.Chehalis, hdr.Trotwood.Waterman })) 
-            mark_to_drop();
+        verify_checksum(true, { hdr.Challis.Alston, hdr.Challis.Casco, hdr.Challis.Boquet, hdr.Challis.BigArm, hdr.Challis.Muncie, hdr.Challis.Blackwood, hdr.Challis.Margie, hdr.Challis.Westline, hdr.Challis.Calimesa, hdr.Challis.Reedsport, hdr.Challis.Chehalis, hdr.Challis.Waterman }, hdr.Challis.McKamie, HashAlgorithm.csum16);
+        verify_checksum(true, { hdr.Trotwood.Alston, hdr.Trotwood.Casco, hdr.Trotwood.Boquet, hdr.Trotwood.BigArm, hdr.Trotwood.Muncie, hdr.Trotwood.Blackwood, hdr.Trotwood.Margie, hdr.Trotwood.Westline, hdr.Trotwood.Calimesa, hdr.Trotwood.Reedsport, hdr.Trotwood.Chehalis, hdr.Trotwood.Waterman }, hdr.Trotwood.McKamie, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    Checksum16() Ladoga;
-    Checksum16() Escondido;
     apply {
-        hdr.Challis.McKamie = Ladoga.get({ hdr.Challis.Alston, hdr.Challis.Casco, hdr.Challis.Boquet, hdr.Challis.BigArm, hdr.Challis.Muncie, hdr.Challis.Blackwood, hdr.Challis.Margie, hdr.Challis.Westline, hdr.Challis.Calimesa, hdr.Challis.Reedsport, hdr.Challis.Chehalis, hdr.Challis.Waterman });
-        hdr.Trotwood.McKamie = Escondido.get({ hdr.Trotwood.Alston, hdr.Trotwood.Casco, hdr.Trotwood.Boquet, hdr.Trotwood.BigArm, hdr.Trotwood.Muncie, hdr.Trotwood.Blackwood, hdr.Trotwood.Margie, hdr.Trotwood.Westline, hdr.Trotwood.Calimesa, hdr.Trotwood.Reedsport, hdr.Trotwood.Chehalis, hdr.Trotwood.Waterman });
+        update_checksum(true, { hdr.Challis.Alston, hdr.Challis.Casco, hdr.Challis.Boquet, hdr.Challis.BigArm, hdr.Challis.Muncie, hdr.Challis.Blackwood, hdr.Challis.Margie, hdr.Challis.Westline, hdr.Challis.Calimesa, hdr.Challis.Reedsport, hdr.Challis.Chehalis, hdr.Challis.Waterman }, hdr.Challis.McKamie, HashAlgorithm.csum16);
+        update_checksum(true, { hdr.Trotwood.Alston, hdr.Trotwood.Casco, hdr.Trotwood.Boquet, hdr.Trotwood.BigArm, hdr.Trotwood.Muncie, hdr.Trotwood.Blackwood, hdr.Trotwood.Margie, hdr.Trotwood.Westline, hdr.Trotwood.Calimesa, hdr.Trotwood.Reedsport, hdr.Trotwood.Chehalis, hdr.Trotwood.Waterman }, hdr.Trotwood.McKamie, HashAlgorithm.csum16);
     }
 }
 

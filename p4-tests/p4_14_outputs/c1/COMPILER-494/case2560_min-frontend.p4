@@ -767,35 +767,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    bit<16> tmp_1;
-    bool tmp_2;
-    bit<16> tmp_3;
-    bool tmp_4;
-    @name("Ojibwa") Checksum16() Ojibwa_0;
-    @name("Bardwell") Checksum16() Bardwell_0;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        tmp_1 = Ojibwa_0.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Kinsley.Adair, hdr.Kinsley.Arcanum, hdr.Kinsley.Hewitt, hdr.Kinsley.Boysen, hdr.Kinsley.Pineridge, hdr.Kinsley.Dilia, hdr.Kinsley.Blunt, hdr.Kinsley.Clermont, hdr.Kinsley.DeepGap, hdr.Kinsley.Cuprum, hdr.Kinsley.Keachi, hdr.Kinsley.Finley });
-        tmp_2 = hdr.Kinsley.Leola == tmp_1;
-        if (tmp_2) 
-            mark_to_drop();
-        tmp_3 = Bardwell_0.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Wauseon.Adair, hdr.Wauseon.Arcanum, hdr.Wauseon.Hewitt, hdr.Wauseon.Boysen, hdr.Wauseon.Pineridge, hdr.Wauseon.Dilia, hdr.Wauseon.Blunt, hdr.Wauseon.Clermont, hdr.Wauseon.DeepGap, hdr.Wauseon.Cuprum, hdr.Wauseon.Keachi, hdr.Wauseon.Finley });
-        tmp_4 = hdr.Wauseon.Leola == tmp_3;
-        if (tmp_4) 
-            mark_to_drop();
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Kinsley.Adair, hdr.Kinsley.Arcanum, hdr.Kinsley.Hewitt, hdr.Kinsley.Boysen, hdr.Kinsley.Pineridge, hdr.Kinsley.Dilia, hdr.Kinsley.Blunt, hdr.Kinsley.Clermont, hdr.Kinsley.DeepGap, hdr.Kinsley.Cuprum, hdr.Kinsley.Keachi, hdr.Kinsley.Finley }, hdr.Kinsley.Leola, HashAlgorithm.csum16);
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Wauseon.Adair, hdr.Wauseon.Arcanum, hdr.Wauseon.Hewitt, hdr.Wauseon.Boysen, hdr.Wauseon.Pineridge, hdr.Wauseon.Dilia, hdr.Wauseon.Blunt, hdr.Wauseon.Clermont, hdr.Wauseon.DeepGap, hdr.Wauseon.Cuprum, hdr.Wauseon.Keachi, hdr.Wauseon.Finley }, hdr.Wauseon.Leola, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    bit<16> tmp_5;
-    bit<16> tmp_6;
-    @name("Ojibwa") Checksum16() Ojibwa_1;
-    @name("Bardwell") Checksum16() Bardwell_1;
     apply {
-        tmp_5 = Ojibwa_1.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Kinsley.Adair, hdr.Kinsley.Arcanum, hdr.Kinsley.Hewitt, hdr.Kinsley.Boysen, hdr.Kinsley.Pineridge, hdr.Kinsley.Dilia, hdr.Kinsley.Blunt, hdr.Kinsley.Clermont, hdr.Kinsley.DeepGap, hdr.Kinsley.Cuprum, hdr.Kinsley.Keachi, hdr.Kinsley.Finley });
-        hdr.Kinsley.Leola = tmp_5;
-        tmp_6 = Bardwell_1.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Wauseon.Adair, hdr.Wauseon.Arcanum, hdr.Wauseon.Hewitt, hdr.Wauseon.Boysen, hdr.Wauseon.Pineridge, hdr.Wauseon.Dilia, hdr.Wauseon.Blunt, hdr.Wauseon.Clermont, hdr.Wauseon.DeepGap, hdr.Wauseon.Cuprum, hdr.Wauseon.Keachi, hdr.Wauseon.Finley });
-        hdr.Wauseon.Leola = tmp_6;
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Kinsley.Adair, hdr.Kinsley.Arcanum, hdr.Kinsley.Hewitt, hdr.Kinsley.Boysen, hdr.Kinsley.Pineridge, hdr.Kinsley.Dilia, hdr.Kinsley.Blunt, hdr.Kinsley.Clermont, hdr.Kinsley.DeepGap, hdr.Kinsley.Cuprum, hdr.Kinsley.Keachi, hdr.Kinsley.Finley }, hdr.Kinsley.Leola, HashAlgorithm.csum16);
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Wauseon.Adair, hdr.Wauseon.Arcanum, hdr.Wauseon.Hewitt, hdr.Wauseon.Boysen, hdr.Wauseon.Pineridge, hdr.Wauseon.Dilia, hdr.Wauseon.Blunt, hdr.Wauseon.Clermont, hdr.Wauseon.DeepGap, hdr.Wauseon.Cuprum, hdr.Wauseon.Keachi, hdr.Wauseon.Finley }, hdr.Wauseon.Leola, HashAlgorithm.csum16);
     }
 }
 

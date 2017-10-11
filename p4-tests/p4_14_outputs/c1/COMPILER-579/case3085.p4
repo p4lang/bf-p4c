@@ -4124,23 +4124,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    Checksum16() Newtonia;
-    Checksum16() Ballville;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        if (hdr.Glenside.Domingo == Newtonia.get({ hdr.Glenside.Rumson, hdr.Glenside.Forkville, hdr.Glenside.Nutria, hdr.Glenside.Orrville, hdr.Glenside.Gresston, hdr.Glenside.Lebanon, hdr.Glenside.Mabana, hdr.Glenside.Lambrook, hdr.Glenside.Elsinore, hdr.Glenside.Century, hdr.Glenside.WolfTrap, hdr.Glenside.Trout })) 
-            mark_to_drop();
-        if (hdr.Halley.Domingo == Ballville.get({ hdr.Halley.Rumson, hdr.Halley.Forkville, hdr.Halley.Nutria, hdr.Halley.Orrville, hdr.Halley.Gresston, hdr.Halley.Lebanon, hdr.Halley.Mabana, hdr.Halley.Lambrook, hdr.Halley.Elsinore, hdr.Halley.Century, hdr.Halley.WolfTrap, hdr.Halley.Trout })) 
-            mark_to_drop();
+        verify_checksum(true, { hdr.Glenside.Rumson, hdr.Glenside.Forkville, hdr.Glenside.Nutria, hdr.Glenside.Orrville, hdr.Glenside.Gresston, hdr.Glenside.Lebanon, hdr.Glenside.Mabana, hdr.Glenside.Lambrook, hdr.Glenside.Elsinore, hdr.Glenside.Century, hdr.Glenside.WolfTrap, hdr.Glenside.Trout }, hdr.Glenside.Domingo, HashAlgorithm.csum16);
+        verify_checksum(true, { hdr.Halley.Rumson, hdr.Halley.Forkville, hdr.Halley.Nutria, hdr.Halley.Orrville, hdr.Halley.Gresston, hdr.Halley.Lebanon, hdr.Halley.Mabana, hdr.Halley.Lambrook, hdr.Halley.Elsinore, hdr.Halley.Century, hdr.Halley.WolfTrap, hdr.Halley.Trout }, hdr.Halley.Domingo, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    Checksum16() Newtonia;
-    Checksum16() Ballville;
     apply {
-        hdr.Glenside.Domingo = Newtonia.get({ hdr.Glenside.Rumson, hdr.Glenside.Forkville, hdr.Glenside.Nutria, hdr.Glenside.Orrville, hdr.Glenside.Gresston, hdr.Glenside.Lebanon, hdr.Glenside.Mabana, hdr.Glenside.Lambrook, hdr.Glenside.Elsinore, hdr.Glenside.Century, hdr.Glenside.WolfTrap, hdr.Glenside.Trout });
-        hdr.Halley.Domingo = Ballville.get({ hdr.Halley.Rumson, hdr.Halley.Forkville, hdr.Halley.Nutria, hdr.Halley.Orrville, hdr.Halley.Gresston, hdr.Halley.Lebanon, hdr.Halley.Mabana, hdr.Halley.Lambrook, hdr.Halley.Elsinore, hdr.Halley.Century, hdr.Halley.WolfTrap, hdr.Halley.Trout });
+        update_checksum(true, { hdr.Glenside.Rumson, hdr.Glenside.Forkville, hdr.Glenside.Nutria, hdr.Glenside.Orrville, hdr.Glenside.Gresston, hdr.Glenside.Lebanon, hdr.Glenside.Mabana, hdr.Glenside.Lambrook, hdr.Glenside.Elsinore, hdr.Glenside.Century, hdr.Glenside.WolfTrap, hdr.Glenside.Trout }, hdr.Glenside.Domingo, HashAlgorithm.csum16);
+        update_checksum(true, { hdr.Halley.Rumson, hdr.Halley.Forkville, hdr.Halley.Nutria, hdr.Halley.Orrville, hdr.Halley.Gresston, hdr.Halley.Lebanon, hdr.Halley.Mabana, hdr.Halley.Lambrook, hdr.Halley.Elsinore, hdr.Halley.Century, hdr.Halley.WolfTrap, hdr.Halley.Trout }, hdr.Halley.Domingo, HashAlgorithm.csum16);
     }
 }
 

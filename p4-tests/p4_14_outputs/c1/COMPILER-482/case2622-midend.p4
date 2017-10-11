@@ -493,10 +493,10 @@ struct headers {
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     bit<16> tmp_5;
     bit<16> tmp_6;
-    bit<32> tmp_13;
-    bit<16> tmp_14;
-    bit<32> tmp_15;
-    bit<112> tmp_16;
+    bit<32> tmp_7;
+    bit<16> tmp_8;
+    bit<32> tmp_9;
+    bit<112> tmp_10;
     @name(".Argentine") state Argentine {
         packet.extract<Hobart>(hdr.ElLago);
         packet.extract<Bixby>(hdr.Kinsley);
@@ -578,8 +578,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     @name(".Paskenta") state Paskenta {
         tmp_6 = packet.lookahead<bit<16>>();
         meta.Horton.Wentworth = tmp_6[15:0];
-        tmp_13 = packet.lookahead<bit<32>>();
-        meta.Horton.CeeVee = tmp_13[15:0];
+        tmp_7 = packet.lookahead<bit<32>>();
+        meta.Horton.CeeVee = tmp_7[15:0];
         packet.extract<Hobart>(hdr.Linden);
         packet.extract<Bixby>(hdr.Sanford);
         transition accept;
@@ -609,10 +609,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
         }
     }
     @name(".Shelby") state Shelby {
-        tmp_14 = packet.lookahead<bit<16>>();
-        meta.Horton.Wentworth = tmp_14[15:0];
-        tmp_15 = packet.lookahead<bit<32>>();
-        meta.Horton.CeeVee = tmp_15[15:0];
+        tmp_8 = packet.lookahead<bit<16>>();
+        meta.Horton.Wentworth = tmp_8[15:0];
+        tmp_9 = packet.lookahead<bit<32>>();
+        meta.Horton.CeeVee = tmp_9[15:0];
         transition accept;
     }
     @name(".Skiatook") state Skiatook {
@@ -643,8 +643,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
         }
     }
     @name(".start") state start {
-        tmp_16 = packet.lookahead<bit<112>>();
-        transition select(tmp_16[15:0]) {
+        tmp_10 = packet.lookahead<bit<112>>();
+        transition select(tmp_10[15:0]) {
             16w0xbf00: McCammon;
             default: NewTrier;
         }
@@ -2399,31 +2399,17 @@ struct tuple_5 {
     bit<32> field_28;
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    bit<16> tmp_17;
-    bit<16> tmp_19;
-    @name("Equality") Checksum16() Equality;
-    @name("Shelbiana") Checksum16() Shelbiana;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        tmp_17 = Equality.get<tuple_5>({ hdr.Gosnell.Sallisaw, hdr.Gosnell.Pendroy, hdr.Gosnell.Dundalk, hdr.Gosnell.Homeacre, hdr.Gosnell.Libby, hdr.Gosnell.Adair, hdr.Gosnell.Arcanum, hdr.Gosnell.Hewitt, hdr.Gosnell.Boysen, hdr.Gosnell.Pineridge, hdr.Gosnell.Blunt, hdr.Gosnell.Clermont });
-        if (hdr.Gosnell.Dilia == tmp_17) 
-            mark_to_drop();
-        tmp_19 = Shelbiana.get<tuple_5>({ hdr.Lakebay.Sallisaw, hdr.Lakebay.Pendroy, hdr.Lakebay.Dundalk, hdr.Lakebay.Homeacre, hdr.Lakebay.Libby, hdr.Lakebay.Adair, hdr.Lakebay.Arcanum, hdr.Lakebay.Hewitt, hdr.Lakebay.Boysen, hdr.Lakebay.Pineridge, hdr.Lakebay.Blunt, hdr.Lakebay.Clermont });
-        if (hdr.Lakebay.Dilia == tmp_19) 
-            mark_to_drop();
+        verify_checksum<tuple_5, bit<16>>(true, { hdr.Gosnell.Sallisaw, hdr.Gosnell.Pendroy, hdr.Gosnell.Dundalk, hdr.Gosnell.Homeacre, hdr.Gosnell.Libby, hdr.Gosnell.Adair, hdr.Gosnell.Arcanum, hdr.Gosnell.Hewitt, hdr.Gosnell.Boysen, hdr.Gosnell.Pineridge, hdr.Gosnell.Blunt, hdr.Gosnell.Clermont }, hdr.Gosnell.Dilia, HashAlgorithm.csum16);
+        verify_checksum<tuple_5, bit<16>>(true, { hdr.Lakebay.Sallisaw, hdr.Lakebay.Pendroy, hdr.Lakebay.Dundalk, hdr.Lakebay.Homeacre, hdr.Lakebay.Libby, hdr.Lakebay.Adair, hdr.Lakebay.Arcanum, hdr.Lakebay.Hewitt, hdr.Lakebay.Boysen, hdr.Lakebay.Pineridge, hdr.Lakebay.Blunt, hdr.Lakebay.Clermont }, hdr.Lakebay.Dilia, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    bit<16> tmp_21;
-    bit<16> tmp_22;
-    @name("Equality") Checksum16() Equality_2;
-    @name("Shelbiana") Checksum16() Shelbiana_2;
     apply {
-        tmp_21 = Equality_2.get<tuple_5>({ hdr.Gosnell.Sallisaw, hdr.Gosnell.Pendroy, hdr.Gosnell.Dundalk, hdr.Gosnell.Homeacre, hdr.Gosnell.Libby, hdr.Gosnell.Adair, hdr.Gosnell.Arcanum, hdr.Gosnell.Hewitt, hdr.Gosnell.Boysen, hdr.Gosnell.Pineridge, hdr.Gosnell.Blunt, hdr.Gosnell.Clermont });
-        hdr.Gosnell.Dilia = tmp_21;
-        tmp_22 = Shelbiana_2.get<tuple_5>({ hdr.Lakebay.Sallisaw, hdr.Lakebay.Pendroy, hdr.Lakebay.Dundalk, hdr.Lakebay.Homeacre, hdr.Lakebay.Libby, hdr.Lakebay.Adair, hdr.Lakebay.Arcanum, hdr.Lakebay.Hewitt, hdr.Lakebay.Boysen, hdr.Lakebay.Pineridge, hdr.Lakebay.Blunt, hdr.Lakebay.Clermont });
-        hdr.Lakebay.Dilia = tmp_22;
+        update_checksum<tuple_5, bit<16>>(true, { hdr.Gosnell.Sallisaw, hdr.Gosnell.Pendroy, hdr.Gosnell.Dundalk, hdr.Gosnell.Homeacre, hdr.Gosnell.Libby, hdr.Gosnell.Adair, hdr.Gosnell.Arcanum, hdr.Gosnell.Hewitt, hdr.Gosnell.Boysen, hdr.Gosnell.Pineridge, hdr.Gosnell.Blunt, hdr.Gosnell.Clermont }, hdr.Gosnell.Dilia, HashAlgorithm.csum16);
+        update_checksum<tuple_5, bit<16>>(true, { hdr.Lakebay.Sallisaw, hdr.Lakebay.Pendroy, hdr.Lakebay.Dundalk, hdr.Lakebay.Homeacre, hdr.Lakebay.Libby, hdr.Lakebay.Adair, hdr.Lakebay.Arcanum, hdr.Lakebay.Hewitt, hdr.Lakebay.Boysen, hdr.Lakebay.Pineridge, hdr.Lakebay.Blunt, hdr.Lakebay.Clermont }, hdr.Lakebay.Dilia, HashAlgorithm.csum16);
     }
 }
 

@@ -4248,23 +4248,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    Checksum16() Parthenon;
-    Checksum16() Kinards;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        if (hdr.CapRock.Waubun == (Parthenon.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.CapRock.Supai, hdr.CapRock.DeSart, hdr.CapRock.Naches, hdr.CapRock.Claypool, hdr.CapRock.Millett, hdr.CapRock.LaUnion, hdr.CapRock.Emmalane, hdr.CapRock.Farlin, hdr.CapRock.Weimar, hdr.CapRock.Kremlin, hdr.CapRock.Nerstrand, hdr.CapRock.Cimarron }))) 
-            mark_to_drop();
-        if (hdr.Lepanto.Waubun == (Kinards.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Lepanto.Supai, hdr.Lepanto.DeSart, hdr.Lepanto.Naches, hdr.Lepanto.Claypool, hdr.Lepanto.Millett, hdr.Lepanto.LaUnion, hdr.Lepanto.Emmalane, hdr.Lepanto.Farlin, hdr.Lepanto.Weimar, hdr.Lepanto.Kremlin, hdr.Lepanto.Nerstrand, hdr.Lepanto.Cimarron }))) 
-            mark_to_drop();
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.CapRock.Supai, hdr.CapRock.DeSart, hdr.CapRock.Naches, hdr.CapRock.Claypool, hdr.CapRock.Millett, hdr.CapRock.LaUnion, hdr.CapRock.Emmalane, hdr.CapRock.Farlin, hdr.CapRock.Weimar, hdr.CapRock.Kremlin, hdr.CapRock.Nerstrand, hdr.CapRock.Cimarron }, hdr.CapRock.Waubun, HashAlgorithm.csum16);
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Lepanto.Supai, hdr.Lepanto.DeSart, hdr.Lepanto.Naches, hdr.Lepanto.Claypool, hdr.Lepanto.Millett, hdr.Lepanto.LaUnion, hdr.Lepanto.Emmalane, hdr.Lepanto.Farlin, hdr.Lepanto.Weimar, hdr.Lepanto.Kremlin, hdr.Lepanto.Nerstrand, hdr.Lepanto.Cimarron }, hdr.Lepanto.Waubun, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    Checksum16() Parthenon;
-    Checksum16() Kinards;
     apply {
-        hdr.CapRock.Waubun = Parthenon.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.CapRock.Supai, hdr.CapRock.DeSart, hdr.CapRock.Naches, hdr.CapRock.Claypool, hdr.CapRock.Millett, hdr.CapRock.LaUnion, hdr.CapRock.Emmalane, hdr.CapRock.Farlin, hdr.CapRock.Weimar, hdr.CapRock.Kremlin, hdr.CapRock.Nerstrand, hdr.CapRock.Cimarron });
-        hdr.Lepanto.Waubun = Kinards.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Lepanto.Supai, hdr.Lepanto.DeSart, hdr.Lepanto.Naches, hdr.Lepanto.Claypool, hdr.Lepanto.Millett, hdr.Lepanto.LaUnion, hdr.Lepanto.Emmalane, hdr.Lepanto.Farlin, hdr.Lepanto.Weimar, hdr.Lepanto.Kremlin, hdr.Lepanto.Nerstrand, hdr.Lepanto.Cimarron });
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.CapRock.Supai, hdr.CapRock.DeSart, hdr.CapRock.Naches, hdr.CapRock.Claypool, hdr.CapRock.Millett, hdr.CapRock.LaUnion, hdr.CapRock.Emmalane, hdr.CapRock.Farlin, hdr.CapRock.Weimar, hdr.CapRock.Kremlin, hdr.CapRock.Nerstrand, hdr.CapRock.Cimarron }, hdr.CapRock.Waubun, HashAlgorithm.csum16);
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Lepanto.Supai, hdr.Lepanto.DeSart, hdr.Lepanto.Naches, hdr.Lepanto.Claypool, hdr.Lepanto.Millett, hdr.Lepanto.LaUnion, hdr.Lepanto.Emmalane, hdr.Lepanto.Farlin, hdr.Lepanto.Weimar, hdr.Lepanto.Kremlin, hdr.Lepanto.Nerstrand, hdr.Lepanto.Cimarron }, hdr.Lepanto.Waubun, HashAlgorithm.csum16);
     }
 }
 

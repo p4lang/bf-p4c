@@ -384,59 +384,36 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    bit<16> tmp;
-    bool tmp_0;
-    bit<16> tmp_1;
-    bool tmp_2;
-    @name("inner_ipv4_csum") Checksum16() inner_ipv4_csum_0;
-    @name("ipv4_csum") Checksum16() ipv4_csum_0;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        tmp = inner_ipv4_csum_0.get<tuple<bit<4>, bit<4>, bit<8>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.inner_ipv4.version, hdr.inner_ipv4.ihl, hdr.inner_ipv4.diffserv, hdr.inner_ipv4.totalLen, hdr.inner_ipv4.identification, hdr.inner_ipv4.flags, hdr.inner_ipv4.fragOffset, hdr.inner_ipv4.ttl, hdr.inner_ipv4.protocol, hdr.inner_ipv4.srcAddr, hdr.inner_ipv4.dstAddr });
-        tmp_0 = hdr.inner_ipv4.hdrChecksum == tmp;
-        if (tmp_0) 
-            mark_to_drop();
-        tmp_1 = ipv4_csum_0.get<tuple<bit<4>, bit<4>, bit<8>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.totalLen, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.fragOffset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.srcAddr, hdr.ipv4.dstAddr });
-        tmp_2 = hdr.ipv4.hdrChecksum == tmp_1;
-        if (tmp_2) 
-            mark_to_drop();
+        verify_checksum<tuple<bit<4>, bit<4>, bit<8>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.inner_ipv4.version, hdr.inner_ipv4.ihl, hdr.inner_ipv4.diffserv, hdr.inner_ipv4.totalLen, hdr.inner_ipv4.identification, hdr.inner_ipv4.flags, hdr.inner_ipv4.fragOffset, hdr.inner_ipv4.ttl, hdr.inner_ipv4.protocol, hdr.inner_ipv4.srcAddr, hdr.inner_ipv4.dstAddr }, hdr.inner_ipv4.hdrChecksum, HashAlgorithm.csum16);
+        verify_checksum<tuple<bit<4>, bit<4>, bit<8>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.totalLen, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.fragOffset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.srcAddr, hdr.ipv4.dstAddr }, hdr.ipv4.hdrChecksum, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    bit<16> tmp_3;
+    tuple<bit<32>, bit<32>, bit<8>, bit<8>, bit<16>, bit<16>, bit<16>, bit<16>> tmp;
+    bit<16> tmp_0;
+    tuple<bit<32>, bit<32>, bit<8>, bit<8>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>> tmp_1;
+    bit<16> tmp_2;
+    tuple<bit<128>, bit<128>, bit<24>, bit<8>, bit<16>, bit<16>, bit<16>, bit<16>> tmp_3;
     bit<16> tmp_4;
-    bit<16> tmp_5;
-    bit<16> tmp_6;
-    bit<16> tmp_7;
-    bit<16> tmp_8;
-    @name("inner_ipv4_csum") Checksum16() inner_ipv4_csum_1;
-    @name("inner_udp_checksum_v4") Checksum16() inner_udp_checksum_v4_0;
-    @name("ipv4_csum_update") Checksum16() ipv4_csum_update_0;
-    @name("tcp_checksum_v4") Checksum16() tcp_checksum_v4_0;
-    @name("udp_checksum_v4") Checksum16() udp_checksum_v4_0;
-    @name("udp_checksum_v6") Checksum16() udp_checksum_v6_0;
     apply {
-        tmp_3 = inner_ipv4_csum_1.get<tuple<bit<4>, bit<4>, bit<8>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.inner_ipv4.version, hdr.inner_ipv4.ihl, hdr.inner_ipv4.diffserv, hdr.inner_ipv4.totalLen, hdr.inner_ipv4.identification, hdr.inner_ipv4.flags, hdr.inner_ipv4.fragOffset, hdr.inner_ipv4.ttl, hdr.inner_ipv4.protocol, hdr.inner_ipv4.srcAddr, hdr.inner_ipv4.dstAddr });
-        hdr.inner_ipv4.hdrChecksum = tmp_3;
-        if (meta.csum_ctrl.inner_v4_udp_enable == 1w1) {
-            tmp_4 = inner_udp_checksum_v4_0.get<tuple<bit<32>, bit<32>, bit<8>, bit<8>, bit<16>, bit<16>, bit<16>, bit<16>>>({ hdr.inner_ipv4.srcAddr, hdr.inner_ipv4.dstAddr, 8w0, hdr.inner_ipv4.protocol, hdr.inner_udp.srcPort, hdr.inner_udp.dstPort, hdr.inner_udp.len, hdr.inner_udp.checksum });
-            hdr.inner_udp.checksum = tmp_4;
-        }
-        tmp_5 = ipv4_csum_update_0.get<tuple<bit<4>, bit<4>, bit<8>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.totalLen, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.fragOffset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.srcAddr, hdr.ipv4.dstAddr });
-        hdr.ipv4.hdrChecksum = tmp_5;
-        if (meta.csum_ctrl.v4_tcp_enable == 1w1) {
-            tmp_6 = tcp_checksum_v4_0.get<tuple<bit<32>, bit<32>, bit<8>, bit<8>, bit<16>, bit<16>, bit<16>, bit<32>, bit<32>, bit<4>, bit<4>, bit<8>, bit<16>, bit<16>>>({ hdr.ipv4.srcAddr, hdr.ipv4.dstAddr, 8w0, hdr.ipv4.protocol, meta.l4_csum_len.len_delta, hdr.tcp.srcPort, hdr.tcp.dstPort, hdr.tcp.seqNo, hdr.tcp.ackNo, hdr.tcp.dataOffset, hdr.tcp.res, hdr.tcp.flags, hdr.tcp.window, hdr.tcp.urgentPtr });
-            hdr.tcp.checksum = tmp_6;
-        }
-        if (meta.csum_ctrl.v4_udp_enable == 1w1) {
-            tmp_7 = udp_checksum_v4_0.get<tuple<bit<32>, bit<32>, bit<8>, bit<8>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>>>({ hdr.ipv4.srcAddr, hdr.ipv4.dstAddr, 8w0, hdr.ipv4.protocol, meta.l4_csum_len.len_delta, hdr.udp.srcPort, hdr.udp.dstPort, hdr.udp.len, hdr.udp.checksum });
-            hdr.udp.checksum = tmp_7;
-        }
-        if (meta.csum_ctrl.v6_udp_enable == 1w1) {
-            tmp_8 = udp_checksum_v6_0.get<tuple<bit<128>, bit<128>, bit<24>, bit<8>, bit<16>, bit<16>, bit<16>, bit<16>>>({ hdr.ipv6.srcAddr, hdr.ipv6.dstAddr, 24w0, hdr.ipv6.nextHdr, hdr.udp.srcPort, hdr.udp.dstPort, hdr.udp.len, hdr.udp.checksum });
-            hdr.udp.checksum = tmp_8;
-        }
+        update_checksum<tuple<bit<4>, bit<4>, bit<8>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.inner_ipv4.version, hdr.inner_ipv4.ihl, hdr.inner_ipv4.diffserv, hdr.inner_ipv4.totalLen, hdr.inner_ipv4.identification, hdr.inner_ipv4.flags, hdr.inner_ipv4.fragOffset, hdr.inner_ipv4.ttl, hdr.inner_ipv4.protocol, hdr.inner_ipv4.srcAddr, hdr.inner_ipv4.dstAddr }, hdr.inner_ipv4.hdrChecksum, HashAlgorithm.csum16);
+        tmp = { hdr.inner_ipv4.srcAddr, hdr.inner_ipv4.dstAddr, 8w0, hdr.inner_ipv4.protocol, hdr.inner_udp.srcPort, hdr.inner_udp.dstPort, hdr.inner_udp.len, hdr.inner_udp.checksum };
+        tmp_0 = hdr.inner_udp.checksum;
+        update_checksum<tuple<bit<32>, bit<32>, bit<8>, bit<8>, bit<16>, bit<16>, bit<16>, bit<16>>, bit<16>>(meta.csum_ctrl.inner_v4_udp_enable == 1w1, tmp, tmp_0, HashAlgorithm.csum16);
+        hdr.inner_udp.checksum = tmp_0;
+        update_checksum<tuple<bit<4>, bit<4>, bit<8>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.totalLen, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.fragOffset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.srcAddr, hdr.ipv4.dstAddr }, hdr.ipv4.hdrChecksum, HashAlgorithm.csum16);
+        update_checksum<tuple<bit<32>, bit<32>, bit<8>, bit<8>, bit<16>, bit<16>, bit<16>, bit<32>, bit<32>, bit<4>, bit<4>, bit<8>, bit<16>, bit<16>>, bit<16>>(meta.csum_ctrl.v4_tcp_enable == 1w1, { hdr.ipv4.srcAddr, hdr.ipv4.dstAddr, 8w0, hdr.ipv4.protocol, meta.l4_csum_len.len_delta, hdr.tcp.srcPort, hdr.tcp.dstPort, hdr.tcp.seqNo, hdr.tcp.ackNo, hdr.tcp.dataOffset, hdr.tcp.res, hdr.tcp.flags, hdr.tcp.window, hdr.tcp.urgentPtr }, hdr.tcp.checksum, HashAlgorithm.csum16);
+        tmp_1 = { hdr.ipv4.srcAddr, hdr.ipv4.dstAddr, 8w0, hdr.ipv4.protocol, meta.l4_csum_len.len_delta, hdr.udp.srcPort, hdr.udp.dstPort, hdr.udp.len, hdr.udp.checksum };
+        tmp_2 = hdr.udp.checksum;
+        update_checksum<tuple<bit<32>, bit<32>, bit<8>, bit<8>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>>, bit<16>>(meta.csum_ctrl.v4_udp_enable == 1w1, tmp_1, tmp_2, HashAlgorithm.csum16);
+        hdr.udp.checksum = tmp_2;
+        tmp_3 = { hdr.ipv6.srcAddr, hdr.ipv6.dstAddr, 24w0, hdr.ipv6.nextHdr, hdr.udp.srcPort, hdr.udp.dstPort, hdr.udp.len, hdr.udp.checksum };
+        tmp_4 = hdr.udp.checksum;
+        update_checksum<tuple<bit<128>, bit<128>, bit<24>, bit<8>, bit<16>, bit<16>, bit<16>, bit<16>>, bit<16>>(meta.csum_ctrl.v6_udp_enable == 1w1, tmp_3, tmp_4, HashAlgorithm.csum16);
+        hdr.udp.checksum = tmp_4;
     }
 }
 

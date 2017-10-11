@@ -1,7 +1,7 @@
 #include <core.p4>
 #include <v1model.p4>
 
-@pa_solitary("ingress", "Nashoba.Allons") @pa_solitary("ingress", "Nashoba.Ekron") @pa_solitary("ingress", "Nashoba.Kekoskee") @pa_solitary("egress", "Barksdale.Range") @pa_solitary("ig_intr_md_for_tm.ucast_egress_port") @pa_atomic("ingress", "Penrose.Philbrook") @pa_solitary("ingress", "Penrose.Philbrook") @pa_atomic("ingress", "Penrose.Lathrop") @pa_solitary("ingress", "Penrose.Lathrop") struct BigBar {
+@pa_solitary("ingress", "Nashoba.Allons") @pa_solitary("ingress", "Nashoba.Ekron") @pa_solitary("ingress", "Nashoba.Kekoskee") @pa_solitary("egress", "Barksdale.Range") @pa_solitary("ingress", "ig_intr_md_for_tm.ucast_egress_port") @pa_solitary("egress", "ig_intr_md_for_tm.ucast_egress_port") @pa_atomic("ingress", "Penrose.Philbrook") @pa_solitary("ingress", "Penrose.Philbrook") @pa_atomic("ingress", "Penrose.Lathrop") @pa_solitary("ingress", "Penrose.Lathrop") struct BigBar {
     bit<16> Caputa;
     bit<16> Sasser;
     bit<8>  Hadley;
@@ -1870,7 +1870,7 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
     }
 }

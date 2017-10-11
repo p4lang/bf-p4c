@@ -3830,23 +3830,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    Checksum16() Rexville;
-    Checksum16() AquaPark;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        if (hdr.Gakona.Kalaloch == Rexville.get({ hdr.Gakona.Bleecker, hdr.Gakona.Mondovi, hdr.Gakona.Sabetha, hdr.Gakona.Hobson, hdr.Gakona.Rosburg, hdr.Gakona.Dunnville, hdr.Gakona.Grigston, hdr.Gakona.Cusick, hdr.Gakona.Gonzalez, hdr.Gakona.Annandale, hdr.Gakona.PellLake, hdr.Gakona.Sweeny })) 
-            mark_to_drop();
-        if (hdr.Toccopola.Kalaloch == AquaPark.get({ hdr.Toccopola.Bleecker, hdr.Toccopola.Mondovi, hdr.Toccopola.Sabetha, hdr.Toccopola.Hobson, hdr.Toccopola.Rosburg, hdr.Toccopola.Dunnville, hdr.Toccopola.Grigston, hdr.Toccopola.Cusick, hdr.Toccopola.Gonzalez, hdr.Toccopola.Annandale, hdr.Toccopola.PellLake, hdr.Toccopola.Sweeny })) 
-            mark_to_drop();
+        verify_checksum(true, { hdr.Gakona.Bleecker, hdr.Gakona.Mondovi, hdr.Gakona.Sabetha, hdr.Gakona.Hobson, hdr.Gakona.Rosburg, hdr.Gakona.Dunnville, hdr.Gakona.Grigston, hdr.Gakona.Cusick, hdr.Gakona.Gonzalez, hdr.Gakona.Annandale, hdr.Gakona.PellLake, hdr.Gakona.Sweeny }, hdr.Gakona.Kalaloch, HashAlgorithm.csum16);
+        verify_checksum(true, { hdr.Toccopola.Bleecker, hdr.Toccopola.Mondovi, hdr.Toccopola.Sabetha, hdr.Toccopola.Hobson, hdr.Toccopola.Rosburg, hdr.Toccopola.Dunnville, hdr.Toccopola.Grigston, hdr.Toccopola.Cusick, hdr.Toccopola.Gonzalez, hdr.Toccopola.Annandale, hdr.Toccopola.PellLake, hdr.Toccopola.Sweeny }, hdr.Toccopola.Kalaloch, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    Checksum16() Rexville;
-    Checksum16() AquaPark;
     apply {
-        hdr.Gakona.Kalaloch = Rexville.get({ hdr.Gakona.Bleecker, hdr.Gakona.Mondovi, hdr.Gakona.Sabetha, hdr.Gakona.Hobson, hdr.Gakona.Rosburg, hdr.Gakona.Dunnville, hdr.Gakona.Grigston, hdr.Gakona.Cusick, hdr.Gakona.Gonzalez, hdr.Gakona.Annandale, hdr.Gakona.PellLake, hdr.Gakona.Sweeny });
-        hdr.Toccopola.Kalaloch = AquaPark.get({ hdr.Toccopola.Bleecker, hdr.Toccopola.Mondovi, hdr.Toccopola.Sabetha, hdr.Toccopola.Hobson, hdr.Toccopola.Rosburg, hdr.Toccopola.Dunnville, hdr.Toccopola.Grigston, hdr.Toccopola.Cusick, hdr.Toccopola.Gonzalez, hdr.Toccopola.Annandale, hdr.Toccopola.PellLake, hdr.Toccopola.Sweeny });
+        update_checksum(true, { hdr.Gakona.Bleecker, hdr.Gakona.Mondovi, hdr.Gakona.Sabetha, hdr.Gakona.Hobson, hdr.Gakona.Rosburg, hdr.Gakona.Dunnville, hdr.Gakona.Grigston, hdr.Gakona.Cusick, hdr.Gakona.Gonzalez, hdr.Gakona.Annandale, hdr.Gakona.PellLake, hdr.Gakona.Sweeny }, hdr.Gakona.Kalaloch, HashAlgorithm.csum16);
+        update_checksum(true, { hdr.Toccopola.Bleecker, hdr.Toccopola.Mondovi, hdr.Toccopola.Sabetha, hdr.Toccopola.Hobson, hdr.Toccopola.Rosburg, hdr.Toccopola.Dunnville, hdr.Toccopola.Grigston, hdr.Toccopola.Cusick, hdr.Toccopola.Gonzalez, hdr.Toccopola.Annandale, hdr.Toccopola.PellLake, hdr.Toccopola.Sweeny }, hdr.Toccopola.Kalaloch, HashAlgorithm.csum16);
     }
 }
 

@@ -2462,23 +2462,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    Checksum16() Menifee;
-    Checksum16() Benonine;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        if (hdr.Longford.McGovern == Menifee.get({ hdr.Longford.Lovett, hdr.Longford.Slagle, hdr.Longford.Titonka, hdr.Longford.Wyandanch, hdr.Longford.Warden, hdr.Longford.Tulia, hdr.Longford.Macon, hdr.Longford.Salamonia, hdr.Longford.Lindsborg, hdr.Longford.Brashear, hdr.Longford.Sedan, hdr.Longford.Kinross })) 
-            mark_to_drop();
-        if (hdr.Uniopolis.McGovern == Benonine.get({ hdr.Uniopolis.Lovett, hdr.Uniopolis.Slagle, hdr.Uniopolis.Titonka, hdr.Uniopolis.Wyandanch, hdr.Uniopolis.Warden, hdr.Uniopolis.Tulia, hdr.Uniopolis.Macon, hdr.Uniopolis.Salamonia, hdr.Uniopolis.Lindsborg, hdr.Uniopolis.Brashear, hdr.Uniopolis.Sedan, hdr.Uniopolis.Kinross })) 
-            mark_to_drop();
+        verify_checksum(true, { hdr.Longford.Lovett, hdr.Longford.Slagle, hdr.Longford.Titonka, hdr.Longford.Wyandanch, hdr.Longford.Warden, hdr.Longford.Tulia, hdr.Longford.Macon, hdr.Longford.Salamonia, hdr.Longford.Lindsborg, hdr.Longford.Brashear, hdr.Longford.Sedan, hdr.Longford.Kinross }, hdr.Longford.McGovern, HashAlgorithm.csum16);
+        verify_checksum(true, { hdr.Uniopolis.Lovett, hdr.Uniopolis.Slagle, hdr.Uniopolis.Titonka, hdr.Uniopolis.Wyandanch, hdr.Uniopolis.Warden, hdr.Uniopolis.Tulia, hdr.Uniopolis.Macon, hdr.Uniopolis.Salamonia, hdr.Uniopolis.Lindsborg, hdr.Uniopolis.Brashear, hdr.Uniopolis.Sedan, hdr.Uniopolis.Kinross }, hdr.Uniopolis.McGovern, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    Checksum16() Menifee;
-    Checksum16() Benonine;
     apply {
-        hdr.Longford.McGovern = Menifee.get({ hdr.Longford.Lovett, hdr.Longford.Slagle, hdr.Longford.Titonka, hdr.Longford.Wyandanch, hdr.Longford.Warden, hdr.Longford.Tulia, hdr.Longford.Macon, hdr.Longford.Salamonia, hdr.Longford.Lindsborg, hdr.Longford.Brashear, hdr.Longford.Sedan, hdr.Longford.Kinross });
-        hdr.Uniopolis.McGovern = Benonine.get({ hdr.Uniopolis.Lovett, hdr.Uniopolis.Slagle, hdr.Uniopolis.Titonka, hdr.Uniopolis.Wyandanch, hdr.Uniopolis.Warden, hdr.Uniopolis.Tulia, hdr.Uniopolis.Macon, hdr.Uniopolis.Salamonia, hdr.Uniopolis.Lindsborg, hdr.Uniopolis.Brashear, hdr.Uniopolis.Sedan, hdr.Uniopolis.Kinross });
+        update_checksum(true, { hdr.Longford.Lovett, hdr.Longford.Slagle, hdr.Longford.Titonka, hdr.Longford.Wyandanch, hdr.Longford.Warden, hdr.Longford.Tulia, hdr.Longford.Macon, hdr.Longford.Salamonia, hdr.Longford.Lindsborg, hdr.Longford.Brashear, hdr.Longford.Sedan, hdr.Longford.Kinross }, hdr.Longford.McGovern, HashAlgorithm.csum16);
+        update_checksum(true, { hdr.Uniopolis.Lovett, hdr.Uniopolis.Slagle, hdr.Uniopolis.Titonka, hdr.Uniopolis.Wyandanch, hdr.Uniopolis.Warden, hdr.Uniopolis.Tulia, hdr.Uniopolis.Macon, hdr.Uniopolis.Salamonia, hdr.Uniopolis.Lindsborg, hdr.Uniopolis.Brashear, hdr.Uniopolis.Sedan, hdr.Uniopolis.Kinross }, hdr.Uniopolis.McGovern, HashAlgorithm.csum16);
     }
 }
 

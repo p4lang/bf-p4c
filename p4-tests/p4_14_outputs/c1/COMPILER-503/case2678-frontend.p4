@@ -2361,35 +2361,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    bit<16> tmp_2;
-    bool tmp_3;
-    bit<16> tmp_4;
-    bool tmp_5;
-    @name("Anacortes") Checksum16() Anacortes_0;
-    @name("Duncombe") Checksum16() Duncombe_0;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        tmp_2 = Anacortes_0.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.HornLake.Woodbury, hdr.HornLake.Munich, hdr.HornLake.Lansdale, hdr.HornLake.Deport, hdr.HornLake.Eureka, hdr.HornLake.Litroe, hdr.HornLake.Neavitt, hdr.HornLake.Heavener, hdr.HornLake.Elderon, hdr.HornLake.Columbia, hdr.HornLake.Kalaloch, hdr.HornLake.Tilton });
-        tmp_3 = hdr.HornLake.Angeles == tmp_2;
-        if (tmp_3) 
-            mark_to_drop();
-        tmp_4 = Duncombe_0.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Scherr.Woodbury, hdr.Scherr.Munich, hdr.Scherr.Lansdale, hdr.Scherr.Deport, hdr.Scherr.Eureka, hdr.Scherr.Litroe, hdr.Scherr.Neavitt, hdr.Scherr.Heavener, hdr.Scherr.Elderon, hdr.Scherr.Columbia, hdr.Scherr.Kalaloch, hdr.Scherr.Tilton });
-        tmp_5 = hdr.Scherr.Angeles == tmp_4;
-        if (tmp_5) 
-            mark_to_drop();
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.HornLake.Woodbury, hdr.HornLake.Munich, hdr.HornLake.Lansdale, hdr.HornLake.Deport, hdr.HornLake.Eureka, hdr.HornLake.Litroe, hdr.HornLake.Neavitt, hdr.HornLake.Heavener, hdr.HornLake.Elderon, hdr.HornLake.Columbia, hdr.HornLake.Kalaloch, hdr.HornLake.Tilton }, hdr.HornLake.Angeles, HashAlgorithm.csum16);
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Scherr.Woodbury, hdr.Scherr.Munich, hdr.Scherr.Lansdale, hdr.Scherr.Deport, hdr.Scherr.Eureka, hdr.Scherr.Litroe, hdr.Scherr.Neavitt, hdr.Scherr.Heavener, hdr.Scherr.Elderon, hdr.Scherr.Columbia, hdr.Scherr.Kalaloch, hdr.Scherr.Tilton }, hdr.Scherr.Angeles, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    bit<16> tmp_6;
-    bit<16> tmp_7;
-    @name("Anacortes") Checksum16() Anacortes_1;
-    @name("Duncombe") Checksum16() Duncombe_1;
     apply {
-        tmp_6 = Anacortes_1.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.HornLake.Woodbury, hdr.HornLake.Munich, hdr.HornLake.Lansdale, hdr.HornLake.Deport, hdr.HornLake.Eureka, hdr.HornLake.Litroe, hdr.HornLake.Neavitt, hdr.HornLake.Heavener, hdr.HornLake.Elderon, hdr.HornLake.Columbia, hdr.HornLake.Kalaloch, hdr.HornLake.Tilton });
-        hdr.HornLake.Angeles = tmp_6;
-        tmp_7 = Duncombe_1.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Scherr.Woodbury, hdr.Scherr.Munich, hdr.Scherr.Lansdale, hdr.Scherr.Deport, hdr.Scherr.Eureka, hdr.Scherr.Litroe, hdr.Scherr.Neavitt, hdr.Scherr.Heavener, hdr.Scherr.Elderon, hdr.Scherr.Columbia, hdr.Scherr.Kalaloch, hdr.Scherr.Tilton });
-        hdr.Scherr.Angeles = tmp_7;
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.HornLake.Woodbury, hdr.HornLake.Munich, hdr.HornLake.Lansdale, hdr.HornLake.Deport, hdr.HornLake.Eureka, hdr.HornLake.Litroe, hdr.HornLake.Neavitt, hdr.HornLake.Heavener, hdr.HornLake.Elderon, hdr.HornLake.Columbia, hdr.HornLake.Kalaloch, hdr.HornLake.Tilton }, hdr.HornLake.Angeles, HashAlgorithm.csum16);
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Scherr.Woodbury, hdr.Scherr.Munich, hdr.Scherr.Lansdale, hdr.Scherr.Deport, hdr.Scherr.Eureka, hdr.Scherr.Litroe, hdr.Scherr.Neavitt, hdr.Scherr.Heavener, hdr.Scherr.Elderon, hdr.Scherr.Columbia, hdr.Scherr.Kalaloch, hdr.Scherr.Tilton }, hdr.Scherr.Angeles, HashAlgorithm.csum16);
     }
 }
 

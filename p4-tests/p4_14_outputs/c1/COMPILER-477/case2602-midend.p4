@@ -2236,31 +2236,17 @@ struct tuple_5 {
     bit<32> field_28;
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    bit<16> tmp_1;
-    bit<16> tmp_9;
-    @name("Arkoe") Checksum16() Arkoe;
-    @name("Wells") Checksum16() Wells;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        tmp_1 = Arkoe.get<tuple_5>({ hdr.Denmark.Amboy, hdr.Denmark.Tafton, hdr.Denmark.Danbury, hdr.Denmark.Luning, hdr.Denmark.Scherr, hdr.Denmark.Tryon, hdr.Denmark.Keener, hdr.Denmark.OldMines, hdr.Denmark.Tusayan, hdr.Denmark.Barnsdall, hdr.Denmark.Fannett, hdr.Denmark.Topton });
-        if (hdr.Denmark.Minneiska == tmp_1) 
-            mark_to_drop();
-        tmp_9 = Wells.get<tuple_5>({ hdr.Nutria.Amboy, hdr.Nutria.Tafton, hdr.Nutria.Danbury, hdr.Nutria.Luning, hdr.Nutria.Scherr, hdr.Nutria.Tryon, hdr.Nutria.Keener, hdr.Nutria.OldMines, hdr.Nutria.Tusayan, hdr.Nutria.Barnsdall, hdr.Nutria.Fannett, hdr.Nutria.Topton });
-        if (hdr.Nutria.Minneiska == tmp_9) 
-            mark_to_drop();
+        verify_checksum<tuple_5, bit<16>>(true, { hdr.Denmark.Amboy, hdr.Denmark.Tafton, hdr.Denmark.Danbury, hdr.Denmark.Luning, hdr.Denmark.Scherr, hdr.Denmark.Tryon, hdr.Denmark.Keener, hdr.Denmark.OldMines, hdr.Denmark.Tusayan, hdr.Denmark.Barnsdall, hdr.Denmark.Fannett, hdr.Denmark.Topton }, hdr.Denmark.Minneiska, HashAlgorithm.csum16);
+        verify_checksum<tuple_5, bit<16>>(true, { hdr.Nutria.Amboy, hdr.Nutria.Tafton, hdr.Nutria.Danbury, hdr.Nutria.Luning, hdr.Nutria.Scherr, hdr.Nutria.Tryon, hdr.Nutria.Keener, hdr.Nutria.OldMines, hdr.Nutria.Tusayan, hdr.Nutria.Barnsdall, hdr.Nutria.Fannett, hdr.Nutria.Topton }, hdr.Nutria.Minneiska, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    bit<16> tmp_11;
-    bit<16> tmp_12;
-    @name("Arkoe") Checksum16() Arkoe_2;
-    @name("Wells") Checksum16() Wells_2;
     apply {
-        tmp_11 = Arkoe_2.get<tuple_5>({ hdr.Denmark.Amboy, hdr.Denmark.Tafton, hdr.Denmark.Danbury, hdr.Denmark.Luning, hdr.Denmark.Scherr, hdr.Denmark.Tryon, hdr.Denmark.Keener, hdr.Denmark.OldMines, hdr.Denmark.Tusayan, hdr.Denmark.Barnsdall, hdr.Denmark.Fannett, hdr.Denmark.Topton });
-        hdr.Denmark.Minneiska = tmp_11;
-        tmp_12 = Wells_2.get<tuple_5>({ hdr.Nutria.Amboy, hdr.Nutria.Tafton, hdr.Nutria.Danbury, hdr.Nutria.Luning, hdr.Nutria.Scherr, hdr.Nutria.Tryon, hdr.Nutria.Keener, hdr.Nutria.OldMines, hdr.Nutria.Tusayan, hdr.Nutria.Barnsdall, hdr.Nutria.Fannett, hdr.Nutria.Topton });
-        hdr.Nutria.Minneiska = tmp_12;
+        update_checksum<tuple_5, bit<16>>(true, { hdr.Denmark.Amboy, hdr.Denmark.Tafton, hdr.Denmark.Danbury, hdr.Denmark.Luning, hdr.Denmark.Scherr, hdr.Denmark.Tryon, hdr.Denmark.Keener, hdr.Denmark.OldMines, hdr.Denmark.Tusayan, hdr.Denmark.Barnsdall, hdr.Denmark.Fannett, hdr.Denmark.Topton }, hdr.Denmark.Minneiska, HashAlgorithm.csum16);
+        update_checksum<tuple_5, bit<16>>(true, { hdr.Nutria.Amboy, hdr.Nutria.Tafton, hdr.Nutria.Danbury, hdr.Nutria.Luning, hdr.Nutria.Scherr, hdr.Nutria.Tryon, hdr.Nutria.Keener, hdr.Nutria.OldMines, hdr.Nutria.Tusayan, hdr.Nutria.Barnsdall, hdr.Nutria.Fannett, hdr.Nutria.Topton }, hdr.Nutria.Minneiska, HashAlgorithm.csum16);
     }
 }
 

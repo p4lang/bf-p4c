@@ -771,23 +771,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    Checksum16() Ojibwa;
-    Checksum16() Bardwell;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        if (hdr.Kinsley.Leola == Ojibwa.get({ hdr.Kinsley.Adair, hdr.Kinsley.Arcanum, hdr.Kinsley.Hewitt, hdr.Kinsley.Boysen, hdr.Kinsley.Pineridge, hdr.Kinsley.Dilia, hdr.Kinsley.Blunt, hdr.Kinsley.Clermont, hdr.Kinsley.DeepGap, hdr.Kinsley.Cuprum, hdr.Kinsley.Keachi, hdr.Kinsley.Finley })) 
-            mark_to_drop();
-        if (hdr.Wauseon.Leola == Bardwell.get({ hdr.Wauseon.Adair, hdr.Wauseon.Arcanum, hdr.Wauseon.Hewitt, hdr.Wauseon.Boysen, hdr.Wauseon.Pineridge, hdr.Wauseon.Dilia, hdr.Wauseon.Blunt, hdr.Wauseon.Clermont, hdr.Wauseon.DeepGap, hdr.Wauseon.Cuprum, hdr.Wauseon.Keachi, hdr.Wauseon.Finley })) 
-            mark_to_drop();
+        verify_checksum(true, { hdr.Kinsley.Adair, hdr.Kinsley.Arcanum, hdr.Kinsley.Hewitt, hdr.Kinsley.Boysen, hdr.Kinsley.Pineridge, hdr.Kinsley.Dilia, hdr.Kinsley.Blunt, hdr.Kinsley.Clermont, hdr.Kinsley.DeepGap, hdr.Kinsley.Cuprum, hdr.Kinsley.Keachi, hdr.Kinsley.Finley }, hdr.Kinsley.Leola, HashAlgorithm.csum16);
+        verify_checksum(true, { hdr.Wauseon.Adair, hdr.Wauseon.Arcanum, hdr.Wauseon.Hewitt, hdr.Wauseon.Boysen, hdr.Wauseon.Pineridge, hdr.Wauseon.Dilia, hdr.Wauseon.Blunt, hdr.Wauseon.Clermont, hdr.Wauseon.DeepGap, hdr.Wauseon.Cuprum, hdr.Wauseon.Keachi, hdr.Wauseon.Finley }, hdr.Wauseon.Leola, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    Checksum16() Ojibwa;
-    Checksum16() Bardwell;
     apply {
-        hdr.Kinsley.Leola = Ojibwa.get({ hdr.Kinsley.Adair, hdr.Kinsley.Arcanum, hdr.Kinsley.Hewitt, hdr.Kinsley.Boysen, hdr.Kinsley.Pineridge, hdr.Kinsley.Dilia, hdr.Kinsley.Blunt, hdr.Kinsley.Clermont, hdr.Kinsley.DeepGap, hdr.Kinsley.Cuprum, hdr.Kinsley.Keachi, hdr.Kinsley.Finley });
-        hdr.Wauseon.Leola = Bardwell.get({ hdr.Wauseon.Adair, hdr.Wauseon.Arcanum, hdr.Wauseon.Hewitt, hdr.Wauseon.Boysen, hdr.Wauseon.Pineridge, hdr.Wauseon.Dilia, hdr.Wauseon.Blunt, hdr.Wauseon.Clermont, hdr.Wauseon.DeepGap, hdr.Wauseon.Cuprum, hdr.Wauseon.Keachi, hdr.Wauseon.Finley });
+        update_checksum(true, { hdr.Kinsley.Adair, hdr.Kinsley.Arcanum, hdr.Kinsley.Hewitt, hdr.Kinsley.Boysen, hdr.Kinsley.Pineridge, hdr.Kinsley.Dilia, hdr.Kinsley.Blunt, hdr.Kinsley.Clermont, hdr.Kinsley.DeepGap, hdr.Kinsley.Cuprum, hdr.Kinsley.Keachi, hdr.Kinsley.Finley }, hdr.Kinsley.Leola, HashAlgorithm.csum16);
+        update_checksum(true, { hdr.Wauseon.Adair, hdr.Wauseon.Arcanum, hdr.Wauseon.Hewitt, hdr.Wauseon.Boysen, hdr.Wauseon.Pineridge, hdr.Wauseon.Dilia, hdr.Wauseon.Blunt, hdr.Wauseon.Clermont, hdr.Wauseon.DeepGap, hdr.Wauseon.Cuprum, hdr.Wauseon.Keachi, hdr.Wauseon.Finley }, hdr.Wauseon.Leola, HashAlgorithm.csum16);
     }
 }
 

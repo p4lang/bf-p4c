@@ -2283,23 +2283,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    Checksum16() Arkoe;
-    Checksum16() Wells;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        if (hdr.Denmark.Minneiska == (Arkoe.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Denmark.Amboy, hdr.Denmark.Tafton, hdr.Denmark.Danbury, hdr.Denmark.Luning, hdr.Denmark.Scherr, hdr.Denmark.Tryon, hdr.Denmark.Keener, hdr.Denmark.OldMines, hdr.Denmark.Tusayan, hdr.Denmark.Barnsdall, hdr.Denmark.Fannett, hdr.Denmark.Topton }))) 
-            mark_to_drop();
-        if (hdr.Nutria.Minneiska == (Wells.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Nutria.Amboy, hdr.Nutria.Tafton, hdr.Nutria.Danbury, hdr.Nutria.Luning, hdr.Nutria.Scherr, hdr.Nutria.Tryon, hdr.Nutria.Keener, hdr.Nutria.OldMines, hdr.Nutria.Tusayan, hdr.Nutria.Barnsdall, hdr.Nutria.Fannett, hdr.Nutria.Topton }))) 
-            mark_to_drop();
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Denmark.Amboy, hdr.Denmark.Tafton, hdr.Denmark.Danbury, hdr.Denmark.Luning, hdr.Denmark.Scherr, hdr.Denmark.Tryon, hdr.Denmark.Keener, hdr.Denmark.OldMines, hdr.Denmark.Tusayan, hdr.Denmark.Barnsdall, hdr.Denmark.Fannett, hdr.Denmark.Topton }, hdr.Denmark.Minneiska, HashAlgorithm.csum16);
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Nutria.Amboy, hdr.Nutria.Tafton, hdr.Nutria.Danbury, hdr.Nutria.Luning, hdr.Nutria.Scherr, hdr.Nutria.Tryon, hdr.Nutria.Keener, hdr.Nutria.OldMines, hdr.Nutria.Tusayan, hdr.Nutria.Barnsdall, hdr.Nutria.Fannett, hdr.Nutria.Topton }, hdr.Nutria.Minneiska, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    Checksum16() Arkoe;
-    Checksum16() Wells;
     apply {
-        hdr.Denmark.Minneiska = Arkoe.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Denmark.Amboy, hdr.Denmark.Tafton, hdr.Denmark.Danbury, hdr.Denmark.Luning, hdr.Denmark.Scherr, hdr.Denmark.Tryon, hdr.Denmark.Keener, hdr.Denmark.OldMines, hdr.Denmark.Tusayan, hdr.Denmark.Barnsdall, hdr.Denmark.Fannett, hdr.Denmark.Topton });
-        hdr.Nutria.Minneiska = Wells.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Nutria.Amboy, hdr.Nutria.Tafton, hdr.Nutria.Danbury, hdr.Nutria.Luning, hdr.Nutria.Scherr, hdr.Nutria.Tryon, hdr.Nutria.Keener, hdr.Nutria.OldMines, hdr.Nutria.Tusayan, hdr.Nutria.Barnsdall, hdr.Nutria.Fannett, hdr.Nutria.Topton });
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Denmark.Amboy, hdr.Denmark.Tafton, hdr.Denmark.Danbury, hdr.Denmark.Luning, hdr.Denmark.Scherr, hdr.Denmark.Tryon, hdr.Denmark.Keener, hdr.Denmark.OldMines, hdr.Denmark.Tusayan, hdr.Denmark.Barnsdall, hdr.Denmark.Fannett, hdr.Denmark.Topton }, hdr.Denmark.Minneiska, HashAlgorithm.csum16);
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Nutria.Amboy, hdr.Nutria.Tafton, hdr.Nutria.Danbury, hdr.Nutria.Luning, hdr.Nutria.Scherr, hdr.Nutria.Tryon, hdr.Nutria.Keener, hdr.Nutria.OldMines, hdr.Nutria.Tusayan, hdr.Nutria.Barnsdall, hdr.Nutria.Fannett, hdr.Nutria.Topton }, hdr.Nutria.Minneiska, HashAlgorithm.csum16);
     }
 }
 

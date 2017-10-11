@@ -3252,35 +3252,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    bit<16> tmp_16;
-    bool tmp_17;
-    bit<16> tmp_18;
-    bool tmp_19;
-    @name("Ladoga") Checksum16() Ladoga_0;
-    @name("Escondido") Checksum16() Escondido_0;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        tmp_16 = Ladoga_0.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Challis.Alston, hdr.Challis.Casco, hdr.Challis.Boquet, hdr.Challis.BigArm, hdr.Challis.Muncie, hdr.Challis.Blackwood, hdr.Challis.Margie, hdr.Challis.Westline, hdr.Challis.Calimesa, hdr.Challis.Reedsport, hdr.Challis.Chehalis, hdr.Challis.Waterman });
-        tmp_17 = hdr.Challis.McKamie == tmp_16;
-        if (tmp_17) 
-            mark_to_drop();
-        tmp_18 = Escondido_0.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Trotwood.Alston, hdr.Trotwood.Casco, hdr.Trotwood.Boquet, hdr.Trotwood.BigArm, hdr.Trotwood.Muncie, hdr.Trotwood.Blackwood, hdr.Trotwood.Margie, hdr.Trotwood.Westline, hdr.Trotwood.Calimesa, hdr.Trotwood.Reedsport, hdr.Trotwood.Chehalis, hdr.Trotwood.Waterman });
-        tmp_19 = hdr.Trotwood.McKamie == tmp_18;
-        if (tmp_19) 
-            mark_to_drop();
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Challis.Alston, hdr.Challis.Casco, hdr.Challis.Boquet, hdr.Challis.BigArm, hdr.Challis.Muncie, hdr.Challis.Blackwood, hdr.Challis.Margie, hdr.Challis.Westline, hdr.Challis.Calimesa, hdr.Challis.Reedsport, hdr.Challis.Chehalis, hdr.Challis.Waterman }, hdr.Challis.McKamie, HashAlgorithm.csum16);
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Trotwood.Alston, hdr.Trotwood.Casco, hdr.Trotwood.Boquet, hdr.Trotwood.BigArm, hdr.Trotwood.Muncie, hdr.Trotwood.Blackwood, hdr.Trotwood.Margie, hdr.Trotwood.Westline, hdr.Trotwood.Calimesa, hdr.Trotwood.Reedsport, hdr.Trotwood.Chehalis, hdr.Trotwood.Waterman }, hdr.Trotwood.McKamie, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    bit<16> tmp_20;
-    bit<16> tmp_21;
-    @name("Ladoga") Checksum16() Ladoga_1;
-    @name("Escondido") Checksum16() Escondido_1;
     apply {
-        tmp_20 = Ladoga_1.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Challis.Alston, hdr.Challis.Casco, hdr.Challis.Boquet, hdr.Challis.BigArm, hdr.Challis.Muncie, hdr.Challis.Blackwood, hdr.Challis.Margie, hdr.Challis.Westline, hdr.Challis.Calimesa, hdr.Challis.Reedsport, hdr.Challis.Chehalis, hdr.Challis.Waterman });
-        hdr.Challis.McKamie = tmp_20;
-        tmp_21 = Escondido_1.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Trotwood.Alston, hdr.Trotwood.Casco, hdr.Trotwood.Boquet, hdr.Trotwood.BigArm, hdr.Trotwood.Muncie, hdr.Trotwood.Blackwood, hdr.Trotwood.Margie, hdr.Trotwood.Westline, hdr.Trotwood.Calimesa, hdr.Trotwood.Reedsport, hdr.Trotwood.Chehalis, hdr.Trotwood.Waterman });
-        hdr.Trotwood.McKamie = tmp_21;
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Challis.Alston, hdr.Challis.Casco, hdr.Challis.Boquet, hdr.Challis.BigArm, hdr.Challis.Muncie, hdr.Challis.Blackwood, hdr.Challis.Margie, hdr.Challis.Westline, hdr.Challis.Calimesa, hdr.Challis.Reedsport, hdr.Challis.Chehalis, hdr.Challis.Waterman }, hdr.Challis.McKamie, HashAlgorithm.csum16);
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Trotwood.Alston, hdr.Trotwood.Casco, hdr.Trotwood.Boquet, hdr.Trotwood.BigArm, hdr.Trotwood.Muncie, hdr.Trotwood.Blackwood, hdr.Trotwood.Margie, hdr.Trotwood.Westline, hdr.Trotwood.Calimesa, hdr.Trotwood.Reedsport, hdr.Trotwood.Chehalis, hdr.Trotwood.Waterman }, hdr.Trotwood.McKamie, HashAlgorithm.csum16);
     }
 }
 

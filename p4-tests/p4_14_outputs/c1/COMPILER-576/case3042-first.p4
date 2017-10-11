@@ -4237,23 +4237,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    Checksum16() Ladoga;
-    Checksum16() Escondido;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        if (hdr.Challis.McKamie == (Ladoga.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Challis.Alston, hdr.Challis.Casco, hdr.Challis.Boquet, hdr.Challis.BigArm, hdr.Challis.Muncie, hdr.Challis.Blackwood, hdr.Challis.Margie, hdr.Challis.Westline, hdr.Challis.Calimesa, hdr.Challis.Reedsport, hdr.Challis.Chehalis, hdr.Challis.Waterman }))) 
-            mark_to_drop();
-        if (hdr.Trotwood.McKamie == (Escondido.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Trotwood.Alston, hdr.Trotwood.Casco, hdr.Trotwood.Boquet, hdr.Trotwood.BigArm, hdr.Trotwood.Muncie, hdr.Trotwood.Blackwood, hdr.Trotwood.Margie, hdr.Trotwood.Westline, hdr.Trotwood.Calimesa, hdr.Trotwood.Reedsport, hdr.Trotwood.Chehalis, hdr.Trotwood.Waterman }))) 
-            mark_to_drop();
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Challis.Alston, hdr.Challis.Casco, hdr.Challis.Boquet, hdr.Challis.BigArm, hdr.Challis.Muncie, hdr.Challis.Blackwood, hdr.Challis.Margie, hdr.Challis.Westline, hdr.Challis.Calimesa, hdr.Challis.Reedsport, hdr.Challis.Chehalis, hdr.Challis.Waterman }, hdr.Challis.McKamie, HashAlgorithm.csum16);
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Trotwood.Alston, hdr.Trotwood.Casco, hdr.Trotwood.Boquet, hdr.Trotwood.BigArm, hdr.Trotwood.Muncie, hdr.Trotwood.Blackwood, hdr.Trotwood.Margie, hdr.Trotwood.Westline, hdr.Trotwood.Calimesa, hdr.Trotwood.Reedsport, hdr.Trotwood.Chehalis, hdr.Trotwood.Waterman }, hdr.Trotwood.McKamie, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    Checksum16() Ladoga;
-    Checksum16() Escondido;
     apply {
-        hdr.Challis.McKamie = Ladoga.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Challis.Alston, hdr.Challis.Casco, hdr.Challis.Boquet, hdr.Challis.BigArm, hdr.Challis.Muncie, hdr.Challis.Blackwood, hdr.Challis.Margie, hdr.Challis.Westline, hdr.Challis.Calimesa, hdr.Challis.Reedsport, hdr.Challis.Chehalis, hdr.Challis.Waterman });
-        hdr.Trotwood.McKamie = Escondido.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Trotwood.Alston, hdr.Trotwood.Casco, hdr.Trotwood.Boquet, hdr.Trotwood.BigArm, hdr.Trotwood.Muncie, hdr.Trotwood.Blackwood, hdr.Trotwood.Margie, hdr.Trotwood.Westline, hdr.Trotwood.Calimesa, hdr.Trotwood.Reedsport, hdr.Trotwood.Chehalis, hdr.Trotwood.Waterman });
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Challis.Alston, hdr.Challis.Casco, hdr.Challis.Boquet, hdr.Challis.BigArm, hdr.Challis.Muncie, hdr.Challis.Blackwood, hdr.Challis.Margie, hdr.Challis.Westline, hdr.Challis.Calimesa, hdr.Challis.Reedsport, hdr.Challis.Chehalis, hdr.Challis.Waterman }, hdr.Challis.McKamie, HashAlgorithm.csum16);
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Trotwood.Alston, hdr.Trotwood.Casco, hdr.Trotwood.Boquet, hdr.Trotwood.BigArm, hdr.Trotwood.Muncie, hdr.Trotwood.Blackwood, hdr.Trotwood.Margie, hdr.Trotwood.Westline, hdr.Trotwood.Calimesa, hdr.Trotwood.Reedsport, hdr.Trotwood.Chehalis, hdr.Trotwood.Waterman }, hdr.Trotwood.McKamie, HashAlgorithm.csum16);
     }
 }
 

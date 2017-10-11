@@ -2402,35 +2402,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    bit<16> tmp_7;
-    bool tmp_8;
-    bit<16> tmp_9;
-    bool tmp_10;
-    @name("Equality") Checksum16() Equality_0;
-    @name("Shelbiana") Checksum16() Shelbiana_0;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        tmp_7 = Equality_0.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Gosnell.Sallisaw, hdr.Gosnell.Pendroy, hdr.Gosnell.Dundalk, hdr.Gosnell.Homeacre, hdr.Gosnell.Libby, hdr.Gosnell.Adair, hdr.Gosnell.Arcanum, hdr.Gosnell.Hewitt, hdr.Gosnell.Boysen, hdr.Gosnell.Pineridge, hdr.Gosnell.Blunt, hdr.Gosnell.Clermont });
-        tmp_8 = hdr.Gosnell.Dilia == tmp_7;
-        if (tmp_8) 
-            mark_to_drop();
-        tmp_9 = Shelbiana_0.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Lakebay.Sallisaw, hdr.Lakebay.Pendroy, hdr.Lakebay.Dundalk, hdr.Lakebay.Homeacre, hdr.Lakebay.Libby, hdr.Lakebay.Adair, hdr.Lakebay.Arcanum, hdr.Lakebay.Hewitt, hdr.Lakebay.Boysen, hdr.Lakebay.Pineridge, hdr.Lakebay.Blunt, hdr.Lakebay.Clermont });
-        tmp_10 = hdr.Lakebay.Dilia == tmp_9;
-        if (tmp_10) 
-            mark_to_drop();
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Gosnell.Sallisaw, hdr.Gosnell.Pendroy, hdr.Gosnell.Dundalk, hdr.Gosnell.Homeacre, hdr.Gosnell.Libby, hdr.Gosnell.Adair, hdr.Gosnell.Arcanum, hdr.Gosnell.Hewitt, hdr.Gosnell.Boysen, hdr.Gosnell.Pineridge, hdr.Gosnell.Blunt, hdr.Gosnell.Clermont }, hdr.Gosnell.Dilia, HashAlgorithm.csum16);
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Lakebay.Sallisaw, hdr.Lakebay.Pendroy, hdr.Lakebay.Dundalk, hdr.Lakebay.Homeacre, hdr.Lakebay.Libby, hdr.Lakebay.Adair, hdr.Lakebay.Arcanum, hdr.Lakebay.Hewitt, hdr.Lakebay.Boysen, hdr.Lakebay.Pineridge, hdr.Lakebay.Blunt, hdr.Lakebay.Clermont }, hdr.Lakebay.Dilia, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    bit<16> tmp_11;
-    bit<16> tmp_12;
-    @name("Equality") Checksum16() Equality_1;
-    @name("Shelbiana") Checksum16() Shelbiana_1;
     apply {
-        tmp_11 = Equality_1.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Gosnell.Sallisaw, hdr.Gosnell.Pendroy, hdr.Gosnell.Dundalk, hdr.Gosnell.Homeacre, hdr.Gosnell.Libby, hdr.Gosnell.Adair, hdr.Gosnell.Arcanum, hdr.Gosnell.Hewitt, hdr.Gosnell.Boysen, hdr.Gosnell.Pineridge, hdr.Gosnell.Blunt, hdr.Gosnell.Clermont });
-        hdr.Gosnell.Dilia = tmp_11;
-        tmp_12 = Shelbiana_1.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Lakebay.Sallisaw, hdr.Lakebay.Pendroy, hdr.Lakebay.Dundalk, hdr.Lakebay.Homeacre, hdr.Lakebay.Libby, hdr.Lakebay.Adair, hdr.Lakebay.Arcanum, hdr.Lakebay.Hewitt, hdr.Lakebay.Boysen, hdr.Lakebay.Pineridge, hdr.Lakebay.Blunt, hdr.Lakebay.Clermont });
-        hdr.Lakebay.Dilia = tmp_12;
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Gosnell.Sallisaw, hdr.Gosnell.Pendroy, hdr.Gosnell.Dundalk, hdr.Gosnell.Homeacre, hdr.Gosnell.Libby, hdr.Gosnell.Adair, hdr.Gosnell.Arcanum, hdr.Gosnell.Hewitt, hdr.Gosnell.Boysen, hdr.Gosnell.Pineridge, hdr.Gosnell.Blunt, hdr.Gosnell.Clermont }, hdr.Gosnell.Dilia, HashAlgorithm.csum16);
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Lakebay.Sallisaw, hdr.Lakebay.Pendroy, hdr.Lakebay.Dundalk, hdr.Lakebay.Homeacre, hdr.Lakebay.Libby, hdr.Lakebay.Adair, hdr.Lakebay.Arcanum, hdr.Lakebay.Hewitt, hdr.Lakebay.Boysen, hdr.Lakebay.Pineridge, hdr.Lakebay.Blunt, hdr.Lakebay.Clermont }, hdr.Lakebay.Dilia, HashAlgorithm.csum16);
     }
 }
 

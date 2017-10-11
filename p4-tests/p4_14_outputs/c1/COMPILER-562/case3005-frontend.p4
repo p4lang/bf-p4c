@@ -3255,35 +3255,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    bit<16> tmp_16;
-    bool tmp_17;
-    bit<16> tmp_18;
-    bool tmp_19;
-    @name("Fenwick") Checksum16() Fenwick_0;
-    @name("Kalaloch") Checksum16() Kalaloch_0;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        tmp_16 = Fenwick_0.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Maljamar.Correo, hdr.Maljamar.Veradale, hdr.Maljamar.Hearne, hdr.Maljamar.Machens, hdr.Maljamar.Korbel, hdr.Maljamar.Nevis, hdr.Maljamar.Iredell, hdr.Maljamar.Gaston, hdr.Maljamar.Disney, hdr.Maljamar.Azalia, hdr.Maljamar.Haines, hdr.Maljamar.Windber });
-        tmp_17 = hdr.Maljamar.Fairhaven == tmp_16;
-        if (tmp_17) 
-            mark_to_drop();
-        tmp_18 = Kalaloch_0.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Tiverton.Correo, hdr.Tiverton.Veradale, hdr.Tiverton.Hearne, hdr.Tiverton.Machens, hdr.Tiverton.Korbel, hdr.Tiverton.Nevis, hdr.Tiverton.Iredell, hdr.Tiverton.Gaston, hdr.Tiverton.Disney, hdr.Tiverton.Azalia, hdr.Tiverton.Haines, hdr.Tiverton.Windber });
-        tmp_19 = hdr.Tiverton.Fairhaven == tmp_18;
-        if (tmp_19) 
-            mark_to_drop();
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Maljamar.Correo, hdr.Maljamar.Veradale, hdr.Maljamar.Hearne, hdr.Maljamar.Machens, hdr.Maljamar.Korbel, hdr.Maljamar.Nevis, hdr.Maljamar.Iredell, hdr.Maljamar.Gaston, hdr.Maljamar.Disney, hdr.Maljamar.Azalia, hdr.Maljamar.Haines, hdr.Maljamar.Windber }, hdr.Maljamar.Fairhaven, HashAlgorithm.csum16);
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Tiverton.Correo, hdr.Tiverton.Veradale, hdr.Tiverton.Hearne, hdr.Tiverton.Machens, hdr.Tiverton.Korbel, hdr.Tiverton.Nevis, hdr.Tiverton.Iredell, hdr.Tiverton.Gaston, hdr.Tiverton.Disney, hdr.Tiverton.Azalia, hdr.Tiverton.Haines, hdr.Tiverton.Windber }, hdr.Tiverton.Fairhaven, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    bit<16> tmp_20;
-    bit<16> tmp_21;
-    @name("Fenwick") Checksum16() Fenwick_1;
-    @name("Kalaloch") Checksum16() Kalaloch_1;
     apply {
-        tmp_20 = Fenwick_1.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Maljamar.Correo, hdr.Maljamar.Veradale, hdr.Maljamar.Hearne, hdr.Maljamar.Machens, hdr.Maljamar.Korbel, hdr.Maljamar.Nevis, hdr.Maljamar.Iredell, hdr.Maljamar.Gaston, hdr.Maljamar.Disney, hdr.Maljamar.Azalia, hdr.Maljamar.Haines, hdr.Maljamar.Windber });
-        hdr.Maljamar.Fairhaven = tmp_20;
-        tmp_21 = Kalaloch_1.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Tiverton.Correo, hdr.Tiverton.Veradale, hdr.Tiverton.Hearne, hdr.Tiverton.Machens, hdr.Tiverton.Korbel, hdr.Tiverton.Nevis, hdr.Tiverton.Iredell, hdr.Tiverton.Gaston, hdr.Tiverton.Disney, hdr.Tiverton.Azalia, hdr.Tiverton.Haines, hdr.Tiverton.Windber });
-        hdr.Tiverton.Fairhaven = tmp_21;
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Maljamar.Correo, hdr.Maljamar.Veradale, hdr.Maljamar.Hearne, hdr.Maljamar.Machens, hdr.Maljamar.Korbel, hdr.Maljamar.Nevis, hdr.Maljamar.Iredell, hdr.Maljamar.Gaston, hdr.Maljamar.Disney, hdr.Maljamar.Azalia, hdr.Maljamar.Haines, hdr.Maljamar.Windber }, hdr.Maljamar.Fairhaven, HashAlgorithm.csum16);
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Tiverton.Correo, hdr.Tiverton.Veradale, hdr.Tiverton.Hearne, hdr.Tiverton.Machens, hdr.Tiverton.Korbel, hdr.Tiverton.Nevis, hdr.Tiverton.Iredell, hdr.Tiverton.Gaston, hdr.Tiverton.Disney, hdr.Tiverton.Azalia, hdr.Tiverton.Haines, hdr.Tiverton.Windber }, hdr.Tiverton.Fairhaven, HashAlgorithm.csum16);
     }
 }
 

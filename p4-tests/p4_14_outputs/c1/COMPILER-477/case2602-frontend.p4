@@ -2245,35 +2245,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    bit<16> tmp_2;
-    bool tmp_3;
-    bit<16> tmp_4;
-    bool tmp_5;
-    @name("Arkoe") Checksum16() Arkoe_0;
-    @name("Wells") Checksum16() Wells_0;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        tmp_2 = Arkoe_0.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Denmark.Amboy, hdr.Denmark.Tafton, hdr.Denmark.Danbury, hdr.Denmark.Luning, hdr.Denmark.Scherr, hdr.Denmark.Tryon, hdr.Denmark.Keener, hdr.Denmark.OldMines, hdr.Denmark.Tusayan, hdr.Denmark.Barnsdall, hdr.Denmark.Fannett, hdr.Denmark.Topton });
-        tmp_3 = hdr.Denmark.Minneiska == tmp_2;
-        if (tmp_3) 
-            mark_to_drop();
-        tmp_4 = Wells_0.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Nutria.Amboy, hdr.Nutria.Tafton, hdr.Nutria.Danbury, hdr.Nutria.Luning, hdr.Nutria.Scherr, hdr.Nutria.Tryon, hdr.Nutria.Keener, hdr.Nutria.OldMines, hdr.Nutria.Tusayan, hdr.Nutria.Barnsdall, hdr.Nutria.Fannett, hdr.Nutria.Topton });
-        tmp_5 = hdr.Nutria.Minneiska == tmp_4;
-        if (tmp_5) 
-            mark_to_drop();
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Denmark.Amboy, hdr.Denmark.Tafton, hdr.Denmark.Danbury, hdr.Denmark.Luning, hdr.Denmark.Scherr, hdr.Denmark.Tryon, hdr.Denmark.Keener, hdr.Denmark.OldMines, hdr.Denmark.Tusayan, hdr.Denmark.Barnsdall, hdr.Denmark.Fannett, hdr.Denmark.Topton }, hdr.Denmark.Minneiska, HashAlgorithm.csum16);
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Nutria.Amboy, hdr.Nutria.Tafton, hdr.Nutria.Danbury, hdr.Nutria.Luning, hdr.Nutria.Scherr, hdr.Nutria.Tryon, hdr.Nutria.Keener, hdr.Nutria.OldMines, hdr.Nutria.Tusayan, hdr.Nutria.Barnsdall, hdr.Nutria.Fannett, hdr.Nutria.Topton }, hdr.Nutria.Minneiska, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    bit<16> tmp_6;
-    bit<16> tmp_7;
-    @name("Arkoe") Checksum16() Arkoe_1;
-    @name("Wells") Checksum16() Wells_1;
     apply {
-        tmp_6 = Arkoe_1.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Denmark.Amboy, hdr.Denmark.Tafton, hdr.Denmark.Danbury, hdr.Denmark.Luning, hdr.Denmark.Scherr, hdr.Denmark.Tryon, hdr.Denmark.Keener, hdr.Denmark.OldMines, hdr.Denmark.Tusayan, hdr.Denmark.Barnsdall, hdr.Denmark.Fannett, hdr.Denmark.Topton });
-        hdr.Denmark.Minneiska = tmp_6;
-        tmp_7 = Wells_1.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Nutria.Amboy, hdr.Nutria.Tafton, hdr.Nutria.Danbury, hdr.Nutria.Luning, hdr.Nutria.Scherr, hdr.Nutria.Tryon, hdr.Nutria.Keener, hdr.Nutria.OldMines, hdr.Nutria.Tusayan, hdr.Nutria.Barnsdall, hdr.Nutria.Fannett, hdr.Nutria.Topton });
-        hdr.Nutria.Minneiska = tmp_7;
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Denmark.Amboy, hdr.Denmark.Tafton, hdr.Denmark.Danbury, hdr.Denmark.Luning, hdr.Denmark.Scherr, hdr.Denmark.Tryon, hdr.Denmark.Keener, hdr.Denmark.OldMines, hdr.Denmark.Tusayan, hdr.Denmark.Barnsdall, hdr.Denmark.Fannett, hdr.Denmark.Topton }, hdr.Denmark.Minneiska, HashAlgorithm.csum16);
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Nutria.Amboy, hdr.Nutria.Tafton, hdr.Nutria.Danbury, hdr.Nutria.Luning, hdr.Nutria.Scherr, hdr.Nutria.Tryon, hdr.Nutria.Keener, hdr.Nutria.OldMines, hdr.Nutria.Tusayan, hdr.Nutria.Barnsdall, hdr.Nutria.Fannett, hdr.Nutria.Topton }, hdr.Nutria.Minneiska, HashAlgorithm.csum16);
     }
 }
 

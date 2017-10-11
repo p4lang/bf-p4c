@@ -3125,31 +3125,17 @@ struct tuple_5 {
     bit<32> field_29;
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    bit<16> tmp_15;
-    bit<16> tmp_23;
-    @name("Parthenon") Checksum16() Parthenon;
-    @name("Kinards") Checksum16() Kinards;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        tmp_15 = Parthenon.get<tuple_5>({ hdr.CapRock.Supai, hdr.CapRock.DeSart, hdr.CapRock.Naches, hdr.CapRock.Claypool, hdr.CapRock.Millett, hdr.CapRock.LaUnion, hdr.CapRock.Emmalane, hdr.CapRock.Farlin, hdr.CapRock.Weimar, hdr.CapRock.Kremlin, hdr.CapRock.Nerstrand, hdr.CapRock.Cimarron });
-        if (hdr.CapRock.Waubun == tmp_15) 
-            mark_to_drop();
-        tmp_23 = Kinards.get<tuple_5>({ hdr.Lepanto.Supai, hdr.Lepanto.DeSart, hdr.Lepanto.Naches, hdr.Lepanto.Claypool, hdr.Lepanto.Millett, hdr.Lepanto.LaUnion, hdr.Lepanto.Emmalane, hdr.Lepanto.Farlin, hdr.Lepanto.Weimar, hdr.Lepanto.Kremlin, hdr.Lepanto.Nerstrand, hdr.Lepanto.Cimarron });
-        if (hdr.Lepanto.Waubun == tmp_23) 
-            mark_to_drop();
+        verify_checksum<tuple_5, bit<16>>(true, { hdr.CapRock.Supai, hdr.CapRock.DeSart, hdr.CapRock.Naches, hdr.CapRock.Claypool, hdr.CapRock.Millett, hdr.CapRock.LaUnion, hdr.CapRock.Emmalane, hdr.CapRock.Farlin, hdr.CapRock.Weimar, hdr.CapRock.Kremlin, hdr.CapRock.Nerstrand, hdr.CapRock.Cimarron }, hdr.CapRock.Waubun, HashAlgorithm.csum16);
+        verify_checksum<tuple_5, bit<16>>(true, { hdr.Lepanto.Supai, hdr.Lepanto.DeSart, hdr.Lepanto.Naches, hdr.Lepanto.Claypool, hdr.Lepanto.Millett, hdr.Lepanto.LaUnion, hdr.Lepanto.Emmalane, hdr.Lepanto.Farlin, hdr.Lepanto.Weimar, hdr.Lepanto.Kremlin, hdr.Lepanto.Nerstrand, hdr.Lepanto.Cimarron }, hdr.Lepanto.Waubun, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    bit<16> tmp_25;
-    bit<16> tmp_26;
-    @name("Parthenon") Checksum16() Parthenon_2;
-    @name("Kinards") Checksum16() Kinards_2;
     apply {
-        tmp_25 = Parthenon_2.get<tuple_5>({ hdr.CapRock.Supai, hdr.CapRock.DeSart, hdr.CapRock.Naches, hdr.CapRock.Claypool, hdr.CapRock.Millett, hdr.CapRock.LaUnion, hdr.CapRock.Emmalane, hdr.CapRock.Farlin, hdr.CapRock.Weimar, hdr.CapRock.Kremlin, hdr.CapRock.Nerstrand, hdr.CapRock.Cimarron });
-        hdr.CapRock.Waubun = tmp_25;
-        tmp_26 = Kinards_2.get<tuple_5>({ hdr.Lepanto.Supai, hdr.Lepanto.DeSart, hdr.Lepanto.Naches, hdr.Lepanto.Claypool, hdr.Lepanto.Millett, hdr.Lepanto.LaUnion, hdr.Lepanto.Emmalane, hdr.Lepanto.Farlin, hdr.Lepanto.Weimar, hdr.Lepanto.Kremlin, hdr.Lepanto.Nerstrand, hdr.Lepanto.Cimarron });
-        hdr.Lepanto.Waubun = tmp_26;
+        update_checksum<tuple_5, bit<16>>(true, { hdr.CapRock.Supai, hdr.CapRock.DeSart, hdr.CapRock.Naches, hdr.CapRock.Claypool, hdr.CapRock.Millett, hdr.CapRock.LaUnion, hdr.CapRock.Emmalane, hdr.CapRock.Farlin, hdr.CapRock.Weimar, hdr.CapRock.Kremlin, hdr.CapRock.Nerstrand, hdr.CapRock.Cimarron }, hdr.CapRock.Waubun, HashAlgorithm.csum16);
+        update_checksum<tuple_5, bit<16>>(true, { hdr.Lepanto.Supai, hdr.Lepanto.DeSart, hdr.Lepanto.Naches, hdr.Lepanto.Claypool, hdr.Lepanto.Millett, hdr.Lepanto.LaUnion, hdr.Lepanto.Emmalane, hdr.Lepanto.Farlin, hdr.Lepanto.Weimar, hdr.Lepanto.Kremlin, hdr.Lepanto.Nerstrand, hdr.Lepanto.Cimarron }, hdr.Lepanto.Waubun, HashAlgorithm.csum16);
     }
 }
 

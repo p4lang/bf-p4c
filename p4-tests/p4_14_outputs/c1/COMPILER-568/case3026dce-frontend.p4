@@ -3250,35 +3250,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    bit<16> tmp_15;
-    bool tmp_16;
-    bit<16> tmp_17;
-    bool tmp_18;
-    @name("Rexville") Checksum16() Rexville_0;
-    @name("AquaPark") Checksum16() AquaPark_0;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        tmp_15 = Rexville_0.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Gakona.Bleecker, hdr.Gakona.Mondovi, hdr.Gakona.Sabetha, hdr.Gakona.Hobson, hdr.Gakona.Rosburg, hdr.Gakona.Dunnville, hdr.Gakona.Grigston, hdr.Gakona.Cusick, hdr.Gakona.Gonzalez, hdr.Gakona.Annandale, hdr.Gakona.PellLake, hdr.Gakona.Sweeny });
-        tmp_16 = hdr.Gakona.Kalaloch == tmp_15;
-        if (tmp_16) 
-            mark_to_drop();
-        tmp_17 = AquaPark_0.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Toccopola.Bleecker, hdr.Toccopola.Mondovi, hdr.Toccopola.Sabetha, hdr.Toccopola.Hobson, hdr.Toccopola.Rosburg, hdr.Toccopola.Dunnville, hdr.Toccopola.Grigston, hdr.Toccopola.Cusick, hdr.Toccopola.Gonzalez, hdr.Toccopola.Annandale, hdr.Toccopola.PellLake, hdr.Toccopola.Sweeny });
-        tmp_18 = hdr.Toccopola.Kalaloch == tmp_17;
-        if (tmp_18) 
-            mark_to_drop();
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Gakona.Bleecker, hdr.Gakona.Mondovi, hdr.Gakona.Sabetha, hdr.Gakona.Hobson, hdr.Gakona.Rosburg, hdr.Gakona.Dunnville, hdr.Gakona.Grigston, hdr.Gakona.Cusick, hdr.Gakona.Gonzalez, hdr.Gakona.Annandale, hdr.Gakona.PellLake, hdr.Gakona.Sweeny }, hdr.Gakona.Kalaloch, HashAlgorithm.csum16);
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Toccopola.Bleecker, hdr.Toccopola.Mondovi, hdr.Toccopola.Sabetha, hdr.Toccopola.Hobson, hdr.Toccopola.Rosburg, hdr.Toccopola.Dunnville, hdr.Toccopola.Grigston, hdr.Toccopola.Cusick, hdr.Toccopola.Gonzalez, hdr.Toccopola.Annandale, hdr.Toccopola.PellLake, hdr.Toccopola.Sweeny }, hdr.Toccopola.Kalaloch, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    bit<16> tmp_19;
-    bit<16> tmp_20;
-    @name("Rexville") Checksum16() Rexville_1;
-    @name("AquaPark") Checksum16() AquaPark_1;
     apply {
-        tmp_19 = Rexville_1.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Gakona.Bleecker, hdr.Gakona.Mondovi, hdr.Gakona.Sabetha, hdr.Gakona.Hobson, hdr.Gakona.Rosburg, hdr.Gakona.Dunnville, hdr.Gakona.Grigston, hdr.Gakona.Cusick, hdr.Gakona.Gonzalez, hdr.Gakona.Annandale, hdr.Gakona.PellLake, hdr.Gakona.Sweeny });
-        hdr.Gakona.Kalaloch = tmp_19;
-        tmp_20 = AquaPark_1.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Toccopola.Bleecker, hdr.Toccopola.Mondovi, hdr.Toccopola.Sabetha, hdr.Toccopola.Hobson, hdr.Toccopola.Rosburg, hdr.Toccopola.Dunnville, hdr.Toccopola.Grigston, hdr.Toccopola.Cusick, hdr.Toccopola.Gonzalez, hdr.Toccopola.Annandale, hdr.Toccopola.PellLake, hdr.Toccopola.Sweeny });
-        hdr.Toccopola.Kalaloch = tmp_20;
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Gakona.Bleecker, hdr.Gakona.Mondovi, hdr.Gakona.Sabetha, hdr.Gakona.Hobson, hdr.Gakona.Rosburg, hdr.Gakona.Dunnville, hdr.Gakona.Grigston, hdr.Gakona.Cusick, hdr.Gakona.Gonzalez, hdr.Gakona.Annandale, hdr.Gakona.PellLake, hdr.Gakona.Sweeny }, hdr.Gakona.Kalaloch, HashAlgorithm.csum16);
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Toccopola.Bleecker, hdr.Toccopola.Mondovi, hdr.Toccopola.Sabetha, hdr.Toccopola.Hobson, hdr.Toccopola.Rosburg, hdr.Toccopola.Dunnville, hdr.Toccopola.Grigston, hdr.Toccopola.Cusick, hdr.Toccopola.Gonzalez, hdr.Toccopola.Annandale, hdr.Toccopola.PellLake, hdr.Toccopola.Sweeny }, hdr.Toccopola.Kalaloch, HashAlgorithm.csum16);
     }
 }
 

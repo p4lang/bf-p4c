@@ -2423,31 +2423,17 @@ struct tuple_5 {
     bit<32> field_28;
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    bit<16> tmp_1;
-    bit<16> tmp_9;
-    @name("Menifee") Checksum16() Menifee;
-    @name("Benonine") Checksum16() Benonine;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        tmp_1 = Menifee.get<tuple_5>({ hdr.Longford.Lovett, hdr.Longford.Slagle, hdr.Longford.Titonka, hdr.Longford.Wyandanch, hdr.Longford.Warden, hdr.Longford.Tulia, hdr.Longford.Macon, hdr.Longford.Salamonia, hdr.Longford.Lindsborg, hdr.Longford.Brashear, hdr.Longford.Sedan, hdr.Longford.Kinross });
-        if (hdr.Longford.McGovern == tmp_1) 
-            mark_to_drop();
-        tmp_9 = Benonine.get<tuple_5>({ hdr.Uniopolis.Lovett, hdr.Uniopolis.Slagle, hdr.Uniopolis.Titonka, hdr.Uniopolis.Wyandanch, hdr.Uniopolis.Warden, hdr.Uniopolis.Tulia, hdr.Uniopolis.Macon, hdr.Uniopolis.Salamonia, hdr.Uniopolis.Lindsborg, hdr.Uniopolis.Brashear, hdr.Uniopolis.Sedan, hdr.Uniopolis.Kinross });
-        if (hdr.Uniopolis.McGovern == tmp_9) 
-            mark_to_drop();
+        verify_checksum<tuple_5, bit<16>>(true, { hdr.Longford.Lovett, hdr.Longford.Slagle, hdr.Longford.Titonka, hdr.Longford.Wyandanch, hdr.Longford.Warden, hdr.Longford.Tulia, hdr.Longford.Macon, hdr.Longford.Salamonia, hdr.Longford.Lindsborg, hdr.Longford.Brashear, hdr.Longford.Sedan, hdr.Longford.Kinross }, hdr.Longford.McGovern, HashAlgorithm.csum16);
+        verify_checksum<tuple_5, bit<16>>(true, { hdr.Uniopolis.Lovett, hdr.Uniopolis.Slagle, hdr.Uniopolis.Titonka, hdr.Uniopolis.Wyandanch, hdr.Uniopolis.Warden, hdr.Uniopolis.Tulia, hdr.Uniopolis.Macon, hdr.Uniopolis.Salamonia, hdr.Uniopolis.Lindsborg, hdr.Uniopolis.Brashear, hdr.Uniopolis.Sedan, hdr.Uniopolis.Kinross }, hdr.Uniopolis.McGovern, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    bit<16> tmp_11;
-    bit<16> tmp_12;
-    @name("Menifee") Checksum16() Menifee_2;
-    @name("Benonine") Checksum16() Benonine_2;
     apply {
-        tmp_11 = Menifee_2.get<tuple_5>({ hdr.Longford.Lovett, hdr.Longford.Slagle, hdr.Longford.Titonka, hdr.Longford.Wyandanch, hdr.Longford.Warden, hdr.Longford.Tulia, hdr.Longford.Macon, hdr.Longford.Salamonia, hdr.Longford.Lindsborg, hdr.Longford.Brashear, hdr.Longford.Sedan, hdr.Longford.Kinross });
-        hdr.Longford.McGovern = tmp_11;
-        tmp_12 = Benonine_2.get<tuple_5>({ hdr.Uniopolis.Lovett, hdr.Uniopolis.Slagle, hdr.Uniopolis.Titonka, hdr.Uniopolis.Wyandanch, hdr.Uniopolis.Warden, hdr.Uniopolis.Tulia, hdr.Uniopolis.Macon, hdr.Uniopolis.Salamonia, hdr.Uniopolis.Lindsborg, hdr.Uniopolis.Brashear, hdr.Uniopolis.Sedan, hdr.Uniopolis.Kinross });
-        hdr.Uniopolis.McGovern = tmp_12;
+        update_checksum<tuple_5, bit<16>>(true, { hdr.Longford.Lovett, hdr.Longford.Slagle, hdr.Longford.Titonka, hdr.Longford.Wyandanch, hdr.Longford.Warden, hdr.Longford.Tulia, hdr.Longford.Macon, hdr.Longford.Salamonia, hdr.Longford.Lindsborg, hdr.Longford.Brashear, hdr.Longford.Sedan, hdr.Longford.Kinross }, hdr.Longford.McGovern, HashAlgorithm.csum16);
+        update_checksum<tuple_5, bit<16>>(true, { hdr.Uniopolis.Lovett, hdr.Uniopolis.Slagle, hdr.Uniopolis.Titonka, hdr.Uniopolis.Wyandanch, hdr.Uniopolis.Warden, hdr.Uniopolis.Tulia, hdr.Uniopolis.Macon, hdr.Uniopolis.Salamonia, hdr.Uniopolis.Lindsborg, hdr.Uniopolis.Brashear, hdr.Uniopolis.Sedan, hdr.Uniopolis.Kinross }, hdr.Uniopolis.McGovern, HashAlgorithm.csum16);
     }
 }
 

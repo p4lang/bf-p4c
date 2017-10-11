@@ -4423,23 +4423,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    Checksum16() LaMarque;
-    Checksum16() Weches;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        if (hdr.Amory.Tallassee == LaMarque.get({ hdr.Amory.Wyanet, hdr.Amory.Elkins, hdr.Amory.Houston, hdr.Amory.Sheldahl, hdr.Amory.Lofgreen, hdr.Amory.Kanorado, hdr.Amory.Snowflake, hdr.Amory.Tulia, hdr.Amory.Teaneck, hdr.Amory.Brush, hdr.Amory.Gresston, hdr.Amory.Worthing })) 
-            mark_to_drop();
-        if (hdr.Weissert.Tallassee == Weches.get({ hdr.Weissert.Wyanet, hdr.Weissert.Elkins, hdr.Weissert.Houston, hdr.Weissert.Sheldahl, hdr.Weissert.Lofgreen, hdr.Weissert.Kanorado, hdr.Weissert.Snowflake, hdr.Weissert.Tulia, hdr.Weissert.Teaneck, hdr.Weissert.Brush, hdr.Weissert.Gresston, hdr.Weissert.Worthing })) 
-            mark_to_drop();
+        verify_checksum(true, { hdr.Amory.Wyanet, hdr.Amory.Elkins, hdr.Amory.Houston, hdr.Amory.Sheldahl, hdr.Amory.Lofgreen, hdr.Amory.Kanorado, hdr.Amory.Snowflake, hdr.Amory.Tulia, hdr.Amory.Teaneck, hdr.Amory.Brush, hdr.Amory.Gresston, hdr.Amory.Worthing }, hdr.Amory.Tallassee, HashAlgorithm.csum16);
+        verify_checksum(true, { hdr.Weissert.Wyanet, hdr.Weissert.Elkins, hdr.Weissert.Houston, hdr.Weissert.Sheldahl, hdr.Weissert.Lofgreen, hdr.Weissert.Kanorado, hdr.Weissert.Snowflake, hdr.Weissert.Tulia, hdr.Weissert.Teaneck, hdr.Weissert.Brush, hdr.Weissert.Gresston, hdr.Weissert.Worthing }, hdr.Weissert.Tallassee, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    Checksum16() LaMarque;
-    Checksum16() Weches;
     apply {
-        hdr.Amory.Tallassee = LaMarque.get({ hdr.Amory.Wyanet, hdr.Amory.Elkins, hdr.Amory.Houston, hdr.Amory.Sheldahl, hdr.Amory.Lofgreen, hdr.Amory.Kanorado, hdr.Amory.Snowflake, hdr.Amory.Tulia, hdr.Amory.Teaneck, hdr.Amory.Brush, hdr.Amory.Gresston, hdr.Amory.Worthing });
-        hdr.Weissert.Tallassee = Weches.get({ hdr.Weissert.Wyanet, hdr.Weissert.Elkins, hdr.Weissert.Houston, hdr.Weissert.Sheldahl, hdr.Weissert.Lofgreen, hdr.Weissert.Kanorado, hdr.Weissert.Snowflake, hdr.Weissert.Tulia, hdr.Weissert.Teaneck, hdr.Weissert.Brush, hdr.Weissert.Gresston, hdr.Weissert.Worthing });
+        update_checksum(true, { hdr.Amory.Wyanet, hdr.Amory.Elkins, hdr.Amory.Houston, hdr.Amory.Sheldahl, hdr.Amory.Lofgreen, hdr.Amory.Kanorado, hdr.Amory.Snowflake, hdr.Amory.Tulia, hdr.Amory.Teaneck, hdr.Amory.Brush, hdr.Amory.Gresston, hdr.Amory.Worthing }, hdr.Amory.Tallassee, HashAlgorithm.csum16);
+        update_checksum(true, { hdr.Weissert.Wyanet, hdr.Weissert.Elkins, hdr.Weissert.Houston, hdr.Weissert.Sheldahl, hdr.Weissert.Lofgreen, hdr.Weissert.Kanorado, hdr.Weissert.Snowflake, hdr.Weissert.Tulia, hdr.Weissert.Teaneck, hdr.Weissert.Brush, hdr.Weissert.Gresston, hdr.Weissert.Worthing }, hdr.Weissert.Tallassee, HashAlgorithm.csum16);
     }
 }
 

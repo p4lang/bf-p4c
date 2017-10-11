@@ -3242,31 +3242,17 @@ struct tuple_6 {
     bit<32> field_30;
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    bit<16> tmp_15;
-    bit<16> tmp_23;
-    @name("Switzer") Checksum16() Switzer;
-    @name("LaMoille") Checksum16() LaMoille;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        tmp_15 = Switzer.get<tuple_6>({ hdr.LaPointe.Sofia, hdr.LaPointe.Wabbaseka, hdr.LaPointe.Baldwin, hdr.LaPointe.Mather, hdr.LaPointe.Marie, hdr.LaPointe.Upalco, hdr.LaPointe.Acree, hdr.LaPointe.Fairborn, hdr.LaPointe.Isleta, hdr.LaPointe.Alderson, hdr.LaPointe.Culloden, hdr.LaPointe.Parrish });
-        if (hdr.LaPointe.Makawao == tmp_15) 
-            mark_to_drop();
-        tmp_23 = LaMoille.get<tuple_6>({ hdr.Robert.Sofia, hdr.Robert.Wabbaseka, hdr.Robert.Baldwin, hdr.Robert.Mather, hdr.Robert.Marie, hdr.Robert.Upalco, hdr.Robert.Acree, hdr.Robert.Fairborn, hdr.Robert.Isleta, hdr.Robert.Alderson, hdr.Robert.Culloden, hdr.Robert.Parrish });
-        if (hdr.Robert.Makawao == tmp_23) 
-            mark_to_drop();
+        verify_checksum<tuple_6, bit<16>>(true, { hdr.LaPointe.Sofia, hdr.LaPointe.Wabbaseka, hdr.LaPointe.Baldwin, hdr.LaPointe.Mather, hdr.LaPointe.Marie, hdr.LaPointe.Upalco, hdr.LaPointe.Acree, hdr.LaPointe.Fairborn, hdr.LaPointe.Isleta, hdr.LaPointe.Alderson, hdr.LaPointe.Culloden, hdr.LaPointe.Parrish }, hdr.LaPointe.Makawao, HashAlgorithm.csum16);
+        verify_checksum<tuple_6, bit<16>>(true, { hdr.Robert.Sofia, hdr.Robert.Wabbaseka, hdr.Robert.Baldwin, hdr.Robert.Mather, hdr.Robert.Marie, hdr.Robert.Upalco, hdr.Robert.Acree, hdr.Robert.Fairborn, hdr.Robert.Isleta, hdr.Robert.Alderson, hdr.Robert.Culloden, hdr.Robert.Parrish }, hdr.Robert.Makawao, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    bit<16> tmp_25;
-    bit<16> tmp_26;
-    @name("Switzer") Checksum16() Switzer_2;
-    @name("LaMoille") Checksum16() LaMoille_2;
     apply {
-        tmp_25 = Switzer_2.get<tuple_6>({ hdr.LaPointe.Sofia, hdr.LaPointe.Wabbaseka, hdr.LaPointe.Baldwin, hdr.LaPointe.Mather, hdr.LaPointe.Marie, hdr.LaPointe.Upalco, hdr.LaPointe.Acree, hdr.LaPointe.Fairborn, hdr.LaPointe.Isleta, hdr.LaPointe.Alderson, hdr.LaPointe.Culloden, hdr.LaPointe.Parrish });
-        hdr.LaPointe.Makawao = tmp_25;
-        tmp_26 = LaMoille_2.get<tuple_6>({ hdr.Robert.Sofia, hdr.Robert.Wabbaseka, hdr.Robert.Baldwin, hdr.Robert.Mather, hdr.Robert.Marie, hdr.Robert.Upalco, hdr.Robert.Acree, hdr.Robert.Fairborn, hdr.Robert.Isleta, hdr.Robert.Alderson, hdr.Robert.Culloden, hdr.Robert.Parrish });
-        hdr.Robert.Makawao = tmp_26;
+        update_checksum<tuple_6, bit<16>>(true, { hdr.LaPointe.Sofia, hdr.LaPointe.Wabbaseka, hdr.LaPointe.Baldwin, hdr.LaPointe.Mather, hdr.LaPointe.Marie, hdr.LaPointe.Upalco, hdr.LaPointe.Acree, hdr.LaPointe.Fairborn, hdr.LaPointe.Isleta, hdr.LaPointe.Alderson, hdr.LaPointe.Culloden, hdr.LaPointe.Parrish }, hdr.LaPointe.Makawao, HashAlgorithm.csum16);
+        update_checksum<tuple_6, bit<16>>(true, { hdr.Robert.Sofia, hdr.Robert.Wabbaseka, hdr.Robert.Baldwin, hdr.Robert.Mather, hdr.Robert.Marie, hdr.Robert.Upalco, hdr.Robert.Acree, hdr.Robert.Fairborn, hdr.Robert.Isleta, hdr.Robert.Alderson, hdr.Robert.Culloden, hdr.Robert.Parrish }, hdr.Robert.Makawao, HashAlgorithm.csum16);
     }
 }
 

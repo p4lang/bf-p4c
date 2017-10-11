@@ -4147,23 +4147,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    Checksum16() Bolckow;
-    Checksum16() Badger;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        if (hdr.Bellmead.Shawmut == Bolckow.get({ hdr.Bellmead.Moraine, hdr.Bellmead.Kensal, hdr.Bellmead.Menomonie, hdr.Bellmead.Salix, hdr.Bellmead.Chandalar, hdr.Bellmead.Ruffin, hdr.Bellmead.Amanda, hdr.Bellmead.Gillespie, hdr.Bellmead.Ignacio, hdr.Bellmead.Granville, hdr.Bellmead.Hines, hdr.Bellmead.Assinippi })) 
-            mark_to_drop();
-        if (hdr.ElkRidge.Shawmut == Badger.get({ hdr.ElkRidge.Moraine, hdr.ElkRidge.Kensal, hdr.ElkRidge.Menomonie, hdr.ElkRidge.Salix, hdr.ElkRidge.Chandalar, hdr.ElkRidge.Ruffin, hdr.ElkRidge.Amanda, hdr.ElkRidge.Gillespie, hdr.ElkRidge.Ignacio, hdr.ElkRidge.Granville, hdr.ElkRidge.Hines, hdr.ElkRidge.Assinippi })) 
-            mark_to_drop();
+        verify_checksum(true, { hdr.Bellmead.Moraine, hdr.Bellmead.Kensal, hdr.Bellmead.Menomonie, hdr.Bellmead.Salix, hdr.Bellmead.Chandalar, hdr.Bellmead.Ruffin, hdr.Bellmead.Amanda, hdr.Bellmead.Gillespie, hdr.Bellmead.Ignacio, hdr.Bellmead.Granville, hdr.Bellmead.Hines, hdr.Bellmead.Assinippi }, hdr.Bellmead.Shawmut, HashAlgorithm.csum16);
+        verify_checksum(true, { hdr.ElkRidge.Moraine, hdr.ElkRidge.Kensal, hdr.ElkRidge.Menomonie, hdr.ElkRidge.Salix, hdr.ElkRidge.Chandalar, hdr.ElkRidge.Ruffin, hdr.ElkRidge.Amanda, hdr.ElkRidge.Gillespie, hdr.ElkRidge.Ignacio, hdr.ElkRidge.Granville, hdr.ElkRidge.Hines, hdr.ElkRidge.Assinippi }, hdr.ElkRidge.Shawmut, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    Checksum16() Bolckow;
-    Checksum16() Badger;
     apply {
-        hdr.Bellmead.Shawmut = Bolckow.get({ hdr.Bellmead.Moraine, hdr.Bellmead.Kensal, hdr.Bellmead.Menomonie, hdr.Bellmead.Salix, hdr.Bellmead.Chandalar, hdr.Bellmead.Ruffin, hdr.Bellmead.Amanda, hdr.Bellmead.Gillespie, hdr.Bellmead.Ignacio, hdr.Bellmead.Granville, hdr.Bellmead.Hines, hdr.Bellmead.Assinippi });
-        hdr.ElkRidge.Shawmut = Badger.get({ hdr.ElkRidge.Moraine, hdr.ElkRidge.Kensal, hdr.ElkRidge.Menomonie, hdr.ElkRidge.Salix, hdr.ElkRidge.Chandalar, hdr.ElkRidge.Ruffin, hdr.ElkRidge.Amanda, hdr.ElkRidge.Gillespie, hdr.ElkRidge.Ignacio, hdr.ElkRidge.Granville, hdr.ElkRidge.Hines, hdr.ElkRidge.Assinippi });
+        update_checksum(true, { hdr.Bellmead.Moraine, hdr.Bellmead.Kensal, hdr.Bellmead.Menomonie, hdr.Bellmead.Salix, hdr.Bellmead.Chandalar, hdr.Bellmead.Ruffin, hdr.Bellmead.Amanda, hdr.Bellmead.Gillespie, hdr.Bellmead.Ignacio, hdr.Bellmead.Granville, hdr.Bellmead.Hines, hdr.Bellmead.Assinippi }, hdr.Bellmead.Shawmut, HashAlgorithm.csum16);
+        update_checksum(true, { hdr.ElkRidge.Moraine, hdr.ElkRidge.Kensal, hdr.ElkRidge.Menomonie, hdr.ElkRidge.Salix, hdr.ElkRidge.Chandalar, hdr.ElkRidge.Ruffin, hdr.ElkRidge.Amanda, hdr.ElkRidge.Gillespie, hdr.ElkRidge.Ignacio, hdr.ElkRidge.Granville, hdr.ElkRidge.Hines, hdr.ElkRidge.Assinippi }, hdr.ElkRidge.Shawmut, HashAlgorithm.csum16);
     }
 }
 

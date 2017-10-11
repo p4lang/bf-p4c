@@ -3382,23 +3382,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    Checksum16() Callimont;
-    Checksum16() McAlister;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        if (hdr.Caspian.Gunder == Callimont.get({ hdr.Caspian.Eunice, hdr.Caspian.Yatesboro, hdr.Caspian.Philmont, hdr.Caspian.Vinita, hdr.Caspian.Hillside, hdr.Caspian.Wyarno, hdr.Caspian.Goosport, hdr.Caspian.Currie, hdr.Caspian.Stambaugh, hdr.Caspian.Ceiba, hdr.Caspian.Rochert, hdr.Caspian.Milbank })) 
-            mark_to_drop();
-        if (hdr.Newcomb.Gunder == McAlister.get({ hdr.Newcomb.Eunice, hdr.Newcomb.Yatesboro, hdr.Newcomb.Philmont, hdr.Newcomb.Vinita, hdr.Newcomb.Hillside, hdr.Newcomb.Wyarno, hdr.Newcomb.Goosport, hdr.Newcomb.Currie, hdr.Newcomb.Stambaugh, hdr.Newcomb.Ceiba, hdr.Newcomb.Rochert, hdr.Newcomb.Milbank })) 
-            mark_to_drop();
+        verify_checksum(true, { hdr.Caspian.Eunice, hdr.Caspian.Yatesboro, hdr.Caspian.Philmont, hdr.Caspian.Vinita, hdr.Caspian.Hillside, hdr.Caspian.Wyarno, hdr.Caspian.Goosport, hdr.Caspian.Currie, hdr.Caspian.Stambaugh, hdr.Caspian.Ceiba, hdr.Caspian.Rochert, hdr.Caspian.Milbank }, hdr.Caspian.Gunder, HashAlgorithm.csum16);
+        verify_checksum(true, { hdr.Newcomb.Eunice, hdr.Newcomb.Yatesboro, hdr.Newcomb.Philmont, hdr.Newcomb.Vinita, hdr.Newcomb.Hillside, hdr.Newcomb.Wyarno, hdr.Newcomb.Goosport, hdr.Newcomb.Currie, hdr.Newcomb.Stambaugh, hdr.Newcomb.Ceiba, hdr.Newcomb.Rochert, hdr.Newcomb.Milbank }, hdr.Newcomb.Gunder, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    Checksum16() Callimont;
-    Checksum16() McAlister;
     apply {
-        hdr.Caspian.Gunder = Callimont.get({ hdr.Caspian.Eunice, hdr.Caspian.Yatesboro, hdr.Caspian.Philmont, hdr.Caspian.Vinita, hdr.Caspian.Hillside, hdr.Caspian.Wyarno, hdr.Caspian.Goosport, hdr.Caspian.Currie, hdr.Caspian.Stambaugh, hdr.Caspian.Ceiba, hdr.Caspian.Rochert, hdr.Caspian.Milbank });
-        hdr.Newcomb.Gunder = McAlister.get({ hdr.Newcomb.Eunice, hdr.Newcomb.Yatesboro, hdr.Newcomb.Philmont, hdr.Newcomb.Vinita, hdr.Newcomb.Hillside, hdr.Newcomb.Wyarno, hdr.Newcomb.Goosport, hdr.Newcomb.Currie, hdr.Newcomb.Stambaugh, hdr.Newcomb.Ceiba, hdr.Newcomb.Rochert, hdr.Newcomb.Milbank });
+        update_checksum(true, { hdr.Caspian.Eunice, hdr.Caspian.Yatesboro, hdr.Caspian.Philmont, hdr.Caspian.Vinita, hdr.Caspian.Hillside, hdr.Caspian.Wyarno, hdr.Caspian.Goosport, hdr.Caspian.Currie, hdr.Caspian.Stambaugh, hdr.Caspian.Ceiba, hdr.Caspian.Rochert, hdr.Caspian.Milbank }, hdr.Caspian.Gunder, HashAlgorithm.csum16);
+        update_checksum(true, { hdr.Newcomb.Eunice, hdr.Newcomb.Yatesboro, hdr.Newcomb.Philmont, hdr.Newcomb.Vinita, hdr.Newcomb.Hillside, hdr.Newcomb.Wyarno, hdr.Newcomb.Goosport, hdr.Newcomb.Currie, hdr.Newcomb.Stambaugh, hdr.Newcomb.Ceiba, hdr.Newcomb.Rochert, hdr.Newcomb.Milbank }, hdr.Newcomb.Gunder, HashAlgorithm.csum16);
     }
 }
 

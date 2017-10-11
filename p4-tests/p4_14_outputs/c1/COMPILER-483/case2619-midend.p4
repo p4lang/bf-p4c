@@ -2236,31 +2236,17 @@ struct tuple_5 {
     bit<32> field_28;
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    bit<16> tmp_1;
-    bit<16> tmp_9;
-    @name("Burnett") Checksum16() Burnett;
-    @name("Charlack") Checksum16() Charlack;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        tmp_1 = Burnett.get<tuple_5>({ hdr.Halfa.Broussard, hdr.Halfa.Miller, hdr.Halfa.Geeville, hdr.Halfa.Belgrade, hdr.Halfa.Sandoval, hdr.Halfa.Cutler, hdr.Halfa.Biscay, hdr.Halfa.Windber, hdr.Halfa.DesPeres, hdr.Halfa.Chatom, hdr.Halfa.Niota, hdr.Halfa.Stonebank });
-        if (hdr.Halfa.Laketown == tmp_1) 
-            mark_to_drop();
-        tmp_9 = Charlack.get<tuple_5>({ hdr.Palatine.Broussard, hdr.Palatine.Miller, hdr.Palatine.Geeville, hdr.Palatine.Belgrade, hdr.Palatine.Sandoval, hdr.Palatine.Cutler, hdr.Palatine.Biscay, hdr.Palatine.Windber, hdr.Palatine.DesPeres, hdr.Palatine.Chatom, hdr.Palatine.Niota, hdr.Palatine.Stonebank });
-        if (hdr.Palatine.Laketown == tmp_9) 
-            mark_to_drop();
+        verify_checksum<tuple_5, bit<16>>(true, { hdr.Halfa.Broussard, hdr.Halfa.Miller, hdr.Halfa.Geeville, hdr.Halfa.Belgrade, hdr.Halfa.Sandoval, hdr.Halfa.Cutler, hdr.Halfa.Biscay, hdr.Halfa.Windber, hdr.Halfa.DesPeres, hdr.Halfa.Chatom, hdr.Halfa.Niota, hdr.Halfa.Stonebank }, hdr.Halfa.Laketown, HashAlgorithm.csum16);
+        verify_checksum<tuple_5, bit<16>>(true, { hdr.Palatine.Broussard, hdr.Palatine.Miller, hdr.Palatine.Geeville, hdr.Palatine.Belgrade, hdr.Palatine.Sandoval, hdr.Palatine.Cutler, hdr.Palatine.Biscay, hdr.Palatine.Windber, hdr.Palatine.DesPeres, hdr.Palatine.Chatom, hdr.Palatine.Niota, hdr.Palatine.Stonebank }, hdr.Palatine.Laketown, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    bit<16> tmp_11;
-    bit<16> tmp_12;
-    @name("Burnett") Checksum16() Burnett_2;
-    @name("Charlack") Checksum16() Charlack_2;
     apply {
-        tmp_11 = Burnett_2.get<tuple_5>({ hdr.Halfa.Broussard, hdr.Halfa.Miller, hdr.Halfa.Geeville, hdr.Halfa.Belgrade, hdr.Halfa.Sandoval, hdr.Halfa.Cutler, hdr.Halfa.Biscay, hdr.Halfa.Windber, hdr.Halfa.DesPeres, hdr.Halfa.Chatom, hdr.Halfa.Niota, hdr.Halfa.Stonebank });
-        hdr.Halfa.Laketown = tmp_11;
-        tmp_12 = Charlack_2.get<tuple_5>({ hdr.Palatine.Broussard, hdr.Palatine.Miller, hdr.Palatine.Geeville, hdr.Palatine.Belgrade, hdr.Palatine.Sandoval, hdr.Palatine.Cutler, hdr.Palatine.Biscay, hdr.Palatine.Windber, hdr.Palatine.DesPeres, hdr.Palatine.Chatom, hdr.Palatine.Niota, hdr.Palatine.Stonebank });
-        hdr.Palatine.Laketown = tmp_12;
+        update_checksum<tuple_5, bit<16>>(true, { hdr.Halfa.Broussard, hdr.Halfa.Miller, hdr.Halfa.Geeville, hdr.Halfa.Belgrade, hdr.Halfa.Sandoval, hdr.Halfa.Cutler, hdr.Halfa.Biscay, hdr.Halfa.Windber, hdr.Halfa.DesPeres, hdr.Halfa.Chatom, hdr.Halfa.Niota, hdr.Halfa.Stonebank }, hdr.Halfa.Laketown, HashAlgorithm.csum16);
+        update_checksum<tuple_5, bit<16>>(true, { hdr.Palatine.Broussard, hdr.Palatine.Miller, hdr.Palatine.Geeville, hdr.Palatine.Belgrade, hdr.Palatine.Sandoval, hdr.Palatine.Cutler, hdr.Palatine.Biscay, hdr.Palatine.Windber, hdr.Palatine.DesPeres, hdr.Palatine.Chatom, hdr.Palatine.Niota, hdr.Palatine.Stonebank }, hdr.Palatine.Laketown, HashAlgorithm.csum16);
     }
 }
 

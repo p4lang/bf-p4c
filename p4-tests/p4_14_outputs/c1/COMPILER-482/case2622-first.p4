@@ -2854,23 +2854,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    Checksum16() Equality;
-    Checksum16() Shelbiana;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        if (hdr.Gosnell.Dilia == (Equality.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Gosnell.Sallisaw, hdr.Gosnell.Pendroy, hdr.Gosnell.Dundalk, hdr.Gosnell.Homeacre, hdr.Gosnell.Libby, hdr.Gosnell.Adair, hdr.Gosnell.Arcanum, hdr.Gosnell.Hewitt, hdr.Gosnell.Boysen, hdr.Gosnell.Pineridge, hdr.Gosnell.Blunt, hdr.Gosnell.Clermont }))) 
-            mark_to_drop();
-        if (hdr.Lakebay.Dilia == (Shelbiana.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Lakebay.Sallisaw, hdr.Lakebay.Pendroy, hdr.Lakebay.Dundalk, hdr.Lakebay.Homeacre, hdr.Lakebay.Libby, hdr.Lakebay.Adair, hdr.Lakebay.Arcanum, hdr.Lakebay.Hewitt, hdr.Lakebay.Boysen, hdr.Lakebay.Pineridge, hdr.Lakebay.Blunt, hdr.Lakebay.Clermont }))) 
-            mark_to_drop();
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Gosnell.Sallisaw, hdr.Gosnell.Pendroy, hdr.Gosnell.Dundalk, hdr.Gosnell.Homeacre, hdr.Gosnell.Libby, hdr.Gosnell.Adair, hdr.Gosnell.Arcanum, hdr.Gosnell.Hewitt, hdr.Gosnell.Boysen, hdr.Gosnell.Pineridge, hdr.Gosnell.Blunt, hdr.Gosnell.Clermont }, hdr.Gosnell.Dilia, HashAlgorithm.csum16);
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Lakebay.Sallisaw, hdr.Lakebay.Pendroy, hdr.Lakebay.Dundalk, hdr.Lakebay.Homeacre, hdr.Lakebay.Libby, hdr.Lakebay.Adair, hdr.Lakebay.Arcanum, hdr.Lakebay.Hewitt, hdr.Lakebay.Boysen, hdr.Lakebay.Pineridge, hdr.Lakebay.Blunt, hdr.Lakebay.Clermont }, hdr.Lakebay.Dilia, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    Checksum16() Equality;
-    Checksum16() Shelbiana;
     apply {
-        hdr.Gosnell.Dilia = Equality.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Gosnell.Sallisaw, hdr.Gosnell.Pendroy, hdr.Gosnell.Dundalk, hdr.Gosnell.Homeacre, hdr.Gosnell.Libby, hdr.Gosnell.Adair, hdr.Gosnell.Arcanum, hdr.Gosnell.Hewitt, hdr.Gosnell.Boysen, hdr.Gosnell.Pineridge, hdr.Gosnell.Blunt, hdr.Gosnell.Clermont });
-        hdr.Lakebay.Dilia = Shelbiana.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Lakebay.Sallisaw, hdr.Lakebay.Pendroy, hdr.Lakebay.Dundalk, hdr.Lakebay.Homeacre, hdr.Lakebay.Libby, hdr.Lakebay.Adair, hdr.Lakebay.Arcanum, hdr.Lakebay.Hewitt, hdr.Lakebay.Boysen, hdr.Lakebay.Pineridge, hdr.Lakebay.Blunt, hdr.Lakebay.Clermont });
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Gosnell.Sallisaw, hdr.Gosnell.Pendroy, hdr.Gosnell.Dundalk, hdr.Gosnell.Homeacre, hdr.Gosnell.Libby, hdr.Gosnell.Adair, hdr.Gosnell.Arcanum, hdr.Gosnell.Hewitt, hdr.Gosnell.Boysen, hdr.Gosnell.Pineridge, hdr.Gosnell.Blunt, hdr.Gosnell.Clermont }, hdr.Gosnell.Dilia, HashAlgorithm.csum16);
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Lakebay.Sallisaw, hdr.Lakebay.Pendroy, hdr.Lakebay.Dundalk, hdr.Lakebay.Homeacre, hdr.Lakebay.Libby, hdr.Lakebay.Adair, hdr.Lakebay.Arcanum, hdr.Lakebay.Hewitt, hdr.Lakebay.Boysen, hdr.Lakebay.Pineridge, hdr.Lakebay.Blunt, hdr.Lakebay.Clermont }, hdr.Lakebay.Dilia, HashAlgorithm.csum16);
     }
 }
 

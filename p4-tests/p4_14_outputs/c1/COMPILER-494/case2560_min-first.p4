@@ -776,23 +776,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    Checksum16() Ojibwa;
-    Checksum16() Bardwell;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        if (hdr.Kinsley.Leola == (Ojibwa.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Kinsley.Adair, hdr.Kinsley.Arcanum, hdr.Kinsley.Hewitt, hdr.Kinsley.Boysen, hdr.Kinsley.Pineridge, hdr.Kinsley.Dilia, hdr.Kinsley.Blunt, hdr.Kinsley.Clermont, hdr.Kinsley.DeepGap, hdr.Kinsley.Cuprum, hdr.Kinsley.Keachi, hdr.Kinsley.Finley }))) 
-            mark_to_drop();
-        if (hdr.Wauseon.Leola == (Bardwell.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Wauseon.Adair, hdr.Wauseon.Arcanum, hdr.Wauseon.Hewitt, hdr.Wauseon.Boysen, hdr.Wauseon.Pineridge, hdr.Wauseon.Dilia, hdr.Wauseon.Blunt, hdr.Wauseon.Clermont, hdr.Wauseon.DeepGap, hdr.Wauseon.Cuprum, hdr.Wauseon.Keachi, hdr.Wauseon.Finley }))) 
-            mark_to_drop();
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Kinsley.Adair, hdr.Kinsley.Arcanum, hdr.Kinsley.Hewitt, hdr.Kinsley.Boysen, hdr.Kinsley.Pineridge, hdr.Kinsley.Dilia, hdr.Kinsley.Blunt, hdr.Kinsley.Clermont, hdr.Kinsley.DeepGap, hdr.Kinsley.Cuprum, hdr.Kinsley.Keachi, hdr.Kinsley.Finley }, hdr.Kinsley.Leola, HashAlgorithm.csum16);
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Wauseon.Adair, hdr.Wauseon.Arcanum, hdr.Wauseon.Hewitt, hdr.Wauseon.Boysen, hdr.Wauseon.Pineridge, hdr.Wauseon.Dilia, hdr.Wauseon.Blunt, hdr.Wauseon.Clermont, hdr.Wauseon.DeepGap, hdr.Wauseon.Cuprum, hdr.Wauseon.Keachi, hdr.Wauseon.Finley }, hdr.Wauseon.Leola, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    Checksum16() Ojibwa;
-    Checksum16() Bardwell;
     apply {
-        hdr.Kinsley.Leola = Ojibwa.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Kinsley.Adair, hdr.Kinsley.Arcanum, hdr.Kinsley.Hewitt, hdr.Kinsley.Boysen, hdr.Kinsley.Pineridge, hdr.Kinsley.Dilia, hdr.Kinsley.Blunt, hdr.Kinsley.Clermont, hdr.Kinsley.DeepGap, hdr.Kinsley.Cuprum, hdr.Kinsley.Keachi, hdr.Kinsley.Finley });
-        hdr.Wauseon.Leola = Bardwell.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Wauseon.Adair, hdr.Wauseon.Arcanum, hdr.Wauseon.Hewitt, hdr.Wauseon.Boysen, hdr.Wauseon.Pineridge, hdr.Wauseon.Dilia, hdr.Wauseon.Blunt, hdr.Wauseon.Clermont, hdr.Wauseon.DeepGap, hdr.Wauseon.Cuprum, hdr.Wauseon.Keachi, hdr.Wauseon.Finley });
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Kinsley.Adair, hdr.Kinsley.Arcanum, hdr.Kinsley.Hewitt, hdr.Kinsley.Boysen, hdr.Kinsley.Pineridge, hdr.Kinsley.Dilia, hdr.Kinsley.Blunt, hdr.Kinsley.Clermont, hdr.Kinsley.DeepGap, hdr.Kinsley.Cuprum, hdr.Kinsley.Keachi, hdr.Kinsley.Finley }, hdr.Kinsley.Leola, HashAlgorithm.csum16);
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Wauseon.Adair, hdr.Wauseon.Arcanum, hdr.Wauseon.Hewitt, hdr.Wauseon.Boysen, hdr.Wauseon.Pineridge, hdr.Wauseon.Dilia, hdr.Wauseon.Blunt, hdr.Wauseon.Clermont, hdr.Wauseon.DeepGap, hdr.Wauseon.Cuprum, hdr.Wauseon.Keachi, hdr.Wauseon.Finley }, hdr.Wauseon.Leola, HashAlgorithm.csum16);
     }
 }
 

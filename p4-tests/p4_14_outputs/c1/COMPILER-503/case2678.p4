@@ -2381,23 +2381,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    Checksum16() Anacortes;
-    Checksum16() Duncombe;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        if (hdr.HornLake.Angeles == Anacortes.get({ hdr.HornLake.Woodbury, hdr.HornLake.Munich, hdr.HornLake.Lansdale, hdr.HornLake.Deport, hdr.HornLake.Eureka, hdr.HornLake.Litroe, hdr.HornLake.Neavitt, hdr.HornLake.Heavener, hdr.HornLake.Elderon, hdr.HornLake.Columbia, hdr.HornLake.Kalaloch, hdr.HornLake.Tilton })) 
-            mark_to_drop();
-        if (hdr.Scherr.Angeles == Duncombe.get({ hdr.Scherr.Woodbury, hdr.Scherr.Munich, hdr.Scherr.Lansdale, hdr.Scherr.Deport, hdr.Scherr.Eureka, hdr.Scherr.Litroe, hdr.Scherr.Neavitt, hdr.Scherr.Heavener, hdr.Scherr.Elderon, hdr.Scherr.Columbia, hdr.Scherr.Kalaloch, hdr.Scherr.Tilton })) 
-            mark_to_drop();
+        verify_checksum(true, { hdr.HornLake.Woodbury, hdr.HornLake.Munich, hdr.HornLake.Lansdale, hdr.HornLake.Deport, hdr.HornLake.Eureka, hdr.HornLake.Litroe, hdr.HornLake.Neavitt, hdr.HornLake.Heavener, hdr.HornLake.Elderon, hdr.HornLake.Columbia, hdr.HornLake.Kalaloch, hdr.HornLake.Tilton }, hdr.HornLake.Angeles, HashAlgorithm.csum16);
+        verify_checksum(true, { hdr.Scherr.Woodbury, hdr.Scherr.Munich, hdr.Scherr.Lansdale, hdr.Scherr.Deport, hdr.Scherr.Eureka, hdr.Scherr.Litroe, hdr.Scherr.Neavitt, hdr.Scherr.Heavener, hdr.Scherr.Elderon, hdr.Scherr.Columbia, hdr.Scherr.Kalaloch, hdr.Scherr.Tilton }, hdr.Scherr.Angeles, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    Checksum16() Anacortes;
-    Checksum16() Duncombe;
     apply {
-        hdr.HornLake.Angeles = Anacortes.get({ hdr.HornLake.Woodbury, hdr.HornLake.Munich, hdr.HornLake.Lansdale, hdr.HornLake.Deport, hdr.HornLake.Eureka, hdr.HornLake.Litroe, hdr.HornLake.Neavitt, hdr.HornLake.Heavener, hdr.HornLake.Elderon, hdr.HornLake.Columbia, hdr.HornLake.Kalaloch, hdr.HornLake.Tilton });
-        hdr.Scherr.Angeles = Duncombe.get({ hdr.Scherr.Woodbury, hdr.Scherr.Munich, hdr.Scherr.Lansdale, hdr.Scherr.Deport, hdr.Scherr.Eureka, hdr.Scherr.Litroe, hdr.Scherr.Neavitt, hdr.Scherr.Heavener, hdr.Scherr.Elderon, hdr.Scherr.Columbia, hdr.Scherr.Kalaloch, hdr.Scherr.Tilton });
+        update_checksum(true, { hdr.HornLake.Woodbury, hdr.HornLake.Munich, hdr.HornLake.Lansdale, hdr.HornLake.Deport, hdr.HornLake.Eureka, hdr.HornLake.Litroe, hdr.HornLake.Neavitt, hdr.HornLake.Heavener, hdr.HornLake.Elderon, hdr.HornLake.Columbia, hdr.HornLake.Kalaloch, hdr.HornLake.Tilton }, hdr.HornLake.Angeles, HashAlgorithm.csum16);
+        update_checksum(true, { hdr.Scherr.Woodbury, hdr.Scherr.Munich, hdr.Scherr.Lansdale, hdr.Scherr.Deport, hdr.Scherr.Eureka, hdr.Scherr.Litroe, hdr.Scherr.Neavitt, hdr.Scherr.Heavener, hdr.Scherr.Elderon, hdr.Scherr.Columbia, hdr.Scherr.Kalaloch, hdr.Scherr.Tilton }, hdr.Scherr.Angeles, HashAlgorithm.csum16);
     }
 }
 

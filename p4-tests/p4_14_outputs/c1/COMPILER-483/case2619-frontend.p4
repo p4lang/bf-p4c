@@ -2245,35 +2245,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    bit<16> tmp_2;
-    bool tmp_3;
-    bit<16> tmp_4;
-    bool tmp_5;
-    @name("Burnett") Checksum16() Burnett_0;
-    @name("Charlack") Checksum16() Charlack_0;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        tmp_2 = Burnett_0.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Halfa.Broussard, hdr.Halfa.Miller, hdr.Halfa.Geeville, hdr.Halfa.Belgrade, hdr.Halfa.Sandoval, hdr.Halfa.Cutler, hdr.Halfa.Biscay, hdr.Halfa.Windber, hdr.Halfa.DesPeres, hdr.Halfa.Chatom, hdr.Halfa.Niota, hdr.Halfa.Stonebank });
-        tmp_3 = hdr.Halfa.Laketown == tmp_2;
-        if (tmp_3) 
-            mark_to_drop();
-        tmp_4 = Charlack_0.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Palatine.Broussard, hdr.Palatine.Miller, hdr.Palatine.Geeville, hdr.Palatine.Belgrade, hdr.Palatine.Sandoval, hdr.Palatine.Cutler, hdr.Palatine.Biscay, hdr.Palatine.Windber, hdr.Palatine.DesPeres, hdr.Palatine.Chatom, hdr.Palatine.Niota, hdr.Palatine.Stonebank });
-        tmp_5 = hdr.Palatine.Laketown == tmp_4;
-        if (tmp_5) 
-            mark_to_drop();
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Halfa.Broussard, hdr.Halfa.Miller, hdr.Halfa.Geeville, hdr.Halfa.Belgrade, hdr.Halfa.Sandoval, hdr.Halfa.Cutler, hdr.Halfa.Biscay, hdr.Halfa.Windber, hdr.Halfa.DesPeres, hdr.Halfa.Chatom, hdr.Halfa.Niota, hdr.Halfa.Stonebank }, hdr.Halfa.Laketown, HashAlgorithm.csum16);
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Palatine.Broussard, hdr.Palatine.Miller, hdr.Palatine.Geeville, hdr.Palatine.Belgrade, hdr.Palatine.Sandoval, hdr.Palatine.Cutler, hdr.Palatine.Biscay, hdr.Palatine.Windber, hdr.Palatine.DesPeres, hdr.Palatine.Chatom, hdr.Palatine.Niota, hdr.Palatine.Stonebank }, hdr.Palatine.Laketown, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    bit<16> tmp_6;
-    bit<16> tmp_7;
-    @name("Burnett") Checksum16() Burnett_1;
-    @name("Charlack") Checksum16() Charlack_1;
     apply {
-        tmp_6 = Burnett_1.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Halfa.Broussard, hdr.Halfa.Miller, hdr.Halfa.Geeville, hdr.Halfa.Belgrade, hdr.Halfa.Sandoval, hdr.Halfa.Cutler, hdr.Halfa.Biscay, hdr.Halfa.Windber, hdr.Halfa.DesPeres, hdr.Halfa.Chatom, hdr.Halfa.Niota, hdr.Halfa.Stonebank });
-        hdr.Halfa.Laketown = tmp_6;
-        tmp_7 = Charlack_1.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Palatine.Broussard, hdr.Palatine.Miller, hdr.Palatine.Geeville, hdr.Palatine.Belgrade, hdr.Palatine.Sandoval, hdr.Palatine.Cutler, hdr.Palatine.Biscay, hdr.Palatine.Windber, hdr.Palatine.DesPeres, hdr.Palatine.Chatom, hdr.Palatine.Niota, hdr.Palatine.Stonebank });
-        hdr.Palatine.Laketown = tmp_7;
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Halfa.Broussard, hdr.Halfa.Miller, hdr.Halfa.Geeville, hdr.Halfa.Belgrade, hdr.Halfa.Sandoval, hdr.Halfa.Cutler, hdr.Halfa.Biscay, hdr.Halfa.Windber, hdr.Halfa.DesPeres, hdr.Halfa.Chatom, hdr.Halfa.Niota, hdr.Halfa.Stonebank }, hdr.Halfa.Laketown, HashAlgorithm.csum16);
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Palatine.Broussard, hdr.Palatine.Miller, hdr.Palatine.Geeville, hdr.Palatine.Belgrade, hdr.Palatine.Sandoval, hdr.Palatine.Cutler, hdr.Palatine.Biscay, hdr.Palatine.Windber, hdr.Palatine.DesPeres, hdr.Palatine.Chatom, hdr.Palatine.Niota, hdr.Palatine.Stonebank }, hdr.Palatine.Laketown, HashAlgorithm.csum16);
     }
 }
 

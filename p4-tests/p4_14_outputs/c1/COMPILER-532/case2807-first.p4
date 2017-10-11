@@ -3149,23 +3149,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    Checksum16() Delmar;
-    Checksum16() Cataract;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        if (hdr.Atlas.Berville == (Delmar.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Atlas.Sylva, hdr.Atlas.Fairhaven, hdr.Atlas.Achille, hdr.Atlas.Eolia, hdr.Atlas.Warba, hdr.Atlas.Dunbar, hdr.Atlas.McCaulley, hdr.Atlas.Newberg, hdr.Atlas.Mustang, hdr.Atlas.Keltys, hdr.Atlas.Sunman, hdr.Atlas.Melba }))) 
-            mark_to_drop();
-        if (hdr.FulksRun.Berville == (Cataract.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.FulksRun.Sylva, hdr.FulksRun.Fairhaven, hdr.FulksRun.Achille, hdr.FulksRun.Eolia, hdr.FulksRun.Warba, hdr.FulksRun.Dunbar, hdr.FulksRun.McCaulley, hdr.FulksRun.Newberg, hdr.FulksRun.Mustang, hdr.FulksRun.Keltys, hdr.FulksRun.Sunman, hdr.FulksRun.Melba }))) 
-            mark_to_drop();
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Atlas.Sylva, hdr.Atlas.Fairhaven, hdr.Atlas.Achille, hdr.Atlas.Eolia, hdr.Atlas.Warba, hdr.Atlas.Dunbar, hdr.Atlas.McCaulley, hdr.Atlas.Newberg, hdr.Atlas.Mustang, hdr.Atlas.Keltys, hdr.Atlas.Sunman, hdr.Atlas.Melba }, hdr.Atlas.Berville, HashAlgorithm.csum16);
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.FulksRun.Sylva, hdr.FulksRun.Fairhaven, hdr.FulksRun.Achille, hdr.FulksRun.Eolia, hdr.FulksRun.Warba, hdr.FulksRun.Dunbar, hdr.FulksRun.McCaulley, hdr.FulksRun.Newberg, hdr.FulksRun.Mustang, hdr.FulksRun.Keltys, hdr.FulksRun.Sunman, hdr.FulksRun.Melba }, hdr.FulksRun.Berville, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    Checksum16() Delmar;
-    Checksum16() Cataract;
     apply {
-        hdr.Atlas.Berville = Delmar.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Atlas.Sylva, hdr.Atlas.Fairhaven, hdr.Atlas.Achille, hdr.Atlas.Eolia, hdr.Atlas.Warba, hdr.Atlas.Dunbar, hdr.Atlas.McCaulley, hdr.Atlas.Newberg, hdr.Atlas.Mustang, hdr.Atlas.Keltys, hdr.Atlas.Sunman, hdr.Atlas.Melba });
-        hdr.FulksRun.Berville = Cataract.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.FulksRun.Sylva, hdr.FulksRun.Fairhaven, hdr.FulksRun.Achille, hdr.FulksRun.Eolia, hdr.FulksRun.Warba, hdr.FulksRun.Dunbar, hdr.FulksRun.McCaulley, hdr.FulksRun.Newberg, hdr.FulksRun.Mustang, hdr.FulksRun.Keltys, hdr.FulksRun.Sunman, hdr.FulksRun.Melba });
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Atlas.Sylva, hdr.Atlas.Fairhaven, hdr.Atlas.Achille, hdr.Atlas.Eolia, hdr.Atlas.Warba, hdr.Atlas.Dunbar, hdr.Atlas.McCaulley, hdr.Atlas.Newberg, hdr.Atlas.Mustang, hdr.Atlas.Keltys, hdr.Atlas.Sunman, hdr.Atlas.Melba }, hdr.Atlas.Berville, HashAlgorithm.csum16);
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.FulksRun.Sylva, hdr.FulksRun.Fairhaven, hdr.FulksRun.Achille, hdr.FulksRun.Eolia, hdr.FulksRun.Warba, hdr.FulksRun.Dunbar, hdr.FulksRun.McCaulley, hdr.FulksRun.Newberg, hdr.FulksRun.Mustang, hdr.FulksRun.Keltys, hdr.FulksRun.Sunman, hdr.FulksRun.Melba }, hdr.FulksRun.Berville, HashAlgorithm.csum16);
     }
 }
 

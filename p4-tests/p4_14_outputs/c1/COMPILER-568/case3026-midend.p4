@@ -3100,31 +3100,17 @@ struct tuple_5 {
     bit<32> field_29;
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    bit<16> tmp_21;
-    bit<16> tmp_23;
-    @name("Rexville") Checksum16() Rexville;
-    @name("AquaPark") Checksum16() AquaPark;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        tmp_21 = Rexville.get<tuple_5>({ hdr.Gakona.Bleecker, hdr.Gakona.Mondovi, hdr.Gakona.Sabetha, hdr.Gakona.Hobson, hdr.Gakona.Rosburg, hdr.Gakona.Dunnville, hdr.Gakona.Grigston, hdr.Gakona.Cusick, hdr.Gakona.Gonzalez, hdr.Gakona.Annandale, hdr.Gakona.PellLake, hdr.Gakona.Sweeny });
-        if (hdr.Gakona.Kalaloch == tmp_21) 
-            mark_to_drop();
-        tmp_23 = AquaPark.get<tuple_5>({ hdr.Toccopola.Bleecker, hdr.Toccopola.Mondovi, hdr.Toccopola.Sabetha, hdr.Toccopola.Hobson, hdr.Toccopola.Rosburg, hdr.Toccopola.Dunnville, hdr.Toccopola.Grigston, hdr.Toccopola.Cusick, hdr.Toccopola.Gonzalez, hdr.Toccopola.Annandale, hdr.Toccopola.PellLake, hdr.Toccopola.Sweeny });
-        if (hdr.Toccopola.Kalaloch == tmp_23) 
-            mark_to_drop();
+        verify_checksum<tuple_5, bit<16>>(true, { hdr.Gakona.Bleecker, hdr.Gakona.Mondovi, hdr.Gakona.Sabetha, hdr.Gakona.Hobson, hdr.Gakona.Rosburg, hdr.Gakona.Dunnville, hdr.Gakona.Grigston, hdr.Gakona.Cusick, hdr.Gakona.Gonzalez, hdr.Gakona.Annandale, hdr.Gakona.PellLake, hdr.Gakona.Sweeny }, hdr.Gakona.Kalaloch, HashAlgorithm.csum16);
+        verify_checksum<tuple_5, bit<16>>(true, { hdr.Toccopola.Bleecker, hdr.Toccopola.Mondovi, hdr.Toccopola.Sabetha, hdr.Toccopola.Hobson, hdr.Toccopola.Rosburg, hdr.Toccopola.Dunnville, hdr.Toccopola.Grigston, hdr.Toccopola.Cusick, hdr.Toccopola.Gonzalez, hdr.Toccopola.Annandale, hdr.Toccopola.PellLake, hdr.Toccopola.Sweeny }, hdr.Toccopola.Kalaloch, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    bit<16> tmp_25;
-    bit<16> tmp_26;
-    @name("Rexville") Checksum16() Rexville_2;
-    @name("AquaPark") Checksum16() AquaPark_2;
     apply {
-        tmp_25 = Rexville_2.get<tuple_5>({ hdr.Gakona.Bleecker, hdr.Gakona.Mondovi, hdr.Gakona.Sabetha, hdr.Gakona.Hobson, hdr.Gakona.Rosburg, hdr.Gakona.Dunnville, hdr.Gakona.Grigston, hdr.Gakona.Cusick, hdr.Gakona.Gonzalez, hdr.Gakona.Annandale, hdr.Gakona.PellLake, hdr.Gakona.Sweeny });
-        hdr.Gakona.Kalaloch = tmp_25;
-        tmp_26 = AquaPark_2.get<tuple_5>({ hdr.Toccopola.Bleecker, hdr.Toccopola.Mondovi, hdr.Toccopola.Sabetha, hdr.Toccopola.Hobson, hdr.Toccopola.Rosburg, hdr.Toccopola.Dunnville, hdr.Toccopola.Grigston, hdr.Toccopola.Cusick, hdr.Toccopola.Gonzalez, hdr.Toccopola.Annandale, hdr.Toccopola.PellLake, hdr.Toccopola.Sweeny });
-        hdr.Toccopola.Kalaloch = tmp_26;
+        update_checksum<tuple_5, bit<16>>(true, { hdr.Gakona.Bleecker, hdr.Gakona.Mondovi, hdr.Gakona.Sabetha, hdr.Gakona.Hobson, hdr.Gakona.Rosburg, hdr.Gakona.Dunnville, hdr.Gakona.Grigston, hdr.Gakona.Cusick, hdr.Gakona.Gonzalez, hdr.Gakona.Annandale, hdr.Gakona.PellLake, hdr.Gakona.Sweeny }, hdr.Gakona.Kalaloch, HashAlgorithm.csum16);
+        update_checksum<tuple_5, bit<16>>(true, { hdr.Toccopola.Bleecker, hdr.Toccopola.Mondovi, hdr.Toccopola.Sabetha, hdr.Toccopola.Hobson, hdr.Toccopola.Rosburg, hdr.Toccopola.Dunnville, hdr.Toccopola.Grigston, hdr.Toccopola.Cusick, hdr.Toccopola.Gonzalez, hdr.Toccopola.Annandale, hdr.Toccopola.PellLake, hdr.Toccopola.Sweeny }, hdr.Toccopola.Kalaloch, HashAlgorithm.csum16);
     }
 }
 

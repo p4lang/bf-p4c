@@ -3224,35 +3224,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    bit<16> tmp_16;
-    bool tmp_17;
-    bit<16> tmp_18;
-    bool tmp_19;
-    @name("Rankin") Checksum16() Rankin_0;
-    @name("Nanakuli") Checksum16() Nanakuli_0;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        tmp_16 = Rankin_0.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Maybee.Venice, hdr.Maybee.Heizer, hdr.Maybee.Frederika, hdr.Maybee.Angus, hdr.Maybee.Vieques, hdr.Maybee.Fackler, hdr.Maybee.Belmond, hdr.Maybee.Parker, hdr.Maybee.Weissert, hdr.Maybee.Lolita, hdr.Maybee.Camanche, hdr.Maybee.Remsen });
-        tmp_17 = hdr.Maybee.Chatanika == tmp_16;
-        if (tmp_17) 
-            mark_to_drop();
-        tmp_18 = Nanakuli_0.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Moorcroft.Venice, hdr.Moorcroft.Heizer, hdr.Moorcroft.Frederika, hdr.Moorcroft.Angus, hdr.Moorcroft.Vieques, hdr.Moorcroft.Fackler, hdr.Moorcroft.Belmond, hdr.Moorcroft.Parker, hdr.Moorcroft.Weissert, hdr.Moorcroft.Lolita, hdr.Moorcroft.Camanche, hdr.Moorcroft.Remsen });
-        tmp_19 = hdr.Moorcroft.Chatanika == tmp_18;
-        if (tmp_19) 
-            mark_to_drop();
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Maybee.Venice, hdr.Maybee.Heizer, hdr.Maybee.Frederika, hdr.Maybee.Angus, hdr.Maybee.Vieques, hdr.Maybee.Fackler, hdr.Maybee.Belmond, hdr.Maybee.Parker, hdr.Maybee.Weissert, hdr.Maybee.Lolita, hdr.Maybee.Camanche, hdr.Maybee.Remsen }, hdr.Maybee.Chatanika, HashAlgorithm.csum16);
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Moorcroft.Venice, hdr.Moorcroft.Heizer, hdr.Moorcroft.Frederika, hdr.Moorcroft.Angus, hdr.Moorcroft.Vieques, hdr.Moorcroft.Fackler, hdr.Moorcroft.Belmond, hdr.Moorcroft.Parker, hdr.Moorcroft.Weissert, hdr.Moorcroft.Lolita, hdr.Moorcroft.Camanche, hdr.Moorcroft.Remsen }, hdr.Moorcroft.Chatanika, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    bit<16> tmp_20;
-    bit<16> tmp_21;
-    @name("Rankin") Checksum16() Rankin_1;
-    @name("Nanakuli") Checksum16() Nanakuli_1;
     apply {
-        tmp_20 = Rankin_1.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Maybee.Venice, hdr.Maybee.Heizer, hdr.Maybee.Frederika, hdr.Maybee.Angus, hdr.Maybee.Vieques, hdr.Maybee.Fackler, hdr.Maybee.Belmond, hdr.Maybee.Parker, hdr.Maybee.Weissert, hdr.Maybee.Lolita, hdr.Maybee.Camanche, hdr.Maybee.Remsen });
-        hdr.Maybee.Chatanika = tmp_20;
-        tmp_21 = Nanakuli_1.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Moorcroft.Venice, hdr.Moorcroft.Heizer, hdr.Moorcroft.Frederika, hdr.Moorcroft.Angus, hdr.Moorcroft.Vieques, hdr.Moorcroft.Fackler, hdr.Moorcroft.Belmond, hdr.Moorcroft.Parker, hdr.Moorcroft.Weissert, hdr.Moorcroft.Lolita, hdr.Moorcroft.Camanche, hdr.Moorcroft.Remsen });
-        hdr.Moorcroft.Chatanika = tmp_21;
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Maybee.Venice, hdr.Maybee.Heizer, hdr.Maybee.Frederika, hdr.Maybee.Angus, hdr.Maybee.Vieques, hdr.Maybee.Fackler, hdr.Maybee.Belmond, hdr.Maybee.Parker, hdr.Maybee.Weissert, hdr.Maybee.Lolita, hdr.Maybee.Camanche, hdr.Maybee.Remsen }, hdr.Maybee.Chatanika, HashAlgorithm.csum16);
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Moorcroft.Venice, hdr.Moorcroft.Heizer, hdr.Moorcroft.Frederika, hdr.Moorcroft.Angus, hdr.Moorcroft.Vieques, hdr.Moorcroft.Fackler, hdr.Moorcroft.Belmond, hdr.Moorcroft.Parker, hdr.Moorcroft.Weissert, hdr.Moorcroft.Lolita, hdr.Moorcroft.Camanche, hdr.Moorcroft.Remsen }, hdr.Moorcroft.Chatanika, HashAlgorithm.csum16);
     }
 }
 

@@ -3033,35 +3033,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    bit<16> tmp_11;
-    bool tmp_12;
-    bit<16> tmp_13;
-    bool tmp_14;
-    @name("Delmar") Checksum16() Delmar_0;
-    @name("Cataract") Checksum16() Cataract_0;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        tmp_11 = Delmar_0.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Atlas.Sylva, hdr.Atlas.Fairhaven, hdr.Atlas.Achille, hdr.Atlas.Eolia, hdr.Atlas.Warba, hdr.Atlas.Dunbar, hdr.Atlas.McCaulley, hdr.Atlas.Newberg, hdr.Atlas.Mustang, hdr.Atlas.Keltys, hdr.Atlas.Sunman, hdr.Atlas.Melba });
-        tmp_12 = hdr.Atlas.Berville == tmp_11;
-        if (tmp_12) 
-            mark_to_drop();
-        tmp_13 = Cataract_0.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.FulksRun.Sylva, hdr.FulksRun.Fairhaven, hdr.FulksRun.Achille, hdr.FulksRun.Eolia, hdr.FulksRun.Warba, hdr.FulksRun.Dunbar, hdr.FulksRun.McCaulley, hdr.FulksRun.Newberg, hdr.FulksRun.Mustang, hdr.FulksRun.Keltys, hdr.FulksRun.Sunman, hdr.FulksRun.Melba });
-        tmp_14 = hdr.FulksRun.Berville == tmp_13;
-        if (tmp_14) 
-            mark_to_drop();
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Atlas.Sylva, hdr.Atlas.Fairhaven, hdr.Atlas.Achille, hdr.Atlas.Eolia, hdr.Atlas.Warba, hdr.Atlas.Dunbar, hdr.Atlas.McCaulley, hdr.Atlas.Newberg, hdr.Atlas.Mustang, hdr.Atlas.Keltys, hdr.Atlas.Sunman, hdr.Atlas.Melba }, hdr.Atlas.Berville, HashAlgorithm.csum16);
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.FulksRun.Sylva, hdr.FulksRun.Fairhaven, hdr.FulksRun.Achille, hdr.FulksRun.Eolia, hdr.FulksRun.Warba, hdr.FulksRun.Dunbar, hdr.FulksRun.McCaulley, hdr.FulksRun.Newberg, hdr.FulksRun.Mustang, hdr.FulksRun.Keltys, hdr.FulksRun.Sunman, hdr.FulksRun.Melba }, hdr.FulksRun.Berville, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    bit<16> tmp_15;
-    bit<16> tmp_16;
-    @name("Delmar") Checksum16() Delmar_1;
-    @name("Cataract") Checksum16() Cataract_1;
     apply {
-        tmp_15 = Delmar_1.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Atlas.Sylva, hdr.Atlas.Fairhaven, hdr.Atlas.Achille, hdr.Atlas.Eolia, hdr.Atlas.Warba, hdr.Atlas.Dunbar, hdr.Atlas.McCaulley, hdr.Atlas.Newberg, hdr.Atlas.Mustang, hdr.Atlas.Keltys, hdr.Atlas.Sunman, hdr.Atlas.Melba });
-        hdr.Atlas.Berville = tmp_15;
-        tmp_16 = Cataract_1.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.FulksRun.Sylva, hdr.FulksRun.Fairhaven, hdr.FulksRun.Achille, hdr.FulksRun.Eolia, hdr.FulksRun.Warba, hdr.FulksRun.Dunbar, hdr.FulksRun.McCaulley, hdr.FulksRun.Newberg, hdr.FulksRun.Mustang, hdr.FulksRun.Keltys, hdr.FulksRun.Sunman, hdr.FulksRun.Melba });
-        hdr.FulksRun.Berville = tmp_16;
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Atlas.Sylva, hdr.Atlas.Fairhaven, hdr.Atlas.Achille, hdr.Atlas.Eolia, hdr.Atlas.Warba, hdr.Atlas.Dunbar, hdr.Atlas.McCaulley, hdr.Atlas.Newberg, hdr.Atlas.Mustang, hdr.Atlas.Keltys, hdr.Atlas.Sunman, hdr.Atlas.Melba }, hdr.Atlas.Berville, HashAlgorithm.csum16);
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.FulksRun.Sylva, hdr.FulksRun.Fairhaven, hdr.FulksRun.Achille, hdr.FulksRun.Eolia, hdr.FulksRun.Warba, hdr.FulksRun.Dunbar, hdr.FulksRun.McCaulley, hdr.FulksRun.Newberg, hdr.FulksRun.Mustang, hdr.FulksRun.Keltys, hdr.FulksRun.Sunman, hdr.FulksRun.Melba }, hdr.FulksRun.Berville, HashAlgorithm.csum16);
     }
 }
 

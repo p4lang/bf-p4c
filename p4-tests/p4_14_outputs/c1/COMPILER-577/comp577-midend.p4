@@ -3169,31 +3169,17 @@ struct tuple_5 {
     bit<32> field_29;
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    bit<16> tmp_15;
-    bit<16> tmp_23;
-    @name("Ripley") Checksum16() Ripley;
-    @name("Sharon") Checksum16() Sharon;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        tmp_15 = Ripley.get<tuple_5>({ hdr.Klukwan.Humarock, hdr.Klukwan.Aguila, hdr.Klukwan.Monkstown, hdr.Klukwan.Rockaway, hdr.Klukwan.OakCity, hdr.Klukwan.Hamel, hdr.Klukwan.Hartfield, hdr.Klukwan.Bladen, hdr.Klukwan.Ridgeland, hdr.Klukwan.HillTop, hdr.Klukwan.Wahoo, hdr.Klukwan.Picayune });
-        if (hdr.Klukwan.Woodward == tmp_15) 
-            mark_to_drop();
-        tmp_23 = Sharon.get<tuple_5>({ hdr.Sharptown.Humarock, hdr.Sharptown.Aguila, hdr.Sharptown.Monkstown, hdr.Sharptown.Rockaway, hdr.Sharptown.OakCity, hdr.Sharptown.Hamel, hdr.Sharptown.Hartfield, hdr.Sharptown.Bladen, hdr.Sharptown.Ridgeland, hdr.Sharptown.HillTop, hdr.Sharptown.Wahoo, hdr.Sharptown.Picayune });
-        if (hdr.Sharptown.Woodward == tmp_23) 
-            mark_to_drop();
+        verify_checksum<tuple_5, bit<16>>(true, { hdr.Klukwan.Humarock, hdr.Klukwan.Aguila, hdr.Klukwan.Monkstown, hdr.Klukwan.Rockaway, hdr.Klukwan.OakCity, hdr.Klukwan.Hamel, hdr.Klukwan.Hartfield, hdr.Klukwan.Bladen, hdr.Klukwan.Ridgeland, hdr.Klukwan.HillTop, hdr.Klukwan.Wahoo, hdr.Klukwan.Picayune }, hdr.Klukwan.Woodward, HashAlgorithm.csum16);
+        verify_checksum<tuple_5, bit<16>>(true, { hdr.Sharptown.Humarock, hdr.Sharptown.Aguila, hdr.Sharptown.Monkstown, hdr.Sharptown.Rockaway, hdr.Sharptown.OakCity, hdr.Sharptown.Hamel, hdr.Sharptown.Hartfield, hdr.Sharptown.Bladen, hdr.Sharptown.Ridgeland, hdr.Sharptown.HillTop, hdr.Sharptown.Wahoo, hdr.Sharptown.Picayune }, hdr.Sharptown.Woodward, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    bit<16> tmp_25;
-    bit<16> tmp_26;
-    @name("Ripley") Checksum16() Ripley_2;
-    @name("Sharon") Checksum16() Sharon_2;
     apply {
-        tmp_25 = Ripley_2.get<tuple_5>({ hdr.Klukwan.Humarock, hdr.Klukwan.Aguila, hdr.Klukwan.Monkstown, hdr.Klukwan.Rockaway, hdr.Klukwan.OakCity, hdr.Klukwan.Hamel, hdr.Klukwan.Hartfield, hdr.Klukwan.Bladen, hdr.Klukwan.Ridgeland, hdr.Klukwan.HillTop, hdr.Klukwan.Wahoo, hdr.Klukwan.Picayune });
-        hdr.Klukwan.Woodward = tmp_25;
-        tmp_26 = Sharon_2.get<tuple_5>({ hdr.Sharptown.Humarock, hdr.Sharptown.Aguila, hdr.Sharptown.Monkstown, hdr.Sharptown.Rockaway, hdr.Sharptown.OakCity, hdr.Sharptown.Hamel, hdr.Sharptown.Hartfield, hdr.Sharptown.Bladen, hdr.Sharptown.Ridgeland, hdr.Sharptown.HillTop, hdr.Sharptown.Wahoo, hdr.Sharptown.Picayune });
-        hdr.Sharptown.Woodward = tmp_26;
+        update_checksum<tuple_5, bit<16>>(true, { hdr.Klukwan.Humarock, hdr.Klukwan.Aguila, hdr.Klukwan.Monkstown, hdr.Klukwan.Rockaway, hdr.Klukwan.OakCity, hdr.Klukwan.Hamel, hdr.Klukwan.Hartfield, hdr.Klukwan.Bladen, hdr.Klukwan.Ridgeland, hdr.Klukwan.HillTop, hdr.Klukwan.Wahoo, hdr.Klukwan.Picayune }, hdr.Klukwan.Woodward, HashAlgorithm.csum16);
+        update_checksum<tuple_5, bit<16>>(true, { hdr.Sharptown.Humarock, hdr.Sharptown.Aguila, hdr.Sharptown.Monkstown, hdr.Sharptown.Rockaway, hdr.Sharptown.OakCity, hdr.Sharptown.Hamel, hdr.Sharptown.Hartfield, hdr.Sharptown.Bladen, hdr.Sharptown.Ridgeland, hdr.Sharptown.HillTop, hdr.Sharptown.Wahoo, hdr.Sharptown.Picayune }, hdr.Sharptown.Woodward, HashAlgorithm.csum16);
     }
 }
 

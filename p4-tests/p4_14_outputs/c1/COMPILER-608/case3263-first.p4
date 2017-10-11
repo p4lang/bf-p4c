@@ -3417,23 +3417,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    Checksum16() Callimont;
-    Checksum16() McAlister;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        if (hdr.Caspian.Gunder == (Callimont.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Caspian.Eunice, hdr.Caspian.Yatesboro, hdr.Caspian.Philmont, hdr.Caspian.Vinita, hdr.Caspian.Hillside, hdr.Caspian.Wyarno, hdr.Caspian.Goosport, hdr.Caspian.Currie, hdr.Caspian.Stambaugh, hdr.Caspian.Ceiba, hdr.Caspian.Rochert, hdr.Caspian.Milbank }))) 
-            mark_to_drop();
-        if (hdr.Newcomb.Gunder == (McAlister.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Newcomb.Eunice, hdr.Newcomb.Yatesboro, hdr.Newcomb.Philmont, hdr.Newcomb.Vinita, hdr.Newcomb.Hillside, hdr.Newcomb.Wyarno, hdr.Newcomb.Goosport, hdr.Newcomb.Currie, hdr.Newcomb.Stambaugh, hdr.Newcomb.Ceiba, hdr.Newcomb.Rochert, hdr.Newcomb.Milbank }))) 
-            mark_to_drop();
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Caspian.Eunice, hdr.Caspian.Yatesboro, hdr.Caspian.Philmont, hdr.Caspian.Vinita, hdr.Caspian.Hillside, hdr.Caspian.Wyarno, hdr.Caspian.Goosport, hdr.Caspian.Currie, hdr.Caspian.Stambaugh, hdr.Caspian.Ceiba, hdr.Caspian.Rochert, hdr.Caspian.Milbank }, hdr.Caspian.Gunder, HashAlgorithm.csum16);
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Newcomb.Eunice, hdr.Newcomb.Yatesboro, hdr.Newcomb.Philmont, hdr.Newcomb.Vinita, hdr.Newcomb.Hillside, hdr.Newcomb.Wyarno, hdr.Newcomb.Goosport, hdr.Newcomb.Currie, hdr.Newcomb.Stambaugh, hdr.Newcomb.Ceiba, hdr.Newcomb.Rochert, hdr.Newcomb.Milbank }, hdr.Newcomb.Gunder, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    Checksum16() Callimont;
-    Checksum16() McAlister;
     apply {
-        hdr.Caspian.Gunder = Callimont.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Caspian.Eunice, hdr.Caspian.Yatesboro, hdr.Caspian.Philmont, hdr.Caspian.Vinita, hdr.Caspian.Hillside, hdr.Caspian.Wyarno, hdr.Caspian.Goosport, hdr.Caspian.Currie, hdr.Caspian.Stambaugh, hdr.Caspian.Ceiba, hdr.Caspian.Rochert, hdr.Caspian.Milbank });
-        hdr.Newcomb.Gunder = McAlister.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Newcomb.Eunice, hdr.Newcomb.Yatesboro, hdr.Newcomb.Philmont, hdr.Newcomb.Vinita, hdr.Newcomb.Hillside, hdr.Newcomb.Wyarno, hdr.Newcomb.Goosport, hdr.Newcomb.Currie, hdr.Newcomb.Stambaugh, hdr.Newcomb.Ceiba, hdr.Newcomb.Rochert, hdr.Newcomb.Milbank });
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Caspian.Eunice, hdr.Caspian.Yatesboro, hdr.Caspian.Philmont, hdr.Caspian.Vinita, hdr.Caspian.Hillside, hdr.Caspian.Wyarno, hdr.Caspian.Goosport, hdr.Caspian.Currie, hdr.Caspian.Stambaugh, hdr.Caspian.Ceiba, hdr.Caspian.Rochert, hdr.Caspian.Milbank }, hdr.Caspian.Gunder, HashAlgorithm.csum16);
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Newcomb.Eunice, hdr.Newcomb.Yatesboro, hdr.Newcomb.Philmont, hdr.Newcomb.Vinita, hdr.Newcomb.Hillside, hdr.Newcomb.Wyarno, hdr.Newcomb.Goosport, hdr.Newcomb.Currie, hdr.Newcomb.Stambaugh, hdr.Newcomb.Ceiba, hdr.Newcomb.Rochert, hdr.Newcomb.Milbank }, hdr.Newcomb.Gunder, HashAlgorithm.csum16);
     }
 }
 

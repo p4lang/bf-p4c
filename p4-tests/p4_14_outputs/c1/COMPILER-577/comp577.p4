@@ -3999,23 +3999,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    Checksum16() Ripley;
-    Checksum16() Sharon;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        if (hdr.Klukwan.Woodward == Ripley.get({ hdr.Klukwan.Humarock, hdr.Klukwan.Aguila, hdr.Klukwan.Monkstown, hdr.Klukwan.Rockaway, hdr.Klukwan.OakCity, hdr.Klukwan.Hamel, hdr.Klukwan.Hartfield, hdr.Klukwan.Bladen, hdr.Klukwan.Ridgeland, hdr.Klukwan.HillTop, hdr.Klukwan.Wahoo, hdr.Klukwan.Picayune })) 
-            mark_to_drop();
-        if (hdr.Sharptown.Woodward == Sharon.get({ hdr.Sharptown.Humarock, hdr.Sharptown.Aguila, hdr.Sharptown.Monkstown, hdr.Sharptown.Rockaway, hdr.Sharptown.OakCity, hdr.Sharptown.Hamel, hdr.Sharptown.Hartfield, hdr.Sharptown.Bladen, hdr.Sharptown.Ridgeland, hdr.Sharptown.HillTop, hdr.Sharptown.Wahoo, hdr.Sharptown.Picayune })) 
-            mark_to_drop();
+        verify_checksum(true, { hdr.Klukwan.Humarock, hdr.Klukwan.Aguila, hdr.Klukwan.Monkstown, hdr.Klukwan.Rockaway, hdr.Klukwan.OakCity, hdr.Klukwan.Hamel, hdr.Klukwan.Hartfield, hdr.Klukwan.Bladen, hdr.Klukwan.Ridgeland, hdr.Klukwan.HillTop, hdr.Klukwan.Wahoo, hdr.Klukwan.Picayune }, hdr.Klukwan.Woodward, HashAlgorithm.csum16);
+        verify_checksum(true, { hdr.Sharptown.Humarock, hdr.Sharptown.Aguila, hdr.Sharptown.Monkstown, hdr.Sharptown.Rockaway, hdr.Sharptown.OakCity, hdr.Sharptown.Hamel, hdr.Sharptown.Hartfield, hdr.Sharptown.Bladen, hdr.Sharptown.Ridgeland, hdr.Sharptown.HillTop, hdr.Sharptown.Wahoo, hdr.Sharptown.Picayune }, hdr.Sharptown.Woodward, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    Checksum16() Ripley;
-    Checksum16() Sharon;
     apply {
-        hdr.Klukwan.Woodward = Ripley.get({ hdr.Klukwan.Humarock, hdr.Klukwan.Aguila, hdr.Klukwan.Monkstown, hdr.Klukwan.Rockaway, hdr.Klukwan.OakCity, hdr.Klukwan.Hamel, hdr.Klukwan.Hartfield, hdr.Klukwan.Bladen, hdr.Klukwan.Ridgeland, hdr.Klukwan.HillTop, hdr.Klukwan.Wahoo, hdr.Klukwan.Picayune });
-        hdr.Sharptown.Woodward = Sharon.get({ hdr.Sharptown.Humarock, hdr.Sharptown.Aguila, hdr.Sharptown.Monkstown, hdr.Sharptown.Rockaway, hdr.Sharptown.OakCity, hdr.Sharptown.Hamel, hdr.Sharptown.Hartfield, hdr.Sharptown.Bladen, hdr.Sharptown.Ridgeland, hdr.Sharptown.HillTop, hdr.Sharptown.Wahoo, hdr.Sharptown.Picayune });
+        update_checksum(true, { hdr.Klukwan.Humarock, hdr.Klukwan.Aguila, hdr.Klukwan.Monkstown, hdr.Klukwan.Rockaway, hdr.Klukwan.OakCity, hdr.Klukwan.Hamel, hdr.Klukwan.Hartfield, hdr.Klukwan.Bladen, hdr.Klukwan.Ridgeland, hdr.Klukwan.HillTop, hdr.Klukwan.Wahoo, hdr.Klukwan.Picayune }, hdr.Klukwan.Woodward, HashAlgorithm.csum16);
+        update_checksum(true, { hdr.Sharptown.Humarock, hdr.Sharptown.Aguila, hdr.Sharptown.Monkstown, hdr.Sharptown.Rockaway, hdr.Sharptown.OakCity, hdr.Sharptown.Hamel, hdr.Sharptown.Hartfield, hdr.Sharptown.Bladen, hdr.Sharptown.Ridgeland, hdr.Sharptown.HillTop, hdr.Sharptown.Wahoo, hdr.Sharptown.Picayune }, hdr.Sharptown.Woodward, HashAlgorithm.csum16);
     }
 }
 

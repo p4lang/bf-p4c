@@ -3249,35 +3249,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    bit<16> tmp_16;
-    bool tmp_17;
-    bit<16> tmp_18;
-    bool tmp_19;
-    @name("Bolckow") Checksum16() Bolckow_0;
-    @name("Badger") Checksum16() Badger_0;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        tmp_16 = Bolckow_0.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Bellmead.Moraine, hdr.Bellmead.Kensal, hdr.Bellmead.Menomonie, hdr.Bellmead.Salix, hdr.Bellmead.Chandalar, hdr.Bellmead.Ruffin, hdr.Bellmead.Amanda, hdr.Bellmead.Gillespie, hdr.Bellmead.Ignacio, hdr.Bellmead.Granville, hdr.Bellmead.Hines, hdr.Bellmead.Assinippi });
-        tmp_17 = hdr.Bellmead.Shawmut == tmp_16;
-        if (tmp_17) 
-            mark_to_drop();
-        tmp_18 = Badger_0.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.ElkRidge.Moraine, hdr.ElkRidge.Kensal, hdr.ElkRidge.Menomonie, hdr.ElkRidge.Salix, hdr.ElkRidge.Chandalar, hdr.ElkRidge.Ruffin, hdr.ElkRidge.Amanda, hdr.ElkRidge.Gillespie, hdr.ElkRidge.Ignacio, hdr.ElkRidge.Granville, hdr.ElkRidge.Hines, hdr.ElkRidge.Assinippi });
-        tmp_19 = hdr.ElkRidge.Shawmut == tmp_18;
-        if (tmp_19) 
-            mark_to_drop();
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Bellmead.Moraine, hdr.Bellmead.Kensal, hdr.Bellmead.Menomonie, hdr.Bellmead.Salix, hdr.Bellmead.Chandalar, hdr.Bellmead.Ruffin, hdr.Bellmead.Amanda, hdr.Bellmead.Gillespie, hdr.Bellmead.Ignacio, hdr.Bellmead.Granville, hdr.Bellmead.Hines, hdr.Bellmead.Assinippi }, hdr.Bellmead.Shawmut, HashAlgorithm.csum16);
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.ElkRidge.Moraine, hdr.ElkRidge.Kensal, hdr.ElkRidge.Menomonie, hdr.ElkRidge.Salix, hdr.ElkRidge.Chandalar, hdr.ElkRidge.Ruffin, hdr.ElkRidge.Amanda, hdr.ElkRidge.Gillespie, hdr.ElkRidge.Ignacio, hdr.ElkRidge.Granville, hdr.ElkRidge.Hines, hdr.ElkRidge.Assinippi }, hdr.ElkRidge.Shawmut, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    bit<16> tmp_20;
-    bit<16> tmp_21;
-    @name("Bolckow") Checksum16() Bolckow_1;
-    @name("Badger") Checksum16() Badger_1;
     apply {
-        tmp_20 = Bolckow_1.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Bellmead.Moraine, hdr.Bellmead.Kensal, hdr.Bellmead.Menomonie, hdr.Bellmead.Salix, hdr.Bellmead.Chandalar, hdr.Bellmead.Ruffin, hdr.Bellmead.Amanda, hdr.Bellmead.Gillespie, hdr.Bellmead.Ignacio, hdr.Bellmead.Granville, hdr.Bellmead.Hines, hdr.Bellmead.Assinippi });
-        hdr.Bellmead.Shawmut = tmp_20;
-        tmp_21 = Badger_1.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.ElkRidge.Moraine, hdr.ElkRidge.Kensal, hdr.ElkRidge.Menomonie, hdr.ElkRidge.Salix, hdr.ElkRidge.Chandalar, hdr.ElkRidge.Ruffin, hdr.ElkRidge.Amanda, hdr.ElkRidge.Gillespie, hdr.ElkRidge.Ignacio, hdr.ElkRidge.Granville, hdr.ElkRidge.Hines, hdr.ElkRidge.Assinippi });
-        hdr.ElkRidge.Shawmut = tmp_21;
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Bellmead.Moraine, hdr.Bellmead.Kensal, hdr.Bellmead.Menomonie, hdr.Bellmead.Salix, hdr.Bellmead.Chandalar, hdr.Bellmead.Ruffin, hdr.Bellmead.Amanda, hdr.Bellmead.Gillespie, hdr.Bellmead.Ignacio, hdr.Bellmead.Granville, hdr.Bellmead.Hines, hdr.Bellmead.Assinippi }, hdr.Bellmead.Shawmut, HashAlgorithm.csum16);
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.ElkRidge.Moraine, hdr.ElkRidge.Kensal, hdr.ElkRidge.Menomonie, hdr.ElkRidge.Salix, hdr.ElkRidge.Chandalar, hdr.ElkRidge.Ruffin, hdr.ElkRidge.Amanda, hdr.ElkRidge.Gillespie, hdr.ElkRidge.Ignacio, hdr.ElkRidge.Granville, hdr.ElkRidge.Hines, hdr.ElkRidge.Assinippi }, hdr.ElkRidge.Shawmut, HashAlgorithm.csum16);
     }
 }
 

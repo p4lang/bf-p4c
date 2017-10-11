@@ -2399,23 +2399,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    Checksum16() Anacortes;
-    Checksum16() Duncombe;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        if (hdr.HornLake.Angeles == (Anacortes.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.HornLake.Woodbury, hdr.HornLake.Munich, hdr.HornLake.Lansdale, hdr.HornLake.Deport, hdr.HornLake.Eureka, hdr.HornLake.Litroe, hdr.HornLake.Neavitt, hdr.HornLake.Heavener, hdr.HornLake.Elderon, hdr.HornLake.Columbia, hdr.HornLake.Kalaloch, hdr.HornLake.Tilton }))) 
-            mark_to_drop();
-        if (hdr.Scherr.Angeles == (Duncombe.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Scherr.Woodbury, hdr.Scherr.Munich, hdr.Scherr.Lansdale, hdr.Scherr.Deport, hdr.Scherr.Eureka, hdr.Scherr.Litroe, hdr.Scherr.Neavitt, hdr.Scherr.Heavener, hdr.Scherr.Elderon, hdr.Scherr.Columbia, hdr.Scherr.Kalaloch, hdr.Scherr.Tilton }))) 
-            mark_to_drop();
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.HornLake.Woodbury, hdr.HornLake.Munich, hdr.HornLake.Lansdale, hdr.HornLake.Deport, hdr.HornLake.Eureka, hdr.HornLake.Litroe, hdr.HornLake.Neavitt, hdr.HornLake.Heavener, hdr.HornLake.Elderon, hdr.HornLake.Columbia, hdr.HornLake.Kalaloch, hdr.HornLake.Tilton }, hdr.HornLake.Angeles, HashAlgorithm.csum16);
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Scherr.Woodbury, hdr.Scherr.Munich, hdr.Scherr.Lansdale, hdr.Scherr.Deport, hdr.Scherr.Eureka, hdr.Scherr.Litroe, hdr.Scherr.Neavitt, hdr.Scherr.Heavener, hdr.Scherr.Elderon, hdr.Scherr.Columbia, hdr.Scherr.Kalaloch, hdr.Scherr.Tilton }, hdr.Scherr.Angeles, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    Checksum16() Anacortes;
-    Checksum16() Duncombe;
     apply {
-        hdr.HornLake.Angeles = Anacortes.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.HornLake.Woodbury, hdr.HornLake.Munich, hdr.HornLake.Lansdale, hdr.HornLake.Deport, hdr.HornLake.Eureka, hdr.HornLake.Litroe, hdr.HornLake.Neavitt, hdr.HornLake.Heavener, hdr.HornLake.Elderon, hdr.HornLake.Columbia, hdr.HornLake.Kalaloch, hdr.HornLake.Tilton });
-        hdr.Scherr.Angeles = Duncombe.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Scherr.Woodbury, hdr.Scherr.Munich, hdr.Scherr.Lansdale, hdr.Scherr.Deport, hdr.Scherr.Eureka, hdr.Scherr.Litroe, hdr.Scherr.Neavitt, hdr.Scherr.Heavener, hdr.Scherr.Elderon, hdr.Scherr.Columbia, hdr.Scherr.Kalaloch, hdr.Scherr.Tilton });
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.HornLake.Woodbury, hdr.HornLake.Munich, hdr.HornLake.Lansdale, hdr.HornLake.Deport, hdr.HornLake.Eureka, hdr.HornLake.Litroe, hdr.HornLake.Neavitt, hdr.HornLake.Heavener, hdr.HornLake.Elderon, hdr.HornLake.Columbia, hdr.HornLake.Kalaloch, hdr.HornLake.Tilton }, hdr.HornLake.Angeles, HashAlgorithm.csum16);
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Scherr.Woodbury, hdr.Scherr.Munich, hdr.Scherr.Lansdale, hdr.Scherr.Deport, hdr.Scherr.Eureka, hdr.Scherr.Litroe, hdr.Scherr.Neavitt, hdr.Scherr.Heavener, hdr.Scherr.Elderon, hdr.Scherr.Columbia, hdr.Scherr.Kalaloch, hdr.Scherr.Tilton }, hdr.Scherr.Angeles, HashAlgorithm.csum16);
     }
 }
 

@@ -2357,31 +2357,17 @@ struct tuple_5 {
     bit<32> field_28;
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    bit<16> tmp_1;
-    bit<16> tmp_9;
-    @name("Anacortes") Checksum16() Anacortes;
-    @name("Duncombe") Checksum16() Duncombe;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        tmp_1 = Anacortes.get<tuple_5>({ hdr.HornLake.Woodbury, hdr.HornLake.Munich, hdr.HornLake.Lansdale, hdr.HornLake.Deport, hdr.HornLake.Eureka, hdr.HornLake.Litroe, hdr.HornLake.Neavitt, hdr.HornLake.Heavener, hdr.HornLake.Elderon, hdr.HornLake.Columbia, hdr.HornLake.Kalaloch, hdr.HornLake.Tilton });
-        if (hdr.HornLake.Angeles == tmp_1) 
-            mark_to_drop();
-        tmp_9 = Duncombe.get<tuple_5>({ hdr.Scherr.Woodbury, hdr.Scherr.Munich, hdr.Scherr.Lansdale, hdr.Scherr.Deport, hdr.Scherr.Eureka, hdr.Scherr.Litroe, hdr.Scherr.Neavitt, hdr.Scherr.Heavener, hdr.Scherr.Elderon, hdr.Scherr.Columbia, hdr.Scherr.Kalaloch, hdr.Scherr.Tilton });
-        if (hdr.Scherr.Angeles == tmp_9) 
-            mark_to_drop();
+        verify_checksum<tuple_5, bit<16>>(true, { hdr.HornLake.Woodbury, hdr.HornLake.Munich, hdr.HornLake.Lansdale, hdr.HornLake.Deport, hdr.HornLake.Eureka, hdr.HornLake.Litroe, hdr.HornLake.Neavitt, hdr.HornLake.Heavener, hdr.HornLake.Elderon, hdr.HornLake.Columbia, hdr.HornLake.Kalaloch, hdr.HornLake.Tilton }, hdr.HornLake.Angeles, HashAlgorithm.csum16);
+        verify_checksum<tuple_5, bit<16>>(true, { hdr.Scherr.Woodbury, hdr.Scherr.Munich, hdr.Scherr.Lansdale, hdr.Scherr.Deport, hdr.Scherr.Eureka, hdr.Scherr.Litroe, hdr.Scherr.Neavitt, hdr.Scherr.Heavener, hdr.Scherr.Elderon, hdr.Scherr.Columbia, hdr.Scherr.Kalaloch, hdr.Scherr.Tilton }, hdr.Scherr.Angeles, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    bit<16> tmp_11;
-    bit<16> tmp_12;
-    @name("Anacortes") Checksum16() Anacortes_2;
-    @name("Duncombe") Checksum16() Duncombe_2;
     apply {
-        tmp_11 = Anacortes_2.get<tuple_5>({ hdr.HornLake.Woodbury, hdr.HornLake.Munich, hdr.HornLake.Lansdale, hdr.HornLake.Deport, hdr.HornLake.Eureka, hdr.HornLake.Litroe, hdr.HornLake.Neavitt, hdr.HornLake.Heavener, hdr.HornLake.Elderon, hdr.HornLake.Columbia, hdr.HornLake.Kalaloch, hdr.HornLake.Tilton });
-        hdr.HornLake.Angeles = tmp_11;
-        tmp_12 = Duncombe_2.get<tuple_5>({ hdr.Scherr.Woodbury, hdr.Scherr.Munich, hdr.Scherr.Lansdale, hdr.Scherr.Deport, hdr.Scherr.Eureka, hdr.Scherr.Litroe, hdr.Scherr.Neavitt, hdr.Scherr.Heavener, hdr.Scherr.Elderon, hdr.Scherr.Columbia, hdr.Scherr.Kalaloch, hdr.Scherr.Tilton });
-        hdr.Scherr.Angeles = tmp_12;
+        update_checksum<tuple_5, bit<16>>(true, { hdr.HornLake.Woodbury, hdr.HornLake.Munich, hdr.HornLake.Lansdale, hdr.HornLake.Deport, hdr.HornLake.Eureka, hdr.HornLake.Litroe, hdr.HornLake.Neavitt, hdr.HornLake.Heavener, hdr.HornLake.Elderon, hdr.HornLake.Columbia, hdr.HornLake.Kalaloch, hdr.HornLake.Tilton }, hdr.HornLake.Angeles, HashAlgorithm.csum16);
+        update_checksum<tuple_5, bit<16>>(true, { hdr.Scherr.Woodbury, hdr.Scherr.Munich, hdr.Scherr.Lansdale, hdr.Scherr.Deport, hdr.Scherr.Eureka, hdr.Scherr.Litroe, hdr.Scherr.Neavitt, hdr.Scherr.Heavener, hdr.Scherr.Elderon, hdr.Scherr.Columbia, hdr.Scherr.Kalaloch, hdr.Scherr.Tilton }, hdr.Scherr.Angeles, HashAlgorithm.csum16);
     }
 }
 

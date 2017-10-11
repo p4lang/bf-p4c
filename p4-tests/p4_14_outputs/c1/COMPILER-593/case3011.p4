@@ -4331,23 +4331,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    Checksum16() Switzer;
-    Checksum16() LaMoille;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        if (hdr.LaPointe.Makawao == Switzer.get({ hdr.LaPointe.Sofia, hdr.LaPointe.Wabbaseka, hdr.LaPointe.Baldwin, hdr.LaPointe.Mather, hdr.LaPointe.Marie, hdr.LaPointe.Upalco, hdr.LaPointe.Acree, hdr.LaPointe.Fairborn, hdr.LaPointe.Isleta, hdr.LaPointe.Alderson, hdr.LaPointe.Culloden, hdr.LaPointe.Parrish })) 
-            mark_to_drop();
-        if (hdr.Robert.Makawao == LaMoille.get({ hdr.Robert.Sofia, hdr.Robert.Wabbaseka, hdr.Robert.Baldwin, hdr.Robert.Mather, hdr.Robert.Marie, hdr.Robert.Upalco, hdr.Robert.Acree, hdr.Robert.Fairborn, hdr.Robert.Isleta, hdr.Robert.Alderson, hdr.Robert.Culloden, hdr.Robert.Parrish })) 
-            mark_to_drop();
+        verify_checksum(true, { hdr.LaPointe.Sofia, hdr.LaPointe.Wabbaseka, hdr.LaPointe.Baldwin, hdr.LaPointe.Mather, hdr.LaPointe.Marie, hdr.LaPointe.Upalco, hdr.LaPointe.Acree, hdr.LaPointe.Fairborn, hdr.LaPointe.Isleta, hdr.LaPointe.Alderson, hdr.LaPointe.Culloden, hdr.LaPointe.Parrish }, hdr.LaPointe.Makawao, HashAlgorithm.csum16);
+        verify_checksum(true, { hdr.Robert.Sofia, hdr.Robert.Wabbaseka, hdr.Robert.Baldwin, hdr.Robert.Mather, hdr.Robert.Marie, hdr.Robert.Upalco, hdr.Robert.Acree, hdr.Robert.Fairborn, hdr.Robert.Isleta, hdr.Robert.Alderson, hdr.Robert.Culloden, hdr.Robert.Parrish }, hdr.Robert.Makawao, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    Checksum16() Switzer;
-    Checksum16() LaMoille;
     apply {
-        hdr.LaPointe.Makawao = Switzer.get({ hdr.LaPointe.Sofia, hdr.LaPointe.Wabbaseka, hdr.LaPointe.Baldwin, hdr.LaPointe.Mather, hdr.LaPointe.Marie, hdr.LaPointe.Upalco, hdr.LaPointe.Acree, hdr.LaPointe.Fairborn, hdr.LaPointe.Isleta, hdr.LaPointe.Alderson, hdr.LaPointe.Culloden, hdr.LaPointe.Parrish });
-        hdr.Robert.Makawao = LaMoille.get({ hdr.Robert.Sofia, hdr.Robert.Wabbaseka, hdr.Robert.Baldwin, hdr.Robert.Mather, hdr.Robert.Marie, hdr.Robert.Upalco, hdr.Robert.Acree, hdr.Robert.Fairborn, hdr.Robert.Isleta, hdr.Robert.Alderson, hdr.Robert.Culloden, hdr.Robert.Parrish });
+        update_checksum(true, { hdr.LaPointe.Sofia, hdr.LaPointe.Wabbaseka, hdr.LaPointe.Baldwin, hdr.LaPointe.Mather, hdr.LaPointe.Marie, hdr.LaPointe.Upalco, hdr.LaPointe.Acree, hdr.LaPointe.Fairborn, hdr.LaPointe.Isleta, hdr.LaPointe.Alderson, hdr.LaPointe.Culloden, hdr.LaPointe.Parrish }, hdr.LaPointe.Makawao, HashAlgorithm.csum16);
+        update_checksum(true, { hdr.Robert.Sofia, hdr.Robert.Wabbaseka, hdr.Robert.Baldwin, hdr.Robert.Mather, hdr.Robert.Marie, hdr.Robert.Upalco, hdr.Robert.Acree, hdr.Robert.Fairborn, hdr.Robert.Isleta, hdr.Robert.Alderson, hdr.Robert.Culloden, hdr.Robert.Parrish }, hdr.Robert.Makawao, HashAlgorithm.csum16);
     }
 }
 

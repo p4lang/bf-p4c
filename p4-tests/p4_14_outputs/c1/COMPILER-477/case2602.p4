@@ -2265,23 +2265,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    Checksum16() Arkoe;
-    Checksum16() Wells;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        if (hdr.Denmark.Minneiska == Arkoe.get({ hdr.Denmark.Amboy, hdr.Denmark.Tafton, hdr.Denmark.Danbury, hdr.Denmark.Luning, hdr.Denmark.Scherr, hdr.Denmark.Tryon, hdr.Denmark.Keener, hdr.Denmark.OldMines, hdr.Denmark.Tusayan, hdr.Denmark.Barnsdall, hdr.Denmark.Fannett, hdr.Denmark.Topton })) 
-            mark_to_drop();
-        if (hdr.Nutria.Minneiska == Wells.get({ hdr.Nutria.Amboy, hdr.Nutria.Tafton, hdr.Nutria.Danbury, hdr.Nutria.Luning, hdr.Nutria.Scherr, hdr.Nutria.Tryon, hdr.Nutria.Keener, hdr.Nutria.OldMines, hdr.Nutria.Tusayan, hdr.Nutria.Barnsdall, hdr.Nutria.Fannett, hdr.Nutria.Topton })) 
-            mark_to_drop();
+        verify_checksum(true, { hdr.Denmark.Amboy, hdr.Denmark.Tafton, hdr.Denmark.Danbury, hdr.Denmark.Luning, hdr.Denmark.Scherr, hdr.Denmark.Tryon, hdr.Denmark.Keener, hdr.Denmark.OldMines, hdr.Denmark.Tusayan, hdr.Denmark.Barnsdall, hdr.Denmark.Fannett, hdr.Denmark.Topton }, hdr.Denmark.Minneiska, HashAlgorithm.csum16);
+        verify_checksum(true, { hdr.Nutria.Amboy, hdr.Nutria.Tafton, hdr.Nutria.Danbury, hdr.Nutria.Luning, hdr.Nutria.Scherr, hdr.Nutria.Tryon, hdr.Nutria.Keener, hdr.Nutria.OldMines, hdr.Nutria.Tusayan, hdr.Nutria.Barnsdall, hdr.Nutria.Fannett, hdr.Nutria.Topton }, hdr.Nutria.Minneiska, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    Checksum16() Arkoe;
-    Checksum16() Wells;
     apply {
-        hdr.Denmark.Minneiska = Arkoe.get({ hdr.Denmark.Amboy, hdr.Denmark.Tafton, hdr.Denmark.Danbury, hdr.Denmark.Luning, hdr.Denmark.Scherr, hdr.Denmark.Tryon, hdr.Denmark.Keener, hdr.Denmark.OldMines, hdr.Denmark.Tusayan, hdr.Denmark.Barnsdall, hdr.Denmark.Fannett, hdr.Denmark.Topton });
-        hdr.Nutria.Minneiska = Wells.get({ hdr.Nutria.Amboy, hdr.Nutria.Tafton, hdr.Nutria.Danbury, hdr.Nutria.Luning, hdr.Nutria.Scherr, hdr.Nutria.Tryon, hdr.Nutria.Keener, hdr.Nutria.OldMines, hdr.Nutria.Tusayan, hdr.Nutria.Barnsdall, hdr.Nutria.Fannett, hdr.Nutria.Topton });
+        update_checksum(true, { hdr.Denmark.Amboy, hdr.Denmark.Tafton, hdr.Denmark.Danbury, hdr.Denmark.Luning, hdr.Denmark.Scherr, hdr.Denmark.Tryon, hdr.Denmark.Keener, hdr.Denmark.OldMines, hdr.Denmark.Tusayan, hdr.Denmark.Barnsdall, hdr.Denmark.Fannett, hdr.Denmark.Topton }, hdr.Denmark.Minneiska, HashAlgorithm.csum16);
+        update_checksum(true, { hdr.Nutria.Amboy, hdr.Nutria.Tafton, hdr.Nutria.Danbury, hdr.Nutria.Luning, hdr.Nutria.Scherr, hdr.Nutria.Tryon, hdr.Nutria.Keener, hdr.Nutria.OldMines, hdr.Nutria.Tusayan, hdr.Nutria.Barnsdall, hdr.Nutria.Fannett, hdr.Nutria.Topton }, hdr.Nutria.Minneiska, HashAlgorithm.csum16);
     }
 }
 

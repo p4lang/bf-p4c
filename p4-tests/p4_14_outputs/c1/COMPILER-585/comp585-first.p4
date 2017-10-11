@@ -4234,23 +4234,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    Checksum16() Bolckow;
-    Checksum16() Badger;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        if (hdr.Bellmead.Shawmut == (Bolckow.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Bellmead.Moraine, hdr.Bellmead.Kensal, hdr.Bellmead.Menomonie, hdr.Bellmead.Salix, hdr.Bellmead.Chandalar, hdr.Bellmead.Ruffin, hdr.Bellmead.Amanda, hdr.Bellmead.Gillespie, hdr.Bellmead.Ignacio, hdr.Bellmead.Granville, hdr.Bellmead.Hines, hdr.Bellmead.Assinippi }))) 
-            mark_to_drop();
-        if (hdr.ElkRidge.Shawmut == (Badger.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.ElkRidge.Moraine, hdr.ElkRidge.Kensal, hdr.ElkRidge.Menomonie, hdr.ElkRidge.Salix, hdr.ElkRidge.Chandalar, hdr.ElkRidge.Ruffin, hdr.ElkRidge.Amanda, hdr.ElkRidge.Gillespie, hdr.ElkRidge.Ignacio, hdr.ElkRidge.Granville, hdr.ElkRidge.Hines, hdr.ElkRidge.Assinippi }))) 
-            mark_to_drop();
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Bellmead.Moraine, hdr.Bellmead.Kensal, hdr.Bellmead.Menomonie, hdr.Bellmead.Salix, hdr.Bellmead.Chandalar, hdr.Bellmead.Ruffin, hdr.Bellmead.Amanda, hdr.Bellmead.Gillespie, hdr.Bellmead.Ignacio, hdr.Bellmead.Granville, hdr.Bellmead.Hines, hdr.Bellmead.Assinippi }, hdr.Bellmead.Shawmut, HashAlgorithm.csum16);
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.ElkRidge.Moraine, hdr.ElkRidge.Kensal, hdr.ElkRidge.Menomonie, hdr.ElkRidge.Salix, hdr.ElkRidge.Chandalar, hdr.ElkRidge.Ruffin, hdr.ElkRidge.Amanda, hdr.ElkRidge.Gillespie, hdr.ElkRidge.Ignacio, hdr.ElkRidge.Granville, hdr.ElkRidge.Hines, hdr.ElkRidge.Assinippi }, hdr.ElkRidge.Shawmut, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    Checksum16() Bolckow;
-    Checksum16() Badger;
     apply {
-        hdr.Bellmead.Shawmut = Bolckow.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Bellmead.Moraine, hdr.Bellmead.Kensal, hdr.Bellmead.Menomonie, hdr.Bellmead.Salix, hdr.Bellmead.Chandalar, hdr.Bellmead.Ruffin, hdr.Bellmead.Amanda, hdr.Bellmead.Gillespie, hdr.Bellmead.Ignacio, hdr.Bellmead.Granville, hdr.Bellmead.Hines, hdr.Bellmead.Assinippi });
-        hdr.ElkRidge.Shawmut = Badger.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.ElkRidge.Moraine, hdr.ElkRidge.Kensal, hdr.ElkRidge.Menomonie, hdr.ElkRidge.Salix, hdr.ElkRidge.Chandalar, hdr.ElkRidge.Ruffin, hdr.ElkRidge.Amanda, hdr.ElkRidge.Gillespie, hdr.ElkRidge.Ignacio, hdr.ElkRidge.Granville, hdr.ElkRidge.Hines, hdr.ElkRidge.Assinippi });
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Bellmead.Moraine, hdr.Bellmead.Kensal, hdr.Bellmead.Menomonie, hdr.Bellmead.Salix, hdr.Bellmead.Chandalar, hdr.Bellmead.Ruffin, hdr.Bellmead.Amanda, hdr.Bellmead.Gillespie, hdr.Bellmead.Ignacio, hdr.Bellmead.Granville, hdr.Bellmead.Hines, hdr.Bellmead.Assinippi }, hdr.Bellmead.Shawmut, HashAlgorithm.csum16);
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.ElkRidge.Moraine, hdr.ElkRidge.Kensal, hdr.ElkRidge.Menomonie, hdr.ElkRidge.Salix, hdr.ElkRidge.Chandalar, hdr.ElkRidge.Ruffin, hdr.ElkRidge.Amanda, hdr.ElkRidge.Gillespie, hdr.ElkRidge.Ignacio, hdr.ElkRidge.Granville, hdr.ElkRidge.Hines, hdr.ElkRidge.Assinippi }, hdr.ElkRidge.Shawmut, HashAlgorithm.csum16);
     }
 }
 

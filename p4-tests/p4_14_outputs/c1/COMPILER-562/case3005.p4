@@ -4154,23 +4154,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    Checksum16() Fenwick;
-    Checksum16() Kalaloch;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        if (hdr.Maljamar.Fairhaven == Fenwick.get({ hdr.Maljamar.Correo, hdr.Maljamar.Veradale, hdr.Maljamar.Hearne, hdr.Maljamar.Machens, hdr.Maljamar.Korbel, hdr.Maljamar.Nevis, hdr.Maljamar.Iredell, hdr.Maljamar.Gaston, hdr.Maljamar.Disney, hdr.Maljamar.Azalia, hdr.Maljamar.Haines, hdr.Maljamar.Windber })) 
-            mark_to_drop();
-        if (hdr.Tiverton.Fairhaven == Kalaloch.get({ hdr.Tiverton.Correo, hdr.Tiverton.Veradale, hdr.Tiverton.Hearne, hdr.Tiverton.Machens, hdr.Tiverton.Korbel, hdr.Tiverton.Nevis, hdr.Tiverton.Iredell, hdr.Tiverton.Gaston, hdr.Tiverton.Disney, hdr.Tiverton.Azalia, hdr.Tiverton.Haines, hdr.Tiverton.Windber })) 
-            mark_to_drop();
+        verify_checksum(true, { hdr.Maljamar.Correo, hdr.Maljamar.Veradale, hdr.Maljamar.Hearne, hdr.Maljamar.Machens, hdr.Maljamar.Korbel, hdr.Maljamar.Nevis, hdr.Maljamar.Iredell, hdr.Maljamar.Gaston, hdr.Maljamar.Disney, hdr.Maljamar.Azalia, hdr.Maljamar.Haines, hdr.Maljamar.Windber }, hdr.Maljamar.Fairhaven, HashAlgorithm.csum16);
+        verify_checksum(true, { hdr.Tiverton.Correo, hdr.Tiverton.Veradale, hdr.Tiverton.Hearne, hdr.Tiverton.Machens, hdr.Tiverton.Korbel, hdr.Tiverton.Nevis, hdr.Tiverton.Iredell, hdr.Tiverton.Gaston, hdr.Tiverton.Disney, hdr.Tiverton.Azalia, hdr.Tiverton.Haines, hdr.Tiverton.Windber }, hdr.Tiverton.Fairhaven, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    Checksum16() Fenwick;
-    Checksum16() Kalaloch;
     apply {
-        hdr.Maljamar.Fairhaven = Fenwick.get({ hdr.Maljamar.Correo, hdr.Maljamar.Veradale, hdr.Maljamar.Hearne, hdr.Maljamar.Machens, hdr.Maljamar.Korbel, hdr.Maljamar.Nevis, hdr.Maljamar.Iredell, hdr.Maljamar.Gaston, hdr.Maljamar.Disney, hdr.Maljamar.Azalia, hdr.Maljamar.Haines, hdr.Maljamar.Windber });
-        hdr.Tiverton.Fairhaven = Kalaloch.get({ hdr.Tiverton.Correo, hdr.Tiverton.Veradale, hdr.Tiverton.Hearne, hdr.Tiverton.Machens, hdr.Tiverton.Korbel, hdr.Tiverton.Nevis, hdr.Tiverton.Iredell, hdr.Tiverton.Gaston, hdr.Tiverton.Disney, hdr.Tiverton.Azalia, hdr.Tiverton.Haines, hdr.Tiverton.Windber });
+        update_checksum(true, { hdr.Maljamar.Correo, hdr.Maljamar.Veradale, hdr.Maljamar.Hearne, hdr.Maljamar.Machens, hdr.Maljamar.Korbel, hdr.Maljamar.Nevis, hdr.Maljamar.Iredell, hdr.Maljamar.Gaston, hdr.Maljamar.Disney, hdr.Maljamar.Azalia, hdr.Maljamar.Haines, hdr.Maljamar.Windber }, hdr.Maljamar.Fairhaven, HashAlgorithm.csum16);
+        update_checksum(true, { hdr.Tiverton.Correo, hdr.Tiverton.Veradale, hdr.Tiverton.Hearne, hdr.Tiverton.Machens, hdr.Tiverton.Korbel, hdr.Tiverton.Nevis, hdr.Tiverton.Iredell, hdr.Tiverton.Gaston, hdr.Tiverton.Disney, hdr.Tiverton.Azalia, hdr.Tiverton.Haines, hdr.Tiverton.Windber }, hdr.Tiverton.Fairhaven, HashAlgorithm.csum16);
     }
 }
 

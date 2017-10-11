@@ -2751,31 +2751,17 @@ struct tuple_6 {
     bit<32> field_30;
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    bit<16> tmp_1;
-    bit<16> tmp_9;
-    @name("Weatherby") Checksum16() Weatherby;
-    @name("Shelby") Checksum16() Shelby;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        tmp_1 = Weatherby.get<tuple_6>({ hdr.Requa.Ottertail, hdr.Requa.Uniontown, hdr.Requa.Laplace, hdr.Requa.Newfane, hdr.Requa.Moclips, hdr.Requa.LaneCity, hdr.Requa.Emerado, hdr.Requa.Tappan, hdr.Requa.Raeford, hdr.Requa.Kupreanof, hdr.Requa.Graford, hdr.Requa.Lugert });
-        if (hdr.Requa.Perdido == tmp_1) 
-            mark_to_drop();
-        tmp_9 = Shelby.get<tuple_6>({ hdr.Sitka.Ottertail, hdr.Sitka.Uniontown, hdr.Sitka.Laplace, hdr.Sitka.Newfane, hdr.Sitka.Moclips, hdr.Sitka.LaneCity, hdr.Sitka.Emerado, hdr.Sitka.Tappan, hdr.Sitka.Raeford, hdr.Sitka.Kupreanof, hdr.Sitka.Graford, hdr.Sitka.Lugert });
-        if (hdr.Sitka.Perdido == tmp_9) 
-            mark_to_drop();
+        verify_checksum<tuple_6, bit<16>>(true, { hdr.Requa.Ottertail, hdr.Requa.Uniontown, hdr.Requa.Laplace, hdr.Requa.Newfane, hdr.Requa.Moclips, hdr.Requa.LaneCity, hdr.Requa.Emerado, hdr.Requa.Tappan, hdr.Requa.Raeford, hdr.Requa.Kupreanof, hdr.Requa.Graford, hdr.Requa.Lugert }, hdr.Requa.Perdido, HashAlgorithm.csum16);
+        verify_checksum<tuple_6, bit<16>>(true, { hdr.Sitka.Ottertail, hdr.Sitka.Uniontown, hdr.Sitka.Laplace, hdr.Sitka.Newfane, hdr.Sitka.Moclips, hdr.Sitka.LaneCity, hdr.Sitka.Emerado, hdr.Sitka.Tappan, hdr.Sitka.Raeford, hdr.Sitka.Kupreanof, hdr.Sitka.Graford, hdr.Sitka.Lugert }, hdr.Sitka.Perdido, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    bit<16> tmp_11;
-    bit<16> tmp_12;
-    @name("Weatherby") Checksum16() Weatherby_2;
-    @name("Shelby") Checksum16() Shelby_2;
     apply {
-        tmp_11 = Weatherby_2.get<tuple_6>({ hdr.Requa.Ottertail, hdr.Requa.Uniontown, hdr.Requa.Laplace, hdr.Requa.Newfane, hdr.Requa.Moclips, hdr.Requa.LaneCity, hdr.Requa.Emerado, hdr.Requa.Tappan, hdr.Requa.Raeford, hdr.Requa.Kupreanof, hdr.Requa.Graford, hdr.Requa.Lugert });
-        hdr.Requa.Perdido = tmp_11;
-        tmp_12 = Shelby_2.get<tuple_6>({ hdr.Sitka.Ottertail, hdr.Sitka.Uniontown, hdr.Sitka.Laplace, hdr.Sitka.Newfane, hdr.Sitka.Moclips, hdr.Sitka.LaneCity, hdr.Sitka.Emerado, hdr.Sitka.Tappan, hdr.Sitka.Raeford, hdr.Sitka.Kupreanof, hdr.Sitka.Graford, hdr.Sitka.Lugert });
-        hdr.Sitka.Perdido = tmp_12;
+        update_checksum<tuple_6, bit<16>>(true, { hdr.Requa.Ottertail, hdr.Requa.Uniontown, hdr.Requa.Laplace, hdr.Requa.Newfane, hdr.Requa.Moclips, hdr.Requa.LaneCity, hdr.Requa.Emerado, hdr.Requa.Tappan, hdr.Requa.Raeford, hdr.Requa.Kupreanof, hdr.Requa.Graford, hdr.Requa.Lugert }, hdr.Requa.Perdido, HashAlgorithm.csum16);
+        update_checksum<tuple_6, bit<16>>(true, { hdr.Sitka.Ottertail, hdr.Sitka.Uniontown, hdr.Sitka.Laplace, hdr.Sitka.Newfane, hdr.Sitka.Moclips, hdr.Sitka.LaneCity, hdr.Sitka.Emerado, hdr.Sitka.Tappan, hdr.Sitka.Raeford, hdr.Sitka.Kupreanof, hdr.Sitka.Graford, hdr.Sitka.Lugert }, hdr.Sitka.Perdido, HashAlgorithm.csum16);
     }
 }
 

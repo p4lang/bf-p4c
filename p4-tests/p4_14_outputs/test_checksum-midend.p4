@@ -406,18 +406,10 @@ struct tuple_0 {
     bit<32> field_9;
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    bit<16> tmp_9;
-    bit<16> tmp_11;
-    @name("inner_ipv4_csum") Checksum16() inner_ipv4_csum;
-    @name("ipv4_csum") Checksum16() ipv4_csum;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        tmp_9 = inner_ipv4_csum.get<tuple_0>({ hdr.inner_ipv4.version, hdr.inner_ipv4.ihl, hdr.inner_ipv4.diffserv, hdr.inner_ipv4.totalLen, hdr.inner_ipv4.identification, hdr.inner_ipv4.flags, hdr.inner_ipv4.fragOffset, hdr.inner_ipv4.ttl, hdr.inner_ipv4.protocol, hdr.inner_ipv4.srcAddr, hdr.inner_ipv4.dstAddr });
-        if (hdr.inner_ipv4.hdrChecksum == tmp_9) 
-            mark_to_drop();
-        tmp_11 = ipv4_csum.get<tuple_0>({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.totalLen, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.fragOffset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.srcAddr, hdr.ipv4.dstAddr });
-        if (hdr.ipv4.hdrChecksum == tmp_11) 
-            mark_to_drop();
+        verify_checksum<tuple_0, bit<16>>(true, { hdr.inner_ipv4.version, hdr.inner_ipv4.ihl, hdr.inner_ipv4.diffserv, hdr.inner_ipv4.totalLen, hdr.inner_ipv4.identification, hdr.inner_ipv4.flags, hdr.inner_ipv4.fragOffset, hdr.inner_ipv4.ttl, hdr.inner_ipv4.protocol, hdr.inner_ipv4.srcAddr, hdr.inner_ipv4.dstAddr }, hdr.inner_ipv4.hdrChecksum, HashAlgorithm.csum16);
+        verify_checksum<tuple_0, bit<16>>(true, { hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.totalLen, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.fragOffset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.srcAddr, hdr.ipv4.dstAddr }, hdr.ipv4.hdrChecksum, HashAlgorithm.csum16);
     }
 }
 
@@ -440,72 +432,83 @@ struct tuple_2 {
     bit<16> field_22;
     bit<16> field_23;
     bit<16> field_24;
-    bit<32> field_25;
-    bit<32> field_26;
-    bit<4>  field_27;
-    bit<4>  field_28;
-    bit<8>  field_29;
-    bit<16> field_30;
-    bit<16> field_31;
+    bit<16> field_25;
+    bit<16> field_26;
 }
 
 struct tuple_3 {
-    bit<32> field_32;
-    bit<32> field_33;
-    bit<8>  field_34;
-    bit<8>  field_35;
-    bit<16> field_36;
-    bit<16> field_37;
-    bit<16> field_38;
-    bit<16> field_39;
-    bit<16> field_40;
+    bit<128> field_27;
+    bit<128> field_28;
+    bit<24>  field_29;
+    bit<8>   field_30;
+    bit<16>  field_31;
+    bit<16>  field_32;
+    bit<16>  field_33;
+    bit<16>  field_34;
 }
 
 struct tuple_4 {
-    bit<128> field_41;
-    bit<128> field_42;
-    bit<24>  field_43;
-    bit<8>   field_44;
-    bit<16>  field_45;
-    bit<16>  field_46;
-    bit<16>  field_47;
-    bit<16>  field_48;
+    bit<32> field_35;
+    bit<32> field_36;
+    bit<8>  field_37;
+    bit<8>  field_38;
+    bit<16> field_39;
+    bit<16> field_40;
+    bit<16> field_41;
+    bit<32> field_42;
+    bit<32> field_43;
+    bit<4>  field_44;
+    bit<4>  field_45;
+    bit<8>  field_46;
+    bit<16> field_47;
+    bit<16> field_48;
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    bit<16> tmp_13;
-    bit<16> tmp_14;
-    bit<16> tmp_15;
-    bit<16> tmp_16;
-    bit<16> tmp_17;
-    bit<16> tmp_18;
-    @name("inner_ipv4_csum") Checksum16() inner_ipv4_csum_2;
-    @name("inner_udp_checksum_v4") Checksum16() inner_udp_checksum_v4;
-    @name("ipv4_csum_update") Checksum16() ipv4_csum_update;
-    @name("tcp_checksum_v4") Checksum16() tcp_checksum_v4;
-    @name("udp_checksum_v4") Checksum16() udp_checksum_v4;
-    @name("udp_checksum_v6") Checksum16() udp_checksum_v6;
+    tuple_1 tmp_5;
+    bit<16> tmp_6;
+    tuple_2 tmp_7;
+    bit<16> tmp_8;
+    tuple_3 tmp_9;
+    bit<16> tmp_10;
     apply {
-        tmp_13 = inner_ipv4_csum_2.get<tuple_0>({ hdr.inner_ipv4.version, hdr.inner_ipv4.ihl, hdr.inner_ipv4.diffserv, hdr.inner_ipv4.totalLen, hdr.inner_ipv4.identification, hdr.inner_ipv4.flags, hdr.inner_ipv4.fragOffset, hdr.inner_ipv4.ttl, hdr.inner_ipv4.protocol, hdr.inner_ipv4.srcAddr, hdr.inner_ipv4.dstAddr });
-        hdr.inner_ipv4.hdrChecksum = tmp_13;
-        if (meta.csum_ctrl.inner_v4_udp_enable == 1w1) {
-            tmp_14 = inner_udp_checksum_v4.get<tuple_1>({ hdr.inner_ipv4.srcAddr, hdr.inner_ipv4.dstAddr, 8w0, hdr.inner_ipv4.protocol, hdr.inner_udp.srcPort, hdr.inner_udp.dstPort, hdr.inner_udp.len, hdr.inner_udp.checksum });
-            hdr.inner_udp.checksum = tmp_14;
-        }
-        tmp_15 = ipv4_csum_update.get<tuple_0>({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.totalLen, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.fragOffset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.srcAddr, hdr.ipv4.dstAddr });
-        hdr.ipv4.hdrChecksum = tmp_15;
-        if (meta.csum_ctrl.v4_tcp_enable == 1w1) {
-            tmp_16 = tcp_checksum_v4.get<tuple_2>({ hdr.ipv4.srcAddr, hdr.ipv4.dstAddr, 8w0, hdr.ipv4.protocol, meta.l4_csum_len.len_delta, hdr.tcp.srcPort, hdr.tcp.dstPort, hdr.tcp.seqNo, hdr.tcp.ackNo, hdr.tcp.dataOffset, hdr.tcp.res, hdr.tcp.flags, hdr.tcp.window, hdr.tcp.urgentPtr });
-            hdr.tcp.checksum = tmp_16;
-        }
-        if (meta.csum_ctrl.v4_udp_enable == 1w1) {
-            tmp_17 = udp_checksum_v4.get<tuple_3>({ hdr.ipv4.srcAddr, hdr.ipv4.dstAddr, 8w0, hdr.ipv4.protocol, meta.l4_csum_len.len_delta, hdr.udp.srcPort, hdr.udp.dstPort, hdr.udp.len, hdr.udp.checksum });
-            hdr.udp.checksum = tmp_17;
-        }
-        if (meta.csum_ctrl.v6_udp_enable == 1w1) {
-            tmp_18 = udp_checksum_v6.get<tuple_4>({ hdr.ipv6.srcAddr, hdr.ipv6.dstAddr, 24w0, hdr.ipv6.nextHdr, hdr.udp.srcPort, hdr.udp.dstPort, hdr.udp.len, hdr.udp.checksum });
-            hdr.udp.checksum = tmp_18;
-        }
+        update_checksum<tuple_0, bit<16>>(true, { hdr.inner_ipv4.version, hdr.inner_ipv4.ihl, hdr.inner_ipv4.diffserv, hdr.inner_ipv4.totalLen, hdr.inner_ipv4.identification, hdr.inner_ipv4.flags, hdr.inner_ipv4.fragOffset, hdr.inner_ipv4.ttl, hdr.inner_ipv4.protocol, hdr.inner_ipv4.srcAddr, hdr.inner_ipv4.dstAddr }, hdr.inner_ipv4.hdrChecksum, HashAlgorithm.csum16);
+        tmp_5.field_10 = hdr.inner_ipv4.srcAddr;
+        tmp_5.field_11 = hdr.inner_ipv4.dstAddr;
+        tmp_5.field_12 = 8w0;
+        tmp_5.field_13 = hdr.inner_ipv4.protocol;
+        tmp_5.field_14 = hdr.inner_udp.srcPort;
+        tmp_5.field_15 = hdr.inner_udp.dstPort;
+        tmp_5.field_16 = hdr.inner_udp.len;
+        tmp_5.field_17 = hdr.inner_udp.checksum;
+        tmp_6 = hdr.inner_udp.checksum;
+        update_checksum<tuple_1, bit<16>>(meta.csum_ctrl.inner_v4_udp_enable == 1w1, tmp_5, tmp_6, HashAlgorithm.csum16);
+        hdr.inner_udp.checksum = tmp_6;
+        update_checksum<tuple_0, bit<16>>(true, { hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.totalLen, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.fragOffset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.srcAddr, hdr.ipv4.dstAddr }, hdr.ipv4.hdrChecksum, HashAlgorithm.csum16);
+        update_checksum<tuple_4, bit<16>>(meta.csum_ctrl.v4_tcp_enable == 1w1, { hdr.ipv4.srcAddr, hdr.ipv4.dstAddr, 8w0, hdr.ipv4.protocol, meta.l4_csum_len.len_delta, hdr.tcp.srcPort, hdr.tcp.dstPort, hdr.tcp.seqNo, hdr.tcp.ackNo, hdr.tcp.dataOffset, hdr.tcp.res, hdr.tcp.flags, hdr.tcp.window, hdr.tcp.urgentPtr }, hdr.tcp.checksum, HashAlgorithm.csum16);
+        tmp_7.field_18 = hdr.ipv4.srcAddr;
+        tmp_7.field_19 = hdr.ipv4.dstAddr;
+        tmp_7.field_20 = 8w0;
+        tmp_7.field_21 = hdr.ipv4.protocol;
+        tmp_7.field_22 = meta.l4_csum_len.len_delta;
+        tmp_7.field_23 = hdr.udp.srcPort;
+        tmp_7.field_24 = hdr.udp.dstPort;
+        tmp_7.field_25 = hdr.udp.len;
+        tmp_7.field_26 = hdr.udp.checksum;
+        tmp_8 = hdr.udp.checksum;
+        update_checksum<tuple_2, bit<16>>(meta.csum_ctrl.v4_udp_enable == 1w1, tmp_7, tmp_8, HashAlgorithm.csum16);
+        hdr.udp.checksum = tmp_8;
+        tmp_9.field_27 = hdr.ipv6.srcAddr;
+        tmp_9.field_28 = hdr.ipv6.dstAddr;
+        tmp_9.field_29 = 24w0;
+        tmp_9.field_30 = hdr.ipv6.nextHdr;
+        tmp_9.field_31 = hdr.udp.srcPort;
+        tmp_9.field_32 = hdr.udp.dstPort;
+        tmp_9.field_33 = hdr.udp.len;
+        tmp_9.field_34 = tmp_8;
+        tmp_10 = tmp_8;
+        update_checksum<tuple_3, bit<16>>(meta.csum_ctrl.v6_udp_enable == 1w1, tmp_9, tmp_10, HashAlgorithm.csum16);
+        hdr.udp.checksum = tmp_10;
     }
 }
 

@@ -3263,35 +3263,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    bit<16> tmp_16;
-    bool tmp_17;
-    bit<16> tmp_18;
-    bool tmp_19;
-    @name("Parthenon") Checksum16() Parthenon_0;
-    @name("Kinards") Checksum16() Kinards_0;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        tmp_16 = Parthenon_0.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.CapRock.Supai, hdr.CapRock.DeSart, hdr.CapRock.Naches, hdr.CapRock.Claypool, hdr.CapRock.Millett, hdr.CapRock.LaUnion, hdr.CapRock.Emmalane, hdr.CapRock.Farlin, hdr.CapRock.Weimar, hdr.CapRock.Kremlin, hdr.CapRock.Nerstrand, hdr.CapRock.Cimarron });
-        tmp_17 = hdr.CapRock.Waubun == tmp_16;
-        if (tmp_17) 
-            mark_to_drop();
-        tmp_18 = Kinards_0.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Lepanto.Supai, hdr.Lepanto.DeSart, hdr.Lepanto.Naches, hdr.Lepanto.Claypool, hdr.Lepanto.Millett, hdr.Lepanto.LaUnion, hdr.Lepanto.Emmalane, hdr.Lepanto.Farlin, hdr.Lepanto.Weimar, hdr.Lepanto.Kremlin, hdr.Lepanto.Nerstrand, hdr.Lepanto.Cimarron });
-        tmp_19 = hdr.Lepanto.Waubun == tmp_18;
-        if (tmp_19) 
-            mark_to_drop();
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.CapRock.Supai, hdr.CapRock.DeSart, hdr.CapRock.Naches, hdr.CapRock.Claypool, hdr.CapRock.Millett, hdr.CapRock.LaUnion, hdr.CapRock.Emmalane, hdr.CapRock.Farlin, hdr.CapRock.Weimar, hdr.CapRock.Kremlin, hdr.CapRock.Nerstrand, hdr.CapRock.Cimarron }, hdr.CapRock.Waubun, HashAlgorithm.csum16);
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Lepanto.Supai, hdr.Lepanto.DeSart, hdr.Lepanto.Naches, hdr.Lepanto.Claypool, hdr.Lepanto.Millett, hdr.Lepanto.LaUnion, hdr.Lepanto.Emmalane, hdr.Lepanto.Farlin, hdr.Lepanto.Weimar, hdr.Lepanto.Kremlin, hdr.Lepanto.Nerstrand, hdr.Lepanto.Cimarron }, hdr.Lepanto.Waubun, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    bit<16> tmp_20;
-    bit<16> tmp_21;
-    @name("Parthenon") Checksum16() Parthenon_1;
-    @name("Kinards") Checksum16() Kinards_1;
     apply {
-        tmp_20 = Parthenon_1.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.CapRock.Supai, hdr.CapRock.DeSart, hdr.CapRock.Naches, hdr.CapRock.Claypool, hdr.CapRock.Millett, hdr.CapRock.LaUnion, hdr.CapRock.Emmalane, hdr.CapRock.Farlin, hdr.CapRock.Weimar, hdr.CapRock.Kremlin, hdr.CapRock.Nerstrand, hdr.CapRock.Cimarron });
-        hdr.CapRock.Waubun = tmp_20;
-        tmp_21 = Kinards_1.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Lepanto.Supai, hdr.Lepanto.DeSart, hdr.Lepanto.Naches, hdr.Lepanto.Claypool, hdr.Lepanto.Millett, hdr.Lepanto.LaUnion, hdr.Lepanto.Emmalane, hdr.Lepanto.Farlin, hdr.Lepanto.Weimar, hdr.Lepanto.Kremlin, hdr.Lepanto.Nerstrand, hdr.Lepanto.Cimarron });
-        hdr.Lepanto.Waubun = tmp_21;
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.CapRock.Supai, hdr.CapRock.DeSart, hdr.CapRock.Naches, hdr.CapRock.Claypool, hdr.CapRock.Millett, hdr.CapRock.LaUnion, hdr.CapRock.Emmalane, hdr.CapRock.Farlin, hdr.CapRock.Weimar, hdr.CapRock.Kremlin, hdr.CapRock.Nerstrand, hdr.CapRock.Cimarron }, hdr.CapRock.Waubun, HashAlgorithm.csum16);
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Lepanto.Supai, hdr.Lepanto.DeSart, hdr.Lepanto.Naches, hdr.Lepanto.Claypool, hdr.Lepanto.Millett, hdr.Lepanto.LaUnion, hdr.Lepanto.Emmalane, hdr.Lepanto.Farlin, hdr.Lepanto.Weimar, hdr.Lepanto.Kremlin, hdr.Lepanto.Nerstrand, hdr.Lepanto.Cimarron }, hdr.Lepanto.Waubun, HashAlgorithm.csum16);
     }
 }
 

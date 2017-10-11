@@ -35,7 +35,7 @@ control DeparserImpl(packet_out packet, in headers_t hdr) {
     }
 }
 
-control verifyChecksum(in headers_t hdr, inout metadata_t meta) {
+control verifyChecksum(inout headers_t hdr, inout metadata_t meta) {
     apply {
     }
 }

@@ -509,7 +509,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     bit<16> tmp_11;
     bit<32> tmp_12;
     bit<16> tmp_13;
-    bit<112> tmp_20;
+    bit<112> tmp_14;
     @name(".Annawan") state Annawan {
         tmp_7 = packet.lookahead<bit<16>>();
         meta.Westboro.Wakefield = tmp_7[15:0];
@@ -677,8 +677,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
         transition accept;
     }
     @name(".start") state start {
-        tmp_20 = packet.lookahead<bit<112>>();
-        transition select(tmp_20[15:0]) {
+        tmp_14 = packet.lookahead<bit<112>>();
+        transition select(tmp_14[15:0]) {
             16w0xbf00: Elrosa;
             default: Clarissa;
         }
@@ -3321,31 +3321,17 @@ struct tuple_6 {
     bit<32> field_29;
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    bit<16> tmp_21;
-    bit<16> tmp_23;
-    @name("LaMarque") Checksum16() LaMarque;
-    @name("Weches") Checksum16() Weches;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        tmp_21 = LaMarque.get<tuple_6>({ hdr.Amory.Wyanet, hdr.Amory.Elkins, hdr.Amory.Houston, hdr.Amory.Sheldahl, hdr.Amory.Lofgreen, hdr.Amory.Kanorado, hdr.Amory.Snowflake, hdr.Amory.Tulia, hdr.Amory.Teaneck, hdr.Amory.Brush, hdr.Amory.Gresston, hdr.Amory.Worthing });
-        if (hdr.Amory.Tallassee == tmp_21) 
-            mark_to_drop();
-        tmp_23 = Weches.get<tuple_6>({ hdr.Weissert.Wyanet, hdr.Weissert.Elkins, hdr.Weissert.Houston, hdr.Weissert.Sheldahl, hdr.Weissert.Lofgreen, hdr.Weissert.Kanorado, hdr.Weissert.Snowflake, hdr.Weissert.Tulia, hdr.Weissert.Teaneck, hdr.Weissert.Brush, hdr.Weissert.Gresston, hdr.Weissert.Worthing });
-        if (hdr.Weissert.Tallassee == tmp_23) 
-            mark_to_drop();
+        verify_checksum<tuple_6, bit<16>>(true, { hdr.Amory.Wyanet, hdr.Amory.Elkins, hdr.Amory.Houston, hdr.Amory.Sheldahl, hdr.Amory.Lofgreen, hdr.Amory.Kanorado, hdr.Amory.Snowflake, hdr.Amory.Tulia, hdr.Amory.Teaneck, hdr.Amory.Brush, hdr.Amory.Gresston, hdr.Amory.Worthing }, hdr.Amory.Tallassee, HashAlgorithm.csum16);
+        verify_checksum<tuple_6, bit<16>>(true, { hdr.Weissert.Wyanet, hdr.Weissert.Elkins, hdr.Weissert.Houston, hdr.Weissert.Sheldahl, hdr.Weissert.Lofgreen, hdr.Weissert.Kanorado, hdr.Weissert.Snowflake, hdr.Weissert.Tulia, hdr.Weissert.Teaneck, hdr.Weissert.Brush, hdr.Weissert.Gresston, hdr.Weissert.Worthing }, hdr.Weissert.Tallassee, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    bit<16> tmp_25;
-    bit<16> tmp_26;
-    @name("LaMarque") Checksum16() LaMarque_2;
-    @name("Weches") Checksum16() Weches_2;
     apply {
-        tmp_25 = LaMarque_2.get<tuple_6>({ hdr.Amory.Wyanet, hdr.Amory.Elkins, hdr.Amory.Houston, hdr.Amory.Sheldahl, hdr.Amory.Lofgreen, hdr.Amory.Kanorado, hdr.Amory.Snowflake, hdr.Amory.Tulia, hdr.Amory.Teaneck, hdr.Amory.Brush, hdr.Amory.Gresston, hdr.Amory.Worthing });
-        hdr.Amory.Tallassee = tmp_25;
-        tmp_26 = Weches_2.get<tuple_6>({ hdr.Weissert.Wyanet, hdr.Weissert.Elkins, hdr.Weissert.Houston, hdr.Weissert.Sheldahl, hdr.Weissert.Lofgreen, hdr.Weissert.Kanorado, hdr.Weissert.Snowflake, hdr.Weissert.Tulia, hdr.Weissert.Teaneck, hdr.Weissert.Brush, hdr.Weissert.Gresston, hdr.Weissert.Worthing });
-        hdr.Weissert.Tallassee = tmp_26;
+        update_checksum<tuple_6, bit<16>>(true, { hdr.Amory.Wyanet, hdr.Amory.Elkins, hdr.Amory.Houston, hdr.Amory.Sheldahl, hdr.Amory.Lofgreen, hdr.Amory.Kanorado, hdr.Amory.Snowflake, hdr.Amory.Tulia, hdr.Amory.Teaneck, hdr.Amory.Brush, hdr.Amory.Gresston, hdr.Amory.Worthing }, hdr.Amory.Tallassee, HashAlgorithm.csum16);
+        update_checksum<tuple_6, bit<16>>(true, { hdr.Weissert.Wyanet, hdr.Weissert.Elkins, hdr.Weissert.Houston, hdr.Weissert.Sheldahl, hdr.Weissert.Lofgreen, hdr.Weissert.Kanorado, hdr.Weissert.Snowflake, hdr.Weissert.Tulia, hdr.Weissert.Teaneck, hdr.Weissert.Brush, hdr.Weissert.Gresston, hdr.Weissert.Worthing }, hdr.Weissert.Tallassee, HashAlgorithm.csum16);
     }
 }
 

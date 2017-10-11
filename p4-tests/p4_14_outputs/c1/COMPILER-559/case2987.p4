@@ -2803,23 +2803,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    Checksum16() Weatherby;
-    Checksum16() Shelby;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        if (hdr.Requa.Perdido == Weatherby.get({ hdr.Requa.Ottertail, hdr.Requa.Uniontown, hdr.Requa.Laplace, hdr.Requa.Newfane, hdr.Requa.Moclips, hdr.Requa.LaneCity, hdr.Requa.Emerado, hdr.Requa.Tappan, hdr.Requa.Raeford, hdr.Requa.Kupreanof, hdr.Requa.Graford, hdr.Requa.Lugert })) 
-            mark_to_drop();
-        if (hdr.Sitka.Perdido == Shelby.get({ hdr.Sitka.Ottertail, hdr.Sitka.Uniontown, hdr.Sitka.Laplace, hdr.Sitka.Newfane, hdr.Sitka.Moclips, hdr.Sitka.LaneCity, hdr.Sitka.Emerado, hdr.Sitka.Tappan, hdr.Sitka.Raeford, hdr.Sitka.Kupreanof, hdr.Sitka.Graford, hdr.Sitka.Lugert })) 
-            mark_to_drop();
+        verify_checksum(true, { hdr.Requa.Ottertail, hdr.Requa.Uniontown, hdr.Requa.Laplace, hdr.Requa.Newfane, hdr.Requa.Moclips, hdr.Requa.LaneCity, hdr.Requa.Emerado, hdr.Requa.Tappan, hdr.Requa.Raeford, hdr.Requa.Kupreanof, hdr.Requa.Graford, hdr.Requa.Lugert }, hdr.Requa.Perdido, HashAlgorithm.csum16);
+        verify_checksum(true, { hdr.Sitka.Ottertail, hdr.Sitka.Uniontown, hdr.Sitka.Laplace, hdr.Sitka.Newfane, hdr.Sitka.Moclips, hdr.Sitka.LaneCity, hdr.Sitka.Emerado, hdr.Sitka.Tappan, hdr.Sitka.Raeford, hdr.Sitka.Kupreanof, hdr.Sitka.Graford, hdr.Sitka.Lugert }, hdr.Sitka.Perdido, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    Checksum16() Weatherby;
-    Checksum16() Shelby;
     apply {
-        hdr.Requa.Perdido = Weatherby.get({ hdr.Requa.Ottertail, hdr.Requa.Uniontown, hdr.Requa.Laplace, hdr.Requa.Newfane, hdr.Requa.Moclips, hdr.Requa.LaneCity, hdr.Requa.Emerado, hdr.Requa.Tappan, hdr.Requa.Raeford, hdr.Requa.Kupreanof, hdr.Requa.Graford, hdr.Requa.Lugert });
-        hdr.Sitka.Perdido = Shelby.get({ hdr.Sitka.Ottertail, hdr.Sitka.Uniontown, hdr.Sitka.Laplace, hdr.Sitka.Newfane, hdr.Sitka.Moclips, hdr.Sitka.LaneCity, hdr.Sitka.Emerado, hdr.Sitka.Tappan, hdr.Sitka.Raeford, hdr.Sitka.Kupreanof, hdr.Sitka.Graford, hdr.Sitka.Lugert });
+        update_checksum(true, { hdr.Requa.Ottertail, hdr.Requa.Uniontown, hdr.Requa.Laplace, hdr.Requa.Newfane, hdr.Requa.Moclips, hdr.Requa.LaneCity, hdr.Requa.Emerado, hdr.Requa.Tappan, hdr.Requa.Raeford, hdr.Requa.Kupreanof, hdr.Requa.Graford, hdr.Requa.Lugert }, hdr.Requa.Perdido, HashAlgorithm.csum16);
+        update_checksum(true, { hdr.Sitka.Ottertail, hdr.Sitka.Uniontown, hdr.Sitka.Laplace, hdr.Sitka.Newfane, hdr.Sitka.Moclips, hdr.Sitka.LaneCity, hdr.Sitka.Emerado, hdr.Sitka.Tappan, hdr.Sitka.Raeford, hdr.Sitka.Kupreanof, hdr.Sitka.Graford, hdr.Sitka.Lugert }, hdr.Sitka.Perdido, HashAlgorithm.csum16);
     }
 }
 

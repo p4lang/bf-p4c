@@ -3319,35 +3319,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    bit<16> tmp_16;
-    bool tmp_17;
-    bit<16> tmp_18;
-    bool tmp_19;
-    @name("Ripley") Checksum16() Ripley_0;
-    @name("Sharon") Checksum16() Sharon_0;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        tmp_16 = Ripley_0.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Klukwan.Humarock, hdr.Klukwan.Aguila, hdr.Klukwan.Monkstown, hdr.Klukwan.Rockaway, hdr.Klukwan.OakCity, hdr.Klukwan.Hamel, hdr.Klukwan.Hartfield, hdr.Klukwan.Bladen, hdr.Klukwan.Ridgeland, hdr.Klukwan.HillTop, hdr.Klukwan.Wahoo, hdr.Klukwan.Picayune });
-        tmp_17 = hdr.Klukwan.Woodward == tmp_16;
-        if (tmp_17) 
-            mark_to_drop();
-        tmp_18 = Sharon_0.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Sharptown.Humarock, hdr.Sharptown.Aguila, hdr.Sharptown.Monkstown, hdr.Sharptown.Rockaway, hdr.Sharptown.OakCity, hdr.Sharptown.Hamel, hdr.Sharptown.Hartfield, hdr.Sharptown.Bladen, hdr.Sharptown.Ridgeland, hdr.Sharptown.HillTop, hdr.Sharptown.Wahoo, hdr.Sharptown.Picayune });
-        tmp_19 = hdr.Sharptown.Woodward == tmp_18;
-        if (tmp_19) 
-            mark_to_drop();
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Klukwan.Humarock, hdr.Klukwan.Aguila, hdr.Klukwan.Monkstown, hdr.Klukwan.Rockaway, hdr.Klukwan.OakCity, hdr.Klukwan.Hamel, hdr.Klukwan.Hartfield, hdr.Klukwan.Bladen, hdr.Klukwan.Ridgeland, hdr.Klukwan.HillTop, hdr.Klukwan.Wahoo, hdr.Klukwan.Picayune }, hdr.Klukwan.Woodward, HashAlgorithm.csum16);
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Sharptown.Humarock, hdr.Sharptown.Aguila, hdr.Sharptown.Monkstown, hdr.Sharptown.Rockaway, hdr.Sharptown.OakCity, hdr.Sharptown.Hamel, hdr.Sharptown.Hartfield, hdr.Sharptown.Bladen, hdr.Sharptown.Ridgeland, hdr.Sharptown.HillTop, hdr.Sharptown.Wahoo, hdr.Sharptown.Picayune }, hdr.Sharptown.Woodward, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    bit<16> tmp_20;
-    bit<16> tmp_21;
-    @name("Ripley") Checksum16() Ripley_1;
-    @name("Sharon") Checksum16() Sharon_1;
     apply {
-        tmp_20 = Ripley_1.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Klukwan.Humarock, hdr.Klukwan.Aguila, hdr.Klukwan.Monkstown, hdr.Klukwan.Rockaway, hdr.Klukwan.OakCity, hdr.Klukwan.Hamel, hdr.Klukwan.Hartfield, hdr.Klukwan.Bladen, hdr.Klukwan.Ridgeland, hdr.Klukwan.HillTop, hdr.Klukwan.Wahoo, hdr.Klukwan.Picayune });
-        hdr.Klukwan.Woodward = tmp_20;
-        tmp_21 = Sharon_1.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Sharptown.Humarock, hdr.Sharptown.Aguila, hdr.Sharptown.Monkstown, hdr.Sharptown.Rockaway, hdr.Sharptown.OakCity, hdr.Sharptown.Hamel, hdr.Sharptown.Hartfield, hdr.Sharptown.Bladen, hdr.Sharptown.Ridgeland, hdr.Sharptown.HillTop, hdr.Sharptown.Wahoo, hdr.Sharptown.Picayune });
-        hdr.Sharptown.Woodward = tmp_21;
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Klukwan.Humarock, hdr.Klukwan.Aguila, hdr.Klukwan.Monkstown, hdr.Klukwan.Rockaway, hdr.Klukwan.OakCity, hdr.Klukwan.Hamel, hdr.Klukwan.Hartfield, hdr.Klukwan.Bladen, hdr.Klukwan.Ridgeland, hdr.Klukwan.HillTop, hdr.Klukwan.Wahoo, hdr.Klukwan.Picayune }, hdr.Klukwan.Woodward, HashAlgorithm.csum16);
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Sharptown.Humarock, hdr.Sharptown.Aguila, hdr.Sharptown.Monkstown, hdr.Sharptown.Rockaway, hdr.Sharptown.OakCity, hdr.Sharptown.Hamel, hdr.Sharptown.Hartfield, hdr.Sharptown.Bladen, hdr.Sharptown.Ridgeland, hdr.Sharptown.HillTop, hdr.Sharptown.Wahoo, hdr.Sharptown.Picayune }, hdr.Sharptown.Woodward, HashAlgorithm.csum16);
     }
 }
 

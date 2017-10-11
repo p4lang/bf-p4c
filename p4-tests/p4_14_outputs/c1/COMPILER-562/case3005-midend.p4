@@ -3104,31 +3104,17 @@ struct tuple_5 {
     bit<32> field_29;
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    bit<16> tmp_15;
-    bit<16> tmp_23;
-    @name("Fenwick") Checksum16() Fenwick;
-    @name("Kalaloch") Checksum16() Kalaloch;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        tmp_15 = Fenwick.get<tuple_5>({ hdr.Maljamar.Correo, hdr.Maljamar.Veradale, hdr.Maljamar.Hearne, hdr.Maljamar.Machens, hdr.Maljamar.Korbel, hdr.Maljamar.Nevis, hdr.Maljamar.Iredell, hdr.Maljamar.Gaston, hdr.Maljamar.Disney, hdr.Maljamar.Azalia, hdr.Maljamar.Haines, hdr.Maljamar.Windber });
-        if (hdr.Maljamar.Fairhaven == tmp_15) 
-            mark_to_drop();
-        tmp_23 = Kalaloch.get<tuple_5>({ hdr.Tiverton.Correo, hdr.Tiverton.Veradale, hdr.Tiverton.Hearne, hdr.Tiverton.Machens, hdr.Tiverton.Korbel, hdr.Tiverton.Nevis, hdr.Tiverton.Iredell, hdr.Tiverton.Gaston, hdr.Tiverton.Disney, hdr.Tiverton.Azalia, hdr.Tiverton.Haines, hdr.Tiverton.Windber });
-        if (hdr.Tiverton.Fairhaven == tmp_23) 
-            mark_to_drop();
+        verify_checksum<tuple_5, bit<16>>(true, { hdr.Maljamar.Correo, hdr.Maljamar.Veradale, hdr.Maljamar.Hearne, hdr.Maljamar.Machens, hdr.Maljamar.Korbel, hdr.Maljamar.Nevis, hdr.Maljamar.Iredell, hdr.Maljamar.Gaston, hdr.Maljamar.Disney, hdr.Maljamar.Azalia, hdr.Maljamar.Haines, hdr.Maljamar.Windber }, hdr.Maljamar.Fairhaven, HashAlgorithm.csum16);
+        verify_checksum<tuple_5, bit<16>>(true, { hdr.Tiverton.Correo, hdr.Tiverton.Veradale, hdr.Tiverton.Hearne, hdr.Tiverton.Machens, hdr.Tiverton.Korbel, hdr.Tiverton.Nevis, hdr.Tiverton.Iredell, hdr.Tiverton.Gaston, hdr.Tiverton.Disney, hdr.Tiverton.Azalia, hdr.Tiverton.Haines, hdr.Tiverton.Windber }, hdr.Tiverton.Fairhaven, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    bit<16> tmp_25;
-    bit<16> tmp_26;
-    @name("Fenwick") Checksum16() Fenwick_2;
-    @name("Kalaloch") Checksum16() Kalaloch_2;
     apply {
-        tmp_25 = Fenwick_2.get<tuple_5>({ hdr.Maljamar.Correo, hdr.Maljamar.Veradale, hdr.Maljamar.Hearne, hdr.Maljamar.Machens, hdr.Maljamar.Korbel, hdr.Maljamar.Nevis, hdr.Maljamar.Iredell, hdr.Maljamar.Gaston, hdr.Maljamar.Disney, hdr.Maljamar.Azalia, hdr.Maljamar.Haines, hdr.Maljamar.Windber });
-        hdr.Maljamar.Fairhaven = tmp_25;
-        tmp_26 = Kalaloch_2.get<tuple_5>({ hdr.Tiverton.Correo, hdr.Tiverton.Veradale, hdr.Tiverton.Hearne, hdr.Tiverton.Machens, hdr.Tiverton.Korbel, hdr.Tiverton.Nevis, hdr.Tiverton.Iredell, hdr.Tiverton.Gaston, hdr.Tiverton.Disney, hdr.Tiverton.Azalia, hdr.Tiverton.Haines, hdr.Tiverton.Windber });
-        hdr.Tiverton.Fairhaven = tmp_26;
+        update_checksum<tuple_5, bit<16>>(true, { hdr.Maljamar.Correo, hdr.Maljamar.Veradale, hdr.Maljamar.Hearne, hdr.Maljamar.Machens, hdr.Maljamar.Korbel, hdr.Maljamar.Nevis, hdr.Maljamar.Iredell, hdr.Maljamar.Gaston, hdr.Maljamar.Disney, hdr.Maljamar.Azalia, hdr.Maljamar.Haines, hdr.Maljamar.Windber }, hdr.Maljamar.Fairhaven, HashAlgorithm.csum16);
+        update_checksum<tuple_5, bit<16>>(true, { hdr.Tiverton.Correo, hdr.Tiverton.Veradale, hdr.Tiverton.Hearne, hdr.Tiverton.Machens, hdr.Tiverton.Korbel, hdr.Tiverton.Nevis, hdr.Tiverton.Iredell, hdr.Tiverton.Gaston, hdr.Tiverton.Disney, hdr.Tiverton.Azalia, hdr.Tiverton.Haines, hdr.Tiverton.Windber }, hdr.Tiverton.Fairhaven, HashAlgorithm.csum16);
     }
 }
 

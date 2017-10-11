@@ -3439,35 +3439,17 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta) {
-    bit<16> tmp_14;
-    bool tmp_15;
-    bit<16> tmp_16;
-    bool tmp_17;
-    @name("LaMarque") Checksum16() LaMarque_0;
-    @name("Weches") Checksum16() Weches_0;
+control verifyChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        tmp_14 = LaMarque_0.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Amory.Wyanet, hdr.Amory.Elkins, hdr.Amory.Houston, hdr.Amory.Sheldahl, hdr.Amory.Lofgreen, hdr.Amory.Kanorado, hdr.Amory.Snowflake, hdr.Amory.Tulia, hdr.Amory.Teaneck, hdr.Amory.Brush, hdr.Amory.Gresston, hdr.Amory.Worthing });
-        tmp_15 = hdr.Amory.Tallassee == tmp_14;
-        if (tmp_15) 
-            mark_to_drop();
-        tmp_16 = Weches_0.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Weissert.Wyanet, hdr.Weissert.Elkins, hdr.Weissert.Houston, hdr.Weissert.Sheldahl, hdr.Weissert.Lofgreen, hdr.Weissert.Kanorado, hdr.Weissert.Snowflake, hdr.Weissert.Tulia, hdr.Weissert.Teaneck, hdr.Weissert.Brush, hdr.Weissert.Gresston, hdr.Weissert.Worthing });
-        tmp_17 = hdr.Weissert.Tallassee == tmp_16;
-        if (tmp_17) 
-            mark_to_drop();
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Amory.Wyanet, hdr.Amory.Elkins, hdr.Amory.Houston, hdr.Amory.Sheldahl, hdr.Amory.Lofgreen, hdr.Amory.Kanorado, hdr.Amory.Snowflake, hdr.Amory.Tulia, hdr.Amory.Teaneck, hdr.Amory.Brush, hdr.Amory.Gresston, hdr.Amory.Worthing }, hdr.Amory.Tallassee, HashAlgorithm.csum16);
+        verify_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Weissert.Wyanet, hdr.Weissert.Elkins, hdr.Weissert.Houston, hdr.Weissert.Sheldahl, hdr.Weissert.Lofgreen, hdr.Weissert.Kanorado, hdr.Weissert.Snowflake, hdr.Weissert.Tulia, hdr.Weissert.Teaneck, hdr.Weissert.Brush, hdr.Weissert.Gresston, hdr.Weissert.Worthing }, hdr.Weissert.Tallassee, HashAlgorithm.csum16);
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    bit<16> tmp_18;
-    bit<16> tmp_19;
-    @name("LaMarque") Checksum16() LaMarque_1;
-    @name("Weches") Checksum16() Weches_1;
     apply {
-        tmp_18 = LaMarque_1.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Amory.Wyanet, hdr.Amory.Elkins, hdr.Amory.Houston, hdr.Amory.Sheldahl, hdr.Amory.Lofgreen, hdr.Amory.Kanorado, hdr.Amory.Snowflake, hdr.Amory.Tulia, hdr.Amory.Teaneck, hdr.Amory.Brush, hdr.Amory.Gresston, hdr.Amory.Worthing });
-        hdr.Amory.Tallassee = tmp_18;
-        tmp_19 = Weches_1.get<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.Weissert.Wyanet, hdr.Weissert.Elkins, hdr.Weissert.Houston, hdr.Weissert.Sheldahl, hdr.Weissert.Lofgreen, hdr.Weissert.Kanorado, hdr.Weissert.Snowflake, hdr.Weissert.Tulia, hdr.Weissert.Teaneck, hdr.Weissert.Brush, hdr.Weissert.Gresston, hdr.Weissert.Worthing });
-        hdr.Weissert.Tallassee = tmp_19;
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Amory.Wyanet, hdr.Amory.Elkins, hdr.Amory.Houston, hdr.Amory.Sheldahl, hdr.Amory.Lofgreen, hdr.Amory.Kanorado, hdr.Amory.Snowflake, hdr.Amory.Tulia, hdr.Amory.Teaneck, hdr.Amory.Brush, hdr.Amory.Gresston, hdr.Amory.Worthing }, hdr.Amory.Tallassee, HashAlgorithm.csum16);
+        update_checksum<tuple<bit<4>, bit<4>, bit<6>, bit<2>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>, bit<16>>(true, { hdr.Weissert.Wyanet, hdr.Weissert.Elkins, hdr.Weissert.Houston, hdr.Weissert.Sheldahl, hdr.Weissert.Lofgreen, hdr.Weissert.Kanorado, hdr.Weissert.Snowflake, hdr.Weissert.Tulia, hdr.Weissert.Teaneck, hdr.Weissert.Brush, hdr.Weissert.Gresston, hdr.Weissert.Worthing }, hdr.Weissert.Tallassee, HashAlgorithm.csum16);
     }
 }
 
