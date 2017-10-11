@@ -157,7 +157,7 @@ unsigned ActionPhvConstraints::can_cohabit(std::vector<const PhvInfo::Field*>& f
                         if (non_move_action_type.size() == 0) {
                             // First non-move action seen
                             LOG3("Writing action_type " << fw->action_name);
-                            non_move_action_type == fw->action_name;
+                            non_move_action_type = fw->action_name;
                         } else {
                             if (non_move_action_type != fw->action_name)
                                 // Note: PHV allocation ensures that this check for packing is never
