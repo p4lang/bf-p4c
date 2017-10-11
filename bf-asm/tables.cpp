@@ -1821,11 +1821,11 @@ void Table::add_field_to_pack_format(json::vector &field_list, int basebit, std:
                 source = "zero";
             json::map field_entry;
             field_entry["start_bit"] = lobit;
-            if (auto t = this->to<TernaryIndirectTable>()) {
+            if (this->to<TernaryIndirectTable>() || this->to<ExactMatchTable>()) {
                 if ((name == "meter_addr") && get_selector())
                     field_entry["start_bit"] = SELECTOR_LOWER_HUFFMAN_BITS;
                 if (name == "action_addr")
-                    if (auto adt = t->action->to<ActionTable>()) {
+                    if (auto adt = action->to<ActionTable>()) {
                         field_entry["start_bit"] = std::min(5U, adt->get_log2size() - 2); } }
             field_entry["field_width"] = bits.size() + add_width;
             field_entry["lsb_mem_word_idx"] = bits.lo/128U;
