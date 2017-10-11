@@ -9,7 +9,6 @@
 #include <vector>
 
 #include "bf-p4c/common/debug_info.h"
-#include "bf-p4c/common/machine_description.h"
 #include "bf-p4c/common/slice.h"
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/parde/parde_visitor.h"
@@ -565,12 +564,12 @@ class ExtractorAllocator {
      * and (2) the shift that the new state should have.
      */
     std::pair<IR::Vector<IR::BFN::LoweredExtract>, int> allocateOneState() {
-        using namespace BFN::Description;
+        auto& pardeSpec = Device::pardeSpec();
 
         // Allocate. We have a limited number of extractions of each size per
         // state. We also ensure that we don't overflow the input buffer.
         LOG3("Allocating extracts for state " << stateName);
-        unsigned allocatedExtractorsBySize[ExtractorKinds.size()] = { 0 };
+        unsigned allocatedExtractorsBySize[pardeSpec.extractorKinds().size()] = { 0 };
         IR::Vector<IR::BFN::LoweredExtract> allocatedExtractions;
         std::vector<const IR::BFN::LoweredExtract*> remainingExtractions;
         nw_byteinterval remainingBytes;
@@ -580,8 +579,8 @@ class ExtractorAllocator {
                                     ? extract->to<IR::BFN::LoweredExtractBuffer>()
                                              ->byteInterval()
                                     : nw_byteinterval();
-            if (allocatedExtractorsBySize[containerSize] == ExtractorCount ||
-                  byteInterval.hi >= ByteInputBufferSize) {
+            if (allocatedExtractorsBySize[containerSize] == pardeSpec.extractorCount() ||
+                  byteInterval.hi >= pardeSpec.byteInputBufferSize()) {
                 remainingExtractions.push_back(extract);
                 remainingBytes = remainingBytes.unionWith(byteInterval);
                 continue;

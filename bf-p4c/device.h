@@ -4,6 +4,7 @@
 #include "lib/cstring.h"
 #include "lib/exceptions.h"
 #include "phv/phv_spec.h"
+#include "parde/parde_spec.h"
 
 class Device {
  public:
@@ -37,6 +38,7 @@ class Device {
     static cstring currentDevice() { return Device::get().name(); }
 
     static const PhvSpec& phvSpec() { return Device::get().getPhvSpec(); }
+    static const PardeSpec& pardeSpec() { return Device::get().getPardeSpec(); }
 
  protected:
     explicit Device(cstring name) : name_(name) {}
@@ -44,6 +46,7 @@ class Device {
     cstring name() const { return name_; }
 
     virtual const PhvSpec& getPhvSpec() const = 0;
+    virtual const PardeSpec& getPardeSpec() const = 0;
 
     cstring name_;
 
@@ -54,21 +57,25 @@ class Device {
 
 class TofinoDevice : public Device {
     const TofinoPhvSpec phv_;
+    const TofinoPardeSpec parde_;
 
  public:
     TofinoDevice() : Device("Tofino") {}
 
     const PhvSpec& getPhvSpec() const { return phv_; }
+    const PardeSpec& getPardeSpec() const { return parde_; }
 };
 
 #if HAVE_JBAY
 class JBayDevice : public Device {
     const JBayPhvSpec phv_;
+    const JBayPardeSpec parde_;
 
  public:
     JBayDevice() : Device("JBay") {}
 
     const PhvSpec& getPhvSpec() const { return phv_; }
+    const PardeSpec& getPardeSpec() const { return parde_; }
 };
 #endif /* HAVE_JBAY */
 

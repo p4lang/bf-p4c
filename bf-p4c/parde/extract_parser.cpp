@@ -7,7 +7,7 @@
 
 #include "ir/ir.h"
 #include "lib/log.h"
-#include "bf-p4c/common/machine_description.h"
+#include "bf-p4c/device.h"
 #include "bf-p4c/parde/add_parde_metadata.h"
 #include "bf-p4c/parde/resolve_computed.h"
 
@@ -281,7 +281,7 @@ struct RewriteParserStatements : public Transform {
         if (currentBit % 8 != 0) {
             ::warning("Can't extract header %1% from non-byte-aligned input "
                       "buffer position on %2%; adding padding.", hdr,
-                      BFN::Description::ModelName);
+                      Device::currentDevice());
             currentBit += 8 - currentBit % 8;
         }
 
@@ -315,14 +315,14 @@ struct RewriteParserStatements : public Transform {
     rewriteAdvance(const IR::Expression* bits) {
         if (!bits->is<IR::Constant>()) {
             ::error("Advancing by a non-constant distance is not supported on "
-                    "%1%: %2%", BFN::Description::ModelName, bits);
+                    "%1%: %2%", Device::currentDevice(), bits);
             return nullptr;
         }
 
         auto bitOffset = bits->to<IR::Constant>()->asInt();
         if (bitOffset < 0) {
             ::error("Advancing by a negative distance is not supported on "
-                    "%1%: %2%", BFN::Description::ModelName, bits);
+                    "%1%: %2%", Device::currentDevice(), bits);
             return nullptr;
         }
 

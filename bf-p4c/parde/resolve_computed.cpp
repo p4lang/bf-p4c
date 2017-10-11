@@ -3,7 +3,7 @@
 #include <boost/optional.hpp>
 
 #include "frontends/p4/callGraph.h"
-#include "bf-p4c/common/machine_description.h"
+#include "bf-p4c/device.h"
 #include "bf-p4c/parde/parde_visitor.h"
 
 namespace {
@@ -663,6 +663,7 @@ class CheckResolvedParserExpressions : public ParserTransform {
 
     const IR::BFN::ParserPrimitive*
     preorder(IR::BFN::ExtractBuffer* extract) override {
+        auto& pardeSpec = Device::pardeSpec();
         // Check if this extract could possibly fit within the input buffer on
         // the hardware. We can split large states into smaller ones, but we're
         // limited by the fact that the total number of bytes we shift out of
@@ -675,14 +676,14 @@ class CheckResolvedParserExpressions : public ParserTransform {
         // support a lot more with some additional program transformations.
         auto* match = findContext<IR::BFN::ParserMatch>();
         const int byteOverflow = extract->bitInterval().hiByte() - *match->shift;
-        if (byteOverflow < BFN::Description::ByteInputBufferSize)
+        if (byteOverflow < pardeSpec.byteInputBufferSize())
             return checkExtractDestination(extract);
 
         ::error("Extract in state %1% requires reading %2% bytes ahead, which "
                 "is beyond %3%'s limit of %4% bytes: %5%",
                 findContext<IR::BFN::ParserState>()->name, byteOverflow,
-                BFN::Description::ModelName,
-                BFN::Description::ByteInputBufferSize, extract);
+                Device::currentDevice(),
+                pardeSpec.byteInputBufferSize(), extract);
 
         // The most likely cause is that RemoveNegativeOffsets had to put off
         // shifting so long that we ran out of runway in the input buffer.
