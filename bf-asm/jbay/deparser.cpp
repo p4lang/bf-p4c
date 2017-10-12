@@ -142,6 +142,7 @@ void output_jbay_field_dictionary(int lineno, CHUNKS &chunk, POV_FMT &pov_layout
             pov_layout[byte++] = r.first->deparser_id(); } }
     while (byte < pov_layout.size())
         pov_layout[byte++] = 0xff;
+    // DANGER -- this code and output_jbay_field_dictionary_slice below must match exactly
     unsigned ch = 0;
     byte = 0;
     Phv::Slice prev_pov;
@@ -150,6 +151,7 @@ void output_jbay_field_dictionary(int lineno, CHUNKS &chunk, POV_FMT &pov_layout
         if (byte + size > JBAY_DEPARSER_CHUNK_SIZE || (prev_pov && *ent.second != prev_pov)) {
             chunk[ch].chunk_vld = 1;
             chunk[ch].pov = pov.at(&prev_pov.reg) + prev_pov.lo;
+            chunk[ch].seg_vld = 0;  // no CLOTs yet
             chunk[ch].seg_slice = byte & 7;
             chunk[ch].seg_sel = byte >> 3;
             ++ch;
@@ -159,25 +161,30 @@ void output_jbay_field_dictionary(int lineno, CHUNKS &chunk, POV_FMT &pov_layout
     if (byte > 0) {
         chunk[ch].chunk_vld = 1;
         chunk[ch].pov = pov.at(&prev_pov.reg) + prev_pov.lo;
+        chunk[ch].seg_vld = 0;  // no CLOTs yet
         chunk[ch].seg_slice = byte & 7;
         chunk[ch].seg_sel = byte >> 3; }
 }
 
 template<class CHUNKS, class CLOTS, class POV, class DICT>
 void output_jbay_field_dictionary_slice(CHUNKS &chunk, CLOTS &clots, POV &pov, DICT &dict) {
+    // DANGER -- this code and output_jbay_field_dictionary above must match exactly
     unsigned ch = 0, byte = 0;
     Phv::Slice prev_pov;
     for (auto &ent : dict) {
         unsigned size = ent.first->reg.size/8U;
         if (byte + size > JBAY_DEPARSER_CHUNK_SIZE || (prev_pov && *ent.second != prev_pov)) {
+            chunk[ch].cfg.seg_vld = 0;  // no CLOTs yet
             chunk[ch].cfg.seg_slice = byte & 7;
             chunk[ch].cfg.seg_sel = byte >> 3;
             ++ch;
             byte = 0; }
         while (size--) {
             chunk[ch].is_phv |= 1 << byte;
-            chunk[ch].byte_off.phv_offset[byte++] = ent.first->reg.deparser_id(); } }
+            chunk[ch].byte_off.phv_offset[byte++] = ent.first->reg.deparser_id(); }
+        prev_pov = *ent.second; }
     if (byte > 0) {
+        chunk[ch].cfg.seg_vld = 0;  // no CLOTs yet
         chunk[ch].cfg.seg_slice = byte & 7;
         chunk[ch].cfg.seg_sel = byte >> 3; }
 }

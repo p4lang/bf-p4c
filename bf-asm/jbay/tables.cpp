@@ -12,6 +12,9 @@ template<> void MatchTable::write_regs(Target::JBay::mau_regs &regs, int type, T
     write_common_regs<Target::JBay>(regs, type, result);
     auto &merge = regs.rams.match.merge;
     if (pred.empty()) {
-        merge.pred_always_run[gress] |= 1 << logical_id;
-        merge.mpr_always_run |= 1 << logical_id; }
+        merge.pred_always_run[gress] |= 1 << logical_id; }
+    // FIXME -- should set this only if pred is empty or contains tables in the current stage?
+    // FIXME -- if all pred tables are in earlier stages, then mpr_next_table_lut and/or
+    // FIXME -- mpr_glob_exec_lut should be used instead?
+    merge.mpr_always_run |= 1 << logical_id;
 }

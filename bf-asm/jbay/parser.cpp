@@ -129,6 +129,7 @@ static void write_output_const_slot(
         unsigned src, int dest, int bytemask, int flags) {
     // use bits 24..27 of 'used' to track the two constant slots
     assert(bytemask > 0 && bytemask < 4);
+    assert((src & ~((0xffff00ff >> (8*(bytemask-1))) & 0xffff)) == 0);
     // FIXME -- should be able to treat this as 4x8-bit rather than 2x16-bit slots, as long
     // as the ROTATE flag is consistent for each half.
     int cslot = 0;
@@ -137,6 +138,7 @@ static void write_output_const_slot(
     if (cslot >= 2) {
         error(lineno, "Ran out of constant output slots");
         return; }
+    if (bytemask == 1) src <<= 8;
     row->val_const[cslot] |= src;
     if (flags & 2 /*ROTATE*/) row->val_const_rot[cslot] = 1;
     used |= bytemask << (2*cslot + 24);
