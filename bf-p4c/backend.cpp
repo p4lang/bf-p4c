@@ -9,7 +9,6 @@
 #include "bf-p4c/common/live_at_entry.h"
 #include "bf-p4c/common/live_range_overlay.h"
 #include "bf-p4c/common/parser_overlay.h"
-#include "bf-p4c/common/metadata_constant_propagation.h"
 #include "bf-p4c/mau/asm_output.h"
 #include "bf-p4c/mau/empty_controls.h"
 #include "bf-p4c/mau/gateway.h"
@@ -170,7 +169,6 @@ Backend::Backend(const BFN_Options& options) :
         new ResolveComputedParserExpressions,
         new CollectPhvInfo(phv),
         &defuse,
-        new MetadataConstantPropagation(phv, defuse),
         new CollectPhvInfo(phv),
         &defuse,
         new Digests,

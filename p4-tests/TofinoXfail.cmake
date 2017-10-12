@@ -195,7 +195,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_45_action_data_immediate_param_and_constant.p4
   extensions/p4_tests/p4_14/test_config_48_action_data_bit_masked_set.p4
   extensions/p4_tests/p4_14/test_config_49_action_data_bit_masked_set_immediate.p4
-  extensions/p4_tests/p4_14/test_config_245_alias_test.p4
   extensions/p4_tests/p4_14/jenkins/pgrs/pgrs_one.p4
   )
 
@@ -203,6 +202,8 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "instruction slot [0-9]+ used multiple times in action"
   testdata/p4_14_samples/instruct1.p4
+  extensions/p4_tests/p4_14/16-WrongSizeInfiniteLoop.p4
+  extensions/p4_tests/p4_14/15-SetMetadata.p4
   extensions/p4_tests/p4_14/instruct1.p4
   extensions/p4_tests/p4_14/action_conflict_2.p4
   )
@@ -238,7 +239,6 @@ p4c_add_xfail_reason("tofino"
   "No field named counter_addr in format"
   testdata/p4_14_samples/13-Counters1and2.p4
   testdata/p4_14_samples/14-Counter.p4
-  testdata/p4_14_samples/acl1.p4
   testdata/p4_16_samples/action_profile-bmv2.p4
   testdata/p4_16_samples/issue297-bmv2.p4
   extensions/p4_tests/p4_14/c1/COMPILER-386/test_config_286_stat_bugs.p4
@@ -327,6 +327,7 @@ p4c_add_xfail_reason("tofino"
 # be the right stop message for a particular message
 p4c_add_xfail_reason("tofino"
   "PHV allocation creates a container action impossible within a Tofino ALU"
+  extensions/p4_tests/p4_14/jenkins/multicast_scale/multicast_scale.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -484,6 +485,7 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "must be at 64 or 96 on ixbar to be used in stateful"
+  extensions/p4_tests/p4_14/test_config_169_stateful_sflow_sequence.p4
   extensions/p4_tests/p4_14/test_config_184_stateful_bug1.p4
   )
 
@@ -562,11 +564,6 @@ p4c_add_xfail_reason("tofino"
   )
 
 # BRIG-271
-p4c_add_xfail_reason("tofino"
-  "Can't have more than one constant operand to an SALU compare"
-  extensions/p4_tests/p4_14/jenkins/multicast_scale/multicast_scale.p4
-  )
-
 p4c_add_xfail_reason("tofino"
   "error: : conditional assignment not supported"
   extensions/p4_tests/p4_14/test_config_219_modify_field_conditionally.p4
@@ -771,7 +768,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/jenkins/power/power.p4
   testdata/p4_14_samples/parser_dc_full.p4
   testdata/p4_14_samples/port_vlan_mapping.p4
-  extensions/p4_tests/p4_14/switch/p4src/switch.p4
   extensions/p4_tests/p4_14/switch_20160602/switch.p4
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
   )
@@ -906,12 +902,27 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-295/vag1892.p4
   extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
   extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
   extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
   extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
   extensions/p4_tests/p4_14/jenkins/pcie_pkt_test/pcie_pkt_test_one.p4
   extensions/p4_tests/p4_14/test_config_100_hash_action.p4
   extensions/p4_tests/p4_14/test_config_273_bridged_and_phase0.p4
+  )
+
+# BRIG-225?
+p4c_add_xfail_reason("tofino"
+  "Unexpected mirror id"
+  testdata/p4_16_samples/clone-bmv2.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "metadata being placed w/ deparsed header"
+  extensions/p4_tests/p4_14/switch/p4src/switch.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Could not find declaration"
+  extensions/p4_tests/p4_16/stful.p4
   )
 
 # BEGIN: XFAILS that match glass XFAILS
@@ -935,6 +946,7 @@ p4c_add_xfail_reason("tofino"
 # BRIG-219
 p4c_add_xfail_reason("tofino"
   "uses more than two source containers."
+  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
   extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
   )
 
@@ -1159,7 +1171,6 @@ if (ENABLE_TNA)
 
   p4c_add_xfail_reason("tofino"
     "src2 must be phv register"
-    extensions/p4_tests/p4_14/test_config_245_alias_test.p4
     extensions/p4_tests/p4_14/jenkins/pgrs/pgrs_one.p4
     )
 

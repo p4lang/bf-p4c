@@ -79,7 +79,6 @@ set (TOFINO_BACKEND_COMMON_SRCS
   common/header_stack.cpp
   common/live_at_entry.cpp
   common/live_range_overlay.cpp
-  common/metadata_constant_propagation.cpp
   common/remap_intrin.cpp
   common/rewrite.cpp
   common/param_binding.cpp
@@ -102,7 +101,6 @@ set (TOFINO_BACKEND_COMMON_HDRS
   common/header_stack.h
   common/live_at_entry.h
   common/live_range_overlay.h
-  common/metadata_constant_propagation.h
   common/remap_intrin.h
   common/rewrite.h
   common/param_binding.h
