@@ -591,6 +591,12 @@ class PhvInfo {
 
     /// @returns true whenever field f is the only field present in container c
     bool is_only_field_in_container(const PHV::Container c, const Field *f) const;
+
+    /** @returns a bitvec showing the currently allocated bits in a container
+      * Note that one common bitvec is used to represent all fields that may be in a container
+      * (overlaid or allocated to disjoint parts of the container)
+      */
+    bitvec bits_allocated(const PHV::Container c) const;
 };  // class PhvInfo
 
 /**

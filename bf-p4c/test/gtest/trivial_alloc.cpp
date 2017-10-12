@@ -8,6 +8,7 @@
 #include "bf-p4c/phv/trivial_alloc.h"
 #include "bf-p4c/test/gtest/tofino_gtest_utils.h"
 #include "ir/ir.h"
+#include "lib/bitvec.h"
 #include "lib/error.h"
 #include "lib/safe_vector.h"
 #include "test/gtest/helpers.h"
@@ -235,7 +236,8 @@ TYPED_TEST(TofinoPHVTrivialAllocators, AutomaticAllocation) {
 class TofinoPHVManualAlloc : public TofinoBackendTest {
  protected:
     static void
-    runManualAllocTest(const PHV::ManualAlloc::AssignmentMap& assignments) {
+    runManualAllocTest(const PHV::ManualAlloc::AssignmentMap& assignments, bool
+            isWidthMismatchTest=false) {
         auto testcase = SharedPhvTestCases::trivialAlloc();
         ASSERT_TRUE(testcase);
 
@@ -265,9 +267,23 @@ class TofinoPHVManualAlloc : public TofinoBackendTest {
                 EXPECT_EQ(requested[i].field_bit, actual[i].field_bit);
                 EXPECT_EQ(requested[i].container_bit, actual[i].container_bit);
                 EXPECT_EQ(requested[i].width, actual[i].width);
-            }
-        }
-    }
+
+                // Only for the width mismatch test, also check the bits_allocated function, which
+                // returns a bitvector with the allocated container bits
+                if (!isWidthMismatchTest) continue;
+
+                if (requested[i].container == "H1") {
+                    auto bitvec_ret = phv.bits_allocated(actual[i].container);
+                    bitvec real (8, 8);
+                    EXPECT_EQ(bitvec_ret, real);
+                } else if (requested[i].container == "B2" || requested[i].container == "B3") {
+                    auto bitvec_ret = phv.bits_allocated(actual[i].container);
+                    bitvec real(0, 8);
+                    EXPECT_EQ(bitvec_ret, real);
+                } else if (requested[i].container == "W31") {
+                    auto bitvec_ret = phv.bits_allocated(actual[i].container);
+                    bitvec real(24, 8);
+                    EXPECT_EQ(bitvec_ret, real); } } } }
 };
 
 TEST_F(TofinoPHVManualAlloc, SimpleAllocation) {
@@ -294,7 +310,7 @@ TEST_F(TofinoPHVManualAlloc, WidthMismatch) {
         // Map the lower 8 bits of h4.field into the upper 8 bits of a 32-bit
         // container.
         { "egress::h4.field", { PHV::ManualAlloc::Slice{"W31", 0, 24, 8} } },
-    });
+    }, /* isWidthMismatchTest */ true);
 }
 
 TEST_F(TofinoPHVManualAlloc, SplitAllocation) {
@@ -323,7 +339,7 @@ TEST_F(TofinoPHVManualAlloc, SplitAllocation) {
         { "ingress::h2.$valid", { PHV::ManualAlloc::Slice{"B33", 0, 0, 1} } },
         { "ingress::h3.$valid", { PHV::ManualAlloc::Slice{"B34", 0, 0, 1} } },
         { "ingress::h4.$valid", { PHV::ManualAlloc::Slice{"B35", 0, 0, 1} } },
-    });
+    }, /* isWidthMismatchTest */ true);
 }
 
 TEST_F(TofinoPHVManualAlloc, ReservedContainerAllocation) {

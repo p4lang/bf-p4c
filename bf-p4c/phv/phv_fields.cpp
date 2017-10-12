@@ -286,6 +286,21 @@ bool PhvInfo::is_only_field_in_container(const PHV::Container c, const Field *f)
     auto& fields = fields_in_container(c);
     return (fields.size() == 1 && fields.count(f));
 }
+
+bitvec PhvInfo::bits_allocated(const PHV::Container c) const {
+    bitvec ret_bitvec;
+    auto& fields = fields_in_container(c);
+    if (fields.size() == 0)
+        return ret_bitvec;
+    for (auto* field : fields) {
+        field->foreach_alloc([&](const Field::alloc_slice &alloc) {
+            if (alloc.container != c) return;
+            bitrange bits = alloc.container_bits();
+            ret_bitvec.setrange(bits.lo, bits.size());
+        }); }
+    return ret_bitvec;
+}
+
 //
 //***********************************************************************************
 //

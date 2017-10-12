@@ -365,6 +365,7 @@ void ManualAlloc::allocateFieldGroup(const FieldGroup& group,
 
             field->alloc_i.emplace_back(field, container, fieldBit,
                                         containerBit, width);
+            phv.add_container_to_field_entry(container, field);
         }
 
         LOG3("   " << field->alloc_i);
@@ -408,6 +409,7 @@ bool ManualAlloc::preorder(const IR::BFN::Pipe *pipe) {
             alloc.allocate(field->gress, slice.container, manualAllocationSource);
             field->alloc_i.emplace_back(field, slice.container, slice.field_bit,
                                         slice.container_bit, slice.width);
+            phv.add_container_to_field_entry(slice.container, field);
         }
     }
 
