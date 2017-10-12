@@ -699,22 +699,10 @@ bool ActionAnalysis::ContainerAction::verify_alignment(int max_phv_unaligned,
  *  instruction where this doesn't apply is the deposit-field instruction.  That instruction
  *  can have a portion masked.  Any other operation currently acts on the entire container, and
  *  all fields could be potentially affected.
- *
- *  FIXME: This does not take into consideration the following scenario:
- *    - Even though the entire container is overwritten, the container is not entirely occupied.
- *      (i.e. standard_metadata.egress_spec).  Therefore, those bits could be affected without
- *      any effect on the packet.  However, no API currently exists to go from container to
- *      field.  This may come up (i.e. resubmit)
  */
 bool ActionAnalysis::ContainerAction::verify_overwritten(PHV::Container container,
           const PhvInfo &phv) {
-    // FIXME: This is currently a hack to get recirculate to work properly.  Deep is working
-    // on an API function call to do this verification more correctly.
-    cstring wname = phv.field(field_actions[0].write.expr)->name;
-    if ((strcmp(wname, "ingress::standard_metadata.egress_spec") == 0) ||
-        (strcmp(wname, "ingress::ig_intr_md_for_tm.ucast_egress_port") == 0))
-        return true;
-
+    bitvec container_occupancy = phv.bits_allocated(container);
     bitvec total_write_bits;
     for (auto &tot_align_info : phv_alignment) {
         total_write_bits |= tot_align_info.second.write_bits;
@@ -723,7 +711,7 @@ bool ActionAnalysis::ContainerAction::verify_overwritten(PHV::Container containe
     total_write_bits |= adi.ad_alignment.write_bits;
     total_write_bits |= constant_alignment.write_bits;
 
-    if (total_write_bits.popcount() != static_cast<int>(container.size()))
+    if (total_write_bits != container_occupancy)
         return false;
 
     return true;
