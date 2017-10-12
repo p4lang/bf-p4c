@@ -20,10 +20,10 @@ class Phv_Parde_Mau_Use : public Inspector {
     //
     explicit Phv_Parde_Mau_Use(const PhvInfo &p) : phv(p) { }
     //
-    bool is_referenced(const PhvInfo::Field *f) const;
-    bool is_deparsed(const PhvInfo::Field *f) const;
-    bool is_used_mau(const PhvInfo::Field *f) const;
-    bool is_used_parde(const PhvInfo::Field *f) const;
+    bool is_referenced(const PHV::Field *f) const;
+    bool is_deparsed(const PHV::Field *f) const;
+    bool is_used_mau(const PHV::Field *f) const;
+    bool is_used_parde(const PHV::Field *f) const;
     //
  protected:
     const PhvInfo &phv;

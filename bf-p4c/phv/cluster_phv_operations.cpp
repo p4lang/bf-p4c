@@ -26,11 +26,11 @@ bool PHV_Field_Operations::preorder(const IR::MAU::Instruction *inst) {
     dst_i = nullptr;
     // get pointer to inst
     if (!inst->operands.empty()) {
-        dst_i = const_cast<PhvInfo::Field*> (phv.field(inst->operands[0]));
+        dst_i = const_cast<PHV::Field*> (phv.field(inst->operands[0]));
         if (dst_i) {
             // insert operation in field.operations with tuple3<operation, mode>
             // most of the information in the tuple is for debugging purpose
-            auto op = std::make_tuple(is_move_op, inst->name, PhvInfo::Field::Field_Ops::W);
+            auto op = std::make_tuple(is_move_op, inst->name, PHV::Field_Ops::W);
             dst_i->operations().push_back(op);
         }
         // get src operands (if more than 1?)
@@ -39,10 +39,10 @@ bool PHV_Field_Operations::preorder(const IR::MAU::Instruction *inst) {
             for (auto operand = ++inst->operands.begin();
                     operand != inst->operands.end();
                     ++operand) {
-                PhvInfo::Field* field = phv.field(*operand);
+                PHV::Field* field = phv.field(*operand);
                 if (field) {
                     // insert operation in field.operations with tuple3
-                    auto op = std::make_tuple(is_move_op, inst->name, PhvInfo::Field::Field_Ops::R);
+                    auto op = std::make_tuple(is_move_op, inst->name, PHV::Field_Ops::R);
                     field->operations().push_back(op);
                 }
             }

@@ -9,7 +9,7 @@ const IR::Node * AllocateVirtualContainers::apply_visitor(
         LOG1(name);
 
     // Find (partially or fully) unallocated fields.
-    ordered_set<PhvInfo::Field *> unallocated =
+    ordered_set<PHV::Field *> unallocated =
         CheckFitting::collect_unallocated_fields(phv_i, uses_i);
 
     // Unallocate allocated pieces of partially allocated fields.
@@ -20,7 +20,7 @@ const IR::Node * AllocateVirtualContainers::apply_visitor(
     return node;
 }
 
-void AllocateVirtualContainers::trivial_allocate(ordered_set<PhvInfo::Field *>& fields) {
+void AllocateVirtualContainers::trivial_allocate(ordered_set<PHV::Field *>& fields) {
     //
     // trivially allocating overflow fields
     //
@@ -102,7 +102,7 @@ void AllocateVirtualContainers::trivial_allocate(ordered_set<PhvInfo::Field *>& 
 }
 
 void AllocateVirtualContainers::container_contiguous_alloc(
-    PhvInfo::Field* f1,
+    PHV::Field* f1,
     int container_width,
     PHV::Container *asm_container,
     int width_in_container) {

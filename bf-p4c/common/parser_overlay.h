@@ -12,7 +12,7 @@
 #include "bf-p4c/parde/parde_visitor.h"
 #include "bf-p4c/phv/phv_fields.h"
 
-/* Produces a SymBitMatrix where keys are PhvInfo::Field ids and values
+/* Produces a SymBitMatrix where keys are PHV::Field ids and values
  * indicate whether two fields are mutually exclusive, based on analyzing the
  * structure of the parse graph to identify fields that can never appear in the
  * same packet.
@@ -40,7 +40,7 @@ class BuildParserOverlay : public BFN::ControlFlowVisitor,
 
     bitvec           fields_encountered;
 
-    void mark(const PhvInfo::Field*);
+    void mark(const PHV::Field*);
     void mark(const IR::HeaderRef*);
 
     bool preorder(const IR::BFN::Extract*) override;

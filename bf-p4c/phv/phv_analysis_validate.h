@@ -38,7 +38,7 @@ class PHV_Analysis_Validate : public Visitor {
     void end_apply() override;
 
     static std::tuple<
-        PhvInfo::Field *,
+        PHV::Field *,
         const std::pair<int, int>,
         const PHV_Container *,
         const std::pair<int, int>>
@@ -51,14 +51,14 @@ class PHV_Analysis_Validate : public Visitor {
     // APIs
     //
     // field allocated, contiguously
-    bool field_allocated(PhvInfo::Field *f, bool contiguously = false);
+    bool field_allocated(PHV::Field *f, bool contiguously = false);
 
     //
     // containers to fields
     //
     void sort_container_ranges(
         std::list<std::tuple<
-            PhvInfo::Field *,
+            PHV::Field *,
             const std::pair<int, int>,
             const PHV_Container *,
             const std::pair<int, int>>>& tuple_list);
@@ -72,7 +72,7 @@ class PHV_Analysis_Validate : public Visitor {
     container_to_fields(
         int phv_num,
         std::list<std::tuple<
-            PhvInfo::Field *,
+            PHV::Field *,
             const std::pair<int, int>,
             const PHV_Container *,
             const std::pair<int, int>>>&,
@@ -84,7 +84,7 @@ class PHV_Analysis_Validate : public Visitor {
         int phv_num,
         std::pair<int, int>&,
         std::list<std::tuple<
-            PhvInfo::Field *,
+            PHV::Field *,
             const std::pair<int, int>,
             const PHV_Container *,
             const std::pair<int, int>>>&,
@@ -98,7 +98,7 @@ class PHV_Analysis_Validate : public Visitor {
     fields_written(
         int phv_num,
         std::list<std::tuple<
-            PhvInfo::Field *,
+            PHV::Field *,
             const std::pair<int, int>,
             const PHV_Container *,
             const std::pair<int, int>>>& tuple_list);
@@ -107,21 +107,21 @@ class PHV_Analysis_Validate : public Visitor {
         int phv_num,
         std::pair<int, int>& f_range,
         std::list<std::tuple<
-            PhvInfo::Field *,
+            PHV::Field *,
             const std::pair<int, int>,
             const PHV_Container *,
             const std::pair<int, int>>>& tuple_list);
     void
     fields_written(
         std::list<std::tuple<
-            PhvInfo::Field *,
+            PHV::Field *,
             const std::pair<int, int>,
             const PHV_Container *,
             const std::pair<int, int>>>& tuple_list);  // all fields written in MAU
     void
     fields_written(
         std::list<std::pair<
-            PhvInfo::Field *,
+            PHV::Field *,
             const std::pair<int, int>>>& tuple_list);  // all fields written in program
     //
     // fields overlayed
@@ -130,7 +130,7 @@ class PHV_Analysis_Validate : public Visitor {
     fields_overlayed(
         int phv_num,
         std::list<std::tuple<
-            PhvInfo::Field *,
+            PHV::Field *,
             const std::pair<int, int>,
             const PHV_Container *,
             const std::pair<int, int>>>& tuple_list);
@@ -139,22 +139,22 @@ class PHV_Analysis_Validate : public Visitor {
         int phv_num,
         std::pair<int, int>& f_range,
         std::list<std::tuple<
-            PhvInfo::Field *,
+            PHV::Field *,
             const std::pair<int, int>,
             const PHV_Container *,
             const std::pair<int, int>>>& tuple_list);
     void
     fields_overlayed(
         std::list<std::tuple<
-            PhvInfo::Field *,
+            PHV::Field *,
             const std::pair<int, int>,
             const PHV_Container *,
             const std::pair<int, int>>>& tuple_list);  // all fields overlayed in MAU
     void
     fields_overlayed(
-        PhvInfo::Field *field,
+        PHV::Field *field,
         std::list<std::tuple<
-            PhvInfo::Field *,
+            PHV::Field *,
             const std::pair<int, int>,
             const PHV_Container *,
             const std::pair<int, int>>>& tuple_list);  // all fields overlaying a field
@@ -165,7 +165,7 @@ class PHV_Analysis_Validate : public Visitor {
     fields_sliced(
         int phv_num,
         std::list<std::tuple<
-            PhvInfo::Field *,
+            PHV::Field *,
             const std::pair<int, int>,
             const PHV_Container *,
             const std::pair<int, int>>>& tuple_list);
@@ -174,27 +174,27 @@ class PHV_Analysis_Validate : public Visitor {
         int phv_num,
         std::pair<int, int>& f_range,
         std::list<std::tuple<
-            PhvInfo::Field *,
+            PHV::Field *,
             const std::pair<int, int>,
             const PHV_Container *,
             const std::pair<int, int>>>& tuple_list);
     void
     fields_sliced(
         std::list<std::tuple<
-            PhvInfo::Field *,
+            PHV::Field *,
             const std::pair<int, int>,
             const PHV_Container *,
             const std::pair<int, int>>>& tuple_list);
     void
     fields_sliced(
         std::list<std::pair<
-            PhvInfo::Field *,
+            PHV::Field *,
             const std::pair<int, int>>>& tuple_list);
     void
     fields_sliced(
-        PhvInfo::Field *f,
+        PHV::Field *f,
         std::list<std::pair<
-            PhvInfo::Field *,
+            PHV::Field *,
             const std::pair<int, int>>>& tuple_list);
 
     friend std::ostream &operator<<(std::ostream &, PHV_Analysis_Validate &);
@@ -208,14 +208,14 @@ std::ostream &operator<<(
 std::ostream &operator<<(
     std::ostream &,
     std::tuple<
-        PhvInfo::Field *,
+        PHV::Field *,
         const std::pair<int, int>,
         const PHV_Container *,
         const std::pair<int, int>>&);
 std::ostream &operator<<(
     std::ostream &,
     std::list<std::tuple<
-        PhvInfo::Field *,
+        PHV::Field *,
         const std::pair<int, int>,
         const PHV_Container *,
         const std::pair<int, int>>>&);

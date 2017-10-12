@@ -28,7 +28,7 @@ class CollectGatewayFields : public Inspector {
     const PhvInfo       &phv;
     const IXBar::Use    *ixbar = nullptr;
     unsigned            row_limit = ~0U;   // FIXME -- needed?  only use by SplitComplexGateways
-    const PhvInfo::Field *xor_match = nullptr;
+    const PHV::Field   *xor_match = nullptr;
     bool preorder(const IR::MAU::Table *tbl) override {
         unsigned row = 0;
         for (auto &gw : tbl->gateway_rows) {
@@ -42,12 +42,12 @@ class CollectGatewayFields : public Inspector {
 
  public:
     struct info_t {
-        const PhvInfo::Field    *xor_with = nullptr;
+        const PHV::Field       *xor_with = nullptr;
         bitrange                bits = { -1, -1 };
         bool                    need_range = false;
         uint64_t                need_mask = 0;
         safe_vector<std::pair<int, bitrange>> offsets; };
-    ordered_map<const PhvInfo::Field *, info_t>       info;
+    ordered_map<const PHV::Field *, info_t>       info;
     bool                                              need_range = false;
     int                                               bytes, bits;
     explicit CollectGatewayFields(const PhvInfo &phv, const IXBar::Use *ix = nullptr)
@@ -99,7 +99,7 @@ class BuildGatewayMatch : public Inspector {
     bool preorder(const IR::Equ *) override;
     bool preorder(const IR::RangeMatch *) override;
     friend std::ostream &operator<<(std::ostream &, const BuildGatewayMatch &);
-    const PhvInfo::Field        *match_field;
+    const PHV::Field           *match_field;
     bitrange                    match_field_bits;
     uint64_t                    andmask, ormask;
     int                         shift;

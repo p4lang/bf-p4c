@@ -168,9 +168,9 @@ Cluster_PHV_Overlay::apply_visitor(const IR::Node *node, const char *name) {
 
 bool
 Cluster_PHV_Overlay::overlay_field_to_field(
-    PhvInfo::Field *f_o,
+    PHV::Field *f_o,
     Cluster_PHV *cl_f_o,
-    PhvInfo::Field *f_s,
+    PHV::Field *f_s,
     bool exceed_substratum) {
     //
     assert(f_o);
@@ -230,12 +230,12 @@ Cluster_PHV_Overlay::overlay_cluster_to_cluster(
     //
     // assumption
     // cluster of fields are sorted decreasing field width
-    ordered_map<PhvInfo::Field *, PhvInfo::Field *> overlay_substratum_map;
-    std::list<PhvInfo::Field *> substratum_fields(
+    ordered_map<PHV::Field *, PHV::Field *> overlay_substratum_map;
+    std::list<PHV::Field *> substratum_fields(
         cl_s->cluster_vec().begin(),
         cl_s->cluster_vec().end());
     for (auto &f_o : cl_o->cluster_vec()) {
-        PhvInfo::Field *remove_field = 0;
+        PHV::Field *remove_field = 0;
         for (auto &f_s : substratum_fields) {
             if (overlay_field_to_field(f_o, cl_o, f_s /* , do not exceed substratum */)) {
                 overlay_substratum_map[f_o] = f_s;
@@ -261,8 +261,8 @@ Cluster_PHV_Overlay::overlay_cluster_to_cluster(
     LOG3("+++++ Overlay cl->cl Passed +++++");
     LOG3(overlay_substratum_map);
     for (auto &e : overlay_substratum_map) {
-        PhvInfo::Field *f_o = e.first;
-        PhvInfo::Field *f_s = e.second;
+        PHV::Field *f_o = e.first;
+        PHV::Field *f_s = e.second;
         LOG3("\t" << f_o);
         LOG3("\t==> " << f_s);
         int f_o_width = f_o->phv_use_width(cl_o);
@@ -320,7 +320,7 @@ Cluster_PHV_Overlay::overlay_clusters_to_clusters(
     for (auto &cl : clusters_to_be_assigned) {
         std::sort(cl->cluster_vec().begin(),
                   cl->cluster_vec().end(),
-                  [](PhvInfo::Field *l, PhvInfo::Field *r) {
+                  [](PHV::Field *l, PHV::Field *r) {
                       if (l->phv_use_width() == r->phv_use_width()) {
                           // sort by cluster id_num to prevent non-determinism
                           return l->id < r->id;
@@ -347,7 +347,7 @@ Cluster_PHV_Overlay::overlay_clusters_to_clusters(
     for (auto &cl : substratum_clusters) {
         std::sort(cl->cluster_vec().begin(),
                   cl->cluster_vec().end(),
-                  [](PhvInfo::Field *l, PhvInfo::Field *r) {
+                  [](PHV::Field *l, PHV::Field *r) {
                       if (l->phv_use_width() == r->phv_use_width()) {
                           // sort by cluster id_num to prevent non-determinism
                           return l->id < r->id;
@@ -397,7 +397,7 @@ Cluster_PHV_Overlay::overlay_clusters_to_clusters(
 //
 bool Cluster_PHV_Overlay::overlay_field_to_container(
     Cluster_PHV *cl,
-    PhvInfo::Field *field,
+    PHV::Field *field,
     PHV_Container *c,
     int run_width,
     int &start_bit) {
@@ -507,13 +507,13 @@ Cluster_PHV_Overlay::overlay_cluster_to_mau_group(Cluster_PHV *cl, PHV_MAU_Group
         << "G" << g->number() << "<" << g->width() << "b>" << '.' << g->gress());
     // LOG3(cl);
     //
-    ordered_map<PhvInfo::Field *,
+    ordered_map<PHV::Field *,
         std::list<std::pair<PHV_Container *, int>>> field_container_map;
     std::list<PHV_Container *> container_list(
         g->phv_containers().begin(),
         g->phv_containers().end());
     for (size_t i=0; i < cl->cluster_vec().size(); i++) {
-        PhvInfo::Field *field = cl->cluster_vec()[i];
+        PHV::Field *field = cl->cluster_vec()[i];
         int field_width = field->phv_use_width(cl);
         for (auto &c : container_list) {
             //
@@ -568,7 +568,7 @@ Cluster_PHV_Overlay::overlay_cluster_to_mau_group(Cluster_PHV *cl, PHV_MAU_Group
     // i.e., enter additional cc for overlayed field in container
     //
     for (auto &e : field_container_map) {
-        PhvInfo::Field *f = e.first;
+        PHV::Field *f = e.first;
         int field_bit_lo = f->phv_use_lo(cl);
         int field_width = f->phv_use_width(cl);
         // field straddles containers when e.second.size() > 1
@@ -658,7 +658,7 @@ Cluster_PHV_Overlay::overlay_clusters_to_mau_groups(
 
 std::ostream &operator<<(
     std::ostream &out,
-    ordered_map<PhvInfo::Field *, PhvInfo::Field *>& overlay_substratum_map) {
+    ordered_map<PHV::Field *, PHV::Field *>& overlay_substratum_map) {
     //
     out << "..... Overlay Field -> Field map ....." << std::endl;
     for (auto &e : overlay_substratum_map) {
@@ -676,7 +676,7 @@ std::ostream &operator<<(
 
 std::ostream &operator<<(
     std::ostream &out,
-    ordered_map<PhvInfo::Field *, std::list<std::pair<PHV_Container *, int>>>&
+    ordered_map<PHV::Field *, std::list<std::pair<PHV_Container *, int>>>&
         field_container_map) {
     //
     out << "..... Overlay Field -> Container_map ....." << std::endl;

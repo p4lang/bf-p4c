@@ -45,7 +45,7 @@ class PHV_Container {
      private:
         const PHV_Container *container_i;  // parent container
         le_bitrange container_range_i;     // range of bits used in container for this field
-        PhvInfo::Field *field_i;
+        PHV::Field *field_i;
         const int field_bit_lo_i;          // start of field bit in this container
         std::string taint_color_i = "?";   // taint color of this field in container
         Pass pass_i = None;                // tracks pass that creates this cc: overlay, slicing
@@ -54,7 +54,7 @@ class PHV_Container {
         Container_Content(
             const PHV_Container *c,
             const le_bitrange container_range,
-            PhvInfo::Field *f,
+            PHV::Field *f,
             const int field_bit_lo = 0,
             const std::string taint_color = "?",
             Pass = None);
@@ -64,7 +64,7 @@ class PHV_Container {
         int hi() const                   { return container_range_i.hi; }
         void hi(int h)                   { container_range_i.hi = h; }
         int width() const                { return container_range_i.size(); }
-        PhvInfo::Field *field()          { return field_i; }
+        PHV::Field *field()          { return field_i; }
         int field_bit_lo() const         { return field_bit_lo_i; }
         int field_bit_hi() const         { return field_bit_lo_i + width() - 1; }
         const PHV_Container *container() { return container_i; }
@@ -104,7 +104,7 @@ class PHV_Container {
     boost::optional<gress_t> gress_i;
 
     Container_status status_i = Container_status::EMPTY;
-    ordered_map<PhvInfo::Field *, std::list<Container_Content *>>
+    ordered_map<PHV::Field *, std::list<Container_Content *>>
         fields_in_container_i;                               // fields binned in this container
                                                              // list of ccs necessary for multiple
                                                              // sliced fields in same container
@@ -188,34 +188,34 @@ class PHV_Container {
     int taint(
         int start,
         int width,
-        PhvInfo::Field *field,
+        PHV::Field *field,
         int field_bit_lo = 0,
         Container_Content::Pass pass = Container_Content::Pass::None,
         bool process_ccgf = true);
     int taint_ccgf(
         int start,
         int width,
-        PhvInfo::Field *field,
+        PHV::Field *field,
         int field_bit_lo,
         Container_Content::Pass pass = Container_Content::Pass::None);
     void update_ccgf(
-        PhvInfo::Field *f,
+        PHV::Field *f,
         int processed_members,
         int processed_width);
     void overlay_ccgf_field(
-        PhvInfo::Field *field,
+        PHV::Field *field,
         int start,
         const int width,
         int field_bit_lo,
         Container_Content::Pass pass = Container_Content::Pass::Field_Interference);
     void single_field_overlay(
-        PhvInfo::Field *f,
+        PHV::Field *f,
         const int start,
         int width,
         const int field_bit_lo,
         Container_Content::Pass pass = Container_Content::Pass::Field_Interference);
     void field_overlays(
-        PhvInfo::Field *field,
+        PHV::Field *field,
         int start,
         int width,
         const int field_bit_lo);
@@ -226,22 +226,22 @@ class PHV_Container {
         taint_bits(
             int start,
             int width,
-            PhvInfo::Field *field,
+            PHV::Field *field,
             int field_bit_lo,
             Container_Content::Pass pass = Container_Content::Pass::None);
     int avail_bits()                                            { return avail_bits_i; }
     ordered_map<int, int>& ranges()                             { return ranges_i; }
-    const ordered_map<PhvInfo::Field *,
+    const ordered_map<PHV::Field *,
               std::list<Container_Content *>>& fields_in_container() const {
         return fields_in_container_i;
     }
-    ordered_map<PhvInfo::Field *,
+    ordered_map<PHV::Field *,
         std::list<Container_Content *>>& fields_in_container() { return fields_in_container_i; }
     void fields_in_container(std::list<Container_Content *>& cc_list);
-    void fields_in_container(PhvInfo::Field *f, Container_Content *cc);
-    void fields_in_container(int start, int end, ordered_set<PhvInfo::Field *>& f_set);
+    void fields_in_container(PHV::Field *f, Container_Content *cc);
+    void fields_in_container(int start, int end, ordered_set<PHV::Field *>& f_set);
 
-    std::pair<int, int> start_bit_and_width(PhvInfo::Field *f);
+    std::pair<int, int> start_bit_and_width(PHV::Field *f);
     static void holes(
         std::vector<char>& bits,
         char empty,
@@ -255,19 +255,19 @@ class PHV_Container {
     void clear();
     void clean_ranges();
     //
-    static bool constraint_no_holes(PhvInfo::Field *field) {
+    static bool constraint_no_holes(PHV::Field *field) {
         return field->deparsed();
     }
-    static bool constraint_no_cohabit(PhvInfo::Field *field) {
+    static bool constraint_no_cohabit(PHV::Field *field) {
         return field->deparsed_no_pack() || field->mau_phv_no_pack();
     }
-    static bool constraint_no_cohabit_exclusive_mau(PhvInfo::Field *field) {
+    static bool constraint_no_cohabit_exclusive_mau(PHV::Field *field) {
         return field->mau_phv_no_pack() && !field->deparsed_no_pack();
     }
-    static bool constraint_bottom_bits(PhvInfo::Field *field) {
+    static bool constraint_bottom_bits(PHV::Field *field) {
         return field->deparsed_bottom_bits();
     }
-    static int ceil_phv_use_width(PhvInfo::Field* f, int min_ceil = 0) {
+    static int ceil_phv_use_width(PHV::Field* f, int min_ceil = 0) {
         BUG_CHECK(f, "NULL field");
         if (f->size <= int(PHV::Size::b8) && int(PHV::Size::b8) >= min_ceil) {
             return int(PHV::Size::b8);
@@ -280,8 +280,8 @@ class PHV_Container {
     }
     //
     bool sanity_check_deparsed_container_violation(
-        const PhvInfo::Field *&deparsed_header,
-        const PhvInfo::Field *&non_deparsed_field) const;
+        const PHV::Field *&deparsed_header,
+        const PHV::Field *&non_deparsed_field) const;
     void sanity_check_container(const std::string& msg, bool check_deparsed = true);
     void sanity_check_overlayed_fields(const std::string& msg);
     void sanity_check_container_avail(int lo, int hi, const std::string&);
@@ -304,6 +304,6 @@ std::ostream &operator<<(std::ostream &, std::vector<PHV_Container *>&);
 std::ostream &operator<<(std::ostream &, std::list<PHV_Container *>&);
 std::ostream &operator<<(
     std::ostream &,
-    ordered_map<PhvInfo::Field *, std::list<PHV_Container::Container_Content *>>&);
+    ordered_map<PHV::Field *, std::list<PHV_Container::Container_Content *>>&);
 //
 #endif /* BF_P4C_PHV_CLUSTER_PHV_CONTAINER_H_ */

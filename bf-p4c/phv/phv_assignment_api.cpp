@@ -15,9 +15,9 @@
 //
 bool
 PHV_Assignment_API::field_to_containers(
-    PhvInfo::Field *f,
+    PHV::Field *f,
     std::list<std::tuple<
-        const PhvInfo::Field *,
+        const PHV::Field *,
         const std::pair<int, int>,
         PHV::Container *,
         const std::pair<int, int>>>& tuple_list) {

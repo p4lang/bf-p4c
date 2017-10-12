@@ -100,7 +100,7 @@ class PHV_Interference : public Visitor {
      *
      * @returns The set of owners (each corresponding to a singleton).
      */
-    ordered_set<PhvInfo::Field*> reduce_singleton_clusters(
+    ordered_set<PHV::Field*> reduce_singleton_clusters(
         const ordered_map<gress_t, ordered_map<int, std::vector<Cluster_PHV *>>>,
         const std::string&);
 
@@ -112,9 +112,9 @@ class PHV_Interference : public Visitor {
      * @return a map from virtual registers to sets of fields that can be
      * overlaid.
      */
-    ordered_map<int, std::vector<PhvInfo::Field *>> find_overlay(
+    ordered_map<int, std::vector<PHV::Field *>> find_overlay(
         int cluster_width,
-        const std::vector<PhvInfo::Field *> cluster);
+        const std::vector<PHV::Field *> cluster);
 
     /** Helper function for `reduce_cluster`.  For each set of fields in
      * @reg_map, selects the widest as the "owner", and updates the owner's
@@ -122,8 +122,8 @@ class PHV_Interference : public Visitor {
      *
      * @returns The set of owners.
      */
-    ordered_set<PhvInfo::Field*> do_intracluster_overlay(
-        const ordered_map<int, std::vector<PhvInfo::Field*>> reg_map);
+    ordered_set<PHV::Field*> do_intracluster_overlay(
+        const ordered_map<int, std::vector<PHV::Field*>> reg_map);
 
     /** Finds fields that can be overlaid.  For each set of fields that can be
      * overlaid, chooses a fresh virtual container, and makes the largest field the
@@ -140,8 +140,8 @@ class PHV_Interference : public Visitor {
      *
      * @returns The set of owners.
      */
-    ordered_set<PhvInfo::Field*> reduce_cluster(
-        const std::vector<PhvInfo::Field*> fields,
+    ordered_set<PHV::Field*> reduce_cluster(
+        const std::vector<PHV::Field*> fields,
         int width,
         const std::string& msg);
 
@@ -177,15 +177,15 @@ class PHV_Interference : public Visitor {
      * and if f1 is the same width as f3, and f2 as f4, then only f1---f3 and
      * f2---f4 need to be mutually exclusive, but not f1---f4 or f2---f3.
      */
-    bool mutually_exclusive(PhvInfo::Field *f1, PhvInfo::Field *f2);
+    bool mutually_exclusive(PHV::Field *f1, PHV::Field *f2);
 
     /** Checks that owners own unique virtual registers, and that overlaid
      * fields are mutually exclusive.
      */
-    void sanity_check_overlay_maps(ordered_set<PhvInfo::Field *>, const std::string&);
+    void sanity_check_overlay_maps(ordered_set<PHV::Field *>, const std::string&);
 };
 
-std::ostream &operator<<(std::ostream &, ordered_map<int, PhvInfo::Field*>&);
+std::ostream &operator<<(std::ostream &, ordered_map<int, PHV::Field*>&);
 std::ostream &operator<<(std::ostream &out,
     ordered_map<gress_t, ordered_map<int, std::vector<Cluster_PHV *>>>&);
 std::ostream &operator<<(std::ostream &, PHV_Interference&);

@@ -827,11 +827,11 @@ int need_align_flags[4][4] = { { 0, 0, 0, 0 },  // 8bit -- no alignment needed
 };
 
 /* Add the pre-allocated bytes to the Use structure */
-static void add_use(IXBar::Use &alloc, const PhvInfo::Field *field,
+static void add_use(IXBar::Use &alloc, const PHV::Field *field,
                     const bitrange *bits = nullptr, int flags = 0) {
     bool ok = false;
     int index = 0;
-    field->foreach_byte(bits, [&](const PhvInfo::Field::alloc_slice &sl) {
+    field->foreach_byte(bits, [&](const PHV::Field::alloc_slice &sl) {
         ok = true;  // FIXME -- better sanity check?
         IXBar::Use::Byte byte(field->name, sl.field_bit, sl.field_hi());
         byte.bit_use.setrange(sl.container_bit % 8, sl.width);
@@ -865,7 +865,7 @@ void IXBar::layout_option_calculation(const LayoutOption *layout_option,
 void IXBar::field_management(const IR::Expression *field, IXBar::Use &alloc,
         std::map<cstring, bitvec> &fields_needed, bool hash_dist, cstring name,
         const PhvInfo &phv) {
-    const PhvInfo::Field *finfo = nullptr;
+    const PHV::Field *finfo = nullptr;
     bitrange bits = { };
     if (auto list = field->to<IR::ListExpression>()) {
         if (!hash_dist)

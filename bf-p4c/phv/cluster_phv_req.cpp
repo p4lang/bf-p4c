@@ -94,8 +94,8 @@ Cluster_PHV_Requirements::apply_visitor(const IR::Node *node, const char *name) 
     }
     std::sort(pov_fields_i.begin(), pov_fields_i.end(),
         [](Cluster_PHV *l, Cluster_PHV *r) {
-            PhvInfo::Field *fl =  *(l->cluster_vec().begin());
-            PhvInfo::Field *fr =  *(r->cluster_vec().begin());
+            PHV::Field *fl =  *(l->cluster_vec().begin());
+            PHV::Field *fr =  *(r->cluster_vec().begin());
             int l_range = fl->phv_use_hi() - fl->phv_use_lo();
             int r_range = fr->phv_use_hi() - fr->phv_use_lo();
             if (l_range == r_range) {
@@ -119,8 +119,8 @@ Cluster_PHV_Requirements::apply_visitor(const IR::Node *node, const char *name) 
 
     std::sort(t_phv_fields_i.begin(), t_phv_fields_i.end(),
         [](Cluster_PHV *l, Cluster_PHV *r) {
-            PhvInfo::Field *fl =  *(l->cluster_vec().begin());
-            PhvInfo::Field *fr =  *(r->cluster_vec().begin());
+            PHV::Field *fl =  *(l->cluster_vec().begin());
+            PHV::Field *fr =  *(r->cluster_vec().begin());
             int l_range = fl->phv_use_hi() - fl->phv_use_lo();
             int r_range = fr->phv_use_hi() - fr->phv_use_lo();
             if (l_range == r_range) {
@@ -163,7 +163,7 @@ std::pair<int, int> Cluster_PHV_Requirements::gress(std::list<Cluster_PHV *>& cl
 //      (ii) set of fields -- non-sliced cluster
 // output
 //      sorted cluster vector of fields, width decreasing
-//      std::vector<const PhvInfo::Field *> cluster_vec_i
+//      std::vector<const PHV::Field *> cluster_vec_i
 //
 //***********************************************************************************
 
@@ -186,7 +186,7 @@ Cluster_PHV::Cluster_PHV(Cluster_PHV *cl, bool lo) {
 
 // non-sliced cluster
 Cluster_PHV::Cluster_PHV(
-    ordered_set<PhvInfo::Field *> *p,
+    ordered_set<PHV::Field *> *p,
     std::string id_s)
     : cluster_vec_i(p->begin(), p->end()), id_i(id_s) {
     //
@@ -321,7 +321,7 @@ Cluster_PHV::compute_requirements() {
         std::adjacent_find(
             cluster_vec_i.begin(),
             cluster_vec_i.end(),
-            [](PhvInfo::Field *l, PhvInfo::Field *r) {
+            [](PHV::Field *l, PHV::Field *r) {
                 return l->phv_use_width() != r->phv_use_width(); })
         == cluster_vec_i.end();
     //
@@ -386,7 +386,7 @@ Cluster_PHV::compute_requirements() {
     //
     std::sort(cluster_vec_i.begin(),
               cluster_vec_i.end(),
-              [](PhvInfo::Field *l, PhvInfo::Field *r) {
+              [](PHV::Field *l, PHV::Field *r) {
                   if (l->phv_use_width() == r->phv_use_width()) {
                       // sort by cluster id_num to prevent non-determinism
                       return l->id < r->id;
@@ -403,7 +403,7 @@ int
 Cluster_PHV::compute_max_width() {
     //
     int width = static_cast<int>(width_i);
-    PhvInfo::Field *field = cluster_vec_i.front();
+    PHV::Field *field = cluster_vec_i.front();
     if (uniform_width_i) {
         if (cluster_vec_i.size() == 1 && field->is_ccgf()) {
             int constrained_width = 0;
@@ -501,7 +501,7 @@ Cluster_PHV::container_width(int field_width) {
 
 int
 Cluster_PHV::num_containers(
-    std::vector<PhvInfo::Field *>& cluster_vec, PHV::Size width) {
+    std::vector<PHV::Field *>& cluster_vec, PHV::Size width) {
     //
     // num containers of width
     int num_containers = 0;

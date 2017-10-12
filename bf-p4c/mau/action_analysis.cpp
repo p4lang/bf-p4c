@@ -159,7 +159,7 @@ void ActionAnalysis::postorder(const IR::MAU::Instruction *instr) {
 
         auto *field = phv.field(field_action.write.expr, &bits);
         int split_count = 0;
-        field->foreach_alloc(bits, [&](const PhvInfo::Field::alloc_slice &) {
+        field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice &) {
             split_count++;
         });
 
@@ -171,7 +171,7 @@ void ActionAnalysis::postorder(const IR::MAU::Instruction *instr) {
         if (split_count > 1 && field_action.write.expr->is<IR::Slice>())
             BUG("Unhandled action bitmask constraint");
 
-        field->foreach_alloc(bits, [&](const PhvInfo::Field::alloc_slice &alloc) {
+        field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice &alloc) {
             auto container = alloc.container;
             if (container_actions_map->find(container) == container_actions_map->end()) {
                 ContainerAction cont_action;
@@ -208,7 +208,7 @@ void ActionAnalysis::postorder(const IR::MAU::Instruction *instr) {
  *    - Only one action data per instruction
  */
 bool ActionAnalysis::verify_P4_action_without_phv(cstring action_name) {
-    ordered_map<const PhvInfo::Field *, bitvec> written_fields;
+    ordered_map<const PHV::Field *, bitvec> written_fields;
 
     for (auto field_action_info : *field_actions_map) {
         auto &field_action = field_action_info.second;
@@ -294,7 +294,7 @@ bool ActionAnalysis::initialize_alignment(const ActionParam &write, const Action
 
     int count = 0;
     bitvec write_bits;
-    field->foreach_alloc(range, [&](const PhvInfo::Field::alloc_slice &alloc) {
+    field->foreach_alloc(range, [&](const PHV::Field::alloc_slice &alloc) {
         count++;
         BUG_CHECK(alloc.container_bit >= 0, "Invalid negative container bit");
         write_bits.setrange(alloc.container_bit, alloc.width);
@@ -330,7 +330,7 @@ bool ActionAnalysis::init_phv_alignment(const ActionParam &read, ContainerAction
     bitvec read_bits;
     PHV::Container read_container;
     int count = 0;
-    field->foreach_alloc(range, [&](const PhvInfo::Field::alloc_slice &alloc) {
+    field->foreach_alloc(range, [&](const PHV::Field::alloc_slice &alloc) {
         count++;
         BUG_CHECK(alloc.container_bit >= 0, "Invalid negative container bit");
         read_bits.setrange(alloc.container_bit, alloc.width);

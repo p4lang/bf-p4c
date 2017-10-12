@@ -6,7 +6,7 @@
 
 class AddBridgedMetadata::FindFieldsToBridge : public ThreadVisitor, Inspector {
     AddBridgedMetadata &self;
-    std::set<const PhvInfo::Field*> bridgedFields;
+    std::set<const PHV::Field*> bridgedFields;
 
     bool preorder(const IR::Expression *e) override {
         if (auto *field = self.phv.field(e)) {

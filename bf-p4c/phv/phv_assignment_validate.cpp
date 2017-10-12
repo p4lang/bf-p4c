@@ -63,25 +63,25 @@ PHV_Assignment_Validate::create_field_container_map() {
     // sort alloc slices in name_alloc_slices_map
     for (auto &e : phv_name_alloc_slices_map_i) {
         e.second.sort(
-            [](const PhvInfo::Field::alloc_slice *l, const PhvInfo::Field::alloc_slice *r) {
+            [](const PHV::Field::alloc_slice *l, const PHV::Field::alloc_slice *r) {
                 return l->container_bit < r->container_bit;
             });
     }
 }
 
 std::tuple<
-    const PhvInfo::Field *,
+    const PHV::Field *,
     const std::pair<int, int>,
     PHV::Container *,
     const std::pair<int, int>>
-PHV_Assignment_Validate::make_tuple(const PhvInfo::Field::alloc_slice *slice) {
+PHV_Assignment_Validate::make_tuple(const PHV::Field::alloc_slice *slice) {
     //
     assert(slice);
     //
     int field_lo = slice->field_bit;
     int field_hi = field_lo + slice->width - 1;
     //
-    const PhvInfo::Field *f = slice->field;
+    const PHV::Field *f = slice->field;
     const std::pair<int, int> field_range = std::make_pair(field_lo, field_hi);
     PHV::Container *c = const_cast<PHV::Container *>(&(slice->container));
     int container_lo = slice->container_bit;
@@ -121,7 +121,7 @@ PHV_Assignment_Validate::sanity_check_fields_containers(const std::string& msg) 
     //
     const std::string msg_1 = msg + ".....sanity_check_fields_containers()";
     std::list<std::tuple<
-        const PhvInfo::Field *,
+        const PHV::Field *,
         const std::pair<int, int>,
         PHV::Container *,
         const std::pair<int, int>>> tuple_list_f;
@@ -149,14 +149,14 @@ PHV_Assignment_Validate::sanity_check_fields_containers(const std::string& msg) 
         // sanity check reverse map container to fields
         //
         std::list<std::tuple<
-            const PhvInfo::Field *,
+            const PHV::Field *,
             const std::pair<int, int>,
             PHV::Container *,
             const std::pair<int, int>>> tuple_list_c;  // sanity reverse check container_to_fields
         ordered_set<const PHV::Container *> phv_containers;  // field's vec of phv_containers
         for (auto &t : tuple_list_f) {
             std::list<std::tuple<
-                const PhvInfo::Field *,
+                const PHV::Field *,
                 const std::pair<int, int>,
                 PHV::Container *,
                 const std::pair<int, int>>> tuple_list_temp;
@@ -173,7 +173,7 @@ PHV_Assignment_Validate::sanity_check_fields_containers(const std::string& msg) 
             //
             tuple_list_temp.remove_if(
                 [&f](std::tuple<
-                      const PhvInfo::Field *,
+                      const PHV::Field *,
                       const std::pair<int, int>,
                       PHV::Container *,
                       const std::pair<int, int>> t) {
@@ -279,7 +279,7 @@ PHV_Assignment_Validate::sanity_check_container_holes(const std::string& msg) {
         container_holes(*c, holes_list_1);
         //
         std::list<std::tuple<
-            const PhvInfo::Field *,
+            const PHV::Field *,
             const std::pair<int, int>,
             PHV::Container *,
             const std::pair<int, int>>> tuple_list;
@@ -339,14 +339,14 @@ PHV_Assignment_Validate::sanity_check_container_holes(const std::string& msg) {
 //
 bool
 PHV_Assignment_Validate::field_allocated(
-    PhvInfo::Field *f,
+    PHV::Field *f,
     bool contiguously) {
     //
     assert(f);
     PHV_Assignment_API *f_api = f->phv_assignment_api();
     assert(f_api);
     std::list<std::tuple<
-        const PhvInfo::Field *,
+        const PHV::Field *,
         const std::pair<int, int>,
         PHV::Container *,
         const std::pair<int, int>>> tuple_list;
@@ -379,9 +379,9 @@ PHV_Assignment_Validate::field_allocated(
 //
 bool
 PHV_Assignment_Validate::field_to_containers(
-    PhvInfo::Field *f,
+    PHV::Field *f,
     std::list<std::tuple<
-        const PhvInfo::Field *,
+        const PHV::Field *,
         const std::pair<int, int>,
         PHV::Container *,
         const std::pair<int, int>>>& tuple_list) {
@@ -419,10 +419,10 @@ PHV_Assignment_Validate::field_to_containers(
 //
 void
 PHV_Assignment_Validate::field_to_containers(
-    PhvInfo::Field *f,
+    PHV::Field *f,
     std::pair<int, int>& f_range,
     std::list<std::tuple<
-        const PhvInfo::Field *,
+        const PHV::Field *,
         const std::pair<int, int>,
         PHV::Container *,
         const std::pair<int, int>>>& tuple_list) {
@@ -448,7 +448,7 @@ PHV_Assignment_Validate::field_to_containers(
             break;
         }
         if (lo >= range.first && lo <= range.second) {
-            const PhvInfo::Field::alloc_slice *slice = e.second;
+            const PHV::Field::alloc_slice *slice = e.second;
             tuple_list.push_back(make_tuple(slice));
             lo += slice->width;
         }
@@ -468,7 +468,7 @@ PHV_Assignment_Validate::field_to_containers(
 void
 PHV_Assignment_Validate::sort_container_ranges(
     std::list<std::tuple<
-        const PhvInfo::Field *,
+        const PHV::Field *,
         const std::pair<int, int>,
         PHV::Container *,
         const std::pair<int, int>>>& tuple_list) {
@@ -477,12 +477,12 @@ PHV_Assignment_Validate::sort_container_ranges(
     //
     tuple_list.sort([](
         std::tuple<
-            const PhvInfo::Field *,
+            const PHV::Field *,
             const std::pair<int, int>,
             PHV::Container *,
             const std::pair<int, int>> l,
         std::tuple<
-            const PhvInfo::Field *,
+            const PHV::Field *,
             const std::pair<int, int>,
             PHV::Container *,
             const std::pair<int, int>> r) {
@@ -552,7 +552,7 @@ void
 PHV_Assignment_Validate::container_to_fields(
     PHV::Container& phv_num,
     std::list<std::tuple<
-        const PhvInfo::Field *,
+        const PHV::Field *,
         const std::pair<int, int>,
         PHV::Container *,
         const std::pair<int, int>>>& tuple_list,
@@ -584,7 +584,7 @@ PHV_Assignment_Validate::container_to_fields(
     PHV::Container& phv_num,
     std::pair<int, int>& f_range,
     std::list<std::tuple<
-        const PhvInfo::Field *,
+        const PHV::Field *,
         const std::pair<int, int>,
         PHV::Container *,
         const std::pair<int, int>>>& tuple_list,
@@ -633,7 +633,7 @@ void
 PHV_Assignment_Validate::fields_written(
     PHV::Container& phv_num,
     std::list<std::tuple<
-        const PhvInfo::Field *,
+        const PHV::Field *,
         const std::pair<int, int>,
         PHV::Container *,
         const std::pair<int, int>>>& tuple_list) {
@@ -649,7 +649,7 @@ PHV_Assignment_Validate::fields_written(
     PHV::Container& phv_num,
     std::pair<int, int>& f_range,
     std::list<std::tuple<
-        const PhvInfo::Field *,
+        const PHV::Field *,
         const std::pair<int, int>,
         PHV::Container *,
         const std::pair<int, int>>>& tuple_list) {
@@ -663,14 +663,14 @@ PHV_Assignment_Validate::fields_written(
 void
 PHV_Assignment_Validate::fields_written(
     std::list<std::tuple<
-        const PhvInfo::Field *,
+        const PHV::Field *,
         const std::pair<int, int>,
         PHV::Container *,
         const std::pair<int, int>>>& tuple_list) {
     //
     tuple_list.clear();
     std::list<std::tuple<
-        const PhvInfo::Field *,
+        const PHV::Field *,
         const std::pair<int, int>,
         PHV::Container *,
         const std::pair<int, int>>> tuple_temp;
@@ -688,7 +688,7 @@ PHV_Assignment_Validate::fields_written(
 void
 PHV_Assignment_Validate::fields_written(
     std::list<std::pair<
-        const PhvInfo::Field *,
+        const PHV::Field *,
         const std::pair<int, int>>>& tuple_list) {
     //
     for (auto &f : phv_i) {
@@ -719,7 +719,7 @@ void
 PHV_Assignment_Validate::fields_overlayed(
     PHV::Container& phv_num,
     std::list<std::tuple<
-        const PhvInfo::Field *,
+        const PHV::Field *,
         const std::pair<int, int>,
         PHV::Container *,
         const std::pair<int, int>>>& tuple_list) {
@@ -739,7 +739,7 @@ PHV_Assignment_Validate::fields_overlayed(
     PHV::Container& phv_num,
     std::pair<int, int>& f_range,
     std::list<std::tuple<
-        const PhvInfo::Field *,
+        const PHV::Field *,
         const std::pair<int, int>,
         PHV::Container *,
         const std::pair<int, int>>>& tuple_list) {
@@ -758,14 +758,14 @@ PHV_Assignment_Validate::fields_overlayed(
 void
 PHV_Assignment_Validate::fields_overlayed(
     std::list<std::tuple<
-        const PhvInfo::Field *,
+        const PHV::Field *,
         const std::pair<int, int>,
         PHV::Container *,
         const std::pair<int, int>>>& tuple_list) {
     //
     tuple_list.clear();
     std::list<std::tuple<
-        const PhvInfo::Field *,
+        const PHV::Field *,
         const std::pair<int, int>,
         PHV::Container *,
         const std::pair<int, int>>> tuple_temp;
@@ -786,9 +786,9 @@ PHV_Assignment_Validate::fields_overlayed(
 //
 void
 PHV_Assignment_Validate::fields_overlayed(
-    PhvInfo::Field *field,
+    PHV::Field *field,
     std::list<std::tuple<
-        const PhvInfo::Field *,
+        const PHV::Field *,
         const std::pair<int, int>,
         PHV::Container *,
         const std::pair<int, int>>>& tuple_list) {
@@ -799,7 +799,7 @@ PHV_Assignment_Validate::fields_overlayed(
     // all containers having field
     //
     std::list<std::tuple<
-        const PhvInfo::Field *,
+        const PHV::Field *,
         const std::pair<int, int>,
         PHV::Container *,
         const std::pair<int, int>>> tuple_list_c;
@@ -810,7 +810,7 @@ PHV_Assignment_Validate::fields_overlayed(
     // for all container ranges for this field, find all fields
     //
     std::list<std::tuple<
-        const PhvInfo::Field *,
+        const PHV::Field *,
         const std::pair<int, int>,
         PHV::Container *,
         const std::pair<int, int>>> tuple_list_f;
@@ -836,7 +836,7 @@ void
 PHV_Assignment_Validate::fields_sliced(
     PHV::Container& phv_num,
     std::list<std::tuple<
-        const PhvInfo::Field *,
+        const PHV::Field *,
         const std::pair<int, int>,
         PHV::Container *,
         const std::pair<int, int>>>& tuple_list) {
@@ -857,7 +857,7 @@ PHV_Assignment_Validate::fields_sliced(
     PHV::Container& phv_num,
     std::pair<int, int>& f_range,
     std::list<std::tuple<
-        const PhvInfo::Field *,
+        const PHV::Field *,
         const std::pair<int, int>,
         PHV::Container *,
         const std::pair<int, int>>>& tuple_list) {
@@ -877,14 +877,14 @@ PHV_Assignment_Validate::fields_sliced(
 void
 PHV_Assignment_Validate::fields_sliced(
     std::list<std::tuple<
-        const PhvInfo::Field *,
+        const PHV::Field *,
         const std::pair<int, int>,
         PHV::Container *,
         const std::pair<int, int>>>& tuple_list) {
     //
     tuple_list.clear();
     std::list<std::tuple<
-        const PhvInfo::Field *,
+        const PHV::Field *,
         const std::pair<int, int>,
         PHV::Container *,
         const std::pair<int, int>>> tuple_temp;
@@ -907,13 +907,13 @@ PHV_Assignment_Validate::fields_sliced(
 void
 PHV_Assignment_Validate::fields_sliced(
     std::list<std::pair<
-        const PhvInfo::Field *,
+        const PHV::Field *,
         const std::pair<int, int>>>& tuple_list) {
     //
     tuple_list.clear();
     for (auto &f : phv_i) {
         std::list<std::pair<
-            const PhvInfo::Field *,
+            const PHV::Field *,
             const std::pair<int, int>>> tuple_list_f;
         fields_sliced(&f, tuple_list_f);
         if (tuple_list_f.size()) {
@@ -927,9 +927,9 @@ PHV_Assignment_Validate::fields_sliced(
 //
 void
 PHV_Assignment_Validate::fields_sliced(
-    PhvInfo::Field *f,
+    PHV::Field *f,
     std::list<std::pair<
-        const PhvInfo::Field *,
+        const PHV::Field *,
         const std::pair<int, int>>>& tuple_list) {
     //
     assert(f);
@@ -973,14 +973,14 @@ std::ostream &operator<<(
 std::ostream &operator<<(
     std::ostream &out,
     std::tuple<
-        const PhvInfo::Field *,
+        const PHV::Field *,
         const std::pair<int, int>,
         PHV::Container *,
         const std::pair<int, int>>& tuple) {
     //
     // print map from field ranges to container ranges
     //
-    const PhvInfo::Field *f = std::get<0>(tuple);
+    const PHV::Field *f = std::get<0>(tuple);
     const std::pair<int, int> field_range = std::get<1>(tuple);
     PHV::Container *c = std::get<2>(tuple);
     const std::pair<int, int> container_range = std::get<3>(tuple);
@@ -996,7 +996,7 @@ std::ostream &operator<<(
 std::ostream &operator<<(
     std::ostream &out,
     std::list<std::tuple<
-        const PhvInfo::Field *,
+        const PHV::Field *,
         const std::pair<int, int>,
         PHV::Container *,
         const std::pair<int, int>>>& tuple_list) {
@@ -1010,12 +1010,12 @@ std::ostream &operator<<(
 
 std::ostream &operator<<(
     std::ostream &out,
-    ordered_map<std::pair<int, int>, const PhvInfo::Field::alloc_slice *>& field_container_map) {
+    ordered_map<std::pair<int, int>, const PHV::Field::alloc_slice *>& field_container_map) {
     //
     for (auto &e : field_container_map) {
         std::pair<int, int> range = e.first;
-        const PhvInfo::Field::alloc_slice *slice = e.second;
-        const PhvInfo::Field *field = slice->field;
+        const PHV::Field::alloc_slice *slice = e.second;
+        const PHV::Field *field = slice->field;
         const PHV::Container c = slice->container;
         int container_bit_lo = slice->container_bit;
         int container_bit_hi = container_bit_lo + slice->width - 1;
@@ -1031,7 +1031,7 @@ std::ostream &operator<<(
 
 std::ostream &operator<<(
     std::ostream &out,
-    std::map<cstring, std::list<const PhvInfo::Field::alloc_slice *>>& name_alloc_slices_map) {
+    std::map<cstring, std::list<const PHV::Field::alloc_slice *>>& name_alloc_slices_map) {
     //
     for (auto &e : name_alloc_slices_map) {
         out << e.first << std::endl;
@@ -1054,7 +1054,7 @@ std::ostream &operator<<(std::ostream &out, PHV_Assignment_Validate &phv_assignm
     out << "Begin+++++++++++++++++++++++++ PHV Assignment Validate ++++++++++++++++++++++++++++++"
         << std::endl;
     std::list<std::tuple<
-        const PhvInfo::Field *,
+        const PHV::Field *,
         const std::pair<int, int>,
         PHV::Container *,
         const std::pair<int, int>>> tuple_list;
@@ -1074,13 +1074,13 @@ std::ostream &operator<<(std::ostream &out, PHV_Assignment_Validate &phv_assignm
         for (auto &t : tuple_list) {
             PHV::Container *c = std::get<2>(t);
             std::list<std::tuple<
-                const PhvInfo::Field *,
+                const PHV::Field *,
                 const std::pair<int, int>,
                 PHV::Container *,
                 const std::pair<int, int>>> tuple_list_c;
             phv_assignment_validate.container_to_fields(*c, tuple_list_c);
             for (auto &t_c : tuple_list_c) {
-                const PhvInfo::Field *field = std::get<0>(t_c);
+                const PHV::Field *field = std::get<0>(t_c);
                 const std::pair<int, int> field_range = std::get<1>(t_c);
                 PHV::Container *container = std::get<2>(t_c);
                 const std::pair<int, int> container_range = std::get<3>(t_c);

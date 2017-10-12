@@ -96,7 +96,7 @@ void IXBarRealign::verify_format(const IXBar::Use &use) {
     for (auto &byte : use.use) {
         auto *field = phv.field(byte.field);
         bool valid_byte = false;
-        field->foreach_byte([&](const PhvInfo::Field::alloc_slice &alloc) {
+        field->foreach_byte([&](const PHV::Field::alloc_slice &alloc) {
             if (byte.lo < alloc.field_bit || byte.hi > alloc.field_hi())
                 return;
             int container_start = (alloc.container_bit % 8) + byte.lo - alloc.field_bit;

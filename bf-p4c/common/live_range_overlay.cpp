@@ -14,7 +14,7 @@ bool LiveRangeOverlay::may_happen_before(
 // Field f is definitely dead at unit u if there does not exist a
 // read-after-write dependence from uw to ur such that uw may happen before
 // u and ur may happen after.
-bool LiveRangeOverlay::is_dead_at(const PhvInfo::Field &f, const IR::BFN::Unit *u) const {
+bool LiveRangeOverlay::is_dead_at(const PHV::Field &f, const IR::BFN::Unit *u) const {
     for (const FieldDefUse::locpair ur_loc : defuse.getAllUses(f.id)) {
         const IR::BFN::Unit *ur = ur_loc.first;
         if (defuse.getDefs(ur_loc).size() == 0) {
@@ -48,7 +48,7 @@ void LiveRangeOverlay::end_apply() {
 
     // Fields that are not definitely dead are possibly live.
     std::map<int, ordered_set<const IR::BFN::Unit *>> livemap;
-    for (const PhvInfo::Field &f : phv) {
+    for (const PHV::Field &f : phv) {
         if (!f.metadata)
             continue;
         LOG4("checking liveness of " << f.name);
@@ -132,7 +132,7 @@ void LiveRangeOverlay::get_uninitialized_reads(
     ordered_map<int, FieldDefUse::LocPairSet> &out) const {
     // If a field use does not have a def, then it is reading an unintialized
     // value.
-    for (const PhvInfo::Field &f : phv) {
+    for (const PHV::Field &f : phv) {
         for (const FieldDefUse::locpair use : defuse.getAllUses(f.id)) {
             if (!defuse.getDefs(use).size()) {
                 LOG4("uninitialized read of " << f.name <<

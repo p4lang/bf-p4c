@@ -13,22 +13,22 @@
 //
 // PHV Analysis API
 // contains results from PHV Analysis PassManager in backend.cpp
-// this object extends from PhvInfo::Field  field->phv_analysis_api
+// this object extends from PHV::Field  field->phv_analysis_api
 //
 //***********************************************************************************
 //
 //
 class PHV_Analysis_API {
  private:
-    PhvInfo::Field *field_i;                          /// owner field points to this extended object
-                                                      //  this object = field_i->phv_analysis_api_i
+    PHV::Field *field_i;                          /// owner field points to this extended object
+                                                  //  this object = field_i->phv_analysis_api_i
     ordered_map<std::pair<int, int>, PHV_Container::Container_Content *> field_container_map_i;
                                                       /// field ranges to container bits
                                                       /// range does not straddle containers
 
  public:
-    PHV_Analysis_API(PhvInfo::Field *f_p) : field_i(f_p) { }  // NOLINT(runtime/explicit)
-    PhvInfo::Field *field()                                   { return field_i; }
+    PHV_Analysis_API(PHV::Field *f_p) : field_i(f_p) { }  // NOLINT(runtime/explicit)
+    PHV::Field *field()                                   { return field_i; }
     ordered_map<std::pair<int, int>, PHV_Container::Container_Content *>&
         field_container_map()                                 { return field_container_map_i; }
     //
@@ -39,18 +39,18 @@ class PHV_Analysis_API {
     //
     bool
     field_to_containers(
-        PhvInfo::Field *,
+        PHV::Field *,
         std::list<std::tuple<
-            PhvInfo::Field *,
+            PHV::Field *,
             const std::pair<int, int>,
             const PHV_Container *,
             const std::pair<int, int>>>&);
     void
     field_to_containers(
-        PhvInfo::Field *,
+        PHV::Field *,
         std::pair<int, int>&,
         std::list<std::tuple<
-            PhvInfo::Field *,
+            PHV::Field *,
             const std::pair<int, int>,
             const PHV_Container *,
             const std::pair<int, int>>>&);

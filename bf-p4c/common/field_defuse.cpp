@@ -50,14 +50,14 @@ void FieldDefUse::check_conflicts(const info &read, int when) {
                 conflict(read.field->id, other.field->id) = true; } }
 }
 
-FieldDefUse::info &FieldDefUse::field(const PhvInfo::Field *f) {
+FieldDefUse::info &FieldDefUse::field(const PHV::Field *f) {
     auto &info = defuse[f->id];
     assert(!info.field || info.field == f);
     info.field = f;
     return info;
 }
 
-void FieldDefUse::read(const PhvInfo::Field *f, const IR::BFN::Unit *unit,
+void FieldDefUse::read(const PHV::Field *f, const IR::BFN::Unit *unit,
                        const IR::Expression *e) {
     if (!f) return;
     auto &info = field(f);
@@ -82,7 +82,7 @@ void FieldDefUse::read(const IR::HeaderRef *hr, const IR::BFN::Unit *unit,
     if (!info.metadata)
         read(phv.field(hr->toString() + ".$valid"), unit, e);
 }
-void FieldDefUse::write(const PhvInfo::Field *f, const IR::BFN::Unit *unit,
+void FieldDefUse::write(const PHV::Field *f, const IR::BFN::Unit *unit,
                         const IR::Expression *e, bool partial) {
     if (!f) return;
     auto &info = field(f);

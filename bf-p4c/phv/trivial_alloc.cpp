@@ -65,7 +65,7 @@ struct FieldGroup final {
 
     /// Construct a FieldGroup with @field as its first field. The thread and
     /// other properties are derived from @field.
-    explicit FieldGroup(PhvInfo::Field& field)
+    explicit FieldGroup(PHV::Field& field)
         : gress(field.gress)
         , fields{&field}
         , ids(field.id, 1)
@@ -73,12 +73,12 @@ struct FieldGroup final {
         , tagalong(false)
     { }
 
-    PhvInfo::Field& back() const {
+    PHV::Field& back() const {
         BUG_CHECK(!fields.empty(), "Calling back() on a group with no fields");
         return *fields.back();
     }
 
-    void push_back(PhvInfo::Field& field) {
+    void push_back(PHV::Field& field) {
         BUG_CHECK(field.gress == gress,
                   "Mixing fields for different threads in group?");
         fields.push_back(&field);
@@ -87,7 +87,7 @@ struct FieldGroup final {
     }
 
     const gress_t gress;                  /// This group's thread.
-    std::vector<PhvInfo::Field*> fields;  /// The fields in this group.
+    std::vector<PHV::Field*> fields;  /// The fields in this group.
     bitvec ids;                           /// The ids of those fields.
     int size;                             /// The total size of all fields.
     bool tagalong;                        /// If true, allocate in TPHV.
@@ -116,7 +116,7 @@ void TrivialAlloc::do_alloc(const FieldGroup& group, Regs *use, Regs *skip) {
         { &PHV::TrivialAlloc::Regs::B, 8 },
     };
 
-    PhvInfo::Field *i = group.fields[0];
+    PHV::Field *i = group.fields[0];
     unsigned group_index = 0;
     int merge_follow = group.fields.size() - 1;
     int size = i->size;

@@ -28,7 +28,7 @@ class ActionPhvConstraints : public Inspector {
         bool ad = false;
         bool constant = false;
         int64_t const_value = 0;
-        const PhvInfo::Field *phv_used;
+        const PHV::Field *phv_used;
         cstring action_name;
 
         bool operator < (FieldOperation other) const {
@@ -39,11 +39,11 @@ class ActionPhvConstraints : public Inspector {
             return (phv_used->id == other.phv_used->id);
         }
 
-        bool operator == (const PhvInfo::Field* field) const {
+        bool operator == (const PHV::Field* field) const {
             return (phv_used->id == field->id);
         }
 
-        explicit FieldOperation(const PhvInfo::Field *field, int id = -1) : unique_action_id(id),
+        explicit FieldOperation(const PHV::Field *field, int id = -1) : unique_action_id(id),
         phv_used(field) {}
 
         FieldOperation() : phv_used(nullptr) {}
@@ -62,7 +62,7 @@ class ActionPhvConstraints : public Inspector {
     void end_apply() override;
 
     /// Any action within this set will have written the key field
-    ordered_map<const PhvInfo::Field *, ordered_set<const IR::MAU::Action *>>
+    ordered_map<const PHV::Field *, ordered_set<const IR::MAU::Action *>>
         field_writes_to_actions;
 
     /// Any FieldOperation (Field) within the set will have been written in the
@@ -71,10 +71,10 @@ class ActionPhvConstraints : public Inspector {
 
     /// Any FieldOperation in the std::vector will use the following as an operand in
     /// action where the key is the field written in that action
-    ordered_map<const PhvInfo::Field *, ordered_map<const IR::MAU::Action *,
+    ordered_map<const PHV::Field *, ordered_map<const IR::MAU::Action *,
         std::vector<FieldOperation>>> write_to_reads_per_action;
-    ordered_map<const PhvInfo::Field *, ordered_map<const IR::MAU::Action *, ordered_set<const
-        PhvInfo::Field *>>> read_to_writes_per_action;
+    ordered_map<const PHV::Field *, ordered_map<const IR::MAU::Action *, ordered_set<const
+        PHV::Field *>>> read_to_writes_per_action;
 
     /// Used to generate unique action IDs when creating `struct FieldOperation` objects
     static int current_action;
@@ -82,22 +82,22 @@ class ActionPhvConstraints : public Inspector {
     /** If PHV allocation has already been done for some fields, this function
       * returns the number of unique containers used as sources
       * @param
-      *     std::vector<PhvInfo::Field*>: that are candidates for sharing a container
+      *     std::vector<PHV::Field*>: that are candidates for sharing a container
       *     IR::MAU::Action *: action for which number of sources must be determined
       */
-    uint32_t num_container_sources(std::vector<const PhvInfo::Field *>&, const IR::MAU::Action *);
+    uint32_t num_container_sources(std::vector<const PHV::Field *>&, const IR::MAU::Action *);
 
     /// @returns true if fields packed in the same container read from action data in action act
-    bool has_ad_sources(std::vector<const PhvInfo::Field *>& fields, const IR::MAU::Action *act);
+    bool has_ad_sources(std::vector<const PHV::Field *>& fields, const IR::MAU::Action *act);
 
     /** Check if two fields share the same container
       */
-    bool fields_share_container(const PhvInfo::Field *, const PhvInfo::Field *);
+    bool fields_share_container(const PHV::Field *, const PHV::Field *);
 
     /** Returns a FieldOperation structure if field is found to be written within
       * action act
       */
-    boost::optional<FieldOperation> is_written(const IR::MAU::Action *, const PhvInfo::Field *);
+    boost::optional<FieldOperation> is_written(const IR::MAU::Action *, const PHV::Field *);
 
  public:
     explicit ActionPhvConstraints(const PhvInfo &p) : phv(p) {}
@@ -124,7 +124,7 @@ class ActionPhvConstraints : public Inspector {
       * intermediate results (via the `PhvInfo` object). It may only be safely invoked *during* PHV
       * allocation.
       */
-    unsigned can_cohabit(std::vector<const PhvInfo::Field *>& fields);
+    unsigned can_cohabit(std::vector<const PHV::Field *>& fields);
 
     /** For GTest function.
       * Checks if the field_writes_to_actions ordered_map entry is valid or not

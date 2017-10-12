@@ -13,7 +13,7 @@
 PHV_Container::Container_Content::Container_Content(
     const PHV_Container *c,
     const le_bitrange container_range,
-    PhvInfo::Field *f,
+    PHV::Field *f,
     const int field_bit_lo,
     const std::string taint_color,
     Pass pass)
@@ -122,7 +122,7 @@ int
 PHV_Container::taint(
     int start,
     int width,
-    PhvInfo::Field *field,
+    PHV::Field *field,
     int field_bit_lo,
     Container_Content::Pass pass,
     bool process_ccgf) {
@@ -178,7 +178,7 @@ int
 PHV_Container::taint_ccgf(
     int start,
     int width,
-    PhvInfo::Field *field,
+    PHV::Field *field,
     int field_bit_lo,
     Container_Content::Pass pass) {
     //
@@ -318,7 +318,7 @@ PHV_Container::taint_ccgf(
 
 void
 PHV_Container::update_ccgf(
-    PhvInfo::Field *field,
+    PHV::Field *field,
     int processed_members,
     int processed_width) {
     //
@@ -334,7 +334,7 @@ PHV_Container::update_ccgf(
 
 void
 PHV_Container::overlay_ccgf_field(
-    PhvInfo::Field *field,
+    PHV::Field *field,
     int start,
     const int width,
     int field_bit_lo,
@@ -448,7 +448,7 @@ PHV_Container::overlay_ccgf_field(
 
 void
 PHV_Container::single_field_overlay(
-    PhvInfo::Field *f,
+    PHV::Field *f,
     const int start,
     int width,
     const int field_bit_lo,
@@ -499,7 +499,7 @@ PHV_Container::single_field_overlay(
         // for all fields f_s overlapped by f in container
         // update field_overlay_map info in f_s' owner field
         //
-        ordered_set<PhvInfo::Field *> f_set;
+        ordered_set<PHV::Field *> f_set;
         fields_in_container(start, start + width - 1, f_set);
         for (auto &f_s : f_set) {
             // f_s can be the same as f
@@ -516,7 +516,7 @@ PHV_Container::single_field_overlay(
 
 void
 PHV_Container::field_overlays(
-    PhvInfo::Field *field,
+    PHV::Field *field,
     int start,
     int width,
     const int field_bit_lo) {
@@ -535,7 +535,7 @@ PHV_Container::field_overlays(
         LOG3("..........PHV_Container::field_overlays.....for container " << this->toString());
         LOG3("\t" << field);
         // consider overlayed fields, if any, for this container only
-        ordered_set<PhvInfo::Field *> *set_of_f = field->field_overlay_map(container_id_i);
+        ordered_set<PHV::Field *> *set_of_f = field->field_overlay_map(container_id_i);
         if (set_of_f) {
             for (auto &f : *set_of_f) {
                 //
@@ -648,7 +648,7 @@ PHV_Container::lowest_bit_and_ccgf_width(bool by_cluster_id) {
 PHV_Container::Container_Content* PHV_Container::taint_bits(
         int start,
         int width,
-        PhvInfo::Field *field,
+        PHV::Field *field,
         int field_bit_lo,
         Container_Content::Pass pass) {
     // XXX(cole)? Where is this encoding documented?
@@ -723,7 +723,7 @@ PHV_Container::fields_in_container(std::list<Container_Content *>& cc_list) {
 }
 
 void
-PHV_Container::fields_in_container(PhvInfo::Field *f, Container_Content *cc) {
+PHV_Container::fields_in_container(PHV::Field *f, Container_Content *cc) {
     assert(f);
     assert(cc);
     if (fields_in_container_i.count(f)) {
@@ -767,7 +767,7 @@ PHV_Container::fields_in_container(PhvInfo::Field *f, Container_Content *cc) {
 }  // fields_in_container f cc
 
 void
-PHV_Container::fields_in_container(int start, int end, ordered_set<PhvInfo::Field *>& fs_set) {
+PHV_Container::fields_in_container(int start, int end, ordered_set<PHV::Field *>& fs_set) {
     //
     // fields that overlap start .. end in container
     //
@@ -792,7 +792,7 @@ PHV_Container::fields_in_container(int start, int end, ordered_set<PhvInfo::Fiel
 }  // fields_in_container fs_set
 
 std::pair<int, int>
-PHV_Container::start_bit_and_width(PhvInfo::Field *f) {
+PHV_Container::start_bit_and_width(PHV::Field *f) {
     //
     assert(f);
     assert(fields_in_container_i.count(f));
@@ -994,13 +994,13 @@ void PHV_Container::Container_Content::sanity_check_container(
 }  // Container_Content::sanity_check_container
 
 bool PHV_Container::sanity_check_deparsed_container_violation(
-    const PhvInfo::Field *&deparsed_header,
-    const PhvInfo::Field *&non_deparsed_field) const {
+    const PHV::Field *&deparsed_header,
+    const PHV::Field *&non_deparsed_field) const {
     // must not have deparsed header with non-deparsed field in container
     deparsed_header = nullptr;
     non_deparsed_field = nullptr;
     for (auto &entry : fields_in_container_i) {
-        PhvInfo::Field *cf = entry.first;
+        PHV::Field *cf = entry.first;
         if (!cf->deparsed()) {
             non_deparsed_field = cf;
         }
@@ -1025,8 +1025,8 @@ void PHV_Container::sanity_check_container(const std::string& msg, bool check_de
     // arises in bridged metadata, where unused bits are padding on the wire
     //
     if (deparsed_i) {
-        const PhvInfo::Field *deparsed_header = nullptr;
-        const PhvInfo::Field *non_deparsed_field = nullptr;
+        const PHV::Field *deparsed_header = nullptr;
+        const PHV::Field *non_deparsed_field = nullptr;
         if (sanity_check_deparsed_container_violation(deparsed_header, non_deparsed_field)) {
             LOG3("*****cluster_phv_container.cpp:sanity_FAIL*****....."
             << msg_1
@@ -1129,8 +1129,8 @@ void PHV_Container::sanity_check_overlayed_fields(const std::string& msg) {
     for (auto &cc_s : Values(fields_in_container_i)) {
         for (auto &cc : cc_s) {
             if (cc->overlayed()) {
-               PhvInfo::Field *overlayed = cc->field();
-               PhvInfo::Field *substratum = overlayed->overlay_substratum();
+               PHV::Field *overlayed = cc->field();
+               PHV::Field *substratum = overlayed->overlay_substratum();
                if (!substratum && overlayed->ccgf()) {
                    substratum = overlayed->ccgf()->overlay_substratum();
                }
@@ -1499,7 +1499,7 @@ std::ostream &operator<<(std::ostream &out, std::list<PHV_Container *> &phv_cont
 
 std::ostream &operator<<(
     std::ostream &out,
-    ordered_map<PhvInfo::Field *, std::list<PHV_Container::Container_Content *>>& fields_cc_map) {
+    ordered_map<PHV::Field *, std::list<PHV_Container::Container_Content *>>& fields_cc_map) {
     for (auto &cc_s : Values(fields_cc_map)) {
         for (auto &cc : cc_s) {
             out << std::endl

@@ -36,13 +36,13 @@ class PHV_Bind : public Visitor {
     const PHV_MAU_Group_Assignments &phv_mau_i;     // PHV MAU Group Assignments
 
     std::list<const PHV_Container *> containers_i;  // all filled containers
-    std::list<PhvInfo::Field *> allocated_fields_i;
+    std::list<PHV::Field *> allocated_fields_i;
                                                     // allocated fields to be finally bound
-    std::list<PhvInfo::Field *> fields_overflow_i;
+    std::list<PHV::Field *> fields_overflow_i;
                                                     // overflow fields =  All - PHV_Bind fields
 
     void sanity_check_field_duplicate_containers(const std::string&);
-    void sanity_check_field_slices(ordered_set<PhvInfo::Field *>&, const std::string&);
+    void sanity_check_field_slices(ordered_set<PHV::Field *>&, const std::string&);
     void sanity_check_all_fields_allocated(const std::string&);
 
  public:
@@ -51,9 +51,9 @@ class PHV_Bind : public Visitor {
          uses_i(u),          // uses recomputed, dead code elimination after Cluster Use computation
          phv_mau_i(phv_m) { }
 
-    std::list<const PHV_Container *> containers()         { return containers_i; }
-    std::list<PhvInfo::Field *>& allocated_fields()       { return allocated_fields_i; }
-    std::list<PhvInfo::Field *>& fields_overflow()        { return fields_overflow_i; }
+    std::list<const PHV_Container *> containers()     { return containers_i; }
+    std::list<PHV::Field *>& allocated_fields()       { return allocated_fields_i; }
+    std::list<PHV::Field *>& fields_overflow()        { return fields_overflow_i; }
 
     const IR::Node *apply_visitor(const IR::Node *, const char *name = 0) override;
     void end_apply(const IR::Node *) override { phv_i.set_done(); }

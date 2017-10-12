@@ -14,24 +14,24 @@
 //
 // PHV Assignment API
 // contains results from PHV Assignment/phv_bind PassManager in backend.cpp
-// this object extends from PhvInfo::Field  field->phv_assignment_api
+// this object extends from PHV::Field  field->phv_assignment_api
 //
 //***********************************************************************************
 //
 //
 class PHV_Assignment_API {
  private:
-    PhvInfo::Field *field_i;                          /// owner field points to this extended object
-                                                      //  this object =field_i->phv_assignment_api_i
-    ordered_map<std::pair<int, int>, const PhvInfo::Field::alloc_slice *> field_container_map_i;
+    PHV::Field *field_i;                          /// owner field points to this extended object
+                                                  //  this object =field_i->phv_assignment_api_i
+    ordered_map<std::pair<int, int>, const PHV::Field::alloc_slice *> field_container_map_i;
                                                       /// field ranges to container bits
                                                       /// range does not straddle containers
 
  public:
-    PHV_Assignment_API(PhvInfo::Field *f_p) : field_i(f_p) { }  // NOLINT(runtime/explicit)
+    PHV_Assignment_API(PHV::Field *f_p) : field_i(f_p) { }  // NOLINT(runtime/explicit)
 
-    PhvInfo::Field *field()                               { return field_i; }
-    ordered_map<std::pair<int, int>, const PhvInfo::Field::alloc_slice *>&
+    PHV::Field *field()                               { return field_i; }
+    ordered_map<std::pair<int, int>, const PHV::Field::alloc_slice *>&
         field_container_map()                             { return field_container_map_i; }
     //
     // APIs
@@ -40,9 +40,9 @@ class PHV_Assignment_API {
     //
     bool
     field_to_containers(
-        PhvInfo::Field *,
+        PHV::Field *,
         std::list<std::tuple<
-            const PhvInfo::Field *,
+            const PHV::Field *,
             const std::pair<int, int>,
             PHV::Container *,
             const std::pair<int, int>>>&);

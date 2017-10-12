@@ -26,7 +26,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
     const auto& phvSpec = Device::phvSpec();
 
     // A mapping from PHV containers to the field slices that they contain.
-    using Slice = PhvInfo::Field::alloc_slice;
+    using Slice = PHV::Field::alloc_slice;
     std::map<PHV::Container, std::vector<Slice>> allocations;
 
     // The set of reserved container ids for each thread.
@@ -108,7 +108,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
     for (auto id : threadAssignments[INGRESS] & threadAssignments[EGRESS]) {
         auto container = phvSpec.idToContainer(id);
 
-        std::set<const PhvInfo::Field*> fields[2];
+        std::set<const PHV::Field*> fields[2];
         if (allocations.count(container))
             for (auto& slice : allocations[container])
                 fields[slice.field->gress].insert(slice.field);
@@ -129,8 +129,8 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
                 container, message.str());
     }
 
-    std::vector<const PhvInfo::Field*> deparseSequence;
-    std::map<const PhvInfo::Field*, std::vector<size_t>> deparseOccurrences;
+    std::vector<const PHV::Field*> deparseSequence;
+    std::map<const PHV::Field*, std::vector<size_t>> deparseOccurrences;
 
     // Verify that we allocate PHV space for all fields which are emitted or
     // used as POV bits in the deparser, and that POV bits don't end up in TPHV.
@@ -166,7 +166,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
                 }
 
                 sourceField->foreach_alloc(sourceFieldBits,
-                             [&](const PhvInfo::Field::alloc_slice& alloc) {
+                             [&](const PHV::Field::alloc_slice& alloc) {
                     checksumAllocations[alloc.container].push_back(alloc);
                 });
             }
@@ -215,7 +215,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
 
         // Verify that POV bit are not be placed in TPHV.
         povField->foreach_alloc(povFieldBits,
-                  [&](const PhvInfo::Field::alloc_slice& alloc) {
+                  [&](const PHV::Field::alloc_slice& alloc) {
             ERROR_CHECK(!alloc.container.is(PHV::Kind::tagalong), "POV bit field was placed "
                         "in TPHV: %1%", cstring::to_cstring(povField));
         });
@@ -228,16 +228,16 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
     //   - Fields in digests may only be packed with other fields in the same
     //     digest.
 
-    auto isDeparsed = [](const PhvInfo::Field* f) { return f->deparsed_i; };
-    auto isBridged = [](const PhvInfo::Field* f) { return f->bridged; };
-    auto isMetadata = [](const PhvInfo::Field* f) { return f->metadata || f->pov; };
-    auto hasOverlay = [](const PhvInfo::Field* f) {
+    auto isDeparsed = [](const PHV::Field* f) { return f->deparsed_i; };
+    auto isBridged = [](const PHV::Field* f) { return f->bridged; };
+    auto isMetadata = [](const PHV::Field* f) { return f->metadata || f->pov; };
+    auto hasOverlay = [](const PHV::Field* f) {
         // XXX(cole): This misses the substratum fields themselves, as
         // `f->overlay_substratum()` is a property of an overlaid field that
         // points to the field it overlays.
         return !f->field_overlay_map().empty() || f->overlay_substratum() != nullptr;
     };
-    auto checkValidOverlay = [&](const PhvInfo::Field* f) {
+    auto checkValidOverlay = [&](const PHV::Field* f) {
         // If this field is overlaid, check that every overlaid field is in
         // fact mutually exclusive.
         for (auto overlaid_by_container : f->field_overlay_map()) {
@@ -272,7 +272,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         auto& slices = allocation.second;
 
         // Collect all the fields which are assigned to this container.
-        std::set<const PhvInfo::Field*> fields;
+        std::set<const PHV::Field*> fields;
         for (auto& slice : slices) fields.insert(slice.field);
 
         // Since TPHV containers can't be accessed in the MAU, and metadata is
@@ -301,9 +301,9 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         bool any_field_has_overlay = std::any_of(fields.begin(), fields.end(), hasOverlay);
 
         // Test combinations of fields that are live at the same time.
-        std::set<std::set<const PhvInfo::Field*>> live_field_sets;
+        std::set<std::set<const PHV::Field*>> live_field_sets;
         for (auto* f1 : fields) {
-            std::set<const PhvInfo::Field*> live_with_f1;
+            std::set<const PHV::Field*> live_with_f1;
             for (auto* f2 : fields) {
                 if (!mutually_exclusive_field_ids(f1->id, f2->id))
                     live_with_f1.insert(f2); }
@@ -414,7 +414,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             // to determine precisely here.
             if (any_field_has_overlay) continue;
 
-            const PhvInfo::Field* previousField;
+            const PHV::Field* previousField;
             std::vector<size_t> previousFieldOccurrences;
 
             // Because we want to check that the fields in this container are
@@ -468,7 +468,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             return;
         }
 
-        field->foreach_alloc(bits, [&](const PhvInfo::Field::alloc_slice& alloc) {
+        field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice& alloc) {
             nw_bitrange fieldSlice =
               alloc.field_bits().toOrder<Endian::Network>(field->size);
             nw_bitrange containerSlice =

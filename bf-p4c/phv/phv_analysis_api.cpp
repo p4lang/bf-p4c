@@ -17,9 +17,9 @@
 //
 bool
 PHV_Analysis_API::field_to_containers(
-    PhvInfo::Field *f,
+    PHV::Field *f,
     std::list<std::tuple<
-        PhvInfo::Field *,
+        PHV::Field *,
         const std::pair<int, int>,
         const PHV_Container *,
         const std::pair<int, int>>>& tuple_list) {
@@ -59,10 +59,10 @@ PHV_Analysis_API::field_to_containers(
 //
 void
 PHV_Analysis_API::field_to_containers(
-    PhvInfo::Field *f,
+    PHV::Field *f,
     std::pair<int, int>& f_range,
     std::list<std::tuple<
-        PhvInfo::Field *,
+        PHV::Field *,
         const std::pair<int, int>,
         const PHV_Container *,
         const std::pair<int, int>>>& tuple_list) {

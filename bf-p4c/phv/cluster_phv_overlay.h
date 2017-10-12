@@ -30,9 +30,9 @@ class Cluster_PHV_Overlay : public Visitor {
     // cluster to cluster overlay
     //
     bool overlay_field_to_field(
-        PhvInfo::Field *f_overlay,
+        PHV::Field *f_overlay,
         Cluster_PHV *cl_f_overlay,
-        PhvInfo::Field *f_substratum,
+        PHV::Field *f_substratum,
         bool exceed_substratum = false);
     bool overlay_cluster_to_cluster(
         Cluster_PHV *cl_1,
@@ -46,7 +46,7 @@ class Cluster_PHV_Overlay : public Visitor {
     //
     bool overlay_field_to_container(
         Cluster_PHV *cl,
-        PhvInfo::Field *field,
+        PHV::Field *field,
         PHV_Container *c,
         int run_width,
         int &start_bit);
@@ -61,10 +61,10 @@ class Cluster_PHV_Overlay : public Visitor {
 
 std::ostream &operator<<(
     std::ostream &,
-    ordered_map<PhvInfo::Field *, PhvInfo::Field *>&);
+    ordered_map<PHV::Field *, PHV::Field *>&);
 std::ostream &operator<<(
     std::ostream &,
-    ordered_map<PhvInfo::Field *, std::list<std::pair<PHV_Container *, int>>>&);
+    ordered_map<PHV::Field *, std::list<std::pair<PHV_Container *, int>>>&);
 std::ostream &operator<<(
     std::ostream &,
     Cluster_PHV_Overlay&);

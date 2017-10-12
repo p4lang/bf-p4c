@@ -20,7 +20,7 @@ class CheckFitting : public Visitor {
     CheckFitting(const PhvInfo &phv, const PhvUse &uses, bool ignorePHVOverflow = false)
     : phv(phv), uses(uses), ignorePHVOverflow(ignorePHVOverflow) { }
     const IR::Node *apply_visitor(const IR::Node *n, const char *) override {
-        ordered_set<PhvInfo::Field *> unallocated = collect_unallocated_fields(phv, uses);
+        ordered_set<PHV::Field *> unallocated = collect_unallocated_fields(phv, uses);
         if (unallocated.size()) {
             std::stringstream msg;
             msg << "PHV allocation was not successful" << std::endl;
@@ -39,16 +39,16 @@ class CheckFitting : public Visitor {
      *
      * @param unallocated Unallocated fields are added to this set.
      */
-    static ordered_set<PhvInfo::Field *>
+    static ordered_set<PHV::Field *>
     collect_unallocated_fields(const PhvInfo &phv, const PhvUse &uses) {
-        ordered_set<PhvInfo::Field*> unallocated;
+        ordered_set<PHV::Field*> unallocated;
 
         for (auto& field : phv) {
             if (!uses.is_referenced(&field))
                 continue;
 
             bitvec allocatedBits;
-            field.foreach_alloc([&](const PhvInfo::Field::alloc_slice& slice) {
+            field.foreach_alloc([&](const PHV::Field::alloc_slice& slice) {
                 bitvec sliceBits(slice.field_bit, slice.width);
                 allocatedBits |= sliceBits; });
 

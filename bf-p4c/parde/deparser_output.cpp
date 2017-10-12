@@ -4,7 +4,7 @@
 // XXX(seth): This duplicates the very similar ExtractDestFormatter class in
 // parser_output.cpp; we need to combine them.
 struct DeparserSourceFormatter {
-    const PhvInfo::Field* dest;
+    const PHV::Field* dest;
     bitrange bits;
 };
 

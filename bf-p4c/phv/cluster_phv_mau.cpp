@@ -468,7 +468,7 @@ void PHV_MAU_Group_Assignments::check_action_constraints() {
     // Check allocation for action induced constraints
     for (auto entry : phv_containers()) {
         if (entry.second->status() != PHV_Container::Container_status::EMPTY) {
-            std::vector<const PhvInfo::Field *> existing_packing;
+            std::vector<const PHV::Field *> existing_packing;
             if (entry.second->fields_in_container().size() < 2)
                 continue;
             std::string packing_string;
@@ -836,7 +836,7 @@ PHV_MAU_Group_Assignments::container_no_pack(
                 // across consecutive empty containers in g, tainting container
                 // bits that are assigned.
                 for (size_t i=0; i < cl->cluster_vec().size(); i++) {
-                    PhvInfo::Field *field = cl->cluster_vec()[i];
+                    PHV::Field *field = cl->cluster_vec()[i];
                     //
                     // phv_use_width can be inflated by Operations ceil_phv_use_width()
                     // to compute accurate requirements
@@ -1177,7 +1177,7 @@ PHV_MAU_Group_Assignments::match_cluster_to_cc_set(
         if (f->bridged && f->mirror_field_list.member_field) {
             // for all fields in container, ensure mirror fields & same field list
             for (auto &entry : c->fields_in_container()) {
-                PhvInfo::Field *cf = entry.first;
+                PHV::Field *cf = entry.first;
                 if (cf->mirror_field_list != f->mirror_field_list) {
                     return false;  // mirror_field_lists disagree, cannot pack
                 }
@@ -1204,7 +1204,7 @@ PHV_MAU_Group_Assignments::match_cluster_to_cc_set(
         if (c->deparsed()) {  // set by taint_bits()..fields_in_container() after fd allocated to c
             // disallow deparsed header w/ deparsed non-header
             for (auto &entry : c->fields_in_container()) {
-                PhvInfo::Field *cf = entry.first;
+                PHV::Field *cf = entry.first;
                 // if deparsed header in c, disallow anything but another deparsed header
                 if (!cf->metadata && cf->deparsed() && (f->metadata || f->pov || !f->deparsed())) {
                     return false;
@@ -1220,7 +1220,7 @@ PHV_MAU_Group_Assignments::match_cluster_to_cc_set(
         //
         if (f->deparsed()) {
             for (auto &entry : c->fields_in_container()) {
-                PhvInfo::Field *cf = entry.first;
+                PHV::Field *cf = entry.first;
                 // do not put deparsed header with non-deparsed field in container
                 if (!f->bridged && !cf->deparsed()) {
                     return false;
@@ -1239,7 +1239,7 @@ PHV_MAU_Group_Assignments::match_cluster_to_cc_set(
         // present in the container.
         // The last (n-1)th element is the field for which we are attempting to pack
 
-        std::vector<const PhvInfo::Field *> packing_candidates;
+        std::vector<const PHV::Field *> packing_candidates;
         for (auto field : c->fields_in_container())
             packing_candidates.push_back(field.first);
         packing_candidates.push_back(f);
@@ -1546,7 +1546,7 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
                         // container tracking based on cc_set ... <cl_n, cl_w>;
                         //
                         size_t field_num = 0;
-                        PhvInfo::Field *f = cl->cluster_vec()[field_num];
+                        PHV::Field *f = cl->cluster_vec()[field_num];
                         auto field_bit_lo = f->phv_use_lo(cl);               // considers slice lo
                         for (auto &cc : cc_set) {
                             //
@@ -1569,8 +1569,8 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
                                 LOG1(" slice width cl_w = " << cl_w);
                             }
                             if (f->metadata && !f->bridged && cc->container()->deparsed()) {
-                                const PhvInfo::Field *deparsed_header = nullptr;
-                                const PhvInfo::Field *non_deparsed_field = nullptr;
+                                const PHV::Field *deparsed_header = nullptr;
+                                const PHV::Field *non_deparsed_field = nullptr;
                                 cc->container()->sanity_check_deparsed_container_violation(
                                         deparsed_header, non_deparsed_field);
                                 if (deparsed_header) {
@@ -1922,7 +1922,7 @@ PHV_MAU_Group_Assignments::canonicalize_cc_set(
         // e.g., {f1, f2, fmeta1, fmeta2} => {Cdeparsed1, Cdeparsed2, .. CNon_deparsed1, CNon2 ..}
         //
         std::sort(cl->cluster_vec().begin(), cl->cluster_vec().end(),
-            [](PhvInfo::Field *l, PhvInfo::Field *r) {
+            [](PHV::Field *l, PHV::Field *r) {
             bool l_meta = l->metadata && !l->bridged;
             bool r_meta = r->metadata && !r->bridged;
             if (!l_meta && !r_meta) {
@@ -1995,7 +1995,7 @@ PHV_MAU_Group_Assignments::num_containers_bottom_bits(
         // e.g., {f1, f2, fneed_b1, fneed_b2} => {CNo_bottom1, CNo_bottom2,..Cbottom_1, Cbottom_2..}
         //
         std::sort(cl->cluster_vec().begin(), cl->cluster_vec().end(),
-            [](PhvInfo::Field *l, PhvInfo::Field *r) {
+            [](PHV::Field *l, PHV::Field *r) {
             if (!l->deparsed_bottom_bits() && !r->deparsed_bottom_bits()) {
                 // sort by field id to prevent non-determinism
                 return l->id < r->id;
@@ -2360,7 +2360,7 @@ void PHV_MAU_Group::sanity_check_container_fields_gress(const std::string& msg) 
     for (auto &c : phv_containers_i) {
         for (auto &cc_s : Values(c->fields_in_container())) {
             for (auto &cc : cc_s) {
-                PhvInfo::Field *field = cc->field();
+                PHV::Field *field = cc->field();
                 gress_t f_gress = field->gress;
                 if (!c->gress() || (c->gress() && f_gress != *c->gress())) {
                     LOG1("*****cluster_phv_mau.cpp:sanity_FAIL***** "
@@ -2502,14 +2502,14 @@ void PHV_MAU_Group_Assignments::sanity_check_group_containers(
     // check spans all groups, containers
     // field can straddle containers but should not be allocated again, unless field-slice
     //
-    ordered_map<PhvInfo::Field *,
+    ordered_map<PHV::Field *,
         ordered_set<PHV_Container::Container_Content *>> field_container_map;
     for (auto &groups : PHV_MAU_i) {
         for (auto &g : groups.second) {
             for (auto &c : g->phv_containers()) {
                 for (auto &cc_s : Values(c->fields_in_container())) {
                     for (auto &cc : cc_s) {
-                        PhvInfo::Field *field = cc->field();
+                        PHV::Field *field = cc->field();
                         field_container_map[field].insert(cc);
                     }
                 }
@@ -2860,7 +2860,7 @@ std::ostream &operator<<(
 
 std::ostream &operator<<(std::ostream &out, PHV_MAU_Group_Assignments &phv_mau_grps) {
     //
-    std::list<PhvInfo::Field *> fields_not_fit;
+    std::list<PHV::Field *> fields_not_fit;
     fields_not_fit.clear();
     for (auto &cl : phv_mau_grps.phv_clusters()) {
         for (auto &f : cl->cluster_vec()) {
@@ -2890,7 +2890,7 @@ std::ostream &operator<<(std::ostream &out, PHV_MAU_Group_Assignments &phv_mau_g
     out << "Begin+++++++++++++++++++++++++ PHV MAU Group Assignments ++++++++++++++++++++++++++++++"
         << std::endl;
     if (fields_not_fit.size()) {
-        fields_not_fit.sort([](const PhvInfo::Field *l, const PhvInfo::Field *r) {
+        fields_not_fit.sort([](const PHV::Field *l, const PHV::Field *r) {
             return l->id < r->id;
         });
         std::string detailed_string =

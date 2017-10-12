@@ -25,7 +25,7 @@
  * Perform cluster analysis after last &phv pass
  * fields computed by PhvInfo phv, these field pointers are not part of IR
  *
- * This pass also fills in the following PhvInfo::Field fields:
+ * This pass also fills in the following PHV::Field fields:
  *  - phv_use_lo
  *  - phv_use_hi
  *  - ccgf
@@ -40,25 +40,25 @@ class Cluster : public PassManager {
                                 // metadata: extensive aggregation causes ccgf related cluster bloat
                                 //           consequent pressure on phv allocation
 
-    using Cluster_t = ordered_set<PhvInfo::Field*>;
+    using Cluster_t = ordered_set<PHV::Field*>;
 
  private:
     PhvInfo& phv_i;
     PhvUse& uses_i;
 
     /// Map of field to cluster it belongs.
-    ordered_map<PhvInfo::Field *, Cluster_t *> dst_map_i;
+    ordered_map<PHV::Field *, Cluster_t *> dst_map_i;
     /// Maintains unique cluster pointers.
     /// There is always a single owner to a cluster
     //  e.g., [b]-->(b,d,x) & op c d => [c]-->(c,b,d,x), lhs_unique set: +insert(c)-remove(b,d,x)
-    ordered_set<PhvInfo::Field *> lhs_unique_i;
+    ordered_set<PHV::Field *> lhs_unique_i;
     /// All POV fields.
     /// POV bits (one per header) only used for deparsing
-    std::list<PhvInfo::Field *> pov_fields_i;
+    std::list<PHV::Field *> pov_fields_i;
     /// POV fields not in cluster, need to be PHV allocated.
-    std::list<PhvInfo::Field *> pov_fields_not_in_cluster_i;
+    std::list<PHV::Field *> pov_fields_not_in_cluster_i;
     /// Fields that are not used through mau pipeline.
-    std::list<PhvInfo::Field *> fields_no_use_mau_i;
+    std::list<PHV::Field *> fields_no_use_mau_i;
 
     class MakeCCGFs : public Inspector {
         Cluster& self;
@@ -82,9 +82,9 @@ class Cluster : public PassManager {
         void postorder(const IR::Primitive* primitive) override;
         void end_apply() override;
 
-        void create_dst_map_entry(PhvInfo::Field *);
-        void insert_cluster(PhvInfo::Field *, PhvInfo::Field *);
-        bool is_ccgf_owner_in_cluster(PhvInfo::Field *, PhvInfo::Field *);
+        void create_dst_map_entry(PHV::Field *);
+        void insert_cluster(PHV::Field *, PHV::Field *);
+        bool is_ccgf_owner_in_cluster(PHV::Field *, PHV::Field *);
 
         void compute_fields_no_use_mau();
         void deparser_ccgf_phv();
@@ -92,15 +92,15 @@ class Cluster : public PassManager {
         void sort_fields_remove_non_determinism();
 
         void sanity_check_field_range(const std::string&);
-        void sanity_check_clusters(const std::string&, PhvInfo::Field *);
+        void sanity_check_clusters(const std::string&, PHV::Field *);
         void sanity_check_clusters_unique(const std::string&);
         void sanity_check_fields_use(
             const std::string&,
-            ordered_set<PhvInfo::Field *>&,       // all fields
-            ordered_set<PhvInfo::Field *>&,       // cluster fields
-            ordered_set<PhvInfo::Field *>&,       // all - cluster
-            ordered_set<PhvInfo::Field *>&,       // pov fields
-            ordered_set<PhvInfo::Field *>&);      // no mau fields
+            ordered_set<PHV::Field *>&,       // all fields
+            ordered_set<PHV::Field *>&,       // cluster fields
+            ordered_set<PHV::Field *>&,       // all - cluster
+            ordered_set<PHV::Field *>&,       // pov fields
+            ordered_set<PHV::Field *>&);      // no mau fields
 
      public:
         explicit MakeClusters(Cluster &self)
@@ -115,24 +115,24 @@ class Cluster : public PassManager {
     }
 
     static void set_field_range(PhvInfo& phv, const IR::Expression&);
-    static void set_field_range(PhvInfo::Field *field, int container_width = 0);
+    static void set_field_range(PHV::Field *field, int container_width = 0);
 
     // Accesssor methods
-    ordered_map<PhvInfo::Field *, Cluster_t *>& dst_map() {
+    ordered_map<PHV::Field *, Cluster_t *>& dst_map() {
         return dst_map_i; }
-    std::list<PhvInfo::Field *>& pov_fields() {
+    std::list<PHV::Field *>& pov_fields() {
         return pov_fields_i; }
-    std::list<PhvInfo::Field *>& pov_fields_not_in_cluster() {
+    std::list<PHV::Field *>& pov_fields_not_in_cluster() {
         return pov_fields_not_in_cluster_i; }
-    std::list<PhvInfo::Field *>& fields_no_use_mau() {
+    std::list<PHV::Field *>& fields_no_use_mau() {
         return fields_no_use_mau_i; }
 };
 
-std::ostream &operator<<(std::ostream &, ordered_set<PhvInfo::Field *>*);
-std::ostream &operator<<(std::ostream &, std::vector<PhvInfo::Field *>&);
+std::ostream &operator<<(std::ostream &, ordered_set<PHV::Field *>*);
+std::ostream &operator<<(std::ostream &, std::vector<PHV::Field *>&);
 std::ostream &operator<<(
     std::ostream&,
-    ordered_map<PhvInfo::Field *, ordered_set<PhvInfo::Field *>*>&);
+    ordered_map<PHV::Field *, ordered_set<PHV::Field *>*>&);
 std::ostream &operator<<(std::ostream &, Cluster &);
 
 #endif /* BF_P4C_PHV_CLUSTER_H_ */

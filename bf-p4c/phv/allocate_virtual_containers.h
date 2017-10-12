@@ -21,10 +21,10 @@ class AllocateVirtualContainers : public Visitor {
      *   - remove it from any containers it was previously (partially) allocated to
      *   - create enough fresh virtual containers to fit it, and allocate it to them
      */
-    void trivial_allocate(ordered_set<PhvInfo::Field *>&);
+    void trivial_allocate(ordered_set<PHV::Field *>&);
 
     /// Helper function for `trivial_allocate`.
-    void container_contiguous_alloc(PhvInfo::Field *, int, PHV::Container *, int);
+    void container_contiguous_alloc(PHV::Field *, int, PHV::Container *, int);
 
  public:
     AllocateVirtualContainers(PhvInfo &phv, const PhvUse &uses)

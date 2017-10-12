@@ -263,7 +263,7 @@ void ActionFormat::create_placement_phv(ActionAnalysis::ContainerActionsMap &con
             int container_bit = 0;
             int write_count = 0;
 
-            write_field->foreach_alloc(bits, [&](const PhvInfo::Field::alloc_slice &alloc) {
+            write_field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice &alloc) {
                 write_count++;
                 BUG_CHECK(alloc.container_bit >= 0, "Invalid negative container bit");
                 if (!alloc.container)

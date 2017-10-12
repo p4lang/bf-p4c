@@ -72,7 +72,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
                                    // into virtual containers instead
             new Build_PHV_Analysis_APIs(phv, uses),
                                    // populate field_container_map in the PHV_Analysis_API
-                                   // attached to each PhvInfo::Field object in phv
+                                   // attached to each PHV::Field object in phv
             new PHV_Bind(phv, uses, cluster_phv_mau),
                                    // fields bound to PHV containers
                                    // later passes assume that phv alloc info

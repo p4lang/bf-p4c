@@ -227,7 +227,7 @@ void MauAsmOutput::emit_ixbar_gather_bytes(const safe_vector<IXBar::Use::Byte> &
         int split_byte = 4;
         if (b.loc.byte == byte_loc && ternary) {
             auto *field = phv.field(b.field);
-            field->foreach_byte([&](const PhvInfo::Field::alloc_slice &sl) {
+            field->foreach_byte([&](const PHV::Field::alloc_slice &sl) {
                 if (sl.field_bit != b.lo) return;
                 if ((sl.container_bit % 8)  >= split_byte) {
                     int lo = std::max(b.hi - split_byte + 1, b.lo);
@@ -849,12 +849,12 @@ class MauAsmOutput::EmitAction : public Inspector {
             if (auto field = self.phv.field(expr, &bits)) {
                 out << sep << canon_name(field->name);
                 int count = 0;
-                field->foreach_alloc(bits, [&](const PhvInfo::Field::alloc_slice &) {
+                field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice &) {
                     count++;
                 });
                 if (count == 1) {
                     bool single_loc = (field->alloc_i.size() == 1);
-                    field->foreach_alloc([&](const PhvInfo::Field::alloc_slice &alloc) {
+                    field->foreach_alloc([&](const PHV::Field::alloc_slice &alloc) {
                         if (!(alloc.field_bit <= bits.lo && alloc.field_hi() >= bits.hi))
                             return;
                         if (!single_loc)

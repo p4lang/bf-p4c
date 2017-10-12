@@ -18,7 +18,7 @@ class CheckForUnallocatedTemps : public PassManager {
             if (name)
                 LOG1(name);
 
-            ordered_set<PhvInfo::Field *> unallocated =
+            ordered_set<PHV::Field *> unallocated =
                 CheckFitting::collect_unallocated_fields(phv, uses);
             if (unallocated.size()) {
                 BUG("Fields added after PHV allocation");

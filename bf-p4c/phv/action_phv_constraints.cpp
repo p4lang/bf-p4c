@@ -64,7 +64,7 @@ void ActionPhvConstraints::end_apply() {
 }
 
 // TODO: Account for multiple containers per field
-uint32_t ActionPhvConstraints::num_container_sources(std::vector<const PhvInfo::Field*>& fields,
+uint32_t ActionPhvConstraints::num_container_sources(std::vector<const PHV::Field*>& fields,
         const IR::MAU::Action* action) {
     ordered_set<PHV_Container *> containerList;
     LOG3("Fields size: " << fields.size());
@@ -74,7 +74,7 @@ uint32_t ActionPhvConstraints::num_container_sources(std::vector<const PhvInfo::
             LOG3("Not written in this action");
         for (auto operand : write_to_reads_per_action[field][action]) {
             if (!operand.ad && !operand.constant) {
-                const PhvInfo::Field* fieldRead = operand.phv_used;
+                const PHV::Field* fieldRead = operand.phv_used;
                 LOG3("Field read: " << fieldRead->name);
                 // TODO: What if container has not yet been allocated?
                 if (fieldRead->phv_containers().size() == 0)
@@ -91,7 +91,7 @@ uint32_t ActionPhvConstraints::num_container_sources(std::vector<const PhvInfo::
     return (containerList.size());
 }
 
-bool ActionPhvConstraints::has_ad_sources(std::vector<const PhvInfo::Field*>& fields, const
+bool ActionPhvConstraints::has_ad_sources(std::vector<const PHV::Field*>& fields, const
         IR::MAU::Action* action) {
     for (auto field : fields) {
         if (write_to_reads_per_action[field][action].size() == 0)
@@ -108,7 +108,7 @@ bool ActionPhvConstraints::has_ad_sources(std::vector<const PhvInfo::Field*>& fi
 // TODO: Alignment constraints on fields
 // TODO: Return constraints instead of boolean
 // TODO: Handle cases where fields span more than one container
-unsigned ActionPhvConstraints::can_cohabit(std::vector<const PhvInfo::Field*>& fields) {
+unsigned ActionPhvConstraints::can_cohabit(std::vector<const PHV::Field*>& fields) {
     /* Merge actions for all the candidate fields into a set */
     ordered_set<const IR::MAU::Action *> set_of_actions;
     for (auto field : fields) {
@@ -179,7 +179,7 @@ unsigned ActionPhvConstraints::can_cohabit(std::vector<const PhvInfo::Field*>& f
 }
 
 boost::optional<ActionPhvConstraints::FieldOperation> ActionPhvConstraints::is_written(const
-        IR::MAU::Action *act, const PhvInfo::Field* field) {
+        IR::MAU::Action *act, const PHV::Field* field) {
     FieldOperation f(field);
     LOG3("Trying to find: " << field->name);
     ordered_set<FieldOperation>::iterator location = action_to_writes[act].find(f);
@@ -200,7 +200,7 @@ void ActionPhvConstraints::printMapStates() {
                         FieldOperation::MOVE)); } }
 
         for (auto &f : write_to_reads_per_action) {
-            const PhvInfo::Field* key = f.first;
+            const PHV::Field* key = f.first;
             LOG3("Key field: " << key->name << " uses operands: ");
             for (auto &fi : f.second) {
                 LOG3("\tAction: " << fi.first->name);
@@ -211,7 +211,7 @@ void ActionPhvConstraints::printMapStates() {
                         LOG3("\t\tAction data."); } } }
 
         for (auto &f : read_to_writes_per_action) {
-            const PhvInfo::Field* key = f.first;
+            const PHV::Field* key = f.first;
             LOG3("Key field: " << key->name << " is read by the field(s): ");
             for (auto &fi : f.second) {
                 LOG3("\tAction: " << fi.first->name);
@@ -221,7 +221,7 @@ void ActionPhvConstraints::printMapStates() {
 
 bool ActionPhvConstraints::is_in_field_writes_to_actions(cstring write, const IR::MAU::Action*
         action) const {
-    const PhvInfo::Field* write_field = phv.field(write);
+    const PHV::Field* write_field = phv.field(write);
     if (write_field == nullptr)
         return false;
     if (field_writes_to_actions.find(write_field) == field_writes_to_actions.end())
@@ -234,7 +234,7 @@ bool ActionPhvConstraints::is_in_field_writes_to_actions(cstring write, const IR
 
 bool ActionPhvConstraints::is_in_action_to_writes(const IR::MAU::Action* action, cstring write)
     const {
-        const PhvInfo::Field* write_field = phv.field(write);
+        const PHV::Field* write_field = phv.field(write);
         if (write_field == nullptr)
             return false;
         if (action_to_writes.find(action) == action_to_writes.end())
@@ -248,8 +248,8 @@ bool ActionPhvConstraints::is_in_action_to_writes(const IR::MAU::Action* action,
 
 bool ActionPhvConstraints::is_in_write_to_reads(cstring write, const IR::MAU::Action *act, cstring
         read) const {
-    const PhvInfo::Field* write_field = phv.field(write);
-    const PhvInfo::Field* read_field = phv.field(read);
+    const PHV::Field* write_field = phv.field(write);
+    const PHV::Field* read_field = phv.field(read);
     if (write_field == nullptr || read_field == nullptr)
         return false;
     if (write_to_reads_per_action.find(write_field) == write_to_reads_per_action.end())

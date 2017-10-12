@@ -228,14 +228,14 @@ bool CollectGatewayFields::compute_offsets() {
     for (auto &info : Values(this->info)) {
         if (info.xor_with) {
             auto &with = this->info[info.xor_with];
-            info.xor_with->foreach_byte(with.bits, [&](const PhvInfo::Field::alloc_slice &sl) {
+            info.xor_with->foreach_byte(with.bits, [&](const PHV::Field::alloc_slice &sl) {
                 with.offsets.emplace_back(bytes*8U + sl.container_bit%8U, sl.field_bits());
                 info.offsets.emplace_back(bytes*8U + sl.container_bit%8U, sl.field_bits());
                 ++bytes;
             }); } }
     if (bytes > 4) return false;
     for (auto *it : sort_by_size) {
-        const PhvInfo::Field &field = *it->first;
+        const PHV::Field &field = *it->first;
         info_t &info = it->second;
         if (!info.offsets.empty()) continue;
         int size = field.container_bytes(info.bits);
@@ -251,7 +251,7 @@ bool CollectGatewayFields::compute_offsets() {
             info.offsets.emplace_back(bits + 32, info.bits);
             bits += info.bits.size();
         } else {
-            field.foreach_byte(info.bits, [&](const PhvInfo::Field::alloc_slice &sl) {
+            field.foreach_byte(info.bits, [&](const PHV::Field::alloc_slice &sl) {
                 info.offsets.emplace_back(bytes*8U + sl.container_bit%8U, sl.field_bits());
                 ++bytes;
             }); } }

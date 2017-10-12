@@ -17,7 +17,7 @@
 
 namespace {
 
-using alloc_slice = PhvInfo::Field::alloc_slice;
+using alloc_slice = PHV::Field::alloc_slice;
 
 /// @return a string containing debugging info describing the relationship
 /// between a slice of a field's PHV allocation and an Extract primitive that
@@ -98,7 +98,7 @@ computeSlices(const IR::Expression* phvBackedStorage, const PhvInfo& phv) {
     bitrange bits;
     auto* field = phv.field(phvBackedStorage, &bits);
     if (!field) return std::make_pair(bits, slices);
-    field->foreach_alloc(bits, [&](const PhvInfo::Field::alloc_slice& alloc) {
+    field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice& alloc) {
         slices.push_back(alloc);
     });
     return std::make_pair(bits, slices);
@@ -510,7 +510,7 @@ struct LowerDeparserIR : public DeparserTransform {
             }
 
             std::vector<bitrange> slices;
-            field->foreach_alloc(bits, [&](const PhvInfo::Field::alloc_slice& alloc) {
+            field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice& alloc) {
                 slices.push_back(alloc.field_bits());
             });
 

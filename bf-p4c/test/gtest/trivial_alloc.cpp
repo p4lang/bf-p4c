@@ -74,10 +74,10 @@ static boost::optional<TofinoPipeTestCase> trivialAlloc() {
 template <typename T>
 class TofinoPHVTrivialAllocators : public TofinoBackendTest {
  protected:
-    // This class is a friend of PhvInfo::Field, so it has access to
+    // This class is a friend of PHV::Field, so it has access to
     // Field::alloc_i; this helper makes that member available to subclasses.
-    static const safe_vector<PhvInfo::Field::alloc_slice>&
-        alloc(const PhvInfo::Field* field) { return field->alloc_i; }
+    static const safe_vector<PHV::Field::alloc_slice>&
+        alloc(const PHV::Field* field) { return field->alloc_i; }
 };
 
 typedef ::testing::Types<PHV::TrivialAlloc, PHV::ManualAlloc> TrivialAllocators;

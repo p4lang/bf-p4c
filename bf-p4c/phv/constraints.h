@@ -1,8 +1,11 @@
 #ifndef BF_P4C_PHV_CONSTRAINTS_H_
 #define BF_P4C_PHV_CONSTRAINTS_H_
 
-#include "phv_fields.h"
 #include "field_alignment.h"
+
+namespace PHV {
+class Field;
+}  // namespace PHV
 
 class Constraint {
  public:
@@ -59,9 +62,9 @@ class Constraint {
      */
     class Adjacent : public Constraint {
      public:
-        const PhvInfo::Field* f1;
-        const PhvInfo::Field* f2;
-        Adjacent(const PhvInfo::Field* f1, const PhvInfo::Field* f2) : f1(f1), f2(f2) { }
+        const PHV::Field* f1;
+        const PHV::Field* f2;
+        Adjacent(const PHV::Field* f1, const PHV::Field* f2) : f1(f1), f2(f2) { }
     };
 
     /** @f is placed at @alignment from the start of the container.
@@ -71,9 +74,9 @@ class Constraint {
      */
     class Align : public Constraint {
      public:
-        const PhvInfo::Field* f;
+        const PHV::Field* f;
         const FieldAlignment alignment;
-        Align(const PhvInfo::Field* f, const FieldAlignment alignment)
+        Align(const PHV::Field* f, const FieldAlignment alignment)
         : f(f), alignment(alignment) { }
     };
 
@@ -82,9 +85,9 @@ class Constraint {
      */
     class AlignMod8 : public Constraint {
      public:
-        const PhvInfo::Field* f;
+        const PHV::Field* f;
         const FieldAlignment alignment;
-        AlignMod8(const PhvInfo::Field* f, const FieldAlignment alignment)
+        AlignMod8(const PHV::Field* f, const FieldAlignment alignment)
         : f(f), alignment(alignment) { }
     };
 
@@ -94,9 +97,9 @@ class Constraint {
      */
     class AlignEq : public Constraint {
      public:
-        const PhvInfo::Field* f1;
-        const PhvInfo::Field* f2;
-        AlignEq(const PhvInfo::Field* f1, const PhvInfo::Field* f2) : f1(f1), f2(f2) { }
+        const PHV::Field* f1;
+        const PHV::Field* f2;
+        AlignEq(const PHV::Field* f1, const PHV::Field* f2) : f1(f1), f2(f2) { }
     };
 
     /** @f1 and @f2 are placed in the same container.
@@ -114,9 +117,9 @@ class Constraint {
      */
     class SameContainer : public Constraint {
      public:
-        const PhvInfo::Field* f1;
-        const PhvInfo::Field* f2;
-        SameContainer(const PhvInfo::Field* f1, const PhvInfo::Field* f2) : f1(f1), f2(f2) { }
+        const PHV::Field* f1;
+        const PHV::Field* f2;
+        SameContainer(const PHV::Field* f1, const PHV::Field* f2) : f1(f1), f2(f2) { }
     };
 
     /** Fields in @fields are placed in the same containers, and no other fields
@@ -137,8 +140,8 @@ class Constraint {
      */
     class Isolate : public Constraint {
      public:
-        const ordered_set<const PhvInfo::Field*> fields;
-        explicit Isolate(const ordered_set<const PhvInfo::Field*>& fields) : fields(fields) { }
+        const ordered_set<const PHV::Field*> fields;
+        explicit Isolate(const ordered_set<const PHV::Field*>& fields) : fields(fields) { }
     };
 
     /** @f is placed in a single container.
@@ -157,9 +160,9 @@ class Constraint {
      * where '.' implies bits in the container that may have any assignment.
      */
     class NoSlice : public Constraint {
-        const PhvInfo::Field* f;
+        const PHV::Field* f;
      public:
-        explicit NoSlice(const PhvInfo::Field* f) : f(f) { }
+        explicit NoSlice(const PHV::Field* f) : f(f) { }
     };
 };
 

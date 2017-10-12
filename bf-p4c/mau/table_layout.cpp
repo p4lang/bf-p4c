@@ -42,7 +42,7 @@ void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::M
              * this will count that byte twice, when it is only needed once.  The
              * match layout in asm_output will likewise lay it out twice, so this
              * is consistent.  Should fix PHV alloc to not make such bad allocations */
-            field->foreach_byte(bits, [&](const PhvInfo::Field::alloc_slice &) {
+            field->foreach_byte(bits, [&](const PHV::Field::alloc_slice &) {
                 bytes++;
             });
 

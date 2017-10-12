@@ -58,7 +58,7 @@ class ManualAlloc final : public Inspector {
      * of which maps a contiguous sequence of N bits in the field to a sequence
      * of N bits in a PHV container.
      *
-     * This structure is analogous to PhvInfo::Field::alloc_slice.
+     * This structure is analogous to PHV::Field::alloc_slice.
      */
     struct Slice {
         PHV::Container container;

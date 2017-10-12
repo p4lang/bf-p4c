@@ -17,7 +17,7 @@ static int cluster_id_g = 0;                // global counter for assigning clus
 
 class Cluster_PHV {
  private:
-    std::vector<PhvInfo::Field *> cluster_vec_i;
+    std::vector<PHV::Field *> cluster_vec_i;
                                             // cluster vec sorted by decreasing field width
     int id_num_i = cluster_id_g;            // number part of id_i
     std::string id_i;                       // cluster id
@@ -33,10 +33,10 @@ class Cluster_PHV {
 
  public:
     Cluster_PHV(
-        ordered_set<PhvInfo::Field *> *set_of_f,
+        ordered_set<PHV::Field *> *set_of_f,
         std::string id_s = "???");                     // NOLINT(runtime/explicit)
                                                        // cluster set of fields
-    Cluster_PHV(PhvInfo::Field *f,
+    Cluster_PHV(PHV::Field *f,
         std::string id_s = "???")                      // NOLINT(runtime/explicit)
         : Cluster_PHV(field_set(f), id_s) {}           // cluster singleton field
                                                        // e.g., POV fields
@@ -54,13 +54,13 @@ class Cluster_PHV {
                                                        // which can be ccgf "no-pack" constrained
     PHV::Size container_width(int field_width);
 
-    ordered_set<PhvInfo::Field *> *field_set(PhvInfo::Field *f) {
-        ordered_set<PhvInfo::Field *> *s = new ordered_set<PhvInfo::Field *>;
+    ordered_set<PHV::Field *> *field_set(PHV::Field *f) {
+        ordered_set<PHV::Field *> *s = new ordered_set<PHV::Field *>;
         s->insert(f);
         return s;
     }
 
-    std::vector<PhvInfo::Field *>& cluster_vec()        { return cluster_vec_i; }
+    std::vector<PHV::Field *>& cluster_vec()        { return cluster_vec_i; }
     int id_num()                                        { return id_num_i; }
     std::string id()                                    { return id_i; }
     void id(std::string id_p)                           { id_i = id_p; }
@@ -83,7 +83,7 @@ class Cluster_PHV {
     }
     int num_containers()                                { return num_containers_i; }
     void num_containers(int n)                          { num_containers_i = n; }
-    int num_containers(std::vector<PhvInfo::Field *>&, PHV::Size);
+    int num_containers(std::vector<PHV::Field *>&, PHV::Size);
     int num_constraints()                               { return num_constraints_i; }
 
     bool sliced()                                       { return sliced_i; }

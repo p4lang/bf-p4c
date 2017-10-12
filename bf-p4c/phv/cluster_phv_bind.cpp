@@ -36,7 +36,7 @@ PHV_Bind::apply_visitor(const IR::Node *node, const char *name) {
     // later passes assume that phv alloc info is sorted in field bit order, msb first
     for (auto &f : phv_i) {
         std::sort(f.alloc_i.begin(), f.alloc_i.end(),
-            [](PhvInfo::Field::alloc_slice l, PhvInfo::Field::alloc_slice r) {
+            [](PHV::Field::alloc_slice l, PHV::Field::alloc_slice r) {
                 return l.field_bit > r.field_bit; }); }
 
     LOG3(*this);
@@ -50,7 +50,7 @@ void PHV_Bind::collect_containers_with_fields() {
     //
     containers_i.clear();
     allocated_fields_i.clear();
-    ordered_set<PhvInfo::Field *> allocated_fields;
+    ordered_set<PHV::Field *> allocated_fields;
     //
     for (auto &it : phv_mau_i.phv_mau_map()) {
         for (auto &g : it.second) {
@@ -80,7 +80,7 @@ void PHV_Bind::collect_containers_with_fields() {
     //
     allocated_fields_i.assign(allocated_fields.begin(), allocated_fields.end());
     allocated_fields_i.sort(
-        [](const PhvInfo::Field *l, const PhvInfo::Field *r) {
+        [](const PHV::Field *l, const PHV::Field *r) {
             // sort by cluster id_num to prevent non-determinism
             return l->id < r->id;
         });
@@ -105,7 +105,7 @@ PHV_Bind::bind_fields_to_containers() {
     for (const PHV_Container *c : containers_i) {
         for (auto& cc_s : Values(c->fields_in_container())) {
             for (auto* cc : cc_s) {
-                PhvInfo::Field *f = cc->field();
+                PHV::Field *f = cc->field();
                 if (!uses_i.is_referenced(f)) {
                     // referenced @ phv_analysis but ElimUnused / unreferenced now @ phv_bind
                     continue;
@@ -174,7 +174,7 @@ PHV_Bind::sanity_check_field_duplicate_containers(
 
 void
 PHV_Bind::sanity_check_field_slices(
-    ordered_set<PhvInfo::Field *>& allocated_fields,
+    ordered_set<PHV::Field *>& allocated_fields,
     const std::string& msg) {
     //
     const std::string msg_1 = msg + "PHV_Bind::sanity_check_field_slices";
@@ -182,7 +182,7 @@ PHV_Bind::sanity_check_field_slices(
     // sliced fields, check all slices allocated
     // remove incompletely allocated fields from allocated_fields
     //
-    ordered_set<PhvInfo::Field *> incomplete_slices;
+    ordered_set<PHV::Field *> incomplete_slices;
     for (auto &f : allocated_fields) {
         int allocated_width = 0;
         for (auto &c : f->phv_containers()) {

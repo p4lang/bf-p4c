@@ -4,7 +4,7 @@
 #include "lib/log.h"
 #include "ir/ir.h"
 
-void BuildParserOverlay::mark(const PhvInfo::Field* f) {
+void BuildParserOverlay::mark(const PHV::Field* f) {
     // XXX(cole): f->pov is supposed to imply f->metadata.
     if (!f || f->metadata || f->pov)
         return;

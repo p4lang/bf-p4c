@@ -31,8 +31,8 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
 
     /// Intermediate data structure for computing def/use sets.
     struct info {
-        const PhvInfo::Field    *field = 0;
-        LocPairSet            def, use;
+        const PHV::Field    *field = 0;
+        LocPairSet           def, use;
     };
     /// Intermediate data structure for computing def/use sets.
     std::unordered_map<int, info> defuse;
@@ -42,14 +42,14 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
     profile_t init_apply(const IR::Node *root) override;
     void end_apply(const IR::Node *root) override;
     void check_conflicts(const info &read, int when);
-    void read(const PhvInfo::Field *, const IR::BFN::Unit *, const IR::Expression *);
+    void read(const PHV::Field *, const IR::BFN::Unit *, const IR::Expression *);
     void read(const IR::HeaderRef *, const IR::BFN::Unit *, const IR::Expression *);
-    void write(const PhvInfo::Field *, const IR::BFN::Unit *,
+    void write(const PHV::Field *, const IR::BFN::Unit *,
                const IR::Expression *, bool partial = false);
     void write(const IR::HeaderRef *, const IR::BFN::Unit *, const IR::Expression *);
-    info &field(const PhvInfo::Field *);
+    info &field(const PHV::Field *);
     info &field(int id) { return field(phv.field(id)); }
-    void access_field(const PhvInfo::Field *);
+    void access_field(const PHV::Field *);
     bool preorder(const IR::BFN::Parser *p) override;
     bool preorder(const IR::BFN::LoweredParser *p) override;
     bool preorder(const IR::Expression *e) override;
@@ -80,7 +80,7 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
         return getDefs(locpair(u, e)); }
     const LocPairSet &getDefs(const Visitor *v, const IR::Expression *e) const {
         return getDefs(locpair(v->findOrigCtxt<IR::BFN::Unit>(), e)); }
-    /** Get all defs of the PhvInfo::Field with ID @fid. */
+    /** Get all defs of the PHV::Field with ID @fid. */
     const LocPairSet &getAllDefs(int fid) const {
         static const LocPairSet emptyset;
         return located_defs.count(fid) ? located_defs.at(fid) : emptyset; }
@@ -92,7 +92,7 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
         return getUses(locpair(u, e)); }
     const LocPairSet &getUses(const Visitor *v, const IR::Expression *e) const {
         return getUses(locpair(v->findOrigCtxt<IR::BFN::Unit>(), e)); }
-    /** Get all uses of the PhvInfo::Field with ID @fid. */
+    /** Get all uses of the PHV::Field with ID @fid. */
     const LocPairSet &getAllUses(int fid) const {
         static const LocPairSet emptyset;
         return located_uses.count(fid) ? located_uses.at(fid) : emptyset; }

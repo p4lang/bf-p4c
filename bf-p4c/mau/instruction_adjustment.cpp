@@ -201,7 +201,7 @@ void ConstantsToActionData::analyze_phv_field(IR::Expression *expr) {
         int write_count = 0;
         int container_bit = 0;
         cstring container_name;
-        field->foreach_alloc(bits, [&](const PhvInfo::Field::alloc_slice &alloc) {
+        field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice &alloc) {
             write_count++;
             container_bit = alloc.container_bit;
             container_name = alloc.container.toString();
@@ -327,12 +327,12 @@ void MergeInstructions::analyze_phv_field(IR::Expression *expr) {
             BUG("More than one write within an instruction");
 
         int split_count = 0;
-        field->foreach_alloc(bits, [&](const PhvInfo::Field::alloc_slice &) {
+        field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice &) {
             split_count++;
         });
         if (split_count != 1)
             BUG("Instruction on field %s not a single container instruction", field->name);
-        field->foreach_alloc(bits, [&](const PhvInfo::Field::alloc_slice &alloc) {
+        field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice &alloc) {
             auto container = alloc.container;
             merged_location = merged_fields.find(container);
             write_found = true;
@@ -454,7 +454,7 @@ void MergeInstructions::fill_out_read_multi_operand(ActionAnalysis::ContainerAct
                 auto *field = phv.field(read.expr, &bits);
                 int split_count = 0;
                 bool names_match = false;
-                field->foreach_alloc(bits, [&](const PhvInfo::Field::alloc_slice &alloc) {
+                field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice &alloc) {
                     split_count++;
                     names_match = alloc.container.toString() == match_name;
                 });

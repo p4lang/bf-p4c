@@ -18,21 +18,21 @@ PHV_Interference::apply_visitor(const IR::Node *node, const char *name) {
     return node;
 }
 
-ordered_set<PhvInfo::Field*> PHV_Interference::reduce_singleton_clusters(
+ordered_set<PHV::Field*> PHV_Interference::reduce_singleton_clusters(
     const ordered_map<gress_t, ordered_map<int, std::vector<Cluster_PHV *>>> singletons,
     const std::string& msg) {
     LOG3("..........Begin: PHV_Interference::reduction_singleton_clusters().........." << msg);
 
-    ordered_set<PhvInfo::Field*> singleton_owners;
+    ordered_set<PHV::Field*> singleton_owners;
     for (auto by_gress : singletons) {
         for (auto by_width : by_gress.second) {
             // Collect fields from singleton clusters with this gress/width.
-            std::vector<PhvInfo::Field*> fields;
+            std::vector<PHV::Field*> fields;
             for (auto cl : by_width.second)
                 fields.insert(fields.end(), cl->cluster_vec().begin(), cl->cluster_vec().end());
 
             // Reduce.
-            ordered_set<PhvInfo::Field*> owners = reduce_cluster(
+            ordered_set<PHV::Field*> owners = reduce_cluster(
                 fields,
                 by_width.first,
                 msg + "_" + PHV_Container::Container_Content::Pass::Aggregate);
@@ -51,9 +51,9 @@ ordered_set<PhvInfo::Field*> PHV_Interference::reduce_singleton_clusters(
  * After vertex coloring, vertices with the same color are fields that can be
  * overlaid.
  */
-ordered_map<int, std::vector<PhvInfo::Field*>> PHV_Interference::find_overlay(
+ordered_map<int, std::vector<PHV::Field*>> PHV_Interference::find_overlay(
     int cluster_width,
-    const std::vector<PhvInfo::Field *> cluster) {
+    const std::vector<PHV::Field *> cluster) {
     /* Split fields that are wider than the cluster_width into slices.  Slices
      * become vertices in place of their fields: if fields f1 and f2 interfere,
      * than all the slices of f1 interfere with all the slices of f2.  The
@@ -63,12 +63,12 @@ ordered_map<int, std::vector<PhvInfo::Field*>> PHV_Interference::find_overlay(
     struct Slice {
         // Offset of this slice in the field.
         std::size_t idx;
-        PhvInfo::Field *field;
-        Slice(std::size_t idx, PhvInfo::Field *field) : idx(idx), field(field) { }
+        PHV::Field *field;
+        Slice(std::size_t idx, PHV::Field *field) : idx(idx), field(field) { }
     };
 
     std::size_t num_slices = 0;
-    ordered_map<PhvInfo::Field *, ordered_set<Slice *>> slices;
+    ordered_map<PHV::Field *, ordered_set<Slice *>> slices;
     for (auto f : cluster) {
         int num_containers =
             f->phv_use_width() / cluster_width + (f->phv_use_width() % cluster_width ? 1 : 0);
@@ -141,7 +141,7 @@ ordered_map<int, std::vector<PhvInfo::Field*>> PHV_Interference::find_overlay(
     // Oddity: The rest of PHV allocation expects "colors" (i.e. virtual
     // containers) to be numbered negatively starting at -1, so colors need to
     // start at 1, not 0.
-    ordered_map<int, std::vector<PhvInfo::Field*>> rv;
+    ordered_map<int, std::vector<PHV::Field*>> rv;
     for (boost::tie(v, vend) = boost::vertices(g); v != vend; ++v) {
         int vreg = static_cast<int>(color[*v]) + 1;
         auto f = slice_map[*v]->field;
@@ -170,9 +170,9 @@ ordered_map<int, std::vector<PhvInfo::Field*>> PHV_Interference::find_overlay(
     return rv;
 }
 
-ordered_set<PhvInfo::Field*> PHV_Interference::do_intracluster_overlay(
-    const ordered_map<int, std::vector<PhvInfo::Field*>> reg_map) {
-    ordered_set<PhvInfo::Field*> owners;
+ordered_set<PHV::Field*> PHV_Interference::do_intracluster_overlay(
+    const ordered_map<int, std::vector<PHV::Field*>> reg_map) {
+    ordered_set<PHV::Field*> owners;
 
     // For each set of fields that can be overlaid, find the widest and
     // make it the owner.  Then add the rest to its overlay map.
@@ -182,9 +182,9 @@ ordered_set<PhvInfo::Field*> PHV_Interference::do_intracluster_overlay(
 
         // Find the owner.
         auto it = std::max_element(kv.second.begin(), kv.second.end(),
-            [&](const PhvInfo::Field *f1, const PhvInfo::Field *f2) {
+            [&](const PHV::Field *f1, const PHV::Field *f2) {
                 return f1->phv_use_width() < f2->phv_use_width(); });
-        PhvInfo::Field *owner = *it;
+        PHV::Field *owner = *it;
         owners.insert(owner);
 
         // Add other fields to owner's overlay set.
@@ -220,19 +220,19 @@ ordered_set<PhvInfo::Field*> PHV_Interference::do_intracluster_overlay(
     return owners;
 }
 
-ordered_set<PhvInfo::Field*> PHV_Interference::reduce_cluster(
-    const std::vector<PhvInfo::Field*> fields,
+ordered_set<PHV::Field*> PHV_Interference::reduce_cluster(
+    const std::vector<PHV::Field*> fields,
     int width,
     const std::string &msg) {
     LOG3(".........." << msg << ".....attempting to reduce.....");
 
     // Produce `reg_map`, which maps each virtual container to the fields
     // overlaid in it.
-    ordered_map<int, std::vector<PhvInfo::Field*>> reg_map = find_overlay(width, fields);
+    ordered_map<int, std::vector<PHV::Field*>> reg_map = find_overlay(width, fields);
 
     // Assign the widest field as owner of each virtual container and update
     // the owner field_overlay_map.
-    ordered_set<PhvInfo::Field*> owners = do_intracluster_overlay(reg_map);
+    ordered_set<PHV::Field*> owners = do_intracluster_overlay(reg_map);
 
     // Verify that fields selected to be overlaid are, in fact, mutually
     // exclusive.
@@ -260,7 +260,7 @@ void PHV_Interference::reduce_clusters(
             continue; }
 
         // Reduce non-singleton clusters.
-        ordered_set<PhvInfo::Field*> owners =
+        ordered_set<PHV::Field*> owners =
             reduce_cluster(cl->cluster_vec(), int(cl->width()), msg);
 
         // Recompute reduced cluster requirements.
@@ -277,7 +277,7 @@ void PHV_Interference::reduce_clusters(
                     clusters.erase(it); }
 
     // Try overlaying singleton clusters with the same width and gress.
-    ordered_set<PhvInfo::Field*> singleton_owners = reduce_singleton_clusters(singletons, msg);
+    ordered_set<PHV::Field*> singleton_owners = reduce_singleton_clusters(singletons, msg);
 
     // Add new clusters for singleton owners.
     for (auto f : singleton_owners) {
@@ -289,14 +289,14 @@ void PHV_Interference::reduce_clusters(
     LOG3("..........End: PHV_Interference::interference_reduction().........." << msg);
 }
 
-bool PHV_Interference::mutually_exclusive(PhvInfo::Field *f1, PhvInfo::Field *f2) {
+bool PHV_Interference::mutually_exclusive(PHV::Field *f1, PHV::Field *f2) {
     // NB: We use std::set here because ordered_set doesn't implement
     // `insert(Iterator first, Iterator last)`, and the order we check the
     // Cartesian product of two sets doesn't matter anyway.
-    std::set<PhvInfo::Field *> f1_fields, f2_fields;
+    std::set<PHV::Field *> f1_fields, f2_fields;
 
     // Get fields already overlaying f1 and f2.
-    std::list<PhvInfo::Field *> f1_overlays, f2_overlays;
+    std::list<PHV::Field *> f1_overlays, f2_overlays;
     f1->field_overlays(f1_overlays);
     f2->field_overlays(f2_overlays);
 
@@ -327,13 +327,13 @@ bool PHV_Interference::mutually_exclusive(PhvInfo::Field *f1, PhvInfo::Field *f2
 //***********************************************************************************
 
 void PHV_Interference::sanity_check_overlay_maps(
-    ordered_set<PhvInfo::Field*> owners,
+    ordered_set<PHV::Field*> owners,
     const std::string& base) {
     const std::string msg = base+"PHV_Interference::sanity_check_overlay_maps";
     //
     // ownership in field_overlay_map has unique registers
     //
-    ordered_map<int, PhvInfo::Field*> reg_owner;
+    ordered_map<int, PHV::Field*> reg_owner;
     for (auto *owner : owners) {
         for (auto &reg_map : owner->field_overlay_map()) {
             int reg = reg_map.first;
@@ -350,7 +350,7 @@ void PHV_Interference::sanity_check_overlay_maps(
     //
     for (auto *owner : owners) {
         for (auto overlays_kv : owner->field_overlay_map()) {
-            ordered_set<PhvInfo::Field *> &overlays = *overlays_kv.second;
+            ordered_set<PHV::Field *> &overlays = *overlays_kv.second;
             for (auto f1 : overlays) {
                 BUG_CHECK(mutex_i(f1->id, owner->id),
                     "Overlaid fields not mutually exclusive");
@@ -369,7 +369,7 @@ void PHV_Interference::sanity_check_overlay_maps(
 //
 //
 
-std::ostream &operator<<(std::ostream &out, ordered_map<int, PhvInfo::Field*>& reg_map) {
+std::ostream &operator<<(std::ostream &out, ordered_map<int, PHV::Field*>& reg_map) {
     for (auto &r : reg_map) {
         out << "\treg[" << r.first << "] --> "
             << r.second

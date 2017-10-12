@@ -88,9 +88,9 @@ const PhvInfo::StructInfo PhvInfo::struct_info(cstring name_) const {
 //***********************************************************************************
 //
 
-const PhvInfo::Field *PhvInfo::field(const IR::Expression *e, bitrange *bits) const {
+const PHV::Field *PhvInfo::field(const IR::Expression *e, bitrange *bits) const {
     BUG_CHECK(!e->is<IR::BFN::ContainerRef>(),
-        "Looking for PhvInfo::Fields but found an IR::BFN::ContainerRef: %1%", e);
+        "Looking for PHV::Fields but found an IR::BFN::ContainerRef: %1%", e);
     if (!e) return nullptr;
     if (auto *fr = e->to<IR::Member>())
         return field(fr, bits);
@@ -122,7 +122,7 @@ const PhvInfo::Field *PhvInfo::field(const IR::Expression *e, bitrange *bits) co
     return 0;
 }
 
-const PhvInfo::Field *PhvInfo::field(const IR::Member *fr, bitrange *bits) const {
+const PHV::Field *PhvInfo::field(const IR::Member *fr, bitrange *bits) const {
     StringRef name = fr->toString();
     if (bits) {
         bits->lo = 0;
@@ -179,8 +179,8 @@ void PhvInfo::allocatePOV(const BFN::HeaderStackInfo& stacks) {
             if (field.pov && field.metadata && field.gress == gress) {
                 size[gress] -= field.size;
                 field.offset = size[gress]; }
-        Field *hdr_dd_valid = 0;  // header.$valid
-        safe_vector<Field *> pov_fields_h;  // accumulate member povs of simple headers
+        PHV::Field *hdr_dd_valid = 0;  // header.$valid
+        safe_vector<PHV::Field *> pov_fields_h;  // accumulate member povs of simple headers
         for (auto hdr : simple_headers) {
             auto hdr_info = hdr.second;
             if (hdr_info.gress == gress) {
@@ -214,7 +214,7 @@ void PhvInfo::allocatePOV(const BFN::HeaderStackInfo& stacks) {
             pov_fields_h.clear();
         }
         for (auto &stack : stacks) {
-            safe_vector<Field *> pov_fields;  // accumulate member povs of header stk pov
+            safe_vector<PHV::Field *> pov_fields;  // accumulate member povs of header stk pov
             // TODO: Why just push hdr_dd_valid?  Why not all of pov_fields_h?
             if (hdr_dd_valid) {
                 pov_fields.push_back(hdr_dd_valid);
@@ -245,7 +245,7 @@ void PhvInfo::allocatePOV(const BFN::HeaderStackInfo& stacks) {
                 // members are slices of owner ".stkvalid"'s allocation span
                 // TODO FIXME: why only push_exists?  What about the $valid and $pop fields?
                 if (push_exists) {
-                    Field *pov_stk = &all_fields[stack.name + ".$stkvalid"];
+                    PHV::Field *pov_stk = &all_fields[stack.name + ".$stkvalid"];
                     for (auto &f : pov_fields) {
                         pov_stk->ccgf_fields().push_back(f);
                         f->set_ccgf(pov_stk);
@@ -266,14 +266,15 @@ void PhvInfo::allocatePOV(const BFN::HeaderStackInfo& stacks) {
 //
 //***********************************************************************************
 //
-void PhvInfo::add_container_to_field_entry(const PHV::Container c, const Field *f) {
+void PhvInfo::add_container_to_field_entry(const PHV::Container c,
+                                           const PHV::Field *f) {
     if (f == nullptr) return;
     container_to_fields[c].insert(f);
 }
 
-const ordered_set<const PhvInfo::Field *>&
+const ordered_set<const PHV::Field *>&
 PhvInfo::fields_in_container(const PHV::Container c) const {
-    static const ordered_set<const Field *> empty_list;
+    static const ordered_set<const PHV::Field *> empty_list;
     if (container_to_fields.count(c))
         return container_to_fields.at(c);
     return empty_list;
@@ -281,7 +282,8 @@ PhvInfo::fields_in_container(const PHV::Container c) const {
 
 // XXX(deep): Currently, this analysis is conservative, in the sense that this does not take
 // overlaying into account
-bool PhvInfo::is_only_field_in_container(const PHV::Container c, const Field *f) const {
+bool PhvInfo::is_only_field_in_container(const PHV::Container c,
+                                         const PHV::Field *f) const {
     if (f == nullptr) return false;
     auto& fields = fields_in_container(c);
     return (fields.size() == 1 && fields.count(f));
@@ -293,7 +295,7 @@ bitvec PhvInfo::bits_allocated(const PHV::Container c) const {
     if (fields.size() == 0)
         return ret_bitvec;
     for (auto* field : fields) {
-        field->foreach_alloc([&](const Field::alloc_slice &alloc) {
+        field->foreach_alloc([&](const PHV::Field::alloc_slice &alloc) {
             if (alloc.container != c) return;
             bitrange bits = alloc.container_bits();
             ret_bitvec.setrange(bits.lo, bits.size());
@@ -304,14 +306,14 @@ bitvec PhvInfo::bits_allocated(const PHV::Container c) const {
 //
 //***********************************************************************************
 //
-// PhvInfo::Field bitrange interface related member functions
+// PHV::Field bitrange interface related member functions
 //
 //***********************************************************************************
 //
 
 // figure out how many disinct container bytes contain info from a bitrange of a particular field
 //
-int PhvInfo::Field::container_bytes(bitrange bits) const {
+int PHV::Field::container_bytes(bitrange bits) const {
     if (bits.hi < 0) bits.hi = size - 1;
     if (alloc_i.empty())
         return bits.hi/8U + bits.lo/8U + 1;
@@ -329,19 +331,19 @@ int PhvInfo::Field::container_bytes(bitrange bits) const {
 //
 //***********************************************************************************
 //
-// PhvInfo::Field Cluster Phv_Bind / alloc_i interface related member functions
+// PHV::Field Cluster Phv_Bind / alloc_i interface related member functions
 //
 //***********************************************************************************
 //
 
-safe_vector<PhvInfo::Field::alloc_slice> *
+safe_vector<PHV::Field::alloc_slice> *
 PhvInfo::alloc(const IR::Member *member) {
-    PhvInfo::Field *info = field(member);
+    PHV::Field *info = field(member);
     BUG_CHECK(nullptr != info, "; Cannot find PHV allocation for %s", member->toString());
     return &info->alloc_i;
 }
 
-const PhvInfo::Field::alloc_slice &PhvInfo::Field::for_bit(int bit) const {
+const PHV::Field::alloc_slice &PHV::Field::for_bit(int bit) const {
     for (auto &sl : alloc_i)
         if (bit >= sl.field_bit && bit < sl.field_bit + sl.width)
             return sl;
@@ -350,7 +352,7 @@ const PhvInfo::Field::alloc_slice &PhvInfo::Field::for_bit(int bit) const {
     return invalid;
 }
 
-void PhvInfo::Field::foreach_byte(int lo, int hi,
+void PHV::Field::foreach_byte(int lo, int hi,
                                   std::function<void(const alloc_slice &)> fn) const {
     alloc_slice tmp(this, PHV::Container(), lo, lo, 8 - (lo&7));
     if (alloc_i.empty()) {
@@ -407,7 +409,7 @@ void PhvInfo::Field::foreach_byte(int lo, int hi,
     if (tmp.container) fn(tmp);
 }  // foreach byte
 
-void PhvInfo::Field::foreach_alloc(
+void PHV::Field::foreach_alloc(
     int lo,
     int hi,
     std::function<void(const alloc_slice &)> fn) const {
@@ -467,7 +469,7 @@ void PhvInfo::Field::foreach_alloc(
 //
 //***********************************************************************************
 //
-// PhvInfo::Field Cluster based Phv Allocation related member functions
+// PHV::Field Cluster based Phv Allocation related member functions
 //
 //***********************************************************************************
 //
@@ -476,7 +478,7 @@ void PhvInfo::Field::foreach_alloc(
 // cluster ids
 //
 void
-PhvInfo::Field::cl_id(std::string cl_p) const {
+PHV::Field::cl_id(std::string cl_p) const {
     // can only change id of original non-sliced cluster
     if (!sliced() && field_slices_i.size()) {
         Cluster_PHV *cl = field_slices_i.begin()->first;
@@ -485,7 +487,7 @@ PhvInfo::Field::cl_id(std::string cl_p) const {
 }
 
 std::string
-PhvInfo::Field::cl_id(Cluster_PHV * cl) const {
+PHV::Field::cl_id(Cluster_PHV * cl) const {
     // the first cl in list is the non-sliced owner cl
     if (!cl && field_slices_i.size()) {
         Cluster_PHV *cl = field_slices_i.begin()->first;
@@ -499,7 +501,7 @@ PhvInfo::Field::cl_id(Cluster_PHV * cl) const {
 }
 
 int
-PhvInfo::Field::cl_id_num(Cluster_PHV *cl) const {
+PHV::Field::cl_id_num(Cluster_PHV *cl) const {
     // the first cl in list is the non-sliced owner cl
     if (!cl && field_slices_i.size()) {
         Cluster_PHV *cl = field_slices_i.begin()->first;
@@ -516,7 +518,7 @@ PhvInfo::Field::cl_id_num(Cluster_PHV *cl) const {
 // constraints, phv_widths
 //
 bool
-PhvInfo::Field::constrained(bool packing_constraint) const {
+PHV::Field::constrained(bool packing_constraint) const {
     bool pack_c = mau_phv_no_pack_i || deparsed_no_pack_i;
     if (packing_constraint) {
         return pack_c;
@@ -525,7 +527,7 @@ PhvInfo::Field::constrained(bool packing_constraint) const {
 }
 
 bool
-PhvInfo::Field::is_ccgf() const {
+PHV::Field::is_ccgf() const {
     if (ccgf_i == this || header_stack_pov_ccgf_i || simple_header_pov_ccgf_i) {
         BUG_CHECK(ccgf_fields_i.size(), "ccgf fields empty");
         return true;
@@ -534,7 +536,7 @@ PhvInfo::Field::is_ccgf() const {
 }
 
 bool
-PhvInfo::Field::allocation_complete() const {
+PHV::Field::allocation_complete() const {
     //
     // after phv container allocation, ccgf fields are removed by update_ccgf()
     //
@@ -542,7 +544,7 @@ PhvInfo::Field::allocation_complete() const {
 }
 
 int
-PhvInfo::Field::phv_use_width(Cluster_PHV *cl) const {
+PHV::Field::phv_use_width(Cluster_PHV *cl) const {
     // non-sliced owner not in map
     if (cl && field_slices_i.count(cl)) {
         return phv_use_hi(cl) - phv_use_lo(cl) + 1;
@@ -551,7 +553,7 @@ PhvInfo::Field::phv_use_width(Cluster_PHV *cl) const {
 }
 
 boost::optional<int>
-PhvInfo::Field::phv_alignment(bool get_ccgf_alignment) const {
+PHV::Field::phv_alignment(bool get_ccgf_alignment) const {
     // the parameter get_ccgf_alignment distinguishes between requesting alignment
     // of the CCGF as a whole vs the alignment of a ccgf member field
     if (alignment) {
@@ -564,14 +566,14 @@ PhvInfo::Field::phv_alignment(bool get_ccgf_alignment) const {
     return boost::none;
 }
 
-boost::optional<int> PhvInfo::Field::phv_alignment_network() const {
+boost::optional<int> PHV::Field::phv_alignment_network() const {
     if (alignment)
         return alignment->network;
     return boost::none;
 }
 
 void
-PhvInfo::Field::set_ccgf_phv_use_width(int min_ceil) {
+PHV::Field::set_ccgf_phv_use_width(int min_ceil) {
     // compute ccgf width, need PHV container(s) of this width
     int ccg_width = 0;
     for (auto &f : ccgf_fields_i) {
@@ -603,7 +605,7 @@ PhvInfo::Field::set_ccgf_phv_use_width(int min_ceil) {
 }  // set_ccgf_phv_use_width()
 
 int
-PhvInfo::Field::ccgf_width() const {
+PHV::Field::ccgf_width() const {
     int ccgf_width_l = 0;
     for (auto &f : ccgf_fields_i) {
         if (f->is_ccgf() && !f->header_stack_pov_ccgf()) {
@@ -627,7 +629,7 @@ PhvInfo::Field::ccgf_width() const {
 //
 
 bool
-PhvInfo::Field::sliced() const {
+PHV::Field::sliced() const {
     if (field_slices_i.size() > 1) {
         return true;
     }
@@ -635,21 +637,21 @@ PhvInfo::Field::sliced() const {
 }
 
 std::pair<int, int>&
-PhvInfo::Field::field_slices(Cluster_PHV *cl) {
+PHV::Field::field_slices(Cluster_PHV *cl) {
     assert(cl);
     assert(field_slices_i.count(cl));
     return field_slices_i[cl];
 }
 
 const std::pair<int, int>&
-PhvInfo::Field::field_slices(Cluster_PHV *cl) const {
+PHV::Field::field_slices(Cluster_PHV *cl) const {
     assert(cl);
     assert(field_slices_i.count(cl));
     return field_slices_i.at(cl);
 }
 
 void
-PhvInfo::Field::set_field_slices(Cluster_PHV *cl, int lo, int hi, Cluster_PHV *parent_cl) {
+PHV::Field::set_field_slices(Cluster_PHV *cl, int lo, int hi, Cluster_PHV *parent_cl) {
     assert(cl);
     assert(lo >= 0);
     assert(hi >= lo);
@@ -673,7 +675,7 @@ PhvInfo::Field::set_field_slices(Cluster_PHV *cl, int lo, int hi, Cluster_PHV *p
 }
 
 int
-PhvInfo::Field::phv_use_lo(Cluster_PHV *cl) const {
+PHV::Field::phv_use_lo(Cluster_PHV *cl) const {
     if (cl && field_slices_i.size() && field_slices_i.count(cl)) {
         return field_slices(cl).first;
     }
@@ -681,7 +683,7 @@ PhvInfo::Field::phv_use_lo(Cluster_PHV *cl) const {
 }
 
 int
-PhvInfo::Field::phv_use_hi(Cluster_PHV *cl) const {
+PHV::Field::phv_use_hi(Cluster_PHV *cl) const {
     if (cl && field_slices_i.size() && field_slices_i.count(cl)) {
         return field_slices(cl).second;
     }
@@ -693,7 +695,7 @@ PhvInfo::Field::phv_use_hi(Cluster_PHV *cl) const {
 //
 
 void
-PhvInfo::Field::phv_containers(PHV_Container *c) {
+PHV::Field::phv_containers(PHV_Container *c) {
     assert(c);
     // actual phv container associated with field
     // field can have several phv containers, e.g, 24bF = 3*8bC
@@ -744,19 +746,19 @@ PhvInfo::Field::phv_containers(PHV_Container *c) {
 }
 
 void
-PhvInfo::Field::overlay_substratum(Field *f) {
+PHV::Field::overlay_substratum(Field *f) {
     assert(f);
     overlay_substratum_i = f;
 }
 
 void
-PhvInfo::Field::field_overlay_map(Field *field, int r, bool actual_register) {
+PHV::Field::field_overlay_map(Field *field, int r, bool actual_register) {
     assert(field);
     //
     // r, as virtual container, made -ve when map entry created (by phv_interference)
     // after phv container association w/ field, virtual entry replaced by actual container
     // r becomes actual phv container number and used when associating overlayed fields
-    // see PhvInfo::Field::phv_containers(PHV_Container *c) above
+    // see PHV::Field::phv_containers(PHV_Container *c) above
     // -ve virtual containers will never clash with actual phv containers {0,+ve}
     //
     if (!actual_register) {
@@ -777,8 +779,8 @@ PhvInfo::Field::field_overlay_map(Field *field, int r, bool actual_register) {
 }
 
 
-ordered_set<PhvInfo::Field *> *
-PhvInfo::Field::field_overlay_map(int r) {
+ordered_set<PHV::Field *> *
+PHV::Field::field_overlay_map(int r) {
     if (!field_overlay_map_i.size() || !field_overlay_map_i.count(r)) {
         return 0;
     }
@@ -786,7 +788,7 @@ PhvInfo::Field::field_overlay_map(int r) {
 }
 
 void
-PhvInfo::Field::field_overlays(std::list<Field *>& fields_list) {
+PHV::Field::field_overlays(std::list<Field *>& fields_list) {
     // fields_list accumulates all overlay fields of this field, including this field
     fields_list.clear();
     fields_list.push_back(this);
@@ -798,7 +800,7 @@ PhvInfo::Field::field_overlays(std::list<Field *>& fields_list) {
 }
 
 void
-PhvInfo::Field::field_overlay(Field *overlay, int phv_number) {
+PHV::Field::field_overlay(Field *overlay, int phv_number) {
     // add overlay to substratum's owner field map of overlays
     // to make phv_interference->mutually_exclusive() computation updated & accurate
     assert(overlay);
@@ -806,7 +808,7 @@ PhvInfo::Field::field_overlay(Field *overlay, int phv_number) {
     overlay->overlay_substratum()->field_overlay_map(overlay, phv_number);
 }
 
-bool PhvInfo::Field::is_overlay(const Field *field) const {
+bool PHV::Field::is_overlay(const Field *field) const {
     // return true if field and this are overlays
     if (!field) {
         return false;
@@ -847,7 +849,7 @@ bool PhvInfo::Field::is_overlay(const Field *field) const {
     return false;
 }
 
-void PhvInfo::Field::updateAlignment(const FieldAlignment& newAlignment) {
+void PHV::Field::updateAlignment(const FieldAlignment& newAlignment) {
     LOG2("Inferred alignment " << newAlignment << " for field " << name);
 
     // If there's no existing alignment for this field, just take this one.
@@ -867,7 +869,7 @@ void PhvInfo::Field::updateAlignment(const FieldAlignment& newAlignment) {
                 cstring::to_cstring(*alignment));
 }
 
-void PhvInfo::Field::updateValidContainerRange(nw_bitrange newValidRange) {
+void PHV::Field::updateValidContainerRange(nw_bitrange newValidRange) {
     LOG2("Inferred valid container range " << newValidRange <<
          " for field " << name);
 
@@ -952,7 +954,7 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
             // IR::BFN::Deparser has a field egress_port which points to
             // egress port in the egress pipeline and
             // egress spec in the ingress pipeline
-            PhvInfo::Field* f = phv.field(d->egress_port);
+            PHV::Field* f = phv.field(d->egress_port);
             BUG_CHECK(f != nullptr, "Field not created in PhvInfo");
             f->set_deparsed_no_pack(true);
             LOG1(".....Deparser Constraint 'egress port' on field..... " << f); }
@@ -968,7 +970,7 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
             if (entry->name != "learning" && entry->name != "mirror")
                 continue;
 
-            PhvInfo::Field* f = phv.field(entry->select);
+            PHV::Field* f = phv.field(entry->select);
             BUG_CHECK(f != nullptr, "Field not created in PhvInfo");
             f->set_deparsed_bottom_bits(true);
             LOG1(".....Deparser Constraint "
@@ -994,7 +996,7 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
             for (auto s : entry->sets) {
                 LOG1("\t.....field list....." << fl);
                 for (auto m : *s) {
-                    PhvInfo::Field* mirror = phv.field(m);
+                    PHV::Field* mirror = phv.field(m);
                     if (mirror) {
                         mirror->mirror_field_list = {f, fl};
                         LOG1("\t\t" << mirror);
@@ -1004,7 +1006,7 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
     }
 
     void postorder(const IR::Expression* e) override {
-        PhvInfo::Field* f = phv.field(e);
+        PHV::Field* f = phv.field(e);
         if (f && isWrite()) {
             f->set_mau_write(true);  // note: this can be a parser write only
             LOG4(".....MAU_write....." << f);
@@ -1020,7 +1022,7 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
 };
 
 /**
- * Determine which fields are bridged and set a flag in their PhvInfo::Field
+ * Determine which fields are bridged and set a flag in their PHV::Field
  * metadata to indicate that.
  *
  * We consider fields to be bridged if they're written to in the special
@@ -1041,8 +1043,8 @@ struct MarkBridgedMetadataFields : public Inspector {
             if (!fieldInfo) return;
 
             // Prior to CreateThreadLocalInstances, a P4 field is represented by
-            // the same PhvInfo::Field object in both ingress and egress. After
-            // that pass runs, there are two PhvInfo::Field objects. The extract
+            // the same PHV::Field object in both ingress and egress. After
+            // that pass runs, there are two PHV::Field objects. The extract
             // will write to the *egress* version, but the one we actually want
             // to mark as bridged is the *ingress* version.
             if (!fieldInfo->name.startsWith("egress::")) {
@@ -1205,7 +1207,7 @@ CollectPhvInfo::CollectPhvInfo(PhvInfo& phv) {
 //***********************************************************************************
 //
 
-std::ostream &operator<<(std::ostream &out, const PhvInfo::Field::alloc_slice &sl) {
+std::ostream &PHV::operator<<(std::ostream &out, const PHV::Field::alloc_slice &sl) {
     out << '[' << (sl.field_bit+sl.width-1) << ':' << sl.field_bit << "]->[" << sl.container << ']';
     if (sl.container_bit || size_t(sl.width) != sl.container.size()) {
         out << '(' << sl.container_bit;
@@ -1216,7 +1218,7 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field::alloc_slice &s
 }
 
 std::ostream &operator<<(std::ostream &out,
-                         const safe_vector<PhvInfo::Field::alloc_slice> &sl_vec) {
+                         const safe_vector<PHV::Field::alloc_slice> &sl_vec) {
     for (auto &sl : sl_vec) {
         out << sl << ';';
     }
@@ -1235,7 +1237,7 @@ std::ostream &operator<<(
     return out;
 }
 
-std::ostream &operator<<(std::ostream &out, const PhvInfo::Field &field) {
+std::ostream &PHV::operator<<(std::ostream &out, const PHV::Field &field) {
     out << field.id << ':' << field.name << '<' << field.size;
     if (field.phv_use_lo() || field.phv_use_hi())
         out << ':' << field.phv_use_lo() << ".." << field.phv_use_hi();
@@ -1317,21 +1319,14 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field &field) {
     return out;
 }
 
-std::ostream &operator<<(std::ostream &out, const PhvInfo::Field *fld) {
+std::ostream &PHV::operator<<(std::ostream &out, const PHV::Field *fld) {
     if (fld) return out << *fld;
     return out << "(nullptr)";
 }
 
 // ordered_set Field*
-std::ostream &operator<<(std::ostream &out, const ordered_set<PhvInfo::Field *>& field_set) {
+std::ostream &operator<<(std::ostream &out, const ordered_set<PHV::Field *>& field_set) {
     for (auto &f : field_set) {
-        out << f << std::endl;
-    }
-    return out;
-}
-
-std::ostream &operator<<(std::ostream &out, const std::list<PhvInfo::Field *>& field_list) {
-    for (auto &f : field_list) {
         out << f << std::endl;
     }
     return out;
@@ -1348,19 +1343,37 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo &phv) {
     return out;
 }
 
-std::ostream &operator<<(std::ostream &out, const PhvInfo::Field::Field_Ops &op) {
+std::ostream &operator<<(std::ostream &out, const PHV::Field_Ops &op) {
     switch (op) {
-        case PhvInfo::Field::Field_Ops::NONE: out << "None"; break;
-        case PhvInfo::Field::Field_Ops::R: out << 'R'; break;
-        case PhvInfo::Field::Field_Ops::W: out << 'W'; break;
-        case PhvInfo::Field::Field_Ops::RW: out << "RW"; break;
+        case PHV::Field_Ops::NONE: out << "None"; break;
+        case PHV::Field_Ops::R: out << 'R'; break;
+        case PHV::Field_Ops::W: out << 'W'; break;
+        case PHV::Field_Ops::RW: out << "RW"; break;
         default: out << "<Field_Ops " << static_cast<int>(op) << ">"; }
     return out;
 }
 
+namespace std {
+
+ostream &operator<<(ostream &out, const list<::PHV::Field *>& field_list) {
+    for (auto &f : field_list) {
+        out << f << std::endl;
+    }
+    return out;
+}
+
+ostream &operator<<(ostream &out, const set<const ::PHV::Field *>& field_list) {
+    for (auto &f : field_list) {
+        out << f << std::endl;
+    }
+    return out;
+}
+
+}  // namespace std
+
 // for calling from the debugger
 void dump(const PhvInfo *phv) { std::cout << *phv; }
-void dump(const PhvInfo::Field *f) { std::cout << *f; }
+void dump(const PHV::Field *f) { std::cout << *f; }
 
 const IR::Node* PhvInfo::DumpPhvFields::apply_visitor(const IR::Node *n, const char *) {
     LOG1("");

@@ -82,7 +82,7 @@ class LiveRangeOverlay : public Inspector {
      */
     bool may_happen_before(const IR::BFN::Unit *x, const IR::BFN::Unit *y) const;
 
-    bool is_dead_at(const PhvInfo::Field &f, const IR::BFN::Unit *u) const;
+    bool is_dead_at(const PHV::Field &f, const IR::BFN::Unit *u) const;
 
     /** Get the set of (unit, expr) locations where each field is read before
      * being written.  Fields that are not read before written do not appear in

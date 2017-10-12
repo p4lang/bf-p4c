@@ -65,7 +65,7 @@ bool Phv_Parde_Mau_Use::preorder(const IR::Expression *e) {
 // Phv_Parde_Mau_Use routines that check use_i[]
 //
 
-bool Phv_Parde_Mau_Use::is_referenced(const PhvInfo::Field *f) const {      // use in mau or parde
+bool Phv_Parde_Mau_Use::is_referenced(const PHV::Field *f) const {      // use in mau or parde
     assert(f);
     if (f->bridged) {
         // bridge metadata
@@ -74,19 +74,19 @@ bool Phv_Parde_Mau_Use::is_referenced(const PhvInfo::Field *f) const {      // u
     return is_used_mau(f) || is_used_parde(f);
 }
 
-bool Phv_Parde_Mau_Use::is_deparsed(const PhvInfo::Field *f) const {      // use in deparser
+bool Phv_Parde_Mau_Use::is_deparsed(const PHV::Field *f) const {      // use in deparser
     assert(f);
     bool use_deparser = deparser_i[f->gress][f->id];
     return use_deparser;
 }
 
-bool Phv_Parde_Mau_Use::is_used_mau(const PhvInfo::Field *f) const {      // use in mau
+bool Phv_Parde_Mau_Use::is_used_mau(const PHV::Field *f) const {      // use in mau
     assert(f);
     bool use_mau = use_i[1][f->gress][f->id];
     return use_mau;
 }
 
-bool Phv_Parde_Mau_Use::is_used_parde(const PhvInfo::Field *f) const {    // use in parser/deparser
+bool Phv_Parde_Mau_Use::is_used_parde(const PHV::Field *f) const {    // use in parser/deparser
     assert(f);
     bool use_pd = use_i[0][f->gress][f->id];
     return use_pd;
