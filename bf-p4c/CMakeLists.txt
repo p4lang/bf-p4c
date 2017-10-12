@@ -253,6 +253,7 @@ set (TOFINO_BACKEND_PHV_HDRS
   phv/cluster_phv_overlay.h
   phv/cluster_phv_req.h
   phv/cluster_phv_slicing.h
+  phv/constraints.h
   phv/create_thread_local_instances.h
   phv/field_alignment.h
   phv/phv_analysis.h
