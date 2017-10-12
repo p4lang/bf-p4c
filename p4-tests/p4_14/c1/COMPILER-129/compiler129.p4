@@ -10,6 +10,7 @@
 header_type ingress_parser_control_signals {
     fields {
         priority : 3;
+        _pad: 5;
     }
 }
 
@@ -854,6 +855,7 @@ header_type sflow_sample_cpu_t {
         numFlowRecords : 8;
         sflow_session_id : 3;
         pipe_id : 2;
+        _pad : 3;
     }
 }
 # 450 "includes/headers.p4"

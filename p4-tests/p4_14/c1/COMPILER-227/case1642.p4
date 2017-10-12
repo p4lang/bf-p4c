@@ -5,12 +5,13 @@ header_type XHdr {
    fields {
       f1 : 24;
       f2 : 12;
+      _pad: 4;
    }
 }
 header XHdr x;
 
-parser start { 
-   return parseX; 
+parser start {
+   return parseX;
 }
 
 parser parseX {
@@ -40,13 +41,13 @@ parser parseFooBar {
 action t1a() {
 }
 
-table T1 { 
-   actions { 
+table T1 {
+   actions {
       t1a;
-   } 
+   }
    size : 1;
 }
 
 control ingress {
       apply( T1 );
-} 
+}

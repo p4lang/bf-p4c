@@ -24,6 +24,7 @@ parser start {
 header_type l2_metadata_t {
     fields {
         bd : 22;
+       _pad : 2;
     }
 }
 
@@ -53,7 +54,7 @@ table port_bd {
     }
     size : 288;
 }
-   
+
 table vlan_port_tab {
     reads {
         ig_intr_md.ingress_port : exact;

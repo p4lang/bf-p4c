@@ -52,6 +52,7 @@ header_type tcp_t {
     res     : 3;
     ecn     : 3;
     ctrl    :3;
+    _pad    : 3;
     window  : 16;
     checksum : 16;
     urgentPtr : 16;

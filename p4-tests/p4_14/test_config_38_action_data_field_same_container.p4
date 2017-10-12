@@ -8,7 +8,8 @@ header_type test_t {
       field_d : 4;
       field_e : 8;
       field_f : 4;
-     
+      _pad    : 4;
+
       field_g : 32;
       field_h : 32;
    }

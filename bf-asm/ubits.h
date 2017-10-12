@@ -66,7 +66,7 @@ template<int N> struct ubits : ubits_base {
         return v; }
     const ubits &operator=(const ubits &v) { *this = v.value; v.read = true; return v; }
     const ubits_base &operator=(const ubits_base &v) { *this = v.value; v.read = true; return v; }
-    unsigned size() { return N; }
+    unsigned size() override { return N; }
     const ubits &operator|=(unsigned long v) override {
         if (disabled)
             ERROR("Writing disabled register value in " << this);

@@ -9,6 +9,7 @@
 header_type ingress_parser_control_signals {
     fields {
         priority : 3;
+        _pad : 5;
     }
 }
 

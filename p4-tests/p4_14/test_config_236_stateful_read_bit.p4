@@ -20,7 +20,8 @@ header_type pkt_t {
         field_l_8 : 8;
 
         pad_0 : 7;
-        single_bit : 1;        
+        single_bit : 1;
+        pad_1 : 7;
     }
 }
 

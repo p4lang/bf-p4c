@@ -23,7 +23,8 @@ parser start {
 
 header_type l2_metadata_t {
     fields {
-        bd : 12;
+        bd   : 12;
+        _pad : 4;
     }
 }
 
@@ -53,7 +54,7 @@ table port_bd {
     }
     size : 288;
 }
-   
+
 table dmac {
     reads {
         l2_metadata.bd  : exact;

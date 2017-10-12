@@ -16,7 +16,9 @@ header_type pkt_t {
         field_i_8 : 8;
         field_j_8 : 8;
         color_0 : 5;
+        _pad : 3;
         color_1 : 8;
+
 /*
         color_0 : 8;
         pad_0 : 24;

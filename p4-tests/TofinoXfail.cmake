@@ -162,12 +162,6 @@ if (NOT ENABLE_TNA)
     testdata/p4_16_samples/checksum1-bmv2.p4
   )
 
-  p4c_add_xfail_reason("tofino"
-    "Extract field slice .* with a negative offset."
-    extensions/p4_tests/p4_14/jenkins/pcie_pkt_test/pcie_pkt_test_one.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-295/vag1892.p4
-    extensions/p4_tests/p4_14/test_config_273_bridged_and_phase0.p4
-    )
 endif() # NOT ENABLE_TNA
 
 # Failure for BRIG-44 in JIRA
@@ -428,18 +422,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/verify-bmv2.p4
   )
 
-# The PHV allocator places h.v and h.$valid in the same container, even though
-# one is metadata and one is not, and moreover one is deparsed and one is not.
-# ValidateAllocation reports this problem:
-#     warning: Deparsed container B15 contains some non-deparsed fields: ( 22:ingress::h.v<1> I off=0 ref deparsed /phv_4,PHV-79;/|phv_4,0..0|[0:0]->[B15](6);, 45:ingress::h.$valid<1> I off=0 ref pov /pov_7,PHV-79;/|pov_7,0..0|[0:0]->[B15](7); )
-#     warning: Deparsed container B15 contains non-bridged metadata fields: ( 22:ingress::h.v<1> I off=0 ref deparsed /phv_4,PHV-79;/|phv_4,0..0|[0:0]->[B15](6);, 45:ingress::h.$valid<1> I off=0 ref pov /pov_7,PHV-79;/|pov_7,0..0|[0:0]->[B15](7); )
-#     warning: Deparsed container B15 contains a mix of metadata and non-metadata fields: ( 22:ingress::h.v<1> I off=0 ref deparsed /phv_4,PHV-79;/|phv_4,0..0|[0:0]->[B15](6);, 45:ingress::h.$valid<1> I off=0 ref pov /pov_7,PHV-79;/|pov_7,0..0|[0:0]->[B15](7); )
-#     warning: Container B15 contains deparsed header fields, but it has unused bits: ( 22:ingress::h.v<1> I off=0 ref deparsed /phv_4,PHV-79;/|phv_4,0..0|[0:0]->[B15](6);, 45:ingress::h.$valid<1> I off=0 ref pov /pov_7,PHV-79;/|pov_7,0..0|[0:0]->[B15](7); )
-# This causes the parser code to be unable to find a valid extractor allocation.
-p4c_add_xfail_reason("tofino"
-  "Ran out of phv output slots"
-  extensions/p4_tests/p4_14/test_config_236_stateful_read_bit.p4
-  )
 
 # failure due to too restrictive constraint of full words in action data bus allocation
 # also: BRIG-56, BRIG-182
@@ -579,6 +561,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-262/case1804.p4
   )
 
+# BRIG-271
 p4c_add_xfail_reason("tofino"
   "Can't have more than one constant operand to an SALU compare"
   extensions/p4_tests/p4_14/jenkins/multicast_scale/multicast_scale.p4
@@ -780,6 +763,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/01-BigMatch.p4
   extensions/p4_tests/p4_14/04-FullPHV3.p4
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   extensions/p4_tests/p4_14/c1/COMPILER-133/full_tphv.p4
   extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
   extensions/p4_tests/p4_14/c4/COMPILER-590/case3179.p4
@@ -789,12 +773,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/port_vlan_mapping.p4
   extensions/p4_tests/p4_14/switch/p4src/switch.p4
   extensions/p4_tests/p4_14/switch_20160602/switch.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "error: Field .* and field .* are adjacent in container .* but aren't adjacent in the deparser"
-  extensions/p4_tests/p4_14/test_config_236_stateful_read_bit.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
+  extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
   )
 
 # Likely still has a bug; emits the following warning:
@@ -850,15 +829,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/table-entries-ternary-bmv2.p4
   testdata/p4_16_samples/table-entries-exact-ternary-bmv2.p4
   testdata/p4_16_samples/issue134-bmv2.p4
-  extensions/p4_tests/p4_14/test_config_236_stateful_read_bit.p4
-  extensions/p4_tests/p4_14/11-MinimalL2.p4
-  extensions/p4_tests/p4_14/12-MaxEnriesSRAM.p4
-  extensions/p4_tests/p4_14/test_config_38_action_data_field_same_container.p4
-  extensions/p4_tests/p4_14/test_config_95_first_meter_table.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-227/case1642.p4
-  extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
-  extensions/p4_tests/p4_14/jenkins/dkm/dkm.p4
 )
 
 
@@ -929,21 +899,25 @@ p4c_add_xfail_reason("tofino"
 # here; we need to be able to convey this constraint to PHV allocation, but in a
 # subset of cases we can handle this by adjusting the parser program and we
 # should do so if we can.
+# BRIG-270
 p4c_add_xfail_reason("tofino"
   "Extract field slice .* with a negative offset."
   extensions/p4_tests/p4_14/c1/COMPILER-217/port_parser.p4
-  extensions/p4_tests/p4_14/test_config_100_hash_action.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-295/vag1892.p4
   extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
   extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
   extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
   extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
+  extensions/p4_tests/p4_14/jenkins/pcie_pkt_test/pcie_pkt_test_one.p4
+  extensions/p4_tests/p4_14/test_config_100_hash_action.p4
+  extensions/p4_tests/p4_14/test_config_273_bridged_and_phase0.p4
   )
 
 # BEGIN: XFAILS that match glass XFAILS
 
 p4c_add_xfail_reason("tofino"
-  "Action writes fields using the same assignment type but different source operands" 
+  "Action writes fields using the same assignment type but different source operands"
   extensions/p4_tests/p4_14/14-MultipleActionsInAContainer.p4
   )
 
@@ -969,7 +943,7 @@ p4c_add_xfail_reason("tofino"
 if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
   # STF2PTF tests that fail
 
-  # Failing on stf2ptf.py indirect counter 
+  # Failing on stf2ptf.py indirect counter
   p4c_add_xfail_reason("tofino"
     "AssertionError: Wrong count of packet_count"
     testdata/p4_14_samples/hash_action_basic.p4
