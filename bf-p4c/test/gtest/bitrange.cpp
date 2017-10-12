@@ -1009,6 +1009,353 @@ TYPED_TEST(TofinoClosedRange, ToHalfOpenRange) {
     }
 }
 
+TYPED_TEST(TofinoHalfOpenRange, MaxSizedRanges) {
+    using RangeType = TypeParam;
+    const RangeType zeroToMax = ZeroToMax();
+    const RangeType minToMax = MinToMax();
+
+    // It should be safe to call `size()` on large ranges.
+    EXPECT_EQ(ssize_t(zeroToMax.hi), zeroToMax.size());
+    EXPECT_EQ(ssize_t(std::numeric_limits<unsigned>::max()), minToMax.size());
+
+    // Shrinking without changing units should be safe for large ranges.
+    {
+        using BitRangeType =
+          decltype(RangeType().template toUnit<RangeUnit::Bit>());
+
+        switch (RangeType::unit) {
+          case RangeUnit::Bit:
+            EXPECT_EQ(BitRangeType(StartLen(0, 1)), zeroToMax.resizedToBits(1));
+            EXPECT_EQ(BitRangeType(StartLen(minToMax.lo, 1)),
+                      minToMax.resizedToBits(1));
+            break;
+
+          case RangeUnit::Byte:
+            EXPECT_EQ(RangeType(StartLen(0, 1)), zeroToMax.resizedToBytes(1));
+            EXPECT_EQ(RangeType(StartLen(minToMax.lo, 1)),
+                      minToMax.resizedToBytes(1));
+            break;
+        }
+    }
+
+    // `loByte()`, `hiByte()`, `isLoAligned()` and `isHiAligned()` should
+    // produce reasonable results. We explicitly don't check `nextByte()`; that
+    // can't be expected to work in general, since the next byte may not even be
+    // representable in the range's underlying type.
+    switch (RangeType::unit) {
+      case RangeUnit::Bit:
+        EXPECT_EQ(0, zeroToMax.loByte());
+        EXPECT_TRUE(zeroToMax.isLoAligned());
+        EXPECT_EQ(ssize_t(zeroToMax.hi) / 8, ssize_t(zeroToMax.hiByte()));
+        EXPECT_FALSE(zeroToMax.isHiAligned());
+
+        EXPECT_EQ(ssize_t(minToMax.lo) / 8, ssize_t(minToMax.loByte()));
+        EXPECT_TRUE(minToMax.isLoAligned());
+        EXPECT_EQ(ssize_t(minToMax.hi) / 8, ssize_t(minToMax.hiByte()));
+        EXPECT_FALSE(minToMax.isHiAligned());
+
+        break;
+
+      case RangeUnit::Byte:
+        EXPECT_EQ(0, zeroToMax.loByte());
+        EXPECT_TRUE(zeroToMax.isLoAligned());
+        EXPECT_EQ(zeroToMax.hi - 1, zeroToMax.hiByte());
+        EXPECT_TRUE(zeroToMax.isHiAligned());
+
+        EXPECT_EQ(minToMax.lo, minToMax.loByte());
+        EXPECT_TRUE(minToMax.isLoAligned());
+        EXPECT_EQ(minToMax.hi - 1, minToMax.hiByte());
+        EXPECT_TRUE(minToMax.isHiAligned());
+
+        break;
+    }
+
+    // Equality should be reflexive, even for large ranges.
+    EXPECT_EQ(RangeType(ZeroToMax()), zeroToMax);
+    EXPECT_EQ(RangeType(MinToMax()), minToMax);
+
+    // We should be able to accurately answer questions about whether a bit or a
+    // range of bits in included in a large range.
+    EXPECT_TRUE(zeroToMax.contains(0));
+    EXPECT_TRUE(zeroToMax.contains(1));
+    EXPECT_TRUE(zeroToMax.contains(1000));
+    EXPECT_TRUE(zeroToMax.contains(zeroToMax.hi - 1));
+    EXPECT_FALSE(zeroToMax.contains(-1));
+    EXPECT_FALSE(zeroToMax.contains(-1000));
+    EXPECT_FALSE(zeroToMax.contains(minToMax.lo));
+
+    EXPECT_TRUE(minToMax.contains(0));
+    EXPECT_TRUE(minToMax.contains(1));
+    EXPECT_TRUE(minToMax.contains(1000));
+    EXPECT_TRUE(minToMax.contains(minToMax.hi - 1));
+    EXPECT_TRUE(minToMax.contains(-1));
+    EXPECT_TRUE(minToMax.contains(-1000));
+    EXPECT_TRUE(minToMax.contains(minToMax.lo));
+
+    EXPECT_TRUE(zeroToMax.overlaps(RangeType(FromTo(0, 0))));
+    EXPECT_TRUE(zeroToMax.overlaps(RangeType(FromTo(0, 1))));
+    EXPECT_TRUE(zeroToMax.overlaps(RangeType(FromTo(-1, 0))));
+    EXPECT_TRUE(zeroToMax.overlaps(RangeType(FromTo(-1000, 1000))));
+    EXPECT_TRUE(zeroToMax.overlaps(RangeType(0, zeroToMax.hi)));
+    EXPECT_TRUE(zeroToMax.overlaps(RangeType(FromTo(minToMax.lo, 0))));
+    EXPECT_TRUE(zeroToMax.overlaps(RangeType(minToMax.lo, zeroToMax.hi)));
+    EXPECT_FALSE(zeroToMax.overlaps(RangeType(FromTo(-1, -1))));
+    EXPECT_FALSE(zeroToMax.overlaps(RangeType(FromTo(-1000, -1))));
+    EXPECT_FALSE(zeroToMax.overlaps(RangeType(FromTo(minToMax.lo, -1))));
+
+    EXPECT_TRUE(minToMax.overlaps(RangeType(FromTo(0, 0))));
+    EXPECT_TRUE(minToMax.overlaps(RangeType(FromTo(0, 1))));
+    EXPECT_TRUE(minToMax.overlaps(RangeType(FromTo(-1, 0))));
+    EXPECT_TRUE(minToMax.overlaps(RangeType(FromTo(-1000, 1000))));
+    EXPECT_TRUE(minToMax.overlaps(RangeType(0, zeroToMax.hi)));
+    EXPECT_TRUE(minToMax.overlaps(RangeType(minToMax.lo, 0)));
+    EXPECT_TRUE(minToMax.overlaps(RangeType(minToMax.lo, zeroToMax.hi)));
+    EXPECT_TRUE(minToMax.overlaps(RangeType(FromTo(-1, -1))));
+    EXPECT_TRUE(minToMax.overlaps(RangeType(FromTo(-1000, -1))));
+    EXPECT_TRUE(minToMax.overlaps(RangeType(FromTo(minToMax.lo, -1))));
+
+    // We should be able to perform intersection or union operations.
+    // (Supporting union might seem surprising, since that could potentially
+    // increase the size of the range, but unioning two ranges that we can
+    // represent without overflow should never produce a range that we can't.)
+    EXPECT_EQ(zeroToMax, zeroToMax.intersectWith(zeroToMax));
+    EXPECT_EQ(zeroToMax, zeroToMax.unionWith(zeroToMax));
+    EXPECT_EQ(zeroToMax, zeroToMax.intersectWith(minToMax));
+    EXPECT_EQ(minToMax, zeroToMax.unionWith(minToMax));
+    EXPECT_EQ(RangeType(FromTo(0, 1)),
+              zeroToMax.intersectWith(RangeType(FromTo(0, 1))));
+    EXPECT_EQ(zeroToMax, zeroToMax.unionWith(RangeType(FromTo(0, 1))));
+    EXPECT_EQ(RangeType(FromTo(0, 1000)),
+              zeroToMax.intersectWith(RangeType(FromTo(-1000, 1000))));
+    EXPECT_EQ(RangeType(-1000, zeroToMax.hi),
+              zeroToMax.unionWith(RangeType(FromTo(-1000, 1000))));
+    EXPECT_EQ(RangeType(), zeroToMax.intersectWith(RangeType(minToMax.lo, -1)));
+    EXPECT_EQ(minToMax, zeroToMax.unionWith(RangeType(minToMax.lo, -1)));
+    EXPECT_EQ(RangeType(1000, zeroToMax.hi),
+              zeroToMax.intersectWith(RangeType(1000, zeroToMax.hi)));
+    EXPECT_EQ(zeroToMax, zeroToMax.unionWith(RangeType(1000, zeroToMax.hi)));
+
+    EXPECT_EQ(minToMax, minToMax.intersectWith(minToMax));
+    EXPECT_EQ(minToMax, minToMax.unionWith(minToMax));
+    EXPECT_EQ(zeroToMax, minToMax.intersectWith(zeroToMax));
+    EXPECT_EQ(minToMax, minToMax.unionWith(zeroToMax));
+    EXPECT_EQ(RangeType(FromTo(0, 1)),
+              minToMax.intersectWith(RangeType(FromTo(0, 1))));
+    EXPECT_EQ(minToMax, minToMax.unionWith(RangeType(FromTo(0, 1))));
+    EXPECT_EQ(RangeType(FromTo(-1000, 1000)),
+              minToMax.intersectWith(RangeType(FromTo(-1000, 1000))));
+    EXPECT_EQ(minToMax,
+              minToMax.unionWith(RangeType(FromTo(-1000, 1000))));
+    EXPECT_EQ(RangeType(minToMax.lo, -1),
+              minToMax.intersectWith(RangeType(minToMax.lo, -1)));
+    EXPECT_EQ(minToMax, minToMax.unionWith(RangeType(minToMax.lo, -1)));
+    EXPECT_EQ(RangeType(1000, zeroToMax.hi),
+              minToMax.intersectWith(RangeType(1000, zeroToMax.hi)));
+    EXPECT_EQ(minToMax, minToMax.unionWith(RangeType(1000, zeroToMax.hi)));
+
+    // We can't support bit order changes for large ranges in general, because
+    // they can overflow, but life is a little easier if we allow reasonable bit
+    // order changes for ZeroToMax.
+    // XXX(seth): Once we start validating ranges when we create them, this will
+    // feel a bit safer...
+    {
+        constexpr auto oppositeOrder = RangeType::order == Endian::Network
+                                     ? Endian::Little
+                                     : Endian::Network;
+        const auto asOppositeOrder =
+          zeroToMax.template toOrder<oppositeOrder>(32);
+
+        EXPECT_EQ(ssize_t(32) - zeroToMax.hi, ssize_t(asOppositeOrder.lo));
+        EXPECT_EQ(32, asOppositeOrder.hi);
+        EXPECT_EQ(zeroToMax,
+                  asOppositeOrder.template toOrder<RangeType::order>(32));
+    }
+
+    // We should be able to convert a large HalfOpenRange to a ClosedRange and
+    // back again.
+    using ClosedRangeType = ClosedRange<RangeType::unit, RangeType::order>;
+    EXPECT_EQ(ClosedRangeType(ZeroToMax()), toClosedRange(zeroToMax));
+    EXPECT_TRUE(toClosedRange(zeroToMax));
+    EXPECT_EQ(zeroToMax, toHalfOpenRange(*toClosedRange(zeroToMax)));
+}
+
+TYPED_TEST(TofinoClosedRange, MaxSizedRanges) {
+    using RangeType = TypeParam;
+    using HalfOpenRangeType = HalfOpenRange<RangeType::unit, RangeType::order>;
+    const RangeType zeroToMax = ZeroToMax();
+    const RangeType minToMax = MinToMax();
+
+    // It should be safe to call `size()` on large ranges.
+    EXPECT_EQ(ssize_t(zeroToMax.hi) + 1, zeroToMax.size());
+    EXPECT_EQ(ssize_t(std::numeric_limits<unsigned>::max()), minToMax.size());
+
+    // Shrinking without changing units should be safe for large ranges.
+    {
+        using BitRangeType =
+          decltype(RangeType().template toUnit<RangeUnit::Bit>());
+
+        switch (RangeType::unit) {
+          case RangeUnit::Bit:
+            EXPECT_EQ(BitRangeType(StartLen(0, 1)), zeroToMax.resizedToBits(1));
+            EXPECT_EQ(BitRangeType(StartLen(minToMax.lo, 1)),
+                      minToMax.resizedToBits(1));
+            break;
+
+          case RangeUnit::Byte:
+            EXPECT_EQ(RangeType(StartLen(0, 1)), zeroToMax.resizedToBytes(1));
+            EXPECT_EQ(RangeType(StartLen(minToMax.lo, 1)),
+                      minToMax.resizedToBytes(1));
+            break;
+        }
+    }
+
+    // `loByte()`, `hiByte()`, `isLoAligned()` and `isHiAligned()` should
+    // produce reasonable results. We explicitly don't check `nextByte()`; that
+    // can't be expected to work in general, since the next byte may not even be
+    // representable in the range's underlying type.
+    switch (RangeType::unit) {
+      case RangeUnit::Bit:
+        EXPECT_EQ(0, zeroToMax.loByte());
+        EXPECT_TRUE(zeroToMax.isLoAligned());
+        EXPECT_EQ(ssize_t(zeroToMax.hi) / 8, ssize_t(zeroToMax.hiByte()));
+        EXPECT_FALSE(zeroToMax.isHiAligned());
+
+        EXPECT_EQ(ssize_t(minToMax.lo) / 8, ssize_t(minToMax.loByte()));
+        EXPECT_TRUE(minToMax.isLoAligned());
+        EXPECT_EQ(ssize_t(minToMax.hi) / 8, ssize_t(minToMax.hiByte()));
+        EXPECT_FALSE(minToMax.isHiAligned());
+
+        break;
+
+      case RangeUnit::Byte:
+        EXPECT_EQ(0, zeroToMax.loByte());
+        EXPECT_TRUE(zeroToMax.isLoAligned());
+        EXPECT_EQ(zeroToMax.hi, zeroToMax.hiByte());
+        EXPECT_TRUE(zeroToMax.isHiAligned());
+
+        EXPECT_EQ(minToMax.lo, minToMax.loByte());
+        EXPECT_TRUE(minToMax.isLoAligned());
+        EXPECT_EQ(minToMax.hi, minToMax.hiByte());
+        EXPECT_TRUE(minToMax.isHiAligned());
+
+        break;
+    }
+
+    // Equality should be reflexive, even for large ranges.
+    EXPECT_EQ(RangeType(ZeroToMax()), zeroToMax);
+    EXPECT_EQ(RangeType(MinToMax()), minToMax);
+
+    // We should be able to accurately answer questions about whether a bit or a
+    // range of bits in included in a large range.
+    EXPECT_TRUE(zeroToMax.contains(0));
+    EXPECT_TRUE(zeroToMax.contains(1));
+    EXPECT_TRUE(zeroToMax.contains(1000));
+    EXPECT_TRUE(zeroToMax.contains(zeroToMax.hi - 1));
+    EXPECT_FALSE(zeroToMax.contains(-1));
+    EXPECT_FALSE(zeroToMax.contains(-1000));
+    EXPECT_FALSE(zeroToMax.contains(minToMax.lo));
+
+    EXPECT_TRUE(minToMax.contains(0));
+    EXPECT_TRUE(minToMax.contains(1));
+    EXPECT_TRUE(minToMax.contains(1000));
+    EXPECT_TRUE(minToMax.contains(minToMax.hi - 1));
+    EXPECT_TRUE(minToMax.contains(-1));
+    EXPECT_TRUE(minToMax.contains(-1000));
+    EXPECT_TRUE(minToMax.contains(minToMax.lo));
+
+    EXPECT_TRUE(zeroToMax.overlaps(RangeType(FromTo(0, 0))));
+    EXPECT_TRUE(zeroToMax.overlaps(RangeType(FromTo(0, 1))));
+    EXPECT_TRUE(zeroToMax.overlaps(RangeType(FromTo(-1, 0))));
+    EXPECT_TRUE(zeroToMax.overlaps(RangeType(FromTo(-1000, 1000))));
+    EXPECT_TRUE(zeroToMax.overlaps(RangeType(0, zeroToMax.hi)));
+    EXPECT_TRUE(zeroToMax.overlaps(RangeType(FromTo(minToMax.lo, 0))));
+    EXPECT_TRUE(zeroToMax.overlaps(RangeType(minToMax.lo, zeroToMax.hi)));
+    EXPECT_FALSE(zeroToMax.overlaps(RangeType(FromTo(-1, -1))));
+    EXPECT_FALSE(zeroToMax.overlaps(RangeType(FromTo(-1000, -1))));
+    EXPECT_FALSE(zeroToMax.overlaps(RangeType(FromTo(minToMax.lo, -1))));
+
+    EXPECT_TRUE(minToMax.overlaps(RangeType(FromTo(0, 0))));
+    EXPECT_TRUE(minToMax.overlaps(RangeType(FromTo(0, 1))));
+    EXPECT_TRUE(minToMax.overlaps(RangeType(FromTo(-1, 0))));
+    EXPECT_TRUE(minToMax.overlaps(RangeType(FromTo(-1000, 1000))));
+    EXPECT_TRUE(minToMax.overlaps(RangeType(0, zeroToMax.hi)));
+    EXPECT_TRUE(minToMax.overlaps(RangeType(minToMax.lo, 0)));
+    EXPECT_TRUE(minToMax.overlaps(RangeType(minToMax.lo, zeroToMax.hi)));
+    EXPECT_TRUE(minToMax.overlaps(RangeType(FromTo(-1, -1))));
+    EXPECT_TRUE(minToMax.overlaps(RangeType(FromTo(-1000, -1))));
+    EXPECT_TRUE(minToMax.overlaps(RangeType(FromTo(minToMax.lo, -1))));
+
+    // We should be able to perform intersection or union operations.
+    // (Supporting union might seem surprising, since that could potentially
+    // increase the size of the range, but unioning two ranges that we can
+    // represent without overflow should never produce a range that we can't.)
+    auto checkIntersectionEquals = [](const RangeType expected,
+                                      const HalfOpenRangeType actual) {
+        EXPECT_FALSE(actual.empty());
+        if (actual.empty()) return;
+        EXPECT_EQ(expected, *toClosedRange(actual));
+    };
+
+    checkIntersectionEquals(zeroToMax, zeroToMax.intersectWith(zeroToMax));
+    EXPECT_EQ(zeroToMax, zeroToMax.unionWith(zeroToMax));
+    checkIntersectionEquals(zeroToMax, zeroToMax.intersectWith(minToMax));
+    EXPECT_EQ(minToMax, zeroToMax.unionWith(minToMax));
+    checkIntersectionEquals(RangeType(FromTo(0, 1)),
+                            zeroToMax.intersectWith(RangeType(FromTo(0, 1))));
+    EXPECT_EQ(zeroToMax, zeroToMax.unionWith(RangeType(FromTo(0, 1))));
+    checkIntersectionEquals(RangeType(FromTo(0, 1000)),
+                            zeroToMax.intersectWith(RangeType(FromTo(-1000, 1000))));
+    EXPECT_EQ(RangeType(-1000, zeroToMax.hi),
+              zeroToMax.unionWith(RangeType(FromTo(-1000, 1000))));
+    EXPECT_TRUE(zeroToMax.intersectWith(RangeType(minToMax.lo, -1)).empty());
+    EXPECT_EQ(minToMax, zeroToMax.unionWith(RangeType(minToMax.lo, -1)));
+    checkIntersectionEquals(RangeType(1000, zeroToMax.hi),
+                            zeroToMax.intersectWith(RangeType(1000, zeroToMax.hi)));
+    EXPECT_EQ(zeroToMax, zeroToMax.unionWith(RangeType(1000, zeroToMax.hi)));
+
+    checkIntersectionEquals(minToMax, minToMax.intersectWith(minToMax));
+    EXPECT_EQ(minToMax, minToMax.unionWith(minToMax));
+    checkIntersectionEquals(zeroToMax, minToMax.intersectWith(zeroToMax));
+    EXPECT_EQ(minToMax, minToMax.unionWith(zeroToMax));
+    checkIntersectionEquals(RangeType(FromTo(0, 1)),
+                            minToMax.intersectWith(RangeType(FromTo(0, 1))));
+    EXPECT_EQ(minToMax, minToMax.unionWith(RangeType(FromTo(0, 1))));
+    checkIntersectionEquals(RangeType(FromTo(-1000, 1000)),
+                            minToMax.intersectWith(RangeType(FromTo(-1000, 1000))));
+    EXPECT_EQ(minToMax,
+              minToMax.unionWith(RangeType(FromTo(-1000, 1000))));
+    checkIntersectionEquals(RangeType(minToMax.lo, -1),
+                            minToMax.intersectWith(RangeType(minToMax.lo, -1)));
+    EXPECT_EQ(minToMax, minToMax.unionWith(RangeType(minToMax.lo, -1)));
+    checkIntersectionEquals(RangeType(1000, zeroToMax.hi),
+                            minToMax.intersectWith(RangeType(1000, zeroToMax.hi)));
+    EXPECT_EQ(minToMax, minToMax.unionWith(RangeType(1000, zeroToMax.hi)));
+
+    // We can't support bit order changes for large ranges in general, because
+    // they can overflow, but life is a little easier if we allow reasonable bit
+    // order changes for ZeroToMax.
+    // XXX(seth): Once we start validating ranges when we create them, this will
+    // feel a bit safer...
+    {
+        constexpr auto oppositeOrder = RangeType::order == Endian::Network
+                                     ? Endian::Little
+                                     : Endian::Network;
+        const auto asOppositeOrder =
+          zeroToMax.template toOrder<oppositeOrder>(32);
+
+        EXPECT_EQ(ssize_t(31) - zeroToMax.hi, ssize_t(asOppositeOrder.lo));
+        EXPECT_EQ(31, asOppositeOrder.hi);
+        EXPECT_EQ(zeroToMax,
+                  asOppositeOrder.template toOrder<RangeType::order>(32));
+    }
+
+    // We should be able to convert a large ClosedRange to a HalfOpenRange and
+    // back again.
+    EXPECT_EQ(HalfOpenRangeType(ZeroToMax()), toHalfOpenRange(zeroToMax));
+    EXPECT_TRUE(toClosedRange(toHalfOpenRange(zeroToMax)));
+    EXPECT_EQ(zeroToMax, *toClosedRange(toHalfOpenRange(zeroToMax)));
+}
+
 class TofinoIntegerMathUtils : public TofinoBackendTest { };
 
 TEST_F(TofinoIntegerMathUtils, DivideFloor) {

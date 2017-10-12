@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <iosfwd>
+#include <limits>
 #include <utility>
 
 #include "lib/exceptions.h"
@@ -105,6 +106,51 @@ struct StartLen {
     const int len;
 };
 
+/**
+ * A helper type used to construct a range that starts at zero and ends at the
+ * maximum index that is safely representable without overflow. Only meant to be
+ * used when constructing a HalfOpenRange or ClosedRange.
+ *
+ * ZeroToMax ranges are useful as an identity when intersecting ranges. If you
+ * have a loop where you intersect ranges over and over, you may find ZeroToMax
+ * useful.
+ *
+ * A caveat: "safely representable" above means that basic bitrange getters,
+ * queries, comparisons, and set operations work. It does *not* mean that any
+ * computation you do with the bitrange will be safe; operations that increase
+ * the size of very large bitranges, that shift them, or that change their units
+ * may result in integer overflow.
+ *
+ * It's generally safe to change the endianness of ZeroToMax, as long as the
+ * space it lives inside is safe. If you try to treat it as living in a space
+ * which also has a very large size, you may encounter integer overflow.
+ *
+ * XXX(seth): There's no substitute for checking unsafe conversions before
+ * performing them, but we don't do that right now, so be cautious with very
+ * large ranges, just as you would be with storing very large values into a
+ * primitive type.
+ */
+struct ZeroToMax { };
+
+/**
+ * A helper type used to construct a range that starts at the minimum index that
+ * is safely representable without overflow and ends at the maximum index that
+ * is safely representable without overflow. Only meant to be used when
+ * constructing a HalfOpenRange or ClosedRange.
+ *
+ * MinToMax ranges are useful as an identity when intersecting ranges. If you
+ * have a loop where you intersect ranges over and over, you may find MinToMax
+ * useful. Note that you're less likely to run into overflow issues with
+ * ZeroToMax ranges, so if you're dealing entirely with non-negative numbers,
+ * you're probably better off using ZeroToMax.
+ *
+ * @see ZeroToMax for more discussion about what "safely representable" means.
+ *
+ * Unlike ZeroToMax, it is not safe to change the endianness of MinToMax; doing
+ * so will inevitably result in integer overflow.
+ */
+struct MinToMax { };
+
 /// JSON serialization/deserialization helpers.
 void rangeToJSON(JSONGenerator& json, int lo, int hi);
 std::pair<int, int> rangeFromJSON(JSONLoader& json);
@@ -129,6 +175,8 @@ std::pair<int, int> rangeFromJSON(JSONLoader& json);
  * ranges where `lo` is greater than `hi`. We should enforce that ranges are
  * consistent; we'll add the necessary checks after the existing code has been
  * audited.
+ *
+ * XXX(seth): We should also add checks to avoid integer overflow.
  */
 template <RangeUnit Unit, Endian Order>
 struct HalfOpenRange {
@@ -141,11 +189,16 @@ struct HalfOpenRange {
       : lo(fromTo.from), hi(fromTo.to + 1) { }
     HalfOpenRange(StartLen&& startLen)  // NOLINT(runtime/explicit)
       : lo(startLen.start), hi(startLen.start + startLen.len) { }
+    HalfOpenRange(ZeroToMax&&)  // NOLINT(runtime/explicit)
+      : lo(0), hi(std::numeric_limits<int>::max()) { }
+    HalfOpenRange(MinToMax&&)  // NOLINT(runtime/explicit)
+      : lo(std::numeric_limits<int>::min())
+      , hi(std::numeric_limits<int>::max()) { }
     explicit HalfOpenRange(std::pair<int, int> range)
       : lo(range.first), hi(range.second) { }
 
     /// @return the number of elements in this range.
-    int size() const { return hi - lo; }
+    ssize_t size() const { return ssize_t(hi) - ssize_t(lo); }
 
     /// @return a canonicalized version of this range. This only has an effect
     /// for empty ranges, which will all be mapped to (0, 0).
@@ -201,7 +254,9 @@ struct HalfOpenRange {
         return Unit == RangeUnit::Byte ? hi - 1 : divideFloor(hi - 1, 8);
     }
 
-    /// @return the next byte that starts after the end of this interval.
+    /// @return the next byte that starts after the end of this interval. May
+    /// result in integer overflow if used with ZeroToMax or MinToMax-sized
+    /// ranges.
     int nextByte() const { return empty() ? 0 : hiByte() + 1; }
 
     /// @return true if the lowest-numbered bit in this range is
@@ -278,6 +333,10 @@ struct HalfOpenRange {
      * We couldn't switch between those numberings without knowing that the
      * space has 10 elements.
      *
+     * Note that this operation may result in integer overflow when dealing with
+     * very large ranges. It's generally safe for ZeroToMax as long as the space
+     * size is not also near INT_MAX. It's never safe for MinToMax.
+     *
      * @tparam DestOrder  The endian order to convert to.
      * @param spaceSize  The size of the space this range is embedded in.
      * @return this range, but converted to the specified endian ordering.
@@ -301,6 +360,9 @@ struct HalfOpenRange {
      * byte-aligned. If that would be problematic, use `isLoAligned()` and
      * `isHiAligned()` to check before converting, or just check that converting
      * the result back to bits yields the original range.
+     *
+     * This operation will result in integer overflow when dealing with
+     * ZeroToMax or MinToMax-sized ranges.
      *
      * @tparam DestUnit  The unit to convert to.
      * @return this range, but converted to the specified unit.
@@ -354,6 +416,8 @@ struct HalfOpenRange {
  * ranges where `lo` is greater than or equal to `hi`. We should enforce that
  * ranges are consistent; we'll add the necessary checks after the existing code
  * has been audited.
+ *
+ * XXX(seth): We should also add checks to avoid integer overflow.
  */
 template <RangeUnit Unit, Endian Order>
 struct ClosedRange {
@@ -366,11 +430,16 @@ struct ClosedRange {
       : lo(fromTo.from), hi(fromTo.to) { }
     ClosedRange(StartLen&& startLen)  // NOLINT(runtime/explicit)
       : lo(startLen.start), hi(startLen.start + startLen.len - 1) { }
+    ClosedRange(ZeroToMax&&)  // NOLINT(runtime/explicit)
+      : lo(0), hi(std::numeric_limits<int>::max() - 1) { }
+    ClosedRange(MinToMax&&)  // NOLINT(runtime/explicit)
+      : lo(std::numeric_limits<int>::min())
+      , hi(std::numeric_limits<int>::max() - 1) { }
     explicit ClosedRange(std::pair<int, int> range)
       : lo(range.first), hi(range.second) { }
 
     /// @see HalfOpenRange::size().
-    int size() const { return hi - lo + 1; }
+    ssize_t size() const { return ssize_t(hi) - ssize_t(lo) + 1; }
 
     /// @see HalfOpenRange::resizedToBits().
     ClosedRange<RangeUnit::Bit, Order> resizedToBits(int size) const {
