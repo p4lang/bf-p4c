@@ -10,16 +10,21 @@ namespace BFN {
 /// A lowered parser extraction operation, representing a write by the parser
 /// into a PHV container.
 abstract LoweredExtract {
-    validate { BUG_CHECK(bool(dest), "Invalid PHV container"); }
+    validate { BUG_CHECK(bool(dest->container), "Invalid PHV container"); }
 
 #emit
     /// Debugging information about the high-level operations that are
     /// implemented by this low-level extract.
     ::BFN::DebugInfo debug;
+
+    /// Convenience constructors for accepting a raw PHV::Container.
+    LoweredExtract(PHV::Container c) : dest(new BFN::ContainerRef(c)) { }
+    LoweredExtract(Util::SourceInfo si, PHV::Container c)
+    : IR::Node(si), dest(new BFN::ContainerRef(c)) { }
 #end
 
     /// The PHV container this extract writes to.
-    PHV::Container dest;
+    BFN::ContainerRef dest;
 }
 
 /// An lowered extraction from the input buffer.
@@ -32,6 +37,14 @@ class LoweredExtractBuffer : LoweredExtract {
         out << "extract bytes " << byteInterval() << "(" << range.size()
             << "B) to " << dest;
     }
+
+#emit
+    /// Convenience constructors for accepting a raw PHV::Container.
+    LoweredExtractBuffer(PHV::Container c, nw_byterange range)
+    : BFN::LoweredExtract(c), range(range) { }
+    LoweredExtractBuffer(Util::SourceInfo si, PHV::Container c, nw_byterange range)
+    : BFN::LoweredExtract(si, c), range(range) { }
+#end
 
     /// @return the half-open range of bytes being extracted, in network order.
     nw_byteinterval byteInterval() const { return toHalfOpenRange(range); }
@@ -47,6 +60,14 @@ class LoweredExtractBuffer : LoweredExtract {
 /// A lowered extraction of a constant.
 class LoweredExtractConstant : LoweredExtract {
     dbprint { out << "extract constant " << constant << " to " << dest; }
+
+#emit
+    /// Convenience constructors for accepting a raw PHV::Container.
+    LoweredExtractConstant(PHV::Container c, int constant)
+    : BFN::LoweredExtract(c), constant(constant) { }
+    LoweredExtractConstant(Util::SourceInfo si, PHV::Container c, int constant)
+    : BFN::LoweredExtract(si, c), constant(constant) { }
+#end
 
     /// The constant to extract.
     int constant;
@@ -134,7 +155,7 @@ class LoweredParser : AbstractParser {
 
     /// The set of PHV containers which may legally be written more than once by
     /// this parser.
-    std::vector<PHV::Container> multiwriteContainers;
+    inline Vector<BFN::ContainerRef> multiwriteContainers;
 
     /// The amount of data, in bytes, which this parser program expects to be
     /// prepended to the packet by the hardware or by compiler-generated code,

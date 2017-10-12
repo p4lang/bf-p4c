@@ -197,6 +197,7 @@ Backend::Backend(const BFN_Options& options) :
         new IXBarRealign(phv),
         new TotalInstructionAdjustment(phv),
         new DumpPipe("Final table graph"),
+        new CheckForUnallocatedTemps(phv, uses),
 
         // Lower the parser IR to a target-specific representation. This *loses
         // information* about field reads and writes in the parser and depaser,
@@ -206,7 +207,6 @@ Backend::Backend(const BFN_Options& options) :
         new LowerParser(phv),
 
         new CheckTableNameDuplicate,
-        new CheckForUnallocatedTemps(phv, uses),
         new CheckUnimplementedFeatures(options.allowUnimplemented),
         new AsmOutput(phv, options.outputFile)
     });

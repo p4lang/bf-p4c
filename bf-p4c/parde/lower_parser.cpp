@@ -255,8 +255,7 @@ struct ExtractSimplifier {
             // bytes of the input buffer - they're in some sense "the same".
             // We only need to merge their debug info.
             const auto finalBufferRange = *toClosedRange(bufferRange);
-            auto* mergedExtract =
-              new IR::BFN::LoweredExtractBuffer(container, finalBufferRange);
+            auto* mergedExtract = new IR::BFN::LoweredExtractBuffer(container, finalBufferRange);
             for (auto* extract : extracts)
                 mergedExtract->debug.mergeWith(extract->debug);
 
@@ -580,7 +579,7 @@ class ExtractorAllocator {
         std::vector<const IR::BFN::LoweredExtract*> remainingExtractions;
         nw_byteinterval remainingBytes;
         for (auto* extract : extracts) {
-            const auto containerSize = extract->dest.log2sz();
+            const auto containerSize = extract->dest->container.log2sz();
             const auto byteInterval = extract->is<IR::BFN::LoweredExtractBuffer>()
                                     ? extract->to<IR::BFN::LoweredExtractBuffer>()
                                              ->byteInterval()
@@ -697,7 +696,7 @@ class SplitBigStates : public ParserModifier {
 class ComputeMultiwriteContainers : public ParserModifier {
     bool preorder(IR::BFN::LoweredParserMatch* match) override {
         for (auto* extract : match->statements)
-            writes[extract->dest]++;
+            writes[extract->dest->container]++;
         return true;
     }
 
@@ -709,7 +708,7 @@ class ComputeMultiwriteContainers : public ParserModifier {
             auto container = item.first;
             auto writeCount = item.second;
             if (writeCount > 1)
-                parser->multiwriteContainers.push_back(container);
+                parser->multiwriteContainers.push_back(new IR::BFN::ContainerRef(container));
         }
 
         // Reset our data structure; each parser must be considered separately.

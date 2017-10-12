@@ -89,6 +89,8 @@ const PhvInfo::StructInfo PhvInfo::struct_info(cstring name_) const {
 //
 
 const PhvInfo::Field *PhvInfo::field(const IR::Expression *e, bitrange *bits) const {
+    BUG_CHECK(!e->is<IR::BFN::ContainerRef>(),
+        "Looking for PhvInfo::Fields but found an IR::BFN::ContainerRef: %1%", e);
     if (!e) return nullptr;
     if (auto *fr = e->to<IR::Member>())
         return field(fr, bits);

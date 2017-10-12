@@ -1,5 +1,7 @@
 #emit
+#include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/ir/gress.h"
+#include "bf-p4c/phv/phv.h"
 
 struct StageUse {
     static constexpr int MAX_STAGES = 12;
@@ -94,12 +96,54 @@ class InstanceRef : HeaderRef {
     dbprint { out << toString(); }
 }
 
-class TempVar : Expression {
+class MetadataInfo {
+    bool forTM;
+    gress_t gress;
+    cstring type_name;
+    cstring instance_name;
+    cstring field_name;
+    dbprint { out << instance_name << "." << field_name; }
+}
+
+
+/** An abstract class that represents values in the back end, including header
+ * and struct fields, slices, temporary variables, literals, etc.
+ *
+ * NB: This is a work in progress, as we slowly transition from using
+ * IR::Expression (which is a v1.def IR node) to IR::BFN::Value.
+ * 
+ * In the back end, all expressions are converted to values and instructions.
+ * For example,
+ *  
+ *    ipv4.ttl = ipv4.ttl - 1
+ *
+ * becomes
+ *
+ *    sub(ipv4.ttl, ipv4.ttl, 1)
+ *
+ * where `sub` is an instruction, and `ipv4.ttl` and `1` are values.
+ */
+abstract BFN::Value : IR::Expression { }
+
+
+/** An abstract class that represents references to values that must be stored
+ * in PHV containers or other sundry types of memory in Barefoot hardware.
+ *
+ * This includes fields of header and metadata instances as well as temporary
+ * variables.  It also includes PHV containers themselves, as some back end
+ * transformations replace collections of references to field instances with
+ * the PHV containers in which they reside. */
+abstract BFN::Reference : BFN::Value { }
+
+
+/** A temporary variable introduced by the compiler, which must be assigned to
+ * a PHV container. */
+class TempVar : BFN::Reference {
     bool        POV;
     cstring     name;
     static int  uid;
 #noconstructor
-    TempVar(Type t, bool p = false, const char *n = 0) : Expression(t), POV(p), name(n) {
+    TempVar(Type t, bool p = false, const char *n = 0) : BFN::Reference(t), POV(p), name(n) {
         if (!name) {
             std::string n("$tmp");
             n += std::to_string(++uid);
@@ -109,11 +153,86 @@ class TempVar : Expression {
     dbprint { out << name; }
 }
 
-class MetadataInfo {
-    bool forTM;
-    gress_t gress;
-    cstring type_name;
-    cstring instance_name;
-    cstring field_name;
-    dbprint { out << instance_name << "." << field_name; }
+
+/** A field of a header or metadata instance, which must be assigned to a PHV
+ * container.
+ */
+class BFN::Member : BFN::Reference {
+    ID member;
+    IR::HeaderOrMetadata expr;
+
+    // XXX(cole): The front-/midend version (IR::Member) has a convenience
+    // function for calculating the bitrange of this field with respect to its
+    // enclosing structure.  If/when that becomes useful in the back end, it
+    // should be implemented here using the ir/bitrange.h library.
+
+    toString{ return expr->toString() + "." + member; }
+    dbprint { out << toString(); }
+}
+
+
+/** A slice of a reference, most commonly a BFN::Member or BFN::TempVar. */
+class BFN::Slice : BFN::Reference {
+    BFN::Reference base;
+    le_bitrange range;
+
+#noconstructor
+
+    /** Slice constructors that also create a Bit<X> type of the appropriate
+     * size if no type is provided.   /// Utility constructors that take hi/lo
+     * bits directly.
+     */
+    Slice(BFN::Reference a, le_bitrange range)
+    : BFN::Reference(IR::Type::Bits::get(range.size())), range(range) { }
+    Slice(Util::SourceInfo si, BFN::Reference a, le_bitrange range)
+    : BFN::Reference(si, IR::Type::Bits::get(range.size())), base(a), range(range) { }
+
+    /// Utility constructors that build a bitrange from hi/lo bits.
+    Slice(BFN::Reference a, int hi, int lo) : BFN::Slice(a, le_bitrange(FromTo(lo, hi))) { }
+    Slice(Util::SourceInfo si, BFN::Reference a, int hi, int lo)
+    : BFN::Slice(si, a, le_bitrange(FromTo(lo, hi))) { }
+
+    Slice {
+        if (type->is<Type::Unknown>())
+            type = IR::Type::Bits::get(range.size()); }
+
+    toString {
+        return base->toString() + "[" + std::to_string(range.hi) + ":" + std::to_string(range.lo) + "]";
+    }
+    dbprint { out << toString(); }
+}
+
+
+/** A reference to a PHV container.  At the hardware level, Barefoot switches
+ * operate over PHV containers, not header/metadata fields, and the back end
+ * eventually lowers operations to work on PHV containers directly.
+ *
+ * NB: This is a work in progress; not all operations are lowered to operate on
+ * containers directly.  See parde-lowered.def for examples.
+ */
+class BFN::ContainerRef : BFN::Reference {
+#emit
+    // We tag ContainerRefs with unique identifiers to structurally distinguish
+    // different references to the same container.
+    static size_t nextId;
+#end
+
+    PHV::Container container;
+    size_t id;
+
+#noconstructor
+    ContainerRef(PHV::Container c) : BFN::Reference(), container(c), id(nextId++) { }
+    ContainerRef(Util::SourceInfo si, PHV::Container c)
+    : BFN::Reference(si), container(c), id(nextId++) { }
+
+    toString { return container.toString(); }
+    dbprint { out << toString(); }
+
+    /// @return a clone of this ContainerRef which does not compare equal
+    /// to the original or to any other existing ContainerRef.
+    ContainerRef makeFresh() const {
+        auto* newRef = this->clone();
+        newRef->id = nextId++;
+        return newRef;
+    }
 }
