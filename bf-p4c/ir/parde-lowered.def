@@ -47,9 +47,11 @@ class LoweredExtractBuffer : LoweredExtract {
 #end
 
     /// @return the half-open range of bytes being extracted, in network order.
+    /// These bytes are specified in the space of the input buffer.
     nw_byteinterval byteInterval() const { return toHalfOpenRange(range); }
 
     /// @return the closed range of bytes being extracted, in network order.
+    /// These bytes are specified in the space of the input buffer.
     nw_byterange extractedBytes() const { return range; }
 
     /// The region of the input buffer which will be extracted, expressed in

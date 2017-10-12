@@ -112,9 +112,11 @@ class ExtractBuffer : Extract {
     bool isShiftedOut() const { return range.lo < 0; }
 
     /// @return the half-open range of bits being extracted, in network order.
+    /// These bytes are specified in the space of the input buffer.
     nw_bitinterval bitInterval() const { return toHalfOpenRange(range); }
 
     /// @return the closed range of bits being extracted, in network order.
+    /// These bits are specified in the space of the input buffer.
     nw_bitrange extractedBits() const { return range; }
 
     /// The region of the input buffer which will be extracted, expressed in
