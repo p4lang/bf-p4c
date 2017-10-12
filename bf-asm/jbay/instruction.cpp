@@ -89,7 +89,7 @@ template<> void VLIWInstruction::write_regs(Target::JBay::mau_regs &regs,
 
     auto &power_ctl = regs.dp.actionmux_din_power_ctl;
     phvRead([&](const Phv::Slice &sl) {
-        set_power_ctl_reg(power_ctl, sl.reg.index); });
+        set_power_ctl_reg(power_ctl, sl.reg.mau_id()); });
 }
 
 void VLIWInstruction::write_regs(Target::JBay::mau_regs &regs,

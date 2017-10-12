@@ -25,22 +25,22 @@ void set_power_ctl_reg(checked_array<2, checked_array<16, ubits<I>>> &power_ctl,
     int side;
     switch (reg >> 6) {
     case 1: // 8 bit
-        reg -= 64;
-        side = reg / 32;
-        reg = (reg % 32) + 32;
+        reg -= I*8;
+        side = reg / (I*4);
+        reg = (reg % (I*4)) + (I*4);
         break;
     case 2: case 3: // 16 bit
-        reg -= 128;
-        side = reg / 48;
-        reg = (reg % 48) + 64;
+        reg -= I*16;
+        side = reg / (I*6);
+        reg = (reg % (I*6)) + (I*8);
         break;
     case 0: // 32 bit
-        side = reg / 32;
-        reg = (reg % 32);
+        side = reg / (I*4);
+        reg = (reg % (I*4));
         break;
     default:
         assert(0); }
-    power_ctl[side][reg/8U] |= 1U << reg%8U;
+    power_ctl[side][reg/I] |= 1U << reg%I;
 }
 
 #endif /* _power_ctl_h_ */

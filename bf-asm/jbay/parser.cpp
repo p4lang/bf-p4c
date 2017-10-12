@@ -209,6 +209,14 @@ template<> void Parser::write_config(Target::JBay::parser_regs &regs) {
             regs.main[INGRESS].phv_owner.owner[id] = 1;
             regs.main[EGRESS].phv_owner.owner[id] = 1; } }
 
+    int i_start = Stage::first_table(INGRESS) & 0x1ff;
+    for (auto &reg : regs.merge.upper.i_start_table)
+        reg.table = i_start;
+    int e_start = Stage::first_table(EGRESS) & 0x1ff;
+    for (auto &reg : regs.merge.upper.e_start_table)
+        reg.table = e_start;
+    regs.merge.upper.g_start_table.table = 0x1ff;
+
     for (auto &ref : regs.ingress.prsr)
         ref = "regs.parser.main.ingress";
     for (auto &ref : regs.egress.prsr)

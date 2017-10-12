@@ -5,6 +5,7 @@
 #include "parser.h"
 #include "phv.h"
 #include "range.h"
+#include "stage.h"
 #include "target.h"
 #include "top_level.h"
 
@@ -964,6 +965,8 @@ Parser::State::OutputUse Parser::State::Match::output_use() const {
     return rv;
 }
 void Parser::State::Match::merge_outputs(OutputUse use) {
+    if (options.target != TOFINO) return;
+    // FIXME -- this is tofino specific
     use += output_use();
     if (use.b32 >= 4 && use.b16 >= 4) return;
     std::sort(save.begin(), save.end(), [](const Save &a, const Save &b)->bool {
@@ -974,6 +977,7 @@ void Parser::State::Match::merge_outputs(OutputUse use) {
             save[i+1].hi == save[i+1].lo + 1 && !save[i].flags && !save[i+1].flags &&
             (save[i].where->reg.parser_id() & 1) == 0 &&
             save[i].where->reg.parser_id() + 1 == save[i+1].where->reg.parser_id()) {
+            LOG3("merge 2x16->32 (" << save[i].where << ", " << save[i+1].where << ")");
             save[i].hi += 2;
             save.erase(save.begin()+i+1);
             use.b32++;
@@ -984,6 +988,7 @@ void Parser::State::Match::merge_outputs(OutputUse use) {
             save[i+1].hi == save[i+1].lo && !save[i].flags && !save[i+1].flags &&
             (save[i].where->reg.parser_id() & 1) == 0 &&
             save[i].where->reg.parser_id() + 1 == save[i+1].where->reg.parser_id()) {
+            LOG3("merge 2x8->16 (" << save[i].where << ", " << save[i+1].where << ")");
             save[i].hi += 1;
             save.erase(save.begin()+i+1);
             use.b16++;
@@ -994,6 +999,7 @@ void Parser::State::Match::merge_outputs(OutputUse use) {
             save[i+1].hi == save[i+1].lo + 1 && !save[i].flags && !save[i+1].flags &&
             (save[i].where->reg.parser_id() & 1) == 0 &&
             save[i].where->reg.parser_id() + 1 == save[i+1].where->reg.parser_id()) {
+            LOG3("merge 4x8->32 (" << save[i].where << ", " << save[i+1].where << ")");
             save[i].hi += 2;
             save.erase(save.begin()+i+1);
             use.b32++;

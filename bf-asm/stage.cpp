@@ -28,6 +28,7 @@ class AsmStage : public Section {
     static AsmStage     singleton_object;
 public:
     static int numstages() { return singleton_object.stage.size(); }
+    static std::vector<Stage> &stages() { return singleton_object.stage; } 
 } AsmStage::singleton_object;
 
 AsmStage::AsmStage() : Section("stage") {
@@ -209,6 +210,19 @@ Stage::Stage() {
 Stage::~Stage() {
 }
 
+int Stage::first_table(gress_t gress) {
+    for (auto &st : AsmStage::stages()) {
+        int min_logical_id = INT_MAX;
+        for (auto tbl : st.tables) {
+            if (tbl->gress != gress) continue;
+            if (tbl->logical_id < min_logical_id)
+                min_logical_id = tbl->logical_id; }
+        if (min_logical_id != INT_MAX) {
+            assert((min_logical_id & ~0xf) == 0);
+            return (st.stageno << 4) + min_logical_id; } }
+    return -1;
+}
+
 Stage::Stage(Stage &&a) : Stage_data(std::move(a)) {
     for (auto ref : all_refs)
         *ref = this;
@@ -259,28 +273,6 @@ template<class TARGET> void Stage::write_common_regs(typename TARGET::mau_regs &
             merge.exact_match_delay_thread[0] |= 1U << gress;
             merge.exact_match_delay_thread[1] |= 1U << gress;
             merge.exact_match_delay_thread[2] |= 1U << gress; }
-        if (stageno == 0) {
-            merge.predication_ctl[gress].start_table_fifo_delay0 = pred_cycle(gress) - 1;
-            merge.predication_ctl[gress].start_table_fifo_delay1 = 0;
-            merge.predication_ctl[gress].start_table_fifo_enable = 1;
-        } else switch (stage_dep[gress]) {
-        case MATCH_DEP:
-            merge.predication_ctl[gress].start_table_fifo_delay0 =
-                this[-1].pipelength(gress) - this[-1].pred_cycle(gress) + pred_cycle(gress) - 1;
-            merge.predication_ctl[gress].start_table_fifo_delay1 =
-                this[-1].pipelength(gress) - this[-1].pred_cycle(gress);
-            merge.predication_ctl[gress].start_table_fifo_enable = 3;
-            break;
-        case ACTION_DEP:
-            merge.predication_ctl[gress].start_table_fifo_delay0 = 1;
-            merge.predication_ctl[gress].start_table_fifo_delay1 = 0;
-            merge.predication_ctl[gress].start_table_fifo_enable = 1;
-            break;
-        case CONCURRENT:
-            merge.predication_ctl[gress].start_table_fifo_enable = 0;
-            break;
-        default:
-            assert(0); }
         regs.rams.match.adrdist.adr_dist_pipe_delay[gress][0] =
         regs.rams.match.adrdist.adr_dist_pipe_delay[gress][1] = adr_dist_delay(gress);
         auto &deferred_eop_bus_delay = regs.rams.match.adrdist.deferred_eop_bus_delay[gress];

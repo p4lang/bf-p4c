@@ -69,6 +69,7 @@ public:
     int pipelength(gress_t gress);
     int pred_cycle(gress_t gress);
     int tcam_delay(gress_t gress);
+    static int first_table(gress_t gress);
 };
 
 #endif /* _stage_h_ */

@@ -4,7 +4,21 @@ template<> void Stage::write_regs(Target::JBay::mau_regs &regs) {
     write_common_regs<Target::JBay>(regs);
     auto &merge = regs.rams.match.merge;
     for (gress_t gress : Range(INGRESS, EGRESS)) {
-        assert(stage_dep[gress] != CONCURRENT);
+        if (stageno == 0) {
+            merge.predication_ctl[gress].start_table_fifo_delay0 = pred_cycle(gress) - 1;
+            merge.predication_ctl[gress].start_table_fifo_enable = 1;
+        } else if (stage_dep[gress] == MATCH_DEP) {
+            merge.predication_ctl[gress].start_table_fifo_delay0 =
+                this[-1].pipelength(gress) - this[-1].pred_cycle(gress) + pred_cycle(gress) - 1;
+            merge.predication_ctl[gress].start_table_fifo_enable = 1;
+            if (stageno == 10) {
+                // FIXME -- regs docs claim this is deprecated and should not be set, but
+                // FIXME -- the model complains if it is not?
+                merge.predication_ctl[gress].start_table_fifo_delay1 = 9; }
+        } else {
+            assert(stage_dep[gress] == ACTION_DEP);
+            merge.predication_ctl[gress].start_table_fifo_delay0 = 1;
+            merge.predication_ctl[gress].start_table_fifo_enable = 0; }
         if (stageno != 0)
             regs.dp.cur_stage_dependency_on_prev[gress] = stage_dep[gress] != MATCH_DEP;
         if (stageno != AsmStage::numstages()-1)
