@@ -24,7 +24,7 @@ struct Phase0Info;
 #end
 
 class BFN::Pipe {
-    inline NameMap<Metadata> metadata;  // not visited
+    inline NameMap<HeaderOrMetadata> metadata;  // not visited
 #noconstructor
     Pipe() = default;
     class thread_t {

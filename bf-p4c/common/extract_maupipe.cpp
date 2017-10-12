@@ -814,7 +814,7 @@ class TnaPipe {
             if (size > 2) {
                 auto md = mau->getApplyParameters()->parameters.at(2);
                 rv->metadata.addUnique("ingress_intrinsic_metadata",
-                                       bindings->get(md)->obj->to<IR::Metadata>());
+                                       bindings->get(md)->obj->to<IR::Header>());
             }
             if (size > 3) {
                 // intrinsic_metadata_from_parser
@@ -833,11 +833,11 @@ class TnaPipe {
             if (size > 2) {
                 auto md = mau->getApplyParameters()->parameters.at(2);
                 rv->metadata.addUnique("egress_intrinsic_metadata",
-                                       bindings->get(md)->obj->to<IR::Metadata>());
+                                       bindings->get(md)->obj->to<IR::Header>());
             }
             if (size > 3) {
                 auto md = mau->getApplyParameters()->parameters.at(3);
-                rv->metadata.addUnique("egress_intrinsic_metadata_from_parser_t",
+                rv->metadata.addUnique("egress_intrinsic_metadata_from_parser",
                                        bindings->get(md)->obj->to<IR::Metadata>());
             }
         }

@@ -5,7 +5,7 @@
 namespace {
 
 using ThreadLocalMetadataMapping =
-    std::map<const IR::Metadata*, const IR::Metadata*>;
+    std::map<const IR::HeaderOrMetadata*, const IR::HeaderOrMetadata*>;
 
 /// Create thread-local versions of variables and parser states.
 struct CreateInstancesForThread : public Modifier, ThreadVisitor {
@@ -54,7 +54,7 @@ struct CreateThreadLocalMetadata : public Modifier {
         // thread-local versions. There are at most two thread-local versions of
         // each variable; there may be fewer than two if the variable is only
         // used by one thread.
-        IR::NameMap<IR::Metadata> instancedMetadata;
+        IR::NameMap<IR::HeaderOrMetadata> instancedMetadata;
         for (auto& item : pipe->metadata) {
             cstring name = item.first;
             auto* metadata = item.second;
