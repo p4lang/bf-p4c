@@ -39,7 +39,7 @@ WORKDIR /bfn/bf-p4c-compilers
 ENV LDFLAGS="-Wl,-s"
 RUN apt-get update && \
     apt-get install -y --no-install-recommends $P4C_DEPS $P4C_RUNTIME_DEPS && \
-    pip install pyinstaller && \
+    pip install pyinstaller==3.2.1 && \
     /usr/local/bin/ccache --zero-stats && \
     ./bootstrap_bfn_compilers.sh --no-ptf -DENABLE_P4C_GRAPHS=OFF -DENABLE_BMV2=OFF -DENABLE_P4TEST=OFF -DENABLE_EBPF=OFF && \
     cd build && \

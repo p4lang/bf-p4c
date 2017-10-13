@@ -10,7 +10,7 @@
 #define HEADERS_H4
 
 header_type l2_metadata_t {
-	fields { 
+	fields {
 	dstOUI : 24;
 	dstSTA : 24;
 	srcOUI : 24;
@@ -31,7 +31,7 @@ header_type l2_metadata_t {
 }
 
 header_type egress_l2_metadata_t {
-	fields { 
+	fields {
 	dstOUI : 24;
 	dstSTA : 24;
 	srcOUI : 24;
@@ -51,7 +51,7 @@ header_type egress_l2_metadata_t {
 }
 
 header_type WeFXyH {
-	fields { 
+	fields {
 	VLGXXG : 8;
 	OTmmdU : 1;
 	vxRZLD : 1;
@@ -62,7 +62,7 @@ header_type WeFXyH {
 }
 
 header_type ipv4_metadata_t {
-	fields { 
+	fields {
 	srcAddr : 32;
 	dstAddr : 32;
 	vrf : 16;
@@ -70,14 +70,14 @@ header_type ipv4_metadata_t {
 }
 
 header_type ipv6_metadata_t {
-	fields { 
+	fields {
 	srcAddr : 128;
 	dstAddr : 128;
 	}
 }
 
 header_type port_metadata_t {
-	fields { 
+	fields {
 	ouVJSA : 14;
 	cCOHKE : 1;
 	huEsCO : 1;
@@ -86,26 +86,26 @@ header_type port_metadata_t {
 }
 
 header_type RjEUbC {
-	fields { 
+	fields {
 	ZtjVUq : 1;
 	tgfjtx : 1;
 	}
 }
 
 header_type pKpXdV {
-	fields { 
+	fields {
 	zVITkG : 8;
 	}
 }
 
 header_type AbPvhk {
-	fields { 
+	fields {
 	SXktkN : 16;
 	}
 }
 
 header_type ethernet_t {
-	fields { 
+	fields {
 	dstOUI : 24;
 	dstSTA : 24;
 	srcOUI : 24;
@@ -115,7 +115,7 @@ header_type ethernet_t {
 }
 
 header_type vlan_tag_t {
-	fields { 
+	fields {
 	prio : 3;
 	cfi : 1;
 	vid : 12;
@@ -124,7 +124,7 @@ header_type vlan_tag_t {
 }
 
 header_type ipv4_t {
-	fields { 
+	fields {
 	version        : 4;
 	ihl            : 4;
 	diffserv       : 8;
@@ -141,7 +141,7 @@ header_type ipv4_t {
 }
 
 header_type ipv6_t {
-	fields { 
+	fields {
 	version      : 4;
 	trafficClass : 8;
 	flowLabel    : 20;
@@ -154,7 +154,7 @@ header_type ipv6_t {
 }
 
 header_type udp_t {
-	fields { 
+	fields {
 	srcPort  : 16;
 	dstPort  : 16;
 	length_  : 16;
@@ -163,7 +163,7 @@ header_type udp_t {
 }
 
 header_type arp_t {
-	fields { 
+	fields {
 	hwType       : 16;
 	protoType    : 16;
 	hwAddrLen    : 8;
@@ -173,7 +173,7 @@ header_type arp_t {
 }
 
 header_type vxlan_t {
-	fields { 
+	fields {
 	flags      : 8;
 	reserved_1 : 24;
 	vni        : 24;
@@ -208,7 +208,7 @@ metadata WeFXyH PdKkSx;
 metadata pKpXdV ozKgHM;
 metadata AbPvhk Eqzejr;
 
-parser parse_outer_vlan_tag { 
+parser parse_outer_vlan_tag {
 	extract(outer_vlan_tag );
 	return select( outer_vlan_tag.ethertype ) {
 		0x0800 : parse_outer_ipv4;
@@ -218,27 +218,27 @@ parser parse_outer_vlan_tag {
 	}
 }
 
-parser start { 
+parser start {
 	return parse_ethernet;
 }
 
-parser parse_inner_ipv6 { 
+parser parse_inner_ipv6 {
 	extract(inner_ipv6 );
 	return ingress;
 }
 
-parser parse_vxlan { 
+parser parse_vxlan {
 	extract(vxlan );
 	set_metadata(l2_metadata.eDTSaM, 0x1 );
 	return parse_inner_ethernet;
 }
 
-parser parse_arp { 
+parser parse_arp {
 	extract(arp );
 	return ingress;
 }
 
-parser parse_outer_ipv4 { 
+parser parse_outer_ipv4 {
 	extract(outer_ipv4 );
 	return select( outer_ipv4.fragOffset, outer_ipv4.ihl, outer_ipv4.protocol ) {
 		0x00000511 : parse_udp;
@@ -246,12 +246,12 @@ parser parse_outer_ipv4 {
 	}
 }
 
-parser parse_outer_ipv6 { 
+parser parse_outer_ipv6 {
 	extract(outer_ipv6 );
 	return ingress;
 }
 
-parser parse_udp { 
+parser parse_udp {
 	extract(udp );
 	return select( udp.dstPort ) {
 		0x12b5 : parse_vxlan;
@@ -259,7 +259,7 @@ parser parse_udp {
 	}
 }
 
-parser parse_ethernet { 
+parser parse_ethernet {
 	extract(outer_ethernet);
 	set_metadata(l2_metadata.dstOUI, outer_ethernet.dstOUI );
 	set_metadata(l2_metadata.dstSTA, outer_ethernet.dstSTA );
@@ -274,12 +274,12 @@ parser parse_ethernet {
 	}
 }
 
-parser parse_inner_ipv4 { 
+parser parse_inner_ipv4 {
 	extract(inner_ipv4 );
 	return ingress;
 }
 
-parser parse_inner_ethernet { 
+parser parse_inner_ethernet {
 	extract(inner_ethernet );
 	return select( inner_ethernet.ethertype ) {
 		0x0800 : parse_inner_ipv4;
@@ -305,9 +305,8 @@ parser parse_inner_ethernet {
 @pragma pa_solitary ingress l2_metadata.outer_bd
 @pragma pa_solitary ingress l2_metadata.inner_bd
 @pragma pa_solitary ingress l2_metadata.pQXqBl
-@pragma pa_solitary ig_intr_md_for_tm.ucast_egress_port
 
-field_list RgamWT { 
+field_list RgamWT {
 	ozKgHM.zVITkG;
 	l2_metadata.srcOUI;
 	l2_metadata.srcSTA;
@@ -315,7 +314,7 @@ field_list RgamWT {
 	l2_metadata.inner_bd;
 }
 
-field_list jeqIuB { 
+field_list jeqIuB {
 	ozKgHM.zVITkG;
 	l2_metadata.outer_bd;
 	inner_ethernet.srcOUI;
@@ -323,32 +322,32 @@ field_list jeqIuB {
 	outer_ipv4.srcAddr;
 }
 
-action XVktOe(rJWdDI) { 
+action XVktOe(rJWdDI) {
 	modify_field(ipv4_metadata.vrf, rJWdDI );
 }
 
-action sgfrDS() { 
+action sgfrDS() {
 	no_op( );
 }
 
-action YpQxby() { 
+action YpQxby() {
 	modify_field(l2_metadata.JFtqsz, 0x1 );
 	modify_field(l2_metadata.OjymPH, 0x1 );
 }
 
-action yTtrnk(JuQPYe) { 
+action yTtrnk(JuQPYe) {
 #ifdef BMV2
 	register_write(XpsIvD, JuQPYe, 0x1 );
 #endif
 }
 
-action uZpeEH() { 
+action uZpeEH() {
 	modify_field(egress_l2_metadata.DxjBnx, 0x1 );
 	modify_field(egress_l2_metadata.xALOuI, 0x1 );
 	add(egress_l2_metadata.VqbwXd, egress_l2_metadata.outer_bd, 0x1000 );
 }
 
-action sRuUvS(ZPSBzg,NldXIO,zbyrRT,iCFOSL,gJQdqX,EsFJTP) { 
+action sRuUvS(ZPSBzg,NldXIO,zbyrRT,iCFOSL,gJQdqX,EsFJTP) {
 	modify_field(l2_metadata.pQXqBl, ZPSBzg );
 	modify_field(l2_metadata.mUhTtj, 0x1 );
 	modify_field(PdKkSx.VLGXXG, NldXIO );
@@ -358,11 +357,11 @@ action sRuUvS(ZPSBzg,NldXIO,zbyrRT,iCFOSL,gJQdqX,EsFJTP) {
 	modify_field(PdKkSx.PqcjFS, EsFJTP );
 }
 
-action TwIQHU(ZJeNes) { 
+action TwIQHU(ZJeNes) {
 	modify_field(Eqzejr.SXktkN, ZJeNes );
 }
 
-action QYBPRQ(ObALmB,NldXIO,zbyrRT,iCFOSL,gJQdqX,EsFJTP,LqZpLg) { 
+action QYBPRQ(ObALmB,NldXIO,zbyrRT,iCFOSL,gJQdqX,EsFJTP,LqZpLg) {
 	modify_field(l2_metadata.outer_bd, ObALmB );
 	modify_field(l2_metadata.mUhTtj, LqZpLg );
 	modify_field(PdKkSx.VLGXXG, NldXIO );
@@ -372,22 +371,22 @@ action QYBPRQ(ObALmB,NldXIO,zbyrRT,iCFOSL,gJQdqX,EsFJTP,LqZpLg) {
 	modify_field(PdKkSx.PqcjFS, EsFJTP );
 }
 
-action FjFvSI() { 
+action FjFvSI() {
 	generate_digest(0x0, RgamWT );
 }
 
-action ZByrIe() { 
+action ZByrIe() {
 	modify_field(outer_ethernet.ethertype, outer_vlan_tag.ethertype );
 	modify_field(l2_metadata.prio, outer_vlan_tag.prio );
 	remove_header(outer_vlan_tag );
 }
 
-action tsXBkz(hkkrmJ) { 
+action tsXBkz(hkkrmJ) {
 	modify_field(egress_l2_metadata.DxjBnx, 0x1 );
 	modify_field(egress_l2_metadata.VqbwXd, hkkrmJ );
 }
 
-action GXegax(NldXIO,zbyrRT,iCFOSL,gJQdqX,EsFJTP) { 
+action GXegax(NldXIO,zbyrRT,iCFOSL,gJQdqX,EsFJTP) {
 	modify_field(l2_metadata.pQXqBl, port_metadata.vid, 0x0FFF);
 	modify_field(l2_metadata.mUhTtj, 0x1 );
 	modify_field(PdKkSx.VLGXXG, NldXIO );
@@ -397,45 +396,45 @@ action GXegax(NldXIO,zbyrRT,iCFOSL,gJQdqX,EsFJTP) {
 	modify_field(PdKkSx.PqcjFS, EsFJTP );
 }
 
-action ukhAli() { 
+action ukhAli() {
 	modify_field(egress_l2_metadata.vRiVoY, 0x1 );
 	modify_field(egress_l2_metadata.VqbwXd, egress_l2_metadata.outer_bd );
 }
 
-action jYRXTf() { 
+action jYRXTf() {
 //	modify_field(l2_metadata.outer_bd, outer_vlan_tag.vid);
 }
 
-action JnIDid() { 
+action JnIDid() {
 	modify_field(egress_l2_metadata.GbMjEH, 0x1 );
 	modify_field(egress_l2_metadata.MXEAcT, 0x1 );
 	modify_field(egress_l2_metadata.VqbwXd, egress_l2_metadata.outer_bd );
 }
 
-action JZMMTw() { 
+action JZMMTw() {
 	modify_field(PdKkSx.TNJQUK, 0x1 );
 }
 
-action KQcrRq() { 
+action KQcrRq() {
 	modify_field(l2_metadata.FZIXaP, 0x1 );
 	modify_field(ozKgHM.zVITkG, 0x1 );
 }
 
-action xsDQie(yppSOY) { 
+action xsDQie(yppSOY) {
 	modify_field(egress_l2_metadata.fqhobT, 0x1 );
 	modify_field(egress_l2_metadata.inner_bd, yppSOY );
 	modify_field(ig_intr_md_for_tm.ucast_egress_port, yppSOY );
 	modify_field(egress_l2_metadata.egress_port, yppSOY );
 }
 
-action uYBjrZ() { 
+action uYBjrZ() {
 }
 
-action GrmhMU() { 
+action GrmhMU() {
 	modify_field(l2_metadata.dhmjSj, 0x1 );
 }
 
-action uNBXVV() { 
+action uNBXVV() {
 	modify_field(ipv4_metadata.srcAddr, inner_ipv4.srcAddr );
 	modify_field(ipv4_metadata.dstAddr, inner_ipv4.dstAddr );
 	modify_field(ipv6_metadata.srcAddr, outer_ipv6.srcAddr );
@@ -446,16 +445,16 @@ action uNBXVV() {
 	modify_field(l2_metadata.srcSTA, inner_ethernet.srcSTA );
 }
 
-action xfABlB() { 
+action xfABlB() {
 	modify_field(l2_metadata.AlAsan, 0x1 );
 	modify_field(ozKgHM.zVITkG, 0x0 );
 }
 
-action jwLDdv() { 
+action jwLDdv() {
 //	modify_field(l2_metadata.outer_bd, port_metadata.vid );
 }
 
-action MbuqfL() { 
+action MbuqfL() {
 	modify_field(egress_l2_metadata.dstOUI, l2_metadata.dstOUI );
 	modify_field(egress_l2_metadata.dstSTA, l2_metadata.dstSTA );
 	modify_field(egress_l2_metadata.srcOUI, l2_metadata.srcOUI );
@@ -463,7 +462,7 @@ action MbuqfL() {
 	modify_field(egress_l2_metadata.outer_bd, l2_metadata.outer_bd );
 }
 
-action add_vlan_tag() { 
+action add_vlan_tag() {
 	add_header(outer_vlan_tag );
 	modify_field(outer_vlan_tag.vid, egress_l2_metadata.vid );
 //	modify_field(outer_vlan_tag.prio, l2_metadata.prio );
@@ -471,23 +470,23 @@ action add_vlan_tag() {
 	modify_field(outer_ethernet.ethertype, 0x8100 );
 }
 
-action bd2vid(ObALmB) { 
+action bd2vid(ObALmB) {
 	modify_field(egress_l2_metadata.vid, ObALmB );
 	remove_header(outer_vlan_tag );
 }
 
-action ruSbdS() { 
+action ruSbdS() {
 }
 
-action QXYBjG() { 
+action QXYBjG() {
 	generate_digest(0x0, jeqIuB );
 }
 
-action SBqFEe(UWsnEK) { 
+action SBqFEe(UWsnEK) {
 	modify_field(l2_metadata.inner_bd, UWsnEK );
 }
 
-action zEaBcj() { 
+action zEaBcj() {
 	modify_field(l2_metadata.eDTSaM, 0x0 );
 	modify_field(l2_metadata.inner_bd, port_metadata.ouVJSA );
 	modify_field(ipv4_metadata.srcAddr, outer_ipv4.srcAddr );
@@ -500,7 +499,7 @@ action zEaBcj() {
 	modify_field(l2_metadata.srcSTA, outer_ethernet.srcSTA );
 }
 
-action wpFyFj(NldXIO,zbyrRT,iCFOSL,gJQdqX,EsFJTP) { 
+action wpFyFj(NldXIO,zbyrRT,iCFOSL,gJQdqX,EsFJTP) {
 //	modify_field(l2_metadata.pQXqBl, outer_vlan_tag.vid, 0x0FFF );
 	modify_field(l2_metadata.mUhTtj, 0x1 );
 	modify_field(PdKkSx.VLGXXG, NldXIO );
@@ -510,15 +509,15 @@ action wpFyFj(NldXIO,zbyrRT,iCFOSL,gJQdqX,EsFJTP) {
 	modify_field(PdKkSx.PqcjFS, EsFJTP );
 }
 
-action Ayapvg(ZPSBzg) { 
+action Ayapvg(ZPSBzg) {
 	modify_field(l2_metadata.outer_bd, ZPSBzg );
 }
 
-action nop() { 
+action nop() {
 	no_op( );
 }
 
-action set_ingress_port_properties(DSyDIW,wPlBaD,jsYLqr,tTfUVS) { 
+action set_ingress_port_properties(DSyDIW,wPlBaD,jsYLqr,tTfUVS) {
 	modify_field(port_metadata.ouVJSA, DSyDIW );
 	modify_field(port_metadata.cCOHKE, wPlBaD );
 	modify_field(port_metadata.vid, jsYLqr );
@@ -529,7 +528,7 @@ table ingress_port_properties {
 	reads{
 		ig_intr_md.ingress_port : exact;
 	}
-	actions{ 
+	actions{
 		set_ingress_port_properties;
 	}
 	size : 288;
@@ -540,7 +539,7 @@ table rmac {
 		outer_ethernet.dstOUI : exact;
 		outer_ethernet.dstSTA : exact;
 	}
-	actions{ 
+	actions{
 		GrmhMU;
 	}
 	size : 64;
@@ -553,7 +552,7 @@ table ceGwFc {
 		outer_ipv4.dstAddr : exact;
 		l2_metadata.eDTSaM : exact;
 	}
-	actions{ 
+	actions{
 		uNBXVV;
 		zEaBcj;
 	}
@@ -566,7 +565,7 @@ table GiINoN {
 		outer_vlan_tag : valid;
 		outer_vlan_tag.vid : ternary;
 	}
-	actions{ 
+	actions{
 		jwLDdv;
 		Ayapvg;
 		jYRXTf;
@@ -578,7 +577,7 @@ table chPApZ {
 	reads{
 		outer_ipv4.srcAddr : exact;
 	}
-	actions{ 
+	actions{
 		SBqFEe;
 		KQcrRq;
 	}
@@ -589,7 +588,7 @@ table KPlvUi {
 	reads{
 		vxlan.vni : exact;
 	}
-	actions{ 
+	actions{
 		QYBPRQ;
 		YpQxby;
 	}
@@ -600,7 +599,7 @@ table jubrcZ {
 	reads{
 		port_metadata.vid : exact;
 	}
-	actions{ 
+	actions{
 		GXegax;
 	}
 	size : 4096;
@@ -611,7 +610,7 @@ table RmXtve {
 		port_metadata.ouVJSA : exact;
 		outer_vlan_tag.vid : exact;
 	}
-	actions{ 
+	actions{
 		sRuUvS;
 		sgfrDS;
 	}
@@ -622,15 +621,15 @@ table FyMYiX {
 	reads{
 		outer_vlan_tag.vid : exact;
 	}
-	actions{ 
+	actions{
 		wpFyFj;
 	}
 	size : 4096;
 }
 
 table FObudl {
-	
-	actions{ 
+
+	actions{
 		QXYBjG;
 	}
 	size : 1;
@@ -642,7 +641,7 @@ table KhzFiy {
 		l2_metadata.dstOUI : exact;
 		l2_metadata.dstSTA : exact;
 	}
-	actions{ 
+	actions{
 		JZMMTw;
 	}
 	size : 512;
@@ -661,7 +660,7 @@ table OsNzCx {
 		l2_metadata.outer_bd : exact;
 		l2_metadata.inner_bd : exact;
 	}
-	actions{ 
+	actions{
 		yTtrnk;
 		xfABlB;
 	}
@@ -669,8 +668,8 @@ table OsNzCx {
 }
 
 table GKgaxO {
-	
-	actions{ 
+
+	actions{
 		FjFvSI;
 	}
 	size : 1;
@@ -681,7 +680,7 @@ table FsxDka {
 		PdKkSx.VLGXXG : exact;
 		ipv4_metadata.dstAddr : lpm;
 	}
-	actions{ 
+	actions{
 		XVktOe;
 	}
 	size : 16384;
@@ -694,7 +693,7 @@ table XWEKAE {
 		ipv4_metadata.vrf : exact;
 		ipv4_metadata.dstAddr : lpm;
 	}
-	actions{ 
+	actions{
 		TwIQHU;
 	}
 	size : 147456;
@@ -705,7 +704,7 @@ table fDUvPP {
 		PdKkSx.VLGXXG : exact;
 		ipv4_metadata.dstAddr : exact;
 	}
-	actions{ 
+	actions{
 		TwIQHU;
 		sgfrDS;
 	}
@@ -713,8 +712,8 @@ table fDUvPP {
 }
 
 table sFQXXt {
-	
-	actions{ 
+
+	actions{
 		MbuqfL;
 	}
 	size : 1;
@@ -725,7 +724,7 @@ table OgtsFH {
 		egress_l2_metadata.dstOUI : exact;
 		egress_l2_metadata.dstSTA : exact;
 	}
-	actions{ 
+	actions{
 		JnIDid;
 		uYBjrZ;
 	}
@@ -733,16 +732,16 @@ table OgtsFH {
 }
 
 table AosIFt {
-	
-	actions{ 
+
+	actions{
 		uZpeEH;
 	}
 	size : 1;
 }
 
 table UHdtQj {
-	
-	actions{ 
+
+	actions{
 		ukhAli;
 	}
 	size : 1;
@@ -754,7 +753,7 @@ table PHSvkl {
 		egress_l2_metadata.dstSTA : exact;
 		egress_l2_metadata.outer_bd : exact;
 	}
-	actions{ 
+	actions{
 		xsDQie;
 		tsXBkz;
 		ruSbdS;
@@ -763,15 +762,15 @@ table PHSvkl {
 }
 
 table LbcSdm {
-	
-	actions{ 
+
+	actions{
 		ZByrIe;
 	}
 	size : 1;
 }
 
-control ingress { 
-	if (ig_intr_md.resubmit_flag == 0x0) { 
+control ingress {
+	if (ig_intr_md.resubmit_flag == 0x0) {
 		apply( ingress_port_properties );
 
 	}
@@ -780,12 +779,12 @@ control ingress {
 
 	apply( ceGwFc ) {
 		zEaBcj {
-			if (port_metadata.huEsCO == 0x1) { 
+			if (port_metadata.huEsCO == 0x1) {
 				apply( GiINoN );
 
 			}
 
-			if ( valid( outer_vlan_tag ) ) { 
+			if ( valid( outer_vlan_tag ) ) {
 				apply( RmXtve ) {
 					sgfrDS {
 						apply( FyMYiX );
@@ -804,28 +803,28 @@ control ingress {
 
 		}
 	}
-	if ((port_metadata.cCOHKE == 0x0) and (l2_metadata.FZIXaP == 0x0)) { 
+	if ((port_metadata.cCOHKE == 0x0) and (l2_metadata.FZIXaP == 0x0)) {
 		apply( OsNzCx );
 
 	}
 
-	if ((l2_metadata.JFtqsz == 0x0) and (l2_metadata.OjymPH == 0x0)) { 
+	if ((l2_metadata.JFtqsz == 0x0) and (l2_metadata.OjymPH == 0x0)) {
 		apply( KhzFiy );
 
 	}
 
-	if (l2_metadata.outer_bd != 0x0) { 
+	if (l2_metadata.outer_bd != 0x0) {
 		apply( sFQXXt );
 
 	}
 
-	if ((((YKjpKX.ZtjVUq == 0x0) and (YKjpKX.tgfjtx == 0x0)) and (l2_metadata.JFtqsz == 0x0)) and (PdKkSx.TNJQUK == 0x1)) { 
-		if ((PdKkSx.OTmmdU == 0x1) and (((l2_metadata.eDTSaM == 0x0) and ( valid( outer_ipv4 ) )) or ((l2_metadata.eDTSaM != 0x0) and ( valid( inner_ipv4 ) )))) { 
+	if ((((YKjpKX.ZtjVUq == 0x0) and (YKjpKX.tgfjtx == 0x0)) and (l2_metadata.JFtqsz == 0x0)) and (PdKkSx.TNJQUK == 0x1)) {
+		if ((PdKkSx.OTmmdU == 0x1) and (((l2_metadata.eDTSaM == 0x0) and ( valid( outer_ipv4 ) )) or ((l2_metadata.eDTSaM != 0x0) and ( valid( inner_ipv4 ) )))) {
 			apply( fDUvPP ) {
 				sgfrDS {
 					apply( FsxDka );
 
-					if (ipv4_metadata.vrf != 0x0) { 
+					if (ipv4_metadata.vrf != 0x0) {
 						apply( XWEKAE );
 
 					}
@@ -836,12 +835,12 @@ control ingress {
 
 	}
 
-	if (l2_metadata.JFtqsz == 0x0) { 
+	if (l2_metadata.JFtqsz == 0x0) {
 		apply( PHSvkl ) {
 			ruSbdS {
 				apply( OgtsFH ) {
 					uYBjrZ {
-						if ((egress_l2_metadata.dstOUI & 0x10000) == 0x10000) { 
+						if ((egress_l2_metadata.dstOUI & 0x10000) == 0x10000) {
 							apply( AosIFt );
 
 						}
@@ -854,17 +853,17 @@ control ingress {
 		}
 	}
 
-	if (l2_metadata.FZIXaP == 0x1) { 
+	if (l2_metadata.FZIXaP == 0x1) {
 		apply( FObudl );
 
 	}
 
-	if (l2_metadata.AlAsan == 0x1) { 
+	if (l2_metadata.AlAsan == 0x1) {
 		apply( GKgaxO );
 
 	}
 
-	if ( valid( outer_vlan_tag ) ) { 
+	if ( valid( outer_vlan_tag ) ) {
 		apply( LbcSdm );
 
 	}
@@ -875,7 +874,7 @@ table assign_vid {
 	reads{
 		egress_l2_metadata.outer_bd : exact;
 	}
-	actions{ 
+	actions{
 		bd2vid;
 	}
 	size : 4096;
@@ -886,14 +885,14 @@ table add_vlan_tag {
 		egress_l2_metadata.vid : exact;
 		egress_l2_metadata.egress_port : exact;
 	}
-	actions{ 
+	actions{
 		nop;
 		add_vlan_tag;
 	}
 	size : 64;
 }
 
-control egress { 
+control egress {
 	apply( assign_vid );
 
     apply( add_vlan_tag );

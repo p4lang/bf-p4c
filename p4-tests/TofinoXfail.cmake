@@ -387,7 +387,6 @@ p4c_add_xfail_reason("tofino"
   "Input xbar hash.*conflict in"
   extensions/p4_tests/p4_14/09-MatchNoDep.p4
   extensions/p4_tests/p4_14/10-MatchNoDep1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-235/vag1737_1.p4
   extensions/p4_tests/p4_14/test_config_129_various_exact_match_keys.p4
   extensions/p4_tests/p4_14/hash_calculation_max_size.p4
   extensions/p4_tests/p4_14/hash_calculation_multiple.p4
@@ -733,6 +732,8 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "ERROR: Unhandled type of Expression"
   testdata/p4_14_samples/issue583.p4
+  # Glass succeeds on the next test, so it is here temporarily
+  extensions/p4_tests/p4_14/c1/COMPILER-235/vag1737_1.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -882,7 +883,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-242/case1679.p4
   extensions/p4_tests/p4_14/c4/COMPILER-549/case2898.p4
   extensions/p4_tests/p4_14/jenkins/range/range.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-235/vag1737_1.p4
   testdata/p4_14_samples/parser2.p4
   extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
   extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4

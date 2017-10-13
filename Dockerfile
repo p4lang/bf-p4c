@@ -27,7 +27,7 @@ ENV P4C_DEPS automake \
 
 RUN apt-get update && \
     apt-get install -y $P4C_DEPS
-RUN pip install pyinstaller
+RUN pip install pyinstaller==3.2.1
 
 # Default to using 2 make jobs, which is a good default for CI. If you're
 # building locally or you know there are more cores available, you may want to

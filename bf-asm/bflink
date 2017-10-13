@@ -140,6 +140,7 @@ fi
 
 #echo "$WALLE --target $CHIP $schema_arg -o $OUT $objs $pipe_args"
 $WALLE --target $CHIP $schema_arg -o $OUT $objs $pipe_args
+rc=$?
 
 # cleanup
 output_dir=$(dirname $OUT)
@@ -160,3 +161,6 @@ fi
 if [ -d "$tmpdir" ]; then
     rm -rf $tmpdir
 fi
+
+# exit with a return code if walle failed
+exit $rc
