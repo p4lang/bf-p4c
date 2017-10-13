@@ -240,7 +240,10 @@ PHV_Container::taint_ccgf(
                             << std::endl
                             << "member = "
                             << member);
-                        ::error("CCGF alignment formation does not allow physical contiguity.");
+                        // ccgf bridge metadata member in ccgf overly parde constrained
+                        // relaxing error generation for bridge metadata
+                        if (!member->bridged)
+                            ::error("CCGF alignment formation does not allow physical contiguity.");
                         start += align_start;
                     }
                 }

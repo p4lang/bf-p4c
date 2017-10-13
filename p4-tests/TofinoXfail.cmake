@@ -98,7 +98,7 @@ if (NOT ENABLE_TNA)
   )
 
   p4c_add_xfail_reason("tofino"
-    "error: Field .* and field .* are adjacent in container .* but aren't adjacent in the deparser"
+    "error: Field is extracted in the parser, but its first container slice has an incompatible alignment"
     extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
     )
 
@@ -122,11 +122,6 @@ if (NOT ENABLE_TNA)
   p4c_add_xfail_reason("tofino"
     "error: Cannot resolve computed select"
     extensions/p4_tests/p4_14/test_config_294_parser_loop.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "error: Field .* and field .* are adjacent in container .* but aren't adjacent in the deparser"
-    extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
     )
 
   p4c_add_xfail_reason("tofino"
@@ -286,7 +281,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/01-FlexCounter.p4
   extensions/p4_tests/p4_14/03-VlanProfile.p4
   extensions/p4_tests/p4_14/19-SimpleTrill.p4
-  extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
   )
 
 # BRIG-112
