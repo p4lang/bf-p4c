@@ -1,13 +1,15 @@
 import sys, os.path
 from string import maketrans
 import logging
+import math
+import random
+import re
+import time
 import traceback
 import unittest
-import random
-import math
-import re
 from ptf import config
 from ptf.testutils import *
+from ptf.mask import Mask
 
 import ptf.testutils as testutils
 
@@ -19,6 +21,7 @@ from base_test import P4RuntimeTest
 from base_test import stringify
 
 from stf_parser import STFParser
+from stf_runner import STFRunner, STFNamedEntry
 
 def protobuf_enum(type_name, protobuf_enum_type):
     enums = dict(protobuf_enum_type.items())
@@ -39,91 +42,38 @@ def protobuf_enum(type_name, protobuf_enum_type):
 
 MatchType = protobuf_enum('MatchType', p4info_pb2.MatchField.MatchType)
 
-class stf2ptf (P4RuntimeTest):
+class STF2ptf(P4RuntimeTest, STFRunner):
 
     def setUp(self):
         logging.info("p4info: %s", testutils.test_param_get("p4info"))
         logging.info("stftest: %s", testutils.test_param_get("stftest"))
+        self._requests = []
+        self._hasPadding = False
+        self._hasByteCounters = False
+        self._tern2zero = maketrans('*','0')
 
-        super(stf2ptf, self).setUp()
+
+        P4RuntimeTest.setUp(self)
         stftest = testutils.test_param_get("stftest")
         testname, ext = os.path.splitext(os.path.basename(stftest))
-        testNameEscapeChars = "-"
-        testNameEscapes = "_"*len(testNameEscapeChars)
-        self._transTable = maketrans(testNameEscapeChars,testNameEscapes)
-        self._testname = testname.translate(self._transTable)
-        self._logger = logging.getLogger(self._testname)
         parser = STFParser()
         ast, errs = parser.parse(filename=stftest)
         if errs != 0:
             sys.exit(1)
-        self._ast = ast
-        self._requests = []
-        self._namedEntries = {}
-        self._hasPadding = False
-        self._hasByteCounters = False
+        STFRunner.__init__(self, ast, testname)
+
 
     def runTest(self):
-        self._logger.info("Starting STF test")
-        try:
-            pkt_expects = []
-            pkt_pair = [None, None]
-            for s in self._ast:
-                self._logger.info("Processing STF statement: %s", s)
-                if s[0] == 'packet':
-                    if pkt_pair[0] is None:
-                        pkt_pair[0] = s
-                    else:
-                        # we've already seen another packet without a pairing
-                        # expect. Send the pair packet, and replace the pair with
-                        # the new one
-                        self.genSendPacket(pkt_pair[0])
-                        pkt_pair[0] = s
-                elif s[0] == 'expect':
-                    if pkt_pair[1] is not None:
-                        pkt_expects.append(s)
-                    else:
-                        pkt_pair[1] = s
-                elif s[0] == 'add':
-                    self.genAddTableEntry(s)
-                elif s[0] == 'wait':
-                    # cleanup the pipe
-                    self.genProcessPacket(pkt_pair)
-                    for e in pkt_expects:
-                        self.genExpectPacket(e, pkt_pair[0])
-                    pkt_expects = []
-                    pkt_pair = [None, None]
-                    self.genWaitStmt()
-                elif s[0] == 'setdefault':
-                    self.genAddDefaultAction(s)
-                elif s[0] == 'check_counter':
-                    self.genCheckCounter(s)
-                elif s[0] == 'remove':
-                    self._logger.info("Flushing table entries")
-                    self.undo_write_requests(self._requests)
-                elif s[0] == 'tcam_2bit_mode':
-                    # ignored for now
-                    pass
-                else:
-                    assert False, "Unknown statement %s" % s[0]
+        STFRunner.runTest(self)
 
-                if pkt_pair[0] is not None and pkt_pair[1] is not None:
-                    self.genProcessPacket(pkt_pair)
-                    pkt_pair = [None, None]
+    def testEnd(self):
+        testutils.verify_no_other_packets(self)
 
-        except Exception as e:
-            self._logger.exception(e)
-            raise
-        else:
-            testutils.verify_no_other_packets(self)
-
-        finally:
-            if self._hasPadding and self._hasByteCounters:
-                self._logger.warning("Mixing small packets and byte-counters produce incorrect results.\n" \
-                                     + "Please increase the size of your packets to be > 15 bytes")
-            self._logger.info("Cleanup")
-            self.undo_write_requests(self._requests)
-            self._logger.info("End STF Test")
+    def testCleanup(self):
+        if self._hasPadding and self._hasByteCounters:
+            self._logger.warning("Mixing small packets and byte-counters produce incorrect results.\n" \
+                                 + "Please increase the size of your packets to be > 15 bytes")
+        self.undo_write_requests(self._requests)
 
     def genAddTableEntry(self, entry):
         """
@@ -164,7 +114,7 @@ class stf2ptf (P4RuntimeTest):
         # bookeeping for aliases (mainly used to name counters)
         if entry[5] is not None:
             match_name, match, mask, hasMask = self.match2spec(table, match_list[0][0], match_list[0][1])
-            self._namedEntries[entry[5]] = (table, match_name, match, mask)
+            self._namedEntries[entry[5]] = STFNamedEntry(table, match_name, match, mask, priority)
 
     def genMatchKey(self, table, match_list):
         """
@@ -234,21 +184,22 @@ class stf2ptf (P4RuntimeTest):
         payload = expect[2]
         self._logger.info("Expecting packet on port %d", port)
         if payload is None:
-            testutils.verify_packet(self, None, port)
+            # testutils.verify_packet(self, None, port)
+            testutils.count_matched_packets_all_ports(self, None, [port])
             return
         elif orig_packet is None:
-            expected = self.encodePacket(payload, padIt = False)
+            packet = payload.translate(self._tern2zero)
+            p = int(packet, base=16)
+            pLen = len(packet)/2 + (len(packet) % 2)
+            expected = Mask(stringify(p, pLen), ignore_extra_bytes=True)
+            offset = 0
+            for x in payload:
+                if x == '*': expected.set_do_not_care(offset, 4)
+                offset += 4
         else:
             expected = self.encodePacket(self.setExpectTern(payload, orig_packet[2]), padIt = False)
         testutils.verify_packet(self, expected, port)
-        self._logger.info("Expected packet received on port %d", port)
-
-    def genProcessPacket(self, pkt_pair):
-        """
-            Generate a send_packet/check_packet pair.
-        """
-        if pkt_pair[0] is not None: self.genSendPacket(pkt_pair[0])
-        if pkt_pair[1] is not None: self.genExpectPacket(pkt_pair[1], pkt_pair[0])
+        self._logger.info("Expected packet {} received on port {}".format(payload, port))
 
     def genCheckCounter(self, chk):
         """
@@ -259,71 +210,78 @@ class stf2ptf (P4RuntimeTest):
         if str(chk[2]).startswith('$'):
             varName = chk[2][1:]
             assert varName in self._namedEntries, "Invalid named entry " + chk[2]
-            table = self._namedEntries[varName][0]
-            match_name = self._namedEntries[varName][1]
-            counterIndex = self._namedEntries[varName][2]
-            mask = self._namedEntries[varName][3]
+            table = self._namedEntries[varName]._tableName
+            counterIndex = self._namedEntries[varName]._value
             isDirect = True
         else:
-            counterIndex = chk[2]
+            counterIndex = int(chk[2])
             isDirect = False
 
         self._logger.info("check_counter %s(%s)", counterName, counterIndex)
         rr = p4runtime_pb2.ReadRequest()
         rr.device_id = self.device_id
         reqCounter = rr.entities.add()
+        counterId = None
         if isDirect:
             counter_entry = reqCounter.direct_counter_entry
-            counter_entry.counter_id = self.get_direct_counter_id(counterName)
+            counterId = self.get_direct_counter_id(counterName)
+            counter_entry.counter_id = counterId
             counter_entry.table_entry.table_id = self.get_table_id(table)
             self.set_match_key(counter_entry.table_entry, table,
-                               [self.get_mf_match(table, match_name, counterIndex, mask)])
+                               [self.get_mf_match(table,
+                                                  self._namedEntries[varName]._fieldName,
+                                                  self._namedEntries[varName]._value,
+                                                  self._namedEntries[varName]._mask)])
+            counter_entry.table_entry.priority = self._namedEntries[varName]._priority
         else:
             counter_entry = reqCounter.counter_entry
-            counter_entry.counter_id = self.get_counter_id(counterName)
-            counter_entry.index = int(counterIndex)
+            counterId = self.get_counter_id(counterName)
+            counter_entry.counter_id = counterId
+            counter_entry.index = counterIndex
         try:
+            foundCounter = False
             for rep in self.stub.Read(rr):
                 for entity in rep.entities:
                     counter = None
                     if isDirect:
                         counter = entity.direct_counter_entry
+                        if counter.counter_id != counterId or \
+                           counter.table_entry.SerializeToString() != counter_entry.table_entry.SerializeToString():
+                            continue
                     else:
                         counter = entity.counter_entry
+                        if counter.counter_id != counterId or counter.index != counterIndex:
+                            continue
+                    foundCounter = True
                     if chk[3][0] is not None:
                         count_type = chk[3][0]
                         compare = chk[3][1]
-                        val = chk[3][2]
-                        # FIXME: use compare for the right comparison
+                        val = int(chk[3][2])
                         if count_type == 'packets':
-                            self.assertTrue(counter.data.packet_count == val, "Wrong count of packet_count")
+                            received = counter.data.packet_count
                         else:
-                            self.assertTrue(counter.data.byte_count == val, "Wrong count of byte_count")
+                            received = counter.data.byte_count
                             self._hasByteCounters = True
+                        condition = "{} {} {}".format(received, compare, val)
+
+                        self.assertTrue(eval(condition),
+                                        "{}: wrong {} count: expected {} not {}".format(counterName, count_type, val, received))
                     else:
-                        self.assertTrue(counter.data.packet_count == 0, "Wrong count of packets")
+                        self.assertTrue(counter.data.packet_count == 0,
+                                        "Wrong count of packets")
+            if not foundCounter:
+                self.fail("Failed to retrieve counter {}".format(counterName))
         except Exception as e:
             self._logger.exception(e)
-            self.assertTrue(False, "Failed to read counter:\n %s" % traceback.format_exc())
+            self.fail("Failed to read counter:\n %s" % traceback.format_exc())
 
 
     def genWaitStmt(self):
         """
         Generate a wait stmt
         """
-        # P4Runtime exposes a blocking interface, so there are no waits
+        time.sleep(1)
         return
-
-    def setExpectTern(self, expect, packet):
-        """
-            Set the expect packet don't care to packet data since
-            the packet comparison looks byte-by-byte
-        """
-        val = ''
-        for e, p in zip(expect, packet):
-            if e == '*': val += p
-            else: val += e
-        return val
 
     def match2spec(self, table_name, match_name, match):
         """
@@ -350,7 +308,7 @@ class stf2ptf (P4RuntimeTest):
                     field_names = [ mf.name for mf in t.match_fields ]
                     if name not in field_names:
                         for x in field_names:
-                            if x.endswith(name):
+                            if x.endswith(name) or x == name + ".$valid$":
                                 name = x
                                 found = True
                     else:
@@ -397,15 +355,7 @@ class stf2ptf (P4RuntimeTest):
         return name, val, mask, hasMask
 
     def match2int(self, val):
-        if isinstance(val, int):
-            return val
-        if val.startswith('0x'):
-            base=16
-        elif val.startswith('0b'):
-            base=2
-        else:
-            base=10
-        return int(val, base=base)
+        return int(val, base=0)
 
     def byteLength(self, val):
         value = self.match2int(val)

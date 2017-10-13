@@ -949,13 +949,6 @@ p4c_add_xfail_reason("tofino"
 if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
   # STF2PTF tests that fail
 
-  # Failing on stf2ptf.py indirect counter
-  p4c_add_xfail_reason("tofino"
-    "AssertionError: Wrong count of packet_count"
-    testdata/p4_14_samples/hash_action_basic.p4
-    testdata/p4_14_samples/hash_action_gateway.p4
-    )
-
   p4c_add_xfail_reason("tofino"
     "AssertionError: Expected packet was not received on device"
     extensions/p4_tests/p4_14/action_default_multiple.p4
@@ -969,21 +962,22 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     testdata/p4_14_samples/07-MultiProtocol.p4
     testdata/p4_14_samples/basic_routing.p4
     testdata/p4_14_samples/exact_match3.p4
-    testdata/p4_14_samples/gateway1.p4
-    testdata/p4_14_samples/gateway2.p4
-    testdata/p4_14_samples/gateway3.p4
-    testdata/p4_14_samples/gateway4.p4
+    testdata/p4_14_samples/exact_match_valid1.p4
     testdata/p4_14_samples/instruct5.p4
-    testdata/p4_14_samples/repeater.p4
     testdata/p4_14_samples/ternary_match2.p4
+    testdata/p4_14_samples/tmvalid.p4
     testdata/p4_16_samples/issue635-bmv2.p4
     testdata/p4_16_samples/issue655-bmv2.p4
     )
 
   p4c_add_xfail_reason("tofino"
-    "AssertionError: Expected packet was not received"
-    testdata/p4_14_samples/counter1.p4
+    "AssertionError: .*: wrong (packets|bytes) count: expected 8 not 64"
+    # counter3 fails because it receives 64 bytes: for PTF the test should be adjusted to send more than 8 bytes
     testdata/p4_14_samples/counter3.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "AssertionError: .*: wrong (packets|bytes) count: expected 1 not 0"
     testdata/p4_14_samples/counter4.p4
     )
 
@@ -1016,12 +1010,10 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
   p4c_add_xfail_reason("tofino"
     "AssertionError: Invalid match name .* for table .*"
     testdata/p4_14_samples/exact_match_mask1.p4
-    testdata/p4_14_samples/exact_match_valid1.p4
     )
 
   p4c_add_xfail_reason("tofino"
     "Error when trying to push config to bf_switchd"
-    testdata/p4_14_samples/tmvalid.p4
     extensions/p4_tests/p4_14/hash_calculation_32.p4
     extensions/p4_tests/p4_14/stateful0.p4
     extensions/p4_tests/p4_14/stateful1.p4
