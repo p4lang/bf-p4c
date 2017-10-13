@@ -2,7 +2,6 @@
 #define BF_P4C_PHV_CLUSTER_H_
 
 #include "phv.h"
-#include "phv_fields.h"
 #include "phv_parde_mau_use.h"
 #include "ir/ir.h"
 #include "lib/map.h"
@@ -11,6 +10,12 @@
 #include "lib/range.h"
 #include "bf-p4c/ir/thread_visitor.h"
 #include "bf-p4c/ir/tofino_write_context.h"
+
+namespace PHV {
+class Field;
+}  // namespace PHV
+
+class PhvInfo;
 
 /** @brief Builds "clusters" of PHV fields that must be placed in the same
  * group.

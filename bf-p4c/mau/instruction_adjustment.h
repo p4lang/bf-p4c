@@ -8,6 +8,10 @@
 #include "bf-p4c/phv/phv.h"
 #include "lib/safe_vector.h"
 
+namespace PHV {
+class Field;
+}  // namespace PHV
+
 /** The purpose of these classes is to adjust the instructions in a single action that perform on
  *  multiple containers into one single action for the entire container.  The pass also
  *  verifies that many Tofino specific constraints for the individual ALUs either through the

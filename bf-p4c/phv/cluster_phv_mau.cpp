@@ -1,9 +1,10 @@
-#include "cluster_phv_mau.h"
+#include "bf-p4c/phv/cluster_phv_mau.h"
 #include <cstdlib>
-#include "cluster_phv_operations.h"
-#include "action_phv_constraints.h"
-#include "phv_spec.h"
 #include "bf-p4c/device.h"
+#include "bf-p4c/phv/cluster_phv_operations.h"
+#include "bf-p4c/phv/action_phv_constraints.h"
+#include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/phv/phv_spec.h"
 #include "lib/log.h"
 #include "lib/stringref.h"
 

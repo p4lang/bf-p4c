@@ -4,9 +4,9 @@
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/ir/tofino_write_context.h"
 #include "bf-p4c/mau/mau_visitor.h"
-#include "bf-p4c/phv/phv_fields.h"
 #include "lib/safe_vector.h"
 
+class PhvInfo;
 struct TableResourceAlloc;
 
 /** The purpose of this class is to look through the actions specified by the table and

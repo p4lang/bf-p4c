@@ -1,7 +1,6 @@
-#include "phv_analysis_api.h"
-#include "phv_analysis_validate.h"  // make_tuple()
-#include "phv_fields.h"
-
+#include "bf-p4c/phv/phv_analysis_api.h"
+#include "bf-p4c/phv/phv_analysis_validate.h"  // make_tuple()
+#include "bf-p4c/phv/phv_fields.h"
 #include "lib/log.h"
 #include "lib/stringref.h"
 

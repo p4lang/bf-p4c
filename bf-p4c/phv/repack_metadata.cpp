@@ -1,4 +1,4 @@
-#include "phv_fields.h"
+#include "bf-p4c/phv/phv_fields.h"
 #include "lib/bitops.h"
 
 void repack_metadata(PhvInfo &phv) {

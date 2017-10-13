@@ -1,10 +1,11 @@
 #ifndef BF_P4C_PHV_VALIDATE_ALLOCATION_H_
 #define BF_P4C_PHV_VALIDATE_ALLOCATION_H_
 
-#include "ir/visitor.h"
 #include "bf-p4c/mau/mau_visitor.h"
-#include "bf-p4c/phv/phv_fields.h"
+#include "ir/visitor.h"
 #include "lib/symbitmatrix.h"
+
+class PhvInfo;
 
 namespace PHV {
 

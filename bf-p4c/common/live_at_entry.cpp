@@ -1,4 +1,5 @@
 #include "live_at_entry.h"
+#include "bf-p4c/phv/phv_fields.h"
 #include "ir/dump.h"
 
 Visitor::profile_t LiveAtEntry::init_apply(const IR::Node *root) {

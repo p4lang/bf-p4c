@@ -1,6 +1,8 @@
-#include "allocate_virtual_containers.h"
-#include "check_fitting.h"
-#include "cluster_phv_container.h"
+#include "bf-p4c/phv/allocate_virtual_containers.h"
+#include "bf-p4c/phv/check_fitting.h"
+#include "bf-p4c/phv/cluster_phv_container.h"
+#include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/phv/phv.h"
 
 const IR::Node * AllocateVirtualContainers::apply_visitor(
     const IR::Node *node,

@@ -1,7 +1,10 @@
-#include "cluster_phv_req.h"
-#include "cluster_phv_mau.h"
+#include "bf-p4c/phv/cluster_phv_req.h"
+#include "bf-p4c/phv/cluster_phv_mau.h"
+#include "bf-p4c/phv/phv_fields.h"
 #include "lib/log.h"
 #include "lib/stringref.h"
+
+static int cluster_id_g = 0;                // global counter for assigning cluster ids
 
 //***********************************************************************************
 //
@@ -169,7 +172,8 @@ std::pair<int, int> Cluster_PHV_Requirements::gress(std::list<Cluster_PHV *>& cl
 
 
 // Cluster Slicing interface
-Cluster_PHV::Cluster_PHV(Cluster_PHV *cl, bool lo) {
+Cluster_PHV::Cluster_PHV(Cluster_PHV *cl, bool lo)
+      : id_num_i(cluster_id_g) {
     assert(cl);
     cluster_vec_i = cl->cluster_vec();
     // sliced cluster keeps string id issued by caller = non-sliced cl id + _lo, _hi
@@ -184,11 +188,15 @@ Cluster_PHV::Cluster_PHV(Cluster_PHV *cl, bool lo) {
     //
 }
 
+// cluster singleton field
+Cluster_PHV::Cluster_PHV(PHV::Field *f, std::string id_s /* = "???" */)
+    : Cluster_PHV(field_set(f), id_s) {}
+
 // non-sliced cluster
 Cluster_PHV::Cluster_PHV(
     ordered_set<PHV::Field *> *p,
     std::string id_s)
-    : cluster_vec_i(p->begin(), p->end()), id_i(id_s) {
+    : cluster_vec_i(p->begin(), p->end()), id_num_i(cluster_id_g), id_i(id_s) {
     //
     if (!p) {
         LOG1("*****Cluster_PHV called w/ nullptr cluster_set******");

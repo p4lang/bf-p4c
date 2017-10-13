@@ -1,4 +1,5 @@
 #include "gateway.h"
+#include "bf-p4c/phv/phv_fields.h"
 #include "ir/dbprint.h"
 #include "lib/indent.h"
 

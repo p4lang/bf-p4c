@@ -3,6 +3,7 @@
 #include "lib/safe_vector.h"
 #include "action_analysis.h"
 #include "bf-p4c/common/slice.h"
+#include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/validate_allocation.h"
 
 template<class T> static

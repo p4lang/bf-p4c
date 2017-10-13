@@ -1,5 +1,6 @@
 #include "bf-p4c/parde/asm_output.h"
 #include "bf-p4c/common/asm_output.h"
+#include "bf-p4c/phv/phv_fields.h"
 
 // XXX(seth): This duplicates the very similar ExtractDestFormatter class in
 // parser_output.cpp; we need to combine them.

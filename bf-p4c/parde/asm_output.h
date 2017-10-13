@@ -1,8 +1,9 @@
 #ifndef BF_P4C_PARDE_ASM_OUTPUT_H_
 #define BF_P4C_PARDE_ASM_OUTPUT_H_
 
-#include "bf-p4c/phv/phv_fields.h"
 #include "ir/ir.h"
+
+class PhvInfo;
 
 /// Helper that can generate parser assembly and write it to an output stream.
 struct ParserAsmOutput {

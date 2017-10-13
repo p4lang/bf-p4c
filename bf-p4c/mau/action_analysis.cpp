@@ -1,6 +1,7 @@
 #include "action_analysis.h"
 #include "resource.h"
 #include "bf-p4c/common/slice.h"
+#include "bf-p4c/phv/phv_fields.h"
 
 void ActionAnalysis::initialize_phv_field(const IR::Expression *expr) {
     if (!phv.field(expr))

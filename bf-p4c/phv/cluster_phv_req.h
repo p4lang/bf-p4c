@@ -1,25 +1,26 @@
 #ifndef BF_P4C_PHV_CLUSTER_PHV_REQ_H_
 #define BF_P4C_PHV_CLUSTER_PHV_REQ_H_
 
-#include "cluster.h"
-#include "cluster_phv_container.h"
-#include "phv.h"
-#include "phv_fields.h"
 #include "bf-p4c/ir/gress.h"
 #include "bf-p4c/ir/thread_visitor.h"
+#include "bf-p4c/phv/cluster.h"
+#include "bf-p4c/phv/cluster_phv_container.h"
+#include "bf-p4c/phv/phv.h"
 #include "ir/ir.h"
 #include "lib/map.h"
 #include "lib/ordered_map.h"
 #include "lib/ordered_set.h"
 #include "lib/range.h"
 
-static int cluster_id_g = 0;                // global counter for assigning cluster ids
+namespace PHV {
+class Field;
+}  // namespace PHV
 
 class Cluster_PHV {
  private:
     std::vector<PHV::Field *> cluster_vec_i;
                                             // cluster vec sorted by decreasing field width
-    int id_num_i = cluster_id_g;            // number part of id_i
+    int id_num_i;                           // number part of id_i
     std::string id_i;                       // cluster id
     gress_t gress_i;                        // ingress or egress
     PHV::Size width_i;        // container width in PHV group
@@ -37,9 +38,8 @@ class Cluster_PHV {
         std::string id_s = "???");                     // NOLINT(runtime/explicit)
                                                        // cluster set of fields
     Cluster_PHV(PHV::Field *f,
-        std::string id_s = "???")                      // NOLINT(runtime/explicit)
-        : Cluster_PHV(field_set(f), id_s) {}           // cluster singleton field
-                                                       // e.g., POV fields
+        std::string id_s = "???");                     // NOLINT(runtime/explicit)
+
     Cluster_PHV(
         Cluster_PHV *cl,                               // cluster slicing interface
         bool lo = true);                               // NOLINT(runtime/explicit)

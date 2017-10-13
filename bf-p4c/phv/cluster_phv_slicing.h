@@ -1,15 +1,16 @@
 #ifndef BF_P4C_PHV_CLUSTER_PHV_SLICING_H_
 #define BF_P4C_PHV_CLUSTER_PHV_SLICING_H_
 
-#include "phv.h"
-#include "phv_fields.h"
+#include "bf-p4c/ir/thread_visitor.h"
+#include "bf-p4c/phv/cluster.h"
+#include "bf-p4c/phv/cluster_phv_mau.h"
+#include "bf-p4c/phv/phv.h"
 #include "ir/ir.h"
 #include "lib/map.h"
 #include "lib/ordered_map.h"
 #include "lib/range.h"
-#include "bf-p4c/ir/thread_visitor.h"
-#include "cluster.h"
-#include "cluster_phv_mau.h"
+
+class PhvInfo;
 
 /** Cluster Slicing
  *

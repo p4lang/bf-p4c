@@ -4,15 +4,20 @@
 #include <boost/optional.hpp>
 #include <boost/optional/optional_io.hpp>
 #include <limits>
-#include "phv.h"
-#include "phv_fields.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/ir/gress.h"
 #include "bf-p4c/ir/thread_visitor.h"
+#include "bf-p4c/phv/phv.h"
+#include "bf-p4c/phv/phv_fields.h"
 #include "ir/ir.h"
 #include "lib/map.h"
 #include "lib/ordered_map.h"
 #include "lib/range.h"
+
+namespace PHV {
+class Field;
+}  // namespace PHV
+
 //
 //
 //***********************************************************************************

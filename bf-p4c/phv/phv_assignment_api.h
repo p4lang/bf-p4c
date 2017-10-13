@@ -1,14 +1,14 @@
 #ifndef BF_P4C_PHV_PHV_ASSIGNMENT_API_H_
 #define BF_P4C_PHV_PHV_ASSIGNMENT_API_H_
 
+#include "bf-p4c/ir/thread_visitor.h"
+#include "bf-p4c/phv/cluster.h"
+#include "bf-p4c/phv/cluster_phv_container.h"
+#include "bf-p4c/phv/phv_fields.h"
 #include "ir/ir.h"
 #include "lib/map.h"
 #include "lib/ordered_map.h"
 #include "lib/range.h"
-#include "bf-p4c/ir/thread_visitor.h"
-#include "cluster.h"
-#include "cluster_phv_container.h"
-#include "phv_fields.h"
 //
 //***********************************************************************************
 //

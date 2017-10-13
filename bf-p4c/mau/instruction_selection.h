@@ -1,8 +1,10 @@
 #ifndef BF_P4C_MAU_INSTRUCTION_SELECTION_H_
 #define BF_P4C_MAU_INSTRUCTION_SELECTION_H_
 
+#include "bf-p4c/ir/tofino_write_context.h"
 #include "bf-p4c/mau/mau_visitor.h"
-#include "bf-p4c/phv/phv_fields.h"
+
+class PhvInfo;
 
 /** The general purpose of instruction selection is to completely transform all P4 frontend code
  *  to parallel instructions that the compiler can completely understand.  These parallel

@@ -2,6 +2,7 @@
 #include <deque>
 #include "split_gateways.h"
 #include "bf-p4c/common/slice.h"
+#include "bf-p4c/phv/phv_fields.h"
 
 class CanonGatewayExpr::NeedNegate : public Inspector {
     bool        rv = false;

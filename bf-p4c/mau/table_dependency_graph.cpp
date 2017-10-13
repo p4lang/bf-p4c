@@ -3,6 +3,7 @@
 #include <boost/graph/breadth_first_search.hpp>
 #include <algorithm>
 #include "bf-p4c/ir/tofino_write_context.h"
+#include "bf-p4c/phv/phv_fields.h"
 #include "ir/ir.h"
 #include "lib/log.h"
 

@@ -1,7 +1,8 @@
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/sequential_vertex_coloring.hpp>
 #include <iomanip>
-#include "cluster_phv_interference.h"
+#include "bf-p4c/phv/cluster_phv_interference.h"
+#include "bf-p4c/phv/phv_fields.h"
 #include "lib/log.h"
 #include "lib/stringref.h"
 

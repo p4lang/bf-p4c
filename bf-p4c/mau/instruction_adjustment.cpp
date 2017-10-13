@@ -1,5 +1,6 @@
 #include "bf-p4c/mau/instruction_adjustment.h"
 #include "bf-p4c/common/slice.h"
+#include "bf-p4c/phv/phv_fields.h"
 
 /** SplitInstructions */
 

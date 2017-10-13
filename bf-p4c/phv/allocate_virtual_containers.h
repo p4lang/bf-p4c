@@ -2,8 +2,12 @@
 #define EXTENSIONS_BF_P4C_PHV_ALLOCATE_VIRTUAL_CONTAINERS_H_
 
 #include "ir/ir.h"
-#include "phv_fields.h"
-#include "phv_parde_mau_use.h"
+#include "bf-p4c/phv/phv_parde_mau_use.h"
+
+namespace PHV {
+class Container;
+class Field;
+}  // namespace PHV
 
 /** Create and "virtual" PHV containers and use them to allocate fields that
  * did not fit in physical PHV containers.

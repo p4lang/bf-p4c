@@ -10,7 +10,12 @@
 #include "bf-p4c/ir/tofino_write_context.h"
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/parde/parde_visitor.h"
-#include "bf-p4c/phv/phv_fields.h"
+
+namespace PHV {
+class Field;
+}  // namespace PHV
+
+class PhvInfo;
 
 /* Produces a SymBitMatrix where keys are PHV::Field ids and values
  * indicate whether two fields are mutually exclusive, based on analyzing the

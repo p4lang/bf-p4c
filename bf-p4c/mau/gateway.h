@@ -3,8 +3,13 @@
 
 #include "bf-p4c/mau/input_xbar.h"
 #include "bf-p4c/mau/mau_visitor.h"
-#include "bf-p4c/phv/phv_fields.h"
 #include "lib/safe_vector.h"
+
+namespace PHV {
+class Field;
+}  // namespace PHV
+
+class PhvInfo;
 
 class CanonGatewayExpr : public MauTransform {
     IR::MAU::Action *preorder(IR::MAU::Action *af) override { prune(); return af; }

@@ -1,9 +1,9 @@
 #ifndef BF_P4C_PHV_ASM_OUTPUT_H_
 #define BF_P4C_PHV_ASM_OUTPUT_H_
 
-#include "phv_fields.h"
-#include "lib/stringref.h"
-#include "bf-p4c/common/asm_output.h"
+#include <iosfwd>
+
+class PhvInfo;
 
 class PhvAsmOutput {
     const PhvInfo     &phv;

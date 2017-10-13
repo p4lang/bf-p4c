@@ -7,13 +7,14 @@
 #include "bf-p4c/phv/cluster_phv_operations.h"
 #include "bf-p4c/phv/cluster_phv_slicing.h"
 #include "bf-p4c/phv/cluster_phv_overlay.h"
-#include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/phv_analysis_api.h"
 #include "bf-p4c/phv/phv_analysis_validate.h"
 #include "bf-p4c/phv/phv_assignment_validate.h"
 #include "bf-p4c/phv/trivial_alloc.h"
 #include "bf-p4c/phv/validate_allocation.h"
+
+class PhvInfo;
 
 PHV_AnalysisPass::PHV_AnalysisPass(
     const BFN_Options &options,

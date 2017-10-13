@@ -10,6 +10,7 @@
 
 #include "bf-p4c/common/debug_info.h"
 #include "bf-p4c/common/slice.h"
+#include "bf-p4c/device.h"
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/parde/parde_visitor.h"
 #include "bf-p4c/phv/phv_fields.h"

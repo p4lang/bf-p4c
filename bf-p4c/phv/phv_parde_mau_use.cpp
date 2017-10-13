@@ -1,4 +1,5 @@
-#include "phv_parde_mau_use.h"
+#include "bf-p4c/phv/phv_parde_mau_use.h"
+#include "bf-p4c/phv/phv_fields.h"
 #include "lib/log.h"
 #include "lib/stringref.h"
 

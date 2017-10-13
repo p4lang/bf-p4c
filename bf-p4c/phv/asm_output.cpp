@@ -1,4 +1,7 @@
 #include "asm_output.h"
+#include "bf-p4c/common/asm_output.h"
+#include "bf-p4c/phv/phv_fields.h"
+#include "lib/stringref.h"
 
 void emit_phv_field(std::ostream &out, PHV::Field &field) {
     for (auto &alloc : field.alloc_i) {

@@ -3,8 +3,10 @@
 
 #include <map>
 #include <vector>
+#include "bf-p4c/phv/phv.h"
 #include "ir/ir.h"
-#include "phv_fields.h"
+
+class PhvInfo;
 
 namespace PHV {
 
@@ -28,7 +30,7 @@ class TrivialAlloc final : public Inspector {
     static bool tagalong_full(int size, Regs *use);
     void do_alloc(const FieldGroup&, Regs *, Regs *);
     bool preorder(const IR::BFN::Pipe *p) override;
-    void end_apply(const IR::Node *) override { phv.set_done(); }
+    void end_apply(const IR::Node *) override;
 };
 
 /**

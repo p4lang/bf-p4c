@@ -1,11 +1,16 @@
 #ifndef BF_P4C_PHV_PHV_PARDE_MAU_USE_H_
 #define BF_P4C_PHV_PHV_PARDE_MAU_USE_H_
 
-#include "phv.h"
-#include "phv_fields.h"
 #include "ir/ir.h"
 #include "bf-p4c/ir/thread_visitor.h"
 #include "bf-p4c/ir/tofino_write_context.h"
+#include "bf-p4c/phv/phv.h"
+
+namespace PHV {
+class Field;
+}  // namespace PHV
+
+class PhvInfo;
 
 //
 class Phv_Parde_Mau_Use : public Inspector {

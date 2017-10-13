@@ -2,12 +2,13 @@
 
 #include <algorithm>
 #include <boost/range/irange.hpp>  // NOLINT
+#include "bf-p4c/device.h"
+#include "bf-p4c/phv/phv.h"
+#include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/ir/gress.h"
 #include "lib/bitvec.h"
 #include "lib/exceptions.h"
 #include "lib/range.h"
-#include "bf-p4c/device.h"
-#include "bf-p4c/phv/phv.h"
-#include "bf-p4c/ir/gress.h"
 
 namespace PHV {
 namespace {
@@ -214,6 +215,10 @@ bool TrivialAlloc::preorder(const IR::BFN::Pipe *pipe) {
         do_alloc(pov_fields, &normal, skip);
     }
     return false;
+}
+
+void TrivialAlloc::end_apply(const IR::Node *) {
+    phv.set_done();
 }
 
 /// Tracks which containers are allocated and which threads they're allocated to.

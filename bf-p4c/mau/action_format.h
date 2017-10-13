@@ -3,13 +3,14 @@
 
 #include "bf-p4c/mau/action_analysis.h"
 #include "bf-p4c/mau/mau_visitor.h"
-#include "bf-p4c/phv/phv_fields.h"
 #include "ir/ir.h"
 #include "lib/bitops.h"
 #include "lib/bitvec.h"
 #include "lib/cstring.h"
 #include "lib/ordered_map.h"
 #include "lib/safe_vector.h"
+
+class PhvInfo;
 
 /** Different Constraints
  *  # Not handled yet

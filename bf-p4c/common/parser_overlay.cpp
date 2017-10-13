@@ -1,8 +1,9 @@
 #include "parser_overlay.h"
 #include <sstream>
 #include <typeinfo>
-#include "lib/log.h"
+#include "bf-p4c/phv/phv_fields.h"
 #include "ir/ir.h"
+#include "lib/log.h"
 
 void BuildParserOverlay::mark(const PHV::Field* f) {
     // XXX(cole): f->pov is supposed to imply f->metadata.

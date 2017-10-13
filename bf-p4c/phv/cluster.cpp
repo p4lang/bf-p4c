@@ -1,5 +1,6 @@
-#include "cluster.h"
-#include "cluster_phv_container.h"
+#include "bf-p4c/phv/cluster.h"
+#include "bf-p4c/phv/cluster_phv_container.h"
+#include "bf-p4c/phv/phv_fields.h"
 #include "lib/log.h"
 #include "lib/stringref.h"
 

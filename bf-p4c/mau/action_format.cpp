@@ -1,4 +1,5 @@
 #include "action_format.h"
+#include "bf-p4c/phv/phv_fields.h"
 #include "lib/log.h"
 
 constexpr int ActionFormat::CONTAINER_SIZES[];

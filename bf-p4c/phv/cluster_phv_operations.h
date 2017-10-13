@@ -1,13 +1,18 @@
 #ifndef BF_P4C_PHV_CLUSTER_PHV_OPERATIONS_H_
 #define BF_P4C_PHV_CLUSTER_PHV_OPERATIONS_H_
 
-#include "phv.h"
-#include "phv_fields.h"
+#include "bf-p4c/ir/thread_visitor.h"
+#include "bf-p4c/phv/phv.h"
 #include "ir/ir.h"
 #include "lib/map.h"
 #include "lib/ordered_map.h"
 #include "lib/range.h"
-#include "bf-p4c/ir/thread_visitor.h"
+
+namespace PHV {
+class Field;
+}  // namespace PHV
+
+class PhvInfo;
 
 /** @brief Annotate each Field in PhvInfo with the instructions it's involved
  * in.

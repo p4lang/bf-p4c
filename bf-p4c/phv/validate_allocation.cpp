@@ -2,14 +2,16 @@
 #include <iterator>
 #include <sstream>
 
-#include "lib/cstring.h"
 #include "lib/log.h"
 #include "ir/ir.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/phv/phv.h"
+#include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/validate_allocation.h"
 #include "bf-p4c/mau/action_analysis.h"
+
+#include "lib/cstring.h"
 
 // Currently we fail a lot of these checks, so to prevent mass XFAIL'ing a lot
 // of the tests, we treat the checks as warning instead of errors. This macro
