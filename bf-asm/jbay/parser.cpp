@@ -209,6 +209,9 @@ template<> void Parser::write_config(Target::JBay::parser_regs &regs) {
             regs.main[INGRESS].phv_owner.owner[id] = 1;
             regs.main[EGRESS].phv_owner.owner[id] = 1; } }
 
+    regs.main[INGRESS].hdr_len_adj.amt = hdr_len_adj[INGRESS];
+    regs.main[EGRESS].hdr_len_adj.amt = hdr_len_adj[EGRESS];
+
     int i_start = Stage::first_table(INGRESS) & 0x1ff;
     for (auto &reg : regs.merge.upper.i_start_table)
         reg.table = i_start;

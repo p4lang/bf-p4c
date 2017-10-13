@@ -9,6 +9,7 @@ class Target::Tofino::Phv : public Target::Phv {
         // FIXME -- base register class is Tofino-like, no need to change
         int parser_id() const override { return uid; }
         int mau_id() const override { return uid < FIRST_TPHV ? uid : -1; }
+        int ixbar_id() const override { return uid < FIRST_TPHV ? uid : -1; }
         int deparser_id() const override { return uid; }
     };
     void init_regs(::Phv &phv) override;

@@ -37,6 +37,7 @@ public:
         bool operator<(const Register &a) const { return uid < a.uid; }
         virtual int parser_id() const { return -1; }
         virtual int mau_id() const { return -1; }
+        virtual int ixbar_id() const { return -1; }
         virtual int deparser_id() const { return -1; }
     };
     class Slice {
