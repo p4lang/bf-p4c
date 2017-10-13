@@ -103,10 +103,10 @@ bool Phv_Parde_Mau_Use::is_used_parde(const PHV::Field *f) const {    // use in 
 
 bool PhvUse::preorder(const IR::BFN::Deparser *d) {
     thread = d->gress;
-    in_mau = true;  // treat egress_port and digests as in mau as they can't go in TPHV
+    in_mau = true;  // treat metadata and digests as in mau as they can't go in TPHV
     in_dep = true;
     revisit_visited();
-    visit(d->egress_port);
+    visit(d->metadata, "metadata");
     visit(d->digests, "digests");
     in_mau = false;
     revisit_visited();

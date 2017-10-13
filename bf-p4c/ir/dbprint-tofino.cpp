@@ -208,8 +208,8 @@ void IR::BFN::Deparser::dbprint(std::ostream &out) const {
     out << ':' << indent;
     for (auto st : emits)
         out << endl << *st;
-    if (egress_port)
-        out << endl << "egress_port: " << *egress_port;
+    for (auto md : Values(metadata))
+        out << *md;
     for (auto digest : Values(digests))
         out << *digest;
     out << unindent;

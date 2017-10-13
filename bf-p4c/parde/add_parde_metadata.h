@@ -19,6 +19,12 @@ class AddMetadataShims : public PardeModifier {
     bool preorder(IR::BFN::Parser *) override;
     bool preorder(IR::BFN::Deparser *) override;
 
+    void addIngressMetadata(IR::BFN::Parser *d);
+    void addEgressMetadata(IR::BFN::Parser *d);
+
+    void addIngressMetadata(IR::BFN::Deparser *d);
+    void addEgressMetadata(IR::BFN::Deparser *d);
+
     const IR::BFN::Pipe* pipe;
     const bool useTna;
 };

@@ -32,9 +32,9 @@ class Uses : public Inspector {
         return true; }
     bool preorder(const IR::BFN::Deparser *d) {
         thread = d->gress;
-        in_mau = true;  // treat egress_port and digests as in mau as they can't go in TPHV
+        in_mau = true;  // treat metadata and digests as in mau as they can't go in TPHV
         revisit_visited();
-        visit(d->egress_port);
+        d->metadata.visit_children(*this);
         d->digests.visit_children(*this);
         in_mau = false;
         revisit_visited();

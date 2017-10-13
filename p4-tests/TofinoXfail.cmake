@@ -765,6 +765,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/port_vlan_mapping.p4
   extensions/p4_tests/p4_14/switch_20160602/switch.p4
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
+  extensions/p4_tests/p4_14/switch/p4src/switch.p4
   )
 
 # Likely still has a bug; emits the following warning:
@@ -907,11 +908,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Unexpected mirror id"
   testdata/p4_16_samples/clone-bmv2.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "metadata being placed w/ deparsed header"
-  extensions/p4_tests/p4_14/switch/p4src/switch.p4
   )
 
 p4c_add_xfail_reason("tofino"

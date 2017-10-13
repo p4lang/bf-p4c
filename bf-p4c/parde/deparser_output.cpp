@@ -162,9 +162,31 @@ std::ostream &operator<<(std::ostream &out, const DeparserAsmOutput &d) {
     if (d.deparser) {
         d.deparser->emits.apply(OutputDictionary(out, d.phv, ++indent));
         --indent;
-        if (d.deparser->egress_port)
-            out << indent << "egress_unicast_port: "
-                << canon_name(d.phv.field(d.deparser->egress_port)->name) << std::endl;
+
+        // XXX(zma) "egress_multicast_group" is an exception that can have multiple elements,
+        // the following block of code deals with this exception.
+        std::vector<std::pair<const cstring, const IR::Expression*>> egress_multicast_group;
+        for (auto md : d.deparser->metadata) {
+            if (md.first == "egress_multicast_group_a" ||
+                md.first == "egress_multicast_group_b") {
+                 egress_multicast_group.push_back(md);
+                 continue;
+            }
+
+            out << indent << md.first << ": "
+                << canon_name(d.phv.field(md.second)->name) << std::endl;
+        }
+        if (egress_multicast_group.size() == 2) {
+            out << indent << "egress_multicast_group: [ ";
+            out << canon_name(d.phv.field(egress_multicast_group[0].second)->name) << ", ";
+            out << canon_name(d.phv.field(egress_multicast_group[1].second)->name) << " ]"
+                << std::endl;
+        } else if (egress_multicast_group.size() == 1) {
+            out << indent << "egress_multicast_group: "
+                << canon_name(d.phv.field(egress_multicast_group[0].second)->name)
+                << std::endl;
+        }
+
         for (auto digest : Values(d.deparser->digests)) {
             int idx = 0;
             out << indent++ << digest->name << ":" << std::endl;

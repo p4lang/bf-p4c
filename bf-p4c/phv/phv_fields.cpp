@@ -950,14 +950,15 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
     void postorder(const IR::BFN::Deparser* d) override {
         // extract deparser constraints from Deparser & Digest IR nodes ref: bf-p4c/ir/parde.def
         // set deparser constaints on field
-        if (d->egress_port) {
-            // IR::BFN::Deparser has a field egress_port which points to
+        for (auto md : d->metadata) {
+            // IR::BFN::Deparser has a NameMap that contains all metadata
+            // One example of metadata is "egress_port" which points to
             // egress port in the egress pipeline and
             // egress spec in the ingress pipeline
-            PHV::Field* f = phv.field(d->egress_port);
+            PHV::Field* f = phv.field(md.second);
             BUG_CHECK(f != nullptr, "Field not created in PhvInfo");
             f->set_deparsed_no_pack(true);
-            LOG1(".....Deparser Constraint 'egress port' on field..... " << f); }
+            LOG1(".....Deparser Constraint '" << md.first << "' on field..... " << f); }
 
         // TODO:
         // IR futures: distinguish each digest as an enumeration: learning, mirror, resubmit
