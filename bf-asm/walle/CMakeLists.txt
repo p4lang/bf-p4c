@@ -14,8 +14,9 @@ execute_process(COMMAND pyinstaller --version
   ERROR_VARIABLE  __pyinstaller_version
   OUTPUT_STRIP_TRAILING_WHITESPACE
   ERROR_STRIP_TRAILING_WHITESPACE)
-if ("${__pyinstaller_version}" VERSION_EQUAL "3.3")
-  MESSAGE(FATAL_ERROR "Pyinstaller version 3.3 is broken. Please install pyinstaller 3.2.1 using pip install pyinstaller==3.2.1")
+string (REGEX MATCH "3\\.3.*-dev.*" __broken "${__pyinstaller_version}")
+if (NOT "${__broken}" STREQUAL "")
+  MESSAGE(FATAL_ERROR "Pyinstaller version ${__pyinstaller_version} is broken. Please install pyinstaller 3.2.1 using pip install pyinstaller==3.2.1")
 endif()
 
 set (WALLE_SRC ${WALLE_SOURCE_DIR}/walle.py)
