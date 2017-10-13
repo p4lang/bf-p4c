@@ -183,7 +183,7 @@ class BFN::Slice : BFN::Reference {
      * bits directly.
      */
     Slice(BFN::Reference a, le_bitrange range)
-    : BFN::Reference(IR::Type::Bits::get(range.size())), range(range) { }
+    : BFN::Reference(IR::Type::Bits::get(range.size())), base(a), range(range) { }
     Slice(Util::SourceInfo si, BFN::Reference a, le_bitrange range)
     : BFN::Reference(si, IR::Type::Bits::get(range.size())), base(a), range(range) { }
 
