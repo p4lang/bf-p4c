@@ -184,16 +184,29 @@ if $debug; then
     # we need to invoke the debugger directly on the backend executable
     P4C=./p4c-tofino
     P4C_ARGS="$P4C_ARGS -D__TARGET_TOFINO__"
-else
-    P4C_ARGS="$P4C_ARGS --target tofino-v1model-barefoot"
 fi
+
 if [ $(expr "$file" : ".*v1_2") -gt 0 -o $(expr "$file" : ".*p4_16") -gt 0 ]; then
+    # XXX(cole): This is a hack.  There are some P4_16 tests written against the
+    # v1model architecture; in the future, this will be deprecated, and only
+    # translated P4_14 programs will use the v1model architecture.  Even better,
+    # eventually architecture files might include enough information to uniquely
+    # identify the target, making the "--target" flag obsolete.  For the time
+    # being, we grep for "v1model.p4" to determine whether a test uses the v1model
+    # or TNA architecture.
+    if grep -q "tofino.p4" "$file"; then
+        P4C_ARGS="$P4C_ARGS --target tofino-native-barefoot"
+    else
+        P4C_ARGS="$P4C_ARGS --target tofino-v1model-barefoot"
+    fi
+
     if $debug; then
         P4C_ARGS="$P4C_ARGS --p4v 16"
     else
         P4C_ARGS="$P4C_ARGS -x p4-16"
     fi
 else
+    P4C_ARGS="$P4C_ARGS --target tofino-v1model-barefoot"
     if $debug; then
         P4C_ARGS="$P4C_ARGS --p4v 14"
     else
