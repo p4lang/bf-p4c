@@ -1,13 +1,10 @@
 /* deparser template specializations for tofino -- #included directly in top-level deparser.cpp */
 
-#define TOFINO_INTRINSIC(GR, NAME, MAX) \
-template<> void INTRIN##GR##NAME::setregs(Target::Tofino::deparser_regs &regs, \
-                                          Deparser &, Deparser::Intrinsic &intrin)
-
 #define YES(X)  X
 #define NO(X)
+
 #define SIMPLE_INTRINSIC(GR, PFX, NAME, IF_SHIFT)                       \
-    TOFINO_INTRINSIC(GR, NAME, 1) {                                     \
+    DEPARSER_INTRINSIC(Tofino, GR, NAME, 1) {                           \
         PFX.NAME.phv = intrin.vals[0].val->reg.deparser_id();           \
         IF_SHIFT( PFX.NAME.shft = intrin.vals[0].val->lo; )             \
         PFX.NAME.valid = 1; }
@@ -20,18 +17,18 @@ template<> void INTRIN##GR##NAME::setregs(Target::Tofino::deparser_regs &regs, \
 IIR_MAIN_INTRINSIC(egress_unicast_port, NO)
 IIR_MAIN_INTRINSIC(drop_ctl, YES)
 IIR_INTRINSIC(copy_to_cpu, YES)
-TOFINO_INTRINSIC(INGRESS, egress_multicast_group, 2) {
+DEPARSER_INTRINSIC(Tofino, INGRESS, egress_multicast_group, 2) {
     int i = 0;
     for (auto &el : intrin.vals) {
         regs.header.hir.ingr.egress_multicast_group[i].phv = el.val->reg.deparser_id();
         regs.header.hir.ingr.egress_multicast_group[i++].valid = 1; } }
-TOFINO_INTRINSIC(INGRESS, hash_lag_ecmp_mcast, 2) {
+DEPARSER_INTRINSIC(Tofino, INGRESS, hash_lag_ecmp_mcast, 2) {
     int i = 0;
     for (auto &el : intrin.vals) {
         regs.header.hir.ingr.hash_lag_ecmp_mcast[i].phv = el.val->reg.deparser_id();
         regs.header.hir.ingr.hash_lag_ecmp_mcast[i++].valid = 1; } }
 HIR_INTRINSIC(copy_to_cpu_cos, YES)
-TOFINO_INTRINSIC(INGRESS, ingress_port_source, 1) {
+DEPARSER_INTRINSIC(Tofino, INGRESS, ingress_port_source, 1) {
     regs.header.hir.ingr.ingress_port.phv = intrin.vals[0].val->reg.deparser_id();
     regs.header.hir.ingr.ingress_port.sel = 0; }
 HIR_INTRINSIC(deflect_on_drop, YES)
@@ -61,9 +58,7 @@ HER_INTRINSIC(ecos, YES)
 #undef HER_INTRINSIC
 
 #define TOFINO_DIGEST(GRESS, NAME, CFG, TBL, IFSHIFT, IFID, CNT)                        \
-void GRESS##NAME##Digest::init(Target::Tofino) { IFSHIFT( can_shift = true; ) }         \
-template<> void GRESS##NAME##Digest::setregs(Target::Tofino::deparser_regs &regs,       \
-                                             Deparser &, Deparser::Digest &data) {      \
+    DEPARSER_DIGEST(Tofino, GRESS, NAME, CNT, IFSHIFT( can_shift = true; )) {           \
         CFG.phv = data.select->reg.deparser_id();                                       \
         IFSHIFT( CFG.shft = data.shift + data.select->lo; )                             \
         CFG.valid = 1;                                                                  \

@@ -3,73 +3,154 @@
 #define YES(X)  X
 #define NO(X)
 
-#define JBAY_UNSUPPORTED_INTRINSIC(GR, NAME)                                            \
-template<> void INTRIN##GR##NAME::setregs(Target::JBay::deparser_regs &, Deparser &,    \
-                                          Deparser::Intrinsic &intrin) {                \
-    error(intrin.lineno, "%s unsupported in jbay deparser", #NAME); }
+#define JBAY_SIMPLE_INTRINSIC(GRESS, VAL, REG, IFSHIFT)                                         \
+    REG.phv = VAL.val->reg.deparser_id();                                                       \
+    if (VAL.pov) REG.pov = deparser.pov[GRESS].at(&VAL.pov->reg) + VAL.pov->lo;                 \
+    else error(VAL.val.lineno, "POV bit required for jbay");                                    \
+    IFSHIFT(REG.shft = intrin.vals[0].val->lo;)
 
-#define JBAY_DEPARSER_INTRINSIC(GR, NAME, MAX) \
-template<> void INTRIN##GR##NAME::setregs(Target::JBay::deparser_regs &regs,            \
-                                          Deparser &deparser, Deparser::Intrinsic &intrin)
+#define JBAY_ARRAY_INTRINSIC(GRESS, VAL, ARRAY, REG, POV, IFSHIFT)                              \
+    for (auto &r : ARRAY) {                                                                     \
+        r.REG.phv = VAL.val->reg.deparser_id();                                                 \
+        IFSHIFT(r.REG.shft = intrin.vals[0].val->lo;) }                                         \
+    if (VAL.pov) POV.pov = deparser.pov[GRESS].at(&VAL.pov->reg) + VAL.pov->lo;                 \
+    else error(VAL.val.lineno, "POV bit required for jbay");
 
-#define JBAY_SIMPLE_INTRINSIC(GRESS, NAME, REG, IFSHIFT, IFPOV)                                 \
-    JBAY_DEPARSER_INTRINSIC(GRESS, NAME, 1) {                                                   \
-        auto &v = intrin.vals[0];                                                               \
-        REG.phv = v.val->reg.deparser_id();                                                     \
-        IFPOV(if (v.pov) REG.pov = deparser.pov[GRESS].at(&v.pov->reg) + v.pov->lo;)            \
-        IFSHIFT(REG.shft = intrin.vals[0].val->lo;) }
-
-#define JBAY_ARRAY_INTRINSIC(GRESS, NAME, ARRAY, REG, IFSHIFT, IFPOV)                           \
-    JBAY_DEPARSER_INTRINSIC(GRESS, NAME, 1) {                                                   \
-        auto &v = intrin.vals[0];                                                               \
-        for (auto &r : ARRAY) {                                                                 \
-            r.REG.phv = v.val->reg.deparser_id();                                               \
-            IFPOV(if (v.pov) r.REG.pov = deparser.pov[GRESS].at(&v.pov->reg) + v.pov->lo;)      \
-            IFSHIFT(r.REG.shft = intrin.vals[0].val->lo;) } }
-
-#define EI_INTRINSIC(NAME, IFSHIFT) \
-    JBAY_SIMPLE_INTRINSIC(EGRESS, NAME, regs.dprsrreg.inp.ipp.egr.m_##NAME, IFSHIFT, YES)
-#define HO_E_INTRINSIC(NAME, IFSHIFT) \
-    JBAY_ARRAY_INTRINSIC(EGRESS, NAME, regs.dprsrreg.ho_e, her.meta.m_##NAME, IFSHIFT, NO)
-#define II_INTRINSIC(NAME, IFSHIFT) \
-    JBAY_SIMPLE_INTRINSIC(INGRESS, NAME, regs.dprsrreg.inp.ipp.ingr.m_##NAME, IFSHIFT, YES)
-#define HO_I_INTRINSIC(NAME, IFSHIFT) \
-    JBAY_ARRAY_INTRINSIC(INGRESS, NAME, regs.dprsrreg.ho_i, hir.meta.m_##NAME, IFSHIFT, NO)
+#define EI_INTRINSIC(NAME, IFSHIFT)                                                             \
+    DEPARSER_INTRINSIC(JBay, EGRESS, NAME, 1) {                                                 \
+        JBAY_SIMPLE_INTRINSIC(EGRESS, intrin.vals[0], regs.dprsrreg.inp.ipp.egr.m_##NAME,       \
+                              IFSHIFT) }
+#define HO_E_INTRINSIC(NAME, IFSHIFT)                                                           \
+    DEPARSER_INTRINSIC(JBay, EGRESS, NAME, 1) {                                                 \
+        JBAY_ARRAY_INTRINSIC(EGRESS, intrin.vals[0], regs.dprsrreg.ho_e, her.meta.m_##NAME,     \
+                             regs.dprsrreg.inp.icr.egr_meta_pov.m_##NAME, IFSHIFT) }
+#define II_INTRINSIC(NAME, IFSHIFT)                                                             \
+    DEPARSER_INTRINSIC(JBay, INGRESS, NAME, 1) {                                                \
+        JBAY_SIMPLE_INTRINSIC(INGRESS, intrin.vals[0], regs.dprsrreg.inp.ipp.ingr.m_##NAME,     \
+                              IFSHIFT) }
+#define HO_I_INTRINSIC(NAME, IFSHIFT)                                                           \
+    DEPARSER_INTRINSIC(JBay, INGRESS, NAME, 1) {                                                \
+        JBAY_ARRAY_INTRINSIC(INGRESS, intrin.vals[0], regs.dprsrreg.ho_i, hir.meta.m_##NAME,    \
+                             regs.dprsrreg.inp.icr.ingr_meta_pov.m_##NAME, IFSHIFT) }
 
 EI_INTRINSIC(drop_ctl, YES)
 EI_INTRINSIC(egress_unicast_port, NO)
+HO_E_INTRINSIC(afc, YES)
 HO_E_INTRINSIC(capture_tx_ts, YES)
 HO_E_INTRINSIC(force_tx_err, YES)
 HO_E_INTRINSIC(tx_pkt_has_offsets, YES)
+HO_E_INTRINSIC(mirr_c2c_ctrl, YES)
+HO_E_INTRINSIC(mirr_coal_smpl_len, YES)
+HO_E_INTRINSIC(mirr_dond_ctrl, YES)
+HO_E_INTRINSIC(mirr_epipe_port, YES)
+HO_E_INTRINSIC(mirr_hash, YES)
+HO_E_INTRINSIC(mirr_icos, YES)
+HO_E_INTRINSIC(mirr_io_sel, YES)
+HO_E_INTRINSIC(mirr_mc_ctrl, YES)
+HO_E_INTRINSIC(mirr_qid, YES)
+HO_E_INTRINSIC(mtu_trunc_err_f, YES)
+HO_E_INTRINSIC(mtu_trunc_len, YES)
 
 II_INTRINSIC(copy_to_cpu, YES)
 II_INTRINSIC(drop_ctl, YES)
 II_INTRINSIC(egress_unicast_port, NO)
+HO_I_INTRINSIC(afc, YES)
 HO_I_INTRINSIC(bypss_egr, YES)
+HO_I_INTRINSIC(copy_to_cpu_cos, YES)
 HO_I_INTRINSIC(ct_disable, YES)
 HO_I_INTRINSIC(ct_mcast, YES)
-HO_I_INTRINSIC(copy_to_cpu_cos, YES)
 HO_I_INTRINSIC(deflect_on_drop, YES)
 HO_I_INTRINSIC(icos, YES)
+HO_I_INTRINSIC(mirr_c2c_ctrl, YES)
+HO_I_INTRINSIC(mirr_coal_smpl_len, YES)
+HO_I_INTRINSIC(mirr_dond_ctrl, YES)
+HO_I_INTRINSIC(mirr_epipe_port, YES)
+HO_I_INTRINSIC(mirr_hash, YES)
+HO_I_INTRINSIC(mirr_icos, YES)
+HO_I_INTRINSIC(mirr_io_sel, YES)
+HO_I_INTRINSIC(mirr_mc_ctrl, YES)
+HO_I_INTRINSIC(mirr_qid, YES)
+HO_I_INTRINSIC(mtu_trunc_err_f, YES)
+HO_I_INTRINSIC(mtu_trunc_len, YES)
+HO_I_INTRINSIC(pkt_color, YES)
 HO_I_INTRINSIC(qid, YES)
 HO_I_INTRINSIC(rid, YES)
 
-// FIXME -- these are different
-JBAY_UNSUPPORTED_INTRINSIC(INGRESS, egress_multicast_group)
-JBAY_UNSUPPORTED_INTRINSIC(INGRESS, hash_lag_ecmp_mcast)
-JBAY_UNSUPPORTED_INTRINSIC(INGRESS, ingress_port_source)
-JBAY_UNSUPPORTED_INTRINSIC(INGRESS, meter_color)
-JBAY_UNSUPPORTED_INTRINSIC(INGRESS, xid)
-JBAY_UNSUPPORTED_INTRINSIC(INGRESS, yid)
-JBAY_UNSUPPORTED_INTRINSIC(EGRESS, coal)
-JBAY_UNSUPPORTED_INTRINSIC(EGRESS, ecos)
+DEPARSER_INTRINSIC(JBay, INGRESS, egress_multicast_group, 2) {
+    int idx = 0;
+    for (auto &v : intrin.vals) {
+        switch (++idx) {
+        case 1: JBAY_SIMPLE_INTRINSIC(INGRESS, v, regs.dprsrreg.inp.ipp.ingr.m_mgid1, NO) break;
+        case 2: JBAY_SIMPLE_INTRINSIC(INGRESS, v, regs.dprsrreg.inp.ipp.ingr.m_mgid2, NO) break;
+        default: assert(0); } } }
 
-#define STUB_JBAY_DEPARSER_DIGEST(GR, NAME, MAX) \
-void GR##NAME##Digest::init(Target::JBay) {} \
-template<> void GR##NAME##Digest::setregs(Target::JBay::deparser_regs &, Deparser &, \
-                                          Deparser::Digest &) { assert(0); }
+DEPARSER_INTRINSIC(JBay, INGRESS, hash_lag_ecmp_mcast, 2) {
+    int idx = 0;
+    for (auto &v : intrin.vals) {
+        switch (++idx) {
+        case 1:
+            JBAY_ARRAY_INTRINSIC(INGRESS, v, regs.dprsrreg.ho_i, hir.meta.m_hash1,
+                                 regs.dprsrreg.inp.icr.ingr_meta_pov.m_hash1, YES)
+            break;
+        case 2:
+            JBAY_ARRAY_INTRINSIC(INGRESS, v, regs.dprsrreg.ho_i, hir.meta.m_hash2,
+                                 regs.dprsrreg.inp.icr.ingr_meta_pov.m_hash2, YES)
+            break;
+        default:
+            assert(0); } } }
+DEPARSER_INTRINSIC(JBay, INGRESS, xid, 2) {
+    int idx = 0;
+    for (auto &v : intrin.vals) {
+        switch (++idx) {
+        case 1:
+            JBAY_ARRAY_INTRINSIC(INGRESS, v, regs.dprsrreg.ho_i, hir.meta.m_xid_l1,
+                                 regs.dprsrreg.inp.icr.ingr_meta_pov.m_xid_l1, YES)
+            break;
+        case 2:
+            JBAY_ARRAY_INTRINSIC(INGRESS, v, regs.dprsrreg.ho_i, hir.meta.m_xid_l2,
+                                 regs.dprsrreg.inp.icr.ingr_meta_pov.m_xid_l2, YES)
+            break;
+        default:
+            assert(0); } } }
 
-ALL_DEPARSER_DIGESTS(STUB_JBAY_DEPARSER_DIGEST)
+#define JBAY_SIMPLE_DIGEST(GRESS, NAME, TBL, SEL, IFID, CNT)                            \
+    DEPARSER_DIGEST(JBay, GRESS, NAME, CNT, can_shift = true; ) {                       \
+        SEL.phv = data.select->reg.deparser_id();                                       \
+        SEL.shft = data.shift + data.select->lo;                                        \
+        SEL.disable_ = 0;                                                               \
+        JBAY_DIGEST_TABLE(GRESS, TBL, IFID, YES, CNT) }
+
+#define JBAY_ARRAY_DIGEST(GRESS, NAME, ARRAY, TBL, SEL, IFID, CNT)                      \
+    DEPARSER_DIGEST(JBay, GRESS, NAME, CNT, can_shift = true; ) {                       \
+        SEL.phv = data.select->reg.deparser_id();                                       \
+        SEL.shft = data.shift + data.select->lo;                                        \
+        SEL.disable_ = 0;                                                               \
+        for (auto &r : ARRAY) {                                                         \
+            JBAY_DIGEST_TABLE(GRESS, r.TBL, IFID, NO, CNT) } }
+
+#define JBAY_DIGEST_TABLE(GRESS, REG, IFID, IFVALID, CNT)                               \
+        for (auto &set : data.layout) {                                                 \
+            int id = set.first >> data.shift;                                           \
+            int idx = 0;                                                                \
+            bool first = true;                                                          \
+            for (auto &reg : set.second) {                                              \
+                if (first) {                                                            \
+                    first = false;                                                      \
+                    IFID( REG[id].id_phv = reg->reg.deparser_id(); continue; ) }        \
+                for (int i = reg->reg.size/8; i > 0; i--)                               \
+                    REG[id].phvs[idx++] = reg->reg.deparser_id(); }                     \
+            IFVALID( REG[id].valid = 1; )                                               \
+            REG[id].len = idx; }
+
+JBAY_SIMPLE_DIGEST(INGRESS, learning, regs.dprsrreg.inp.ipp.ingr.learn_tbl,
+                   regs.dprsrreg.inp.ipp.ingr.m_learn_sel, NO, 8)
+JBAY_ARRAY_DIGEST(INGRESS, mirror, regs.dprsrreg.ho_i, him.mirr_hdr_tbl.entry,
+                  regs.dprsrreg.inp.ipp.ingr.m_mirr_sel, YES, 16)
+JBAY_ARRAY_DIGEST(EGRESS, mirror, regs.dprsrreg.ho_e, hem.mirr_hdr_tbl.entry,
+                  regs.dprsrreg.inp.ipp.egr.m_mirr_sel, YES, 16)
+JBAY_SIMPLE_DIGEST(INGRESS, resubmit, regs.dprsrreg.inp.ipp.ingr.resub_tbl,
+                   regs.dprsrreg.inp.ipp.ingr.m_resub_sel, NO, 8)
+
 
 // all the jbay deparser subtrees with a dis or disable_ bit
 // FIXME -- should be a way of doing this with a smart template or other metaprogramming.
@@ -210,12 +291,20 @@ static void setup_jbay_ownership(bitvec phv_use, ubits_base &phv8, ubits_base &p
 template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
     regs.dprsrreg.dprsr_csr_ring.disable();
     regs.dprsrreg.dprsr_pbus.disable();
+    regs.dprsrreg.inpslice.disable();
+    regs.dprsrreg.inp.icr.disable();            // disable this whole tree
+    regs.dprsrreg.inp.icr.disabled_ = false;    // then enable just certain subtrees
+    regs.dprsrreg.inp.icr.egr.enable(); 
+    regs.dprsrreg.inp.icr.egr_meta_pov.enable(); 
+    regs.dprsrreg.inp.icr.ingr.enable(); 
+    regs.dprsrreg.inp.icr.ingr_meta_pov.enable(); 
+    for (auto &r : regs.dprsrreg.ho_i)
+        r.out_ingr.disable();
+    for (auto &r : regs.dprsrreg.ho_e)
+        r.out_egr.disable();
+
 #if 0
     // FIXME -- this is old tofino code -- needs to be updated to jbay?
-    regs.input.icr.inp_cfg.disable();
-    regs.input.icr.intr.disable();
-    regs.header.hem.he_edf_cfg.disable();
-    regs.header.him.hi_edf_cfg.disable();
     dump_checksum_units(regs.input.iim.ii_phv_csum.csum_cfg, regs.header.him.hi_tphv_csum.csum_cfg,
                         INGRESS, checksum[INGRESS]);
     dump_checksum_units(regs.input.iem.ie_phv_csum.csum_cfg, regs.header.hem.he_tphv_csum.csum_cfg,
@@ -244,6 +333,9 @@ template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
         Phv::unsetuse(EGRESS, phv_use[INGRESS]);
     }
 
+    regs.dprsrreg.inp.icr.i_phv8_grp.enable();
+    regs.dprsrreg.inp.icr.i_phv16_grp.enable();
+    regs.dprsrreg.inp.icr.i_phv32_grp.enable();
     regs.dprsrreg.inp.icr.i_phv8_grp.val = 0;
     regs.dprsrreg.inp.icr.i_phv16_grp.val = 0;
     regs.dprsrreg.inp.icr.i_phv32_grp.val = 0;

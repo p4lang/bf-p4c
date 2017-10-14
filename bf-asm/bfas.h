@@ -2,7 +2,7 @@
 #define _bfas_h_
 
 enum config_version_t { CONFIG_OLD=1, CONFIG_NEW=2, CONFIG_BOTH=3 };
-enum target_t { TOFINO=1, JBAY=2 };
+enum target_t { TOFINO=1, JBAY=2, TARGET_INDEX_LIMIT };
 extern struct option_t {
     config_version_t    version;
     target_t            target;

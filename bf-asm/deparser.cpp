@@ -12,96 +12,55 @@ Deparser::Deparser() : Section("deparser") { }
 Deparser::~Deparser() { }
 
 struct Deparser::Intrinsic::Type {
+    target_t    target;
     gress_t     gress;
     std::string name;
     int         max;
-    static std::map<std::string, Type *> all[2];
+    static std::map<std::string, Type *> all[TARGET_INDEX_LIMIT][2];
 protected:
-    Type(gress_t gr, const char *n, int m) : gress(gr), name(n), max(m) {
-        assert(!all[gr].count(name));
-        all[gress][name] = this; }
-    ~Type() { all[gress].erase(name); }
+    Type(target_t t, gress_t gr, const char *n, int m) : target(t), gress(gr), name(n), max(m) {
+        assert(!all[t][gr].count(name));
+        all[target][gress][name] = this; }
+    ~Type() { all[target][gress].erase(name); }
 public:
 #define VIRTUAL_TARGET_METHODS(TARGET) \
     virtual void setregs(Target::TARGET::deparser_regs &regs, Deparser &deparser,       \
-                         Intrinsic &vals) = 0;
+                         Intrinsic &vals) { assert(!"target mismatch"); }
     FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
 #undef VIRTUAL_TARGET_METHODS
 };
 
-#define ALL_DEPARSER_INTRINSICS(M, ...) \
-    M(INGRESS, egress_unicast_port, 1, ##__VA_ARGS__) \
-    M(INGRESS, drop_ctl, 1, ##__VA_ARGS__) \
-    M(INGRESS, copy_to_cpu, 1, ##__VA_ARGS__) \
-    M(INGRESS, egress_multicast_group, 2, ##__VA_ARGS__) \
-    M(INGRESS, hash_lag_ecmp_mcast, 2, ##__VA_ARGS__) \
-    M(INGRESS, copy_to_cpu_cos, 1, ##__VA_ARGS__) \
-    M(INGRESS, ingress_port_source, 1, ##__VA_ARGS__) \
-    M(INGRESS, deflect_on_drop, 1, ##__VA_ARGS__) \
-    M(INGRESS, meter_color, 1, ##__VA_ARGS__) \
-    M(INGRESS, icos, 1, ##__VA_ARGS__) \
-    M(INGRESS, qid, 1, ##__VA_ARGS__) \
-    M(INGRESS, xid, 1, ##__VA_ARGS__) \
-    M(INGRESS, yid, 1, ##__VA_ARGS__) \
-    M(INGRESS, rid, 1, ##__VA_ARGS__) \
-    M(INGRESS, bypss_egr, 1, ##__VA_ARGS__) \
-    M(INGRESS, ct_disable, 1, ##__VA_ARGS__) \
-    M(INGRESS, ct_mcast, 1, ##__VA_ARGS__) \
-    M(EGRESS, egress_unicast_port, 1, ##__VA_ARGS__) \
-    M(EGRESS, drop_ctl, 1, ##__VA_ARGS__) \
-    M(EGRESS, force_tx_err, 1, ##__VA_ARGS__) \
-    M(EGRESS, tx_pkt_has_offsets, 1, ##__VA_ARGS__) \
-    M(EGRESS, capture_tx_ts, 1, ##__VA_ARGS__) \
-    M(EGRESS, coal, 1, ##__VA_ARGS__) \
-    M(EGRESS, ecos, 1, ##__VA_ARGS__)
+#define DEPARSER_INTRINSIC(TARGET, GR, NAME, MAX)                                               \
+static struct TARGET##INTRIN##GR##NAME : public Deparser::Intrinsic::Type {                     \
+    TARGET##INTRIN##GR##NAME()                                                                  \
+    : Deparser::Intrinsic::Type(Target::TARGET::tag, GR, #NAME, MAX) {}                         \
+    void setregs(Target::TARGET::deparser_regs &, Deparser &, Deparser::Intrinsic &) override;  \
+} TARGET##INTRIN##GR##NAME##_singleton;                                                         \
+void TARGET##INTRIN##GR##NAME::setregs(Target::TARGET::deparser_regs &regs,                     \
+                                       Deparser &deparser, Deparser::Intrinsic &intrin)
 
-#define DECLARE_DEPARSER_INTRINSIC(GR, NAME, MAX)                               \
-struct INTRIN##GR##NAME : public Deparser::Intrinsic::Type {                    \
-    INTRIN##GR##NAME() : Deparser::Intrinsic::Type(GR, #NAME, MAX) {}           \
-    template<class REGS> void setregs(REGS &regs, Deparser &deparser,           \
-                                      Deparser::Intrinsic &vals);               \
-    FOR_ALL_TARGETS(DECLARE_INTRINSIC_SETREGS_FORWARD)                          \
-};
-#define DECLARE_INTRINSIC_SETREGS_FORWARD(TARGET)                               \
-    void setregs(Target::TARGET::deparser_regs &regs, Deparser &deparser,       \
-                 Deparser::Intrinsic &vals);
-#define DEFINE_INTRINSIC_SETREGS_FORWARD(TARGET, CLASS)                         \
-void CLASS::setregs(Target::TARGET::deparser_regs &regs, Deparser &deparser,    \
-                    Deparser::Intrinsic &vals) {                                \
-    setregs<Target::TARGET::deparser_regs>(regs, deparser, vals); }
-#define DEFINE_DEPARSER_INTRINSIC(GR, NAME, MAX) \
-FOR_ALL_TARGETS(DEFINE_INTRINSIC_SETREGS_FORWARD, INTRIN##GR##NAME) \
-static struct INTRIN##GR##NAME INTRIN##GR##NAME##_singleton;
-
-std::map<std::string, Deparser::Intrinsic::Type *> Deparser::Intrinsic::Type::all[2];
-
-ALL_DEPARSER_INTRINSICS(DECLARE_DEPARSER_INTRINSIC)
+std::map<std::string, Deparser::Intrinsic::Type *>
+    Deparser::Intrinsic::Type::all[TARGET_INDEX_LIMIT][2];
 
 struct Deparser::Digest::Type {
+    target_t    target;
     gress_t     gress;
     std::string name;
     int         count;
     bool        can_shift = false;
-    static std::map<std::string, Type *> all[2];
+    static std::map<std::string, Type *> all[TARGET_INDEX_LIMIT][2];
 protected:
-    Type(gress_t gr, const char *n, int cnt) : gress(gr), name(n), count(cnt) {
-        assert(!all[gress].count(name)); all[gress][name] = this; }
-    ~Type() { all[gress].erase(name); }
+    Type(target_t t, gress_t gr, const char *n, int cnt)
+    : target(t), gress(gr), name(n), count(cnt) {
+        assert(!all[target][gress].count(name));
+        all[target][gress][name] = this; }
+    ~Type() { all[target][gress].erase(name); }
 public:
 #define VIRTUAL_TARGET_METHODS(TARGET)                                                  \
     virtual void setregs(Target::TARGET::deparser_regs &regs, Deparser &deparser,       \
-                         Deparser::Digest &data) = 0;                                   \
-    virtual void init(Target::TARGET) = 0;
+                         Deparser::Digest &data) { assert(!"target mismatch"); }
     FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
 #undef VIRTUAL_TARGET_METHODS
-    static void init(target_t target) {
-        for (auto &m : all) {
-            for (auto d : Values(m)) {
-                switch(target) {
-#define SWITCH_FOR_TARGET(TARGET) case Target::TARGET::tag: d->init(Target::TARGET()); break;
-                FOR_ALL_TARGETS(SWITCH_FOR_TARGET)
-#undef SWITCH_FOR_TARGET
-                default: assert(0); } } } }
 };
 Deparser::Digest::Digest(Deparser::Digest::Type *t, int l, VECTOR(pair_t) &data) {
     type = t;
@@ -124,38 +83,18 @@ Deparser::Digest::Digest(Deparser::Digest::Type *t, int l, VECTOR(pair_t) &data)
         error(lineno, "No select key in %s spec", t->name.c_str());
 }
 
-#define ALL_DEPARSER_DIGESTS(M, ...)    \
-    M(INGRESS, learning, 8)             \
-    M(INGRESS, mirror, 8)               \
-    M(EGRESS, mirror, 8)                \
-    M(INGRESS, resubmit, 8)
+#define DEPARSER_DIGEST(TARGET, GRESS, NAME, CNT, ...)                                          \
+static struct TARGET##GRESS##NAME##Digest : public Deparser::Digest::Type {                     \
+    TARGET##GRESS##NAME##Digest()                                                               \
+    : Deparser::Digest::Type(Target::TARGET::tag, GRESS, #NAME, CNT) { __VA_ARGS__ }            \
+    void setregs(Target::TARGET::deparser_regs &, Deparser &, Deparser::Digest &) override;     \
+} TARGET##GRESS##NAME##Digest##_singleton;                                                      \
+void TARGET##GRESS##NAME##Digest::setregs(Target::TARGET::deparser_regs &regs,                  \
+                                          Deparser &deparser, Deparser::Digest &data)
 
-#define DECLARE_DEPARSER_DIGEST(GRESS, NAME, CNT)                               \
-struct GRESS##NAME##Digest : public Deparser::Digest::Type {                    \
-    GRESS##NAME##Digest() : Deparser::Digest::Type(GRESS, #NAME, CNT) {}        \
-    template<class REGS> void setregs(REGS &regs, Deparser &deparser,           \
-                                      Deparser::Digest &data);                  \
-    FOR_ALL_TARGETS(DECLARE_INIT_OVERRIDE)                                      \
-    FOR_ALL_TARGETS(DECLARE_DIGEST_SETREGS_FORWARD)                             \
-};
-#define DECLARE_INIT_OVERRIDE(TARGET) void init(Target::TARGET) override;
-#define DECLARE_DIGEST_SETREGS_FORWARD(TARGET)                                  \
-    void setregs(Target::TARGET::deparser_regs &regs, Deparser &deparser,       \
-                 Deparser::Digest &data) override;
-#define DEFINE_DIGEST_SETREGS_FORWARD(TARGET, CLASS)                            \
-void CLASS::setregs(Target::TARGET::deparser_regs &regs, Deparser &deparser,    \
-                    Deparser::Digest &data) {                                   \
-    setregs<Target::TARGET::deparser_regs>(regs, deparser, data); }
-#define DEFINE_DEPARSER_DIGEST(GRESS, NAME, CNT)                                \
-FOR_ALL_TARGETS(DEFINE_DIGEST_SETREGS_FORWARD, GRESS##NAME##Digest)             \
-static struct GRESS##NAME##Digest GRESS##NAME##Digest##_singleton;
-
-std::map<std::string, Deparser::Digest::Type *> Deparser::Digest::Type::all[2];
-
-ALL_DEPARSER_DIGESTS(DECLARE_DEPARSER_DIGEST)
+std::map<std::string, Deparser::Digest::Type *> Deparser::Digest::Type::all[TARGET_INDEX_LIMIT][2];
 
 void Deparser::start(int lineno, VECTOR(value_t) args) {
-    Digest::Type::init(options.target);
     if (args.size == 0) {
         this->lineno[INGRESS] = this->lineno[EGRESS] = lineno;
         return; }
@@ -192,7 +131,7 @@ void Deparser::input(VECTOR(value_t) args, value_t data) {
                     int unit = kv.key[1].i;
                     for (auto &ent : kv.value.vec)
                         checksum[gress][unit].emplace_back(gress, ent); }
-            } else if (auto *itype = ::get(Intrinsic::Type::all[gress], value_desc(&kv.key))) {
+            } else if (auto *itype = ::get(Intrinsic::Type::all[options.target][gress], value_desc(&kv.key))) {
                 intrinsics.emplace_back(itype, kv.key.lineno);
                 auto &intrin = intrinsics.back();
                 if (kv.value.type == tVEC) {
@@ -203,7 +142,7 @@ void Deparser::input(VECTOR(value_t) args, value_t data) {
                         intrin.vals.emplace_back(gress, el.key, el.value);
                 } else {
                     intrin.vals.emplace_back(gress, kv.value); }
-            } else if (auto *digest = ::get(Digest::Type::all[gress], value_desc(&kv.key))) {
+            } else if (auto *digest = ::get(Digest::Type::all[options.target][gress], value_desc(&kv.key))) {
                 if (CHECKTYPE(kv.value, tMAP))
                     digests.emplace_back(digest, kv.value.lineno, kv.value.map);
             } else
@@ -378,10 +317,6 @@ void output_phv_ownership(bitvec phv_use[2],
 #if HAVE_JBAY
 #include "jbay/deparser.cpp"      // jbay template specializations
 #endif // HAVE_JBAY
-
-// These defintions must be after the template specializations
-ALL_DEPARSER_INTRINSICS(DEFINE_DEPARSER_INTRINSIC)
-ALL_DEPARSER_DIGESTS(DEFINE_DEPARSER_DIGEST)
 
 void Deparser::output(json::map &) {
     switch(options.target) {
