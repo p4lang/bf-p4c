@@ -291,13 +291,15 @@ static void setup_jbay_ownership(bitvec phv_use, ubits_base &phv8, ubits_base &p
 template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
     regs.dprsrreg.dprsr_csr_ring.disable();
     regs.dprsrreg.dprsr_pbus.disable();
-    regs.dprsrreg.inpslice.disable();
     regs.dprsrreg.inp.icr.disable();            // disable this whole tree
     regs.dprsrreg.inp.icr.disabled_ = false;    // then enable just certain subtrees
+    regs.dprsrreg.inp.icr.csum_engine.enable();
     regs.dprsrreg.inp.icr.egr.enable(); 
     regs.dprsrreg.inp.icr.egr_meta_pov.enable(); 
     regs.dprsrreg.inp.icr.ingr.enable(); 
     regs.dprsrreg.inp.icr.ingr_meta_pov.enable(); 
+    regs.dprsrreg.inp.iim.disable();
+    regs.dprsrreg.inpslice.disable();
     for (auto &r : regs.dprsrreg.ho_i)
         r.out_ingr.disable();
     for (auto &r : regs.dprsrreg.ho_e)
@@ -309,6 +311,11 @@ template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
                         INGRESS, checksum[INGRESS]);
     dump_checksum_units(regs.input.iem.ie_phv_csum.csum_cfg, regs.header.hem.he_tphv_csum.csum_cfg,
                         EGRESS, checksum[EGRESS]);
+
+    // jbay register trees associated with checksums:
+    // regs.dprsrreg.inp.icr.csum_engine
+    // regs.dprsrreg.inp.ipp.phv_csum_phv_cfg
+    // regs.dprsrreg.inp.ipp_m.i_csum.engine
 #endif
 
     output_jbay_field_dictionary(lineno[INGRESS], regs.dprsrreg.inp.icr.ingr.chunk_info,
@@ -358,4 +365,8 @@ template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
         regs.disable_if_zero();
     regs.emit_json(*open_output("regs.deparser.cfg.json"));
     TopLevel::regs<Target::JBay>()->reg_pipe.pardereg.dprsrreg = "regs.deparser";
+}
+
+template<> Phv::Slice Deparser::RefOrChksum::lookup<Target::JBay>() const {
+    return Phv::Slice();
 }

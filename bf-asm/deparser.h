@@ -10,32 +10,35 @@ enum {
     DEPARSER_MAX_POV_BYTES = 32,
     DEPARSER_MAX_FD_ENTRIES = 384,
     DEPARSER_LEARN_GROUPS = 8,
-    DEPARSER_CHECKSUM_UNITS = 6,
+
+    // limits over all targets
+    MAX_DEPARSER_CHECKSUM_UNITS = 8,
 };
 
 class Deparser : public Section {
     static Deparser singleton_object;
 public:
+    struct Val {
+        Phv::Ref   val, pov;
+        Val(gress_t gr, const value_t &v) : val(gr, v) {}
+        Val(gress_t gr, const value_t &v, const value_t &p) : val(gr, v), pov(gr, p) {}
+    };
     class RefOrChksum : public Phv::Ref {
     public:
         RefOrChksum(gress_t g, const value_t &v) : Phv::Ref(g, v) {}
+        template<class TARGET> Phv::Slice lookup() const;
         bool check() const;
         Phv::Slice operator *() const;
         Phv::Slice operator->() const { return **this; }
     };
     int                                             lineno[2];
     std::vector<std::pair<RefOrChksum, Phv::Ref>>   dictionary[2];
-    std::vector<Phv::Ref>                           checksum[2][DEPARSER_CHECKSUM_UNITS];
+    std::vector<Phv::Ref>                           checksum[2][MAX_DEPARSER_CHECKSUM_UNITS];
     std::vector<Phv::Ref>                           pov_order[2];
     ordered_map<const Phv::Register *, unsigned>    pov[2];
     bitvec                                          phv_use[2];
     struct Intrinsic {
         struct Type;
-        struct Val {
-            Phv::Ref   val, pov;
-            Val(gress_t gr, const value_t &v) : val(gr, v) {}
-            Val(gress_t gr, const value_t &v, const value_t &p) : val(gr, v), pov(gr, p) {}
-        };
         Type                    *type;
         int                     lineno;
         std::vector<Val>        vals;

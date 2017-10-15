@@ -218,18 +218,13 @@ void Parser::output(json::map & ctxt_json) {
     for (auto st : all) st->pass2(this);
     if (error_count > 0) return;
     tcam_row_use[INGRESS] = tcam_row_use[EGRESS] = PARSER_TCAM_DEPTH;
-    switch (options.target) {
-#define SWITCH_FOR_TARGET(TARGET)                                        \
-    case Target::TARGET::tag: {                                          \
-        Target::TARGET::parser_regs       regs;                          \
-        declare_registers(&regs);                                        \
-        write_config(regs);                                              \
-        undeclare_registers(&regs);                                      \
-        gen_configuration_cache(regs, ctxt_json["configuration_cache"]); \
-        break; }
-    FOR_ALL_TARGETS(SWITCH_FOR_TARGET)
-#undef SWITCH_FOR_TARGET
-    default: assert(0); }
+    SWITCH_FOREACH_TARGET(options.target,
+        TARGET::parser_regs       regs;
+        declare_registers(&regs);
+        write_config(regs);
+        undeclare_registers(&regs);
+        gen_configuration_cache(regs, ctxt_json["configuration_cache"]);
+    )
 }
 
 Parser::Checksum::Checksum(gress_t gress, pair_t data) : lineno(data.key.lineno), gress(gress) {

@@ -186,13 +186,8 @@ void AsmStage::output(json::map &ctxt_json) {
             if (stage[i].stage_dep[gress] != Stage::MATCH_DEP)
                 stage[i-1].group_table_use[gress] |= stage[i].group_table_use[gress]; }
 
-    for (unsigned i = 0; i < stage.size(); i++) {
-        switch (options.target) {
-#define SWITCH_FOR_TARGET(TARGET) \
-        case Target::TARGET::tag: stage[i].output<Target::TARGET>(ctxt_json); break;
-        FOR_ALL_TARGETS(SWITCH_FOR_TARGET)
-#undef SWITCH_FOR_TARGET
-        default: assert(0); } }
+    for (unsigned i = 0; i < stage.size(); i++)
+        SWITCH_FOREACH_TARGET(options.target, stage[i].output<TARGET>(ctxt_json);)
 }
 
 static FakeTable invalid_rams("RAMS NOT PRESENT");

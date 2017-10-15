@@ -4,6 +4,8 @@
 #include <config.h>
 #include "bfas.h"
 
+/** FOR_ALL_TARGETS -- metamacro that expands a macro for each defined target
+ */
 #if HAVE_JBAY
 #define FOR_ALL_TARGETS(M, ...) \
     M(Tofino, ##__VA_ARGS__) \
@@ -75,6 +77,7 @@ class Target::Tofino : public Target {
     enum {
         NUM_MAU_STAGES = 12,
         ACTION_INSTRUCTION_MAP_WIDTH = 7,
+        DEPARSER_CHECKSUM_UNITS = 6,
     };
 };
 
@@ -134,6 +137,7 @@ class Target::JBay : public Target {
     enum {
         NUM_MAU_STAGES = 20,
         ACTION_INSTRUCTION_MAP_WIDTH = 8,
+        DEPARSER_CHECKSUM_UNITS = 8,
     };
 };
 void declare_registers(const Target::JBay::top_level_regs *regs);
@@ -143,5 +147,18 @@ void undeclare_registers(const Target::JBay::parser_regs *regs);
 void declare_registers(const Target::JBay::mau_regs *regs, int stage);
 void declare_registers(const Target::JBay::deparser_regs *regs);
 #endif // HAVE_JBAY
+
+/** Macro to buid a switch table switching on a target_t, expanding to the same
+ *  code for each target, with TARGET being a typedef for the target type */
+#define SWITCH_FOREACH_TARGET(VAR, ...)                         \
+        switch(VAR) {                                           \
+        FOR_ALL_TARGETS(DO_SWITCH_FOREACH_TARGET, __VA_ARGS__)  \
+        default: assert(0); }
+
+#define DO_SWITCH_FOREACH_TARGET(TARGET_, ...)                  \
+        case Target::TARGET_::tag: {                            \
+            typedef Target::TARGET_  TARGET;                    \
+            __VA_ARGS__                                         \
+            break; }
 
 #endif /* _target_h_ */

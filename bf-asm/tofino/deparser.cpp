@@ -145,10 +145,10 @@ template<typename IPO, typename HPO> static
 void dump_checksum_units(checked_array_base<IPO> &main_csum_units,
                          checked_array_base<HPO> &tagalong_csum_units,
                          gress_t gress,
-                         std::vector<Phv::Ref> checksum[DEPARSER_CHECKSUM_UNITS])
+                         std::vector<Phv::Ref> checksum[])
 {
     assert(phv2cksum[Target::Tofino::Phv::NUM_PHV_REGS-1][0] == 143);
-    for (int i = 0; i < DEPARSER_CHECKSUM_UNITS; i++) {
+    for (int i = 0; i < Target::Tofino::DEPARSER_CHECKSUM_UNITS; i++) {
         if (checksum[i].empty()) {
             if (!options.match_compiler)
                 continue; }
@@ -189,7 +189,7 @@ void dump_checksum_units(checked_array_base<IPO> &main_csum_units,
                     main_unit[phv2cksum[idx][1]].zero_m_s_b = 0;
                     main_unit[phv2cksum[idx][1]].swap = polarity; } } }
         // Thread non-tagalong checksum results through the tagalong unit
-        int idx = i + TAGALONG_THREAD_BASE + gress * DEPARSER_CHECKSUM_UNITS;
+        int idx = i + TAGALONG_THREAD_BASE + gress * Target::Tofino::DEPARSER_CHECKSUM_UNITS;
         tagalong_unit[idx].zero_l_s_b = 0;
         tagalong_unit[idx].zero_m_s_b = 0;
         tagalong_unit[idx].swap = 0; }
@@ -253,4 +253,19 @@ template<> void Deparser::write_config(Target::Tofino::deparser_regs &regs) {
     regs.header.emit_json(*open_output("regs.all.deparser.header_phase.cfg.json"));
     TopLevel::regs<Target::Tofino>()->reg_pipe.deparser.hdr = "regs.all.deparser.header_phase";
     TopLevel::regs<Target::Tofino>()->reg_pipe.deparser.inp = "regs.all.deparser.input_phase";
+}
+
+namespace {
+static struct ChecksumReg : public Phv::Register {
+    ChecksumReg(int unit) : Phv::Register("", Phv::Register::CHECKSUM, unit, unit+224, 16) {
+        sprintf(name, "csum%d", unit); }
+    int deparser_id() const override { return uid; }
+} checksum_units[12] = { {0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11} };
+}
+
+template<> Phv::Slice Deparser::RefOrChksum::lookup<Target::Tofino>() const {
+    if (lo != hi || lo < 0 || lo >= Target::Tofino::DEPARSER_CHECKSUM_UNITS) {
+        error(lineno, "Invalid checksum unit number");
+        return Phv::Slice(); }
+    return Phv::Slice(checksum_units[gress*Target::Tofino::DEPARSER_CHECKSUM_UNITS+lo], 0, 15);
 }

@@ -125,7 +125,7 @@ void Deparser::input(VECTOR(value_t) args, value_t data) {
                     pov_order[gress].emplace_back(gress, ent);
             } else if (kv.key == "checksum") {
                 if (kv.key.type != tCMD || kv.key.vec.size != 2 || kv.key[1].type != tINT ||
-                    kv.key[1].i < 0 || kv.key[1].i >= DEPARSER_CHECKSUM_UNITS)
+                    kv.key[1].i < 0 || kv.key[1].i >= MAX_DEPARSER_CHECKSUM_UNITS)
                     error(kv.key.lineno, "Invalid checksum unit number");
                 else if (CHECKTYPE(kv.value, tVEC)) {
                     int unit = kv.key[1].i;
@@ -170,7 +170,7 @@ void Deparser::process() {
                 if (!pov_use[gress][ent.second->reg.uid]) {
                     pov_order[gress].emplace_back(ent.second->reg);
                     pov_use[gress][ent.second->reg.uid] = 1; } } }
-        for (int i = 0; i < DEPARSER_CHECKSUM_UNITS; i++)
+        for (int i = 0; i < MAX_DEPARSER_CHECKSUM_UNITS; i++)
             for (auto &ent : checksum[gress][i])
                 if (ent.check() && (ent->lo != 0 || ent->hi != ent->reg.size - 1))
                     error(ent.lineno, "Can only do checksums on full phv registers, not slices"); }
@@ -319,46 +319,22 @@ void output_phv_ownership(bitvec phv_use[2],
 #endif // HAVE_JBAY
 
 void Deparser::output(json::map &) {
-    switch(options.target) {
-#define SWITCH_FOR_TARGET(TARGET)                                       \
-    case Target::TARGET::tag: {                                         \
-        Target::TARGET::deparser_regs    regs;                          \
-        declare_registers(&regs);                                       \
-        write_config(regs);                                             \
-        undeclare_registers(&regs);                                     \
-        break; }
-    FOR_ALL_TARGETS(SWITCH_FOR_TARGET)
-#undef SWITCH_FOR_TARGET
-    default: assert(0); }
+    SWITCH_FOREACH_TARGET(options.target,
+        TARGET::deparser_regs    regs;
+        declare_registers(&regs);
+        write_config(regs);
+        undeclare_registers(&regs);
+    )
 }
 
 bool Deparser::RefOrChksum::check() const {
-    if (name_ == "checksum") {
-        if (lo != hi || lo < 0 || lo >= DEPARSER_CHECKSUM_UNITS) {
-            error(lineno, "Invalid checksum unit number");
-            return false; }
-        return true; }
+    if (name_ == "checksum")
+        SWITCH_FOREACH_TARGET(options.target, return bool(lookup<TARGET>()); )
     return Phv::Ref::check();
 }
 
-// FIXME -- we need to set the uid explicitly here so it matches the encoding of the
-// FIXME -- checksums.  This works for tofino, but will fail for jbay as they won't be
-// FIXME -- unique.  They also don't get installed properly in Phv::regs, but that is
-// FIXME -- ok as we never ask for them (FIXME-PHV)
-namespace {
-static struct ChecksumReg : public Phv::Register {
-    ChecksumReg(int unit) : Phv::Register("", Phv::Register::CHECKSUM, unit, unit+224, 16) {
-        sprintf(name, "csum%d", unit); }
-    int deparser_id() const override { return uid; }
-} checksum_units[12] = { {0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11} };
-}
-
 Phv::Slice Deparser::RefOrChksum::operator *() const {
-    if (name_ == "checksum") {
-        if (lo != hi || lo < 0 || lo >= DEPARSER_CHECKSUM_UNITS) {
-            error(lineno, "Invalid checksum unit number");
-            return Phv::Slice(); }
-        return Phv::Slice(checksum_units[gress*DEPARSER_CHECKSUM_UNITS+lo], 0, 15); }
+    if (name_ == "checksum")
+        SWITCH_FOREACH_TARGET(options.target, return lookup<TARGET>(); )
     return Phv::Ref::operator*();
 }
-

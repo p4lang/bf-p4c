@@ -209,17 +209,17 @@ list_elements: list_elements list_element { $$ = $1; VECTOR_add($$, $2); }
 
 map_element
         : key ':' value '\n' { $$ = pair_t($1, $3); }
-        | flow_value ':' value '\n' { $$ = pair_t($1, $3); }
         | key ':' '\n' indent_elements { $$ = pair_t($1, $4); }
-        | flow_value ':' '\n' indent_elements { $$ = pair_t($1, $4); }
         | key ':' '\n' list_elements { $$ = pair_t($1, VAL($4)); }
-        | flow_value ':' '\n' list_elements { $$ = pair_t($1, VAL($4)); }
-        | '?' value  ':' value '\n' { $$ = pair_t($2, $4); }
+        | '?' value ':' value '\n' { $$ = pair_t($2, $4); }
+        | '?' value ':' '\n' indent_elements { $$ = pair_t($2, $5); }
+        | '?' value ':' '\n' list_elements { $$ = pair_t($2, VAL($5)); }
         | '?' value '\n' ':' value '\n' { $$ = pair_t($2, $5); }
         ;
 
 list_element
         : '-' key ':' value '\n' { $$ = singleton_map($2, $4); }
+        | '-' '?' value ':' value '\n' { $$ = singleton_map($3, $5); }
         | '-' value '\n' { $$ = $2; }
         | '-' ID comma_params '\n' { $$ = command($2, $3, yychar == '\n' ? 2 : 1); }
         | '-' ID comma_params ',' '\n' linewrapped_value_list
@@ -230,6 +230,7 @@ list_element
               { VECTOR_insert($6, 0); $6.data[0] = $3;
                 $$ = command($2, $6, yychar == '\n' ? 2 : 1); }
         | '-' key ':' '\n' indent_elements { $$ = singleton_map($2, $5); }
+        | '-' '?' value ':' '\n' indent_elements { $$ = singleton_map($3, $6); }
         ;
 
 key : ID { $$ = VAL($1); }
@@ -240,10 +241,10 @@ key : ID { $$ = VAL($1); }
     | INT DOTDOT INT { $$ = VAL($1, $3); }
     | ID '(' value_list ')' { $$ = CMD($1, $3); }
     | ID '(' ')' { $$ = VAL($1); }
+    | flow_value
     ;
 
 value: key
-    | flow_value
     | '-' value %prec UNARY { if (($$=$2).type == tINT) $$.i = -$$.i; else $$ = CMD(strdup("-"), $2); }
     | '!' value %prec UNARY { $$ = CMD(strdup("!"), $2); }
     | dotvals INT { VECTOR_add($1, VAL($2)); $$ = VAL($1); }
