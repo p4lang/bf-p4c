@@ -109,6 +109,7 @@ class PHV_Container {
     boost::optional<gress_t> gress_i;
 
     Container_status status_i = Container_status::EMPTY;
+    // TODO: Does this key need to be a nonconst? PHV::Field*
     ordered_map<PHV::Field *, std::list<Container_Content *>>
         fields_in_container_i;                               // fields binned in this container
                                                              // list of ccs necessary for multiple
@@ -245,6 +246,10 @@ class PHV_Container {
     void fields_in_container(std::list<Container_Content *>& cc_list);
     void fields_in_container(PHV::Field *f, Container_Content *cc);
     void fields_in_container(int start, int end, ordered_set<PHV::Field *>& f_set);
+
+    /// @returns true if @slice bits of field @f are allocated to this PHV_Container
+    /// Used by ActionPhvConstraints
+    bool is_field_slice_in_container(const PHV::Field *f, le_bitrange slice);
 
     std::pair<int, int> start_bit_and_width(PHV::Field *f);
     static void holes(

@@ -3,6 +3,7 @@
 
 #include <boost/optional.hpp>
 #include "ir/ir.h"
+#include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/mau/action_analysis.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/cluster_phv_container.h"
@@ -15,6 +16,16 @@
   * actions. 
  */
 class ActionPhvConstraints : public Inspector {
+ public:
+        struct PackingCandidate {
+            PHV::Field *field;
+            le_bitrange limits;
+
+            explicit PackingCandidate(PHV::Field* f, le_bitrange bits) :
+                field(f), limits(bits) {}
+        };
+
+ private:
     /// Defines a struct for a particular field operation: either read or write
     // TODO: Will we ever need a boolean indicating read or write in this
     // struct?
@@ -80,12 +91,15 @@ class ActionPhvConstraints : public Inspector {
     static int current_action;
 
     /** If PHV allocation has already been done for some fields, this function
-      * returns the number of unique containers used as sources
+      * returns the number of unique containers used as sources by the field slices used in a
+      * particular container.
       * @param
-      *     std::vector<PHV::Field*>: that are candidates for sharing a container
+      *     std::vector<PackingCandidate>& candidates: that are candidates for sharing a container
       *     IR::MAU::Action *: action for which number of sources must be determined
+      * candidates contains a field pointer, and the lo and hi bits of the field slice that is the
+      * candidate for packing into a particular container.
       */
-    uint32_t num_container_sources(std::vector<const PHV::Field *>&, const IR::MAU::Action *);
+    uint32_t num_container_sources(std::vector<PackingCandidate>&, const IR::MAU::Action *);
 
     /// @returns true if fields packed in the same container read from action data in action act
     bool has_ad_sources(std::vector<const PHV::Field *>& fields, const IR::MAU::Action *act);
@@ -124,7 +138,7 @@ class ActionPhvConstraints : public Inspector {
       * intermediate results (via the `PhvInfo` object). It may only be safely invoked *during* PHV
       * allocation.
       */
-    unsigned can_cohabit(std::vector<const PHV::Field *>& fields);
+    unsigned can_cohabit(std::vector<PackingCandidate>& fields);
 
     /** For GTest function.
       * Checks if the field_writes_to_actions ordered_map entry is valid or not

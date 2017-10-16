@@ -800,6 +800,21 @@ PHV_Container::fields_in_container(int start, int end, ordered_set<PHV::Field *>
     }  // for
 }  // fields_in_container fs_set
 
+bool PHV_Container::is_field_slice_in_container(const PHV::Field* f, le_bitrange slice) {
+    if (f == nullptr)
+        return false;
+    // XXX(deep)
+    // Because fields_in_container_i has a nonconst PHV::Field * as key, I am using const_cast
+    // as a temporary way to get around the const conversion error
+    PHV::Field *field = const_cast<PHV::Field *>(f);
+    if (fields_in_container_i.count(field) == 0)
+        return false;
+    for (auto cc_i : fields_in_container_i.at(field)) {
+        if (cc_i->field_bit_lo() == slice.lo && cc_i->field_bit_hi() == slice.hi)
+            return true; }
+    return false;
+}
+
 std::pair<int, int>
 PHV_Container::start_bit_and_width(PHV::Field *f) {
     //

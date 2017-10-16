@@ -63,12 +63,16 @@ void ActionPhvConstraints::end_apply() {
     LOG3("*****End Print ActionPhvConstraints Maps*****");
 }
 
-// TODO: Account for multiple containers per field
-uint32_t ActionPhvConstraints::num_container_sources(std::vector<const PHV::Field*>& fields,
+// xxx(deep)
+// Because of the nature of PHV allocation, field slices are always aligned with each other.
+// We make use of this assumption by using the same slice width as the destination field for
+// determining the number of containers used by the operand field
+uint32_t ActionPhvConstraints::num_container_sources(std::vector<PackingCandidate>& candidates,
         const IR::MAU::Action* action) {
     ordered_set<PHV_Container *> containerList;
-    LOG3("Fields size: " << fields.size());
-    for (auto field : fields) {
+    LOG3("Number of slices: " << candidates.size());
+    for (auto pack : candidates) {
+        auto field = pack.field;
         LOG3("Field name: " << field->name);
         if (write_to_reads_per_action[field][action].size() == 0)
             LOG3("Not written in this action");
@@ -76,13 +80,14 @@ uint32_t ActionPhvConstraints::num_container_sources(std::vector<const PHV::Fiel
             if (!operand.ad && !operand.constant) {
                 const PHV::Field* fieldRead = operand.phv_used;
                 LOG3("Field read: " << fieldRead->name);
-                // TODO: What if container has not yet been allocated?
+                // TODO: Is it possible that a container has not been allocated yet?
                 if (fieldRead->phv_containers().size() == 0)
                     LOG3("Container not assigned to PHV.");
                 LOG3("Number of containers read: " << fieldRead->phv_containers().size());
                 for (auto container : fieldRead->phv_containers()) {
-                    LOG3("Inserting container " << container);
-                    containerList.insert(container); } } } }
+                    if (container->is_field_slice_in_container(fieldRead, pack.limits)) {
+                            containerList.insert(container);
+                            LOG3("Inserting container " << container); } } } } }
     if (LOGGING(3)) {
         LOG3("Number of operands for " << action->name << ": " <<
                 (containerList.size()));
@@ -107,24 +112,29 @@ bool ActionPhvConstraints::has_ad_sources(std::vector<const PHV::Field*>& fields
 
 // TODO: Alignment constraints on fields
 // TODO: Return constraints instead of boolean
-// TODO: Handle cases where fields span more than one container
-unsigned ActionPhvConstraints::can_cohabit(std::vector<const PHV::Field*>& fields) {
+unsigned ActionPhvConstraints::can_cohabit(std::vector<PackingCandidate>& candidates) {
     /* Merge actions for all the candidate fields into a set */
     ordered_set<const IR::MAU::Action *> set_of_actions;
-    for (auto field : fields) {
+    std::vector<const PHV::Field *> fields;
+    for (auto pack : candidates) {
+        auto field = pack.field;
+        fields.push_back(field);
         set_of_actions.insert(field_writes_to_actions[field].begin(),
                 field_writes_to_actions[field].end()); }
 
     for (auto &action : set_of_actions) {
         LOG3("Action: " << action->name);
-        uint32_t num_srcs = num_container_sources(fields, action);
+        uint32_t num_srcs = num_container_sources(candidates, action);
         bool has_ad_srcs = has_ad_sources(fields, action);
         if (num_srcs == 1) {
             LOG3("One source detected");
             // TODO: Add check for similarity of the set operations
             continue;
         } else if (num_srcs == 0) {
-            LOG3("Can there be zero sources?");
+            if (has_ad_srcs)
+                LOG3("Action data source only");
+            else
+                LOG3("Can there be zero sources?");
             continue;
         } else if (num_srcs > 2) {
             LOG3("Action " << action->name << " uses more than two phv sources");

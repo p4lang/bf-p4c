@@ -1,4 +1,5 @@
 #include "bf-p4c/phv/cluster_phv_mau.h"
+#include <boost/range/adaptor/reversed.hpp>
 #include <cstdlib>
 #include "bf-p4c/device.h"
 #include "bf-p4c/phv/cluster_phv_operations.h"
@@ -469,15 +470,17 @@ void PHV_MAU_Group_Assignments::check_action_constraints() {
     // Check allocation for action induced constraints
     for (auto entry : phv_containers()) {
         if (entry.second->status() != PHV_Container::Container_status::EMPTY) {
-            std::vector<const PHV::Field *> existing_packing;
+            std::vector<ActionPhvConstraints::PackingCandidate> existing_packing;
             if (entry.second->fields_in_container().size() < 2)
                 continue;
             std::string packing_string;
             for (auto field : entry.second->fields_in_container()) {
-                existing_packing.push_back(field.first);
                 packing_string.append(field.first->name);
                 packing_string.append(" ");
-                if (existing_packing.size() > 2) {
+                for (auto cc : field.second)
+                    existing_packing.push_back(ActionPhvConstraints::PackingCandidate(field.first,
+                                le_bitrange(FromTo(cc->field_bit_lo(), cc->field_bit_hi()))));
+                if (existing_packing.size() >= 2) {
                     unsigned error_code = action_constraints.can_cohabit(existing_packing);
                     std::stringstream msg;
                     if (error_code != ActionAnalysis::ContainerAction::NO_PROBLEM)
@@ -1226,21 +1229,69 @@ PHV_MAU_Group_Assignments::match_cluster_to_cc_set(
             }  // for
         }
         //
-
         // Pass a vector to ActionPhvConstraints::can_cohabit to detect if any
         // action constraints prevent packing within the same container
         // 0th to (n-2)th elements of the n-element vector are the fields already
         // present in the container.
         // The last (n-1)th element is the field for which we are attempting to pack
-
-        std::vector<const PHV::Field *> packing_candidates;
-        for (auto field : c->fields_in_container())
-            packing_candidates.push_back(field.first);
-        packing_candidates.push_back(f);
+        // Along with the field itself, also pass it the relevant container content so that Action
+        // Analysis knows which slice of the field the container contains
+        std::vector<ActionPhvConstraints::PackingCandidate> packing_candidates;
+        for (auto field : c->fields_in_container()) {
+            for (auto cc : field.second)
+                packing_candidates.push_back(ActionPhvConstraints::PackingCandidate(field.first,
+                            le_bitrange(FromTo(cc->field_bit_lo(), cc->field_bit_hi())))); }
+        if (f->ccgf() == nullptr) {
+            // If a field is not part of a CCGF, then its (phv_use_lo, phv_use_hi) range represents
+            // the slice of the field that is a candidate for packing
+            packing_candidates.push_back(ActionPhvConstraints::PackingCandidate(f,
+                        le_bitrange(FromTo(f->phv_use_lo(), f->phv_use_hi()))));
+        } else {
+            /** If a field is a CCGF, then we need to examine which fields fall within the
+              * [phv_use_lo, phv_use_hi] range of the CCGF representative. E.g. suppose we have a
+              * CCGF formed of the following header fields:
+              *
+              *     bit<4> a;
+              *     bit<2> b;
+              *     bit<3> c;
+              *     bit<7> d;
+              *
+              * Suppose we are considering the slice [0,7] (i.e. phv_use_lo = 0, phv_use_hi =
+              * 7). The can_cohabit method must examine the co-habit of fields a, b, and c in
+              * addition to the existing packing for that container.
+              *
+              * On the other hand, if we only consider the candidate slice [4,7], then it needs to
+              * examine cohabiting only for fields b and c.
+              *
+              * This piece of the code walks through each CCGF member and checks if part of that
+              * member field falls within the [phv_use_lo, phv_use_hi] closed range.
+              *
+              */
+            auto use_range = le_bitrange(FromTo(f->phv_use_lo(), f->phv_use_hi()));
+            int offset = 0;
+            for (auto *field : boost::adaptors::reverse(f->ccgf_fields())) {
+                auto field_range = le_bitrange(StartLen(0, field->size)).shiftedByBits(offset);
+                if (use_range.overlaps(field_range)) {
+                    // intersectsWith() returns a HalfOpenRange because the result of
+                    // intersectWith() may be empty
+                    // In this case though, because intersectWith is only performed when overlaps is
+                    // true, the result of intersectWith should never be empty and so, it can be
+                    // safely converted to a ClosedRange.
+                    boost::optional<le_bitrange> phv_limits =
+                        toClosedRange(use_range.intersectWith(field_range));
+                    if (!phv_limits)
+                        BUG("Intersect operation must not return empty bitrange if the result of "
+                                "overlaps() is true");
+                    // As the check in can_cohabit is based on slices of fields [field_bit_lo,
+                    // field_bit_hi], we need to push the field slice limits onto packing_candidates
+                    // (and not the ccgf's phv use limits)
+                    auto field_limits = phv_limits.get().shiftedByBits(-offset);
+                    packing_candidates.push_back(ActionPhvConstraints::PackingCandidate(field,
+                                field_limits)); }
+                offset += field->size; } }
         if (action_constraints.can_cohabit(packing_candidates) !=
-                ActionAnalysis::ContainerAction::NO_PROBLEM)
-            return false;
-    }  // for
+                ActionAnalysis::ContainerAction::NO_PROBLEM) {
+            return false; } }  // for
     return true;
 }  // match_cluster_to_cc_set
 
