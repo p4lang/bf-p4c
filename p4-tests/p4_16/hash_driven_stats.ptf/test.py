@@ -7,7 +7,6 @@ from p4 import p4runtime_pb2
 
 from base_test import P4RuntimeTest
 
-#@testutils.disabled
 class CounterReadTest(P4RuntimeTest):
     def read_counter(self, name, port):
         req = p4runtime_pb2.ReadRequest()

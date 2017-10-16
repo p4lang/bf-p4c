@@ -6,7 +6,7 @@ from p4 import p4runtime_pb2
 from p4.tmp import p4config_pb2
 from p4.config import p4info_pb2
 
-from base_test import P4RuntimeTest, stringify
+from base_test import P4RuntimeTest, stringify, autocleanup
 
 import random
 
@@ -25,32 +25,12 @@ def dumbPacket(f1=0xabcd, f2=0xef, f3=0xaa, n1=0xb, n2=0xc):
     return s
 
 class BaseTest(P4RuntimeTest):
-    def setUp(self):
-        super(BaseTest, self).setUp()
-        self.reqs = []
-
-    def tearDown(self):
-        self.undo_write_requests(self.reqs)
-        super(BaseTest, self).tearDown()
-
     def add_entry(self, f1, pLen):
-        req = p4runtime_pb2.WriteRequest()
-        req.device_id = self.device_id
-        update = req.updates.add()
-        update.type = p4runtime_pb2.Update.INSERT
-        table_entry = update.entity.table_entry
-        table_entry.table_id = self.get_table_id("t")
-
-        self.set_match_key(
-            table_entry, "t",
-            [self.Lpm("h.f1", stringify(f1, 2), pLen)])
-        self.set_action_entry(
-            table_entry, "do", []) 
-
-        rep = self.stub.Write(req)
-        self.reqs.append(req)
+        self.send_request_add_entry_to_action(
+            "t", [self.Lpm("h.f1", stringify(f1, 2), pLen)], "do", [])
 
 class SimpleTest(BaseTest):
+    @autocleanup
     def runTest(self):
         ig_port = self.swports(1)
         eg_port = self.swports(3)

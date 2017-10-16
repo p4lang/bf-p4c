@@ -18,6 +18,7 @@
 #
 #
 
+from functools import wraps
 import sys
 import threading
 import time
@@ -72,6 +73,10 @@ class P4RuntimeTest(BaseTest):
         self.p4info = p4info_pb2.P4Info()
         with open(proto_txt_path, "rb") as fin:
             google.protobuf.text_format.Merge(fin.read(), self.p4info)
+
+        # used to store write requests sent to the P4Runtime server, useful for
+        # autocleanup of tests (see definition of autocleanup decorator below)
+        self._reqs = []
 
         self.set_up_stream()
 
@@ -232,7 +237,7 @@ class P4RuntimeTest(BaseTest):
             mf.ternary.value = self.v
 
     # Sets the match key for a p4::TableEntry object. mk needs to be an iterable
-    # object of MF instances.
+    # object of MF instances
     def set_match_key(self, table_entry, t_name, mk):
         for mf in mk:
             mf_id = self.get_mf_id(t_name, mf.name)
@@ -250,13 +255,144 @@ class P4RuntimeTest(BaseTest):
     def set_action_entry(self, table_entry, a_name, params):
         self.set_action(table_entry.action.action, a_name, params)
 
-    # iterates over all requests; if they are INSERT updates, replay them as
-    # DELETE updates; this is a convenient way to clean-up a lot of switch state
+    def write_request(self, req, store=True):
+        rep = self.stub.Write(req)
+        if store:
+            self._reqs.append(req)
+        return rep
+
+    #
+    # Convenience functions to build and send P4Runtime write requests
+    #
+
+    def _push_update_member(self, req, ap_name, mbr_id, a_name, params,
+                            update_type):
+        update = req.updates.add()
+        update.type = update_type
+        ap_member = update.entity.action_profile_member
+        ap_member.action_profile_id = self.get_ap_id(ap_name)
+        ap_member.member_id = mbr_id
+        self.set_action(ap_member.action, a_name, params)
+
+    def push_update_add_member(self, req, ap_name, mbr_id, a_name, params):
+        self._push_update_member(req, ap_name, mbr_id, a_name, params,
+                                 p4runtime_pb2.Update.INSERT)
+
+    def send_request_add_member(self, ap_name, mbr_id, a_name, params):
+        req = p4runtime_pb2.WriteRequest()
+        req.device_id = self.device_id
+        self.push_update_add_member(req, ap_name, mbr_id, a_name, params)
+        return req, self.write_request(req)
+
+    def push_update_modify_member(self, req, ap_name, mbr_id, a_name, params):
+        self._push_update_member(req, ap_name, mbr_id, a_name, params,
+                                 p4runtime_pb2.Update.MODIFY)
+
+    def send_request_modify_member(self, ap_name, mbr_id, a_name, params):
+        req = p4runtime_pb2.WriteRequest()
+        req.device_id = self.device_id
+        self.push_update_modify_member(req, ap_name, mbr_id, a_name, params)
+        return req, self.write_request(req, store=False)
+
+    def push_update_add_group(self, req, ap_name, grp_id, grp_size=32,
+                              mbr_ids=[]):
+        update = req.updates.add()
+        update.type = p4runtime_pb2.Update.INSERT
+        ap_group = update.entity.action_profile_group
+        ap_group.action_profile_id = self.get_ap_id(ap_name)
+        ap_group.group_id = grp_id
+        ap_group.max_size = grp_size
+        for mbr_id in mbr_ids:
+            member = ap_group.members.add()
+            member.member_id = mbr_id
+
+    def send_request_add_group(self, ap_name, grp_id, grp_size=32, mbr_ids=[]):
+        req = p4runtime_pb2.WriteRequest()
+        req.device_id = self.device_id
+        self.push_update_add_group(req, ap_name, grp_id, grp_size, mbr_ids)
+        return req, self.write_request(req)
+
+    def push_update_set_group_membership(self, req, ap_name, grp_id,
+                                         mbr_ids=[]):
+        update = req.updates.add()
+        update.type = p4runtime_pb2.Update.MODIFY
+        ap_group = update.entity.action_profile_group
+        ap_group.action_profile_id = self.get_ap_id(ap_name)
+        ap_group.group_id = grp_id
+        for mbr_id in mbr_ids:
+            member = ap_group.members.add()
+            member.member_id = mbr_id
+
+    def send_request_set_group_membership(self, ap_name, grp_id, mbr_ids=[]):
+        req = p4runtime_pb2.WriteRequest()
+        req.device_id = self.device_id
+        self.push_update_set_group_membership(req, ap_name, grp_id, mbr_ids)
+        return req, self.write_request(req, store=False)
+
+    #
+    # for all add_entry function, use mk == None for default entry
+    #
+    # TODO(antonin): default entry support in P4Runtime is in the process of
+    # being updated, so the code below will need to change slightly
+    # soon. Additionally, the current P4Runtime reference implementation on
+    # p4lang does not support resetting the default entry (i.e. a DELETE
+    # operation on the default entry), which is why we make sure not to include
+    # it in the list used for autocleanup, by passing store=False to
+    # write_request calls.
+    #
+
+    def push_update_add_entry_to_action(self, req, t_name, mk, a_name, params):
+        update = req.updates.add()
+        update.type = p4runtime_pb2.Update.INSERT
+        table_entry = update.entity.table_entry
+        table_entry.table_id = self.get_table_id(t_name)
+        if mk is not None:
+            self.set_match_key(table_entry, t_name, mk)
+        self.set_action_entry(table_entry, a_name, params)
+
+    def send_request_add_entry_to_action(self, t_name, mk, a_name, params):
+        req = p4runtime_pb2.WriteRequest()
+        req.device_id = self.device_id
+        self.push_update_add_entry_to_action(req, t_name, mk, a_name, params)
+        return req, self.write_request(req, store=(mk is not None))
+
+    def push_update_add_entry_to_member(self, req, t_name, mk, mbr_id):
+        update = req.updates.add()
+        update.type = p4runtime_pb2.Update.INSERT
+        table_entry = update.entity.table_entry
+        table_entry.table_id = self.get_table_id(t_name)
+        if mk is not None:
+            self.set_match_key(table_entry, t_name, mk)
+        table_entry.action.action_profile_member_id = mbr_id
+
+    def send_request_add_entry_to_member(self, t_name, mk, mbr_id):
+        req = p4runtime_pb2.WriteRequest()
+        req.device_id = self.device_id
+        self.push_update_add_entry_to_member(req, t_name, mk, mbr_id)
+        return req, self.write_request(req, store=(mk is not None))
+
+    def push_update_add_entry_to_group(self, req, t_name, mk, grp_id):
+        update = req.updates.add()
+        update.type = p4runtime_pb2.Update.INSERT
+        table_entry = update.entity.table_entry
+        table_entry.table_id = self.get_table_id(t_name)
+        if mk is not None:
+            self.set_match_key(table_entry, t_name, mk)
+        table_entry.action.action_profile_group_id = grp_id
+
+    def send_request_add_entry_to_group(self, t_name, mk, grp_id):
+        req = p4runtime_pb2.WriteRequest()
+        req.device_id = self.device_id
+        self.push_update_add_entry_to_group(req, t_name, mk, grp_id)
+        return req, self.write_request(req, store=(mk is not None))
+
+    # iterates over all requests in reverse order; if they are INSERT updates,
+    # replay them as DELETE updates; this is a convenient way to clean-up a lot
+    # of switch state
     def undo_write_requests(self, reqs):
         updates = []
-        for req in reqs:
-            for i in xrange(len(req.updates)):
-                update = req.updates.pop()
+        for req in reversed(reqs):
+            for update in reversed(req.updates):
                 if update.type == p4runtime_pb2.Update.INSERT:
                     updates.append(update)
         new_req = p4runtime_pb2.WriteRequest()
@@ -265,3 +401,29 @@ class P4RuntimeTest(BaseTest):
             update.type = p4runtime_pb2.Update.DELETE
             new_req.updates.add().CopyFrom(update)
         rep = self.stub.Write(new_req)
+
+# this decorator can be used on the runTest method of P4Runtime PTF tests
+# when it is used, the undo_write_requests will be called at the end of the test
+# (irrespective of whether the test was a failure, a success, or an exception
+# was raised). When this is used, all write requests must be performed through
+# one of the send_request_* convenience functions, or by calling write_request;
+# do not use stub.Write directly!
+# most of the time, it is a great idea to use this decorator, as it makes the
+# tests less verbose. In some circumstances, it is difficult to use it, in
+# particular when the test itself issues DELETE request to remove some
+# objects. In this case you will want to do the cleanup yourself (in the
+# tearDown function for example); you can still use undo_write_request which
+# should make things easier.
+# because the PTF test writer needs to choose whether or not to use autocleanup,
+# it seems more appropriate to define a decorator for this rather than do it
+# unconditionally in the P4RuntimeTest tearDown method.
+def autocleanup(f):
+    @wraps(f)
+    def handle(*args, **kwargs):
+        test = args[0]
+        assert(isinstance(test, P4RuntimeTest))
+        try:
+            return f(*args, **kwargs)
+        finally:
+            test.undo_write_requests(test._reqs)
+    return handle

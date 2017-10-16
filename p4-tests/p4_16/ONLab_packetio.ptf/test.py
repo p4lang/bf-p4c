@@ -5,19 +5,13 @@ import ptf.testutils as testutils
 
 from p4 import p4runtime_pb2
 
-from base_test import P4RuntimeTest, stringify
+from base_test import P4RuntimeTest, stringify, autocleanup
 
-#@testutils.disabled
 class PacketInTest(P4RuntimeTest):
+    @autocleanup
     def runTest(self):
-        req = p4runtime_pb2.WriteRequest()
-        req.device_id = self.device_id
-        update = req.updates.add()
-        update.type = p4runtime_pb2.Update.INSERT
-        table_entry = update.entity.table_entry
-        table_entry.table_id = self.get_table_id("table0")
-        self.set_action_entry(table_entry, "send_to_cpu", [])
-        response = self.stub.Write(req)
+        # default entry
+        self.send_request_add_entry_to_action("table0", None, "send_to_cpu", [])
 
         payload = 'a' * 64
         ingress_port = self.swports(3)
@@ -32,7 +26,6 @@ class PacketInTest(P4RuntimeTest):
                 break
         self.assertEqual(ingress_port, ingress_port_hex)
 
-#@testutils.disabled
 class PacketOutTest(P4RuntimeTest):
     def runTest(self):
         port = 3

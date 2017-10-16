@@ -8,7 +8,7 @@ from p4.tmp import p4config_pb2
 from p4.config import p4info_pb2
 import google.protobuf.text_format
 
-from base_test import P4RuntimeTest, stringify
+from base_test import P4RuntimeTest, stringify, autocleanup
 
 class FullTest(P4RuntimeTest):
     def runCommonTest(self, proto_entries):
@@ -19,7 +19,7 @@ class FullTest(P4RuntimeTest):
         with open(p4runtime_request_path, "r") as fin:
             google.protobuf.text_format.Merge(fin.read(), p4runtime_request)
         print "Sending request to switch"
-        response = self.stub.Write(p4runtime_request)
+        response = self.write_request(p4runtime_request)
 
         h1_eth  = "EE:61:23:BC:E5:00"
         h1_ip   = "172.24.111.01"
@@ -63,97 +63,50 @@ class FullTest(P4RuntimeTest):
 
         testutils.verify_no_other_packets(self)
 
-        # cleanup, we need to perform request in inverse order
-        updates = []
-        for i in xrange(len(p4runtime_request.updates)):
-            updates.append(p4runtime_request.updates.pop())
-        for update in updates:
-            update.type = p4runtime_pb2.Update.DELETE
-            p4runtime_request.updates.add().CopyFrom(update)
-        response = self.stub.Write(p4runtime_request)
-
 class FullTestGroups(FullTest):
+    @autocleanup
     def runTest(self):
         # Pick entries from 'tor.ptf/write_lpm_entries.pb.txt'
         self.runCommonTest("write_lpm_entries.pb.txt")
 
 class FullTestMembersOnly(FullTest):
+    @autocleanup
     def runTest(self):
         # Pick entries from 'tor.ptf/write_lpm_entries_members_only.pb.txt'
         self.runCommonTest("write_lpm_entries_members_only.pb.txt")
 
 class HashDistributionTest(P4RuntimeTest):
+    ap_name = "l3_fwd.wcmp_action_profile"
+
     def add_member(self, mbr_id, eg_port, smac, dmac):
         print "Creating member", mbr_id
         eg_port_str = stringify(eg_port, 2)
-        req = p4runtime_pb2.WriteRequest()
-        req.device_id = self.device_id
-        update = req.updates.add()
-        update.type = p4runtime_pb2.Update.INSERT
-        ap_member = update.entity.action_profile_member
-        ap_member.action_profile_id = self.get_ap_id(
-            "l3_fwd.wcmp_action_profile")
-        ap_member.member_id = mbr_id
-        self.set_action(ap_member.action, "l3_fwd.set_nexthop",
-                        [("port", eg_port_str), ("smac", smac), ("dmac", dmac)])
-        rep = self.stub.Write(req)
-        self.requests.append(req)
+        self.send_request_add_member(
+            self.ap_name, mbr_id, "l3_fwd.set_nexthop",
+            [("port", eg_port_str), ("smac", smac), ("dmac", dmac)])
 
     def add_group(self, grp_id):
         print "Creating group", grp_id
-        req = p4runtime_pb2.WriteRequest()
-        req.device_id = self.device_id
-        update = req.updates.add()
-        update.type = p4runtime_pb2.Update.INSERT
-        ap_group = update.entity.action_profile_group
-        ap_group.action_profile_id = self.get_ap_id(
-            "l3_fwd.wcmp_action_profile")
-        ap_group.group_id = grp_id
-        ap_group.max_size = 32
-        rep = self.stub.Write(req)
-        self.requests.append(req)
+        self.send_request_add_group(self.ap_name, grp_id)
 
     def set_group_membership(self, grp_id, mbr_ids = []):
         print "Setting members for group", grp_id
-        req = p4runtime_pb2.WriteRequest()
-        req.device_id = self.device_id
-        update = req.updates.add()
-        update.type = p4runtime_pb2.Update.MODIFY
-        ap_group = update.entity.action_profile_group
-        ap_group.action_profile_id = self.get_ap_id(
-            "l3_fwd.wcmp_action_profile")
-        ap_group.group_id = grp_id
-        for mbr_id in mbr_ids:
-            member = ap_group.members.add()
-            member.member_id = mbr_id
-        rep = self.stub.Write(req)
+        self.send_request_set_group_membership(self.ap_name, grp_id, mbr_ids)
 
     def add_entry_to_group(self, mac, pref, pLen, grp_id):
         print "Adding match entry to group", grp_id
         req = p4runtime_pb2.WriteRequest()
         req.device_id = self.device_id
-        update = req.updates.add()
-        update.type = p4runtime_pb2.Update.INSERT
-        table_entry = update.entity.table_entry
-        table_entry.table_id = self.get_table_id(
-            "l3_fwd.l3_routing_classifier_table")
-        self.set_match_key(
-            table_entry, "l3_fwd.l3_routing_classifier_table",
-            [self.Exact("hdr.ethernet.dst_addr", mac)])
-        self.set_action_entry(table_entry, "NoAction", [])
-        update = req.updates.add()
-        update.type = p4runtime_pb2.Update.INSERT
-        table_entry = update.entity.table_entry
-        table_entry.table_id = self.get_table_id(
-            "l3_fwd.l3_ipv4_override_table")
-        self.set_match_key(
-            table_entry, "l3_fwd.l3_ipv4_override_table",
-            [self.Lpm("hdr.ipv4_base.dst_addr", pref, pLen)])
-        table_entry.action.action_profile_group_id = grp_id
-        rep = self.stub.Write(req)
-        self.requests.append(req)
+        self.push_update_add_entry_to_action(
+            req, "l3_fwd.l3_routing_classifier_table",
+            [self.Exact("hdr.ethernet.dst_addr", mac)], "NoAction", [])
+        self.push_update_add_entry_to_group(
+            req, "l3_fwd.l3_ipv4_override_table",
+            [self.Lpm("hdr.ipv4_base.dst_addr", pref, pLen)], grp_id)
+        self.write_request(req)
 
-    def runtest(self):
+    @autocleanup
+    def runTest(self):
         ig_port = self.swports(3)
         mbr1, port1 = 1, self.swports(1)
         mbr2, port2 = 2, self.swports(2)
@@ -190,13 +143,6 @@ class HashDistributionTest(P4RuntimeTest):
         for c in counts:
             self.assertGreater(c, npkts / 4)
 
-    def runTest(self):
-        self.requests = []
-        try:
-            self.runtest()
-        finally:
-            self.undo_write_requests(self.requests)
-
 class PacketOutTest(P4RuntimeTest):
     def runTest(self):
         # We test the case where the packet is skipping ingress & egress
@@ -219,6 +165,7 @@ class PacketOutTest(P4RuntimeTest):
         testutils.verify_no_other_packets(self)
 
 class PacketOutTestCheckSkipIngress(P4RuntimeTest):
+    @autocleanup
     def runTest(self):
         # We test the case where the packet is skipping ingress & egress
         # (i.e. submit_to_ingress == 0)
@@ -236,64 +183,36 @@ class PacketOutTestCheckSkipIngress(P4RuntimeTest):
 
         # add an entry to punt the packet to CPU, in order to check that ingress
         # is actually skipped
-        req = p4runtime_pb2.WriteRequest()
-        req.device_id = self.device_id
-        update = req.updates.add()
-        update.type = p4runtime_pb2.Update.INSERT
-        table_entry = update.entity.table_entry
-        table_entry.table_id = self.get_table_id("punt.punt_table")
-        self.set_match_key(
-            table_entry, "punt.punt_table",
-            [self.Ternary("standard_metadata.egress_spec", port3_hex,
-                          "\x01\xff")])
-        self.set_action_entry(table_entry, "punt.set_queue_and_send_to_cpu",
-                              [("queue_id", "\x01")])
-        response = self.stub.Write(req)
+        mask = "\x01\xff"
+        self.send_request_add_entry_to_action(
+            "punt.punt_table",
+            [self.Ternary("standard_metadata.egress_spec", port3_hex, mask)],
+            "punt.set_queue_and_send_to_cpu", [("queue_id", "\x01")])
 
-        try:
-            self.send_packet_out(packet_out)
-            testutils.verify_packet(self, payload, port3)
-            testutils.verify_no_other_packets(self)
-        finally:
-            update.type = p4runtime_pb2.Update.DELETE
-            response = self.stub.Write(req)
+        self.send_packet_out(packet_out)
+        testutils.verify_packet(self, payload, port3)
+        testutils.verify_no_other_packets(self)
 
 class PacketInTest(P4RuntimeTest):
-    def setUp(self):
-        super(PacketInTest, self).setUp()
-
-    def tearDown(self):
-        super(PacketInTest, self).tearDown()
-
+    @autocleanup
     def runTest(self):
         # Add an entry to punt table which says that all packets coming on port
         # 3 should be sent to CPU
         port3 = self.swports(3)
         port3_hex = stringify(port3, 2)
-        req = p4runtime_pb2.WriteRequest()
-        req.device_id = self.device_id
-        update = req.updates.add()
-        update.type = p4runtime_pb2.Update.INSERT
-        table_entry = update.entity.table_entry
-        table_entry.table_id = self.get_table_id("punt.punt_table")
-        self.set_match_key(
-            table_entry, "punt.punt_table",
-            [self.Ternary("standard_metadata.ingress_port", port3_hex, "\x01\xff")])
-        self.set_action_entry(table_entry, "punt.set_queue_and_send_to_cpu",
-                              [("queue_id", "\x01")])
-        response = self.stub.Write(req)
+        mask = "\x01\xff"
+        self.send_request_add_entry_to_action(
+            "punt.punt_table",
+            [self.Ternary("standard_metadata.ingress_port", port3_hex, mask)],
+            "punt.set_queue_and_send_to_cpu", [("queue_id", "\x01")])
 
         payload = 'a' * 64 
-        try:
-            testutils.send_packet(self, port3, payload)
-            packet_in = self.get_packet_in()
-            self.assertEqual(packet_in.payload, payload)
-            ingress_physical_port = None
-            for metadata in packet_in.metadata:
-                if metadata.metadata_id == 1:
-                    ingress_physical_port = metadata.value
-                    break
-            self.assertEqual(ingress_physical_port, port3_hex)
-        finally:
-            update.type = p4runtime_pb2.Update.DELETE
-            response = self.stub.Write(req)
+        testutils.send_packet(self, port3, payload)
+        packet_in = self.get_packet_in()
+        self.assertEqual(packet_in.payload, payload)
+        ingress_physical_port = None
+        for metadata in packet_in.metadata:
+            if metadata.metadata_id == 1:
+                ingress_physical_port = metadata.value
+                break
+        self.assertEqual(ingress_physical_port, port3_hex)

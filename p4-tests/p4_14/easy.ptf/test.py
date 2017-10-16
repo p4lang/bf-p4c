@@ -21,24 +21,14 @@ class MyTest(P4RuntimeTest):
         testutils.send_packet(self, ig_port, str(pkt))
         testutils.verify_packet(self, pkt, eg_port)
 
-        req = p4runtime_pb2.WriteRequest()
-        req.device_id = self.device_id
-        update = req.updates.add()
-        update.type = p4runtime_pb2.Update.INSERT
-        table_entry = update.entity.table_entry
-        table_entry.table_id = self.get_table_id("t")
-        self.set_action_entry(table_entry, "nop", [])
-
-        rep = self.stub.Write(req)
+        self.send_request_add_entry_to_action("t", None, "nop", [])
 
         testutils.send_packet(self, ig_port, str(pkt))
         testutils.verify_no_other_packets(self)
 
         # restore default action
         # port must be 2 bytes
-        self.set_action_entry(table_entry, "do", [])
-
-        rep = self.stub.Write(req)
+        self.send_request_add_entry_to_action("t", None, "do", [])
 
         testutils.send_packet(self, ig_port, str(pkt))
         testutils.verify_packet(self, pkt, eg_port)
