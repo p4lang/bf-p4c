@@ -744,6 +744,14 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Field is marked as deparsed, but the deparser doesn't emit it"
   testdata/p4_16_samples/issue430-1-bmv2.p4
+  extensions/p4_tests/p4_16/cast_narrowing_set.p4
+  extensions/p4_tests/p4_16/cast_widening_set.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "warning: : Currently the Barefoot HW compiler cannot handle any non direct assignment instruction that has missized rvalues"
+  extensions/p4_tests/p4_16/cast_narrowing_add.p4
+  extensions/p4_tests/p4_16/cast_widening_add.p4
   )
 
 p4c_add_xfail_reason("tofino"
