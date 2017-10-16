@@ -402,6 +402,9 @@ class FixP4Table : public Transform {
             LOG3("attaching " << obj->name << " to " << tt->name);
             tt->attached.push_back(obj);
         } else if (prop->name == "support_timeout") {
+            auto bool_lit = ev->expression->to<IR::BoolLiteral>();
+            if (bool_lit == nullptr || bool_lit->value == false)
+                return ev;
             auto table = findContext<IR::P4Table>();
             auto annot = table->getAnnotations();
             auto it = createIdleTime(table->name, annot);

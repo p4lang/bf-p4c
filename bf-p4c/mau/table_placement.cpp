@@ -145,6 +145,7 @@ struct TablePlacement::Placed {
     const IR::MAU::Table        *table, *gw = 0;
     int                         stage, logical_id;
     StageUseEstimate            use;
+    StageUseEstimate            extra_use;
     const TableResourceAlloc    *resources;
     Placed(TablePlacement &self, const IR::MAU::Table *t)
         : self(self), id(++uid_counter), table(t) {
@@ -237,9 +238,15 @@ static StageUseEstimate get_current_stage_use(const TablePlacement::Placed *pl) 
     StageUseEstimate    rv;
     if (pl) {
         stage = pl->stage;
-        rv = pl->use;
-        for (pl = pl->prev; pl && pl->stage == stage; pl = pl->prev)
-            rv += pl->use; }
+        for (; pl && pl->stage == stage; pl = pl->prev) {
+            rv += pl->use;
+            for (auto at : pl->table->attached) {
+                if (auto ad = at->to<IR::MAU::ActionData>()) {
+                    rv.shared_action_data.insert(ad);
+                }
+            }
+        }
+    }
     return rv;
 }
 
@@ -308,11 +315,13 @@ static bool try_alloc_ixbar(TablePlacement::Placed *next, const TablePlacement::
     if (!current_ixbar.allocTable(next->table, phv, *resources, sue.preferred()) ||
         !current_ixbar.allocTable(next->gw, phv, *resources, sue.preferred())) {
         resources->clear_ixbar();
+        LOG1("Failed in ixbar?");
         return false; }
 
     const bitvec immediate_mask = lc.get_action_format(next->table).immediate_mask;
     if (!is_gw && !try_alloc_format(next, resources, sue, immediate_mask, next->gw)) {
         resources->clear_ixbar();
+        LOG1("Failed in format?");
         return false;
     }
 
@@ -432,26 +441,31 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
                 return nullptr; }
             set_entries -= p->entries;
         } else if (p->stage == rv->stage) {
-             if (deps->happens_before(p->table, rv->table) && !mutex.action(p->table, rv->table))
+             if (deps->happens_before(p->table, rv->table) && !mutex.action(p->table, rv->table)) {
                  rv->stage++;
-             else if (rv->gw && deps->happens_before(p->table, rv->gw))
+                 LOG2(" - dependency between " << p->table->name << " and table advances stage");
+             } else if (rv->gw && deps->happens_before(p->table, rv->gw)) {
                  rv->stage++;
+                 LOG2(" - dependency between " << p->table->name << " and gateway advances stage");
+             }
         }
     }
     assert(!rv->placed[tblInfo.at(rv->table).uid]);
     min_resources->action_format = lc.get_action_format(t);
     resources->action_format = lc.get_action_format(t);
     const safe_vector<LayoutOption> layout_options = lc.get_layout_options(t);
-    StageUseEstimate min_use(t, min_entries, prev_placed, has_action_data, layout_options);
     StageUseEstimate stage_current = current;
     if (done && rv->stage != done->stage)
         stage_current.clear();
+    StageUseEstimate min_use(t, min_entries, prev_placed, has_action_data, layout_options,
+                             stage_current.shared_action_data);
 
     bool allocated = false;
     bool ixbar_allocation_bug = false;
     bool mem_allocation_bug = false;
     bool adb_allocation_bug = false;
     int furthest_stage = (done == nullptr) ? 0 : done->stage + 1;
+    LOG3("Initial stage is " << rv->stage);
 
     /* Loop to find the right size of entries for a table to place into stage */
     do {
@@ -459,7 +473,8 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
         auto avail = StageUseEstimate::max();
         bool advance_to_next_stage = false;
         allocated = false; ixbar_allocation_bug = false; mem_allocation_bug = false;
-        rv->use = StageUseEstimate(t, rv->entries, prev_placed, has_action_data, layout_options);
+        rv->use = StageUseEstimate(t, rv->entries, prev_placed, has_action_data, layout_options,
+                                   stage_current.shared_action_data);
         // FIXME: This is not the appropriate way to check if a table is a single gateway
         bool is_gw = rv->entries == 0;
 
@@ -484,6 +499,8 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
                         min_resources,
                         min_use,
                         prev_resources))) {
+            LOG1("First boolean " << (min_use + stage_current <= avail));
+            LOG1("Min_use rams " << min_use.srams << " " << stage_current.srams);
             mem_allocation_bug = true;
             advance_to_next_stage = true;
             LOG3("Min use of memory allocation did not fit");
@@ -556,7 +573,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
     } while (!allocated && rv->stage <= furthest_stage);
 
     // FIXME: for a particular test case, adding more entries actually filled in the table better
-    if (rv->need_more && rv->entries > set_entries)
+    if (rv->need_more && rv->entries >= set_entries)
         rv->need_more = false;
 
     if (rv->stage > furthest_stage) {
@@ -589,7 +606,12 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
     if (!rv->need_more) {
         rv->placed[tblInfo.at(rv->table).uid] = true;
         if (rv->gw)
-            rv->placed[tblInfo.at(rv->gw).uid] = true; }
+            rv->placed[tblInfo.at(rv->gw).uid] = true;
+    } else {
+        int extra_entries = set_entries - rv->entries;
+        has_action_data |= rv->use.preferred()->layout.direct_ad_required();
+        rv->extra_use = StageUseEstimate(t, extra_entries, true, has_action_data, layout_options);
+    }
     /* FIXME -- need to redo IXBar alloc if we moved to the next stage?  Or if we need less
      * hash indexing bits for smaller ways? */
     return rv;
@@ -600,6 +622,7 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed *
     LOG1("placing " << pl->entries << " entries of " << pl->name << (pl->gw ? " (with gw " : "") <<
          (pl->gw ? pl->gw->name : "") << (pl->gw ? ")" : "") << " in stage " <<
          pl->stage << (pl->need_more ? " (need more)" : ""));
+    LOG1("Use RAMs " << pl->table->name << " " << pl->use.srams);
     if (!pl->need_more) {
         pl->group->finish_if_placed(work, pl);
         GroupPlace *gw_match_grp = nullptr;
@@ -654,13 +677,17 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b) {
     if (a->stage < b->stage) return true;
     if (a->stage > b->stage) return false;
 
-    int a_deps_stages = deps->dependence_tail_size(a->table);
-    int b_deps_stages = deps->dependence_tail_size(b->table);
+    int a_extra_stages = a->need_more ? a->extra_use.stages_required() : 0;
+    int b_extra_stages = b->need_more ? b->extra_use.stages_required() : 0;
+
+    int a_deps_stages = deps->dependence_tail_size(a->table) + a_extra_stages;
+    int b_deps_stages = deps->dependence_tail_size(b->table) + b_extra_stages;
+
     if (a_deps_stages > b_deps_stages) return true;
     if (a_deps_stages < b_deps_stages) return false;
 
-    int a_total_deps = deps->happens_before_dependences(a->table).size();
-    int b_total_deps = deps->happens_before_dependences(b->table).size();
+    int a_total_deps = deps->happens_before_dependences(a->table).size() + a_extra_stages;
+    int b_total_deps = deps->happens_before_dependences(b->table).size() + b_extra_stages;
     if (a_total_deps < b_total_deps) return true;
     if (a_total_deps > b_total_deps) return false;
 
@@ -709,6 +736,7 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
         LOG3("stage " << (placed ? placed->stage : 0) << ", work: " << work <<
              ", partly placed " << partly_placed.size() << ", placed " << count(placed));
         StageUseEstimate current = get_current_stage_use(placed);
+        LOG1("Initialize current");
         safe_vector<const Placed *> trial;
         for (auto it = work.begin(); it != work.end();) {
             auto grp = *it;

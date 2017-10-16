@@ -421,9 +421,9 @@ struct Memories {
 
     bool find_mem_and_bus_for_idletime(std::vector<std::pair<int, std::vector<int>>>& mem_locs,
                                     int& bus, int total_mem_required, bool top_half);
-    bool allocate_idletime_in_top_or_bottom_half(const SRAM_group* idletime_group,
+    bool allocate_idletime_in_top_or_bottom_half(SRAM_group* idletime_group,
                                                  bool top_or_bottom);
-    bool allocate_idletime(const SRAM_group* idletime_group);
+    bool allocate_idletime(SRAM_group* idletime_group);
     bool allocate_all_idletime();
 
  public:

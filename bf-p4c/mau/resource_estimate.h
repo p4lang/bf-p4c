@@ -5,14 +5,18 @@
 #include "lib/safe_vector.h"
 
 struct StageUseEstimate {
-    int logical_ids;
-    int srams, tcams, maprams;
-    int exact_ixbar_bytes;
-    int ternary_ixbar_groups;
-    bool prev_placed; bool has_action_data;
+    int logical_ids = 0;
+    int srams = 0;
+    int tcams = 0;
+    int maprams = 0;
+    int exact_ixbar_bytes = 0;
+    int ternary_ixbar_groups = 0;
+    bool prev_placed = false;
+    bool has_action_data = false;
     safe_vector<LayoutOption> layout_options;
+    ordered_set<const IR::MAU::ActionData *> shared_action_data;
     int preferred_index;
-    StageUseEstimate() { memset(this, 0, sizeof(*this)); }
+    StageUseEstimate() {}
     StageUseEstimate &operator+=(const StageUseEstimate &a) {
         logical_ids += a.logical_ids;
         srams += a.srams;
@@ -23,7 +27,10 @@ struct StageUseEstimate {
         return *this; }
     StageUseEstimate(const IR::MAU::Table *, int &, bool pp, bool had,
                      const safe_vector<LayoutOption> &lo,
+                     ordered_set<const IR::MAU::ActionData *> sad
+                         = ordered_set<const IR::MAU::ActionData *>(),
                      bool table_placement = false);
+
     StageUseEstimate operator+(const StageUseEstimate &a) const {
         StageUseEstimate rv = *this; rv += a; return rv; }
     static StageUseEstimate max() {
@@ -42,6 +49,7 @@ struct StageUseEstimate {
     void clear() {
         logical_ids = 0; srams = 0; tcams = 0; maprams = 0;
         exact_ixbar_bytes = 0; ternary_ixbar_groups = 0;
+        shared_action_data.clear();
     }
     void options_to_ways(int &entries);
     void options_to_rams(const IR::MAU::Table *tbl, bool table_placement);
@@ -65,7 +73,7 @@ struct StageUseEstimate {
     void unknown_tcams_needed(const IR::MAU::Table *tbl, LayoutOption *lo, int tcams_left,
                               int srams_left);
     void calculate_way_sizes(LayoutOption *lo, int &calculated_depth);
-    void srams_left_best_option();
+    void srams_left_best_option(int srams_left);
     void tcams_left_best_option();
     struct RAM_counter {
         int per_word;
@@ -78,6 +86,8 @@ struct StageUseEstimate {
     };
     void calculate_per_row_vector(safe_vector<RAM_counter> &per_word_and_width,
                                   const IR::MAU::Table *tbl, LayoutOption *lo);
+
+    int stages_required() const;
 };
 
 

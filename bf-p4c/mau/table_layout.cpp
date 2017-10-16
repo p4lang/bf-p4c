@@ -2,6 +2,7 @@
 
 #include <set>
 #include "bf-p4c/mau/input_xbar.h"
+#include "bf-p4c/mau/table_format.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "lib/bitops.h"
 #include "lib/log.h"
@@ -32,29 +33,42 @@ void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::M
         }
     }
 
+    safe_vector<int> byte_sizes;
+
     for (auto ixbar_read : tbl->match_key) {
         if (ixbar_read->match_type.name == "selector") continue;
         bitrange bits = { 0, 0 };
         auto *field = phv.field(ixbar_read->expr, &bits);
+        int bytes = 0;
         if (field) {
-            int bytes = 0;
             /* FIXME -- if a field is allocated to non-contiguous bits of a byte,
              * this will count that byte twice, when it is only needed once.  The
              * match layout in asm_output will likewise lay it out twice, so this
              * is consistent.  Should fix PHV alloc to not make such bad allocations */
-            field->foreach_byte(bits, [&](const PHV::Field::alloc_slice &) {
+            field->foreach_byte(bits, [&](const PHV::Field::alloc_slice &sl) {
                 bytes++;
+                byte_sizes.push_back(sl.width);
             });
-
             if (bytes == 0)  // FIXME: Better sanity check needed?
                 ERROR("Field " << field->name << " allocated to tagalong but used in MAU pipe");
 
+            layout.ixbar_bytes += bytes;
             layout.match_bytes += bytes;
             layout.match_width_bits += bits.size();
-            if (!layout.ternary)
-                layout.ixbar_bytes += bytes;
         } else {
             BUG("unexpected reads expression %s", ixbar_read->expr);
+        }
+    }
+
+    if (!layout.ternary) {
+        int ghost_bits_left = TableFormat::RAM_GHOST_BITS;
+        std::sort(byte_sizes.begin(), byte_sizes.end());
+        for (auto byte_size : byte_sizes) {
+            if (ghost_bits_left >= byte_size) {
+                ghost_bits_left -= byte_size;
+                layout.ghost_bytes++;
+                layout.match_bytes--;
+            }
         }
     }
 
@@ -113,8 +127,9 @@ void TableLayout::setup_ternary_layout_options(IR::MAU::Table *tbl, int immediat
 
 void TableLayout::setup_exact_match(IR::MAU::Table *tbl, int action_data_bytes) {
     for (int entry_count = 1; entry_count < 10; entry_count++) {
-        int match_group_bits = std::max(8*tbl->layout.match_bytes-8, 0) +
+        int match_group_bits = 8*tbl->layout.match_bytes +
                                tbl->layout.overhead_bits + action_data_bytes * 8 + 4;
+        LOG1("Match group bits " << match_group_bits);
         int width = (entry_count * match_group_bits + 127) / 128;
         while (entry_count / width > 4)
             width++;

@@ -1712,7 +1712,7 @@ void Memories::fill_RAM_use(swbox_fill &candidate, int row, RAM_side_t side, swi
     }
 
     sram_inuse[row] |= candidate.mask;
-    if (candidate.group->is_synth_type()) {
+    if (type == SYNTH) {
         if (candidate.group->type == SRAM_group::STATS)
             stats_alus[row/2] = name;
         else
@@ -2410,11 +2410,13 @@ bool Memories::find_mem_and_bus_for_idletime(
 
     const char* which_half = top_half ? "top" : "bottom";
 
+    /*
     if (total_requested < total_mem_required) {
         mem_locs.clear();
         LOG4("Ran out of mapram in " << which_half << "half");
         return false;
     }
+    */
 
     // find a bus
     bool found_bus = false;
@@ -2434,14 +2436,12 @@ bool Memories::find_mem_and_bus_for_idletime(
     return true;
 }
 
-bool Memories::allocate_idletime_in_top_or_bottom_half(const SRAM_group* idletime_group,
+bool Memories::allocate_idletime_in_top_or_bottom_half(SRAM_group* idletime_group,
                                                        bool top_or_bottom) {
     auto *ta = idletime_group->ta;
     cstring name = ta->table->get_use_name(idletime_group->attached);
 
-    int depth = idletime_group->depth;
-    int width = idletime_group->width;
-    int total_required = width * depth;
+    int total_required = idletime_group->left_to_place();
 
     std::vector<std::pair<int, std::vector<int>>> mem_locs;
     int bus = -1;
@@ -2461,16 +2461,17 @@ bool Memories::allocate_idletime_in_top_or_bottom_half(const SRAM_group* idletim
         for (auto col : loc.second) {
             mapram_use[loc.first][col] = name;
             row.col.push_back(col);  // XXX(zma) use col as bfas expects "column" for idletime
+            idletime_group->placed++;
         }
         alloc.row.push_back(row);
     }
 
     idletime_bus[(unsigned)top_or_bottom][bus] = name;
-    return true;
+    return idletime_group->all_placed();
 }
 
 
-bool Memories::allocate_idletime(const SRAM_group* idletime_group) {
+bool Memories::allocate_idletime(SRAM_group* idletime_group) {
     // try to allocate idletime in top and bottom half of the mapram array
     // each half has its own 10 idletime buses
     if (allocate_idletime_in_top_or_bottom_half(idletime_group, true))
@@ -2490,7 +2491,7 @@ bool Memories::allocate_all_idletime() {
 
             int per_row = IdleTimePerWord(id);
             int depth = mems_needed(ta->calculated_entries, SRAM_DEPTH, per_row, true);
-            auto idletime_group = new SRAM_group(ta, depth, 1, 1, SRAM_group::IDLETIME);
+            auto idletime_group = new SRAM_group(ta, depth, 1, SRAM_group::IDLETIME);
             idletime_group->attached = id;
             idletime_groups.push_back(idletime_group);
         }

@@ -165,6 +165,8 @@ void StageUseEstimate::calculate_attached_rams(const IR::MAU::Table *tbl,
             // as that is decided after the table layout is picked
             if (!table_placement && ad->direct)
                 BUG("Direct Action Data table exists before table placement occurs");
+            if (shared_action_data.find(ad) != shared_action_data.end())
+                continue;
             width = 1;
             per_word = ActionDataPerWord(&lo->layout, &width);
             if (!ad->direct)
@@ -315,11 +317,11 @@ void StageUseEstimate::fill_estimate_from_option(int &entries) {
 
 /* Constructor to estimate the number of srams, tcams, and maprams a table will require*/
 StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries, bool pp, bool had,
-                                   const safe_vector<LayoutOption> &lo, bool table_placement) {
+                                   const safe_vector<LayoutOption> &lo,
+                                   ordered_set<const IR::MAU::ActionData *> sad /* Defaulted */,
+                                   bool table_placement)
+    : prev_placed(pp), has_action_data(had), shared_action_data(sad) {
     // Because the table is const, the layout options must be copied into the Object
-    memset(this, 0, sizeof(*this));
-    prev_placed = pp;
-    has_action_data = had;
     logical_ids = 1;
     layout_options.clear();
     layout_options = lo;
@@ -344,6 +346,12 @@ StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries, bool
     }
 }
 
+int StageUseEstimate::stages_required() const {
+    return std::max({(srams + StageUse::MAX_SRAMS - 1) / StageUse::MAX_SRAMS,
+                    (tcams + StageUse::MAX_TCAMS - 1) / StageUse::MAX_TCAMS,
+                    (maprams + StageUse::MAX_MAPRAMS - 1) / StageUse::MAX_MAPRAMS});
+}
+
 /* Given a number of available srams within a stage, calculate the maximum size
    different layout options can be while still using up to the number of srams */
 void StageUseEstimate::calculate_for_leftover_srams(const IR::MAU::Table *tbl, int srams_left,
@@ -353,7 +361,7 @@ void StageUseEstimate::calculate_for_leftover_srams(const IR::MAU::Table *tbl, i
         known_srams_needed(tbl, &lo);
         unknown_srams_needed(tbl, &lo, srams_left);
     }
-    srams_left_best_option();
+    srams_left_best_option(srams_left);
     fill_estimate_from_option(entries);
 }
 
@@ -397,6 +405,7 @@ void StageUseEstimate::known_srams_needed(const IR::MAU::Table *tbl,
         } else if (auto *ad = at->to<IR::MAU::ActionData>()) {
             // Because this is called before and after table placement
             if (ad->direct) continue;
+            if (shared_action_data.find(ad) != shared_action_data.end()) continue;
             per_word = ActionDataPerWord(&lo->layout, &width);
             attached_entries = ad->size;
         } else if (at->is<IR::MAU::Selector>()) {
@@ -532,12 +541,14 @@ void StageUseEstimate::unknown_srams_needed(const IR::MAU::Table *tbl, LayoutOpt
 
 /* Sorting the layout options in terms of best fit for the given number of resources left
 */
-void StageUseEstimate::srams_left_best_option() {
+void StageUseEstimate::srams_left_best_option(int srams_left) {
     std::sort(layout_options.begin(), layout_options.end(),
         [=](const LayoutOption &a, const LayoutOption &b) {
         int t;
         if (prev_placed && has_action_data != a.layout.direct_ad_required()) return false;
         if (prev_placed && has_action_data != b.layout.direct_ad_required()) return true;
+        if (a.srams > srams_left) return false;
+        if (b.srams > srams_left) return true;
         if ((t = a.way.match_groups % a.way.width) != 0) return false;
         if ((t = b.way.match_groups % b.way.width) != 0) return true;
         if ((t = a.entries - b.entries) != 0) return t > 0;

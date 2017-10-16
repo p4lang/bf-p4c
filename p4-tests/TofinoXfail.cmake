@@ -99,7 +99,6 @@ if (NOT ENABLE_TNA)
 
   p4c_add_xfail_reason("tofino"
     "error: Field is extracted in the parser, but its first container slice has an incompatible alignment"
-    extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
     )
 
   p4c_add_xfail_reason("tofino"
@@ -252,7 +251,6 @@ p4c_add_xfail_reason("tofino"
 # BRIG-240
 p4c_add_xfail_reason("tofino"
   "Input xbar group.* conflict in stage"
-  extensions/p4_tests/p4_14/test_config_194_same_action_param.p4
   extensions/p4_tests/p4_14/test_config_197_default_next_table.p4
   extensions/p4_tests/p4_14/test_config_196_hit_miss.p4
   )
@@ -320,7 +318,7 @@ p4c_add_xfail_reason("tofino"
 # WARNING: Currently, when this message is sent, the compiler does not stop.  Thus, it may not
 # be the right stop message for a particular message
 p4c_add_xfail_reason("tofino"
-  "PHV allocation creates a container action impossible within a Tofino ALU"
+  "No input xbar for salu instruction operand for phv"
   extensions/p4_tests/p4_14/jenkins/multicast_scale/multicast_scale.p4
   )
 
@@ -381,7 +379,6 @@ p4c_add_xfail_reason("tofino"
   "Input xbar hash.*conflict in"
   extensions/p4_tests/p4_14/09-MatchNoDep.p4
   extensions/p4_tests/p4_14/10-MatchNoDep1.p4
-  extensions/p4_tests/p4_14/test_config_129_various_exact_match_keys.p4
   extensions/p4_tests/p4_14/hash_calculation_max_size.p4
   extensions/p4_tests/p4_14/hash_calculation_multiple.p4
   )
@@ -647,6 +644,11 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Multiple synth2port require overflow"
   extensions/p4_tests/p4_14/jenkins/fr_test/fr_test.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Can't fit table .* in input xbar by itself"
+  extensions/p4_tests/p4_14/test_config_103_first_phase_0.p4
   )
 
 
@@ -1151,7 +1153,6 @@ if (ENABLE_TNA)
   p4c_add_xfail_reason("tofino"
     "Unexpected method call in parser"
     extensions/p4_tests/p4_14/packet_priority_exact_match.p4
-    extensions/p4_tests/p4_14/switch_l2_profile_tofino.p4
     )
 
   p4c_add_xfail_reason("tofino"

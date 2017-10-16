@@ -50,6 +50,10 @@ struct operand {
         void pass1(Stateful *tbl) override {
             if (!reg.check()) return;
             int size = tbl->format->begin()->second.size/8U;
+            if (!tbl->input_xbar) {
+                error(lineno, "No input xbar for salu instruction operand for phv");
+                return;
+            }
             int byte = tbl->find_on_ixbar(*reg, tbl->input_xbar->match_group());
             if (byte < 0)
                 error(lineno, "Can't find %s on the input xbar", reg.name());

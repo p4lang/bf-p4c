@@ -385,16 +385,15 @@ const IR::Node *InstructionSelection::postorder(IR::Primitive *prim) {
             return rv; }
     } else if (prim->name == "drop" || prim->name == "mark_to_drop") {
         // XXX(hanw) instead of invalidating egress_port container, we should set drop_ctrl bit.
-        auto member = gen_stdmeta(VisitingThread(this) ? "egress_port" : "egress_spec");
+        // FIXME: This needs to be fixed in the midend by Han in order for the register to be
+        // correct, this is a punt to Han to be done ASAP
+        auto member = gen_stdmeta("drop");
+        auto constant = new IR::Constant(IR::Type::Bits::get(1), 1);
         if (member)
-            return new IR::MAU::Instruction(prim->srcInfo, "invalidate", member);
-        if (VisitingThread(this) == gress_t::INGRESS) {
-            auto member = gen_intrinsic_metadata(VisitingThread(this), "ucast_egress_port");
-            return new IR::MAU::Instruction(prim->srcInfo, "invalidate", member);
-        } else {
-            auto member = gen_intrinsic_metadata(VisitingThread(this), "egress_port");
-            return new IR::MAU::Instruction(prim->srcInfo, "invalidate", member);
-        }
+            return new IR::MAU::Instruction(prim->srcInfo, "set", member, constant);
+        auto intr_member = gen_intrinsic_metadata(VisitingThread(this), "drop_ctl");
+        return new IR::MAU::Instruction(prim->srcInfo, "set", MakeSlice(intr_member, 0, 0),
+                                        constant);
     } else if (prim->name == "register_action.execute") {
         bool direct_access = false;
         if (prim->operands.size() > 1)
