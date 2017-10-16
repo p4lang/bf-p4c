@@ -1165,37 +1165,34 @@ PHV_MAU_Group_Assignments::match_cluster_to_cc_set(
     // when x fields can be allocated to y ccs, x < y
     // the top y-x is striped for reuse as a new set of aligned ccs, the bottom x allocated
     // iterate through ccs in reverse, otherwise comparison is against the wrong set of containers
+    // compare fields in reverse: [f1,f2] vs [c1,c2,c3,c4]
+    // f2 vs c4, f1 vs c3, s.t., [f1,f2] => [c3,c4]
     //
-    auto cc_set_iter = cc_set.rbegin();  // reverse, allocation stripe uses bottom for partial map
-    for (auto &f : cl->cluster_vec()) {
+    auto cc_it = cc_set.rbegin();
+    auto f_it = cl->cluster_vec().rbegin();
+    for (; cc_it != cc_set.rend() && f_it != cl->cluster_vec().rend(); ++cc_it, ++f_it) {
         //
         // bridge metadata considerations:
         // cannot pack bridge metadata mirror & bridge metadata Not mirror
         // packed bridge metadata must belong to same field list (one of eight field lists)
         //
-        PHV_Container *c = (*cc_set_iter)->container();
+        PHV::Field *f = *f_it;
+        PHV_Container *c = (*cc_it)->container();
         BUG_CHECK(c, "*****PHV_MAU_Group_Assignments::packing_predicates, container null *****");
         if (f->bridged && f->mirror_field_list.member_field) {
             // for all fields in container, ensure mirror fields & same field list
             for (auto &entry : c->fields_in_container()) {
                 PHV::Field *cf = entry.first;
-                if (cf->mirror_field_list != f->mirror_field_list) {
+                if (cf->mirror_field_list != f->mirror_field_list)
                     return false;  // mirror_field_lists disagree, cannot pack
-                }
             }  // for
         }
         //
-        // TODO
         // bridge-metadata has alignment constraint between ingress and egress
         // mirror field list members (whether bridged or not) have same alignment constraint
         // ingress_bridge_metadata starts at same 'bit in byte' as egress_bridge_metadata
-        // temporarily we ensure start bit 0
-        // automatically ensured when allocated during initial container placement
-        // if allocated during packing, ensure start bit is 0, width accommodation checked apriori
+        // such constraints are auto matched by parde alignment generation after thread split
         //
-        if (f->bridged && (*cc_set_iter)->lo()) {
-            return false;
-        }
         // TODO
         // learning digests: L1, L2 belong to same digest
         // mirror, resubmit digests do not have this constraint
@@ -1207,13 +1204,11 @@ PHV_MAU_Group_Assignments::match_cluster_to_cc_set(
             for (auto &entry : c->fields_in_container()) {
                 PHV::Field *cf = entry.first;
                 // if deparsed header in c, disallow anything but another deparsed header
-                if (!cf->metadata && cf->deparsed() && (f->metadata || f->pov || !f->deparsed())) {
+                if (!cf->metadata && cf->deparsed() && (f->metadata || f->pov || !f->deparsed()))
                     return false;
-                }
                 // if deparsed bridge metadata in c, disallow deparsed header
-                if (cf->metadata && cf->deparsed() && !(f->metadata || f->pov) && f->deparsed()) {
+                if (cf->metadata && cf->deparsed() && !(f->metadata || f->pov) && f->deparsed())
                     return false;
-                }
             }  // for
         }
         // before placing deparsed f in c, ensure
@@ -1223,13 +1218,11 @@ PHV_MAU_Group_Assignments::match_cluster_to_cc_set(
             for (auto &entry : c->fields_in_container()) {
                 PHV::Field *cf = entry.first;
                 // do not put deparsed header with non-deparsed field in container
-                if (!f->bridged && !cf->deparsed()) {
+                if (!f->bridged && !cf->deparsed())
                     return false;
-                }
                 // if container has deparsed header, disallow metadata
-                if (!cf->metadata && cf->deparsed() && f->metadata) {
+                if (!cf->metadata && cf->deparsed() && f->metadata)
                     return false;
-                }
             }  // for
         }
         //
@@ -1284,19 +1277,18 @@ PHV_MAU_Group_Assignments::packing_predicates(
         return false;
     }
     //
-    // when cluster fields < slices try sliding window of cc_set
+    // try sliding window of cc_set
     for (int slice_adjust = cc_set.size() - cl->cluster_vec().size() + 1;
         slice_adjust;
         slice_adjust--) {
         //
-        if (match_cluster_to_cc_set(cl, cc_set)) {
+        if (match_cluster_to_cc_set(cl, cc_set))
             break;
-        }
-        if (slice_adjust == 1) {
+        if (slice_adjust == 1)
             return false;
-        }
+        //
         // rotate down cc_set by 1
-        // note ccs iterated in reverse -- match_cluster_cc_set()
+        // allocation stripe uses bottom
         //
         cc_set.push_front(*(cc_set.rbegin()));
         cc_set.pop_back();

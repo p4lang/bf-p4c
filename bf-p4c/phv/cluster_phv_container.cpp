@@ -220,36 +220,41 @@ PHV_Container::taint_ccgf(
                         << member->size
                         << std::endl
                         << member);
-                } else {
-                    // width_i >= member->size)
+                } else if (int(width_i) > member->size) {
+                    // ccgf member cannot guarantee physical contiguity
+                    // cluster.cpp header analysis, checks such cases during CCGF formation
+                    // no-pack constraints introduced subsequently by analysis of MAU operations
+                    LOG3("*****cluster_phv_container.cpp:*****....."
+                        << "CCGF Physical Contiguity violated: "
+                        << std::endl
+                        << "member = " << member);
+                    // ccgf metadata member in ccgf overly parde constrained
+                    // metadata need not be part of ccgf
+                    // relaxing error generation for metadata
+                    if (!member->metadata)
+                        ::error("CCGF member %1% not physically contiguous.", member->name);
+                    //
                     int pad = width - member->size;
-                    start -= pad;               // taint starts from RHS
+                    start -= pad;                    // start now @end of [0..member_size-1]
+                    int lhs = start - member->size;  // lhs now @beginning of [0..member_size-1]
                     const int align_start =
-                        member->phv_alignment(false /*ccgf member alignment*/).get_value_or(start);
-                    // detect if the member cannot guarantee physical contiguity
-                    // note there is a check for this case in cluster.cpp during CCGF formation
-                    // but no-pack constraints can be introduced subsequently based on analysis of
-                    // MAU operations
-                    if (align_start % int(PHV::Size::b8) != start % int(PHV::Size::b8)) {
-                        LOG3("*****cluster_phv_container.cpp:*****....."
-                            << "Physical Contiguity violated: "
-                            << "CCGF member expected alignment 'start'="
-                            << start
-                            << " does not match member's parde alignment 'align_start'="
-                            << align_start
-                            << std::endl
-                            << "member = "
-                            << member);
-                        // ccgf bridge metadata member in ccgf overly parde constrained
-                        // relaxing error generation for bridge metadata
-                        if (!member->bridged)
-                            ::error("CCGF alignment formation does not allow physical contiguity.");
-                        start += align_start;
+                        member->phv_alignment(false /*ccgf member align*/).get_value_or(lhs);
+                    if (align_start % int(PHV::Size::b8) != lhs % int(PHV::Size::b8)) {
+                        // shift by alignment
+                        start = align_start + member->size - member->phv_use_rem();
+                        // start decremented by (member_size - member_phv_use_rem) before taint
                     }
-                }
-            }
-        }
-        int use_width = member->size;           // always using size to taint container
+                } else {
+                    // width_i == member->size
+                    const int align_start =
+                        member->phv_alignment(false /*ccgf member align*/).get_value_or(0);
+                    if (align_start)
+                        ::error("CCGF member in exact width container %1% alignment not at 0.",
+                                member->name);
+                }  // width_i <=> member->size
+            }  // processed_width
+        }  // constraint_no_cohabit
+        int use_width = member->size;             // always using size to taint container
         if (!member->simple_header_pov_ccgf()) {  // ignore simple header ccgf
             use_width -= member->phv_use_rem();
         }

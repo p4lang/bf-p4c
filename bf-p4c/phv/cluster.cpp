@@ -10,7 +10,7 @@ bool Cluster::MakeCCGFs::preorder(const IR::HeaderRef *hr) {
     // parser extract, deparser emit
     // operand can be field or header
     // when header, set_field_range all fields in header
-    // attempting container contiguous groups
+    // attempting container contiguous groups -- see Note #5 below
     //
     ordered_map<PHV::Field *, int> ccgf;
     PHV::Field *group_accumulator = 0;
@@ -1038,4 +1038,18 @@ std::ostream &operator<<(std::ostream &out, Cluster &cluster) {
 // IR::BFN::Deparser has a field egress_port,
 // which points to the egress port in the egress pipeline & egress spec in the ingress pipeline
 // Each Deparser holds a vector of digests, one of which will be the learning digest if present
+//
+// Note 5 CCGF
+// ccgfs are accumulated in network order
+// so header [f1, f2, f3]
+// f1's ccgf_fields contains in order f1, f2, f3
+// first field of f->ccgf_fields() is the owner
+// f->ccgf points to f, all members->ccgf point to f
+// consider [f1<3>, f2<1>, f3<12>] where < w > = size, ccgf phv_use_lo .. phv_use_hi = 0 .. 15
+// range denoted by f->phv_use_lo(), f->phv_use_hi() is the little Endian bit range,
+// e.g., le_bitrange(FromTo(f->phv_use_lo(), f->phv_use_hi()))
+// the allocation in a container H 0..15 would be
+// 3333333333332111 container bits here are 0123456789.......
+// low bit of f1 = 13, f2 = 12, f3 = 0, low bit of whole ccgf = 0
+// high bit of f1 = 15, f2 = 12, f3 = 11, hi bit of whole ccgf = 15
 //

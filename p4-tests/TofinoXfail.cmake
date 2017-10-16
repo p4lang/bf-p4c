@@ -275,10 +275,13 @@ p4c_add_xfail_reason("tofino"
 
 # parde physical adjacency constraint violated by mau phv_no_pack constraint
 p4c_add_xfail_reason("tofino"
-  "CCGF alignment formation does not allow physical contiguity"
+  "CCGF member .* not physically contiguous"
   extensions/p4_tests/p4_14/01-FlexCounter.p4
   extensions/p4_tests/p4_14/03-VlanProfile.p4
   extensions/p4_tests/p4_14/19-SimpleTrill.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
+  extensions/p4_tests/p4_14/switch_20160602/switch.p4
+  extensions/p4_tests/p4_14/switch/p4src/switch.p4
   )
 
 # BRIG-112
@@ -765,7 +768,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/01-BigMatch.p4
   extensions/p4_tests/p4_14/04-FullPHV3.p4
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   extensions/p4_tests/p4_14/c1/COMPILER-133/full_tphv.p4
   extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
   extensions/p4_tests/p4_14/c4/COMPILER-590/case3179.p4
@@ -773,9 +775,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/jenkins/power/power.p4
   testdata/p4_14_samples/parser_dc_full.p4
   testdata/p4_14_samples/port_vlan_mapping.p4
-  extensions/p4_tests/p4_14/switch_20160602/switch.p4
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
-  extensions/p4_tests/p4_14/switch/p4src/switch.p4
   )
 
 # Likely still has a bug; emits the following warning:

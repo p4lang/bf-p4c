@@ -306,3 +306,32 @@ std::ostream &operator<<(std::ostream &out, Cluster_Slicing &cluster_slicing) {
         << std::endl;
     return out;
 }
+
+//
+//***********************************************************************************
+//
+// Notes
+//
+//***********************************************************************************
+//
+// Note 1
+//
+// Is it for two or more container slices in the same field to be allocated to the same container?
+//
+// even without recursive slicing, two slices can land in the same container
+// consider a cluster with 2 fields f1<16> f2<16> but available containers in group are
+// C1<16b> C2<8b out of 16b> and C3 <8b out of 16b>
+// so, initially no fit
+// after cluster slicing, f21, f22 in C2, C3, whereas f11, f12 in C1
+//
+// if we recursively slice,
+// it is possible for two or more slices of the same field to land in the same container
+// e.g., we have field f1<16b> but available space = two containers having 8b avail each
+// f1 sliced into f11, f12 and further to f111, f112, f121, f122 each 4b wide.
+// each of the above 2 containers will contain 2 slices of the same field
+//
+// Note 2
+//
+// inter-cluster overlaying, slices overlaid fields the same as the field being overlaid.
+// however this will not give rise to two slices of the same field being the same container
+//
