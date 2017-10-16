@@ -4,6 +4,7 @@
 @name("XHdr") header XHdr_0 {
     bit<24> f1;
     bit<12> f2;
+    bit<4>  _pad;
 }
 
 struct metadata {

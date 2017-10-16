@@ -774,6 +774,7 @@ header ingress_intrinsic_metadata_from_parser_aux_t {
 
 header ingress_parser_control_signals {
     bit<3> priority;
+    bit<5> _pad;
 }
 
 header ipv4_t {
@@ -919,6 +920,7 @@ header sflow_sample_cpu_t {
     bit<8>  numFlowRecords;
     bit<3>  sflow_session_id;
     bit<2>  pipe_id;
+    bit<3>  _pad;
 }
 
 header snap_header_t {

@@ -119,6 +119,7 @@ header pkt_t {
     bit<8>  field_i_8;
     bit<8>  field_j_8;
     bit<5>  color_0;
+    bit<3>  _pad;
     bit<8>  color_1;
 }
 

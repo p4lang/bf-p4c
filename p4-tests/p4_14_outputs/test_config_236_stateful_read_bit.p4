@@ -122,6 +122,7 @@ header pkt_t {
     bit<8>  field_l_8;
     bit<7>  pad_0;
     bit<1>  single_bit;
+    bit<7>  pad_1;
 }
 
 struct metadata {

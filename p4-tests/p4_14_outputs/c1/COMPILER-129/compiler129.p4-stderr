@@ -13,10 +13,10 @@ l3.p4(323): warning: -1: negative value with unsigned type
 l3.p4(328): warning: -1: negative value with unsigned type
     add_to_field(mpls[0].ttl, -1);
                                ^
-acl.p4(579): warning: Could not infer type for session_id, using bit<8>
+acl.p4(587): warning: Could not infer type for session_id, using bit<8>
 action egress_mirror_coal_hdr(session_id, id) {
                               ^^^^^^^^^^
-acl.p4(579): warning: Could not infer type for id, using bit<8>
+acl.p4(587): warning: Could not infer type for id, using bit<8>
 action egress_mirror_coal_hdr(session_id, id) {
                                           ^^
 port.p4(454): warning: -1: negative value with unsigned type

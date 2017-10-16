@@ -115,6 +115,7 @@ header ingress_parser_control_signals {
 
 header l2_metadata_t {
     bit<12> bd;
+    bit<4>  _pad;
 }
 
 struct metadata {

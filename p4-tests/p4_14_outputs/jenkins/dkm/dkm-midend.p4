@@ -142,6 +142,7 @@ header tcp_t {
     bit<3>  res;
     bit<3>  ecn;
     bit<3>  ctrl;
+    bit<3>  _pad;
     bit<16> window;
     bit<16> checksum;
     bit<16> urgentPtr;

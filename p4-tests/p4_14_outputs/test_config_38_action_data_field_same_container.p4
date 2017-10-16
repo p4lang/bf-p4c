@@ -114,6 +114,7 @@ header test_t {
     bit<4>  field_d;
     bit<8>  field_e;
     bit<4>  field_f;
+    bit<4>  _pad;
     bit<32> field_g;
     bit<32> field_h;
 }
