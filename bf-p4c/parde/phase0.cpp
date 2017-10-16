@@ -1,12 +1,13 @@
 #include "bf-p4c/parde/phase0.h"
 
 #include <algorithm>
+#include "bf-p4c/device.h"
+#include "bf-p4c/parde/field_packing.h"
 #include "frontends/p4/coreLibrary.h"
 #include "frontends/p4/fromv1.0/v1model.h"
 #include "ir/ir.h"
 #include "lib/cstring.h"
 #include "lib/indent.h"
-#include "bf-p4c/parde/field_packing.h"
 
 std::ostream& operator<<(std::ostream& out, const BFN::Phase0Info* info) {
     if (info == nullptr) return out;
@@ -30,30 +31,38 @@ std::ostream& operator<<(std::ostream& out, const BFN::Phase0Info* info) {
 
     // Write out the field packing format. We have to convert into the LSB-first
     // representation that the assembler uses.
-    BUG_CHECK(info->packing->totalWidth == 64,
-              "Expected phase 0 field packing to allocate exactly 64 bits");
+    const nw_bitrange phase0Range =
+      StartLen(0, Device::pardeSpec().bitPhase0Size());
+    BUG_CHECK(info->packing->totalWidth == phase0Range.size(),
+              "Expected phase 0 field packing to allocate exactly %1% bits",
+              phase0Range.size());
     bool wroteAtLeastOneField = false;
-    int msb = 63;
+    int posBits = 0;
     out << indent << "format: {";
     for (auto& field : *info->packing) {
         BUG_CHECK(field.width > 0, "Empty phase 0 field?");
-        BUG_CHECK(msb >= 0, "Phase 0 field starts past 64 bit boundary");
-        if (!field.isPadding()) {
-            if (wroteAtLeastOneField) out << ", ";
-            wroteAtLeastOneField = true;
-            int lsb = msb - field.width + 1;
-            BUG_CHECK(lsb >= 0, "Phase 0 field overflowed 64 bits");
-            out << field.source << ": " << lsb;
-            if (msb != lsb) out << ".." << msb;
-        }
-        msb -= field.width;
+        const nw_bitrange fieldRange(StartLen(posBits, field.width));
+        BUG_CHECK(phase0Range.contains(fieldRange),
+                  "Phase 0 allocation %1% overflows the phase 0 region %2% for "
+                  "field %3%", fieldRange, phase0Range,
+                  field.isPadding() ? "(padding)" : field.source);
+
+        posBits += field.width;
+        if (field.isPadding()) continue;
+        if (wroteAtLeastOneField) out << ", ";
+        wroteAtLeastOneField = true;
+
+        const le_bitrange leFieldRange =
+          fieldRange.toOrder<Endian::Little>(phase0Range.size());
+        out << field.source << ": " << leFieldRange.lo;
+        if (leFieldRange.size() > 1) out << ".." << leFieldRange.hi;
     }
     out << "}" << std::endl;
 
-    // Write out the constant value. This is a 64-bit value which is used by the
-    // driver to initialize the phase 0 data before the bits assigned to fields
-    // are given their user-provided values. Having this available gives us a
-    // little more flexibility when packing phase 0 fields.
+    // Write out the constant value. This value is used by the driver to
+    // initialize the phase 0 data before the bits assigned to fields are given
+    // their user-provided values. Having this available gives us a little more
+    // flexibility when packing phase 0 fields.
     // XXX(seth): The above isn't actually implemented, but it's planned. Right
     // now, the driver acts as if this is always set to zero.
     out << indent << "constant_value: 0" << std::endl;
@@ -345,7 +354,7 @@ FieldPacking* packPhase0Fields(const Phase0Extracts* extracts) {
         packing->padToAlignment(8);
     }
 
-    packing->padToAlignment(64);
+    packing->padToAlignment(Device::pardeSpec().bitPhase0Size());
     return packing;
 }
 
@@ -419,9 +428,10 @@ extractPhase0(const IR::P4Control* ingress, IR::BFN::Pipe* pipe,
       ingress->apply(RemovePhase0Table(findPhase0.apply));
 
     // Attempt to pack the fields we'll need to extract in the phase 0 parser
-    // into 64 bits. This may fail.
+    // into the available phase 0 space. This may fail.
     auto packing = packPhase0Fields(findPhase0.extracts);
-    if (packing->totalWidth != 64) return std::make_pair(ingress, pipe);
+    if (packing->totalWidth != Device::pardeSpec().bitPhase0Size())
+        return std::make_pair(ingress, pipe);
 
     // Create the phase 0 parser and link it into place in the existing parser
     // program.
