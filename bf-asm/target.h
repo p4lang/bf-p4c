@@ -24,6 +24,8 @@ class Target {
     class Phv;
     FOR_ALL_TARGETS(DECLARE_TARGET_CLASS)
     static int NUM_MAU_STAGES();
+    static int DEPARSER_CHECKSUM_UNITS();
+    static int DEPARSER_MAX_POV_BYTES();
     static const char *name();
 };
 
@@ -78,6 +80,8 @@ class Target::Tofino : public Target {
         NUM_MAU_STAGES = 12,
         ACTION_INSTRUCTION_MAP_WIDTH = 7,
         DEPARSER_CHECKSUM_UNITS = 6,
+        DEPARSER_MAX_POV_BYTES = 32,
+        DEPARSER_MAX_FD_ENTRIES = 384,
     };
 };
 
@@ -138,6 +142,7 @@ class Target::JBay : public Target {
         NUM_MAU_STAGES = 20,
         ACTION_INSTRUCTION_MAP_WIDTH = 8,
         DEPARSER_CHECKSUM_UNITS = 8,
+        DEPARSER_MAX_POV_BYTES = 16,
     };
 };
 void declare_registers(const Target::JBay::top_level_regs *regs);

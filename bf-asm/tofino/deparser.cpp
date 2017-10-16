@@ -3,10 +3,12 @@
 #define YES(X)  X
 #define NO(X)
 
-#define SIMPLE_INTRINSIC(GR, PFX, NAME, IF_SHIFT)                       \
-    DEPARSER_INTRINSIC(Tofino, GR, NAME, 1) {                           \
-        PFX.NAME.phv = intrin.vals[0].val->reg.deparser_id();           \
-        IF_SHIFT( PFX.NAME.shft = intrin.vals[0].val->lo; )             \
+#define SIMPLE_INTRINSIC(GR, PFX, NAME, IF_SHIFT)                                       \
+    DEPARSER_INTRINSIC(Tofino, GR, NAME, 1) {                                           \
+        PFX.NAME.phv = intrin.vals[0].val->reg.deparser_id();                           \
+        IF_SHIFT( PFX.NAME.shft = intrin.vals[0].val->lo; )                             \
+        if (intrin.vals[0].pov)                                                         \
+            error(intrin.vals[0].pov.lineno, "No POV support in tofino "#NAME);         \
         PFX.NAME.valid = 1; }
 #define IIR_MAIN_INTRINSIC(NAME, SHFT) SIMPLE_INTRINSIC(INGRESS, regs.input.iir.main_i, NAME, SHFT)
 #define IIR_INTRINSIC(NAME, SHFT)      SIMPLE_INTRINSIC(INGRESS, regs.input.iir.ingr, NAME, SHFT)
@@ -62,6 +64,9 @@ HER_INTRINSIC(ecos, YES)
         CFG.phv = data.select->reg.deparser_id();                                       \
         IFSHIFT( CFG.shft = data.shift + data.select->lo; )                             \
         CFG.valid = 1;                                                                  \
+        if (data.select.pov)                                                            \
+            error(data.select.pov.lineno, "No POV bit support in tofino %s digest",     \
+                  #NAME);                                                               \
         for (auto &set : data.layout) {                                                 \
             int id = set.first >> data.shift;                                           \
             int idx = 0;                                                                \
@@ -84,7 +89,60 @@ TOFINO_DIGEST(EGRESS, mirror, regs.header.her.main_e.mirror_cfg,
 TOFINO_DIGEST(INGRESS, resubmit, regs.input.iir.ingr.resub_cfg,
               regs.input.iir.ingr.resub_tbl, YES, NO, 8)
 
-static short phv2cksum[Target::Tofino::Phv::NUM_PHV_REGS][2] = {
+void dump_tofino_field_dictionary(checked_array_base<fde_pov> &fde_control,
+                                  checked_array_base<fde_phv> &fde_data,
+                                  checked_array_base<ubits<8>> &pov_layout,
+                                  std::vector<Phv::Ref> &pov_order,
+                                  std::vector<std::pair<Deparser::RefOrChksum, Phv::Ref>> &dict)
+{
+    std::map<unsigned, unsigned>        pov;
+    unsigned pov_byte = 0, pov_size = 0;
+    for (auto &ent : pov_order)
+        if (pov.count(ent->reg.deparser_id()) == 0) {
+            pov[ent->reg.deparser_id()] = pov_size;
+            pov_size += ent->reg.size;
+            for (unsigned i = 0; i < ent->reg.size; i += 8) {
+                if (pov_byte >= Target::Tofino::DEPARSER_MAX_POV_BYTES) {
+                    error(ent.lineno, "Ran out of space in POV in deparser");
+                    return; }
+                pov_layout[pov_byte++] = ent->reg.deparser_id(); } }
+    while (pov_byte < Target::Tofino::DEPARSER_MAX_POV_BYTES)
+        pov_layout[pov_byte++] = 0xff;
+
+    int row = -1, prev_pov = -1;
+    bool prev_is_checksum = false;
+    unsigned pos = 0;
+    for (auto &ent : dict) {
+        unsigned size = ent.first->reg.size/8;
+        int pov_bit = pov[ent.second->reg.deparser_id()] + ent.second->lo;
+        if (options.match_compiler) {
+            if (ent.first->reg.deparser_id() >= 224 && ent.first->reg.deparser_id() < 236) {
+                /* checksum unit -- make sure it gets its own dictionary line */
+                prev_pov = -1;
+                prev_is_checksum = true;
+            } else {
+                if (prev_is_checksum) prev_pov = -1;
+                prev_is_checksum = false; } }
+        while (size--) {
+            if (pov_bit != prev_pov || pos >= 4 /*|| (pos & (size-1)) != 0*/) {
+                if (row >= 0) {
+                    fde_control[row].num_bytes = pos & 3;
+                    fde_data[row].num_bytes = pos & 3; }
+                if (row >= Target::Tofino::DEPARSER_MAX_FD_ENTRIES) {
+                    error(ent.first.lineno, "Ran out of space in field dictionary");
+                    return; }
+                fde_control[++row].pov_sel = pov_bit;
+                fde_control[row].version = 0xf;
+                fde_control[row].valid = 1;
+                pos = 0; }
+            fde_data[row].phv[pos++] = ent.first->reg.deparser_id();
+            prev_pov = pov_bit; } }
+    if (pos) {
+        fde_control[row].num_bytes = pos & 3;
+        fde_data[row].num_bytes = pos & 3; }
+}
+
+static short tofino_phv2cksum[Target::Tofino::Phv::NUM_PHV_REGS][2] = {
     {287, 286}, {283, 282}, {279, 278}, {275, 274}, {271, 270}, {267, 266}, {263, 262}, {259, 258},
     {255, 254}, {251, 250}, {247, 246}, {243, 242}, {239, 238}, {235, 234}, {231, 230}, {227, 226},
     {223, 222}, {219, 218}, {215, 214}, {211, 210}, {207, 206}, {203, 202}, {199, 198}, {195, 194},
@@ -142,12 +200,11 @@ static short phv2cksum[Target::Tofino::Phv::NUM_PHV_REGS][2] = {
      2*Target::Tofino::Phv::COUNT_32BIT_TPHV)
 
 template<typename IPO, typename HPO> static
-void dump_checksum_units(checked_array_base<IPO> &main_csum_units,
-                         checked_array_base<HPO> &tagalong_csum_units,
-                         gress_t gress,
-                         std::vector<Phv::Ref> checksum[])
+void dump_tofino_checksum_units(checked_array_base<IPO> &main_csum_units,
+                                checked_array_base<HPO> &tagalong_csum_units,
+                                gress_t gress, std::vector<Deparser::Val> checksum[])
 {
-    assert(phv2cksum[Target::Tofino::Phv::NUM_PHV_REGS-1][0] == 143);
+    assert(tofino_phv2cksum[Target::Tofino::Phv::NUM_PHV_REGS-1][0] == 143);
     for (int i = 0; i < Target::Tofino::DEPARSER_CHECKSUM_UNITS; i++) {
         if (checksum[i].empty()) {
             if (!options.match_compiler)
@@ -169,25 +226,27 @@ void dump_checksum_units(checked_array_base<IPO> &main_csum_units,
         int polarity = 0;
         for (auto &reg : checksum[i]) {
             int idx = reg->reg.deparser_id();
-            assert(phv2cksum[idx][0] >= 0);
+            if (reg.pov)
+                error(reg.pov.lineno, "No POV support in tofino checksum");
+            assert(tofino_phv2cksum[idx][0] >= 0);
             if (reg->reg.size == 8)
                 polarity ^= 1;
             if (idx >= 256) {
-                tagalong_unit[phv2cksum[idx][0]].zero_l_s_b = 0;
-                tagalong_unit[phv2cksum[idx][0]].zero_m_s_b = 0;
-                tagalong_unit[phv2cksum[idx][0]].swap = polarity;
-                if (phv2cksum[idx][1] >= 0) {
-                    tagalong_unit[phv2cksum[idx][1]].zero_l_s_b = 0;
-                    tagalong_unit[phv2cksum[idx][1]].zero_m_s_b = 0;
-                    tagalong_unit[phv2cksum[idx][1]].swap = polarity; }
+                tagalong_unit[tofino_phv2cksum[idx][0]].zero_l_s_b = 0;
+                tagalong_unit[tofino_phv2cksum[idx][0]].zero_m_s_b = 0;
+                tagalong_unit[tofino_phv2cksum[idx][0]].swap = polarity;
+                if (tofino_phv2cksum[idx][1] >= 0) {
+                    tagalong_unit[tofino_phv2cksum[idx][1]].zero_l_s_b = 0;
+                    tagalong_unit[tofino_phv2cksum[idx][1]].zero_m_s_b = 0;
+                    tagalong_unit[tofino_phv2cksum[idx][1]].swap = polarity; }
             } else {
-                main_unit[phv2cksum[idx][0]].zero_l_s_b = 0;
-                main_unit[phv2cksum[idx][0]].zero_m_s_b = 0;
-                main_unit[phv2cksum[idx][0]].swap = polarity;
-                if (phv2cksum[idx][1] >= 0) {
-                    main_unit[phv2cksum[idx][1]].zero_l_s_b = 0;
-                    main_unit[phv2cksum[idx][1]].zero_m_s_b = 0;
-                    main_unit[phv2cksum[idx][1]].swap = polarity; } } }
+                main_unit[tofino_phv2cksum[idx][0]].zero_l_s_b = 0;
+                main_unit[tofino_phv2cksum[idx][0]].zero_m_s_b = 0;
+                main_unit[tofino_phv2cksum[idx][0]].swap = polarity;
+                if (tofino_phv2cksum[idx][1] >= 0) {
+                    main_unit[tofino_phv2cksum[idx][1]].zero_l_s_b = 0;
+                    main_unit[tofino_phv2cksum[idx][1]].zero_m_s_b = 0;
+                    main_unit[tofino_phv2cksum[idx][1]].swap = polarity; } } }
         // Thread non-tagalong checksum results through the tagalong unit
         int idx = i + TAGALONG_THREAD_BASE + gress * Target::Tofino::DEPARSER_CHECKSUM_UNITS;
         tagalong_unit[idx].zero_l_s_b = 0;
@@ -200,14 +259,16 @@ template<> void Deparser::write_config(Target::Tofino::deparser_regs &regs) {
     regs.input.icr.intr.disable();
     regs.header.hem.he_edf_cfg.disable();
     regs.header.him.hi_edf_cfg.disable();
-    dump_checksum_units(regs.input.iim.ii_phv_csum.csum_cfg, regs.header.him.hi_tphv_csum.csum_cfg,
-                        INGRESS, checksum[INGRESS]);
-    dump_checksum_units(regs.input.iem.ie_phv_csum.csum_cfg, regs.header.hem.he_tphv_csum.csum_cfg,
-                        EGRESS, checksum[EGRESS]);
-    dump_field_dictionary(regs.input.iim.ii_fde_pov.fde_pov, regs.header.him.hi_fde_phv.fde_phv,
-        regs.input.iir.main_i.pov.phvs, pov_order[INGRESS], dictionary[INGRESS]);
-    dump_field_dictionary(regs.input.iem.ie_fde_pov.fde_pov, regs.header.hem.he_fde_phv.fde_phv,
-        regs.input.ier.main_e.pov.phvs, pov_order[EGRESS], dictionary[EGRESS]);
+    dump_tofino_checksum_units(regs.input.iim.ii_phv_csum.csum_cfg,
+            regs.header.him.hi_tphv_csum.csum_cfg, INGRESS, checksum[INGRESS]);
+    dump_tofino_checksum_units(regs.input.iem.ie_phv_csum.csum_cfg,
+            regs.header.hem.he_tphv_csum.csum_cfg, EGRESS, checksum[EGRESS]);
+    dump_tofino_field_dictionary(regs.input.iim.ii_fde_pov.fde_pov,
+            regs.header.him.hi_fde_phv.fde_phv, regs.input.iir.main_i.pov.phvs,
+            pov_order[INGRESS], dictionary[INGRESS]);
+    dump_tofino_field_dictionary(regs.input.iem.ie_fde_pov.fde_pov,
+            regs.header.hem.he_fde_phv.fde_phv, regs.input.ier.main_e.pov.phvs,
+            pov_order[EGRESS], dictionary[EGRESS]);
 
     if (Phv::use(INGRESS).intersects(Phv::use(EGRESS))) {
         warning(lineno[INGRESS], "Registers used in both ingress and egress in pipeline: %s",
@@ -256,16 +317,17 @@ template<> void Deparser::write_config(Target::Tofino::deparser_regs &regs) {
 }
 
 namespace {
-static struct ChecksumReg : public Phv::Register {
-    ChecksumReg(int unit) : Phv::Register("", Phv::Register::CHECKSUM, unit, unit+224, 16) {
+static struct TofinoChecksumReg : public Phv::Register {
+    TofinoChecksumReg(int unit) : Phv::Register("", Phv::Register::CHECKSUM, unit, unit+224, 16) {
         sprintf(name, "csum%d", unit); }
     int deparser_id() const override { return uid; }
-} checksum_units[12] = { {0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11} };
+} tofino_checksum_units[12] = { {0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11} };
 }
 
 template<> Phv::Slice Deparser::RefOrChksum::lookup<Target::Tofino>() const {
     if (lo != hi || lo < 0 || lo >= Target::Tofino::DEPARSER_CHECKSUM_UNITS) {
         error(lineno, "Invalid checksum unit number");
         return Phv::Slice(); }
-    return Phv::Slice(checksum_units[gress*Target::Tofino::DEPARSER_CHECKSUM_UNITS+lo], 0, 15);
+    int unit = gress*Target::Tofino::DEPARSER_CHECKSUM_UNITS + lo;
+    return Phv::Slice(tofino_checksum_units[unit], 0, 15);
 }

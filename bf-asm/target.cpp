@@ -157,8 +157,17 @@ void declare_registers(const Target::JBay::deparser_regs *regs) {
 }
 #endif // HAVE_JBAY
 
+// should these be inline in the header file?
 int Target::NUM_MAU_STAGES() {
     SWITCH_FOREACH_TARGET(options.target, return TARGET::NUM_MAU_STAGES; )
+}
+
+int Target::DEPARSER_CHECKSUM_UNITS() {
+    SWITCH_FOREACH_TARGET(options.target, return TARGET::DEPARSER_CHECKSUM_UNITS; )
+}
+
+int Target::DEPARSER_MAX_POV_BYTES() {
+    SWITCH_FOREACH_TARGET(options.target, return TARGET::DEPARSER_MAX_POV_BYTES; )
 }
 
 const char *Target::name() {

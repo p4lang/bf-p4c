@@ -288,16 +288,108 @@ static void setup_jbay_ownership(bitvec phv_use, ubits_base &phv8, ubits_base &p
             assert(0); } }
 }
 
+static short jbay_phv2cksum[224][2] = {
+    {  0,  1}, {  2,  3}, {  4,  5}, {  6,  7}, {  8,  9}, { 10, 11}, { 12, 13}, { 14, 15},
+    { 16, 17}, { 18, 19}, { 20, 21}, { 22, 23}, { 24, 25}, { 26, 27}, { 28, 29}, { 30, 31},
+    { 32, 33}, { 34, 35}, { 36, 37}, { 38, 39}, { 40, 41}, { 42, 43}, { 44, 45}, { 46, 47},
+    { 48, 49}, { 50, 51}, { 52, 53}, { 54, 55}, { 56, 57}, { 58, 59}, { 60, 61}, { 62, 63},
+    { 64, 65}, { 66, 67}, { 68, 69}, { 70, 71}, { 72, 73}, { 74, 75}, { 76, 77}, { 78, 79},
+    { 80, 81}, { 82, 83}, { 84, 85}, { 86, 87}, { 88, 89}, { 90, 91}, { 92, 93}, { 94, 95},
+    { 96, 97}, { 98, 99}, {100,101}, {102,103}, {104,105}, {106,107}, {108,109}, {110,111},
+    {112,113}, {114,115}, {116,117}, {118,119}, {120,121}, {122,123}, {124,125}, {126,127}, 
+    {128, -1}, {129, -1}, {130, -1}, {131, -1}, {132, -1}, {133, -1}, {134, -1}, {135, -1},
+    {136, -1}, {137, -1}, {138, -1}, {139, -1}, {140, -1}, {141, -1}, {142, -1}, {143, -1},
+    {144, -1}, {145, -1}, {146, -1}, {147, -1}, {148, -1}, {149, -1}, {150, -1}, {151, -1},
+    {152, -1}, {153, -1}, {154, -1}, {155, -1}, {156, -1}, {157, -1}, {158, -1}, {159, -1},
+    {160, -1}, {161, -1}, {162, -1}, {163, -1}, {164, -1}, {165, -1}, {166, -1}, {167, -1},
+    {168, -1}, {169, -1}, {170, -1}, {171, -1}, {172, -1}, {173, -1}, {174, -1}, {175, -1},
+    {176, -1}, {177, -1}, {178, -1}, {179, -1}, {180, -1}, {181, -1}, {182, -1}, {183, -1},
+    {184, -1}, {185, -1}, {186, -1}, {187, -1}, {188, -1}, {189, -1}, {190, -1}, {191, -1},
+    {192, -1}, {193, -1}, {194, -1}, {195, -1}, {196, -1}, {197, -1}, {198, -1}, {199, -1},
+    {200, -1}, {201, -1}, {202, -1}, {203, -1}, {204, -1}, {205, -1}, {206, -1}, {207, -1},
+    {208, -1}, {209, -1}, {210, -1}, {211, -1}, {212, -1}, {213, -1}, {214, -1}, {215, -1},
+    {216, -1}, {217, -1}, {218, -1}, {219, -1}, {220, -1}, {221, -1}, {222, -1}, {223, -1},
+    {224, -1}, {225, -1}, {226, -1}, {227, -1}, {228, -1}, {229, -1}, {230, -1}, {231, -1},
+    {232, -1}, {233, -1}, {234, -1}, {235, -1}, {236, -1}, {237, -1}, {238, -1}, {239, -1},
+    {240, -1}, {241, -1}, {242, -1}, {243, -1}, {244, -1}, {245, -1}, {246, -1}, {247, -1},
+    {248, -1}, {249, -1}, {250, -1}, {251, -1}, {252, -1}, {253, -1}, {254, -1}, {255, -1},
+    {256, -1}, {257, -1}, {258, -1}, {259, -1}, {260, -1}, {261, -1}, {262, -1}, {263, -1},
+    {264, -1}, {265, -1}, {266, -1}, {267, -1}, {268, -1}, {269, -1}, {270, -1}, {271, -1},
+    {272, -1}, {273, -1}, {274, -1}, {275, -1}, {276, -1}, {277, -1}, {278, -1}, {279, -1},
+    {280, -1}, {281, -1}, {282, -1}, {283, -1}, {284, -1}, {285, -1}, {286, -1}, {287, -1},
+};
+
+template<class ENTRIES>
+int write_jbay_checksum_entry(ENTRIES &entry, unsigned mask, int swap, int pov,
+                              int lineno, const char *reg, int id) {
+    if (mask == 0) return 0;
+    if (entry.modified()) {
+        error(lineno, "%s appears multiple times in checksum %d", reg, id);
+        return 0; }
+    entry.swap = swap;
+    entry.pov = pov;
+    switch (mask ^ (swap*3)) {
+    case 1:
+        entry.zero_m_s_b = 1;
+        return 1;
+    case 2:
+        entry.zero_l_s_b = 1;
+        return 1;
+    default:
+        return 0; }
+}
+
+template<class CSUM, class POV, class ENTRIES>
+void write_jbay_checksum_config(CSUM &csum, POV &pov_cfg, ENTRIES &phv_entries, int unit,
+        std::vector<Deparser::Val> &data, ordered_map<const Phv::Register *, unsigned> &pov) {
+    std::map<unsigned, unsigned>        pov_map;
+    unsigned byte = 0, mapped[4];
+    for (auto &val : data) {
+        unsigned bit = pov.at(&val.pov->reg) + val.pov->lo;
+        if (pov_map.count(bit)) continue;
+        for (unsigned i = 0; i < byte; ++i) {
+            if (pov_cfg.byte_sel[i] == bit/8U) {
+                pov_map[bit] = i*8U + bit%8U;
+                break; } }
+        if (pov_map.count(bit)) continue;
+        if (byte == 4) {
+            error(val.pov.lineno, "POV bits for checksum %d don't fit in 4 bytes", unit);
+            return; }
+        pov_map[bit] = byte*8U + bit%8U;
+        pov_cfg.byte_sel[byte++] = bit/8U; }
+
+    int swap = 0;
+    for (auto &val : data) {
+        unsigned mask = (1 << ((val->hi+1)/8U)) - (1 << (val->lo/8U));
+        auto &remap = jbay_phv2cksum[val->reg.deparser_id()];
+        int povbit = pov_map.at(pov.at(&val.pov->reg) + val.pov->lo);
+        if (remap[1] >= 0)
+            swap ^= write_jbay_checksum_entry(phv_entries.entry[remap[1]], mask >> 2, swap, povbit,
+                                              val.lineno, val->reg.name, unit);
+        else assert(mask >> 2 == 0);
+        swap ^= write_jbay_checksum_entry(phv_entries.entry[remap[0]], mask & 3, swap, povbit,
+                                          val.lineno, val->reg.name, unit); }
+
+    // FIXME -- CLOT support
+    // csm.clot_entry = ???
+
+    // FIXME -- the checksum outputs are actually the checksums of any set of units?
+    csum.phv_entry[unit].pov = pov_map.begin()->second; // FIXME which POV bit to use?
+    csum.phv_entry[unit].vld = 1;
+    // FIXME -- use/set csum.csum_constant and csum.zeros_as_ones?
+}
+
+
 template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
     regs.dprsrreg.dprsr_csr_ring.disable();
     regs.dprsrreg.dprsr_pbus.disable();
     regs.dprsrreg.inp.icr.disable();            // disable this whole tree
     regs.dprsrreg.inp.icr.disabled_ = false;    // then enable just certain subtrees
     regs.dprsrreg.inp.icr.csum_engine.enable();
-    regs.dprsrreg.inp.icr.egr.enable(); 
-    regs.dprsrreg.inp.icr.egr_meta_pov.enable(); 
-    regs.dprsrreg.inp.icr.ingr.enable(); 
-    regs.dprsrreg.inp.icr.ingr_meta_pov.enable(); 
+    regs.dprsrreg.inp.icr.egr.enable();
+    regs.dprsrreg.inp.icr.egr_meta_pov.enable();
+    regs.dprsrreg.inp.icr.ingr.enable();
+    regs.dprsrreg.inp.icr.ingr_meta_pov.enable();
     regs.dprsrreg.inp.iim.disable();
     regs.dprsrreg.inpslice.disable();
     for (auto &r : regs.dprsrreg.ho_i)
@@ -305,18 +397,20 @@ template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
     for (auto &r : regs.dprsrreg.ho_e)
         r.out_egr.disable();
 
-#if 0
-    // FIXME -- this is old tofino code -- needs to be updated to jbay?
-    dump_checksum_units(regs.input.iim.ii_phv_csum.csum_cfg, regs.header.him.hi_tphv_csum.csum_cfg,
-                        INGRESS, checksum[INGRESS]);
-    dump_checksum_units(regs.input.iem.ie_phv_csum.csum_cfg, regs.header.hem.he_tphv_csum.csum_cfg,
-                        EGRESS, checksum[EGRESS]);
-
-    // jbay register trees associated with checksums:
-    // regs.dprsrreg.inp.icr.csum_engine
-    // regs.dprsrreg.inp.ipp.phv_csum_phv_cfg
-    // regs.dprsrreg.inp.ipp_m.i_csum.engine
-#endif
+    for (int i = 0; i < Target::JBay::DEPARSER_CHECKSUM_UNITS; i++) {
+        if (!checksum[INGRESS][i].empty()) {
+            regs.dprsrreg.inp.ipp.phv_csum_pov_cfg.thread.thread[i] = INGRESS;
+            write_jbay_checksum_config(regs.dprsrreg.inp.icr.csum_engine[i],
+                regs.dprsrreg.inp.ipp.phv_csum_pov_cfg.csum_pov_cfg[i],
+                regs.dprsrreg.inp.ipp_m.i_csum.engine[i], i, checksum[INGRESS][i], pov[INGRESS]);
+            if (!checksum[EGRESS][i].empty()) {
+                error(checksum[INGRESS][i][0].lineno, "checksum %d used in both ingress", i);
+                error(checksum[EGRESS][i][0].lineno, "...and egress"); }
+        } else if (!checksum[EGRESS][i].empty()) {
+            regs.dprsrreg.inp.ipp.phv_csum_pov_cfg.thread.thread[i] = EGRESS;
+            write_jbay_checksum_config(regs.dprsrreg.inp.icr.csum_engine[i],
+               regs.dprsrreg.inp.ipp.phv_csum_pov_cfg.csum_pov_cfg[i],
+               regs.dprsrreg.inp.ipp_m.i_csum.engine[i], i, checksum[EGRESS][i], pov[EGRESS]); } }
 
     output_jbay_field_dictionary(lineno[INGRESS], regs.dprsrreg.inp.icr.ingr.chunk_info,
         regs.dprsrreg.inp.ipp.main_i.pov.phvs, pov[INGRESS], dictionary[INGRESS]);
@@ -370,6 +464,17 @@ template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
     TopLevel::regs<Target::JBay>()->reg_pipe.pardereg.dprsrreg = "regs.deparser";
 }
 
+namespace {
+static struct JbayChecksumReg : public Phv::Register {
+    JbayChecksumReg(int unit) : Phv::Register("", Phv::Register::CHECKSUM, unit, unit+232, 16) {
+        sprintf(name, "csum%d", unit); }
+    int deparser_id() const override { return uid; }
+} jbay_checksum_units[8] = { {0}, {1}, {2}, {3}, {4}, {5}, {6}, {7} };
+}
+
 template<> Phv::Slice Deparser::RefOrChksum::lookup<Target::JBay>() const {
-    return Phv::Slice();
+    if (lo != hi || lo < 0 || lo >= Target::JBay::DEPARSER_CHECKSUM_UNITS) {
+        error(lineno, "Invalid checksum unit number");
+        return Phv::Slice(); }
+    return Phv::Slice(tofino_checksum_units[lo], 0, 15);
 }

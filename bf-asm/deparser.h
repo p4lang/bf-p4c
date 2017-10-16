@@ -6,11 +6,6 @@
 #include <vector>
 
 enum {
-    // FIXME -- these are tofino specific
-    DEPARSER_MAX_POV_BYTES = 32,
-    DEPARSER_MAX_FD_ENTRIES = 384,
-    DEPARSER_LEARN_GROUPS = 8,
-
     // limits over all targets
     MAX_DEPARSER_CHECKSUM_UNITS = 8,
 };
@@ -19,9 +14,17 @@ class Deparser : public Section {
     static Deparser singleton_object;
 public:
     struct Val {
+        /* a phv reference with optional associated POV phv reference */
         Phv::Ref   val, pov;
+        const int &lineno = val.lineno;
+        Val() {}
         Val(gress_t gr, const value_t &v) : val(gr, v) {}
         Val(gress_t gr, const value_t &v, const value_t &p) : val(gr, v), pov(gr, p) {}
+        Val &operator=(const Val &a) { val = a.val; pov = a.pov; }
+        explicit operator bool() const { return bool(val); }
+        Phv::Slice operator*() const { return *val; }
+        Phv::Slice operator->() const { return *val; }
+        bool check() const { return val.check(); }
     };
     class RefOrChksum : public Phv::Ref {
     public:
@@ -33,7 +36,7 @@ public:
     };
     int                                             lineno[2];
     std::vector<std::pair<RefOrChksum, Phv::Ref>>   dictionary[2];
-    std::vector<Phv::Ref>                           checksum[2][MAX_DEPARSER_CHECKSUM_UNITS];
+    std::vector<Val>                                checksum[2][MAX_DEPARSER_CHECKSUM_UNITS];
     std::vector<Phv::Ref>                           pov_order[2];
     ordered_map<const Phv::Register *, unsigned>    pov[2];
     bitvec                                          phv_use[2];
@@ -49,7 +52,7 @@ public:
         struct Type;
         Type                                    *type;
         int                                     lineno;
-        Phv::Ref                                select;
+        Val                                     select;
         int                                     shift = 0;
         std::map<int, std::vector<Phv::Ref>>    layout;
         Digest(Type *t, int lineno, VECTOR(pair_t) &data);

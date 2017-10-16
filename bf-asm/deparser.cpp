@@ -66,9 +66,12 @@ Deparser::Digest::Digest(Deparser::Digest::Type *t, int l, VECTOR(pair_t) &data)
     type = t;
     lineno = l;
     for (auto &l : data) {
-        if (l.key == "select")
-            select = Phv::Ref(t->gress, l.value);
-        else if (t->can_shift && l.key == "shift") {
+        if (l.key == "select") {
+            if (l.value.type == tMAP && l.value.map.size == 1) {
+                select = Val(t->gress, l.value.map[0].key, l.value.map[0].value);
+            } else {
+                select = Val(t->gress, l.value); }
+        } else if (t->can_shift && l.key == "shift") {
             if (CHECKTYPE(l.value, tINT))
                 shift = l.value.i;
         } else if (!CHECKTYPE(l.key, tINT))
@@ -125,13 +128,18 @@ void Deparser::input(VECTOR(value_t) args, value_t data) {
                     pov_order[gress].emplace_back(gress, ent);
             } else if (kv.key == "checksum") {
                 if (kv.key.type != tCMD || kv.key.vec.size != 2 || kv.key[1].type != tINT ||
-                    kv.key[1].i < 0 || kv.key[1].i >= MAX_DEPARSER_CHECKSUM_UNITS)
+                    kv.key[1].i < 0 || kv.key[1].i >= Target::DEPARSER_CHECKSUM_UNITS())
                     error(kv.key.lineno, "Invalid checksum unit number");
-                else if (CHECKTYPE(kv.value, tVEC)) {
+                else if (CHECKTYPE2(kv.value, tVEC, tMAP)) {
                     int unit = kv.key[1].i;
-                    for (auto &ent : kv.value.vec)
-                        checksum[gress][unit].emplace_back(gress, ent); }
-            } else if (auto *itype = ::get(Intrinsic::Type::all[options.target][gress], value_desc(&kv.key))) {
+                    if (kv.value.type == tVEC) {
+                        for (auto &ent : kv.value.vec)
+                            checksum[gress][unit].emplace_back(gress, ent);
+                    } else {
+                        for (auto &ent : kv.value.map)
+                            checksum[gress][unit].emplace_back(gress, ent.key, ent.value); } }
+            } else if (auto *itype = ::get(Intrinsic::Type::all[options.target][gress],
+                                           value_desc(&kv.key))) {
                 intrinsics.emplace_back(itype, kv.key.lineno);
                 auto &intrin = intrinsics.back();
                 if (kv.value.type == tVEC) {
@@ -142,7 +150,8 @@ void Deparser::input(VECTOR(value_t) args, value_t data) {
                         intrin.vals.emplace_back(gress, el.key, el.value);
                 } else {
                     intrin.vals.emplace_back(gress, kv.value); }
-            } else if (auto *digest = ::get(Digest::Type::all[options.target][gress], value_desc(&kv.key))) {
+            } else if (auto *digest = ::get(Digest::Type::all[options.target][gress],
+                                            value_desc(&kv.key))) {
                 if (CHECKTYPE(kv.value, tMAP))
                     digests.emplace_back(digest, kv.value.lineno, kv.value.map);
             } else
@@ -176,8 +185,8 @@ void Deparser::process() {
                     error(ent.lineno, "Can only do checksums on full phv registers, not slices"); }
     for (auto &intrin : intrinsics) {
         for (auto &el : intrin.vals) {
-            if (el.val.check())
-                phv_use[intrin.type->gress][el.val->reg.uid] = 1;
+            if (el.check())
+                phv_use[intrin.type->gress][el->reg.uid] = 1;
             if (el.pov.check()) {
                 phv_use[intrin.type->gress][el.pov->reg.uid] = 1;
                 if (el.pov->lo != el.pov->hi)
@@ -196,6 +205,13 @@ void Deparser::process() {
             if (digest.select->lo > 0 && !digest.type->can_shift)
                 error(digest.select.lineno, "%s digest selector must be in bottom bits of phv",
                       digest.type->name.c_str()); }
+        if (digest.select.pov.check()) {
+            phv_use[digest.type->gress][digest.select.pov->reg.uid] = 1;
+            if (digest.select.pov->lo != digest.select.pov->hi)
+                error(digest.select.pov.lineno, "POV bits should be single bits");
+            if (!pov_use[digest.type->gress][digest.select.pov->reg.uid]) {
+                pov_order[digest.type->gress].emplace_back(digest.select.pov->reg);
+                pov_use[digest.type->gress][digest.select.pov->reg.uid] = 1; } }
         for (auto &set : digest.layout)
             for (auto &reg : set.second)
                 if (reg.check())
@@ -209,72 +225,8 @@ void Deparser::process() {
             if (pov[gress].count(&ent->reg) == 0) {
                 pov[gress][&ent->reg] = pov_size;
                 pov_size += ent->reg.size; }
-        if (pov_size > 8*DEPARSER_MAX_POV_BYTES)
+        if (pov_size > 8*Target::DEPARSER_MAX_POV_BYTES())
             error(lineno[gress], "Ran out of space in POV in deparser"); }
-}
-
-void dump_field_dictionary(checked_array_base<fde_pov> &fde_control,
-                           checked_array_base<fde_phv> &fde_data,
-                           checked_array_base<ubits<8>> &pov_layout,
-                           std::vector<Phv::Ref> &pov_order,
-                           std::vector<std::pair<Deparser::RefOrChksum, Phv::Ref>> &dict)
-{
-    std::map<unsigned, unsigned>        pov;
-    unsigned pov_byte = 0, pov_size = 0;
-    for (auto &ent : pov_order)
-        if (pov.count(ent->reg.deparser_id()) == 0) {
-            pov[ent->reg.deparser_id()] = pov_size;
-            pov_size += ent->reg.size;
-            for (unsigned i = 0; i < ent->reg.size; i += 8) {
-                if (pov_byte >= DEPARSER_MAX_POV_BYTES) {
-                    error(ent.lineno, "Ran out of space in POV in deparser");
-                    return; }
-                pov_layout[pov_byte++] = ent->reg.deparser_id(); } }
-#if 0
-    for (auto &ent : dict)
-        if (pov.count(ent.second->reg.deparser_id()) == 0) {
-            pov[ent.second->reg.deparser_id()] = pov_size;
-            pov_size += ent.second->reg.size;
-            for (unsigned i = 0; i < ent.second->reg.size; i += 8) {
-                if (pov_byte >= DEPARSER_MAX_POV_BYTES) {
-                    error(ent.second.lineno, "Ran out of space in POV in deparser");
-                    return; }
-                pov_layout[pov_byte++] = ent.second->reg.deparser_id(); } }
-#endif
-    while (pov_byte < DEPARSER_MAX_POV_BYTES)
-        pov_layout[pov_byte++] = 0xff;
-
-    int row = -1, prev_pov = -1;
-    bool prev_is_checksum = false;
-    unsigned pos = 0;
-    for (auto &ent : dict) {
-        unsigned size = ent.first->reg.size/8;
-        int pov_bit = pov[ent.second->reg.deparser_id()] + ent.second->lo;
-        if (options.match_compiler) {
-            if (ent.first->reg.deparser_id() >= 224 && ent.first->reg.deparser_id() < 236) {
-                /* checksum unit -- make sure it gets its own dictionary line */
-                prev_pov = -1;
-                prev_is_checksum = true;
-            } else {
-                if (prev_is_checksum) prev_pov = -1;
-                prev_is_checksum = false; } }
-        while (size--) {
-            if (pov_bit != prev_pov || pos >= 4 /*|| (pos & (size-1)) != 0*/) {
-                if (row >= 0) {
-                    fde_control[row].num_bytes = pos & 3;
-                    fde_data[row].num_bytes = pos & 3; }
-                if (row >= DEPARSER_MAX_FD_ENTRIES) {
-                    error(ent.first.lineno, "Ran out of space in field dictionary");
-                    return; }
-                fde_control[++row].pov_sel = pov_bit;
-                fde_control[row].version = 0xf;
-                fde_control[row].valid = 1;
-                pos = 0; }
-            fde_data[row].phv[pos++] = ent.first->reg.deparser_id();
-            prev_pov = pov_bit; } }
-    if (pos) {
-        fde_control[row].num_bytes = pos & 3;
-        fde_data[row].num_bytes = pos & 3; }
 }
 
 template <typename IN_GRP, typename IN_SPLIT, typename EG_GRP, typename EG_SPLIT>
