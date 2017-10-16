@@ -420,8 +420,9 @@ struct ReplaceParserIR : public ParserTransform {
         // Record the amount of metadata which is prepended to the packet; this
         // is used to compensate so that e.g. counters record only bytes which
         // are part of the "real" packet.
-        // XXX(seth): This should be calculated, rather than hard-coded.
-        loweredParser->prePacketDataLengthBytes = parser->gress == INGRESS ? 16 : 2;
+        loweredParser->prePacketDataLengthBytes =
+          parser->gress == INGRESS ? Device::pardeSpec().byteTotalIngressMetadataSize()
+                                   : Device::pardeSpec().byteEgressMetadataSize();
 
         return loweredParser;
     }
