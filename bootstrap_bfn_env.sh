@@ -308,15 +308,14 @@ pushd model >/dev/null
     fi
 popd >/dev/null
 
-if [ ! -x "$(which ptf)" ]; then
-    pushd $tmpdir
-    git clone https://github.com/p4lang/ptf.git
-    cd ptf
-    sudo python setup.py install
-    cd ..
-    sudo rm -rf ptf
-    popd # tmpdir
-fi
+# re-install ptf unconditionally
+pushd $tmpdir
+gitclone https://github.com/p4lang/ptf.git ptf
+cd ptf
+sudo python setup.py install
+cd ..
+sudo rm -rf ptf
+popd # tmpdir
 
 echo "Checking for huge pages"
 sudo $curdir/scripts/ptf_hugepage_setup.sh

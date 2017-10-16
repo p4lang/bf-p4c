@@ -148,13 +148,15 @@ macro(p4c_add_ptf_test_with_ptfdir alias ts args ptfdir)
   p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} FALSE ${alias}
     ${p4test} "${args} -ptfdir ${ptfdir}")
   p4c_test_set_name(__testname "tofino" ${alias})
+if (PTF_REQUIREMENTS_MET)
   set_tests_properties(${__testname} PROPERTIES RUN_SERIAL 1)
   p4c_add_test_label("tofino" "ptf" ${alias})
+endif()
 endmacro(p4c_add_ptf_test_with_ptfdir)
 
 p4c_add_ptf_test_with_ptfdir (
     tor.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/google-tor/p4/spec/tor.p4
-    ${testExtraArgs} ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/tor.ptf)
+    "${testExtraArgs}" ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/tor.ptf)
 
 if (PTF_REQUIREMENTS_MET)
   # PTF tests cannot be run in parallel with other tests, so we set the SERIAL
