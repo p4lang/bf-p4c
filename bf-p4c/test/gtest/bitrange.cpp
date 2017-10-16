@@ -105,6 +105,7 @@ TYPED_TEST(TofinoHalfOpenRange, EmptyRange) {
         for (int bit : { -2, -1, 0, 1, 2 }) {
             SCOPED_TRACE(bit);
             EXPECT_FALSE(range.contains(bit));
+            EXPECT_FALSE(range.contains(HalfOpenRangeType(StartLen(bit, 1))));
         }
 
         // Check that an empty range doesn't overlap anything.
@@ -607,15 +608,41 @@ TYPED_TEST(TofinoAnyRange, Contains) {
     for (auto i = -15; i < -11; i++) {
         SCOPED_TRACE(i);
         EXPECT_FALSE(range.contains(i));
+        EXPECT_FALSE(range.contains(AnyRangeType(StartLen(i, 1))));
     }
     for (auto i = -11; i <= 5; i++) {
         SCOPED_TRACE(i);
         EXPECT_TRUE(range.contains(i));
+        EXPECT_TRUE(range.contains(AnyRangeType(StartLen(i, 1))));
     }
     for (auto i = 6; i <= 10; i++) {
         SCOPED_TRACE(i);
         EXPECT_FALSE(range.contains(i));
+        EXPECT_FALSE(range.contains(AnyRangeType(StartLen(i, 1))));
     }
+
+    // Check that our range doesn't contain another range which lies completely
+    // outside it.
+    EXPECT_FALSE(range.contains(AnyRangeType(FromTo(-1000, -12))));
+    EXPECT_FALSE(range.contains(AnyRangeType(FromTo(6, 1000))));
+
+    // Check that our range *does* contain a range which lies completely within
+    // it.
+    EXPECT_TRUE(range.contains(AnyRangeType(FromTo(-11, -3))));
+    EXPECT_TRUE(range.contains(AnyRangeType(FromTo(-11, 5))));
+    EXPECT_TRUE(range.contains(AnyRangeType(FromTo(-1, 1))));
+    EXPECT_TRUE(range.contains(AnyRangeType(FromTo(2, 5))));
+
+    // Check that our range does not contain a range which lies partially within
+    // it and partially outside.
+    EXPECT_FALSE(range.contains(AnyRangeType(FromTo(-1000, -11))));
+    EXPECT_FALSE(range.contains(AnyRangeType(FromTo(-12, -10))));
+    EXPECT_FALSE(range.contains(AnyRangeType(FromTo(-12, 3))));
+    EXPECT_FALSE(range.contains(AnyRangeType(FromTo(-11, 6))));
+    EXPECT_FALSE(range.contains(AnyRangeType(FromTo(-3, 6))));
+    EXPECT_FALSE(range.contains(AnyRangeType(FromTo(4, 6))));
+    EXPECT_FALSE(range.contains(AnyRangeType(FromTo(5, 1000))));
+    EXPECT_FALSE(range.contains(AnyRangeType(FromTo(-1000, 1000))));
 }
 
 TYPED_TEST(TofinoAnyRange, Overlaps) {
@@ -1080,17 +1107,35 @@ TYPED_TEST(TofinoHalfOpenRange, MaxSizedRanges) {
     EXPECT_TRUE(zeroToMax.contains(1));
     EXPECT_TRUE(zeroToMax.contains(1000));
     EXPECT_TRUE(zeroToMax.contains(zeroToMax.hi - 1));
+    EXPECT_TRUE(zeroToMax.contains(RangeType(FromTo(0, 0))));
+    EXPECT_TRUE(zeroToMax.contains(RangeType(FromTo(0, 1000))));
+    EXPECT_TRUE(zeroToMax.contains(RangeType(ZeroToMax())));
     EXPECT_FALSE(zeroToMax.contains(-1));
     EXPECT_FALSE(zeroToMax.contains(-1000));
     EXPECT_FALSE(zeroToMax.contains(minToMax.lo));
+    EXPECT_FALSE(zeroToMax.contains(RangeType(FromTo(-1, 0))));
+    EXPECT_FALSE(zeroToMax.contains(RangeType(StartLen(-1000, 1))));
+    EXPECT_FALSE(zeroToMax.contains(RangeType(FromTo(-1000, -1))));
+    EXPECT_FALSE(zeroToMax.contains(RangeType(FromTo(-1000, 1000))));
+    EXPECT_FALSE(zeroToMax.contains(RangeType(FromTo(-1, zeroToMax.hi - 1))));
+    EXPECT_FALSE(zeroToMax.contains(RangeType(MinToMax())));
 
     EXPECT_TRUE(minToMax.contains(0));
     EXPECT_TRUE(minToMax.contains(1));
     EXPECT_TRUE(minToMax.contains(1000));
+    EXPECT_TRUE(minToMax.contains(RangeType(FromTo(0, 0))));
+    EXPECT_TRUE(minToMax.contains(RangeType(FromTo(0, 1000))));
+    EXPECT_TRUE(minToMax.contains(RangeType(ZeroToMax())));
     EXPECT_TRUE(minToMax.contains(minToMax.hi - 1));
     EXPECT_TRUE(minToMax.contains(-1));
     EXPECT_TRUE(minToMax.contains(-1000));
     EXPECT_TRUE(minToMax.contains(minToMax.lo));
+    EXPECT_TRUE(minToMax.contains(RangeType(FromTo(-1, 0))));
+    EXPECT_TRUE(minToMax.contains(RangeType(StartLen(-1000, 1))));
+    EXPECT_TRUE(minToMax.contains(RangeType(FromTo(-1000, -1))));
+    EXPECT_TRUE(minToMax.contains(RangeType(FromTo(-1000, 1000))));
+    EXPECT_TRUE(minToMax.contains(RangeType(FromTo(-1, minToMax.hi - 1))));
+    EXPECT_TRUE(minToMax.contains(RangeType(MinToMax())));
 
     EXPECT_TRUE(zeroToMax.overlaps(RangeType(FromTo(0, 0))));
     EXPECT_TRUE(zeroToMax.overlaps(RangeType(FromTo(0, 1))));
@@ -1251,17 +1296,35 @@ TYPED_TEST(TofinoClosedRange, MaxSizedRanges) {
     EXPECT_TRUE(zeroToMax.contains(1));
     EXPECT_TRUE(zeroToMax.contains(1000));
     EXPECT_TRUE(zeroToMax.contains(zeroToMax.hi - 1));
+    EXPECT_TRUE(zeroToMax.contains(RangeType(FromTo(0, 0))));
+    EXPECT_TRUE(zeroToMax.contains(RangeType(FromTo(0, 1000))));
+    EXPECT_TRUE(zeroToMax.contains(RangeType(ZeroToMax())));
     EXPECT_FALSE(zeroToMax.contains(-1));
     EXPECT_FALSE(zeroToMax.contains(-1000));
     EXPECT_FALSE(zeroToMax.contains(minToMax.lo));
+    EXPECT_FALSE(zeroToMax.contains(RangeType(FromTo(-1, 0))));
+    EXPECT_FALSE(zeroToMax.contains(RangeType(StartLen(-1000, 1))));
+    EXPECT_FALSE(zeroToMax.contains(RangeType(FromTo(-1000, -1))));
+    EXPECT_FALSE(zeroToMax.contains(RangeType(FromTo(-1000, 1000))));
+    EXPECT_FALSE(zeroToMax.contains(RangeType(FromTo(-1, zeroToMax.hi - 1))));
+    EXPECT_FALSE(zeroToMax.contains(RangeType(MinToMax())));
 
     EXPECT_TRUE(minToMax.contains(0));
     EXPECT_TRUE(minToMax.contains(1));
     EXPECT_TRUE(minToMax.contains(1000));
     EXPECT_TRUE(minToMax.contains(minToMax.hi - 1));
+    EXPECT_TRUE(minToMax.contains(RangeType(FromTo(0, 0))));
+    EXPECT_TRUE(minToMax.contains(RangeType(FromTo(0, 1000))));
+    EXPECT_TRUE(minToMax.contains(RangeType(ZeroToMax())));
     EXPECT_TRUE(minToMax.contains(-1));
     EXPECT_TRUE(minToMax.contains(-1000));
     EXPECT_TRUE(minToMax.contains(minToMax.lo));
+    EXPECT_TRUE(minToMax.contains(RangeType(FromTo(-1, 0))));
+    EXPECT_TRUE(minToMax.contains(RangeType(StartLen(-1000, 1))));
+    EXPECT_TRUE(minToMax.contains(RangeType(FromTo(-1000, -1))));
+    EXPECT_TRUE(minToMax.contains(RangeType(FromTo(-1000, 1000))));
+    EXPECT_TRUE(minToMax.contains(RangeType(FromTo(-1, minToMax.hi - 1))));
+    EXPECT_TRUE(minToMax.contains(RangeType(MinToMax())));
 
     EXPECT_TRUE(zeroToMax.overlaps(RangeType(FromTo(0, 0))));
     EXPECT_TRUE(zeroToMax.overlaps(RangeType(FromTo(0, 1))));

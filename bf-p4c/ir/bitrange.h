@@ -284,6 +284,12 @@ struct HalfOpenRange {
     /// @return true if this range includes the provided index.
     bool contains(int index) const { return index >= lo && index < hi; }
 
+    /// @return true if this range includes the provided range - i.e., if this
+    /// range contains a superset of the provided range's bits.
+    bool contains(HalfOpenRange other) const {
+        return intersectWith(other) == other;
+    }
+
     /// @return true if this range has some bits in common with the provided
     /// range. Note that an empty range never overlaps with any other range, so
     /// `rangeA == rangeB` does not imply that `rangeA.overlaps(rangeB)`.
@@ -497,6 +503,12 @@ struct ClosedRange {
 
     /// @see HalfOpenRange::contains().
     bool contains(int index) const { return index >= lo && index <= hi; }
+
+    /// @see HalfOpenRange::contains().
+    bool contains(ClosedRange other) const {
+        auto intersection = intersectWith(other);
+        return intersection.lo == other.lo && intersection.size() == other.size();
+    }
 
     /// @see HalfOpenRange::overlaps().
     bool overlaps(ClosedRange a) const {
