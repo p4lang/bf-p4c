@@ -260,21 +260,28 @@ class FindPhase0Table : public Inspector {
   bool preorder(const IR::P4Table*) override {
       if (table != nullptr) return false;
 
-      auto candidateTable = getOriginal<IR::P4Table>();
+      auto* candidateTable = getOriginal<IR::P4Table>();
       CHECK_NULL(candidateTable);
+      LOG3("Checking if " << candidateTable->name << " is a valid phase 0 table");
       Phase0Extracts* extracts = nullptr;
       Phase0Constants* constants = nullptr;
       const IR::MethodCallStatement* apply = nullptr;
 
       // Check if this table meets all of the phase 0 criteria.
       if (!hasCorrectSize(candidateTable)) return false;
+      LOG3(" - The size is correct");
       if (!hasNoSideEffects(candidateTable)) return false;
+      LOG3(" - It has no side effects");
       if (!hasCorrectKey(candidateTable)) return false;
+      LOG3(" - The key is correct");
       if (!hasValidAction(candidateTable, &extracts, &constants)) return false;
+      LOG3(" - The action is valid");
       if (!hasValidControlFlow(candidateTable, &apply)) return false;
+      LOG3(" - The control flow is valid");
 
       BUG_CHECK(apply != nullptr && extracts != nullptr && constants != nullptr,
                 "Found a table, but didn't gather all the metadata?");
+      LOG3(" - " << candidateTable->name << " will be used as the phase 0 table");
       this->table = candidateTable;
       this->extracts = extracts;
       this->constants = constants;
