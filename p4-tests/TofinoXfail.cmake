@@ -145,12 +145,6 @@ if (NOT ENABLE_TNA)
     testdata/p4_14_samples/resubmit.p4
     )
 
-  # BRIG-244
-  p4c_add_xfail_reason("tofino"
-    "error: Inferred incompatible alignments for field"
-    extensions/p4_tests/p4_14/jenkins/mirror_test/mirror_test.p4
-  )
-
   p4c_add_xfail_reason("tofino"
     "Wrong number of arguments for method call"
     testdata/p4_16_samples/checksum1-bmv2.p4
@@ -908,6 +902,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Unexpected mirror id"
   testdata/p4_16_samples/clone-bmv2.p4
+  extensions/p4_tests/p4_14/jenkins/mirror_test/mirror_test.p4
   )
 
 p4c_add_xfail_reason("tofino"

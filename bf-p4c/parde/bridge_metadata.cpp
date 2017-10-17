@@ -8,6 +8,17 @@ class AddBridgedMetadata::FindFieldsToBridge : public ThreadVisitor, Inspector {
     AddBridgedMetadata &self;
     std::set<const PHV::Field*> bridgedFields;
 
+    // Ignore any cast or slice that may wrap a bridged field. This ensures that
+    // the bridged metadata that we deparse in ingress matches the data that we
+    // parse in egress; we won't deparse only a slice, for example. It also
+    // prevents alignment issues caused by inconsistencies between the two
+    // threads.
+    // XXX(seth): Long term, if both ingress and egress use only a subset of
+    // the bits in the field, it'd be nice to take that into account here
+    // and not bother to write the ones we don't use.
+    bool preorder(const IR::Cast*) override { return true; }
+    bool preorder(const IR::Slice*) override { return true; }
+
     bool preorder(const IR::Expression *e) override {
         if (auto *field = self.phv.field(e)) {
             for (auto &loc : self.defuse.getAllUses(field->id)) {
@@ -37,8 +48,7 @@ class AddBridgedMetadata::FindFieldsToBridge : public ThreadVisitor, Inspector {
                           self.packing.padToAlignment(8, alignment);
                       }
 
-                      self.packing.appendField(loc.second,
-                                               loc.second->type->width_bits());
+                      self.packing.appendField(e, e->type->width_bits());
 
                       // Pad out to the next byte boundary.
                       // XXX(seth): Again, this is just an attempt to match the
