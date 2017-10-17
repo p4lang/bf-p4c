@@ -143,6 +143,11 @@ class Target::JBay : public Target {
         ACTION_INSTRUCTION_MAP_WIDTH = 8,
         DEPARSER_CHECKSUM_UNITS = 8,
         DEPARSER_MAX_POV_BYTES = 16,
+        DEPARSER_CHUNKS_PER_GROUP = 8,
+        DEPARSER_CHUNK_SIZE = 8,
+        DEPARSER_CHUNK_GROUPS = 16,
+        DEPARSER_CLOTS_PER_GROUP = 4,
+        DEPARSER_TOTAL_CHUNKS = DEPARSER_CHUNK_GROUPS * DEPARSER_CHUNKS_PER_GROUP,
     };
 };
 void declare_registers(const Target::JBay::top_level_regs *regs);

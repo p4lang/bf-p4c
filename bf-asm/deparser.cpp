@@ -1,6 +1,7 @@
 #include <config.h>
 
 #include "deparser.h"
+#include "parser.h"
 #include "phv.h"
 #include "range.h"
 #include "target.h"
@@ -10,6 +11,104 @@ Deparser Deparser::singleton_object;
 
 Deparser::Deparser() : Section("deparser") { }
 Deparser::~Deparser() { }
+
+struct Deparser::FDEntry {
+    struct Base {
+        virtual void check(bitvec &phv_use) = 0;
+        virtual unsigned encode() = 0;
+        virtual unsigned size() = 0;
+        template<class T> bool is() { return dynamic_cast<T*>(this) != nullptr; }
+        template<class T> T *to() { return dynamic_cast<T*>(this); }
+    };
+    struct Phv : Base {
+        ::Phv::Ref    val;
+        Phv(gress_t g, const value_t &v) : val(g, v) {}
+        void check(bitvec &phv_use) override {
+            if (val.check()) {
+                phv_use[val->reg.uid] = 1;
+                if (val->lo != 0 || val->hi != val->reg.size - 1)
+                    error(val.lineno, "Can only output full phv registers, not slices, "
+                                      "in deparser"); } }
+        unsigned encode() override { return val->reg.deparser_id(); }
+        unsigned size() override { return val->reg.size/8; }
+    };
+    struct Checksum : Base {
+        gress_t         gress;
+        int             unit;
+        Checksum(gress_t gr, const value_t &v) : gress(gr) {
+            if (CHECKTYPE(v, tINT)) {
+                if ((unit = v.i) < 0 || v.i >= Target::DEPARSER_CHECKSUM_UNITS())
+                    error(v.lineno, "Invalid deparser checksum unit %d", v.i); } }
+        void check(bitvec &phv_use) override { }
+        template<class TARGET> unsigned encode();
+        unsigned encode() override;
+        unsigned size() override { return 2; }
+    };
+    struct Clot : Base {
+        int                                     lineno;
+        gress_t                                 gress;
+        std::string                             tag;
+        int                                     length = -1;
+        std::map<unsigned, ::Phv::Ref>          replace;
+        Clot(gress_t gr, const value_t &tag, const value_t &data, ::Phv::Ref &pov)
+        : lineno(tag.lineno), gress(gr) {
+            if (CHECKTYPE2(tag, tINT, tSTR)) {
+                if (tag.type == tSTR)
+                    this->tag = tag.s;
+                else
+                    this->tag = std::to_string(tag.i); }
+            if (data.type == tMAP) {
+                for (auto &kv : data.map) {
+                    if (kv.key == "pov") {
+                        if (pov) error(kv.value.lineno, "Duplicate POV");
+                        pov = ::Phv::Ref(gress, kv.value);
+                    } else if (kv.key == "max_length" || kv.key == "length") {
+                        if (length >= 0)
+                            error(kv.value.lineno, "Duplicate length");
+                        if (CHECKTYPE(kv.value, tINT) && ((length = kv.value.i) < 0 || length > 64))
+                            error(kv.value.lineno, "Invalid clot length");
+                    } else if (kv.key.type == tINT) {
+                        if (replace.count(kv.key.i))
+                            error(kv.value.lineno, "Duplicate value at offset %d", kv.key.i);
+                        replace.emplace(kv.key.i, ::Phv::Ref(gress, kv.value)); } }
+            } else {
+                pov = ::Phv::Ref(gress, data); } }
+        void check(bitvec &phv_use) override {
+            if (length < 0) length = Parser::clot_maxlen(gress, tag);
+            if (length < 0) error(lineno, "No length for clot %s", tag.c_str());
+            if (Parser::clot_tag(gress, tag) < 0) error(lineno, "No tag for clot %s", tag.c_str());
+            unsigned next = 0;
+            ::Phv::Ref *prev;
+            for (auto &r: replace) {
+                if (r.first < next) {
+                    error(r.second.lineno, "Overlapping phvs in clot");
+                    error(prev->lineno, "%s and %s", prev->name(), r.second.name()); }
+                if (r.second.check()) {
+                    phv_use[r.second->reg.uid] = 1;
+                    if (r.second->lo != 0 || r.second->hi != r.second->reg.size - 1)
+                        error(r.second.lineno, "Can only output full phv registers, not slices,"
+                                               " in deparser");
+                    next = r.first + r.second->reg.size/8U;
+                    prev = &r.second; } } }
+        unsigned size() override { return length; }
+        unsigned encode() override { assert(0); }
+    };
+
+    int         lineno;
+    Base        *what;
+    ::Phv::Ref  pov;
+    FDEntry(gress_t gress, const value_t &v, const value_t &p) {
+        lineno = v.lineno;
+        if (v.type == tCMD && v.vec.size == 2 && v == "clot") {
+            what = new Clot(gress, v.vec[1], p, pov);
+        } else if (v.type == tCMD && v.vec.size == 2 && v == "checksum") {
+            what = new Checksum(gress, v.vec[1]);
+            pov = ::Phv::Ref(gress, p);
+        } else {
+            what = new Phv(gress, v);
+            pov = ::Phv::Ref(gress, p); } }
+    void check(bitvec &phv_use) { what->check(phv_use); }
+};
 
 struct Deparser::Intrinsic::Type {
     target_t    target;
@@ -106,6 +205,7 @@ void Deparser::start(int lineno, VECTOR(value_t) args) {
     gress_t gress = args[0] == "egress" ? EGRESS : INGRESS;
     if (!this->lineno[gress]) this->lineno[gress] = lineno;
 }
+
 void Deparser::input(VECTOR(value_t) args, value_t data) {
     if (!CHECKTYPE(data, tMAP)) return;
     for (gress_t gress : Range(INGRESS, EGRESS)) {
@@ -120,8 +220,7 @@ void Deparser::input(VECTOR(value_t) args, value_t data) {
                 collapse_list_of_maps(kv.value);
                 if (!CHECKTYPE(kv.value, tMAP)) continue;
                 for (auto &ent : kv.value.map)
-                    dictionary[gress].emplace_back(RefOrChksum(gress, ent.key),
-                                                   Phv::Ref(gress, ent.value));
+                    dictionary[gress].emplace_back(gress, ent.key, ent.value);
             } else if (kv.key == "pov") {
                 if (!CHECKTYPE(kv.value, tVEC)) continue;
                 for (auto &ent : kv.value.vec)
@@ -159,6 +258,7 @@ void Deparser::input(VECTOR(value_t) args, value_t data) {
         }
     }
 }
+
 void Deparser::process() {
     bitvec pov_use[2];
     for (gress_t gress : Range(INGRESS, EGRESS)) {
@@ -167,18 +267,14 @@ void Deparser::process() {
                 pov_use[gress][ent->reg.uid] = 1;
                 phv_use[gress][ent->reg.uid] = 1; }
         for (auto &ent : dictionary[gress]) {
-            if (ent.first.check()) {
-                phv_use[gress][ent.first->reg.uid] = 1;
-                if (ent.first->lo != 0 || ent.first->hi != ent.first->reg.size - 1)
-                    error(ent.first.lineno, "Can only output full phv registers, not slices, "
-                          "in deparser"); }
-            if (ent.second.check()) {
-                phv_use[gress][ent.second->reg.uid] = 1;
-                if (ent.second->lo != ent.second->hi)
-                    error(ent.second.lineno, "POV bits should be single bits");
-                if (!pov_use[gress][ent.second->reg.uid]) {
-                    pov_order[gress].emplace_back(ent.second->reg);
-                    pov_use[gress][ent.second->reg.uid] = 1; } } }
+            ent.check(phv_use[gress]);
+            if (ent.pov.check()) {
+                phv_use[gress][ent.pov->reg.uid] = 1;
+                if (ent.pov->lo != ent.pov->hi)
+                    error(ent.pov.lineno, "POV bits should be single bits");
+                if (!pov_use[gress][ent.pov->reg.uid]) {
+                    pov_order[gress].emplace_back(ent.pov->reg);
+                    pov_use[gress][ent.pov->reg.uid] = 1; } } }
         for (int i = 0; i < MAX_DEPARSER_CHECKSUM_UNITS; i++)
             for (auto &ent : checksum[gress][i])
                 if (ent.check() && (ent->lo != 0 || ent->hi != ent->reg.size - 1))
@@ -229,46 +325,12 @@ void Deparser::process() {
             error(lineno[gress], "Ran out of space in POV in deparser"); }
 }
 
-template <typename IN_GRP, typename IN_SPLIT, typename EG_GRP, typename EG_SPLIT>
-void output_phv_ownership(bitvec phv_use[2],
-                          IN_GRP &in_grp, IN_SPLIT &in_split,
-                          EG_GRP &eg_grp, EG_SPLIT &eg_split,
-                          unsigned first, unsigned count)
-{
-    assert(in_grp.val.size() == eg_grp.val.size());
-    assert(in_split.val.size() == eg_split.val.size());
-    assert((in_grp.val.size() + 1) * in_split.val.size() == count);
-    unsigned group_size = in_split.val.size();
-    // FIXME -- this only works because tofino Phv::Register uids happend to match
-    // FIXME -- the deparser encoding of phv containers. (FIXME-PHV)
-    unsigned reg = first;
-    for (unsigned i = 0; i < in_grp.val.size(); i++, reg += group_size) {
-        int count = 0;
-        if (phv_use[INGRESS].getrange(reg, group_size)) {
-            in_grp.val |= 1U << i;
-            if (i * group_size >= 16 && i * group_size < 32)
-                error(0, "%s..%s(R%d..R%d) used by ingress deparser but only available to egress",
-                      Phv::reg(reg)->name, Phv::reg(reg+group_size-1)->name, reg, reg+group_size-1);
-            else
-                count++; }
-        if (phv_use[EGRESS].getrange(reg, group_size)) {
-            eg_grp.val |= 1U << i;
-            if (i * group_size < 16)
-                error(0, "%s..%s(R%d..R%d) used by egress deparser but only available to ingress",
-                      Phv::reg(reg)->name, Phv::reg(reg+group_size-1)->name, reg, reg+group_size-1);
-            else
-                count++; }
-        if (count > 1)
-            error(0, "%s..%s(R%d..R%d) used by both ingress and egress deparser",
-                  Phv::reg(reg)->name, Phv::reg(reg+group_size-1)->name, reg, reg+group_size-1); }
-    in_split.val = phv_use[INGRESS].getrange(reg, group_size);
-    eg_split.val = phv_use[EGRESS].getrange(reg, group_size);
-}
-
 #include "tofino/deparser.cpp"    // tofino template specializations
 #if HAVE_JBAY
 #include "jbay/deparser.cpp"      // jbay template specializations
 #endif // HAVE_JBAY
+
+/* The following uses of specialized templates must be after the specialization... */
 
 void Deparser::output(json::map &) {
     SWITCH_FOREACH_TARGET(options.target,
@@ -279,14 +341,6 @@ void Deparser::output(json::map &) {
     )
 }
 
-bool Deparser::RefOrChksum::check() const {
-    if (name_ == "checksum")
-        SWITCH_FOREACH_TARGET(options.target, return bool(lookup<TARGET>()); )
-    return Phv::Ref::check();
-}
-
-Phv::Slice Deparser::RefOrChksum::operator *() const {
-    if (name_ == "checksum")
-        SWITCH_FOREACH_TARGET(options.target, return lookup<TARGET>(); )
-    return Phv::Ref::operator*();
+unsigned Deparser::FDEntry::Checksum::encode() {
+    SWITCH_FOREACH_TARGET(options.target, return encode<TARGET>(); );
 }

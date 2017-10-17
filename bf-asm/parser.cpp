@@ -145,7 +145,38 @@ void Parser::input(VECTOR(value_t) args, value_t data) {
             else {
                 error(kv.key.lineno, "State %s already defined in %sgress", name,
                       gress ? "e" : "in");
-                warning(n.first->second.lineno, "previously defined here"); } } }
+                warning(n.first->second.lineno, "previously defined here"); } }
+
+        // process the CLOTs immediately rather than in Parser::process() so that it
+        // happens before Deparser::process()
+        for (auto &vec : Values(clots[gress])) {
+            State::Match::Clot *maxlen = 0;
+            for (auto *cl : vec) {
+                if (cl->tag >= 0)
+                    clot_use[gress][cl->tag].push_back(cl);
+                if (!maxlen || cl->max_length > maxlen->max_length)
+                    maxlen = cl; }
+            for (auto *cl : vec)
+                cl->max_length = maxlen->max_length; }
+        std::map<std::string, unsigned> clot_alloc;
+        unsigned free_clot_tag = 0;
+        while (free_clot_tag < PARSER_MAX_CLOTS && !clot_use[gress][free_clot_tag].empty())
+            ++free_clot_tag;
+        for (auto &vec : Values(clots[gress])) {
+            for (auto *cl : vec) {
+                if (cl->tag >= 0) continue;
+                if (clot_alloc.count(cl->name)) {
+                    cl->tag = clot_alloc.at(cl->name);
+                    clot_use[gress][cl->tag].push_back(cl);
+                } else if (free_clot_tag >= PARSER_MAX_CLOTS) {
+                    error(cl->lineno, "Too many CLOTs (%d max)", PARSER_MAX_CLOTS);
+                } else {
+                    clot_alloc[cl->name] = cl->tag = free_clot_tag++;
+                    clot_use[gress][cl->tag].push_back(cl);
+                    while (free_clot_tag < PARSER_MAX_CLOTS &&
+                           !clot_use[gress][free_clot_tag].empty())
+                        ++free_clot_tag; } } }
+    }
 }
 
 void Parser::process() {
@@ -711,6 +742,8 @@ Parser::State::Match::Match(int l, gress_t gress, match_t m, VECTOR(pair_t) &dat
                 future.setup(kv.value);
         } else if (kv.key == "checksum") {
             csum.emplace_back(gress, kv);
+        } else if (kv.key.type == tCMD && kv.key == "clot" && kv.key.vec.size == 2) {
+            clots.emplace_back(singleton_object, gress, kv.key.vec[1], kv.value);
         } else if (kv.key.type == tINT) {
             save.emplace_back(gress, kv.key.i, kv.key.i, kv.value);
         } else if (kv.key.type == tRANGE) {
@@ -768,6 +801,82 @@ Parser::State::Match::Set::Set(gress_t gress, value_t &data, int v, int flgs) :
             flags |= OFFSET;
         else if (data[0] == "rotate")
             flags |= ROTATE; }
+}
+
+bool Parser::State::Match::Clot::parse_length(const value_t &exp, int what) {
+    enum { START, MASK, SHIFT, LOAD };
+    if (exp.type == tCMD) {
+        if (exp[0] == ">>") {
+            return what < SHIFT && parse_length(exp[1], LOAD) && parse_length(exp[2], SHIFT);
+        } else if (exp[0] == "&") {
+            return what < SHIFT && parse_length(exp[1], MASK) && parse_length(exp[2], MASK);
+        }
+    } else if (exp.type == tINT) {
+        switch (what) {
+        case START: case MASK:
+            if (length_mask >= 0) return false;
+            if ((length_mask = exp.i) < 0 || length_mask > 0x3f) {
+                error(exp.lineno, "length mask %d out of range", length_mask);
+                return false; }
+            return true;
+        case SHIFT:
+            if (length_shift >= 0) return false;
+            if ((length_shift = exp.i) < 0 || length_shift > 15) {
+                error(exp.lineno, "length shift %d out of range", length_shift);
+                return false; }
+            return true;
+        default:
+            return false; }
+    } else if (exp.type == tSTR && exp.s[0] == '@' && isdigit(exp.s[1])) {
+        char *end;
+        if (what == SHIFT || length >= 0 || (length = strtol(exp.s+1, &end, 10)) < 0 || *end)
+            return false;
+        load_length = true;
+        return true; }
+    return false;
+}
+
+Parser::State::Match::Clot::Clot(Parser &prsr, gress_t gress, const value_t &tag,
+                                 const value_t &data) : lineno(tag.lineno) {
+    if (CHECKTYPE2(tag, tINT, tSTR)) {
+        if (tag.type == tINT) {
+            this->tag = tag.i;
+            name = std::to_string(tag.i);
+        } else {
+            this->tag = -1;
+            name = tag.s; } }
+    prsr.clots[gress][name].push_back(this);
+    if (!CHECKTYPE2(data, tRANGE, tMAP)) return;
+    if (data.type == tRANGE) {
+        start = data.lo;
+        length = data.hi - data.lo + 1;
+    } else for (auto &kv : data.map) {
+        if (kv.key == "start") {
+            if (CHECKTYPE(kv.value, tINT))
+                start = kv.value.i;
+        } else if (kv.key == "length") {
+            if (kv.value.type == tINT) {
+                length = kv.value.i;
+            } else if (!parse_length(kv.value) || !load_length)
+                error(kv.value.lineno, "Syntax error");
+            if (length_mask < 0) length_mask = 0x3f;
+            if (length_shift < 0) length_shift = 0;
+        } else if (kv.key == "max_length") {
+            if (CHECKTYPE(kv.value, tINT))
+                max_length = kv.value.i;
+        } else
+            error(kv.key.lineno, "Unknown CLOT key %s", value_desc(kv.key)); }
+    if (start < 0)
+        error(data.lineno, "No start in clot %s", name.c_str());
+    if (length < 0)
+        error(data.lineno, "No length in clot %s", name.c_str());
+    if (max_length < 0) {
+        if (load_length)
+            max_length = 64;
+        else
+            max_length = length;
+    } else if (!load_length && max_length != length) {
+        error(data.lineno, "Inconsistent constant length and max_length in clot"); }
 }
 
 Parser::State::State(int l, const char *n, gress_t gr, match_t sno, const VECTOR(pair_t) &data) :
@@ -1021,6 +1130,11 @@ void Parser::State::Match::pass2(Parser *pa, State *state) {
                     pa->counter_init[state->gress][counter = free] = counter_exp;
                 else
                     error(counter_exp->lineno, "no space left in counter init ram"); } } }
+    if (clots.size() > 0) {
+        if (options.target == TOFINO)
+            error(clots[0].lineno, "clots not supported on tofino");
+        else if (clots.size() > 2)
+            error(clots[2].lineno, "no more that 2 clots per state"); }
 }
 
 void Parser::State::pass2(Parser *pa) {
@@ -1130,6 +1244,9 @@ void Parser::State::Match::write_config(REGS &regs, Parser *pa, State *state, Ma
         max_off = std::max(max_off, s.write_output_config(regs, output_map, used));
     if (def) for (auto &s : def->save)
         max_off = std::max(max_off, s.write_output_config(regs, output_map, used));
+    int clot_unit = 0;
+    for (auto &c : clots) c.write_config(action_row, clot_unit++);
+    if (def) for (auto &c : def->clots) c.write_config(action_row, clot_unit++);
     pa->mark_unused_output_map(regs, output_map, used);
 
     if (buf_req < 0) {

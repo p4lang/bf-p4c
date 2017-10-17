@@ -182,6 +182,21 @@ template <> void Parser::mark_unused_output_map(Target::JBay::parser_regs &,
     // unneeded on jbay
 }
 
+template<> void Parser::State::Match::Clot::write_config(
+        JBay::memories_parser_::_po_action_row &po_row, int idx) const {
+    po_row.clot_tag[idx] = tag;
+    po_row.clot_offset[idx] = start;
+    if (load_length) {
+        po_row.clot_type[idx] = 1;
+        po_row.clot_len_src[idx] = length;
+        po_row.clot_en_len_shr[idx] = length_shift;
+        // po_row.clot_len_mask[idx] = length_mask; -- FIXME -- CSR reg commented out
+    } else {
+        po_row.clot_len_src[idx] = length-1;
+        po_row.clot_type[idx] = 0;
+        po_row.clot_en_len_shr[idx] = 1; }
+}
+
 template<> void Parser::State::Match::write_counter_config(
     Target::JBay::parser_regs::_memory::_ml_ea_row &ea_row) const {
     ea_row.ctr_amt_idx = counter;

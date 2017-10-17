@@ -18,6 +18,8 @@ enum {
     PARSER_CHECKSUM_ROWS = 32,
     PARSER_CTRINIT_ROWS = 16,
     PARSER_INPUT_BUFFER_SIZE = 32,
+    PARSER_MAX_CLOTS = 64,
+    PARSER_MAX_CLOT_LENGTH = 64,
 };
 
 class Parser : public Section {
@@ -140,6 +142,17 @@ class Parser : public Section {
                     && flags == a.flags; }
             };
             std::vector<Set>            set;
+            struct Clot {
+                int             lineno, tag;
+                std::string     name;
+                bool            load_length = false;
+                int             start = -1, length = -1, length_shift = -1, length_mask = -1;
+                int             max_length = -1;
+                Clot(Parser &prsr, gress_t gress, const value_t &tag, const value_t &data);
+                bool parse_length(const value_t &exp, int what=0);
+                template<class PO_ROW> void write_config(PO_ROW &, int) const;
+            };
+            std::vector<Clot>           clots;
             std::vector<Checksum>       csum;
             Match(int lineno, gress_t, match_t m, VECTOR(pair_t) &data);
             Match(int lineno, gress_t, State *n);
@@ -187,10 +200,25 @@ public:
     bitvec                              phv_use[2], phv_allow_multi_write, phv_init_valid;
     // FIXME -- multi_write stuff should be split by gress?
     int                                 hdr_len_adj[2], meta_opt;
-    Alloc1D<Checksum *, PARSER_CHECKSUM_ROWS>   checksum_use[2];
-    Alloc1D<CounterInit *, PARSER_CTRINIT_ROWS> counter_init[2];
+    Alloc1D<Checksum *, PARSER_CHECKSUM_ROWS>                           checksum_use[2];
+    Alloc1D<CounterInit *, PARSER_CTRINIT_ROWS>                         counter_init[2];
+    std::map<std::string, std::vector<State::Match::Clot *>>            clots[2];
+    Alloc1D<std::vector<State::Match::Clot *>, PARSER_MAX_CLOTS>        clot_use[2];
+
     static Parser& get_parser() { return singleton_object; }
     template<class REGS> void gen_configuration_cache(REGS &, json::vector &cfg_cache);
+    static int clot_maxlen(gress_t gress, unsigned tag) {
+        auto &vec = singleton_object.clot_use[gress][tag];
+        return vec.empty() ? -1 : vec[0]->max_length; }
+    static int clot_maxlen(gress_t gress, std::string tag) {
+        if (singleton_object.clots[gress].count(tag))
+            return singleton_object.clots[gress].at(tag)[0]->max_length;
+        return -1; }
+    static int clot_tag(gress_t gress, std::string tag) {
+        if (singleton_object.clots[gress].count(tag))
+            return singleton_object.clots[gress].at(tag)[0]->tag;
+        return -1; }
+
 private:
     template<class REGS> void *setup_phv_output_map(REGS &, gress_t, int);
     template<class REGS> void mark_unused_output_map(REGS &, void *, unsigned);

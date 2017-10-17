@@ -89,12 +89,11 @@ TOFINO_DIGEST(EGRESS, mirror, regs.header.her.main_e.mirror_cfg,
 TOFINO_DIGEST(INGRESS, resubmit, regs.input.iir.ingr.resub_cfg,
               regs.input.iir.ingr.resub_tbl, YES, NO, 8)
 
-void dump_tofino_field_dictionary(checked_array_base<fde_pov> &fde_control,
-                                  checked_array_base<fde_phv> &fde_data,
-                                  checked_array_base<ubits<8>> &pov_layout,
-                                  std::vector<Phv::Ref> &pov_order,
-                                  std::vector<std::pair<Deparser::RefOrChksum, Phv::Ref>> &dict)
-{
+void tofino_field_dictionary(checked_array_base<fde_pov> &fde_control,
+                             checked_array_base<fde_phv> &fde_data,
+                             checked_array_base<ubits<8>> &pov_layout,
+                             std::vector<Phv::Ref> &pov_order,
+                             std::vector<Deparser::FDEntry> &dict) {
     std::map<unsigned, unsigned>        pov;
     unsigned pov_byte = 0, pov_size = 0;
     for (auto &ent : pov_order)
@@ -113,10 +112,10 @@ void dump_tofino_field_dictionary(checked_array_base<fde_pov> &fde_control,
     bool prev_is_checksum = false;
     unsigned pos = 0;
     for (auto &ent : dict) {
-        unsigned size = ent.first->reg.size/8;
-        int pov_bit = pov[ent.second->reg.deparser_id()] + ent.second->lo;
+        unsigned size = ent.what->size();
+        int pov_bit = pov[ent.pov->reg.deparser_id()] + ent.pov->lo;
         if (options.match_compiler) {
-            if (ent.first->reg.deparser_id() >= 224 && ent.first->reg.deparser_id() < 236) {
+            if (ent.what->is<Deparser::FDEntry::Checksum>()) {
                 /* checksum unit -- make sure it gets its own dictionary line */
                 prev_pov = -1;
                 prev_is_checksum = true;
@@ -129,17 +128,54 @@ void dump_tofino_field_dictionary(checked_array_base<fde_pov> &fde_control,
                     fde_control[row].num_bytes = pos & 3;
                     fde_data[row].num_bytes = pos & 3; }
                 if (row >= Target::Tofino::DEPARSER_MAX_FD_ENTRIES) {
-                    error(ent.first.lineno, "Ran out of space in field dictionary");
+                    error(ent.lineno, "Ran out of space in field dictionary");
                     return; }
                 fde_control[++row].pov_sel = pov_bit;
                 fde_control[row].version = 0xf;
                 fde_control[row].valid = 1;
                 pos = 0; }
-            fde_data[row].phv[pos++] = ent.first->reg.deparser_id();
+            fde_data[row].phv[pos++] = ent.what->encode();
             prev_pov = pov_bit; } }
     if (pos) {
         fde_control[row].num_bytes = pos & 3;
         fde_data[row].num_bytes = pos & 3; }
+}
+
+template <typename IN_GRP, typename IN_SPLIT, typename EG_GRP, typename EG_SPLIT>
+void tofino_phv_ownership(bitvec phv_use[2],
+                          IN_GRP &in_grp, IN_SPLIT &in_split,
+                          EG_GRP &eg_grp, EG_SPLIT &eg_split,
+                          unsigned first, unsigned count)
+{
+    assert(in_grp.val.size() == eg_grp.val.size());
+    assert(in_split.val.size() == eg_split.val.size());
+    assert((in_grp.val.size() + 1) * in_split.val.size() == count);
+    unsigned group_size = in_split.val.size();
+    // DANGER -- this only works because tofino Phv::Register uids happend to match
+    // DANGER -- the deparser encoding of phv containers.
+    unsigned reg = first;
+    for (unsigned i = 0; i < in_grp.val.size(); i++, reg += group_size) {
+        unsigned last = reg + group_size - 1;
+        int count = 0;
+        if (phv_use[INGRESS].getrange(reg, group_size)) {
+            in_grp.val |= 1U << i;
+            if (i * group_size >= 16 && i * group_size < 32)
+                error(0, "%s..%s(R%d..R%d) used by ingress deparser but only available to egress",
+                      Phv::reg(reg)->name, Phv::reg(last)->name, reg, last);
+            else
+                count++; }
+        if (phv_use[EGRESS].getrange(reg, group_size)) {
+            eg_grp.val |= 1U << i;
+            if (i * group_size < 16)
+                error(0, "%s..%s(R%d..R%d) used by egress deparser but only available to ingress",
+                      Phv::reg(reg)->name, Phv::reg(last)->name, reg, last);
+            else
+                count++; }
+        if (count > 1)
+            error(0, "%s..%s(R%d..R%d) used by both ingress and egress deparser",
+                  Phv::reg(reg)->name, Phv::reg(last)->name, reg, last); }
+    in_split.val = phv_use[INGRESS].getrange(reg, group_size);
+    eg_split.val = phv_use[EGRESS].getrange(reg, group_size);
 }
 
 static short tofino_phv2cksum[Target::Tofino::Phv::NUM_PHV_REGS][2] = {
@@ -200,10 +236,9 @@ static short tofino_phv2cksum[Target::Tofino::Phv::NUM_PHV_REGS][2] = {
      2*Target::Tofino::Phv::COUNT_32BIT_TPHV)
 
 template<typename IPO, typename HPO> static
-void dump_tofino_checksum_units(checked_array_base<IPO> &main_csum_units,
-                                checked_array_base<HPO> &tagalong_csum_units,
-                                gress_t gress, std::vector<Deparser::Val> checksum[])
-{
+void tofino_checksum_units(checked_array_base<IPO> &main_csum_units,
+                           checked_array_base<HPO> &tagalong_csum_units,
+                           gress_t gress, std::vector<Deparser::Val> checksum[]) {
     assert(tofino_phv2cksum[Target::Tofino::Phv::NUM_PHV_REGS-1][0] == 143);
     for (int i = 0; i < Target::Tofino::DEPARSER_CHECKSUM_UNITS; i++) {
         if (checksum[i].empty()) {
@@ -259,16 +294,15 @@ template<> void Deparser::write_config(Target::Tofino::deparser_regs &regs) {
     regs.input.icr.intr.disable();
     regs.header.hem.he_edf_cfg.disable();
     regs.header.him.hi_edf_cfg.disable();
-    dump_tofino_checksum_units(regs.input.iim.ii_phv_csum.csum_cfg,
-            regs.header.him.hi_tphv_csum.csum_cfg, INGRESS, checksum[INGRESS]);
-    dump_tofino_checksum_units(regs.input.iem.ie_phv_csum.csum_cfg,
-            regs.header.hem.he_tphv_csum.csum_cfg, EGRESS, checksum[EGRESS]);
-    dump_tofino_field_dictionary(regs.input.iim.ii_fde_pov.fde_pov,
-            regs.header.him.hi_fde_phv.fde_phv, regs.input.iir.main_i.pov.phvs,
-            pov_order[INGRESS], dictionary[INGRESS]);
-    dump_tofino_field_dictionary(regs.input.iem.ie_fde_pov.fde_pov,
-            regs.header.hem.he_fde_phv.fde_phv, regs.input.ier.main_e.pov.phvs,
-            pov_order[EGRESS], dictionary[EGRESS]);
+    tofino_checksum_units(regs.input.iim.ii_phv_csum.csum_cfg,
+                          regs.header.him.hi_tphv_csum.csum_cfg, INGRESS, checksum[INGRESS]);
+    tofino_checksum_units(regs.input.iem.ie_phv_csum.csum_cfg,
+                          regs.header.hem.he_tphv_csum.csum_cfg, EGRESS, checksum[EGRESS]);
+    tofino_field_dictionary(regs.input.iim.ii_fde_pov.fde_pov, regs.header.him.hi_fde_phv.fde_phv,
+                            regs.input.iir.main_i.pov.phvs, pov_order[INGRESS],
+                            dictionary[INGRESS]);
+    tofino_field_dictionary(regs.input.iem.ie_fde_pov.fde_pov, regs.header.hem.he_fde_phv.fde_phv,
+                            regs.input.ier.main_e.pov.phvs, pov_order[EGRESS], dictionary[EGRESS]);
 
     if (Phv::use(INGRESS).intersects(Phv::use(EGRESS))) {
         warning(lineno[INGRESS], "Registers used in both ingress and egress in pipeline: %s",
@@ -280,14 +314,14 @@ template<> void Deparser::write_config(Target::Tofino::deparser_regs &regs) {
         Phv::unsetuse(EGRESS, phv_use[INGRESS]);
     }
 
-    output_phv_ownership(phv_use, regs.input.iir.ingr.phv8_grp, regs.input.iir.ingr.phv8_split,
+    tofino_phv_ownership(phv_use, regs.input.iir.ingr.phv8_grp, regs.input.iir.ingr.phv8_split,
                          regs.input.ier.egr.phv8_grp, regs.input.ier.egr.phv8_split,
                          Target::Tofino::Phv::FIRST_8BIT_PHV, Target::Tofino::Phv::COUNT_8BIT_PHV);
-    output_phv_ownership(phv_use, regs.input.iir.ingr.phv16_grp, regs.input.iir.ingr.phv16_split,
+    tofino_phv_ownership(phv_use, regs.input.iir.ingr.phv16_grp, regs.input.iir.ingr.phv16_split,
                          regs.input.ier.egr.phv16_grp, regs.input.ier.egr.phv16_split,
                          Target::Tofino::Phv::FIRST_16BIT_PHV,
                          Target::Tofino::Phv::COUNT_16BIT_PHV);
-    output_phv_ownership(phv_use, regs.input.iir.ingr.phv32_grp, regs.input.iir.ingr.phv32_split,
+    tofino_phv_ownership(phv_use, regs.input.iir.ingr.phv32_grp, regs.input.iir.ingr.phv32_split,
                          regs.input.ier.egr.phv32_grp, regs.input.ier.egr.phv32_split,
                          Target::Tofino::Phv::FIRST_32BIT_PHV,
                          Target::Tofino::Phv::COUNT_32BIT_PHV);
@@ -316,18 +350,6 @@ template<> void Deparser::write_config(Target::Tofino::deparser_regs &regs) {
     TopLevel::regs<Target::Tofino>()->reg_pipe.deparser.inp = "regs.all.deparser.input_phase";
 }
 
-namespace {
-static struct TofinoChecksumReg : public Phv::Register {
-    TofinoChecksumReg(int unit) : Phv::Register("", Phv::Register::CHECKSUM, unit, unit+224, 16) {
-        sprintf(name, "csum%d", unit); }
-    int deparser_id() const override { return uid; }
-} tofino_checksum_units[12] = { {0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11} };
-}
-
-template<> Phv::Slice Deparser::RefOrChksum::lookup<Target::Tofino>() const {
-    if (lo != hi || lo < 0 || lo >= Target::Tofino::DEPARSER_CHECKSUM_UNITS) {
-        error(lineno, "Invalid checksum unit number");
-        return Phv::Slice(); }
-    int unit = gress*Target::Tofino::DEPARSER_CHECKSUM_UNITS + lo;
-    return Phv::Slice(tofino_checksum_units[unit], 0, 15);
+template<> unsigned Deparser::FDEntry::Checksum::encode<Target::Tofino>() {
+    return 224 + gress * 6 + unit;
 }

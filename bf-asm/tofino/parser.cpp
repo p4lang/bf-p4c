@@ -281,6 +281,11 @@ template <> void Parser::mark_unused_output_map(Target::Tofino::parser_regs &reg
             *map[i].dst = 0x1ff;
 }
 
+template<> void Parser::State::Match::Clot::write_config(
+        Tofino::memories_all_parser_::_po_action_row &, int) const {
+    assert(0);  // no CLOTs on tofino; should not get here
+}
+
 template<> void Parser::State::Match::write_counter_config(
     Target::Tofino::parser_regs::_memory::_ml_ea_row &ea_row) const {
     ea_row.ctr_amt_idx = counter;

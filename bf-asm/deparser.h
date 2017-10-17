@@ -26,16 +26,10 @@ public:
         Phv::Slice operator->() const { return *val; }
         bool check() const { return val.check(); }
     };
-    class RefOrChksum : public Phv::Ref {
-    public:
-        RefOrChksum(gress_t g, const value_t &v) : Phv::Ref(g, v) {}
-        template<class TARGET> Phv::Slice lookup() const;
-        bool check() const;
-        Phv::Slice operator *() const;
-        Phv::Slice operator->() const { return **this; }
-    };
+    struct FDEntry;
+
     int                                             lineno[2];
-    std::vector<std::pair<RefOrChksum, Phv::Ref>>   dictionary[2];
+    std::vector<FDEntry>                            dictionary[2];
     std::vector<Val>                                checksum[2][MAX_DEPARSER_CHECKSUM_UNITS];
     std::vector<Phv::Ref>                           pov_order[2];
     ordered_map<const Phv::Register *, unsigned>    pov[2];

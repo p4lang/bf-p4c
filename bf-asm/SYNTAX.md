@@ -79,6 +79,14 @@ parser [<thread>]:
                 # write the specifed byte (or range) to named phv slot
             [offset] <phv_location>: [rotate] <constant>
                 # write the specified constant to the phv location
+            clot <tag>:
+                # output a CLOT (jbay only)
+                start: <constant>
+                length: <constant> | <expression>
+                    # expression is generally '@' <const> [ '>>' <const> ] [ '&' <const> ]
+                    # with variations (unary is highest precedence, followed by shift,
+                    # mask(&), +/- lowest)
+                max_length: <constant>
         default:
             # actions to perform regardless of the match
         # if there is no 'default' tag in a state, anything that is not
@@ -159,38 +167,38 @@ stage <constant> <thread>:
             # gateway table on this table -- see below
         match: <phv-location> | '[' <phv-location>, ... ']'
             # value(s) to match against the 'match' field(s) in the format
-    ways:
-        - '[' <int>,<int>,<int>, '[' <row>,<col> ']',... ']'
-        # description of one way of the table
-        # initial 3 values are hash group, 10-bit slice from group, and
-        # mask of upper 12 bits from the group.
-        # FIXME -- needs to be done as a more descriptive map?
-    match_group_map: '[' '[' <int>,... ']',... ']'
-        # map from per-word match groups to overall match groups
-        # one row for each word in the width of the table with up to
-        # 5 values for up to 5 match groups in that word.  Values are
-        # match groups in the format
-        format: { <name>: <range>, <name>: <size> ... }
-            # format of data in the table, mapping names to ranges of bits.
-            # some names have predefined meanings:
-            #   match or match(0) match(1)..
-            #       exact match groups to match against
-            # fields with sizes instead of explicit ranges will be laid out
-            # by the assembler following preceeding fields
-        hash_dist: <hash_distribution>
-            # see hash_action hash_dist
-        action: <table-name>(<action> [, <index>])
-            # Action table to use -- action is a named field from the format
-            # that determines which action to do.  Index is optional (for
-            # indirect action), named field from format.  If not present use
-            # direct action (index is match address).
-        action_enable: <int>
-    enable_action_data_enable: true | false
-    enable_action_instruction_enable: true | false
-    action_bus: { <int> : <name> | <int>..<int> : <name>, ... }
-        # immediate actions data
-    actions: { <name> [<index>] : '[' [<address>,] [<data map>,] <instructions>, ... ']', ... }
-        # immediate actions if the is no action table (details in action table entry)
+        ways:
+            - '[' <int>,<int>,<int>, '[' <row>,<col> ']',... ']'
+            # description of one way of the table
+            # initial 3 values are hash group, 10-bit slice from group, and
+            # mask of upper 12 bits from the group.
+            # FIXME -- needs to be done as a more descriptive map?
+        match_group_map: '[' '[' <int>,... ']',... ']'
+            # map from per-word match groups to overall match groups
+            # one row for each word in the width of the table with up to
+            # 5 values for up to 5 match groups in that word.  Values are
+            # match groups in the format
+            format: { <name>: <range>, <name>: <size> ... }
+                # format of data in the table, mapping names to ranges of bits.
+                # some names have predefined meanings:
+                #   match or match(0) match(1)..
+                #       exact match groups to match against
+                # fields with sizes instead of explicit ranges will be laid out
+                # by the assembler following preceeding fields
+            hash_dist: <hash_distribution>
+                # see hash_action hash_dist
+            action: <table-name>(<action> [, <index>])
+                # Action table to use -- action is a named field from the format
+                # that determines which action to do.  Index is optional (for
+                # indirect action), named field from format.  If not present use
+                # direct action (index is match address).
+            action_enable: <int>
+        enable_action_data_enable: true | false
+        enable_action_instruction_enable: true | false
+        action_bus: { <int> : <name> | <int>..<int> : <name>, ... }
+            # immediate actions data
+        actions: { <name> [<index>] : '[' [<address>,] [<data map>,] <instructions>, ... ']', ... }
+            # immediate actions if the is no action table (details in action table entry)
         selector: <table-name>(<index-field> [ , <length-field> [ , <shift-field> ] ] )
             # selection table to use
         stats: <table-name> [ (<index-field>) ]
@@ -206,14 +214,14 @@ stage <constant> <thread>:
             sweep_interval: <int>
             notification: enable | disable | two_way
             per_flow_enable: true | false
-    table_counter: disable | table_miss | table_hit | gateway_miss |
-               gateway_hit | gateway_inhibit
-        # event type to count in per-table event counter
-    hit: <table-name> | '[' <table-name>, ... ']'
-        # next table on table hit.  If a list, 'format' must contain a
-        # 'next' field that determines which next table to use
+        table_counter: disable | table_miss | table_hit | gateway_miss |
+                   gateway_hit | gateway_inhibit
+            # event type to count in per-table event counter
+        hit: <table-name> | '[' <table-name>, ... ']'
+            # next table on table hit.  If a list, 'format' must contain a
+            # 'next' field that determines which next table to use
         miss: <table-name>
-        # next table on table miss
+            # next table on table miss
         next: <table-name>
             # default (unconditional) next table.  Exclusive with hit/miss
         p4: # information about P4 level tables and control plane API
@@ -278,10 +286,10 @@ stage <constant> <thread>:
             # meter table to use (only if no indirection table)
         idletime:
             # idletime table
-    hit: <table-name>
-        # next table on table hit.
+        hit: <table-name>
+            # next table on table hit.
         miss: <table-name>
-        # next table on table miss
+            # next table on table miss
         next: <table-name>
             # default (unconditional) next table.  Exclusive with hit/miss
         p4: # information about P4 level tables and control plane API
@@ -300,21 +308,21 @@ stage <constant> <thread>:
         action: <table-name>(<index>)
             # Action table to use -- index is optional (for indirect action),
             # named field from format.  If not present use direct action
-    action_bus: { <int> : <name> | <int>..<int> : <name>, ... }
-        # immediate actions data
-    actions: { <name> [<index>] : '[' [<address>,] [<data map>,] <instructions>, ... ']', ... }
-        # immediate actions if the is no action table (details in action table entry)
+        action_bus: { <int> : <name> | <int>..<int> : <name>, ... }
+            # immediate actions data
+        actions: { <name> [<index>] : '[' [<address>,] [<data map>,] <instructions>, ... ']', ... }
+            # immediate actions if the is no action table (details in action table entry)
         selector: <table-name>(<index-field>)
             # selection table to use
         stats: <table-name> [ (<index-field>) ]
             # statistics table to use
         meter: <table-name> [ (<index-field>) ]
             # meter table to use
-    hit: <table-name> | '[' <table-name>,  ... ']'
-        # next table on table hit.  If a list, 'format' must contain a
-        # 'next' field that determines which next table to use
+        hit: <table-name> | '[' <table-name>,  ... ']'
+            # next table on table hit.  If a list, 'format' must contain a
+            # 'next' field that determines which next table to use
         miss: <table-name>
-        # next table on table miss
+            # next table on table miss
         next: <table-name>
             # default (unconditional) next table.  Exclusive with hit/miss
         p4: # information about P4 level tables and control plane API
@@ -350,9 +358,9 @@ stage <constant> <thread>:
             # If not present assembler generate handles
         default_action_parameters: { <name> : <int>, ... }
             # Specifies list of params and values
-    action_bus: { <int> : <name> | <int>..<int> : <name>, ... }
-    actions: { <name> [<index>] : '[' [<address>,] [<data map>,] <instructions>, ... ']', ... }
-    hit: <table-name> | '[' <table-name>, ... ']'
+        action_bus: { <int> : <name> | <int>..<int> : <name>, ... }
+        actions: { <name> [<index>] : '[' [<address>,] [<data map>,] <instructions>, ... ']', ... }
+        hit: <table-name> | '[' <table-name>, ... ']'
         miss: <table-name>
         next: <table-name>
         p4: # information about P4 level tables and control plane API
@@ -370,11 +378,11 @@ stage <constant> <thread>:
         format [<action>]: { <name>: <range-or-constant>, ... }
             # fields in the ram record.  Different actions may have
             # different formats (and different sizes)...
-    action_bus: { <int> : <name> | <int>..<int> : <name>, ... }
-        # mapping from action bus bytes to values in the table.  Names
-        # must be present in the 'format' for the table.
-        # Can be optional -- if not present, assembler will attempt to
-        # lay out fields in the action bus based on usage in actions.
+        action_bus: { <int> : <name> | <int>..<int> : <name>, ... }
+            # mapping from action bus bytes to values in the table.  Names
+            # must be present in the 'format' for the table.
+            # Can be optional -- if not present, assembler will attempt to
+            # lay out fields in the action bus based on usage in actions.
         actions:
             # defines actions that can be used in the table
             <name> [<index>]:
@@ -383,7 +391,9 @@ stage <constant> <thread>:
             [- <address>]   # constant imem address to use for this action
             [- <data alias map>]        # map of aliases for data operands
                 <name> : <name> [ (<bit-range>) ]
-                # defines a name as an alias for (a slice of) something else
+                    # defines a name as an alias for (a slice of) something else
+            [- p4_param_order: '{' param_name : <int>, ... '}' ]
+                # Param order specifying param name and width for context json (p4_parameters)
             - <instruction> <operands>
         p4: # information about P4 level tables and control plane API
             # same as exact_match p4 info
@@ -492,14 +502,13 @@ stage <constant> <thread>:
         hash_dist: <hash_distribution>
             # see hash_action hash_dist
     actions: 
-        { <action name> : 
+        <action name> : 
             - { alias: <param/value>, ... }
                 # aliases used in instructions
-            - p4_param_order: { param_name : <int>, ... }
+            - p4_param_order: '{' param_name : <int>, ... '}'
                 # Param order specifying param name and width for context json (p4_parameters)
             - <instruction>
                 # SALU instructions to run for this table
-        }
     dependency: concurrent | action | match
         # set the interstage dependency between this stage and the
         # previous stage.  Ignored in stage 0
@@ -512,45 +521,70 @@ deparser <thread>:
             # single value to write iff the referred to bit is set
         - checksum <int> : <bit-location>
             # checksum result to write iff the referred to bit is set
+        - clot <tag>:
+            # clot to output (jbay only)
+            pov: <bit-location>
+            length: <int>
+                # maximum length of the clot
+            <int>: <phv_location>
+                # offset in clot to replace with a PHV value
     pov: <phv-location> | '[' <phv-location>, ... ']'
         # optional explicit use/ordering of phvs for POV.  All phvs used for POV bits
         # in the dictionary will be added to the end of this, if not already present
-    checksum <int>: <phv-location> | '[' <phv-location>, ... ']'
-        # checksum unit programming
-    <name>: <phv-location> | <digest-params>
+    checksum <int>:
+        <phv-location> [ ':' <pov-bit> ]
+        # checksum unit programming -- pov bits for jbay only
+    <name>: <phv-location> [ ':' <pov-bit ] | <digest-params>
         # more generally, any deparser param that comes from the phv is
-    # specified this way.  <digest-params> are as follows
-    select: <phv-location>
+        # specified this way.  Only jbay has pov bits here
+        # <digest-params> are as follows
+        select: <phv-location> [ ':' <pov-bit> ]
             # controls which digest group is output
-    shift: <constant>
-        <int>: <phv-location> | '[' <phv-location>, ... ']'
-            # values for a single digest group
+        shift: <constant>
+            <int>: <phv-location> | '[' <phv-location>, ... ']'
+                # values for a single digest group
     # ingress or egress params:
     mirror: <digest-params>
-    egress_unicast_port: <phv-location>
+    egress_unicast_port: <phv-location> [ ':' <pov-bit> ]
         # specifies the port to write to
-    drop_ctl: <phv-location>
+    drop_ctl: <phv-location> [ ':' <pov-bit> ]
+    # jbay only, ingress or egress
+    afc: '{' <phv->location> ':' <pov-bit> '}'
+    mirr_c2c_ctrl: '{' <phv->location> ':' <pov-bit> '}'
+    mirr_c2c_ctrl: '{' <phv->location> ':' <pov-bit> '}'
+    mirr_coal_smpl_len: '{' <phv->location> ':' <pov-bit> '}'
+    mirr_dond_ctrl: '{' <phv->location> ':' <pov-bit> '}'
+    mirr_hash: '{' <phv->location> ':' <pov-bit> '}'
+    mirr_icos: '{' <phv->location> ':' <pov-bit> '}'
+    mirr_io_sel: '{' <phv->location> ':' <pov-bit> '}'
+    mirr_mc_ctrl: '{' <phv->location> ':' <pov-bit> '}'
+    mirr_qid: '{' <phv->location> ':' <pov-bit> '}'
+    mtu_trunc_err_f: '{' <phv->location> ':' <pov-bit> '}'
+    mtu_trunc_len: '{' <phv->location> ':' <pov-bit> '}'
     # ingress only deparser params:
-    learning: <digest-params>
-    resubmit: <digest-params>
-    copy_to_cpu: <phv-location>
+    learning: <digest-params> [ ':' <pov-bit> ]
+    resubmit: <digest-params> [ ':' <pov-bit> ]
+    copy_to_cpu: <phv-location> [ ':' <pov-bit> ]
     egress_multicast_group: <phv-location> | '[' <phv-location>, <phv-location ']'
     hash_lag_ecmp_mcast: <phv-location> | '[' <phv-location>, <phv-location ']'
-    copy_to_cpu_cos: <phv-location>
-    ingress_port_source: <phv-location>
-    deflect_on_drop: <phv-location>
-    meter_color: <phv-location>
-    icos: <phv-location>
-    qid: <phv-location>
+    copy_to_cpu_cos: <phv-location> [ ':' <pov-bit> ]
+    ingress_port_source: <phv-location> [ ':' <pov-bit> ]
+    deflect_on_drop: <phv-location> [ ':' <pov-bit> ]
+    meter_color: <phv-location> [ ':' <pov-bit> ]
+    icos: <phv-location> [ ':' <pov-bit> ]
+    qid: <phv-location> [ ':' <pov-bit> ]
     xid: <phv-location>
-    yid: <phv-location>
-    rid: <phv-location>
-    warp: <phv-location>
-    ct_disable: <phv-location>
-    ct_mcast: <phv-location>
-    # egress only deparser params:
-    force_tx_err: <phv-location>
-    tx_pkt_has_offsets: <phv-location>
-    capture_tx_ts: <phv-location>
-    coal: <phv-location>
-    ecos: <phv-location>
+    yid: <phv-location> [ ':' <pov-bit> ]
+    rid: <phv-location> [ ':' <pov-bit> ]
+    warp: <phv-location> [ ':' <pov-bit> ]
+    ct_disable: <phv-location> [ ':' <pov-bit> ]
+    ct_mcast: <phv-location> [ ':' <pov-bit> ]
+    # jbay ingress only 
+    bypass_egr: '{' <phv->location> ':' <pov-bit> '}'
+    pkt_color: '{' <phv->location> ':' <pov-bit> '}'
+    # egress only deparser params: [ ':' <pov-bit> ]
+    force_tx_err: <phv-location> [ ':' <pov-bit> ]
+    tx_pkt_has_offsets: <phv-location> [ ':' <pov-bit> ]
+    capture_tx_ts: <phv-location> [ ':' <pov-bit> ]
+    coal: <phv-location> [ ':' <pov-bit> ]
+    ecos: <phv-location> [ ':' <pov-bit> ]
