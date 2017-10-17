@@ -348,6 +348,9 @@ template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
     regs.dprsrreg.inp.icr.i_phv32_grp.val = 0;
     setup_jbay_ownership(phv_use[INGRESS], regs.dprsrreg.inp.icr.i_phv8_grp.val,
         regs.dprsrreg.inp.icr.i_phv16_grp.val, regs.dprsrreg.inp.icr.i_phv32_grp.val);
+    regs.dprsrreg.inp.icr.e_phv8_grp.enable();
+    regs.dprsrreg.inp.icr.e_phv16_grp.enable();
+    regs.dprsrreg.inp.icr.e_phv32_grp.enable();
     setup_jbay_ownership(phv_use[EGRESS], regs.dprsrreg.inp.icr.e_phv8_grp.val,
         regs.dprsrreg.inp.icr.e_phv16_grp.val, regs.dprsrreg.inp.icr.e_phv32_grp.val);
 
