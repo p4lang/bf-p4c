@@ -18,16 +18,31 @@ class MauAsmOutput : public MauInspector {
     const IR::BFN::Pipe *pipe;
 
  private:
+    struct TableInstance {
+        explicit TableInstance(const IR::MAU::Table *table)
+            : tableInfo(table), phase0Info(nullptr) { }
+        explicit TableInstance(const BFN::Phase0Info *phase0)
+            : tableInfo(nullptr), phase0Info(phase0) { }
+
+        const IR::MAU::Table *tableInfo;
+        const BFN::Phase0Info *phase0Info;
+    };
+
     DefaultNext         default_next;
-    std::map<std::pair<gress_t, int>, std::vector<const IR::MAU::Table *>>      by_stage;
+    std::map<std::pair<gress_t, int>, std::vector<TableInstance>>      by_stage;
     profile_t init_apply(const IR::Node *root) override {
         root->apply(default_next);
         return MauInspector::init_apply(root); }
     bool preorder(const IR::BFN::Pipe *p) override {
         pipe = p;
+        if (p->phase0Info) {
+            auto tableId = std::make_pair(INGRESS, 0);
+            by_stage[tableId].push_back(TableInstance(p->phase0Info));
+        }
         return true; }
     bool preorder(const IR::MAU::Table *tbl) override {
-        by_stage[std::make_pair(tbl->gress, tbl->logical_id/16U)].push_back(tbl);
+        auto tableId = std::make_pair(tbl->gress, tbl->logical_id/16U);
+        by_stage[tableId].push_back(TableInstance(tbl));
         return true; }
     friend std::ostream &operator<<(std::ostream &, const MauAsmOutput &);
     class TableMatch;

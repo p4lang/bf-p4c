@@ -32,10 +32,14 @@ class MauAsmOutput::EmitAttached : public Inspector {
 std::ostream &operator<<(std::ostream &out, const MauAsmOutput &mauasm) {
     for (auto &stage : mauasm.by_stage) {
         out << "stage " << stage.first.second << ' ' << stage.first.first << ':' << std::endl;
-        if (stage.first.first == INGRESS && stage.first.second == 0)
-            out << mauasm.pipe->phase0Info;
-        for (auto tbl : stage.second)
-            mauasm.emit_table(out, tbl);
+        for (auto &tbl : stage.second) {
+            BUG_CHECK(!(tbl.phase0Info && tbl.tableInfo),
+                      "TableInstance is both a phase 0 table and a regular table?");
+            if (tbl.phase0Info)
+                out << tbl.phase0Info;
+            else
+                mauasm.emit_table(out, tbl.tableInfo);
+        }
     }
     return out;
 }
