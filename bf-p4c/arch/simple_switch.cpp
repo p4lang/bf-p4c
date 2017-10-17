@@ -1831,10 +1831,10 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
                                                  P4::TypeMap* typeMap, BFN_Options& options) {
     setName("Translation");
     BFN::Target target = BFN::Target::Unknown;
-    if (options.target == "tofino-v1model-barefoot")
+    if (options.arch == "v1model")
         target = BFN::Target::Simple;
-    else if (options.target == "tofino-native-barefoot")
-        target = BFN::Target::Tofino;
+    else if (options.arch == "native")
+        target = BFN::Target::Tofino;  // XXX(zma) : assuming tofino & jbay have same arch for now
     addDebugHook(options.getDebugHook());
     auto evaluator = new P4::EvaluatorPass(refMap, typeMap);
     auto checksums = new ChecksumSourceMap;

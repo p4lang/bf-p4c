@@ -146,7 +146,7 @@ MidEnd::MidEnd(BFN_Options& options) {
         // only contain one ingress and one egress control block.
         // Otherwise, the translator has to transform all parameters in all custom control
         // blocks, which is unattainable.
-        (options.target == "tofino-v1model-barefoot" && needTranslation) ?
+        (options.arch == "v1model" && needTranslation) ?
                 new BFN::SimpleSwitchTranslation(&refMap, &typeMap, options /*map*/) : nullptr,
         new P4::InlineActions(&refMap, &typeMap),
         new P4::LocalizeAllActions(&refMap),
@@ -180,10 +180,12 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::TableHit(&refMap, &typeMap),
         new P4::SynthesizeActions(&refMap, &typeMap, new SkipControls(skip_controls)),
         new P4::MoveActionsToTables(&refMap, &typeMap),
-        (needTranslation || options.target == "tofino-native-barefoot") ?
+        // XXX(zma) : assuming tofino & jbay have same arch for now
+        (needTranslation || options.arch == "native") ?
                 nullptr : new RemapIntrinsics,
         new P4::TypeChecking(&refMap, &typeMap, true),
-        (options.target == "tofino-native-barefoot") ?
+        // XXX(zma) : assuming tofino & jbay have same arch for now
+        (options.arch == "native") ?
                 nullptr : new FillFromBlockMap(&refMap, &typeMap),
         evaluator,
         new VisitFunctor([this, evaluator]() { toplevel = evaluator->getToplevelBlock(); }),
