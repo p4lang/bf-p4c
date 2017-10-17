@@ -95,7 +95,6 @@ bool Cluster::MakeCCGFs::preorder(const IR::HeaderRef *hr) {
         assert(ccgf_width > 0);
         //
         bool single_member = owner->ccgf_fields().size() == 1;
-        bool sub_byte = ccgf_width < int(PHV::Size::b8);
         bool byte_multiple = ccgf_width % int(PHV::Size::b8) == 0;
         auto contiguity_limit = owner->metadata?
                                 CCGF_contiguity_limit::Metadata * int(PHV::Size::b8):
@@ -108,7 +107,7 @@ bool Cluster::MakeCCGFs::preorder(const IR::HeaderRef *hr) {
                 << "single member");
             discard = true;
         }
-        if (!sub_byte && !byte_multiple) {
+        if (!byte_multiple) {
             LOG2("*****cluster.cpp: ccgf fields not grouped *****"
                 << "-----discarding PHV_container_contiguous_group....."
                 << "not byte_multiple");

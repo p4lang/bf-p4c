@@ -189,7 +189,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_45_action_data_immediate_param_and_constant.p4
   extensions/p4_tests/p4_14/test_config_48_action_data_bit_masked_set.p4
   extensions/p4_tests/p4_14/test_config_49_action_data_bit_masked_set_immediate.p4
-  extensions/p4_tests/p4_14/jenkins/pgrs/pgrs_one.p4
   )
 
 # BRIG-103
@@ -355,11 +354,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: .*: Cannot unify bit"
   extensions/p4_tests/p4_14/test_config_214_full_stats.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "Gateway xor key .* misaligned"
-  extensions/p4_tests/p4_14/test_config_244_gateway_compare.p4
   )
 
 # BRIG-102
@@ -767,7 +761,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/04-FullPHV3.p4
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
   extensions/p4_tests/p4_14/c1/COMPILER-133/full_tphv.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
   extensions/p4_tests/p4_14/c4/COMPILER-590/case3179.p4
   extensions/p4_tests/p4_14/c4/COMPILER-591/case3176.p4
   extensions/p4_tests/p4_14/jenkins/power/power.p4
@@ -903,7 +896,6 @@ p4c_add_xfail_reason("tofino"
   "Extract field slice .* with a negative offset."
   extensions/p4_tests/p4_14/c1/COMPILER-217/port_parser.p4
   extensions/p4_tests/p4_14/c1/COMPILER-295/vag1892.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
   extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
   extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
   extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
@@ -937,7 +929,9 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/action_conflict_3.p4
   extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
   extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
   )
 
 # Fails due to use of more than two source containers
