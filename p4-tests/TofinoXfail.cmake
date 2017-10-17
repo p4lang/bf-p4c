@@ -380,8 +380,6 @@ p4c_add_xfail_reason("tofino"
 # BRIG-113
 p4c_add_xfail_reason("tofino"
   "Input xbar hash.*conflict in"
-  extensions/p4_tests/p4_14/09-MatchNoDep.p4
-  extensions/p4_tests/p4_14/10-MatchNoDep1.p4
   extensions/p4_tests/p4_14/hash_calculation_max_size.p4
   extensions/p4_tests/p4_14/hash_calculation_multiple.p4
   )

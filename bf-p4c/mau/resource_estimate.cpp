@@ -1,4 +1,5 @@
 #include "resource_estimate.h"
+#include "memories.h"
 #include "lib/bitops.h"
 
 int CounterPerWord(const IR::MAU::Counter *ctr) {
@@ -68,6 +69,13 @@ int IdleTimePerWord(const IR::MAU::IdleTime *idletime) {
    4 4 4 4 4 4 */
 void StageUseEstimate::calculate_way_sizes(LayoutOption *lo,
                                            int &calculated_depth) {
+    if (lo->layout.match_width_bits <= ceil_log2(Memories::SRAM_DEPTH)) {
+        if (calculated_depth == 1) {
+            lo->way_sizes = {1};
+            return;
+        }
+    }
+
     if (calculated_depth < 8) {
         switch (calculated_depth) {
             case 1:

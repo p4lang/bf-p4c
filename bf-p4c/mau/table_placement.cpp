@@ -303,10 +303,7 @@ static bool try_alloc_ixbar(TablePlacement::Placed *next, const TablePlacement::
                             const PhvInfo &phv, StageUseEstimate &sue,
                             TableResourceAlloc *resources, const LayoutChoices &lc,
                             bool is_gw) {
-    resources->match_ixbar.clear();
-    resources->gateway_ixbar.clear();
-    resources->selector_ixbar.clear();
-    resources->salu_ixbar.clear();
+    resources->clear_ixbar();
     IXBar current_ixbar;
     for (auto *p = done; p && p->stage == next->stage; p = p->prev) {
         current_ixbar.update(p->name, p->resources);
@@ -315,15 +312,20 @@ static bool try_alloc_ixbar(TablePlacement::Placed *next, const TablePlacement::
     if (!current_ixbar.allocTable(next->table, phv, *resources, sue.preferred()) ||
         !current_ixbar.allocTable(next->gw, phv, *resources, sue.preferred())) {
         resources->clear_ixbar();
-        LOG1("Failed in ixbar?");
         return false; }
 
     const bitvec immediate_mask = lc.get_action_format(next->table).immediate_mask;
     if (!is_gw && !try_alloc_format(next, resources, sue, immediate_mask, next->gw)) {
         resources->clear_ixbar();
-        LOG1("Failed in format?");
         return false;
     }
+
+    IXBar verify_ixbar;
+    for (auto *p = done; p && p->stage == next->stage; p = p->prev) {
+        verify_ixbar.update(p->name, p->resources);
+    }
+
+    verify_ixbar.update(next->name, next->resources);
 
     return true;
 }
@@ -499,8 +501,6 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
                         min_resources,
                         min_use,
                         prev_resources))) {
-            LOG1("First boolean " << (min_use + stage_current <= avail));
-            LOG1("Min_use rams " << min_use.srams << " " << stage_current.srams);
             mem_allocation_bug = true;
             advance_to_next_stage = true;
             LOG3("Min use of memory allocation did not fit");

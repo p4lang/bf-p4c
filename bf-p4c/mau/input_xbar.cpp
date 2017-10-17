@@ -1605,8 +1605,13 @@ class XBarHashDist : MauInspector {
     }
 
     void end_apply() {
-        if (!allocation_passed)
+        if (!allocation_passed) {
             alloc.hash_dists.clear();
+        }
+    }
+
+    bool preorder(const IR::MAU::AttachedOutput *) {
+        return false;
     }
 
     bool preorder(const IR::MAU::TableSeq *) {
