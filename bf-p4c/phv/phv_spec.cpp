@@ -57,6 +57,66 @@ cstring PhvSpec::containerSetToString(const bitvec& set) const {
     return cstring(setAsString);
 }
 
+bitvec
+PhvSpec::range(PHV::Type t, unsigned start, unsigned length) const {
+    bitvec containers;
+    for (unsigned index = start; index < start + length; ++index)
+        containers.setbit(index * numContainerTypes() + containerTypeToId(t));
+    return containers;
+}
+
+const bitvec& PhvSpec::physicalContainers() const {
+    static bitvec containers;
+    if (containers == bitvec()) {
+        for (auto tg : mauGroups())
+            for (auto g : tg.second)
+                containers |= g;
+
+        for (auto g : tagalongGroups())
+            containers |= g;
+    }
+    return containers;
+}
+
+boost::optional<bitvec> PhvSpec::mauGroup(unsigned container_id) const {
+    const auto containerType = idToContainerType(container_id % numContainerTypes());
+    auto it = mauGroupSpec.find(containerType);
+    if (it == mauGroupSpec.end())
+        return boost::none;
+
+    const unsigned index = container_id / numContainerTypes();
+    unsigned groupSize = it->second.second;
+    const unsigned mau_group_index = index / groupSize;
+    auto group = mauGroups(containerType);
+    if (mau_group_index < group.size())
+        return group[mau_group_index];
+    return boost::none;
+}
+
+const std::map<PHV::Type, std::vector<bitvec>>& PhvSpec::mauGroups() const {
+    static std::map<PHV::Type, std::vector<bitvec>> mau_groups;
+
+    // Initialize once
+    if (mau_groups.size() == 0) {
+        for (auto gs : mauGroupSpec) {
+            PHV::Type groupType = gs.first;
+            unsigned numGroups = gs.second.first;
+            unsigned groupSize = gs.second.second;
+            for (unsigned index = 0; index < numGroups; index++)
+                mau_groups[groupType].push_back(range(groupType, index * groupSize, groupSize)); } }
+
+    return mau_groups;
+}
+
+const std::vector<bitvec>& PhvSpec::mauGroups(PHV::Type t) const {
+    auto it = mauGroups().find(t);
+    if (it != mauGroups().end())
+        return mauGroups().at(t);
+
+    static std::vector<bitvec> dummy;
+    return dummy;  // FIXME
+}
+
 TofinoPhvSpec::TofinoPhvSpec() {
     addType(PHV::Type::B);
     addType(PHV::Type::H);
@@ -64,6 +124,12 @@ TofinoPhvSpec::TofinoPhvSpec() {
     addType(PHV::Type::TB);
     addType(PHV::Type::TH);
     addType(PHV::Type::TW);
+
+    mauGroupSpec = {
+        { PHV::Type::B, std::make_pair(4, 16) },
+        { PHV::Type::H, std::make_pair(6, 16) },
+        { PHV::Type::W, std::make_pair(4, 16) }
+    };
 }
 
 bitvec
@@ -97,14 +163,6 @@ TofinoPhvSpec::deparserGroup(unsigned id) const {
         BUG("Unexpected PHV container type %1%", containerType);
 }
 
-bitvec
-TofinoPhvSpec::range(PHV::Type t, unsigned start, unsigned length) const {
-    bitvec containers;
-    for (unsigned index = start; index < start + length; ++index)
-        containers.setbit(index * numContainerTypes() + containerTypeToId(t));
-    return containers;
-}
-
 const bitvec& TofinoPhvSpec::ingressOnly() const {
     static const bitvec containers = range(PHV::Type::B, 0, 16)
                                    | range(PHV::Type::H, 0, 16)
@@ -117,33 +175,6 @@ const bitvec& TofinoPhvSpec::egressOnly() const {
                                    | range(PHV::Type::H, 16, 16)
                                    | range(PHV::Type::W, 16, 16);
     return containers;
-}
-
-const std::vector<bitvec>& TofinoPhvSpec::mauGroups(PHV::Type t) const {
-    static std::map<PHV::Type, std::vector<bitvec>> mau_groups;
-
-    // Initialize once
-    if (mau_groups.size() == 0) {
-        for (int index = 0; index < 4; ++index) {
-            mau_groups[PHV::Type::B].push_back(range(PHV::Type::B, index * 16, 16));
-            mau_groups[PHV::Type::W].push_back(range(PHV::Type::W, index * 16, 16)); }
-        for (int index = 0; index < 6; ++index)
-            mau_groups[PHV::Type::H].push_back(range(PHV::Type::H, index * 16, 16)); }
-
-    return mau_groups[t];
-}
-
-boost::optional<bitvec> TofinoPhvSpec::mauGroup(unsigned container_id) const {
-    const auto containerType = idToContainerType(container_id % numContainerTypes());
-    if (containerType.kind() != PHV::Kind::normal)
-        return boost::none;
-
-    const unsigned index = container_id / numContainerTypes();
-    const unsigned mau_group_index = index / 16;
-    auto group = mauGroups(containerType);
-    if (mau_group_index < group.size())
-        return group[mau_group_index];
-    return boost::none;
 }
 
 const std::vector<bitvec>& TofinoPhvSpec::tagalongGroups() const {
@@ -190,16 +221,6 @@ const bitvec& TofinoPhvSpec::individuallyAssignedContainers() const {
     return containers;
 }
 
-const bitvec& TofinoPhvSpec::physicalContainers() const {
-    static const bitvec containers = range(PHV::Type::B,  0, 64)
-                                   | range(PHV::Type::H,  0, 96)
-                                   | range(PHV::Type::W,  0, 64)
-                                   | range(PHV::Type::TB, 0, 32)
-                                   | range(PHV::Type::TH, 0, 48)
-                                   | range(PHV::Type::TW, 0, 32);
-    return containers;
-}
-
 #if HAVE_JBAY
 // XXX(zma) JBayPhvSpec is TofinoPhvSpec minus tagalongs for now,
 // will need to add dark and mochas (TODO).
@@ -207,6 +228,12 @@ JBayPhvSpec::JBayPhvSpec() {
     addType(PHV::Type::B);
     addType(PHV::Type::H);
     addType(PHV::Type::W);
+
+    mauGroupSpec = {
+        { PHV::Type::B, std::make_pair(4, 12) },
+        { PHV::Type::H, std::make_pair(6, 12) },
+        { PHV::Type::W, std::make_pair(4, 12) }
+    };
 }
 
 bitvec
@@ -217,53 +244,14 @@ JBayPhvSpec::deparserGroup(unsigned id) const {
     return rv;
 }
 
-bitvec
-JBayPhvSpec::range(PHV::Type t, unsigned start, unsigned length) const {
-    bitvec containers;
-    for (unsigned index = start; index < start + length; ++index)
-        containers.setbit(index * numContainerTypes() + containerTypeToId(t));
-    return containers;
-}
-
 const bitvec& JBayPhvSpec::ingressOnly() const {
-    static const bitvec containers = range(PHV::Type::B, 0, 16)
-                                   | range(PHV::Type::H, 0, 16)
-                                   | range(PHV::Type::W, 0, 16);
+    static const bitvec containers;
     return containers;
 }
 
 const bitvec& JBayPhvSpec::egressOnly() const {
-    static const bitvec containers = range(PHV::Type::B, 16, 16)
-                                   | range(PHV::Type::H, 16, 16)
-                                   | range(PHV::Type::W, 16, 16);
+    static const bitvec containers;
     return containers;
-}
-
-const std::vector<bitvec>& JBayPhvSpec::mauGroups(PHV::Type t) const {
-    static std::map<PHV::Type, std::vector<bitvec>> mau_groups;
-
-    // Initialize once
-    if (mau_groups.size() == 0) {
-        for (int index = 0; index < 4; ++index) {
-            mau_groups[PHV::Type::B].push_back(range(PHV::Type::B, index * 16, 16));
-            mau_groups[PHV::Type::W].push_back(range(PHV::Type::W, index * 16, 16)); }
-        for (int index = 0; index < 6; ++index)
-            mau_groups[PHV::Type::H].push_back(range(PHV::Type::H, index * 16, 16)); }
-
-    return mau_groups[t];
-}
-
-boost::optional<bitvec> JBayPhvSpec::mauGroup(unsigned container_id) const {
-    const auto containerType = idToContainerType(container_id % numContainerTypes());
-    if (containerType.kind() != PHV::Kind::normal)
-        return boost::none;
-
-    const unsigned index = container_id / numContainerTypes();
-    const unsigned mau_group_index = index / 16;
-    auto group = mauGroups(containerType);
-    if (mau_group_index < group.size())
-        return group[mau_group_index];
-    return boost::none;
 }
 
 const std::vector<bitvec>& JBayPhvSpec::tagalongGroups() const {
@@ -276,16 +264,8 @@ boost::optional<bitvec> JBayPhvSpec::tagalongGroup(unsigned) const {
 }
 
 const bitvec& JBayPhvSpec::individuallyAssignedContainers() const {
-    static const bitvec containers = range(PHV::Type::B, 56, 8)
-                                   | range(PHV::Type::H, 88, 8)
-                                   | range(PHV::Type::W, 60, 4);
+    static const bitvec containers;
     return containers;
 }
 
-const bitvec& JBayPhvSpec::physicalContainers() const {
-    static const bitvec containers = range(PHV::Type::B,  0, 64)
-                                   | range(PHV::Type::H,  0, 96)
-                                   | range(PHV::Type::W,  0, 64);
-    return containers;
-}
 #endif /* HAVE_JBAY */

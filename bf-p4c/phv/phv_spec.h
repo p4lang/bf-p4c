@@ -13,6 +13,13 @@ class PhvSpec {
     std::vector<PHV::Type> definedTypes;
     ordered_map<PHV::Type, unsigned> typeIdMap;
 
+    /**
+     * @used to describe phv groups for mau in the device. 
+     * e.g. entry { PHV::Type::W, std::pair(4,16) } means for normal 32b
+     * container, there are 4 groups, each with 16 containers.
+     */
+    std::map<PHV::Type, std::pair<unsigned, unsigned>> mauGroupSpec;
+
     /// Add a PHV container type to the set of types which are available on this
     /// device. This should only be called inside the constructor of subclasses
     /// of PhvSpec; after a PhvSpec instance is constructed, its list of
@@ -66,7 +73,7 @@ class PhvSpec {
      * @param start The index of first container in the range.
      * @param length The number of containers in the range. May be zero.
      */
-    virtual bitvec range(PHV::Type t, unsigned start, unsigned length) const = 0;
+    bitvec range(PHV::Type t, unsigned start, unsigned length) const;
 
     /// @return a bitvec of the containers which are hard-wired to ingress.
     virtual const bitvec& ingressOnly() const = 0;
@@ -75,11 +82,14 @@ class PhvSpec {
     virtual const bitvec& egressOnly() const = 0;
 
     /// @return MAU groups of a given type @t.
-    virtual const std::vector<bitvec>& mauGroups(PHV::Type t) const = 0;
+    const std::vector<bitvec>& mauGroups(PHV::Type t) const;
+
+    /// @return MAU groups of all types
+    const std::map<PHV::Type, std::vector<bitvec>>& mauGroups() const;
 
     /// @return the ids of every container in @container_id's MAU group, or
     /// boost::none if @container_id is not part of any MAU group.
-    virtual boost::optional<bitvec> mauGroup(unsigned container_id) const = 0;
+    boost::optional<bitvec> mauGroup(unsigned container_id) const;
 
     /// @return a bitvec of available tagalong collections.
     virtual const std::vector<bitvec>& tagalongGroups() const = 0;
@@ -94,7 +104,7 @@ class PhvSpec {
 
     /// @return the ids of all containers which actually exist on the Tofino
     /// hardware - i.e., all non-overflow containers.
-    virtual const bitvec& physicalContainers() const = 0;
+    const bitvec& physicalContainers() const;
 };
 
 
@@ -104,23 +114,15 @@ class TofinoPhvSpec : public PhvSpec {
 
     bitvec deparserGroup(unsigned id) const override;
 
-    bitvec range(PHV::Type t, unsigned start, unsigned length) const override;
-
     const bitvec& ingressOnly() const override;
 
     const bitvec& egressOnly() const override;
-
-    const std::vector<bitvec>& mauGroups(PHV::Type t) const override;
-
-    boost::optional<bitvec> mauGroup(unsigned groupID) const override;
 
     const std::vector<bitvec>& tagalongGroups() const override;
 
     boost::optional<bitvec> tagalongGroup(unsigned groupIndex) const override;
 
     const bitvec& individuallyAssignedContainers() const override;
-
-    const bitvec& physicalContainers() const override;
 };
 
 #if HAVE_JBAY
@@ -130,23 +132,15 @@ class JBayPhvSpec : public PhvSpec {
 
     bitvec deparserGroup(unsigned id) const override;
 
-    bitvec range(PHV::Type t, unsigned start, unsigned length) const override;
-
     const bitvec& ingressOnly() const override;
 
     const bitvec& egressOnly() const override;
-
-    const std::vector<bitvec>& mauGroups(PHV::Type t) const override;
-
-    boost::optional<bitvec> mauGroup(unsigned groupID) const override;
 
     const std::vector<bitvec>& tagalongGroups() const override;
 
     boost::optional<bitvec> tagalongGroup(unsigned groupIndex) const override;
 
     const bitvec& individuallyAssignedContainers() const override;
-
-    const bitvec& physicalContainers() const override;
 };
 #endif /* HAVE_JBAY */
 
