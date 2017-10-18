@@ -229,7 +229,6 @@ set (TOFINO_BACKEND_PHV_SRCS
   phv/phv_fields.cpp
   phv/phv_parde_mau_use.cpp
   phv/phv_spec.cpp
-  phv/repack_metadata.cpp
   phv/trivial_alloc.cpp
   phv/validate_allocation.cpp
   )

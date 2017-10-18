@@ -70,7 +70,6 @@ class Field;
 
 void alloc_pov(PHV::Field *i, PHV::Field *pov);
 void emit_phv_field(std::ostream &out, PHV::Field &field);
-void repack_metadata(PhvInfo &phv);
 
 std::ostream &operator<<(std::ostream &out, Cluster_PHV &cp);
 std::ostream &operator<<(std::ostream &out, PHV_Bind &phv_bind);
@@ -246,7 +245,6 @@ class Field {
     //
     friend void ::alloc_pov(PHV::Field *i, PHV::Field *pov);
     friend void ::emit_phv_field(std::ostream &out, PHV::Field &field);
-    friend void ::repack_metadata(PhvInfo &phv);
     //
     template <typename T> friend class ::Test::TofinoPHVTrivialAllocators;
     friend class ::Test::TofinoPHVManualAlloc;
