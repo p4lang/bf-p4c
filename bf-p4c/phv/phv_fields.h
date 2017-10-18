@@ -146,8 +146,8 @@ class Field {
         int field_bit, container_bit, width;
         alloc_slice(const Field* f, PHV::Container c, int fb, int cb, int w)
             : field(f), container(c), field_bit(fb), container_bit(cb), width(w) {}
-        bitrange field_bits() const       { return { field_bit, field_bit+width-1 }; }
-        bitrange container_bits() const   { return { container_bit, container_bit+width-1 }; }
+        le_bitrange field_bits() const       { return { field_bit, field_bit+width-1 }; }
+        le_bitrange container_bits() const   { return { container_bit, container_bit+width-1 }; }
         int field_hi() const              { return field_bit + width - 1; }
         int container_hi() const          { return container_bit + width - 1; }
         bool operator==(const alloc_slice& other) const {
