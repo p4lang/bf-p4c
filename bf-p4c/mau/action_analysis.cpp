@@ -715,6 +715,8 @@ bool ActionAnalysis::ContainerAction::verify_overwritten(PHV::Container containe
     if (total_write_bits != container_occupancy)
         return false;
 
+    if (static_cast<size_t>(total_write_bits.popcount()) != container.size())
+        error_code |= PARTIAL_OVERWRITE;
     return true;
 }
 
@@ -914,14 +916,16 @@ bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
     }
 
 
-    if (!(name == "set" && sources_needed < 2)) {
+    if (name != "set" || to_deposit_field) {
         bool total_overwrite_possible = verify_overwritten(container, phv);
         if (!total_overwrite_possible) {
-            error_code |= PARTIAL_OVERWRITE;
+            error_code |= ILLEGAL_OVERWRITE;
             error_message += "the container is not completely overwritten when the operand is "
                              "over the entire container";
             return false;
         }
+    } else if (to_bitmasked_set) {
+        error_code |= PARTIAL_OVERWRITE;
     }
 
     return true;

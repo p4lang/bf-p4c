@@ -133,6 +133,8 @@ class MergeInstructions : public MauTransform, TofinoWriteContext {
     bool write_found = false;
     ordered_set<PHV::Container>::iterator merged_location;
 
+    IR::MAU::Instruction *dest_slice_to_container(PHV::Container container,
+        ActionAnalysis::ContainerAction &cont_action);
     IR::MAU::Instruction *build_merge_instruction(PHV::Container container,
         ActionAnalysis::ContainerAction &cont_action);
     void fill_out_write_multi_operand(ActionAnalysis::ContainerAction &cont_action,

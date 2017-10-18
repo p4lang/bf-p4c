@@ -161,13 +161,14 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
                             IMPOSSIBLE_ALIGNMENT = (1 << 5),
                             CONSTANT_TO_ACTION_DATA = (1 << 6),
                             MULTIPLE_ACTION_DATA = (1 << 7),
-                            PARTIAL_OVERWRITE = (1 << 8),
+                            ILLEGAL_OVERWRITE = (1 << 8),
                             BIT_COLLISION = (1 << 9),
                             OPERAND_MISMATCH = (1 << 10),
                             UNHANDLED_ACTION_DATA = (1 << 11),
                             DIFFERENT_READ_SIZE = (1 << 12),
                             MAU_GROUP_MISMATCH = (1 << 13),
-                            PHV_AND_ACTION_DATA = (1 << 14) };
+                            PHV_AND_ACTION_DATA = (1 << 14),
+                            PARTIAL_OVERWRITE = (1 << 15) };
         unsigned error_code = NO_PROBLEM;
         cstring name;
         ActionDataInfo adi;

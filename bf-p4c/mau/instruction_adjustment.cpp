@@ -298,13 +298,15 @@ const IR::MAU::Action *MergeInstructions::preorder(IR::MAU::Action *act) {
     act->apply(aa);
     if (aa.misaligned_actiondata())
         throw ActionFormat::failure(act->name);
+    unsigned error_mask = ~ActionAnalysis::ContainerAction::PARTIAL_OVERWRITE;
 
     for (auto &container_action : container_actions_map) {
         auto container = container_action.first;
         auto &cont_action = container_action.second;
-        if (cont_action.field_actions.size() == 1) continue;
+        if (cont_action.field_actions.size() == 1
+            && (cont_action.error_code & ~error_mask) == 0) continue;
         // Currently skip unresolved ActionAnalysis issues
-        if (cont_action.error_code != ActionAnalysis::ContainerAction::NO_PROBLEM) continue;
+        if ((cont_action.error_code & error_mask) != 0) continue;
         merged_fields.insert(container);
     }
 
@@ -479,6 +481,28 @@ void MergeInstructions::fill_out_write_multi_operand(ActionAnalysis::ContainerAc
     }
 }
 
+
+/** The purpose of this is to convert any full container instruction destination to the container
+ *  in order for the container to be the correct size.  The assembler will only parse full
+ *  container instruction if the destination is the correct size.  This is based on the
+ *  verify_overwritten check in ActionAnalysis in order to determine that a partial overwrite of
+ *  the container is actually valid, due to the rest of the container being unoccupied.
+ */
+IR::MAU::Instruction *MergeInstructions::dest_slice_to_container(PHV::Container container,
+        ActionAnalysis::ContainerAction &cont_action) {
+    BUG_CHECK(cont_action.field_actions.size() == 1, "Can only call this function on an operation "
+                                                     "that has one field action");
+    IR::MAU::Instruction *rv = new IR::MAU::Instruction(cont_action.name);
+    IR::Vector<IR::Expression> components;
+    auto *dst_mo = new IR::MAU::MultiOperand(components, container.toString(), true);
+    fill_out_write_multi_operand(cont_action, dst_mo);
+    rv->operands.push_back(dst_mo);
+    for (auto &read : cont_action.field_actions[0].reads) {
+        rv->operands.push_back(read.expr);
+    }
+    return rv;
+}
+
 /** The purpose of this function is to morph together instructions over an individual container.
  *  If multiple field actions are contained within an individual container action, then they
  *  have to be merged into an individual ALU instruction.
@@ -505,6 +529,13 @@ void MergeInstructions::fill_out_write_multi_operand(ActionAnalysis::ContainerAc
  */
 IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container container,
          ActionAnalysis::ContainerAction &cont_action) {
+    if (cont_action.field_actions.size() == 1) {
+        BUG_CHECK(cont_action.name != "set" &&
+            (cont_action.error_code & ActionAnalysis::ContainerAction::PARTIAL_OVERWRITE) != 0,
+            "Invalid call to build a merged instruction");
+        return dest_slice_to_container(container, cont_action);
+    }
+
     const IR::Expression *dst = nullptr;
     const IR::Expression *src1 = nullptr;
     const IR::Expression *src2 = nullptr;
@@ -552,8 +583,8 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
     auto *dst_mo = new IR::MAU::MultiOperand(components, container.toString(), true);
     fill_out_write_multi_operand(cont_action, dst_mo);
     dst = dst_mo;
-    if (!cont_action.to_bitmasked_set && src1_writebits.popcount()
-                                         != static_cast<int>(container.size()))
+    if (!cont_action.PARTIAL_OVERWRITE && src1_writebits.popcount()
+                                          != static_cast<int>(container.size()))
         dst = MakeSlice(dst, src1_writebits.min().index(), src1_writebits.max().index());
 
     cstring instr_name = cont_action.name;
@@ -567,6 +598,9 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
     merged_instr->operands.push_back(src1);
     if (src2)
         merged_instr->operands.push_back(src2);
+    // Currently bitmasked-set requires at least 2 source operands, or it crashes
+    if (cont_action.to_bitmasked_set && !src2)
+        merged_instr->operands.push_back(dst);
     return merged_instr;
 }
 

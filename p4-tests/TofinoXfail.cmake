@@ -52,6 +52,11 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     testdata/p4_14_samples/ternary_match4.p4
     )
 
+p4c_add_xfail_reason("tofino"
+  "corrupt table config json"
+  extensions/p4_tests/p4_14/adjust_instr6.p4
+  )
+
 endif() # HARLYN_STF
 
 # add the failures with no reason
@@ -177,13 +182,9 @@ p4c_add_xfail_reason("tofino"
 # was BRIG-147 for extensions/p4_tests/p4_14/adjust_instr6.p4
 p4c_add_xfail_reason("tofino"
   "src2 must be phv register"
-  testdata/p4_14_samples/instruct3.p4
-  extensions/p4_tests/p4_14/adjust_instr6.p4
   extensions/p4_tests/p4_14/c4/COMPILER-549/case2898.p4
-  extensions/p4_tests/p4_14/test_config_45_action_data_immediate_param_and_constant.p4
-  extensions/p4_tests/p4_14/test_config_48_action_data_bit_masked_set.p4
-  extensions/p4_tests/p4_14/test_config_49_action_data_bit_masked_set_immediate.p4
   )
+
 
 # BRIG-103
 p4c_add_xfail_reason("tofino"
@@ -280,15 +281,6 @@ p4c_add_xfail_reason("tofino"
 # BRIG-112
 p4c_add_xfail_reason("tofino"
   "ALU ops cannot operate on slices"
-  extensions/p4_tests/p4_14/06-MultiFieldAdd.p4
-  extensions/p4_tests/p4_14/20-SimpleTrillTwoStep.p4
-  extensions/p4_tests/p4_14/21-SimpleTrillThreeStep.p4
-  extensions/p4_tests/p4_14/24-SimpleTrillThreeStep2.p4
-  extensions/p4_tests/p4_14/test_config_92_bit_xor_10_bits.p4
-  extensions/p4_tests/p4_14/test_config_216_phv_aff.p4
-  extensions/p4_tests/p4_14/test_config_217_gateway_non_determin.p4
-  testdata/p4_16_samples/issue414-bmv2.p4
-  testdata/p4_16_samples/parser-locals2.p4
   extensions/p4_tests/p4_14/c1/COMPILER-228/case1644.p4
   )
 
@@ -417,6 +409,7 @@ p4c_add_xfail_reason("tofino"
   "alias for .* has out of range index from allowed"
   extensions/p4_tests/p4_14/adjust_instr5.p4
   extensions/p4_tests/p4_14/test_config_112_no_phase_0_case_action_width_too_big.p4
+  extensions/p4_tests/p4_14/test_config_45_action_data_immediate_param_and_constant.p4
   )
 
 # BRIG-149
