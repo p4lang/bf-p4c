@@ -23,6 +23,7 @@ class STF2PD (STFRunner):
         testNameEscapeChars = "-.[]"
         testNameEscapes = "_"*len(testNameEscapeChars)
         self._transTable = maketrans(testNameEscapeChars,testNameEscapes)
+        self._tern2zero = maketrans('*','0') # replace * with 0s
         self._testname = testname.translate(self._transTable)
         self._indent = ''
         self._indentSize = 0
@@ -163,14 +164,33 @@ class STF2PD (STFRunner):
             self._ptf.write(self._indent + 'testsuite.verify_no_other_packets(self)\n')
             return
 
+        port = int(expect[1])
+        payload = expect[2]
         self._ptf.write('\n')
-        self._ptf.write(self._indent + 'logging.info("Expecting packet on port ' + expect[1] + '")\n')
-        if expect[2] is not None:
-            expected = "\"" + encodePacket(self.setExpectTern(expect[2], orig_packet[2])) + "\""
+        self._ptf.write(self._indent + 'logging.info("Expecting packet on port {}")\n'.format(port))
+        if payload is None:
+            # testutils.verify_packet(self, None, port)
+            self._ptf.write(self._indent +
+                            'testutils.count_matched_packets_all_ports(self, None, [{}])\n'.format(port))
+            return
+        elif orig_packet is None:
+            packet = payload.translate(self._tern2zero)
+            p = int(packet, base=16)
+            pLen = len(packet)/2 + (len(packet) % 2)
+            self._ptf.write(self._indent + 'expected = Mask(stringify({}, {}), ignore_extra_bytes=True)\n'.format(p, pLen))
+            self._ptf.write(self._indent + 'if "*" in "{}":\n'.format(payload))
+            self.incrementIndent()
+            self._ptf.write(self._indent + 'offset = 0\n')
+            self._ptf.write(self._indent + 'for x in "{}":\n'.format(payload))
+            self.incrementIndent()
+            self._ptf.write(self._indent + 'if x == "*": expected.set_do_not_care(offset, 4)\n')
+            self._ptf.write(self._indent + 'offset += 4\n')
+            self.decrementIndent()
+            self.decrementIndent()
         else:
-            expected = "None"
-        self._ptf.write(self._indent + 'check_packet(self, ' + expected + ', ' + expect[1] + ')\n')
-
+            expected = self.encodePacket(self.setExpectTern(payload, orig_packet[2]))
+            self._ptf.write(self._indent + 'expected = "{}"\n'.format(expected))
+        self._ptf.write(self._indent + 'testutils.verify_packet(self, expected, {})\n'.format(port))
 
     def genCheckCounter(self, chk):
         if str(chk[2]).startswith('$'):
@@ -234,6 +254,7 @@ class STF2PD (STFRunner):
         self._ptf.write('import random\n')
         self._ptf.write('from ptf import config\n')
         self._ptf.write('from ptf.testutils import *\n')
+        self._ptf.write('from ptf.mask import Mask\n')
 
         self._ptf.write('\n')
         self._ptf.write('def match_ternary(expected, received):\n')

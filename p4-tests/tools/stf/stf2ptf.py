@@ -192,10 +192,11 @@ class STF2ptf(P4RuntimeTest, STFRunner):
             p = int(packet, base=16)
             pLen = len(packet)/2 + (len(packet) % 2)
             expected = Mask(stringify(p, pLen), ignore_extra_bytes=True)
-            offset = 0
-            for x in payload:
-                if x == '*': expected.set_do_not_care(offset, 4)
-                offset += 4
+            if '*' in payload:
+                offset = 0
+                for x in payload:
+                    if x == '*': expected.set_do_not_care(offset, 4)
+                    offset += 4
         else:
             expected = self.encodePacket(self.setExpectTern(payload, orig_packet[2]), padIt = False)
         testutils.verify_packet(self, expected, port)
