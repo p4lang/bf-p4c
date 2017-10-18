@@ -164,9 +164,9 @@ class Field {
     // alloc_slice byte
     void foreach_byte(std::function<void(const alloc_slice &)> fn) const {
         foreach_byte(0, size-1, fn); }
-    void foreach_byte(bitrange r, std::function<void(const alloc_slice &)> fn) const {
+    void foreach_byte(le_bitrange r, std::function<void(const alloc_slice &)> fn) const {
         foreach_byte(r.lo, r.hi, fn); }
-    void foreach_byte(const bitrange *r, std::function<void(const alloc_slice &)> fn) const {
+    void foreach_byte(const le_bitrange *r, std::function<void(const alloc_slice &)> fn) const {
         foreach_byte(r ? r->lo : 0, r ? r->hi : size-1, fn); }
     //
     // alloc_slice bitrange
@@ -174,18 +174,18 @@ class Field {
         std::function<void(const alloc_slice &)> fn) const {
         foreach_alloc(0, size-1, fn);
     }
-    void foreach_alloc(bitrange r, std::function<void(const alloc_slice &)> fn) const {
+    void foreach_alloc(le_bitrange r, std::function<void(const alloc_slice &)> fn) const {
         foreach_alloc(r.lo, r.hi, fn); }
-    void foreach_alloc(const bitrange *r, std::function<void(const alloc_slice &)> fn) const {
+    void foreach_alloc(const le_bitrange *r, std::function<void(const alloc_slice &)> fn) const {
         foreach_alloc(r ? r->lo : 0, r ? r->hi : size-1, fn); }
-            // e.g., foreach_alloc function with bitrange to only iterate over part of field
-            // bitrange  bits;        // local var (on stack)
+            // e.g., foreach_alloc function with le_bitrange to only iterate over part of field
+            // le_bitrange  bits;        // local var (on stack)
             // auto *field = phv.field(expr, &bits);  // pointer to bits, phv.field fills it
             // field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice &alloc) {
             //     LOG1("Alloc slice of write " << alloc); }
     //
     cstring header() const { return name.before(strrchr(name, '.')); }
-    int container_bytes(bitrange bits = {0, -1}) const;
+    int container_bytes(le_bitrange bits = {0, -1}) const;
     //
     PHV_Assignment_API *phv_assignment_api()        { return phv_assignment_api_i; }
     void phv_assignment_api(PHV_Assignment_API *p)  { phv_assignment_api_i = p; }
@@ -625,13 +625,13 @@ class PhvInfo {
     }
     const PHV::Field *field(cstring name) const {
         return all_fields.count(name) ? &all_fields.at(name) : 0; }
-    const PHV::Field *field(const IR::Expression *, bitrange *bits = 0) const;
-    const PHV::Field *field(const IR::Member *, bitrange *bits = 0) const;
+    const PHV::Field *field(const IR::Expression *, le_bitrange *bits = 0) const;
+    const PHV::Field *field(const IR::Member *, le_bitrange *bits = 0) const;
     PHV::Field *field(int idx) { return (size_t)idx < by_id.size() ? by_id.at(idx) : 0; }
     PHV::Field *field(cstring name) { return all_fields.count(name) ? &all_fields.at(name) : 0; }
-    PHV::Field *field(const IR::Expression *e, bitrange *bits = 0) {
+    PHV::Field *field(const IR::Expression *e, le_bitrange *bits = 0) {
         return const_cast<PHV::Field *>(const_cast<const PhvInfo *>(this)->field(e, bits)); }
-    PHV::Field *field(const IR::Member *fr, bitrange *bits = 0) {
+    PHV::Field *field(const IR::Member *fr, le_bitrange *bits = 0) {
         return const_cast<PHV::Field *>(const_cast<const PhvInfo *>(this)->field(fr, bits)); }
     safe_vector<PHV::Field::alloc_slice> *alloc(const IR::Member *member);
     const StructInfo struct_info(cstring name) const;

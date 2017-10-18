@@ -88,7 +88,7 @@ const PhvInfo::StructInfo PhvInfo::struct_info(cstring name_) const {
 //***********************************************************************************
 //
 
-const PHV::Field *PhvInfo::field(const IR::Expression *e, bitrange *bits) const {
+const PHV::Field *PhvInfo::field(const IR::Expression *e, le_bitrange *bits) const {
     BUG_CHECK(!e->is<IR::BFN::ContainerRef>(),
         "Looking for PHV::Fields but found an IR::BFN::ContainerRef: %1%", e);
     if (!e) return nullptr;
@@ -119,7 +119,7 @@ const PHV::Field *PhvInfo::field(const IR::Expression *e, bitrange *bits) const 
     return 0;
 }
 
-const PHV::Field *PhvInfo::field(const IR::Member *fr, bitrange *bits) const {
+const PHV::Field *PhvInfo::field(const IR::Member *fr, le_bitrange *bits) const {
     StringRef name = fr->toString();
     if (bits) {
         bits->lo = 0;
@@ -294,7 +294,7 @@ bitvec PhvInfo::bits_allocated(const PHV::Container c) const {
     for (auto* field : fields) {
         field->foreach_alloc([&](const PHV::Field::alloc_slice &alloc) {
             if (alloc.container != c) return;
-            bitrange bits = alloc.container_bits();
+            le_bitrange bits = alloc.container_bits();
             ret_bitvec.setrange(bits.lo, bits.size());
         }); }
     return ret_bitvec;
@@ -303,14 +303,14 @@ bitvec PhvInfo::bits_allocated(const PHV::Container c) const {
 //
 //***********************************************************************************
 //
-// PHV::Field bitrange interface related member functions
+// PHV::Field le_bitrange interface related member functions
 //
 //***********************************************************************************
 //
 
-// figure out how many disinct container bytes contain info from a bitrange of a particular field
+// figure out how many disinct container bytes contain info from a le_bitrange of a particular field
 //
-int PHV::Field::container_bytes(bitrange bits) const {
+int PHV::Field::container_bytes(le_bitrange bits) const {
     if (bits.hi < 0) bits.hi = size - 1;
     if (alloc_i.empty())
         return bits.hi/8U + bits.lo/8U + 1;
