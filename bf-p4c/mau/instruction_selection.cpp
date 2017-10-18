@@ -21,6 +21,7 @@ IR::Member *InstructionSelection::gen_stdmeta(cstring field) {
                            "::standard_metadata";
     auto* meta = findContext<IR::BFN::Pipe>()->metadata[metadataName];
     if (!meta) return nullptr;
+    LOG1("metadata size " << findContext<IR::BFN::Pipe>()->metadata.size());
     if (auto* f = meta->type->getField(field))
         return new IR::Member(f->type, new IR::ConcreteHeaderRef(meta), field);
     BUG("No field %s in standard_metadata", field);
@@ -30,14 +31,16 @@ IR::Member *InstructionSelection::gen_stdmeta(cstring field) {
 IR::Member *InstructionSelection::gen_intrinsic_metadata(gress_t gress, cstring field) {
     cstring metadataName;
     if (gress == gress_t::INGRESS)
-        metadataName = cstring::to_cstring(gress) + "::" + "ingress_intrinsic_metadata_for_tm";
+        metadataName = cstring::to_cstring(VisitingThread(this)) +
+                "::" + "ingress_intrinsic_metadata_for_tm";
     else
-        metadataName = cstring::to_cstring(gress) + "::" + "egress_intrinsic_metadata";
+        metadataName = cstring::to_cstring(VisitingThread(this)) +
+                "::" + "egress_intrinsic_metadata";
 
-    auto* meta = findContext<IR::BFN::Pipe>()->metadata[metadataName];
-    for (auto& m : findContext<IR::BFN::Pipe>()->metadata) {
-        LOG1("metadata " << m.first << " " << m.second);
+    for (auto m : findContext<IR::BFN::Pipe>()->metadata) {
+        LOG3("metadata " << m.first << " " << m.second);
     }
+    auto* meta = findContext<IR::BFN::Pipe>()->metadata[metadataName];
     if (!meta) {
         BUG("Unable to find metadata %s", metadataName);
         return nullptr;
@@ -384,16 +387,11 @@ const IR::Node *InstructionSelection::postorder(IR::Primitive *prim) {
             rv->name = rv->name + 4;  // strip off bit_ prefix
             return rv; }
     } else if (prim->name == "drop" || prim->name == "mark_to_drop") {
-        // XXX(hanw) instead of invalidating egress_port container, we should set drop_ctrl bit.
-        // FIXME: This needs to be fixed in the midend by Han in order for the register to be
-        // correct, this is a punt to Han to be done ASAP
-        auto member = gen_stdmeta("drop");
-        auto constant = new IR::Constant(IR::Type::Bits::get(1), 1);
+        // XXX(hanw) there is no more drop or mark_to_drop primitive after translation
+        // this case should be removed
+        auto member = gen_stdmeta(VisitingThread(this) ? "egress_port" : "egress_spec");
         if (member)
-            return new IR::MAU::Instruction(prim->srcInfo, "set", member, constant);
-        auto intr_member = gen_intrinsic_metadata(VisitingThread(this), "drop_ctl");
-        return new IR::MAU::Instruction(prim->srcInfo, "set", MakeSlice(intr_member, 0, 0),
-                                        constant);
+            return new IR::MAU::Instruction(prim->srcInfo, "invalidate", member);
     } else if (prim->name == "register_action.execute") {
         bool direct_access = false;
         if (prim->operands.size() > 1)
@@ -486,7 +484,6 @@ const IR::Node *InstructionSelection::postorder(IR::Primitive *prim) {
         WARNING("unhandled in InstSel: " << *prim); }
     return prim;
 }
-
 
 const IR::Type *stateful_type_for_primitive(const IR::Primitive *prim) {
     if (prim->name == "counter.count" || prim->name == "direct_counter.count")

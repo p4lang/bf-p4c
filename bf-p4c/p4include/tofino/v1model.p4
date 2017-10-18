@@ -29,25 +29,27 @@ typedef bit<5>  QueueId_t;    // Queue id
 typedef bit<4>  CloneId_t;    // Clone id
 typedef bit<10> MirrorId_t;   // Mirror id
 
-enum meter_type_t {
+enum MeterType_t {
     PACKETS,
     BYTES
 }
 
 /// Counter
-enum counter_type_t {
+enum CounterType_t {
     PACKETS,
     BYTES,
     PACKETS_AND_BYTES
 }
 
-enum hash_algorithm_t {
+enum HashAlgorithm_t {
     IDENTITY,
     RANDOM,
     CRC16,
-    CRC32
+    CRC32,
+    CSUM16
 }
 
+// p4_14_prim.p4 forward declared this enum.
 enum CloneType {
     I2E,
     E2E
@@ -62,7 +64,7 @@ match_kind {
 // -----------------------------------------------------------------------------
 // INGRESS INTRINSIC METADATA
 // -----------------------------------------------------------------------------
-struct ingress_intrinsic_metadata_t {
+header ingress_intrinsic_metadata_t {
     bit<1> resubmit_flag;                // flag distinguising original packets
                                          // from resubmitted packets.
     bit<1> _pad1;
@@ -92,7 +94,9 @@ struct ingress_intrinsic_metadata_from_parser_t {
 
 struct ingress_intrinsic_metadata_for_tm_t {
     // The ingress physical port id is passed to the TM directly from
-    // ig_intr_md.ingress_port
+    bit<1> resubmit_flag;                // flag distinguising original packets
+                                         // from resubmitted packets.
+                                         // XXX(hanw) add_parde_metadata requires this.
     PortId_t ingress_port;               // ingress physical port id.
                                          // this field is passed to the deparser
 
@@ -176,9 +180,8 @@ struct ingress_intrinsic_metadata_for_mirror_buffer_t {
 // -----------------------------------------------------------------------------
 // EGRESS INTRINSIC METADATA
 // -----------------------------------------------------------------------------
-struct egress_intrinsic_metadata_t {
+header egress_intrinsic_metadata_t {
     bit<32> instance_type;               // TODO: tofino does not have this field
-    bit<8> clone_src;                    // TODO: tofino does not have this field
     PortId_t ingress_port;               // TODO(hanw): hack until ingress_port is part
                                          // of bridged metadata.
 
@@ -234,6 +237,7 @@ struct egress_intrinsic_metadata_from_parser_t {
     bit<16> egress_parser_err;           // error flags indicating error(s)
                                          // encountered at egress
                                          // parser.
+    bit<8> clone_src;                    // TODO: tofino does not have this field
 }
 
 struct egress_intrinsic_metadata_for_deparser_t {
@@ -266,7 +270,7 @@ struct egress_intrinsic_metadata_for_output_port_t {
                                          // Ethernet header.
     bit<1> force_tx_error;               // force a hardware transmission error
 
-    bit<1> drop_ctl;                     // disable packet replication:
+    bit<3> drop_ctl;                     // disable packet replication:
                                          //    - bit 0 disables unicast,
                                          //      multicast, and resubmit
                                          //    - bit 1 disables copy-to-cpu
@@ -283,7 +287,7 @@ struct egress_intrinsic_metadata_for_output_port_t {
 // contribution) for checksums that include the payload.
 // Checksum engine only supports 16-bit ones' complement checksums.
 extern checksum<W> {
-    checksum(hash_algorithm_t algorithm);
+    checksum(HashAlgorithm_t algorithm);
     void add<T>(in T data);
     bool verify();
     void update<T>(in T data, out W csum, @optional in W residul_csum);
@@ -293,6 +297,26 @@ extern checksum<W> {
 // -----------------------------------------------------------------------------
 // PARSER COUNTER/PRIORITY/VALUE SET
 // -----------------------------------------------------------------------------
+
+extern parser_counter {
+    parser_counter();
+    /// Load the counter with an immediate value or a header field.
+    ///   @max : Maximum permitted value for counter (pre rotate/mask/add).
+    ///   @rotate : Rotate the source field right by this number of bits.
+    ///   @mask : Mask the rotated source field by 2**(MASK+1) - 1.
+    ///   @add : Constant to add to the rotated and masked lookup field.
+    void set(in int<8> value,
+            @optional in int<8> max,
+            @optional in bit<3> rotate,
+            @optional in bit<3> mask,
+            @optional in int<8> add);
+
+    /// Add an immediate value to the parser counter.
+    void increment(in int<8> value);
+    bool is_zero();
+    bool is_neg();
+}
+
 // Parser value set
 // The parser value set implements a run-time updatable values that is used to
 // determine parser transition
@@ -314,7 +338,7 @@ extern priority {
 // -----------------------------------------------------------------------------
 extern hash<D, T, M> {
     /// Constructor
-    hash(hash_algorithm_t algo);
+    hash(HashAlgorithm_t algo);
 
     /// compute the hash for data
     ///  @base :
@@ -336,14 +360,24 @@ extern idle_timeout {
 
 /// Counter
 extern counter<I> {
-    counter(counter_type_t type, @optional I instance_count);
-    void count(@optional in I index);
+    counter(CounterType_t type, I instance_count);
+    void count(in I index);
+}
+
+extern direct_counter {
+    direct_counter(CounterType_t type);
+    void count();
 }
 
 /// Meter
 extern meter<I> {
-    meter(meter_type_t type, @optional I instance_count);
-    bit<8> execute(@optional in I index, @optional in bit<8> color);
+    meter(MeterType_t type, @optional I instance_count);
+    bit<8> execute(@optional in I index, @optional in bit<2> color);
+}
+
+extern direct_meter {
+    direct_meter(MeterType_t type);
+    void execute(in bit<2> color);
 }
 
 /// LPF
@@ -392,7 +426,7 @@ extern register_action<T, U> {
 
 /// XXX(hanw): convert
 extern action_selector {
-    action_selector(hash_algorithm_t algorithm, bit<32> size, bit<32> outputWidth);
+    action_selector(HashAlgorithm_t algorithm, bit<32> size, bit<32> outputWidth);
 }
 
 extern action_profile {
@@ -428,7 +462,9 @@ parser IngressParser<H, M>(
     packet_in pkt,
     out H hdr,
     inout M ig_md,
-    out ingress_intrinsic_metadata_t ig_intr_md);
+    out ingress_intrinsic_metadata_t ig_intr_md,
+    @optional out ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm
+    );
 
 parser EgressParser<H, M>(
     packet_in pkt,
@@ -452,13 +488,7 @@ control Egress<H, M>(
     @optional in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr,
     @optional out egress_intrinsic_metadata_for_mirror_buffer_t eg_intr_md_for_mb,
     @optional out egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport,
-    @optional out egress_intrinsic_metadata_for_deparser_t g_intr_md_for_dprsr,
-    /// XXX(hanw): temporary solution for bridge metadata until we can use defuse
-    /// in midend to create bridge metadata.
-    @optional in ingress_intrinsic_metadata_t ig_intr_md,
-    @optional in ingress_intrinsic_metadata_from_parser_t ig_intr_md_from_prsr,
-    @optional in ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm,
-    @optional in ingress_intrinsic_metadata_for_mirror_buffer_t ig_intr_md_for_mb);
+    @optional out egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr);
 
 control IngressDeparser<H, M>(
     packet_out pkt,

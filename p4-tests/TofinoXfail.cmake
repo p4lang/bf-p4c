@@ -128,10 +128,6 @@ if (NOT ENABLE_TNA)
     extensions/p4_tests/p4_14/test_config_294_parser_loop.p4
     )
 
-  p4c_add_xfail_reason("tofino"
-    "error: : condition too complex"
-    testdata/p4_14_samples/issue894.p4
-    )
 
   # Incorrect P4_14->16 conversion for varbit extract
   p4c_add_xfail_reason("tofino"
@@ -154,7 +150,6 @@ if (NOT ENABLE_TNA)
     "Wrong number of arguments for method call"
     testdata/p4_16_samples/checksum1-bmv2.p4
   )
-
 endif() # NOT ENABLE_TNA
 
 # Failure for BRIG-44 in JIRA
@@ -376,8 +371,8 @@ p4c_add_xfail_reason("tofino"
   "error: : condition too complex"
   extensions/p4_tests/p4_14/07-MacAddrCheck.p4
   extensions/p4_tests/p4_14/08-MacAddrCheck1.p4
+  testdata/p4_14_samples/issue894.p4
   )
-
 
 p4c_add_xfail_reason("tofino"
   "Unhandled InstanceRef type header_union"
@@ -883,6 +878,7 @@ p4c_add_xfail_reason("tofino"
   "Extract field slice .* with a negative offset."
   extensions/p4_tests/p4_14/c1/COMPILER-217/port_parser.p4
   extensions/p4_tests/p4_14/c1/COMPILER-295/vag1892.p4
+  extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
   extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
   extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
   extensions/p4_tests/p4_14/jenkins/pcie_pkt_test/pcie_pkt_test_one.p4
@@ -1012,116 +1008,132 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
 endif() # ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET
 
 if (ENABLE_TNA)
+
+  ######## correct error message ######
+  p4c_add_xfail_reason("tofino"
+  "CCGF member .* not physically contiguous"
+  extensions/p4_tests/p4_14/jenkins/multicast_scale/multicast_scale.p4
+  )
+
   # clone/resubmit the entire standard_metadata struct in ingress
   # fail reason: not all fields in standard metadata are defined in ingress
   p4c_add_xfail_reason("tofino"
     "Could not find declaration for"
     testdata/p4_14_samples/packet_redirect.p4
-    testdata/p4_14_samples/simple_nat.p4
-    # access stdmeta.egress_spec in egress pipeline
-    extensions/p4_tests/p4_14/test_config_6_sram_and_tcam_allocation.p4
-    # writes to egress_port which is a read-only field in ingress
-    # A better error message should be
-    # "Unable to write to read-only field standard_metadata.egress_port"
-    testdata/p4_14_samples/simple_router.p4
-    testdata/p4_14_samples/issue767.p4
-    # A better error message should be
-    # "Attempt to access undefined metadata field egress_port in ingress"
     testdata/p4_14_samples/copy_to_cpu.p4
     testdata/p4_14_samples/resubmit.p4
-    testdata/p4_14_samples/queueing.p4
-    extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
-    extensions/p4_tests/p4_16/stful.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-559/case2987.p4
     )
 
+  ######## no bridge metadata #######
+  # bridge metadata related
   p4c_add_xfail_reason("tofino"
-    "meta already resolved to"
-    extensions/p4_tests/p4_14/test_config_102_clone.p4
-    extensions/p4_tests/p4_14/test_config_303_static_table.p4
+    "Could not find declaration for standard_metadata"
+    # access .egress_spec in egress pipeline
+    testdata/p4_14_samples/switch_20160226/switch.p4
+    testdata/p4_14_samples/switch_20160512/switch.p4
+    extensions/p4_tests/p4_14/switch_20160602/switch.p4
     )
-
   p4c_add_xfail_reason("tofino"
-    "Duplicate element meter"
-    extensions/p4_tests/p4_14/test_config_168_meter_bug.p4
-    extensions/p4_tests/p4_14/test_config_177_meter_test.p4
+    "Could not find declaration for ig_intr_md_for_tm"
+    extensions/p4_tests/p4_14/test_config_306_no_mirror_share.p4
+    extensions/p4_tests/p4_14/c8/COMPILER-616/case3331.p4
+    extensions/p4_tests/p4_14/test_config_6_sram_and_tcam_allocation.p4
     )
 
-  # accessing ingress_intrinsic_metadata in egress
-  # failed because there is no implicit bridged metadata in tofino.p4
   p4c_add_xfail_reason("tofino"
     "Could not find declaration for ig_intr_md"
-    extensions/p4_tests/p4_14/test_config_301_bridge_intrinsic.p4
+    extensions/p4_tests/p4_14/jenkins/parser_intr_md/parser_intr_md.p4
     extensions/p4_tests/p4_14/c2/COMPILER-261/vag2241.p4
     extensions/p4_tests/p4_14/c4/COMPILER-590/case3179.p4
+    extensions/p4_tests/p4_14/jenkins/fr_test/fr_test.p4
+    extensions/p4_tests/p4_14/test_config_301_bridge_intrinsic.p4
     extensions/p4_tests/p4_14/c4/COMPILER-591/case3176.p4
-    extensions/p4_tests/p4_14/jenkins/parser_intr_md/parser_intr_md.p4
+    extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
     )
 
-  #
+  ######## missing metadata translation #####
+  # metadata translation: standard_metadata.instance_type
   p4c_add_xfail_reason("tofino"
-    "Unrecognized mode of the action selector"
-    extensions/p4_tests/p4_14/jenkins/exm_direct/exm_direct_one.p4
+    "Could not find declaration for standard_metadata"
+    extensions/p4_tests/p4_14/switch_l2_profile.p4
     )
 
+  p4c_add_xfail_reason("tofino"
+    "Could not find declaration for pktgen_generic"
+    extensions/p4_tests/p4_14/jenkins/stful/stful.p4
+    )
+
+  ######### translation issue? ##########
+  p4c_add_xfail_reason("tofino"
+    "Interface .* does not have a method named execute with 0 arguments"
+    extensions/p4_tests/p4_14/switch/p4src/switch.p4
+    )
+
+  ######### cast() relate ######
+  # these tests need translation to insert 'cast' (no better way??)
   # hash function that return a data width that is different from 'base'
   p4c_add_xfail_reason("tofino"
     "Cannot unify bit"
     testdata/p4_14_samples/flowlet_switching.p4
     extensions/p4_tests/p4_14/test_config_96_hash_data.p4
     extensions/p4_tests/p4_14/test_config_13_first_selection.p4
-    extensions/p4_tests/p4_14/test_config_294_parser_loop.p4
     )
-
-  p4c_add_xfail_reason("tofino"
-    "Cannot resolve computed select: BFN::SelectComputed"
-    extensions/p4_tests/p4_14/c1/COMPILER-217/port_parser.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "does not have a PHV allocation though it is used in an action"
-    extensions/p4_tests/p4_14/test_config_157_random_number_generator.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "Could not find declaration for ig_intr_md_for_tm"
-    extensions/p4_tests/p4_14/test_config_306_no_mirror_share.p4
-    extensions/p4_tests/p4_14/c8/COMPILER-616/case3331.p4
-    )
-
   p4c_add_xfail_reason("tofino"
     "Field counter_pfe overlaps with meter_pfe"
+    extensions/p4_tests/p4_14/jenkins/stats_pi/stats_pi.p4
     extensions/p4_tests/p4_14/jenkins/action_spec_format/action_spec_format.p4
     )
-
   p4c_add_xfail_reason("tofino"
-    "Could not find declaration for ig_prsr_ctrl"
-    extensions/p4_tests/p4_14/switch/p4src/switch.p4
+    "Cannot unify bit.* to bit.*"
+    extensions/p4_tests/p4_14/meter_test1.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-632/case3459.p4
     )
 
+  ######### bogus test case #############
+  # these test cases are using invalid metadata
   p4c_add_xfail_reason("tofino"
-    "Duplicates declaration struct .*"
-    extensions/p4_tests/p4_14/switch_l2_profile.p4
-    testdata/p4_14_samples/switch_20160226/switch.p4
-    testdata/p4_14_samples/switch_20160512/switch.p4
-    testdata/p4_14_samples/sai_p4.p4
-    extensions/p4_tests/p4_14/switch_20160602/switch.p4
+    # writes to egress_port which is a read-only field in ingress
+    # A better error message should be
+    # "Unable to write to read-only field standard_metadata.egress_port"
+    "Could not find declaration for"
+    testdata/p4_14_samples/simple_router.p4
+    testdata/p4_14_samples/issue767.p4
     )
-
-  p4c_add_xfail_reason("tofino"
-    "Cannot unify Type"
-    testdata/p4_14_samples/issue894.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "payload 0.0 already in use by table simple_table_0 gateway"
-    extensions/p4_tests/p4_14/jenkins/mau_tcam_test/mau_tcam_test.p4
-    )
-
+  # error in metadata translation
   p4c_add_xfail_reason("tofino"
     "Expression .* cannot be the target of an assignment"
     extensions/p4_tests/p4_14/test_config_249_simple_bridge.p4
     )
+  # ingress control is not named 'ingress'
+  p4c_add_xfail_reason("tofino"
+    "can only be used in ingress control"
+    extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
+    )
+  # programs without intrinsic_metadata.p4
+  p4c_add_xfail_reason("tofino"
+    "header .* does not have a field"
+    testdata/p4_14_samples/sai_p4.p4
+    )
+  # invalid p4-14 program
+  p4c_add_xfail_reason("tofino"
+    "terminating with uncaught exception of type"
+    testdata/p4_14_samples/issue780-9.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-219/test.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-242/case1679.p4
+    )
+  # P4-14 program can not define extern
+  p4c_add_xfail_reason("tofino"
+    "Could not find declaration for"
+    testdata/p4_14_samples/issue604.p4
+    )
 
+  ######### failed in backend #######
+  # failure in backend
+  p4c_add_xfail_reason("tofino"
+    "Cannot resolve computed select: BFN::SelectComputed"
+    extensions/p4_tests/p4_14/c1/COMPILER-217/port_parser.p4
+    )
   p4c_add_xfail_reason("tofino"
     "Could not find declaration for tmp_hdr.*"
     testdata/p4_14_samples/issue781.p4
@@ -1129,44 +1141,60 @@ if (ENABLE_TNA)
     testdata/p4_14_samples/09-IPv4OptionsUnparsed.p4
     testdata/p4_14_samples/TLV_parsing.p4
     )
-
+  p4c_add_xfail_reason("tofino"
+    "payload 0.0 already in use by table simple_table_0 gateway"
+    extensions/p4_tests/p4_14/jenkins/mau_tcam_test/mau_tcam_test.p4
+    )
+  p4c_add_xfail_reason("tofino"
+    "Unrecognized mode of the action selector"
+    extensions/p4_tests/p4_14/jenkins/exm_direct/exm_direct_one.p4
+    )
   p4c_add_xfail_reason("tofino"
     "Unexpected method call in parser"
     extensions/p4_tests/p4_14/packet_priority_exact_match.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
     )
-
   p4c_add_xfail_reason("tofino"
-    "Interface register does not have a method named execute with 2 argument"
-    testdata/p4_14_samples/register.p4
+    "does not have a PHV allocation though it is used in an action"
+    extensions/p4_tests/p4_14/test_config_157_random_number_generator.p4
     )
-
-  p4c_add_xfail_reason("tofino"
-    "src2 must be phv register"
-    extensions/p4_tests/p4_14/jenkins/pgrs/pgrs_one.p4
+   p4c_add_xfail_reason("tofino"
+    "Extract field slice .* with a negative offset."
+    extensions/p4_tests/p4_14/test_checksum.p4
     )
-
+  ######### cannot handle p4-16 program #######
+  # P16 programs are not translated.
   p4c_add_xfail_reason("tofino"
     "Wrong number of arguments for method call"
     testdata/p4_16_samples/checksum1-bmv2.p4
-    )
-
+   )
   p4c_add_xfail_reason("tofino"
     "NULL operand 4 for hash"
     testdata/p4_16_samples/flowlet_switching-bmv2.p4
     )
 
+  ######## segfault #########
+  # BRIG-138 then segfault
   p4c_add_xfail_reason("tofino"
-    "Extract field slice .* resulted in buffer"
-    extensions/p4_tests/p4_14/jenkins/multi_thread_test/multi_thread_test.p4
-    extensions/p4_tests/p4_14/jenkins/perf_test/perf_test_one.p4
+    "Exiting with SIGSEGV"
+    testdata/p4_14_samples/queueing.p4
+    testdata/p4_14_samples/simple_nat.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-589/comp589.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-608/case3263.p4
+    extensions/p4_tests/p4_14/c1/DRV-543/case2499.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-588/comp588dce.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-585/comp585.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-577/comp577.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-579/case3085.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-575/case3041.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-568/case3026.p4
+    extensions/p4_tests/p4_14/c1/COMPILER-562/case3005.p4
     )
 
+  ####### not translated #######
   p4c_add_xfail_reason("tofino"
-    "meta already resolved to"
-    extensions/p4_tests/p4_14/c1/COMPILER-548/case3011.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-593/case3011.p4
-    extensions/p4_tests/p4_14/switch/p4src/switch.p4
-    extensions/p4_tests/p4_14/test_checksum.p4
+    "parser counter translation is not implemented"
+    extensions/p4_tests/p4_14/test_config_294_parser_loop.p4
     )
 
 endif()  # ENABLE_TNA

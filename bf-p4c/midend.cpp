@@ -140,8 +140,6 @@ MidEnd::MidEnd(BFN_Options& options) {
 
         new P4::Inline(&refMap, &typeMap, evaluator),
 
-        // map = defuse();
-
         // perform architecture translation after the program is normalized by inline to
         // only contain one ingress and one egress control block.
         // Otherwise, the translator has to transform all parameters in all custom control

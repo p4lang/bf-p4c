@@ -19,9 +19,13 @@ struct CreateInstancesForThread : public Modifier, ThreadVisitor {
     /// Prepend "thread-name::" to the names of headers and metadata structs.
     bool preorder(IR::HeaderOrMetadata* header) override {
         header->name = IR::ID(cstring::to_cstring(VisitingThread(this)) +
-                              "::" + header->name);
-        if (auto* metadata = header->to<IR::Metadata>())
+                                      "::" + header->name);
+        if (auto* metadata = header->to<IR::Metadata>()) {
             localMetadata[getOriginal()->to<IR::Metadata>()] = metadata;
+        }
+        if (auto* hdr = header->to<IR::Header>()) {
+            localMetadata[getOriginal()->to<IR::Header>()] = hdr;
+        }
         return false;
     }
 
@@ -61,8 +65,9 @@ struct CreateThreadLocalMetadata : public Modifier {
             for (auto gress : { INGRESS, EGRESS }) {
                 auto gressName = cstring::to_cstring(gress) + "::" + name;
                 auto& gressMetadata = *localMetadata[gress];
-                if (gressMetadata.find(metadata) != gressMetadata.end())
+                if (gressMetadata.find(metadata) != gressMetadata.end()) {
                     instancedMetadata.addUnique(gressName, gressMetadata.at(metadata));
+                }
             }
         }
 

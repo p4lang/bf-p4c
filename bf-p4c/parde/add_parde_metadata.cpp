@@ -30,6 +30,10 @@ void AddMetadataShims::addIngressMetadata(IR::BFN::Parser *parser) {
         new IR::TempVar(IR::Type::Bits::get(1), true, "$always_deparse");
 
     auto* meta = pipe->metadata[ingress_intrinsic_metadata];
+
+    for (auto meta : pipe->metadata) {
+        LOG1("metadata " << meta.first << " " << meta.second);
+    }
     if (!meta || !meta->type->getField("ingress_port") ||
                  !meta->type->getField("resubmit_flag")) {
         // There's not really much we can do in this case; just skip over

@@ -492,6 +492,7 @@ parser IngressParser<H, M>(
   out H hdr,
   out M ig_md,
   out ingress_intrinsic_metadata_t ig_intr_md,
+  @optional out ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm,
   @optional in bit<48> global_tstamp,
   @optional in bit<32> global_version);
 

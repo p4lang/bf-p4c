@@ -66,7 +66,7 @@ const IR::Expression *SplitInstructions::preorder(IR::Expression *expr) {
             write_found = true;
         }
     } else {
-        ERROR("Unhandled type of Expression");
+        ERROR("Unhandled type of Expression " << expr);
     }
     prune();
     return expr;

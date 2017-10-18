@@ -863,8 +863,6 @@ class TnaPipe {
     }
 };
 
-/// XXX(hanw): this function is currently not exercised by the translation path.
-/// We will use it once all the extern translations are completed.
 const IR::BFN::Pipe* extract_native_arch(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
                                             const IR::PackageBlock* main) {
     TnaPipe* pipes[2];
@@ -877,7 +875,7 @@ const IR::BFN::Pipe* extract_native_arch(P4::ReferenceMap* refMap, P4::TypeMap* 
     auto rv = new IR::BFN::Pipe();
     for (auto gress : {INGRESS, EGRESS}) {
         pipes[gress]->bindParams(&bindings /* out */);
-        pipes[gress]->extractMetadata(rv /* out */, &bindings /* in */, gress /* in */);
+        pipes[gress]->extractMetadata(rv /* out */, &bindings /* in */, gress);
         pipes[gress]->apply(simplifyReferences);
         pipes[gress]->extractTable(rv /* out */, gress /* in */);
         pipes[gress]->extractAttached(rv /* out */, gress);
