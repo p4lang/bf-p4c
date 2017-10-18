@@ -883,7 +883,6 @@ p4c_add_xfail_reason("tofino"
   "Extract field slice .* with a negative offset."
   extensions/p4_tests/p4_14/c1/COMPILER-217/port_parser.p4
   extensions/p4_tests/p4_14/c1/COMPILER-295/vag1892.p4
-  extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
   extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
   extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
   extensions/p4_tests/p4_14/jenkins/pcie_pkt_test/pcie_pkt_test_one.p4
@@ -920,6 +919,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
   extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
+  extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
   )
 
 # Fails due to use of more than two source containers

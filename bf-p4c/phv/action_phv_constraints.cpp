@@ -96,17 +96,18 @@ uint32_t ActionPhvConstraints::num_container_sources(std::vector<PackingCandidat
     return (containerList.size());
 }
 
-bool ActionPhvConstraints::has_ad_sources(std::vector<const PHV::Field*>& fields, const
+//  Note: If both action data and constant are used in the same action as operands on the same
+//  container, action data allocation folds them into one action data parameter to ensure a
+//  legal Tofino action. Same is true when multiple action data and/or multiple constants are used
+//  as operands on the same container in the same action.
+bool ActionPhvConstraints::has_ad_or_constant_sources(std::vector<const PHV::Field*>& fields, const
         IR::MAU::Action* action) {
     for (auto field : fields) {
         if (write_to_reads_per_action[field][action].size() == 0)
             LOG3("Not written in this action");
         for (auto operand : write_to_reads_per_action[field][action]) {
-            if (operand.ad) {
-                return true;
-            } else if (operand.constant) {
-                // TODO: Evaluate constant
-                return false; } } }
+            if (operand.ad || operand.constant) {
+                return true; } } }
     return false;
 }
 
@@ -124,22 +125,24 @@ unsigned ActionPhvConstraints::can_cohabit(std::vector<PackingCandidate>& candid
 
     for (auto &action : set_of_actions) {
         LOG3("Action: " << action->name);
-        uint32_t num_srcs = num_container_sources(candidates, action);
-        bool has_ad_srcs = has_ad_sources(fields, action);
-        if (num_srcs == 1) {
+        uint32_t num_container_srcs = num_container_sources(candidates, action);
+        bool has_ad_constant_srcs = has_ad_or_constant_sources(fields, action);
+        if (num_container_srcs == 1 && !has_ad_constant_srcs) {
+            // If num_container_srcs = 1 and has_ad_constant_srcs, then we actually have two sources
+            // for this action: PHV container and action data
             LOG3("One source detected");
             // TODO: Add check for similarity of the set operations
             continue;
-        } else if (num_srcs == 0) {
-            if (has_ad_srcs)
+        } else if (num_container_srcs == 0) {
+            if (has_ad_constant_srcs)
                 LOG3("Action data source only");
             else
                 LOG3("Can there be zero sources?");
             continue;
-        } else if (num_srcs > 2) {
+        } else if (num_container_srcs > 2) {
             LOG3("Action " << action->name << " uses more than two phv sources");
             return ActionAnalysis::ContainerAction::TOO_MANY_PHV_SOURCES;
-        } else if (num_srcs == 2 && has_ad_srcs) {
+        } else if (num_container_srcs == 2 && has_ad_constant_srcs) {
             LOG3("Action " << action->name << " uses 2 PHV sources in addition to action data.");
             return ActionAnalysis::ContainerAction::PHV_AND_ACTION_DATA;
         } else {

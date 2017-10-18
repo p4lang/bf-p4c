@@ -101,8 +101,10 @@ class ActionPhvConstraints : public Inspector {
       */
     uint32_t num_container_sources(std::vector<PackingCandidate>&, const IR::MAU::Action *);
 
-    /// @returns true if fields packed in the same container read from action data in action act
-    bool has_ad_sources(std::vector<const PHV::Field *>& fields, const IR::MAU::Action *act);
+    /// @returns true if @fields packed in the same container read from action data or from constant
+    /// in action @act
+    bool has_ad_or_constant_sources(std::vector<const PHV::Field *>& fields, const IR::MAU::Action
+            *act);
 
     /** Check if two fields share the same container
       */
