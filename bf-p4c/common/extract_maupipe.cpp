@@ -93,6 +93,7 @@ class ActionFunctionSetup : public PassManager {
             new ConvertMethodCall(refMap, typeMap),
             action_arg_setup
         });
+        stop_on_error = false;
     }
 };
 
