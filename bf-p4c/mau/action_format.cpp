@@ -261,16 +261,16 @@ void ActionFormat::create_placement_phv(ActionAnalysis::ContainerActionsMap &con
         for (auto &field_action : cont_action.field_actions) {
             bitrange bits;
             auto *write_field = phv.field(field_action.write.expr, &bits);
-            int container_bit = 0;
+            le_bitrange container_bits;
             int write_count = 0;
 
             write_field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice &alloc) {
                 write_count++;
-                BUG_CHECK(alloc.container_bit >= 0, "Invalid negative container bit");
+                container_bits = alloc.container_bits();
+                BUG_CHECK(container_bits.lo >= 0, "Invalid negative container bit");
                 if (!alloc.container)
                     ERROR("Phv field " << write_field->name << " written in action "
                           << action_name << " is not allocated?");
-                container_bit = alloc.container_bit;
             });
 
             if (write_count > 1)
@@ -278,12 +278,13 @@ void ActionFormat::create_placement_phv(ActionAnalysis::ContainerActionsMap &con
 
             for (auto &read : field_action.reads) {
                 if (read.type == ActionAnalysis::ActionParam::ACTIONDATA) {
-                    create_from_actiondata(adp, read, container_bit);
+                    create_from_actiondata(adp, read, container_bits.lo);
                     initialized = true;
                 } else if (read.type == ActionAnalysis::ActionParam::CONSTANT
                     && cont_action.convert_constant_to_actiondata()) {
-                    create_from_constant(adp, read, bits.lo, container_bit, constant_to_ad_count,
-                                         container, constant_renames);
+                    create_from_constant(adp, read, bits.lo, container_bits.lo,
+                                         constant_to_ad_count, container,
+                                         constant_renames);
                     initialized = true;
                 }
             }
