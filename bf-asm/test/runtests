@@ -449,17 +449,19 @@ function test_p4() {
     return $rv
 }
 
-function test_tfa() {
+function test_bfa() {
     tfafile="$1"
+    target=${2:-tofino}
     msg="$tfafile"
     pushd $(dirname $1) >/dev/null
-    name=$(basename $1 .tfa)
+    srcfile=$(basename $1)
+    name=${srcfile%.*}
     mkdir -p $name.out
-    expect_fail=$(sed -n "/^$name.tfa/s/[^ ]* *//p" expected_failures.txt 2>/dev/null | head -1)
-    #cd $name.out
+    rm -f $name.out/*.json $name.out/*.json.gz $name.out/*.bin
+    expect_fail=$(sed -n "/^$srcfile/s/[^ ]* *//p" expected_failures.txt 2>/dev/null | head -1)
     ok=true
     rv=0
-    if not run $BFAS -g -Mvvvvl $name.out/bfas.config.log $name.tfa >$name.out/bfas.log 2>&1; then
+    if not run $BFAS -g -t $target -Mvvvvl $name.out/bfas.config.log $srcfile >$name.out/bfas.log 2>&1; then
         msg="$msg bfas failed"
         fail_type="bfas"
         if [ $count -eq 1 ] || [ "$expect_fail" != "bfas" ]; then
@@ -469,6 +471,7 @@ function test_tfa() {
         ok=false
     else
         msg="$msg pass"
+        gzip $name.out/*.cfg.json
     fi
     if [ "$expect_fail" != "" ]; then
         if $ok; then
@@ -644,7 +647,10 @@ for file in "$@"; do
         test_p4 $file &
     elif [ "${file##*.}" == "tfa" ]; then
         let running++
-        test_tfa $file &
+        test_bfa $file tofino &
+    elif [ "${file##*.}" == "jba" ]; then
+        let running++
+        test_bfa $file jbay &
     elif [ "${file##*.}" == "stf" ]; then
         let running++
         test_stf $file &

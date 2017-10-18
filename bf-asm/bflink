@@ -18,8 +18,8 @@
 
 
 WALLE=""
-CHIP="tofino"
-OUT="tofino.bin"
+CHIP=""
+OUT=""
 objs=""
 object_files=""
 base_program=""
@@ -129,6 +129,20 @@ if [ ! -x "$WALLE" ]; then
         echo >&2 "Can't find walle"
         exit 1
     fi
+fi
+
+if [ -z "$CHIP" ]; then
+    for jf in $objs; do
+        if [ $(basename $jf) = regs.top.cfg.json ]; then
+            CHIP=$(grep '"_type"' $jf | sed -e 's/.*"regs\.//' -e 's/[_"].*//')
+            break
+        fi
+    done
+    if [ -z "$CHIP" ]; then
+        echo >&2 "Can't find target, assuming tofino"
+        CHIP=tofino
+    fi
+    OUT=$CHIP.bin
 fi
 
 schema_arg=""
