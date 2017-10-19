@@ -1463,399 +1463,355 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
     // slice containers to form groups that can accommodate larger number for given width in <n:w>
     //
     create_aligned_container_slices();
-    //
-    // sort clusters number decreasing, width decreasing
-    //
+
+    // sort clusters number decreasing, width decreasing, using ids to break
+    // ties
     clusters_to_be_assigned.sort([](Cluster_PHV *l, Cluster_PHV *r) {
-        if (l->num_containers() == r->num_containers()) {
-            //
-            // width() = width of container
-            // max_width() = max width of field in cluster
-            // max_width() <= width()
-            // when packing consider field width
-            //
-            // return l->width() > r->width();
-            if (l->max_width() == r->max_width()) {
-                // sort by cluster id_num to prevent non-determinism
-                return l->id_num() < r->id_num();
-            }
+        // Sort by number of containers first
+        if (l->num_containers() != r->num_containers())
+            return l->num_containers() > r->num_containers();
+
+        // ...then by width
+        if (l->max_width() != r->max_width())
             return l->max_width() > r->max_width();
-        }
-        return l->num_containers() > r->num_containers();
-    });
+
+        // ...and finally by unique ID number.
+        return l->id_num() < r->id_num(); });
+
     LOG3("..........Begin Pack Cohabit ("
          << clusters_to_be_assigned.size()
          << ").....Sorted Clusters to be packed....."
          << msg
          << std::endl);
     LOG3(clusters_to_be_assigned);
-    //
+
     // pack sorted clusters<n,w> to containers[w][n]
-    //
     LOG4("..........Packing.........." << std::endl);
-    //
+
     std::list<Cluster_PHV *> clusters_remove;
-    for (auto &cl : clusters_to_be_assigned) {
-        int cl_w = std::min(cl->max_width(), int(cl->width()));
+    for (auto* cl : clusters_to_be_assigned) {
+        int required_width = std::min(cl->max_width(), int(cl->width()));
             // exceed container_width => no match, e.g., cluster <1:160>{5*32}(pkt.pad_1{0..159})
-        int cl_n = cl->num_containers();
-        //
-        bool found_match = false;
-        for (auto &i : aligned_slices) {
-            int m_w = i.first;
-            if (m_w >= cl_w) {
-                for (auto &j : i.second) {
-                    if (cl->exact_containers()) {
-                        //
-                        // cluster width must exact match container
-                        // check first container in cc_list
-                        //
-                        if (m_w != cl_w) {
-                            continue;
-                        }
-                        std::list<PHV_MAU_Group::Container_Slice *>& cc_l = *(j.second.begin());
-                        PHV_MAU_Group::Container_Slice *cc = *(cc_l.begin());
-                        PHV::Size c_width = cc->container()->width();
-                        if (m_w != int(c_width)) {
-                            continue;
-                        }
-                    }
-                    //
-                    // split container_pack <mw, mn>
-                    // --> <mw, mn-cn>, (<mw, cn> --> <mw-cw, cn>, <cw, cn>)
-                    //
-                    int m_n = j.first;
-                    if (m_n >= cl_n) {
-                        //
-                        // check gress compatibility
-                        //
-                        std::list<PHV_MAU_Group::Container_Slice *> cc_set;
-                        cc_set.clear();
-                        boost::optional<gress_t> c_gress = boost::none;
+        int required_containers = cl->num_containers();
 
-                        // find a slice set suitable for holding cluster cl
-                        for (auto &cc_set_x : j.second) {
-                            c_gress = (*(cc_set_x.begin()))->container()->gress();
-                            if (packing_predicates(cl, cc_set_x)) {
-                                cc_set = cc_set_x;
+        // Find a group of slices (copied to cc_set) that can hold this cluster.
+        std::list<PHV_MAU_Group::Container_Slice *> cc_set;
 
-                                // remove matching MAU_Group Container Content from set_of_sets
-                                // if set_of_sets empty then remove map[m_w] entry
-                                j.second.remove(cc_set_x);
-                                if (j.second.empty())
-                                    i.second.erase(j.first);
+        // Set when cc_set is found:
+        int slice_width;
+        int available_slices;
+        boost::optional<gress_t> slice_gress;
 
-                                break; } }
+        for (auto& slices_by_width : aligned_slices) {
+            slice_width = slices_by_width.first;
+            if (slice_width < required_width)
+                continue;
+            for (auto &slices_by_count : slices_by_width.second) {
+                if (cl->exact_containers()) {
+                    BUG_CHECK(slices_by_count.second.size() > 0,
+                              "Aligned slices group with zero slices");
 
-                        if (cc_set.empty()) {
-                            // not compatible, constraints not satisfied
-                            LOG4("-----" << cl->id() << "<" << cl_n << ',' << cl_w << '>'
-                                << cl->gress()
-                                << "-----[" << m_w << "](" << m_n << ')'
-                                << c_gress /*<< j.second*/);
-                            continue; }
+                    // cluster width must exact match container
+                    // check first container in cc_list
+                    if (slice_width != required_width)
+                        continue;
 
-                        LOG4("....." << cl->id() << "<" << cl_n << ',' << cl_w << '>'
-                             << cl->gress()
-                             <<  "-->[" << m_w << "](" << m_n << ')'
-                             << c_gress
-                             << cc_set);
-
-                        // mau availability number > cluster requirement number
-                        if (m_n > cl_n) {
-                            //
-                            // create new container pack <mw, mn-cn>
-                            // n = m_n - cl_n containers
-                            // insert in map[n]
-                            //
-                            auto* cc_n = new std::list<PHV_MAU_Group::Container_Slice *>;
-                            auto n = m_n - cl_n;
-                            for (auto i = 0; i < n; i++) {
-                                cc_n->push_back(*(cc_set.begin()));
-                                cc_set.erase(cc_set.begin());
-                            }
-                            i.second[n].push_back(*cc_n);
-                            LOG4("\t==>["
-                                 << m_w
-                                 << "]-->["
-                                 << m_w
-                                 << "]("
-                                 << n
-                                 << ')'
-                                 << std::endl
-                                 << '\t'
-                                 << *cc_n);
-                        }
-                        //
-                        // container tracking based on cc_set ... <cl_n, cl_w>;
-                        //
-                        size_t field_num = 0;
-                        PHV::Field *f = cl->cluster_vec()[field_num];
-                        auto field_bit_lo = f->phv_use_lo(cl);               // considers slice lo
-                        for (auto &cc : cc_set) {
-                            //
-                            // to honor alignment of fields in clusters
-                            // start with rightmost vertical slice that accommodates this width
-                            //
-                            int start = cc->hi() + 1 - cl_w;
-                            if (f->deparsed_bottom_bits()) {
-                                // f has constraints "bottom bits", e.g., learning digest
-                                // packing_predicates() must have ensured bottom bits available
-                                assert(cc->lo() == 0);
-                                start = cc->lo();
-                            }
-                            if (f->phv_use_width(cl) > cl_w
-                                && cl_w != int(cc->container()->width())) {       // 128b = 32*4
-                                //
-                                LOG1("cluster_phv_mau.cpp*****sanity_FAIL*****");
-                                LOG1(".....field width exceeds slice .....");
-                                LOG1(f);
-                                LOG1(" slice width cl_w = " << cl_w);
-                            }
-                            if (f->metadata && !f->bridged && cc->container()->deparsed()) {
-                                const PHV::Field *deparsed_header = nullptr;
-                                const PHV::Field *non_deparsed_field = nullptr;
-                                cc->container()->sanity_check_deparsed_container_violation(
-                                        deparsed_header, non_deparsed_field);
-                                if (deparsed_header) {
-                                    //
-                                    LOG1("cluster_phv_mau.cpp*****sanity_FAIL*****");
-                                    LOG1(".....metadata being placed w/ deparsed header .....");
-                                    LOG1(f);
-                                    LOG1(deparsed_header);
-                                    LOG1(cc->container());
-                                    BUG("*****metadata being placed w/ deparsed header*****");
-                                }
-                            }
-                            // last alloc of field slice may be remainder of division by cl_w,
-                            // e.g., 375bits mod 32b containers, last field slice = 23 bits
-                            //
-                            int remaining_field_width = f->phv_use_hi(cl) - field_bit_lo + 1;
-                            int width_in_container = std::min(cl_w, remaining_field_width);
-                            int align_start = start;
-                            if (field_bit_lo == 0) {  // consider alignment only @ start of field
-                                align_start = f->phv_alignment().get_value_or(start);
-                            }
-                            if (width_in_container + align_start > int(cc->container()->width())) {
-                                width_in_container = int(cc->container()->width()) - align_start;
-                            }
-                            cc->container()->taint(align_start,               // start
-                                                   width_in_container,        // width
-                                                   f,                         // field
-                                                   field_bit_lo);             // field_bit_lo
-                            cc->container()->sanity_check_container_ranges(
-                                "PHV_MAU_Group_Assignments::container_pack_cohabit..");
-                            LOG3("\t\t" << *(cc->container()));
-                            //
-                            // advance to next field or continue same field
-                            //
-                            if (field_num < cl->cluster_vec().size() - 1) {
-                                field_num++;
-                                f = cl->cluster_vec()[field_num];
-                                field_bit_lo = f->phv_use_lo(cl);             // considers slice lo
-                            } else {
-                                //
-                                // single field overlapping several containers
-                                // e.g., singleton field cl <1:160>{5*32}
-                                // same field, advance field_bit_lo
-                                //
-                                field_bit_lo += cl_w;
-                            }
-                        }  // for
-                        //
-                        // mau availabilty width > cluster requirement width
-                        //
-                        if (m_w > cl_w) {
-                            //
-                            // set aligned slices with cc_set representing updated availability
-                            // if no disjoint available segments due to parde_alignment
-                            //     create new container pack <mw-cw, cn>
-                            //     new width w = m_w - cl_w;
-                            //     insert in map[m_w-cl_w][cl_n]
-                            // else
-                            //     create container packs representing availability
-                            //     to left and right of occupation
-                            //
-                            // usually top-bit occupation but check bottom bit, e.g., $learning
-                            // parde alignment can create disjoint partitions
-                            // vacancies before & after occupation width
-                            auto cc_b = *(cc_set.begin());
-                            bool lo_occupied = cc_b->container()->bits()[cc_b->lo()] != '0';
-                            bool hi_occupied = cc_b->container()->bits()[cc_b->hi()] != '0';
-                            //
-                            bool disjoint_segments = !lo_occupied && !hi_occupied;
-                            std::list<PHV_MAU_Group::Container_Slice *>* cc_d = nullptr;
-                            int lo_d = 0;
-                            int hi_d = 0;
-                            if (disjoint_segments) {
-                                cc_d = new std::list<PHV_MAU_Group::Container_Slice *>;
-                                for (auto i = cc_b->lo(); i <= cc_b->hi(); i++) {
-                                    if (cc_b->container()->bits()[i] != '0') {
-                                        lo_d = i - 1;
-                                        hi_d = lo_d + cl_w + 1;
-                                        BUG_CHECK(cc_b->container()->bits()[hi_d] == '0',
-                                            "*****PHV_MAU_Group_Assignments:: "
-                                            "disjoint availability inconsistent *****");
-                                        break;
-                                    }
-                                }
-                                for (auto &cc : cc_set) {
-                                    // disjoint available segments
-                                    // cc_d represents availability to right of occupation
-                                    cc_d->push_back(
-                                        new PHV_MAU_Group::Container_Slice(
-                                            hi_d, cc->hi() - hi_d + 1, cc->container()));
-                                }
-                            }
-                            auto *cc_w = new std::list<PHV_MAU_Group::Container_Slice *>;
-                            for (auto &cc : cc_set) {
-                                if (lo_occupied) {
-                                    cc_w->push_back(
-                                        new PHV_MAU_Group::Container_Slice(
-                                            cc->lo() + cl_w,
-                                            cc->hi() - cc->lo() - cl_w + 1,
-                                            cc->container()));
-                                } else {
-                                    if (hi_occupied) {
-                                        cc_w->push_back(
-                                            new PHV_MAU_Group::Container_Slice(
-                                                cc->lo(),
-                                                cc->hi() - cl_w - cc->lo() + 1,
-                                                cc->container()));
-                                    } else {
-                                        // disjoint available segments
-                                        // cc_w represents availability to left of occupation
-                                        cc_w->push_back(
-                                            new PHV_MAU_Group::Container_Slice(
-                                                cc->lo(), lo_d - cc->lo() + 1, cc->container()));
-                                    }
-                                }
-                            }
-                            int w_d_h = 0;
-                            int w = 0;
-                            if (disjoint_segments) {
-                                w_d_h = (*(cc_d->begin()))->width();
-                                w = (*(cc_w->begin()))->width();
-                                aligned_slices[w_d_h][cl_n].push_back(*cc_d);
-                                aligned_slices[w][cl_n].push_back(*cc_w);
-                            } else {
-                                w = m_w - cl_w;
-                                aligned_slices[w][cl_n].push_back(*cc_w);
-                            }
-                            LOG4("\t==>("
-                                << cl_n
-                                << ")-->["
-                                << w
-                                << "]("
-                                << cl_n
-                                << ')'
-                                << std::endl
-                                << '\t'
-                                << *cc_w);
-                            if (disjoint_segments) {
-                                LOG3("\t|==>|("
-                                    << cl_n
-                                    << ")-->["
-                                    << w_d_h
-                                    << "]("
-                                    << cl_n
-                                    << ')'
-                                    << std::endl
-                                    << '\t'
-                                    << *cc_d);
-                            }
-                        }  // m_w > cl_w
-                        // remove cl
-                        //
-                        clusters_remove.push_back(cl);
-                        //
-                        found_match = true;  // next cluster cl
-                        break;
-                    }
+                    std::list<PHV_MAU_Group::Container_Slice *>& cc_l =
+                        *(slices_by_count.second.begin());
+                    PHV_MAU_Group::Container_Slice *cc = *(cc_l.begin());
+                    if (slice_width != int(cc->container()->width()))
+                        continue;
                 }
+                //
+                // split container_pack <slice_width, slice_count>
+                // --> <slice_width, slice_count-cn>,
+                //     (<slice_width, required_containers> -->
+                //      <slice_width-required_width, required_containers>,
+                //      <required_width, required_containers>)
+                //
+                available_slices = slices_by_count.first;
+                if (available_slices < required_containers)
+                    continue;
+
+                // check gress compatibility
+                slice_gress = boost::none;
+
+                // find a slice set suitable for holding cluster cl
+                for (auto &cc_set_x : slices_by_count.second) {
+                    slice_gress = (*(cc_set_x.begin()))->container()->gress();
+                    if (packing_predicates(cl, cc_set_x)) {
+                        cc_set = cc_set_x;
+
+                        // remove matching MAU_Group Container Content from set_of_sets
+                        // if set_of_sets empty then remove map[slice_width] entry
+                        slices_by_count.second.remove(cc_set_x);
+                        if (slices_by_count.second.empty())
+                            slices_by_width.second.erase(slices_by_count.first);
+
+                        break; } }
+
+                if (cc_set.empty()) {
+                    // not compatible, constraints not satisfied, continue looking
+                    LOG4("-----" << cl->id() <<
+                         "<" << required_containers << ',' << required_width << '>' <<
+                         cl->gress() <<
+                         "-----[" << slice_width << "](" << available_slices << ')'
+                        << slice_gress /*<< slices_by_count.second*/);
+                } else {
+                    break; } }
+
+            // If the inner loop was successful, break.
+            if (!cc_set.empty())
+                break; }
+
+        // If no slice set can hold this cluster, continue to the next
+        // cluster; a later pass will hopefully handle this one.
+        if (cc_set.empty())
+            continue;
+
+        // Mark cluster for removal.
+        clusters_remove.push_back(cl);
+
+        LOG4("....." << cl->id() << "<" << required_containers << ',' << required_width << '>'
+             << cl->gress()
+             <<  "-->[" << slice_width << "](" << available_slices << ')'
+             << slice_gress
+             << cc_set);
+        BUG_CHECK(available_slices >= 0 && size_t(available_slices) == cc_set.size(),
+            "Slice group of size %1% but expected size %2%", cc_set.size(), available_slices);
+
+        // Put any extra, unused slices into their own group in the slice map.
+        if (available_slices > required_containers) {
+            //
+            // create new container pack <mw, mn-cn>
+            // n = available_slices - required_containers containers
+            // insert in map[n]
+            //
+            auto* cc_n = new std::list<PHV_MAU_Group::Container_Slice *>;
+            auto n = available_slices - required_containers;
+            for (auto idx = 0; idx < n; idx++) {
+                cc_n->push_back(*(cc_set.begin()));
+                cc_set.erase(cc_set.begin());
             }
-            if (found_match) {
-                break;
-            }
-        }
-    }
-    //
+            aligned_slices[slice_width][n].push_back(*cc_n);
+            LOG4("\t==>[" << slice_width << "]-->[" << slice_width << "](" << n << ')'
+                 << std::endl << '\t' << *cc_n); }
+
+        // Assign slices to containers.
+        size_t field_num = 0;
+        PHV::Field *f = cl->cluster_vec()[field_num];
+        auto field_bit_lo = f->phv_use_lo(cl);               // considers slice lo
+        for (auto &cc : cc_set) {
+            //
+            // to honor alignment of fields in clusters
+            // start with rightmost vertical slice that accommodates this width
+            //
+            int start = cc->hi() + 1 - required_width;
+            if (f->deparsed_bottom_bits()) {
+                // f has constraints "bottom bits", e.g., learning digest
+                // packing_predicates() must have ensured bottom bits available
+                assert(cc->lo() == 0);
+                start = cc->lo(); }
+
+            if (f->phv_use_width(cl) > required_width
+                && required_width != int(cc->container()->width())) {       // 128b = 32*4
+                //
+                LOG1("cluster_phv_mau.cpp*****sanity_FAIL*****");
+                LOG1(".....field width exceeds slice .....");
+                LOG1(f);
+                LOG1(" slice width required_width = " << required_width); }
+
+            if (f->metadata && !f->bridged && cc->container()->deparsed()) {
+                const PHV::Field *deparsed_header = nullptr;
+                const PHV::Field *non_deparsed_field = nullptr;
+                cc->container()->sanity_check_deparsed_container_violation(
+                        deparsed_header, non_deparsed_field);
+                if (deparsed_header) {
+                    //
+                    LOG1("cluster_phv_mau.cpp*****sanity_FAIL*****");
+                    LOG1(".....metadata being placed w/ deparsed header .....");
+                    LOG1(f);
+                    LOG1(deparsed_header);
+                    LOG1(cc->container());
+                    BUG("*****metadata being placed w/ deparsed header*****"); } }
+
+            // last alloc of field slice may be remainder of division by required_width,
+            // e.g., 375bits mod 32b containers, last field slice = 23 bits
+            //
+            int remaining_field_width = f->phv_use_hi(cl) - field_bit_lo + 1;
+            int width_in_container = std::min(required_width, remaining_field_width);
+            int align_start = start;
+
+            // consider alignment only @ start of field
+            if (field_bit_lo == 0)
+                align_start = f->phv_alignment().get_value_or(start);
+
+            if (width_in_container + align_start > int(cc->container()->width()))
+                width_in_container = int(cc->container()->width()) - align_start;
+
+            cc->container()->taint(align_start,               // start
+                                   width_in_container,        // width
+                                   f,                         // field
+                                   field_bit_lo);             // field_bit_lo
+            cc->container()->sanity_check_container_ranges(
+                "PHV_MAU_Group_Assignments::container_pack_cohabit..");
+            LOG3("\t\t" << *(cc->container()));
+            //
+            // advance to next field or continue same field
+            //
+            if (field_num < cl->cluster_vec().size() - 1) {
+                field_num++;
+                f = cl->cluster_vec()[field_num];
+                field_bit_lo = f->phv_use_lo(cl);             // considers slice lo
+            } else {
+                //
+                // single field overlapping several containers
+                // e.g., singleton field cl <1:160>{5*32}
+                // same field, advance field_bit_lo
+                //
+                field_bit_lo += required_width; } }
+
+        // If the cluster did not use all the available bits in each slice,
+        // create a new group of slices out of the remaining, free bits.
+        if (slice_width > required_width) {
+            //
+            // set aligned slices with cc_set representing updated availability
+            // if no disjoint available segments due to parde_alignment
+            //     create new container pack <mw-cw, cn>
+            //     new width w = slice_width - required_width;
+            //     insert in map[slice_width-required_width][required_containers]
+            // else
+            //     create container packs representing availability
+            //     to left and right of occupation
+            //
+            // usually top-bit occupation but check bottom bit, e.g., $learning
+            // parde alignment can create disjoint partitions
+            // vacancies before & after occupation width
+            auto cc_b = *(cc_set.begin());
+            bool lo_occupied = cc_b->container()->bits()[cc_b->lo()] != '0';
+            bool hi_occupied = cc_b->container()->bits()[cc_b->hi()] != '0';
+            //
+            bool disjoint_segments = !lo_occupied && !hi_occupied;
+            std::list<PHV_MAU_Group::Container_Slice *>* cc_d = nullptr;
+            int lo_d = 0;
+            int hi_d = 0;
+            if (disjoint_segments) {
+                cc_d = new std::list<PHV_MAU_Group::Container_Slice *>;
+                for (auto bit = cc_b->lo(); bit <= cc_b->hi(); bit++) {
+                    if (cc_b->container()->bits()[bit] != '0') {
+                        lo_d = bit - 1;
+                        hi_d = lo_d + required_width + 1;
+                        BUG_CHECK(cc_b->container()->bits()[hi_d] == '0',
+                            "*****PHV_MAU_Group_Assignments:: "
+                            "disjoint availability inconsistent *****");
+                        break; } }
+
+                for (auto &cc : cc_set) {
+                    // disjoint available segments
+                    // cc_d represents availability to right of occupation
+                    cc_d->push_back(
+                        new PHV_MAU_Group::Container_Slice(
+                            hi_d, cc->hi() - hi_d + 1, cc->container())); } }
+
+            auto *cc_w = new std::list<PHV_MAU_Group::Container_Slice *>;
+            for (auto &cc : cc_set) {
+                if (lo_occupied) {
+                    cc_w->push_back(
+                        new PHV_MAU_Group::Container_Slice(
+                            cc->lo() + required_width,
+                            cc->hi() - cc->lo() - required_width + 1,
+                            cc->container()));
+                } else {
+                    if (hi_occupied) {
+                        cc_w->push_back(
+                            new PHV_MAU_Group::Container_Slice(
+                                cc->lo(),
+                                cc->hi() - required_width - cc->lo() + 1,
+                                cc->container()));
+                    } else {
+                        // disjoint available segments
+                        // cc_w represents availability to left of occupation
+                        cc_w->push_back(
+                            new PHV_MAU_Group::Container_Slice(
+                                cc->lo(), lo_d - cc->lo() + 1, cc->container())); } } }
+
+            int w_d_h = 0;
+            int w = 0;
+            if (disjoint_segments) {
+                w_d_h = (*(cc_d->begin()))->width();
+                w = (*(cc_w->begin()))->width();
+                aligned_slices[w_d_h][required_containers].push_back(*cc_d);
+                aligned_slices[w][required_containers].push_back(*cc_w);
+            } else {
+                w = slice_width - required_width;
+                aligned_slices[w][required_containers].push_back(*cc_w); }
+
+            LOG4("\t==>(" << required_containers << ")-->[" << w << "]" <<
+                 "(" << required_containers << ')' << std::endl << '\t' << *cc_w);
+
+            if (disjoint_segments) {
+                LOG3("\t|==>|(" << required_containers << ")-->[" << w_d_h << "]" <<
+                    "(" << required_containers << ')' << std::endl << '\t' << *cc_d); } } }
+
     sanity_check_container_fields_gress("PHV_MAU_Group_Assignments::container_pack_cohabit()..");
-    //
+
     // remove clusters already assigned
-    //
-    for (auto &cl : clusters_remove) {
+    for (auto &cl : clusters_remove)
         clusters_to_be_assigned.remove(cl);
-    }
-    //
+
     // clean up aligned_slices
-    //
     for (auto &i : aligned_slices) {
         bool clear_i = true;
         for (auto &x : i.second) {
             if (!x.second.empty()) {
                 clear_i = false;
-                break;
-            }
-        }
-        if (clear_i == true) {
-            aligned_slices[i.first].clear();
-        }
-    }
+                break; } }
+        if (clear_i == true)
+            aligned_slices[i.first].clear(); }
+
     bool clear_i = true;
     for (auto &i : aligned_slices) {
         if (!i.second.empty()) {
             clear_i = false;
-            break;
-        }
-    }
-    if (clear_i == true) {
+            break; } }
+
+    if (clear_i == true)
         aligned_slices.clear();
-    }
-    //
-    // update groups with Empty containers
-    //
+
+    // update groups with empty containers
     std::list<PHV_MAU_Group *> phv_groups = PHV_groups_i;
-    if (&aligned_slices != &aligned_container_slices_i) {
+    if (&aligned_slices != &aligned_container_slices_i)
         phv_groups = T_PHV_groups_i;
-    }
+
     ordered_set<PHV_MAU_Group *> phv_groups_remove;
     for (auto &g : phv_groups) {
         g->empty_containers() = 0;
         for (auto &c : g->phv_containers()) {
-            if (c->status() == PHV_Container::Container_status::EMPTY) {
-                g->inc_empty_containers();
-            }
-        }
-        if (g->empty_containers() == 0) {
-            phv_groups_remove.insert(g);
-        }
-    }
-    for (auto &g : phv_groups_remove) {
+            if (c->status() == PHV_Container::Container_status::EMPTY)
+                g->inc_empty_containers(); }
+        if (g->empty_containers() == 0)
+            phv_groups_remove.insert(g); }
+
+    for (auto &g : phv_groups_remove)
         phv_groups.remove(g);
-    }
-    //
+
     // update correct state for aligned slices in all groups
-    //
     create_aligned_container_slices();
-    //
+
     // sanity check after correct state for aligned slices so that container ranges are correct
-    //
     sanity_check_container_avail("container_pack_cohabit ()..");
-    //
-    LOG3("..........End Pack Cohabit ("
-         << clusters_to_be_assigned.size()
-         << ").........."
-         << msg
-         << std::endl);
-    if (strstr(msg, "T_PHV")) {
+
+    LOG3("..........End Pack Cohabit (" << clusters_to_be_assigned.size() << ").........."
+         << msg << std::endl);
+
+    if (strstr(msg, "T_PHV"))
         LOG3(T_PHV_i);
-    } else {
+    else
         LOG3(PHV_MAU_i);
-    }
+
     status(clusters_to_be_assigned, msg);
     status(aligned_slices, msg);
-}  // container_pack_cohabit
+}
 
 
 void PHV_MAU_Group_Assignments::consolidate_slices_in_group(
