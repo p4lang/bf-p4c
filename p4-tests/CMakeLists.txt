@@ -225,7 +225,7 @@ p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
   "switch_ent_fin_spine" ${switchtest} "${testExtraArgs} -DENT_FIN_SPINE_PROFILE")
 p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
   "switch_ent_fin_postcard" ${switchtest} "${testExtraArgs} -DENT_FIN_POSTCARD_PROFILE")
-p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
+p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} FALSE
   "switch_l2" ${switchtest} "${testExtraArgs} -DL2_PROFILE")
 p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
   "switch_l3_ipv4_fib_clpm" ${switchtest} "${testExtraArgs} -DL3_IPV4_FIB_CLPM_PROFILE")

@@ -194,16 +194,17 @@ void GatewayTable::pass1() {
     else if (layout[0].bus < 0 && (!match.empty() || !xor_match.empty()))
         error(lineno, "No bus specified in gateway to read from");
     if (layout.size() > 1) {
-        if (layout[1].row < 0)
+        if (layout[1].row < 0) {
             error(layout[1].lineno, "payload_bus with no payload_row in gateway");
-        else if (match_table)
+        } else if (match_table) {
             error(layout[1].lineno, "payload_row/bus on gateway attached to table");
-        else if (auto *old = stage->gw_payload_use[layout[1].row][layout[1].bus & 1])
-            error(layout[1].lineno, "payload %d.%d already in use by table %s",
-                  layout[1].row, layout[1].bus & 1, old->name());
-        else
-            stage->gw_payload_use[layout[1].row][layout[1].bus & 1] = this;
-    } else if (have_payload && !match_table)
+        } else if (have_payload >= 0 || match_address >= 0) {
+            if (auto *old = stage->gw_payload_use[layout[1].row][layout[1].bus & 1])
+                error(layout[1].lineno, "payload %d.%d already in use by table %s",
+                      layout[1].row, layout[1].bus & 1, old->name());
+            else
+                stage->gw_payload_use[layout[1].row][layout[1].bus & 1] = this; }
+    } else if ((have_payload >= 0  || match_address >= 0) && !match_table)
         error(have_payload, "payload on standalone gateway requires explicit payload_row");
     if (gw_unit >= 0) {
         if (auto *old = stage->gw_unit_use[layout[0].row][gw_unit])
@@ -268,13 +269,13 @@ void GatewayTable::pass2() {
     if (Table *tbl = match_table) {
         if (auto *tmatch = dynamic_cast<TernaryMatchTable *>(tbl))
             tbl = tmatch->indirect;
-        if (tbl)
+        if (tbl && (have_payload >= 0 || match_address >= 0)) {
             for (auto &row : tbl->layout) {
                 if (auto *old = stage->gw_payload_use[row.row][row.bus & 1])
                     error(lineno, "payload %d.%d already in use by table %s",
                           row.row, row.bus & 1, old->name());
                 else
-                    stage->gw_payload_use[row.row][row.bus & 1] = this; } }
+                    stage->gw_payload_use[row.row][row.bus & 1] = this; } } }
     if (input_xbar) input_xbar->pass2();
 }
 
@@ -332,11 +333,12 @@ void GatewayTable::payload_write_regs(REGS &regs, int row, int type, int bus) {
     } else {
         xbar_ctl.exact_logical_select = logical_id;
         xbar_ctl.exact_inhibit_enable = 1; }
-    if (have_payload) {
+    if (have_payload >= 0 || match_address >= 0) {
         if (type)
             merge.gateway_payload_tind_pbus[row] |= 1 << bus;
         else
-            merge.gateway_payload_exact_pbus[row] |= 1 << bus;
+            merge.gateway_payload_exact_pbus[row] |= 1 << bus; }
+    if (have_payload >= 0) {
         merge.gateway_payload_data[row][bus][0][type] = payload & 0xffffffff;
         merge.gateway_payload_data[row][bus][1][type] = payload >> 32;
         merge.gateway_payload_data[row][bus][0][type^1] = payload & 0xffffffff;
@@ -345,10 +347,10 @@ void GatewayTable::payload_write_regs(REGS &regs, int row, int type, int bus) {
         merge.gateway_payload_match_adr[row][bus][type] = match_address;
         merge.gateway_payload_match_adr[row][bus][type^1] = match_address;
     } else {
-        //For Tofino A0, there is a bug in snapshot that cannot distinguish if a
-        //gateway is inhibiting a table To work around this, configure the
-        //gateway_payload_match_adr to an invalid value. Add a command line flag
-        //if this is only a tofino A0 issue?.
+        // For Tofino A0, there is a bug in snapshot that cannot distinguish if a
+        // gateway is inhibiting a table To work around this, configure the
+        // gateway_payload_match_adr to an invalid value. Add a command line flag
+        // if this is only a tofino A0 issue?.
         merge.gateway_payload_match_adr[row][bus][type] = 0x7ffff;
         merge.gateway_payload_match_adr[row][bus][type^1] = 0x7ffff; }
 }
