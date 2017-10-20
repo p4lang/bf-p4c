@@ -128,7 +128,7 @@ class TableAllocPass : public PassManager {
     LayoutChoices           lc;
 
  public:
-    TableAllocPass(PhvInfo& phv, FieldDefUse &defuse, DependencyGraph &deps) {
+    TableAllocPass(const BFN_Options& options, PhvInfo& phv, FieldDefUse &defuse, DependencyGraph &deps) {
             addPasses({
                 new GatewayOpt(phv),   // must be before TableLayout?  or just TablePlacement?
                 new TableLayout(phv, lc),
@@ -147,7 +147,7 @@ class TableAllocPass : public PassManager {
                 new TableFindSeqDependencies,  // not needed?
                 new CheckTableNameDuplicate,
                 &defuse,
-                new ElimUnused(phv, defuse),
+                (options.no_deadcode_elimination == false) ? new ElimUnused(phv, defuse) : nullptr,
                 &mutex,
                 new TableSummary} );
 
@@ -186,12 +186,12 @@ Backend::Backend(const BFN_Options& options) :
         new DumpPipe("After InstructionSelection"),
         new CollectPhvInfo(phv),
         &defuse,
-        new ElimUnused(phv, defuse),  // ElimUnused may have eliminated all references to a field
+        (options.no_deadcode_elimination == false) ? new ElimUnused(phv, defuse) : nullptr,
         new DumpPipe("Before phv_analysis"),
         new CheckForHeaders(),
         new PHV_AnalysisPass(options, phv, uses, defuse, deps),  // phv analysis after last
                                                                  // CollectPhvInfo pass
-        new TableAllocPass(phv, defuse, deps),
+        new TableAllocPass(options, phv, defuse, deps),
         new IXBarRealign(phv),
         new TotalInstructionAdjustment(phv),
         new DumpPipe("Final table graph"),

@@ -20,6 +20,7 @@ class BFN_Options : public CompilerOptions {
     bool native_arch = false;
     bool allowUnimplemented = false;
     bool debugInfo = false;
+    bool no_deadcode_elimination = false;
 
     BFN_Options() {
         target = "tofino-v1model-barefoot";
@@ -49,6 +50,9 @@ class BFN_Options : public CompilerOptions {
         registerOption("-g", nullptr,
             [this](const char *) { debugInfo = true; return true; },
             "generate debug information");
+        registerOption("--no-deadcode-elimination", nullptr,
+            [this](const char *) { no_deadcode_elimination = true; return true; },
+            "do not use dead code elimination");
     }
 
     bool targetSupported() {
