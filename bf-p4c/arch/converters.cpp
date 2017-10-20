@@ -305,7 +305,7 @@ const IR::Node* IngressParserConverter::postorder(IR::P4Parser *node) {
     return result;
 }
 
-const IR::Node* EgressParserConverter::postorder(IR::AssignmentStatement* ) {
+const IR::Node* EgressParserConverter::postorder(IR::AssignmentStatement*) {
     // remove all set_metadata from egress parser
     return nullptr;
 }

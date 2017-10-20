@@ -107,7 +107,9 @@ MidEnd::MidEnd(BFN_Options& options) {
         // FIXME -- don't tie this to v1model
         P4V1::V1Model::instance.sw.verify.name,
         P4V1::V1Model::instance.sw.update.name,
-        P4V1::V1Model::instance.sw.deparser.name };
+        P4V1::V1Model::instance.sw.deparser.name,
+        "ingress_deparser",
+        "egress_deparser"};
 
     bool needTranslation = options.native_arch &&
                            (options.langVersion == CompilerOptions::FrontendVersion::P4_14);
@@ -121,29 +123,9 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::RemoveAllUnusedDeclarations(&refMap),
         new P4::ClearTypeMap(&typeMap),
         evaluator,
-
-        new VisitFunctor([=](const IR::Node *root) -> const IR::Node * {
-            auto toplevel = evaluator->getToplevelBlock();
-            auto main = toplevel->getMain();
-            if (main == nullptr)
-                // nothing further to do
-                return nullptr;
-            for (auto arg : args_to_skip) {
-                if (!main->getConstructorParameters()->getDeclByName(arg))
-                    continue;
-                if (auto a = main->getParameterValue(arg))
-                    if (auto ctrl = a->to<IR::ControlBlock>())
-                        skip_controls->emplace(ctrl->container->name);
-            }
-            return root;
-        }),
-
         new P4::Inline(&refMap, &typeMap, evaluator),
-
-        // perform architecture translation after the program is normalized by inline to
-        // only contain one ingress and one egress control block.
-        // Otherwise, the translator has to transform all parameters in all custom control
-        // blocks, which is unattainable.
+        // translate architecture after program inlining to
+        // avoid handling abitrary parameters in user defined control blocks
         (options.arch == "v1model" && needTranslation) ?
                 new BFN::SimpleSwitchTranslation(&refMap, &typeMap, options /*map*/) : nullptr,
         new P4::InlineActions(&refMap, &typeMap),
@@ -176,6 +158,22 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::SimplifyControlFlow(&refMap, &typeMap),
         new P4::CompileTimeOperations(),
         new P4::TableHit(&refMap, &typeMap),
+        evaluator,
+        new VisitFunctor([=](const IR::Node *root) -> const IR::Node * {
+            auto toplevel = evaluator->getToplevelBlock();
+            auto main = toplevel->getMain();
+            if (main == nullptr)
+                // nothing further to do
+                return nullptr;
+            for (auto arg : args_to_skip) {
+                if (!main->getConstructorParameters()->getDeclByName(arg))
+                    continue;
+                if (auto a = main->getParameterValue(arg))
+                    if (auto ctrl = a->to<IR::ControlBlock>())
+                        skip_controls->emplace(ctrl->container->name);
+            }
+            return root;
+        }),
         new P4::SynthesizeActions(&refMap, &typeMap, new SkipControls(skip_controls)),
         new P4::MoveActionsToTables(&refMap, &typeMap),
         // XXX(zma) : assuming tofino & jbay have same arch for now

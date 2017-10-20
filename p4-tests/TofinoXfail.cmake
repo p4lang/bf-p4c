@@ -65,16 +65,6 @@ p4c_add_xfail_reason("tofino" "" ${TOFINO_XFAIL_TESTS})
 # tests that no longer fail when enable TNA translation
 # possibly due to different PHV allocation
 if (NOT ENABLE_TNA)
-  # BRIG-136
-  # was BRIG-134 for extensions/p4_tests/p4_14/jenkins/alpm_test/alpm_test.p4
-  p4c_add_xfail_reason("tofino"
-    "No write within a split instruction"
-    extensions/p4_tests/p4_14/jenkins/alpm_test/alpm_test.p4
-    extensions/p4_tests/p4_14/jenkins/basic_ipv4/basic_ipv4.p4
-    extensions/p4_tests/p4_14/jenkins/exm_direct/exm_direct_one.p4
-    extensions/p4_tests/p4_14/jenkins/exm_direct_1/exm_direct_1_one.p4
-    )
-
   p4c_add_xfail_reason("tofino"
     "Too much data for parse matcher"
     testdata/p4_14_samples/copy_to_cpu.p4
@@ -141,7 +131,6 @@ if (NOT ENABLE_TNA)
     extensions/p4_tests/p4_14/jenkins/pcie_pkt_test/pcie_pkt_test_one.p4
     extensions/p4_tests/p4_14/test_config_273_bridged_and_phase0.p4
     )
-
 endif() # NOT ENABLE_TNA
 
 # Failure for BRIG-44 in JIRA
@@ -344,7 +333,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "tofino only supports 12 stages"
   extensions/p4_tests/p4_14/jenkins/alpm_test/alpm_test.p4
-  extensions/p4_tests/p4_14/jenkins/basic_ipv4/basic_ipv4.p4
   extensions/p4_tests/p4_14/jenkins/exm_direct_1/exm_direct_1_one.p4
   extensions/p4_tests/p4_14/jenkins/basic_ipv4/basic_ipv4.p4
   extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
