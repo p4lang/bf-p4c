@@ -223,10 +223,6 @@ void
 Cluster_PHV::set_exact_containers() {
     //
     for (auto &field : cluster_vec_i) {
-        if (field->deparsed_no_pack()) {
-            exact_containers_i = false;
-            break;
-        }
         // deparsed header fields need exact containers as they go out on the wire
         // metadata does not go on the wire so exactness can be relaxed
         if (field->deparsed()

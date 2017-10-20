@@ -161,13 +161,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c4/COMPILER-549/case2898.p4
   )
 
-#BRIG-201
-p4c_add_xfail_reason("tofino"
-  "payload ... already in use"
-  extensions/p4_tests/p4_14/jenkins/mau_tcam_test/mau_tcam_test.p4
-  testdata/p4_14_samples/simple_router.p4
-  )
-
 # BRIG-103
 p4c_add_xfail_reason("tofino"
   "instruction slot [0-9]+ used multiple times in action"
