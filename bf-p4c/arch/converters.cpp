@@ -32,12 +32,12 @@ const IR::Node* ControlConverter::postorder(IR::Declaration_Instance* node) {
 const IR::Node* ControlConverter::postorder(IR::MethodCallExpression* node) {
     auto* orig = getOriginal<IR::MethodCallExpression>();
     RETURN_TRANSLATED_NODE_IF_FOUND(meterCalls);
-    RETURN_TRANSLATED_NODE_IF_FOUND(directMeterCalls);
     return node;
 }
 
 const IR::Node* ControlConverter::postorder(IR::MethodCallStatement* node) {
     auto* orig = getOriginal<IR::MethodCallStatement>();
+    RETURN_TRANSLATED_NODE_IF_FOUND(directMeterCalls);
     RETURN_TRANSLATED_NODE_IF_FOUND(hashCalls);
     RETURN_TRANSLATED_NODE_IF_FOUND(randomCalls);
     RETURN_TRANSLATED_NODE_IF_FOUND(resubmitCalls);
@@ -135,10 +135,25 @@ const IR::Node* EgressControlConverter::preorder(IR::P4Control *node) {
     param = new IR::Parameter("eg_intr_md_for_oport", IR::Direction::Out, type);
     paramList->push_back(param);
 
-    // add ig_intr_md_for_dprsr
+    // add eg_intr_md_for_dprsr
     path = new IR::Path("egress_intrinsic_metadata_for_deparser_t");
     type = new IR::Type_Name(path);
     param = new IR::Parameter("eg_intr_md_for_deparser", IR::Direction::Out, type);
+    paramList->push_back(param);
+
+    /// XXX(hanw) following three parameters are added and should be removed after
+    /// the defuse analysis is moved to the midend and bridge metadata is implemented.
+
+    // add ig_intr_md_from_prsr
+    path = new IR::Path("ingress_intrinsic_metadata_t");
+    type = new IR::Type_Name(path);
+    param = new IR::Parameter("ig_intr_md", IR::Direction::InOut, type);
+    paramList->push_back(param);
+
+    // add ig_intr_md_from_prsr
+    path = new IR::Path("ingress_intrinsic_metadata_for_tm_t");
+    type = new IR::Type_Name(path);
+    param = new IR::Parameter("ig_intr_md_for_tm", IR::Direction::InOut, type);
     paramList->push_back(param);
 
     auto controlType = new IR::Type_Control("egress", paramList);
@@ -397,8 +412,8 @@ const IR::Node* HashConverter::postorder(IR::MethodCallStatement* node) {
 
     auto member = new IR::Member(new IR::PathExpression(hashName), "get_hash");
 
-    auto src_size = pBase->type->width_bits();
-    auto dst_size = pDest->type->width_bits();
+    auto dst_size = mce->typeArguments->at(0)->width_bits();
+    auto src_size = mce->typeArguments->at(2)->width_bits();
     if (src_size != dst_size) {
         WARNING("casting bit<" << src_size << "> to bit<" << dst_size << ">");
         return new IR::AssignmentStatement(pDest,
@@ -514,31 +529,42 @@ const IR::Node* MeterConverter::postorder(IR::MethodCallExpression* node) {
 }
 /**
  * direct_meter(meter_type_t.PACKETS) meter_name;
- * XXX(hanw): changed direct_meter<bit<32>> to direct_meter
+ * More fixes are need to handle direct meter properly in backend, leave it to a separate PR.
  */
 const IR::Node* DirectMeterConverter::postorder(IR::Declaration_Instance* node) {
+#if 0
     return new IR::Declaration_Instance(node->srcInfo, node->name, node->annotations,
                                         new IR::Type_Name("direct_meter"), node->arguments);
+#endif
+    return new IR::Declaration_Instance(node->srcInfo, node->name, node->annotations,
+                                        node->type, node->arguments);
 }
 
-const IR::Node* DirectMeterConverter::postorder(IR::MethodCallExpression* node) {
-    auto member = node->method->to<IR::Member>();
+const IR::Node* DirectMeterConverter::postorder(IR::MethodCallStatement* node) {
+#if 0
+    auto orig = getOriginal<IR::MethodCallStatement>();
+    auto mce = orig->methodCall->to<IR::MethodCallExpression>();
+
+    auto member = mce->method->to<IR::Member>();
     if (member->member == "read") {
         auto method = new IR::Member(node->srcInfo, member->expr, "execute");
 
-        auto meterColor = node->arguments->at(0);
+        auto meterColor = mce->arguments->at(0);
         auto size = meterColor->type->width_bits();
         BUG_CHECK(size != 0, "meter color width cannot be bit<0>");
-        auto args = new IR::Vector<IR::Expression>();
-        if (size != 2) {
-            WARNING("casting argument " << node->arguments->at(0) << " to bit<2>");
-            args->push_back(new IR::Cast(IR::Type_Bits::get(2), node->arguments->at(0)));
+        auto expr = new IR::MethodCallExpression(node->srcInfo, method, mce->typeArguments);
+        if (size != 8) {
+            WARNING("casting direct meter return value to bit<" << size << ">");
+            auto cast = new IR::Cast(IR::Type_Bits::get(size), expr);
+            return new IR::AssignmentStatement(node->srcInfo, mce->arguments->at(0), cast);
         }
-        return new IR::MethodCallExpression(node->srcInfo, method, node->typeArguments, args);
+        return new IR::AssignmentStatement(node->srcInfo, mce->arguments->at(0), expr);
     } else {
         BUG("Unexpected direct_meter method %s", member->member);
         return node;
     }
+#endif
+    return node;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////

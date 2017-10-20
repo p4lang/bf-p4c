@@ -372,23 +372,25 @@ class CleanP14V1model : public Transform {
         return newMem; }
 };
 
-/// Build the partial program
-class ConstructUserProgram : public Transform {
-    ProgramStructure* structure;
- public:
-    explicit ConstructUserProgram(ProgramStructure* structure)
-    : structure(structure) { CHECK_NULL(structure); setName("ConstructUserProgram"); }
-
-    const IR::Node* postorder(IR::P4Program* program) {
-        return new IR::P4Program(program->srcInfo, structure->user_program);
-    }
-};
-
 //////////////////////////////////////////////////////////////////////////////////////////////
+
 
 /// This pass collects all top level p4program declarations.
 class AnalyzeV1modelProgram : public Inspector {
     ProgramStructure* structure;
+
+    template<class P4Type, class BlockType>
+    const P4Type* getBlock(const IR::ToplevelBlock* blk, cstring name) {
+        auto main = blk->getMain();
+        auto ctrl = main->findParameterValue(name);
+        if (ctrl == nullptr)
+            return nullptr;
+        if (!ctrl->is<BlockType>()) {
+            ::error("%1%: main package  match the expected model", main);
+            return nullptr;
+        }
+        return ctrl->to<BlockType>()->container;
+    }
 
  public:
     explicit AnalyzeV1modelProgram(ProgramStructure* structure)
@@ -425,6 +427,15 @@ class AnalyzeV1modelProgram : public Inspector {
     { structure->controls.emplace(node->name, node); }
     // instantiation - extern
     // instantiation - package
+
+    void postorder(const IR::P4Program*) override {
+        auto ingress = getBlock<IR::P4Control, IR::ControlBlock>(structure->toplevel, "ig");
+        CHECK_NULL(ingress);
+        structure->ingress_name = ingress->name;
+        auto egress = getBlock<IR::P4Control, IR::ControlBlock>(structure->toplevel, "eg");
+        CHECK_NULL(egress);
+        structure->egress_name = egress->name;
+    }
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////
@@ -463,7 +474,8 @@ class ConstructSymbolTable : public Inspector {
         BUG_CHECK(mce != nullptr, "malformed IR in digest() function");
         auto control = findContext<IR::P4Control>();
         BUG_CHECK(control != nullptr, "digest() must be used in a control block");
-        BUG_CHECK(control->name == "ingress", "digest() can only be used in ingress control");
+        BUG_CHECK(control->name == structure->ingress_name,
+                  "digest() can only be used in %1%", structure->ingress_name);
         IR::PathExpression* path = new IR::PathExpression("ig_intr_md_for_deparser");
         auto mem = new IR::Member(path, "learn_idx");
         auto idx = new IR::Constant(new IR::Type_Bits(3, false), digestIndex++);
@@ -775,19 +787,22 @@ class ConstructSymbolTable : public Inspector {
                 auto it = toTranslateInParser.find(path->name);
                 if (it == toTranslateInParser.end())
                     return;
-                auto type = expr->type->to<IR::Type_Name>();
-                if (type->path->name == "ingress_parser_control_signals") {
-                    auto stmt = findContext<IR::AssignmentStatement>();
-                    if (stmt && node->member == "priority") {
-                        structure->priorityCalls.emplace(stmt, stmt);
-                    } else if (stmt && node->member == "parser_counter") {
-                        structure->parserCounterCalls.emplace(stmt, stmt);
+                if (auto type = expr->type->to<IR::Type_Name>()) {
+                    if (type->path->name == "ingress_parser_control_signals") {
+                        auto stmt = findContext<IR::AssignmentStatement>();
+                        if (stmt && node->member == "priority") {
+                            structure->priorityCalls.emplace(stmt, stmt);
+                        } else if (stmt && node->member == "parser_counter") {
+                            structure->parserCounterCalls.emplace(stmt, stmt);
+                        }
+                        // handle parser counter in select() expression
+                        auto select = findContext<IR::SelectExpression>();
+                        if (select) {
+                            structure->parserCounterSelects.emplace(node, node);
+                        }
                     }
-                    // handle parser counter in select() expression
-                    auto select = findContext<IR::SelectExpression>();
-                    if (select) {
-                        structure->parserCounterSelects.emplace(node, node);
-                    }
+                } else {
+                    WARNING("metadata " << expr << " is not converted");
                 }}}
     }
 
@@ -830,7 +845,7 @@ class ConstructSymbolTable : public Inspector {
         if (auto em = mi->to<P4::ExternMethod>()) {
             cstring name = em->actualExternType->name;
             if (name == "direct_meter") {
-                structure->directMeterCalls.emplace(mce, mce);
+                structure->directMeterCalls.emplace(node, node);
             } else if (name == "meter") {
                 structure->meterCalls.emplace(mce, mce);
             } else {
@@ -907,10 +922,13 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
     else if (options.arch == "native")
         target = BFN::Target::Tofino;  // XXX(zma) : assuming tofino & jbay have same arch for now
     addDebugHook(options.getDebugHook());
+    auto evaluator = new P4::EvaluatorPass(refMap, typeMap);
     auto structure = new BFN::ProgramStructure;
     addPasses({
+        evaluator,
+        new VisitFunctor([structure, evaluator]() {
+            structure->toplevel = evaluator->getToplevelBlock(); }),
         new ReplaceArchitecture(structure, target),
-        new ConstructUserProgram(structure),
         new CleanP14V1model(),
         new AnalyzeV1modelProgram(structure),
         new ConstructSymbolTable(structure, refMap, typeMap),

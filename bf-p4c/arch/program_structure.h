@@ -68,7 +68,7 @@ class ProgramStructure {
     ExternMethodMap                              counterCalls;
     ExternMethodMap                              directCounterCalls;
     ExternMethodMap                              meterCalls;
-    ExternMethodMap                              directMeterCalls;
+    ExternFunctionMap                            directMeterCalls;
     ExternFunctionMap                            hashCalls;
     ExternFunctionNameMap                        hashNames;
     ExternFunctionMap                            resubmitCalls;
@@ -117,6 +117,11 @@ class ProgramStructure {
 
     /// all unique names in the program
     std::set<cstring>                            unique_names;
+
+    /// program control block names from P14
+    const IR::ToplevelBlock*                     toplevel;
+    cstring ingress_name;
+    cstring egress_name;
 
     void createErrors();
     void createEnums();

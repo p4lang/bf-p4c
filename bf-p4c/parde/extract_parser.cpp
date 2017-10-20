@@ -346,6 +346,10 @@ struct RewriteParserStatements : public Transform {
                       "Wrong number of arguments for method call: %1%", statement);
             return rewriteAdvance((*call->arguments)[0]);
         }
+        if (method->member == "set") {
+            WARNING("packet priority set is not yet implemented");
+            return nullptr;
+        }
 
         ::error("Unexpected method call in parser: %1%", statement);
         return nullptr;

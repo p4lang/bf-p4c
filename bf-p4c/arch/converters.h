@@ -173,7 +173,7 @@ class DirectMeterConverter : public ExternConverter {
     explicit DirectMeterConverter(ProgramStructure* structure)
     : ExternConverter(structure) { CHECK_NULL(structure); }
     const IR::Node* postorder(IR::Declaration_Instance* node) override;
-    const IR::Node* postorder(IR::MethodCallExpression* node) override;
+    const IR::Node* postorder(IR::MethodCallStatement* node) override;
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////

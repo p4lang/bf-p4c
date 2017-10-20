@@ -226,7 +226,9 @@ void ProgramStructure::createControls() {
     TRANSLATE_EXTERN_INSTANCE(direct_meters, DirectMeterConverter);
 
     TRANSLATE_EXTERN_CALL(meterCalls, MeterConverter);
-    TRANSLATE_EXTERN_CALL(directMeterCalls, DirectMeterConverter);
+    // XXX(hanw) more fixes are required to handle direct meter properly in backend
+    // leave it as a separate PR.
+    // TRANSLATE_EXTERN_FUNCTION(directMeterCalls, DirectMeterConverter);
 
     TRANSLATE_EXTERN_FUNCTION(hashCalls, HashConverter);
     TRANSLATE_EXTERN_FUNCTION(randomCalls, RandomConverter);
@@ -235,7 +237,7 @@ void ProgramStructure::createControls() {
     // dropCalls is translated in ConstructSybmolTable
 
     IngressControlConverter cvt_i(this);
-    auto ingress = controls.at("ingress");
+    auto ingress = controls.at(ingress_name);
     ingress = cvt_i.convert(ingress);
     declarations.push_back(ingress);
 
@@ -245,7 +247,7 @@ void ProgramStructure::createControls() {
     declarations.push_back(igDeparser);
 
     EgressControlConverter cvt_e(this);
-    auto egress = controls.at("egress");
+    auto egress = controls.at(egress_name);
     egress = cvt_e.convert(egress);
     declarations.push_back(egress);
 
@@ -312,7 +314,6 @@ const IR::P4Program* ProgramStructure::create(const IR::P4Program* program) {
     createControls();
     createMain();
     auto result = new IR::P4Program(program->srcInfo, declarations);
-    // dump(result);
     return result;
 }
 

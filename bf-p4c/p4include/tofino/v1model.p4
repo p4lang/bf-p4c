@@ -375,9 +375,10 @@ extern meter<I> {
     bit<8> execute(@optional in I index, @optional in bit<2> color);
 }
 
-extern direct_meter {
+/// direct meter is not translated.
+extern direct_meter<T> {
     direct_meter(MeterType_t type);
-    void execute(in bit<2> color);
+    void read(out T result);
 }
 
 /// LPF
@@ -488,7 +489,11 @@ control Egress<H, M>(
     @optional in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr,
     @optional out egress_intrinsic_metadata_for_mirror_buffer_t eg_intr_md_for_mb,
     @optional out egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport,
-    @optional out egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr);
+    @optional out egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
+    // temporary solution for bridge metadata, remove after defuse is implemented in midend
+    @optional inout ingress_intrinsic_metadata_t ig_intr_md,
+    @optional inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm
+    );
 
 control IngressDeparser<H, M>(
     packet_out pkt,
