@@ -1,6 +1,7 @@
 #include "bf-p4c/mau/table_dependency_graph.h"
 #include <assert.h>
 #include <boost/graph/breadth_first_search.hpp>
+#include <boost/optional.hpp>
 #include <algorithm>
 #include "bf-p4c/ir/tofino_write_context.h"
 #include "bf-p4c/phv/phv_fields.h"
@@ -29,12 +30,23 @@ std::ostream &operator<<(std::ostream &out, const DependencyGraph &dg) {
 }
 
 class FindDependencyGraph::AddDependencies : public MauInspector, TofinoWriteContext {
-    FindDependencyGraph         &self;
-    const IR::MAU::Table        *table;
+    FindDependencyGraph          &self;
+    const IR::MAU::Table         *table;
+    const ordered_set<cstring>&  ignoreDep;
 
  public:
-    AddDependencies(FindDependencyGraph &self, const IR::MAU::Table *t)
-    : self(self), table(t) { }
+    AddDependencies(FindDependencyGraph &self, const IR::MAU::Table *t, ordered_set<cstring>& t1) :
+        self(self), table(t), ignoreDep(t1) { }
+
+ private:
+    void addDeps(ordered_set<const IR::MAU::Table *> tables, const IR::MAU::Table* tbl,
+            DependencyGraph::dependencies_t dep) {
+        for (auto upstream_t : tables) {
+            if (ignoreDep.count(upstream_t->name)) {
+                LOG3("Ignoring dependency from " << upstream_t->name << " to " << tbl->name);
+                continue; }
+            self.dg.add_edge(upstream_t, table, dep); }
+    }
 
     bool preorder(const IR::Expression *e) override {
         if (auto *field = self.phv.field(e)) {
@@ -42,17 +54,15 @@ class FindDependencyGraph::AddDependencies : public MauInspector, TofinoWriteCon
             LOG3("add_dependency(" << field->name << ")");
             if (isWrite()) {
                 // Write-after-read dependence.
-                for (auto upstream_t : self.access[field->name].read)
-                    self.dg.add_edge(upstream_t, table, DependencyGraph::ANTI);
+                addDeps(self.access[field->name].read, table, DependencyGraph::ANTI);
                 // Write-after-write dependence.
-                for (auto upstream_t : self.access[field->name].write)
-                    self.dg.add_edge(upstream_t, table, DependencyGraph::OUTPUT);
+                addDeps(self.access[field->name].write, table, DependencyGraph::OUTPUT);
             } else {
                 // Read-after-write dependence.
-                for (auto upstream_t : self.access[field->name].write)
-                    self.dg.add_edge(upstream_t, table, DependencyGraph::DATA); }
+                addDeps(self.access[field->name].write, table, DependencyGraph::DATA); }
             return false; }
         return true; }
+
     bool preorder(const IR::Annotation *) override { return false; }
 };
 
@@ -134,6 +144,20 @@ bool FindDependencyGraph::preorder(const IR::MAU::TableSeq *seq) {
 bool FindDependencyGraph::preorder(const IR::MAU::Table *t) {
     LOG3("FindDep table " << t->name);
 
+    // Gather up the names of tables with which dependencies must be ignored, as defined by
+    // @pragma ignore_table_dependency
+    // Note that multiple ignore_table_dependency pragmas may be inserted for a given table and
+    // therefore, we cannot use the get_single() accessor for annotations
+    ordered_set<cstring> ignore_tables;
+    if (t->match_table) {
+        auto annot = t->match_table->getAnnotations();
+        for (auto ann : annot->annotations) {
+            auto name = ann->to<IR::StringLiteral>();
+            if (name && name->value == "ignore_table_dependency") {
+                auto tbl_name = ann->expr.at(0)->to<IR::StringLiteral>();
+                if (!tbl_name) continue;
+                ignore_tables.insert(tbl_name->value); } } }
+
     // TODO: add a pass in the beginning of the back end that checks for
     // duplicate table instances and, if found, aborts compilation.
     //     error("%s: Multiple applies of table %s not supported", t->srcInfo, t->name); }
@@ -144,11 +168,11 @@ bool FindDependencyGraph::preorder(const IR::MAU::Table *t) {
 
     // Add data dependences induced by gateways, matches, and actions.
     for (auto &gw : t->gateway_rows)
-        gw.first->apply(AddDependencies(*this, t));
+        gw.first->apply(AddDependencies(*this, t, ignore_tables));
     for (auto ixbar_read : t->match_key)
-        ixbar_read->apply(AddDependencies(*this, t));
+        ixbar_read->apply(AddDependencies(*this, t, ignore_tables));
     for (auto &action : Values(t->actions))
-        action->apply(AddDependencies(*this, t));
+        action->apply(AddDependencies(*this, t, ignore_tables));
 
     // Mark fields read/written by this table in accesses.
     for (auto &gw : t->gateway_rows)
