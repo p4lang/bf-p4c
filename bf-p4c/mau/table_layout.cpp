@@ -26,10 +26,19 @@ void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::M
     if (tbl->match_key.empty())
         return;
 
-    for (auto ixbar_read : tbl->match_key) {
-        if (ixbar_read->match_type.name == "ternary" || ixbar_read->match_type.name == "lpm") {
+    auto annot = tbl->match_table->getAnnotations();
+    if (auto s = annot->getSingle("ternary")) {
+        auto pragma_val =  s->expr.at(0)->to<IR::Constant>()->asInt();
+        if (pragma_val == 1)
             layout.ternary = true;
-            break;
+        else
+            ::warning("Pragma ternary ignored for table %s because value is not 1", tbl->name);
+    } else {
+        for (auto ixbar_read : tbl->match_key) {
+            if (ixbar_read->match_type.name == "ternary" || ixbar_read->match_type.name == "lpm") {
+                layout.ternary = true;
+                break;
+            }
         }
     }
 
