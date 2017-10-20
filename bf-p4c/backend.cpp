@@ -128,7 +128,8 @@ class TableAllocPass : public PassManager {
     LayoutChoices           lc;
 
  public:
-    TableAllocPass(const BFN_Options& options, PhvInfo& phv, FieldDefUse &defuse, DependencyGraph &deps) {
+    TableAllocPass(const BFN_Options& options, PhvInfo& phv, FieldDefUse &defuse,
+        DependencyGraph &deps) {
             addPasses({
                 new GatewayOpt(phv),   // must be before TableLayout?  or just TablePlacement?
                 new TableLayout(phv, lc),
