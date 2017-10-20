@@ -61,7 +61,7 @@ action ig_drop() {
 
 action hop(ttl, egress_port) {
     add_to_field(ttl, -1);
-    modify_field(standard_metadata.egress_port, egress_port);
+    modify_field(standard_metadata.egress_spec, egress_port);
 }
 
 action do_nothing(){
