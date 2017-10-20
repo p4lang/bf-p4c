@@ -127,7 +127,7 @@ class FindPhase0Table : public Inspector {
       if (!containingType->is<IR::Type_Declaration>()) return false;
       auto containingTypeDecl = containingType->to<IR::Type_Declaration>();
       if (useTna) {
-          if (containingTypeDecl->name != "ingress_intrinsic_metadata") return false;
+          if (containingTypeDecl->name != "ingress_intrinsic_metadata_t") return false;
       } else {
           if (containingTypeDecl->name != "standard_metadata_t") return false;
       }
@@ -240,7 +240,7 @@ class FindPhase0Table : public Inspector {
       auto containingTypeDecl = containingType->to<IR::Type_Declaration>();
       // XXX(hanw): remove check on 'standard_metadata_t' when tna translation is done
       if (useTna) {
-          if (containingTypeDecl->name != "ingress_intrinsic_metadata") return false;
+          if (containingTypeDecl->name != "ingress_intrinsic_metadata_t") return false;
       } else {
           if (containingTypeDecl->name != "standard_metadata_t") return false;
       }

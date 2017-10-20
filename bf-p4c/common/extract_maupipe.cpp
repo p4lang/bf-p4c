@@ -861,6 +861,14 @@ class TnaPipe {
         AttachTables toAttach(refMap);
         rv->thread[gress].mau = rv->thread[gress].mau->apply(toAttach);
     }
+
+    void extracPhase0(IR::BFN::Pipe* rv, gress_t gress) {
+        if (gress == EGRESS) return;
+        // Check for a phase 0 table. If one exists, it'll be removed from the
+        // ingress pipeline and converted to a parser program.
+        // XXX(seth): We should be able to move this into the midend now.
+        std::tie(mau, rv) = BFN::extractPhase0(mau, rv, refMap, typeMap, true);
+    }
 };
 
 const IR::BFN::Pipe* extract_native_arch(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
@@ -876,6 +884,7 @@ const IR::BFN::Pipe* extract_native_arch(P4::ReferenceMap* refMap, P4::TypeMap* 
     for (auto gress : {INGRESS, EGRESS}) {
         pipes[gress]->bindParams(&bindings /* out */);
         pipes[gress]->extractMetadata(rv /* out */, &bindings /* in */, gress);
+        pipes[gress]->extracPhase0(rv, gress);
         pipes[gress]->apply(simplifyReferences);
         pipes[gress]->extractTable(rv /* out */, gress /* in */);
         pipes[gress]->extractAttached(rv /* out */, gress);
