@@ -50,12 +50,23 @@ void AddMetadataShims::addIngressMetadata(IR::BFN::Parser *parser) {
         return;
     }
 
+    // Add a state that skips over any padding between the phase 0 data and the
+    // beginning of the packet.
+    // XXX(seth): This "padding" is new in JBay, and it may contain actual data
+    // rather than just padding. Once we have a chance to investigate what it
+    // does, we'll want to revisit this.
+    const auto byteSkip = Device::pardeSpec().byteIngressPrePacketPaddingSize();
+    auto* skipToPacketState =
+      new IR::BFN::ParserState("$skip_to_packet", INGRESS, { }, { }, {
+          new IR::BFN::Transition(match_t(), byteSkip, parser->start)
+      });
+
     // Add a state that parses the phase 0 data. This is a placeholder that
     // just skips it; if we find a phase 0 table, it'll be replaced later.
     const auto bytePhase0Size = Device::pardeSpec().bytePhase0Size();
     auto* phase0State =
         new IR::BFN::ParserState("$phase0", INGRESS, { }, { }, {
-            new IR::BFN::Transition(match_t(), bytePhase0Size, parser->start)
+            new IR::BFN::Transition(match_t(), bytePhase0Size, skipToPacketState)
         });
 
     // This state handles the extraction of all intrinsic metadata other
