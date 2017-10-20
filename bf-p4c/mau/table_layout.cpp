@@ -81,7 +81,13 @@ void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::M
         }
     }
 
-    layout.overhead_bits = ceil_log2(tbl->actions.size());
+    int hit_actions = 0;
+    for (auto act : Values(tbl->actions)) {
+        if (!act->miss_action_only)
+            hit_actions++;
+    }
+
+    layout.overhead_bits = ceil_log2(hit_actions);
 }
 
 class GatewayLayout : public MauInspector {
@@ -334,4 +340,26 @@ bool TableLayout::preorder(IR::MAU::Table *tbl) {
     else
         setup_layout_options(tbl, immediate_bytes_reserved);
     return true;
+}
+
+
+bool TableLayout::preorder(IR::MAU::Action *act) {
+    auto tbl = findContext<IR::MAU::Table>();
+    if (tbl->layout.no_match_hit_path())
+        return false;
+    GetHashDistReqs ghdr;
+    act->apply(ghdr);
+    if (!ghdr.is_hash_dist_needed())
+        return false;
+
+    ERROR_CHECK(!act->init_default, "%s: Cannot specify %s as the default action, as it requires "
+                "the hash distribution unit", act->srcInfo, act->name);
+    ERROR_CHECK(!tbl->layout.no_match_miss_path(), "%s: This table with no key cannot have the "
+                "action %s as an action here, because it requires hash distribution, which "
+                "utilizes the hit path in Tofino, while the driver configures the miss path",
+                act->srcInfo, act->name);
+
+    act->default_allowed = false;
+    act->disallowed_reason = "USES_HASH_DIST";
+    return false;
 }

@@ -363,6 +363,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/action_profile_not_shared.p4
   extensions/p4_tests/p4_14/action_profile_next_stage.p4
   testdata/p4_16_samples/action_selector_shared-bmv2.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-235/vag1662.p4
   )
 
 p4c_add_xfail_reason("tofino"

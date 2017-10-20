@@ -476,6 +476,11 @@ class Instruction : Primitive {
 /// The Action part of an action table -- basically a single VLIW instruction, which is a
 /// set of instructions on different PHV containers that all run simultaneously
 class Action : ActionFunction {
+    bool miss_action_only = false;
+    bool init_default = false;
+    bool default_allowed = false;
+    cstring disallowed_reason = "";
+    inline Vector<Expression> default_params = {};
     // Separate stateful primitives from actions, as they aren't instructions
     // as such.
     inline Vector<Primitive>    stateful = {};

@@ -97,6 +97,59 @@ class ActionFunctionSetup : public PassManager {
     }
 };
 
+/** The purpose of this pass is to initialize each IR::MAU::Action with information on whether
+ *  or not the action can be used as a default action, or if specifically it is meant only for the
+ *  default action.  This information must be passed back directly to the context JSON.
+ */
+class DefaultActionInit : public Modifier {
+    const IR::P4Table *table;
+    const IR::ActionListElement *elem;
+
+    bool preorder(IR::MAU::Action *act) override {
+        auto prop = table->properties->getProperty(IR::TableProperties::defaultActionPropertyName);
+        if (prop == nullptr) {
+            error("%s: This table has no default action defined, and cannot be understood by "
+                  " the backend compiler", table->srcInfo, table->externalName());
+            return false;
+        }
+
+        auto default_action = table->getDefaultAction();
+        if (!default_action)
+            return false;
+        const IR::Vector<IR::Expression> *args = nullptr;
+        if (auto mc = default_action->to<IR::MethodCallExpression>()) {
+            default_action = mc->method;
+            args = mc->arguments;
+        }
+        // Indicates that this action is to be used only as a miss
+        auto def_only_annot = elem->annotations->getSingle("default_only");
+
+        auto path = default_action->to<IR::PathExpression>();
+        if (!path)
+            BUG("Default action path %s cannot be found", default_action);
+        if (path->path->name == act->name) {
+            if (def_only_annot)
+                act->miss_action_only = true;
+            act->init_default = true;
+            if (args)
+                act->default_params = *args;
+        } else {
+            if (def_only_annot)
+                error("%s: Action %s is marked as default only, but is not the default action",
+                      elem->srcInfo, elem);
+            // Default action is marked constant, and cannot be changed by the runtime
+            if (prop->isConstant)
+                return false;
+        }
+        act->default_allowed = true;
+        return false;
+    }
+
+ public:
+    DefaultActionInit(const IR::P4Table *t, const IR::ActionListElement *ale)
+        : table(t), elem(ale) {}
+};
+
 class ActionBodySetup : public Inspector {
     IR::MAU::Action         *af;
 
@@ -577,8 +630,10 @@ class GetTofinoTables : public Inspector {
             if (auto action = refMap->getDeclaration(act->getPath())->to<IR::P4Action>()) {
                 auto mce = act->expression->to<IR::MethodCallExpression>();
                 auto newaction = createActionFunction(refMap, typeMap, action, mce->arguments);
-                if (!tt->actions.count(newaction->name))
-                    tt->actions.addUnique(newaction->name, newaction);
+                DefaultActionInit dai(table, act);
+                auto newaction_defact = newaction->apply(dai)->to<IR::MAU::Action>();
+                if (!tt->actions.count(newaction_defact->name))
+                    tt->actions.addUnique(newaction_defact->name, newaction_defact);
                 else
                     error("%s: action %s appears multiple times in table %s", action->name.srcInfo,
                           action->name, tt->name); } }

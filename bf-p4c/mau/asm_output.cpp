@@ -1443,25 +1443,29 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
         }
         --indent;
     }
-    if (auto defact = tbl->match_table ? tbl->match_table->getDefaultAction() : nullptr) {
+
+    if (!tbl->gateway_only()) {
         out << indent << "default_action: ";
-        const IR::Vector<IR::Expression> *args = nullptr;
-        if (auto mc = defact->to<IR::MethodCallExpression>()) {
-            args = mc->arguments;
-            defact = mc->method; }
-        if (auto path = defact->to<IR::PathExpression>())
-            out << canon_name(path->path->name);
-        else
-            BUG("default action %s not handled", defact);
-        out << std::endl;
-        if (args && args->size() > 0) {
-            auto params = defact->type->to<IR::Type_Action>()->parameters;
-            BUG_CHECK(params->size() == args->size(), "Wrong number of params to default action");
+        bool found_def_act = false;
+        for (auto act : Values(tbl->actions)) {
+            if (!act->init_default) continue;
+            found_def_act = true;
+            out << canon_name(act->name) << std::endl;
+            if (act->default_params.size() == 0)
+                break;
+            BUG_CHECK(act->default_params.size() == act->args.size(), "Wrong number of params "
+                      "to default action %s", act->name);
             out << indent++ << "default_action_parameters:" << std::endl;
             int index = 0;
-            for (auto arg : *args)
-                out << indent << params->getParameter(index++)->name << ": " << arg << std::endl;
-            --indent; } }
+            for (auto param : act->default_params) {
+                out << indent << act->args[index++]->name << ": " << param << std::endl;
+            }
+            indent--;
+            break;
+        }
+        if (!found_def_act)
+            BUG("No default action found in table %s", tbl->name);
+    }
 }
 
 static void counter_format(std::ostream &out, const IR::MAU::DataAggregation type, int per_row) {

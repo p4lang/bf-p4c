@@ -30,14 +30,20 @@ void TablesMutuallyExclusive::postorder(const IR::MAU::Table *tbl) {
                     mutex[t] |= other;
 
     bool miss_mutex = false;
-    if (tbl->match_table) {
+    if (!tbl->gateway_only()) {
         // Need to ensure that default action is constant
-        auto defact = tbl->match_table->getDefaultAction();
-        for (auto action : tbl->actions) {
-            if (defact->toString() != action.first) continue;
+        int allowed_defaults = 0;
+        for (auto act : Values(tbl->actions)) {
+            if (act->default_allowed)
+                allowed_defaults++;
+        }
+
+        for (auto act : Values(tbl->actions)) {
+            if (!act->init_default) continue;
             // Ensure that the miss action is a noop
-            if (action.second->action.size() == 0)
+            if (act->action.size() == 0 && allowed_defaults == 1) {
                 miss_mutex = true;
+            }
         }
     }
 

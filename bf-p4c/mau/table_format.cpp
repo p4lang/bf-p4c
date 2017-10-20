@@ -307,9 +307,15 @@ bool TableFormat::allocate_all_instr_selection() {
 
     // Because a gateway requires the 0 position in the action instruction 8 entry matrix, one must
     // add an extra action to a table if linked with a gateway
+    int hit_actions = 0;
+    for (auto act : Values(tbl->actions)) {
+        if (!act->miss_action_only)
+            hit_actions++;
+    }
+
     int extra_action_needed = gw_linked ? 1 : 0;
 
-    int instr_select = ceil_log2(tbl->actions.size() + extra_action_needed);
+    int instr_select = ceil_log2(hit_actions + extra_action_needed);
     // FIXME: At least one action bit is currently needed in order for it to pass
     if (instr_select == 0)
         instr_select++;
