@@ -1122,28 +1122,25 @@ void Table::Actions::add_action_format(Table *table, json::map &tbl) {
     json::vector &action_format = tbl["action_format"] = json::vector();
     for (auto &act : *this) {
         json::map action_format_per_action;
-        if ((hit_index >= table->hit_next.size()) ||
-                ((table->hit_next.size() == 1) && (table->hit_next[0].name == "END"))){
-            action_format_per_action["next_table"] = 0;
-            action_format_per_action["next_table_full"] = 0xff;
-            action_format_per_action["action_name"] = act.name;
-            action_format_per_action["action_handle"] = act.handle;
-            action_format_per_action["table_name"] = "--END_OF_PIPELINE--";
-            action_format_per_action["vliw_instruction"] = act.code;
-            action_format_per_action["vliw_instruction_full"] = ACTION_INSTRUCTION_ADR_ENABLE | act.addr;
-        } else {
-            auto next = table->hit_next[hit_index++];
-            action_format_per_action["next_table"] = next ? hit_index : 0;
-            action_format_per_action["next_table_full"] = next ? next->table_id() : 0xff;
-            action_format_per_action["action_name"] = act.name;
-            action_format_per_action["action_handle"] = act.handle;
-            action_format_per_action["table_name"] = next ? next->name() : "--END_OF_PIPELINE--";
-            action_format_per_action["vliw_instruction"] = act.code;
-            action_format_per_action["vliw_instruction_full"] = ACTION_INSTRUCTION_ADR_ENABLE | act.addr;
-        }
-        json::vector &action_format_per_action_imm_fields = action_format_per_action["immediate_fields"] = json::vector();
+        // compute what is the next table and set next to "nullptr" if either this is the
+        // last table or it ran out of indices
+        auto next = hit_index < table->hit_next.size() ? table->hit_next[hit_index] : Table::Ref();
+        if(next && next->name_ == "END") next = Table::Ref();
+        hit_index++;
+        action_format_per_action["action_name"] = act.name;
+        action_format_per_action["action_handle"] = act.handle;
+        action_format_per_action["table_name"] = next ? next->name() : "--END_OF_PIPELINE--";
+        action_format_per_action["next_table"] = next ? hit_index : 0;
+        action_format_per_action["next_table_full"] = next ? next->table_id() : 0xff;
+        action_format_per_action["vliw_instruction"] = act.code;
+        action_format_per_action["vliw_instruction_full"] = ACTION_INSTRUCTION_ADR_ENABLE | act.addr;
+
+        json::vector &action_format_per_action_imm_fields =
+          action_format_per_action["immediate_fields"] = json::vector();
         for (auto &a : act.alias) {
             json::string name = a.first;
+            json::string immed_name = a.second.name;
+            if (immed_name != "immediate") continue; // output only immediate fields
             int lo = remove_name_tail_range(name);
             json::map action_format_per_action_imm_field;
             action_format_per_action_imm_field["param_name"] = name;
@@ -1152,12 +1149,15 @@ void Table::Actions::add_action_format(Table *table, json::map &tbl) {
                 action_format_per_action_imm_field["param_type"] = "constant";
                 action_format_per_action_imm_field["const_value"] = a.second.value;
                 action_format_per_action_imm_field["param_name"] = "constant_" + std::to_string(a.second.value);
-            } else
+            } else {
                 action_format_per_action_imm_field["param_shift"] = lo;
+            }
             action_format_per_action_imm_field["dest_start"] = a.second.lo;
             action_format_per_action_imm_field["dest_width"] = (a.second.hi - a.second.lo + 1);
-            action_format_per_action_imm_fields.push_back(std::move(action_format_per_action_imm_field)); }
-        action_format.push_back(std::move(action_format_per_action)); }
+            action_format_per_action_imm_fields.push_back(std::move(action_format_per_action_imm_field));
+        }
+        action_format.push_back(std::move(action_format_per_action));
+    }
 }
 
 void Table::Actions::add_immediate_mapping(json::map &tbl) {
@@ -1432,8 +1432,6 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
         merge.mau_table_counter_ctl[logical_id/8U].set_subfield(
             TABLE_HIT, 3 * (logical_id%8U), 3); }
 }
-
-// FOR_ALL_TARGETS(INSTANTIATE_TARGET_TEMPLATE, void MatchTable::write_regs, mau_regs &, int, Table *)
 
 template<class REGS>
 void Table::write_mapram_regs(REGS &regs, int row, int col, int vpn, int type) {
@@ -1821,7 +1819,9 @@ void Table::add_field_to_pack_format(json::vector &field_list, int basebit, std:
             if (name == a->second.name) {
                has_alias = true;
                source = "spec";
-               name = a->first; } }
+               name = a->first;
+            }
+        }
         for (auto &bits : field.bits) {
             bool pfe_enable = false;
             std::string immediate_name = "";
