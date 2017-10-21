@@ -7,72 +7,84 @@
 
 namespace BFN {
 
-/// A lowered parser extraction operation, representing a write by the parser
-/// into a PHV container.
-abstract LoweredExtract {
-    validate { BUG_CHECK(bool(dest->container), "Invalid PHV container"); }
+/// A value that can be read from in the parser on the hardware.
+abstract LoweredParserRVal { }
 
-#emit
-    /// Debugging information about the high-level operations that are
-    /// implemented by this low-level extract.
-    ::BFN::DebugInfo debug;
-
-    /// Convenience constructors for accepting a raw PHV::Container.
-    LoweredExtract(PHV::Container c) : dest(new BFN::ContainerRef(c)) { }
-    LoweredExtract(Util::SourceInfo si, PHV::Container c)
-    : IR::Node(si), dest(new BFN::ContainerRef(c)) { }
-#end
-
-    /// The PHV container this extract writes to.
-    BFN::ContainerRef dest;
-}
-
-/// An lowered extraction from the input buffer.
-class LoweredExtractBuffer : LoweredExtract {
+/// An r-value originating from the input buffer. Represented as a range of input
+/// buffer bytes (rather than bits, as in the high-level parser IR). This must be
+/// interpreted relative to a specific parser state to have an absolute meaning.
+class LoweredBufferRVal : LoweredParserRVal {
     validate {
         BUG_CHECK(range.lo >= 0,
                   "Extracting from offset before the start of the input buffer");
     }
     dbprint {
-        out << "extract bytes " << byteInterval() << "(" << range.size()
-            << "B) to " << dest;
+        out << "buffer bytes " << byteInterval() << "(" << range.size() << "B)";
     }
 
-#emit
-    /// Convenience constructors for accepting a raw PHV::Container.
-    LoweredExtractBuffer(PHV::Container c, nw_byterange range)
-    : BFN::LoweredExtract(c), range(range) { }
-    LoweredExtractBuffer(Util::SourceInfo si, PHV::Container c, nw_byterange range)
-    : BFN::LoweredExtract(si, c), range(range) { }
-#end
-
-    /// @return the half-open range of bytes being extracted, in network order.
+    /// @return this buffer range as a half-open range of bytes in network order.
     /// These bytes are specified in the space of the input buffer.
     nw_byteinterval byteInterval() const { return toHalfOpenRange(range); }
 
-    /// @return the closed range of bytes being extracted, in network order.
+    /// @return this buffer range as a closed range of bytes in network order.
     /// These bytes are specified in the space of the input buffer.
     nw_byterange extractedBytes() const { return range; }
 
-    /// The region of the input buffer which will be extracted, expressed in
-    /// bytes in network order.
+    /// The region of the input buffer represented by this `LoweredBufferRVal`,
+    /// expressed as a range of bytes in network order.
     nw_byterange range;
 }
 
-/// A lowered extraction of a constant.
-class LoweredExtractConstant : LoweredExtract {
-    dbprint { out << "extract constant " << constant << " to " << dest; }
-
-#emit
-    /// Convenience constructors for accepting a raw PHV::Container.
-    LoweredExtractConstant(PHV::Container c, int constant)
-    : BFN::LoweredExtract(c), constant(constant) { }
-    LoweredExtractConstant(Util::SourceInfo si, PHV::Container c, int constant)
-    : BFN::LoweredExtract(si, c), constant(constant) { }
-#end
+/// A lowered representation of a constant used as an r-value in the parser.
+class LoweredConstantRVal : LoweredParserRVal {
+    dbprint { out << "constant " << constant; }
 
     /// The constant to extract.
     int constant;
+}
+
+/// A lowered parser extraction operation, representing a write by the parser
+/// into a PHV container.
+class LoweredExtract {
+#emit
+    /// Convenience constructors for accepting a raw PHV::Container.
+    LoweredExtract(PHV::Container dest, const LoweredParserRVal* source)
+      : source(source), dest(new BFN::ContainerRef(dest)) { }
+    LoweredExtract(Util::SourceInfo si, PHV::Container dest,
+                   const LoweredParserRVal* source)
+      : IR::Node(si), source(source), dest(new BFN::ContainerRef(dest)) { }
+#end
+
+    dbprint { out << "extract " << source << " to " << dest; }
+    validate { BUG_CHECK(bool(dest->container), "Invalid PHV container"); }
+
+    /// The location that will be read from.
+    LoweredParserRVal source;
+
+    /// The PHV container this extract writes to.
+    BFN::ContainerRef dest;
+
+#emit
+    /// Debugging information about the high-level operations that are
+    /// implemented by this low-level extract.
+    ::BFN::DebugInfo debug;
+#end
+}
+
+/// A lowered parser selection operation. These represent a load of a range of
+/// bytes from the input buffer which will be compared against the state's
+/// LoweredParserMatch entries to select the next state to transition to.
+class LoweredSelect {
+    dbprint { out << "match " << range; }
+
+    /// The region of the input buffer which will be loaded and matched against.
+    nw_byterange range;
+
+#emit
+    /// Debugging information about the high-level operations that are
+    /// implemented by this low-level select operation.
+    ::BFN::DebugInfo debug;
+#end
 }
 
 /// A lowered parser match construct. Each LoweredParserMatch logically
@@ -82,10 +94,6 @@ class LoweredParserMatch {
     LoweredParserMatch(match_t value, unsigned shift,
                        const LoweredParserState* next)
         : value(value), shift(shift), next(next) { }
-
-    /// Debugging information about the high-level parser states that were used
-    /// to generate this low-level match construct.
-    ::BFN::DebugInfo debug;
 #end
 
     /// The mask which will be matched against the value the containing state
@@ -102,6 +110,12 @@ class LoweredParserMatch {
     /// If the match is successful, the next state to transition to, or null if
     /// this is a terminal state in the parser program.
     NullOK LoweredParserState next;
+
+#emit
+    /// Debugging information about the high-level parser states that were used
+    /// to generate this low-level match construct.
+    ::BFN::DebugInfo debug;
+#end
 }
 
 /// A lowered parser state, representing a group of related parser TCAM rows.
@@ -117,12 +131,6 @@ class LoweredParserState : Unit {
         select.visit_children(v);
         match.parallel_visit_children(v); }
 
-#emit
-    /// Debugging information about the high-level parser states that were used
-    /// to generate this low-level parser state.
-    ::BFN::DebugInfo debug;
-#end
-
     /// The name of this state. This does not necessarily correspond to any
     /// state name in the P4 program.
     cstring name;
@@ -132,10 +140,16 @@ class LoweredParserState : Unit {
 
     /// The bytes from the input buffer which will be loaded into the match
     /// registers and used to select a LoweredParserMatch transition to take.
-    inline Vector<SelectBuffer> select;
+    inline Vector<LoweredSelect> select;
 
     /// The possible transitions out of this state.
     inline Vector<LoweredParserMatch> match;
+
+#emit
+    /// Debugging information about the high-level parser states that were used
+    /// to generate this low-level parser state.
+    ::BFN::DebugInfo debug;
+#end
 }
 
 

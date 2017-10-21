@@ -15,6 +15,8 @@
 
 namespace Test {
 
+class TofinoFieldAlignment : public TofinoBackendTest {};
+
 namespace {
 
 boost::optional<TofinoPipeTestCase>
@@ -101,7 +103,7 @@ void checkFieldAlignment(const IR::BFN::Pipe* pipe,
 
 }  // namespace
 
-TEST(TofinoFieldAlignment, ByteAlignedFields) {
+TEST_F(TofinoFieldAlignment, ByteAlignedFields) {
     auto test = createFieldAlignmentTestCase(P4_SOURCE(P4Headers::NONE, R"(
         bit<8> field1;
         bit<16> field2;
@@ -122,7 +124,7 @@ TEST(TofinoFieldAlignment, ByteAlignedFields) {
     });
 }
 
-TEST(TofinoFieldAlignment, SmallUnalignedFields) {
+TEST_F(TofinoFieldAlignment, SmallUnalignedFields) {
     auto test = createFieldAlignmentTestCase(P4_SOURCE(P4Headers::NONE, R"(
         bit<1> field1;
         bit<3> field2;
@@ -145,7 +147,7 @@ TEST(TofinoFieldAlignment, SmallUnalignedFields) {
     });
 }
 
-TEST(TofinoFieldAlignment, LargeUnalignedFields) {
+TEST_F(TofinoFieldAlignment, LargeUnalignedFields) {
     auto test = createFieldAlignmentTestCase(P4_SOURCE(P4Headers::NONE, R"(
         bit<7> field1;
         bit<9> field2;
@@ -166,7 +168,7 @@ TEST(TofinoFieldAlignment, LargeUnalignedFields) {
     });
 }
 
-TEST(TofinoFieldAlignment, NonPardeFieldsDoNotForceAlignment) {
+TEST_F(TofinoFieldAlignment, NonPardeFieldsDoNotForceAlignment) {
     auto test = TofinoPipeTestCase::create(P4_SOURCE(P4Headers::V1MODEL, R"(
         header H {
             bit<8> field;
@@ -215,7 +217,7 @@ TEST(TofinoFieldAlignment, NonPardeFieldsDoNotForceAlignment) {
     });
 }
 
-TEST(TofinoFieldAlignment, BridgedMetadataRespectsAlignment) {
+TEST_F(TofinoFieldAlignment, BridgedMetadataRespectsAlignment) {
     auto test = TofinoPipeTestCase::create(P4_SOURCE(P4Headers::V1MODEL, R"(
         header H { bit<8> field; }
         struct Headers { H h; }
@@ -291,10 +293,12 @@ TEST(TofinoFieldAlignment, BridgedMetadataRespectsAlignment) {
         foundBridgedMetadataState = true;
 
         ASSERT_EQ(1u, state->statements.size());
-        auto* extract = state->statements[0]->to<IR::BFN::ExtractBuffer>();
+        auto* extract = state->statements[0]->to<IR::BFN::Extract>();
         ASSERT_TRUE(extract != nullptr);
-        EXPECT_EQ("meta.metadataField", extract->dest->toString());
-        EXPECT_EQ(3, extract->extractedBits().lo % 8);
+        EXPECT_EQ("meta.metadataField", extract->dest->field->toString());
+        auto* bufferSource = extract->source->to<IR::BFN::BufferRVal>();
+        ASSERT_TRUE(bufferSource != nullptr);
+        EXPECT_EQ(3, bufferSource->extractedBits().lo % 8);
     });
 
     EXPECT_TRUE(foundBridgedMetadataState);

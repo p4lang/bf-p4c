@@ -13,10 +13,12 @@ class ElimUnused::Instructions : public Transform {
     IR::BFN::Extract* preorder(IR::BFN::Extract* extract) override {
         auto unit = findOrigCtxt<IR::BFN::Unit>();
         if (!unit) return extract;
-        if (!self.defuse.getUses(unit, extract->dest).empty()) return extract;
+        if (!self.defuse.getUses(unit, extract->dest->field).empty())
+            return extract;
 
         // XXX(cole): We should find a better mechanism rather than overlaying stkvalid.
-        if (strstr(extract->dest->toString().c_str(), "$stkvalid")) return extract;
+        if (strstr(extract->dest->field->toString().c_str(), "$stkvalid"))
+            return extract;
 
         LOG1("ELIM UNUSED " << extract << " IN UNIT " << DBPrint::Brief << unit);
         return nullptr;

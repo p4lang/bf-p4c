@@ -79,20 +79,16 @@ struct ParserAsmSerializer : public ParserInspector {
             out << indent << "match: ";
             const char *sep = "[ ";
             for (auto* select : state->select) {
-                auto bits = select->selectedBits();
-                out << sep << Range(bits.loByte(), bits.hiByte());
+                out << sep << Range(select->range.lo, select->range.hi);
                 sep = ", ";
             }
             out << " ]" << std::endl;
 
-            // Print human-friendly info about where the select offsets come from.
-            for (auto* select : state->select) {
-                out << indent << "      # - " << select->selectedBits() << ": ";
-                if (select->source)
-                    out << canon_name(select->source->toString()) << std::endl;
-                else
-                    out << "(buffer)" << std::endl;
-            }
+            // Print human-friendly debug info about what the select offsets
+            // mean in terms of the original P4 program.
+            for (auto* select : state->select)
+                for (auto& info : select->debug.info)
+                    out << "      # - " << info << std::endl;
         }
 
         for (auto* match : state->match)
@@ -128,13 +124,11 @@ struct ParserAsmSerializer : public ParserInspector {
 
     void outputExtract(const IR::BFN::LoweredExtract* extract) {
         // Generate the assembly that actually implements the extract.
-        if (auto* extractBuffer = extract->to<IR::BFN::LoweredExtractBuffer>()) {
-            auto bytes = extractBuffer->extractedBytes();
-            out << indent << Range(bytes.lo, bytes.hi) << ": "
-                << extractBuffer->dest;
-        } else if (auto* extractConstant = extract->to<IR::BFN::LoweredExtractConstant>()) {
-            out << indent << extractConstant->dest << ": "
-                << extractConstant->constant;
+        if (auto* source = extract->source->to<IR::BFN::LoweredBufferRVal>()) {
+            auto bytes = source->extractedBytes();
+            out << indent << Range(bytes.lo, bytes.hi) << ": " << extract->dest;
+        } else if (auto* source = extract->source->to<IR::BFN::LoweredConstantRVal>()) {
+            out << indent << extract->dest << ": " << source->constant;
         } else {
             BUG("Can't generate assembly for: %1%", extract);
         }

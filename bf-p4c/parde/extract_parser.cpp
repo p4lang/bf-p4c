@@ -59,7 +59,7 @@ struct TransitionStack {
             extractCount++;
             cstring destName;
             unsigned allowedExtracts;
-            std::tie(destName, allowedExtracts) = analyzeDest(extract->dest);
+            std::tie(destName, allowedExtracts) = analyzeDest(extract->dest->field);
             if (extractTotals[destName] >= allowedExtracts) {
                 LOG2(state->name << ": too many extracts for " << destName);
                 badExtractCount++;
@@ -292,8 +292,8 @@ struct RewriteParserStatements : public Transform {
                 P4C_UNIMPLEMENTED("Parser writes to varbits values are not yet supported.");
             IR::Expression* fref = new IR::Member(field->type, hdr, field->name);
             auto width = field->type->width_bits();
-            auto* extract =
-              new IR::BFN::ExtractBuffer(srcInfo, fref, StartLen(currentBit, width));
+            auto* extract = new IR::BFN::Extract(srcInfo, fref,
+                              new IR::BFN::BufferRVal(StartLen(currentBit, width)));
             currentBit += width;
             rv->push_back(extract);
         }
@@ -306,8 +306,8 @@ struct RewriteParserStatements : public Transform {
 
         // Generate an extract operation for the POV bit.
         auto* validBit = new IR::Member(IR::Type::Bits::get(1), hdr, "$valid");
-        rv->push_back(new IR::BFN::ExtractConstant(srcInfo, validBit,
-                                                   new IR::Constant(1)));
+        rv->push_back(new IR::BFN::Extract(srcInfo, validBit,
+                        new IR::BFN::ConstantRVal(1)));
         return rv;
     }
 
@@ -377,12 +377,13 @@ struct RewriteParserStatements : public Transform {
             rhs = rhs->to<IR::Cast>()->expr;
 
         if (rhs->is<IR::Constant>())
-            return new IR::BFN::ExtractConstant(s->srcInfo, s->left,
-                                                   rhs->to<IR::Constant>());
+            return new IR::BFN::Extract(s->srcInfo, s->left,
+                     new IR::BFN::ConstantRVal(rhs->to<IR::Constant>()));
 
         if (auto* lookahead = rhs->to<IR::BFN::LookaheadExpression>()) {
             auto bits = lookahead->bitRange().shiftedByBits(currentBit);
-            return new IR::BFN::ExtractBuffer(s->srcInfo, s->left, bits);
+            return new IR::BFN::Extract(s->srcInfo, s->left,
+                     new IR::BFN::BufferRVal(bits));
         }
 
         if (!canEvaluateInParser(rhs)) {
@@ -390,7 +391,8 @@ struct RewriteParserStatements : public Transform {
             return nullptr;
         }
 
-        return new IR::BFN::ExtractComputed(s->srcInfo, s->left, rhs);
+        return new IR::BFN::Extract(s->srcInfo, s->left,
+                                    new IR::BFN::ComputedRVal(rhs));
     }
 
     const IR::Expression* preorder(IR::Statement* s) override {
@@ -447,9 +449,8 @@ const IR::Node* rewriteSelect(const IR::Expression* component) {
     // We can transform a LookaheadExpression immediately to a concrete select
     // on bits in the input buffer.
     if (auto* lookahead = component->to<IR::BFN::LookaheadExpression>())
-        return new IR::BFN::SelectBuffer(component->srcInfo,
-                                            lookahead->bitRange(),
-                                            lookahead);
+        return new IR::BFN::Select(new IR::BFN::BufferRVal(lookahead->bitRange()),
+                                   lookahead);
 
     // We can split a Concat into multiple selects. Note that this is quite
     // unlike a Slice; the Concat operands may not even be adjacent in the input
@@ -462,7 +463,8 @@ const IR::Node* rewriteSelect(const IR::Expression* component) {
     }
 
     // For anything else, we'll have to resolve it later.
-    return new IR::BFN::SelectComputed(component->srcInfo, component);
+    return new IR::BFN::Select(new IR::BFN::ComputedRVal(component),
+                               component);
 }
 
 }  // namespace

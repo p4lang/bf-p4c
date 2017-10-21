@@ -42,10 +42,10 @@ class StackPushShims : public PardeModifier {
             const unsigned stkValidValue = pushValue << (stack.size + stack.maxpop);
 
             IR::Vector<IR::BFN::ParserPrimitive> initStkValid = {
-                new IR::BFN::ExtractConstant(
+                new IR::BFN::Extract(
                     new IR::Member(IR::Type::Bits::get(stkValidSize),
                                    new IR::PathExpression(stack.name), "$stkvalid"),
-                    new IR::Constant(stkValidValue))
+                    new IR::BFN::ConstantRVal(stkValidValue))
             };
             p->start = new IR::BFN::ParserState(stack.name + "$shim", p->gress,
                                                 initStkValid, { }, {

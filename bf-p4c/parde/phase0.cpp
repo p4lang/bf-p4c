@@ -402,10 +402,11 @@ class AddPhase0Parser : public Modifier {
 
       // Generate a state which extracts the constants.
       IR::Vector<IR::BFN::ParserPrimitive> extracts;
-      for (auto constantItem : *constants) {
-          auto dest = constantItem.first;
-          auto constant = constantItem.second;
-          auto extract = new IR::BFN::ExtractConstant(dest, constant);
+      for (auto& constantItem : *constants) {
+          auto* dest = constantItem.first;
+          auto* constant = constantItem.second;
+          auto* extract =
+            new IR::BFN::Extract(dest, new IR::BFN::ConstantRVal(constant));
           extracts.push_back(extract);
       }
 

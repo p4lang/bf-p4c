@@ -62,7 +62,12 @@ if (NOT ENABLE_TNA)
 
   # BRIG-109
   p4c_add_xfail_reason("tofino"
-    "error: Cannot resolve computed select"
+    "Cannot resolve computed value unambiguously"
+    extensions/p4_tests/p4_14/test_config_294_parser_loop.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
+    "Couldn't resolve computed value for select"
     testdata/p4_14_samples/queueing.p4
     )
 
@@ -93,7 +98,7 @@ if (NOT ENABLE_TNA)
 
   # BRIG-109
   p4c_add_xfail_reason("tofino"
-    "error: Cannot resolve computed select"
+    "Cannot resolve computed value unambiguously"
     extensions/p4_tests/p4_14/test_config_294_parser_loop.p4
     )
 
@@ -198,7 +203,7 @@ p4c_add_xfail_reason("tofino"
 
 # BRIG-109
 p4c_add_xfail_reason("tofino"
-  "error: Cannot resolve computed select"
+  "Couldn't resolve computed value for select"
   # XXX(seth): This code just uses packet_in.lookahead() in a way which isn't supported yet.
   testdata/p4_16_samples/issue355-bmv2.p4
   )
@@ -617,8 +622,9 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue361-bmv2.p4
   )
 
+# This program tries to assign an error value to a metadata field.
 p4c_add_xfail_reason("tofino"
-  "Couldn't resolve computed extract in state start"
+  "Couldn't resolve computed value for extract"
   testdata/p4_16_samples/issue510-bmv2.p4
   )
 
@@ -1012,7 +1018,7 @@ if (ENABLE_TNA)
   ######### failed in backend #######
   # failure in backend
   p4c_add_xfail_reason("tofino"
-    "Cannot resolve computed select: BFN::SelectComputed"
+    "Couldn't resolve computed value for select"
     extensions/p4_tests/p4_14/c1/COMPILER-217/port_parser.p4
     )
   p4c_add_xfail_reason("tofino"

@@ -17,7 +17,7 @@ void BuildParserOverlay::mark(const PHV::Field* f) {
 }
 
 bool BuildParserOverlay::preorder(const IR::BFN::Extract *e) {
-    auto *f = phv.field(e->dest);
+    auto *f = phv.field(e->dest->field);
     mark(f);
     return false;
 }

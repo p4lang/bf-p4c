@@ -110,9 +110,9 @@ struct ResolveStackRefs : public ParserInspector {
     void updateExtractedIndices(const IR::BFN::Extract* extract,
                                 ExtractedStackIndices& map) const {
         // Is this a write to a header stack item POV bit?
-        if (!extract->is<IR::BFN::ExtractConstant>()) return;
-        if (!extract->dest->is<IR::Member>()) return;
-        auto* member = extract->dest->to<IR::Member>();
+        if (!extract->source->is<IR::BFN::ConstantRVal>()) return;
+        if (!extract->dest->field->is<IR::Member>()) return;
+        auto* member = extract->dest->field->to<IR::Member>();
         if (member->member != "$valid") return;
         if (!member->expr->is<IR::HeaderStackItemRef>()) return;
 
@@ -233,213 +233,188 @@ struct ResolveNextAndLast : public PassManager {
     }
 };
 
-class VerifyParserPrimitivesAreUnique : public ParserInspector {
-    bool preorder(const IR::BFN::ParserState* state) override {
-        for (auto* prim : state->statements) {
-            BUG_CHECK(visitedParserPrims.find(prim) == visitedParserPrims.end(),
-                      "Parser primitive appears in more than one place: %1%",
-                      prim);
-            visitedParserPrims.insert(prim);
-        }
-
-        forAllMatching<IR::BFN::Select>(&state->selects,
-                      [&](const IR::BFN::Select* select) {
-            BUG_CHECK(visitedSelects.find(select) == visitedSelects.end(),
-                      "Select primitive appears in more than one place: %1%",
-                      select);
-            visitedSelects.insert(select);
-        });
-
-        return true;
-    }
-
-    std::set<const IR::BFN::Select*> visitedSelects;
-    std::set<const IR::BFN::ParserPrimitive*> visitedParserPrims;
-};
-
-using ComputedExtractResolution = std::map<const IR::BFN::ExtractComputed*,
-                                           const IR::BFN::Extract*>;
-using ComputedSelectResolution = std::map<const IR::BFN::SelectComputed*,
-                                          const IR::BFN::Select*>;
-
-struct ResolveComputedParserPrimitives : public ParserInspector {
-    ComputedExtractResolution resolvedExtracts;
-    ComputedSelectResolution resolvedSelects;
-
- private:
-    using ExtractMap = std::map<cstring, const IR::BFN::Extract*>;
-
-    bool preorder(const IR::BFN::Parser* parser) override {
-        ExtractMap initialMap;
-        resolveForState(parser->start, initialMap);
+/// Verify that every r-value referenced in the parser program only appears
+/// once. This is a requirement for the correctness of
+/// CopyPropagateParserValues.
+class VerifyParserRValsAreUnique : public ParserInspector {
+    bool preorder(const IR::BFN::ParserRVal* value) override {
+        BUG_CHECK(visitedParserRVals.find(value) == visitedParserRVals.end(),
+                  "Parser r-value appears in more than one place: %1%", value);
+        visitedParserRVals.insert(value);
         return false;
     }
 
-    ExtractMap updateOffsets(const ExtractMap& map, int byteShift) {
-        if (byteShift == 0) return map;
+    std::set<const IR::BFN::ParserRVal*> visitedParserRVals;
+};
 
-        ExtractMap updated;
-        for (auto& item : map) {
-            auto dest = item.first;
-            auto* extract = item.second;
+/// A mapping from a computed r-value to the r-value we evaluated it to. Ideally
+/// we evaluated it to a simple r-value which is implementable on the hardware.
+using ParserValueResolution = std::map<const IR::BFN::ComputedRVal*,
+                                       const IR::BFN::ParserRVal*>;
 
-            // Extracts that don't come from the buffer don't need to change.
-            if (!extract->is<IR::BFN::ExtractBuffer>()) {
-                updated[dest] = extract;
+/**
+ * Walk the parser programs (each thread is treated separately) and try to
+ * simplify r-values by replacing any uses of l-values with their definition.
+ *
+ * XXX(seth): This is slated for demolition. I want to replace this with a copy
+ * propagation pass that walks over the entire program, rather than just the
+ * parser.
+ *
+ * @pre Every `ParserRVal` in each of the parser programs is a unique object.
+ * @post Any `ComputedRVal` which can be evaluated unambiguously to a simple
+ * r-value (i.e. a `BufferRVal` or `ConstantRVal`) is replaced. Any
+ * `ComputedRVal` which remains is either too complex to evaluate, contains uses
+ * of l-values that were reached by more than one definition, or contains uses
+ * of l-values that were not reached by any definition at all.
+ */
+struct CopyPropagateParserValues : public ParserInspector {
+    ParserValueResolution resolvedValues;
+
+ private:
+    /// A map from l-values (identified by strings) to the r-value most recently
+    /// assigned to them.
+    using ReachingDefs = std::map<cstring, const IR::BFN::ParserRVal*>;
+
+    bool preorder(const IR::BFN::Parser* parser) override {
+        ReachingDefs initialDefs;
+        propagateToState(parser->start, std::move(initialDefs));
+        return false;
+    }
+
+    ReachingDefs updateOffsets(const ReachingDefs& defs, int byteShift) {
+        if (byteShift == 0) return defs;
+
+        ReachingDefs updated;
+        for (auto& def : defs) {
+            auto lVal = def.first;
+            auto* rVal = def.second;
+
+            // Values that don't come from the buffer don't need to change.
+            if (!rVal->is<IR::BFN::BufferRVal>()) {
+                updated[lVal] = rVal;
                 continue;
             }
 
-            // Extracts from the input buffer need their offsets to be shifted
+            // Values from the input buffer need their offsets to be shifted
             // to the left to compensate for the fact that the transition is
             // shifting the input buffer to the right.
-            auto* extractBuffer = extract->to<IR::BFN::ExtractBuffer>();
-            auto* clone = extractBuffer->clone();
+            auto* clone = rVal->to<IR::BFN::BufferRVal>()->clone();
             clone->range = clone->range.shiftedByBytes(-byteShift);
-            updated[dest] = clone;
+            updated[lVal] = clone;
         }
+
         return updated;
     }
 
-    void resolveExtract(const IR::BFN::ExtractComputed* extract,
-                        ExtractMap& map) {
-        auto sourceName = extract->source->toString();
-        if (map.find(sourceName) == map.end()) {
-            // "Resolve" to the original ExtractComputed, indicating failure.
-            resolvedExtracts[extract] = extract->clone();
+    void propagateToUse(const IR::BFN::ComputedRVal* value,
+                        const ReachingDefs& defs) {
+        // Create a string representation of this computed value. We consider
+        // values to be equal if they have the same string representation.
+        // XXX(seth): It'd be nice to move away from using strings.
+        auto sourceName = value->source->toString();
+
+        // Does some definition for this computed value reach this point?
+        if (defs.find(sourceName) == defs.end()) {
+            // No reaching definition; just "propagate" the original value.
+            resolvedValues[value] = value->clone();
             return;
         }
 
-        // There's an existing extract for this source. Forward it here. (We're
-        // essentially doing copy propagation.)
-        auto* sourceExtract = map[sourceName];
-        auto* resolvedExtract = sourceExtract->clone();
-        resolvedExtract->dest = extract->dest;
+        // We found a definition; propagate it here.
+        auto* resolvedValue = defs.at(sourceName)->clone();
 
-        // If there was no previous resolution, we know we're OK.
-        if (resolvedExtracts.find(extract) == resolvedExtracts.end()) {
-            resolvedExtracts[extract] = resolvedExtract;
-            map[extract->dest->toString()] = resolvedExtract;
+        // If there's no other reaching definition, we know we're OK.
+        if (resolvedValues.find(value) == resolvedValues.end()) {
+            resolvedValues[value] = resolvedValue;
             return;
         }
 
-        // There was a previous resolution. Make sure it matches. For the
-        // generated code to be correct, we need to ensure that we get the same
-        // resolution no matter what path we take to reach this point.
-        auto* previousResolution = resolvedExtracts[extract];
-        if (previousResolution->is<IR::BFN::ExtractComputed>()) {
-            return;  // We already failed; keep it that way.
-        }
+        // We've seen another definition already.
+        auto* previousResolution = resolvedValues[value];
 
-        if (*previousResolution != *resolvedExtract) {
-            ::error("Cannot resolve computed extract unambiguously: %1%", extract);
-            // "Resolve" to the original ExtractComputed, indicating failure.
-            resolvedExtracts[extract] = extract;
-            map[extract->dest->toString()] = extract->clone();
-            return;
-        }
+        // If the previous definition is a computed r-value, we've already
+        // encountered some kind of failure; just keep it that way.
+        if (previousResolution->is<IR::BFN::ComputedRVal>()) return;
+
+        // We found a previous definition that was valid on its own; we just
+        // need to make sure it matches the new one. For the generated code to
+        // be correct, we need to ensure that every reaching definition is
+        // equivalent.
+        if (*previousResolution == *resolvedValue) return;
+
+        // The two definitions don't match; that means that we can't resolve
+        // this value to a simple r-value unambiguously. Forget the previously
+        // encountered definition *and* this new one; just "propagate" the
+        // original value.
+        ::error("Cannot resolve computed value unambiguously: %1%", value);
+        resolvedValues[value] = value->clone();
     }
 
-    void resolveSelect(const IR::BFN::SelectComputed* select,
-                       const ExtractMap& map) {
-        auto* resolvedSelect = [&]() -> const IR::BFN::Select* {
-            auto sourceName = select->source->toString();
-            if (map.find(sourceName) == map.end()) {
-                ::error("Cannot resolve computed select: %1%", select);
-                // "Resolve" to the original SelectComputed, indicating failure.
-                return select;
-            }
-
-            // There's an existing extract for this source. Forward it here.
-            auto* resolvedExtract = map.at(sourceName)->to<IR::BFN::ExtractBuffer>();
-            if (!resolvedExtract) {
-                ::warning("Couldn't resolve select %1% to unsupported source: %2%",
-                          select, resolvedExtract);
-                // "Resolve" to the original SelectComputed, indicating failure.
-                return select;
-            }
-            return new IR::BFN::SelectBuffer(resolvedExtract->extractedBits(),
-                                                resolvedExtract->dest);
-        }();
-
-        // If there was no previous resolution, we know we're OK.
-        if (resolvedSelects.find(select) == resolvedSelects.end()) {
-            resolvedSelects[select] = resolvedSelect;
-            return;
-        }
-
-        // There was a previous resolution. Make sure it matches. For the
-        // generated code to be correct, we need to ensure that we get the same
-        // resolution no matter what path we take to reach this point.
-        auto* previousResolution = resolvedSelects[select];
-        if (*previousResolution != *resolvedSelect) {
-            ::error("Cannot resolve computed select unambiguously: %1%", select);
-            // "Resolve" to the original SelectComputed, indicating failure.
-            resolvedSelects[select] = select;
-            return;
-        }
-    }
-
-    void resolveForState(const IR::BFN::ParserState* state,
-                         const ExtractMap& context) {
+    void propagateToState(const IR::BFN::ParserState* state,
+                          ReachingDefs&& reachingDefs) {
         if (!state) return;
 
-        ExtractMap map(context);
+        ReachingDefs defs(reachingDefs);
 
         forAllMatching<IR::BFN::Extract>(&state->statements,
                       [&](const IR::BFN::Extract* extract) {
-            if (extract->is<IR::BFN::ExtractComputed>()) {
-                resolveExtract(extract->to<IR::BFN::ExtractComputed>(), map);
+            auto dest = extract->dest->field->toString();
+
+            // If the source of this extract is a computed r-value, its
+            // expression may use a definition we've seen. Try to simplify it.
+            // (And regardless of our success, record the new definition for
+            // `dest`.)
+            if (auto* computed = extract->source->to<IR::BFN::ComputedRVal>()) {
+                propagateToUse(computed, defs);
+                defs[dest] = resolvedValues[computed];
                 return;
             }
-            map[extract->dest->toString()] = extract;
+
+            // The source is a simple r-value; just record the new definition
+            // for `dest` and move on.
+            defs[dest] = extract->source;
         });
 
-        forAllMatching<IR::BFN::SelectComputed>(&state->selects,
-                      [&](const IR::BFN::SelectComputed* select) {
-            resolveSelect(select, map);
+        forAllMatching<IR::BFN::Select>(&state->selects,
+                      [&](const IR::BFN::Select* select) {
+            // If the source of this select is a computed r-value, its
+            // expression may use a definition we've seen. Try to simplify it.
+            if (auto* computed = select->source->to<IR::BFN::ComputedRVal>())
+                propagateToUse(computed, defs);
         });
 
 
+        // Recursively propagate the definitions which have reached this point
+        // to child states.
         for (auto* transition : state->transitions)
-            resolveForState(transition->next,
-                            updateOffsets(map, *transition->shift));
+            propagateToState(transition->next,
+                             updateOffsets(defs, *transition->shift));
     }
 };
 
-struct ApplyPrimitiveResolutions : public ParserTransform {
-    ApplyPrimitiveResolutions(const ComputedExtractResolution& resolvedExtracts,
-                              const ComputedSelectResolution& resolvedSelects)
-      : resolvedExtracts(resolvedExtracts), resolvedSelects(resolvedSelects) { }
+struct ApplyParserValueResolutions : public ParserTransform {
+    explicit ApplyParserValueResolutions(const ParserValueResolution& resolvedValues)
+      : resolvedValues(resolvedValues) { }
 
  private:
-    IR::BFN::Extract* preorder(IR::BFN::ExtractComputed* extract) override {
+    IR::BFN::ParserRVal* preorder(IR::BFN::ComputedRVal* value) override {
         prune();
-        auto* original = getOriginal<IR::BFN::ExtractComputed>();
-        BUG_CHECK(resolvedExtracts.find(original) != resolvedExtracts.end(),
-                  "No resolution for computed extract: %1%", extract);
-        return resolvedExtracts.at(original)->clone();
+        auto* original = getOriginal<IR::BFN::ComputedRVal>();
+        BUG_CHECK(resolvedValues.find(original) != resolvedValues.end(),
+                  "No resolution for computed value: %1%", value);
+        return resolvedValues.at(original)->clone();
     }
 
-    IR::BFN::Select* preorder(IR::BFN::SelectComputed* select) override {
-        prune();
-        auto* original = getOriginal<IR::BFN::SelectComputed>();
-        BUG_CHECK(resolvedSelects.find(original) != resolvedSelects.end(),
-                  "No resolution for computed select: %1%", select);
-        return resolvedSelects.at(original)->clone();
-    }
-
-    const ComputedExtractResolution& resolvedExtracts;
-    const ComputedSelectResolution& resolvedSelects;
+    const ParserValueResolution& resolvedValues;
 };
 
-class ResolveComputedExtracts : public PassManager {
+class ResolveComputedValues : public PassManager {
  public:
-    ResolveComputedExtracts() {
-        auto* computeResolution = new ResolveComputedParserPrimitives;
+    ResolveComputedValues() {
+        auto* copyPropagate = new CopyPropagateParserValues;
         addPasses({
-            computeResolution,
-            new ApplyPrimitiveResolutions(computeResolution->resolvedExtracts,
-                                          computeResolution->resolvedSelects)
+            copyPropagate,
+            new ApplyParserValueResolutions(copyPropagate->resolvedValues)
         });
     }
 };
@@ -469,13 +444,13 @@ class ComputeOffsetCorrections : public ParserInspector {
         // all offsets are positive. Note that we take any shift corrections
         // that were already computed by our successor states into account.
         int bitMinOffset = 0;
-        forAllMatching<IR::BFN::ExtractBuffer>(&state->statements,
-                      [&](const IR::BFN::ExtractBuffer* extract) {
-            bitMinOffset = std::min(bitMinOffset, extract->range.lo);
+        forAllMatching<IR::BFN::BufferRVal>(&state->statements,
+                      [&](const IR::BFN::BufferRVal* value) {
+            bitMinOffset = std::min(bitMinOffset, value->range.lo);
         });
-        forAllMatching<IR::BFN::SelectBuffer>(&state->selects,
-                      [&](const IR::BFN::SelectBuffer* select) {
-            bitMinOffset = std::min(bitMinOffset, select->range.lo);
+        forAllMatching<IR::BFN::BufferRVal>(&state->selects,
+                      [&](const IR::BFN::BufferRVal* value) {
+            bitMinOffset = std::min(bitMinOffset, value->range.lo);
         });
         for (auto* transition : state->transitions) {
             BUG_CHECK(byteShiftCorrections[transition] <= 0,
@@ -534,20 +509,12 @@ struct ApplyOffsetCorrections : public ParserModifier {
     { }
 
  private:
-    void postorder(IR::BFN::SelectBuffer* select) override {
+    void postorder(IR::BFN::BufferRVal* value) override {
         auto* state = findOrigCtxt<IR::BFN::ParserState>();
         BUG_CHECK(bitOffsetCorrections.find(state) != bitOffsetCorrections.end(),
                   "No offset correction entries for state %1%", state->name);
-        select->range = select->range.shiftedByBits(bitOffsetCorrections.at(state));
-        BUG_CHECK(select->range.lo >= 0, "Failed to correct offset?");
-    }
-
-    void postorder(IR::BFN::ExtractBuffer* extract) override {
-        auto* state = findOrigCtxt<IR::BFN::ParserState>();
-        BUG_CHECK(bitOffsetCorrections.find(state) != bitOffsetCorrections.end(),
-                  "No offset correction entries for state %1%", state->name);
-        extract->range = extract->range.shiftedByBits(bitOffsetCorrections.at(state));
-        BUG_CHECK(extract->range.lo >= 0, "Failed to correct offset?");
+        value->range = value->range.shiftedByBits(bitOffsetCorrections.at(state));
+        BUG_CHECK(value->range.lo >= 0, "Failed to correct offset?");
     }
 
     void postorder(IR::BFN::Transition* transition) override {
@@ -583,11 +550,11 @@ class CheckResolvedHeaderStackExpressions : public ParserInspector {
 };
 
 class CheckResolvedParserExpressions : public ParserTransform {
-    const IR::BFN::ParserPrimitive*
-    checkExtractDestination(IR::BFN::Extract* extract) const {
-        if (!extract->dest->is<IR::HeaderStackItemRef>()) return extract;
+    const IR::BFN::Extract*
+    checkExtractDestination(const IR::BFN::Extract* extract) const {
+        if (!extract->dest->field->is<IR::HeaderStackItemRef>()) return extract;
 
-        auto* itemRef = extract->dest->to<IR::HeaderStackItemRef>();
+        auto* itemRef = extract->dest->field->to<IR::HeaderStackItemRef>();
         if (itemRef->index()->is<IR::BFN::UnresolvedStackRef>()) {
             ::error("Couldn't resolve header stack reference in state %1%: %2%",
                     findContext<IR::BFN::ParserState>()->name, extract);
@@ -601,7 +568,7 @@ class CheckResolvedParserExpressions : public ParserTransform {
             return nullptr;
         }
 
-        auto* stack = extract->dest->to<IR::HeaderStackItemRef>()->base();
+        auto* stack = extract->dest->field->to<IR::HeaderStackItemRef>()->base();
         auto stackSize = stack->type->to<IR::Type_Stack>()
                               ->size->to<IR::Constant>()->asInt();
         if (itemRef->index()->to<IR::Constant>()->asInt() >= stackSize) {
@@ -614,25 +581,20 @@ class CheckResolvedParserExpressions : public ParserTransform {
             auto* itemRefClone = itemRef->clone();
             itemRefClone->index_ = new IR::Constant(std::max(stackSize - 1, 0));
             auto* clone = extract->clone();
-            clone->dest = itemRefClone;
+            clone->dest = new IR::BFN::FieldLVal(itemRefClone);
             return clone;
         }
 
         return extract;
     }
 
-    const IR::BFN::ParserPrimitive*
-    preorder(IR::BFN::ExtractComputed* extract) override {
-        ::error("Couldn't resolve computed extract in state %1%: %2%",
-                findContext<IR::BFN::ParserState>()->name, extract);
-        return nullptr;
-    }
+    const IR::BFN::Extract*
+    checkExtractFitsInBuffer(const IR::BFN::Extract* extract) const {
+        auto* bufferSource = extract->source->to<IR::BFN::BufferRVal>();
+        if (!bufferSource) return extract;
 
-    const IR::BFN::ParserPrimitive*
-    preorder(IR::BFN::ExtractBuffer* extract) override {
-        auto& pardeSpec = Device::pardeSpec();
         auto* state = findContext<IR::BFN::ParserState>();
-        if (state->transitions.empty()) return checkExtractDestination(extract);
+        if (state->transitions.empty()) return extract;
 
         // Check if this extract could possibly fit within the input buffer on
         // the hardware. We can split large states into smaller ones, but we're
@@ -648,15 +610,15 @@ class CheckResolvedParserExpressions : public ParserTransform {
         for (auto* transition : state->transitions)
             worstCaseShift = std::min(worstCaseShift, *transition->shift);
 
-        const int byteOverflow = extract->bitInterval().hiByte() - worstCaseShift;
-        if (byteOverflow < pardeSpec.byteInputBufferSize())
-            return checkExtractDestination(extract);
+        const int byteOverflow = bufferSource->bitInterval().hiByte() - worstCaseShift;
+        if (byteOverflow < Device::pardeSpec().byteInputBufferSize())
+            return extract;
 
         ::error("Extract in state %1% requires reading %2% bytes ahead, which "
                 "is beyond %3%'s limit of %4% bytes: %5%",
                 findContext<IR::BFN::ParserState>()->name, byteOverflow,
                 Device::currentDevice(),
-                pardeSpec.byteInputBufferSize(), extract);
+                Device::pardeSpec().byteInputBufferSize(), extract);
 
         // The most likely cause is that RemoveNegativeOffsets had to put off
         // shifting so long that we ran out of runway in the input buffer.
@@ -666,14 +628,29 @@ class CheckResolvedParserExpressions : public ParserTransform {
         return nullptr;
     }
 
+    const IR::BFN::Extract*
+    checkExtractIsNotComputed(const IR::BFN::Extract* extract) const {
+        if (!extract->source->is<IR::BFN::ComputedRVal>()) return extract;
+        ::error("Couldn't resolve computed value for extract in state %1%: %2%",
+                findContext<IR::BFN::ParserState>()->name, extract);
+        return nullptr;
+    }
+
     const IR::BFN::ParserPrimitive*
     preorder(IR::BFN::Extract* extract) override {
-        return checkExtractDestination(extract);
+        prune();
+        auto* checkedExtract = checkExtractIsNotComputed(extract);
+        if (!checkedExtract) return checkedExtract;
+        checkedExtract = checkExtractFitsInBuffer(checkedExtract);
+        if (!checkedExtract) return checkedExtract;
+        return checkExtractDestination(checkedExtract);
     }
 
     const IR::BFN::Select*
-    preorder(IR::BFN::SelectComputed* select) override {
-        ::error("Couldn't resolve computed select in state %1%: %2%",
+    preorder(IR::BFN::Select* select) override {
+        prune();
+        if (!select->source->is<IR::BFN::ComputedRVal>()) return select;
+        ::error("Couldn't resolve computed value for select in state %1%: %2%",
                 findContext<IR::BFN::ParserState>()->name, select);
         return nullptr;
     }
@@ -685,8 +662,8 @@ ResolveComputedParserExpressions::ResolveComputedParserExpressions() {
     addPasses({
         new VerifyAssignedShifts,
         new ResolveNextAndLast,
-        new VerifyParserPrimitivesAreUnique,
-        new ResolveComputedExtracts,
+        new VerifyParserRValsAreUnique,
+        new ResolveComputedValues,
         new RemoveNegativeOffsets,
         new CheckResolvedParserExpressions
     });

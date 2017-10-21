@@ -8,26 +8,24 @@ bool TofinoWriteContext::isWrite(bool root_value) {
     if (!ctxt || !ctxt->node || !current)
         return rv;
 
-    const IR::Node* contextChild = current;
     while (ctxt->child_index == 0 &&
             (ctxt->node->is<IR::ArrayIndex>() ||
              ctxt->node->is<IR::HeaderStackItemRef>() ||
              ctxt->node->is<IR::Slice>() ||
              ctxt->node->is<IR::Member>())) {
-        contextChild = ctxt->node;
         ctxt = ctxt->parent;
         if (!ctxt || !ctxt->node)
             return rv; }
+
+    BUG_CHECK(!ctxt->node->is<IR::BFN::LoweredParserRVal>(),
+              "Computing reads and writes over lowered parser IR?");
 
     auto *salu = findContext<IR::MAU::SaluAction>();
     if (salu && current == salu->output_dst) {
         return true; }
 
-    // The destination of an Extract is written to, but the other fields aren't.
-    // This is just a roundabout way to check that we reached the Extract by
-    // walking upwards via the destination and not via some other route.
-    if (ctxt->node->is<IR::BFN::Extract>())
-        return contextChild == ctxt->node->to<IR::BFN::Extract>()->dest;
+    // Parser l-values (e.g. the destination of an Extract) are written to.
+    if (ctxt->node->is<IR::BFN::ParserLVal>()) return true;
 
     // TODO: Does C++ support monads?  The following if statements are nested
     // because C++ only supports declaring variables in if predicates if the
@@ -69,17 +67,24 @@ bool TofinoWriteContext::isRead(bool root_value) {
     if (ctxt->child_index < 0)
         return rv;
 
+    BUG_CHECK(!ctxt->node->is<IR::BFN::LoweredParserRVal>(),
+              "Computing reads and writes over lowered parser IR?");
+
     auto *salu = findContext<IR::MAU::SaluAction>();
     if (salu && current == salu->output_dst) {
         return false; }
 
     // XXX(seth): This treats both the destination and the source of the extract
     // as read. This is a hack intended to capture the fact that parser writes
-    // OR the destination PHV container with its existing contents. Ideally,
-    // we'd be more precise about this, and only treat the destination as read
-    // if the container is marked multiwrite.
-    if (ctxt->node->is<IR::BFN::Extract>())
+    // OR the destination PHV container with its existing contents.
+    // XXX(seth): We should remove this as soon as it's no longer needed; it
+    // doesn't make sense.
+    if (ctxt->node->is<IR::BFN::ParserLVal>() && ctxt->parent &&
+        ctxt->parent->node->is<IR::BFN::Extract>())
         return true;
+
+    // Parser r-values (e.g. the source of a Select) are read.
+    if (ctxt->node->is<IR::BFN::ParserRVal>()) return true;
 
     // An Emit reads both the emitted field and the POV bit.
     if (ctxt->node->is<IR::BFN::Emit>())
@@ -87,10 +92,6 @@ bool TofinoWriteContext::isRead(bool root_value) {
 
     // An EmitChecksum reads the POV bit and all checksummed fields.
     if (ctxt->node->is<IR::BFN::EmitChecksum>())
-        return true;
-
-    // A computed select reads its source.
-    if (ctxt->node->is<IR::BFN::SelectComputed>())
         return true;
 
     // TODO: Does C++ support monads?  The following if statements are nested

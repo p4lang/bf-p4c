@@ -40,11 +40,12 @@ class AddJBayMetadataPOV : public Transform {
                             new IR::Constant(IR::Type::Bits::get(1), 1)) }); } } }
         return p; }
     IR::Node *postorder(IR::BFN::Extract *e) override {
-        for (auto &el : dp->metadata) {
-            if (equiv(e->dest, el.second->value)) {
+        for (auto &el : dp->metadata)
+            if (equiv(e->dest->field, el.second->value))
                 return new IR::Vector<IR::BFN::ParserPrimitive>({ e,
-                    new IR::BFN::ExtractConstant(el.second->povBit,
-                        new IR::Constant(IR::Type::Bits::get(1), 1)) }); } }
+                    new IR::BFN::Extract(el.second->povBit,
+                                         new IR::BFN::ConstantRVal(1))
+                });
         return e; }
 
  public:

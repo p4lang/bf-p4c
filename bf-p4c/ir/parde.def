@@ -6,9 +6,9 @@
 
 namespace BFN {
 
-/// An expression representing a `packet_in.lookahead()` call at the P4 level.
-/// The interface is very similar to ExtractBuffer, and that's not a
-/// coincidence, since the two concepts are very closely related.
+// An expression representing a `packet_in.lookahead()` call at the P4 level.
+// The interface is very similar to Extract, and that's not a coincidence, since
+// the two concepts are very closely related.
 class LookaheadExpression : Expression {
 #noconstructor
     LookaheadExpression(Util::SourceInfo si, nw_bitrange range)
@@ -76,96 +76,105 @@ class UnresolvedStackLast : UnresolvedStackRef {
     toString { return "last"; }
 }
 
+/// A value that can *conceptually* be read from in the parser. This is a
+/// superset of the values that can actually be read from on the hardware.
+abstract ParserRVal { }
+
+/// An r-value originating from the input buffer. Represented as a range of input
+/// buffer bits.  This must be interpreted relative to a specific parser state to
+/// have an absolute meaning.
+class BufferRVal : ParserRVal {
+    dbprint {
+        out << "buffer bits " << bitInterval() << "(" << range.size() << "b)";
+    }
+
+    /// @return this buffer range as a half-open range of bits in network order.
+    /// These bits are specified in the space of the input buffer.
+    nw_bitinterval bitInterval() const { return toHalfOpenRange(range); }
+
+    /// @return this buffer range as a closed range of bits in network order.
+    /// These bits are specified in the space of the input buffer.
+    nw_bitrange extractedBits() const { return range; }
+
+    /// The region of the input buffer represented by this `BufferRVal`,
+    /// expressed as a range of bits in network order.
+    nw_bitrange range;
+}
+
+/// A constant used as an r-value in the parser.
+class ConstantRVal : ParserRVal {
+#emit
+    explicit ConstantRVal(mpz_class value)
+      : constant(new IR::Constant(value)) { }
+    ConstantRVal(const IR::Type* type, mpz_class value)
+      : constant(new IR::Constant(type, value)) { }
+    ConstantRVal(Util::SourceInfo si, const IR::Type* type, mpz_class value)
+      : ParserRVal(si), constant(new IR::Constant(type, value)) { }
+#end
+
+    dbprint { out << "constant " << constant; }
+
+    Constant constant;
+}
+
+/// An r-value which is computed in the parser. The source may be an arbitrary
+/// expression. These generally can't be implemented directly on any existing
+/// Barefoot hardware, so if the compiler can't optimize them out, compilation
+/// will fail.
+class ComputedRVal : ParserRVal {
+    dbprint { out << "computed value " << source; }
+
+    /// An expression which should evaluate to an r-value usable in the parser.
+    Expression source;
+}
+
+/// A value that can *conceptually* be written to in the parser. This is a
+/// superset of the values that can actually be written to on the hardware.
+abstract ParserLVal { }
+
+/// A field or "field-like" value. This is something which will ultimately be
+/// backed by a PHV container. It may be an `IR::Member`, an `IR::TempVar`, or
+/// an `IR::Slice` wrapping either of those things.
+class FieldLVal : ParserLVal {
+    dbprint { out << field; }
+
+    validate {
+        CHECK_NULL(field);
+        BUG_CHECK(field->is<IR::Member>() || field->is<IR::TempVar>() ||
+                  field->is<IR::Slice>(),
+                  "FieldLVal contains unexpected value: %1%", field);
+    }
+
+    /// A reference to a "field-like" value backed by a PHV container.
+    Expression field;
+}
+
 /// Supertype for all parser primitives - i.e., actions that can be executed in
 /// parser states.
 abstract ParserPrimitive { }
 
 /// A parser extraction operation, representing a write by the parser into some
-/// location which will be ultimately backed by a PHV container.
-abstract Extract : ParserPrimitive {
-    validate { CHECK_NULL(dest); }
+/// l-value.
+class Extract : ParserPrimitive {
+    Extract(Expression dest, ParserRVal source)
+      : dest(new FieldLVal(dest)), source(source) { }
+    Extract(Util::SourceInfo si, Expression dest, ParserRVal source)
+      : ParserPrimitive(si), dest(new FieldLVal(dest)), source(source) { }
 
-    // XXX(seth): It'd be ideal to constrain the type of `dest` a little more.
-    // It's normally a field, represented by an Member, but right now we
-    // sometimes extract into TempVars, and we represent partial writes using an
-    // Slice, so we need a more general type.
+    dbprint { out << "extract " << source << " to " << dest; }
 
-    /// The location to be written to. Must be backed by a PHV container.
-    Expression dest;
-}
+    /// The location to be written to.
+    FieldLVal dest;
 
-/// An extraction from the input buffer.
-class ExtractBuffer : Extract {
-#noconstructor
-    ExtractBuffer(Util::SourceInfo si, Expression dest, nw_bitrange range)
-        : Extract(si, dest), range(range) { }
-    ExtractBuffer(Expression dest, nw_bitrange range)
-        : Extract(dest), range(range) { }
-
-    dbprint {
-        out << "extract bits " << bitInterval() << "(" << range.size()
-            << "b) to " << dest;
-    }
-
-    /// @return true if some of the bits being extracted were already shifted
-    /// out of the input buffer.
-    bool isShiftedOut() const { return range.lo < 0; }
-
-    /// @return the half-open range of bits being extracted, in network order.
-    /// These bytes are specified in the space of the input buffer.
-    nw_bitinterval bitInterval() const { return toHalfOpenRange(range); }
-
-    /// @return the closed range of bits being extracted, in network order.
-    /// These bits are specified in the space of the input buffer.
-    nw_bitrange extractedBits() const { return range; }
-
-    /// The region of the input buffer which will be extracted, expressed in
-    /// bits in network order.
-    nw_bitrange range;
-}
-
-/// An extraction of a constant.
-class ExtractConstant : Extract {
-#noconstructor
-    ExtractConstant(Util::SourceInfo si, Expression dest, Constant constant)
-        : Extract(si, dest), constant(constant) { }
-    ExtractConstant(Expression dest, Constant constant)
-        : Extract(dest), constant(constant) { }
-
-    validate { CHECK_NULL(constant); }
-    dbprint { out << "extract constant " << constant << " to " << dest; }
-
-    /// The constant to extract.
-    Constant constant;
-}
-
-/// An extraction of some computed value. The source may be an arbitrary
-/// expression. These can't be implemented directly on Tofino, so if the
-/// compiler can't optimize them out, compilation will fail.
-class ExtractComputed : Extract {
-#noconstructor
-    ExtractComputed(Util::SourceInfo si, Expression dest, Expression source)
-        : Extract(si, dest), source(source) { }
-    ExtractComputed(Expression dest, Expression source)
-        : Extract(dest), source(source) { }
-
-    validate { CHECK_NULL(source); }
-    dbprint { out << "extract computed value " << source << " to " << dest; }
-
-    /// An expression which computes the value to be extracted.
-    Expression source;
+    /// The location that will be read from.
+    ParserRVal source;
 }
 
 /// The high-level representation of a parser state transition.
 class Transition {
-#noconstructor
     Transition(match_t value) : value(value), next(nullptr) { }
-#emit
     Transition(match_t value, boost::optional<int> shift)
         : value(value), shift(shift), next(nullptr) { }
-    Transition(match_t value, boost::optional<int> shift, const ParserState* next)
-        : value(value), shift(shift), next(next) { }
-#end
 
     /// If the owning state's select expressions evaluate to a value which
     /// matches this...
@@ -179,61 +188,22 @@ class Transition {
     NullOK ParserState             next;
 }
 
-/// Supertype for all parser selection operations. These represent a load of a
-/// value from some source which will be compared against the state's
-/// Transitions to select the next state to transition to.
-abstract Select { }
+/// A parser selection operation. These represent a load of a value from some
+/// source which will be compared against the state's Transitions to select the
+/// next state to transition to.
+class Select {
+    Select(ParserRVal source, Expression p4Source)
+        : Node(p4Source->srcInfo), source(source), p4Source(p4Source) { }
 
-/// A selection against a range of bits in the input buffer.
-class SelectBuffer : Select {
-#noconstructor
-    SelectBuffer(Util::SourceInfo si, nw_bitrange range, Node source)
-        : Select(si), range(range), source(source) { }
-    SelectBuffer(Util::SourceInfo si, nw_bitrange range)
-        : SelectBuffer(si, range, nullptr) { }
-    SelectBuffer(nw_bitrange range, Node source)
-        : range(range), source(source) { }
-    SelectBuffer(nw_bitrange range)
-        : SelectBuffer(range, nullptr) { }
+    dbprint { out << "match " << source; }
 
-    dbprint {
-        out << "match bits " << bitInterval() << "(" << range.size() << "b)";
-    }
-
-    /// @return true if some of the bits being selected were already shifted
-    /// out of the input buffer.
-    bool isShiftedOut() const { return range.lo < 0; }
-
-    /// @return the half-open range of bits being selected, in network order.
-    nw_bitinterval bitInterval() const { return toHalfOpenRange(range); }
-
-    /// @return the closed range of bits being selected, in network order.
-    nw_bitrange selectedBits() const { return range; }
-
-    /// The region of the input buffer which will be selected against, expressed
-    /// in bits in network order.
-    nw_bitrange range;
+    /// The value which will be matched against.
+    ParserRVal source;
 
 #emit
     /// The higher-level expression we were selecting against. Not visited.
-    const Node* source;
+    const Expression* p4Source = nullptr;
 #end
-}
-
-/// A selection against a computed value. The source may be an arbitrary
-/// expression. These can't be implemented directly on Tofino, so if the
-/// compiler can't optimize them out, compilation will fail.
-class SelectComputed : Select {
-#noconstructor
-    SelectComputed(Util::SourceInfo si, Expression source)
-        : Select(si), source(source) { }
-    SelectComputed(Expression source) : source(source) { }
-
-    validate { CHECK_NULL(source); }
-    dbprint { out << "match computed value " << source; }
-
-    /// An expression which computes the value to be matched against.
-    Expression source;
 }
 
 /// A high-level parser state. Contains primitives which operate on fields and

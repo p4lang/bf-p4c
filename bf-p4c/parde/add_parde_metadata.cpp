@@ -39,8 +39,7 @@ void AddMetadataShims::addIngressMetadata(IR::BFN::Parser *parser) {
         // There's not really much we can do in this case; just skip over
         // the intrinsic metadata.
         IR::Vector<IR::BFN::ParserPrimitive> init = {
-            new IR::BFN::ExtractConstant(alwaysDeparseBit,
-                                         new IR::Constant(IR::Type::Bits::get(1), 1))
+            new IR::BFN::Extract(alwaysDeparseBit, new IR::BFN::ConstantRVal(1))
         };
         const auto byteSkip = Device::pardeSpec().byteTotalIngressMetadataSize();
         parser->start =
@@ -75,7 +74,7 @@ void AddMetadataShims::addIngressMetadata(IR::BFN::Parser *parser) {
       Device::pardeSpec().byteIngressMetadataPrefixSize();
     auto* igPort = gen_fieldref(meta, "ingress_port");
     IR::Vector<IR::BFN::ParserPrimitive> extractIgMetadata = {
-        new IR::BFN::ExtractBuffer(igPort, StartLen(7, 9)),
+        new IR::BFN::Extract(igPort, new IR::BFN::BufferRVal(StartLen(7, 9))),
     };
     auto intrinsicState =
         new IR::BFN::ParserState("$ingress_metadata", INGRESS,
@@ -91,9 +90,8 @@ void AddMetadataShims::addIngressMetadata(IR::BFN::Parser *parser) {
     // place no matter what. We need to figure out what to do here.
     auto resubmitFlag = gen_fieldref(meta, "resubmit_flag");
     IR::Vector<IR::BFN::ParserPrimitive> init = {
-        new IR::BFN::ExtractBuffer(resubmitFlag, StartLen(0, 1)),
-        new IR::BFN::ExtractConstant(alwaysDeparseBit,
-                                     new IR::Constant(IR::Type::Bits::get(1), 1))
+        new IR::BFN::Extract(resubmitFlag, new IR::BFN::BufferRVal(StartLen(0, 1))),
+        new IR::BFN::Extract(alwaysDeparseBit, new IR::BFN::ConstantRVal(1))
     };
     auto* toNormal =
       new IR::BFN::Transition(match_t(8, 0, 0x80), 0, intrinsicState);
@@ -101,8 +99,8 @@ void AddMetadataShims::addIngressMetadata(IR::BFN::Parser *parser) {
       new IR::BFN::Transition(match_t(8, 0x80, 0x80), 0, intrinsicState);
     parser->start =
       new IR::BFN::ParserState("$ingress_metadata_shim", INGRESS, init,
-                               { new IR::BFN::SelectBuffer(StartLen(0, 1)) },
-                               { toNormal, toResubmit });
+        { new IR::BFN::Select(new IR::BFN::BufferRVal(StartLen(0, 1))) },
+        { toNormal, toResubmit });
 }
 
 void AddMetadataShims::addEgressMetadata(IR::BFN::Parser *parser) {
@@ -136,8 +134,8 @@ void AddMetadataShims::addEgressMetadata(IR::BFN::Parser *parser) {
     // XXX(seth): We'll eventually need to handle mirroring and coalescing
     // here, too.
     IR::Vector<IR::BFN::ParserPrimitive> extractEgMetadata = {
-        new IR::BFN::ExtractBuffer(gen_fieldref(meta, "egress_port"),
-                                   StartLen(7, 9))
+        new IR::BFN::Extract(gen_fieldref(meta, "egress_port"),
+          new IR::BFN::BufferRVal(StartLen(7, 9)))
     };
     parser->start =
       new IR::BFN::ParserState("$egress_metadata_shim", parser->gress,

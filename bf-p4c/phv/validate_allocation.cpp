@@ -459,11 +459,13 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
     }
 
     // Check that the allocation respects parser alignment limitations.
-    forAllMatching<IR::BFN::ExtractBuffer>(pipe,
-                  [&](const IR::BFN::ExtractBuffer* extract) {
-        int requiredAlignment = extract->extractedBits().lo % 8;
+    forAllMatching<IR::BFN::Extract>(pipe, [&](const IR::BFN::Extract* extract) {
+        auto* bufferSource = extract->source->to<IR::BFN::BufferRVal>();
+        if (!bufferSource) return;
+
+        int requiredAlignment = bufferSource->extractedBits().lo % 8;
         bitrange bits;
-        auto* field = phv.field(extract->dest, &bits);
+        auto* field = phv.field(extract->dest->field, &bits);
         if (!field) {
             ::error("No PHV allocation for field extracted by the "
                     "parser: %1%", extract->dest);

@@ -224,12 +224,12 @@ TEST(TofinoFieldPacking, CreateExtractionState) {
     // Define a packing.
     FieldPacking packing;
     packing.appendPadding(3);
-    auto* field1 = new IR::Constant(0);
+    auto* field1 = new IR::Member(new IR::Constant(0), "field1");
     packing.appendField(field1, 6);
-    auto* field2 = new IR::Constant(0);
+    auto* field2 = new IR::Member(new IR::Constant(0), "field2");
     packing.appendField(field2, 15);
     packing.appendPadding(9);
-    auto* field3 = new IR::Constant(0);
+    auto* field3 = new IR::Member(new IR::Constant(0), "field3");
     packing.appendField(field3, 8);
     packing.padToAlignment(8);
 
@@ -254,24 +254,30 @@ TEST(TofinoFieldPacking, CreateExtractionState) {
 
     // Verify that the state reproduces the packing and has the structure we
     // expect. Note that padding isn't represented as a separate IR object; it's
-    // implicit in the range of bits read by an ExtractBuffer.
+    // implicit in the range of bits read by an Extract.
     auto& extracts = extractionState->statements;
     ASSERT_EQ(3u, extracts.size());
 
-    auto* field1Extract = extracts[0]->to<IR::BFN::ExtractBuffer>();
+    auto* field1Extract = extracts[0]->to<IR::BFN::Extract>();
     ASSERT_TRUE(field1Extract != nullptr);
-    ASSERT_TRUE(field1Extract->dest == field1);
-    ASSERT_TRUE(field1Extract->extractedBits() == nw_bitrange(3, 8));
+    ASSERT_TRUE(field1Extract->dest->field == field1);
+    auto* field1Source = field1Extract->source->to<IR::BFN::BufferRVal>();
+    ASSERT_TRUE(field1Source != nullptr);
+    ASSERT_TRUE(field1Source->extractedBits() == nw_bitrange(3, 8));
 
-    auto* field2Extract = extracts[1]->to<IR::BFN::ExtractBuffer>();
+    auto* field2Extract = extracts[1]->to<IR::BFN::Extract>();
     ASSERT_TRUE(field2Extract != nullptr);
-    ASSERT_TRUE(field2Extract->dest == field2);
-    ASSERT_TRUE(field2Extract->extractedBits() == nw_bitrange(9, 23));
+    ASSERT_TRUE(field2Extract->dest->field == field2);
+    auto* field2Source = field2Extract->source->to<IR::BFN::BufferRVal>();
+    ASSERT_TRUE(field2Source != nullptr);
+    ASSERT_TRUE(field2Source->extractedBits() == nw_bitrange(9, 23));
 
-    auto* field3Extract = extracts[2]->to<IR::BFN::ExtractBuffer>();
+    auto* field3Extract = extracts[2]->to<IR::BFN::Extract>();
     ASSERT_TRUE(field3Extract != nullptr);
-    ASSERT_TRUE(field3Extract->dest == field3);
-    ASSERT_TRUE(field3Extract->extractedBits() == nw_bitrange(33, 40));
+    ASSERT_TRUE(field3Extract->dest->field == field3);
+    auto* field3Source = field3Extract->source->to<IR::BFN::BufferRVal>();
+    ASSERT_TRUE(field3Source != nullptr);
+    ASSERT_TRUE(field3Source->extractedBits() == nw_bitrange(33, 40));
 }
 
 }  // namespace BFN

@@ -5,6 +5,9 @@
 #include "test/gtest/helpers.h"
 
 namespace Test {
+
+namespace {
+
 static IR::Constant *zero = new IR::Constant(0);
 static IR::Constant *one = new IR::Constant(1);
 static IR::Constant *two = new IR::Constant(2);
@@ -34,16 +37,21 @@ class TestRead : public Inspector, TofinoWriteContext {
     TestRead() { }
 };
 
+}  // namespace
+
 TEST(TofinoWriteContext, Read) {
+    auto* zeroLVal = new IR::Member(zero, "zero");
+    auto* oneLVal = new IR::Member(one, "one");
+
     IR::Vector<IR::BFN::ParserPrimitive> statements = {
-        new IR::BFN::ExtractBuffer(zero, StartLen(0, 1)),
-        new IR::BFN::ExtractBuffer(one, StartLen(1, 2)),
-        new IR::BFN::ExtractComputed(zero, zero),
-        new IR::BFN::ExtractComputed(one, one)
+        new IR::BFN::Extract(zeroLVal, new IR::BFN::BufferRVal(StartLen(0, 1))),
+        new IR::BFN::Extract(oneLVal, new IR::BFN::BufferRVal(StartLen(1, 2))),
+        new IR::BFN::Extract(zeroLVal, new IR::BFN::ComputedRVal(zero)),
+        new IR::BFN::Extract(oneLVal, new IR::BFN::ComputedRVal(one))
     };
     auto *state = new IR::BFN::ParserState("foo", INGRESS, statements, {
-        new IR::BFN::SelectComputed(zero),
-        new IR::BFN::SelectComputed(one)
+        new IR::BFN::Select(new IR::BFN::ComputedRVal(zero)),
+        new IR::BFN::Select(new IR::BFN::ComputedRVal(one))
     }, { });
 
     state->apply(TestRead());

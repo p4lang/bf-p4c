@@ -18,13 +18,12 @@
  * computed parser expressions. This means that the bridged metadata states must
  * already have been generated, for example.
  *
- * @post If it's possible, all UnresolvedStackRef, ExtractComputed, and
- * SelectComputed IR nodes are removed from the program, and all negative
- * offsets and negative shifts are eliminated. If program errors (e.g. ambiguous
- * references, references to unextracted headers, or input buffer requirements
- * in excess of what is available on the hardware) prevent us from doing so, or
- * if we're simply incapable of handling what the program is doing, errors are
- * reported.
+ * @post If it's possible, all UnresolvedStackRef and ComputedRVal IR nodes are
+ * removed from the program, and all negative offsets and negative shifts are
+ * eliminated. If program errors (e.g. ambiguous references, references to
+ * unextracted headers, or input buffer requirements in excess of what is
+ * available on the hardware) prevent us from doing so, or if we're simply
+ * incapable of handling what the program is doing, errors are reported.
  */
 struct ResolveComputedParserExpressions : public PassManager {
     ResolveComputedParserExpressions();
