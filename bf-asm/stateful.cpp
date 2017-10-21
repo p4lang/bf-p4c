@@ -207,21 +207,21 @@ template<class REGS> void Stateful::write_merge_regs(REGS &regs, MatchTable *mat
                 ptr_bits = EXACT_VPN_BITS + EXACT_WORD_BITS;
             else {
                 ptr_bits = METER_ADDRESS_BITS - METER_TYPE_BITS - 1 - bw_adjust; }
-        } else 
-            ptr_bits = TCAM_VPN_BITS + TCAM_WORD_BITS; 
+        } else
+            ptr_bits = TCAM_VPN_BITS + TCAM_WORD_BITS;
     } else if (args[0].type == Call::Arg::HashDist) {
         // indirect access via hash dist
-        if (instr_slots > 1) 
+        if (instr_slots > 1)
             ptr_bits = METER_TYPE_BITS - 1;
-        if (per_flow_enable) 
+        if (per_flow_enable)
             ptr_bits += 1;
     } else {
         ptr_bits = METER_ADDRESS_BITS - bw_adjust;
-        if (!per_flow_enable) 
+        if (!per_flow_enable)
             ptr_bits -= 1;
-        if (instr_slots < 2) 
+        if (instr_slots < 2)
             ptr_bits -= METER_TYPE_BITS;
-        else 
+        else
             ptr_bits -= 1;
     }
 
@@ -252,7 +252,7 @@ template<class REGS> void Stateful::write_merge_regs(REGS &regs, MatchTable *mat
         if (per_flow_enable)
             base_width -= 1;
         base_mask = (1U << base_width) - 1;
-        stateful_adr_mask = base_mask << bw_adjust; 
+        stateful_adr_mask = base_mask << bw_adjust;
     }
     stateful_adr_mask &= full_mask;
     if (match->to<HashActionTable>()) {
@@ -364,17 +364,17 @@ void Stateful::gen_tbl_cfg(json::vector &out) {
         int size = (layout_size() - 1) * 1024 * (128U/format->size);
         json::map &tbl = *base_tbl_cfg(out, "stateful", size);
         /*json::map &stage_tbl = */add_stage_tbl_cfg(tbl, "stateful", size);
-        tbl["stateful_alu_width"] = format->size/(dual_mode ? 2 : 1);
+        tbl["alu_width"] = format->size/(dual_mode ? 2 : 1);
         tbl["dual_width_mode"] = dual_mode;
         if (actions) {
             for (auto &a : *actions) {
                 for (auto &i : a.instr) {
                     if (i->name() == "set_bit_at")
-                            tbl["set_instr_at"] = a.code; 
+                            tbl["set_instr_at"] = a.code;
                     if (i->name() == "set_bit")
-                            tbl["set_instr"] = a.code; 
+                            tbl["set_instr"] = a.code;
                     if (i->name() == "clr_bit_at")
-                            tbl["clr_instr_at"] = a.code; 
+                            tbl["clr_instr_at"] = a.code;
                     if (i->name() == "clr_bit")
                             tbl["clr_instr"] = a.code; } }
             actions->gen_tbl_cfg((tbl["actions"] = json::vector())); }
@@ -387,22 +387,22 @@ void Stateful::gen_tbl_cfg(json::vector &out) {
         int size = (layout_size() - 1) * 1024 * (128U/format->size);
         json::map &tbl = *base_tbl_cfg(out, "stateful", size);
         /*json::map &stage_tbl = */add_stage_tbl_cfg(tbl, "stateful", size);
-        tbl["stateful_alu_width"] = format->size/(dual_mode ? 2 : 1);
+        tbl["alu_width"] = format->size/(dual_mode ? 2 : 1);
         tbl["dual_width_mode"] = dual_mode;
         if (actions) {
             for (auto &a : *actions) {
                 for (auto &i : a.instr) {
                     if (i->name() == "set_bit_at")
-                            tbl["set_instr_at"] = a.code; 
+                            tbl["set_instr_at"] = a.code;
                     if (i->name() == "set_bit")
-                            tbl["set_instr"] = a.code; 
+                            tbl["set_instr"] = a.code;
                     if (i->name() == "clr_bit_at")
-                            tbl["clr_instr_at"] = a.code; 
+                            tbl["clr_instr_at"] = a.code;
                     if (i->name() == "clr_bit")
                             tbl["clr_instr"] = a.code; } }
             actions->gen_tbl_cfg((tbl["actions"] = json::vector())); }
         if (bound_selector)
             tbl["bound_to_selection_table_handle"] = bound_selector->handle();
         json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "stateful", size);
-        stage_tbl["default_lower_huffman_bits_included"] = METER_LOWER_HUFFMAN_BITS; } 
+        stage_tbl["default_lower_huffman_bits_included"] = METER_LOWER_HUFFMAN_BITS; }
 }

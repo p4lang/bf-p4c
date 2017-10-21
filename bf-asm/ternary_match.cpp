@@ -541,16 +541,17 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
                     add_reference_table(selection_table_refs, a->selector, "indirect"); }
                 json::vector &meter_table_refs = tbl["meter_table_refs"] = json::vector();
                 for (auto &m : a->meter) {
-                    std::string ref_type = "direct";
-                    if (m.args.size() > 0)
-                        ref_type = "indirect";
+                    std::string ref_type = m.is_indirect() ? "indirect" : "direct";
                     add_reference_table(meter_table_refs, m, ref_type); }
                 json::vector &stats_table_refs = tbl["statistics_table_refs"] = json::vector();
                 for (auto &s : a->stats) {
-                    std::string ref_type = "direct";
-                    if (s.args.size() > 0)
-                        ref_type = "indirect";
-                    add_reference_table(stats_table_refs, s, ref_type); } }
+                    std::string ref_type = s.is_indirect() ? "indirect" : "direct";
+                    add_reference_table(stats_table_refs, s, ref_type); }
+                json::vector &stateful_table_refs = tbl["stateful_table_refs"] = json::vector();
+                for (auto &s : a->stateful) {
+                  std::string ref_type = s.is_indirect() ? "indirect" : "direct";
+                  add_reference_table(stateful_table_refs, s, ref_type); }
+            }
             json::vector &action_data_table_refs = tbl["action_data_table_refs"] = json::vector();
             if (indirect->action)
                 add_reference_table(action_data_table_refs, indirect->action, "indirect");
@@ -583,7 +584,9 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
             tind["logical_table_id"] = 0;
             tind["stage_number"] = 0;
             tind["stage_table_type"] = "ternary_indirection";
-            tind["size"] = 0; }
+            tind["size"] = 0;
+            tbl["stateful_table_refs"] = json::vector();
+        }
         common_tbl_cfg(tbl, "ternary");
         if (actions)
             actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
@@ -592,7 +595,6 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
         MatchTable::gen_idletime_tbl_cfg(stage_tbl);
         stage_tables.push_back(std::move(stage_tbl));
         match_attributes["match_type"] = "ternary";
-        tbl["stateful_table_refs"] = json::vector();
     } else {
         unsigned number_entries = layout_size()/match.size() * 512;
         json::map &tbl = *base_tbl_cfg(out, "match_entry", number_entries);
@@ -691,11 +693,16 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
                 for (auto &v : kv.value.vec)
                     attached.stats.emplace_back(v, this);
             else attached.stats.emplace_back(kv.value, this);
-        } else if (kv.key == "meter" || kv.key == "stateful") {
+        } else if (kv.key == "meter") {
             if (kv.value.type == tVEC)
                 for (auto &v : kv.value.vec)
                     attached.meter.emplace_back(v, this);
             else attached.meter.emplace_back(kv.value, this);
+        } else if (kv.key == "stateful") {
+            if (kv.value.type == tVEC)
+                for (auto &v : kv.value.vec)
+                    attached.stateful.emplace_back(v, this);
+            else attached.stateful.emplace_back(kv.value, this);
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     value_desc(kv.key), name()); }

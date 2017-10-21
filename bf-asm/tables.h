@@ -226,6 +226,7 @@ public:
         void setup(const value_t &v, Table *tbl);
         Call() {}
         Call(const value_t &v, Table *tbl) { setup(v, tbl); }
+        bool is_indirect() const { return (args.size() > 0); }
     };
 
     struct p4_param {
@@ -463,7 +464,7 @@ public:
 
 struct AttachedTables {
     Table::Call                 selector;
-    std::vector<Table::Call>    stats, meter;
+    std::vector<Table::Call>    stats, meter, stateful;
     SelectionTable *get_selector() const;
     void pass1(MatchTable *self);
     template<class REGS> void write_merge_regs(REGS &regs, MatchTable *self, int type, int bus);

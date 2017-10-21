@@ -1662,7 +1662,7 @@ void AttachedTables::pass1(MatchTable *self) {
             error(selector.lineno, "Selector table %s not in same thread as %s",
                   selector->name(), self->name()); }
     for (auto &s : stats) if (s.check()) {
-        if (s->set_match_table(self, s.args.size() >= 1) != Table::COUNTER)
+        if (s->set_match_table(self, s.is_indirect()) != Table::COUNTER)
             error(s.lineno, "%s is not a counter table", s->name());
         if (s.args.size() > 1)
             error(s.lineno, "Stats table requires zero or one args");
@@ -1675,9 +1675,9 @@ void AttachedTables::pass1(MatchTable *self) {
         else if (s->gress != self->gress)
             error(s.lineno, "Counter %s not in same thread as %s", s->name(), self->name()); }
     for (auto &m : meter) if (m.check()) {
-        auto type = m->set_match_table(self, m.args.size() >= 1);
+        auto type = m->set_match_table(self, m.is_indirect());
         if (type != Table::METER && type != Table::STATEFUL)
-            error(m.lineno, "%s is not a meter or stateful table", m->name());
+            error(m.lineno, "%s is not a meter table", m->name());
         if (m.args.size() > 1)
             error(m.lineno, "Meter table requires zero or one args");
         if (m.args.size() > 0 && m.args[0].hash_dist())
@@ -1688,6 +1688,14 @@ void AttachedTables::pass1(MatchTable *self) {
             error(m.lineno, "Meter %s not in same stage as %s", m->name(), self->name());
         else if (m->gress != self->gress)
             error(m.lineno, "Meter %s not in same thread as %s", m->name(), self->name()); }
+    for (auto &s : stateful) if (s.check()) {
+        auto type = s->set_match_table(self, s.is_indirect());
+        if (type != Table::STATEFUL)
+            error(s.lineno, "%s is not a stateful table", s->name());
+        if (s.args.size() > 1)
+            error(s.lineno, "Stateful table requires zero or one args");
+        warning(s.lineno, "Checks for stateful tables are not yet fully implemented");
+      }
 }
 
 template<class REGS>
