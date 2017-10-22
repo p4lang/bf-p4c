@@ -614,7 +614,9 @@ void ExactMatchTable::add_field_to_pack_format(json::vector &field_list, int bas
         for (auto &piece : field.bits) {
             auto mw = --match_by_bit.upper_bound(bit);
             int lo = bit - mw->first;
-            int offset = piece.lo;
+	    int lsb_mem_word_idx = piece.lo / MEM_WORD_WIDTH;
+	    int msb_mem_word_idx = piece.hi / MEM_WORD_WIDTH;
+            int offset = piece.lo % MEM_WORD_WIDTH;
             while(mw != match_by_bit.end() &&  mw->first < bit + piece.size()) {
                 std::string source = "spec";
                 std::string immediate_name = "";
@@ -632,8 +634,8 @@ void ExactMatchTable::add_field_to_pack_format(json::vector &field_list, int bas
                     { "lsb_mem_word_offset", json::number(offset) },
                     { "start_bit", json::number(lo + mw->second.lobit()) },
                     { "immediate_name", json::string(immediate_name) },
-                    { "lsb_mem_word_idx", json::number(0) }, //FIXME-JSON
-                    { "msb_mem_word_idx", json::number(0) }, //FIXME-JSON
+                    { "lsb_mem_word_idx", json::number(lsb_mem_word_idx) },
+                    { "msb_mem_word_idx", json::number(msb_mem_word_idx) },
                     { "match_mode", json::string("unused") }, //FIXME-JSON
                     { "enable_pfe", json::False() }, //FIXME-JSON
                     { "field_width", json::number(width) }});
@@ -726,10 +728,11 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
         } else if (action && action->actions) {
             action->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
             action->actions->add_action_format(this, stage_tbl); }
-        if (format)
-            add_pack_format(stage_tbl, 128, 1, 1);
-        else
-            add_pack_format(stage_tbl, 0, 0, 1);
+        add_pack_format(stage_tbl, format, false);
+        //if (format)
+        //    add_pack_format(stage_tbl, ((format->size - 1)/128U + 1) * 128, 1, 1);
+        //else
+        //    add_pack_format(stage_tbl, 0, 0, 1);
         add_result_physical_buses(stage_tbl);
         if (ways.size() > 0) {
             json::vector &way_stage_tables = stage_tbl["ways"] = json::vector();

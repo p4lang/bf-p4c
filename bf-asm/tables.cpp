@@ -1837,10 +1837,10 @@ void Table::add_field_to_pack_format(json::vector &field_list, int basebit, std:
                     if (auto adt = action->to<ActionTable>()) {
                         field_entry["start_bit"] = std::min(5U, adt->get_log2size() - 2); } }
             field_entry["field_width"] = bits.size() + add_width;
-            field_entry["lsb_mem_word_idx"] = bits.lo/128U;
-            field_entry["msb_mem_word_idx"] = bits.hi/128U;
+            field_entry["lsb_mem_word_idx"] = bits.lo/MEM_WORD_WIDTH;
+            field_entry["msb_mem_word_idx"] = bits.hi/MEM_WORD_WIDTH;
             field_entry["source"] = json::string(source);
-            field_entry["lsb_mem_word_offset"] = basebit + bits.lo;
+            field_entry["lsb_mem_word_offset"] = basebit + (bits.lo % MEM_WORD_WIDTH);
             field_entry["field_name"] = json::string(name);
             //field_entry["immediate_name"] = json::string(immediate_name);
             if (this->to<ExactMatchTable>())
@@ -1935,56 +1935,76 @@ void Table::add_zero_padding_fields(Table::Format *format, Table::Actions::Actio
             format->add_field(f, pad_name); }
 }
 
+bool Table::is_wide_format() {
+    if (format) {
+        if (format->log2size >= 7 || format->groups() > 1)
+	    return true;
+	return false; }
+    return false;
+}
+
+int Table::get_entries_per_table_word() {
+    if (format) {
+    	if (is_wide_format())
+    	    return format->groups();
+    	return format->log2size ? (1U << (ceil_log2(MEM_WORD_WIDTH) - format->log2size)) : 0; }
+    return 1;
+}
+ 
+int Table::get_mem_units_per_table_word() {
+    if (format) {
+        if (is_wide_format())
+	    return ((format->size - 1)/MEM_WORD_WIDTH) + 1; }
+    return 1;
+}
+
+int Table::get_table_word_width() {
+    if (format) {
+	if (is_wide_format())
+            return get_entries_per_table_word() * get_mem_units_per_table_word(); }
+    return MEM_WORD_WIDTH;
+}
+
 json::map &Table::add_pack_format(json::map &stage_tbl, Table::Format *format,
-                                  Table::Actions::Action *act) {
+                                  bool print_fields, Table::Actions::Action *act) {
     if (options.new_ctx_json) {
         decltype(act->reverse_alias()) alias;
         if (act) alias = act->reverse_alias();
         // Add zero padding fields to format
         // FIXME: Can this be moved to a format pass?
-        //unsigned format_width = 64;
-        unsigned format_width = 1U << format->log2size;
-        unsigned memory_word_width = 128;
-        if (stage_tbl["stage_table_type"]->to<json::string>() != "hash_way")
-            add_zero_padding_fields(format, act, format_width);
-        json::map pack_fmt { { "memory_word_width", json::number(memory_word_width) } };
-        /* FIXME -- factor the two cases of this if better */
-        if (format->log2size >= 7 || format->groups() > 1) {
-            pack_fmt["table_word_width"] = ((format->size - 1) | 127) + 1;
-            pack_fmt["entries_per_table_word"] = format->groups();
-            pack_fmt["number_memory_units_per_table_word"] = (format->size - 1)/128U + 1;
+	if (format) {
+            unsigned format_width = 1U << format->log2size;
+            if (stage_tbl["stage_table_type"]->to<json::string>() != "hash_way")
+                add_zero_padding_fields(format, act, format_width); }
+        json::map pack_fmt;
+        pack_fmt["memory_word_width"] = MEM_WORD_WIDTH;
+        pack_fmt["table_word_width"] = get_table_word_width();
+        pack_fmt["entries_per_table_word"] = get_entries_per_table_word();
+        pack_fmt["number_memory_units_per_table_word"] = get_mem_units_per_table_word();
+        if (print_fields) {
+            int basebit = std::max(0, MEM_WORD_WIDTH - (1 << format->log2size));
             json::vector &entry_list = pack_fmt["entries"];
-            //int basebit = (format->size - 1) | 127;
-            //int basebit = 128U - (1 << format->log2size);
-            int basebit = 0;
-            for (int i = format->groups()-1; i >= 0; --i) {
-                json::vector field_list;
-                for (auto it = format->begin(i); it != format->end(i); ++it)
-                    add_field_to_pack_format(field_list, basebit, it->first, it->second,
-                                             get(alias, it->first));
-                canon_field_list(field_list);
-                entry_list.push_back( json::map {
-                    { "entry_number", json::number(i) },
-                    { "fields", std::move(field_list) }}); }
-        } else {
-            // Determine no. of entries that can fit in 128 bits (format word)
-            unsigned log2size = 7;
-            int entries = format->log2size ? 1U << (log2size - format->log2size) : 0;
-            pack_fmt["table_word_width"] = 128;
-            pack_fmt["entries_per_table_word"] = entries;
-            pack_fmt["number_memory_units_per_table_word"] = 1;
-            json::vector &entry_list = pack_fmt["entries"];
-            int basebit = 128U - (1 << format->log2size);
-            for (int i = entries-1; i >= 0; --i) {
-                json::vector field_list;
-                for (auto &field : *format)
-                    add_field_to_pack_format(field_list, basebit, field.first, field.second,
-                                             get(alias, field.first));
-                canon_field_list(field_list);
-                entry_list.push_back( json::map {
-                    { "entry_number", json::number(i) },
-                    { "fields", std::move(field_list) }});
-                basebit -= 1 << format->log2size; } }
+	    if (is_wide_format()) {
+                for (int i = format->groups()-1; i >= 0; --i) {
+                    json::vector field_list;
+                    for (auto it = format->begin(i); it != format->end(i); ++it)
+                        add_field_to_pack_format(field_list, basebit, it->first, it->second,
+                                                 get(alias, it->first));
+                    canon_field_list(field_list);
+                    entry_list.push_back( json::map {
+                        { "entry_number", json::number(i) },
+                        { "fields", std::move(field_list) }}); }
+            } else {
+                for (int i = get_entries_per_table_word()-1; i >= 0; --i) {
+                    json::vector field_list;
+                    for (auto &field : *format)
+                        add_field_to_pack_format(field_list, basebit, field.first, field.second,
+                                                 get(alias, field.first));
+                    canon_field_list(field_list);
+                    entry_list.push_back( json::map {
+                        { "entry_number", json::number(i) },
+                        { "fields", std::move(field_list) }});
+                    basebit -= 1 << format->log2size; } } }
         if (act)
             pack_fmt["action_handle"] = act->handle;
         json::vector &pack_format = stage_tbl["pack_format"];
