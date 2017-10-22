@@ -136,6 +136,10 @@ class ReplaceArchitecture : public Inspector {
                                        std::make_pair("ig_intr_md", "ingress_port"));
         structure->metadataMap.emplace(std::make_pair("standard_metadata", "egress_port"),
                                        std::make_pair("eg_intr_md", "egress_port"));
+        structure->metadataMap.emplace(std::make_pair("standard_metadata", "instance_type"),
+                                       std::make_pair("eg_intr_md", "instance_type"));
+        structure->metadataMap.emplace(std::make_pair("standard_metadata", "packet_length"),
+                                       std::make_pair("eg_intr_md", "pkt_length"));
         LOG3("populate metadata map with size " << structure->metadataMap.size());
     }
 

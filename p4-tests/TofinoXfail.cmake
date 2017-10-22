@@ -112,10 +112,6 @@ if (NOT ENABLE_TNA)
     )
 
   p4c_add_xfail_reason("tofino"
-    "Header present in IR not under Member"
-    testdata/p4_14_samples/resubmit.p4
-    )
-  p4c_add_xfail_reason("tofino"
     "Extract field slice .* with a negative offset."
     extensions/p4_tests/p4_14/c1/COMPILER-295/vag1892.p4
     extensions/p4_tests/p4_14/jenkins/pcie_pkt_test/pcie_pkt_test_one.p4
@@ -801,6 +797,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/packet_redirect.p4
   # was "too much data for parser match"
   testdata/p4_14_samples/copy_to_cpu.p4
+  testdata/p4_14_samples/resubmit.p4
   testdata/p4_16_samples/issue907-bmv2.p4
   )
 
@@ -1062,7 +1059,6 @@ if (ENABLE_TNA)
     testdata/p4_14_samples/packet_redirect.p4
     testdata/p4_14_samples/copy_to_cpu.p4
     testdata/p4_14_samples/resubmit.p4
-    extensions/p4_tests/p4_14/c1/COMPILER-559/case2987.p4
     )
   # P4-14 program can not define extern
   p4c_add_xfail_reason("tofino"
