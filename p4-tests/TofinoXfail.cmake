@@ -250,7 +250,12 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/19-SimpleTrill.p4
   extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   extensions/p4_tests/p4_14/switch_20160602/switch.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "error: CCGF cannot be formed with parde_alignment constraints"
   extensions/p4_tests/p4_14/switch/p4src/switch.p4
+  switch_l2
   )
 
 # BRIG-112
