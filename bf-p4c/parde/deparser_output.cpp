@@ -208,7 +208,8 @@ std::ostream &operator<<(std::ostream &out, const DeparserAsmOutput &d) {
                 out << indent << idx++ << ": [ ";
                 d.emit_fieldlist(out, l);
                 out << " ]" << std::endl; }
-            out << indent-- << "select: " << canon_name(digest->select->name) << std::endl;
+            out << indent-- << "select: " << canon_name(d.phv.field(digest->select)->name)
+                << std::endl;
         }
         d.deparser->emits.apply(OutputChecksums(out, d.phv, indent));
     }

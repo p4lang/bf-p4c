@@ -21,19 +21,105 @@ void generateEmits(const IR::Expression* expression, Func func) {
     }
 }
 
+class GenerateDeparser : public Inspector {
+    IR::BFN::Deparser                           *dprsr;
+    const IR::Expression                        *pred = nullptr;
+    ordered_map<cstring, IR::BFN::Digest *>     digests;
+
+    void generateDigest(IR::BFN::Digest *&digest, cstring name, const IR::Expression *list);
+    bool equiv(const IR::Expression *a, const IR::Expression *b) const;
+    bool preorder(const IR::IfStatement *ifstmt) {
+        const IR::Expression *old_pred = pred;
+        pred = ifstmt->condition;
+        if (old_pred) pred = new IR::LAnd(old_pred, pred);
+        visit(ifstmt->ifTrue, "ifTrue");
+        if (ifstmt->ifFalse) {
+            pred = new IR::LNot(ifstmt->condition);
+            if (old_pred) pred = new IR::LAnd(old_pred, pred);
+            visit(ifstmt->ifFalse, "ifFalse"); }
+        pred = old_pred;
+        return false; }
+
+    bool preorder(const IR::MethodCallExpression* mc) {
+        auto method = mc->method->to<IR::Member>();
+        if (!method) return true;
+        if (method->member == "emit") {
+            if (pred) error("Conditional emit %s not supported", mc);
+            generateEmits((*mc->arguments)[0], [&](const IR::Expression* field,
+                                                   const IR::Expression* povBit) {
+                dprsr->emits.push_back(new IR::BFN::Emit(mc->srcInfo, field, povBit)); });
+            return false;
+        } else if (method->member == "update") {
+            warning("FIXME method call %s in deparser not yet supported", mc);
+            return false;
+        } else if (method->member == "add_metadata") {
+            if (auto dname = method->expr->to<IR::PathExpression>()) {
+                generateDigest(digests[dname->path->name], dname->path->name, mc->arguments->at(0));
+            } else {
+                error("Unsupported method call %s in deparser", mc); }
+            return false;
+        } else {
+            error("Unsupported method call %s in deparser", mc);
+            return true; } }
+
+ public:
+    explicit GenerateDeparser(IR::BFN::Deparser *d) : dprsr(d) {}
+};
+
+// FIXME -- factor this with Digests::add_to_digest in digest.h?
+void GenerateDeparser::generateDigest(IR::BFN::Digest *&digest, cstring name,
+                                      const IR::Expression *expr) {
+    const IR::Constant *k = nullptr;
+    const IR::Expression *select;
+    if (!pred) {
+        error("%s:Unconditional %s.add_metadata not supported", expr->srcInfo, name);
+        return;
+    } else if (auto eq = pred->to<IR::Equ>()) {
+        if ((k = eq->left->to<IR::Constant>()))
+            select = eq->right;
+        else if ((k = eq->right->to<IR::Constant>()))
+            select = eq->left; }
+    if (!k) {
+        error("%s.add_metadata condition %s not supported", name, pred);
+        return; }
+    if (!digest) {
+        digest = new IR::BFN::Digest(dprsr->gress, name, select);
+        dprsr->digests.addUnique(name, digest);
+    } else if (!equiv(select, digest->select)) {
+        error("Inconsistent %s selectors, %s and %s", name, select, digest->select); }
+    auto list = dynamic_cast<const IR::Vector<IR::Expression> *>(expr);
+    if (!list) {
+        if (auto l = dynamic_cast<const IR::ListExpression *>(expr))
+            list = new IR::Vector<IR::Expression>(l->components);
+        else if (expr)
+            list = new IR::Vector<IR::Expression>({expr});
+        else
+            list = new IR::Vector<IR::Expression>; }
+    if (static_cast<int>(digest->sets.size()) <= k->asInt())
+        digest->sets.resize(k->asInt() + 1);
+    digest->sets.at(k->asInt()) = list;
+}
+
+// FIXME -- yet another 'deep' comparison for expressions
+bool GenerateDeparser::equiv(const IR::Expression *a, const IR::Expression *b) const {
+    if (a == b) return true;
+    if (typeid(*a) != typeid(*b)) return false;
+    if (auto ma = a->to<IR::Member>()) {
+        auto mb = b->to<IR::Member>();
+        return ma->member == mb->member && equiv(ma->expr, mb->expr); }
+    if (auto pa = a->to<IR::PathExpression>()) {
+        auto pb = b->to<IR::PathExpression>();
+        return pa->path->name == pb->path->name; }
+    if (auto ka = a->to<IR::Constant>()) {
+        auto kb = b->to<IR::Constant>();
+        return ka->value == kb->value; }
+    return false;
+}
+
 }  // namespace
 IR::BFN::Deparser::Deparser(gress_t gr, const IR::P4Control* dp) : gress(gr) {
     CHECK_NULL(dp);
-    forAllMatching<IR::MethodCallExpression>(dp,
-                  [&](const IR::MethodCallExpression* mc) {
-        auto method = mc->method->to<IR::Member>();
-        if (!method || method->member != "emit") return true;
-        generateEmits((*mc->arguments)[0], [&](const IR::Expression* field,
-                                               const IR::Expression* povBit) {
-            emits.push_back(new IR::BFN::Emit(mc->srcInfo, field, povBit));
-        });
-        return false;
-    });
+    dp->apply(GenerateDeparser(this));
 }
 
 IR::BFN::Deparser::Deparser(gress_t gr, const IR::BFN::Parser* p) : gress(gr) {

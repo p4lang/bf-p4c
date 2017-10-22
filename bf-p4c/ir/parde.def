@@ -310,9 +310,8 @@ class DeparserIntrinsic {
 class Digest {
     gress_t                             gress;
     cstring                             name;
-    TempVar                             select;
-    std::vector<Vector<Expression>>     sets;
-#noconstructor
+    Expression                          select;
+    std::vector<Vector<Expression>>     sets = {};
     Digest(gress_t gress, cstring name) : gress(gress), name(name),
         select(new TempVar(Type::Bits::get(3), cstring("$" + name))) {}
     visit_children {
