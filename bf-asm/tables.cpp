@@ -1084,8 +1084,8 @@ void Table::Actions::gen_tbl_cfg(json::vector &cfg) {
 
 void Table::Actions::add_p4_params(const Action &act, json::vector &cfg) {
     int index = 0;
+    unsigned start_bit = 0;
     for (auto &a : act.p4_params_list) {
-        unsigned start_bit = 0;
         json::map param;
         param["name"] = a.name;
         param["start_bit"] = start_bit;
@@ -1404,7 +1404,8 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
         merge.mau_table_counter_ctl[logical_id/8U].set_subfield(
             TABLE_HIT, 3 * (logical_id%8U), 3); }
 }
-FOR_ALL_TARGETS(INSTANTIATE_TARGET_TEMPLATE, void MatchTable::write_regs, mau_regs &, int, Table *)
+
+// FOR_ALL_TARGETS(INSTANTIATE_TARGET_TEMPLATE, void MatchTable::write_regs, mau_regs &, int, Table *)
 
 template<class REGS>
 void Table::write_mapram_regs(REGS &regs, int row, int col, int vpn, int type) {

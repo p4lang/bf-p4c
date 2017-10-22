@@ -20,7 +20,7 @@ public:
         Val() {}
         Val(gress_t gr, const value_t &v) : val(gr, v) {}
         Val(gress_t gr, const value_t &v, const value_t &p) : val(gr, v), pov(gr, p) {}
-        Val &operator=(const Val &a) { val = a.val; pov = a.pov; }
+        Val &operator=(const Val &a) { val = a.val; pov = a.pov; return *this; }
         explicit operator bool() const { return bool(val); }
         Phv::Slice operator*() const { return *val; }
         Phv::Slice operator->() const { return *val; }
