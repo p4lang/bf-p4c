@@ -156,6 +156,12 @@ bool AddMetadataShims::preorder(IR::BFN::Deparser *d) {
     return false;
 }
 
+void AddMetadataShims::addDeparserIntrinsic(IR::BFN::Deparser *d, const IR::HeaderOrMetadata *meta,
+                                            cstring field, cstring intrinsic) {
+    if (meta->type->getField(field))
+        d->metadata[intrinsic] = new IR::BFN::DeparserIntrinsic(gen_fieldref(meta, field));
+}
+
 void AddMetadataShims::addIngressMetadata(IR::BFN::Deparser *d) {
     // XXX(hanw): remove after tna translation for p16 is done
     cstring ingress_intrinsic_metadata = useTna ? "ingress_intrinsic_metadata_for_tm" :
@@ -165,37 +171,20 @@ void AddMetadataShims::addIngressMetadata(IR::BFN::Deparser *d) {
     if (!meta) return;
 
     cstring ingress_egress_port = useTna ? "ucast_egress_port" : "egress_spec";
-    if (meta->type->getField(ingress_egress_port))
-        d->metadata["egress_unicast_port"] = gen_fieldref(meta, ingress_egress_port);
+    addDeparserIntrinsic(d, meta, ingress_egress_port, "egress_unicast_port");
 
     // XXX(hanw): remove after tna translation for p16 is done
     if (useTna) {
-        if (meta->type->getField("mcast_grp_a"))
-            d->metadata["egress_multicast_group_a"] = gen_fieldref(meta, "mcast_grp_a");
-        if (meta->type->getField("mcast_grp_b"))
-            d->metadata["egress_multicast_group_b"] = gen_fieldref(meta, "mcast_grp_b");
+        addDeparserIntrinsic(d, meta, "mcast_grp_a", "egress_multicast_group_a");
+        addDeparserIntrinsic(d, meta, "mcast_grp_b", "egress_multicast_group_b");
     } else {
-        if (meta->type->getField("mcast_grp"))
-            d->metadata["egress_multicast_group"] = gen_fieldref(meta, "mcast_grp");
-    }
-
-    if (meta->type->getField("deflect_on_drop"))
-        d->metadata["deflect_on_drop"] = gen_fieldref(meta, "deflect_on_drop");
-
-    if (meta->type->getField("packet_color"))
-        d->metadata["meter_color"] = gen_fieldref(meta, "packet_color");
-
-    if (meta->type->getField("ingress_cos"))
-        d->metadata["icos"] = gen_fieldref(meta, "ingress_cos");
-
-    if (meta->type->getField("qid"))
-        d->metadata["qid"] = gen_fieldref(meta, "qid");
-
-    if (meta->type->getField("bypass_egress"))
-        d->metadata["bypss_egr"] = gen_fieldref(meta, "bypass_egress");
-
-    if (meta->type->getField("enable_mcast_cutthru"))
-        d->metadata["ct_mcast"] = gen_fieldref(meta, "enable_mcast_cutthru");
+        addDeparserIntrinsic(d, meta, "mcast_grp", "egress_multicast_group"); }
+    addDeparserIntrinsic(d, meta, "deflect_on_drop", "deflect_on_drop");
+    addDeparserIntrinsic(d, meta, "packet_color", "meter_color");
+    addDeparserIntrinsic(d, meta, "ingress_cos", "icos");
+    addDeparserIntrinsic(d, meta, "qid", "qid");
+    addDeparserIntrinsic(d, meta, "bypass_egress", "bypss_egr");
+    addDeparserIntrinsic(d, meta, "enable_mcast_cutthru", "ct_mcast");
 }
 
 void AddMetadataShims::addEgressMetadata(IR::BFN::Deparser *d) {
@@ -206,10 +195,6 @@ void AddMetadataShims::addEgressMetadata(IR::BFN::Deparser *d) {
     // egress_port is read-only
     auto *meta = pipe->metadata[egress_intrinsic_metadata];
     if (!meta) return;
-
-    if (meta->type->getField("egress_port"))
-        d->metadata["egress_unicast_port"] = gen_fieldref(meta, "egress_port");
-
-    if (meta->type->getField("egress_cos"))
-        d->metadata["ecos"] = gen_fieldref(meta, "egress_cos");
+    addDeparserIntrinsic(d, meta, "egress_port", "egress_unicast_port");
+    addDeparserIntrinsic(d, meta, "egress_cos", "ecos");
 }

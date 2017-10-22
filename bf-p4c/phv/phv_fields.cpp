@@ -952,8 +952,9 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
             // One example of metadata is "egress_port" which points to
             // egress port in the egress pipeline and
             // egress spec in the ingress pipeline
-            PHV::Field* f = phv.field(md.second);
+            PHV::Field* f = phv.field(md.second->value);
             BUG_CHECK(f != nullptr, "Field not created in PhvInfo");
+            // FIXME -- this is only needed on tofino, not on jbay
             f->set_deparsed_no_pack(true);
             LOG1(".....Deparser Constraint '" << md.first << "' on field..... " << f); }
 

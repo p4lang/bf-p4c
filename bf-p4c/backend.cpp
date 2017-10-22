@@ -23,6 +23,7 @@
 #include "bf-p4c/mau/table_placement.h"
 #include "bf-p4c/mau/table_seqdeps.h"
 #include "bf-p4c/mau/table_summary.h"
+#include "bf-p4c/parde/add_jbay_pov.h"
 #include "bf-p4c/parde/asm_output.h"
 #include "bf-p4c/parde/bridge_metadata.h"
 #include "bf-p4c/parde/digest.h"
@@ -167,6 +168,7 @@ Backend::Backend(const BFN_Options& options) :
         new CollectPhvInfo(phv),
         &defuse,
         new AddBridgedMetadata(phv, defuse),
+        options.device == "jbay" ? new AddJBayMetadataPOV(phv) : nullptr,
         new ResolveComputedParserExpressions,
         new CollectPhvInfo(phv),
         &defuse,

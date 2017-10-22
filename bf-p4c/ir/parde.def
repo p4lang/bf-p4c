@@ -302,6 +302,11 @@ class Parser : AbstractParser {
     ParserState start;
 }
 
+class DeparserIntrinsic {
+    Expression          value;
+    NullOK Expression   povBit = nullptr;
+}
+
 class Digest {
     gress_t                             gress;
     cstring                             name;
@@ -357,7 +362,7 @@ class EmitChecksum : DeparserPrimitive {
 class Deparser : Unit {
     gress_t                             gress;
     inline Vector<DeparserPrimitive>    emits;
-    inline NameMap<Expression>          metadata;
+    inline NameMap<DeparserIntrinsic>   metadata;
     inline NameMap<Digest>              digests;
 #noconstructor
     Deparser(gress_t gr, Parser s);

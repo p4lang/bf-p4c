@@ -152,6 +152,20 @@ void DeparserAsmOutput::emit_fieldlist(std::ostream &out, const IR::Vector<IR::E
             sep = ", "; } }
 }
 
+class printIntrin {
+    const PhvInfo &phv;
+    const IR::BFN::DeparserIntrinsic &di;
+    friend std::ostream &operator<<(std::ostream &out, const printIntrin &p) {
+        if (p.di.povBit) {
+            out << "{ " << canon_name(p.phv.field(p.di.value)->name) << ": "
+                << canon_name(p.phv.field(p.di.povBit)->name) << " }";
+        } else {
+            out << canon_name(p.phv.field(p.di.value)->name); }
+        return out; }
+ public:
+    printIntrin(const PhvInfo &p, const IR::BFN::DeparserIntrinsic *d) : phv(p), di(*d) {}
+};
+
 std::ostream &operator<<(std::ostream &out, const DeparserAsmOutput &d) {
     indent_t    indent(1);
     out << "deparser " << d.gress << ":" << std::endl;
@@ -165,7 +179,8 @@ std::ostream &operator<<(std::ostream &out, const DeparserAsmOutput &d) {
 
         // XXX(zma) "egress_multicast_group" is an exception that can have multiple elements,
         // the following block of code deals with this exception.
-        std::vector<std::pair<const cstring, const IR::Expression*>> egress_multicast_group;
+        std::vector<std::pair<const cstring, const IR::BFN::DeparserIntrinsic *>>
+            egress_multicast_group;
         for (auto md : d.deparser->metadata) {
             if (md.first == "egress_multicast_group_a" ||
                 md.first == "egress_multicast_group_b") {
@@ -173,17 +188,16 @@ std::ostream &operator<<(std::ostream &out, const DeparserAsmOutput &d) {
                  continue;
             }
 
-            out << indent << md.first << ": "
-                << canon_name(d.phv.field(md.second)->name) << std::endl;
+            out << indent << md.first << ": " << printIntrin(d.phv, md.second) << std::endl;
         }
         if (egress_multicast_group.size() == 2) {
             out << indent << "egress_multicast_group: [ ";
-            out << canon_name(d.phv.field(egress_multicast_group[0].second)->name) << ", ";
-            out << canon_name(d.phv.field(egress_multicast_group[1].second)->name) << " ]"
+            out << printIntrin(d.phv, egress_multicast_group[0].second) << ", ";
+            out << printIntrin(d.phv, egress_multicast_group[1].second) << " ]"
                 << std::endl;
         } else if (egress_multicast_group.size() == 1) {
             out << indent << "egress_multicast_group: "
-                << canon_name(d.phv.field(egress_multicast_group[0].second)->name)
+                << printIntrin(d.phv, egress_multicast_group[0].second)
                 << std::endl;
         }
 

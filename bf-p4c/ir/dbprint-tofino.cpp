@@ -180,6 +180,11 @@ void IR::BFN::LoweredParser::dbprint(std::ostream &out) const {
     });
 }
 
+void IR::BFN::DeparserIntrinsic::dbprint(std::ostream &out) const {
+    out << *value;
+    if (povBit) out << " : " << *povBit;
+}
+
 void IR::BFN::Digest::dbprint(std::ostream &out) const {
     out << endl << gress << ' ' << name << ": " << indent << endl << "select: " << *select;
     int idx = 0;
