@@ -198,6 +198,13 @@ class PHV_Container {
         int field_bit_lo = 0,
         Container_Content::Pass pass = Container_Content::Pass::None,
         bool process_ccgf = true);
+    std::pair<int, int> ccgf_members_bit_assign(
+        int& start,
+        const int width,
+        const PHV::Field *field,
+        const Container_Content::Pass pass = Container_Content::Pass::None,
+        const bool taint_not_overlay = true);
+            // ccgf member processing commonality for both taint as well as overlay_ccgf
     int taint_ccgf(
         int start,
         int width,
@@ -212,7 +219,6 @@ class PHV_Container {
         PHV::Field *field,
         int start,
         const int width,
-        int field_bit_lo,
         Container_Content::Pass pass = Container_Content::Pass::Field_Interference);
     void single_field_overlay(
         PHV::Field *f,

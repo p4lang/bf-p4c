@@ -224,12 +224,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/switch_20160602/switch.p4
   )
 
-p4c_add_xfail_reason("tofino"
-  "error: CCGF cannot be formed with parde_alignment constraints"
-  extensions/p4_tests/p4_14/switch/p4src/switch.p4
-  switch_l2
-  )
-
 # BRIG-112
 p4c_add_xfail_reason("tofino"
   "ALU ops cannot operate on slices"
@@ -566,6 +560,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c8/COMPILER-616/case3331.p4
   extensions/p4_tests/p4_14/jenkins/action_spec_format/action_spec_format.p4
   extensions/p4_tests/p4_14/jenkins/stats_pi/stats_pi.p4
+  switch_l2
   )
 
 p4c_add_xfail_reason("tofino"
@@ -702,12 +697,15 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/01-BigMatch.p4
   extensions/p4_tests/p4_14/04-FullPHV3.p4
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   extensions/p4_tests/p4_14/c1/COMPILER-133/full_tphv.p4
   extensions/p4_tests/p4_14/c4/COMPILER-590/case3179.p4
   extensions/p4_tests/p4_14/c4/COMPILER-591/case3176.p4
   extensions/p4_tests/p4_14/jenkins/power/power.p4
   testdata/p4_14_samples/parser_dc_full.p4
   testdata/p4_14_samples/port_vlan_mapping.p4
+  extensions/p4_tests/p4_14/switch_20160602/switch.p4
+  extensions/p4_tests/p4_14/switch/p4src/switch.p4
   )
 
 # Likely still has a bug; emits the following warning:
@@ -808,11 +806,6 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Conflicting hash distribution bit allocation .*"
-  extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
-  )
-
-p4c_add_xfail_reason("tofino"
   "Hash table .* column .* duplicated"
   extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
   )
@@ -853,6 +846,10 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
   extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
   extensions/p4_tests/p4_14/test_config_100_hash_action.p4
+  extensions/p4_tests/p4_14/c4/COMPILER-523/vag2774.p4
+  extensions/p4_tests/p4_14/test_config_216_phv_aff.p4
+  extensions/p4_tests/p4_14/c6/COMPILER-604/new_parser.p4
+  extensions/p4_tests/p4_14/jenkins/stful/stful.p4
   )
 
 # BRIG-225?
@@ -881,6 +878,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/action_conflict_3.p4
   extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
   extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
   extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
   extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
@@ -893,6 +891,11 @@ p4c_add_xfail_reason("tofino"
   "uses more than two source containers."
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
   extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Assertion .* failed."
+  extensions/p4_tests/p4_14/test_config_215_nondphv.p4
   )
 
 #END: XFAILS that match glass XFAILS

@@ -119,8 +119,7 @@ PHV_Container::create_ranges() {
     sanity_check_container_ranges(msg);
 }
 
-int
-PHV_Container::taint(
+int PHV_Container::taint(
     int start,
     int width,
     PHV::Field *field,
@@ -137,9 +136,8 @@ PHV_Container::taint(
     //
     // ccgf field processing
     //
-    if (process_ccgf && !field->allocation_complete()) {
+    if (process_ccgf && !field->allocation_complete())
         return taint_ccgf(start, width, field, field_bit_lo, pass);
-    }
     //
     // non cluster_overlay fields
     // includes interference based overlay fields
@@ -159,9 +157,9 @@ PHV_Container::taint(
     // "mixed-gress" arithmetic disallowed
     //
     this->gress(field->gress);
-    if (!phv_mau_group_i->gress()) {
+    if (!phv_mau_group_i->gress())
         phv_mau_group_i->gress(field->gress);
-    } else {
+    else
         BUG_CHECK(
             phv_mau_group_i->gress() == gress(),
             "*****PHV_Container::taint()*****%s mau_group gress = %c, field = %d:%s, gress = %c",
@@ -170,27 +168,16 @@ PHV_Container::taint(
             field->id,
             field->name,
             gress_i);
-    }
     sanity_check_container_ranges("PHV_Container::taint()..");
     return width;  // all bits of this field processed
 }
 
-int
-PHV_Container::taint_ccgf(
-    int start,
-    int width,
-    PHV::Field *field,
-    int field_bit_lo,
-    Container_Content::Pass pass) {
-    //
-    // container contiguous groups
-    // header fields allocation permits no holes in container
-    // for each member taint container with appropriate width
-    // must consider MSB order
-    //
-    // header stack pov's allocation is composition of members
-    // it is not present as a member in its ccgf
-    // as allocation is extra-bit overlaying members
+std::pair<int, int>  PHV_Container::ccgf_members_bit_assign(
+    int& start,
+    const int width,
+    const PHV::Field *field,
+    const Container_Content::Pass pass,
+    const bool taint_not_overlay) {
     //
     start += width;  // start allocation from ccgf-segment RHS in container
     int processed_members = 0;
@@ -212,21 +199,16 @@ PHV_Container::taint_ccgf(
                 // account pad for no_pack constraint
                 //
                 if (int(width_i) < member->size) {
-                    LOG1(
-                        "*****cluster_phv_container.cpp:sanity_WARN*****....."
-                        << " width_i of container "
-                        << width_i
-                        << " is less than 'no-pack' ccgf member size "
-                        << member->size
-                        << std::endl
+                    LOG1("*****cluster_phv_container.cpp:sanity_WARN*****....."
+                        << " width_i of container " << width_i
+                        << " is less than 'no-pack' ccgf member size " << member->size << std::endl
                         << member);
                 } else if (int(width_i) > member->size) {
                     // ccgf member cannot guarantee physical contiguity
                     // cluster.cpp header analysis, checks such cases during CCGF formation
                     // no-pack constraints introduced subsequently by analysis of MAU operations
                     LOG3("*****cluster_phv_container.cpp:*****....."
-                        << "CCGF Physical Contiguity violated: "
-                        << std::endl
+                        << "CCGF Physical Contiguity violated: " << std::endl
                         << "member = " << member);
                     // ccgf metadata member in ccgf overly parde constrained
                     // metadata need not be part of ccgf
@@ -239,25 +221,20 @@ PHV_Container::taint_ccgf(
                     int lhs = start - member->size;  // lhs now @beginning of [0..member_size-1]
                     const int align_start =
                         member->phv_alignment(false /*ccgf member align*/).get_value_or(lhs);
-                    if (align_start % int(PHV::Size::b8) != lhs % int(PHV::Size::b8)) {
+                    if (align_start % int(PHV::Size::b8) != lhs % int(PHV::Size::b8))
                         // shift by alignment
-                        start = align_start + member->size - member->phv_use_rem();
                         // start decremented by (member_size - member_phv_use_rem) before taint
-                    }
+                        start = align_start + member->size - member->phv_use_rem();
                 } else {
                     // width_i == member->size
                     const int align_start =
                         member->phv_alignment(false /*ccgf member align*/).get_value_or(0);
                     if (align_start)
                         ::error("CCGF member in exact width container %1% alignment not at 0.",
-                                member->name);
-                }  // width_i <=> member->size
-            }  // processed_width
-        }  // constraint_no_cohabit
+                                member->name); }}}  // constraint_no_cohabit
         int use_width = member->size;             // always using size to taint container
-        if (!member->simple_header_pov_ccgf()) {  // ignore simple header ccgf
+        if (!member->simple_header_pov_ccgf())    // ignore simple header ccgf
             use_width -= member->phv_use_rem();
-        }
         start -= use_width;
         int member_bit_lo = member->phv_use_lo();
         if (start < 0) {
@@ -268,27 +245,71 @@ PHV_Container::taint_ccgf(
             use_width += start;  // start is -ve
             start = 0;
             member_bit_lo = member->size - member->phv_use_rem() - use_width;
+            // spans several containers, aggregate used bits
             member->set_phv_use_rem(member->phv_use_rem() + use_width);
-                                                // spans several containers, aggregate used bits
         } else {
             member->set_phv_use_rem(0);
             processed_members++;
         }
-        // recursive taint call, do not recursively process ccgf
-        taint(start, use_width, member, member_bit_lo, pass, false /* process_ccgf */);
+        const int align_start
+            = member->phv_alignment(false /*need ccgf member alignment*/).get_value_or(start);
+        if (member_bit_lo == 0)
+            BUG_CHECK(
+                align_start % int(PHV::Size::b8) == start % int(PHV::Size::b8),
+                "*****PHV_Container::ccgf_members_bit_assign()"
+                "*****%s, pass = '%c', field=%d:%s, align_start=%s,start=%d",
+                this->toString(),
+                pass,
+                field->id,
+                field->name,
+                align_start,
+                start);
+        if (taint_not_overlay)
+            // recursive taint call, do not recursively process ccgf
+            taint(start, use_width, member, member_bit_lo, pass, false /* process_ccgf */);
+        else
+            fields_in_container(
+                member,
+                new Container_Content(
+                   this,
+                   StartLen(start, use_width),
+                   member,
+                   member_bit_lo,
+                   taint_color(start, start + use_width - 1),
+                   pass /* pass that performs the overlay */));
         processed_width += constraint_no_cohabit(member) ? int(width_i) : use_width;
-        BUG_CHECK(
-            processed_width <= int(width_i),
-            "*****PHV_Container::taint_ccgf()*****%s, field=%d:%s, processed_width=%s > width_i=%d",
+        BUG_CHECK(processed_width <= int(width_i),
+            "*****PHV_Container::ccgf_members_bit_assign()"
+            "*****%s, pass = '%c', field=%d:%s, processed_width=%s > width_i=%d",
             this->toString(),
+            pass,
             field->id,
             field->name,
             processed_width,
             int(width_i));
-        if (start <= 0 || processed_width == int(width_i)) {
-            break;
-        }
-    }  // for ccgf members
+        if (start <= 0 || processed_width == int(width_i))
+            break; }  // for ccgf members
+    return std::make_pair(processed_members, processed_width);
+}
+
+int PHV_Container::taint_ccgf(
+    int start,
+    int width,
+    PHV::Field *field,
+    int field_bit_lo,
+    Container_Content::Pass pass) {
+    //
+    // container contiguous groups
+    // header fields allocation permits no holes in container
+    // for each member taint container with appropriate width
+    // must consider MSB order
+    //
+    // header stack pov's allocation is composition of members
+    // it is not present as a member in its ccgf
+    // as allocation is extra-bit overlaying members
+    //
+    std::pair<int, int> pm_pw = ccgf_members_bit_assign(start, width, field, pass /*,taint=true */);
+    //
     if (field->header_stack_pov_ccgf()) {
         //
         // header stack pov ccgf needs additional bit + overlay its members
@@ -309,24 +330,29 @@ PHV_Container::taint_ccgf(
         // 7= 721:egress::mpls[2].$valid<1> E off=2 pov /phv_168,PHV-44;/[0..0]=PHV-44.W44<1:17..17>
         // 84^ 722:egress::mpls.$stkvalid<6:0..5> ..... /phv_168,PHV-44;/[0..6]=PHV-44.W44<7:16..22>
         //
-        assert(start >= 1 && start < int(width_i));
+        BUG_CHECK(start >= 1 && start < int(width_i),
+            "*****PHV_Container::taint_ccgf()"
+            "*****%s, start = %d, field=%d:%s, processed_width=%s > width_i=%d",
+            this->toString(),
+            start,
+            field->id,
+            field->name,
+            pm_pw.second,
+            int(width_i));
         Container_Content *header_stack_cc = taint_bits(start - 1, 1, field, field_bit_lo);
-        processed_width++;
+        pm_pw.second++;
         //
         header_stack_cc->pass(Container_Content::Pass::Header_Stack_Pov_Ccgf);
         header_stack_cc->hi(start + field->size - 2);  // start - 1 + field->size - 1
-        header_stack_cc->taint_color() += std::string(1, bits()[header_stack_cc->hi()]);
-    }
+        header_stack_cc->taint_color() += std::string(1, bits()[header_stack_cc->hi()]); }
     //
     // update ccgf owner record
     //
-    update_ccgf(field, processed_members, processed_width);
-    //
-    return processed_width;  // all bits of this field may NOT be processed
+    update_ccgf(field, pm_pw.first, pm_pw.second);
+    return pm_pw.second;  // all bits of this field may NOT be processed
 }  // taint_ccgf
 
-void
-PHV_Container::update_ccgf(
+void PHV_Container::update_ccgf(
     PHV::Field *field,
     int processed_members,
     int processed_width) {
@@ -335,10 +361,9 @@ PHV_Container::update_ccgf(
         field->ccgf_fields().begin(),
         field->ccgf_fields().begin() + processed_members);
     field->set_phv_use_hi(field->phv_use_hi() - processed_width);
-    if (field->allocation_complete()) {
+    if (field->allocation_complete())
         // ccgf owners with no-pack constraint, set range to entire container
         Cluster::set_field_range(field, constraint_no_cohabit(field) ? int(width_i) : 0);
-    }
 }  // update_ccgf
 
 void
@@ -346,14 +371,13 @@ PHV_Container::overlay_ccgf_field(
     PHV::Field *field,
     int start,
     const int width,
-    int field_bit_lo,
     Container_Content::Pass pass) {
     //
     // f is a ccgf
     // ccgf can be overlayed on top of another ccgf
     // ccgf overlay can span containers
     //
-    // overlay field f, slice starting from field_bit_lo
+    // overlay field f, slice starting from ccgf's remaining field_bit_lo
     // onto this container starting at bit 'start' with width
     //
     //
@@ -396,63 +420,29 @@ PHV_Container::overlay_ccgf_field(
     //       ][0..7]
     //       = 45:ingress::vlan_tag_[1].pcp<3>
     //       + 46:ingress::vlan_tag_[1].cfi<1>
-    //       + 47:ingress::vlan_tag_[1].vid<4>[0..3] => PHV-96
+    //       + 47:ingress::vlan_tag_[1].vid<4>[8..11] => PHV-96
     //   ==> overlayed'%' 47:ingress::vlan_tag_[1].vid<12:0..11>  /phv_183,PHV-96;PHV-97;/
     //       ][8..15]
-    //       = 47:ingress::vlan_tag_[1].vid [4..11]  => PHV-97
+    //       = 47:ingress::vlan_tag_[1].vid [0..7]  => PHV-97
     //
-    start += width;  // start allocation from ccgf-segment RHS in container
-    int processed_members = 0;
-    int processed_width = 0;
-    int width_remaining = width;
-    int skip_member = 0;
-    for (auto &member : field->ccgf_fields()) {
-        skip_member += member->size;
-        if (field_bit_lo > skip_member) {
-            continue;
-        }
-        int member_bit_lo = member->phv_use_lo() + member->phv_use_rem();
-        int use_width = member->size - member->phv_use_rem();
-        start -= use_width;
-        if (use_width > width_remaining) {
-            //
-            // member straddles containers
-            // remainder bits processed in subsequent container allocated to owner
-            //
-            use_width = width_remaining;
-            member->set_phv_use_rem(member->phv_use_rem() + use_width);
-                                                // spans several containers, aggregate used bits
-        } else {
-            member->set_phv_use_rem(0);
-            processed_members++;
-        }
-        const int align_start
-            = member->phv_alignment(false /*need ccgf member alignment*/).get_value_or(start);
-        BUG_CHECK(
-            align_start % int(PHV::Size::b8) == start % int(PHV::Size::b8),
-            "*****PHV_Container::overlay_ccgf_field()*****%s, field=%d:%s, align_start=%s,start=%d",
-            this->toString(),
-            field->id,
-            field->name,
-            align_start,
-            start);
-        fields_in_container(
-            member,
-            new Container_Content(
-               this,
-               StartLen(start, use_width),
-               member,
-               member_bit_lo,
-               taint_color(start, start + use_width - 1),
-               pass /* pass that performs the overlay */));
-        processed_width += use_width;
-        width_remaining -= use_width;
-        if (width_remaining <= 0) {
-            break;
-        }
-    }  // for ccgf members
+    // e.g.,
+    // cluster_phv_overlay cl->maug ==> (
+    //   B52. egress.Fd  11111111 = 389:egress::mpls_bos.ttl<8> [0..7] = B52<8:0..7>;
+    //   B53. egress.Fd  11111111 = 385:egress::mpls[2].ttl<8>  [0..7] = B53<8:0..7>;)
+    //   ==> overlayed'%' 441:egress::ipv4.flags<3> ^5 ccgf=441
+    //         [442:egress::ipv4.fragOffset<13> ^0 ccgf=441]      [0..7]  -> B52
+    //   ==> overlayed'%' 441:egress::ipv4.flags<3> ^5 ccgf=441 [8..15] -> B53
+    //         B52. egress.Fdp 11111111
+    //                         1= 389:egress::mpls_bos.ttl<8:0..7>         [0..7] = B52<8:0..7>
+    //                         1% 441:egress::ipv4.flags<3> ^5 ccgf=441    [0..2] = B52<3:5..7>
+    //                         1% 442:egress::ipv4.fragOffset<13:0..12> ^0 [8..12] = B52<5:0..4>
+    //         B53. egress.Fdp 11111111
+    //                         1= 385:egress::mpls[2].ttl<8:0..7> ^0       [0..7] = B53<8:0..7>
+    //                         1% 442:egress::ipv4.fragOffset<13:0..12> ^0 [0..7] = B53<8:0..7>
     //
-    update_ccgf(field, processed_members, processed_width);
+    std::pair<int, int> pm_pw =
+        ccgf_members_bit_assign(start, width, field, pass, false /* overlay = true */);
+    update_ccgf(field, pm_pw.first, pm_pw.second);
 }  // overlay_ccgf_field
 
 void
@@ -481,7 +471,7 @@ PHV_Container::single_field_overlay(
         taint(start, width, f, field_bit_lo, pass);
     } else {
         if (f->ccgf_fields().size()) {
-            overlay_ccgf_field(f, start, width, field_bit_lo, pass);
+            overlay_ccgf_field(f, start, width, pass);
         } else {
             int align_start = start;
             if (field_bit_lo == 0)  // alignment @ start of field

@@ -1298,7 +1298,10 @@ std::ostream &PHV::operator<<(std::ostream &out, const PHV::Field &field) {
         out << ':' << field.phv_use_lo() << ".." << field.phv_use_hi();
     out << '>';
     out << (field.gress ? " E" : " I") << " off=" << field.offset;
-    if (field.alignment) out << " ^" << field.alignment->littleEndian;
+    if (field.alignment)
+        out << " ^" << field.alignment->littleEndian;
+    else
+        out << " ^x";
     if (field.bridged) out << " bridge";
     if (field.metadata) out << " meta";
     if (field.mirror_field_list.member_field)

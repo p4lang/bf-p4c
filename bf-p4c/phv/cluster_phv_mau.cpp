@@ -2137,13 +2137,13 @@ PHV_MAU_Group_Assignments::statistics(
         out << str <<"<b" << e.first << "> ";
         for (auto &e_s : e.second) {
             out << "\t" << static_cast<char>(e_s.first)
-                << " = #" << e_s.second.first << ",b" << e_s.second.second;
+                << " = #" << e_s.second.first << "," << e_s.second.second << "b";
             occupied_bits += e_s.second.second;
             if (e_s.first != PHV_Container::Container_status::EMPTY) {
                 occupied_containers += e_s.second.first;
             }
         }
-        out << "\t(#" << occupied_containers << ",b" << occupied_bits << ")";
+        out << "\t(#" << occupied_containers << "," << occupied_bits << "b)";
         out << std::endl;
         total_occupied_bits += occupied_bits;
         total_occupied_containers += occupied_containers;
@@ -2169,16 +2169,18 @@ PHV_MAU_Group_Assignments::statistics(std::ostream &out) {
     // to preserve order Full, Partial, Empty during output
     // do not want ordered_map / order of insertion
     //
+    out << "....................PHV Containers Occupation Statistics................." << std::endl;
+    out << "        F=Full, P=Partial, V=Vacant        " << std::endl;
+    out << "        #Containers, Occupied bits        " << std::endl;
+    out << "-------------------------------------------------------------------------" << std::endl;
     std::map<PHV::Size,
         std::map<PHV_Container::Container_status,
             std::pair<int, int>>> c_bits_agg;
-    //
     container_population_density(c_bits_agg /*, phv = true */);
     statistics(out, c_bits_agg, "phv");
-    //
     container_population_density(c_bits_agg, false /* t_phv */);
     statistics(out, c_bits_agg, "t_phv");
-    //
+    out << "-------------------------------------------------------------------------" << std::endl;
 }
 
 //***********************************************************************************

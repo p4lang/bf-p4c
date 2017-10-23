@@ -48,10 +48,11 @@ bool Cluster::MakeCCGFs::preorder(const IR::HeaderRef *hr) {
                 const int align_start =
                     field->phv_alignment_network().get_value_or(accumulator_bits);
                 if (accumulator_bits) {
-                    if (accumulator_bits % int(PHV::Size::b8) != align_start) {
+                    if (accumulator_bits % int(PHV::Size::b8) != align_start % int(PHV::Size::b8)) {
                         ccgf[group_accumulator] = accumulator_bits;
                         LOG4("+++++PHV_container_contiguous_group.....parde_alignment cutoff....."
-                            << accumulator_bits);
+                            << "accumulated_bits = " << accumulator_bits
+                            << ", align_start (nw)" << align_start);
                         LOG4(group_accumulator);
                         // TODO:
                         // if the member cannot guarantee physical contiguity as required by parser
@@ -71,7 +72,7 @@ bool Cluster::MakeCCGFs::preorder(const IR::HeaderRef *hr) {
                     accumulator_bits += align_start;
                 }
                 accumulator_bits += field->size;
-                if (PHV_Container::exact_container(accumulator_bits)) {
+                if (accumulator_bits % int(PHV::Size::b8) == 0) {  // accumulate to byte boundary
                     ccgf[group_accumulator] = accumulator_bits;
                     LOG4("+++++PHV_container_contiguous_group....."
                         << accumulator_bits);
