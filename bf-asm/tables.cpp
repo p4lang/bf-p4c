@@ -1961,7 +1961,7 @@ int Table::get_mem_units_per_table_word() {
 int Table::get_table_word_width() {
     if (format) {
 	if (is_wide_format())
-            return get_entries_per_table_word() * get_mem_units_per_table_word(); }
+            return MEM_WORD_WIDTH * get_mem_units_per_table_word(); }
     return MEM_WORD_WIDTH;
 }
 
