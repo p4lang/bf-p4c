@@ -72,6 +72,9 @@ class Type {
     }
 
     bool valid() const { return size_ != Size::null; }
+
+    /// @return a string representation of this container type.
+    cstring toString() const;
 };
 
 class Container {

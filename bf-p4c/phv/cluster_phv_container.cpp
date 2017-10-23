@@ -1,7 +1,10 @@
 #include "bf-p4c/phv/cluster_phv_container.h"
 #include "bf-p4c/phv/cluster_phv_mau.h"
 #include "bf-p4c/phv/cluster_phv_operations.h"
+#include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/phv/phv_spec.h"
+#include "bf-p4c/device.h"
 #include "lib/log.h"
 #include "lib/stringref.h"
 
@@ -1438,6 +1441,7 @@ std::ostream &operator<<(std::ostream &out, ordered_map<int, int>& ranges) {
     return out;
 }
 
+/*
 std::ostream &operator<<(std::ostream &out, PHV_Container *c) {
     //
     // summary output
@@ -1461,13 +1465,18 @@ std::ostream &operator<<(std::ostream &out, PHV_Container *c) {
     }
     return out;
 }
+*/
 
 std::ostream &operator<<(std::ostream &out, const PHV_Container *c) {
-    if (c) {
+    if (c)
         out << c->toString();
-    } else {
+    else
         out << "-c-";
-    }
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, PHV_Container *c) {
+    out << static_cast<const PHV_Container*>(c);
     return out;
 }
 
@@ -1480,8 +1489,10 @@ std::ostream &operator<<(std::ostream &out, PHV_Container &c) {
 
 std::ostream &operator<<(std::ostream &out, ordered_set<PHV_Container *> &phv_containers) {
     // detailed output for phv containers
-    for (auto &c : phv_containers) {
-        out << *c;
+    for (auto *c : phv_containers) {
+        out << '\t' << c
+            << '\t' << c->bits()
+            << c->fields_in_container();
     }
     return out;
 }
@@ -1498,15 +1509,19 @@ std::ostream &operator<<(std::ostream &out, ordered_set<PHV_Container *> *phv_co
 }
 
 std::ostream &operator<<(std::ostream &out, std::vector<PHV_Container *> &phv_containers) {
-    for (auto &c : phv_containers) {
-        out << *c;
+    for (auto *c : phv_containers) {
+        out << '\t' << c
+            << '\t' << c->bits()
+            << c->fields_in_container();
     }
     return out;
 }
 
 std::ostream &operator<<(std::ostream &out, std::list<PHV_Container *> &phv_containers) {
     for (auto &c : phv_containers) {
-        out << c;
+        out << '\t' << c
+            << '\t' << c->bits()
+            << c->fields_in_container();
     }
     return out;
 }
@@ -1523,3 +1538,10 @@ std::ostream &operator<<(
     return out;
 }
 
+std::ostream &operator<<(std::ostream &out, boost::optional<gress_t> g) {
+    if (g)
+        out << *g;
+    else
+        out << "--";
+    return out;
+}

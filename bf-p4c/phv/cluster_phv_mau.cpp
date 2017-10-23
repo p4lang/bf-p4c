@@ -1,4 +1,5 @@
 #include "bf-p4c/phv/cluster_phv_mau.h"
+#include <boost/format.hpp>
 #include <boost/range/adaptor/reversed.hpp>
 #include <cstdlib>
 #include "bf-p4c/device.h"
@@ -190,47 +191,52 @@ PHV_MAU_Group::container_population_density(
 
 
 const IR::Node *
-PHV_MAU_Group_Assignments::apply_visitor(const IR::Node *node, const char *name) {
-    //
-    LOG1("..........PHV_MAU_Group_Assignments::apply_visitor()..........");
-    if (name) {
-        LOG1(name);
-    }
+PHV_MAU_Group_Assignments::apply_visitor(const IR::Node *node, const char *) {
+    LOG1("--- BEGIN PHV ALLOCATION ----------------------------------------------------");
+    LOG2("");
+    LOG2("Dumping PHV allocation after each intermediate round of allocation.  Each round");
+    LOG2("assigns as many clusters as possible under the given constraints.");
+    LOG2("");
+    LOG2("Format: CONTAINER(gress)[slice of container]<--field_name[slice of field]");
+    LOG2("where slices are optional and their lack implies all bits have been assigned.");
+    LOG2("");
+
+    if (!phv_requirements_i.cluster_phv_fields().size())
+        LOG4("**********PHV_MAU_Group_Assignments apply_visitor w/ 0 Requirements***********");
+
     //
     // create PHV Group Assignments from PHV Requirements
     //
-    if (!phv_requirements_i.cluster_phv_fields().size()) {
-        LOG1("**********PHV_MAU_Group_Assignments apply_visitor w/ 0 Requirements***********");
-    }
     clear();                            // clear all PHV, T_PHV container assignments if any
                                         // used when PHV_MAU_Group_Assignments::apply_visitor()
                                         // called multiple times
     create_MAU_groups();
     create_TPHV_collections();
-    //
+
     cluster_PHV_placements();           // PHV placements
+
     cluster_TPHV_placements();          // consider TPHVoverflow => PHV before POV placements
+
     cluster_POV_placements();           // POV placements after TPHVoverflow => PHV
+
     cluster_PHV_nibble_placements();    // nibble cluster PHV placements
+
     cluster_T_PHV_nibble_placements();  // nibble T_PHV placements
-    //
+
     field_overlays();                   // place non-owner fields in containers "on top of" their
                                         // owners, i.e. overlaid starting at the same lo bit
-    //
+
     compute_substratum_clusters();      // write non-POV clusters that have already been placed to
                                         // substratum_phv_clusters and substratum_t_phv_clusters
-    //
+
     container_cohabit_summary();        // summarize recommendations to TP by storing containers
                                         // in cohabit_fields that contain more than one field which
                                         // is written to in the MAU pipeline
-    //
+
     sanity_check_group_containers("PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments()..");
-    //
-    LOG3(*this);
-    //
+    LOG4(*this);
     return node;
-    //
-}  // PHV_MAU_Group_Assignments::apply_visitor
+}
 
 void
 PHV_MAU_Group_Assignments::clear() {
@@ -292,7 +298,7 @@ PHV_MAU_Group_Assignments::num_ingress_collections(std::vector<Cluster_PHV *>& c
         if (std::abs(ingress_collections - value) > 1)
             ingress_collections = value; }
 
-    LOG1("*****PHV_MAU_Group_Assignments: sanity_INFO*****....."
+    LOG4("*****PHV_MAU_Group_Assignments: sanity_INFO*****....."
         << ".....ingress = " << ingress << ", ingress_and_egress = " << ingress_and_egress
         << ", ingress_collections = " << ingress_collections);
 
@@ -422,6 +428,110 @@ void PHV_MAU_Group_Assignments::compute_substratum_clusters() {
     //
 }  // compute_substratum_clusters
 
+
+void PHV_MAU_Group_Assignments::dump_new_placements(const std::string& msg, bool clear) const {
+    // All containers, sorted by type.
+    static std::vector<PHV_Container *> all_containers;
+    static ordered_set<PHV_Container::Container_Content *> allocated;
+
+    if (!LOGGING(3))
+        return;
+
+    // Get all containers once.
+    if (all_containers.size() == 0) {
+        std::set<PHV_Container *> all_containers_set;
+        for (auto *g : PHV_groups_i) {
+            for (auto *c : g->phv_containers()) {
+                all_containers_set.insert(c); } }
+        for (auto &by_collection : T_PHV_i) {
+            for (auto &by_width : by_collection.second) {
+                for (auto *c : by_width.second) {
+                    all_containers_set.insert(c); } } }
+        all_containers.insert(
+            all_containers.begin(), all_containers_set.begin(), all_containers_set.end());
+        std::sort(all_containers.begin(), all_containers.end()); }
+
+    if (clear)
+        allocated.clear();
+
+    if (clear)
+        LOG3("--- ALL PHV ALLOCATION (for all rounds so far): " << msg);
+    else
+        LOG3("--- PHV ALLOCATION (new in this round): " << msg);
+    LOG3("");
+
+    std::map<boost::optional<gress_t>,
+        std::map<PHV::Type,
+            std::map<PHV_Container::Container_status,
+                ordered_set<PHV_Container *>>>> alloc_status;
+
+    // Print field allocation.
+    const PhvSpec& phvSpec = Device::phvSpec();
+    for (auto *c : all_containers) {
+        PHV::Type type = phvSpec.idToContainer(c->container_id()).type();
+        alloc_status[c->gress()][type][c->status()].insert(c);
+        if (c->fields_in_container().size() == 0)
+            continue;
+        for (auto &field_ccs : c->fields_in_container()) {
+            for (auto* cc : field_ccs.second) {
+                if (allocated.count(cc))
+                    continue;
+                allocated.insert(cc);
+                std::stringstream gress_ss;
+                std::stringstream container_slice_ss;
+                std::stringstream field_slice_ss;
+                std::stringstream field_info_ss;
+                std::stringstream field_name_ss;
+                gress_ss << c->gress();
+                field_info_ss << cc->field();
+                field_name_ss << cc->field()->name;
+                // Print container slice info if field only partially fills container.
+                if (cc->width() != int(c->width()))
+                    container_slice_ss << "[" << cc->lo() << ":" << cc->hi() << "]";
+                // Print field slice info if field is partially allocated to container.
+                if (cc->width() != cc->field()->size)
+                    field_slice_ss << "[" << cc->field_bit_lo() << " : " <<
+                                             cc->field_bit_hi() << "]";
+                LOG3(boost::format("%1%(%2%)%3% %|25t| <-- %|30t|%4%%5%")
+                    % c->toString()
+                    % gress_ss.str()
+                    % container_slice_ss.str()
+                    % (LOGGING(4) ? field_info_ss.str() : field_name_ss.str())
+                    % field_slice_ss.str()); } } }
+
+    // Print container status.
+    std::stringstream ss;
+    bool first_by_gress = true;
+    auto gresses = std::list<boost::optional<gress_t>>({INGRESS, EGRESS, boost::none});
+    auto statuses = {PHV_Container::EMPTY, PHV_Container::PARTIAL, PHV_Container::FULL};
+    for (auto gress : gresses) {
+        first_by_gress = true;
+        for (auto status : statuses) {
+            for (auto type : phvSpec.containerTypes()) {
+                if (alloc_status[gress][type][status].size() == 0)
+                    continue;
+                std::stringstream ss_gress;
+                std::string s_status;
+                ss_gress << gress;
+                switch (status) {
+                  case PHV_Container::EMPTY: s_status = "EMPTY"; break;
+                  case PHV_Container::PARTIAL: s_status = "PARTIAL"; break;
+                  case PHV_Container::FULL: s_status = "FULL"; break; }
+                ss << boost::format("%1% %|10t| %3% %|20t| %2% %|30t| %4%\n")
+                      % (first_by_gress  ? ss_gress.str() : "")
+                      % type.toString()
+                      % s_status
+                      % alloc_status[gress][type][status].size();
+                first_by_gress = false; } } }
+
+    LOG3("");
+    LOG3("CONTAINER STATUS (after allocation so far):");
+    LOG3(boost::format("%1% %|10t| %2% %|20t| %3% %|30t| %4%\n")
+        % "GRESS" % "TYPE" % "STATUS" % "COUNT");
+    LOG3(ss.str());
+    LOG3("");
+}
+
 void PHV_MAU_Group_Assignments::cluster_PHV_placements() {
     //
     // cluster placement in containers conforming to MAU group constraints
@@ -432,39 +542,38 @@ void PHV_MAU_Group_Assignments::cluster_PHV_placements() {
         // it is beneficial to include contrained nibbles also, e.g., learning "bottom bits"
         // as packing smaller widths before larger widths restricts latter accommodation
         //
-        if (cl->max_width() <= Constants::nibble) {
+        if (cl->max_width() <= Constants::nibble)
             clusters_to_be_assigned_nibble_i.push_front(cl);
-        } else {
-            clusters_to_be_assigned_i.push_front(cl);
-        }
-    }
-    //
+        else
+            clusters_to_be_assigned_i.push_front(cl); }
+
+    // place fields into their natural container sizes
     container_no_pack(clusters_to_be_assigned_i, PHV_groups_i, "PHV_smallest_container_width");
+
     if (clusters_to_be_assigned_i.size()) {
         //
         // attempt placement without smallest_container_width
         // e.g., empty 32b, 16b containers for 8b clusters
         //
-        container_no_pack(
-            clusters_to_be_assigned_i,
-            PHV_groups_i,
-            "PHV_any_container_width",
-            false/*smallest_container_width*/);
+        container_no_pack(clusters_to_be_assigned_i, PHV_groups_i,
+            "PHV_any_container_width", false/*smallest_container_width*/);
+
         // Check allocation for action induced constraints
         check_action_constraints();
+
         if (clusters_to_be_assigned_i.size()) {
-            //
-            // pack remaining clusters to partially filled containers
-            //
+            // If there are any remaining unallocated clusters, try assigning them
+            // to container groups that are partially occupied.  This includes
+            // packing fields from different clusters in the same container, if the
+            // appropriate constraints are satisfied.
             container_pack_cohabit(clusters_to_be_assigned_i, aligned_container_slices_i, "PHV");
-            //
+
             if (clusters_to_be_assigned_i.size())
-                LOG3("********** PHV placement + packing ***** DID NOT FIT ***** **********");
-        }
+                LOG4("********** PHV placement + packing ***** DID NOT FIT ***** **********"); }
     } else {
         check_action_constraints();
     }
-}  // PHV_MAU_Group_Assignments::cluster_PHV_placements
+}
 
 void PHV_MAU_Group_Assignments::check_action_constraints() {
     // Check allocation for action induced constraints
@@ -530,7 +639,7 @@ void PHV_MAU_Group_Assignments::cluster_POV_placements() {
         container_pack_cohabit(pov_fields_i, aligned_container_slices_i, "POV");
         //
         if (pov_fields_i.size())
-            LOG3("********** POV packing ***** DID NOT FIT ***** **********");
+            LOG4("********** POV packing ***** DID NOT FIT ***** **********");
     }
 }  // PHV_MAU_Group_Assignments::cluster_POV_placements
 
@@ -577,7 +686,7 @@ PHV_MAU_Group_Assignments::cluster_TPHV_placements() {
             //
             if (t_phv_fields_i.size()) {
                 //
-                LOG3("..........T_PHV Overflow ==> PHV ..........");
+                LOG4("..........T_PHV Overflow ==> PHV ..........");
                 //
                 container_pack_cohabit(
                     t_phv_fields_i,
@@ -585,7 +694,7 @@ PHV_MAU_Group_Assignments::cluster_TPHV_placements() {
                     "PHV <== TPHV_Overflow");
                 //
                 if (t_phv_fields_i.size())
-                    LOG3("********** T_PHV placement+packing+PHV_Overflow DID NOT FIT **********");
+                    LOG4("********** T_PHV placement+packing+PHV_Overflow DID NOT FIT **********");
             }
         }
     }
@@ -611,7 +720,7 @@ PHV_MAU_Group_Assignments::cluster_PHV_nibble_placements() {
             "PHV_Nibble");
         //
         if (clusters_to_be_assigned_nibble_i.size())
-            LOG3("********** PHV Nibble placement + packing ***** DID NOT FIT ***** **********");
+            LOG4("********** PHV Nibble placement + packing ***** DID NOT FIT ***** **********");
     }
 }  // PHV_MAU_Group_Assignments::cluster_PHV_nibble_placements
 
@@ -631,7 +740,7 @@ PHV_MAU_Group_Assignments::cluster_T_PHV_nibble_placements() {
         //
         if (t_phv_fields_nibble_i.size()) {
             //
-            LOG3("..........T_PHV Nibble Overflow ==> PHV ..........");
+            LOG4("..........T_PHV Nibble Overflow ==> PHV ..........");
             //
             container_pack_cohabit(
                 t_phv_fields_nibble_i,
@@ -639,7 +748,7 @@ PHV_MAU_Group_Assignments::cluster_T_PHV_nibble_placements() {
                 "PHV <== TPHV_Nibble_Overflow");
             //
             if (t_phv_fields_nibble_i.size())
-                LOG3("********** T_PHV Nibble packing + PHV_Overflow ***** DID NOT FIT **********");
+                LOG4("********** T_PHV Nibble packing + PHV_Overflow ***** DID NOT FIT **********");
         }
     }
 }  // PHV_MAU_Group_Assignments::cluster_T_PHV_nibble_placements
@@ -733,13 +842,6 @@ PHV_MAU_Group_Assignments::container_no_pack(
         return l->num_constraints() > r->num_constraints();
     });
     //
-    LOG3("..........Begin PHV Container NO PACK ("
-         << clusters_to_be_assigned.size()
-         << ").........."
-         << msg
-         << std::endl);
-    LOG3(clusters_to_be_assigned);
-    //
     // sort PHV_Groups in order 32b, 16b, 8b
     // for given width, I/E tagged MAU groups first
     //
@@ -749,12 +851,6 @@ PHV_MAU_Group_Assignments::container_no_pack(
         return l->width() > r->width();
     });
 
-    LOG4(".......... PHV_Groups to be filled ("
-         << phv_groups_to_be_filled.size()
-         << ").........." << std::endl);
-    LOG4(phv_groups_to_be_filled);
-
-    LOG4(".......... No Pack Placements .........." << std::endl);
     for (auto &g : phv_groups_to_be_filled) {
         std::list<Cluster_PHV *> clusters_remove;
         for (auto &cl : clusters_to_be_assigned) {
@@ -800,9 +896,9 @@ PHV_MAU_Group_Assignments::container_no_pack(
                         LOG4("..... exact_containers ... downsizing MAU Group .....");
                         LOG4(*cl_g);
                     } else {
-                        LOG1("*****cluster_phv_mau.cpp: sanity_WARN*****"
+                        LOG4("*****cluster_phv_mau.cpp: sanity_WARN*****"
                             << ".....downsize...exact_containers MATCH NOT AVAILABLE");
-                        LOG1(cl);
+                        LOG4(cl);
                     }
                 } else {
                     // upsize mau group if current width groups have insufficient empty containers
@@ -816,12 +912,12 @@ PHV_MAU_Group_Assignments::container_no_pack(
                                                     phv_groups_to_be_filled)) {
                             //
                             cl_g = g_scale_up;
-                            LOG3("..... exact_containers ... upsizing MAU Group .....");
-                            LOG3(*cl_g);
+                            LOG4("..... exact_containers ... upsizing MAU Group .....");
+                            LOG4(*cl_g);
                         } else {
-                            LOG1("*****cluster_phv_mau.cpp: sanity_WARN*****"
+                            LOG4("*****cluster_phv_mau.cpp: sanity_WARN*****"
                                 << ".....upsize...exact_containers MATCH NOT AVAILABLE");
-                            LOG1(cl);
+                            LOG4(cl);
                         }
                     }
                 }
@@ -833,8 +929,8 @@ PHV_MAU_Group_Assignments::container_no_pack(
                 req_containers = cl->num_containers(cl->cluster_vec(), cl_g->width());
             }
             if (req_containers <= cl_g->empty_containers()) {  // attempt assigning cl to cl_g
-                LOG3("..... attempting MAU Group .....");
-                LOG3(*cl_g);
+                LOG4("..... attempting MAU Group .....");
+                LOG4(*cl_g);
 
                 // for each field in cluster cl, assign consecutive chunks
                 // across consecutive empty containers in g, tainting container
@@ -860,12 +956,8 @@ PHV_MAU_Group_Assignments::container_no_pack(
                     for (auto field_bit_lo=0; field_width > 0;) {
                         int taint_bits = std::min(field_width, int(cl_g->width()));
                         PHV_Container *container = cl_g->empty_container();
-                        if (!container) {
-                            LOG1("*****cluster_phv_mau.cpp: sanity_FAIL*****"
-                                << ".....NO CONTAINER AVAILABLE for field ");
-                            LOG1(field);
-                            assert(container);
-                        }
+                        BUG_CHECK(container != nullptr,
+                            "No container available for field %1%", field);
                         int align_start = 0;
                         if (field_bit_lo == 0) {  // consider alignment only @ start of field
                             align_start = field->phv_alignment().get_value_or(0);
@@ -894,7 +986,7 @@ PHV_MAU_Group_Assignments::container_no_pack(
                                 taint_bits,
                                 field,
                                 field_bit_lo);
-                        LOG3(*container);
+                        LOG4(*container);
 
                         // ccgf fields with members that have pack constraints may not be done yet
                         // taint() sets field's hi reflecting balance remaining,
@@ -914,9 +1006,10 @@ PHV_MAU_Group_Assignments::container_no_pack(
                         //
                     }  // for field
                     if (!field->allocation_complete()) {
-                        LOG1("*****cluster_phv_mau.cpp: sanity_FAIL*****"
+                        // TODO(cole): Should this be a BUG?
+                        LOG4("*****cluster_phv_mau.cpp: sanity_FAIL*****"
                             << ".....ccgf member(s) INCOMPLETE ALLOCATION");
-                        LOG1(field);
+                        LOG4(field);
                     }
                 }  // for cluster
                 // update num_containers
@@ -929,7 +1022,7 @@ PHV_MAU_Group_Assignments::container_no_pack(
                 if (cl_g->gress() == boost::none)
                     cl_g->gress(cl->gress());
 
-                LOG3(*cl_g << " <-- " << cl);
+                LOG4(*cl_g << " <-- " << cl);
                 if (cl_g->empty_containers() == 0)
                     break;
             }  // attempt cl to g
@@ -939,35 +1032,23 @@ PHV_MAU_Group_Assignments::container_no_pack(
         for (auto &cl : clusters_remove)
             clusters_to_be_assigned.remove(cl);
     }  // for phv groups
+
     //
     // all mau groups searched
     //
     std::list<PHV_MAU_Group *> phv_groups_remove;
     for (auto &g : phv_groups_to_be_filled) {
-        if (g->empty_containers() == 0) {
-            phv_groups_remove.push_back(g);
-        }
-    }
+        if (g->empty_containers() == 0)
+            phv_groups_remove.push_back(g); }
+
     // remove groups that are full
-    for (auto &g : phv_groups_remove) {
+    for (auto &g : phv_groups_remove)
         phv_groups_to_be_filled.remove(g);
-    }
-    //
-    LOG3("..........End PHV Container NO PACK ("
-         << clusters_to_be_assigned.size()
-         << ").........."
-         << msg
-         << std::endl);
-    if (strstr(msg, "T_PHV")) {
-        LOG3(T_PHV_i);
-    } else {
-        LOG3(PHV_MAU_i);
-    }
-    //
-    status(clusters_to_be_assigned, msg);
-    status(phv_groups_to_be_filled, msg);
-    //
-}  // container_no_pack
+
+    // Log new fields allocated and the current state of the containers (free,
+    // partially allocated, full).
+    dump_new_placements(msg);
+}
 
 size_t PHV_MAU_Group_Assignments::max_empty_containers(
         boost::optional<gress_t> gress,
@@ -1004,7 +1085,7 @@ PHV_MAU_Group_Assignments::upsize_mau_group(
         if (gress_is_ok && enough_empty_bits)
             return g; }
 
-    LOG1("***** upsize_mau_group() FAILED for <gress,width,required_containers>  *****"
+    LOG4("***** upsize_mau_group() FAILED for <gress,width,required_containers>  *****"
         << "<" << required_containers << "*" << width << gress << ">");
 
     return nullptr;
@@ -1033,7 +1114,7 @@ PHV_MAU_Group_Assignments::downsize_mau_group(
         if (gress_is_ok && int(g->width()) <= width && enough_empty_bits)
             return g; }
 
-    LOG1("***** downsize_mau_group() FAILED for <gress,width,required_containers>  *****"
+    LOG4("***** downsize_mau_group() FAILED for <gress,width,required_containers>  *****"
         << "<" << required_containers << "*" << width << gress << ">");
 
     return nullptr;
@@ -1079,8 +1160,8 @@ void PHV_MAU_Group_Assignments::create_aligned_container_slices() {
             }
         }
     }
-    LOG3("..........PHV Container Packs Avail ..........");
-    LOG3(aligned_container_slices_i);
+    LOG4("..........PHV Container Packs Avail ..........");
+    LOG4(aligned_container_slices_i);
     //
     // pack remaining fields to partially filled containers
     // conforming to T_PHV Collection constraints
@@ -1118,8 +1199,8 @@ void PHV_MAU_Group_Assignments::create_aligned_container_slices() {
             }
         }
     }
-    LOG3("..........T_PHV Container Packs avail ..........");
-    LOG3(T_PHV_container_slices_i);
+    LOG4("..........T_PHV Container Packs avail ..........");
+    LOG4(T_PHV_container_slices_i);
 }  // PHV_MAU_Group_Assignments::create_aligned_container_slices()
 
 //***********************************************************************************
@@ -1478,12 +1559,12 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
         // ...and finally by unique ID number.
         return l->id_num() < r->id_num(); });
 
-    LOG3("..........Begin Pack Cohabit ("
+    LOG4("..........Begin Pack Cohabit ("
          << clusters_to_be_assigned.size()
          << ").....Sorted Clusters to be packed....."
          << msg
          << std::endl);
-    LOG3(clusters_to_be_assigned);
+    LOG4(clusters_to_be_assigned);
 
     // pack sorted clusters<n,w> to containers[w][n]
     LOG4("..........Packing.........." << std::endl);
@@ -1520,8 +1601,7 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
                         *(slices_by_count.second.begin());
                     PHV_MAU_Group::Container_Slice *cc = *(cc_l.begin());
                     if (slice_width != int(cc->container()->width()))
-                        continue;
-                }
+                        continue; }
                 //
                 // split container_pack <slice_width, slice_count>
                 // --> <slice_width, slice_count-cn>,
@@ -1616,24 +1696,19 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
             if (f->phv_use_width(cl) > required_width
                 && required_width != int(cc->container()->width())) {       // 128b = 32*4
                 //
-                LOG1("cluster_phv_mau.cpp*****sanity_FAIL*****");
-                LOG1(".....field width exceeds slice .....");
-                LOG1(f);
-                LOG1(" slice width required_width = " << required_width); }
+                // TODO(cole): Should this be BUG?
+                LOG4("cluster_phv_mau.cpp*****sanity_FAIL*****");
+                LOG4(".....field width exceeds slice .....");
+                LOG4(f);
+                LOG4(" slice width required_width = " << required_width); }
 
             if (f->metadata && !f->bridged && cc->container()->deparsed()) {
                 const PHV::Field *deparsed_header = nullptr;
                 const PHV::Field *non_deparsed_field = nullptr;
                 cc->container()->sanity_check_deparsed_container_violation(
                         deparsed_header, non_deparsed_field);
-                if (deparsed_header) {
-                    //
-                    LOG1("cluster_phv_mau.cpp*****sanity_FAIL*****");
-                    LOG1(".....metadata being placed w/ deparsed header .....");
-                    LOG1(f);
-                    LOG1(deparsed_header);
-                    LOG1(cc->container());
-                    BUG("*****metadata being placed w/ deparsed header*****"); } }
+                BUG_CHECK(!deparsed_header, "Metadata %1% placed with deparsed header field %2%",
+                    f, deparsed_header); }
 
             // last alloc of field slice may be remainder of division by required_width,
             // e.g., 375bits mod 32b containers, last field slice = 23 bits
@@ -1655,7 +1730,7 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
                                    field_bit_lo);             // field_bit_lo
             cc->container()->sanity_check_container_ranges(
                 "PHV_MAU_Group_Assignments::container_pack_cohabit..");
-            LOG3("\t\t" << *(cc->container()));
+            LOG4("\t\t" << *(cc->container()));
             //
             // advance to next field or continue same field
             //
@@ -1750,7 +1825,7 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
                  "(" << required_containers << ')' << std::endl << '\t' << *cc_w);
 
             if (disjoint_segments) {
-                LOG3("\t|==>|(" << required_containers << ")-->[" << w_d_h << "]" <<
+                LOG4("\t|==>|(" << required_containers << ")-->[" << w_d_h << "]" <<
                     "(" << required_containers << ')' << std::endl << '\t' << *cc_d); } } }
 
     sanity_check_container_fields_gress("PHV_MAU_Group_Assignments::container_pack_cohabit()..");
@@ -1801,16 +1876,9 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
     // sanity check after correct state for aligned slices so that container ranges are correct
     sanity_check_container_avail("container_pack_cohabit ()..");
 
-    LOG3("..........End Pack Cohabit (" << clusters_to_be_assigned.size() << ").........."
-         << msg << std::endl);
-
-    if (strstr(msg, "T_PHV"))
-        LOG3(T_PHV_i);
-    else
-        LOG3(PHV_MAU_i);
-
-    status(clusters_to_be_assigned, msg);
-    status(aligned_slices, msg);
+    // Log new fields allocated and the current state of the containers (free,
+    // partially allocated, full).
+    dump_new_placements(msg);
 }
 
 
@@ -1912,7 +1980,7 @@ PHV_MAU_Group_Assignments::canonicalize_cc_set(
             // sort by container_id to prevent non-determinism
             return l->container()->container_id() < r->container()->container_id();
         });
-        LOG3("..........Reordered non-deparsed containers to end ("
+        LOG4("..........Reordered non-deparsed containers to end ("
              << cc_set.size()
              << ").........."
              << cc_set
@@ -1984,7 +2052,7 @@ PHV_MAU_Group_Assignments::num_containers_bottom_bits(
             // sort by container_id to prevent non-determinism
             return l->container()->container_id() < r->container()->container_id();
         });
-        LOG3("..........Reordered bottom-bit containers to end ("
+        LOG4("..........Reordered bottom-bit containers to end ("
              << cc_set.size()
              << ").........."
              << cc_set
@@ -2194,7 +2262,7 @@ bool PHV_MAU_Group_Assignments::status(
         std::list<Cluster_PHV *>& clusters_to_be_assigned,
         const char *msg) {
     if (clusters_to_be_assigned.size() > 0) {
-        if (LOGGING(3)) {
+        if (LOGGING(4)) {
             ordered_map<gress_t, ordered_map<PHV::Size, int>> needed_containers;
             for (PHV::Size size : { PHV::Size::b8, PHV::Size::b16, PHV::Size::b32 }) {
                 needed_containers[INGRESS][size] = 0;
@@ -2216,7 +2284,7 @@ bool PHV_MAU_Group_Assignments::status(
             if (needed_bits)
                 ss << " (bits=" << needed_bits << ");";
             std::string s = ss.str();
-            LOG3(std::endl << "---------- Status: Clusters NOT Assigned ("
+            LOG4(std::endl << "---------- Status: Clusters NOT Assigned ("
                 << clusters_to_be_assigned.size()
                 << ")"
                 << s
@@ -2226,9 +2294,9 @@ bool PHV_MAU_Group_Assignments::status(
                 << clusters_to_be_assigned); }
         return false;
     } else {
-        LOG3(' ');
-        LOG3("++++++++++++++++++++ Status: ALL clusters Assigned ++++++++++++++++++++" << msg);
-        LOG3(' ');
+        LOG4(' ');
+        LOG4("++++++++++++++++++++ Status: ALL clusters Assigned ++++++++++++++++++++" << msg);
+        LOG4(' ');
         return true;
     }
 }
@@ -2238,7 +2306,7 @@ bool PHV_MAU_Group_Assignments::status(
     const char *msg) {
     //
     if (aligned_slices.empty()) {
-        LOG3("----------Status: NO Container Packs Available----------"
+        LOG4("----------Status: NO Container Packs Available----------"
             << msg
             << std::endl);
         return false;
@@ -2249,7 +2317,7 @@ bool PHV_MAU_Group_Assignments::status(
                 bits_available += w.first * n.first * n.second.size();
             }
         }
-        LOG3("..........Status: Container Packs Available"
+        LOG4("..........Status: Container Packs Available"
             << " ("
             << bits_available
             << " bits).........."
@@ -2265,11 +2333,11 @@ bool PHV_MAU_Group_Assignments::status(
     const char * /*msg*/) {
     //
     if (phv_mau_groups.empty()) {
-        LOG3("----------Status: NO MAU Groups w/ empty Containers Available----------"
+        LOG4("----------Status: NO MAU Groups w/ empty Containers Available----------"
             << std::endl);
         return false;
     } else {
-        LOG3("..........Status: MAU Groups w/ empty Containers Available.........."
+        LOG4("..........Status: MAU Groups w/ empty Containers Available.........."
             << phv_mau_groups);
         return true;
     }

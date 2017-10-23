@@ -48,6 +48,12 @@ unsigned Type::log2sz() const {  // TODO(zma) get rid of this function
     }
 }
 
+cstring Type::toString() const {
+    std::stringstream tmp;
+    tmp << *this;
+    return tmp.str();
+}
+
 Container::Container(const char *name) {
     const char *n = name + strcspn(name, "0123456789");
     type_ = Type(std::string(name, n - name).c_str());

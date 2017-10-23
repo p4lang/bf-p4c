@@ -401,10 +401,8 @@ class PHV_MAU_Group_Assignments : public Visitor {
             std::map<PHV_Container::Container_status,
                 std::pair<int, int>>>&,
         bool phv = true);
-    //
-    bool status(
-        std::list<Cluster_PHV *>&,
-        const char *msg = "");
+
+    bool status(std::list<Cluster_PHV *>&, const char *msg = "");
     bool status(
         std::list<PHV_MAU_Group *>&,
         const char *msg = "");
@@ -434,7 +432,14 @@ class PHV_MAU_Group_Assignments : public Visitor {
                 std::pair<int, int>>>& c_bits_agg,
         const char *str);
     void statistics(std::ostream &);
-    //
+
+    /** Log new PHV_Container::Container_Content slices allocated since
+     * the last time this method was called.
+     *
+     * @param msg title log message.
+     * @param clear report all allocated slices so far.
+     */
+    void dump_new_placements(const std::string& msg, bool clear = false) const;
 };  // class PHV_MAU_Group_Assignments
 //
 //

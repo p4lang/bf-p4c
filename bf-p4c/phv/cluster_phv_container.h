@@ -321,5 +321,6 @@ std::ostream &operator<<(std::ostream &, std::list<PHV_Container *>&);
 std::ostream &operator<<(
     std::ostream &,
     ordered_map<PHV::Field *, std::list<PHV_Container::Container_Content *>>&);
+std::ostream &operator<<(std::ostream &, boost::optional<gress_t>);
 //
 #endif /* BF_P4C_PHV_CLUSTER_PHV_CONTAINER_H_ */
