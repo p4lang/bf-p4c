@@ -521,11 +521,21 @@ const IR::MAU::Instruction *CreateSaluInstruction::createInstruction(int pred_id
         break;
     case OUTPUT:
         BUG_CHECK(pred_idx >= 0 && pred_idx < 5, "Invalid index");
-        if (operands.at(0)->is<IR::Constant>()) {
-            // FIXME -- can't ouput a constant!  Perhaps have an optimization pass
-            // that deals with this better, but for now, see if we can use alu_hi to
-            // to output the constant and use that instead
-            if (!salu->dual && !alu_hi_var) {
+        if (auto k = operands.at(0)->to<IR::Constant>()) {
+            if (k->value == 0) {
+                // 0 will be output if we don't drive it at all
+                break;
+            } else if (k->value == 1 && predicates[pred_idx]) {
+                // use the predicate output
+                // FIXME -- need to set the salu_output_pred_shift/salu_output_pred_comb_shift
+                // registers properly, but we currently have no way of specifying them in the
+                // assembler.  The default (0) value works out for a 1 bit output, but by
+                // using them we could generate other values (any power of 2?)
+                operands.at(0) = new IR::MAU::SaluReg("predicate");
+            } else if (!salu->dual && !alu_hi_var) {
+                // FIXME -- can't output general constant!  Perhaps have an optimization pass
+                // that deals with this better, but for now, see if we can use alu_hi to
+                // to output the constant and use that instead
                 alu_hi_var = "--output--";
                 action->action.push_back(new IR::MAU::Instruction(
                         "alu_a", new IR::MAU::SaluReg("hi"), operands.at(0)));

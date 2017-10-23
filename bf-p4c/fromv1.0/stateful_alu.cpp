@@ -81,6 +81,8 @@ class CreateSaluApplyFunction : public Inspector {
                 return new IR::MethodCallExpression(
                         new IR::Member(new IR::PathExpression(self.math_unit_name), "execute"),
                         new IR::Vector<IR::Expression>({ self.math_input }));
+            } else if (attr->name == "predicate") {
+                return new IR::Constant(self.utype, 1);
             } else {
                 BUG("Unrecognized AttribLocal %s", attr);
                 return attr; }
@@ -166,7 +168,9 @@ class CreateSaluApplyFunction : public Inspector {
                             const IR::Type::Bits *utype, cstring mu)
     : structure(s), rtype(rtype), utype(utype), math_unit_name(mu),
       rewrite({ new RewriteExpr(*this), new TypeCheck }) {
-        body = new IR::BlockStatement;
+        body = new IR::BlockStatement({
+            new IR::AssignmentStatement(new IR::PathExpression("rv"),
+                                        new IR::Constant(utype, 0)) });
         if (auto st = rtype->to<IR::Type_StructLike>())
             rtype = new IR::Type_Name(st->name);
         apply = new IR::Function("apply", new IR::Type_Method(
@@ -179,6 +183,9 @@ class CreateSaluApplyFunction : public Inspector {
         if (need_alu_hi)
             body->components.insert(body->components.begin(),
                                     new IR::Declaration_Variable("alu_hi", utype));
+            // FIXME -- should initialize to 0 to avoid warnings about uninitialized values?
+            // FIXME -- doing so causes a redundant assgnment of 0 which may cause asm
+            // FIXME -- failure due to too many instructions in the stateful action.
         if (output && defer_out)
             body->push_back(output); }
     static const IR::Function *create(P4V1::ProgramStructure *structure,

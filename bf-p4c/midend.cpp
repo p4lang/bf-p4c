@@ -152,6 +152,7 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::ConstantFolding(&refMap, &typeMap),
         new P4::LocalCopyPropagation(&refMap, &typeMap),
         new P4::ConstantFolding(&refMap, &typeMap),
+        new P4::StrengthReduction(),
         new P4::MoveDeclarations(),
         new P4::ValidateTableProperties({"implementation", "size", "counters",
                                          "meters", "size", "support_timeout"}),
