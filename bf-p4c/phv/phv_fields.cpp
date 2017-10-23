@@ -1453,5 +1453,37 @@ const IR::Node* PhvInfo::DumpPhvFields::apply_visitor(const IR::Node *n, const c
                       (uses.is_referenced(child) ? "R" : " ") <<
                       (uses.is_deparsed(child) ? "D" : " ") << ") " << *child); } } }
     LOG1("");
+
+    LOG1("--- PHV FIELDS WIDTH HISTOGRAM----------------------------");
+    LOG1("\nINGRESS:");
+    generate_field_histogram(INGRESS);
+    LOG1("\nEGRESS:");
+    generate_field_histogram(EGRESS);
+    LOG1("\n");
     return n;
+}
+
+void PhvInfo::DumpPhvFields::generate_field_histogram(gress_t gress) const {
+    if (!LOGGING(2)) return;
+    std::map<int, size_t> size_distribution;
+    size_t total_bits = 0;
+    size_t total_fields = 0;
+    for (auto field : phv) {
+        if (field.gress == gress) {
+            // Only report histogram for fields that aren't dead code eliminated
+            if (uses.is_referenced(&field) || uses.is_deparsed(&field) || uses.is_used_mau(&field)
+                    || uses.is_used_parde(&field)) {
+                size_distribution[field.size] += 1;
+                total_bits += field.size;
+                total_fields++; } } }
+    // Print histogram
+    LOG1("Fields to be allocated: " << total_fields);
+    LOG1("Bits to be allocated: " << total_bits);
+    for (auto entry : size_distribution) {
+        std::stringstream row;
+        row << entry.first << "\t";
+        for (size_t i = 0; i < entry.second; i++)
+            row << "x";
+        row << " (" << entry.second << ")";
+        LOG1(row); }
 }

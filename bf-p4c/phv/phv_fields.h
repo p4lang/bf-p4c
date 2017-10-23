@@ -528,6 +528,10 @@ class PhvInfo {
           : phv(phv), uses(uses) { }
 
         const IR::Node *apply_visitor(const IR::Node *n, const char *) override;
+        /** Prints a histogram of all field sizes (number of fields of a particular size) in a
+         * particular gress. Also prints number of fields and total number of bits to be allocated
+         */
+        void generate_field_histogram(gress_t) const;
     };
 
     /// PHV-related info about structs, i.e. collections of header or metadata fields.
