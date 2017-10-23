@@ -1,4 +1,5 @@
 #include "bf-p4c/phv/phv_fields.h"
+#include <boost/optional.hpp>
 #include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/phv/phv_analysis_api.h"
 #include "bf-p4c/phv/phv_assignment_api.h"
@@ -1196,7 +1197,62 @@ CollectPhvInfo::CollectPhvInfo(PhvInfo& phv) {
     });
 }
 
+//
+//
+//***********************************************************************************
+//
+// logging functions
+//
+//***********************************************************************************
+//
+void PhvInfo::print_phv_group_occupancy() const {
+    if (!LOGGING(2)) return;
+    std::set<PHV::Container> containers_used;
+    std::map<bitvec, size_t> groups_usage;
+    std::map<bitvec, size_t> groups_containers;
+    std::map<bitvec, int> groups_to_ids;
 
+    // Extract MAU group specific information from phvSpec
+    std::pair<int, int> numBytes = Device::phvSpec().mauGroupNumAndSize(PHV::Type::B);
+    std::pair<int, int> numHalfs = Device::phvSpec().mauGroupNumAndSize(PHV::Type::H);
+    std::pair<int, int> numWords = Device::phvSpec().mauGroupNumAndSize(PHV::Type::W);
+
+    for (auto *field : by_id) {
+        for (auto phv_c : field->phv_containers()) {
+            PHV::Container c = Device::phvSpec().idToContainer(phv_c->container_id());
+            if (containers_used.count(c)) continue;
+            containers_used.insert(c);
+            int bitsUsed = static_cast<int>(phv_c->width()) - phv_c->avail_bits();
+            if (boost::optional<bitvec> mau_group =
+                    Device::phvSpec().mauGroup(phv_c->container_id())) {
+                groups_containers[mau_group.get()] += 1;
+                groups_usage[mau_group.get()] += bitsUsed;
+                // Group numbers go from Words -> Bytes -> Halfwords
+                // In Tofino, this is (0-3) -> (4-7) -> (8-13)
+                if (c.type() == PHV::Type::B)
+                    groups_to_ids[mau_group.get()] = (c.index() / numBytes.second) + numWords.first;
+                else if (c.type() == PHV::Type::H)
+                    groups_to_ids[mau_group.get()] = (c.index() / numHalfs.second) + (numWords.first
+                            + numBytes.first);
+                else if (c.type() == PHV::Type::W)
+                    groups_to_ids[mau_group.get()] = (c.index() / numWords.second); } } }
+
+    LOG2("\nPHV Groups Allocation State:\n");
+    LOG2("-----------------------------------------------------");
+    LOG2("|     PHV Group     |   Containers   |   Bits Used  |");
+    LOG2("|  (container bits) |      Used      |              |");
+    LOG2("-----------------------------------------------------");
+
+    // Print PHV groups
+    for (auto container_type : Device::phvSpec().containerTypes()) {
+        for (auto mau_group : Device::phvSpec().mauGroups(container_type)) {
+            LOG2("|\t\t" << groups_to_ids[mau_group] << " (" << container_type << ")\t\t|\t\t" <<
+                    groups_containers[mau_group] << "\t\t|\t\t" << groups_usage[mau_group] <<
+                    "\t\t|"); }
+        // Ensure that the line appears only for B, H, and W; not for TB, TH, TW
+        if (Device::phvSpec().mauGroups(container_type).size() != 0)
+            LOG2("-----------------------------------------------------"); }
+}
 //
 //
 //***********************************************************************************

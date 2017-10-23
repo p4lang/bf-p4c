@@ -663,6 +663,12 @@ class PhvInfo {
       * (overlaid or allocated to disjoint parts of the container)
       */
     bitvec bits_allocated(const PHV::Container c) const;
+
+    /** Prints the occupancy of each PHV group
+      * Only to be called before cluster_phv_bind pass
+      * Note: This does not print the occupancy of tagalong collections yet
+      */
+    void print_phv_group_occupancy() const;
 };  // class PhvInfo
 
 /**

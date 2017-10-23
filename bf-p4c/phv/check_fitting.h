@@ -27,10 +27,11 @@ class CheckFitting : public Visitor {
             msg << "Unallocated fields:" << std::endl;
             for (auto f : unallocated)
                 msg << "    " << f->name << std::endl;
-            if (ignorePHVOverflow)
+            if (ignorePHVOverflow) {
                 ::warning("%1%", msg.str());
-            else
-                ::error("%1%", msg.str()); }
+            } else {
+                phv.print_phv_group_occupancy();
+                ::error("%1%", msg.str()); } }
 
         return n;
     }

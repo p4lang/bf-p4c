@@ -91,6 +91,10 @@ class PhvSpec {
     /// boost::none if @container_id is not part of any MAU group.
     boost::optional<bitvec> mauGroup(unsigned container_id) const;
 
+    /// @return a pair <#groups, #containers per group> corresponding to the
+    /// PHV Type @t
+    const std::pair<int, int> mauGroupNumAndSize(const PHV::Type t) const;
+
     /// @return a bitvec of available tagalong collections.
     virtual const std::vector<bitvec>& tagalongGroups() const = 0;
 

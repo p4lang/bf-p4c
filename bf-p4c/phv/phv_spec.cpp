@@ -117,6 +117,12 @@ const std::vector<bitvec>& PhvSpec::mauGroups(PHV::Type t) const {
     return dummy;  // FIXME
 }
 
+const std::pair<int, int> PhvSpec::mauGroupNumAndSize(const PHV::Type t) const {
+    std::pair<int, int> emptyPair;
+    if (!mauGroupSpec.count(t)) return emptyPair;
+    return mauGroupSpec.at(t);
+}
+
 TofinoPhvSpec::TofinoPhvSpec() {
     addType(PHV::Type::B);
     addType(PHV::Type::H);
