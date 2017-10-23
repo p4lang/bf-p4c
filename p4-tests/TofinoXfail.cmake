@@ -217,9 +217,6 @@ p4c_add_xfail_reason("tofino"
 # parde physical adjacency constraint violated by mau phv_no_pack constraint
 p4c_add_xfail_reason("tofino"
   "CCGF member .* not physically contiguous"
-  extensions/p4_tests/p4_14/01-FlexCounter.p4
-  extensions/p4_tests/p4_14/03-VlanProfile.p4
-  extensions/p4_tests/p4_14/19-SimpleTrill.p4
   extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   extensions/p4_tests/p4_14/switch_20160602/switch.p4
   )
@@ -865,6 +862,14 @@ p4c_add_xfail_reason("tofino"
   )
 
 # BEGIN: XFAILS that match glass XFAILS
+
+# parde physical adjacency constraint violated by mau phv_no_pack constraint
+p4c_add_xfail_reason("tofino"
+  "CCGF member .* not physically contiguous"
+  extensions/p4_tests/p4_14/01-FlexCounter.p4
+  extensions/p4_tests/p4_14/03-VlanProfile.p4
+  extensions/p4_tests/p4_14/19-SimpleTrill.p4
+  )
 
 p4c_add_xfail_reason("tofino"
   "Action writes fields using the same assignment type but different source operands"
