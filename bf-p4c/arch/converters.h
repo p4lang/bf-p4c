@@ -93,6 +93,7 @@ class EgressParserConverter : public ParserConverter {
     explicit EgressParserConverter(ProgramStructure* structure)
     : ParserConverter(structure) { CHECK_NULL(structure); }
     const IR::Node* postorder(IR::AssignmentStatement* node) override;
+    const IR::Node* postorder(IR::Declaration_Variable* node) override;
     const IR::Node* postorder(IR::P4Parser* node) override;
 };
 

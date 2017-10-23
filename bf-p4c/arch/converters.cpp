@@ -310,6 +310,11 @@ const IR::Node* EgressParserConverter::postorder(IR::AssignmentStatement*) {
     return nullptr;
 }
 
+const IR::Node* EgressParserConverter::postorder(IR::Declaration_Variable* node) {
+    return new IR::Declaration_Variable(node->srcInfo, node->name,
+                                        node->type, node->initializer->apply(cloner));
+}
+
 const IR::Node* EgressParserConverter::postorder(IR::P4Parser* node) {
     auto parser = node->apply(cloner);
     auto params = parser->type->getApplyParameters();

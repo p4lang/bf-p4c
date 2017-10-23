@@ -89,26 +89,12 @@ if (NOT ENABLE_TNA)
   p4c_add_xfail_reason("tofino"
     "error: Assignment cannot be supported in the parser"
     testdata/p4_14_samples/simple_nat.p4
-    testdata/p4_14_samples/TLV_parsing.p4
     )
 
   # BRIG-109
   p4c_add_xfail_reason("tofino"
     "error: Cannot resolve computed select"
     extensions/p4_tests/p4_14/test_config_294_parser_loop.p4
-    )
-
-
-  # Incorrect P4_14->16 conversion for varbit extract
-  p4c_add_xfail_reason("tofino"
-    "Wrong number of arguments for method call: packet.extract"
-    testdata/p4_14_samples/09-IPv4OptionsUnparsed.p4
-    testdata/p4_14_samples/issue781.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "Wrong number of arguments for method call"
-    extensions/p4_tests/p4_14/c2/COMPILER-379/case2210.p4
     )
 
   p4c_add_xfail_reason("tofino"
@@ -779,6 +765,18 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue134-bmv2.p4
 )
 
+# Incorrect P4_14->16 conversion for varbit extract
+p4c_add_xfail_reason("tofino"
+  "Wrong number of arguments for method call: packet.extract"
+  testdata/p4_14_samples/09-IPv4OptionsUnparsed.p4
+  testdata/p4_14_samples/issue781.p4
+  extensions/p4_tests/p4_14/c2/COMPILER-379/case2210.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "error: Assignment cannot be supported in the parser"
+  testdata/p4_14_samples/TLV_parsing.p4
+  )
 
 p4c_add_xfail_reason("tofino"
   "visitor returned non-Statement type"
@@ -1008,13 +1006,6 @@ if (ENABLE_TNA)
   p4c_add_xfail_reason("tofino"
     "Cannot resolve computed select: BFN::SelectComputed"
     extensions/p4_tests/p4_14/c1/COMPILER-217/port_parser.p4
-    )
-  p4c_add_xfail_reason("tofino"
-    "Could not find declaration for tmp_hdr.*"
-    testdata/p4_14_samples/issue781.p4
-    extensions/p4_tests/p4_14/c2/COMPILER-379/case2210.p4
-    testdata/p4_14_samples/09-IPv4OptionsUnparsed.p4
-    testdata/p4_14_samples/TLV_parsing.p4
     )
   p4c_add_xfail_reason("tofino"
     "does not have a PHV allocation though it is used in an action"
