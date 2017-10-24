@@ -105,10 +105,7 @@ void IR::BFN::Transition::dbprint(std::ostream &out) const {
     else
         out << "(shift unknown)";
 
-    if (next)
-        out << " goto " << next->name;
-    else
-        out << " goto (end)";
+    out << endl << "goto " << (next ? next->name : "(end)");
 }
 
 void IR::BFN::LoweredParserMatch::dbprint(std::ostream &out) const {
@@ -122,11 +119,9 @@ void IR::BFN::LoweredParserMatch::dbprint(std::ostream &out) const {
     out << indent;
     for (auto *st : statements)
         out << endl << *st;
+    out << unindent;
 
-    if (next)
-        out << endl << "goto " << next->name;
-    else
-        out << endl << "goto (end)";
+    out << endl << "goto " << (next ? next->name : "(end)");
 }
 
 void IR::BFN::ParserState::dbprint(std::ostream &out) const {
