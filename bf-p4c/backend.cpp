@@ -6,7 +6,6 @@
 #include "bf-p4c/common/extract_maupipe.h"
 #include "bf-p4c/common/elim_unused.h"
 #include "bf-p4c/common/header_stack.h"
-#include "bf-p4c/common/live_at_entry.h"
 #include "bf-p4c/common/live_range_overlay.h"
 #include "bf-p4c/common/parser_overlay.h"
 #include "bf-p4c/mau/asm_output.h"
@@ -177,7 +176,6 @@ Backend::Backend(const BFN_Options& options) :
         new Digests,
         // only needed to avoid warnings about otherwise unused ingress/egress_port?
         new CollectPhvInfo(phv),
-        new LiveAtEntry(phv),
         new CreateThreadLocalInstances,
         new CollectHeaderStackInfo,  // Needs to be rerun after CreateThreadLocalInstances.
         new StackPushShims,
