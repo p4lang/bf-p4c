@@ -332,13 +332,10 @@ class P4RuntimeTest(BaseTest):
     #
     # for all add_entry function, use mk == None for default entry
     #
-    # TODO(antonin): default entry support in P4Runtime is in the process of
-    # being updated, so the code below will need to change slightly
-    # soon. Additionally, the current P4Runtime reference implementation on
-    # p4lang does not support resetting the default entry (i.e. a DELETE
-    # operation on the default entry), which is why we make sure not to include
-    # it in the list used for autocleanup, by passing store=False to
-    # write_request calls.
+    # TODO(antonin): The current P4Runtime reference implementation on p4lang
+    # does not support resetting the default entry (i.e. a DELETE operation on
+    # the default entry), which is why we make sure not to include it in the
+    # list used for autocleanup, by passing store=False to write_request calls.
     #
 
     def push_update_add_entry_to_action(self, req, t_name, mk, a_name, params):
@@ -348,6 +345,8 @@ class P4RuntimeTest(BaseTest):
         table_entry.table_id = self.get_table_id(t_name)
         if mk is not None:
             self.set_match_key(table_entry, t_name, mk)
+        else:
+            table_entry.is_default_action = True
         self.set_action_entry(table_entry, a_name, params)
 
     def send_request_add_entry_to_action(self, t_name, mk, a_name, params):
@@ -363,6 +362,8 @@ class P4RuntimeTest(BaseTest):
         table_entry.table_id = self.get_table_id(t_name)
         if mk is not None:
             self.set_match_key(table_entry, t_name, mk)
+        else:
+            table_entry.is_default_action = True
         table_entry.action.action_profile_member_id = mbr_id
 
     def send_request_add_entry_to_member(self, t_name, mk, mbr_id):
@@ -378,6 +379,8 @@ class P4RuntimeTest(BaseTest):
         table_entry.table_id = self.get_table_id(t_name)
         if mk is not None:
             self.set_match_key(table_entry, t_name, mk)
+        else:
+            table_entry.is_default_action = True
         table_entry.action.action_profile_group_id = grp_id
 
     def send_request_add_entry_to_group(self, t_name, mk, grp_id):

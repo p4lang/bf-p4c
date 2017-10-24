@@ -156,6 +156,7 @@ class STF2ptf(P4RuntimeTest, STFRunner):
         table_entry.table_id = self.get_table_id(table)
         self.set_action(table_entry.action.action, action,
                         self.genActionParamList(action, action_params))
+        table_entry.is_default_action = True
         reply = self.stub.Write(req)
         # resetting default actions is not supported in P4Runtime
         # self._requests.append(req)
