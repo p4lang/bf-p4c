@@ -391,7 +391,7 @@ void ActionBus::alloc_field(Table *tbl, Source src, unsigned offset, unsigned si
     int lo, hi, use;
     bool can_merge = true;
     if (src.type == Source::Field) {
-        lo = (src.field->bit(offset) - immed_offset) % 128U;
+        lo = src.field->bit(offset) - immed_offset;
         hi = src.field->bit(src.field->size) - 1 - immed_offset;
         lineno = tbl->find_field_lineno(src.field);
     } else {
@@ -403,7 +403,7 @@ void ActionBus::alloc_field(Table *tbl, Source src, unsigned offset, unsigned si
         /* Can't go across 32-bit boundary so chop it down as needed */
         hi = lo|31U; }
     int bytes = hi/8U - lo/8U + 1;
-    int step = lo < 32 && is_action_data ? 2 : lo < 64 ? 4 : 8;
+    int step = (lo%128U) < 32 && is_action_data ? 2 : (lo%128U) < 64 ? 4 : 8;
     if (sizes_needed & 1) {
         /* need 8-bit */
         if ((lo % 8U) && (lo/8U != hi/8U)) {
@@ -418,7 +418,7 @@ void ActionBus::alloc_field(Table *tbl, Source src, unsigned offset, unsigned si
         else
             error(lineno, "Can't allocate space on 8-bit part of action bus for %s",
                   src.toString(tbl).c_str()); }
-    step = lo < 64 ? 4 : 8;
+    step = (lo%128U) < 64 ? 4 : 8;
     if (sizes_needed & 2) {
         /* need 16-bit */
         if (lo % 16U) {
@@ -711,3 +711,28 @@ std::string ActionBus::Source::toString(Table *tbl) const {
         tmp << "<invalid source " << int(type) << ">";
         return tmp.str(); }
 }
+
+std::ostream &operator<<(std::ostream &out, const ActionBus::Slot &sl) {
+    out << sl.name << " byte=" << sl.byte << " size=" << sl.size;
+    for (auto &d : sl.data)
+        out << "\n\t" << d.first << ": " << d.second;
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, const ActionBus &a) {
+    for (auto &slot: a.by_byte) out << slot.first << ": " << slot.second << std::endl;
+    for (auto &np : a.need_place) {
+        out << np.first << " {";
+        const char *sep = " ";
+        for (auto &el : np.second) {
+            out << sep << el.first << ":" << el.second;
+            sep = ", "; }
+        out << (sep+1) << "}" << std::endl; }
+    out << "byte_use: " << a.byte_use << std::endl;
+    for (auto &hvslice : a.action_hv_slice_use) {
+        for (auto v : hvslice) out << "  " << hex(v, 4, '0');
+        out << std::endl; }
+    return out;
+}
+
+void dump(const ActionBus *a) { std::cout << *a; }

@@ -29,7 +29,6 @@ class ActionBus {
     // Check two Source refs to ensure that they are compatible (can be at the same
     // location on the aciton bus -- basically the same data)
     static bool compatible(const Source &a, unsigned a_off, const Source &b, unsigned b_off);
-    friend std::ostream &operator<<(std::ostream &, const Source &);
     struct Slot {
         std::string                 name;
         unsigned                    byte, size;  // size in bits
@@ -46,6 +45,9 @@ class ActionBus {
                     return true;
             return false; }
     };
+    friend std::ostream &operator<<(std::ostream &, const Source &);
+    friend std::ostream &operator<<(std::ostream &, const Slot &);
+    friend std::ostream &operator<<(std::ostream &, const ActionBus &);
     std::map<unsigned, Slot>                        by_byte;
     std::map<Source, std::map<unsigned, unsigned>>  need_place;
     // bytes from the given sources are needed on the action bus -- the pairs in the map
@@ -55,7 +57,8 @@ class ActionBus {
     std::vector<std::array<unsigned, ACTION_HV_XBAR_SLICES>>    action_hv_slice_use;
     // which bytes of input to the ixbar are used in each action_hv_xbar slice, for each
     // 128-bit slice of the action bus.
-    bitvec      byte_use;  // bytes on the action data bus or immediate bus in use
+    bitvec      byte_use;  // bytes on the action data (input) bus or immediate bus in use
+                           // for wide action tables, this may be >16 bytes...
 
     int find_free(Table *tbl, int min, int max, int step, int lobyte, int bytes);
     int find_merge(Table *tbl, int offset, int bytes, int use);
