@@ -197,7 +197,7 @@ Backend::Backend(const BFN_Options& options) :
         new CheckForUnallocatedTemps(phv, uses),
 
         // Lower the parser IR to a target-specific representation. This *loses
-        // information* about field reads and writes in the parser and depaser,
+        // information* about field reads and writes in the parser and deparser,
         // so after this point it's not safe to run CollectPhvInfo, FieldDefUse,
         // or any other pass that walks over the IR to find references to
         // fields.
