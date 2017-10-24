@@ -161,6 +161,20 @@ public:
             Field(Format *f, unsigned size, unsigned lo = 0, enum flags_t fl = NONE)
                 : size(size), flags(fl), fmt(f) {
                 if (size) bits.push_back({ lo, lo + size-1 }); }
+            /// add the bits of this field to the padbit bit vector
+            /// adjust the size and the offset with the corresponding alias sizes
+            void to_pad_bits(bitvec &padbits, unsigned alias_size = -1, unsigned alias_offset = 0) {
+                unsigned bits_size = 0;
+                for (auto &b : bits) {
+                    bits_size += b.size();
+                    if (alias_size < bits_size) {
+                        bits_size = alias_size;
+                        b.hi = b.lo + alias_size - 1;
+                        alias_size -= b.size();
+                    }
+                    padbits.setrange(b.lo + alias_offset, bits_size);
+                }
+            }
         };
         Format(Table *t) : tbl(t) { fmt.resize(1); }
         Format(Table *, const VECTOR(pair_t) &data, bool may_overlap = false);
@@ -254,7 +268,14 @@ public:
                 int             lineno = -1, lo = -1, hi = -1;
                 bool            is_constant = false;
                 unsigned        value;
-                alias_t(value_t &); };
+                alias_t(value_t &);
+                unsigned size() const {
+                    if (hi != -1 && lo != -1)
+                        return hi - lo + 1;
+                    else
+                        return 0;
+                }
+            };
             std::string                         name;
             std::string                         rng_param_name = "";
             int                                 lineno = -1, addr = -1, code = -1;
@@ -272,6 +293,12 @@ public:
             std::map<std::string, std::vector<alias_value_t *>> reverse_alias() const;
             bool has_rng() { return !rng_param_name.empty(); }
             void set_action_handle(Table* tbl);
+            bool has_param(std::string param) const {
+                for (auto &e : p4_params_list)
+                    if (e.name == param) return true;
+                return false;
+            }
+          friend std::ostream &operator<<(std::ostream &, const alias_t &);
         };
     private:
         typedef ordered_map<std::string, Action> map_t;
@@ -442,8 +469,18 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
                                bool print_fields = true, Table::Actions::Action *act = nullptr);
     virtual void add_field_to_pack_format(json::vector &field_list, int basebit, std::string name,
                                           const Table::Format::Field &field,
-                                          const std::vector<Actions::Action::alias_value_t *> &);
-    void add_zero_padding_fields(Table::Format *format, Table::Actions::Action *act = nullptr, unsigned format_width = 64);
+                                          const Table::Actions::Action *act);
+                                          // const std::vector<Actions::Action::alias_value_t *> &);
+    // Generate the context json for a field into field list.
+    // Use the bits specified in field, offset by the base bit.
+    // If the field is a constant, output a const_tuple map, including the specified value.
+    void output_field_to_pack_format(json::vector &field_list, int basebit,
+                                     std::string name, std::string source,
+                                     const Table::Format::Field &field,
+                                     unsigned value = 0);
+    void add_zero_padding_fields(Table::Format *format,
+                                 Table::Actions::Action *act = nullptr,
+                                 unsigned format_width = 64);
     // Result physical buses should be setup for
     // Exact/Hash/MatchwithNoKey/ATCAM/Ternary tables
     void add_result_physical_buses(json::map &stage_tbl);
@@ -456,10 +493,10 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
         for (auto &p : l)
             if (p.name == v.s) return &p;
         return nullptr; }
-    bool is_wide_format(); 
-    int get_entries_per_table_word(); 
+    bool is_wide_format();
+    int get_entries_per_table_word();
     int get_mem_units_per_table_word();
-    int get_table_word_width(); 
+    int get_table_word_width();
 };
 
 class FakeTable : public Table {
@@ -600,7 +637,7 @@ public:
     std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(Way &);
     void add_field_to_pack_format(json::vector &field_list, int basebit, std::string name,
                                   const Table::Format::Field &field,
-                                  const std::vector<Actions::Action::alias_value_t *> &) override;
+                                  const Table::Actions::Action *act) override;
     int unitram_type() override { return UnitRam::MATCH; }
     table_type_t table_type() override { return EXACT; }
 )
@@ -702,7 +739,7 @@ DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
     FOR_ALL_TARGETS(FORWARD_VIRTUAL_TABLE_WRITE_MERGE_REGS)
     void add_field_to_pack_format(json::vector &field_list, int basebit, std::string name,
                                   const Table::Format::Field &field,
-                                  const std::vector<Actions::Action::alias_value_t *> &) override;
+                                  const Table::Actions::Action *act) override;
     int unitram_type() override { return UnitRam::TERNARY_INDIRECTION; }
 public:
     unsigned address_shift() const { return std::min(5U, format->log2size - 2); }

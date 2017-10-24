@@ -108,7 +108,8 @@ void vector::print_on(std::ostream &out, int indent, int width, const char *pfx)
         first = false;
     }
     indent -= 2;
-    if (!first) out << ' ';
+    if (!first) out << (oneline ? ' ' : '\n');
+    if (!oneline) out << std::setw(indent+1);
     out << ']';
 }
 
@@ -132,7 +133,8 @@ void map::print_on(std::ostream &out, int indent, int width, const char *pfx) co
         first = false;
     }
     indent -= 2;
-    if (!first) out << ' ';
+    if (!first) out << (oneline ? ' ' : '\n');
+    if (!oneline) out << std::setw(indent+1);
     out << '}';
 }
 

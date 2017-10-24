@@ -39,12 +39,9 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     extensions/p4_tests/p4_16/stack_valid.p4
     extensions/p4_tests/p4_14/adjust_instr4.p4
     extensions/p4_tests/p4_14/adb_shared2.p4
+    # potential STF bug in reading mask constants
+    extensions/p4_tests/p4_14/adjust_instr6.p4
     )
-
-p4c_add_xfail_reason("tofino"
-  "corrupt table config json"
-  extensions/p4_tests/p4_14/adjust_instr6.p4
-  )
 
 endif() # HARLYN_STF
 
@@ -67,7 +64,6 @@ p4c_add_xfail_reason("tofino"
   )
 
 # BRIG-101
-# was BRIG-147 for extensions/p4_tests/p4_14/adjust_instr6.p4
 p4c_add_xfail_reason("tofino"
   "src2 must be phv register"
   extensions/p4_tests/p4_14/c4/COMPILER-549/case2898.p4
@@ -955,12 +951,11 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     extensions/p4_tests/p4_14/action_default_multiple.p4
     extensions/p4_tests/p4_14/adb_shared2.p4
     extensions/p4_tests/p4_14/adjust_instr3.p4
-    extensions/p4_tests/p4_14/adjust_instr4.p4
-    extensions/p4_tests/p4_14/adjust_instr6.p4
     extensions/p4_tests/p4_16/depgraph1.p4
     extensions/p4_tests/p4_16/parser_metadata_init.p4
     extensions/p4_tests/p4_16/stack_valid.p4
     testdata/p4_14_samples/07-MultiProtocol.p4
+    testdata/p4_14_samples/bigfield1.p4
     testdata/p4_14_samples/instruct5.p4
     testdata/p4_14_samples/ternary_match2.p4
     testdata/p4_14_samples/tmvalid.p4
@@ -988,11 +983,6 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
   p4c_add_xfail_reason("tofino"
     "Match field .* is too complicated to represent in P4Runtime"
     testdata/p4_14_samples/exact_match_mask1.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "error: Encountered invalid code in computed checksum control"
-    testdata/p4_14_samples/sai_p4.p4
     )
 
 # Detailed error  "<_Rendezvous of RPC that terminated with (StatusCode.INVALID_ARGUMENT, Cannot map table entry to handle)>"

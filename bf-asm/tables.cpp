@@ -1141,6 +1141,8 @@ void Table::Actions::add_action_format(Table *table, json::map &tbl) {
             json::string name = a.first;
             json::string immed_name = a.second.name;
             if (immed_name != "immediate") continue; // output only immediate fields
+            if (!(act.has_param(a.first) || a.second.is_constant))
+                continue;   // and fields that are parameters or constants
             int lo = remove_name_tail_range(name);
             json::map action_format_per_action_imm_field;
             action_format_per_action_imm_field["param_name"] = name;
@@ -1149,15 +1151,22 @@ void Table::Actions::add_action_format(Table *table, json::map &tbl) {
                 action_format_per_action_imm_field["param_type"] = "constant";
                 action_format_per_action_imm_field["const_value"] = a.second.value;
                 action_format_per_action_imm_field["param_name"] = "constant_" + std::to_string(a.second.value);
-            } else {
-                action_format_per_action_imm_field["param_shift"] = lo;
             }
+            action_format_per_action_imm_field["param_shift"] = lo;
             action_format_per_action_imm_field["dest_start"] = a.second.lo;
             action_format_per_action_imm_field["dest_width"] = (a.second.hi - a.second.lo + 1);
             action_format_per_action_imm_fields.push_back(std::move(action_format_per_action_imm_field));
         }
         action_format.push_back(std::move(action_format_per_action));
     }
+}
+
+std::ostream &operator<<(std::ostream &out, const Table::Actions::Action::alias_t &a) {
+    out << "alias: (" << a.name << ", lineno = " << a.lineno
+        << ", lo = " << a.lo << ", hi = " << a.hi
+        << ", is_constant = " << a.is_constant << ", value = 0x"
+        << std::hex << a.value << std::dec << ")";
+    return out;
 }
 
 void Table::Actions::add_immediate_mapping(json::map &tbl) {
@@ -1809,113 +1818,139 @@ void Table::canon_field_list(json::vector &field_list) {
 
 void Table::add_field_to_pack_format(json::vector &field_list, int basebit, std::string name,
                                      const Table::Format::Field &field,
-                                     const std::vector<Actions::Action::alias_value_t *> &alias) {
-    if (options.new_ctx_json) {
-        int lobit = 0;
-        bool has_alias = false;
-        unsigned add_width = 0;
-        std::string source = "";
-        for (auto a : alias) {
-            if (name == a->second.name) {
-               has_alias = true;
-               source = "spec";
-               name = a->first;
+                                     const Table::Actions::Action *act)
+{
+    if (! options.new_ctx_json)
+        error(0, "Table::add_field_to_pack_format does not support old context.json");
+
+    decltype(act->reverse_alias()) aliases;
+    if (act) aliases = act->reverse_alias();
+    auto alias = get(aliases, name);
+
+    // we need to add only those aliases that are parameters, and there can be multiple
+    // such fields that contain slices of one or more other aliases
+    // FIXME: why aren't we de-aliasing in setup?
+    for (auto a : alias) {
+        if (act->has_param(a->first) || a->second.is_constant) {
+            auto newField = field;
+            if (a->second.hi != -1) {
+                unsigned fieldSize = a->second.hi - a->second.lo + 1;
+                if (field.bits.size() > 1) warning(0, "multiple bit ranges for %s", name.c_str());
+                newField = Table::Format::Field(field.fmt, fieldSize, a->second.lo + field.bits[0].lo,
+                                                static_cast<Format::Field::flags_t>(field.flags));
             }
+
+            if (a->second.is_constant)
+                output_field_to_pack_format(field_list, basebit, a->first, "constant",
+                                            newField, a->second.value);
+            else
+                output_field_to_pack_format(field_list, basebit, a->first, "spec", newField);
         }
-        for (auto &bits : field.bits) {
-            bool pfe_enable = false;
-            std::string immediate_name = "";
-            if (name == "version")
-                source = "version";
-            else if (name == "immediate") {
-                source = "immediate";
-                immediate_name = name;
-            } else if (name == "action")
-                source = "instr";
-            else if (name == "action_addr")
-                source = "adt_ptr";
-            else if ((name == "meter_addr") && get_selector())
-                source = "sel_ptr";
-            if (auto a = this->get_attached()) {
-                // If field is an attached table address specified by a pfe
-                // param, set source to "stats_ptr" and pfe_enable to true
-                // Discard pfe bit fields
-                if (a->stats.size() > 0) {
-                    auto s = a->stats[0]->to<Synth2Port>();
-                    std::string pfe_param = s->get_per_flow_enable_param();
-                    std::string pfe_name = pfe_param.substr(0, pfe_param.find("_pfe"));
-                    if (name == (pfe_name + "_pfe"))
-                        return; //Do not output per flow enable parameter
-                    if (name == (pfe_name + "_addr")) {
-                        source = "stats_ptr";
-                        // FIXME-DRIVER: Currently driver assumes pfe bit is at the MSB of
-                        // address. Hence the fields <field>_addr and
-                        // <field>_pfe should be merged in the context json
-                        // i.e. field_width should be incremented by 1
-                        // Once driver supports a new "source" type for a
-                        // separate pfe bit this hack will go away and pfe
-                        // fields wont be dropped from the entry format
-                        add_width = 1;
-                        pfe_enable = true; } } }
-            if (field.flags == Format::Field::ZERO)
-                source = "zero";
-            json::map field_entry;
-            field_entry["start_bit"] = lobit;
-            if (this->to<TernaryIndirectTable>() || this->to<ExactMatchTable>()) {
-                if ((name == "meter_addr") && get_selector())
-                    field_entry["start_bit"] = SELECTOR_LOWER_HUFFMAN_BITS;
-                if (name == "action_addr")
-                    if (auto adt = action->to<ActionTable>()) {
-                        field_entry["start_bit"] = std::min(5U, adt->get_log2size() - 2); } }
-            field_entry["field_width"] = bits.size() + add_width;
-            field_entry["lsb_mem_word_idx"] = bits.lo/MEM_WORD_WIDTH;
-            field_entry["msb_mem_word_idx"] = bits.hi/MEM_WORD_WIDTH;
-            field_entry["source"] = json::string(source);
-            field_entry["lsb_mem_word_offset"] = basebit + (bits.lo % MEM_WORD_WIDTH);
-            field_entry["field_name"] = json::string(name);
-            //field_entry["immediate_name"] = json::string(immediate_name);
-            if (this->to<ExactMatchTable>())
-                //FIXME-JSON : match_mode only matters for ATCAM's not clear if
-                //'unused' or 'exact' is used by driver
-                field_entry["match_mode"] = json::string("unused");
-            if (this->to<ExactMatchTable>() || this->to<TernaryIndirectTable>()) {
-                field_entry["enable_pfe"] = pfe_enable;
-                if (auto s = this->get_selector()) {
-                    if (name == "meter_addr")
-                        field_entry["enable_pfe"] = s->get_per_flow_enable();
-                    if (s->get_per_flow_enable_param() == name)
-                        return; } } //Do not output per flow enable parameter
-            field_list.push_back(std::move(field_entry));
-            lobit += bits.size(); }
-    } else {
-        int lobit = 0;
-        for (auto &bits : field.bits) {
-            field_list.push_back( json::map {
-                { "name", json::string(name) },
-                { "start_offset", json::number(basebit - bits.hi) },
-                { "start_bit", json::number(lobit) },
-                { "bit_width", json::number(bits.size()) }});
-            lobit += bits.size(); }
-        for (auto a : alias) {
-            Format::bitrange_t abits(a->second.lo, a->second.hi);
-            if (a->second.lo < 0) abits.lo = 0;
-            if (a->second.hi < 0) abits.hi = field.size;
-            lobit = 0;
-            for (auto &bits : field.bits) {
-                Format::bitrange_t fbits(lobit, lobit + bits.size() - 1);
-                lobit += bits.size();
-                if (fbits.disjoint(abits)) continue;
-                auto overlap = fbits.overlap(abits);
-                field_list.push_back( json::map {
-                    { "name", json::string(a->first) },
-                    { "start_offset", json::number(basebit - bits.hi - (overlap.hi - fbits.hi)) },
-                    { "start_bit", json::number(overlap.lo) },
-                    { "bit_width", json::number(overlap.size()) }}); } } }
+    }
+
+    // Determine the source of the field. If called recursively for an alias,
+    // act will be a nullptr
+    std::string source = act ? "" : "spec";
+    std::string immediate_name = "";
+    if (name == "version")
+        source = "version";
+    else if (name == "immediate") {
+        source = "immediate";
+        immediate_name = name;
+    } else if (name == "action")
+        source = "instr";
+    else if (name == "action_addr")
+        source = "adt_ptr";
+    else if ((name == "meter_addr") && get_selector())
+        source = "sel_ptr";
+
+    if (field.flags == Format::Field::ZERO)
+        source = "zero";
+
+    if (source == "")
+        return; // we couldn't determine a proper source
+
+    output_field_to_pack_format(field_list, basebit, name, source, field);
 }
+
+void Table::output_field_to_pack_format(json::vector &field_list,
+                                        int basebit,
+                                        std::string name,
+                                        std::string source,
+                                        const Table::Format::Field &field,
+                                        unsigned value)
+{
+    unsigned add_width = 0;
+    bool pfe_enable = false;
+    auto a = this->get_attached();
+    if (a && a->stats.size() > 0) {
+        // If field is an attached table address specified by a pfe
+        // param, set source to "stats_ptr" and pfe_enable to true
+        // Discard pfe bit fields
+        auto s = a->stats[0]->to<Synth2Port>();
+        std::string pfe_param = s->get_per_flow_enable_param();
+        std::string pfe_name = pfe_param.substr(0, pfe_param.find("_pfe"));
+        if (name == (pfe_name + "_pfe"))
+            return; //Do not output per flow enable parameter
+        if (name == (pfe_name + "_addr")) {
+            source = "stats_ptr";
+            // FIXME-DRIVER: Currently driver assumes pfe bit is at the MSB of
+            // address. Hence the fields <field>_addr and
+            // <field>_pfe should be merged in the context json
+            // i.e. field_width should be incremented by 1
+            // Once driver supports a new "source" type for a
+            // separate pfe bit this hack will go away and pfe
+            // fields wont be dropped from the entry format
+            add_width = 1;
+            pfe_enable = true; }
+    }
+
+    int lobit = 0;
+    for (auto &bits : field.bits) {
+        json::map field_entry;
+        field_entry["start_bit"] = lobit;
+        if (this->to<TernaryIndirectTable>() || this->to<ExactMatchTable>()) {
+            auto selector = get_selector();
+            if (selector && selector->get_per_flow_enable_param() == name)
+                return; // Do not output per flow enable parameter
+            field_entry["enable_pfe"] = pfe_enable;
+            if ((name == "meter_addr") && selector) {
+                field_entry["start_bit"] = SELECTOR_LOWER_HUFFMAN_BITS;
+                field_entry["enable_pfe"] = selector->get_per_flow_enable();
+            }
+            if (name == "action_addr")
+                if (auto adt = action->to<ActionTable>())
+                    field_entry["start_bit"] = std::min(5U, adt->get_log2size() - 2);
+        }
+        field_entry["field_width"] = bits.size() + add_width;
+        field_entry["lsb_mem_word_idx"] = bits.lo / MEM_WORD_WIDTH;
+        field_entry["msb_mem_word_idx"] = bits.hi / MEM_WORD_WIDTH;
+        field_entry["source"] = json::string(source);
+        if (source == "constant") {
+            field_entry["const_tuples"] = json::vector {
+                json::map {
+                    { "dest_start",  json::number(0) },
+                    { "value", json::number(value) },
+                    { "dest_width", json::number(bits.size()) }
+                }};
+        }
+        field_entry["lsb_mem_word_offset"] = basebit + (bits.lo % MEM_WORD_WIDTH);
+        field_entry["field_name"] = json::string(name);
+        //field_entry["immediate_name"] = json::string(immediate_name);
+        if (this->to<ExactMatchTable>())
+            //FIXME-JSON : match_mode only matters for ATCAM's not clear if
+            //'unused' or 'exact' is used by driver
+            field_entry["match_mode"] = json::string("unused");
+        field_list.push_back(std::move(field_entry));
+        lobit += bits.size();
+    }
+
+}
+
 
 void Table::add_zero_padding_fields(Table::Format *format, Table::Actions::Action *act, unsigned format_width) {
     if (!format) return;
-    // For an action with no format pad zeros per 64 bit entry
+    // For an action with no format pad zeros for action table size
     unsigned pad_count = 0;
     if (format->log2size == 0) {
         if (auto at = this->to<ActionTable>()) {
@@ -1937,20 +1972,16 @@ void Table::add_zero_padding_fields(Table::Format *format, Table::Actions::Actio
     // Loop through fields to find zero padding
     bitvec padbits;
     for (auto &field : *format) {
-        unsigned alias_size = -1;
         auto k = get(alias, field.first);
         if (k.size() > 0) {
-            for (auto a : k) {
-                if (a->second.name == field.first)
-                    alias_size = a->second.hi - a->second.lo + 1; } }
-        unsigned bits_size = 0;
-        for (auto &bits : field.second.bits) {
-            bits_size += bits.hi - bits.lo + 1;
-            if (alias_size < bits_size) {
-                bits_size = alias_size;
-                bits.hi = bits.lo + alias_size - 1;
-                alias_size -= bits.hi - bits.lo + 1; }
-            padbits.setrange(bits.lo, bits_size); } }
+            // add each alias for a parameter or a constant
+            for (auto a : k)
+                if (act->has_param(a->first) || a->second.is_constant)
+                    field.second.to_pad_bits(padbits, a->second.size(), a->second.lo);
+        } else {
+            field.second.to_pad_bits(padbits);
+        }
+    }
     unsigned idx_lo = 0, idx_hi = 63;;
     for (auto p : padbits) {
         if (p > idx_lo) {
@@ -1981,7 +2012,7 @@ int Table::get_entries_per_table_word() {
     	return format->log2size ? (1U << (ceil_log2(MEM_WORD_WIDTH) - format->log2size)) : 0; }
     return 1;
 }
- 
+
 int Table::get_mem_units_per_table_word() {
     if (format) {
         if (is_wide_format())
@@ -1999,8 +2030,6 @@ int Table::get_table_word_width() {
 json::map &Table::add_pack_format(json::map &stage_tbl, Table::Format *format,
                                   bool print_fields, Table::Actions::Action *act) {
     if (options.new_ctx_json) {
-        decltype(act->reverse_alias()) alias;
-        if (act) alias = act->reverse_alias();
         // Add zero padding fields to format
         // FIXME: Can this be moved to a format pass?
 	if (format) {
@@ -2019,8 +2048,7 @@ json::map &Table::add_pack_format(json::map &stage_tbl, Table::Format *format,
                 for (int i = format->groups()-1; i >= 0; --i) {
                     json::vector field_list;
                     for (auto it = format->begin(i); it != format->end(i); ++it)
-                        add_field_to_pack_format(field_list, basebit, it->first, it->second,
-                                                 get(alias, it->first));
+                        add_field_to_pack_format(field_list, basebit, it->first, it->second, act);
                     canon_field_list(field_list);
                     entry_list.push_back( json::map {
                         { "entry_number", json::number(i) },
@@ -2029,8 +2057,7 @@ json::map &Table::add_pack_format(json::map &stage_tbl, Table::Format *format,
                 for (int i = get_entries_per_table_word()-1; i >= 0; --i) {
                     json::vector field_list;
                     for (auto &field : *format)
-                        add_field_to_pack_format(field_list, basebit, field.first, field.second,
-                                                 get(alias, field.first));
+                        add_field_to_pack_format(field_list, basebit, field.first, field.second, act);
                     canon_field_list(field_list);
                     entry_list.push_back( json::map {
                         { "entry_number", json::number(i) },
@@ -2042,8 +2069,6 @@ json::map &Table::add_pack_format(json::map &stage_tbl, Table::Format *format,
         pack_format.push_back(std::move(pack_fmt));
         return pack_format.back()->to<json::map>();
     } else {
-        decltype(act->reverse_alias()) alias;
-        if (act) alias = act->reverse_alias();
         json::map pack_fmt { { "memory_word_width", json::number(128) } };
         /* FIXME -- factor the two cases of this if better */
         if (format->log2size >= 7 || format->groups() > 1) {
@@ -2055,8 +2080,7 @@ json::map &Table::add_pack_format(json::map &stage_tbl, Table::Format *format,
             for (int i = format->groups()-1; i >= 0; --i) {
                 json::vector field_list;
                 for (auto it = format->begin(i); it != format->end(i); ++it)
-                    add_field_to_pack_format(field_list, basebit, it->first, it->second,
-                                             get(alias, it->first));
+                    add_field_to_pack_format(field_list, basebit, it->first, it->second, act);
                 canon_field_list(field_list);
                 entry_list.push_back( json::map {
                     { "entry_number", json::number(i) },
@@ -2071,8 +2095,7 @@ json::map &Table::add_pack_format(json::map &stage_tbl, Table::Format *format,
             for (int i = entries-1; i >= 0; --i) {
                 json::vector field_list;
                 for (auto &field : *format)
-                    add_field_to_pack_format(field_list, basebit, field.first, field.second,
-                                             get(alias, field.first));
+                    add_field_to_pack_format(field_list, basebit, field.first, field.second, act);
                 canon_field_list(field_list);
                 entry_list.push_back( json::map {
                     { "entry_number", json::number(i) },

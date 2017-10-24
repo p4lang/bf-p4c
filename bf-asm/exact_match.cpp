@@ -603,11 +603,12 @@ std::unique_ptr<json::map> ExactMatchTable::gen_memory_resource_allocation_tbl_c
 }
 
 void ExactMatchTable::add_field_to_pack_format(json::vector &field_list, int basebit,
-                                std::string name, const Table::Format::Field &field,
-                                const std::vector<Table::Actions::Action::alias_value_t *> &alias) {
+                                               std::string name,
+                                               const Table::Format::Field &field,
+                                               const Table::Actions::Action *act) {
     if (options.new_ctx_json) {
         if (name != "match") {
-            Table::add_field_to_pack_format(field_list, basebit, name, field, alias);
+            Table::add_field_to_pack_format(field_list, basebit, name, field, act);
             return; }
         unsigned bit = 0;
         for (auto &piece : field.bits) {
@@ -647,7 +648,7 @@ void ExactMatchTable::add_field_to_pack_format(json::vector &field_list, int bas
         if (name == "version") name = "--version_valid--";
         if (name == "immediate") name = "--immediate--";
         if (name != "match") {
-            Table::add_field_to_pack_format(field_list, basebit, name, field, alias);
+            Table::add_field_to_pack_format(field_list, basebit, name, field, act);
             return; }
         unsigned bit = 0;
         for (auto &piece : field.bits) {
