@@ -360,6 +360,6 @@ bool TableLayout::preorder(IR::MAU::Action *act) {
                 act->srcInfo, act->name);
 
     act->default_allowed = false;
-    act->disallowed_reason = "USES_HASH_DIST";
+    act->disallowed_reason = "uses_hash_dist";
     return false;
 }

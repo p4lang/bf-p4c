@@ -813,6 +813,11 @@ class MauAsmOutput::EmitAction : public Inspector {
                 alias[aa->name] = self.find_indirect_index(at); } }
         out << indent << canon_name(act->name) << ":" << std::endl;
         action_context_json(act);
+        out << indent << "- default_action: { "
+            << " allowed: " << std::boolalpha << act->default_allowed;
+            if (!act->default_allowed)
+                out << ", reason: " << act->disallowed_reason;
+            out << " }" << std::endl;
         is_empty = true;
         if (table->layout.action_data_bytes > 0) {
             self.emit_action_data_alias(out, indent, table, act);
@@ -1377,7 +1382,7 @@ class MauAsmOutput::UnattachedName : public MauInspector {
 /** Figure out which overhead field in the table is being used to index an attached
  *  indirect table (counter, meter, stateful, action data) and return its asm name.  Contained
  *  now within the actual IR for Hash Distribution
- */ 
+ */
 std::string MauAsmOutput::find_indirect_index(const IR::Attached *at) const {
     cstring index_name;
     if (auto hdat = at->to<IR::MAU::HashDistAttached>()) {

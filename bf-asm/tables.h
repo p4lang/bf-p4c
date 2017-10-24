@@ -260,6 +260,8 @@ public:
             bitvec                              slot_use;
             unsigned                            handle;
             p4_params                           p4_params_list;
+            bool                                default_allowed = false;
+            std::string                         default_disallowed_reason = "";
             Action(Table *, Actions *, pair_t &);
             Action(const char *n, int l) : name(n), lineno(l) {}
             bool equiv(Action *a);

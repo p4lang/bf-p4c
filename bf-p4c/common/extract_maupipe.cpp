@@ -138,8 +138,9 @@ class DefaultActionInit : public Modifier {
                 error("%s: Action %s is marked as default only, but is not the default action",
                       elem->srcInfo, elem);
             // Default action is marked constant, and cannot be changed by the runtime
-            if (prop->isConstant)
-                return false;
+            if (prop->isConstant) {
+                act->disallowed_reason = "has_const_default";
+                return false; }
         }
         act->default_allowed = true;
         return false;

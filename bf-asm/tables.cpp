@@ -787,6 +787,14 @@ Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv) {
                             for (auto &p : a.value.map) {
                                 if (CHECKTYPE(p.key, tSTR) && CHECKTYPE(p.value, tINT))
                                     p4_params_list.emplace_back(p.key.s, position++, p.value.i); } }
+                    } else if (a.key == "default_action") {
+                        if CHECKTYPE(a.value, tMAP) {
+                            for (auto &p : a.value.map) {
+                                if (CHECKTYPE(p.key, tSTR) && CHECKTYPE(p.value, tSTR)) {
+                                    if (p.key == "allowed")
+                                        default_allowed = get_bool(p.value);
+                                    else if (p.key == "reason")
+                                        default_disallowed_reason = p.value.s; } } }
                     } else if (CHECKTYPE3(a.value, tSTR, tCMD, tINT)) {
                         if (a.value.type == tINT) {
                             auto k = alias.find(a.key.s);
@@ -797,11 +805,11 @@ Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv) {
                                 k->second.value = a.value.i; }
                         } else alias.emplace(a.key.s, a.value); } }
         } else if (i.type == tSTR) {
-            VECTOR(value_t)     tmp;
-            VECTOR_init1(tmp, i);
-            if (auto *p = Instruction::decode(tbl, this, tmp))
-                instr.push_back(p);
-            VECTOR_fini(tmp);
+           VECTOR(value_t)     tmp;
+           VECTOR_init1(tmp, i);
+           if (auto *p = Instruction::decode(tbl, this, tmp))
+               instr.push_back(p);
+           VECTOR_fini(tmp);
         } else if (CHECKTYPE(i, tCMD))
             if (auto *p = Instruction::decode(tbl, this, i.vec))
                 instr.push_back(p); }
@@ -1037,17 +1045,19 @@ void Table::Actions::gen_tbl_cfg(json::vector &cfg) {
             // FIXME-JSON - indirect_resources are generated in meters, check
             // for glass examples
             action_cfg["indirect_resources"] = json::vector();
-            //FIXME: Check for random number generation must implement assembly
-            //support in table to identify rng type and corresponding updates in
-            //assembler to parse and set registers accordingly. Below checks should
-            //see if an operand is Hash-Dist type or RNG-type.
-            action_cfg["allowed_as_default_action"] = (has_hash_dist() || act.has_rng()) ? false : true;
-            if (has_hash_dist() && act.has_rng()) {
-                action_cfg["disallowed_as_default_action_reason"] = "USES_HASH_DIST_AND_RNG";
-            } else if (has_hash_dist()) {
-                action_cfg["disallowed_as_default_action_reason"] = "USES_HASH_DIST";
-            } else if (act.has_rng()) {
-                action_cfg["disallowed_as_default_action_reason"] = "USES_RNG"; }
+            // XXX(amresh): allowed_as_default_action info is directly passed through assembly
+            // This will be 'false' for following conditions:
+            // 1. Action requires hardware in hit path i.e. hash distribution or
+            // random number generator
+            // 2. There is a default action declared constant in program which
+            // implies all other actions cannot be set to default
+            action_cfg["allowed_as_default_action"] = act.default_allowed;
+            // XXX(amresh): "diallowed_as_default_action" is not used by driver.
+            // Keeping it here as debugging info. Will be set to "none",
+            // "has_const_default", "has_hash_dist". Once rng support is added
+            // to the compiler this must reflect "has_rng" or similar string.
+            if (!act.default_allowed)
+                action_cfg["disallowed_as_default_action_reason"] = act.default_disallowed_reason;
             json::vector &p4_params = action_cfg["p4_parameters"] = json::vector();
             add_p4_params(act, p4_params);
             action_cfg["override_meter_addr"] = false;

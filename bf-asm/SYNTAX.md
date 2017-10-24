@@ -507,6 +507,7 @@ stage <constant> <thread>:
                 # aliases used in instructions
             - p4_param_order: '{' param_name : <int>, ... '}'
                 # Param order specifying param name and width for context json (p4_parameters)
+            - default_action: '{' allowed : <true/false>, reason : <string> '}'
             - <instruction>
                 # SALU instructions to run for this table
     dependency: concurrent | action | match
