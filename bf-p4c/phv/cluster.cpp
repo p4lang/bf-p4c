@@ -541,9 +541,14 @@ void Cluster::MakeClusters::compute_fields_no_use_mau() {
     for (auto f : not_used_mau) {
         // Metadata in T_PHV can be removed but bridged metadata must
         // be allocated.  CCGF children are also removed.
+        // If a field is a candidate for TPHV but not deparsed then it is removed.
+        // TODO:
+        // If a field is a candidate for TPHV but only used in egress deparser
+        // then it does not need T_PHV container. It is removed.
         bool is_ccgf_child = f->ccgf() && f->ccgf() != f;
         bool is_nonbridged_metadata = f->metadata && !f->bridged;
-        if (is_ccgf_child || is_nonbridged_metadata) {
+        bool is_not_deparsed = !f->deparsed();
+        if (is_ccgf_child || is_nonbridged_metadata || is_not_deparsed) {
             delete_set.insert(f);
         } else {
             BUG_CHECK(!f->pov, "POV field not clustered");
