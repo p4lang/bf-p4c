@@ -3,9 +3,11 @@
 
 #include "ir/ir.h"
 
-/** After the CopyHeaderEliminator pass, HeaderRef objects should no longer exist
- * in the IR as arguments, only as children of Member nodes.  This pass checks
- * and throws a BUG if this property does not hold.
+/**
+ * Once the CopyHeaderEliminator and HeaderPushPo passes have run, HeaderRef
+ * objects should no longer exist in the IR as arguments, only as children of
+ * Member nodes.  This pass checks and throws a BUG if this property does not
+ * hold.
  */
 class CheckForHeaders final : public Inspector {
     bool preorder(const IR::Member *) { return false; }

@@ -2,7 +2,6 @@
 #include <fstream>
 #include <set>
 #include "bf-p4c/common/check_header_refs.h"
-#include "bf-p4c/common/copy_header_eliminator.h"
 #include "bf-p4c/common/extract_maupipe.h"
 #include "bf-p4c/common/elim_unused.h"
 #include "bf-p4c/common/header_stack.h"
@@ -181,7 +180,6 @@ Backend::Backend(const BFN_Options& options) :
         new StackPushShims,
         new CollectPhvInfo(phv),  // Needs to be rerun after CreateThreadLocalInstances.
         new HeaderPushPop,
-        new CopyHeaderEliminator,   // needs to be after HeaderPushPop and before InstSel
         new CollectPhvInfo(phv),
         new DoInstructionSelection(phv),
         new DumpPipe("After InstructionSelection"),

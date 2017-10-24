@@ -8,6 +8,7 @@
 #include "common/name_gateways.h"
 #include "frontends/p4/evaluator/evaluator.h"
 #include "frontends/p4/methodInstance.h"
+#include "bf-p4c/common/copy_header_eliminator.h"
 #include "bf-p4c/common/param_binding.h"
 #include "bf-p4c/common/simplify_references.h"
 #include "bf-p4c/mau/stateful_alu.h"
@@ -815,7 +816,12 @@ const IR::BFN::Pipe* extract_v1model_arch(P4::ReferenceMap* refMap, P4::TypeMap*
     for (auto &th : rv->thread)
         th.mau = th.mau->apply(toAttach);
 
-    return rv->apply(simplifyReferences);
+    PassManager finalSimplifications = {
+        &simplifyReferences,
+        new CopyHeaderEliminator
+    };
+
+    return rv->apply(finalSimplifications);
 }
 
 // model tofino native pipeline using frontend IR
@@ -954,7 +960,12 @@ const IR::BFN::Pipe* extract_native_arch(P4::ReferenceMap* refMap, P4::TypeMap* 
         rv->thread[gress].deparser = parserInfo.deparsers[gress];
     }
 
-    return rv->apply(simplifyReferences);
+    PassManager finalSimplifications = {
+        &simplifyReferences,
+        new CopyHeaderEliminator
+    };
+
+    return rv->apply(finalSimplifications);
 }
 
 const IR::BFN::Pipe *extract_maupipe(const IR::P4Program *program, const BFN_Options &options) {
