@@ -17,6 +17,8 @@ std::ostream &operator<<(std::ostream &out, const ActionBus::Source &src) {
             out << sep << range.lo << ".." << range.hi;
             sep = ", "; }
         out << ")";
+        if (src.field->fmt && src.field->fmt->tbl)
+            out << " " << src.field->fmt->tbl->find_field(src.field);
         break;
     case ActionBus::Source::HashDist:
         out << "HashDist(" << src.hd->hash_group << ", " << src.hd->id << ")";

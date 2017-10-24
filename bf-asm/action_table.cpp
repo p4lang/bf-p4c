@@ -104,7 +104,7 @@ void ActionTable::setup(VECTOR(pair_t) &data) {
                     error(kv.key.lineno, "Multiple formats for action %s", kv.key[1].s);
                     continue; } }
             if (CHECKTYPEPM(kv.value, tMAP, kv.value.map.size > 0, "non-empty map")) {
-                auto *fmt = new Format(kv.value.map, action == nullptr);
+                auto *fmt = new Format(this, kv.value.map, action == nullptr);
                 if (fmt->size < 8) {  // pad out to minimum size
                     fmt->size = 8;
                     fmt->log2size = 3; }
@@ -223,7 +223,7 @@ void ActionTable::pass2() {
     if (match_tables.empty())
         error(lineno, "No match table for action table %s", name());
     if (!format)
-        format = new Format();
+        format = new Format(this);
     if (direct) {
         /* need all formats to be the same size, so pad them out */
         pad_format_fields(); }

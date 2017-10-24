@@ -140,6 +140,7 @@ public:
             unsigned    size = 0, group = 0, flags = 0;
             std::vector<bitrange_t>    bits;
             Field       **by_group = 0;
+            Format      *fmt;  // containing format
             bool operator==(const Field &a) const { return size == a.size; }
             unsigned bit(unsigned i) {
                 unsigned last = 0;
@@ -156,13 +157,13 @@ public:
                         return chunk.hi;
                 assert(0); }
             enum flags_t { NONE=0, USED_IMMED=1, ZERO=3 };
-            Field() {}
-            Field(unsigned size, unsigned lo = 0, enum flags_t fl = NONE)
-                : size(size), flags(fl) {
+            Field(Format *f) : fmt(f) {}
+            Field(Format *f, unsigned size, unsigned lo = 0, enum flags_t fl = NONE)
+                : size(size), flags(fl), fmt(f) {
                 if (size) bits.push_back({ lo, lo + size-1 }); }
         };
-        Format() { fmt.resize(1); }
-        Format(const VECTOR(pair_t) &data, bool may_overlap = false);
+        Format(Table *t) : tbl(t) { fmt.resize(1); }
+        Format(Table *, const VECTOR(pair_t) &data, bool may_overlap = false);
         ~Format();
         void pass1(Table *tbl);
         void pass2(Table *tbl);
@@ -171,6 +172,7 @@ public:
         std::map<unsigned, std::map<std::string, Field>::iterator> byindex;
     public:
         int                     lineno = -1;
+        Table                   *tbl;
         unsigned                size = 0, immed_size = 0;
         Field                   *immed = 0;
         unsigned                log2size = 0; /* ceil(log2(size)) */
@@ -197,7 +199,8 @@ public:
                     if (field == &f.second)
                         return lineno;
             return -1; }
-        void add_field(Field &f, std::string name="dummy", int grp=0 ) { fmt[grp][name] = f; }
+        void add_field(Field &f, std::string name="dummy", int grp=0 ) {
+            fmt[grp].emplace(name, f); }
         decltype(fmt[0].begin()) begin(int grp=0) { return fmt[grp].begin(); }
         decltype(fmt[0].end()) end(int grp=0) { return fmt[grp].end(); }
         decltype(fmt[0].cbegin()) begin(int grp=0) const { return fmt[grp].begin(); }

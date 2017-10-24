@@ -10,7 +10,7 @@
 Table::Format::Field *SRamMatchTable::lookup_field(const std::string &n, const std::string &) {
     if (format) return format->field(n);
     if (n == "immediate" && !::Phv::get(gress, n)) {
-        static Format::Field default_immediate(32, Format::Field::USED_IMMED);
+        static Format::Field default_immediate(nullptr, 32, Format::Field::USED_IMMED);
         return &default_immediate; }
     return nullptr;
 }

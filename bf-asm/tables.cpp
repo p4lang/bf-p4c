@@ -266,7 +266,7 @@ void Table::common_init_setup(const VECTOR(pair_t) &data, bool, P4Table::type) {
     setup_layout(layout, get(data, "row"), get(data, "column"), get(data, "bus"));
     if (auto *fmt = get(data, "format")) {
         if (CHECKTYPEPM(*fmt, tMAP, fmt->map.size > 0, "non-empty map"))
-            format = new Format(fmt->map); }
+            format = new Format(this, fmt->map); }
     if (auto *hd = get(data, "hash_dist"))
         HashDistribution::parse(hash_dist, *hd);
 }
@@ -573,7 +573,7 @@ static void append_bits(std::vector<Table::Format::bitrange_t> &vec, int lo, int
     vec.emplace_back(lo, hi);
 }
 
-Table::Format::Format(const VECTOR(pair_t) &data, bool may_overlap) {
+Table::Format::Format(Table *t, const VECTOR(pair_t) &data, bool may_overlap) : tbl(t) {
     unsigned nextbit = 0;
     fmt.resize(1);
     for (auto &kv : data) {
@@ -596,8 +596,7 @@ Table::Format::Format(const VECTOR(pair_t) &data, bool may_overlap) {
             else
                 error(name.lineno, "Duplicate key %s in format", name.s);
             continue; }
-        //auto it = fmt[idx].emplace(name.s, Field{ nextbit, 0, idx, 0, -1 }).first;
-        Field *f = &fmt[idx][name.s];
+        Field *f = &fmt[idx].emplace(name.s, Field(this)).first->second;
         f->group = idx;
         if (kv.value.type == tINT) {
             if (kv.value.i <= 0)
@@ -642,7 +641,7 @@ Table::Format::Format(const VECTOR(pair_t) &data, bool may_overlap) {
         f.second.by_group[0] = &f.second; }
     for (size_t i = 1; i < fmt.size(); i++)
         for (auto &f : fmt[i]) {
-            auto &f0 = fmt[0][f.first];
+            Field &f0 = fmt[0].emplace(f.first, Field(this)).first->second;
             f.second.by_group = f0.by_group;
             f.second.by_group[i] = &f.second; }
 }
@@ -1904,7 +1903,7 @@ void Table::add_zero_padding_fields(Table::Format *format, Table::Actions::Actio
             // single pad field of 256 bits
             unsigned action_entries_per_word = std::max(1U, 128U/format->size);
             // Add a flag type to specify padding?
-            Format::Field f(format->size, 0, Format::Field::ZERO);
+            Format::Field f(format, format->size, 0, Format::Field::ZERO);
             for (int i = 0; i < action_entries_per_word; i++)
                 format->add_field(f, "--padding--");
         } else {
@@ -1933,13 +1932,13 @@ void Table::add_zero_padding_fields(Table::Format *format, Table::Actions::Actio
     unsigned idx_lo = 0, idx_hi = 63;;
     for (auto p : padbits) {
         if (p > idx_lo) {
-            Format::Field f(p - idx_lo, idx_lo, Format::Field::ZERO);
+            Format::Field f(format, p - idx_lo, idx_lo, Format::Field::ZERO);
             std::string pad_name = "--padding_" + std::to_string(idx_lo)
                 + "_" + std::to_string(p - 1) + "--";
             format->add_field(f, pad_name); }
         idx_lo = p + 1 ; }
     if (idx_lo < format_width) {
-            Format::Field f(format_width - idx_lo, idx_lo, Format::Field::ZERO);
+            Format::Field f(format, format_width - idx_lo, idx_lo, Format::Field::ZERO);
             std::string pad_name = "--padding_" + std::to_string(idx_lo)
                 + "_" + std::to_string(format_width - 1) + "--";
             format->add_field(f, pad_name); }
