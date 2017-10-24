@@ -351,7 +351,7 @@ struct CopyPropagateParserValues : public ParserInspector {
     }
 
     void propagateToState(const IR::BFN::ParserState* state,
-                          ReachingDefs&& reachingDefs) {
+                          ReachingDefs&& reachingDefs) {  // NOLINT
         if (!state) return;
 
         ReachingDefs defs(reachingDefs);
