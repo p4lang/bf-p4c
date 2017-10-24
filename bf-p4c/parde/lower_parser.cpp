@@ -572,28 +572,61 @@ class ExtractorAllocator {
 
         // Allocate. We have a limited number of extractions of each size per
         // state. We also ensure that we don't overflow the input buffer.
-        // XXX(seth): This code assumes that the set of container sizes and the
-        // set of extractor sizes are the same, but that isn't true on JBay, so
-        // this will require some rework.
         LOG3("Allocating extracts for state " << stateName);
-        std::vector<unsigned> allocatedExtractorsBySize(pardeSpec.extractorKinds().size(), 0);
+
         IR::Vector<IR::BFN::LoweredExtract> allocatedExtractions;
         std::vector<const IR::BFN::LoweredExtract*> remainingExtractions;
         nw_byteinterval remainingBytes;
-        for (auto* extract : extracts) {
-            const auto containerSize = extract->dest->container.log2sz();
-            const auto byteInterval = extract->is<IR::BFN::LoweredExtractBuffer>()
-                                    ? extract->to<IR::BFN::LoweredExtractBuffer>()
-                                             ->byteInterval()
-                                    : nw_byteinterval();
-            if (allocatedExtractorsBySize[containerSize] == pardeSpec.extractorCount() ||
-                  byteInterval.hi >= pardeSpec.byteInputBufferSize()) {
-                remainingExtractions.push_back(extract);
-                remainingBytes = remainingBytes.unionWith(byteInterval);
-                continue;
+
+        if (Device::currentDevice() == "Tofino") {
+            std::map<size_t, unsigned> allocatedExtractorsBySize;
+
+            for (auto* extract : extracts) {
+                const auto containerSize = extract->dest->container.size();
+                const auto byteInterval = extract->is<IR::BFN::LoweredExtractBuffer>()
+                                        ? extract->to<IR::BFN::LoweredExtractBuffer>()
+                                                 ->byteInterval()
+                                        : nw_byteinterval();
+                if (allocatedExtractorsBySize[containerSize] ==
+                    pardeSpec.extractorSpec().at(containerSize) ||
+                      byteInterval.hi >= pardeSpec.byteInputBufferSize()) {
+                    remainingExtractions.push_back(extract);
+                    remainingBytes = remainingBytes.unionWith(byteInterval);
+                    continue;
+                }
+                allocatedExtractorsBySize[containerSize]++;
+                allocatedExtractions.push_back(extract);
             }
-            allocatedExtractorsBySize[containerSize]++;
-            allocatedExtractions.push_back(extract);
+        } else if (Device::currentDevice() == "JBay") {
+            // JBay has one size, 16-bit extractors
+            unsigned allocatedExtractors = 0;
+            unsigned totalExtractors = pardeSpec.extractorSpec().at(16);
+
+            for (auto* extract : extracts) {
+                const auto containerSize = extract->dest->container.size();
+                const auto byteInterval = extract->is<IR::BFN::LoweredExtractBuffer>()
+                                        ? extract->to<IR::BFN::LoweredExtractBuffer>()
+                                                 ->byteInterval()
+                                        : nw_byteinterval();
+
+                if (allocatedExtractors == totalExtractors ||
+                    byteInterval.hi >= pardeSpec.byteInputBufferSize()) {
+                    remainingExtractions.push_back(extract);
+                    remainingBytes = remainingBytes.unionWith(byteInterval);
+                    continue;
+                }
+
+                switch (containerSize) {
+                    case 8:  allocatedExtractors++;  break;
+                    case 16: allocatedExtractors++;  break;
+                    case 32: allocatedExtractors+=2; break;
+                    default: BUG("Unknown container size");
+                }
+                // XXX(zma) we could pack two 8-bit extract into a single exact
+                // if the two containers are an even-odd pair.
+
+                allocatedExtractions.push_back(extract);
+            }
         }
 
         // Compute the actual shift for this state. If we allocated everything,

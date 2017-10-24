@@ -2,6 +2,7 @@
 #define EXTENSIONS_BF_P4C_PARDE_PARDE_SPEC_H_
 
 #include <vector>
+#include <map>
 
 class PardeSpec {
  public:
@@ -35,18 +36,16 @@ class PardeSpec {
     /// device.
     virtual size_t byteEgressMetadataSize() const = 0;
 
-    /// The available kinds of extractors, specified as sizes in bits.
-    virtual std::vector<unsigned> extractorKinds() const = 0;
-
-    /// The number of extractors of each kind available in each hardware parser
-    /// state.
-    virtual unsigned extractorCount() const = 0;
-
     /// The size of the input buffer, in bits.
     virtual int bitInputBufferSize() const = 0;
 
     /// The size of the input buffer, in bytes.
     int byteInputBufferSize() const { return bitInputBufferSize() / 8; }
+
+    /// Specifies the available kinds of extractors, specified as sizes in bits,
+    /// and the number of extractors of each kind available in each hardware parser
+    /// state.
+    virtual const std::map<unsigned, unsigned>& extractorSpec() const = 0;
 };
 
 class TofinoPardeSpec : public PardeSpec {
@@ -56,15 +55,19 @@ class TofinoPardeSpec : public PardeSpec {
     size_t byteIngressPrePacketPaddingSize() const override { return 0; }
     size_t byteEgressMetadataSize() const override { return 2; }
 
-    std::vector<unsigned> extractorKinds() const override { return {8, 16, 32 }; }
-
-    unsigned extractorCount() const override { return 4; }
-
     int bitInputBufferSize() const override { return 256; }
+
+    const std::map<unsigned, unsigned>& extractorSpec() const override {
+        static const std::map<unsigned, unsigned> extractorSpec = {
+            {8,  4},
+            {16, 4},
+            {32, 4}
+        };
+        return extractorSpec;
+    }
 };
 
 #if HAVE_JBAY
-// XXX(zma) same as TofinoPardeSpec for now
 class JBayPardeSpec : public PardeSpec {
  public:
     size_t byteIngressMetadataPrefixSize() const override { return 8; }
@@ -72,11 +75,14 @@ class JBayPardeSpec : public PardeSpec {
     size_t byteIngressPrePacketPaddingSize() const override { return 8; }
     size_t byteEgressMetadataSize() const override { return 2; }
 
-    std::vector<unsigned> extractorKinds() const override { return {8, 16, 32 }; }
-
-    unsigned extractorCount() const override { return 4; }
-
     int bitInputBufferSize() const override { return 256; }
+
+    const std::map<unsigned, unsigned>& extractorSpec() const override {
+        static const std::map<unsigned, unsigned> extractorSpec = {
+            {16, 20}
+        };
+        return extractorSpec;
+    }
 };
 #endif /* HAVE_JBAY */
 
