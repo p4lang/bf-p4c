@@ -171,8 +171,6 @@ Backend::Backend(const BFN_Options& options) :
         new ResolveComputedParserExpressions,
         new CollectPhvInfo(phv),
         &defuse,
-        new CollectPhvInfo(phv),
-        &defuse,
         new Digests,
         // only needed to avoid warnings about otherwise unused ingress/egress_port?
         new CollectPhvInfo(phv),
