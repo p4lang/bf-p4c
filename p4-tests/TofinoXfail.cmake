@@ -367,11 +367,6 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "rv < 0 || rv == off"
-  extensions/p4_tests/p4_14/test_config_86_multiple_action_widths_for_indirect_action.p4
-  )
-
-p4c_add_xfail_reason("tofino"
   "Expected 3 operands for execute_meter"
   extensions/p4_tests/p4_14/test_config_125_meter_pre_color.p4
   extensions/p4_tests/p4_14/test_config_126_meter_pre_color_2.p4
@@ -896,11 +891,6 @@ p4c_add_xfail_reason("tofino"
   "uses more than two source containers."
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
   extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "Assertion .* failed."
-  extensions/p4_tests/p4_14/test_config_215_nondphv.p4
   )
 
 #END: XFAILS that match glass XFAILS
