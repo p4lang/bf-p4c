@@ -96,12 +96,6 @@ if (NOT ENABLE_TNA)
     testdata/p4_14_samples/simple_nat.p4
     )
 
-  # BRIG-109
-  p4c_add_xfail_reason("tofino"
-    "Cannot resolve computed value unambiguously"
-    extensions/p4_tests/p4_14/test_config_294_parser_loop.p4
-    )
-
   p4c_add_xfail_reason("tofino"
     "Extract field slice .* with a negative offset."
     extensions/p4_tests/p4_14/c1/COMPILER-295/vag1892.p4
