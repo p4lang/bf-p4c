@@ -170,6 +170,17 @@ void AlgTcamMatchTable::pass2() {
     if (logical_id < 0) choose_logical_id();
     input_xbar->pass2();
     setup_word_ixbar_group();
+    ixbar_subgroup.resize(word_ixbar_group.size());
+    ixbar_mask.resize(word_ixbar_group.size());
+    // FIXME -- need a method of specifying these things in the asm code?
+    // FIXME -- should at least check that these are sane
+    for (unsigned i = 0; i < word_ixbar_group.size(); ++i) {
+        bitvec ixbar_use = input_xbar->hash_group_bituse(word_ixbar_group[i]);
+        // Which 10-bit address group to use for this word -- use the lowest one with
+        // a bit set in the hash group.  Can it be different for different words?
+        ixbar_subgroup[i] = ixbar_use.min().index() / EXACT_HASH_ADR_BITS;
+        // Assume that any hash bits usuable for select are used for select
+        ixbar_mask[i] = ixbar_use.getrange(EXACT_HASH_FIRST_SELECT_BIT, EXACT_HASH_SELECT_BITS); }
     if (actions) actions->pass2(this);
     if (action_bus) action_bus->pass2(this);
     if (gateway) gateway->pass2();
@@ -196,11 +207,14 @@ template<class REGS> void AlgTcamMatchTable::write_regs(REGS &regs) {
     Format::Field *next = format ? format->field("next") : nullptr;
     if (format && !next && hit_next.size() > 1)
         next = format->field("action");
+    std::vector<MaskCounter>    select_id;
+    for (auto m : ixbar_mask)
+        select_id.emplace_back(m);
 
     /* iterating through rows in the sram array;  while in this loop, 'row' is the
-     * row we're on, 'word' is which word in a wide full-way the row is for, and 'way'
-     * is which full-way of the match table the row is for.  For compatibility with the
-     * compiler, we iterate over rows and ways in order, and words from msb to lsb (reversed) */
+     * row we're on, and 'word' is which word in a wide full-way the row is for.  For
+     * compatibility with the compiler, we iterate over rows in order, and words
+     * from msb to lsb (reversed) */
     int index = -1;
     int word = fmt_width;
     for (auto &row : layout) {
@@ -211,16 +225,16 @@ template<class REGS> void AlgTcamMatchTable::write_regs(REGS &regs) {
         auto &vh_adr_xbar = rams_row.vh_adr_xbar;
         bool first = true;
         int hash_group = word_ixbar_group[word];
+        setup_muxctl(vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[row.bus], hash_group);
         auto vpn_iter = row.vpns.begin();
         for (auto col : row.cols) {
-            // setup_muxctl(vh_adr_xbar.exactmatch_mem_hashadr_xbar_ctl[col],
-            //              ways[way.way].subgroup + row.bus*5);
-            // vh_adr_xbar.exactmatch_bank_enable[col]
-            //     .exactmatch_bank_enable_bank_mask = ways[way.way].mask;
-            // vh_adr_xbar.exactmatch_bank_enable[col]
-            //     .exactmatch_bank_enable_bank_id = way.bank;
-            // vh_adr_xbar.exactmatch_bank_enable[col]
-            //     .exactmatch_bank_enable_inp_sel |= 1 << row.bus;
+            setup_muxctl(vh_adr_xbar.exactmatch_mem_hashadr_xbar_ctl[col],
+                         ixbar_subgroup[word] + row.bus*5);
+            if (ixbar_mask[word]) {
+                auto &bank_enable = vh_adr_xbar.exactmatch_bank_enable[col];
+                bank_enable.exactmatch_bank_enable_bank_mask = ixbar_mask[word];
+                bank_enable.exactmatch_bank_enable_bank_id = select_id[word]++;
+                bank_enable.exactmatch_bank_enable_inp_sel |= 1 << row.bus; }
             auto &ram = rams_row.ram[col];
             for (unsigned i = 0; i < 4; i++)
                 ram.match_mask[i] = match_mask.getrange(word*128U+i*32, 32);

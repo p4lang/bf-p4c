@@ -532,12 +532,13 @@ InputXbar::Input *InputXbar::find(Phv::Slice sl, Group grp) {
     return rv;
 }
 
-bitvec InputXbar::hash_group_bituse() const {
+bitvec InputXbar::hash_group_bituse(int grp) const {
     bitvec rv;
     unsigned tables = 0;
-    for (auto &grp : hash_groups) {
-        tables |= grp.second.tables;
-        rv |= grp.second.seed; }
+    for (auto &g : hash_groups) {
+        if (grp == -1 || (int)g.first == grp) {
+            tables |= g.second.tables;
+            rv |= g.second.seed; } }
     for (auto &tbl : hash_tables) {
         if (!((tables >> tbl.first) & 1)) continue;
         for (auto &col : tbl.second)

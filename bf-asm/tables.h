@@ -604,7 +604,8 @@ public:
 )
 
 DECLARE_TABLE_TYPE(AlgTcamMatchTable, SRamMatchTable, "atcam_match",
-    bitvec      s0q1_nibbles, s1q0_nibbles;
+    std::vector<int>    ixbar_subgroup, ixbar_mask;
+    bitvec              s0q1_nibbles, s1q0_nibbles;
     void alloc_vpns() override;
     void find_tcam_match();
 )

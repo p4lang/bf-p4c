@@ -290,12 +290,11 @@ template<class REGS> void ExactMatchTable::write_regs(REGS &regs) {
                 word = way.word; }
             setup_muxctl(vh_adr_xbar.exactmatch_mem_hashadr_xbar_ctl[col],
                          ways[way.way].subgroup + row.bus*5);
-            vh_adr_xbar.exactmatch_bank_enable[col]
-                .exactmatch_bank_enable_bank_mask = ways[way.way].mask;
-            vh_adr_xbar.exactmatch_bank_enable[col]
-                .exactmatch_bank_enable_bank_id = way.bank;
-            vh_adr_xbar.exactmatch_bank_enable[col]
-                .exactmatch_bank_enable_inp_sel |= 1 << row.bus;
+            if (ways[way.way].mask) {
+                auto &bank_enable = vh_adr_xbar.exactmatch_bank_enable[col];
+                bank_enable.exactmatch_bank_enable_bank_mask = ways[way.way].mask;
+                bank_enable.exactmatch_bank_enable_bank_id = way.bank;
+                bank_enable.exactmatch_bank_enable_inp_sel |= 1 << row.bus; }
             auto &ram = rams_row.ram[col];
             for (unsigned i = 0; i < 4; i++)
                 ram.match_mask[i] = match_mask.getrange(way.word*128U+i*32, 32);

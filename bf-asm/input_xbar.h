@@ -78,7 +78,7 @@ public:
         /* used by gateways to get the associated hash group */
         if (hash_groups.size() != 1) return -1;
         return hash_groups.begin()->first; }
-    bitvec hash_group_bituse() const;
+    bitvec hash_group_bituse(int grp = -1) const;
     std::vector<const HashCol *> hash_column(int col, int grp = -1) const;
     int match_group() {
         /* used by gateways and stateful to get the associated match group */
