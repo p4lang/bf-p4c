@@ -95,6 +95,13 @@ test suite for that P4 program. For example:
       --name easy_ternary --ptfdir p4-tests/p4_14/easy_ternary.ptf \
       --test-only test.SimpleTest
 
+When running a STF test with PTF (aka STF2PTF), you need to use
+`p4-tests/tools/stf/` as the `--ptfdir` and provide the path to the .stf file
+with `--stftest`:
+
+    sudo ./p4-tests/ptf_runner.py --testdir $P4C_OUTPUT/ --name <prog_name> \
+      --ptfdir p4-tests/tools/stf/ --test-only --stftest <path to .stf file>
+
 Often you may need to run bf_switchd in GDB. Because of the P4Runtime gRPC
 server, you will need to ignore `SIG36` by typing `handle SIG36 noprint nostop`
 at the GDB prompt.
