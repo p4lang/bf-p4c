@@ -1724,16 +1724,19 @@ json::map *Table::base_tbl_cfg(json::vector &out, const char *type, int size) {
 
 json::map *Table::add_stage_tbl_cfg(json::map &tbl, const char *type, int size) {
     if (options.new_ctx_json) {
-        auto &stage_tables = dynamic_cast<json::vector &>(*tbl["stage_tables"]);
-        stage_tables.push_back(json::map());
-        auto &stage_tbl = dynamic_cast<json::map &>(*stage_tables.back());
+        json::vector &stage_tables = tbl["stage_tables"];
+        json::map stage_tbl;
         stage_tbl["stage_number"] = stage->stageno;
         stage_tbl["size"] = size;
         stage_tbl["stage_table_type"] = type;
         stage_tbl["logical_table_id"] = logical_id;
+        stage_tbl["has_attached_gateway"] = false;
+        if (get_gateway())
+            stage_tbl["has_attached_gateway"] = true;
         if (!strcmp(type, "selection") && get_stateful())
             tbl["bound_to_stateful_table_handle"] = get_stateful()->handle();
-        return &stage_tbl;
+        stage_tables.push_back(std::move(stage_tbl));
+        return &(stage_tables.back()->to<json::map>());
     } else {
         auto &stage_tables = dynamic_cast<json::vector &>(*tbl["stage_tables"]);
         stage_tables.push_back(json::map());

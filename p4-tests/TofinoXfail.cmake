@@ -39,7 +39,6 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     extensions/p4_tests/p4_16/stack_valid.p4
     extensions/p4_tests/p4_14/adjust_instr4.p4
     extensions/p4_tests/p4_14/adb_shared2.p4
-    testdata/p4_14_samples/ternary_match4.p4
     )
 
 p4c_add_xfail_reason("tofino"
@@ -917,6 +916,12 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     )
 
   p4c_add_xfail_reason("tofino"
+    "StatusCode.UNAVAILABLE, Endpoint read failed"
+    testdata/p4_14_samples/ternary_match4.p4
+    testdata/p4_14_samples/basic_routing.p4
+    )
+
+  p4c_add_xfail_reason("tofino"
     "StatusCode.UNKNOWN, Error when adding match entry to target"
     testdata/p4_14_samples/exact_match_valid1.p4
     )
@@ -947,12 +952,6 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
   p4c_add_xfail_reason("tofino"
     "StatusCode.INVALID_ARGUMENT, Cannot map table entry to handle"
     testdata/p4_14_samples/counter2.p4
-    )
-
-# Detailed error "<_Rendezvous of RPC that terminated with (StatusCode.UNAVAILABLE, Connect Failed)>"
-  p4c_add_xfail_reason("tofino"
-    "StatusCode.UNAVAILABLE, Connect Failed"
-    extensions/p4_tests/p4_14/meter_test1.p4
     )
 
 # BRIG-241

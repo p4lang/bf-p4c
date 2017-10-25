@@ -126,7 +126,6 @@ void HashActionTable::gen_tbl_cfg(json::vector &out) {
         //FIXME: Support multiple hash_dist's
         int size = hash_dist.empty() ? 1 : 1 + hash_dist[0].mask;
         json::map &tbl = *base_tbl_cfg(out, "match_entry", size);
-        json::map &match_attributes = tbl["match_attributes"] = json::map();
         if (!tbl.count("preferred_match_type"))
             tbl["preferred_match_type"] = "exact";
         const char *stage_tbl_type = "match_with_no_key";
@@ -136,13 +135,10 @@ void HashActionTable::gen_tbl_cfg(json::vector &out) {
                 if (arg.hash_dist()){
                     stage_tbl_type = "hash_action";
                     size = 1 + hash_dist[0].mask; } } }
-        json::vector stage_tables;
-        json::map stage_tbl;
-        stage_tbl["stage_number"] = stage->stageno;
-        stage_tbl["logical_table_id"] = logical_id;
+        json::map &match_attributes = tbl["match_attributes"];
+        json::vector &stage_tables = match_attributes["stage_tables"];
+        json::map &stage_tbl = *add_stage_tbl_cfg(match_attributes, stage_tbl_type, size);
         stage_tbl["memory_resource_allocation"] = nullptr;
-        stage_tbl["size"] = size;
-        stage_tbl["stage_table_type"] = stage_tbl_type;
         match_attributes["match_type"] = stage_tbl_type;
         match_attributes["uses_dynamic_key_masks"] = false; //FIXME-JSON
         // FIXME-JSON: If the next table is modifiable then we set it to what it's mapped
@@ -215,8 +211,6 @@ void HashActionTable::gen_tbl_cfg(json::vector &out) {
                             hash_bits.push_back(std::move(hash_bit)); } }
                     hash_functions.push_back(std::move(hash_function)); } }
         MatchTable::gen_idletime_tbl_cfg(stage_tbl);
-        stage_tables.push_back(std::move(stage_tbl));
-        match_attributes["stage_tables"] = std::move(stage_tables);
     } else {
         int size = hash_dist.empty() ? 1 : 1 + hash_dist[0].mask;
         json::map &tbl = *base_tbl_cfg(out, "match_entry", size);

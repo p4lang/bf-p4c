@@ -447,13 +447,9 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
                 version_word_group = match_index - index;
                 break; }
             index++; }
-        json::map &match_attributes = tbl["match_attributes"] = json::map();
+        json::map &match_attributes = tbl["match_attributes"];
         json::vector &stage_tables = match_attributes["stage_tables"];
-        json::map stage_tbl;
-        stage_tbl["stage_number"] = stage->stageno;
-        stage_tbl["size"] = number_entries;
-        stage_tbl["stage_table_type"] = "ternary_match";
-        stage_tbl["logical_table_id"] = logical_id;
+        json::map &stage_tbl = *add_stage_tbl_cfg(match_attributes, "ternary_match", number_entries);
         json::map &pack_fmt = add_pack_format(stage_tbl, 47, match.size(), 1);
         stage_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg("tcam", layout);
         // FIXME-JSON: If the next table is modifiable then we set it to what it's mapped
@@ -593,7 +589,6 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
         else if (action && action->actions)
             action->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
         MatchTable::gen_idletime_tbl_cfg(stage_tbl);
-        stage_tables.push_back(std::move(stage_tbl));
         match_attributes["match_type"] = "ternary";
     } else {
         unsigned number_entries = layout_size()/match.size() * 512;

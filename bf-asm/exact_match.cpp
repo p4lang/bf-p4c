@@ -677,12 +677,8 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
         common_tbl_cfg(tbl, "exact");
         json::map &match_attributes = tbl["match_attributes"];
         json::vector &stage_tables = match_attributes["stage_tables"];
-        json::map stage_tbl;
-        stage_tbl["stage_number"] = stage->stageno;
-        stage_tbl["logical_table_id"] = logical_id;
+        json::map &stage_tbl = *add_stage_tbl_cfg(match_attributes, "hash_match", number_entries);
         stage_tbl["memory_resource_allocation"] = nullptr;
-        stage_tbl["size"] = number_entries;
-        stage_tbl["stage_table_type"] = "hash_match";
         match_attributes["match_type"] = "exact";
         match_attributes["uses_dynamic_key_masks"] = false; //FIXME-JSON
         if (number_entries == 0) {
@@ -747,7 +743,6 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
                 way_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg(way);
                 way_stage_tables.push_back(std::move(way_tbl)); } }
         MatchTable::gen_idletime_tbl_cfg(stage_tbl);
-        stage_tables.push_back(std::move(stage_tbl));
         tbl["stateful_table_refs"] = json::vector();
         json::vector &action_data_table_refs = tbl["action_data_table_refs"] = json::vector();
         if (action) {
