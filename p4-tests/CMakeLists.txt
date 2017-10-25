@@ -81,8 +81,8 @@ include(TofinoTests.cmake)
 include(TofinoXfail.cmake)
 
 # add jbay tests and xfails with reasons
-include(JBayTests.cmake)
-include(JBayXfail.cmake)
+#include(JBayTests.cmake)
+#include(JBayXfail.cmake)
 
 # We have additional test inputs that are used to test the other
 # (standard) back-ends These test input programs depend on Tofino in
