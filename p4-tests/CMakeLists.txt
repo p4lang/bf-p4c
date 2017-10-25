@@ -61,68 +61,8 @@ else()
   MESSAGE (WARNING "PTF tests will not run as at least one requirement is not met.")
 endif()
 
-# if we have a reason for failure, then use that regular expression to
-# make the test succeed. If that changes, we know the test moved to a
-# different failure. Also turn off automatic ignoring of failures (WILL_FAIL).
-macro(p4c_add_xfail_reason tag reason)
-  set (__tests "${ARGN}")
-  foreach (test IN LISTS __tests)
-    p4c_test_set_name(__testname ${tag} ${test})
-    if ( "${reason}" STREQUAL "")
-      set_tests_properties(${__testname} PROPERTIES WILL_FAIL 1)
-    else ()
-      set_tests_properties(${__testname} PROPERTIES
-        PASS_REGULAR_EXPRESSION ${reason}
-        WILL_FAIL 0)
-    endif()
-    p4c_add_test_label(${tag} "XFAIL" ${test})
-  endforeach()
-endmacro(p4c_add_xfail_reason)
 
-set (tofino_timeout 500)
-
-set (P4C_TOFINO_RUNTEST ${CMAKE_CURRENT_SOURCE_DIR}/runtest)
-
-set (V1_SEARCH_PATTERNS "include.*(v1model|psa).p4" "main")
-set (P4TESTDATA ${P4C_SOURCE_DIR}/testdata)
-set (P4TESTS_FOR_TOFINO "${P4TESTDATA}/p4_16_samples/*.p4")
-p4c_find_tests("${P4TESTS_FOR_TOFINO}" v1tests INCLUDE "${V1_SEARCH_PATTERNS}")
-
-set (TOFINO_TEST_SUITES
-  ${P4C_SOURCE_DIR}/testdata/p4_14_samples/*.p4
-  ${P4TESTDATA}/p4_14_samples/switch_*/switch.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/*.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/*.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c1/*/*.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c2/*/*.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c3/*/*.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c4/*/*.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c5/*/*.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c6/*/*.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c7/*/*.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c8/*/*.p4
-  # switch DC_BASIC_PROFILE
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch/p4src/switch.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/jenkins/*/*.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch_*/switch.p4
-  ${v1tests}
-  )
-
-set (testExtraArgs)
-# if STF is not found, disbale all stf tests
-if (NOT HARLYN_STF)
-  set (testExtraArgs ${testExtraArgs} -norun)
-endif()
-if (PTF_REQUIREMENTS_MET)
-  set (testExtraArgs ${testExtraArgs} -ptf)
-  if (ENABLE_STF2PTF)
-    set (testExtraArgs ${testExtraArgs} -stf2ptf)
-  endif()
-endif()
-
-if (ENABLE_TNA)
-  set (testExtraArgs ${testExtraArgs} -Xp4c=--native)
-endif()
+set (P4C_RUNTEST ${CMAKE_CURRENT_SOURCE_DIR}/runtest)
 
 set (HARLYN_PTF_DRIVER ${CMAKE_CURRENT_SOURCE_DIR}/ptf_runner.py
   CACHE FILEPATH "Path to PTF Harlyn runner")
@@ -132,186 +72,33 @@ set (HARLYN_PTF_DRIVER_WRAPPER ${CMAKE_CURRENT_BINARY_DIR}/ptf_runner_wrapper
 configure_file ("src/ptf_runner_wrapper.c.in"
   "${P4C_BINARY_DIR}/ptf_runner_wrapper.c" @ONLY)
 
-# xfail list is empty: tests which are expected to fail should be listed in
-# TofinoXfail.cmake with a reason
-p4c_add_tests ("tofino" ${P4C_TOFINO_RUNTEST} "${TOFINO_TEST_SUITES}"
-  "" "${testExtraArgs}")
 
-# call this macro to register a PTF test with a custom PTF test directory; by
-# default the behavior is to look for a directory with the same name as the P4
-# program and a .ptf extension, which may not always be convenient when adding
-# tests for third-party P4 programs.
-# if you need to mark this test as XFAIL, please edit TofinoXfail.cmake with the
-# appropriate call to p4c_add_xfail_reason.
-macro(p4c_add_ptf_test_with_ptfdir alias ts args ptfdir)
-  file (RELATIVE_PATH p4test ${P4C_SOURCE_DIR} ${ts})
-  p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} FALSE ${alias}
-    ${p4test} "${args} -ptfdir ${ptfdir}")
-  p4c_test_set_name(__testname "tofino" ${alias})
-if (PTF_REQUIREMENTS_MET)
-  set_tests_properties(${__testname} PROPERTIES RUN_SERIAL 1)
-  p4c_add_test_label("tofino" "ptf" ${alias})
-endif()
-endmacro(p4c_add_ptf_test_with_ptfdir)
+# common test utils
+include(TestUtils.cmake)
 
-p4c_add_ptf_test_with_ptfdir (
-    tor.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/google-tor/p4/spec/tor.p4
-    "${testExtraArgs}" ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/tor.ptf)
-
-if (PTF_REQUIREMENTS_MET)
-  # PTF tests cannot be run in parallel with other tests, so we set the SERIAL
-  # property for them
-  set (__ptfCounter 0)
-  foreach (ts "${TOFINO_TEST_SUITES}")
-    file (GLOB __testfiles RELATIVE ${P4C_SOURCE_DIR} ${ts})
-    foreach (__p4file ${__testfiles})
-      set(__havePTF 0)
-      string (REGEX REPLACE ".p4$" ".ptf" __ptffile ${__p4file})
-      if (EXISTS ${P4C_SOURCE_DIR}/${__ptffile})
-        set(__havePTF 1)
-      endif()
-      string (REGEX REPLACE ".p4$" ".stf" __stffile ${__p4file})
-      if (ENABLE_STF2PTF AND NOT ${__havePTF} AND EXISTS ${P4C_SOURCE_DIR}/${__stffile})
-        # Also add as PTF test the STF
-        # MESSAGE(STATUS "STF2PTF: Generating ${P4C_BINARY_DIR}/tofino/${__ptffile}/test.py")
-        set(__havePTF 1)
-      endif()
-      if (${__havePTF})
-        p4c_test_set_name(__testname "tofino" ${__p4file})
-        set_tests_properties(${__testname} PROPERTIES RUN_SERIAL 1)
-        p4c_add_test_label("tofino" "ptf" ${__p4file})
-        # MESSAGE(STATUS "Added PTF test: ${__testname}")
-        math (EXPR __ptfCounter "${__ptfCounter} + 1")
-      endif()
-    endforeach() # __p4file
-  endforeach() # ts
-  MESSAGE(STATUS "Added ${__ptfCounter} PTF tests")
-endif() # PTF_REQUIREMENTS_MET
-
-if (HARLYN_STF)
-  foreach (ts "${TOFINO_TEST_SUITES}")
-    file (GLOB __testfiles RELATIVE ${P4C_SOURCE_DIR} ${ts})
-    foreach (__p4file ${__testfiles})
-      string (REGEX REPLACE ".p4$" ".stf" __stffile ${__p4file})
-      if (EXISTS ${P4C_SOURCE_DIR}/${__stffile})
-        p4c_add_test_label("tofino" "stf" ${__p4file})
-      endif()
-    endforeach() # __p4file
-  endforeach()   # ts
-endif(HARLYN_STF)
-
-set  (SWITCH_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch/p4src/switch.p4)
-set  (isXFail TRUE)
-file (RELATIVE_PATH switchtest ${P4C_SOURCE_DIR} ${SWITCH_P4})
-p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_ent_fin_leaf" ${switchtest} "${testExtraArgs} -DENT_FIN_LEAF_PROFILE")
-p4c_add_test_label("tofino" "17Q4Goal" "switch_ent_fin_leaf")
-
-p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_dc_basic" ${switchtest} "${testExtraArgs} -DDC_BASIC_PROFILE")
-p4c_add_test_label("tofino" "17Q4Goal" "switch_dc_basic")
-
-p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_ent_dc_general" ${switchtest} "${testExtraArgs} -DENT_DC_GENERAL_PROFILE")
-p4c_add_test_label("tofino" "17Q4Goal" "switch_ent_dc_general")
-
-p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_msdc" ${switchtest} "${testExtraArgs} -DMSDC_PROFILE")
-p4c_add_test_label("tofino" "17Q4Goal" "switch_msdc")
-
-p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_acl_ip4v" ${switchtest} "${testExtraArgs} -DACL_IPV4_PROFILE")
-p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_bfd_offload" ${switchtest} "${testExtraArgs} -DBFD_OFFLOAD_PROFILE")
-p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_dc_maxsizes" ${switchtest} "${testExtraArgs} -DDC_MAXSIZES_PROFILE")
-p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_egress_acl" ${switchtest} "${testExtraArgs} -DEGRESS_ACL_PROFILE")
-p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_fabric" ${switchtest} "${testExtraArgs} -DFABRIC_PROFILE")
-p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_fabric_maxsizes" ${switchtest} "${testExtraArgs} -DFABRIC_MAXSIZES_PROFILE")
-p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_ila" ${switchtest} "${testExtraArgs} -DILA_PROFILE")
-p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_ila_ipv6" ${switchtest} "${testExtraArgs} -DILA_IPV6_PROFILE")
-p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_ent_fin_spine" ${switchtest} "${testExtraArgs} -DENT_FIN_SPINE_PROFILE")
-p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_ent_fin_postcard" ${switchtest} "${testExtraArgs} -DENT_FIN_POSTCARD_PROFILE")
-p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} FALSE
-  "switch_l2" ${switchtest} "${testExtraArgs} -DL2_PROFILE")
-p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_l3_ipv4_fib_clpm" ${switchtest} "${testExtraArgs} -DL3_IPV4_FIB_CLPM_PROFILE")
-p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_mpls_udp" ${switchtest} "${testExtraArgs} -DMPLS_UDP_PROFILE")
-p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_nat" ${switchtest} "${testExtraArgs} -DNAT_PROFILE")
-p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_qos" ${switchtest} "${testExtraArgs} -DQOS_PROFILE")
-p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_sflow" ${switchtest} "${testExtraArgs} -DSFLOW_PROFILE")
-p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_test_int_vxlan_ep" ${switchtest} "${testExtraArgs} -DTEST_INT_VXLAN_EP_PROFILE")
-p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_test_int_vxlan_transit" ${switchtest} "${testExtraArgs} -DTEST_INT_VXLAN_TRANSIT_PROFILE")
-p4c_add_test_with_args ("tofino" ${P4C_TOFINO_RUNTEST} ${isXFail}
-  "switch_test_mirror_on_drop" ${switchtest} "${testExtraArgs} -DTEST_MIRROR_ON_DROP_PROFILE")
-
-# add xfails with reasons
+# add tofino tests and xfails with reasons
+include(TofinoTests.cmake)
 include(TofinoXfail.cmake)
 
+# add jbay tests and xfails with reasons
+include(JBayTests.cmake)
+include(JBayXfail.cmake)
 
 # We have additional test inputs that are used to test the other
 # (standard) back-ends These test input programs depend on Tofino in
 # some way.
 
 # Exercise v12 back-end on Tofino-specific programs
+include (P14Tests.cmake)
 include (P14Xfail.cmake)
-set (P14_TEST_SUITES
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/*.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c1/*/*.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c2/*/*.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c3/*/*.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c4/*/*.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c5/*/*.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c6/*/*.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c7/*/*.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c8/*/*.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch/p4src/switch.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/jenkins/*/*.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch_*/switch.p4
-  )
-
-set (V12_DRIVER ${CMAKE_CURRENT_SOURCE_DIR}/test-v12-sample.sh)
-p4c_add_tests("p14_to_16" ${V12_DRIVER} "${P14_TEST_SUITES}" "${P14_XFAIL_TESTS}")
 
 # P4_16 tests
+include (P16Tests.cmake)
 include (P16Xfail.cmake)
-set (P16_TEST_SUITES
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/*.p4
-  )
-set (P4TEST_DRIVER ${P4C_SOURCE_DIR}/backends/p4test/run-p4-sample.py)
-p4c_add_tests("p4" ${P4TEST_DRIVER} "${P16_TEST_SUITES}" "${P4_XFAIL_TESTS}")
 
 # Exercise bmv2 back-end on Tofino-specific programs
+include (BMV2Tests.cmake)
 include (BMV2Xfail.cmake)
-set (exclude_stateful "tofino/stateful_alu_blackbox" "tofino/stateful_alu")
-set (BMV2_P4_14_DIRS
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/*.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch_*/switch.p4)
-
-p4c_find_tests("${BMV2_P4_14_DIRS}" bmv2_p4_14_tests
-  EXCLUDE "${exclude_stateful}")
-
-p4c_find_tests("${CMAKE_CURRENT_SOURCE_DIR}/p4_16/*.p4" bmv2_p4_16_tests
-  INCLUDE "${V1_SEARCH_PATTERNS}" EXCLUDE "${exclude_stateful}")
-set (BMV2_TEST_SUITES
-  ${bmv2_p4_14_tests}
-  ${bmv2_p4_16_tests}
-  )
-set(BMV2_DRIVER ${CMAKE_CURRENT_SOURCE_DIR}/test-bmv2.sh)
-p4c_add_tests("bmv2" ${BMV2_DRIVER} "${BMV2_TEST_SUITES}" "${BMV2_XFAIL_TESTS}")
 
 # test STF lexing and parsing by running the stf2ptf_pd generator on
 # all existing STF files in the tree
