@@ -400,6 +400,7 @@ public:
     element_ref operator[](const std::string &str) { return element_ref(*this, str.c_str()); }
     element_ref operator[](long n) { return element_ref(*this, n); }
     element_ref operator[](std::unique_ptr<obj> &&i) { return element_ref(*this, std::move(i)); }
+    using map_base::erase;
     map_base::size_type erase(const char *str) {
         string tmp(str);
         return map_base::erase(&tmp); }
@@ -415,6 +416,7 @@ public:
         for (auto &e: *this)
             m->emplace(e.first ? e.first->clone().release() : nullptr, clone_ptr(e.second));
         return std::unique_ptr<map>(m); }
+    map &merge(const map &a);
 };
 
 inline void vector::push_back(map &&m) { emplace_back(mkuniq<map>(std::move(m))); }

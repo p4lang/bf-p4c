@@ -451,4 +451,6 @@ void AlgTcamMatchTable::gen_tbl_cfg(json::vector &out) {
     //add_result_physical_buses(stage_tbl);
     //stage_tbl["action_format"] = // TODO
     //MatchTable::gen_idletime_tbl_cfg(stage_tbl);
+    //if (context_json)
+    //    stage_tbl.merge(*context_json);
 }

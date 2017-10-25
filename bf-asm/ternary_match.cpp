@@ -589,6 +589,8 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
         else if (action && action->actions)
             action->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
         MatchTable::gen_idletime_tbl_cfg(stage_tbl);
+        if (context_json)
+            stage_tbl.merge(*context_json);
         match_attributes["match_type"] = "ternary";
     } else {
         unsigned number_entries = layout_size()/match.size() * 512;

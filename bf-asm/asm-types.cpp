@@ -30,6 +30,56 @@ void collapse_list_of_maps(value_t &v) {
     v.map = map;
 }
 
+std::unique_ptr<json::obj> toJson(value_t &v) {
+    switch(v.type) {
+    case tINT:
+        return json::mkuniq<json::number>(v.i);
+    case tBIGINT:
+        if (v.bigi.size == 1 && v.bigi.data[0] < LONG_MAX)
+            return json::mkuniq<json::number>(v.bigi.data[0]);
+        // fall through
+    case tRANGE:
+    case tMATCH:
+        return json::mkuniq<json::string>(value_desc(v));
+    case tSTR:
+        if (v == "true") return json::mkuniq<json::True>();
+        if (v == "false") return json::mkuniq<json::False>();
+        if (v == "null") return std::unique_ptr<json::obj>();
+        return json::mkuniq<json::string>(v.s);
+    case tVEC:
+        return toJson(v.vec);
+    case tMAP:
+        return toJson(v.map);
+    case tCMD:
+        return toJson(v.vec);
+    default:
+        assert(0); }
+    return std::unique_ptr<json::obj>();
+}
+
+std::unique_ptr<json::vector> toJson(VECTOR(value_t) &v) {
+    auto rv = json::mkuniq<json::vector>();
+    auto &vec = *rv;
+    for (auto &el : v)
+        vec.push_back(toJson(el));
+    return rv;
+}
+
+std::unique_ptr<json::map> toJson(pair_t &kv) {
+    auto rv = json::mkuniq<json::map>();
+    auto &map = *rv;
+    map[toJson(kv.key)] = toJson(kv.value);
+    return rv;
+}
+
+std::unique_ptr<json::map> toJson(VECTOR(pair_t) &m) {
+    auto rv = json::mkuniq<json::map>();
+    auto &map = *rv;
+    for (auto &kv : m)
+        map[toJson(kv.key)] = toJson(kv.value);
+    return rv;
+}
+
 bool get_bool(const value_t &v) {
     if (v == "true")
         return true;

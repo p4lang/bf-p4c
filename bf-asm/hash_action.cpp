@@ -211,6 +211,8 @@ void HashActionTable::gen_tbl_cfg(json::vector &out) {
                             hash_bits.push_back(std::move(hash_bit)); } }
                     hash_functions.push_back(std::move(hash_function)); } }
         MatchTable::gen_idletime_tbl_cfg(stage_tbl);
+        if (context_json)
+            stage_tbl.merge(*context_json);
     } else {
         int size = hash_dist.empty() ? 1 : 1 + hash_dist[0].mask;
         json::map &tbl = *base_tbl_cfg(out, "match_entry", size);

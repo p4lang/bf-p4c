@@ -743,6 +743,8 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
                 way_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg(way);
                 way_stage_tables.push_back(std::move(way_tbl)); } }
         MatchTable::gen_idletime_tbl_cfg(stage_tbl);
+        if (context_json)
+            stage_tbl.merge(*context_json);
         tbl["stateful_table_refs"] = json::vector();
         json::vector &action_data_table_refs = tbl["action_data_table_refs"] = json::vector();
         if (action) {

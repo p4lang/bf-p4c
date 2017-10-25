@@ -142,6 +142,25 @@ std::string obj::toString() const {
     return buf.str();
 }
 
+map &map::merge(const map &a) {
+    for (auto &el : a) {
+        if (!el.second) {
+            erase(el.first);
+        } else if (count(el.first)) {
+            auto &exist = at(el.first);
+            if (exist->is<map>() && el.second->is<map>()) {
+                exist->to<map>().merge(el.second->to<map>());
+            } else if (exist->is<vector>() && el.second->is<vector>()) {
+                auto &vec = exist->to<vector>();
+                for (auto &vel : el.second->to<vector>())
+                    vec.push_back(vel->clone());
+            } else {
+                exist = el.second->clone(); }
+        } else {
+            emplace(el.first->clone().release(), el.second->clone()); } }
+    return *this;
+}
+
 }
 
 void dump(const json::obj &o) { std::cout << &o << std::endl; }

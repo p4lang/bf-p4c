@@ -382,6 +382,8 @@ void Stateful::gen_tbl_cfg(json::vector &out) {
             tbl["bound_to_selection_table_handle"] = bound_selector->handle();
         json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "stateful", size);
         add_meter_alu_index(stage_tbl);
+        if (context_json)
+            stage_tbl.merge(*context_json);
     } else {
         // FIXME -- factor common Synth2Port stuff
         int size = (layout_size() - 1) * 1024 * (128U/format->size);

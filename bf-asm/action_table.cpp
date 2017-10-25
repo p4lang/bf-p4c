@@ -443,6 +443,8 @@ void ActionTable::gen_tbl_cfg(json::vector &out) {
         tbl["how_referenced"] = indirect ? "indirect" : "direct";
         /* FIXME -- don't include ref to select table as compiler doesn't */
         tbl.erase("p4_selection_tables");
+        if (context_json)
+            stage_tbl.merge(*context_json);
     } else {
         // FIXME -- this is wrong if actions have different format sizes
         unsigned number_entries = (layout_size() * 128 * 1024) / (1 << format->log2size);

@@ -390,6 +390,7 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     std::set<Table *>           pred;
     std::vector<HashDistribution>       hash_dist;
     p4_params                   p4_params_list;
+    std::unique_ptr<json::map>  context_json;
 
     static std::map<std::string, Table *>       all;
 

@@ -66,4 +66,6 @@ void Phase0MatchTable::gen_tbl_cfg(json::vector &out) {
     if (options.match_compiler)
         tbl["p4_statistics_tables"] = json::vector();
     common_tbl_cfg(tbl, "exact");
+    if (context_json)
+        stage_tbl.merge(*context_json);
 }

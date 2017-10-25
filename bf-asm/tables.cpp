@@ -346,6 +346,9 @@ bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p
                             else if (w.key == "size") p.bit_width = w.value.i;
                             else error(lineno, "Incorrect param type %s in p4_param_order", w.key.s); } }
                     p4_params_list.emplace_back(p); } } }
+    } else if (kv.key == "context_json") {
+        if (CHECKTYPE(kv.value, tMAP))
+            context_json = toJson(kv.value.map);
     } else
         return false;
     return true;

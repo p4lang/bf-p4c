@@ -433,5 +433,7 @@ void MeterTable::gen_tbl_cfg(json::vector &out) {
     tbl["color_aware_pfe_address_type_bit_position"] = 0; //FIXME
     stage_tbl["default_lower_huffman_bits_included"] = METER_LOWER_HUFFMAN_BITS;
     add_meter_alu_index(stage_tbl);
+    if (context_json)
+        stage_tbl.merge(*context_json);
 }
 

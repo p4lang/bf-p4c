@@ -8,6 +8,7 @@
 #include <string.h>
 #include <sstream>
 #include "vector.h"
+#include "json.h"
 
 enum gress_t { INGRESS, EGRESS, NONE };
 
@@ -125,6 +126,12 @@ inline void fini(pair_t &p) { free_pair(&p); }
 inline void fini(VECTOR(value_t) &v) { VECTOR_foreach(v, free_value); VECTOR_fini(v); }
 inline void fini(VECTOR(pair_t) &v) { VECTOR_foreach(v, free_pair); VECTOR_fini(v); }
 void collapse_list_of_maps(value_t &);
+
+std::unique_ptr<json::obj> toJson(value_t &);
+std::unique_ptr<json::vector> toJson(VECTOR(value_t) &);
+std::unique_ptr<json::map> toJson(pair_t &);
+std::unique_ptr<json::map> toJson(VECTOR(pair_t) &);
+
 #endif /* __cplusplus */
 
 #define CHECKTYPE(V, T) \

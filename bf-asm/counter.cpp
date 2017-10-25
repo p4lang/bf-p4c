@@ -218,6 +218,8 @@ void CounterTable::gen_tbl_cfg(json::vector &out) {
         case BYTES: tbl["statistics_type"] = "bytes"; break;
         case BOTH: tbl["statistics_type"] = "packets_and_bytes"; break;
         default: break; }
+        if (context_json)
+            stage_tbl.merge(*context_json);
     } else {
         // FIXME -- factor common Synth2Port stuff
         int size = (layout_size() - 1)*1024*format->groups();
