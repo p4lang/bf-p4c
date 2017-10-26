@@ -89,16 +89,16 @@ include(TofinoXfail.cmake)
 # some way.
 
 # Exercise v12 back-end on Tofino-specific programs
-include (P14Tests.cmake)
 include (P14Xfail.cmake)
+include (P14Tests.cmake)
 
 # P4_16 tests
-include (P16Tests.cmake)
 include (P16Xfail.cmake)
+include (P16Tests.cmake)
 
 # Exercise bmv2 back-end on Tofino-specific programs
-include (BMV2Tests.cmake)
 include (BMV2Xfail.cmake)
+include (BMV2Tests.cmake)
 
 # test STF lexing and parsing by running the stf2ptf_pd generator on
 # all existing STF files in the tree
