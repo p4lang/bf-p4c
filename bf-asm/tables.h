@@ -261,7 +261,7 @@ public:
             std::map<std::string, alias_t>      alias;
             std::vector<Instruction *>          instr;
             bitvec                              slot_use;
-            unsigned                            handle;
+            unsigned                            handle = 0;
             p4_params                           p4_params_list;
             bool                                default_allowed = false;
             std::string                         default_disallowed_reason = "";
@@ -271,6 +271,7 @@ public:
             typedef const decltype(alias)::value_type alias_value_t;
             std::map<std::string, std::vector<alias_value_t *>> reverse_alias() const;
             bool has_rng() { return !rng_param_name.empty(); }
+            void set_action_handle(Table* tbl);
         };
     private:
         typedef ordered_map<std::string, Action> map_t;

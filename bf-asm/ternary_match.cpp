@@ -723,7 +723,8 @@ Table::table_type_t TernaryIndirectTable::set_match_table(MatchTable *m, bool in
         if (action.check() && action->set_match_table(m, action.args.size() > 1) != ACTION)
             error(action.lineno, "%s is not an action table", action->name());
         attached.pass1(m);
-        logical_id = m->logical_id; }
+        logical_id = m->logical_id; 
+        p4_table = m->p4_table; }
     return TERNARY_INDIRECT;
 }
 

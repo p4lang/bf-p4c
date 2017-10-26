@@ -817,19 +817,6 @@ Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv) {
         } else if (CHECKTYPE(i, tCMD))
             if (auto *p = Instruction::decode(tbl, this, i.vec))
                 instr.push_back(p); }
-    // For action tables shared in multiple stages, the same action handle must
-    // be assigned for that action in each stage. Action handles are stored in
-    // p4_table. Lookup action handles and assign handle if present else add a
-    // new handle
-    bool action_handle_present = false;
-    auto p4_table = tbl->p4_table;
-    if (p4_table) {
-        if (p4_table->action_handles.count(name) > 0) {
-            handle = p4_table->action_handles[name];
-            action_handle_present = true; } }
-    if (!action_handle_present) {
-        handle = unique_action_handle++;
-        if (p4_table) p4_table->action_handles[name] = handle; }
 }
 
 Table::Actions::Actions(Table *tbl, VECTOR(pair_t) &data) {
@@ -846,8 +833,22 @@ Table::Actions::Actions(Table *tbl, VECTOR(pair_t) &data) {
         actions.emplace(name, Action(tbl, this, kv)); }
 }
 
+void Table::Actions::Action::set_action_handle(Table *tbl) {
+    // For actions in tables shared across multiple stages, the action handles
+    // must be same. p4_table stores a map of actions and their handles. If
+    // action present store the same handle else assign a new one.
+    auto p4_table = tbl->p4_table;
+    if (p4_table) {
+        if (p4_table->action_handles.count(name) > 0)
+            handle = p4_table->action_handles[name]; }
+    if (handle == 0) {
+        handle = unique_action_handle++;
+        if (p4_table) p4_table->action_handles[name] = handle; }
+}
+
 void Table::Actions::pass1(Table *tbl) {
     for (auto &act : *this) {
+        act.set_action_handle(tbl);
         if ((tbl->default_action == act.name) &&
             (!tbl->default_action_handle))
             tbl->default_action_handle = act.handle;

@@ -916,12 +916,6 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     )
 
   p4c_add_xfail_reason("tofino"
-    "StatusCode.UNAVAILABLE, Endpoint read failed"
-    testdata/p4_14_samples/ternary_match4.p4
-    testdata/p4_14_samples/basic_routing.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
     "StatusCode.UNKNOWN, Error when adding match entry to target"
     testdata/p4_14_samples/exact_match_valid1.p4
     )
