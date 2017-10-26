@@ -1073,7 +1073,6 @@ void Table::Actions::gen_tbl_cfg(json::vector &cfg) {
             action_cfg["override_stateful_addr"] = false;
             action_cfg["override_stateful_addr_pfe"] = false;
             action_cfg["override_stateful_full_addr"] = 0;
-            // KKG: call here
             json::vector &prim_cfg = action_cfg["primitives"] = json::vector();
             gen_prim_cfg(act, prim_cfg);
             cfg.push_back(std::move(action_cfg)); }
@@ -1194,7 +1193,6 @@ void Table::Actions::add_next_table_mapping(Table *table, json::map &tbl) {
             map["next_table_name"] = next->name(); }
 }
 
-// KKG
 void Table::Actions::gen_prim_cfg(const Action& act, json::vector &out) {
     auto instrs = act.instr;
     for (unsigned i = 0; i < instrs.size(); i++) {

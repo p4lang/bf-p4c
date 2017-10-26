@@ -171,10 +171,12 @@ struct operand {
                     << field->group << ']'; }
         void gen_prim_cfg(json::map& out) { 
           std::string refn;
-          auto tbl = field->fmt->tbl;
-          auto tbltype = tbl->table_type();
-          if (tbltype == Table::ACTION) {
-              refn = "action_param";
+          if (field) {
+            auto tbl = field->fmt->tbl;
+            auto tbltype = tbl->table_type();
+            if (tbltype == Table::ACTION) {
+                refn = "action_param";
+            } 
           } else refn = "immediate";
           out["type"] = refn;
           out["name"] = p4name; 
