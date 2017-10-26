@@ -30,3 +30,5 @@ extern void invalidate_raw(in bit<9> field);
 
 extern void sample3(in CloneType type, in bit<32> session, in bit<32> length);
 extern void sample4<T>(in CloneType type, in bit<32> session, in bit<32> length, in T data);
+
+extern void execute_meter_with_color<M, I, T>(M m, I index, out T dst, in T pre_color);

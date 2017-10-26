@@ -359,10 +359,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Expected 3 operands for execute_meter"
-  extensions/p4_tests/p4_14/test_config_125_meter_pre_color.p4
-  extensions/p4_tests/p4_14/test_config_126_meter_pre_color_2.p4
-  extensions/p4_tests/p4_14/test_config_127_meter_pre_color_3.p4
+  "P4_14 extern not fully supported"
   extensions/p4_tests/p4_14/test_config_132_meter_pre_color_4.p4
   extensions/p4_tests/p4_14/jenkins/mau_test/mau_test.p4
   )

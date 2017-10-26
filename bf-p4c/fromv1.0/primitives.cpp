@@ -19,6 +19,20 @@ CONVERT_PRIMITIVE(bypass_egress) {
 #endif
 }
 
+CONVERT_PRIMITIVE(execute_meter, 5) {
+    if (primitive->operands.size() != 4) return nullptr;
+    structure->include("tofino/p4_14_prim.p4");
+    ExpressionConverter conv(structure);
+    // FIXME -- convert this to a custom primitive so TNA translation can convert
+    // FIXME -- it to an execute call on a TNA meter
+    return new IR::MethodCallStatement(primitive->srcInfo,
+            IR::ID(primitive->srcInfo, "execute_meter_with_color"), {
+                conv.convert(primitive->operands.at(0)),
+                conv.convert(primitive->operands.at(1)),
+                conv.convert(primitive->operands.at(2)),
+                conv.convert(primitive->operands.at(3)) });
+}
+
 CONVERT_PRIMITIVE(invalidate) {
     if (primitive->operands.size() != 1) return nullptr;
     structure->include("tofino/p4_14_prim.p4");
