@@ -225,6 +225,18 @@ struct AluOP : public SaluInstruction {
     operand             srca, srcb;
     AluOP(const Decode *op, int l) : SaluInstruction(l), opc(op) {}
     std::string name() override { return opc->name; };
+    void gen_prim_cfg(json::map& out) {
+        out["name"] = opc->name;
+        /* TODO:
+        dest.gen_prim_cfg((out["dest"] = json::map()));
+        json::vector &srcv = out["src"] = json::vector();
+        json::map oneoper;
+        srca.gen_prim_cfg(oneoper);
+        srcv.push_back(std::move(oneoper));
+        srcb.gen_prim_cfg(oneoper);
+        srcv.push_back(std::move(oneoper));
+        */
+    }
     Instruction *pass1(Table *tbl, Table::Actions::Action *) override;
     void pass2(Table *tbl, Table::Actions::Action *)  override { }
     bool equiv(Instruction *a_) override;
@@ -355,6 +367,9 @@ struct BitOP : public SaluInstruction {
     int predication_encode = STATEFUL_PREDICATION_ENCODE_UNCOND;
     BitOP(const Decode *op, int lineno) : SaluInstruction(lineno), opc(op) {}
     std::string name() override { return opc->name; };
+    void gen_prim_cfg(json::map& out) {
+        out["name"] = opc->name;
+    }
     Instruction *pass1(Table *, Table::Actions::Action *) override { slot = ALU1LO; return this; }
     void pass2(Table *, Table::Actions::Action *) override { }
     bool equiv(Instruction *a_) override;
@@ -401,6 +416,18 @@ struct CmpOP : public SaluInstruction {
     bool                srca_neg = false, srcb_neg = false;
     CmpOP(const Decode *op, int lineno) : SaluInstruction(lineno), opc(op) {}
     std::string name() override { return opc->name; };
+    void gen_prim_cfg(json::map& out) {
+        out["name"] = opc->name;
+        /* TODO: Whar are srca, srcb and srcc here? 
+        srca->gen_prim_cfg((out["dest"] = json::map()));
+        json::vector &srcv = out["src"] = json::vector();
+        json::map oneoper;
+        srcb->gen_prim_cfg(oneoper);
+        srcv.push_back(std::move(oneoper));
+        srcc->gen_prim_cfg(oneoper);
+        srcv.push_back(std::move(oneoper));
+        */
+    }
     Instruction *pass1(Table *tbl, Table::Actions::Action *) override;
     void pass2(Table *tbl, Table::Actions::Action *) override { }
     bool equiv(Instruction *a_) override;
@@ -482,6 +509,7 @@ struct OutOP : public SaluInstruction {
     static const std::map<std::string, int> ops_mux_lookup;
     OutOP(const Decode *op, int lineno) : SaluInstruction(lineno) {}
     std::string name() override { return "output"; };
+    void gen_prim_cfg(json::map& out) { out["name"] = "output"; };
     Instruction *pass1(Table *tbl, Table::Actions::Action *) override { slot = ALUOUT; return this; }
     void pass2(Table *tbl, Table::Actions::Action *) override { }
     bool equiv(Instruction *a_) override;

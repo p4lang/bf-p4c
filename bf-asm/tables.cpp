@@ -8,6 +8,8 @@
 #include "stage.h"
 #include "tables.h"
 
+#include <unordered_map>
+
 extern unsigned unique_action_handle;
 
 std::map<std::string, Table *> Table::all;
@@ -1071,6 +1073,9 @@ void Table::Actions::gen_tbl_cfg(json::vector &cfg) {
             action_cfg["override_stateful_addr"] = false;
             action_cfg["override_stateful_addr_pfe"] = false;
             action_cfg["override_stateful_full_addr"] = 0;
+            // KKG: call here
+            json::vector &prim_cfg = action_cfg["primitives"] = json::vector();
+            gen_prim_cfg(act, prim_cfg);
             cfg.push_back(std::move(action_cfg)); }
     } else {
         for (auto &act : *this) {
@@ -1188,6 +1193,18 @@ void Table::Actions::add_next_table_mapping(Table *table, json::map &tbl) {
         if (next)
             map["next_table_name"] = next->name(); }
 }
+
+// KKG
+void Table::Actions::gen_prim_cfg(const Action& act, json::vector &out) {
+    auto instrs = act.instr;
+    for (unsigned i = 0; i < instrs.size(); i++) {
+        auto oneinstr = instrs[i];
+        json::map oneprim;
+        oneinstr->gen_prim_cfg(oneprim);
+        out.push_back(std::move(oneprim));
+    }
+}
+
 
 int get_address_mau_actiondata_adr_default(unsigned log2size, bool per_flow_enable) {
     int huffman_ones = log2size > 2 ? log2size - 3 : 0;
@@ -2067,6 +2084,7 @@ json::map &Table::add_pack_format(json::map &stage_tbl, Table::Format *format,
         return pack_format.back()->to<json::map>(); }
 }
 
+
 void MatchTable::gen_name_lookup(json::map &out) {
     if (p4_table && p4_table->p4_name())
         out["table_name"] = p4_table->p4_name();
@@ -2077,7 +2095,7 @@ void MatchTable::gen_name_lookup(json::map &out) {
         for (auto a : *acts) {
             json::map &action_map = actions_map[a.name] = json::map();
             action_map["direction"] = logical_id;
-            action_map["primitives"] = json::vector();
+            json::vector &prims = action_map["primitives"] = json::vector();
         }
     }
 }
@@ -2144,3 +2162,4 @@ void Table::add_result_physical_buses(json::map &stage_tbl) {
     for (auto l : layout) {
         result_physical_buses.push_back(l.row * 2 + l.bus); }
 }
+

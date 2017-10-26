@@ -43,6 +43,7 @@ struct operand {
         virtual bool equiv(const Base *) const = 0;
         virtual void phvRead(std::function<void (const ::Phv::Slice &sl)>) {}
         virtual void pass2(int) const {}
+        virtual void gen_prim_cfg(json::map& ) = 0;
     } *op;
     struct Const : Base {
         long            value;
@@ -62,6 +63,10 @@ struct operand {
             error(lineno, "constant value %ld out of range for immediate", value);
             return -1; }
         void dbprint(std::ostream &out) const override { out << value; }
+        void gen_prim_cfg(json::map& out) { 
+          out["type"] = "immmediate"; 
+          out["name"] = std::to_string(value);
+        }
     };
     struct Phv : Base {
         ::Phv::Ref      reg;
@@ -92,15 +97,23 @@ struct operand {
             tbl->stage->action_use[tbl->gress][reg->reg.uid] = true; }
         void dbprint(std::ostream &out) const override { out << reg; }
         void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) override { fn(*reg); }
+        void gen_prim_cfg(json::map& out) { 
+          out["type"] = "phv"; 
+          out["name"] = reg->reg.name;
+        }
     };
     struct Action : Base {
         std::string             name;
+        std::string             p4name;
         Table                   *table;
         Table::Format::Field    *field;
         unsigned                lo, hi;
 
         Action(int line, const std::string &n, Table *tbl, Table::Format::Field *f,
                unsigned l, unsigned h) : Base(line), name(n), table(tbl), field(f), lo(l), hi(h) {}
+        Action(int line, const std::string &n, Table *tbl, Table::Format::Field *f,
+               unsigned l, unsigned h, const std::string &m) : 
+                Base(line), name(n), p4name(m), table(tbl), field(f), lo(l), hi(h) {}
         bool equiv(const Base *a_) const override {
             if (auto *a = dynamic_cast<const Action *>(a_)) {
                 return name == a->name && table == a->table && field == a->field &&
@@ -156,6 +169,16 @@ struct operand {
             if (field)
                 out << '[' << field->bits[0].lo << ':' << field->size << ", "
                     << field->group << ']'; }
+        void gen_prim_cfg(json::map& out) { 
+          std::string refn;
+          auto tbl = field->fmt->tbl;
+          auto tbltype = tbl->table_type();
+          if (tbltype == Table::ACTION) {
+              refn = "action_param";
+          } else refn = "immediate";
+          out["type"] = refn;
+          out["name"] = p4name; 
+        }
     };
     struct RawAction : Base {
         int             index;
@@ -170,6 +193,7 @@ struct operand {
         int bits(int group) override { return 0x40 + index; }
         unsigned bitoffset(int group) const override { return offset; }
         void dbprint(std::ostream &out) const override { out << 'A' << index; }
+        void gen_prim_cfg(json::map& out) { /* TODO: what is this */ }
     };
     struct HashDist : Base {
         Table                   *table;
@@ -246,15 +270,23 @@ struct operand {
                 out << sep << u;
                 sep = ", "; }
             out << ")"; }
+        void gen_prim_cfg(json::map& out) { 
+          out["type"] = "hash";
+          out["name"] = "TODO"; // TODO: What is the name?
+          // TODO: What about algorithm?
+        }
     };
     struct Named : Base {
         std::string     name;
+        std::string     p4name;
         int             lo, hi;
         Table           *tbl;
         std::string     action;
 
         Named(int line, const std::string &n, int l, int h, Table *t, const std::string &act)
         : Base(line), name(n), lo(l), hi(h), tbl(t), action(act) {}
+        Named(int line, const std::string &n, int l, int h, Table *t, const std::string &act, std::string &m)
+        : Base(line), name(n), p4name(m), lo(l), hi(h), tbl(t), action(act) {}
         bool equiv(const Base *a_) const override {
             if (auto *a = dynamic_cast<const Named *>(a_)) {
                 return name == a->name && lo == a->lo && hi == a->hi && tbl == a->tbl &&
@@ -274,6 +306,7 @@ struct operand {
                 if (hi >= 0 && hi != lo) out << ".. " << hi;
                 out << ')'; }
             out << '[' << tbl->name() << ':' << action << ']'; }
+        void gen_prim_cfg(json::map& out) { /* what will be this */ }
     };
     operand() : op(0) {}
     operand(const operand &a) : op(a.op ? a.op->clone() : 0) {}
@@ -305,6 +338,8 @@ struct operand {
     void dbprint(std::ostream &out) const { op->dbprint(out); }
     Base *operator->() { return op->lookup(op); }
     template <class T> T *to() { return dynamic_cast<T *>(op->lookup(op)); }
+    void gen_prim_cfg(json::map& out) { op->gen_prim_cfg(out); }
+    
 };
 
 operand::operand(Table *tbl, const Table::Actions::Action *act, const value_t &v) : op(0) {
@@ -312,6 +347,7 @@ operand::operand(Table *tbl, const Table::Actions::Action *act, const value_t &v
         op = new Const(v.lineno, v.i);
     } else if (CHECKTYPE2(v, tSTR, tCMD)) {
         std::string name = v.type == tSTR ? v.s : v[0].s;
+        std::string p4name = name;
         int lo = -1, hi = -1;
         if (v.type == tCMD) {
             if (v == "hash_dist" && (op = HashDist::parse(tbl, v.vec)))
@@ -333,7 +369,7 @@ operand::operand(Table *tbl, const Table::Actions::Action *act, const value_t &v
                 lo = alias.lo;
                 hi = alias.hi; }
             name = alias.name; }
-        op = new Named(v.lineno, name, lo, hi, tbl, act->name); }
+        op = new Named(v.lineno, name, lo, hi, tbl, act->name, p4name); }
 }
 
 auto operand::Named::lookup(Base *&ref) -> Base * {
@@ -350,12 +386,13 @@ auto operand::Named::lookup(Base *&ref) -> Base * {
             } else if (hi >= 0 && (unsigned)hi >= field->size) {
                 error(lineno, "Bit %d out of range for field %s", hi, name.c_str());
                 ref = 0; } }
-        if (ref)
+        if (ref) {
             ref = new Action(lineno, name, tbl, field, lo >= 0 ? lo : 0,
-                             hi >= 0 ? hi : field->size - 1);
+                             hi >= 0 ? hi : field->size - 1, p4name);
+        }
     } else if (tbl->find_on_actionbus(name, lo >= 0 ? lo : 0, 7, &len) >= 0) {
         ref = new Action(lineno, name, tbl, 0, lo >= 0 ? lo : 0,
-                         hi >= 0 ? hi : len - 1);
+                         hi >= 0 ? hi : len - 1, p4name);
     } else if (::Phv::get(tbl->gress, name)) {
         ref = new Phv(lineno, tbl->gress, name, lo, hi);
     } else if (sscanf(name.c_str(), "A%d%n", &slot, &len) >= 1 &&
@@ -364,7 +401,7 @@ auto operand::Named::lookup(Base *&ref) -> Base * {
     } else if (name == "hash_dist" && lo == hi) {
         ref = new HashDist(lineno, tbl, lo);
     } else if (Table::all.count(name)) {
-        ref = new Action(lineno, name, tbl, nullptr, lo >= 0 ? lo : 0, hi >= 0 ? hi : 31);
+        ref = new Action(lineno, name, tbl, nullptr, lo >= 0 ? lo : 0, hi >= 0 ? hi : 31, p4name);
     } else {
         ref = new Phv(lineno, tbl->gress, name, lo, hi); }
     if (ref != this) delete this;
@@ -383,6 +420,7 @@ int parity(unsigned v) {
 struct VLIWInstruction : Instruction {
     VLIWInstruction(int l) : Instruction(l) {}
     virtual int encode() = 0;
+    void gen_prim_cfg(json::map& out) { };
     template<class REGS>
     void write_regs(REGS &regs, Table *tbl, Table::Actions::Action *act);
     FOR_ALL_TARGETS(DECLARE_FORWARD_VIRTUAL_INSTRUCTION_WRITE_REGS)
@@ -414,6 +452,16 @@ struct AluOP : VLIWInstruction {
     : VLIWInstruction(d.lineno), opc(op), dest(tbl->gress, d),
       src1(tbl, act, s1), src2(tbl, act, s2) {}
     std::string name() { return opc->name; };
+    void gen_prim_cfg(json::map& out) { 
+      out["name"] = opc->name;
+      dest.gen_prim_cfg((out["dest"] = json::map()));
+      json::vector &srcv = out["src"] = json::vector();
+      json::map oneoper;
+      src1.gen_prim_cfg(oneoper);
+      srcv.push_back(std::move(oneoper));
+      src2.gen_prim_cfg(oneoper);
+      srcv.push_back(std::move(oneoper));
+    }
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
     void pass2(Table *tbl, Table::Actions::Action *) {
         src1->pass2(slot/Phv::mau_groupsize());
@@ -560,6 +608,7 @@ struct LoadConst : VLIWInstruction {
         : VLIWInstruction(d.lineno), dest(tbl->gress, d), src(s) {}
     LoadConst(int line, Phv::Ref &d, int v) : VLIWInstruction(line), dest(d), src(v) {}
     std::string name() { return ""; };
+    void gen_prim_cfg(json::map& out) { }
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
     void pass2(Table *, Table::Actions::Action *) {}
     int encode();
@@ -634,6 +683,16 @@ struct CondMoveMux : VLIWInstruction {
     : VLIWInstruction(d.lineno), opc(op), dest(tbl->gress, d), src1(tbl, act, s1),
       src2(tbl, act, s2) {}
     std::string name() { return opc->name; }
+    void gen_prim_cfg(json::map& out) { 
+      out["name"] = opc->name;
+      dest.gen_prim_cfg((out["dest"] = json::map()));
+      json::vector &srcv = out["src"] = json::vector();
+      json::map oneoper;
+      src1.gen_prim_cfg(oneoper);
+      srcv.push_back(std::move(oneoper));
+      src2.gen_prim_cfg(oneoper);
+      srcv.push_back(std::move(oneoper));
+    }
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
     void pass2(Table *tbl, Table::Actions::Action *) {
         src1->pass2(slot/Phv::mau_groupsize());
@@ -724,6 +783,17 @@ struct DepositField : VLIWInstruction {
     : VLIWInstruction(d.lineno), dest(tbl->gress, d), src1(tbl, act, s1), src2(tbl, act, s2) {}
     DepositField(const Set &);
     std::string name() { return "deposit_field"; }
+    void gen_prim_cfg(json::map& out) { 
+      out["name"] = "set"; // treat deposit as a set - atleast for debug
+      dest.gen_prim_cfg((out["dest"] = json::map()));
+      json::vector &srcv = out["src"] = json::vector();
+      json::map oneoper;
+      src1.gen_prim_cfg(oneoper);
+      srcv.push_back(std::move(oneoper));
+      src2.gen_prim_cfg(oneoper);
+      srcv.push_back(std::move(oneoper));
+    }
+
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
     void pass2(Table *tbl, Table::Actions::Action *) {
         src1->pass2(slot/Phv::mau_groupsize());
@@ -814,6 +884,15 @@ struct Set : VLIWInstruction {
     Set(Table *tbl, const Table::Actions::Action *act, const value_t &d, const value_t &s)
         : VLIWInstruction(d.lineno), dest(tbl->gress, d), src(tbl, act, s) {}
     std::string name() { return "set"; };
+    void gen_prim_cfg(json::map& out) { 
+      // glass calls this ModifyFieldPrimitive based on python class name
+      out["name"] = "set"; 
+      dest.gen_prim_cfg((out["dest"] = json::map()));
+      json::vector &srcv = out["src"] = json::vector();
+      json::map oneoper;
+      src.gen_prim_cfg(oneoper);
+      srcv.push_back(std::move(oneoper));
+    }
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
     void pass2(Table *tbl, Table::Actions::Action *) { src->pass2(slot/Phv::mau_groupsize()); }
     int encode();
@@ -899,6 +978,10 @@ struct NulOP : VLIWInstruction {
     NulOP(Table *tbl, const Table::Actions::Action *act, const Decode *o, const value_t &d) :
         VLIWInstruction(d.lineno), opc(o), dest(tbl->gress, d) {}
     std::string name() { return opc->name; };
+    void gen_prim_cfg(json::map& out) { 
+      out["name"] = opc->name;
+      dest.gen_prim_cfg((out["dest"] = json::map()));
+    }
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
     void pass2(Table *, Table::Actions::Action *) {}
     int encode();
@@ -961,6 +1044,16 @@ struct ShiftOP : VLIWInstruction {
                     src2 = src1;
                     if (CHECKTYPE(ops[2], tINT)) shift = ops[2].i; } }
     std::string name() { return opc->name; };
+    void gen_prim_cfg(json::map& out) { 
+      out["name"] = opc->name;
+      dest.gen_prim_cfg((out["dest"] = json::map()));
+      json::vector &srcv = out["src"] = json::vector();
+      json::map oneoper;
+      src1.gen_prim_cfg(oneoper);
+      srcv.push_back(std::move(oneoper));
+      src2.gen_prim_cfg(oneoper);
+      srcv.push_back(std::move(oneoper));
+    }
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
     void pass2(Table *tbl, Table::Actions::Action *) {
         src1->pass2(slot/Phv::mau_groupsize());
