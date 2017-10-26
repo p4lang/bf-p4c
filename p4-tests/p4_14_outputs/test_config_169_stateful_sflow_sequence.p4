@@ -220,6 +220,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     register_action<bit<32>, bit<32>>(sflow_state_seq_num) seq_num_gen = {
         void apply(inout bit<32> value, out bit<32> rv) {
             bit<32> alu_hi;
+            rv = 32w0;
             alu_hi = value;
             value = value + 32w1;
             rv = alu_hi;
@@ -228,6 +229,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     register_action<bit<32>, bit<32>>(sflow_state_exp_seq_num) sflow_exp_seq_num = {
         void apply(inout bit<32> value, out bit<32> rv) {
             bit<32> alu_hi;
+            rv = 32w0;
             alu_hi = (bit<32>)meta.sflowHdr.seq_num - value;
             value = (bit<32>)meta.sflowHdr.temp;
             rv = alu_hi;

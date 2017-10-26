@@ -219,6 +219,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".flowlet_state") register<bit<64>>(32w65536) flowlet_state;
     register_action<flowlet_state_alu_layout, bit<32>>(flowlet_state) flowlet_state_alu = {
         void apply(inout flowlet_state_alu_layout value, out bit<32> rv) {
+            rv = 32w0;
             if (meta.meta.tstamp - value.lo > 32w20000) 
                 value.hi = value.hi;
             value.lo = meta.meta.tstamp;

@@ -166,6 +166,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     register_action<bit<8>, bit<8>>(r_test) b_test = {
         void apply(inout bit<8> value, out bit<8> rv) {
             bit<8> alu_hi;
+            rv = 8w0;
             if (value == 8w1) 
                 alu_hi = 8w1;
             if (value == 8w0x0) 

@@ -912,6 +912,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".QUINJI") register<bit<1>>(32w65536) _QUINJI_0;
     @name(".IFycyA.tOUEnP") register_action<bit<1>, bit<1>>(_QUINJI_0) _IFycyA_tOUEnP_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             value = 1w1;
         }
     };

@@ -154,6 +154,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name(".log") register<bit<16>>(32w0) log;
     register_action<bit<16>, bit<16>>(log) salu = {
         void apply(inout bit<16> value, out bit<16> rv) {
+            rv = 16w0;
             if (hdr.eg_intr_md.egress_rid_first == 1w1) 
                 value = value + 16w0x100;
             if (!(hdr.eg_intr_md.egress_rid_first == 1w1)) 

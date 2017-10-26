@@ -1875,12 +1875,14 @@ control Victoria(inout headers hdr, inout metadata meta, inout standard_metadata
     @name(".Merrill") register<bit<1>>(32w262144) Merrill;
     register_action<bit<1>, bit<1>>(Merrill) Kekoskee = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             value = value;
             rv = value;
         }
     };
     register_action<bit<1>, bit<1>>(Illmo) Woodsboro = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             value = value;
             rv = value;
         }

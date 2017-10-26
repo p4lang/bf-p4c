@@ -167,6 +167,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     register_action<bit<32>, bit<32>>(sampling_cntr) sampling_alu = {
         void apply(inout bit<32> value, out bit<32> rv) {
             bit<32> alu_hi;
+            rv = 32w0;
             alu_hi = 32w1;
             if (value >= 32w10) 
                 value = 32w1;

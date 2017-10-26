@@ -270,16 +270,19 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".r3") register<bit<32>>(32w500) r3_0;
     @name("alu1") register_action<bit<32>, bit<32>>(r1_0) alu1_0 = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            rv = 32w0;
             value = value + 32w1;
         }
     };
     @name("alu2") register_action<bit<32>, bit<32>>(r2_0) alu2_0 = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            rv = 32w0;
             value = value + 32w1;
         }
     };
     @name("alu3") register_action<bit<32>, bit<32>>(r3_0) alu3_0 = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            rv = 32w0;
             value = value + 32w1;
         }
     };

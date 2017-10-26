@@ -331,21 +331,25 @@ control pgen_pass_1_ctrl_flow(inout headers hdr, inout metadata meta, inout stan
     @name(".next_hop_ecmp_reg") register<bit<1>>(32w131072) next_hop_ecmp_reg_0;
     @name("clr_bloom_filter_alu_1") register_action<bit<1>, bit<1>>(bloom_filter) clr_bloom_filter_alu = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             value = 1w0;
         }
     };
     @name("clr_bloom_filter_alu_2") register_action<bit<1>, bit<1>>(bloom_filter_0) clr_bloom_filter_alu_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             value = 1w0;
         }
     };
     @name("clr_bloom_filter_alu_3") register_action<bit<1>, bit<1>>(bloom_filter_4) clr_bloom_filter_alu_4 = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             value = 1w0;
         }
     };
     @name("next_hop_ecmp_alu") register_action<bit<1>, bit<1>>(next_hop_ecmp_reg_0) next_hop_ecmp_alu_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             value = 1w0;
         }
     };
@@ -459,6 +463,7 @@ control pgen_pass_2_ctrl_flow(inout headers hdr, inout metadata meta, inout stan
     @name(".lag_reg") register<bit<1>>(32w131072) lag_reg_0;
     @name("lag_alu") register_action<bit<1>, bit<1>>(lag_reg_0) lag_alu_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             value = 1w0;
         }
     };
@@ -554,6 +559,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     };
     @name("counter_alu") register_action<counter_alu_layout, int<32>>(port_cntr_0) counter_alu_0 = {
         void apply(inout counter_alu_layout value, out int<32> rv) {
+            rv = 32s0;
             if (value.lo < 32s0 && value.lo + meta.md.offset >= 32s0) 
                 value.hi = value.hi + 32s1;
             if (value.lo >= 32s0 && value.lo + meta.md.offset < 32s0) 
@@ -563,6 +569,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     };
     @name("ifid_cntr_alu") register_action<int<16>, int<16>>(ifid_cntr_0) ifid_cntr_alu_0 = {
         void apply(inout int<16> value, out int<16> rv) {
+            rv = 16s0;
             value = value + (int<16>)(bit<16>)hdr.ipv4.ttl;
         }
     };
@@ -580,6 +587,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("sampling_alu") register_action<bit<32>, bit<32>>(sampling_cntr_0) sampling_alu_0 = {
         void apply(inout bit<32> value, out bit<32> rv) {
             bit<32> alu_hi_0;
+            rv = 32w0;
             alu_hi_0 = 32w1;
             if (value >= 32w10) 
                 value = 32w1;
@@ -591,21 +599,25 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     };
     @name("scratch_alu_add") register_action<bit<16>, bit<16>>(scratch_0) scratch_alu_add_0 = {
         void apply(inout bit<16> value, out bit<16> rv) {
+            rv = 16w0;
             value = value + meta.md.nh_id;
         }
     };
     @name("scratch_alu_invert") register_action<bit<16>, bit<16>>(scratch_0) scratch_alu_invert_0 = {
         void apply(inout bit<16> value, out bit<16> rv) {
+            rv = 16w0;
             value = ~value;
         }
     };
     @name("scratch_alu_sub") register_action<bit<16>, bit<16>>(scratch_0) scratch_alu_sub_0 = {
         void apply(inout bit<16> value, out bit<16> rv) {
+            rv = 16w0;
             value = meta.md.nh_id - value;
         }
     };
     @name("scratch_alu_zero") register_action<bit<16>, bit<16>>(scratch_0) scratch_alu_zero_0 = {
         void apply(inout bit<16> value, out bit<16> rv) {
+            rv = 16w0;
             value = 16w0;
         }
     };

@@ -230,18 +230,21 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".bloom_filter_3") register<bit<1>>(32w262144) bloom_filter_3;
     register_action<bit<1>, bit<1>>(bloom_filter_1) bloom_filter_alu_1 = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             value = 1w1;
             rv = value;
         }
     };
     register_action<bit<1>, bit<1>>(bloom_filter_2) bloom_filter_alu_2 = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             value = 1w1;
             rv = value;
         }
     };
     register_action<bit<1>, bit<1>>(bloom_filter_3) bloom_filter_alu_3 = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             value = 1w1;
             rv = value;
         }

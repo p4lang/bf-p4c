@@ -189,6 +189,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".flow_cnt") register<bit<8>>(32w0) flow_cnt;
     @name("sampler_alu") register_action<bit<8>, bit<8>>(flow_cnt) sampler_alu = {
         void apply(inout bit<8> value, out bit<8> rv) {
+            rv = 8w0;
             if (value == 8w100) 
                 value = 8w0;
             if (value != 8w100) 

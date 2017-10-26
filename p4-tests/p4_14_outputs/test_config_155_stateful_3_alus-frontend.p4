@@ -176,6 +176,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".stateful_cntr_2") register<bit<16>>(32w0) stateful_cntr_0;
     @name("cntr_1") register_action<bit<16>, bit<16>>(stateful_cntr) cntr = {
         void apply(inout bit<16> value, out bit<16> rv) {
+            rv = 16w0;
             value = value + 16w1;
         }
     };
@@ -187,6 +188,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     };
     @name("sampler_alu") register_action<bit<8>, bit<8>>(flow_cnt_0) sampler_alu_0 = {
         void apply(inout bit<8> value, out bit<8> rv) {
+            rv = 8w0;
             if (value == 8w10) 
                 value = 8w1;
             if (value != 8w10) 

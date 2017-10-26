@@ -674,12 +674,14 @@ control KentPark(inout headers hdr, inout metadata meta, inout standard_metadata
     @name(".Chaffey") register<bit<1>>(32w262144) Chaffey;
     register_action<bit<1>, bit<1>>(Chaffey) Sherack = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             value = value;
             rv = value;
         }
     };
     register_action<bit<1>, bit<1>>(Buenos) Spiro = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             value = value;
             rv = value;
         }
@@ -981,6 +983,7 @@ control Laneburg(inout headers hdr, inout metadata meta, inout standard_metadata
     @name(".Ingleside") register<bit<1>>(32w65536) Ingleside;
     register_action<bit<1>, bit<1>>(Ingleside) Powderly = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             value = 1w1;
         }
     };

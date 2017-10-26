@@ -174,18 +174,21 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".reg_2") register<bit<8>>(32w1024) reg_2;
     register_action<bit<8>, bit<8>>(reg_0) alu_0 = {
         void apply(inout bit<8> value, out bit<8> rv) {
+            rv = 8w0;
             value = (bit<8>)15;
             rv = value;
         }
     };
     register_action<bit<8>, bit<8>>(reg_1) alu_1 = {
         void apply(inout bit<8> value, out bit<8> rv) {
+            rv = 8w0;
             value = (bit<8>)0x30;
             rv = value;
         }
     };
     register_action<bit<8>, bit<8>>(reg_2) alu_2 = {
         void apply(inout bit<8> value, out bit<8> rv) {
+            rv = 8w0;
             value = (bit<8>)0xc0;
             rv = value;
         }

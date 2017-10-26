@@ -1414,12 +1414,14 @@ control OjoFeliz(inout headers hdr, inout metadata meta, inout standard_metadata
     @name(".Redfield") register<bit<1>>(32w262144) Redfield;
     register_action<bit<1>, bit<1>>(Arnold) LaConner = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             value = value;
             rv = value;
         }
     };
     register_action<bit<1>, bit<1>>(Redfield) ShowLow = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             value = value;
             rv = value;
         }

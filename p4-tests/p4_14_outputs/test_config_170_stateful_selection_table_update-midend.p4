@@ -216,6 +216,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".lag_mbrs") register<bit<1>>(32w1) lag_mbrs;
     @name("port_status_alu") register_action<bit<1>, bit<1>>(lag_mbrs) port_status_alu = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             value = 1w0;
         }
     };

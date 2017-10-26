@@ -5282,6 +5282,7 @@ control process_flowlet(inout headers hdr, inout metadata meta, inout standard_m
     @name(".flowlet_state") register<bit<64>>(32w8192) flowlet_state;
     register_action<flowlet_alu_layout, bit<32>>(flowlet_state) flowlet_alu = {
         void apply(inout flowlet_alu_layout value, out bit<32> rv) {
+            rv = 32w0;
             if (meta.i2e_metadata.ingress_tstamp - value.lo > 32w1) 
                 value.hi = value.hi + 32w1;
             if (meta.i2e_metadata.ingress_tstamp - value.lo <= 32w1) 

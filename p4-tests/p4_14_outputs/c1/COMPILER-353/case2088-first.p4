@@ -1288,12 +1288,14 @@ control Parnell(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".Skillman") register<bit<1>>(32w262144) Skillman;
     register_action<bit<1>, bit<1>>(BigWells) Gonzalez = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             value = value;
             rv = value;
         }
     };
     register_action<bit<1>, bit<1>>(Skillman) Tillatoba = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             value = value;
             rv = value;
         }

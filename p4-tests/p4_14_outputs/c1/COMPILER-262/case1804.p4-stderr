@@ -7,4 +7,3 @@ case1804.p4(1802): warning: -1: negative value with unsigned type
 case1804.p4(1182): warning: Could not infer type for Isabel, using bit<8>
 action Ingraham(Isabel) {
                 ^^^^^^
-warning: out parameter rv may be uninitialized when apply terminates

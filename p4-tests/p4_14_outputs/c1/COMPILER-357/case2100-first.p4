@@ -755,12 +755,14 @@ control Chamois(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".Sprout") register<bit<1>>(32w262144) Sprout;
     register_action<bit<1>, bit<1>>(Sprout) Millikin = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             value = value;
             rv = value;
         }
     };
     register_action<bit<1>, bit<1>>(Jemison) Pierpont = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             value = value;
             rv = value;
         }

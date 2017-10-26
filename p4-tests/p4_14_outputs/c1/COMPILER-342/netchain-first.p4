@@ -246,6 +246,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".kv_register") register<bit<32>>(32w8192) kv_register;
     register_action<bit<32>, bit<32>>(kv_register) kv_alu = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            rv = 32w0;
             rv = value;
         }
     };

@@ -47,6 +47,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".accum") register<pair32_t>(32w65536) accum;
     register_action<pair32_t, bit<32>>(accum) sful = {
         void apply(inout pair32_t value, out bit<32> rv) {
+            rv = 32w0;
             rv = value.lo;
             value.hi = value.hi + 32w1;
             if (hdr.data.f2 > 32w1000 && hdr.data.f2 < 32w2000) 

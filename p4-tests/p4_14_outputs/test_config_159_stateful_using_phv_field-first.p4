@@ -172,6 +172,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     register_action<bit<16>, bit<16>>(flow_cnt) sampler_alu = {
         void apply(inout bit<16> value, out bit<16> rv) {
             bit<16> alu_hi;
+            rv = 16w0;
             alu_hi = hdr.pkt.field_j_16 + 16w2;
             if (value == 16w10) 
                 value = 16w1;

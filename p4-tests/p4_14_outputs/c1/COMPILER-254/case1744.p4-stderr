@@ -1,4 +1,3 @@
 case1744.p4(316): warning: Could not infer type for pIFssJ, using bit<8>
 action wgUyys(pIFssJ) {
               ^^^^^^
-warning: out parameter rv may be uninitialized when apply terminates

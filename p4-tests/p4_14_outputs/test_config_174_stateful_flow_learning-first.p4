@@ -254,6 +254,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".flow_cache_2_way_2") register<bit<32>>(32w16384) flow_cache_2_way_2;
     register_action<flow_cache_1_way_1_alu_layout, bit<32>>(flow_cache_1_way_1) flow_cache_1_way_1_alu = {
         void apply(inout flow_cache_1_way_1_alu_layout value, out bit<32> rv) {
+            rv = 32w0;
             value.lo = 32w1;
             if (value.lo == hdr.ipv4.dstAddr && value.hi == hdr.ipv4.srcAddr) 
                 rv = value.lo;
@@ -261,6 +262,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     };
     register_action<flow_cache_1_way_1_learn_alu_layout, bit<32>>(flow_cache_1_way_1) flow_cache_1_way_1_learn_alu = {
         void apply(inout flow_cache_1_way_1_learn_alu_layout value, out bit<32> rv) {
+            rv = 32w0;
             if (value.lo == 32w0 && value.hi == 32w0) 
                 value.hi = hdr.ipv4.srcAddr;
             if (value.lo == 32w0 && value.hi == 32w0) 
@@ -269,6 +271,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     };
     register_action<flow_cache_1_way_2_alu_layout, bit<32>>(flow_cache_1_way_2) flow_cache_1_way_2_alu = {
         void apply(inout flow_cache_1_way_2_alu_layout value, out bit<32> rv) {
+            rv = 32w0;
             value.lo = 32w1;
             if (value.lo == hdr.ipv4.dstAddr && value.hi == hdr.ipv4.srcAddr) 
                 rv = value.lo;
@@ -277,6 +280,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     register_action<bit<32>, bit<32>>(flow_cache_2_way_1) flow_cache_2_way_1_alu = {
         void apply(inout bit<32> value, out bit<32> rv) {
             bit<32> alu_hi;
+            rv = 32w0;
             value = value;
             if (alu_hi == (bit<32>)meta.meta.port_numbers) 
                 rv = value;
@@ -285,6 +289,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     register_action<bit<32>, bit<32>>(flow_cache_2_way_1) flow_cache_2_way_1_learn_alu = {
         void apply(inout bit<32> value, out bit<32> rv) {
             bit<32> alu_hi;
+            rv = 32w0;
             if (value == 32w0 && alu_hi == 32w0) 
                 alu_hi = (bit<32>)meta.meta.port_numbers;
             if (value == 32w0 && alu_hi == 32w0) 
@@ -294,6 +299,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     register_action<bit<32>, bit<32>>(flow_cache_2_way_2) flow_cache_2_way_2_alu = {
         void apply(inout bit<32> value, out bit<32> rv) {
             bit<32> alu_hi;
+            rv = 32w0;
             value = value;
             if (alu_hi == (bit<32>)meta.meta.port_numbers) 
                 rv = value;

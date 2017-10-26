@@ -750,12 +750,14 @@ control Devore(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name(".Ilwaco") register<bit<1>>(32w262144) Ilwaco;
     register_action<bit<1>, bit<1>>(Ilwaco) Gerlach = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             value = value;
             rv = value;
         }
     };
     register_action<bit<1>, bit<1>>(Elmdale) Vinita = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             value = value;
             rv = value;
         }

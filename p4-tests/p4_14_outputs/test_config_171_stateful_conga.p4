@@ -223,12 +223,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".conga_state") register<conga_state_layout>(32w256) conga_state;
     register_action<conga_state_layout, bit<8>>(conga_state) conga_alu = {
         void apply(inout conga_state_layout value, out bit<8> rv) {
+            rv = 8w0;
             value.next_hop = value.utilization;
             rv = value.next_hop;
         }
     };
     register_action<conga_state_layout, bit<8>>(conga_state) conga_update_alu = {
         void apply(inout conga_state_layout value, out bit<8> rv) {
+            rv = 8w0;
             if (value.next_hop > meta.conga_meta.util) 
                 value.utilization = meta.conga_meta.next_hop;
             if (value.next_hop > meta.conga_meta.util || value.utilization == meta.conga_meta.next_hop) 

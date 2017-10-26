@@ -202,56 +202,67 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".reg_9") register<bit<32>>(32w36864) reg_21;
     @name("reg_alu_0") register_action<bit<32>, bit<32>>(reg_11) reg_alu = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            rv = 32w0;
             value = value + 32w1;
         }
     };
     @name("reg_alu_1") register_action<bit<32>, bit<32>>(reg_12) reg_alu_11 = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            rv = 32w0;
             value = value + 32w1;
         }
     };
     @name("reg_alu_10") register_action<bit<32>, bit<32>>(reg_13) reg_alu_12 = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            rv = 32w0;
             value = value + 32w1;
         }
     };
     @name("reg_alu_2") register_action<bit<32>, bit<32>>(reg_14) reg_alu_13 = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            rv = 32w0;
             value = value + 32w1;
         }
     };
     @name("reg_alu_3") register_action<bit<32>, bit<32>>(reg_15) reg_alu_14 = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            rv = 32w0;
             value = value + 32w1;
         }
     };
     @name("reg_alu_4") register_action<bit<32>, bit<32>>(reg_16) reg_alu_15 = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            rv = 32w0;
             value = value + 32w1;
         }
     };
     @name("reg_alu_5") register_action<bit<32>, bit<32>>(reg_17) reg_alu_16 = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            rv = 32w0;
             value = value + 32w1;
         }
     };
     @name("reg_alu_6") register_action<bit<32>, bit<32>>(reg_18) reg_alu_17 = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            rv = 32w0;
             value = value + 32w1;
         }
     };
     @name("reg_alu_7") register_action<bit<32>, bit<32>>(reg_19) reg_alu_18 = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            rv = 32w0;
             value = value + 32w1;
         }
     };
     @name("reg_alu_8") register_action<bit<32>, bit<32>>(reg_20) reg_alu_19 = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            rv = 32w0;
             value = value + 32w1;
         }
     };
     @name("reg_alu_9") register_action<bit<32>, bit<32>>(reg_21) reg_alu_20 = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            rv = 32w0;
             value = value + 32w1;
         }
     };

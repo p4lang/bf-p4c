@@ -590,12 +590,14 @@ control Amber(inout headers hdr, inout metadata meta, inout standard_metadata_t 
     @name(".Shidler") register<bit<1>>(32w262144) Shidler;
     register_action<bit<1>, bit<1>>(Shidler) Moxley = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             value = value;
             rv = value;
         }
     };
     register_action<bit<1>, bit<1>>(Jefferson) Shorter = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             value = value;
             rv = value;
         }

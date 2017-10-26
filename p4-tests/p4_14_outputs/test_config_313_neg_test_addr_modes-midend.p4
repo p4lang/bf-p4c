@@ -306,16 +306,19 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".r3") register<bit<32>>(32w500) r3;
     @name("alu1") register_action<bit<32>, bit<32>>(r1) alu1 = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            rv = 32w0;
             value = value + 32w1;
         }
     };
     @name("alu2") register_action<bit<32>, bit<32>>(r2) alu2 = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            rv = 32w0;
             value = value + 32w1;
         }
     };
     @name("alu3") register_action<bit<32>, bit<32>>(r3) alu3 = {
         void apply(inout bit<32> value, out bit<32> rv) {
+            rv = 32w0;
             value = value + 32w1;
         }
     };

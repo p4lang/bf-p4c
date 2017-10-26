@@ -195,6 +195,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".reg0") register<bit<16>>(32w512) reg0;
     @name("salu0") register_action<bit<16>, bit<16>>(reg0) salu0 = {
         void apply(inout bit<16> value, out bit<16> rv) {
+            rv = 16w0;
             value = value + 16w1;
         }
     };

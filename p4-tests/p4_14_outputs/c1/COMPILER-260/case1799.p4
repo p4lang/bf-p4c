@@ -550,6 +550,7 @@ control IFycyA(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name(".QUINJI") register<bit<1>>(32w65536) QUINJI;
     register_action<bit<1>, bit<1>>(QUINJI) tOUEnP = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             value = 1w1;
         }
     };
@@ -806,12 +807,14 @@ control TDPRYG(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name(".yevXhQ") register<bit<1>>(32w262144) yevXhQ;
     register_action<bit<1>, bit<1>>(GBdGiH) fcVprY = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             value = value;
             rv = value;
         }
     };
     register_action<bit<1>, bit<1>>(yevXhQ) vOaDPT = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             value = value;
             rv = value;
         }

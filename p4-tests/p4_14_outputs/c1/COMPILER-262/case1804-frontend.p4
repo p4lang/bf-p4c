@@ -965,6 +965,7 @@ control Laneburg(inout headers hdr, inout metadata meta, inout standard_metadata
     @name(".Ingleside") register<bit<1>>(32w65536) Ingleside_0;
     @name("Powderly") register_action<bit<1>, bit<1>>(Ingleside_0) Powderly_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             value = 1w1;
         }
     };

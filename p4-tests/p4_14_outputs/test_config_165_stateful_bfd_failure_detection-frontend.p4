@@ -189,12 +189,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".bfd_cnt") register<bit<8>>(32w1024) bfd_cnt_0;
     @name("bfd_cnt_rx_alu") register_action<bit<8>, bit<8>>(bfd_cnt_0) bfd_cnt_rx_alu_0 = {
         void apply(inout bit<8> value, out bit<8> rv) {
+            rv = 8w0;
             value = 8w0;
         }
     };
     @name("bfd_cnt_tx_alu") register_action<bit<8>, bit<8>>(bfd_cnt_0) bfd_cnt_tx_alu_0 = {
         void apply(inout bit<8> value, out bit<8> rv) {
             bit<8> alu_hi_0;
+            rv = 8w0;
             alu_hi_0 = 8w1;
             value = value + 8w1;
             if (value > 8w3) 

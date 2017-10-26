@@ -174,6 +174,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @stateful_table_counter("table_hit") @name(".flow_cnt") register<bit<16>>(32w0) flow_cnt;
     @name("sampler_alu") register_action<bit<16>, bit<16>>(flow_cnt) sampler_alu = {
         void apply(inout bit<16> value, out bit<16> rv) {
+            rv = 16w0;
             if (value == 16w10) 
                 value = 16w1;
             if (value != 16w10) 

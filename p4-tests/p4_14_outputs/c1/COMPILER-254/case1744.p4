@@ -400,6 +400,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".uVMcgg") register<bit<1>>(32w65536) uVMcgg;
     register_action<bit<1>, bit<1>>(uVMcgg) abcAlu1 = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             value = 1w1;
         }
     };

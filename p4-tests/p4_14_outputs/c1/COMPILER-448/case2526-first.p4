@@ -586,12 +586,14 @@ control Bagwell(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".Noyack") register<bit<1>>(32w262144) Noyack;
     register_action<bit<1>, bit<1>>(Noyack) Goodwin = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             value = value;
             rv = value;
         }
     };
     register_action<bit<1>, bit<1>>(Hobucken) Hulbert = {
         void apply(inout bit<1> value, out bit<1> rv) {
+            rv = 1w0;
             value = value;
             rv = value;
         }
