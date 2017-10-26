@@ -175,6 +175,9 @@ void AddMetadataShims::addIngressMetadata(IR::BFN::Deparser *d) {
     if (useTna) {
         addDeparserIntrinsic(d, meta, "mcast_grp_a", "egress_multicast_group_a");
         addDeparserIntrinsic(d, meta, "mcast_grp_b", "egress_multicast_group_b");
+        addDeparserIntrinsic(d, meta, "rid", "rid");
+        addDeparserIntrinsic(d, meta, "level1_exclusion_id", "xid");
+        addDeparserIntrinsic(d, meta, "level2_exclusion_id", "yid");
     } else {
         addDeparserIntrinsic(d, meta, "mcast_grp", "egress_multicast_group"); }
     addDeparserIntrinsic(d, meta, "deflect_on_drop", "deflect_on_drop");

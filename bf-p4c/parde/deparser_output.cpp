@@ -181,11 +181,20 @@ std::ostream &operator<<(std::ostream &out, const DeparserAsmOutput &d) {
         // the following block of code deals with this exception.
         std::vector<std::pair<const cstring, const IR::BFN::DeparserIntrinsic *>>
             egress_multicast_group;
+
+        std::vector<std::pair<const cstring, const IR::BFN::DeparserIntrinsic *>>
+                      hash_lag_ecmp_mcast;
         for (auto md : d.deparser->metadata) {
             if (md.first == "egress_multicast_group_a" ||
                 md.first == "egress_multicast_group_b") {
                  egress_multicast_group.push_back(md);
                  continue;
+            }
+
+            if (md.first == "hash_lag_ecmp_mcast_1" ||
+                md.first == "hash_lag_ecmp_mcast_2") {
+                    hash_lag_ecmp_mcast.push_back(md);
+                    continue;
             }
 
             out << indent << md.first << ": " << printIntrin(d.phv, md.second) << std::endl;
@@ -199,6 +208,12 @@ std::ostream &operator<<(std::ostream &out, const DeparserAsmOutput &d) {
             out << indent << "egress_multicast_group: "
                 << printIntrin(d.phv, egress_multicast_group[0].second)
                 << std::endl;
+        }
+
+        if (hash_lag_ecmp_mcast.size() == 2) {
+            out << indent << "hash_lag_ecmp_mcast: [ ";
+            out << printIntrin(d.phv, hash_lag_ecmp_mcast[0].second) << ", ";
+            out << printIntrin(d.phv, hash_lag_ecmp_mcast[1].second) << " ]" << std::endl;
         }
 
         for (auto digest : Values(d.deparser->digests)) {
