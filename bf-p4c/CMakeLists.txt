@@ -208,6 +208,7 @@ set (TOFINO_BACKEND_PHV_SRCS
   phv/action_phv_constraints.cpp
   phv/allocate_virtual_containers.cpp
   phv/asm_output.cpp
+  phv/check_fitting.cpp
   phv/cluster.cpp
   phv/cluster_phv_bind.cpp
   phv/cluster_phv_container.cpp

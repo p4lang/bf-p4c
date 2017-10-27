@@ -202,9 +202,11 @@ void PhvInfo::allocatePOV(const BFN::HeaderStackInfo& stacks) {
 
         // TODO: Why only do this when no stacks are present?
         if (!stacks_num && pov_fields_h.size() > 1) {
-            for (auto &f : pov_fields_h) {
+            for (auto* f : pov_fields_h) {
                 hdr_dd_valid->ccgf_fields().push_back(f);
                 f->set_ccgf(hdr_dd_valid);
+                BUG_CHECK(f->validContainerRange() == nw_bitrange(ZeroToMax()),
+                    "POV bit with absolute container offset");
             }
             hdr_dd_valid->set_phv_use_hi(pov_fields_h.size());
                                      // allocate container for ccgf width
@@ -247,6 +249,8 @@ void PhvInfo::allocatePOV(const BFN::HeaderStackInfo& stacks) {
                     for (auto &f : pov_fields) {
                         pov_stk->ccgf_fields().push_back(f);
                         f->set_ccgf(pov_stk);
+                        BUG_CHECK(f->validContainerRange() == nw_bitrange(ZeroToMax()),
+                            "POV bit with absolute container offset");
                     }
                     pov_stk->set_ccgf(pov_stk);
                     pov_stk->set_header_stack_pov_ccgf(true);
@@ -642,10 +646,14 @@ PHV::Field::field_slices(Cluster_PHV *cl) {
 }
 
 const std::pair<int, int>&
-PHV::Field::field_slices(Cluster_PHV *cl) const {
+PHV::Field::field_slices(const Cluster_PHV *cl) const {
     assert(cl);
-    assert(field_slices_i.count(cl));
-    return field_slices_i.at(cl);
+
+    // This const_cast is necessary to look up `cl` in `field_slices_i`.  By
+    // using `at()`, we guarantee that `cl` is not *inserted* into
+    // `field_slices_i`, and hence cannot be modified, despite the cast.
+    assert(field_slices_i.count(const_cast<Cluster_PHV*>(cl)));
+    return field_slices_i.at(const_cast<Cluster_PHV*>(cl));
 }
 
 void
@@ -871,16 +879,16 @@ void PHV::Field::updateValidContainerRange(nw_bitrange newValidRange) {
     LOG2("Inferred valid container range " << newValidRange <<
          " for field " << name);
 
-    const auto intersection = validContainerRange.intersectWith(newValidRange);
+    const auto intersection = validContainerRange_i.intersectWith(newValidRange);
     if (intersection.empty() || intersection.size() < size) {
         ::error("Inferred valid container ranges %1% and %2% for field %3% "
                 "which cannot both be satisfied for a field of size %4%b",
-                cstring::to_cstring(validContainerRange),
+                cstring::to_cstring(validContainerRange_i),
                 cstring::to_cstring(newValidRange), name, size);
         return;
     }
 
-    validContainerRange = *toClosedRange(intersection);
+    validContainerRange_i = *toClosedRange(intersection);
 }
 
 

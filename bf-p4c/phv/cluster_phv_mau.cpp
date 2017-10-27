@@ -16,15 +16,15 @@
 //
 //***********************************************************************************
 
-PHV_MAU_Group::Container_Slice::Container_Slice(int l, int w, PHV_Container *c)
-    : lo_i(l), hi_i(l+w-1), container_i(c) {
-    //
+PHV_MAU_Group::Container_Slice::Container_Slice(le_bitrange range, PHV_Container *c)
+        : range_i(range), container_i(c) {
     BUG_CHECK(container_i,
         "*****PHV_MAU_Group::Container_Slice constructor called with null container ptr*****");
-    // container_i->ranges()[lo_i] = hi_i;
     container_i->sanity_check_container_ranges("PHV_MAU_Group::Container_Slice constructor");
 }
 
+PHV_MAU_Group::Container_Slice::Container_Slice(int lo, int width, PHV_Container *c)
+    : Container_Slice(le_bitrange(StartLen(lo, width)), c) { }
 
 //***********************************************************************************
 //
@@ -944,8 +944,7 @@ PHV_MAU_Group_Assignments::container_no_pack(
                     //
                     auto field_width = 0;
                     // field constrained no_pack and not ccgf owner, use size
-                    if (PHV_Container::constraint_no_cohabit(field)
-                       && field->ccgf() != field) {
+                    if (PHV_Container::constraint_no_cohabit(field) && field->ccgf() != field) {
                        // field->ccgf() should be null, no member of ccgf should reach here
                        BUG_CHECK(field->ccgf() == nullptr,
                            "cluster_phv_mau.cpp: no ccgf member should be present in cluster");
@@ -958,13 +957,60 @@ PHV_MAU_Group_Assignments::container_no_pack(
                         PHV_Container *container = cl_g->empty_container();
                         BUG_CHECK(container != nullptr,
                             "No container available for field %1%", field);
+
+                        // consider alignment only at start of field
                         int align_start = 0;
-                        if (field_bit_lo == 0) {  // consider alignment only @ start of field
+                        if (field_bit_lo == 0) {
+                            // Consider byte-relative alignment constraint (if any).
                             align_start = field->phv_alignment().get_value_or(0);
-                        }
-                        if (taint_bits + align_start > int(container->width())) {
+
+                            // Consider absolute alignment constraint for this set of containers,
+                            // by:
+                            // ...finding the bitrange representing all the containers this
+                            // field will be tiled across.
+                            int field_placement_size = cl->get_field_placement_size(field);
+                            int req_containers_for_field =
+                                field_placement_size / int(container->width()) +
+                                (field_placement_size % int(container->width()) ? 1 : 0);
+                            int aggregate_container_bits =
+                                req_containers_for_field * int(container->width());
+                            auto this_container_range =
+                                nw_bitrange(StartLen(0, aggregate_container_bits));
+
+                            // ...intersecting with the valid range for this field.
+                            nw_bitinterval valid_interval =
+                                this_container_range.intersectWith(field->validContainerRange());
+                            BUG_CHECK(!valid_interval.empty(), "Bad absolute container range");
+                            le_bitrange valid_range =
+                                (*toClosedRange(valid_interval)).toOrder<Endian::Little>(
+                                    aggregate_container_bits);
+
+                            // ...and shifting the start bit if necessary.
+                            if (!valid_range.contains(align_start)) {
+                                // Use the lowest valid bit that also respects
+                                // any relative (intra-byte) alignment, if present.
+                                if (!field->phv_alignment()) {
+                                    align_start = valid_range.lo;
+                                } else {
+                                    int req_byte_align = align_start % int(PHV::Size::b8);
+                                    int abs_byte_align = valid_range.lo % int(PHV::Size::b8);
+                                    int shift =
+                                        abs_byte_align <= req_byte_align ?
+                                        req_byte_align - abs_byte_align :
+                                        req_byte_align + int(PHV::Size::b8) - abs_byte_align;
+                                    align_start =
+                                        (valid_range.lo + shift) % int(container->width()); }
+                                BUG_CHECK(valid_range.contains(align_start),
+                                    "Field %1% to start at container bit %2% (width %4%) "
+                                    "but has an absolute alignment requirement of %3%",
+                                    field, align_start, valid_range.lo, container->width());
+                                BUG_CHECK(align_start % int(PHV::Size::b8) ==
+                                          field->phv_alignment().get_value_or(0),
+                                          "Inconsistent alignment constraints"); } }
+
+                        if (taint_bits + align_start > int(container->width()))
                             taint_bits = int(container->width()) - align_start;
-                        }
+
                         // TODO: If fields write to a ccgf in the same action, we need extra code
                         // here to ensure that the fields written into the ccgf destinations follow
                         // the same packing as the ccgf.
@@ -992,7 +1038,7 @@ PHV_MAU_Group_Assignments::container_no_pack(
                         // taint() sets field's hi reflecting balance remaining,
                         // returns processed width
                         //
-                        field_bit_lo += int(cl_g->width());
+                        field_bit_lo += processed_bits;
                         field_width -= processed_bits;  // loop termination
                         //
                         // check if this container is partially filled with parser field
@@ -1397,18 +1443,55 @@ PHV_MAU_Group_Assignments::packing_predicates(
     //
     // constrained nibbles, e.g., learning digest, place in container's "bottom bits"
     int req = cl->req_containers_bottom_bits();
-    if (req && !num_containers_bottom_bits(cl, cc_set, req)) {
+    if (req && !num_containers_bottom_bits(cl, cc_set, req))
         return false;
-    }
-    //
+
     // TODO
     //
     // field start restrictions .. must start @X 'bit-in-byte' in container, e.g., X,X+8,X+16 etc.
     //
-    if (!satisfies_phv_alignment(cl, (*(cc_set.rbegin()))->lo(), (*(cc_set.rbegin()))->hi())) {
+    le_bitrange container_slice_range = (*cc_set.rbegin())->range();
+    if (!satisfies_phv_alignment(cl, container_slice_range.lo, container_slice_range.hi))
         return false;
-    }
-    //
+
+    // Check whether this slice set supports the absolute alignment constraints
+    // for all fields in the cluster.
+    PHV::Size container_size = (*cc_set.rbegin())->container()->width();
+    for (PHV::Field* fieldInfo : cl->cluster_vec()) {
+        nw_bitrange valid_container_range = fieldInfo->validContainerRange();
+
+        // XXX(cole): for now, if a field has an absolute alignment constraint but
+        // cannot fit in a single slice, don't pack this cluster in this slice
+        // group.
+        if (valid_container_range != ZeroToMax()
+            && fieldInfo->phv_use_width() > container_slice_range.size()) {
+            return false; }
+
+        // Intersect the valid container range with this container size, in
+        // case the valid container range is larger than this container.
+        nw_bitinterval valid_interval =
+            valid_container_range.intersectWith(nw_bitrange(StartLen(0, int(container_size))));
+        if (valid_interval.empty())
+            return false;
+
+        // The `validContainerRange` constraint is a bit range in network
+        // order, so convert it to little Endian with respect to this container
+        // size.
+        le_bitrange valid_range =
+            (*toClosedRange(valid_interval)).toOrder<Endian::Little>(int(container_size));
+        le_bitinterval valid_slice_interval =
+            valid_range.intersectWith(container_slice_range);
+
+        // Return false if the slice isn't in the valid range.
+        if (valid_slice_interval.size() < fieldInfo->phv_use_width())
+            return false;
+
+        // If this field needs to be allocated in the "bottom bits" (little
+        // Endian, LSB), check that these bits are in the valid range.
+        auto phv_use_width = le_bitinterval(StartLen(0, fieldInfo->phv_use_width()));
+        if (fieldInfo->deparsed_bottom_bits() && !valid_slice_interval.contains(phv_use_width))
+            return false; }
+
     // try sliding window of cc_set
     for (int slice_adjust = cc_set.size() - cl->cluster_vec().size() + 1;
         slice_adjust;
@@ -1423,8 +1506,8 @@ PHV_MAU_Group_Assignments::packing_predicates(
         // allocation stripe uses bottom
         //
         cc_set.push_front(*(cc_set.rbegin()));
-        cc_set.pop_back();
-    }
+        cc_set.pop_back(); }
+
     //
     // TODO
     //
@@ -1681,7 +1764,7 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
         size_t field_num = 0;
         PHV::Field *f = cl->cluster_vec()[field_num];
         auto field_bit_lo = f->phv_use_lo(cl);               // considers slice lo
-        for (auto &cc : cc_set) {
+        for (auto* cc : cc_set) {
             //
             // to honor alignment of fields in clusters
             // start with rightmost vertical slice that accommodates this width
@@ -1690,6 +1773,10 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
             if (f->deparsed_bottom_bits()) {
                 // f has constraints "bottom bits", e.g., learning digest
                 // packing_predicates() must have ensured bottom bits available
+                //
+                // TODO(cole): If any field in a cluster has
+                // `deparsed_bottom_bits()` set, do all fields need to be
+                // aligned at 0?
                 assert(cc->lo() == 0);
                 start = cc->lo(); }
 
@@ -1717,9 +1804,51 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
             int width_in_container = std::min(required_width, remaining_field_width);
             int align_start = start;
 
-            // consider alignment only @ start of field
-            if (field_bit_lo == 0)
+            // consider alignment only at start of field
+            if (field_bit_lo == 0) {
+                // account for relative alignment
                 align_start = f->phv_alignment().get_value_or(start);
+
+                // account for absolute container alignment
+                nw_bitrange nw_container_slice =
+                    cc->range().toOrder<Endian::Network>(int(cc->container()->width()));
+                nw_bitinterval nw_valid_container_slice =
+                    nw_container_slice.intersectWith(f->validContainerRange());
+                BUG_CHECK(nw_valid_container_slice.size() >= required_width,
+                    "Container slice %1% does not have enough valid bits for field %2%: "
+                    "%3% cannot hold %4% bits",
+                    cc, f, nw_valid_container_slice, required_width);
+                le_bitrange le_valid_container_slice = *toClosedRange(
+                    nw_valid_container_slice.toOrder<Endian::Little>(
+                        int(cc->container()->width())));
+
+                if (!le_valid_container_slice.contains(align_start)) {
+                    // Use the lowest valid bit that also respects
+                    // any relative (intra-byte) alignment, if present.
+                    if (!f->phv_alignment()) {
+                        align_start = le_valid_container_slice.lo;
+                    } else {
+                        int req_byte_align = align_start % int(PHV::Size::b8);
+                        int abs_byte_align = le_valid_container_slice.lo % int(PHV::Size::b8);
+                        int shift = abs_byte_align <= req_byte_align ?
+                                    req_byte_align - abs_byte_align :
+                                    req_byte_align + int(PHV::Size::b8) - abs_byte_align;
+                        align_start = le_valid_container_slice.lo + shift; }
+
+                    BUG_CHECK(le_valid_container_slice.contains(align_start),
+                        "Field %1% to start at container bit %2% but has an absolute alignment "
+                        "requirement of %3%", f, align_start, le_valid_container_slice.lo);
+                    BUG_CHECK(align_start % int(PHV::Size::b8) ==
+                              f->phv_alignment().get_value_or(0),
+                              "Inconsistent alignment constraints"); } }
+
+            if (f->size < cc->width()) {
+                auto le_field_range = le_bitrange(StartLen(align_start, f->size));
+                auto nw_field_range = le_field_range.toOrder<Endian::Network>(
+                    int(cc->container()->width()));
+                BUG_CHECK(f->validContainerRange().contains(nw_field_range),
+                    "Violated container alignment constraint for field %1%: %2% not in %3%",
+                    f, nw_field_range, f->validContainerRange()); }
 
             if (width_in_container + align_start > int(cc->container()->width()))
                 width_in_container = int(cc->container()->width()) - align_start;
@@ -2353,7 +2482,7 @@ void PHV_MAU_Group::Container_Slice::sanity_check_container(const std::string& m
     //
     const std::string msg_1 = msg+"PHV_MAU_Group::Container_Slice..";
     //
-    container_i->sanity_check_container_avail(lo_i, hi_i, msg_1);
+    container_i->sanity_check_container_avail(this->lo(), this->hi(), msg_1);
 }
 
 void PHV_MAU_Group::sanity_check_container_packs(const std::string& msg) {

@@ -70,6 +70,14 @@ class Cluster : public PassManager {
         PhvInfo& phv_i;
         PhvUse&  uses_i;
 
+        /** Analyze `validContainerRange` constraints on CCGF members to
+         * compute a constraint for the CCGF as a whole, which is stored in
+         * `PHV::Field::validCCGFRange_i` of its owner.
+         *
+         * Must be invoked after `ccgf_fields_i` has been populated.
+         */
+        void computeCCGFValidRange(PHV::Field* owner);
+
         bool preorder(const IR::HeaderRef*) override;
         void end_apply() override;
         void set_deparsed_flag();

@@ -49,32 +49,44 @@ class PHV_MAU_Group {
      // cluster of fields mapped to aligned container slices, <number, width>, within a MAU group
      //
      private:
-        int lo_i;  // low of bit range in container for packing
-        int hi_i;  // high of bit range in container for packing
+        // range of container bits in this slice
+        le_bitrange range_i;
         PHV_Container *container_i;
         //
      public:
-        //
-        Container_Slice(int l, int h, PHV_Container *c);
-        //
-        int lo() const                  { return lo_i; }
-        void lo(int l)                  { lo_i = l; }
-        int hi() const                  { return hi_i; }
-        void hi(int h)                  { hi_i = h; }
-        int width() const               { return hi_i - lo_i + 1; }
-        PHV_Container *container()      { return container_i; }
-        //
+        /// Create a @width wide slice of container @c starting at bit position
+        /// @lo (little Endian, @lo points to the LSB).
+        Container_Slice(int lo, int width, PHV_Container *c);
+        Container_Slice(le_bitrange range, PHV_Container *c);
+
+        /// @returns the low bit (little Endian, LSB) of this container slice.
+        int lo() const                      { return range_i.lo; }
+
+        /// @returns the high bit (little Endian, MSB) of this container slice.
+        int hi() const                      { return range_i.hi; }
+
+        /// @returns the width of this container slice.
+        int width() const                   { return range_i.size(); }
+
+        /// @returns the (little Endian) bit range of this container slice.
+        le_bitrange range() const           { return range_i; }
+
+        /// @returns the container object that this container slice slices.
+        PHV_Container *container() const    { return container_i; }
+
         void sanity_check_container(const std::string&);
     };
 
     /** Groups container slices first by slice width and then by number of
-     * slices available of that width.  For example:
+     * slices available of that width.  All slices in a group slice the same
+     * bit range of different containers.  For example:
      *
      * ```
      * Aligned_Container_Slices_t slices = {
      *     { 8, // bit wide slices
      *       { 2, // slices in this group
-     *         { new Container_Slice(...), new Container_Slice(...) } } } }
+     *         { new Container_Slice(0, 8, c1),
+     *           new Container_Slice(0, 8, c2) } } } }
      * ```
      *
      * Note that we use std::map and std::list rather than ordered_map in order

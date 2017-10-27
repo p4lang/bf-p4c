@@ -87,27 +87,29 @@ class Field {
      *   - "header.$valid"
      */
     cstring         name;
+
     /// Unique field ID.
     int             id;
+
     /// Whether the Field is ingress or egress.
     gress_t         gress;
+
     /// Total size of Field in bits.
     int             size;
+
     /// The alignment requirement of this field. If boost::none, there is no
     /// particular alignment requirement.
     boost::optional<FieldAlignment> alignment;
-    /// The range of possible bit positions at which this field can be
-    /// placed in a container, in network order. In other words, the low bit
-    /// index of the field's container range must be
-    /// `>= validContainerRange.lo`, and the high bit index must be
-    /// `<= validContainerRange.hi`.
-    nw_bitrange validContainerRange = ZeroToMax();
+
     /// Offset of lsb from lsb (last) bit of containing header.
     int             offset;
+
     /// True if this Field is metadata.
     bool            metadata;
+
     /// True if this Field is metadata bridged from ingress to egress.
     bool            bridged = false;
+
     /// A mirror field points to its field list (one of eight)
     struct mirror_field_list_t {
         Field *member_field;
@@ -198,7 +200,11 @@ class Field {
     // API: phv assignment to rest of Compiler
     //
     PHV_Assignment_API *phv_assignment_api_i = nullptr;
-    //
+
+
+    /// See documentation for `Field::validContainerRange()`.
+    nw_bitrange validContainerRange_i = ZeroToMax();
+
     void foreach_alloc(
         int lo,
         int hi,
@@ -309,6 +315,12 @@ class Field {
                                        //      owner->ccgf_fields = (owner + members)
     safe_vector<Field *> ccgf_fields_i;  // member fields of ccgfs
                                          // members are in same container as owner
+
+    // Sub-byte/byte boundary CCGFs accumulate the alignment constraints of
+    // their members, which is stored here.  POV-based CCGFs, by construction,
+    // will not have alignment constraints (which come from parser extraction).
+    nw_bitrange validCCGFRange_i = ZeroToMax();
+
     //
     // phv container requirement of field
     //
@@ -420,8 +432,8 @@ class Field {
     //
 
     /**
-     * Returns alignment constraint (bit position within container, mod 8)
-     * on this field, if any.
+     * Returns alignment constraint (little Endian bit position within
+     * container, mod 8) on this field, if any.
      *
      * @param get_ccgf_alignment  When `true`, returns the alignment
      *                            constraint of the whole CCGF; otherwise,
@@ -442,7 +454,7 @@ class Field {
     const ordered_map<Cluster_PHV *, std::pair<int, int>>&
         field_slices() const                               { return field_slices_i; }
     std::pair<int, int>& field_slices(Cluster_PHV *cl);
-    const std::pair<int, int>& field_slices(Cluster_PHV *cl) const;
+    const std::pair<int, int>& field_slices(const Cluster_PHV *cl) const;
     void set_field_slices(Cluster_PHV *cl, int lo, int hi, Cluster_PHV *parent = nullptr);
     //
     // field overlays
@@ -479,7 +491,7 @@ class Field {
     //
     friend std::ostream &operator<<(std::ostream &out, const Field &field);
     friend std::ostream &::operator<<(std::ostream &out, ::Cluster_PHV &cp);
-    //
+
  public:  // class Field
     //
     PHV_Analysis_API *phv_analysis_api()         { return phv_analysis_api_i; }
@@ -488,8 +500,39 @@ class Field {
     // ****************************************************************************************
     // end phv_analysis interface
     // ****************************************************************************************
-    //
-};  // class Field
+
+    /** The range of possible bit positions at which this field can be placed
+     * in a container, in network order.  For example, suppose we have an 8-bit
+     * field with `validContainerRange = [0, 11]` and a 16-bit container.
+     *
+     *      0              15  (network order)
+     *    | ---------------- | container
+     *      ^          ^
+     *      X          Y
+     *
+     * The entire field must be placed between X and Y (inclusive).
+     *
+     * Note that field-->container assignment is usually in *little Endian*.
+     * From that perspective the picture looks like:
+     *
+     *      15             0   (little Endian order)
+     *    | ---------------- | container
+     *      ^          ^
+     *      X          Y
+     *
+     * And so the field must be placed in what are considered the "upper" bits
+     * of the container.
+     *
+     * If this field is a CCGF owner, recomputes and returns the valid
+     * container range for all CCGF fields (including the owner).
+     *
+     * XXX(cole): This range always starts at 0, which is an invariant that
+     * other parts of the compiler rely on.
+     */
+    nw_bitrange validContainerRange() {
+        return this->is_ccgf() ? validCCGFRange_i : validContainerRange_i;
+    }
+};
 
 std::ostream &operator<<(std::ostream &out, const Field &);
 std::ostream &operator<<(std::ostream &out, const Field *);

@@ -4,6 +4,45 @@
 #include "lib/log.h"
 #include "lib/stringref.h"
 
+void Cluster::MakeCCGFs::computeCCGFValidRange(PHV::Field *owner) {
+    // Return immediately if this owner is not a CCGF owner.
+    if (!owner->ccgf_i || !owner->ccgf_fields_i.size())
+        return;
+
+    int total_width = 0;
+    for (PHV::Field *f : owner->ccgf_fields_i)
+        total_width += f->size;
+
+    // Compute the valid range for the CCGF as a whole such that, when
+    // satisfied, it implies that all valid range constraints for members will
+    // also be satisfied.
+    auto valid_interval = nw_bitinterval(ZeroToMax());
+    int width_so_far = 0;
+    for (PHV::Field *f : owner->ccgf_fields_i) {
+        // Sanity check
+        width_so_far += f->size;
+        auto range_so_far = nw_bitrange(StartLen(0, width_so_far));
+        BUG_CHECK(f->validContainerRange_i.contains(range_so_far),
+                  "Field %1% is a CCGF member but has a valid container range "
+                  "that does not include fields preceding it in its CCGF.",
+                  cstring::to_cstring(f));
+
+        // If valid field isn't already ZeroToMax(), expand it to include the
+        // remaining members.
+        if (f->validContainerRange_i == nw_bitrange(ZeroToMax()))
+            continue;
+        int remaining_width = total_width - width_so_far;
+        nw_bitrange extended_range = f->validContainerRange_i.resizedToBits(
+            f->validContainerRange_i.size() + remaining_width);
+        valid_interval = valid_interval.intersectWith(toHalfOpenRange(extended_range)); }
+
+    BUG_CHECK(!valid_interval.empty(),
+              "Fields within CCGF owned by %1% have mutually unsatisfiable alignment constraints.",
+              cstring::to_cstring(this));
+
+    owner->validCCGFRange_i = *toClosedRange(valid_interval);
+}
+
 bool Cluster::MakeCCGFs::preorder(const IR::HeaderRef *hr) {
     LOG4(".....Header Ref.....");
     //
@@ -137,10 +176,14 @@ bool Cluster::MakeCCGFs::preorder(const IR::HeaderRef *hr) {
                 << "-----discarded PHV_container_contiguous_group.....\n"
                 << owner);
         } else {
-            LOG2("CCGF owner: " << owner);
-            for (auto child : owner->ccgf_fields())
-                LOG2("     child: " << child); }
-    }
+            // For surviving CCGFs, lift any valid range constraints on members
+            // to the CCGF as a whole.
+            computeCCGFValidRange(owner);
+
+            if (LOGGING(2)) {
+                LOG2("CCGF owner: " << owner);
+                for (auto child : owner->ccgf_fields())
+                    LOG2("     child: " << child); } } }
     return true;
 }
 

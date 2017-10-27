@@ -19,26 +19,7 @@ class CheckFitting : public Visitor {
  public:
     CheckFitting(const PhvInfo &phv, const PhvUse &uses, bool ignorePHVOverflow = false)
     : phv(phv), uses(uses), ignorePHVOverflow(ignorePHVOverflow) { }
-    const IR::Node *apply_visitor(const IR::Node *n, const char *) override {
-        ordered_set<PHV::Field *> unallocated = collect_unallocated_fields(phv, uses);
-        int unallocated_bits = 0;
-        if (unallocated.size()) {
-            std::stringstream msg;
-            msg << "PHV allocation was not successful" << std::endl;
-            msg << "Unallocated fields (=" << unallocated.size() << "):" << std::endl;
-            for (auto f : unallocated) {
-                msg << "    " << f->id << ":" << f->name << " <" << f->size << ">" << std::endl;
-                unallocated_bits += f->size;
-            }
-            msg << std::endl << "..........Unallocated bits = " << unallocated_bits << std::endl;
-            if (ignorePHVOverflow) {
-                ::warning("%1%", msg.str());
-            } else {
-                phv.print_phv_group_occupancy();
-                ::error("%1%", msg.str()); }}
-
-        return n;
-    }
+    const IR::Node *apply_visitor(const IR::Node *n, const char *) override;
 
     /** Produce the set of fields that are not fully allocated to PHV containers.
      *

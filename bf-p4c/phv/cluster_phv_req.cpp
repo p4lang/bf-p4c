@@ -400,8 +400,7 @@ Cluster_PHV::compute_requirements() {
     // max width of field in cluster, computed after sorting cluster fields
     //
     max_width_i = compute_max_width();
-    //
-}  // compute requirements
+}
 
 int
 Cluster_PHV::compute_max_width() {
@@ -546,6 +545,21 @@ Cluster_PHV::req_containers_bottom_bits() {
         }
     }
     return req;
+}
+
+int Cluster_PHV::get_field_placement_size(const PHV::Field *f) const {
+    BUG_CHECK(!(sliced_i && f->is_ccgf()),
+              "CCGF fields cannot be sliced, but CCGF field %1% appears in sliced cluster %2%",
+              cstring::to_cstring(f), this);
+    if (sliced_i) {
+        auto hi_lo_pair = f->field_slices(this);
+        return le_bitrange(FromTo(hi_lo_pair.first, hi_lo_pair.second)).size(); }
+    if (f->is_ccgf()) {
+        int aggregate_size = 0;
+        for (auto member : f->ccgf_fields())
+            aggregate_size += member->size;
+        return aggregate_size; }
+    return f->size;
 }
 
 //***********************************************************************************

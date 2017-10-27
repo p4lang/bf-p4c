@@ -90,6 +90,22 @@ class Cluster_PHV {
     int req_containers_bottom_bits();  // number of fields that must be in bottom bits of container
     bool exact_containers()                             { return exact_containers_i; }
     void set_exact_containers();                        // set exact_containers
+
+    /** Returns the width of @f, taking the following into consideration:
+     *
+     *    1. If @f is in this cluster and this is a sliced cluster, then
+     *    returns the width of the slice of @f under consideration.
+     *
+     *    2. If @f is a CCGF owner, returns the total size of all CCGF members.
+     *    This is different than `f->phv_use_width()`, which may be
+     *    artificially inflated beyond the size of the field to force PHV
+     *    allocation to place the field alone in a container.
+     *
+     *    3. Otherwise, returns `f->size`.
+     *
+     * (1) and (2) are mutually exclusive, as CCGFs cannot be sliced.
+     */
+    int get_field_placement_size(const PHV::Field *f) const;
 };
 
 

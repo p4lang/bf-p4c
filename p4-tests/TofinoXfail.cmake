@@ -94,13 +94,6 @@ if (NOT ENABLE_TNA)
     "error: Assignment cannot be supported in the parser"
     testdata/p4_14_samples/simple_nat.p4
     )
-
-  p4c_add_xfail_reason("tofino"
-    "Extract field slice .* with a negative offset."
-    extensions/p4_tests/p4_14/c1/COMPILER-295/vag1892.p4
-    extensions/p4_tests/p4_14/jenkins/pcie_pkt_test/pcie_pkt_test_one.p4
-    extensions/p4_tests/p4_14/test_config_273_bridged_and_phase0.p4
-    )
 endif() # NOT ENABLE_TNA
 
 # Failure for BRIG-44 in JIRA
@@ -685,6 +678,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
   extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   extensions/p4_tests/p4_14/c1/COMPILER-133/full_tphv.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
   extensions/p4_tests/p4_14/c4/COMPILER-590/case3179.p4
   extensions/p4_tests/p4_14/c4/COMPILER-591/case3176.p4
   extensions/p4_tests/p4_14/jenkins/power/power.p4
@@ -816,7 +810,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
   extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
   extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
   )
 
 # Tests where a field is placed correctly, but we still can't extract it without
@@ -827,15 +820,9 @@ p4c_add_xfail_reason("tofino"
 # BRIG-270
 p4c_add_xfail_reason("tofino"
   "Extract field slice .* with a negative offset."
-  extensions/p4_tests/p4_14/c1/COMPILER-217/port_parser.p4
   extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
   extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
   extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
-  extensions/p4_tests/p4_14/test_config_100_hash_action.p4
-  extensions/p4_tests/p4_14/c4/COMPILER-523/vag2774.p4
-  extensions/p4_tests/p4_14/test_config_216_phv_aff.p4
-  extensions/p4_tests/p4_14/c6/COMPILER-604/new_parser.p4
-  extensions/p4_tests/p4_14/jenkins/stful/stful.p4
   )
 
 # BRIG-225?
@@ -1044,7 +1031,7 @@ if (ENABLE_TNA)
     )
   ####### need more translation #######
   p4c_add_xfail_reason("tofino"
-    "parser counter translation is not implemented"
+    "Cannot resolve computed value unambiguously"
     extensions/p4_tests/p4_14/test_config_294_parser_loop.p4
     )
   # need parser_value_set
