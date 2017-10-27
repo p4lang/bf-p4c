@@ -60,7 +60,11 @@ bool Cluster::MakeCCGFs::preorder(const IR::HeaderRef *hr) {
                         // metadata, especially bridge metadata need not satisfy contiguity
                         // the parser can always extract more than once
                         if (!group_accumulator->metadata)
-                            ::error("CCGF cannot be formed with parde_alignment constraints.");
+                            ::error("Header field %1% is the first of a series of non-byte "
+                                    "aligned fields, and the subsequent field %2% has an "
+                                    "incompatible alignment requirement.",
+                                    cstring::to_cstring(group_accumulator),
+                                    cstring::to_cstring(field));
                         group_accumulator = field;  // begin new ccgf accumulation
                         accumulator_bits = 0;
                     }

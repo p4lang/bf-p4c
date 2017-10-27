@@ -213,12 +213,17 @@ std::pair<int, int>  PHV_Container::ccgf_members_bit_assign(
                     LOG3("*****cluster_phv_container.cpp:*****....."
                         << "CCGF Physical Contiguity violated: " << std::endl
                         << "member = " << member);
+
                     // ccgf metadata member in ccgf overly parde constrained
                     // metadata need not be part of ccgf
                     // relaxing error generation for metadata
                     if (!member->metadata)
-                        ::error("CCGF member %1% not physically contiguous.", member->name);
-                    //
+                        ::error("Header field %1% is required to be allocated contiguously with "
+                                "its adjacent header fields in the PHV, but it also must be "
+                                "allocated alone in a PHV container, and it is not a size that "
+                                "exactly fills any container.  These constraints are "
+                                "unsatisfiable.", cstring::to_cstring(member));
+
                     int pad = width - member->size;
                     start -= pad;                    // start now @end of [0..member_size-1]
                     int lhs = start - member->size;  // lhs now @beginning of [0..member_size-1]
@@ -233,8 +238,11 @@ std::pair<int, int>  PHV_Container::ccgf_members_bit_assign(
                     const int align_start =
                         member->phv_alignment(false /*ccgf member align*/).get_value_or(0);
                     if (align_start)
-                        ::error("CCGF member in exact width container %1% alignment not at 0.",
-                                member->name); }}}  // constraint_no_cohabit
+                        ::error("Header field %1% must be allocated to its own PHV container, but "
+                                "it is deparsed, meaning that its container cannot contain "
+                                "non-deparsed bits, yet the field is too small to fill the whole "
+                                "container.", cstring::to_cstring(member)); } } }
+
         int use_width = member->size;             // always using size to taint container
         if (!member->simple_header_pov_ccgf())    // ignore simple header ccgf
             use_width -= member->phv_use_rem();

@@ -214,7 +214,7 @@ p4c_add_xfail_reason("tofino"
 
 # parde physical adjacency constraint violated by mau phv_no_pack constraint
 p4c_add_xfail_reason("tofino"
-  "CCGF member .* not physically contiguous"
+  "Header field .* is required to be allocated contiguously"
   extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   extensions/p4_tests/p4_14/switch_20160602/switch.p4
   )
@@ -854,7 +854,7 @@ p4c_add_xfail_reason("tofino"
 
 # parde physical adjacency constraint violated by mau phv_no_pack constraint
 p4c_add_xfail_reason("tofino"
-  "CCGF member .* not physically contiguous"
+  "Header field .* is required to be allocated contiguously"
   extensions/p4_tests/p4_14/01-FlexCounter.p4
   extensions/p4_tests/p4_14/03-VlanProfile.p4
   extensions/p4_tests/p4_14/19-SimpleTrill.p4
@@ -965,7 +965,7 @@ endif() # ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET
 if (ENABLE_TNA)
   ######## correct error message ######
   p4c_add_xfail_reason("tofino"
-    "CCGF member .* not physically contiguous"
+    "Header field .* is required to be allocated contiguously"
     extensions/p4_tests/p4_14/switch/p4src/switch.p4
     extensions/p4_tests/p4_14/jenkins/multicast_scale/multicast_scale.p4
   )
