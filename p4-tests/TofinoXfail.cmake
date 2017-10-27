@@ -955,7 +955,6 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     extensions/p4_tests/p4_16/parser_metadata_init.p4
     extensions/p4_tests/p4_16/stack_valid.p4
     testdata/p4_14_samples/07-MultiProtocol.p4
-    testdata/p4_14_samples/bigfield1.p4
     testdata/p4_14_samples/instruct5.p4
     testdata/p4_14_samples/ternary_match2.p4
     testdata/p4_14_samples/tmvalid.p4

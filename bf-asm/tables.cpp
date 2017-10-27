@@ -728,6 +728,14 @@ void Table::Format::pass2(Table *tbl) {
             error(lineno, "Immediate data misaligned for action bus byte %d", byte_slot); }
 }
 
+std::ostream &operator<<(std::ostream &out, const Table::Format::Field &f) {
+    out << "(size = " << f.size << " ";
+    for (auto b: f.bits) out << "[" << b.lo << ".." << b.hi << "]";
+    out << ")";
+    return out;
+}
+
+
 bool Table::Actions::Action::equiv(Action *a) {
     if (instr.size() != a->instr.size()) return false;
     for (unsigned i = 0; i < instr.size(); i++)
@@ -1139,11 +1147,11 @@ void Table::Actions::add_action_format(Table *table, json::map &tbl) {
           action_format_per_action["immediate_fields"] = json::vector();
         for (auto &a : act.alias) {
             json::string name = a.first;
+            int lo = remove_name_tail_range(name);
             json::string immed_name = a.second.name;
             if (immed_name != "immediate") continue; // output only immediate fields
-            if (!(act.has_param(a.first) || a.second.is_constant))
+            if (!(act.has_param(name) || a.second.is_constant))
                 continue;   // and fields that are parameters or constants
-            int lo = remove_name_tail_range(name);
             json::map action_format_per_action_imm_field;
             action_format_per_action_imm_field["param_name"] = name;
             action_format_per_action_imm_field["param_type"] = "parameter";
@@ -1154,7 +1162,7 @@ void Table::Actions::add_action_format(Table *table, json::map &tbl) {
             }
             action_format_per_action_imm_field["param_shift"] = lo;
             action_format_per_action_imm_field["dest_start"] = a.second.lo;
-            action_format_per_action_imm_field["dest_width"] = (a.second.hi - a.second.lo + 1);
+            action_format_per_action_imm_field["dest_width"] = a.second.size();
             action_format_per_action_imm_fields.push_back(std::move(action_format_per_action_imm_field));
         }
         action_format.push_back(std::move(action_format_per_action));
@@ -1162,12 +1170,28 @@ void Table::Actions::add_action_format(Table *table, json::map &tbl) {
 }
 
 std::ostream &operator<<(std::ostream &out, const Table::Actions::Action::alias_t &a) {
-    out << "alias: (" << a.name << ", lineno = " << a.lineno
+    out << "(" << a.name << ", lineno = " << a.lineno
         << ", lo = " << a.lo << ", hi = " << a.hi
         << ", is_constant = " << a.is_constant << ", value = 0x"
         << std::hex << a.value << std::dec << ")";
     return out;
 }
+
+std::ostream &operator<<(std::ostream &out, const Table::Actions::Action &a) {
+    out << a.name << "(";
+    auto indent = a.name.length() + 10;
+    for (auto &p: a.p4_params_list)
+        out << p << std::endl << std::setw(indent);
+    out << ")";
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, const Table::p4_param &p) {
+    out << p.name << "[ w =" << p.bit_width << ", w_full =" << p.bit_width_full
+        << " type =" << p.type << "]";
+    return out;
+}
+
 
 void Table::Actions::add_immediate_mapping(json::map &tbl) {
     for (auto &act : *this) {
@@ -1831,7 +1855,9 @@ void Table::add_field_to_pack_format(json::vector &field_list, int basebit, std:
     // such fields that contain slices of one or more other aliases
     // FIXME: why aren't we de-aliasing in setup?
     for (auto a : alias) {
-        if (act->has_param(a->first) || a->second.is_constant) {
+        json::string param_name = a->first;
+        int lo = remove_name_tail_range(param_name);
+        if (act->has_param(param_name) || a->second.is_constant) {
             auto newField = field;
             if (a->second.hi != -1) {
                 unsigned fieldSize = a->second.hi - a->second.lo + 1;
@@ -1948,7 +1974,8 @@ void Table::output_field_to_pack_format(json::vector &field_list,
 }
 
 
-void Table::add_zero_padding_fields(Table::Format *format, Table::Actions::Action *act, unsigned format_width) {
+void Table::add_zero_padding_fields(Table::Format *format, Table::Actions::Action *act,
+                                    unsigned format_width) {
     if (!format) return;
     // For an action with no format pad zeros for action table size
     unsigned pad_count = 0;
@@ -1969,32 +1996,44 @@ void Table::add_zero_padding_fields(Table::Format *format, Table::Actions::Actio
         return; }
     decltype(act->reverse_alias()) alias;
     if (act) alias = act->reverse_alias();
-    // Loop through fields to find zero padding
+
+    // Determine the zero padding necessary by creating a bitvector that has all
+    // bits cleared, and then iterate through parameters and immediates and set the
+    // bits that are used. Create padding for the remaining bit ranges.
     bitvec padbits;
+    padbits.clrrange(0, format_width-1);
     for (auto &field : *format) {
-        auto k = get(alias, field.first);
-        if (k.size() > 0) {
-            // add each alias for a parameter or a constant
-            for (auto a : k)
-                if (act->has_param(a->first) || a->second.is_constant)
-                    field.second.to_pad_bits(padbits, a->second.size(), a->second.lo);
-        } else {
-            field.second.to_pad_bits(padbits);
+        auto aliases = get(alias, field.first);
+        for (auto a : aliases) {
+            auto newField = field.second;
+            json::string param_name = a->first;
+            int lo = remove_name_tail_range(param_name);
+            if (act->has_param(param_name) || a->second.is_constant) {
+                auto newField = Table::Format::Field(field.second.fmt, a->second.size(),
+                                                     a->second.lo + field.second.bits[0].lo,
+                                                     static_cast<Format::Field::flags_t>(field.second.flags));
+                newField.set_field_bits(padbits);
+            }
         }
+        if (aliases.size() == 0)
+            field.second.set_field_bits(padbits);
     }
-    unsigned idx_lo = 0, idx_hi = 63;;
+
+    unsigned idx_lo = 0;
     for (auto p : padbits) {
         if (p > idx_lo) {
             Format::Field f(format, p - idx_lo, idx_lo, Format::Field::ZERO);
             std::string pad_name = "--padding_" + std::to_string(idx_lo)
                 + "_" + std::to_string(p - 1) + "--";
-            format->add_field(f, pad_name); }
-        idx_lo = p + 1 ; }
+            format->add_field(f, pad_name);
+        }
+        idx_lo = p + 1; }
     if (idx_lo < format_width) {
-            Format::Field f(format, format_width - idx_lo, idx_lo, Format::Field::ZERO);
-            std::string pad_name = "--padding_" + std::to_string(idx_lo)
-                + "_" + std::to_string(format_width - 1) + "--";
-            format->add_field(f, pad_name); }
+        Format::Field f(format, format_width - idx_lo, idx_lo, Format::Field::ZERO);
+        std::string pad_name = "--padding_" + std::to_string(idx_lo)
+            + "_" + std::to_string(format_width - 1) + "--";
+        format->add_field(f, pad_name);
+    }
 }
 
 bool Table::is_wide_format() {
@@ -2184,4 +2223,3 @@ void Table::add_result_physical_buses(json::map &stage_tbl) {
     for (auto l : layout) {
         result_physical_buses.push_back(l.row * 2 + l.bus); }
 }
-

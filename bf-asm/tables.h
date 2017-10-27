@@ -161,21 +161,12 @@ public:
             Field(Format *f, unsigned size, unsigned lo = 0, enum flags_t fl = NONE)
                 : size(size), flags(fl), fmt(f) {
                 if (size) bits.push_back({ lo, lo + size-1 }); }
-            /// add the bits of this field to the padbit bit vector
-            /// adjust the size and the offset with the corresponding alias sizes
-            void to_pad_bits(bitvec &padbits, unsigned alias_size = -1, unsigned alias_offset = 0) {
-                unsigned bits_size = 0;
-                for (auto &b : bits) {
-                    bits_size += b.size();
-                    if (alias_size < bits_size) {
-                        bits_size = alias_size;
-                        b.hi = b.lo + alias_size - 1;
-                        alias_size -= b.size();
-                    }
-                    padbits.setrange(b.lo + alias_offset, bits_size);
-                }
+            /// mark all bits from the field in @param bitset
+            void set_field_bits(bitvec &bitset) {
+                for (auto &b : bits) bitset.setrange(b.lo, b.size());
             }
         };
+        friend std::ostream &operator<<(std::ostream &, const Field &);
         Format(Table *t) : tbl(t) { fmt.resize(1); }
         Format(Table *, const VECTOR(pair_t) &data, bool may_overlap = false);
         ~Format();
@@ -258,6 +249,7 @@ public:
         p4_param(std::string n = "", unsigned p = 0, unsigned bw = 0, unsigned bwf = 0, std::string t = "",unsigned v = 0, bool d = false, bool i = false) :
             name(n), position(p), bit_width(bw), bit_width_full(bwf), type(t) , default_value(v), defaulted(d), is_valid(i) {}
     };
+    friend std::ostream &operator<<(std::ostream &, const p4_param &);
     typedef std::vector<p4_param>  p4_params;
 
     class Actions {
@@ -298,7 +290,8 @@ public:
                     if (e.name == param) return true;
                 return false;
             }
-          friend std::ostream &operator<<(std::ostream &, const alias_t &);
+            friend std::ostream &operator<<(std::ostream &, const alias_t &);
+            friend std::ostream &operator<<(std::ostream &, const Action &);
         };
     private:
         typedef ordered_map<std::string, Action> map_t;
