@@ -11,7 +11,6 @@ set (P14_XFAIL_TESTS
   extensions/p4_tests/p4_14/test_config_201_meter_constant_index.p4
   extensions/p4_tests/p4_14/test_config_163_stateful_table_math_unit.p4
   extensions/p4_tests/p4_14/test_config_195_stateful_predicate_output.p4
-  extensions/p4_tests/p4_14/test_config_206_stateful_logging.p4
   extensions/p4_tests/p4_14/test_config_205_modify_field_from_hash.p4
   extensions/p4_tests/p4_14/test_config_214_full_stats.p4
   extensions/p4_tests/p4_14/shared_names.p4

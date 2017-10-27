@@ -394,7 +394,8 @@ const IR::Node *InstructionSelection::postorder(IR::Primitive *prim) {
         auto constant = new IR::Constant(IR::Type::Bits::get(1), 1);
         if (member)
             return new IR::MAU::Instruction(prim->srcInfo, "set", member, constant);
-    } else if (prim->name == "register_action.execute") {
+    } else if (prim->name == "register_action.execute" ||
+               prim->name == "register_action.execute_log") {
         bool direct_access = false;
         if (prim->operands.size() > 1)
             stateful.push_back(prim);  // needed to setup the index properly
@@ -405,17 +406,8 @@ const IR::Node *InstructionSelection::postorder(IR::Primitive *prim) {
         if (salu->direct != direct_access)
             error("%s: %sdirect access to %sdirect register", prim->srcInfo,
                   direct_access ? "" : "in", salu->direct ? "" : "in");
-        cstring action = findContext<IR::ActionFunction>()->name;
-        auto out = salu->instruction.at(salu->action_map.at(action))->output_dst;
-        if (prim->name == "register_action.execute")
-            out = new IR::TempVar(prim->type);
-        if (out) {
-            int size = out->type->width_bits();
-            return new IR::MAU::Instruction(prim->srcInfo, "set", out,
-                                            new IR::MAU::AttachedOutput(IR::Type::Bits::get(size),
-                                                                        salu));
-        }
-        return nullptr;
+        return new IR::MAU::Instruction(prim->srcInfo, "set", new IR::TempVar(prim->type),
+                                        new IR::MAU::AttachedOutput(prim->type, salu));
     } else if (prim->name == "counter.count" || prim->name == "meter.execute_meter" ||
                prim->name == "meter.execute") {
         stateful.push_back(prim);  // needed to setup the index

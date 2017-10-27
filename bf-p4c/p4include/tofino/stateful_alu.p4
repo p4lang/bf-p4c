@@ -48,6 +48,7 @@ extern register_action<T, U> {
         reg.write(index, value);
         return rv;
     } */
+    U execute_log(); /* execute at an index that increments each time */
 }
 
 #if 0  // XXX(hanw): implemented with stateful_alu extern in tofino.p4

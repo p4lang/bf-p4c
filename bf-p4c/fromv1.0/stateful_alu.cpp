@@ -379,6 +379,9 @@ const IR::Statement *P4V1::StatefulAluConverter::convertExternCall(
         args = new IR::Vector<IR::Expression>();
         args->push_back(new IR::Cast(IR::Type_Bits::get(32),
                         new IR::PathExpression(new IR::Path(temp))));
+    } else if (prim->name == "execute_stateful_log") {
+        BUG_CHECK(prim->operands.size() == 1, "Wrong number of operands to %s", prim->name);
+        method = new IR::Member(prim->srcInfo, extref, "execute_log");
     } else {
         BUG("Unknown method %s in stateful_alu", prim->name); }
     auto mc = new IR::MethodCallExpression(prim->srcInfo, info.utype, method, args);
