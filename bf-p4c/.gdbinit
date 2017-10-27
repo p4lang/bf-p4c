@@ -332,17 +332,15 @@ class IXBarUsePrinter(object):
                 rv += "\n   sel_use[" + str(i) +"]: "
                 sel = vec_at(self.val['select_use'], i)
                 rv += "%d:%x - %s" % (int(sel['group']), int(sel['bit_mask']), str(sel['alg']))
-            for i in range(0, vec_size(self.val['hash_dist_use'])):
-                rv += "\n   hd_use[" + str(i) +"]: "
-                hd = vec_at(self.val['hash_dist_use'], i)
-                rv += "[i%d u%d g%d s%d]" % (int(hd['hash_table_input']), int(hd['unit']),
-                                             int(hd['group']), int(hd['slice']))
-                if hd['shift'] != 0:
-                    rv += " shift=%d" % hd['shift']
-                if hd['max_size'] != 0:
-                    rv += " max_size=%d" % hd['max_size']
-                rv += " " + str(hd['alg']) + " " + str(hd['type'])
-                rv += self.use_array(hd['use'], '      ')
+            hdh = self.val['hash_dist_hash']
+            if hdh['allocated']:
+                rv += "\n   hash_dist_hash: unit=" + str(hdh['unit'])
+                rv += " group=" + str(hdh['group'])
+                rv += " slice=" + str(hdh['slice'])
+                rv += " bit_mask=" + str(hdh['bit_mask'])
+                if hdh['algorithm']['str']:
+                    rv += " algorithm=" + hdh['algorithm']['str'].string()
+            rv += "\n"
         except Exception as e:
             rv += "{crash: "+str(e)+"}\n"
         return rv;

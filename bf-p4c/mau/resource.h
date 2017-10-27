@@ -22,9 +22,10 @@ struct TableResourceAlloc {
         rv->match_ixbar = match_ixbar;
         rv->gateway_ixbar = gateway_ixbar;
         rv->selector_ixbar = selector_ixbar;
+        rv->salu_ixbar = salu_ixbar;
+        rv->hash_dists = hash_dists;
         rv->table_format = table_format;
         rv->action_format = action_format;
-        rv->hash_dists = hash_dists;
         rv->action_data_xbar = action_data_xbar;
         for (auto &use : memuse) {
             if (name == use.first) {
@@ -45,6 +46,7 @@ struct TableResourceAlloc {
         rv->selector_ixbar = selector_ixbar;
         rv->salu_ixbar = salu_ixbar;
         rv->table_format = table_format;
+        // NOT cloning memuse
         rv->action_format = action_format;
         rv->hash_dists = hash_dists;
         rv->action_data_xbar = action_data_xbar;

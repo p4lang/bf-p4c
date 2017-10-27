@@ -237,13 +237,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/jenkins/pctr/pctr.p4
   )
 
-# WARNING: Currently, when this message is sent, the compiler does not stop.  Thus, it may not
-# be the right stop message for a particular message
-p4c_add_xfail_reason("tofino"
-  "No input xbar for salu instruction operand for phv"
-  extensions/p4_tests/p4_14/jenkins/multicast_scale/multicast_scale.p4
-  )
-
 p4c_add_xfail_reason("tofino"
   "warning: Program does not contain a `main' module"
   extensions/p4_tests/p4_16/bloom_filter.p4
