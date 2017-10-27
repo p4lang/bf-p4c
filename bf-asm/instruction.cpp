@@ -170,7 +170,7 @@ struct operand {
                 out << '[' << field->bits[0].lo << ':' << field->size << ", "
                     << field->group << ']'; }
         void gen_prim_cfg(json::map& out) { 
-          std::string refn;
+          std::string refn = "immediate";
           if (field) {
             auto fmt = field->fmt;
             if (fmt) {
@@ -180,7 +180,7 @@ struct operand {
                     refn = "action_param";
                 } 
             }
-          } else refn = "immediate";
+          } 
           out["type"] = refn;
           out["name"] = p4name; 
         }
@@ -458,7 +458,8 @@ struct AluOP : VLIWInstruction {
       src1(tbl, act, s1), src2(tbl, act, s2) {}
     std::string name() { return opc->name; };
     void gen_prim_cfg(json::map& out) { 
-      out["name"] = opc->name;
+      out["name"] = "DirectAluPrimitive";
+      out["operation"] = opc->name;
       dest.gen_prim_cfg((out["dest"] = json::map()));
       json::vector &srcv = out["src"] = json::vector();
       json::map oneoper;
@@ -613,7 +614,14 @@ struct LoadConst : VLIWInstruction {
         : VLIWInstruction(d.lineno), dest(tbl->gress, d), src(s) {}
     LoadConst(int line, Phv::Ref &d, int v) : VLIWInstruction(line), dest(d), src(v) {}
     std::string name() { return ""; };
-    void gen_prim_cfg(json::map& out) { }
+    void gen_prim_cfg(json::map& out) { 
+      out["name"] = "ModifyFieldPrimitive"; 
+      dest.gen_prim_cfg((out["dest"] = json::map()));
+      json::vector &srcv = out["src"] = json::vector();
+      json::map onemap;
+      onemap["immediate"] = std::to_string(src);
+      srcv.push_back(std::move(onemap));
+    }
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
     void pass2(Table *, Table::Actions::Action *) {}
     int encode();
@@ -789,7 +797,7 @@ struct DepositField : VLIWInstruction {
     DepositField(const Set &);
     std::string name() { return "deposit_field"; }
     void gen_prim_cfg(json::map& out) { 
-      out["name"] = "set"; // treat deposit as a set - atleast for debug
+      out["name"] = "ModifyFieldPrimitive"; 
       dest.gen_prim_cfg((out["dest"] = json::map()));
       json::vector &srcv = out["src"] = json::vector();
       json::map oneoper;
@@ -890,8 +898,7 @@ struct Set : VLIWInstruction {
         : VLIWInstruction(d.lineno), dest(tbl->gress, d), src(tbl, act, s) {}
     std::string name() { return "set"; };
     void gen_prim_cfg(json::map& out) { 
-      // glass calls this ModifyFieldPrimitive based on python class name
-      out["name"] = "set"; 
+      out["name"] = "ModifyFieldPrimitive"; 
       dest.gen_prim_cfg((out["dest"] = json::map()));
       json::vector &srcv = out["src"] = json::vector();
       json::map oneoper;
@@ -984,7 +991,8 @@ struct NulOP : VLIWInstruction {
         VLIWInstruction(d.lineno), opc(o), dest(tbl->gress, d) {}
     std::string name() { return opc->name; };
     void gen_prim_cfg(json::map& out) { 
-      out["name"] = opc->name;
+      out["name"] = "DirectAluPrimitive";
+      out["operator"] = opc->name;
       dest.gen_prim_cfg((out["dest"] = json::map()));
     }
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
@@ -1050,7 +1058,8 @@ struct ShiftOP : VLIWInstruction {
                     if (CHECKTYPE(ops[2], tINT)) shift = ops[2].i; } }
     std::string name() { return opc->name; };
     void gen_prim_cfg(json::map& out) { 
-      out["name"] = opc->name;
+      out["name"] = "DirectAluPrimitive";
+      out["operator"] = opc->name;
       dest.gen_prim_cfg((out["dest"] = json::map()));
       json::vector &srcv = out["src"] = json::vector();
       json::map oneoper;
