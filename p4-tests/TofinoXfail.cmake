@@ -641,7 +641,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Tofino does not allow meters to use different address schemes on one table"
+  "Tofino does not allow stats to use different address schemes on one table"
   testdata/p4_14_samples/counter.p4
   extensions/p4_tests/p4_14/test_config_313_neg_test_addr_modes.p4
   )

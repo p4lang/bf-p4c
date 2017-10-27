@@ -56,11 +56,12 @@ if [ "$RUN_BOOTSTRAP_PTF" == "yes" ]; then
     ${mydir}/bootstrap_ptf.sh ${builddir}
 fi
 
-pushd ${builddir}/p4c
-if [ ! -e p4c-tofino-gdb.gdb ]; then ln -sf ${mydir}/bf-p4c/.gdbinit p4c-tofino-gdb.gdb; fi
-if [ ! -e p4c-bm2-ss-gdb.gdb ]; then ln -sf ${mydir}/bf-p4c/.gdbinit p4c-bm2-ss-gdb.gdb; fi
-if [ ! -e .gdbinit ]; then ln -sf ${mydir}/bf-p4c/.gdbinit; fi
-popd # build/p4c
+mkdir -p ${builddir}/p4c/extensions/bf-p4c
+ln -sf ${mydir}/bf-p4c/.gdbinit ${builddir}/p4c/extensions/bf-p4c/p4c-tofino-gdb.gdb
+mkdir -p ${builddir}/p4c/backends/bmv2/
+ln -sf ${mydir}/bf-p4c/.gdbinit ${builddir}/p4c/backends/bmv2/p4c-bm2-ss-gdb.gdb
+mkdir -p ${builddir}/p4c/backends/p4test
+ln -sf ${mydir}/bf-p4c/.gdbinit ${builddir}/p4c/backends/p4test/p4test-gdb.gdb
 
 echo "Configured for build in ${builddir}"
 popd > /dev/null # $mydir

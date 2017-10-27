@@ -232,17 +232,17 @@ class VisitAttached : public Inspector {
                             int &sp_addr_bits_needed, int *layout_addr_bits) {
         if (sp->direct) {
             if (sp_set && sp_addr_bits_needed > 0)
-               error("Tofino does not allow counter to use different address schemes on one "
-                    "table.  Counters %s and %s have different address schemes",
-                     sp_addr_name, sp->name);
+               error("Tofino does not allow %s to use different address schemes on one "
+                    "table.  %s and %s have different address schemes",
+                     sp->kind(), sp_addr_name, sp->name);
         } else {
             if (sp->size <= 0)
                 error("%s: No instance count in indirect %s %s", sp->srcInfo, sp->kind(),
                       sp->name);
             if (sp_set && sp_addr_bits_needed == 0)
-                error("Tofino does not allow meters to use different address schemes on one "
-                    "table.  Meters %s and %s have different address schemes",
-                     sp_addr_name, sp->name);
+                error("Tofino does not allow %s to use different address schemes on one "
+                    "table.  %s and %s have different address schemes",
+                     sp->kind(), sp_addr_name, sp->name);
 
             int addr_bits_needed = std::max(10, ceil_log2(sp->size)) + 1;
             int addition_to_overhead = addr_bits_needed;
