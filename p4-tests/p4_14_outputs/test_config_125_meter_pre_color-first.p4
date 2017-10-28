@@ -50,16 +50,6 @@ header egress_intrinsic_metadata_from_parser_aux_t {
     bit<8>  coalesce_sample_count;
 }
 
-header ethernet_t {
-    bit<48> dstAddr;
-    bit<48> srcAddr;
-    bit<16> etherType;
-    bit<16> blah;
-    bit<32> x;
-    bit<32> y;
-    bit<32> z;
-}
-
 header ingress_intrinsic_metadata_t {
     bit<1>  resubmit_flag;
     bit<1>  _pad1;
@@ -117,6 +107,24 @@ header ingress_parser_control_signals {
     bit<5> _pad;
 }
 
+header pkt_t {
+    bit<32> field_a_32;
+    bit<32> field_b_32;
+    bit<32> field_c_32;
+    bit<32> field_d_32;
+    bit<16> field_e_16;
+    bit<16> field_f_16;
+    bit<16> field_g_16;
+    bit<16> field_h_16;
+    bit<8>  field_i_8;
+    bit<8>  field_j_8;
+    bit<4>  color_0;
+    bit<4>  pad_0;
+    bit<8>  color_1;
+    bit<8>  pre_color_0;
+    bit<8>  pre_color_1;
+}
+
 struct metadata {
 }
 
@@ -129,8 +137,6 @@ struct headers {
     egress_intrinsic_metadata_for_output_port_t    eg_intr_md_for_oport;
     @pa_fragment("egress", "eg_intr_md_from_parser_aux.coalesce_sample_count") @pa_fragment("egress", "eg_intr_md_from_parser_aux.clone_src") @pa_fragment("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @pa_atomic("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md_from_parser_aux") @name(".eg_intr_md_from_parser_aux") 
     egress_intrinsic_metadata_from_parser_aux_t    eg_intr_md_from_parser_aux;
-    @name(".ethernet") 
-    ethernet_t                                     ethernet;
     @dont_trim @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md.ingress_port") @name(".ig_intr_md") 
     ingress_intrinsic_metadata_t                   ig_intr_md;
     @dont_trim @pa_intrinsic_header("ingress", "ig_intr_md_for_mb") @pa_atomic("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @not_deparsed("ingress") @not_deparsed("egress") @name(".ig_intr_md_for_mb") 
@@ -143,53 +149,60 @@ struct headers {
     generator_metadata_t_0                         ig_pg_md;
     @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_prsr_ctrl") @name(".ig_prsr_ctrl") 
     ingress_parser_control_signals                 ig_prsr_ctrl;
+    @name(".pkt") 
+    pkt_t                                          pkt;
 }
-#include <tofino/stateful_alu.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".parse_ethernet") state parse_ethernet {
-        packet.extract<ethernet_t>(hdr.ethernet);
+        packet.extract<pkt_t>(hdr.pkt);
         transition accept;
     }
     @name(".start") state start {
         transition parse_ethernet;
     }
 }
+#include <tofino/p4_14_prim.p4>
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".sampling_cntr") register<bit<32>>(32w8192) sampling_cntr;
-    register_action<bit<32>, bit<32>>(sampling_cntr) sampling_alu = {
-        void apply(inout bit<32> value, out bit<32> rv) {
-            rv = 32w0;
-            value = value + 32w1;
-            rv = value;
-        }
-    };
-    @name(".action_0") action action_0() {
-        hdr.ethernet.x = sampling_alu.execute(32w8191);
+    @name(".meter_0") direct_meter<bit<4>>(MeterType.bytes) meter_0;
+    @name(".meter_1") meter(32w500, MeterType.bytes) meter_1;
+    @name(".action_0") action action_0(bit<8> param0) {
     }
-    @name(".action_1") action action_1() {
+    @name(".do_nothing") action do_nothing() {
     }
-    @ways(1) @name(".table_0") table table_0 {
+    @name(".action_1") action action_1(bit<8> param0) {
+        execute_meter_with_color<meter, bit<32>, bit<8>>(meter_1, 32w7, hdr.pkt.color_1, hdr.pkt.pre_color_1);
+    }
+    @name(".action_0") action action_0_0(bit<8> param0) {
+        meter_0.read(hdr.pkt.color_0);
+    }
+    @include_stash(1) @name(".table_0") table table_0 {
         actions = {
-            action_0();
+            action_0_0();
             @defaultonly NoAction();
         }
         key = {
-            hdr.ethernet.blah: exact @name("ethernet.blah") ;
+            hdr.pkt.field_e_16 : ternary @name("pkt.field_e_16") ;
+            hdr.pkt.color_0    : exact @name("pkt.color_0") ;
+            hdr.pkt.color_1    : exact @name("pkt.color_1") ;
+            hdr.pkt.pre_color_0: exact @name("pkt.pre_color_0") ;
+            hdr.pkt.pre_color_1: exact @name("pkt.pre_color_1") ;
         }
-        size = 1024;
+        size = 6000;
+        meters = meter_0;
         default_action = NoAction();
     }
-    @name(".table_1") table table_1 {
+    @idletime_two_way_notification(1) @include_stash(1) @name(".table_1") table table_1 {
         actions = {
+            do_nothing();
             action_1();
             @defaultonly NoAction();
         }
         key = {
-            hdr.ethernet.blah: ternary @name("ethernet.blah") ;
+            hdr.pkt.field_e_16: exact @name("pkt.field_e_16") ;
         }
-        size = 1024;
+        size = 32768;
         default_action = NoAction();
     }
     apply {
@@ -205,7 +218,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        packet.emit<ethernet_t>(hdr.ethernet);
+        packet.emit<pkt_t>(hdr.pkt);
     }
 }
 

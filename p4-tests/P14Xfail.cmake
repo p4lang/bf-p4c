@@ -1,9 +1,5 @@
-
 set (P14_XFAIL_TESTS
   extensions/p4_tests/p4_14/02-FlexCounterActionProfile.p4
-  extensions/p4_tests/p4_14/test_config_125_meter_pre_color.p4
-  extensions/p4_tests/p4_14/test_config_126_meter_pre_color_2.p4
-  extensions/p4_tests/p4_14/test_config_127_meter_pre_color_3.p4
   extensions/p4_tests/p4_14/test_config_132_meter_pre_color_4.p4
   extensions/p4_tests/p4_14/test_config_172_stateful_heavy_hitter.p4
   extensions/p4_tests/p4_14/test_config_160_stateful_single_bit_mode.p4

@@ -1,0 +1,9 @@
+test_config_125_meter_pre_color.p4(58): warning: Could not infer type for param0, using bit<8>
+action action_0(param0){
+                ^^^^^^
+test_config_125_meter_pre_color.p4(64): warning: Could not infer type for param0, using bit<8>
+action action_1(param0){
+                ^^^^^^
+test_config_125_meter_pre_color.p4(58): warning: Could not infer type for param0, using bit<8>
+action action_0(param0){
+                ^^^^^^

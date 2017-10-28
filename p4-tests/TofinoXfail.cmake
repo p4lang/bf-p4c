@@ -96,12 +96,6 @@ if (NOT ENABLE_TNA)
     )
 endif() # NOT ENABLE_TNA
 
-# Failure for BRIG-44 in JIRA
-p4c_add_xfail_reason("tofino"
-  "Unhandled expression in BuildGatewayMatch"
-  testdata/p4_14_samples/basic_conditionals.p4
-  )
-
 # BRIG-136
 # was BRIG-134 for extensions/p4_tests/p4_14/jenkins/alpm_test/alpm_test.p4
 p4c_add_xfail_reason("tofino"
@@ -383,11 +377,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Unrecognized AttribLocal combined_predicate"
   extensions/p4_tests/p4_14/test_config_195_stateful_predicate_output.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "recursion failure"
-  extensions/p4_tests/p4_14/test_config_199_stateful_constant_index.p4
   )
 
 # conflict between blackbox meter and builtin meter
@@ -825,6 +814,12 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Could not find declaration"
   extensions/p4_tests/p4_16/stful.p4
+  )
+
+# P4-14 program can not define extern
+p4c_add_xfail_reason("tofino"
+  "P4_14 extern not fully supported"
+  testdata/p4_14_samples/issue604.p4
   )
 
 # BEGIN: XFAILS that match glass XFAILS
