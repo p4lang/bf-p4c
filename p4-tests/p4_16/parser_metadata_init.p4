@@ -1,4 +1,4 @@
-#include "tofino.h"
+#include <v1model.p4>
 
 header data_h {
     bit<32> f;
@@ -9,7 +9,15 @@ struct packet_t {
     bit<8>  meta;
 }
 
-parser p(packet_in b, out packet_t hdrs, inout standard_metadata meta)
+struct user_metadata_t {
+    bit<8> unused;
+}
+
+parser p(
+    packet_in b,
+    out packet_t hdrs,
+    inout user_metadata_t m,
+    inout standard_metadata_t meta)
 {
     state start {
         hdrs.meta = 0x01;
@@ -22,7 +30,11 @@ parser p(packet_in b, out packet_t hdrs, inout standard_metadata meta)
     }
 }
 
-control ingress(inout packet_t hdrs, inout standard_metadata meta) {
+control ingress(
+    inout packet_t hdrs,
+    inout user_metadata_t m,
+    inout standard_metadata_t meta)
+{
     action set(bit<9> port, bit<32> val) {
         hdrs.data.f = val;
         meta.egress_spec = port;
@@ -43,14 +55,26 @@ control ingress(inout packet_t hdrs, inout standard_metadata meta) {
     }
 }
 
-control egress(inout packet_t hdrs, inout standard_metadata meta) {
+control egress(
+    inout packet_t hdrs,
+    inout user_metadata_t m,
+    inout standard_metadata_t meta)
+{
     apply { }
 }
 
-control deparser(packet_out b, in packet_t hdrs, inout standard_metadata meta) {
+control deparser(packet_out b, in packet_t hdrs) {
     apply {
         b.emit(hdrs.data);
     }
 }
 
-Switch(p(), ingress(), egress(), deparser()) main;
+control vck(inout packet_t hdrs, inout user_metadata_t meta) {
+    apply {}
+}
+
+control uck(inout packet_t hdrs, inout user_metadata_t meta) {
+    apply {}
+}
+
+V1Switch(p(), vck(), ingress(), egress(), uck(), deparser()) main;

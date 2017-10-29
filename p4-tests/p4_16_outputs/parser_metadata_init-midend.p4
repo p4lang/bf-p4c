@@ -1,20 +1,6 @@
 #include <core.p4>
+#include <v1model.p4>
 
-struct standard_metadata {
-    bit<9>  ingress_port;
-    bit<32> packet_length;
-    bit<9>  egress_spec;
-    bit<9>  egress_port;
-    bit<16> egress_instance;
-    bit<32> instance_type;
-    bit<8>  parser_status;
-    bit<8>  parser_error_location;
-}
-
-parser parse<H>(packet_in packet, out H headers, inout standard_metadata meta);
-control pipe<H>(inout H headers, inout standard_metadata meta);
-control deparse<H>(packet_out packet, in H headers, inout standard_metadata meta);
-package Switch<H>(parse<H> p, pipe<H> ig, pipe<H> eg, deparse<H> dep);
 header data_h {
     bit<32> f;
 }
@@ -24,7 +10,11 @@ struct packet_t {
     bit<8> meta;
 }
 
-parser p(packet_in b, out packet_t hdrs, inout standard_metadata meta) {
+struct user_metadata_t {
+    bit<8> unused;
+}
+
+parser p(packet_in b, out packet_t hdrs, inout user_metadata_t m, inout standard_metadata_t meta) {
     state start {
         hdrs.meta = 8w0x1;
         b.extract<data_h>(hdrs.data);
@@ -32,7 +22,7 @@ parser p(packet_in b, out packet_t hdrs, inout standard_metadata meta) {
     }
 }
 
-control ingress(inout packet_t hdrs, inout standard_metadata meta) {
+control ingress(inout packet_t hdrs, inout user_metadata_t m, inout standard_metadata_t meta) {
     @name("set") action set_0(bit<9> port, bit<32> val) {
         hdrs.data.f = val;
         meta.egress_spec = port;
@@ -54,24 +44,25 @@ control ingress(inout packet_t hdrs, inout standard_metadata meta) {
     }
 }
 
-control egress(inout packet_t hdrs, inout standard_metadata meta) {
+control egress(inout packet_t hdrs, inout user_metadata_t m, inout standard_metadata_t meta) {
     apply {
     }
 }
 
-control deparser(packet_out b, in packet_t hdrs, inout standard_metadata meta) {
-    @hidden action act() {
+control deparser(packet_out b, in packet_t hdrs) {
+    apply {
         b.emit<data_h>(hdrs.data);
     }
-    @hidden table tbl_act {
-        actions = {
-            act();
-        }
-        const default_action = act();
-    }
+}
+
+control vck(inout packet_t hdrs, inout user_metadata_t meta) {
     apply {
-        tbl_act.apply();
     }
 }
 
-Switch<packet_t>(p(), ingress(), egress(), deparser()) main;
+control uck(inout packet_t hdrs, inout user_metadata_t meta) {
+    apply {
+    }
+}
+
+V1Switch<packet_t, user_metadata_t>(p(), vck(), ingress(), egress(), uck(), deparser()) main;

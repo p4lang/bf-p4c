@@ -1,20 +1,6 @@
 #include <core.p4>
+#include <v1model.p4>
 
-struct standard_metadata {
-    bit<9>  ingress_port;
-    bit<32> packet_length;
-    bit<9>  egress_spec;
-    bit<9>  egress_port;
-    bit<16> egress_instance;
-    bit<32> instance_type;
-    bit<8>  parser_status;
-    bit<8>  parser_error_location;
-}
-
-parser parse<H>(packet_in packet, out H headers, inout standard_metadata meta);
-control pipe<H>(inout H headers, inout standard_metadata meta);
-control deparse<H>(packet_out packet, in H headers, inout standard_metadata meta);
-package Switch<H>(parse<H> p, pipe<H> ig, pipe<H> eg, deparse<H> dep);
 header data_h {
     bit<32> f1;
     bit<32> f2;
@@ -27,14 +13,18 @@ struct packet_t {
     data_h data;
 }
 
-parser p(packet_in b, out packet_t hdrs, inout standard_metadata meta) {
+struct user_metadata_t {
+    bit<8> unused;
+}
+
+parser p(packet_in b, out packet_t hdrs, inout user_metadata_t m, inout standard_metadata_t meta) {
     state start {
         b.extract(hdrs.data);
         transition accept;
     }
 }
 
-control ingress(inout packet_t hdrs, inout standard_metadata meta) {
+control ingress(inout packet_t hdrs, inout user_metadata_t m, inout standard_metadata_t meta) {
     action set_f1(bit<32> val) {
         hdrs.data.f1 = val;
     }
@@ -108,15 +98,25 @@ control ingress(inout packet_t hdrs, inout standard_metadata meta) {
     }
 }
 
-control egress(inout packet_t hdrs, inout standard_metadata meta) {
+control egress(inout packet_t hdrs, inout user_metadata_t m, inout standard_metadata_t meta) {
     apply {
     }
 }
 
-control deparser(packet_out b, in packet_t hdrs, inout standard_metadata meta) {
+control deparser(packet_out b, in packet_t hdrs) {
     apply {
         b.emit(hdrs.data);
     }
 }
 
-Switch(p(), ingress(), egress(), deparser()) main;
+control vck(inout packet_t hdrs, inout user_metadata_t meta) {
+    apply {
+    }
+}
+
+control uck(inout packet_t hdrs, inout user_metadata_t meta) {
+    apply {
+    }
+}
+
+V1Switch(p(), vck(), ingress(), egress(), uck(), deparser()) main;
