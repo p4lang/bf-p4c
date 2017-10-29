@@ -525,7 +525,8 @@ template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
 
     if (options.condense_json)
         regs.disable_if_zero();
-    regs.emit_json(*open_output("regs.deparser.cfg.json"));
+    if (error_count == 0)
+        regs.emit_json(*open_output("regs.deparser.cfg.json"));
     TopLevel::regs<Target::JBay>()->reg_pipe.pardereg.dprsrreg = "regs.deparser";
 }
 

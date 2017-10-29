@@ -245,6 +245,7 @@ void Deparser::input(VECTOR(value_t) args, value_t data) {
                                            value_desc(&kv.key))) {
                 intrinsics.emplace_back(itype, kv.key.lineno);
                 auto &intrin = intrinsics.back();
+                collapse_list_of_maps(kv.value);
                 if (kv.value.type == tVEC) {
                     for (auto &val : kv.value.vec)
                         intrin.vals.emplace_back(gress, val);

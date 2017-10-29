@@ -29,13 +29,22 @@ void InputXbar::setup_hash(std::map<int, HashCol> &hash_table, int id,
     if (width && width != abs(hi - lo) + 1)
         error(what.lineno, "hash expression width mismatch (%d != %d)", width, abs(hi-lo)+1);
     int bit = 0;
+    int errlo = -1;
     for (int col : Range(lo, hi))
-        if (hash_table[col].data || hash_table[col].fn)
-            error(lineno, "Hash table %d column %d duplicated", id, col);
-        else {
+        if (hash_table[col].data || hash_table[col].fn) {
+            if (errlo < 0) errlo = col;
+        } else {
+            if (errlo >= 0) {
+                if (errlo == col-1)
+                    error(lineno, "Hash table %d column %d duplicated", id, errlo);
+                else
+                    error(lineno, "Hash table %d column %d..%d duplicated", id, errlo, col-1);
+                errlo = -1; }
             hash_table[col].lineno = what.lineno;
             hash_table[col].fn = fn;
             hash_table[col].bit = bit++; }
+    if (errlo >= 0)
+        error(lineno, "Hash table %d column %d..%d duplicated", id, errlo, hi);
 }
 
 InputXbar::InputXbar(Table *t, bool tern, const VECTOR(pair_t) &data)

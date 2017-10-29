@@ -52,12 +52,13 @@ void TopLevelTarget<TARGET>::output(json::map &) {
         this->mem_pipe.disable_if_zero();
         this->reg_top.disable_if_zero();
         this->reg_pipe.disable_if_zero(); }
-    this->mem_top.emit_json(*open_output("memories.top.cfg.json"));
-    this->mem_pipe.emit_json(*open_output("memories.pipe.cfg.json"));
-    this->reg_top.emit_json(*open_output("regs.top.cfg.json"));
-    this->reg_pipe.emit_json(*open_output("regs.pipe.cfg.json"));
-    if (!name_lookup.empty())
-        *open_output("p4_name_lookup.json") <<  &name_lookup << std::endl;
+    if (error_count == 0) {
+        this->mem_top.emit_json(*open_output("memories.top.cfg.json"));
+        this->mem_pipe.emit_json(*open_output("memories.pipe.cfg.json"));
+        this->reg_top.emit_json(*open_output("regs.top.cfg.json"));
+        this->reg_pipe.emit_json(*open_output("regs.pipe.cfg.json"));
+        if (!name_lookup.empty())
+            *open_output("p4_name_lookup.json") <<  &name_lookup << std::endl; }
 }
 
 template class TopLevelTarget<Target::Tofino>;

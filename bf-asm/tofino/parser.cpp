@@ -379,11 +379,14 @@ template<> void Parser::write_config(Target::Tofino::parser_regs &regs) {
     //    regs.ingress.disable_if_zero();
     //    regs.egress.disable_if_zero();
     //    regs.merge.disable_if_zero(); }
-    regs.memory[INGRESS].emit_json(*open_output("memories.all.parser.ingress.cfg.json"), "ingress");
-    regs.memory[EGRESS].emit_json(*open_output("memories.all.parser.egress.cfg.json"), "egress");
-    regs.ingress.emit_json(*open_output("regs.all.parser.ingress.cfg.json"));
-    regs.egress.emit_json(*open_output("regs.all.parser.egress.cfg.json"));
-    regs.merge.emit_json(*open_output("regs.all.parse_merge.cfg.json"));
+    if (error_count == 0) {
+        regs.memory[INGRESS].emit_json(
+            *open_output("memories.all.parser.ingress.cfg.json"), "ingress");
+        regs.memory[EGRESS].emit_json(
+            *open_output("memories.all.parser.egress.cfg.json"), "egress");
+        regs.ingress.emit_json(*open_output("regs.all.parser.ingress.cfg.json"));
+        regs.egress.emit_json(*open_output("regs.all.parser.egress.cfg.json"));
+        regs.merge.emit_json(*open_output("regs.all.parse_merge.cfg.json")); }
     for (int i = 0; i < 18; i++) {
         TopLevel::regs<Target::Tofino>()->mem_pipe.i_prsr[i] = "memories.all.parser.ingress";
         TopLevel::regs<Target::Tofino>()->reg_pipe.pmarb.ibp18_reg.ibp_reg[i]

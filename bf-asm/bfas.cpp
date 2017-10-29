@@ -216,7 +216,7 @@ int main(int ac, char **av) {
         } else if (FILE *fp = fopen(av[i], "r")) {
             if (!srcfiles++) firstsrc = av[i];
             error_count += asm_parse_file(av[i], fp);
-            if (error_count > 0) return error_count;
+            if (error_count > 0) return 1;
             fclose(fp);
             asmfile = true;
             asmfile_name = get_filename(av[i]);

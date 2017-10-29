@@ -218,11 +218,18 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "tofino only supports 12 stages"
-  extensions/p4_tests/p4_14/jenkins/alpm_test/alpm_test.p4
-  extensions/p4_tests/p4_14/jenkins/exm_direct_1/exm_direct_1_one.p4
-  extensions/p4_tests/p4_14/jenkins/basic_ipv4/basic_ipv4.p4
+  "error: tofino supports up to 12 stages"
+  extensions/p4_tests/p4_14/c1/COMPILER-257/case1770.p4
   extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
+  extensions/p4_tests/p4_14/case1770.p4
+  extensions/p4_tests/p4_14/jenkins/alpm_test/alpm_test.p4
+  extensions/p4_tests/p4_14/jenkins/basic_ipv4/basic_ipv4.p4
+  extensions/p4_tests/p4_14/jenkins/clpm/clpm.p4
+  extensions/p4_tests/p4_14/jenkins/exm_direct_1/exm_direct_1_one.p4
+  extensions/p4_tests/p4_14/jenkins/exm_indirect_1/exm_indirect_1_one.p4
+  extensions/p4_tests/p4_14/jenkins/exm_smoke_test/exm_smoke_test_one.p4
+  extensions/p4_tests/p4_14/jenkins/multi_device/multi_device.p4
+  extensions/p4_tests/p4_14/jenkins/perf_test_alpm/perf_test_alpm_one.p4
   )
 
 # BRIG-113

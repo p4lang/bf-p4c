@@ -59,9 +59,6 @@ void AsmStage::start(int lineno, VECTOR(value_t) args) {
     else if (args[0].i < 0)
         error(lineno, "invalid stage number");
     else if ((unsigned)args[0].i >= stage.size()) {
-        if (args[0].i >= Target::NUM_MAU_STAGES())
-            warning(lineno, "%s only supports %d stages, using %d", Target::name(),
-                    Target::NUM_MAU_STAGES(), args[0].i + 1);
         stage.resize(args[0].i + 1); }
     for (size_t i = oldsize; i < stage.size(); i++)
         stage[i].stageno = i;
@@ -154,6 +151,10 @@ void AsmStage::output(json::map &ctxt_json) {
         //if  (stage[i].tables.empty()) continue;
         for (auto table : stage[i].tables)
             table->pass2(); }
+    if (stage.size() > Target::NUM_MAU_STAGES())
+        error(stage.back().tables.empty() ? 0 : stage.back().tables[0]->lineno,
+              "%s supports up to %d stages, using %zd", Target::name(), Target::NUM_MAU_STAGES(),
+              stage.size());
     if (error_count > 0) return;
     if (stage.empty()) return;
     for (gress_t gress : Range(INGRESS, EGRESS)) {
@@ -377,7 +378,8 @@ void Stage::output(json::map &ctxt_json) {
     for(int row = 0; row < SRAM_ROWS; row++)
         for(int col = 0; col < MAPRAM_UNITS_PER_ROW; col++)
             regs.rams.map_alu.row[row].adrmux.mapram_config[col].enable();
-    regs.emit_json(*open_output("regs.match_action_stage.%02x.cfg.json", stageno) , stageno);
+    if (error_count == 0)
+        regs.emit_json(*open_output("regs.match_action_stage.%02x.cfg.json", stageno) , stageno);
     char buf[64];
     sprintf(buf, "regs.match_action_stage.%02x", stageno);
     if (stageno < Target::NUM_MAU_STAGES())
