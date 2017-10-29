@@ -21,7 +21,6 @@ option_t options = {
     .target = TOFINO,
     .match_compiler = false,
     .condense_json = true,
-    .new_ctx_json = true,
     .debug_info = false,
     .werror = false,
 };
@@ -80,16 +79,8 @@ void output_all() {
     Section::output_all(ctxtJson);
     TopLevel::output_all(ctxtJson);
     auto json_out = open_output("context.json");
-    if (options.new_ctx_json) {
-        *json_out << &ctxtJson;
-    } else {
-        // old context json only outputs the tables -- the rest is ignored
-        if (options.match_compiler)
-            *json_out << "{ \"ContextJsonNode\": ";
-        *json_out << '[' << ctxtJson["tables"] << (options.match_compiler ? ",\n[] " : "")
-                  << ']' << std::endl;
-        if (options.match_compiler)
-            *json_out << '}' << std::endl; }
+    *json_out << &ctxtJson;
+
     delete TopLevel::all;
 }
 
@@ -129,8 +120,8 @@ int main(int ac, char **av) {
                 error_count++;
                 std::cerr << "Supported targets:" FOR_ALL_TARGETS(OUTPUT_TARGET) << std::endl; }
         } else if (!strcmp(av[i], "--old_json")) {
-            /* XXX(hanw): Temporary flag to use old ctxt json, to be removed */
-            options.new_ctx_json = false;
+            std::cerr << "Old context json is no longer supported" << std::endl;
+            error_count++;
         } else if (av[i][0] == '-' && av[i][1] == '-') {
             FOR_ALL_TARGETS(MATCH_TARGET_OPTION, av[i]+2) {
                 std::cerr << "Unrecognized option " << av[i] << std::endl;

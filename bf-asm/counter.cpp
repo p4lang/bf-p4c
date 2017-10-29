@@ -95,12 +95,12 @@ template<class REGS> void CounterTable::write_merge_regs(REGS &regs, MatchTable 
         //pfe = STATISTICS_PER_FLOW_ENABLE_START_BIT;
         pfe = 0; // Does pfe value get picked up in default case?
         stats_adr_default = 1U << (STAT_ADDRESS_BITS - 1); }
-    // FIXME: Should be cleaner, separate function to indicate addressing 
+    // FIXME: Should be cleaner, separate function to indicate addressing
     if (match->to<HashActionTable>()) {
         merge.mau_stats_adr_mask[type][bus] = 0;
     } else
         merge.mau_stats_adr_mask[type][bus] = stats_adr_mask;
-    merge.mau_stats_adr_default[type][bus] = stats_adr_default; 
+    merge.mau_stats_adr_default[type][bus] = stats_adr_default;
     merge.mau_stats_adr_per_entry_en_mux_ctl[type][bus] = pfe;
     merge.mau_stats_adr_hole_swizzle_mode[type][bus] = counter_hole_swizzle[format->groups()];
 }
@@ -198,50 +198,25 @@ template<class REGS> void CounterTable::write_regs(REGS &regs) {
 }
 
 void CounterTable::gen_tbl_cfg(json::vector &out) {
-    if (options.new_ctx_json) {
-        // FIXME -- factor common Synth2Port stuff
-        int size = (layout_size() - 1)*1024*format->groups();
-        json::map &tbl = *base_tbl_cfg(out, "statistics", size);
-        json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "statistics", size);
-        tbl["enable_pfe"] = per_flow_enable;
-        tbl["pfe_bit_position"] = per_flow_enable_bit;
-        if (auto *f = lookup_field("bytes"))
-            tbl["byte_counter_resolution"] = f->size;
-        else
-            tbl["byte_counter_resolution"] = 0L;
-        if (auto *f = lookup_field("packets"))
-            tbl["packet_counter_resolution"] = f->size;
-        else
-            tbl["packet_counter_resolution"] = 0L;
-        switch (type) {
-        case PACKETS: tbl["statistics_type"] = "packets"; break;
-        case BYTES: tbl["statistics_type"] = "bytes"; break;
-        case BOTH: tbl["statistics_type"] = "packets_and_bytes"; break;
-        default: break; }
-        if (context_json)
-            stage_tbl.merge(*context_json);
-    } else {
-        // FIXME -- factor common Synth2Port stuff
-        int size = (layout_size() - 1)*1024*format->groups();
-        json::map &tbl = *base_tbl_cfg(out, "statistics", size);
-        json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "statistics", size);
-        if (auto *f = lookup_field("bytes"))
-            stage_tbl["byte_width"] = f->size;
-        else
-            stage_tbl["byte_width"] = 0L;
-        if (auto *f = lookup_field("packets"))
-            stage_tbl["pkt_width"] = f->size;
-        else
-            stage_tbl["pkt_width"] = 0L;
-        switch (type) {
-        case PACKETS: tbl["statistics_type"] = "packets";
-                      stage_tbl["stat_type"] = "packets"; break;
-        case BYTES: tbl["statistics_type"] = "bytes";
-                    stage_tbl["stat_type"] = "bytes"; break;
-        case BOTH: tbl["statistics_type"] = "packets_and_bytes";
-                   stage_tbl["stat_type"] = "packets_and_bytes"; break;
-        default: break; }
-        tbl["lrt_enable"] = false;
-        tbl["saturating"] = false;  // FIXME?
-        stage_tbl["default_lower_huffman_bits_included"] = 0; }
+    // FIXME -- factor common Synth2Port stuff
+    int size = (layout_size() - 1)*1024*format->groups();
+    json::map &tbl = *base_tbl_cfg(out, "statistics", size);
+    json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "statistics", size);
+    tbl["enable_pfe"] = per_flow_enable;
+    tbl["pfe_bit_position"] = per_flow_enable_bit;
+    if (auto *f = lookup_field("bytes"))
+        tbl["byte_counter_resolution"] = f->size;
+    else
+        tbl["byte_counter_resolution"] = 0L;
+    if (auto *f = lookup_field("packets"))
+        tbl["packet_counter_resolution"] = f->size;
+    else
+        tbl["packet_counter_resolution"] = 0L;
+    switch (type) {
+    case PACKETS: tbl["statistics_type"] = "packets"; break;
+    case BYTES: tbl["statistics_type"] = "bytes"; break;
+    case BOTH: tbl["statistics_type"] = "packets_and_bytes"; break;
+    default: break; }
+    if (context_json)
+        stage_tbl.merge(*context_json);
 }

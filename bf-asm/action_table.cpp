@@ -428,43 +428,20 @@ void ActionTable::write_regs(REGS &regs) {
 //    { 1024,   {"011", "11111"} };
 
 void ActionTable::gen_tbl_cfg(json::vector &out) {
-    if (options.new_ctx_json) {
-        // FIXME -- this is wrong if actions have different format sizes
-        unsigned number_entries = (layout_size() * 128 * 1024) / (1 << format->log2size);
-        json::map &tbl = *base_tbl_cfg(out, "action_data", number_entries);
-        json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "action_data", number_entries);
-        for (auto &act : *actions) {
-            auto *fmt = ::get(action_formats, act.name);
-            add_pack_format(stage_tbl, fmt ? fmt : format, true, &act); }
-        stage_tbl["memory_resource_allocation"] =
-                gen_memory_resource_allocation_tbl_cfg("sram", layout, true);
-        if (actions)
-            actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
-        tbl["how_referenced"] = indirect ? "indirect" : "direct";
-        /* FIXME -- don't include ref to select table as compiler doesn't */
-        tbl.erase("p4_selection_tables");
-        if (context_json)
-            stage_tbl.merge(*context_json);
-    } else {
-        // FIXME -- this is wrong if actions have different format sizes
-        unsigned number_entries = (layout_size() * 128 * 1024) / (1 << format->log2size);
-        json::map &tbl = *base_tbl_cfg(out, "action_data", number_entries);
-        json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "action_data", number_entries);
-        stage_tbl["stage_table_handle"] = action_id;
-        for (auto &act : *actions) {
-            auto *fmt = ::get(action_formats, act.name);
-            add_pack_format(stage_tbl, fmt ? fmt : format, true, &act); }
-        stage_tbl["memory_resource_allocation"] =
-                gen_memory_resource_allocation_tbl_cfg("sram", layout);
-        if (actions)
-            actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
-        stage_tbl["how_referenced"] = indirect ? "indirect" : "direct";
-        // FIXME -- this is wrong if actions have different format sizes
-        unsigned action_data_entry_width = 1 << format->log2size;
-        tbl["action_data_entry_width"] = action_data_entry_width;
-        stage_tbl["default_lower_huffman_bits_included"] = std::min(std::max(format->log2size, 2U) - 2, 5U);
-        /* FIXME -- don't include ref to select table as compiler doesn't */
-        tbl.erase("p4_selection_tables");
-        if (options.match_compiler)
-            tbl["indirect"] = indirect; }
+    // FIXME -- this is wrong if actions have different format sizes
+    unsigned number_entries = (layout_size() * 128 * 1024) / (1 << format->log2size);
+    json::map &tbl = *base_tbl_cfg(out, "action_data", number_entries);
+    json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "action_data", number_entries);
+    for (auto &act : *actions) {
+        auto *fmt = ::get(action_formats, act.name);
+        add_pack_format(stage_tbl, fmt ? fmt : format, true, &act); }
+    stage_tbl["memory_resource_allocation"] =
+        gen_memory_resource_allocation_tbl_cfg("sram", layout, true);
+    if (actions)
+        actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
+    tbl["how_referenced"] = indirect ? "indirect" : "direct";
+    /* FIXME -- don't include ref to select table as compiler doesn't */
+    tbl.erase("p4_selection_tables");
+    if (context_json)
+        stage_tbl.merge(*context_json);
 }

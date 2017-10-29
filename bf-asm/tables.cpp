@@ -1050,61 +1050,40 @@ template<class REGS> void Table::Actions::write_regs(REGS &regs, Table *tbl) {
 FOR_ALL_TARGETS(INSTANTIATE_TARGET_TEMPLATE, void Table::Actions::write_regs, mau_regs &, Table *)
 
 void Table::Actions::gen_tbl_cfg(json::vector &cfg) {
-    if (options.new_ctx_json) {
-        for (auto &act : *this) {
-            json::map action_cfg;
-            action_cfg["name"] = act.name;
-            action_cfg["handle"] = act.handle; //FIXME-JSON
-            // FIXME-JSON - indirect_resources are generated in meters, check
-            // for glass examples
-            action_cfg["indirect_resources"] = json::vector();
-            // XXX(amresh): allowed_as_default_action info is directly passed through assembly
-            // This will be 'false' for following conditions:
-            // 1. Action requires hardware in hit path i.e. hash distribution or
-            // random number generator
-            // 2. There is a default action declared constant in program which
-            // implies all other actions cannot be set to default
-            action_cfg["allowed_as_default_action"] = act.default_allowed;
-            // XXX(amresh): "diallowed_as_default_action" is not used by driver.
-            // Keeping it here as debugging info. Will be set to "none",
-            // "has_const_default", "has_hash_dist". Once rng support is added
-            // to the compiler this must reflect "has_rng" or similar string.
-            if (!act.default_allowed)
-                action_cfg["disallowed_as_default_action_reason"] = act.default_disallowed_reason;
-            json::vector &p4_params = action_cfg["p4_parameters"] = json::vector();
-            add_p4_params(act, p4_params);
-            action_cfg["override_meter_addr"] = false;
-            action_cfg["override_meter_addr_pfe"] = false;
-            action_cfg["override_meter_full_addr"] = 0;
-            action_cfg["override_stat_addr"] = false;
-            action_cfg["override_stat_addr_pfe"] = false;
-            action_cfg["override_stat_full_addr"] = 0;
-            action_cfg["override_stateful_addr"] = false;
-            action_cfg["override_stateful_addr_pfe"] = false;
-            action_cfg["override_stateful_full_addr"] = 0;
-            json::vector &prim_cfg = action_cfg["primitives"] = json::vector();
-            gen_prim_cfg(act, prim_cfg);
-            cfg.push_back(std::move(action_cfg)); }
-    } else {
-        for (auto &act : *this) {
-            int full_address = ACTION_INSTRUCTION_ADR_ENABLE | act.addr;
-            json::map action_cfg;
-            action_cfg["name"] = act.name;
-            action_cfg["address_to_use"] = act.code;
-            action_cfg["full_address"] = full_address;
-            //FIXME: Check for random number generation must implement assembly
-            //support in table to identify rng type and corresponding updates in
-            //assembler to parse and set registers accordingly. Below checks should
-            //see if an operand is Hash-Dist type or RNG-type.
-            action_cfg["allowed_as_default_action"] = (has_hash_dist() || act.has_rng()) ? false : true;
-            action_cfg["disallowed_as_default_action_reason"] = nullptr;
-            if (has_hash_dist() && act.has_rng()) {
-                action_cfg["disallowed_as_default_action_reason"] = "USES_HASH_DIST_AND_RNG";
-            } else if (has_hash_dist()) {
-                action_cfg["disallowed_as_default_action_reason"] = "USES_HASH_DIST";
-            } else if (act.has_rng()) {
-                action_cfg["disallowed_as_default_action_reason"] = "USES_RNG"; }
-            cfg.push_back(std::move(action_cfg)); } }
+    for (auto &act : *this) {
+        json::map action_cfg;
+        action_cfg["name"] = act.name;
+        action_cfg["handle"] = act.handle; //FIXME-JSON
+        // FIXME-JSON - indirect_resources are generated in meters, check
+        // for glass examples
+        action_cfg["indirect_resources"] = json::vector();
+        // XXX(amresh): allowed_as_default_action info is directly passed through assembly
+        // This will be 'false' for following conditions:
+        // 1. Action requires hardware in hit path i.e. hash distribution or
+        // random number generator
+        // 2. There is a default action declared constant in program which
+        // implies all other actions cannot be set to default
+        action_cfg["allowed_as_default_action"] = act.default_allowed;
+        // XXX(amresh): "diallowed_as_default_action" is not used by driver.
+        // Keeping it here as debugging info. Will be set to "none",
+        // "has_const_default", "has_hash_dist". Once rng support is added
+        // to the compiler this must reflect "has_rng" or similar string.
+        if (!act.default_allowed)
+            action_cfg["disallowed_as_default_action_reason"] = act.default_disallowed_reason;
+        json::vector &p4_params = action_cfg["p4_parameters"] = json::vector();
+        add_p4_params(act, p4_params);
+        action_cfg["override_meter_addr"] = false;
+        action_cfg["override_meter_addr_pfe"] = false;
+        action_cfg["override_meter_full_addr"] = 0;
+        action_cfg["override_stat_addr"] = false;
+        action_cfg["override_stat_addr_pfe"] = false;
+        action_cfg["override_stat_full_addr"] = 0;
+        action_cfg["override_stateful_addr"] = false;
+        action_cfg["override_stateful_addr_pfe"] = false;
+        action_cfg["override_stateful_full_addr"] = 0;
+        json::vector &prim_cfg = action_cfg["primitives"] = json::vector();
+        gen_prim_cfg(act, prim_cfg);
+        cfg.push_back(std::move(action_cfg)); }
 }
 
 void Table::Actions::add_p4_params(const Action &act, json::vector &cfg) {
@@ -1545,94 +1524,50 @@ int Table::find_on_ixbar(Phv::Slice sl, int group) {
 }
 
 std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(const char *type, std::vector<Layout> &layout, bool skip_spare_bank) {
-    if (options.new_ctx_json) {
-        int width, depth, period;
-        const char *period_name;
-        // FIXME -- calling vpn_params here is only valid when layout == this->layout, but we also
-        // FIXME -- get here for color_maprams.  It works out as we don't use depth or width, only
-        // FIXME -- period, which will always be 1 for meter layout or color_maprams
-        vpn_params(width, depth, period, period_name);
-        json::map mra;
-        mra["memory_type"] = type;
-        std::vector<json::vector> mem_units;
-        json::vector &mem_units_and_vpns = mra["memory_units_and_vpns"] = json::vector();
-        int ctr = 0;
-        bool no_vpns = false;
-        for (auto &row : layout) {
-            auto vpn = row.vpns.begin();
-            for (auto col : row.cols) {
-                if (vpn == row.vpns.end())
-                    no_vpns = true;
-                else ctr = *vpn++;
-                int unit = ctr++/period;
-                if (size_t(unit) >= mem_units.size())
-                    mem_units.resize(unit + 1);
-                mem_units[unit].push_back(memunit(row.row, col)); } }
-        int vpn = 0;
-        for (auto &mem : mem_units) {
-            if (skip_spare_bank && &mem == &mem_units.back()) {
-                if (mem.size() == 1)
-                    mra["spare_bank_memory_unit"] = mem[0]->clone();
-                else
-                    mra["spare_bank_memory_unit"] = mem.clone();
+    int width, depth, period;
+    const char *period_name;
+    // FIXME -- calling vpn_params here is only valid when layout == this->layout, but we also
+    // FIXME -- get here for color_maprams.  It works out as we don't use depth or width, only
+    // FIXME -- period, which will always be 1 for meter layout or color_maprams
+    vpn_params(width, depth, period, period_name);
+    json::map mra;
+    mra["memory_type"] = type;
+    std::vector<json::vector> mem_units;
+    json::vector &mem_units_and_vpns = mra["memory_units_and_vpns"] = json::vector();
+    int ctr = 0;
+    bool no_vpns = false;
+    for (auto &row : layout) {
+        auto vpn = row.vpns.begin();
+        for (auto col : row.cols) {
+            if (vpn == row.vpns.end())
+                no_vpns = true;
+            else ctr = *vpn++;
+            int unit = ctr++/period;
+            if (size_t(unit) >= mem_units.size())
+                mem_units.resize(unit + 1);
+            mem_units[unit].push_back(memunit(row.row, col)); } }
+    int vpn = 0;
+    for (auto &mem : mem_units) {
+        if (skip_spare_bank && &mem == &mem_units.back()) {
+            if (mem.size() == 1)
+                mra["spare_bank_memory_unit"] = mem[0]->clone();
+            else
+                mra["spare_bank_memory_unit"] = mem.clone();
             if (table_type() == SELECTION) break; }
-            //FIXME-JSON -- Hack to match glass json
-            //if (table_type() != ACTION) break; }
-            std::sort(mem.begin(), mem.end(), json::obj::ptrless());
-            json::map tmp;
-            tmp["memory_units"] = std::move(mem);
-            json::vector vpns;
-            if (no_vpns)
-                vpns.push_back(nullptr);
-            else
-                vpns.push_back(vpn);
-            tmp["vpns"] = std::move(vpns);
-            mem_units_and_vpns.push_back(std::move(tmp));
-            vpn += period; }
-        return json::mkuniq<json::map>(std::move(mra));
-    } else {
-        int width, depth, period;
-        const char *period_name;
-        // FIXME -- calling vpn_params here is only valid when layout == this->layout, but we also
-        // FIXME -- get here for color_maprams.  It works out as we don't use depth or width, only
-        // FIXME -- period, which will always be 1 for meter layout or color_maprams
-        vpn_params(width, depth, period, period_name);
-        json::map mra;
-        mra["memory_type"] = type;
-        std::vector<json::vector> mem_units;
-        json::vector &mem_units_and_vpns = mra["memory_units_and_vpns"] = json::vector();
-        int ctr = 0;
-        bool no_vpns = false;
-        for (auto &row : layout) {
-            auto vpn = row.vpns.begin();
-            for (auto col : row.cols) {
-                if (vpn == row.vpns.end())
-                    no_vpns = true;
-                else ctr = *vpn++;
-                int unit = ctr++/period;
-                if (size_t(unit) >= mem_units.size())
-                    mem_units.resize(unit + 1);
-                mem_units[unit].push_back(memunit(row.row, col)); } }
-        int vpn = 0;
-        for (auto &mem : mem_units) {
-            if (skip_spare_bank && &mem == &mem_units.back()) {
-                if (mem.size() == 1)
-                    mra["spare_bank_memory_unit"] = std::move(mem[0]);
-                else
-                    mra["spare_bank_memory_unit"] = std::move(mem);
-                break; }
-            std::sort(mem.begin(), mem.end(), json::obj::ptrless());
-            json::map tmp;
-            tmp["memory_units"] = std::move(mem);
-            json::vector vpns;
-            if (no_vpns)
-                vpns.push_back(nullptr);
-            else
-                vpns.push_back(vpn);
-            tmp["vpns"] = std::move(vpns);
-            mem_units_and_vpns.push_back(std::move(tmp));
-            vpn += period; }
-        return json::mkuniq<json::map>(std::move(mra)); }
+        //FIXME-JSON -- Hack to match glass json
+        //if (table_type() != ACTION) break; }
+        std::sort(mem.begin(), mem.end(), json::obj::ptrless());
+        json::map tmp;
+        tmp["memory_units"] = std::move(mem);
+        json::vector vpns;
+        if (no_vpns)
+            vpns.push_back(nullptr);
+        else
+            vpns.push_back(vpn);
+        tmp["vpns"] = std::move(vpns);
+        mem_units_and_vpns.push_back(std::move(tmp));
+        vpn += period; }
+    return json::mkuniq<json::map>(std::move(mra));
 }
 
 void AttachedTable::pass1() {
@@ -1773,34 +1708,19 @@ json::map *Table::base_tbl_cfg(json::vector &out, const char *type, int size) {
 }
 
 json::map *Table::add_stage_tbl_cfg(json::map &tbl, const char *type, int size) {
-    if (options.new_ctx_json) {
-        json::vector &stage_tables = tbl["stage_tables"];
-        json::map stage_tbl;
-        stage_tbl["stage_number"] = stage->stageno;
-        stage_tbl["size"] = size;
-        stage_tbl["stage_table_type"] = type;
-        stage_tbl["logical_table_id"] = logical_id;
-        stage_tbl["has_attached_gateway"] = false;
-        if (get_gateway())
-            stage_tbl["has_attached_gateway"] = true;
-        if (!strcmp(type, "selection") && get_stateful())
-            tbl["bound_to_stateful_table_handle"] = get_stateful()->handle();
-        stage_tables.push_back(std::move(stage_tbl));
-        return &(stage_tables.back()->to<json::map>());
-    } else {
-        auto &stage_tables = dynamic_cast<json::vector &>(*tbl["stage_tables"]);
-        stage_tables.push_back(json::map());
-        auto &stage_tbl = dynamic_cast<json::map &>(*stage_tables.back());
-        tbl["stage_tables_length"] = stage_tables.size();
-        stage_tbl["stage_number"] = stage->stageno;
-        stage_tbl["number_entries"] = size;
-        stage_tbl["stage_table_type"] = type;
-        if (options.match_compiler && !strcmp(type, "selection")) {
-        } else if (logical_id >= 0)
-            stage_tbl["stage_table_handle"] = logical_id;
-        if (!strcmp(type, "selection") && get_stateful())
-            tbl["bound_to_stateful_table_handle"] = get_stateful()->handle();
-        return &stage_tbl; }
+    json::vector &stage_tables = tbl["stage_tables"];
+    json::map stage_tbl;
+    stage_tbl["stage_number"] = stage->stageno;
+    stage_tbl["size"] = size;
+    stage_tbl["stage_table_type"] = type;
+    stage_tbl["logical_table_id"] = logical_id;
+    stage_tbl["has_attached_gateway"] = false;
+    if (get_gateway())
+        stage_tbl["has_attached_gateway"] = true;
+    if (!strcmp(type, "selection") && get_stateful())
+        tbl["bound_to_stateful_table_handle"] = get_stateful()->handle();
+    stage_tables.push_back(std::move(stage_tbl));
+    return &(stage_tables.back()->to<json::map>());
 }
 
 void Table::add_reference_table(json::vector &table_refs, const Table::Call& c, const std::string& href) {
@@ -1826,27 +1746,17 @@ json::map &Table::add_pack_format(json::map &stage_tbl, int memword, int words, 
 }
 
 void Table::canon_field_list(json::vector &field_list) {
-    if (options.new_ctx_json) {
-        for (auto &field_ : field_list) {
-            auto &field = field_->to<json::map>();
-            auto &name = field["field_name"]->to<json::string>();
-            if (int lo = remove_name_tail_range(name))
-                field["start_bit"]->to<json::number>().val += lo; }
-    } else {
-        for (auto &field_ : field_list) {
-            auto &field = field_->to<json::map>();
-            auto &name = field["name"]->to<json::string>();
-            if (int lo = remove_name_tail_range(name))
-                field["start_bit"]->to<json::number>().val += lo; } }
+    for (auto &field_ : field_list) {
+        auto &field = field_->to<json::map>();
+        auto &name = field["field_name"]->to<json::string>();
+        if (int lo = remove_name_tail_range(name))
+            field["start_bit"]->to<json::number>().val += lo; }
 }
 
 void Table::add_field_to_pack_format(json::vector &field_list, int basebit, std::string name,
                                      const Table::Format::Field &field,
                                      const Table::Actions::Action *act)
 {
-    if (! options.new_ctx_json)
-        error(0, "Table::add_field_to_pack_format does not support old context.json");
-
     decltype(act->reverse_alias()) aliases;
     if (act) aliases = act->reverse_alias();
     auto alias = get(aliases, name);
@@ -2068,81 +1978,44 @@ int Table::get_table_word_width() {
 
 json::map &Table::add_pack_format(json::map &stage_tbl, Table::Format *format,
                                   bool print_fields, Table::Actions::Action *act) {
-    if (options.new_ctx_json) {
-        // Add zero padding fields to format
-        // FIXME: Can this be moved to a format pass?
-	if (format) {
-            unsigned format_width = 1U << format->log2size;
-            if (stage_tbl["stage_table_type"]->to<json::string>() != "hash_way")
-                add_zero_padding_fields(format, act, format_width); }
-        json::map pack_fmt;
-        pack_fmt["memory_word_width"] = MEM_WORD_WIDTH;
-        pack_fmt["table_word_width"] = get_table_word_width();
-        pack_fmt["entries_per_table_word"] = get_entries_per_table_word();
-        pack_fmt["number_memory_units_per_table_word"] = get_mem_units_per_table_word();
-        if (print_fields) {
-            int basebit = std::max(0, MEM_WORD_WIDTH - (1 << format->log2size));
-            json::vector &entry_list = pack_fmt["entries"];
-	    if (is_wide_format()) {
-                for (int i = format->groups()-1; i >= 0; --i) {
-                    json::vector field_list;
-                    for (auto it = format->begin(i); it != format->end(i); ++it)
-                        add_field_to_pack_format(field_list, basebit, it->first, it->second, act);
-                    canon_field_list(field_list);
-                    entry_list.push_back( json::map {
-                        { "entry_number", json::number(i) },
-                        { "fields", std::move(field_list) }}); }
-            } else {
-                for (int i = get_entries_per_table_word()-1; i >= 0; --i) {
-                    json::vector field_list;
-                    for (auto &field : *format)
-                        add_field_to_pack_format(field_list, basebit, field.first, field.second, act);
-                    canon_field_list(field_list);
-                    entry_list.push_back( json::map {
-                        { "entry_number", json::number(i) },
-                        { "fields", std::move(field_list) }});
-                    basebit -= 1 << format->log2size; } } }
-        if (act)
-            pack_fmt["action_handle"] = act->handle;
-        json::vector &pack_format = stage_tbl["pack_format"];
-        pack_format.push_back(std::move(pack_fmt));
-        return pack_format.back()->to<json::map>();
-    } else {
-        json::map pack_fmt { { "memory_word_width", json::number(128) } };
-        /* FIXME -- factor the two cases of this if better */
-        if (format->log2size >= 7 || format->groups() > 1) {
-            pack_fmt["table_word_width"] = ((format->size - 1) | 127) + 1;
-            pack_fmt["entries_per_table_word"] = format->groups();
-            pack_fmt["number_memory_units_per_table_word"] = (format->size - 1)/128U + 1;
-            json::vector &entry_list = pack_fmt["entry_list"];
-            int basebit = (format->size - 1) | 127;
+    // Add zero padding fields to format
+    // FIXME: Can this be moved to a format pass?
+    if (format) {
+        unsigned format_width = 1U << format->log2size;
+        if (stage_tbl["stage_table_type"]->to<json::string>() != "hash_way")
+            add_zero_padding_fields(format, act, format_width); }
+    json::map pack_fmt;
+    pack_fmt["memory_word_width"] = MEM_WORD_WIDTH;
+    pack_fmt["table_word_width"] = get_table_word_width();
+    pack_fmt["entries_per_table_word"] = get_entries_per_table_word();
+    pack_fmt["number_memory_units_per_table_word"] = get_mem_units_per_table_word();
+    if (print_fields) {
+        int basebit = std::max(0, MEM_WORD_WIDTH - (1 << format->log2size));
+        json::vector &entry_list = pack_fmt["entries"];
+        if (is_wide_format()) {
             for (int i = format->groups()-1; i >= 0; --i) {
                 json::vector field_list;
                 for (auto it = format->begin(i); it != format->end(i); ++it)
                     add_field_to_pack_format(field_list, basebit, it->first, it->second, act);
                 canon_field_list(field_list);
                 entry_list.push_back( json::map {
-                    { "entry_number", json::number(i) },
-                    { "field_list", std::move(field_list) }}); }
+                        { "entry_number", json::number(i) },
+                        { "fields", std::move(field_list) }}); }
         } else {
-            int entries = format->log2size ? 1U << (7 - format->log2size) : 0;
-            pack_fmt["table_word_width"] = 128;
-            pack_fmt["entries_per_table_word"] = entries;
-            pack_fmt["number_memory_units_per_table_word"] = 1;
-            json::vector &entry_list = pack_fmt["entry_list"];
-            int basebit = (1 << format->log2size) - 1;
-            for (int i = entries-1; i >= 0; --i) {
+            for (int i = get_entries_per_table_word()-1; i >= 0; --i) {
                 json::vector field_list;
                 for (auto &field : *format)
                     add_field_to_pack_format(field_list, basebit, field.first, field.second, act);
                 canon_field_list(field_list);
                 entry_list.push_back( json::map {
-                    { "entry_number", json::number(i) },
-                    { "field_list", std::move(field_list) }});
-                basebit += 1 << format->log2size; } }
-        json::vector &pack_format = stage_tbl["pack_format"];
-        pack_format.push_back(std::move(pack_fmt));
-        return pack_format.back()->to<json::map>(); }
+                        { "entry_number", json::number(i) },
+                        { "fields", std::move(field_list) }});
+                basebit -= 1 << format->log2size; } } }
+    if (act)
+        pack_fmt["action_handle"] = act->handle;
+    json::vector &pack_format = stage_tbl["pack_format"];
+    pack_format.push_back(std::move(pack_fmt));
+    return pack_format.back()->to<json::map>();
 }
 
 
@@ -2162,60 +2035,36 @@ void MatchTable::gen_name_lookup(json::map &out) {
 }
 
 void Table::common_tbl_cfg(json::map &tbl, const char *default_match_type) {
-    if (options.new_ctx_json) {
-        if (!default_action.empty())
-            tbl["default_action_handle"] = default_action_handle;
-        tbl["action_profile"] = p4_table->action_profile;
-        // FIXME-JSON : If next table is present, set default_next_table_mask to
-        // 2^(width of next table field called '--next_tbl--') - 1
-        // matters if test is changing default action
-        tbl["default_next_table_mask"] = 0;
-        //FIXME-JSON: No brig support yet, uncomment when driver support is
-        //added to validate json
-        //tbl["uses_dynamic_key_masks"] = false;
-        //tbl["static_entries"] = json::vector();
-        //FIXME-JSON: PD related pragma
-        tbl["ap_bind_indirect_res_to_match"] = json::vector();
-        //FIXME-JSON: PD related, check glass examples for false (ALPM)
-        tbl["is_resource_controllable"] = true;
-        tbl["uses_range"] = false; //FIXME-JSON: Ranges not yet implemented by brig
-        json::vector &params = tbl["match_key_fields"] = json::vector();
-        if ((!p4_params_list.empty()) && (this->to<MatchTable>())) {
-            for (auto &p : p4_params_list) {
-                unsigned start_bit = 0;
-                json::map param;
-                param["name"] = p.name;
-                param["position"] = p.position;
-                param["match_type"] = p.type;
-                param["start_bit"] = start_bit;
-                param["bit_width"] = p.bit_width;
-                param["bit_width_full"] = p.bit_width_full;
-                param["is_valid"] = p.is_valid;
-                params.push_back(std::move(param));
-                start_bit += p.bit_width_full; } }
-    } else {
-        if (!default_action.empty()) {
-            tbl["default_action"] = json::map{
-                { "name", json::string(default_action) },
-                { "handle", json::number(default_action_handle) } };
-            tbl["default_action_parameters"] = nullptr;
-            if (!default_action_parameters.empty()) {
-                json::map &params = tbl["default_action_parameters"] = json::map();
-                for (auto val : default_action_parameters)
-                    params[val.first] = val.second; }
-        } else if (options.match_compiler) {
-            tbl["default_action"] = nullptr;
-            tbl["default_action_parameters"] = nullptr; }
-        tbl["performs_hash_action"] = false;
-        tbl["uses_versioning"] = true;
-        tbl["tcam_error_detect"] = false;
-        tbl["match_type"] = p4_table->match_type.empty() ? default_match_type : p4_table->match_type;
-        if (!p4_table->action_profile.empty())
-            tbl["action_profile"] = p4_table->action_profile;
-        else
-            tbl["action_profile"] = nullptr;
-        tbl["dynamic_match_key_masks"] = false;
-        tbl["uses_static_entries"] = false; }
+    if (!default_action.empty())
+        tbl["default_action_handle"] = default_action_handle;
+    tbl["action_profile"] = p4_table->action_profile;
+    // FIXME-JSON : If next table is present, set default_next_table_mask to
+    // 2^(width of next table field called '--next_tbl--') - 1
+    // matters if test is changing default action
+    tbl["default_next_table_mask"] = 0;
+    //FIXME-JSON: No brig support yet, uncomment when driver support is
+    //added to validate json
+    //tbl["uses_dynamic_key_masks"] = false;
+    //tbl["static_entries"] = json::vector();
+    //FIXME-JSON: PD related pragma
+    tbl["ap_bind_indirect_res_to_match"] = json::vector();
+    //FIXME-JSON: PD related, check glass examples for false (ALPM)
+    tbl["is_resource_controllable"] = true;
+    tbl["uses_range"] = false; //FIXME-JSON: Ranges not yet implemented by brig
+    json::vector &params = tbl["match_key_fields"] = json::vector();
+    if ((!p4_params_list.empty()) && (this->to<MatchTable>())) {
+        for (auto &p : p4_params_list) {
+            unsigned start_bit = 0;
+            json::map param;
+            param["name"] = p.name;
+            param["position"] = p.position;
+            param["match_type"] = p.type;
+            param["start_bit"] = start_bit;
+            param["bit_width"] = p.bit_width;
+            param["bit_width_full"] = p.bit_width_full;
+            param["is_valid"] = p.is_valid;
+            params.push_back(std::move(param));
+            start_bit += p.bit_width_full; } }
 }
 
 void Table::add_result_physical_buses(json::map &stage_tbl) {

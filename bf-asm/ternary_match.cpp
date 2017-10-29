@@ -368,55 +368,31 @@ void TernaryMatchTable::write_regs(REGS &regs) {
 }
 
 std::unique_ptr<json::map> TernaryMatchTable::gen_memory_resource_allocation_tbl_cfg(const char *type, std::vector<Layout> &, bool skip_spare_bank) {
-    if (options.new_ctx_json) {
-        assert(!skip_spare_bank); // never spares in tcam
-        json::map mra { { "memory_type", json::string(type) } };
-        json::vector &mem_units_and_vpns = mra["memory_units_and_vpns"];
-        json::vector mem_units;
-        unsigned word = 0;
-        bool done = false;
-        unsigned lrow = 0;
-        for (auto colnum = 0U; !done; colnum++) {
-            done = true;
-            for (auto &row : layout) {
-                if (colnum >= row.cols.size())
-                    continue;
-                auto col = row.cols[colnum];
-                auto vpn = row.vpns[colnum];
-                mem_units.push_back(memunit(row.row, col));
-                lrow = memunit(row.row, col);
-                if (++word == match.size()) {
-                    mem_units_and_vpns.push_back( json::map {
+    assert(!skip_spare_bank); // never spares in tcam
+    json::map mra { { "memory_type", json::string(type) } };
+    json::vector &mem_units_and_vpns = mra["memory_units_and_vpns"];
+    json::vector mem_units;
+    unsigned word = 0;
+    bool done = false;
+    unsigned lrow = 0;
+    for (auto colnum = 0U; !done; colnum++) {
+        done = true;
+        for (auto &row : layout) {
+            if (colnum >= row.cols.size())
+                continue;
+            auto col = row.cols[colnum];
+            auto vpn = row.vpns[colnum];
+            mem_units.push_back(memunit(row.row, col));
+            lrow = memunit(row.row, col);
+            if (++word == match.size()) {
+                mem_units_and_vpns.push_back( json::map {
                         { "memory_units",  std::move(mem_units) },
-                        { "vpns", json::vector { json::number(vpn) }}});
-                    mem_units = json::vector();
-                    word = 0; }
-                done = false; } }
-        mra["spare_bank_memory_unit"] = lrow;
-        return json::mkuniq<json::map>(std::move(mra));
-    } else {
-        assert(!skip_spare_bank); // never spares in tcam
-        json::map mra { { "memory_type", json::string(type) } };
-        json::vector &mem_units_and_vpns = mra["memory_units_and_vpns"];
-        json::vector mem_units;
-        unsigned word = 0;
-        bool done = false;
-        for (auto colnum = 0U; !done; colnum++) {
-            done = true;
-            for (auto &row : layout) {
-                if (colnum >= row.cols.size())
-                    continue;
-                auto col = row.cols[colnum];
-                auto vpn = row.vpns[colnum];
-                mem_units.push_back(memunit(row.row, col));
-                if (++word == match.size()) {
-                    mem_units_and_vpns.push_back( json::map {
-                        { "memory_units",  std::move(mem_units) },
-                        { "vpns", json::vector { json::number(vpn) }}});
-                    mem_units = json::vector();
-                    word = 0; }
-                done = false; } }
-        return json::mkuniq<json::map>(std::move(mra)); }
+                            { "vpns", json::vector { json::number(vpn) }}});
+                mem_units = json::vector();
+                word = 0; }
+            done = false; } }
+    mra["spare_bank_memory_unit"] = lrow;
+    return json::mkuniq<json::map>(std::move(mra));
 }
 
 void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
@@ -434,239 +410,163 @@ void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
 }
 
 void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
-    if (options.new_ctx_json) {
-        unsigned number_entries = layout_size()/match.size() * 512;
-        json::map &tbl = *base_tbl_cfg(out, "match_entry", number_entries);
-        bool uses_versioning = false;
-        unsigned version_word_group = -1;
-        unsigned match_index = match.size() - 1;
-        unsigned index = 0;
-        for (auto &m : match) {
-            if (m.byte_config == 3) {
-                uses_versioning = true;
-                version_word_group = match_index - index;
-                break; }
-            index++; }
-        json::map &match_attributes = tbl["match_attributes"];
-        json::vector &stage_tables = match_attributes["stage_tables"];
-        json::map &stage_tbl = *add_stage_tbl_cfg(match_attributes, "ternary_match", number_entries);
-        json::map &pack_fmt = add_pack_format(stage_tbl, 47, match.size(), 1);
-        stage_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg("tcam", layout);
-        // FIXME-JSON: If the next table is modifiable then we set it to what it's mapped
-        // to. Otherwise, set it to the default next table for this stage.
-        stage_tbl["default_next_table"] = 255;
-        add_result_physical_buses(stage_tbl);
-        json::vector match_field_list, match_entry_list;
-        unsigned curWord = -1;
-        for (auto field : *input_xbar) {
-            if (!field.first.ternary) continue;
-            int word = match_index - match_word(field.first.index);
-            if (word < 0) continue;
-            if (curWord != word) {
-                // Insert payload (bit 0), parity (bit 45, 46) and
-                // version bits(bits 43, 44 if specified) for new word
-                gen_entry_cfg(match_field_list, "--tcam_payload_" +
-                        std::to_string(word) + "--", 0, word, word, "payload", 0, 1);
-                if (uses_versioning && (version_word_group == word)) {
-                    gen_entry_cfg(match_field_list, "--version--", \
-                            43, word, word, "version", 0, 2); }
-                gen_entry_cfg(match_field_list, "--tcam_parity_" +
-                        std::to_string(word) + "--", 45, word, word, "parity", 0, 2);
-                curWord = word; }
-            std::string source = "spec";
-            std::string field_name = field.second.what.name();
-            remove_aug_names(field_name);
-            unsigned lsb_mem_word_offset = 0;
-            if (field.second.hi > 43) {
-                // a field in the (mid) byte group, which is shared with the adjacent word group
-                // each word gets only 4 bits of the byte group and is placed at msb
-                assert(field.second.hi < 48);
-                assert((field.first.index & 1) == 0);
-                int hwidth = 44 - field.second.lo;
-                lsb_mem_word_offset = 1 + field.second.lo;
-                gen_entry_cfg(match_field_list, field_name, \
-                        lsb_mem_word_offset, word, word, source, \
-                        field.second.what.lobit(), hwidth);
-                int adjword = match_index - match_word(field.first.index + 1);
-                if (adjword < 0) continue;
-                lsb_mem_word_offset = 1 + field.second.lo;
-                gen_entry_cfg(match_field_list, field_name, \
-                        lsb_mem_word_offset, adjword, adjword, source, \
-                        field.second.what.lobit() + hwidth, \
-                        field.second.hi - 43);
-            } else {
-                lsb_mem_word_offset = 1 + field.second.lo;
-                gen_entry_cfg(match_field_list, field_name, \
-                        lsb_mem_word_offset, word, word, source, \
-                        field.second.what.lobit(), \
-                        field.second.hi - field.second.lo + 1); } }
-        canon_field_list(match_field_list);
-        pack_fmt["entries"] = json::vector {
-            json::map {
-                { "entry_number",  json::number(0) },
-                { "fields",  std::move(match_field_list) }}};
-        json::vector &action_data_table_refs = tbl["action_data_table_refs"] = json::vector();
-        if (action)
-            add_reference_table(action_data_table_refs, action, "direct");
-        tbl["meter_table_refs"] = json::vector();
-        tbl["selection_table_refs"] = json::vector();
-        json::map &tind = stage_tbl["ternary_indirection_stage_table"] = json::map();
-        if (indirect) {
-            unsigned fmt_width = 1U << indirect->format->log2size;
-            //json::map tind;
-            tind["stage_number"] = stage->stageno;
-            tind["stage_table_type"] = "ternary_indirection";
-            tind["size"] = indirect->layout_size()*128/fmt_width * 1024;
-            indirect->add_pack_format(tind, indirect->format);
-            tind["memory_resource_allocation"] =
-                indirect->gen_memory_resource_allocation_tbl_cfg("sram", indirect->layout, true);
-            // Add action formats for actions present in table or attached action table
-            auto *acts = indirect->get_actions();
-            if (auto a = indirect->get_action())
-              acts = a->get_actions();
-            acts->add_action_format(this, tind);
-                //if (acts->count() > 0) {
-                //    auto &p4_params = tind["p4_parameters"] = json::vector();
-                //for (auto act: *acts) acts->add_p4_params(act, p4_params); } }
-            //stage_tbl["ternary_indirection_stage_table"] = std::move(tind);
-            if (auto a = indirect->get_attached()) {
-                json::vector &selection_table_refs = tbl["selection_table_refs"] = json::vector();
-                if (a->selector) {
-                    tbl["default_selector_mask"] = 0; //FIXME-JSON
-                    tbl["default_selector_value"] = 0; //FIXME-JSON
-                    add_reference_table(selection_table_refs, a->selector, "indirect"); }
-                json::vector &meter_table_refs = tbl["meter_table_refs"] = json::vector();
-                for (auto &m : a->meter) {
-                    std::string ref_type = m.is_indirect() ? "indirect" : "direct";
-                    add_reference_table(meter_table_refs, m, ref_type); }
-                json::vector &stats_table_refs = tbl["statistics_table_refs"] = json::vector();
-                for (auto &s : a->stats) {
-                    std::string ref_type = s.is_indirect() ? "indirect" : "direct";
-                    add_reference_table(stats_table_refs, s, ref_type); }
-                json::vector &stateful_table_refs = tbl["stateful_table_refs"] = json::vector();
-                for (auto &s : a->stateful) {
-                  std::string ref_type = s.is_indirect() ? "indirect" : "direct";
-                  add_reference_table(stateful_table_refs, s, ref_type); }
-            }
-            json::vector &action_data_table_refs = tbl["action_data_table_refs"] = json::vector();
-            if (indirect->action)
-                add_reference_table(action_data_table_refs, indirect->action, "indirect");
-            if (indirect->actions) {
-                indirect->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
-                indirect->actions->add_next_table_mapping(indirect, stage_tbl);
-            } else if (indirect->action && indirect->action->actions) {
-                indirect->action->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
-                indirect->action->actions->add_next_table_mapping(indirect, stage_tbl); }
-            indirect->common_tbl_cfg(tbl, "ternary");
+    unsigned number_entries = layout_size()/match.size() * 512;
+    json::map &tbl = *base_tbl_cfg(out, "match_entry", number_entries);
+    bool uses_versioning = false;
+    unsigned version_word_group = -1;
+    unsigned match_index = match.size() - 1;
+    unsigned index = 0;
+    for (auto &m : match) {
+        if (m.byte_config == 3) {
+            uses_versioning = true;
+            version_word_group = match_index - index;
+            break; }
+        index++; }
+    json::map &match_attributes = tbl["match_attributes"];
+    json::vector &stage_tables = match_attributes["stage_tables"];
+    json::map &stage_tbl = *add_stage_tbl_cfg(match_attributes, "ternary_match", number_entries);
+    json::map &pack_fmt = add_pack_format(stage_tbl, 47, match.size(), 1);
+    stage_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg("tcam", layout);
+    // FIXME-JSON: If the next table is modifiable then we set it to what it's mapped
+    // to. Otherwise, set it to the default next table for this stage.
+    stage_tbl["default_next_table"] = 255;
+    add_result_physical_buses(stage_tbl);
+    json::vector match_field_list, match_entry_list;
+    unsigned curWord = -1;
+    for (auto field : *input_xbar) {
+        if (!field.first.ternary) continue;
+        int word = match_index - match_word(field.first.index);
+        if (word < 0) continue;
+        if (curWord != word) {
+            // Insert payload (bit 0), parity (bit 45, 46) and
+            // version bits(bits 43, 44 if specified) for new word
+            gen_entry_cfg(match_field_list, "--tcam_payload_" +
+                          std::to_string(word) + "--", 0, word, word, "payload", 0, 1);
+            if (uses_versioning && (version_word_group == word)) {
+                gen_entry_cfg(match_field_list, "--version--", \
+                              43, word, word, "version", 0, 2); }
+            gen_entry_cfg(match_field_list, "--tcam_parity_" +
+                          std::to_string(word) + "--", 45, word, word, "parity", 0, 2);
+            curWord = word; }
+        std::string source = "spec";
+        std::string field_name = field.second.what.name();
+        remove_aug_names(field_name);
+        unsigned lsb_mem_word_offset = 0;
+        if (field.second.hi > 43) {
+            // a field in the (mid) byte group, which is shared with the adjacent word group
+            // each word gets only 4 bits of the byte group and is placed at msb
+            assert(field.second.hi < 48);
+            assert((field.first.index & 1) == 0);
+            int hwidth = 44 - field.second.lo;
+            lsb_mem_word_offset = 1 + field.second.lo;
+            gen_entry_cfg(match_field_list, field_name, \
+                          lsb_mem_word_offset, word, word, source, \
+                          field.second.what.lobit(), hwidth);
+            int adjword = match_index - match_word(field.first.index + 1);
+            if (adjword < 0) continue;
+            lsb_mem_word_offset = 1 + field.second.lo;
+            gen_entry_cfg(match_field_list, field_name, \
+                          lsb_mem_word_offset, adjword, adjword, source, \
+                          field.second.what.lobit() + hwidth, \
+                          field.second.hi - 43);
         } else {
-            // FIXME: Add a fake ternary indirect table (as otherwise driver complains)
-            // if tind not present - to be removed with update on driver side
-            auto *acts = get_actions();
-            if (auto a = get_action())
-                acts = a->get_actions();
-            acts->add_action_format(this, tind);
-            tind["memory_resource_allocation"] = nullptr;
-            json::vector &pack_format = tind["pack_format"] = json::vector();
-            json::map pack_format_entry;
-            pack_format_entry["memory_word_width"] = 128;
-            pack_format_entry["entries_per_table_word"] = 1;
-            json::vector &entries = pack_format_entry["entries"] = json::vector();
-            entries.push_back( json::map {
-                    { "entry_number", json::number(0) },
-                    { "fields", json::vector() } } );
-            pack_format_entry["table_word_width"] = 0;
-            pack_format_entry["number_memory_units_per_table_word"] = 0;
-            pack_format.push_back(std::move(pack_format_entry));
-            tind["logical_table_id"] = 0;
-            tind["stage_number"] = 0;
-            tind["stage_table_type"] = "ternary_indirection";
-            tind["size"] = 0;
-            tbl["stateful_table_refs"] = json::vector();
+            lsb_mem_word_offset = 1 + field.second.lo;
+            gen_entry_cfg(match_field_list, field_name, \
+                          lsb_mem_word_offset, word, word, source, \
+                          field.second.what.lobit(), \
+                          field.second.hi - field.second.lo + 1); } }
+    canon_field_list(match_field_list);
+    pack_fmt["entries"] = json::vector {
+        json::map {
+            { "entry_number",  json::number(0) },
+            { "fields",  std::move(match_field_list) }}};
+    json::vector &action_data_table_refs = tbl["action_data_table_refs"] = json::vector();
+    if (action)
+        add_reference_table(action_data_table_refs, action, "direct");
+    tbl["meter_table_refs"] = json::vector();
+    tbl["selection_table_refs"] = json::vector();
+    json::map &tind = stage_tbl["ternary_indirection_stage_table"] = json::map();
+    if (indirect) {
+        unsigned fmt_width = 1U << indirect->format->log2size;
+        //json::map tind;
+        tind["stage_number"] = stage->stageno;
+        tind["stage_table_type"] = "ternary_indirection";
+        tind["size"] = indirect->layout_size()*128/fmt_width * 1024;
+        indirect->add_pack_format(tind, indirect->format);
+        tind["memory_resource_allocation"] =
+            indirect->gen_memory_resource_allocation_tbl_cfg("sram", indirect->layout, true);
+        // Add action formats for actions present in table or attached action table
+        auto *acts = indirect->get_actions();
+        if (auto a = indirect->get_action())
+            acts = a->get_actions();
+        acts->add_action_format(this, tind);
+        //if (acts->count() > 0) {
+        //    auto &p4_params = tind["p4_parameters"] = json::vector();
+        //for (auto act: *acts) acts->add_p4_params(act, p4_params); } }
+        //stage_tbl["ternary_indirection_stage_table"] = std::move(tind);
+        if (auto a = indirect->get_attached()) {
+            json::vector &selection_table_refs = tbl["selection_table_refs"] = json::vector();
+            if (a->selector) {
+                tbl["default_selector_mask"] = 0; //FIXME-JSON
+                tbl["default_selector_value"] = 0; //FIXME-JSON
+                add_reference_table(selection_table_refs, a->selector, "indirect"); }
+            json::vector &meter_table_refs = tbl["meter_table_refs"] = json::vector();
+            for (auto &m : a->meter) {
+                std::string ref_type = m.is_indirect() ? "indirect" : "direct";
+                add_reference_table(meter_table_refs, m, ref_type); }
+            json::vector &stats_table_refs = tbl["statistics_table_refs"] = json::vector();
+            for (auto &s : a->stats) {
+                std::string ref_type = s.is_indirect() ? "indirect" : "direct";
+                add_reference_table(stats_table_refs, s, ref_type); }
+            json::vector &stateful_table_refs = tbl["stateful_table_refs"] = json::vector();
+            for (auto &s : a->stateful) {
+                std::string ref_type = s.is_indirect() ? "indirect" : "direct";
+                add_reference_table(stateful_table_refs, s, ref_type); }
         }
-        common_tbl_cfg(tbl, "ternary");
-        if (actions)
-            actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
-        else if (action && action->actions)
-            action->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
-        MatchTable::gen_idletime_tbl_cfg(stage_tbl);
-        if (context_json)
-            stage_tbl.merge(*context_json);
-        match_attributes["match_type"] = "ternary";
+        json::vector &action_data_table_refs = tbl["action_data_table_refs"] = json::vector();
+        if (indirect->action)
+            add_reference_table(action_data_table_refs, indirect->action, "indirect");
+        if (indirect->actions) {
+            indirect->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
+            indirect->actions->add_next_table_mapping(indirect, stage_tbl);
+        } else if (indirect->action && indirect->action->actions) {
+            indirect->action->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
+            indirect->action->actions->add_next_table_mapping(indirect, stage_tbl); }
+        indirect->common_tbl_cfg(tbl, "ternary");
     } else {
-        unsigned number_entries = layout_size()/match.size() * 512;
-        json::map &tbl = *base_tbl_cfg(out, "match_entry", number_entries);
-        if (!tbl.count("preferred_match_type"))
-            tbl["preferred_match_type"] = "ternary";
-        json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "ternary_match", number_entries);
-        json::map &pack_fmt = add_pack_format(stage_tbl, 47, match.size(), 1);
-        stage_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg("tcam", layout);
-        json::vector match_field_list, match_entry_list;
-        for (auto field : *input_xbar) {
-            if (!field.first.ternary) continue;
-            int word = match_word(field.first.index);
-            if (word < 0) continue;
-            if (field.second.hi > 43) {
-                // a field in the byte group, which is shared with the adjacent word group
-                // each word gets only 4 bits of the byte group
-                assert(field.second.hi < 48);
-                assert((field.first.index & 1) == 0);
-                int hwidth = 44 - field.second.lo;
-                match_field_list.push_back( json::map {
-                    { "name", json::string(field.second.what.name()) },
-                    { "start_offset", json::number(47*word + 2) },
-                    { "start_bit", json::number(field.second.what.lobit()) },
-                    { "bit_width", json::number(hwidth) }});
-                int adjword = match_word(field.first.index + 1);
-                if (adjword < 0) continue;
-                match_field_list.push_back( json::map {
-                    { "name", json::string(field.second.what.name()) },
-                    { "start_offset", json::number(47*adjword + 49 - field.second.hi) },
-                    { "start_bit", json::number(field.second.what.lobit() + hwidth) },
-                    { "bit_width", json::number(field.second.hi - 43) }});
-            } else {
-                match_field_list.push_back( json::map {
-                    { "name", json::string(field.second.what.name()) },
-                    { "start_offset", json::number(47*word + 45 - field.second.hi) },
-                    { "start_bit", json::number(field.second.what.lobit()) },
-                    { "bit_width", json::number(field.second.hi - field.second.lo + 1) }}); } }
-        canon_field_list(match_field_list);
-        pack_fmt["entry_list"] = json::vector {
-            json::map {
-                { "entry_number",  json::number(0) },
-                { "field_list",  std::move(match_field_list) }}};
-        if (indirect) {
-            unsigned fmt_width = 1U << indirect->format->log2size;
-            json::map tind {
-                { "stage_number", json::number(stage->stageno) },
-                { "number_entries", json::number(indirect->layout_size()*128/fmt_width * 1024) },
-                { "stage_table_type", json::string("ternary_indirection") }};
-            indirect->add_pack_format(tind, indirect->format);
-            tind["memory_resource_allocation"] =
-                indirect->gen_memory_resource_allocation_tbl_cfg("sram", indirect->layout);
-            stage_tbl["ternary_indirection_table"] = std::move(tind);
-            if (indirect->actions) {
-                indirect->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
-                indirect->actions->add_immediate_mapping(stage_tbl);
-                indirect->actions->add_next_table_mapping(indirect, stage_tbl);
-            } else if (indirect->action && indirect->action->actions) {
-                indirect->action->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
-                indirect->action->actions->add_immediate_mapping(stage_tbl);
-                indirect->action->actions->add_next_table_mapping(indirect, stage_tbl); } }
-        if (actions)
-            actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
-        else if (action && action->actions)
-            action->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
-        if(indirect)
-            indirect->common_tbl_cfg(tbl, "ternary");
-        else common_tbl_cfg(tbl, "ternary");
-        if (idletime)
-            idletime->gen_stage_tbl_cfg(stage_tbl);
-        bool uses_versioning = false;
-        for (auto &m : match)
-            if (m.byte_config == 3) {
-                uses_versioning = true;
-                break; }
-        tbl["uses_versioning"] = uses_versioning; }
+        // FIXME: Add a fake ternary indirect table (as otherwise driver complains)
+        // if tind not present - to be removed with update on driver side
+        auto *acts = get_actions();
+        if (auto a = get_action())
+            acts = a->get_actions();
+        acts->add_action_format(this, tind);
+        tind["memory_resource_allocation"] = nullptr;
+        json::vector &pack_format = tind["pack_format"] = json::vector();
+        json::map pack_format_entry;
+        pack_format_entry["memory_word_width"] = 128;
+        pack_format_entry["entries_per_table_word"] = 1;
+        json::vector &entries = pack_format_entry["entries"] = json::vector();
+        entries.push_back( json::map {
+                { "entry_number", json::number(0) },
+                    { "fields", json::vector() } } );
+        pack_format_entry["table_word_width"] = 0;
+        pack_format_entry["number_memory_units_per_table_word"] = 0;
+        pack_format.push_back(std::move(pack_format_entry));
+        tind["logical_table_id"] = 0;
+        tind["stage_number"] = 0;
+        tind["stage_table_type"] = "ternary_indirection";
+        tind["size"] = 0;
+        tbl["stateful_table_refs"] = json::vector();
+    }
+    common_tbl_cfg(tbl, "ternary");
+    if (actions)
+        actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
+    else if (action && action->actions)
+        action->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
+    MatchTable::gen_idletime_tbl_cfg(stage_tbl);
+    if (context_json)
+        stage_tbl.merge(*context_json);
+    match_attributes["match_type"] = "ternary";
 }
 
 void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
@@ -723,7 +623,7 @@ Table::table_type_t TernaryIndirectTable::set_match_table(MatchTable *m, bool in
         if (action.check() && action->set_match_table(m, action.args.size() > 1) != ACTION)
             error(action.lineno, "%s is not an action table", action->name());
         attached.pass1(m);
-        logical_id = m->logical_id; 
+        logical_id = m->logical_id;
         p4_table = m->p4_table; }
     return TERNARY_INDIRECT;
 }

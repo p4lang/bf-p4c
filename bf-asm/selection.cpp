@@ -111,7 +111,7 @@ void SelectionTable::pass1() {
 
 void SelectionTable::pass2() {
     LOG1("### Selection table " << name() << " pass2");
-    if (input_xbar) { 
+    if (input_xbar) {
         input_xbar->pass2();
         if (selection_hash < 0 && (selection_hash = input_xbar->hash_group()) < 0)
             error(lineno, "No selection_hash in selector table %s", name());
@@ -125,7 +125,7 @@ template<class REGS> void SelectionTable::write_merge_regs(REGS &regs, MatchTabl
     setup_physical_alu_map(regs, type, bus, meter_group());
     if (!per_flow_enable)
         per_flow_enable_bit = SELECTOR_PER_FLOW_ENABLE_START_BIT;
-    merge.mau_meter_adr_per_entry_en_mux_ctl[type][bus] = per_flow_enable_bit; 
+    merge.mau_meter_adr_per_entry_en_mux_ctl[type][bus] = per_flow_enable_bit;
     //if (match->action_call())
     //    /*merge.mau_selector_action_entry_size[type][bus] = match->action_call()->format->log2size - 3*/;
     //else if (options.match_compiler)
@@ -138,7 +138,7 @@ template<class REGS> void SelectionTable::write_merge_regs(REGS &regs, MatchTabl
     if (match->action_call().args.size() > 1) {
         /* FIXME -- regs need to stabilize */
         merge.mau_meter_adr_mask[type][bus] = ((1U << per_flow_enable_bit) - 1) << 7; }
-    merge.mau_meter_adr_default[type][bus] = (METER_SELECTOR << SELECTOR_METER_TYPE_START_BIT) 
+    merge.mau_meter_adr_default[type][bus] = (METER_SELECTOR << SELECTOR_METER_TYPE_START_BIT)
         | (per_flow_enable ? 0 : (1U << SELECTOR_PER_FLOW_ENABLE_START_BIT));
     //if (!hash_dist.empty()) {
     //    /* from HashDistributionResourceAllocation.write_config: */
@@ -232,7 +232,7 @@ void SelectionTable::write_regs(REGS &regs) {
             unsigned fmt = 3;
             fmt = std::max(fmt, act->format->log2size);
             if (auto at = dynamic_cast<ActionTable *>(&(*act)))
-                for (auto &f: at->get_action_formats()) fmt = std::max(fmt, f.second->log2size); 
+                for (auto &f: at->get_action_formats()) fmt = std::max(fmt, f.second->log2size);
             merge.mau_selector_action_entry_size[meter_group] = fmt - 3; } //val in bytes
         adrdist.mau_ad_meter_virt_lt[meter_group] |= 1U << m->logical_id;
         adrdist.movereg_ad_meter_alu_to_logical_xbar_ctl[m->logical_id/8U].set_subfield(
@@ -272,32 +272,21 @@ template<> void SelectionTable::setup_logical_alu_map(Target::JBay::mau_regs &re
 #endif // HAVE_JBAY
 
 void SelectionTable::gen_tbl_cfg(json::vector &out) {
-    if (options.new_ctx_json) {
-        json::map &tbl = *base_tbl_cfg(out, "selection", 1024);
-        tbl["selection_type"] = resilient_hash ? "resilient" : "fair";
-        tbl["how_referenced"] = indirect ? "indirect" : "direct";
-        if (pool_sizes.size() > 0)
-            tbl["max_port_pool_size"] = *std::max_element(std::begin(pool_sizes), std::end(pool_sizes));
-        for (MatchTable *m : match_tables)
-            if (auto &act = m->get_action())
-                if (auto at = dynamic_cast<ActionTable *>(&(*act))) {
-                    tbl["bound_to_action_data_table_handle"] = act->handle();
-                    break; }
-        json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "selection", 1024);
-        add_pack_format(stage_tbl, 128, 1, 1);
-        stage_tbl["memory_resource_allocation"] =
-                gen_memory_resource_allocation_tbl_cfg("sram", layout, true);
-        add_meter_alu_index(stage_tbl);
-        if (context_json)
-            stage_tbl.merge(*context_json);
-    } else {
-        json::map &tbl = *base_tbl_cfg(out, "selection", 1024);
-        tbl["selection_type"] = resilient_hash ? "resilient" : "fair";
-        tbl["enable_sps_scrambling"] = non_linear_hash;
-        json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "selection", 1024);
-        stage_tbl["how_referenced"] = indirect ? "indirect" : "direct";
-        add_pack_format(stage_tbl, 128, 1, 1);
-        stage_tbl["memory_resource_allocation"] =
-                gen_memory_resource_allocation_tbl_cfg("sram", layout, true);
-        stage_tbl["stage_table_handle"] = logical_id; }
+    json::map &tbl = *base_tbl_cfg(out, "selection", 1024);
+    tbl["selection_type"] = resilient_hash ? "resilient" : "fair";
+    tbl["how_referenced"] = indirect ? "indirect" : "direct";
+    if (pool_sizes.size() > 0)
+        tbl["max_port_pool_size"] = *std::max_element(std::begin(pool_sizes), std::end(pool_sizes));
+    for (MatchTable *m : match_tables)
+        if (auto &act = m->get_action())
+            if (auto at = dynamic_cast<ActionTable *>(&(*act))) {
+                tbl["bound_to_action_data_table_handle"] = act->handle();
+                break; }
+    json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "selection", 1024);
+    add_pack_format(stage_tbl, 128, 1, 1);
+    stage_tbl["memory_resource_allocation"] =
+        gen_memory_resource_allocation_tbl_cfg("sram", layout, true);
+    add_meter_alu_index(stage_tbl);
+    if (context_json)
+        stage_tbl.merge(*context_json);
 }
