@@ -51,51 +51,6 @@ endif() # HARLYN_STF
 # add the failures with no reason
 p4c_add_xfail_reason("tofino" "" ${TOFINO_XFAIL_TESTS})
 
-# tests that no longer fail when enable TNA translation
-# possibly due to different PHV allocation
-if (NOT ENABLE_TNA)
-  p4c_add_xfail_reason("tofino"
-    "Too much data for parse matcher"
-    testdata/p4_14_samples/copy_to_cpu.p4
-    )
-
-  # BRIG-109
-  p4c_add_xfail_reason("tofino"
-    "Cannot resolve computed value unambiguously"
-    extensions/p4_tests/p4_14/test_config_294_parser_loop.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "Couldn't resolve computed value for select"
-    testdata/p4_14_samples/queueing.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "Encountered invalid code in computed checksum control"
-    extensions/p4_tests/p4_14/test_checksum.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "NULL operand 4 for hash"
-    testdata/p4_14_samples/flowlet_switching.p4
-  )
-
-  p4c_add_xfail_reason("tofino"
-    "Input xbar hash.*conflict in"
-    extensions/p4_tests/p4_14/test_config_96_hash_data.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "No PHV allocation for field extracted by the parser"
-    testdata/p4_14_samples/packet_redirect.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
-    "error: Assignment cannot be supported in the parser"
-    testdata/p4_14_samples/simple_nat.p4
-    )
-endif() # NOT ENABLE_TNA
-
 # BRIG-136
 # was BRIG-134 for extensions/p4_tests/p4_14/jenkins/alpm_test/alpm_test.p4
 p4c_add_xfail_reason("tofino"
@@ -122,10 +77,10 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "instruction slot [0-9]+ used multiple times in action"
   testdata/p4_14_samples/instruct1.p4
-  extensions/p4_tests/p4_14/16-WrongSizeInfiniteLoop.p4
-  extensions/p4_tests/p4_14/15-SetMetadata.p4
   extensions/p4_tests/p4_14/instruct1.p4
   extensions/p4_tests/p4_14/action_conflict_2.p4
+  testdata/p4_16_samples/flowlet_switching-bmv2.p4
+  extensions/p4_tests/p4_14/test_config_96_hash_data.p4
   )
 
 # BRIG-104
@@ -196,14 +151,19 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue447-2-bmv2.p4
   testdata/p4_16_samples/issue447-3-bmv2.p4
   testdata/p4_16_samples/issue447-4-bmv2.p4
+  )
+# varbit not handled in backend
+p4c_add_xfail_reason("tofino"
+  "Unhandled InstanceRef type"
   testdata/p4_16_samples/issue447-5-bmv2.p4
   )
-
 # parde physical adjacency constraint violated by mau phv_no_pack constraint
 p4c_add_xfail_reason("tofino"
   "Header field .* is required to be allocated contiguously"
   extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   extensions/p4_tests/p4_14/switch_20160602/switch.p4
+  extensions/p4_tests/p4_14/jenkins/multicast_scale/multicast_scale.p4
+  switch_l2
   )
 
 # BRIG-112
@@ -218,9 +178,9 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_88_testing_action_data_allocation_3.p4
   )
 
-# parser verify not supported
+# Checksum16 is deprecated
 p4c_add_xfail_reason("tofino"
-  "Invalid method call: verify"
+  "Could not find declaration for"
   extensions/p4_tests/p4_16/ipv4_options.p4
   )
 
@@ -229,13 +189,6 @@ p4c_add_xfail_reason("tofino"
 "No field named parser_counter in"
   extensions/p4_tests/p4_14/c1/COMPILER-384/case2240.p4
   extensions/p4_tests/p4_14/jenkins/pctr/pctr.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "warning: Program does not contain a `main' module"
-  extensions/p4_tests/p4_16/bloom_filter.p4
-  extensions/p4_tests/p4_16/flowlet_switching.p4
-  extensions/p4_tests/p4_16/stateful_alu.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -314,6 +267,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/union4-bmv2.p4
   testdata/p4_16_samples/verify-bmv2.p4
   )
+
 
 
 # failure due to too restrictive constraint of full words in action data bus allocation
@@ -517,7 +471,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c8/COMPILER-616/case3331.p4
   extensions/p4_tests/p4_14/jenkins/action_spec_format/action_spec_format.p4
   extensions/p4_tests/p4_14/jenkins/stats_pi/stats_pi.p4
-  switch_l2
   )
 
 p4c_add_xfail_reason("tofino"
@@ -584,25 +537,10 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "package .*: unexpected type"
-  testdata/p4_16_samples/issue584-1.p4
-  testdata/p4_16_samples/noMatch.p4
-  testdata/p4_16_samples/pred.p4
-  testdata/p4_16_samples/pred1.p4
-  testdata/p4_16_samples/pred2.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "NULL operand 4 for hash"
-  testdata/p4_16_samples/flowlet_switching-bmv2.p4
-)
-
-p4c_add_xfail_reason("tofino"
   "Exiting with SIGSEGV"
   extensions/p4_tests/p4_14/c1/COMPILER-635/case3468.p4
   extensions/p4_tests/p4_14/c1/COMPILER-637/case3478.p4
   )
-
 
 # BRIG-181
 # These are invalid programs, simply because P4_14 is too lax
@@ -639,7 +577,11 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/cast_narrowing_set.p4
   extensions/p4_tests/p4_16/cast_widening_set.p4
   )
-
+# bug in instruction selection
+p4c_add_xfail_reason("tofino"
+  "visitor returned invalid type MAU::HashDist"
+  testdata/p4_16_samples/issue430-bmv2.p4
+  )
 p4c_add_xfail_reason("tofino"
   "warning: : Currently the Barefoot HW compiler cannot handle any non direct assignment instruction that has missized rvalues"
   extensions/p4_tests/p4_16/cast_narrowing_add.p4
@@ -655,23 +597,15 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/01-BigMatch.p4
   extensions/p4_tests/p4_14/04-FullPHV3.p4
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   extensions/p4_tests/p4_14/c1/COMPILER-133/full_tphv.p4
   extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
   extensions/p4_tests/p4_14/c4/COMPILER-590/case3179.p4
   extensions/p4_tests/p4_14/c4/COMPILER-591/case3176.p4
   extensions/p4_tests/p4_14/jenkins/power/power.p4
   testdata/p4_14_samples/parser_dc_full.p4
   testdata/p4_14_samples/port_vlan_mapping.p4
   extensions/p4_tests/p4_14/switch_20160602/switch.p4
-  extensions/p4_tests/p4_14/switch/p4src/switch.p4
-  )
-
-# Likely still has a bug; emits the following warning:
-p4c_add_xfail_reason("tofino"
-   "Action argument is not found to be allocated in the action format"
-   testdata/p4_16_samples/slice-def-use.p4
-   testdata/p4_16_samples/slice-def-use1.p4
   )
 
 # We can't (without some complex acrobatics) support conditional computed
@@ -802,13 +736,8 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
   extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
   extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
-  )
-
-# BRIG-225?
-p4c_add_xfail_reason("tofino"
-  "Unexpected mirror id"
-  testdata/p4_16_samples/clone-bmv2.p4
-  extensions/p4_tests/p4_14/jenkins/mirror_test/mirror_test.p4
+  extensions/p4_tests/p4_14/jenkins/stful/stful.p4
+  extensions/p4_tests/p4_14/test_checksum.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -844,7 +773,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/action_conflict_3.p4
   extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
   extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
   extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
   extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
@@ -860,6 +788,164 @@ p4c_add_xfail_reason("tofino"
   )
 
 #END: XFAILS that match glass XFAILS
+
+# BRIG-314
+p4c_add_xfail_reason("tofino"
+  "Header field .* has an incompatible alignment requirement"
+  extensions/p4_tests/p4_14/10-AssignChooseSource.p4
+  extensions/p4_tests/p4_14/04-MatchDep.p4
+  extensions/p4_tests/p4_14/11-AssignChooseDest.p4
+  extensions/p4_tests/p4_14/11-MinimalL2.p4
+  extensions/p4_tests/p4_14/12-MaxEnriesSRAM.p4
+  extensions/p4_tests/p4_14/12-MaxEnriesTCAM.p4
+  extensions/p4_tests/p4_14/test_config_103_first_phase_0.p4
+  extensions/p4_tests/p4_14/test_config_105_no_phase_0_case_has_side_effect.p4
+  extensions/p4_tests/p4_14/test_checksum.p4
+  extensions/p4_tests/p4_14/test_config_106_no_phase_0_case_not_first_table.p4
+  extensions/p4_tests/p4_14/test_config_109_no_phase_0_case_wrong_key.p4
+  extensions/p4_tests/p4_14/test_config_108_no_phae_0_case_wrong_condition.p4
+  extensions/p4_tests/p4_14/test_config_110_no_phase_0_case_wrong_match_type.p4
+  extensions/p4_tests/p4_14/test_config_113_no_phase_0_case_sourced_from_field.p4
+  extensions/p4_tests/p4_14/test_config_112_no_phase_0_case_action_width_too_big.p4
+  extensions/p4_tests/p4_14/test_config_111_no_phase_0_case_two_actions.p4
+  extensions/p4_tests/p4_14/test_config_no_phase_0_case_two_actions.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-295/vag1892.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
+  extensions/p4_tests/p4_14/jenkins/pcie_pkt_test/pcie_pkt_test_one.p4
+  extensions/p4_tests/p4_14/jenkins/mirror_test/mirror_test.p4
+  extensions/p4_tests/p4_14/jenkins/emulation/emulation.p4
+  )
+
+# START: XFAILs with translation
+# invalid tests, trying to emit standard_metadata that are not defined
+p4c_add_xfail_reason("tofino"
+  "Could not find declaration for standard_metadata"
+  testdata/p4_14_samples/copy_to_cpu.p4
+  testdata/p4_14_samples/simple_nat.p4
+  testdata/p4_14_samples/resubmit.p4
+  testdata/p4_14_samples/packet_redirect.p4
+  )
+# invalid tests, eg_intr_md.egress_port is read-only
+p4c_add_xfail_reason("tofino"
+  "Expression .* cannot be the target of an assignment"
+  extensions/p4_tests/p4_14/test_config_249_simple_bridge.p4
+  )
+# invalid tests, issue604.p4 is a v1.1 testcase
+p4c_add_xfail_reason("tofino"
+  "Could not find declaration for extern_test"
+  testdata/p4_14_samples/issue604.p4
+  )
+# are we going to retire these switch profiles?
+p4c_add_xfail_reason("tofino"
+  "Structure header .* does not have a field"
+  testdata/p4_14_samples/sai_p4.p4
+  testdata/p4_14_samples/switch_20160226/switch.p4
+  testdata/p4_14_samples/switch_20160512/switch.p4
+  )
+p4c_add_xfail_reason("tofino"
+  "Could not find declaration for"
+  extensions/p4_tests/p4_14/switch_l2_profile.p4
+  extensions/p4_tests/p4_14/switch_20160602/switch.p4
+  )
+
+# BRIG-109
+p4c_add_xfail_reason("tofino"
+  "resolve computed"
+  extensions/p4_tests/p4_14/c1/COMPILER-217/port_parser.p4
+  )
+p4c_add_xfail_reason("tofino"
+  "hash offset must be a power of 2 in a hash calculation hash.get_hash"
+  testdata/p4_14_samples/flowlet_switching.p4
+  )
+# failed in assembler
+p4c_add_xfail_reason("tofino"
+  "Field counter_pfe overlaps with meter_pfe"
+  extensions/p4_tests/p4_14/c8/COMPILER-616/case3331.p4
+  extensions/p4_tests/p4_14/jenkins/stats_pi/stats_pi.p4
+  extensions/p4_tests/p4_14/jenkins/action_spec_format/action_spec_format.p4
+  )
+# ingress parser need access pkt_length
+p4c_add_xfail_reason("tofino"
+  "Could not find declaration for eg_intr_md"
+  testdata/p4_14_samples/queueing.p4
+  )
+# resubmit size is 32 bytes which exceeds max size for tofino (8 bytes).
+p4c_add_xfail_reason("tofino"
+  "Assertion .* failed"
+  extensions/p4_tests/p4_14/13-ResubmitMetadataSize.p4
+  )
+# backend bug
+p4c_add_xfail_reason("tofino"
+  "PHV_Container::taint_bits"
+  extensions/p4_tests/p4_14/switch/p4src/switch.p4
+  )
+# backend bug
+p4c_add_xfail_reason("tofino"
+  "Slice is of IR structure not handled by ActionAnalysis"
+  extensions/p4_tests/p4_14/test_config_13_first_selection.p4
+  )
+# backend bug
+p4c_add_xfail_reason("tofino"
+  "does not have a PHV allocation though it is used in an action"
+  extensions/p4_tests/p4_14/test_config_157_random_number_generator.p4
+  )
+# backend bug
+p4c_add_xfail_reason("tofino"
+  "Assignment cannot be supported in the parser"
+  extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
+  )
+# need a good way to handle global action
+p4c_add_xfail_reason("tofino"
+  "Could not find declaration for drop"
+  testdata/p4_16_samples/drop-bmv2.p4
+  )
+# need a good way to handle global action
+p4c_add_xfail_reason("tofino"
+  "Could not find declaration for send_to_cpu"
+  testdata/p4_16_samples/std_meta_inlining.p4
+  )
+p4c_add_xfail_reason("tofino"
+  "Action argument is not found to be allocated in the action format"
+  testdata/p4_16_samples/slice-def-use1.p4
+  )
+# translation bug: pktgen headers
+p4c_add_xfail_reason("tofino"
+  "Could not find declaration for pktgen_generic"
+  extensions/p4_tests/p4_14/jenkins/stful/stful.p4
+  )
+# translation bug: smeta
+p4c_add_xfail_reason("tofino"
+  "Could not find declaration for smeta"
+  testdata/p4_16_samples/issue677-bmv2.p4
+  )
+# missing support in translation: parser counter
+p4c_add_xfail_reason("tofino"
+  "parser counter translation is not implemented"
+  extensions/p4_tests/p4_14/test_config_294_parser_loop.p4
+  )
+# missing support in meter_with_color
+p4c_add_xfail_reason("tofino"
+  "error: Type parameters needed for m"
+  extensions/p4_tests/p4_14/test_config_126_meter_pre_color_2.p4
+  extensions/p4_tests/p4_14/test_config_127_meter_pre_color_3.p4
+  extensions/p4_tests/p4_14/test_config_125_meter_pre_color.p4
+  )
+# missing support for stateful logging
+p4c_add_xfail_reason("tofino"
+  "Interface register_action does not have a method named execute_log"
+  extensions/p4_tests/p4_14/test_config_206_stateful_logging.p4
+  )
+
+# END: XFAILs with translation
 
 if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
   # STF2PTF tests that fail
@@ -934,103 +1020,9 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
 
 endif() # ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET
 
-if (ENABLE_TNA)
-  ######## correct error message ######
-  p4c_add_xfail_reason("tofino"
-    "Header field .* is required to be allocated contiguously"
-    extensions/p4_tests/p4_14/switch/p4src/switch.p4
-    extensions/p4_tests/p4_14/jenkins/multicast_scale/multicast_scale.p4
-  )
-  ######## missing metadata translation #####
-  # metadata translation: standard_metadata.instance_type
-  p4c_add_xfail_reason("tofino"
-    "Could not find declaration for standard_metadata"
-    testdata/p4_14_samples/queueing.p4
-    testdata/p4_14_samples/simple_nat.p4
-    )
-  p4c_add_xfail_reason("tofino"
-    "Could not find declaration for pktgen_generic"
-    extensions/p4_tests/p4_14/jenkins/stful/stful.p4
-    )
-  ######### cast() relate ######
-  p4c_add_xfail_reason("tofino"
-    "Field counter_pfe overlaps with meter_pfe"
-    extensions/p4_tests/p4_14/c8/COMPILER-616/case3331.p4
-    extensions/p4_tests/p4_14/jenkins/stats_pi/stats_pi.p4
-    extensions/p4_tests/p4_14/jenkins/action_spec_format/action_spec_format.p4
-    )
-  ######### failed in backend #######
-  # failure in backend
-  p4c_add_xfail_reason("tofino"
-    "Couldn't resolve computed value for select"
-    extensions/p4_tests/p4_14/c1/COMPILER-217/port_parser.p4
-    )
-  p4c_add_xfail_reason("tofino"
-    "does not have a PHV allocation though it is used in an action"
-    extensions/p4_tests/p4_14/test_config_157_random_number_generator.p4
-    )
-   p4c_add_xfail_reason("tofino"
-    "Extract field slice .* with a negative offset."
-    extensions/p4_tests/p4_14/c1/COMPILER-242/case1679.p4
-    )
-   p4c_add_xfail_reason("tofino"
-    "instruction slot .* used multiple times in action .*"
-    extensions/p4_tests/p4_14/test_config_96_hash_data.p4
-    )
-   p4c_add_xfail_reason("tofino"
-    "hash offset must be a power of 2 in a hash calculation hash.get_hash"
-    testdata/p4_14_samples/flowlet_switching.p4
-    )
-   p4c_add_xfail_reason("tofino"
-    "Slice is of IR structure not handled by ActionAnalysis"
-    extensions/p4_tests/p4_14/test_config_184_stateful_bug1.p4
-    extensions/p4_tests/p4_14/test_config_13_first_selection.p4
-    )
-  ######### handle duplicated intrinsic struct ##########
-  p4c_add_xfail_reason("tofino"
-    "Duplicates declaration header"
-    testdata/p4_14_samples/switch_20160226/switch.p4
-    testdata/p4_14_samples/switch_20160512/switch.p4
-    extensions/p4_tests/p4_14/switch_20160602/switch.p4
-    extensions/p4_tests/p4_14/switch_l2_profile.p4
-    testdata/p4_14_samples/sai_p4.p4
-    )
-  ######### bogus test case #############
-  # This is not possible, egress_port is read-only
-  p4c_add_xfail_reason("tofino"
-    "Expression .* cannot be the target of an assignment"
-    extensions/p4_tests/p4_14/test_config_249_simple_bridge.p4
-    )
-  # clone/resubmit the entire standard_metadata struct in ingress
-  # fail reason: not all fields in standard metadata are defined in ingress
-  p4c_add_xfail_reason("tofino"
-    "Could not find declaration for"
-    testdata/p4_14_samples/packet_redirect.p4
-    testdata/p4_14_samples/copy_to_cpu.p4
-    testdata/p4_14_samples/resubmit.p4
-    )
-  # P4-14 program can not define extern
-  p4c_add_xfail_reason("tofino"
-    "Could not find declaration for"
-    testdata/p4_14_samples/issue604.p4
-    )
-  ####### need more translation #######
-  p4c_add_xfail_reason("tofino"
-    "Cannot resolve computed value unambiguously"
-    extensions/p4_tests/p4_14/test_config_294_parser_loop.p4
-    )
-  # need parser_value_set
-  p4c_add_xfail_reason("tofino"
-    "Could not find declaration for ig_intr_md"
-    extensions/p4_tests/p4_14/jenkins/parser_intr_md/parser_intr_md.p4
-    )
-endif()  # ENABLE_TNA
-
-if (HARLYN_STF AND NOT ENABLE_STF2PTF AND ENABLE_TNA)
+if (HARLYN_STF AND NOT ENABLE_STF2PTF)
   p4c_add_xfail_reason("tofino"
     ".* expected packet on port .* not seen"
-    testdata/p4_14_samples/repeater.p4
-    testdata/p4_14_samples/basic_routing.p4
     extensions/p4_tests/p4_14/meter_test1.p4
     )
   p4c_add_xfail_reason("tofino"

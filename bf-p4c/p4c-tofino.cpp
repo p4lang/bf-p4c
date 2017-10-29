@@ -75,7 +75,7 @@ int main(int ac, char **av) {
         return 1;
     log_dump(program, "After midend");
 
-    auto maupipe = extract_maupipe(program, options);
+    auto maupipe = extract_maupipe(program);
 
     if (ErrorReporter::instance.getErrorCount() > 0)
         return 1;

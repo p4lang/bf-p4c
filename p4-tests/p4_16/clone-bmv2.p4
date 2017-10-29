@@ -25,7 +25,6 @@ parser ParserI(packet_in pk, out H hdr, inout M meta, inout standard_metadata_t 
 }
 
 control IngressI(inout H hdr, inout M meta, inout standard_metadata_t smeta) {
-
     apply {
         smeta.clone_spec = (bit<32>) 0; // write to prevent the read of clone
                                         // spec from being replaced by a

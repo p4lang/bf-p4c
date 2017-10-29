@@ -225,6 +225,8 @@ header egress_intrinsic_metadata_t {
                                          // deflected due to deflect_on_drop.
 
     bit<16> pkt_length;                  // Packet length, in bytes
+
+    bit<2> pad;
 }
 
 struct egress_intrinsic_metadata_from_parser_t {
@@ -471,7 +473,11 @@ parser EgressParser<H, M>(
     packet_in pkt,
     out H hdr,
     inout M eg_md,
-    out egress_intrinsic_metadata_t eg_intr_md);
+    out egress_intrinsic_metadata_t eg_intr_md,
+    /// following two arguments are bridged metadata
+    @optional inout ingress_intrinsic_metadata_t ig_intr_md,
+    @optional inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm
+    );
 
 control Ingress<H, M>(
     inout H hdr,
@@ -490,7 +496,7 @@ control Egress<H, M>(
     @optional out egress_intrinsic_metadata_for_mirror_buffer_t eg_intr_md_for_mb,
     @optional out egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport,
     @optional out egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
-    // temporary solution for bridge metadata, remove after defuse is implemented in midend
+    // following two arguments are bridged metadata
     @optional inout ingress_intrinsic_metadata_t ig_intr_md,
     @optional inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm
     );
@@ -499,6 +505,7 @@ control IngressDeparser<H, M>(
     packet_out pkt,
     inout H hdr,
     @optional in M metadata,
+    @optional in ingress_intrinsic_metadata_t ig_intr_md,
     @optional in ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
     @optional mirror_packet mirror,
     @optional resubmit_packet resubmit);

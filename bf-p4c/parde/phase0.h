@@ -39,14 +39,13 @@ struct Phase0Info {
  *                 implies, this only makes sense for the ingress control.
  * @param pipe     The pipe to which any generated phase 0 parser should be
  *                 attached.
- * @param useTna   The flag is true if used in v1model to tofino translation
  * @return a new ingress control without the phase 0 table, and a new pipe which
  *         includes the phase 0 parser. If there is no phase 0 table, the
  *         original ingress control and pipe are returned unaltered.
  */
 std::pair<const IR::P4Control*, IR::BFN::Pipe*>
 extractPhase0(const IR::P4Control* ingress, IR::BFN::Pipe* pipe,
-              P4::ReferenceMap* refMap, P4::TypeMap* typeMap, bool useTna = false);
+              P4::ReferenceMap* refMap, P4::TypeMap* typeMap);
 
 }  // namespace BFN
 

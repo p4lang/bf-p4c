@@ -76,7 +76,7 @@ HER_INTRINSIC(ecos, YES)
                     first = false;                                                      \
                     IFID( TBL[id].id_phv = reg->reg.deparser_id(); continue; ) }        \
                 for (int i = reg->reg.size/8; i > 0; i--) {                             \
-                    if (idx >= TBL[id].phvs.size()) {                                   \
+                    if (idx > TBL[id].phvs.size()) {                                   \
                         error(data.lineno, "%s digest limited to %zd bytes",            \
                               #NAME, TBL[id].phvs.size());                              \
                         ok = false;                                                     \

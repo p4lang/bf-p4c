@@ -21,8 +21,9 @@ class AddBridgedMetadata::FindFieldsToBridge : public ThreadVisitor, Inspector {
 
     bool preorder(const IR::Expression *e) override {
         if (auto *field = self.phv.field(e)) {
-            for (auto &loc : self.defuse.getAllUses(field->id)) {
-                if (loc.first->thread() == EGRESS && field->metadata) {
+            auto ctxt = findContext<IR::BFN::Unit>();
+            for (auto &loc : self.defuse.getUses(ctxt, e)) {
+                if (loc.first->thread() == EGRESS) {
                     if (bridgedFields.find(field) == bridgedFields.end()) {
                       LOG2("bridging field " << loc.second << " id=" << field->id);
                       bridgedFields.insert(field);

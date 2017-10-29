@@ -41,16 +41,13 @@ struct ParserInfo {
  *                    ingress parser.
  * @param egDeparser  The egress deparser. If null, will be inferred from the
  *                    egress parser.
- * @param useTna      Temporary bool to switch between v1model and tna,
- *                    to be removed after translation is done.
  * @return a ParserInfo object containing the Tofino IR parsers and deparsers.
  */
 ParserInfo extractParser(const IR::BFN::Pipe* pipe,
                          const IR::P4Parser* igParser,
                          const IR::P4Control* igDeparser,
                          const IR::P4Parser* egParser = nullptr,
-                         const IR::P4Control* egDeparser = nullptr,
-                         bool useTna = false);
+                         const IR::P4Control* egDeparser = nullptr);
 
 }  // namespace BFN
 

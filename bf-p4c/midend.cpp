@@ -34,7 +34,6 @@
 #include "midend/validateProperties.h"
 #include "common/blockmap.h"
 #include "common/check_header_alignment.h"
-#include "common/remap_intrin.h"
 
 namespace BFN {
 
@@ -103,16 +102,7 @@ MidEnd::MidEnd(BFN_Options& options) {
     refMap.setIsV1(true);
     auto evaluator = new P4::EvaluatorPass(&refMap, &typeMap);
     auto skip_controls = new std::set<cstring>();
-    cstring args_to_skip[] = {
-        // FIXME -- don't tie this to v1model
-        P4V1::V1Model::instance.sw.verify.name,
-        P4V1::V1Model::instance.sw.update.name,
-        P4V1::V1Model::instance.sw.deparser.name,
-        "ingress_deparser",
-        "egress_deparser"};
-
-    bool needTranslation = options.native_arch &&
-                           (options.langVersion == CompilerOptions::FrontendVersion::P4_14);
+    cstring args_to_skip[] = { "ingress_deparser", "egress_deparser"};
 
     addPasses({
         new P4::TypeChecking(&refMap, &typeMap, true),
@@ -126,8 +116,8 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::Inline(&refMap, &typeMap, evaluator),
         // translate architecture after program inlining to
         // avoid handling abitrary parameters in user defined control blocks
-        (options.arch == "v1model" && needTranslation) ?
-                new BFN::SimpleSwitchTranslation(&refMap, &typeMap, options /*map*/) : nullptr,
+        (options.arch == "v1model") ?
+            new BFN::SimpleSwitchTranslation(&refMap, &typeMap, options /*map*/) : nullptr,
         new P4::InlineActions(&refMap, &typeMap),
         new P4::LocalizeAllActions(&refMap),
         new P4::UniqueNames(&refMap),
@@ -144,6 +134,7 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::SimplifyParsers(&refMap),
         new P4::StrengthReduction(),
         new P4::EliminateTuples(&refMap, &typeMap),
+
         new P4::CopyStructures(&refMap, &typeMap),
         new P4::NestedStructs(&refMap, &typeMap),
         new P4::SimplifySelectList(&refMap, &typeMap),
@@ -159,6 +150,7 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::SimplifyControlFlow(&refMap, &typeMap),
         new P4::CompileTimeOperations(),
         new P4::TableHit(&refMap, &typeMap),
+
         evaluator,
         new VisitFunctor([=](const IR::Node *root) -> const IR::Node * {
             auto toplevel = evaluator->getToplevelBlock();
@@ -177,13 +169,9 @@ MidEnd::MidEnd(BFN_Options& options) {
         }),
         new P4::SynthesizeActions(&refMap, &typeMap, new SkipControls(skip_controls)),
         new P4::MoveActionsToTables(&refMap, &typeMap),
-        // XXX(zma) : assuming tofino & jbay have same arch for now
-        (needTranslation || options.arch == "native") ?
-                nullptr : new RemapIntrinsics,
         new P4::TypeChecking(&refMap, &typeMap, true),
         // XXX(zma) : assuming tofino & jbay have same arch for now
-        (options.arch == "native") ?
-                nullptr : new FillFromBlockMap(&refMap, &typeMap),
+        (options.arch == "native") ? nullptr : new FillFromBlockMap(&refMap, &typeMap),
         evaluator,
         new VisitFunctor([this, evaluator]() { toplevel = evaluator->getToplevelBlock(); }),
     });

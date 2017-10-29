@@ -14,7 +14,6 @@
 
 MESSAGE("-- Adding BFN Compiler test suite")
 OPTION(ENABLE_STF2PTF "Run STF tests as PTF" OFF)
-OPTION(ENABLE_TNA "Enable v1model.p4 to tofino.p4 translation" OFF)
 
 if (NOT ENABLE_STF2PTF)
   # We run STF tests on the STF framework

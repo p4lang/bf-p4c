@@ -166,6 +166,7 @@ Backend::Backend(const BFN_Options& options) :
         new CollectPhvInfo(phv),
         &defuse,
         new AddBridgedMetadata(phv, defuse),
+        new DumpPipe("After bridge metadata"),
         options.device == "jbay" ? new AddJBayMetadataPOV(phv) : nullptr,
         new ResolveComputedParserExpressions,
         new CollectPhvInfo(phv),

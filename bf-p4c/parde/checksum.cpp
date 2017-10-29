@@ -280,7 +280,7 @@ analyzeComputedChecksumStatement(const IR::MethodCallStatement* statement) {
  * @return the checksums, represented as a map from the destination field of the
  * checksum to the list of source fields that the checksum is computed from.
  */
-ChecksumSourceMap findChecksums(const IR::P4Control* control) {
+ChecksumSourceMap findChecksumsP14(const IR::P4Control* control) {
     CHECK_NULL(control);
     ChecksumSourceMap checksums;
 
@@ -328,6 +328,124 @@ ChecksumSourceMap findChecksums(const IR::P4Control* control) {
     return checksums;
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Analyze an method call statement within a deparser control and try to
+ * extract the destination field and the source field list
+ *
+ * @param methodCallStatement The `checksum.update` statement to analyze
+ * @return a ChecksumSourceMap entry containing the checksum destination field
+ * name and the source fields which will be used to compute the checksum, or
+ * boost::none if the checksum code was invalid.
+ */
+boost::optional<ChecksumSourceMap::value_type>
+analyzeDeparserStatement(const IR::MethodCallStatement* statement) {
+    auto methodCall = statement->methodCall->to<IR::MethodCallExpression>();
+    if (!methodCall) {
+        return boost::none;
+    }
+    auto member = methodCall->method->to<IR::Member>();
+    if (!member || member->member != "update")  {
+        return boost::none;
+    }
+    if (methodCall->arguments->size() != 2) {
+        ::warning("Expected 2 arguments for update statement: %1%", statement);
+        return boost::none;
+    }
+    auto destField = (*methodCall->arguments)[1]->to<IR::Member>();
+    if (!destField || !destField->expr->is<IR::HeaderRef>()) {
+        ::warning("Expected argument %1% to be a header field", methodCall->arguments->at(1));
+        return boost::none;
+    }
+
+    const IR::HeaderRef* sourceHeader = nullptr;
+    if (!sourceHeader)
+        sourceHeader = destField->expr->to<IR::HeaderRef>();
+    if (!sourceHeader) {
+        ::warning("Expected destination of checksum to be a header field: %1%",
+                  destField);
+        return boost::none;
+    }
+
+    if (destField->type->width_bits() != 16) {
+        ::warning("Expected computed checksum output to be stored in a "
+                          "16-bit field: %1%", destField);
+        return boost::none;
+    }
+    LOG2("Would write computed checksum to field: " << destField);
+
+    const IR::ListExpression* sourceList = nullptr;
+    {
+        sourceList = (*methodCall->arguments)[0]->to<IR::ListExpression>();
+        if (!sourceList) {
+            ::warning("Expected list of fields: %1%", methodCall);
+            return boost::none;
+        }
+    }
+
+    auto* sources = new ChecksumSources;
+    for (auto* source : sourceList->components) {
+        LOG2("Checksum would include field: " << source);
+        auto* member = source->to<IR::Member>();
+        if (!member || !member->expr->is<IR::HeaderRef>()) {
+            ::warning("Expected field: %1%", source);
+            return boost::none;
+        }
+        auto* headerRef = member->expr->to<IR::HeaderRef>();
+        if (headerRef->toString() != sourceHeader->toString()) {
+            ::warning("Expected field of checksummed header %1%: %2%",
+                      sourceHeader, member);
+            return boost::none;
+        }
+        sources->push_back(member);
+    }
+
+    if (sources->empty()) {
+        ::warning("Expected at least one field: %1%", sources);
+        return boost::none;
+    }
+
+    LOG2("Validated computed checksum for field: " << destField);
+    return ChecksumSourceMap::value_type(destField->toString(), sources);
+}
+
+/**
+ * Analyze the provided tofino.p4 deparser and determine the set of checksums
+ * to be computed.
+ *
+ * @param control A deparser control block.
+ * @return the checksums, represented as a map from the destination field of the
+ * checksum to the list of source fields that the checksum is computed from.
+ *
+ */
+ChecksumSourceMap findChecksumsNative(const IR::P4Control* control) {
+    CHECK_NULL(control);
+    ChecksumSourceMap checksums;
+
+    for (auto *statement : control->body->components) {
+        boost::optional<ChecksumSourceMap::value_type> checksum;
+        // It only makes sense to compute a checksum against a valid header, so
+        // ideally the program will include a check of the form `if
+        // (header.isValid())`. We also allow a bare assignment without the
+        // check. The effect at runtime is the same, since the destination field
+        // of the checksum must be part of the header that contains the
+        // checksummed fields and hence is controlled by the same POV bit.
+        if (auto* ifStatement = statement->to<IR::IfStatement>()) {
+            auto checksum = analyzeComputedChecksumStatement(ifStatement);
+            if (checksum) checksums.insert(*checksum);
+            continue;
+        }
+        if (auto* method = statement->to<IR::MethodCallStatement>()) {
+            auto checksum = analyzeDeparserStatement(method);
+            if (checksum) checksums.insert(*checksum);
+            continue;
+        }
+    }
+
+    return checksums;
+}
+
 /// Substitute computed checksums into the deparser code by replacing Emits for
 /// the destination field with EmitChecksums.
 struct SubstituteComputeChecksums : public Transform {
@@ -359,6 +477,8 @@ struct SubstituteComputeChecksums : public Transform {
 
 namespace BFN {
 
+/// Deprecated. This function is used to extract checksums from v1model
+/// computeChecksum control block.
 IR::BFN::Pipe*
 extractComputeChecksum(const IR::P4Control* computeChecksumControl,
                        IR::BFN::Pipe* pipe) {
@@ -366,7 +486,26 @@ extractComputeChecksum(const IR::P4Control* computeChecksumControl,
 
     if (!computeChecksumControl) return pipe;
 
-    auto checksums = findChecksums(computeChecksumControl);
+    auto checksums = findChecksumsP14(computeChecksumControl);
+    if (checksums.empty()) return pipe;
+
+    SubstituteComputeChecksums substituteChecksums(checksums);
+    for (auto gress : { INGRESS, EGRESS }) {
+        auto* substituted = pipe->thread[gress].deparser->apply(substituteChecksums);
+        pipe->thread[gress].deparser = substituted;
+    }
+
+    return pipe;
+}
+
+/// This function extracts checksum from the translated tofino.p4 checksum extern.
+/// Error checking should be done during the translation, not in this function.
+IR::BFN::Pipe*
+extractChecksumFromDeparser(const IR::P4Control* deparser, IR::BFN::Pipe* pipe) {
+    CHECK_NULL(pipe);
+    if (!deparser) return pipe;
+
+    auto checksums = findChecksumsNative(deparser);
     if (checksums.empty()) return pipe;
 
     SubstituteComputeChecksums substituteChecksums(checksums);

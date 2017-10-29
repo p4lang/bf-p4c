@@ -22,18 +22,11 @@ bool AddMetadataShims::preorder(IR::BFN::Parser *parser) {
 }
 
 void AddMetadataShims::addIngressMetadata(IR::BFN::Parser *parser) {
-    // XXX(hanw): remove after tna translation for p16 is done
-    cstring ingress_intrinsic_metadata = useTna ? "ingress_intrinsic_metadata_for_tm" :
-                                                  "standard_metadata";
-
     auto alwaysDeparseBit =
         new IR::TempVar(IR::Type::Bits::get(1), true, "$always_deparse");
 
-    auto* meta = pipe->metadata[ingress_intrinsic_metadata];
+    auto* meta = pipe->metadata["ingress_intrinsic_metadata"];
 
-    for (auto meta : pipe->metadata) {
-        LOG1("metadata " << meta.first << " " << meta.second);
-    }
     if (!meta || !meta->type->getField("ingress_port") ||
                  !meta->type->getField("resubmit_flag")) {
         // There's not really much we can do in this case; just skip over
@@ -104,9 +97,6 @@ void AddMetadataShims::addIngressMetadata(IR::BFN::Parser *parser) {
 }
 
 void AddMetadataShims::addEgressMetadata(IR::BFN::Parser *parser) {
-    // XXX(hanw): remove after tna translation for p16 is done
-    cstring egress_intrinsic_metadata = useTna ? "egress_intrinsic_metadata"
-                                               : "standard_metadata";
     const auto byteEgMetadataSize =
       Device::pardeSpec().byteEgressMetadataSize();
 
@@ -117,7 +107,7 @@ void AddMetadataShims::addEgressMetadata(IR::BFN::Parser *parser) {
             new IR::BFN::Transition(match_t(), 0, parser->start)
         });
 
-    auto* meta = pipe->metadata[egress_intrinsic_metadata];
+    auto* meta = pipe->metadata["egress_intrinsic_metadata"];
     if (!meta || !meta->type->getField("egress_port")) {
         // There's not really much we can do in this case; just skip over
         // the intrinsic metadata.
@@ -161,25 +151,15 @@ void AddMetadataShims::addDeparserIntrinsic(IR::BFN::Deparser *d, const IR::Head
 }
 
 void AddMetadataShims::addIngressMetadata(IR::BFN::Deparser *d) {
-    // XXX(hanw): remove after tna translation for p16 is done
-    cstring ingress_intrinsic_metadata = useTna ? "ingress_intrinsic_metadata_for_tm" :
-                                                  "standard_metadata";
-
-    auto *meta = pipe->metadata[ingress_intrinsic_metadata];
+    auto *meta = pipe->metadata["ingress_intrinsic_metadata_for_tm"];
     if (!meta) return;
 
-    cstring ingress_egress_port = useTna ? "ucast_egress_port" : "egress_spec";
-    addDeparserIntrinsic(d, meta, ingress_egress_port, "egress_unicast_port");
-
-    // XXX(hanw): remove after tna translation for p16 is done
-    if (useTna) {
-        addDeparserIntrinsic(d, meta, "mcast_grp_a", "egress_multicast_group_a");
-        addDeparserIntrinsic(d, meta, "mcast_grp_b", "egress_multicast_group_b");
-        addDeparserIntrinsic(d, meta, "rid", "rid");
-        addDeparserIntrinsic(d, meta, "level1_exclusion_id", "xid");
-        addDeparserIntrinsic(d, meta, "level2_exclusion_id", "yid");
-    } else {
-        addDeparserIntrinsic(d, meta, "mcast_grp", "egress_multicast_group"); }
+    addDeparserIntrinsic(d, meta, "ucast_egress_port", "egress_unicast_port");
+    addDeparserIntrinsic(d, meta, "mcast_grp_a", "egress_multicast_group_a");
+    addDeparserIntrinsic(d, meta, "mcast_grp_b", "egress_multicast_group_b");
+    addDeparserIntrinsic(d, meta, "rid", "rid");
+    addDeparserIntrinsic(d, meta, "level1_exclusion_id", "xid");
+    addDeparserIntrinsic(d, meta, "level2_exclusion_id", "yid");
     addDeparserIntrinsic(d, meta, "deflect_on_drop", "deflect_on_drop");
     addDeparserIntrinsic(d, meta, "packet_color", "meter_color");
     addDeparserIntrinsic(d, meta, "ingress_cos", "icos");
@@ -189,12 +169,8 @@ void AddMetadataShims::addIngressMetadata(IR::BFN::Deparser *d) {
 }
 
 void AddMetadataShims::addEgressMetadata(IR::BFN::Deparser *d) {
-    // XXX(hanw): remove after tna translation for p16 is done
-    cstring egress_intrinsic_metadata = useTna ? "egress_intrinsic_metadata" :
-                                                 "standard_metadata";
-
     // egress_port is read-only
-    auto *meta = pipe->metadata[egress_intrinsic_metadata];
+    auto *meta = pipe->metadata["egress_intrinsic_metadata"];
     if (!meta) return;
     addDeparserIntrinsic(d, meta, "egress_port", "egress_unicast_port");
     addDeparserIntrinsic(d, meta, "egress_cos", "ecos");

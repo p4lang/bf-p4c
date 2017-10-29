@@ -1176,7 +1176,7 @@ struct ComputeFieldAlignments : public Inspector {
             // egress alignment constraints, which are inferred from the
             // parser, for the ingress versions of the fields.) For now, we just
             // skip to the next byte-aligned position.
-            if (fieldInfo->metadata && fieldInfo->bridged) {
+            if (fieldInfo->bridged) {
                 currentBit += fieldInfo->size;
                 if (currentBit % 8 != 0)
                     currentBit += 8 - currentBit % 8;

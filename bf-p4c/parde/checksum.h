@@ -59,5 +59,45 @@ IR::BFN::Pipe*
 extractComputeChecksum(const IR::P4Control* computeChecksumControl,
                        IR::BFN::Pipe* pipe);
 
+/**
+ * Attempts to convert the P4 code in the provided control into deparser
+ * EmitChecksum primitives. The control is expected to follow the pattern of
+ * tofino.p4's IngressDeparser and EgressDeparser control.
+ *
+ * Only a very specific pattern is permitted. Each checksum computation must be
+ * defined as either:
+ * ```
+ *   if (header.isValid()) {
+ *     checksumExternInstance.update({
+ *        header.sourceField1,
+ *        header.sourceField2
+ *     }, header.destField);
+ *   }
+ * ```
+ * or (a bit less cleanly):
+ * ```
+ *   checksumExternInstance.update({
+ *      header.sourceField1,
+ *      header.sourceField2
+ *   }, header.destField);
+ * ```
+ *
+ * This pattern reflects the actual behavior of the hardware. Any deviation will
+ * result in a warning and the computation will be ignored.
+ *
+ * XXX(hanw): this function does not handle the incremental checksum yet. The analysis
+ * we have to do on deparser control block to support incremental is more involved.
+ *
+ * @param deparserControl The P4 control to be analyzed.
+ * @param pipe The pipe which should hold the generated deparser primitives.
+ * @return a modified pipe in which the deparser have been modified to include
+ *         the discovered checksum computations. If no checksum computations
+ *         were discovered, the original pipe is returned
+ *         unaltered.
+ */
+IR::BFN::Pipe*
+extractChecksumFromDeparser(const IR::P4Control* deparserControl,
+                            IR::BFN::Pipe* pipe);
+
 }  // namespace BFN
 #endif /* BF_P4C_PARDE_CHECKSUM_H_ */

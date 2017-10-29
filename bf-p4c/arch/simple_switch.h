@@ -16,6 +16,7 @@
 #include "midend/actionsInlining.h"
 #include "midend/localizeActions.h"
 #include "bf-p4c/bf-p4c-options.h"
+#include "bf-p4c/ir/gress.h"
 #include "program_structure.h"
 
 namespace BFN {

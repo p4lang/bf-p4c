@@ -156,6 +156,13 @@ void ProgramStructure::include(cstring filename, IR::IndexedVector<IR::Node>* ve
 #define TRANSLATE_STATEMENT(NODE, CONVERTER)            \
     TRANSLATE_NODE(NODE, IR::Statement, CONVERTER, convert)
 
+cstring ProgramStructure::getBlockName(cstring name) {
+    BUG_CHECK(blockNames.find(name) != blockNames.end(),
+              "Cannot find block %1% in package", name);
+    auto blockname = blockNames.at(name);
+    return blockname;
+}
+
 void ProgramStructure::createErrors() {
     auto allErrors = new IR::IndexedVector<IR::Declaration_ID>();
     for (auto e : errors) {
@@ -179,7 +186,13 @@ void ProgramStructure::createTofinoArch() {
 }
 
 void ProgramStructure::createTypes() {
+    for (auto t : typedef_types) {
+        declarations.push_back(t.second);
+    }
     for (auto h : header_types) {
+        declarations.push_back(h.second);
+    }
+    for (auto h : header_union_types) {
         declarations.push_back(h.second);
     }
     for (auto s : struct_types) {
@@ -199,27 +212,29 @@ void ProgramStructure::createExterns() {
 //    }
 }
 
+void ProgramStructure::cvtExpressions() {
+    TRANSLATE_MEMBER(membersToDo, MemberExpressionConverter);
+    TRANSLATE_MEMBER(pathsToDo, PathExpressionConverter);
+    TRANSLATE_MEMBER(typeNamesToDo, TypeNameExpressionConverter);
+}
+
 void ProgramStructure::createParsers() {
     TRANSLATE_STATEMENT(priorityCalls, ParserPriorityConverter);
     TRANSLATE_STATEMENT(parserCounterCalls, ParserCounterConverter);
     TRANSLATE_STATEMENT(parserCounterSelects, ParserCounterSelectionConverter);
 
     IngressParserConverter cvt_i(this);
-    auto ingressParser = parsers.at("ParserImpl");
+    auto ingressParser = parsers.at(getBlockName("parser"));
     ingressParser = cvt_i.convert(ingressParser);
     declarations.push_back(ingressParser);
 
     EgressParserConverter cvt_e(this);
-    auto egressParser = parsers.at("ParserImpl");
+    auto egressParser = parsers.at(getBlockName("parser"));
     egressParser = cvt_e.convert(egressParser);
     declarations.push_back(egressParser);
 }
 
 void ProgramStructure::createControls() {
-    TRANSLATE_MEMBER(membersToDo, MemberExpressionConverter);
-    TRANSLATE_MEMBER(typeNamesToDo, TypeNameExpressionConverter);
-    TRANSLATE_MEMBER(pathsToDo, PathExpressionConverter);
-
     TRANSLATE_EXTERN_INSTANCE(counters, CounterConverter);
     TRANSLATE_EXTERN_INSTANCE(meters, MeterConverter);
     TRANSLATE_EXTERN_INSTANCE(direct_counters, DirectCounterConverter);
@@ -233,26 +248,23 @@ void ProgramStructure::createControls() {
     TRANSLATE_EXTERN_FUNCTION(hashCalls, HashConverter);
     TRANSLATE_EXTERN_FUNCTION(randomCalls, RandomConverter);
 
-    // resubmitCalls is translated in ConstructSymbolTable
-    // dropCalls is translated in ConstructSybmolTable
-
     IngressControlConverter cvt_i(this);
-    auto ingress = controls.at(ingress_name);
+    auto ingress = controls.at(getBlockName("ingress"));
     ingress = cvt_i.convert(ingress);
     declarations.push_back(ingress);
 
     IngressDeparserConverter cvt_igDep(this);
-    auto igDeparser = controls.at("DeparserImpl");
+    auto igDeparser = controls.at(getBlockName("deparser"));
     igDeparser = cvt_igDep.convert(igDeparser);
     declarations.push_back(igDeparser);
 
     EgressControlConverter cvt_e(this);
-    auto egress = controls.at(egress_name);
+    auto egress = controls.at(getBlockName("egress"));
     egress = cvt_e.convert(egress);
     declarations.push_back(egress);
 
     EgressDeparserConverter cvt_egDep(this);
-    auto egDeparser = controls.at("DeparserImpl");
+    auto egDeparser = controls.at(getBlockName("deparser"));
     egDeparser = cvt_egDep.convert(egDeparser);
     declarations.push_back(egDeparser);
 }
@@ -305,6 +317,7 @@ void ProgramStructure::createMain() {
 }
 
 const IR::P4Program* ProgramStructure::create(const IR::P4Program* program) {
+    cvtExpressions();
     createErrors();
     createTofinoArch();
     createExterns();

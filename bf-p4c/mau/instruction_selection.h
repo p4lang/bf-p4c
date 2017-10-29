@@ -49,8 +49,7 @@ class InstructionSelection : public MauTransform {
     bool checkSrc1(const IR::Expression *);
     bool checkConst(const IR::Expression *ex, long &value);
     bool equiv(const IR::Expression *a, const IR::Expression *b);
-    IR::Member *gen_stdmeta(cstring field);
-    IR::Member *gen_intrinsic_metadata(gress_t gress, cstring field);
+    IR::Member *genIntrinsicMetadata(gress_t gress, cstring header, cstring field);
 
  public:
     explicit InstructionSelection(PhvInfo &phv);

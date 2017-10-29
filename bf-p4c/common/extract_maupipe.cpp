@@ -727,103 +727,6 @@ class GetTofinoTables : public Inspector {
 };
 }  // anonymous namespace
 
-/// XXX(hanw) this function should be removed when TNA completes.
-const IR::BFN::Pipe* extract_v1model_arch(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
-                                             const IR::PackageBlock* top) {
-    auto parser_blk = top->getParameterValue("p");
-    auto parser = parser_blk->to<IR::ParserBlock>()->container;
-    auto verify_checksum_blk = top->findParameterValue("vr");
-    auto verify_checksum = verify_checksum_blk
-                         ? verify_checksum_blk->to<IR::ControlBlock>()->container
-                         : nullptr;
-    auto ingress_blk = top->getParameterValue("ig");
-    auto ingress = ingress_blk->to<IR::ControlBlock>()->container;
-    auto egress_blk = top->getParameterValue("eg");
-    auto egress = egress_blk->to<IR::ControlBlock>()->container;
-    auto compute_checksum_blk = top->findParameterValue("ck");
-    auto compute_checksum = compute_checksum_blk
-                          ? compute_checksum_blk->to<IR::ControlBlock>()->container
-                          : nullptr;
-    auto deparser_blk = top->getParameterValue("dep");
-    auto deparser = deparser_blk->to<IR::ControlBlock>()->container;
-
-    LOG1("parser: " << parser);
-    LOG1("verify checksum: " << verify_checksum);
-    LOG1("ingress: " << ingress);
-    LOG1("egress: " << egress);
-    LOG1("compute checksum: " << compute_checksum);
-    LOG1("deparser: " << deparser);
-    // FIXME add consistency/sanity checks to make sure arch is well-formed.
-
-    auto rv = new IR::BFN::Pipe();
-
-    ParamBinding bindings(typeMap);
-
-    for (auto param : *parser->type->applyParams->getEnumerator())
-        bindings.bind(param);
-    if (verify_checksum) {
-        for (auto param : *verify_checksum->type->applyParams->getEnumerator())
-            bindings.bind(param);
-    }
-    for (auto param : *ingress->type->applyParams->getEnumerator())
-        bindings.bind(param);
-    for (auto param : *egress->type->applyParams->getEnumerator())
-        bindings.bind(param);
-    if (compute_checksum) {
-        for (auto param : *compute_checksum->type->applyParams->getEnumerator())
-            bindings.bind(param);
-    }
-    for (auto param : *deparser->type->applyParams->getEnumerator())
-        bindings.bind(param);
-    auto it = ingress->type->applyParams->parameters.rbegin();
-
-    rv->metadata.addUnique("standard_metadata",
-                           bindings.get(*it)->obj->to<IR::Metadata>());
-
-    SimplifyReferences simplifyReferences(&bindings, refMap, typeMap);
-    parser = parser->apply(simplifyReferences);
-    if (verify_checksum)
-        verify_checksum = verify_checksum->apply(simplifyReferences);
-    if (compute_checksum)
-        compute_checksum = compute_checksum->apply(simplifyReferences);
-    deparser = deparser->apply(simplifyReferences);
-
-    auto parserInfo = BFN::extractParser(rv, parser, deparser);
-    for (auto gress : { INGRESS, EGRESS }) {
-        rv->thread[gress].parser = parserInfo.parsers[gress];
-        rv->thread[gress].deparser = parserInfo.deparsers[gress];
-    }
-
-    // Check for a phase 0 table. If one exists, it'll be removed from the
-    // ingress pipeline and converted to a parser program.
-    // XXX(seth): We should be able to move this into the midend now.
-    std::tie(ingress, rv) = BFN::extractPhase0(ingress, rv, refMap, typeMap);
-
-    // Convert the contents of the ComputeChecksum control, if any, into
-    // deparser primitives.
-    rv = BFN::extractComputeChecksum(compute_checksum, rv);
-
-    ingress = ingress->apply(simplifyReferences);
-    egress = egress->apply(simplifyReferences);
-
-    // ingress = ingress->apply(InlineControlFlow(blockMap));
-    ingress->apply(GetTofinoTables(refMap, typeMap, INGRESS, rv));
-    // egress = egress->apply(InlineControlFlow(blockMap));
-    egress->apply(GetTofinoTables(refMap, typeMap, EGRESS, rv));
-
-    // AttachTables...
-    AttachTables toAttach(refMap);
-    for (auto &th : rv->thread)
-        th.mau = th.mau->apply(toAttach);
-
-    PassManager finalSimplifications = {
-        &simplifyReferences,
-        new CopyHeaderEliminator
-    };
-
-    return rv->apply(finalSimplifications);
-}
-
 // model tofino native pipeline using frontend IR
 class TnaPipe {
  public:
@@ -924,12 +827,12 @@ class TnaPipe {
         rv->thread[gress].mau = rv->thread[gress].mau->apply(toAttach);
     }
 
-    void extracPhase0(IR::BFN::Pipe* rv, gress_t gress) {
+    void extractPhase0(IR::BFN::Pipe* rv, gress_t gress) {
         if (gress == EGRESS) return;
         // Check for a phase 0 table. If one exists, it'll be removed from the
         // ingress pipeline and converted to a parser program.
         // XXX(seth): We should be able to move this into the midend now.
-        std::tie(mau, rv) = BFN::extractPhase0(mau, rv, refMap, typeMap, true);
+        std::tie(mau, rv) = BFN::extractPhase0(mau, rv, refMap, typeMap);
     }
 };
 
@@ -946,18 +849,21 @@ const IR::BFN::Pipe* extract_native_arch(P4::ReferenceMap* refMap, P4::TypeMap* 
     for (auto gress : {INGRESS, EGRESS}) {
         pipes[gress]->bindParams(&bindings /* out */);
         pipes[gress]->extractMetadata(rv /* out */, &bindings /* in */, gress);
-        pipes[gress]->extracPhase0(rv, gress);
+        pipes[gress]->extractPhase0(rv, gress);
         pipes[gress]->apply(simplifyReferences);
         pipes[gress]->extractTable(rv /* out */, gress /* in */);
         pipes[gress]->extractAttached(rv /* out */, gress);
     }
 
     auto parserInfo = BFN::extractParser(rv, pipes[INGRESS]->parser, pipes[INGRESS]->deparser,
-                                         pipes[EGRESS]->parser, pipes[EGRESS]->deparser,
-                                         /* useTna = */ true);
+                                         pipes[EGRESS]->parser, pipes[EGRESS]->deparser);
     for (auto gress : { INGRESS, EGRESS }) {
         rv->thread[gress].parser = parserInfo.parsers[gress];
         rv->thread[gress].deparser = parserInfo.deparsers[gress];
+    }
+
+    for (auto gress : { INGRESS, EGRESS }) {
+        rv = BFN::extractChecksumFromDeparser(pipes[gress]->deparser, rv);
     }
 
     PassManager finalSimplifications = {
@@ -968,30 +874,16 @@ const IR::BFN::Pipe* extract_native_arch(P4::ReferenceMap* refMap, P4::TypeMap* 
     return rv->apply(finalSimplifications);
 }
 
-const IR::BFN::Pipe *extract_maupipe(const IR::P4Program *program, const BFN_Options &options) {
+const IR::BFN::Pipe *extract_maupipe(const IR::P4Program *program) {
     P4::ReferenceMap  refMap;
     P4::TypeMap       typeMap;
     refMap.setIsV1(true);
     P4::EvaluatorPass evaluator(&refMap, &typeMap);
-    program = program->apply(evaluator);
+    program->apply(evaluator);
     auto toplevel = evaluator.getToplevelBlock();
     auto top = toplevel->getMain();
     if (!top) {
         error("No main switch");
         return nullptr; }
-
-    bool needTranslation = options.native_arch &&
-            (options.langVersion == CompilerOptions::FrontendVersion::P4_14);
-
-    // XXX(zma) : assuming tofino & jbay have same arch for now
-    if (options.arch == "v1model" && !needTranslation) {
-        return extract_v1model_arch(&refMap, &typeMap, top);
-    } else if (options.arch == "native") {
-        return extract_native_arch(&refMap, &typeMap, top);
-    } else if (options.arch == "v1model" && needTranslation) {
-        return extract_native_arch(&refMap, &typeMap, top);
-    } else {
-        error("Unknown architecture %s", options.target);
-        return nullptr;
-    }
+    return extract_native_arch(&refMap, &typeMap, top);
 }

@@ -16,30 +16,9 @@ Visitor::profile_t InstructionSelection::init_apply(const IR::Node *root) {
     return rv;
 }
 
-IR::Member *InstructionSelection::gen_stdmeta(cstring field) {
-    cstring metadataName = cstring::to_cstring(VisitingThread(this)) +
-                           "::standard_metadata";
-    auto* meta = findContext<IR::BFN::Pipe>()->metadata[metadataName];
-    if (!meta) return nullptr;
-    LOG1("metadata size " << findContext<IR::BFN::Pipe>()->metadata.size());
-    if (auto* f = meta->type->getField(field))
-        return new IR::Member(f->type, new IR::ConcreteHeaderRef(meta), field);
-    BUG("No field %s in standard_metadata", field);
-    return nullptr;
-}
-
-IR::Member *InstructionSelection::gen_intrinsic_metadata(gress_t gress, cstring field) {
-    cstring metadataName;
-    if (gress == gress_t::INGRESS)
-        metadataName = cstring::to_cstring(VisitingThread(this)) +
-                "::" + "ingress_intrinsic_metadata_for_tm";
-    else
-        metadataName = cstring::to_cstring(VisitingThread(this)) +
-                "::" + "egress_intrinsic_metadata";
-
-    for (auto m : findContext<IR::BFN::Pipe>()->metadata) {
-        LOG3("metadata " << m.first << " " << m.second);
-    }
+IR::Member *InstructionSelection::genIntrinsicMetadata(gress_t gress,
+                                                       cstring header, cstring field) {
+    auto metadataName = cstring::to_cstring(gress) + "::" + header;
     auto* meta = findContext<IR::BFN::Pipe>()->metadata[metadataName];
     if (!meta) {
         BUG("Unable to find metadata %s", metadataName);
@@ -317,12 +296,14 @@ const IR::Node *InstructionSelection::postorder(IR::Primitive *prim) {
         } else {
             if (VisitingThread(this) != gress_t::INGRESS)
                 error("%s%: %s is only allowed in ingress", prim->srcInfo, prim->name);
-            auto egress_spec = gen_stdmeta("egress_spec");
-            auto ingress_port = gen_stdmeta("ingress_port");
-            if (!egress_spec)
-                egress_spec = gen_intrinsic_metadata(gress_t::INGRESS, "ucast_egress_port");
-            if (!ingress_port)
-                ingress_port = gen_intrinsic_metadata(gress_t::INGRESS, "ingress_port");
+
+            auto egress_spec = genIntrinsicMetadata(gress_t::INGRESS,
+                                                    "ingress_intrinsic_metadata_for_tm",
+                                                    "ucast_egress_port");
+            auto ingress_port = genIntrinsicMetadata(gress_t::INGRESS,
+                                                     "ingress_intrinsic_metadata",
+                                                     "ingress_port");
+
             auto s1 = new IR::MAU::Instruction(prim->srcInfo, "set",
                           MakeSlice(egress_spec, 0, 6),
                           MakeSlice(prim->operands.at(0), 0, 6));
@@ -386,14 +367,6 @@ const IR::Node *InstructionSelection::postorder(IR::Primitive *prim) {
             auto rv = new IR::MAU::Instruction(*prim);
             rv->name = rv->name + 4;  // strip off bit_ prefix
             return rv; }
-    } else if (prim->name == "drop" || prim->name == "mark_to_drop") {
-        // XXX(hanw) instead of invalidating egress_port container, we should set drop_ctrl bit.
-        // FIXME: This needs to be fixed in the midend by Han in order for the register to be
-        // correct, this is a punt to Han to be done ASAP
-        auto member = gen_stdmeta("drop");
-        auto constant = new IR::Constant(IR::Type::Bits::get(1), 1);
-        if (member)
-            return new IR::MAU::Instruction(prim->srcInfo, "set", member, constant);
     } else if (prim->name == "register_action.execute" ||
                prim->name == "register_action.execute_log") {
         bool direct_access = false;

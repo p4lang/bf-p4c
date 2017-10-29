@@ -17,7 +17,6 @@ class BFN_Options : public CompilerOptions {
     bool phv_slicing = true;
     bool phv_overlay = true;
     bool ignorePHVOverflow = false;
-    bool native_arch = false;
     bool allowUnimplemented = false;
     bool debugInfo = false;
     bool no_deadcode_elimination = false;
@@ -41,9 +40,6 @@ class BFN_Options : public CompilerOptions {
         registerOption("--ignore-overflow", nullptr,
             [this](const char *) { ignorePHVOverflow = true; return true; },
             "attempt to continue compiling even if PHV space is exhausted");
-        registerOption("--native", nullptr,
-            [this](const char *) { native_arch = true; return true; },
-            "use tofino native model as target architecture (experimental)");
         registerOption("--allowUnimplemented", nullptr,
             [this](const char *) { allowUnimplemented = true; return true; },
             "allow assembly generation even if there are unimplemented features in the P4 code");

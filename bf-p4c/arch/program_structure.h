@@ -49,12 +49,15 @@ class ProgramStructure {
     ordered_map<cstring, const IR::Type_Enum*>   enums;
     ordered_map<cstring, const IR::Type_Extern*> extern_types;
     ordered_map<cstring, const IR::Type_Typedef*> typedefs;
+    ordered_set<cstring>                         unique_declarations;
 
     /// maintain program declarations to reprint a valid P16 program
     ordered_map<cstring, const IR::P4Control*>   controls;
     ordered_map<cstring, const IR::P4Parser*>    parsers;
     ordered_map<cstring, const IR::Type_Header*> header_types;
     ordered_map<cstring, const IR::Type_Struct*> struct_types;
+    ordered_map<cstring, const IR::Type_HeaderUnion*> header_union_types;
+    ordered_map<cstring, const IR::Type_Typedef*> typedef_types;
     std::vector<const IR::Type_Action*>          action_types;
 
     // maintain symbol tables for program transformation
@@ -113,15 +116,19 @@ class ProgramStructure {
 
     /// map metadata identified by a tuple {structure name, field name}
     /// to another metadata identified by the same tuple
-    std::map<std::pair<cstring, cstring>, std::pair<cstring, cstring>> metadataMap;
+    std::map<std::pair<cstring, cstring>, std::pair<cstring, cstring>> metadataNameMap;
+    std::map<std::pair<cstring, cstring>, unsigned> metadataTypeMap;
 
     /// all unique names in the program
     std::set<cstring>                            unique_names;
 
     /// program control block names from P14
     const IR::ToplevelBlock*                     toplevel;
-    cstring ingress_name;
-    cstring egress_name;
+
+    /// map standard parser and control block name to
+    /// arbitrary name assigned by user.
+    ordered_map<cstring, cstring>                blockNames;
+    cstring getBlockName(cstring name);
 
     void createErrors();
     void createEnums();
@@ -129,6 +136,7 @@ class ProgramStructure {
     void createTypes();
     void createActions();
     void createExterns();
+    void cvtExpressions();
     void createParsers();
     void createControls();
     void createMain();

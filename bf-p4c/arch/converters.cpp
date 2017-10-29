@@ -55,6 +55,8 @@ const IR::Node* ParserConverter::postorder(IR::AssignmentStatement* node) {
 
 const IR::Node* ParserConverter::postorder(IR::Member* node) {
     auto* orig = getOriginal<IR::Member>();
+    RETURN_TRANSLATED_NODE_IF_FOUND(pathsToDo);
+    RETURN_TRANSLATED_NODE_IF_FOUND(typeNamesToDo);
     RETURN_TRANSLATED_NODE_IF_FOUND(parserCounterSelects);
     return node;
 }
@@ -187,9 +189,15 @@ const IR::Node* IngressDeparserConverter::preorder(IR::P4Control* node) {
                               IR::Direction::In, meta->type);
     paramList->push_back(param);
 
-    // add deparser intrinsic metadata
-    auto path = new IR::Path("ingress_intrinsic_metadata_for_deparser_t");
+    // add ingress intrinsic metadata
+    auto path = new IR::Path("ingress_intrinsic_metadata_t");
     auto type = new IR::Type_Name(path);
+    param = new IR::Parameter("ig_intr_md", IR::Direction::In, type);
+    paramList->push_back(param);
+
+    // add deparser intrinsic metadata
+    path = new IR::Path("ingress_intrinsic_metadata_for_deparser_t");
+    type = new IR::Type_Name(path);
     param = new IR::Parameter("ig_intr_md_for_deparser", IR::Direction::In, type);
     paramList->push_back(param);
 
@@ -323,11 +331,24 @@ const IR::Node* EgressParserConverter::postorder(IR::P4Parser* node) {
     auto paramList = new IR::ParameterList({parser->getApplyParameters()->parameters.at(0),
                                             parser->getApplyParameters()->parameters.at(1),
                                             parser->getApplyParameters()->parameters.at(2)});
-    // add ig_intr_md
+    // add eg_intr_md
     auto path = new IR::Path("egress_intrinsic_metadata_t");
     auto type = new IR::Type_Name(path);
     auto param = new IR::Parameter("eg_intr_md", IR::Direction::Out, type);
     paramList->push_back(param);
+
+    // add ig_intr_md
+    path = new IR::Path("ingress_intrinsic_metadata_t");
+    type = new IR::Type_Name(path);
+    param = new IR::Parameter("ig_intr_md", IR::Direction::InOut, type);
+    paramList->push_back(param);
+
+    // add ig_intr_md_for_tm
+    path = new IR::Path("ingress_intrinsic_metadata_for_tm_t");
+    type = new IR::Type_Name(path);
+    param = new IR::Parameter("ig_intr_md_for_tm", IR::Direction::InOut, type);
+    paramList->push_back(param);
+
     auto parser_type = new IR::Type_Parser("egressParserImpl", paramList);
     auto result = new IR::P4Parser(parser->srcInfo, "egressParserImpl", parser_type,
                                    parser->constructorParams, parser->parserLocals,
@@ -380,9 +401,9 @@ const IR::Node* PathExpressionConverter::postorder(IR::Member *node) {
     CHECK_NULL(expr);
     auto pathname = expr->path->name;
 
-    BUG_CHECK(!structure->metadataMap.empty(), "metadata translation map cannot be empty");
-    auto it = structure->metadataMap.find(std::make_pair(pathname, membername));
-    if (it != structure->metadataMap.end()) {
+    BUG_CHECK(!structure->metadataNameMap.empty(), "metadata translation map cannot be empty");
+    auto it = structure->metadataNameMap.find(std::make_pair(pathname, membername));
+    if (it != structure->metadataNameMap.end()) {
         auto expr = new IR::PathExpression(it->second.first);
         auto result = new IR::Member(node->srcInfo, expr, it->second.second);
         return result;
@@ -418,7 +439,7 @@ const IR::Node* HashConverter::postorder(IR::MethodCallStatement* node) {
     auto member = new IR::Member(new IR::PathExpression(hashName), "get_hash");
 
     auto dst_size = mce->typeArguments->at(0)->width_bits();
-    auto src_size = mce->typeArguments->at(2)->width_bits();
+    auto src_size = mce->typeArguments->at(1)->width_bits();
     if (src_size != dst_size) {
         WARNING("casting bit<" << src_size << "> to bit<" << dst_size << ">");
         return new IR::AssignmentStatement(pDest,
