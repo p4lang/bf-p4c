@@ -161,16 +161,16 @@ class ReplaceArchitecture : public Inspector {
             if (auto v = decl->to<IR::Type_Extern>()) {
                 structure->extern_types.emplace(v->name, v);
             } else if (decl->is<IR::P4Action>()) {
-            } else if (auto v = decl->to<IR::Type_MatchKind>()) {
+            } else if (decl->is<IR::Type_MatchKind>()) {
             } else if (auto v = decl->to<IR::Type_Typedef>()) {
                 structure->typedefs.emplace(v->name, v);
                 structure->unique_declarations.insert(v->name);
             } else if (auto v = decl->to<IR::Type_Enum>()) {
                 structure->enums.emplace(v->name, v);
-            } else if (auto v = decl->to<IR::Type_Struct>()) {
-            } else if (auto v = decl->to<IR::Type_Control>()) {
-            } else if (auto v = decl->to<IR::Type_Parser>()) {
-            } else if (auto v = decl->to<IR::Type_Package>()) {
+            } else if (decl->is<IR::Type_Struct>()) {
+            } else if (decl->is<IR::Type_Control>()) {
+            } else if (decl->is<IR::Type_Parser>()) {
+            } else if (decl->is<IR::Type_Package>()) {
             } else {
                 WARNING("Cannot recognize architecture definition " << decl);
             }
@@ -1049,7 +1049,7 @@ class ConstructSymbolTable : public Inspector {
                             structure->parserCounterSelects.emplace(node, node);
                         }
                     }
-                } else if (auto type = expr->type->to<IR::Type_Struct>()) {
+                } else if (expr->type->is<IR::Type_Struct>()) {
                     structure->pathsToDo.emplace(node, node);
                 } else {
                     WARNING("metadata " << node << " is not converted");
@@ -1134,7 +1134,7 @@ class ConstructSymbolTable : public Inspector {
             } else {
                 WARNING("Unsupported extern function" << node);
             }
-        } else if (auto bi = mi->to<P4::BuiltInMethod>()) {
+        } else if (mi->is<P4::BuiltInMethod>()) {
             WARNING("built-in method " << node << " is not converted");
         } else {
             WARNING("method call " << node << " not converted");

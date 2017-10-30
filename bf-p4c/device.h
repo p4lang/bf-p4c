@@ -60,7 +60,7 @@ class TofinoDevice : public Device {
     const TofinoPardeSpec parde_;
 
  public:
-    TofinoDevice() : Device("Tofino") {}
+    TofinoDevice() : Device("Tofino"), parde_() {}
 
     const PhvSpec& getPhvSpec() const { return phv_; }
     const PardeSpec& getPardeSpec() const { return parde_; }
@@ -72,7 +72,7 @@ class JBayDevice : public Device {
     const JBayPardeSpec parde_;
 
  public:
-    JBayDevice() : Device("JBay") {}
+    JBayDevice() : Device("JBay"), parde_() {}
 
     const PhvSpec& getPhvSpec() const { return phv_; }
     const PardeSpec& getPardeSpec() const { return parde_; }

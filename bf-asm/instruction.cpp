@@ -63,8 +63,8 @@ struct operand {
             error(lineno, "constant value %ld out of range for immediate", value);
             return -1; }
         void dbprint(std::ostream &out) const override { out << value; }
-        void gen_prim_cfg(json::map& out) { 
-          out["type"] = "immmediate"; 
+        void gen_prim_cfg(json::map& out) override {
+          out["type"] = "immmediate";
           out["name"] = std::to_string(value);
         }
     };
@@ -97,8 +97,8 @@ struct operand {
             tbl->stage->action_use[tbl->gress][reg->reg.uid] = true; }
         void dbprint(std::ostream &out) const override { out << reg; }
         void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) override { fn(*reg); }
-        void gen_prim_cfg(json::map& out) { 
-          out["type"] = "phv"; 
+        void gen_prim_cfg(json::map& out) override {
+          out["type"] = "phv";
           out["name"] = reg->reg.name;
         }
     };
@@ -112,7 +112,7 @@ struct operand {
         Action(int line, const std::string &n, Table *tbl, Table::Format::Field *f,
                unsigned l, unsigned h) : Base(line), name(n), table(tbl), field(f), lo(l), hi(h) {}
         Action(int line, const std::string &n, Table *tbl, Table::Format::Field *f,
-               unsigned l, unsigned h, const std::string &m) : 
+               unsigned l, unsigned h, const std::string &m) :
                 Base(line), name(n), p4name(m), table(tbl), field(f), lo(l), hi(h) {}
         bool equiv(const Base *a_) const override {
             if (auto *a = dynamic_cast<const Action *>(a_)) {
@@ -169,7 +169,7 @@ struct operand {
             if (field)
                 out << '[' << field->bits[0].lo << ':' << field->size << ", "
                     << field->group << ']'; }
-        void gen_prim_cfg(json::map& out) { 
+        void gen_prim_cfg(json::map& out) override {
           std::string refn = "immediate";
           if (field) {
             auto fmt = field->fmt;
@@ -178,11 +178,11 @@ struct operand {
                 auto tbltype = tbl->table_type();
                 if (tbltype == Table::ACTION) {
                     refn = "action_param";
-                } 
+                }
             }
-          } 
+          }
           out["type"] = refn;
-          out["name"] = p4name; 
+          out["name"] = p4name;
         }
     };
     struct RawAction : Base {
@@ -198,7 +198,7 @@ struct operand {
         int bits(int group) override { return 0x40 + index; }
         unsigned bitoffset(int group) const override { return offset; }
         void dbprint(std::ostream &out) const override { out << 'A' << index; }
-        void gen_prim_cfg(json::map& out) { /* TODO: what is this */ }
+        void gen_prim_cfg(json::map& out) override { /* TODO: what is this */ }
     };
     struct HashDist : Base {
         Table                   *table;
@@ -275,7 +275,7 @@ struct operand {
                 out << sep << u;
                 sep = ", "; }
             out << ")"; }
-        void gen_prim_cfg(json::map& out) { 
+        void gen_prim_cfg(json::map& out) override {
           out["type"] = "hash";
           out["name"] = "TODO"; // TODO: What is the name?
           // TODO: What about algorithm?
@@ -311,7 +311,7 @@ struct operand {
                 if (hi >= 0 && hi != lo) out << ".. " << hi;
                 out << ')'; }
             out << '[' << tbl->name() << ':' << action << ']'; }
-        void gen_prim_cfg(json::map& out) { /* what will be this */ }
+        void gen_prim_cfg(json::map& out) override { /* what will be this */ }
     };
     operand() : op(0) {}
     operand(const operand &a) : op(a.op ? a.op->clone() : 0) {}
@@ -344,7 +344,7 @@ struct operand {
     Base *operator->() { return op->lookup(op); }
     template <class T> T *to() { return dynamic_cast<T *>(op->lookup(op)); }
     void gen_prim_cfg(json::map& out) { op->gen_prim_cfg(out); }
-    
+
 };
 
 operand::operand(Table *tbl, const Table::Actions::Action *act, const value_t &v) : op(0) {
@@ -425,7 +425,7 @@ int parity(unsigned v) {
 struct VLIWInstruction : Instruction {
     VLIWInstruction(int l) : Instruction(l) {}
     virtual int encode() = 0;
-    void gen_prim_cfg(json::map& out) { };
+    void gen_prim_cfg(json::map& out) override { };
     template<class REGS>
     void write_regs(REGS &regs, Table *tbl, Table::Actions::Action *act);
     FOR_ALL_TARGETS(DECLARE_FORWARD_VIRTUAL_INSTRUCTION_WRITE_REGS)
@@ -457,7 +457,7 @@ struct AluOP : VLIWInstruction {
     : VLIWInstruction(d.lineno), opc(op), dest(tbl->gress, d),
       src1(tbl, act, s1), src2(tbl, act, s2) {}
     std::string name() { return opc->name; };
-    void gen_prim_cfg(json::map& out) { 
+    void gen_prim_cfg(json::map& out) {
       out["name"] = "DirectAluPrimitive";
       out["operation"] = opc->name;
       dest.gen_prim_cfg((out["dest"] = json::map()));
@@ -614,8 +614,8 @@ struct LoadConst : VLIWInstruction {
         : VLIWInstruction(d.lineno), dest(tbl->gress, d), src(s) {}
     LoadConst(int line, Phv::Ref &d, int v) : VLIWInstruction(line), dest(d), src(v) {}
     std::string name() { return ""; };
-    void gen_prim_cfg(json::map& out) { 
-      out["name"] = "ModifyFieldPrimitive"; 
+    void gen_prim_cfg(json::map& out) {
+      out["name"] = "ModifyFieldPrimitive";
       dest.gen_prim_cfg((out["dest"] = json::map()));
       json::vector &srcv = out["src"] = json::vector();
       json::map onemap;
@@ -696,7 +696,7 @@ struct CondMoveMux : VLIWInstruction {
     : VLIWInstruction(d.lineno), opc(op), dest(tbl->gress, d), src1(tbl, act, s1),
       src2(tbl, act, s2) {}
     std::string name() { return opc->name; }
-    void gen_prim_cfg(json::map& out) { 
+    void gen_prim_cfg(json::map& out) {
       out["name"] = opc->name;
       dest.gen_prim_cfg((out["dest"] = json::map()));
       json::vector &srcv = out["src"] = json::vector();
@@ -796,8 +796,8 @@ struct DepositField : VLIWInstruction {
     : VLIWInstruction(d.lineno), dest(tbl->gress, d), src1(tbl, act, s1), src2(tbl, act, s2) {}
     DepositField(const Set &);
     std::string name() { return "deposit_field"; }
-    void gen_prim_cfg(json::map& out) { 
-      out["name"] = "ModifyFieldPrimitive"; 
+    void gen_prim_cfg(json::map& out) {
+      out["name"] = "ModifyFieldPrimitive";
       dest.gen_prim_cfg((out["dest"] = json::map()));
       json::vector &srcv = out["src"] = json::vector();
       json::map oneoper;
@@ -897,8 +897,8 @@ struct Set : VLIWInstruction {
     Set(Table *tbl, const Table::Actions::Action *act, const value_t &d, const value_t &s)
         : VLIWInstruction(d.lineno), dest(tbl->gress, d), src(tbl, act, s) {}
     std::string name() { return "set"; };
-    void gen_prim_cfg(json::map& out) { 
-      out["name"] = "ModifyFieldPrimitive"; 
+    void gen_prim_cfg(json::map& out) {
+      out["name"] = "ModifyFieldPrimitive";
       dest.gen_prim_cfg((out["dest"] = json::map()));
       json::vector &srcv = out["src"] = json::vector();
       json::map oneoper;
@@ -990,7 +990,7 @@ struct NulOP : VLIWInstruction {
     NulOP(Table *tbl, const Table::Actions::Action *act, const Decode *o, const value_t &d) :
         VLIWInstruction(d.lineno), opc(o), dest(tbl->gress, d) {}
     std::string name() { return opc->name; };
-    void gen_prim_cfg(json::map& out) { 
+    void gen_prim_cfg(json::map& out) {
       out["name"] = "DirectAluPrimitive";
       out["operator"] = opc->name;
       dest.gen_prim_cfg((out["dest"] = json::map()));
@@ -1057,7 +1057,7 @@ struct ShiftOP : VLIWInstruction {
                     src2 = src1;
                     if (CHECKTYPE(ops[2], tINT)) shift = ops[2].i; } }
     std::string name() { return opc->name; };
-    void gen_prim_cfg(json::map& out) { 
+    void gen_prim_cfg(json::map& out) {
       out["name"] = "DirectAluPrimitive";
       out["operator"] = opc->name;
       dest.gen_prim_cfg((out["dest"] = json::map()));

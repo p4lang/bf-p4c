@@ -179,7 +179,7 @@ void ProgramStructure::createEnums() {
 
 void ProgramStructure::createTofinoArch() {
     for (auto decl : tofinoArchTypes) {
-        if (auto err = decl->to<IR::Type_Error>())
+        if (decl->is<IR::Type_Error>())
             continue;
         declarations.push_back(decl);
     }

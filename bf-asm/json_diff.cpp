@@ -214,8 +214,8 @@ void list_map_print_diff(json::vector *a, json::vector *b, int indent, const cha
     std::cout << ']';
 }
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpotentially-evaluated-expression"
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpotentially-evaluated-expression"
 bool equiv(json::vector *a, json::vector *b, const std::set<long> &ignore_idx) {
     for (auto key : list_map_keys)
         if (is_list_map(a, key) && is_list_map(b, key))
@@ -289,7 +289,7 @@ void print_diff(json::vector *a, json::vector *b, const std::set<long> &ignore_i
     do_prefix(indent, " ");
     std::cout << ']';
 }
-#pragma GCC diagnostic pop
+#pragma clang diagnostic pop
 
 std::map<json::obj *, json::obj *, json::obj::ptrless> build_sort_map(json::map *m) {
     std::map<json::obj *, json::obj *, json::obj::ptrless> rv;

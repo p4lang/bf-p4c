@@ -44,7 +44,7 @@ cstring debugInfoFor(const IR::BFN::Extract* extract,
     if (auto* constantSource = extract->source->to<IR::BFN::ConstantRVal>()) {
         info << "value " << constantSource->constant << " -> "
              << slice.container << " " << slice.container_bits() << ": ";
-    } else if (auto* bufferSource = extract->source->to<IR::BFN::BufferRVal>()) {
+    } else if (extract->source->is<IR::BFN::BufferRVal>()) {
         // In the interest of brevity, don't print the range of bits being
         // extracted into the destination container if it matches the size of
         // the container exactly.
