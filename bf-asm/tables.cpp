@@ -2069,6 +2069,11 @@ void Table::common_tbl_cfg(json::map &tbl, const char *default_match_type) {
             param["bit_width"] = p.bit_width;
             param["bit_width_full"] = p.bit_width_full;
             param["is_valid"] = p.is_valid;
+            /* BRIG-288 */
+            std::string fieldname, instname;
+            gen_instfield_name(p.name, instname, fieldname);
+            param["instance_name"] = instname;
+            param["field_name"] = fieldname;
             params.push_back(std::move(param));
             start_bit += p.bit_width_full; } }
 }

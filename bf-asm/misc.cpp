@@ -1,5 +1,6 @@
 #include "misc.h"
 #include <sstream>
+#include <string>
 
 int remove_name_tail_range(std::string &name, int *size) {
     auto tail = name.rfind('.');
@@ -53,4 +54,19 @@ bool remove_aug_names(std::string  &name) {
         return true;
     }
     return false;
+}
+
+/* Given a p4 name, split into instance and field names if possible 
+ *  - else return a copy of the original name */
+bool gen_instfield_name(const std::string &fullname, std::string &instname, 
+                         std::string &field_name) {
+    auto dotpos = fullname.rfind('.');
+    if (dotpos == std::string::npos) {
+        instname = fullname;
+        field_name = std::string();
+    } else {
+        instname = fullname.substr(0, dotpos);
+        field_name = fullname.substr(dotpos+1, fullname.size());
+    }
+    return true;
 }

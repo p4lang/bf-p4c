@@ -58,6 +58,9 @@ std::string get_filename(const char *s);
 
 bool remove_aug_names(std::string& name);
 
+bool gen_instfield_name(const std::string &fullname, std::string &instname,
+     std::string &field_name);
+
 #include <memory>
 /// Compare pointers based on the pointed at type
 /// For use as a Comparator for map/set types
