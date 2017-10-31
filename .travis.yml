@@ -1,6 +1,9 @@
 services:
 - docker
 
+notifications:
+    slack: barefootnetworks:DLConaMwl9V5JAlA3hErnoSE#brig-travis
+
 branches:
   only:
   - master
