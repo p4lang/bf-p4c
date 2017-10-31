@@ -650,11 +650,7 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
     } else if (action && action->actions) {
         action->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
         action->actions->add_action_format(this, stage_tbl); }
-    add_pack_format(stage_tbl, format, false);
-    //if (format)
-    //    add_pack_format(stage_tbl, ((format->size - 1)/128U + 1) * 128, 1, 1);
-    //else
-    //    add_pack_format(stage_tbl, 0, 0, 1);
+    add_pack_format(stage_tbl, format, true, false);
     add_result_physical_buses(stage_tbl);
     if (ways.size() > 0) {
         json::vector &way_stage_tables = stage_tbl["ways"] = json::vector();
@@ -665,7 +661,7 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
             way_tbl["way_number"] = way_number++;
             way_tbl["stage_table_type"] = "hash_way";
             way_tbl["size"] = way.rams.size()/fmt_width * format->groups() * 1024;
-            add_pack_format(way_tbl, format);
+            add_pack_format(way_tbl, format, false);
             way_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg(way);
             way_stage_tables.push_back(std::move(way_tbl)); } }
     MatchTable::gen_idletime_tbl_cfg(stage_tbl);

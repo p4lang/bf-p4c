@@ -434,7 +434,7 @@ void ActionTable::gen_tbl_cfg(json::vector &out) {
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "action_data", number_entries);
     for (auto &act : *actions) {
         auto *fmt = ::get(action_formats, act.name);
-        add_pack_format(stage_tbl, fmt ? fmt : format, true, &act); }
+        add_pack_format(stage_tbl, fmt ? fmt : format, true, true, &act); }
     stage_tbl["memory_resource_allocation"] =
         gen_memory_resource_allocation_tbl_cfg("sram", layout, true);
     if (actions)

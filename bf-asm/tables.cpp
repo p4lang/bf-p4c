@@ -1976,14 +1976,20 @@ int Table::get_table_word_width() {
     return MEM_WORD_WIDTH;
 }
 
+int Table::get_padding_format_width() {
+    if (format) {
+        if (is_wide_format())
+            return get_mem_units_per_table_word() * MEM_WORD_WIDTH;
+        return (1U << format->log2size); }
+    return -1;
+}
+
 json::map &Table::add_pack_format(json::map &stage_tbl, Table::Format *format,
-                                  bool print_fields, Table::Actions::Action *act) {
+        bool pad_zeros, bool print_fields, Table::Actions::Action *act) {
     // Add zero padding fields to format
     // FIXME: Can this be moved to a format pass?
-    if (format) {
-        unsigned format_width = 1U << format->log2size;
-        if (stage_tbl["stage_table_type"]->to<json::string>() != "hash_way")
-            add_zero_padding_fields(format, act, format_width); }
+    if (pad_zeros)
+        add_zero_padding_fields(format, act, get_padding_format_width());
     json::map pack_fmt;
     pack_fmt["memory_word_width"] = MEM_WORD_WIDTH;
     pack_fmt["table_word_width"] = get_table_word_width();

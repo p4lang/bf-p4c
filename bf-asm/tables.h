@@ -458,7 +458,7 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     virtual Actions *get_actions() { return actions; }
     void add_reference_table(json::vector &table_refs, const Table::Call& c, const std::string& href);
     json::map &add_pack_format(json::map &stage_tbl, int memword, int words, int entries = -1);
-    json::map &add_pack_format(json::map &stage_tbl, Table::Format *format,
+    json::map &add_pack_format(json::map &stage_tbl, Table::Format *format, bool pad_zeros = true,
                                bool print_fields = true, Table::Actions::Action *act = nullptr);
     virtual void add_field_to_pack_format(json::vector &field_list, int basebit, std::string name,
                                           const Table::Format::Field &field,
@@ -490,6 +490,7 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     int get_entries_per_table_word();
     int get_mem_units_per_table_word();
     int get_table_word_width();
+    int get_padding_format_width(); 
 };
 
 class FakeTable : public Table {
