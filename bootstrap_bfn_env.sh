@@ -1,5 +1,15 @@
 #!/bin/bash
 
+cd $(dirname $0)
+curdir=$(basename $PWD)
+topdir=$(dirname $PWD)
+
+os_deps=${topdir}/${curdir}/install_os_deps.sh
+if [ ! -x $os_deps ]; then
+    echo "Can not find script to install OS dependencies: $os_deps"
+    exit 1
+fi
+
 confirm () {
     # call with a prompt string or use a default
     read -r -p "${1:-Are you sure? [y/N]} " response
@@ -13,26 +23,29 @@ confirm () {
     esac
 }
 
-die () {
-    if [ $# -gt 0 ]; then
-        echo >&2 "$@"
-    fi
-    exit 1
-}
-
 gitclone() {
+    # arguments:
+    # $1 - the repository
+    # $2 - the directory name where to checkout
+    # $3 - optional branch to checkout
+    local branch="master"
+    if [ ! -z $3 ]; then branch=$3; fi
     [ -e "$2" ] && die "$2 already exists!"
     [ ! -d "$(dirname $2)" ] && die "$(dirname $2) not a directory"
-    git clone --recursive $1 $2 || { rm -rf $2; die "can't clone $1"; }
+    git clone --recursive -b $branch $1 $2 || { rm -rf $2; die "can't clone $1"; }
 }
 
-cd $(dirname $0)
-curdir=$(basename $PWD)
-topdir=$(dirname $PWD)
+echo "Using $topdir as top level directory for git repositories"
+echo "Using MAKEFLAGS=${MAKEFLAGS:=-j 4}"
+export MAKEFLAGS
+
+reuse_asis=false
+clean_before_rebuild=false
+pull_before_rebuild=false
+rebase_option=""
 
 cd $topdir
 found=""
-
 for repo in behavioral-model model bf-syslibs bf-utils bf-drivers PI; do
     if [ -d $repo ]; then
         if [ -d $repo/.git ]; then
@@ -43,11 +56,6 @@ for repo in behavioral-model model bf-syslibs bf-utils bf-drivers PI; do
         fi
     fi
 done
-
-reuse_asis=false
-clean_before_rebuild=false
-pull_before_rebuild=false
-rebase_option=""
 
 if [ -z "$found" ]; then
     echo >&2 "No exisiting repositories found"
@@ -73,82 +81,10 @@ fi
 # needs to be rebuilt from scratch
 PI_clean_before_rebuild=$clean_before_rebuild
 
-ubuntu_release=$(lsb_release -r | cut -f 2)
-
-apt_packages="g++ git pkg-config automake libtool cmake python2.7 python cmake bison flex libboost-dev libboost-graph-dev libboost-test-dev libboost-program-options-dev libboost-system-dev libboost-filesystem-dev libboost-thread-dev libcli-dev libedit-dev libeditline-dev libevent-dev libjudy-dev libgc-dev libgmp-dev libjson0 libjson0-dev libmoose-perl libnl-route-3-dev libpcap0.8-dev libssl-dev autopoint doxygen texinfo python-scapy python-yaml python-ipaddr python-pip"
-
-echo "Need sudo privs to install apt packages"
-sudo apt-get update || die "Failed to update apt"
-sudo apt-get install -y $apt_packages || die "Failed to install needed packages"
-sudo pip install --upgrade pip
-sudo pip install ply || die "Failed to install needed packages"
-sudo pip install pyinstaller==3.2.1 || die "Failed to install needed packages"
-sudo apt-get remove -y python-thrift    # remove this broken package in case it was installed
-sudo pip install thrift || die "Failed to install needed packages"  # need this one instead
-sudo apt-get install -y libboost-iostreams-dev || die "Failed to update boost-iostream"
-
-# rapidjson is not available on Ubuntu 14.04, so we build from source
-if [[ $ubuntu_release =~ "14.04" ]]; then
-    builddir=$(mktemp --directory -t rjson_XXXXXX)
-    cd $builddir && \
-    git clone --recursive https://github.com/miloyip/rapidjson.git --branch "v1.1.0" && \
-    cd rapidjson && \
-    mkdir build && cd build && \
-    cmake .. && \
-    make install && \
-    cd /tmp && \
-    rm -rf $builddir || die "Failed to install rapidjson"
-else
-    sudo apt-get install -y rapidjson-dev || die "Failed to update rapidjson-dev"
-fi
-
-echo "Using $topdir as top level directory for git repositories"
-echo Using MAKEFLAGS=${MAKEFLAGS:=-j 4}
-export MAKEFLAGS
-
-function version_LT() { test "$(echo "$@" | tr " " "\n" | sort -rV | head -n 1)" != "$1"; }
-
-tmpdir=$(mktemp --directory)
-echo "Using $tmpdir for temporary build files"
-
-echo "Checking for and installing protobuf"
-if ! `pkg-config protobuf` || version_LT `pkg-config --modversion protobuf` "3.0.0"; then
-    pushd $tmpdir
-    sudo apt-get install -y curl unzip
-    git clone https://github.com/google/protobuf
-    cd protobuf
-    git checkout tags/v3.2.0
-    git submodule update --init --recursive
-    ./autogen.sh && \
-    ./configure && \
-    make && \
-    sudo make install && \
-    sudo ldconfig || \
-    die "Failed to install protobuf"
-    cd ../
-    /bin/rm -rf protobuf
-    PI_clean_before_rebuild=true
-    popd # tmpdir
-fi
-
-echo "Checking for and installing grpc"
-if ! `pkg-config grpc++` || version_LT `pkg-config --modversion grpc++` "1.3.0"; then
-    pushd $tmpdir
-    git clone https://github.com/google/grpc.git
-    cd grpc
-    git checkout tags/v1.3.2
-    git submodule update --init --recursive
-    make && \
-    sudo make install && \
-    sudo ldconfig || \
-    die "Failed to install grpc"
-    cd ../
-    /bin/rm -rf grpc
-    PI_clean_before_rebuild=true
-    popd # tmpdir
-fi
-
-sudo pip install protobuf grpcio || die "Failed to install python grpc packages"
+# install all necessary packages
+# and set SUDO, LDCONFIG, LDLIB_EXT as appropriate for the OS
+# also sets PI_clean_before_rebuild if the protobuf/grpc have been re-installed
+. $os_deps
 
 
 ### Behavioral Model setup
@@ -176,31 +112,31 @@ pushd behavioral-model >/dev/null
         # it is a libtool wrapper script and is slow to execute the first time
         # to avoid a potential timeout in STF tests, we "warm up" here
         ./targets/simple_switch/simple_switch -h > /dev/null 2>&1
-        sudo make install
+        $SUDO make install
     fi
 popd >/dev/null
 
 ### Model dependencies that need manual build
 ## libcrafter
-if [ ! -r /usr/local/include/crafter.h -o ! -x /usr/local/lib/libcrafter.so ]; then
+if [ ! -r /usr/local/include/crafter.h -o ! -x /usr/local/lib/libcrafter.${LDLIB_EXT} ]; then
     git clone https://github.com/pellegre/libcrafter
     cd libcrafter/libcrafter
     ./autogen.sh
     make -j4 || die "Failed to build libcrafter"
-    sudo make install
-    sudo ldconfig
+    $SUDO make install
+    $SUDO $LDCONFIG
     cd ../..
     rm -rf libcrafter
 else
     echo "libcrafter already installed"
 fi
 ## libcli
-if [ ! -r /usr/local/include/libcli.h -o ! -x /usr/local/lib/libcli.so ]; then
+if [ ! -r /usr/local/include/libcli.h -o ! -x /usr/local/lib/libcli.${LDLIB_EXT} ]; then
     git clone git@github.com:dparrish/libcli.git
     cd libcli
     make || die "Failed to build libcli"
-    sudo make install
-    sudo ldconfig
+    $SUDO make install
+    $SUDO $LDCONFIG
     cd ..
     rm -rf libcli
 else
@@ -214,10 +150,10 @@ install_bf_repo () {
     x_path_check=$2
     configure_flags=$3
     if [ ! -d $name/.git ]; then
-        gitclone git@github.com:barefootnetworks/$name.git $name
+        gitclone git@github.com:barefootnetworks/$name.git $name "brig-stable"
     elif $pull_before_rebuild; then
         pushd $name >/dev/null
-        git pull $rebase_option origin master
+        git pull $rebase_option origin brig-stable
         popd >/dev/null
     fi
     pushd $name >/dev/null
@@ -234,16 +170,19 @@ install_bf_repo () {
             make clean
         fi
         make && \
-        sudo make install && \
-        sudo ldconfig || \
+        $SUDO make install && \
+        $SUDO $LDCONFIG || \
         die "Failed to install $name"
     fi
     popd >/dev/null
     return 0
 }
 
-install_bf_repo "bf-syslibs" "/usr/local/lib/libbfsys.so" ""
-install_bf_repo "bf-utils" "/usr/local/lib/libbfutils.so" ""
+# build the drivers only on Linux
+if [ $(uname -s) == 'Linux' ]; then
+    install_bf_repo "bf-syslibs" "/usr/local/lib/libbfsys.${LDLIB_EXT}" ""
+    install_bf_repo "bf-utils" "/usr/local/lib/libbfutils.${LDLIB_EXT}" ""
+fi
 
 if [ ! -d PI/.git ]; then
     gitclone git@github.com:p4lang/PI.git PI
@@ -254,7 +193,7 @@ elif $pull_before_rebuild; then
 fi
 pushd PI >/dev/null
     builddir="."
-    if $reuse_asis && [ -x /usr/local/lib/libpi.so ]; then
+    if $reuse_asis && [ -x /usr/local/lib/libpi.${LDLIB_EXT} ]; then
         echo "Reusing PI as is"
     else
         cd $builddir
@@ -266,13 +205,16 @@ pushd PI >/dev/null
             make clean
         fi
         make && \
-        sudo make install && \
-        sudo ldconfig || \
+        $SUDO make install && \
+        $SUDO $LDCONFIG || \
         die "Failed to install PI"
     fi
 popd >/dev/null
 
-install_bf_repo "bf-drivers" "$(which bf_switchd)" "--disable-thrift --with-avago --without-kdrv --with-build-model --enable-pi"
+# build the drivers only on Linux
+if [ $(uname -s) == 'Linux' ]; then
+    install_bf_repo "bf-drivers" "$(which bf_switchd)" "--disable-thrift --with-avago --without-kdrv --with-build-model --enable-pi"
+fi
 
 ### Model setup
 if [ ! -d model/.git ]; then
@@ -293,9 +235,14 @@ pushd model >/dev/null
         echo "Reusing built $PWD/$builddir/tests/simple_test_harness/simple_test_harness as is"
     else
         cd $builddir
+        if [ $(uname -s) == 'Linux' ]; then
+            config_args="--enable-runner --enable-simple-test-harness"
+        else
+            config_args="--enable-simple-test-harness"
+        fi
         if [ ! -r Makefile ]; then
             ./autogen.sh
-            ./configure --enable-runner --enable-simple-test-harness
+            ./configure $config_args
         fi
         if $clean_before_rebuild; then
             make clean
@@ -303,22 +250,25 @@ pushd model >/dev/null
         make || die "harlyn model build failed"
         # FIXME -- should not need make install here!!!  Unless someone has previously
         # done a make install of the model, in which case cmake will get the old one
-        sudo make install
-        sudo ldconfig
+        $SUDO make install
+        $SUDO $LDCONFIG
     fi
 popd >/dev/null
 
 # re-install ptf unconditionally
+tmpdir=$(mktemp -d)
+echo "Using $tmpdir for temporary build files"
 pushd $tmpdir
 gitclone https://github.com/p4lang/ptf.git ptf
 cd ptf
-sudo python setup.py install
+$SUDO python setup.py install
 cd ..
-sudo rm -rf ptf
+$SUDO rm -rf ptf
 popd # tmpdir
-
-echo "Checking for huge pages"
-sudo $curdir/scripts/ptf_hugepage_setup.sh
-
 echo "Removing $tmpdir"
 rm -rf $tmpdir
+
+if [ $(uname -s) == 'Linux' ]; then
+    echo "Checking for huge pages"
+    $SUDO $curdir/scripts/ptf_hugepage_setup.sh
+fi
