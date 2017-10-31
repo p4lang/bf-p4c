@@ -30,9 +30,10 @@ std::ostream &operator<<(std::ostream &out, const DependencyGraph &dg) {
 }
 
 class FindDependencyGraph::AddDependencies : public MauInspector, TofinoWriteContext {
-    FindDependencyGraph          &self;
-    const IR::MAU::Table         *table;
-    const ordered_set<cstring>&  ignoreDep;
+    FindDependencyGraph                 &self;
+    const IR::MAU::Table                *table;
+    const ordered_set<cstring>&         ignoreDep;
+    std::map<PHV::Container, bitvec>    cont_writes;
 
  public:
     AddDependencies(FindDependencyGraph &self, const IR::MAU::Table *t, ordered_set<cstring>& t1) :
@@ -48,27 +49,60 @@ class FindDependencyGraph::AddDependencies : public MauInspector, TofinoWriteCon
             self.dg.add_edge(upstream_t, table, dep); }
     }
 
+    void addContDeps(ordered_map<const IR::MAU::Table *, bitvec> tables,
+                     const IR::MAU::Table *t, bitvec range, PHV::Container container) {
+        for (auto upstream_t : tables) {
+            if (ignoreDep.count(upstream_t.first->name)) {
+                WARN_CHECK(upstream_t.second == range, "Table %s's pragma ignore_table_dependency "
+                           "of %s is also ignoring PHV added action dependencies over container "
+                           "%s, which may not have been the desired outcome", t->name,
+                            upstream_t.first->name, container.toString());
+                continue;
+            }
+            self.dg.container_conflicts[upstream_t.first].insert(t);
+            self.dg.container_conflicts[t].insert(upstream_t.first);
+        }
+    }
+
     bool preorder(const IR::Expression *e) override {
         if (auto *field = self.phv.field(e)) {
-            if (!self.access.count(field->name)) return false;
-            LOG3("add_dependency(" << field->name << ")");
-            if (isWrite()) {
-                // Write-after-read dependence.
-                addDeps(self.access[field->name].read, table, DependencyGraph::ANTI);
-                // Write-after-write dependence.
-                addDeps(self.access[field->name].write, table, DependencyGraph::OUTPUT);
-            } else {
-                // Read-after-write dependence.
-                addDeps(self.access[field->name].write, table, DependencyGraph::DATA); }
-            return false; }
-        return true; }
+            if (self.access.count(field->name)) {
+                LOG3("add_dependency(" << field->name << ")");
+                if (isWrite()) {
+                    // Write-after-read dependence.
+                    addDeps(self.access[field->name].read, table, DependencyGraph::ANTI);
+                    // Write-after-write dependence.
+                    addDeps(self.access[field->name].write, table, DependencyGraph::OUTPUT);
+                } else {
+                    // Read-after-write dependence.
+                    addDeps(self.access[field->name].write, table, DependencyGraph::DATA);
+                }
+            }
+
+            if (isWrite() && self.phv.alloc_done()) {
+                field->foreach_alloc([&](const PHV::Field::alloc_slice &sl) {
+                    bitvec range(sl.container_bit, sl.width);
+                    cont_writes[sl.container] |= range;
+                });
+            }
+
+            return false;
+        }
+        return true;
+    }
 
     bool preorder(const IR::Annotation *) override { return false; }
+    void end_apply() override {
+        for (auto entry : cont_writes) {
+            addContDeps(self.cont_write[entry.first], table, entry.second, entry.first);
+        }
+    }
 };
 
 class FindDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteContext {
-    FindDependencyGraph         &self;
-    const IR::MAU::Table        *table;
+    FindDependencyGraph                &self;
+    const IR::MAU::Table               *table;
+    std::map<PHV::Container, bitvec>    cont_writes;
 
  public:
     UpdateAccess(FindDependencyGraph &self, const IR::MAU::Table *t) : self(self), table(t) {}
@@ -82,9 +116,25 @@ class FindDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteConte
                 a.write.insert(table);
             } else {
                 LOG3("update_access read " << field->name);
-                self.access[field->name].read.insert(table); }
-            return false; }
-        return true; }
+                self.access[field->name].read.insert(table);
+            }
+            if (isWrite() && self.phv.alloc_done()) {
+                field->foreach_alloc([&](const PHV::Field::alloc_slice &sl) {
+                    bitvec range(sl.container_bit, sl.width);
+                    cont_writes[sl.container] |= range;
+                });
+            }
+            return false;
+        }
+        return true;
+    }
+
+    void end_apply() override {
+        for (auto entry : cont_writes) {
+            auto &cw = self.cont_write[entry.first];
+            cw.emplace(table, entry.second);
+        }
+    }
 };
 
 class FindDependencyGraph::UpdateAttached : public Inspector {
@@ -132,6 +182,7 @@ bool FindDependencyGraph::preorder(const IR::MAU::TableSeq *seq) {
     const Context *ctxt = getContext();
     if (ctxt && ctxt->node->is<IR::BFN::Pipe>()) {
         access.clear();
+        cont_write.clear();
     } else if (ctxt && dynamic_cast<const IR::MAU::Table *>(ctxt->node)) {
         const IR::MAU::Table* parent;
         parent = dynamic_cast<const IR::MAU::Table *>(ctxt->node);
@@ -152,11 +203,12 @@ bool FindDependencyGraph::preorder(const IR::MAU::Table *t) {
     if (t->match_table) {
         auto annot = t->match_table->getAnnotations();
         for (auto ann : annot->annotations) {
-            auto name = ann->to<IR::StringLiteral>();
-            if (name && name->value == "ignore_table_dependency") {
-                auto tbl_name = ann->expr.at(0)->to<IR::StringLiteral>();
-                if (!tbl_name) continue;
-                ignore_tables.insert(tbl_name->value); } } }
+            if (ann->expr.size() != 1) continue;
+            auto tbl_name = ann->expr.at(0)->to<IR::StringLiteral>();
+            if (!tbl_name) continue;
+            ignore_tables.insert(tbl_name->value);
+        }
+    }
 
     // TODO: add a pass in the beginning of the back end that checks for
     // duplicate table instances and, if found, aborts compilation.
@@ -192,6 +244,12 @@ void FindDependencyGraph::flow_merge(Visitor &v) {
     for (auto &a : dynamic_cast<FindDependencyGraph &>(v).access) {
         access[a.first].read |= a.second.read;
         access[a.first].write |= a.second.write;
+    }
+
+    for (auto &cw : dynamic_cast<FindDependencyGraph &>(v).cont_write) {
+        for (auto entry : cw.second) {
+            cont_write[cw.first][entry.first] |= entry.second;
+        }
     }
 }
 

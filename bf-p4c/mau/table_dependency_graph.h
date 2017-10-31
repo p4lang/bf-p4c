@@ -32,10 +32,10 @@ class PhvInfo;
 
 struct DependencyGraph {
     typedef enum {
-        CONTROL,    // Control dependence.
-        DATA,       // Read-after-write (data) dependence.
-        ANTI,       // Write-after-read (anti) dependence.
-        OUTPUT      // Write-after-write (output) dependence.
+        CONTROL,     // Control dependence.
+        DATA,        // Read-after-write (data) dependence.
+        ANTI,        // Write-after-read (anti) dependence.
+        OUTPUT       // Write-after-write (output) dependence.
     } dependencies_t;
     typedef boost::adjacency_list<
         boost::vecS,
@@ -44,6 +44,46 @@ struct DependencyGraph {
         const IR::MAU::Table*,   // Vertex labels.
         dependencies_t     // Edge labels.
         > Graph;
+
+    /** A map of all tables that cannot be placed in the same stage as the key table, because
+     *  they share an ALU operation over a container.  The following example will indicate why
+     *  this is a problem:
+     *
+     *  action a1(bit<4> x1) { hdr.data.x1 = x1; }
+     *  action a2(bit<4> x2) { hdr.data.x2 = x2; }
+     *
+     *  table t1 { key = { hdr.data.f1; } actions = { a1; } default_action = a1(1); }
+     *  table t2 { key = { hdr.data.f1; } actions = { a2; } default_action = a2(1); }
+     *
+     *  apply { t1.apply(); t2.apply(); }
+     *
+     *  Now let's say that hdr.data.x1 and hdr.data.x2 are in the same 8 bit PHV container, i.e.
+     *  B0.  In the instruction memory, a1 and a2 will have its own VLIW instruction, which itself
+     *  contains an opcode for every single PHV ALU.  All actions in the ALUs run in parallel,
+     *  and the individual operations to each ALU are brought in as a portion of one stage VLIW
+     *  instruction.
+     *
+     *  This stage VLIW instruction is formed by ORing together all actions (each of which is
+     *  its own VLIW instruction) that are intended to be run in the stage.  Thus if a1 and a2
+     *  were to be run in the same stage, their operations over container B0 would be ORed
+     *  together.  In general ORing these opcodes will lose the meaning of the original
+     *  operation.
+     *
+     *  Note that the constraint does not apply if the actions themselves are mutually exclusive,
+     *  i.e. if the apply statement looked like the following:
+     *
+     *  apply { if (hdr.data.f1 == 1) { t1.apply() } else { t2.apply() }
+     *
+     *  then it would be impossible for a1 and a2 to ever be called in the same packet, and thus
+     *  the opcode for B0 would never be mucked up by the OR.
+     *
+     *  However, this is not to be considered an action dependency.  If t2 were action dependent
+     *  on t1, then t1 would have to happen before t2.  This is not the case for this program
+     *  as t2 does not affect any of the values that t1 is working on.  Instead it just affects
+     *  the containers
+     */
+    std::map<const IR::MAU::Table*,
+             std::set<const IR::MAU::Table*>> container_conflicts;
 
     Graph g;                // Dependency graph.
 
@@ -107,6 +147,14 @@ struct DependencyGraph {
         return {maybe_new_e.first, true};
     }
 
+    bool container_conflict(const IR::MAU::Table *t1, const IR::MAU::Table *t2) const {
+        if (container_conflicts.find(t1) == container_conflicts.end())
+            return false;
+        if (container_conflicts.at(t1).find(t2) == container_conflicts.at(t1).end())
+            return false;
+        return true;
+    }
+
     bool happens_before(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const {
         if (!finalized)
             BUG("Dependence graph used before being fully constructed.");
@@ -139,14 +187,18 @@ struct DependencyGraph {
     friend std::ostream &operator<<(std::ostream &, const DependencyGraph&);
 };
 
+
+
 class FindDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
  public:
+    typedef ordered_map<const IR::MAU::Table*, bitvec> cont_write_t;
     typedef struct { ordered_set<const IR::MAU::Table*> read, write; } access_t;
 
  private:
     PhvInfo                                              &phv;
     DependencyGraph                                      &dg;
     std::map<cstring, access_t>                           access;
+    std::map<PHV::Container, cont_write_t>                cont_write;
 
     void finalize_dependence_graph(void);
 

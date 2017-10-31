@@ -449,6 +449,10 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
              } else if (rv->gw && deps->happens_before(p->table, rv->gw)) {
                  rv->stage++;
                  LOG2(" - dependency between " << p->table->name << " and gateway advances stage");
+             } else if (deps->container_conflict(p->table, rv->table)) {
+                 rv->stage++;
+                 LOG2(" - action dependency between " << p->table->name << " and table due to "
+                      "PHV allocation advances stage");
              }
         }
     }
