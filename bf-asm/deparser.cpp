@@ -179,8 +179,12 @@ Deparser::Digest::Digest(Deparser::Digest::Type *t, int l, VECTOR(pair_t) &data)
             error(l.key.lineno, "%s index %d out of range", t->name.c_str(), l.key.i);
         else if (l.value.type != tVEC)
             layout[l.key.i].emplace_back(t->gress, l.value);
-        else for (auto &v : l.value.vec)
-            layout[l.key.i].emplace_back(t->gress, v); }
+        else {
+            // XXX(amresh) : Need an empty layout entry if no values are present to
+            // set the config registers correctly
+            layout.emplace(l.key.i, std::vector<Phv::Ref>());
+            for (auto &v : l.value.vec)
+                layout[l.key.i].emplace_back(t->gress, v); } }
     if (!select)
         error(lineno, "No select key in %s spec", t->name.c_str());
 }
