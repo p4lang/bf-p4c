@@ -78,12 +78,6 @@ findbin() {
     echo $bin
 }
 
-# Looks for path to simple_test_harness in cmake cache
-# FIXME -- this is often wrong as the cmake cache frequently is out of date
-findstfbin() {
-    echo $(findbin HARLYN_STF)
-}
-
 P4C=./p4c
 testdir=tofino
 filter_P4C_ARGS=""
@@ -306,7 +300,11 @@ if [ ! -r $testdir/$name${out_ext}.out/$name.bfa ]; then
 fi
 
 if $run_stf && [ -r ${file%.p4}.stf ]; then
-    STF=$(findstfbin)
+    if [ $device = jbay ]; then
+        STF=$(findbin HARLYN_JBAY_STF)
+    else
+        STF=$(findbin HARLYN_STF)
+    fi
 
     if [[ "$file" =~ ^/ ]]; then
         test=${file%.p4}.stf

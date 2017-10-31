@@ -22,7 +22,9 @@ if (NOT ENABLE_STF2PTF)
     ${BFN_P4C_SOURCE_DIR}/../model/tests/simple_test_harness
     ${BFN_P4C_SOURCE_DIR}/../model/build/tests/simple_test_harness
     ${BFN_P4C_SOURCE_DIR}/../model/debug/tests/simple_test_harness)
-  find_program(HARLYN_STF simple_test_harness
+  find_program(HARLYN_STF tofino_test_harness
+    PATHS ${STF_SEARCH_PATHS})
+  find_program(HARLYN_JBAY_STF jbay_test_harness
     PATHS ${STF_SEARCH_PATHS})
   if (HARLYN_STF)
     MESSAGE (STATUS "STF binary found.")

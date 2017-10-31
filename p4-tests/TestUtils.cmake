@@ -36,21 +36,21 @@ endmacro(p4c_add_ptf_test_with_ptfdir)
 
 macro(p4c_add_bf_backend_tests tag tests)
 set (testExtraArgs)
-set (testExtraArgs ${testExtraArgs} "-${tag}")
+set (testExtraArgs "${testExtraArgs} -${tag}")
 # if STF is not found, disbale all stf tests
 if (NOT HARLYN_STF)
-  set (testExtraArgs ${testExtraArgs} -norun)
+  set (testExtraArgs "${testExtraArgs} -norun")
 endif()
 
 if (PTF_REQUIREMENTS_MET)
-  set (testExtraArgs ${testExtraArgs} -ptf)
+  set (testExtraArgs "${testExtraArgs} -ptf")
   if (ENABLE_STF2PTF)
-    set (testExtraArgs ${testExtraArgs} -stf2ptf)
+    set (testExtraArgs "${testExtraArgs} -stf2ptf")
   endif()
 endif()
 
 if (ENABLE_TNA)
-  set (testExtraArgs ${testExtraArgs} -Xp4c=--native)
+  set (testExtraArgs "${testExtraArgs} -Xp4c=--native")
 endif()
 
 p4c_add_tests (${tag} ${P4C_RUNTEST} "${tests}"
