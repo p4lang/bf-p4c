@@ -55,30 +55,39 @@ void AddMetadataShims::addIngressMetadata(IR::BFN::Parser *parser) {
             new IR::BFN::Transition(match_t(), bytePhase0Size, skipToPacketState)
         });
 
+    // This state parses resubmit data. Just like phase 0, the version we're
+    // generating here is a placeholder that just skips the data; we'll replace
+    // it later with an actual implementation.
+    auto* resubmitState =
+        new IR::BFN::ParserState("$resubmit", INGRESS, { }, { }, {
+            new IR::BFN::Transition(match_t(), bytePhase0Size, skipToPacketState)
+        });
+
+    // If this is a resubmitted packet, the initial intrinsic metadata will be
+    // followed by the resubmit data; otherwise, it's followed by the phase 0
+    // data. This state checks the resubmit flag and branches accordingly.
+    auto* resubmitFlagField = gen_fieldref(meta, "resubmit_flag");
+    auto* checkResubmitState =
+      new IR::BFN::ParserState("$check_resubmit", INGRESS, { },
+        { new IR::BFN::Select(new IR::BFN::ComputedRVal(resubmitFlagField)) },
+        { new IR::BFN::Transition(match_t(8, 0, 0x80), 0, phase0State),
+          new IR::BFN::Transition(match_t(8, 0x80, 0x80), 0, resubmitState) });
+
     // This state handles the extraction of ingress intrinsic metadata.
     const auto igMetadataPacking = Device::pardeSpec().ingressMetadataLayout(meta);
-    auto* intrinsicState =
-      igMetadataPacking.createExtractionState(INGRESS, "$ingress_metadata", phase0State);
+    auto* igMetadataState =
+      igMetadataPacking.createExtractionState(INGRESS, "$ingress_metadata",
+                                              checkResubmitState);
 
-    // On ingress, parsing starts by initializing constants and checking the
-    // resubmit flag. If it's not set, we parse the ingress metadata and
-    // transition to phase 0. If it is set, we have a resubmitted packet,
-    // which we need to handle differently.
-    // XXX(seth): For now, we check the resubmit flag but branch to the same
-    // place no matter what. We need to figure out what to do here.
+    // This state initializes some special constant metadata and serves as an
+    // entry point.
     auto* alwaysDeparseBit =
         new IR::TempVar(IR::Type::Bits::get(1), true, "$always_deparse");
-    IR::Vector<IR::BFN::ParserPrimitive> init = {
-        new IR::BFN::Extract(alwaysDeparseBit, new IR::BFN::ConstantRVal(1))
-    };
-    auto* toNormal =
-      new IR::BFN::Transition(match_t(8, 0, 0x80), 0, intrinsicState);
-    auto* toResubmit =
-      new IR::BFN::Transition(match_t(8, 0x80, 0x80), 0, intrinsicState);
     parser->start =
-      new IR::BFN::ParserState("$entry_point", INGRESS, init,
-        { new IR::BFN::Select(new IR::BFN::BufferRVal(StartLen(0, 1))) },
-        { toNormal, toResubmit });
+      new IR::BFN::ParserState("$entry_point", INGRESS,
+        { new IR::BFN::Extract(alwaysDeparseBit, new IR::BFN::ConstantRVal(1)) },
+        { },
+        { new IR::BFN::Transition(match_t(), 0, igMetadataState) });
 }
 
 void AddMetadataShims::addEgressMetadata(IR::BFN::Parser *parser) {
@@ -88,7 +97,7 @@ void AddMetadataShims::addEgressMetadata(IR::BFN::Parser *parser) {
     // we'll replace it once we know which metadata need to be bridged.
     // XXX(seth): We'll eventually need to handle mirroring and coalescing
     // as well.
-    auto bridgedMetadataState =
+    auto* bridgedMetadataState =
         new IR::BFN::ParserState("$bridged_metadata", EGRESS, { }, { }, {
             new IR::BFN::Transition(match_t(), 0, parser->start)
         });
@@ -97,9 +106,19 @@ void AddMetadataShims::addEgressMetadata(IR::BFN::Parser *parser) {
     const auto epbConfig = Device::pardeSpec().defaultEPBConfig();
     const auto egMetadataPacking =
       Device::pardeSpec().egressMetadataLayout(epbConfig, meta);
-    parser->start =
-      egMetadataPacking.createExtractionState(EGRESS, "$egress_metadata_shim",
+    auto* egMetadataState =
+      egMetadataPacking.createExtractionState(EGRESS, "$egress_metadata",
                                               bridgedMetadataState);
+
+    // This state initializes some special constant metadata and serves as an
+    // entry point.
+    auto* alwaysDeparseBit =
+        new IR::TempVar(IR::Type::Bits::get(1), true, "$always_deparse");
+    parser->start =
+      new IR::BFN::ParserState("$entry_point", EGRESS,
+        { new IR::BFN::Extract(alwaysDeparseBit, new IR::BFN::ConstantRVal(1)) },
+        { },
+        { new IR::BFN::Transition(match_t(), 0, egMetadataState) });
 }
 
 bool AddMetadataShims::preorder(IR::BFN::Deparser *d) {
