@@ -2,15 +2,27 @@
 #include "bf-p4c/device.h"
 #include "lib/exceptions.h"
 
+namespace {
+
 IR::Member *gen_fieldref(const IR::HeaderOrMetadata *hdr, cstring field) {
     const IR::Type *ftype = nullptr;
     auto f = hdr->type->getField(field);
     if (f != nullptr)
         ftype = f->type;
     else
-        BUG("No field %s in %s", field, hdr->name);
+        BUG("Couldn't find intrinsic metadata field %s in %s", field, hdr->name);
     return new IR::Member(ftype, new IR::ConcreteHeaderRef(hdr), field);
 }
+
+const IR::HeaderOrMetadata*
+getMetadataType(const IR::BFN::Pipe* pipe, cstring typeName) {
+    auto* meta = pipe->metadata[typeName];
+    BUG_CHECK(meta != nullptr,
+              "Couldn't find required intrinsic metadata type: %1%", typeName);
+    return meta;
+}
+
+}  // namespace
 
 bool AddMetadataShims::preorder(IR::BFN::Parser *parser) {
     switch (parser->gress) {
@@ -22,25 +34,7 @@ bool AddMetadataShims::preorder(IR::BFN::Parser *parser) {
 }
 
 void AddMetadataShims::addIngressMetadata(IR::BFN::Parser *parser) {
-    auto alwaysDeparseBit =
-        new IR::TempVar(IR::Type::Bits::get(1), true, "$always_deparse");
-
-    auto* meta = pipe->metadata["ingress_intrinsic_metadata"];
-
-    if (!meta || !meta->type->getField("ingress_port") ||
-                 !meta->type->getField("resubmit_flag")) {
-        // There's not really much we can do in this case; just skip over
-        // the intrinsic metadata.
-        IR::Vector<IR::BFN::ParserPrimitive> init = {
-            new IR::BFN::Extract(alwaysDeparseBit, new IR::BFN::ConstantRVal(1))
-        };
-        const auto byteSkip = Device::pardeSpec().byteTotalIngressMetadataSize();
-        parser->start =
-            new IR::BFN::ParserState("$skip_metadata", INGRESS, init, { }, {
-                new IR::BFN::Transition(match_t(), byteSkip, parser->start)
-            });
-        return;
-    }
+    auto* meta = getMetadataType(pipe, "ingress_intrinsic_metadata");
 
     // Add a state that skips over any padding between the phase 0 data and the
     // beginning of the packet.
@@ -61,19 +55,10 @@ void AddMetadataShims::addIngressMetadata(IR::BFN::Parser *parser) {
             new IR::BFN::Transition(match_t(), bytePhase0Size, skipToPacketState)
         });
 
-    // This state handles the extraction of all intrinsic metadata other
-    // than the resubmit flag.
-    const auto byteIgMetadataSize =
-      Device::pardeSpec().byteIngressMetadataPrefixSize();
-    auto* igPort = gen_fieldref(meta, "ingress_port");
-    IR::Vector<IR::BFN::ParserPrimitive> extractIgMetadata = {
-        new IR::BFN::Extract(igPort, new IR::BFN::BufferRVal(StartLen(7, 9))),
-    };
-    auto intrinsicState =
-        new IR::BFN::ParserState("$ingress_metadata", INGRESS,
-                                 extractIgMetadata, { }, {
-            new IR::BFN::Transition(match_t(), byteIgMetadataSize, phase0State)
-        });
+    // This state handles the extraction of ingress intrinsic metadata.
+    const auto igMetadataPacking = Device::pardeSpec().ingressMetadataLayout(meta);
+    auto* intrinsicState =
+      igMetadataPacking.createExtractionState(INGRESS, "$ingress_metadata", phase0State);
 
     // On ingress, parsing starts by initializing constants and checking the
     // resubmit flag. If it's not set, we parse the ingress metadata and
@@ -81,9 +66,9 @@ void AddMetadataShims::addIngressMetadata(IR::BFN::Parser *parser) {
     // which we need to handle differently.
     // XXX(seth): For now, we check the resubmit flag but branch to the same
     // place no matter what. We need to figure out what to do here.
-    auto resubmitFlag = gen_fieldref(meta, "resubmit_flag");
+    auto* alwaysDeparseBit =
+        new IR::TempVar(IR::Type::Bits::get(1), true, "$always_deparse");
     IR::Vector<IR::BFN::ParserPrimitive> init = {
-        new IR::BFN::Extract(resubmitFlag, new IR::BFN::BufferRVal(StartLen(0, 1))),
         new IR::BFN::Extract(alwaysDeparseBit, new IR::BFN::ConstantRVal(1))
     };
     auto* toNormal =
@@ -91,48 +76,30 @@ void AddMetadataShims::addIngressMetadata(IR::BFN::Parser *parser) {
     auto* toResubmit =
       new IR::BFN::Transition(match_t(8, 0x80, 0x80), 0, intrinsicState);
     parser->start =
-      new IR::BFN::ParserState("$ingress_metadata_shim", INGRESS, init,
+      new IR::BFN::ParserState("$entry_point", INGRESS, init,
         { new IR::BFN::Select(new IR::BFN::BufferRVal(StartLen(0, 1))) },
         { toNormal, toResubmit });
 }
 
 void AddMetadataShims::addEgressMetadata(IR::BFN::Parser *parser) {
-    const auto byteEgMetadataSize =
-      Device::pardeSpec().byteEgressMetadataSize();
+    auto* meta = getMetadataType(pipe, "egress_intrinsic_metadata");
 
     // Add a state that parses bridged metadata. This is just a placeholder;
     // we'll replace it once we know which metadata need to be bridged.
+    // XXX(seth): We'll eventually need to handle mirroring and coalescing
+    // as well.
     auto bridgedMetadataState =
         new IR::BFN::ParserState("$bridged_metadata", EGRESS, { }, { }, {
             new IR::BFN::Transition(match_t(), 0, parser->start)
         });
 
-    auto* meta = pipe->metadata["egress_intrinsic_metadata"];
-    if (!meta || !meta->type->getField("egress_port")) {
-        // There's not really much we can do in this case; just skip over
-        // the intrinsic metadata.
-        parser->start =
-            new IR::BFN::ParserState("$skip_metadata", EGRESS, { }, { }, {
-                new IR::BFN::Transition(match_t(), byteEgMetadataSize,
-                                        bridgedMetadataState)
-            });
-        return;
-    }
-
-    // On egress, we start by extracting the egress intrinsic metadata and
-    // then begin processing bridged metadata.
-    // XXX(seth): We'll eventually need to handle mirroring and coalescing
-    // here, too.
-    IR::Vector<IR::BFN::ParserPrimitive> extractEgMetadata = {
-        new IR::BFN::Extract(gen_fieldref(meta, "egress_port"),
-          new IR::BFN::BufferRVal(StartLen(7, 9)))
-    };
+    // This state handles the extraction of egress intrinsic metadata.
+    const auto epbConfig = Device::pardeSpec().defaultEPBConfig();
+    const auto egMetadataPacking =
+      Device::pardeSpec().egressMetadataLayout(epbConfig, meta);
     parser->start =
-      new IR::BFN::ParserState("$egress_metadata_shim", parser->gress,
-                               extractEgMetadata, { }, {
-          new IR::BFN::Transition(match_t(), byteEgMetadataSize,
-                                  bridgedMetadataState)
-      });
+      egMetadataPacking.createExtractionState(EGRESS, "$egress_metadata_shim",
+                                              bridgedMetadataState);
 }
 
 bool AddMetadataShims::preorder(IR::BFN::Deparser *d) {

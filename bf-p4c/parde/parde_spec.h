@@ -1,8 +1,15 @@
 #ifndef EXTENSIONS_BF_P4C_PARDE_PARDE_SPEC_H_
 #define EXTENSIONS_BF_P4C_PARDE_PARDE_SPEC_H_
 
-#include <vector>
 #include <map>
+#include <vector>
+
+#include "bf-p4c/parde/epb_config.h"
+#include "bf-p4c/parde/field_packing.h"
+
+namespace IR {
+class HeaderOrMetadata;
+}  // namespace IR
 
 class PardeSpec {
  public:
@@ -32,9 +39,44 @@ class PardeSpec {
                byteIngressPrePacketPaddingSize();
     }
 
-    /// @return the size in bytes of the egress metadata "header" on this
-    /// device.
-    virtual size_t byteEgressMetadataSize() const = 0;
+    /// @return the size in bytes of the egress intrinsic metadata "header" that
+    /// will be generated for the given EPB configuration.
+    virtual size_t byteEgressMetadataSize(EgressParserBufferConfig config) const = 0;
+
+    /**
+     * Generate the ingress intrinsic metadata layout for this device.
+     *
+     * The returned field packing can be used directly to generate a parser
+     * program that extracts the ingress intrinsic metadata.
+     *
+     * @param header  The header or metadata instance that the field packing
+     *                should reference; this is where the output of the
+     *                generated parser will be written.
+     * @return a fielding packing for the ingress intrinsic metadata.
+     */
+    virtual BFN::FieldPacking
+    ingressMetadataLayout(const IR::HeaderOrMetadata* header) const = 0;
+
+    /**
+     * Given an EPB configuration, generate the resulting egress intrinsic
+     * metadata layout for this device.
+     *
+     * The returned field packing can be used directly to generate a parser
+     * program that extracts the egress intrinsic metadata.
+     *
+     * @param config  An EPB configuration indicating which egress intrinsic
+     *                metadata fields are enabled.
+     * @param header  The header or metadata instance that the field packing
+     *                should reference; this is where the output of the
+     *                generated parser will be written.
+     * @return a fielding packing for the egress intrinsic metadata.
+     */
+    virtual BFN::FieldPacking
+    egressMetadataLayout(EgressParserBufferConfig config,
+                         const IR::HeaderOrMetadata* header) const = 0;
+
+    /// @return a default, conservative EPB configuration.
+    virtual EgressParserBufferConfig defaultEPBConfig() const = 0;
 
     /// The size of the input buffer, in bits.
     virtual int bitInputBufferSize() const = 0;
@@ -50,10 +92,18 @@ class PardeSpec {
 
 class TofinoPardeSpec : public PardeSpec {
  public:
-    size_t byteIngressMetadataPrefixSize() const override { return 8; }
+    size_t byteIngressMetadataPrefixSize() const override;
     size_t byteIngressPerPortMetadataSize() const override { return 8; }
     size_t byteIngressPrePacketPaddingSize() const override { return 0; }
-    size_t byteEgressMetadataSize() const override { return 2; }
+    size_t byteEgressMetadataSize(EgressParserBufferConfig config) const override;
+
+    BFN::FieldPacking
+    ingressMetadataLayout(const IR::HeaderOrMetadata* header) const override;
+    BFN::FieldPacking
+    egressMetadataLayout(EgressParserBufferConfig config,
+                         const IR::HeaderOrMetadata* header) const override;
+
+    EgressParserBufferConfig defaultEPBConfig() const override;
 
     int bitInputBufferSize() const override { return 256; }
 
@@ -70,10 +120,18 @@ class TofinoPardeSpec : public PardeSpec {
 #if HAVE_JBAY
 class JBayPardeSpec : public PardeSpec {
  public:
-    size_t byteIngressMetadataPrefixSize() const override { return 8; }
+    size_t byteIngressMetadataPrefixSize() const override;
     size_t byteIngressPerPortMetadataSize() const override { return 16; }
     size_t byteIngressPrePacketPaddingSize() const override { return 8; }
-    size_t byteEgressMetadataSize() const override { return 2; }
+    size_t byteEgressMetadataSize(EgressParserBufferConfig config) const override;
+
+    BFN::FieldPacking
+    ingressMetadataLayout(const IR::HeaderOrMetadata* header) const override;
+    BFN::FieldPacking
+    egressMetadataLayout(EgressParserBufferConfig config,
+                         const IR::HeaderOrMetadata* header) const override;
+
+    EgressParserBufferConfig defaultEPBConfig() const override;
 
     int bitInputBufferSize() const override { return 256; }
 

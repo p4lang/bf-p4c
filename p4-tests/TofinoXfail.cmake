@@ -829,13 +829,22 @@ p4c_add_xfail_reason("tofino"
 )
 
 # START: XFAILs with translation
-# invalid tests, trying to emit standard_metadata that are not defined
+# We fail to translate `resubmit()`.
 p4c_add_xfail_reason("tofino"
   "Could not find declaration for standard_metadata"
-  testdata/p4_14_samples/copy_to_cpu.p4
-  testdata/p4_14_samples/simple_nat.p4
   testdata/p4_14_samples/resubmit.p4
+  )
+# We fail to translate `standard_metadata.instance_type`.
+p4c_add_xfail_reason("tofino"
+  "Could not find declaration for standard_metadata"
+  extensions/p4_tests/p4_14/c1/COMPILER-559/case2987.p4
+  extensions/p4_tests/p4_14/switch_l2_profile.p4
+  extensions/p4_tests/p4_14/switch_20160602/switch.p4
+  testdata/p4_14_samples/copy_to_cpu.p4
   testdata/p4_14_samples/packet_redirect.p4
+  testdata/p4_14_samples/simple_nat.p4
+  testdata/p4_14_samples/switch_20160226/switch.p4
+  testdata/p4_14_samples/switch_20160512/switch.p4
   )
 # invalid tests, eg_intr_md.egress_port is read-only
 p4c_add_xfail_reason("tofino"
@@ -851,13 +860,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Structure header .* does not have a field"
   testdata/p4_14_samples/sai_p4.p4
-  testdata/p4_14_samples/switch_20160226/switch.p4
-  testdata/p4_14_samples/switch_20160512/switch.p4
-  )
-p4c_add_xfail_reason("tofino"
-  "Could not find declaration for"
-  extensions/p4_tests/p4_14/switch_l2_profile.p4
-  extensions/p4_tests/p4_14/switch_20160602/switch.p4
   )
 
 # BRIG-109

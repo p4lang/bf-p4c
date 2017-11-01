@@ -138,7 +138,8 @@ class ReplaceArchitecture : public Inspector {
                     "ucast_egress_port", 9);
         addMetadata("standard_metadata", "ingress_port", "ig_intr_md", "ingress_port", 9);
         addMetadata("standard_metadata", "egress_port", "eg_intr_md", "egress_port", 9);
-        addMetadata("standard_metadata", "instance_type", "eg_intr_md", "instance_type", 32);
+        // XXX(seth): We need to figure out what to map this to.
+        // addMetadata("standard_metadata", "instance_type", "eg_intr_md", "instance_type", 32);
         addMetadata("standard_metadata", "packet_length", "eg_intr_md", "pkt_length", 16);
         addMetadata("standard_metadata", "clone_spec", "ig_intr_md_for_mb", "mirror_id", 10);
         addMetadata("standard_metadata", "drop", "ig_intr_md_for_tm", "drop_ctl", 3);

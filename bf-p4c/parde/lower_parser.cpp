@@ -452,10 +452,19 @@ struct ReplaceParserIR : public ParserTransform {
 
         // Record the amount of metadata which is prepended to the packet; this
         // is used to compensate so that e.g. counters record only bytes which
-        // are part of the "real" packet.
-        loweredParser->prePacketDataLengthBytes =
-          parser->gress == INGRESS ? Device::pardeSpec().byteTotalIngressMetadataSize()
-                                   : Device::pardeSpec().byteEgressMetadataSize();
+        // are part of the "real" packet. On egress, it may vary according to
+        // the EPB configuration, which is determined by which fields are used
+        // in the program.
+        // XXX(seth): We just use a default EPB configuration for now.
+        if (parser->gress == INGRESS) {
+            loweredParser->prePacketDataLengthBytes =
+              Device::pardeSpec().byteTotalIngressMetadataSize();
+        } else {
+            const auto epbConfig = Device::pardeSpec().defaultEPBConfig();
+            loweredParser->epbConfig = epbConfig;
+            loweredParser->prePacketDataLengthBytes =
+              Device::pardeSpec().byteEgressMetadataSize(epbConfig);
+        }
 
         return loweredParser;
     }
