@@ -2,6 +2,7 @@
 #include <set>
 #include "bf-p4c/common/debug_info.h"
 #include "bf-p4c/ir/bitrange.h"
+#include "bf-p4c/parde/epb_config.h"
 #include "bf-p4c/phv/phv.h"
 #end
 
@@ -177,6 +178,14 @@ class LoweredParser : AbstractParser {
     /// prepended to the packet by the hardware or by compiler-generated code,
     /// but which is not part of the packet itself.
     unsigned prePacketDataLengthBytes = 0;
+
+#emit
+    /// If present, an EPB configuration for this parser. (This is an
+    /// egress-specific feature, so we expect this to never be present on
+    /// ingress.) The interpretation of the configuration is device-specific; use
+    /// the utility methods on PardeSpec to interact with it.
+    boost::optional<EgressParserBufferConfig> epbConfig;
+#end
 }
 
 }  // end namespace BFN

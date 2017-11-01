@@ -51,6 +51,10 @@ struct ParserAsmSerializer : public ParserInspector {
         out << indent << "hdr_len_adj: " << parser->prePacketDataLengthBytes
             << std::endl;
 
+        if (parser->epbConfig)
+            out << indent << "meta_opt: " << parser->epbConfig->fieldsEnabled
+                << std::endl;
+
         out << indent << "states:" << std::endl;
 
         return true;

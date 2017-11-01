@@ -193,6 +193,7 @@ set (TOFINO_BACKEND_PARDE_HDRS
   parde/asm_output.h
   parde/bridge_metadata.h
   parde/checksum.h
+  parde/epb_config.h
   parde/extract_parser.h
   parde/field_packing.h
   parde/lower_parser.h
