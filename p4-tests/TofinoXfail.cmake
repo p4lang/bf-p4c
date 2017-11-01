@@ -950,12 +950,9 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     extensions/p4_tests/p4_14/action_default_multiple.p4
     extensions/p4_tests/p4_14/adb_shared2.p4
     extensions/p4_tests/p4_14/adjust_instr3.p4
-    extensions/p4_tests/p4_16/depgraph1.p4
-    extensions/p4_tests/p4_16/parser_metadata_init.p4
     extensions/p4_tests/p4_16/stack_valid.p4
     testdata/p4_14_samples/07-MultiProtocol.p4
     testdata/p4_14_samples/instruct5.p4
-    testdata/p4_14_samples/ternary_match2.p4
     testdata/p4_14_samples/tmvalid.p4
     testdata/p4_16_samples/issue635-bmv2.p4
     testdata/p4_16_samples/issue655-bmv2.p4

@@ -440,8 +440,6 @@ void ActionTable::gen_tbl_cfg(json::vector &out) {
     if (actions)
         actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
     tbl["how_referenced"] = indirect ? "indirect" : "direct";
-    /* FIXME -- don't include ref to select table as compiler doesn't */
-    tbl.erase("p4_selection_tables");
     if (context_json)
         stage_tbl.merge(*context_json);
 }

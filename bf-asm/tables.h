@@ -24,6 +24,7 @@ class ActionBus;
 struct AttachedTables;
 class GatewayTable;
 class IdletimeTable;
+class ActionTable;
 struct Instruction;
 class InputXbar;
 class MatchTable;
@@ -234,7 +235,13 @@ public:
         void setup(const value_t &v, Table *tbl);
         Call() {}
         Call(const value_t &v, Table *tbl) { setup(v, tbl); }
-        bool is_indirect() const { return (args.size() > 0); }
+        // Action Table has a default action argument specifying action bits
+        // for both direct/indirect access. All other tables have arguments only
+        // if they are indirect
+        bool is_indirect() const {
+            if ((*this)->to<ActionTable>())
+                return (args.size() > 1);
+            return (args.size() > 0); }
     };
 
     struct p4_param {
@@ -456,7 +463,7 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     virtual void need_on_actionbus(HashDistribution *hd, int off, int size);
     virtual Call &action_call() { return action; }
     virtual Actions *get_actions() { return actions; }
-    void add_reference_table(json::vector &table_refs, const Table::Call& c, const std::string& href);
+    void add_reference_table(json::vector &table_refs, const Table::Call& c);
     json::map &add_pack_format(json::map &stage_tbl, int memword, int words, int entries = -1);
     json::map &add_pack_format(json::map &stage_tbl, Table::Format *format, bool pad_zeros = true,
                                bool print_fields = true, Table::Actions::Action *act = nullptr);
@@ -490,7 +497,7 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     int get_entries_per_table_word();
     int get_mem_units_per_table_word();
     int get_table_word_width();
-    int get_padding_format_width(); 
+    int get_padding_format_width();
 };
 
 class FakeTable : public Table {
@@ -619,10 +626,6 @@ DECLARE_TABLE_TYPE(ExactMatchTable, SRamMatchTable, "exact_match",
     struct WayRam { int way, index, word, bank; };
     std::map<std::pair<int, int>, WayRam> way_map;
     std::map<unsigned, unsigned> hash_fn_ids;
-    bool isindirect() {
-        if (action)
-            if (action.args.size() > 1) return true;
-        return false; }
     void setup_ways();
     void alloc_vpns() override;
 public:

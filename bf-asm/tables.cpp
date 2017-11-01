@@ -1723,14 +1723,15 @@ json::map *Table::add_stage_tbl_cfg(json::map &tbl, const char *type, int size) 
     return &(stage_tables.back()->to<json::map>());
 }
 
-void Table::add_reference_table(json::vector &table_refs, const Table::Call& c, const std::string& href) {
-    json::map table_ref;
-    table_ref["how_referenced"] = href;
-    table_ref["handle"] = c->handle();
-    table_ref["name"] = c->name();
-        if (c->p4_table)
-            table_ref["name"] = c->p4_table->p4_name();
-    table_refs.push_back(std::move(table_ref));
+void Table::add_reference_table(json::vector &table_refs, const Table::Call& c) {
+    if (c) {
+        json::map table_ref;
+        table_ref["how_referenced"] = c.is_indirect() ? "indirect" : "direct";
+        table_ref["handle"] = c->handle();
+        table_ref["name"] = c->name();
+            if (c->p4_table)
+                table_ref["name"] = c->p4_table->p4_name();
+        table_refs.push_back(std::move(table_ref)); }
 }
 
 json::map &Table::add_pack_format(json::map &stage_tbl, int memword, int words, int entries) {

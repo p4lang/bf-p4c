@@ -669,25 +669,12 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
         stage_tbl.merge(*context_json);
     tbl["stateful_table_refs"] = json::vector();
     json::vector &action_data_table_refs = tbl["action_data_table_refs"] = json::vector();
-    if (action) {
-        if (isindirect())
-            add_reference_table(action_data_table_refs, action, "indirect");
-        else
-            add_reference_table(action_data_table_refs, action, "direct"); }
+    add_reference_table(action_data_table_refs, action);
     if (auto a = get_attached()) {
         json::vector &selection_table_refs = tbl["selection_table_refs"] = json::vector();
-        if (a->get_selector()) {
-            add_reference_table(selection_table_refs, a->selector, "direct"); }
+        add_reference_table(selection_table_refs, a->selector);
         json::vector &meter_table_refs = tbl["meter_table_refs"] = json::vector();
-        for (auto &m : a->meter) {
-            std::string ref_type = "direct";
-            if (m.args.size() > 0)
-                ref_type = "indirect";
-            add_reference_table(meter_table_refs, m, ref_type); }
+        for (auto &m : a->meter) { add_reference_table(meter_table_refs, m); }
         json::vector &statistics_table_refs = tbl["statistics_table_refs"] = json::vector();
-        for (auto &s : a->stats) {
-            std::string ref_type = "direct";
-            if (s.args.size() > 0)
-                ref_type = "indirect";
-            add_reference_table(statistics_table_refs, s, ref_type); } }
+        for (auto &s : a->stats) { add_reference_table(statistics_table_refs, s); } }
 }

@@ -164,11 +164,9 @@ void HashActionTable::gen_tbl_cfg(json::vector &out) {
     if (auto a = get_attached()) {
         if (a->meter.size() > 0) {
             for (auto m : a->meter)
-                add_reference_table(meter_table_refs, m, "direct"); }
-        if (auto s = a->get_selector())
-            add_reference_table(selection_table_refs, a->selector, "direct"); }
-    if (action)
-        add_reference_table(action_data_table_refs, action, "direct");
+                add_reference_table(meter_table_refs, m); }
+            add_reference_table(selection_table_refs, a->selector); }
+    add_reference_table(action_data_table_refs, action);
     // Add hash functions
     json::vector &hash_functions = stage_tbl["hash_functions"] = json::vector();
     // Emit hash info only if p4_param_order (match_key_fields) are present

@@ -54,8 +54,6 @@ void Synth2Port::write_regs(REGS &) {
 
 json::map *Synth2Port::base_tbl_cfg(json::vector &out, const char *type, int size) {
     json::map &tbl = *AttachedTable::base_tbl_cfg(out, type, size);
-    tbl.erase("p4_selection_tables");
-    tbl.erase("p4_action_data_tables");
     tbl["enable_per_flow_enable"] = per_flow_enable;
     tbl["per_flow_enable_bit_position"] = per_flow_enable_bit;
     return &tbl;

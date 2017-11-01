@@ -481,8 +481,7 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
             { "entry_number",  json::number(0) },
             { "fields",  std::move(match_field_list) }}};
     json::vector &action_data_table_refs = tbl["action_data_table_refs"] = json::vector();
-    if (action)
-        add_reference_table(action_data_table_refs, action, "direct");
+    add_reference_table(action_data_table_refs, action);
     tbl["meter_table_refs"] = json::vector();
     tbl["selection_table_refs"] = json::vector();
     json::map &tind = stage_tbl["ternary_indirection_stage_table"] = json::map();
@@ -506,26 +505,18 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
         //stage_tbl["ternary_indirection_stage_table"] = std::move(tind);
         if (auto a = indirect->get_attached()) {
             json::vector &selection_table_refs = tbl["selection_table_refs"] = json::vector();
-            if (a->selector) {
-                tbl["default_selector_mask"] = 0; //FIXME-JSON
-                tbl["default_selector_value"] = 0; //FIXME-JSON
-                add_reference_table(selection_table_refs, a->selector, "indirect"); }
+            tbl["default_selector_mask"] = 0; //FIXME-JSON
+            tbl["default_selector_value"] = 0; //FIXME-JSON
+            add_reference_table(selection_table_refs, a->selector);
             json::vector &meter_table_refs = tbl["meter_table_refs"] = json::vector();
-            for (auto &m : a->meter) {
-                std::string ref_type = m.is_indirect() ? "indirect" : "direct";
-                add_reference_table(meter_table_refs, m, ref_type); }
+            for (auto &m : a->meter) { add_reference_table(meter_table_refs, m); }
             json::vector &stats_table_refs = tbl["statistics_table_refs"] = json::vector();
-            for (auto &s : a->stats) {
-                std::string ref_type = s.is_indirect() ? "indirect" : "direct";
-                add_reference_table(stats_table_refs, s, ref_type); }
+            for (auto &s : a->stats) { add_reference_table(stats_table_refs, s); }
             json::vector &stateful_table_refs = tbl["stateful_table_refs"] = json::vector();
-            for (auto &s : a->stateful) {
-                std::string ref_type = s.is_indirect() ? "indirect" : "direct";
-                add_reference_table(stateful_table_refs, s, ref_type); }
+            for (auto &s : a->stateful) { add_reference_table(stateful_table_refs, s); }
         }
         json::vector &action_data_table_refs = tbl["action_data_table_refs"] = json::vector();
-        if (indirect->action)
-            add_reference_table(action_data_table_refs, indirect->action, "indirect");
+        add_reference_table(action_data_table_refs, indirect->action);
         if (indirect->actions) {
             indirect->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
             indirect->actions->add_next_table_mapping(indirect, stage_tbl);
