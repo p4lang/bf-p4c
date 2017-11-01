@@ -78,8 +78,6 @@ header ingress_intrinsic_metadata_t {
 
     bit<48> ingress_mac_tstamp;          // ingress IEEE 1588 timestamp (in nsec)
                                          // taken at the ingress MAC.
-
-    bit<32> instance_type;               // FIXME: tofino does not have this metadata
 }
 
 /// Produced by Ingress Parser-Auxiliary
@@ -94,12 +92,6 @@ struct ingress_intrinsic_metadata_from_parser_t {
 
 struct ingress_intrinsic_metadata_for_tm_t {
     // The ingress physical port id is passed to the TM directly from
-    bit<1> resubmit_flag;                // flag distinguising original packets
-                                         // from resubmitted packets.
-                                         // XXX(hanw) add_parde_metadata requires this.
-    PortId_t ingress_port;               // ingress physical port id.
-                                         // this field is passed to the deparser
-
     PortId_t ucast_egress_port;          // egress port for unicast packets. must
                                          // be presented to TM for unicast.
 
@@ -181,15 +173,17 @@ struct ingress_intrinsic_metadata_for_mirror_buffer_t {
 // EGRESS INTRINSIC METADATA
 // -----------------------------------------------------------------------------
 header egress_intrinsic_metadata_t {
-    bit<32> instance_type;               // TODO: tofino does not have this field
-    PortId_t ingress_port;               // TODO(hanw): hack until ingress_port is part
-                                         // of bridged metadata.
+    bit<7> _pad0;
 
     bit<9> egress_port;                  // egress port id.
                                          // this field is passed to the deparser
 
+    bit<5> _pad1;
+
     bit<19> enq_qdepth;                  // queue depth at the packet enqueue
                                          // time.
+
+    bit<6> _pad2;
 
     bit<2> enq_congest_stat;             // queue congestion status at the packet
                                          // enqueue time.
@@ -197,8 +191,12 @@ header egress_intrinsic_metadata_t {
     bit<32> enq_tstamp;                  // time snapshot taken when the packet
                                          // is enqueued (in nsec).
 
+    bit<5> _pad3;
+
     bit<19> deq_qdepth;                  // queue depth at the packet dequeue
                                          // time.
+
+    bit<6> _pad4;
 
     bit<2> deq_congest_stat;             // queue congestion status at the packet
                                          // dequeue time.
@@ -213,20 +211,26 @@ header egress_intrinsic_metadata_t {
     bit<16> egress_rid;                  // L3 replication id for multicast
                                          // packets.
 
+    bit<7> _pad5;
+
     bit<1> egress_rid_first;             // flag indicating the first replica for
                                          // the given multicast group.
+
+    bit<3> _pad6;
 
     bit<5> egress_qid;                   // egress (physical) queue id via which
                                          // this packet was served.
 
+    bit<5> _pad7;
+
     bit<3> egress_cos;                   // egress cos (eCoS) value.
+
+    bit<7> _pad8;
 
     bit<1> deflection_flag;              // flag indicating whether a packet is
                                          // deflected due to deflect_on_drop.
 
     bit<16> pkt_length;                  // Packet length, in bytes
-
-    bit<2> pad;
 }
 
 struct egress_intrinsic_metadata_from_parser_t {
