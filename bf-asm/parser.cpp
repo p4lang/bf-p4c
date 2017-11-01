@@ -117,35 +117,16 @@ void Parser::input(VECTOR(value_t) args, value_t data) {
                 if (CHECKTYPE(kv.value, tINT))
                     hdr_len_adj[gress] = kv.value.i;
                 continue; }
+            if (kv.key == "states") {
+                if (CHECKTYPE(kv.value, tMAP))
+                    for (auto &st : kv.value.map)
+                        define_state(gress, st); 
+                continue; }
             if (gress == EGRESS && kv.key == "meta_opt") {
                 if (CHECKTYPE(kv.value, tINT))
                     meta_opt = kv.value.i;
                 continue; }
-            if (!CHECKTYPE2M(kv.key, tSTR, tCMD, "state declaration")) continue;
-            const char *name = kv.key.s;
-            match_t stateno = { 0, 0 };
-            if (kv.key.type == tCMD) {
-                name = kv.key[0].s;
-                if (!CHECKTYPE2(kv.key[1], tINT, tMATCH)) continue;
-                if (kv.key[1].type == tINT) {
-                    if (kv.key[1].i > PARSER_STATE_MASK)
-                        error(kv.key.lineno, "Explicit state out of range");
-                    stateno.word1 = kv.key[1].i;
-                    stateno.word0 = (~kv.key[1].i) & PARSER_STATE_MASK;
-                } else {
-                    stateno = kv.key[1].m;
-                    if ((stateno.word0 | stateno.word1) > PARSER_STATE_MASK)
-                        error(kv.key.lineno, "Explicit state out of range");
-                    stateno.word0 |= ~(stateno.word0 | stateno.word1) & PARSER_STATE_MASK; } }
-            if (!CHECKTYPE(kv.value, tMAP)) continue;
-            auto n = states[gress].emplace(name, State(kv.key.lineno, name, gress,
-                                           stateno, kv.value.map));
-            if (n.second)
-                all.push_back(&n.first->second);
-            else {
-                error(kv.key.lineno, "State %s already defined in %sgress", name,
-                      gress ? "e" : "in");
-                warning(n.first->second.lineno, "previously defined here"); } }
+            define_state(gress, kv); }
 
         // process the CLOTs immediately rather than in Parser::process() so that it
         // happens before Deparser::process()
@@ -177,6 +158,34 @@ void Parser::input(VECTOR(value_t) args, value_t data) {
                            !clot_use[gress][free_clot_tag].empty())
                         ++free_clot_tag; } } }
     }
+}
+
+void Parser::define_state(gress_t gress, pair_t &kv) {
+   if (!CHECKTYPE2M(kv.key, tSTR, tCMD, "state declaration")) return;
+   const char *name = kv.key.s;
+   match_t stateno = { 0, 0 };
+   if (kv.key.type == tCMD) {
+       name = kv.key[0].s;
+       if (!CHECKTYPE2(kv.key[1], tINT, tMATCH)) return;
+       if (kv.key[1].type == tINT) {
+           if (kv.key[1].i > PARSER_STATE_MASK)
+               error(kv.key.lineno, "Explicit state out of range");
+           stateno.word1 = kv.key[1].i;
+           stateno.word0 = (~kv.key[1].i) & PARSER_STATE_MASK;
+       } else {
+           stateno = kv.key[1].m;
+           if ((stateno.word0 | stateno.word1) > PARSER_STATE_MASK)
+               error(kv.key.lineno, "Explicit state out of range");
+           stateno.word0 |= ~(stateno.word0 | stateno.word1) & PARSER_STATE_MASK; } }
+   if (!CHECKTYPE(kv.value, tMAP)) return;
+   auto n = states[gress].emplace(name, State(kv.key.lineno, name, gress,
+                                  stateno, kv.value.map));
+   if (n.second)
+       all.push_back(&n.first->second);
+   else {
+       error(kv.key.lineno, "State %s already defined in %sgress", name,
+             gress ? "e" : "in");
+       warning(n.first->second.lineno, "previously defined here"); }
 }
 
 void Parser::process() {

@@ -51,11 +51,13 @@ struct ParserAsmSerializer : public ParserInspector {
         out << indent << "hdr_len_adj: " << parser->prePacketDataLengthBytes
             << std::endl;
 
+        out << indent << "states:" << std::endl;
+
         return true;
     }
 
     bool preorder(const IR::BFN::LoweredParserState* state) override {
-        AutoIndent indentState(indent);
+        AutoIndent indentState(indent, 2);
 
         out << indent << canon_name(state->name) << ':';
 

@@ -222,6 +222,7 @@ public:
 private:
     template<class REGS> void *setup_phv_output_map(REGS &, gress_t, int);
     template<class REGS> void mark_unused_output_map(REGS &, void *, unsigned);
+    void define_state(gress_t gress, pair_t &kv);
 };
 
 #endif /* _parser_h_ */

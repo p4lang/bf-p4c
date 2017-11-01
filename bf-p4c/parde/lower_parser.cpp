@@ -358,13 +358,7 @@ struct ComputeLoweredParserIR : public ParserInspector {
         // Drop any thread-specific prefix from the name.
         if (auto prefix = name.findstr("::"))
             name = name.after(prefix) += 2;
-
-        // We add a prefix to all parser state names. This ensures that they
-        // won't collide with assembly syntax.
-        // XXX(seth): It would probably be better to tweak the assembly syntax
-        // so that state names and assembly directives don't exist in the same
-        // namespace.
-        return cstring("$") + name;
+        return name;
     }
 
     void postorder(const IR::BFN::ParserState* state) override {

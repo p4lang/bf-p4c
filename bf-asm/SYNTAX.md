@@ -42,56 +42,60 @@ parser [<thread>]:
     priority: <int> | '[' <int>, ... ']'
     priority_threshold: <int> | '[' <int>, ... ']'
         # define initial parser priority and threshold for the 4 channels
-    <name> [<match-constant>]:
-        # Defines a parser state.  The state 'start' is the implicit initial state
-        # if there is no explicit initial state defined by a separate 'start' entry.
-        # The state 'end' cannot exist (used for exit)
-        # The optional constant is the 8-bit value used to denote the state;
-        # overlapping state values will be flagged as an error
-        match: <vector> | { <matcher> : <byte-loc> }
-            # specifies up to 4 bytes to match against in the input buffer
-            # may also specify 'ctr_zero' and 'ctr_neg' to match those
-            # special bits, or the specific matchers 'byte0', 'byte1' or 'half'
-            # to match against values explicitly loaded by a 'save' in a previous
-            # state.  May additionally specify specific matchers to use.
-        <match-constant>:
-            # actions to perform when the match matches this match constant
-            # this is a tcam priority match, so only the first match triggers
-            buf_req: <constant>
-                # number bytes that must be in the input buffer to not stall
-            counter: [set] <constant> | inc <constant> | dec <constant> | load <expression>
-                # modification of the counter
-            next: <name> | <match-constant>
-                # next state -- match-constant takes don't care bits
-                # from current state
-            offset: [set] <constant> | inc <constant>
-                # modificate to the offset
-            priority: <constant> | @ <offset> [ >> <constant> ] [ & <constant> ]
-                # update the packet priority
-            save: { <matcher> : <byte-loc>, ... } | <matcher>
-                # specifies one or more values from the input stream to be
-                # loaded into specific matchers or specific matchers to have
-                # their values preserved for use by later states
-            shift: <constant>
-                # number of bytes to shift out
-            [rotate] <constant> : [offset] <phv_location> 
-            [rotate] <range> : [offset] <phv_location> 
-                # write the specifed byte (or range) to named phv slot
-            [offset] <phv_location>: [rotate] <constant>
-                # write the specified constant to the phv location
-            clot <tag>:
-                # output a CLOT (jbay only)
-                start: <constant>
-                length: <constant> | <expression>
-                    # expression is generally '@' <const> [ '>>' <const> ] [ '&' <const> ]
-                    # with variations (unary is highest precedence, followed by shift,
-                    # mask(&), +/- lowest)
-                max_length: <constant>
-        default:
-            # actions to perform regardless of the match
-        # if there is no 'default' tag in a state, anything that is not
-        # recognized as a valid state tag is treated as part of an implicit
-        # default
+    states:
+        # Parser states can be defined with or without the 'states' key but this
+        # is preferred as it avoids name collisions with other assembly
+        # directives, 
+        <name> [<match-constant>]:
+            # Defines a parser state.  The state 'start' is the implicit initial state
+            # if there is no explicit initial state defined by a separate 'start' entry.
+            # The state 'end' cannot exist (used for exit)
+            # The optional constant is the 8-bit value used to denote the state;
+            # overlapping state values will be flagged as an error
+            match: <vector> | { <matcher> : <byte-loc> }
+                # specifies up to 4 bytes to match against in the input buffer
+                # may also specify 'ctr_zero' and 'ctr_neg' to match those
+                # special bits, or the specific matchers 'byte0', 'byte1' or 'half'
+                # to match against values explicitly loaded by a 'save' in a previous
+                # state.  May additionally specify specific matchers to use.
+            <match-constant>:
+                # actions to perform when the match matches this match constant
+                # this is a tcam priority match, so only the first match triggers
+                buf_req: <constant>
+                    # number bytes that must be in the input buffer to not stall
+                counter: [set] <constant> | inc <constant> | dec <constant> | load <expression>
+                    # modification of the counter
+                next: <name> | <match-constant>
+                    # next state -- match-constant takes don't care bits
+                    # from current state
+                offset: [set] <constant> | inc <constant>
+                    # modificate to the offset
+                priority: <constant> | @ <offset> [ >> <constant> ] [ & <constant> ]
+                    # update the packet priority
+                save: { <matcher> : <byte-loc>, ... } | <matcher>
+                    # specifies one or more values from the input stream to be
+                    # loaded into specific matchers or specific matchers to have
+                    # their values preserved for use by later states
+                shift: <constant>
+                    # number of bytes to shift out
+                [rotate] <constant> : [offset] <phv_location> 
+                [rotate] <range> : [offset] <phv_location> 
+                    # write the specifed byte (or range) to named phv slot
+                [offset] <phv_location>: [rotate] <constant>
+                    # write the specified constant to the phv location
+                clot <tag>:
+                    # output a CLOT (jbay only)
+                    start: <constant>
+                    length: <constant> | <expression>
+                        # expression is generally '@' <const> [ '>>' <const> ] [ '&' <const> ]
+                        # with variations (unary is highest precedence, followed by shift,
+                        # mask(&), +/- lowest)
+                    max_length: <constant>
+            default:
+                # actions to perform regardless of the match
+            # if there is no 'default' tag in a state, anything that is not
+            # recognized as a valid state tag is treated as part of an implicit
+            # default
     counter_init:
         - { add: <int>, max: <int>, mask: <int>, src: <matcher>, rot: <int> }
         # intial values for the counter init ram
