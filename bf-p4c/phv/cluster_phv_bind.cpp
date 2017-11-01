@@ -113,7 +113,11 @@ PHV_Bind::bind_fields_to_containers() {
                 }
                 int field_bit = cc->field_bit_lo();
                 int container_bit = cc->lo();
-                int width_in_container = std::min(f->size, cc->width());
+                // ensure overlay preserves field overlay width, does not extend to substratum width
+                BUG_CHECK(f->size >= cc->width(), "Field size is less than CC width, check Overlay "
+                    "field = %1%, size=%2%, width=%3%",
+                    cstring::to_cstring(f), f->size, cc->width());
+                int width_in_container = cc->width();
                 PHV::Container asm_container = Device::phvSpec().idToContainer(c->container_id());
                 //
                 // ignore allocation for owners of

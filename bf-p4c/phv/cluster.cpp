@@ -93,7 +93,6 @@ bool Cluster::MakeCCGFs::preorder(const IR::HeaderRef *hr) {
                             << "accumulated_bits = " << accumulator_bits
                             << ", align_start (nw)" << align_start);
                         LOG4(group_accumulator);
-                        // TODO:
                         // if the member cannot guarantee physical contiguity as required by parser
                         // error message to bail out
                         // metadata, especially bridge metadata need not satisfy contiguity
@@ -589,9 +588,6 @@ void Cluster::MakeClusters::compute_fields_no_use_mau() {
         // Metadata in T_PHV can be removed but bridged metadata must
         // be allocated.  CCGF children are also removed.
         // If a field is a candidate for TPHV but not deparsed then it is removed.
-        // TODO:
-        // If a field is a candidate for TPHV but only used in egress deparser
-        // then it does not need T_PHV container. It is removed.
         bool is_ccgf_child = f->ccgf() && f->ccgf() != f;
         bool is_nonbridged_metadata = f->metadata && !f->bridged;
         bool is_not_deparsed = !f->deparsed();

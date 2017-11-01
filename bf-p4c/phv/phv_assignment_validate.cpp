@@ -35,6 +35,8 @@ PHV_Assignment_Validate::end_apply() {
     LOG3(*this);
     //
     sanity_check_fields("PHV_Assignment_Validate::end_apply()");
+    //
+    LOG1("");
 }
 
 void

@@ -470,10 +470,10 @@ PHV_Container::single_field_overlay(
     assert(f);
     assert(start >= 0);
     assert(width >= 0);
-    //
     // if field width is less that substratum width, reduce width required
-    //
     width = std::min(f->phv_use_width(), width);
+    // container content for overlay field must reflect overlay field's size, not phv_use_width
+    if (constraint_no_cohabit(f)) width = std::min(f->size, width);
     //
     // if substratum area is not yet associated with a field, taint color will be 0
     // need to go through steps for container area allocation, updating its avail bits
@@ -1490,18 +1490,7 @@ std::ostream &operator<<(std::ostream &out, PHV_Container *c) {
 
 std::ostream &operator<<(std::ostream &out, PHV_Container &c) {
     // detailed output
-    //
     out << '\t' << &c;
-    return out;
-}
-
-std::ostream &operator<<(std::ostream &out, ordered_set<PHV_Container *> &phv_containers) {
-    // detailed output for phv containers
-    for (auto *c : phv_containers) {
-        out << '\t' << c
-            << '\t' << c->bits()
-            << c->fields_in_container();
-    }
     return out;
 }
 
@@ -1509,40 +1498,37 @@ std::ostream &operator<<(std::ostream &out, ordered_set<PHV_Container *> *phv_co
     // terse output for phv containers
     assert(phv_containers);
     out << "[";
-    for (auto &c : *phv_containers) {
+    for (auto &c : *phv_containers)
         out << c->toString() << ';';
-    }
     out << "]";
     return out;
 }
 
+std::ostream &operator<<(std::ostream &out, ordered_set<PHV_Container *> &phv_containers) {
+    // detailed output for phv containers
+    for (auto *c : phv_containers)
+        out << '\t' << c << '\t' << c->bits() << c->fields_in_container();
+    return out;
+}
+
 std::ostream &operator<<(std::ostream &out, std::vector<PHV_Container *> &phv_containers) {
-    for (auto *c : phv_containers) {
-        out << '\t' << c
-            << '\t' << c->bits()
-            << c->fields_in_container();
-    }
+    for (auto *c : phv_containers)
+        out << '\t' << c << '\t' << c->bits() << c->fields_in_container() << std::endl;
     return out;
 }
 
 std::ostream &operator<<(std::ostream &out, std::list<PHV_Container *> &phv_containers) {
-    for (auto &c : phv_containers) {
-        out << '\t' << c
-            << '\t' << c->bits()
-            << c->fields_in_container();
-    }
+    for (auto &c : phv_containers)
+        out << '\t' << c << '\t' << c->bits() << c->fields_in_container() << std::endl;
     return out;
 }
 
 std::ostream &operator<<(
     std::ostream &out,
     ordered_map<PHV::Field *, std::list<PHV_Container::Container_Content *>>& fields_cc_map) {
-    for (auto &cc_s : Values(fields_cc_map)) {
-        for (auto &cc : cc_s) {
-            out << std::endl
-                << cc;
-        }
-    }
+    for (auto &cc_s : Values(fields_cc_map))
+        for (auto &cc : cc_s)
+            out << std::endl << cc;
     return out;
 }
 

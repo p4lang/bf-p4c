@@ -1,5 +1,6 @@
 #include "cluster_phv_slicing.h"
 #include "lib/log.h"
+#include "bf-p4c/ir/bitrange.h"
 
 const IR::Node *
 Cluster_Slicing::apply_visitor(const IR::Node *node, const char *name) {
@@ -224,35 +225,18 @@ Cluster_Slicing::sanity_check_cluster_slices(const std::string& msg) {
     for (auto &f : phv_l) {
         if (f.sliced()) {
             // there must be field slices
-            if (f.field_slices().empty()) {
-                LOG1(
-                    "*****cluster_phv_slicing.cpp:sanity_FAIL*****....."
-                    << msg_1
-                    << std::endl
-                    << ".....sliced cluster has no field slices....."
-                    << std::endl
-                    << &f);
-            }
+            BUG_CHECK(!f.field_slices().empty(),
+                "sliced cluster has no field slices for %1%", cstring::to_cstring(f));
             // every slice has unique cl_id
             // no overlapping slices
             // all slices correctly add up to unsliced field width
-            //
             ordered_set<std::string> set_of_cl_ids;
             ordered_set<std::pair<int, int>> set_of_ranges;
             int slice_widths = 0;
             for (auto &e : f.field_slices()) {
-                //
                 std::string id = e.first->id();
-                if (set_of_cl_ids.count(id)) {
-                    LOG1(
-                        "*****cluster_phv_slicing.cpp:sanity_FAIL*****....."
-                        << msg_1
-                        << std::endl
-                        << ".....cluster ids for slices are not unique....."
-                        << id
-                        << std::endl
-                        << &f);
-                }
+                BUG_CHECK(!set_of_cl_ids.count(id),
+                    "cluster ids for slices not unique id=%1%, f= %2%", id, cstring::to_cstring(f));
                 set_of_cl_ids.insert(id);
                 //
                 int lo = e.second.first;
@@ -260,35 +244,31 @@ Cluster_Slicing::sanity_check_cluster_slices(const std::string& msg) {
                 for (auto &r : set_of_ranges) {
                     int lo_r = r.first;
                     int hi_r = r.second;
-                    if ((lo_r >= lo && lo_r <= hi)
-                        || (hi_r >= lo && hi_r <= hi)) {
-                        LOG1(
-                            "*****cluster_phv_slicing.cpp:sanity_FAIL*****....."
-                            << msg_1
-                            << std::endl
-                            << ".....cluster ranges for slices overlap....."
-                            << " " << lo << ".." << hi
-                            << " " << lo_r << ".." << hi_r
-                            << std::endl
-                            << &f);
-                   }
-                }
+                    BUG_CHECK(!((lo_r >= lo && lo_r <= hi) || (hi_r >= lo && hi_r <= hi)),
+                        "cluster slice ranges overlap <%1%,%2%><%3%,%4%> f=%5%", lo, hi, lo_r, hi_r,
+                        cstring::to_cstring(f)); }  // for
                 set_of_ranges.insert({lo, hi});
-                slice_widths += hi - lo + 1;
-            }  // for
-            if (slice_widths != f.size) {
-                LOG1(
-                    "*****cluster_phv_slicing.cpp:sanity_FAIL*****....."
-                    << msg_1
-                    << std::endl
-                    << ".....cluster slice ranges do not add up to field size....."
-                    << "slice_widths = " << slice_widths
-                    << " field_size = " << f.size
-                    << std::endl
-                    << &f);
-            }
-        }
-    }
+                slice_widths += hi - lo + 1; }  // for
+            BUG_CHECK(slice_widths == f.size,
+                "adding cluster slice ranges != field size, slice_widths=%1%, f.size=%2%, f=%3%",
+                slice_widths, f.size, cstring::to_cstring(f));
+            // several field slices in container must be orderly allocated
+            // parser can't support two slices allocated to the same container but not in order.
+            // slices placed in the wrong order can result in flip around on the wire when deparsed.
+            for (auto* c : f.phv_containers()) {
+                auto cc_list = c->fields_in_container()[&f];
+                if (cc_list.size() > 1) {
+                    ordered_map<int, le_bitrange> flo_cbits;
+                    for (auto* cc : cc_list)
+                        flo_cbits[cc->field_bit_lo()] = FromTo(cc->lo(), cc->hi());
+                    le_bitinterval usedBits;
+                    for (auto x : Values(flo_cbits)) {
+                        // field slice ranges, ascending field bits,
+                        // ensure x.lo > previous hi && x.hi >= x.lo
+                        BUG_CHECK(!usedBits.overlaps(toHalfOpenRange(x)),
+                            "field slices for field %1% placed disorderly in container %2%, lo=%3%",
+                            cstring::to_cstring(f), cstring::to_cstring(c), x.lo);
+                            usedBits = usedBits.unionWith(FromTo(0, x.hi)); }}}}}  // forall f
 }  // sanity_check_cluster_slices
 
 //

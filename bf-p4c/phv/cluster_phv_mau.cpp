@@ -2893,7 +2893,7 @@ std::ostream &operator<<(
             out << cc << ' ';
         }
     }
-    out << std::endl << "\t)";
+    out << ")";
     return out;
 }
 //
@@ -2955,7 +2955,7 @@ std::ostream &operator<<(std::ostream &out, PHV_MAU_Group &g) {
         for (auto c : containers_pack) {
             out << c << ' ';
         }
-        out << std::endl << "\t}";
+        out << "}";
     }
     // summarize container slice groups
     if (!g.aligned_container_slices().empty()) {

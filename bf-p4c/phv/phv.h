@@ -13,8 +13,10 @@ class JSONLoader;
 namespace PHV {
 
 enum class Kind : unsigned short {  // all possible PHV kinds in BFN devices
-    normal   = 0,
-    tagalong = 1
+    normal   = 0,  // PHV
+    tagalong = 1,  // TPHV
+    mocha    = 2,  // MOCHA
+    dark     = 3   // DARK
 };
 
 enum class Size : unsigned short {  // all possible PHV sizes in BFN devices

@@ -37,7 +37,6 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
   p4c_add_xfail_reason("tofino"
     "mismatch from expected.*at byte 0x"
     extensions/p4_tests/p4_16/stack_valid.p4
-    extensions/p4_tests/p4_14/adjust_instr4.p4
     extensions/p4_tests/p4_14/adb_shared2.p4
     # potential STF bug in reading mask constants
     extensions/p4_tests/p4_14/adjust_instr6.p4
