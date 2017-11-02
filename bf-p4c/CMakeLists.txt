@@ -43,13 +43,17 @@ set (TOFINO_IR_HDRS
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_IR_HDRS}")
 
 set (TOFINO_BACKEND_CONV_SRCS
+  fromv1.0/lpf.cpp
   fromv1.0/primitives.cpp
   fromv1.0/stateful_alu.cpp
+  fromv1.0/wred.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_CONV_SRCS}")
 
 set (TOFINO_BACKEND_CONV_HDRS
+  fromv1.0/lph.h
   fromv1.0/stateful_alu.h
+  fromv1.0/wred.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_CONV_HDRS}")
 
@@ -308,10 +312,12 @@ set (IR_DEF_FILES ${IR_DEF_FILES} ${TOFINO_IR_DEF_FILES} PARENT_SCOPE)
 set (p4include_HEADERS
   p4include/tofino_model.p4
   p4include/tofino.p4
+  p4include/tofino/lpf.p4
   p4include/tofino/p4_14_prim.p4
   p4include/tofino/p4_16_prim.p4
-  p4include/tofino/v1model.p4
   p4include/tofino/stateful_alu.p4
+  p4include/tofino/v1model.p4
+  p4include/tofino/wred.p4
   )
 
 set (p4_14include_HEADERS

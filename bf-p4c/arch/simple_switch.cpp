@@ -201,6 +201,8 @@ class ReplaceArchitecture : public Inspector {
 
         /// append tofino.p4 architecture definition
         structure->include("tofino/v1model.p4", &structure->tofinoArchTypes);
+        structure->include("tofino/lpf.p4", &structure->tofinoArchTypes);
+        structure->include("tofino/wred.p4", &structure->tofinoArchTypes);
         structure->include("tofino/p4_14_prim.p4", &structure->tofinoArchTypes);
         analyzeErrors(program);
         analyzeTofinoModel();

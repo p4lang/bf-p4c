@@ -296,12 +296,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/shared_names.p4
   )
 
-p4c_add_xfail_reason("tofino"
-  "P4_14 extern not fully supported"
-  extensions/p4_tests/p4_14/test_config_132_meter_pre_color_4.p4
-  extensions/p4_tests/p4_14/jenkins/mau_test/mau_test.p4
-  )
-
 # various stateful
 # Signed 1-bit field not allowed in P4_16 (and really makes no sense?)
 p4c_add_xfail_reason("tofino"
@@ -937,6 +931,8 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_126_meter_pre_color_2.p4
   extensions/p4_tests/p4_14/test_config_127_meter_pre_color_3.p4
   extensions/p4_tests/p4_14/test_config_125_meter_pre_color.p4
+  extensions/p4_tests/p4_14/test_config_132_meter_pre_color_4.p4
+  extensions/p4_tests/p4_14/jenkins/mau_test/mau_test.p4
   )
 # missing support for stateful logging
 p4c_add_xfail_reason("tofino"
