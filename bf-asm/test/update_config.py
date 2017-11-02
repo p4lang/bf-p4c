@@ -44,7 +44,8 @@ def main():
 
     print "Sending P4 config"
     request = p4runtime_pb2.SetForwardingPipelineConfigRequest()
-    config = request.configs.add()
+    request.device_id = 0
+    config = request.config
     with open(args.p4info) as p4info_f:
         google.protobuf.text_format.Merge(p4info_f.read(), config.p4info)
     device_config = p4config_pb2.P4DeviceConfig()
