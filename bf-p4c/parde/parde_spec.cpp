@@ -74,8 +74,13 @@ const IntrinsicMetadataSpec& getTofinoEgressIntrinsicMetadataSpec() {
 }
 
 /// @return an EPB config with all fields enabled.
-EgressParserBufferConfig allFieldsEnabledEPBConfig() {
-    return EgressParserBufferConfig{uint16_t(~0)};
+EgressParserBufferConfig
+allFieldsEnabledEPBConfig(const IntrinsicMetadataSpec& metadataSpec) {
+    uint16_t fieldsEnabled = 0;
+    for (auto& field : metadataSpec)
+        if (field.configBit)
+            fieldsEnabled |= *field.configBit;
+    return EgressParserBufferConfig{fieldsEnabled};
 }
 
 /// @return the total size in bits of the fields in the given metadata spec. If
@@ -140,7 +145,9 @@ TofinoPardeSpec::ingressMetadataLayout(const IR::HeaderOrMetadata* header) const
 }
 
 EgressParserBufferConfig TofinoPardeSpec::defaultEPBConfig() const {
-    return allFieldsEnabledEPBConfig();
+    static const EgressParserBufferConfig defaultConfig =
+      allFieldsEnabledEPBConfig(getTofinoEgressIntrinsicMetadataSpec());
+    return defaultConfig;
 }
 
 BFN::FieldPacking
@@ -187,7 +194,9 @@ JBayPardeSpec::ingressMetadataLayout(const IR::HeaderOrMetadata* header) const {
 }
 
 EgressParserBufferConfig JBayPardeSpec::defaultEPBConfig() const {
-    return allFieldsEnabledEPBConfig();
+    static const EgressParserBufferConfig defaultConfig =
+      allFieldsEnabledEPBConfig(getJBayEgressIntrinsicMetadataSpec());
+    return defaultConfig;
 }
 
 BFN::FieldPacking
