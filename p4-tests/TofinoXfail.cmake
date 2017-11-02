@@ -126,6 +126,15 @@ p4c_add_xfail_reason("tofino"
   "Couldn't resolve computed value for select"
   # XXX(seth): This code just uses packet_in.lookahead() in a way which isn't supported yet.
   testdata/p4_16_samples/issue355-bmv2.p4
+  # this one should be easy to handle, but hits this issue
+  testdata/p4_16_samples/issue1000-bmv2.p4
+  )
+
+# Too big a select key (96 bits) for tofino to match in one parser state.  Could be split into
+# mulitple states?
+p4c_add_xfail_reason("tofino"
+  "error: Too much data for parse matcher"
+  testdata/p4_16_samples/issue995-bmv2.p4
   )
 
 # varbit extracts don't work in parser
@@ -868,6 +877,17 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Interface register_action does not have a method named execute_log"
   extensions/p4_tests/p4_14/test_config_206_stateful_logging.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Null field_list"
+  testdata/p4_16_samples/issue1001-bmv2.p4
+  )
+
+# math_unit deleted by TNA translation
+p4c_add_xfail_reason("tofino"
+  "Could not find declaration for"
+  extensions/p4_tests/p4_14/test_config_163_stateful_table_math_unit.p4
   )
 
 # END: XFAILs with translation

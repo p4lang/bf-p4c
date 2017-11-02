@@ -404,10 +404,17 @@ struct RewriteParserStatements : public Transform {
     const bool filterSetMetadata;
 };
 
-static match_t buildListMatch(const IR::Vector<IR::Expression> *list) {
+static match_t buildListMatch(const IR::Vector<IR::Expression> *list,
+                              const IR::Vector<IR::Expression> select) {
     match_t     rv;
+    auto sel_el = select.begin();
     for (auto el : *list) {
-        int width = el->type->width_bits();
+        if (!el->is<IR::DefaultExpression>()) {
+            BUG_CHECK(el->type == (*sel_el)->type ||
+                      (el->type->is<IR::Type_Set>() &&
+                       el->type->to<IR::Type_Set>()->elementType == (*sel_el)->type),
+                      "select type mismatch"); }
+        int width = (*sel_el)->type->width_bits();
         rv.word0 <<= width;
         rv.word1 <<= width;
         uintmax_t mask = -1, v;
@@ -420,14 +427,19 @@ static match_t buildListMatch(const IR::Vector<IR::Expression> *list) {
             rv.word1 |= mask & ~v;
             mask &= v;
             v = mval->left->to<IR::Constant>()->asLong();
+        } else if (el->is<IR::DefaultExpression>()) {
+            mask = v = 0;
         } else {
             BUG("Invalid select case expression %1%", el); }
         rv.word0 |= mask & ~v;
-        rv.word1 |= mask & v; }
+        rv.word1 |= mask & v;
+        ++sel_el; }
+    BUG_CHECK(sel_el == select.end(), "select/match mismatch");
     return rv;
 }
 
-static match_t buildMatch(int match_size, const IR::Expression *key) {
+static match_t buildMatch(int match_size, const IR::Expression *key,
+                          const IR::Vector<IR::Expression> &select) {
     if (key->is<IR::DefaultExpression>())
         return match_t();
     else if (auto k = key->to<IR::Constant>())
@@ -436,7 +448,7 @@ static match_t buildMatch(int match_size, const IR::Expression *key) {
         return match_t(match_size, mask->left->to<IR::Constant>()->asLong(),
                                    mask->right->to<IR::Constant>()->asLong());
     else if (auto list = key->to<IR::ListExpression>())
-        return buildListMatch(&list->components);
+        return buildListMatch(&list->components, select);
     else
         BUG("Invalid select case expression %1%", key);
     return match_t();
@@ -536,7 +548,7 @@ IR::BFN::ParserState* GetTofinoParser::getState(cstring name) {
 
     // Generate the outgoing transitions.
     for (auto selectCase : selectExpr->selectCases) {
-        auto matchVal = buildMatch(matchSize, selectCase->keyset);
+        auto matchVal = buildMatch(matchSize, selectCase->keyset, selectExpr->select->components);
         auto* transition = new IR::BFN::Transition(matchVal, shift);
         state->transitions.push_back(transition);
 
