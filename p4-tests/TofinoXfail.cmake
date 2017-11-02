@@ -53,13 +53,7 @@ p4c_add_xfail_reason("tofino"
   "No write within a split instruction"
   extensions/p4_tests/p4_14/jenkins/alpm_test/alpm_test.p4
   extensions/p4_tests/p4_14/jenkins/basic_ipv4/basic_ipv4.p4
-  extensions/p4_tests/p4_14/jenkins/exm_direct/exm_direct_one.p4
   extensions/p4_tests/p4_14/jenkins/exm_direct_1/exm_direct_1_one.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "Unrecognized mode of the action selector"
-  extensions/p4_tests/p4_14/jenkins/exm_direct/exm_direct_one.p4
   )
 
 # BRIG-101
@@ -230,6 +224,8 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/jenkins/exm_smoke_test/exm_smoke_test_one.p4
   extensions/p4_tests/p4_14/jenkins/multi_device/multi_device.p4
   extensions/p4_tests/p4_14/jenkins/perf_test_alpm/perf_test_alpm_one.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
+  extensions/p4_tests/p4_14/jenkins/exm_direct/exm_direct_one.p4
   )
 
 # BRIG-113
@@ -826,6 +822,11 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/jenkins/mirror_test/mirror_test.p4
   extensions/p4_tests/p4_14/jenkins/emulation/emulation.p4
   )
+
+p4c_add_xfail_reason("tofino"
+   "Stage pragma provided to table .* has multiple parameters, while Brig currently"
+   extensions/p4_tests/p4_14/test_config_131_placement_with_pragma.p4
+)
 
 # START: XFAILs with translation
 # invalid tests, trying to emit standard_metadata that are not defined

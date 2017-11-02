@@ -142,7 +142,7 @@ class TableAllocPass : public PassManager {
                 &mutex,
                 new SharedIndirectActionAnalysis(mutex),
                 new DumpPipe("Before TablePlacement"),
-                new TablePlacement(&deps, mutex, phv, lc),
+                new TablePlacement(&deps, mutex, phv, lc, options.forced_placement),
                 new CheckTableNameDuplicate,
                 new TableFindSeqDependencies,  // not needed?
                 new CheckTableNameDuplicate,

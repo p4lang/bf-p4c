@@ -20,6 +20,7 @@ class BFN_Options : public CompilerOptions {
     bool allowUnimplemented = false;
     bool debugInfo = false;
     bool no_deadcode_elimination = false;
+    bool forced_placement = false;
 
     BFN_Options() {
         target = "tofino-v1model-barefoot";
@@ -49,6 +50,9 @@ class BFN_Options : public CompilerOptions {
         registerOption("--no-deadcode-elimination", nullptr,
             [this](const char *) { no_deadcode_elimination = true; return true; },
             "do not use dead code elimination");
+        registerOption("--placement", nullptr,
+            [this](const char *) { forced_placement = true; return true; },
+            "ignore all dependencies during table placement");
     }
 
     bool targetSupported() {

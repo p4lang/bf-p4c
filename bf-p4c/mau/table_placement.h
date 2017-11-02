@@ -14,7 +14,7 @@ class LayoutChoices;
 class TablePlacement : public MauTransform, public Backtrack {
  public:
     TablePlacement(const DependencyGraph* d, const TablesMutuallyExclusive &m, const PhvInfo &p,
-                   const LayoutChoices &l);
+                   const LayoutChoices &l, bool fp);
     struct GroupPlace;
     struct Placed;
 
@@ -28,6 +28,7 @@ class TablePlacement : public MauTransform, public Backtrack {
     const TablesMutuallyExclusive &mutex;
     const PhvInfo &phv;
     const LayoutChoices &lc;
+    bool forced_placement = false;
     bool alloc_done = false;
     profile_t init_apply(const IR::Node *root) override;
     bool backtrack(trigger &) override {
@@ -43,6 +44,7 @@ class TablePlacement : public MauTransform, public Backtrack {
     Placed *try_place_table(const IR::MAU::Table *t, const Placed *done,
                             const StageUseEstimate &current);
     const Placed *place_table(ordered_set<const GroupPlace *>&work, const Placed *pl);
+    int get_provided_stage(const IR::MAU::Table *tbl);
     std::multimap<cstring, const Placed *> table_placed;
     std::multimap<cstring, const Placed *>::const_iterator find_placed(cstring name) const;
 };

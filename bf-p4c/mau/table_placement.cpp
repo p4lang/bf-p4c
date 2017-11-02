@@ -21,8 +21,8 @@
 #include "bf-p4c/phv/phv_fields.h"
 
 TablePlacement::TablePlacement(const DependencyGraph* d, const TablesMutuallyExclusive &m,
-                               const PhvInfo &p, const LayoutChoices &l)
-: deps(d), mutex(m), phv(p), lc(l) {}
+                               const PhvInfo &p, const LayoutChoices &l, bool fp)
+: deps(d), mutex(m), phv(p), lc(l), forced_placement(fp) {}
 
 Visitor::profile_t TablePlacement::init_apply(const IR::Node *root) {
     alloc_done = phv.alloc_done();
@@ -85,6 +85,7 @@ class TablePlacement::SetupInfo : public Inspector {
  public:
     explicit SetupInfo(TablePlacement &self) : self(self) {}
 };
+
 
 struct TablePlacement::GroupPlace {
     /* tracking the placement of a group of tables from an IR::MAU::TableSeq
@@ -286,6 +287,21 @@ TablePlacement::Placed *TablePlacement::Placed::gateway_merge() {
     return this;
 }
 
+int TablePlacement::get_provided_stage(const IR::MAU::Table *tbl) {
+    if (tbl->gateway_only())
+        return -1;
+    auto annot = tbl->match_table->annotations->getSingle("stage");
+    if (annot == nullptr)
+        return -1;
+    BUG_CHECK(annot->expr.size() == 1, "%s: Stage pragma provided to table %s has multiple "
+              "parameters, while Brig currently only supports one parameter",
+              annot->srcInfo, tbl->name);
+    auto constant = annot->expr.at(0)->to<IR::Constant>();
+    ERROR_CHECK(constant, "%s: Stage pragma value provided to table %s is not a constant",
+                annot->srcInfo, tbl->name);
+    return constant->asInt();
+}
+
 static bool try_alloc_format(TablePlacement::Placed *next, TableResourceAlloc *resources,
                              StageUseEstimate &sue, const bitvec immediate_mask, bool gw_linked) {
      resources->table_format.clear();
@@ -443,6 +459,8 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
                 return nullptr; }
             set_entries -= p->entries;
         } else if (p->stage == rv->stage) {
+             if (forced_placement)
+                 continue;
              if (deps->happens_before(p->table, rv->table) && !mutex.action(p->table, rv->table)) {
                  rv->stage++;
                  LOG2(" - dependency between " << p->table->name << " and table advances stage");
@@ -461,8 +479,6 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
     resources->action_format = lc.get_action_format(t);
     const safe_vector<LayoutOption> layout_options = lc.get_layout_options(t);
     StageUseEstimate stage_current = current;
-    if (done && rv->stage != done->stage)
-        stage_current.clear();
     StageUseEstimate min_use(t, min_entries, prev_placed, has_action_data, layout_options,
                              stage_current.shared_action_data);
 
@@ -471,8 +487,19 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
     bool mem_allocation_bug = false;
     bool adb_allocation_bug = false;
     int furthest_stage = (done == nullptr) ? 0 : done->stage + 1;
+
+    auto stage_pragma = get_provided_stage(t);
+    if (stage_pragma >= 0) {
+        rv->stage = std::max(stage_pragma, rv->stage);
+        furthest_stage = rv->stage + 1;
+    } else if (forced_placement && !t->gateway_only()) {
+        ::warning("%s: Table %s has not been provided a stage even though forced placement of "
+                  "tables is turned on", t->srcInfo, t->name);
+    }
     LOG3("Initial stage is " << rv->stage);
 
+    if (done && rv->stage != done->stage)
+        stage_current.clear();
     /* Loop to find the right size of entries for a table to place into stage */
     do {
         rv->entries = set_entries;
@@ -626,7 +653,12 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed *
     LOG1("placing " << pl->entries << " entries of " << pl->name << (pl->gw ? " (with gw " : "") <<
          (pl->gw ? pl->gw->name : "") << (pl->gw ? ")" : "") << " in stage " <<
          pl->stage << (pl->need_more ? " (need more)" : ""));
-    LOG1("Use RAMs " << pl->table->name << " " << pl->use.srams);
+
+    if (get_provided_stage(pl->table) >= 0 && get_provided_stage(pl->table) != pl->stage)
+        ::warning("%s: The stage specified for the table %s is %d, but the stage actually "
+                  "allocated %d are not the same", pl->table->srcInfo, pl->table->name,
+                  get_provided_stage(pl->table), pl->stage);
+
     if (!pl->need_more) {
         pl->group->finish_if_placed(work, pl);
         GroupPlace *gw_match_grp = nullptr;
@@ -677,9 +709,23 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed *
     return pl;
 }
 
+
 bool TablePlacement::is_better(const Placed *a, const Placed *b) {
     if (a->stage < b->stage) return true;
     if (a->stage > b->stage) return false;
+
+    int a_provided_stage = get_provided_stage(a->table);
+    int b_provided_stage = get_provided_stage(b->table);
+
+    if (a_provided_stage >= 0 && b_provided_stage >= 0) {
+        if (a_provided_stage != b_provided_stage)
+            return a_provided_stage < b_provided_stage;
+    } else if (a_provided_stage >= 0 && b_provided_stage < 0) {
+        return true;
+    } else if (b_provided_stage >= 0 && a_provided_stage < 0) {
+        return false;
+    }
+
 
     int a_extra_stages = a->need_more ? a->extra_use.stages_required() : 0;
     int b_extra_stages = b->need_more ? b->extra_use.stages_required() : 0;

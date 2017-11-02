@@ -282,10 +282,20 @@ static IR::MAU::BackendAttached *createAttached(IR::MAU::Table *tt, Util::Source
             return shared_as->at(name);
         }
         auto sel = new IR::MAU::Selector(srcInfo, name, annot);
-        if (annot->getSingle("mode"))
-            sel->mode = getAnnotID(annot, "mode");
-        else
+        if (annot->getSingle("mode")) {
+            auto sel_mode = getAnnotID(annot, "mode");
+            if (sel_mode.name == "fair" || sel_mode.name == "resilient")
+                sel->mode = sel_mode;
+            else if (sel_mode.name == "non_resilient")
+                sel->mode = IR::ID("fair");
+            else
+                ::error("%s: Mode %s provided for the selector %s is unsupported",
+                        sel->srcInfo, sel_mode.name, sel->name);
+        } else {
+            ::warning("%s: No mode specified for the selection %s.  Assuming fair", sel->srcInfo,
+                       sel->name);
             sel->mode = IR::ID("fair");
+        }
         sel->type = getAnnotID(annot, "type");
         sel->num_groups = 4;
         sel->group_size = 120;
