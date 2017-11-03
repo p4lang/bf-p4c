@@ -157,6 +157,7 @@ TofinoPardeSpec::egressMetadataLayout(EgressParserBufferConfig config,
                                 config);
 }
 
+#if HAVE_JBAY
 namespace {
 
 const IntrinsicMetadataSpec& getJBayIngressIntrinsicMetadataSpec() {
@@ -205,3 +206,4 @@ JBayPardeSpec::egressMetadataLayout(EgressParserBufferConfig config,
     return createMetadataLayout(getJBayEgressIntrinsicMetadataSpec(), header,
                                 config);
 }
+#endif // HAVE_JBAY
