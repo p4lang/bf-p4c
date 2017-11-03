@@ -206,4 +206,4 @@ JBayPardeSpec::egressMetadataLayout(EgressParserBufferConfig config,
     return createMetadataLayout(getJBayEgressIntrinsicMetadataSpec(), header,
                                 config);
 }
-#endif // HAVE_JBAY
+#endif  // HAVE_JBAY
