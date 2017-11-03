@@ -11,29 +11,43 @@ namespace BFN {
 /// A value that can be read from in the parser on the hardware.
 abstract LoweredParserRVal { }
 
-/// An r-value originating from the input buffer. Represented as a range of input
-/// buffer bytes (rather than bits, as in the high-level parser IR). This must be
-/// interpreted relative to a specific parser state to have an absolute meaning.
-class LoweredBufferRVal : LoweredParserRVal {
+/// An r-value that represents a read from a range of input buffer bytes (rather
+/// than bits, as in the high-level parser IR) in the input buffer. The
+/// coordinate system used will depend on the specific type of
+/// `LoweredBufferlikeRVal`.
+abstract LoweredBufferlikeRVal : LoweredParserRVal {
     validate {
         BUG_CHECK(range.lo >= 0,
                   "Extracting from offset before the start of the input buffer");
     }
-    dbprint {
-        out << "buffer bytes " << byteInterval() << "(" << range.size() << "B)";
-    }
 
     /// @return this buffer range as a half-open range of bytes in network order.
-    /// These bytes are specified in the space of the input buffer.
     nw_byteinterval byteInterval() const { return toHalfOpenRange(range); }
 
     /// @return this buffer range as a closed range of bytes in network order.
-    /// These bytes are specified in the space of the input buffer.
     nw_byterange extractedBytes() const { return range; }
 
-    /// The region of the input buffer represented by this `LoweredBufferRVal`,
-    /// expressed as a range of bytes in network order.
+    /// The region represented by this `LoweredBufferlikeRVal`, expressed as a
+    /// range of bytes in network order.
     nw_byterange range;
+}
+
+// An r-value originating from the input packet. Represented as a range of bytes
+// in the coordinate system of some parser state. @see PacketRVal for more
+// details about the coordinate system.
+class LoweredPacketRVal : LoweredBufferlikeRVal {
+    dbprint {
+        out << "packet bytes " << byteInterval() << "(" << range.size() << "B)";
+    }
+}
+
+/// An r-value representing a range of bits from the region of the input buffer
+/// that's mapped onto special metadata, rather than data from the input packet.
+/// @see BufferRVal for more details about the coordinate system.
+class LoweredBufferRVal : LoweredBufferlikeRVal {
+    dbprint {
+        out << "buffer bytes " << byteInterval() << "(" << range.size() << "B)";
+    }
 }
 
 /// A lowered representation of a constant used as an r-value in the parser.

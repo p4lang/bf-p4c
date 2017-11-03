@@ -1,6 +1,7 @@
 #include "bf-p4c/phv/phv_fields.h"
 #include <boost/optional.hpp>
 #include "bf-p4c/common/header_stack.h"
+#include "bf-p4c/device.h"
 #include "bf-p4c/phv/phv_analysis_api.h"
 #include "bf-p4c/phv/phv_assignment_api.h"
 #include "ir/ir.h"
@@ -1100,7 +1101,7 @@ struct ComputeFieldAlignments : public Inspector {
  private:
     bool preorder(const IR::BFN::Extract* extract) override {
         // Only extracts from the input buffer introduce alignment constraints.
-        auto* bufferSource = extract->source->to<IR::BFN::BufferRVal>();
+        auto* bufferSource = extract->source->to<IR::BFN::BufferlikeRVal>();
         if (!bufferSource) return false;
 
         auto* fieldInfo = phv.field(extract->dest->field);
@@ -1131,7 +1132,20 @@ struct ComputeFieldAlignments : public Inspector {
         //
         // To avoid this, we generate a constraint that prevents PHV allocation
         // from placing the field in a problematic position in the container.
-        fieldInfo->updateValidContainerRange(FromTo(0, extractedBits.hi));
+        //
+        // In simple terms, what we want to avoid is placing the field too far
+        // to the right in the container. For fields which come from the mapped
+        // input buffer region (which has a fixed coordinate system that cannot
+        // be shifted) or from the end of the headers in the input packet (where
+        // we'll end up treating some of the packet payload as header if we
+        // introduce an extra shift), a symmetric issue exists where we need to
+        // avoid placing the field too far to the *left* in the container. Both
+        // of these limitations need to be converted into constraints for PHV
+        // allocation.
+        // XXX(seth): Unfortunately we can't capture the "too far to the left"
+        // case with our current representation of valid container ranges.
+        const nw_bitrange validContainerRange = FromTo(0, extractedBits.hi);
+        fieldInfo->updateValidContainerRange(validContainerRange);
 
         // XXX(seth): This is a hack: if this field was bridged from ingress, we
         // apply the same alignment constraint to the ingress version of the
@@ -1149,6 +1163,7 @@ struct ComputeFieldAlignments : public Inspector {
             BUG_CHECK(ingressFieldInfo != nullptr,
                       "No ingress version of egress bridged metadata field?");
             ingressFieldInfo->updateAlignment(alignment);
+            ingressFieldInfo->updateValidContainerRange(validContainerRange);
         }
 
         return false;

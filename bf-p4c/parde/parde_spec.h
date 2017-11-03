@@ -4,6 +4,7 @@
 #include <map>
 #include <vector>
 
+#include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/parde/epb_config.h"
 #include "bf-p4c/parde/field_packing.h"
 
@@ -78,11 +79,21 @@ class PardeSpec {
     /// @return a default, conservative EPB configuration.
     virtual EgressParserBufferConfig defaultEPBConfig() const = 0;
 
-    /// The size of the input buffer, in bits.
+    /// The amount of packet data that fits in the input buffer, in bits.
     virtual int bitInputBufferSize() const = 0;
 
-    /// The size of the input buffer, in bytes.
+    /// The amount of packet data that fits in the input buffer, in bytes.
     int byteInputBufferSize() const { return bitInputBufferSize() / 8; }
+
+    /// The "mapped" region of the input buffer address space, which contains
+    /// special intrinsic metadata rather than packet data. In bits.
+    virtual nw_bitrange bitMappedInputBufferRange() const = 0;
+
+    /// The "mapped" region of the input buffer address space, which contains
+    /// special intrinsic metadata rather than packet data. In bytes.
+    nw_byterange byteMappedInputBufferRange() const {
+        return bitMappedInputBufferRange().toUnit<RangeUnit::Byte>();
+    }
 
     /// Specifies the available kinds of extractors, specified as sizes in bits,
     /// and the number of extractors of each kind available in each hardware parser
@@ -106,6 +117,10 @@ class TofinoPardeSpec : public PardeSpec {
     EgressParserBufferConfig defaultEPBConfig() const override;
 
     int bitInputBufferSize() const override { return 256; }
+
+    nw_bitrange bitMappedInputBufferRange() const override {
+        return StartLen(256, 256);
+    }
 
     const std::map<unsigned, unsigned>& extractorSpec() const override {
         static const std::map<unsigned, unsigned> extractorSpec = {
@@ -134,6 +149,10 @@ class JBayPardeSpec : public PardeSpec {
     EgressParserBufferConfig defaultEPBConfig() const override;
 
     int bitInputBufferSize() const override { return 256; }
+
+    nw_bitrange bitMappedInputBufferRange() const override {
+        return StartLen(256, 256);
+    }
 
     const std::map<unsigned, unsigned>& extractorSpec() const override {
         static const std::map<unsigned, unsigned> extractorSpec = {

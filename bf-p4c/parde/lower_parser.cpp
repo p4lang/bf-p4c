@@ -5,6 +5,7 @@
 
 #include <numeric>
 #include <sstream>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -44,13 +45,16 @@ cstring debugInfoFor(const IR::BFN::Extract* extract,
     if (auto* constantSource = extract->source->to<IR::BFN::ConstantRVal>()) {
         info << "value " << constantSource->constant << " -> "
              << slice.container << " " << slice.container_bits() << ": ";
-    } else if (extract->source->is<IR::BFN::BufferRVal>()) {
+    } else if (extract->source->is<IR::BFN::PacketRVal>()) {
         // In the interest of brevity, don't print the range of bits being
         // extracted into the destination container if it matches the size of
         // the container exactly.
         if (slice.container.size() != size_t(bufferRange.size()))
             info << bufferRange << " -> " << slice.container << " "
                  << slice.container_bits() << ": ";
+    } else if (extract->source->is<IR::BFN::BufferRVal>()) {
+        info << "buffer mapped I/O: " << bufferRange << " -> "
+             << slice.container << " " << slice.container_bits() << ": ";
     }
 
     // Identify the P4 field that we're writing to.
@@ -81,9 +85,9 @@ cstring debugInfoFor(const IR::BFN::Select* select, nw_byterange source) {
     return cstring(info);
 }
 
-/// A predicate which orders input buffer bit intervals by where their input
-/// data ends. Empty intervals are ordered last.
-static bool isIntervalEarlierInBuffer(nw_byteinterval a,
+/// A predicate which orders input packet bit intervals by where they end.
+/// Empty intervals are ordered last.
+static bool isIntervalEarlierInPacket(nw_byteinterval a,
                                       nw_byteinterval b) {
     if (a.empty()) return false;
     if (b.empty()) return true;
@@ -92,16 +96,17 @@ static bool isIntervalEarlierInBuffer(nw_byteinterval a,
 }
 
 /// A predicate which orders extracts by where their input data ends. Extracts
-/// which don't come from the buffer are ordered last - they're lowest priority,
-/// since we can execute them at any time without delaying other extracts.
-static bool isExtractEarlierInBuffer(const IR::BFN::LoweredExtract* a,
+/// which don't come from the input packet are ordered last - they're lowest
+/// priority, since we can execute them at any time without delaying other
+/// extracts.
+static bool isExtractEarlierInPacket(const IR::BFN::LoweredExtract* a,
                                      const IR::BFN::LoweredExtract* b) {
-    auto* aFromBuffer = a->source->to<IR::BFN::LoweredBufferRVal>();
-    auto* bFromBuffer = b->source->to<IR::BFN::LoweredBufferRVal>();
-    if (aFromBuffer && bFromBuffer)
-        return isIntervalEarlierInBuffer(aFromBuffer->byteInterval(),
-                                         bFromBuffer->byteInterval());
-    return aFromBuffer;
+    auto* aFromPacket = a->source->to<IR::BFN::LoweredPacketRVal>();
+    auto* bFromPacket = b->source->to<IR::BFN::LoweredPacketRVal>();
+    if (aFromPacket && bFromPacket)
+        return isIntervalEarlierInPacket(aFromPacket->byteInterval(),
+                                         bFromPacket->byteInterval());
+    return aFromPacket;
 }
 
 /**
@@ -115,11 +120,11 @@ static bool isExtractEarlierInBuffer(const IR::BFN::LoweredExtract* a,
  * the location is a field, and the expression may only refer to part of it if
  * it's e.g. a Slice expression) and the PHV allocation slices for those bits.
  */
-static std::pair<bitrange, std::vector<alloc_slice>>
+static std::pair<le_bitrange, std::vector<alloc_slice>>
 computeSlices(const IR::Expression* phvBackedStorage, const PhvInfo& phv) {
     CHECK_NULL(phvBackedStorage);
     std::vector<alloc_slice> slices;
-    bitrange bits;
+    le_bitrange bits;
     auto* field = phv.field(phvBackedStorage, &bits);
     if (!field) return std::make_pair(bits, slices);
     field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice& alloc) {
@@ -131,6 +136,8 @@ computeSlices(const IR::Expression* phvBackedStorage, const PhvInfo& phv) {
 /// Helper class that splits extract operations into multiple smaller extracts,
 /// such that each extract writes to exactly one PHV container.
 struct ExtractSimplifier {
+    using ExtractSequence = std::vector<const IR::BFN::LoweredExtract*>;
+
     /// Add a new extract operation to the sequence.
     void add(const IR::BFN::Extract* extract, const PhvInfo& phv) {
         LOG4("[ExtractSimplifier] adding: " << extract);
@@ -146,7 +153,7 @@ struct ExtractSimplifier {
             BUG_CHECK(bool(slice.container),
                       "Parser extracts into invalid PHV container: %1%", extract);
 
-        if (auto* bufferSource = extract->source->to<IR::BFN::BufferRVal>()) {
+        if (auto* bufferSource = extract->source->to<IR::BFN::BufferlikeRVal>()) {
             for (const auto& slice : slices) {
                 // Shift the slice to its proper place in the input buffer.
                 auto bitOffset = bufferSource->extractedBits().lo;
@@ -184,19 +191,26 @@ struct ExtractSimplifier {
                           "buffer range %4% with a negative offset: %5%",
                           bufferRange, slice.container, containerRange,
                           finalBufferRange, extract);
+                const auto byteFinalBufferRange =
+                  finalBufferRange.toUnit<RangeUnit::Byte>();
 
                 // Generate the lowered extract.
-                auto* newSource =
-                  new IR::BFN::LoweredBufferRVal(finalBufferRange.toUnit<RangeUnit::Byte>());
-                auto* newExtract =
-                  new IR::BFN::LoweredExtract(slice.container, newSource);
-                newExtract->debug.info.push_back(debugInfoFor(extract, slice, bufferRange));
-                extractBufferByContainer[slice.container].push_back(newExtract);
-            }
-            return;
-        }
+                const IR::BFN::LoweredParserRVal* newSource;
+                if (bufferSource->is<IR::BFN::PacketRVal>())
+                    newSource = new IR::BFN::LoweredPacketRVal(byteFinalBufferRange);
+                else
+                    newSource = new IR::BFN::LoweredBufferRVal(byteFinalBufferRange);
 
-        if (auto* constantSource = extract->source->to<IR::BFN::ConstantRVal>()) {
+                auto* newExtract = new IR::BFN::LoweredExtract(slice.container, newSource);
+                newExtract->debug.info.push_back(debugInfoFor(extract, slice,
+                                                              bufferRange));
+
+                if (bufferSource->is<IR::BFN::PacketRVal>())
+                    extractFromPacketByContainer[slice.container].push_back(newExtract);
+                else
+                    extractFromBufferByContainer[slice.container].push_back(newExtract);
+            }
+        } else if (auto* constantSource = extract->source->to<IR::BFN::ConstantRVal>()) {
             for (const auto& slice : slices) {
                 // We need to generate a mask from this slice that will pull out
                 // the relevant bits of the constant value. Because we're
@@ -236,11 +250,58 @@ struct ExtractSimplifier {
                 newExtract->debug.info.push_back(debugInfoFor(extract, slice));
                 extractConstantByContainer[slice.container].push_back(newExtract);
             }
-            return;
+        } else {
+            BUG("Unexpected parser primitive (most likely something that should "
+                "have been eliminated by an earlier pass): %1%", extract);
+        }
+    }
+
+    template <typename BufferlikeRValType>
+    static const IR::BFN::LoweredExtract*
+    mergeExtractsFor(PHV::Container container, const ExtractSequence& extracts) {
+        BUG_CHECK(!extracts.empty(), "Trying merge an empty sequence of extracts?");
+        if (extracts.size() == 1)
+            return extracts[0];
+
+        // Merge the input buffer range for every extract that writes to
+        // this container. They should all be the same, but if they aren't
+        // we want to know about it.
+        nw_byteinterval bufferRange;
+        for (auto* extract : extracts) {
+            auto* bufferSource = extract->source->to<BufferlikeRValType>();
+            BUG_CHECK(bufferSource, "Unexpected non-buffer source");
+
+            if (std::is_same<BufferlikeRValType, IR::BFN::LoweredBufferRVal>::value)
+                BUG_CHECK(toHalfOpenRange(Device::pardeSpec().byteMappedInputBufferRange())
+                            .contains(bufferSource->byteInterval()),
+                          "Buffer mapped I/O range is outside of the mapped input "
+                          "buffer range: %1%", bufferSource->byteInterval());
+
+            bufferRange = bufferSource->byteInterval().unionWith(bufferRange);
         }
 
-        BUG("Unexpected parser primitive (most likely something that should "
-            "have been eliminated by an earlier pass): %1%", extract);
+        BUG_CHECK(!bufferRange.empty(), "Extracting zero bytes?");
+        const size_t extractedSizeBits =
+          bufferRange.toUnit<RangeUnit::Bit>().size();
+        BUG_CHECK(extractedSizeBits == container.size(),
+                  "Extracted range %1% with size %2% doesn't match "
+                  "destination container %3% with size %4%; was the PHV "
+                  "allocation misaligned or inconsistent?", bufferRange,
+                  extractedSizeBits, container, container.size());
+
+        // Create a single combined extract that implements all of the
+        // component extracts. Because `add()` expands each extract
+        // operation so that it writes to an entire container, if PHV
+        // allocation did its job all of these extracts should read the same
+        // bytes of the input buffer - they're in some sense "the same".
+        // We only need to merge their debug info.
+        const auto* finalBufferValue =
+          new BufferlikeRValType(*toClosedRange(bufferRange));
+        auto* mergedExtract = new IR::BFN::LoweredExtract(container, finalBufferValue);
+        for (auto* extract : extracts)
+            mergedExtract->debug.mergeWith(extract->debug);
+
+        return mergedExtract;
     }
 
     /// Convert the sequence of Extract operations that have been passed to
@@ -249,56 +310,25 @@ struct ExtractSimplifier {
     IR::Vector<IR::BFN::LoweredExtract> lowerExtracts() {
         IR::Vector<IR::BFN::LoweredExtract> loweredExtracts;
 
-        for (auto& item : extractBufferByContainer) {
+        for (auto& item : extractFromPacketByContainer) {
             auto container = item.first;
             auto& extracts = item.second;
+            auto* merged = mergeExtractsFor<IR::BFN::LoweredPacketRVal>(container, extracts);
+            loweredExtracts.push_back(merged);
+        }
 
-            BUG_CHECK(!extracts.empty(), "Map entry with no extracts?");
-            if (extracts.size() == 1) {
-                loweredExtracts.push_back(extracts[0]);
-                continue;
-            }
-
-            // Merge the input buffer range for every extract that writes to
-            // this container. They should all be the same, but if they aren't
-            // we want to know about it.
-            nw_byteinterval bufferRange;
-            for (auto* extract : extracts) {
-                auto* bufferSource =
-                  extract->source->to<IR::BFN::LoweredBufferRVal>();
-                BUG_CHECK(bufferSource, "Unexpected non-buffer source");
-                bufferRange = bufferSource->byteInterval().unionWith(bufferRange);
-            }
-
-            BUG_CHECK(!bufferRange.empty(), "Extracting zero bytes?");
-            const size_t extractedSizeBits =
-              bufferRange.toUnit<RangeUnit::Bit>().size();
-            BUG_CHECK(extractedSizeBits == container.size(),
-                      "Extracted range %1% with size %2% doesn't match "
-                      "destination container %3% with size %4%; was the PHV "
-                      "allocation misaligned or inconsistent?", bufferRange,
-                      extractedSizeBits, container, container.size());
-
-            // Create a single combined extract that implements all of the
-            // component extracts. Because `add()` expands each extract
-            // operation so that it writes to an entire container, if PHV
-            // allocation did its job all of these extracts should read the same
-            // bytes of the input buffer - they're in some sense "the same".
-            // We only need to merge their debug info.
-            const auto finalBufferValue =
-              new IR::BFN::LoweredBufferRVal(*toClosedRange(bufferRange));
-            auto* mergedExtract = new IR::BFN::LoweredExtract(container, finalBufferValue);
-            for (auto* extract : extracts)
-                mergedExtract->debug.mergeWith(extract->debug);
-
-            loweredExtracts.push_back(mergedExtract);
+        for (auto& item : extractFromBufferByContainer) {
+            auto container = item.first;
+            auto& extracts = item.second;
+            auto* merged = mergeExtractsFor<IR::BFN::LoweredBufferRVal>(container, extracts);
+            loweredExtracts.push_back(merged);
         }
 
         for (auto& item : extractConstantByContainer) {
             auto container = item.first;
             auto& extracts = item.second;
 
-            BUG_CHECK(!extracts.empty(), "Map entry with no extracts?");
+            BUG_CHECK(!extracts.empty(), "Trying merge an empty sequence of extracts?");
             if (extracts.size() == 1) {
                 loweredExtracts.push_back(extracts[0]);
                 continue;
@@ -324,12 +354,11 @@ struct ExtractSimplifier {
         return loweredExtracts;
     }
 
-    using ExtractSequence = std::vector<const IR::BFN::LoweredExtract*>;
-
     /// The sequence of extract operations to be simplified. They're organized
     /// by container so that multiple extracts to the same container can be
     /// merged.
-    std::map<PHV::Container, ExtractSequence> extractBufferByContainer;
+    std::map<PHV::Container, ExtractSequence> extractFromPacketByContainer;
+    std::map<PHV::Container, ExtractSequence> extractFromBufferByContainer;
     std::map<PHV::Container, ExtractSequence> extractConstantByContainer;
 };
 
@@ -394,7 +423,13 @@ struct ComputeLoweredParserIR : public ParserInspector {
 
         forAllMatching<IR::BFN::Select>(&state->selects,
                       [&](const IR::BFN::Select* select) {
-            if (auto* bufferSource = select->source->to<IR::BFN::BufferRVal>()) {
+            if (auto* bufferSource = select->source->to<IR::BFN::BufferlikeRVal>()) {
+                // XXX(seth): For now we don't perform any further
+                // transformations on selects (like we do for extracts in e.g.
+                // SplitBigStates), so in this context we can treat `PacketRVal`s
+                // and `BufferRVal`s like they live in the same coordinate
+                // system. We need to change that, though; it doesn't work
+                // correctly in general.
                 const auto bufferRange =
                   bufferSource->extractedBits().toUnit<RangeUnit::Byte>();
                 auto* loweredSelect = new IR::BFN::LoweredSelect(bufferRange);
@@ -591,8 +626,8 @@ class ExtractorAllocator {
         for (auto* extract : match->statements)
             extracts.push_back(extract);
 
-        // Sort the extract primitives by position in the input buffer.
-        std::sort(extracts.begin(), extracts.end(), isExtractEarlierInBuffer);
+        // Sort the extract primitives by position in the input packet.
+        std::sort(extracts.begin(), extracts.end(), isExtractEarlierInPacket);
     }
 
     /// @return true if we haven't allocated everything yet.
@@ -625,8 +660,8 @@ class ExtractorAllocator {
 
             for (auto* extract : extracts) {
                 const auto containerSize = extract->dest->container.size();
-                const auto byteInterval = extract->source->is<IR::BFN::LoweredBufferRVal>()
-                                        ? extract->source->to<IR::BFN::LoweredBufferRVal>()
+                const auto byteInterval = extract->source->is<IR::BFN::LoweredPacketRVal>()
+                                        ? extract->source->to<IR::BFN::LoweredPacketRVal>()
                                                  ->byteInterval()
                                         : nw_byteinterval();
                 if (allocatedExtractorsBySize[containerSize] ==
@@ -646,8 +681,8 @@ class ExtractorAllocator {
 
             for (auto* extract : extracts) {
                 const auto containerSize = extract->dest->container.size();
-                const auto byteInterval = extract->source->is<IR::BFN::LoweredBufferRVal>()
-                                        ? extract->source->to<IR::BFN::LoweredBufferRVal>()
+                const auto byteInterval = extract->source->is<IR::BFN::LoweredPacketRVal>()
+                                        ? extract->source->to<IR::BFN::LoweredPacketRVal>()
                                                  ->byteInterval()
                                         : nw_byteinterval();
 
@@ -704,15 +739,16 @@ class ExtractorAllocator {
     }
 
  private:
-    /// Shift all extracts in the sequence to the left by the given amount.
+    /// Shift all input packet extracts in the sequence to the left by the given
+    /// amount.
     const IR::BFN::LoweredExtract*
     shiftExtract(const IR::BFN::LoweredExtract* extract, int byteDelta) {
-        auto* bufferSource = extract->source->to<IR::BFN::LoweredBufferRVal>();
+        auto* bufferSource = extract->source->to<IR::BFN::LoweredPacketRVal>();
         if (!bufferSource) return extract;
         const auto shiftedRange = bufferSource->range.shiftedByBytes(-byteDelta);
         BUG_CHECK(shiftedRange.lo >= 0, "Shifted extract too much?");
         auto* clone = extract->clone();
-        clone->source = new IR::BFN::LoweredBufferRVal(shiftedRange);
+        clone->source = new IR::BFN::LoweredPacketRVal(shiftedRange);
         return clone;
     }
 

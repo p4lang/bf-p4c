@@ -296,7 +296,7 @@ TEST_F(TofinoFieldAlignment, BridgedMetadataRespectsAlignment) {
         auto* extract = state->statements[0]->to<IR::BFN::Extract>();
         ASSERT_TRUE(extract != nullptr);
         EXPECT_EQ("meta.metadataField", extract->dest->field->toString());
-        auto* bufferSource = extract->source->to<IR::BFN::BufferRVal>();
+        auto* bufferSource = extract->source->to<IR::BFN::PacketRVal>();
         ASSERT_TRUE(bufferSource != nullptr);
         EXPECT_EQ(3, bufferSource->extractedBits().lo % 8);
     });

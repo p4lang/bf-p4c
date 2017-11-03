@@ -130,7 +130,7 @@ struct ParserAsmSerializer : public ParserInspector {
 
     void outputExtract(const IR::BFN::LoweredExtract* extract) {
         // Generate the assembly that actually implements the extract.
-        if (auto* source = extract->source->to<IR::BFN::LoweredBufferRVal>()) {
+        if (auto* source = extract->source->to<IR::BFN::LoweredBufferlikeRVal>()) {
             auto bytes = source->extractedBytes();
             out << indent << Range(bytes.lo, bytes.hi) << ": " << extract->dest;
         } else if (auto* source = extract->source->to<IR::BFN::LoweredConstantRVal>()) {

@@ -262,7 +262,7 @@ using ParserValueResolution = std::map<const IR::BFN::ComputedRVal*,
  *
  * @pre Every `ParserRVal` in each of the parser programs is a unique object.
  * @post Any `ComputedRVal` which can be evaluated unambiguously to a simple
- * r-value (i.e. a `BufferRVal` or `ConstantRVal`) is replaced. Any
+ * r-value (i.e. a `PacketRVal` or `ConstantRVal`) is replaced. Any
  * `ComputedRVal` which remains is either too complex to evaluate, contains uses
  * of l-values that were reached by more than one definition, or contains uses
  * of l-values that were not reached by any definition at all.
@@ -289,16 +289,17 @@ struct CopyPropagateParserValues : public ParserInspector {
             auto lVal = def.first;
             auto* rVal = def.second;
 
-            // Values that don't come from the buffer don't need to change.
-            if (!rVal->is<IR::BFN::BufferRVal>()) {
+            // Values that don't come from the input packet don't need to
+            // change; they're invariant under shifting.
+            if (!rVal->is<IR::BFN::PacketRVal>()) {
                 updated[lVal] = rVal;
                 continue;
             }
 
-            // Values from the input buffer need their offsets to be shifted
+            // Values from the input packet need their offsets to be shifted
             // to the left to compensate for the fact that the transition is
             // shifting the input buffer to the right.
-            auto* clone = rVal->to<IR::BFN::BufferRVal>()->clone();
+            auto* clone = rVal->to<IR::BFN::PacketRVal>()->clone();
             clone->range = clone->range.shiftedByBytes(-byteShift);
             updated[lVal] = clone;
         }
@@ -440,16 +441,16 @@ class ComputeOffsetCorrections : public ParserInspector {
 
     void postorder(const IR::BFN::ParserState* state) override {
         // Find the minimum negative offset used in this state. This tells us
-        // how far back in the input buffer we need to move this state so that
+        // how far back in the input packet we need to move this state so that
         // all offsets are positive. Note that we take any shift corrections
         // that were already computed by our successor states into account.
         int bitMinOffset = 0;
-        forAllMatching<IR::BFN::BufferRVal>(&state->statements,
-                      [&](const IR::BFN::BufferRVal* value) {
+        forAllMatching<IR::BFN::PacketRVal>(&state->statements,
+                      [&](const IR::BFN::PacketRVal* value) {
             bitMinOffset = std::min(bitMinOffset, value->range.lo);
         });
-        forAllMatching<IR::BFN::BufferRVal>(&state->selects,
-                      [&](const IR::BFN::BufferRVal* value) {
+        forAllMatching<IR::BFN::PacketRVal>(&state->selects,
+                      [&](const IR::BFN::PacketRVal* value) {
             bitMinOffset = std::min(bitMinOffset, value->range.lo);
         });
         for (auto* transition : state->transitions) {
@@ -509,7 +510,7 @@ struct ApplyOffsetCorrections : public ParserModifier {
     { }
 
  private:
-    void postorder(IR::BFN::BufferRVal* value) override {
+    void postorder(IR::BFN::PacketRVal* value) override {
         auto* state = findOrigCtxt<IR::BFN::ParserState>();
         BUG_CHECK(bitOffsetCorrections.find(state) != bitOffsetCorrections.end(),
                   "No offset correction entries for state %1%", state->name);
@@ -590,7 +591,7 @@ class CheckResolvedParserExpressions : public ParserTransform {
 
     const IR::BFN::Extract*
     checkExtractFitsInBuffer(const IR::BFN::Extract* extract) const {
-        auto* bufferSource = extract->source->to<IR::BFN::BufferRVal>();
+        auto* bufferSource = extract->source->to<IR::BFN::PacketRVal>();
         if (!bufferSource) return extract;
 
         auto* state = findContext<IR::BFN::ParserState>();

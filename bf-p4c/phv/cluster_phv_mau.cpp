@@ -980,7 +980,10 @@ PHV_MAU_Group_Assignments::container_no_pack(
                             // ...intersecting with the valid range for this field.
                             nw_bitinterval valid_interval =
                                 this_container_range.intersectWith(field->validContainerRange());
-                            BUG_CHECK(!valid_interval.empty(), "Bad absolute container range");
+                            BUG_CHECK(!valid_interval.empty(), "Bad absolute container range; "
+                                      "field %1% has valid container range %2%, which has no "
+                                      "overlap with aggregate container range %3%", field->name,
+                                      field->validContainerRange(), this_container_range);
                             le_bitrange valid_range =
                                 (*toClosedRange(valid_interval)).toOrder<Endian::Little>(
                                     aggregate_container_bits);

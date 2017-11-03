@@ -80,25 +80,44 @@ class UnresolvedStackLast : UnresolvedStackRef {
 /// superset of the values that can actually be read from on the hardware.
 abstract ParserRVal { }
 
-/// An r-value originating from the input buffer. Represented as a range of input
-/// buffer bits.  This must be interpreted relative to a specific parser state to
-/// have an absolute meaning.
-class BufferRVal : ParserRVal {
-    dbprint {
-        out << "buffer bits " << bitInterval() << "(" << range.size() << "b)";
-    }
-
+/// An r-value that represents a read from a range of bits in the input buffer.
+/// The coordinate system used will depend on the specific type of
+/// `BufferlikeRVal`.
+abstract BufferlikeRVal : ParserRVal {
     /// @return this buffer range as a half-open range of bits in network order.
-    /// These bits are specified in the space of the input buffer.
     nw_bitinterval bitInterval() const { return toHalfOpenRange(range); }
 
     /// @return this buffer range as a closed range of bits in network order.
-    /// These bits are specified in the space of the input buffer.
     nw_bitrange extractedBits() const { return range; }
 
-    /// The region of the input buffer represented by this `BufferRVal`,
-    /// expressed as a range of bits in network order.
+    /// The region represented by this `BufferlikeRVal`, expressed as a range of
+    /// bits in network order.
     nw_bitrange range;
+}
+
+/// An r-value originating from the input packet. Represented as a range of bits
+/// in the coordinate system of some parser state or, to describe the same thing
+/// in a different way, relative to some (possibly unknown) offset within the
+/// input packet. Mapping this to a location in the input *buffer* - that is, the
+/// address space into which the input packet gets mapped by the hardware -
+/// requires knowing which parser state it belongs to and which hardware it will
+/// be used on.
+class PacketRVal : BufferlikeRVal {
+    dbprint {
+        out << "packet bits " << bitInterval() << "(" << range.size() << "b)";
+    }
+}
+
+/// An r-value representing a range of bits from the region of the input buffer
+/// that's mapped onto special metadata, rather than data from the input packet.
+/// This is analogous to memory-mapped I/O. The range of bits is specified in the
+/// space of the input *buffer*, rather than the input *packet*, and thus the
+/// coordinate system is independent of any parser state, although it's still
+/// hardware-specific.
+class BufferRVal : BufferlikeRVal {
+    dbprint {
+        out << "buffer bits " << bitInterval() << "(" << range.size() << "b)";
+    }
 }
 
 /// A constant used as an r-value in the parser.

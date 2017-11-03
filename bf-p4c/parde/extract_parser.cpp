@@ -292,7 +292,7 @@ struct RewriteParserStatements : public Transform {
             IR::Expression* fref = new IR::Member(field->type, hdr, field->name);
             auto width = field->type->width_bits();
             auto* extract = new IR::BFN::Extract(srcInfo, fref,
-                              new IR::BFN::BufferRVal(StartLen(currentBit, width)));
+                              new IR::BFN::PacketRVal(StartLen(currentBit, width)));
             currentBit += width;
             rv->push_back(extract);
         }
@@ -382,7 +382,7 @@ struct RewriteParserStatements : public Transform {
         if (auto* lookahead = rhs->to<IR::BFN::LookaheadExpression>()) {
             auto bits = lookahead->bitRange().shiftedByBits(currentBit);
             return new IR::BFN::Extract(s->srcInfo, s->left,
-                     new IR::BFN::BufferRVal(bits));
+                     new IR::BFN::PacketRVal(bits));
         }
 
         if (!canEvaluateInParser(rhs)) {
@@ -460,7 +460,7 @@ const IR::Node* rewriteSelect(const IR::Expression* component) {
     // We can transform a LookaheadExpression immediately to a concrete select
     // on bits in the input buffer.
     if (auto* lookahead = component->to<IR::BFN::LookaheadExpression>())
-        return new IR::BFN::Select(new IR::BFN::BufferRVal(lookahead->bitRange()),
+        return new IR::BFN::Select(new IR::BFN::PacketRVal(lookahead->bitRange()),
                                    lookahead);
 
     // We can split a Concat into multiple selects. Note that this is quite

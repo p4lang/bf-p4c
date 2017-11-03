@@ -71,7 +71,7 @@ FieldPacking::createExtractionState(gress_t gress, cstring stateName,
     for (auto& item : fields) {
         if (!item.isPadding()) {
             auto* extract = new IR::BFN::Extract(item.field,
-              new IR::BFN::BufferRVal(StartLen(currentBit, item.width)));
+              new IR::BFN::PacketRVal(StartLen(currentBit, item.width)));
             extracts.push_back(extract);
         }
         currentBit += item.width;
