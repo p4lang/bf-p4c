@@ -394,7 +394,7 @@ class AddPhase0Parser : public Modifier {
       IR::Vector<IR::BFN::ParserPrimitive> extracts;
       for (auto& constantItem : *constants) {
           auto* dest = constantItem.first;
-          auto* constant = constantItem.second;
+          auto constant = constantItem.second->value;
           auto* extract =
             new IR::BFN::Extract(dest, new IR::BFN::ConstantRVal(constant));
           extracts.push_back(extract);

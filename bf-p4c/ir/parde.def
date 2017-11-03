@@ -103,6 +103,7 @@ class BufferRVal : ParserRVal {
 
 /// A constant used as an r-value in the parser.
 class ConstantRVal : ParserRVal {
+#noconstructor
 #emit
     explicit ConstantRVal(mpz_class value)
       : constant(new IR::Constant(value)) { }

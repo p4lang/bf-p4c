@@ -377,7 +377,7 @@ struct RewriteParserStatements : public Transform {
 
         if (rhs->is<IR::Constant>())
             return new IR::BFN::Extract(s->srcInfo, s->left,
-                     new IR::BFN::ConstantRVal(rhs->to<IR::Constant>()));
+                     new IR::BFN::ConstantRVal(rhs->to<IR::Constant>()->value));
 
         if (auto* lookahead = rhs->to<IR::BFN::LookaheadExpression>()) {
             auto bits = lookahead->bitRange().shiftedByBits(currentBit);
