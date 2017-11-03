@@ -150,7 +150,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Header field .* is required to be allocated contiguously"
   extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
-  extensions/p4_tests/p4_14/switch_20160602/switch.p4
   extensions/p4_tests/p4_14/jenkins/multicast_scale/multicast_scale.p4
   switch_l2
   )
@@ -603,7 +602,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/jenkins/power/power.p4
   testdata/p4_14_samples/parser_dc_full.p4
   testdata/p4_14_samples/port_vlan_mapping.p4
-  extensions/p4_tests/p4_14/switch_20160602/switch.p4
   )
 
 # We can't (without some complex acrobatics) support conditional computed
@@ -704,8 +702,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Inferred incompatible alignments for field"
   extensions/p4_tests/p4_14/switch_l2_profile.p4
-  testdata/p4_14_samples/switch_20160226/switch.p4
-  testdata/p4_14_samples/switch_20160512/switch.p4
   )
 
 # Tests where a field is placed into a container that's too big, causing us to
@@ -839,12 +835,9 @@ p4c_add_xfail_reason("tofino"
   "Could not find declaration for standard_metadata"
   extensions/p4_tests/p4_14/c1/COMPILER-559/case2987.p4
   extensions/p4_tests/p4_14/switch_l2_profile.p4
-  extensions/p4_tests/p4_14/switch_20160602/switch.p4
   testdata/p4_14_samples/copy_to_cpu.p4
   testdata/p4_14_samples/packet_redirect.p4
   testdata/p4_14_samples/simple_nat.p4
-  testdata/p4_14_samples/switch_20160226/switch.p4
-  testdata/p4_14_samples/switch_20160512/switch.p4
   )
 # invalid tests, eg_intr_md.egress_port is read-only
 p4c_add_xfail_reason("tofino"
@@ -891,8 +884,9 @@ p4c_add_xfail_reason("tofino"
 # backend bug
 p4c_add_xfail_reason("tofino"
   "PHV_Container::taint_bits"
-  extensions/p4_tests/p4_14/switch/p4src/switch.p4
+  switch_dc_basic
   )
+
 # backend bug
 p4c_add_xfail_reason("tofino"
   "Slice is of IR structure not handled by ActionAnalysis"
