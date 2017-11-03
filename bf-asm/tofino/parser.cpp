@@ -418,7 +418,7 @@ void Parser::gen_configuration_cache(Target::Tofino::parser_regs &regs, json::ve
             + std::to_string(i) + "]"; 
         reg_name = "parser0_chnl_ctrl_" + std::to_string(i);
         reg_value =
-               (regs.egress.epb_prsr_port_regs.chnl_ctrl[i].meta_opt        & 0x000001FF)  
+               (regs.egress.epb_prsr_port_regs.chnl_ctrl[i].meta_opt        & 0x00001FFF)
             | ((regs.egress.epb_prsr_port_regs.chnl_ctrl[i].chnl_ena        & 0x00000001)  << 16)
             | ((regs.egress.epb_prsr_port_regs.chnl_ctrl[i].afull_thr       & 0x00000007)  << 17)
             | ((regs.egress.epb_prsr_port_regs.chnl_ctrl[i].aemp_thr        & 0x00000007)  << 20)
