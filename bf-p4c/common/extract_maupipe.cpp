@@ -785,7 +785,6 @@ class TnaPipe {
     }
 
     /// XXX(hanw): key to rv->metadata is used in add_parde_metadata.cpp
-    /// metadata_from_parser is currently not used anywhere.
     void extractMetadata(IR::BFN::Pipe* rv, ParamBinding* bindings, gress_t gress) {
         if (gress == INGRESS) {
             // XXX(hanw) index must be consistent with tofino.p4

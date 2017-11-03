@@ -249,9 +249,26 @@ struct egress_intrinsic_metadata_from_parser_t {
     bit<32> egress_global_ver;           // global version number taken at the
                                          // egress pipe.
 
-  bit<16> egress_parser_err;             // error flags indicating error(s)
+    bit<16> egress_parser_err;           // error flags indicating error(s)
                                          // encountered at egress
                                          // parser.
+
+    bit<4> clone_digest_id;              // value indicating the digest ID,
+                                         // based on the field list ID.
+
+    // XXX(seth): This definition is correct, but doesn't pass type checking.
+    // For now, we work around this by treating `clone_src` as a bit<8> and
+    // adding some useless padding to keep things byte-aligned.
+    //bit<4> clone_src;                    // value indicating whether or not this
+    //                                     // is a cloned packet, and if so, where
+    //                                     // it came from.
+    //                                     // (see #defines in glass's constants.p4)
+    bit<4> _pad;
+    bit<8> clone_src;
+
+    bit<8> coalesce_sample_count;        // if clone_src indicates this packet
+                                         // is coalesced, the number of samples
+                                         // taken from other packets
 }
 
 struct egress_intrinsic_metadata_for_deparser_t {
