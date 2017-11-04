@@ -36,7 +36,7 @@ install_linux_packages() {
         boost_libs="libboost-dev libboost-graph-dev libboost-test-dev libboost-program-options-dev libboost-system-dev libboost-filesystem-dev libboost-iostreams-dev libboost-thread-dev"
     fi
 
-    apt_packages="g++${gcc_ver} git pkg-config automake cmake curl python2.7 python bison flex ${boost_libs} libtool libcli-dev libedit-dev libeditline-dev libevent-dev libjudy-dev libgc-dev libgmp-dev libjson0 libjson0-dev libmoose-perl libnl-route-3-dev libpcap0.8-dev libssl-dev autopoint doxygen texinfo python-scapy python-yaml python-ipaddr python-pip realpath unzip"
+    apt_packages="g++${gcc_ver} git pkg-config automake cmake curl python2.7 python bison flex ${boost_libs} libtool libcli-dev libedit-dev libeditline-dev libevent-dev libjudy-dev libgc-dev libgmp-dev libjson0 libjson0-dev libmoose-perl libnl-route-3-dev libpcap0.8-dev libssl-dev autopoint doxygen texinfo python-scapy python-yaml python-ipaddr python-pip rpm realpath unzip"
 
     echo "Need sudo privs to install apt packages"
     $SUDO apt-get update || die "Failed to update apt"
