@@ -1,6 +1,7 @@
 #include "bf-p4c/mau/asm_output.h"
 #include "bf-p4c/mau/gateway.h"
 #include "bf-p4c/mau/resource.h"
+#include "bf-p4c/mau/table_format.h"
 #include "bf-p4c/parde/phase0.h"
 #include "bf-p4c/phv/asm_output.h"
 #include "lib/algorithm.h"
@@ -178,9 +179,9 @@ void MauAsmOutput::emit_action_data_format(std::ostream &out, indent_t indent,
 
 struct FormatHash {
     safe_vector<Slice> match_data;
-    safe_vector<Slice> ghost;
+    const Slice *ghost;
     cstring alg;
-    FormatHash(const safe_vector<Slice>& md, const safe_vector<Slice>& g,
+    FormatHash(const safe_vector<Slice>& md, const Slice *g,
                cstring a)
         : match_data(md), ghost(g), alg(a) {}
 };
@@ -202,10 +203,10 @@ std::ostream &operator<<(std::ostream &out, const FormatHash &hash) {
     if (checkEqual(hash.alg, "exact_match")) {
         if (!hash.match_data.empty()) {
             out << "random(" << emit_vector(hash.match_data, ", ") << ")";
-            if (!hash.ghost.empty()) out << " ^ ";
+            if (hash.ghost) out << " ^ ";
         }
-        if (!hash.ghost.empty()) {
-            out << "stripe(" << emit_vector(hash.ghost, ", ") << ")";
+        if (hash.ghost) {
+            out << *hash.ghost;
         }
     } else if (checkEqual(hash.alg, "random")) {
         out << "random(" << emit_vector(hash.match_data, ", ") << ")";
@@ -355,35 +356,163 @@ void MauAsmOutput::emit_ixbar_hash_table(int hash_table, safe_vector<Slice> &mat
     }
 }
 
+/** Emits information on a lower 10 bit portion of a RAM select for exact match
+ */
+void MauAsmOutput::emit_ixbar_hash_way(std::ostream &out, indent_t indent,
+        safe_vector<Slice> &match_data, Slice *ghost, const IXBar::Use *use, int start_bit,
+        int end_bit) const {
+    unsigned done = 0;
+    if (match_data.empty() && ghost == nullptr)
+        return;
+    for (auto &way : use->way_use) {
+        if (done & (1 << way.slice)) continue;
+        done |= 1 << way.slice;
+        int way_start = way.slice * TableFormat::RAM_GHOST_BITS + start_bit;
+        int way_end = way.slice * TableFormat::RAM_GHOST_BITS + end_bit;
+        out << indent << way_start;
+        if (way_end != way_start)
+            out << ".." << way_end;
+        out << ": " << FormatHash(match_data, ghost, "exact_match") << std::endl;
+    }
+}
+
+/** Emits infomration on the upper 12 bits select porition of a RAM select for exact match
+ */
+void MauAsmOutput::emit_ixbar_hash_way_select(std::ostream &out, indent_t indent,
+        safe_vector<Slice> &match_data, Slice *ghost, int start_bit, int end_bit) const {
+    int way_start = TableFormat::RAM_GHOST_BITS * IXBar::HASH_INDEX_GROUPS + start_bit;
+    int way_end = TableFormat::RAM_GHOST_BITS * IXBar::HASH_INDEX_GROUPS + end_bit;
+    out << indent << way_start;
+    if (way_end != way_start)
+        out << ".." << way_end;
+    out << ": " << FormatHash(match_data, ghost, "exact_match") << std::endl;
+}
+
+/** The purpose of this code is to output the hash matrix specifically for exact tables.
+ *  This code classifies all of the ghost bits for this particular hash table.  The ghost bits
+ *  are the bits that appear in the hash but not in the table format.  This reduces the
+ *  number of bits actually needed to match against.
+ *
+ *  The ghost bits themselves are spread through an identity hash, while the bits that appear
+ *  in the match are randomized.  Thus each ghost bit is assigned a corresponding bit in the
+ *  way bits or select bits within the match format.
+ *
+ *  The hash matrix is specified on a hash table by hash table basis.  16 x 64b hash tables
+ *  at most are specified, and if the ghost bits do not appear in that particular hash table,
+ *  they will not be output.  The ident_bits_prev_alloc is used to track how where to start
+ *  the identity of the ghost bits within this particular hash table.
+ */
+void MauAsmOutput::emit_ixbar_hash_exact(std::ostream &out, indent_t indent,
+        safe_vector<Slice> &match_data, safe_vector<Slice> &ghost, const IXBar::Use *use,
+        int &ident_bits_prev_alloc) const {
+    // Do not specify identity ghost bits at places where ghost bits are already specified
+    if (ident_bits_prev_alloc > 0) {
+        emit_ixbar_hash_way(out, indent, match_data, nullptr, use, 0, ident_bits_prev_alloc);
+    }
+
+    safe_vector<Slice> way_ghost;
+    safe_vector<Slice> select_ghost;
+
+    // Classify which ghost bits are going in the lower 10 bits, and the upper select bits
+    int ident_bits_alloc = 0;
+    for (auto ghost_slice : ghost) {
+        int start_bit = ident_bits_prev_alloc + ident_bits_alloc;
+        if (start_bit >= TableFormat::RAM_GHOST_BITS) {
+            select_ghost.push_back(ghost_slice);
+        } else if (start_bit + ghost_slice.width() <= TableFormat::RAM_GHOST_BITS) {
+            way_ghost.push_back(ghost_slice);
+        } else {
+            int diff = TableFormat::RAM_GHOST_BITS - start_bit - 1;
+            auto way_slice = ghost_slice(0, diff);
+            way_ghost.push_back(way_slice);
+            select_ghost.push_back(ghost_slice - way_slice);
+        }
+        ident_bits_alloc += ghost_slice.width();
+    }
+
+    // Handle the ghost bits that are in the lower 10 bits of the hash way
+    int bits_allocated = 0;
+    for (auto ghost_slice : way_ghost) {
+        int start_bit = ident_bits_prev_alloc + bits_allocated;
+        int end_bit = start_bit + ghost_slice.width() - 1;
+        emit_ixbar_hash_way(out, indent, match_data, &ghost_slice, use, start_bit, end_bit);
+        bits_allocated += ghost_slice.width();
+    }
+
+    // Select bits for each way.  Due to an optimization, select bits can be shared between
+    // ways if more than 4 ways are actually required.  This makes sure that the ghost bits
+    // for those align appropriately
+    bitvec total_ghost_mask;
+    // If there aren't enough ghost bits to even reach the select bits
+    if (ident_bits_alloc + ident_bits_prev_alloc < TableFormat::RAM_GHOST_BITS) {
+        int start_bit = ident_bits_alloc + ident_bits_prev_alloc;
+        int end_bit = TableFormat::RAM_GHOST_BITS - 1;
+        emit_ixbar_hash_way(out, indent, match_data, nullptr, use, start_bit, end_bit);
+    } else if (ident_bits_alloc + ident_bits_prev_alloc > TableFormat::RAM_GHOST_BITS) {
+        bits_allocated = 0;
+        bitvec ghost_slice_mask;
+        for (auto ghost_slice : select_ghost) {
+            ghost_slice_mask.clear();
+            int select_bits = ghost_slice.width();
+            int offset = std::max(ident_bits_prev_alloc, int(TableFormat::RAM_GHOST_BITS));
+            offset += bits_allocated - TableFormat::RAM_GHOST_BITS;
+            bitvec bit_mask(offset, select_bits);
+            for (auto way : use->way_use) {
+                bitvec way_mask;
+                way_mask.setraw(way.mask);
+                bitvec select_ghost_mask = (bit_mask << way_mask.ffs()) & way_mask;
+
+                // Check to make sure that shared ghosted select bits between ways still are
+                // correctly aligned
+                if ((select_ghost_mask & total_ghost_mask).popcount() != 0) {
+                    BUG_CHECK((select_ghost_mask & total_ghost_mask).popcount() == select_bits,
+                          "Select mask for a way sharing the select bits is not correctly set up");
+                    BUG_CHECK((select_ghost_mask & total_ghost_mask)
+                              == (select_ghost_mask & ghost_slice_mask), "Select mask for bits "
+                             "collide with a different ghost slice select portion");
+                    continue;
+                }
+                total_ghost_mask |= select_ghost_mask;
+                ghost_slice_mask |= select_ghost_mask;
+                int start_bit = select_ghost_mask.min().index();
+                int end_bit = select_ghost_mask.max().index();
+                emit_ixbar_hash_way_select(out, indent, match_data, &ghost_slice, start_bit,
+                                           end_bit);
+            }
+            bits_allocated += select_bits;
+        }
+    }
+
+    // For all holes in the upper 12 bits that don't have a corresponding select bit
+    unsigned mask_bits = 0;
+    for (auto way : use->way_use)
+        mask_bits |= way.mask;
+    bitvec select_range = (bitvec(mask_bits) - total_ghost_mask);
+    for (auto range : bitranges(select_range.getrange(0, IXBar::HASH_SINGLE_BITS))) {
+        emit_ixbar_hash_way_select(out, indent, match_data, nullptr, range.first, range.second);
+    }
+}
+
 /* Generate asm for the hash of a table, specifically either a match, gateway, or selector
    table.  Not used for hash distribution hash */
 void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent,
                                    safe_vector<Slice> &match_data,
                                    safe_vector<Slice> &ghost,
-                                   const IXBar::Use *use, int hash_group) const {
-    unsigned done = 0; unsigned mask_bits = 0;
+                                   const IXBar::Use *use, int hash_group,
+                                   int &ident_bits_prev_alloc) const {
+    if (!use->way_use.empty()) {
+        emit_ixbar_hash_exact(out, indent, match_data, ghost, use, ident_bits_prev_alloc);
+    }
 
     for (auto &select : use->select_use) {
         if (select.mode == "resilient")
             out << indent << "0..50: "
-                << FormatHash(match_data, ghost, select.algorithm) << std::endl;
+                << FormatHash(match_data, nullptr, select.algorithm) << std::endl;
         else if (select.mode == "fair")
             out << indent << "0..13: "
-                << FormatHash(match_data, ghost, select.algorithm) << std::endl;
+                << FormatHash(match_data, nullptr, select.algorithm) << std::endl;
         else
             BUG("Unrecognized mode of the action selector");
-    }
-    for (auto &way : use->way_use) {
-        mask_bits |= way.mask;
-        if (done & (1 << way.slice)) continue;
-        done |= 1 << way.slice;
-        out << indent << (way.slice*10) << ".." << (way.slice*10 + 9) << ": "
-            << FormatHash(match_data, ghost, "exact_match") << std::endl;
-    }
-    for (auto range : bitranges(mask_bits)) {
-        out << indent << (range.first+40);
-        if (range.second != range.first) out << ".." << (range.second+40);
-        out << ": " << FormatHash(match_data, ghost, "exact_match") << std::endl;
     }
     for (auto ident : use->bit_use) {
         out << indent << (40 + ident.bit);
@@ -430,7 +559,7 @@ void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent,
                 if (last_bit == -1)
                 last_bit = (i + 1) * IXBar::HASH_DIST_BITS - 1;
                 out << indent << first_bit << ".." << last_bit;
-                out << ": " << FormatHash(match_data, ghost, hdh.algorithm) << std::endl;
+                out << ": " << FormatHash(match_data, nullptr, hdh.algorithm) << std::endl;
             }
         }
     }
@@ -446,6 +575,7 @@ void MauAsmOutput::emit_single_ixbar(std::ostream &out, indent_t indent, const I
                       << group.second << std::endl;
     int hash_group = 0;
     for (auto hash_table_input : use->hash_table_inputs) {
+        int ident_bits_prev_alloc = 0;
         if (hash_table_input) {
             for (int ht : bitvec(hash_table_input)) {
                 out << indent++ << "hash " << ht << ":" << std::endl;
@@ -454,7 +584,8 @@ void MauAsmOutput::emit_single_ixbar(std::ostream &out, indent_t indent, const I
                 emit_ixbar_hash_table(ht, match_data, ghost, fmt, sort);
                 // FIXME: This is obviously an issue for larger selector tables,
                 //  whole function needs to be replaced
-                emit_ixbar_hash(out, indent, match_data, ghost, use, hash_group);
+                emit_ixbar_hash(out, indent, match_data, ghost, use, hash_group,
+                                ident_bits_prev_alloc);
                 --indent;
             }
             out << indent++ << "hash group " << hash_group << ":" << std::endl;

@@ -59,7 +59,14 @@ class MauAsmOutput : public MauInspector {
             safe_vector<Slice> &ghost, const TableMatch *fmt,
             std::map<int, std::map<int, Slice>> &sort) const;
     void emit_ixbar_hash(std::ostream &out, indent_t indent, safe_vector<Slice> &match_data,
-            safe_vector<Slice> &ghost, const IXBar::Use *use, int hash_group) const;
+            safe_vector<Slice> &ghost, const IXBar::Use *use, int hash_group,
+            int &ident_bits_prev_alloc) const;
+    void emit_ixbar_hash_exact(std::ostream &out, indent_t indent, safe_vector<Slice> &match_data,
+            safe_vector<Slice> &ghost, const IXBar::Use *use, int &ident_bits_prev_alloc) const;
+    void emit_ixbar_hash_way(std::ostream &out, indent_t indent, safe_vector<Slice> &match_data,
+           Slice *ghost, const IXBar::Use *use, int start_bit, int end_bit) const;
+    void emit_ixbar_hash_way_select(std::ostream &out, indent_t indent,
+            safe_vector<Slice> &match_data, Slice *ghost, int start_bit, int end_bit) const;
     void emit_single_ixbar(std::ostream& out, indent_t indent, const IXBar::Use *use,
             const TableMatch *fmt) const;
     void emit_memory(std::ostream &out, indent_t, const Memories::Use &) const;

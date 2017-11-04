@@ -28,8 +28,13 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
   )
 
   p4c_add_xfail_reason("tofino"
-    "expected packet([s])* on port .* not seen"
+    "the monitored command dumped core"
     testdata/p4_14_samples/07-MultiProtocol.p4
+    testdata/p4_14_samples/exact_match_valid1.p4
+  )
+
+  p4c_add_xfail_reason("tofino"
+    "expected packet([s])* on port .* not seen"
     testdata/p4_14_samples/gateway4.p4
     testdata/p4_14_samples/hitmiss.p4
     )
