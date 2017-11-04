@@ -108,7 +108,7 @@ class LoweredParserMatch {
 #emit
     LoweredParserMatch(match_t value, unsigned shift,
                        const LoweredParserState* next)
-        : value(value), shift(shift), next(next) { }
+        : value(value), shift(shift), bufferRequired(0), next(next) { }
 #end
 
     /// The mask which will be matched against the value the containing state
@@ -121,6 +121,11 @@ class LoweredParserMatch {
 
     /// If the match is successful, the extractions to perform.
     inline Vector<LoweredExtract> statements;
+
+    /// The number of packet bytes which must be available in the input buffer
+    /// for the extractions to be performed successfully. If `boost::none`,
+    /// there is no particular requirement; the assembler will choose a default.
+    optional boost::optional<unsigned> bufferRequired;
 
     /// If the match is successful, the next state to transition to, or null if
     /// this is a terminal state in the parser program.

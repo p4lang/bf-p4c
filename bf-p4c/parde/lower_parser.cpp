@@ -832,6 +832,50 @@ class ComputeMultiwriteContainers : public ParserModifier {
     std::map<PHV::Container, unsigned> writes;
 };
 
+/// Compute the number of bytes which must be available for each parser match to
+/// avoid a stall.
+class ComputeBufferRequirements : public ParserModifier {
+    void postorder(IR::BFN::LoweredParserMatch* match) override {
+        // Determine the range of bytes in the input packet read if this match
+        // is successful. Note that we ignore `LoweredBufferRVal`s and
+        // `LoweredConstantRVal`s, since those do not originate in the input
+        // packet.
+        nw_byteinterval bytesRead;
+        forAllMatching<IR::BFN::LoweredPacketRVal>(&match->statements,
+                      [&](const IR::BFN::LoweredPacketRVal* packetSource) {
+            bytesRead = bytesRead.unionWith(packetSource->byteInterval());
+        });
+
+        // XXX(seth): This is pretty unintuitive. It doesn't matter what we're
+        // matching against here; that stuff was all loaded into the match
+        // registers in a previous state. Instead, we need to take into account
+        // the bytes that the *next* state will match on, because those bytes
+        // will be loaded here. This is gross, but it'll go away once we start
+        // modeling the match registers explicitly.
+        if (match->next) {
+            for (auto* select : match->next->select) {
+                // We need to consider these bytes in this state's coordinate
+                // system, rather than that of the next state, so we "undo" the
+                // shift we'd apply.
+                const auto matchedBytes =
+                  toHalfOpenRange(select->range.shiftedByBytes(match->shift));
+                bytesRead = bytesRead.unionWith(matchedBytes);
+            }
+        }
+
+        // We need to have buffered enough bytes to read the last byte in the
+        // range.
+        match->bufferRequired = int(bytesRead.hi);
+
+        const unsigned inputBufferSize = Device::pardeSpec().byteInputBufferSize();
+        BUG_CHECK(*match->bufferRequired < inputBufferSize,
+                  "Match for state %1% requires %2% bytes to be buffered, which "
+                  "is more than can fit in the %3% byte input buffer",
+                  findContext<IR::BFN::LoweredParserState>()->name,
+                  *match->bufferRequired, inputBufferSize);
+    }
+};
+
 }  // namespace
 
 LowerParser::LowerParser(const PhvInfo& phv) {
@@ -839,6 +883,7 @@ LowerParser::LowerParser(const PhvInfo& phv) {
         new LowerParserIR(phv),
         new LowerDeparserIR(phv),
         new SplitBigStates,
-        new ComputeMultiwriteContainers
+        new ComputeMultiwriteContainers,
+        new ComputeBufferRequirements
     });
 }
