@@ -1472,7 +1472,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".Traverse") register<bit<1>>(32w294912) _Traverse_0;
     @name(".Bonner.Penalosa") register_action<bit<1>, bit<1>>(_Traverse_0) _Bonner_Penalosa_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            rv = value;
+            rv = ~value;
         }
     };
     @name(".Bonner.Rosburg") register_action<bit<1>, bit<1>>(_Allen_0) _Bonner_Rosburg_0 = {

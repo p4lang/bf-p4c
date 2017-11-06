@@ -1420,7 +1420,7 @@ control OjoFeliz(inout headers hdr, inout metadata meta, inout standard_metadata
     @name("LaConner") register_action<bit<1>, bit<1>>(Arnold_0) LaConner_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = value;
-            rv = value;
+            rv = ~value;
         }
     };
     @name("ShowLow") register_action<bit<1>, bit<1>>(Redfield_0) ShowLow_0 = {

@@ -582,7 +582,7 @@ control Amber(inout headers hdr, inout metadata meta, inout standard_metadata_t 
     @name("Moxley") register_action<bit<1>, bit<1>>(Shidler_0) Moxley_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = value;
-            rv = value;
+            rv = ~value;
         }
     };
     @name("Shorter") register_action<bit<1>, bit<1>>(Jefferson_0) Shorter_0 = {

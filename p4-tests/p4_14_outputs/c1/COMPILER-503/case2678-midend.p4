@@ -1218,7 +1218,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     };
     @name(".Devore.Vinita") register_action<bit<1>, bit<1>>(_Elmdale_0) _Devore_Vinita_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            rv = value;
+            rv = ~value;
         }
     };
     @name(".Lowland") action _Lowland() {

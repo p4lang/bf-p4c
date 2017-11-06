@@ -1414,7 +1414,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     };
     @name(".Ashburn.RioPecos") register_action<bit<1>, bit<1>>(_Longwood_0) _Ashburn_RioPecos_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            rv = value;
+            rv = ~value;
         }
     };
     @name(".Lardo") action _Lardo() {

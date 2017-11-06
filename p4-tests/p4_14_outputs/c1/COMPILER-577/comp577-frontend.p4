@@ -2024,7 +2024,7 @@ control Netarts(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("Campton") register_action<bit<1>, bit<1>>(Hibernia_0) Campton_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = value;
-            rv = value;
+            rv = ~value;
         }
     };
     @name("Panaca") register_action<bit<1>, bit<1>>(Frontier_0) Panaca_0 = {

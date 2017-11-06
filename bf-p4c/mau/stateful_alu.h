@@ -30,26 +30,27 @@ class CreateSaluInstruction : public Inspector {
     const IR::ParameterList     *params = nullptr;
     cstring                     alu_hi_var;  // a single variable can live in alu_hi
                                              // if its not needed for dual mode
-    enum { NONE, COND, PRED, IF, VALUE, OUTPUT, BIT_INSTR } etype = NONE;
+    enum { NONE, IF, VALUE, OUTPUT } etype = NONE;
     bool                        negate = false;
     bool                        alu_write[2] = { false, false };
     cstring                     opcode;
     std::vector<const IR::Expression *>         operands, pred_operands;
     std::vector<const IR::MAU::Instruction *>   cmp_instr;
-    const IR::Expression        *predicates[5];
+    const IR::Expression        *predicate;
     const IR::MAU::Instruction  *output;
+    bool                        output_cmpl = false;
     IR::MAU::StatefulAlu::MathUnit      math;
     IR::MAU::SaluMathFunction   *math_function = nullptr;
     const IR::Expression        *math_input = nullptr;
 
-    const IR::MAU::Instruction *createInstruction(int);
+    const IR::MAU::Instruction *createInstruction();
     bool applyArg(const IR::PathExpression *, cstring);
     const IR::Expression *reuseCmp(const IR::MAU::Instruction *cmp, int idx);
 
     bool preorder(const IR::Declaration_Instance *di) override;
     bool preorder(const IR::Declaration_Variable *v) override;
-    bool preorder(const IR::Property *) override;
-    void postorder(const IR::Property *) override;
+    bool preorder(const IR::Property *) override { BUG("unconverted p4_14"); }
+    void postorder(const IR::Property *) override { BUG("unconverted p4_14"); }
     bool preorder(const IR::Function *) override;
     void postorder(const IR::Function *) override;
     bool preorder(const IR::AssignmentStatement *) override;
@@ -61,7 +62,7 @@ class CreateSaluInstruction : public Inspector {
     bool preorder(const IR::PathExpression *) override;
 
     bool preorder(const IR::Constant *) override;
-    bool preorder(const IR::AttribLocal *) override;
+    bool preorder(const IR::AttribLocal *) override { BUG("unconverted p4_14"); }
     bool preorder(const IR::Member *) override;
     bool preorder(const IR::Operation::Relation *, cstring op, bool eq);
     bool preorder(const IR::Equ *r) override { return preorder(r, "equ", true); }

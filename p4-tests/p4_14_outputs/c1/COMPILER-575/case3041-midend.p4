@@ -1489,7 +1489,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     };
     @name(".Lacona.Woodcrest") register_action<bit<1>, bit<1>>(_Ontonagon_0) _Lacona_Woodcrest_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            rv = value;
+            rv = ~value;
         }
     };
     @name(".Pathfork") action _Pathfork() {

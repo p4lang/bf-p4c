@@ -1004,7 +1004,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".Tryon") register<bit<1>>(32w262144) _Tryon_0;
     @name(".Sitka.Klondike") register_action<bit<1>, bit<1>>(_Buenos_0) _Sitka_Klondike_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            rv = value;
+            rv = ~value;
         }
     };
     @name(".Sitka.Theba") register_action<bit<1>, bit<1>>(_Tryon_0) _Sitka_Theba_0 = {

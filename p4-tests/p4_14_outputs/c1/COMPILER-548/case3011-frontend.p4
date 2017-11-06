@@ -2831,7 +2831,7 @@ control Snowflake(inout headers hdr, inout metadata meta, inout standard_metadat
     @name("ShadeGap") register_action<bit<1>, bit<1>>(Bosworth_0) ShadeGap_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = value;
-            rv = value;
+            rv = ~value;
         }
     };
     @name("ShowLow") register_action<bit<1>, bit<1>>(Tuttle_0) ShowLow_0 = {

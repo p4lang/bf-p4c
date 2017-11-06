@@ -1486,7 +1486,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".Proctor") register<bit<1>>(32w262144) _Proctor_0;
     @name(".Shickley.Baskett") register_action<bit<1>, bit<1>>(_Flaxton_0) _Shickley_Baskett_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            rv = value;
+            rv = ~value;
         }
     };
     @name(".Shickley.Sunrise") register_action<bit<1>, bit<1>>(_Proctor_0) _Shickley_Sunrise_0 = {

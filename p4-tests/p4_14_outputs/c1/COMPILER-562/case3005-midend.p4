@@ -1419,7 +1419,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".Verdery") register<bit<1>>(32w262144) _Verdery_0;
     @name(".Howland.FulksRun") register_action<bit<1>, bit<1>>(_Servia_0) _Howland_FulksRun_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            rv = value;
+            rv = ~value;
         }
     };
     @name(".Howland.Oilmont") register_action<bit<1>, bit<1>>(_Verdery_0) _Howland_Oilmont_0 = {

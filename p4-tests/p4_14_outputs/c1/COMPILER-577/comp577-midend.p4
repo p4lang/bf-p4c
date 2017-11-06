@@ -1613,7 +1613,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".Hibernia") register<bit<1>>(32w294912) _Hibernia_0;
     @name(".Netarts.Campton") register_action<bit<1>, bit<1>>(_Hibernia_0) _Netarts_Campton_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            rv = value;
+            rv = ~value;
         }
     };
     @name(".Netarts.Panaca") register_action<bit<1>, bit<1>>(_Frontier_0) _Netarts_Panaca_0 = {

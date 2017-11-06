@@ -797,7 +797,7 @@ control Eastover(inout headers hdr, inout metadata meta, inout standard_metadata
     @name("Waxhaw") register_action<bit<1>, bit<1>>(Correo_0) Waxhaw_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = value;
-            rv = value;
+            rv = ~value;
         }
     };
     @name(".NewSite") action NewSite_0(bit<1> Rohwer) {

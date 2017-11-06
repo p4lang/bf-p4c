@@ -1112,7 +1112,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     };
     @name(".Carrizozo.Skene") register_action<bit<1>, bit<1>>(_Kennedale_0) _Carrizozo_Skene_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            rv = value;
+            rv = ~value;
         }
     };
     @name(".Greenbush") action _Greenbush() {

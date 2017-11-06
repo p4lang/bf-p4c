@@ -1092,7 +1092,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     };
     @name(".Bagwell.Hulbert") register_action<bit<1>, bit<1>>(_Hobucken_0) _Bagwell_Hulbert_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            rv = value;
+            rv = ~value;
         }
     };
     @name(".Sudbury") action _Sudbury() {

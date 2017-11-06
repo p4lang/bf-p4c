@@ -1001,7 +1001,7 @@ control Bogota(inout headers hdr, inout metadata meta, inout standard_metadata_t
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = value;
-            rv = value;
+            rv = ~value;
         }
     };
     @name(".Ivyland") action Ivyland() {

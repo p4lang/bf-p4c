@@ -1330,7 +1330,7 @@ control Sitka(inout headers hdr, inout metadata meta, inout standard_metadata_t 
     @name("Klondike") register_action<bit<1>, bit<1>>(Buenos_0) Klondike_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = value;
-            rv = value;
+            rv = ~value;
         }
     };
     @name("Theba") register_action<bit<1>, bit<1>>(Tryon_0) Theba_0 = {

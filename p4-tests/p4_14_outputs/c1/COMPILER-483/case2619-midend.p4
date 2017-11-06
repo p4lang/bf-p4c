@@ -1152,7 +1152,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".NewSite") register<bit<1>>(32w262144) _NewSite_0;
     @name(".Tahuya.Goldsmith") register_action<bit<1>, bit<1>>(_Alcalde_0) _Tahuya_Goldsmith_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            rv = value;
+            rv = ~value;
         }
     };
     @name(".Tahuya.Mizpah") register_action<bit<1>, bit<1>>(_NewSite_0) _Tahuya_Mizpah_0 = {

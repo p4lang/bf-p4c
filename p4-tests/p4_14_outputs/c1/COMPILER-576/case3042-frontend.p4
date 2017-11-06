@@ -2521,7 +2521,7 @@ control Shickley(inout headers hdr, inout metadata meta, inout standard_metadata
     @name("Baskett") register_action<bit<1>, bit<1>>(Flaxton_0) Baskett_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = value;
-            rv = value;
+            rv = ~value;
         }
     };
     @name("Sunrise") register_action<bit<1>, bit<1>>(Proctor_0) Sunrise_0 = {

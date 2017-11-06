@@ -1408,7 +1408,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     };
     @name(".Bogota.Union") register_action<bit<1>, bit<1>>(_Pathfork_0) _Bogota_Union_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            rv = value;
+            rv = ~value;
         }
     };
     @name(".Ivyland") action _Ivyland() {

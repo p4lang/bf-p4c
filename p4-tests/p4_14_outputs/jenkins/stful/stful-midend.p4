@@ -419,19 +419,19 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("bloom_filter_alu_1") register_action<bit<1>, bit<1>>(bloom_filter) bloom_filter_alu_1 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = 1w1;
-            rv = 1w1;
+            rv = 1w0;
         }
     };
     @name("bloom_filter_alu_2") register_action<bit<1>, bit<1>>(bloom_filter_0) bloom_filter_alu_2 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = 1w1;
-            rv = 1w1;
+            rv = 1w0;
         }
     };
     @name("bloom_filter_alu_3") register_action<bit<1>, bit<1>>(bloom_filter_1) bloom_filter_alu_3 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = 1w1;
-            rv = 1w1;
+            rv = 1w0;
         }
     };
     @name("counter_alu") register_action<counter_alu_layout, int<32>>(port_cntr) counter_alu = {

@@ -1885,7 +1885,7 @@ control Tiverton(inout headers hdr, inout metadata meta, inout standard_metadata
     @name("Riverlea") register_action<bit<1>, bit<1>>(Noyack_0) Riverlea_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = value;
-            rv = value;
+            rv = ~value;
         }
     };
     @name(".Sudbury") action Sudbury_0(bit<1> Moraine) {

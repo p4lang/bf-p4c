@@ -1286,7 +1286,7 @@ control Giltner(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("Bramwell") register_action<bit<1>, bit<1>>(Bennet_0) Bramwell_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = value;
-            rv = value;
+            rv = ~value;
         }
     };
     @name("Colonias") register_action<bit<1>, bit<1>>(OldMinto_0) Colonias_0 = {

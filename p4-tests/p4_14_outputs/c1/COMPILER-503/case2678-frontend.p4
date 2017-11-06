@@ -747,7 +747,7 @@ control Devore(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name("Vinita") register_action<bit<1>, bit<1>>(Elmdale_0) Vinita_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = value;
-            rv = value;
+            rv = ~value;
         }
     };
     @name(".Lowland") action Lowland_0() {

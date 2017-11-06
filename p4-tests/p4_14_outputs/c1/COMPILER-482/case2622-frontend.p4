@@ -1604,7 +1604,7 @@ control Montegut(inout headers hdr, inout metadata meta, inout standard_metadata
     @name("Leoma") register_action<bit<1>, bit<1>>(Helotes_0) Leoma_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = value;
-            rv = value;
+            rv = ~value;
         }
     };
     @name("Rodessa") register_action<bit<1>, bit<1>>(Bloomdale_0) Rodessa_0 = {

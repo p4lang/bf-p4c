@@ -1619,7 +1619,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     };
     @name(".Ludowici.Moose") register_action<bit<1>, bit<1>>(_Spenard_0) _Ludowici_Moose_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            rv = value;
+            rv = ~value;
         }
     };
     @name(".Larwill") action _Larwill() {

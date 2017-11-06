@@ -1381,7 +1381,7 @@ control Hiawassee(inout headers hdr, inout metadata meta, inout standard_metadat
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = value;
-            rv = value;
+            rv = ~value;
         }
     };
     @name(".Sudbury") action Sudbury() {

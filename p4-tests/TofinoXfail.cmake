@@ -36,7 +36,7 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     extensions/p4_tests/p4_14/stateful3.p4
   )
 
-  # BRIG-328
+  # These pass with the latest model -- Travis images need update?
   p4c_add_xfail_reason("tofino"
     "the monitored command dumped core"
     testdata/p4_14_samples/07-MultiProtocol.p4
@@ -49,6 +49,7 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     extensions/p4_tests/p4_14/adb_shared2.p4
     # potential STF bug in reading mask constants
     extensions/p4_tests/p4_14/adjust_instr6.p4
+    extensions/p4_tests/p4_14/sful_1bit.p4
     )
 
 endif() # HARLYN_STF

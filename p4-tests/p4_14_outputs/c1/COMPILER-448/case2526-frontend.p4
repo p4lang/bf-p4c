@@ -583,7 +583,7 @@ control Bagwell(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("Hulbert") register_action<bit<1>, bit<1>>(Hobucken_0) Hulbert_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = value;
-            rv = value;
+            rv = ~value;
         }
     };
     @name(".Sudbury") action Sudbury_0() {

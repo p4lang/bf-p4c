@@ -1098,7 +1098,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".Merrill") register<bit<1>>(32w262144) _Merrill_0;
     @name(".Victoria.Kekoskee") register_action<bit<1>, bit<1>>(_Merrill_0) _Victoria_Kekoskee_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            rv = value;
+            rv = ~value;
         }
     };
     @name(".Victoria.Woodsboro") register_action<bit<1>, bit<1>>(_Illmo_0) _Victoria_Woodsboro_0 = {

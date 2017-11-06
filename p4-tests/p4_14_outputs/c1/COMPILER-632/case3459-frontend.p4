@@ -2593,7 +2593,7 @@ control Ludowici(inout headers hdr, inout metadata meta, inout standard_metadata
     @name("Moose") register_action<bit<1>, bit<1>>(Spenard_0) Moose_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = value;
-            rv = value;
+            rv = ~value;
         }
     };
     @name(".Larwill") action Larwill_0() {

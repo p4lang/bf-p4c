@@ -1004,7 +1004,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".Redfield") register<bit<1>>(32w262144) _Redfield_0;
     @name(".OjoFeliz.LaConner") register_action<bit<1>, bit<1>>(_Arnold_0) _OjoFeliz_LaConner_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            rv = value;
+            rv = ~value;
         }
     };
     @name(".OjoFeliz.ShowLow") register_action<bit<1>, bit<1>>(_Redfield_0) _OjoFeliz_ShowLow_0 = {

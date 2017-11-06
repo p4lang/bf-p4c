@@ -1998,7 +1998,7 @@ control Tahuya(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name("Goldsmith") register_action<bit<1>, bit<1>>(Alcalde_0) Goldsmith_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = value;
-            rv = value;
+            rv = ~value;
         }
     };
     @name("Mizpah") register_action<bit<1>, bit<1>>(NewSite_0) Mizpah_0 = {

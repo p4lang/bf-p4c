@@ -1489,7 +1489,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     };
     @name(".Calabasas.Portal") register_action<bit<1>, bit<1>>(_Simla_0) _Calabasas_Portal_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            rv = value;
+            rv = ~value;
         }
     };
     @name(".Manilla") action _Manilla(bit<1> Denhoff) {

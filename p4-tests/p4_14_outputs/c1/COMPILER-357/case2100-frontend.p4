@@ -750,7 +750,7 @@ control Chamois(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("Pierpont") register_action<bit<1>, bit<1>>(Jemison_0) Pierpont_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = value;
-            rv = value;
+            rv = ~value;
         }
     };
     @name(".Sequim") action Sequim_0() {

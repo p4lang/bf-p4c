@@ -1569,7 +1569,7 @@ control Oakford(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("Saluda") register_action<bit<1>, bit<1>>(Gregory_0) Saluda_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = value;
-            rv = value;
+            rv = ~value;
         }
     };
     @name("SomesBar") register_action<bit<1>, bit<1>>(Argentine_0) SomesBar_0 = {

@@ -2626,7 +2626,7 @@ control Ranchito(inout headers hdr, inout metadata meta, inout standard_metadata
     @name("Wheaton") register_action<bit<1>, bit<1>>(Oxford_0) Wheaton_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = value;
-            rv = value;
+            rv = ~value;
         }
     };
     @name(".Hobucken") action Hobucken_0(bit<1> Bufalo) {

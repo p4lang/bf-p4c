@@ -1012,7 +1012,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     };
     @name(".Chamois.Pierpont") register_action<bit<1>, bit<1>>(_Jemison_0) _Chamois_Pierpont_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            rv = value;
+            rv = ~value;
         }
     };
     @name(".Sequim") action _Sequim() {

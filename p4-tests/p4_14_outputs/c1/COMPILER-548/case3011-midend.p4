@@ -1486,7 +1486,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".Tuttle") register<bit<1>>(32w262144) _Tuttle_0;
     @name(".Snowflake.ShadeGap") register_action<bit<1>, bit<1>>(_Bosworth_0) _Snowflake_ShadeGap_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            rv = value;
+            rv = ~value;
         }
     };
     @name(".Snowflake.ShowLow") register_action<bit<1>, bit<1>>(_Tuttle_0) _Snowflake_ShowLow_0 = {

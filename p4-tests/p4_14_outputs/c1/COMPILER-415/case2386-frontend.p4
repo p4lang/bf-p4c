@@ -608,7 +608,7 @@ control Carrizozo(inout headers hdr, inout metadata meta, inout standard_metadat
     @name("Skene") register_action<bit<1>, bit<1>>(Kennedale_0) Skene_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = value;
-            rv = value;
+            rv = ~value;
         }
     };
     @name(".Greenbush") action Greenbush_0() {

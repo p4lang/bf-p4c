@@ -642,7 +642,7 @@ control Chunchula(inout headers hdr, inout metadata meta, inout standard_metadat
     @name("Sisters") register_action<bit<1>, bit<1>>(Lucien_0) Sisters_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = value;
-            rv = value;
+            rv = ~value;
         }
     };
     @name(".Heflin") action Heflin_0() {

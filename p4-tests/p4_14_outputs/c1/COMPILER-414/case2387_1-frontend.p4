@@ -1840,7 +1840,7 @@ control Victoria(inout headers hdr, inout metadata meta, inout standard_metadata
     @name("Kekoskee") register_action<bit<1>, bit<1>>(Merrill_0) Kekoskee_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = value;
-            rv = value;
+            rv = ~value;
         }
     };
     @name("Woodsboro") register_action<bit<1>, bit<1>>(Illmo_0) Woodsboro_0 = {

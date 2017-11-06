@@ -1453,7 +1453,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".OldMinto") register<bit<1>>(32w294912) _OldMinto_0;
     @name(".Giltner.Bramwell") register_action<bit<1>, bit<1>>(_Bennet_0) _Giltner_Bramwell_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            rv = value;
+            rv = ~value;
         }
     };
     @name(".Giltner.Colonias") register_action<bit<1>, bit<1>>(_OldMinto_0) _Giltner_Colonias_0 = {

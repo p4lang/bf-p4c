@@ -1244,7 +1244,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".Helotes") register<bit<1>>(32w262144) _Helotes_0;
     @name(".Montegut.Leoma") register_action<bit<1>, bit<1>>(_Helotes_0) _Montegut_Leoma_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            rv = value;
+            rv = ~value;
         }
     };
     @name(".Montegut.Rodessa") register_action<bit<1>, bit<1>>(_Bloomdale_0) _Montegut_Rodessa_0 = {

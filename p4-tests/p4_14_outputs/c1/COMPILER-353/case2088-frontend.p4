@@ -1262,7 +1262,7 @@ control Parnell(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("Tillatoba") register_action<bit<1>, bit<1>>(Skillman_0) Tillatoba_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             value = value;
-            rv = value;
+            rv = ~value;
         }
     };
     @name(".Tocito") action Tocito_0(bit<1> Astor) {

@@ -1475,7 +1475,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     };
     @name(".Ranchito.Wheaton") register_action<bit<1>, bit<1>>(_Oxford_0) _Ranchito_Wheaton_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
-            rv = value;
+            rv = ~value;
         }
     };
     @name(".Hobucken") action _Hobucken(bit<1> Bufalo) {

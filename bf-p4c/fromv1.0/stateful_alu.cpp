@@ -27,6 +27,7 @@ class CreateSaluApplyFunction : public Inspector {
     const IR::Statement *output = nullptr;
     enum expr_index_t { LO1, LO2, HI1, HI2, OUT } expr_index;
     bool defer_out = false;
+    bool cmpl_out = false;
     bool need_alu_hi = false;
     PassManager rewrite;
 
@@ -72,10 +73,16 @@ class CreateSaluApplyFunction : public Inspector {
                 idx = 1;
                 self.defer_out = true;
             } else if (attr->name == "set_bit" || attr->name == "set_bitc") {
+                if (self.utype->width_bits() != 1)
+                    error("%s only allowed in 1 bit registers", attr->name);
                 return new IR::Constant(self.utype, 1);
             } else if (attr->name == "clr_bit" || attr->name == "clr_bitc") {
+                if (self.utype->width_bits() != 1)
+                    error("%s only allowed in 1 bit registers", attr->name);
                 return new IR::Constant(self.utype, 0);
             } else if (attr->name == "read_bit" || attr->name == "read_bitc") {
+                if (self.utype->width_bits() != 1)
+                    error("%s only allowed in 1 bit registers", attr->name);
                 idx = 0;
             } else if (attr->name == "math_unit") {
                 return new IR::MethodCallExpression(
@@ -153,6 +160,8 @@ class CreateSaluApplyFunction : public Inspector {
                 new IR::Path(idx < 0 ? "rv" : "value"));
         if (idx >= 0)
             dest = makeRegFieldMember(dest, idx);
+        else if (cmpl_out)
+            e = new IR::Cmpl(e);
         const IR::Statement *instr = structure->assign(prop->srcInfo, dest, e, utype);
         LOG2("adding " << instr << " with pred " << pred);
         if (pred)
@@ -192,6 +201,9 @@ class CreateSaluApplyFunction : public Inspector {
                 const IR::Declaration_Instance *ext, const IR::Type *rtype,
                 const IR::Type::Bits *utype, cstring math_unit_name) {
         CreateSaluApplyFunction create_apply(structure, rtype, utype, math_unit_name);
+        // need a separate traversal here as "update" will be visited after "output"
+        forAllMatching<IR::AttribLocal>(&ext->properties, [&](const IR::AttribLocal *attr) {
+            if (attr->name.name.endsWith("_bitc")) { create_apply.cmpl_out = true; } });
         ext->apply(create_apply);
         return create_apply.apply; }
 };
