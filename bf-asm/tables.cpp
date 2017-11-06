@@ -1302,8 +1302,9 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
                 merge.mau_action_instruction_adr_mask[type][bus] = 0;
                 if (actions->count() == 1)
                     default_action = actions->begin()->code;
-                if (options.match_compiler)
-                    shift_en.action_instruction_adr_payload_shifter_en = 1; }
+                else if (this->to<HashActionTable>() && this->get_gateway()) {
+                    merge.mau_action_instruction_adr_mask[type][bus] = 1;
+                    shift_en.action_instruction_adr_payload_shifter_en = 1; } }
             if (!result->enable_action_instruction_enable)
                 default_action |= ACTION_INSTRUCTION_ADR_ENABLE;
             merge.mau_action_instruction_adr_default[type][bus] = default_action;
