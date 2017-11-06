@@ -154,6 +154,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   extensions/p4_tests/p4_14/jenkins/multicast_scale/multicast_scale.p4
   switch_l2
+  switch_dc_basic
   )
 
 # BRIG-112
@@ -814,7 +815,6 @@ p4c_add_xfail_reason("tofino"
 # backend bug
 p4c_add_xfail_reason("tofino"
   "PHV_Container::taint_bits"
-  switch_dc_basic
   )
 
 # backend bug

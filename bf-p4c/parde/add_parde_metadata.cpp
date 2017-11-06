@@ -143,6 +143,8 @@ void AddMetadataShims::addIngressMetadata(IR::BFN::Deparser *d) {
     addDeparserIntrinsic(d, meta, "ucast_egress_port", "egress_unicast_port");
     addDeparserIntrinsic(d, meta, "mcast_grp_a", "egress_multicast_group_a");
     addDeparserIntrinsic(d, meta, "mcast_grp_b", "egress_multicast_group_b");
+    addDeparserIntrinsic(d, meta, "level1_mcast_hash", "hash_lag_ecmp_mcast_1");
+    addDeparserIntrinsic(d, meta, "level2_mcast_hash", "hash_lag_ecmp_mcast_2");
     addDeparserIntrinsic(d, meta, "rid", "rid");
     addDeparserIntrinsic(d, meta, "level1_exclusion_id", "xid");
     addDeparserIntrinsic(d, meta, "level2_exclusion_id", "yid");
