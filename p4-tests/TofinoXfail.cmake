@@ -19,14 +19,24 @@ if (HARLYN_STF AND NOT ENABLE_STF2PTF)
 set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
   extensions/p4_tests/p4_14/hash_calculation_32.p4
   testdata/p4_14_samples/counter4.p4
-  # Masked table keys ignoring mask in table layout?
-  extensions/p4_tests/p4_14/stateful2.p4
-  extensions/p4_tests/p4_14/stateful3.p4
   # default drop packet instead of writing to port 0
   testdata/p4_16_samples/issue635-bmv2.p4
   testdata/p4_16_samples/issue655-bmv2.p4
   )
 
+  # BRIG-325
+  p4c_add_xfail_reason("tofino"
+    "no field idx related to table test1"
+    extensions/p4_tests/p4_14/stateful2.p4
+  )
+
+  # BRIG-327
+  p4c_add_xfail_reason("tofino"
+    "mismatch from expected[(]01[)] at byte 0xe"
+    extensions/p4_tests/p4_14/stateful3.p4
+  )
+
+  # BRIG-328
   p4c_add_xfail_reason("tofino"
     "the monitored command dumped core"
     testdata/p4_14_samples/07-MultiProtocol.p4
@@ -52,15 +62,6 @@ endif() # HARLYN_STF
 # add the failures with no reason
 p4c_add_xfail_reason("tofino" "" ${TOFINO_XFAIL_TESTS})
 
-# BRIG-136
-# was BRIG-134 for extensions/p4_tests/p4_14/jenkins/alpm_test/alpm_test.p4
-p4c_add_xfail_reason("tofino"
-  "No write within a split instruction"
-  extensions/p4_tests/p4_14/jenkins/alpm_test/alpm_test.p4
-  extensions/p4_tests/p4_14/jenkins/basic_ipv4/basic_ipv4.p4
-  extensions/p4_tests/p4_14/jenkins/exm_direct_1/exm_direct_1_one.p4
-  )
-
 # BRIG-101
 p4c_add_xfail_reason("tofino"
   "src2 must be phv register"
@@ -82,7 +83,6 @@ p4c_add_xfail_reason("tofino"
   "Unhandled action bitmask constraint"
   extensions/p4_tests/p4_14/13-IngressEgressConflict.p4
   testdata/p4_14_samples/mac_rewrite.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   )
 
 # Fails due to invalid action specification
@@ -98,7 +98,6 @@ p4c_add_xfail_reason("tofino"
   "error: Assignment cannot be supported in the parser"
   testdata/p4_16_samples/scalarmeta-bmv2.p4
   testdata/p4_16_samples/issue281.p4
-  testdata/p4_16_samples/stack_complex-bmv2.p4
   testdata/p4_14_samples/axon.p4
   testdata/p4_16_samples/stack_complex-bmv2.p4
   )
@@ -108,8 +107,6 @@ p4c_add_xfail_reason("tofino"
   "No field named counter_addr in format"
   testdata/p4_14_samples/13-Counters1and2.p4
   testdata/p4_14_samples/14-Counter.p4
-  testdata/p4_16_samples/action_profile-bmv2.p4
-  testdata/p4_16_samples/issue297-bmv2.p4
   extensions/p4_tests/p4_14/c1/COMPILER-386/test_config_286_stat_bugs.p4
   )
 
@@ -218,7 +215,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: tofino supports up to 12 stages"
   extensions/p4_tests/p4_14/c1/COMPILER-257/case1770.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
   extensions/p4_tests/p4_14/case1770.p4
   extensions/p4_tests/p4_14/jenkins/alpm_test/alpm_test.p4
   extensions/p4_tests/p4_14/jenkins/basic_ipv4/basic_ipv4.p4
@@ -228,7 +224,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/jenkins/exm_smoke_test/exm_smoke_test_one.p4
   extensions/p4_tests/p4_14/jenkins/multi_device/multi_device.p4
   extensions/p4_tests/p4_14/jenkins/perf_test_alpm/perf_test_alpm_one.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
   extensions/p4_tests/p4_14/jenkins/exm_direct/exm_direct_one.p4
   )
 
@@ -517,11 +512,6 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "metadata arrays not handled in"
-  testdata/p4_16_samples/inline-stack-bmv2.p4
-  )
-
-p4c_add_xfail_reason("tofino"
   "Invalid select case expression"
   testdata/p4_16_samples/issue361-bmv2.p4
   )
@@ -595,7 +585,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
   extensions/p4_tests/p4_14/c1/COMPILER-133/full_tphv.p4
   extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
   extensions/p4_tests/p4_14/c4/COMPILER-590/case3179.p4
   extensions/p4_tests/p4_14/c4/COMPILER-591/case3176.p4
   extensions/p4_tests/p4_14/jenkins/power/power.p4
@@ -677,30 +666,7 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "Header present in IR not under Member"
-  # was "No PHV allocation for field extracted by the parser"
-  testdata/p4_14_samples/packet_redirect.p4
-  # was "too much data for parser match"
-  testdata/p4_14_samples/copy_to_cpu.p4
-  testdata/p4_14_samples/resubmit.p4
   testdata/p4_16_samples/issue907-bmv2.p4
-  )
-
-# Hash distribution errors.  Zhao is looking at the following 2 errors currently
-p4c_add_xfail_reason("tofino"
-  "Hash column out of range"
-  # was "Conflicting hash distribution bit allocation .*"
-  extensions/p4_tests/p4_14/jenkins/stful/stful.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "Hash table .* column .* duplicated"
-  extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "Inferred incompatible alignments for field"
-  extensions/p4_tests/p4_14/switch_l2_profile.p4
   )
 
 # Tests where a field is placed into a container that's too big, causing us to
@@ -713,35 +679,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c4/COMPILER-549/case2898.p4
   extensions/p4_tests/p4_14/jenkins/range/range.p4
   testdata/p4_14_samples/parser2.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
   extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
-  )
-
-# Tests where a field is placed correctly, but we still can't extract it without
-# reading past the beginning of the input buffer. Multiple fixes are needed
-# here; we need to be able to convey this constraint to PHV allocation, but in a
-# subset of cases we can handle this by adjusting the parser program and we
-# should do so if we can.
-# BRIG-270
-p4c_add_xfail_reason("tofino"
-  "Extract field slice .* with a negative offset."
-  extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
-  extensions/p4_tests/p4_14/jenkins/stful/stful.p4
-  extensions/p4_tests/p4_14/test_checksum.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "Could not find declaration"
-  extensions/p4_tests/p4_16/stful.p4
-  )
-
-# P4-14 program can not define extern
-p4c_add_xfail_reason("tofino"
-  "P4_14 extern not fully supported"
-  testdata/p4_14_samples/issue604.p4
   )
 
 # BEGIN: XFAILS that match glass XFAILS
@@ -766,7 +704,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/action_conflict_3.p4
   extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
   extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
   extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
   extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
@@ -844,8 +781,9 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_249_simple_bridge.p4
   )
 # invalid tests, issue604.p4 is a v1.1 testcase
+# P4-14 program can not define extern
 p4c_add_xfail_reason("tofino"
-  "Could not find declaration for extern_test"
+  "P4_14 extern not fully supported"
   testdata/p4_14_samples/issue604.p4
   )
 # are we going to retire these switch profiles?
@@ -862,13 +800,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "hash offset must be a power of 2 in a hash calculation hash.get_hash"
   testdata/p4_14_samples/flowlet_switching.p4
-  )
-# failed in assembler
-p4c_add_xfail_reason("tofino"
-  "Field counter_pfe overlaps with meter_pfe"
-  extensions/p4_tests/p4_14/c8/COMPILER-616/case3331.p4
-  extensions/p4_tests/p4_14/jenkins/stats_pi/stats_pi.p4
-  extensions/p4_tests/p4_14/jenkins/action_spec_format/action_spec_format.p4
   )
 # ingress parser need access pkt_length
 p4c_add_xfail_reason("tofino"
