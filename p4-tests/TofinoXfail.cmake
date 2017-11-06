@@ -44,12 +44,6 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
   )
 
   p4c_add_xfail_reason("tofino"
-    "expected packet([s])* on port .* not seen"
-    testdata/p4_14_samples/gateway4.p4
-    testdata/p4_14_samples/hitmiss.p4
-    )
-
-  p4c_add_xfail_reason("tofino"
     "mismatch from expected.*at byte 0x"
     extensions/p4_tests/p4_16/stack_valid.p4
     extensions/p4_tests/p4_14/adb_shared2.p4

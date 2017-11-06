@@ -1106,19 +1106,34 @@ void Table::Actions::add_action_format(Table *table, json::map &tbl) {
      * hit_next entries.  Need a way of speicfying next table in the actual action */
     //if (table->hit_next.size() <= 1) return;
     unsigned hit_index = 0;
+    bool hit_index_inc = true;
+    // If hit and miss tables are same, set next table for all actions
+    if (table->hit_next.size() == 1)
+        if (table->hit_next[0] == table->miss_next)
+            hit_index_inc = false;
+    // If miss table not in any hit tables, set next table to miss table for all actions
+    // This is the default action next table or miss table which runtime updates
+    bool set_miss_table = true;
+    for (auto &htbl : table->hit_next)
+        if (htbl == table->miss_next)
+            set_miss_table = false;
     json::vector &action_format = tbl["action_format"] = json::vector();
     for (auto &act : *this) {
         json::map action_format_per_action;
         // compute what is the next table and set next to "nullptr" if either this is the
         // last table or it ran out of indices
         auto next = hit_index < table->hit_next.size() ? table->hit_next[hit_index] : Table::Ref();
+        if (set_miss_table) next = table->miss_next;
         if(next && next->name_ == "END") next = Table::Ref();
-        hit_index++;
+        if (hit_index_inc) hit_index++;
+        std::string next_table_name = next ? next->name() : "--END_OF_PIPELINE--";
+        unsigned next_table = next ? hit_index : 0;
+        unsigned next_table_full = next ? next->table_id() : 0xff;
         action_format_per_action["action_name"] = act.name;
         action_format_per_action["action_handle"] = act.handle;
-        action_format_per_action["table_name"] = next ? next->name() : "--END_OF_PIPELINE--";
-        action_format_per_action["next_table"] = next ? hit_index : 0;
-        action_format_per_action["next_table_full"] = next ? next->table_id() : 0xff;
+        action_format_per_action["table_name"] = next_table_name;
+        action_format_per_action["next_table"] = next_table;
+        action_format_per_action["next_table_full"] = next_table_full;
         action_format_per_action["vliw_instruction"] = act.code;
         action_format_per_action["vliw_instruction_full"] = ACTION_INSTRUCTION_ADR_ENABLE | act.addr;
 

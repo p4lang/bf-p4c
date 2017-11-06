@@ -119,6 +119,7 @@ public:
         bool operator==(const Table *t) { return name == t->name_; }
         bool operator==(const char *t) { return name == t; }
         bool operator==(const std::string &t) { return name == t; }
+        bool operator==(const Ref &a) { return name == a.name; }
         bool check() {
             if (set() && !*this)
                 error(lineno, "No table named %s", name.c_str());
