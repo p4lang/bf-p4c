@@ -41,6 +41,7 @@ const IR::Node* ControlConverter::postorder(IR::MethodCallStatement* node) {
     RETURN_TRANSLATED_NODE_IF_FOUND(hashCalls);
     RETURN_TRANSLATED_NODE_IF_FOUND(randomCalls);
     RETURN_TRANSLATED_NODE_IF_FOUND(resubmitCalls);
+    RETURN_TRANSLATED_NODE_IF_FOUND(digestCalls);
     RETURN_TRANSLATED_NODE_IF_FOUND(cloneCalls);
     RETURN_TRANSLATED_NODE_IF_FOUND(dropCalls);
     return node;
@@ -211,6 +212,12 @@ const IR::Node* IngressDeparserConverter::preorder(IR::P4Control* node) {
     path = new IR::Path("resubmit_packet");
     type = new IR::Type_Name(path);
     param = new IR::Parameter("resubmit", IR::Direction::None, type);
+    paramList->push_back(param);
+
+    // add digest
+    path = new IR::Path("learning_packet");
+    type = new IR::Type_Name(path);
+    param = new IR::Parameter("learning", IR::Direction::None, type);
     paramList->push_back(param);
 
     auto controlType = new IR::Type_Control("ingressDeparserImpl", paramList);

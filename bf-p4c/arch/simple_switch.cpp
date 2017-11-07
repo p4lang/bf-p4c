@@ -729,19 +729,19 @@ class ConstructSymbolTable : public Inspector {
         auto mem = new IR::Member(path, "learn_idx");
         auto idx = new IR::Constant(new IR::Type_Bits(3, false), digestIndex++);
         auto stmt = new IR::AssignmentStatement(mem, idx);
-        structure->resubmitCalls.emplace(node, stmt);
+        structure->digestCalls.emplace(node, stmt);
 
         /*
          * In the ingress deparser, add the following code
          *
-         * if (ig_intr_md_for_dprsr.digest_idx == n)
-         *    learn.add_metadata({fields});
+         * if (ig_intr_md_for_dprsr.learn_idx == n)
+         *    learning.add_metadata({fields});
          *
          */
-        auto field_list = mce->arguments->at(0);
+        auto field_list = mce->arguments->at(1);
         auto cloned_field_list = cloneFieldList(field_list);
         auto args = new IR::Vector<IR::Expression>({ cloned_field_list });
-        auto expr = new IR::PathExpression(new IR::Path("resubmit"));
+        auto expr = new IR::PathExpression(new IR::Path("learning"));
         auto member = new IR::Member(expr, "add_metadata");
         auto typeArgs = new IR::Vector<IR::Type>();
         auto mcs = new IR::MethodCallStatement(

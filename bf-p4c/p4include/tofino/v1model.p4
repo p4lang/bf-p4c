@@ -472,7 +472,7 @@ extern resubmit_packet {
     void add_metadata<T>(@optional in T hdr);
 }
 
-extern learn_filter_packet {
+extern learning_packet {
     ///
     void add_metadata<T>(in T hdr);
 }
@@ -528,7 +528,8 @@ control IngressDeparser<H, M>(
     @optional in ingress_intrinsic_metadata_t ig_intr_md,
     @optional in ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
     @optional mirror_packet mirror,
-    @optional resubmit_packet resubmit);
+    @optional resubmit_packet resubmit,
+    @optional learning_packet learning);
 
 control EgressDeparser<H, M>(
     packet_out pkt,
