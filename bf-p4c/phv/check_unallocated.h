@@ -10,16 +10,19 @@
  */
 class CheckForUnallocatedTemps : public PassManager {
     struct RejectTemps : public Inspector {
-        const PhvInfo& phv;
+        const PhvInfo &phv;
         const PhvUse &uses;
+        const ClotInfo &clot;
 
-        RejectTemps(const PhvInfo& phv, const PhvUse &uses) : phv(phv), uses(uses) { }
+        RejectTemps(const PhvInfo& phv, const PhvUse &uses, const ClotInfo& clot) :
+            phv(phv), uses(uses), clot(clot) { }
+
         const IR::Node *apply_visitor(const IR::Node *n, const char *name = 0) override {
             if (name)
                 LOG1(name);
 
             ordered_set<PHV::Field *> unallocated =
-                CheckFitting::collect_unallocated_fields(phv, uses);
+                CheckFitting::collect_unallocated_fields(phv, uses, clot);
             if (unallocated.size()) {
                 BUG("Fields added after PHV allocation");
                 for (auto f : unallocated)
@@ -42,10 +45,10 @@ class CheckForUnallocatedTemps : public PassManager {
     };
 
  public:
-    CheckForUnallocatedTemps(const PhvInfo &phv, PhvUse &uses) {
+    CheckForUnallocatedTemps(const PhvInfo &phv, PhvUse &uses, const ClotInfo& clot) {
         addPasses({
             &uses,
-            new RejectTemps(phv, uses) });
+            new RejectTemps(phv, uses, clot) });
     }
 };
 

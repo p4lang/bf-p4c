@@ -597,9 +597,18 @@ void Cluster::MakeClusters::compute_fields_no_use_mau() {
             BUG_CHECK(!f->pov, "POV field not clustered");
             set_field_range(f); } }
 
-    // s_diff = not_used_mau - delete_set
+    // fields that are already allocated as a clot
+    ordered_set<PHV::Field *> clot_set;
+    for (auto f : not_used_mau) {
+        if (clot_i.allocated(f))
+            clot_set.insert(f);
+    }
+
+    // s_diff = not_used_mau - delete_set - clot_set
     ordered_set<PHV::Field *> s_diff = not_used_mau;
     s_diff -= delete_set;
+    s_diff -= clot_set;
+
     self.fields_no_use_mau_i.assign(s_diff.begin(), s_diff.end());  // self.fields_no_use_mau_i
 
     LOG3("..........T_PHV Fields ("

@@ -10,6 +10,7 @@
 #include "lib/range.h"
 #include "bf-p4c/ir/thread_visitor.h"
 #include "bf-p4c/ir/tofino_write_context.h"
+#include "bf-p4c/parde/clot_info.h"
 
 namespace PHV {
 class Field;
@@ -50,6 +51,7 @@ class Cluster : public PassManager {
  private:
     PhvInfo& phv_i;
     PhvUse& uses_i;
+    const ClotInfo& clot_i;
 
     /// Map of field to cluster it belongs.
     ordered_map<PHV::Field *, Cluster_t *> dst_map_i;
@@ -90,6 +92,7 @@ class Cluster : public PassManager {
         Cluster& self;
         PhvInfo& phv_i;
         PhvUse&  uses_i;
+        const ClotInfo& clot_i;
 
         bool preorder(const IR::Expression* e) override;
         void postorder(const IR::Primitive* primitive) override;
@@ -117,11 +120,11 @@ class Cluster : public PassManager {
 
      public:
         explicit MakeClusters(Cluster &self)
-        : self(self), phv_i(self.phv_i), uses_i(self.uses_i) { }
+        : self(self), phv_i(self.phv_i), uses_i(self.uses_i), clot_i(self.clot_i) { }
     };
     //
  public:
-    Cluster(PhvInfo &p, PhvUse &u) : phv_i(p), uses_i(u) {
+    Cluster(PhvInfo &p, PhvUse &u, const ClotInfo& c) : phv_i(p), uses_i(u), clot_i(c) {
         addPasses({
             new MakeCCGFs(*this),
             new MakeClusters(*this) });

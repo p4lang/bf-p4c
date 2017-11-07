@@ -12,7 +12,7 @@ const IR::Node * AllocateVirtualContainers::apply_visitor(
 
     // Find (partially or fully) unallocated fields.
     ordered_set<PHV::Field *> unallocated =
-        CheckFitting::collect_unallocated_fields(phv_i, uses_i);
+        CheckFitting::collect_unallocated_fields(phv_i, uses_i, clot_i);
 
     // Unallocate allocated pieces of partially allocated fields.
     for (auto &f : unallocated)

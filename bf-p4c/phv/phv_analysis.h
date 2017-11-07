@@ -23,7 +23,7 @@ class PHV_AnalysisPass : public PassManager {
     PHV_MAU_Group_Assignments cluster_phv_mau;  // cluster PHV Container placements
 
  public:
-    PHV_AnalysisPass(const BFN_Options &options, PhvInfo &phv, PhvUse &uses,
+    PHV_AnalysisPass(const BFN_Options &options, PhvInfo &phv, PhvUse &uses, const ClotInfo &clot,
                      FieldDefUse &defuse, DependencyGraph &deps);
 };
 

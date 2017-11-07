@@ -3,6 +3,7 @@
 
 #include "ir/ir.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
+#include "bf-p4c/parde/clot_info.h"
 
 namespace PHV {
 class Container;
@@ -18,6 +19,7 @@ class AllocateVirtualContainers : public Visitor {
  private:
     PhvInfo &phv_i;                                 // all fields in input
     const PhvUse &uses_i;                           // field uses mau, I, E
+    const ClotInfo &clot_i;
 
     const IR::Node * apply_visitor(const IR::Node *, const char *);
 
@@ -31,8 +33,8 @@ class AllocateVirtualContainers : public Visitor {
     void container_contiguous_alloc(PHV::Field *, int, PHV::Container *, int);
 
  public:
-    AllocateVirtualContainers(PhvInfo &phv, const PhvUse &uses)
-      : phv_i(phv), uses_i(uses) { }
+    AllocateVirtualContainers(PhvInfo &phv, const PhvUse &uses, const ClotInfo &clot)
+      : phv_i(phv), uses_i(uses), clot_i(clot) { }
 };
 
 

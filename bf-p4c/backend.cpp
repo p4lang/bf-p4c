@@ -167,7 +167,9 @@ Backend::Backend(const BFN_Options& options) :
         &defuse,
         new AddBridgedMetadata(phv, defuse),
         new DumpPipe("After bridge metadata"),
+#if HAVE_JBAY
         options.device == "jbay" ? new AddJBayMetadataPOV(phv) : nullptr,
+#endif  // HAVE_JBAY
         new ResolveComputedParserExpressions,
         new CollectPhvInfo(phv),
         &defuse,
@@ -187,13 +189,16 @@ Backend::Backend(const BFN_Options& options) :
         (options.no_deadcode_elimination == false) ? new ElimUnused(phv, defuse) : nullptr,
         new DumpPipe("Before phv_analysis"),
         new CheckForHeaders(),
-        new PHV_AnalysisPass(options, phv, uses, defuse, deps),  // phv analysis after last
+#if HAVE_JBAY
+        options.device == "jbay" ? new AllocateClot(clot, phv, uses) : nullptr,
+#endif  // HAVE_JBAY
+        new PHV_AnalysisPass(options, phv, uses, clot, defuse, deps),  // phv analysis after last
                                                                  // CollectPhvInfo pass
         new TableAllocPass(options, phv, defuse, deps),
         new IXBarRealign(phv),
         new TotalInstructionAdjustment(phv),
         new DumpPipe("Final table graph"),
-        new CheckForUnallocatedTemps(phv, uses),
+        new CheckForUnallocatedTemps(phv, uses, clot),
 
         // Lower the parser IR to a target-specific representation. This *loses
         // information* about field reads and writes in the parser and deparser,

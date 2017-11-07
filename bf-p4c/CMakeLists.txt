@@ -28,6 +28,7 @@ set (TOFINO_IR_SRCS
   ir/thread_visitor.cpp
   ir/tofino.cpp
   ir/tofino_write_context.cpp
+  parde/clot.cpp
   phv/phv.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_IR_SRCS}")
@@ -38,6 +39,7 @@ set (TOFINO_IR_HDRS
   ir/gress.h
   ir/thread_visitor.h
   ir/tofino_write_context.h
+  parde/clot.h
   phv/phv.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_IR_HDRS}")
@@ -180,6 +182,7 @@ set (TOFINO_BACKEND_PARDE_SRCS
   parde/add_parde_metadata.cpp
   parde/bridge_metadata.cpp
   parde/checksum.cpp
+  parde/clot_info.cpp
   parde/deparser_output.cpp
   parde/extract_parser.cpp
   parde/field_packing.cpp
@@ -199,6 +202,7 @@ set (TOFINO_BACKEND_PARDE_HDRS
   parde/asm_output.h
   parde/bridge_metadata.h
   parde/checksum.h
+  parde/clot_info.h
   parde/epb_config.h
   parde/extract_parser.h
   parde/field_packing.h

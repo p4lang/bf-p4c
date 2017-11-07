@@ -1,7 +1,7 @@
 #include "check_fitting.h"
 
 const IR::Node* CheckFitting::apply_visitor(const IR::Node *n, const char *) {
-    ordered_set<PHV::Field *> unallocated = collect_unallocated_fields(phv, uses);
+    ordered_set<PHV::Field *> unallocated = collect_unallocated_fields(phv, uses, clot);
     int unallocated_bits = 0;
     int ingress_phv_bits = 0;
     int egress_phv_bits = 0;

@@ -6,12 +6,14 @@
 
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
+#include "bf-p4c/parde/clot_info.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 
 namespace BFN {
 
 class Backend : public PassManager {
+    ClotInfo clot;
     PhvInfo phv;
     PhvUse uses;
     DependencyGraph deps;

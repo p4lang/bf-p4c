@@ -18,9 +18,9 @@ class PhvInfo;
 
 PHV_AnalysisPass::PHV_AnalysisPass(
     const BFN_Options &options,
-    PhvInfo &phv, PhvUse &uses,
+    PhvInfo &phv, PhvUse &uses, const ClotInfo& clot,
     FieldDefUse &defuse, DependencyGraph &deps)
-    : cluster(phv, uses),
+    : cluster(phv, uses, clot),
       cluster_phv_req(cluster),
       cluster_phv_interference(cluster_phv_req, mutually_exclusive_field_ids),
       action_constraints(phv),
@@ -68,7 +68,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
                                    // need cluster_phv_interference
                                    // func mutually_exclusive(f1, f2)
                                    // overlay unallocated clusters to clusters & MAU groups
-            options.ignorePHVOverflow ? new AllocateVirtualContainers(phv, uses) : nullptr,
+            options.ignorePHVOverflow ? new AllocateVirtualContainers(phv, uses, clot) : nullptr,
                                    // Remove any fields not fully allocated and allocate them
                                    // into virtual containers instead
             new Build_PHV_Analysis_APIs(phv, uses),
@@ -83,7 +83,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
                                    // phv analysis results validation
             new PHV_Assignment_Validate(phv),
                                    // phv assignment results validation
-            new CheckFitting(phv, uses, options.ignorePHVOverflow),
+            new CheckFitting(phv, uses, clot, options.ignorePHVOverflow),
                                    // fail if there are clusters remaining that have not
                                    // been assigned to container groups; only warn if
                                    // options.ignorePHVOverflow == true.

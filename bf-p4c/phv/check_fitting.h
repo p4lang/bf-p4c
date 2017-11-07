@@ -14,11 +14,13 @@ class CheckFitting : public Visitor {
  private:
     const PhvInfo &phv;
     const PhvUse &uses;
+    const ClotInfo &clot;
     const bool ignorePHVOverflow;
 
  public:
-    CheckFitting(const PhvInfo &phv, const PhvUse &uses, bool ignorePHVOverflow = false)
-    : phv(phv), uses(uses), ignorePHVOverflow(ignorePHVOverflow) { }
+    CheckFitting(const PhvInfo &phv, const PhvUse &uses, const ClotInfo &clot,
+                 bool ignorePHVOverflow = false)
+    : phv(phv), uses(uses), clot(clot), ignorePHVOverflow(ignorePHVOverflow) { }
     const IR::Node *apply_visitor(const IR::Node *n, const char *) override;
 
     /** Produce the set of fields that are not fully allocated to PHV containers.
@@ -26,11 +28,14 @@ class CheckFitting : public Visitor {
      * @param unallocated Unallocated fields are added to this set.
      */
     static ordered_set<PHV::Field *>
-    collect_unallocated_fields(const PhvInfo &phv, const PhvUse &uses) {
+    collect_unallocated_fields(const PhvInfo &phv, const PhvUse &uses, const ClotInfo& clot) {
         ordered_set<PHV::Field*> unallocated;
 
         for (auto& field : phv) {
             if (!uses.is_referenced(&field))
+                continue;
+
+            if (clot.allocated(&field))
                 continue;
 
             bitvec allocatedBits;
