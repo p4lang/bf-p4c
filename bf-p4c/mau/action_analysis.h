@@ -196,6 +196,10 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
             return (counts[ActionParam::ACTIONDATA] + counts[ActionParam::CONSTANT]) > 0;
         }
 
+        bool partial_overwrite() {
+            return (error_code & PARTIAL_OVERWRITE) != 0;
+        }
+
         void set_mismatch(ActionParam::type_t type) {
             if (type == ActionParam::PHV)
                 error_code |= READ_PHV_MISMATCH;

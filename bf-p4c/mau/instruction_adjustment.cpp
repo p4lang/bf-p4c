@@ -583,7 +583,7 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
     auto *dst_mo = new IR::MAU::MultiOperand(components, container.toString(), true);
     fill_out_write_multi_operand(cont_action, dst_mo);
     dst = dst_mo;
-    if (!cont_action.PARTIAL_OVERWRITE && src1_writebits.popcount()
+    if (!cont_action.partial_overwrite() && src1_writebits.popcount()
                                           != static_cast<int>(container.size()))
         dst = MakeSlice(dst, src1_writebits.min().index(), src1_writebits.max().index());
 
