@@ -29,6 +29,14 @@ class PardeSpec {
     size_t bitPhase0Size() const { return byteIngressPerPortMetadataSize() * 8; }
     size_t bytePhase0Size() const { return byteIngressPerPortMetadataSize(); }
 
+    /// @return the size in bits or bytes of the reserved resubmit tag on this device.
+    size_t bitResubmitTagSize() const { return 8; }
+    size_t byteResubmitTagSize() const { return 1; }
+
+    /// @return the size in bits or bytes of the resubmit data on this device.
+    size_t bitResubmitSize() const { return byteIngressPerPortMetadataSize() * 8; }
+    size_t byteResubmitSize() const { return byteIngressPerPortMetadataSize(); }
+
     /// @return the size in bytes of the padding between the ingress static
     /// per-port metadata and the beginning of the packet.
     virtual size_t byteIngressPrePacketPaddingSize() const = 0;

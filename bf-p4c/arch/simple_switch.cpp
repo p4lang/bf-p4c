@@ -785,7 +785,7 @@ class ConstructSymbolTable : public Inspector {
                 args->push_back(cloned_field_list);
             }
         } else {
-            args->push_back(new IR::ListExpression({}));
+            args->push_back(new IR::ListExpression({ }));
         }
         auto member = new IR::Member(pathExpr, "add_metadata");
         auto typeArgs = new IR::Vector<IR::Type>();
@@ -881,9 +881,16 @@ class ConstructSymbolTable : public Inspector {
          *    resubmit.add_metadata({fields});
          *
          */
-        auto field_list = mce->arguments->at(0);
-        auto cloned_field_list = cloneFieldList(field_list);
-        auto args = new IR::Vector<IR::Expression>({ cloned_field_list });
+        auto fl = mce->arguments->at(0);   // resubmit field list
+        /// compiler inserts resubmit_idx as the format id to
+        /// identify the resubmit group, it is 3 bits in size, but
+        /// will be aligned to byte boundary in backend.
+        auto new_fl = new IR::ListExpression({ mem });
+        for (auto f : fl->to<IR::ListExpression>()->components)
+            new_fl->push_back(f);
+        // ensure path is different in ingress and egress deparser
+        auto cloned_fl = cloneFieldList(new_fl);
+        auto args = new IR::Vector<IR::Expression>(cloned_fl);
         auto expr = new IR::PathExpression(new IR::Path("resubmit"));
         auto member = new IR::Member(expr, "add_metadata");
         auto typeArgs = new IR::Vector<IR::Type>();

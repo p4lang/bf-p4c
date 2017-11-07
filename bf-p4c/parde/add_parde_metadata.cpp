@@ -60,9 +60,10 @@ void AddMetadataShims::addIngressMetadata(IR::BFN::Parser *parser) {
     // This state parses resubmit data. Just like phase 0, the version we're
     // generating here is a placeholder that just skips the data; we'll replace
     // it later with an actual implementation.
+    const auto byteResubmitSize = Device::pardeSpec().byteResubmitSize();
     auto* resubmitState =
         new IR::BFN::ParserState("$resubmit", INGRESS, { }, { }, {
-            new IR::BFN::Transition(match_t(), bytePhase0Size, skipToPacketState)
+            new IR::BFN::Transition(match_t(), byteResubmitSize, skipToPacketState)
         });
 
     // If this is a resubmitted packet, the initial intrinsic metadata will be
@@ -88,6 +89,7 @@ void AddMetadataShims::addIngressMetadata(IR::BFN::Parser *parser) {
     auto* globalTimestamp = gen_fieldref(igParserMeta, "ingress_global_tstamp");
     auto* globalVersion = gen_fieldref(igParserMeta, "ingress_global_ver");
     auto* parserErrorCode = gen_fieldref(igParserMeta, "ingress_parser_err");
+
     parser->start =
       new IR::BFN::ParserState("$entry_point", INGRESS,
         { new IR::BFN::Extract(alwaysDeparseBit, new IR::BFN::ConstantRVal(1)),

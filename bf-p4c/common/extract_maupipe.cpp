@@ -1,13 +1,13 @@
-
 #include "extract_maupipe.h"
 #include <assert.h>
 #include "slice.h"
 #include "ir/ir.h"
 #include "ir/dbprint.h"
-#include "frontends/p4-14/inline_control_flow.h"
 #include "common/name_gateways.h"
+#include "frontends/p4-14/inline_control_flow.h"
 #include "frontends/p4/evaluator/evaluator.h"
 #include "frontends/p4/methodInstance.h"
+#include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/common/copy_header_eliminator.h"
 #include "bf-p4c/common/param_binding.h"
 #include "bf-p4c/common/simplify_references.h"
@@ -16,7 +16,7 @@
 #include "bf-p4c/parde/checksum.h"
 #include "bf-p4c/parde/extract_parser.h"
 #include "bf-p4c/parde/phase0.h"
-#include "bf-p4c/bf-p4c-options.h"
+#include "bf-p4c/parde/resubmit.h"
 #include "lib/algorithm.h"
 #include "lib/error.h"
 #include "lib/safe_vector.h"
@@ -843,6 +843,11 @@ class TnaPipe {
         // XXX(seth): We should be able to move this into the midend now.
         std::tie(mau, rv) = BFN::extractPhase0(mau, rv, refMap, typeMap);
     }
+
+    void extractResubmit(IR::BFN::Pipe* rv, gress_t gress) {
+        if (gress == EGRESS) return;
+        std::tie(deparser, rv) = BFN::extractResubmit(deparser, rv, refMap, typeMap);
+    }
 };
 
 const IR::BFN::Pipe* extract_native_arch(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
@@ -869,6 +874,11 @@ const IR::BFN::Pipe* extract_native_arch(P4::ReferenceMap* refMap, P4::TypeMap* 
     for (auto gress : { INGRESS, EGRESS }) {
         rv->thread[gress].parser = parserInfo.parsers[gress];
         rv->thread[gress].deparser = parserInfo.deparsers[gress];
+    }
+
+    for (auto gress : { INGRESS, EGRESS}) {
+        /// native tofino path should skip this pass
+        pipes[gress]->extractResubmit(rv, gress);
     }
 
     for (auto gress : { INGRESS, EGRESS }) {

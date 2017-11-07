@@ -51,7 +51,7 @@ set (TOFINO_BACKEND_CONV_SRCS
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_CONV_SRCS}")
 
 set (TOFINO_BACKEND_CONV_HDRS
-  fromv1.0/lph.h
+  fromv1.0/lpf.h
   fromv1.0/stateful_alu.h
   fromv1.0/wred.h
   )
@@ -189,6 +189,7 @@ set (TOFINO_BACKEND_PARDE_SRCS
   parde/parser_output.cpp
   parde/phase0.cpp
   parde/resolve_computed.cpp
+  parde/resubmit.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_PARDE_SRCS}")
 build_unified(TOFINO_BACKEND_PARDE_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
@@ -205,6 +206,7 @@ set (TOFINO_BACKEND_PARDE_HDRS
   parde/parde_spec.h
   parde/phase0.h
   parde/resolve_computed.h
+  parde/resubmit.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_PARDE_HDRS}")
 

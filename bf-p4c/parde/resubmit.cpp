@@ -1,0 +1,227 @@
+#include "bf-p4c/parde/resubmit.h"
+
+#include <algorithm>
+#include "bf-p4c/device.h"
+#include "bf-p4c/parde/field_packing.h"
+#include "frontends/p4/coreLibrary.h"
+#include "frontends/p4/fromv1.0/v1model.h"
+#include "ir/ir.h"
+#include "lib/cstring.h"
+#include "lib/indent.h"
+
+namespace BFN {
+
+/**
+ * Analyze the resubmit_packet `add_metadata` method within the deparser block,
+ * and try to extract the source field list.
+ *
+ * @param statement  The `add_metadata` method to analyze
+ * @return a ResubmitSource vector containing the source fields used in the resubmit,
+ * or boost::none if the resubmit code was invalid.
+ */
+
+using ResubmitSources = IR::Vector<IR::Expression>;
+using ResubmitExtracts = std::map<unsigned, const ResubmitSources*>;
+using ResubmitPacking = std::map<unsigned, const FieldPacking*>;
+
+boost::optional<ResubmitSources*>
+analyzeResubmitStatement(const IR::MethodCallStatement* statement) {
+    auto methodCall = statement->methodCall->to<IR::MethodCallExpression>();
+    if (!methodCall) {
+        return boost::none;
+    }
+    auto member = methodCall->method->to<IR::Member>();
+    if (!member || (member->member != "add_metadata" && member->member != "emit")) {
+        return boost::none;
+    }
+    if (methodCall->arguments->size() != 1) {
+        ::warning("Expected 1 arguments for resubmit.%1% statement: %1%", member->member);
+        return boost::none;
+    }
+    const IR::ListExpression* sourceList = nullptr;
+    {
+        sourceList = (*methodCall->arguments)[0]->to<IR::ListExpression>();
+        if (!sourceList) {
+            ::warning("Expected list of fields: %1%", methodCall);
+            return boost::none;
+        }
+    }
+    auto* sources = new ResubmitSources;
+    for (auto* source : sourceList->components) {
+        LOG2("resubmit would include field: " << source);
+        auto* member = source->to<IR::Member>();
+        if (!member || !member->expr->is<IR::HeaderRef>()) {
+            ::warning("Expected field: %1%", source);
+            return boost::none;
+        }
+        sources->push_back(member);
+    }
+    return sources;
+}
+
+boost::optional<const IR::Constant*>
+checkIfStatement(const IR::IfStatement* ifStatement) {
+    auto* equalExpr = ifStatement->condition->to<IR::Equ>();
+    if (!equalExpr) {
+        ::warning("Expected comparing resubmit_idx with constant: %1%", ifStatement->condition);
+        return boost::none;
+    }
+    auto* constant = equalExpr->right->to<IR::Constant>();
+    if (!constant) {
+        ::warning("Expected comparing resubmit_idx with constant: %1%", equalExpr->right);
+        return boost::none;
+    }
+
+    auto* member = equalExpr->left->to<IR::Member>();
+    if (!member || member->member != "resubmit_idx") {
+        ::warning("Expected comparing resubmit_idx with constant: %1%", ifStatement->condition);
+        return boost::none;
+    }
+    if (!ifStatement->ifTrue || ifStatement->ifFalse) {
+        ::warning("Expected an `if` with no `else`: %1%", ifStatement);
+        return boost::none;
+    }
+    auto* method = ifStatement->ifTrue->to<IR::MethodCallStatement>();
+    if (!method) {
+        ::warning("Expected a single method call statement: %1%", method);
+        return boost::none;
+    }
+    return constant;
+}
+
+class FindResubmit : public Inspector {
+    bool preorder(const IR::MethodCallStatement* node) override {
+        auto mi = P4::MethodInstance::resolve(node, refMap, typeMap);
+        if (auto* em = mi->to<P4::ExternMethod>()) {
+            cstring externName = em->actualExternType->name;
+            if (externName != "resubmit_packet") {
+                return false;
+            }
+        }
+        auto ifStatement = findContext<IR::IfStatement>();
+        if (!ifStatement) {
+            ::warning("Expected resubmit_packet to be used within an If statement");
+        }
+        auto resubmit_idx = checkIfStatement(ifStatement);
+        if (!resubmit_idx) {
+            return false;
+        }
+
+        auto resubmit = analyzeResubmitStatement(node);
+        if (resubmit) extracts.emplace((*resubmit_idx)->asInt(), *resubmit);
+        return false;
+    }
+
+ public:
+    FindResubmit(P4::ReferenceMap* refMap, P4::TypeMap* typeMap)
+            : refMap(refMap), typeMap(typeMap) { }
+
+    ResubmitExtracts extracts;
+
+ private:
+    P4::ReferenceMap* refMap;
+    P4::TypeMap* typeMap;
+};
+
+FieldPacking* packResubmitFields(const ResubmitSources* extracts) {
+    auto* packing = new FieldPacking;
+
+    for (auto extractItem : *extracts) {
+        const IR::Member* source = extractItem->to<IR::Member>();
+        auto containingType = source->expr->type;
+        BUG_CHECK(containingType->is<IR::Type_StructLike>(),
+                  "Resubmit field is not attached to a structlike type?");
+        auto type = containingType->to<IR::Type_StructLike>();
+
+        auto field = type->getField(source->member);
+        BUG_CHECK(field != nullptr,
+                  "Resubmit field %1% not found in type %2%", field, type);
+
+        // skip parsing intr_md_for_deparser.resubmit_idx
+        if (source->member == "resubmit_idx" &&
+            type->name == "ingress_intrinsic_metadata_for_deparser_t") {
+            packing->padToAlignment(8);
+            continue;
+        }
+        packing->appendField(source, field->type->width_bits());
+        packing->padToAlignment(8);
+    }
+
+    auto maxResubmitSize = Device::pardeSpec().bitResubmitSize() -
+                           Device::pardeSpec().bitResubmitTagSize();
+    if (packing->totalWidth == 0) {
+        packing->appendPadding(maxResubmitSize);
+    } else {
+        packing->padToAlignment(maxResubmitSize);
+    }
+    return packing;
+}
+
+/// resubmit parser is only generated for p4-14 based programs
+class AddResubmitParser : public Modifier {
+ public:
+  explicit AddResubmitParser(const ResubmitPacking* packings)
+      : packings(packings) { }
+
+  bool preorder(IR::BFN::Parser* parser) {
+      if (parser->gress != INGRESS) return false;
+
+      auto start = transformAllMatching<IR::BFN::ParserState>(parser->start,
+                   [this](const IR::BFN::ParserState* state) {
+          if (state->name != "$resubmit") return state;
+
+          // This is the '$resubmit' placeholder state. We'll replace it with our
+          // generated parser program. After resubmit, we'll transition to the
+          // same state that the placeholder state transitioned to.
+          return this->addResubmitState(state->transitions[0]->next);
+      });
+
+      parser->start = start->to<IR::BFN::ParserState>();
+      return false;
+  }
+
+  const IR::BFN::ParserState*
+  addResubmitState(const IR::BFN::ParserState* finalState) {
+      IR::Vector<IR::BFN::Transition> transitions;
+      for (auto packing : *packings) {
+          cstring nextStateName = "$resubmit_$" + std::to_string(packing.first);
+
+          auto* nextState =
+                  packing.second->createExtractionState(INGRESS, nextStateName, finalState);
+          transitions.push_back(
+                  new IR::BFN::Transition(match_t(8, packing.first, 0x07), 1, nextState));
+      }
+
+      auto select = new IR::BFN::Select(new IR::BFN::BufferRVal(StartLen(0, 8)));
+      IR::Vector<IR::BFN::ParserPrimitive> extracts;
+      return new IR::BFN::ParserState("$resubmit", INGRESS, extracts, { select }, transitions);
+  }
+
+ private:
+  const ResubmitPacking* packings;
+};
+
+std::pair<const IR::P4Control*, IR::BFN::Pipe*>
+extractResubmit(const IR::P4Control* deparser, IR::BFN::Pipe* pipe,
+        P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {
+    CHECK_NULL(deparser);
+    CHECK_NULL(pipe);
+    CHECK_NULL(refMap);
+    CHECK_NULL(typeMap);
+
+    FindResubmit findResubmit(refMap, typeMap);
+    deparser->apply(findResubmit);
+
+    auto fieldPackings = new ResubmitPacking;
+    for (auto extract : findResubmit.extracts) {
+        auto packing = packResubmitFields(extract.second);
+        fieldPackings->emplace(extract.first, packing);
+    }
+
+    AddResubmitParser addResubmitParser(fieldPackings);
+    pipe->thread[INGRESS].parser = pipe->thread[INGRESS].parser->apply(addResubmitParser);
+
+    return std::make_pair(deparser, pipe);
+}
+
+}  // namespace BFN
