@@ -185,8 +185,8 @@ std::pair<int, int>  PHV_Container::ccgf_members_bit_assign(
     start += width;  // start allocation from ccgf-segment RHS in container
     int processed_members = 0;
     int processed_width = 0;
-    for (auto &member : field->ccgf_fields()) {
-        if (constraint_no_cohabit(member)) {
+    for (auto *member : field->ccgf_fields()) {
+        if (constraint_no_cohabit(member) || member->deparsed_bottom_bits()) {
             if (processed_width) {
                 //
                 // entire phv_use_width to be allocated in stand-alone container
@@ -224,7 +224,7 @@ std::pair<int, int>  PHV_Container::ccgf_members_bit_assign(
                                 "exactly fills any container.  These constraints are "
                                 "unsatisfiable.", cstring::to_cstring(member));
 
-                    int pad = width - member->size;
+                    int pad = constraint_no_cohabit(member) ? width - member->size : 0;
                     start -= pad;                    // start now @end of [0..member_size-1]
                     int lhs = start - member->size;  // lhs now @beginning of [0..member_size-1]
                     const int align_start =
