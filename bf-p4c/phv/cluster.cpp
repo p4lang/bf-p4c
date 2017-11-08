@@ -369,7 +369,7 @@ void Cluster::MakeClusters::end_apply() {
 void Cluster::MakeCCGFs::set_deparsed_flag() {
     for (auto &f : self.phv_i)
         // set field's deparsed if used in deparser
-        if (uses_i.is_deparsed(&f) && !(f.metadata && !f.bridged) && !f.pov)
+        if (uses_i.is_deparsed(&f) && !f.pov)
             f.set_deparsed(true);
     //
     // CCGF fields are either:

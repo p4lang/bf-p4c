@@ -354,7 +354,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             }
 
             if (hasDeparsedMetadataFields) {
-                ERROR_CHECK(std::any_of(live_fields.begin(), live_fields.end(), isBridged),
+                ERROR_WARN_(std::any_of(live_fields.begin(), live_fields.end(), isBridged),
                             "Deparsed container %1% contains deparsed metadata "
                             "fields, but none of them are bridged: %2%",
                             container, cstring::to_cstring(fields));
