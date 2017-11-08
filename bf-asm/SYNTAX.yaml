@@ -113,28 +113,28 @@ parser [<thread>]:
 stage <constant> <thread>:
     # Defines a single stage of the MAU.  The order of the tables within the
     # stage is the logical table ordering, so order matters
-    exact_match <name> [<logical_id>]:
-        # Exact match table
+    <table-type> <name> [<logical_id>]:
+        # common keys available in (almost) all tables types
         row: <vector>
-            # one or more physical ram rows the table uses
+            # one or more ram rows the table uses
+            # whether these are physical or logical rows depends on the table type
         column: <vector> | '[' <vector>, ... ']'
             # May be a single vector or a list of vectors.  If a list, length
             # must match the number of rows specified
+            # Denotes the rams used on each row.  RAM type (sram, tcam or mapram)
+            # depends on the table type
         bus: 0 | 1 | '[' 0 | 1, ... ']'
-            # Exact match bus(es) to use.  If a list, must match the number
-            # of rows
+            # bus(es) to use.  If a list, must match the number of rows
         vpns: <vector>
             # vpn values to use for rams
         input_xbar:
             # Input xbar config for this table
             group <constant>: <phv-location> | '[' <phv_location>, ... ']' |
                 { <int>: <phv_location> | <int>..<int>: <phv_location>,... }
-                # One or more registers to be mapped into the specified
-                # exact match group in order or at the locations specified,
-                # and then routed to the proper exact match bus.  If multiple
-                # groups are used, must match the number of rows.
+                # One or more registers to be mapped into the specified match group
+                # in order or at the locations specified,
             hash <constant>:
-                # specify the hash table for the input group
+                # hash table config
                 <int>: <hash>
                     # specify one column of the table -- hash is a 64-bit constant
                 <int> | <range>: <expression>
@@ -157,7 +157,7 @@ stage <constant> <thread>:
                 valid <int>: <int>
                     # specifies the 16-bit valid hash for one column of the table
             hash group <constant>:
-                # specify the hash group
+                # hash group config
                 table: <vector>
                     # one or more hash tables to xor together for this group
                 seed: <hash>
@@ -169,28 +169,20 @@ stage <constant> <thread>:
                 # use an xbar group configured elsewhere
         gateway:
             # gateway table on this table -- see below
-        match: <phv-location> | '[' <phv-location>, ... ']'
-            # value(s) to match against the 'match' field(s) in the format
-        ways:
-            - '[' <int>,<int>,<int>, '[' <row>,<col> ']',... ']'
-            # description of one way of the table
-            # initial 3 values are hash group, 10-bit slice from group, and
-            # mask of upper 12 bits from the group.
-            # FIXME -- needs to be done as a more descriptive map?
-        match_group_map: '[' '[' <int>,... ']',... ']'
-            # map from per-word match groups to overall match groups
-            # one row for each word in the width of the table with up to
-            # 5 values for up to 5 match groups in that word.  Values are
-            # match groups in the format
         format: { <name>: <range>, <name>: <size> ... }
             # format of data in the table, mapping names to ranges of bits.
-            # some names have predefined meanings:
-            #   match or match(0) match(1)..
-            #       exact match groups to match against
             # fields with sizes instead of explicit ranges will be laid out
             # by the assembler following preceeding fields
-        hash_dist: <hash_distribution>
-            # see hash_action hash_dist
+        hash_dist: { <unit>: <config>, ... }
+            <int>: # hash distribution unit to config
+                hash: <int>
+                mask: <int>
+                shift: <int>
+                expand: <int>
+                    # hash distribution config params
+                output: <name> | '[' <name>,... ']'
+                    # outputs to enable for this hast_dist unit
+                    # 'lo' | 'hi' | 'meter' | 'stats' | 'action' | 'hashmod'
         action: <table-name>(<action> [, <index>])
             # Action table to use -- action is a named field from the format
             # that determines which action to do.  Index is optional (for
@@ -199,10 +191,27 @@ stage <constant> <thread>:
         action_enable: <int>
         enable_action_data_enable: true | false
         enable_action_instruction_enable: true | false
+        default_action: <action>
+        default_action_handle: <int>
+            # Specifies a unique integer for action handle, used to match glass
+            # If not present assembler generate handles
+        default_action_parameters: { <name> : <int>, ... }
+            # Specifies list of params and values
         action_bus: { <int> : <name> | <int>..<int> : <name>, ... }
             # immediate actions data
-        actions: { <name> [<index>] : '[' [<address>,] [<data map>,] <instructions>, ... ']', ... }
-            # immediate actions if the is no action table (details in action table entry)
+        actions:
+            # defines actions that can be used in the table
+            <name> [<index>]:
+                # the optional index is the index to use in the 8-entry
+                # instruction indirection map of the table.
+            [- <address>]   # constant imem address to use for this action
+            [- <data alias map>]        # map of aliases for data operands
+                <name> : <name> [ (<bit-range>) ]
+                    # defines a name as an alias for (a slice of) something else
+            [- p4_param_order: '{' param_name : <int>, ... '}' ]
+                # Param order specifying param name and width for context json (p4_parameters)
+            [- default_action: '{' allowed: true|false, reason: <string> '}' ]
+            - <instruction> <operands>
         selector: <table-name>(<index-field> [ , <length-field> [ , <shift-field> ] ] )
             # selection table to use
         stats: <table-name> [ (<index-field>) ]
@@ -242,26 +251,71 @@ stage <constant> <thread>:
                 # table size, as table is rounded up to fill memories
             match_type: exact | ternary | lpm | ...
             action_profile: <name>
-        context_json:
-            # any keys/vector/values here are converted to json and output into
-            # the context.json info for this table verbatim
-    ternary_match <name> [<logical_id>]:
-        # Ternary match table
-        p4: # information about P4 level tables and control plane API
-            # same as exact_match p4 info
         p4_param_order:
             # order of match params as seen in p4 program
             # PD generated has same order and needs to match context
             # json output
             <name>: { type: <table-type>, size: <int> } ...
                 # param names with their types and size info
-        row: <vector> | '[' <vector>, ... ']'
+        context_json:
+            # any keys/vector/values here are converted to json and output into
+            # the context.json info for this table verbatim
+    exact_match <name> [<logical_id>]:
+        # Exact match table
+        row: <vector>
+        column: <vector> | '[' <vector>, ... ']'
+            # physical rows and srams used by the table
+        input_xbar:
+            # specifies exact match groups, hash tables, and groups (see above)
+            # If there are multiple groups, the must match the total width of the
+            # format, which must in turn match the rows and the ways.
+        format: { <name>: <range>, <name>: <size> ... }
+            # names may have `(<int>)` suffix denoting up to 5 match groups
+            # all match groups must contain the same keys
+            # some names have predefined meanings: 
+            match: ...  # exact match groups to match against
+            action: ... # field that selects which action to run
+            next: ...   # next table
+        match: <phv-location> | '[' <phv-location>, ... ']'
+            # value(s) to match against the 'match' field(s) in the format
+        ways:
+            - '[' <int>,<int>,<int>, '[' <row>,<col> ']',... ']'
+            # description of one way of the table
+            # initial 3 values are hash group, 10-bit slice from group, and
+            # mask of upper 12 bits from the group.
+            # FIXME -- needs to be done as a more descriptive map?
+        match_group_map: '[' '[' <int>,... ']',... ']'
+            # map from per-word match groups to overall match groups
+            # one row for each word in the width of the table with up to
+            # 5 values for up to 5 match groups in that word.  Values are
+            # match groups in the format
+        # common keys described above
+        action:
+        actions:
+        action_bus:
+        default_action:
+        default_action_handle:
+        default_action_parameters:
+        context_json:
+        gateway:
+        hash_dist:
+        hit:
+        idletime:
+        meter:
+        miss:
+        next:
+        p4:
+        selector:
+        stateful:
+        stats:
+    ternary_match <name> [<logical_id>]:
+        # Ternary match table
+        row: <vector>
         column: <vector> | '[' <vector>, ... ']'
             # tcam rows and columns to use
         input_xbar:
-            # Input xbar config for this table
+            # specifies ternary match groups
             group <constant>: <phv-location> | '[' <phv_location>, ... ']'
-                # Registers to map into the specified ternary match group
                 # odd groups are 5 bytes wide, even groups 6 -- the extra byte
                 # is the byte group n/2
                 # TBD -- Need a way to explicitly set byte swizzler?
@@ -279,110 +333,89 @@ stage <constant> <thread>:
                 # dirtcam control bits for the group; used to set
                 # tcams.col.tcam_mode.tcam_data_dirtcam_mode (bits 0..9)
                 # and tcams.col.tcam_mode.tcam_vbit_dirtcam_mode (bits 10..11)
-        gateway:
-            # gateway table on this table -- see below
         indirect: <table-name>
             # ternary indirection table to use with this table
             # if there's an indirection table, it should contain all the table refs
         indirect_bus: <int>
             # which indirect bus to use for ternary tables with no indirection table
-        hash_dist: <hash_distribution>
-            # see hash_action hash_dist
-        action: <table-name>
-            # Action table to use -- direct only, no indirection table
-        selector: <table-name>(<index-field>)
-            # selection table to use (only if no indirection table)
-        stats: <table-name> [ (<index-field>) ]
-            # statistics table to use (only if no indirection table)
-        meter: <table-name> [ (<index-field>) ]
-            # meter table to use (only if no indirection table)
+        # common keys described above
+        action:
+        actions:
+        action_bus:
+        default_action:
+        default_action_handle:
+        default_action_parameters:
+        context_json:
+        gateway:
+        hash_dist:
+        hit:
         idletime:
-            # idletime table
-        hit: <table-name>
-            # next table on table hit.
-        miss: <table-name>
-            # next table on table miss
-        next: <table-name>
-            # default (unconditional) next table.  Exclusive with hit/miss
-        p4: # information about P4 level tables and control plane API
-            # same as exact_match p4 info
-        context_json: #anything
+        meter:
+        miss:
+        next:
+        p4:
+        selector:
+        stateful:
+        stats:
     ternary_indirect <name>:
         # Ternary indirection table
         row: <vector>
         column: <vector> | '[' <vector>, ... ']'
-            # srams to use
+            # physical rows and srams to use
         bus: 0 | 1 | '[' 0 | 1, ... ']'
             # ternary indirection bus to use.  List must match rows
         format: { <name>: <range-or-constant>, ... }
             # fields in the ram record, sized in bits
-        hash_dist: <hash_distribution>
-            # see hash_action hash_dist
-        action: <table-name>(<index>)
-            # Action table to use -- index is optional (for indirect action),
-            # named field from format.  If not present use direct action
-        action_bus: { <int> : <name> | <int>..<int> : <name>, ... }
-            # immediate actions data
-        actions: { <name> [<index>] : '[' [<address>,] [<data map>,] <instructions>, ... ']', ... }
-            # immediate actions if the is no action table (details in action table entry)
-        selector: <table-name>(<index-field>)
-            # selection table to use
-        stats: <table-name> [ (<index-field>) ]
-            # statistics table to use
-        meter: <table-name> [ (<index-field>) ]
-            # meter table to use
-        hit: <table-name> | '[' <table-name>,  ... ']'
-            # next table on table hit.  If a list, 'format' must contain a
-            # 'next' field that determines which next table to use
-        miss: <table-name>
-            # next table on table miss
-        next: <table-name>
-            # default (unconditional) next table.  Exclusive with hit/miss
-        p4: # information about P4 level tables and control plane API
-            # same as exact_match p4 info
-        context_json: #anything
+        # common keys described above
+        action:
+        actions:
+        action_bus:
+        default_action:
+        default_action_handle:
+        default_action_parameters:
+        context_json:
+        gateway:
+        hash_dist:
+        hit:
+        idletime:
+        meter:
+        miss:
+        next:
+        p4:
+        selector:
+        stateful:
+        stats:
     hash_action <name> [<logical_id>]:
         # hash-action table
         row: <int>
         bus: <int>
-            # specify which exact match bus to use
+            # specify which physical row and exact match bus to use
         input_xbar:
             # input xbar config (as exact match table)
-        hash_dist:
-            <int>: # hash distribution unit to config
-                hash: <int>
-                mask: <int>
-                shift: <int>
-                expand: <int>
-                    # hash distribution config params
-                output: <name> | '[' <name>,... ']'
-                    # outputs to enable for this hast_dist unit
-                    # 'lo' | 'hi' | 'meter' | 'stats' | 'action' | 'hashmod'
-        # rest of the keys are as exact_match
+        # common keys described above
+        action:
+        actions:
+        action_bus:
+        default_action:
+        default_action_handle:
+        default_action_parameters:
+        context_json:
         gateway:
+        hash_dist:
+        hit:
         idletime:
-        selector: <table-name>(<index-field> [ , <length-field> [ , <shift-field> ] ] )
-        stats: <table-name> [ (<index-field>) ]
-        meter: <table-name> [ (<index-field>) ]
-        action: <table-name>(<action> [, <index>])
-        action_enable: <int>
-        default_action: <action>
-        default_action_handle: <int>
-            # Specifies a unique integer for action handle, used to match glass
-            # If not present assembler generate handles
-        default_action_parameters: { <name> : <int>, ... }
-            # Specifies list of params and values
-        action_bus: { <int> : <name> | <int>..<int> : <name>, ... }
-        actions: { <name> [<index>] : '[' [<address>,] [<data map>,] <instructions>, ... ']', ... }
-        hit: <table-name> | '[' <table-name>, ... ']'
-        miss: <table-name>
-        next: <table-name>
-        p4: # information about P4 level tables and control plane API
-        context_json: #anything
+        meter:
+        miss:
+        next:
+        p4:
+        selector:
+        stateful:
+        stats:
     phase0_match <name>
         # special phase 0 match table before stage 0 (only in stage 0 ingress)
         p4: # information about P4 level tables and control plane API
         width: <int>
+        # other common keys are NOT available in this table type
     action <name>:
         # Action table
         logical_row: <vector>
@@ -411,6 +444,7 @@ stage <constant> <thread>:
                 # Param order specifying param name and width for context json (p4_parameters)
             [- default_action: '{' allowed: true|false, reason: <string> '}' ]
             - <instruction> <operands>
+
         p4: # information about P4 level tables and control plane API
             # same as exact_match p4 info
         context_json: #anything
