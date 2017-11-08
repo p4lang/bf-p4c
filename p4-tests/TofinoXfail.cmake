@@ -36,13 +36,6 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     extensions/p4_tests/p4_14/stateful3.p4
   )
 
-  # These pass with the latest model -- Travis images need update?
-  p4c_add_xfail_reason("tofino"
-    "the monitored command dumped core"
-    testdata/p4_14_samples/07-MultiProtocol.p4
-    testdata/p4_14_samples/exact_match_valid1.p4
-  )
-
   p4c_add_xfail_reason("tofino"
     "mismatch from expected.*at byte 0x"
     extensions/p4_tests/p4_16/stack_valid.p4
