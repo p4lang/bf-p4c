@@ -527,17 +527,17 @@ control Ingress<H, M>(
     in ingress_intrinsic_metadata_t ig_intr_md,
     @optional in ingress_intrinsic_metadata_from_parser_t ig_intr_md_from_prsr,
     @optional inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm,
-    @optional inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
-    @optional inout ingress_intrinsic_metadata_for_mirror_buffer_t ig_intr_md_for_mb);
+    @optional inout ingress_intrinsic_metadata_for_mirror_buffer_t ig_intr_md_for_mb,
+    @optional inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr);
 
 control Egress<H, M>(
   inout H hdr,
   inout M eg_md,
   in egress_intrinsic_metadata_t eg_intr_md,
   @optional in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr,
-  @optional inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
   @optional inout egress_intrinsic_metadata_for_mirror_buffer_t eg_intr_md_for_mb,
-  @optional inout egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport);
+  @optional inout egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport,
+  @optional inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr);
 
 
 control IngressDeparser<H, M>(
