@@ -94,6 +94,7 @@ add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_COMMON_SRCS}")
 build_unified(TOFINO_BACKEND_COMMON_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (TOFINO_BACKEND_COMMON_HDRS
+  common/autoindent.h
   common/blockmap.h
   common/check_header_alignment.h
   common/check_header_refs.h
