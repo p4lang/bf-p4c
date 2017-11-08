@@ -806,6 +806,16 @@ class TnaPipe {
                 rv->metadata.addUnique("ingress_intrinsic_metadata_for_tm",
                                        bindings->get(md)->obj->to<IR::Metadata>());
             }
+            if (size > 5) {
+                auto md = mau->getApplyParameters()->parameters.at(5);
+                rv->metadata.addUnique("ingress_intrinsic_metadata_for_mirror_buffer",
+                                       bindings->get(md)->obj->to<IR::Metadata>());
+            }
+            if (size > 6) {
+                auto md = mau->getApplyParameters()->parameters.at(6);
+                rv->metadata.addUnique("ingress_intrinsic_metadata_for_deparser",
+                                       bindings->get(md)->obj->to<IR::Metadata>());
+            }
         } else if (gress == EGRESS) {
             int size = mau->getApplyParameters()->parameters.size();
             if (size > 2) {
@@ -816,6 +826,21 @@ class TnaPipe {
             if (size > 3) {
                 auto md = mau->getApplyParameters()->parameters.at(3);
                 rv->metadata.addUnique("egress_intrinsic_metadata_from_parser",
+                                       bindings->get(md)->obj->to<IR::Metadata>());
+            }
+            if (size > 4) {
+                auto md = mau->getApplyParameters()->parameters.at(4);
+                rv->metadata.addUnique("egress_intrinsic_metadata_for_mirror_buffer",
+                                       bindings->get(md)->obj->to<IR::Metadata>());
+            }
+            if (size > 5) {
+                auto md = mau->getApplyParameters()->parameters.at(5);
+                rv->metadata.addUnique("egress_intrinsic_metadata_for_output_port",
+                                       bindings->get(md)->obj->to<IR::Metadata>());
+            }
+            if (size > 6) {
+                auto md = mau->getApplyParameters()->parameters.at(6);
+                rv->metadata.addUnique("egress_intrinsic_metadata_for_deparser",
                                        bindings->get(md)->obj->to<IR::Metadata>());
             }
         }
