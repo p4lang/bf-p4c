@@ -11,6 +11,7 @@ struct FieldAlignment {
     // implied by the provided on-the-wire layout. Usually this layout is the
     // range of bits operated on by an extract or emit for the field.
     explicit FieldAlignment(nw_bitrange bitLayout);
+    explicit FieldAlignment(le_bitrange bitLayout);
 
     bool operator==(const FieldAlignment& other) const;
     bool operator!=(const FieldAlignment& other) const;

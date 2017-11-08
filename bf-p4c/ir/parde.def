@@ -157,6 +157,7 @@ abstract ParserLVal { }
 /// an `IR::Slice` wrapping either of those things.
 class FieldLVal : ParserLVal {
     dbprint { out << field; }
+    toString { return field->toString(); }
 
     validate {
         CHECK_NULL(field);
@@ -372,6 +373,12 @@ class DeparserParameter {
     /// If present, the POV bit controlling whether the contents of the source
     /// location are valid. Not used on Tofino.
     NullOK FieldLVal povBit = nullptr;
+
+#emit
+    /// If true, the source for this deparser parameter can be safely packed
+    /// with other fields.
+    bool canPack = true;
+#end
 }
 
 class Deparser : Unit {

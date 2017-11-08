@@ -954,28 +954,33 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
         return false;
     }
 
-    void postorder(const IR::BFN::Deparser* d) override {
+    void postorder(const IR::BFN::DeparserParameter* param) override {
         // extract deparser constraints from Deparser & Digest IR nodes ref: bf-p4c/ir/parde.def
         // set deparser constaints on field
-        for (auto* param : d->params) {
-            PHV::Field* f = phv.field(param->source->field);
-            BUG_CHECK(f != nullptr, "Field not created in PhvInfo");
+        PHV::Field* f = phv.field(param->source->field);
+        BUG_CHECK(f != nullptr, "Field not created in PhvInfo");
 
-            // On Tofino, we need to be careful with fields which are used to
-            // set intrinsic deparser parameters. This is because the hidden
-            // validity bit for the container the field is placed in will
-            // control whether the parameter is actually "set" or the value is
-            // just ignored. Since we don't explicitly track those container
-            // validity bits, and any write to a container will mark it valid,
-            // we currently can't safely pack other fields into the same
-            // container.
-            // XXX(seth): JBay does away with this constraint, because it has
-            // explicit POV bits for deparser parameters.
-            f->set_deparsed_no_pack(true);
+        // Deparser parameters all need to be placed right-justified in their
+        // containers *for now*.
+        // XXX(seth): We can relax this restriction once we add support for the
+        // shifters that the deparser hardware makes available.
+        f->updateAlignment(FieldAlignment(le_bitrange(StartLen(0, f->size))));
+        f->set_deparsed_bottom_bits(true);
 
-            LOG1(".....Deparser Constraint '" << param->name
-                  << "' on field..... " << f); }
+        // If this field can be packed with other fields, we're done.
+        if (param->canPack) return;
 
+        // The field assigned to this parameter cannot be packed with other
+        // fields; this is generally because Tofino's hidden container
+        // validity bit matters for this parameter, and if we packed it with
+        // other fields, writes to those other fields would change the
+        // hidden container validity bit and break the program.
+        f->set_deparsed_no_pack(true);
+        LOG1(".....Deparser No-Pack Constraint '" << param->name
+              << "' on field..... " << f);
+    }
+
+    void postorder(const IR::BFN::Deparser* d) override {
         // TODO:
         // IR futures: distinguish each digest as an enumeration: learning, mirror, resubmit
         // as they have differing constraints -- bottom-bits, bridge-metadata mirror packing

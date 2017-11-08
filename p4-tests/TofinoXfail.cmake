@@ -806,7 +806,7 @@ p4c_add_xfail_reason("tofino"
   )
 # resubmit size is 32 bytes which exceeds max size for tofino (8 bytes).
 p4c_add_xfail_reason("tofino"
-  "Assertion .* failed"
+  "Assertion .*failed"
   extensions/p4_tests/p4_14/13-ResubmitMetadataSize.p4
   )
 # backend bug

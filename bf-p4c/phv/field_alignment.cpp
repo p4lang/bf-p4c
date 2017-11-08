@@ -6,6 +6,11 @@ FieldAlignment::FieldAlignment(nw_bitrange bitLayout)
     , littleEndian(7 - bitLayout.hi % 8)
 { }
 
+FieldAlignment::FieldAlignment(le_bitrange bitLayout)
+    : network(7 - bitLayout.hi % 8)
+    , littleEndian(bitLayout.lo % 8)
+{ }
+
 bool FieldAlignment::operator==(const FieldAlignment& other) const {
     return other.network == network && other.littleEndian == littleEndian;
 }

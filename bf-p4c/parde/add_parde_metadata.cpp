@@ -158,8 +158,21 @@ namespace {
 
 void addDeparserParam(IR::BFN::Deparser* deparser,
                       const IR::HeaderOrMetadata* meta,
-                      cstring field, cstring paramName) {
-    auto* param = new IR::BFN::DeparserParameter(paramName, gen_fieldref(meta, field));
+                      cstring field, cstring paramName,
+                      bool canPack = true) {
+    auto* param =
+      new IR::BFN::DeparserParameter(paramName, gen_fieldref(meta, field));
+
+    // Packing restrictions arise from Tofino's hidden container validity bits,
+    // which control the behavior of certain deparser parameters. If the fields
+    // assigned to those parameters are packed with other fields in the same
+    // container, then writes to those other fields will affect the container
+    // validity bit, which can cause the program to misbehave. Other devices use
+    // explicit POV bits for the same purpose, so they don't have this problem,
+    // and we can ignore the restriction.
+    if (Device::currentDevice() == "Tofino")
+        param->canPack = canPack;
+
     deparser->params.push_back(param);
 }
 
@@ -167,7 +180,8 @@ void addDeparserParam(IR::BFN::Deparser* deparser,
 
 void AddMetadataShims::addIngressMetadata(IR::BFN::Deparser *d) {
     auto* tmMeta = getMetadataType(pipe, "ingress_intrinsic_metadata_for_tm");
-    addDeparserParam(d, tmMeta, "ucast_egress_port", "egress_unicast_port");
+    addDeparserParam(d, tmMeta, "ucast_egress_port", "egress_unicast_port",
+                     /* canPack = */ false);
     addDeparserParam(d, tmMeta, "drop_ctl", "drop_ctl");
     addDeparserParam(d, tmMeta, "bypass_egress", "bypss_egr");
     addDeparserParam(d, tmMeta, "deflect_on_drop", "deflect_on_drop");
@@ -178,8 +192,8 @@ void AddMetadataShims::addIngressMetadata(IR::BFN::Deparser *d) {
     addDeparserParam(d, tmMeta, "packet_color", "meter_color");
     addDeparserParam(d, tmMeta, "disable_ucast_cutthru", "ct_disable");
     addDeparserParam(d, tmMeta, "enable_mcast_cutthru", "ct_mcast");
-    addDeparserParam(d, tmMeta, "mcast_grp_a", "mcast_grp_a");
-    addDeparserParam(d, tmMeta, "mcast_grp_b", "mcast_grp_b");
+    addDeparserParam(d, tmMeta, "mcast_grp_a", "mcast_grp_a", /* canPack = */ false);
+    addDeparserParam(d, tmMeta, "mcast_grp_b", "mcast_grp_b", /* canPack = */ false);
     addDeparserParam(d, tmMeta, "level1_mcast_hash", "level1_mcast_hash");
     addDeparserParam(d, tmMeta, "level2_mcast_hash", "level2_mcast_hash");
     addDeparserParam(d, tmMeta, "level1_exclusion_id", "xid");
@@ -206,6 +220,7 @@ void AddMetadataShims::addEgressMetadata(IR::BFN::Deparser *d) {
     // intrinsic metadata struct an `in` parameter, so that changes made in the
     // egress control do not propagate to the deparser.)
     auto* egMeta = getMetadataType(pipe, "egress_intrinsic_metadata");
-    addDeparserParam(d, egMeta, "egress_port", "egress_unicast_port");
+    addDeparserParam(d, egMeta, "egress_port", "egress_unicast_port",
+                     /* canPack = */ false);
     addDeparserParam(d, egMeta, "egress_cos", "ecos");
 }
