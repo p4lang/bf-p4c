@@ -100,11 +100,11 @@ parser [<thread>]:
         - { add: <int>, max: <int>, mask: <int>, src: <matcher>, rot: <int> }
         # intial values for the counter init ram
     hdr_len_adj: <constant>
-    # value for the hdr_len_adj register
+        # value for the hdr_len_adj register
     init_zero: [ <phv_location>,... ]
-    # list of phv slots that should be initialized to (valid) zero
+        # list of phv slots that should be initialized to (valid) zero
     meta_opt: <constant>
-    # value for the meta_opt register
+        # value for the meta_opt register
     multi_write: [ <phv_location>,... ]
         # list of phv slots that the parser may write multiple times
         # values OR'd with previous values
@@ -123,8 +123,8 @@ stage <constant> <thread>:
         bus: 0 | 1 | '[' 0 | 1, ... ']'
             # Exact match bus(es) to use.  If a list, must match the number
             # of rows
-    vpns: <vector>
-        # vpn values to use for rams
+        vpns: <vector>
+            # vpn values to use for rams
         input_xbar:
             # Input xbar config for this table
             group <constant>: <phv-location> | '[' <phv_location>, ... ']' |
@@ -182,21 +182,21 @@ stage <constant> <thread>:
             # one row for each word in the width of the table with up to
             # 5 values for up to 5 match groups in that word.  Values are
             # match groups in the format
-            format: { <name>: <range>, <name>: <size> ... }
-                # format of data in the table, mapping names to ranges of bits.
-                # some names have predefined meanings:
-                #   match or match(0) match(1)..
-                #       exact match groups to match against
-                # fields with sizes instead of explicit ranges will be laid out
-                # by the assembler following preceeding fields
-            hash_dist: <hash_distribution>
-                # see hash_action hash_dist
-            action: <table-name>(<action> [, <index>])
-                # Action table to use -- action is a named field from the format
-                # that determines which action to do.  Index is optional (for
-                # indirect action), named field from format.  If not present use
-                # direct action (index is match address).
-            action_enable: <int>
+        format: { <name>: <range>, <name>: <size> ... }
+            # format of data in the table, mapping names to ranges of bits.
+            # some names have predefined meanings:
+            #   match or match(0) match(1)..
+            #       exact match groups to match against
+            # fields with sizes instead of explicit ranges will be laid out
+            # by the assembler following preceeding fields
+        hash_dist: <hash_distribution>
+            # see hash_action hash_dist
+        action: <table-name>(<action> [, <index>])
+            # Action table to use -- action is a named field from the format
+            # that determines which action to do.  Index is optional (for
+            # indirect action), named field from format.  If not present use
+            # direct action (index is match address).
+        action_enable: <int>
         enable_action_data_enable: true | false
         enable_action_instruction_enable: true | false
         action_bus: { <int> : <name> | <int>..<int> : <name>, ... }
@@ -209,6 +209,10 @@ stage <constant> <thread>:
             # statistics table to use
         meter: <table-name> [ (<index-field>) ]
             # meter table to use
+            # FIXME -- how to specify meter type
+        stateful: <table-name> [ (<index-field>) ]
+            # stateful table to use
+            # FIXME -- how to specify stateful instruction?
         idletime:
             # idletime table
             row: <vector>
@@ -238,15 +242,19 @@ stage <constant> <thread>:
                 # table size, as table is rounded up to fill memories
             match_type: exact | ternary | lpm | ...
             action_profile: <name>
+        context_json:
+            # any keys/vector/values here are converted to json and output into
+            # the context.json info for this table verbatim
     ternary_match <name> [<logical_id>]:
         # Ternary match table
         p4: # information about P4 level tables and control plane API
             # same as exact_match p4 info
-        p4_param_order: # order of match params as seen in p4 program
-                        # PD generated has same order and needs to match context
-                        # json output
+        p4_param_order:
+            # order of match params as seen in p4 program
+            # PD generated has same order and needs to match context
+            # json output
             <name>: { type: <table-type>, size: <int> } ...
-            # param names with their types and size info
+                # param names with their types and size info
         row: <vector> | '[' <vector>, ... ']'
         column: <vector> | '[' <vector>, ... ']'
             # tcam rows and columns to use
@@ -298,6 +306,7 @@ stage <constant> <thread>:
             # default (unconditional) next table.  Exclusive with hit/miss
         p4: # information about P4 level tables and control plane API
             # same as exact_match p4 info
+        context_json: #anything
     ternary_indirect <name>:
         # Ternary indirection table
         row: <vector>
@@ -331,6 +340,7 @@ stage <constant> <thread>:
             # default (unconditional) next table.  Exclusive with hit/miss
         p4: # information about P4 level tables and control plane API
             # same as exact_match p4 info
+        context_json: #anything
     hash_action <name> [<logical_id>]:
         # hash-action table
         row: <int>
@@ -368,6 +378,7 @@ stage <constant> <thread>:
         miss: <table-name>
         next: <table-name>
         p4: # information about P4 level tables and control plane API
+        context_json: #anything
     phase0_match <name>
         # special phase 0 match table before stage 0 (only in stage 0 ingress)
         p4: # information about P4 level tables and control plane API
@@ -398,9 +409,11 @@ stage <constant> <thread>:
                     # defines a name as an alias for (a slice of) something else
             [- p4_param_order: '{' param_name : <int>, ... '}' ]
                 # Param order specifying param name and width for context json (p4_parameters)
+            [- default_action: '{' allowed: true|false, reason: <string> '}' ]
             - <instruction> <operands>
         p4: # information about P4 level tables and control plane API
             # same as exact_match p4 info
+        context_json: #anything
     gateway <name> [<logical_id>]:
         # 'bare' Gateway table -- no corresponding match table, so must
         # always specify next table
@@ -442,6 +455,7 @@ stage <constant> <thread>:
             # payload data to use if gateway is not disabled (run_table is false)
         match_address: <constant>
             # gateway match address to use if the gateway is not disabled
+        context_json: #anything
     selection <name> [<logical_id>]:
         logical_row: <vector>
         column: <vector> | '[' <vector>, ... ']'
@@ -460,6 +474,7 @@ stage <constant> <thread>:
             # see hash_action hash_dist
         p4: # information about P4 level tables and control plane API
             # same as exact_match p4 info
+        context_json: #anything
     counter <name> [<logical_id>]:
         logical_row: <vector>
         column: <vector> | '[' <vector>, ... ']'
@@ -495,6 +510,7 @@ stage <constant> <thread>:
         sweep_interval: <int>
         global_binding: true | false
         per_flow_enable: true | false
+        context_json: #anything
     stateful <name> [<logical_id>]:
         logical_row: <vector>
         column: <vector> | '[' <vector>, ... ']'
@@ -505,15 +521,11 @@ stage <constant> <thread>:
         bus: <vector>
         hash_dist: <hash_distribution>
             # see hash_action hash_dist
-    actions: 
-        <action name> : 
-            - { alias: <param/value>, ... }
-                # aliases used in instructions
-            - p4_param_order: '{' param_name : <int>, ... '}'
-                # Param order specifying param name and width for context json (p4_parameters)
-            - default_action: '{' allowed : <true/false>, reason : <string> '}'
-            - <instruction>
-                # SALU instructions to run for this table
+        actions: 
+            <action name> : 
+                - <instruction>
+                    # SALU instructions to run for this table
+        context_json: #anything
     dependency: concurrent | action | match
         # set the interstage dependency between this stage and the
         # previous stage.  Ignored in stage 0
