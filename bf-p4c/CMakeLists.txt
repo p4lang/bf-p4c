@@ -367,18 +367,22 @@ install (DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/p4include
 install (DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/p4_14include
   DESTINATION ${P4C_ARTIFACTS_OUTPUT_DIRECTORY})
 
+set (P4C_DRIVER_MACROS ${P4C_BINARY_DIR}/p4c_src/bfn_version.py)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/driver/bfn_version.in
+  ${P4C_DRIVER_MACROS} @ONLY)
+
 set (DRIVER_FILES ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino.cfg)
 if (ENABLE_JBAY)
   set (DRIVER_FILES ${DRIVER_FILES}
     ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.jbay.cfg)
 endif (ENABLE_JBAY)
 
-install (FILES ${DRIVER_FILES}
+install (FILES ${DRIVER_FILES} ${P4C_DRIVER_MACROS}
   DESTINATION ${P4C_ARTIFACTS_OUTPUT_DIRECTORY}/p4c_src)
 
 # hack to get around the fact that the test scripts expect the backend
 # binary to be in the top level directory. This should go away when we
-# remove automake and fix the scripts.
+# fix the scripts.
 add_custom_target(linktofino
   COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_BINARY_DIR}/p4c-tofino ${P4C_BINARY_DIR}/p4c-tofino
   COMMAND ${CMAKE_COMMAND} -E make_directory ${P4C_BINARY_DIR}/p4include
@@ -390,6 +394,7 @@ add_custom_target(linktofino
   done
   COMMAND ${CMAKE_COMMAND} -E make_directory ${P4C_BINARY_DIR}/p4c_src
   COMMAND ${CMAKE_COMMAND} -E copy ${DRIVER_FILES} ${P4C_BINARY_DIR}/p4c_src
+  COMMAND ${CMAKE_COMMAND} -E copy ${P4C_DRIVER_MACROS} ${P4C_BINARY_DIR}/p4c_src
   COMMAND ${CMAKE_COMMAND} -E create_symlink ${P4C_BINARY_DIR}/p4include ${CMAKE_CURRENT_BINARY_DIR}/p4include
   COMMAND ${CMAKE_COMMAND} -E create_symlink ${P4C_BINARY_DIR}/p4_14include ${CMAKE_CURRENT_BINARY_DIR}/p4_14include
   )
