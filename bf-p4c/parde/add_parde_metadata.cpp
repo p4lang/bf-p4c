@@ -159,8 +159,8 @@ namespace {
 void addDeparserParam(IR::BFN::Deparser* deparser,
                       const IR::HeaderOrMetadata* meta,
                       cstring field, cstring paramName) {
-    if (meta->type->getField(field))
-        deparser->metadata[paramName] = new IR::BFN::DeparserIntrinsic(gen_fieldref(meta, field));
+    auto* param = new IR::BFN::DeparserParameter(paramName, gen_fieldref(meta, field));
+    deparser->params.push_back(param);
 }
 
 }  // namespace
@@ -178,10 +178,10 @@ void AddMetadataShims::addIngressMetadata(IR::BFN::Deparser *d) {
     addDeparserParam(d, tmMeta, "packet_color", "meter_color");
     addDeparserParam(d, tmMeta, "disable_ucast_cutthru", "ct_disable");
     addDeparserParam(d, tmMeta, "enable_mcast_cutthru", "ct_mcast");
-    addDeparserParam(d, tmMeta, "mcast_grp_a", "egress_multicast_group_a");
-    addDeparserParam(d, tmMeta, "mcast_grp_b", "egress_multicast_group_b");
-    addDeparserParam(d, tmMeta, "level1_mcast_hash", "hash_lag_ecmp_mcast_1");
-    addDeparserParam(d, tmMeta, "level2_mcast_hash", "hash_lag_ecmp_mcast_2");
+    addDeparserParam(d, tmMeta, "mcast_grp_a", "mcast_grp_a");
+    addDeparserParam(d, tmMeta, "mcast_grp_b", "mcast_grp_b");
+    addDeparserParam(d, tmMeta, "level1_mcast_hash", "level1_mcast_hash");
+    addDeparserParam(d, tmMeta, "level2_mcast_hash", "level2_mcast_hash");
     addDeparserParam(d, tmMeta, "level1_exclusion_id", "xid");
     addDeparserParam(d, tmMeta, "level2_exclusion_id", "yid");
     addDeparserParam(d, tmMeta, "rid", "rid");

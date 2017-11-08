@@ -54,6 +54,10 @@ class PhvUse : public Phv_Parde_Mau_Use {
     //
  private:
     bool preorder(const IR::BFN::Deparser *d) override;
+    bool preorder(const IR::BFN::DeparserParameter *param) override;
+    void postorder(const IR::BFN::DeparserParameter *param) override;
+    bool preorder(const IR::BFN::Digest *digest) override;
+    void postorder(const IR::BFN::Digest *digest) override;
 };
 //
 //

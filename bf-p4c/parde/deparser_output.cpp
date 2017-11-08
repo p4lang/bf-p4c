@@ -1,9 +1,8 @@
 #include "bf-p4c/parde/asm_output.h"
 #include "bf-p4c/common/asm_output.h"
+#include "bf-p4c/common/autoindent.h"
 #include "bf-p4c/phv/phv_fields.h"
 
-// XXX(seth): This duplicates the very similar ExtractDestFormatter class in
-// parser_output.cpp; we need to combine them.
 struct DeparserSourceFormatter {
     const PHV::Field* dest;
     bitrange bits;
@@ -16,13 +15,17 @@ std::ostream& operator<<(std::ostream& out, const DeparserSourceFormatter& forma
     return out;
 }
 
-class OutputDictionary : public Inspector {
+namespace {
+
+struct OutputDictionary : public Inspector {
     std::ostream        &out;
     const PhvInfo       &phv;
     unsigned            checksumIndex = 0;
     indent_t            indent;
+    AutoIndent          autoDictionaryIndent;
     PHV::Container      last;
-    bool preorder(const IR::BFN::Emit* emit) {
+
+    bool preorder(const IR::BFN::Emit* emit) override {
         bitrange bits;
         auto field = phv.field(emit->source, &bits);
         if (!field) {
@@ -63,7 +66,7 @@ class OutputDictionary : public Inspector {
         return false;
     }
 
-    bool preorder(const IR::BFN::EmitChecksum* emit) {
+    bool preorder(const IR::BFN::EmitChecksum* emit) override {
         out << indent << "checksum " << checksumIndex;
 
         bitrange povAllocBits;
@@ -78,23 +81,22 @@ class OutputDictionary : public Inspector {
         return false;
     }
 
- public:
-    OutputDictionary(std::ostream &out, const PhvInfo &phv, indent_t indent)
-    : out(out), phv(phv), indent(indent) {}
+    OutputDictionary(std::ostream &out, const PhvInfo &phv, indent_t initialIndent)
+      : out(out), phv(phv), indent(initialIndent), autoDictionaryIndent(indent) { }
 };
 
 /// Generates the list of input PHV containers for each deparser checksum
 /// computation.
-class OutputChecksums : public Inspector {
+struct OutputChecksums : public Inspector {
     std::ostream        &out;
     const PhvInfo       &phv;
     unsigned            checksumIndex;
-    indent_t            indent;
+    indent_t      indent;
 
-    bool preorder(const IR::BFN::EmitChecksum* emit) {
+    bool preorder(const IR::BFN::EmitChecksum* emit) override {
         out << indent << "checksum " << checksumIndex << ":" << std::endl;
 
-        indent++;
+        AutoIndent checksumIndent(indent);
         PHV::Container lastContainer;
         for (auto* source : emit->sources) {
             bitrange bits;
@@ -122,16 +124,80 @@ class OutputChecksums : public Inspector {
             out << DeparserSourceFormatter{field, bits} << std::endl;
             lastContainer = alloc.container;
         }
-        indent--;
 
         checksumIndex++;
         return false;
     }
 
- public:
-    OutputChecksums(std::ostream &out, const PhvInfo &phv, indent_t indent)
-    : out(out), phv(phv), checksumIndex(0), indent(indent) {}
+    OutputChecksums(std::ostream &out, const PhvInfo &phv, indent_t initialIndent)
+      : out(out), phv(phv), checksumIndex(0), indent(initialIndent) { }
 };
+
+/// Generates the configuration for the intrinsic deparser parameters.
+struct OutputParameters : public Inspector {
+    std::ostream        &out;
+    const PhvInfo       &phv;
+    const indent_t       indent;
+
+    using ParamGroup = std::vector<const IR::BFN::DeparserParameter*>;
+    ParamGroup egMulticastGroup;
+    ParamGroup hashLagECMP;
+
+    bool preorder(const IR::BFN::DeparserParameter* param) override {
+        // There are a few deparser parameters that need to be grouped in the
+        // generated assembly; we save these off to the side and deal with them
+        // at the end.
+        if (param->name == "mcast_grp_a" || param->name == "mcast_grp_b") {
+            egMulticastGroup.push_back(param);
+            return false;
+        }
+        if (param->name == "level1_mcast_hash" || param->name == "level2_mcast_hash") {
+            hashLagECMP.push_back(param);
+            return false;
+        }
+
+        out << indent << param->name << ": ";
+        outputParamSource(param);
+        out << std::endl;
+
+        return false;
+    }
+
+    void postorder(const IR::BFN::Deparser*) override {
+        outputParamGroup("egress_multicast_group", egMulticastGroup);
+        outputParamGroup("hash_lag_ecmp_mcast", hashLagECMP);
+    }
+
+    void outputParamSource(const IR::BFN::DeparserParameter* param) const {
+        if (param->povBit) out << "{ ";
+
+        out << canon_name(phv.field(param->source->field)->name);
+
+        if (param->povBit)
+            out << ": " << canon_name(phv.field(param->povBit->field)->name)
+                        << " }";
+    }
+
+    void outputParamGroup(const char* groupName, const ParamGroup& group) {
+        if (group.empty()) return;
+
+        out << indent << groupName << ": [ ";
+
+        const char* sep = "";
+        for (auto* param : group) {
+            out << sep;
+            outputParamSource(param);
+            sep = ", ";
+        }
+
+        out << " ]" << std::endl;
+    }
+
+    OutputParameters(std::ostream &out, const PhvInfo &phv, indent_t indent)
+      : out(out), phv(phv), indent(indent) { }
+};
+
+}  // namespace
 
 void DeparserAsmOutput::emit_fieldlist(std::ostream &out, const IR::Vector<IR::Expression> *list,
                                        const char *sep) const {
@@ -152,20 +218,6 @@ void DeparserAsmOutput::emit_fieldlist(std::ostream &out, const IR::Vector<IR::E
             sep = ", "; } }
 }
 
-class printIntrin {
-    const PhvInfo &phv;
-    const IR::BFN::DeparserIntrinsic &di;
-    friend std::ostream &operator<<(std::ostream &out, const printIntrin &p) {
-        if (p.di.povBit) {
-            out << "{ " << canon_name(p.phv.field(p.di.value)->name) << ": "
-                << canon_name(p.phv.field(p.di.povBit)->name) << " }";
-        } else {
-            out << canon_name(p.phv.field(p.di.value)->name); }
-        return out; }
- public:
-    printIntrin(const PhvInfo &p, const IR::BFN::DeparserIntrinsic *d) : phv(p), di(*d) {}
-};
-
 std::ostream &operator<<(std::ostream &out, const DeparserAsmOutput &d) {
     indent_t    indent(1);
     out << "deparser " << d.gress << ":" << std::endl;
@@ -173,60 +225,22 @@ std::ostream &operator<<(std::ostream &out, const DeparserAsmOutput &d) {
     if (!d.deparser || d.deparser->emits.empty())
         out << " {}";
     out << std::endl;
-    if (d.deparser) {
-        d.deparser->emits.apply(OutputDictionary(out, d.phv, ++indent));
-        --indent;
+    if (!d.deparser)  return out;
 
-        // XXX(zma) "egress_multicast_group" is an exception that can have multiple elements,
-        // the following block of code deals with this exception.
-        std::vector<std::pair<const cstring, const IR::BFN::DeparserIntrinsic *>>
-            egress_multicast_group;
+    d.deparser->emits.apply(OutputDictionary(out, d.phv, indent));
+    d.deparser->emits.apply(OutputChecksums(out, d.phv, indent));
+    d.deparser->params.apply(OutputParameters(out, d.phv, indent));
 
-        std::vector<std::pair<const cstring, const IR::BFN::DeparserIntrinsic *>>
-                      hash_lag_ecmp_mcast;
-        for (auto md : d.deparser->metadata) {
-            if (md.first == "egress_multicast_group_a" ||
-                md.first == "egress_multicast_group_b") {
-                 egress_multicast_group.push_back(md);
-                 continue;
-            }
-
-            if (md.first == "hash_lag_ecmp_mcast_1" ||
-                md.first == "hash_lag_ecmp_mcast_2") {
-                    hash_lag_ecmp_mcast.push_back(md);
-                    continue;
-            }
-
-            out << indent << md.first << ": " << printIntrin(d.phv, md.second) << std::endl;
-        }
-        if (egress_multicast_group.size() == 2) {
-            out << indent << "egress_multicast_group: [ ";
-            out << printIntrin(d.phv, egress_multicast_group[0].second) << ", ";
-            out << printIntrin(d.phv, egress_multicast_group[1].second) << " ]"
-                << std::endl;
-        } else if (egress_multicast_group.size() == 1) {
-            out << indent << "egress_multicast_group: "
-                << printIntrin(d.phv, egress_multicast_group[0].second)
-                << std::endl;
-        }
-
-        if (hash_lag_ecmp_mcast.size() == 2) {
-            out << indent << "hash_lag_ecmp_mcast: [ ";
-            out << printIntrin(d.phv, hash_lag_ecmp_mcast[0].second) << ", ";
-            out << printIntrin(d.phv, hash_lag_ecmp_mcast[1].second) << " ]" << std::endl;
-        }
-
-        for (auto digest : Values(d.deparser->digests)) {
-            int idx = 0;
-            out << indent++ << digest->name << ":" << std::endl;
-            for (auto l : digest->sets) {
-                out << indent << idx++ << ": [ ";
-                d.emit_fieldlist(out, l);
-                out << " ]" << std::endl; }
-            out << indent-- << "select: " << canon_name(d.phv.field(digest->select)->name)
-                << std::endl;
-        }
-        d.deparser->emits.apply(OutputChecksums(out, d.phv, indent));
+    for (auto digest : Values(d.deparser->digests)) {
+        int idx = 0;
+        out << indent++ << digest->name << ":" << std::endl;
+        for (auto l : digest->sets) {
+            out << indent << idx++ << ": [ ";
+            d.emit_fieldlist(out, l);
+            out << " ]" << std::endl; }
+        out << indent-- << "select: " << canon_name(d.phv.field(digest->select)->name)
+            << std::endl;
     }
+
     return out;
 }

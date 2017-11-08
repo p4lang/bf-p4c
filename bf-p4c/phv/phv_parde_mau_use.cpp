@@ -103,13 +103,36 @@ bool Phv_Parde_Mau_Use::is_used_parde(const PHV::Field *f) const {    // use in 
 
 bool PhvUse::preorder(const IR::BFN::Deparser *d) {
     thread = d->gress;
-    in_mau = true;  // treat metadata and digests as in mau as they can't go in TPHV
     in_dep = true;
+
     revisit_visited();
-    visit(d->metadata, "metadata");
     visit(d->digests, "digests");
-    in_mau = false;
+    visit(d->params, "params");
+
     revisit_visited();
     visit(d->emits, "emits");
+
     return false;
+}
+
+bool PhvUse::preorder(const IR::BFN::DeparserParameter*) {
+    // Treat fields which are used to set intrinsic deparser parameters as if
+    // they're used in the MAU, because they can't go in TPHV.
+    in_mau = true;
+    return true;
+}
+
+void PhvUse::postorder(const IR::BFN::DeparserParameter*) {
+    in_mau = false;
+}
+
+bool PhvUse::preorder(const IR::BFN::Digest*) {
+    // Treat fields which are used in digests as if they're used in the MAU,
+    // because they can't go in TPHV.
+    in_mau = true;
+    return true;
+}
+
+void PhvUse::postorder(const IR::BFN::Digest*) {
+    in_mau = false;
 }

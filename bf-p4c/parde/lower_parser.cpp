@@ -600,6 +600,22 @@ struct LowerDeparserIR : public DeparserTransform {
         return emit;
     }
 
+    const IR::Node* postorder(IR::BFN::DeparserParameter* param) override {
+        prune();
+        std::vector<alloc_slice> slices;
+        std::tie(std::ignore, slices) = computeSlices(param->source->field, phv);
+
+        // Deparser parameters receive their value from exactly one container,
+        // so we expect exactly one slice.
+        BUG_CHECK(!slices.empty(), "Deparser sets a parameter from a field which "
+                  "didn't receive a PHV allocation: %1%", param);
+        BUG_CHECK(slices.size() == 1, "Deparser sets a parameter from a field "
+                  "which is split between multiple PHV containers: %1% (%2%)",
+                  param, cstring::to_cstring(phv.field(param->source->field)));
+
+        return param;
+    }
+
     const PhvInfo& phv;
 };
 

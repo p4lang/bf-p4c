@@ -24,8 +24,11 @@ bool TofinoWriteContext::isWrite(bool root_value) {
     if (salu && current == salu->output_dst) {
         return true; }
 
-    // Parser l-values (e.g. the destination of an Extract) are written to.
-    if (ctxt->node->is<IR::BFN::ParserLVal>()) return true;
+    // Parser primitives write to l-values - for example, an Extract writes to
+    // its destination.
+    if (ctxt->node->is<IR::BFN::ParserLVal>() &&
+        findContext<IR::BFN::ParserPrimitive>())
+        return true;
 
     // TODO: Does C++ support monads?  The following if statements are nested
     // because C++ only supports declaring variables in if predicates if the
@@ -86,11 +89,18 @@ bool TofinoWriteContext::isRead(bool root_value) {
     // Parser r-values (e.g. the source of a Select) are read.
     if (ctxt->node->is<IR::BFN::ParserRVal>()) return true;
 
+    // Deparser parameters obtain their value from l-values.
+    if (ctxt->node->is<IR::BFN::ParserLVal>() &&
+        findContext<IR::BFN::DeparserPrimitive>())
+        return true;
+
     // An Emit reads both the emitted field and the POV bit.
+    // XXX(seth): These should be represented as l-values as well.
     if (ctxt->node->is<IR::BFN::Emit>())
         return true;
 
     // An EmitChecksum reads the POV bit and all checksummed fields.
+    // XXX(seth): These also.
     if (ctxt->node->is<IR::BFN::EmitChecksum>())
         return true;
 

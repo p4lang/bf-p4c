@@ -957,16 +957,24 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
     void postorder(const IR::BFN::Deparser* d) override {
         // extract deparser constraints from Deparser & Digest IR nodes ref: bf-p4c/ir/parde.def
         // set deparser constaints on field
-        for (auto md : d->metadata) {
-            // IR::BFN::Deparser has a NameMap that contains all metadata
-            // One example of metadata is "egress_port" which points to
-            // egress port in the egress pipeline and
-            // egress spec in the ingress pipeline
-            PHV::Field* f = phv.field(md.second->value);
+        for (auto* param : d->params) {
+            PHV::Field* f = phv.field(param->source->field);
             BUG_CHECK(f != nullptr, "Field not created in PhvInfo");
-            // FIXME -- this is only needed on tofino, not on jbay
+
+            // On Tofino, we need to be careful with fields which are used to
+            // set intrinsic deparser parameters. This is because the hidden
+            // validity bit for the container the field is placed in will
+            // control whether the parameter is actually "set" or the value is
+            // just ignored. Since we don't explicitly track those container
+            // validity bits, and any write to a container will mark it valid,
+            // we currently can't safely pack other fields into the same
+            // container.
+            // XXX(seth): JBay does away with this constraint, because it has
+            // explicit POV bits for deparser parameters.
             f->set_deparsed_no_pack(true);
-            LOG1(".....Deparser Constraint '" << md.first << "' on field..... " << f); }
+
+            LOG1(".....Deparser Constraint '" << param->name
+                  << "' on field..... " << f); }
 
         // TODO:
         // IR futures: distinguish each digest as an enumeration: learning, mirror, resubmit

@@ -27,25 +27,27 @@ class AddJBayMetadataPOV : public Transform {
             visit(t.parser);
             visit(t.mau); }
         return pipe; }
-    IR::BFN::DeparserIntrinsic *postorder(IR::BFN::DeparserIntrinsic *di) override {
-        di->povBit = new IR::TempVar(IR::Type::Bits::get(1), true);
-        return di; }
+    IR::BFN::DeparserParameter *
+    postorder(IR::BFN::DeparserParameter *param) override {
+        param->povBit =
+          new IR::BFN::FieldLVal(new IR::TempVar(IR::Type::Bits::get(1), true));
+        return param; }
     IR::Node *postorder(IR::Primitive *p) override {
         if (p->name == "modify_field") {
             auto *dest = p->operands.at(0);
-            for (auto &el : dp->metadata) {
-                if (equiv(dest, el.second->value)) {
+            for (auto* param : dp->params) {
+                if (equiv(dest, param->source->field)) {
                     return new IR::Vector<IR::Primitive>({ p,
-                        new IR::Primitive("modify_field", el.second->povBit,
+                        new IR::Primitive("modify_field", param->povBit->field,
                             new IR::Constant(IR::Type::Bits::get(1), 1)) }); } } }
         return p; }
     IR::Node *postorder(IR::BFN::Extract *e) override {
-        for (auto &el : dp->metadata)
-            if (equiv(e->dest->field, el.second->value))
+        for (auto* param : dp->params) {
+            if (equiv(e->dest->field, param->source->field))
                 return new IR::Vector<IR::BFN::ParserPrimitive>({ e,
-                    new IR::BFN::Extract(el.second->povBit,
+                    new IR::BFN::Extract(param->povBit,
                                          new IR::BFN::ConstantRVal(1))
-                });
+                }); }
         return e; }
 
  public:

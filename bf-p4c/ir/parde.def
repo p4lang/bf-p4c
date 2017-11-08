@@ -298,11 +298,6 @@ class Parser : AbstractParser {
     ParserState start;
 }
 
-class DeparserIntrinsic {
-    Expression          value;
-    NullOK Expression   povBit = nullptr;
-}
-
 class Digest {
     gress_t                             gress;
     cstring                             name;
@@ -354,10 +349,35 @@ class EmitChecksum : DeparserPrimitive {
     Expression povBit;
 }
 
+/// Configures the location from which an intrinsic deparser parameter should
+/// obtain its value.
+class DeparserParameter {
+    DeparserParameter(cstring name, Expression source)
+      : name(name), source(new FieldLVal(source)), povBit(nullptr) { }
+    DeparserParameter(Util::SourceInfo si, cstring name, Expression source)
+      : Node(si), name(name), source(new FieldLVal(source)), povBit(nullptr) { }
+
+    dbprint {
+        out << "parameter " << name << " = " << source->toString();
+        if (povBit) out << " if " << povBit->toString();
+    }
+
+    /// The deparser parameter to configure. The name is the one used in the
+    /// assembly, which in turn derives from the CSR register name.
+    cstring name;
+
+    /// The location to read the parameter value from.
+    FieldLVal source;
+
+    /// If present, the POV bit controlling whether the contents of the source
+    /// location are valid. Not used on Tofino.
+    NullOK FieldLVal povBit = nullptr;
+}
+
 class Deparser : Unit {
     gress_t                             gress;
     inline Vector<DeparserPrimitive>    emits;
-    inline NameMap<DeparserIntrinsic>   metadata;
+    inline Vector<DeparserParameter>    params;
     inline NameMap<Digest>              digests;
 #noconstructor
     Deparser(gress_t gr, Parser s);
