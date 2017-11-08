@@ -5,58 +5,13 @@
 #include "bf-p4c/device.h"
 #include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/ir/gress.h"
 #include "lib/bitvec.h"
 #include "lib/exceptions.h"
 #include "lib/range.h"
 
 namespace PHV {
-namespace {
-
-class Uses : public Inspector {
- public:
-    bitvec      use[2][2];
-    /*              |  ^- gress                 */
-    /*              0 == use in parser/deparser */
-    /*              1 == use in mau             */
-    explicit Uses(const PhvInfo &p) : phv(p) { }
-
- private:
-    const PhvInfo       &phv;
-    gress_t             thread;
-    bool                in_mau;
-    bool preorder(const IR::BFN::Parser *p) {
-        in_mau = false;
-        thread = p->gress;
-        revisit_visited();
-        return true; }
-    bool preorder(const IR::BFN::Deparser *d) {
-        thread = d->gress;
-        in_mau = true;  // treat metadata and digests as in mau as they can't go in TPHV
-        revisit_visited();
-        d->metadata.visit_children(*this);
-        d->digests.visit_children(*this);
-        in_mau = false;
-        revisit_visited();
-        d->emits.visit_children(*this);
-        return false; }
-    bool preorder(const IR::MAU::TableSeq *) {
-        in_mau = true;
-        revisit_visited();
-        return true; }
-    bool preorder(const IR::HeaderRef *hr) {
-        PhvInfo::StructInfo info = phv.struct_info(hr);
-        use[in_mau][thread].setrange(info.first_field_id, info.size);
-        return false; }
-    bool preorder(const IR::Expression *e) {
-        if (auto info = phv.field(e)) {
-            LOG3("use " << info->name << " in " << thread << (in_mau ? " mau" : ""));
-            use[in_mau][thread][info->id] = true;
-            return false; }
-        return true; }
-};
-
-}  // namespace
 
 /// A group of fields that should be allocated contiguously. Offers a
 /// std::vector-like interface.
@@ -165,7 +120,7 @@ static void adjust_skip_for_egress(PHV::Container &reg, unsigned group_size,
 
 bool TrivialAlloc::preorder(const IR::BFN::Pipe *pipe) {
     if (phv.alloc_done()) return false;
-    PHV::Uses uses(phv);
+    Phv_Parde_Mau_Use uses(phv);
     Regs normal = { "B0", "H0", "W0" },
          tagalong = { "TB0", "TH0", "TW0" },
          skip[2] = { { "B16", "H16", "W16" }, { "B32", "H32", "W32" } };
@@ -191,20 +146,20 @@ bool TrivialAlloc::preorder(const IR::BFN::Pipe *pipe) {
                 if (field.pov) {
                     pov_fields.push_back(field);
                 } else {
-                    bool use_mau = uses.use[1][gr][field.id];
-                    bool use_any = uses.use[0][gr][field.id];
+                    bool use_mau = uses.is_used_mau(&field);
+                    bool use_parde = uses.is_used_parde(&field);
                     FieldGroup group(field);
                     if (!field.metadata && field.size % 8U != 0 && field.offset > 0) {
                         while (group.size % 8U != 0) {
                             auto* mfield = phv.field(group.back().id + 1);
                             group.push_back(*mfield);
-                            use_mau |= uses.use[1][gr][mfield->id];
-                            use_any |= uses.use[0][gr][mfield->id];
+                            use_mau |= uses.is_used_mau(mfield);
+                            use_parde |= uses.is_used_parde(mfield);
                             assert(!mfield->metadata);
                             if (mfield->offset == 0) break; } }
                     if (use_mau) {
                         do_alloc(group, &normal, skip);
-                    } else if (use_any) {
+                    } else if (use_parde) {
                         if (tagalong_full(field.size, &tagalong))
                             do_alloc(group, &normal, skip);
                         else
@@ -419,7 +374,7 @@ bool ManualAlloc::preorder(const IR::BFN::Pipe *pipe) {
     }
 
     // Collect information about where fields are used.
-    PHV::Uses uses(phv);
+    Phv_Parde_Mau_Use uses(phv);
     pipe->apply(uses);
 
     // Allocate all fields except for POV bits.
@@ -444,9 +399,9 @@ bool ManualAlloc::preorder(const IR::BFN::Pipe *pipe) {
             group.push_back(*nextField);
         }
 
-        if (group.ids.intersects(uses.use[1][group.gress])) {
+        if (group.ids.intersects(uses.use_i[1][group.gress])) {
             // This group is used in the MAU pipeline.
-        } else if (group.ids.intersects(uses.use[0][group.gress])) {
+        } else if (group.ids.intersects(uses.use_i[0][group.gress])) {
             // This group is only used in the parser/deparser.
             group.tagalong = true;
         } else {
