@@ -1,4 +1,5 @@
 #include "midend.h"
+#include "arch/native.h"
 #include "arch/simple_switch.h"
 #include "frontends/common/constantFolding.h"
 #include "frontends/common/resolveReferences/resolveReferences.h"
@@ -118,6 +119,8 @@ MidEnd::MidEnd(BFN_Options& options) {
         // avoid handling abitrary parameters in user defined control blocks
         (options.arch == "v1model") ?
             new BFN::SimpleSwitchTranslation(&refMap, &typeMap, options /*map*/) : nullptr,
+        (options.arch == "native") ?
+            new BFN::NormalizeNativeProgram(&refMap, &typeMap, options /*map*/) : nullptr,
         new P4::InlineActions(&refMap, &typeMap),
         new P4::LocalizeAllActions(&refMap),
         new P4::UniqueNames(&refMap),
