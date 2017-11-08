@@ -154,36 +154,58 @@ bool AddMetadataShims::preorder(IR::BFN::Deparser *d) {
     return false;
 }
 
-void AddMetadataShims::addDeparserIntrinsic(IR::BFN::Deparser *d, const IR::HeaderOrMetadata *meta,
-                                            cstring field, cstring intrinsic) {
+namespace {
+
+void addDeparserParam(IR::BFN::Deparser* deparser,
+                      const IR::HeaderOrMetadata* meta,
+                      cstring field, cstring paramName) {
     if (meta->type->getField(field))
-        d->metadata[intrinsic] = new IR::BFN::DeparserIntrinsic(gen_fieldref(meta, field));
+        deparser->metadata[paramName] = new IR::BFN::DeparserIntrinsic(gen_fieldref(meta, field));
 }
 
-void AddMetadataShims::addIngressMetadata(IR::BFN::Deparser *d) {
-    auto *meta = pipe->metadata["ingress_intrinsic_metadata_for_tm"];
-    if (!meta) return;
+}  // namespace
 
-    addDeparserIntrinsic(d, meta, "ucast_egress_port", "egress_unicast_port");
-    addDeparserIntrinsic(d, meta, "mcast_grp_a", "egress_multicast_group_a");
-    addDeparserIntrinsic(d, meta, "mcast_grp_b", "egress_multicast_group_b");
-    addDeparserIntrinsic(d, meta, "level1_mcast_hash", "hash_lag_ecmp_mcast_1");
-    addDeparserIntrinsic(d, meta, "level2_mcast_hash", "hash_lag_ecmp_mcast_2");
-    addDeparserIntrinsic(d, meta, "rid", "rid");
-    addDeparserIntrinsic(d, meta, "level1_exclusion_id", "xid");
-    addDeparserIntrinsic(d, meta, "level2_exclusion_id", "yid");
-    addDeparserIntrinsic(d, meta, "deflect_on_drop", "deflect_on_drop");
-    addDeparserIntrinsic(d, meta, "packet_color", "meter_color");
-    addDeparserIntrinsic(d, meta, "ingress_cos", "icos");
-    addDeparserIntrinsic(d, meta, "qid", "qid");
-    addDeparserIntrinsic(d, meta, "bypass_egress", "bypss_egr");
-    addDeparserIntrinsic(d, meta, "enable_mcast_cutthru", "ct_mcast");
+void AddMetadataShims::addIngressMetadata(IR::BFN::Deparser *d) {
+    auto* tmMeta = getMetadataType(pipe, "ingress_intrinsic_metadata_for_tm");
+    addDeparserParam(d, tmMeta, "ucast_egress_port", "egress_unicast_port");
+    addDeparserParam(d, tmMeta, "drop_ctl", "drop_ctl");
+    addDeparserParam(d, tmMeta, "bypass_egress", "bypss_egr");
+    addDeparserParam(d, tmMeta, "deflect_on_drop", "deflect_on_drop");
+    addDeparserParam(d, tmMeta, "ingress_cos", "icos");
+    addDeparserParam(d, tmMeta, "qid", "qid");
+    addDeparserParam(d, tmMeta, "icos_for_copy_to_cpu", "copy_to_cpu_cos");
+    addDeparserParam(d, tmMeta, "copy_to_cpu", "copy_to_cpu");
+    addDeparserParam(d, tmMeta, "packet_color", "meter_color");
+    addDeparserParam(d, tmMeta, "disable_ucast_cutthru", "ct_disable");
+    addDeparserParam(d, tmMeta, "enable_mcast_cutthru", "ct_mcast");
+    addDeparserParam(d, tmMeta, "mcast_grp_a", "egress_multicast_group_a");
+    addDeparserParam(d, tmMeta, "mcast_grp_b", "egress_multicast_group_b");
+    addDeparserParam(d, tmMeta, "level1_mcast_hash", "hash_lag_ecmp_mcast_1");
+    addDeparserParam(d, tmMeta, "level2_mcast_hash", "hash_lag_ecmp_mcast_2");
+    addDeparserParam(d, tmMeta, "level1_exclusion_id", "xid");
+    addDeparserParam(d, tmMeta, "level2_exclusion_id", "yid");
+    addDeparserParam(d, tmMeta, "rid", "rid");
 }
 
 void AddMetadataShims::addEgressMetadata(IR::BFN::Deparser *d) {
-    // egress_port is read-only
-    auto *meta = pipe->metadata["egress_intrinsic_metadata"];
-    if (!meta) return;
-    addDeparserIntrinsic(d, meta, "egress_port", "egress_unicast_port");
-    addDeparserIntrinsic(d, meta, "egress_cos", "ecos");
+    auto* mirrorMeta =
+      getMetadataType(pipe, "egress_intrinsic_metadata_for_mirror_buffer");
+    addDeparserParam(d, mirrorMeta, "coalesce_length", "coal");
+
+    auto* outputMeta =
+      getMetadataType(pipe, "egress_intrinsic_metadata_for_output_port");
+    addDeparserParam(d, outputMeta, "capture_tstamp_on_tx", "capture_tx_ts");
+    addDeparserParam(d, outputMeta, "update_delay_on_tx", "tx_pkt_has_offsets");
+    addDeparserParam(d, outputMeta, "force_tx_error", "force_tx_err");
+    addDeparserParam(d, outputMeta, "drop_ctl", "drop_ctl");
+
+    // `egress_unicast_port` and `ecos` are a bit special in that they are made
+    // available in the parser as part of `egress_intrinsic_metadata`, but we
+    // also need to provide them to the deparser hardware. (The user also can't
+    // overwrite these; we prevent that in the architecture by making the
+    // intrinsic metadata struct an `in` parameter, so that changes made in the
+    // egress control do not propagate to the deparser.)
+    auto* egMeta = getMetadataType(pipe, "egress_intrinsic_metadata");
+    addDeparserParam(d, egMeta, "egress_port", "egress_unicast_port");
+    addDeparserParam(d, egMeta, "egress_cos", "ecos");
 }

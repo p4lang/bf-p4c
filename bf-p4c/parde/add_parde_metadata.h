@@ -22,8 +22,6 @@ class AddMetadataShims : public PardeModifier {
     void addIngressMetadata(IR::BFN::Parser *d);
     void addEgressMetadata(IR::BFN::Parser *d);
 
-    void addDeparserIntrinsic(IR::BFN::Deparser *d, const IR::HeaderOrMetadata *meta,
-                          cstring field, cstring intrinsic);
     void addIngressMetadata(IR::BFN::Deparser *d);
     void addEgressMetadata(IR::BFN::Deparser *d);
 
