@@ -3,8 +3,11 @@
 #include "bf-p4c/phv/phv_fields.h"
 #include "lib/stringref.h"
 
-void emit_phv_field(std::ostream &out, PHV::Field &field) {
+void emit_phv_field(std::ostream &out, PHV::Field &field,
+                    cstring& sectionHeaderInOut) {
     for (auto &alloc : field.alloc_i) {
+        out << sectionHeaderInOut;
+        sectionHeaderInOut = "";
         out << "  " << canon_name(field.name);
         if (alloc.field_bit > 0 || alloc.width < field.size)
             out << '.' << alloc.field_bit << '-' << alloc.field_hi();
@@ -18,13 +21,13 @@ void emit_phv_field(std::ostream &out, PHV::Field &field) {
 }
 
 std::ostream &operator<<(std::ostream &out, const PhvAsmOutput &phvasm) {
-    out << "phv ingress:" << std::endl;
+    cstring ingressSectionHeader = "phv ingress:\n";
     for (auto &f : phvasm.phv)
         if (f.gress == INGRESS)
-            emit_phv_field(out, f);
-    out << "phv egress:" << std::endl;
+            emit_phv_field(out, f, ingressSectionHeader);
+    cstring egressSectionHeader = "phv egress:\n";
     for (auto &f : phvasm.phv)
         if (f.gress == EGRESS)
-            emit_phv_field(out, f);
+            emit_phv_field(out, f, egressSectionHeader);
     return out;
 }
