@@ -70,19 +70,20 @@ class ElimUnused::Headers : public PardeTransform {
         LOG1("ELIMINATING parser state " << state->name);
         return nullptr; }
 
-    bool isPovBitUsed(const IR::Expression* povBit) const {
+    bool hasDefs(const IR::Expression* fieldRef) const {
         // XXX(seth): We should really be checking if any reaching definition
         // could be setting it to something other than zero.
-        auto povField = self.phv.field(povBit);
-        if (!povField) return true;
-        return !self.defuse.getAllDefs(povField->id).empty();
+        auto* field = self.phv.field(fieldRef);
+        if (!field) return true;
+        return !self.defuse.getAllDefs(field->id).empty();
     }
 
     IR::BFN::Emit* preorder(IR::BFN::Emit* emit) override {
         prune();
 
         // The emit primitive is used if the POV bit being set somewhere.
-        if (isPovBitUsed(emit->povBit)) return emit;
+        if (hasDefs(emit->povBit)) return emit;
+
         LOG1("ELIMINATING emit " << emit << " IN UNIT " <<
              DBPrint::Brief << findContext<IR::BFN::Unit>());
         return nullptr;
@@ -92,8 +93,22 @@ class ElimUnused::Headers : public PardeTransform {
         prune();
 
         // The emit checksum primitive is used if the POV bit being set somewhere.
-        if (isPovBitUsed(emit->povBit)) return emit;
+        if (hasDefs(emit->povBit)) return emit;
+
         LOG1("ELIMINATING emit checksum " << emit << " IN UNIT " <<
+             DBPrint::Brief << findContext<IR::BFN::Unit>());
+        return nullptr;
+    }
+
+    IR::BFN::DeparserParameter*
+    preorder(IR::BFN::DeparserParameter* param) override {
+        prune();
+
+        // We don't need to set a deparser parameter if the field it gets its
+        // value from is never set.
+        if (hasDefs(param->source->field)) return param;
+
+        LOG1("ELIMINATING deparser parameter " << param << " IN UNIT " <<
              DBPrint::Brief << findContext<IR::BFN::Unit>());
         return nullptr;
     }

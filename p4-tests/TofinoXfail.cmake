@@ -111,6 +111,7 @@ p4c_add_xfail_reason("tofino"
 # BRIG-240
 p4c_add_xfail_reason("tofino"
   "Input xbar group.* conflict in stage"
+  extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
   extensions/p4_tests/p4_14/test_config_197_default_next_table.p4
   extensions/p4_tests/p4_14/test_config_196_hit_miss.p4
   )
@@ -582,7 +583,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/04-FullPHV3.p4
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
   extensions/p4_tests/p4_14/c1/COMPILER-133/full_tphv.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
   extensions/p4_tests/p4_14/c4/COMPILER-590/case3179.p4
   extensions/p4_tests/p4_14/c4/COMPILER-591/case3176.p4
   extensions/p4_tests/p4_14/jenkins/power/power.p4
