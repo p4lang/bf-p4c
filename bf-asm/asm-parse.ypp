@@ -120,7 +120,8 @@ static value_t command(char *cmd, value_t &a1, value_t &a2, int lineno_adj) {
 %token<str>     ID
 %token<match>   MATCH
 
-%type<value>    param param_expr list_element key value elements indent_elements flow_value
+%type<value>    param param_expr list_element key value elements opt_indent_elements
+                indent_elements flow_value
 %type<vec>      opt_params params comma_params linewrapped_value_list list_elements value_list dotvals
 %type<pair>     map_element pair
 %type<map>      map_elements pair_list
@@ -150,7 +151,7 @@ sections: sections section | section ;
 
 section : ID opt_params ':'
             { $<i>$ = Section::start_section(lineno, $1, $2); }
-          '\n' indent_elements
+          '\n' opt_indent_elements
             { if (!$<i>4) Section::asm_section($1, $2, $6);
               VECTOR_foreach($2, free_value);
               VECTOR_fini($2);
@@ -191,6 +192,10 @@ param_expr
         | param '&' value { $$ = CMD(strdup("&"), $1, $3); }
         ;
 
+opt_indent_elements: { $$ = empty_map(1); }
+        | indent_elements
+        ;
+
 indent_elements
         : INDENT elements UNINDENT { $$ = $2; }
         | INDENT error { $<i>$ = lineno; } error_resync UNINDENT { $$ = empty_map(lineno-$<i>3); }
@@ -211,6 +216,7 @@ map_element
         : key ':' value '\n' { $$ = pair_t($1, $3); }
         | key ':' '\n' indent_elements { $$ = pair_t($1, $4); }
         | key ':' '\n' list_elements { $$ = pair_t($1, VAL($4)); }
+        | key ':' '\n' { $$ = pair_t($1, empty_map(1)); }
         | '?' value ':' value '\n' { $$ = pair_t($2, $4); }
         | '?' value ':' '\n' indent_elements { $$ = pair_t($2, $5); }
         | '?' value ':' '\n' list_elements { $$ = pair_t($2, VAL($5)); }
