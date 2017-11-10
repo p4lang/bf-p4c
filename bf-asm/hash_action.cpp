@@ -151,7 +151,7 @@ void HashActionTable::gen_tbl_cfg(json::vector &out) {
     } else if (action && action->actions) {
         action->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
         action->actions->add_action_format(this, stage_tbl); }
-    common_tbl_cfg(tbl, "exact");
+    common_tbl_cfg(tbl);
     if (idletime)
         idletime->gen_stage_tbl_cfg(stage_tbl);
     else if (options.match_compiler)

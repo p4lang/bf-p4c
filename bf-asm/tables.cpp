@@ -1081,6 +1081,8 @@ void Table::Actions::gen_tbl_cfg(json::vector &cfg) {
         action_cfg["override_stateful_addr"] = false;
         action_cfg["override_stateful_addr_pfe"] = false;
         action_cfg["override_stateful_full_addr"] = 0;
+        if (!this->table->to<ActionTable>())
+            action_cfg["is_action_meter_color_aware"] = false;
         json::vector &prim_cfg = action_cfg["primitives"] = json::vector();
         gen_prim_cfg(act, prim_cfg);
         cfg.push_back(std::move(action_cfg)); }
@@ -2057,7 +2059,7 @@ void MatchTable::gen_name_lookup(json::map &out) {
     }
 }
 
-void Table::common_tbl_cfg(json::map &tbl, const char *default_match_type) {
+void Table::common_tbl_cfg(json::map &tbl) {
     if (!default_action.empty())
         tbl["default_action_handle"] = default_action_handle;
     tbl["action_profile"] = p4_table->action_profile;
@@ -2075,7 +2077,8 @@ void Table::common_tbl_cfg(json::map &tbl, const char *default_match_type) {
     tbl["is_resource_controllable"] = true;
     tbl["uses_range"] = false; //FIXME-JSON: Ranges not yet implemented by brig
     json::vector &params = tbl["match_key_fields"] = json::vector();
-    if ((!p4_params_list.empty()) && (this->to<MatchTable>())) {
+    if ((!p4_params_list.empty()) && 
+            (this->to<MatchTable>() || this->to<Phase0MatchTable>())) {
         for (auto &p : p4_params_list) {
             unsigned start_bit = 0;
             json::map param;

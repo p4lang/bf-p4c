@@ -74,7 +74,8 @@ enum {
     // FIXME-COMPILER: Parser header length adjust values should be picked up
     // from assembly
     INGRESS_PARSER_HEADER_LENGTH_ADJUST = 16,
-    EGRESS_PARSER_HEADER_LENGTH_ADJUST = 2
+    EGRESS_PARSER_HEADER_LENGTH_ADJUST = 2,
+    MAX_PORTS = 288
 };
 
 enum METER_ACCESS_TYPE {

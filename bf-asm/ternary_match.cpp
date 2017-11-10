@@ -523,7 +523,7 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
         } else if (indirect->action && indirect->action->actions) {
             indirect->action->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
             indirect->action->actions->add_next_table_mapping(indirect, stage_tbl); }
-        indirect->common_tbl_cfg(tbl, "ternary");
+        indirect->common_tbl_cfg(tbl);
     } else {
         // FIXME: Add a fake ternary indirect table (as otherwise driver complains)
         // if tind not present - to be removed with update on driver side
@@ -549,7 +549,7 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
         tind["size"] = 0;
         tbl["stateful_table_refs"] = json::vector();
     }
-    common_tbl_cfg(tbl, "ternary");
+    common_tbl_cfg(tbl);
     if (actions)
         actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
     else if (action && action->actions)

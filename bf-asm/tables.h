@@ -368,9 +368,9 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     virtual json::map *add_stage_tbl_cfg(json::map &tbl, const char *type, int size);
     virtual std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(
             const char *type, std::vector<Layout> &layout, bool skip_spare_bank = false);
-    virtual void common_tbl_cfg(json::map &tbl, const char *match_type);
+    virtual void common_tbl_cfg(json::map &tbl);
     enum table_type_t { OTHER=0, TERNARY_INDIRECT, GATEWAY, ACTION, SELECTION, COUNTER,
-                        METER, IDLETIME, STATEFUL, HASH_ACTION, EXACT, TERNARY };
+                        METER, IDLETIME, STATEFUL, HASH_ACTION, EXACT, TERNARY, PHASE0 };
     virtual table_type_t table_type() { return OTHER; }
     virtual int instruction_set() { return 0; /* VLIW_ALU */ }
     virtual table_type_t set_match_table(MatchTable *m, bool indirect) { assert(0); }
@@ -701,9 +701,11 @@ public:
         std::string source, unsigned start_bit, unsigned field_width);
 )
 
-DECLARE_TABLE_TYPE(Phase0MatchTable, Table, "phase0_match",
-    int         size = 72;
+DECLARE_TABLE_TYPE(Phase0MatchTable, MatchTable, "phase0_match",
+    int         size = MAX_PORTS;
     int         width = 1;
+    int         constant_value = 0;
+    table_type_t table_type() override { return PHASE0; }
 )
 DECLARE_TABLE_TYPE(HashActionTable, MatchTable, "hash_action",
 public:

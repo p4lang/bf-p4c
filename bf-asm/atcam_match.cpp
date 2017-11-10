@@ -451,7 +451,7 @@ template<class REGS> void AlgTcamMatchTable::write_regs(REGS &regs) {
 // FIXME: Add tbl-cfg support for ATCAM tables
 void AlgTcamMatchTable::gen_tbl_cfg(json::vector &out) {
     //json::map &tbl = *base_tbl_cfg(out, "match", number_entries);
-    //common_tbl_cfg(tbl, "exact");
+    //common_tbl_cfg(tbl);
     //json::map &match_attributes = tbl["match_attributes"];
     //json::vector &stage_tables = match_attributes["stage_tables"];
     //json::map &stage_tbl = *add_stage_tbl_cfg(match_attributes, "atcam" , size);

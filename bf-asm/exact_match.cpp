@@ -600,7 +600,7 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
     unsigned fmt_width = format ? (format->size + 127)/128 : 0;
     unsigned number_entries = format ? layout_size()/fmt_width * format->groups() * 1024 : 0;
     json::map &tbl = *base_tbl_cfg(out, "match", number_entries);
-    common_tbl_cfg(tbl, "exact");
+    common_tbl_cfg(tbl);
     json::map &match_attributes = tbl["match_attributes"];
     json::vector &stage_tables = match_attributes["stage_tables"];
     json::map &stage_tbl = *add_stage_tbl_cfg(match_attributes, "hash_match", number_entries);

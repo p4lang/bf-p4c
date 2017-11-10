@@ -25,8 +25,9 @@ struct FieldPacking;
 
 /// Phase 0 metadata; used to generate phase 0 assembly.
 struct Phase0Info {
-    const IR::P4Table* table;     /// The phase 0 table.
-    const FieldPacking* packing;  /// How the phase 0 fields should be packed.
+    const IR::P4Table* table;      /// The phase 0 table.
+    const FieldPacking* packing;   /// How the phase 0 fields should be packed.
+    const std::string actionName;  /// The phase 0 action name
 };
 
 /**

@@ -27,7 +27,12 @@ std::ostream& operator<<(std::ostream& out, const BFN::Phase0Info* info) {
     out <<   indent << "preferred_match_type: exact" << std::endl;
     out <<   indent << "match_type: exact" << std::endl;
     out << --indent << "size: 288" << std::endl;
-    out <<   indent << "width: 1" << std::endl;
+
+    // Write out the p4 parameter, which (for phase0) is always
+    // 'ig_intr_md.ingress_port'
+    out <<   indent << "p4_param_order:" << std::endl;
+    out << ++indent << "ig_intr_md.ingress_port: ";
+    out << "{ type: exact, size: 9 }" << std::endl;
 
     // Write out the field packing format. We have to convert into the LSB-first
     // representation that the assembler uses.
@@ -38,7 +43,7 @@ std::ostream& operator<<(std::ostream& out, const BFN::Phase0Info* info) {
               phase0Range.size());
     bool wroteAtLeastOneField = false;
     int posBits = 0;
-    out << indent << "format: {";
+    out << --indent << "format: {";
     for (auto& field : *info->packing) {
         BUG_CHECK(field.width > 0, "Empty phase 0 field?");
         const nw_bitrange fieldRange(StartLen(posBits, field.width));
@@ -67,6 +72,26 @@ std::ostream& operator<<(std::ostream& out, const BFN::Phase0Info* info) {
     // now, the driver acts as if this is always set to zero.
     out << indent << "constant_value: 0" << std::endl;
 
+    // Write out the actions block with the param order
+    // XXX(amresh): This is a fake action block output in assembly to allow
+    // generating context json as expected by driver. No instructions are
+    // generated as,
+    // 1. phase0 does not do any actual ALU operations
+    // 2. This info is not needed in the context json (for now).
+    // Glass does generate primitives (for model logging - previously
+    // p4_name_lookup) which requires setting ingress metadata fields as ALU ops
+    // but it is unclear if model uses this info.
+    out << indent << "actions:" << std::endl;
+    out << ++indent << info->actionName << ":" << std::endl;
+    out <<   indent << "- p4_param_order: { ";
+    wroteAtLeastOneField = false;
+    for (auto& field : *info->packing) {
+        if (field.isPadding()) continue;
+        if (wroteAtLeastOneField) out << ", ";
+        out << field.source << ": " << field.width;
+        wroteAtLeastOneField = true;
+    }
+    out << " } " << std::endl;
     return out;
 }
 
@@ -161,7 +186,8 @@ class FindPhase0Table : public Inspector {
 
   bool hasValidAction(const IR::P4Table* table,
                       Phase0Extracts** extractsOut,
-                      Phase0Constants** constantsOut) const {
+                      Phase0Constants** constantsOut,
+                      std::string& actionNameOut) const {
       auto actions = table->getActionList();
       if (actions == nullptr) return false;
 
@@ -177,6 +203,9 @@ class FindPhase0Table : public Inspector {
       auto decl = refMap->getDeclaration(actionElem->getPath(), true);
       BUG_CHECK(decl->is<IR::P4Action>(), "Action list element is not an action?");
       auto action = decl->to<IR::P4Action>();
+
+      // Save the action name for assembly output
+      actionNameOut = action->getName().name;
 
       // The action should have only action data parameters.
       for (auto param : *action->parameters)
@@ -256,6 +285,7 @@ class FindPhase0Table : public Inspector {
       LOG3("Checking if " << candidateTable->name << " is a valid phase 0 table");
       Phase0Extracts* extracts = nullptr;
       Phase0Constants* constants = nullptr;
+      std::string actionName = "";
       const IR::MethodCallStatement* apply = nullptr;
 
       // Check if this table meets all of the phase 0 criteria.
@@ -265,7 +295,7 @@ class FindPhase0Table : public Inspector {
       LOG3(" - It has no side effects");
       if (!hasCorrectKey(candidateTable)) return false;
       LOG3(" - The key is correct");
-      if (!hasValidAction(candidateTable, &extracts, &constants)) return false;
+      if (!hasValidAction(candidateTable, &extracts, &constants, actionName)) return false;
       LOG3(" - The action is valid");
       if (!hasValidControlFlow(candidateTable, &apply)) return false;
       LOG3(" - The control flow is valid");
@@ -276,6 +306,7 @@ class FindPhase0Table : public Inspector {
       this->table = candidateTable;
       this->extracts = extracts;
       this->constants = constants;
+      this->actionName = actionName;
       this->apply = apply;
       return false;
   }
@@ -295,6 +326,9 @@ class FindPhase0Table : public Inspector {
   Phase0Extracts* extracts = nullptr;
   /// If non-null, the constant assignments the phase 0 parser needs to perform.
   Phase0Constants* constants = nullptr;
+  /// If non-empty, the action name as specified in the P4 program
+  std::string actionName = "";
+
   /// If non-null, the table apply call that's being replaced with a phase 0 parser.
   const IR::MethodCallStatement* apply = nullptr;
 
@@ -437,7 +471,7 @@ extractPhase0(const IR::P4Control* ingress, IR::BFN::Pipe* pipe,
     pipe->thread[INGRESS].parser =
         pipe->thread[INGRESS].parser->apply(addPhase0Parser);
 
-    pipe->phase0Info = new Phase0Info{findPhase0.table, packing};
+    pipe->phase0Info = new Phase0Info{findPhase0.table, packing, findPhase0.actionName};
     return std::make_pair(ingressWithoutPhase0, pipe);
 }
 
