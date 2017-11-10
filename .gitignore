@@ -12,6 +12,6 @@ tags
 *~
 
 #vim savefiles
-.*.swp
+.*.sw*
 
 *.pyc
