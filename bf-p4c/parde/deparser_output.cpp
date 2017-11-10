@@ -201,21 +201,30 @@ struct OutputParameters : public Inspector {
 
 void DeparserAsmOutput::emit_fieldlist(std::ostream &out, const IR::Vector<IR::Expression> *list,
                                        const char *sep) const {
-    PHV::Container last;
     for (auto f : *list) {
         bitrange bits;
-        if (auto field = phv.field(f, &bits)) {
-            auto &alloc = field->for_bit(bits.lo);
-            if (last && alloc.container == last)
-                continue;
-            last = alloc.container;
+        auto* field = phv.field(f, &bits);
+        BUG_CHECK(field != nullptr, "no valid phv allocation for field %1%", f);
+        field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice &alloc) {
+            // XXX(hanw)
+            // If the fields are not full bytes and the things output in the field list to the
+            // assembler must be byte aligned, we need padding to fill it out to bytes, as well
+            // as combine any fields that are in the same byte into a single thing in the field
+            // list. We will issue a bug for now, assuming we can create a constraint on phv
+            // allocation to enforce that field that goes to digest must be aligned to bit zero
+            // in all containers.
+            BUG_CHECK(alloc.container_bit == 0, "bad alignment for container %1%", alloc.container);
+
             if (alloc.container && size_t(bits.size()) != alloc.container.size()) {
                 out << sep << alloc.container;
             } else {
                 out << sep << canon_name(field->name);
                 if (bits.lo != 0 || bits.hi + 1 != field->size)
-                    out << '.' << bits.lo << '-' << bits.hi; }
-            sep = ", "; } }
+                    out << '.' << bits.lo << '-' << bits.hi;
+            }
+            sep = ", ";
+        });
+    }
 }
 
 std::ostream &operator<<(std::ostream &out, const DeparserAsmOutput &d) {
