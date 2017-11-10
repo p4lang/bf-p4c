@@ -35,6 +35,8 @@ Visitor::profile_t FieldDefUse::init_apply(const IR::Node *root) {
     defs.clear();
     uses.clear();
     defuse.clear();
+    located_uses.clear();
+    located_defs.clear();
     return rv;
 }
 
