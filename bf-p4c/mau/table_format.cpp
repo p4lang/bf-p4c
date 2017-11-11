@@ -11,9 +11,17 @@ bool TableFormat::analyze_layout_option() {
     int min_way_size = *std::min_element(layout_option.way_sizes.begin(),
                                          layout_option.way_sizes.end());
 
-    ghost_bits_count = RAM_GHOST_BITS + floor_log2(min_way_size);
+    if (!tbl->layout.atcam) {
+        ghost_bits_count = RAM_GHOST_BITS + floor_log2(min_way_size);
+    } else {
+       auto partition = match_ixbar.atcam_partition();
+       for (auto byte : partition) {
+           use->ghost_bits[byte] = byte.bit_use;
+       }
+    }
     int per_RAM = layout_option.way.match_groups / layout_option.way.width;
-    safe_vector<std::pair<int, int>> sizes = match_ixbar.bits_per_group_single();
+    safe_vector<std::pair<int, int>> sizes
+        = match_ixbar.bits_per_search_bus_single();
 
     safe_vector<int> empty;
     for (int i = 0; i < layout_option.way.match_groups; i++) {
@@ -39,7 +47,7 @@ bool TableFormat::analyze_layout_option() {
    multiple match groups, then balance these match groups and corresponding overhead */
 bool TableFormat::analyze_skinny_layout_option(int per_RAM,
                                                safe_vector<std::pair<int, int>> &sizes) {
-    if (match_ixbar.groups_single() > 1) {
+    if (match_ixbar.search_buses_single() > 1) {
         return false;  // FIXME: deal with this later, essentially potentially can ghost
                        // the extra group of if possible/have enough space
     }
@@ -69,7 +77,7 @@ bool TableFormat::analyze_skinny_layout_option(int per_RAM,
     }
 
     for (int i = 0; i < layout_option.way.width; i++) {
-        ixbar_group_per_width.push_back(sizes[0].first);
+        search_bus_per_width.push_back(sizes[0].first);
     }
     return true;
 }
@@ -82,7 +90,7 @@ bool TableFormat::analyze_wide_layout_option(safe_vector<std::pair<int, int>> &s
         && layout_option.way.match_groups != 1) {
         BUG("Ridiculous layout chosen.  Must be shrunken down");
     }
-    if (size_t(match_ixbar.groups_single()) > RAM_per) {
+    if (size_t(match_ixbar.search_buses_single()) > RAM_per) {
         return false;  // FIXME: Again, can potentially be saved by ghosting off certain bits
     }
 
@@ -114,7 +122,7 @@ bool TableFormat::analyze_wide_layout_option(safe_vector<std::pair<int, int>> &s
     bool single = layout_option.way.match_groups == 1;
     for (size_t i = 0; static_cast<int>(i) < layout_option.way.width; i++) {
         if (i < layout_option.way.match_groups * RAM_per) {
-            ixbar_group_per_width.push_back(sizes[i % RAM_per].first);
+            search_bus_per_width.push_back(sizes[i % RAM_per].first);
             match_groups_per_RAM.push_back(1);
             if (single && i == layout_option.way.width - 1U)
                 overhead_groups_per_RAM.push_back(1);
@@ -122,7 +130,7 @@ bool TableFormat::analyze_wide_layout_option(safe_vector<std::pair<int, int>> &s
                 overhead_groups_per_RAM.push_back(0);
             match_group_info[i / RAM_per].push_back(i);
         } else {
-            ixbar_group_per_width.push_back(sizes.back().first);
+            search_bus_per_width.push_back(sizes.back().first);
             match_groups_per_RAM.push_back(2);
             overhead_groups_per_RAM.push_back(2);
             match_group_info[overhead_start].push_back(i);
@@ -391,7 +399,7 @@ void TableFormat::determine_difficult_vectors(safe_vector<ByteInfo> &unaligned_m
         index++;
         if (!unaligned_bytes.getbit(index)) continue;
         int size = byte.hi - byte.lo + 1;
-        if (byte.loc.group == ghosted_group) {
+        if (byte.search_bus == ghosted_group) {
             unaligned_ghost.emplace_back(byte, byte.bit_use, index);
             unaligned_ghost_bits += size;
         } else {
@@ -470,7 +478,7 @@ bool TableFormat::allocate_difficult_bytes(bitvec &unaligned_bytes, bitvec &chos
     int o_index = std::max_element(overhead_groups_per_RAM.begin(),
                                    overhead_groups_per_RAM.end())
                       - overhead_groups_per_RAM.begin();
-    int ghosted_group = ixbar_group_per_width[o_index];
+    int ghosted_group = search_bus_per_width[o_index];
 
     // All non 8-bit IXBar Bytes we can ghost
     safe_vector<ByteInfo> unaligned_ghost;
@@ -560,7 +568,7 @@ bool TableFormat::allocate_byte_vector(safe_vector<ByteInfo> &bytes, int prev_al
             bitvec all_bits = use->match_groups[group].allocated_bytes;
             for (auto byte : bytes) {
                 if (all_bits.getbit(byte.use_index)) continue;
-                if (byte.byte.loc.group != ixbar_group_per_width[i]) continue;
+                if (byte.byte.search_bus != search_bus_per_width[i]) continue;
                 easy_byte_fill(i, group, byte, starting_byte, true);
             }
             group = determine_next_group(group, i);
@@ -579,7 +587,7 @@ bool TableFormat::allocate_byte_vector(safe_vector<ByteInfo> &bytes, int prev_al
             }
             for (auto byte : bytes) {
                 if (all_bits.getbit(byte.use_index)) continue;
-                if (byte.byte.loc.group != ixbar_group_per_width[i]) continue;
+                if (byte.byte.search_bus != search_bus_per_width[i]) continue;
                 easy_byte_fill(i, group, byte, starting_byte, false);
             }
             group = determine_next_group(group, i);
@@ -608,10 +616,10 @@ void TableFormat::determine_byte_types(bitvec &unaligned_bytes, bitvec &chosen_g
     int o_index = std::max_element(overhead_groups_per_RAM.begin(),
                                    overhead_groups_per_RAM.end())
                       - overhead_groups_per_RAM.begin();
-    int ghosted_group = ixbar_group_per_width[o_index];
+    int ghosted_group = search_bus_per_width[o_index];
     int unaligned_bits = 0;
     for (auto byte : single_match) {
-        if (byte.loc.group != ghosted_group) continue;
+        if (byte.search_bus != ghosted_group) continue;
         if (byte.bit_use.popcount() != 8)
             unaligned_bits += byte.bit_use.popcount();
     }

@@ -98,8 +98,8 @@ struct TableFormat {
     safe_vector<int> match_groups_per_RAM;
     /// Which RAM sections contain overhead info
     safe_vector<int> overhead_groups_per_RAM;
-    /// Specifically which ixbar group coordinates to which RAM
-    safe_vector<int> ixbar_group_per_width;
+    /// Specifically which search bus coordinates to which RAM
+    safe_vector<int> search_bus_per_width;
 
     // Match group index in use coordinate to whenever they are found in the match_groups_per_RAM
     // i.e. if the match_groups_per_RAM looks like [2, 2], then use->match_groups[0] and

@@ -17,19 +17,96 @@ bool TableLayout::backtrack(trigger &trig) {
     return (trig.is<IXBar::failure>() || trig.is<ActionFormat::failure>()) && !alloc_done;
 }
 
-void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl) {
-    if (auto k = tbl->match_table->getConstantProperty("size"))
-        layout.entries = k->asInt();
-    else if (auto k = tbl->match_table->getConstantProperty("min_size"))
-        layout.entries = k->asInt();
-    layout.match_width_bits = 0;
-    if (tbl->match_key.empty())
-        return;
+/** Algorithmic TCAM is a third type of table, in the same vein as ternary and exact.  An
+ *  ATCAM table is a ternary table that Tofino can implement using exact hardware, specifically
+ *  the SRAM array.
+ *
+ *  A ternary match requires two things that a normal exact match cannot.  A ternary match
+ *  must be able to specify a don't care for any bit, and must have a priority system in order
+ *  to rank the matches.  By using particular features of the SRAM array, the Tofino target
+ *  can create these features.
+ *
+ *  The don't care bit is possible due by containing any ternary match data twice in the RAM
+ *  line.  The match data is encoded to match as 0, 1, or don't care.  This is briefly
+ *  described in section 6.4.2.2 Algorithmic TCAM section of the Tofino uArch, while the
+ *  encoding scheme for ternary match in general is described in section 6.3.1 TCAM Data
+ *  Representation.  The terms s0q1 and s1q0 describe these different encodings.
+ *
+ *  Priority is engineered through the placement of RAMs in a row.  If the RAMs are in the same
+ *  row, and belong to the same ATCAM table, then if multiple tables match, as is possible
+ *  within a single TCAM table, the one closer to the edge of the chip will have higher
+ *  priority and will be the match.  If the algorithm cannot fit all of the entries within
+ *  a single row, then the table will be split into multiple logical tables, and will use
+ *  hit/miss predication of these logical tables in order to generate priority across tables.
+ *  This is described by section 1.4.5 Algorithmic TCAM Overview in the uArch.
+ *
+ *  An ATCAM table requires a partition index.  This is an field in the key that must be
+ *  an exact match.  This partition index is used as an identity hash to find the correct
+ *  partition within the massive ATCAM table.
+ *
+ *  The user can also specify the number of partitions. In a standard TCAM, the size of the
+ *  table specifies how many entries are looked up (logically) simultaneously.  In an ATCAM
+ *  table, the number of entries that are looked up simultaneously is:
+ *      table_size / number_of_partitions
+ *
+ *  If no number of partitions is specified, then the number of partitions is:
+ *      2 ^ (partition index bits)
+ */
+void TableLayout::check_for_atcam(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl,
+                                  cstring &partition_index) {
+    auto annot = tbl->match_table->getAnnotations();
+    bool index_found = false;
+    bool partitions_found = false;
+    int partition_count = -1;
 
+    if (auto s = annot->getSingle("atcam_partition_index")) {
+        auto pragma_val = s->expr.at(0)->to<IR::StringLiteral>();
+        ERROR_CHECK(pragma_val != nullptr, "%s: Please provide a valid atcam_partition_index "
+                    "for table %s", tbl->srcInfo, tbl->name);
+        if (pragma_val)
+            partition_index = pragma_val->value;
+        index_found = true;
+    }
+
+    if (auto s = annot->getSingle("atcam_number_partitions")) {
+        auto pragma_val = s->expr.at(0)->to<IR::Constant>();
+        ERROR_CHECK(pragma_val != nullptr, "%s: Please provide a valid atcam_number_partitions "
+                    "for table %s", tbl->srcInfo, tbl->name);
+        if (pragma_val) {
+            partition_count = pragma_val->asInt();
+            ERROR_CHECK(partition_count > 0, "%s: The number of partitions specified for table %s "
+                        "has to be greater than 0", tbl->srcInfo, tbl->name);
+        }
+        partitions_found = true;
+    }
+
+    if (partitions_found) {
+        WARN_CHECK(index_found, "%s: Number of partitions specified for table %s but will be "
+                   "ignored because no partition index specified", tbl->srcInfo, tbl->name);
+    }
+
+
+    if (index_found) {
+        if (VisitingThread(this) == INGRESS)
+            partition_index = "ingress::" + partition_index;
+        else
+            partition_index = "egress::" + partition_index;
+        ERROR_CHECK(phv.field(partition_index) != nullptr, "%s: The partition index %s for table "
+                    "%s is not found in the PHV", tbl->srcInfo, partition_index, tbl->name);
+    }
+
+    layout.atcam = (index_found);
+    if (partitions_found)
+        layout.partition_count = partition_count;
+}
+
+void TableLayout::check_for_ternary(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl) {
     auto annot = tbl->match_table->getAnnotations();
     if (auto s = annot->getSingle("ternary")) {
-        auto pragma_val =  s->expr.at(0)->to<IR::Constant>()->asInt();
-        if (pragma_val == 1)
+        auto pragma_val =  s->expr.at(0)->to<IR::Constant>();
+        ERROR_CHECK(pragma_val != nullptr, "%s: Cannot interpret the ternary pragma on table %s",
+                    tbl->srcInfo, tbl->name);
+        if (pragma_val->asInt() == 1)
             layout.ternary = true;
         else
             ::warning("Pragma ternary ignored for table %s because value is not 1", tbl->name);
@@ -41,35 +118,86 @@ void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::M
             }
         }
     }
+}
+
+void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl) {
+    if (auto k = tbl->match_table->getConstantProperty("size"))
+        layout.entries = k->asInt();
+    else if (auto k = tbl->match_table->getConstantProperty("min_size"))
+        layout.entries = k->asInt();
+    layout.match_width_bits = 0;
+    if (tbl->match_key.empty())
+        return;
+
+    cstring partition_index;
+    check_for_atcam(layout, tbl, partition_index);
+    if (!layout.atcam)
+        check_for_ternary(layout, tbl);
 
     safe_vector<int> byte_sizes;
+    bool partition_found = false;
 
     for (auto ixbar_read : tbl->match_key) {
         if (ixbar_read->match_type.name == "selector") continue;
         bitrange bits = { 0, 0 };
         auto *field = phv.field(ixbar_read->expr, &bits);
         int bytes = 0;
+        int multiplier = 1;
         if (field) {
             /* FIXME -- if a field is allocated to non-contiguous bits of a byte,
              * this will count that byte twice, when it is only needed once.  The
              * match layout in asm_output will likewise lay it out twice, so this
              * is consistent.  Should fix PHV alloc to not make such bad allocations */
+             bool is_partition = false;
+             if (layout.atcam) {
+                 if (field->name == partition_index) {
+                     multiplier = 0;
+                     is_partition = true;
+                     partition_found = true;
+                     ERROR_CHECK(ixbar_read->match_type.name == "exact", "%s: The partition index "
+                                 "of algorithmic TCAM table %s must be an exact field");
+                 } else if (ixbar_read->match_type.name == "ternary" ||
+                            ixbar_read->match_type.name == "lpm") {
+                     multiplier = 2;
+                 }
+             }
+
+
             field->foreach_byte(bits, [&](const PHV::Field::alloc_slice &sl) {
                 bytes++;
                 byte_sizes.push_back(sl.width);
             });
+
             if (bytes == 0)  // FIXME: Better sanity check needed?
                 ERROR("Field " << field->name << " allocated to tagalong but used in MAU pipe");
 
             layout.ixbar_bytes += bytes;
-            layout.match_bytes += bytes;
-            layout.match_width_bits += bits.size();
+            layout.match_bytes += bytes * multiplier;
+            layout.match_width_bits += bits.size() * multiplier;
+            if (is_partition) {
+                layout.partition_bits = bits.size();
+            }
         } else {
             BUG("unexpected reads expression %s", ixbar_read->expr);
         }
     }
 
-    if (!layout.ternary) {
+    if (layout.atcam) {
+        ERROR_CHECK(partition_found, "%s: Table %s is specified to be an atcam, but partition "
+                    "index %s is not found within the table key", tbl->srcInfo, tbl->name,
+                    partition_index);
+        if (partition_found) {
+            int possible_partitions = 1 << layout.partition_bits;
+            ERROR_CHECK(layout.partition_count <= possible_partitions, "%s: Table %s has "
+                        "specified %d partitions, but the actual possible partitions due to the "
+                        "number of bits in the partition index is %d", tbl->srcInfo, tbl->name,
+                        layout.partition_count, possible_partitions);
+            if (layout.partition_count == 0)
+                layout.partition_count = possible_partitions;
+        }
+    }
+
+    if (!layout.ternary && !layout.atcam) {
         int ghost_bits_left = TableFormat::RAM_GHOST_BITS;
         std::sort(byte_sizes.begin(), byte_sizes.end());
         for (auto byte_size : byte_sizes) {
@@ -144,7 +272,6 @@ void TableLayout::setup_exact_match(IR::MAU::Table *tbl, int action_data_bytes) 
     for (int entry_count = 1; entry_count < 10; entry_count++) {
         int match_group_bits = 8*tbl->layout.match_bytes +
                                tbl->layout.overhead_bits + action_data_bytes * 8 + 4;
-        LOG1("Match group bits " << match_group_bits);
         int width = (entry_count * match_group_bits + 127) / 128;
         while (entry_count / width > 4)
             width++;
@@ -243,7 +370,6 @@ class VisitAttached : public Inspector {
                 error("Tofino does not allow %s to use different address schemes on one "
                     "table.  %s and %s have different address schemes",
                      sp->kind(), sp_addr_name, sp->name);
-
             int addr_bits_needed = std::max(10, ceil_log2(sp->size)) + 1;
             int addition_to_overhead = addr_bits_needed;
             int diff;
@@ -361,5 +487,21 @@ bool TableLayout::preorder(IR::MAU::Action *act) {
 
     act->default_allowed = false;
     act->disallowed_reason = "uses_hash_dist";
+    return false;
+}
+
+bool TableLayout::preorder(IR::MAU::InputXBarRead *read) {
+    auto tbl = findContext<IR::MAU::Table>();
+    if (tbl->layout.atcam) {
+        auto annot = tbl->match_table->getAnnotations();
+        auto s = annot->getSingle("atcam_partition_index");
+        auto partition_index = s->expr.at(0)->to<IR::StringLiteral>()->value;
+        if (VisitingThread(this) == INGRESS)
+            partition_index = "ingress::" + partition_index;
+        else
+            partition_index = "egress::" + partition_index;
+        if (phv.field(read->expr)->name == partition_index)
+            read->partition_index = true;
+    }
     return false;
 }

@@ -16,6 +16,7 @@ class MauAsmOutput::EmitAttached : public Inspector {
     const MauAsmOutput          &self;
     std::ostream                &out;
     const IR::MAU::Table        *tbl;
+    bool is_unattached(const IR::MAU::BackendAttached *at);
     bool preorder(const IR::MAU::Counter *) override;
     bool preorder(const IR::MAU::Meter *) override;
     bool preorder(const IR::MAU::Selector *) override;
@@ -226,10 +227,12 @@ std::ostream &operator<<(std::ostream &out, const FormatHash &hash) {
 
 /* Calculate the hash tables used by an individual P4 table in the IXBar */
 void MauAsmOutput::emit_ixbar_gather_bytes(const safe_vector<IXBar::Use::Byte> &use,
-        std::map<int, std::map<int, Slice>> &sort, bool ternary) const {
+        std::map<int, std::map<int, Slice>> &sort, bool ternary, bool atcam) const {
     for (auto &b : use) {
         int byte_loc = IXBar::TERNARY_BYTES_PER_GROUP;
         int split_byte = 4;
+        if (atcam && !b.atcam_index)
+            continue;
         if (b.loc.byte == byte_loc && ternary) {
             auto *field = phv.field(b.field);
             field->foreach_byte([&](const PHV::Field::alloc_slice &sl) {
@@ -289,21 +292,23 @@ void MauAsmOutput::emit_ways(std::ostream &out, indent_t indent, const IXBar::Us
         const Memories::Use *mem) const {
     if (use == nullptr || use->way_use.empty())
         return;
+    out << indent++ << "ways:" << std::endl;
 
-    out << indent << "ways:" << std::endl;
-    auto memway = mem->ways.begin();
-    for (auto way : use->way_use) {
-        out << indent << "- [" << way.group << ", " << way.slice;
-        out << ", 0x" << hex(memway->select_mask) << ", ";
+    auto ixbar_way = use->way_use.begin();
+    for (auto mem_way : mem->ways) {
+        BUG_CHECK(ixbar_way != use->way_use.end(), "No more ixbar ways to output in asm_output");
+        out << indent << "- [" << ixbar_way->group << ", " << ixbar_way->slice;
+        out << ", 0x" << hex(mem_way.select_mask) << ", ";
         size_t index = 0;
-        for (auto ram : memway->rams) {
+        for (auto ram : mem_way.rams) {
             out << "[" << ram.first << ", " << (ram.second + 2) << "]";
-            if (index < memway->rams.size() - 1)
+            if (index < mem_way.rams.size() - 1)
                 out << ", ";
             index++;
         }
         out  << "]" << std::endl;
-        ++memway;
+        // ATCAM tables have only one input xbar way
+        if (!use->atcam) ++ixbar_way;
     }
 }
 
@@ -484,6 +489,8 @@ void MauAsmOutput::emit_ixbar_hash_exact(std::ostream &out, indent_t indent,
     }
 
     // For all holes in the upper 12 bits that don't have a corresponding select bit
+    if (match_data.size() == 0)
+        return;
     unsigned mask_bits = 0;
     for (auto way : use->way_use)
         mask_bits |= way.mask;
@@ -573,6 +580,10 @@ void MauAsmOutput::emit_single_ixbar(std::ostream &out, indent_t indent, const I
     for (auto &group : sort)
         out << indent << group_type << " group " << group.first << ": "
                       << group.second << std::endl;
+    if (use->atcam) {
+        sort.clear();
+        emit_ixbar_gather_bytes(use->use, sort, use->ternary, use->atcam);
+    }
     int hash_group = 0;
     for (auto hash_table_input : use->hash_table_inputs) {
         int ident_bits_prev_alloc = 0;
@@ -634,7 +645,7 @@ std::ostream &operator<<(std::ostream &out, const memory_vector &v) {
     const char *sep = "";
     int col_adjust = (v.type == Memories::Use::TERNARY  ||
                       v.type == Memories::Use::IDLETIME || v.is_mapcol)  ? 0 : 2;
-    bool logical = v.type >= Memories::Use::TWOPORT;
+    bool logical = v.type >= Memories::Use::COUNTER;
     int col_mod = logical ? 6 : 12;
     for (auto c : v.vec) {
         out << sep << (c + col_adjust) % col_mod;
@@ -645,9 +656,9 @@ std::ostream &operator<<(std::ostream &out, const memory_vector &v) {
 
 void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memories::Use &mem) const {
     safe_vector<int> row, bus, home_row;
-    bool logical = mem.type >= Memories::Use::TWOPORT;
+    bool logical = mem.type >= Memories::Use::COUNTER;
     bool have_bus = !logical;
-    bool have_mapcol = mem.type == Memories::Use::TWOPORT;
+    bool have_mapcol = mem.is_twoport();
 
     for (auto &r : mem.row) {
         if (logical) {
@@ -1360,7 +1371,9 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
         tbl_type = tbl->layout.ternary ? "ternary_match" : "exact_match";
     if (no_match_hit)
         tbl_type = "hash_action";
-    out << indent++ << tbl_type << ' '<< tbl->name << ' ' << tbl->logical_id % 16U << ':'
+    if (tbl->layout.atcam)
+        tbl_type = "atcam_match";
+    out << indent++ << tbl_type << ' ' << tbl->name << ' ' << tbl->logical_id % 16U << ':'
         << std::endl;
     if (!tbl->gateway_only()) {
         emit_table_context_json(out, indent, tbl);
@@ -1539,34 +1552,24 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
                                     const IR::MAU::Table *tbl) const {
     bool have_action = false;
     auto match_name = tbl->get_use_name();
+    if (tbl->layout.atcam)
+        match_name = tbl->get_use_name();
     for (auto at : tbl->attached) {
         if (at->is<IR::MAU::TernaryIndirect>()) continue;
         if (at->is<IR::MAU::IdleTime>()) continue;  // XXX(zma) idletime is inlined
-        if (auto *ad = at->to<IR::MAU::ActionData>()) {
+        if (at->is<IR::MAU::ActionData>()) {
             have_action = true;
-            out << indent << "action: ";
-            auto &memuse = tbl->resources->memuse.at(match_name);
-            if (memuse.unattached_profile) {
-                UnattachedName unattached(tbl, memuse.profile_name, ad);
-                pipe->apply(unattached);
-                out << unattached.name();
-            } else {
-                out << tbl->get_use_name(ad);
-            }
-        } else if (auto *as = at->to<IR::MAU::Selector>()) {
-             auto &memuse = tbl->resources->memuse.at(match_name);
-             out << indent << "selector: ";
-             if (memuse.unattached_selector) {
-                 UnattachedName unattached(tbl, memuse.selector_name, as);
-                 pipe->apply(unattached);
-                 out << unattached.name();
-             } else {
-                 out << tbl->get_use_name(as);
-             }
-        } else {
-            out << indent << at->kind() << ": " << tbl->get_use_name(at);
         }
-
+        out << indent << at->kind() << ": ";
+        auto &memuse = tbl->resources->memuse.at(match_name);
+        auto at_name = tbl->get_use_name(at);
+        auto unattached_loc = memuse.unattached_tables.find(at_name);
+        if (unattached_loc != memuse.unattached_tables.end()) {
+            UnattachedName unattached(tbl, memuse.unattached_tables.at(at_name), at);
+            pipe->apply(unattached);
+            at_name = unattached.name();
+        }
+        out << at_name;
         if (at->indexed())
             out << '(' << find_indirect_index(at) << ')';
         out << std::endl;
@@ -1645,8 +1648,23 @@ static void counter_format(std::ostream &out, const IR::MAU::DataAggregation typ
     }
 }
 
+/** This ensures that the attached table is output one time, as the memory allocation is stored
+ *  with one table alone.
+ */
+bool MauAsmOutput::EmitAttached::is_unattached(const IR::MAU::BackendAttached *at) {
+    auto match_name = tbl->get_use_name();
+    auto &memuse = tbl->resources->memuse.at(match_name);
+    auto at_name = tbl->get_use_name(at);
+    auto unattached_loc = memuse.unattached_tables.find(at_name);
+    if (unattached_loc != memuse.unattached_tables.end())
+        return true;
+    return false;
+}
+
 bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Counter *counter) {
     indent_t indent(1);
+    if (is_unattached(counter))
+        return false;
     auto name = tbl->get_use_name(counter);
     out << indent++ << "counter " << name << ":" << std::endl;
     out << indent << "p4: { name: " << canon_name(counter->name) << " }" << std::endl;
@@ -1673,6 +1691,9 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Counter *counter) {
 
 bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Meter *meter) {
     indent_t indent(1);
+    if (is_unattached(meter))
+        return false;
+
     auto name = tbl->get_use_name(meter);
     out << indent++ << "meter " << name << ":" << std::endl;
     out << indent << "p4: { name: " << canon_name(meter->name) << " }" << std::endl;
@@ -1702,8 +1723,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Meter *meter) {
 
 bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Selector *as) {
     indent_t indent(1);
-    auto match_name = tbl->get_use_name();
-    if (tbl->resources->memuse.at(match_name).unattached_profile) {
+    if (is_unattached(as)) {
         return false;
     }
     cstring name = tbl->get_use_name(as);
@@ -1732,11 +1752,9 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::TernaryIndirect *ti) {
 
 bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::ActionData *ad) {
     indent_t    indent(1);
-    if (!ad->direct) {
-        auto match_name = tbl->get_use_name();
-        if (tbl->resources->memuse.at(match_name).unattached_profile)
-            return false;
-    }
+    if (is_unattached(ad))
+        return false;
+
     auto name = tbl->get_use_name(ad);
     out << indent++ << "action " << name << ':' << std::endl;
     out << indent << "p4: { name: " << canon_name(ad->name);
@@ -1759,6 +1777,9 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::ActionData *ad) {
 
 bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
     indent_t    indent(1);
+    if (is_unattached(salu))
+        return false;
+
     auto name = tbl->get_use_name(salu);
     out << indent++ << "stateful " << name << ':' << std::endl;
     out << indent << "p4: { name: " << canon_name(salu->name) << " }" << std::endl;

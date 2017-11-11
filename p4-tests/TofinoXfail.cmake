@@ -111,9 +111,6 @@ p4c_add_xfail_reason("tofino"
 # BRIG-240
 p4c_add_xfail_reason("tofino"
   "Input xbar group.* conflict in stage"
-  extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
-  extensions/p4_tests/p4_14/test_config_197_default_next_table.p4
-  extensions/p4_tests/p4_14/test_config_196_hit_miss.p4
   )
 
 # BRIG-109
@@ -213,7 +210,6 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "error: tofino supports up to 12 stages"
-  extensions/p4_tests/p4_14/c1/COMPILER-257/case1770.p4
   extensions/p4_tests/p4_14/case1770.p4
   extensions/p4_tests/p4_14/jenkins/alpm_test/alpm_test.p4
   extensions/p4_tests/p4_14/jenkins/basic_ipv4/basic_ipv4.p4
@@ -471,8 +467,10 @@ p4c_add_xfail_reason("tofino"
 
 # BRIG-243
 p4c_add_xfail_reason("tofino"
-  "Multiple synth2port require overflow"
+  "conflicting memory use between .* and .*"
   extensions/p4_tests/p4_14/jenkins/fr_test/fr_test.p4
+  # This is an ATCAM failure due to a stage split being in the same stage.  Much more subtle
+  extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -752,6 +750,22 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/jenkins/mirror_test/mirror_test.p4
   extensions/p4_tests/p4_14/jenkins/emulation/emulation.p4
   )
+
+p4c_add_xfail_reason("tofino"
+  "Action bus byte [0-9]* set in table .* and table .*"
+  extensions/p4_tests/p4_16/atcam_match_wide1.p4
+  extensions/p4_tests/p4_16/atcam_match4.p4
+  extensions/p4_tests/p4_16/atcam_match5.p4
+  extensions/p4_tests/p4_16/atcam_match3.p4
+  extensions/p4_tests/p4_14/test_config_181_first_alg_tcam.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "error: .* overlaps .* in .*"
+  extensions/p4_tests/p4_14/case1770.p4
+)
+
+
 
 p4c_add_xfail_reason("tofino"
    "Stage pragma provided to table .* has multiple parameters, while Brig currently"

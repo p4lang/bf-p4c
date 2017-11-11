@@ -101,7 +101,6 @@ void IXBarRealign::verify_format(const IXBar::Use &use) {
                 return;
             int container_start = (alloc.container_bit % 8) + byte.lo - alloc.field_bit;
             bitvec cont_use(container_start, byte.hi - byte.lo + 1);
-            LOG1("We are here " << cont_use << " " << byte.bit_use << " " << byte.field);
             if (cont_use == byte.bit_use)
                 valid_byte = true;
         });

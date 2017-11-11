@@ -56,8 +56,8 @@ struct StageUseEstimate {
     void select_best_option(const IR::MAU::Table *tbl);
     void options_to_ternary_entries(const IR::MAU::Table *tbl, int &entries);
     void select_best_option_ternary();
-    void calculate_attached_rams(const IR::MAU::Table *tbl, LayoutOption *lo,
-                                 bool table_placement);
+    void options_to_atcam_entries(const IR::MAU::Table *tbl, int &entries);
+    void calculate_attached_rams(const IR::MAU::Table *tbl, LayoutOption *lo, bool table_placement);
     void fill_estimate_from_option(int &entries);
     const LayoutOption *preferred() const {
     if (layout_options.empty())
@@ -68,11 +68,14 @@ struct StageUseEstimate {
     void calculate_for_leftover_srams(const IR::MAU::Table *tbl, int srams_left, int &entries);
     void calculate_for_leftover_tcams(const IR::MAU::Table *tbl, int srams_left, int tcams_left,
                                       int &entries);
+    void calculate_for_leftover_atcams(const IR::MAU::Table *tbl, int srams_left, int &entries);
     void known_srams_needed(const IR::MAU::Table *tbl, LayoutOption *lo);
     void unknown_srams_needed(const IR::MAU::Table *tbl, LayoutOption *lo, int srams_left);
     void unknown_tcams_needed(const IR::MAU::Table *tbl, LayoutOption *lo, int tcams_left,
                               int srams_left);
+    void unknown_atcams_needed(const IR::MAU::Table *tbl, LayoutOption *lo, int srams_left);
     void calculate_way_sizes(LayoutOption *lo, int &calculated_depth);
+    void calculate_partition_sizes(LayoutOption *lo, int ram_depth);
     void srams_left_best_option(int srams_left);
     void tcams_left_best_option();
     struct RAM_counter {

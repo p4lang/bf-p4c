@@ -138,6 +138,7 @@ set (TOFINO_BACKEND_MAU_SRCS
   mau/ixbar_realign.cpp
   mau/memories.cpp
   mau/resource_estimate.cpp
+  mau/resource.cpp
   mau/split_gateways.cpp
   mau/stateful_alu.cpp
   mau/table_dependency_graph.cpp

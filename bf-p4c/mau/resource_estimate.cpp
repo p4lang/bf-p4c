@@ -145,6 +145,42 @@ void StageUseEstimate::options_to_ternary_entries(const IR::MAU::Table *tbl, int
     }
 }
 
+/** Calculates an estimate for the total number of logical tables, given the number of RAMs
+ *  dedicated to an ATCAM table.  The goal is, calculate the minimum logical tables that I
+ *  need, and then balance the size of those logical tables. 
+ */
+void StageUseEstimate::calculate_partition_sizes(LayoutOption *lo, int ram_depth) {
+    int logical_tables_needed = (ram_depth + Memories::MAX_PARTITION_RAMS_PER_ROW - 1)
+                                / Memories::MAX_PARTITION_RAMS_PER_ROW;
+    for (int i = 0; i < logical_tables_needed; i++) {
+        int logical_table_depth = ram_depth / logical_tables_needed;
+        if (i < (ram_depth % logical_tables_needed))
+            logical_table_depth++;
+        lo->partition_sizes.push_back(logical_table_depth);
+    }
+}
+
+/** Calculating the total number of entries for each layout option for an atcam table.
+ *  The number of RAMs for the whole table is the following calculation:
+ *      ways_per_partition: ceil_log2(select_bits of the atcam_partition_index)
+ *      partition_entries: total (logical) simultaneous lookups in the table
+ *      ram_depth: number of RAMs to hold all partitions, if the match was one ram wide
+ */
+void StageUseEstimate::options_to_atcam_entries(const IR::MAU::Table *tbl, int &entries) {
+    int partition_entries = (entries + tbl->layout.partition_count - 1)
+                           / tbl->layout.partition_count;
+    for (auto &lo : layout_options) {
+        int per_row = lo.way.match_groups;
+        int ram_depth = (partition_entries + per_row - 1) / per_row;
+        calculate_partition_sizes(&lo, ram_depth);
+        int ways_per_partition = (tbl->layout.partition_count + 1024 - 1) / 1024;
+        lo.way_sizes.push_back(ways_per_partition);
+        lo.srams = ram_depth * lo.way.width * ways_per_partition;
+        lo.entries = ram_depth * ways_per_partition * lo.way.match_groups
+                     * Memories::SRAM_DEPTH;
+    }
+}
+
 /* Calculate the number of rams required for attached tables, given the number of entries
    provided from the table placment */
 void StageUseEstimate::calculate_attached_rams(const IR::MAU::Table *tbl,
@@ -338,6 +374,11 @@ StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries, bool
     if (layout_options.size() == 1 && layout_options[0].layout.no_match_data()) {
         entries = 512;
         preferred_index = 0;
+    } else if (tbl->layout.atcam) {
+        options_to_atcam_entries(tbl, entries);
+        options_to_rams(tbl, table_placement);
+        select_best_option(tbl);
+        fill_estimate_from_option(entries);
     } else if (tbl->layout.ternary) {  // ternary
         options_to_ternary_entries(tbl, entries);
         options_to_rams(tbl, table_placement);
@@ -383,6 +424,17 @@ void StageUseEstimate::calculate_for_leftover_tcams(const IR::MAU::Table *tbl, i
         unknown_tcams_needed(tbl, &lo, tcams_left, srams_left);
     }
     tcams_left_best_option();
+    fill_estimate_from_option(entries);
+}
+
+void StageUseEstimate::calculate_for_leftover_atcams(const IR::MAU::Table *tbl, int srams_left,
+                                                     int &entries) {
+    for (auto &lo : layout_options) {
+        lo.clear_mems();
+        known_srams_needed(tbl, &lo);
+        unknown_atcams_needed(tbl, &lo, srams_left);
+    }
+    srams_left_best_option(srams_left);
     fill_estimate_from_option(entries);
 }
 
@@ -545,6 +597,51 @@ void StageUseEstimate::unknown_srams_needed(const IR::MAU::Table *tbl, LayoutOpt
     lo->srams += used_srams;
     lo->maprams += used_maprams;
     lo->entries = adding_entries;
+}
+
+/** Given a number of srams, calculate the size of the possible atcam table, given the
+ *  layout option.  It is different than normal SRAMs, because the algorithm has to grow all
+ *  ways simultaneously.
+ */
+void StageUseEstimate::unknown_atcams_needed(const IR::MAU::Table *tbl, LayoutOption *lo,
+                                             int srams_left) {
+    safe_vector<RAM_counter> per_word_and_width;
+    calculate_per_row_vector(per_word_and_width, tbl, lo);
+
+    int available_srams = srams_left - lo->srams;
+    int used_srams = 0; int used_maprams = 0;
+    int adding_entries = 0;
+    int depth = 0;
+    int ways_per_partition = (tbl->layout.partition_count + 1023) / 1024;
+
+    while (true) {
+        int attempted_depth = depth + 1;
+        int sram_count = 0;
+        int mapram_count = 0;
+        int atcam_srams = attempted_depth * ways_per_partition;
+        int attempted_entries = atcam_srams * lo->way.match_groups * 1024;
+        sram_count += atcam_srams * lo->way.width;
+
+        for (auto rc : per_word_and_width) {
+            int entries_per_sram = 1024 * rc.per_word;
+            int units = (attempted_entries + entries_per_sram - 1) / entries_per_sram;
+            if (rc.need_srams)
+                sram_count += units * rc.width;
+            if (rc.need_maprams)
+                mapram_count += units;
+        }
+
+        if (sram_count > available_srams) break;
+        depth = attempted_depth;
+        adding_entries = attempted_entries;
+        used_srams = sram_count;
+        used_maprams = mapram_count;
+    }
+    lo->srams += used_srams;
+    lo->maprams += used_maprams;
+    lo->entries = adding_entries;
+
+    calculate_partition_sizes(lo, depth);
 }
 
 /* Sorting the layout options in terms of best fit for the given number of resources left

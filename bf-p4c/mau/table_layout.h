@@ -10,13 +10,25 @@ class LayoutOption {
     IR::MAU::Table::Layout layout;
     IR::MAU::Table::Way way;
     safe_vector<int> way_sizes;
+    safe_vector<int> partition_sizes;
     int entries = 0;
     int srams = 0, maprams = 0, tcams = 0;
     LayoutOption() {}
     explicit LayoutOption(const IR::MAU::Table::Layout l) : layout(l) {}
     LayoutOption(const IR::MAU::Table::Layout l, const IR::MAU::Table::Way w)
                 : layout(l), way(w) {}
-    void clear_mems() { srams = 0; maprams = 0; tcams = 0; entries = 0; way_sizes.clear(); }
+    void clear_mems() {
+        srams = 0;
+        maprams = 0;
+        tcams = 0;
+        entries = 0;
+        way_sizes.clear();
+        partition_sizes.clear();
+    }
+
+    int logical_tables() const {
+        return static_cast<size_t>(partition_sizes.size());
+    }
 };
 
 class LayoutChoices {
@@ -55,6 +67,10 @@ class TableLayout : public MauModifier, Backtrack {
     bool backtrack(trigger &trig) override;
     bool preorder(IR::MAU::Table *tbl) override;
     bool preorder(IR::MAU::Action *act) override;
+    bool preorder(IR::MAU::InputXBarRead *read) override;
+    void check_for_atcam(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl,
+                         cstring &partition_index);
+    void check_for_ternary(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl);
     void setup_match_layout(IR::MAU::Table::Layout &, const IR::MAU::Table *);
     void setup_gateway_layout(IR::MAU::Table::Layout &, IR::MAU::Table *);
     void setup_exact_match(IR::MAU::Table *tbl, int action_data_bytes);

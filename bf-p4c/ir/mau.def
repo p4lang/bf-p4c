@@ -1,4 +1,4 @@
-/* -*-c++-*- */
+
 
 #emit
 struct TableResourceAlloc;
@@ -68,6 +68,8 @@ class Table : BFN::Unit {
      * `(int)(logical_id/16)`.
      */
     int                                         logical_id = -1;
+    // The split within the stage for an atcam table
+    int                                         atcam_logical_split = -1;
     safe_vector<std::pair<Expression, cstring>> gateway_rows;
     /** each gateway_row is a an expression for a single row of the gateway,
      * with the string being a tag to run in 'next' for next table, or null
@@ -89,6 +91,7 @@ class Table : BFN::Unit {
         bool            gateway = false;
         bool            ternary = false;
         bool            hash_action = false;
+        bool            atcam = false;
         int             ixbar_bytes = 0;
         int             match_bytes = 0;
         int             match_width_bits = 0;
@@ -99,6 +102,8 @@ class Table : BFN::Unit {
         int             meter_addr_bits = 0;
         int             counter_addr_bits = 0;
         int             indirect_action_addr_bits = 0;
+        int             partition_bits = 0;
+        int             partition_count = 0;
         Layout() { memset(this, 0, sizeof(*this)); }
         operator== { return memcmp(this, &a, sizeof(Layout)) == 0; }
         toJSON {
@@ -178,40 +183,14 @@ class Table : BFN::Unit {
     }
     safe_vector<Way>    ways;
     const TableResourceAlloc            *resources = nullptr;
+    bool is_placed() const { return resources != nullptr; }
 
 #emit
     static constexpr int TIND_NAME = 1;
     static constexpr int AD_NAME = 2;
 #end
-    cstring get_use_name(const IR::Attached *at = nullptr, bool is_gw = false, int type = 0) const {
-        if (is_gw) {
-            return name + "$gw";
-        } else if (at == nullptr) {
-            if (type == IR::MAU::Table::TIND_NAME)
-                return name + "$tind";
-            else if (type == IR::MAU::Table::AD_NAME)
-                return name + "$action";
-            else
-                return name;
-        } else if (at->is<IR::MAU::Counter>()) {
-            return name + "$counter." + at->name;
-        } else if (at->is<IR::MAU::Meter>()) {
-            return name + "$meter." + at->name;
-        } else if (at->is<IR::MAU::StatefulAlu>()) {
-            return name + "$salu." + at->name;
-        } else if (at->is<IR::MAU::Selector>()) {
-            return name + "$act_sel." + at->name;
-        } else if (at->is<IR::MAU::ActionData>()) {
-            return name + "$action";
-        } else if (at->is<IR::MAU::TernaryIndirect>()) {
-            return name + "$tind";
-        } else if (at->is<IR::MAU::IdleTime>()) {
-            return name + "$idletime";
-        } else {
-            BUG("Unrecgonized attached table %s", at->name);
-            return "";
-        }
-    }
+    cstring get_use_name(const IR::Attached *at = nullptr, bool is_gw = false, int type = 0,
+                         int logical_table = -1) const;
 
 #noconstructor
     Table(cstring n, gress_t gr) : name(n), gress(gr) {}
@@ -225,7 +204,7 @@ class Table : BFN::Unit {
 #end
 
     int logical_order() const { return logical_id + gress * 4096; }
-    Table *clone_rename(const char *ext) const {
+    Table *clone_rename(cstring ext) const {
         Table *rv = clone();
         rv->name += ext;
         return rv; }
@@ -384,7 +363,7 @@ class Selector : BackendAttached {
     ID type = {};
     ID mode = {};
     ID algorithm = {};
-    const char *kind() const override { return "action_selector"; }
+    const char *kind() const override { return "selector"; }
     int num_groups = 0;
     int group_size = 0;
 #nodbprint
@@ -553,6 +532,7 @@ class InputXBarRead : Expression {
     ID match_type;
     int p4_param_order = -1;
     bool from_mask = false;
+    bool partition_index = false;
 #nodbprint
 }
 

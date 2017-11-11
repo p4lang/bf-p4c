@@ -17,28 +17,6 @@ struct TableResourceAlloc {
     std::map<cstring, Memories::Use>    memuse;
     ActionFormat::Use                   action_format;
     ActionDataBus::Use                  action_data_xbar;
-    TableResourceAlloc *clone_rename(const char *ext, const cstring name) const {
-        TableResourceAlloc *rv = new TableResourceAlloc;
-        rv->match_ixbar = match_ixbar;
-        rv->gateway_ixbar = gateway_ixbar;
-        rv->selector_ixbar = selector_ixbar;
-        rv->salu_ixbar = salu_ixbar;
-        rv->hash_dists = hash_dists;
-        rv->table_format = table_format;
-        rv->action_format = action_format;
-        rv->action_data_xbar = action_data_xbar;
-        for (auto &use : memuse) {
-            if (name == use.first) {
-                rv->memuse.emplace(name + ext, use.second);
-            } else {
-                cstring back = use.first.findlast('$');
-                if (back)
-                    rv->memuse.emplace(name + ext + back, use.second);
-                else
-                    rv->memuse.emplace(use.first + ext, use.second);
-            }
-        }
-        return rv; }
     TableResourceAlloc *clone_ixbar() const {
         TableResourceAlloc *rv = new TableResourceAlloc;
         rv->match_ixbar = match_ixbar;
@@ -51,6 +29,31 @@ struct TableResourceAlloc {
         rv->hash_dists = hash_dists;
         rv->action_data_xbar = action_data_xbar;
         return rv; }
+    TableResourceAlloc *clone_rename(cstring ext, const cstring name) const {
+        TableResourceAlloc *rv = clone_ixbar();
+        for (auto &use : memuse) {
+            if (name == use.first) {
+                rv->memuse.emplace(name + ext, use.second);
+                auto &unattached = rv->memuse.at(name + ext).unattached_tables;
+                unattached.clear();
+                for (auto entry : use.second.unattached_tables) {
+                    cstring back = entry.first.findlast('$');
+                    if (back)
+                        unattached.emplace(name + ext + back, entry.second);
+                    else
+                        unattached.emplace(name + ext, entry.second);
+                }
+            } else {
+                cstring back = use.first.findlast('$');
+                if (back)
+                    rv->memuse.emplace(name + ext + back, use.second);
+                else
+                    rv->memuse.emplace(use.first + ext, use.second);
+            }
+        }
+        return rv; }
+    TableResourceAlloc *clone_atcam(const IR::MAU::Table *tbl, int logical_table,
+                                    cstring suffix) const;
     void clear_ixbar() {
         match_ixbar.clear();
         gateway_ixbar.clear();

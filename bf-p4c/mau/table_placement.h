@@ -34,11 +34,14 @@ class TablePlacement : public MauTransform, public Backtrack {
     bool backtrack(trigger &) override {
         /* always back up to TableLayout -- don't catch here */
         return false;  /* trig.is<IXBar::failure>() && !alloc_done; */ }
+    IR::MAU::Table *break_up_atcam(IR::MAU::Table *);
     IR::Node *preorder(IR::BFN::Pipe *) override;
     IR::Node *preorder(IR::MAU::TableSeq *) override;
     IR::Node *preorder(IR::MAU::Table *) override;
     IR::Expression *preorder(IR::MAU::HashDist *) override;
     IR::Node *postorder(IR::BFN::Pipe *pipe) override;
+    IR::MAU::Table *break_up_atcam(IR::MAU::Table *tbl, const Placed *placed,
+                                   cstring suffix = "", IR::MAU::Table **last = nullptr);
     const Placed *placement;
     bool is_better(const Placed *a, const Placed *b);
     Placed *try_place_table(const IR::MAU::Table *t, const Placed *done,

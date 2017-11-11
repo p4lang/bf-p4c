@@ -666,3 +666,14 @@ void ActionDataBus::update(cstring name, const Use &alloc) {
 void ActionDataBus::update(cstring name, const TableResourceAlloc *alloc) {
     update(name, alloc->action_data_xbar);
 }
+
+void ActionDataBus::update(const IR::MAU::Table *tbl) {
+    BUG_CHECK(tbl->is_placed(), "Cannot call update on a pre-placed table");
+    if (tbl->layout.atcam) {
+        auto orig_name = tbl->name.before(tbl->name.findlast('$'));
+        if (atcam_updates.find(orig_name) != atcam_updates.end())
+            return;
+        atcam_updates.emplace(orig_name);
+    }
+    update(tbl->name, tbl->resources);
+}

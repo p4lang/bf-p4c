@@ -368,6 +368,12 @@ static bool try_alloc_mem(TablePlacement::Placed *next, const TablePlacement::Pl
         }
         return false;
     }
+
+    Memories verify_mem;
+    for (auto prev_resource : prev_resources)
+        verify_mem.update(prev_resource->memuse);
+    verify_mem.update(resources->memuse);
+
     return true;
 }
 
@@ -565,7 +571,9 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
                (allocated = try_alloc_mem(rv, done, rv->entries, resources,
                                           rv->use, prev_resources)) == false)) {
             rv->need_more = true;
-            if (!t->layout.ternary)
+            if (t->layout.atcam)
+                rv->use.calculate_for_leftover_atcams(t, srams_left, rv->entries);
+            else if (!t->layout.ternary)
                 rv->use.calculate_for_leftover_srams(t, srams_left, rv->entries);
             else
                 rv->use.calculate_for_leftover_tcams(t, tcams_left, srams_left, rv->entries);
@@ -617,8 +625,15 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
         BUG("Unknown error for stage advancement?");
     }
 
-    rv->logical_id = done && done->stage == rv->stage ? done->logical_id + 1
-                                                      : rv->stage * StageUse::MAX_LOGICAL_IDS;
+    if (done && done->stage == rv->stage) {
+        if (done->table->layout.atcam)
+            rv->logical_id = done->logical_id + done->use.preferred()->logical_tables();
+        else
+            rv->logical_id = done->logical_id + 1;
+    } else {
+        rv->logical_id = rv->stage * StageUse::MAX_LOGICAL_IDS;
+    }
+
     assert((rv->logical_id / StageUse::MAX_LOGICAL_IDS) == rv->stage);
     LOG2("try_place_table returning " << rv->entries << " of " << rv->name <<
          " in stage " << rv->stage << (rv->need_more ? " (need more)" : ""));
@@ -786,7 +801,6 @@ IR::Node *TablePlacement::preorder(IR::BFN::Pipe *pipe) {
         LOG3("stage " << (placed ? placed->stage : 0) << ", work: " << work <<
              ", partly placed " << partly_placed.size() << ", placed " << count(placed));
         StageUseEstimate current = get_current_stage_use(placed);
-        LOG1("Initialize current");
         safe_vector<const Placed *> trial;
         for (auto it = work.begin(); it != work.end();) {
             auto grp = *it;
@@ -877,9 +891,12 @@ static void table_set_resources(IR::MAU::Table *tbl, const TableResourceAlloc *r
     tbl->layout.entries = entries;
     if (!tbl->ways.empty()) {
         auto &mem = resources->memuse.at(tbl->name);
-        assert(tbl->ways.size() == mem.ways.size());
-        for (unsigned i = 0; i < tbl->ways.size(); ++i)
-            tbl->ways[i].entries = mem.ways[i].size * 1024 * tbl->ways[i].match_groups; }
+        if (!tbl->layout.atcam) {
+            assert(tbl->ways.size() == mem.ways.size());
+            for (unsigned i = 0; i < tbl->ways.size(); ++i)
+                tbl->ways[i].entries = mem.ways[i].size * 1024 * tbl->ways[i].match_groups;
+        }
+    }
 }
 
 /* Sets the layout and ways for a table from the selected table layout option 
@@ -914,11 +931,51 @@ static void add_attached_tables(IR::MAU::Table *tbl, const LayoutOption *layout_
     }
 }
 
+/** Similar to splitting a IR::MAU::Table across stages, this is splitting an ATCAM
+ *  IR::MAU::Table object into the multiple logical tables specified by the table placement
+ *  algorithm.  Like split tables, these tables are chained in a hit miss chain in order
+ *  to maintain priority.
+ *
+ *  For an ATCAM table split across stages, a pointer to the last table in the chain is saved
+ *  in the last pointer to chain the last table in the current stage to the first table in
+ *  the next stage
+ */
+IR::MAU::Table *TablePlacement::break_up_atcam(IR::MAU::Table *tbl, const Placed *placed,
+    cstring suffix, IR::MAU::Table **last) {
+    IR::MAU::Table *rv = nullptr;
+    IR::MAU::Table *prev = nullptr;
+    for (int lt = 0; lt < placed->use.preferred()->logical_tables(); lt++) {
+        cstring atcam_suffix = "$atcam" + std::to_string(lt);
+        auto *table_part = tbl->clone();
+        table_part->name = table_part->name + atcam_suffix + suffix;
+        table_part->logical_id = placed->logical_id + lt;
+        table_part->atcam_logical_split = lt;
+        if (lt != 0) {
+            tbl->gateway_rows.clear();
+        }
+        table_set_resources(table_part, placed->resources->clone_atcam(tbl, lt, suffix),
+                            0);  // table_part->ways[0].entries);
+        if (!rv) {
+            rv = table_part;
+            assert(!prev);
+        } else {
+            for (auto &gw : table_part->gateway_rows)
+                table_part->next.erase(gw.second);
+            table_part->gateway_rows.clear();
+            prev->next["$miss"] = new IR::MAU::TableSeq(table_part);
+        }
+        if (last != nullptr)
+            *last = table_part;
+        prev = table_part;
+    }
+    return rv;
+}
 
 IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
     auto it = table_placed.find(tbl->name);
     if (it == table_placed.end()) {
-        assert(strchr(tbl->name, '.'));
+        BUG_CHECK(strchr(tbl->name, '.') || strchr(tbl->name, '$'), "Trying to place "
+                  "a table %s that is already placed", tbl->name);
         return tbl; }
     tbl->logical_id = it->second->logical_id;
     // FIXME: Currently the gateway is laid out for every table, so I'm keeping the information
@@ -983,23 +1040,32 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
 
 
     if (table_placed.count(tbl->name) == 1) {
-        table_set_resources(tbl, it->second->resources, it->second->entries);
+        if (tbl->layout.atcam)
+            return break_up_atcam(tbl, it->second);
+        else
+            table_set_resources(tbl, it->second->resources, it->second->entries);
         return tbl;
     }
     int counter = 0;
     IR::MAU::Table *rv = 0, *prev = 0;
+    IR::MAU::Table *atcam_last = nullptr;
     /* split the table into multiple parts per the placement */
     LOG1("splitting " << tbl->name << " across " << table_placed.count(tbl->name) << " stages");
     for (it = table_placed.find(tbl->name); it->first == tbl->name; it++) {
-        char suffix[8];
-        snprintf(suffix, sizeof(suffix), ".%d", ++counter);
-        auto *table_part = tbl->clone_rename(suffix);
+        cstring suffix = "." + std::to_string(++counter);
+        auto *table_part = tbl->clone();
         select_layout_option(table_part, it->second->use.preferred());
         if (gw_layout_used)
             table_part->layout += gw_layout;
         table_part->logical_id = it->second->logical_id;
-        table_set_resources(table_part, it->second->resources->clone_rename(suffix, tbl->name),
-                            it->second->entries);
+
+        if (table_part->layout.atcam) {
+            table_part = break_up_atcam(table_part, it->second, suffix, &atcam_last);
+        } else {
+            table_part->name += suffix;
+            table_set_resources(table_part, it->second->resources->clone_rename(suffix, tbl->name),
+                                it->second->entries);
+        }
         if (!rv) {
             rv = table_part;
             assert(!prev);
@@ -1007,8 +1073,12 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
             for (auto &gw : table_part->gateway_rows)
                 table_part->next.erase(gw.second);
             table_part->gateway_rows.clear();
-            prev->next["$miss"] = new IR::MAU::TableSeq(table_part); }
-        prev = table_part; }
+            prev->next["$miss"] = new IR::MAU::TableSeq(table_part);
+        }
+        prev = table_part;
+        if (atcam_last)
+            prev = atcam_last;
+    }
     assert(rv);
     return rv;
 }
@@ -1017,8 +1087,13 @@ IR::Node *TablePlacement::preorder(IR::MAU::TableSeq *seq) {
     if (seq->tables.size() > 1) {
         std::sort(seq->tables.begin(), seq->tables.end(),
             [this](const IR::MAU::Table *a, const IR::MAU::Table *b) -> bool {
-                return find_placed(a->name)->second->logical_id <
-                       find_placed(b->name)->second->logical_id; }); }
+                int a_logical_id = find_placed(a->name)->second->logical_id;
+                int b_logical_id = find_placed(b->name)->second->logical_id;
+                if (a_logical_id != b_logical_id)
+                    return a_logical_id < b_logical_id;
+                return a->atcam_logical_split < b->atcam_logical_split;
+        });
+    }
     return seq;
 }
 
@@ -1051,9 +1126,12 @@ IR::Expression *TablePlacement::preorder(IR::MAU::HashDist *hd) {
 std::multimap<cstring, const TablePlacement::Placed *>::const_iterator
 TablePlacement::find_placed(cstring name) const {
     auto rv = table_placed.find(name);
-    if (rv == table_placed.end())
+    if (rv == table_placed.end()) {
         if (auto p = name.findlast('.'))
             rv = table_placed.find(name.before(p));
+        if (auto p = name.findlast('$'))
+            rv = table_placed.find(name.before(p));
+    }
     return rv;
 }
 

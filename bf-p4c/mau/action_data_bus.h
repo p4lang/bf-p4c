@@ -49,6 +49,7 @@ struct ActionDataBus {
     bitvec total_in_use;
 
     safe_vector<std::pair<int, int>> immed_starts;
+    std::set<cstring> atcam_updates;
 
 
  public:
@@ -153,8 +154,7 @@ struct ActionDataBus {
 
     void update(cstring name, const Use &alloc);
     void update(cstring name, const TableResourceAlloc *alloc);
-    void update(const IR::MAU::Table *tbl) {
-        if (tbl->resources) update(tbl->name, tbl->resources); }
+    void update(const IR::MAU::Table *tbl);
 };
 
 #endif /* BF_P4C_MAU_ACTION_DATA_BUS_H_*/

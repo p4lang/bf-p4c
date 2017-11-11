@@ -13,6 +13,9 @@ struct Memories {
     static constexpr int SRAM_ROWS = 8;
     static constexpr int SRAM_COLUMNS = 10;
     static constexpr int LEFT_SIDE_COLUMNS = 4;
+    static constexpr int RIGHT_SIDE_COLUMNS = SRAM_COLUMNS - LEFT_SIDE_COLUMNS;
+    static constexpr int LEFT_SIDE_RAMS = LEFT_SIDE_COLUMNS * SRAM_ROWS;
+    static constexpr int RIGHT_SIDE_RAMS = RIGHT_SIDE_COLUMNS * SRAM_ROWS;
     static constexpr int MAPRAM_COLUMNS = 6;
     static constexpr int SRAM_DEPTH = 1024;
     static constexpr int TCAM_ROWS = 12;
@@ -30,13 +33,37 @@ struct Memories {
     static constexpr int IMEM_ADDRESS_BITS = 6;
     static constexpr int IMEM_LOOKUP_BITS = 3;
     static constexpr int NUM_IDLETIME_BUS = 10;
+    static constexpr int MAX_PARTITION_RAMS_PER_ROW = 5;
+
+    struct search_bus_info {
+        cstring name;
+        int width_section = 0;
+        int hash_group = 0;
+        int logical_table = 0;
+        bool init = false;
+
+        search_bus_info() {}
+        search_bus_info(cstring n, int ws, int hg, int lt)
+            : name(n), width_section(ws), hash_group(hg), logical_table(lt), init(true) {}
+
+        bool operator==(const search_bus_info &sbi) {
+            return name == sbi.name && width_section == sbi.width_section
+                   && hash_group == sbi.hash_group && logical_table == sbi.logical_table;
+        }
+
+        bool operator!=(const search_bus_info &sbi) {
+            return !operator==(sbi);
+        }
+
+        bool free() { return !init; }
+    };
 
  private:
     Alloc2D<cstring, SRAM_ROWS, SRAM_COLUMNS>          sram_use;
     unsigned                                           sram_inuse[SRAM_ROWS] = { 0 };
     Alloc2D<cstring, TCAM_ROWS, TCAM_COLUMNS>          tcam_use;
     Alloc2D<cstring, SRAM_ROWS, 2>                     gateway_use;
-    Alloc2D<std::pair<cstring, int>, SRAM_ROWS, 2>     sram_search_bus;
+    Alloc2D<search_bus_info, SRAM_ROWS, 2>             sram_search_bus;
     Alloc2D<cstring, SRAM_ROWS, 2>                     sram_print_search_bus;
     Alloc2D<cstring, SRAM_ROWS, 2>                     sram_match_bus;
     Alloc2D<cstring, SRAM_ROWS, 2>                     tind_bus;
@@ -52,9 +79,12 @@ struct Memories {
     int gw_bytes_per_sb[SRAM_ROWS][BUS_COUNT] = {{0}};
     Alloc1D<cstring, STATS_ALUS>                       stats_alus;
     Alloc1D<cstring, METER_ALUS>                       meter_alus;
+    int                                                result_buses_used = 0;
+
     struct mem_info {
         int match_tables = 0;
         int match_bus_min = 0;
+        int atcam_tables = 0;
         int match_RAMs = 0;
         int tind_tables = 0;
         int tind_RAMs = 0;
@@ -95,7 +125,10 @@ struct Memories {
  public:
     /* Memories::Use tracks memory use of a single table */
     struct Use {
-        enum type_t { EXACT, TERNARY, GATEWAY, TIND, IDLETIME, TWOPORT, ACTIONDATA } type;
+        enum type_t { EXACT, ATCAM, TERNARY, GATEWAY, TIND, IDLETIME, COUNTER, METER, SELECTOR,
+                      STATEFUL, ACTIONDATA } type;
+        bool is_twoport() const { return type == COUNTER || type == METER || type == SELECTOR
+                                         || type == STATEFUL; }
         /* FIXME -- when tracking EXACT table memuse, do we need to track which way
          * each memory is allocated to?  For now, we do not. */
         struct Row {
@@ -118,16 +151,14 @@ struct Memories {
             int unit;
             type_t bus_type;
         };
-        safe_vector<Row>                     row;
-        safe_vector<Row>                     color_mapram;
-        safe_vector<std::pair<int, int>>     home_row;
-        safe_vector<Way>                     ways;
-        Gateway                              gateway;
-        int                                  per_row;
-        bool                                 unattached_profile = false;
-        cstring                              profile_name;
-        bool                                 unattached_selector = false;
-        cstring                              selector_name;
+
+        safe_vector<Row>                         row;
+        safe_vector<Row>                         color_mapram;
+        safe_vector<std::pair<int, int>>         home_row;
+        safe_vector<Way>                         ways;
+        Gateway                                  gateway;
+        int                                      per_row;
+        std::map<cstring, cstring>               unattached_tables;
         // depth in memory units + mask to use for memory selection per way
         void visit(Memories &mem, std::function<void(cstring &)>) const;
     };
@@ -159,17 +190,26 @@ struct Memories {
         int placed = 0;   // How many have been allocated so far
         int number = 0;   // Used to keep track of wide action tables and way numbers in exact match
         int hash_group = -1;  // Which hash group the exact match way is using
+        int logical_table = 0;  // For ATCAM tables, which logical table this partition is based
+        bool direct = false;  // Whether the attached table is directly or indirectly addressed
         const IR::Attached *attached = nullptr;
         int recent_home_row = -1;  // For swbox users, most recent row to oflow to
-        enum type_t { EXACT, ACTION, STATS, METER, REGISTER, SELECTOR, TIND, IDLETIME } type;
+        enum type_t { EXACT, ACTION, STATS, METER, REGISTER, SELECTOR, TIND, IDLETIME, ATCAM } type;
 
         // Color Mapram Requirements, necessary for METER groups
         struct color_mapram_group {
             int needed = 0;
             int placed = 0;
-            bool all_placed() { return needed == placed; }
-            int left_to_place() { return needed - placed; }
+            bool all_placed() {
+                BUG_CHECK(placed <= needed, "Placed more RAMs than actually needed");
+                return needed == placed;
+            }
+            int left_to_place() {
+                BUG_CHECK(placed <= needed, "Placed more RAMs than actually needed");
+                return needed - placed;
+            }
         };
+
 
         // Linkage between selectors and the corresponding action table in order to prevent
         // a collision on the selector overflow
@@ -242,7 +282,10 @@ struct Memories {
             out << ta->table->name << " way #" << number << " depth: " << depth
                 << " width: " << width << " placed: " << placed;
         }
-        int unique_bus(int i) { return hash_group * width + i; }
+        search_bus_info build_search_bus(int width_sect) {
+            return search_bus_info(ta->table->name, width_sect, hash_group, logical_table);
+        }
+
         int left_to_place() { return depth - placed; }
         bool all_placed() { return (depth == placed); }
         bool any_placed() { return (placed != 0); }
@@ -276,16 +319,17 @@ struct Memories {
                 return left_to_place();
             }
         }
-        cstring get_name() const {
-            if (type == TIND)
-                return ta->table->get_use_name(nullptr, false, IR::MAU::Table::TIND_NAME);
-            else if (type == ACTION && attached == nullptr)
-                return ta->table->get_use_name(nullptr, false, IR::MAU::Table::AD_NAME);
-            else
-                return ta->table->get_use_name(attached);
-        }
+        cstring get_name() const;
+        bool same_wide_action(const SRAM_group &a);
     };
 
+    struct match_selection {
+        safe_vector<int> rows;
+        safe_vector<int> cols;
+        std::map<int, int> widths;
+        std::map<int, int> buses;
+        unsigned column_mask = 0;
+    };
     /** Information about particular use on a row during allocate_all_swbox_users */
     struct swbox_fill {
         SRAM_group *group = nullptr;
@@ -305,7 +349,6 @@ struct Memories {
         explicit profile_info(const IR::MAU::Selector *a, table_alloc *t) : as(a), linked_ta(t) {}
     };
 
-
     // Used for array indices in allocate_all_action
     enum RAM_side_t { LEFT = 0, RIGHT, RAM_SIDES };
     enum switchbox_t { ACTION = 0, SYNTH, OFLOW, SWBOX_TYPES };
@@ -313,6 +356,8 @@ struct Memories {
     safe_vector<table_alloc *>       tables;
     safe_vector<table_alloc *>       exact_tables;
     safe_vector<SRAM_group *>        exact_match_ways;
+    safe_vector<table_alloc *>       atcam_tables;
+    safe_vector<SRAM_group *>        atcam_partitions;
     safe_vector<table_alloc *>       ternary_tables;
     safe_vector<table_alloc *>       tind_tables;
     safe_vector<SRAM_group *>        tind_groups;
@@ -335,25 +380,37 @@ struct Memories {
     safe_vector<SRAM_group *>        idletime_groups;
 
     unsigned side_mask(RAM_side_t side);
+    unsigned partition_mask(RAM_side_t side);
     int mems_needed(int entries, int depth, int per_mem_row, bool is_twoport);
     void clear_table_vectors();
     void clear_uses();
     bool analyze_tables(mem_info &mi);
     void calculate_column_balance(const mem_info &mi, unsigned &row);
     bool cut_from_left_side(const mem_info &mi, int left_given_columns, int right_given_columns);
+    bool allocate_all_atcam(mem_info &mi);
     bool allocate_all_exact(unsigned column_mask);
     safe_vector<int> way_size_calculator(int ways, int RAMs_needed);
-    safe_vector<std::pair<int, int>> available_SRAMs_per_row(unsigned mask, table_alloc *ta,
-                                                             int depth);
-    safe_vector<int> available_match_SRAMs_per_row(unsigned row_mask, unsigned total_mask, int row,
-                                                   table_alloc *ta, int width_sect);
+    safe_vector<std::pair<int, int>> available_SRAMs_per_row(unsigned mask, SRAM_group *group,
+                                                             int width_sect);
+    safe_vector<int> available_match_SRAMs_per_row(unsigned selected_columns_mask,
+        unsigned total_mask, std::set<int> selected_rows, SRAM_group *group, int width_sect);
     void break_exact_tables_into_ways();
-    int match_bus_available(table_alloc *ta, int width, int row);
+    bool search_bus_available(int search_row, search_bus_info &sbi);
+    int select_search_bus(SRAM_group *group, int width_sect, int row);
     bool find_best_row_and_fill_out(unsigned column_mask);
-    bool fill_out_row(SRAM_group *placed_wa, int row, unsigned column_mask);
-    bool pack_way_into_RAMs(SRAM_group *wa, int row, int &cols, unsigned column_mask);
-    SRAM_group *find_best_candidate(SRAM_group *placed_wa, int row, int &loc);
-    void compress_ways();
+    bool fill_out_row(SRAM_group *placed_way, int row, unsigned column_mask);
+    SRAM_group *find_best_candidate(SRAM_group *placed_way, int row, int &loc);
+    void compress_ways(bool atcam);
+    void compress_row(Use &alloc);
+
+    void break_atcams_into_partitions();
+    bool determine_match_rows_and_cols(SRAM_group *group, int row, unsigned column_mask,
+        match_selection &match_select, bool atcam);
+    void fill_out_match_alloc(SRAM_group *group, match_selection &match_select, bool atcam);
+    bool find_best_partition_for_atcam(unsigned column_mask);
+    bool fill_out_partition(int row, unsigned partition_mask);
+    unsigned best_partition_side(mem_info &mi);
+    SRAM_group *best_partition_candidate(int row, unsigned column_mask, int &loc);
 
     bool allocate_all_ternary();
     int ternary_TCAMs_necessary(table_alloc *ta, int &mid_bytes_needed);
