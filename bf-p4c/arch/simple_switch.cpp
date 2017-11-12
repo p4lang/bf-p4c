@@ -502,7 +502,6 @@ class NormalizeV1modelProgram : public Transform {
 
     const IR::Node* postorder(IR::PathExpression* node) override {
         auto path = node->path->name;
-        LOG1("path " << path.name);
         auto it = namescopes.find(path);
         if (it != namescopes.end()) {
             auto renameIt = renameMap.find(path);
@@ -633,8 +632,22 @@ class AnalyzeV1modelProgram : public Inspector {
     }
 
     // instantiation - extern
-    // instantiation - package
+    void postorder(const IR::Declaration_Instance* node) override {
+        // look for global instances
+        auto control = findContext<IR::P4Control>();
+        if (control) return;
+        auto parser = findContext<IR::P4Parser>();
+        if (parser) return;
+        // ignore main()
+        if (auto type = node->type->to<IR::Type_Specialized>()) {
+            auto typeName = type->baseType->to<IR::Type_Name>();
+            if (typeName && typeName->path->name == "V1Switch")
+                return;
+        }
+        structure->global_instances.emplace(node->name, node);
+    }
 
+    // instantiation - program
     void postorder(const IR::P4Program*) override {
         auto params = structure->toplevel->getMain()->getConstructorParameters();
         if (params->parameters.size() != 6) {
@@ -664,6 +677,7 @@ class ConstructSymbolTable : public Inspector {
     unsigned          igCloneIndex;
     unsigned          egCloneIndex;
     P4::ClonePathExpressions cloner;
+    std::set<cstring> globals;
 
  public:
     ConstructSymbolTable(ProgramStructure* structure,
@@ -1148,6 +1162,29 @@ class ConstructSymbolTable : public Inspector {
             WARNING("built-in method " << node << " is not converted");
         } else {
             WARNING("method call " << node << " not converted");
+        }
+    }
+
+    // if a path refers to a global declaration, move
+    // the global declaration to local control;
+    void postorder(const IR::PathExpression* node) override {
+        auto path = node->path;
+        auto it = structure->global_instances.find(path->name);
+        if (it != structure->global_instances.end()) {
+            if (globals.find(path->name) != globals.end())
+                return;
+            auto control = findContext<IR::P4Control>();
+            BUG_CHECK(control != nullptr,
+                      "unable to reference global instance from non-control block");
+            if (control->name == structure->getBlockName("ingress")) {
+                structure->ingressDeclarations.push_back(it->second);
+                globals.insert(path->name);
+            } else if (control->name == structure->getBlockName("egress")) {
+                structure->egressDeclarations.push_back(it->second);
+                globals.insert(path->name);
+            } else {
+                BUG("unexpected reference to global instance from %1%", control->name);
+            }
         }
     }
 

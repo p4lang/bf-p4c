@@ -58,6 +58,7 @@ class ProgramStructure {
     ordered_map<cstring, const IR::Type_Struct*> struct_types;
     ordered_map<cstring, const IR::Type_HeaderUnion*> header_union_types;
     ordered_map<cstring, const IR::Type_Typedef*> typedef_types;
+    ordered_map<cstring, const IR::Declaration_Instance*> global_instances;
     std::vector<const IR::Type_Action*>          action_types;
 
     // maintain symbol tables for program transformation

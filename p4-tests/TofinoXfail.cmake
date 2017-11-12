@@ -892,9 +892,8 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue1001-bmv2.p4
   )
 
-# math_unit deleted by TNA translation
 p4c_add_xfail_reason("tofino"
-  "Could not find declaration for"
+  "expression too complex for register action"
   extensions/p4_tests/p4_14/test_config_163_stateful_table_math_unit.p4
   )
 
