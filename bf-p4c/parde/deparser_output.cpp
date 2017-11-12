@@ -22,10 +22,17 @@ struct OutputDictionary : public Inspector {
     const PhvInfo       &phv;
     unsigned            checksumIndex = 0;
     indent_t            indent;
-    AutoIndent          autoDictionaryIndent;
     PHV::Container      last;
 
+    bool preorder(const IR::BFN::Deparser* deparser) override {
+        out << indent << "dictionary:";
+        if (deparser->emits.empty()) out << " {}";
+        out << std::endl;
+        return true;
+    }
+
     bool preorder(const IR::BFN::Emit* emit) override {
+        AutoIndent emitIndent(indent);
         bitrange bits;
         auto field = phv.field(emit->source, &bits);
         if (!field) {
@@ -67,6 +74,7 @@ struct OutputDictionary : public Inspector {
     }
 
     bool preorder(const IR::BFN::EmitChecksum* emit) override {
+        AutoIndent emitChecksumIndent(indent);
         out << indent << "checksum " << checksumIndex;
 
         bitrange povAllocBits;
@@ -82,7 +90,7 @@ struct OutputDictionary : public Inspector {
     }
 
     OutputDictionary(std::ostream &out, const PhvInfo &phv, indent_t initialIndent)
-      : out(out), phv(phv), indent(initialIndent), autoDictionaryIndent(indent) { }
+      : out(out), phv(phv), indent(initialIndent) { }
 };
 
 /// Generates the list of input PHV containers for each deparser checksum
@@ -91,7 +99,7 @@ struct OutputChecksums : public Inspector {
     std::ostream        &out;
     const PhvInfo       &phv;
     unsigned            checksumIndex;
-    indent_t      indent;
+    indent_t            indent;
 
     bool preorder(const IR::BFN::EmitChecksum* emit) override {
         out << indent << "checksum " << checksumIndex << ":" << std::endl;
@@ -228,17 +236,13 @@ void DeparserAsmOutput::emit_fieldlist(std::ostream &out, const IR::Vector<IR::E
 }
 
 std::ostream &operator<<(std::ostream &out, const DeparserAsmOutput &d) {
-    indent_t    indent(1);
-    out << "deparser " << d.gress << ":" << std::endl;
-    out << indent << "dictionary:";
-    if (!d.deparser || d.deparser->emits.empty())
-        out << " {}";
-    out << std::endl;
-    if (!d.deparser)  return out;
+    BUG_CHECK(d.deparser, "No deparser?");
 
-    d.deparser->emits.apply(OutputDictionary(out, d.phv, indent));
-    d.deparser->emits.apply(OutputChecksums(out, d.phv, indent));
-    d.deparser->params.apply(OutputParameters(out, d.phv, indent));
+    out << "deparser " << d.gress << ":" << std::endl;
+    indent_t indent(1);
+    d.deparser->apply(OutputDictionary(out, d.phv, indent));
+    d.deparser->apply(OutputChecksums(out, d.phv, indent));
+    d.deparser->apply(OutputParameters(out, d.phv, indent));
 
     for (auto digest : Values(d.deparser->digests)) {
         int idx = 0;
