@@ -182,7 +182,6 @@ updates {
     action_profile_group {
       action_profile_id: 285270769  # ecmp_action_profile
       group_id: 2
-      type: SELECT
       members {
         member_id: 1
         weight: 1
@@ -224,7 +223,6 @@ updates {
     action_profile_group {
       action_profile_id: 285270769  # ecmp_action_profile
       group_id: 4
-      type: SELECT
       members {
         member_id: 3
         weight: 1
