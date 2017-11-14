@@ -12,39 +12,41 @@ class ClotInfo {
     friend class CollectClotInfo;
     friend class NaiveClotAlloc;
 
-    std::map<const IR::BFN::ParserState*, std::vector<const PHV::Field*>> all_fields;
+    std::map<const IR::BFN::ParserState*, std::vector<const PHV::Field*>> all_fields_;
 
-    std::vector<const Clot*> clots;
-    std::map<const PHV::Field*, const Clot*> field_to_clot;
-    std::map<const Clot*, const IR::BFN::ParserState*> clot_to_parser_state;
-    std::map<const IR::BFN::ParserState*, std::vector<const Clot*>> parser_state_to_clots;
+    std::vector<const Clot*> clots_;
+    std::map<const Clot*, const IR::BFN::ParserState*> clot_to_parser_state_;
+    std::map<const IR::BFN::ParserState*, std::vector<const Clot*>> parser_state_to_clots_;
 
  public:
+    const std::vector<const Clot*>& clots() const { return clots_; }
+
+    const std::map<const IR::BFN::ParserState*, std::vector<const Clot*>>&
+        parser_state_to_clots() const { return parser_state_to_clots_; }
+
     void add(const Clot* cl, const IR::BFN::ParserState* state) {
-        clots.push_back(cl);
+        clots_.push_back(cl);
 
-        for (auto f : cl->all_fields)
-            field_to_clot[f] = cl;
-
-        clot_to_parser_state[cl] = state;
-        parser_state_to_clots[state].push_back(cl);
+        clot_to_parser_state_[cl] = state;
+        parser_state_to_clots_[state].push_back(cl);
     }
 
     const Clot* allocated(const PHV::Field* field) const {
-        auto find = field_to_clot.find(field);
-        if (find == field_to_clot.end())
-            return nullptr;
-        auto* clot = find->second;
-        return clot;
+        for (auto c : clots_)
+            for (auto f : c->all_fields)
+                if (f == field)
+                    return c;
+        return nullptr;
     }
 
     void clear() {
-        all_fields.clear();
-        clots.clear();
-        field_to_clot.clear();
-        clot_to_parser_state.clear();
-        parser_state_to_clots.clear();
+        all_fields_.clear();
+        clots_.clear();
+        clot_to_parser_state_.clear();
+        parser_state_to_clots_.clear();
     }
+
+    void dbprint(std::ostream &out) const;
 };
 
 class AllocateClot : public PassManager {

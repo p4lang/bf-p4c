@@ -190,7 +190,7 @@ Backend::Backend(const BFN_Options& options) :
         new DumpPipe("Before phv_analysis"),
         new CheckForHeaders(),
 #if HAVE_JBAY
-        options.device == "jbay" ? new AllocateClot(clot, phv, uses) : nullptr,
+        options.device == "jbay" && options.use_clot ? new AllocateClot(clot, phv, uses) : nullptr,
 #endif  // HAVE_JBAY
         new PHV_AnalysisPass(options, phv, uses, clot, defuse, deps),  // phv analysis after last
                                                                  // CollectPhvInfo pass
@@ -205,7 +205,7 @@ Backend::Backend(const BFN_Options& options) :
         // so after this point it's not safe to run CollectPhvInfo, FieldDefUse,
         // or any other pass that walks over the IR to find references to
         // fields.
-        new LowerParser(phv),
+        new LowerParser(phv, clot),
 
         new CheckTableNameDuplicate,
         new CheckUnimplementedFeatures(options.allowUnimplemented),

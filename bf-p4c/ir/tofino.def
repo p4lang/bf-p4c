@@ -1,6 +1,7 @@
 #emit
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/ir/gress.h"
+#include "bf-p4c/parde/clot.h"
 #include "bf-p4c/phv/phv.h"
 
 struct StageUse {
@@ -236,3 +237,4 @@ class BFN::ContainerRef : BFN::Reference {
         return newRef;
     }
 }
+

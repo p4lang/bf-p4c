@@ -21,6 +21,7 @@ class BFN_Options : public CompilerOptions {
     bool debugInfo = false;
     bool no_deadcode_elimination = false;
     bool forced_placement = false;
+    bool use_clot = false;
 
     BFN_Options() {
         target = "tofino-v1model-barefoot";
@@ -53,6 +54,9 @@ class BFN_Options : public CompilerOptions {
         registerOption("--placement", nullptr,
             [this](const char *) { forced_placement = true; return true; },
             "ignore all dependencies during table placement");
+        registerOption("--use_clot", nullptr,
+            [this](const char *) { use_clot = true; return true; },
+            "use clots in JBay");
     }
 
     bool targetSupported() {

@@ -3,9 +3,13 @@
 
 #include <vector>
 
-#include "lib/cstring.h"
-#include "ir/json_loader.h"
-#include "bf-p4c/phv/phv_fields.h"
+namespace PHV {
+class Field;
+}
+
+class cstring;
+class JSONGenerator;
+class JSONLoader;
 
 class Clot {
  public:
@@ -27,12 +31,11 @@ class Clot {
     // unsigned start = 0;  // start byte offset in the packet
                             // this will become clear during parser lowering?
 
-    unsigned length() {
-       unsigned len = 0;
-       for (auto f : all_fields)
-           len += f->size;
-       return len;
-    }
+    /// num of bytes covered in this clot
+    unsigned length() const;
+
+    /// byte offset of field with in clot
+    unsigned offset(const PHV::Field* f) const;
 
     std::vector<const PHV::Field*> all_fields;  // all fields covered in this clot
     std::vector<const PHV::Field*> phv_fields;  // fields that need to be replaced by

@@ -13,6 +13,7 @@
 #include "bf-p4c/common/slice.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/ir/bitrange.h"
+#include "bf-p4c/parde/clot_info.h"
 #include "bf-p4c/parde/parde_visitor.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "lib/stringref.h"
@@ -99,8 +100,8 @@ static bool isIntervalEarlierInPacket(nw_byteinterval a,
 /// which don't come from the input packet are ordered last - they're lowest
 /// priority, since we can execute them at any time without delaying other
 /// extracts.
-static bool isExtractEarlierInPacket(const IR::BFN::LoweredExtract* a,
-                                     const IR::BFN::LoweredExtract* b) {
+static bool isExtractEarlierInPacket(const IR::BFN::LoweredExtractPhv* a,
+                                     const IR::BFN::LoweredExtractPhv* b) {
     auto* aFromPacket = a->source->to<IR::BFN::LoweredPacketRVal>();
     auto* bFromPacket = b->source->to<IR::BFN::LoweredPacketRVal>();
     if (aFromPacket && bFromPacket)
@@ -136,14 +137,25 @@ computeSlices(const IR::Expression* phvBackedStorage, const PhvInfo& phv) {
 /// Helper class that splits extract operations into multiple smaller extracts,
 /// such that each extract writes to exactly one PHV container.
 struct ExtractSimplifier {
-    using ExtractSequence = std::vector<const IR::BFN::LoweredExtract*>;
+    const PhvInfo& phv;
+    const ClotInfo& clot;
+
+    ExtractSimplifier(const PhvInfo& phv, const ClotInfo& clot) : phv(phv), clot(clot) { }
+
+    using ExtractSequence = std::vector<const IR::BFN::LoweredExtractPhv*>;
 
     /// Add a new extract operation to the sequence.
-    void add(const IR::BFN::Extract* extract, const PhvInfo& phv) {
+    void add(const IR::BFN::Extract* extract) {
         LOG4("[ExtractSimplifier] adding: " << extract);
 
         std::vector<alloc_slice> slices;
         std::tie(std::ignore, slices) = computeSlices(extract->dest->field, phv);
+
+        if (auto c = clot.allocated(phv.field(extract->dest->field))) {
+            clotExtracts[c].push_back(extract);
+            return;
+        }
+
         if (slices.empty()) {
             BUG("Parser extract didn't receive a PHV allocation: %1%", extract);
             return;
@@ -201,7 +213,7 @@ struct ExtractSimplifier {
                 else
                     newSource = new IR::BFN::LoweredBufferRVal(byteFinalBufferRange);
 
-                auto* newExtract = new IR::BFN::LoweredExtract(slice.container, newSource);
+                auto* newExtract = new IR::BFN::LoweredExtractPhv(slice.container, newSource);
                 newExtract->debug.info.push_back(debugInfoFor(extract, slice,
                                                               bufferRange));
 
@@ -246,7 +258,7 @@ struct ExtractSimplifier {
                 auto* newSource =
                   new IR::BFN::LoweredConstantRVal(maskedValue);
                 auto* newExtract =
-                  new IR::BFN::LoweredExtract(slice.container, newSource);
+                  new IR::BFN::LoweredExtractPhv(slice.container, newSource);
                 newExtract->debug.info.push_back(debugInfoFor(extract, slice));
                 extractConstantByContainer[slice.container].push_back(newExtract);
             }
@@ -257,7 +269,7 @@ struct ExtractSimplifier {
     }
 
     template <typename BufferlikeRValType>
-    static const IR::BFN::LoweredExtract*
+    static const IR::BFN::LoweredExtractPhv*
     mergeExtractsFor(PHV::Container container, const ExtractSequence& extracts) {
         BUG_CHECK(!extracts.empty(), "Trying merge an empty sequence of extracts?");
         if (extracts.size() == 1)
@@ -297,7 +309,7 @@ struct ExtractSimplifier {
         // We only need to merge their debug info.
         const auto* finalBufferValue =
           new BufferlikeRValType(*toClosedRange(bufferRange));
-        auto* mergedExtract = new IR::BFN::LoweredExtract(container, finalBufferValue);
+        auto* mergedExtract = new IR::BFN::LoweredExtractPhv(container, finalBufferValue);
         for (auto* extract : extracts)
             mergedExtract->debug.mergeWith(extract->debug);
 
@@ -307,8 +319,8 @@ struct ExtractSimplifier {
     /// Convert the sequence of Extract operations that have been passed to
     /// `add()` so far into a sequence of LoweredExtract operations. Extracts
     /// that write to the same container are merged together.
-    IR::Vector<IR::BFN::LoweredExtract> lowerExtracts() {
-        IR::Vector<IR::BFN::LoweredExtract> loweredExtracts;
+    IR::Vector<IR::BFN::LoweredParserPrimitive> lowerExtracts() {
+        IR::Vector<IR::BFN::LoweredParserPrimitive> loweredExtracts;
 
         for (auto& item : extractFromPacketByContainer) {
             auto container = item.first;
@@ -339,7 +351,7 @@ struct ExtractSimplifier {
             // operate over the entire container, all we need to do is OR the
             // constants together.
             auto* mergedValue = new IR::BFN::LoweredConstantRVal(0);
-            auto* mergedExtract = new IR::BFN::LoweredExtract(container, mergedValue);
+            auto* mergedExtract = new IR::BFN::LoweredExtractPhv(container, mergedValue);
             for (auto* extract : extracts) {
                 auto* constantSource =
                   extract->source->to<IR::BFN::LoweredConstantRVal>();
@@ -351,6 +363,24 @@ struct ExtractSimplifier {
             loweredExtracts.push_back(mergedExtract);
         }
 
+        for (auto cx : clotExtracts) {
+            nw_bitinterval bitInterval;
+
+            for (auto extract : cx.second) {
+                if (auto* bufferSource = extract->source->to<IR::BFN::PacketRVal>())
+                    bitInterval = bitInterval.unionWith(bufferSource->bitInterval());
+                else
+                    BUG("not sure if CLOT can extract constant");
+            }
+
+            nw_bitrange bitrange = *toClosedRange(bitInterval);
+            nw_byterange byterange = bitrange.toUnit<RangeUnit::Byte>();
+
+            auto rval = new IR::BFN::LoweredPacketRVal(byterange);
+            auto extractClot = new IR::BFN::LoweredExtractClot(*(cx.first), rval);
+            loweredExtracts.push_back(extractClot);
+        }
+
         return loweredExtracts;
     }
 
@@ -360,6 +390,8 @@ struct ExtractSimplifier {
     std::map<PHV::Container, ExtractSequence> extractFromPacketByContainer;
     std::map<PHV::Container, ExtractSequence> extractFromBufferByContainer;
     std::map<PHV::Container, ExtractSequence> extractConstantByContainer;
+
+    std::map<const Clot*, std::vector<const IR::BFN::Extract*>> clotExtracts;
 };
 
 using LoweredParserIRStates = std::map<const IR::BFN::ParserState*,
@@ -370,7 +402,8 @@ using LoweredParserIRStates = std::map<const IR::BFN::ParserState*,
 /// Note that the new IR is just constructed here; ReplaceParserIR is what
 /// actually replaces the high-level IR with the lowered version.
 struct ComputeLoweredParserIR : public ParserInspector {
-    explicit ComputeLoweredParserIR(const PhvInfo& phv) : phv(phv) {
+    explicit ComputeLoweredParserIR(const PhvInfo& phv, const ClotInfo& clot) :
+        phv(phv), clot(clot) {
         // Initialize the map from high-level parser states to low-level parser
         // states so that null, which represents the end of the parser program
         // in the high-level IR, is mapped to null, which conveniently enough
@@ -406,11 +439,11 @@ struct ComputeLoweredParserIR : public ParserInspector {
 
         // Collect all the extract operations; we'll lower them as a group so we
         // can merge extracts that write to the same PHV containers.
-        ExtractSimplifier simplifier;
+        ExtractSimplifier simplifier(phv, clot);
         forAllMatching<IR::BFN::ParserPrimitive>(&state->statements,
                       [&](const IR::BFN::ParserPrimitive* prim) {
             if (auto* extract = prim->to<IR::BFN::Extract>()) {
-                simplifier.add(extract, phv);
+                simplifier.add(extract);
                 return;
             }
 
@@ -419,6 +452,7 @@ struct ComputeLoweredParserIR : public ParserInspector {
             loweredState->debug.info.push_back("unhandled: " +
                                                cstring::to_cstring(prim));
         });
+
         auto loweredStatements = simplifier.lowerExtracts();
 
         forAllMatching<IR::BFN::Select>(&state->selects,
@@ -467,6 +501,7 @@ struct ComputeLoweredParserIR : public ParserInspector {
     }
 
     const PhvInfo& phv;
+    const ClotInfo& clot;
 };
 
 /// Replace the high-level parser IR version of each parser's root node with its
@@ -510,8 +545,8 @@ struct ReplaceParserIR : public ParserTransform {
 /// Generate a lowered version of the parser IR in this program and swap it in
 /// for the existing representation.
 struct LowerParserIR : public PassManager {
-    explicit LowerParserIR(const PhvInfo& phv) {
-        auto* computeLoweredParserIR = new ComputeLoweredParserIR(phv);
+    explicit LowerParserIR(const PhvInfo& phv, const ClotInfo& clot) {
+        auto* computeLoweredParserIR = new ComputeLoweredParserIR(phv, clot);
         addPasses({
             computeLoweredParserIR,
             new ReplaceParserIR(computeLoweredParserIR->loweredStates)
@@ -522,7 +557,7 @@ struct LowerParserIR : public PassManager {
 /// Split deparser primitives as needed so that each deparser primitive operates
 /// on only one PHV container.
 struct LowerDeparserIR : public DeparserTransform {
-    explicit LowerDeparserIR(const PhvInfo& phv) : phv(phv) { }
+    explicit LowerDeparserIR(const PhvInfo& phv, const ClotInfo& clot) : phv(phv), clot(clot) { }
 
  private:
     const IR::Node* splitExpression(const IR::Expression* expr,
@@ -566,7 +601,7 @@ struct LowerDeparserIR : public DeparserTransform {
         return rv;
     }
 
-    const IR::Node* postorder(IR::BFN::Emit* emit) override {
+    const IR::Node* preorder(IR::BFN::Emit* emit) override {
         prune();
         bitrange bits;
         std::vector<alloc_slice> slices;
@@ -616,7 +651,40 @@ struct LowerDeparserIR : public DeparserTransform {
         return param;
     }
 
+    const IR::Node* preorder(IR::BFN::Deparser* deparser) override {
+        // replace Emits covered in a CLOT with EmitClot
+
+        IR::Vector<IR::BFN::DeparserPrimitive> newEmits;
+
+        for (auto e : deparser->emits) {
+           if (auto emit = e->to<IR::BFN::Emit>()) {
+               auto field = phv.field(emit->source);
+               if (auto c = clot.allocated(field)) {
+                   if (!newEmits.empty()) {
+                       if (auto lastEmitClot = newEmits.back()->to<IR::BFN::EmitClot>())
+                           if (lastEmitClot->clot.tag == c->tag)
+                               continue;
+                   }
+
+                   auto povBit = e->to<IR::BFN::Emit>()->povBit;
+                   auto clotEmit = new IR::BFN::EmitClot(*c, povBit);
+                   newEmits.pushBackOrAppend(clotEmit);
+               } else {
+                   newEmits.pushBackOrAppend(e);
+               }
+           } else {
+               newEmits.pushBackOrAppend(e);
+           }
+        }
+
+        auto* clone = deparser->clone();
+        clone->emits = newEmits;
+
+        return clone;
+    }
+
     const PhvInfo& phv;
+    const ClotInfo& clot;
 };
 
 /// Allocate sequences of parser primitives to one or more states while
@@ -639,8 +707,13 @@ class ExtractorAllocator {
         BUG_CHECK(byteDesiredShift >= 0,
                   "Splitting state %1% with negative shift", stateName);
 
-        for (auto* extract : match->statements)
-            extracts.push_back(extract);
+        for (auto* stmt : match->statements)
+            if (auto* e = stmt->to<IR::BFN::LoweredExtractPhv>())
+                extracts.push_back(e);
+            else if (auto* e = stmt->to<IR::BFN::LoweredExtractClot>())
+                extractClots.push_back(e);
+            else
+                BUG("unknown parser primitive type");
 
         // Sort the extract primitives by position in the input packet.
         std::sort(extracts.begin(), extracts.end(), isExtractEarlierInPacket);
@@ -660,15 +733,15 @@ class ExtractorAllocator {
      * @return a pair containing (1) the parser primitives that were allocated,
      * and (2) the shift that the new state should have.
      */
-    std::pair<IR::Vector<IR::BFN::LoweredExtract>, int> allocateOneState() {
+    std::pair<IR::Vector<IR::BFN::LoweredParserPrimitive>, int> allocateOneState() {
         auto& pardeSpec = Device::pardeSpec();
 
         // Allocate. We have a limited number of extractions of each size per
         // state. We also ensure that we don't overflow the input buffer.
         LOG3("Allocating extracts for state " << stateName);
 
-        IR::Vector<IR::BFN::LoweredExtract> allocatedExtractions;
-        std::vector<const IR::BFN::LoweredExtract*> remainingExtractions;
+        IR::Vector<IR::BFN::LoweredParserPrimitive> allocatedExtractions;
+        std::vector<const IR::BFN::LoweredExtractPhv*> remainingExtractions;
         nw_byteinterval remainingBytes;
 
         if (Device::currentDevice() == "Tofino") {
@@ -720,13 +793,20 @@ class ExtractorAllocator {
 
                 allocatedExtractions.push_back(extract);
             }
+
+            for (auto* extract : extractClots) {
+                // XXX(zma) assumes allocation takes care of
+                // the 2 CLOTs per state constraint
+                allocatedExtractions.push_back(extract);
+            }
+            extractClots.clear();
         }
 
         // Compute the actual shift for this state. If we allocated everything,
         // we use the desired shift. Otherwise, we want to shift enough to bring
         // the first remaining extraction to the beginning of the input buffer.
         const int byteActualShift = remainingBytes.empty()
-                                  ? byteDesiredShift
+                                  ? std::min(byteDesiredShift, pardeSpec.byteInputBufferSize())
                                   : std::min(byteDesiredShift, remainingBytes.loByte());
 
         BUG_CHECK(byteActualShift >= 0,
@@ -757,8 +837,8 @@ class ExtractorAllocator {
  private:
     /// Shift all input packet extracts in the sequence to the left by the given
     /// amount.
-    const IR::BFN::LoweredExtract*
-    shiftExtract(const IR::BFN::LoweredExtract* extract, int byteDelta) {
+    const IR::BFN::LoweredExtractPhv*
+    shiftExtract(const IR::BFN::LoweredExtractPhv* extract, int byteDelta) {
         auto* bufferSource = extract->source->to<IR::BFN::LoweredPacketRVal>();
         if (!bufferSource) return extract;
         const auto shiftedRange = bufferSource->range.shiftedByBytes(-byteDelta);
@@ -768,7 +848,8 @@ class ExtractorAllocator {
         return clone;
     }
 
-    std::vector<const IR::BFN::LoweredExtract*> extracts;
+    std::vector<const IR::BFN::LoweredExtractPhv*> extracts;
+    std::vector<const IR::BFN::LoweredExtractClot*> extractClots;
     cstring stateName;
     int byteDesiredShift;
 };
@@ -825,8 +906,9 @@ class SplitBigStates : public ParserModifier {
 /// hence need the "multiwrite" bit set).
 class ComputeMultiwriteContainers : public ParserModifier {
     bool preorder(IR::BFN::LoweredParserMatch* match) override {
-        for (auto* extract : match->statements)
-            writes[extract->dest->container]++;
+        for (auto* stmt : match->statements)
+            if (auto* extract = stmt->to<IR::BFN::LoweredExtractPhv>())
+                writes[extract->dest->container]++;
         return true;
     }
 
@@ -894,10 +976,10 @@ class ComputeBufferRequirements : public ParserModifier {
 
 }  // namespace
 
-LowerParser::LowerParser(const PhvInfo& phv) {
+LowerParser::LowerParser(const PhvInfo& phv, const ClotInfo& clot) {
     addPasses({
-        new LowerParserIR(phv),
-        new LowerDeparserIR(phv),
+        new LowerParserIR(phv, clot),
+        new LowerDeparserIR(phv, clot),
         new SplitBigStates,
         new ComputeMultiwriteContainers,
         new ComputeBufferRequirements

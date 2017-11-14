@@ -337,6 +337,28 @@ class Emit : DeparserPrimitive {
     Expression povBit;
 }
 
+/// A deparser emit operation, representing a copy by the deparser of the
+/// contents of some location (ultimately backed by a CLOT) to the
+/// output packet.
+class EmitClot : DeparserPrimitive {
+    dbprint {
+        out << "emit clot " << clot.tag << " if " << povBit->toString();
+    }
+
+    // XXX(seth): Just like for Extracts, it'd be ideal to constrain the type of
+    // `source` and `povBit` a little more, but for now we need to support
+    // TempVars and Slices in addition to Members.
+
+    // XXX(zma): EmitClot should really be a lowered IR class, since these
+    // are inferred from CLOT allocation.
+
+    Clot clot;
+
+    /// The POV bit controlling whether the copy happens. Must be backed by a
+    /// PHV container.
+    Expression povBit;
+}
+
 /// A deparser computed checksum operation. This instructs the deparser to
 /// compute the checksum of a group of fields and write the result into the
 /// output packet.

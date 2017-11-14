@@ -5,6 +5,7 @@
 #include "lib/log.h"
 #include "ir/ir.h"
 #include "bf-p4c/device.h"
+#include "bf-p4c/parde/clot_info.h"
 #include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
@@ -44,7 +45,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
     // collect information that we'll use to check container properties.
     for (auto& field : phv) {
         if (!uses.is_referenced(&field)) {
-            WARN_CHECK(field.alloc_i.empty(),
+            WARN_CHECK(field.alloc_i.empty() && !clot.allocated(&field) ,
                         "PHV allocation for unreferenced %1%field %2% (width %3%)",
                         field.bridged ? "bridged " : "",
                         cstring::to_cstring(field),
@@ -52,13 +53,17 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             continue;
         }
 
-        ERROR_CHECK(!field.alloc_i.empty(),
-                    "No PHV allocation for referenced field %1%",
+        ERROR_CHECK(!field.alloc_i.empty() || clot.allocated(&field),
+                    "No PHV or CLOT allocation for referenced field %1%",
                     cstring::to_cstring(field));
 
         ERROR_CHECK(!field.bridged || field.deparsed_i,
                     "Field is bridged, but not deparsed: %1%",
                     cstring::to_cstring(field));
+
+        // TODO(zma) add clot validation
+        if (clot.allocated(&field))
+            continue;
 
         bitvec assignedContainers;
         bitvec allocatedBits;

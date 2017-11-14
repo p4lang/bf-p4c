@@ -2,7 +2,11 @@
 
 #include <iostream>
 #include <sstream>
+
 #include "lib/exceptions.h"
+#include "lib/cstring.h"
+#include "ir/json_loader.h"
+#include "bf-p4c/phv/phv_fields.h"
 
 int Clot::tagCnt = 0;
 
@@ -25,6 +29,29 @@ Clot::Clot(cstring name) {
         BUG("Invalid CLOT '%s'", name);
 
     tag = v;
+}
+
+unsigned Clot::length() const {
+    unsigned len = 0;
+    for (auto f : all_fields)
+        len += (f->size + 7 / 8);
+    return len;
+}
+
+unsigned Clot::offset(const PHV::Field* field) const {
+    unsigned offset = 0;
+    bool found = false;
+
+    for (auto f : all_fields) {
+        if (f == field) {
+            found = true;
+            break;
+        }
+        offset += (f->size + 7) / 8;
+    }
+
+    BUG_CHECK(found, "field not in clot");
+    return offset;
 }
 
 void Clot::toJSON(JSONGenerator& json) const {

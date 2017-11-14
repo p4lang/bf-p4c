@@ -6,6 +6,7 @@
 #include "lib/symbitmatrix.h"
 
 class PhvInfo;
+class ClotInfo;
 
 namespace PHV {
 
@@ -24,11 +25,14 @@ namespace PHV {
  */
 class ValidateAllocation final : public Inspector {
  public:
-    ValidateAllocation(const PhvInfo& phv, const SymBitMatrix& mutually_exclusive_field_ids)
-        : phv(phv), mutually_exclusive_field_ids(mutually_exclusive_field_ids) { }
+    ValidateAllocation(const PhvInfo& phv, const ClotInfo& clot,
+                       const SymBitMatrix& mutually_exclusive_field_ids)
+        : phv(phv), clot(clot), mutually_exclusive_field_ids(mutually_exclusive_field_ids) { }
 
  private:
     const PhvInfo& phv;
+    const ClotInfo& clot;
+
     const SymBitMatrix& mutually_exclusive_field_ids;
     bool preorder(const IR::BFN::Pipe* pipe) override;
 };

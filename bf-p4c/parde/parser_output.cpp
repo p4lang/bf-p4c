@@ -101,8 +101,14 @@ struct ParserAsmSerializer : public ParserInspector {
 
         AutoIndent indentMatch(indent);
 
-        for (auto* extract : match->statements)
-            outputExtract(extract);
+        for (auto* stmt : match->statements) {
+            if (auto* extract = stmt->to<IR::BFN::LoweredExtractPhv>())
+                outputExtractPhv(extract);
+            else if (auto* extract = stmt->to<IR::BFN::LoweredExtractClot>())
+                outputExtractClot(extract);
+            else
+                BUG("unknown lowered parser primitive type");
+        }
 
         if (match->shift != 0)
             out << indent << "shift: " << match->shift << std::endl;
@@ -119,7 +125,7 @@ struct ParserAsmSerializer : public ParserInspector {
         out << std::endl;
     }
 
-    void outputExtract(const IR::BFN::LoweredExtract* extract) {
+    void outputExtractPhv(const IR::BFN::LoweredExtractPhv* extract) {
         // Generate the assembly that actually implements the extract.
         if (auto* source = extract->source->to<IR::BFN::LoweredBufferlikeRVal>()) {
             auto bytes = source->extractedBytes();
@@ -141,6 +147,17 @@ struct ParserAsmSerializer : public ParserInspector {
         }
 
         out << std::endl;
+    }
+
+    void outputExtractClot(const IR::BFN::LoweredExtractClot* extract) {
+        out << indent << "clot " << extract->dest.tag << " : ";
+
+        if (auto* source = extract->source->to<IR::BFN::LoweredPacketRVal>()) {
+            auto bytes = source->extractedBytes();
+            out << Range(bytes.lo, bytes.hi) << std::endl;
+        } else {
+            BUG("Can't generate assembly for: %1%", extract);
+        }
     }
 
     std::ostream& out;

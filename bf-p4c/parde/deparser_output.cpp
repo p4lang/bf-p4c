@@ -89,6 +89,18 @@ struct OutputDictionary : public Inspector {
         return false;
     }
 
+    bool preorder(const IR::BFN::EmitClot* emit) override {
+        AutoIndent autoIndent(indent);
+        out << indent << "clot " << emit->clot.tag << ":" << std::endl;
+        bitrange povAllocBits;
+        auto povBit = phv.field(emit->povBit, &povAllocBits);
+        AutoIndent fieldIndent(indent);
+        out << indent << "pov: " << canon_name(trim_asm_name(povBit->name)) << std::endl;
+        for (auto f : emit->clot.phv_fields)
+            out << indent << emit->clot.offset(f) << " : " <<  canon_name(f->name) << std::endl;
+        return false;
+    }
+
     OutputDictionary(std::ostream &out, const PhvInfo &phv, indent_t initialIndent)
       : out(out), phv(phv), indent(initialIndent) { }
 };

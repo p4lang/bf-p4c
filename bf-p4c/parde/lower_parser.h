@@ -3,6 +3,7 @@
 
 #include "ir/ir.h"
 
+class ClotInfo;
 class PhvInfo;
 
 /**
@@ -27,7 +28,7 @@ class PhvInfo;
  * @post The parser and deparser IR are replaced by lowered versions.
  */
 struct LowerParser : public PassManager {
-    explicit LowerParser(const PhvInfo& phv);
+    explicit LowerParser(const PhvInfo& phv, const ClotInfo& clot);
 };
 
 #endif /* EXTENSIONS_BF_P4C_PARDE_LOWER_PARSER_H_ */
