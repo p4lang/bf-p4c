@@ -42,6 +42,28 @@ if (NOT HARLYN_STF)
   set (testExtraArgs "${testExtraArgs} -norun")
 endif()
 
+# tests will succeed when it finds the "reason" regex
+macro(p4c_add_codegen_success_reason reason __tests)
+  foreach (t ${__tests})
+    set (__testname "codegen/${t}")
+    set_tests_properties (${__testname} PROPERTIES
+      PASS_REGULAR_EXPRESSION "${reason}"
+      WILL_FAIL 0)
+  endforeach()
+endmacro(p4c_add_codegen_success_reason)
+
+# tests will fail when it finds the "reason" regex
+macro(p4c_add_codegen_fail_reason reason __tests)
+  foreach (t ${__tests})
+    set (__testname "codegen/${t}")
+    set_tests_properties (${__testname} PROPERTIES
+      FAIL_REGULAR_EXPRESSION "${reason}"
+      WILL_FAIL 0)
+    p4c_add_test_label("codegen" "XFAIL" ${t})
+  endforeach()
+endmacro(p4c_add_codegen_fail_reason)
+
+
 if (PTF_REQUIREMENTS_MET)
   set (testExtraArgs "${testExtraArgs} -ptf")
   if (ENABLE_STF2PTF)
@@ -98,4 +120,3 @@ if (HARLYN_STF)
   endforeach()   # ts
 endif(HARLYN_STF)
 endmacro(p4c_add_bf_backend_tests)
-
