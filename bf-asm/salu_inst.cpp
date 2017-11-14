@@ -19,7 +19,7 @@ struct operand {
         virtual bool equiv(const Base *) const = 0;
         virtual const char *kind() const = 0;
         virtual Base *lookup(Base *&) { return this; }
-        virtual void pass1(Stateful *) { }
+        virtual void pass1(StatefulTable *) { }
     } *op;
     struct Const : public Base {
         long value;
@@ -35,7 +35,7 @@ struct operand {
     struct Phv : public Base {
         virtual Phv *clone() const = 0;
         Phv(int lineno) : Base(lineno) {}
-        virtual int phv_index(Stateful *tbl) = 0;
+        virtual int phv_index(StatefulTable *tbl) = 0;
     };
     struct PhvReg : public Phv {
         ::Phv::Ref      reg;
@@ -47,7 +47,7 @@ struct operand {
                 return reg == a->reg;
             } else return false; }
         const char *kind() const override { return "phv_reg"; }
-        void pass1(Stateful *tbl) override {
+        void pass1(StatefulTable *tbl) override {
             if (!reg.check()) return;
             int size = tbl->format->begin()->second.size/8U;
             if (!tbl->input_xbar) {
@@ -65,7 +65,7 @@ struct operand {
                       reg.desc().c_str(), tbl->name());
             else
                 tbl->phv_byte_mask |= ((1U << (reg->size() + 7)/8U) - 1) << (byte - 8); }
-        int phv_index(Stateful *tbl) override {
+        int phv_index(StatefulTable *tbl) override {
             return tbl->find_on_ixbar(*reg, tbl->input_xbar->match_group()) > 8; }
     };
     // Operand which directly accesses phv(hi/lo) from Input Xbar
@@ -82,7 +82,7 @@ struct operand {
                 return pi == a->pi;
             } else return false; }
         const char *kind() const override { return "phv_ixb"; }
-        int phv_index(Stateful *tbl) override { return pi; }
+        int phv_index(StatefulTable *tbl) override { return pi; }
     };
     struct Memory : public Base {
         Table                     *tbl;
@@ -341,7 +341,7 @@ bool AluOP::equiv(Instruction *a_) {
 }
 
 Instruction *AluOP::pass1(Table *tbl_, Table::Actions::Action *act) {
-    auto tbl = dynamic_cast<Stateful *>(tbl_);
+    auto tbl = dynamic_cast<StatefulTable *>(tbl_);
     if (slot < 0 && act->slot_use[slot = (dest ? ALU1HI : ALU1LO)])
         slot = dest ? ALU2HI : ALU2LO;
     auto k1 = srca.to<operand::Const>();
@@ -485,7 +485,7 @@ bool CmpOP::equiv(Instruction *a_) {
 }
 
 Instruction *CmpOP::pass1(Table *tbl_, Table::Actions::Action *act) {
-    auto tbl = dynamic_cast<Stateful *>(tbl_);
+    auto tbl = dynamic_cast<StatefulTable *>(tbl_);
     slot = dest;
     if (srca) srca->pass1(tbl);
     if (srcb) srcb->pass1(tbl);

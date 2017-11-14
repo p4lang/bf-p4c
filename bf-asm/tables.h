@@ -29,7 +29,7 @@ struct Instruction;
 class InputXbar;
 class MatchTable;
 class SelectionTable;
-class Stateful;
+class StatefulTable;
 class Synth2Port;
 class Stage;
 struct Ref;
@@ -116,11 +116,11 @@ public:
         operator Table*() const { return ::get(all, name); }
         Table *operator->() const { return ::get(all, name); }
         bool set() const { return lineno >= 0; }
-        bool operator==(const Table *t) { return name == t->name_; }
-        bool operator==(const char *t) { return name == t; }
-        bool operator==(const std::string &t) { return name == t; }
-        bool operator==(const Ref &a) { return name == a.name; }
-        bool check() {
+        bool operator==(const Table *t) const { return name == t->name_; }
+        bool operator==(const char *t) const { return name == t; }
+        bool operator==(const std::string &t) const { return name == t; }
+        bool operator==(const Ref &a) const { return name == a.name; }
+        bool check() const {
             if (set() && !*this)
                 error(lineno, "No table named %s", name.c_str());
             return *this; }
@@ -216,33 +216,56 @@ public:
 
     struct Call : Ref { /* a Ref with arguments */
         struct Arg {
-            enum { Field, HashDist }    type;
+            enum { Field, HashDist, Const, Name }    type;
         private:
             union {
                 Format::Field           *fld;
                 HashDistribution        *hd;
+                intptr_t                val;
+                char                    *str;
             };
         public:
+            Arg() = delete;
+            Arg(const Arg &a) : type(a.type) {
+                memcpy(this, &a, sizeof(*this));
+                if (type == Name) str = strdup(str); }
+            Arg(Arg &&a) : type(a.type) {
+                memcpy(this, &a, sizeof(*this));
+                a.type = Const; }
+            Arg &operator=(const Arg &a) {
+                if (type == Name) free(str);
+                memcpy(this, &a, sizeof(*this));
+                if (type == Name) str = strdup(str); }
+            Arg &operator=(Arg &&a) {
+                std::swap(type, a.type);
+                std::swap(val, a.val); }
             Arg(Format::Field *f) : type(Field) { fld = f; }
             Arg(HashDistribution *hdist) : type(HashDist) { hd = hdist; }
-            bool operator==(const Arg &a) const { return type == a.type && fld == a.fld; }
-            bool operator!=(const Arg &a) const { return type != a.type || fld != a.fld; }
-            Format::Field *field() { return type == Field ? fld : 0; }
-            HashDistribution *hash_dist() { return type == HashDist ? hd : 0; }
-            operator bool() { return fld != nullptr; }
+            Arg(int v) : type(Const) { val = v; }
+            Arg(const char *n) : type(Name) { str = strdup(n); }
+            ~Arg() { if (type == Name) free(str); }
+            bool operator==(const Arg &a) const {
+                if (type != a.type) return false;
+                switch(type) {
+                    case Field: return fld == a.fld;
+                    case HashDist: return hd == a.hd;
+                    case Const: return val == a.val;
+                    case Name: return !strcmp(str, a.str);
+                    default: assert(0); } }
+            bool operator!=(const Arg &a) const { return !operator==(a); }
+            Format::Field *field() const { return type == Field ? fld : nullptr; }
+            HashDistribution *hash_dist() const { return type == HashDist ? hd : nullptr; }
+            const char *name() const { return type == Name ? str : nullptr; }
+            int value() const { return type == Const ? val : 0; }
+            operator bool() const { return fld != nullptr; }
             unsigned size() const;
         };
         std::vector<Arg>        args;
         void setup(const value_t &v, Table *tbl);
         Call() {}
         Call(const value_t &v, Table *tbl) { setup(v, tbl); }
-        // Action Table has a default action argument specifying action bits
-        // for both direct/indirect access. All other tables have arguments only
-        // if they are indirect
-        bool is_indirect() const {
-            if ((*this)->to<ActionTable>())
-                return (args.size() > 1);
-            return (args.size() > 0); }
+        bool operator==(const Call &a) const { return Ref::operator==(a) && args == a.args; }
+        bool operator!=(const Call &a) const { return !(*this == a); }
     };
 
     struct p4_param {
@@ -286,6 +309,7 @@ public:
             p4_params                           p4_params_list;
             bool                                default_allowed = false;
             std::string                         default_disallowed_reason = "";
+            std::vector<Call>                   attached;
             Action(Table *, Actions *, pair_t &);
             Action(const char *n, int l) : name(n), lineno(l) {}
             bool equiv(Action *a);
@@ -298,6 +322,7 @@ public:
                     if (e.name == param) return true;
                 return false;
             }
+            void pass1(Table *tbl);
             friend std::ostream &operator<<(std::ostream &, const alias_t &);
             friend std::ostream &operator<<(std::ostream &, const Action &);
         };
@@ -379,8 +404,8 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     virtual const AttachedTables *get_attached() const { return 0; }
     virtual const GatewayTable *get_gateway() const { return 0; }
     virtual SelectionTable *get_selector() const { return 0; }
-    virtual void set_stateful (Stateful *s) { assert(0); }
-    virtual Stateful *get_stateful() const { return 0; }
+    virtual void set_stateful (StatefulTable *s) { assert(0); }
+    virtual StatefulTable *get_stateful() const { return 0; }
     virtual const Call &get_action() const { return action; }
     virtual int direct_shiftcount() { assert(0); }
     virtual int indirect_shiftcount() { assert(0); }
@@ -482,6 +507,9 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     void add_zero_padding_fields(Table::Format *format,
                                  Table::Actions::Action *act = nullptr,
                                  unsigned format_width = 64);
+    void get_cjson_source(const std::string &field_name,
+			     const Table::Actions::Action *act,
+		             std::string &source, std::string &imm_name); 
     // Result physical buses should be setup for
     // Exact/Hash/MatchwithNoKey/ATCAM/Ternary tables
     void add_result_physical_buses(json::map &stage_tbl);
@@ -514,10 +542,13 @@ public:
 
 struct AttachedTables {
     Table::Call                 selector;
-    std::vector<Table::Call>    stats, meter, stateful;
+    std::vector<Table::Call>    stats, meters, statefuls;
     SelectionTable *get_selector() const;
+    StatefulTable *get_stateful(std::string name = "") const;
     void pass1(MatchTable *self);
     template<class REGS> void write_merge_regs(REGS &regs, MatchTable *self, int type, int bus);
+    template<class REGS> void write_tcam_merge_regs(REGS &regs, MatchTable *self, int bus,
+                                                    int tcam_shift);
     bool run_at_eop();
 };
 
@@ -603,6 +634,8 @@ protected:
     std::vector<std::vector<int>> word_info;    /* which format group corresponds to each
                                                  * match group in each word */
     int         mgm_lineno = -1;                /* match_group_map lineno */
+    template<class REGS>
+    void write_attached_merge_regs(REGS &regs, int bus, int word, int word_group);
 public:
     Format::Field *lookup_field(const std::string &n, const std::string &act = "") override;
     void setup_word_ixbar_group();
@@ -631,6 +664,7 @@ DECLARE_TABLE_TYPE(ExactMatchTable, SRamMatchTable, "exact_match",
     void alloc_vpns() override;
 public:
     SelectionTable *get_selector() const override { return attached.get_selector(); }
+    StatefulTable *get_stateful() const override { return attached.get_stateful(); }
     using Table::gen_memory_resource_allocation_tbl_cfg;
     std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(Way &);
     void add_field_to_pack_format(json::vector &field_list, int basebit, std::string name,
@@ -686,6 +720,8 @@ public:
         return indirect ? indirect->get_attached() : &attached; }
     SelectionTable *get_selector() const override {
         return indirect ? indirect->get_selector() : 0; }
+    StatefulTable *get_stateful() const override {
+        return indirect ? indirect->get_stateful() : 0; }
     std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(
             const char *type, std::vector<Layout> &layout, bool skip_spare_bank=false) override;
     Call &action_call() override { return indirect ? indirect->action : action; }
@@ -734,12 +770,10 @@ DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
         if (match_table) rv.insert(match_table);
         return rv; }
     SelectionTable *get_selector() const override { return attached.get_selector(); }
+    StatefulTable *get_stateful() const override { return attached.get_stateful(); }
     template<class REGS> void write_merge_regs(REGS &regs, int type, int bus) {
         attached.write_merge_regs(regs, match_table, type, bus); }
     FOR_ALL_TARGETS(FORWARD_VIRTUAL_TABLE_WRITE_MERGE_REGS)
-    void add_field_to_pack_format(json::vector &field_list, int basebit, std::string name,
-                                  const Table::Format::Field &field,
-                                  const Table::Actions::Action *act) override;
     int unitram_type() override { return UnitRam::TERNARY_INDIRECTION; }
 public:
     unsigned address_shift() const { return std::min(5U, format->log2size - 2); }
@@ -768,6 +802,8 @@ DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,
     std::set<MatchTable *> get_match_tables() { return match_tables; }
     SelectionTable *get_selector() const {
         return match_tables.size() == 1 ? (*match_tables.begin())->get_selector() : 0; }
+    StatefulTable *get_stateful() const {
+        return match_tables.size() == 1 ? (*match_tables.begin())->get_stateful() : 0; }
     Call &action_call() {
         return match_tables.size() == 1 ? (*match_tables.begin())->action_call() : action; }
     int memunit(int r, int c) { return r*6 + c; }
@@ -782,6 +818,7 @@ protected:
 public:
     std::string get_per_flow_enable_param() { return per_flow_enable_param; }
     bool get_per_flow_enable() { return per_flow_enable; }
+    bool is_direct() const { return direct; }
 )
 
 DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",
@@ -862,6 +899,8 @@ public:
     const GatewayTable *get_gateway() const override { return this; }
     SelectionTable *get_selector() const override {
         return match_table ? match_table->get_selector() : 0; }
+    StatefulTable *get_stateful() const override {
+        return match_table ? match_table->get_stateful() : 0; }
     bool empty_match() const { return match.empty() && xor_match.empty(); }
     unsigned input_use() const;
 )
@@ -874,7 +913,7 @@ DECLARE_TABLE_TYPE(SelectionTable, AttachedTable, "selection",
     int                 min_words = -1, max_words = -1;
     int                 selection_hash = -1;
 public:
-    Stateful*           bound_stateful = nullptr;
+    StatefulTable*           bound_stateful = nullptr;
     table_type_t table_type() override { return SELECTION; }
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) override {
         width = period = 1; depth = layout_size(); period_name = 0; }
@@ -888,8 +927,8 @@ public:
     unsigned meter_group() const { return layout.at(0).row/4U; }
     int home_row() const override { return layout.at(0).row | 3; }
     int unitram_type() override { return UnitRam::SELECTOR; }
-    Stateful *get_stateful() const override { return bound_stateful; }
-    void set_stateful(Stateful *s) override { bound_stateful = s; }
+    StatefulTable *get_stateful() const override { return bound_stateful; }
+    void set_stateful(StatefulTable *s) override { bound_stateful = s; }
 )
 
 class IdletimeTable : public Table {
@@ -977,7 +1016,7 @@ public:
     void add_cfg_reg(json::vector &cfg_cache, std::string full_name, std::string name, unsigned val, unsigned width);
 )
 
-DECLARE_TABLE_TYPE(Stateful, Synth2Port, "stateful",
+DECLARE_TABLE_TYPE(StatefulTable, Synth2Port, "stateful",
     table_type_t table_type() override { return STATEFUL; }
     template<class REGS> void write_merge_regs(REGS &regs, MatchTable *match, int type, int bus,
                                                const std::vector<Call::Arg> &args);
@@ -1001,13 +1040,6 @@ public:
     int get_const(long v);
     bool is_dual_mode() { return dual_mode; }
     int home_row() const override { return layout.at(0).row | 3; }
-    int indirect_shiftcount() override;
-    unsigned get_instruction_count() {
-        unsigned instr_count = 0;
-        if (actions) {
-            for (auto &a : *actions) { //will have only 1 action
-                for (auto &i : a.instr) ++instr_count; } }
-        return instr_count; }
 )
 
 #endif /* _tables_h_ */

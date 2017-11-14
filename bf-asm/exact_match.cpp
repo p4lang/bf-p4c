@@ -449,39 +449,7 @@ template<class REGS> void ExactMatchTable::write_regs(REGS &regs) {
             if (idletime)
                 merge.mau_idletime_adr_exact_shiftcount[bus][word_group] =
                     68 - idletime->precision_shift();
-            for (auto &st : attached.stats) {
-                if (st.args.empty())
-                    merge.mau_stats_adr_exact_shiftcount[bus][word_group] = st->direct_shiftcount();
-                else if (group_info[group].overhead_word == (int)word) {
-                    assert(st.args[0].field()->by_group[group]->bits[0].lo/128U == word);
-                    merge.mau_stats_adr_exact_shiftcount[bus][word_group] =
-                        st.args[0].field()->by_group[group]->bits[0].lo%128U + st->indirect_shiftcount();
-                } else if (options.match_compiler) {
-                    /* unused, so should not be set... */
-                    merge.mau_stats_adr_exact_shiftcount[bus][word_group] = 7; }
-                break; /* all must be the same, only config once */ }
-            for (auto &m : attached.meter) {
-                if (m.args.empty()) {
-                    merge.mau_meter_adr_exact_shiftcount[bus][word_group] = m->direct_shiftcount() + 16;
-                    if (idletime)
-                        merge.mau_idletime_adr_exact_shiftcount[bus][word_group] = m->direct_shiftcount();
-                } else if (group_info[group].overhead_word == (int)word) {
-                    if (m.args[0].type == Call::Arg::Field) {
-                        assert(m.args[0].field()->by_group[group]->bits[0].lo/128U == word);
-                        merge.mau_meter_adr_exact_shiftcount[bus][word_group] =
-                            m.args[0].field()->by_group[group]->bits[0].lo%128U + 16;
-                        if (idletime)
-                            merge.mau_idletime_adr_exact_shiftcount[bus][word_group] =
-                                m.args[0].field()->by_group[group]->bits[0].lo%128U;
-                    } else {
-                        assert(m.args[0].type == Call::Arg::HashDist);
-                        merge.mau_meter_adr_exact_shiftcount[bus][word_group] = 0; }
-                } else if (options.match_compiler) {
-                    /* unused, so should not be set... */
-                    merge.mau_meter_adr_exact_shiftcount[bus][word_group] = 16;
-                    if (idletime)
-                        merge.mau_idletime_adr_exact_shiftcount[bus][word_group] = 0; }
-                break; /* all must be the same, only config once */ } }
+            write_attached_merge_regs(regs, bus, word, word_group); }
         for (auto col : row.cols) {
             int word_group = 0;
             for (int group : word_info[word]) {
@@ -569,14 +537,12 @@ void ExactMatchTable::add_field_to_pack_format(json::vector &field_list, int bas
         int msb_mem_word_idx = piece.hi / MEM_WORD_WIDTH;
         int offset = piece.lo % MEM_WORD_WIDTH;
         while(mw != match_by_bit.end() &&  mw->first < bit + piece.size()) {
-            std::string source = "spec";
+            std::string source = "";
             std::string immediate_name = "";
             std::string mw_name = mw->second.name();
-            if (mw_name == "version")
-                source = "version";
-            else if (mw_name == "immediate") {
-                source = "immediate";
-                immediate_name = name; }
+            get_cjson_source(mw_name, act, source, immediate_name);
+            if (source == "")
+                error(lineno, "Cannot determine proper source for field %s", name.c_str());
             int hi = std::min((unsigned)mw->second->size()-1, bit+piece.size()-mw->first-1);
             int width = hi - lo + 1;
             field_list.push_back( json::map {
@@ -674,7 +640,7 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
         json::vector &selection_table_refs = tbl["selection_table_refs"] = json::vector();
         add_reference_table(selection_table_refs, a->selector);
         json::vector &meter_table_refs = tbl["meter_table_refs"] = json::vector();
-        for (auto &m : a->meter) { add_reference_table(meter_table_refs, m); }
+        for (auto &m : a->meters) { add_reference_table(meter_table_refs, m); }
         json::vector &statistics_table_refs = tbl["statistics_table_refs"] = json::vector();
         for (auto &s : a->stats) { add_reference_table(statistics_table_refs, s); } }
 }

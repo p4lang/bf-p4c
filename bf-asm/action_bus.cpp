@@ -212,12 +212,12 @@ void ActionBus::pass1(Table *tbl) {
                         ok = false; }
                 } else {
                     auto att = tbl->get_attached();
-                    if (!att || att->meter.empty())
+                    if (!att || att->meters.empty())
                         error(lineno, "No meter table attached to %s", tbl->name());
-                    else if (att->meter.size() > 1)
+                    else if (att->meters.size() > 1)
                         error(lineno, "Multiple meter tables attached to %s", tbl->name());
                     else
-                        slot.data[Source(att->meter.at(0))] = it->second; }
+                        slot.data[Source(att->meters.at(0))] = it->second; }
                 it = slot.data.erase(it);
             } else {
                 ++it; } }

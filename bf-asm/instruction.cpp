@@ -19,7 +19,6 @@ Instruction *Instruction::decode(Table *tbl, const Table::Actions::Action *act,
         if (auto *d = ::get(Instruction::Decode::opcode[tbl->instruction_set()], opname)) {
             if (d->type_suffix)
                 return d->decode(tbl, act, op); } }
-    error(op[0].lineno, "Unknown instruction %s", op[0].s);
     return 0;
 }
 

@@ -90,6 +90,7 @@ enum METER_ACCESS_TYPE {
 };
 
 /* constants for various config params */
+#include <math.h>
 #undef OVERFLOW         /* get rid of global preproc define from math.h */
 namespace UnitRam {
     enum {

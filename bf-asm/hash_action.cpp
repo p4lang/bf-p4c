@@ -35,7 +35,7 @@ void HashActionTable::pass1() {
     if (actions) {
         assert(action.args.size() == 0);
         if (auto *sel = lookup_field("action"))
-            action.args.push_back(sel);
+            action.args.emplace_back(sel);
         else if ((actions->count() > 1 && default_action.empty())
                || (actions->count() > 2 && !default_action.empty()))
             error(lineno, "No field 'action' to select between multiple actions in "
@@ -130,7 +130,7 @@ void HashActionTable::gen_tbl_cfg(json::vector &out) {
     const char *stage_tbl_type = "match_with_no_key";
     size = 1;
     if (auto act = this->get_action()) {
-        for (auto arg : act.args) {
+        for (auto &arg : act.args) {
             if (arg.hash_dist()){
                 stage_tbl_type = "hash_action";
                 size = 1 + hash_dist[0].mask; } } }
@@ -162,10 +162,9 @@ void HashActionTable::gen_tbl_cfg(json::vector &out) {
     json::vector &stateful_table_refs = tbl["stateful_table_refs"] = json::vector();
     json::vector &action_data_table_refs = tbl["action_data_table_refs"] = json::vector();
     if (auto a = get_attached()) {
-        if (a->meter.size() > 0) {
-            for (auto m : a->meter)
-                add_reference_table(meter_table_refs, m); }
-            add_reference_table(selection_table_refs, a->selector); }
+        for (auto m : a->meters)
+            add_reference_table(meter_table_refs, m);
+        add_reference_table(selection_table_refs, a->selector); }
     add_reference_table(action_data_table_refs, action);
     // Add hash functions
     json::vector &hash_functions = stage_tbl["hash_functions"] = json::vector();

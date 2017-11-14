@@ -31,10 +31,12 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
   )
 
   # BRIG-327
-  p4c_add_xfail_reason("tofino"
-    "mismatch from expected[(]01[)] at byte 0xe"
-    extensions/p4_tests/p4_14/stateful3.p4
-  )
+  # bug isn't fixed yet, but the test currently passes! with
+  # many error messages from the model
+  #p4c_add_xfail_reason("tofino"
+  #  "mismatch from expected[(]01[)] at byte 0xe"
+  #  extensions/p4_tests/p4_14/stateful3.p4
+  #)
 
   p4c_add_xfail_reason("tofino"
     "mismatch from expected.*at byte 0x"

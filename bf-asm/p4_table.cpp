@@ -107,7 +107,7 @@ json::map *P4Table::base_tbl_cfg(json::vector &out, int size, Table *table) {
                 stats["how_referenced"] = tblcall.args.empty() ? "direct" : "indirect";
                 vec->push_back(std::move(stats)); }
             vec = 0;
-            for (auto &tblcall : attached->meter) {
+            for (auto &tblcall : attached->meters) {
                 if (!vec) vec = &(tbl["meter_table_refs"] = json::vector());
                 json::map meter;
                 meter["name"] = tblcall->p4_name();

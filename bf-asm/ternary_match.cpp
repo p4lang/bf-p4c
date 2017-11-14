@@ -138,7 +138,7 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
         if (indirect_bus >= 0)
             error(lineno, "Table %s has both ternary indirect table and explicit indirect bus",
                   name());
-        if (!attached.stats.empty() || !attached.meter.empty())
+        if (!attached.stats.empty() || !attached.meters.empty() || !attached.statefuls.empty())
             error(lineno, "Table %s has ternary indirect table and directly attached stats/meters"
                   " -- move them to indirect table", name());
     } else if (action.set() && actions)
@@ -310,7 +310,7 @@ void TernaryMatchTable::write_regs(REGS &regs) {
             shift_en.actiondata_adr_payload_shifter_en = 1;
         if (!attached.stats.empty())
             shift_en.stats_adr_payload_shifter_en = 1;
-        if (!attached.meter.empty())
+        if (!attached.meters.empty() || !attached.statefuls.empty())
             shift_en.meter_adr_payload_shifter_en = 1;
         merge.tind_bus_prop[indirect_bus].tcam_piped = 1;
         merge.tind_bus_prop[indirect_bus].thread = gress;
@@ -336,23 +336,7 @@ void TernaryMatchTable::write_regs(REGS &regs) {
                     ((1U << action.args[1].size()) - 1) << lo_huffman_bits;
                 merge.mau_actiondata_adr_tcam_shiftcount[indirect_bus] =
                     action.args[1].field()->bits[0].lo + 5 - lo_huffman_bits; } }
-        for (auto &st : attached.stats) {
-            if (st.args.empty())
-                merge.mau_stats_adr_tcam_shiftcount[indirect_bus] = st->direct_shiftcount();
-            else
-                merge.mau_stats_adr_tcam_shiftcount[indirect_bus] = st.args[0].field()->bits[0].lo + 7;
-            break; /* all must be the same, only config once */ }
-        for (auto &m : attached.meter) {
-            if (m.args.empty()) {
-                merge.mau_meter_adr_tcam_shiftcount[indirect_bus] = m->direct_shiftcount() + 16;
-                merge.mau_idletime_adr_tcam_shiftcount[indirect_bus] = m->direct_shiftcount();
-            } else if (m.args[0].type == Call::Arg::Field) {
-                merge.mau_meter_adr_tcam_shiftcount[indirect_bus] = m.args[0].field()->bits[0].lo + 16;
-                merge.mau_idletime_adr_tcam_shiftcount[indirect_bus] = m.args[0].field()->bits[0].lo;
-            } else {
-                assert(m.args[0].type == Call::Arg::HashDist);
-                merge.mau_meter_adr_tcam_shiftcount[indirect_bus] = 0; }
-            break; /* all must be the same, only config once */ }
+        attached.write_tcam_merge_regs(regs, this, indirect_bus, 0);
     }
     if (actions) actions->write_regs(regs, this);
     if (gateway) gateway->write_regs(regs);
@@ -509,11 +493,11 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
             tbl["default_selector_value"] = 0; //FIXME-JSON
             add_reference_table(selection_table_refs, a->selector);
             json::vector &meter_table_refs = tbl["meter_table_refs"] = json::vector();
-            for (auto &m : a->meter) { add_reference_table(meter_table_refs, m); }
+            for (auto &m : a->meters) { add_reference_table(meter_table_refs, m); }
             json::vector &stats_table_refs = tbl["statistics_table_refs"] = json::vector();
             for (auto &s : a->stats) { add_reference_table(stats_table_refs, s); }
             json::vector &stateful_table_refs = tbl["stateful_table_refs"] = json::vector();
-            for (auto &s : a->stateful) { add_reference_table(stateful_table_refs, s); }
+            for (auto &s : a->statefuls) { add_reference_table(stateful_table_refs, s); }
         }
         json::vector &action_data_table_refs = tbl["action_data_table_refs"] = json::vector();
         add_reference_table(action_data_table_refs, indirect->action);
@@ -584,13 +568,13 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "meter") {
             if (kv.value.type == tVEC)
                 for (auto &v : kv.value.vec)
-                    attached.meter.emplace_back(v, this);
-            else attached.meter.emplace_back(kv.value, this);
+                    attached.meters.emplace_back(v, this);
+            else attached.meters.emplace_back(kv.value, this);
         } else if (kv.key == "stateful") {
             if (kv.value.type == tVEC)
                 for (auto &v : kv.value.vec)
-                    attached.stateful.emplace_back(v, this);
-            else attached.stateful.emplace_back(kv.value, this);
+                    attached.statefuls.emplace_back(v, this);
+            else attached.statefuls.emplace_back(kv.value, this);
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     value_desc(kv.key), name()); }
@@ -727,32 +711,9 @@ template<class REGS> void TernaryIndirectTable::write_regs(REGS &regs) {
         if (match_table->idletime)
             merge.mau_idletime_adr_tcam_shiftcount[bus] =
                     66 + format->log2size - match_table->idletime->precision_shift();
-        for (auto &st : attached.stats) {
-            if (st.args.empty())
-                merge.mau_stats_adr_tcam_shiftcount[bus] = st->direct_shiftcount() + tcam_shift;
-            else
-                merge.mau_stats_adr_tcam_shiftcount[bus] = st.args[0].field()->bits[0].lo + 7;
-            break; /* all must be the same, only config once */ }
-        for (auto &m : attached.meter) {
-            if (m.args.empty()) {
-                merge.mau_meter_adr_tcam_shiftcount[bus] = m->direct_shiftcount() + tcam_shift + 16;
-                merge.mau_idletime_adr_tcam_shiftcount[bus] = m->direct_shiftcount() + tcam_shift;
-            } else if (m.args[0].type == Call::Arg::Field) {
-                merge.mau_meter_adr_tcam_shiftcount[bus] = m.args[0].field()->bits[0].lo + 16;
-                merge.mau_idletime_adr_tcam_shiftcount[bus] = m.args[0].field()->bits[0].lo;
-            } else {
-                assert(m.args[0].type == Call::Arg::HashDist);
-                merge.mau_meter_adr_tcam_shiftcount[bus] = 0; }
-            break; /* all must be the same, only config once */ }
+        attached.write_tcam_merge_regs(regs, match_table, bus, tcam_shift);
     }
     if (actions) actions->write_regs(regs, this);
-}
-
-void TernaryIndirectTable::add_field_to_pack_format(json::vector &field_list, int basebit,
-                                                    std::string name,
-                                                    const Table::Format::Field &field,
-                                                    const Table::Actions::Action *act) {
-    Table::add_field_to_pack_format(field_list, basebit, name, field, act);
 }
 
 void TernaryIndirectTable::gen_tbl_cfg(json::vector &out) {

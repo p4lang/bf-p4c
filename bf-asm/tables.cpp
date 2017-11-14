@@ -55,9 +55,8 @@ void Table::Call::setup(const value_t &val, Table *tbl) {
         return; }
     Ref::operator=(val[0]);
     for (int i = 1; i < val.vec.size; i++) {
-        Format::Field *arg = 0;
-        if (val[i].type == tINT && val[i].i == 0)
-            ; // ok
+        if (val[i].type == tINT)
+            args.emplace_back(val[i].i);
         else if (val[i].type == tCMD && val[i] == "hash_dist") {
             if (PCHECKTYPE(val[i].vec.size > 1, val[i][1], tINT)) {
                 bool ok = false;
@@ -69,13 +68,14 @@ void Table::Call::setup(const value_t &val, Table *tbl) {
                 if (!ok)
                     error(val[i].lineno, "hash_dist %d not defined in table %s", val[i][1].i,
                           tbl->name()); }
-            continue; }
-        else if (CHECKTYPE(val[i], tSTR) &&
-            !(arg = tbl->lookup_field(val[i].s)))
-            error(val[i].lineno, "No field named %s in format for %s", val[i].s, tbl->name());
-        if (arg && arg->bits.size() != 1)
-            error(val[i].lineno, "arg fields can't be split in format");
-        args.emplace_back(arg); }
+        } else if (!CHECKTYPE(val[i], tSTR)) {
+            ;  // syntax error message emit by CHEKCTYPE
+        } else if (auto arg = tbl->lookup_field(val[i].s)) {
+            if (arg->bits.size() != 1)
+                error(val[i].lineno, "arg fields can't be split in format");
+            args.emplace_back(arg);
+        } else {
+            args.emplace_back(val[i].s); } }
     lineno = val.lineno;
 }
 
@@ -85,6 +85,9 @@ unsigned Table::Call::Arg::size() const {
         return fld ? fld->size : 0;
     case HashDist:
         return hd ? hd->expand >= 0 ? 23 : 16 : 0;
+    case Const:
+    case Name:
+        return 0;
     default:
         assert(0);
     }
@@ -391,11 +394,17 @@ bool MatchTable::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::t
                 attached.stats.emplace_back(v, this);
         else attached.stats.emplace_back(kv.value, this);
         return true; }
-    if (kv.key == "meter" || kv.key == "stateful") {
+    if (kv.key == "meter") {
         if (kv.value.type == tVEC)
             for (auto &v : kv.value.vec)
-                attached.meter.emplace_back(v, this);
-        else attached.meter.emplace_back(kv.value, this);
+                attached.meters.emplace_back(v, this);
+        else attached.meters.emplace_back(kv.value, this);
+        return true; }
+    if (kv.key == "stateful") {
+        if (kv.value.type == tVEC)
+            for (auto &v : kv.value.vec)
+                attached.statefuls.emplace_back(v, this);
+        else attached.statefuls.emplace_back(kv.value, this);
         return true; }
     if (kv.key == "table_counter") {
         if (kv.value == "table_miss") table_counter = TABLE_MISS;
@@ -741,6 +750,9 @@ bool Table::Actions::Action::equiv(Action *a) {
     for (unsigned i = 0; i < instr.size(); i++)
         if (!instr[i]->equiv(a->instr[i]))
             return false;
+    if (attached.size() != a->attached.size()) return false;
+    for (unsigned i = 0; i < attached.size(); i++)
+        if (attached[i] != a->attached[i]) return false;
     return true;
 }
 
@@ -816,15 +828,20 @@ Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv) {
                                 k->second.is_constant = true;
                                 k->second.value = a.value.i; }
                         } else alias.emplace(a.key.s, a.value); } }
-        } else if (i.type == tSTR) {
-           VECTOR(value_t)     tmp;
-           VECTOR_init1(tmp, i);
-           if (auto *p = Instruction::decode(tbl, this, tmp))
-               instr.push_back(p);
-           VECTOR_fini(tmp);
-        } else if (CHECKTYPE(i, tCMD))
-            if (auto *p = Instruction::decode(tbl, this, i.vec))
-                instr.push_back(p); }
+        } else if (CHECKTYPE2(i, tSTR, tCMD)) {
+            VECTOR(value_t) tmp;
+            if (i.type == tSTR)
+                VECTOR_init1(tmp, i);
+            else
+                VECTOR_initcopy(tmp, i.vec);
+            if (auto *p = Instruction::decode(tbl, this, tmp))
+                instr.push_back(p);
+            else if (tbl->to<MatchTable>() || tbl->to<TernaryIndirectTable>() ||
+                     tbl->to<ActionTable>())
+                attached.emplace_back(i, tbl);
+            else
+                error(i.lineno, "Unknown instruction %s", tmp[0].s);
+            VECTOR_fini(tmp); } }
 }
 
 Table::Actions::Actions(Table *tbl, VECTOR(pair_t) &data) {
@@ -854,71 +871,79 @@ void Table::Actions::Action::set_action_handle(Table *tbl) {
         if (p4_table) p4_table->action_handles[name] = handle; }
 }
 
+void Table::Actions::Action::pass1(Table *tbl) {
+    set_action_handle(tbl);
+    if ((tbl->default_action == name) &&
+        (!tbl->default_action_handle))
+        tbl->default_action_handle = handle;
+    /* SALU actions always have addr == -1 (so iaddr == -1) */
+    int iaddr = -1;
+    if (addr >= 0) {
+        if (auto old = tbl->stage->imem_addr_use[tbl->gress][addr]) {
+            if (equiv(old)) {
+                return; }
+            error(lineno, "action instruction addr %d in use elsewhere", addr);
+            warning(old->lineno, "also defined here"); }
+        tbl->stage->imem_addr_use[tbl->gress][addr] = this;
+        iaddr = addr/ACTION_IMEM_COLORS; }
+    for (auto &inst : instr) {
+        inst = inst->pass1(tbl, this);
+        if (inst->slot >= 0) {
+            if (slot_use[inst->slot])
+                error(inst->lineno, "instruction slot %d used multiple times in action %s",
+                      inst->slot, name.c_str());
+            slot_use[inst->slot] = 1; }
+        if (inst->slot >= 0 && iaddr >= 0) {
+            if (tbl->stage->imem_use[iaddr][inst->slot])
+                error(lineno, "action instruction slot %d.%d in use elsewhere",
+                      iaddr, inst->slot);
+            tbl->stage->imem_use[iaddr][inst->slot] = 1; } }
+    for (auto &a : alias) {
+        while (alias.count(a.second.name)) {
+            // the alias refers to something else in the alias list
+            auto &rec = alias.at(a.second.name);
+            if (rec.name == a.first) {
+                error(a.second.lineno, "recursive alias %s", a.first.c_str());
+                break; }
+            if (rec.lo > 0) {
+                a.second.lo += rec.lo;
+                if (a.second.hi >= 0)
+                    a.second.hi += rec.lo; }
+            if (rec.hi > 0 && a.second.hi < 0)
+                a.second.hi = rec.hi;
+            if (a.second.lo < rec.lo || a.second.hi > rec.hi) {
+                error(a.second.lineno,
+                        "alias for %s:%s(%d:%d) has out of range index from allowed %s:%s(%d:%d)",
+                        a.first.c_str(), a.second.name.c_str(), a.second.lo, a.second.hi,
+                        a.second.name.c_str(), rec.name.c_str(), rec.lo, rec.hi );
+                break; }
+            a.second.name = rec.name;
+            a.second.is_constant = rec.is_constant;
+            a.second.value = rec.value; }
+        if (auto *f = tbl->lookup_field(a.second.name, name)) {
+            if (a.second.hi < 0)
+                a.second.hi = f->size - 1;
+        } else
+            error(a.second.lineno, "No field %s(%d:%d) in table %s",
+                    a.second.name.c_str(), a.second.lo, a.second.hi, tbl->name()); }
+    //Update default value for params if default action parameters present
+    for (auto &p : p4_params_list) {
+        if (tbl->default_action_parameters.count(p.name) > 0) {
+            p.default_value = tbl->default_action_parameters[p.name];
+            p.defaulted = true; } }
+    for (auto &c : attached) {
+        if (!c) {
+            error(c.lineno, "Unknown instruction or table %s", c.name.c_str());
+            continue; }
+        if (c->table_type() != COUNTER && c->table_type() != METER && c->table_type() != STATEFUL) {
+            error(c.lineno, "%s is not a counter, meter or stateful table", c.name.c_str());
+            continue; } }
+}
+
 void Table::Actions::pass1(Table *tbl) {
     for (auto &act : *this) {
-        act.set_action_handle(tbl);
-        if ((tbl->default_action == act.name) &&
-            (!tbl->default_action_handle))
-            tbl->default_action_handle = act.handle;
-        /* SALU actions always have act.addr == -1 (so iaddr == -1) */
-        int iaddr = -1;
-        if (act.addr >= 0) {
-            if (auto old = tbl->stage->imem_addr_use[tbl->gress][act.addr]) {
-                if (act.equiv(old)) {
-                    continue; }
-                error(act.lineno, "action instruction addr %d in use elsewhere", act.addr);
-                warning(old->lineno, "also defined here"); }
-            tbl->stage->imem_addr_use[tbl->gress][act.addr] = &act;
-            iaddr = act.addr/ACTION_IMEM_COLORS; }
-        for (auto &inst : act.instr) {
-            inst = inst->pass1(tbl, &act);
-            if (inst->slot >= 0) {
-                if (act.slot_use[inst->slot])
-                    error(inst->lineno, "instruction slot %d used multiple times in action %s",
-                          inst->slot, act.name.c_str());
-                act.slot_use[inst->slot] = 1; }
-            if (inst->slot >= 0 && iaddr >= 0) {
-                if (tbl->stage->imem_use[iaddr][inst->slot])
-                    error(act.lineno, "action instruction slot %d.%d in use elsewhere",
-                          iaddr, inst->slot);
-                tbl->stage->imem_use[iaddr][inst->slot] = 1; } }
-        slot_use |= act.slot_use;
-        for (auto &a : act.alias) {
-            while (act.alias.count(a.second.name)) {
-                // the alias refers to something else in the alias list
-                auto &rec = act.alias.at(a.second.name);
-                if (rec.name == a.first) {
-                    error(a.second.lineno, "recursive alias %s", a.first.c_str());
-                    break; }
-                if (rec.lo > 0) {
-                    a.second.lo += rec.lo;
-                    if (a.second.hi >= 0)
-                        a.second.hi += rec.lo; }
-                if (rec.hi > 0 && a.second.hi < 0)
-                    a.second.hi = rec.hi;
-                if (a.second.lo < rec.lo || a.second.hi > rec.hi) {
-                    error(a.second.lineno,
-                            "alias for %s:%s(%d:%d) has out of range index from allowed %s:%s(%d:%d)",
-                            a.first.c_str(), a.second.name.c_str(), a.second.lo, a.second.hi,
-                            a.second.name.c_str(), rec.name.c_str(), rec.lo, rec.hi );
-                    break; }
-                a.second.name = rec.name;
-                a.second.is_constant = rec.is_constant;
-                a.second.value = rec.value; }
-            if (auto *f = tbl->lookup_field(a.second.name, act.name)) {
-                if (a.second.hi < 0)
-                    a.second.hi = f->size - 1;
-            } else
-                error(a.second.lineno, "No field %s(%d:%d) in table %s",
-                        a.second.name.c_str(), a.second.lo, a.second.hi, tbl->name()); }
-        //Update default value for params if default action parameters present
-        for (auto &p : act.p4_params_list) {
-            if (tbl->default_action_parameters.count(p.name) > 0) {
-                p.default_value = tbl->default_action_parameters[p.name];
-                p.defaulted = true;
-            }
-        }
-    }
+        act.pass1(tbl);
+        slot_use |= act.slot_use; }
 }
 
 static void find_pred_in_stage(int stageno, std::set<MatchTable *> &pred, Table *tbl) {
@@ -1346,7 +1371,7 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
                     shift_en.actiondata_adr_payload_shifter_en = 1; }
             if (!get_attached()->stats.empty())
                 shift_en.stats_adr_payload_shifter_en = 1;
-            if (!get_attached()->meter.empty())
+            if (!get_attached()->meters.empty() || !get_attached()->statefuls.empty())
                 shift_en.meter_adr_payload_shifter_en = 1;
 
             result->write_merge_regs(regs, type, bus); }
@@ -1414,11 +1439,14 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
                     .immediate_data_payload_shifter_en = 1; } }
     if (result->action_bus) {
         result->action_bus->write_immed_regs(regs, result);
-        for (auto &mtab : get_attached()->meter) {
+        for (auto &mtab : get_attached()->meters) {
             // if the meter table outputs something on the action-bus of the meter
             // home row, need to set up the action hv xbar properly
-            result->action_bus->write_action_regs(regs, result, mtab->home_row(), 0);
-        }
+            result->action_bus->write_action_regs(regs, result, mtab->home_row(), 0); }
+        for (auto &stab : get_attached()->statefuls) {
+            // if the stateful table outputs something on the action-bus of the meter
+            // home row, need to set up the action hv xbar properly
+            result->action_bus->write_action_regs(regs, result, stab->home_row(), 0); }
     }
 
     // FIXME:
@@ -1496,7 +1524,7 @@ HashDistribution *Table::find_hash_dist(int unit) {
             if (hd.id == unit)
                 return &hd;
     if (auto *a = get_attached())
-        for (auto &call : a->meter)
+        for (auto &call : a->meters)
             for (auto &hd : call->hash_dist)
                 if (hd.id == unit)
                     return &hd;
@@ -1588,139 +1616,6 @@ std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(const c
     return json::mkuniq<json::map>(std::move(mra));
 }
 
-void AttachedTable::pass1() {
-    // Per Flow Enable - Validate and Set pfe and address bits
-    bool pfe_set = false;
-    unsigned addr_bits = 0;
-    if (per_flow_enable && !per_flow_enable_param.empty()) {
-        for (auto m : match_tables) {
-            auto fmt = m->format;
-            if (auto t = m->to<TernaryMatchTable>())
-                if (t->indirect) fmt = t->indirect->format;
-            if (fmt) {
-                unsigned g = 0;
-                while (g < fmt->groups()) {
-                    if (auto f = fmt->field(per_flow_enable_param, g)) {
-                        // Get pfe bit position from format entry
-                        // This value is then adjusted based on address
-                        unsigned pfe_bit = 0;
-                        if (f->bits[0].lo == f->bits[0].hi)
-                            pfe_bit = f->bits[0].lo;
-                        else
-                            error(lineno, "pfe bit %s is not a 1 bit value for entry in table format %s(%d)",
-                                    per_flow_enable_param.c_str(), per_flow_enable_param.c_str(), g);
-                        // Generate address field name based on pfe name
-                        std::string addr = per_flow_enable_param.substr(0, per_flow_enable_param.find("_pfe"));
-                        addr = addr + "_addr";
-                        // Find addr field in format and adjust pfe_bit
-                        if (auto a = fmt->field(addr, g)) {
-                            pfe_bit = pfe_bit - a->bits[0].lo;
-                            addr_bits = a->bits[0].hi - a->bits[0].lo + 1;
-                        } else
-                            error(lineno, "addr field not found in entry format for pfe %s(%i)",
-                                per_flow_enable_param.c_str(), g);
-                        if (pfe_set) {
-                            // For multiple entries check if each of the pfe bits are in the same position relative to address
-                            if (pfe_bit != per_flow_enable_bit)
-                                error(lineno, "PFE bit position not in the same relative location to address in other entries in table format - %s(%i)",
-                                        per_flow_enable_param.c_str(), g);
-                            // Also check for address bits having similar widths
-                            if (addr_bits != address_bits)
-                                error(lineno, "Address with different widths in other entries in table format - %s(%i)",
-                                        addr.c_str(), g);
-                        } else {
-                            per_flow_enable_bit = pfe_bit;
-                            address_bits = addr_bits;
-                            pfe_set = true; } }
-                    ++g; }
-            } else {
-                error(lineno, "no format found for per_flow_enable param %s", per_flow_enable_param.c_str()); } } }
-}
-
-// ---------------
-// Meter ALU | Row
-// Used      |
-// ---------------
-// 0         | 1
-// 1         | 3
-// 2         | 5
-// 3         | 7
-// ---------------
-void AttachedTable::add_meter_alu_index(json::map &stage_tbl) {
-    if (layout.size() <= 0)
-        error(lineno, "Invalid meter alu setup. A meter ALU should be allocated for table %s", name());
-    stage_tbl["meter_alu_index"] = get_meter_alu_index();
-}
-
-SelectionTable *AttachedTables::get_selector() const {
-    return dynamic_cast<SelectionTable *>((Table *)selector); }
-
-bool AttachedTables::run_at_eop() {
-    if (meter.size() > 0) return true;
-    for (auto &s : stats)
-        if (s->run_at_eop()) return true;
-    return false;
-}
-
-void AttachedTables::pass1(MatchTable *self) {
-    if (selector.check()) {
-        if (selector->set_match_table(self, true) != Table::SELECTION)
-            error(selector.lineno, "%s is not a selection table", selector->name());
-        if (selector.args.size() < 1 || selector.args.size() > 3)
-            error(selector.lineno, "Selector requires 1-3 args");
-        if (selector->stage != self->stage)
-            error(selector.lineno, "Selector table %s not in same stage as %s",
-                  selector->name(), self->name());
-        else if (selector->gress != self->gress)
-            error(selector.lineno, "Selector table %s not in same thread as %s",
-                  selector->name(), self->name()); }
-    for (auto &s : stats) if (s.check()) {
-        if (s->set_match_table(self, s.is_indirect()) != Table::COUNTER)
-            error(s.lineno, "%s is not a counter table", s->name());
-        if (s.args.size() > 1)
-            error(s.lineno, "Stats table requires zero or one args");
-        if (s.args.size() > 0 && s.args[0].hash_dist())
-            s.args[0].hash_dist()->xbar_use |= HashDistribution::STATISTICS_ADDRESS;
-        else if (s.args != stats[0].args)
-            error(s.lineno, "Must pass same args to all stats tables in a single table");
-        if (s->stage != self->stage)
-            error(s.lineno, "Counter %s not in same stage as %s", s->name(), self->name());
-        else if (s->gress != self->gress)
-            error(s.lineno, "Counter %s not in same thread as %s", s->name(), self->name()); }
-    for (auto &m : meter) if (m.check()) {
-        auto type = m->set_match_table(self, m.is_indirect());
-        if (type != Table::METER && type != Table::STATEFUL)
-            error(m.lineno, "%s is not a meter table", m->name());
-        if (m.args.size() > 1)
-            error(m.lineno, "Meter table requires zero or one args");
-        if (m.args.size() > 0 && m.args[0].hash_dist())
-            m.args[0].hash_dist()->xbar_use |= HashDistribution::METER_ADDRESS;
-        else if (m.args != meter[0].args)
-            error(m.lineno, "Must pass same args to all meter tables in a single table");
-        if (m->stage != self->stage)
-            error(m.lineno, "Meter %s not in same stage as %s", m->name(), self->name());
-        else if (m->gress != self->gress)
-            error(m.lineno, "Meter %s not in same thread as %s", m->name(), self->name()); }
-    for (auto &s : stateful) if (s.check()) {
-        auto type = s->set_match_table(self, s.is_indirect());
-        if (type != Table::STATEFUL)
-            error(s.lineno, "%s is not a stateful table", s->name());
-        if (s.args.size() > 1)
-            error(s.lineno, "Stateful table requires zero or one args");
-        warning(s.lineno, "Checks for stateful tables are not yet fully implemented");
-      }
-}
-
-template<class REGS>
-void AttachedTables::write_merge_regs(REGS &regs, MatchTable *self, int type, int bus) {
-    for (auto &s : stats) s->write_merge_regs(regs, self, type, bus, s.args);
-    for (auto &m : meter) m->write_merge_regs(regs, self, type, bus, m.args);
-    if (selector)
-        get_selector()->write_merge_regs(regs, self, type, bus, selector.args);
-}
-FOR_ALL_TARGETS(INSTANTIATE_TARGET_TEMPLATE,
-                void AttachedTables::write_merge_regs, mau_regs &, MatchTable *, int, int)
-
 json::map *Table::base_tbl_cfg(json::vector &out, const char *type, int size) {
     return p4_table->base_tbl_cfg(out, size, this);
 }
@@ -1744,7 +1639,7 @@ json::map *Table::add_stage_tbl_cfg(json::map &tbl, const char *type, int size) 
 void Table::add_reference_table(json::vector &table_refs, const Table::Call& c) {
     if (c) {
         json::map table_ref;
-        table_ref["how_referenced"] = c.is_indirect() ? "indirect" : "direct";
+        table_ref["how_referenced"] = c->to<AttachedTable>()->is_direct() ? "direct" : "indirect";
         table_ref["handle"] = c->handle();
         table_ref["name"] = c->name();
             if (c->p4_table)
@@ -1770,6 +1665,30 @@ void Table::canon_field_list(json::vector &field_list) {
         auto &name = field["field_name"]->to<json::string>();
         if (int lo = remove_name_tail_range(name))
             field["start_bit"]->to<json::number>().val += lo; }
+}
+
+void Table::get_cjson_source(const std::string &field_name,
+			     const Table::Actions::Action *act,
+		             std::string &source, std::string &imm_name) {
+
+    source = act ? "" : "spec";
+    if (field_name == "version")
+        source = "version";
+    else if (field_name == "immediate") {
+        source = "immediate";
+        imm_name = field_name;
+    } else if (field_name == "action")
+        source = "instr";
+    else if (field_name == "action_addr")
+        source = "adt_ptr";
+    else if ((field_name == "meter_addr") && get_selector())
+        source = "sel_ptr";
+    else if ((field_name == "meter_addr") && get_stateful())
+        source = "stful_ptr";
+    else if ((field_name == "meter_pfe") && get_selector())
+        source = "sel_ptr";
+    else if ((field_name == "meter_pfe") && get_stateful())
+        source = "stful_ptr";
 }
 
 void Table::add_field_to_pack_format(json::vector &field_list, int basebit, std::string name,
@@ -1805,27 +1724,14 @@ void Table::add_field_to_pack_format(json::vector &field_list, int basebit, std:
 
     // Determine the source of the field. If called recursively for an alias,
     // act will be a nullptr
-    std::string source = act ? "" : "spec";
-    std::string immediate_name = "";
-    if (name == "version")
-        source = "version";
-    else if (name == "immediate") {
-        source = "immediate";
-        immediate_name = name;
-    } else if (name == "action")
-        source = "instr";
-    else if (name == "action_addr")
-        source = "adt_ptr";
-    else if ((name == "meter_addr") && get_selector())
-        source = "sel_ptr";
+    std::string source = "", immediate_name = "";
+    get_cjson_source(name, act, source, immediate_name);
 
     if (field.flags == Format::Field::ZERO)
         source = "zero";
 
-    if (source == "")
-        return; // we couldn't determine a proper source
-
-    output_field_to_pack_format(field_list, basebit, name, source, field);
+    if (source != "")
+        output_field_to_pack_format(field_list, basebit, name, source, field);
 }
 
 void Table::output_field_to_pack_format(json::vector &field_list,

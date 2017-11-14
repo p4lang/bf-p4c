@@ -251,3 +251,67 @@ void SRamMatchTable::setup_word_ixbar_group() {
     for (unsigned i = 0; i < match_in_word.size(); i++)
         word_ixbar_group[i] = find_in_ixbar(this, match_in_word[i]);
 }
+
+template<class REGS>
+void SRamMatchTable::write_attached_merge_regs(REGS &regs, int bus, int word, int word_group) {
+    int group = word_info[word][word_group];
+    auto &merge = regs.rams.match.merge;
+    for (auto &st : attached.stats) {
+        if (st.args.empty())
+            merge.mau_stats_adr_exact_shiftcount[bus][word_group] = st->direct_shiftcount();
+        else if (group_info[group].overhead_word == (int)word) {
+            assert(st.args[0].field()->by_group[group]->bits[0].lo/128U == word);
+            merge.mau_stats_adr_exact_shiftcount[bus][word_group] =
+                st.args[0].field()->by_group[group]->bits[0].lo%128U + st->indirect_shiftcount();
+        } else if (options.match_compiler) {
+            /* unused, so should not be set... */
+            merge.mau_stats_adr_exact_shiftcount[bus][word_group] = 7; }
+        break; /* all must be the same, only config once */ }
+    for (auto &m : attached.meters) {
+        if (m.args.empty()) {
+            merge.mau_meter_adr_exact_shiftcount[bus][word_group] = m->direct_shiftcount() + 16;
+            if (idletime)
+                merge.mau_idletime_adr_exact_shiftcount[bus][word_group] = m->direct_shiftcount();
+        } else if (group_info[group].overhead_word == (int)word) {
+            if (m.args[0].type == Call::Arg::Field) {
+                assert(m.args[0].field()->by_group[group]->bits[0].lo/128U == word);
+                merge.mau_meter_adr_exact_shiftcount[bus][word_group] =
+                    m.args[0].field()->by_group[group]->bits[0].lo%128U + 16;
+                if (idletime)
+                    merge.mau_idletime_adr_exact_shiftcount[bus][word_group] =
+                        m.args[0].field()->by_group[group]->bits[0].lo%128U;
+            } else {
+                assert(m.args[0].type == Call::Arg::HashDist);
+                merge.mau_meter_adr_exact_shiftcount[bus][word_group] = 0; }
+        } else if (options.match_compiler) {
+            /* unused, so should not be set... */
+            merge.mau_meter_adr_exact_shiftcount[bus][word_group] = 16;
+            if (idletime)
+                merge.mau_idletime_adr_exact_shiftcount[bus][word_group] = 0; }
+        break; /* all must be the same, only config once */ }
+    for (auto &s : attached.statefuls) {
+        if (s.args.size() <= 1) {
+            merge.mau_meter_adr_exact_shiftcount[bus][word_group] = s->direct_shiftcount() + 16;
+            if (idletime)
+                merge.mau_idletime_adr_exact_shiftcount[bus][word_group] = s->direct_shiftcount();
+        } else if (group_info[group].overhead_word == (int)word) {
+            if (s.args[1].type == Call::Arg::Field) {
+                assert(s.args[1].field()->by_group[group]->bits[0].lo/128U == word);
+                merge.mau_meter_adr_exact_shiftcount[bus][word_group] =
+                    s.args[1].field()->by_group[group]->bits[0].lo%128U + 16;
+                if (idletime)
+                    merge.mau_idletime_adr_exact_shiftcount[bus][word_group] =
+                        s.args[1].field()->by_group[group]->bits[0].lo%128U;
+            } else {
+                assert(s.args[1].type == Call::Arg::HashDist);
+                merge.mau_meter_adr_exact_shiftcount[bus][word_group] = 0; }
+        } else if (options.match_compiler) {
+            /* unused, so should not be set... */
+            merge.mau_meter_adr_exact_shiftcount[bus][word_group] = 16;
+            if (idletime)
+                merge.mau_idletime_adr_exact_shiftcount[bus][word_group] = 0; }
+        break; /* all must be the same, only config once */ }
+}
+FOR_ALL_TARGETS(INSTANTIATE_TARGET_TEMPLATE,
+                void SRamMatchTable::write_attached_merge_regs, mau_regs &, int, int, int)
+

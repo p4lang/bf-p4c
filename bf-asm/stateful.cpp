@@ -6,9 +6,9 @@
 #include "stage.h"
 #include "tables.h"
 
-DEFINE_TABLE_TYPE(Stateful)
+DEFINE_TABLE_TYPE(StatefulTable)
 
-void Stateful::setup(VECTOR(pair_t) &data) {
+void StatefulTable::setup(VECTOR(pair_t) &data) {
     common_init_setup(data, false, P4Table::Stateful);
     if (!format)
         error(lineno, "No format specified in table %s", name());
@@ -86,7 +86,7 @@ bool match_table_layouts(Table *t1, Table *t2) {
     return true;
 }
 
-void Stateful::MathTable::check() {
+void StatefulTable::MathTable::check() {
     if (data.size() > 16)
         error(lineno, "math table only has 16 data entries");
     data.resize(16);
@@ -99,7 +99,7 @@ void Stateful::MathTable::check() {
         error(lineno, "%d out of range for math_table scale", scale);
 }
 
-void Stateful::pass1() {
+void StatefulTable::pass1() {
     LOG1("### Stateful table " << name() << " pass1");
     if (!p4_table) p4_table = P4Table::alloc(P4Table::Stateful, this);
     else p4_table->check(this);
@@ -148,124 +148,85 @@ void Stateful::pass1() {
             error(format->lineno, "only two fields allowed in a stateful table"); } }
     if ((idx == 2) && (format->size == 2*size))
         dual_mode = true;
-    if (actions) actions->pass1(this);
+    if (actions)
+        actions->pass1(this);
+    else
+        error(lineno, "No actions in stateful table %s", name());
     if (math_table)
         math_table.check();
     AttachedTable::pass1();
 }
 
-int Stateful::get_const(long v) {
+int StatefulTable::get_const(long v) {
     size_t rv = std::find(const_vals.begin(), const_vals.end(), v) - const_vals.begin();
     if (rv == const_vals.size())
         const_vals.push_back(v);
     return rv;
 }
 
-void Stateful::pass2() {
+void StatefulTable::pass2() {
     LOG1("### Stateful table " << name() << " pass2");
     if (input_xbar) input_xbar->pass2();
     if (actions)
         actions->stateful_pass2(this);
 }
 
-int Stateful::direct_shiftcount() {
+int StatefulTable::direct_shiftcount() {
     return 64;
 }
 
-int Stateful::indirect_shiftcount() {
-    return 7U - (64U/format->size);
-}
-
-template<class REGS> void Stateful::write_merge_regs(REGS &regs, MatchTable *match,
+template<class REGS> void StatefulTable::write_merge_regs(REGS &regs, MatchTable *match,
             int type, int bus, const std::vector<Call::Arg> &args) {
     auto &merge = regs.rams.match.merge;
-    assert(args.size() <= 1);
-    //if (args.empty()) { // direct access
-    //    merge.mau_meter_adr_mask[type][bus] = 0x7fff80;
-    //} else if (args[0].type == Call::Arg::Field) {
-    //    // indirect access via overhead field
-    //    int bits = args[0].size() - 3;
-    //    if (per_flow_enable) --bits;
-    //    merge.mau_meter_adr_mask[type][bus] = 0x700000 | (~(~0u << bits) << 7);
-    //} else if (args[0].type == Call::Arg::HashDist) {
-    //    // indirect access via hash_dist
-    //    merge.mau_meter_adr_mask[type][bus] = 0x7fff80; }
-    //merge.mau_meter_adr_per_entry_en_mux_ctl[type][bus] = 16; // FIXME
-    //merge.mau_meter_adr_type_position[type][bus] = per_flow_enable ? 16 : 17;
-    //if (!per_flow_enable)
-    //    merge.mau_meter_adr_default[type][bus] |= 1 << 23;
-    //merge.mau_meter_adr_default[type][bus] |= 1 << 24;  // FIXME -- instruction number?
-
-    unsigned ptr_bits = 0;
-    unsigned entry_bit_width = format->size/(dual_mode ? 2 : 1);
-    unsigned bw_adjust = ceil_log2(entry_bit_width);
-    unsigned full_mask = (1U << METER_ADDRESS_BITS) - 1;
-    unsigned instr_slots = get_instruction_count();
-    if (args.empty()) { // direct access
+    assert(args.size() <= 2);
+    unsigned zero_bits = ceil_log2(format->size);
+    unsigned ptr_bits = 0, inst_bits;
+    Format::Field *ptr_field = nullptr;
+    if (args.size() <= 1) { // direct access
         if (match->to<ExactMatchTable>()) {
-            if (entry_bit_width < 16)
-                ptr_bits = EXACT_VPN_BITS + EXACT_WORD_BITS;
-            else {
-                ptr_bits = METER_ADDRESS_BITS - METER_TYPE_BITS - 1 - bw_adjust; }
+            ptr_bits = EXACT_VPN_BITS + EXACT_WORD_BITS;
         } else
             ptr_bits = TCAM_VPN_BITS + TCAM_WORD_BITS;
-    } else if (args[0].type == Call::Arg::HashDist) {
-        // indirect access via hash dist
-        if (instr_slots > 1)
-            ptr_bits = METER_TYPE_BITS - 1;
-        if (per_flow_enable)
-            ptr_bits += 1;
+    } else if (args[1].type == Call::Arg::HashDist) {
+        // indirect access via hash dist -- bits are ORed in after mask.
+        ptr_bits = 0;
+    } else if (args[1].type == Call::Arg::Field) {
+        // indirect access via match overhead
+        ptr_bits = (ptr_field = args[1].field())->size;
     } else {
-        ptr_bits = METER_ADDRESS_BITS - bw_adjust;
-        if (!per_flow_enable)
-            ptr_bits -= 1;
-        if (instr_slots < 2)
-            ptr_bits -= METER_TYPE_BITS;
-        else
-            ptr_bits -= 1;
-    }
+        assert(!"unhandled argument type"); }
 
-    unsigned stateful_adr_default = 0x0;
+    unsigned stateful_adr_default = (1U << METER_TYPE_START_BIT);
     if (!per_flow_enable)
         stateful_adr_default |= (1U << METER_PER_FLOW_ENABLE_START_BIT);
-    // FIXME: Factor in stateful logging which is not currently supported in
-    // assembly?
-    //if (instr_slots == 1) -- encode instr number in type?
-    stateful_adr_default |= (1U << METER_TYPE_START_BIT);
-    // FIXME: Factor in index constants
-    // FIXME: Factor in when addr is OR'd from hash computation
+    if (args.size() > 0) {
+        if (args[0].type == Call::Arg::Field) {
+            inst_bits = args[1].field()->size;
+            if (ptr_field)
+                merge.mau_meter_adr_type_position[type][bus] =
+                    args[0].field()->bit(0) - ptr_field->bit(0);
+        } else if (args[0].type == Call::Arg::Name) {
+            stateful_adr_default |=
+                actions->action(args[1].name())->code << (METER_TYPE_START_BIT + 1);
+        } else if (args[0].type == Call::Arg::Const) {
+            stateful_adr_default |= args[1].value() << (METER_TYPE_START_BIT + 1);
+        } else {
+            assert(!"unhandled argument type"); } }
     merge.mau_meter_adr_default[type][bus] = stateful_adr_default;
 
-    unsigned stateful_adr_mask = 0x0;
-    unsigned base_width = 0;
-    unsigned base_mask = 0x0;
-    unsigned type_mask = (1U << (METER_TYPE_BITS - 1)) - 1;
-    if (instr_slots > 1) {
-        base_width = ptr_bits - METER_TYPE_BITS + 1;
-        if (per_flow_enable)
-            base_width -= 1;
-        base_mask = (1U << base_width) - 1;
-        stateful_adr_mask = base_mask << bw_adjust;
-        stateful_adr_mask |= (type_mask << (METER_TYPE_START_BIT + 1));
-    } else {
-        base_width = ptr_bits;
-        if (per_flow_enable)
-            base_width -= 1;
-        base_mask = (1U << base_width) - 1;
-        stateful_adr_mask = base_mask << bw_adjust;
-    }
-    stateful_adr_mask &= full_mask;
-    if (match->to<HashActionTable>()) {
-        merge.mau_stats_adr_mask[type][bus] = 0;
-    } else
-        merge.mau_meter_adr_mask[type][bus] = stateful_adr_mask;
+    unsigned stateful_adr_mask = ((1U << ptr_bits) - 1) << zero_bits;
+    if (inst_bits > 0)
+        stateful_adr_mask |= ((1U << inst_bits) - 1) << (METER_TYPE_START_BIT + 1);
+    if (per_flow_enable)
+        stateful_adr_mask |= (1U << METER_PER_FLOW_ENABLE_START_BIT);
+    merge.mau_meter_adr_mask[type][bus] = stateful_adr_mask;
 
     if (!per_flow_enable)
         per_flow_enable_bit = METER_ADDRESS_BITS - METER_TYPE_BITS - 1;
     merge.mau_meter_adr_per_entry_en_mux_ctl[type][bus] = per_flow_enable_bit;
 }
 
-template<class REGS> void Stateful::write_regs(REGS &regs) {
+template<class REGS> void StatefulTable::write_regs(REGS &regs) {
     LOG1("### Stateful table " << name() << " write_regs");
     // FIXME -- factor common AttachedTable::write_regs
     // FIXME -- factor common Synth2Port::write_regs
@@ -358,13 +319,14 @@ template<class REGS> void Stateful::write_regs(REGS &regs) {
         salu.salu_const_regfile[i] = const_vals[i] & 0xffffffffU;
 }
 
-void Stateful::gen_tbl_cfg(json::vector &out) {
+void StatefulTable::gen_tbl_cfg(json::vector &out) {
     // FIXME -- factor common Synth2Port stuff
     int size = (layout_size() - 1) * 1024 * (128U/format->size);
     json::map &tbl = *base_tbl_cfg(out, "stateful", size);
     /*json::map &stage_tbl = */add_stage_tbl_cfg(tbl, "stateful", size);
     tbl["alu_width"] = format->size/(dual_mode ? 2 : 1);
     tbl["dual_width_mode"] = dual_mode;
+    json::vector &act_to_sful_instr_slot = tbl["action_to_stateful_instruction_slot"];
     if (actions) {
         for (auto &a : *actions) {
             for (auto &i : a.instr) {
@@ -375,7 +337,11 @@ void Stateful::gen_tbl_cfg(json::vector &out) {
                 if (i->name() == "clr_bit_at")
                     tbl["clr_instr_at"] = a.code;
                 if (i->name() == "clr_bit")
-                    tbl["clr_instr"] = a.code; } }
+                    tbl["clr_instr"] = a.code; }
+		json::map instr_slot;
+		instr_slot["action_handle"] = a.handle;
+		instr_slot["instruction_slot"] = a.code;
+		act_to_sful_instr_slot.push_back(std::move(instr_slot));}
         actions->gen_tbl_cfg((tbl["actions"] = json::vector())); }
     if (bound_selector)
         tbl["bound_to_selection_table_handle"] = bound_selector->handle();

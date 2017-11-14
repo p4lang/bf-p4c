@@ -949,7 +949,7 @@ class MauAsmOutput::EmitAction : public Inspector {
     bool preorder(const IR::MAU::Action *act) override {
         act_name = act->name;
         for (auto prim : act->stateful) {
-            auto at = prim->operands.at(0)->to<IR::GlobalRef>()->obj->to<IR::Attached>();
+            auto *at = prim->operands.at(0)->to<IR::GlobalRef>()->obj->to<IR::Attached>();
             if (prim->operands.size() < 2) continue;
             if (auto aa = prim->operands.at(1)->to<IR::ActionArg>()) {
                 alias[aa->name] = self.find_indirect_index(at); } }
@@ -970,6 +970,20 @@ class MauAsmOutput::EmitAction : public Inspector {
             is_empty = false;
             alias.clear(); }
         act->action.visit_children(*this);
+        for (auto prim : act->stateful) {
+            auto *at = prim->operands.at(0)->to<IR::GlobalRef>()->obj->to<IR::Attached>();
+            if (prim->operands.size() < 2) continue;
+            out << indent << "- " << table->get_use_name(at) << '(';
+            const char *sep = "";
+            if (auto *salu = at->to<IR::MAU::StatefulAlu>()) {
+                out << salu->action_map.at(act->name);
+                sep = ", "; }
+            if (auto *k = prim->operands.at(1)->to<IR::Constant>())
+                out << sep << k->value;
+            else if (auto *a = prim->operands.at(1)->to<IR::ActionArg>())
+                out << sep << a->name;
+            out << ')' << std::endl;
+            is_empty = false; }
         if (is_empty)
             out << indent << "- 0" << std::endl;
         return false; }

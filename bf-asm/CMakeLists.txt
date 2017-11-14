@@ -79,6 +79,7 @@ set (BFAS_COMMON_SOURCES
   action_bus.cpp
   action_table.cpp
   asm-types.cpp
+  attached_table.cpp
   bfas.cpp
   atcam_match.cpp
   counter.cpp
