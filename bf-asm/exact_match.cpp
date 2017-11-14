@@ -638,6 +638,8 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
     add_reference_table(action_data_table_refs, action);
     if (auto a = get_attached()) {
         json::vector &selection_table_refs = tbl["selection_table_refs"] = json::vector();
+        tbl["default_selector_mask"] = 0; //FIXME-JSON
+        tbl["default_selector_value"] = 0; //FIXME-JSON
         add_reference_table(selection_table_refs, a->selector);
         json::vector &meter_table_refs = tbl["meter_table_refs"] = json::vector();
         for (auto &m : a->meters) { add_reference_table(meter_table_refs, m); }

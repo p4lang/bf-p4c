@@ -3,7 +3,7 @@
 
 
 /* Overall analysis for the exact match layout option, to determine in which RAMs of table
-   format will contain particular match data, and which RAMs contain the overhead data. 
+   format will contain particular match data, and which RAMs contain the overhead data.
    Responsible for balancing entries if they require more than 1 match group */
 bool TableFormat::analyze_layout_option() {
     // FIXME: In total needs some information variable passed about ghosting
@@ -324,13 +324,21 @@ bool TableFormat::allocate_all_instr_selection() {
     int extra_action_needed = gw_linked ? 1 : 0;
 
     int instr_select = ceil_log2(hit_actions + extra_action_needed);
-    // FIXME: At least one action bit is currently needed in order for it to pass
-    if (instr_select == 0)
-        instr_select++;
+
+    // If no action instruction bit is required return unless the table is
+    // ternary in which case always a ternary indirect is used to specify
+    // actions
+    if (instr_select == 0) {
+        if (tbl->layout.ternary)
+            ++instr_select;
+        else
+            return true;
+    }
+
     /* If actions cannot be fit inside a lookup table, the action instruction can be
-       anywhere in the IMEM and will need entire imem bits. The assembler decides 
-       based on color scheme allocations. Assembler will flag an error if it fails 
-       to fit the action code in the given bits. */ 
+       anywhere in the IMEM and will need entire imem bits. The assembler decides
+       based on color scheme allocations. Assembler will flag an error if it fails
+       to fit the action code in the given bits. */
 
     if (instr_select > Memories::IMEM_LOOKUP_BITS) instr_select = Memories::IMEM_ADDRESS_BITS;
 
@@ -354,7 +362,7 @@ bool TableFormat::allocate_all_instr_selection() {
 }
 
 /* This section of match group information is responsible for allocating the bytes that
-   are designated to be simple, essentialy bytes that 8 bits total and have no ghosting 
+   are designated to be simple, essentialy bytes that 8 bits total and have no ghosting
    issues.  Create a vector of these easy bytes and try to allocate them all at once */
 bool TableFormat::allocate_easy_bytes(bitvec &unaligned_bytes, bitvec &chosen_ghost_bytes,
     int &easy_size) {
@@ -534,7 +542,7 @@ void TableFormat::easy_byte_fill(int RAM, int group, ByteInfo &byte, int &starti
 
 /* Specifically for the iteration through match group in byte vector allocation.  Coordination
    of which IXBar groups coordinate to which RAM.  Specifically different for wide matches.
-   Essentially, an individual match group can be in multiple RAMs, and group cannot be 
+   Essentially, an individual match group can be in multiple RAMs, and group cannot be
    simply incremented */
 int TableFormat::determine_next_group(int current_group, int RAM) {
     int per_RAM = layout_option.way.match_groups / layout_option.way.width;

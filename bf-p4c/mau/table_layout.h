@@ -63,6 +63,7 @@ class TableLayout : public MauModifier, Backtrack {
     const PhvInfo &phv;
     LayoutChoices &lc;
     bool alloc_done = false;
+    int get_hit_actions(const IR::MAU::Table *tbl);
     profile_t init_apply(const IR::Node *root) override;
     bool backtrack(trigger &trig) override;
     bool preorder(IR::MAU::Table *tbl) override;

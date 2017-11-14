@@ -209,13 +209,16 @@ void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::M
         }
     }
 
+    layout.overhead_bits = ceil_log2(get_hit_actions(tbl));
+}
+
+int TableLayout::get_hit_actions(const IR::MAU::Table *tbl) {
     int hit_actions = 0;
     for (auto act : Values(tbl->actions)) {
         if (!act->miss_action_only)
             hit_actions++;
     }
-
-    layout.overhead_bits = ceil_log2(hit_actions);
+    return hit_actions;
 }
 
 class GatewayLayout : public MauInspector {
@@ -252,6 +255,11 @@ static void setup_action_layout(IR::MAU::Table *tbl, LayoutChoices &lc, const Ph
    data if immediate is possible */
 void TableLayout::setup_ternary_layout_options(IR::MAU::Table *tbl, int immediate_bytes_reserved) {
     bool no_action_data = (tbl->layout.action_data_bytes == 0);
+
+    // Add extra bit to be factored in for a single action This is because
+    // ternary always uses an indirect table with action(s)
+    if (get_hit_actions(tbl) == 1)
+        tbl->layout.overhead_bits++;
 
     IR::MAU::Table::Layout layout = tbl->layout;
     LayoutOption lo(layout);
