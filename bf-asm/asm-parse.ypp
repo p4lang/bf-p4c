@@ -332,9 +332,13 @@ void warning(int lineno, const char *fmt, va_list args) {
 
 void error(int lineno, const char *fmt, va_list args) {
     auto it = line_file_map.upper_bound(lineno);
-    it--;
-    fprintf(stderr, "%s:%d: error: ", it->second.first.c_str(),
-            lineno - it->first + it->second.second);
+    if (it == line_file_map.end()) {
+        fprintf(stderr, "<unknown location>: error: ");
+    } else {
+        if (it != line_file_map.begin()) it--;
+        fprintf(stderr, "%s:%d: error: ", it->second.first.c_str(),
+                lineno - it->first + it->second.second);
+    }
     vfprintf(stderr, fmt, args);
     fprintf(stderr, "\n");
     fflush(stderr);
