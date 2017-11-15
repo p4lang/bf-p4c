@@ -259,7 +259,13 @@ if $debug; then
     if $verbose; then
         echo "$DEBUGGER_COMMAND $P4C $P4C_ARGS $file -o $testdir/$name${out_ext}.bfa"
     fi
-    exec $DEBUGGER_COMMAND $P4C $P4C_ARGS $file -o $testdir/$name${out_ext}.bfa
+    $DEBUGGER_COMMAND $P4C $P4C_ARGS $file -o $testdir/$name${out_ext}.bfa
+
+    BFAS=../bf-asm/bfas
+    if [ ! -x $BFAS ]; then
+        die "Can't find $BFAS"
+    fi
+    exec $DEBUGGER_COMMAND $BFAS $testdir/$name${out_ext}.bfa
 fi
 
 if [ $(expr "$file" : ".*_errors") -gt 0 ]; then
