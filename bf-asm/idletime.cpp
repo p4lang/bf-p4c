@@ -143,6 +143,8 @@ void IdletimeTable::gen_stage_tbl_cfg(json::map &out) {
     tbl["precision"] = precision;
     tbl["disable_notification"] = disable_notification;
     tbl["two_way_notification"] = two_way_notification;
+    // ??
+    tbl["logical_table_id"] = match_table->logical_id;
     tbl["enable_pfe"] = per_flow_enable;
     add_pack_format(tbl, 11, 1, 8U/precision);
     tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg("map_ram", layout);

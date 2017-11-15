@@ -221,19 +221,24 @@ static IR::ID getAnnotID(const IR::Annotations *annot, cstring name) {
 static IR::MAU::BackendAttached *createIdleTime(cstring name, const IR::Annotations *annot) {
     auto idletime = new IR::MAU::IdleTime(name);
 
-    if (auto s = annot->getSingle("idletime_precision"))
+    if (auto s = annot->getSingle("idletime_precision")) {
         idletime->precision = s->expr.at(0)->to<IR::Constant>()->asInt();
+        /* Default is 3 */
+        if (idletime->precision != 1 && idletime->precision != 2 &&
+            idletime->precision != 3 && idletime->precision != 6)
+                idletime->precision = 3;
+    }
 
-    if (auto s = annot->getSingle("idletime_interval"))
+    if (auto s = annot->getSingle("idletime_interval")) {
         idletime->interval = s->expr.at(0)->to<IR::Constant>()->asInt();
+        if (idletime->interval < 0 || idletime->interval > 12)
+            idletime->interval = 7;
+    }
 
     if (auto s = annot->getSingle("idletime_two_way_notification")) {
         int two_way_notification = s->expr.at(0)->to<IR::Constant>()->asInt();
-
-        if (two_way_notification == 2)
+        if (two_way_notification == 1)
             idletime->two_way_notification = "two_way";
-        else if (two_way_notification == 1)
-            idletime->two_way_notification = "enable";
         else if (two_way_notification == 0)
             idletime->two_way_notification = "disable";
     }
@@ -243,14 +248,10 @@ static IR::MAU::BackendAttached *createIdleTime(cstring name, const IR::Annotati
         idletime->per_flow_idletime = (per_flow_enable == 1) ? true : false;
     }
 
-    if (idletime->precision != 1 && idletime->precision != 2 &&
-        idletime->precision != 3 && idletime->precision != 6)
-        idletime->precision = 3;
-
-    if (idletime->interval < 0 || idletime->interval > 12)
-        idletime->interval = 7;
-
-    idletime->two_way_notification = (idletime->precision > 1) ? "enable" : "disable";
+    /* this is weird - precision value overrides an explicit two_way_notification 
+     * and per_flow_idletime pragma  */
+    if (idletime->precision > 1)
+        idletime->two_way_notification = "two_way";
 
     if (idletime->precision == 1 || idletime->precision == 2)
         idletime->per_flow_idletime = false;
