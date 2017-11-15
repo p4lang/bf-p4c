@@ -160,7 +160,14 @@ struct ingress_intrinsic_metadata_for_tm_t {
 struct ingress_intrinsic_metadata_for_deparser_t {
     bit<3> learn_idx;
     bit<3> resubmit_idx;
-    bit<3> mirror_idx;
+    bit<3> mirror_idx;     // The user-selected mirror field list index.
+
+    bit<8> mirror_source;  // Compiler-generated field containing metadata about
+                           // the mirror field list.
+                           // XXX(seth): We should eliminate this once we have a
+                           // generic mechanism for introducing
+                           // compiler-generated metadata in the midend; it's
+                           // not really something that should be user-visible.
 }
 
 struct ingress_intrinsic_metadata_for_mirror_buffer_t {
@@ -258,7 +265,14 @@ struct egress_intrinsic_metadata_from_parser_t {
 }
 
 struct egress_intrinsic_metadata_for_deparser_t {
-    bit<3> mirror_idx;
+    bit<3> mirror_idx;     // The user-selected mirror field list index.
+
+    bit<8> mirror_source;  // Compiler-generated field containing metadata about
+                           // the mirror field list.
+                           // XXX(seth): We should eliminate this once we have a
+                           // generic mechanism for introducing
+                           // compiler-generated metadata in the midend; it's
+                           // not really something that should be user-visible.
 }
 
 struct egress_intrinsic_metadata_for_mirror_buffer_t {
