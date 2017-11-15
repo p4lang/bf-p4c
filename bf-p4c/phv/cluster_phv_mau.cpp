@@ -160,7 +160,8 @@ void PHV_MAU_Group::create_aligned_container_slices(
            container_hi_s[c->ranges().begin()->second].push_back(c);
 
         for (auto &entry : container_hi_s) {
-            LOG4("\t~~~this iteration, considering containers~~~" << entry.second);
+            LOG4("\t~~~this iteration, considering containers~~~");
+            LOG4(entry.second);
             create_aligned_container_slices_per_range(entry.second);
             assert(entry.second.size() == 0); }
 
@@ -556,7 +557,7 @@ void PHV_MAU_Group_Assignments::cluster_PHV_placements() {
         // e.g., empty 32b, 16b containers for 8b clusters
         //
         container_no_pack(clusters_to_be_assigned_i, PHV_groups_i,
-            "PHV_any_container_width", false/*smallest_container_width*/);
+            "PHV_any_container_width", false /* use any container width */);
 
         // Check allocation for action induced constraints
         check_action_constraints();
@@ -658,46 +659,30 @@ PHV_MAU_Group_Assignments::cluster_TPHV_placements() {
     // separate t_phv fields nibble
     //
     for (auto &cl : phv_requirements_i.t_phv_fields()) {
-        if (cl->max_width() <= Constants::nibble) {
+        if (cl->max_width() <= Constants::nibble)
             t_phv_fields_nibble_i.push_front(cl);
-        } else {
-            t_phv_fields_i.push_front(cl);
-        }
-    }
+        else
+            t_phv_fields_i.push_front(cl); }
     container_no_pack(t_phv_fields_i, T_PHV_groups_i, "T_PHV_smallest_container_width");
     //
     if (t_phv_fields_i.size()) {
-        //
         // attempt placement without smallest_container_width
         // e.g., empty 32b, 16b containers for 8b clusters
-        //
-        container_no_pack(
-            t_phv_fields_i,
-            T_PHV_groups_i,
-            "T_PHV_any_container_width",
-            false/*smallest_container_width*/);
+        container_no_pack(t_phv_fields_i, T_PHV_groups_i, "T_PHV_any_container_width", false);
         if (t_phv_fields_i.size()) {
-            //
             // pack remaining clusters to partially filled containers
-            //
             container_pack_cohabit(t_phv_fields_i, T_PHV_container_slices_i, "T_PHV");
-            //
             // try overflow T_PHVs in PHV remaining spaces
-            //
             if (t_phv_fields_i.size()) {
-                //
                 LOG4("..........T_PHV Overflow ==> PHV ..........");
-                //
-                container_pack_cohabit(
-                    t_phv_fields_i,
-                    aligned_container_slices_i,
-                    "PHV <== TPHV_Overflow");
-                //
-                if (t_phv_fields_i.size())
-                    LOG4("********** T_PHV placement+packing+PHV_Overflow DID NOT FIT **********");
-            }
-        }
-    }
+                // attempt empty containers in PHV
+                container_no_pack(t_phv_fields_i, PHV_groups_i, "PHV <= T_PHV any_C_width", false);
+                if (t_phv_fields_i.size()) {
+                    container_pack_cohabit(
+                        t_phv_fields_i, aligned_container_slices_i, "PHV <== TPHV_Overflow");
+                    if (t_phv_fields_i.size()) {
+                        LOG4("*** T_PHV Overflow PHV DID NOT FIT #cls = " << t_phv_fields_i.size());
+                        LOG4(t_phv_fields_i); } } } } }
 }  // PHV_MAU_Group_Assignments::cluster_TPHV_placements
 
 void
@@ -824,23 +809,18 @@ PHV_MAU_Group_Assignments::container_no_pack(
     // higher number of constraints
     //
     clusters_to_be_assigned.sort([](Cluster_PHV *l, Cluster_PHV *r) {
-        if (l->exact_containers() && !r->exact_containers()) {
+        if (l->num_overlays() > r->num_overlays())
             return true;
-        }
-        if (!l->exact_containers() && r->exact_containers()) {
+        if (l->exact_containers() && !r->exact_containers())
+            return true;
+        if (!l->exact_containers() && r->exact_containers())
             return false;
-        }
         if (l->num_constraints() == r->num_constraints()) {
-            if (l->num_containers() == r->num_containers()) {
-                //
+            if (l->num_containers() == r->num_containers())
                 // when placement, no pack, consider container_width, not field width (max_width())
-                //
                 return l->width() > r->width();
-            }
-            return l->num_containers() > r->num_containers();
-        }
-        return l->num_constraints() > r->num_constraints();
-    });
+            return l->num_containers() > r->num_containers(); }
+        return l->num_constraints() > r->num_constraints(); });
     //
     // sort PHV_Groups in order 32b, 16b, 8b
     // for given width, I/E tagged MAU groups first
@@ -848,8 +828,7 @@ PHV_MAU_Group_Assignments::container_no_pack(
     phv_groups_to_be_filled.sort([](PHV_MAU_Group *l, PHV_MAU_Group *r) {
         if (l->width() == r->width())
             return l->gress() != boost::none;
-        return l->width() > r->width();
-    });
+        return l->width() > r->width(); });
 
     for (auto &g : phv_groups_to_be_filled) {
         std::list<Cluster_PHV *> clusters_remove;
@@ -1626,15 +1605,15 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
     std::list<Cluster_PHV *>& clusters_to_be_assigned,
     PHV_MAU_Group::Aligned_Container_Slices_t& aligned_slices,
     const char *msg) {
-    //
     // slice containers to form groups that can accommodate larger number for given width in <n:w>
-    //
     create_aligned_container_slices();
 
-    // sort clusters number decreasing, width decreasing, using ids to break
-    // ties
+    // sort clusters number decreasing, width decreasing, using ids to break ties
     clusters_to_be_assigned.sort([](Cluster_PHV *l, Cluster_PHV *r) {
-        // Sort by number of containers first
+        // Sort by number of overlays first
+        if (l->num_overlays() > r->num_overlays())
+            return true;
+        // ...then by number of containers
         if (l->num_containers() != r->num_containers())
             return l->num_containers() > r->num_containers();
 
@@ -1716,15 +1695,14 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
 
                         break; } }
 
-                if (cc_set.empty()) {
+                if (cc_set.empty())
                     // not compatible, constraints not satisfied, continue looking
-                    LOG4("-----" << cl->id() <<
-                         "<" << required_containers << ',' << required_width << '>' <<
-                         cl->gress() <<
-                         "-----[" << slice_width << "](" << available_slices << ')'
-                        << slice_gress /*<< slices_by_count.second*/);
-                } else {
-                    break; } }
+                    LOG4("-----" << cl->id() << '<' << required_containers << ',' << required_width
+                         << '>' << cl->gress()
+                         << "-----[" << slice_width << "](" << available_slices << ')'
+                         << slice_gress /*<< slices_by_count.second*/);
+                else
+                    break; }
 
             // If the inner loop was successful, break.
             if (!cc_set.empty())
@@ -1739,10 +1717,9 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
         clusters_remove.push_back(cl);
 
         LOG4("....." << cl->id() << "<" << required_containers << ',' << required_width << '>'
-             << cl->gress()
-             <<  "-->[" << slice_width << "](" << available_slices << ')'
-             << slice_gress
-             << cc_set);
+             << cl->gress() <<  "-->[" << slice_width << "](" << available_slices << ')'
+             << slice_gress);
+        LOG4("\t" << cc_set);
         BUG_CHECK(available_slices >= 0 && size_t(available_slices) == cc_set.size(),
             "Slice group of size %1% but expected size %2%", cc_set.size(), available_slices);
 
@@ -1760,8 +1737,8 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
                 cc_set.erase(cc_set.begin());
             }
             aligned_slices[slice_width][n].push_back(*cc_n);
-            LOG4("\t==>[" << slice_width << "]-->[" << slice_width << "](" << n << ')'
-                 << std::endl << '\t' << *cc_n); }
+            LOG4("\t==>[" << slice_width << "]-->[" << slice_width << "](" << n << ')');
+            LOG4("\t" << *cc_n); }
 
         // Assign slices to containers.
         size_t field_num = 0;
@@ -1862,7 +1839,7 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
                                    field_bit_lo);             // field_bit_lo
             cc->container()->sanity_check_container_ranges(
                 "PHV_MAU_Group_Assignments::container_pack_cohabit..");
-            LOG4("\t\t" << *(cc->container()));
+            LOG4("\t" << f << " assigned to " << *(cc->container()));
             //
             // advance to next field or continue same field
             //
@@ -2857,18 +2834,11 @@ void PHV_MAU_Group_Assignments::sanity_check_clusters_allocation() {
 // PHV_MAU_Group Container_Slice output
 //
 std::ostream &operator<<(std::ostream &out, PHV_MAU_Group::Container_Slice *c) {
-    if (c) {
-        out << c->container()
-            << '<'
-            << c->width()
-            << '>'
-            << '{' << c->lo()
-            << ".."
-            << c->hi()
-            << '}';
-    } else {
+    if (c)
+        out << c->container() << c->container()->gress()
+            << '<' << c->width() << '>' << '{' << c->lo() << ".." << c->hi() << '}';
+    else
         out << "--cc--";
-    }
     return out;
 }
 //
@@ -2877,11 +2847,9 @@ std::ostream &operator<<(
     std::ostream &out,
     ordered_set<PHV_MAU_Group::Container_Slice *>& slices) {
     out << '(';
-    for (auto c : slices) {
-        if (c->container()->status() != PHV_Container::Container_status::FULL) {
+    for (auto c : slices)
+        if (c->container()->status() != PHV_Container::Container_status::FULL)
             out << c << ' ';
-        }
-    }
     out << std::endl << "\t)";
     return out;
 }
@@ -2891,11 +2859,9 @@ std::ostream &operator<<(
     std::ostream &out,
     std::list<PHV_MAU_Group::Container_Slice *>& slices_list) {
     out << '(';
-    for (auto &cc : slices_list) {
-        if (cc->container()->status() != PHV_Container::Container_status::FULL) {
+    for (auto &cc : slices_list)
+        if (cc->container()->status() != PHV_Container::Container_status::FULL)
             out << cc << ' ';
-        }
-    }
     out << ")";
     return out;
 }
@@ -2905,9 +2871,8 @@ std::ostream &operator<<(
     std::ostream &out,
     std::list<std::list<PHV_MAU_Group::Container_Slice *>>& slices_list_list) {
     out << '{';
-    for (auto &slices_list : slices_list_list) {
+    for (auto &slices_list : slices_list_list)
         out << slices_list << ',';
-    }
     out << std::endl << "\t}";
     return out;
 }
@@ -2916,21 +2881,15 @@ std::ostream &operator<<(
 std::ostream &operator<<(
     std::ostream &out,
     PHV_MAU_Group::Aligned_Container_Slices_t& all_container_packs) {
-    //
     // map[w][n] --> <set of <set of container_packs>>
-    //
-    for (auto &w : all_container_packs) {
+    for (auto &w : all_container_packs)
         for (auto &n : w.second) {
             out << std::endl << "\t" << "[w" << w.first << "](n" << n.first << ')';
-            if (n.second.size() > 1) {
+            if (n.second.size() > 1)
                 out << '*' << n.second.size();
-            }
             out << std::endl << '\t';
-            for (auto s : n.second) {
-                out << s;
-            }
-        }
-    }
+            for (auto s : n.second)
+                out << s; }
     out << std::endl;
     return out;
 }

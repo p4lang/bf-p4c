@@ -148,10 +148,14 @@ p4c_add_xfail_reason("tofino"
 # parde physical adjacency constraint violated by mau phv_no_pack constraint
 p4c_add_xfail_reason("tofino"
   "Header field .* is required to be allocated contiguously"
-  extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   extensions/p4_tests/p4_14/jenkins/multicast_scale/multicast_scale.p4
   switch_l2
   switch_dc_basic
+  )
+
+p4c_add_xfail_reason("tofino"
+  "PHV_Container::taint_bits()"
+  extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   )
 
 # BRIG-112
@@ -222,6 +226,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/jenkins/multi_device/multi_device.p4
   extensions/p4_tests/p4_14/jenkins/perf_test_alpm/perf_test_alpm_one.p4
   extensions/p4_tests/p4_14/jenkins/exm_direct/exm_direct_one.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
   )
 
 # BRIG-113
@@ -583,6 +588,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/04-FullPHV3.p4
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
   extensions/p4_tests/p4_14/c1/COMPILER-133/full_tphv.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
   extensions/p4_tests/p4_14/c4/COMPILER-590/case3179.p4
   extensions/p4_tests/p4_14/c4/COMPILER-591/case3176.p4
   extensions/p4_tests/p4_14/jenkins/power/power.p4

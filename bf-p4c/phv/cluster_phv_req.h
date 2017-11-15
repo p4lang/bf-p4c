@@ -18,19 +18,20 @@ class Field;
 
 class Cluster_PHV {
  private:
-    std::vector<PHV::Field *> cluster_vec_i;
-                                            // cluster vec sorted by decreasing field width
-    int id_num_i;                           // number part of id_i
-    std::string id_i;                       // cluster id
-    gress_t gress_i;                        // ingress or egress
-    PHV::Size width_i;        // container width in PHV group
-    bool uniform_width_i = false;           // field widths differ in cluster
-    int max_width_i = 0;                    // max width of field in cluster
-    int num_containers_i = 0;               // number of containers
-    int num_constraints_i = 0;              // number of constrained fields, e.g., no cohabit
-
-    bool sliced_i = false;                  // sliced cluster, move-based ops only
-    bool exact_containers_i = false;        // true => single field must exact match container width
+    std::vector<PHV::Field *> cluster_vec_i;           // vec sorted by decreasing field width
+    std::vector<Cluster_PHV *> cluster_overlay_vec_i;  // clusters that can overlay this cluster
+    Cluster_PHV *overlay_substratum_i = nullptr;       // this cluster overlay on substratum cluster
+    int id_num_i;                                      // number part of id_i
+    std::string id_i;                                  // cluster id
+    gress_t gress_i;                                   // ingress or egress
+    bool uniform_width_i = false;                      // field widths differ in cluster
+    int max_width_i = 0;                               // max width of field in cluster
+    int num_containers_i = 0;                          // # of containers
+    PHV::Size width_i;                                 // container width in PHV group
+    int num_overlays_i = 0;                            // number of overlay fields
+    int num_constraints_i = 0;                         // # of constrained fields, e.g., no cohabit
+    bool sliced_i = false;                             // sliced cluster, move-based ops only
+    bool exact_containers_i = false;                   // true => field must match container width
 
  public:
     Cluster_PHV(
@@ -45,6 +46,7 @@ class Cluster_PHV {
         bool lo = true);                               // NOLINT(runtime/explicit)
 
     void set_gress();                                  // set gress
+    int compute_num_overlays();                        // number of overlay fields on this cluster
     void insert_field_clusters(Cluster_PHV *parent = 0, bool slice_lo = true);
                                                        // field's list of clusters
     void compute_requirements();                       // compute cluster requirements
@@ -60,7 +62,11 @@ class Cluster_PHV {
         return s;
     }
 
-    std::vector<PHV::Field *>& cluster_vec()        { return cluster_vec_i; }
+    std::vector<PHV::Field *>& cluster_vec()            { return cluster_vec_i; }
+    const std::vector<PHV::Field *>& cluster_vec() const  { return cluster_vec_i; }
+    std::vector<Cluster_PHV *>& cluster_overlay_vec()   { return cluster_overlay_vec_i; }
+    Cluster_PHV* overlay_substratum() const             { return overlay_substratum_i; }
+    void overlay_substratum(Cluster_PHV *cl)            { overlay_substratum_i = cl; }
     int id_num()                                        { return id_num_i; }
     std::string id()                                    { return id_i; }
     void id(std::string id_p)                           { id_i = id_p; }
@@ -83,8 +89,12 @@ class Cluster_PHV {
     }
     int num_containers()                                { return num_containers_i; }
     void num_containers(int n)                          { num_containers_i = n; }
-    int num_containers(std::vector<PHV::Field *>&, PHV::Size);
+    int num_containers(PHV::Field *);
+    int num_containers(PHV::Field *, PHV::Size width);
+    int num_containers(std::vector<PHV::Field *>&);
+    int num_containers(std::vector<PHV::Field *>&, PHV::Size width);
     int num_constraints()                               { return num_constraints_i; }
+    int num_overlays()                                  { return num_overlays_i; }
 
     bool sliced()                                       { return sliced_i; }
     int req_containers_bottom_bits();  // number of fields that must be in bottom bits of container

@@ -27,13 +27,10 @@ PHV_Container::Container_Content::Container_Content(
           field_bit_lo_i(field_bit_lo),
           taint_color_i(taint_color),
           pass_i(pass) {
-    //
     BUG_CHECK(
         field_i,
         "*****PHV_Container::Container_Content constructor called with null field ptr*****");
-    //
     // insert phv container in field
-    //
     f->phv_containers(const_cast<PHV_Container *>(c));
 }
 
@@ -459,12 +456,12 @@ PHV_Container::overlay_ccgf_field(
 void
 PHV_Container::single_field_overlay(
     PHV::Field *f,
-    const int start,
+    int start,
     int width,
-    const int field_bit_lo,
+    const int overlay_field_bit_lo,
     Container_Content::Pass pass) {
     //
-    // overlay field f, slice starting from field_bit_lo
+    // overlay field f, slice starting from overlay_field_bit_lo
     // onto this container starting at bit 'start' with width
     //
     assert(f);
@@ -474,36 +471,30 @@ PHV_Container::single_field_overlay(
     width = std::min(f->phv_use_width(), width);
     // container content for overlay field must reflect overlay field's size, not phv_use_width
     if (constraint_no_cohabit(f)) width = std::min(f->size, width);
-    //
+
     // if substratum area is not yet associated with a field, taint color will be 0
     // need to go through steps for container area allocation, updating its avail bits
-    //
+    if (f->phv_use_width() < static_cast<int>(width_i))  // right justify for extract
+        start += int(width_i) - (start + width);
     if (taint_color(start, start + width - 1) == "0") {
-        taint(start, width, f, field_bit_lo, pass);
+        taint(start, width, f, overlay_field_bit_lo, pass);
     } else {
         if (f->ccgf_fields().size()) {
             overlay_ccgf_field(f, start, width, pass);
         } else {
-            int align_start = start;
-            if (field_bit_lo == 0)  // alignment @ start of field
-                align_start = f->phv_alignment().get_value_or(start);
-            else
-                if (f->sliced() && f->phv_alignment())
-                    // offset start by alignment + field_slice leading bits, e.g., f^0=f1^0,f2^8
-                    align_start += field_bit_lo;
             fields_in_container(
                 f,
                 new Container_Content(
                     this,
-                    StartLen(align_start, width),
+                    StartLen(start, width),
                     f,
-                    field_bit_lo,
+                    overlay_field_bit_lo,
                     taint_color(start, start + width - 1),
                     pass /* pass that performs the overlay */));
         }
     }
     LOG3("\t==> overlayed'" << static_cast<char>(pass) << "' " << f
-        << "[" << field_bit_lo << ".." << field_bit_lo + width - 1 << "]");
+        << "[" << overlay_field_bit_lo << ".." << overlay_field_bit_lo + width - 1 << "]");
     if (pass == Container_Content::Cluster_Overlay) {
         //
         // for all fields f_s overlapped by f in container
@@ -529,10 +520,9 @@ PHV_Container::field_overlays(
     PHV::Field *field,
     int start,
     int width,
-    const int field_bit_lo) {
+    const int substratum_field_bit_lo) {
     //
     assert(field);
-    //
     // field can have overlays spanning containers
     // e.g., 24b field mapped to 3*8b containers
     // field->field_overlay_map is [3]={f_ov,...}, [4]={f_ov,...}, [5]={f_ov,...}
@@ -540,50 +530,55 @@ PHV_Container::field_overlays(
     // this container should only overlay the first slice
     // other containers should overlay remaining slices
     // f_ov's slice-width mimics substratum width in each container
-    //
     if (field->field_overlay_map().size()) {
         LOG3("..........PHV_Container::field_overlays.....for container " << this->toString());
         LOG3("\t" << field);
         // consider overlayed fields, if any, for this container only
         ordered_set<PHV::Field *> *set_of_f = field->field_overlay_map(container_id_i);
         if (set_of_f) {
-            for (auto &f : *set_of_f) {
-                //
-                // overlay ccgf on substratum ccgf
-                // substratum ccgf owner in single container but its members span several containers
-                // overlay ccgf spans these containers
-                //
-                if (f->is_ccgf() && f->phv_use_width() > int(width_i)) {
-                    for (auto &c : field->phv_containers()) {
-                        c->single_field_overlay(
-                            f,
-                            start,
-                            width,
-                            field_bit_lo,
-                            Container_Content::Pass::Field_Interference);
-                    }
-                } else {
+            for (auto *f : *set_of_f) {
+                // num containers used by overlay field can be less than substratum field
+                int overlay_field_bit_lo = substratum_field_bit_lo;
+                int width_diff = field->size - f->size;
+                if (width_diff > 0) {
+                    int overlay_field_lo_shift = overlay_field_bit_lo % 8;
+                    if (overlay_field_bit_lo >= width_diff && overlay_field_lo_shift) {
+                        overlay_field_bit_lo -= width_diff;
+                    } else {
+                        overlay_field_bit_lo -= overlay_field_lo_shift; } }
+                BUG_CHECK(overlay_field_bit_lo >= 0, "....field_overlays(): "
+                    "overlay_field_bit_lo=%1%, substratum_field_bit_lo=%2%, o_f = %3%, s_f = %4%",
+                    overlay_field_bit_lo, substratum_field_bit_lo, f, field);
+                if (f->ccgf_fields().size() && f->phv_use_width() > int(width_i)) {
+                    // overlay ccgf fields are overlaid across substratum containers
+                    for (auto &c : field->phv_containers())
+                        if (!f->allocation_complete())  // ccgf overlay field < substratum width ?
+                            c->single_field_overlay(
+                                f,
+                                start,
+                                width,
+                                overlay_field_bit_lo,
+                                Container_Content::Pass::Field_Interference);
+                } else if (!(f->ccgf() == f && f->allocation_complete())) {
+                    // considers remaining ccgf fields not overlaid across containers
+                    // as well as non-ccgf fields
+                    // overlay (48b), substratum(64) same #containers but overlay width < substratum
+                    int overlay_width = std::min(width, f->phv_use_width() - f->phv_use_rem());
+                    // right justify for extract operation
+                    int shift_start = static_cast<int>(width_i) - overlay_width;
+                    int align_start = f->phv_alignment().get_value_or(shift_start);
                     single_field_overlay(
                         f,
-                        start,
-                        width,
-                        field_bit_lo,
+                        align_start,
+                        overlay_width,
+                        overlay_field_bit_lo,
                         Container_Content::Pass::Field_Interference);
+                    f->set_phv_use_rem(f->phv_use_rem() + overlay_width);
                 }
-                if (!f->allocation_complete()) {
-                    LOG1("*****cluster_phv_container.cpp: sanity_FAIL field_overlays*****"
-                        << "..........ccgf member(s) INCOMPLETE ALLOCATION");
-                    LOG1("..........overlay_field = ");
-                    LOG1(f);
-                    LOG1("..........substratum_field = ");
-                    LOG1(field);
-                    LOG1("..........substratum phv containers = "
-                        << &(field->phv_containers())
-                        << ".....");
-                }
-            }
-        }
-    }
+                BUG_CHECK(f->allocation_complete(),
+                    "ccgf member(s) INCOMPLETE ALLOCATION overlay_field = %1%, substratum = %2%",
+                    f, field);
+                } } }
 }  // field_overlays
 
 void
@@ -671,13 +666,9 @@ PHV_Container::Container_Content* PHV_Container::taint_bits(
          bits_i[i] = taint_color_i.back();
 
     avail_bits_i -= width;  // packing reduces available bits
-    BUG_CHECK(
-        avail_bits_i >= 0,
-        "*****PHV_Container::taint_bits()*****%s avail_bits = %d, field = %d:%s",
-        this->toString(),
-        avail_bits_i,
-        field->id,
-        field->name);
+    BUG_CHECK(avail_bits_i >= 0,
+        "*****PHV_Container::taint_bits()*****%s avail_bits = %d, field = %d:%s<%d>",
+        this->toString(), avail_bits_i, field->id, field->name, field->phv_use_width());
 
     if (status_i == Container_status::EMPTY)
         phv_mau_group_i->dec_empty_containers();
@@ -710,9 +701,8 @@ PHV_Container::Container_Content* PHV_Container::taint_bits(
         "Assigning field to container of wrong gress");
 
     // track fields in this container
-    Container_Content *cc =
-        new Container_Content(this, StartLen(start, width), field,
-                              field_bit_lo, taint_color_i, pass);
+    Container_Content *cc = new Container_Content(
+        this, StartLen(start, width), field, field_bit_lo, taint_color_i, pass);
     fields_in_container(field, cc);
 
     return cc;

@@ -560,7 +560,7 @@ PHV::Field::phv_alignment(bool get_ccgf_alignment) const {
     // the parameter get_ccgf_alignment distinguishes between requesting alignment
     // of the CCGF as a whole vs the alignment of a ccgf member field
     if (alignment) {
-        if (get_ccgf_alignment && is_ccgf()) {
+        if (get_ccgf_alignment && ccgf_fields_i.size()) {
             // return alignment of last field of ccgf as [m1,m2,m3] placed m3.m2.m1 in phv[0..w]
             return ccgf_fields_i.back()->phv_alignment();
         }
@@ -709,29 +709,30 @@ PHV::Field::phv_containers(PHV_Container *c) {
     phv_containers_i.insert(c);
     // owner ccgf records container allocation of members
     // used during ccgf overlay on ccgf substratum
-    if (ccgf_i && !is_ccgf()) {
+    if (ccgf_i && ccgf_fields_i.size() == 0)
         ccgf_i->phv_containers().insert(c);
-    }
     if (field_overlay_map_i.size()) {
-        //
         // field overlays exist, update field overlay map key with actual container number
         // remove virtual container entry from ordered map
         // add actual phv-container entry
         // alternate solution would be to key as std::pair<int virtual, PHV_Container*>
-        //
         int container_number = field_overlay_map_i.begin()->first;
-        ordered_set<Field *> *set_of_f = field_overlay_map_i.begin()->second;
-        if (container_number < 0) {
-            // remove virtual container entry
+        ordered_set<Field *> *set_of_f =
+            new ordered_set<Field *>(*(field_overlay_map_i.begin()->second));
+        if (container_number < 0)  // remove virtual container entry
             field_overlay_map_i.erase(container_number);
-        }
         if (set_of_f && set_of_f->size()) {
             // insert phv container entry
-            field_overlay_map_i[c->container_id()] = set_of_f;
-        }
-    }
+            // consider containers spanning overlay field width and not substratum width
+            std::set<Field *> fields_to_erase;
+            for (auto *f : *set_of_f)
+                if (f->phv_use_width() <= int(field_overlay_map_i.size()) * int(c->width()))
+                    fields_to_erase.insert(f);
+            for (auto *f : fields_to_erase)
+                set_of_f->erase(f);
+            field_overlay_map_i[c->container_id()] = set_of_f; } }
     // sanity check this field's field_overlay_map
-    for (auto overlaid_by_field : field_overlay_map_i) {
+    for (auto overlaid_by_field : field_overlay_map_i)
         for (auto* f_overlay : *overlaid_by_field.second) {
             // field is never overlaid atop itself
             // ensure this field is not present in field_overlay_map
@@ -747,9 +748,7 @@ PHV::Field::phv_containers(PHV_Container *c) {
             // ensure member's ccgf owner not in member's field_overlay_map
             BUG_CHECK(this->ccgf() != f_overlay,
                       "ccgf member's %1% field_overlay_map contains ccgf owner %2%",
-                      cstring::to_cstring(this), cstring::to_cstring(f_overlay));
-        }
-    }
+                      cstring::to_cstring(this), cstring::to_cstring(f_overlay)); }
 }
 
 void
@@ -772,17 +771,13 @@ PHV::Field::field_overlay_map(Field *field, int r, bool actual_register) {
         assert(r > 0);
         r = -r;
     }
-    if (!field_overlay_map_i[r]) {
+    if (!field_overlay_map_i[r])
         field_overlay_map_i[r] = new ordered_set<Field *>;
-    }
     field_overlay_map_i[r]->insert(field);
-    //
     // overlayed field points to substratum
-    //
     field->overlay_substratum(this);
-    for (auto &m : field->ccgf_fields()) {
+    for (auto &m : field->ccgf_fields())
         m->overlay_substratum(this);
-    }
 }
 
 
@@ -1262,7 +1257,7 @@ void PhvInfo::print_phv_group_occupancy() const {
             PHV::Container c = Device::phvSpec().idToContainer(phv_c->container_id());
             if (containers_used.count(c)) continue;
             containers_used.insert(c);
-            int bitsUsed = static_cast<int>(phv_c->width()) - phv_c->avail_bits();
+            int bitsUsed = int(phv_c->width()) - phv_c->avail_bits();
             if (boost::optional<bitvec> mau_group =
                     Device::phvSpec().mauGroup(phv_c->container_id())) {
                 groups_containers[mau_group.get()] += 1;
@@ -1447,7 +1442,7 @@ std::ostream &operator<<(std::ostream &out, const PHV::Field_Ops &op) {
         case PHV::Field_Ops::R: out << 'R'; break;
         case PHV::Field_Ops::W: out << 'W'; break;
         case PHV::Field_Ops::RW: out << "RW"; break;
-        default: out << "<Field_Ops " << static_cast<int>(op) << ">"; }
+        default: out << "<Field_Ops " << int(op) << ">"; }
     return out;
 }
 

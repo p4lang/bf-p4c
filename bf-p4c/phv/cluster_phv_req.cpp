@@ -211,6 +211,8 @@ Cluster_PHV::Cluster_PHV(
     //
     set_gress();
     //
+    num_overlays_i = compute_num_overlays();
+    //
     insert_field_clusters();
     //
     set_exact_containers();
@@ -219,10 +221,17 @@ Cluster_PHV::Cluster_PHV(
     //
 }  // Cluster_PHV
 
+int Cluster_PHV::compute_num_overlays() {
+    int num_overlays = 0;
+    for (auto* field : cluster_vec_i)
+        for (auto set_of_f : Values(field->field_overlay_map()))
+            num_overlays += set_of_f->size();
+    return num_overlays;
+}
+
 void
 Cluster_PHV::set_exact_containers() {
-    //
-    for (auto &field : cluster_vec_i) {
+    for (auto* field : cluster_vec_i) {
         // deparsed header fields need exact containers as they go out on the wire
         // metadata does not go on the wire so exactness can be relaxed
         if (field->deparsed()
@@ -329,7 +338,6 @@ Cluster_PHV::compute_requirements() {
                 return l->phv_use_width() != r->phv_use_width(); })
         == cluster_vec_i.end();
     //
-    //
     // although uniform width, width_req cannot use cluster_vec_i.front()->phv_use_width()
     // as fields may be ccgf with members phv_no_pack
     // e.g., <1:12>[4,8] = {2*8} better than {2*16}
@@ -365,7 +373,7 @@ Cluster_PHV::compute_requirements() {
     // container width
     width_i = container_width(width_req);
     // num containers of width
-    num_containers_i = num_containers(cluster_vec_i, width_i);
+    num_containers_i = num_containers(cluster_vec_i);
     //
     // recompute requirements based on width_i for ccgf fields containing no_pack members
     // e.g.,
@@ -494,42 +502,43 @@ Cluster_PHV::container_width(int field_width) {
     return PHV::Size::b8;
 }
 
-//
 // Cluster_PHV::num_containers()
 // input
-//      cluster vector of fields*, container width
+//      (1) field, width of container
+//      (2) cluster vector of fields*, width of container
 // output
-//      num_containers based on field width
-//
+//      num_containers
 
-int
-Cluster_PHV::num_containers(
-    std::vector<PHV::Field *>& cluster_vec, PHV::Size width) {
-    //
-    // num containers of width
-    int num_containers = 0;
-    for (auto &pfield : cluster_vec) {
-        //
+int Cluster_PHV::num_containers(PHV::Field *field) {
+    // num containers of width for field
+    return num_containers(field, width_i);
+}
+
+int Cluster_PHV::num_containers(PHV::Field *field, PHV::Size width) {
+    // num containers of width for field
+    int field_width = field->phv_use_width();
+    return field_width / int(width) + (field_width % int(width) ? 1 : 0);
+}
+
+int Cluster_PHV::num_containers(std::vector<PHV::Field *>& cluster_vec) {
+    return num_containers(cluster_vec, width_i);
+}
+
+int Cluster_PHV::num_containers(std::vector<PHV::Field *>& cluster_vec, PHV::Size width) {
+    // num containers of width for cluster
+    int num_c = 0;
+    for (auto *field : cluster_vec)
         // fields can span containers  (e.g., 48b = 2*32b or 3*16b = 6*8b)
         // container cannot contain two fields from same cluster
-        //
-        int field_width = pfield->phv_use_width();
-        num_containers += field_width / int(width) + (field_width % int(width) ? 1 : 0);
-    }
-    if (num_containers > PHV_MAU_Group_Assignments::Constants::phv_mau_group_size) {
-        LOG1(
-            "*****Cluster_PHV::get_num_containers: "
-            << "cluster "
-            << this->id()
-            << " requires num_containers = "
-            << num_containers
-            << " > "
-            << PHV_MAU_Group_Assignments::Constants::phv_mau_group_size
-            << " of width "
-            << width
+        num_c += num_containers(field, width);
+
+    if (num_c > PHV_MAU_Group_Assignments::Constants::phv_mau_group_size)
+        LOG1("*****Cluster_PHV::get_num_containers: " << "cluster " << this->id()
+            << " requires num_containers = " << num_c << " > "
+            << PHV_MAU_Group_Assignments::Constants::phv_mau_group_size << " of width " << width
             << " ******");
-    }
-    return num_containers;
+
+    return num_c;
 }
 
 
@@ -593,7 +602,7 @@ std::ostream &operator<<(std::ostream &out, Cluster_PHV &cp) {
             << cp.needed_bits()
             << ']';
     }
-    out << static_cast<char>(cp.gress());
+    out << cp.gress();
     return out;
 }
 

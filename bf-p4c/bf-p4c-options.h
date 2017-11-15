@@ -14,6 +14,7 @@ class BFN_Options : public CompilerOptions {
 
     bool trivial_phvalloc = false;
     bool phv_interference = true;
+    bool cluster_interference = true;
     bool phv_slicing = true;
     bool phv_overlay = true;
     bool ignorePHVOverflow = false;
@@ -33,6 +34,9 @@ class BFN_Options : public CompilerOptions {
         registerOption("--nophvintf", nullptr,
             [this](const char *) { phv_interference = false; return true; },
             "do not use cluster_phv_interference interference-graph based PHV reduction");
+        registerOption("--noclusterintf", nullptr,
+            [this](const char *) { cluster_interference = false; return true; },
+            "do not use cluster_to_cluster interference interference-graph based PHV reduction");
         registerOption("--nophvslice", nullptr,
             [this](const char *) { phv_slicing = false; return true; },
             "do not use cluster_phv_slicing based PHV slices");

@@ -23,6 +23,7 @@ struct OutputDictionary : public Inspector {
     unsigned            checksumIndex = 0;
     indent_t            indent;
     PHV::Container      last;
+    const PHV::Field    *last_pov;
 
     bool preorder(const IR::BFN::Deparser* deparser) override {
         out << indent << "dictionary:";
@@ -44,21 +45,22 @@ struct OutputDictionary : public Inspector {
             /* varbits? not supported */
             LOG3("skipping varbits? " << field->name);
             return false; }
+
+        bitrange povAllocBits;
+        auto povBit = phv.field(emit->povBit, &povAllocBits);
         auto &alloc = field->for_bit(bits.lo);
-        if (last == alloc.container) {
+        int size = alloc.container.size() / 8;
+        if (last == alloc.container && last_pov == povBit) {
             out << indent << "    # - " << alloc.container_bits() << ": "
                 << DeparserSourceFormatter{field, bits} << std::endl;
-            return false;
-        }
+            return false; }
         last = alloc.container;
-        int size = alloc.container.size() / 8;
+        last_pov = povBit;
         if (bits.size() != size * 8)
             out << indent << alloc.container;
         else
             out << indent << DeparserSourceFormatter{field, bits};
 
-        bitrange povAllocBits;
-        auto povBit = phv.field(emit->povBit, &povAllocBits);
         if (!povBit) {
             out << indent << " # no phv for pov: " << *emit->povBit << std::endl;
             return false;

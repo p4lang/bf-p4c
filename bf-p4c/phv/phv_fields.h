@@ -53,6 +53,7 @@ class PHV_Assignment_Validate;
 class PHV_Bind;
 class PHV_Field_Operations;
 class PHV_Interference;
+class Cluster_Interference;
 class PhvInfo;
 class PHV_MAU_Group;
 class PHV_MAU_Group_Assignments;
@@ -479,6 +480,7 @@ class Field {
     friend class ::PHV_Bind;
     friend class ::PHV_Container;
     friend class ::PHV_Interference;
+    friend class ::Cluster_Interference;
     friend class ::PHV_MAU_Group;
     friend class ::PHV_MAU_Group_Assignments;
     friend class ::PHV_Field_Operations;

@@ -222,15 +222,15 @@ class PHV_Container {
         Container_Content::Pass pass = Container_Content::Pass::Field_Interference);
     void single_field_overlay(
         PHV::Field *f,
-        const int start,
+        int start,
         int width,
-        const int field_bit_lo,
+        const int overlay_field_bit_lo,
         Container_Content::Pass pass = Container_Content::Pass::Field_Interference);
     void field_overlays(
         PHV::Field *field,
         int start,
         int width,
-        const int field_bit_lo);
+        const int substratum_field_bit_lo);
     void field_overlays();
     ordered_map<int, std::pair<int, int>>*
         lowest_bit_and_ccgf_width(bool by_cluster_id = true);

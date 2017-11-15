@@ -230,6 +230,7 @@ set (TOFINO_BACKEND_PHV_SRCS
   phv/cluster_phv_overlay.cpp
   phv/cluster_phv_req.cpp
   phv/cluster_phv_slicing.cpp
+  phv/cluster_to_cluster_interference.cpp
   phv/create_thread_local_instances.cpp
   phv/field_alignment.cpp
   phv/phv_analysis.cpp
@@ -261,6 +262,7 @@ set (TOFINO_BACKEND_PHV_HDRS
   phv/cluster_phv_overlay.h
   phv/cluster_phv_req.h
   phv/cluster_phv_slicing.h
+  phv/cluster_to_cluster_interference.h
   phv/constraints.h
   phv/create_thread_local_instances.h
   phv/field_alignment.h
