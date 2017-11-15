@@ -60,7 +60,7 @@ bool FieldPacking::isAlignedTo(unsigned alignment, unsigned phase /* = 0 */) con
     return totalWidth % alignment == phase % alignment;
 }
 
-const IR::BFN::ParserState*
+IR::BFN::ParserState*
 FieldPacking::createExtractionState(gress_t gress, cstring stateName,
                                     const IR::BFN::ParserState* finalState) const {
     BUG_CHECK(totalWidth % 8 == 0,

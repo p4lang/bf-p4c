@@ -100,7 +100,7 @@ struct FieldPacking {
      *                    its work is complete.
      * @return the root of the resulting parser program.
      */
-    const IR::BFN::ParserState*
+    IR::BFN::ParserState*
     createExtractionState(gress_t gress, cstring stateName,
                           const IR::BFN::ParserState* finalState) const;
 
