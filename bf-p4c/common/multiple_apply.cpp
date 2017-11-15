@@ -205,11 +205,13 @@ bool MultipleApply::UniqueGatewayChain::preorder(const IR::MAU::Table *tbl) {
     return true;
 }
 
-MultipleApply::MultipleApply() : PassManager {
-    &mutex,
-    new MutuallyExclusiveApplies(mutex, mutex_errors),
-    new EquivalentTableSequence(equiv_seqs),
-    new RefactorSequence(equiv_seqs),
-    new DistinctTables(distinct_errors),
-    new UniqueGatewayChain(gateway_chain_errors)
-} {}
+MultipleApply::MultipleApply() {
+    addPasses({
+        &mutex,
+        new MutuallyExclusiveApplies(mutex, mutex_errors),
+        new EquivalentTableSequence(equiv_seqs),
+        new RefactorSequence(equiv_seqs),
+        new DistinctTables(distinct_errors),
+        new UniqueGatewayChain(gateway_chain_errors)
+    });
+}
