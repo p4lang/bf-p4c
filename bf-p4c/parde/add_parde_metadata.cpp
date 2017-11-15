@@ -86,6 +86,8 @@ void AddMetadataShims::addIngressMetadata(IR::BFN::Parser *parser) {
     // point.
     auto* alwaysDeparseBit =
         new IR::TempVar(IR::Type::Bits::get(1), true, "$always_deparse");
+    auto* bridgedMetadataIndicator =
+      new IR::TempVar(IR::Type::Bits::get(8), false, "$bridged_metadata_indicator");
     auto* globalTimestamp = gen_fieldref(igParserMeta, "ingress_global_tstamp");
     auto* globalVersion = gen_fieldref(igParserMeta, "ingress_global_ver");
     auto* parserErrorCode = gen_fieldref(igParserMeta, "ingress_parser_err");
@@ -93,6 +95,7 @@ void AddMetadataShims::addIngressMetadata(IR::BFN::Parser *parser) {
     parser->start =
       new IR::BFN::ParserState("$entry_point", INGRESS,
         { new IR::BFN::Extract(alwaysDeparseBit, new IR::BFN::ConstantRVal(1)),
+          new IR::BFN::Extract(bridgedMetadataIndicator, new IR::BFN::ConstantRVal(0)),
           new IR::BFN::Extract(globalTimestamp, new IR::BFN::BufferRVal(StartLen(432, 48))),
           new IR::BFN::Extract(globalVersion, new IR::BFN::BufferRVal(StartLen(480, 32))),
           new IR::BFN::Extract(parserErrorCode, new IR::BFN::ConstantRVal(0)),
@@ -107,12 +110,30 @@ void AddMetadataShims::addEgressMetadata(IR::BFN::Parser *parser) {
 
     // Add a state that parses bridged metadata. This is just a placeholder;
     // we'll replace it once we know which metadata need to be bridged.
-    // XXX(seth): We'll eventually need to handle mirroring and coalescing
-    // as well.
     auto* bridgedMetadataState =
         new IR::BFN::ParserState("$bridged_metadata", EGRESS, { }, { }, {
             new IR::BFN::Transition(match_t(), 0, parser->start)
         });
+
+    // Similarly, this state is a placeholder which will eventually hold the
+    // parser for mirrored data.
+    auto* mirroredState =
+        new IR::BFN::ParserState("$mirrored", EGRESS, { }, { }, {
+            new IR::BFN::Transition(match_t(), 0, parser->start)
+        });
+
+    // If this is a mirrored packet, the hardware will have prepended the
+    // contents of the mirror buffer to the actual packet data. To detect this
+    // data, we add a byte to the beginning of the mirror buffer that contains a
+    // flag indicating that it's a mirrored packet. We can use this flag to
+    // distinguish a mirrored packet from a normal packet because we always
+    // begin the bridged metadata we attach to normal packet with an extra byte
+    // which has the mirror indicator flag set to zero.
+    auto* checkMirroredState =
+      new IR::BFN::ParserState("$check_mirrored", EGRESS, { },
+        { new IR::BFN::Select(new IR::BFN::PacketRVal(StartLen(0, 8))) },
+        { new IR::BFN::Transition(match_t(8, 0, 1 << 3), 0, bridgedMetadataState),
+          new IR::BFN::Transition(match_t(8, 1 << 3, 1 << 3), 0, mirroredState) });
 
     // This state handles the extraction of egress intrinsic metadata.
     const auto epbConfig = Device::pardeSpec().defaultEPBConfig();
@@ -120,7 +141,7 @@ void AddMetadataShims::addEgressMetadata(IR::BFN::Parser *parser) {
       Device::pardeSpec().egressMetadataLayout(epbConfig, egMeta);
     auto* egMetadataState =
       egMetadataPacking.createExtractionState(EGRESS, "$egress_metadata",
-                                              bridgedMetadataState);
+                                              checkMirroredState);
 
     // This state initializes some special metadata and serves as an entry
     // point.
@@ -129,8 +150,6 @@ void AddMetadataShims::addEgressMetadata(IR::BFN::Parser *parser) {
     auto* globalTimestamp = gen_fieldref(egParserMeta, "egress_global_tstamp");
     auto* globalVersion = gen_fieldref(egParserMeta, "egress_global_ver");
     auto* parserErrorCode = gen_fieldref(egParserMeta, "egress_parser_err");
-    auto* cloneDigestId = gen_fieldref(egParserMeta, "clone_digest_id");
-    auto* cloneSource = gen_fieldref(egParserMeta, "clone_src");
     auto* sampleCount = gen_fieldref(egParserMeta, "coalesce_sample_count");
     parser->start =
       new IR::BFN::ParserState("$entry_point", EGRESS,
@@ -138,8 +157,6 @@ void AddMetadataShims::addEgressMetadata(IR::BFN::Parser *parser) {
           new IR::BFN::Extract(globalTimestamp, new IR::BFN::BufferRVal(StartLen(432, 48))),
           new IR::BFN::Extract(globalVersion, new IR::BFN::BufferRVal(StartLen(480, 32))),
           new IR::BFN::Extract(parserErrorCode, new IR::BFN::ConstantRVal(0)),
-          new IR::BFN::Extract(cloneDigestId, new IR::BFN::ConstantRVal(0)),
-          new IR::BFN::Extract(cloneSource, new IR::BFN::ConstantRVal(0)),
           new IR::BFN::Extract(sampleCount, new IR::BFN::ConstantRVal(0)),
         }, { },
         { new IR::BFN::Transition(match_t(), 0, egMetadataState) });

@@ -93,7 +93,7 @@ class AddBridgedMetadata::AddBridge : public PardeModifier {
         if (!self.packing.containsFields()) return false;
 
         auto start = transformAllMatching<IR::BFN::ParserState>(parser->start,
-                     [this](const IR::BFN::ParserState* state) {
+                     [this](IR::BFN::ParserState* state) {
             if (state->name != "$bridged_metadata") return state;
 
             // Replace this placeholder state with a generated parser program
@@ -117,5 +117,13 @@ AddBridgedMetadata:: AddBridgedMetadata(PhvInfo &phv, const FieldDefUse &defuse)
         new FindFieldsToBridge(*this),
         new AddBridge(*this),
     });
+
+    // We always need to bridge at least one byte of metadata; it's used to
+    // indicate to the egress parser that it's dealing with bridged metadata
+    // rather than mirrored data. (We could pack more information in there, too,
+    // but we don't right now.)
+    auto* bridgedMetadataIndicator =
+      new IR::TempVar(IR::Type::Bits::get(8), false, "$bridged_metadata_indicator");
+    packing.appendField(bridgedMetadataIndicator, 8);
 }
 

@@ -16,6 +16,7 @@
 #include "bf-p4c/mau/table_dependency_graph.h"
 #include "bf-p4c/parde/checksum.h"
 #include "bf-p4c/parde/extract_parser.h"
+#include "bf-p4c/parde/mirror.h"
 #include "bf-p4c/parde/phase0.h"
 #include "bf-p4c/parde/resubmit.h"
 #include "lib/algorithm.h"
@@ -862,6 +863,13 @@ class TnaPipe {
         std::tie(mau, rv) = BFN::extractPhase0(mau, rv, refMap, typeMap);
     }
 
+    void addMirroredFieldParser(IR::BFN::Pipe* rv,
+                                const IR::P4Control* ingressDeparser,
+                                const IR::P4Control* egressDeparser) {
+        BFN::addMirroredFieldParser(rv, ingressDeparser, egressDeparser,
+                                    refMap, typeMap);
+    }
+
     void extractResubmit(IR::BFN::Pipe* rv, gress_t gress) {
         if (gress == EGRESS) return;
         std::tie(deparser, rv) = BFN::extractResubmit(deparser, rv, refMap, typeMap);
@@ -893,6 +901,10 @@ const IR::BFN::Pipe* extract_native_arch(P4::ReferenceMap* refMap, P4::TypeMap* 
         rv->thread[gress].parser = parserInfo.parsers[gress];
         rv->thread[gress].deparser = parserInfo.deparsers[gress];
     }
+
+    // Native tofino path should skip this pass.
+    pipes[EGRESS]->addMirroredFieldParser(rv, pipes[INGRESS]->deparser,
+                                              pipes[EGRESS]->deparser);
 
     for (auto gress : { INGRESS, EGRESS}) {
         /// native tofino path should skip this pass

@@ -192,6 +192,7 @@ set (TOFINO_BACKEND_PARDE_SRCS
   parde/field_packing.cpp
   parde/gen_deparser.cpp
   parde/lower_parser.cpp
+  parde/mirror.cpp
   parde/parde_spec.cpp
   parde/parser_output.cpp
   parde/phase0.cpp
@@ -211,6 +212,7 @@ set (TOFINO_BACKEND_PARDE_HDRS
   parde/extract_parser.h
   parde/field_packing.h
   parde/lower_parser.h
+  parde/mirror.h
   parde/parde_spec.h
   parde/phase0.h
   parde/resolve_computed.h

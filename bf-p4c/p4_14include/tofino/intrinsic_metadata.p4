@@ -345,9 +345,13 @@ header_type egress_intrinsic_metadata_from_parser_aux_t {
                                         // encountered at egress
                                         // parser.
 
-        clone_src : 8;                  // value indicating whether or not a
-                                        // packet is a cloned copy
-                                        // (see #defines in constants.p4)
+        clone_digest_id : 4;            // value indicating the digest ID,
+                                        // based on the field list ID.
+
+        clone_src : 4;                  // value indicating whether or not this
+                                        // is a cloned packet, and if so, where
+                                        // it came from.
+                                        // (see #defines in glass's constants.p4)
 
         coalesce_sample_count : 8;      // if clone_src indicates this packet
                                         // is coalesced, the number of samples

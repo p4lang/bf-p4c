@@ -721,14 +721,28 @@ class ConstructSymbolTable : public Inspector {
       resubmitIndex(0), digestIndex(0), igCloneIndex(0), egCloneIndex(0)
     { CHECK_NULL(structure); setName("ConstructSymbolTable"); }
 
-    // provide a list of IR::Members that will be translated, create a clone of each IR::Member,
-    // and insert the new IR::Member to the translation table.
-    const IR::Expression* cloneFieldList(const IR::Expression* expr) {
-        if (!expr->is<IR::ListExpression>())
-            return expr;
-        if (expr->to<IR::ListExpression>()->components.size() == 0)
-            return expr;
-        auto origin = expr->to<IR::ListExpression>();
+    /**
+     * Translate a field list for a digest primitive. All member expressions are
+     * cloned and added to the translation table.
+     *
+     * @param expr  The field list to clone.
+     * @param prefix  An optional list of additional fields to prepend to the
+     *                field list. Used to include compiler-generated fields
+     *                that weren't present in the original program.
+     * @return the translated field list.
+     */
+    const IR::ListExpression*
+    cloneFieldList(const IR::Expression* expr,
+                   std::initializer_list<const IR::Expression*> prefix = { }) {
+        IR::ListExpression* origin = new IR::ListExpression(prefix);
+        if (!expr) {
+        } else if (auto* list = expr->to<IR::ListExpression>()) {
+            origin->components.pushBackOrAppend(&list->components);
+        } else {
+            origin->components.pushBackOrAppend(expr);
+        }
+        if (origin->components.size() == 0)
+            return origin;
         auto *cloned = origin->apply(cloner)->to<IR::ListExpression>();
         CHECK_NULL(cloned);
         auto origin_iter = origin->components.begin();
@@ -737,12 +751,7 @@ class ConstructSymbolTable : public Inspector {
                ++origin_iter, ++cloned_iter) {
             auto origin_member = (*origin_iter)->to<IR::Member>();
             auto cloned_member = (*cloned_iter)->to<IR::Member>();
-            if (origin_member && cloned_member) {
-                auto it = structure->pathsToDo.find(origin_member);
-                if (it != structure->pathsToDo.end()) {
-                    structure->pathsToDo.emplace(cloned_member, it->second);
-                }
-            }
+            updatePathsToDo(origin_member, cloned_member);
         }
         return cloned;
     }
@@ -808,14 +817,72 @@ class ConstructSymbolTable : public Inspector {
         BUG_CHECK(mce != nullptr, "malformed IR in clone() function");
         auto control = findContext<IR::P4Control>();
         BUG_CHECK(control != nullptr, "clone() must be used in a control block");
-        auto path = new IR::PathExpression((control->name == structure->getBlockName("ingress")) ?
-             "ig_intr_md_for_deparser" : "eg_intr_md_for_deparser");
-        auto mem = new IR::Member(path, "mirror_idx");
-        auto idx = new IR::Constant(new IR::Type_Bits(3, false),
-             (control->name == structure->getBlockName("ingress")) ?
-             igCloneIndex++ : egCloneIndex++);
-        auto stmt = new IR::AssignmentStatement(mem, idx);
-        structure->cloneCalls.emplace(node, stmt);
+
+        const bool isIngress = control->name == structure->getBlockName("ingress");
+        auto* deparserMetadataPath =
+          new IR::PathExpression(isIngress ? "ig_intr_md_for_deparser"
+                                           : "eg_intr_md_for_deparser");
+        auto* mirrorBufferMetadataPath =
+          new IR::PathExpression(isIngress ? "ig_intr_md_for_mb"
+                                           : "eg_intr_md_for_mb");
+
+        // Generate a fresh index for this clone field list. This is used by the
+        // hardware to select the correct mirror table entry, and to select the
+        // correct parser for this field list.
+        auto* idx =
+          new IR::Constant(IR::Type::Bits::get(3), isIngress ? igCloneIndex++
+                                                             : egCloneIndex++);
+        if (idx->asInt() > 7) {
+            ::error("Too many clone() calls in %1%",
+                    isIngress ? "ingress" : "egress");
+            return;
+        }
+
+        {
+            auto* block = new IR::BlockStatement;
+
+            // Construct a value for `mirror_source`, which is
+            // compiler-generated metadata that's prepended to the user field
+            // list. Its layout (in network order) is:
+            //   [  0    1       2          3         4       5    6   7 ]
+            //     [unused] [coalesced?] [gress] [mirrored?] [mirror idx]
+            // Here `gress` is 0 for I2E mirroring and 1 for E2E mirroring.
+            //
+            // This information is used to set intrinsic metadata in the egress
+            // parser. The `mirrored?` bit is particularly important; if that
+            // bit is zero, the egress parser expects the following bytes to be
+            // bridged metadata rather than mirrored fields.
+            //
+            // XXX(seth): Glass is able to reuse `mirror_idx` for last three
+            // bits of this data, which eliminates the need for an extra PHV
+            // container. We'll start doing that soon as well, but we need to
+            // work out some issues with PHV allocation constraints first.
+            auto* mirrorSource = new IR::Member(deparserMetadataPath, "mirror_source");
+            const unsigned sourceIdx = idx->asInt();
+            const unsigned isMirroredTag = 1 << 3;
+            const unsigned gressTag = isIngress ? 0 : 1 << 4;
+            auto* source =
+              new IR::Constant(IR::Type::Bits::get(8), sourceIdx | isMirroredTag | gressTag);
+            block->components.push_back(new IR::AssignmentStatement(mirrorSource, source));
+
+            // Set `mirror_idx`, which is used as the digest selector in the
+            // deparser (in other words, it selects the field list to use).
+            auto* mirrorIdx = new IR::Member(deparserMetadataPath, "mirror_idx");
+            block->components.push_back(new IR::AssignmentStatement(mirrorIdx, idx));
+
+            // Set `mirror_id`, which configures the mirror session id that the
+            // hardware uses to route mirrored packets in the TM.
+            BUG_CHECK(mce->arguments->size() >= 2,
+                      "No mirror session id specified: %1%", mce);
+            auto* mirrorId = new IR::Member(mirrorBufferMetadataPath, "mirror_id");
+            auto* mirrorIdValue = new IR::Cast(IR::Type::Bits::get(10),
+                                               mce->arguments->at(1));
+            block->components.push_back(new IR::AssignmentStatement(mirrorId,
+                                                                    mirrorIdValue));
+
+            structure->cloneCalls.emplace(node, block->apply(cloner)
+                                                     ->to<IR::BlockStatement>());
+        }
 
         /*
          * generate statement in ingress/egress deparser to prepend mirror metadata
@@ -823,30 +890,28 @@ class ConstructSymbolTable : public Inspector {
          *    mirror.add_metadata({});
          */
 
-        auto pathExpr = new IR::PathExpression(new IR::Path("mirror"));
         auto args = new IR::Vector<IR::Expression>();
-        if (hasData) {
-            auto nargs = mce->arguments->size();
-            if (nargs > 2) {
-                auto field_list = mce->arguments->at(2)->to<IR::ListExpression>();
-                CHECK_NULL(field_list);
-                auto cloned_field_list = cloneFieldList(field_list);
-                args->push_back(cloned_field_list);
-            }
-        } else {
-            args->push_back(new IR::ListExpression({ }));
+        const IR::ListExpression* originalFieldList = nullptr;
+        if (hasData && mce->arguments->size() > 2) {
+            originalFieldList = mce->arguments->at(2)->to<IR::ListExpression>();
+            CHECK_NULL(originalFieldList);
         }
+        auto* cloned_field_list = cloneFieldList(originalFieldList, {
+            new IR::Member(mirrorBufferMetadataPath, "mirror_id"),
+            new IR::Member(deparserMetadataPath, "mirror_source"),
+        });
+        args->push_back(cloned_field_list);
+
+        auto pathExpr = new IR::PathExpression(new IR::Path("mirror"));
         auto member = new IR::Member(pathExpr, "add_metadata");
         auto typeArgs = new IR::Vector<IR::Type>();
         auto mcs = new IR::MethodCallStatement(
              new IR::MethodCallExpression(member, typeArgs, args));
-        auto condExprPath = new IR::Member(
-                new IR::PathExpression(control->name == structure->getBlockName("ingress") ?
-                    "ig_intr_md_for_deparser" : "eg_intr_md_for_deparser"),
-                "mirror_idx");
+        auto condExprPath =
+          new IR::Member(deparserMetadataPath->apply(cloner), "mirror_idx");
         auto condExpr = new IR::Equ(condExprPath, idx);
         auto cond = new IR::IfStatement(condExpr, mcs, nullptr);
-        if (control->name == structure->getBlockName("ingress"))
+        if (isIngress)
             structure->ingressDeparserStatements.push_back(cond);
         else
             structure->egressDeparserStatements.push_back(cond);

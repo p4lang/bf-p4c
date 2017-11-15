@@ -1,0 +1,307 @@
+#include "bf-p4c/parde/mirror.h"
+
+#include <algorithm>
+#include "bf-p4c/device.h"
+#include "bf-p4c/parde/field_packing.h"
+#include "frontends/p4/coreLibrary.h"
+#include "frontends/p4/fromv1.0/v1model.h"
+#include "ir/ir.h"
+#include "lib/cstring.h"
+#include "lib/indent.h"
+
+namespace BFN {
+namespace {
+
+using FieldListId = std::pair<gress_t, unsigned>;
+using MirroredFieldList = IR::Vector<IR::Expression>;
+using MirroredFieldLists = std::map<FieldListId, const MirroredFieldList*>;
+using MirroredFieldListPacking = std::map<FieldListId, const FieldPacking*>;
+
+/**
+ * Analyze the `mirror_packet.add_metadata()` method within the deparser block,
+ * and try to extract the field list.
+ *
+ * `mirror_packet.emit()` (which is used by `tofino.p4`) is also accepted as a
+ * synonym for `mirror_packet.add_metadata()`.
+ *
+ * @param statement  The `add_metadata()` method call to analyze.
+ * @return a MirroredFieldList vector containing the mirrored fields, or
+ * boost::none if the `add_metadata()` call was invalid.
+ */
+boost::optional<MirroredFieldList*>
+analyzeMirrorStatement(const IR::MethodCallStatement* statement) {
+    auto methodCall = statement->methodCall->to<IR::MethodCallExpression>();
+    if (!methodCall) {
+        return boost::none;
+    }
+    auto member = methodCall->method->to<IR::Member>();
+    if (!member || (member->member != "add_metadata" && member->member != "emit")) {
+        return boost::none;
+    }
+    if (methodCall->arguments->size() != 1) {
+        ::warning("Expected 1 arguments for mirror_packet.%1% statement: %1%",
+                  member->member);
+        return boost::none;
+    }
+    const IR::ListExpression* fieldList = nullptr;
+    {
+        fieldList = (*methodCall->arguments)[0]->to<IR::ListExpression>();
+        if (!fieldList) {
+            ::warning("Expected field list: %1%", methodCall);
+            return boost::none;
+        }
+    }
+    auto* finalFieldList = new MirroredFieldList;
+    for (auto* field : fieldList->components) {
+        LOG2("mirror field list would include field: " << field);
+        auto* member = field->to<IR::Member>();
+        if (!member || !member->expr->is<IR::HeaderRef>()) {
+            ::warning("Expected field: %1%", field);
+            return boost::none;
+        }
+        finalFieldList->push_back(member);
+    }
+    return finalFieldList;
+}
+
+boost::optional<const IR::Constant*>
+checkIfStatement(const IR::IfStatement* ifStatement) {
+    auto* equalExpr = ifStatement->condition->to<IR::Equ>();
+    if (!equalExpr) {
+        ::warning("Expected comparison of mirror_idx with constant: "
+                  "%1%", ifStatement->condition);
+        return boost::none;
+    }
+    auto* constant = equalExpr->right->to<IR::Constant>();
+    if (!constant) {
+        ::warning("Expected comparison of mirror_idx with constant: "
+                  "%1%", equalExpr->right);
+        return boost::none;
+    }
+
+    auto* member = equalExpr->left->to<IR::Member>();
+    if (!member || member->member != "mirror_idx") {
+        ::warning("Expected comparison of mirror_idx with constant: "
+                  "%1%", ifStatement->condition);
+        return boost::none;
+    }
+    if (!ifStatement->ifTrue || ifStatement->ifFalse) {
+        ::warning("Expected an `if` with no `else`: %1%", ifStatement);
+        return boost::none;
+    }
+    auto* method = ifStatement->ifTrue->to<IR::MethodCallStatement>();
+    if (!method) {
+        ::warning("Expected a single method call statement: %1%", method);
+        return boost::none;
+    }
+    return constant;
+}
+
+struct FindMirroredFieldLists : public Inspector {
+    FindMirroredFieldLists(MirroredFieldLists& fieldListsOut,
+                           gress_t gress,
+                           P4::ReferenceMap* refMap,
+                           P4::TypeMap* typeMap)
+      : fieldListsOut(fieldListsOut), gress(gress),
+        refMap(refMap), typeMap(typeMap) { }
+
+    bool preorder(const IR::MethodCallStatement* call) override {
+        auto* mi = P4::MethodInstance::resolve(call, refMap, typeMap);
+        if (auto* em = mi->to<P4::ExternMethod>()) {
+            cstring externName = em->actualExternType->name;
+            if (externName != "mirror_packet") return false;
+        }
+        auto* ifStatement = findContext<IR::IfStatement>();
+        if (!ifStatement) {
+            ::warning("Expected mirror_packet to be used within an `if` "
+                      "statement");
+            return false;
+        }
+        auto mirrorIdxConstant = checkIfStatement(ifStatement);
+        if (!mirrorIdxConstant) return false;
+
+        auto fieldList = analyzeMirrorStatement(call);
+        if (!fieldList) return false;
+
+        unsigned mirrorIdx = (*mirrorIdxConstant)->asInt();
+        BUG_CHECK((mirrorIdx & ~0x07) == 0, "Mirror index is more than 3 bits?");
+        fieldListsOut[std::make_pair(gress, mirrorIdx)] = *fieldList;
+        return false;
+    }
+
+ private:
+    MirroredFieldLists& fieldListsOut;
+    gress_t gress;
+    P4::ReferenceMap* refMap;
+    P4::TypeMap* typeMap;
+};
+
+FieldPacking* packMirroredFieldList(const MirroredFieldList* fieldList) {
+    auto* packing = new FieldPacking;
+
+    for (auto* toMirror : *fieldList) {
+        const IR::Member* source = toMirror->to<IR::Member>();
+        auto* containingType = source->expr->type;
+        BUG_CHECK(containingType->is<IR::Type_StructLike>(),
+                  "Mirror field is not attached to a structlike type?");
+        auto* type = containingType->to<IR::Type_StructLike>();
+
+        auto* field = type->getField(source->member);
+        BUG_CHECK(field != nullptr,
+                  "Mirror field %1% not found in type %2%", field, type);
+
+        // Skip parsing `mirror_id`, `mirror_idx`, and `mirror_source`; they're
+        // handled specially.
+        if (source->member == "mirror_id" &&
+              type->name == "egress_intrinsic_metadata_for_mirror_buffer_t") {
+            packing->appendPadding(8);
+            packing->padToAlignment(8);
+            continue;
+        }
+        if ((source->member == "mirror_idx" ||  source->member == "mirror_source") &&
+              type->name == "egress_intrinsic_metadata_for_deparser_t") {
+            packing->appendPadding(8);
+            packing->padToAlignment(8);
+            continue;
+        }
+
+        // Align the field so that its LSB lines up with a byte boundary. This
+        // is a best-effort attempt to reproduce the behavior of the PHV
+        // allocator. This situation is even worse than the one for bridged
+        // metadata, because we don't even have knowledge of alignment
+        // constraints at this point in the code.
+        // XXX(seth): This entire approach - for digests as well as for bridged
+        // metadata - needs to be revisited.
+        const int fieldSize = field->type->width_bits();
+        const int nextByteBoundary = 8 * ((fieldSize + 7) / 8);
+        const int alignment = nextByteBoundary - fieldSize;
+        packing->padToAlignment(8, alignment);
+
+        packing->appendField(source, field->type->width_bits());
+        packing->padToAlignment(8);
+    }
+
+    return packing;
+}
+
+// XXX(seth): We have code like this duplicated in several places. We should
+// centralize it.
+IR::Member *gen_fieldref(const IR::HeaderOrMetadata *hdr, cstring field) {
+    const IR::Type *ftype = nullptr;
+    auto f = hdr->type->getField(field);
+    if (f != nullptr)
+        ftype = f->type;
+    else
+        BUG("Couldn't find intrinsic metadata field %s in %s", field, hdr->name);
+    return new IR::Member(ftype, new IR::ConcreteHeaderRef(hdr), field);
+}
+
+// XXX(seth): This is widely duplicated too.
+const IR::HeaderOrMetadata*
+getMetadataType(const IR::BFN::Pipe* pipe, cstring typeName) {
+    auto* meta = pipe->metadata[typeName];
+    BUG_CHECK(meta != nullptr,
+              "Couldn't find required intrinsic metadata type: %1%", typeName);
+    return meta;
+}
+
+struct AddMirroredFieldListParser : public Transform {
+  AddMirroredFieldListParser(const IR::BFN::Pipe* pipe,
+                             const MirroredFieldListPacking* fieldLists)
+          : fieldLists(fieldLists) {
+      auto* egParserMeta =
+        getMetadataType(pipe, "egress_intrinsic_metadata_from_parser");
+      cloneDigestId = gen_fieldref(egParserMeta, "clone_digest_id");
+      cloneSource = gen_fieldref(egParserMeta, "clone_src");
+  }
+
+  const IR::BFN::ParserState* preorder(IR::BFN::ParserState* state) override {
+      if (state->name != "$mirrored") return state;
+
+      // This is the '$mirrored' placeholder state. Generate code to extract
+      // mirrored field lists.
+      return addMirroredFieldListParser(state->transitions[0]->next);
+  }
+
+  const IR::BFN::ParserState*
+  addMirroredFieldListParser(const IR::BFN::ParserState* finalState) {
+      IR::Vector<IR::BFN::Transition> transitions;
+      for (auto& fieldList : *fieldLists) {
+          const gress_t gress = fieldList.first.first;
+          const auto digestId = fieldList.first.second;
+          const FieldPacking* packing = fieldList.second;
+
+          // Construct a `clone_src` value. The first bit indicates that the
+          // packet is mirrored; the second bit indicates whether it originates
+          // from ingress or egress. See `constants.p4` for the details of the
+          // format.
+          unsigned source = 1 << 0;
+          if (gress == EGRESS)
+              source |= 1 << 1;
+
+          // Create a state that extracts the fields in this field list.
+          cstring fieldListStateName = "$mirror_field_list_" +
+                                       cstring::to_cstring(gress) + "_" +
+                                       cstring::to_cstring(digestId);
+          auto* fieldListState =
+            packing->createExtractionState(EGRESS, fieldListStateName, finalState);
+          fieldListState->statements.push_back(
+            new IR::BFN::Extract(cloneDigestId, new IR::BFN::ConstantRVal(digestId)));
+          fieldListState->statements.push_back(
+            new IR::BFN::Extract(cloneSource, new IR::BFN::ConstantRVal(source)));
+
+          // The combination of `clone_src` and the digest ID uniquely identify
+          // this field list; this information is included in the mirror field
+          // list, although frustratingly it's included with an alignment that
+          // prevents us from simply extracting it, which would certainly
+          // simplify this code a lot.
+          // XXX(seth): This would also be much simpler to do during
+          // translation, where is where this stuff really belongs.
+          const unsigned fieldListId = (source << 3) | digestId;
+          transitions.push_back(
+            new IR::BFN::Transition(match_t(8, fieldListId, 0x1f), 1,
+                                    fieldListState));
+      }
+
+      auto* select = new IR::BFN::Select(new IR::BFN::BufferRVal(StartLen(0, 8)));
+      return new IR::BFN::ParserState("$mirrored", INGRESS, { },
+                                      { select }, transitions);
+  }
+
+ private:
+  const MirroredFieldListPacking* fieldLists;
+  const IR::Member* cloneDigestId;
+  const IR::Member* cloneSource;
+};
+
+}  // namespace
+
+void addMirroredFieldParser(IR::BFN::Pipe* pipe,
+                            const IR::P4Control* ingressDeparser,
+                            const IR::P4Control* egressDeparser,
+                            P4::ReferenceMap* refMap,
+                            P4::TypeMap* typeMap) {
+    CHECK_NULL(pipe);
+    CHECK_NULL(ingressDeparser);
+    CHECK_NULL(egressDeparser);
+    CHECK_NULL(refMap);
+    CHECK_NULL(typeMap);
+
+    MirroredFieldLists fieldLists;
+    FindMirroredFieldLists findIgFieldLists(fieldLists, INGRESS, refMap, typeMap);
+    ingressDeparser->apply(findIgFieldLists);
+    FindMirroredFieldLists findEgFieldLists(fieldLists, EGRESS, refMap, typeMap);
+    egressDeparser->apply(findEgFieldLists);
+
+    auto* fieldPackings = new MirroredFieldListPacking;
+    for (auto& fieldList : fieldLists) {
+        auto* packing = packMirroredFieldList(fieldList.second);
+        fieldPackings->emplace(fieldList.first, packing);
+    }
+
+    AddMirroredFieldListParser addParser(pipe, fieldPackings);
+    pipe->thread[EGRESS].parser =
+      pipe->thread[EGRESS].parser->apply(addParser);
+}
+
+}  // namespace BFN
