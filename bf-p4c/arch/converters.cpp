@@ -196,6 +196,12 @@ const IR::Node* IngressDeparserConverter::preorder(IR::P4Control* node) {
     param = new IR::Parameter("ig_intr_md", IR::Direction::In, type);
     paramList->push_back(param);
 
+    // add mirror buffer intrinsic metadata
+    path = new IR::Path("ingress_intrinsic_metadata_for_mirror_buffer_t");
+    type = new IR::Type_Name(path);
+    param = new IR::Parameter("ig_intr_md_for_mb", IR::Direction::In, type);
+    paramList->push_back(param);
+
     // add deparser intrinsic metadata
     path = new IR::Path("ingress_intrinsic_metadata_for_deparser_t");
     type = new IR::Type_Name(path);
@@ -261,9 +267,15 @@ const IR::Node* EgressDeparserConverter::preorder(IR::P4Control* node) {
                               IR::Direction::In, meta->type);
     paramList->push_back(param);
 
-    // add eg_intr_md_for_dprsr
-    auto path = new IR::Path("egress_intrinsic_metadata_for_deparser_t");
+    // add mirror buffer intrinsic metadata
+    auto path = new IR::Path("egress_intrinsic_metadata_for_mirror_buffer_t");
     auto type = new IR::Type_Name(path);
+    param = new IR::Parameter("eg_intr_md_for_mb", IR::Direction::In, type);
+    paramList->push_back(param);
+
+    // add eg_intr_md_for_dprsr
+    path = new IR::Path("egress_intrinsic_metadata_for_deparser_t");
+    type = new IR::Type_Name(path);
     param = new IR::Parameter("eg_intr_md_for_deparser", IR::Direction::In, type);
     paramList->push_back(param);
 

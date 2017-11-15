@@ -247,15 +247,10 @@ struct egress_intrinsic_metadata_from_parser_t {
     bit<4> clone_digest_id;              // value indicating the digest ID,
                                          // based on the field list ID.
 
-    // XXX(seth): This definition is correct, but doesn't pass type checking.
-    // For now, we work around this by treating `clone_src` as a bit<8> and
-    // adding some useless padding to keep things byte-aligned.
-    //bit<4> clone_src;                    // value indicating whether or not this
-    //                                     // is a cloned packet, and if so, where
-    //                                     // it came from.
-    //                                     // (see #defines in glass's constants.p4)
-    bit<4> _pad;
-    bit<8> clone_src;
+    bit<4> clone_src;                    // value indicating whether or not this
+                                         // is a cloned packet, and if so, where
+                                         // it came from.
+                                         // (see #defines in glass's constants.p4)
 
     bit<8> coalesce_sample_count;        // if clone_src indicates this packet
                                          // is coalesced, the number of samples
@@ -526,6 +521,7 @@ control IngressDeparser<H, M>(
     inout H hdr,
     @optional in M metadata,
     @optional in ingress_intrinsic_metadata_t ig_intr_md,
+    @optional in ingress_intrinsic_metadata_for_mirror_buffer_t ig_intr_md_for_mb,
     @optional in ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
     @optional mirror_packet mirror,
     @optional resubmit_packet resubmit,
@@ -535,6 +531,7 @@ control EgressDeparser<H, M>(
     packet_out pkt,
     inout H hdr,
     @optional in M metadata,
+    @optional in egress_intrinsic_metadata_for_mirror_buffer_t eg_intr_md_for_mb,
     @optional in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
     @optional mirror_packet mirror);
 
