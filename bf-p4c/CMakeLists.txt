@@ -84,6 +84,7 @@ set (TOFINO_BACKEND_COMMON_SRCS
   common/field_defuse.cpp
   common/header_stack.cpp
   common/live_range_overlay.cpp
+  common/multiple_apply.cpp
   common/rewrite.cpp
   common/param_binding.cpp
   common/parser_overlay.cpp
@@ -105,6 +106,7 @@ set (TOFINO_BACKEND_COMMON_HDRS
   common/field_defuse.h
   common/header_stack.h
   common/live_range_overlay.h
+  common/multiple_apply.h
   common/rewrite.h
   common/param_binding.h
   common/parser_overlay.h
@@ -410,16 +412,17 @@ add_dependencies(p4c_driver linktofino)
 
 # # Tofino-specific GTests.
 set (GTEST_TOFINO_SOURCES
+  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/action_phv.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/bitrange.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/checksum.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_alignment.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_packing.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/multiple_apply.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_tofino.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_jbay.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/tofino_write_context.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/tofino_gtest_utils.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/trivial_alloc.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/action_phv.cpp
   )
 
 set (GTEST_SOURCES ${GTEST_SOURCES} ${GTEST_TOFINO_SOURCES} PARENT_SCOPE)

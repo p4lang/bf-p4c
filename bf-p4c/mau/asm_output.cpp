@@ -1348,7 +1348,7 @@ void MauAsmOutput::emit_no_match_gateway(std::ostream &out, indent_t gw_indent,
 
 void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
         const IR::MAU::Table *tbl) const {
-    out << indent << "p4: { name: " << canon_name(tbl->match_table->name);
+    out << indent << "p4: { name: " << canon_name(tbl->match_table->externalName());
     if (auto k = tbl->match_table->getConstantProperty("size"))
         out << ", size: " << k->asInt();
     for (auto at : tbl->attached)

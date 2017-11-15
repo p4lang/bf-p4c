@@ -6,6 +6,7 @@
 #include "bf-p4c/common/elim_unused.h"
 #include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/common/live_range_overlay.h"
+#include "bf-p4c/common/multiple_apply.h"
 #include "bf-p4c/common/parser_overlay.h"
 #include "bf-p4c/mau/asm_output.h"
 #include "bf-p4c/mau/empty_controls.h"
@@ -161,6 +162,7 @@ Backend::Backend(const BFN_Options& options) :
     addPasses({
         new DumpPipe("Initial table graph"),
         new RemoveEmptyControls,
+        new MultipleApply,
         new CheckStatefulAlu,
         new CollectHeaderStackInfo,  // Needed by CollectPhvInfo.
         new CollectPhvInfo(phv),

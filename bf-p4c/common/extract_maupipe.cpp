@@ -11,6 +11,7 @@
 #include "bf-p4c/common/copy_header_eliminator.h"
 #include "bf-p4c/common/param_binding.h"
 #include "bf-p4c/common/simplify_references.h"
+#include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/mau/stateful_alu.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
 #include "bf-p4c/parde/checksum.h"
@@ -22,7 +23,7 @@
 #include "lib/safe_vector.h"
 
 namespace {
-class ActionArgSetup : public Transform {
+class ActionArgSetup : public MauTransform {
     /* FIXME -- use ParameterSubstitution for this somehow? */
     std::map<cstring, const IR::Expression *>    args;
     const IR::Node *preorder(IR::PathExpression *pe) override {
@@ -35,7 +36,7 @@ class ActionArgSetup : public Transform {
     void add_arg(cstring name, const IR::Expression *e) { args[name] = e; }
 };
 
-class ConvertMethodCall : public Transform {
+class ConvertMethodCall : public MauTransform {
     P4::ReferenceMap        *refMap;
     P4::TypeMap             *typeMap;
 
@@ -102,9 +103,10 @@ class ActionFunctionSetup : public PassManager {
  *  or not the action can be used as a default action, or if specifically it is meant only for the
  *  default action.  This information must be passed back directly to the context JSON.
  */
-class DefaultActionInit : public Modifier {
+class DefaultActionInit : public MauModifier {
     const IR::P4Table *table;
     const IR::ActionListElement *elem;
+    P4::ReferenceMap *refMap;
 
     bool preorder(IR::MAU::Action *act) override {
         auto prop = table->properties->getProperty(IR::TableProperties::defaultActionPropertyName);
@@ -128,7 +130,9 @@ class DefaultActionInit : public Modifier {
         auto path = default_action->to<IR::PathExpression>();
         if (!path)
             BUG("Default action path %s cannot be found", default_action);
-        if (path->path->name == act->name) {
+        auto actName = refMap->getDeclaration(path->path, true)->externalName();
+
+        if (actName == act->name) {
             if (def_only_annot)
                 act->miss_action_only = true;
             act->init_default = true;
@@ -148,8 +152,9 @@ class DefaultActionInit : public Modifier {
     }
 
  public:
-    DefaultActionInit(const IR::P4Table *t, const IR::ActionListElement *ale)
-        : table(t), elem(ale) {}
+    DefaultActionInit(const IR::P4Table *t, const IR::ActionListElement *ale,
+                      P4::ReferenceMap *rm)
+        : table(t), elem(ale), refMap(rm) {}
 };
 
 class ActionBodySetup : public Inspector {
@@ -412,25 +417,20 @@ static void updateAttachedSalu(const P4::ReferenceMap *refMap, IR::MAU::Stateful
 }
 
 namespace {
-class FixP4Table : public Transform {
+class FixP4Table : public Inspector {
     const P4::ReferenceMap *refMap;
     IR::MAU::Table *tt;
     std::set<cstring> &unique_names;
     std::map<cstring, IR::MAU::ActionData *> *shared_ap;
     std::map<cstring, IR::MAU::Selector *> *shared_as;
-    bool default_action_fix = false;
 
-    const IR::P4Table *preorder(IR::P4Table *tc) override {
-        tc->name = tc->externalName();
+    bool preorder(const IR::P4Table *tc) override {
         visit(tc->properties);  // just visiting properties
-        prune();
-        return tc; }
-    const IR::ExpressionValue *preorder(IR::ExpressionValue *ev) override {
+        return false;
+    }
+    bool preorder(const IR::ExpressionValue *ev) override {
         auto prop = findContext<IR::Property>();
-        if (prop->name == "default_action") {
-            default_action_fix = true;
-            return ev;
-        } else if (prop->name == "counters" || prop->name == "meters" ||
+        if (prop->name == "counters" || prop->name == "meters" ||
                    prop->name == "implementation") {
             // counters: direct counters
             // meters: direct meters
@@ -471,40 +471,14 @@ class FixP4Table : public Transform {
         } else if (prop->name == "support_timeout") {
             auto bool_lit = ev->expression->to<IR::BoolLiteral>();
             if (bool_lit == nullptr || bool_lit->value == false)
-                return ev;
+                return false;
             auto table = findContext<IR::P4Table>();
             auto annot = table->getAnnotations();
             auto it = createIdleTime(table->name, annot);
             tt->attached.push_back(it);
         }
-        prune();
-        return ev; }
-    const IR::ExpressionValue *postorder(IR::ExpressionValue *ev) override {
-        default_action_fix = false;
-        return ev; }
-    const IR::PathExpression *preorder(IR::PathExpression *pe) override {
-        if (default_action_fix) {
-            // need to change the default action name back to the extern name, rather than
-            // whatever the frontend code rewrote it as.
-            auto actName = refMap->getDeclaration(pe->path, true)->externalName();
-            pe->path = new IR::Path(pe->path->srcInfo, actName); }
-        prune();
-        return pe; }
-    const IR::Expression *preorder(IR::MethodCallExpression *mc) override {
-        visit(mc->method);
-        if (default_action_fix && mc->arguments->empty())
-            return mc->method;
-        prune();
-        return mc; }
-    const IR::Expression *preorder(IR::BAnd *exp) override {
-        if (!getParent<IR::KeyElement>())
-            return exp;
-        if (exp->left->is<IR::Constant>())
-            return new IR::Mask(exp->srcInfo, exp->type, exp->right, exp->left);
-        if (exp->right->is<IR::Constant>())
-            return new IR::Mask(exp->srcInfo, exp->type, exp->left, exp->right);
-        error("%s: mask must have a constant operand to be used as a table key", exp->srcInfo);
-        return exp; }
+        return false;
+    }
 
  public:
     FixP4Table(const P4::ReferenceMap *r, IR::MAU::Table *tt, std::set<cstring> &u,
@@ -609,6 +583,18 @@ class GetTofinoTables : public Inspector {
     : refMap(refMap), typeMap(typeMap), gress(gr), pipe(p) {}
 
  private:
+    void setup_match_mask(IR::MAU::Table *tt, const IR::Mask *mask, IR::ID match_id,
+                          int p4_param_order) {
+         auto slices = convertMaskToSlices(mask);
+         for (auto slice : slices) {
+             auto ixbar_read = new IR::MAU::InputXBarRead(slice, match_id);
+             ixbar_read->from_mask = true;
+             if (match_id.name != "selector")
+                 ixbar_read->p4_param_order = p4_param_order;
+             tt->match_key.push_back(ixbar_read);
+         }
+    }
+
     void setup_tt_match(IR::MAU::Table *tt, const IR::P4Table *table) {
         auto *key = table->getKey();
         if (key == nullptr)
@@ -617,15 +603,20 @@ class GetTofinoTables : public Inspector {
         for (auto key_elem : key->keyElements) {
             auto key_expr = key_elem->expression;
             IR::ID match_id(key_elem->matchType->srcInfo, key_elem->matchType->path->name);
-            if (auto *mask = key_expr->to<IR::Mask>()) {
-                auto slices = convertMaskToSlices(mask);
-                for (auto slice : slices) {
-                    auto ixbar_read = new IR::MAU::InputXBarRead(slice, match_id);
-                    ixbar_read->from_mask = true;
-                    if (match_id.name != "selector")
-                        ixbar_read->p4_param_order = p4_param_order;
-                    tt->match_key.push_back(ixbar_read);
-                }
+            if (auto *b_and = key_expr->to<IR::BAnd>()) {
+                IR::Mask *mask = nullptr;
+                if (b_and->left->is<IR::Constant>())
+                    mask = new IR::Mask(b_and->srcInfo, b_and->type, b_and->right, b_and->left);
+                else if (b_and->right->is<IR::Constant>())
+                    mask = new IR::Mask(b_and->srcInfo, b_and->type, b_and->left, b_and->right);
+                else
+                    ::error("%s: mask %s must have a constant operand to be used as a table key",
+                             b_and->srcInfo, b_and);
+                if (mask == nullptr)
+                    continue;
+                setup_match_mask(tt, mask, match_id, p4_param_order);
+            } else if (auto *mask = key_expr->to<IR::Mask>()) {
+                setup_match_mask(tt, mask, match_id, p4_param_order);
             } else {
                 auto ixbar_read = new IR::MAU::InputXBarRead(key_expr, match_id);
                 if (match_id.name != "selector")
@@ -643,7 +634,7 @@ class GetTofinoTables : public Inspector {
             if (auto action = refMap->getDeclaration(act->getPath())->to<IR::P4Action>()) {
                 auto mce = act->expression->to<IR::MethodCallExpression>();
                 auto newaction = createActionFunction(refMap, typeMap, action, mce->arguments);
-                DefaultActionInit dai(table, act);
+                DefaultActionInit dai(table, act, refMap);
                 auto newaction_defact = newaction->apply(dai)->to<IR::MAU::Action>();
                 if (!tt->actions.count(newaction_defact->name))
                     tt->actions.addUnique(newaction_defact->name, newaction_defact);
@@ -665,6 +656,7 @@ class GetTofinoTables : public Inspector {
             if (tables.count(el))
                 seqs.at(b)->tables.push_back(tables.at(el)); }
     bool preorder(const IR::MethodCallExpression *m) override {
+        LOG1("Method call expression " << m);
         auto mi = P4::MethodInstance::resolve(m, refMap, typeMap, true);
         if (!mi || !mi->isApply())
             BUG("Method Call %1% not apply", m);

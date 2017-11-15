@@ -721,7 +721,29 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
   )
 
+p4c_add_xfail_reason("tofino"
+  "Not all applies of table .* are mutually exclusive"
+  extensions/p4_tests/p4_14/c1/COMPILER-100/exclusive_cf_one_action_fail_after.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-100/exclusive_cf_one_action_fail_before.p4
+  
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Table .* is applied multiple times, and the next table information cannot correctly propagate"
+  extensions/p4_tests/p4_14/c1/COMPILER-100/exclusive_cf_multiple_actions.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-100/exclusive_cf_fail_next_ptr.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-100/exclusive_cf_one_action.p4
+  testdata/p4_14_samples/16-TwoReferences.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-125/16-TwoReferences.p4
+  )
+
 #END: XFAILS that match glass XFAILS
+
+p4c_add_xfail_reason("tofino"
+  "Table .* is applied multiple times, but the gateway conditionals determining"
+  extensions/p4_tests/p4_14/c1/COMPILER-100/eth_addr_cmp.p4
+  extensions/p4_tests/p4_14/eth_addr_cmp.p4
+  )
 
 # BRIG-314
 p4c_add_xfail_reason("tofino"

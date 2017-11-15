@@ -1,0 +1,152 @@
+#include <core.p4>
+#include <tofino.p4>
+
+header data_t {
+    bit<16> h1;
+    bit<16> h2;
+    bit<8>  b1;
+    bit<8>  b2;
+    bit<8>  b3;
+    bit<8>  b4;
+}
+
+struct metadata {
+}
+
+struct headers {
+    data_t data;
+}
+
+parser ParserI(packet_in b, out headers hdr, out metadata meta, out ingress_intrinsic_metadata_t ig_intr_md) {
+    state start {
+        b.extract<data_t>(hdr.data);
+        transition accept;
+    }
+}
+
+control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_metadata_t ig_intr_md, in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md, inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
+    bool tmp_0;
+    @name("noop") action noop_0() {
+    }
+    @name("noop") action noop_3() {
+    }
+    @name("noop") action noop_4() {
+    }
+    @name("set_port") action set_port_0(bit<9> port) {
+        ig_intr_tm_md.ucast_egress_port = port;
+    }
+    @name("t1_act") action t1_act_0(bit<8> b3) {
+        hdr.data.b3 = b3;
+    }
+    @name("t2_act") action t2_act_0(bit<8> b4) {
+        hdr.data.b4 = b4;
+    }
+    @name("t1") table t1 {
+        actions = {
+            t1_act_0();
+            noop_0();
+        }
+        key = {
+            hdr.data.h1: exact @name("hdr.data.h1") ;
+        }
+        default_action = noop_0();
+    }
+    @name("t2") table t2 {
+        actions = {
+            t2_act_0();
+            noop_3();
+        }
+        key = {
+            hdr.data.h2: exact @name("hdr.data.h2") ;
+        }
+        default_action = noop_3();
+    }
+    @name("port_setter") table port_setter {
+        actions = {
+            set_port_0();
+            noop_4();
+        }
+        key = {
+            hdr.data.h1: exact @name("hdr.data.h1") ;
+            hdr.data.h2: exact @name("hdr.data.h2") ;
+        }
+        default_action = noop_4();
+    }
+    @hidden action act() {
+        tmp_0 = true;
+    }
+    @hidden action act_0() {
+        tmp_0 = false;
+    }
+    @hidden table tbl_act {
+        actions = {
+            act();
+        }
+        const default_action = act();
+    }
+    @hidden table tbl_act_0 {
+        actions = {
+            act_0();
+        }
+        const default_action = act_0();
+    }
+    apply {
+        if (hdr.data.b1 == 8w0) {
+            if (t1.apply().hit) 
+                tbl_act.apply();
+            else 
+                tbl_act_0.apply();
+            if (!tmp_0) 
+                if (hdr.data.b2 == 8w0 && hdr.data.b3 == 8w0) 
+                    t2.apply();
+        }
+        else 
+            if (hdr.data.b2 == 8w0 && hdr.data.b3 == 8w0) 
+                t2.apply();
+        port_setter.apply();
+    }
+}
+
+control DeparserI(packet_out b, in headers hdr, in metadata meta) {
+    @hidden action act_1() {
+        b.emit<data_t>(hdr.data);
+    }
+    @hidden table tbl_act_1 {
+        actions = {
+            act_1();
+        }
+        const default_action = act_1();
+    }
+    apply {
+        tbl_act_1.apply();
+    }
+}
+
+parser ParserE(packet_in b, out headers hdr, out metadata meta, out egress_intrinsic_metadata_t eg_intr_md) {
+    state start {
+        b.extract<data_t>(hdr.data);
+        transition accept;
+    }
+}
+
+control EgressP(inout headers hdr, inout metadata meta, in egress_intrinsic_metadata_t eg_intr_md, in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr) {
+    apply {
+    }
+}
+
+control DeparserE(packet_out b, in headers hdr, in metadata meta) {
+    @hidden action act_2() {
+        b.emit<data_t>(hdr.data);
+    }
+    @hidden table tbl_act_2 {
+        actions = {
+            act_2();
+        }
+        const default_action = act_2();
+    }
+    apply {
+        tbl_act_2.apply();
+    }
+}
+
+Switch<headers, metadata, headers, metadata>(ParserI(), IngressP(), DeparserI(), ParserE(), EgressP(), DeparserE()) main;
