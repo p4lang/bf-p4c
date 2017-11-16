@@ -43,4 +43,6 @@ class CounterReadTest(P4RuntimeTest):
         print "Egress Count: ", egress_count
         #WIP: Working on bytecount adjust to account for additional 16 bytes
         self.assertEqual(ingress_count, 70)
-        self.assertEqual(egress_count, 70)
+        # The egress count includes one byte of bridged metadata generated
+        # internally by the compiler.
+        self.assertEqual(egress_count, 71)

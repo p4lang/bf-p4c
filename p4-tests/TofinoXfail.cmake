@@ -483,6 +483,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Can't fit table .* in input xbar by itself"
   extensions/p4_tests/p4_14/test_config_103_first_phase_0.p4
+  extensions/p4_tests/p4_14/test_config_215_nondphv.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -686,6 +687,14 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
   )
 
+# Tests where a field is placed into a container that's too big, causing the
+# output packet to contain padding bits filled with garbage and triggering a PTF
+# test failure.
+p4c_add_xfail_reason("tofino"
+  "Container .* contains deparsed header fields, but it has unused bits.*"
+  testdata/p4_14_samples/instruct5.p4
+  )
+
 # BEGIN: XFAILS that match glass XFAILS
 
 # parde physical adjacency constraint violated by mau phv_no_pack constraint
@@ -817,6 +826,13 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/packet_redirect.p4
   testdata/p4_14_samples/simple_nat.p4
   )
+# We fail to translate `standard_metadata.clone_src`, apparently because it's
+# wrapped in a cast.
+p4c_add_xfail_reason("tofino"
+  "Could not find declaration for standard_metadata"
+  extensions/p4_tests/p4_16/clone-bmv2.p4
+  testdata/p4_16_samples/clone-bmv2.p4
+  )
 # invalid tests, eg_intr_md.egress_port is read-only
 p4c_add_xfail_reason("tofino"
   "Expression .* cannot be the target of an assignment"
@@ -918,7 +934,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Null field_list"
+  "Null originalFieldList"
   testdata/p4_16_samples/issue1001-bmv2.p4
   )
 
