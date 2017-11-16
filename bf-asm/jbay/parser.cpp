@@ -159,7 +159,7 @@ template <> void Parser::State::Match::Set::write_output_config(Target::JBay::pa
         if (((what >> (8*i)) & 0xff) == 0)
             mask &= ~(1 << i);
     if (where->reg.size == 8) {
-        assert(mask == 1);
+        assert((mask & ~1) == 0);
         if (where->reg.index & 1) {
             mask <<= 1;
             what <<= 8; } }
