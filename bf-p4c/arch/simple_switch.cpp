@@ -6,6 +6,41 @@ namespace BFN {
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
+/// Find and remove extern method calls that the P4 programmer has requested by
+/// excluded from translation using the `@dont_translate_extern_method` pragma.
+/// Currently this pragma is only supported on actions; it takes as an argument
+/// a list of strings that identify extern method calls to remove from the action
+/// body.
+struct RemoveExternMethodCallsExcludedByAnnotation : public Transform {
+    const IR::MethodCallStatement*
+    preorder(IR::MethodCallStatement* call) override {
+        auto* action = findContext<IR::P4Action>();
+        if (!action) return call;
+
+        auto* callExpr = call->methodCall->to<IR::MethodCallExpression>();
+        BUG_CHECK(callExpr, "Malformed method call IR: %1%", call);
+
+        auto* dontTranslate = action->getAnnotation("dont_translate_extern_method");
+        if (!dontTranslate) return call;
+        for (auto* excluded : dontTranslate->expr) {
+            auto* excludedMethod = excluded->to<IR::StringLiteral>();
+            if (!excludedMethod) {
+                ::error("Non-string argument to @dont_translate_extern_method: "
+                        "%1%", excluded);
+                return call;
+            }
+
+            if (excludedMethod->value == callExpr->toString()) {
+                ::warning("Excluding method call from translation due to "
+                          "@dont_translate_extern_method: %1%", call);
+                return nullptr;
+            }
+        }
+
+        return call;
+    }
+};
+
 /// When compiling a tofino-v1model program, the compiler by default
 /// includes tofino/intrinsic_metadata.p4 and v1model.p4 from the
 /// system path. Symbols in these system header files are reserved and
@@ -1268,6 +1303,7 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
     auto evaluator = new P4::EvaluatorPass(refMap, typeMap);
     auto structure = new BFN::ProgramStructure;
     addPasses({
+        new RemoveExternMethodCallsExcludedByAnnotation,
         new NormalizeV1modelProgram(),
         evaluator,
         new VisitFunctor([structure, evaluator]() {
