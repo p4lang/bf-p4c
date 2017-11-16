@@ -327,7 +327,8 @@ header_type egress_intrinsic_metadata_from_parser_aux_t {
 
 
 
-        clone_src : 8;
+        clone_digest_id : 4;
+        clone_src : 4;
 
 
 
