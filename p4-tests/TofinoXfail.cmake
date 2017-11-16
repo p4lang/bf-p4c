@@ -943,6 +943,8 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     testdata/p4_14_samples/tmvalid.p4
     testdata/p4_16_samples/issue635-bmv2.p4
     testdata/p4_16_samples/issue655-bmv2.p4
+    extensions/p4_tests/p4_14/sful_1bit.p4
+    extensions/p4_tests/p4_14/stateful2.p4
     )
 
   p4c_add_xfail_reason("tofino"
@@ -982,12 +984,7 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
   p4c_add_xfail_reason("tofino"
     "Error when trying to push config to bf_switchd"
     extensions/p4_tests/p4_14/hash_calculation_32.p4
-    extensions/p4_tests/p4_14/stateful0.p4
-    extensions/p4_tests/p4_14/stateful1.p4
-    extensions/p4_tests/p4_14/stateful2.p4
     extensions/p4_tests/p4_14/stateful3.p4
-    extensions/p4_tests/p4_16/stateful1.p4
-    extensions/p4_tests/p4_16/stateful2.p4
     )
 
 endif() # ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET
