@@ -68,15 +68,20 @@ class AddBridgedMetadata::FindFieldsToBridge : public ThreadVisitor, Inspector {
     explicit FindFieldsToBridge(AddBridgedMetadata &self) : ThreadVisitor(INGRESS), self(self) {}
 };
 
-class AddBridgedMetadata::AddBridge : public PardeModifier {
+class AddBridgedMetadata::AddBridge : public PardeTransform {
     AddBridgedMetadata &self;
 
-    bool preorder(IR::BFN::Deparser *deparser) override {
-        if (deparser->gress != INGRESS) return false;
-        if (!self.packing.containsFields()) return false;
+    IR::BFN::Deparser* preorder(IR::BFN::Deparser* deparser) override {
+        // We only need to deparse bridged metadata on the ingress thread.
+        if (deparser->gress != INGRESS) {
+            prune();
+            return deparser;
+        }
 
-        auto alwaysDeparseBit =
+        // All bridged metadata fields share the same POV bit.
+        auto* alwaysDeparseBit =
             new IR::TempVar(IR::Type::Bits::get(1), true, "$always_deparse");
+
         IR::Vector<IR::BFN::DeparserPrimitive> bridge;
         for (auto& item : self.packing.fields) {
             if (item.isPadding()) continue;
@@ -85,26 +90,23 @@ class AddBridgedMetadata::AddBridge : public PardeModifier {
 
         deparser->emits.insert(deparser->emits.begin(),
                                bridge.begin(), bridge.end());
-        return false;
+        return deparser;
     }
 
-    bool preorder(IR::BFN::Parser *parser) override {
-        if (parser->gress != EGRESS) return false;
-        if (!self.packing.containsFields()) return false;
+    IR::BFN::Parser* preorder(IR::BFN::Parser* parser) override {
+        // We only need to generate a bridged metadata parser on egress.
+        if (parser->gress != EGRESS) prune();
+        return parser;
+    }
 
-        auto start = transformAllMatching<IR::BFN::ParserState>(parser->start,
-                     [this](IR::BFN::ParserState* state) {
-            if (state->name != "$bridged_metadata") return state;
+    IR::BFN::ParserState* preorder(IR::BFN::ParserState* state) override {
+        if (state->name != "$bridged_metadata") return state;
 
-            // Replace this placeholder state with a generated parser program
-            // that extracts the bridged metadata.
-            auto* next = state->transitions[0]->next;
-            cstring stateName = "$bridge_metadata_extract";
-            return self.packing.createExtractionState(EGRESS, stateName, next);
-        });
-
-        parser->start = start->to<IR::BFN::ParserState>();
-        return false;
+        // Replace this placeholder state with a generated parser program
+        // that extracts the bridged metadata.
+        auto* next = state->transitions[0]->next;
+        cstring stateName = "$bridge_metadata_extract";
+        return self.packing.createExtractionState(EGRESS, stateName, next);
     }
 
  public:
@@ -126,4 +128,3 @@ AddBridgedMetadata:: AddBridgedMetadata(PhvInfo &phv, const FieldDefUse &defuse)
       new IR::TempVar(IR::Type::Bits::get(8), false, "$bridged_metadata_indicator");
     packing.appendField(bridgedMetadataIndicator, 8);
 }
-
