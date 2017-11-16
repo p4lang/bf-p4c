@@ -1681,7 +1681,9 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Counter *counter) {
         return false;
     auto name = tbl->get_use_name(counter);
     out << indent++ << "counter " << name << ":" << std::endl;
-    out << indent << "p4: { name: " << canon_name(counter->name) << " }" << std::endl;
+    out << indent << "p4: { name: " << canon_name(counter->name)
+                      << ", size: " << counter->size
+                      << " }" << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(name));
     cstring count_type;
     switch (counter->type) {

@@ -202,6 +202,7 @@ void CounterTable::gen_tbl_cfg(json::vector &out) {
     int size = (layout_size() - 1)*1024*format->groups();
     json::map &tbl = *base_tbl_cfg(out, "statistics", size);
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "statistics", size);
+    add_alu_index(stage_tbl, "stats_alu_index");
     tbl["enable_pfe"] = per_flow_enable;
     tbl["pfe_bit_position"] = per_flow_enable_bit;
     if (auto *f = lookup_field("bytes"))

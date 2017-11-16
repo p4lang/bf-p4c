@@ -808,13 +808,14 @@ DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,
         return match_tables.size() == 1 ? (*match_tables.begin())->action_call() : action; }
     int memunit(int r, int c) { return r*6 + c; }
     void pass1();
-    unsigned get_meter_alu_index() {
+    unsigned get_alu_index() {
         if(layout.size() > 0) return layout[0].row/4U;
-        error(lineno, "Cannot determine Meter ALU Index for table %s", name());
+        error(lineno, "Cannot determine ALU Index for table %s", name());
         return 0; }
 protected:
-    // Accessed by Meter/Selection/Stateful Tables
-    void add_meter_alu_index(json::map &stage_tbl);
+    // Accessed by Meter/Selection/Stateful Tables as "meter_alu_index"
+    // Accessed by Statistics (Counter) Tables as "stats_alu_index"
+    void add_alu_index(json::map &stage_tbl, std::string alu_index);
 public:
     std::string get_per_flow_enable_param() { return per_flow_enable_param; }
     bool get_per_flow_enable() { return per_flow_enable; }

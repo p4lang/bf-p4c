@@ -346,7 +346,7 @@ void StatefulTable::gen_tbl_cfg(json::vector &out) {
     if (bound_selector)
         tbl["bound_to_selection_table_handle"] = bound_selector->handle();
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "stateful", size);
-    add_meter_alu_index(stage_tbl);
+    add_alu_index(stage_tbl, "meter_alu_index");
     if (context_json)
         stage_tbl.merge(*context_json);
 }

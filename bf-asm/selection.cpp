@@ -286,7 +286,7 @@ void SelectionTable::gen_tbl_cfg(json::vector &out) {
     add_pack_format(stage_tbl, 128, 1, 1);
     stage_tbl["memory_resource_allocation"] =
         gen_memory_resource_allocation_tbl_cfg("sram", layout, true);
-    add_meter_alu_index(stage_tbl);
+    add_alu_index(stage_tbl, "meter_alu_index");
     if (context_json)
         stage_tbl.merge(*context_json);
 }

@@ -68,10 +68,10 @@ void AttachedTable::pass1() {
 // 2         | 5
 // 3         | 7
 // ---------------
-void AttachedTable::add_meter_alu_index(json::map &stage_tbl) {
+void AttachedTable::add_alu_index(json::map &stage_tbl, std::string alu_index) {
     if (layout.size() <= 0)
         error(lineno, "Invalid meter alu setup. A meter ALU should be allocated for table %s", name());
-    stage_tbl["meter_alu_index"] = get_meter_alu_index();
+    stage_tbl[alu_index] = get_alu_index();
 }
 
 SelectionTable *AttachedTables::get_selector() const {

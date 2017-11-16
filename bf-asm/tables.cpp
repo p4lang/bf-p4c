@@ -1627,9 +1627,10 @@ json::map *Table::add_stage_tbl_cfg(json::map &tbl, const char *type, int size) 
     stage_tbl["size"] = size;
     stage_tbl["stage_table_type"] = type;
     stage_tbl["logical_table_id"] = logical_id;
-    stage_tbl["has_attached_gateway"] = false;
-    if (get_gateway())
-        stage_tbl["has_attached_gateway"] = true;
+    if (this->to<MatchTable>()) {
+        stage_tbl["has_attached_gateway"] = false;
+        if (get_gateway())
+            stage_tbl["has_attached_gateway"] = true; }
     if (!strcmp(type, "selection") && get_stateful())
         tbl["bound_to_stateful_table_handle"] = get_stateful()->handle();
     stage_tables.push_back(std::move(stage_tbl));
