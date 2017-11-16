@@ -260,26 +260,34 @@ void SRamMatchTable::write_attached_merge_regs(REGS &regs, int bus, int word, in
         if (st.args.empty())
             merge.mau_stats_adr_exact_shiftcount[bus][word_group] = st->direct_shiftcount();
         else if (group_info[group].overhead_word == (int)word) {
-            assert(st.args[0].field()->by_group[group]->bits[0].lo/128U == word);
-            merge.mau_stats_adr_exact_shiftcount[bus][word_group] =
-                st.args[0].field()->by_group[group]->bits[0].lo%128U + st->indirect_shiftcount();
+            if (st.args[0].type == Call::Arg::Field) {
+                assert(st.args[0].field()->by_group[group]->bit(0)/128U == word);
+                merge.mau_stats_adr_exact_shiftcount[bus][word_group] =
+                    st.args[0].field()->by_group[group]->bit(0)%128U + st->indirect_shiftcount();
+            } else if (auto f = st->get_per_flow_enable_param(this)) {
+                merge.mau_stats_adr_exact_shiftcount[bus][word_group] =
+                    f->bit(0) + STAT_ADDRESS_ZERO_PAD; }
         } else if (options.match_compiler) {
             /* unused, so should not be set... */
             merge.mau_stats_adr_exact_shiftcount[bus][word_group] = 7; }
         break; /* all must be the same, only config once */ }
     for (auto &m : attached.meters) {
         if (m.args.empty()) {
-            merge.mau_meter_adr_exact_shiftcount[bus][word_group] = m->direct_shiftcount() + 16;
+            merge.mau_meter_adr_exact_shiftcount[bus][word_group] = m->direct_shiftcount();
             if (idletime)
-                merge.mau_idletime_adr_exact_shiftcount[bus][word_group] = m->direct_shiftcount();
+                merge.mau_idletime_adr_exact_shiftcount[bus][word_group] =
+                    idletime->direct_shiftcount();
         } else if (group_info[group].overhead_word == (int)word) {
             if (m.args[0].type == Call::Arg::Field) {
-                assert(m.args[0].field()->by_group[group]->bits[0].lo/128U == word);
+                assert(m.args[0].field()->by_group[group]->bit(0)/128U == word);
                 merge.mau_meter_adr_exact_shiftcount[bus][word_group] =
-                    m.args[0].field()->by_group[group]->bits[0].lo%128U + 16;
+                    m.args[0].field()->by_group[group]->bit(0)%128U + m->indirect_shiftcount();
                 if (idletime)
                     merge.mau_idletime_adr_exact_shiftcount[bus][word_group] =
-                        m.args[0].field()->by_group[group]->bits[0].lo%128U;
+                        m.args[0].field()->by_group[group]->bit(0)%128U;
+            } else if (auto f = m->get_per_flow_enable_param(this)) {
+                merge.mau_meter_adr_exact_shiftcount[bus][word_group] =
+                    f->bit(0) + METER_ADDRESS_ZERO_PAD;
             } else {
                 assert(m.args[0].type == Call::Arg::HashDist);
                 merge.mau_meter_adr_exact_shiftcount[bus][word_group] = 0; }
@@ -291,17 +299,21 @@ void SRamMatchTable::write_attached_merge_regs(REGS &regs, int bus, int word, in
         break; /* all must be the same, only config once */ }
     for (auto &s : attached.statefuls) {
         if (s.args.size() <= 1) {
-            merge.mau_meter_adr_exact_shiftcount[bus][word_group] = s->direct_shiftcount() + 16;
+            merge.mau_meter_adr_exact_shiftcount[bus][word_group] = s->direct_shiftcount();
             if (idletime)
-                merge.mau_idletime_adr_exact_shiftcount[bus][word_group] = s->direct_shiftcount();
+                merge.mau_idletime_adr_exact_shiftcount[bus][word_group] =
+                    idletime->direct_shiftcount();
         } else if (group_info[group].overhead_word == (int)word) {
             if (s.args[1].type == Call::Arg::Field) {
-                assert(s.args[1].field()->by_group[group]->bits[0].lo/128U == word);
+                assert(s.args[1].field()->by_group[group]->bit(0)/128U == word);
                 merge.mau_meter_adr_exact_shiftcount[bus][word_group] =
-                    s.args[1].field()->by_group[group]->bits[0].lo%128U + 16;
+                    s.args[1].field()->by_group[group]->bit(0)%128U + s->indirect_shiftcount();
                 if (idletime)
                     merge.mau_idletime_adr_exact_shiftcount[bus][word_group] =
-                        s.args[1].field()->by_group[group]->bits[0].lo%128U;
+                        s.args[1].field()->by_group[group]->bit(0)%128U;
+            } else if (auto f = s->get_per_flow_enable_param(this)) {
+                merge.mau_meter_adr_exact_shiftcount[bus][word_group] =
+                    f->bit(0) + METER_ADDRESS_ZERO_PAD;
             } else {
                 assert(s.args[1].type == Call::Arg::HashDist);
                 merge.mau_meter_adr_exact_shiftcount[bus][word_group] = 0; }

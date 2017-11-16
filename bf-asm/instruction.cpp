@@ -361,18 +361,7 @@ operand::operand(Table *tbl, const Table::Actions::Action *act, const value_t &v
             else {
                 lo = v[1].lo;
                 hi = v[1].hi; } }
-        while (act->alias.count(name)) {
-            auto &alias = act->alias.at(name);
-            if (lo >= 0) {
-                if (alias.lo >= 0) {
-                    lo += alias.lo;
-                    hi += alias.lo;
-                    if (alias.hi >= 0 && hi > alias.hi)
-                        error(v.lineno, "invalid bitslice of %s", name.c_str()); }
-            } else {
-                lo = alias.lo;
-                hi = alias.hi; }
-            name = alias.name; }
+        name = act->alias_lookup(v.lineno, name, lo, hi);
         op = new Named(v.lineno, name, lo, hi, tbl, act->name, p4name); }
 }
 

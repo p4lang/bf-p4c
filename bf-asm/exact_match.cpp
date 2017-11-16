@@ -480,6 +480,8 @@ template<class REGS> void ExactMatchTable::write_regs(REGS &regs) {
     if (actions) actions->write_regs(regs, this);
     if (gateway) gateway->write_regs(regs);
     if (idletime) idletime->write_regs(regs);
+    for (auto &hd : hash_dist)
+        hd.write_regs(regs, this, 1, false);
 }
 
 std::unique_ptr<json::map> ExactMatchTable::gen_memory_resource_allocation_tbl_cfg(Way &way) {

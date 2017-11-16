@@ -171,8 +171,16 @@ void StatefulTable::pass2() {
         actions->stateful_pass2(this);
 }
 
-int StatefulTable::direct_shiftcount() {
-    return 64;
+int StatefulTable::direct_shiftcount() const {
+    return 64 + METER_ADDRESS_ZERO_PAD - ceil_log2(format->size);
+}
+
+int StatefulTable::indirect_shiftcount() const {
+    return METER_ADDRESS_ZERO_PAD - ceil_log2(format->size);
+}
+
+int StatefulTable::address_shift() const {
+    return ceil_log2(format->size);
 }
 
 template<class REGS> void StatefulTable::write_merge_regs(REGS &regs, MatchTable *match,

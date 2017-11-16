@@ -764,6 +764,24 @@ Table::Actions::Action::reverse_alias() const {
     return rv;
 }
 
+std::string Table::Actions::Action::alias_lookup(int lineno, std::string name,
+                                                 int &lo, int &hi) const {
+    while (alias.count(name)) {
+        auto &a = alias.at(name);
+        if (lo >= 0) {
+            if (a.lo >= 0) {
+                lo += a.lo;
+                hi += a.lo;
+                if (a.hi >= 0 && hi > a.hi)
+                    error(lineno, "invalid bitslice of %s", name.c_str()); }
+        } else {
+            lo = a.lo;
+            hi = a.hi; }
+        name = a.name;
+        lineno = a.lineno; }
+    return name;
+}
+
 Table::Actions::Action::alias_t::alias_t(value_t &data) {
     lineno = data.lineno;
     if (CHECKTYPE3(data, tSTR, tCMD, tINT)) {
@@ -1074,6 +1092,43 @@ template<class REGS> void Table::Actions::write_regs(REGS &regs, Table *tbl) {
 }
 FOR_ALL_TARGETS(INSTANTIATE_TARGET_TEMPLATE, void Table::Actions::write_regs, mau_regs &, Table *)
 
+static void gen_override(json::map &cfg, Table::Call &att) {
+    auto type = att->table_type();
+    std::string base;
+    switch (type) {
+    case Table::COUNTER:  base = "override_stat";     break;
+    case Table::METER:    base = "override_meter";    break;
+    case Table::STATEFUL: base = "override_stateful"; break;
+    default:
+        error(att.lineno, "unsupported table type in action call"); }
+    unsigned full_addr = 0;
+    cfg[base + "_addr"] = true;
+    if (att->to<AttachedTable>()->has_per_flow_enable()) {
+        cfg[base + "_addr_pfe"] = true;
+        full_addr |= 1U << (type == Table::COUNTER ? STATISTICS_PER_FLOW_ENABLE_START_BIT
+                                                   : METER_PER_FLOW_ENABLE_START_BIT); }
+    int idx = -1;
+    for (auto &arg : att.args) {
+        ++idx;
+        if (arg.type == Table::Call::Arg::Name) {
+            if (auto *st = att->to<StatefulTable>()) {
+                if (auto *act = st->actions->action(arg.name())) {
+                    full_addr |= 1 << METER_TYPE_START_BIT;
+                    full_addr |= act->code << (METER_TYPE_START_BIT + 1); } }
+            // FIXME -- else assume its a reference to a format field, so doesn't need to
+            // FIXME -- be in the override.  Should check that somewhere, but need access
+            // FIXME -- to the match_table to do it here.
+        } else if (arg.type == Table::Call::Arg::Const) {
+            if (idx == 0 && att.args.size() > 1) {
+                full_addr |= 1 << METER_TYPE_START_BIT;
+                full_addr |= arg.value() << (METER_TYPE_START_BIT + 1);
+            } else {
+                full_addr |= arg.value(); }
+        } else {
+            error(att.lineno, "argument not a constant"); } }
+    cfg[base + "_full_addr"] = full_addr;
+}
+
 void Table::Actions::gen_tbl_cfg(json::vector &cfg) {
     for (auto &act : *this) {
         json::map action_cfg;
@@ -1106,6 +1161,8 @@ void Table::Actions::gen_tbl_cfg(json::vector &cfg) {
         action_cfg["override_stateful_addr"] = false;
         action_cfg["override_stateful_addr_pfe"] = false;
         action_cfg["override_stateful_full_addr"] = 0;
+        for (auto &att : act.attached)
+            gen_override(action_cfg, att);
         if (!this->table->to<ActionTable>())
             action_cfg["is_action_meter_color_aware"] = false;
         json::vector &prim_cfg = action_cfg["primitives"] = json::vector();

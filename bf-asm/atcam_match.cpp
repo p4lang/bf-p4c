@@ -414,6 +414,8 @@ template<class REGS> void AlgTcamMatchTable::write_regs(REGS &regs) {
     if (actions) actions->write_regs(regs, this);
     if (gateway) gateway->write_regs(regs);
     if (idletime) idletime->write_regs(regs);
+    for (auto &hd : hash_dist)
+        hd.write_regs(regs, this, 1, false);
 }
 
 // FIXME: Add tbl-cfg support for ATCAM tables

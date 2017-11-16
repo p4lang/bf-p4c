@@ -54,15 +54,19 @@ void CounterTable::pass2() {
 
 static int counter_size[]         = { 0, 0, 1, 2, 3, 0, 4 };
 static int counter_masks[]        = { 0, 7, 3, 4, 1, 0, 0 };
-static int counter_shifts[]       = { 0, 3, 2, 1, 1, 0, 0 };
+static int counter_shifts[]       = { 0, 3, 2, 3, 1, 0, 2 };
 static int counter_hole_swizzle[] = { 0, 0, 0, 1, 0, 0, 2 };
 
-int CounterTable::direct_shiftcount() {
-    return 64 + 7 - counter_shifts[format->groups()];
+int CounterTable::direct_shiftcount() const {
+    return 64 + STAT_ADDRESS_ZERO_PAD - counter_shifts[format->groups()];
 }
 
-int CounterTable::indirect_shiftcount() {
-    return 7 - counter_shifts[format->groups()];
+int CounterTable::indirect_shiftcount() const {
+    return STAT_ADDRESS_ZERO_PAD - counter_shifts[format->groups()];
+}
+
+int CounterTable::address_shift() const {
+    return counter_shifts[format->groups()];
 }
 
 template<class REGS> void CounterTable::write_merge_regs(REGS &regs, MatchTable *match,

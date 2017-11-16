@@ -88,8 +88,16 @@ void MeterTable::pass2() {
     if (input_xbar) input_xbar->pass2();
 }
 
-int MeterTable::direct_shiftcount() {
-    return 64;
+int MeterTable::direct_shiftcount() const {
+    return 64 + METER_ADDRESS_ZERO_PAD - 7;  // meters are always 128 bits wide
+}
+
+int MeterTable::indirect_shiftcount() const {
+    return METER_ADDRESS_ZERO_PAD - 7;  // meters are always 128 bits wide
+}
+
+int MeterTable::address_shift() const {
+    return 7;  // meters are always 128 bits wide
 }
 
 template<class REGS> void MeterTable::write_merge_regs(REGS &regs, MatchTable *match,

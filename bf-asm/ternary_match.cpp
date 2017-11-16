@@ -341,6 +341,8 @@ void TernaryMatchTable::write_regs(REGS &regs) {
     if (actions) actions->write_regs(regs, this);
     if (gateway) gateway->write_regs(regs);
     if (idletime) idletime->write_regs(regs);
+    for (auto &hd : hash_dist)
+        hd.write_regs(regs, this, 1, false);
     merge.exact_match_logical_result_delay |= 1 << logical_id;
     regs.cfg_regs.mau_cfg_movereg_tcam_only |= 1U << logical_id;
 
@@ -714,6 +716,8 @@ template<class REGS> void TernaryIndirectTable::write_regs(REGS &regs) {
         attached.write_tcam_merge_regs(regs, match_table, bus, tcam_shift);
     }
     if (actions) actions->write_regs(regs, this);
+    for (auto &hd : hash_dist)
+        hd.write_regs(regs, this, 1, false);
 }
 
 void TernaryIndirectTable::gen_tbl_cfg(json::vector &out) {

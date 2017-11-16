@@ -21,6 +21,7 @@
 #include "target.h"
 
 class ActionBus;
+class AttachedTable;
 struct AttachedTables;
 class GatewayTable;
 class IdletimeTable;
@@ -315,6 +316,7 @@ public:
             bool equiv(Action *a);
             typedef const decltype(alias)::value_type alias_value_t;
             std::map<std::string, std::vector<alias_value_t *>> reverse_alias() const;
+            std::string alias_lookup(int lineno, std::string name, int &lo, int &hi) const;
             bool has_rng() { return !rng_param_name.empty(); }
             void set_action_handle(Table* tbl);
             bool has_param(std::string param) const {
@@ -407,8 +409,11 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     virtual void set_stateful (StatefulTable *s) { assert(0); }
     virtual StatefulTable *get_stateful() const { return 0; }
     virtual const Call &get_action() const { return action; }
-    virtual int direct_shiftcount() { assert(0); }
-    virtual int indirect_shiftcount() { assert(0); }
+    virtual Format::Field *find_address_field(AttachedTable *) const { assert(0); return 0; }
+    virtual Format::Field *get_per_flow_enable_param(MatchTable *) const { assert(0); return 0; }
+    virtual int direct_shiftcount() const { assert(0); }
+    virtual int indirect_shiftcount() const { assert(0); }
+    virtual int address_shift() const { assert(0); }
     virtual int home_row() const { assert(0); }
     /* row,col -> mem unitno mapping -- unitnumbers used in context json */
     virtual int memunit(int r, int c) { return r*12 + c; }
@@ -545,6 +550,7 @@ struct AttachedTables {
     std::vector<Table::Call>    stats, meters, statefuls;
     SelectionTable *get_selector() const;
     StatefulTable *get_stateful(std::string name = "") const;
+    Table::Format::Field *find_address_field(AttachedTable *tbl) const;
     void pass1(MatchTable *self);
     template<class REGS> void write_merge_regs(REGS &regs, MatchTable *self, int type, int bus);
     template<class REGS> void write_tcam_merge_regs(REGS &regs, MatchTable *self, int bus,
@@ -564,6 +570,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(MatchTable, Table,
     GatewayTable                *gateway = 0;
     IdletimeTable               *idletime = 0;
     AttachedTables              attached;
+    friend class AttachedTables;
     enum { NONE=0, TABLE_MISS=1, TABLE_HIT=2, DISABLED=3, GATEWAY_MISS=4, GATEWAY_HIT=5,
            GATEWAY_INHIBIT=6 }  table_counter = NONE;
 
@@ -580,10 +587,13 @@ public:
     const GatewayTable *get_gateway() const override { return gateway; }
     MatchTable *get_match_table() override { return this; }
     std::set<MatchTable *> get_match_tables() override { return std::set<MatchTable *>{this}; }
+    Format::Field *find_address_field(AttachedTable *tbl) const override {
+        return attached.find_address_field(tbl); }
     void gen_name_lookup(json::map &out) override;
     bool run_at_eop() override { return attached.run_at_eop(); }
     virtual bool is_ternary() { return false; }
     void gen_idletime_tbl_cfg(json::map &stage_tbl);
+    int direct_shiftcount() const override { return 64; }
 )
 
 #define DECLARE_TABLE_TYPE(TYPE, PARENT, NAME, ...)                     \
@@ -722,6 +732,8 @@ public:
         return indirect ? indirect->get_selector() : 0; }
     StatefulTable *get_stateful() const override {
         return indirect ? indirect->get_stateful() : 0; }
+    Format::Field *find_address_field(AttachedTable *tbl) const override {
+        return indirect ? indirect->find_address_field(tbl) : attached.find_address_field(tbl); }
     std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(
             const char *type, std::vector<Layout> &layout, bool skip_spare_bank=false) override;
     Call &action_call() override { return indirect ? indirect->action : action; }
@@ -771,12 +783,14 @@ DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
         return rv; }
     SelectionTable *get_selector() const override { return attached.get_selector(); }
     StatefulTable *get_stateful() const override { return attached.get_stateful(); }
+    Format::Field *find_address_field(AttachedTable *tbl) const override {
+        return attached.find_address_field(tbl); }
     template<class REGS> void write_merge_regs(REGS &regs, int type, int bus) {
         attached.write_merge_regs(regs, match_table, type, bus); }
     FOR_ALL_TARGETS(FORWARD_VIRTUAL_TABLE_WRITE_MERGE_REGS)
     int unitram_type() override { return UnitRam::TERNARY_INDIRECTION; }
 public:
-    unsigned address_shift() const { return std::min(5U, format->log2size - 2); }
+    int address_shift() const { return std::min(5U, format->log2size - 2); }
 )
 
 DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,
@@ -817,7 +831,10 @@ protected:
     // Accessed by Statistics (Counter) Tables as "stats_alu_index"
     void add_alu_index(json::map &stage_tbl, std::string alu_index);
 public:
+    bool has_per_flow_enable() const { return per_flow_enable; }
     std::string get_per_flow_enable_param() { return per_flow_enable_param; }
+    Format::Field *get_per_flow_enable_param(MatchTable *m) const override {
+        return per_flow_enable ? m->lookup_field(per_flow_enable_param) : nullptr; }
     bool get_per_flow_enable() { return per_flow_enable; }
     bool is_direct() const { return direct; }
 )
@@ -924,7 +941,7 @@ public:
     template<class REGS> void setup_logical_alu_map(REGS &regs, int logical_id, int alu);
     template<class REGS> void setup_physical_alu_map(REGS &regs, int type, int bus, int alu);
     FOR_ALL_TARGETS(FORWARD_VIRTUAL_TABLE_WRITE_MERGE_REGS_WITH_ARGS)
-    unsigned address_shift() const { return 7 + ceil_log2(min_words); }
+    int address_shift() const { return 7 + ceil_log2(min_words); }
     unsigned meter_group() const { return layout.at(0).row/4U; }
     int home_row() const override { return layout.at(0).row | 3; }
     int unitram_type() override { return UnitRam::SELECTOR; }
@@ -990,8 +1007,9 @@ DECLARE_TABLE_TYPE(CounterTable, Synth2Port, "counter",
                                                const std::vector<Call::Arg> &args);
     FOR_ALL_TARGETS(FORWARD_VIRTUAL_TABLE_WRITE_MERGE_REGS_WITH_ARGS)
 public:
-    int direct_shiftcount() override;
-    int indirect_shiftcount() override;
+    int direct_shiftcount() const override;
+    int indirect_shiftcount() const override;
+    int address_shift() const override;
     bool run_at_eop() override { return (type&BYTES) != 0; }
     bool adr_mux_select_stats() override { return true; }
     int unitram_type() override { return UnitRam::STATISTICS; }
@@ -1008,7 +1026,9 @@ DECLARE_TABLE_TYPE(MeterTable, Synth2Port, "meter",
     FOR_ALL_TARGETS(FORWARD_VIRTUAL_TABLE_WRITE_MERGE_REGS_WITH_ARGS)
     int                 sweep_interval = 2;
 public:
-    int direct_shiftcount() override;
+    int direct_shiftcount() const override;
+    int indirect_shiftcount() const override;
+    int address_shift() const override;
     bool                color_aware = false;
     bool                color_aware_per_flow_enable = false;
     bool run_at_eop() override { return type == STANDARD; }
@@ -1036,7 +1056,9 @@ DECLARE_TABLE_TYPE(StatefulTable, Synth2Port, "stateful",
 public:
     unsigned phv_byte_mask = 0;
     int instruction_set() override { return 1; /* STATEFUL_ALU */ }
-    int direct_shiftcount() override;
+    int direct_shiftcount() const override;
+    int indirect_shiftcount() const override;
+    int address_shift() const override;
     int unitram_type() override { return UnitRam::STATEFUL; }
     int get_const(long v);
     bool is_dual_mode() { return dual_mode; }
