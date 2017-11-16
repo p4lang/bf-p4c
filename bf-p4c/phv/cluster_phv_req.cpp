@@ -232,10 +232,15 @@ int Cluster_PHV::compute_num_overlays() {
 void
 Cluster_PHV::set_exact_containers() {
     for (auto* field : cluster_vec_i) {
-        // deparsed header fields need exact containers as they go out on the wire
-        // metadata does not go on the wire so exactness can be relaxed
+        // Deparsed header fields need exact containers as they go out on the
+        // wire. Metadata does not go on the wire so exactness can normally be
+        // relaxed; however, the correctness of the egress parser for bridged
+        // metadata requires that some compiler-generated fields be placed in a
+        // container of a specific size, so we'll still obey the
+        // `exact_containers` constraint if it was explicitly applied to the
+        // field. (`$bridged_metadata_indicator` is an example of such a case.)
         if (field->deparsed()
-            && !field->metadata
+            && (!field->metadata || field->exact_containers())
             && (field->phv_use_width() % int(PHV::Size::b8) == 0)) {
                                                                    // ok 24,40,48,56b, not <b8,9,23b
             // e.g., cannot map W47 as

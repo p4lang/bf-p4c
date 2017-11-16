@@ -946,6 +946,19 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
     bool preorder(const IR::TempVar* tv) override {
         auto gress = VisitingThread(this);
         phv.addTempVar(tv, gress);
+
+        // XXX(seth): `$bridged_metadata_indicator` is a special case, because
+        // it looks like bridged metadata in the IR, but it *must* be placed in
+        // a single 8-bit container so that the egress parser works correctly.
+        if (tv->name.endsWith("$bridged_metadata_indicator")) {
+            PHV::Field* f = phv.field(tv);
+            BUG_CHECK(f, "No PhvInfo entry for a field we just added?");
+            f->set_exact_containers(true);
+            f->set_deparsed_no_pack(true);
+            f->set_deparsed_bottom_bits(true);
+            f->updateAlignment(FieldAlignment(le_bitrange(StartLen(0, 8))));
+        }
+
         return false;
     }
 
