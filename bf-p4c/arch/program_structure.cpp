@@ -316,6 +316,22 @@ void ProgramStructure::createMain() {
     declarations.push_back(result);
 }
 
+namespace {
+
+/// Remap paths, member expressions, and type names according to the mappings
+/// specified in the given ProgramStructure.
+struct ConvertNames : public PassManager {
+    explicit ConvertNames(ProgramStructure* structure) {
+        addPasses({
+            new BFN::PathExpressionConverter(structure),
+            new BFN::MemberExpressionConverter(structure),
+            new BFN::TypeNameExpressionConverter(structure)
+        });
+    }
+};
+
+}  // namespace
+
 const IR::P4Program* ProgramStructure::create(const IR::P4Program* program) {
     cvtExpressions();
     createErrors();
@@ -326,8 +342,13 @@ const IR::P4Program* ProgramStructure::create(const IR::P4Program* program) {
     createParsers();
     createControls();
     createMain();
-    auto result = new IR::P4Program(program->srcInfo, declarations);
-    return result;
+    auto* convertedProgram = new IR::P4Program(program->srcInfo, declarations);
+
+    // Run a final name conversion pass now that the overall program has been
+    // converted.  Some additional opportunities will be exposed once the
+    // substitutions performed by all of the `create*()` methods are finished.
+    ConvertNames nameConverter(this);
+    return convertedProgram->apply(nameConverter);
 }
 
 }  // namespace BFN

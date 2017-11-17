@@ -710,7 +710,6 @@ class ConstructSymbolTable : public Inspector {
     unsigned          digestIndex;
     unsigned          igCloneIndex;
     unsigned          egCloneIndex;
-    P4::ClonePathExpressions cloner;
     std::set<cstring> globals;
 
  public:
@@ -720,49 +719,6 @@ class ConstructSymbolTable : public Inspector {
       resubmitIndex(0), digestIndex(0), igCloneIndex(0), egCloneIndex(0)
     { CHECK_NULL(structure); setName("ConstructSymbolTable"); }
 
-    /**
-     * Translate a field list for a digest primitive. All member expressions are
-     * cloned and added to the translation table.
-     *
-     * @param expr  The field list to clone.
-     * @param prefix  An optional list of additional fields to prepend to the
-     *                field list. Used to include compiler-generated fields
-     *                that weren't present in the original program.
-     * @return the translated field list.
-     */
-    const IR::ListExpression*
-    cloneFieldList(const IR::Expression* expr,
-                   std::initializer_list<const IR::Expression*> prefix = { }) {
-        IR::ListExpression* origin = new IR::ListExpression(prefix);
-        if (!expr) {
-        } else if (auto* list = expr->to<IR::ListExpression>()) {
-            origin->components.pushBackOrAppend(&list->components);
-        } else {
-            origin->components.pushBackOrAppend(expr);
-        }
-        if (origin->components.size() == 0)
-            return origin;
-        auto *cloned = origin->apply(cloner)->to<IR::ListExpression>();
-        CHECK_NULL(cloned);
-        auto origin_iter = origin->components.begin();
-        auto cloned_iter = cloned->components.begin();
-        for (; origin_iter != origin->components.end() && cloned_iter != cloned->components.end();
-               ++origin_iter, ++cloned_iter) {
-            auto origin_member = (*origin_iter)->to<IR::Member>();
-            auto cloned_member = (*cloned_iter)->to<IR::Member>();
-            updatePathsToDo(origin_member, cloned_member);
-        }
-        return cloned;
-    }
-
-    void updatePathsToDo(const IR::Member* origin_member, const IR::Member* cloned_member) {
-        if (origin_member && cloned_member) {
-            auto it = structure->pathsToDo.find(origin_member);
-            if (it != structure->pathsToDo.end()) {
-                structure->pathsToDo.emplace(cloned_member, it->second);
-            }
-        }
-    }
     /*
      * following extern methods in v1model.p4 need to be converted to an extern instance
      * and a method call on the instance.
@@ -796,8 +752,7 @@ class ConstructSymbolTable : public Inspector {
          *
          */
         auto field_list = mce->arguments->at(1);
-        auto cloned_field_list = cloneFieldList(field_list);
-        auto args = new IR::Vector<IR::Expression>({ cloned_field_list });
+        auto args = new IR::Vector<IR::Expression>({ field_list });
         auto expr = new IR::PathExpression(new IR::Path("learning"));
         auto member = new IR::Member(expr, "emit");
         auto typeArgs = new IR::Vector<IR::Type>();
@@ -879,8 +834,7 @@ class ConstructSymbolTable : public Inspector {
             block->components.push_back(new IR::AssignmentStatement(mirrorId,
                                                                     mirrorIdValue));
 
-            structure->cloneCalls.emplace(node, block->apply(cloner)
-                                                     ->to<IR::BlockStatement>());
+            structure->cloneCalls.emplace(node, block);
         }
 
         /*
@@ -889,25 +843,25 @@ class ConstructSymbolTable : public Inspector {
          *    mirror.emit({});
          */
 
-        auto args = new IR::Vector<IR::Expression>();
-        const IR::ListExpression* originalFieldList = nullptr;
-        if (hasData && mce->arguments->size() > 2) {
-            originalFieldList = mce->arguments->at(2)->to<IR::ListExpression>();
-            CHECK_NULL(originalFieldList);
-        }
-        auto* cloned_field_list = cloneFieldList(originalFieldList, {
+        auto* newFieldList = new IR::ListExpression({
             new IR::Member(mirrorBufferMetadataPath, "mirror_id"),
             new IR::Member(deparserMetadataPath, "mirror_source"),
         });
-        args->push_back(cloned_field_list);
+        if (hasData && mce->arguments->size() > 2) {
+            auto* clonedData = mce->arguments->at(2);
+            if (auto* originalFieldList = clonedData->to<IR::ListExpression>())
+                newFieldList->components.pushBackOrAppend(&originalFieldList->components);
+            else
+                newFieldList->components.push_back(clonedData);
+        }
+        auto* args = new IR::Vector<IR::Expression>({ newFieldList });
 
         auto pathExpr = new IR::PathExpression(new IR::Path("mirror"));
         auto member = new IR::Member(pathExpr, "emit");
         auto typeArgs = new IR::Vector<IR::Type>();
         auto mcs = new IR::MethodCallStatement(
              new IR::MethodCallExpression(member, typeArgs, args));
-        auto condExprPath =
-          new IR::Member(deparserMetadataPath->apply(cloner), "mirror_idx");
+        auto condExprPath = new IR::Member(deparserMetadataPath, "mirror_idx");
         auto condExpr = new IR::Equ(condExprPath, idx);
         auto cond = new IR::IfStatement(condExpr, mcs, nullptr);
         if (isIngress)
@@ -1001,9 +955,7 @@ class ConstructSymbolTable : public Inspector {
         auto new_fl = new IR::ListExpression({ mem });
         for (auto f : fl->to<IR::ListExpression>()->components)
             new_fl->push_back(f);
-        // ensure path is different in ingress and egress deparser
-        auto cloned_fl = cloneFieldList(new_fl);
-        auto args = new IR::Vector<IR::Expression>(cloned_fl);
+        auto args = new IR::Vector<IR::Expression>(new_fl);
         auto expr = new IR::PathExpression(new IR::Path("resubmit"));
         auto member = new IR::Member(expr, "emit");
         auto typeArgs = new IR::Vector<IR::Type>();
@@ -1050,7 +1002,6 @@ class ConstructSymbolTable : public Inspector {
     boost::optional<ChecksumSourceMap::value_type>
     analyzeComputedChecksumStatement(const IR::MethodCallStatement* statement) {
         auto methodCall = statement->methodCall->to<IR::MethodCallExpression>();
-        methodCall = methodCall->apply(cloner)->to<IR::MethodCallExpression>();
         if (!methodCall) {
             ::warning("Expected a non-empty method call expression: %1%", statement);
             return boost::none;
@@ -1089,17 +1040,13 @@ class ConstructSymbolTable : public Inspector {
             structure->egressDeparserDeclarations.push_back(decl);
 
             auto fieldlist = csum.second->arguments->at(1);
-            auto ig_fieldlist = cloneFieldList(fieldlist);
-            auto eg_fieldlist = cloneFieldList(fieldlist);
             auto dest_field = csum.second->arguments->at(2);
-            auto ig_dest_field = dest_field->apply(cloner);
-            auto eg_dest_field = dest_field->apply(cloner);
             auto ig_csum = new IR::MethodCallStatement(csum.second->srcInfo,
                                new IR::Member(new IR::PathExpression(csum_name), "update"),
-                                   {ig_fieldlist, ig_dest_field});
+                                   {fieldlist, dest_field});
             auto eg_csum = new IR::MethodCallStatement(csum.second->srcInfo,
                                new IR::Member(new IR::PathExpression(csum_name), "update"),
-                                   {eg_fieldlist, eg_dest_field});
+                                   {fieldlist, dest_field});
             structure->ingressDeparserStatements.push_back(ig_csum);
             structure->egressDeparserStatements.push_back(eg_csum);
         }
@@ -1379,6 +1326,7 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
         new ConstructSymbolTable(structure, refMap, typeMap),
         new GenerateTofinoProgram(structure),
         new CastFixup(structure),
+        new P4::ClonePathExpressions,
         new TranslationLast(),
         new P4::ClearTypeMap(typeMap),
         new P4::TypeChecking(refMap, typeMap, true),
