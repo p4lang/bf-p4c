@@ -433,6 +433,8 @@ const IR::Node* PathExpressionConverter::postorder(IR::Member *node) {
     if (it != structure->metadataNameMap.end()) {
         auto expr = new IR::PathExpression(it->second.first);
         auto result = new IR::Member(node->srcInfo, expr, it->second.second);
+        const unsigned bitWidth = structure->metadataTypeMap.at(it->second);
+        result->type = IR::Type::Bits::get(bitWidth);
         return result;
     }
     return node;
