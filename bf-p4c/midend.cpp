@@ -97,6 +97,11 @@ class NonMaskLeftValueOrIsValid : public P4::KeyIsComplex {
     }
 };
 
+class MidEndLast : public PassManager {
+ public:
+    MidEndLast() { setName("MidEndLast"); }
+};
+
 MidEnd::MidEnd(BFN_Options& options) {
     // we may come through this path even if the program is actually a P4 v1.0 program
     setName("MidEnd");
@@ -177,6 +182,7 @@ MidEnd::MidEnd(BFN_Options& options) {
         (options.arch == "native") ? nullptr : new FillFromBlockMap(&refMap, &typeMap),
         evaluator,
         new VisitFunctor([this, evaluator]() { toplevel = evaluator->getToplevelBlock(); }),
+        new MidEndLast
     });
 }
 
