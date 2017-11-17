@@ -68,6 +68,13 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_96_hash_data.p4
   )
 
+# We need a deposit_field instruction, but we fail to select it.
+p4c_add_xfail_reason("tofino"
+  "instruction slot [0-9]+ used multiple times in action"
+  extensions/p4_tests/p4_14/15-SetMetadata.p4
+  extensions/p4_tests/p4_14/16-WrongSizeInfiniteLoop.p4
+  )
+
 # BRIG-104
 p4c_add_xfail_reason("tofino"
   "Unhandled action bitmask constraint"
@@ -585,7 +592,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/08-FullTPHV3.p4
   testdata/p4_14_samples/01-BigMatch.p4
   extensions/p4_tests/p4_14/04-FullPHV3.p4
-  extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
   extensions/p4_tests/p4_14/c1/COMPILER-133/full_tphv.p4
   extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
   extensions/p4_tests/p4_14/c4/COMPILER-590/case3179.p4
@@ -651,8 +657,10 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c2/COMPILER-379/case2210.p4
   )
 
+# Also incorrect P4_14->16 conversion for varbit extract, but a different
+# symptom.
 p4c_add_xfail_reason("tofino"
-  "error: Assignment cannot be supported in the parser"
+  "Cannot find declaration for len"
   testdata/p4_14_samples/TLV_parsing.p4
   )
 
@@ -772,7 +780,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_112_no_phase_0_case_action_width_too_big.p4
   extensions/p4_tests/p4_14/test_config_111_no_phase_0_case_two_actions.p4
   extensions/p4_tests/p4_14/test_config_no_phase_0_case_two_actions.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-295/vag1892.p4
   extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
   extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
   extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
@@ -783,10 +790,15 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
   extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
   extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
-  extensions/p4_tests/p4_14/jenkins/pcie_pkt_test/pcie_pkt_test_one.p4
-  extensions/p4_tests/p4_14/jenkins/mirror_test/mirror_test.p4
   extensions/p4_tests/p4_14/jenkins/emulation/emulation.p4
   )
+
+# This code contains an implicit cast in an assignment in the parser; we need to
+# convert it into a slice instead of just ignoring the cast.
+p4c_add_xfail_reason("tofino"
+  "Inferred incompatible alignments for field ig_intr_md_for_tm.ucast_egress_port"
+  extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
+)
 
 p4c_add_xfail_reason("tofino"
   "Action bus byte [0-9]* set in table .* and table .*"
@@ -800,9 +812,13 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: .* overlaps .* in .*"
   extensions/p4_tests/p4_14/case1770.p4
+  extensions/p4_tests/p4_14/jenkins/mirror_test/mirror_test.p4
 )
 
-
+p4c_add_xfail_reason("tofino"
+  "error: .* overlaps .* with .*"
+  extensions/p4_tests/p4_14/jenkins/mirror_test/mirror_test.p4
+)
 
 p4c_add_xfail_reason("tofino"
    "Stage pragma provided to table .* has multiple parameters, while Brig currently"
@@ -824,17 +840,11 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/packet_redirect.p4
   testdata/p4_14_samples/simple_nat.p4
   )
-# We fail to translate `standard_metadata.clone_src`, apparently because it's
-# wrapped in a cast.
-p4c_add_xfail_reason("tofino"
-  "Could not find declaration for standard_metadata"
-  extensions/p4_tests/p4_16/clone-bmv2.p4
-  testdata/p4_16_samples/clone-bmv2.p4
-  )
 # invalid tests, eg_intr_md.egress_port is read-only
 p4c_add_xfail_reason("tofino"
   "Expression .* cannot be the target of an assignment"
   extensions/p4_tests/p4_14/test_config_249_simple_bridge.p4
+  extensions/p4_tests/p4_14/test_config_6_sram_and_tcam_allocation.p4
   )
 # invalid tests, issue604.p4 is a v1.1 testcase
 # P4-14 program can not define extern
@@ -867,10 +877,6 @@ p4c_add_xfail_reason("tofino"
   "Assertion .*failed"
   extensions/p4_tests/p4_14/13-ResubmitMetadataSize.p4
   )
-# backend bug
-p4c_add_xfail_reason("tofino"
-  "PHV_Container::taint_bits"
-  )
 
 # backend bug
 p4c_add_xfail_reason("tofino"
@@ -881,11 +887,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "does not have a PHV allocation though it is used in an action"
   extensions/p4_tests/p4_14/test_config_157_random_number_generator.p4
-  )
-# backend bug
-p4c_add_xfail_reason("tofino"
-  "Assignment cannot be supported in the parser"
-  extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
   )
 # need a good way to handle global action
 p4c_add_xfail_reason("tofino"
@@ -932,7 +933,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Null originalFieldList"
+  "Could not find declaration for x"
   testdata/p4_16_samples/issue1001-bmv2.p4
   )
 
