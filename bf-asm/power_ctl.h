@@ -23,7 +23,7 @@
 template <int I>
 void set_power_ctl_reg(checked_array<2, checked_array<16, ubits<I>>> &power_ctl, int reg) {
     int side;
-    switch (reg >> 6) {
+    switch (reg/(I*8)) {
     case 1: // 8 bit
         reg -= I*8;
         side = reg / (I*4);
