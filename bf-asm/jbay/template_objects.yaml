@@ -32,7 +32,7 @@
     ],
     "regs":[
       # jbay_reg
-        "dvsl_addrmap", "mac_addrmap", "gpio_regs", "serdes_addrmap",
+        "dvsl_addrmap", "gpio_regs", "serdes_addrmap",
         # pipes
           # mau
           # pardereg

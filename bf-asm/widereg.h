@@ -36,11 +36,19 @@ struct widereg_base {
     void log(const char *op, bitvec v) const;
 };
 
+inline static unsigned int to_unsigned(const bitvec& v) {
+    std::stringstream ss;
+    ss << v;
+    std::string str(ss.str());
+    unsigned int rv = std::strtoul(str.c_str(), 0, 16);
+    return rv;
+}
+
 inline std::ostream &operator<<(std::ostream &out, const widereg_base *u) {
     print_regname(out, u, u+1);
     return out; }
 inline std::ostream &operator<<(std::ostream &out, const widereg_base &u) {
-    return out << u.value; }
+    return out << to_unsigned(u.value); }
 
 template<int N> struct widereg : widereg_base {
     widereg() : widereg_base() {}
@@ -50,6 +58,7 @@ template<int N> struct widereg : widereg_base {
             value.clrrange(N, value.max().index() - N + 1); }
         return *this; }
     widereg(bitvec v) : widereg_base(v) { check(); }
+    widereg(uintptr_t v) : widereg_base(v) { check(); }
     widereg(const widereg &) = delete;
     widereg(widereg &&) = default;
     bitvec operator=(bitvec v) {
