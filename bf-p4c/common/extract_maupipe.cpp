@@ -877,7 +877,7 @@ class TnaPipe {
 };
 
 const IR::BFN::Pipe* extract_native_arch(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
-                                            const IR::PackageBlock* main) {
+                                            const IR::PackageBlock* main, bool useTna) {
     TnaPipe* pipes[2];
     pipes[INGRESS] = new TnaPipe(main, INGRESS, refMap, typeMap);
     pipes[EGRESS] = new TnaPipe(main, EGRESS, refMap, typeMap);
@@ -896,7 +896,7 @@ const IR::BFN::Pipe* extract_native_arch(P4::ReferenceMap* refMap, P4::TypeMap* 
     }
 
     auto parserInfo = BFN::extractParser(rv, pipes[INGRESS]->parser, pipes[INGRESS]->deparser,
-                                         pipes[EGRESS]->parser, pipes[EGRESS]->deparser);
+                                         pipes[EGRESS]->parser, pipes[EGRESS]->deparser, useTna);
     for (auto gress : { INGRESS, EGRESS }) {
         rv->thread[gress].parser = parserInfo.parsers[gress];
         rv->thread[gress].deparser = parserInfo.deparsers[gress];
@@ -923,7 +923,7 @@ const IR::BFN::Pipe* extract_native_arch(P4::ReferenceMap* refMap, P4::TypeMap* 
     return rv->apply(finalSimplifications);
 }
 
-const IR::BFN::Pipe *extract_maupipe(const IR::P4Program *program) {
+const IR::BFN::Pipe *extract_maupipe(const IR::P4Program *program, bool useTna) {
     P4::ReferenceMap  refMap;
     P4::TypeMap       typeMap;
     refMap.setIsV1(true);
@@ -934,5 +934,6 @@ const IR::BFN::Pipe *extract_maupipe(const IR::P4Program *program) {
     if (!top) {
         error("No main switch");
         return nullptr; }
-    return extract_native_arch(&refMap, &typeMap, top);
+
+    return extract_native_arch(&refMap, &typeMap, top, useTna);
 }

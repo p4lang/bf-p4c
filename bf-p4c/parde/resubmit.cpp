@@ -12,10 +12,10 @@
 namespace BFN {
 
 /**
- * Analyze the resubmit_packet `add_metadata` method within the deparser block,
+ * Analyze the resubmit_packet `emit` method within the deparser block,
  * and try to extract the source field list.
  *
- * @param statement  The `add_metadata` method to analyze
+ * @param statement  The `emit` method to analyze
  * @return a ResubmitSource vector containing the source fields used in the resubmit,
  * or boost::none if the resubmit code was invalid.
  */
@@ -31,7 +31,7 @@ analyzeResubmitStatement(const IR::MethodCallStatement* statement) {
         return boost::none;
     }
     auto member = methodCall->method->to<IR::Member>();
-    if (!member || (member->member != "add_metadata" && member->member != "emit")) {
+    if (!member || member->member != "emit") {
         return boost::none;
     }
     if (methodCall->arguments->size() != 1) {

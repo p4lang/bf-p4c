@@ -23,24 +23,16 @@ agreement with Barefoot Networks, Inc.
 // -----------------------------------------------------------------------------
 // COMMON TYPES
 // -----------------------------------------------------------------------------
-typedef bit<9> PortId_t;     // Port ID -- ingress or egress port
-typedef bit<16> MulticaseGroupId_t;      // Multicast group id
-typedef bit<5> QueueId_t;    // Queue id
-typedef bit<4> CloneId_t;    // Clone id
-typedef bit<10> MirrorId_t;  // Mirror id
+typedef bit<9>  PortId_t;     // Port id -- ingress or egress port
+typedef bit<16> MulticastGroupId_t;   // Multicast group id
+typedef bit<5>  QueueId_t;    // Queue id
+typedef bit<4>  CloneId_t;    // Clone id
+typedef bit<10> MirrorId_t;   // Mirror id
 
-/// Meter types
 enum MeterType_t {
     PACKETS,
     BYTES
 }
-
-/// Meter colors
-enum MeterColor_t {
-    RED,
-    GREEN,
-    YELLOW
-};
 
 /// Counter
 enum CounterType_t {
@@ -59,14 +51,14 @@ enum HashAlgorithm_t {
     IDENTITY,
     RANDOM,
     CRC16,
-    CRC32
+    CRC32,
+    CSUM16
 }
 
 match_kind {
-    // exact
-    // ternary
-    // lpm
-    range
+    range,
+    // Used for implementing dynamic_action_selection
+    selector
 }
 
 error {
@@ -113,8 +105,6 @@ struct ingress_intrinsic_metadata_from_parser_t {
 
 struct ingress_intrinsic_metadata_for_tm_t {
     // The ingress physical port id is passed to the TM directly from
-
-    bit<7> _pad1;
     PortId_t ucast_egress_port;          // egress port for unicast packets. must
                                          // be presented to TM for unicast.
 
@@ -133,12 +123,12 @@ struct ingress_intrinsic_metadata_for_tm_t {
                                          // ingress admission control, PFC,
                                          // etc.
 
-    QueueId_t qid;                       // egress (logical) queue id into which
+    QueueId_t qid;                           // egress (logical) queue id into which
                                          // this packet will be deposited.
     bit<3> icos_for_copy_to_cpu;         // ingress cos for the copy to CPU. must
                                          // be presented to TM if copy_to_cpu ==
                                          // 1.
-    bit<3> _pad2;
+
     bit<1> copy_to_cpu;                  // request for copy to cpu.
 
     bit<2> packet_color;                 // packet color (G,Y,R) that is
@@ -150,20 +140,19 @@ struct ingress_intrinsic_metadata_for_tm_t {
     bit<1> enable_mcast_cutthru;         // enable cut-through forwarding for
                                          // multicast.
 
-    MulticaseGroupId_t  mcast_grp_a;     // 1st multicast group (i.e., tree) id;
+    MulticastGroupId_t  mcast_grp_a;                 // 1st multicast group (i.e., tree) id;
                                          // a tree can have two levels. must be
                                          // presented to TM for multicast.
 
-    MulticaseGroupId_t  mcast_grp_b;     // 2nd multicast group (i.e., tree) id;
+    MulticastGroupId_t  mcast_grp_b;                 // 2nd multicast group (i.e., tree) id;
                                          // a tree can have two levels.
 
-    bit<3> _pad3;
     bit<13> level1_mcast_hash;           // source of entropy for multicast
                                          // replication-tree level1 (i.e., L3
                                          // replication). must be presented to TM
                                          // for L3 dynamic member selection
                                          // (e.g., ECMP) for multicast.
-    bit<3> _pad4;
+
     bit<13> level2_mcast_hash;           // source of entropy for multicast
                                          // replication-tree level2 (i.e., L2
                                          // replication). must be presented to TM
@@ -174,7 +163,6 @@ struct ingress_intrinsic_metadata_for_tm_t {
                                          // replication-tree level1. used for
                                          // pruning.
 
-    bit<7> _pad5;
     bit<9> level2_exclusion_id;          // exclusion id for multicast
                                          // replication-tree level2. used for
                                          // pruning.
@@ -185,7 +173,14 @@ struct ingress_intrinsic_metadata_for_tm_t {
 struct ingress_intrinsic_metadata_for_deparser_t {
     bit<3> learn_idx;
     bit<3> resubmit_idx;
-    bit<3> mirror_idx;
+    bit<3> mirror_idx;     // The user-selected mirror field list index.
+
+    bit<8> mirror_source;  // Compiler-generated field containing metadata about
+                           // the mirror field list.
+                           // XXX(seth): We should eliminate this once we have a
+                           // generic mechanism for introducing
+                           // compiler-generated metadata in the midend; it's
+                           // not really something that should be user-visible.
 }
 
 struct ingress_intrinsic_metadata_for_mirror_buffer_t {
@@ -199,21 +194,30 @@ struct ingress_intrinsic_metadata_for_mirror_buffer_t {
 // -----------------------------------------------------------------------------
 header egress_intrinsic_metadata_t {
     bit<7> _pad0;
+
     bit<9> egress_port;                  // egress port id.
                                          // this field is passed to the deparser
+
     bit<5> _pad1;
+
     bit<19> enq_qdepth;                  // queue depth at the packet enqueue
                                          // time.
+
     bit<6> _pad2;
+
     bit<2> enq_congest_stat;             // queue congestion status at the packet
                                          // enqueue time.
 
     bit<32> enq_tstamp;                  // time snapshot taken when the packet
                                          // is enqueued (in nsec).
+
     bit<5> _pad3;
+
     bit<19> deq_qdepth;                  // queue depth at the packet dequeue
                                          // time.
+
     bit<6> _pad4;
+
     bit<2> deq_congest_stat;             // queue congestion status at the packet
                                          // dequeue time.
 
@@ -226,16 +230,23 @@ header egress_intrinsic_metadata_t {
 
     bit<16> egress_rid;                  // L3 replication id for multicast
                                          // packets.
+
     bit<7> _pad5;
+
     bit<1> egress_rid_first;             // flag indicating the first replica for
                                          // the given multicast group.
+
     bit<3> _pad6;
+
     bit<5> egress_qid;                   // egress (physical) queue id via which
                                          // this packet was served.
+
     bit<5> _pad7;
+
     bit<3> egress_cos;                   // egress cos (eCoS) value.
 
     bit<7> _pad8;
+
     bit<1> deflection_flag;              // flag indicating whether a packet is
                                          // deflected due to deflect_on_drop.
 
@@ -268,6 +279,13 @@ struct egress_intrinsic_metadata_from_parser_t {
 
 struct egress_intrinsic_metadata_for_deparser_t {
     bit<3> mirror_idx;
+
+    bit<8> mirror_source;  // Compiler-generated field containing metadata about
+                           // the mirror field list.
+                           // XXX(seth): We should eliminate this once we have a
+                           // generic mechanism for introducing
+                           // compiler-generated metadata in the midend; it's
+                           // not really something that should be user-visible.
 }
 
 struct egress_intrinsic_metadata_for_mirror_buffer_t {
@@ -296,7 +314,7 @@ struct egress_intrinsic_metadata_for_output_port_t {
                                          // Ethernet header.
     bit<1> force_tx_error;               // force a hardware transmission error
 
-    bit<1> drop_ctl;                     // disable packet replication:
+    bit<3> drop_ctl;                     // disable packet replication:
                                          //    - bit 0 disables unicast,
                                          //      multicast, and resubmit
                                          //    - bit 1 disables copy-to-cpu
@@ -304,7 +322,6 @@ struct egress_intrinsic_metadata_for_output_port_t {
                                          // TODO: which of these actually apply
                                          //       for egress?
 }
-
 
 // -----------------------------------------------------------------------------
 // PACKET GENERATION
@@ -364,6 +381,7 @@ extern checksum<W> {
 // -----------------------------------------------------------------------------
 // PARSER COUNTER/PRIORITY/VALUE SET
 // -----------------------------------------------------------------------------
+
 extern parser_counter {
     parser_counter();
     /// Load the counter with an immediate value or a header field.
@@ -383,14 +401,6 @@ extern parser_counter {
     bool is_neg();
 }
 
-// Parser priority
-// The ingress parser drops the packet based on priority if the input buffer is
-// indicating congestion; egress parser does not perform any dropping.
-extern priority {
-    priority();
-    void set(in bit<3> prio);
-}
-
 // Parser value set
 // The parser value set implements a run-time updatable values that is used to
 // determine parser transition
@@ -399,17 +409,25 @@ extern value_set<D> {
     bool is_member(in D data);
 }
 
+// Parser priority
+// The ingress parser drops the packet based on priority if the input buffer is
+// indicating congestion; egress parser does not perform any dropping.
+extern priority {
+    priority();
+    void set(in bit<3> prio);
+}
+
 // -----------------------------------------------------------------------------
 // HASH ENGINE
 // -----------------------------------------------------------------------------
-extern hash<T> {
+extern hash<D, T, M> {
     /// Constructor
     hash(HashAlgorithm_t algo);
 
     /// compute the hash for data
     ///  @base :
     ///  @max :
-    T get_hash<D>(in D data, @optional in T base, @optional in T max);
+    T get_hash(in D data, @optional in T base, @optional in M max);
 }
 
 /// Random number generator
@@ -419,39 +437,88 @@ extern random<T> {
 }
 
 /// idle timeout
-extern idle_timeout<N, T> {
-    idle_timeout(N state_count, T idle_interval);
+extern idle_timeout {
+    idle_timeout(bit<3> state_count, @optional bool two_way_notify /* = false */,
+                 @optional bool per_flow_enable /* = false */);
 }
 
 /// Counter
 extern counter<I> {
-    counter(CounterType_t type, @optional I instance_count);
-    void count(@optional in I index);
+    counter(CounterType_t type, I instance_count);
+    void count(in I index);
+}
+
+extern direct_counter {
+    direct_counter(CounterType_t type);
+    void count();
 }
 
 /// Meter
 extern meter<I> {
     meter(MeterType_t type, @optional I instance_count);
-    MeterColor_t execute(@optional in I index,
-                          @optional in MeterColor_t color);
+    bit<8> execute(@optional in I index, @optional in bit<2> color);
 }
 
-/// Low pass filter (LPF)
-extern lpf<T, I> {
-    lpf(@optional I instance_count);
-    T execute(in T data, @optional in I index);
+/// direct meter is not translated.
+extern direct_meter<T> {
+    direct_meter(MeterType_t type);
+    void read(out T result);
 }
 
-/// Random early drop (RED)
-extern wred<T, I> {
-    wred(@optional I instance_count);
-    T execute(in T data, @optional in I index);
+/// LPF
+extern lpf<T> {
+    lpf(@optional bit<32> instance_count);
+    T execute(in T val, @optional in bit<32> index);
+}
+
+/// WRED
+extern wred<T> {
+    wred(T lower_bound, T upper_bound, @optional bit<32> instance_count);
+    T execute(in T val, @optional in bit<32> index);
 }
 
 /// Register
 extern register<T> {
     register(@optional bit<32> instance_count, @optional T initial_value);
+
+    ///XXX(hanw): BRIG-212
+    /// following two methods are not supported in brig backend
+    /// they are present to help with the transition from v1model to tofino.p4
+    /// after the transition, these two methods should be removed
+    /// and the corresponding test cases should be marked as XFAILs.
+    void read(out T result, in bit<32> index);
+    void write(in bit<32> index, in T value);
 }
+
+extern register_params<T> {
+    register_params();
+    register_params(T value);
+    register_params(T v1, T v2);
+    register_params(T v1, T v2, T v3);
+    register_params(T v1, T v2, T v3, T v4);
+    T read(bit<2> index);
+}
+
+extern math_unit<T, U> {
+    math_unit(bool invert, int<2> shift, int<6> scale, U data);
+    T execute(in T x);
+}
+
+extern register_action<T, U> {
+    register_action(register<T> reg, @optional math_unit<U, _> math,
+                                     @optional register_params<U> params);
+    abstract void apply(inout T value, @optional out U rv, @optional register_params<U> params);
+    U execute(@optional in bit<32> index); /* {
+        U rv;
+        T value = reg.read(index);
+        apply(value, rv);
+        reg.write(index, value);
+        return rv;
+    } */
+}
+
+/// stateful alu defined but not yet supported, the one supported in backend is
+/// the version after P14-to-16 translation.
 
 extern stateful_param<T> {
     stateful_param(T initial_value);
@@ -465,20 +532,27 @@ extern stateful_alu<T, O, P> {
     O execute<I>(@optional in I index);
 }
 
-/// Action Selector
-extern action_selector<T> {
-    /// Optional annotations to help with compiler fitting
-    /// @max_num_groups, max number of groups in a selector table
-    /// @max_group_size, max number of entries in a group
-    action_selector(bit<32> size,
-                    @optional SelectorMode_t mode,
-                    @optional register<bit<1>> reg);
-    abstract T hash();
+extern action_selector {
+    action_selector(HashAlgorithm_t algorithm, bit<32> size, bit<32> outputWidth);
 }
+
+/// Action Selector
+//extern action_selector<T> {
+//    /// Optional annotations to help with compiler fitting
+//    /// @max_num_groups, max number of groups in a selector table
+//    /// @max_group_size, max number of entries in a group
+//    action_selector(bit<32> size,
+//                    @optional SelectorMode_t mode,
+//                    @optional register<bit<1>> reg);
+//    abstract T hash();
+//}
 
 extern action_profile {
     action_profile(bit<32> size);
 }
+
+/// need to remove truncate from tofino.p4
+extern void truncate(in bit<32> length);
 
 extern mirror_packet {
     /// Write @hdr into the ingress/egress mirror buffer.
@@ -488,33 +562,34 @@ extern mirror_packet {
 }
 
 extern resubmit_packet {
-    /// Write @hdr into the in.
+    /// Write @hdr into the resubmit header.
     /// @T can be a header type, a header stack, a header_union, or a struct
     /// containing fields with such types.
-    void emit<T>(in T hdr);
+    void emit<T>(@optional in T hdr);
 }
 
-extern learn_filter_packet {
-    ///
+extern learning_packet {
+    /// Write @hdr into learning digest.
     void emit<T>(in T hdr);
 }
 
 parser IngressParser<H, M>(
-  packet_in pkt,
-  out H hdr,
-  out M ig_md,
-  out ingress_intrinsic_metadata_t ig_intr_md,
-  @optional out ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm,
-  @optional in bit<48> global_tstamp,
-  @optional in bit<32> global_version);
+    packet_in pkt,
+    out H hdr,
+    out M ig_md,
+    out ingress_intrinsic_metadata_t ig_intr_md,
+    @optional out ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm
+    );
 
 parser EgressParser<H, M>(
-  packet_in pkt,
-  out H hdr,
-  out M eg_md,
-  out egress_intrinsic_metadata_t eg_intr_md,
-  @optional in bit<48> global_tstamp,
-  @optional in bit<32> global_version);
+    packet_in pkt,
+    out H hdr,
+    out M eg_md,
+    out egress_intrinsic_metadata_t eg_intr_md,
+    /// following two arguments are bridged metadata
+    @optional inout ingress_intrinsic_metadata_t ig_intr_md,
+    @optional inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm
+    );
 
 control Ingress<H, M>(
     inout H hdr,
@@ -526,28 +601,32 @@ control Ingress<H, M>(
     @optional inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr);
 
 control Egress<H, M>(
-  inout H hdr,
-  inout M eg_md,
-  in egress_intrinsic_metadata_t eg_intr_md,
-  @optional in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr,
-  @optional inout egress_intrinsic_metadata_for_mirror_buffer_t eg_intr_md_for_mb,
-  @optional inout egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport,
-  @optional inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr);
-
+    inout H hdr,
+    inout M eg_md,
+    in egress_intrinsic_metadata_t eg_intr_md,
+    @optional in egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr,
+    @optional inout egress_intrinsic_metadata_for_mirror_buffer_t eg_intr_md_for_mb,
+    @optional inout egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport,
+    @optional inout egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
+    // following two arguments are bridged metadata
+    @optional inout ingress_intrinsic_metadata_t ig_intr_md,
+    @optional inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm
+    );
 
 control IngressDeparser<H, M>(
     packet_out pkt,
-    in H hdr,
+    inout H hdr,
     @optional in M metadata,
+    @optional in ingress_intrinsic_metadata_t ig_intr_md,
     @optional in ingress_intrinsic_metadata_for_mirror_buffer_t ig_intr_md_for_mb,
     @optional in ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
     @optional mirror_packet mirror,
     @optional resubmit_packet resubmit,
-    @optional learn_filter_packet lf);
+    @optional learning_packet learning);
 
 control EgressDeparser<H, M>(
     packet_out pkt,
-    in H hdr,
+    inout H hdr,
     @optional in M metadata,
     @optional in egress_intrinsic_metadata_for_mirror_buffer_t eg_intr_md_for_mb,
     @optional in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr,
@@ -561,4 +640,4 @@ package Switch<IH, IM, EH, EM>(
     Egress<EH, EM> egress,
     EgressDeparser<EH, EM> egress_deparser);
 
-#endif  /* TOFINO_P4_ */
+#endif  /* _V1MODEL_P4_ */

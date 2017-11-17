@@ -44,23 +44,33 @@ class GenerateDeparser : public Inspector {
         auto method = mc->method->to<IR::Member>();
         if (!method) return true;
         if (method->member == "emit") {
-            if (pred) error("Conditional emit %s not supported", mc);
-            generateEmits((*mc->arguments)[0], [&](const IR::Expression* field,
-                                                   const IR::Expression* povBit) {
-                dprsr->emits.push_back(new IR::BFN::Emit(mc->srcInfo, field, povBit)); });
+            auto dname = method->expr->to<IR::PathExpression>();
+            if (!dname) return true;
+
+            auto type = dname->type->to<IR::Type_Extern>();
+            if (!type) return true;
+
+            if (type->name == "packet_out") {
+                if (pred) error("Conditional emit %s not supported", mc);
+                generateEmits((*mc->arguments)[0], [&](const IR::Expression* field,
+                                                       const IR::Expression* povBit) {
+                    dprsr->emits.push_back(new IR::BFN::Emit(mc->srcInfo, field, povBit)); });
+            } else if (type->name == "mirror_packet" ||
+                       type->name == "resubmit_packet" ||
+                       type->name == "learning_packet" ) {
+                generateDigest(digests[dname->path->name], dname->path->name, mc->arguments->at(0));
+            } else {
+                error("Unsupported method call %s in deparser", mc);
+            }
             return false;
         } else if (method->member == "update") {
             warning("FIXME method call %s in deparser not yet supported", mc);
             return false;
-        } else if (method->member == "add_metadata") {
-            if (auto dname = method->expr->to<IR::PathExpression>()) {
-                generateDigest(digests[dname->path->name], dname->path->name, mc->arguments->at(0));
-            } else {
-                error("Unsupported method call %s in deparser", mc); }
-            return false;
         } else {
             error("Unsupported method call %s in deparser", mc);
-            return true; } }
+            return true;
+        }
+    }
 
  public:
     explicit GenerateDeparser(IR::BFN::Deparser *d) : dprsr(d) {}
@@ -72,7 +82,7 @@ void GenerateDeparser::generateDigest(IR::BFN::Digest *&digest, cstring name,
     const IR::Constant *k = nullptr;
     const IR::Expression *select;
     if (!pred) {
-        error("%s:Unconditional %s.add_metadata not supported", expr->srcInfo, name);
+        error("%s:Unconditional %s.emit not supported", expr->srcInfo, name);
         return;
     } else if (auto eq = pred->to<IR::Equ>()) {
         if ((k = eq->left->to<IR::Constant>()))
@@ -80,7 +90,7 @@ void GenerateDeparser::generateDigest(IR::BFN::Digest *&digest, cstring name,
         else if ((k = eq->right->to<IR::Constant>()))
             select = eq->left; }
     if (!k) {
-        error("%s.add_metadata condition %s not supported", name, pred);
+        error("%s.emit condition %s not supported", name, pred);
         return; }
     if (!digest) {
         digest = new IR::BFN::Digest(dprsr->gress, name, select);

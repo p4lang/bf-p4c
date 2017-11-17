@@ -81,7 +81,7 @@ control IngressP(inout headers hdr,
 }
 
 control DeparserI(packet_out b,
-                  in headers hdr,
+                  inout headers hdr,
                   in metadata meta) {
     apply { b.emit(hdr.data); }
 }
@@ -104,7 +104,7 @@ control EgressP(inout headers hdr,
 }
 
 control DeparserE(packet_out b,
-                  in headers hdr,
+                  inout headers hdr,
                   in metadata meta) {
     apply { b.emit(hdr.data); }
 }

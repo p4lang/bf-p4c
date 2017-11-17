@@ -189,7 +189,8 @@ ParserInfo extractParser(const IR::BFN::Pipe* pipe,
                          const IR::P4Parser* igParser,
                          const IR::P4Control* igDeparser,
                          const IR::P4Parser* egParser /* = nullptr */,
-                         const IR::P4Control* egDeparser /* = nullptr */) {
+                         const IR::P4Control* egDeparser /* = nullptr */,
+                         bool useTna /* = false */) {
     CHECK_NULL(igParser);
     CHECK_NULL(igDeparser);
 
@@ -225,6 +226,10 @@ ParserInfo extractParser(const IR::BFN::Pipe* pipe,
     info.deparsers[EGRESS] = egDeparser != nullptr
         ? new IR::BFN::Deparser(EGRESS, egDeparser)
         : new IR::BFN::Deparser(EGRESS, igDeparser);
+
+    // TNA does not need intrinsic metadata shim.
+    // XXX(hanw): to be removed if done in midend
+    if (useTna) return info;
 
     // Add shims for intrinsic metadata.
     AddMetadataShims addMetadataShims(pipe);

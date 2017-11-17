@@ -1,0 +1,12 @@
+atcam_match_wide1.p4(30): warning: out parameter meta may be uninitialized when ParserI terminates
+               out metadata meta,
+                            ^^^^
+atcam_match_wide1.p4(28)
+parser ParserI(packet_in b,
+       ^^^^^^^
+atcam_match_wide1.p4(91): warning: out parameter meta may be uninitialized when ParserE terminates
+               out metadata meta,
+                            ^^^^
+atcam_match_wide1.p4(89)
+parser ParserE(packet_in b,
+       ^^^^^^^

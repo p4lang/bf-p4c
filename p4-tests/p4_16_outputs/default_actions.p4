@@ -114,7 +114,7 @@ control IngressP(inout headers hdr, inout metadata meta, in ingress_intrinsic_me
     }
 }
 
-control DeparserI(packet_out b, in headers hdr, in metadata meta) {
+control DeparserI(packet_out b, inout headers hdr, in metadata meta) {
     apply {
         b.emit(hdr.data);
     }
@@ -132,7 +132,7 @@ control EgressP(inout headers hdr, inout metadata meta, in egress_intrinsic_meta
     }
 }
 
-control DeparserE(packet_out b, in headers hdr, in metadata meta) {
+control DeparserE(packet_out b, inout headers hdr, in metadata meta) {
     apply {
         b.emit(hdr.data);
     }

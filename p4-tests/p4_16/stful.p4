@@ -236,14 +236,14 @@ parser SwitchEgressParser(
 }
 
 control SwitchIngressDeparser(
-    packet_out pkt, in headers_t hdr, in user_metadata_t md) {
+    packet_out pkt, inout headers_t hdr, in user_metadata_t md) {
     apply {
         pkt.emit(hdr);
     }
 }
 
 control SwitchEgressDeparser(
-    packet_out pkt, in headers_t hdr, in user_metadata_t md) {
+    packet_out pkt, inout headers_t hdr, in user_metadata_t md) {
     apply {
         pkt.emit(hdr);
     }

@@ -17,6 +17,7 @@ agreement with Barefoot Networks, Inc.
 
 /* primitives supported by tofino and not supported by v1model.p4 */
 
+// p4_14_prim.p4 forward declared this enum.
 #if !defined(_V1_MODEL_P4_)
 extern CloneType;  // "forward" declaration -- so parser recognizes it as a type name
 #endif /* !_V1_MODEL_P4_ */

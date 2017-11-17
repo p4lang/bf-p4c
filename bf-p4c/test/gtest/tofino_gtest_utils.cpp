@@ -45,7 +45,7 @@ TofinoPipeTestCase::create(const std::string& source,
     auto midendTestCase = MidendTestCase::create(source, langVersion);
     if (!midendTestCase) return boost::none;
 
-    auto* pipe = extract_maupipe(midendTestCase->program);
+    auto* pipe = extract_maupipe(midendTestCase->program, false);
     if (pipe == nullptr) {
         std::cerr << "extract_maupipe failed" << std::endl;
         return boost::none;

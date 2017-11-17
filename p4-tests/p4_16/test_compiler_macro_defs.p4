@@ -40,7 +40,7 @@ control SwitchIngress(
 }
 control SwitchIngressDeparser(
     packet_out pkt,
-    in headers_t hdr,
+    inout headers_t hdr,
     in user_metadata_t meta) {
     apply {
         pkt.emit(hdr);
@@ -73,7 +73,7 @@ control SwitchEgress(
 }
 control SwitchEgressDeparser(
     packet_out pkt,
-    in headers_t hdr) {
+    inout headers_t hdr) {
     apply {
         pkt.emit(hdr);
     }

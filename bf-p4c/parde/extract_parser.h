@@ -47,7 +47,8 @@ ParserInfo extractParser(const IR::BFN::Pipe* pipe,
                          const IR::P4Parser* igParser,
                          const IR::P4Control* igDeparser,
                          const IR::P4Parser* egParser = nullptr,
-                         const IR::P4Control* egDeparser = nullptr);
+                         const IR::P4Control* egDeparser = nullptr,
+                         bool useTna = false);
 
 }  // namespace BFN
 

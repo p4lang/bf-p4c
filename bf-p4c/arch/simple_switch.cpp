@@ -235,9 +235,8 @@ class ReplaceArchitecture : public Inspector {
         setupMetadataRenameMap();
 
         /// append tofino.p4 architecture definition
-        structure->include("tofino/v1model.p4", &structure->tofinoArchTypes);
-        structure->include("tofino/lpf.p4", &structure->tofinoArchTypes);
-        structure->include("tofino/wred.p4", &structure->tofinoArchTypes);
+        structure->include("tofino.p4", &structure->tofinoArchTypes);
+        structure->include("tofino/p4_14_types.p4", &structure->tofinoArchTypes);
         structure->include("tofino/p4_14_prim.p4", &structure->tofinoArchTypes);
         analyzeErrors(program);
         analyzeTofinoModel();
@@ -793,14 +792,14 @@ class ConstructSymbolTable : public Inspector {
          * In the ingress deparser, add the following code
          *
          * if (ig_intr_md_for_dprsr.learn_idx == n)
-         *    learning.add_metadata({fields});
+         *    learning.emit({fields});
          *
          */
         auto field_list = mce->arguments->at(1);
         auto cloned_field_list = cloneFieldList(field_list);
         auto args = new IR::Vector<IR::Expression>({ cloned_field_list });
         auto expr = new IR::PathExpression(new IR::Path("learning"));
-        auto member = new IR::Member(expr, "add_metadata");
+        auto member = new IR::Member(expr, "emit");
         auto typeArgs = new IR::Vector<IR::Type>();
         auto mcs = new IR::MethodCallStatement(
                        new IR::MethodCallExpression(member, typeArgs, args));
@@ -887,7 +886,7 @@ class ConstructSymbolTable : public Inspector {
         /*
          * generate statement in ingress/egress deparser to prepend mirror metadata
          * if (ig_intr_md_for_dprsr.mirror_idx == N)
-         *    mirror.add_metadata({});
+         *    mirror.emit({});
          */
 
         auto args = new IR::Vector<IR::Expression>();
@@ -903,7 +902,7 @@ class ConstructSymbolTable : public Inspector {
         args->push_back(cloned_field_list);
 
         auto pathExpr = new IR::PathExpression(new IR::Path("mirror"));
-        auto member = new IR::Member(pathExpr, "add_metadata");
+        auto member = new IR::Member(pathExpr, "emit");
         auto typeArgs = new IR::Vector<IR::Type>();
         auto mcs = new IR::MethodCallStatement(
              new IR::MethodCallExpression(member, typeArgs, args));
@@ -992,7 +991,7 @@ class ConstructSymbolTable : public Inspector {
          * In the ingress deparser, add the following code
          *
          * if (ig_intr_md_for_dprsr.resubmit_idx == n)
-         *    resubmit.add_metadata({fields});
+         *    resubmit.emit({fields});
          *
          */
         auto fl = mce->arguments->at(0);   // resubmit field list
@@ -1006,7 +1005,7 @@ class ConstructSymbolTable : public Inspector {
         auto cloned_fl = cloneFieldList(new_fl);
         auto args = new IR::Vector<IR::Expression>(cloned_fl);
         auto expr = new IR::PathExpression(new IR::Path("resubmit"));
-        auto member = new IR::Member(expr, "add_metadata");
+        auto member = new IR::Member(expr, "emit");
         auto typeArgs = new IR::Vector<IR::Type>();
         auto mcs = new IR::MethodCallStatement(
                        new IR::MethodCallExpression(member, typeArgs, args));

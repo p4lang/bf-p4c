@@ -82,19 +82,19 @@ const IR::Node* IngressControlConverter::preorder(IR::P4Control* node) {
     // add ig_intr_md_for_tm
     path = new IR::Path("ingress_intrinsic_metadata_for_tm_t");
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("ig_intr_md_for_tm", IR::Direction::Out, type);
+    param = new IR::Parameter("ig_intr_md_for_tm", IR::Direction::InOut, type);
     paramList->push_back(param);
 
     // add ig_intr_md_for_mb
     path = new IR::Path("ingress_intrinsic_metadata_for_mirror_buffer_t");
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("ig_intr_md_for_mb", IR::Direction::Out, type);
+    param = new IR::Parameter("ig_intr_md_for_mb", IR::Direction::InOut, type);
     paramList->push_back(param);
 
     // add ig_intr_md_for_dprsr
     path = new IR::Path("ingress_intrinsic_metadata_for_deparser_t");
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("ig_intr_md_for_deparser", IR::Direction::Out, type);
+    param = new IR::Parameter("ig_intr_md_for_deparser", IR::Direction::InOut, type);
     paramList->push_back(param);
 
     auto controlType = new IR::Type_Control("ingress", paramList);
@@ -129,19 +129,19 @@ const IR::Node* EgressControlConverter::preorder(IR::P4Control *node) {
     // add eg_intr_md_for_mb
     path = new IR::Path("egress_intrinsic_metadata_for_mirror_buffer_t");
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("eg_intr_md_for_mb", IR::Direction::Out, type);
+    param = new IR::Parameter("eg_intr_md_for_mb", IR::Direction::InOut, type);
     paramList->push_back(param);
 
     // add eg_intr_md_for_oport
     path = new IR::Path("egress_intrinsic_metadata_for_output_port_t");
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("eg_intr_md_for_oport", IR::Direction::Out, type);
+    param = new IR::Parameter("eg_intr_md_for_oport", IR::Direction::InOut, type);
     paramList->push_back(param);
 
     // add eg_intr_md_for_dprsr
     path = new IR::Path("egress_intrinsic_metadata_for_deparser_t");
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("eg_intr_md_for_deparser", IR::Direction::Out, type);
+    param = new IR::Parameter("eg_intr_md_for_deparser", IR::Direction::InOut, type);
     paramList->push_back(param);
 
     /// XXX(hanw) following three parameters are added and should be removed after
@@ -306,12 +306,16 @@ const IR::Node* IngressParserConverter::postorder(IR::P4Parser *node) {
     auto params = parser->type->getApplyParameters();
     BUG_CHECK(params->size() == 4, "%1%: Expected 4 parameters for parser", parser);
     auto paramList = new IR::ParameterList({parser->getApplyParameters()->parameters.at(0),
-                                            parser->getApplyParameters()->parameters.at(1),
-                                            parser->getApplyParameters()->parameters.at(2)});
+                                            parser->getApplyParameters()->parameters.at(1)});
+
+    auto meta = parser->getApplyParameters()->parameters.at(2);
+    auto param = new IR::Parameter(meta->name, meta->annotations, IR::Direction::Out, meta->type);
+    paramList->push_back(param);
+
     // add ig_intr_md
     auto path = new IR::Path("ingress_intrinsic_metadata_t");
     auto type = new IR::Type_Name(path);
-    auto param = new IR::Parameter("ig_intr_md", IR::Direction::Out, type);
+    param = new IR::Parameter("ig_intr_md", IR::Direction::Out, type);
     paramList->push_back(param);
 
     // add ig_intr_md_for_tm
@@ -348,12 +352,16 @@ const IR::Node* EgressParserConverter::postorder(IR::P4Parser* node) {
     /// assume we are dealing with egress parser
     BUG_CHECK(params->size() == 4, "%1%: Expected 4 parameters for parser", parser);
     auto paramList = new IR::ParameterList({parser->getApplyParameters()->parameters.at(0),
-                                            parser->getApplyParameters()->parameters.at(1),
-                                            parser->getApplyParameters()->parameters.at(2)});
+                                            parser->getApplyParameters()->parameters.at(1)});
+
+    auto meta = parser->getApplyParameters()->parameters.at(2);
+    auto param = new IR::Parameter(meta->name, meta->annotations, IR::Direction::Out, meta->type);
+    paramList->push_back(param);
+
     // add eg_intr_md
     auto path = new IR::Path("egress_intrinsic_metadata_t");
     auto type = new IR::Type_Name(path);
-    auto param = new IR::Parameter("eg_intr_md", IR::Direction::Out, type);
+    param = new IR::Parameter("eg_intr_md", IR::Direction::Out, type);
     paramList->push_back(param);
 
     // add ig_intr_md

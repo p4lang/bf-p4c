@@ -565,8 +565,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Field is marked as deparsed, but the deparser doesn't emit it"
   testdata/p4_16_samples/issue430-1-bmv2.p4
-  extensions/p4_tests/p4_16/cast_narrowing_set.p4
-  extensions/p4_tests/p4_16/cast_widening_set.p4
   )
 # bug in instruction selection
 p4c_add_xfail_reason("tofino"
@@ -1009,6 +1007,10 @@ if (HARLYN_STF AND NOT ENABLE_STF2PTF)
   p4c_add_xfail_reason("tofino"
     ".* expected packet on port .* not seen"
     extensions/p4_tests/p4_14/meter_test1.p4
+    extensions/p4_tests/p4_16/multiple_apply1.p4
+    extensions/p4_tests/p4_16/cast_widening_set.p4
+    extensions/p4_tests/p4_16/cast_narrowing_set.p4
+    extensions/p4_tests/p4_16/container_dependency.p4
     )
   p4c_add_xfail_reason("tofino"
     "Mau::get_color_bus: Nothing drove bus"
