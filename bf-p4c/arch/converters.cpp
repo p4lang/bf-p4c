@@ -472,7 +472,7 @@ const IR::Node* HashConverter::postorder(IR::MethodCallStatement* node) {
     if (src_size != dst_size) {
         WARNING("casting bit<" << src_size << "> to bit<" << dst_size << ">");
         return new IR::AssignmentStatement(pDest,
-                   new IR::Cast(IR::Type_Bits::get(dst_size),
+                   new IR::Cast(IR::Type::Bits::get(dst_size),
                        new IR::MethodCallExpression(node->srcInfo, member, args)));
     }
     return new IR::AssignmentStatement(pDest,
@@ -578,7 +578,7 @@ const IR::Node* MeterConverter::postorder(IR::MethodCallExpression* node) {
     args->push_back(node->arguments->at(0));
     if (size != 2) {
         WARNING("casting argument " <<  node->arguments->at(1) << " to bit<2>");
-        args->push_back(new IR::Cast(IR::Type_Bits::get(2), node->arguments->at(1)));
+        args->push_back(new IR::Cast(IR::Type::Bits::get(2), node->arguments->at(1)));
     }
     return new IR::MethodCallExpression(node->srcInfo, method, args);
 }

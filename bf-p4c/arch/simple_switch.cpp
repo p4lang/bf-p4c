@@ -277,7 +277,7 @@ class IdleTimeoutTranslation : public Transform {
             auto param = new IR::Vector<IR::Expression>();
             /// XXX(hanw): check default value for two_way_notify and per_flow_enable
             param->push_back(precision ? precision->expr.at(0) :
-                                 new IR::Constant(new IR::Type_Bits(3, false), 3));
+                                 new IR::Constant(IR::Type::Bits::get(3), 3));
             param->push_back(two_way_notify ? new IR::BoolLiteral(two_way_notify) :
                                  new IR::BoolLiteral(false));
             param->push_back(per_flow_enable ? new IR::BoolLiteral(per_flow_enable):
@@ -740,7 +740,7 @@ class ConstructSymbolTable : public Inspector {
                   "digest() can only be used in %1%", structure->getBlockName("ingress"));
         IR::PathExpression* path = new IR::PathExpression("ig_intr_md_for_deparser");
         auto mem = new IR::Member(path, "learn_idx");
-        auto idx = new IR::Constant(new IR::Type_Bits(3, false), digestIndex++);
+        auto idx = new IR::Constant(IR::Type::Bits::get(3), digestIndex++);
         auto stmt = new IR::AssignmentStatement(mem, idx);
         structure->digestCalls.emplace(node, stmt);
 
@@ -829,8 +829,7 @@ class ConstructSymbolTable : public Inspector {
             BUG_CHECK(mce->arguments->size() >= 2,
                       "No mirror session id specified: %1%", mce);
             auto* mirrorId = new IR::Member(mirrorBufferMetadataPath, "mirror_id");
-            auto* mirrorIdValue = new IR::Cast(IR::Type::Bits::get(10),
-                                               mce->arguments->at(1));
+            auto* mirrorIdValue = mce->arguments->at(1);
             block->components.push_back(new IR::AssignmentStatement(mirrorId,
                                                                     mirrorIdValue));
 
@@ -875,13 +874,13 @@ class ConstructSymbolTable : public Inspector {
         if (control->name == structure->getBlockName("ingress")) {
             auto path = new IR::Member(
                             new IR::PathExpression("ig_intr_md_for_tm"), "drop_ctl");
-            auto val = new IR::Constant(new IR::Type_Bits(3, false), 1);
+            auto val = new IR::Constant(IR::Type::Bits::get(3), 1);
             auto stmt = new IR::AssignmentStatement(path, val);
             structure->dropCalls.emplace(node, stmt);
         } else if (control->name == structure->getBlockName("egress")) {
             auto path = new IR::Member(
                             new IR::PathExpression("eg_intr_md_for_oport"), "drop_ctl");
-            auto val = new IR::Constant(new IR::Type_Bits(3, false), 1);
+            auto val = new IR::Constant(IR::Type::Bits::get(3), 1);
             auto stmt = new IR::AssignmentStatement(path, val);
             structure->dropCalls.emplace(node, stmt);
         } else {
@@ -937,7 +936,7 @@ class ConstructSymbolTable : public Inspector {
                   "resubmit() can only be used in ingress control");
         IR::PathExpression* path = new IR::PathExpression("ig_intr_md_for_deparser");
         auto mem = new IR::Member(path, "resubmit_idx");
-        auto idx = new IR::Constant(new IR::Type_Bits(3, false), resubmitIndex++);
+        auto idx = new IR::Constant(IR::Type::Bits::get(3), resubmitIndex++);
         auto stmt = new IR::AssignmentStatement(mem, idx);
         structure->resubmitCalls.emplace(node, stmt);
 
@@ -1275,7 +1274,7 @@ class CastFixup : public Transform {
 
                 auto it = structure->metadataTypeMap.find(std::make_pair(pathname, memname));
                 if (it != structure->metadataTypeMap.end()) {
-                    auto type = new IR::Type_Bits(it->second, false);
+                    auto type = IR::Type::Bits::get(it->second);
                     if (type != right->type) {
                         right = new IR::Cast(type, right);
                         return new IR::AssignmentStatement(node->srcInfo, left, right);
