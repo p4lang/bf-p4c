@@ -32,8 +32,8 @@ RUN pip install pyinstaller==3.2.1
 # Default to 1, as dockerhub provides a single CPU
 ARG MAKEFLAGS=-j1
 
-# Use 'test' if you wish to keep the build artifacts
-ARG IMAGE_TYPE=release
+# Use 'release' if you wish to remove the build artifacts and the source
+ARG IMAGE_TYPE=test
 
 # testing dependencies
 RUN apt-get install -y net-tools
