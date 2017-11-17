@@ -103,9 +103,9 @@ const IR::Node* IngressControlConverter::preorder(IR::P4Control* node) {
     controlLocals->append(structure->ingressDeclarations);
     controlLocals->append(node->controlLocals);
 
-    auto result = new IR::P4Control(node->srcInfo, "ingress", controlType,
-                                    node->constructorParams, *controlLocals,
-                                    node->body);
+    auto result = new IR::BFN::TranslatedP4Control(node->srcInfo, "ingress", controlType,
+                                                   node->constructorParams, *controlLocals,
+                                                   node->body, INGRESS);
     return result;
 }
 
@@ -165,9 +165,9 @@ const IR::Node* EgressControlConverter::preorder(IR::P4Control *node) {
     controlLocals->append(structure->egressDeclarations);
     controlLocals->append(node->controlLocals);
 
-    auto result = new IR::P4Control(node->srcInfo, "egress", controlType,
-                                    node->constructorParams, *controlLocals,
-                                    node->body);
+    auto result = new IR::BFN::TranslatedP4Control(node->srcInfo, "egress", controlType,
+                                                   node->constructorParams, *controlLocals,
+                                                   node->body, EGRESS);
     return result;
 }
 
@@ -237,8 +237,9 @@ const IR::Node* IngressDeparserConverter::preorder(IR::P4Control* node) {
     statements->append(deparser->body->components);
     auto body = new IR::BlockStatement(deparser->body->srcInfo, *statements);
 
-    auto result = new IR::P4Control(deparser->srcInfo, "ingressDeparserImpl", controlType,
-                                    deparser->constructorParams, *controlLocals, body);
+    auto result = new IR::BFN::TranslatedP4Control(deparser->srcInfo, "ingressDeparserImpl",
+                                                   controlType, deparser->constructorParams,
+                                                   *controlLocals, body, INGRESS);
     return result;
 }
 
@@ -296,8 +297,9 @@ const IR::Node* EgressDeparserConverter::preorder(IR::P4Control* node) {
     statements->append(deparser->body->components);
     auto body = new IR::BlockStatement(deparser->body->srcInfo, *statements);
 
-    auto result = new IR::P4Control(deparser->srcInfo, "egressDeparserImpl", controlType,
-                                    deparser->constructorParams, *controlLocals, body);
+    auto result = new IR::BFN::TranslatedP4Control(deparser->srcInfo, "egressDeparserImpl",
+                                                   controlType, deparser->constructorParams,
+                                                   *controlLocals, body, EGRESS);
     return result;
 }
 
@@ -330,9 +332,9 @@ const IR::Node* IngressParserConverter::postorder(IR::P4Parser *node) {
     parserLocals->append(structure->ingressParserDeclarations);
     parserLocals->append(node->parserLocals);
 
-    auto result = new IR::P4Parser(parser->srcInfo, "ingressParserImpl", parser_type,
-                                   parser->constructorParams, *parserLocals,
-                                   parser->states);
+    auto result = new IR::BFN::TranslatedP4Parser(parser->srcInfo, "ingressParserImpl",
+                                                  parser_type, parser->constructorParams,
+                                                  *parserLocals, parser->states, INGRESS);
     return result;
 }
 
@@ -377,9 +379,10 @@ const IR::Node* EgressParserConverter::postorder(IR::P4Parser* node) {
     paramList->push_back(param);
 
     auto parser_type = new IR::Type_Parser("egressParserImpl", paramList);
-    auto result = new IR::P4Parser(parser->srcInfo, "egressParserImpl", parser_type,
-                                   parser->constructorParams, parser->parserLocals,
-                                   parser->states);
+    auto result = new IR::BFN::TranslatedP4Parser(parser->srcInfo, "egressParserImpl",
+                                                  parser_type, parser->constructorParams,
+                                                  parser->parserLocals, parser->states,
+                                                  EGRESS);
     return result;
 }
 
@@ -425,18 +428,33 @@ const IR::Node* MemberExpressionConverter::postorder(IR::Member *node) {
 const IR::Node* PathExpressionConverter::postorder(IR::Member *node) {
     auto membername = node->member.name;
     auto expr = node->expr->to<IR::PathExpression>();
-    CHECK_NULL(expr);
+    if (!expr) return node;
     auto pathname = expr->path->name;
 
-    BUG_CHECK(!structure->metadataNameMap.empty(), "metadata translation map cannot be empty");
-    auto it = structure->metadataNameMap.find(std::make_pair(pathname, membername));
-    if (it != structure->metadataNameMap.end()) {
-        auto expr = new IR::PathExpression(it->second.first);
-        auto result = new IR::Member(node->srcInfo, expr, it->second.second);
+    gress_t thread;
+    if (auto* parser = findContext<IR::BFN::TranslatedP4Parser>()) {
+        thread = parser->thread;
+    } else if (auto* control = findContext<IR::BFN::TranslatedP4Control>()) {
+        thread = control->thread;
+    } else {
+        LOG3("Member expression " << node << " is not inside a translated control; "
+             "won't translate it");
+        return node;
+    }
+
+    auto& nameMap = thread == INGRESS ? structure->ingressMetadataNameMap
+                                      : structure->egressMetadataNameMap;
+    BUG_CHECK(!nameMap.empty(), "metadata translation map cannot be empty");
+    auto it = nameMap.find(MetadataField{pathname, membername});
+    if (it != nameMap.end()) {
+        auto expr = new IR::PathExpression(it->second.structName);
+        auto result = new IR::Member(node->srcInfo, expr, it->second.fieldName);
         const unsigned bitWidth = structure->metadataTypeMap.at(it->second);
         result->type = IR::Type::Bits::get(bitWidth);
+        LOG3("Translating " << node << " to " << result);
         return result;
     }
+    LOG4("No translation found for " << node);
     return node;
 }
 

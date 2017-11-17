@@ -141,9 +141,6 @@ void ProgramStructure::include(cstring filename, IR::IndexedVector<IR::Node>* ve
         LOG3("translated " << v.first << " to " << v.second);}  \
     } while (false)
 
-#define TRANSLATE_MEMBER(NODE, CONVERTER)               \
-    TRANSLATE_NODE(NODE, IR::Member, CONVERTER, convertMember)
-
 #define TRANSLATE_EXTERN_INSTANCE(NODE, CONVERTER)      \
     TRANSLATE_NODE(NODE, IR::Declaration_Instance, CONVERTER, convertExternInstance)
 
@@ -210,12 +207,6 @@ void ProgramStructure::createExterns() {
 //    for (auto e : extern_types) {
 //        declarations.push_back(e.second);
 //    }
-}
-
-void ProgramStructure::cvtExpressions() {
-    TRANSLATE_MEMBER(membersToDo, MemberExpressionConverter);
-    TRANSLATE_MEMBER(pathsToDo, PathExpressionConverter);
-    TRANSLATE_MEMBER(typeNamesToDo, TypeNameExpressionConverter);
 }
 
 void ProgramStructure::createParsers() {
@@ -333,7 +324,6 @@ struct ConvertNames : public PassManager {
 }  // namespace
 
 const IR::P4Program* ProgramStructure::create(const IR::P4Program* program) {
-    cvtExpressions();
     createErrors();
     createTofinoArch();
     createExterns();

@@ -318,6 +318,7 @@ add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_MAIN_HDRS}")
 
 set (TOFINO_IR_DEF_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/ir/tofino.def
+  ${CMAKE_CURRENT_SOURCE_DIR}/ir/arch.def
   ${CMAKE_CURRENT_SOURCE_DIR}/ir/mau.def
   ${CMAKE_CURRENT_SOURCE_DIR}/ir/parde.def
   ${CMAKE_CURRENT_SOURCE_DIR}/ir/parde-lowered.def

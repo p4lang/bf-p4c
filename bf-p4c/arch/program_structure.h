@@ -31,6 +31,23 @@ using MemberStatementMap = ordered_map<const IR::Node*, const IR::Node*>;
 using ChecksumSourceMap = ordered_map<const IR::Member*,
                                       const IR::MethodCallExpression*>;
 
+/// A helper struct used to construct the metadata remapping tables.
+struct MetadataField {
+    cstring structName;
+    cstring fieldName;
+
+    bool operator<(const MetadataField& other) const {
+        if (structName != other.structName)
+            return structName < other.structName;
+        return fieldName < other.fieldName;
+    }
+
+    bool operator==(const MetadataField& other) const {
+        return structName == other.structName &&
+               fieldName == other.fieldName;
+    }
+};
+
 /// Experimental implementation of programStructure to facilitate the
 /// translation between P4-16 program of different architecture.
 class ProgramStructure {
@@ -115,10 +132,13 @@ class ProgramStructure {
     /// this map is populated by manually by the ReplaceArchitecture pass.
     ordered_map<cstring, cstring>                 externNameMap;
 
-    /// map metadata identified by a tuple {structure name, field name}
-    /// to another metadata identified by the same tuple
-    std::map<std::pair<cstring, cstring>, std::pair<cstring, cstring>> metadataNameMap;
-    std::map<std::pair<cstring, cstring>, unsigned> metadataTypeMap;
+    /// Map from pre-translation metadata fields to post-translation metadata
+    /// fields. The mapping may be different for each thread.
+    std::map<MetadataField, MetadataField> ingressMetadataNameMap;
+    std::map<MetadataField, MetadataField> egressMetadataNameMap;
+
+    /// Map from metadata fields to their types, specified as a width in bits.
+    std::map<MetadataField, unsigned> metadataTypeMap;
 
     /// all unique names in the program
     std::set<cstring>                            unique_names;

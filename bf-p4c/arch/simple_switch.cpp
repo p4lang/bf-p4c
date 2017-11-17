@@ -163,21 +163,45 @@ class ReplaceArchitecture : public Inspector {
         structure->externNameMap.emplace("verify_checksum", "checksum");
     }
 
+    void addMetadata(gress_t gress, cstring ss, cstring sf,
+                                    cstring ds, cstring df, unsigned w) {
+        auto& nameMap = gress == INGRESS ? structure->ingressMetadataNameMap
+                                         : structure->egressMetadataNameMap;
+        nameMap.emplace(MetadataField{ss, sf}, MetadataField{ds, df});
+        structure->metadataTypeMap.emplace(MetadataField{ds, df}, w);
+    }
+
     void addMetadata(cstring ss, cstring sf, cstring ds, cstring df, unsigned w) {
-        structure->metadataNameMap.emplace(std::make_pair(ss, sf), std::make_pair(ds, df));
-        structure->metadataTypeMap.emplace(std::make_pair(ds, df), w);
+        addMetadata(INGRESS, ss, sf, ds, df, w);
+        addMetadata(EGRESS, ss, sf, ds, df, w);
     }
 
     void setupMetadataRenameMap() {
-        addMetadata("standard_metadata", "egress_spec", "ig_intr_md_for_tm",
-                    "ucast_egress_port", 9);
-        addMetadata("standard_metadata", "ingress_port", "ig_intr_md", "ingress_port", 9);
-        addMetadata("standard_metadata", "egress_port", "eg_intr_md", "egress_port", 9);
-        // XXX(seth): We need to figure out what to map this to.
-        // addMetadata("standard_metadata", "instance_type", "eg_intr_md", "instance_type", 32);
+        addMetadata(INGRESS, "standard_metadata", "egress_spec",
+                             "ig_intr_md_for_tm", "ucast_egress_port", 9);
+        addMetadata(EGRESS, "standard_metadata", "egress_spec",
+                            "eg_intr_md", "egress_port", 9);
+
+        addMetadata(INGRESS, "standard_metadata", "egress_port",
+                             "ig_intr_md_for_tm", "ucast_egress_port", 9);
+        addMetadata(EGRESS, "standard_metadata", "egress_port",
+                            "eg_intr_md", "egress_port", 9);
+
+        addMetadata("standard_metadata", "ingress_port",
+                    "ig_intr_md", "ingress_port", 9);
+
         addMetadata("standard_metadata", "packet_length", "eg_intr_md", "pkt_length", 16);
-        addMetadata("standard_metadata", "clone_spec", "ig_intr_md_for_mb", "mirror_id", 10);
+
+        addMetadata(INGRESS, "standard_metadata", "clone_spec",
+                             "ig_intr_md_for_mb", "mirror_id", 10);
+        addMetadata(EGRESS, "standard_metadata", "clone_spec",
+                            "eg_intr_md_for_mb", "mirror_id", 10);
+
         addMetadata("standard_metadata", "drop", "ig_intr_md_for_tm", "drop_ctl", 3);
+
+        // XXX(seth): We need to figure out what to map this to.
+        // addMetadata("standard_metadata", "instance_type",
+        //             "eg_intr_md", "instance_type", 32);
     }
 
     void analyzeErrors(const IR::P4Program* program) {
@@ -1269,10 +1293,8 @@ class CastFixup : public Transform {
 
         if (auto mem = left->to<IR::Member>()) {
             if (auto path = mem->expr->to<IR::PathExpression>()) {
-                auto memname = mem->member.name;
-                auto pathname = path->path->name;
-
-                auto it = structure->metadataTypeMap.find(std::make_pair(pathname, memname));
+                MetadataField field{path->path->name, mem->member.name};
+                auto it = structure->metadataTypeMap.find(field);
                 if (it != structure->metadataTypeMap.end()) {
                     auto type = IR::Type::Bits::get(it->second);
                     if (type != right->type) {
