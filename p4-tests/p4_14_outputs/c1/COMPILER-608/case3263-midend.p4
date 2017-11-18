@@ -1198,7 +1198,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.Frontenac.Glouster          : ternary @name("Frontenac.Glouster") ;
         }
         size = 1024;
-        @name(".Kaplan") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Kaplan_0;
         default_action = NoAction_58();
     }
     @name(".Rockport") table _Rockport_0 {
@@ -1500,7 +1500,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 512;
         default_action = _Nanson_4();
-        @name(".Yorkville") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Yorkville_0;
     }
     @name(".Chambers") table _Chambers_0 {
         actions = {
@@ -2860,7 +2860,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 32768;
         default_action = _Nanson_41();
-        @name(".Hiland") counters = direct_counter(CounterType.packets);
+        counters = _Hiland_0;
     }
     apply {
         if (hdr.ig_intr_md.resubmit_flag == 1w0) 

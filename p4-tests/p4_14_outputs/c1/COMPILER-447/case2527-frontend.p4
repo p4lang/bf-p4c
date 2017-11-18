@@ -692,7 +692,7 @@ control Baskett(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.Leetsdale.Wanatah : ternary @name("Leetsdale.Wanatah") ;
         }
         size = 512;
-        @name(".Cement") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Cement_0;
         default_action = NoAction();
     }
     @name(".Grasston") table Grasston_0 {
@@ -1667,7 +1667,7 @@ control Moapa(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         size = 512;
         default_action = Wetumpka_5();
-        @name(".Moody") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Moody_0;
     }
     apply {
         switch (SnowLake_0.apply().action_run) {

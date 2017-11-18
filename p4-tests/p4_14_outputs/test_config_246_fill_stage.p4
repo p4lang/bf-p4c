@@ -191,7 +191,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             hdr.ethernet.dstAddr[8:0]: exact;
         }
         size = 512;
-        @name(".counter_egress") counters = direct_counter(CounterType.packets);
+        counters = counter_egress;
     }
     apply {
         simple_table_egress.apply();

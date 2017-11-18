@@ -812,7 +812,7 @@ control Armagh(inout headers hdr, inout metadata meta, inout standard_metadata_t
             hdr.eg_intr_md.egress_qid[2:0] : exact;
         }
         size = 1024;
-        @name(".Ogunquit") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Ogunquit;
     }
     apply {
         Haugen.apply();
@@ -1705,7 +1705,7 @@ control Lewes(inout headers hdr, inout metadata meta, inout standard_metadata_t 
             hdr.Nuangola.Nathalie : ternary;
         }
         size = 512;
-        @name(".Pearson") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Pearson;
     }
     apply {
         Swisshome.apply();
@@ -2504,7 +2504,7 @@ control Suarez(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         size = 512;
         default_action = McCartys();
-        @name(".Garrison") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Garrison;
     }
     apply {
         switch (Slovan.apply().action_run) {

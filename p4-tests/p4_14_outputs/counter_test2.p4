@@ -65,7 +65,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.f1: exact;
         }
         size = 16384;
-        @name(".cnt") counters = direct_counter(CounterType.packets);
+        counters = cnt;
     }
     @name(".c4_6") action c4_6_0(bit<16> val4, bit<16> val5, bit<16> val6, bit<9> port) {
         cnt2.count();
@@ -82,7 +82,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.f2: exact;
         }
         size = 16384;
-        @name(".cnt2") counters = direct_counter(CounterType.packets);
+        counters = cnt2;
     }
     @name(".c7_9") action c7_9_0(bit<16> val7, bit<16> val8, bit<16> val9) {
         cnt3.count();
@@ -98,7 +98,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.f3: exact;
         }
         size = 1024;
-        @name(".cnt3") counters = direct_counter(CounterType.packets);
+        counters = cnt3;
     }
     apply {
         test1.apply();

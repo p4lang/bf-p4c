@@ -806,7 +806,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             hdr.eg_intr_md.egress_qid[2:0] : exact @name("eg_intr_md.egress_qid[2:0]") ;
         }
         size = 1024;
-        @name(".Stidham") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Stidham_0;
         default_action = NoAction_40();
     }
     apply {
@@ -1005,7 +1005,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.Bavaria.Govan  : ternary @name("Bavaria.Govan") ;
         }
         size = 512;
-        @name(".Ardsley") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Ardsley_0;
         default_action = NoAction_43();
     }
     @name(".PortVue") action _PortVue() {
@@ -1348,7 +1348,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 512;
         default_action = _Shoshone_4();
-        @name(".Mekoryuk") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Mekoryuk_0;
     }
     @name(".PortWing") action _PortWing() {
         hash<bit<32>, bit<32>, tuple_1, bit<64>>(meta.Cropper.Wiota, HashAlgorithm.crc32, 32w0, { hdr.Bavaria.Hilltop, hdr.Bavaria.Govan, hdr.Bavaria.Tahuya, hdr.Bavaria.Kennedale, hdr.Bavaria.Rudolph }, 64w4294967296);

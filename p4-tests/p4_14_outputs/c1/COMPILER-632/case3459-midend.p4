@@ -1405,7 +1405,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.Greenland.Wabasha           : ternary @name("Greenland.Wabasha") ;
         }
         size = 2048;
-        @name(".Moneta") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Moneta_0;
         default_action = NoAction_59();
     }
     @name(".Wadley") table _Wadley_0 {
@@ -1764,7 +1764,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 512;
         default_action = _Fitler_6();
-        @name(".Poteet") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Poteet_0;
     }
     @name(".Owanka") action _Owanka() {
         hash<bit<32>, bit<32>, tuple_1, bit<64>>(meta.Barstow.Oakford, HashAlgorithm.crc32, 32w0, { hdr.Greenland.Wheatland, hdr.Greenland.Wabasha, hdr.Greenland.Newberg, hdr.Greenland.Slick, hdr.Greenland.Kenefic }, 64w4294967296);
@@ -2982,7 +2982,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 512;
         default_action = _Fitler_39();
-        @name(".Domingo") counters = direct_counter(CounterType.packets);
+        counters = _Domingo_0;
     }
     @name(".Trail") action _Trail_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.CoalCity.Killen;
@@ -3066,7 +3066,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 32768;
         default_action = _Fitler_41();
-        @name(".Henry") counters = direct_counter(CounterType.packets);
+        counters = _Henry_0;
     }
     apply {
         if (hdr.ig_intr_md.resubmit_flag == 1w0) 

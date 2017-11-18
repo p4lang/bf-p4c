@@ -984,7 +984,7 @@ control Floral(inout headers hdr, inout metadata meta, inout standard_metadata_t
             meta.Goodlett.Greendale: ternary;
         }
         size = 512;
-        @name(".Holden") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Holden;
     }
     apply {
         switch (Selby.apply().action_run) {
@@ -1245,7 +1245,7 @@ control Nixon(inout headers hdr, inout metadata meta, inout standard_metadata_t 
             hdr.Willette.Toulon : ternary;
         }
         size = 512;
-        @name(".Stuttgart") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Stuttgart;
     }
     apply {
         Jauca.apply();

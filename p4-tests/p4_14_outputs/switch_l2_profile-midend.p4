@@ -1427,7 +1427,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             meta.l2_metadata.lkp_pkt_type: exact @name("l2_metadata.lkp_pkt_type") ;
         }
         size = 16384;
-        @name(".egress_bd_stats") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _egress_bd_stats_1;
         default_action = NoAction_61();
     }
     @name(".nop") action _nop_5() {

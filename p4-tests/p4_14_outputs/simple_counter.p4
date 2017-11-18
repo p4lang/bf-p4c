@@ -48,7 +48,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         key = {
             hdr.data.f1: exact;
         }
-        @name(".cnt") counters = direct_counter(CounterType.packets);
+        counters = cnt;
     }
     @name(".test2") table test2 {
         actions = {

@@ -625,7 +625,7 @@ control Benwood(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.Cricket.Flynn  : ternary @name("Cricket.Flynn") ;
         }
         size = 512;
-        @name(".Hilbert") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Hilbert;
         default_action = NoAction();
     }
     @name(".Wadley") table Wadley {
@@ -1735,7 +1735,7 @@ control Munger(inout headers hdr, inout metadata meta, inout standard_metadata_t
             meta.Timken.Dorset   : ternary @name("Timken.Dorset") ;
         }
         size = 512;
-        @name(".HillCity") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = HillCity;
         default_action = NoAction();
     }
     apply {

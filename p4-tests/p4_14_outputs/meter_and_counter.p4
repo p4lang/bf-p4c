@@ -65,7 +65,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.f2: exact;
         }
         size = 2048;
-        @name(".counter2") counters = direct_counter(CounterType.packets);
+        counters = counter2;
     }
     apply {
         test1.apply();

@@ -1276,7 +1276,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.Issaquah.Summit : ternary @name("Issaquah.Summit") ;
         }
         size = 1024;
-        @name(".Traverse") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Traverse_0;
         default_action = NoAction_62();
     }
     @name(".Quitman") action _Quitman(bit<16> Gerty) {
@@ -1648,7 +1648,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 512;
         default_action = _Odebolt_5();
-        @name(".Meeker") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Meeker_0;
     }
     @name(".Opelousas") table _Opelousas_0 {
         actions = {
@@ -2854,7 +2854,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 32768;
         default_action = _Odebolt_39();
-        @name(".LakeFork") counters = direct_counter(CounterType.packets);
+        counters = _LakeFork_0;
     }
     @name(".Motley") table _Motley_0 {
         actions = {

@@ -1417,7 +1417,7 @@ control Dougherty(inout headers hdr, inout metadata meta, inout standard_metadat
         }
         size = 32768;
         default_action = Comptche_5();
-        @name(".Palmdale") counters = direct_counter(CounterType.packets);
+        counters = Palmdale_0;
     }
     apply {
         Wakenda_0.apply();
@@ -1694,7 +1694,7 @@ control Kalida(inout headers hdr, inout metadata meta, inout standard_metadata_t
             hdr.Parkland.ElmPoint           : ternary @name("Parkland.ElmPoint") ;
         }
         size = 1024;
-        @name(".SwissAlp") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = SwissAlp_0;
         default_action = NoAction();
     }
     @name(".Wakita") table Wakita_0 {
@@ -2962,7 +2962,7 @@ control Westville(inout headers hdr, inout metadata meta, inout standard_metadat
         }
         size = 512;
         default_action = Comptche_10();
-        @name(".Ethete") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Ethete_0;
     }
     @name(".Nuremberg") table Nuremberg_0 {
         actions = {

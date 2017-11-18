@@ -470,7 +470,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             hdr.mrk.hi: exact @name("mrk.hi") ;
         }
         size = 4096;
-        @name(".e1_cntr") counters = direct_counter(CounterType.packets);
+        counters = e1_cntr_0;
         default_action = NoAction();
     }
     @name(".e2_action") action e2_action() {
@@ -488,7 +488,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             hdr.mrk.hi: exact @name("mrk.hi") ;
         }
         size = 4096;
-        @name(".e2_cntr") counters = direct_counter(CounterType.packets);
+        counters = e2_cntr_0;
         default_action = NoAction();
     }
     @name(".e3_action") action e3_action() {
@@ -505,7 +505,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             hdr.mrk.hi: exact @name("mrk.hi") ;
         }
         size = 4096;
-        @name(".e3_cntr") counters = direct_counter(CounterType.bytes);
+        counters = e3_cntr_0;
         meters = e3_meter_0;
         default_action = NoAction();
     }
@@ -523,7 +523,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             hdr.mrk.hi: exact @name("mrk.hi") ;
         }
         size = 4096;
-        @name(".e4_cntr") counters = direct_counter(CounterType.packets);
+        counters = e4_cntr_0;
         meters = e4_meter_0;
         default_action = NoAction();
     }
@@ -542,7 +542,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             hdr.mrk.hi: exact @name("mrk.hi") ;
         }
         size = 4096;
-        @name(".e5_cntr") counters = direct_counter(CounterType.bytes);
+        counters = e5_cntr_0;
         default_action = NoAction();
     }
     @name(".e6_action") action e6_action() {
@@ -560,7 +560,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             hdr.mrk.hi: exact @name("mrk.hi") ;
         }
         size = 4096;
-        @name(".e6_cntr") counters = direct_counter(CounterType.packets);
+        counters = e6_cntr_0;
         default_action = NoAction();
     }
     @stage(11) @name(".eg_dummy") table eg_dummy_0 {
@@ -697,7 +697,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         key = {
             hdr.ethernet.etherType: ternary @name("ethernet.etherType") ;
         }
-        @name(".t1_cntr") counters = direct_counter(CounterType.packets);
+        counters = t1_cntr_0;
         default_action = NoAction();
     }
     @name(".t2_action") action t2_action() {
@@ -713,7 +713,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         key = {
             hdr.ethernet.etherType: ternary @name("ethernet.etherType") ;
         }
-        @name(".t2_cntr") counters = direct_counter(CounterType.packets);
+        counters = t2_cntr_0;
         default_action = NoAction();
     }
     @name(".t3_action") action t3_action() {
@@ -728,7 +728,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         key = {
             hdr.ethernet.etherType: ternary @name("ethernet.etherType") ;
         }
-        @name(".t3_cntr") counters = direct_counter(CounterType.bytes);
+        counters = t3_cntr_0;
         meters = t3_meter_0;
         default_action = NoAction();
     }
@@ -744,7 +744,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         key = {
             hdr.ethernet.etherType: ternary @name("ethernet.etherType") ;
         }
-        @name(".t4_cntr") counters = direct_counter(CounterType.packets);
+        counters = t4_cntr_0;
         meters = t4_meter_0;
         default_action = NoAction();
     }
@@ -761,7 +761,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         key = {
             hdr.ethernet.etherType: ternary @name("ethernet.etherType") ;
         }
-        @name(".t5_cntr") counters = direct_counter(CounterType.bytes);
+        counters = t5_cntr_0;
         default_action = NoAction();
     }
     @name(".t6_action") action t6_action() {
@@ -777,7 +777,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         key = {
             hdr.ethernet.etherType: ternary @name("ethernet.etherType") ;
         }
-        @name(".t6_cntr") counters = direct_counter(CounterType.packets);
+        counters = t6_cntr_0;
         default_action = NoAction();
     }
     @name(".nothing") action nothing_6() {
@@ -791,7 +791,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         key = {
             hdr.ethernet.etherType: exact @name("ethernet.etherType") ;
         }
-        @name(".v3_cntr") counters = direct_counter(CounterType.bytes);
+        counters = v3_cntr_0;
         default_action = NoAction();
     }
     @name(".nothing") action nothing_7() {
@@ -805,7 +805,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         key = {
             hdr.ethernet.etherType: exact @name("ethernet.etherType") ;
         }
-        @name(".v4_cntr") counters = direct_counter(CounterType.packets);
+        counters = v4_cntr_0;
         default_action = NoAction();
     }
     @name(".nothing") action nothing_8() {
@@ -819,7 +819,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         key = {
             hdr.ethernet.etherType: exact @name("ethernet.etherType") ;
         }
-        @name(".v5_cntr") counters = direct_counter(CounterType.bytes);
+        counters = v5_cntr_0;
         default_action = NoAction();
     }
     @name(".nothing") action nothing_9() {
@@ -833,7 +833,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         key = {
             hdr.ethernet.etherType: exact @name("ethernet.etherType") ;
         }
-        @name(".v6_cntr") counters = direct_counter(CounterType.packets);
+        counters = v6_cntr_0;
         default_action = NoAction();
     }
     @stage(11) @name(".vp5") table vp5_0 {
@@ -1315,7 +1315,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.md.m1_clr: exact @name("md.m1_clr") ;
         }
         size = 1024;
-        @name(".ig_m1_cntr") counters = direct_counter(CounterType.bytes);
+        counters = ig_m1_cntr_0;
         default_action = NoAction();
     }
     @name(".ig_m1_color") table ig_m1_color_0 {

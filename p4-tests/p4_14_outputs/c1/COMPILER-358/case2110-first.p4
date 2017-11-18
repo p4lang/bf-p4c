@@ -900,7 +900,7 @@ control Iberia(inout headers hdr, inout metadata meta, inout standard_metadata_t
             hdr.Nuremberg.Pierson: ternary @name("Nuremberg.Pierson") ;
         }
         size = 512;
-        @name(".BigPlain") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = BigPlain;
         default_action = NoAction();
     }
     apply {
@@ -1205,7 +1205,7 @@ control Osage(inout headers hdr, inout metadata meta, inout standard_metadata_t 
             meta.Seagrove.Idalia : ternary @name("Seagrove.Idalia") ;
         }
         size = 512;
-        @name(".Terrell") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Terrell;
         default_action = NoAction();
     }
     @name(".Hisle") table Hisle {

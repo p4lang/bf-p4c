@@ -55,7 +55,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.dstPort: ternary;
         }
         size = 4096;
-        @name(".counter_0") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = counter_0;
     }
     apply {
         table_0.apply();

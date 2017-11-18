@@ -838,7 +838,7 @@ control Connell(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Conneaut.Gurdon    : ternary;
         }
         size = 512;
-        @name(".Veguita") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Veguita;
     }
     apply {
         switch (Riverland.apply().action_run) {
@@ -1660,7 +1660,7 @@ control Ledoux(inout headers hdr, inout metadata meta, inout standard_metadata_t
             hdr.BigPlain.Browndell: ternary;
         }
         size = 512;
-        @name(".Patchogue") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Patchogue;
     }
     apply {
         Weiser.apply();

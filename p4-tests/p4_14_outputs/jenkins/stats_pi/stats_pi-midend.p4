@@ -224,7 +224,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ethernet.dstAddr: exact @name("ethernet.dstAddr") ;
         }
         size = 512;
-        @name(".ExactOne_counter") counters = direct_counter(CounterType.packets);
+        counters = ExactOne_counter;
         meters = ExactOne_meter;
         default_action = NoAction_0();
     }

@@ -1198,7 +1198,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.Wauseon.Goodwin: ternary @name("Wauseon.Goodwin") ;
         }
         size = 1024;
-        @name(".Carpenter") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Carpenter_0;
         default_action = NoAction_59();
     }
     @name(".Tindall") table _Tindall_0 {
@@ -1554,7 +1554,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 512;
         default_action = _Monteview_4();
-        @name(".Hauppauge") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Hauppauge_0;
     }
     @name(".OakCity") table _OakCity_0 {
         actions = {

@@ -1568,7 +1568,7 @@ control process_egress_bd_stats(inout headers hdr, inout metadata meta, inout st
             meta.l2_metadata.lkp_pkt_type: exact;
         }
         size = 16384;
-        @name(".egress_bd_stats") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = egress_bd_stats;
     }
     apply {
         egress_bd_stats_0.apply();

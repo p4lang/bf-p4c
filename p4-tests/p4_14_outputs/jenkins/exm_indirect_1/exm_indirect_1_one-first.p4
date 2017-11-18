@@ -358,7 +358,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             hdr.ipv4.dstAddr: lpm @name("ipv4.dstAddr") ;
         }
         size = 2048;
-        @name(".egr_cntDum1") counters = direct_counter(CounterType.packets);
+        counters = egr_cntDum1;
         default_action = NoAction();
     }
     apply {
@@ -629,7 +629,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ethernet.srcAddr: exact @name("ethernet.srcAddr") ;
         }
         size = 2048;
-        @name(".cntDum2") counters = direct_counter(CounterType.packets);
+        counters = cntDum2;
         default_action = NoAction();
     }
     @name(".act1") action act1_0(bit<9> egress_port) {
@@ -646,7 +646,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ethernet.srcAddr: exact @name("ethernet.srcAddr") ;
         }
         size = 2048;
-        @name(".cntDum1") counters = direct_counter(CounterType.packets);
+        counters = cntDum1;
         default_action = NoAction();
     }
     @name(".act1") action act1_1(bit<9> egress_port) {
@@ -663,7 +663,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ethernet.srcAddr: exact @name("ethernet.srcAddr") ;
         }
         size = 2048;
-        @name(".cntDum5") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = cntDum5;
         default_action = NoAction();
     }
     @name(".act1") action act1_2(bit<9> egress_port) {
@@ -680,7 +680,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ethernet.srcAddr: exact @name("ethernet.srcAddr") ;
         }
         size = 2048;
-        @name(".cntDum4") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = cntDum4;
         default_action = NoAction();
     }
     @stage(9) @name(".stat_tbl_indirect_pkt_32bit") table stat_tbl_indirect_pkt_32bit {

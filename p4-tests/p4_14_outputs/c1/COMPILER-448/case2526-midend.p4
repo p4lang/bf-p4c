@@ -873,7 +873,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.Leetsdale.Wanatah : ternary @name("Leetsdale.Wanatah") ;
         }
         size = 512;
-        @name(".Owanka") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Owanka_0;
         default_action = NoAction_38();
     }
     @name(".Faulkton") table _Faulkton_0 {
@@ -1207,7 +1207,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 512;
         default_action = _Onley_2();
-        @name(".Lovett") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Lovett_0;
     }
     @name(".SnowLake") table _SnowLake_0 {
         support_timeout = true;

@@ -210,7 +210,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         }
 
         bool constant_set = false;
-        int constant_used = 0;
+        long constant_used = 0;
 
         // FIXME: Can potentially use rotational shifts at some point
         // bool is_contig_rotate(bitvec check, int &shift, int size);

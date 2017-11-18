@@ -1235,7 +1235,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.Lamar.WoodDale              : ternary @name("Lamar.WoodDale") ;
         }
         size = 1024;
-        @name(".Carnation") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Carnation_0;
         default_action = NoAction_62();
     }
     @name(".Plush") table _Plush_0 {
@@ -1619,7 +1619,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 512;
         default_action = _Millstadt_6();
-        @name(".Saragosa") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Saragosa_0;
     }
     @name(".Joiner") table _Joiner_0 {
         actions = {
@@ -2845,7 +2845,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 32768;
         default_action = _Millstadt_41();
-        @name(".Atoka") counters = direct_counter(CounterType.packets);
+        counters = _Atoka_0;
     }
     @name(".McKamie") table _McKamie_0 {
         actions = {

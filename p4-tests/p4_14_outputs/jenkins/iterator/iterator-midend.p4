@@ -373,7 +373,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 512;
         default_action = n_6();
-        @name(".ha_cntr") counters = direct_counter(CounterType.packets);
+        counters = ha_cntr;
     }
     @name(".p0") table p0 {
         actions = {

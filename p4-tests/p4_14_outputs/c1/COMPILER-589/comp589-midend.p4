@@ -1262,7 +1262,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.Dixboro.Scottdale           : ternary @name("Dixboro.Scottdale") ;
         }
         size = 1024;
-        @name(".Seaside") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Seaside_0;
         default_action = NoAction_61();
     }
     @name(".Wadley") table _Wadley_0 {
@@ -1618,7 +1618,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 512;
         default_action = _Ewing_5();
-        @name(".Carlsbad") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Carlsbad_0;
     }
     @name(".Motley") table _Motley_0 {
         support_timeout = true;
@@ -2867,7 +2867,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 32768;
         default_action = _Ewing_39();
-        @name(".Fallis") counters = direct_counter(CounterType.packets);
+        counters = _Fallis_0;
     }
     @name(".FifeLake") table _FifeLake_0 {
         actions = {

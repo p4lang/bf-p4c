@@ -915,7 +915,7 @@ control Grassflat(inout headers hdr, inout metadata meta, inout standard_metadat
             hdr.Gratis.Simla    : ternary @name("Gratis.Simla") ;
         }
         size = 512;
-        @name(".Lahaina") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Lahaina;
         default_action = NoAction();
     }
     apply {
@@ -1297,7 +1297,7 @@ control Lamona(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         size = 512;
         default_action = Norland();
-        @name(".Maltby") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Maltby;
     }
     @name(".Vandling") table Vandling {
         support_timeout = true;

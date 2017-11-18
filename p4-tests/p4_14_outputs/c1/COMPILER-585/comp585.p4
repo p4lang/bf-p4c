@@ -1586,7 +1586,7 @@ control Dunedin(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 512;
         default_action = Mingus();
-        @name(".Sherrill") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Sherrill;
     }
     @name(".Perryman") table Perryman {
         actions = {
@@ -2129,7 +2129,7 @@ control Gunder(inout headers hdr, inout metadata meta, inout standard_metadata_t
             hdr.Kiana.Grays                 : ternary;
         }
         size = 1024;
-        @name(".Endeavor") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Endeavor;
     }
     apply {
         Rocheport.apply();
@@ -2438,7 +2438,7 @@ control Lewis(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         size = 32768;
         default_action = Mingus();
-        @name(".Ironside") counters = direct_counter(CounterType.packets);
+        counters = Ironside;
     }
     @name(".Pearcy") table Pearcy {
         actions = {

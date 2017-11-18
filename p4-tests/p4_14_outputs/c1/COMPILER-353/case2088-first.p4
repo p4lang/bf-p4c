@@ -990,7 +990,7 @@ control Floral(inout headers hdr, inout metadata meta, inout standard_metadata_t
             meta.Goodlett.Greendale: ternary @name("Goodlett.Greendale") ;
         }
         size = 512;
-        @name(".Holden") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Holden;
         default_action = NoAction();
     }
     apply {
@@ -1257,7 +1257,7 @@ control Nixon(inout headers hdr, inout metadata meta, inout standard_metadata_t 
             hdr.Willette.Toulon : ternary @name("Willette.Toulon") ;
         }
         size = 512;
-        @name(".Stuttgart") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Stuttgart;
         default_action = NoAction();
     }
     apply {

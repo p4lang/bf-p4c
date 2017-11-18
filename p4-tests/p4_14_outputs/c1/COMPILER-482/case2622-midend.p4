@@ -838,7 +838,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             hdr.eg_intr_md.egress_qid[2:0] : exact @name("eg_intr_md.egress_qid[2:0]") ;
         }
         size = 1024;
-        @name(".Ogunquit") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Ogunquit_0;
         default_action = NoAction_42();
     }
     apply {
@@ -1036,7 +1036,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.Nuangola.Nathalie : ternary @name("Nuangola.Nathalie") ;
         }
         size = 512;
-        @name(".Pearson") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Pearson_0;
         default_action = NoAction_45();
     }
     @name(".McCartys") action _McCartys() {
@@ -1420,7 +1420,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 512;
         default_action = _McCartys_2();
-        @name(".Garrison") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Garrison_0;
     }
     @name(".Fillmore") action _Fillmore() {
         hash<bit<32>, bit<32>, tuple_1, bit<64>>(meta.Bieber.Arvonia, HashAlgorithm.crc32, 32w0, { hdr.Nuangola.Blanchard, hdr.Nuangola.Nathalie, hdr.Nuangola.Laramie, hdr.Nuangola.Wolcott, hdr.Nuangola.Villanova }, 64w4294967296);

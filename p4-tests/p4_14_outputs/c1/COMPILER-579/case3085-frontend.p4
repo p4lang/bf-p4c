@@ -752,7 +752,7 @@ control Albany(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         size = 512;
         default_action = Millstadt_2();
-        @name(".Saragosa") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Saragosa_0;
     }
     @name(".Joiner") table Joiner_0 {
         actions = {
@@ -1604,7 +1604,7 @@ control Harts(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         size = 32768;
         default_action = Millstadt_6();
-        @name(".Atoka") counters = direct_counter(CounterType.packets);
+        counters = Atoka_0;
     }
     @name(".McKamie") table McKamie_0 {
         actions = {
@@ -2809,7 +2809,7 @@ control Sneads(inout headers hdr, inout metadata meta, inout standard_metadata_t
             hdr.Lamar.WoodDale              : ternary @name("Lamar.WoodDale") ;
         }
         size = 1024;
-        @name(".Carnation") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Carnation_0;
         default_action = NoAction();
     }
     @name(".Plush") table Plush_0 {

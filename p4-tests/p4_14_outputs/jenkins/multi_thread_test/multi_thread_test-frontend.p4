@@ -289,7 +289,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.dstAddr: exact @name("ipv4.dstAddr") ;
         }
         size = 102400;
-        @name(".cntr_exm_tbl_1") counters = direct_counter(CounterType.packets);
+        counters = cntr_exm_tbl;
         default_action = NoAction();
     }
     @name(".nop") action nop_3() {
@@ -314,7 +314,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.dstAddr: ternary @name("ipv4.dstAddr") ;
         }
         size = 51200;
-        @name(".cntr_tcam_tbl_1") counters = direct_counter(CounterType.packets);
+        counters = cntr_tcam_tbl;
         default_action = NoAction();
     }
     @name(".nop") action nop_4() {
@@ -339,7 +339,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.dstAddr: exact @name("ipv4.dstAddr") ;
         }
         size = 51200;
-        @name(".verify_cntr") counters = direct_counter(CounterType.packets);
+        counters = verify_cntr_0;
         default_action = NoAction();
     }
     apply {

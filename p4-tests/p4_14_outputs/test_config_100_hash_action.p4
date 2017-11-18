@@ -184,7 +184,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         key = {
             meta.meta.field_17: exact;
         }
-        @name(".extra_stats") counters = direct_counter(CounterType.bytes);
+        counters = extra_stats;
     }
     apply {
         table_3.apply();

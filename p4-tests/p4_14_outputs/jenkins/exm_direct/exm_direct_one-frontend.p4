@@ -451,7 +451,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.dstAddr: exact @name("ipv4.dstAddr") ;
         }
         size = 4096;
-        @name(".exm_cnt") counters = direct_counter(CounterType.packets);
+        counters = exm_cnt_0;
         default_action = NoAction();
     }
     @immediate(1) @stage(10) @include_idletime(1) @idletime_precision(2) @name(".idle_2") table idle {

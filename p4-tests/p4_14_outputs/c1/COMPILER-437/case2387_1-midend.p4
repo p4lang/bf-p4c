@@ -886,7 +886,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.Cricket.Flynn  : ternary @name("Cricket.Flynn") ;
         }
         size = 512;
-        @name(".Hilbert") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Hilbert_0;
         default_action = NoAction_41();
     }
     @name(".Wadley") table _Wadley_0 {
@@ -1284,7 +1284,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Timken.Dorset   : ternary @name("Timken.Dorset") ;
         }
         size = 512;
-        @name(".HillCity") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _HillCity_0;
         default_action = NoAction_56();
     }
     @name(".Livengood") action _Livengood() {

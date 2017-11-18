@@ -801,7 +801,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.Nuremberg.Pierson: ternary @name("Nuremberg.Pierson") ;
         }
         size = 512;
-        @name(".BigPlain") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _BigPlain_0;
         default_action = NoAction_39();
     }
     @name(".Pawtucket") action _Pawtucket() {
@@ -1155,7 +1155,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Seagrove.Idalia : ternary @name("Seagrove.Idalia") ;
         }
         size = 512;
-        @name(".Terrell") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Terrell_0;
         default_action = NoAction_51();
     }
     @name(".Hisle") table _Hisle_0 {

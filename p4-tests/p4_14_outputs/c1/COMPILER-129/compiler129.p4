@@ -4782,7 +4782,7 @@ control process_storm_control_stats(inout headers hdr, inout metadata meta, inou
             meta.ingress_metadata.ingress_port        : exact;
         }
         size = 8;
-        @name(".storm_control_counter") counters = direct_counter(CounterType.bytes);
+        counters = storm_control_counter;
     }
     apply {
         storm_control_stats.apply();

@@ -1288,7 +1288,7 @@ control Medulla(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Egypt.Omemee    : ternary;
         }
         size = 512;
-        @name(".Ceiba") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Ceiba;
     }
     apply {
         switch (Tontogany.apply().action_run) {

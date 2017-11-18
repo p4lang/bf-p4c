@@ -1262,7 +1262,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.Kiana.Grays                 : ternary @name("Kiana.Grays") ;
         }
         size = 1024;
-        @name(".Endeavor") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Endeavor_0;
         default_action = NoAction_62();
     }
     @name(".Tecolote") action _Tecolote() {
@@ -1622,7 +1622,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 512;
         default_action = _Mingus_4();
-        @name(".Sherrill") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Sherrill_0;
     }
     @name(".Perryman") table _Perryman_0 {
         actions = {
@@ -2851,7 +2851,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 32768;
         default_action = _Mingus_39();
-        @name(".Ironside") counters = direct_counter(CounterType.packets);
+        counters = _Ironside_0;
     }
     @name(".Pearcy") table _Pearcy_0 {
         actions = {

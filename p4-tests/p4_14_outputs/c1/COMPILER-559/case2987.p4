@@ -1628,7 +1628,7 @@ control Nondalton(inout headers hdr, inout metadata meta, inout standard_metadat
             hdr.Wauseon.Goodwin: ternary;
         }
         size = 1024;
-        @name(".Carpenter") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Carpenter;
     }
     @name(".Tindall") table Tindall {
         actions = {
@@ -2178,7 +2178,7 @@ control Swisher(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 512;
         default_action = Monteview();
-        @name(".Hauppauge") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Hauppauge;
     }
     @name(".OakCity") table OakCity {
         actions = {

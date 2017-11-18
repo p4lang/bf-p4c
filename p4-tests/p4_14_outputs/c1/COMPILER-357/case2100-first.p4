@@ -1201,7 +1201,7 @@ control Manning(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Nashoba.Iselin  : ternary @name("Nashoba.Iselin") ;
         }
         size = 512;
-        @name(".Trotwood") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Trotwood;
         default_action = NoAction();
     }
     apply {
@@ -1677,7 +1677,7 @@ control Sutton(inout headers hdr, inout metadata meta, inout standard_metadata_t
             hdr.Skillman.Halbur: ternary @name("Skillman.Halbur") ;
         }
         size = 512;
-        @name(".Gastonia") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Gastonia;
         default_action = NoAction();
     }
     apply {

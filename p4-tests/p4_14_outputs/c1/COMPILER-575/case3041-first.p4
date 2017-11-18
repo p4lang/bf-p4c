@@ -1333,7 +1333,7 @@ control Dolliver(inout headers hdr, inout metadata meta, inout standard_metadata
             hdr.Eclectic.Felton   : ternary @name("Eclectic.Felton") ;
         }
         size = 1024;
-        @name(".Paxico") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Paxico;
         default_action = NoAction();
     }
     @name(".Ririe") table Ririe {
@@ -3485,7 +3485,7 @@ control Wauregan(inout headers hdr, inout metadata meta, inout standard_metadata
         }
         size = 512;
         default_action = Sultana();
-        @name(".Hernandez") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Hernandez;
     }
     @name(".Pinecrest") table Pinecrest {
         actions = {
@@ -3700,7 +3700,7 @@ control Zarah(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         size = 32768;
         default_action = Sultana();
-        @name(".Boistfort") counters = direct_counter(CounterType.packets);
+        counters = Boistfort;
     }
     @name(".Seaforth") table Seaforth {
         actions = {

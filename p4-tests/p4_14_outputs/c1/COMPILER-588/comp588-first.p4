@@ -1494,7 +1494,7 @@ control ElCentro(inout headers hdr, inout metadata meta, inout standard_metadata
         }
         size = 32768;
         default_action = ViewPark();
-        @name(".Newsoms") counters = direct_counter(CounterType.packets);
+        counters = Newsoms;
     }
     @name(".Statham") table Statham {
         actions = {
@@ -2222,7 +2222,7 @@ control Machens(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 512;
         default_action = ViewPark();
-        @name(".Commack") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Commack;
     }
     apply {
         switch (WestBend.apply().action_run) {
@@ -2716,7 +2716,7 @@ control Norseland(inout headers hdr, inout metadata meta, inout standard_metadat
             hdr.Elkader.Staunton            : ternary @name("Elkader.Staunton") ;
         }
         size = 1024;
-        @name(".Malesus") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Malesus;
         default_action = NoAction();
     }
     @name(".Gibbstown") table Gibbstown {

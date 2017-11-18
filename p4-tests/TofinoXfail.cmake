@@ -96,6 +96,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue281.p4
   testdata/p4_14_samples/axon.p4
   testdata/p4_16_samples/stack_complex-bmv2.p4
+  testdata/p4_16_samples/issue737-bmv2.p4
   )
 
 # BRIG-107
@@ -145,6 +146,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue447-2-bmv2.p4
   testdata/p4_16_samples/issue447-3-bmv2.p4
   testdata/p4_16_samples/issue447-4-bmv2.p4
+  testdata/p4_16_samples/issue1025-bmv2.p4
   )
 # varbit not handled in backend
 p4c_add_xfail_reason("tofino"
@@ -171,8 +173,12 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Value too large"
+  "Too much data for parse matcher"
   testdata/p4_14_samples/source_routing.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Value too large"
   extensions/p4_tests/p4_14/test_config_88_testing_action_data_allocation_3.p4
   )
 
@@ -505,6 +511,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "PHV read has no allocation"
   testdata/p4_16_samples/arith-bmv2.p4
+  testdata/p4_16_samples/issue983-bmv2.p4
   )
 
 #
@@ -537,7 +544,26 @@ p4c_add_xfail_reason("tofino"
   "Exiting with SIGSEGV"
   extensions/p4_tests/p4_14/c1/COMPILER-635/case3468.p4
   extensions/p4_tests/p4_14/c1/COMPILER-637/case3478.p4
+  testdata/p4_16_samples/issue461-bmv2.p4
   )
+
+# new p4lang/p4c tests that fail
+p4c_add_xfail_reason("tofino"
+    "error: Syntax error, expecting identifier or operation"
+    testdata/p4_14_samples/issue1013.p4
+    )
+p4c_add_xfail_reason("tofino"
+    "Failed to transform the program into a P4Runtime-compatible form"
+    testdata/p4_16_samples/issue841.p4
+    )
+p4c_add_xfail_reason("tofino"
+    "visitor returned non-MethodCallExpression type"
+    testdata/p4_16_samples/issue955.p4
+    )
+p4c_add_xfail_reason("tofino"
+    "TablePlacement::place_table(.*): Assertion"
+    testdata/p4_16_samples/issue986-1-bmv2.p4
+    )
 
 # BRIG-181
 # These are invalid programs, simply because P4_14 is too lax
@@ -749,6 +775,16 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-100/exclusive_cf_one_action.p4
   testdata/p4_14_samples/16-TwoReferences.p4
   extensions/p4_tests/p4_14/c1/COMPILER-125/16-TwoReferences.p4
+  testdata/p4_16_samples/issue986-bmv2.p4
+  )
+
+# Brig/Glass do not follow P4_14 spec for 'drop' in the ingress pipeline
+p4c_add_xfail_reason("tofino"
+  "expected packet on port .* not seen"
+  testdata/p4_14_samples/gateway1.p4
+  testdata/p4_14_samples/gateway2.p4
+  testdata/p4_14_samples/gateway3.p4
+  testdata/p4_14_samples/gateway4.p4
   )
 
 #END: XFAILS that match glass XFAILS

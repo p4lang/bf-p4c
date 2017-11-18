@@ -1564,7 +1564,7 @@ control Pekin(inout headers hdr, inout metadata meta, inout standard_metadata_t 
             hdr.Ickesburg.Thistle : ternary;
         }
         size = 512;
-        @name(".Southam") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Southam;
     }
     @name(".Tekonsha") table Tekonsha {
         actions = {
@@ -1675,7 +1675,7 @@ control Rehobeth(inout headers hdr, inout metadata meta, inout standard_metadata
             meta.Roxboro.Mabana  : ternary;
         }
         size = 512;
-        @name(".Waiehu") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Waiehu;
     }
     apply {
         switch (Scottdale.apply().action_run) {

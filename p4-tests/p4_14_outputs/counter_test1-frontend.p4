@@ -45,7 +45,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.f1: exact @name("data.f1") ;
         }
         size = 32768;
-        @name(".cnt") counters = direct_counter(CounterType.packets);
+        counters = cnt_0;
         default_action = NoAction();
     }
     @name(".c4_6") action c4_6(bit<16> val4, bit<16> val5, bit<16> val6, bit<9> port) {
@@ -64,7 +64,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.f2: exact @name("data.f2") ;
         }
         size = 10000;
-        @name(".cnt2") counters = direct_counter(CounterType.packets);
+        counters = cnt2_0;
         default_action = NoAction();
     }
     apply {

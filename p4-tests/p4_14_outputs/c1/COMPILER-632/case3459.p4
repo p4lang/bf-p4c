@@ -2119,7 +2119,7 @@ control Gowanda(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 512;
         default_action = Fitler();
-        @name(".Poteet") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Poteet;
     }
     apply {
         switch (Swords.apply().action_run) {
@@ -2342,7 +2342,7 @@ control Gunter(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         size = 512;
         default_action = Fitler();
-        @name(".Domingo") counters = direct_counter(CounterType.packets);
+        counters = Domingo;
     }
     @name(".Loris") Loris() Loris_0;
     apply {
@@ -3784,7 +3784,7 @@ control Wattsburg(inout headers hdr, inout metadata meta, inout standard_metadat
         }
         size = 32768;
         default_action = Fitler();
-        @name(".Henry") counters = direct_counter(CounterType.packets);
+        counters = Henry;
     }
     apply {
         Harriet.apply();
@@ -3941,7 +3941,7 @@ control Wellford(inout headers hdr, inout metadata meta, inout standard_metadata
             hdr.Greenland.Wabasha           : ternary;
         }
         size = 2048;
-        @name(".Moneta") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Moneta;
     }
     @name(".Wadley") table Wadley {
         actions = {

@@ -1276,7 +1276,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.Kapalua.Harmony  : ternary @name("Kapalua.Harmony") ;
         }
         size = 1024;
-        @name(".Sidon") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Sidon_0;
         default_action = NoAction_66();
     }
     @name(".Rehoboth") action _Rehoboth_1() {
@@ -1621,7 +1621,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 512;
         default_action = _Rehoboth_5();
-        @name(".Penrose") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Penrose_0;
     }
     @name(".Leoma") table _Leoma_0 {
         actions = {
@@ -2992,7 +2992,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 32768;
         default_action = _Rehoboth_39();
-        @name(".Shelby") counters = direct_counter(CounterType.packets);
+        counters = _Shelby_0;
     }
     apply {
         if (hdr.ig_intr_md.resubmit_flag == 1w0) 

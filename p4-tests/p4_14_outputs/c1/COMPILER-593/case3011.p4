@@ -2595,7 +2595,7 @@ control Paicines(inout headers hdr, inout metadata meta, inout standard_metadata
             hdr.Kapalua.Harmony  : ternary;
         }
         size = 1024;
-        @name(".Sidon") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Sidon;
     }
     apply {
         Kenton.apply();
@@ -2931,7 +2931,7 @@ control Ravena(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         size = 32768;
         default_action = Rehoboth();
-        @name(".Shelby") counters = direct_counter(CounterType.packets);
+        counters = Shelby;
     }
     apply {
         Stennett.apply();
@@ -3084,7 +3084,7 @@ control Royston(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 512;
         default_action = Rehoboth();
-        @name(".Penrose") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Penrose;
     }
     @name(".Leoma") table Leoma {
         actions = {

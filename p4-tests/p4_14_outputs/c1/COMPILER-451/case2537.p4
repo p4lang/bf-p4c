@@ -980,7 +980,7 @@ control Bicknell(inout headers hdr, inout metadata meta, inout standard_metadata
         }
         size = 512;
         default_action = Whitefish();
-        @name(".Marshall") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Marshall;
     }
     @name(".SnowLake") table SnowLake {
         actions = {
@@ -1181,7 +1181,7 @@ control Cement(inout headers hdr, inout metadata meta, inout standard_metadata_t
             hdr.Leetsdale.Wanatah : ternary;
         }
         size = 512;
-        @name(".Orrville") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Orrville;
     }
     apply {
         Kealia.apply();

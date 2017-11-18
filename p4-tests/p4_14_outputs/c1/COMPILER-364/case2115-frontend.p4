@@ -1551,7 +1551,7 @@ control Pekin(inout headers hdr, inout metadata meta, inout standard_metadata_t 
             hdr.Ickesburg.Thistle : ternary @name("Ickesburg.Thistle") ;
         }
         size = 512;
-        @name(".Southam") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Southam_0;
         default_action = NoAction();
     }
     @name(".Tekonsha") table Tekonsha_0 {
@@ -1663,7 +1663,7 @@ control Rehobeth(inout headers hdr, inout metadata meta, inout standard_metadata
             meta.Roxboro.Mabana  : ternary @name("Roxboro.Mabana") ;
         }
         size = 512;
-        @name(".Waiehu") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Waiehu_0;
         default_action = NoAction();
     }
     apply {

@@ -659,7 +659,7 @@ control Airmont(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.Filley.LaMoille  : ternary;
         }
         size = 512;
-        @name(".Hobergs") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Hobergs;
     }
     apply {
         Litroe.apply();
@@ -788,7 +788,7 @@ control Capitola(inout headers hdr, inout metadata meta, inout standard_metadata
             hdr.eg_intr_md.egress_qid[2:0] : exact;
         }
         size = 1024;
-        @name(".FlatLick") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = FlatLick;
     }
     apply {
         Lapoint.apply();
@@ -1031,7 +1031,7 @@ control Eckman(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         size = 512;
         default_action = Scherr();
-        @name(".Lansdowne") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Lansdowne;
     }
     apply {
         switch (Saltair.apply().action_run) {

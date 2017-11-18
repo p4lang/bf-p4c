@@ -2158,7 +2158,7 @@ control Lublin(inout headers hdr, inout metadata meta, inout standard_metadata_t
             hdr.Notus.Greer      : ternary @name("Notus.Greer") ;
         }
         size = 512;
-        @name(".Goldenrod") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Goldenrod_0;
         default_action = NoAction();
     }
     @name(".RedLevel") table RedLevel_0 {
@@ -2380,7 +2380,7 @@ control Neame(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         size = 512;
         default_action = Calabash_5();
-        @name(".Bayne") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Bayne_0;
     }
     @name(".Norco") table Norco_0 {
         actions = {

@@ -889,7 +889,7 @@ control Iberia(inout headers hdr, inout metadata meta, inout standard_metadata_t
             hdr.Nuremberg.Pierson: ternary;
         }
         size = 512;
-        @name(".BigPlain") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = BigPlain;
     }
     apply {
         WestEnd.apply();
@@ -1187,7 +1187,7 @@ control Osage(inout headers hdr, inout metadata meta, inout standard_metadata_t 
             meta.Seagrove.Idalia : ternary;
         }
         size = 512;
-        @name(".Terrell") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Terrell;
     }
     @name(".Hisle") table Hisle {
         support_timeout = true;

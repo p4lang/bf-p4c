@@ -789,7 +789,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.Ickesburg.Thistle : ternary @name("Ickesburg.Thistle") ;
         }
         size = 512;
-        @name(".Southam") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Southam_0;
         default_action = NoAction_38();
     }
     @name(".Tekonsha") table _Tekonsha_0 {
@@ -1184,7 +1184,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Roxboro.Mabana  : ternary @name("Roxboro.Mabana") ;
         }
         size = 512;
-        @name(".Waiehu") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Waiehu_0;
         default_action = NoAction_53();
     }
     @name(".Colonie") action _Colonie() {

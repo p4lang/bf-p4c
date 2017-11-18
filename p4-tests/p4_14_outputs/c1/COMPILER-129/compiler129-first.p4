@@ -4897,7 +4897,7 @@ control process_storm_control_stats(inout headers hdr, inout metadata meta, inou
             meta.ingress_metadata.ingress_port        : exact @name("ingress_metadata.ingress_port") ;
         }
         size = 8;
-        @name(".storm_control_counter") counters = direct_counter(CounterType.bytes);
+        counters = storm_control_counter;
         default_action = NoAction();
     }
     apply {

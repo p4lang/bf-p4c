@@ -826,7 +826,7 @@ control Connell(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Conneaut.Gurdon    : ternary @name("Conneaut.Gurdon") ;
         }
         size = 512;
-        @name(".Veguita") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Veguita_0;
         default_action = NoAction();
     }
     apply {
@@ -1645,7 +1645,7 @@ control Ledoux(inout headers hdr, inout metadata meta, inout standard_metadata_t
             hdr.BigPlain.Browndell: ternary @name("BigPlain.Browndell") ;
         }
         size = 512;
-        @name(".Patchogue") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Patchogue_0;
         default_action = NoAction();
     }
     apply {

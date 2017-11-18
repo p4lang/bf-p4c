@@ -802,7 +802,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.Skillman.Halbur: ternary @name("Skillman.Halbur") ;
         }
         size = 512;
-        @name(".Gastonia") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Gastonia_0;
         default_action = NoAction_39();
     }
     @name(".Grygla") action _Grygla(bit<16> Gordon, bit<8> Poipu, bit<1> Ambler, bit<1> Coronado, bit<1> Vieques, bit<1> Virgin) {
@@ -1187,7 +1187,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Nashoba.Iselin  : ternary @name("Nashoba.Iselin") ;
         }
         size = 512;
-        @name(".Trotwood") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Trotwood_0;
         default_action = NoAction_53();
     }
     @name(".Alnwick") action _Alnwick() {

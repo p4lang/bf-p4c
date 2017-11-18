@@ -1852,7 +1852,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             meta.l2_metadata.lkp_pkt_type: exact @name("l2_metadata.lkp_pkt_type") ;
         }
         size = 1024;
-        @name(".egress_bd_stats") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _egress_bd_stats_1;
         default_action = NoAction_111();
     }
     @name(".nop") action _nop_18() {
@@ -4235,7 +4235,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.ipv4_metadata.lkp_ipv4_da: exact @name("ipv4_metadata.lkp_ipv4_da") ;
         }
         size = 1024;
-        @name(".ipv4_multicast_route_s_g_stats") counters = direct_counter(CounterType.packets);
+        counters = _ipv4_multicast_route_s_g_stats;
         default_action = NoAction_167();
     }
     @name(".multicast_route_star_g_miss") action _multicast_route_star_g_miss_1() {
@@ -4268,7 +4268,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.ipv4_metadata.lkp_ipv4_da: exact @name("ipv4_metadata.lkp_ipv4_da") ;
         }
         size = 1024;
-        @name(".ipv4_multicast_route_star_g_stats") counters = direct_counter(CounterType.packets);
+        counters = _ipv4_multicast_route_star_g_stats;
         default_action = NoAction_168();
     }
     @name(".ipv6_multicast_route_s_g_stats") direct_counter(CounterType.packets) _ipv6_multicast_route_s_g_stats;
@@ -4334,7 +4334,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.ipv6_metadata.lkp_ipv6_da: exact @name("ipv6_metadata.lkp_ipv6_da") ;
         }
         size = 1024;
-        @name(".ipv6_multicast_route_s_g_stats") counters = direct_counter(CounterType.packets);
+        counters = _ipv6_multicast_route_s_g_stats;
         default_action = NoAction_171();
     }
     @name(".multicast_route_star_g_miss") action _multicast_route_star_g_miss_2() {
@@ -4367,7 +4367,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.ipv6_metadata.lkp_ipv6_da: exact @name("ipv6_metadata.lkp_ipv6_da") ;
         }
         size = 1024;
-        @name(".ipv6_multicast_route_star_g_stats") counters = direct_counter(CounterType.packets);
+        counters = _ipv6_multicast_route_star_g_stats;
         default_action = NoAction_172();
     }
     @name(".on_miss") action _on_miss_32() {
@@ -4572,7 +4572,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.meter_metadata.meter_index: exact @name("meter_metadata.meter_index") ;
         }
         size = 1024;
-        @name(".meter_stats") counters = direct_counter(CounterType.packets);
+        counters = _meter_stats_0;
         default_action = NoAction_182();
     }
     @min_width(32) @name(".ingress_bd_stats") counter(32w1024, CounterType.packets_and_bytes) _ingress_bd_stats_1;
@@ -4613,7 +4613,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.ig_intr_md.ingress_port   : exact @name("ig_intr_md.ingress_port") ;
         }
         size = 1024;
-        @name(".storm_control_stats") counters = direct_counter(CounterType.packets);
+        counters = _storm_control_stats_1;
         default_action = NoAction_185();
     }
     @name(".nop") action _nop_87() {

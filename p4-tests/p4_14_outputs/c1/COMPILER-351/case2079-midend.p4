@@ -1218,7 +1218,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Counce.Immokalee: ternary @name("Counce.Immokalee") ;
         }
         size = 512;
-        @name(".Barwick") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Barwick_0;
         default_action = NoAction_51();
     }
     @name(".Klawock") table _Klawock_0 {

@@ -1209,7 +1209,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.Heeia.Burnett   : ternary @name("Heeia.Burnett") ;
         }
         size = 1024;
-        @name(".Topsfield") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Topsfield_0;
         default_action = NoAction_60();
     }
     @name(".Glassboro") action _Glassboro(bit<16> Maiden, bit<8> Sudden, bit<1> Burmah, bit<1> Lesley, bit<1> LakePine, bit<1> Havana) {
@@ -1594,7 +1594,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 512;
         default_action = _Rosburg_6();
-        @name(".Wyanet") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Wyanet_0;
     }
     @name(".Montague") action _Montague() {
         hash<bit<32>, bit<32>, tuple_1, bit<64>>(meta.Coalton.Durant, HashAlgorithm.crc32, 32w0, { hdr.Heeia.Bairoa, hdr.Heeia.Burnett, hdr.Heeia.Harmony, hdr.Heeia.Brundage, hdr.Heeia.Sarepta }, 64w4294967296);
@@ -2846,7 +2846,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 32768;
         default_action = _Rosburg_39();
-        @name(".Gypsum") counters = direct_counter(CounterType.packets);
+        counters = _Gypsum_0;
     }
     @name(".Pricedale") table _Pricedale_0 {
         actions = {

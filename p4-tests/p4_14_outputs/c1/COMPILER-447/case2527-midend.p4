@@ -873,7 +873,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.Leetsdale.Wanatah : ternary @name("Leetsdale.Wanatah") ;
         }
         size = 512;
-        @name(".Cement") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Cement_0;
         default_action = NoAction_38();
     }
     @name(".Grasston") table _Grasston_0 {
@@ -1222,7 +1222,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 512;
         default_action = _Wetumpka_2();
-        @name(".Moody") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Moody_0;
     }
     @name(".Claiborne") action _Claiborne() {
         hash<bit<32>, bit<32>, tuple_1, bit<64>>(meta.Speed.Bellville, HashAlgorithm.crc32, 32w0, { hdr.Leetsdale.Yardley, hdr.Leetsdale.Wanatah, hdr.Leetsdale.Grantfork, hdr.Leetsdale.Walcott, hdr.Leetsdale.Flippen }, 64w4294967296);

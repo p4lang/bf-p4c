@@ -1760,7 +1760,7 @@ control Fiskdale(inout headers hdr, inout metadata meta, inout standard_metadata
             hdr.Heeia.Burnett   : ternary @name("Heeia.Burnett") ;
         }
         size = 1024;
-        @name(".Topsfield") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Topsfield_0;
         default_action = NoAction();
     }
     apply {
@@ -2152,7 +2152,7 @@ control Hurst(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         size = 512;
         default_action = Rosburg_6();
-        @name(".Wyanet") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Wyanet_0;
     }
     apply {
         switch (Onida_0.apply().action_run) {
@@ -2306,7 +2306,7 @@ control Linganore(inout headers hdr, inout metadata meta, inout standard_metadat
         }
         size = 32768;
         default_action = Rosburg_8();
-        @name(".Gypsum") counters = direct_counter(CounterType.packets);
+        counters = Gypsum_0;
     }
     @name(".Pricedale") table Pricedale_0 {
         actions = {

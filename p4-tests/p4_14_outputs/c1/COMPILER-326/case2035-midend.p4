@@ -706,7 +706,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<1> _Addison_tmp_1;
     bit<1> _Addison_tmp_2;
     bool _BigPoint_tmp_0;
-    bit<24> key_0;
+    bit<24> key_42;
     @name("NoAction") action NoAction_39() {
     }
     @name("NoAction") action NoAction_40() {
@@ -1288,7 +1288,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Egypt.Omemee    : ternary @name("Egypt.Omemee") ;
         }
         size = 512;
-        @name(".Ceiba") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Ceiba_0;
         default_action = NoAction_56();
     }
     @name(".NewSite") action _NewSite() {
@@ -1642,7 +1642,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @defaultonly _Spanaway();
         }
         key = {
-            key_0              : exact @name("Egypt.Salduro & 16711679") ;
+            key_42             : exact @name("Egypt.Salduro & 16711679") ;
             meta.Egypt.HydePark: exact @name("Egypt.HydePark") ;
             meta.Egypt.Sudden  : exact @name("Egypt.Sudden") ;
         }
@@ -1831,7 +1831,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         _BigPoint_tmp_0 = false;
     }
     @hidden action act_1() {
-        key_0 = meta.Egypt.Salduro & 24w0xfeffff;
+        key_42 = meta.Egypt.Salduro & 24w0xfeffff;
     }
     @hidden table tbl_act {
         actions = {

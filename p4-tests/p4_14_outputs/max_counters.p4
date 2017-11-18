@@ -51,7 +51,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         key = {
             hdr.data.f1: exact;
         }
-        @name(".cnt") counters = direct_counter(CounterType.packets);
+        counters = cnt;
     }
     @name(".c3_4") action c3_4_0(bit<8> val3, bit<8> val4, bit<9> port) {
         cnt3.count();
@@ -67,7 +67,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.f2: exact;
         }
         size = 1024;
-        @name(".cnt3") counters = direct_counter(CounterType.packets);
+        counters = cnt3;
     }
     apply {
         test1.apply();

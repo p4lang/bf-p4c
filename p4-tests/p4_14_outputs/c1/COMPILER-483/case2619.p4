@@ -1282,7 +1282,7 @@ control Kenyon(inout headers hdr, inout metadata meta, inout standard_metadata_t
             hdr.Rankin.Helen     : ternary;
         }
         size = 512;
-        @name(".Frankfort") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Frankfort;
     }
     apply {
         Lamkin.apply();
@@ -1308,7 +1308,7 @@ control Knoke(inout headers hdr, inout metadata meta, inout standard_metadata_t 
             hdr.eg_intr_md.egress_qid[2:0] : exact;
         }
         size = 1024;
-        @name(".Redvale") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Redvale;
     }
     apply {
         Bains.apply();
@@ -1535,7 +1535,7 @@ control Luverne(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 512;
         default_action = LasLomas();
-        @name(".Pathfork") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Pathfork;
     }
     apply {
         switch (Telephone.apply().action_run) {

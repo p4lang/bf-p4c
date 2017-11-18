@@ -1185,7 +1185,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.Notus.Greer      : ternary @name("Notus.Greer") ;
         }
         size = 512;
-        @name(".Goldenrod") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Goldenrod_0;
         default_action = NoAction_60();
     }
     @name(".RedLevel") table _RedLevel_0 {
@@ -1521,7 +1521,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 512;
         default_action = _Calabash_4();
-        @name(".Bayne") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Bayne_0;
     }
     @name(".Norco") table _Norco_0 {
         actions = {

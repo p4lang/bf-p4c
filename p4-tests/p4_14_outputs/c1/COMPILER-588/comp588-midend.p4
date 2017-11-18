@@ -1229,7 +1229,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.Elkader.Staunton            : ternary @name("Elkader.Staunton") ;
         }
         size = 1024;
-        @name(".Malesus") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Malesus_0;
         default_action = NoAction_61();
     }
     @name(".Gibbstown") table _Gibbstown_0 {
@@ -1628,7 +1628,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 512;
         default_action = _ViewPark_6();
-        @name(".Commack") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Commack_0;
     }
     @name(".Hookdale") action _Hookdale() {
         hash<bit<32>, bit<32>, tuple_1, bit<64>>(meta.Paxico.Gotham, HashAlgorithm.crc32, 32w0, { hdr.Elkader.McFaddin, hdr.Elkader.Staunton, hdr.Elkader.Nashua, hdr.Elkader.BigWater, hdr.Elkader.Toklat }, 64w4294967296);
@@ -2829,7 +2829,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 32768;
         default_action = _ViewPark_39();
-        @name(".Newsoms") counters = direct_counter(CounterType.packets);
+        counters = _Newsoms_0;
     }
     @name(".Statham") table _Statham_0 {
         actions = {

@@ -959,7 +959,7 @@ control Bicknell(inout headers hdr, inout metadata meta, inout standard_metadata
         }
         size = 512;
         default_action = Whitefish_2();
-        @name(".Marshall") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Marshall_0;
     }
     @name(".SnowLake") table SnowLake_0 {
         actions = {
@@ -1143,7 +1143,7 @@ control Cement(inout headers hdr, inout metadata meta, inout standard_metadata_t
             hdr.Leetsdale.Wanatah : ternary @name("Leetsdale.Wanatah") ;
         }
         size = 512;
-        @name(".Orrville") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Orrville_0;
         default_action = NoAction();
     }
     apply {

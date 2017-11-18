@@ -1549,7 +1549,7 @@ control Drifton(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.Frontenac.Glouster          : ternary @name("Frontenac.Glouster") ;
         }
         size = 1024;
-        @name(".Kaplan") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Kaplan_0;
         default_action = NoAction();
     }
     @name(".Rockport") table Rockport_0 {
@@ -2130,7 +2130,7 @@ control Gurdon(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         size = 32768;
         default_action = Nanson_8();
-        @name(".Hiland") counters = direct_counter(CounterType.packets);
+        counters = Hiland_0;
     }
     apply {
         Covina_0.apply();
@@ -3058,7 +3058,7 @@ control Wyanet(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         size = 512;
         default_action = Nanson_12();
-        @name(".Yorkville") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Yorkville_0;
     }
     @name(".Chambers") table Chambers_0 {
         actions = {

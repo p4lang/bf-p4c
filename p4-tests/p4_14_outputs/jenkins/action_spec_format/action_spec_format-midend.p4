@@ -342,7 +342,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.dstAddr: exact @name("ipv4.dstAddr") ;
         }
         default_action = nop_0();
-        @name(".exm_cntr1") counters = direct_counter(CounterType.packets);
+        counters = exm_cntr1;
     }
     @name(".next_hop_ipv4_stats_2") action next_hop_ipv4_stats_2(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac, bit<32> stat_idx) {
         exm_meter2.read(hdr.ipv4.diffserv);
@@ -412,7 +412,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.dstAddr: exact @name("ipv4.dstAddr") ;
         }
         default_action = nop_8();
-        @name(".tcam_cntr1") counters = direct_counter(CounterType.packets);
+        counters = tcam_cntr1;
     }
     @name(".tcam_next_hop_ipv4_stats_2") action tcam_next_hop_ipv4_stats_2(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac, bit<32> stat_idx) {
         tcam_meter2.read(hdr.ipv4.diffserv);

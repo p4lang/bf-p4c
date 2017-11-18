@@ -753,7 +753,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             hdr.eg_intr_md.egress_qid[2:0] : exact @name("eg_intr_md.egress_qid[2:0]") ;
         }
         size = 1024;
-        @name(".Redvale") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Redvale_0;
         default_action = NoAction_39();
     }
     apply {
@@ -945,7 +945,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.Rankin.Helen     : ternary @name("Rankin.Helen") ;
         }
         size = 512;
-        @name(".Frankfort") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Frankfort_0;
         default_action = NoAction_42();
     }
     @name(".LasLomas") action _LasLomas() {
@@ -1287,7 +1287,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 512;
         default_action = _LasLomas_2();
-        @name(".Pathfork") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Pathfork_0;
     }
     @name(".Lackey") action _Lackey() {
         hash<bit<32>, bit<32>, tuple_1, bit<64>>(meta.Summit.Kalkaska, HashAlgorithm.crc32, 32w0, { hdr.Rankin.Lewistown, hdr.Rankin.Helen, hdr.Rankin.Weissert, hdr.Rankin.Assinippi, hdr.Rankin.Almont }, 64w4294967296);

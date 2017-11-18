@@ -897,7 +897,7 @@ control Grassflat(inout headers hdr, inout metadata meta, inout standard_metadat
             hdr.Gratis.Simla    : ternary;
         }
         size = 512;
-        @name(".Lahaina") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Lahaina;
     }
     apply {
         RockHall.apply();
@@ -1274,7 +1274,7 @@ control Lamona(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         size = 512;
         default_action = Norland();
-        @name(".Maltby") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Maltby;
     }
     @name(".Vandling") table Vandling {
         support_timeout = true;

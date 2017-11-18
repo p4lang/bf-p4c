@@ -319,7 +319,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.udp.hdr_length     : ternary;
         }
         size = 2048;
-        @name(".dummy_cntr") counters = direct_counter(CounterType.packets);
+        counters = dummy_cntr;
     }
     apply {
         idle_stats_tbl.apply();

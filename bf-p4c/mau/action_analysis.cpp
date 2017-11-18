@@ -451,7 +451,7 @@ bool ActionAnalysis::init_simple_alignment(const ActionParam &read,
     } else if (read.type == ActionParam::CONSTANT) {
         cont_action.constant_alignment.add_alignment(write_bits, read_bits);
         if (!cont_action.constant_set) {
-            cont_action.constant_used = read.expr->to<IR::Constant>()->asInt();
+            cont_action.constant_used = read.expr->to<IR::Constant>()->asLong();
             cont_action.constant_set = true;
         }
     }

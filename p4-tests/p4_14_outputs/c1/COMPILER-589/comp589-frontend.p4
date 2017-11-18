@@ -815,7 +815,7 @@ control Anchorage(inout headers hdr, inout metadata meta, inout standard_metadat
         }
         size = 32768;
         default_action = Ewing_2();
-        @name(".Fallis") counters = direct_counter(CounterType.packets);
+        counters = Fallis_0;
     }
     @name(".FifeLake") table FifeLake_0 {
         actions = {
@@ -1914,7 +1914,7 @@ control Hatfield(inout headers hdr, inout metadata meta, inout standard_metadata
             hdr.Dixboro.Scottdale           : ternary @name("Dixboro.Scottdale") ;
         }
         size = 1024;
-        @name(".Seaside") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Seaside_0;
         default_action = NoAction();
     }
     @name(".Wadley") table Wadley_0 {
@@ -1995,7 +1995,7 @@ control Henry(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         size = 512;
         default_action = Ewing_9();
-        @name(".Carlsbad") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Carlsbad_0;
     }
     @name(".Motley") table Motley_0 {
         support_timeout = true;

@@ -2454,7 +2454,7 @@ control Naalehu(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.Issaquah.Summit : ternary @name("Issaquah.Summit") ;
         }
         size = 1024;
-        @name(".Traverse") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Traverse;
         default_action = NoAction();
     }
     apply {
@@ -2750,7 +2750,7 @@ control Othello(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 512;
         default_action = Odebolt();
-        @name(".Meeker") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Meeker;
     }
     @name(".Opelousas") table Opelousas {
         actions = {
@@ -3293,7 +3293,7 @@ control Rowden(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         size = 32768;
         default_action = Odebolt();
-        @name(".LakeFork") counters = direct_counter(CounterType.packets);
+        counters = LakeFork;
     }
     @name(".Motley") table Motley {
         actions = {

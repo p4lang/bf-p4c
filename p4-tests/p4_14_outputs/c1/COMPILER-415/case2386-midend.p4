@@ -902,7 +902,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.BigPlain.Browndell: ternary @name("BigPlain.Browndell") ;
         }
         size = 512;
-        @name(".Patchogue") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Patchogue_0;
         default_action = NoAction_41();
     }
     @name(".Blackwood") action _Blackwood() {
@@ -1276,7 +1276,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Conneaut.Gurdon    : ternary @name("Conneaut.Gurdon") ;
         }
         size = 512;
-        @name(".Veguita") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Veguita_0;
         default_action = NoAction_54();
     }
     @name(".Mentone") action _Mentone() {

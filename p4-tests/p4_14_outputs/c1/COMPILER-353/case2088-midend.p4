@@ -890,7 +890,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.Willette.Toulon : ternary @name("Willette.Toulon") ;
         }
         size = 512;
-        @name(".Stuttgart") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Stuttgart_0;
         default_action = NoAction_42();
     }
     @name(".DosPalos") action _DosPalos() {
@@ -1273,7 +1273,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Goodlett.Greendale: ternary @name("Goodlett.Greendale") ;
         }
         size = 512;
-        @name(".Holden") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Holden_0;
         default_action = NoAction_56();
     }
     @name(".Longdale") action _Longdale() {

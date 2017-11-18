@@ -1027,7 +1027,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         size = 32768;
         default_action = _Sultana_1();
-        @name(".Boistfort") counters = direct_counter(CounterType.packets);
+        counters = _Boistfort_0;
     }
     @name(".Seaforth") table _Seaforth_0 {
         actions = {
@@ -1275,7 +1275,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.Eclectic.Felton   : ternary @name("Eclectic.Felton") ;
         }
         size = 1024;
-        @name(".Paxico") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Paxico_0;
         default_action = NoAction_61();
     }
     @name(".Ririe") table _Ririe_0 {
@@ -1634,7 +1634,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 512;
         default_action = _Sultana_7();
-        @name(".Hernandez") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Hernandez_0;
     }
     @name(".Pinecrest") table _Pinecrest_0 {
         actions = {

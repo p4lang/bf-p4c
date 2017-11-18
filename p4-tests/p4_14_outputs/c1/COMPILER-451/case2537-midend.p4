@@ -889,7 +889,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.Leetsdale.Wanatah : ternary @name("Leetsdale.Wanatah") ;
         }
         size = 512;
-        @name(".Orrville") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Orrville_0;
         default_action = NoAction_40();
     }
     @name(".Whitefish") action _Whitefish() {
@@ -1216,7 +1216,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 512;
         default_action = _Whitefish_2();
-        @name(".Marshall") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Marshall_0;
     }
     @name(".SnowLake") table _SnowLake_0 {
         actions = {

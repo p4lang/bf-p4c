@@ -621,7 +621,7 @@ control Benwood(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.Cricket.Flynn  : ternary;
         }
         size = 512;
-        @name(".Hilbert") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Hilbert;
     }
     @name(".Wadley") table Wadley {
         actions = {
@@ -1692,7 +1692,7 @@ control Munger(inout headers hdr, inout metadata meta, inout standard_metadata_t
             meta.Timken.Dorset   : ternary;
         }
         size = 512;
-        @name(".HillCity") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = HillCity;
     }
     apply {
         switch (Umpire.apply().action_run) {

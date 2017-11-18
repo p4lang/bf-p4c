@@ -906,7 +906,7 @@ control Fieldon(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.eg_intr_md.egress_qid[2:0] : exact @name("eg_intr_md.egress_qid[2:0]") ;
         }
         size = 1024;
-        @name(".Stidham") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Stidham;
         default_action = NoAction();
     }
     apply {
@@ -2140,7 +2140,7 @@ control Terral(inout headers hdr, inout metadata meta, inout standard_metadata_t
             hdr.Bavaria.Govan  : ternary @name("Bavaria.Govan") ;
         }
         size = 512;
-        @name(".Ardsley") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Ardsley;
         default_action = NoAction();
     }
     apply {
@@ -2218,7 +2218,7 @@ control Urbanette(inout headers hdr, inout metadata meta, inout standard_metadat
         }
         size = 512;
         default_action = Shoshone();
-        @name(".Mekoryuk") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Mekoryuk;
     }
     apply {
         switch (Johnsburg.apply().action_run) {

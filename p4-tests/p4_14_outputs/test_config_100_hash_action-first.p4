@@ -185,7 +185,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         key = {
             meta.meta.field_17: exact @name("meta.field_17") ;
         }
-        @name(".extra_stats") counters = direct_counter(CounterType.bytes);
+        counters = extra_stats;
         default_action = NoAction();
     }
     apply {

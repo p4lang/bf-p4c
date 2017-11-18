@@ -627,7 +627,7 @@ control BlackOak(inout headers hdr, inout metadata meta, inout standard_metadata
         }
         size = 512;
         default_action = Wentworth_1();
-        @name(".Hallowell") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Hallowell_0;
     }
     @name(".Woodridge") table Woodridge_0 {
         actions = {
@@ -1258,7 +1258,7 @@ control Lanyon(inout headers hdr, inout metadata meta, inout standard_metadata_t
             hdr.Thalia.Lamboglia: ternary @name("Thalia.Lamboglia") ;
         }
         size = 512;
-        @name(".Sutherlin") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Sutherlin_0;
         default_action = NoAction();
     }
     @name(".Umpire") table Umpire_0 {
@@ -1855,7 +1855,7 @@ control Thermal(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.eg_intr_md.egress_qid[2:0] : exact @name("eg_intr_md.egress_qid[2:0]") ;
         }
         size = 1024;
-        @name(".Crump") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Crump_0;
         default_action = NoAction();
     }
     apply {

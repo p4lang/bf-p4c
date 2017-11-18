@@ -887,7 +887,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.Gratis.Simla    : ternary @name("Gratis.Simla") ;
         }
         size = 512;
-        @name(".Lahaina") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Lahaina_0;
         default_action = NoAction_39();
     }
     @name(".Holladay") action _Holladay(bit<16> Westwego) {
@@ -1249,7 +1249,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 512;
         default_action = _Norland_2();
-        @name(".Maltby") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _Maltby_0;
     }
     @name(".Vandling") table _Vandling_0 {
         support_timeout = true;

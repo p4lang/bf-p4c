@@ -832,7 +832,7 @@ control Etter(inout headers hdr, inout metadata meta, inout standard_metadata_t 
         }
         size = 512;
         default_action = Onley();
-        @name(".Lovett") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Lovett;
     }
     @name(".SnowLake") table SnowLake {
         support_timeout = true;
@@ -2032,7 +2032,7 @@ control Waukesha(inout headers hdr, inout metadata meta, inout standard_metadata
             hdr.Leetsdale.Wanatah : ternary;
         }
         size = 512;
-        @name(".Owanka") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Owanka;
     }
     @name(".Faulkton") table Faulkton {
         actions = {

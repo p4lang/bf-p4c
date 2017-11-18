@@ -1551,7 +1551,7 @@ control Retrop(inout headers hdr, inout metadata meta, inout standard_metadata_t
             meta.Counce.Immokalee: ternary @name("Counce.Immokalee") ;
         }
         size = 512;
-        @name(".Barwick") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Barwick_0;
         default_action = NoAction();
     }
     @name(".Klawock") table Klawock_0 {

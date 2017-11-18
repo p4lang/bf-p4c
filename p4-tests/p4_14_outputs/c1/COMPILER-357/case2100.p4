@@ -1182,7 +1182,7 @@ control Manning(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Nashoba.Iselin  : ternary;
         }
         size = 512;
-        @name(".Trotwood") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Trotwood;
     }
     apply {
         switch (Shamokin.apply().action_run) {
@@ -1643,7 +1643,7 @@ control Sutton(inout headers hdr, inout metadata meta, inout standard_metadata_t
             hdr.Skillman.Halbur: ternary;
         }
         size = 512;
-        @name(".Gastonia") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = Gastonia;
     }
     apply {
         Wilmore.apply();
