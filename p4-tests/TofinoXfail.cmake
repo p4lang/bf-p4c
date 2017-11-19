@@ -44,7 +44,6 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     extensions/p4_tests/p4_14/adb_shared2.p4
     # potential STF bug in reading mask constants
     extensions/p4_tests/p4_14/adjust_instr6.p4
-    extensions/p4_tests/p4_14/sful_1bit.p4
     )
 
 endif() # HARLYN_STF
@@ -1007,14 +1006,9 @@ endif() # ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET
 if (HARLYN_STF AND NOT ENABLE_STF2PTF)
   p4c_add_xfail_reason("tofino"
     ".* expected packet on port .* not seen"
-    extensions/p4_tests/p4_14/meter_test1.p4
     extensions/p4_tests/p4_16/multiple_apply1.p4
     extensions/p4_tests/p4_16/cast_widening_set.p4
     extensions/p4_tests/p4_16/cast_narrowing_set.p4
     extensions/p4_tests/p4_16/container_dependency.p4
-    )
-  p4c_add_xfail_reason("tofino"
-    "Mau::get_color_bus: Nothing drove bus"
-    extensions/p4_tests/p4_14/meter_test1.p4
     )
 endif()  # STF FAILURE IN TNA

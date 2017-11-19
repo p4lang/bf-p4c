@@ -188,7 +188,7 @@ template<class REGS> void StatefulTable::write_merge_regs(REGS &regs, MatchTable
     auto &merge = regs.rams.match.merge;
     assert(args.size() <= 2);
     unsigned zero_bits = ceil_log2(format->size);
-    unsigned ptr_bits = 0, inst_bits;
+    unsigned ptr_bits = 0, inst_bits = 0;
     Format::Field *ptr_field = nullptr;
     if (args.size() <= 1) { // direct access
         if (match->to<ExactMatchTable>()) {
@@ -209,10 +209,10 @@ template<class REGS> void StatefulTable::write_merge_regs(REGS &regs, MatchTable
         stateful_adr_default |= (1U << METER_PER_FLOW_ENABLE_START_BIT);
     if (args.size() > 0) {
         if (args[0].type == Call::Arg::Field) {
-            inst_bits = args[1].field()->size;
+            inst_bits = args[0].field()->size;
             if (ptr_field)
                 merge.mau_meter_adr_type_position[type][bus] =
-                    args[0].field()->bit(0) - ptr_field->bit(0);
+                    args[0].field()->bit(0) - ptr_field->bit(0) - 1;
         } else if (args[0].type == Call::Arg::Name) {
             stateful_adr_default |=
                 actions->action(args[1].name())->code << (METER_TYPE_START_BIT + 1);

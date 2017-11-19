@@ -1727,9 +1727,13 @@ void Table::canon_field_list(json::vector &field_list) {
 
 void Table::get_cjson_source(const std::string &field_name,
 			     const Table::Actions::Action *act,
-		             std::string &source, std::string &imm_name) {
+		             std::string &source, std::string &imm_name,
+                             int &start_bit) {
+    // FIXME -- these should be based on the USES of the field in the table (as indexes
+    // FIXME -- to attached tables), and not on the name of the field.
 
     source = act ? "" : "spec";
+    start_bit = 0;
     if (field_name == "version")
         source = "version";
     else if (field_name == "immediate") {
@@ -1745,8 +1749,13 @@ void Table::get_cjson_source(const std::string &field_name,
         source = "stful_ptr";
     else if ((field_name == "meter_pfe") && get_selector())
         source = "sel_ptr";
-    else if ((field_name == "meter_pfe") && get_stateful())
+        // FIXME start_bit = ??
+    else if ((field_name == "meter_pfe") && get_stateful()) {
         source = "stful_ptr";
+        start_bit = METER_PER_FLOW_ENABLE_START_BIT;
+    } else if ((field_name == "meter_type") && get_stateful()) {
+        source = "stful_ptr";
+        start_bit = METER_TYPE_START_BIT; }
 }
 
 void Table::add_field_to_pack_format(json::vector &field_list, int basebit, std::string name,
@@ -1773,29 +1782,31 @@ void Table::add_field_to_pack_format(json::vector &field_list, int basebit, std:
             }
 
             if (a->second.is_constant)
-                output_field_to_pack_format(field_list, basebit, a->first, "constant",
+                output_field_to_pack_format(field_list, basebit, a->first, "constant", 0,
                                             newField, a->second.value);
             else
-                output_field_to_pack_format(field_list, basebit, a->first, "spec", newField);
+                output_field_to_pack_format(field_list, basebit, a->first, "spec", 0, newField);
         }
     }
 
     // Determine the source of the field. If called recursively for an alias,
     // act will be a nullptr
     std::string source = "", immediate_name = "";
-    get_cjson_source(name, act, source, immediate_name);
+    int start_bit;
+    get_cjson_source(name, act, source, immediate_name, start_bit);
 
     if (field.flags == Format::Field::ZERO)
         source = "zero";
 
     if (source != "")
-        output_field_to_pack_format(field_list, basebit, name, source, field);
+        output_field_to_pack_format(field_list, basebit, name, source, start_bit, field);
 }
 
 void Table::output_field_to_pack_format(json::vector &field_list,
                                         int basebit,
                                         std::string name,
                                         std::string source,
+                                        int start_bit,
                                         const Table::Format::Field &field,
                                         unsigned value)
 {
@@ -1827,7 +1838,7 @@ void Table::output_field_to_pack_format(json::vector &field_list,
     int lobit = 0;
     for (auto &bits : field.bits) {
         json::map field_entry;
-        field_entry["start_bit"] = lobit;
+        field_entry["start_bit"] = lobit + start_bit;
         if (this->to<TernaryIndirectTable>() || this->to<ExactMatchTable>()) {
             auto selector = get_selector();
             if (selector && selector->get_per_flow_enable_param() == name)

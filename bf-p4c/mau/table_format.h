@@ -38,7 +38,8 @@ struct TableFormat {
     static constexpr int MID_BYTE_HI = 1;
     static constexpr int MID_BYTE_VERS = 3;
 
-    enum type_t {MATCH, ACTION, IMMEDIATE, VERS, COUNTER, METER, INDIRECT_ACTION, ENTRY_TYPES };
+    enum type_t { MATCH, ACTION, IMMEDIATE, VERS, COUNTER, METER, METER_TYPE,
+                  INDIRECT_ACTION, ENTRY_TYPES };
 
     struct Use {
         struct match_group_use {

@@ -46,7 +46,8 @@ header egress_intrinsic_metadata_from_parser_aux_t {
     bit<48> egress_global_tstamp;
     bit<32> egress_global_ver;
     bit<16> egress_parser_err;
-    bit<8>  clone_src;
+    bit<4>  clone_digest_id;
+    bit<4>  clone_src;
     bit<8>  coalesce_sample_count;
 }
 
@@ -195,7 +196,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = NoAction();
     }
     apply {
-        if (hdr.eg_intr_md_from_parser_aux.clone_src == 8w0) 
+        if (hdr.eg_intr_md_from_parser_aux.clone_src == 4w0) 
             egress_mirror_0.apply();
         if (!hdr.vlan_tag.isValid()) 
             change_eth_src_0.apply();

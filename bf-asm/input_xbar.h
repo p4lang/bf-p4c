@@ -88,7 +88,7 @@ public:
     unsigned tcam_width();
     int tcam_byte_group(int n);
     int tcam_word_group(int n);
-    const std::map<unsigned, std::map<int, HashCol>>& get_hash_tables() { return hash_tables; } 
+    const std::map<unsigned, std::map<int, HashCol>>& get_hash_tables() { return hash_tables; }
     Phv::Ref get_group_bit(Group grp, unsigned bit) {
         if (groups.count(grp))
             for (auto &in : groups.at(grp))
@@ -99,12 +99,11 @@ public:
         for (auto &g: groups) {
             for (auto &p: g.second) {
                 if (bit <= p.hi && bit >= p.lo)
-                    return p.what.name(); } } 
+                    return p.what.name(); } }
         return ""; }
-    //FIXME
-    unsigned get_seed_bit(unsigned group, unsigned bit) { 
-        if (group < hash_groups.size())
-            return ((hash_groups[group].seed >> bit) & 0x1);
+    unsigned get_seed_bit(unsigned group, unsigned bit) const {
+        if (hash_groups.count(group))
+            return ((hash_groups.at(group).seed >> bit) & 0x1);
         return 0; }
 
     class all_iter {

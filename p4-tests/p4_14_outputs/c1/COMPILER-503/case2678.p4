@@ -297,7 +297,8 @@ header egress_intrinsic_metadata_from_parser_aux_t {
     bit<48> egress_global_tstamp;
     bit<32> egress_global_ver;
     bit<16> egress_parser_err;
-    bit<8>  clone_src;
+    bit<4>  clone_digest_id;
+    bit<4>  clone_src;
     bit<8>  coalesce_sample_count;
 }
 

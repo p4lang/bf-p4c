@@ -414,6 +414,9 @@ class VisitAttached : public Inspector {
         }
         interpret_stateful(salu, meter_addr_name, register_set, meter_addr_bits_needed,
                            &(layout.meter_addr_bits));
+        if (salu->instruction.size() > 1) {
+            layout.meter_type_bits = salu->instruction.size() > 2 ? 2 : 1;
+            layout.overhead_bits += layout.meter_type_bits; }
         return false;
     }
     bool preorder(const IR::MAU::Selector *as) override {

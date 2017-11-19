@@ -318,7 +318,9 @@ const IR::MAU::Instruction *CreateSaluInstruction::createInstruction() {
             BUG_CHECK(k, "non-const writeback in 1-bit instruction?");
             opcode = k->value ? "set_bit" : "clr_bit";
             if (output_cmpl) opcode += 'c';
-            rv = output = new IR::MAU::Instruction(opcode);
+            onebit = new IR::MAU::Instruction(opcode);
+            rv = output = new IR::MAU::Instruction("output",
+                { new IR::MAU::SaluReg(operands.at(0)->type, "alu_lo") } );
             break; }
         if (predicate)
             operands.insert(operands.begin(), predicate);
@@ -329,7 +331,9 @@ const IR::MAU::Instruction *CreateSaluInstruction::createInstruction() {
         if (operands.at(0)->type->width_bits() == 1) {
             BUG_CHECK(!predicate, "can't have predicate on 1-bit instruction");
             opcode = output_cmpl ? "read_bitc" : "read_bit";
-            rv = output = new IR::MAU::Instruction(opcode);
+            onebit = new IR::MAU::Instruction(opcode);
+            rv = output = new IR::MAU::Instruction("output",
+                { new IR::MAU::SaluReg(operands.at(0)->type, "alu_lo") } );
             break;
         } else if (auto k = operands.at(0)->to<IR::Constant>()) {
             if (k->value == 0) {
@@ -379,6 +383,7 @@ bool CreateSaluInstruction::preorder(const IR::Declaration_Instance *di) {
     action = new IR::MAU::SaluAction(di->srcInfo, di->name);
     salu->instruction.addUnique(di->name, action);
     predicate = nullptr;
+    onebit = nullptr;
     output = nullptr;
     math = IR::MAU::StatefulAlu::MathUnit();
     math_function = nullptr;
@@ -388,6 +393,9 @@ bool CreateSaluInstruction::preorder(const IR::Declaration_Instance *di) {
     if (cmp_instr.size() > 2)
         error("%s: register action %s needs %d comparisons; only 2 possible",
               di->srcInfo, di->name, cmp_instr.size());
+    if (onebit) {
+        action->action.push_back(onebit);
+        LOG3("  add " << *action->action.back()); }
     if (output) {
         action->action.push_back(output);
         LOG3("  add " << *action->action.back()); }
@@ -400,6 +408,7 @@ bool CreateSaluInstruction::preorder(const IR::Declaration_Instance *di) {
         error("%s: math unit requires math_input", di->srcInfo);
     action = nullptr;
     predicate = nullptr;
+    onebit = nullptr;
     output = nullptr;
     math = IR::MAU::StatefulAlu::MathUnit();
     math_function = nullptr;

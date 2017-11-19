@@ -269,6 +269,11 @@ bool TableFormat::allocate_all_indirect_ptrs() {
                      return false;
              }
 
+             if ((total = layout_option.layout.meter_type_bits) != 0) {
+                 if (!allocate_indirect_ptr(total, METER_TYPE, group, i))
+                     return false;
+             }
+
              if ((total = layout_option.layout.indirect_action_addr_bits) != 0) {
                  if (!allocate_indirect_ptr(total, INDIRECT_ACTION, group, i))
                      return false;

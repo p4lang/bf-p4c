@@ -100,6 +100,7 @@ class Table : BFN::Unit {
         int             action_data_bytes_in_overhead = 0;
         int             overhead_bits = 0;
         int             meter_addr_bits = 0;
+        int             meter_type_bits = 0;
         int             counter_addr_bits = 0;
         int             indirect_action_addr_bits = 0;
         int             partition_bits = 0;
@@ -330,8 +331,6 @@ class Meter : Synth2Port {
 /** Configuration for a stateful table -- a register object (for the memory) plus
  * the associated stateful alu instructions and config */
 class StatefulAlu : Synth2Port {
-    ID          layout = {};
-    bool        signed_ = false;
     // The single register extern used in this stateful alu
     Declaration_Instance                                reg;
     bool                                                dual = false;  // dual mode

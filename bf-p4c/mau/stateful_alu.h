@@ -37,6 +37,7 @@ class CreateSaluInstruction : public Inspector {
     std::vector<const IR::Expression *>         operands, pred_operands;
     std::vector<const IR::MAU::Instruction *>   cmp_instr;
     const IR::Expression        *predicate;
+    const IR::MAU::Instruction  *onebit;        // the single 1-bit alu op
     const IR::MAU::Instruction  *output;
     bool                        output_cmpl = false;
     IR::MAU::StatefulAlu::MathUnit      math;

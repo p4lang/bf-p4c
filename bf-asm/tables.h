@@ -506,7 +506,7 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     // Use the bits specified in field, offset by the base bit.
     // If the field is a constant, output a const_tuple map, including the specified value.
     void output_field_to_pack_format(json::vector &field_list, int basebit,
-                                     std::string name, std::string source,
+                                     std::string name, std::string source, int start_bit,
                                      const Table::Format::Field &field,
                                      unsigned value = 0);
     void add_zero_padding_fields(Table::Format *format,
@@ -514,7 +514,7 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
                                  unsigned format_width = 64);
     void get_cjson_source(const std::string &field_name,
 			     const Table::Actions::Action *act,
-		             std::string &source, std::string &imm_name); 
+		             std::string &source, std::string &imm_name, int &start_bit); 
     // Result physical buses should be setup for
     // Exact/Hash/MatchwithNoKey/ATCAM/Ternary tables
     void add_result_physical_buses(json::map &stage_tbl);

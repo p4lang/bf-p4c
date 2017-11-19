@@ -774,6 +774,8 @@ cstring format_name(int type, bool pfe_bit = false) {
         else
             return "meter_addr";
     }
+    if (type == TableFormat::METER_TYPE)
+        return "meter_type";
     if (type == TableFormat::INDIRECT_ACTION)
         return "action_addr";
     return "";
@@ -952,7 +954,7 @@ class MauAsmOutput::EmitAction : public Inspector {
             auto *at = prim->operands.at(0)->to<IR::GlobalRef>()->obj->to<IR::Attached>();
             if (prim->operands.size() < 2) continue;
             if (auto aa = prim->operands.at(1)->to<IR::ActionArg>()) {
-                alias[aa->name] = self.find_indirect_index(at); } }
+                alias[aa->name] = self.find_indirect_index(at, true); } }
         out << indent << canon_name(act->name) << ":" << std::endl;
         action_context_json(act);
         out << indent << "- default_action: { "
@@ -1541,7 +1543,7 @@ class MauAsmOutput::UnattachedName : public MauInspector {
  *  indirect table (counter, meter, stateful, action data) and return its asm name.  Contained
  *  now within the actual IR for Hash Distribution
  */
-std::string MauAsmOutput::find_indirect_index(const IR::Attached *at) const {
+std::string MauAsmOutput::find_indirect_index(const IR::Attached *at, bool index_only) const {
     cstring index_name;
     if (auto hdat = at->to<IR::MAU::HashDistAttached>()) {
         if (auto hash_dist = hdat->hash_dist) {
@@ -1551,11 +1553,15 @@ std::string MauAsmOutput::find_indirect_index(const IR::Attached *at) const {
 
     if (at->is<IR::MAU::Counter>()) {
         return "counter_addr";
-    } else if (at->is<IR::MAU::Meter>() || at->is<IR::MAU::StatefulAlu>()
-               || at->is<IR::MAU::Selector>()) {
+    } else if (at->is<IR::MAU::Meter>() || at->is<IR::MAU::Selector>()) {
         return "meter_addr";
+    } else if (auto salu = at->to<IR::MAU::StatefulAlu>()) {
+        if (salu->instruction.size() > 1 && !index_only)
+            return "meter_type, meter_addr";
+        else
+            return "meter_addr";
     } else if (at->is<IR::MAU::ActionData>()) {
-        return "action, action_addr";
+        return index_only ? "action_addr" : "action, action_addr";
     } else {
         BUG("unsupported attached table type in find_indirect_index: %s", at);
     }
@@ -1585,7 +1591,7 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
         }
         out << at_name;
         if (at->indexed())
-            out << '(' << find_indirect_index(at) << ')';
+            out << '(' << find_indirect_index(at, false) << ')';
         out << std::endl;
     }
 

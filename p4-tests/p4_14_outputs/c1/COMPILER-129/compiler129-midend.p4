@@ -602,7 +602,8 @@ header egress_intrinsic_metadata_from_parser_aux_t {
     bit<48> egress_global_tstamp;
     bit<32> egress_global_ver;
     bit<16> egress_parser_err;
-    bit<8>  clone_src;
+    bit<4>  clone_digest_id;
+    bit<4>  clone_src;
     bit<8>  coalesce_sample_count;
 }
 
@@ -2761,7 +2762,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     apply {
         if (hdr.eg_intr_md.deflection_flag == 1w0 && meta.egress_metadata.bypass == 1w0) {
-            if (hdr.eg_intr_md_from_parser_aux.clone_src != 8w0) 
+            if (hdr.eg_intr_md_from_parser_aux.clone_src != 4w0) 
                 mirror.apply();
             else 
                 if (hdr.eg_intr_md.egress_rid != 16w0) {
@@ -2770,7 +2771,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
                 }
             switch (egress_port_mapping.apply().action_run) {
                 egress_port_type_normal_0: {
-                    if (hdr.eg_intr_md_from_parser_aux.clone_src == 8w0) 
+                    if (hdr.eg_intr_md_from_parser_aux.clone_src == 4w0) 
                         _vlan_decap_0.apply();
                     if (meta.tunnel_metadata.tunnel_terminate == 1w1) 
                         if (meta.multicast_metadata.inner_replica == 1w1 || meta.multicast_metadata.replica == 1w0) {

@@ -542,7 +542,8 @@ void ExactMatchTable::add_field_to_pack_format(json::vector &field_list, int bas
             std::string source = "";
             std::string immediate_name = "";
             std::string mw_name = mw->second.name();
-            get_cjson_source(mw_name, act, source, immediate_name);
+            int start_bit = 0;
+            get_cjson_source(mw_name, act, source, immediate_name, start_bit);
             if (source == "")
                 error(lineno, "Cannot determine proper source for field %s", name.c_str());
             int hi = std::min((unsigned)mw->second->size()-1, bit+piece.size()-mw->first-1);
@@ -551,7 +552,7 @@ void ExactMatchTable::add_field_to_pack_format(json::vector &field_list, int bas
                     { "field_name", json::string(mw->second.name()) },
                     { "source", json::string(source) },
                     { "lsb_mem_word_offset", json::number(offset) },
-                    { "start_bit", json::number(lo + mw->second.lobit()) },
+                    { "start_bit", json::number(start_bit + lo + mw->second.lobit()) },
                     { "immediate_name", json::string(immediate_name) },
                     { "lsb_mem_word_idx", json::number(lsb_mem_word_idx) },
                     { "msb_mem_word_idx", json::number(msb_mem_word_idx) },
