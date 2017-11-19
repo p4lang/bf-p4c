@@ -42,7 +42,7 @@ parser parse_ethernet {
 
 @pragma stateful_table_counter table_hit
 register flow_cnt {
-    width : 16;
+    width : 32;
     direct : match_tbl;
     /* instance_count : 65536; */
 }

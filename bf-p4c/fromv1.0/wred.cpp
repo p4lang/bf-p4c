@@ -11,7 +11,8 @@ const IR::Type_Extern *P4V1::WREDConverter::convertExternType(P4V1::ProgramStruc
 }
 
 const IR::Declaration_Instance *P4V1::WREDConverter::convertExternInstance(
-        P4V1::ProgramStructure *structure, const IR::Declaration_Instance *ext, cstring name) {
+        P4V1::ProgramStructure *structure, const IR::Declaration_Instance *ext, cstring name,
+        IR::IndexedVector<IR::Declaration> *) {
     auto *et = ext->type->to<IR::Type_Extern>();
     BUG_CHECK(et && et->name == "wred", "Extern %s is not wred type, but %s", ext, ext->type);
     ExpressionConverter conv(structure);

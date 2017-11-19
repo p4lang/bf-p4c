@@ -169,25 +169,29 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
-math_unit<bit<32>, tuple<bit<32>, bit<32>, bit<32>, bit<32>, bit<32>, bit<32>, bit<32>, bit<32>, bit<32>, bit<32>, bit<32>, bit<32>, bit<32>, bit<32>, bit<32>, bit<32>>>(true, -2s1, 6s4, { 32w0xf, 32w14, 32w13, 32w0xc, 32w0xb, 32w10, 32w9, 32w8, 32w7, 32w6, 32w5, 32w4, 32w3, 32w2, 32w1, 32w0 }) cntr_1_math_unit;
+struct cntr_1_layout {
+    bit<16> lo;
+    bit<16> hi;
+}
+
+math_unit<bit<16>, tuple<bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>>>(true, -2s1, 6s4, { 16w0xf, 16w14, 16w13, 16w0xc, 16w0xb, 16w10, 16w9, 16w8, 16w7, 16w6, 16w5, 16w4, 16w3, 16w2, 16w1, 16w0 }) cntr_1_math_unit;
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<32> tmp_1;
-    @name(".stateful_cntr_1") register<bit<32>>(32w0) stateful_cntr;
-    @name("cntr_1") register_action<bit<32>, bit<32>>(stateful_cntr, cntr_1_math_unit) cntr = {
-        void apply(inout bit<32> value, out bit<32> rv) {
-            bit<32> tmp;
-            bit<32> tmp_0;
-            bit<32> alu_hi_0;
-            rv = 32w0;
+    bit<16> tmp_1;
+    @name(".stateful_cntr_1") register<cntr_1_layout>(32w0) stateful_cntr;
+    @name("cntr_1") register_action<cntr_1_layout, bit<16>>(stateful_cntr, cntr_1_math_unit) cntr = {
+        void apply(inout cntr_1_layout value, out bit<16> rv) {
+            bit<16> tmp;
+            bit<16> tmp_0;
+            rv = 16w0;
             if (hdr.pkt.field_e_16 == 16w7) 
-                value = value + 32w1;
+                value.lo = value.lo + 16w1;
             if (hdr.pkt.field_e_16 != 16w7) {
-                tmp = cntr_1_math_unit.execute((bit<32>)hdr.pkt.field_f_16);
-                tmp_0 = alu_hi_0 ^ tmp;
-                value = tmp_0;
+                tmp = cntr_1_math_unit.execute(hdr.pkt.field_f_16);
+                tmp_0 = value.hi ^ tmp;
+                value.lo = tmp_0;
             }
             if (hdr.pkt.field_e_16 == 16w7) 
-                rv = value;
+                rv = value.lo;
         }
     };
     @name(".cnt_1") action cnt() {

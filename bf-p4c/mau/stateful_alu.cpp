@@ -128,6 +128,15 @@ bool CreateSaluInstruction::preorder(const IR::Member *e) {
     LOG4("Member operand: " << operands.back());
     return false;
 }
+bool CreateSaluInstruction::preorder(const IR::Primitive *prim) {
+    if (prim->name == "math_unit.execute") {
+        BUG_CHECK(prim->operands.size() == 2, "typechecking failure");
+        operands.push_back(new IR::MAU::SaluMathFunction(prim->srcInfo, prim->operands.at(1)));
+        LOG4("Math Unit operand: " << operands.back());
+    } else {
+        error("%s: expression too complex for register action", prim->srcInfo); }
+    return false;
+}
 
 static std::map<cstring, cstring> negate_op = {
     { "equ", "neq" }, { "neq", "equ" },

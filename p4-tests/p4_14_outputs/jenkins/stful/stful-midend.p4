@@ -332,9 +332,9 @@ struct counter_alu_layout {
     int<32> hi;
 }
 
-struct counter_alu_layout_0 {
-    int<32> lo;
-    int<32> hi;
+struct sampling_alu_layout {
+    bit<16> lo;
+    bit<16> hi;
 }
 
 struct tuple_0 {
@@ -363,7 +363,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<1> tmp_10;
     bit<1> tmp_11;
     bit<1> tmp_12;
-    bit<32> tmp_13;
+    bit<16> tmp_13;
     bool tmp_14;
     bit<18> _pgen_pass_1_ctrl_flow_temp_3;
     bit<18> _pgen_pass_1_ctrl_flow_temp_4;
@@ -414,8 +414,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".ifid_cntr") register<bit<16>>(32w0) ifid_cntr;
     @name(".ob1") register<bit<1>>(32w1000) ob1;
     @name(".ob2") register<bit<1>>(32w1000) ob2;
-    @name(".port_cntr") register<bit<64>>(32w0) port_cntr;
-    @name(".sampling_cntr") register<bit<32>>(32w143360) sampling_cntr;
+    @name(".port_cntr") register<counter_alu_layout>(32w0) port_cntr;
+    @name(".sampling_cntr") register<sampling_alu_layout>(32w143360) sampling_cntr;
     @name(".scratch") register<bit<16>>(32w4096) scratch;
     @name("bloom_filter_alu_1") register_action<bit<1>, bit<1>>(bloom_filter) bloom_filter_alu_1 = {
         void apply(inout bit<1> value, out bit<1> rv) {
@@ -461,15 +461,16 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             rv = value;
         }
     };
-    @name("sampling_alu") register_action<bit<32>, bit<32>>(sampling_cntr) sampling_alu = {
-        void apply(inout bit<32> value, out bit<32> rv) {
-            rv = 32w0;
-            if (value >= 32w10) 
-                value = 32w1;
-            if (value < 32w10) 
-                value = value + 32w1;
-            if (value >= 32w10 || hdr.ig_intr_md_for_tm.copy_to_cpu != 1w0) 
-                rv = 32w1;
+    @name("sampling_alu") register_action<sampling_alu_layout, bit<16>>(sampling_cntr) sampling_alu = {
+        void apply(inout sampling_alu_layout value, out bit<16> rv) {
+            rv = 16w0;
+            value.hi = 16w1;
+            if (value.lo >= 16w10) 
+                value.lo = 16w1;
+            if (value.lo < 16w10) 
+                value.lo = value.lo + 16w1;
+            if (value.lo >= 16w10 || hdr.ig_intr_md_for_tm.copy_to_cpu != 1w0) 
+                rv = 16w1;
         }
     };
     @name("scratch_alu_add") register_action<bit<16>, bit<16>>(scratch) scratch_alu_add = {

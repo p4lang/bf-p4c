@@ -11,7 +11,8 @@ const IR::Type_Extern *P4V1::LpfConverter::convertExternType(P4V1::ProgramStruct
 }
 
 const IR::Declaration_Instance *P4V1::LpfConverter::convertExternInstance(
-        P4V1::ProgramStructure *structure, const IR::Declaration_Instance *ext, cstring name) {
+        P4V1::ProgramStructure *structure, const IR::Declaration_Instance *ext, cstring name,
+        IR::IndexedVector<IR::Declaration> *) {
     auto *et = ext->type->to<IR::Type_Extern>();
     BUG_CHECK(et && et->name == "lpf", "Extern %s is not lpf type, but %s", ext, ext->type);
     ExpressionConverter conv(structure);

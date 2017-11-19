@@ -85,9 +85,9 @@ class CreateSaluApplyFunction : public Inspector {
                     error("%s only allowed in 1 bit registers", attr->name);
                 idx = 0;
             } else if (attr->name == "math_unit") {
-                return new IR::MethodCallExpression(
-                        new IR::Member(new IR::PathExpression(self.math_unit_name), "execute"),
-                        new IR::Vector<IR::Expression>({ self.math_input }));
+                auto *mu = new IR::PathExpression(IR::ID(attr->srcInfo, self.math_unit_name));
+                return new IR::MethodCallExpression(attr->srcInfo,
+                        new IR::Member(mu, "execute"), { self.math_input });
             } else if (attr->name == "predicate") {
                 return new IR::Constant(self.utype, 1);
             } else {
@@ -208,6 +208,24 @@ class CreateSaluApplyFunction : public Inspector {
         return create_apply.apply; }
 };
 
+static bool usesRegHi(const IR::Declaration_Instance *salu) {
+    struct scanVisitor : public Inspector {
+        bool result = false;
+        bool preorder(const IR::AttribLocal *attr) override {
+            if (attr->name == "register_hi")
+                result = true;
+            return !result; }
+        bool preorder(const IR::Property *prop) override {
+            if (prop->name == "update_hi_1_value" || prop->name == "update_hi_1_value")
+                result = true;
+            return !result; }
+        bool preorder(const IR::Expression *) override { return !result; }
+    } scan;
+
+    salu->properties.apply(scan);
+    return scan.result;
+}
+
 class CreateMathUnit : public Inspector {
     cstring name;
     const IR::Type::Bits *utype;
@@ -279,14 +297,26 @@ class CreateMathUnit : public Inspector {
         stateful_logging_mode
 */
 
+// FIXME -- this should be a method of IR::IndexedVector, or better yet, have a
+// FIXME -- replace method that doesn't need an iterator.
+IR::IndexedVector<IR::Declaration>::iterator find_in_scope(
+        IR::IndexedVector<IR::Declaration> *scope, cstring name) {
+    for (auto it = scope->begin(); it != scope->end(); ++it) {
+        if ((*it)->name == name)
+            return it; }
+    BUG_CHECK("%s not in scope", name);
+    return scope->end();
+}
 
 P4V1::StatefulAluConverter::reg_info P4V1::StatefulAluConverter::getRegInfo(
-        P4V1::ProgramStructure *structure, const IR::Declaration_Instance *ext) {
+        P4V1::ProgramStructure *structure, const IR::Declaration_Instance *ext,
+        IR::IndexedVector<IR::Declaration> *scope) {
     reg_info rv;
     if (auto rp = ext->properties.get<IR::Property>("reg")) {
         auto rpv = rp->value->to<IR::ExpressionValue>();
         auto gref = rpv ? rpv->expression->to<IR::GlobalRef>() : nullptr;
         if ((rv.reg = gref ? gref->obj->to<IR::Register>() : nullptr)) {
+            if (cache.count(rv.reg)) return cache.at(rv.reg);
             if (rv.reg->layout) {
                 rv.rtype = structure->types.get(rv.reg->layout);
                 if (!rv.rtype) {
@@ -302,17 +332,19 @@ P4V1::StatefulAluConverter::reg_info P4V1::StatefulAluConverter::getRegInfo(
                 } else {
                     error("%s is not a struct type", rv.reg->layout);
                 }
-            } else if (rv.reg->width == 1 || rv.reg->width == 8 ||
-                       rv.reg->width == 16 || rv.reg->width == 32) {
-                rv.rtype = rv.utype = IR::Type::Bits::get(rv.reg->width, rv.reg->signed_);
-            } else if (rv.reg->width == 64) {
-                // Some (broken?) test programs use width 64 when they really mean 2x32
-                rv.utype = IR::Type::Bits::get(32, rv.reg->signed_);
-                cstring rtype_name = structure->makeUniqueName(ext->name + "_layout");
-                rv.rtype = new IR::Type_Struct(IR::ID(rtype_name), {
-                    new IR::StructField("lo", rv.utype),
-                    new IR::StructField("hi", rv.utype) });
-                structure->declarations->push_back(rv.rtype);
+            } else if (rv.reg->width == 1 || rv.reg->width == 8 || rv.reg->width == 16 ||
+                       rv.reg->width == 32 || rv.reg->width == 64) {
+                if (rv.reg->width == 64 || (rv.reg->width > 8 && usesRegHi(ext))) {
+                    rv.utype = IR::Type::Bits::get(rv.reg->width/2, rv.reg->signed_);
+                    cstring rtype_name = structure->makeUniqueName(ext->name + "_layout");
+                    rv.rtype = new IR::Type_Struct(IR::ID(rtype_name), {
+                        new IR::StructField("lo", rv.utype),
+                        new IR::StructField("hi", rv.utype) });
+                    scope->replace(find_in_scope(scope, structure->registers.get(rv.reg)),
+                        structure->convert(rv.reg, structure->registers.get(rv.reg), rv.rtype));
+                    structure->declarations->push_back(rv.rtype);
+                } else {
+                    rv.rtype = rv.utype = IR::Type::Bits::get(rv.reg->width, rv.reg->signed_); }
             } else {
                 error("register %s width %d not supported for stateful_alu", rv.reg, rv.reg->width);
             }
@@ -320,17 +352,18 @@ P4V1::StatefulAluConverter::reg_info P4V1::StatefulAluConverter::getRegInfo(
             error("%s reg property %s not a register", ext->name, rp);
         }
     } else {
-        error("No reg property in %s", ext);
-    }
+        error("No reg property in %s", ext); }
+    if (rv.reg) cache[rv.reg] = rv;
     return rv;
 }
 
 const IR::Declaration_Instance *P4V1::StatefulAluConverter::convertExternInstance(
-        P4V1::ProgramStructure *structure, const IR::Declaration_Instance *ext, cstring name) {
+        P4V1::ProgramStructure *structure, const IR::Declaration_Instance *ext, cstring name,
+        IR::IndexedVector<IR::Declaration> *scope) {
     auto *et = ext->type->to<IR::Type_Extern>();
     BUG_CHECK(et && et->name == "stateful_alu",
               "Extern %s is not stateful_alu type, but %s", ext, ext->type);
-    auto info = getRegInfo(structure, ext);
+    auto info = getRegInfo(structure, ext, scope);
     if (info.utype) {
         LOG2("Creating apply function for register_action " << ext->name);
         auto ratype = new IR::Type_Specialized(new IR::Type_Name("register_action"),
@@ -348,7 +381,7 @@ const IR::Declaration_Instance *P4V1::StatefulAluConverter::convertExternInstanc
         return rv->apply(TypeConverter(structure))->to<IR::Declaration_Instance>();
     }
     BUG("Failed to find utype for %s", ext);
-    return ExternConverter::convertExternInstance(structure, ext, name);
+    return ExternConverter::convertExternInstance(structure, ext, name, scope);
 }
 
 const IR::Statement *P4V1::StatefulAluConverter::convertExternCall(
@@ -357,7 +390,7 @@ const IR::Statement *P4V1::StatefulAluConverter::convertExternCall(
     auto *et = ext->type->to<IR::Type_Extern>();
     BUG_CHECK(et && et->name == "stateful_alu",
               "Extern %s is not stateful_alu type, but %s", ext, ext->type);
-    auto info = getRegInfo(structure, ext);
+    auto info = getRegInfo(structure, ext, nullptr);
     ExpressionConverter conv(structure);
     const IR::Statement *rv = nullptr;
     IR::BlockStatement *block = nullptr;

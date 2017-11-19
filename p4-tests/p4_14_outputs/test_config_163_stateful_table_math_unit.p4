@@ -169,19 +169,23 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
-math_unit<bit<32>, tuple<bit<32>, bit<32>, bit<32>, bit<32>, bit<32>, bit<32>, bit<32>, bit<32>, bit<32>, bit<32>, bit<32>, bit<32>, bit<32>, bit<32>, bit<32>, bit<32>>>(true, -1, 4, { 0xf, 14, 13, 0xc, 0xb, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 }) cntr_1_math_unit;
+struct cntr_1_layout {
+    bit<16> lo;
+    bit<16> hi;
+}
+
+math_unit<bit<16>, tuple<bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>, bit<16>>>(true, -1, 4, { 0xf, 14, 13, 0xc, 0xb, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 }) cntr_1_math_unit;
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".stateful_cntr_1") register<bit<32>>(32w0) stateful_cntr_1;
-    register_action<bit<32>, bit<32>>(stateful_cntr_1, cntr_1_math_unit) cntr_1 = {
-        void apply(inout bit<32> value, out bit<32> rv) {
-            bit<32> alu_hi;
-            rv = 32w0;
+    @name(".stateful_cntr_1") register<cntr_1_layout>(32w0) stateful_cntr_1;
+    register_action<cntr_1_layout, bit<16>>(stateful_cntr_1, cntr_1_math_unit) cntr_1 = {
+        void apply(inout cntr_1_layout value, out bit<16> rv) {
+            rv = 16w0;
             if (hdr.pkt.field_e_16 == 16w7) 
-                value = value + 32w1;
+                value.lo = value.lo + 16w1;
             if (!(hdr.pkt.field_e_16 == 16w7)) 
-                value = alu_hi ^ cntr_1_math_unit.execute((bit<32>)hdr.pkt.field_f_16);
+                value.lo = value.hi ^ cntr_1_math_unit.execute(hdr.pkt.field_f_16);
             if (hdr.pkt.field_e_16 == 16w7) 
-                rv = value;
+                rv = value.lo;
         }
     };
     @name(".cnt_1") action cnt_1() {

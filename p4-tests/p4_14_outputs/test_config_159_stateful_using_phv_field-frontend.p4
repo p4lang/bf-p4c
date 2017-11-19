@@ -168,19 +168,24 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+struct sampler_alu_layout {
+    bit<16> lo;
+    bit<16> hi;
+}
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     bit<16> tmp;
-    @stateful_table_counter("table_hit") @name(".flow_cnt") register<bit<16>>(32w0) flow_cnt_0;
-    @name("sampler_alu") register_action<bit<16>, bit<16>>(flow_cnt_0) sampler_alu_0 = {
-        void apply(inout bit<16> value, out bit<16> rv) {
-            bit<16> alu_hi_0;
+    @stateful_table_counter("table_hit") @name(".flow_cnt") register<sampler_alu_layout>(32w0) flow_cnt_0;
+    @name("sampler_alu") register_action<sampler_alu_layout, bit<16>>(flow_cnt_0) sampler_alu_0 = {
+        void apply(inout sampler_alu_layout value, out bit<16> rv) {
             rv = 16w0;
-            if (value == 16w10) 
-                value = 16w1;
-            if (value != 16w10) 
-                value = value + 16w1;
-            if (value == 16w10) 
-                rv = value;
+            value.hi = hdr.pkt.field_j_16 + 16w2;
+            if (value.lo == 16w10) 
+                value.lo = 16w1;
+            if (value.lo != 16w10) 
+                value.lo = value.lo + 16w1;
+            if (value.lo == 16w10) 
+                rv = value.lo;
         }
     };
     @name(".sample") action sample_0() {

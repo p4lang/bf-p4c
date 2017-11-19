@@ -309,18 +309,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Changing type of"
-  extensions/p4_tests/p4_14/test_config_163_stateful_table_math_unit.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "Can't reference memory in"
-  extensions/p4_tests/p4_14/test_config_169_stateful_sflow_sequence.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "must be at 64 or 96 on ixbar to be used in stateful"
-  extensions/p4_tests/p4_14/test_config_169_stateful_sflow_sequence.p4
+  "Can't combine hash_dist units in 16 bit operation"
   extensions/p4_tests/p4_14/test_config_184_stateful_bug1.p4
   )
 
@@ -554,6 +543,10 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
     "TablePlacement::place_table(.*): Assertion"
     testdata/p4_16_samples/issue986-1-bmv2.p4
+    )
+p4c_add_xfail_reason("tofino"
+    "error: : The hash offset must be a power of 2 in a hash calculation hash.get_hash"
+    testdata/p4_16_samples/issue1049-bmv2.p4
     )
 
 # BRIG-181
@@ -955,11 +948,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Could not find declaration for x"
   testdata/p4_16_samples/issue1001-bmv2.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "expression too complex for register action"
-  extensions/p4_tests/p4_14/test_config_163_stateful_table_math_unit.p4
   )
 
 # END: XFAILs with translation

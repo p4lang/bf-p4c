@@ -5128,11 +5128,6 @@ struct flowlet_alu_layout {
     bit<32> hi;
 }
 
-struct flowlet_alu_layout_0 {
-    bit<32> lo;
-    bit<32> hi;
-}
-
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
         packet.emit<ethernet_t>(hdr.ethernet);
