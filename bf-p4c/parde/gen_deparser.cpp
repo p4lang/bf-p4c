@@ -25,9 +25,17 @@ class GenerateDeparser : public Inspector {
     IR::BFN::Deparser                           *dprsr;
     const IR::Expression                        *pred = nullptr;
     ordered_map<cstring, IR::BFN::Digest *>     digests;
+    ordered_map<cstring, cstring>               nameMap;
 
-    void generateDigest(IR::BFN::Digest *&digest, cstring name, const IR::Expression *list);
+    void generateDigest(IR::BFN::Digest *&digest, cstring name,
+                        const IR::Expression *list, cstring controlPlaneName = nullptr);
     bool equiv(const IR::Expression *a, const IR::Expression *b) const;
+
+    bool preorder(const IR::Declaration_Instance *decl) {
+        nameMap.emplace(decl->name.name, decl->controlPlaneName());
+        return false;
+    }
+
     bool preorder(const IR::IfStatement *ifstmt) {
         const IR::Expression *old_pred = pred;
         pred = ifstmt->condition;
@@ -66,6 +74,13 @@ class GenerateDeparser : public Inspector {
         } else if (method->member == "update") {
             warning("FIXME method call %s in deparser not yet supported", mc);
             return false;
+        } else if (method->member == "pack") {
+            auto dname = method->expr->to<IR::PathExpression>();
+            if (!dname) return true;
+            auto cpn = nameMap.find(dname->path->name);
+            BUG_CHECK(cpn != nameMap.end(), "unable to find digest %1%", dname->path->name);
+            generateDigest(digests["learning"], "learning", mc->arguments->at(0), cpn->second);
+            return false;
         } else {
             error("Unsupported method call %s in deparser", mc);
             return true;
@@ -78,7 +93,7 @@ class GenerateDeparser : public Inspector {
 
 // FIXME -- factor this with Digests::add_to_digest in digest.h?
 void GenerateDeparser::generateDigest(IR::BFN::Digest *&digest, cstring name,
-                                      const IR::Expression *expr) {
+                                      const IR::Expression *expr, cstring controlPlaneName) {
     const IR::Constant *k = nullptr;
     const IR::Expression *select;
     if (!pred) {
@@ -108,6 +123,13 @@ void GenerateDeparser::generateDigest(IR::BFN::Digest *&digest, cstring name,
     if (static_cast<int>(digest->sets.size()) <= k->asInt())
         digest->sets.resize(k->asInt() + 1);
     digest->sets.at(k->asInt()) = list;
+
+    if (controlPlaneName) {
+        if (static_cast<int>(digest->controlPlaneNames.size()) <= k->asInt()) {
+            digest->controlPlaneNames.resize(k->asInt() + 1);
+        }
+        digest->controlPlaneNames.at(k->asInt()) = controlPlaneName;
+    }
 }
 
 // FIXME -- yet another 'deep' comparison for expressions

@@ -98,6 +98,7 @@ class ProgramStructure {
     ExternFunctionMap                            dropCalls;
     ExternFunctionMap                            randomCalls;
     ExternFunctionNameMap                        randomNames;
+    ExternFunctionMap                            executeMeterCalls;
 
     // parser related translations
     StatementMap                                 priorityCalls;

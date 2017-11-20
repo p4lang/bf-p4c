@@ -49,6 +49,7 @@ public:
         Val                                     select;
         int                                     shift = 0;
         std::map<int, std::vector<Phv::Ref>>    layout;
+        std::unique_ptr<json::map>              context_json;
         Digest(Type *t, int lineno, VECTOR(pair_t) &data);
     };
     std::vector<Digest>                 digests;

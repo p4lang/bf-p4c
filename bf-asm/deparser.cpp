@@ -173,6 +173,9 @@ Deparser::Digest::Digest(Deparser::Digest::Type *t, int l, VECTOR(pair_t) &data)
         } else if (t->can_shift && l.key == "shift") {
             if (CHECKTYPE(l.value, tINT))
                 shift = l.value.i;
+        } else if (l.key == "context_json") {
+            if (CHECKTYPE(l.value, tMAP))
+                context_json = toJson(l.value.map);
         } else if (!CHECKTYPE(l.key, tINT))
             continue;
         else if (l.key.i < 0 || l.key.i >= t->count)

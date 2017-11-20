@@ -241,12 +241,14 @@ class ReplaceArchitecture : public Inspector {
         IR::IndexedVector<IR::Node> baseArchTypes;
         IR::IndexedVector<IR::Node> libArchTypes;
 
+
         if (target == Target::Simple) {
             structure->include("v1model.p4", &baseArchTypes);
             structure->include("tofino/stateful_alu.p4", &libArchTypes);
             structure->include14("tofino/intrinsic_metadata.p4", &libArchTypes);
             structure->include14("tofino/pktgen_headers.p4", &libArchTypes);
         }
+
         /// populate reservedNames from arch.p4 and include system headers
         for (auto node : baseArchTypes) {
             processArchTypes(node); }
@@ -262,6 +264,8 @@ class ReplaceArchitecture : public Inspector {
         structure->include("tofino.p4", &structure->tofinoArchTypes);
         structure->include("tofino/p4_14_types.p4", &structure->tofinoArchTypes);
         structure->include("tofino/p4_14_prim.p4", &structure->tofinoArchTypes);
+        structure->include("tofino/p4_16_prim.p4", &structure->tofinoArchTypes);
+
         analyzeErrors(program);
         analyzeTofinoModel();
         /// append program without v1model declarations
@@ -768,17 +772,26 @@ class ConstructSymbolTable : public Inspector {
         auto stmt = new IR::AssignmentStatement(mem, idx);
         structure->digestCalls.emplace(node, stmt);
 
+        BUG_CHECK(mce->typeArguments->size() == 1, "Expected 1 type parameter for %1%",
+                  mce->method);
+        auto* typeArg = mce->typeArguments->at(0);
+        auto* typeName = typeArg->to<IR::Type_Name>();
+        BUG_CHECK(typeName != nullptr, "Expected type T in digest to be a typeName %1%", typeArg);
+        auto fieldList = refMap->getDeclaration(typeName->path);
+        auto declAnno = fieldList->getAnnotation("name");
+
+        BUG_CHECK(typeName != nullptr, "Wrong argument type for %1%", typeArg);
         /*
          * In the ingress deparser, add the following code
-         *
+         * _learning_packet_ () learn_1;
          * if (ig_intr_md_for_dprsr.learn_idx == n)
-         *    learning.emit({fields});
+         *    learning_1.pack({fields});
          *
          */
         auto field_list = mce->arguments->at(1);
         auto args = new IR::Vector<IR::Expression>({ field_list });
-        auto expr = new IR::PathExpression(new IR::Path("learning"));
-        auto member = new IR::Member(expr, "emit");
+        auto expr = new IR::PathExpression(new IR::Path(typeName->path->name));
+        auto member = new IR::Member(expr, "pack");
         auto typeArgs = new IR::Vector<IR::Type>();
         auto mcs = new IR::MethodCallStatement(
                        new IR::MethodCallExpression(member, typeArgs, args));
@@ -788,6 +801,14 @@ class ConstructSymbolTable : public Inspector {
         auto condExpr = new IR::Equ(condExprPath, idx);
         auto cond = new IR::IfStatement(condExpr, mcs, nullptr);
         structure->ingressDeparserStatements.push_back(cond);
+
+        auto declArgs = new IR::Vector<IR::Expression>({ mce->arguments->at(0) });
+        auto declType = new IR::Type_Specialized(new IR::Type_Name("_learning_packet_"),
+                                                 mce->typeArguments);
+        auto decl = new IR::Declaration_Instance(typeName->path->name,
+                                                 new IR::Annotations({ declAnno }),
+                                                 declType, declArgs);
+        structure->ingressDeparserDeclarations.push_back(decl);
     }
 
     void cvtCloneFunction(const IR::MethodCallStatement* node, bool hasData) {
@@ -912,9 +933,35 @@ class ConstructSymbolTable : public Inspector {
         }
     }
 
+    /// execute_meter_with_color is converted to a meter extern
+    void cvtExecuteMeterFunctiion(const IR::MethodCallStatement* node) {
+        auto control = findContext<IR::P4Control>();
+        BUG_CHECK(control != nullptr, "execute_meter_with_color() must be used in a control block");
+        auto mce = node->methodCall->to<IR::MethodCallExpression>();
+
+        auto inst = mce->arguments->at(0)->to<IR::PathExpression>();
+        BUG_CHECK(inst != nullptr, "Invalid meter instance %1%", inst);
+        auto path = inst->to<IR::PathExpression>()->path;
+        auto pathExpr = new IR::PathExpression(path->name);
+
+        auto method = new IR::Member(node->srcInfo, pathExpr, "execute");
+        auto args = new IR::Vector<IR::Expression>();
+        args->push_back(mce->arguments->at(1));
+        args->push_back(new IR::Cast(IR::Type::Bits::get(2), mce->arguments->at(3)));
+        auto methodCall = new IR::MethodCallExpression(node->srcInfo, method, args);
+
+        auto stmt = new IR::MethodCallStatement(methodCall);
+        WARNING("execute_meter_with_color is translated without a return value");
+        // auto stmt = new IR::AssignmentStatement(mce->arguments->at(2), methodCall);
+        structure->executeMeterCalls.emplace(node, stmt);
+    }
+
     /// hash function is converted to an instance of hash extern in the enclosed control block
     void cvtHashFunction(const IR::MethodCallStatement* node) {
         auto control = findContext<IR::P4Control>();
+        BUG_CHECK(control != nullptr, "hash() must be used in a control block");
+        const bool isIngress = control->name == structure->getBlockName("ingress");
+
         auto mce = node->methodCall->to<IR::MethodCallExpression>();
         BUG_CHECK(mce != nullptr, "Malformed IR: method call expression cannot be nullptr");
 
@@ -935,12 +982,10 @@ class ConstructSymbolTable : public Inspector {
         auto hashArgs = new IR::Vector<IR::Expression>({ typeName });
         auto hashInst = new IR::Declaration_Instance(hashName, hashType, hashArgs);
 
-        if (control->name == structure->getBlockName("ingress")) {
+        if (isIngress) {
             structure->ingressDeclarations.push_back(hashInst->to<IR::Declaration>());
-        } else if (control->name == structure->getBlockName("egress")) {
-            structure->egressDeclarations.push_back(hashInst->to<IR::Declaration>());
         } else {
-            BUG("hash must be used in either ingress or egress pipeline");
+            structure->egressDeclarations.push_back(hashInst->to<IR::Declaration>());
         }
     }
 
@@ -995,6 +1040,8 @@ class ConstructSymbolTable : public Inspector {
 
     void cvtRandomFunction(const IR::MethodCallStatement* node) {
         auto control = findContext<IR::P4Control>();
+        BUG_CHECK(control != nullptr, "random() must be used in a control block");
+        const bool isIngress = control->name == structure->getBlockName("ingress");
         auto mce = node->methodCall->to<IR::MethodCallExpression>();
         BUG_CHECK(mce != nullptr, "Malformed IR: method call expression cannot be nullptr");
 
@@ -1008,12 +1055,10 @@ class ConstructSymbolTable : public Inspector {
 
         auto randInst = new IR::Declaration_Instance(randName, type, param);
 
-        if (control->name == structure->getBlockName("ingress")) {
+        if (isIngress) {
             structure->ingressDeclarations.push_back(randInst->to<IR::Declaration>());
-        } else if (control->name == structure->getBlockName("egress")) {
-            structure->egressDeclarations.push_back(randInst->to<IR::Declaration>());
         } else {
-            BUG("random() must be used in either ingress or egress pipeline");
+            structure->egressDeclarations.push_back(randInst->to<IR::Declaration>());
         }
     }
 
@@ -1224,6 +1269,8 @@ class ConstructSymbolTable : public Inspector {
             } else if (name == "verify_checksum") {
                 // cvtVerifyChecksum(node);
                 WARNING("verify_checksum is not converted");
+            } else if (name == "execute_meter_with_color") {
+                cvtExecuteMeterFunctiion(node);
             } else {
                 WARNING("Unsupported extern function" << node);
             }

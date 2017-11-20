@@ -219,6 +219,85 @@ struct OutputParameters : public Inspector {
       : out(out), phv(phv), indent(indent) { }
 };
 
+/// Generate digest field list
+class OutputDigests : public Inspector {
+    std::ostream        &out;
+    const PhvInfo       &phv;
+    indent_t             indent;
+
+    void postorder(const IR::BFN::Digest* digest) override {
+        LOG1("emit digest " << digest << " name " << digest->name);
+
+        int idx = 0;
+        out << indent++ << digest->name << ":" << std::endl;
+        for (auto l : digest->sets) {
+            out << indent << idx++ << ": [ ";
+            outputFieldlist(l);
+            out << " ]" << std::endl;
+        }
+        out << indent << "select: " << canon_name(phv.field(digest->select)->name)
+            << std::endl;
+
+        // resubmit, clone digest has no control plane names
+        // do not generate context json for them.
+        if (digest->controlPlaneNames.size() == 0)
+            return;
+
+        idx = 0;
+        out << indent++ << "context_json" << ":" << std::endl;
+        for (auto l : digest->sets) {
+            out << indent << idx++ << ": [ ";
+            outputContextJson(l);
+            out << " ]" << std::endl;
+        }
+
+        const char *sep = "";
+        out << indent << "name" << ": [ ";
+        for (auto l : digest->controlPlaneNames) {
+            out << sep << l;
+            sep = ", ";
+        }
+        out << " ]" << std::endl;
+    }
+
+    void outputFieldlist(const IR::Vector<IR::Expression> *list) {
+        const char* sep = "";
+        for (auto f : *list) {
+            bitrange bits;
+            auto* field = phv.field(f, &bits);
+            BUG_CHECK(field != nullptr, "no valid phv allocation for field %1%", f);
+            field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice &alloc) {
+                BUG_CHECK(alloc.container_bit == 0, "bad alignment for container %1%",
+                          alloc.container);
+                out << sep << alloc.container;
+                sep = ", ";
+            });
+        }
+    }
+
+    void outputContextJson(const IR::Vector<IR::Expression> *list) {
+        const char *sep = "";
+        int offset = 0;
+        for (auto f : *list) {
+            bitrange bits;
+            auto* field = phv.field(f, &bits);
+
+            out << sep << "[ " << canon_name(trim_asm_name(field->name)) << ", "
+                << bits.lo << ", " << bits.size() << ", " << offset << "]";
+
+            field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice &alloc) {
+                offset += alloc.container.size() / 8;
+            });
+
+            sep = ", ";
+        }
+    }
+
+ public:
+    OutputDigests(std::ostream &out, const PhvInfo &phv, indent_t indent)
+            : out(out), phv(phv), indent(indent) { }
+};
+
 }  // namespace
 
 void DeparserAsmOutput::emit_fieldlist(std::ostream &out, const IR::Vector<IR::Expression> *list,
@@ -257,17 +336,6 @@ std::ostream &operator<<(std::ostream &out, const DeparserAsmOutput &d) {
     d.deparser->apply(OutputDictionary(out, d.phv, indent));
     d.deparser->apply(OutputChecksums(out, d.phv, indent));
     d.deparser->apply(OutputParameters(out, d.phv, indent));
-
-    for (auto digest : Values(d.deparser->digests)) {
-        int idx = 0;
-        out << indent++ << digest->name << ":" << std::endl;
-        for (auto l : digest->sets) {
-            out << indent << idx++ << ": [ ";
-            d.emit_fieldlist(out, l);
-            out << " ]" << std::endl; }
-        out << indent-- << "select: " << canon_name(d.phv.field(digest->select)->name)
-            << std::endl;
-    }
-
+    d.deparser->apply(OutputDigests(out, d.phv, indent));
     return out;
 }

@@ -569,7 +569,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Field is marked as deparsed, but the deparser doesn't emit it"
+  "Expected type T in digest to be a typeName"
   testdata/p4_16_samples/issue430-1-bmv2.p4
   )
 # bug in instruction selection
@@ -811,7 +811,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: .* overlaps .* in .*"
   extensions/p4_tests/p4_14/case1770.p4
-  extensions/p4_tests/p4_14/jenkins/mirror_test/mirror_test.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -916,13 +915,12 @@ p4c_add_xfail_reason("tofino"
   "parser counter translation is not implemented"
   extensions/p4_tests/p4_14/test_config_294_parser_loop.p4
   )
-# missing support in meter_with_color
 p4c_add_xfail_reason("tofino"
-  "error: Type parameters needed for m"
-  extensions/p4_tests/p4_14/test_config_126_meter_pre_color_2.p4
-  extensions/p4_tests/p4_14/test_config_127_meter_pre_color_3.p4
-  extensions/p4_tests/p4_14/test_config_125_meter_pre_color.p4
+  "does not have a PHV allocation though it is used in an action"
   extensions/p4_tests/p4_14/test_config_132_meter_pre_color_4.p4
+  )
+p4c_add_xfail_reason("tofino"
+  "expression too complex for stateful alu"
   extensions/p4_tests/p4_14/jenkins/mau_test/mau_test.p4
   )
 # missing support for stateful logging

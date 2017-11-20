@@ -304,6 +304,7 @@ class Digest {
     cstring                             name;
     Expression                          select;
     std::vector<Vector<Expression>>     sets = {};
+    std::vector<cstring>                controlPlaneNames = {};
     Digest(gress_t gress, cstring name) : gress(gress), name(name),
         select(new TempVar(Type::Bits::get(3), cstring("$" + name))) {}
     visit_children {

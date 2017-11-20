@@ -44,6 +44,7 @@ const IR::Node* ControlConverter::postorder(IR::MethodCallStatement* node) {
     RETURN_TRANSLATED_NODE_IF_FOUND(digestCalls);
     RETURN_TRANSLATED_NODE_IF_FOUND(cloneCalls);
     RETURN_TRANSLATED_NODE_IF_FOUND(dropCalls);
+    RETURN_TRANSLATED_NODE_IF_FOUND(executeMeterCalls);
     return node;
 }
 
