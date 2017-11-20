@@ -228,8 +228,10 @@ class OutputDigests : public Inspector {
     void postorder(const IR::BFN::Digest* digest) override {
         LOG1("emit digest " << digest << " name " << digest->name);
 
+        out << indent << digest->name << ":" << std::endl;
+        AutoIndent digestIndent(indent);
+
         int idx = 0;
-        out << indent++ << digest->name << ":" << std::endl;
         for (auto l : digest->sets) {
             out << indent << idx++ << ": [ ";
             outputFieldlist(l);
@@ -243,8 +245,10 @@ class OutputDigests : public Inspector {
         if (digest->controlPlaneNames.size() == 0)
             return;
 
+        out << indent << "context_json" << ":" << std::endl;
+        AutoIndent contextJsonIndent(indent);
+
         idx = 0;
-        out << indent++ << "context_json" << ":" << std::endl;
         for (auto l : digest->sets) {
             out << indent << idx++ << ": [ ";
             outputContextJson(l);
