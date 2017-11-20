@@ -1,4 +1,4 @@
-/* mau table template specializations for jbay -- #included directly in tables.cpp */
+/* mau table template specializations for jbay -- #included directly in match_tables.cpp */
 
 template<> void MatchTable::setup_next_table_map(Target::JBay::mau_regs &regs, Table *tbl) {
     auto &merge = regs.rams.match.merge;

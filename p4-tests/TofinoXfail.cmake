@@ -957,8 +957,11 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     testdata/p4_14_samples/tmvalid.p4
     testdata/p4_16_samples/issue635-bmv2.p4
     testdata/p4_16_samples/issue655-bmv2.p4
-    extensions/p4_tests/p4_14/sful_1bit.p4
     extensions/p4_tests/p4_14/stateful2.p4
+    extensions/p4_tests/p4_16/multiple_apply1.p4
+    extensions/p4_tests/p4_16/cast_widening_set.p4
+    extensions/p4_tests/p4_16/cast_narrowing_set.p4
+    extensions/p4_tests/p4_16/container_dependency.p4
     )
 
   p4c_add_xfail_reason("tofino"
@@ -995,12 +998,6 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     testdata/p4_14_samples/exact_match_mask1.p4
     )
 
-  p4c_add_xfail_reason("tofino"
-    "Error when trying to push config to bf_switchd"
-    extensions/p4_tests/p4_14/hash_calculation_32.p4
-    extensions/p4_tests/p4_14/stateful3.p4
-    )
-
 endif() # ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET
 
 if (HARLYN_STF AND NOT ENABLE_STF2PTF)
@@ -1012,3 +1009,4 @@ if (HARLYN_STF AND NOT ENABLE_STF2PTF)
     extensions/p4_tests/p4_16/container_dependency.p4
     )
 endif()  # STF FAILURE IN TNA
+

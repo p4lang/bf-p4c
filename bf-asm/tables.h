@@ -34,6 +34,7 @@ class StatefulTable;
 class Synth2Port;
 class Stage;
 struct Ref;
+struct HashCol;
 
 class Table {
 public:
@@ -523,9 +524,9 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     void check_next(Ref &next);
     bool choose_logical_id(const slist<Table *> *work = nullptr);
     virtual int hit_next_size() const { return hit_next.size(); }
-    p4_param *find_p4_param(value_t &v, p4_params &l) {
-        for (auto &p : l)
-            if (p.name == v.s) return &p;
+    p4_param *find_p4_param(std::string &s) {
+        for (auto &p : p4_params_list)
+            if (p.name == s) return &p;
         return nullptr; }
     bool is_wide_format();
     int get_entries_per_table_word();
@@ -582,6 +583,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(MatchTable, Table,
     template<class REGS> void setup_next_table_map(REGS &, Table *);
     void common_init_setup(const VECTOR(pair_t) &, bool, P4Table::type) override;
     bool common_setup(pair_t &, const VECTOR(pair_t) &, P4Table::type) override;
+    int get_address_mau_actiondata_adr_default(unsigned log2size, bool per_flow_enable); 
 public:
     const AttachedTables *get_attached() const override { return &attached; }
     const GatewayTable *get_gateway() const override { return gateway; }
@@ -594,6 +596,8 @@ public:
     virtual bool is_ternary() { return false; }
     void gen_idletime_tbl_cfg(json::map &stage_tbl);
     int direct_shiftcount() const override { return 64; }
+    void gen_hash_bits(const std::map<int, HashCol> &hash_table, 
+            unsigned hash_table_id, json::vector &hash_bits); 
 )
 
 #define DECLARE_TABLE_TYPE(TYPE, PARENT, NAME, ...)                     \
@@ -682,6 +686,11 @@ public:
                                   const Table::Actions::Action *act) override;
     int unitram_type() override { return UnitRam::MATCH; }
     table_type_t table_type() override { return EXACT; }
+    bool has_group(int grp) {
+        for (auto &way: ways)
+            if (way.group == grp) return true;
+        return false; }
+    void gen_hash_functions(json::map &stage_tbl);
 )
 
 DECLARE_TABLE_TYPE(AlgTcamMatchTable, SRamMatchTable, "atcam_match",

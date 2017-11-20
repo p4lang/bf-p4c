@@ -580,39 +580,7 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
         stage_tbl["stage_table_type"] = "match_with_no_key";
         match_attributes["match_type"] = "match_with_no_key";
         stage_tbl["size"] = 1024; }
-    auto ht = input_xbar->get_hash_tables();
-    if (ht.size() > 0) {
-        // Merge all bits to xor across multiple hash ways in single
-        // json::vector for each hash bit
-        json::vector &hash_functions = stage_tbl["hash_functions"] = json::vector();
-        json::map hash_function;
-        json::vector &hash_bits = hash_function["hash_bits"] = json::vector();
-        for (auto &hash : input_xbar->get_hash_tables()) {
-            for (auto &col: hash.second) {
-                json::map hash_bit;
-                bool hash_bit_added = false;
-                json::vector *bits_to_xor_prev;
-                for (auto &hb : hash_bits) {
-                    if (hb->to<json::map>()["hash_bit"]->to<json::number>() == json::number(col.first)) {
-                        bits_to_xor_prev = &(hb->to<json::map>()["bits_to_xor"]->to<json::vector>());
-                        hash_bit_added = true; } }
-                hash_bit["hash_bit"] = col.first;
-                hash_bit["seed"] = input_xbar->get_seed_bit(hash.first, col.first);
-                json::vector &bits_to_xor = hash_bit["bits_to_xor"] = json::vector();
-                for (const auto &bit: col.second.data) {
-                    json::map field;
-                    if (auto ref = input_xbar->get_group_bit(InputXbar::Group(false, hash.first/2), bit + 64*(hash.first&1))) {
-                        std::string field_name = ref.name();
-                        field["field_bit"] = remove_name_tail_range(field_name) + ref.lobit();
-                        remove_aug_names(field_name);
-                        field["field_name"] = field_name; }
-                    if (!hash_bit_added)
-                        bits_to_xor.push_back(std::move(field));
-                    else
-                        bits_to_xor_prev->push_back(std::move(field)); }
-                if (!hash_bit_added)
-                    hash_bits.push_back(std::move(hash_bit)); } }
-        hash_functions.push_back(std::move(hash_function)); }
+    gen_hash_functions(stage_tbl);
     if (actions) {
         actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
         actions->add_action_format(this, stage_tbl);
@@ -649,3 +617,36 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
         json::vector &statistics_table_refs = tbl["statistics_table_refs"] = json::vector();
         for (auto &s : a->stats) { add_reference_table(statistics_table_refs, s); } }
 }
+
+// Generate hash_functions node in cjson.
+// Loop through each way and get the associated hash group. Output hash bits for
+// each table accessed by the hash group with seed and bits_to_xor info.
+// 'bits_to_xor' has a field_bit and field_name which correspond to the xor'd
+// fields bit position and field's (p4) name. Check that the name appears in the
+// match key fields (p4_params_list) as this is verified by the driver.  Do not
+// repeat a hash group if already visited.
+void ExactMatchTable::gen_hash_functions(json::map &stage_tbl) {
+    bitvec visited_groups(EXACT_HASH_GROUPS,0);
+    auto ht = input_xbar->get_hash_tables();
+    // Output cjson node only if hash tables present
+    if (ht.size() > 0) {
+        json::vector &hash_functions = stage_tbl["hash_functions"] = json::vector();
+        for (auto &way : ways) {
+            int hash_group_no = way.group;
+            // Do not output json for already processed hash groups
+            if (visited_groups[hash_group_no]) continue;
+            // Setup cjson hash_function
+            json::map hash_function;
+            json::vector &hash_bits = hash_function["hash_bits"] = json::vector();
+            // Get the hash group data
+            auto *hash_group = input_xbar->get_hash_group(hash_group_no);
+            if (hash_group) {
+                // Process only hash tables used per hash group
+                for (unsigned hash_table_id: bitvec(hash_group->tables)) {
+                    auto hash_table = input_xbar->get_hash_table(hash_table_id);
+                    MatchTable::gen_hash_bits(hash_table, hash_table_id, hash_bits); }
+            hash_functions.push_back(std::move(hash_function));
+            // Mark hash group as visited
+            visited_groups[hash_group_no] = 1; } } }
+}
+

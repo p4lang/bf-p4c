@@ -180,32 +180,33 @@ void HashActionTable::gen_tbl_cfg(json::vector &out) {
             // json::vector for each hash bit
             json::map hash_function;
             json::vector &hash_bits = hash_function["hash_bits"] = json::vector();
-            for (auto &hash : input_xbar->get_hash_tables()) {
-                for (auto &col: hash.second) {
-                    json::map hash_bit;
-                    bool hash_bit_added = false;
-                    json::vector *bits_to_xor_prev;
-                    for (auto &hb : hash_bits) {
-                        if (hb->to<json::map>()["hash_bit"]->to<json::number>() == json::number(col.first)) {
-                            bits_to_xor_prev = &(hb->to<json::map>()["bits_to_xor"]->to<json::vector>());
-                            hash_bit_added = true; } }
-                    hash_bit["hash_bit"] = col.first;
-                    hash_bit["seed"] = input_xbar->get_seed_bit(hash.first, col.first);
-                    json::vector &bits_to_xor = hash_bit["bits_to_xor"] = json::vector();
-                    for (const auto &bit: col.second.data) {
-                        json::map field;
-                        if (auto ref = input_xbar->get_group_bit(InputXbar::Group(false, hash.first/2), bit + 64*(hash.first&1))) {
-                            std::string field_name = ref.name();
-                            field["field_bit"] = remove_name_tail_range(field_name) + ref.lobit();
-                            remove_aug_names(field_name);
-                            field["field_name"] = field_name; }
-                        if (!hash_bit_added)
-                            bits_to_xor.push_back(std::move(field));
-                        else
-                            bits_to_xor_prev->push_back(std::move(field)); }
-                    if (!hash_bit_added)
-                        hash_bits.push_back(std::move(hash_bit)); } }
-            hash_functions.push_back(std::move(hash_function)); } }
+            for (const auto hash_table : ht) {
+                MatchTable::gen_hash_bits(hash_table.second, hash_table.first, hash_bits); 
+                //for (auto &col: hash.second) {
+                //    json::map hash_bit;
+                //    bool hash_bit_added = false;
+                //    json::vector *bits_to_xor_prev;
+                //    for (auto &hb : hash_bits) {
+                //        if (hb->to<json::map>()["hash_bit"]->to<json::number>() == json::number(col.first)) {
+                //            bits_to_xor_prev = &(hb->to<json::map>()["bits_to_xor"]->to<json::vector>());
+                //            hash_bit_added = true; } }
+                //    hash_bit["hash_bit"] = col.first;
+                //    hash_bit["seed"] = input_xbar->get_seed_bit(hash.first, col.first);
+                //    json::vector &bits_to_xor = hash_bit["bits_to_xor"] = json::vector();
+                //    for (const auto &bit: col.second.data) {
+                //        json::map field;
+                //        if (auto ref = input_xbar->get_group_bit(InputXbar::Group(false, hash.first/2), bit + 64*(hash.first&1))) {
+                //            std::string field_name = ref.name();
+                //            field["field_bit"] = remove_name_tail_range(field_name) + ref.lobit();
+                //            remove_aug_names(field_name);
+                //            field["field_name"] = field_name; }
+                //        if (!hash_bit_added)
+                //            bits_to_xor.push_back(std::move(field));
+                //        else
+                //            bits_to_xor_prev->push_back(std::move(field)); }
+                //    if (!hash_bit_added)
+                //        hash_bits.push_back(std::move(hash_bit)); } }
+            hash_functions.push_back(std::move(hash_function)); } } }
     MatchTable::gen_idletime_tbl_cfg(stage_tbl);
     if (context_json)
         stage_tbl.merge(*context_json);

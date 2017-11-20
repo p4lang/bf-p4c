@@ -555,7 +555,7 @@ bitvec InputXbar::hash_group_bituse(int grp) const {
     return rv;
 }
 
-std::vector<const InputXbar::HashCol *> InputXbar::hash_column(int col, int grp) const {
+std::vector<const HashCol *> InputXbar::hash_column(int col, int grp) const {
     unsigned tables = 0;
     std::vector<const HashCol *> rv;
     for (auto &g : hash_groups)

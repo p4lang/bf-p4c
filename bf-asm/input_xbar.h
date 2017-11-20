@@ -8,6 +8,15 @@
 
 class HashExpr;
 
+struct HashCol {
+    int                     lineno = -1;
+    HashExpr                *fn = 0;
+    int                     bit = 0;
+    bitvec                  data;
+    unsigned                valid = 0;  // FIXME jbay valid bits are gone; should
+                    // issue an error if one tries to use them.  For now just ignored.
+};
+
 class InputXbar {
  public:
     struct Group {
@@ -26,17 +35,9 @@ class InputXbar {
         Input(const Phv::Ref &a, int s) : what(a), lo(s), hi(-1) {}
         Input(const Phv::Ref &a, int l, int h) : what(a), lo(l), hi(h) {}
     };
-    struct HashCol {
-        int                     lineno = -1;
-        HashExpr                *fn = 0;
-        int                     bit = 0;
-        bitvec                  data;
-        unsigned                valid = 0;  // FIXME jbay valid bits are gone; should
-                        // issue an error if one tries to use them.  For now just ignored.
-    };
     struct HashGrp {
         int             lineno = -1;
-        unsigned        tables = 0;
+        unsigned        tables = 0; //Bit set for table index
         uint64_t        seed = 0;
     };
     Table       *table;
@@ -88,7 +89,13 @@ public:
     unsigned tcam_width();
     int tcam_byte_group(int n);
     int tcam_word_group(int n);
-    const std::map<unsigned, std::map<int, HashCol>>& get_hash_tables() { return hash_tables; }
+    std::map<unsigned, std::map<int, HashCol>>& get_hash_tables() { return hash_tables; }
+    const std::map<int, HashCol>& get_hash_table(unsigned id = 0) {
+        for (auto &ht : hash_tables)
+            if (ht.first == id) return ht.second;
+        warning(lineno, "Hash Table for index %d does not exist in table %s", id, table->name()); }
+    Phv::Ref get_hashtable_bit(unsigned id, unsigned bit) {
+        return get_group_bit(InputXbar::Group(false, id/2), bit + 64*(id & 0x1)); }
     Phv::Ref get_group_bit(Group grp, unsigned bit) {
         if (groups.count(grp))
             for (auto &in : groups.at(grp))
@@ -105,7 +112,7 @@ public:
         if (hash_groups.count(group))
             return ((hash_groups.at(group).seed >> bit) & 0x1);
         return 0; }
-
+    HashGrp* get_hash_group(unsigned group = -1){ ::getref(hash_groups, group); }
     class all_iter {
         decltype(groups)::const_iterator        outer, outer_end;
         bool                                    inner_valid;

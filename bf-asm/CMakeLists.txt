@@ -94,6 +94,7 @@ set (BFAS_COMMON_SOURCES
   input_xbar.cpp
   instruction.cpp
   json.cpp
+  match_table.cpp
   meter.cpp
   misc.cpp
   p4_table.cpp
