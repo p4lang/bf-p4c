@@ -59,6 +59,10 @@ int main(int ac, char **av) {
 
     auto program = P4::parseP4File(options);
 
+    // The program itself may include additional options specified as pragmas or
+    // annotations.
+    options.setFromPragmas(program);
+
     program = P4::FrontEnd(hook).run(options, program, true);
     if (!program)
         return 1;
