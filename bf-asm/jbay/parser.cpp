@@ -214,6 +214,18 @@ template<> void Parser::write_config(Target::JBay::parser_regs &regs) {
         for (auto csum : checksum_use[gress])
             if (csum) csum->write_config(regs, this); }
 
+    // FIXME -- what fixed initialization of parser buffer regs do we need?
+    // FIXME -- see tofino/parser.cpp init_common_regs for ideas
+
+    regs.egress.epbreg.chan0_group.chnl_ctrl.meta_opt = meta_opt;
+    regs.egress.epbreg.chan1_group.chnl_ctrl.meta_opt = meta_opt;
+    regs.egress.epbreg.chan2_group.chnl_ctrl.meta_opt = meta_opt;
+    regs.egress.epbreg.chan3_group.chnl_ctrl.meta_opt = meta_opt;
+    regs.egress.epbreg.chan4_group.chnl_ctrl.meta_opt = meta_opt;
+    regs.egress.epbreg.chan5_group.chnl_ctrl.meta_opt = meta_opt;
+    regs.egress.epbreg.chan6_group.chnl_ctrl.meta_opt = meta_opt;
+    regs.egress.epbreg.chan7_group.chnl_ctrl.meta_opt = meta_opt;
+
     for (int i : phv_use[EGRESS]) {
         auto id = Phv::reg(i)->parser_id();
         regs.merge.lower.phv_owner.owner[id] = 1;
