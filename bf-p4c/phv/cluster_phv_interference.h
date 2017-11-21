@@ -158,7 +158,7 @@ class PHV_Interference : public Visitor {
      * Removes non-owner fields from each cluster in @clusters and non-owner
      * singletons from @clusters.
      */
-    void reduce_clusters(std::vector<Cluster_PHV *> &clusters, const std::string&);
+    void reduce_clusters(std::vector<Cluster_PHV *> &clusters, bool phv_cluster = true);
 
     /** True if @f1 and all its associated fields are mutually exclusive with
      * @f2 and all its associated fields.  Associated fields are:

@@ -23,6 +23,7 @@ class Cluster_PHV {
     Cluster_PHV *overlay_substratum_i = nullptr;       // this cluster overlay on substratum cluster
     int id_num_i;                                      // number part of id_i
     std::string id_i;                                  // cluster id
+    bool is_phv_i = false;                             // when true cluster placed in phv else t_phv
     gress_t gress_i;                                   // ingress or egress
     bool uniform_width_i = false;                      // field widths differ in cluster
     int max_width_i = 0;                               // max width of field in cluster
@@ -45,6 +46,7 @@ class Cluster_PHV {
         Cluster_PHV *cl,                               // cluster slicing interface
         bool lo = true);                               // NOLINT(runtime/explicit)
 
+    bool is_phv()                                      { return is_phv_i; }
     void set_gress();                                  // set gress
     int compute_num_overlays();                        // number of overlay fields on this cluster
     void insert_field_clusters(Cluster_PHV *parent = 0, bool slice_lo = true);
@@ -93,6 +95,7 @@ class Cluster_PHV {
     int num_containers(PHV::Field *, PHV::Size width);
     int num_containers(std::vector<PHV::Field *>&);
     int num_containers(std::vector<PHV::Field *>&, PHV::Size width);
+    int container_bits()                                { return num_containers_i * int(width_i); }
     int num_constraints()                               { return num_constraints_i; }
     int num_overlays()                                  { return num_overlays_i; }
 

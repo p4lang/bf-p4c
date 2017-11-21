@@ -158,12 +158,6 @@ p4c_add_xfail_reason("tofino"
   "Header field .* is required to be allocated contiguously"
   extensions/p4_tests/p4_14/jenkins/multicast_scale/multicast_scale.p4
   switch_l2
-  switch_dc_basic
-  )
-
-p4c_add_xfail_reason("tofino"
-  "PHV_Container::taint_bits()"
-  extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   )
 
 # BRIG-112
@@ -238,7 +232,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/jenkins/multi_device/multi_device.p4
   extensions/p4_tests/p4_14/jenkins/perf_test_alpm/perf_test_alpm_one.p4
   extensions/p4_tests/p4_14/jenkins/exm_direct/exm_direct_one.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
   )
 
 # BRIG-113
@@ -580,8 +573,6 @@ p4c_add_xfail_reason("tofino"
   "ERROR: Unhandled type of Expression"
   extensions/p4_tests/p4_14/jenkins/emulation/emulation.p4
   testdata/p4_14_samples/issue583.p4
-  # Glass succeeds on the next test, so it is here temporarily
-  extensions/p4_tests/p4_14/c1/COMPILER-235/vag1737_1.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -618,13 +609,20 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/08-FullTPHV3.p4
   testdata/p4_14_samples/01-BigMatch.p4
   extensions/p4_tests/p4_14/04-FullPHV3.p4
+  extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   extensions/p4_tests/p4_14/c1/COMPILER-133/full_tphv.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-235/vag1737_1.p4
   extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
   extensions/p4_tests/p4_14/c4/COMPILER-590/case3179.p4
   extensions/p4_tests/p4_14/c4/COMPILER-591/case3176.p4
   extensions/p4_tests/p4_14/jenkins/power/power.p4
+  extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
+  extensions/p4_tests/p4_14/c4/COMPILER-523/vag2774.p4
   testdata/p4_14_samples/parser_dc_full.p4
   testdata/p4_14_samples/port_vlan_mapping.p4
+  switch_dc_basic
   )
 
 # We can't (without some complex acrobatics) support conditional computed
@@ -716,15 +714,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c4/COMPILER-549/case2898.p4
   extensions/p4_tests/p4_14/jenkins/range/range.p4
   testdata/p4_14_samples/parser2.p4
-  extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
-  )
-
-# Tests where a field is placed into a container that's too big, causing the
-# output packet to contain padding bits filled with garbage and triggering a PTF
-# test failure.
-p4c_add_xfail_reason("tofino"
-  "Container .* contains deparsed header fields, but it has unused bits.*"
-  testdata/p4_14_samples/instruct5.p4
   )
 
 # BEGIN: XFAILS that match glass XFAILS

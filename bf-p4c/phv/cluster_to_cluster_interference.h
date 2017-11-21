@@ -33,14 +33,13 @@ class Field;
  *  adding the other, non-owner clusters to the owner's `cluster_overlay_map`, and
  *  removing the non-owner clusters from the list of clusters to be phv allocated.
  *
- *  4. Recomputing cluster requirements, now that some clusters have been
+ *  4. NO NEED to recompute cluster requirements after some clusters have been
  *  removed from the list of clusters (and overlaid).
  *
  * Singleton clusters (i.e. with only one element) have already been  grouped by width and
  * gress by a previous pass "cluster_phv_interference"
  *
  *
- * @pre Cluster_PHV_Requirements and any field overlay information available.
  * @pre Cluster_PHV_Interference and any field overlay information available.
  *
  * @post Populate the cluster_overlay_map of each cluster
@@ -78,7 +77,7 @@ class Cluster_Interference : public Visitor {
      * with the largest number of member fields and make it the owner
      * Then add the rest to its overlay map.
      */
-    std::vector<Cluster_PHV*>
+    std::list<Cluster_PHV*>
         do_intercluster_overlay(const ordered_map<int, std::vector<Cluster_PHV*>> reg_map);
 
     /** Finds clusters that can be overlaid.  For each set of clusters that can be
@@ -89,9 +88,10 @@ class Cluster_Interference : public Visitor {
      *
      * @param msg       Message prepended to debug messages.
      *
-     * updates the reduced set of clusters.
+     * removes overlaid clusters from @clusters
      */
-    void reduce_clusters(std::vector<Cluster_PHV*> &clusters, const std::string &msg);
+    std::list<Cluster_PHV*>*
+        reduce_clusters(std::vector<Cluster_PHV*> &clusters, const std::string &msg);
 
     /** True if @cl1 and all its associated fields are mutually exclusive with
      * @cl2 and all its associated fields.  Associated fields are:
@@ -112,14 +112,34 @@ class Cluster_Interference : public Visitor {
      * If we know that both CCGFs will be overlaid starting at the same bit,
      * and if f1 is the same width as f3, and f2 as f4, then only f1---f3 and
      * f2---f4 need to be mutually exclusive, but not f1---f4 or f2---f3.
+     *
+     * Compute whether/how c1 and c2 can overlay
      */
-    bool mutually_exclusive(Cluster_PHV *cl1, Cluster_PHV *cl2, bool seal_deal = false);
+    boost::optional<std::map<PHV::Field *, std::map<int, PHV::Field *>>>
+        mutually_exclusive(Cluster_PHV *cl1, Cluster_PHV *cl2);
+
+    /** True if @cl1 and @cl2 are mutually_exclusive
+     * and all constraints necessary for them to be overlaid are satisfiable
+     * Compute whether c1 and c2 can overlay
+     */
+    boost::optional<std::map<PHV::Field *, std::map<int, PHV::Field *>>>
+        can_overlay(Cluster_PHV *cl1, Cluster_PHV *cl2);
+
+    /** obtain substratum clusters from @cl_list of all clusters
+     * update substratum cluster fields to implement the overlay.
+     */
+    std::vector<Cluster_PHV *> substratum_clusters(std::list<Cluster_PHV*>* cl_list);
+
+    /** if @cl1 and @cl2 are mutually_exclusive
+     * update substratum cluster fields to implement the overlay.
+     */
+    void do_field_overlay(Cluster_PHV *cl1, Cluster_PHV *cl2);
 
     /** Checks that owners own unique virtual groups, and that overlaid
      * clusters are mutually exclusive.
      * note that several virtual groups can be mapped to a single mau group
      */
-    void sanity_check_overlay_maps(std::vector<Cluster_PHV *>, const std::string&);
+    void sanity_check_overlay_maps(std::list<Cluster_PHV *>&, const std::string&);
 };
 
 std::ostream &operator<<(std::ostream &, ordered_map<int, Cluster_PHV*>&);

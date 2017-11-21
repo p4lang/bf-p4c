@@ -863,14 +863,13 @@ PHV_MAU_Group_Assignments::container_no_pack(
             //
             PHV_MAU_Group *cl_g = g;
             size_t req_containers = cl->num_containers();
-            if (cl->exact_containers()) {
+            if (cl->exact_containers() && cl->width() != cl_g->width()) {
                 if (int(cl->width()) < int(cl_g->width())) {
                     if (auto g_scale_down = downsize_mau_group(
                                                 cl->gress(),
                                                 int(cl->width()),
                                                 req_containers,
                                                 phv_groups_to_be_filled)) {
-                        //
                         cl_g = g_scale_down;
                         LOG4("..... exact_containers ... downsizing MAU Group .....");
                         LOG4(*cl_g);
@@ -878,29 +877,10 @@ PHV_MAU_Group_Assignments::container_no_pack(
                         LOG4("*****cluster_phv_mau.cpp: sanity_WARN*****"
                             << ".....downsize...exact_containers MATCH NOT AVAILABLE");
                         LOG4(cl);
-                    }
+                        continue; }
                 } else {
-                    // upsize mau group if current width groups have insufficient empty containers
-                    if (req_containers > max_empty_containers(cl->gress(),
-                                                              int(cl_g->width()),
-                                                              phv_groups_to_be_filled)) {
-                        if (auto g_scale_up = upsize_mau_group(
-                                                    cl->gress(),
-                                                    int(cl->width()),
-                                                    req_containers,
-                                                    phv_groups_to_be_filled)) {
-                            //
-                            cl_g = g_scale_up;
-                            LOG4("..... exact_containers ... upsizing MAU Group .....");
-                            LOG4(*cl_g);
-                        } else {
-                            LOG4("*****cluster_phv_mau.cpp: sanity_WARN*****"
-                                << ".....upsize...exact_containers MATCH NOT AVAILABLE");
-                            LOG4(cl);
-                        }
-                    }
-                }
-            }
+                    // exact container requirements, incorrect to upsize mau group
+                    continue; } }
             if (cl_g->width() != cl->width()) {
                 // scale cl width down or up
                 // <2:_48_32>{3*32} => <2:_48_32>{5*16}
@@ -2250,8 +2230,7 @@ void PHV_MAU_Group_Assignments::container_cohabit_summary() {
 //
 //***********************************************************************************
 
-void
-PHV_MAU_Group_Assignments::container_population_density(
+void PHV_MAU_Group_Assignments::container_population_density(
     std::map<PHV::Size,
         std::map<PHV_Container::Container_status,
             std::pair<int, int>>>& c_bits_agg,
@@ -2299,8 +2278,32 @@ PHV_MAU_Group_Assignments::container_population_density(
     }  // for
 }  // container_population_density
 
-void
-PHV_MAU_Group_Assignments::statistics(
+void PHV_MAU_Group_Assignments::statistics(
+    std::list<PHV::Field *>& fields_not_fit,
+    std::pair<int, int>& gress_bits) {
+    fields_not_fit.clear();  // fields that did not fit
+    gress_bits = {0, 0};     // bits needed for allocating fields that did not fit
+    statistics(phv_clusters(), fields_not_fit, gress_bits);
+    statistics(phv_clusters_nibble(), fields_not_fit, gress_bits);
+    statistics(pov_clusters(), fields_not_fit, gress_bits);
+    statistics(t_phv_clusters(), fields_not_fit, gress_bits);
+    statistics(t_phv_clusters_nibble(), fields_not_fit, gress_bits);
+}
+
+void PHV_MAU_Group_Assignments::statistics(
+    std::list<Cluster_PHV*> cl_list,
+    std::list<PHV::Field *>& field_list,
+    std::pair<int, int>& gress_bits) {
+    for (auto &cl : cl_list) {
+        int bits = 0;
+        for (auto* f : cl->cluster_vec()) {
+            field_list.push_front(f);
+            bits += f->phv_use_width(cl); }
+        gress_bits.first += cl->gress() == INGRESS? bits: 0;
+        gress_bits.second += cl->gress() == EGRESS? bits: 0; }
+}
+
+void PHV_MAU_Group_Assignments::statistics(
     std::ostream &out,
     std::map<PHV::Size,
         std::map<PHV_Container::Container_status,
@@ -2338,8 +2341,7 @@ PHV_MAU_Group_Assignments::statistics(
         << std::endl;
 }
 
-void
-PHV_MAU_Group_Assignments::statistics(std::ostream &out) {
+void PHV_MAU_Group_Assignments::statistics(std::ostream &out) {
     //
     // statistics
     //
@@ -3021,39 +3023,14 @@ std::ostream &operator<<(
 
 std::ostream &operator<<(std::ostream &out, PHV_MAU_Group_Assignments &phv_mau_grps) {
     //
-    std::list<PHV::Field *> fields_not_fit;
-    fields_not_fit.clear();
-    for (auto &cl : phv_mau_grps.phv_clusters()) {
-        for (auto &f : cl->cluster_vec()) {
-            fields_not_fit.push_front(f);
-        }
-    }
-    for (auto &cl : phv_mau_grps.phv_clusters_nibble()) {
-        for (auto &f : cl->cluster_vec()) {
-            fields_not_fit.push_front(f);
-        }
-    }
-    for (auto &cl : phv_mau_grps.pov_clusters()) {
-        for (auto &f : cl->cluster_vec()) {
-            fields_not_fit.push_front(f);
-        }
-    }
-    for (auto &cl : phv_mau_grps.t_phv_clusters()) {
-        for (auto &f : cl->cluster_vec()) {
-            fields_not_fit.push_front(f);
-        }
-    }
-    for (auto &cl : phv_mau_grps.t_phv_clusters_nibble()) {
-        for (auto &f : cl->cluster_vec()) {
-            fields_not_fit.push_front(f);
-        }
-    }
+    std::list<PHV::Field *> fields_not_fit;  // fields that did not fit
+    std::pair<int, int> gress_bits;          // bits needed for allocating fields that did not fit
+    phv_mau_grps.statistics(fields_not_fit, gress_bits);
     out << "Begin+++++++++++++++++++++++++ PHV MAU Group Assignments ++++++++++++++++++++++++++++++"
         << std::endl;
     if (fields_not_fit.size()) {
         fields_not_fit.sort([](const PHV::Field *l, const PHV::Field *r) {
-            return l->id < r->id;
-        });
+            return l->id < r->id; });
         std::string detailed_string =
               " ****************************** Clusters NOT Fit ("
               "\n...PHV cluster\t= " + std::to_string(phv_mau_grps.phv_clusters().size())
@@ -3067,7 +3044,10 @@ std::ostream &operator<<(std::ostream &out, PHV_MAU_Group_Assignments &phv_mau_g
             << detailed_string
             << std::endl
             << std::endl;
-        out << fields_not_fit;
+        out << fields_not_fit
+            << std::endl;
+        out << "\t...need container bits = " << gress_bits.first << "I," << gress_bits.second << "E"
+            << std::endl;
         out << "End"
             << detailed_string
             << std::endl

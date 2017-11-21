@@ -179,6 +179,7 @@ Cluster_PHV::Cluster_PHV(Cluster_PHV *cl, bool lo)
     // sliced cluster keeps string id issued by caller = non-sliced cl id + _lo, _hi
     const char *suffix = lo? "_lo": "_hi";
     id_i = cl->id() + suffix;
+    is_phv_i = cl->is_phv();
     sliced_i = true;
     uniform_width_i = cl->uniform_width();
     assert(uniform_width_i == true);
@@ -196,29 +197,22 @@ Cluster_PHV::Cluster_PHV(PHV::Field *f, std::string id_s /* = "???" */)
 Cluster_PHV::Cluster_PHV(
     ordered_set<PHV::Field *> *p,
     std::string id_s)
-    : cluster_vec_i(p->begin(), p->end()), id_num_i(cluster_id_g), id_i(id_s) {
+    : cluster_vec_i(p->begin(), p->end()) {
     //
     if (!p) {
         LOG1("*****Cluster_PHV called w/ nullptr cluster_set******");
     }
-    id_num_i = cluster_id_g++;
-    //
+    is_phv_i = id_s.substr(0, 3).compare("phv") == 0 || id_s.substr(0, 3).compare("pov") == 0;
     // set string id for non-sliced cluster
-    //
     std::stringstream ss;
+    id_num_i = cluster_id_g++;
     ss << id_num_i;
     id_i = id_s + "_" + ss.str();
-    //
     set_gress();
-    //
     num_overlays_i = compute_num_overlays();
-    //
     insert_field_clusters();
-    //
     set_exact_containers();
-    //
     compute_requirements();
-    //
 }  // Cluster_PHV
 
 int Cluster_PHV::compute_num_overlays() {

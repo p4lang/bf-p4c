@@ -472,10 +472,23 @@ PHV_Container::single_field_overlay(
     // container content for overlay field must reflect overlay field's size, not phv_use_width
     if (constraint_no_cohabit(f)) width = std::min(f->size, width);
 
+    // start represents the container index at which the field_bit_lo will be placed
+    // must be same for all fields in a cluster,
+    // unsafe to change it for a single field, unless field isn't involved in any MAU operations
+    // right justify only for extract operation on field with no alignment constraint
+    // honor field's alignment constraint
+    auto start_with_alignment = f->phv_alignment();
+    // consider slice_offset for sliced clusters else slices will incorrectly overlay identically
+    int slice_offset = f->sliced()? overlay_field_bit_lo: 0;
+    if (start_with_alignment) {
+        // consider slice_offset for sliced clusters
+        int pad = std::abs(start % 8 - (*start_with_alignment + slice_offset) % 8);
+        start += pad;
+    } else if (!f->operations().size() && f->phv_use_width() < int(width_i)) {
+        start += int(width_i) - (start + width) - slice_offset; }
+
     // if substratum area is not yet associated with a field, taint color will be 0
     // need to go through steps for container area allocation, updating its avail bits
-    if (f->phv_use_width() < static_cast<int>(width_i))  // right justify for extract
-        start += int(width_i) - (start + width);
     if (taint_color(start, start + width - 1) == "0") {
         taint(start, width, f, overlay_field_bit_lo, pass);
     } else {
@@ -737,12 +750,12 @@ PHV_Container::fields_in_container(PHV::Field *f, Container_Content *cc) {
                 && (cc_slice->lo() > cc->hi() || cc_slice->hi() < cc->lo()),
                 "*****PHV_Container::fields_in_container()*****"
                 ".....field slices overlap.....\n"
-                "<cc_slice_lo=%d..cc_slice_hi=%d> <cc->lo()=%d..cc->hi()=%d>\n"
-                "cc_slice->field()=%d:%s, cc->field()=%d:%s\t%s",
-                cc_slice->lo(), cc_slice->hi(), cc->lo(), cc->hi(),
-                cc_slice->field()->id, cc_slice->field()->name,
-                cc->field()->id, cc->field()->name,
-                this->toString());
+                "container = %s\n"
+                "field = cc_slice->field()=%d:%s<%d>\n"
+                "slices = <cc_slice_lo=%d..cc_slice_hi=%d>, <cc->lo()=%d..cc->hi()=%d>",
+                this->toString(),
+                cc_slice->field()->id, cc_slice->field()->name, cc_slice->field()->size,
+                cc_slice->lo(), cc_slice->hi(), cc->lo(), cc->hi());
             // TODO
             // if two field slices are part of the same substratum then it is ok to have same color
             // introduce a substratum_field in cc to enable this check
@@ -758,12 +771,10 @@ PHV_Container::fields_in_container(PHV::Field *f, Container_Content *cc) {
                 // cc->field()->id, cc->field()->name,
                 // cc_slice->taint_color(), cc->taint_color(),
                 // this->toString());
-        }
-    }
+        } }
     fields_in_container_i[f].push_back(cc);
-    if (f->deparsed()) {
+    if (f->deparsed())
         set_deparsed(true);
-    }
 }  // fields_in_container f cc
 
 void

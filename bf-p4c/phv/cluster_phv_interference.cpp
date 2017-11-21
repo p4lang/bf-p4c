@@ -12,8 +12,8 @@ PHV_Interference::apply_visitor(const IR::Node *node, const char *name) {
     if (name)
         LOG1(name);
 
-    reduce_clusters(phv_requirements_i.cluster_phv_fields(), "phv");
-    reduce_clusters(phv_requirements_i.t_phv_fields(), "t_phv");
+    reduce_clusters(phv_requirements_i.cluster_phv_fields() /* phv clusters */);
+    reduce_clusters(phv_requirements_i.t_phv_fields(), false /* t_phv clusters */);
 
     LOG3(*this);
     return node;
@@ -243,8 +243,9 @@ ordered_set<PHV::Field*> PHV_Interference::reduce_cluster(
 
 void PHV_Interference::reduce_clusters(
     std::vector<Cluster_PHV *>& clusters,
-    const std::string& msg) {
-    LOG3("..........Begin: PHV_Interference::interference_reduction().........." << msg);
+    bool phv_clusters) {
+    const std::string phv_string = phv_clusters? "phv" : "t_phv";
+    LOG3("..........Begin: PHV_Interference::interference_reduction().........." << phv_string);
 
     ordered_map<gress_t, ordered_map<int, std::vector<Cluster_PHV *>>> singletons;
 
@@ -262,7 +263,7 @@ void PHV_Interference::reduce_clusters(
 
         // Reduce non-singleton clusters.
         ordered_set<PHV::Field*> owners =
-            reduce_cluster(cl->cluster_vec(), int(cl->width()), msg);
+            reduce_cluster(cl->cluster_vec(), int(cl->width()), phv_string);
 
         // Recompute reduced cluster requirements.
         cl->cluster_vec().clear();
@@ -278,16 +279,17 @@ void PHV_Interference::reduce_clusters(
                     clusters.erase(it); }
 
     // Try overlaying singleton clusters with the same width and gress.
-    ordered_set<PHV::Field*> singleton_owners = reduce_singleton_clusters(singletons, msg);
+    ordered_set<PHV::Field*> singleton_owners = reduce_singleton_clusters(singletons, phv_string);
 
     // Add new clusters for singleton owners.
     for (auto f : singleton_owners) {
         std::string cl_id =
-            PHV_Container::Container_Content::Pass::Field_Interference +
+            // prefix phv or t_phv to retain cl's is_phv() identity
+            phv_string + PHV_Container::Container_Content::Pass::Field_Interference +
             std::string(1, PHV_Container::Container_Content::Pass::Aggregate);
         clusters.push_back(new Cluster_PHV(f, cl_id)); }
 
-    LOG3("..........End: PHV_Interference::interference_reduction().........." << msg);
+    LOG3("..........End: PHV_Interference::interference_reduction().........." << phv_string);
 }
 
 bool PHV_Interference::mutually_exclusive(PHV::Field *f1, PHV::Field *f2) {

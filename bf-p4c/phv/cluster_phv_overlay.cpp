@@ -51,102 +51,84 @@
 
 const IR::Node *
 Cluster_PHV_Overlay::apply_visitor(const IR::Node *node, const char *name) {
-    if (name) {
+    if (name)
         LOG1(name);
-    }
     if (!phv_mau_i.phv_clusters().size() && !phv_mau_i.t_phv_clusters().size()) {
         LOG3("++++++++++++++++++++Cluster_PHV_Overlay NOT NEEDED++++++++++++++++++++");
-        return node;
-    }
+        return node; }
     LOG3("Begin..............................Cluster_PHV_Overlay..............................");
     LOG3("\tPHV Clusters = " << phv_mau_i.phv_clusters().size());
     LOG3("\tT_PHV Clusters = " << phv_mau_i.t_phv_clusters().size());
     // PHV overlay cl->cl
     // overlay cluster to cluster, no straddling
-    //
-    if (phv_mau_i.phv_clusters().size()) {
+    if (phv_mau_i.phv_clusters().size())
         overlay_clusters_to_clusters(
             phv_mau_i.phv_clusters(),
             phv_mau_i.substratum_phv_clusters(),
             "Clusters_PHV_Overlay:PHV cl->cl");
-    }
     // PHV overlay cl->Mau_g
     // overlay cluster to MAU group, allows cluster straddling
-    //
     if (phv_mau_i.phv_clusters().size()) {
         // obtain PHV MAU groups
         std::list<PHV_MAU_Group *> phv_groups_to_be_overlayed;
-        for (auto &it : phv_mau_i.phv_mau_map()) {
-            for (auto &g : it.second) {
+        for (auto &it : phv_mau_i.phv_mau_map())
+            for (auto &g : it.second)
                 phv_groups_to_be_overlayed.push_front(g);
-            }
-        }
         overlay_clusters_to_mau_groups(
             phv_mau_i.phv_clusters(),
             phv_groups_to_be_overlayed,
-            "Clusters_PHV_Overlay:PHV cl->Mau_g");
-    }
+            "Clusters_PHV_Overlay:PHV cl->Mau_g"); }
     // T_PHV overlay cl->cl substratum T_PHV clusters
     // overlay cluster to cluster, no straddling
-    //
-    if (phv_mau_i.t_phv_clusters().size()) {
+    if (phv_mau_i.t_phv_clusters().size())
         overlay_clusters_to_clusters(
             phv_mau_i.t_phv_clusters(),
             phv_mau_i.substratum_t_phv_clusters(),
             "Clusters_PHV_Overlay:T_PHV cl->T_PHV_cl");
-    }
     // T_PHV overlay cl->cl substratum PHV clusters
     // overlay cluster to cluster, no straddling
-    //
-    if (phv_mau_i.t_phv_clusters().size()) {
+    if (phv_mau_i.t_phv_clusters().size())
         overlay_clusters_to_clusters(
             phv_mau_i.t_phv_clusters(),
             phv_mau_i.substratum_phv_clusters(),
             "Clusters_PHV_Overlay:T_PHV cl->PHV_cl");
-    }
     // T_PHV overlay cl->Mau_g T_PHV MAUg
     // overlay cluster to MAU group, allows cluster straddling
-    //
     if (phv_mau_i.t_phv_clusters().size()) {
         // obtain T_PHV groups
         ordered_set<PHV_MAU_Group *> t_phv_group_set;
-        for (auto &it : phv_mau_i.t_phv_map()) {
-            for (auto &it_2 : it.second) {
-                for (auto &c : it_2.second) {
+        for (auto &it : phv_mau_i.t_phv_map())
+            for (auto &it_2 : it.second)
+                for (auto &c : it_2.second)
                     t_phv_group_set.insert(c->phv_mau_group());
-                }
-            }
-        }
         std::list<PHV_MAU_Group *> t_phv_groups_to_be_overlayed(
             t_phv_group_set.begin(),
             t_phv_group_set.end());
         overlay_clusters_to_mau_groups(
             phv_mau_i.t_phv_clusters(),
             t_phv_groups_to_be_overlayed,
-            "Cluster_PHV_Overlay:T_PHV cl->T_PHV_Mau_g");
-    }
+            "Cluster_PHV_Overlay:T_PHV cl->T_PHV_Mau_g"); }
     // T_PHV overlay cl->Mau_g PHV Mau_g
     // overlay cluster to MAU group, allows cluster straddling
-    //
     if (phv_mau_i.t_phv_clusters().size()) {
         // obtain PHV MAU groups
         std::list<PHV_MAU_Group *> phv_groups_to_be_overlayed;
-        for (auto &it : phv_mau_i.phv_mau_map()) {
-            for (auto &g : it.second) {
+        for (auto &it : phv_mau_i.phv_mau_map())
+            for (auto &g : it.second)
                 phv_groups_to_be_overlayed.push_front(g);
-            }
-        }
         overlay_clusters_to_mau_groups(
             phv_mau_i.t_phv_clusters(),
             phv_groups_to_be_overlayed,
-            "Cluster_PHV_Overlay:T_PHV cl->PHV_Mau_g");
-    }
-    //
+            "Cluster_PHV_Overlay:T_PHV cl->PHV_Mau_g"); }
     LOG3(*this);
     LOG3("\tPHV Clusters = " << phv_mau_i.phv_clusters().size());
     LOG3("\tT_PHV Clusters = " << phv_mau_i.t_phv_clusters().size());
+    std::list<PHV::Field *> fields_not_fit;  // fields that did not fit
+    std::pair<int, int> gress_bits;          // bits needed for allocating fields that did not fit
+    phv_mau_i.statistics(fields_not_fit, gress_bits);
+    LOG3("\t\tneeded container bits (w/ overlaid fields) = "
+        << gress_bits.first << "I, " << gress_bits.second << "E");
     LOG3("End..............................Cluster_PHV_Overlay..............................");
-    //
     return node;
 }  // apply_visitor
 

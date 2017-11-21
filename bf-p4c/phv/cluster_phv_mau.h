@@ -408,12 +408,6 @@ class PHV_MAU_Group_Assignments : public Visitor {
     std::pair<int, int>
         gress(PHV_MAU_Group::Aligned_Container_Slices_t&);
     //
-    void container_population_density(
-        std::map<PHV::Size,
-            std::map<PHV_Container::Container_status,
-                std::pair<int, int>>>&,
-        bool phv = true);
-
     bool status(std::list<Cluster_PHV *>&, const char *msg = "");
     bool status(
         std::list<PHV_MAU_Group *>&,
@@ -437,6 +431,18 @@ class PHV_MAU_Group_Assignments : public Visitor {
         const std::string&);
     void sanity_check_clusters_allocation();
     //
+    void container_population_density(
+        std::map<PHV::Size,
+            std::map<PHV_Container::Container_status,
+                std::pair<int, int>>>&,
+        bool phv = true);
+    void statistics(
+        std::list<PHV::Field *>& fields_not_fit,
+        std::pair<int, int>& gress_bits);
+    void statistics(
+        std::list<Cluster_PHV*> cl_list,
+        std::list<PHV::Field *>& field_list,
+        std::pair<int, int>& gress_bits);
     void statistics(
         std::ostream &out,
         std::map<PHV::Size,
