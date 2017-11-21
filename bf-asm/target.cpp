@@ -160,16 +160,20 @@ void declare_registers(const Target::JBay::deparser_regs *regs) {
 // should these be inline in the header file?
 int Target::NUM_MAU_STAGES() {
     SWITCH_FOREACH_TARGET(options.target, return TARGET::NUM_MAU_STAGES; )
+    return -1;
 }
 
 int Target::DEPARSER_CHECKSUM_UNITS() {
     SWITCH_FOREACH_TARGET(options.target, return TARGET::DEPARSER_CHECKSUM_UNITS; )
+    return -1;
 }
 
 int Target::DEPARSER_MAX_POV_BYTES() {
     SWITCH_FOREACH_TARGET(options.target, return TARGET::DEPARSER_MAX_POV_BYTES; )
+    return -1;
 }
 
 const char *Target::name() {
     SWITCH_FOREACH_TARGET(options.target, return TARGET::name; )
+    return nullptr;
 }

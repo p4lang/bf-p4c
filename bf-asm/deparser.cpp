@@ -91,7 +91,7 @@ struct Deparser::FDEntry {
                     next = r.first + r.second->reg.size/8U;
                     prev = &r.second; } } }
         unsigned size() override { return length; }
-        unsigned encode() override { assert(0); }
+        unsigned encode() override { assert(0); return -1; }
     };
 
     int         lineno;
@@ -351,4 +351,5 @@ void Deparser::output(json::map &) {
 
 unsigned Deparser::FDEntry::Checksum::encode() {
     SWITCH_FOREACH_TARGET(options.target, return encode<TARGET>(); );
+    return -1;
 }

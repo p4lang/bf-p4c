@@ -627,7 +627,7 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
 // repeat a hash group if already visited.
 void ExactMatchTable::gen_hash_functions(json::map &stage_tbl) {
     bitvec visited_groups(EXACT_HASH_GROUPS,0);
-    auto ht = input_xbar->get_hash_tables();
+    auto &ht = input_xbar->get_hash_tables();
     // Output cjson node only if hash tables present
     if (ht.size() > 0) {
         json::vector &hash_functions = stage_tbl["hash_functions"] = json::vector();

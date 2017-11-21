@@ -401,9 +401,9 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
                         METER, IDLETIME, STATEFUL, HASH_ACTION, EXACT, TERNARY, PHASE0 };
     virtual table_type_t table_type() { return OTHER; }
     virtual int instruction_set() { return 0; /* VLIW_ALU */ }
-    virtual table_type_t set_match_table(MatchTable *m, bool indirect) { assert(0); }
-    virtual MatchTable *get_match_table() { assert(0); }
-    virtual std::set<MatchTable *> get_match_tables() { assert(0); }
+    virtual table_type_t set_match_table(MatchTable *m, bool indirect) { assert(0); return OTHER; }
+    virtual MatchTable *get_match_table() { assert(0); return nullptr; }
+    virtual std::set<MatchTable *> get_match_tables() { assert(0); return std::set<MatchTable *>(); }
     virtual const AttachedTables *get_attached() const { return 0; }
     virtual const GatewayTable *get_gateway() const { return 0; }
     virtual SelectionTable *get_selector() const { return 0; }
@@ -412,13 +412,13 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     virtual const Call &get_action() const { return action; }
     virtual Format::Field *find_address_field(AttachedTable *) const { assert(0); return 0; }
     virtual Format::Field *get_per_flow_enable_param(MatchTable *) const { assert(0); return 0; }
-    virtual int direct_shiftcount() const { assert(0); }
-    virtual int indirect_shiftcount() const { assert(0); }
-    virtual int address_shift() const { assert(0); }
-    virtual int home_row() const { assert(0); }
+    virtual int direct_shiftcount() const { assert(0); return -1; }
+    virtual int indirect_shiftcount() const { assert(0); return -1; }
+    virtual int address_shift() const { assert(0); return -1; }
+    virtual int home_row() const { assert(0); return -1; }
     /* row,col -> mem unitno mapping -- unitnumbers used in context json */
     virtual int memunit(int r, int c) { return r*12 + c; }
-    virtual int unitram_type() { assert(0); }
+    virtual int unitram_type() { assert(0); return -1; }
     virtual bool adr_mux_select_stats() { return false; }
     virtual bool run_at_eop() { return false; }
     template<class REGS> void write_mapram_regs(REGS &regs, int row, int col, int vpn, int type);
@@ -799,7 +799,7 @@ DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
     FOR_ALL_TARGETS(FORWARD_VIRTUAL_TABLE_WRITE_MERGE_REGS)
     int unitram_type() override { return UnitRam::TERNARY_INDIRECTION; }
 public:
-    int address_shift() const { return std::min(5U, format->log2size - 2); }
+    int address_shift() const override { return std::min(5U, format->log2size - 2); }
 )
 
 DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,
@@ -810,7 +810,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,
     std::string                 per_flow_enable_param = "";
     unsigned                    per_flow_enable_bit = 0;
     unsigned                    address_bits;
-    table_type_t set_match_table(MatchTable *m, bool indirect) {
+    table_type_t set_match_table(MatchTable *m, bool indirect) override {
         if ((indirect && direct) || (!indirect && this->indirect))
             error(lineno, "Table %s is accessed with direct and indirect indices", name());
         this->indirect = indirect;
@@ -818,19 +818,19 @@ DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,
         match_tables.insert(m);
         if ((unsigned)m->logical_id < (unsigned)logical_id) logical_id = m->logical_id;
         return table_type(); }
-    const GatewayTable *get_gateway() const {
+    const GatewayTable *get_gateway() const override {
         return match_tables.size() == 1 ? (*match_tables.begin())->get_gateway() : 0; }
-    MatchTable *get_match_table() {
+    MatchTable *get_match_table() override {
         return match_tables.size() == 1 ? *match_tables.begin() : 0; }
-    std::set<MatchTable *> get_match_tables() { return match_tables; }
-    SelectionTable *get_selector() const {
+    std::set<MatchTable *> get_match_tables() override { return match_tables; }
+    SelectionTable *get_selector() const override {
         return match_tables.size() == 1 ? (*match_tables.begin())->get_selector() : 0; }
-    StatefulTable *get_stateful() const {
+    StatefulTable *get_stateful() const override {
         return match_tables.size() == 1 ? (*match_tables.begin())->get_stateful() : 0; }
-    Call &action_call() {
+    Call &action_call() override {
         return match_tables.size() == 1 ? (*match_tables.begin())->action_call() : action; }
-    int memunit(int r, int c) { return r*6 + c; }
-    void pass1();
+    int memunit(int r, int c) override { return r*6 + c; }
+    void pass1() override;
     unsigned get_alu_index() {
         if(layout.size() > 0) return layout[0].row/4U;
         error(lineno, "Cannot determine ALU Index for table %s", name());
@@ -950,7 +950,7 @@ public:
     template<class REGS> void setup_logical_alu_map(REGS &regs, int logical_id, int alu);
     template<class REGS> void setup_physical_alu_map(REGS &regs, int type, int bus, int alu);
     FOR_ALL_TARGETS(FORWARD_VIRTUAL_TABLE_WRITE_MERGE_REGS_WITH_ARGS)
-    int address_shift() const { return 7 + ceil_log2(min_words); }
+    int address_shift() const override { return 7 + ceil_log2(min_words); }
     unsigned meter_group() const { return layout.at(0).row/4U; }
     int home_row() const override { return layout.at(0).row | 3; }
     int unitram_type() override { return UnitRam::SELECTOR; }

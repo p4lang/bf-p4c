@@ -112,7 +112,7 @@ public:
         if (hash_groups.count(group))
             return ((hash_groups.at(group).seed >> bit) & 0x1);
         return 0; }
-    HashGrp* get_hash_group(unsigned group = -1){ ::getref(hash_groups, group); }
+    HashGrp* get_hash_group(unsigned group = -1){ return ::getref(hash_groups, group); }
     class all_iter {
         decltype(groups)::const_iterator        outer, outer_end;
         bool                                    inner_valid;
