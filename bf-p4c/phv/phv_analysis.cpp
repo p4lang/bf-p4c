@@ -20,7 +20,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
     const BFN_Options &options,
     PhvInfo &phv, PhvUse &uses, const ClotInfo& clot,
     FieldDefUse &defuse, DependencyGraph &deps)
-    : cluster(phv, uses, clot),
+    : cluster(phv, uses, clot, options),
       cluster_phv_req(cluster),
       cluster_phv_interference(cluster_phv_req, mutually_exclusive_field_ids),
       cluster_to_cluster_interference(

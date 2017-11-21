@@ -8,6 +8,7 @@
 #include "lib/ordered_map.h"
 #include "lib/ordered_set.h"
 #include "lib/range.h"
+#include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/ir/thread_visitor.h"
 #include "bf-p4c/ir/tofino_write_context.h"
 #include "bf-p4c/parde/clot_info.h"
@@ -52,6 +53,7 @@ class Cluster : public PassManager {
     PhvInfo& phv_i;
     PhvUse& uses_i;
     const ClotInfo& clot_i;
+    const BFN_Options& options_i;
 
     /// Map of field to cluster it belongs.
     ordered_map<PHV::Field *, Cluster_t *> dst_map_i;
@@ -124,7 +126,8 @@ class Cluster : public PassManager {
     };
     //
  public:
-    Cluster(PhvInfo &p, PhvUse &u, const ClotInfo& c) : phv_i(p), uses_i(u), clot_i(c) {
+    Cluster(PhvInfo &p, PhvUse &u, const ClotInfo& c, const BFN_Options& options)
+          : phv_i(p), uses_i(u), clot_i(c), options_i(options) {
         addPasses({
             new MakeCCGFs(*this),
             new MakeClusters(*this) });
