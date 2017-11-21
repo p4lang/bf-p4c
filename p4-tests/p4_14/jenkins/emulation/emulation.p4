@@ -6,6 +6,8 @@
 #define ETHERTYPE_VLAN         0x8100
 #define ETHERTYPE_IPV4         0x0800
 
+@pragma diagnostic ccgf_contiguity_failure warn
+
 header_type ethernet_t {
     fields {
         dstAddr : 48;

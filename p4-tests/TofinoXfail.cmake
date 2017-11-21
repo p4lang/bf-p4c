@@ -578,6 +578,7 @@ p4c_add_xfail_reason("tofino"
 # Tofino expected failures (Glass fails as well)
 p4c_add_xfail_reason("tofino"
   "ERROR: Unhandled type of Expression"
+  extensions/p4_tests/p4_14/jenkins/emulation/emulation.p4
   testdata/p4_14_samples/issue583.p4
   # Glass succeeds on the next test, so it is here temporarily
   extensions/p4_tests/p4_14/c1/COMPILER-235/vag1737_1.p4
@@ -825,7 +826,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
   extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
   extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
-  extensions/p4_tests/p4_14/jenkins/emulation/emulation.p4
   )
 
 # This code contains an implicit cast in an assignment in the parser; we need to
