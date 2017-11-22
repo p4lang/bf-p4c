@@ -263,6 +263,10 @@ struct RewriteParserStatements : public Transform {
         return bitsAdvanced.nextByte();
     }
 
+    /// @return the cumulative shift in bits from all statements rewritten up to
+    /// this point.
+    int bitTotalShift() const { return currentBit; }
+
  private:
     const IR::Vector<IR::BFN::ParserPrimitive>*
     rewriteExtract(Util::SourceInfo srcInfo, const IR::Expression* dest) {
@@ -466,20 +470,21 @@ static match_t buildMatch(int match_size, const IR::Expression *key,
 
 namespace {
 
-const IR::Node* rewriteSelect(const IR::Expression* component) {
+const IR::Node* rewriteSelect(const IR::Expression* component, int bitShift) {
     // We can transform a LookaheadExpression immediately to a concrete select
     // on bits in the input buffer.
-    if (auto* lookahead = component->to<IR::BFN::LookaheadExpression>())
-        return new IR::BFN::Select(new IR::BFN::PacketRVal(lookahead->bitRange()),
-                                   lookahead);
+    if (auto* lookahead = component->to<IR::BFN::LookaheadExpression>()) {
+        auto finalRange = lookahead->bitRange().shiftedByBits(bitShift);
+        return new IR::BFN::Select(new IR::BFN::PacketRVal(finalRange), lookahead);
+    }
 
     // We can split a Concat into multiple selects. Note that this is quite
     // unlike a Slice; the Concat operands may not even be adjacent in the input
     // buffer, so this is really two primitive select operations.
     if (auto* concat = component->to<IR::Concat>()) {
         auto* rv = new IR::Vector<IR::BFN::Select>;
-        rv->pushBackOrAppend(rewriteSelect(concat->left));
-        rv->pushBackOrAppend(rewriteSelect(concat->right));
+        rv->pushBackOrAppend(rewriteSelect(concat->left, bitShift));
+        rv->pushBackOrAppend(rewriteSelect(concat->right, bitShift));
         return rv;
     }
 
@@ -527,6 +532,7 @@ IR::BFN::ParserState* GetTofinoParser::getState(cstring name) {
         state->statements.pushBackOrAppend(statement->apply(rewriteStatements));
 
     // Compute the new state's shift.
+    auto bitShift = rewriteStatements.bitTotalShift();
     auto shift = rewriteStatements.byteTotalShift();
 
     // Handle the simple cases: this state has no successor, or it transitions
@@ -556,7 +562,7 @@ IR::BFN::ParserState* GetTofinoParser::getState(cstring name) {
     auto selectExpr = state->p4State->selectExpression->to<IR::SelectExpression>();
     for (auto* component : selectExpr->select->components) {
         matchSize += component->type->width_bits();
-        state->selects.pushBackOrAppend(rewriteSelect(component));
+        state->selects.pushBackOrAppend(rewriteSelect(component, bitShift));
     }
 
     // Generate the outgoing transitions.
