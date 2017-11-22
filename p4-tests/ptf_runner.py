@@ -172,7 +172,7 @@ def run_ptf_tests(PTF, grpc_addr, ptfdir, p4info_path, port_map, stftest,
         p.wait()
     except:
         error("Error when running PTF tests")
-        return 1
+        return False
     return p.returncode == 0
 
 def start_model(model, out=None, lookup_json=None, port_map_path=None):
