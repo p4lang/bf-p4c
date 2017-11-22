@@ -33,6 +33,10 @@ set (BMV2_XFAIL_TESTS
   extensions/p4_tests/p4_14/test_config_318_sym_hash_neg_test_4.p4
   extensions/p4_tests/p4_14/test_config_319_sym_hash_neg_test_5.p4
   extensions/p4_tests/p4_14/test_checksum.p4
+  extensions/p4_tests/p4_14/gateway1.p4
+  extensions/p4_tests/p4_14/gateway2.p4
+  extensions/p4_tests/p4_14/gateway3.p4
+  extensions/p4_tests/p4_14/gateway4.p4
   )
 
 

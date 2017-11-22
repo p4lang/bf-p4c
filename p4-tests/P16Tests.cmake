@@ -2,6 +2,7 @@
 set (P4_XFAIL_TESTS
   extensions/p4_tests/p4_16/stful.p4
   extensions/p4_tests/p4_16/tna-salu.p4
+  extensions/p4_tests/p4_16/test_compiler_macro_defs.p4
   )
 
 set (P16_TEST_SUITES
