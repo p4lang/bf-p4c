@@ -40,6 +40,9 @@ class PardeSpec {
     /// @return the size in bytes of the padding between the ingress static
     /// per-port metadata and the beginning of the packet.
     virtual size_t byteIngressPrePacketPaddingSize() const = 0;
+    size_t bitIngressPrePacketPaddingSize() const {
+        return byteIngressPrePacketPaddingSize() * 8;
+    }
 
     /// @return the total size of all ingress metadata on this device.
     size_t byteTotalIngressMetadataSize() const {

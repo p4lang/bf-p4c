@@ -34,63 +34,16 @@ bool AddMetadataShims::preorder(IR::BFN::Parser *parser) {
 }
 
 void AddMetadataShims::addIngressMetadata(IR::BFN::Parser *parser) {
-    auto* igMeta = getMetadataType(pipe, "ingress_intrinsic_metadata");
-    auto* igParserMeta =
-      getMetadataType(pipe, "ingress_intrinsic_metadata_from_parser");
-
-    // Add a state that skips over any padding between the phase 0 data and the
-    // beginning of the packet.
-    // XXX(seth): This "padding" is new in JBay, and it may contain actual data
-    // rather than just padding. Once we have a chance to investigate what it
-    // does, we'll want to revisit this.
-    const auto byteSkip = Device::pardeSpec().byteIngressPrePacketPaddingSize();
-    auto* skipToPacketState =
-      new IR::BFN::ParserState("$skip_to_packet", INGRESS, { }, { }, {
-          new IR::BFN::Transition(match_t(), byteSkip, parser->start)
-      });
-
-    // Add a state that parses the phase 0 data. This is a placeholder that
-    // just skips it; if we find a phase 0 table, it'll be replaced later.
-    const auto bytePhase0Size = Device::pardeSpec().bytePhase0Size();
-    auto* phase0State =
-        new IR::BFN::ParserState("$phase0", INGRESS, { }, { }, {
-            new IR::BFN::Transition(match_t(), bytePhase0Size, skipToPacketState)
-        });
-
-    // This state parses resubmit data. Just like phase 0, the version we're
-    // generating here is a placeholder that just skips the data; we'll replace
-    // it later with an actual implementation.
-    const auto byteResubmitSize = Device::pardeSpec().byteResubmitSize();
-    auto* resubmitState =
-        new IR::BFN::ParserState("$resubmit", INGRESS, { }, { }, {
-            new IR::BFN::Transition(match_t(), byteResubmitSize, skipToPacketState)
-        });
-
-    // If this is a resubmitted packet, the initial intrinsic metadata will be
-    // followed by the resubmit data; otherwise, it's followed by the phase 0
-    // data. This state checks the resubmit flag and branches accordingly.
-    auto* resubmitFlagField = gen_fieldref(igMeta, "resubmit_flag");
-    auto* checkResubmitState =
-      new IR::BFN::ParserState("$check_resubmit", INGRESS, { },
-        { new IR::BFN::Select(new IR::BFN::ComputedRVal(resubmitFlagField)) },
-        { new IR::BFN::Transition(match_t(8, 0, 0x80), 0, phase0State),
-          new IR::BFN::Transition(match_t(8, 0x80, 0x80), 0, resubmitState) });
-
-    // This state handles the extraction of ingress intrinsic metadata.
-    const auto igMetadataPacking = Device::pardeSpec().ingressMetadataLayout(igMeta);
-    auto* igMetadataState =
-      igMetadataPacking.createExtractionState(INGRESS, "$ingress_metadata",
-                                              checkResubmitState);
-
     // This state initializes some special metadata and serves as an entry
     // point.
+    auto* igParserMeta =
+      getMetadataType(pipe, "ingress_intrinsic_metadata_from_parser");
     auto* alwaysDeparseBit =
         new IR::TempVar(IR::Type::Bits::get(1), true, "$always_deparse");
     auto* bridgedMetadataIndicator =
       new IR::TempVar(IR::Type::Bits::get(8), false, "$bridged_metadata_indicator");
     auto* globalTimestamp = gen_fieldref(igParserMeta, "ingress_global_tstamp");
     auto* globalVersion = gen_fieldref(igParserMeta, "ingress_global_ver");
-    auto* parserErrorCode = gen_fieldref(igParserMeta, "ingress_parser_err");
 
     parser->start =
       new IR::BFN::ParserState("$entry_point", INGRESS,
@@ -98,68 +51,25 @@ void AddMetadataShims::addIngressMetadata(IR::BFN::Parser *parser) {
           new IR::BFN::Extract(bridgedMetadataIndicator, new IR::BFN::ConstantRVal(0)),
           new IR::BFN::Extract(globalTimestamp, new IR::BFN::BufferRVal(StartLen(432, 48))),
           new IR::BFN::Extract(globalVersion, new IR::BFN::BufferRVal(StartLen(480, 32))),
-          new IR::BFN::Extract(parserErrorCode, new IR::BFN::ConstantRVal(0)),
         }, { },
-        { new IR::BFN::Transition(match_t(), 0, igMetadataState) });
+        { new IR::BFN::Transition(match_t(), 0, parser->start) });
 }
 
 void AddMetadataShims::addEgressMetadata(IR::BFN::Parser *parser) {
-    auto* egMeta = getMetadataType(pipe, "egress_intrinsic_metadata");
     auto* egParserMeta =
       getMetadataType(pipe, "egress_intrinsic_metadata_from_parser");
 
-    // Add a state that parses bridged metadata. This is just a placeholder;
-    // we'll replace it once we know which metadata need to be bridged.
-    auto* bridgedMetadataState =
-        new IR::BFN::ParserState("$bridged_metadata", EGRESS, { }, { }, {
-            new IR::BFN::Transition(match_t(), 0, parser->start)
-        });
-
-    // Similarly, this state is a placeholder which will eventually hold the
-    // parser for mirrored data.
-    auto* mirroredState =
-        new IR::BFN::ParserState("$mirrored", EGRESS, { }, { }, {
-            new IR::BFN::Transition(match_t(), 0, parser->start)
-        });
-
-    // If this is a mirrored packet, the hardware will have prepended the
-    // contents of the mirror buffer to the actual packet data. To detect this
-    // data, we add a byte to the beginning of the mirror buffer that contains a
-    // flag indicating that it's a mirrored packet. We can use this flag to
-    // distinguish a mirrored packet from a normal packet because we always
-    // begin the bridged metadata we attach to normal packet with an extra byte
-    // which has the mirror indicator flag set to zero.
-    auto* checkMirroredState =
-      new IR::BFN::ParserState("$check_mirrored", EGRESS, { },
-        { new IR::BFN::Select(new IR::BFN::PacketRVal(StartLen(0, 8))) },
-        { new IR::BFN::Transition(match_t(8, 0, 1 << 3), 0, bridgedMetadataState),
-          new IR::BFN::Transition(match_t(8, 1 << 3, 1 << 3), 0, mirroredState) });
-
-    // This state handles the extraction of egress intrinsic metadata.
-    const auto epbConfig = Device::pardeSpec().defaultEPBConfig();
-    const auto egMetadataPacking =
-      Device::pardeSpec().egressMetadataLayout(epbConfig, egMeta);
-    auto* egMetadataState =
-      egMetadataPacking.createExtractionState(EGRESS, "$egress_metadata",
-                                              checkMirroredState);
-
-    // This state initializes some special metadata and serves as an entry
-    // point.
     auto* alwaysDeparseBit =
         new IR::TempVar(IR::Type::Bits::get(1), true, "$always_deparse");
     auto* globalTimestamp = gen_fieldref(egParserMeta, "egress_global_tstamp");
     auto* globalVersion = gen_fieldref(egParserMeta, "egress_global_ver");
-    auto* parserErrorCode = gen_fieldref(egParserMeta, "egress_parser_err");
-    auto* sampleCount = gen_fieldref(egParserMeta, "coalesce_sample_count");
     parser->start =
       new IR::BFN::ParserState("$entry_point", EGRESS,
         { new IR::BFN::Extract(alwaysDeparseBit, new IR::BFN::ConstantRVal(1)),
           new IR::BFN::Extract(globalTimestamp, new IR::BFN::BufferRVal(StartLen(432, 48))),
           new IR::BFN::Extract(globalVersion, new IR::BFN::BufferRVal(StartLen(480, 32))),
-          new IR::BFN::Extract(parserErrorCode, new IR::BFN::ConstantRVal(0)),
-          new IR::BFN::Extract(sampleCount, new IR::BFN::ConstantRVal(0)),
         }, { },
-        { new IR::BFN::Transition(match_t(), 0, egMetadataState) });
+        { new IR::BFN::Transition(match_t(), 0, parser->start) });
 }
 
 bool AddMetadataShims::preorder(IR::BFN::Deparser *d) {

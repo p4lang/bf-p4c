@@ -578,6 +578,7 @@ parser IngressParser<H, M>(
     out H hdr,
     out M ig_md,
     out ingress_intrinsic_metadata_t ig_intr_md,
+    @optional out ingress_intrinsic_metadata_from_parser_t ig_intr_md_from_prsr,
     @optional out ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm
     );
 
@@ -586,6 +587,7 @@ parser EgressParser<H, M>(
     out H hdr,
     out M eg_md,
     out egress_intrinsic_metadata_t eg_intr_md,
+    @optional out egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr,
     /// following two arguments are bridged metadata
     @optional inout ingress_intrinsic_metadata_t ig_intr_md,
     @optional inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm
