@@ -164,6 +164,7 @@ class GetTofinoParser {
     TransitionStack                             transitionStack;
     gress_t                                     gress = INGRESS;
     std::map<cstring, IR::BFN::ParserState *>   states;
+    std::map<cstring, cstring>                  p4StateNameToStateName;
     bool                                        filterSetMetadata;
 };
 
@@ -174,14 +175,18 @@ GetTofinoParser::extract(gress_t gress, const IR::P4Parser* parser,
 
     forAllMatching<IR::ParserState>(parser,
                   [&](const IR::ParserState* state) {
+        auto stateName = state->controlPlaneName();
+        getter.p4StateNameToStateName.emplace(state->name, stateName);
         if (state->name == "accept" || state->name == "reject")
             return false;
-        getter.states[state->name] =
-          new IR::BFN::ParserState(state, state->name, gress);
+        getter.states[stateName] =
+          new IR::BFN::ParserState(state, stateName, gress);
         return true;
     });
 
-    auto startState = getter.getState("start");
+    BUG_CHECK(getter.p4StateNameToStateName.count("start"),
+              "No entry point in parser?");
+    auto* startState = getter.getState(getter.p4StateNameToStateName.at("start"));
     return new IR::BFN::Parser(gress, startState);
 }
 
@@ -502,7 +507,7 @@ IR::BFN::ParserState* GetTofinoParser::getState(cstring name) {
         // We're inside a loop. We don't want loops in the actual IR graph, so
         // we'll unroll the loop by creating a new, empty instance of this
         // state, which we'll convert again.
-        auto originalName = state->p4State->name;
+        auto originalName = state->p4State->controlPlaneName();
         auto unrolledName = cstring::make_unique(states, originalName);
         state = new IR::BFN::ParserState(state->p4State, unrolledName, gress);
         states[unrolledName] = state;
@@ -516,7 +521,7 @@ IR::BFN::ParserState* GetTofinoParser::getState(cstring name) {
               "Converting a parser state that didn't come from the frontend?");
 
     // Lower the parser statements from the frontend IR to the Tofino IR.
-    RewriteParserStatements rewriteStatements(state->p4State->name,
+    RewriteParserStatements rewriteStatements(state->p4State->controlPlaneName(),
                                               gress, filterSetMetadata);
     for (auto* statement : state->p4State->components)
         state->statements.pushBackOrAppend(statement->apply(rewriteStatements));
@@ -533,10 +538,13 @@ IR::BFN::ParserState* GetTofinoParser::getState(cstring name) {
         state->transitions.push_back(transition);
 
         AutoPushTransition newTransition(transitionStack, state, transition);
-        if (newTransition.isValid)
-            transition->next = getState(path->path->name);
-        else
+        if (newTransition.isValid) {
+            BUG_CHECK(p4StateNameToStateName.count(path->path->name),
+                      "Transition to unknown P4 state: %1%", path);
+            transition->next = getState(p4StateNameToStateName.at(path->path->name));
+        } else {
             return nullptr;  // One bad transition means the whole state's bad.
+        }
 
         return state;
     }
@@ -558,10 +566,14 @@ IR::BFN::ParserState* GetTofinoParser::getState(cstring name) {
         state->transitions.push_back(transition);
 
         AutoPushTransition newTransition(transitionStack, state, transition);
-        if (newTransition.isValid)
-            transition->next = getState(selectCase->state->path->name);
-        else
+        if (newTransition.isValid) {
+            BUG_CHECK(p4StateNameToStateName.count(selectCase->state->path->name),
+                      "Transition to unknown P4 state: %1%", selectCase);
+            transition->next =
+              getState(p4StateNameToStateName.at(selectCase->state->path->name));
+        } else {
             return nullptr;  // One bad transition means the whole state's bad.
+        }
     }
 
     return state;
