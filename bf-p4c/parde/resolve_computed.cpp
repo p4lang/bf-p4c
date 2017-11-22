@@ -309,10 +309,18 @@ struct CopyPropagateParserValues : public ParserInspector {
 
     void propagateToUse(const IR::BFN::ComputedRVal* value,
                         const ReachingDefs& defs) {
+        // Drop any cast which may be applied to this computed value.
+        // XXX(seth): This obviously isn't sound, but it's consistent with what
+        // we're doing elsewhere in the parser code. This is just a hack until
+        // we eliminate casts correctly in an earlier pass.
+        auto* sourceExpr = value->source;
+        if (auto* cast = sourceExpr->to<IR::Cast>())
+            sourceExpr = cast->expr;
+
         // Create a string representation of this computed value. We consider
         // values to be equal if they have the same string representation.
         // XXX(seth): It'd be nice to move away from using strings.
-        auto sourceName = value->source->toString();
+        auto sourceName = sourceExpr->toString();
 
         // Does some definition for this computed value reach this point?
         if (defs.find(sourceName) == defs.end()) {
@@ -652,7 +660,8 @@ class CheckResolvedParserExpressions : public ParserTransform {
         prune();
         if (!select->source->is<IR::BFN::ComputedRVal>()) return select;
         ::error("Couldn't resolve computed value for select in state %1%: %2%",
-                findContext<IR::BFN::ParserState>()->name, select);
+                findContext<IR::BFN::ParserState>()->name,
+                select->source->to<IR::BFN::ComputedRVal>()->source);
         return nullptr;
     }
 };
