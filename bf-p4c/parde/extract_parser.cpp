@@ -153,11 +153,10 @@ struct AutoPushTransition {
 class GetTofinoParser {
  public:
     static const IR::BFN::Parser*
-    extract(gress_t gress, const IR::P4Parser* parser,
-            bool filterSetMetadata = false);
+    extract(gress_t gress, const IR::P4Parser* parser);
+
  private:
-    GetTofinoParser(gress_t gress, bool filterSetMetadata)
-        : gress(gress), filterSetMetadata(filterSetMetadata) { }
+    explicit GetTofinoParser(gress_t gress) : gress(gress) { }
 
     IR::BFN::ParserState* getState(cstring name);
 
@@ -165,13 +164,11 @@ class GetTofinoParser {
     gress_t                                     gress = INGRESS;
     std::map<cstring, IR::BFN::ParserState *>   states;
     std::map<cstring, cstring>                  p4StateNameToStateName;
-    bool                                        filterSetMetadata;
 };
 
 /* static */ const IR::BFN::Parser*
-GetTofinoParser::extract(gress_t gress, const IR::P4Parser* parser,
-                         bool filterSetMetadata /* = false */) {
-    GetTofinoParser getter(gress, filterSetMetadata);
+GetTofinoParser::extract(gress_t gress, const IR::P4Parser* parser) {
+    GetTofinoParser getter(gress);
 
     forAllMatching<IR::ParserState>(parser,
                   [&](const IR::ParserState* state) {
@@ -193,24 +190,19 @@ GetTofinoParser::extract(gress_t gress, const IR::P4Parser* parser,
 ParserInfo extractParser(const IR::BFN::Pipe* pipe,
                          const IR::P4Parser* igParser,
                          const IR::P4Control* igDeparser,
-                         const IR::P4Parser* egParser /* = nullptr */,
-                         const IR::P4Control* egDeparser /* = nullptr */,
+                         const IR::P4Parser* egParser,
+                         const IR::P4Control* egDeparser,
                          bool useTna /* = false */) {
     CHECK_NULL(igParser);
     CHECK_NULL(igDeparser);
+    CHECK_NULL(egParser);
+    CHECK_NULL(egDeparser);
 
     ParserInfo info;
 
-    // XXX(seth): Most of the stuff in this function should actually be handled
-    // during the conversion to Tofino Native Architecture.
-
-    // Convert the parsers. If no egress parser was provided, we generate one
-    // from the ingress parser by removing all 'set_metadata' primitives.
+    // Convert the parsers.
     info.parsers[INGRESS] = GetTofinoParser::extract(INGRESS, igParser);
-    info.parsers[EGRESS] = egParser != nullptr
-        ? GetTofinoParser::extract(EGRESS, egParser)
-        : GetTofinoParser::extract(EGRESS, igParser,
-                                   /* filterSetMetadata = */ true);
+    info.parsers[EGRESS] = GetTofinoParser::extract(EGRESS, egParser);
 
     // Attempt to resolve header stack ".next" and ".last" members.
     // XXX(seth): In the long term we should run
@@ -222,15 +214,14 @@ ParserInfo extractParser(const IR::BFN::Pipe* pipe,
     // correctly requires that we've resolved header stack indices, but that's
     // an artifact of the IR conversion and it's not something that should not
     // be happening at this layer anyway.
+    // XXX(seth): We could and should deal with this in the midend.
     ResolveComputedHeaderStackExpressions resolveComputed;
     for (auto gress : { INGRESS, EGRESS })
         info.parsers[gress] = info.parsers[gress]->apply(resolveComputed);
 
-    // Convert the deparsers, generating the egress deparser if necessary.
+    // Convert the deparsers.
     info.deparsers[INGRESS] = new IR::BFN::Deparser(INGRESS, igDeparser);
-    info.deparsers[EGRESS] = egDeparser != nullptr
-        ? new IR::BFN::Deparser(EGRESS, egDeparser)
-        : new IR::BFN::Deparser(EGRESS, igDeparser);
+    info.deparsers[EGRESS] = new IR::BFN::Deparser(EGRESS, egDeparser);
 
     // TNA does not need intrinsic metadata shim.
     // XXX(hanw): to be removed if done in midend
@@ -247,10 +238,8 @@ ParserInfo extractParser(const IR::BFN::Pipe* pipe,
 }
 
 struct RewriteParserStatements : public Transform {
-    RewriteParserStatements(cstring stateName, gress_t gress,
-                            bool filterSetMetadata)
-        : stateName(stateName), gress(gress),
-          filterSetMetadata(filterSetMetadata) { }
+    RewriteParserStatements(cstring stateName, gress_t gress)
+        : stateName(stateName), gress(gress) { }
 
     /// @return the cumulative shift in bytes from all of the statements
     /// rewritten up to this point. This includes both extracts and `advance()`
@@ -378,8 +367,6 @@ struct RewriteParserStatements : public Transform {
 
     const IR::BFN::ParserPrimitive*
     preorder(IR::AssignmentStatement* s) override {
-        if (filterSetMetadata) return nullptr;
-
         if (s->left->type->is<IR::Type::Varbits>())
             P4C_UNIMPLEMENTED("Parser writes to varbits values are not yet supported.");
 
@@ -415,7 +402,6 @@ struct RewriteParserStatements : public Transform {
     const cstring stateName;
     const gress_t gress;
     unsigned currentBit = 0;
-    const bool filterSetMetadata;
 };
 
 static match_t buildListMatch(const IR::Vector<IR::Expression> *list,
@@ -527,7 +513,7 @@ IR::BFN::ParserState* GetTofinoParser::getState(cstring name) {
 
     // Lower the parser statements from the frontend IR to the Tofino IR.
     RewriteParserStatements rewriteStatements(state->p4State->controlPlaneName(),
-                                              gress, filterSetMetadata);
+                                              gress);
     for (auto* statement : state->p4State->components)
         state->statements.pushBackOrAppend(statement->apply(rewriteStatements));
 

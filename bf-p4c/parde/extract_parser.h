@@ -27,27 +27,21 @@ struct ParserInfo {
 
 /**
  * Convert the frontend parser and deparser IR into the representation used in
- * the Tofino backend. Special Tofino-specific states are automatically added.
- *
- * XXX(seth): We shouldn't really be doing any inferring here. Long term we
- * should be converting both P4-14 and v1model P4-16 programs to TNA, and any
- * inference should happen as part of those conversions.
+ * the backend. Special architecture-specific states are automatically added.
  *
  * @param pipe  The pipe into which these parsers will eventually be installed.
  *              The metadata headers must already be configured.
- * @param igParser    The ingress parser. Required.
- * @param igDeparser  The ingress deparser. Required.
- * @param egParser    The egress parser. If null, will be inferred from the
- *                    ingress parser.
- * @param egDeparser  The egress deparser. If null, will be inferred from the
- *                    egress parser.
+ * @param igParser    The ingress parser.
+ * @param igDeparser  The ingress deparser.
+ * @param egParser    The egress parser.
+ * @param egDeparser  The egress deparser.
  * @return a ParserInfo object containing the Tofino IR parsers and deparsers.
  */
 ParserInfo extractParser(const IR::BFN::Pipe* pipe,
                          const IR::P4Parser* igParser,
                          const IR::P4Control* igDeparser,
-                         const IR::P4Parser* egParser = nullptr,
-                         const IR::P4Control* egDeparser = nullptr,
+                         const IR::P4Parser* egParser,
+                         const IR::P4Control* egDeparser,
                          bool useTna = false);
 
 }  // namespace BFN
