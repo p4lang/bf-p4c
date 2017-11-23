@@ -320,12 +320,12 @@ public:
             std::string alias_lookup(int lineno, std::string name, int &lo, int &hi) const;
             bool has_rng() { return !rng_param_name.empty(); }
             void set_action_handle(Table* tbl);
-            bool has_param(std::string param) const {
+            const p4_param* has_param(std::string param) const {
                 for (auto &e : p4_params_list)
-                    if (e.name == param) return true;
-                return false;
-            }
+                    if (e.name == param) return &e;
+                return nullptr; }
             void pass1(Table *tbl);
+            void add_indirect_resources(json::vector &indirect_resources);
             friend std::ostream &operator<<(std::ostream &, const alias_t &);
             friend std::ostream &operator<<(std::ostream &, const Action &);
         };

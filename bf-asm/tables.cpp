@@ -1070,14 +1070,31 @@ static void gen_override(json::map &cfg, Table::Call &att) {
     cfg[base + "_full_addr"] = full_addr;
 }
 
+void Table::Actions::Action::add_indirect_resources(json::vector &indirect_resources) {
+    for (auto &att : attached) {
+        for (auto &arg : att.args) {
+            json::map indirect_resource;
+            if (arg.type == Table::Call::Arg::Name) {
+                auto *p = has_param(arg.name());
+                if (p) {
+                    indirect_resource["access_mode"] = "index";
+                    indirect_resource["parameter_name"] = p->name;
+                    indirect_resource["parameter_index"] = p->position;
+                } else continue;
+            } else if (arg.type == Table::Call::Arg::Const) {
+                indirect_resource["access_mode"] = "constant";
+                indirect_resource["value"] = arg.value();
+            } else continue;
+            indirect_resource["resource_name"] = att->p4_name();
+            indirect_resources.push_back(std::move(indirect_resource)); } }
+}
+
 void Table::Actions::gen_tbl_cfg(json::vector &cfg) {
     for (auto &act : *this) {
         json::map action_cfg;
         action_cfg["name"] = act.name;
         action_cfg["handle"] = act.handle; //FIXME-JSON
-        // FIXME-JSON - indirect_resources are generated in meters, check
-        // for glass examples
-        action_cfg["indirect_resources"] = json::vector();
+        act.add_indirect_resources(action_cfg["indirect_resources"]);
         // XXX(amresh): allowed_as_default_action info is directly passed through assembly
         // This will be 'false' for following conditions:
         // 1. Action requires hardware in hit path i.e. hash distribution or
@@ -1085,7 +1102,7 @@ void Table::Actions::gen_tbl_cfg(json::vector &cfg) {
         // 2. There is a default action declared constant in program which
         // implies all other actions cannot be set to default
         action_cfg["allowed_as_default_action"] = act.default_allowed;
-        // XXX(amresh): "diallowed_as_default_action" is not used by driver.
+        // XXX(amresh): "disallowed_as_default_action" is not used by driver.
         // Keeping it here as debugging info. Will be set to "none",
         // "has_const_default", "has_hash_dist". Once rng support is added
         // to the compiler this must reflect "has_rng" or similar string.
@@ -1745,7 +1762,7 @@ void Table::common_tbl_cfg(json::map &tbl) {
     tbl["is_resource_controllable"] = true;
     tbl["uses_range"] = false; //FIXME-JSON: Ranges not yet implemented by brig
     json::vector &params = tbl["match_key_fields"] = json::vector();
-    if ((!p4_params_list.empty()) && 
+    if ((!p4_params_list.empty()) &&
             (this->to<MatchTable>() || this->to<Phase0MatchTable>())) {
         for (auto &p : p4_params_list) {
             unsigned start_bit = 0;
