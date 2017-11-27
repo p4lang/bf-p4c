@@ -69,9 +69,7 @@ void SRamMatchTable::verify_format() {
             if (info.overhead_word < 0) {
                 info.overhead_word = word;
                 info.overhead_bit = it->second.bits[0].lo%128;
-                if (!info.match_group.count(word))
-                    error(format->lineno, "Overhead for group %d must be in the same word "
-                          "as part of its match", i);
+                info.match_group[word] = -1;
             } else if (info.overhead_word != (int)word)
                 error(format->lineno, "Match overhead group %d split across words", i);
             else if (word != it->second.bits[0].hi/128 || it->second.bits[0].hi%128 >= limit)
