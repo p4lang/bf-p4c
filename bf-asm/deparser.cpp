@@ -359,7 +359,6 @@ void Deparser::output(json::map& map) {
 */
 template<class REGS>
 void Deparser::gen_learn_quanta(REGS &regs, json::vector &learn_quanta) {
-    static int lq_cfg_type=0;
     for (auto &digest : digests) {
         if (digest.type->name != "learning") continue;
         assert(digest.context_json);
@@ -370,7 +369,7 @@ void Deparser::gen_learn_quanta(REGS &regs, json::vector &learn_quanta) {
         for(auto &tname : names) {
             json::map quanta;
             quanta["name"] = (*tname).c_str();
-            quanta["lq_cfg_type"] = lq_cfg_type++;
+            quanta["lq_cfg_type"] = idx;
             quanta["handle"] = unique_action_handle++;
             auto digentry = (*(digest.context_json))[idx++];
             auto &digfields = *(digentry->as_vector());
