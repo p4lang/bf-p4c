@@ -360,3 +360,6 @@ template<> void Deparser::write_config(Target::Tofino::deparser_regs &regs) {
 template<> unsigned Deparser::FDEntry::Checksum::encode<Target::Tofino>() {
     return 224 + gress * 6 + unit;
 }
+
+template<> void Deparser::gen_learn_quanta(Target::Tofino::parser_regs &regs, json::vector &learn_quanta) {
+}

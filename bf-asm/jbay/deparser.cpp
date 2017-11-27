@@ -550,3 +550,6 @@ template<> Phv::Slice Deparser::RefOrChksum::lookup<Target::JBay>() const {
 template<> unsigned Deparser::FDEntry::Checksum::encode<Target::JBay>() {
     return 232 + unit;
 }
+
+template<> void Deparser::gen_learn_quanta(Target::JBay::parser_regs &regs, json::vector &learn_quanta) {
+}

@@ -7,6 +7,8 @@
 #include "target.h"
 #include "top_level.h"
 
+extern unsigned unique_action_handle;
+
 Deparser Deparser::singleton_object;
 
 Deparser::Deparser() : Section("deparser") { }
@@ -339,14 +341,53 @@ void Deparser::process() {
 #endif // HAVE_JBAY
 
 /* The following uses of specialized templates must be after the specialization... */
-
-void Deparser::output(json::map &) {
+void Deparser::output(json::map& map) {
     SWITCH_FOREACH_TARGET(options.target,
         TARGET::deparser_regs    regs;
         declare_registers(&regs);
         write_config(regs);
         undeclare_registers(&regs);
+        gen_learn_quanta(regs, map["learn_quanta"]);
     )
+}
+
+/* this is a bit complicated since the output from compiler digest is as follows:
+ context_json:
+  0: [ [ ipv4.ihl, 0, 4, 0], [ ipv4.protocol, 0, 8, 1], [ ipv4.srcAddr, 0, 32, 2], [ ethernet.srcAddr, 0, 48, 6], [ ethernet.dstAddr, 0, 48, 12], [ ipv4.fragOffset, 0, 13, 18     ], [ ipv4.identification, 0, 16, 20], [ routing_metadata.learn_meta_1, 0, 20, 22], [ routing_metadata.learn_meta_4, 0, 10, 26] ]
+  1: [ [ ipv4.ihl, 0, 4, 0], [ ipv4.identification, 0, 16, 1], [ ipv4.protocol, 0, 8, 3], [ ipv4.srcAddr, 0, 32, 4], [ ethernet.srcAddr, 0, 48, 8], [ ethernet.dstAddr, 0, 48,      14], [ ipv4.fragOffset, 0, 13, 20], [ routing_metadata.learn_meta_2, 0, 24, 22], [ routing_metadata.learn_meta_3, 0, 25, 26] ]
+ name: [ learn_1, learn_2 ]
+*/
+template<class REGS>
+void Deparser::gen_learn_quanta(REGS &regs, json::vector &learn_quanta) {
+    static int lq_cfg_type=0;
+    for (auto &digest : digests) {
+        if (digest.type->name != "learning") continue;
+        assert(digest.context_json);
+        auto namevec = (*(digest.context_json))["name"];
+        auto &names = *(namevec->as_vector());
+        unsigned idx = 0;
+        // Iterate on names. for each name, get the corresponding digest entry and fill in
+        for(auto &tname : names) {
+            json::map quanta;
+            quanta["name"] = (*tname).c_str();
+            quanta["lq_cfg_type"] = lq_cfg_type++;
+            quanta["handle"] = unique_action_handle++;
+            auto digentry = (*(digest.context_json))[idx++];
+            auto &digfields = *(digentry->as_vector());
+            json::vector &fields = quanta["fields"];
+            for (auto &tup : digfields) {
+                auto &one = *(tup->as_vector());
+                assert(one.size() == 4);
+                json::map anon;
+                anon["field_name"] = (*(one[0])).clone();
+                anon["start_byte"] = (*(one[1])).clone();
+                anon["field_width"] = (*(one[2])).clone();
+                anon["start_bit"] = (*(one[3])).clone();
+                fields.push_back(std::move(anon));
+            }
+            learn_quanta.push_back(std::move(quanta));
+        }
+    }
 }
 
 unsigned Deparser::FDEntry::Checksum::encode() {
