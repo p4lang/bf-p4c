@@ -44,12 +44,12 @@ struct RemoveExternMethodCallsExcludedByAnnotation : public Transform {
     }
 };
 
-class ReplaceArchitecture : public Inspector {
+class LoadTargetArchitecture : public Inspector {
     ProgramStructure* structure;
 
  public:
-    explicit ReplaceArchitecture(ProgramStructure* structure) : structure(structure) {
-        setName("ReplaceArchitecture");
+    explicit LoadTargetArchitecture(ProgramStructure* structure) : structure(structure) {
+        setName("LoadTargetArchitecture");
         CHECK_NULL(structure);
     }
 
@@ -206,20 +206,14 @@ class IdleTimeoutTranslation : public Transform {
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
-// clean up p14 v1model
-class CleanP14V1model : public Transform {
+class RemoveNodesWithNoMapping : public Transform {
     // following fields are showing up in struct H, because in P4-14
     // these structs are declared as header type.
     // In TNA, most of these metadata are individual parameter to
     // the control block, and shall be removed from struct H.
-    // XXX(hanw): these hard-coded name should be auto-generated from include files.
-    std::set<cstring> structToRemove = {
+    std::set<cstring> removeAllOccurences = {
             "generator_metadata_t_0",
             "ingress_parser_control_signals",
-            "pktgen_generic_header_t",
-            "pktgen_port_down_header_t",
-            "pktgen_recirc_header_t",
-            "pktgen_timer_header_t",
             "standard_metadata_t",
             "egress_intrinsic_metadata_t",
             "egress_intrinsic_metadata_for_mirror_buffer_t",
@@ -230,19 +224,31 @@ class CleanP14V1model : public Transform {
             "ingress_intrinsic_metadata_for_tm_t",
             "ingress_intrinsic_metadata_from_parser_aux_t"};
 
+    std::set<cstring> removeDeclarations = {
+            "pktgen_generic_header_t",
+            "pktgen_port_down_header_t",
+            "pktgen_recirc_header_t",
+            "pktgen_timer_header_t"};
+
  public:
-    CleanP14V1model() { setName("CleanP14V1model"); }
+    RemoveNodesWithNoMapping() { setName("RemoveNodesWithNoMapping"); }
 
     const IR::Node* preorder(IR::Type_Header* node) {
-        auto it = structToRemove.find(node->name);
-        if (it != structToRemove.end()) {
-            return nullptr; }
+        auto it = removeAllOccurences.find(node->name);
+        if (it != removeAllOccurences.end())
+            return nullptr;
+        it = removeDeclarations.find(node->name);
+        if (it != removeDeclarations.end())
+            return nullptr;
         return node; }
 
     const IR::Node* preorder(IR::Type_Struct* node) {
-        auto it = structToRemove.find(node->name);
-        if (it != structToRemove.end()) {
-            return nullptr; }
+        auto it = removeAllOccurences.find(node->name);
+        if (it != removeAllOccurences.end())
+            return nullptr;
+        it = removeDeclarations.find(node->name);
+        if (it != removeDeclarations.end())
+            return nullptr;
         return node; }
 
     const IR::Node* preorder(IR::StructField* node) {
@@ -253,8 +259,8 @@ class CleanP14V1model : public Transform {
         auto type = node->type->to<IR::Type_Name>();
         if (!type) return node;
 
-        auto it = structToRemove.find(type->path->name);
-        if (it != structToRemove.end())
+        auto it = removeAllOccurences.find(type->path->name);
+        if (it != removeAllOccurences.end())
             return nullptr;
         return node;
     }
@@ -281,8 +287,8 @@ class CleanP14V1model : public Transform {
         if (!submem) return mem;
         auto submemType = submem->type->to<IR::Type_Header>();
         if (!submemType) return mem;
-        auto it = structToRemove.find(submemType->name);
-        if (it == structToRemove.end()) return mem;
+        auto it = removeAllOccurences.find(submemType->name);
+        if (it == removeAllOccurences.end()) return mem;
 
         auto newType = new IR::Type_Name(submemType->name);
         auto newName = new IR::Path(submem->member);
@@ -1492,8 +1498,8 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
         new VisitFunctor([structure, evaluator]() {
             structure->toplevel = evaluator->getToplevelBlock(); }),
         new TranslationFirst(),
-        new ReplaceArchitecture(structure),
-        new CleanP14V1model(),
+        new LoadTargetArchitecture(structure),
+        new RemoveNodesWithNoMapping(),
         new AnalyzeV1modelProgram(structure),
         new ConstructSymbolTable(structure, refMap, typeMap),
         new GenerateTofinoProgram(structure),
