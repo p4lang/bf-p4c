@@ -41,6 +41,7 @@ class InputXbar {
         uint64_t        seed = 0;
     };
     Table       *table;
+    std::map<int, HashCol>                              empty_hash_table;
     ordered_map<Group, std::vector<Input>>              groups;
     std::map<unsigned, std::map<int, HashCol>>          hash_tables;
     std::map<unsigned, HashGrp>                         hash_groups;
@@ -93,7 +94,8 @@ public:
     const std::map<int, HashCol>& get_hash_table(unsigned id = 0) {
         for (auto &ht : hash_tables)
             if (ht.first == id) return ht.second;
-        warning(lineno, "Hash Table for index %d does not exist in table %s", id, table->name()); }
+        warning(lineno, "Hash Table for index %d does not exist in table %s", id, table->name());
+        return empty_hash_table; }
     Phv::Ref get_hashtable_bit(unsigned id, unsigned bit) {
         return get_group_bit(InputXbar::Group(false, id/2), bit + 64*(id & 0x1)); }
     Phv::Ref get_group_bit(Group grp, unsigned bit) {

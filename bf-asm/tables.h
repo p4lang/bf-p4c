@@ -237,10 +237,12 @@ public:
             Arg &operator=(const Arg &a) {
                 if (type == Name) free(str);
                 memcpy(this, &a, sizeof(*this));
-                if (type == Name) str = strdup(str); }
+                if (type == Name) str = strdup(str);
+                return *this; }
             Arg &operator=(Arg &&a) {
                 std::swap(type, a.type);
-                std::swap(val, a.val); }
+                std::swap(val, a.val);
+                return *this; }
             Arg(Format::Field *f) : type(Field) { fld = f; }
             Arg(HashDistribution *hdist) : type(HashDist) { hd = hdist; }
             Arg(int v) : type(Const) { val = v; }
@@ -515,7 +517,7 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
                                  unsigned format_width = 64);
     void get_cjson_source(const std::string &field_name,
 			     const Table::Actions::Action *act,
-		             std::string &source, std::string &imm_name, int &start_bit); 
+		             std::string &source, std::string &imm_name, int &start_bit);
     // Result physical buses should be setup for
     // Exact/Hash/MatchwithNoKey/ATCAM/Ternary tables
     void add_result_physical_buses(json::map &stage_tbl);
@@ -583,7 +585,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(MatchTable, Table,
     template<class REGS> void setup_next_table_map(REGS &, Table *);
     void common_init_setup(const VECTOR(pair_t) &, bool, P4Table::type) override;
     bool common_setup(pair_t &, const VECTOR(pair_t) &, P4Table::type) override;
-    int get_address_mau_actiondata_adr_default(unsigned log2size, bool per_flow_enable); 
+    int get_address_mau_actiondata_adr_default(unsigned log2size, bool per_flow_enable);
 public:
     const AttachedTables *get_attached() const override { return &attached; }
     const GatewayTable *get_gateway() const override { return gateway; }
@@ -596,8 +598,8 @@ public:
     virtual bool is_ternary() { return false; }
     void gen_idletime_tbl_cfg(json::map &stage_tbl);
     int direct_shiftcount() const override { return 64; }
-    void gen_hash_bits(const std::map<int, HashCol> &hash_table, 
-            unsigned hash_table_id, json::vector &hash_bits); 
+    void gen_hash_bits(const std::map<int, HashCol> &hash_table,
+            unsigned hash_table_id, json::vector &hash_bits);
 )
 
 #define DECLARE_TABLE_TYPE(TYPE, PARENT, NAME, ...)                     \

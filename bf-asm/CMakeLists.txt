@@ -36,6 +36,13 @@ include (CheckIncludeFile)
 check_include_file (execinfo.h HAVE_EXECINFO_H)
 check_include_file (ucontext.h HAVE_UCONTEXT_H)
 
+include(P4CUtils)
+add_cxx_compiler_option ("-Wall")
+add_cxx_compiler_option ("-Wextra")
+add_cxx_compiler_option ("-Werror")
+add_cxx_compiler_option ("-Wno-overloaded-virtual")
+add_cxx_compiler_option ("-Wno-deprecated")
+
 add_subdirectory (walle)
 
 set (BFN_P4C_LIB_DIR ${BFN_P4C_SOURCE_DIR}/p4c/lib)
