@@ -974,16 +974,18 @@ class MauAsmOutput::EmitAction : public Inspector {
         act->action.visit_children(*this);
         for (auto prim : act->stateful) {
             auto *at = prim->operands.at(0)->to<IR::GlobalRef>()->obj->to<IR::Attached>();
-            if (prim->operands.size() < 2) continue;
+            auto *salu = at->to<IR::MAU::StatefulAlu>();
+            if (prim->operands.size() < 2 && (!salu || salu->instruction.size() <= 1)) continue;
             out << indent << "- " << table->get_use_name(at) << '(';
             const char *sep = "";
-            if (auto *salu = at->to<IR::MAU::StatefulAlu>()) {
+            if (salu) {
                 out << salu->action_map.at(act->name);
                 sep = ", "; }
-            if (auto *k = prim->operands.at(1)->to<IR::Constant>())
-                out << sep << k->value;
-            else if (auto *a = prim->operands.at(1)->to<IR::ActionArg>())
-                out << sep << a->name;
+            if (prim->operands.size() > 1) {
+                if (auto *k = prim->operands.at(1)->to<IR::Constant>())
+                    out << sep << k->value;
+                else if (auto *a = prim->operands.at(1)->to<IR::ActionArg>())
+                    out << sep << a->name; }
             out << ')' << std::endl;
             is_empty = false; }
         if (is_empty)

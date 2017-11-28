@@ -370,12 +370,12 @@ const IR::Node *InstructionSelection::postorder(IR::Primitive *prim) {
     } else if (prim->name == "register_action.execute" ||
                prim->name == "register_action.execute_log") {
         bool direct_access = false;
-        if (prim->operands.size() > 1)
-            stateful.push_back(prim);  // needed to setup the index properly
-        else if (prim->name == "register_action.execute")
+        if (prim->operands.size() == 1 && prim->name == "register_action.execute")
             direct_access = true;
         auto glob = prim->operands.at(0)->to<IR::GlobalRef>();
         auto salu = glob->obj->to<IR::MAU::StatefulAlu>();
+        if (prim->operands.size() > 1 || salu->instruction.size() > 1)
+            stateful.push_back(prim);  // needed to setup the index and/or type properly
         if (salu->direct != direct_access)
             error("%s: %sdirect access to %sdirect register", prim->srcInfo,
                   direct_access ? "" : "in", salu->direct ? "" : "in");

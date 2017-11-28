@@ -44,6 +44,9 @@ add_registers ("tofino" "regs.pipe_addrmap" "regs.pipe" "${ARCH}" "+E")
 add_registers ("tofino" "memories.pipe_top_level" "memories.top" ${ARCH})
 add_registers ("tofino" "memories.pipe_addrmap" "memories.pipe" ${ARCH})
 
+# used by hashdump
+genRegTemplate("tofino" "disas.regs.mau_addrmap.h" "regs.mau_addrmap" "Tofino" "-ref")
+
 include_directories (${BFASM_BINARY_DIR}/gen/tofino)
 add_library (regs_tofino ${GEN_TOFINO_SRCS} ${GEN_TOFINO_HDRS})
 

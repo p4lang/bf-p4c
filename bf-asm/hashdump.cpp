@@ -1,10 +1,10 @@
-#include "gen/disas.regs.mau_addrmap.h"
+#include "gen/tofino/disas.regs.mau_addrmap.h"
 #include "json.h"
 #include <iostream>
 #include <fstream>
 #include "hex.h"
 
-static regs_mau_addrmap regs;
+static Tofino::regs_mau_addrmap regs;
 
 static void dump_hashtables(std::ostream &out);
 
@@ -38,21 +38,21 @@ int main(int ac, char **av) {
 
 static bool col_nonzero(int i, int col) {
     for (int word = i*8; word < i*8+8; word++) {
-        auto &x = regs.dp.hash.galois_field_matrix[word][col];
+        auto &x = regs.dp.xbar_hash.hash.galois_field_matrix[word][col];
         if (x.byte0 || x.byte1) return true; }
     return false;
 }
 
 static bool col_valid_nonzero(int i, int col) {
     for (int word = i*8; word < i*8+8; word++) {
-        auto &x = regs.dp.hash.galois_field_matrix[word][col];
+        auto &x = regs.dp.xbar_hash.hash.galois_field_matrix[word][col];
         if (x.valid0 || x.valid1) return true; }
     return false;
 }
 
 static bool ht_nonzero(int i) {
     for (int col = 0; col < 52; col++) {
-        if ((regs.dp.hash.hash_seed[i][col/26] >> (col%26)) & 1) return true;
+        if ((regs.dp.xbar_hash.hash.hash_seed[col] >> i) & 1) return true;
         if (col_nonzero(i, col)) return true;
         if (col_valid_nonzero(i, col)) return true;
     }
@@ -65,7 +65,7 @@ static void dump_ht(std::ostream &out, int i) {
             out << "    " << col << ": 0x";
             bool pfx = true;
             for (int word = 8*i+7; word >= 8*i; word--) {
-                auto &w = regs.dp.hash.galois_field_matrix[word][col];
+                auto &w = regs.dp.xbar_hash.hash.galois_field_matrix[word][col];
                 if (!pfx || w.byte1) {
                     out << hex(w.byte1, pfx ? 0 : 2, '0');
                     pfx = false; }
@@ -77,7 +77,7 @@ static void dump_ht(std::ostream &out, int i) {
             out << "    valid " << col << ": 0b";
             bool pfx = true;
             for (int word = 8*i+7; word >= 8*i; word--) {
-                auto &w = regs.dp.hash.galois_field_matrix[word][col];
+                auto &w = regs.dp.xbar_hash.hash.galois_field_matrix[word][col];
                 if (!pfx || w.valid1) {
                     out << (w.valid1 ? '1' : '0');
                     pfx = false; }
@@ -85,7 +85,7 @@ static void dump_ht(std::ostream &out, int i) {
                     out << (w.valid0 ? '1' : '0');
                     pfx = false; } }
             out << '\n'; }
-        if ((regs.dp.hash.hash_seed[i][col/26] >> (col%26)) & 1)
+        if ((regs.dp.xbar_hash.hash.hash_seed[col] >> i) & 1)
             out << "    seed " << col << ": 1\n";
     }
 }

@@ -212,7 +212,7 @@ template<class REGS> void StatefulTable::write_merge_regs(REGS &regs, MatchTable
             inst_bits = args[0].field()->size;
             if (ptr_field)
                 merge.mau_meter_adr_type_position[type][bus] =
-                    args[0].field()->bit(0) - ptr_field->bit(0) - 1;
+                    args[0].field()->bit(0) - ptr_field->bit(0) - 1 + address_shift();
         } else if (args[0].type == Call::Arg::Name) {
             stateful_adr_default |=
                 actions->action(args[1].name())->code << (METER_TYPE_START_BIT + 1);
@@ -231,7 +231,7 @@ template<class REGS> void StatefulTable::write_merge_regs(REGS &regs, MatchTable
 
     if (!per_flow_enable)
         per_flow_enable_bit = METER_ADDRESS_BITS - METER_TYPE_BITS - 1;
-    merge.mau_meter_adr_per_entry_en_mux_ctl[type][bus] = per_flow_enable_bit;
+    merge.mau_meter_adr_per_entry_en_mux_ctl[type][bus] = per_flow_enable_bit + address_shift();
 }
 
 template<class REGS> void StatefulTable::write_regs(REGS &regs) {

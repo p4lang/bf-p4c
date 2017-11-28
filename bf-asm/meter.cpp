@@ -186,7 +186,7 @@ template<class REGS> void MeterTable::write_merge_regs(REGS &regs, MatchTable *m
             per_flow_enable_bit = ptr_bits - METER_TYPE_BITS - 1;
         else
             per_flow_enable_bit = ptr_bits - 1; }
-    merge.mau_meter_adr_per_entry_en_mux_ctl[type][bus] = per_flow_enable_bit;
+    merge.mau_meter_adr_per_entry_en_mux_ctl[type][bus] = per_flow_enable_bit + address_shift();
 
     unsigned meter_adr_type = 0;
     if (!color_aware)

@@ -24,20 +24,6 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
   testdata/p4_16_samples/issue655-bmv2.p4
   )
 
-  # BRIG-325
-  p4c_add_xfail_reason("tofino"
-    "no field idx related to table test1"
-    extensions/p4_tests/p4_14/stateful2.p4
-  )
-
-  # BRIG-327
-  # bug isn't fixed yet, but the test currently passes! with
-  # many error messages from the model
-  #p4c_add_xfail_reason("tofino"
-  #  "mismatch from expected[(]01[)] at byte 0xe"
-  #  extensions/p4_tests/p4_14/stateful3.p4
-  #)
-
   p4c_add_xfail_reason("tofino"
     "mismatch from expected.*at byte 0x"
     extensions/p4_tests/p4_16/stack_valid.p4
@@ -966,11 +952,15 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     testdata/p4_14_samples/tmvalid.p4
     testdata/p4_16_samples/issue635-bmv2.p4
     testdata/p4_16_samples/issue655-bmv2.p4
-    extensions/p4_tests/p4_14/stateful2.p4
     extensions/p4_tests/p4_16/multiple_apply1.p4
     extensions/p4_tests/p4_16/cast_widening_set.p4
     extensions/p4_tests/p4_16/cast_narrowing_set.p4
     extensions/p4_tests/p4_16/container_dependency.p4
+    # Brig/Glass do not follow P4_14 spec for 'drop' in the ingress pipeline
+    testdata/p4_14_samples/gateway1.p4
+    testdata/p4_14_samples/gateway2.p4
+    testdata/p4_14_samples/gateway3.p4
+    testdata/p4_14_samples/gateway4.p4
     )
 
   p4c_add_xfail_reason("tofino"
@@ -1006,6 +996,7 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     "AssertionError: Invalid match name .* for table .*"
     testdata/p4_14_samples/exact_match_mask1.p4
     )
+
 
 endif() # ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET
 
