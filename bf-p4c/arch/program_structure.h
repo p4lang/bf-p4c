@@ -107,10 +107,6 @@ class ProgramStructure {
     SimpleNameMap                                parserCounterNames;
     MemberStatementMap                           parserCounterSelects;
 
-    /// system metadata is metadata from v1model or p4-14 intrinsic_metadata
-    ordered_map<cstring, const IR::Node*>        system_metadata;
-    IR::IndexedVector<IR::Node>                  user_program;
-
     /// user program specific info
     cstring                                      type_h;
     cstring                                      type_m;

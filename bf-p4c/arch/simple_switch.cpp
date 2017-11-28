@@ -61,109 +61,6 @@ class ReplaceArchitecture : public Inspector {
         : structure(structure), target(arch) {
         setName("ReplaceArchitecture");
         CHECK_NULL(structure);
-        reservedNames = new std::set<cstring>();
-    }
-
-    template<typename T>
-    void setReservedName(const IR::Node* node, cstring prefix = cstring()) {
-        if (auto type = node->to<T>()) {
-            auto name = type->name.name;
-            if (prefix)
-                name = prefix + "$" + name;
-            reservedNames->insert(name); } }
-
-    void processArchTypes(const IR::Node *node) {
-        if (node->is<IR::Type_Error>()) {
-            for (auto err : node->to<IR::Type_Error>()->members) {
-                setReservedName<IR::Declaration_ID>(err, "error"); }
-            return; }
-        if (node->is<IR::Type_Declaration>())
-            setReservedName<IR::Type_Declaration>(node);
-        else if (node->is<IR::P4Action>())
-            setReservedName<IR::P4Action>(node);
-        else if (node->is<IR::Method>())
-            setReservedName<IR::Method>(node);
-        else if (node->is<IR::Declaration_MatchKind>())
-            for (auto member : node->to<IR::Declaration_MatchKind>()->members)
-                setReservedName<IR::Declaration_ID>(member);
-        else
-            ::error("Unhandled declaration type %1%", node);
-
-        /// store metadata defined in system header in program structure,
-        /// they are used for control block parameter translation
-        if (node->is<IR::Type_Struct>()) {
-            cstring name = node->to<IR::Type_Struct>()->name;
-            structure->system_metadata.emplace(name, node);
-        } else if (node->is<IR::Type_Header>()) {
-            cstring name = node->to<IR::Type_Header>()->name;
-            structure->system_metadata.emplace(name, node); } }
-
-    /// Helper function to decide if the type of IR::Node is a system defined type.
-    template<typename T>
-    bool isSystemType(const IR::Node* t, cstring prefix = cstring()) {
-        if (auto type = t->to<T>()) {
-            auto name = type->name.name;
-            if (prefix)
-                name = prefix + "$" + name;
-            auto it = reservedNames->find(name);
-            return it != reservedNames->end(); }
-        return false;
-    }
-
-    const IR::Node* filterV1modelArch(const IR::Node *node) {
-        bool filter = false;
-        if (node->is<IR::Type_Error>())
-            filter = true;
-        else if (node->is<IR::Type_Declaration>())
-            filter = isSystemType<IR::Type_Declaration>(node);
-        else if (node->is<IR::P4Action>())
-            filter = isSystemType<IR::P4Action>(node);
-        else if (node->is<IR::Method>())
-            filter = isSystemType<IR::Method>(node);
-        else if (node->is<IR::Declaration_MatchKind>())
-            filter = true;
-        if (filter)
-            return nullptr;
-        return node;
-    }
-
-    /**
-     * This function populates the mapping table from v1model extern
-     * to tofino extern.
-     *
-     * externs in tofino.p4 that do not exist in v1model
-     * idle_timeout
-     * parser_counter
-     * priority
-     * lpf
-     * wred
-     * stateful_param
-     * stateful_alu
-     * recirculate_raw
-     *
-     * externs that are not supported in tofino
-     * truncate
-     *
-     * externs that are not mapped to extern in tofino
-     * mark_to_drop
-     */
-    void setupExternRenameMap() {
-        structure->externNameMap.emplace("action_profile", "action_profile");
-        structure->externNameMap.emplace("action_selector", "action_selector");
-        structure->externNameMap.emplace("clone", "mirror_packet");
-        structure->externNameMap.emplace("clone3", "mirror_packet");
-        structure->externNameMap.emplace("counter", "counter");
-        structure->externNameMap.emplace("direct_counter", "counter");
-        structure->externNameMap.emplace("direct_meter", "meter");
-        structure->externNameMap.emplace("digest", "learn_filter_packet");
-        structure->externNameMap.emplace("hash", "hash");
-        structure->externNameMap.emplace("meter", "meter");
-        structure->externNameMap.emplace("random", "random");
-        structure->externNameMap.emplace("register", "register");
-        structure->externNameMap.emplace("resubmit", "resubmit_packet");
-        structure->externNameMap.emplace("update_checksum", "checksum");
-        structure->externNameMap.emplace("value_set", "value_set");
-        structure->externNameMap.emplace("verify_checksum", "checksum");
     }
 
     void addMetadata(gress_t gress, cstring ss, cstring sf,
@@ -241,26 +138,6 @@ class ReplaceArchitecture : public Inspector {
     }
 
     void postorder(const IR::P4Program* program) override {
-        IR::IndexedVector<IR::Node> baseArchTypes;
-        IR::IndexedVector<IR::Node> libArchTypes;
-
-
-        if (target == Target::Simple) {
-            structure->include("v1model.p4", &baseArchTypes);
-            structure->include("tofino/stateful_alu.p4", &libArchTypes);
-            structure->include14("tofino/intrinsic_metadata.p4", &libArchTypes);
-            structure->include14("tofino/pktgen_headers.p4", &libArchTypes);
-        }
-
-        /// populate reservedNames from arch.p4 and include system headers
-        for (auto node : baseArchTypes) {
-            processArchTypes(node); }
-        for (auto node : libArchTypes) {
-            processArchTypes(node); }
-        // Debug only
-        for (auto name : *reservedNames) {
-            LOG3("Reserved: " << name); }
-        setupExternRenameMap();
         setupMetadataRenameMap();
 
         /// append tofino.p4 architecture definition
@@ -271,12 +148,6 @@ class ReplaceArchitecture : public Inspector {
 
         analyzeErrors(program);
         analyzeTofinoModel();
-        /// append program without v1model declarations
-        for (auto node : program->declarations) {
-            if (auto decl = filterV1modelArch(node)) {
-                structure->user_program.push_back(decl);
-            }
-        }
     }
 };
 
