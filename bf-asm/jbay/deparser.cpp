@@ -410,6 +410,9 @@ void write_jbay_checksum_config(CSUM &csum, POV &pov_cfg, ENTRIES &phv_entries, 
     std::map<unsigned, unsigned>        pov_map;
     unsigned byte = 0, mapped[4];
     for (auto &val : data) {
+        if (!val.pov) {
+            error(val.val.lineno, "POV bit required for jbay");
+            continue; }
         unsigned bit = pov.at(&val.pov->reg) + val.pov->lo;
         if (pov_map.count(bit)) continue;
         for (unsigned i = 0; i < byte; ++i) {
@@ -427,6 +430,7 @@ void write_jbay_checksum_config(CSUM &csum, POV &pov_cfg, ENTRIES &phv_entries, 
     for (auto &val : data) {
         unsigned mask = (1 << ((val->hi+1)/8U)) - (1 << (val->lo/8U));
         auto &remap = jbay_phv2cksum[val->reg.deparser_id()];
+        if (!val.pov) continue;
         int povbit = pov_map.at(pov.at(&val.pov->reg) + val.pov->lo);
         if (remap[1] >= 0)
             swap ^= write_jbay_checksum_entry(phv_entries.entry[remap[1]], mask >> 2, swap, povbit,
