@@ -163,33 +163,27 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
-struct sampling_alu_layout {
-    bit<16> lo;
-    bit<16> hi;
-}
-
 struct tuple_0 {
     bit<48> field;
     bit<16> field_0;
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<16> tmp_0;
+    bit<32> tmp_0;
     @name("NoAction") action NoAction_0() {
     }
     @name("NoAction") action NoAction_3() {
     }
-    @name(".sampling_cntr") register<sampling_alu_layout>(32w139264) sampling_cntr;
-    @name("sampling_alu") register_action<sampling_alu_layout, bit<16>>(sampling_cntr) sampling_alu = {
-        void apply(inout sampling_alu_layout value, out bit<16> rv) {
-            rv = 16w0;
-            value.hi = 16w1;
-            if (value.lo >= 16w10) 
-                value.lo = 16w1;
-            if (value.lo < 16w10) 
-                value.lo = value.lo + 16w1;
-            if (value.lo >= 16w10 || hdr.ig_intr_md_for_tm.copy_to_cpu != 1w0) 
-                rv = 16w1;
+    @name(".sampling_cntr") register<bit<32>>(32w139264) sampling_cntr;
+    @name("sampling_alu") register_action<bit<32>, bit<32>>(sampling_cntr) sampling_alu = {
+        void apply(inout bit<32> value, out bit<32> rv) {
+            rv = 32w0;
+            if (value >= 32w10) 
+                value = 32w1;
+            if (value < 32w10) 
+                value = value + 32w1;
+            if (value >= 32w10 || hdr.ig_intr_md_for_tm.copy_to_cpu != 1w0) 
+                rv = 32w1;
         }
     };
     @name(".action_0") action action_2(bit<32> idx) {

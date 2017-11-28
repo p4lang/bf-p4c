@@ -5,9 +5,11 @@ set unwindonsignal on
 set unwind-on-terminating-exception on
 set python print-stack full
 
-break ErrorReporter::emit_message
-disable
-break Util::CompilerBug::CompilerBug<>
+if $_isvoid($bpnum)
+    break ErrorReporter::emit_message
+    disable
+    break Util::CompilerBug::CompilerBug<>
+end
 
 define pn
     call ::dbprint($arg0)

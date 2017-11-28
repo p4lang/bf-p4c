@@ -215,10 +215,6 @@ static bool usesRegHi(const IR::Declaration_Instance *salu) {
             if (attr->name == "register_hi")
                 result = true;
             return !result; }
-        bool preorder(const IR::Property *prop) override {
-            if (prop->name == "update_hi_1_value" || prop->name == "update_hi_1_value")
-                result = true;
-            return !result; }
         bool preorder(const IR::Expression *) override { return !result; }
     } scan;
 

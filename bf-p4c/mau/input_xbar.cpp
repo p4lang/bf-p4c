@@ -901,7 +901,8 @@ int need_align_flags[4][4] = { { 0, 0, 0, 0 },  // 8bit -- no alignment needed
 
 /* Add the pre-allocated bytes to the Use structure */
 static void add_use(IXBar::Use &alloc, const PHV::Field *field,
-                    const bitrange *bits = nullptr, int flags = 0, int partition_multiplier = 1) {
+                    const bitrange *bits = nullptr, int flags = 0, int partition_multiplier = 1,
+                    unsigned extra_align = 0) {
     bool ok = false;
     int index = 0;
     field->foreach_byte(bits, [&](const PHV::Field::alloc_slice &sl) {
@@ -909,7 +910,8 @@ static void add_use(IXBar::Use &alloc, const PHV::Field *field,
         IXBar::Use::Byte byte(field->name, sl.field_bit, sl.field_hi());
         byte.bit_use.setrange(sl.container_bit % 8, sl.width);
         byte.flags =
-            flags | need_align_flags[sl.container.log2sz()][(sl.container_bit/8U) & 3];
+            flags | need_align_flags[sl.container.log2sz()][(sl.container_bit/8U) & 3]
+                  | need_align_flags[extra_align][index & 3];
         if (partition_multiplier == 0)
             byte.atcam_index = true;
         else if (partition_multiplier == 2)
@@ -988,6 +990,7 @@ class FindFieldsToAlloc : public Inspector {
     const PhvInfo       &phv;
     IXBar::Use          &alloc;
     std::set<cstring>   &fields_needed;
+    unsigned            extra_align;  // log2 of the salu size in bytes (0 = 8 bits, etc)
     bool preorder(const IR::MAU::SaluAction *a) override {
         visit(a->action, "action");  // just visit the action instructions
         return false; }
@@ -996,7 +999,7 @@ class FindFieldsToAlloc : public Inspector {
         if (auto *finfo = phv.field(e, &bits)) {
             if (!fields_needed.count(finfo->name)) {
                 fields_needed.insert(finfo->name);
-                add_use(alloc, finfo, &bits, 0); }
+                add_use(alloc, finfo, &bits, 0, 1, extra_align); }
             return false; }
         return true; }
     bool preorder(const IR::MAU::HashDist *) override {
@@ -1005,8 +1008,8 @@ class FindFieldsToAlloc : public Inspector {
     }
 
  public:
-    FindFieldsToAlloc(const PhvInfo &phv, IXBar::Use &alloc, std::set<cstring> &fn)
-    : phv(phv), alloc(alloc), fields_needed(fn) {}
+    FindFieldsToAlloc(const PhvInfo &phv, IXBar::Use &alloc, std::set<cstring> &fn, unsigned ea)
+    : phv(phv), alloc(alloc), fields_needed(fn), extra_align(ea) {}
 };
 
 bool IXBar::allocMatch(bool ternary, const IR::MAU::Table *tbl,
@@ -1453,7 +1456,18 @@ bool IXBar::allocSelector(const IR::MAU::Selector *as, const IR::MAU::Table *tbl
 bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu,
                           const PhvInfo &phv, Use &alloc, bool second_try) {
     std::set <cstring> fields_needed;
-    salu->apply(FindFieldsToAlloc(phv, alloc, fields_needed));
+    unsigned extra_align = 0;
+    if (!second_try && salu->width > 1) {
+        /* To use the stateful_meter_alu_data path, any fields read must be aligned
+         * properly on the ixbar for the size of the stateful alu.  We only do this
+         * on the first try, since if it's not aligned, we can still make it work, we
+         * just need to use a hash table to swizzle it properly, and use the Exact
+         * Match Hash Address VH Xbar.  See 6.2.3(fig 6-18) and 6.2.8.4.1(fig 6-32)
+         * in the Tofino uArch doc */
+        extra_align = floor_log2(salu->width) - 3;
+        if (salu->dual) extra_align--;
+        BUG_CHECK(extra_align <= 2, "Bad SatefulAlu width"); }
+    salu->apply(FindFieldsToAlloc(phv, alloc, fields_needed, extra_align));
     unsigned width = salu->width/8U;
     if (!salu->dual) width *= 2;
     unsigned byte_mask = ((1U << width) - 1) << 8;
@@ -1465,6 +1479,7 @@ bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu,
     if (!find_alloc(alloc.use, false, second_try, xbar_alloced, 0, false, byte_mask)) {
         alloc.clear();
         return false; }
+    // FIXME -- need to allocate hash table space if it turns out we need it
     fill_out_use(xbar_alloced, false);
     return true;
 }

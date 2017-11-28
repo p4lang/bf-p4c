@@ -215,45 +215,37 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
-struct seq_num_gen_layout {
-    bit<16> lo;
-    bit<16> hi;
-}
-
-struct sflow_exp_seq_num_layout {
-    bit<16> lo;
-    bit<16> hi;
-}
-
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<16> tmp;
-    bit<16> tmp_0;
-    @name(".sflow_state_exp_seq_num") register<sflow_exp_seq_num_layout>(32w0) sflow_state_exp_seq_num_0;
-    @name(".sflow_state_seq_num") register<seq_num_gen_layout>(32w0) sflow_state_seq_num_0;
-    @name("seq_num_gen") register_action<seq_num_gen_layout, bit<16>>(sflow_state_seq_num_0) seq_num_gen_0 = {
-        void apply(inout seq_num_gen_layout value, out bit<16> rv) {
-            value.hi = value.lo;
-            value.lo = value.lo + 16w1;
-            rv = value.hi;
+    bit<32> tmp;
+    bit<32> tmp_0;
+    @name(".sflow_state_exp_seq_num") register<bit<32>>(32w0) sflow_state_exp_seq_num_0;
+    @name(".sflow_state_seq_num") register<bit<32>>(32w0) sflow_state_seq_num_0;
+    @name("seq_num_gen") register_action<bit<32>, bit<32>>(sflow_state_seq_num_0) seq_num_gen_0 = {
+        void apply(inout bit<32> value, out bit<32> rv) {
+            bit<32> alu_hi_0;
+            alu_hi_0 = value;
+            value = value + 32w1;
+            rv = alu_hi_0;
         }
     };
-    @name("sflow_exp_seq_num") register_action<sflow_exp_seq_num_layout, bit<16>>(sflow_state_exp_seq_num_0) sflow_exp_seq_num_0 = {
-        void apply(inout sflow_exp_seq_num_layout value, out bit<16> rv) {
-            value.hi = meta.sflowHdr.seq_num - value.lo;
-            value.lo = meta.sflowHdr.temp;
-            rv = value.hi;
+    @name("sflow_exp_seq_num") register_action<bit<32>, bit<32>>(sflow_state_exp_seq_num_0) sflow_exp_seq_num_0 = {
+        void apply(inout bit<32> value, out bit<32> rv) {
+            bit<32> alu_hi_1;
+            alu_hi_1 = (bit<32>)meta.sflowHdr.seq_num - value;
+            value = (bit<32>)meta.sflowHdr.temp;
+            rv = alu_hi_1;
         }
     };
     @name(".get_sflow_seq_num") action get_sflow_seq_num_0() {
         tmp = seq_num_gen_0.execute();
-        meta.meta.sflow_sample_seq_no = (bit<32>)tmp;
+        meta.meta.sflow_sample_seq_no = tmp;
     }
     @name(".calc_next_seq_num") action calc_next_seq_num_0() {
         meta.sflowHdr.temp = meta.sflowHdr.seq_num + meta.sflowHdr.num_samples;
     }
     @name(".chk_sflow_seq_num") action chk_sflow_seq_num_0() {
         tmp_0 = sflow_exp_seq_num_0.execute();
-        meta.sflowHdr.drops = tmp_0;
+        meta.sflowHdr.drops = (bit<16>)tmp_0;
     }
     @name(".drop_me") action drop_me_0() {
         mark_to_drop();
