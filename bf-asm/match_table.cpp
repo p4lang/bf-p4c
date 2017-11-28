@@ -142,12 +142,16 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
                     ((1U << result->action.args[0].size()) - 1) & ~action_enable;
                 shift_en.action_instruction_adr_payload_shifter_en = 1;
             } else {
-                merge.mau_action_instruction_adr_mask[type][bus] = 0;
+                if (this->to<HashActionTable>() && this->get_gateway())
+                    merge.mau_action_instruction_adr_mask[type][bus] = 1;
+                else
+                    merge.mau_action_instruction_adr_mask[type][bus] = 0;
+
                 if (actions->count() == 1)
                     default_action = actions->begin()->code;
-                else if (this->to<HashActionTable>() && this->get_gateway()) {
-                    merge.mau_action_instruction_adr_mask[type][bus] = 1;
-                    shift_en.action_instruction_adr_payload_shifter_en = 1; } }
+                else if (this->to<HashActionTable>() && this->get_gateway())
+                    shift_en.action_instruction_adr_payload_shifter_en = 1;
+            }
             if (!result->enable_action_instruction_enable)
                 default_action |= ACTION_INSTRUCTION_ADR_ENABLE;
             merge.mau_action_instruction_adr_default[type][bus] = default_action;
@@ -197,7 +201,9 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
                                   (act.code%4) * TARGET::ACTION_INSTRUCTION_MAP_WIDTH,
                                   TARGET::ACTION_INSTRUCTION_MAP_WIDTH);
             } }
-    if (!default_action.empty()) {
+    if (this->to<HashActionTable>()) {
+        merge.mau_action_instruction_adr_miss_value[logical_id] = 0;
+    } else if (!default_action.empty()) {
         auto *act = actions->action(default_action);
         merge.mau_action_instruction_adr_miss_value[logical_id] =
             ACTION_INSTRUCTION_ADR_ENABLE + act->addr;
@@ -206,9 +212,6 @@ template<class TARGET> void MatchTable::write_common_regs(typename TARGET::mau_r
         merge.mau_action_instruction_adr_miss_value[logical_id] =
             ACTION_INSTRUCTION_ADR_ENABLE + act->addr; }
 
-    if (this->to<HashActionTable>()) {
-        merge.mau_action_instruction_adr_miss_value[logical_id] = 0;
-    }
     /*------------------------
      * Next Table
      *-----------------------*/
