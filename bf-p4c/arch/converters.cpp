@@ -114,6 +114,13 @@ const IR::Node* IngressControlConverter::preorder(IR::P4Control* node) {
     tnaParams.emplace("ig_intr_md_for_dprsr", param->name);
     paramList->push_back(param);
 
+    // add compiler generated struct
+    path = new IR::Path("compiler_generated_metadata_t");
+    type = new IR::Type_Name(path);
+    param = new IR::Parameter("compiler_generated_meta", IR::Direction::InOut, type);
+    tnaParams.emplace("compiler_generated_meta", param->name);
+    paramList->push_back(param);
+
     auto controlType = new IR::Type_Control("ingress", paramList);
 
     auto controlLocals = new IR::IndexedVector<IR::Declaration>();
@@ -191,6 +198,13 @@ const IR::Node* EgressControlConverter::preorder(IR::P4Control *node) {
     type = new IR::Type_Name(path);
     param = new IR::Parameter("ig_intr_md_for_tm", IR::Direction::InOut, type);
     tnaParams.emplace("ig_intr_md_for_tm", param->name);
+    paramList->push_back(param);
+
+    // add compiler generated struct
+    path = new IR::Path("compiler_generated_metadata_t");
+    type = new IR::Type_Name(path);
+    param = new IR::Parameter("compiler_generated_meta", IR::Direction::InOut, type);
+    tnaParams.emplace("compiler_generated_meta", param->name);
     paramList->push_back(param);
 
     auto controlType = new IR::Type_Control("egress", paramList);
@@ -274,6 +288,13 @@ const IR::Node* IngressDeparserConverter::preorder(IR::P4Control* node) {
     tnaParams.emplace("learning", param->name);
     paramList->push_back(param);
 
+    // add compiler generated struct
+    path = new IR::Path("compiler_generated_metadata_t");
+    type = new IR::Type_Name(path);
+    param = new IR::Parameter("compiler_generated_meta", IR::Direction::InOut, type);
+    tnaParams.emplace("compiler_generated_meta", param->name);
+    paramList->push_back(param);
+
     auto controlType = new IR::Type_Control("ingressDeparserImpl", paramList);
 
     auto controlLocals = new IR::IndexedVector<IR::Declaration>();
@@ -345,6 +366,13 @@ const IR::Node* EgressDeparserConverter::preorder(IR::P4Control* node) {
     tnaParams.emplace("mirror", param->name);
     paramList->push_back(param);
 
+    // add compiler generated struct
+    path = new IR::Path("compiler_generated_metadata_t");
+    type = new IR::Type_Name(path);
+    param = new IR::Parameter("compiler_generated_meta", IR::Direction::InOut, type);
+    tnaParams.emplace("compiler_generated_meta", param->name);
+    paramList->push_back(param);
+
     auto controlType = new IR::Type_Control("egressDeparserImpl", paramList);
 
     auto controlLocals = new IR::IndexedVector<IR::Declaration>();
@@ -403,6 +431,13 @@ const IR::Node* IngressParserConverter::postorder(IR::P4Parser *node) {
     type = new IR::Type_Name(path);
     param = new IR::Parameter("ig_intr_md_for_tm", IR::Direction::Out, type);
     tnaParams.emplace("ig_intr_md_for_tm", param->name);
+    paramList->push_back(param);
+
+    // add compiler generated struct
+    path = new IR::Path("compiler_generated_metadata_t");
+    type = new IR::Type_Name(path);
+    param = new IR::Parameter("compiler_generated_meta", IR::Direction::InOut, type);
+    tnaParams.emplace("compiler_generated_meta", param->name);
     paramList->push_back(param);
 
     auto parser_type = new IR::Type_Parser("ingressParserImpl", paramList);
@@ -477,6 +512,13 @@ const IR::Node* EgressParserConverter::postorder(IR::P4Parser* node) {
     type = new IR::Type_Name(path);
     param = new IR::Parameter("ig_intr_md_for_tm", IR::Direction::InOut, type);
     tnaParams.emplace("ig_intr_md_for_tm", param->name);
+    paramList->push_back(param);
+
+    // add compiler generated struct
+    path = new IR::Path("compiler_generated_metadata_t");
+    type = new IR::Type_Name(path);
+    param = new IR::Parameter("compiler_generated_meta", IR::Direction::InOut, type);
+    tnaParams.emplace("compiler_generated_meta", param->name);
     paramList->push_back(param);
 
     auto parser_type = new IR::Type_Parser("egressParserImpl", paramList);

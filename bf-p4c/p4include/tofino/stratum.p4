@@ -25,15 +25,6 @@ agreement with Barefoot Networks, Inc.
 
 #include "core.p4"
 
-// -----------------------------------------------------------------------------
-// COMMON TYPES
-// -----------------------------------------------------------------------------
-typedef bit<9>  PortId_t;     // Port id -- ingress or egress port
-typedef bit<16> MulticastGroupId_t;   // Multicast group id
-typedef bit<5>  QueueId_t;    // Queue id
-typedef bit<4>  CloneId_t;    // Clone id
-typedef bit<10> MirrorId_t;   // Mirror id
-
 enum MeterType_t {
     PACKETS,
     BYTES
@@ -79,6 +70,10 @@ error {
     // Add more errors here.
 }
 
+struct compiler_generated_metadata_t {
+    // This struct is intentionally left blank and to be filled by later passes.
+}
+
 // -----------------------------------------------------------------------------
 // INGRESS INTRINSIC METADATA
 // -----------------------------------------------------------------------------
@@ -91,7 +86,7 @@ header ingress_intrinsic_metadata_t {
 
     bit<3> _pad2;
 
-    PortId_t ingress_port;               // ingress physical port id.
+    bit<9> ingress_port;                 // ingress physical port id.
                                          // this field is passed to the deparser
 
     bit<48> ingress_mac_tstamp;          // ingress IEEE 1588 timestamp (in nsec)
@@ -110,7 +105,7 @@ struct ingress_intrinsic_metadata_from_parser_t {
 
 struct ingress_intrinsic_metadata_for_tm_t {
     // The ingress physical port id is passed to the TM directly from
-    PortId_t ucast_egress_port;          // egress port for unicast packets. must
+    bit<9> ucast_egress_port;            // egress port for unicast packets. must
                                          // be presented to TM for unicast.
 
     bit<3> drop_ctl;                     // disable packet replication:
@@ -128,7 +123,7 @@ struct ingress_intrinsic_metadata_for_tm_t {
                                          // ingress admission control, PFC,
                                          // etc.
 
-    QueueId_t qid;                           // egress (logical) queue id into which
+    bit<5> qid;                          // egress (logical) queue id into which
                                          // this packet will be deposited.
     bit<3> icos_for_copy_to_cpu;         // ingress cos for the copy to CPU. must
                                          // be presented to TM if copy_to_cpu ==
@@ -145,11 +140,11 @@ struct ingress_intrinsic_metadata_for_tm_t {
     bit<1> enable_mcast_cutthru;         // enable cut-through forwarding for
                                          // multicast.
 
-    MulticastGroupId_t  mcast_grp_a;                 // 1st multicast group (i.e., tree) id;
+    bit<16>  mcast_grp_a;                // 1st multicast group (i.e., tree) id;
                                          // a tree can have two levels. must be
                                          // presented to TM for multicast.
 
-    MulticastGroupId_t  mcast_grp_b;                 // 2nd multicast group (i.e., tree) id;
+    bit<16>  mcast_grp_b;                // 2nd multicast group (i.e., tree) id;
                                          // a tree can have two levels.
 
     bit<13> level1_mcast_hash;           // source of entropy for multicast
@@ -583,6 +578,7 @@ parser IngressParser<H, M, CG>(
     out H hdr,
     out M ig_md,
     out ingress_intrinsic_metadata_t ig_intr_md,
+    out ingress_intrinsic_metadata_from_parser_t ig_intr_md_from_prsr,
     out ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm,
     inout CG aux
     );
@@ -592,6 +588,7 @@ parser EgressParser<H, M, CG>(
     out H hdr,
     out M eg_md,
     out egress_intrinsic_metadata_t eg_intr_md,
+    out egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr,
     /// following two arguments are bridged metadata
     inout ingress_intrinsic_metadata_t ig_intr_md,
     inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm,

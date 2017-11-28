@@ -327,9 +327,9 @@ set (TOFINO_IR_DEF_FILES
 set (IR_DEF_FILES ${IR_DEF_FILES} ${TOFINO_IR_DEF_FILES} PARENT_SCOPE)
 
 set (p4include_HEADERS
-  p4include/tofino_model.p4
   p4include/tofino.p4
   p4include/tofino/lpf.p4
+  p4include/tofino/stratum.p4
   p4include/tofino/p4_14_prim.p4
   p4include/tofino/p4_14_types.p4
   p4include/tofino/p4_16_prim.p4

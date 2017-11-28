@@ -44,21 +44,11 @@ struct RemoveExternMethodCallsExcludedByAnnotation : public Transform {
     }
 };
 
-/// When compiling a tofino-v1model program, the compiler by default
-/// includes tofino/intrinsic_metadata.p4 and v1model.p4 from the
-/// system path. Symbols in these system header files are reserved and
-/// cannot be used in user programs.
 class ReplaceArchitecture : public Inspector {
     ProgramStructure* structure;
-    Target            target;
-
-    // reservedNames is used to filter out system defined types.
-    std::set<cstring>* reservedNames;
-    IR::IndexedVector<IR::Node> localDeclarations;
 
  public:
-    ReplaceArchitecture(ProgramStructure* structure, Target arch)
-        : structure(structure), target(arch) {
+    explicit ReplaceArchitecture(ProgramStructure* structure) : structure(structure) {
         setName("ReplaceArchitecture");
         CHECK_NULL(structure);
     }
@@ -104,49 +94,27 @@ class ReplaceArchitecture : public Inspector {
         //             "eg_intr_md", "instance_type", 32);
     }
 
-    void analyzeErrors(const IR::P4Program* program) {
-        for (auto decl : structure->tofinoArchTypes) {
-            if (auto err = decl->to<IR::Type_Error>()) {
-                for (auto m : err->members)
-                    structure->errors.emplace(m->name); }}
-        /// append error defined in user program
-        for (auto decl : program->declarations) {
-            if (auto err = decl->to<IR::Type_Error>()) {
-                for (auto m : err->members)
-                    structure->errors.emplace(m->name); }}
-    }
-
     void analyzeTofinoModel() {
-        for (auto decl : structure->tofinoArchTypes) {
-            if (auto v = decl->to<IR::Type_Extern>()) {
-                structure->extern_types.emplace(v->name, v);
-            } else if (decl->is<IR::P4Action>()) {
-            } else if (decl->is<IR::Type_MatchKind>()) {
-            } else if (auto v = decl->to<IR::Type_Typedef>()) {
-                structure->typedefs.emplace(v->name, v);
-                structure->unique_declarations.insert(v->name);
-            } else if (auto v = decl->to<IR::Type_Enum>()) {
+        for (auto decl : structure->targetTypes) {
+            if (auto v = decl->to<IR::Type_Enum>()) {
                 structure->enums.emplace(v->name, v);
-            } else if (decl->is<IR::Type_Struct>()) {
-            } else if (decl->is<IR::Type_Control>()) {
-            } else if (decl->is<IR::Type_Parser>()) {
-            } else if (decl->is<IR::Type_Package>()) {
-            } else {
-                WARNING("Cannot recognize architecture definition " << decl);
+            } else if (auto v = decl->to<IR::Type_Error>()) {
+                for (auto mem : v->members) {
+                    structure->errors.emplace(mem->name);
+                }
             }
         }
     }
 
-    void postorder(const IR::P4Program* program) override {
+    void postorder(const IR::P4Program*) override {
         setupMetadataRenameMap();
 
         /// append tofino.p4 architecture definition
-        structure->include("tofino.p4", &structure->tofinoArchTypes);
-        structure->include("tofino/p4_14_types.p4", &structure->tofinoArchTypes);
-        structure->include("tofino/p4_14_prim.p4", &structure->tofinoArchTypes);
-        structure->include("tofino/p4_16_prim.p4", &structure->tofinoArchTypes);
+        structure->include("tofino/stratum.p4", &structure->targetTypes);
+        structure->include("tofino/p4_14_types.p4", &structure->targetTypes);
+        structure->include("tofino/p4_14_prim.p4", &structure->targetTypes);
+        structure->include("tofino/p4_16_prim.p4", &structure->targetTypes);
 
-        analyzeErrors(program);
         analyzeTofinoModel();
     }
 };
@@ -531,6 +499,11 @@ class AnalyzeV1modelProgram : public Inspector {
     void postorder(const IR::Type_Action* node) override
     { structure->action_types.push_back(node); }
     // errorDeclaration
+    void postorder(const IR::Type_Error* node) override {
+        for (auto m : node->members) {
+            structure->errors.emplace(m->name);
+        }
+    }
     // typeDeclarations
     void postorder(const IR::Type_Struct* node) override
     { structure->struct_types.emplace(node->name, node); }
@@ -538,14 +511,8 @@ class AnalyzeV1modelProgram : public Inspector {
     { structure->header_types.emplace(node->name, node); }
     void postorder(const IR::Type_HeaderUnion* node) override
     { structure->header_union_types.emplace(node->name, node); }
-    void postorder(const IR::Type_Typedef* node) override {
-        auto it = structure->unique_declarations.find(node->name);
-        if (it != structure->unique_declarations.end()) {
-            WARNING("Duplicate definition of " << node->name.name << ", ignored.");
-            return;
-        }
-        structure->typedef_types.emplace(node->name, node);
-    }
+    void postorder(const IR::Type_Typedef* node) override
+    { structure->typedef_types.emplace(node->name, node); }
     void postorder(const IR::Type_Enum* node) override
     { structure->enums.emplace(node->name, node); }
 
@@ -1515,11 +1482,6 @@ class TranslationLast : public PassManager {
 SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
                                                  P4::TypeMap* typeMap, BFN_Options& options) {
     setName("Translation");
-    BFN::Target target = BFN::Target::Unknown;
-    if (options.arch == "v1model")
-        target = BFN::Target::Simple;
-    else if (options.arch == "native")
-        target = BFN::Target::Tofino;  // XXX(zma) : assuming tofino & jbay have same arch for now
     addDebugHook(options.getDebugHook());
     auto evaluator = new P4::EvaluatorPass(refMap, typeMap);
     auto structure = new BFN::ProgramStructure;
@@ -1530,7 +1492,7 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
         new VisitFunctor([structure, evaluator]() {
             structure->toplevel = evaluator->getToplevelBlock(); }),
         new TranslationFirst(),
-        new ReplaceArchitecture(structure, target),
+        new ReplaceArchitecture(structure),
         new CleanP14V1model(),
         new AnalyzeV1modelProgram(structure),
         new ConstructSymbolTable(structure, refMap, typeMap),

@@ -58,15 +58,11 @@ class ProgramStructure {
     void include14(cstring filename, IR::IndexedVector<IR::Node>* decls);
 
     IR::IndexedVector<IR::Node>                  declarations;
-    IR::IndexedVector<IR::Node>                  tofinoArchTypes;
+    IR::IndexedVector<IR::Node>                  targetTypes;
 
     /// target architecture types
     ordered_set<cstring>                         errors;
-    ordered_set<const IR::Type_MatchKind*>       match_kinds;
     ordered_map<cstring, const IR::Type_Enum*>   enums;
-    ordered_map<cstring, const IR::Type_Extern*> extern_types;
-    ordered_map<cstring, const IR::Type_Typedef*> typedefs;
-    ordered_set<cstring>                         unique_declarations;
 
     /// maintain program declarations to reprint a valid P16 program
     ordered_map<cstring, const IR::P4Control*>   controls;
@@ -149,12 +145,9 @@ class ProgramStructure {
     cstring getBlockName(cstring name);
 
     void createErrors();
-    void createEnums();
     void createTofinoArch();
     void createTypes();
     void createActions();
-    void createExterns();
-    void cvtExpressions();
     void createParsers();
     void createControls();
     void createMain();

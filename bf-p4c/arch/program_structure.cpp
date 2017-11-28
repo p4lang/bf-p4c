@@ -23,89 +23,6 @@
 
 namespace BFN {
 
-///////////////////////////////////////////////////////////////////////////////////////////////
-/// Following is a simplified version of P4-14 to P4-16 converter that just
-/// converts included header files.
-namespace {
-
-class V1DiscoverStructure : public Inspector {
-    P4V1::ProgramStructure *structure;
-
- public:
-    explicit V1DiscoverStructure(P4V1::ProgramStructure *structure) : structure(structure) {
-        CHECK_NULL(structure);
-        setName("DiscoverStructure");
-    }
-
-    void postorder(const IR::Metadata *md) override { structure->metadata.emplace(md); }
-    void postorder(const IR::Header *hd) override { structure->headers.emplace(hd); }
-    void postorder(const IR::Type_StructLike *t) override { structure->types.emplace(t); }
-    void postorder(const IR::Type_Extern *ext) override { structure->extern_types.emplace(ext); }
-};
-
-class V1Rewrite : public Transform {
-    P4V1::ProgramStructure *structure;
-
- public:
-    explicit V1Rewrite(P4V1::ProgramStructure *structure) : structure(structure) {
-        CHECK_NULL(structure);
-        setName("V1Rewrite");
-    }
-
-    const IR::Node *preorder(IR::V1Program *global) override {
-        prune();
-        structure->createTypes();
-        structure->createExterns();
-        auto result = new IR::P4Program(global->srcInfo, *structure->declarations);
-        LOG3("V1Rewrite " << result);
-        return result;
-    }
-};
-
-// @input: P4 v1.0 partial program
-// @output: P4 v1.2 partial program
-class V1Converter : public PassManager {
-    P4V1::ProgramStructure structure;
-
- public:
-    V1Converter() {
-        setName("V1Converter");
-        passes.emplace_back(new P4::DoConstantFolding(nullptr, nullptr));
-        passes.emplace_back(new CheckHeaderTypes());
-        passes.emplace_back(new TypeCheck());
-        passes.emplace_back(new V1DiscoverStructure(&structure));
-        passes.emplace_back(new V1Rewrite(&structure));
-    }
-};
-
-}  // namespace
-
-void ProgramStructure::include14(cstring filename, IR::IndexedVector<IR::Node>* vector) {
-    Util::PathName path(p4_14includePath);
-    path = path.join(filename);
-
-    CompilerOptions options;
-    options.langVersion = CompilerOptions::FrontendVersion::P4_14;
-    options.file = path.toString();
-    if (FILE* file = options.preprocess()) {
-        if (::errorCount() > 0) {
-            ::error("Failed to preprocess library file %1%", options.file);
-            return; }
-
-        V1Converter converter;
-        const IR::Node* v1 = V1::V1ParserDriver::parse(options.file, file);
-        v1 = v1->apply(converter);
-        if (v1 == nullptr) {
-            ::error("Failed to load library file %1%", options.file);
-            return; }
-
-        auto program = v1->to<IR::P4Program>();
-        for (auto decl : program->declarations)
-            vector->push_back(decl);
-        options.closeInput(file);
-    }
-}
-
 // append target architecture to declaration
 void ProgramStructure::include(cstring filename, IR::IndexedVector<IR::Node>* vector) {
     Util::PathName path(p4includePath);
@@ -160,26 +77,20 @@ cstring ProgramStructure::getBlockName(cstring name) {
     return blockname;
 }
 
+void ProgramStructure::createTofinoArch() {
+    for (auto decl : targetTypes) {
+        if (decl->is<IR::Type_Error>())
+            continue;
+        declarations.push_back(decl);
+    }
+}
+
 void ProgramStructure::createErrors() {
     auto allErrors = new IR::IndexedVector<IR::Declaration_ID>();
     for (auto e : errors) {
         allErrors->push_back(new IR::Declaration_ID(e));
     }
     declarations.push_back(new IR::Type_Error("error", *allErrors));
-}
-
-void ProgramStructure::createEnums() {
-    for (auto decl : enums) {
-        WARNING("enum is not appended to program declarations" << decl.first);
-    }
-}
-
-void ProgramStructure::createTofinoArch() {
-    for (auto decl : tofinoArchTypes) {
-        if (decl->is<IR::Type_Error>())
-            continue;
-        declarations.push_back(decl);
-    }
 }
 
 void ProgramStructure::createTypes() {
@@ -201,12 +112,6 @@ void ProgramStructure::createActions() {
     for (auto a : action_types) {
         declarations.push_back(a);
     }
-}
-
-void ProgramStructure::createExterns() {
-//    for (auto e : extern_types) {
-//        declarations.push_back(e.second);
-//    }
 }
 
 void ProgramStructure::createParsers() {
@@ -269,6 +174,7 @@ void ProgramStructure::createMain() {
     typeArgs->push_back(new IR::Type_Name(type_m));
     typeArgs->push_back(new IR::Type_Name(type_h));
     typeArgs->push_back(new IR::Type_Name(type_m));
+    typeArgs->push_back(new IR::Type_Name("compiler_generated_metadata_t"));
     auto typeSpecialized = new IR::Type_Specialized(type, typeArgs);
 
     auto args = new IR::Vector<IR::Expression>();
@@ -326,7 +232,6 @@ struct ConvertNames : public PassManager {
 const IR::P4Program* ProgramStructure::create(const IR::P4Program* program) {
     createErrors();
     createTofinoArch();
-    createExterns();
     createTypes();
     createActions();
     createParsers();
