@@ -14,13 +14,14 @@ struct ByteInfo {
  public:
     IXBar::Use::Byte byte;  // Obviously the byte
     bitvec bit_use;   // Relevant bits of the byte
-    int use_index;          // What number it is in the vector
+    int byte_location = -1;
 
-    explicit ByteInfo(const IXBar::Use::Byte b, bitvec bu, int ui)
-        : byte(b), bit_use(bu), use_index(ui) {}
+    explicit ByteInfo(const IXBar::Use::Byte b, bitvec bu)
+        : byte(b), bit_use(bu) {}
 
     void dbprint(std::ostream &out) const {
-        out << "Byte " << byte << " bit_use " << bit_use << " use_index " << use_index;
+        out << "Byte " << byte << " bit_use " << bit_use << " byte_location"
+            << byte_location;
     }
 };
 
@@ -37,9 +38,12 @@ struct TableFormat {
     static constexpr int MID_BYTE_LO = 0;
     static constexpr int MID_BYTE_HI = 1;
     static constexpr int MID_BYTE_VERS = 3;
+    static constexpr int MAX_SHARED_GROUPS = 2;
+    static constexpr int MAX_GROUPS_PER_RAM = 5;
 
     enum type_t { MATCH, ACTION, IMMEDIATE, VERS, COUNTER, METER, METER_TYPE,
                   INDIRECT_ACTION, ENTRY_TYPES };
+
 
     struct Use {
         struct match_group_use {
@@ -54,6 +58,13 @@ struct TableFormat {
             bitvec mask[ENTRY_TYPES];
             bitvec match_byte_mask;  // The bytes that are allocaated for matching
             bitvec allocated_bytes;
+
+            void clear_match() {
+                match.clear();
+                mask[MATCH].clear();
+                mask[VERS].clear();
+                match_byte_mask.clear();
+            }
         };
 
         struct TCAM_use {
@@ -88,6 +99,10 @@ struct TableFormat {
 
     // Vector for a hash group, as large tables could potentially use multiple hash groups
     safe_vector<IXBar::Use::Byte> single_match;
+    // Match Bytes
+    safe_vector<ByteInfo> match_bytes;
+    safe_vector<ByteInfo> ghost_bytes;
+    int ghost_bit_bus;
 
     bitvec total_use;  // Total bitvec for all entries in table format
     bitvec match_byte_use;   // Bytes used by all match byte masks
@@ -96,11 +111,15 @@ struct TableFormat {
     // Size of the following vectors is the layout_option.way->width
 
     /// Which RAM sections contain the match groups
-    safe_vector<int> match_groups_per_RAM;
+    // safe_vector<int> match_groups_per_RAM;
     /// Which RAM sections contain overhead info
     safe_vector<int> overhead_groups_per_RAM;
     /// Specifically which search bus coordinates to which RAM
     safe_vector<int> search_bus_per_width;
+
+    safe_vector<int> full_match_groups_per_RAM;
+    safe_vector<int> shared_groups_per_RAM;
+    safe_vector<bool> version_allocated;
 
     // Match group index in use coordinate to whenever they are found in the match_groups_per_RAM
     // i.e. if the match_groups_per_RAM looks like [2, 2], then use->match_groups[0] and
@@ -108,7 +127,7 @@ struct TableFormat {
 
     // Size of outer vector is layout_option.way->match_groups.  Essentially which RAMs does
     // each match group use, for allocating version bits.
-    safe_vector<safe_vector<int>> match_group_info;
+    // safe_vector<safe_vector<int>> match_group_info;
 
     bool balanced = true;
     int ghost_bits_count = 0;
@@ -116,22 +135,41 @@ struct TableFormat {
     const bitvec immediate_mask;
     bool gw_linked;
     // bitvec ghost_start;
+    bool allocate_overhead();
+    bool allocate_all_indirect_ptrs();
+    bool allocate_all_immediate();
+    bool allocate_all_instr_selection();
+    bool allocate_match();
 
- public:
-    TableFormat(const LayoutOption &l, const IXBar::Use &mi, const IR::MAU::Table *t,
-                const bitvec im, bool gl)
-        : layout_option(l), match_ixbar(mi), tbl(t), immediate_mask(im), gw_linked(gl) {}
-    bool find_format(Use *u);
+    bool allocate_all_ternary_match();
+
     bool analyze_layout_option();
     bool analyze_skinny_layout_option(int per_RAM, safe_vector<std::pair<int, int>> &sizes);
     bool analyze_wide_layout_option(safe_vector<std::pair<int, int>> &sizes);
     bool allocate_next_table();
     bool allocate_indirect_ptr(int total, type_t type, int group, int RAM);
-    bool allocate_all_indirect_ptrs();
-    bool allocate_all_immediate();
-    bool allocate_all_instr_selection();
+
+    void find_bytes_to_allocate(int width_sect, safe_vector<ByteInfo> &unalloced);
+    bool initialize_byte(int byte_offset, int width_sect, ByteInfo &info,
+        safe_vector<ByteInfo> &alloced, bitvec &byte_attempt, bitvec &bit_attempted);
+    bool allocate_match_byte(ByteInfo &info, safe_vector<ByteInfo> &alloced, int width_sect,
+        bitvec &byte_attempt, bitvec &bit_attempt);
+    bool allocate_version(int width_sect, const safe_vector<ByteInfo> &alloced,
+        bitvec &version_loc, bitvec &byte_attempt, bitvec &bit_attempt);
+    void fill_out_use(int group, const safe_vector<ByteInfo> &alloced, bitvec &version_loc);
+
+    void choose_ghost_bits();
+    int determine_group(int width_sect, int groups_allocated);
+
+    void allocate_share(int width_sect, safe_vector<ByteInfo> &unalloced_group,
+        safe_vector<ByteInfo> &alloced, bitvec &version_loc, bitvec &byte_attempt,
+        bitvec &bit_attempt, bool overhead_section);
+    bool attempt_allocate_shares();
+    bool allocate_shares();
+    void allocate_full_fits(int width_sect);
+
+    /*
     bool allocate_all_match();
-    bool allocate_all_ternary_match();
 
     void determine_byte_types(bitvec &unaligned_bytes, bitvec &chosen_ghost_bytes);
     bool allocate_easy_bytes(bitvec &unaligned_bytes, bitvec &chosen_ghost_bytes,
@@ -147,6 +185,14 @@ struct TableFormat {
     int determine_next_group(int current_group, int RAM);
     bool allocate_one_version(int starting_byte, int group);
     bool allocate_all_version();
+    */
+
+ public:
+    TableFormat(const LayoutOption &l, const IXBar::Use &mi, const IR::MAU::Table *t,
+                const bitvec im, bool gl)
+        : layout_option(l), match_ixbar(mi), tbl(t), immediate_mask(im), gw_linked(gl) {}
+
+    bool find_format(Use *u);
     void verify();
 };
 

@@ -2,9 +2,24 @@
 #include "memories.h"
 
 
-/* Overall analysis for the exact match layout option, to determine in which RAMs of table
-   format will contain particular match data, and which RAMs contain the overhead data.
-   Responsible for balancing entries if they require more than 1 match group */
+/** The goal of this code is to determine how to initial divide up the match data and the
+ *  overhead, and which RAM correspond to which input xbar group.
+ *
+ *  If you look at section 6.2.3 Exact Match Row Vertical/Horizontal (VH) Xbars, one can
+ *  the inputs to an individual RAM line.  There are two search buses per line, which
+ *  themselves are 128 bits wide, the same as an individual RAM row.  Each search bus can
+ *  select from one of 8 crossbar groups that come from the input crossbar.  Thus, the number
+ *  of input xbars groups needed is the number of search buses needed.  (This is not entirely
+ *  true, as in ATCAM a single xbar bytes is actually in multiple places on the RAM.  This
+ *  information is tracked through the search_bus field in each IXBar::Byte)
+ *
+ *  Thus the algorithm is divided into two types, skinny and wide.  Skinny means that only
+ *  one search bus is required, while wide means multiple search buses are required.
+ *
+ *  The analyze option assigns both a number of overhead entries per RAM as well as
+ *  a search bus assigned to each width.  Thus only bytes with that search_bus value can
+ *  be found at that particular location.
+ */
 bool TableFormat::analyze_layout_option() {
     // FIXME: In total needs some information variable passed about ghosting
 
@@ -19,15 +34,21 @@ bool TableFormat::analyze_layout_option() {
            use->ghost_bits[byte] = byte.bit_use;
        }
     }
+
     int per_RAM = layout_option.way.match_groups / layout_option.way.width;
     safe_vector<std::pair<int, int>> sizes
         = match_ixbar.bits_per_search_bus_single();
 
-    safe_vector<int> empty;
     for (int i = 0; i < layout_option.way.match_groups; i++) {
-        match_group_info.push_back(empty);
         use->match_groups.emplace_back();
     }
+
+    // Initialize all information
+    overhead_groups_per_RAM.resize(layout_option.way.width, 0);
+    full_match_groups_per_RAM.resize(layout_option.way.width, 0);
+    shared_groups_per_RAM.resize(layout_option.way.width, 0);
+    search_bus_per_width.resize(layout_option.way.width, 0);
+    version_allocated.resize(layout_option.way.match_groups, false);
 
     single_match = match_ixbar.match_hash_single();
 
@@ -52,43 +73,39 @@ bool TableFormat::analyze_skinny_layout_option(int per_RAM,
                        // the extra group of if possible/have enough space
     }
 
+    // Evenly assign overhead information per RAM.  In the case of single sized RAMs, one
+    // can later share match groups.
     int total = 0;
     for (int i = 0; i < layout_option.way.width; i++) {
-        match_groups_per_RAM.push_back(per_RAM);
-        overhead_groups_per_RAM.push_back(per_RAM);
+        overhead_groups_per_RAM[i] = per_RAM;
         total += per_RAM;
     }
 
-    int i = match_groups_per_RAM.size() - 1;
+    int index = 0;
     while (total < layout_option.way.match_groups) {
-        balanced = false;
-        match_groups_per_RAM[i]++;
-        overhead_groups_per_RAM[i]++;
-        i--;
+        overhead_groups_per_RAM[index]++;
+        index++;
         total++;
     }
 
-    int index = 0; int min_total = 0;
-    for (int i = 0; i < layout_option.way.match_groups; i++) {
-        if (min_total == match_groups_per_RAM[index])
-            index++;
-        match_group_info[i].push_back(index);
-        min_total++;
-    }
-
+    // Every single RAM is assigned the same search bus, as there is only one
     for (int i = 0; i < layout_option.way.width; i++) {
-        search_bus_per_width.push_back(sizes[0].first);
+        search_bus_per_width[i] = sizes[0].first;
     }
+    ghost_bit_bus = sizes[0].first;
     return true;
 }
 
 /* Specifically for the allocation of groups that require multiple RAMs.  Determine where
    the overhead has to be, and which RAMs contain the particular match groups */
 bool TableFormat::analyze_wide_layout_option(safe_vector<std::pair<int, int>> &sizes) {
-    size_t RAM_per = layout_option.way.width / layout_option.way.match_groups;
+    size_t RAM_per = (layout_option.way.width + layout_option.way.match_groups - 1)
+                     / layout_option.way.match_groups;
     if (layout_option.way.width % layout_option.way.match_groups == 0
         && layout_option.way.match_groups != 1) {
-        BUG("Ridiculous layout chosen.  Must be shrunken down");
+        ::warning("Format for table %s to be %d entries and %d width, when that allocation "
+                  "could easily be split.", tbl->name, layout_option.way.match_groups,
+                  layout_option.way.width);
     }
     if (size_t(match_ixbar.search_buses_single()) > RAM_per) {
         return false;  // FIXME: Again, can potentially be saved by ghosting off certain bits
@@ -100,7 +117,7 @@ bool TableFormat::analyze_wide_layout_option(safe_vector<std::pair<int, int>> &s
     }
 
     // Whichever one has the least amount of bits will be the group in which the overhead
-    // is stored
+    // will be stored.  This is because we can ghost the most bits off in that section
     std::sort(sizes.begin(), sizes.end(),
         [=](const std::pair<int, int> &a, const std::pair<int, int> &b) {
         int t;
@@ -109,40 +126,81 @@ bool TableFormat::analyze_wide_layout_option(safe_vector<std::pair<int, int>> &s
         return true;
     });
 
-    // Check to see if two match groups can share the space within an individual RAM
-    if (layout_option.way.match_groups > 1) {
-        if (2 * (sizes.back().second + VERSION_BITS + layout_option.layout.overhead_bits)
-            > SINGLE_RAM_BITS) {
-            return false;
-        }
+    int full_RAMs = layout_option.way.match_groups * (sizes.size() - 1);
+    int overhead_RAMs = layout_option.way.width - full_RAMs;
+    if (overhead_RAMs * MAX_SHARED_GROUPS < layout_option.way.match_groups)
+        return false;
+
+    BUG_CHECK(overhead_RAMs <= layout_option.way.match_groups, "Allocation for %s has %d RAMs for "
+              "overhead allocation, but it only requires %d.  Issue in width calculation.",
+              tbl->name, overhead_RAMs, layout_option.way.match_groups);
+
+    // Determine where the overhead groups go.  Evenly distribute the overhead.  At most, only
+    // 2 sections of overhead can be within a wide match, as that is the maximum sharing
+    ghost_bit_bus = sizes.back().first;
+    int total = 0;
+    for (int i = 0; i < overhead_RAMs; i++) {
+        overhead_groups_per_RAM[i] = 1;
+        search_bus_per_width[i] = sizes.back().first;
+        total++;
     }
 
-    // Assigns the match group, overhead, and ixbar group information to the particular RAM
-    int overhead_start = 0;
-    bool single = layout_option.way.match_groups == 1;
-    for (size_t i = 0; static_cast<int>(i) < layout_option.way.width; i++) {
-        if (i < layout_option.way.match_groups * RAM_per) {
-            search_bus_per_width.push_back(sizes[i % RAM_per].first);
-            match_groups_per_RAM.push_back(1);
-            if (single && i == layout_option.way.width - 1U)
-                overhead_groups_per_RAM.push_back(1);
-            else
-                overhead_groups_per_RAM.push_back(0);
-            match_group_info[i / RAM_per].push_back(i);
-        } else {
-            search_bus_per_width.push_back(sizes.back().first);
-            match_groups_per_RAM.push_back(2);
-            overhead_groups_per_RAM.push_back(2);
-            match_group_info[overhead_start].push_back(i);
-            match_group_info[overhead_start + 1].push_back(i);
-            overhead_start += 2;
+    int index = 0;
+    while (total < layout_option.way.match_groups) {
+        BUG_CHECK(index < overhead_RAMs, "Overhead check should fail earlier");
+        overhead_groups_per_RAM[index]++;
+        index++;
+        total++;
+    }
+
+    // Assign a search bus to the non overhead groups
+    auto it = sizes.begin();
+    int match_groups_set = 0;
+    for (int i = overhead_RAMs; i < layout_option.way.width; i++) {
+        if (match_groups_set == layout_option.way.match_groups) {
+            it++;
+            match_groups_set = 0;
         }
+        search_bus_per_width[i] = it->first;
+        match_groups_set++;
     }
     return true;
 }
 
-/* General algorithms for finding the formats for all tables.  Separate algorithms for no match,
-   ternary tables, and exact match tables */
+/** The algorithm find_format is to determine how to best pack the RAMs of match tables.
+ *  For any table using SRAMs only (i.e. exact match/atcam), this means determining how
+ *  the RAM line is filled.  For tables using the TCAMs, (i.e. ternary), this is specifically
+ *  for the ternary indirect packing.
+ *
+ *  The RAM is packed with two classes of information, match data and overhead.  Match data
+ *  is anything that is to be directly compared with packet data.  Overhead is everything else.
+ *  Overhead consists of anything that could go to match central as well as version bits.
+ *
+ *  When an entry hits within a table, the lower 64 bits of the RAM (or in the case of a wide
+ *  match, one of the RAMs), are sent to match central for further processing.  Thus any
+ *  information that is needed by match central for later processing is considered overhead,
+ *  and must fit within the lower 64 bits.
+ *
+ *  The exception to the previous paragraph is what we call version bits.  These are bits
+ *  that are matched not as part of the packet, but as a way to ensure that an entry is valid,
+ *  and that all data is atomically written into the RAM.  Version bits are then appended
+ *  on before the match, and thus can be anywhere within the RAM line.
+ *
+ *  Data from the packet comes in through the input xbar.  The algorithm is as follows.
+ *      1. Analyze the estimate and calculate initial set up information based on the input
+ *         xbar allocation and the estimate.
+ *      2. Allocate all overhead that is not version bits
+ *      3. Allocate all match and version bits.
+ *      4. Verify that the algorithm works.
+ *
+ *  The constraints for these individual pieces will be described above the function which
+ *  are part of the algorithm.
+ *
+ *  FIXME: Noted weaknesses in the algorithm to address in the future:
+ *     1. Ghost bits could be worked in with overhead, so that holes in overhead could
+ *        be filled with match data.  Glass currently does not do this, so no support
+ *        necessary yet.
+ */
 bool TableFormat::find_format(Use *u) {
     use = u;
     LOG3("Find format for table " << tbl->name);
@@ -154,13 +212,7 @@ bool TableFormat::find_format(Use *u) {
             return false;
         if (!layout_option.layout.ternary_indirect_required())
             return true;
-        if (!allocate_next_table())
-            return false;
-        if (!allocate_all_instr_selection())
-            return false;
-        if (!allocate_all_indirect_ptrs())
-            return false;
-        if (!allocate_all_immediate())
+        if (!allocate_overhead())
             return false;
         return true;
     }
@@ -176,9 +228,36 @@ bool TableFormat::find_format(Use *u) {
         return true;
     }
 
+
     if (!analyze_layout_option())
         return false;
     LOG3("Layout option");
+    if (!allocate_overhead()) {
+        return false;
+    }
+
+    if (!allocate_match())
+        return false;
+    LOG3("Match");
+    verify();
+    LOG3("Everything is verified?");
+    return true;
+}
+
+/** Allocate all overhead data that could head to match central.  This includes the following
+ *  information, if needed:
+ *    1. Next table, if the table has multiple next table choices and cannot be specified by
+ *       the action alone
+ *    2. Instruction selection, the bits to indicate which action is to be run.
+ *    3. Indirect Pointers: addresses for indirect tables, such as counters, meters, action,
+ *       etc.  These needs are specified by the program
+ *    4. Immediate: Action data that is stored with the match rather than in a separate action
+ *       data table.
+ *
+ *  The current algorithm just packs as close to the bottom as it can, and does not leave
+ *  any holes to put match data in.  This could be optimized to pack match data.
+ */
+bool TableFormat::allocate_overhead() {
     if (!allocate_next_table())
         return false;
     LOG3("Next Table");
@@ -191,20 +270,13 @@ bool TableFormat::find_format(Use *u) {
     if (!allocate_all_immediate())
         return false;
     LOG3("Immediate");
-    if (!allocate_all_match())
-        return false;
-    LOG3("Match");
-    if (!allocate_all_version())
-        return false;
-    LOG3("Version");
-    verify();
-    LOG3("Everything is verified?");
     return true;
 }
 
 /* Bits for selecting the next table from an action chain table must be in the lower part
    of the overhead.  This is specifically to handle this corner case.  If this is run,
-   then instruction selection does not necessarily need to be run */
+   then instruction selection does not necessarily need to be run.  This information has
+   to be placed very specifically, according to section 6.4.1.3.2 Next Table Bits */
 bool TableFormat::allocate_next_table() {
     /** FIXME: Currently moving instruction address first, just to make life easier.  This
                still needs to be done, but the current implementation is not doing anything
@@ -366,305 +438,602 @@ bool TableFormat::allocate_all_instr_selection() {
     return true;
 }
 
-/* This section of match group information is responsible for allocating the bytes that
-   are designated to be simple, essentialy bytes that 8 bits total and have no ghosting
-   issues.  Create a vector of these easy bytes and try to allocate them all at once */
-bool TableFormat::allocate_easy_bytes(bitvec &unaligned_bytes, bitvec &chosen_ghost_bytes,
-    int &easy_size) {
-    safe_vector<ByteInfo> easy_match_bytes;
-    bitvec difficult_bytes = unaligned_bytes | chosen_ghost_bytes;
-    int index = -1;
-    for (auto &byte : single_match) {
-        index++;
-        if (difficult_bytes.getbit(index)) continue;
-        easy_match_bytes.emplace_back(byte, byte.bit_use, index);
-    }
-
-    easy_size = easy_match_bytes.size();
-    bool rv = allocate_byte_vector(easy_match_bytes, 0);
-
-    // Potential for splits?
-    if (!rv)
-        return false;
-
-    int group = 0;
-    for (size_t i = 0; i < match_groups_per_RAM.size(); i++) {
-        for (int j = 0; j < match_groups_per_RAM[i]; j++) {
-            for (auto mg : use->match_groups[group].match) {
-                LOG4("Group " << group << " Byte " << mg.first << " Allocation " << mg.second);
-            }
-            group = determine_next_group(group, i);
-        }
-    }
-    return true;
+/** Save information on a byte by byte basis so that fill out use can correctly be used.
+ *  Note that each individual byte from PHV requires an individual byte in the match format,
+ *  and cannot be reused by a separate entry.
+ */
+bool TableFormat::initialize_byte(int byte_offset, int width_sect, ByteInfo &info,
+        safe_vector<ByteInfo> &alloced, bitvec &byte_attempt, bitvec &bit_attempt) {
+     int initial_offset = byte_offset + width_sect * SINGLE_RAM_BYTES;
+     if (match_byte_use.getbit(initial_offset) || byte_attempt.getbit(initial_offset))
+         return false;
+     auto use_slice = total_use.getslice(initial_offset * 8, 8);
+     use_slice |= bit_attempt.getslice(initial_offset * 8, 8);
+     if (!(use_slice & info.bit_use).empty())
+         return false;
+     byte_attempt.setbit(initial_offset);
+     bit_attempt.setrange(initial_offset * 8, 8);
+     alloced.push_back(info);
+     alloced.back().byte_location = initial_offset;
+     return true;
 }
 
-/* Fills in the vectors used and dsecribed in the allocate_difficult_bytes function call. */
-void TableFormat::determine_difficult_vectors(safe_vector<ByteInfo> &unaligned_match,
-        safe_vector<ByteInfo> &unaligned_ghost, bitvec &unaligned_bytes,
-        bitvec &chosen_ghost_bytes, int ghosted_group) {
-    int unaligned_ghost_bits = 0;
-    int index = -1;
+bool TableFormat::allocate_match_byte(ByteInfo &info, safe_vector<ByteInfo> &alloced,
+        int width_sect, bitvec &byte_attempt, bitvec &bit_attempt) {
+    for (int i = 0; i < SINGLE_RAM_BYTES; i++) {
+       if (initialize_byte(i, width_sect, info, alloced, byte_attempt, bit_attempt))
+           return true;
+    }
+    return false;
 
-    // Only bytes that are contained in the group that is determined to be ghosted can be
-    // This is for fitting wide match data with its overhead
-    for (auto byte : single_match) {
-        index++;
-        if (!unaligned_bytes.getbit(index)) continue;
-        int size = byte.hi - byte.lo + 1;
-        if (byte.search_bus == ghosted_group) {
-            unaligned_ghost.emplace_back(byte, byte.bit_use, index);
-            unaligned_ghost_bits += size;
-        } else {
-            unaligned_match.emplace_back(byte, byte.bit_use, index);
+    /* Future optimization to save potential ram space for gateways, but the memories
+       algorithm doesn't even share search buses yet
+    for (int i = 0; i < SINGLE_RAM_BYTES; i++) {
+        if (i < GATEWAY_BYTES || i >= VERSION_BYTES)
+            continue;
+        if (initialize_byte(i, width_sect, info, alloced, byte_attempt, bit_attempt)) {
+            return true;
         }
     }
 
-    int ghost_bits_allowed = ghost_bits_count;
-    std::sort(unaligned_ghost.begin(), unaligned_ghost.end(),
-        [=](const ByteInfo &a, const ByteInfo &b){
+    for (int i = 0; i < SINGLE_RAM_BYTES; i++) {
+        if (i >= GATEWAY_BYTES && i < VERSION_BYTES)
+            continue;
+        if (initialize_byte(i, width_sect, info, alloced, byte_attempt, bit_attempt)) {
+            return true;
+        }
+    }
+    */
+    return false;
+}
+
+/** Pull out all bytes that coordinate to a particular search bus
+ */
+void TableFormat::find_bytes_to_allocate(int width_sect, safe_vector<ByteInfo> &unalloced) {
+    int search_bus = search_bus_per_width[width_sect];
+    for (auto info : match_bytes) {
+        if (info.byte.search_bus != search_bus)
+            continue;
+        unalloced.push_back(info);
+    }
+
+    std::sort(unalloced.begin(), unalloced.end(), [=](const ByteInfo &a, const ByteInfo &b) {
         int t;
         if ((t = a.bit_use.popcount() - b.bit_use.popcount()) != 0)
-            return a.bit_use.popcount() < b.bit_use.popcount();
-
+            return t > 0;
         return a.byte < b.byte;
     });
+}
 
-    // If the bits of non 8 bit fields > total allowed ghost bits from the way sizes,
-    // this loop decides which fields must be actually matched upon, and how to split them up
-    while (unaligned_ghost_bits > ghost_bits_allowed) {
-        int difference = unaligned_ghost_bits - ghost_bits_allowed;
-        int match_added = unaligned_ghost.back().bit_use.popcount();
-        if (match_added <= difference) {
-            unaligned_match.push_back(unaligned_ghost.back());
-            unaligned_ghost.pop_back();
-            unaligned_ghost_bits -= match_added;
-        } else if (match_added > difference) {
-            int ghosted_bits = match_added - difference;
-            ByteInfo &last_ghost = unaligned_ghost.back();
-            bitvec ghost_mask;
-            int index = 0;
-            for (auto b : last_ghost.bit_use) {
-                ghost_mask.setbit(b);
-                index++;
-                if (index == ghosted_bits) break;
-            }
-            unaligned_match.push_back(unaligned_ghost.back());
-            unaligned_match.back().bit_use -= ghost_mask;
-            last_ghost.bit_use = ghost_mask;
-            unaligned_ghost_bits -= ghosted_bits;
+/** Version bits are used to indicate whether an entry is valid or not.  For instance, during
+ *  the addition of an entry, packets may be running while the entry is not fully added.  Thus
+ *  the version bits are used in order to keep track of atomic adds.  Version bits are placed
+ *  on the search bus after the input xbar, as specified by section 6.2.3 Exact Match Row
+ *  Vertical/Horizontal (VH) Bar, and go anywhere within the 128 bits at a four byte
+ *  alignment.
+ *
+ *  The other trick to version bits is that the upper two bytes of each RAM have nibble by
+ *  nibble checks rather than byte by byte checks.  This means that in the upper two nibble,
+ *  the algorithm does not have to burn an entire byte for 4 bits, but can fully use a
+ *  nibble instead.
+ *
+ *  The algorithm first tries to put the version with bytes already allocated for that
+ *  group.  Then if the algorithm is not try to save space, then the allocation tries
+ *  to find places that version could overlap with overhead.  Finally, if that does not
+ *  succeed, then try to place in the upper two bytes at nibble alignment 
+ */
+bool TableFormat::allocate_version(int width_sect, const safe_vector<ByteInfo> &alloced,
+                                   bitvec &version_loc, bitvec &byte_attempt,
+                                   bitvec &bit_attempt) {
+    bitvec lo_vers(0, VERSION_BITS);
+    bitvec hi_vers(VERSION_BITS, VERSION_BITS);
+    // Try to place with a match byte already
+    for (auto &info : alloced) {
+        if (info.byte_location / SINGLE_RAM_BITS != width_sect)
+            continue;
+        auto use_slice = total_use.getslice(info.byte_location * 8, 8);
+        use_slice |= bit_attempt.getslice(info.byte_location * 8, 8);
+        if (((info.bit_use | use_slice) & lo_vers).empty()) {
+            version_loc = lo_vers << (8 * info.byte_location);
+            bit_attempt |= version_loc;
+            return true;
+        } else if (((info.bit_use | use_slice) & hi_vers).empty()) {
+            version_loc = hi_vers << (8 * info.byte_location);
+            bit_attempt |= version_loc;
+            return true;
         }
     }
 
-    // If the bits of non 8 bit fields < total allowed ghost bits from the way sizes,
-    // this loop selects an 8 bit field to split into ghosted and non-ghosted
-    if (unaligned_ghost_bits < ghost_bits_allowed) {
-        int difference = ghost_bits_allowed - unaligned_ghost_bits;
-        int ghosted_bits = difference % 8 == 0 ? 8 : difference % 8;
-
-        int index = -1;
-        bool match_allocated = false;
-        for (auto byte : single_match) {
-            index++;
-            if (!chosen_ghost_bytes.getbit(index)) continue;
-            bitvec byte_mask(0, 8);
-            if (!match_allocated) {
-                bitvec ghost_mask(0, ghosted_bits);
-                unaligned_ghost.emplace_back(byte, ghost_mask, index);
-                if (ghosted_bits < 8)
-                    unaligned_match.emplace_back(byte, byte_mask - ghost_mask, index);
-                match_allocated = true;
-            } else {
-                unaligned_ghost.emplace_back(byte, byte_mask, index);
-            }
+    // Look for a corresponding place within the overhead
+    for (int i = 0; i < OVERHEAD_BITS / 8; i++) {
+        int byte = width_sect * SINGLE_RAM_BYTES + i;
+        if (byte_attempt.getbit(i) || match_byte_use.getbit(i)) continue;
+        auto use_slice = total_use.getslice(byte * 8, 8);
+        use_slice |= bit_attempt.getslice(byte * 8, 8);
+        if ((use_slice & lo_vers).empty() && !(use_slice & hi_vers).empty()) {
+            version_loc = lo_vers << (8 * byte);
+            bit_attempt |= version_loc;
+            byte_attempt |= byte;
+            return true;
         }
-    }
-}
-
-/* This section deals with the so-called difficult bytes.  These are bytes that do not use
-   all of the 8 bits, as well any bits that are decided to be ghosted.  The algorithm tries
-   to ghost all these less than 8 bit vectors, as these require a total match byte but don't
-   use all individual bits of that byte.  After that, a full 8 bit is selected to be partially
-   ghosted and partially matched. */
-bool TableFormat::allocate_difficult_bytes(bitvec &unaligned_bytes, bitvec &chosen_ghost_bytes,
-    int easy_size) {
-    int o_index = std::max_element(overhead_groups_per_RAM.begin(),
-                                   overhead_groups_per_RAM.end())
-                      - overhead_groups_per_RAM.begin();
-    int ghosted_group = search_bus_per_width[o_index];
-
-    // All non 8-bit IXBar Bytes we can ghost
-    safe_vector<ByteInfo> unaligned_ghost;
-    // All non 8-bit IXBar Bytes we have to include in the match
-    safe_vector<ByteInfo> unaligned_match;
-    // Specifically the 8 bit byte that can select any of its bits to ghost
-    safe_vector<ByteInfo> ghost_anywhere;
-
-    determine_difficult_vectors(unaligned_match, unaligned_ghost, unaligned_bytes,
-                                chosen_ghost_bytes, ghosted_group);
-    bool rv = allocate_byte_vector(unaligned_match, easy_size);
-    if (!rv)
-        return false;
-
-    // Fill out ghost byte information
-    for (auto byte : unaligned_ghost) {
-        use->ghost_bits[byte.byte] = byte.bit_use;
-    }
-    return true;
-}
-
-/* Function for packing an individual byte into a table.  Fills out all TableFormat bitvecs
-   appropriately.  Protect is used to preserve space on the lower 4 bytes for gateway space,
-   and the upper 2 bits for version information.  Ghost anywhere is specifically for the 8 bit
-   value that has to determine a mask. */
-void TableFormat::easy_byte_fill(int RAM, int group, ByteInfo &byte, int &starting_byte,
-    bool protect) {
-    int begin = starting_byte;
-    int RAM_offset = SINGLE_RAM_BYTES * RAM;
-    for (int i = begin; i < RAM_offset + SINGLE_RAM_BYTES; i++) {
-        starting_byte++;
-        if ((i < RAM_offset + GATEWAY_BYTES) && protect) continue;
-        if ((i >= RAM_offset + VERSION_BYTES) && protect) continue;
-        int byte_offset = i;
-        // If the ghost anywhere is not set, we reserve the whole byte, as we do not know
-        // the PHV alignment.  At some point we could combine this analysis after PHV allocation,
-        // but this is probably not a limiting constraint currently
-        if ((byte_use[byte_offset] & byte.bit_use).popcount() > 0) continue;
-        bitvec byte_mask(0, 8);
-        bitvec match_mask = byte_mask << (byte_offset * 8);
-        // Fill out the appropriate bit vectors, Only one byte per 8 bit section of table format
-        // Thus reserve the whole bit
-        total_use |= match_mask;
-        match_byte_use |= i;
-        byte_use[byte_offset] |= byte_mask;
-        use->match_groups[group].match[byte.byte] = byte.bit_use << (byte_offset * 8);
-        use->match_groups[group].mask[MATCH] |= byte.bit_use << (byte_offset * 8);
-        use->match_groups[group].match_byte_mask |= i;
-        use->match_groups[group].allocated_bytes.setbit(byte.use_index);
-        return;
-    }
-}
-
-/* Specifically for the iteration through match group in byte vector allocation.  Coordination
-   of which IXBar groups coordinate to which RAM.  Specifically different for wide matches.
-   Essentially, an individual match group can be in multiple RAMs, and group cannot be
-   simply incremented */
-int TableFormat::determine_next_group(int current_group, int RAM) {
-    int per_RAM = layout_option.way.match_groups / layout_option.way.width;
-
-    if (per_RAM > 0)
-        return current_group + 1;
-
-    int RAM_per = layout_option.way.width / layout_option.way.match_groups;
-
-    if (RAM >= RAM_per * layout_option.way.match_groups)
-        return current_group + 1;
-    if (RAM % RAM_per == RAM_per - 1) {
-        if (RAM == RAM_per * layout_option.way.match_groups - 1)
-            return 0;
-        else
-            return current_group + 1;
-    } else {
-        return current_group;
-    }
-}
-
-/* For allocating every byte in the vector, which are filled by the allocation vectors.
-   Bytes are coordinated to which IXBar groups as well as how many match groups are
-   contained within the individual RAM */
-bool TableFormat::allocate_byte_vector(safe_vector<ByteInfo> &bytes, int prev_allocated) {
-    // Save space for the lower 4 bytes and upper 2 bytes for potential gateway allocation
-    int group = 0;
-    for (size_t i = 0; i < match_groups_per_RAM.size(); i++) {
-        int starting_byte = i * SINGLE_RAM_BYTES;
-        for (int j = 0; j < match_groups_per_RAM[i]; j++) {
-            bitvec all_bits = use->match_groups[group].allocated_bytes;
-            for (auto byte : bytes) {
-                if (all_bits.getbit(byte.use_index)) continue;
-                if (byte.byte.search_bus != search_bus_per_width[i]) continue;
-                easy_byte_fill(i, group, byte, starting_byte, true);
-            }
-            group = determine_next_group(group, i);
+        if ((use_slice & hi_vers).empty() && !(use_slice & lo_vers).empty()) {
+            version_loc = hi_vers << (8 * byte);
+            bit_attempt |= version_loc;
+            byte_attempt |= byte;
+            return true;
         }
     }
 
-    group = 0;
-    // Use all space within a RAM, i.e. the lower 4 bytes and upper 2 bytes.
-    for (size_t i = 0; i < match_groups_per_RAM.size(); i++) {
-        int starting_byte = i * SINGLE_RAM_BYTES;
-        for (int j = 0; j < match_groups_per_RAM[i]; j++) {
-            bitvec all_bits = use->match_groups[group].allocated_bytes;
-            if (all_bits.popcount() == static_cast<int>(bytes.size()) + prev_allocated) {
-                group = determine_next_group(group, i);
-                continue;
-            }
-            for (auto byte : bytes) {
-                if (all_bits.getbit(byte.use_index)) continue;
-                if (byte.byte.search_bus != search_bus_per_width[i]) continue;
-                easy_byte_fill(i, group, byte, starting_byte, false);
-            }
-            group = determine_next_group(group, i);
+    // Look in the upper two nibbles.
+    for (int i = 0; i < VERSION_NIBBLES; i++) {
+        int initial_bit_offset = (width_sect * SINGLE_RAM_BYTES + VERSION_BYTES) * 8;
+        initial_bit_offset += i * VERSION_BITS;
+        auto use_slice = total_use.getslice(initial_bit_offset, VERSION_BITS);
+        use_slice |= bit_attempt.getslice(initial_bit_offset, VERSION_BITS);
+        if ((use_slice).empty()) {
+            version_loc = lo_vers << initial_bit_offset;
+            bit_attempt |= version_loc;
+            return true;
         }
     }
-
-    // Check to see if all match groups have allocated total space
-    group = 0;
-    for (size_t i = 0; i < match_groups_per_RAM.size(); i++) {
-        for (int j = 0; j < match_groups_per_RAM[i]; j++) {
-            bitvec all_bits = use->match_groups[group].allocated_bytes;
-            if (all_bits.popcount() != static_cast<int>(bytes.size()) + prev_allocated) {
-                // FIXME: Not yet doing sharing of groups that are too small
-                return false;
-            }
-            group = determine_next_group(group, i);
-        }
-    }
-    return true;
+    return false;
 }
 
+/** Ghost bits are bits that are used in the hash to find the location of the entry, but are not
+ *  contained within the match.  It is an optimization to save space on match bits.
+ *
+ *  The number of bits one can ghost is the minimum number of bits used to select a RAM row
+ *  and a RAM on the hash bus.  One automatically gets 10 bits, for the 10 bits of hash that
+ *  determines the RAM row.  Extra bits can be ghosted by the log2size of the minimum way.
+ *
+ *  This algorithm chooses which bits to ghost.  If the match requires multiple search buses
+ *  then the search bus which is going to have the overhead is preferred.  Match requirements
+ *  that don't require the full byte are preferred over bytes that require the full 8 bits.
+ *  That way, the algorithm can eliminate more match bytes.
+ *
+ *  For examples, say the match has the following, which were all in separate PHV containers:
+ *     3 3 bit fields
+ *     1 1 bit field
+ *     4 8 bit fields
+ *
+ *  It would be optimal to ghost off the 3 3 bit fields, and the 1 bit fields, as it would remove
+ *  4 total PHV bytes to match on.
+ */
+void TableFormat::choose_ghost_bits() {
+    safe_vector<IXBar::Use::Byte> potential_ghost;
 
-/* Analysis for chosen which bytes are easy and which are difficult.  This information is
-   used for determining how to allocate bytes */
-void TableFormat::determine_byte_types(bitvec &unaligned_bytes, bitvec &chosen_ghost_bytes) {
-    int o_index = std::max_element(overhead_groups_per_RAM.begin(),
-                                   overhead_groups_per_RAM.end())
-                      - overhead_groups_per_RAM.begin();
-    int ghosted_group = search_bus_per_width[o_index];
-    int unaligned_bits = 0;
     for (auto byte : single_match) {
-        if (byte.search_bus != ghosted_group) continue;
-        if (byte.bit_use.popcount() != 8)
-            unaligned_bits += byte.bit_use.popcount();
+        potential_ghost.push_back(byte);
     }
 
-    int full_bytes_ghosted = std::max((ghost_bits_count - unaligned_bits + 7) / 8, 0);
-    int full_bytes_remain = full_bytes_ghosted;
+    std::sort(potential_ghost.begin(), potential_ghost.end(),
+              [=](const IXBar::Use::Byte &a, const IXBar::Use::Byte &b){
+        int t = 0;
+        if (a.search_bus == ghost_bit_bus && b.search_bus != ghost_bit_bus)
+            return true;
+        if (b.search_bus == ghost_bit_bus && a.search_bus != ghost_bit_bus)
+            return false;
+        if ((t = a.bit_use.popcount() - b.bit_use.popcount()) != 0)
+            return t < 0;
+        return a < b;
+    });
 
-    for (int i = single_match.size() - 1; i >= 0; i--) {
-        if (single_match[i].bit_use.popcount() == 8 && full_bytes_remain > 0) {
-            if (single_match[i].loc.group != ghosted_group) continue;
-            full_bytes_remain--;
-            chosen_ghost_bytes.setbit(i);
-        } else if (single_match[i].bit_use.popcount() < 8) {
-            unaligned_bytes.setbit(i);
+    int ghost_bits_allocated = 0;
+    while (ghost_bits_allocated < ghost_bits_count) {
+        int diff = ghost_bits_count - ghost_bits_allocated;
+        auto it = potential_ghost.begin();
+        if (it == potential_ghost.end())
+            break;
+        if (diff >= it->bit_use.popcount()) {
+            ghost_bytes.emplace_back(*it, it->bit_use);
+            ghost_bits_allocated += it->bit_use.popcount();
+        } else {
+            bitvec ghosted_bits;
+            int start = it->bit_use.ffs();
+            int split_bit = -1;
+            do {
+                int end = it->bit_use.ffz(start);
+                if (end - start + ghosted_bits.popcount() < diff) {
+                    ghosted_bits.setrange(start, end - start);
+                } else {
+                    split_bit = start + (diff - ghosted_bits.popcount()) - 1;
+                    ghosted_bits.setrange(start, split_bit - start + 1);
+                }
+                start = it->bit_use.ffs(end);
+            } while (start >= 0);
+            BUG_CHECK(split_bit >= 0, "Could not correctly split a byte into a ghosted and "
+                      "match section");
+            bitvec match_bits = it->bit_use - ghosted_bits;
+            ghost_bytes.emplace_back(*it, ghosted_bits);
+            ghost_bits_allocated += ghosted_bits.popcount();
+            match_bytes.emplace_back(*it, match_bits);
         }
+        it = potential_ghost.erase(it);
+    }
+
+    for (auto byte : potential_ghost) {
+        match_bytes.emplace_back(byte, byte.bit_use);
+    }
+
+    for (auto info : ghost_bytes) {
+        use->ghost_bits[info.byte] = info.bit_use;
     }
 }
 
-/* Total allocation scheme for all match data */
-bool TableFormat::allocate_all_match() {
-    for (int i = 0; i < SINGLE_RAM_BITS / 8 * layout_option.way.width; i++) {
-        byte_use.push_back(total_use.getslice(i*8, 8));
+/** Determines which match group that the algorithm is attempting to allocate, given where
+ *  overhead is as well as whether the match is skinny or wide
+ */
+int TableFormat::determine_group(int width_sect, int groups_allocated) {
+    bool skinny = match_ixbar.search_buses_single() == 1;
+    if (skinny) {
+        int overhead_groups_seen = 0;
+        for (int i = 0; i < layout_option.way.width; i++) {
+            if (width_sect == i) {
+                if (groups_allocated == overhead_groups_per_RAM[i])
+                    return -1;
+                return overhead_groups_seen + groups_allocated;
+            } else {
+                overhead_groups_seen += overhead_groups_per_RAM[i];
+            }
+        }
     }
 
-    int easy_size = 0;
-    bitvec unaligned_bytes; bitvec chosen_ghost_bytes;
-    determine_byte_types(unaligned_bytes, chosen_ghost_bytes);
-    if (!allocate_easy_bytes(unaligned_bytes, chosen_ghost_bytes, easy_size))
-        return false;
-    if (!allocate_difficult_bytes(unaligned_bytes, chosen_ghost_bytes, easy_size))
-        return false;
+    int search_bus_seen = 0;
+    for (int i = 0; i < layout_option.way.width; i++) {
+        if (width_sect == i) {
+            if (overhead_groups_per_RAM[i] > 0) {
+                if (groups_allocated == overhead_groups_per_RAM[i])
+                    return -1;
+                return search_bus_seen + groups_allocated;
+            } else {
+                if (groups_allocated > 0)
+                    return -1;
+                return search_bus_seen;
+            }
+        }
+        if (search_bus_per_width[width_sect] == search_bus_per_width[i]) {
+            if (overhead_groups_per_RAM[i] > 0)
+                search_bus_seen += overhead_groups_per_RAM[i];
+            else
+                search_bus_seen++;
+        }
+    }
+    BUG("Should never reach this point in table format allocation");
+    return -1;
+}
 
+/** This fills out the use object, as well as the global structures for keeping track of the
+ *  format.  This does this for both match and version information.
+ */
+void TableFormat::fill_out_use(int group, const safe_vector<ByteInfo> &alloced,
+                               bitvec &version_loc) {
+    auto &group_use = use->match_groups[group];
+    for (auto info : alloced) {
+        bitvec match_location = info.bit_use << (8 * info.byte_location);
+        group_use.match[info.byte] = match_location;
+        group_use.mask[MATCH] |= match_location;
+        group_use.match_byte_mask.setbit(info.byte_location);
+        match_byte_use.setbit(info.byte_location);
+        total_use |= match_location;
+    }
+
+    if (!version_loc.empty()) {
+        group_use.mask[VERS] |= version_loc;
+        total_use |= version_loc;
+        version_allocated[group] = true;
+        auto byte_offset = (version_loc.min().index() / 8);
+        if ((byte_offset % SINGLE_RAM_BYTES) < VERSION_BYTES)
+            match_byte_use.setbit(byte_offset);
+    }
+}
+
+/** Given a number of overhead entries, this algorithm determines how many match groups
+ *  can fully fit into that particular RAM.  It both allocates match and version, as both
+ *  of those have to be placed in order for the entry to fit.
+ *
+ *  For wide matches, this ensures that the entirety of the search bus is placed, but not
+ *  necessarily version, as version can be placed in any of the wide match sections.
+ */
+void TableFormat::allocate_full_fits(int width_sect) {
+    safe_vector<ByteInfo> allocation_needed;
+    safe_vector<ByteInfo> alloced;
+    find_bytes_to_allocate(width_sect, allocation_needed);
+    bitvec byte_attempt;
+    bitvec bit_attempt;
+
+    int groups_allocated = 0;
+    while (true) {
+        alloced.clear();
+        byte_attempt.clear();
+        bit_attempt.clear();
+        int group = determine_group(width_sect, groups_allocated);
+        if (group == -1)
+            break;
+        for (auto info : allocation_needed) {
+            if (!allocate_match_byte(info, alloced, width_sect, byte_attempt, bit_attempt))
+                break;
+        }
+
+        if (allocation_needed.size() != alloced.size())
+            break;
+
+        bitvec version_loc;
+        bool wide = match_ixbar.search_buses_single() > 1;
+        if (wide) {
+            if (!version_allocated[group])
+                allocate_version(width_sect, alloced, version_loc, byte_attempt, bit_attempt);
+        } else {
+            if (!allocate_version(width_sect, alloced, version_loc, byte_attempt, bit_attempt)) {
+                break;
+            }
+        }
+
+        groups_allocated++;
+        full_match_groups_per_RAM[width_sect]++;
+        fill_out_use(group, alloced, version_loc);
+    }
+}
+
+/** Given all the information about a group that currently has not been placed, try to fit
+ *  that group within a current section.  If the group has never been attempted before, (which
+ *  happens when the overhead section is found), then try to fit the information in all
+ *  previous RAMs as well.
+ */
+void TableFormat::allocate_share(int width_sect, safe_vector<ByteInfo> &unalloced_group,
+        safe_vector<ByteInfo> &alloced, bitvec &version_loc, bitvec &byte_attempt,
+        bitvec &bit_attempt, bool overhead_section) {
+    std::set<int> width_sections;
+    int min_sect = width_sect;
+
+    BUG_CHECK(shared_groups_per_RAM[width_sect] < MAX_SHARED_GROUPS, "Trying to share a group "
+              "on a section that is already allocated");
+
+    // Try all previous RAMs
+    if (overhead_section) {
+        min_sect = 0;
+    }
+
+    for (int current_sect = min_sect; current_sect <= width_sect; current_sect++) {
+        if (shared_groups_per_RAM[width_sect] == MAX_SHARED_GROUPS)
+            continue;
+        auto it = unalloced_group.begin();
+        while (it != unalloced_group.end()) {
+            if (allocate_match_byte(*it, alloced, current_sect, byte_attempt, bit_attempt)) {
+                width_sections.emplace(current_sect);
+                it = unalloced_group.erase(it);
+            } else {
+                it++;
+            }
+        }
+    }
+
+    for (int current_sect = min_sect; current_sect <= width_sect; current_sect++) {
+        if (shared_groups_per_RAM[current_sect] == MAX_SHARED_GROUPS)
+            continue;
+
+        if (!version_loc.empty()) break;
+        if (allocate_version(current_sect, alloced, version_loc, byte_attempt, bit_attempt)) {
+            width_sections.emplace(current_sect);
+            break;
+        }
+    }
+
+    // Note that if a group has overhead on that section, it must be able to access the
+    // match result bus that has that particular information, as specified in 6.4.1.4 Match
+    // Overhead Enable
+    bool on_current_section = false;
+    for (auto section : width_sections) {
+        shared_groups_per_RAM[section]++;
+        on_current_section |= (section == width_sect);
+    }
+
+    if (!on_current_section && overhead_section) {
+        shared_groups_per_RAM[width_sect]++;
+    }
+}
+
+
+/** Given that no entry can fully fit within a particular RAM line, this allocation fills in
+ *  the gaps within those RAMs will currently unallocated groups.  The constraint that comes
+ *  from section 6.4.3.1 Exact Match Physical Row Result Generation is that at most 2 groups
+ *  can be shared within a particular RAM, as only two hit signals will be able to merge.
+ *
+ *  The other constraint from the hardware is described in section 6.4.1.4 Match Overhead
+ *  Enable.  This constraint says that if the overhead is contained within a particular
+ *  RAM, then that match group must be either in the RAM, or a shared spot has to be open
+ *  to access this overhead.  Thus these constraints have to be maintained while placing
+ *  these shared groups.
+ */
+bool TableFormat::allocate_shares() {
+    safe_vector<ByteInfo> unalloced;
+
+    std::map<int, safe_vector<ByteInfo>> unalloced_groups;
+    std::map<int, safe_vector<ByteInfo>> allocated;
+    std::map<int, bitvec> version_locs;
+    bitvec byte_attempt;
+    bitvec bit_attempt;
+
+    find_bytes_to_allocate(0, unalloced);
+
+    int overhead_groups_seen = 0;
+    // Initialize unallocated groups.  Group number is determined by what overhead is within
+    // that section
+    for (int width_sect = 0; width_sect < layout_option.way.width; width_sect++) {
+        int total_groups = overhead_groups_per_RAM[width_sect]
+                           - full_match_groups_per_RAM[width_sect];
+        for (int i = 0; i < total_groups; i++) {
+            int unallocated_group = overhead_groups_seen + full_match_groups_per_RAM[width_sect];
+            unallocated_group += i;
+            unalloced_groups[unallocated_group] = unalloced;
+        }
+        overhead_groups_seen += overhead_groups_per_RAM[width_sect];
+    }
+
+    // Groups currently partially allocated
+    safe_vector<int> groups_begun;
+
+    overhead_groups_seen = 0;
+    for (int width_sect = 0; width_sect < layout_option.way.width; width_sect++) {
+        // Groups that aren't allocated that will need sharing
+        int groups_to_start = overhead_groups_per_RAM[width_sect]
+                              - full_match_groups_per_RAM[width_sect];
+        if (groups_to_start == 0 && groups_begun.size() == 0)
+            continue;
+        int shared_group_count = groups_to_start + groups_begun.size();
+        // Cannot share the resources
+        if (shared_group_count > MAX_SHARED_GROUPS)
+            return false;
+
+        // Try to complete all groups that have been previously placed, to try and get rid
+        // of them as quickly as possible
+        for (auto group : groups_begun) {
+            if (shared_groups_per_RAM[width_sect] > MAX_SHARED_GROUPS)
+                break;
+            allocate_share(width_sect, unalloced_groups[group], allocated[group],
+                           version_locs[group], byte_attempt, bit_attempt, false);
+        }
+
+        // Try to allocate new overhead groups
+        for (int i = 0; i < groups_to_start; i++) {
+            if (shared_groups_per_RAM[width_sect] > MAX_SHARED_GROUPS)
+                break;
+            int group = overhead_groups_seen + full_match_groups_per_RAM[width_sect];
+            group += i;
+            allocate_share(width_sect, unalloced_groups[group], allocated[group],
+                           version_locs[group], byte_attempt, bit_attempt, true);
+        }
+
+        // Eliminate placed groups
+        auto it = groups_begun.begin();
+        while (it != groups_begun.end()) {
+            if (unalloced_groups[*it].empty())
+                it = groups_begun.erase(it);
+            else
+                it++;
+        }
+
+        // Add new overhead groups that are not fully placed
+        for (int i = 0; i < groups_to_start; i++) {
+            int group = overhead_groups_seen + full_match_groups_per_RAM[width_sect];
+            group += i;
+            if (!unalloced_groups[group].empty())
+                groups_begun.push_back(group);
+        }
+        overhead_groups_seen += overhead_groups_per_RAM[width_sect];
+    }
+
+    // If everything is not placed, then complain
+    for (auto unalloced_group : unalloced_groups) {
+        if (!unalloced_group.second.empty())
+            return false;
+    }
+
+    for (auto version_loc : version_locs) {
+        if (version_loc.second.empty())
+            return false;
+    }
+
+    for (auto entry : allocated) {
+        BUG_CHECK(entry.second.size() == unalloced.size(), "During sharing of match "
+                  "groups, allocation for group %d not filled out", entry.first);
+        BUG_CHECK(!version_locs[entry.first].empty(), "During sharing of match groups, "
+                  "allocation of version for group %d is not filled out", entry.first);
+        fill_out_use(entry.first, entry.second, version_locs[entry.first]);
+    }
+    return true;
+}
+
+/** This is a further optimization on allocating shares.  Because version is placed relatively
+ *  early, occasionally this leads to a packing issue as versions in separate RAMs could be
+ *  combined into an early upper nibble, and save an extra necessary byte.  This actually
+ *  will clear the placing of the full fit match a version from back, and try to actually
+ *  share this section.
+ *
+ *  The algorithm will keep removing fully placed section until a fit is found, or the
+ *  algorithm determines that with the extra sharing the matches still will not fit.
+ */
+bool TableFormat::attempt_allocate_shares() {
+    // Try with all full fits
+    if (allocate_shares())
+        return true;
+    // Eliminate a full fit section from the back one at a time, clear it out, and repeat
+    // allocation
+    for (int width_sect = layout_option.way.width - 1; width_sect >= 0; width_sect--) {
+        std::fill(shared_groups_per_RAM.begin(), shared_groups_per_RAM.end(), 0);
+        int overhead_groups_seen = 0;
+        if (full_match_groups_per_RAM[width_sect] == 0)
+            continue;
+        for (int j = 0; j < width_sect; j++)
+             overhead_groups_seen += overhead_groups_per_RAM[j];
+        int group = overhead_groups_seen + full_match_groups_per_RAM[width_sect] - 1;
+        total_use -= use->match_groups[group].mask[MATCH];
+        total_use -= use->match_groups[group].mask[VERS];
+        match_byte_use -= use->match_groups[group].match_byte_mask;
+        use->match_groups[group].clear_match();
+        full_match_groups_per_RAM[width_sect]--;
+
+        if (allocate_shares())
+            return true;
+    }
+    return false;
+}
+
+
+/** This section allocates all of the match data.  Given that we have assigned search buses to
+ *  each individual RAM as well as overhead, this algorithm fills in the gap with all of the
+ *  match data.
+ *
+ *  The general constraints for match data are described in many sections, but mostly in the
+ *  from 6.4.1 Exact Match Table Entry Description - 6.4.3 Match Merge.  Section 6.4.2
+ *  Match Generation indicates that at most 5 entries can be contained per RAM line.  The total
+ *  data used for all match can be specified at bit granularity, while each of the 5 entries
+ *  can specify which bytes to match on of these bits.  Thus every byte must coordinate to at
+ *  most one match, but any bits of those bytes can be ignored as well.
+ *
+ *  The other major constraint that the algorithm takes advantage of is specified in section
+ *  6.4.3.1 Exact Match Physical Row Generation.  This is the hardware that allows matches
+ *  to chain, for example wide matches.  However, the maximum number of hits allowed to chain
+ *  is at most two.
+ *
+ *  (The previous paragraph does have the following exception, the upper 4 nibbles are not
+ *   on a byte by byte granularity, but on a nibble by nibble granularity, to pack version
+ *   nibbles)
+ *
+ *  The algorithm is the following:
+ *    1. Choose ghost bits: bits that won't appear in the match format
+ *    2. Allocate full fits: i.e. match groups that fit on the entirety of the individual RAM
+ *    3. Allocate shares: share match groups RAMs
+ */
+bool TableFormat::allocate_match() {
+    choose_ghost_bits();
+
+    for (int width_sect = 0; width_sect < layout_option.way.width; width_sect++) {
+        allocate_full_fits(width_sect);
+    }
+
+    // Determine if everything is fully allocated
+    safe_vector<int> search_bus_alloc(match_ixbar.search_buses_single(), 0);
+    for (int width_sect = 0; width_sect < layout_option.way.width; width_sect++) {
+        search_bus_alloc[search_bus_per_width[width_sect]]
+            += full_match_groups_per_RAM[width_sect];
+    }
+
+    bool split_match = false;
+
+    for (auto search_bus : search_bus_alloc) {
+        BUG_CHECK(search_bus <= layout_option.way.match_groups, "Allocating of more match "
+                  "groups than actually required");
+        split_match |= search_bus < layout_option.way.match_groups;
+    }
+
+    if (split_match) {
+        // Will not split up wide matches
+        if (match_ixbar.search_buses_single() > 1) {
+            return false;
+        } else {
+            return attempt_allocate_shares();
+        }
+    }
     return true;
 }
 
@@ -721,6 +1090,7 @@ bool TableFormat::allocate_all_ternary_match() {
 
 /* Specifically allocates one version for a byte.  Only looks in the upper 4 nibbles of the RAM
    This isn't what I want to do, but it's a first draft so I can test the other pieces */
+/*
 bool TableFormat::allocate_one_version(int starting_byte, int group) {
     bool allocated = false;
     int version_check = starting_byte + VERSION_BYTES;
@@ -737,8 +1107,10 @@ bool TableFormat::allocate_one_version(int starting_byte, int group) {
     }
     return allocated;
 }
+*/
 
 /* Allocates the version for all match groups.  Again, this is a relatively simpler version */
+/*
 bool TableFormat::allocate_all_version() {
     for (size_t i = 0; i < match_group_info.size(); i++) {
         bool allocated = false;
@@ -752,6 +1124,7 @@ bool TableFormat::allocate_all_version() {
     }
     return true;
 }
+*/
 
 /* This is a verification pass that guarantees that we don't have overlap.  More constraints can
    be checked as well.  */
@@ -760,6 +1133,7 @@ void TableFormat::verify() {
 
     for (int i = 0; i < layout_option.way.match_groups; i++) {
         for (int j = ACTION; j <= INDIRECT_ACTION; j++) {
+            if (!use->match_groups[i].mask[j].empty())
             if ((verify_mask & use->match_groups[i].mask[j]).popcount() != 0)
                 BUG("Overlap of multiple things in the format");
             verify_mask |= use->match_groups[i].mask[j];

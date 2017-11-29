@@ -60,6 +60,11 @@ class LayoutChoices {
 };
 
 class TableLayout : public MauModifier, Backtrack {
+    static constexpr int MIN_PACK = 1;
+    static constexpr int MAX_PACK = 9;
+    // FIXME: Technically this is 5, but need to update version bit information
+    static constexpr int MAX_ENTRIES_PER_ROW = 4;
+
     const PhvInfo &phv;
     LayoutChoices &lc;
     bool alloc_done = false;
@@ -78,6 +83,7 @@ class TableLayout : public MauModifier, Backtrack {
     void setup_layout_options(IR::MAU::Table *tbl, int immediate_bytes_reserved);
     void setup_ternary_layout_options(IR::MAU::Table *tbl, int immediate_bytes_reserved);
     void setup_layout_option_no_match(IR::MAU::Table *tbl, int immediate_bytes_reserved);
+
  public:
     explicit TableLayout(const PhvInfo &p, LayoutChoices &l) : phv(p), lc(l) {}
 };

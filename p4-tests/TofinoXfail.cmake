@@ -461,7 +461,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Can't fit table .* in input xbar by itself"
   extensions/p4_tests/p4_14/test_config_103_first_phase_0.p4
-  extensions/p4_tests/p4_14/test_config_215_nondphv.p4
   )
 
 p4c_add_xfail_reason("tofino"
