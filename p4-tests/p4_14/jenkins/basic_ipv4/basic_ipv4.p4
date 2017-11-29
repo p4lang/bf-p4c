@@ -1,5 +1,5 @@
 /*
-Copyright 2013-present Barefoot Networks, Inc. 
+Copyright 2013-present Barefoot Networks, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -332,6 +332,7 @@ action modify_l2 (egress_port, srcAddr, dstAddr, tcp_sport, tcp_dport) {
 }
 
 @pragma command_line --no-dead-code-elimination
+@pragma command_line --placement pragma
 @pragma immediate 1
 @pragma stage 0
 table ig_udp {
@@ -730,7 +731,7 @@ table tcam_range_ternary_valid {
     size : 1024;
 }
 
-@pragma stage 6 
+@pragma stage 6
 @pragma entries_with_ranges 1
 table tcam_range_2_fields {
     reads {
@@ -745,7 +746,7 @@ table tcam_range_2_fields {
     size : 1024;
 }
 
-@pragma stage 7 
+@pragma stage 7
 table src_non_overlap_range_table{
     reads {
         tcp.srcPort : range;
@@ -810,7 +811,7 @@ table no_key_2 {
 
 /* Main control flow */
 control ingress {
-    /* A general principle : Always keep the exact match tables ahead of the 
+    /* A general principle : Always keep the exact match tables ahead of the
      * ternary tables in the same stage, except first stage. Logic relating to next-table
      * will cause the Tofino model not to launch a lookup on th exact match
      * tables if the order is reversed.
@@ -854,7 +855,7 @@ control ingress {
     // stage 8
     apply(tcam_adt_deep_stage_8);
     apply(ipv4_routing_exm_ways_4_pack_5_stage_8);
-    // Stage 9 
+    // Stage 9
     apply(ipv4_routing_select);
     // Stage 10
     apply(tcam_indirect_action);
@@ -869,4 +870,3 @@ control egress {
     // Commenting out since modify of egress port is not possible in egress
 //    apply(ipv4_routing_exm_ways_6_pack_4_stage_11);
 }
-

@@ -32,8 +32,10 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
 
     if (device == "tofino")
         preprocessor_options += " -D__TARGET_TOFINO__";
+#if HAVE_JBAY
     else if (device == "jbay")
         preprocessor_options += " -D__TARGET_JBAY__";
+#endif
 
     return remainingOptions;
 }
@@ -82,6 +84,7 @@ namespace {
  * CollectOptionsPragmas recognizes:
  *  - `pragma bf_p4c_compiler_option [command line arguments]`
  *  - `@bf_p4c_compiler_option([command line arguments])`
+ *  - `pragma command_line [command line arguments]` for Glass compatibility
  *  - `pragma diagnostic [diagnostic name] [disable|warn|error]`
  *  - `@diagnostic([diagnostic name], ["disable"|"warn"|"error"])`
  *
@@ -118,6 +121,33 @@ struct CollectOptionsPragmas : public Inspector {
                 }
                 newOptions.push_back(argString->value.c_str());
             }
+        } else if (annotation->name.name == "command_line") {
+            bool first = true;
+            for (auto* arg : annotation->expr) {
+                auto* argString = arg->to<IR::StringLiteral>();
+                if (!argString) {
+                    ::warning("@pragma command_line arguments must be strings: %1%",
+                              annotation);
+                    return false;
+                }
+                if (first && !isGlassSupported(argString->value)) {
+                    ::warning("@pragma command_line %1% is not supported",
+                              annotation);
+                    return false;
+                }
+                if (first && !isBFP4CSupported(argString->value)) {
+                    ::warning("@pragma command_line %1% is not supported in this compiler version",
+                              annotation);
+                    return false;
+                }
+                // trim the options off --placement
+                if (first && argString->value == "--placement") {
+                    newOptions.push_back(argString->value.c_str());
+                    break;
+                }
+                first = false;
+                newOptions.push_back(argString->value.c_str());
+            }
         } else if (annotation->name.name == "diagnostic") {
             if (annotation->expr.size() != 2) {
                 ::warning("@diagnostic takes two arguments: %1%", annotation);
@@ -152,6 +182,35 @@ struct CollectOptionsPragmas : public Inspector {
 
         LOG1("Adding options from pragma: " << annotation);
         options.insert(options.end(), newOptions.begin(), newOptions.end());
+        return false;
+    }
+
+ private:
+    /// check whether this is a supported Glass command_line pragma
+    bool isGlassSupported(const cstring &name) const {
+        // See `supported_cmd_line_pragmas` in glass/p4c_tofino/target/tofino/compile.py:205
+        static const cstring glassCmdLinePragmas[] = {
+            "--no-dead-code-elimination",
+            "--force-match-dependency",
+            "--metadata-overlay",
+            "--placement",
+            "--placement-order"
+        };
+        for (auto n : glassCmdLinePragmas)
+            if (name == n) return true;
+        return false;
+    }
+
+    bool isBFP4CSupported(const cstring &name) const {
+        // all supported bf-p4c command line pragmas.
+        // \TODO: would be nice to get the list directly from the compile options ...
+        // for now, we hardcode them
+        static const cstring bfp4cCmdLinePragmas[] = {
+            "--no-dead-code-elimination",
+            "--placement",
+        };
+        for (auto n : bfp4cCmdLinePragmas)
+            if (name == n) return true;
         return false;
     }
 };
