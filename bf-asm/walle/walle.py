@@ -44,6 +44,7 @@ to be relative to the addresses in the _including_ JSON.
 import argparse
 import sys
 import os
+import subprocess
 
 import pickle
 import json
@@ -241,6 +242,11 @@ def walle_process(parser, args=None):
         schema = csr.build_schema(args.generate_schema, __version__)
         with open(args.schema, "wb") as outfile:
             pickle.dump(schema, outfile, protocol=2)
+            print "Schema generated from:\n"
+            cmd = 'echo | git -C %s log -1' % args.generate_schema
+            output = subprocess.check_output(cmd, shell=True)
+            print(output)
+            outfile.write('\n\n' + output)
 
         if args.generate_templates != None:
             generate_templates(args, schema)
