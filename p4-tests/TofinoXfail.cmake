@@ -547,7 +547,6 @@ p4c_add_xfail_reason("tofino"
 # Tofino expected failures (Glass fails as well)
 p4c_add_xfail_reason("tofino"
   "ERROR: Unhandled type of Expression"
-  extensions/p4_tests/p4_14/jenkins/emulation/emulation.p4
   testdata/p4_14_samples/issue583.p4
   )
 
@@ -732,7 +731,7 @@ p4c_add_xfail_reason("tofino"
   "Not all applies of table .* are mutually exclusive"
   extensions/p4_tests/p4_14/c1/COMPILER-100/exclusive_cf_one_action_fail_after.p4
   extensions/p4_tests/p4_14/c1/COMPILER-100/exclusive_cf_one_action_fail_before.p4
-  
+
   )
 
 p4c_add_xfail_reason("tofino"
@@ -1004,4 +1003,3 @@ if (HARLYN_STF AND NOT ENABLE_STF2PTF)
     extensions/p4_tests/p4_16/container_dependency.p4
     )
 endif()  # STF FAILURE IN TNA
-
