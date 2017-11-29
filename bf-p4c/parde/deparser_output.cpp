@@ -234,7 +234,11 @@ class OutputDigests : public Inspector {
         int idx = 0;
         for (auto l : digest->sets) {
             out << indent << idx++ << ": [ ";
-            outputFieldlist(l);
+            /* learning digest is a bit special here - the driver looks at the first
+             * field of the digest to resolve the digest-ID and hence must be appended
+             * to the list of digest fields.
+             */
+            outputFieldlist(l, (digest->name == "learning") ? digest->select : NULL);
             out << " ]" << std::endl;
         }
         out << indent << "select: " << canon_name(phv.field(digest->select)->name)
@@ -264,8 +268,22 @@ class OutputDigests : public Inspector {
         out << " ]" << std::endl;
     }
 
-    void outputFieldlist(const IR::Vector<IR::Expression> *list) {
+    void outputFieldlist(const IR::Vector<IR::Expression> *list, const IR::Expression *lrnindex) {
         const char* sep = "";
+
+        /* if this is a learning digest, make sure to add lrnindex at the head of
+         * this list */
+        if (lrnindex) {
+            bitrange bits;
+            auto *field = phv.field(lrnindex, &bits);
+            field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice &alloc) {
+                BUG_CHECK(alloc.container_bit == 0, "bad alignment for container %1%",
+                          alloc.container);
+                out << sep << alloc.container;
+                sep = ", ";
+            });
+        }
+
         for (auto f : *list) {
             bitrange bits;
             auto* field = phv.field(f, &bits);
