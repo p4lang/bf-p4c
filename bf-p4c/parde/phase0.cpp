@@ -205,7 +205,7 @@ class FindPhase0Table : public Inspector {
       auto action = decl->to<IR::P4Action>();
 
       // Save the action name for assembly output
-      actionNameOut = action->getName().name;
+      actionNameOut = action->getName().originalName;
 
       // The action should have only action data parameters.
       for (auto param : *action->parameters)
