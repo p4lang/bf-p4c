@@ -223,14 +223,12 @@ ParserInfo extractParser(const IR::BFN::Pipe* pipe,
     info.deparsers[INGRESS] = new IR::BFN::Deparser(INGRESS, igDeparser);
     info.deparsers[EGRESS] = new IR::BFN::Deparser(EGRESS, egDeparser);
 
-    // TNA does not need intrinsic metadata shim.
-    // XXX(hanw): to be removed if done in midend
-    if (useTna) return info;
 
     // Add shims for intrinsic metadata.
     AddMetadataShims addMetadataShims(pipe);
     for (auto gress : { INGRESS, EGRESS }) {
-        info.parsers[gress] = info.parsers[gress]->apply(addMetadataShims);
+        if (!useTna)
+            info.parsers[gress] = info.parsers[gress]->apply(addMetadataShims);
         info.deparsers[gress] = info.deparsers[gress]->apply(addMetadataShims);
     }
 
