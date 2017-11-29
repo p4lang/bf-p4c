@@ -79,7 +79,6 @@ include(TestUtils.cmake)
 
 # add tofino tests and xfails with reasons
 include(TofinoTests.cmake)
-include(TofinoXfail.cmake)
 
 # add jbay tests and xfails with reasons
 #include(JBayTests.cmake)

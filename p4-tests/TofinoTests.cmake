@@ -56,6 +56,9 @@ p4c_add_test_label("tofino" "17Q4Goal" "switch_msdc")
 p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE
   "switch_l2" ${switchtest} "${testExtraArgs} -DL2_PROFILE")
 
+include(TofinoMustPass.cmake)
+include(TofinoXfail.cmake)
+
 #
 # Commented out because we're not yet ready to run all these failed profiles
 # and save cycles on testing
