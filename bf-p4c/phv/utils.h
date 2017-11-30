@@ -586,18 +586,18 @@ class SuperCluster : public ClusterStats {
     bool contains(const PHV::Field* f) const override;
 };
 
-}   // namespace PHV
+std::ostream &operator<<(std::ostream &out, const Allocation&);
+std::ostream &operator<<(std::ostream &out, const Allocation*);
+std::ostream &operator<<(std::ostream &out, const AllocSlice&);
+std::ostream &operator<<(std::ostream &out, const AllocSlice*);
+std::ostream &operator<<(std::ostream &out, const ContainerGroup&);
+std::ostream &operator<<(std::ostream &out, const ContainerGroup*);
+std::ostream &operator<<(std::ostream &out, const AlignedCluster&);
+std::ostream &operator<<(std::ostream &out, const AlignedCluster*);
+std::ostream &operator<<(std::ostream &out, const SuperCluster&);
+std::ostream &operator<<(std::ostream &out, const SuperCluster*);
 
-std::ostream &operator<<(std::ostream &out, const PHV::Allocation&);
-std::ostream &operator<<(std::ostream &out, const PHV::Allocation*);
-std::ostream &operator<<(std::ostream &out, const PHV::AllocSlice&);
-std::ostream &operator<<(std::ostream &out, const PHV::AllocSlice*);
-std::ostream &operator<<(std::ostream &out, const PHV::ContainerGroup&);
-std::ostream &operator<<(std::ostream &out, const PHV::ContainerGroup*);
-std::ostream &operator<<(std::ostream &out, const PHV::AlignedCluster&);
-std::ostream &operator<<(std::ostream &out, const PHV::AlignedCluster*);
-std::ostream &operator<<(std::ostream &out, const PHV::SuperCluster&);
-std::ostream &operator<<(std::ostream &out, const PHV::SuperCluster*);
+}   // namespace PHV
 
 // XXX(cole): This should go in the public repo, in `p4c/lib/ordered_set.h`.
 template <typename T>

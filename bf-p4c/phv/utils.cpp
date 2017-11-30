@@ -729,6 +729,7 @@ void PHV::Allocation::print_occupancy() const {
             LOG2("-----------------------------------------------------"); }
 }
 
+namespace PHV {
 
 std::ostream &operator<<(std::ostream &out, const PHV::Allocation& alloc) {
     if (dynamic_cast<const PHV::Transaction *>(&alloc)) {
@@ -860,3 +861,5 @@ std::ostream &operator<<(std::ostream &out, const PHV::SuperCluster* g) {
         out << "-null-cluster-group-";
     return out;
 }
+
+}  // namespace PHV

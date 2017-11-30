@@ -5,24 +5,67 @@
 #include <vector>
 #include "ir/ir.h"
 #include "ir/visitor.h"
+#include "version.h"
 
-safe_vector<cstring> BFN_Options::supported_targets =
-    {   "tofino-v1model-barefoot"
-      , "tofino-native-barefoot"
+BFN_Options::BFN_Options() {
+    target = "tofino-v1model-barefoot";
+    compilerVersion = P4C_TOFINO_VERSION;
+
+    registerOption("--trivpa", nullptr,
+        [this](const char *) { trivial_phvalloc = true; return true; },
+        "use the trivial PHV allocator");
+    registerOption("--nophvintf", nullptr,
+        [this](const char *) { phv_interference = false; return true; },
+        "do not use cluster_phv_interference interference-graph based PHV reduction");
+    registerOption("--noclusterintf", nullptr,
+        [this](const char *) { cluster_interference = false; return true; },
+        "do not use cluster_to_cluster interference interference-graph based PHV reduction");
+    registerOption("--nophvslice", nullptr,
+        [this](const char *) { phv_slicing = false; return true; },
+        "do not use cluster_phv_slicing based PHV slices");
+    registerOption("--nophvover", nullptr,
+        [this](const char *) { phv_overlay = false; return true; },
+        "do not use cluster_phv_overlay based PHV overlays");
+    registerOption("--ignore-overflow", nullptr,
+        [this](const char *) { ignorePHVOverflow = true; return true; },
+        "attempt to continue compiling even if PHV space is exhausted");
+    registerOption("--allowUnimplemented", nullptr,
+        [this](const char *) { allowUnimplemented = true; return true; },
+        "allow assembly generation even if there are unimplemented features in the P4 code");
+    registerOption("-g", nullptr,
+        [this](const char *) { debugInfo = true; return true; },
+        "generate debug information");
+    registerOption("--no-dead-code-elimination", nullptr,
+        [this](const char *) { no_deadcode_elimination = true; return true; },
+        "do not use dead code elimination");
+    registerOption("--placement", nullptr,
+        [this](const char *) { forced_placement = true; return true; },
+        "ignore all dependencies during table placement");
+    registerOption("--use_clot", nullptr,
+        [this](const char *) { use_clot = true; return true; },
+        "use clots in JBay");
+}
+
+std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
+    static const std::unordered_set<cstring> supportedTargets = {
+        "tofino-v1model-barefoot",
+        "tofino-native-barefoot",
 #if HAVE_JBAY
-      , "jbay-v1model-barefoot"
-      , "jbay-native-barefoot"
+        "jbay-v1model-barefoot",
+        "jbay-native-barefoot",
 #endif /* HAVE_JBAY */
     };
 
-std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
     auto remainingOptions = CompilerOptions::process(argc, argv);
 
-    std::vector<std::string> splits;
+    if (!supportedTargets.count(target)) {
+        ::error("Target '%s' is not supported", target);
+        return remainingOptions;
+    }
 
+    std::vector<std::string> splits;
     std::string target_str(target.c_str());
     boost::split(splits, target_str, [](char c){return c == '-';});
-
     if (splits.size() != 3)
         BUG("Invalid target %s", target);
 
@@ -40,190 +83,102 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
     return remainingOptions;
 }
 
-DiagnosticAction
-BFN_Options::getDiagnosticAction(cstring diagnostic,
-                                 DiagnosticAction defaultAction) const {
-    auto it = diagnosticActions.find(diagnostic);
-    if (it != diagnosticActions.end()) return it->second;
-    return defaultAction;
+/* static */ BFNContext& BFNContext::get() {
+    return CompileContextStack::top<BFNContext>();
 }
 
-void BFN_Options::setDiagnosticAction(cstring diagnostic,
-                                      DiagnosticAction action) {
+BFN_Options& BFNContext::options() {
+    return optionsInstance;
+}
+
+bool BFNContext::isRecognizedDiagnostic(cstring diagnostic) {
     static const std::unordered_set<cstring> recognizedDiagnostics = {
         "ccgf_contiguity_failure",
-        "unknown_diagnostic"
     };
 
-    // Warn if the provided diagnostic isn't one that we recognize. This is just
-    // to help the user find typos and the like; diagnostics will still work (or
-    // not) even if they aren't in `recognizedDiagnostics`.
-    if (!recognizedDiagnostics.count(diagnostic))
-        DIAGNOSE_WARN("unknown_diagnostic", *this,
-                      "Unrecognized diagnostic: %1%", diagnostic);
-
-    switch (action) {
-        case DiagnosticAction::Ignore:
-            LOG1("Ignoring diagnostic: " << diagnostic); break;
-        case DiagnosticAction::Warn:
-            LOG1("Reporting warning for diagnostic: " << diagnostic); break;
-        case DiagnosticAction::Error:
-            LOG1("Reporting error for diagnostic: " << diagnostic); break;
-    }
-
-    diagnosticActions[diagnostic] = action;
+    if (recognizedDiagnostics.count(diagnostic)) return true;
+    return P4CContext::isRecognizedDiagnostic(diagnostic);
 }
 
-namespace {
+boost::optional<P4::IOptionPragmaParser::CommandLineOptions>
+BFNOptionPragmaParser::tryToParse(const IR::Annotation* annotation) {
+    auto pragmaName = annotation->name.name;
+    if (pragmaName == "bf_p4c_compiler_option")
+        return parseBrigCompilerOption(annotation);
+    if (pragmaName == "command_line")
+        return parseGlassCompilerOption(annotation);
+    return P4COptionPragmaParser::tryToParse(annotation);
+}
 
-/**
- * Find P4-14 pragmas or P4-16 annotations which specify compiler or diagnostic
- * options and generate a sequence of command-line-like arguments which can be
- * processed by BFN_Options.
- *
- * CollectOptionsPragmas recognizes:
- *  - `pragma bf_p4c_compiler_option [command line arguments]`
- *  - `@bf_p4c_compiler_option([command line arguments])`
- *  - `pragma command_line [command line arguments]` for Glass compatibility
- *  - `pragma diagnostic [diagnostic name] [disable|warn|error]`
- *  - `@diagnostic([diagnostic name], ["disable"|"warn"|"error"])`
- *
- * Although P4-16 annotations are attached to a specific program construct, it
- * doesn't matter what these annotations are attached to; only their order in
- * the program matters. This allows these annotations to be used as if they were
- * top-level, standalone directives, and provides a natural translation path
- * from P4-14, where truly standalone pragmas are often used.
- */
-struct CollectOptionsPragmas : public Inspector {
-    std::vector<const char*> options;
+boost::optional<P4::IOptionPragmaParser::CommandLineOptions>
+BFNOptionPragmaParser::parseBrigCompilerOption(const IR::Annotation* annotation) {
+    boost::optional<CommandLineOptions> newOptions;
+    newOptions.emplace();
 
-    CollectOptionsPragmas() {
-        // Add an initial "option" which will ultimately be ignored.
-        // Util::Options::process() expects its arguments to be `argc` and
-        // `argv`, so it skips over `argv[0]`, which would ordinarily be the
-        // program name.
-        options.push_back("(from pragmas)");
-    }
-
-    bool preorder(const IR::Annotation* annotation) {
-        std::vector<const char*> newOptions;
-
-        if (annotation->name.name == "bf_p4c_compiler_option") {
-            // XXX(seth): It'd be nice to have some mechanism for whitelisting
-            // options so a P4 program from an untrusted source can't overwrite
-            // your files or launch the missiles.
-            for (auto* arg : annotation->expr) {
-                auto* argString = arg->to<IR::StringLiteral>();
-                if (!argString) {
-                    ::warning("@bf_p4c_compiler_option arguments must be strings: %1%",
-                              annotation);
-                    return false;
-                }
-                newOptions.push_back(argString->value.c_str());
-            }
-        } else if (annotation->name.name == "command_line") {
-            bool first = true;
-            for (auto* arg : annotation->expr) {
-                auto* argString = arg->to<IR::StringLiteral>();
-                if (!argString) {
-                    ::warning("@pragma command_line arguments must be strings: %1%",
-                              annotation);
-                    return false;
-                }
-                if (first && !isGlassSupported(argString->value)) {
-                    ::warning("@pragma command_line %1% is not supported",
-                              annotation);
-                    return false;
-                }
-                if (first && !isBFP4CSupported(argString->value)) {
-                    ::warning("@pragma command_line %1% is not supported in this compiler version",
-                              annotation);
-                    return false;
-                }
-                // trim the options off --placement
-                if (first && argString->value == "--placement") {
-                    newOptions.push_back(argString->value.c_str());
-                    break;
-                }
-                first = false;
-                newOptions.push_back(argString->value.c_str());
-            }
-        } else if (annotation->name.name == "diagnostic") {
-            if (annotation->expr.size() != 2) {
-                ::warning("@diagnostic takes two arguments: %1%", annotation);
-                return false;
-            }
-
-            auto* diagnosticName = annotation->expr[0]->to<IR::StringLiteral>();
-            auto* diagnosticAction = annotation->expr[1]->to<IR::StringLiteral>();
-            if (!diagnosticName || !diagnosticAction) {
-                ::warning("@diagnostic arguments must be strings: %1%", annotation);
-                return false;
-            }
-
-            cstring diagnosticOption;
-            if (diagnosticAction->value == "disable") {
-                diagnosticOption = "--Wdisable=";
-            } else if (diagnosticAction->value == "warn") {
-                diagnosticOption = "--Wwarn=";
-            } else if (diagnosticAction->value == "error") {
-                diagnosticOption = "--Werr=";
-            } else {
-                ::warning("@diagnostic's second argument must be 'disable', "
-                          "'warn', or 'error': %1%", annotation);
-                return false;
-            }
-
-            diagnosticOption += diagnosticName->value;
-            newOptions.push_back(diagnosticOption.c_str());
-        } else {
-            return false;
+    // XXX(seth): It'd be nice to have some mechanism for whitelisting
+    // options so a P4 program from an untrusted source can't overwrite
+    // your files or launch the missiles.
+    for (auto* arg : annotation->expr) {
+        auto* argString = arg->to<IR::StringLiteral>();
+        if (!argString) {
+            ::warning("@bf_p4c_compiler_option arguments must be strings: %1%",
+                      annotation);
+            return boost::none;
         }
-
-        LOG1("Adding options from pragma: " << annotation);
-        options.insert(options.end(), newOptions.begin(), newOptions.end());
-        return false;
+        newOptions->push_back(argString->value.c_str());
     }
 
- private:
-    /// check whether this is a supported Glass command_line pragma
-    bool isGlassSupported(const cstring &name) const {
-        // See `supported_cmd_line_pragmas` in glass/p4c_tofino/target/tofino/compile.py:205
-        static const cstring glassCmdLinePragmas[] = {
-            "--no-dead-code-elimination",
-            "--force-match-dependency",
-            "--metadata-overlay",
-            "--placement",
-            "--placement-order"
-        };
-        for (auto n : glassCmdLinePragmas)
-            if (name == n) return true;
-        return false;
+    return newOptions;
+}
+
+boost::optional<P4::IOptionPragmaParser::CommandLineOptions>
+BFNOptionPragmaParser::parseGlassCompilerOption(const IR::Annotation* annotation) {
+    // See `supported_cmd_line_pragmas` in glass/p4c_tofino/target/tofino/compile.py:205
+    static const std::unordered_set<cstring> glassCmdLinePragmas = {
+        "--no-dead-code-elimination",
+        "--force-match-dependency",
+        "--metadata-overlay",
+        "--placement",
+        "--placement-order",
+    };
+
+    // Glass command line pragmas supported in bf-p4c.
+    // \TODO: would be nice to get the list directly from the compile options ...
+    // for now, we hardcode them
+    static const std::unordered_set<cstring> glassCmdLinePragmasAvailableInBrig = {
+        "--no-dead-code-elimination",
+        "--placement",
+    };
+
+    boost::optional<CommandLineOptions> newOptions;
+    newOptions.emplace();
+
+    bool first = true;
+    for (auto* arg : annotation->expr) {
+        auto* argString = arg->to<IR::StringLiteral>();
+        if (!argString) {
+            ::warning("@pragma command_line arguments must be strings: %1%",
+                      annotation);
+            return boost::none;
+        }
+        if (first && !glassCmdLinePragmas.count(argString->value)) {
+            ::warning("@pragma command_line %1% is not supported",
+                      annotation);
+            return boost::none;
+        }
+        if (first && !glassCmdLinePragmasAvailableInBrig.count(argString->value)) {
+            ::warning("@pragma command_line %1% is not supported in this "
+                      "compiler version", annotation);
+            return boost::none;
+        }
+        // trim the options off --placement
+        if (first && argString->value == "--placement") {
+            newOptions->push_back(argString->value.c_str());
+            break;
+        }
+        first = false;
+        newOptions->push_back(argString->value.c_str());
     }
 
-    bool isBFP4CSupported(const cstring &name) const {
-        // all supported bf-p4c command line pragmas.
-        // \TODO: would be nice to get the list directly from the compile options ...
-        // for now, we hardcode them
-        static const cstring bfp4cCmdLinePragmas[] = {
-            "--no-dead-code-elimination",
-            "--placement",
-        };
-        for (auto n : bfp4cCmdLinePragmas)
-            if (name == n) return true;
-        return false;
-    }
-};
-
-}  // namespace
-
-void BFN_Options::setFromPragmas(const IR::P4Program* program) {
-    CollectOptionsPragmas collectOptions;
-    program->apply(collectOptions);
-
-    // Process the options just as if they were specified at the command line.
-    // XXX(seth): It'd be nice if the user's command line options took
-    // precedence; currently, pragmas override the command line.
-    process(collectOptions.options.size(),
-            const_cast<char* const*>(collectOptions.options.data()));
+    return newOptions;
 }

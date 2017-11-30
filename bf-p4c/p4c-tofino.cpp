@@ -18,6 +18,7 @@
 #include "frontends/common/constantFolding.h"
 #include "frontends/p4-14/header_type.h"
 #include "frontends/p4-14/typecheck.h"
+#include "frontends/common/applyOptionsPragmas.h"
 #include "frontends/common/parseInput.h"
 #include "common/extract_maupipe.h"
 #include "midend.h"
@@ -45,25 +46,20 @@ int main(int ac, char **av) {
     AutoCompileContext autoBFNContext(new BFNContext);
     auto& options = BFNContext::get().options();
 
-    if (options.process(ac, av) != nullptr)
-        options.setInputFile();
-
-    if (::errorCount() > 0)
+    if (!options.process(ac, av) || ::errorCount() > 0)
         return 1;
 
+    options.setInputFile();
     Device::init(options.device);
-
-    if (!options.targetSupported()) {
-         error("target '%s' not supported", options.target);
-         return 1; }
 
     auto hook = options.getDebugHook();
 
     auto program = P4::parseP4File(options);
+    if (!program || ::errorCount() > 0)
+        return 1;
 
-    // The program itself may include additional options specified as pragmas or
-    // annotations.
-    options.setFromPragmas(program);
+    BFNOptionPragmaParser optionsPragmaParser;
+    program->apply(P4::ApplyOptionsPragmas(optionsPragmaParser));
 
     program = P4::FrontEnd(hook).run(options, program, true);
     if (!program)
