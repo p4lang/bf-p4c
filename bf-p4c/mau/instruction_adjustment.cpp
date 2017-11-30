@@ -20,7 +20,6 @@
 const IR::MAU::Action *SplitInstructions::preorder(IR::MAU::Action *act) {
     container_actions_map.clear();
     split_fields.clear();
-    ActionAnalysis aa(phv, true, true, tbl);
     aa.set_container_actions_map(&container_actions_map);
     act->apply(aa);
     if (aa.misaligned_actiondata())
@@ -65,8 +64,8 @@ const IR::Expression *SplitInstructions::preorder(IR::Expression *expr) {
             split_location = split_fields.find(field);
             write_found = true;
         }
-    } else {
-        ERROR("Unhandled type of Expression " << expr);
+    } else if (!aa.isActionParam(expr)) {
+        BUG("Unhandled type of Expression within Split Instructions");
     }
     prune();
     return expr;

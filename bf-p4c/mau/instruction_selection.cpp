@@ -629,9 +629,18 @@ const IR::Expression *ConvertCastToSlice::preorder(IR::Slice *sl) {
     return sl;
 }
 
-const IR::Cast *ConvertCastToSlice::preorder(IR::Cast *c) {
+/**
+ *  FIXME: Quick fix in order for mirror_test to be correct.  This should be handled in the
+ *  midend way before this
+ */
+const IR::Node *ConvertCastToSlice::preorder(IR::Cast *c) {
     contains_cast = true;
-    return c;
+    auto *upper_cast = findContext<IR::Cast>();
+    if (upper_cast == nullptr) {
+        return c;
+    } else {
+        return c->expr;
+    }
 }
 
 /** The goal of this particular function is to remove all final casts from any particular backend

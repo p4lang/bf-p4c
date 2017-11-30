@@ -200,7 +200,7 @@ p4c_add_xfail_reason("tofino"
 
 # BRIG-102
 p4c_add_xfail_reason("tofino"
-  "syntax error, unexpected ','"
+  "IR structure not yet handled by the ActionAnalysis pass"
   extensions/p4_tests/p4_14/test_config_235_funnel_shift.p4
   )
 
@@ -544,9 +544,8 @@ p4c_add_xfail_reason("tofino"
 #  extensions/p4_tests/p4_14/c1/COMPILER-235/vag1662.p4
   )
 
-# Tofino expected failures (Glass fails as well)
 p4c_add_xfail_reason("tofino"
-  "ERROR: Unhandled type of Expression"
+  "Ran out of tcam space in .* parser"
   testdata/p4_14_samples/issue583.p4
   )
 

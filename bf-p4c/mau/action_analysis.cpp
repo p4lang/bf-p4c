@@ -136,11 +136,15 @@ bool ActionAnalysis::preorder(const IR::Slice *sl) {
     return false;
 }
 
+bool ActionAnalysis::preorder(const IR::Cast *) {
+    BUG("No casts should ever reach this point in the Tofino backend");
+}
+
 bool ActionAnalysis::preorder(const IR::Expression *expr) {
     if (phv.field(expr)) {
         initialize_phv_field(expr);
     } else {
-        ERROR("IR structure not yet handled by the ActionAnalysis pass");
+        BUG("IR structure not yet handled by the ActionAnalysis pass");
     }
     return false;
 }

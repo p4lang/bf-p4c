@@ -78,7 +78,7 @@ class ConvertCastToSlice : public MauTransform, P4WriteContext {
     bool contains_cast = false;
     const IR::MAU::Instruction *preorder(IR::MAU::Instruction *) override;
     const IR::Expression *preorder(IR::Slice *) override;
-    const IR::Cast *preorder(IR::Cast *) override;
+    const IR::Node *preorder(IR::Cast *) override;
     const IR::MAU::SaluAction *preorder(IR::MAU::SaluAction *) override;
     const IR::Node *postorder(IR::MAU::Instruction *) override;
 };

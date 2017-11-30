@@ -51,6 +51,7 @@ class Field;
 class SplitInstructions : public MauTransform, TofinoWriteContext {
     const PhvInfo &phv;
     const IR::MAU::Table *tbl;
+    ActionAnalysis aa;
     ActionAnalysis::ContainerActionsMap container_actions_map;
     ordered_set<const PHV::Field *> split_fields;
     ordered_map<const PHV::Field *, IR::MAU::Instruction *> removed_instrs;
@@ -72,7 +73,8 @@ class SplitInstructions : public MauTransform, TofinoWriteContext {
     const IR::MAU::HashDist *preorder(IR::MAU::HashDist *hd) override;
 
  public:
-    SplitInstructions(const PhvInfo &p, const IR::MAU::Table *t) : phv(p), tbl(t) {}
+    SplitInstructions(const PhvInfo &p, const IR::MAU::Table *t) : phv(p), tbl(t),
+        aa(phv, true, true, tbl) {}
 };
 
 class ConstantsToActionData : public MauTransform, TofinoWriteContext {

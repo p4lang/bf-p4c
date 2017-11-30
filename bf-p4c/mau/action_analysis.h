@@ -255,15 +255,13 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
 
     void initialize_phv_field(const IR::Expression *expr);
     void initialize_action_data(const IR::Expression *expr);
-    const IR::Expression *isActionParam(const IR::Expression *expr,
-        bitrange *bits_out = nullptr, ActionParam::type_t *type = nullptr);
-
     bool preorder(const IR::MAU::Action *) override { visitOnce(); return true; }
     bool preorder(const IR::MAU::Table *) override { visitOnce(); return true; }
     bool preorder(const IR::MAU::TableSeq *) override { visitOnce(); return true; }
 
     bool preorder(const IR::Slice *) override;
     bool preorder(const IR::ActionArg *) override;
+    bool preorder(const IR::Cast *) override;
     bool preorder(const IR::Expression *) override;
     bool preorder(const IR::MAU::ActionDataConstant *) override;
     bool preorder(const IR::Constant *) override;
@@ -293,6 +291,9 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
     bool verify_P4_action_with_phv(cstring action_name);
 
  public:
+    const IR::Expression *isActionParam(const IR::Expression *expr,
+        bitrange *bits_out = nullptr, ActionParam::type_t *type = nullptr);
+
     bool misaligned_actiondata() {
         return action_data_misaligned;
     }
