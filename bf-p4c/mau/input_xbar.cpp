@@ -930,8 +930,8 @@ void IXBar::layout_option_calculation(const LayoutOption *layout_option,
         start = 0; last = 0; return;
     }
     start = last;
-    if (start == 0 && layout_option && layout_option->way_sizes[0] == 16) {
-        last = 3;
+    if (start == 0 && layout_option && layout_option->select_bus_split != -1) {
+        last = layout_option->select_bus_split;
     } else {
         last = layout_option->way_sizes.size();
     }

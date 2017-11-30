@@ -277,6 +277,11 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_297_big_metadata.p4
   )
 
+p4c_add_xfail_reason("tofino"
+  "Can't fit the minimum number of table .* entries within the memories"
+  extensions/p4_tests/p4_14/dileep8.p4
+)
+
 # BRIG-146 (also was BRIG-133)
 p4c_add_xfail_reason("tofino"
   "alias for .* has out of range index from allowed"

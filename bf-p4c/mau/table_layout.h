@@ -13,6 +13,7 @@ class LayoutOption {
     safe_vector<int> partition_sizes;
     int entries = 0;
     int srams = 0, maprams = 0, tcams = 0;
+    int select_bus_split = -1;
     LayoutOption() {}
     explicit LayoutOption(const IR::MAU::Table::Layout l) : layout(l) {}
     LayoutOption(const IR::MAU::Table::Layout l, const IR::MAU::Table::Way w)

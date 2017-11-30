@@ -65,10 +65,109 @@ int IdleTimePerWord(const IR::MAU::IdleTime *idletime) {
     }
 }
 
-/* Calculates the individual way sizes, given a total depth, i.e. 24 will become
-   4 4 4 4 4 4 */
-void StageUseEstimate::calculate_way_sizes(LayoutOption *lo,
+bool StageUseEstimate::ways_provided(const IR::MAU::Table *tbl, LayoutOption *lo,
+                                     int &calculated_depth) {
+    int way_total = -1;
+    auto annot = tbl->match_table->getAnnotations();
+    if (auto s = annot->getSingle("ways")) {
+        ERROR_CHECK(s->expr.size() >= 1, "%s: The ways pragma on table %s does not have a "
+                    "value", tbl->srcInfo, tbl->name);
+        auto pragma_val =  s->expr.at(0)->to<IR::Constant>();
+        if (pragma_val == nullptr) {
+            ::error("%s: The ways pragma value on table %s is not a constant", tbl->srcInfo,
+                  tbl->name);
+            return false;
+        }
+        way_total = pragma_val->asInt();
+        if (way_total < MIN_WAYS || way_total > MAX_WAYS) {
+            ::warning("%s: The ways pragma value on table %s is not between %d and %d, and "
+                      "will be ignored", tbl->srcInfo, tbl->name, MIN_WAYS, MAX_WAYS);
+            way_total = -1;
+        }
+    }
+    if (way_total == -1)
+        return false;
+
+    int depth_needed = std::min(calculated_depth, int(StageUse::MAX_SRAMS));
+    int depth = 0;
+
+    for (int i = 0; i < way_total; i++) {
+        if (depth_needed <= 0)
+            depth_needed = 1;
+        int initial_way_size = (depth_needed + (way_total - i) - 1)  / (way_total - i);
+        int log2_way_size = 1 << (ceil_log2(initial_way_size));
+        depth_needed -= log2_way_size;
+        depth += log2_way_size;
+        lo->way_sizes.push_back(log2_way_size);
+    }
+
+    int select_upper_bits_required = 0;
+    int index = 0;
+    for (auto way_size : lo->way_sizes) {
+        if (index == IXBar::HASH_INDEX_GROUPS) {
+            lo->select_bus_split = index;
+            break;
+        }
+        int select_bits = floor_log2(way_size);
+
+        if (select_bits + select_upper_bits_required > IXBar::HASH_SINGLE_BITS) {
+            lo->select_bus_split = index;
+            break;
+        }
+        select_upper_bits_required += floor_log2(way_size);
+        index++;
+    }
+
+    calculated_depth = depth;
+    return true;
+}
+
+/** This calculates the number of simultaneous lookups within an exact match table, using the
+ *  cuckoo hashing.  The RAM selection is done through using particular bits on the 52 bit
+ *  hash bus.  The lower 40 bits are broken into 4 10 bit sections for RAM line selection,
+ *  and the upper 12 bits are used to do a RAM select.
+ *
+ *  In order to fit as at least 90% of entries without having to move other match entries,
+ *  generally 4 ways are required for complete independent lookup.  Thus, if the entries
+ *  requested for the table is smaller than a particular number, the algorithm will still
+ *  bump the number of entries up in order to maintain this number of independent ways.
+ *
+ *  Let me provide the following example.  Say that the number of entries for a particular
+ *  table requires 4 independent ways of size 8.  The hash bus would be allocated as
+ *  the following:
+ *    - Each of the 4 independent ways would each have a separate 10 bits of RAM row select,
+ *      totalling 40 bits
+ *    - To select a distinct RAM out of the 8 ways, each way would require 3 bits of RAM
+ *      select, totalling 12 bits.
+ *  This totals to 52 bits, which fortunately is the size of the number of hash select bits
+ *
+ *  An optimization that I take advantage of is the fact that I can repeat using of select bits.
+ *  For example, say the number of entries required 40 RAMs.  One could in theory break this
+ *  up into 5 independent ways of 8 RAMs.  However, this would not fit onto the 52 bits, as
+ *  50 bits of RAM row select + 15 bits of RAM select, way larger than the 52 bits on a hash
+ *  select bus.
+ *
+ *  However, the compiler will optimize so that way 1 and way 5 will actually share the 10
+ *  bits of RAM row select, and the 3 upper bits of RAM select.  This means that ways 1 and 5
+ *  are not independent, instead they are the exact same.  However, this is not an issue for
+ *  our constraint, as we still have 4 independent hash lookups.
+ *
+ *  This cannot be used indefinitely however.  For example, say we needed 64 RAMs, with 4
+ *  ways of 16 RAMs.  Even though we can fit all RAM row selection in the lower 40 bits, this
+ *  would require 16 bits of RAM select.  In this case, we cannot repeat the use select bits
+ *  as this would not provide at least 4 independent hash lookups, which is the standard
+ *  required by the driver.
+ *
+ *  In the case just described, we would actually require 2 separate RAM select buses, and thus
+ *  two separate search buses.  The fortunate thing is that the maximum number of RAMs is 80
+ *  per MAU stage, so even the input xbar requirements are high, the RAM array requirements
+ *  are high as well.
+ */
+void StageUseEstimate::calculate_way_sizes(const IR::MAU::Table *tbl, LayoutOption *lo,
                                            int &calculated_depth) {
+    if (ways_provided(tbl, lo, calculated_depth))
+        return;
+
     if (lo->layout.match_width_bits <= ceil_log2(Memories::SRAM_DEPTH)) {
         if (calculated_depth == 1) {
             lo->way_sizes = {1};
@@ -109,6 +208,8 @@ void StageUseEstimate::calculate_way_sizes(LayoutOption *lo,
         int test_depth = calculated_depth > 64 ? 64 : calculated_depth;
         int max_group_size = (1 << floor_log2(test_depth)) / 4;
         int depth = calculated_depth > 80 ? 80 : calculated_depth;
+        if (depth >= 64)
+            lo->select_bus_split = 3;
         while (depth > 0) {
             if (max_group_size <= depth) {
                 lo->way_sizes.push_back(max_group_size);
@@ -121,12 +222,12 @@ void StageUseEstimate::calculate_way_sizes(LayoutOption *lo,
 }
 
 /* Convert all possible layout options to the correct way sizes */
-void StageUseEstimate::options_to_ways(int &entries) {
+void StageUseEstimate::options_to_ways(const IR::MAU::Table *tbl, int &entries) {
     for (auto &lo : layout_options) {
         int per_row = lo.way.match_groups;
         int total_depth = (entries + per_row * 1024 - 1) / (per_row * 1024);
         int calculated_depth = total_depth;
-        calculate_way_sizes(&lo, calculated_depth);
+        calculate_way_sizes(tbl, &lo, calculated_depth);
         lo.entries = calculated_depth * lo.way.match_groups * 1024;
         lo.srams = calculated_depth * lo.way.width;
         lo.maprams = 0;
@@ -386,7 +487,7 @@ StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries, bool
         fill_estimate_from_option(entries);
     } else if (!tbl->gateway_only()) {  // exact_match
         /* assuming all ways have the same format and width (only differ in depth) */
-        options_to_ways(entries);
+        options_to_ways(tbl, entries);
         options_to_rams(tbl, table_placement);
         select_best_option(tbl);
         fill_estimate_from_option(entries);
@@ -576,7 +677,7 @@ void StageUseEstimate::unknown_srams_needed(const IR::MAU::Table *tbl, LayoutOpt
     int depth_test = depth;
 
     if (adding_entries > 0)
-        calculate_way_sizes(lo, depth_test);
+        calculate_way_sizes(tbl, lo, depth_test);
 
     if (depth_test != depth) {
         int attempted_entries = lo->way.match_groups * 1024 * depth_test;

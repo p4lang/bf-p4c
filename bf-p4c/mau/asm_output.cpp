@@ -364,12 +364,14 @@ void MauAsmOutput::emit_ixbar_hash_table(int hash_table, safe_vector<Slice> &mat
 /** Emits information on a lower 10 bit portion of a RAM select for exact match
  */
 void MauAsmOutput::emit_ixbar_hash_way(std::ostream &out, indent_t indent,
-        safe_vector<Slice> &match_data, Slice *ghost, const IXBar::Use *use, int start_bit,
-        int end_bit) const {
+        safe_vector<Slice> &match_data, Slice *ghost, const IXBar::Use *use, int hash_group,
+        int start_bit, int end_bit) const {
     unsigned done = 0;
     if (match_data.empty() && ghost == nullptr)
         return;
     for (auto &way : use->way_use) {
+        if (way.group != hash_group)
+            continue;
         if (done & (1 << way.slice)) continue;
         done |= 1 << way.slice;
         int way_start = way.slice * TableFormat::RAM_GHOST_BITS + start_bit;
@@ -409,10 +411,11 @@ void MauAsmOutput::emit_ixbar_hash_way_select(std::ostream &out, indent_t indent
  */
 void MauAsmOutput::emit_ixbar_hash_exact(std::ostream &out, indent_t indent,
         safe_vector<Slice> &match_data, safe_vector<Slice> &ghost, const IXBar::Use *use,
-        int &ident_bits_prev_alloc) const {
+        int hash_group, int &ident_bits_prev_alloc) const {
     // Do not specify identity ghost bits at places where ghost bits are already specified
     if (ident_bits_prev_alloc > 0) {
-        emit_ixbar_hash_way(out, indent, match_data, nullptr, use, 0, ident_bits_prev_alloc);
+        emit_ixbar_hash_way(out, indent, match_data, nullptr, use, hash_group, 0,
+                            ident_bits_prev_alloc);
     }
 
     safe_vector<Slice> way_ghost;
@@ -440,7 +443,8 @@ void MauAsmOutput::emit_ixbar_hash_exact(std::ostream &out, indent_t indent,
     for (auto ghost_slice : way_ghost) {
         int start_bit = ident_bits_prev_alloc + bits_allocated;
         int end_bit = start_bit + ghost_slice.width() - 1;
-        emit_ixbar_hash_way(out, indent, match_data, &ghost_slice, use, start_bit, end_bit);
+        emit_ixbar_hash_way(out, indent, match_data, &ghost_slice, use, hash_group, start_bit,
+                            end_bit);
         bits_allocated += ghost_slice.width();
     }
 
@@ -452,7 +456,7 @@ void MauAsmOutput::emit_ixbar_hash_exact(std::ostream &out, indent_t indent,
     if (ident_bits_alloc + ident_bits_prev_alloc < TableFormat::RAM_GHOST_BITS) {
         int start_bit = ident_bits_alloc + ident_bits_prev_alloc;
         int end_bit = TableFormat::RAM_GHOST_BITS - 1;
-        emit_ixbar_hash_way(out, indent, match_data, nullptr, use, start_bit, end_bit);
+        emit_ixbar_hash_way(out, indent, match_data, nullptr, use, hash_group, start_bit, end_bit);
     } else if (ident_bits_alloc + ident_bits_prev_alloc > TableFormat::RAM_GHOST_BITS) {
         bits_allocated = 0;
         bitvec ghost_slice_mask;
@@ -463,6 +467,8 @@ void MauAsmOutput::emit_ixbar_hash_exact(std::ostream &out, indent_t indent,
             offset += bits_allocated - TableFormat::RAM_GHOST_BITS;
             bitvec bit_mask(offset, select_bits);
             for (auto way : use->way_use) {
+                if (way.group != hash_group)
+                    continue;
                 bitvec way_mask;
                 way_mask.setraw(way.mask);
                 bitvec select_ghost_mask = (bit_mask << way_mask.ffs()) & way_mask;
@@ -492,8 +498,11 @@ void MauAsmOutput::emit_ixbar_hash_exact(std::ostream &out, indent_t indent,
     if (match_data.size() == 0)
         return;
     unsigned mask_bits = 0;
-    for (auto way : use->way_use)
+    for (auto way : use->way_use) {
+        if (way.group != hash_group)
+            continue;
         mask_bits |= way.mask;
+    }
     bitvec select_range = (bitvec(mask_bits) - total_ghost_mask);
     for (auto range : bitranges(select_range.getrange(0, IXBar::HASH_SINGLE_BITS))) {
         emit_ixbar_hash_way_select(out, indent, match_data, nullptr, range.first, range.second);
@@ -508,7 +517,8 @@ void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent,
                                    const IXBar::Use *use, int hash_group,
                                    int &ident_bits_prev_alloc) const {
     if (!use->way_use.empty()) {
-        emit_ixbar_hash_exact(out, indent, match_data, ghost, use, ident_bits_prev_alloc);
+        emit_ixbar_hash_exact(out, indent, match_data, ghost, use, hash_group,
+                              ident_bits_prev_alloc);
     }
 
     for (auto &select : use->select_use) {

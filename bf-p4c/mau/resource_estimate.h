@@ -5,6 +5,9 @@
 #include "lib/safe_vector.h"
 
 struct StageUseEstimate {
+    static constexpr int MIN_WAYS = 1;
+    static constexpr int MAX_WAYS = 8;
+
     int logical_ids = 0;
     int srams = 0;
     int tcams = 0;
@@ -51,7 +54,7 @@ struct StageUseEstimate {
         exact_ixbar_bytes = 0; ternary_ixbar_groups = 0;
         shared_action_data.clear();
     }
-    void options_to_ways(int &entries);
+    void options_to_ways(const IR::MAU::Table *tbl, int &entries);
     void options_to_rams(const IR::MAU::Table *tbl, bool table_placement);
     void select_best_option(const IR::MAU::Table *tbl);
     void options_to_ternary_entries(const IR::MAU::Table *tbl, int &entries);
@@ -74,8 +77,9 @@ struct StageUseEstimate {
     void unknown_tcams_needed(const IR::MAU::Table *tbl, LayoutOption *lo, int tcams_left,
                               int srams_left);
     void unknown_atcams_needed(const IR::MAU::Table *tbl, LayoutOption *lo, int srams_left);
-    void calculate_way_sizes(LayoutOption *lo, int &calculated_depth);
+    void calculate_way_sizes(const IR::MAU::Table *tbl, LayoutOption *lo, int &calculated_depth);
     void calculate_partition_sizes(LayoutOption *lo, int ram_depth);
+    bool ways_provided(const IR::MAU::Table *tbl, LayoutOption *lo, int &calculated_depth);
     void srams_left_best_option(int srams_left);
     void tcams_left_best_option();
     struct RAM_counter {

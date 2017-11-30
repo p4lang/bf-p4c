@@ -56,6 +56,7 @@ struct Memories {
         }
 
         bool free() { return !init; }
+        friend std::ostream &operator<<(std::ostream &, const search_bus_info &);
     };
 
  private:

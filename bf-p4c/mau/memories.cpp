@@ -595,8 +595,8 @@ Memories::SRAM_group *Memories::find_best_candidate(SRAM_group *placed_wa, int r
 
     loc = 0;
     for (auto emw : exact_match_ways) {
-        auto name = emw->ta->table->name;
-        if ((!bus[0].free() && bus[0].name == name) || (!bus[1].free() && bus[1].name == name))
+        auto group_bus = emw->build_search_bus(0);
+        if ((!bus[0].free() && bus[0] == group_bus) || (!bus[1].free() && bus[1] == group_bus))
             return emw;
         loc++;
     }
@@ -2907,6 +2907,12 @@ void Memories::remove(cstring name, const Memories::Use &alloc) {
 }
 void Memories::remove(const std::map<cstring, Use> &alloc) {
     for (auto &a : alloc) remove(a.first, a.second);
+}
+
+std::ostream &operator<<(std::ostream &out, const Memories::search_bus_info &sbi) {
+    out << "search bus " << sbi.name << " width: " << sbi.width_section << " hash_group: "
+        << sbi.hash_group << " lt: " << sbi.logical_table;
+    return out;
 }
 
 /* MemoriesPrinter in .gdbinit should match this */
