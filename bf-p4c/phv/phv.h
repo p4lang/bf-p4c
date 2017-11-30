@@ -19,6 +19,25 @@ enum class Kind : unsigned short {  // all possible PHV kinds in BFN devices
     dark     = 3   // DARK
 };
 
+/** Provides a partial ordering over PHV container kinds, denoting subset
+ * inclusion over the set of capabilities each kind supports.  For example,
+ * `tagalong < normal`, because tagalong containers don't support reads/writes
+ * in the MAU, whereas normal containers do.
+ */
+inline bool operator<(Kind left, Kind right) {
+    // No containers support more operations than normal containers.
+    if (left == Kind::normal) return false;
+
+    // Hence, a non-normal (left) container always supports fewer operations.
+    if (right == Kind::normal) return true;
+
+    // All other container types are incomparable.
+    return false;
+}
+inline bool operator<=(Kind left, Kind right) {
+    return left == right || left < right;
+}
+
 enum class Size : unsigned short {  // all possible PHV sizes in BFN devices
     null = 0,
     b8   = 8,

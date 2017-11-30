@@ -80,6 +80,21 @@ void CheckPhvContainerTypes() {
     EXPECT_ANY_THROW(PHV::Container("W-1"));
 }
 
+void CheckJBayPhvContainerResources() {
+    const auto& phvSpec = Device::phvSpec();
+
+    // MAU containers should be subsets of the physical containers.
+    for (auto t : phvSpec.containerTypes()) {
+        for (auto mau_group : phvSpec.mauGroups(t)) {
+            EXPECT_NE(bitvec(), mau_group & phvSpec.physicalContainers()); } }
+
+    // MAU groups should have the type used to retrieve them.
+    for (auto t : phvSpec.containerTypes()) {
+        for (auto mau_group : phvSpec.mauGroups(t)) {
+            for (auto cid : mau_group) {
+                EXPECT_EQ(t, phvSpec.idToContainer(cid).type()); } } }
+}
+
 // Test that we can serialize PHV::Container objects to JSON.
 void CheckPhvContainerJSON() {
     std::vector<PHV::Container> inputs = {
@@ -111,6 +126,11 @@ class JBayPhvContainer : public JBayBackendTest {};
 TEST_F(JBayPhvContainer, Types) {
     EXPECT_EQ(cstring("JBay"), Device::currentDevice());
     CheckPhvContainerTypes();
+}
+
+TEST_F(JBayPhvContainer, Resources) {
+    EXPECT_EQ(cstring("Tofino"), Device::currentDevice());
+    CheckJBayPhvContainerResources();
 }
 
 TEST_F(JBayPhvContainer, JSON) {

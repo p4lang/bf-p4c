@@ -1,6 +1,7 @@
+#include "gress.h"
 #include <lib/cstring.h>
 #include <lib/exceptions.h>
-#include "gress.h"
+#include <boost/optional/optional_io.hpp>
 
 static cstring toString(gress_t gress) {
   switch (gress) {
@@ -11,6 +12,14 @@ static cstring toString(gress_t gress) {
 
 std::ostream& operator<<(std::ostream& out, gress_t gress) {
     return out << toString(gress);
+}
+
+std::ostream& operator<<(std::ostream& out, boost::optional<gress_t> gress) {
+    if (gress)
+        out << *gress;
+    else
+        out << "none";
+    return out;
 }
 
 bool operator>>(cstring s, gress_t& gressOut) {

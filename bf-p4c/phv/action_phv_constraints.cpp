@@ -40,7 +40,7 @@ bool ActionPhvConstraints::preorder(const IR::MAU::Action *act) {
                 fr.ad = true;
             } else if (read.type == ActionAnalysis::ActionParam::CONSTANT) {
                 fr.constant = true;
-                LOG3("Action: " << act->name);
+                LOG5("Action: " << act->name);
             } else {
                 BUG("Read must either be of a PHV, action data, or constant."); }
 
@@ -58,42 +58,39 @@ bool ActionPhvConstraints::preorder(const IR::MAU::Action *act) {
 }
 
 void ActionPhvConstraints::end_apply() {
-    LOG3("*****Printing  ActionPhvConstraints Maps*****");
+    LOG5("*****Printing  ActionPhvConstraints Maps*****");
     printMapStates();
-    LOG3("*****End Print ActionPhvConstraints Maps*****");
+    LOG5("*****End Print ActionPhvConstraints Maps*****");
 }
 
-// xxx(deep)
-// Because of the nature of PHV allocation, field slices are always aligned with each other.
-// We make use of this assumption by using the same slice width as the destination field for
-// determining the number of containers used by the operand field
-uint32_t ActionPhvConstraints::num_container_sources(std::vector<PackingCandidate>& candidates,
-        const IR::MAU::Action* action) {
-    ordered_set<PHV_Container *> containerList;
-    LOG3("Number of slices: " << candidates.size());
-    for (auto pack : candidates) {
-        auto field = pack.field;
-        LOG3("Field name: " << field->name);
+size_t ActionPhvConstraints::num_container_sources(const PHV::Allocation &alloc,
+        PHV::Allocation::MutuallyLiveSlices container_state, const IR::MAU::Action* action) {
+    ordered_set<PHV::Container> containerList;
+    size_t num_unallocated = 0;
+    for (auto slice : container_state) {
+        auto *field = slice.field();
+        auto range = slice.field_slice();
         if (write_to_reads_per_action[field][action].size() == 0)
-            LOG3("Not written in this action");
+            LOG5("\t\t\t\tField " << field->name << " is not written in action " << action->name);
         for (auto operand : write_to_reads_per_action[field][action]) {
-            if (!operand.ad && !operand.constant) {
-                const PHV::Field* fieldRead = operand.phv_used;
-                LOG3("Field read: " << fieldRead->name);
-                // TODO: Is it possible that a container has not been allocated yet?
-                if (fieldRead->phv_containers().size() == 0)
-                    LOG3("Container not assigned to PHV.");
-                LOG3("Number of containers read: " << fieldRead->phv_containers().size());
-                for (auto container : fieldRead->phv_containers()) {
-                    if (container->is_field_slice_in_container(fieldRead, pack.limits)) {
-                            containerList.insert(container);
-                            LOG3("Inserting container " << container); } } } } }
-    if (LOGGING(3)) {
-        LOG3("Number of operands for " << action->name << ": " <<
-                (containerList.size()));
-        for (auto container : containerList)
-            LOG3("Container: " << container); }
-    return (containerList.size());
+            if (operand.ad || operand.constant) continue;
+            const PHV::Field* fieldRead = operand.phv_used;
+            // assume aligned clusters. so, range for operands is the same as the range for
+            // destination.
+            ordered_set<PHV::Container> per_source_containers;
+            ordered_set<PHV::AllocSlice> per_source_slices = alloc.slices(fieldRead, range);
+            for (auto slice : per_source_slices)
+                per_source_containers.insert(slice.container());
+            if (per_source_containers.size() == 0) {
+                LOG5("\t\t\t\tSource " << fieldRead->name << " has not been allocated yet.");
+                ++num_unallocated;
+            } else {
+                LOG5("\t\t\t\tField " << field->name << " written by action data or constant."); } }
+        }
+    LOG5("\t\t\t\tNumber of allocated sources  : " << containerList.size());
+    LOG5("\t\t\t\tNumber of unallocated sources: " << num_unallocated);
+    LOG5("\t\t\t\tTotal number of sources      : " << (containerList.size() + num_unallocated));
+    return (containerList.size() + num_unallocated);
 }
 
 //  Note: If both action data and constant are used in the same action as operands on the same
@@ -103,133 +100,197 @@ uint32_t ActionPhvConstraints::num_container_sources(std::vector<PackingCandidat
 bool ActionPhvConstraints::has_ad_or_constant_sources(std::vector<const PHV::Field*>& fields, const
         IR::MAU::Action* action) {
     for (auto field : fields) {
-        if (write_to_reads_per_action[field][action].size() == 0)
-            LOG3("Not written in this action");
         for (auto operand : write_to_reads_per_action[field][action]) {
             if (operand.ad || operand.constant) {
+                LOG5("\t\t\t\tField " << field->name << " written using action data/constant in "
+                        "action " << action->name);
                 return true; } } }
     return false;
 }
 
-// TODO: Alignment constraints on fields
-// TODO: Return constraints instead of boolean
-unsigned ActionPhvConstraints::can_cohabit(std::vector<PackingCandidate>& candidates) {
-    /* Merge actions for all the candidate fields into a set */
-    ordered_set<const IR::MAU::Action *> set_of_actions;
+int ActionPhvConstraints::unallocated_bits(PHV::Allocation::MutuallyLiveSlices slices,
+        const PHV::Container c) const {
+    int size_used = 0;
+    for (auto slice : slices) {
+        size_used += slice.width(); }
+    if (int(c.size()) < size_used)
+        ::warning("Total size of mutually live slices is greater than the size of the container");
+    return (c.size() - size_used);
+}
+
+unsigned ActionPhvConstraints::container_operation_type(ordered_set<const IR::MAU::Action*>&
+        actions, std::vector<const PHV::Field*>& fields) {
+    for (auto *action : actions) {
+        LOG5("\t\t\tChecking container operation type for action: " << action->name);
+        unsigned type_of_operation = 0;
+        size_t num_fields_not_written = 0;
+        for (auto *f : fields) {
+            boost::optional<FieldOperation> fw = is_written(action, f);
+            if (!fw) {
+                num_fields_not_written++;
+            } else {
+                if (fw->flags & FieldOperation::MOVE)
+                    type_of_operation |= FieldOperation::MOVE;
+                else if (fw->flags & FieldOperation::WHOLE_CONTAINER)
+                    type_of_operation |= FieldOperation::WHOLE_CONTAINER;
+                else
+                    ::warning("Detected a write that is neither move nor whole container "
+                            "operation."); } }
+
+        // If there is a WHOLE_CONTAINER operation present, do not pack.
+        // TODO: In the long run, we need to distinguish between bitwise operations and carry-based
+        // operations. For the latter, we cannot pack. For the former, we should ensure that:
+        // 1. There is no unwritten field in any action for the proposed packing
+        // 2. There is no MOVE operation on any field in the proposed packing in the same action.
+        if (type_of_operation & FieldOperation::WHOLE_CONTAINER) {
+            if (num_fields_not_written) {
+                LOG5("\t\t\t\tAction " << action->name << " uses a whole container operation but "
+                        << num_fields_not_written << " fields are not written in this action.");
+                return FieldOperation::WHOLE_CONTAINER; }
+
+            if (type_of_operation & FieldOperation::MOVE) {
+                LOG5("\t\t\t\tAction " << action->name << " uses both whole container and move "
+                        "operations for fields in the proposed packing.");
+                return FieldOperation::MIXED; }
+
+            return FieldOperation::WHOLE_CONTAINER; } }
+
+    return FieldOperation::MOVE;
+}
+
+boost::optional<std::vector<ActionPhvConstraints::CohabitSet>>
+ActionPhvConstraints::can_pack(const PHV::Allocation& alloc, const PHV::AllocSlice& slice,
+        PHV::Allocation::MutuallyLiveSlices container_state, const PHV::Container c) {
+    // Determine if there are any unallocated bits in the container corresponding to the given
+    // mutually live slices
+    int available_bits = unallocated_bits(container_state, c);
+
+    // If no available bits, cannot pack
+    if (!available_bits) {
+        LOG5("\t\tContainer " << c << " is full");
+        return boost::none; }
+
+    // If bits available but lesser in width than the size requested, cannot pack
+    // It is important to distinguish between these cases because we might want to slice
+    // fields to enable packing in the future
+    if (available_bits < slice.width()) {
+        LOG5("\t\tSlice requires " << slice.width() << "b. Container " << c << " has " <<
+                available_bits << "b available.");
+        return boost::none; }
+
+    // If existing container_state contains only one field which has a deparsed_no_pack() condition,
+    // then one cannot pack any other field with it
+    if (container_state.size() == 1) {
+        LOG5("\t\tSingle slice container");
+        for (auto existing_slice : container_state) {
+            if (existing_slice.field()->no_pack()) {
+                LOG5("\t\tExisting slice has a no pack property");
+                return boost::none; } } }
+
+    LOG5("\t\tChecking whether field " << slice.field()->name << " (" << slice.field()->size << "b)"
+            " can be packed into container " << container_state << " already containing " <<
+            container_state.size() << " slices");
+    container_state.insert(slice);
+
+    // Merge actions for all the candidate fields into a set
     std::vector<const PHV::Field *> fields;
-    for (auto pack : candidates) {
-        auto field = pack.field;
+    ordered_set<const IR::MAU::Action *> set_of_actions;
+    for (auto slice : container_state) {
+        auto field = slice.field();
         fields.push_back(field);
         set_of_actions.insert(field_writes_to_actions[field].begin(),
                 field_writes_to_actions[field].end()); }
 
+    // Debug info: print the names of all actions under consideration for these fields
+    if (LOGGING(5)) {
+        std::stringstream ss;
+        ss << "\t\t\tActions to be checked are: ";
+        for (auto *act : set_of_actions)
+            ss << act->name << " ";
+        LOG5(ss); }
+
+    // Check if actions on the packing candidates involve WHOLE_CONTAINER operations or a mix of
+    // WHOLE_CONTAINER and MOVE operations (FieldOperation::MIXED)
+    // If they do, the fields cannot be packed together
+    unsigned cont_operation = container_operation_type(set_of_actions, fields);
+    if (cont_operation == FieldOperation::WHOLE_CONTAINER || cont_operation ==
+            FieldOperation::MIXED) {
+        LOG5("\t\t\tCannot pack because of presence of whole container operations");
+        return boost::none; }
+
+    // Perform analysis related to number of sources for every action
+    // Only MOVE operations get here
     for (auto &action : set_of_actions) {
-        LOG3("Action: " << action->name);
-        uint32_t num_container_srcs = num_container_sources(candidates, action);
-        bool has_ad_constant_srcs = has_ad_or_constant_sources(fields, action);
-        if (num_container_srcs == 1 && !has_ad_constant_srcs) {
-            // If num_container_srcs = 1 and has_ad_constant_srcs, then we actually have two sources
-            // for this action: PHV container and action data
-            LOG3("One source detected");
-            // TODO: Add check for similarity of the set operations
-            continue;
-        } else if (num_container_srcs == 0) {
-            if (has_ad_constant_srcs)
-                LOG3("Action data source only");
-            else
-                LOG3("Can there be zero sources?");
-            continue;
-        } else if (num_container_srcs > 2) {
-            LOG3("Action " << action->name << " uses more than two phv sources");
-            return ActionAnalysis::ContainerAction::TOO_MANY_PHV_SOURCES;
-        } else if (num_container_srcs == 2 && has_ad_constant_srcs) {
-            LOG3("Action " << action->name << " uses 2 PHV sources in addition to action data.");
-            return ActionAnalysis::ContainerAction::PHV_AND_ACTION_DATA;
-        } else {
-            LOG3("Two sources");
-            unsigned type_of_operation = 0;
-            cstring non_move_action_type;
-            for (auto field : fields) {
-                boost::optional<FieldOperation> fw = is_written(action, field);
-                if (!fw) {
-                    // One of the fields in the container is not written
-                    // So, all other writes to this container in this action
-                    // must be a move operation (bitmasks required)
-                    LOG3("Field " << field->name << " is not written in action " << action->name);
-                    return ActionAnalysis::ContainerAction::PARTIAL_OVERWRITE;
-                } else {
-                    if (fw->flags & FieldOperation::MOVE) {
-                        // The write to the current field under consideration is
-                        // a set operation
-                        type_of_operation |= FieldOperation::MOVE;
-                        LOG3("Seeing move operation for field " << field->name);
-                    } else if (fw->flags & FieldOperation::WHOLE_CONTAINER) {
-                        // Operations on whole containers, so no partial
-                        // container based operations possible
-                        type_of_operation |= FieldOperation::WHOLE_CONTAINER;
-                        if (non_move_action_type.size() == 0) {
-                            // First non-move action seen
-                            LOG3("Writing action_type " << fw->action_name);
-                            non_move_action_type = fw->action_name;
-                        } else {
-                            if (non_move_action_type != fw->action_name)
-                                // Note: PHV allocation ensures that this check for packing is never
-                                // exercised
-                                BUG("Found two different kinds of non-move operations on the same "
-                                    "container"); }
-                        LOG3("Seeing non-move operation for field: " << field->name);
-                    } else {
-                        LOG3("Should this ever happen?" << field->name);
-                        LOG3("type_of_operation: " << fw->flags); } } }
+        LOG5("\t\t\tNeed to check container sources now");
+        size_t num_source_containers = num_container_sources(alloc, container_state, action);
+        bool has_ad_constant_sources = has_ad_or_constant_sources(fields, action);
+        if (num_source_containers == 1) continue;
+        if (num_source_containers == 0) continue;
+        if (num_source_containers > 2) {
+            LOG5("\t\t\t\tAction " << action->name << " uses more than two PHV sources.");
+            return boost::none; }
+        if (num_source_containers == 2 && has_ad_constant_sources) {
+            LOG5("\t\t\t\tAction " << action->name << " uses action data/constant in addition to "
+                    "two PHV sources");
+            return boost::none; }
+        // Number of source containers = 2, No action data/constant operands
+        for (auto field : fields) {
+            boost::optional<FieldOperation> fw = is_written(action, field);
+            if (!fw) {
+                // Partial write to a container which will cause bits to get clobbered
+                LOG5("\t\t\t\tBits of field " << field->name << " will get clobbered.");
+                return boost::none; } } }
 
-            if ((type_of_operation & FieldOperation::MOVE) && (type_of_operation &
-                                FieldOperation::WHOLE_CONTAINER)) {
-                LOG3("move and non-move operations seen together in action " << action->name);
-                return ActionAnalysis::ContainerAction::MULTIPLE_CONTAINER_ACTIONS; } } }
+    std::vector<CohabitSet> packing_constraints;
 
-    LOG3("can_cohabit did not detect any issues");
-    return ActionAnalysis::ContainerAction::NO_PROBLEM;
+    return packing_constraints;
 }
 
 boost::optional<ActionPhvConstraints::FieldOperation> ActionPhvConstraints::is_written(const
         IR::MAU::Action *act, const PHV::Field* field) {
     FieldOperation f(field);
-    LOG3("Trying to find: " << field->name);
     ordered_set<FieldOperation>::iterator location = action_to_writes[act].find(f);
     if (location == action_to_writes[act].end()) {
-        LOG3("Did not find");
+        LOG5("\t\t\t\tField " << field->name << " is not written in action " << act->name);
         return boost::optional<FieldOperation>{};
     } else {
-        LOG3("Found " << (*location).phv_used->name);
+        if (LOGGING(5)) {
+            std::stringstream ss;
+            ss << "\t\t\t\tField " << field->name << " is written in action " << act->name;
+            if ((*location).flags & FieldOperation::MOVE)
+                ss << " by a MOVE operation.";
+            else
+                ss << " by a WHOLE_CONTAINER operation.";
+            LOG5(ss); }
         return *location; }
 }
 
 void ActionPhvConstraints::printMapStates() {
-    if (!LOGGING(3)) return;
+    if (!LOGGING(5)) return;
     for (auto &act : action_to_writes) {
-        LOG3("Action: " << act.first->name << " writes fields: ");
+        LOG5("Action: " << act.first->name << " writes fields: ");
         for (auto &fi : act.second) {
-            LOG3("\t\t" << fi.phv_used->name << ", written by a MOVE? " << (fi.flags ==
+            LOG5("\t\t" << fi.phv_used->name << ", written by a MOVE? " << (fi.flags ==
                         FieldOperation::MOVE)); } }
 
         for (auto &f : write_to_reads_per_action) {
             const PHV::Field* key = f.first;
-            LOG3("Key field: " << key->name << " uses operands: ");
+            LOG5("Key field: " << key->name << " uses operands: ");
             for (auto &fi : f.second) {
-                LOG3("\tAction: " << fi.first->name);
+                LOG5("\tAction: " << fi.first->name);
                 for (auto &fii : fi.second) {
                     if (!fii.ad && !fii.constant)
-                        LOG3("\t\tField: " << fii.phv_used->name);
+                        LOG5("\t\tField: " << fii.phv_used->name);
                     else
-                        LOG3("\t\tAction data."); } } }
+                        LOG5("\t\tAction data."); } } }
 
         for (auto &f : read_to_writes_per_action) {
             const PHV::Field* key = f.first;
-            LOG3("Key field: " << key->name << " is read by the field(s): ");
+            LOG5("Key field: " << key->name << " is read by the field(s): ");
             for (auto &fi : f.second) {
-                LOG3("\tAction: " << fi.first->name);
+                LOG5("\tAction: " << fi.first->name);
                 for (auto &fii : fi.second)
-                    LOG3("\t\tField: " << fii->name); } }
+                    LOG5("\t\tField: " << fii->name); } }
 }
 
 bool ActionPhvConstraints::is_in_field_writes_to_actions(cstring write, const IR::MAU::Action*

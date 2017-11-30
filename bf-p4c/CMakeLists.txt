@@ -88,6 +88,7 @@ set (TOFINO_BACKEND_COMMON_SRCS
   common/rewrite.cpp
   common/param_binding.cpp
   common/parser_overlay.cpp
+  common/parser_critical_path.cpp
   common/simplify_references.cpp
   common/slice.cpp
   )
@@ -110,6 +111,7 @@ set (TOFINO_BACKEND_COMMON_HDRS
   common/rewrite.h
   common/param_binding.h
   common/parser_overlay.h
+  common/parser_critical_path.h
   common/simplify_references.h
   common/slice.h
   )
@@ -125,6 +127,11 @@ set (TOFINO_BACKEND_CONTROL_PLANE_HDRS
   control-plane/tofino_p4runtime.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_CONTROL_PLANE_HDRS}")
+
+set (TOFINO_BACKEND_LIB_HDRS
+  lib/union_find.hpp
+  )
+add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_LIB_HDRS}")
 
 set (TOFINO_BACKEND_MAU_SRCS
   mau/action_analysis.cpp
@@ -222,63 +229,46 @@ add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_PARDE_HDRS}")
 
 set (TOFINO_BACKEND_PHV_SRCS
   phv/action_phv_constraints.cpp
-  phv/allocate_virtual_containers.cpp
+  phv/allocate_phv.cpp
   phv/asm_output.cpp
-  phv/check_fitting.cpp
-  phv/cluster.cpp
-  phv/cluster_phv_bind.cpp
-  phv/cluster_phv_container.cpp
-  phv/cluster_phv_interference.cpp
-  phv/cluster_phv_mau.cpp
   phv/cluster_phv_operations.cpp
-  phv/cluster_phv_overlay.cpp
-  phv/cluster_phv_req.cpp
-  phv/cluster_phv_slicing.cpp
-  phv/cluster_to_cluster_interference.cpp
   phv/create_thread_local_instances.cpp
+  phv/cluster_to_cluster_interference.cpp
   phv/field_alignment.cpp
+  phv/make_clusters.cpp
   phv/phv_analysis.cpp
-  phv/phv_analysis_api.cpp
-  phv/phv_analysis_validate.cpp
-  phv/phv_assignment_api.cpp
-  phv/phv_assignment_validate.cpp
   phv/phv_fields.cpp
   phv/phv_parde_mau_use.cpp
   phv/phv_spec.cpp
   phv/trivial_alloc.cpp
+  phv/utils.cpp
   phv/validate_allocation.cpp
+  phv/analysis/field_interference.cpp
+  phv/analysis/critical_path_clusters.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_PHV_SRCS}")
 build_unified(TOFINO_BACKEND_PHV_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (TOFINO_BACKEND_PHV_HDRS
   phv/action_phv_constraints.h
-  phv/allocate_virtual_containers.h
+  phv/allocate_phv.h
   phv/asm_output.h
-  phv/check_fitting.h
   phv/check_unallocated.h
-  phv/cluster.h
-  phv/cluster_phv_bind.h
-  phv/cluster_phv_container.h
-  phv/cluster_phv_interference.h
-  phv/cluster_phv_mau.h
   phv/cluster_phv_operations.h
-  phv/cluster_phv_overlay.h
-  phv/cluster_phv_req.h
-  phv/cluster_phv_slicing.h
-  phv/cluster_to_cluster_interference.h
   phv/constraints.h
   phv/create_thread_local_instances.h
+  phv/cluster_to_cluster_interference.h
   phv/field_alignment.h
+  phv/make_clusters.h
   phv/phv_analysis.h
-  phv/phv_analysis_api.h
-  phv/phv_assignment_api.h
-  phv/phv_assignment_validate.h
   phv/phv_fields.h
   phv/phv_parde_mau_use.h
   phv/phv_spec.h
   phv/trivial_alloc.h
+  phv/utils.h
   phv/validate_allocation.h
+  phv/analysis/field_interference.h
+  phv/analysis/critical_path_clusters.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_PHV_HDRS}")
 
@@ -418,14 +408,19 @@ set (GTEST_TOFINO_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/action_phv.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/bitrange.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/checksum.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/critical_path_clusters.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_alignment.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_packing.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/multiple_apply.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/parser_critical_path.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_constraints.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_crush.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_tofino.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_jbay.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/tofino_write_context.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/tofino_gtest_utils.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/trivial_alloc.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/union_find.cpp
   )
 
 set (GTEST_SOURCES ${GTEST_SOURCES} ${GTEST_TOFINO_SOURCES} PARENT_SCOPE)

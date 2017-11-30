@@ -2,13 +2,43 @@
 #define BF_P4C_PHV_CHECK_UNALLOCATED_H_
 
 #include "ir/ir.h"
-#include "bf-p4c/phv/check_fitting.h"
+#include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/phv/phv_parde_mau_use.h"
 
 /** Until we support backtracking, all fields (including temporary fields) must
  * be created before PHV allocation.  This pass checks for fields that may have
  * been created afterwards and do not have a PHV allocation.
  */
 class CheckForUnallocatedTemps : public PassManager {
+    /** Produce the set of fields that are not fully allocated to PHV containers.
+     *
+     * @param unallocated Unallocated fields are added to this set.
+     */
+    static ordered_set<PHV::Field *>
+    collect_unallocated_fields(const PhvInfo &phv, const PhvUse &uses, const ClotInfo& clot) {
+        ordered_set<PHV::Field*> unallocated;
+
+        for (auto& field : phv) {
+            if (!uses.is_referenced(&field))
+                continue;
+
+            if (clot.allocated(&field))
+                continue;
+
+            bitvec allocatedBits;
+            field.foreach_alloc([&](const PHV::Field::alloc_slice& slice) {
+                bitvec sliceBits(slice.field_bit, slice.width);
+                allocatedBits |= sliceBits; });
+
+            // XXX(seth): Long term it would be ideal to only allocate the bits we
+            // actually need, but this will help us find bugs in the short term.
+            bitvec allBitsInField(0, field.size);
+            if (allocatedBits != allBitsInField)
+                unallocated.insert(&field); }
+
+        return unallocated;
+    }
+
     struct RejectTemps : public Inspector {
         const PhvInfo &phv;
         const PhvUse &uses;
@@ -21,8 +51,7 @@ class CheckForUnallocatedTemps : public PassManager {
             if (name)
                 LOG1(name);
 
-            ordered_set<PHV::Field *> unallocated =
-                CheckFitting::collect_unallocated_fields(phv, uses, clot);
+            ordered_set<PHV::Field *> unallocated = collect_unallocated_fields(phv, uses, clot);
             if (unallocated.size()) {
                 BUG("Fields added after PHV allocation");
                 for (auto f : unallocated)

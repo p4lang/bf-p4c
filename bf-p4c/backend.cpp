@@ -189,6 +189,9 @@ Backend::Backend(const BFN_Options& options) :
         new CollectPhvInfo(phv),
         &defuse,
         (options.no_deadcode_elimination == false) ? new ElimUnused(phv, defuse) : nullptr,
+        new CollectHeaderStackInfo,  // Needed by CollectPhvInfo.
+        new CollectPhvInfo(phv),
+        &defuse,
         new DumpPipe("Before phv_analysis"),
         new CheckForHeaders(),
 #if HAVE_JBAY

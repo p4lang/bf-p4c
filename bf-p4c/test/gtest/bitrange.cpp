@@ -1419,6 +1419,38 @@ TYPED_TEST(TofinoClosedRange, MaxSizedRanges) {
     EXPECT_EQ(zeroToMax, *toClosedRange(toHalfOpenRange(zeroToMax)));
 }
 
+TYPED_TEST(TofinoBitRange, Subtract) {
+    using RangeType = TypeParam;
+    using HalfOpenRangeType = HalfOpenRange<RangeType::unit, RangeType::order>;
+
+    auto empty = HalfOpenRangeType(StartLen(0, 0));
+    struct ExpectedSubtractionResults {
+        RangeType minuend;
+        RangeType subtrahend;
+        HalfOpenRangeType lower;
+        HalfOpenRangeType upper;
+    };
+    const std::vector<ExpectedSubtractionResults> testCases = {
+        // Subtracting from the middle of the range should result in two ranges.
+        { StartLen(0, 8), StartLen(2, 4), StartLen(0, 2), StartLen(6, 2) },
+        // Subtracting from either end should result in one empty, one non-empty range.
+        { StartLen(0, 8), StartLen(0, 4), empty,          StartLen(4, 4) },
+        { StartLen(0, 8), StartLen(4, 4), StartLen(0, 4), empty },
+        // Subtracting non-overlapping ranges should result in one empty, one identity range.
+        { StartLen(0, 8), StartLen(8, 4), StartLen(0, 8), empty },
+        { StartLen(8, 8), StartLen(0, 4), empty,          StartLen(8, 8) },
+        // Subtracting a larger set from a smaller set should result in empty ranges.
+        { StartLen(2, 4), StartLen(0, 9), empty,          empty },
+        // Subtracting a range from itself should result in empty ranges.
+        { StartLen(0, 8), StartLen(0, 8), empty,          empty }
+    };
+
+    for (auto test : testCases ) {
+        EXPECT_EQ(std::make_pair(test.lower, test.upper), test.minuend - test.subtrahend);
+    }
+}
+
+
 class TofinoIntegerMathUtils : public TofinoBackendTest { };
 
 TEST_F(TofinoIntegerMathUtils, DivideFloor) {

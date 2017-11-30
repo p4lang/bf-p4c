@@ -21,6 +21,7 @@ namespace PHV {
 class ManualAlloc;
 class TrivialAlloc;
 class ValidateAllocation;
+class AlignedCluster;
 }  // end namespace PHV
 
 namespace Test {
@@ -28,52 +29,24 @@ template <typename T> class TofinoPHVTrivialAllocators;
 class TofinoPHVManualAlloc;
 }  // namespace Test
 
-class ActionAnalysis;
-class AllocateVirtualContainers;
-class ArgumentAnalyzer;
-class Build_PHV_Analysis_APIs;
-class CheckFitting;
-class Cluster;
-class Cluster_PHV;
-class Cluster_PHV_Overlay;
-class Cluster_PHV_Requirements;
-class Cluster_Slicing;
-class CheckFitting;
-class CollectGatewayFields;
+class ActionPhvConstraints;
+class Clustering;
 struct CollectPhvFields;
 struct ComputeFieldAlignments;
-class IXBarRealign;
-class MauAsmOutput;
-class MergeInstructions;
-class PHV_Container;
-class PHV_Analysis_API;
-class PHV_Analysis_Validate;
-class PHV_Assignment_API;
-class PHV_Assignment_Validate;
-class PHV_Bind;
 class PHV_Field_Operations;
-class PHV_Interference;
-class Cluster_Interference;
 class PhvInfo;
-class PHV_MAU_Group;
-class PHV_MAU_Group_Assignments;
 class PHVManualAlloc;
 class Phv_Parde_Mau_Use;
 class PHVTrivialAlloc;
 class PhvUse;
-class PHVValidateAllocation;
 class Slice;
-class TableLayout;
+class AllocatePHV;
+class FieldInterference;
 
 namespace PHV {
 class Field;
 }  // namespace PHV
 
-void alloc_pov(PHV::Field *i, PHV::Field *pov);
-void emit_phv_field(std::ostream &out, PHV::Field &field);
-
-std::ostream &operator<<(std::ostream &out, Cluster_PHV &cp);
-std::ostream &operator<<(std::ostream &out, PHV_Bind &phv_bind);
 std::ostream &operator<<(std::ostream &out, const Slice &sl);
 
 namespace PHV {
@@ -102,6 +75,10 @@ class Field {
     /// particular alignment requirement.
     boost::optional<FieldAlignment> alignment;
 
+    /// See documentation for `Field::validContainerRange()`.
+    /// TODO(cole): Refactor this.
+    nw_bitrange validContainerRange_i = ZeroToMax();
+
     /// Offset of lsb from lsb (last) bit of containing header.
     int             offset;
 
@@ -123,25 +100,12 @@ class Field {
         }
     } mirror_field_list = {nullptr, -1};
 
-    /// True if this Field is a validity bit.  Implies metadata.
+    /// True if this Field is a validity bit.
     bool            pov;
 
-    //
-    // ****************************************************************************************
-    // ****************************************************************************************
-    // TODO goal to move Analysis API related members here into field->phv_analysis_api object
-    // similarly move Assignment API related members here into field->phv_assignment_api object
-    // alternately, use abstract base classes
-    // define both APIs as abstract classes that PHV::Field implements
-    // more efficient than creating new API objects for every field
-    // ****************************************************************************************
-    // ****************************************************************************************
-    //
-    //
     // ****************************************************************************************
     // begin phv_assignment (phv_bind) interface
     // ****************************************************************************************
-    //
     struct alloc_slice {
         const Field*           field;
         PHV::Container         container;
@@ -189,23 +153,11 @@ class Field {
     cstring header() const { return name.before(strrchr(name, '.')); }
     int container_bytes(le_bitrange bits = {0, -1}) const;
     //
-    PHV_Assignment_API *phv_assignment_api()        { return phv_assignment_api_i; }
-    void phv_assignment_api(PHV_Assignment_API *p)  { phv_assignment_api_i = p; }
-
     void clear_alloc() { alloc_i.clear(); }
 
     safe_vector<alloc_slice> alloc_i;  // sorted MSB (field) first
 
  private:  // class Field
-    //
-    // API: phv assignment to rest of Compiler
-    //
-    PHV_Assignment_API *phv_assignment_api_i = nullptr;
-
-
-    /// See documentation for `Field::validContainerRange()`.
-    nw_bitrange validContainerRange_i = ZeroToMax();
-
     void foreach_alloc(
         int lo,
         int hi,
@@ -233,30 +185,15 @@ class Field {
     //
     friend struct ::CollectPhvFields;
     friend struct ::ComputeFieldAlignments;
-    friend class ::CheckFitting;
     friend class ::PHV::ManualAlloc;        // phv/trivial_alloc
     friend class ::PHV::TrivialAlloc;       // phv/trivial_alloc
     friend class ::PHV::ValidateAllocation;  // phv/validate_allocation
-    friend class ::Slice;                   // common/asm_output
-    friend class ::ArgumentAnalyzer;        // mau/action_format
-    friend class ::TableLayout;             // mau/table_layout
-    friend class ::CollectGatewayFields;    // mau/gateway
-    friend class ::MauAsmOutput;            // mau/asm_output
-    friend class ::IXBarRealign;            // mau/ixbar_realign
-    friend class ::ActionAnalysis;          // mau/action_analysis
-    friend class ::MergeInstructions;       // mau/instruction_adjustment
-    friend class ::PHV_Assignment_API;
-    friend class ::Build_PHV_Analysis_APIs;
-    friend class ::PHV_Assignment_Validate;
-    friend class ::AllocateVirtualContainers;
-    //
-    friend void ::alloc_pov(PHV::Field *i, PHV::Field *pov);
-    friend void ::emit_phv_field(std::ostream &out, PHV::Field &field);
+    friend class ::PHV::AlignedCluster;
+    friend class ::AllocatePHV;
     //
     template <typename T> friend class ::Test::TofinoPHVTrivialAllocators;
     friend class ::Test::TofinoPHVManualAlloc;
     //
-    friend std::ostream &::operator<<(std::ostream &out, ::PHV_Bind &phv_bind);
     friend std::ostream &::operator<<(std::ostream &out, const ::Slice &sl);
     //
     // ****************************************************************************************
@@ -272,9 +209,16 @@ class Field {
     bool            mau_phv_no_pack_i = false;         /// true if op on field not "move based"
                                                        /// set by PHV_Field_Operations
     bool            deparsed_i = false;                /// true if deparsed field
-    bool            deparsed_no_pack_i = false;        /// true when egress_port/spec, no pack
+    bool            no_pack_i = false;                 /// prevents field from being placed in a
+                                                       /// container with any other field
     bool            deparsed_bottom_bits_i = false;    /// true when learning digest, no shifter
     bool            exact_containers_i = false;        /// place in container exactly (no holes)
+
+    bool            no_split_i = false;                /// true if field cannot be split into
+                                                       /// multiple PHV containers
+
+    bool            deparsed_to_tm_i = false;          /// true if field is read by TM
+
     //
     // operations on this field
     //
@@ -317,74 +261,6 @@ class Field {
     safe_vector<Field *> ccgf_fields_i;  // member fields of ccgfs
                                          // members are in same container as owner
 
-    // Sub-byte/byte boundary CCGFs accumulate the alignment constraints of
-    // their members, which is stored here.  POV-based CCGFs, by construction,
-    // will not have alignment constraints (which come from parser extraction).
-    nw_bitrange validCCGFRange_i = ZeroToMax();
-
-    //
-    // phv container requirement of field
-    //
-    int             phv_use_lo_i = 0;   // lowest bit of field used through MAU pipeline
-    int             phv_use_hi_i = 0;   // highest bit of field used through MAU pipeline
-                                        // for container contiguous groups
-                                        // owner phv_use_hi = sum of member sizes
-    int             phv_use_rem_i = 0;  // field straddles containers
-                                        // used in ccgf: container contiguous group fields
-                                        // phv_container allocation phase:
-                                        // remembers lowest bit of field use in next container
-                                        // phv binding phase:
-                                        // remembers bits already allocated
-    //
-    // clusters, containers and field_slices associated with this field
-    //
-    ordered_map<Cluster_PHV *, std::pair<int, int>> field_slices_i;
-                                       // map has singleton entry when cluster/field not sliced
-                                       // field slice = lo .. hi represents slice of same field
-    ordered_set<PHV_Container *> phv_containers_i;
-                                       // field in one or more containers
-    //
-    // field overlays
-    //
-    Field *overlay_substratum_i = nullptr;  // substratum field on which this field overlayed
-    ordered_map<int, ordered_set<Field *> *> field_overlay_map_i;
-                                       // liveness / interference graph related
-                                       // fields (within cluster) overlay map
-                                       // F = <c1,c2> adjacent containers based on F width
-                                       // F[0] = c1
-                                       // F[1] = c2
-                                       // F<c1,c2> -- [0] -- B<c1>, A<c1>
-                                       //          -- [1] -- B<c2>, D<c2>, E<c2>
-                                       // after phv container association with field
-                                       // virtual container number keys replaced by phv-numbers
-    //
-    // API: phv analysis to rest of Compiler
-    //
-    PHV_Analysis_API *phv_analysis_api_i = nullptr;
-    //
-    // cluster ids
-    //
-    // cluster IDs strings for tracking and differentiating purposes
-    // e.g., PHV_Interference::virtual_container_overlay() updates cluster id
-    // tracks chain of "interference reduced" overlay fields to substratum field
-    //
-    void cl_id(std::string cl_p) const;
-    std::string cl_id(Cluster_PHV *cl = nullptr) const;
-    int cl_id_num(Cluster_PHV *cl = nullptr) const;
-    //
-    // constraints
-    //
-    bool mau_phv_no_pack() const                           { return mau_phv_no_pack_i; }
-    void set_mau_phv_no_pack(bool b)                       { mau_phv_no_pack_i = b; }
-    bool deparsed() const                                  { return deparsed_i; }
-    void set_deparsed(bool b)                              { deparsed_i = b; }
-    bool deparsed_no_pack() const                          { return deparsed_no_pack_i; }
-    void set_deparsed_no_pack(bool b)                      { deparsed_no_pack_i = b; }
-    bool deparsed_bottom_bits() const                      { return deparsed_bottom_bits_i; }
-    void set_deparsed_bottom_bits(bool b)                  { deparsed_bottom_bits_i = b; }
-    bool exact_containers() const                          { return exact_containers_i; }
-    void set_exact_containers(bool b)                      { exact_containers_i = b; }
-    bool constrained(bool packing_constraint = false) const;
     //
     // operations on this field
     //
@@ -396,42 +272,42 @@ class Field {
     // ccgf
     //
     bool is_ccgf() const;
-    bool allocation_complete() const;
     bool simple_header_pov_ccgf() const                    { return simple_header_pov_ccgf_i; }
     void set_simple_header_pov_ccgf(bool b)                { simple_header_pov_ccgf_i = b; }
     bool header_stack_pov_ccgf() const                     { return header_stack_pov_ccgf_i; }
     void set_header_stack_pov_ccgf(bool b)                 { header_stack_pov_ccgf_i = b; }
     Field *ccgf() const                                    { return ccgf_i; }
     void set_ccgf(Field *f)                                { ccgf_i = f; }
+
+ public:
     safe_vector<Field *>& ccgf_fields()                    { return ccgf_fields_i; }
     const safe_vector<Field *>& ccgf_fields() const        { return ccgf_fields_i; }
 
     int ccgf_width() const;  // phv width = aggregate size of members
+
     //
-    // phv_containers
- public:
+    // constraints
     //
-    ordered_set<PHV_Container *>& phv_containers()         { return phv_containers_i; }
-    const ordered_set<PHV_Container *>&
-        phv_containers() const                             { return phv_containers_i; }
-    void phv_containers(PHV_Container *c);
+    bool mau_phv_no_pack() const                           { return mau_phv_no_pack_i; }
+    void set_mau_phv_no_pack(bool b)                       { mau_phv_no_pack_i = b; }
+    bool deparsed() const                                  { return deparsed_i; }
+    void set_deparsed(bool b)                              { deparsed_i = b; }
+    bool no_pack() const                                   { return no_pack_i; }
+    void set_no_pack(bool b)                               { no_pack_i = b; }
+    bool deparsed_bottom_bits() const                      { return deparsed_bottom_bits_i; }
+    void set_deparsed_bottom_bits(bool b)                  { deparsed_bottom_bits_i = b; }
+    bool exact_containers() const                          { return exact_containers_i; }
+    void set_exact_containers(bool b)                      { exact_containers_i = b; }
+
+    bool no_split() const                                  { return no_split_i; }
+    void set_no_split(bool b)                              { no_split_i = b; }
+
+    bool deparsed_to_tm() const                            { return deparsed_to_tm_i; }
+    void set_deparsed_to_tm(bool b)                        { deparsed_to_tm_i = b; }
+
+    bool constrained(bool packing_constraint = false) const;
 
  private:
-    //
-    // phv_widths
-    //
-    int phv_use_width(Cluster_PHV *cl = nullptr) const;   // field width needed in phv container
-    void set_ccgf_phv_use_width(int min_ceil = 0);        // set phv_use_width for ccgf owners
-    int phv_use_lo(Cluster_PHV *cl = nullptr) const;
-    void set_phv_use_lo(int value)                         { phv_use_lo_i = value; }
-    int phv_use_hi(Cluster_PHV *cl = nullptr) const;
-    void set_phv_use_hi(int value)                         { phv_use_hi_i = value; }
-    int phv_use_rem() const                                { return phv_use_rem_i; }
-    void set_phv_use_rem(int value)                        { phv_use_rem_i = value; }
-    //
-    // phv_alignment
-    //
-
     /**
      * Returns alignment constraint (little Endian bit position within
      * container, mod 8) on this field, if any.
@@ -446,63 +322,20 @@ class Field {
                                                           // alignment in phv container
                                                           // ccgf as a whole vs ccgf member
     boost::optional<int> phv_alignment_network() const;   // alignment in network order
-    //
-    // field slices
-    //
-    bool sliced() const;
-    ordered_map<Cluster_PHV *, std::pair<int, int>>&
-        field_slices()                                     { return field_slices_i; }
-    const ordered_map<Cluster_PHV *, std::pair<int, int>>&
-        field_slices() const                               { return field_slices_i; }
-    std::pair<int, int>& field_slices(Cluster_PHV *cl);
-    const std::pair<int, int>& field_slices(const Cluster_PHV *cl) const;
-    void set_field_slices(Cluster_PHV *cl, int lo, int hi, Cluster_PHV *parent = nullptr);
-    //
-    // field overlays
-    //
-    Field *overlay_substratum() const                      { return overlay_substratum_i; }
-    void overlay_substratum(Field *f);
-    ordered_map<int, ordered_set<Field *> *>&
-        field_overlay_map()                                { return field_overlay_map_i; }
-    const ordered_map<int, ordered_set<Field *> *>&
-        field_overlay_map() const                          { return field_overlay_map_i; }
-    void field_overlay_map(Field *field, int r, bool actual_register = true);
-    ordered_set<Field *> *field_overlay_map(int r);
-    void field_overlays(std::list<Field *>& fields_list);
-    void field_overlay(Field *overlay, int phv_number);
-    bool is_overlay(const Field *field) const;
+
     //
     // friends of phv_analysis interface
     //
+    friend class ::ActionPhvConstraints;
+    friend class ::Clustering;
     friend class ::PhvInfo;
     friend class ::Phv_Parde_Mau_Use;
-    friend class ::Cluster;
-    friend class ::PHV_Bind;
-    friend class ::PHV_Container;
-    friend class ::PHV_Interference;
-    friend class ::Cluster_Interference;
-    friend class ::PHV_MAU_Group;
-    friend class ::PHV_MAU_Group_Assignments;
     friend class ::PHV_Field_Operations;
-    friend class ::Cluster_PHV_Overlay;
-    friend class ::Cluster_PHV;
-    friend class ::Cluster_PHV_Requirements;
-    friend class ::Cluster_Slicing;
-    friend class ::PHV_Analysis_API;
-    friend class ::PHV_Analysis_Validate;
+    friend class ::FieldInterference;
     //
     friend std::ostream &operator<<(std::ostream &out, const Field &field);
-    friend std::ostream &::operator<<(std::ostream &out, ::Cluster_PHV &cp);
 
  public:  // class Field
-    //
-    PHV_Analysis_API *phv_analysis_api()         { return phv_analysis_api_i; }
-    void phv_analysis_api(PHV_Analysis_API *p)   { phv_analysis_api_i = p; }
-    //
-    // ****************************************************************************************
-    // end phv_analysis interface
-    // ****************************************************************************************
-
     /** The range of possible bit positions at which this field can be placed
      * in a container, in network order.  For example, suppose we have an 8-bit
      * field with `validContainerRange = [0, 11]` and a 16-bit container.
@@ -532,7 +365,15 @@ class Field {
      * other parts of the compiler rely on.
      */
     nw_bitrange validContainerRange() {
-        return this->is_ccgf() ? validCCGFRange_i : validContainerRange_i;
+        if (this->is_ccgf() && !this->pov) {
+            auto last_member = ccgf_fields_i.back();
+            if (last_member->validContainerRange_i == ZeroToMax())
+                return ZeroToMax();
+            int extra_valid_bits = last_member->validContainerRange_i.size() - this->size;
+            return last_member->validContainerRange_i.resizedToBits(
+                this->ccgf_width() + extra_valid_bits);
+        }
+        return validContainerRange_i;
     }
 };
 
@@ -712,13 +553,7 @@ class PhvInfo {
       * (overlaid or allocated to disjoint parts of the container)
       */
     bitvec bits_allocated(const PHV::Container c) const;
-
-    /** Prints the occupancy of each PHV group
-      * Only to be called before cluster_phv_bind pass
-      * Note: This does not print the occupancy of tagalong collections yet
-      */
-    void print_phv_group_occupancy() const;
-};  // class PhvInfo
+};
 
 /**
  * @brief Create and store a PHV::Field for each header and metadata
@@ -749,7 +584,6 @@ void dump(const PhvInfo *);
 void dump(const PHV::Field *);
 
 std::ostream &operator<<(std::ostream &, const safe_vector<PHV::Field::alloc_slice> &);
-std::ostream &operator<<(std::ostream &, const ordered_map<Cluster_PHV *, std::pair<int, int>>&);
 std::ostream &operator<<(std::ostream &, const ordered_set<PHV::Field *>&);
 std::ostream &operator<<(std::ostream &, const PhvInfo &);
 std::ostream &operator<<(std::ostream &, const PHV::Field_Ops &);

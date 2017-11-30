@@ -311,6 +311,13 @@ struct HalfOpenRange {
         if (rv.hi <= rv.lo) return {0, 0};
         return rv;
     }
+    HalfOpenRange operator&(HalfOpenRange a) const {
+        return intersectWith(a);
+    }
+    HalfOpenRange operator&=(HalfOpenRange a) {
+        *this = intersectWith(a);
+        return *this;
+    }
 
     /// @return the smallest range that contains all of the bits in both this
     /// range and the provided range. Note that because ranges are contiguous,
@@ -323,6 +330,13 @@ struct HalfOpenRange {
         if (empty()) return {l, h};
         if (l == h) return *this;
         return HalfOpenRange(std::min(lo, l), std::max(hi, h));
+    }
+    HalfOpenRange operator|(HalfOpenRange a) const {
+        return unionWith(a);
+    }
+    HalfOpenRange operator|=(HalfOpenRange a) {
+        *this = unionWith(a);
+        return *this;
     }
 
     /**
@@ -529,6 +543,13 @@ struct ClosedRange {
         return HalfOpenRange<Unit, Order>(lo, hi + 1)
               .intersectWith(HalfOpenRange<Unit, Order>(l, h + 1));
     }
+    HalfOpenRange<Unit, Order> operator&(ClosedRange a) const {
+        return intersectWith(a);
+    }
+    HalfOpenRange<Unit, Order> operator&=(ClosedRange a) {
+        *this = intersectWith(a);
+        return *this;
+    }
 
     /// @see HalfOpenRange::unionWith().
     ClosedRange unionWith(ClosedRange a) const {
@@ -536,6 +557,13 @@ struct ClosedRange {
     }
     ClosedRange unionWith(int l, int h) const {
         return ClosedRange(std::min(lo, l), std::max(hi, h));
+    }
+    ClosedRange operator|(ClosedRange a) const {
+        return unionWith(a);
+    }
+    ClosedRange operator|=(ClosedRange a) {
+        *this = unionWith(a);
+        return *this;
     }
 
     /// @see HalfOpenRange::toOrder().
@@ -582,6 +610,42 @@ struct ClosedRange {
     /// index identifies is included in the range.
     int hi;
 };
+
+/** Implements range subtraction (similar to set subtraction), computing the
+ * upper and lower ranges that result from @left - @right.  For example,
+ * @left - @right = { C.lower, C.upper }:
+ *
+ *   example   (1)          (2)         (3)         (4)
+ *   @left     --------     ----             ----      ----
+ *   @right       ---            ----   ----        ----------
+ *   C.lower   ---          ----        (empty)     (empty)
+ *   C.upper         --     (empty)          ----   (empty)
+ *
+ * XXX(cole): This could produce a bit vector.
+ */
+template <RangeUnit Unit, Endian Order>
+std::pair<HalfOpenRange<Unit, Order>, HalfOpenRange<Unit, Order>>
+operator-(HalfOpenRange<Unit, Order> left, HalfOpenRange<Unit, Order> right) {
+    HalfOpenRange<Unit, Order> empty = {0, 0};
+    HalfOpenRange<Unit, Order> intersect = left.intersectWith(right);
+    if (intersect.empty())
+        return left.lo < right.lo ? std::make_pair(left, empty) : std::make_pair(empty, left);
+
+    HalfOpenRange<Unit, Order> lower =
+        left.lo == intersect.lo ? empty : FromTo(left.lo, intersect.lo - 1);
+    HalfOpenRange<Unit, Order> upper =
+        left.hi == intersect.hi ? empty : FromTo(intersect.hi, left.hi - 1);
+
+    return { lower, upper };
+}
+
+/// @see HalfOpenRange subtraction.
+/// @returns a pair of half-open ranges (which may be empty).
+template <RangeUnit Unit, Endian Order>
+std::pair<HalfOpenRange<Unit, Order>, HalfOpenRange<Unit, Order>>
+operator-(ClosedRange<Unit, Order> left, ClosedRange<Unit, Order> right) {
+    return toHalfOpenRange(left) - toHalfOpenRange(right);
+}
 
 /// @return a half-open range denoting the same elements as the provided closed
 /// range.

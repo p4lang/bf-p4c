@@ -123,6 +123,12 @@ void CheckTofinoPhvContainerResources() {
             EXPECT_NE(bitvec(), mau_group & phvSpec.physicalContainers()); } }
     for (auto tagalong_group : phvSpec.tagalongGroups()) {
         EXPECT_NE(bitvec(), tagalong_group & phvSpec.physicalContainers()); }
+
+    // MAU groups should have the type used to retrieve them.
+    for (auto t : phvSpec.containerTypes()) {
+        for (auto mau_group : phvSpec.mauGroups(t)) {
+            for (auto cid : mau_group) {
+                EXPECT_EQ(t, phvSpec.idToContainer(cid).type()); } } }
     
     // They should also be disjoint.
     for (auto t : phvSpec.containerTypes()) {

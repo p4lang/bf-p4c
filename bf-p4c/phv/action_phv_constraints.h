@@ -6,7 +6,7 @@
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/mau/action_analysis.h"
 #include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/phv/cluster_phv_container.h"
+#include "bf-p4c/phv/utils.h"
 
 /** This class is meant to gather action information as well as provide information to PHV analysis
   * through function calls.  This must be run after InstructionSelection, as it is dependent on
@@ -17,13 +17,7 @@
  */
 class ActionPhvConstraints : public Inspector {
  public:
-        struct PackingCandidate {
-            PHV::Field *field;
-            le_bitrange limits;
-
-            explicit PackingCandidate(PHV::Field* f, le_bitrange bits) :
-                field(f), limits(bits) {}
-        };
+    using CohabitSet = ordered_set<const PHV::Field*>;
 
  private:
     /// Defines a struct for a particular field operation: either read or write
@@ -33,7 +27,8 @@ class ActionPhvConstraints : public Inspector {
         int unique_action_id;
         enum field_read_flags_t { MOVE = 1,
                                   WHOLE_CONTAINER = (1 << 1),
-                                  ANOTHER_OPERAND = (1 << 2)
+                                  ANOTHER_OPERAND = (1 << 2),
+                                  MIXED = (1 << 3)
         };
         uint8_t flags = 0;
         bool ad = false;
@@ -90,19 +85,16 @@ class ActionPhvConstraints : public Inspector {
     /// Used to generate unique action IDs when creating `struct FieldOperation` objects
     static int current_action;
 
-    /** If PHV allocation has already been done for some fields, this function
-      * returns the number of unique containers used as sources by the field slices used in a
-      * particular container.
-      * @param
-      *     std::vector<PackingCandidate>& candidates: that are candidates for sharing a container
-      *     IR::MAU::Action *: action for which number of sources must be determined
-      * candidates contains a field pointer, and the lo and hi bits of the field slice that is the
-      * candidate for packing into a particular container.
+    /** Given the state of PHV allocation represented by @alloc and @container_state, a vector of
+      * slices to be packed together and mutually live in a given container
+      * @returns the number of container sources used in @action
       */
-    uint32_t num_container_sources(std::vector<PackingCandidate>&, const IR::MAU::Action *);
+    size_t num_container_sources(const PHV::Allocation& alloc, PHV::Allocation::MutuallyLiveSlices
+            container_state, const IR::MAU::Action* action);
 
-    /// @returns true if @fields packed in the same container read from action data or from constant
-    /// in action @act
+    /** @returns true if @fields packed in the same container read from action data or from constant
+      * in action @act
+      */
     bool has_ad_or_constant_sources(std::vector<const PHV::Field *>& fields, const IR::MAU::Action
             *act);
 
@@ -115,32 +107,32 @@ class ActionPhvConstraints : public Inspector {
       */
     boost::optional<FieldOperation> is_written(const IR::MAU::Action *, const PHV::Field *);
 
- public:
-    explicit ActionPhvConstraints(const PhvInfo &p) : phv(p) {}
+    /** @returns the number of no unallocated bits in a set of mutually live field slices @slice
+      * in container @c
+      */
+    int unallocated_bits(PHV::Allocation::MutuallyLiveSlices, const PHV::Container) const;
+
+    /** @returns the type of operation (FieldOperation::MOVE or FieldOperation::WHOLE_CONTAINER)  
+      * if for every action in @actions, the fields in @fields are all written using
+      * either MOVE or WHOLE_CONTAINER operations (in case of WHOLE_CONTAINER, no field is @fields
+      * may be left unwritten by an action).
+      * @returns FieldOperation::MIXED if there is a mix of WHOLE_CONTAINER and MOVE operations in
+      * the same action.
+      */
+    unsigned container_operation_type(ordered_set<const IR::MAU::Action*>&, std::vector<const
+            PHV::Field*>&);
 
     /** Print the state of the maps */
     void printMapStates();
 
+ public:
+    explicit ActionPhvConstraints(const PhvInfo &p) : phv(p) {}
+
     /** Checks whether packing @fields into a container will violate MAU action constraints.
-      * 
-      * For each action that writes to any field in @fields, calculate the number of sources
-      * (containers/action data/constants) read by all instructions that write to @fields. If the
-      * number of sources exceeds 2, packing is not possible.
-      *
-      * Further, all instructions that write to any field in @fields in the same action must be the
-      * same kind of instruction---e.g. all "set" instructions, or all "and" instructions, etc.
-      *
-      * Also, any action writing to only part of a container may only do so for "set" operations
-      * using a bitmask, deposit-field, or load-const instruction. 
-      *
-      * @returns `ActionAnalysis::ContainerAction::NO_PROBLEM` if the proposed packing satisfied
-      * action constraints.
-      *
-      * @warning This method reads data structures that are internal to PHV allocation and hold
-      * intermediate results (via the `PhvInfo` object). It may only be safely invoked *during* PHV
-      * allocation.
       */
-    unsigned can_cohabit(std::vector<PackingCandidate>& fields);
+    boost::optional<std::vector<CohabitSet>> can_pack(const PHV::Allocation& alloc, const
+            PHV::AllocSlice& slice, PHV::Allocation::MutuallyLiveSlices container_state, const
+            PHV::Container c);
 
     /** For GTest function.
       * Checks if the field_writes_to_actions ordered_map entry is valid or not

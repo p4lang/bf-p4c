@@ -27,19 +27,12 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
   p4c_add_xfail_reason("tofino"
     "mismatch from expected.*at byte 0x"
     extensions/p4_tests/p4_16/stack_valid.p4
-    extensions/p4_tests/p4_14/adb_shared2.p4
     )
 
 endif() # HARLYN_STF
 
 # add the failures with no reason
 p4c_add_xfail_reason("tofino" "" ${TOFINO_XFAIL_TESTS})
-
-# BRIG-101
-p4c_add_xfail_reason("tofino"
-  "src2 must be phv register"
-  extensions/p4_tests/p4_14/c4/COMPILER-549/case2898.p4
-  )
 
 # BRIG-103
 p4c_add_xfail_reason("tofino"
@@ -63,14 +56,6 @@ p4c_add_xfail_reason("tofino"
   "Unhandled action bitmask constraint"
   extensions/p4_tests/p4_14/13-IngressEgressConflict.p4
   testdata/p4_14_samples/mac_rewrite.p4
-  )
-
-# Fails due to invalid action specification
-# BRIG-219
-p4c_add_xfail_reason("tofino"
-  "error: Only part of the container"
-  extensions/p4_tests/p4_14/test_config_256_pa_problem_4.p4
-  extensions/p4_tests/p4_14/adjust_instr1.p4
   )
 
 # Fails due to complex expressions in the parser that our hardware can't support.
@@ -137,30 +122,6 @@ p4c_add_xfail_reason("tofino"
   "Unhandled InstanceRef type"
   testdata/p4_16_samples/issue447-5-bmv2.p4
   )
-# parde physical adjacency constraint violated by mau phv_no_pack constraint
-p4c_add_xfail_reason("tofino"
-  "Header field .* is required to be allocated contiguously"
-  extensions/p4_tests/p4_14/jenkins/basic_ipv4/basic_ipv4.p4
-  extensions/p4_tests/p4_14/jenkins/exm_direct/exm_direct_one.p4
-  extensions/p4_tests/p4_14/jenkins/exm_direct_1/exm_direct_1_one.p4
-  extensions/p4_tests/p4_14/jenkins/exm_indirect_1/exm_indirect_1_one.p4
-  extensions/p4_tests/p4_14/jenkins/exm_smoke_test/exm_smoke_test_one.p4
-  extensions/p4_tests/p4_14/jenkins/multicast_scale/multicast_scale.p4
-  extensions/p4_tests/p4_14/jenkins/multi_device/multi_device.p4
-  extensions/p4_tests/p4_14/jenkins/perf_test_alpm/perf_test_alpm_one.p4
-  extensions/p4_tests/p4_14/jenkins/perf_test/perf_test_one.p4
-  extensions/p4_tests/p4_14/jenkins/smoke_large_tbls/smoke_large_tbls.p4
-  extensions/p4_tests/p4_14/test_config_328_alias.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
-  switch_l2
-  )
 
 # BRIG-112
 p4c_add_xfail_reason("tofino"
@@ -224,9 +185,10 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "error: tofino supports up to 12 stages"
-  extensions/p4_tests/p4_14/case1770.p4
   extensions/p4_tests/p4_14/jenkins/alpm_test/alpm_test.p4
+  extensions/p4_tests/p4_14/jenkins/perf_test_alpm/perf_test_alpm_one.p4
   extensions/p4_tests/p4_14/jenkins/clpm/clpm.p4
+  extensions/p4_tests/p4_14/jenkins/multi_device/multi_device.p4
   )
 
 # BRIG-113
@@ -273,8 +235,8 @@ p4c_add_xfail_reason("tofino"
 # also: BRIG-56, BRIG-182
 p4c_add_xfail_reason("tofino"
   "Can't fit table .* in .* by itself"
-  extensions/p4_tests/p4_14/adb_shared3.p4
   extensions/p4_tests/p4_14/test_config_297_big_metadata.p4
+  extensions/p4_tests/p4_14/jenkins/smoke_large_tbls/smoke_large_tbls.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -489,12 +451,6 @@ p4c_add_xfail_reason("tofino"
   "(throwing|uncaught exception).*Backtrack::trigger"
 )
 
-p4c_add_xfail_reason("tofino"
-  "PHV read has no allocation"
-  testdata/p4_16_samples/arith-bmv2.p4
-  testdata/p4_16_samples/issue983-bmv2.p4
-  )
-
 #
 p4c_add_xfail_reason("tofino"
   "error: : source of modify_field invalid"
@@ -600,7 +556,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/01-BigMatch.p4
   extensions/p4_tests/p4_14/04-FullPHV3.p4
   extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   extensions/p4_tests/p4_14/c1/COMPILER-133/full_tphv.p4
   extensions/p4_tests/p4_14/c1/COMPILER-235/vag1737_1.p4
   extensions/p4_tests/p4_14/c4/COMPILER-590/case3179.p4
@@ -609,6 +564,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
   extensions/p4_tests/p4_14/c4/COMPILER-523/vag2774.p4
   testdata/p4_14_samples/parser_dc_full.p4
+  switch_dc_basic
   testdata/p4_14_samples/port_vlan_mapping.p4
   switch_dc_basic
   extensions/p4_tests/p4_14/jenkins/stful/stful.p4
@@ -622,14 +578,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Encountered invalid code in computed checksum control"
   testdata/p4_16_samples/issue134-bmv2.p4
-)
-
-# BRIG-226
-# immediates are placed on disallowed bytes on the action bus
-p4c_add_xfail_reason("tofino"
-  "immediate is not on the action bus"
-  extensions/p4_tests/p4_14/test_tp_1_one_table_spill.p4
-  extensions/p4_tests/p4_14/test_config_21_tcam_vpns.p4
 )
 
 # no support for static entries
@@ -693,18 +641,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue907-bmv2.p4
   )
 
-# Tests where a field is placed into a container that's too big, causing us to
-# generate an extract that reads past the beginning of the input buffer.
-p4c_add_xfail_reason("tofino"
-  "Container .* contains deparsed header fields, but it has unused bits.*"
-  extensions/p4_tests/p4_14/22-BigToSmallFieldWithMask8.p4
-  extensions/p4_tests/p4_14/test_config_262_req_packing.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-242/case1679.p4
-  extensions/p4_tests/p4_14/c4/COMPILER-549/case2898.p4
-  extensions/p4_tests/p4_14/jenkins/range/range.p4
-  testdata/p4_14_samples/parser2.p4
-  )
-
 # BEGIN: XFAILS that match glass XFAILS
 
 # parde physical adjacency constraint violated by mau phv_no_pack constraint
@@ -716,26 +652,14 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Action writes fields using the same assignment type but different source operands"
+  "Action.* writes fields using the same assignment type but different source operands"
   extensions/p4_tests/p4_14/14-MultipleActionsInAContainer.p4
-  )
-
-# BRIG-219
-p4c_add_xfail_reason("tofino"
-  "error: Only part of the container"
-  extensions/p4_tests/p4_14/action_conflict_1.p4
-  extensions/p4_tests/p4_14/action_conflict_3.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
-  extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
   )
 
 p4c_add_xfail_reason("tofino"
   "Not all applies of table .* are mutually exclusive"
   extensions/p4_tests/p4_14/c1/COMPILER-100/exclusive_cf_one_action_fail_after.p4
   extensions/p4_tests/p4_14/c1/COMPILER-100/exclusive_cf_one_action_fail_before.p4
-
   )
 
 p4c_add_xfail_reason("tofino"
@@ -765,31 +689,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/eth_addr_cmp.p4
   )
 
-# BRIG-314
-p4c_add_xfail_reason("tofino"
-  "Header field .* has an incompatible alignment requirement"
-  extensions/p4_tests/p4_14/10-AssignChooseSource.p4
-  extensions/p4_tests/p4_14/04-MatchDep.p4
-  extensions/p4_tests/p4_14/11-AssignChooseDest.p4
-  extensions/p4_tests/p4_14/11-MinimalL2.p4
-  extensions/p4_tests/p4_14/12-MaxEnriesSRAM.p4
-  extensions/p4_tests/p4_14/12-MaxEnriesTCAM.p4
-  extensions/p4_tests/p4_14/test_config_103_first_phase_0.p4
-  extensions/p4_tests/p4_14/test_config_105_no_phase_0_case_has_side_effect.p4
-  extensions/p4_tests/p4_14/test_checksum.p4
-  extensions/p4_tests/p4_14/test_config_106_no_phase_0_case_not_first_table.p4
-  extensions/p4_tests/p4_14/test_config_109_no_phase_0_case_wrong_key.p4
-  extensions/p4_tests/p4_14/test_config_108_no_phae_0_case_wrong_condition.p4
-  extensions/p4_tests/p4_14/test_config_110_no_phase_0_case_wrong_match_type.p4
-  extensions/p4_tests/p4_14/test_config_113_no_phase_0_case_sourced_from_field.p4
-  extensions/p4_tests/p4_14/test_config_112_no_phase_0_case_action_width_too_big.p4
-  extensions/p4_tests/p4_14/test_config_111_no_phase_0_case_two_actions.p4
-  extensions/p4_tests/p4_14/test_config_no_phase_0_case_two_actions.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
-  )
-
 # This code contains an implicit cast in an assignment in the parser; we need to
 # convert it into a slice instead of just ignoring the cast.
 p4c_add_xfail_reason("tofino"
@@ -804,16 +703,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/atcam_match5.p4
   extensions/p4_tests/p4_16/atcam_match3.p4
   extensions/p4_tests/p4_14/test_config_181_first_alg_tcam.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "error: .* overlaps .* in .*"
-  extensions/p4_tests/p4_14/case1770.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "error: .* overlaps .* with .*"
-  extensions/p4_tests/p4_14/jenkins/mirror_test/mirror_test.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -879,11 +768,6 @@ p4c_add_xfail_reason("tofino"
   "Slice is of IR structure not handled by ActionAnalysis"
   extensions/p4_tests/p4_14/test_config_13_first_selection.p4
   )
-# backend bug
-p4c_add_xfail_reason("tofino"
-  "does not have a PHV allocation though it is used in an action"
-  extensions/p4_tests/p4_14/test_config_157_random_number_generator.p4
-  )
 # need a good way to handle global action
 p4c_add_xfail_reason("tofino"
   "Could not find declaration for drop"
@@ -943,6 +827,7 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     testdata/p4_14_samples/tmvalid.p4
     testdata/p4_16_samples/issue635-bmv2.p4
     testdata/p4_16_samples/issue655-bmv2.p4
+    extensions/p4_tests/p4_14/stateful2.p4
     extensions/p4_tests/p4_16/multiple_apply1.p4
     extensions/p4_tests/p4_16/cast_widening_set.p4
     extensions/p4_tests/p4_16/cast_narrowing_set.p4
@@ -988,7 +873,6 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     testdata/p4_14_samples/exact_match_mask1.p4
     )
 
-
 endif() # ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET
 
 if (HARLYN_STF AND NOT ENABLE_STF2PTF)
@@ -1000,3 +884,152 @@ if (HARLYN_STF AND NOT ENABLE_STF2PTF)
     extensions/p4_tests/p4_16/container_dependency.p4
     )
 endif()  # STF FAILURE IN TNA
+
+# XXX(cole): Temporarily override previous XFAILs with new failures related to
+# PHV allocation.
+p4c_add_xfail_reason("tofino"
+  "PHV allocation was not successful"
+  testdata/p4_14_samples/parser4.p4
+  testdata/p4_14_samples/source_routing.p4
+  testdata/p4_14_samples/parser1.p4
+  testdata/p4_14_samples/parser2.p4
+  testdata/p4_14_samples/03-FullPHV2.p4
+  testdata/p4_14_samples/02-FullPHV1.p4
+  extensions/p4_tests/p4_14/test_config_119_tcam_range_3.p4
+  extensions/p4_tests/p4_14/03-VlanProfile.p4
+  extensions/p4_tests/p4_14/23-SimpleMPLS.p4
+  extensions/p4_tests/p4_14/test_config_237_hash_action_17_bits.p4
+  extensions/p4_tests/p4_14/19-SimpleTrill.p4
+  extensions/p4_tests/p4_14/01-FlexCounter.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-235/vag1737_1.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-242/case1679.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
+  extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
+  extensions/p4_tests/p4_14/c4/COMPILER-523/vag2774.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
+  extensions/p4_tests/p4_14/c6/COMPILER-603/loop.p4
+  extensions/p4_tests/p4_14/c8/COMPILER-616/case3331.p4
+  extensions/p4_tests/p4_14/c6/COMPILER-604/new_parser.p4
+  testdata/p4_16_samples/issue983-bmv2.p4
+
+  # Lack of cluster splitting:
+  extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
+
+  # Lack of container packing:
+  extensions/p4_tests/p4_14/15-SetMetadata.p4
+  extensions/p4_tests/p4_14/16-WrongSizeInfiniteLoop.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "error: Invalid slice of"
+  testdata/p4_14_samples/instruct6.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "error: set requires 2 operands"
+  extensions/p4_tests/p4_16/stateful1.p4
+  extensions/p4_tests/p4_16/stateful2.p4
+  extensions/p4_tests/p4_14/hash_calculation_two_hash1.p4
+  extensions/p4_tests/p4_14/test_config_169_stateful_sflow_sequence.p4
+  extensions/p4_tests/p4_14/test_config_199_stateful_constant_index.p4
+  extensions/p4_tests/p4_14/hash_calculation_two_hash2.p4
+  extensions/p4_tests/p4_14/hash_calculation_multiple.p4
+  extensions/p4_tests/p4_14/test_config_299_write_hash_keyless_table.p4
+  extensions/p4_tests/p4_14/test_config_156_indirect_stateful_cntr.p4
+  extensions/p4_tests/p4_14/stateful3.p4
+  extensions/p4_tests/p4_14/hash_calculation_16.p4
+  extensions/p4_tests/p4_14/test_config_184_stateful_bug1.p4
+  extensions/p4_tests/p4_14/stateful0.p4
+  extensions/p4_tests/p4_14/test_config_157_random_number_generator.p4
+  extensions/p4_tests/p4_14/test_config_300_multi_hash.p4
+  extensions/p4_tests/p4_14/test_config_153_stateful_simple_cntr_with_output.p4
+  extensions/p4_tests/p4_14/test_config_261_mutually_exclusive_src_ops.p4
+  extensions/p4_tests/p4_14/stateful2.p4
+  extensions/p4_tests/p4_14/stateful1.p4
+  extensions/p4_tests/p4_14/hash_calculation_max_size.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-342/netchain.p4
+  )
+
+# BRIG-219
+p4c_add_xfail_reason("tofino"
+  "PHV allocation creates a container action impossible within a Tofino ALU"
+  extensions/p4_tests/p4_14/14-MultipleActionsInAContainer.p4
+  extensions/p4_tests/p4_14/action_conflict_1.p4
+  extensions/p4_tests/p4_14/adjust_instr1.p4
+  extensions/p4_tests/p4_14/test_config_248_pa_problem.p4
+  extensions/p4_tests/p4_14/test_config_252_pa_required_packing.p4
+  extensions/p4_tests/p4_14/test_config_256_pa_problem_4.p4
+  extensions/p4_tests/p4_14/test_config_257_pa_problem_5.p4
+  extensions/p4_tests/p4_14/c4/COMPILER-550/vag2899.p4
+  extensions/p4_tests/p4_16/stack_valid.p4
+  testdata/p4_14_samples/instruct5.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "error: .* must be at .* or .* on ixbar to be used in stateful table"
+  extensions/p4_tests/p4_14/jenkins/multicast_scale/multicast_scale.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Unhandled action bitmask constraint"
+  extensions/p4_tests/p4_14/test_config_151_action_bus_allocation_2.p4
+  extensions/p4_tests/p4_14/test_config_90_testing_action_data_allocation_3_with_fields_in_overhead.p4
+  extensions/p4_tests/p4_14/test_config_50_action_data_different_size_fields.p4
+  extensions/p4_tests/p4_16/cast_widening_set.p4
+  switch_l2
+  )
+
+p4c_add_xfail_reason("tofino"
+  "error: immediate.* is not on the action bus"
+  extensions/p4_tests/p4_14/test_config_291_default_action.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "error: No phv record"
+  # Instruction adjustment is not splitting an instruction?
+  extensions/p4_tests/p4_14/test_config_163_stateful_table_math_unit.p4
+  )
+
+# XXX(cole): This will be fixed with SuperCluster splitting.
+p4c_add_xfail_reason("tofino"
+  "accumulate too many fields in CCGF"
+  extensions/p4_tests/p4_14/test_config_236_stateful_read_bit.p4
+  extensions/p4_tests/p4_14/test_config_216_phv_aff.p4
+  extensions/p4_tests/p4_14/action_conflict_4.p4
+  extensions/p4_tests/p4_14/test_config_259_large_non_multiple_8_bit.p4
+  extensions/p4_tests/p4_14/action_conflict_3.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Field .* overlaps with .*"
+  extensions/p4_tests/p4_14/jenkins/mirror_test/mirror_test.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "No format in action table"
+  extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Operands of arithmetic operations cannot be greater than 32b, but field .* has .*"
+  extensions/p4_tests/p4_14/test_config_296_pragma_container.p4
+  extensions/p4_tests/p4_14/test_config_258_wide_add.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
+  testdata/p4_16_samples/arith-bmv2.p4
+  switch_dc_basic
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Inferred incompatible alignments for field"
+  extensions/p4_tests/p4_14/jenkins/parser_intr_md/parser_intr_md.p4
+  )

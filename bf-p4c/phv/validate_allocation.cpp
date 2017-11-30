@@ -1,18 +1,19 @@
+#include "validate_allocation.h"
+
+#include <boost/range/adaptors.hpp>
 #include <algorithm>
 #include <iterator>
 #include <sstream>
 
-#include "lib/log.h"
-#include "ir/ir.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/parde/clot_info.h"
 #include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
-#include "bf-p4c/phv/validate_allocation.h"
 #include "bf-p4c/mau/action_analysis.h"
-
+#include "ir/ir.h"
 #include "lib/cstring.h"
+#include "lib/log.h"
 
 // Currently we fail a lot of these checks, so to prevent mass XFAIL'ing a lot
 // of the tests, we treat the checks as warning instead of errors. This macro
@@ -94,6 +95,26 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
                         "Overlapping field slices in allocation for field %1%",
                         cstring::to_cstring(field));
             allocatedBits |= sliceBits;
+
+            // Verify that each slice is within the bounds of the field.
+            ERROR_CHECK(le_bitrange(StartLen(0, slice.field->size)).contains(slice.field_bits()),
+                        "Field %1% contains slice %2% that falls outside the size of the field",
+                        cstring::to_cstring(field), cstring::to_cstring(slice));
+
+            // Verify that slices point to their parent fields.
+            ERROR_CHECK(slice.field == &field, "Field %1% contains slice %2% of field %3%",
+                        cstring::to_cstring(field), cstring::to_cstring(slice),
+                        cstring::to_cstring(slice.field));
+        }
+
+        // Verify that slices are sorted in descending MSB order.
+        int last_msb_idx = -1;
+        for (auto& slice : boost::adaptors::reverse(field.alloc_i)) {
+            ERROR_CHECK(last_msb_idx < slice.field_bits().hi,
+                "Field %1% has allocated slices out of order.  Slice %2% is the first out of "
+                "order slice.",
+                cstring::to_cstring(field), cstring::to_cstring(slice));
+            last_msb_idx = slice.field_bits().hi;
         }
 
         // Verify that we didn't overflow the PHV space which is actually
@@ -239,26 +260,12 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
     auto isBridged = [](const PHV::Field* f) { return f->bridged; };
     auto isMetadata = [](const PHV::Field* f) { return f->metadata || f->pov; };
     auto hasOverlay = [](const PHV::Field* f) {
-        // XXX(cole): This misses the substratum fields themselves, as
-        // `f->overlay_substratum()` is a property of an overlaid field that
-        // points to the field it overlays.
-        return !f->field_overlay_map().empty() || f->overlay_substratum() != nullptr;
-    };
-    auto checkValidOverlay = [&](const PHV::Field* f) {
-        // If this field is overlaid, check that every overlaid field is in
-        // fact mutually exclusive.
-        for (auto overlaid_by_container : f->field_overlay_map()) {
-            for (auto* f_overlay : *overlaid_by_container.second) {
-                if (f == f_overlay) continue;
-                ERROR_CHECK(mutually_exclusive_field_ids(f->id, f_overlay->id),
-                    "Field %1% contains %2% in its overlay map, "
-                    "but they are not mutually exclusive.",
-                    cstring::to_cstring(f), cstring::to_cstring(f_overlay)); } }
-        if (auto* substratum = f->overlay_substratum())
-            ERROR_CHECK(mutually_exclusive_field_ids(f->id, substratum->id),
-                "Field %1% is overlaid atop substratum field %2% but is not mutually exclusive.",
-                cstring::to_cstring(f), cstring::to_cstring(substratum));
-    };
+        le_bitrange allocated;
+        for (auto& slice : f->alloc_i) {
+            if (allocated.overlaps(slice.field_bits()))
+                return true;
+            allocated |= slice.field_bits(); }
+        return false; };
 
     // Check that we've marked a field as deparsed if and only if it's actually
     // emitted in the deparser.
@@ -281,25 +288,6 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         // Collect all the fields which are assigned to this container.
         std::set<const PHV::Field*> fields;
         for (auto& slice : slices) fields.insert(slice.field);
-
-        // Since TPHV containers can't be accessed in the MAU, and metadata is
-        // not normally deparsed, it generally doesn't make sense to put
-        // metadata fields in TPHV. There are some exceptional cases, though:
-        // both bridged metadata and mirrored metadata effectively get turned
-        // into compiler-synthesized headers that are prepended to the packet,
-        // and hence must be deparsed.
-        // XXX(seth): We'll have to add a check for mirrored metadata below when
-        // that feature is implemented.
-        if (container.is(PHV::Kind::tagalong)) {
-            for (auto field : fields)
-                ERROR_CHECK(!isMetadata(field) || field->bridged,
-                            "Tagalong container %1% contains non-bridged metadata "
-                            "field %2%", container, cstring::to_cstring(field));
-        }
-
-        // Check that every overlaid field is mutually exclusive with every
-        // other overlaid field.
-        std::for_each(fields.begin(), fields.end(), checkValidOverlay);
 
         // XXX(cole): Some of the deparser constraints, such as field ordering
         // within a container, are still too difficult to check in the presence
@@ -356,13 +344,6 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
                             "Deparsed container %1% mixes deparsed header "
                             "fields with non-deparsed fields: %2%", container,
                             cstring::to_cstring(fields));
-            }
-
-            if (hasDeparsedMetadataFields) {
-                ERROR_WARN_(std::any_of(live_fields.begin(), live_fields.end(), isBridged),
-                            "Deparsed container %1% contains deparsed metadata "
-                            "fields, but none of them are bridged: %2%",
-                            container, cstring::to_cstring(fields));
             }
 
             // Verify that the allocations for each field don't overlap. (Note that

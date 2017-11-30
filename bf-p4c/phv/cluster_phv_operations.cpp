@@ -1,4 +1,3 @@
-#include "bf-p4c/phv/cluster_phv_container.h"
 #include "bf-p4c/phv/cluster_phv_operations.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "lib/log.h"
@@ -63,20 +62,22 @@ bool PHV_Field_Operations::preorder(const IR::MAU::Instruction *inst) {
 void PHV_Field_Operations::end_apply() {
     LOG3("..........Begin PHV_Field_Operations..........");
     for (auto &f : phv)
-        for (auto &op : f.operations())
-            if (std::get<0>(op) != true) {
-                // element 0 in tuple is not 'is_move_op'
+        for (auto &op : f.operations()) {
+            bool is_move_op = std::get<0>(op);
+            if (is_move_op != true) {
+                // Don't split carry operations.
+                f.set_no_split(true);
+
+                // If f can't be split but is larger than 32 bits, report an error.
+                if (f.size > 32)
+                    P4C_UNIMPLEMENTED("Operands of arithmetic operations cannot be greater than "
+                                      "32b, but field %1% has %2%b",
+                                      cstring::to_cstring(f), f.size);
+
                 if (f.mau_write())  {
-                    f.set_mau_phv_no_pack(true);                     // set mau_phv_no_pack
-                    break; }}
-    // recompute phv_use_width for no_cohabit fields
-    for (auto &f : phv)
-        if (PHV_Container::constraint_no_cohabit(&f)) {
-            f.set_phv_use_hi(PHV_Container::ceil_phv_use_width(&f) - 1);
-            LOG3("...packing_constraint... " << f); }
-    // recompute phv_use_width for ccgf owners
-    for (auto &f : phv)
-        if (f.is_ccgf())
-            f.set_ccgf_phv_use_width();
+                    // Don't pack destinations, but we can pack sources.
+                    // XXX(cole): but sometimes we can't, and we need to check that.
+                    f.set_no_pack(true);
+                    break; } } }
     LOG3("..........End PHV_Field_Operations..........");
 }  // end_apply()

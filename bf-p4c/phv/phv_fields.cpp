@@ -1,9 +1,9 @@
 #include "bf-p4c/phv/phv_fields.h"
+
 #include <boost/optional.hpp>
 #include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/device.h"
-#include "bf-p4c/phv/phv_analysis_api.h"
-#include "bf-p4c/phv/phv_assignment_api.h"
+#include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "ir/ir.h"
 #include "lib/log.h"
 #include "lib/stringref.h"
@@ -34,23 +34,17 @@ void PhvInfo::add(cstring name, gress_t gress, int size, int offset, bool meta, 
     info->id = by_id.size();
     info->gress = gress;
     info->size = size;
-    info->phv_use_hi_i = size - 1;  // default phv_use_hi, modifiable by cluster::set_field_range()
     info->offset = offset;
     info->metadata = meta;
     info->pov = pov;
     by_id.push_back(info);
-    //
-    // create extended objects for phv_analysis_api, phv_assignment_api
-    //
-    info->phv_analysis_api(new PHV_Analysis_API(info));
-    info->phv_assignment_api(new PHV_Assignment_API(info));
 }
 
 void PhvInfo::add_hdr(cstring name, const IR::Type_StructLike *type, gress_t gress, bool meta) {
     if (!type) {
-        LOG2("PhvInfo no type for " << name);
+        LOG3("PhvInfo no type for " << name);
         return; }
-    LOG2("PhvInfo adding " << (meta ? "metadata" : "header") << " " << name);
+    LOG3("PhvInfo adding " << (meta ? "metadata" : "header") << " " << name);
     BUG_CHECK(all_structs.count(name) == 0, "phv_fields.cpp:add_hdr(): all_structs inconsistent");
     int start = by_id.size();
     int offset = 0;
@@ -91,9 +85,9 @@ const PhvInfo::StructInfo PhvInfo::struct_info(cstring name_) const {
 //
 
 const PHV::Field *PhvInfo::field(const IR::Expression *e, le_bitrange *bits) const {
+    if (!e) return nullptr;
     BUG_CHECK(!e->is<IR::BFN::ContainerRef>(),
         "Looking for PHV::Fields but found an IR::BFN::ContainerRef: %1%", e);
-    if (!e) return nullptr;
     if (auto *fr = e->to<IR::Member>())
         return field(fr, bits);
     if (auto *cast = e->to<IR::Cast>())
@@ -155,71 +149,44 @@ const PHV::Field *PhvInfo::field(const IR::Member *fr, le_bitrange *bits) const 
 //
 
 void PhvInfo::allocatePOV(const BFN::HeaderStackInfo& stacks) {
+    LOG3("BEGIN PhvInfo::allocatePOV");
     if (pov_alloc_done) BUG("trying to reallocate POV");
     pov_alloc_done = true;
 
     int size[2] = { 0, 0 };
     int stacks_num = 0;
     for (auto &stack : stacks) {
+        LOG3("    ...preanalyzing header stack " << stack.name);
         StructInfo info = struct_info(stack.name);
         BUG_CHECK(!info.metadata, "metadata stack?");
         size[info.gress] += stack.size + stack.maxpush + stack.maxpop;
         stacks_num++;
         /* FIXME all bits for a stack must end up in one container */ }
+
     for (auto &hdr : simple_headers) {
+        LOG3("    ...preanalyzing simple header " << hdr.first);
         auto hdr_info = hdr.second;
-            ++size[hdr_info.gress]; }
+        ++size[hdr_info.gress]; }
+
     for (auto &field : *this)
         if (field.pov && field.metadata)
             size[field.gress] += field.size;
+
     for (auto gress : { INGRESS, EGRESS }) {
         if (size[gress] == 0) continue;
-        for (auto &field : *this)
+        for (auto &field : *this) {
             if (field.pov && field.metadata && field.gress == gress) {
                 size[gress] -= field.size;
-                field.offset = size[gress]; }
-        PHV::Field *hdr_dd_valid = 0;  // header.$valid
-        safe_vector<PHV::Field *> pov_fields_h;  // accumulate member povs of simple headers
-        for (auto hdr : simple_headers) {
-            auto hdr_info = hdr.second;
-            if (hdr_info.gress == gress) {
+                field.offset = size[gress]; } }
+
+        // Create fields for validity bits.
+        for (auto hdr : simple_headers)
+            if (hdr.second.gress == gress)
                 add(hdr.first + ".$valid", gress, 1, --size[gress], false, true);
-                hdr_dd_valid = &all_fields[hdr.first + ".$valid"];
-                pov_fields_h.push_back(hdr_dd_valid); } }
 
-        // Accumulate member povs of simple headers into the same ccgf.
-        //
-        // e.g.,
-        // ingress::udp.$valid[1]{0..4}-r- --> ingress::udp.$valid
-        // [      ingress::ethernet.$valid[1]
-        //        ingress::ig_intr_md_for_tm.$valid[1]
-        //        ingress::ipv4.$valid[1]
-        //        ingress::tcp.$valid[1]
-        //        ingress::udp.$valid[1]
-        // :5]
-        //
-        //  Use hdr_dd_valid (the last $valid field created in the loop above)
-        //  as the owner.
-
-        // TODO: Why only do this when no stacks are present?
-        if (!stacks_num && pov_fields_h.size() > 1) {
-            for (auto* f : pov_fields_h) {
-                hdr_dd_valid->ccgf_fields().push_back(f);
-                f->set_ccgf(hdr_dd_valid);
-                BUG_CHECK(f->validContainerRange() == nw_bitrange(ZeroToMax()),
-                    "POV bit with absolute container offset");
-            }
-            hdr_dd_valid->set_phv_use_hi(pov_fields_h.size());
-                                     // allocate container for ccgf width
-            hdr_dd_valid->set_simple_header_pov_ccgf(true);
-            pov_fields_h.clear();
-        }
+        // Create header stack CCGFs.
         for (auto &stack : stacks) {
             safe_vector<PHV::Field *> pov_fields;  // accumulate member povs of header stk pov
-            // TODO: Why just push hdr_dd_valid?  Why not all of pov_fields_h?
-            if (hdr_dd_valid) {
-                pov_fields.push_back(hdr_dd_valid);
-            }
             bool push_exists = false;
             StructInfo info = struct_info(stack.name);
             if (info.gress == gress) {
@@ -255,6 +222,10 @@ void PhvInfo::allocatePOV(const BFN::HeaderStackInfo& stacks) {
                     }
                     pov_stk->set_ccgf(pov_stk);
                     pov_stk->set_header_stack_pov_ccgf(true);
+                    LOG3("Creating HEADER STACK CCGF " << pov_stk);
+                    BUG_CHECK(pov_stk->ccgf_fields().size() > 0,
+                        "Creating .$stkvalid CCGF with no members: %1%",
+                        cstring::to_cstring(pov_stk));
                 }
             }
         }
@@ -422,18 +393,10 @@ void PHV::Field::foreach_alloc(
     auto it = alloc_i.rbegin();
     while (it != alloc_i.rend() && it->field_hi() < lo) ++it;
     if (it != alloc_i.rend() && it->field_bit != lo) {
-        if (it->field_bit >= lo) {
-            LOG1("********** phv_fields.cpp:sanity_FAIL **********"
-                << ".....field_bit in alloc_slice not less than lo....."
-                << " field_bit = " << it->field_bit
-                << " container_bit = " << it->container_bit
-                << " width = " << it->width
-                << " lo = " << lo
-                << std::endl
-                << " field = " << this
-                << " container = " << it->container);
-            BUG("phv_fields.cpp:foreach_alloc(): field_bit in alloc_slice not less than lo");
-        }
+        BUG_CHECK(it->field_bit < lo,
+            "Field %1% has an allocated PHV slice %2% that appears out of order; expected its LSB "
+            "(%3%) to be less than %4%.", cstring::to_cstring(it->field),
+            cstring::to_cstring(*it), it->field_bit, lo);
         tmp = *it;
         tmp.container_bit += abs(it->field_bit - lo);
         if (tmp.container_bit < 0) {
@@ -470,59 +433,11 @@ void PHV::Field::foreach_alloc(
 }
 
 //
-//***********************************************************************************
-//
-// PHV::Field Cluster based Phv Allocation related member functions
-//
-//***********************************************************************************
-//
-
-//
-// cluster ids
-//
-void
-PHV::Field::cl_id(std::string cl_p) const {
-    // can only change id of original non-sliced cluster
-    if (!sliced() && field_slices_i.size()) {
-        Cluster_PHV *cl = field_slices_i.begin()->first;
-        cl->id(cl_p);
-    }
-}
-
-std::string
-PHV::Field::cl_id(Cluster_PHV * cl) const {
-    // the first cl in list is the non-sliced owner cl
-    if (!cl && field_slices_i.size()) {
-        Cluster_PHV *cl = field_slices_i.begin()->first;
-        return cl->id();
-    }
-    // cluster cl among field_slices
-    if (field_slices_i.count(cl)) {
-        return cl->id();
-    }
-    return "??";
-}
-
-int
-PHV::Field::cl_id_num(Cluster_PHV *cl) const {
-    // the first cl in list is the non-sliced owner cl
-    if (!cl && field_slices_i.size()) {
-        Cluster_PHV *cl = field_slices_i.begin()->first;
-        return cl->id_num();
-    }
-    // cluster cl among field_slices
-    if (field_slices_i.count(cl)) {
-        return cl->id_num();
-    }
-    return -1;
-}
-
-//
 // constraints, phv_widths
 //
 bool
 PHV::Field::constrained(bool packing_constraint) const {
-    bool pack_c = mau_phv_no_pack_i || deparsed_no_pack_i;
+    bool pack_c = mau_phv_no_pack_i || no_pack_i;
     if (packing_constraint) {
         return pack_c;
     }
@@ -536,23 +451,6 @@ PHV::Field::is_ccgf() const {
         return true;
     }
     return false;
-}
-
-bool
-PHV::Field::allocation_complete() const {
-    //
-    // after phv container allocation, ccgf fields are removed by update_ccgf()
-    //
-    return ccgf_fields_i.size() == 0;
-}
-
-int
-PHV::Field::phv_use_width(Cluster_PHV *cl) const {
-    // non-sliced owner not in map
-    if (cl && field_slices_i.count(cl)) {
-        return phv_use_hi(cl) - phv_use_lo(cl) + 1;
-    }
-    return phv_use_hi_i - phv_use_lo_i + 1;
 }
 
 boost::optional<int>
@@ -575,38 +473,6 @@ boost::optional<int> PHV::Field::phv_alignment_network() const {
     return boost::none;
 }
 
-void
-PHV::Field::set_ccgf_phv_use_width(int min_ceil) {
-    // compute ccgf width, need PHV container(s) of this width
-    int ccg_width = 0;
-    for (auto &f : ccgf_fields_i) {
-        // ccgf owner appears as member, phv_use_width = aggregate size of members
-        if (f->is_ccgf()) {
-            if (PHV_Container::constraint_no_cohabit(f)) {
-                ccg_width += PHV_Container::ceil_phv_use_width(f, min_ceil);
-            } else {
-                ccg_width += f->size;
-            }
-        } else {
-            if (PHV_Container::constraint_no_cohabit(f)) {
-                ccg_width += PHV_Container::ceil_phv_use_width(f, min_ceil);
-            } else {
-                ccg_width += f->phv_use_width();
-            }
-        }
-    }  // for
-    if (header_stack_pov_ccgf_i) {
-        // e.g.,
-        // ingress::data.$stkvalid, egress::mpls.$stkvalid, ingress::extra.$stkvalid
-        // width requirement temporarily incremented
-        // so that "header stack" owner gets allocated in members' container pointing to tos
-        // note: size remains untouched
-        //
-        ccg_width++;
-    }
-    phv_use_hi_i = ccg_width - 1;
-}  // set_ccgf_phv_use_width()
-
 int
 PHV::Field::ccgf_width() const {
     int ccgf_width_l = 0;
@@ -615,244 +481,14 @@ PHV::Field::ccgf_width() const {
             // ccgf owner appears as member, phv_use_width = aggregate size of members
             ccgf_width_l += f->size;
         } else {
-            if (f->id == id) {
-                // originally f was ccgf owner but after container assignment
-                // ownership got terminated although f remains ccgf member of itself
-                ccgf_width_l += f->size;
-            } else {
-                ccgf_width_l += f->phv_use_width();
-            }
+            ccgf_width_l += f->size;
         }
     }
     return ccgf_width_l;
 }
 
-//
-// field slices
-//
-
-bool
-PHV::Field::sliced() const {
-    if (field_slices_i.size() > 1) {
-        return true;
-    }
-    return false;
-}
-
-std::pair<int, int>&
-PHV::Field::field_slices(Cluster_PHV *cl) {
-    assert(cl);
-    assert(field_slices_i.count(cl));
-    return field_slices_i[cl];
-}
-
-const std::pair<int, int>&
-PHV::Field::field_slices(const Cluster_PHV *cl) const {
-    assert(cl);
-
-    // This const_cast is necessary to look up `cl` in `field_slices_i`.  By
-    // using `at()`, we guarantee that `cl` is not *inserted* into
-    // `field_slices_i`, and hence cannot be modified, despite the cast.
-    assert(field_slices_i.count(const_cast<Cluster_PHV*>(cl)));
-    return field_slices_i.at(const_cast<Cluster_PHV*>(cl));
-}
-
-void
-PHV::Field::set_field_slices(Cluster_PHV *cl, int lo, int hi, Cluster_PHV *parent_cl) {
-    assert(cl);
-    assert(lo >= 0);
-    assert(hi >= lo);
-    if (!cl->sliced()) {
-        // in cases of cluster id renaming, clear previous incarnation
-        assert(!parent_cl);
-        field_slices_i.clear();
-    }
-    field_slices_i.emplace(cl, std::make_pair(lo, hi));
-    // cluster map entry for ccgf members
-    for (auto &m : ccgf_fields_i) {
-        if (m != this) {
-            m->field_slices().clear();
-            m->set_field_slices(cl, m->phv_use_lo(), m->phv_use_hi());
-        }
-    }
-    if (parent_cl) {
-        // remove parent from map
-        field_slices_i.erase(parent_cl);
-    }
-}
-
-int
-PHV::Field::phv_use_lo(Cluster_PHV *cl) const {
-    if (cl && field_slices_i.size() && field_slices_i.count(cl)) {
-        return field_slices(cl).first;
-    }
-    return phv_use_lo_i;
-}
-
-int
-PHV::Field::phv_use_hi(Cluster_PHV *cl) const {
-    if (cl && field_slices_i.size() && field_slices_i.count(cl)) {
-        return field_slices(cl).second;
-    }
-    return phv_use_hi_i;
-}
-
-//
-// field overlays
-//
-
-void
-PHV::Field::phv_containers(PHV_Container *c) {
-    assert(c);
-    // actual phv container associated with field
-    // field can have several phv containers, e.g, 24bF = 3*8bC
-    phv_containers_i.insert(c);
-    // owner ccgf records container allocation of members
-    // used during ccgf overlay on ccgf substratum
-    if (ccgf_i && ccgf_fields_i.size() == 0)
-        ccgf_i->phv_containers().insert(c);
-    if (field_overlay_map_i.size()) {
-        // field overlays exist, update field overlay map key with actual container number
-        // remove virtual container entry from ordered map
-        // add actual phv-container entry
-        // alternate solution would be to key as std::pair<int virtual, PHV_Container*>
-        int container_number = field_overlay_map_i.begin()->first;
-        ordered_set<Field *> *set_of_f =
-            new ordered_set<Field *>(*(field_overlay_map_i.begin()->second));
-        if (container_number < 0)  // remove virtual container entry
-            field_overlay_map_i.erase(container_number);
-        if (set_of_f && set_of_f->size()) {
-            // insert phv container entry
-            // consider containers spanning overlay field width and not substratum width
-            std::set<Field *> fields_to_erase;
-            for (auto *f : *set_of_f)
-                if (f->phv_use_width() <= int(field_overlay_map_i.size()) * int(c->width()))
-                    fields_to_erase.insert(f);
-            for (auto *f : fields_to_erase)
-                set_of_f->erase(f);
-            field_overlay_map_i[c->container_id()] = set_of_f; } }
-    // sanity check this field's field_overlay_map
-    for (auto overlaid_by_field : field_overlay_map_i)
-        for (auto* f_overlay : *overlaid_by_field.second) {
-            // field is never overlaid atop itself
-            // ensure this field is not present in field_overlay_map
-            BUG_CHECK(f_overlay != this,
-                      "field's %1% field_overlay_map contains itself",
-                      cstring::to_cstring(f_overlay));
-            // ccgf member can never be overlaid atop owner
-            // ensure this field's ccgf members are not in field's field_overlay_map
-            BUG_CHECK(f_overlay->ccgf() != this,
-                      "ccgf owner's %1% field_overlay_map contains ccgf member %2%",
-                      cstring::to_cstring(this), cstring::to_cstring(f_overlay));
-            // ccgf owner can never be overlaid atop its member
-            // ensure member's ccgf owner not in member's field_overlay_map
-            BUG_CHECK(this->ccgf() != f_overlay,
-                      "ccgf member's %1% field_overlay_map contains ccgf owner %2%",
-                      cstring::to_cstring(this), cstring::to_cstring(f_overlay)); }
-}
-
-void
-PHV::Field::overlay_substratum(Field *f) {
-    assert(f);
-    overlay_substratum_i = f;
-}
-
-void
-PHV::Field::field_overlay_map(Field *field, int r, bool actual_register) {
-    assert(field);
-    //
-    // r, as virtual container, made -ve when map entry created (by phv_interference)
-    // after phv container association w/ field, virtual entry replaced by actual container
-    // r becomes actual phv container number and used when associating overlayed fields
-    // see PHV::Field::phv_containers(PHV_Container *c) above
-    // -ve virtual containers will never clash with actual phv containers {0,+ve}
-    //
-    if (!actual_register) {
-        assert(r > 0);
-        r = -r;
-    }
-    if (!field_overlay_map_i[r])
-        field_overlay_map_i[r] = new ordered_set<Field *>;
-    field_overlay_map_i[r]->insert(field);
-    // overlayed field points to substratum
-    field->overlay_substratum(this);
-    for (auto &m : field->ccgf_fields())
-        m->overlay_substratum(this);
-}
-
-
-ordered_set<PHV::Field *> *
-PHV::Field::field_overlay_map(int r) {
-    if (!field_overlay_map_i.size() || !field_overlay_map_i.count(r)) {
-        return 0;
-    }
-    return field_overlay_map_i[r];
-}
-
-void
-PHV::Field::field_overlays(std::list<Field *>& fields_list) {
-    // fields_list accumulates all overlay fields of this field, including this field
-    fields_list.clear();
-    fields_list.push_back(this);
-    if (field_overlay_map_i.size()) {
-        for (auto *f_set : Values(field_overlay_map_i)) {
-            fields_list.insert(fields_list.end(), f_set->begin(), f_set->end());
-        }
-    }
-}
-
-void
-PHV::Field::field_overlay(Field *overlay, int phv_number) {
-    // add overlay to substratum's owner field map of overlays
-    // to make phv_interference->mutually_exclusive() computation updated & accurate
-    assert(overlay);
-    overlay->overlay_substratum(overlay_substratum_i? overlay_substratum_i: this);
-    overlay->overlay_substratum()->field_overlay_map(overlay, phv_number);
-}
-
-bool PHV::Field::is_overlay(const Field *field) const {
-    // return true if field and this are overlays
-    if (!field) {
-        return false;
-    }
-    if (overlay_substratum_i == field->overlay_substratum()) {
-        return true;
-    }
-    for (auto &entry : field->field_overlay_map()) {
-        if (entry.second) {
-            for (Field *f : *(entry.second)) {
-                if (f->id == id) {
-                    return true;
-                }
-                for (Field *m : f->ccgf_fields()) {
-                    if (m->is_overlay(this)) {
-                        return true;
-                    }
-                }  // for
-            }  // for
-        }
-    }
-    for (auto &entry : field_overlay_map_i) {
-        if (entry.second) {
-            for (auto &f : *(entry.second)) {
-                if (f->id == field->id) {
-                    return true;
-                }
-                if (f->ccgf_fields().size()) {
-                    for (auto &m : f->ccgf_fields()) {
-                        if (m->is_overlay(field)) {
-                            return true;
-                        }
-                    }  // for
-                }
-            }  // for
-        }
-    }
-    return false;
-}
-
 void PHV::Field::updateAlignment(const FieldAlignment& newAlignment) {
-    LOG2("Inferred alignment " << newAlignment << " for field " << name);
+    LOG3("Inferred alignment " << newAlignment << " for field " << name);
 
     // If there's no existing alignment for this field, just take this one.
     if (!alignment) {
@@ -872,7 +508,7 @@ void PHV::Field::updateAlignment(const FieldAlignment& newAlignment) {
 }
 
 void PHV::Field::updateValidContainerRange(nw_bitrange newValidRange) {
-    LOG2("Inferred valid container range " << newValidRange <<
+    LOG3("Inferred valid container range " << newValidRange <<
          " for field " << name);
 
     const auto intersection = validContainerRange_i.intersectWith(newValidRange);
@@ -954,9 +590,8 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
             PHV::Field* f = phv.field(tv);
             BUG_CHECK(f, "No PhvInfo entry for a field we just added?");
             f->set_exact_containers(true);
-            f->set_deparsed_no_pack(true);
-            f->set_deparsed_bottom_bits(true);
-            f->updateAlignment(FieldAlignment(le_bitrange(StartLen(0, 8))));
+            f->set_no_pack(true);
+            f->set_no_split(true);
         }
 
         return false;
@@ -974,6 +609,12 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
         // shifters that the deparser hardware makes available.
         f->updateAlignment(FieldAlignment(le_bitrange(StartLen(0, f->size))));
         f->set_deparsed_bottom_bits(true);
+        f->set_deparsed_to_tm(true);
+        f->set_no_split(true);
+
+        BUG_CHECK(f->size < 32, "The architecture requires that field %1% not be split "
+                  "across PHV containers, but the field is larger than the largest PHV container.",
+                  cstring::to_cstring(f));
 
         // If this field can be packed with other fields, we're done.
         if (param->canPack) return;
@@ -983,12 +624,12 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
         // validity bit matters for this parameter, and if we packed it with
         // other fields, writes to those other fields would change the
         // hidden container validity bit and break the program.
-        f->set_deparsed_no_pack(true);
+        f->set_no_pack(true);
         LOG1(".....Deparser No-Pack Constraint '" << param->name
               << "' on field..... " << f);
     }
 
-    void postorder(const IR::BFN::Deparser* d) override {
+    void postorder(const IR::BFN::Digest* entry) override {
         // TODO:
         // IR futures: distinguish each digest as an enumeration: learning, mirror, resubmit
         // as they have differing constraints -- bottom-bits, bridge-metadata mirror packing
@@ -996,43 +637,42 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
         // 301:ingress::$learning<3:0..2>
         // 590:egress::$mirror<3:0..2> specifies 1 of 8 field lists
         // currently, IR::BFN::Digest node has a string field to distinguish them by name
-        for (auto &entry : Values(d->digests)) {
-            if (entry->name != "learning" && entry->name != "mirror")
-                continue;
+        if (entry->name != "learning" && entry->name != "mirror")
+            return;
 
-            PHV::Field* f = phv.field(entry->select);
-            BUG_CHECK(f != nullptr, "Field not created in PhvInfo");
-            f->set_deparsed_bottom_bits(true);
-            LOG1(".....Deparser Constraint "
-                << entry->name
-                << " 'digest' on field..... "
-                << f);
+        PHV::Field* f = phv.field(entry->select);
+        BUG_CHECK(f != nullptr, "Field not created in PhvInfo");
+        f->set_deparsed_bottom_bits(true);
+        LOG1(".....Deparser Constraint " << entry->name << " 'digest' on field..... " << f);
 
-            if (entry->name ==  "learning") {
-                for (auto s : entry->sets) {
-                    LOG1("\t.....learning field list..... ");
-                    for (auto l : *s) {
-                        auto l_f = phv.field(l);
-                        if (l_f)
-                            LOG1("\t\t" << l_f);
-                        else
-                            LOG1("\t\t" <<"-f?"); } }
-                continue; }
-
-            // associating a mirror field with its field list
-            // used during constraint checks for bridge-metadata phv allocation
-            LOG1(".....mirror fields in field list " << f->id << ":" << f->name);
-            int fl = 0;
+        // For learning digests, we're done.
+        if (entry->name == "learning") {
+            // Logging...
             for (auto s : entry->sets) {
-                LOG1("\t.....field list....." << fl);
-                for (auto m : *s) {
-                    PHV::Field* mirror = phv.field(m);
-                    if (mirror) {
-                        mirror->mirror_field_list = {f, fl};
-                        LOG1("\t\t" << mirror);
-                    } else {
-                        LOG1("\t\t" << "-f?"); }
-                    fl++; } } }
+                LOG1("\t.....learning field list..... ");
+                for (auto l : *s) {
+                    auto l_f = phv.field(l);
+                    if (l_f)
+                        LOG1("\t\t" << l_f);
+                    else
+                        LOG1("\t\t" <<"-f?"); } }
+            return; }
+
+        // For mirror digests, associate the mirror field with its field list,
+        // which is used during constraint checks for bridge-metadata phv
+        // allocation.
+        LOG1(".....mirror fields in field list " << f->id << ":" << f->name);
+        int fl = 0;
+        for (auto s : entry->sets) {
+            LOG1("\t.....field list....." << fl);
+            for (auto m : *s) {
+                PHV::Field* mirror = phv.field(m);
+                if (mirror) {
+                    mirror->mirror_field_list = {f, fl};
+                    LOG1("\t\t" << mirror);
+                } else {
+                    LOG1("\t\t" << "-f?"); }
+                fl++; } }
     }
 
     void postorder(const IR::Expression* e) override {
@@ -1103,6 +743,11 @@ struct AllocatePOVBits : public Inspector {
     explicit AllocatePOVBits(PhvInfo& phv) : phv(phv) { }
 
  private:
+    profile_t init_apply(const IR::Node* root) {
+        LOG3("BEGIN AllocatePOVBits");
+        return Inspector::init_apply(root);
+    }
+
     bool preorder(const IR::BFN::Pipe* pipe) override {
         BUG_CHECK(pipe->headerStackInfo != nullptr,
                   "Running AllocatePOVBits without running "
@@ -1236,70 +881,36 @@ struct ComputeFieldAlignments : public Inspector {
     PhvInfo& phv;
 };
 
+
+/// Set the `deparsed` constraint for fields that are emitted in the deparser.
+class MarkDeparsedFields : public Inspector {
+    PhvInfo& phv_i;
+    const PhvUse& uses_i;
+
+    bool preorder(const IR::BFN::Emit* emit) {
+        auto* src_field = phv_i.field(emit->source);
+        BUG_CHECK(src_field, "Deparser Emit with a non-PHV source: %1%",
+                  cstring::to_cstring(emit));
+        // XXX(cole): These two constraints will be subsumed by deparser schema.
+        src_field->set_exact_containers(true);
+        src_field->set_deparsed(true);
+        return false;
+    }
+
+ public:
+    MarkDeparsedFields(PhvInfo& phv, const PhvUse& uses) : phv_i(phv), uses_i(uses) { }
+};
+
 CollectPhvInfo::CollectPhvInfo(PhvInfo& phv) {
+    PhvUse* uses = new PhvUse(phv);
     addPasses({
         new CollectPhvFields(phv),
         new AllocatePOVBits(phv),
         new MarkBridgedMetadataFields(phv),
-        new ComputeFieldAlignments(phv)
+        new ComputeFieldAlignments(phv),
+        uses,
+        new MarkDeparsedFields(phv, *uses)
     });
-}
-
-//
-//
-//***********************************************************************************
-//
-// logging functions
-//
-//***********************************************************************************
-//
-void PhvInfo::print_phv_group_occupancy() const {
-    if (!LOGGING(2)) return;
-    std::set<PHV::Container> containers_used;
-    std::map<bitvec, size_t> groups_usage;
-    std::map<bitvec, size_t> groups_containers;
-    std::map<bitvec, int> groups_to_ids;
-
-    // Extract MAU group specific information from phvSpec
-    std::pair<int, int> numBytes = Device::phvSpec().mauGroupNumAndSize(PHV::Type::B);
-    std::pair<int, int> numHalfs = Device::phvSpec().mauGroupNumAndSize(PHV::Type::H);
-    std::pair<int, int> numWords = Device::phvSpec().mauGroupNumAndSize(PHV::Type::W);
-
-    for (auto *field : by_id) {
-        for (auto phv_c : field->phv_containers()) {
-            PHV::Container c = Device::phvSpec().idToContainer(phv_c->container_id());
-            if (containers_used.count(c)) continue;
-            containers_used.insert(c);
-            int bitsUsed = int(phv_c->width()) - phv_c->avail_bits();
-            if (boost::optional<bitvec> mau_group =
-                    Device::phvSpec().mauGroup(phv_c->container_id())) {
-                groups_containers[mau_group.get()] += 1;
-                groups_usage[mau_group.get()] += bitsUsed;
-                // Group numbers go from Words -> Bytes -> Halfwords
-                // In Tofino, this is (0-3) -> (4-7) -> (8-13)
-                if (c.type() == PHV::Type::B)
-                    groups_to_ids[mau_group.get()] = (c.index() / numBytes.second) + numWords.first;
-                else if (c.type() == PHV::Type::H)
-                    groups_to_ids[mau_group.get()] = (c.index() / numHalfs.second) + (numWords.first
-                            + numBytes.first);
-                else if (c.type() == PHV::Type::W)
-                    groups_to_ids[mau_group.get()] = (c.index() / numWords.second); } } }
-
-    LOG2("\nPHV Groups Allocation State:\n");
-    LOG2("-----------------------------------------------------");
-    LOG2("|     PHV Group     |   Containers   |   Bits Used  |");
-    LOG2("|  (container bits) |      Used      |              |");
-    LOG2("-----------------------------------------------------");
-
-    // Print PHV groups
-    for (auto container_type : Device::phvSpec().containerTypes()) {
-        for (auto mau_group : Device::phvSpec().mauGroups(container_type)) {
-            LOG2("|\t\t" << groups_to_ids[mau_group] << " (" << container_type << ")\t\t|\t\t" <<
-                    groups_containers[mau_group] << "\t\t|\t\t" << groups_usage[mau_group] <<
-                    "\t\t|"); }
-        // Ensure that the line appears only for B, H, and W; not for TB, TH, TW
-        if (Device::phvSpec().mauGroups(container_type).size() != 0)
-            LOG2("-----------------------------------------------------"); }
 }
 //
 //
@@ -1328,26 +939,14 @@ std::ostream &operator<<(std::ostream &out,
     return out;
 }
 
-std::ostream &operator<<(
-    std::ostream &out,
-    const ordered_map<Cluster_PHV *, std::pair<int, int>>& field_slices) {
-    for (auto &entry : field_slices) {
-        out << '|';
-        out << entry.first->id() << ',';
-        out << entry.second.first << ".." << entry.second.second;
-        out << '|';
-    }
-    return out;
-}
-
 std::ostream &PHV::operator<<(std::ostream &out, const PHV::Field &field) {
-    out << field.id << ':' << field.name << '<' << field.size;
-    if (field.phv_use_lo() || field.phv_use_hi())
-        out << ':' << field.phv_use_lo() << ".." << field.phv_use_hi();
-    out << '>';
-    out << (field.gress ? " E" : " I") << " off=" << field.offset;
+    out << field.id << ':' << field.name << '<' << field.size << '>';
     if (field.alignment)
         out << " ^" << field.alignment->littleEndian;
+    else
+        out << " ^x";
+    if (field.validContainerRange_i != ZeroToMax())
+        out << " ^" << field.validContainerRange_i;
     else
         out << " ^x";
     if (field.bridged) out << " bridge";
@@ -1362,18 +961,15 @@ std::ostream &PHV::operator<<(std::ostream &out, const PHV::Field &field) {
     if (field.mau_write()) out << " mau_write";
     if (field.deparsed()) out << " deparsed";
     if (field.mau_phv_no_pack()) out << " mau_phv_no_pack";
-    if (field.deparsed_no_pack()) out << " deparsed_no_pack";
+    if (field.no_pack()) out << " no_pack";
+    if (field.no_split()) out << " no_split";
     if (field.deparsed_bottom_bits()) out << " deparsed_bottom_bits";
+    if (field.deparsed_to_tm()) out << " deparsed_to_tm";
     if (field.exact_containers()) out << " exact_containers";
     if (field.header_stack_pov_ccgf()) out << " header_stack_pov_ccgf";
     if (field.simple_header_pov_ccgf()) out << " simple_header_pov_ccgf";
     if (field.ccgf()) out << " ccgf=" << field.ccgf()->id << ':' << field.ccgf()->name;
-    out << " /" << field.cl_id() << ",";    // cluster id
-    for (auto &c : field.phv_containers()) {
-        out << c->toString() << ";";  // phv number
-    }
-    out << "/";
-    out << field.field_slices();
+    out << " / ";
     if (field.ccgf_fields().size()) {
         // aggregate widths of members in "container contiguous group fields"
         out << std::endl << '[';
@@ -1393,32 +989,7 @@ std::ostream &PHV::operator<<(std::ostream &out, const PHV::Field &field) {
             }
             out << std::endl;
         }
-        out << ':' << field.phv_use_width();
-        int ccgf_width_l = field.ccgf_width();
-        if (field.phv_use_width() != ccgf_width_l) {
-            out << '(' << ccgf_width_l << ')';
-        }
         out << ']';
-    }
-    if (field.field_overlay_map().size()) {
-        for (auto &entry : field.field_overlay_map()) {
-            out << "\t"
-                << "[r" << entry.first << "] = [";
-            if (entry.second) {
-                for (auto &f : *(entry.second)) {
-                    out << f->id;
-                    if (f->ccgf_fields().size()) {
-                        out << '(';
-                        for (auto &m : f->ccgf_fields()) {
-                            out << m->id << ',';
-                        }
-                        out << ')';
-                    }
-                    out << ";";
-                }
-            }
-            out << ']';
-        }
     }
     if (!field.alloc_i.empty())
         out << field.alloc_i;
@@ -1494,15 +1065,7 @@ const IR::Node* PhvInfo::DumpPhvFields::apply_visitor(const IR::Node *n, const c
               (uses.is_used_parde(&f) ? "P" : " ") <<
               (uses.is_used_mau(&f) ? "M" : " ") <<
               (uses.is_referenced(&f) ? "R" : " ") <<
-              (uses.is_deparsed(&f) ? "D" : " ") << ") " << f);
-
-        for (auto vreg : f.field_overlay_map_i) {
-            for (auto child : *vreg.second) {
-                LOG1("  -overlay-(" <<
-                      (uses.is_used_parde(child) ? "P" : " ") <<
-                      (uses.is_used_mau(child) ? "M" : " ") <<
-                      (uses.is_referenced(child) ? "R" : " ") <<
-                      (uses.is_deparsed(child) ? "D" : " ") << ") " << *child); } } }
+              (uses.is_deparsed(&f) ? "D" : " ") << ") " << f); }
     LOG1("");
 
     LOG1("--- PHV FIELDS WIDTH HISTOGRAM----------------------------");
