@@ -1033,3 +1033,7 @@ p4c_add_xfail_reason("tofino"
   "Inferred incompatible alignments for field"
   extensions/p4_tests/p4_14/jenkins/parser_intr_md/parser_intr_md.p4
   )
+
+
+# BRIG-348
+p4c_add_xfail_reason("tofino" "Compiler Bug" ${ONOS_FABRIC_P4})
