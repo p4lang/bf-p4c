@@ -84,6 +84,7 @@ bool Clustering::MakeSuperClusters::preorder(const IR::Primitive *prim) {
 
     LOG5("Adding set operands from instruction " << prim);
     set_operands_i.insert(std::make_pair(dst, src));
+    return false;
 }
 
 void Clustering::MakeSuperClusters::end_apply() {

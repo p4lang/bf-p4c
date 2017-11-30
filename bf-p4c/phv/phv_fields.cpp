@@ -743,7 +743,7 @@ struct AllocatePOVBits : public Inspector {
     explicit AllocatePOVBits(PhvInfo& phv) : phv(phv) { }
 
  private:
-    profile_t init_apply(const IR::Node* root) {
+    profile_t init_apply(const IR::Node* root) override {
         LOG3("BEGIN AllocatePOVBits");
         return Inspector::init_apply(root);
     }
@@ -885,7 +885,6 @@ struct ComputeFieldAlignments : public Inspector {
 /// Set the `deparsed` constraint for fields that are emitted in the deparser.
 class MarkDeparsedFields : public Inspector {
     PhvInfo& phv_i;
-    const PhvUse& uses_i;
 
     bool preorder(const IR::BFN::Emit* emit) {
         auto* src_field = phv_i.field(emit->source);
@@ -898,18 +897,16 @@ class MarkDeparsedFields : public Inspector {
     }
 
  public:
-    MarkDeparsedFields(PhvInfo& phv, const PhvUse& uses) : phv_i(phv), uses_i(uses) { }
+    explicit MarkDeparsedFields(PhvInfo& phv) : phv_i(phv) { }
 };
 
 CollectPhvInfo::CollectPhvInfo(PhvInfo& phv) {
-    PhvUse* uses = new PhvUse(phv);
     addPasses({
         new CollectPhvFields(phv),
         new AllocatePOVBits(phv),
         new MarkBridgedMetadataFields(phv),
         new ComputeFieldAlignments(phv),
-        uses,
-        new MarkDeparsedFields(phv, *uses)
+        new MarkDeparsedFields(phv)
     });
 }
 //

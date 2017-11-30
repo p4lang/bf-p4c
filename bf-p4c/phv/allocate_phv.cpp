@@ -48,9 +48,9 @@ AllocatePHV::make_container_slices(int aggregate_size, int slice_size, int start
 
 /* static */
 bool AllocatePHV::can_overlay(
-        SymBitMatrix mutex,
-        const PHV::Field* f,
-        const ordered_set<PHV::AllocSlice>& slices) {
+        SymBitMatrix /* mutex */,
+        const PHV::Field* /* f */,
+        const ordered_set<PHV::AllocSlice>& /* slices */) {
     return false;
 /* XXX(cole): Temporarily disable overlaying.
     for (auto slice : slices) {

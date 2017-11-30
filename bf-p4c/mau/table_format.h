@@ -129,7 +129,6 @@ struct TableFormat {
     // each match group use, for allocating version bits.
     // safe_vector<safe_vector<int>> match_group_info;
 
-    bool balanced = true;
     int ghost_bits_count = 0;
     bool next_table = false;
     const bitvec immediate_mask;

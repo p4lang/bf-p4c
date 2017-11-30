@@ -50,7 +50,6 @@ class Clustering : public PassManager {
     class MakeSuperClusters : public Inspector {
         Clustering& self;
         PhvInfo& phv_i;
-        PhvUse&  uses_i;
 
         /// Collection of field lists, each of which contains fields that must
         /// be placed, in order, in the same container.
@@ -68,11 +67,11 @@ class Clustering : public PassManager {
 
         /// Create cluster groups by taking the union of clusters of fields
         /// that appear in the same list.
-        void end_apply();
+        void end_apply() override;
 
      public:
         explicit MakeSuperClusters(Clustering &self)
-        : self(self), phv_i(self.phv_i), uses_i(self.uses_i) { }
+        : self(self), phv_i(self.phv_i) { }
     };
 
     class MakeClusters : public Inspector {
@@ -84,7 +83,7 @@ class Clustering : public PassManager {
         UnionFind<PHV::Field*> union_find_i;
 
         /// Initialize the UnionFind data structure with all fields in phv_i.
-        profile_t init_apply(const IR::Node *root);
+        profile_t init_apply(const IR::Node *root) override;
 
         /// Union all operands of each primitive instruction.
         bool preorder(const IR::Primitive* primitive) override;

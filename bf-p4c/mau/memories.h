@@ -80,7 +80,6 @@ struct Memories {
     int gw_bytes_per_sb[SRAM_ROWS][BUS_COUNT] = {{0}};
     Alloc1D<cstring, STATS_ALUS>                       stats_alus;
     Alloc1D<cstring, METER_ALUS>                       meter_alus;
-    int                                                result_buses_used = 0;
 
     struct mem_info {
         int match_tables = 0;

@@ -26,7 +26,6 @@ class FieldInterference : public Visitor {
  private:
     const Clustering&           clustering_i;
     SymBitMatrix&               mutex_i;
-    const PhvUse&               uses_i;
 
     /// Stores a mapping from a field to its corresponding cluster
     /// Without field slicing, the ordered_set will only contain 1 cluster
@@ -54,8 +53,8 @@ class FieldInterference : public Visitor {
     void printFieldColorMap(FieldColorMap& m);
 
  public:
-    FieldInterference(const Clustering& cluster, SymBitMatrix& mutex_m, const PhvUse& uses_u)
-        : clustering_i(cluster), mutex_i(mutex_m), uses_i(uses_u) { }
+    FieldInterference(const Clustering& cluster, SymBitMatrix& mutex_m)
+        : clustering_i(cluster), mutex_i(mutex_m) { }
 
     /** Entry point for the FieldInterference pass
       * Calls constructFieldInterference() to generate separate FieldColorMaps corresponding to PHV

@@ -62,7 +62,7 @@ class ContainerGroup {
 };
 
 class FieldSlice {
-    PHV::Field* field_i;
+    // PHV::Field* field_i;  // XXX(seth): Unused?
     le_bitrange range_i;
 
     /** Field name, following this scheme:
@@ -73,13 +73,13 @@ class FieldSlice {
     cstring         name;
 
     /// Unique field ID.
-    int             id;
+    // int             id;  // XXX(seth): Unused?
 
     /// Whether the Field is ingress or egress.
-    gress_t         gress;
+    // gress_t         gress;  // XXX(seth): Unused?
 
     /// Total size of Field in bits.
-    int             size;
+    // int             size;  // XXX(seth): Unused?
 
     /// The alignment requirement of this field. If boost::none, there is no
     /// particular alignment requirement.
@@ -90,13 +90,13 @@ class FieldSlice {
     nw_bitrange validContainerRange_i = ZeroToMax();
 
     /// Kind of this field.
-    FieldKind kind;
+    // FieldKind kind;  // XXX(seth): Unused?
 
     /// True if this Field is metadata bridged from ingress to egress.
-    bool            bridged = false;
+    // bool            bridged = false;  // XXX(seth): Unused?
 
  public:
-    FieldSlice(Field* field, le_bitrange range) : field_i(field), range_i(range) {
+    FieldSlice(Field* field, le_bitrange range) : range_i(range) {
         BUG_CHECK(0 <= range.lo, "Trying to create field slice with negative start");
         BUG_CHECK(range.size() <= field->size, "Trying to create field slice larger than field");
 
@@ -321,17 +321,17 @@ class Transaction : public Allocation {
 
     /// Iterate through container-->allocation slices.
     /// @warning not yet implemented.
-    const_iterator begin() const;
+    const_iterator begin() const override;
 
     /// Iterate through container-->allocation slices.
     /// @warning not yet implemented.
-    const_iterator end() const;
+    const_iterator end() const override;
 
     /// @returns number of containers owned by this allocation.
-    size_t size() const { return parent_i.size(); }
+    size_t size() const override { return parent_i.size(); }
 
     /// @returns true if this allocation owns @c.
-    bool contains(PHV::Container c) const { return parent_i.contains(c); }
+    bool contains(PHV::Container c) const override { return parent_i.contains(c); }
 
     /// @returns all the slices allocated to @c.
     ordered_set<AllocSlice> slices(PHV::Container c) const override;
@@ -346,11 +346,11 @@ class Transaction : public Allocation {
     ordered_set<PHV::AllocSlice> slices(const PHV::Field* f, le_bitrange range) const override;
 
     /// @returns the container status of @c and fails if @c is not present.
-    GressAssignment gress(PHV::Container c) const;
+    GressAssignment gress(PHV::Container c) const override;
 
     /// @returns a summary of the status of each container by type and gress.
     /// @warning not yet implemented.
-    cstring getSummary() const;
+    cstring getSummary() const override;
 
     /// Returns the outstanding writes in this view.
     const ordered_map<PHV::Container, ContainerStatus>& getTransactionStatus() const {
@@ -467,7 +467,7 @@ class AlignedCluster : public ClusterStats {
 
     /// @returns true if this cluster can be assigned to containers of kind
     /// @kind.
-    bool okIn(PHV::Kind kind) const;
+    bool okIn(PHV::Kind kind) const override;
 
     /** @returns the (little Endian) byte-relative alignment constraint (if
      * any) for all fields in this cluster.
@@ -568,7 +568,7 @@ class SuperCluster : public ClusterStats {
 
     /// @returns true if this cluster can be assigned to containers of kind
     /// @kind.
-    bool okIn(PHV::Kind kind) const;
+    bool okIn(PHV::Kind kind) const override;
 
     /// @returns the number of clusters in this group with the exact_containers constraint.
     int exact_containers() const override { return exact_containers_i; }

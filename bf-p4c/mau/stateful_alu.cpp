@@ -329,7 +329,7 @@ const IR::MAU::Instruction *CreateSaluInstruction::createInstruction() {
             if (output_cmpl) opcode += 'c';
             onebit = new IR::MAU::Instruction(opcode);
             rv = output = new IR::MAU::Instruction("output",
-                { new IR::MAU::SaluReg(operands.at(0)->type, "alu_lo") } );
+                new IR::MAU::SaluReg(operands.at(0)->type, "alu_lo"));
             break; }
         if (predicate)
             operands.insert(operands.begin(), predicate);
@@ -342,7 +342,7 @@ const IR::MAU::Instruction *CreateSaluInstruction::createInstruction() {
             opcode = output_cmpl ? "read_bitc" : "read_bit";
             onebit = new IR::MAU::Instruction(opcode);
             rv = output = new IR::MAU::Instruction("output",
-                { new IR::MAU::SaluReg(operands.at(0)->type, "alu_lo") } );
+                new IR::MAU::SaluReg(operands.at(0)->type, "alu_lo"));
             break;
         } else if (auto k = operands.at(0)->to<IR::Constant>()) {
             if (k->value == 0) {

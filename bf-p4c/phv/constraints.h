@@ -267,8 +267,8 @@ class Isolate : public BaseConstraint {
  * where '.' implies bits in the container that may have any assignment.
  */
 class NoSlice : public BaseConstraint {
-    const PHV::Field* f;
  public:
+    const PHV::Field* f;
     explicit NoSlice(const PHV::Field* f) : f(f) { }
 };
 

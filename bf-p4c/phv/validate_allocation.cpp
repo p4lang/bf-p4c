@@ -257,7 +257,6 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
     //     digest.
 
     auto isDeparsed = [](const PHV::Field* f) { return f->deparsed_i; };
-    auto isBridged = [](const PHV::Field* f) { return f->bridged; };
     auto isMetadata = [](const PHV::Field* f) { return f->metadata || f->pov; };
     auto hasOverlay = [](const PHV::Field* f) {
         le_bitrange allocated;

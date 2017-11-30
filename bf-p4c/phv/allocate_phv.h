@@ -35,7 +35,7 @@ class AllocatePHV : public Inspector {
 
     // Modified in this pass.
     PhvInfo& phv_i;
-    ActionPhvConstraints& actions_i;
+    // ActionPhvConstraints& actions_i;  // XXX(seth): Not yet implemented?
 
     /** The entry point.  This "pass" doesn't actually traverse the IR, but it
      * marks the place in the back end where PHV allocation does its work,
@@ -49,9 +49,8 @@ class AllocatePHV : public Inspector {
                 const PhvUse& uses,
                 const ClotInfo& clot,
                 PhvInfo& phv,
-                ActionPhvConstraints& actions)
-    : mutex_i(mutex), clustering_i(clustering), uses_i(uses), clot_i(clot), phv_i(phv),
-      actions_i(actions) { }
+                ActionPhvConstraints& /* actions */)
+    : mutex_i(mutex), clustering_i(clustering), uses_i(uses), clot_i(clot), phv_i(phv) { }
 
     /// Throw a pretty-printed ::error when allocation fails.
     static void formatAndThrowError(
