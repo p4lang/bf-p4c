@@ -7,6 +7,7 @@
 #include "device.h"
 #include "ir/ir.h"
 #include "ir/dbprint.h"
+#include "lib/compile_context.h"
 #include "lib/crash.h"
 #include "lib/gc.h"
 #include "lib/log.h"
@@ -41,12 +42,13 @@ int main(int ac, char **av) {
     setup_gc_logging();
     setup_signals();
 
-    BFN_Options options;
+    AutoCompileContext autoBFNContext(new BFNContext);
+    auto& options = BFNContext::get().options();
 
     if (options.process(ac, av) != nullptr)
         options.setInputFile();
 
-    if (ErrorReporter::instance.getErrorCount() > 0)
+    if (::errorCount() > 0)
         return 1;
 
     Device::init(options.device);
@@ -69,7 +71,7 @@ int main(int ac, char **av) {
     log_dump(program, "Initial program");
 
     BFN::generateP4Runtime(program, options);
-    if (ErrorReporter::instance.getErrorCount() > 0)
+    if (::errorCount() > 0)
         return 1;
 
     BFN::MidEnd midend(options);
@@ -83,7 +85,7 @@ int main(int ac, char **av) {
                    options.arch == "native");
     auto maupipe = extract_maupipe(program, useTna);
 
-    if (ErrorReporter::instance.getErrorCount() > 0)
+    if (::errorCount() > 0)
         return 1;
     if (!maupipe)
         return 1;
@@ -96,5 +98,5 @@ int main(int ac, char **av) {
 
     if (Log::verbose())
         std::cout << "Done." << std::endl;
-    return ErrorReporter::instance.getErrorCount() > 0;
+    return ::errorCount() > 0;
 }

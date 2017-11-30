@@ -113,7 +113,7 @@ TEST_F(TofinoFieldAlignment, ByteAlignedFields) {
     )"));
 
     ASSERT_TRUE(test);
-    EXPECT_EQ(0u, ::ErrorReporter::instance.getDiagnosticCount());
+    EXPECT_EQ(0u, ::diagnosticCount());
 
     checkFieldAlignment(test->pipe, {
         { "h.field1", ExpectedAlignment{/* network */ 0, /* little endian */ 0} },
@@ -135,7 +135,7 @@ TEST_F(TofinoFieldAlignment, SmallUnalignedFields) {
     )"));
 
     ASSERT_TRUE(test);
-    EXPECT_EQ(0u, ::ErrorReporter::instance.getDiagnosticCount());
+    EXPECT_EQ(0u, ::diagnosticCount());
 
     checkFieldAlignment(test->pipe, {
         { "h.field1", ExpectedAlignment{/* network */ 0, /* little endian */ 7} },
@@ -157,7 +157,7 @@ TEST_F(TofinoFieldAlignment, LargeUnalignedFields) {
     )"));
 
     ASSERT_TRUE(test);
-    EXPECT_EQ(0u, ::ErrorReporter::instance.getDiagnosticCount());
+    EXPECT_EQ(0u, ::diagnosticCount());
 
     checkFieldAlignment(test->pipe, {
         { "h.field1", ExpectedAlignment{/* network */ 0, /* little endian */ 1} },
@@ -208,7 +208,7 @@ TEST_F(TofinoFieldAlignment, NonPardeFieldsDoNotForceAlignment) {
     )"));
 
     ASSERT_TRUE(test);
-    EXPECT_EQ(0u, ::ErrorReporter::instance.getDiagnosticCount());
+    EXPECT_EQ(0u, ::diagnosticCount());
 
     checkFieldAlignment(test->pipe, {
         { "usedInParser.field", ExpectedAlignment{/* network */ 0, /* little endian */ 0} },
@@ -259,7 +259,7 @@ TEST_F(TofinoFieldAlignment, BridgedMetadataRespectsAlignment) {
     )"));
 
     ASSERT_TRUE(test);
-    EXPECT_EQ(0u, ::ErrorReporter::instance.getDiagnosticCount());
+    EXPECT_EQ(0u, ::diagnosticCount());
 
     // We need to run enough of the backend to generate the bridged metadata
     // parser state.
@@ -282,7 +282,7 @@ TEST_F(TofinoFieldAlignment, BridgedMetadataRespectsAlignment) {
     // If the generated bridged metadata parser state used the wrong alignment,
     // CollectPhvInfo() will report an error because it will detect inconsistent
     // alignments.
-    EXPECT_EQ(0u, ::ErrorReporter::instance.getDiagnosticCount());
+    EXPECT_EQ(0u, ::diagnosticCount());
 
     // Verify that the generated parser state contains an extract for
     // `meta.metadataField` with the correct alignment.

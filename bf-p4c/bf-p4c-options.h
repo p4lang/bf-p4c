@@ -151,4 +151,6 @@ class BFN_Options : public CompilerOptions {
     static safe_vector<cstring> supported_targets;
 };
 
+using BFNContext = P4CContextWithOptions<BFN_Options>;
+
 #endif /* EXTENSIONS_BF_P4C_BF_P4C_OPTIONS_H_ */

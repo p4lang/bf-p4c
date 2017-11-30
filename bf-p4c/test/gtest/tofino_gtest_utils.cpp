@@ -21,7 +21,8 @@ MidendTestCase::create(const std::string& source,
     auto frontendTestCase = FrontendTestCase::create(source, langVersion);
     if (!frontendTestCase) return boost::none;
 
-    BFN_Options options;
+    AutoCompileContext autoBFNContext(new BFNContext(BFNContext::get()));
+    auto& options = BFNContext::get().options();
     options.langVersion = langVersion;
     BFN::MidEnd midend(options);
     auto* midendProgram = frontendTestCase->program->apply(midend);
@@ -29,8 +30,8 @@ MidendTestCase::create(const std::string& source,
         std::cerr << "Midend failed" << std::endl;
         return boost::none;
     }
-    if (::ErrorReporter::instance.getDiagnosticCount() > 0) {
-        std::cerr << "Encountered " << ::ErrorReporter::instance.getDiagnosticCount()
+    if (::diagnosticCount() > 0) {
+        std::cerr << "Encountered " << ::diagnosticCount()
                   << " errors while executing midend" << std::endl;
         return boost::none;
     }
@@ -50,8 +51,8 @@ TofinoPipeTestCase::create(const std::string& source,
         std::cerr << "extract_maupipe failed" << std::endl;
         return boost::none;
     }
-    if (::ErrorReporter::instance.getDiagnosticCount() > 0) {
-        std::cerr << "Encountered " << ::ErrorReporter::instance.getDiagnosticCount()
+    if (::diagnosticCount() > 0) {
+        std::cerr << "Encountered " << ::diagnosticCount()
                   << " errors while executing extract_maupipe" << std::endl;
         return boost::none;
     }
@@ -72,8 +73,8 @@ TofinoPipeTestCase::createWithThreadLocalInstances(
         std::cerr << "Inserting thread local instances failed" << std::endl;
         return boost::none;
     }
-    if (::ErrorReporter::instance.getDiagnosticCount() > 0) {
-        std::cerr << "Encountered " << ::ErrorReporter::instance.getDiagnosticCount()
+    if (::diagnosticCount() > 0) {
+        std::cerr << "Encountered " << ::diagnosticCount()
                   << " errors while executing CreateThreadLocalInstances" << std::endl;
         return boost::none;
     }

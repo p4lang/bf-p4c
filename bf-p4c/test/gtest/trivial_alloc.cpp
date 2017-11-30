@@ -101,7 +101,7 @@ TYPED_TEST(TofinoPHVTrivialAllocators, AutomaticAllocation) {
     };
     auto program = testcase->pipe->apply(passes);
     ASSERT_TRUE(program != nullptr);
-    EXPECT_EQ(0u, ::ErrorReporter::instance.getDiagnosticCount());
+    EXPECT_EQ(0u, ::diagnosticCount());
 
     // Used to check that no container is shared between fields unexpectedly.
     std::set<PHV::Container> uniqueContainers;
@@ -250,7 +250,7 @@ class TofinoPHVManualAlloc : public TofinoBackendTest {
         };
         auto program = testcase->pipe->apply(passes);
         ASSERT_TRUE(program != nullptr);
-        EXPECT_EQ(0u, ::ErrorReporter::instance.getDiagnosticCount());
+        EXPECT_EQ(0u, ::diagnosticCount());
 
         // Verify that we got the assignments we requested.
         for (auto& assignment : assignments) {
@@ -360,7 +360,7 @@ TEST_F(TofinoPHVManualAlloc, ReservedContainerAllocation) {
     };
     auto program = testcase->pipe->apply(passes);
     ASSERT_TRUE(program != nullptr);
-    EXPECT_EQ(0u, ::ErrorReporter::instance.getDiagnosticCount());
+    EXPECT_EQ(0u, ::diagnosticCount());
 
     // [B0, B16), [H0, H16), and [W0, W16) are reserved for ingress.
     ASSERT_ANY_THROW(program->apply(PHV::ManualAlloc(phv, /* checked = */ true, {

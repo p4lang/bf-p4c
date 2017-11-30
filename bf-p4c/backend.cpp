@@ -107,7 +107,7 @@ class AsmOutput : public Inspector {
        MauAsmOutput mauasm(phv);
        pipe->apply(mauasm);
 
-       if (ErrorReporter::instance.getErrorCount() > 0)
+       if (::errorCount() > 0)
            return false;
 
        *out << "version: 1.0.0" << std::endl

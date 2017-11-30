@@ -289,7 +289,7 @@ ChecksumSourceMap findChecksumsP14(const IR::P4Control* control) {
     // Record the existing diagnostic count so that if any warnings or errors
     // are reported in the body of this function, we can print a usage message
     // at the end.
-    const auto existingDiagnostics = ::ErrorReporter::instance.getDiagnosticCount();
+    const auto existingDiagnostics = ::diagnosticCount();
 
     for (auto* statement : control->body->components) {
         boost::optional<ChecksumSourceMap::value_type> checksum;
@@ -319,7 +319,7 @@ ChecksumSourceMap findChecksumsP14(const IR::P4Control* control) {
         ::warning("Unexpected statement: %1%", statement);
     }
 
-    if (::ErrorReporter::instance.getDiagnosticCount() > existingDiagnostics) {
+    if (::diagnosticCount() > existingDiagnostics) {
         ::error("Encountered invalid code in computed checksum control: %1%",
                 control);
         showComputeChecksumUsage();

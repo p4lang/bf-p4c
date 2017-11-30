@@ -77,7 +77,9 @@ const IR::BFN::Pipe *runInitialPassManager(const IR::BFN::Pipe* pipe, PhvInfo *p
 
 }  // namespace
 
-TEST(ActionPhv, IngressSingleTableSharedWrites) {
+class ActionPhv : public TofinoBackendTest { };
+
+TEST_F(ActionPhv, IngressSingleTableSharedWrites) {
     auto test = createActionTest(P4_SOURCE(P4Headers::NONE, R"(
         action first(bit<8> param1, bit<8> param2) {
             headers.h1.field1 = param1;
@@ -144,7 +146,7 @@ TEST(ActionPhv, IngressSingleTableSharedWrites) {
     EXPECT_FALSE(apc.is_in_action_to_writes(actionList[2], "ingress::h1.field4"));
 }
 
-TEST(ActionPhv, IngressMultipleTablesSharedWrites) {
+TEST_F(ActionPhv, IngressMultipleTablesSharedWrites) {
     auto test = createActionTest(P4_SOURCE(P4Headers::NONE, R"(
         action first(bit<8> param1, bit<8> param2) {
             headers.h1.field1 = param1;
@@ -225,7 +227,7 @@ TEST(ActionPhv, IngressMultipleTablesSharedWrites) {
     EXPECT_FALSE(apc.is_in_action_to_writes(actionList[2], "ingress::h2.field2"));
 }
 
-TEST(ActionPhv, IngressMultipleTablesReads) {
+TEST_F(ActionPhv, IngressMultipleTablesReads) {
     auto test = createActionTest(P4_SOURCE(P4Headers::NONE, R"(
         action first() {
             headers.h1.field1 = headers.h2.field1;

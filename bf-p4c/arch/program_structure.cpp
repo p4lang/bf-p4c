@@ -37,7 +37,7 @@ void ProgramStructure::include(cstring filename, IR::IndexedVector<IR::Node>* ve
             return;
         }
 
-        auto code = P4::P4ParserDriver::parse(options.file, file);
+        auto code = P4::P4ParserDriver::parse(file, options.file);
         if (code == nullptr || ::errorCount() > 0) {
             ::error("Failed to load architecture file %1%", options.file);
             return;

@@ -7,6 +7,7 @@
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/device.h"
 #include "gtest/gtest.h"
+#include "lib/compile_context.h"
 
 namespace IR {
 namespace BFN {
@@ -55,14 +56,21 @@ struct TofinoPipeTestCase {
 /// A GTest fixture for Tofino tests.
 class TofinoBackendTest : public ::testing::Test {
  public:
+    TofinoBackendTest() : autoBFNContext(new BFNContext) { }
+
     static void SetUpTestCase() {
         Device::reinitialize("Tofino");
     }
+
+ private:
+    AutoCompileContext autoBFNContext;
 };
 
 /// A GTest fixture for JBay tests.
 class JBayBackendTest : public ::testing::Test {
  public:
+    JBayBackendTest() : autoBFNContext(new BFNContext) { }
+
     static void SetUpTestCase() {
         Device::reinitialize("JBay");
     }
@@ -75,6 +83,9 @@ class JBayBackendTest : public ::testing::Test {
         // needed.
         Device::reinitialize("tofino");
     }
+
+ private:
+    AutoCompileContext autoBFNContext;
 };
 
 }  // namespace Test

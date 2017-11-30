@@ -84,7 +84,9 @@ void checkComputedChecksum(const IR::BFN::Pipe* pipe,
 
 }  // namespace
 
-TEST(TofinoComputedChecksum, SimpleWithIsValid) {
+class TofinoComputedChecksum : public TofinoBackendTest { };
+
+TEST_F(TofinoComputedChecksum, SimpleWithIsValid) {
     auto test = createComputedChecksumTestCase(P4_SOURCE(P4Headers::NONE, R"(
         update_checksum(true, {
                         headers.h1.field1,
@@ -96,7 +98,7 @@ TEST(TofinoComputedChecksum, SimpleWithIsValid) {
     )"));
 
     ASSERT_TRUE(test);
-    EXPECT_EQ(0u, ::ErrorReporter::instance.getDiagnosticCount());
+    EXPECT_EQ(0u, ::diagnosticCount());
     checkComputedChecksum(test->pipe, {
         "emit h1.field1 if h1.$valid",
         "emit h1.field2 if h1.$valid",
@@ -105,7 +107,7 @@ TEST(TofinoComputedChecksum, SimpleWithIsValid) {
     });
 }
 
-TEST(TofinoComputedChecksum, SimpleWithoutIsValid) {
+TEST_F(TofinoComputedChecksum, SimpleWithoutIsValid) {
     auto test = createComputedChecksumTestCase(P4_SOURCE(P4Headers::NONE, R"(
         update_checksum(true, {
                         headers.h1.field1,
@@ -117,7 +119,7 @@ TEST(TofinoComputedChecksum, SimpleWithoutIsValid) {
     )"));
 
     ASSERT_TRUE(test);
-    EXPECT_EQ(0u, ::ErrorReporter::instance.getDiagnosticCount());
+    EXPECT_EQ(0u, ::diagnosticCount());
     checkComputedChecksum(test->pipe, {
         "emit h1.field1 if h1.$valid",
         "emit h1.field2 if h1.$valid",
@@ -126,7 +128,7 @@ TEST(TofinoComputedChecksum, SimpleWithoutIsValid) {
     });
 }
 
-TEST(TofinoComputedChecksum, DuplicateHeader) {
+TEST_F(TofinoComputedChecksum, DuplicateHeader) {
     auto test = createComputedChecksumTestCase(P4_SOURCE(P4Headers::NONE, R"(
         update_checksum(true, {
                         headers.h2.field1,
@@ -139,7 +141,7 @@ TEST(TofinoComputedChecksum, DuplicateHeader) {
     )"));
 
     ASSERT_TRUE(test);
-    EXPECT_EQ(0u, ::ErrorReporter::instance.getDiagnosticCount());
+    EXPECT_EQ(0u, ::diagnosticCount());
     checkComputedChecksum(test->pipe, {
         "emit h1.field1 if h1.$valid",
         "emit h1.field2 if h1.$valid",
@@ -153,7 +155,7 @@ TEST(TofinoComputedChecksum, DuplicateHeader) {
     });
 }
 
-TEST(TofinoComputedChecksum, DuplicateHeader2) {
+TEST_F(TofinoComputedChecksum, DuplicateHeader2) {
     auto test = createComputedChecksumTestCase(P4_SOURCE(P4Headers::NONE, R"(
         update_checksum(true, {
                         headers.h2.field1,
@@ -171,7 +173,7 @@ TEST(TofinoComputedChecksum, DuplicateHeader2) {
     )"));
 
     ASSERT_TRUE(test);
-    EXPECT_EQ(0u, ::ErrorReporter::instance.getDiagnosticCount());
+    EXPECT_EQ(0u, ::diagnosticCount());
     checkComputedChecksum(test->pipe, {
         "emit h1.field1 if h1.$valid",
         "emit h1.field2 if h1.$valid",
@@ -185,7 +187,7 @@ TEST(TofinoComputedChecksum, DuplicateHeader2) {
     });
 }
 
-TEST(TofinoComputedChecksum, NotEmitted) {
+TEST_F(TofinoComputedChecksum, NotEmitted) {
     auto test = createComputedChecksumTestCase(P4_SOURCE(P4Headers::NONE, R"(
         update_checksum(true, {
                         headers.h2.field1,
@@ -197,7 +199,7 @@ TEST(TofinoComputedChecksum, NotEmitted) {
     )"));
 
     ASSERT_TRUE(test);
-    EXPECT_EQ(0u, ::ErrorReporter::instance.getDiagnosticCount());
+    EXPECT_EQ(0u, ::diagnosticCount());
     checkComputedChecksum(test->pipe, {
         "emit h1.field1 if h1.$valid",
         "emit h1.field2 if h1.$valid",
@@ -206,7 +208,7 @@ TEST(TofinoComputedChecksum, NotEmitted) {
     });
 }
 
-TEST(TofinoComputedChecksum, EmittedTwice) {
+TEST_F(TofinoComputedChecksum, EmittedTwice) {
     auto test = createComputedChecksumTestCase(P4_SOURCE(P4Headers::NONE, R"(
         update_checksum(true, {
                         headers.h1.field1,
@@ -219,7 +221,7 @@ TEST(TofinoComputedChecksum, EmittedTwice) {
     )"));
 
     ASSERT_TRUE(test);
-    EXPECT_EQ(0u, ::ErrorReporter::instance.getDiagnosticCount());
+    EXPECT_EQ(0u, ::diagnosticCount());
     checkComputedChecksum(test->pipe, {
         "emit h1.field1 if h1.$valid",
         "emit h1.field2 if h1.$valid",
@@ -233,7 +235,7 @@ TEST(TofinoComputedChecksum, EmittedTwice) {
     });
 }
 
-TEST(TofinoComputedChecksum, ChecksumFieldInChecksum) {
+TEST_F(TofinoComputedChecksum, ChecksumFieldInChecksum) {
     auto test = createComputedChecksumTestCase(P4_SOURCE(P4Headers::NONE, R"(
         update_checksum(true, {
                         headers.h1.field1,
@@ -246,7 +248,7 @@ TEST(TofinoComputedChecksum, ChecksumFieldInChecksum) {
     )"));
 
     ASSERT_TRUE(test);
-    EXPECT_EQ(0u, ::ErrorReporter::instance.getDiagnosticCount());
+    EXPECT_EQ(0u, ::diagnosticCount());
     checkComputedChecksum(test->pipe, {
         "emit h1.field1 if h1.$valid",
         "emit h1.field2 if h1.$valid",
@@ -255,7 +257,7 @@ TEST(TofinoComputedChecksum, ChecksumFieldInChecksum) {
     });
 }
 
-TEST(TofinoComputedChecksum, MultipleChecksumsInOneHeader) {
+TEST_F(TofinoComputedChecksum, MultipleChecksumsInOneHeader) {
     auto test = createComputedChecksumTestCase(P4_SOURCE(P4Headers::NONE, R"(
         update_checksum(true, {
                         headers.h1.field2,
@@ -272,7 +274,7 @@ TEST(TofinoComputedChecksum, MultipleChecksumsInOneHeader) {
     )"));
 
     ASSERT_TRUE(test);
-    EXPECT_EQ(0u, ::ErrorReporter::instance.getDiagnosticCount());
+    EXPECT_EQ(0u, ::diagnosticCount());
     checkComputedChecksum(test->pipe, {
         "emit h1.field1 if h1.$valid",
         "emit checksum { h1.field1, h1.field3 } if h1.$valid",
@@ -281,7 +283,7 @@ TEST(TofinoComputedChecksum, MultipleChecksumsInOneHeader) {
     });
 }
 
-TEST(TofinoComputedChecksum, ErrorEmptyChecksum) {
+TEST_F(TofinoComputedChecksum, ErrorEmptyChecksum) {
     auto test = createComputedChecksumTestCase(P4_SOURCE(P4Headers::NONE, R"(
         update_checksum(true, {},
                         headers.h1.checksum,
@@ -290,10 +292,10 @@ TEST(TofinoComputedChecksum, ErrorEmptyChecksum) {
         packet.emit(headers.h1);
     )"));
 
-    EXPECT_GT(::ErrorReporter::instance.getDiagnosticCount(), 0u);
+    EXPECT_GT(::diagnosticCount(), 0u);
 }
 
-TEST(TofinoComputedChecksum, ErrorDestFieldMismatch) {
+TEST_F(TofinoComputedChecksum, ErrorDestFieldMismatch) {
     auto test = createComputedChecksumTestCase(P4_SOURCE(P4Headers::NONE, R"(
         update_checksum(true, {
                         headers.h1.field1,
@@ -304,10 +306,10 @@ TEST(TofinoComputedChecksum, ErrorDestFieldMismatch) {
         packet.emit(headers.h1);
     )"));
 
-    EXPECT_GT(::ErrorReporter::instance.getDiagnosticCount(), 0u);
+    EXPECT_GT(::diagnosticCount(), 0u);
 }
 
-TEST(TofinoComputedChecksum, ErrorSourceFieldMismatch) {
+TEST_F(TofinoComputedChecksum, ErrorSourceFieldMismatch) {
     auto test = createComputedChecksumTestCase(P4_SOURCE(P4Headers::NONE, R"(
         update_checksum(true, {
                         headers.h1.field1,
@@ -318,10 +320,10 @@ TEST(TofinoComputedChecksum, ErrorSourceFieldMismatch) {
         packet.emit(headers.h1);
     )"));
 
-    EXPECT_GT(::ErrorReporter::instance.getDiagnosticCount(), 0u);
+    EXPECT_GT(::diagnosticCount(), 0u);
 }
 
-TEST(TofinoComputedChecksum, ErrorSourceFieldMismatchWithoutIsValid) {
+TEST_F(TofinoComputedChecksum, ErrorSourceFieldMismatchWithoutIsValid) {
     auto test = createComputedChecksumTestCase(P4_SOURCE(P4Headers::NONE, R"(
         update_checksum(true, {
                         headers.h1.field1,
@@ -332,10 +334,10 @@ TEST(TofinoComputedChecksum, ErrorSourceFieldMismatchWithoutIsValid) {
         packet.emit(headers.h1);
     )"));
 
-    EXPECT_GT(::ErrorReporter::instance.getDiagnosticCount(), 0u);
+    EXPECT_GT(::diagnosticCount(), 0u);
 }
 
-TEST(TofinoComputedChecksum, ErrorDestFieldNot16Bit) {
+TEST_F(TofinoComputedChecksum, ErrorDestFieldNot16Bit) {
     auto test = createComputedChecksumTestCase(P4_SOURCE(P4Headers::NONE, R"(
         update_checksum(true, {
                         headers.h1.field1,
@@ -346,10 +348,10 @@ TEST(TofinoComputedChecksum, ErrorDestFieldNot16Bit) {
         packet.emit(headers.h1);
     )"));
 
-    EXPECT_GT(::ErrorReporter::instance.getDiagnosticCount(), 0u);
+    EXPECT_GT(::diagnosticCount(), 0u);
 }
 
-TEST(TofinoComputedChecksum, ErrorUnexpectedStatement) {
+TEST_F(TofinoComputedChecksum, ErrorUnexpectedStatement) {
     auto test = createComputedChecksumTestCase(P4_SOURCE(P4Headers::NONE, R"(
         update_checksum(true, {
                         headers.h1.field1,
@@ -361,10 +363,10 @@ TEST(TofinoComputedChecksum, ErrorUnexpectedStatement) {
         packet.emit(headers.h1);
     )"));
 
-    EXPECT_GT(::ErrorReporter::instance.getDiagnosticCount(), 0u);
+    EXPECT_GT(::diagnosticCount(), 0u);
 }
 
-TEST(TofinoComputedChecksum, ErrorUnexpectedSource) {
+TEST_F(TofinoComputedChecksum, ErrorUnexpectedSource) {
     auto test = createComputedChecksumTestCase(P4_SOURCE(P4Headers::NONE, R"(
         update_checksum(true, {
                         headers.h1.field1,
@@ -375,10 +377,10 @@ TEST(TofinoComputedChecksum, ErrorUnexpectedSource) {
         packet.emit(headers.h1);
     )"));
 
-    EXPECT_GT(::ErrorReporter::instance.getDiagnosticCount(), 0u);
+    EXPECT_GT(::diagnosticCount(), 0u);
 }
 
-TEST(TofinoComputedChecksum, ErrorNoDestField) {
+TEST_F(TofinoComputedChecksum, ErrorNoDestField) {
     auto test = createComputedChecksumTestCase(P4_SOURCE(P4Headers::NONE, R"(
         update_checksum(true, {
                         headers.h1.field1,
@@ -389,7 +391,7 @@ TEST(TofinoComputedChecksum, ErrorNoDestField) {
         packet.emit(headers.h1);
     )"));
 
-    EXPECT_GT(::ErrorReporter::instance.getDiagnosticCount(), 0u);
+    EXPECT_GT(::diagnosticCount(), 0u);
 }
 
 }  // namespace Test
