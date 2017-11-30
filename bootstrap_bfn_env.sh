@@ -189,6 +189,7 @@ if [ ! -d PI/.git ]; then
 elif $pull_before_rebuild; then
     pushd PI >/dev/null
         git pull $rebase_option origin master
+        git submodule update --init --recursive
     popd >/dev/null
 fi
 pushd PI >/dev/null
