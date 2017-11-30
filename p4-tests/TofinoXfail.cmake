@@ -140,7 +140,25 @@ p4c_add_xfail_reason("tofino"
 # parde physical adjacency constraint violated by mau phv_no_pack constraint
 p4c_add_xfail_reason("tofino"
   "Header field .* is required to be allocated contiguously"
+  extensions/p4_tests/p4_14/jenkins/basic_ipv4/basic_ipv4.p4
+  extensions/p4_tests/p4_14/jenkins/exm_direct/exm_direct_one.p4
+  extensions/p4_tests/p4_14/jenkins/exm_direct_1/exm_direct_1_one.p4
+  extensions/p4_tests/p4_14/jenkins/exm_indirect_1/exm_indirect_1_one.p4
+  extensions/p4_tests/p4_14/jenkins/exm_smoke_test/exm_smoke_test_one.p4
   extensions/p4_tests/p4_14/jenkins/multicast_scale/multicast_scale.p4
+  extensions/p4_tests/p4_14/jenkins/multi_device/multi_device.p4
+  extensions/p4_tests/p4_14/jenkins/perf_test_alpm/perf_test_alpm_one.p4
+  extensions/p4_tests/p4_14/jenkins/perf_test/perf_test_one.p4
+  extensions/p4_tests/p4_14/jenkins/smoke_large_tbls/smoke_large_tbls.p4
+  extensions/p4_tests/p4_14/test_config_328_alias.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
   switch_l2
   )
 
@@ -208,14 +226,7 @@ p4c_add_xfail_reason("tofino"
   "error: tofino supports up to 12 stages"
   extensions/p4_tests/p4_14/case1770.p4
   extensions/p4_tests/p4_14/jenkins/alpm_test/alpm_test.p4
-  extensions/p4_tests/p4_14/jenkins/basic_ipv4/basic_ipv4.p4
   extensions/p4_tests/p4_14/jenkins/clpm/clpm.p4
-  extensions/p4_tests/p4_14/jenkins/exm_direct_1/exm_direct_1_one.p4
-  extensions/p4_tests/p4_14/jenkins/exm_indirect_1/exm_indirect_1_one.p4
-  extensions/p4_tests/p4_14/jenkins/exm_smoke_test/exm_smoke_test_one.p4
-  extensions/p4_tests/p4_14/jenkins/multi_device/multi_device.p4
-  extensions/p4_tests/p4_14/jenkins/perf_test_alpm/perf_test_alpm_one.p4
-  extensions/p4_tests/p4_14/jenkins/exm_direct/exm_direct_one.p4
   )
 
 # BRIG-113
@@ -264,7 +275,6 @@ p4c_add_xfail_reason("tofino"
   "Can't fit table .* in .* by itself"
   extensions/p4_tests/p4_14/adb_shared3.p4
   extensions/p4_tests/p4_14/test_config_297_big_metadata.p4
-  extensions/p4_tests/p4_14/jenkins/smoke_large_tbls/smoke_large_tbls.p4
   )
 
 # BRIG-146 (also was BRIG-133)
@@ -455,7 +465,8 @@ p4c_add_xfail_reason("tofino"
   "conflicting memory use between .* and .*"
   extensions/p4_tests/p4_14/jenkins/fr_test/fr_test.p4
   # This is an ATCAM failure due to a stage split being in the same stage.  Much more subtle
-  extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
+  # now fails in PHV allocation
+  # extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -587,8 +598,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   extensions/p4_tests/p4_14/c1/COMPILER-133/full_tphv.p4
   extensions/p4_tests/p4_14/c1/COMPILER-235/vag1737_1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
   extensions/p4_tests/p4_14/c4/COMPILER-590/case3179.p4
   extensions/p4_tests/p4_14/c4/COMPILER-591/case3176.p4
   extensions/p4_tests/p4_14/jenkins/power/power.p4
@@ -714,16 +723,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
   extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
   extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
-  )
-
-# Fails due to use of more than two source containers
-# BRIG-219
-p4c_add_xfail_reason("tofino"
-  "uses more than two source containers."
-  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -780,16 +780,9 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_112_no_phase_0_case_action_width_too_big.p4
   extensions/p4_tests/p4_14/test_config_111_no_phase_0_case_two_actions.p4
   extensions/p4_tests/p4_14/test_config_no_phase_0_case_two_actions.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
   extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
   )
 
 # This code contains an implicit cast in an assignment in the parser; we need to
