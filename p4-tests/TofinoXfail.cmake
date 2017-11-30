@@ -258,10 +258,9 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/adjust_instr7.p4
   )
 
-# Same Name Conversion Bug
 p4c_add_xfail_reason("tofino"
-  "boost::too_few_args: format-string referred to more arguments than were passed"
-  extensions/p4_tests/p4_14/shared_names.p4
+  "Syntax error, expecting list"
+  testdata/p4_14_samples/issue1057.p4
   )
 
 # various stateful
@@ -482,6 +481,8 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-635/case3468.p4
   extensions/p4_tests/p4_14/c1/COMPILER-637/case3478.p4
   testdata/p4_16_samples/issue461-bmv2.p4
+  # Same Name Conversion Bug
+  extensions/p4_tests/p4_14/shared_names.p4
   )
 
 # new p4lang/p4c tests that fail
@@ -724,6 +725,11 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/copy_to_cpu.p4
   testdata/p4_14_samples/packet_redirect.p4
   testdata/p4_14_samples/simple_nat.p4
+  )
+# We fail to translate `generate_digest()`.
+p4c_add_xfail_reason("tofino"
+  "Could not find declaration for standard_metadata"
+  testdata/p4_14_samples/issue1058.p4
   )
 # invalid tests, eg_intr_md.egress_port is read-only
 p4c_add_xfail_reason("tofino"
@@ -1034,6 +1040,16 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/jenkins/parser_intr_md/parser_intr_md.p4
   )
 
+p4c_add_xfail_reason("tofino"
+  "invalid exact key expression"
+  # This test attempts to match on a field of `error` type.
+  testdata/p4_16_samples/issue1062-bmv2.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "header hdr is not byte-aligned"
+  testdata/p4_16_samples/issue1062-1-bmv2.p4
+  )
 
 # BRIG-348
 p4c_add_xfail_reason("tofino" "Compiler Bug" ${ONOS_FABRIC_P4})
