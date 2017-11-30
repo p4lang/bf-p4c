@@ -310,8 +310,8 @@ def main():
                                 p4info_path, tofino_bin_path, cxt_json_path)
         if not success:
             error("Error when pushing P4 config to switchd")
-            return 1
-        return 0
+            sys.exit(1)
+        sys.exit(0)
 
     if args.top_builddir is None:
         top_builddir = os.path.join(
@@ -320,7 +320,7 @@ def main():
             'build')
         if not os.path.exists(top_builddir):
             error("Please provide --top-builddir")
-            return 1
+            sys.exit(1)
     else:
         top_builddir = args.top_builddir
 
@@ -353,8 +353,8 @@ def main():
                                 port_map, args.stftest, extra_ptf_args)
         if not success:
             error("Error when running PTF tests")
-            return 1
-        return 0
+            sys.exit(1)
+        sys.exit(0)
 
     BF_SWITCHD = findbin(top_builddir, 'BF_SWITCHD')
     HARLYN_MODEL = findbin(top_builddir, 'HARLYN_MODEL')
