@@ -133,7 +133,8 @@ const PHV::Field *PhvInfo::field(const IR::Member *fr, le_bitrange *bits) const 
     // XXX(seth): The warning spew from POV bits prior to allocatePOV() being
     // called is just too great. We need to improve how that's handled, but for
     // now, silence those warnings.
-    if (!name.toString().endsWith(".$valid"))
+    // (ctd): also no need to warn about enum tags, as they are really constants
+    if (!name.toString().endsWith(".$valid") && !fr->type->is<IR::Type_Enum>())
         warning("can't find field '%s'", name);
 
     return nullptr;

@@ -409,7 +409,8 @@ static IR::MAU::BackendAttached *createAttached(IR::MAU::Table *tt, Util::Source
 }
 
 static void updateAttachedSalu(const P4::ReferenceMap *refMap, IR::MAU::StatefulAlu *&salu,
-                               const IR::Declaration_Instance *ext) {
+                               const IR::Declaration_Instance *ext,
+                               std::map<cstring, IR::MAU::Selector *> *shared_as) {
     auto reg_arg = ext->arguments->size() > 0 ? ext->arguments->at(0) : nullptr;
     if (!reg_arg) {
         if (auto regprop = ext->properties["reg"]) {
@@ -424,18 +425,26 @@ static void updateAttachedSalu(const P4::ReferenceMap *refMap, IR::MAU::Stateful
     auto d = pe ? refMap->getDeclaration(pe->path, true) : nullptr;
     auto reg = d ? d->to<IR::Declaration_Instance>() : nullptr;
     auto regtype = reg ? reg->type->to<IR::Type_Specialized>() : nullptr;
-    if (!regtype || regtype->baseType->toString() != "register") {
-        error("%s: reg is not a register", reg_arg->srcInfo);
+    auto seltype = reg ? reg->type->to<IR::Type_Extern>() : nullptr;
+    if ((!regtype || regtype->baseType->toString() != "register") &&
+        (!seltype || seltype->name != "action_selector")) {
+        error("%s: is not a register or action_selector", reg_arg->srcInfo);
         return; }
     if (!salu) {
-        LOG3("Creating new StatefulAlu for " << regtype->toString() << " " << reg->name);
+        LOG3("Creating new StatefulAlu for " <<
+             (regtype ? regtype->toString() : seltype->toString()) << " " << reg->name);
         salu = new IR::MAU::StatefulAlu(reg->srcInfo, reg->externalName(), reg->annotations, reg);
-        if (auto size = reg->arguments->at(0)->to<IR::Constant>()->asInt()) {
+        if (seltype) {
+            salu->direct = false;
+            salu->selector = shared_as->at(reg->externalName());
+            // FIXME -- how are selector table sizes set?  It seems to be lost in P4_16
+            salu->size = 120*1024;  // one ram?
+        } else if (auto size = reg->arguments->at(0)->to<IR::Constant>()->asInt()) {
             salu->direct = false;
             salu->size = size;
         } else {
             salu->direct = true; }
-        salu->width = regtype->arguments->at(0)->width_bits();
+        salu->width = regtype ? regtype->arguments->at(0)->width_bits() : 1;
     } else if (salu->reg != reg) {
         // FIXME -- allow multiple stateful alus in one table?  Must use the same index.
         error("%s: register actions in the same table must use the same underlying regster,"
@@ -505,6 +514,7 @@ struct AttachTables : public Modifier {
     std::map<cstring, safe_vector<const IR::MAU::BackendAttached *>>  attached;
     std::map<cstring, IR::MAU::StatefulAlu *>                    all_salu;
     std::map<const IR::Declaration_Instance *, const IR::MAU::BackendAttached *> converted;
+    std::map<cstring, IR::MAU::Selector *> *shared_as;
 
 
     bool preorder(IR::MAU::Table *tbl) override {
@@ -549,15 +559,17 @@ struct AttachTables : public Modifier {
                 LOG3("Created " << att->node_type_name() << ' ' << att->name << " (pt 3)");
                 gref->obj = converted[di] = att;
                 attached[tt->name].push_back(att);
-            } else if (di->type->toString().startsWith("register_action<")) {
-                updateAttachedSalu(refMap, salu, di);
+            } else if (di->type->toString().startsWith("register_action<") ||
+                       di->type->toString() == "selector_action") {
+                updateAttachedSalu(refMap, salu, di, shared_as);
                 gref->obj = converted[di] = salu; }
             if (salu == gref->obj) {
                 auto act = findContext<IR::MAU::Action>();
                 if (!salu->action_map.emplace(act->name, di->name).second) {
                     error("%s: multiple calls to execute in action %s",
                           gref->srcInfo, act->name); } } } }
-    explicit AttachTables(const P4::ReferenceMap *refMap) : refMap(refMap) {}
+    AttachTables(const P4::ReferenceMap *refMap, std::map<cstring, IR::MAU::Selector *> *as)
+    : refMap(refMap), shared_as(as) {}
 };
 
 static const IR::MethodCallExpression *isApplyHit(const IR::Expression *e, bool *lnot = 0) {
@@ -584,7 +596,7 @@ class GetTofinoTables : public Inspector {
     std::map<const IR::Node *, IR::MAU::Table *>     tables;
     std::map<const IR::Node *, IR::MAU::TableSeq *>  seqs;
     std::map<cstring, IR::MAU::ActionData *> shared_ap;
-    std::map<cstring, IR::MAU::Selector *> shared_as;
+    std::map<cstring, IR::MAU::Selector *> *shared_as;
     IR::MAU::TableSeq *getseq(const IR::Node *n) {
         if (!seqs.count(n) && tables.count(n))
             seqs[n] = new IR::MAU::TableSeq(tables.at(n));
@@ -592,8 +604,9 @@ class GetTofinoTables : public Inspector {
 
  public:
     GetTofinoTables(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
-                    gress_t gr, IR::BFN::Pipe *p)
-    : refMap(refMap), typeMap(typeMap), gress(gr), pipe(p) {}
+                    gress_t gr, IR::BFN::Pipe *p,
+                    std::map<cstring, IR::MAU::Selector *> *as)
+    : refMap(refMap), typeMap(typeMap), gress(gr), pipe(p), shared_as(as) {}
 
  private:
     void setup_match_mask(IR::MAU::Table *tt, const IR::Mask *mask, IR::ID match_id,
@@ -681,7 +694,7 @@ class GetTofinoTables : public Inspector {
             unique_names.insert(tt->name);
             tt->match_table = table =
                 table->apply(FixP4Table(refMap, tt, unique_names,
-                                        &shared_ap, &shared_as))->to<IR::P4Table>();
+                                        &shared_ap, shared_as))->to<IR::P4Table>();
             setup_tt_match(tt, table);
             setup_tt_actions(tt, table);
         } else {
@@ -751,6 +764,7 @@ class TnaPipe {
     const IR::P4Parser *parser;
     const IR::P4Control *mau;
     const IR::P4Control *deparser;
+    std::map<cstring, IR::MAU::Selector *> shared_as;
 
     TnaPipe(const IR::PackageBlock* main, gress_t gress,
             P4::ReferenceMap* refMap, P4::TypeMap* typeMap)
@@ -859,11 +873,11 @@ class TnaPipe {
     }
 
     void extractTable(IR::BFN::Pipe* rv, gress_t gress) {
-        mau->apply(GetTofinoTables(refMap, typeMap, gress, rv));
+        mau->apply(GetTofinoTables(refMap, typeMap, gress, rv, &shared_as));
     }
 
     void extractAttached(IR::BFN::Pipe* rv, gress_t gress) {
-        AttachTables toAttach(refMap);
+        AttachTables toAttach(refMap, &shared_as);
         rv->thread[gress].mau = rv->thread[gress].mau->apply(toAttach);
     }
 

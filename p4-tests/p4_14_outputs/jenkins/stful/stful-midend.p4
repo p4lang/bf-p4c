@@ -783,7 +783,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             value = 1w0;
         }
     };
-    @name(".pgen_pass_1_ctrl_flow.next_hop_ecmp_alu") register_action<bit<1>, bit<1>>(_next_hop_ecmp_reg_0) _pgen_pass_1_ctrl_flow_next_hop_ecmp_alu_0 = {
+    @name(".pgen_pass_1_ctrl_flow.next_hop_ecmp_alu") selector_action(next_hop_ecmp_ap) _pgen_pass_1_ctrl_flow_next_hop_ecmp_alu_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = 1w0;
@@ -874,7 +874,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_36();
     }
     @name(".lag_reg") register<bit<1>>(32w131072) _lag_reg_0;
-    @name(".pgen_pass_2_ctrl_flow.lag_alu") register_action<bit<1>, bit<1>>(_lag_reg_0) _pgen_pass_2_ctrl_flow_lag_alu_0 = {
+    @name(".pgen_pass_2_ctrl_flow.lag_alu") selector_action(lag_ap) _pgen_pass_2_ctrl_flow_lag_alu_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = 1w0;

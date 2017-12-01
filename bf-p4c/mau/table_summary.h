@@ -19,7 +19,7 @@ class TableSummary: public MauInspector {
         action_data_bus.clear();
         return rv; }
     void end_apply() override {
-        if (Log::verbose())
+        if (Log::verbose() || LOGGING(1))
             std::cout << *this; }
     bool preorder(const IR::MAU::Table *t) override {
         assert(order.count(t->logical_id) == 0);

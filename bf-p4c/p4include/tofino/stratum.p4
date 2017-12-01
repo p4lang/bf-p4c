@@ -556,6 +556,12 @@ extern action_selector {
     action_selector(HashAlgorithm_t algorithm, bit<32> size, bit<32> outputWidth);
 }
 
+extern selector_action {
+    selector_action(action_selector sel);
+    abstract void apply(inout bit<1> value, @optional out bit<1> rv);
+    bit<1> execute(@optional in bit<32> index);
+}
+
 /// Action Selector
 //extern action_selector<T> {
 //    /// Optional annotations to help with compiler fitting

@@ -1434,6 +1434,9 @@ void Memories::swbox_bus_meters_counters() {
         for (auto at : ta->table->attached) {
             if ((salu = at->to<IR::MAU::StatefulAlu>()) == nullptr)
                 continue;
+            if (salu->selector)
+                // use the selector's memory
+                continue;
             int per_row = RegisterPerWord(salu);
             int depth;
             if (salu->direct) {

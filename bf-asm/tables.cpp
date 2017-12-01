@@ -355,6 +355,19 @@ bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p
     return true;
 }
 
+/** check two tables to see if they can share ram.
+ * FIXME -- for now we just allow a STATEFUL and a SELECTION to share -- we should
+ * FIXME -- check to make sure they're mutually exclusive and use the memory in
+ * FIXME -- a compatible way
+ */
+bool Table::allow_ram_sharing(const Table *t1, const Table *t2) {
+    if (t1->table_type() == STATEFUL && t2->table_type() == SELECTION)
+        return true;
+    if (t2->table_type() == STATEFUL && t1->table_type() == SELECTION)
+        return true;
+    return false;
+}
+
 void Table::alloc_rams(bool logical, Alloc2Dbase<Table *> &use, Alloc2Dbase<Table *> *bus_use) {
     for (auto &row : layout) {
         for (int col : row.cols) {
@@ -363,10 +376,11 @@ void Table::alloc_rams(bool logical, Alloc2Dbase<Table *> &use, Alloc2Dbase<Tabl
                 c += 6 * (r&1);
                 r >>= 1; }
             try {
-                if (Table *old = use[r][c])
-                    error(lineno, "Table %s trying to use (%d,%d) which is already in use "
-                          "by table %s", name(), row.row, col, old->name());
-                else
+                if (Table *old = use[r][c]) {
+                    if (!allow_ram_sharing(this, old))
+                        error(lineno, "Table %s trying to use (%d,%d) which is already in use "
+                              "by table %s", name(), row.row, col, old->name());
+                } else
                     use[r][c] = this;
             } catch(const char *oob) {
                 error(lineno, "Table %s using out-of-bounds (%d,%d)", name(),
@@ -433,10 +447,11 @@ void Table::alloc_maprams() {
                 stage->mapram_use[sram_row][use++] = this; }
         } else {
             for (auto mapcol : row.maprams) {
-                if (auto *old = stage->mapram_use[sram_row][mapcol])
-                    error(lineno, "Table %s trying to use mapram %d,%d which is use by table %s",
-                          name(), sram_row, mapcol, old->name());
-                else
+                if (auto *old = stage->mapram_use[sram_row][mapcol]) {
+                    if (!allow_ram_sharing(this, old))
+                        error(lineno, "Table %s trying to use mapram %d,%d which is use by "
+                              "table %s", name(), sram_row, mapcol, old->name());
+                } else
                     stage->mapram_use[sram_row][mapcol] = this; } } }
 }
 

@@ -447,6 +447,10 @@ bool CreateSaluInstruction::preorder(const IR::Declaration_Instance *di) {
 }
 
 bool CheckStatefulAlu::preorder(IR::MAU::StatefulAlu *salu) {
+    if (salu->reg->type->is<IR::Type_Extern>()) {
+        // selector action
+        BUG_CHECK(salu->width == 1 && salu->dual == false, "wrong size for selector action");
+        return false; }
     auto regtype = salu->reg->type->to<IR::Type_Specialized>()->arguments->at(0);
     auto bits = regtype->to<IR::Type::Bits>();
     if (auto str = regtype->to<IR::Type_Struct>()) {

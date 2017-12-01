@@ -20,6 +20,8 @@ TIMEOUT=${P4C_TIMEOUT:-500}
 TIME_COMMAND="" # don't time commands
 verbose=false
 debug=false
+debug_bfas=false
+debug_p4c=false
 run_stf=true
 run_stf2ptf=false
 run_ptf=false
@@ -117,10 +119,18 @@ while [ $# -gt 1 ]; do
         exit 0
         ;;
     -db|-gdb)
-        debug=true
-        if $verbose; then
+        if $verbose && ! $debug; then
             P4C_ARGS="$P4C_ARGS -v"
         fi
+        debug=true
+        debug_p4c=true
+        ;;
+    -dbas)
+        if $verbose && ! $debug; then
+            P4C_ARGS="$P4C_ARGS -v"
+        fi
+        debug=true
+        debug_bfas=true
         ;;
     -to)
         TIMEOUT=$2
@@ -259,13 +269,21 @@ if $debug; then
     if $verbose; then
         echo "$DEBUGGER_COMMAND $P4C $P4C_ARGS $file -o $testdir/$name${out_ext}.bfa"
     fi
-    $DEBUGGER_COMMAND $P4C $P4C_ARGS $file -o $testdir/$name${out_ext}.bfa
+    if $debug_p4c; then
+        $DEBUGGER_COMMAND $P4C $P4C_ARGS $file -o $testdir/$name${out_ext}.bfa
+    else
+        $P4C $P4C_ARGS $file -o $testdir/$name${out_ext}.bfa
+    fi
 
     BFAS=../bf-asm/bfas
     if [ ! -x $BFAS ]; then
         die "Can't find $BFAS"
     fi
-    exec $DEBUGGER_COMMAND $BFAS $testdir/$name${out_ext}.bfa
+    if $debug_bfas; then
+        exec $DEBUGGER_COMMAND $BFAS $testdir/$name${out_ext}.bfa
+    else
+        exec $BFAS $testdir/$name${out_ext}.bfa
+    fi
 fi
 
 if [ $(expr "$file" : ".*_errors") -gt 0 ]; then

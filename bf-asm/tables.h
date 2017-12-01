@@ -75,6 +75,7 @@ protected:
     void alloc_maprams();
     virtual void alloc_vpns();
     void need_bus(int lineno, Alloc1Dbase<Table *> &use, int idx, const char *name);
+    static bool allow_ram_sharing(const Table *t1, const Table *t2);
 public:
 
     class Type {
@@ -401,7 +402,7 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     virtual void common_tbl_cfg(json::map &tbl);
     enum table_type_t { OTHER=0, TERNARY_INDIRECT, GATEWAY, ACTION, SELECTION, COUNTER,
                         METER, IDLETIME, STATEFUL, HASH_ACTION, EXACT, TERNARY, PHASE0 };
-    virtual table_type_t table_type() { return OTHER; }
+    virtual table_type_t table_type() const { return OTHER; }
     virtual int instruction_set() { return 0; /* VLIW_ALU */ }
     virtual table_type_t set_match_table(MatchTable *m, bool indirect) { assert(0); return OTHER; }
     virtual MatchTable *get_match_table() { assert(0); return nullptr; }
@@ -688,7 +689,7 @@ public:
                                   const Table::Format::Field &field,
                                   const Table::Actions::Action *act) override;
     int unitram_type() override { return UnitRam::MATCH; }
-    table_type_t table_type() override { return EXACT; }
+    table_type_t table_type() const override { return EXACT; }
     bool has_group(int grp) {
         for (auto &way: ways)
             if (way.group == grp) return true;
@@ -755,7 +756,7 @@ public:
         if (indirect && indirect->hit_next.size() > 0)
             return indirect->hit_next.size();
         return hit_next.size(); }
-    table_type_t table_type() override { return TERNARY; }
+    table_type_t table_type() const override { return TERNARY; }
     void gen_entry_cfg(json::vector &out, std::string name, \
         unsigned lsb_offset, unsigned lsb_idx, unsigned msb_idx, \
         std::string source, unsigned start_bit, unsigned field_width);
@@ -765,12 +766,12 @@ DECLARE_TABLE_TYPE(Phase0MatchTable, MatchTable, "phase0_match",
     int         size = MAX_PORTS;
     int         width = 1;
     int         constant_value = 0;
-    table_type_t table_type() override { return PHASE0; }
+    table_type_t table_type() const override { return PHASE0; }
 )
 DECLARE_TABLE_TYPE(HashActionTable, MatchTable, "hash_action",
 public:
     //int                                 row = -1, bus = -1;
-    table_type_t table_type() override { return HASH_ACTION; }
+    table_type_t table_type() const override { return HASH_ACTION; }
     template<class REGS> void write_merge_regs(REGS &regs, int type, int bus);
     FOR_ALL_TARGETS(FORWARD_VIRTUAL_TABLE_WRITE_MERGE_REGS)
 )
@@ -778,7 +779,7 @@ public:
 DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
     TernaryMatchTable           *match_table;
     AttachedTables              attached;
-    table_type_t table_type() override { return TERNARY_INDIRECT; }
+    table_type_t table_type() const override { return TERNARY_INDIRECT; }
     table_type_t set_match_table(MatchTable *m, bool indirect) override;
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) override {
         width = (format->size-1)/128 + 1;
@@ -864,7 +865,7 @@ DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",
     void apply_to_field(const std::string &n, std::function<void(Format::Field *)> fn) override;
     int find_on_actionbus(Format::Field *f, int off, int size) override;
     int find_on_actionbus(const char *n, int off, int size, int *len) override;
-    table_type_t table_type() override { return ACTION; }
+    table_type_t table_type() const override { return ACTION; }
     int unitram_type() override { return UnitRam::ACTION; }
     void pad_format_fields();
     unsigned get_do_care_count(std::string bstring);
@@ -913,7 +914,7 @@ private:
     std::vector<Match>          table;
     template<class REGS> void payload_write_regs(REGS &, int row, int type, int bus);
 public:
-    table_type_t table_type() override { return GATEWAY; }
+    table_type_t table_type() const override { return GATEWAY; }
     MatchTable *get_match_table() override { return match_table; }
     std::set<MatchTable *> get_match_tables() override {
         std::set<MatchTable *> rv;
@@ -944,7 +945,7 @@ DECLARE_TABLE_TYPE(SelectionTable, AttachedTable, "selection",
     int                 selection_hash = -1;
 public:
     StatefulTable*           bound_stateful = nullptr;
-    table_type_t table_type() override { return SELECTION; }
+    table_type_t table_type() const override { return SELECTION; }
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) override {
         width = period = 1; depth = layout_size(); period_name = 0; }
 
@@ -972,7 +973,7 @@ class IdletimeTable : public Table {
         : Table(lineno, name, gress, stage, lid) {}
     void setup(VECTOR(pair_t) &data) override;
 public:
-    table_type_t table_type() override { return IDLETIME; }
+    table_type_t table_type() const override { return IDLETIME; }
     table_type_t set_match_table(MatchTable *m, bool indirect) override {
         match_table = m;
         if ((unsigned)m->logical_id < (unsigned)logical_id) logical_id = m->logical_id;
@@ -1014,7 +1015,7 @@ public:
 
 DECLARE_TABLE_TYPE(CounterTable, Synth2Port, "counter",
     enum { NONE=0, PACKETS=1, BYTES=2, BOTH=3 } type = NONE;
-    table_type_t table_type() override { return COUNTER; }
+    table_type_t table_type() const override { return COUNTER; }
     template<class REGS> void write_merge_regs(REGS &regs, MatchTable *match, int type, int bus,
                                                const std::vector<Call::Arg> &args);
     FOR_ALL_TARGETS(FORWARD_VIRTUAL_TABLE_WRITE_MERGE_REGS_WITH_ARGS)
@@ -1031,7 +1032,7 @@ DECLARE_TABLE_TYPE(MeterTable, Synth2Port, "meter",
     enum { NONE=0, STANDARD=1, LPF=2, RED=3 }   type = NONE;
     enum { NONE_=0, PACKETS=1, BYTES=2 }        count = NONE_;
     std::vector<Layout>                         color_maprams;
-    table_type_t table_type() override { return METER; }
+    table_type_t table_type() const override { return METER; }
     template<class REGS> void write_merge_regs(REGS &regs, MatchTable *match, int type, int bus,
                                                const std::vector<Call::Arg> &args);
     template<class REGS> void meter_color_logical_to_phys(REGS &regs, int logical_id, int alu);
@@ -1050,7 +1051,7 @@ public:
 )
 
 DECLARE_TABLE_TYPE(StatefulTable, Synth2Port, "stateful",
-    table_type_t table_type() override { return STATEFUL; }
+    table_type_t table_type() const override { return STATEFUL; }
     template<class REGS> void write_merge_regs(REGS &regs, MatchTable *match, int type, int bus,
                                                const std::vector<Call::Arg> &args);
     FOR_ALL_TARGETS(FORWARD_VIRTUAL_TABLE_WRITE_MERGE_REGS_WITH_ARGS)

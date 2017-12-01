@@ -51,10 +51,8 @@ extern register_action<T, U> {
     U execute_log(); /* execute at an index that increments each time */
 }
 
-#if 0  // XXX(hanw): implemented with stateful_alu extern in tofino.p4
 extern selector_action {
     selector_action(action_selector sel);
     abstract void apply(inout bit<1> value, @optional out bit<1> rv);
     bit<1> execute(@optional in bit<32> index);
 }
-#endif

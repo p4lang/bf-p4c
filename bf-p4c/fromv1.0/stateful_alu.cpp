@@ -199,7 +199,7 @@ class CreateSaluApplyFunction : public Inspector {
             body->push_back(output); }
     static const IR::Function *create(P4V1::ProgramStructure *structure,
                 const IR::Declaration_Instance *ext, const IR::Type *rtype,
-                const IR::Type::Bits *utype, cstring math_unit_name) {
+                const IR::Type::Bits *utype, cstring math_unit_name = cstring()) {
         CreateSaluApplyFunction create_apply(structure, rtype, utype, math_unit_name);
         // need a separate traversal here as "update" will be visited after "output"
         forAllMatching<IR::AttribLocal>(&ext->properties, [&](const IR::AttribLocal *attr) {
@@ -353,12 +353,42 @@ P4V1::StatefulAluConverter::reg_info P4V1::StatefulAluConverter::getRegInfo(
     return rv;
 }
 
+const IR::ActionProfile *P4V1::StatefulAluConverter::getSelectorProfile(
+        P4V1::ProgramStructure *structure, const IR::Declaration_Instance *ext) {
+    if (auto sel_bind = ext->properties.get<IR::Property>("selector_binding")) {
+        auto ev = sel_bind->value->to<IR::ExpressionValue>();
+        auto gref = ev ? ev->expression->to<IR::GlobalRef>() : nullptr;
+        auto tbl = gref ? gref->obj->to<IR::V1Table>() : nullptr;
+        if (!tbl) {
+            error("%s is not a table", sel_bind);
+            return nullptr; }
+        auto ap = structure->action_profiles.get(tbl->action_profile);
+        auto sel = ap ? structure->action_selectors.get(ap->selector) : nullptr;
+        if (!sel) {
+            error("No action selector for table %s", tbl);
+            return nullptr; }
+        return ap; }
+    return nullptr;
+}
+
 const IR::Declaration_Instance *P4V1::StatefulAluConverter::convertExternInstance(
         P4V1::ProgramStructure *structure, const IR::Declaration_Instance *ext, cstring name,
         IR::IndexedVector<IR::Declaration> *scope) {
     auto *et = ext->type->to<IR::Type_Extern>();
     BUG_CHECK(et && et->name == "stateful_alu",
               "Extern %s is not stateful_alu type, but %s", ext, ext->type);
+    if (auto ap = getSelectorProfile(structure, ext)) {
+        LOG2("Creating apply function for selector_action " << ext->name);
+        auto satype = new IR::Type_Name("selector_action");
+        auto bit1 = IR::Type::Bits::get(1);
+        auto *ctor_args = new IR::Vector<IR::Expression>({
+                new IR::PathExpression(new IR::Path(
+                    structure->action_profiles.get(ap))) });
+        auto *block = new IR::BlockStatement({
+            CreateSaluApplyFunction::create(structure, ext, bit1, bit1) });
+        auto *rv = new IR::Declaration_Instance(name, satype, ctor_args, block);
+        return rv->apply(TypeConverter(structure))->to<IR::Declaration_Instance>();
+    }
     auto info = getRegInfo(structure, ext, scope);
     if (info.utype) {
         LOG2("Creating apply function for register_action " << ext->name);
@@ -386,7 +416,8 @@ const IR::Statement *P4V1::StatefulAluConverter::convertExternCall(
     auto *et = ext->type->to<IR::Type_Extern>();
     BUG_CHECK(et && et->name == "stateful_alu",
               "Extern %s is not stateful_alu type, but %s", ext, ext->type);
-    auto info = getRegInfo(structure, ext, nullptr);
+    auto rtype = getSelectorProfile(structure, ext) ? IR::Type::Bits::get(1)
+                                                    : getRegInfo(structure, ext, nullptr).utype;
     ExpressionConverter conv(structure);
     const IR::Statement *rv = nullptr;
     IR::BlockStatement *block = nullptr;
@@ -425,7 +456,7 @@ const IR::Statement *P4V1::StatefulAluConverter::convertExternCall(
         method = new IR::Member(prim->srcInfo, extref, "execute_log");
     } else {
         BUG("Unknown method %s in stateful_alu", prim->name); }
-    auto mc = new IR::MethodCallExpression(prim->srcInfo, info.utype, method, args);
+    auto mc = new IR::MethodCallExpression(prim->srcInfo, rtype, method, args);
     if (auto prop = ext->properties.get<IR::Property>("output_dst")) {
         if (auto ev = prop->value->to<IR::ExpressionValue>()) {
             rv = structure->assign(prim->srcInfo, conv.convert(ev->expression), mc,

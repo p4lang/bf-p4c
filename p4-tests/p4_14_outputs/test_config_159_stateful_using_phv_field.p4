@@ -168,27 +168,23 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
-struct sampler_alu_layout {
-    bit<16> lo;
-    bit<16> hi;
-}
-
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @stateful_table_counter("table_hit") @name(".flow_cnt") register<sampler_alu_layout>(32w0) flow_cnt;
-    register_action<sampler_alu_layout, bit<16>>(flow_cnt) sampler_alu = {
-        void apply(inout sampler_alu_layout value, out bit<16> rv) {
-            rv = 16w0;
-            value.hi = hdr.pkt.field_j_16 + 16w2;
-            if (value.lo == 16w10) 
-                value.lo = (bit<16>)1;
-            if (!(value.lo == 16w10)) 
-                value.lo = value.lo + 16w1;
-            if (value.lo == 16w10) 
-                rv = value.lo;
+    @stateful_table_counter("table_hit") @name(".flow_cnt") register<bit<32>>(32w0) flow_cnt;
+    register_action<bit<32>, bit<32>>(flow_cnt) sampler_alu = {
+        void apply(inout bit<32> value, out bit<32> rv) {
+            bit<32> alu_hi;
+            rv = 32w0;
+            alu_hi = (bit<32>)(hdr.pkt.field_j_16 + 16w2);
+            if (value == 32w10) 
+                value = (bit<32>)1;
+            if (!(value == 32w10)) 
+                value = value + 32w1;
+            if (value == 32w10) 
+                rv = value;
         }
     };
     @name(".sample") action sample() {
-        meta.meta.needs_sampling = (int<16>)sampler_alu.execute();
+        meta.meta.needs_sampling = (int<16>)(bit<16>)sampler_alu.execute();
     }
     @name(".match_tbl") table match_tbl {
         actions = {

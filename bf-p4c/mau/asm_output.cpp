@@ -1821,7 +1821,10 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
     auto name = tbl->get_use_name(salu);
     out << indent++ << "stateful " << name << ':' << std::endl;
     out << indent << "p4: { name: " << canon_name(salu->name) << " }" << std::endl;
-    self.emit_memory(out, indent, tbl->resources->memuse.at(name));
+    if (salu->selector)
+        self.emit_memory(out, indent, *self.selector_memory.at(salu->selector));
+    else
+        self.emit_memory(out, indent, tbl->resources->memuse.at(name));
     self.emit_ixbar(out, indent, &tbl->resources->salu_ixbar, nullptr, nullptr, nullptr, false);
     out << indent << "format: { lo: ";
     if (salu->dual)

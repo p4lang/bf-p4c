@@ -13,6 +13,8 @@ class StatefulAluConverter : public ExternConverter {
         const IR::Type *rtype = nullptr;  // layout type
     };
     std::map<const IR::Register *, reg_info>        cache;
+    const IR::ActionProfile *getSelectorProfile(P4V1::ProgramStructure *,
+                                                const IR::Declaration_Instance *);
     reg_info getRegInfo(P4V1::ProgramStructure *, const IR::Declaration_Instance *,
                         IR::IndexedVector<IR::Declaration> *);
     const IR::Type::Bits *findUType(const IR::Declaration_Instance *, const IR::Type ** = nullptr);

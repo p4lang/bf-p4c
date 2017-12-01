@@ -34,3 +34,5 @@ action scratch_invert(index, ifid) {
 stful.p4(259)
 table ifid {
 ^
+warning: .next_hop_ecmp_reg: unused instance
+warning: .lag_reg: unused instance

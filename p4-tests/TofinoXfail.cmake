@@ -333,7 +333,6 @@ p4c_add_xfail_reason("tofino"
 # COMPILER-540
 p4c_add_xfail_reason("tofino"
   "error: : direct access to indirect register"
-  extensions/p4_tests/p4_14/test_config_170_stateful_selection_table_update.p4
   extensions/p4_tests/p4_14/test_config_171_stateful_conga.p4
   extensions/p4_tests/p4_14/test_config_173_stateful_bloom_filter.p4
   extensions/p4_tests/p4_14/test_config_174_stateful_flow_learning.p4
@@ -947,11 +946,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/stack_valid.p4
   testdata/p4_14_samples/instruct5.p4
   extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "error: .* must be at .* or .* on ixbar to be used in stateful table"
-  extensions/p4_tests/p4_14/jenkins/multicast_scale/multicast_scale.p4
   )
 
 p4c_add_xfail_reason("tofino"

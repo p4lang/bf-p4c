@@ -900,7 +900,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             rv = value;
         }
     };
-    register_action<bit<1>, bit<1>>(sel_tbl_reg) stateful_selection_alu = {
+    selector_action(sel_tbl_ap) stateful_selection_alu = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = 1w0;

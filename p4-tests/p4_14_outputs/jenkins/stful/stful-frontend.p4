@@ -352,7 +352,7 @@ control pgen_pass_1_ctrl_flow(inout headers hdr, inout metadata meta, inout stan
             value = 1w0;
         }
     };
-    @name("next_hop_ecmp_alu") register_action<bit<1>, bit<1>>(next_hop_ecmp_reg_0) next_hop_ecmp_alu_0 = {
+    @name("next_hop_ecmp_alu") selector_action(next_hop_ecmp_ap) next_hop_ecmp_alu_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = 1w0;
@@ -466,7 +466,7 @@ control recirc_trigger_pkt_ctrl_flow(inout headers hdr, inout metadata meta, ino
 control pgen_pass_2_ctrl_flow(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     bit<17> temp_11;
     @name(".lag_reg") register<bit<1>>(32w131072) lag_reg_0;
-    @name("lag_alu") register_action<bit<1>, bit<1>>(lag_reg_0) lag_alu_0 = {
+    @name("lag_alu") selector_action(lag_ap) lag_alu_0 = {
         void apply(inout bit<1> value, out bit<1> rv) {
             rv = 1w0;
             value = 1w0;

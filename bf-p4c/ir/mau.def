@@ -275,6 +275,12 @@ class Table : BFN::Unit {
                 clone2.visit(next.at(gw.second), gw.second);
                 v.flow_merge(clone2);
                 gw_next.emplace(gw.second); } }
+        // FIXME -- attached tables are not properly visited here in the control-flow order,
+        // FIXME -- because we don't really know which actions will trigger them.  They
+        // FIXME -- should be visited after the action(s) that trigger them and before
+        // FIXME -- the next tables that happen after those actions?
+        // FIXME -- If the actions contain references to them, then they'll be visited when
+        // FIXME -- the action is visited, and this will be a 'revisit'
         attached.visit_children(v);
     }
 #apply
@@ -331,8 +337,9 @@ class Meter : Synth2Port {
 /** Configuration for a stateful table -- a register object (for the memory) plus
  * the associated stateful alu instructions and config */
 class StatefulAlu : Synth2Port {
-    // The single register extern used in this stateful alu
+    // The single register or action_selector extern used in this stateful alu
     Declaration_Instance                                reg;
+    NullOK Selector                                     selector = nullptr;
     bool                                                dual = false;  // dual mode
         // if dual is true, the ALU width is half the Register width (field)
         // if dual is false, the ALU width is equal to the Register width

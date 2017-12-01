@@ -55,6 +55,10 @@ class InstructionSelection::SplitInstructions : public Transform {
                 split.push_back(inst);
                 return tv; } }
         return inst; }
+    const IR::MAU::AttachedOutput *preorder(IR::MAU::AttachedOutput *ao) override {
+        // don't recurse into attached tables read by instructions.
+        prune();
+        return ao; }
  public:
     explicit SplitInstructions(IR::Vector<IR::Primitive> &s) : split(s) {}
 };
@@ -312,7 +316,9 @@ const IR::Node *InstructionSelection::postorder(IR::Primitive *prim) {
                           MakeSlice(ingress_port, 7, 8));
             return new IR::Vector<IR::Expression>({s1, s2}); }
     } else if (prim->name == "register_action.execute" ||
-               prim->name == "register_action.execute_log") {
+               prim->name == "register_action.execute_log" ||
+               prim->name == "selector_action.execute" ||
+               prim->name == "selector_action.execute_log") {
         bool direct_access = false;
         if (prim->operands.size() == 1 && prim->name == "register_action.execute")
             direct_access = true;
@@ -415,7 +421,7 @@ const IR::Type *stateful_type_for_primitive(const IR::Primitive *prim) {
     if (prim->name == "meter.execute_meter" || prim->name == "direct_meter.read" ||
         prim->name == "meter.execute" || prim->name == "lpf.execute")
         return IR::Type_Meter::get();
-    if (prim->name.startsWith("register_action."))
+    if (prim->name.startsWith("register_action.") || prim->name.startsWith("selector_action."))
         return IR::Type_Register::get();
     BUG("Not a stateful primitive %s", prim);
 }

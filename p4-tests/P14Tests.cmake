@@ -62,8 +62,6 @@ set (P14_XFAIL_TESTS
   extensions/p4_tests/p4_14/c2/COMPILER-599/case3230.p4
   extensions/p4_tests/p4_14/c5/COMPILER-594/comp594.p4
   extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
-# BRIG-28
-  extensions/p4_tests/p4_14/switch/p4src/switch.p4
   )
 
 set (P14_TEST_SUITES

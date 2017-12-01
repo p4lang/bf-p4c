@@ -29,7 +29,8 @@ class MauAsmOutput : public MauInspector {
     };
 
     DefaultNext         default_next;
-    std::map<std::pair<gress_t, int>, std::vector<TableInstance>>      by_stage;
+    std::map<std::pair<gress_t, int>, std::vector<TableInstance>>       by_stage;
+    ordered_map<const IR::MAU::Selector *, const Memories::Use *>       selector_memory;
     profile_t init_apply(const IR::Node *root) override {
         root->apply(default_next);
         return MauInspector::init_apply(root); }
@@ -44,6 +45,12 @@ class MauAsmOutput : public MauInspector {
         auto tableId = std::make_pair(tbl->gress, tbl->logical_id/16U);
         by_stage[tableId].push_back(TableInstance(tbl));
         return true; }
+    void postorder(const IR::MAU::Selector *as) {
+        auto tbl = findContext<IR::MAU::Table>();
+        auto name = tbl->get_use_name(as);
+        if (tbl->resources->memuse.count(name))
+            selector_memory[as] = &tbl->resources->memuse.at(name); }
+    bool preorder(const IR::MAU::StatefulAlu *) { return false; }
     friend std::ostream &operator<<(std::ostream &, const MauAsmOutput &);
     class TableMatch;
     void emit_ixbar(std::ostream &out, indent_t, const IXBar::Use *,
