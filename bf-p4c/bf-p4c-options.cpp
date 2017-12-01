@@ -146,7 +146,7 @@ BFNOptionPragmaParser::parseGlassCompilerOption(const IR::Annotation* annotation
     // \TODO: would be nice to get the list directly from the compile options ...
     // for now, we hardcode them
     static const std::unordered_set<cstring> glassCmdLinePragmasAvailableInBrig = {
-        "--no-dead-code-elimination",
+        // "--no-dead-code-elimination", \TODO: disabled until we fix issues with PHV
         "--placement",
     };
 
