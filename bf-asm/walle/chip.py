@@ -126,14 +126,17 @@ class dma_block(chip_object):
         return new
 
     def bytes(self):
-        # TODO: generalize DMA writes larger than 128 bits
-        if self.width == 256:
-            self.width = 128
+        if self.width > 128:
+            # FIXME: this only works cleanly if width is a multiple of 128, can it be otherwise?
+            if self.width % 128 != 0:
+                sys.stderr.write("ERROR: register width %d not a multiple of 128" % self.width);
+                sys.exit(1)
             new_values = []
             for value in self.values:
-                new_values.append(value[0:16].rjust(128/8,chr(0)))
-                new_values.append(value[16:32].rjust(128/8,chr(0)))
+                for chunk in range(0, self.width/8, 16):
+                    new_values.append(value[chunk:chunk+16].rjust(128/8,chr(0)))
             self.values = new_values
+            self.width = 128
 
         if self.is_reg:
             op_type = "\0\0\0B"
