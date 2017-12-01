@@ -373,7 +373,10 @@ set (P4C_DRIVER_MACROS ${P4C_BINARY_DIR}/p4c_src/bfn_version.py)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/driver/bfn_version.in
   ${P4C_DRIVER_MACROS} @ONLY)
 
-set (DRIVER_FILES ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino.cfg)
+set (DRIVER_FILES
+  ${CMAKE_CURRENT_SOURCE_DIR}/driver/barefoot.py
+  ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino.cfg
+  )
 if (ENABLE_JBAY)
   set (DRIVER_FILES ${DRIVER_FILES}
     ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.jbay.cfg)
