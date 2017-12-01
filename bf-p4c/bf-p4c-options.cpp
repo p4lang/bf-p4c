@@ -26,9 +26,6 @@ BFN_Options::BFN_Options() {
     registerOption("--nophvover", nullptr,
         [this](const char *) { phv_overlay = false; return true; },
         "do not use cluster_phv_overlay based PHV overlays");
-    registerOption("--ignore-overflow", nullptr,
-        [this](const char *) { ignorePHVOverflow = true; return true; },
-        "attempt to continue compiling even if PHV space is exhausted");
     registerOption("--allowUnimplemented", nullptr,
         [this](const char *) { allowUnimplemented = true; return true; },
         "allow assembly generation even if there are unimplemented features in the P4 code");
@@ -41,9 +38,12 @@ BFN_Options::BFN_Options() {
     registerOption("--placement", nullptr,
         [this](const char *) { forced_placement = true; return true; },
         "ignore all dependencies during table placement");
-    registerOption("--use_clot", nullptr,
+    registerOption("--use-clot", nullptr,
         [this](const char *) { use_clot = true; return true; },
         "use clots in JBay");
+    registerOption("--virtual-phvs", nullptr,
+        [this](const char *) { virtual_phvs = true; return true; },
+        "allow virtual phvs");
 }
 
 std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {

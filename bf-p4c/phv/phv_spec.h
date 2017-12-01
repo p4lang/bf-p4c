@@ -20,6 +20,14 @@ class PhvSpec {
      */
     std::map<PHV::Type, std::pair<unsigned, unsigned>> mauGroupSpec;
 
+    std::map<PHV::Type, std::vector<unsigned>> ingressOnlyMauGroupIds;
+
+    std::map<PHV::Type, std::vector<unsigned>> egressOnlyMauGroupIds;
+
+    std::map<PHV::Type, unsigned> tagalongCollectionSpec;
+
+    unsigned numTagalongCollections = 0;
+
     /// Add a PHV container type to the set of types which are available on this
     /// device. This should only be called inside the constructor of subclasses
     /// of PhvSpec; after a PhvSpec instance is constructed, its list of
@@ -75,11 +83,15 @@ class PhvSpec {
      */
     bitvec range(PHV::Type t, unsigned start, unsigned length) const;
 
+    /// @return containers that constraint to either ingress or egress
+    bitvec ingressOrEgressOnlyContainers(
+        const std::map<PHV::Type, std::vector<unsigned>>& gressOnlyMauGroupIds) const;
+
     /// @return a bitvec of the containers which are hard-wired to ingress.
-    virtual const bitvec& ingressOnly() const = 0;
+    const bitvec& ingressOnly() const;
 
     /// @return a bitvec of the containers which are hard-wired to egress.
-    virtual const bitvec& egressOnly() const = 0;
+    const bitvec& egressOnly() const;
 
     /// @return MAU groups of a given type @t.
     const std::vector<bitvec>& mauGroups(PHV::Type t) const;
@@ -96,11 +108,11 @@ class PhvSpec {
     const std::pair<int, int> mauGroupNumAndSize(const PHV::Type t) const;
 
     /// @return a bitvec of available tagalong collections.
-    virtual const std::vector<bitvec>& tagalongGroups() const = 0;
+    const std::vector<bitvec>& tagalongGroups() const;
 
     /// @return the ids of every container in @container_id's tagalong group, or
     /// boost::none if @container_id is not part of any MAU group.
-    virtual boost::optional<bitvec> tagalongGroup(unsigned container_id) const = 0;
+    boost::optional<bitvec> tagalongGroup(unsigned container_id) const;
 
     /// @return the ids of containers that can be assigned to a thread
     /// individually.
@@ -118,14 +130,6 @@ class TofinoPhvSpec : public PhvSpec {
 
     bitvec deparserGroup(unsigned id) const override;
 
-    const bitvec& ingressOnly() const override;
-
-    const bitvec& egressOnly() const override;
-
-    const std::vector<bitvec>& tagalongGroups() const override;
-
-    boost::optional<bitvec> tagalongGroup(unsigned groupIndex) const override;
-
     const bitvec& individuallyAssignedContainers() const override;
 };
 
@@ -135,14 +139,6 @@ class JBayPhvSpec : public PhvSpec {
     JBayPhvSpec();
 
     bitvec deparserGroup(unsigned id) const override;
-
-    const bitvec& ingressOnly() const override;
-
-    const bitvec& egressOnly() const override;
-
-    const std::vector<bitvec>& tagalongGroups() const override;
-
-    boost::optional<bitvec> tagalongGroup(unsigned groupIndex) const override;
 
     const bitvec& individuallyAssignedContainers() const override;
 };

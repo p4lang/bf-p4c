@@ -16,12 +16,12 @@ class BFN_Options : public CompilerOptions {
     bool cluster_interference = true;
     bool phv_slicing = true;
     bool phv_overlay = true;
-    bool ignorePHVOverflow = false;
     bool allowUnimplemented = false;
     bool debugInfo = false;
     bool no_deadcode_elimination = false;
     bool forced_placement = false;
     bool use_clot = false;
+    bool virtual_phvs = false;
 
     BFN_Options();
 
