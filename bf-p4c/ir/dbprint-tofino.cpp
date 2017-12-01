@@ -178,11 +178,25 @@ void IR::BFN::LoweredParser::dbprint(std::ostream &out) const {
     });
 }
 
+void IR::BFN::DigestFieldList::dbprint(std::ostream &out) const {
+    out << "[ ";
+
+    const char* sep = "";
+    for (auto* source : sources) {
+        out << sep << source->field->toString();
+        sep = ", ";
+    }
+
+    out << " ]";
+}
+
 void IR::BFN::Digest::dbprint(std::ostream &out) const {
-    out << endl << gress << ' ' << name << ": " << indent << endl << "select: " << *select;
+    out << endl << name << ": " << indent << endl
+                << "select: " << *selector->field;
     int idx = 0;
-    for (auto s : sets) {
-        out << endl << name << ' ' << idx++ << ": " << indent << *s << unindent;
+    for (auto* fieldList : fieldLists) {
+        out << endl << name << ' ' << idx++ << ": "
+            << indent << *fieldList << unindent;
     }
     out << unindent;
 }
@@ -192,11 +206,11 @@ void IR::BFN::EmitChecksum::dbprint(std::ostream &out) const {
 
     const char* sep = "";
     for (auto* source : sources) {
-        out << sep << source->toString();
+        out << sep << source->field->toString();
         sep = ", ";
     }
 
-    out << " } if " << povBit->toString();
+    out << " } if " << povBit->field->toString();
 }
 
 void IR::BFN::Deparser::dbprint(std::ostream &out) const {

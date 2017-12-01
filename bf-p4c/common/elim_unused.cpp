@@ -82,7 +82,7 @@ class ElimUnused::Headers : public PardeTransform {
         prune();
 
         // The emit primitive is used if the POV bit being set somewhere.
-        if (hasDefs(emit->povBit)) return emit;
+        if (hasDefs(emit->povBit->field)) return emit;
 
         LOG1("ELIMINATING emit " << emit << " IN UNIT " <<
              DBPrint::Brief << findContext<IR::BFN::Unit>());
@@ -93,7 +93,7 @@ class ElimUnused::Headers : public PardeTransform {
         prune();
 
         // The emit checksum primitive is used if the POV bit being set somewhere.
-        if (hasDefs(emit->povBit)) return emit;
+        if (hasDefs(emit->povBit->field)) return emit;
 
         LOG1("ELIMINATING emit checksum " << emit << " IN UNIT " <<
              DBPrint::Brief << findContext<IR::BFN::Unit>());

@@ -640,7 +640,7 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
         if (entry->name != "learning" && entry->name != "mirror")
             return;
 
-        PHV::Field* f = phv.field(entry->select);
+        PHV::Field* f = phv.field(entry->selector->field);
         BUG_CHECK(f != nullptr, "Field not created in PhvInfo");
         f->set_deparsed_bottom_bits(true);
         LOG1(".....Deparser Constraint " << entry->name << " 'digest' on field..... " << f);
@@ -648,12 +648,12 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
         // For learning digests, we're done.
         if (entry->name == "learning") {
             // Logging...
-            for (auto s : entry->sets) {
+            for (auto* fieldList : entry->fieldLists) {
                 LOG1("\t.....learning field list..... ");
-                for (auto l : *s) {
-                    auto l_f = phv.field(l);
-                    if (l_f)
-                        LOG1("\t\t" << l_f);
+                for (auto* fieldListEntry : fieldList->sources) {
+                    auto* fieldInfo = phv.field(fieldListEntry->field);
+                    if (fieldInfo)
+                        LOG1("\t\t" << fieldInfo);
                     else
                         LOG1("\t\t" <<"-f?"); } }
             return; }
@@ -662,17 +662,17 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
         // which is used during constraint checks for bridge-metadata phv
         // allocation.
         LOG1(".....mirror fields in field list " << f->id << ":" << f->name);
-        int fl = 0;
-        for (auto s : entry->sets) {
-            LOG1("\t.....field list....." << fl);
-            for (auto m : *s) {
-                PHV::Field* mirror = phv.field(m);
+        int fieldListIndex = 0;
+        for (auto* fieldList : entry->fieldLists) {
+            LOG1("\t.....field list....." << fieldList);
+            for (auto* mirroredField : fieldList->sources) {
+                PHV::Field* mirror = phv.field(mirroredField->field);
                 if (mirror) {
-                    mirror->mirror_field_list = {f, fl};
+                    mirror->mirror_field_list = {f, fieldListIndex};
                     LOG1("\t\t" << mirror);
                 } else {
                     LOG1("\t\t" << "-f?"); }
-                fl++; } }
+                fieldListIndex++; } }
     }
 
     void postorder(const IR::Expression* e) override {
@@ -844,7 +844,7 @@ struct ComputeFieldAlignments : public Inspector {
             auto* emit = emitPrimitive->to<IR::BFN::Emit>();
             if (!emit) continue;
 
-            auto* fieldInfo = phv.field(emit->source);
+            auto* fieldInfo = phv.field(emit->source->field);
             if (!fieldInfo) {
                 ::warning("No allocation for field %1%", emit->source);
                 currentBit = 0;
@@ -887,7 +887,7 @@ class MarkDeparsedFields : public Inspector {
     PhvInfo& phv_i;
 
     bool preorder(const IR::BFN::Emit* emit) {
-        auto* src_field = phv_i.field(emit->source);
+        auto* src_field = phv_i.field(emit->source->field);
         BUG_CHECK(src_field, "Deparser Emit with a non-PHV source: %1%",
                   cstring::to_cstring(emit));
         // XXX(cole): These two constraints will be subsumed by deparser schema.

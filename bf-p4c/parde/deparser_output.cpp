@@ -35,7 +35,7 @@ struct OutputDictionary : public Inspector {
     bool preorder(const IR::BFN::Emit* emit) override {
         AutoIndent emitIndent(indent);
         bitrange bits;
-        auto field = phv.field(emit->source, &bits);
+        auto field = phv.field(emit->source->field, &bits);
         if (!field) {
             out << indent << "# no phv: " << *emit << std::endl;
             return false;
@@ -47,7 +47,7 @@ struct OutputDictionary : public Inspector {
             return false; }
 
         bitrange povAllocBits;
-        auto povBit = phv.field(emit->povBit, &povAllocBits);
+        auto povBit = phv.field(emit->povBit->field, &povAllocBits);
         auto &alloc = field->for_bit(bits.lo);
         int size = alloc.container.size() / 8;
         if (last == alloc.container && last_pov == povBit) {
@@ -80,7 +80,7 @@ struct OutputDictionary : public Inspector {
         out << indent << "checksum " << checksumIndex;
 
         bitrange povAllocBits;
-        auto povBit = phv.field(emit->povBit, &povAllocBits);
+        auto povBit = phv.field(emit->povBit->field, &povAllocBits);
         if (!povBit) {
             out << indent << " # no phv for pov: " << *emit->povBit << std::endl;
             return false;
@@ -95,7 +95,7 @@ struct OutputDictionary : public Inspector {
         AutoIndent autoIndent(indent);
         out << indent << "clot " << emit->clot.tag << ":" << std::endl;
         bitrange povAllocBits;
-        auto povBit = phv.field(emit->povBit, &povAllocBits);
+        auto povBit = phv.field(emit->povBit->field, &povAllocBits);
         AutoIndent fieldIndent(indent);
         out << indent << "pov: " << canon_name(trim_asm_name(povBit->name)) << std::endl;
         for (auto f : emit->clot.phv_fields)
@@ -122,7 +122,7 @@ struct OutputChecksums : public Inspector {
         PHV::Container lastContainer;
         for (auto* source : emit->sources) {
             bitrange bits;
-            auto* field = phv.field(source, &bits);
+            auto* field = phv.field(source->field, &bits);
             if (!field) {
                 out << indent << "# no phv: " << source->toString() << std::endl;
                 continue;
@@ -232,50 +232,51 @@ class OutputDigests : public Inspector {
         AutoIndent digestIndent(indent);
 
         int idx = 0;
-        for (auto l : digest->sets) {
+        for (auto* fieldList : digest->fieldLists) {
             out << indent << idx++ << ": [ ";
             /* learning digest is a bit special here - the driver looks at the first
              * field of the digest to resolve the digest-ID and hence must be appended
              * to the list of digest fields.
              */
-            outputFieldlist(l, (digest->name == "learning") ? digest->select : NULL);
+            auto* learnIndex = digest->name == "learning" ? digest->selector : nullptr;
+            outputFieldlist(fieldList, learnIndex);
             out << " ]" << std::endl;
         }
-        out << indent << "select: " << canon_name(phv.field(digest->select)->name)
+        auto* selector = digest->selector->field;
+        out << indent << "select: " << canon_name(phv.field(selector)->name)
             << std::endl;
 
-        // resubmit, clone digest has no control plane names
-        // do not generate context json for them.
-        if (digest->controlPlaneNames.size() == 0)
-            return;
+        // Only learning digests need context JSON.
+        if (digest->name != "learning") return;
 
         out << indent << "context_json" << ":" << std::endl;
         AutoIndent contextJsonIndent(indent);
 
         idx = 0;
-        for (auto l : digest->sets) {
+        for (auto* fieldList : digest->fieldLists) {
             out << indent << idx++ << ": [ ";
-            outputContextJson(l);
+            outputContextJson(fieldList);
             out << " ]" << std::endl;
         }
 
         const char *sep = "";
         out << indent << "name" << ": [ ";
-        for (auto l : digest->controlPlaneNames) {
-            out << sep << l;
+        for (auto* fieldList : digest->fieldLists) {
+            out << sep << fieldList->controlPlaneName;
             sep = ", ";
         }
         out << " ]" << std::endl;
     }
 
-    void outputFieldlist(const IR::Vector<IR::Expression> *list, const IR::Expression *lrnindex) {
+    void outputFieldlist(const IR::BFN::DigestFieldList* fieldList,
+                         const IR::BFN::FieldLVal* learnIndex) {
         const char* sep = "";
 
         /* if this is a learning digest, make sure to add lrnindex at the head of
          * this list */
-        if (lrnindex) {
+        if (learnIndex) {
             bitrange bits;
-            auto *field = phv.field(lrnindex, &bits);
+            auto *field = phv.field(learnIndex->field, &bits);
             field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice &alloc) {
                 BUG_CHECK(alloc.container_bit == 0, "bad alignment for container %1%",
                           alloc.container);
@@ -284,10 +285,10 @@ class OutputDigests : public Inspector {
             });
         }
 
-        for (auto f : *list) {
+        for (auto* source : fieldList->sources) {
             bitrange bits;
-            auto* field = phv.field(f, &bits);
-            BUG_CHECK(field != nullptr, "no valid phv allocation for field %1%", f);
+            auto* field = phv.field(source->field, &bits);
+            BUG_CHECK(field, "no valid phv allocation for field %1%", source->field);
             field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice &alloc) {
                 BUG_CHECK(alloc.container_bit == 0, "bad alignment for container %1%",
                           alloc.container);
@@ -297,12 +298,12 @@ class OutputDigests : public Inspector {
         }
     }
 
-    void outputContextJson(const IR::Vector<IR::Expression> *list) {
+    void outputContextJson(const IR::BFN::DigestFieldList* fieldList) {
         const char *sep = "";
         int offset = 0;
-        for (auto f : *list) {
+        for (auto* source : fieldList->sources) {
             bitrange bits;
-            auto* field = phv.field(f, &bits);
+            auto* field = phv.field(source->field, &bits);
 
             out << sep << "[ " << canon_name(trim_asm_name(field->name)) << ", "
                 << bits.lo << ", " << bits.size() << ", " << offset << "]";

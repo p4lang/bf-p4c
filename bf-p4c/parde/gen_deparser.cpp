@@ -15,7 +15,7 @@ void generateEmits(const IR::Expression* expression, Func func) {
               "Emitting header with non-structlike type: %1%", headerType);
 
     auto* povBit = new IR::Member(IR::Type::Bits::get(1), header, "$valid");
-    for (auto field : headerType->fields) {
+    for (auto* field : headerType->fields) {
         IR::Expression* fieldRef = new IR::Member(field->type, header, field->name);
         func(fieldRef, povBit);
     }
@@ -108,28 +108,29 @@ void GenerateDeparser::generateDigest(IR::BFN::Digest *&digest, cstring name,
         error("%s.emit condition %s not supported", name, pred);
         return; }
     if (!digest) {
-        digest = new IR::BFN::Digest(dprsr->gress, name, select);
+        digest = new IR::BFN::Digest(name, select);
         dprsr->digests.addUnique(name, digest);
-    } else if (!equiv(select, digest->select)) {
-        error("Inconsistent %s selectors, %s and %s", name, select, digest->select); }
-    auto list = dynamic_cast<const IR::Vector<IR::Expression> *>(expr);
-    if (!list) {
-        if (auto l = dynamic_cast<const IR::ListExpression *>(expr))
-            list = new IR::Vector<IR::Expression>(l->components);
-        else if (expr)
-            list = new IR::Vector<IR::Expression>({expr});
-        else
-            list = new IR::Vector<IR::Expression>; }
-    if (static_cast<int>(digest->sets.size()) <= k->asInt())
-        digest->sets.resize(k->asInt() + 1);
-    digest->sets.at(k->asInt()) = list;
+    } else if (!equiv(select, digest->selector->field)) {
+        error("Inconsistent %s selectors, %s and %s", name, select,
+              digest->selector->field); }
 
-    if (controlPlaneName) {
-        if (static_cast<int>(digest->controlPlaneNames.size()) <= k->asInt()) {
-            digest->controlPlaneNames.resize(k->asInt() + 1);
-        }
-        digest->controlPlaneNames.at(k->asInt()) = controlPlaneName;
+    IR::Vector<IR::BFN::FieldLVal> sources;
+    if (!expr) {
+        // Treat as an empty list.
+    } else if (auto* list = expr->to<const IR::Vector<IR::Expression>>()) {
+        for (auto* item : *list)
+          sources.push_back(new IR::BFN::FieldLVal(item));
+    } else if (auto* list = expr->to<IR::ListExpression>()) {
+        for (auto* item : list->components)
+          sources.push_back(new IR::BFN::FieldLVal(item));
+    } else {
+        sources.push_back(new IR::BFN::FieldLVal(expr));
     }
+
+    auto* fieldList = new IR::BFN::DigestFieldList(sources, controlPlaneName);
+    if (int(digest->fieldLists.size()) <= k->asInt())
+        digest->fieldLists.resize(k->asInt() + 1);
+    digest->fieldLists.at(k->asInt()) = fieldList;
 }
 
 // FIXME -- yet another 'deep' comparison for expressions

@@ -167,10 +167,10 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
     // fields.
     forAllMatching<IR::BFN::DeparserPrimitive>(pipe,
                   [&](const IR::BFN::DeparserPrimitive* prim) {
-        const IR::Expression* povFieldSource;
+        const IR::BFN::FieldLVal* povFieldSource;
 
         if (auto* emit = prim->to<IR::BFN::Emit>()) {
-            auto* sourceField = phv.field(emit->source, nullptr);
+            auto* sourceField = phv.field(emit->source->field, nullptr);
             ERROR_CHECK(sourceField != nullptr, "No PHV allocation for field "
                         "emitted by the deparser: %1%", emit->source);
             povFieldSource = emit->povBit;
@@ -186,7 +186,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             std::map<PHV::Container, std::vector<Slice>> checksumAllocations;
             for (auto* source : emitChecksum->sources) {
                 bitrange sourceFieldBits;
-                auto* sourceField = phv.field(source, &sourceFieldBits);
+                auto* sourceField = phv.field(source->field, &sourceFieldBits);
                 if (!sourceField) {
                     ::error("No PHV allocation for field used in computed "
                             "checksum: %1%", source);
@@ -229,10 +229,10 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         BUG_CHECK(povFieldSource != nullptr, "No POV bit field for %1%", prim);
 
         bitrange povFieldBits;
-        auto* povField = phv.field(povFieldSource, &povFieldBits);
+        auto* povField = phv.field(povFieldSource->field, &povFieldBits);
         if (!povField) {
             ::error("No PHV allocation for field used as a POV bit in the "
-                    "deparser: %1%", povFieldSource);
+                    "deparser: %1%", povFieldSource->field);
             return;
         }
 

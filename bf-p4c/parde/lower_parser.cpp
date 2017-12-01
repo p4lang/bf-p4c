@@ -560,20 +560,20 @@ struct LowerDeparserIR : public DeparserTransform {
     explicit LowerDeparserIR(const PhvInfo& phv, const ClotInfo& clot) : phv(phv), clot(clot) { }
 
  private:
-    const IR::Node* splitExpression(const IR::Expression* expr,
+    const IR::Node* splitExpression(const IR::BFN::FieldLVal* expr,
                                     const bitrange& exprBits,
                                     const std::vector<bitrange>& slices) {
         if (slices.empty()) return expr;
         if (slices.size() == 1 && slices[0] == exprBits) {
-            LOG3("SplitPhvUse: no need to split: " << expr);
+            LOG3("SplitPhvUse: no need to split: " << expr->field);
             return expr;
         }
 
-        auto rv = new IR::Vector<IR::Expression>();
+        auto rv = new IR::Vector<IR::BFN::FieldLVal>();
         for (auto slice : boost::adaptors::reverse(slices)) {
-            auto clone = MakeSlice(expr->clone(), slice.lo, slice.hi);
+            auto* clone = MakeSlice(expr->field->clone(), slice.lo, slice.hi);
             LOG3("splitExpression: creating slice " << clone);
-            rv->push_back(clone);
+            rv->push_back(new IR::BFN::FieldLVal(clone));
         }
         return rv;
     }
@@ -594,7 +594,8 @@ struct LowerDeparserIR : public DeparserTransform {
         for (auto slice : boost::adaptors::reverse(slices)) {
             auto* clone = emit->clone();
             le_bitrange sliceBits = slice.field_bits();
-            clone->source = MakeSlice(emit->source, sliceBits.lo, sliceBits.hi);
+            clone->source = new IR::BFN::FieldLVal(
+              MakeSlice(emit->source->field, sliceBits.lo, sliceBits.hi));
             LOG3("splitEmit: creating slice " << clone);
             rv->push_back(clone);
         }
@@ -605,7 +606,7 @@ struct LowerDeparserIR : public DeparserTransform {
         prune();
         bitrange bits;
         std::vector<alloc_slice> slices;
-        std::tie(bits, slices) = computeSlices(emit->source, phv);
+        std::tie(bits, slices) = computeSlices(emit->source->field, phv);
         return splitEmit(emit, bits, slices);
     }
 
@@ -614,10 +615,10 @@ struct LowerDeparserIR : public DeparserTransform {
 
         // A checksum uses a list of fields as input, and we need to split each
         // field individually.
-        IR::Vector<IR::Expression> sources;
+        IR::Vector<IR::BFN::FieldLVal> sources;
         for (auto* source : emit->sources) {
             bitrange bits;
-            auto* field = phv.field(source, &bits);
+            auto* field = phv.field(source->field, &bits);
             if (!field) {
                 sources.push_back(source);
                 continue;
@@ -658,7 +659,7 @@ struct LowerDeparserIR : public DeparserTransform {
 
         for (auto e : deparser->emits) {
            if (auto emit = e->to<IR::BFN::Emit>()) {
-               auto field = phv.field(emit->source);
+               auto field = phv.field(emit->source->field);
                if (auto c = clot.allocated(field)) {
                    if (!newEmits.empty()) {
                        if (auto lastEmitClot = newEmits.back()->to<IR::BFN::EmitClot>())

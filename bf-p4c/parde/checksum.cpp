@@ -8,7 +8,7 @@
 
 namespace {
 
-using ChecksumSources = IR::Vector<IR::Expression>;
+using ChecksumSources = IR::Vector<IR::BFN::FieldLVal>;
 using ChecksumSourceMap = std::map<cstring, const ChecksumSources*>;
 
 void showComputeChecksumUsage() {
@@ -116,7 +116,7 @@ analyzeComputedChecksumStatement(const IR::AssignmentStatement* assignment,
                       sourceHeader, member);
             return boost::none;
         }
-        sources->push_back(member);
+        sources->push_back(new IR::BFN::FieldLVal(member));
     }
 
     if (sources->empty()) {
@@ -259,7 +259,7 @@ analyzeComputedChecksumStatement(const IR::MethodCallStatement* statement) {
                       sourceHeader, member);
             return boost::none;
         }
-        sources->push_back(member);
+        sources->push_back(new IR::BFN::FieldLVal(member));
     }
 
     if (sources->empty()) {
@@ -398,7 +398,7 @@ analyzeDeparserStatement(const IR::MethodCallStatement* statement) {
                       sourceHeader, member);
             return boost::none;
         }
-        sources->push_back(member);
+        sources->push_back(new IR::BFN::FieldLVal(member));
     }
 
     if (sources->empty()) {
@@ -455,8 +455,8 @@ struct SubstituteComputeChecksums : public Transform {
  private:
     IR::BFN::DeparserPrimitive* preorder(IR::BFN::Emit* emit) override {
         prune();
-        if (!emit->source->is<IR::Member>()) return emit;
-        auto* source = emit->source->to<IR::Member>();
+        if (!emit->source->field->is<IR::Member>()) return emit;
+        auto* source = emit->source->field->to<IR::Member>();
         if (checksums.find(source->toString()) == checksums.end()) return emit;
 
         // The source field of this Emit will get its value from a computed
