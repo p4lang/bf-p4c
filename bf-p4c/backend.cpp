@@ -25,7 +25,6 @@
 #include "bf-p4c/parde/add_jbay_pov.h"
 #include "bf-p4c/parde/asm_output.h"
 #include "bf-p4c/parde/bridge_metadata.h"
-#include "bf-p4c/parde/digest.h"
 #include "bf-p4c/parde/lower_parser.h"
 #include "bf-p4c/parde/resolve_computed.h"
 #include "bf-p4c/parde/stack_push_shims.h"
@@ -175,7 +174,6 @@ Backend::Backend(const BFN_Options& options) :
         new ResolveComputedParserExpressions,
         new CollectPhvInfo(phv),
         &defuse,
-        new Digests,
         // only needed to avoid warnings about otherwise unused ingress/egress_port?
         new CollectPhvInfo(phv),
         new CreateThreadLocalInstances,
