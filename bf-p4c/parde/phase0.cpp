@@ -59,8 +59,7 @@ std::ostream& operator<<(std::ostream& out, const BFN::Phase0Info* info) {
 
         const le_bitrange leFieldRange =
           fieldRange.toOrder<Endian::Little>(phase0Range.size());
-        out << field.source << ": " << leFieldRange.lo;
-        if (leFieldRange.size() > 1) out << ".." << leFieldRange.hi;
+        out << field.source << ": " << leFieldRange.lo << ".." << leFieldRange.hi;
     }
     out << "}" << std::endl;
 
