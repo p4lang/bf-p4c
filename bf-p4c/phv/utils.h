@@ -62,7 +62,7 @@ class ContainerGroup {
 };
 
 class FieldSlice {
-    // PHV::Field* field_i;  // XXX(seth): Unused?
+    PHV::Field* field_i;
     le_bitrange range_i;
 
     /** Field name, following this scheme:
@@ -99,11 +99,13 @@ class FieldSlice {
     FieldSlice(Field* field, le_bitrange range) : range_i(range) {
         BUG_CHECK(0 <= range.lo, "Trying to create field slice with negative start");
         BUG_CHECK(range.size() <= field->size, "Trying to create field slice larger than field");
-
-        // TODO(cole): Not yet implemented.  Need to initialize field slice
-        // members by interpreting its parent field members/constraints.
-        P4C_UNIMPLEMENTED("FieldSlice NYI");
     }
+
+    /// @returns the field this is a slice of.
+    PHV::Field* field() const   { return field_i; }
+
+    /// @returns the bits of the field included in this field slice.
+    le_bitrange range() const   { return range_i; }
 };
 
 // XXX(cole): This duplicates PHV::Field::alloc_slice.
