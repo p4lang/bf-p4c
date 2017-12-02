@@ -523,26 +523,40 @@ template<class REGS> void ActionBus::write_action_regs(REGS &regs, Table *tbl,
         unsigned byte = el.first;
         assert(byte == el.second.byte);
         unsigned slot = Stage::action_bus_slot_map[byte];
-        unsigned bit, size;
+        unsigned bit = 0, size = 0;
         std::string srcname;
-        auto data = el.second.data.begin();
-        if (data->first.type == Source::Field) {
-            auto f = data->first.field;
-            if ((f->bit(data->second) >> 7) != action_slice)
-                continue;
-            bit = f->bit(data->second) & 0x7f;
-            size = std::min(el.second.size, f->size - data->second);
-            srcname = "field " + tbl->find_field(f);
-        } else if (data->first.type == Source::TableOutput) {
-            bit = data->second;
-            size = el.second.size;
-            srcname = "table " + data->first.table->name_;
-        } else {
-            // HashDist only works in write_immed_regs
-            assert(0); }
-        LOG3("    byte " << byte << " (slot " << slot << "): " << srcname <<
-             " (" << data->second << ".." << (data->second + size - 1) << ")" <<
-             " [" << bit << ".." << (bit+size-1) << "]");
+        for (auto &data : el.second.data) {
+            // FIXME -- this loop feels like a hack -- the size SHOULD already be set in
+            // el.second.size (the max of the sizes of everything in the data we're looping
+            // over), so should not need recomputing.  We do need to figure out the source
+            // bit location, and ignore things in other wide words, but that should be stored
+            // in the Slot object?  What about wired-ors, writing two inputs to the same
+            // slot -- it is possible but is it useful?
+            unsigned data_bit, data_size;
+            if (data.first.type == Source::Field) {
+                auto f = data.first.field;
+                if ((f->bit(data.second) >> 7) != action_slice)
+                    continue;
+                data_bit = f->bit(data.second) & 0x7f;
+                data_size = std::min(el.second.size, f->size - data.second);
+                srcname = "field " + tbl->find_field(f);
+            } else if (data.first.type == Source::TableOutput) {
+                data_bit = data.second;
+                data_size = el.second.size;
+                srcname = "table " + data.first.table->name_;
+            } else {
+                // HashDist only works in write_immed_regs
+                assert(0); }
+            LOG3("    byte " << byte << " (slot " << slot << "): " << srcname <<
+                 " (" << data.second << ".." << (data.second + data_size - 1) << ")" <<
+                 " [" << data_bit << ".." << (data_bit+data_size-1) << "]");
+            if (size) {
+                assert(bit == data_bit);  // checked in pass1; maintained by pass2
+                size = std::max(size, data_size);
+            } else {
+                bit = data_bit;
+                size = data_size; } }
+        if (size == 0) continue;
         if (bit + size > 128) {
             error(lineno, "Action bus setup can't deal with field %s split across "
                   "SRAM rows", el.second.name.c_str());
