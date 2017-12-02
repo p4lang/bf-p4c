@@ -20,6 +20,7 @@ import os.path
 import sys
 import p4c_src.bfn_version as p4c_version
 from p4c_src.util import find_file
+from p4c_src.driver import BackendDriver
 
 # Search the environment for assets
 if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
@@ -31,44 +32,74 @@ else:
     bfas = find_file(os.environ['P4C_BIN_DIR'], 'bfas')
     bflink = find_file(os.environ['P4C_BIN_DIR'], 'bflink')
 
-def get_assembler():
-    return bfas
+class BarefootBackend(BackendDriver):
+    def __init__(self, target, argParser):
+        BackendDriver.__init__(self, target, argParser)
+        # commands
+        self.add_command('preprocessor', 'cc')
+        self.add_command('compiler',
+                         os.path.join(os.environ['P4C_BIN_DIR'], 'p4c-tofino'))
+        self.add_command('assembler', bfas)
+        self.add_command('linker', bflink)
 
-def get_linker():
-    return bflink
+        # order of commands
+        self.enable_commands(['preprocessor', 'compiler', 'assembler', 'linker'])
 
-def config_preprocessor(target, targetDefine, basepath, source_fullname):
-    target.add_command_option('preprocessor', "-E -x c")
-    target.add_command_option('preprocessor', "-D" + targetDefine)
-    target.add_command_option('preprocessor', p4c_version.macro_defs)
-    if basepath is not None:
-        target.add_command_option('preprocessor', "-o")
-        target.add_command_option('preprocessor', "{}.p4i".format(basepath))
-        target.add_command_option('preprocessor', source_fullname)
+        # additional options
+        self.add_command_line_options()
 
-def config_compiler(target, triplet, targetDefine, basepath):
-    target.add_command_option('compiler', "--nocpp")
-    target.add_command_option('compiler', "--target " + triplet)
-    target.add_command_option('compiler', "-D" + targetDefine)
-    target.add_command_option('compiler', p4c_version.macro_defs)
-    if basepath is not None:
-        target.add_command_option('compiler', "-o")
-        target.add_command_option('compiler', "{}.bfa".format(basepath))
-        target.add_command_option('compiler', "{}.p4i".format(basepath))
+    def add_command_line_options(self):
+        # BackendDriver.add_command_line_options(self)
+        self._argGroup = self._argParser.add_argument_group("Barefoot Networks specific options")
+        self._argGroup.add_argument("-s", dest="run_post_compiler",
+                                    help="Only run assembler and linker",
+                                    action="store_true", default=False)
 
-def config_assembler(target, targetName, basepath, output_dir):
-    if basepath is not None:
-        target.add_command_option('assembler', "--target " + targetName)
+    def config_preprocessor(self, targetDefine):
+        self.add_command_option('preprocessor', "-E -x c")
+        self.add_command_option('preprocessor', "-D" + targetDefine)
+        self.add_command_option('preprocessor', p4c_version.macro_defs)
+
+    def config_compiler(self, triplet, targetDefine):
+        self.add_command_option('compiler', "--nocpp")
+        self.add_command_option('compiler', "--target " + triplet)
+        self.add_command_option('compiler', "-D" + targetDefine)
+        self.add_command_option('compiler', p4c_version.macro_defs)
+
+    def config_assembler(self, targetName):
+        self.add_command_option('assembler', "--target " + targetName)
+
+    def config_linker(self, targetName):
+        self.add_command_option('linker', "--walle " + walle)
+        self.add_command_option('linker', "--target " + targetName)
+        self._linkerTargetName = targetName
+
+
+    def process_command_line_options(self, opts):
+        BackendDriver.process_command_line_options(self, opts)
+
+        # process the options related to source file
+        output_dir = self._output_directory
+        basepath = "{}/{}".format(output_dir, self._source_basename)
+
+        self.add_command_option('preprocessor', "-o")
+        self.add_command_option('preprocessor', "{}.p4i".format(basepath))
+        self.add_command_option('preprocessor', self._source_filename)
+
+        self.add_command_option('compiler', "-o")
+        self.add_command_option('compiler', "{}.bfa".format(basepath))
+        self.add_command_option('compiler', "{}.p4i".format(basepath))
+
         if (os.environ['P4C_BUILD_TYPE'] == "DEVELOPER"):
-            target.add_command_option('assembler',
-                                      "-vvvvl {}/bfas.config.log".format(output_dir))
-        target.add_command_option('assembler', "-o {}".format(output_dir))
-        target.add_command_option('assembler', "{}.bfa".format(basepath))
+            self.add_command_option('assembler',
+                                    "-vvvvl {}/bfas.config.log".format(output_dir))
+        self.add_command_option('assembler', "-o {}".format(output_dir))
+        self.add_command_option('assembler', "{}.bfa".format(basepath))
 
-def config_linker(target, targetName, basename, output_dir):
-    target.add_command_option('linker', "--walle " + walle)
-    target.add_command_option('linker', "--target " + targetName)
-    if basename is not None:
-        target.add_command_option('linker', "-o {}/{}.bin".format(output_dir, targetName))
-        target.add_command_option('linker', "{}/*.cfg.json".format(output_dir))
-        target.add_command_option('linker', "-b {}".format(basename))
+        self.add_command_option('linker', "-o {}/{}.bin".format(output_dir, self._linkerTargetName))
+        self.add_command_option('linker', "{}/*.cfg.json".format(output_dir))
+        self.add_command_option('linker', "-b {}".format(self._source_basename))
+
+        # local options
+        if opts.run_post_compiler:
+            self.enable_commands(['assembler', 'linker'])
