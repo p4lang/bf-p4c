@@ -1017,11 +1017,6 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Field .* overlaps with .*"
-  extensions/p4_tests/p4_14/jenkins/mirror_test/mirror_test.p4
-  )
-
-p4c_add_xfail_reason("tofino"
   "No format in action table"
   extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
   )
