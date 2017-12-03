@@ -86,9 +86,13 @@ struct ActionDataBus {
             ReservedSpace(Loc l, int bo, bool im)
                 : location(l), byte_offset(bo), immediate(im) {}
         };
-        safe_vector<ReservedSpace> reserved_spaces;
+        // Locations of action data where the ALUs will pull action data
+        safe_vector<ReservedSpace> action_data_locs;
+        // Slots reserved because unused action data was needed
+        safe_vector<ReservedSpace> clobber_locs;
         void clear() {
-            reserved_spaces.clear();
+            action_data_locs.clear();
+            clobber_locs.clear();
         }
     };
 
@@ -101,52 +105,44 @@ struct ActionDataBus {
     int byte_to_output(int byte, ActionFormat::cont_type_t type);
     int output_to_byte(int output, ActionFormat::cont_type_t type);
     int find_byte_sz(ActionFormat::cont_type_t);
+    bitvec combined(const bitvec bv[ActionFormat::CONTAINER_TYPES]);
 
-
-    bitvec paired_space(ActionFormat::cont_type_t type, bitvec adjacent, int start_byte);
-    bool find_location(ActionFormat::cont_type_t type, bitvec adjacent, int diff,
+    bool find_location(ActionFormat::cont_type_t type, bitvec combined_adjacent, int diff,
                        int &start_byte);
     bool find_lower_location(ActionFormat::cont_type_t type, bitvec adjacent,
                              int diff, int &start_byte);
-    bool find_full_location(bitvec adjacent, int diff, int &output);
+    bool find_full_location(bitvec combined_adjacent, int diff, int &output);
 
-    void analyze_full_share(safe_vector<Use::ReservedSpace> &reserved_spaces,
-                            bitvec layouts[ActionFormat::CONTAINER_TYPES],
+    void analyze_full_share(Use &use, bitvec layouts[ActionFormat::CONTAINER_TYPES],
                             FullShare &full_share, int init_byte_offset,
                             int add_byte_offset, bool immed);
-    void analyze_full_shares(safe_vector<Use::ReservedSpace> &reserved_spaces,
-                             bitvec layouts[ActionFormat::CONTAINER_TYPES],
+    void analyze_full_shares(Use &use, bitvec layouts[ActionFormat::CONTAINER_TYPES],
                              bitvec full_bitmasked, FullShare full_shares[4],
                              int init_byte_offset);
-    void reserve_space(safe_vector<Use::ReservedSpace> &reserved_spaces,
-                       ActionFormat::cont_type_t type, bitvec adjacent,
-                       int start_byte, int byte_offset, bool immed, cstring name);
-    bool fit_adf_section(safe_vector<Use::ReservedSpace> &reserved_spaces, bitvec adjacent,
+    void reserve_space(Use &use, ActionFormat::cont_type_t type, bitvec adjacent,
+                       bitvec combined_adjacent, int start_byte, int byte_offset,
+                       bool immed, cstring name);
+    bool fit_adf_section(Use &use, bitvec adjacent, bitvec combined_adjacent,
                          ActionFormat::cont_type_t type, loc_alg_t loc_alg,
                          int init_byte_offset, int sec_begin, int size, cstring name);
-    bool alloc_bytes(safe_vector<Use::ReservedSpace> &reserved_spaces,
-                     bitvec layout, int init_byte_offset, cstring name);
-    bool alloc_halves(safe_vector<Use::ReservedSpace> &reserved_spaces,
-                      bitvec layout, int init_byte_offset, cstring name);
-    bool alloc_fulls(safe_vector<Use::ReservedSpace> &reserved_spaces,
-                     bitvec layouts[ActionFormat::CONTAINER_TYPES],
+    bool alloc_bytes(Use &use, bitvec layout, bitvec combined_layout, int init_byte_offset,
+                     cstring name);
+    bool alloc_halves(Use &use, bitvec layout, bitvec combined_layout, int init_byte_offset,
+                      cstring name);
+    bool alloc_fulls(Use &use, bitvec layouts[ActionFormat::CONTAINER_TYPES],
                      bitvec full_bitmasked, int init_byte_offset, cstring name);
-    bool alloc_full_sect(safe_vector<Use::ReservedSpace> &reserved_spaces,
-                         FullShare full_shares[4], int begin, int init_byte_offset,
-                         cstring name, bitvec full_bitmasked);
+    bool alloc_full_sect(Use &use, FullShare full_shares[4], bitvec combined_layout, int begin,
+                         int init_byte_offset, cstring name, bitvec full_bitmasked);
     bool alloc_ad_table(const bitvec total_layouts[ActionFormat::CONTAINER_TYPES],
                         const bitvec full_layout_bitmasked,
-                        safe_vector<Use::ReservedSpace> &locations, cstring name);
-
-    bool fit_immed_sect(safe_vector<Use::ReservedSpace> &reserved_spaces, bitvec layout,
+                        Use &use, cstring name);
+    bool fit_immed_sect(Use &use, bitvec layout, bitvec combined_layout,
                         ActionFormat::cont_type_t type, loc_alg_t loc_alg, cstring name);
-
-    bool alloc_unshared_immed(safe_vector<Use::ReservedSpace> &reserved_spaces,
-                              ActionFormat::cont_type_t, bitvec layout, cstring name);
-    bool alloc_shared_immed(safe_vector<Use::ReservedSpace> &reserved_spaces,
-                            bitvec layouts[ActionFormat::CONTAINER_TYPES], cstring name);
-    bool alloc_immediate(const bitvec total_layouts[ActionFormat::CONTAINER_TYPES],
-                         safe_vector<Use::ReservedSpace> &locations, cstring name);
+    bool alloc_unshared_immed(Use &use, ActionFormat::cont_type_t, bitvec layout,
+                              bitvec combined_layout, cstring name);
+    bool alloc_shared_immed(Use &use, bitvec layouts[ActionFormat::CONTAINER_TYPES], cstring name);
+    bool alloc_immediate(const bitvec total_layouts[ActionFormat::CONTAINER_TYPES], Use &use,
+                         cstring name);
 
  public:
     bool alloc_action_data_bus(const IR::MAU::Table *tbl, const LayoutOption *lo,
@@ -154,6 +150,7 @@ struct ActionDataBus {
 
     void update(cstring name, const Use &alloc);
     void update(cstring name, const TableResourceAlloc *alloc);
+    void update(cstring name, const Use::ReservedSpace &rs);
     void update(const IR::MAU::Table *tbl);
 };
 

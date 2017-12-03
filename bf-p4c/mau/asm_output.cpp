@@ -799,7 +799,7 @@ void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
 
     if (tbl->layout.action_data_bytes > 0) {
         size_t total_index = 0;
-        for (auto &rs : action_data_xbar.reserved_spaces) {
+        for (auto &rs : action_data_xbar.action_data_locs) {
             bitvec total_range(0, ActionFormat::CONTAINER_SIZES[rs.location.type]);
             int byte_sz = ActionFormat::CONTAINER_SIZES[rs.location.type] / 8;
             out << rs.location.byte;
@@ -807,7 +807,7 @@ void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
                 out << ".." << (rs.location.byte + byte_sz - 1);
             out << " : " << use.get_format_name(rs.byte_offset, rs.location.type, rs.immediate,
                                                 total_range, false);
-            if (total_index != action_data_xbar.reserved_spaces.size() - 1)
+            if (total_index != action_data_xbar.action_data_locs.size() - 1)
                 out << ", ";
             else
                 out << " ";
