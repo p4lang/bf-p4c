@@ -89,12 +89,19 @@ class BarefootBackend(BackendDriver):
         self.add_command_option('compiler', "-o")
         self.add_command_option('compiler', "{}.bfa".format(basepath))
         self.add_command_option('compiler', "{}.p4i".format(basepath))
+        # cleanup after compiler
+        self._postCmds['compiler'] = []
+        self._postCmds['compiler'].append(["rm -f {}.p4i".format(basepath)])
 
         if (os.environ['P4C_BUILD_TYPE'] == "DEVELOPER"):
             self.add_command_option('assembler',
                                     "-vvvvl {}/bfas.config.log".format(output_dir))
         self.add_command_option('assembler', "-o {}".format(output_dir))
         self.add_command_option('assembler', "{}.bfa".format(basepath))
+        # cleanup after assembler
+        if not opts.debug_info:
+            self._postCmds['assembler'] = []
+            self._postCmds['assembler'].append(["rm -f {}.bfa".format(basepath)])
 
         self.add_command_option('linker', "-o {}/{}.bin".format(output_dir, self._linkerTargetName))
         self.add_command_option('linker', "{}/*.cfg.json".format(output_dir))

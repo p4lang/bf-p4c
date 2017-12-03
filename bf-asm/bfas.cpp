@@ -220,11 +220,6 @@ int main(int ac, char **av) {
             fclose(fp);
             asmfile = true;
             asmfile_name = get_filename(av[i]);
-            if (!options.debug_info) {
-                auto rc = unlink(av[i]);
-                if (rc != 0 && log_error > 0)
-                    warning(0, "failed to remove %s: %s", av[i], strerror(errno));
-            }
         } else {
             std::cerr << "Can't read " << av[i] << ": " << strerror(errno) << std::endl;
             error_count++; } }
