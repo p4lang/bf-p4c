@@ -130,6 +130,7 @@ add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_CONTROL_PLANE_HD
 
 set (TOFINO_BACKEND_LIB_HDRS
   lib/union_find.hpp
+  lib/vertex_weighted_coloring.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${TOFINO_BACKEND_LIB_HDRS}")
 
@@ -421,6 +422,7 @@ set (GTEST_TOFINO_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/tofino_gtest_utils.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/trivial_alloc.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/union_find.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/vertex_weighted_coloring.cpp
   )
 
 set (GTEST_SOURCES ${GTEST_SOURCES} ${GTEST_TOFINO_SOURCES} PARENT_SCOPE)

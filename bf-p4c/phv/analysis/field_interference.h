@@ -8,11 +8,11 @@
 #include "lib/symbitmatrix.h"
 
 /** Generate a field-to-field interference graph for all fields referenced in the program and use
-  * vertex coloring to create sets of mutually exclusive fields 
+  * vertex coloring to create sets of mutually exclusive fields
   *
   * @pre Clusters determined by the MakeClusters pass, with all clusters separated into PHV and TPHV
   * clusters
-  * 
+  *
   * @post Maps corresponding to sets of mutually exclusive fields, with each set corresponding to a
   * single color determined by vertex coloring
   * Currently, we generate four separate maps: phv_overlays_ingress, phv_overlays_egress,
@@ -37,7 +37,7 @@ class FieldInterference : public Visitor {
     FieldColorMap egress_overlays;
 
     /** @return all referenced fields in the program that belong to the list of clusters and the
-      * gress specified by @clusters and @gress respectively 
+      * gress specified by @clusters and @gress respectively
       */
     FieldVector getAllReferencedFields(std::vector<PHV::AlignedCluster*>& clusters, gress_t gress);
 

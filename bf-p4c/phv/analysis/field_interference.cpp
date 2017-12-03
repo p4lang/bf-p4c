@@ -1,5 +1,5 @@
 #include <boost/graph/adjacency_list.hpp>
-#include <boost/graph/sequential_vertex_coloring.hpp>
+#include "bf-p4c/lib/vertex_weighted_coloring.h"
 
 #include "bf-p4c/phv/analysis/field_interference.h"
 #include "lib/log.h"
@@ -51,60 +51,39 @@ FieldInterference::constructFieldInterference(FieldVector &fields) {
         boost::property<boost::vertex_index_t, std::size_t>,
         boost::no_property              // No edge labels
             > Graph;
-    typedef typename boost::graph_traits<Graph> GraphTraits;
-    typedef typename GraphTraits::vertex_descriptor Vertex;
-    typedef typename boost::graph_traits<Graph>::vertices_size_type vertices_size_type;
-    typedef typename boost::property_map<Graph, boost::vertex_index_t>::const_type vertex_index_map;
 
-    Graph g;
-    // BGL Property Map: Maps vertices to fields
-    boost::iterator_property_map<PHV::Field **, vertex_index_map> field_map(&fields.front(),
-            boost::get(boost::vertex_index, g));
-
-    // Add vertices
-    // TODO: Add gress, tagalong/PHVs labels to this log message
     LOG5("Creating field to field interference graph");
-    std::size_t i = 0;
-    for (auto *f : fields) {
-        // Do not create interference graph for unreferenced fields
-        Vertex v = boost::add_vertex(i++, g);
-        field_map[v] = f;
-        LOG5("\tVertex " << (i - 1) << " <- Field " << f->name); }
+    VertexWeightedGraphBuilder<Graph> graph_builder;
+    std::map<int, PHV::Field *> vertex_id_to_field;
+    // add vertices with its weight
+    for (const auto& f : fields) {
+        int v_id = graph_builder.add_vertex(f->size);
+        vertex_id_to_field[v_id] = f;
+        LOG5("\tVertex " << v_id << " <- Field " << f->name);
+    }
 
     // Add interference edges
-    GraphTraits::vertex_iterator v, vend;
-    for (boost::tie(v, vend) = boost::vertices(g); v != vend; ++v) {
-        GraphTraits::vertex_iterator v2, vend2;
-        for (boost::tie(v2, vend2) = boost::vertices(g); v2 != vend2; ++v2) {
-            PHV::Field *f1 = field_map[*v];
-            PHV::Field *f2 = field_map[*v2];
-            if (f1 == f2) continue;
-            if (!PHV::Allocation::mutually_exclusive(mutex_i, f1, f2)) {
-                // Fields interfere
-                boost::add_edge(*v, *v2, g);
-                LOG5("\tAdding interference edge: " << f1->name << " <-> " << f2->name); } } }
+    for (const auto& vi : vertex_id_to_field) {
+        for (const auto& vj : vertex_id_to_field) {
+            if (vi.first == vj.first) continue;
+            if (!PHV::Allocation::mutually_exclusive(mutex_i, vi.second, vj.second)) {
+                graph_builder.add_edge(vi.first, vj.first);
+                LOG5("\tAdding interference edge: "
+                     << vi.second->name
+                     << " <-> " << vj.second->name); } } }
 
-    // Build smallest-last vertex ordering for greedy vertex coloring
-    boost::tie(v, vend) = boost::vertices(g);
-    std::vector<Vertex> order_vec(v, vend);
-    std::sort(order_vec.begin(), order_vec.end(), [&](Vertex v1, Vertex v2) {
-        return boost::out_degree(v1, g) > boost::out_degree(v2, g); });
-
-    // Do vertex coloring; output color
-    auto order = boost::make_iterator_property_map(order_vec.begin(),
-            boost::identity_property_map(), GraphTraits::null_vertex());
-    std::vector<vertices_size_type> color_vec(boost::num_vertices(g));
-    boost::iterator_property_map<vertices_size_type*, vertex_index_map> color(&color_vec.front(),
-            boost::get(boost::vertex_index, g));
-    boost::sequential_vertex_coloring(g, order, color);
+    auto graph = graph_builder.build();
+    WeightedGraphColoringSolver<decltype(graph.graph),
+                                decltype(graph.weights),
+                                decltype(graph.colors)> solver(graph);
+    solver.run();
 
     // Build a color->cluster map to return. Colors are virtual MAU groups.
     ordered_map<int, std::vector<PHV::Field *>> rv;
-    for (boost::tie(v, vend) = boost::vertices(g); v != vend; ++v) {
-        int vreg = static_cast<int>(color[*v]);
-        PHV::Field* f = field_map[*v];
-        LOG5("Field " << f->name << " assigned VREG " << vreg);
-        rv[vreg].push_back(f); }
+    for (const auto& v : vertex_id_to_field) {
+        int v_color = graph.colors[v.first];
+        LOG5("Field " << v.second->name << " assigned VREG " << v_color);
+        rv[v_color].push_back(v.second); }
 
     return rv;
 }
