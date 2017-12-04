@@ -72,6 +72,7 @@ void output_all() {
     ctxtJson["compiler_version"] = P4C_TOFINO_VERSION;
     ctxtJson["program_name"] = asmfile_name;
     ctxtJson["learn_quanta"] = json::vector();
+    ctxtJson["dynamic_hash_calculations"] = json::vector();
     ctxtJson["parser"] = json::map();
     ctxtJson["phv_allocation"] = json::vector();
     ctxtJson["tables"] = json::vector();
