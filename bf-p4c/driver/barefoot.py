@@ -107,6 +107,7 @@ class BarefootBackend(BackendDriver):
         self.add_command_option('linker', "{}/*.cfg.json".format(output_dir))
         self.add_command_option('linker', "-b {}".format(self._source_basename))
 
+        src_filename, src_extension = os.path.splitext(self._source_filename)
         # local options
-        if opts.run_post_compiler:
+        if opts.run_post_compiler or src_extension == '.bfa':
             self.enable_commands(['assembler', 'linker'])
