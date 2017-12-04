@@ -212,6 +212,24 @@ class Allocation {
      */
     virtual std::vector<MutuallyLiveSlices> slicesByLiveness(PHV::Container c) const;
 
+    /** @returns a set of slices allocated to @c that are all live at the same time as @sl
+      * The previous function (slicesByLiveness(c))  constructs a vector of sets of slices
+      * that are live in the container at the same time; the same slice may be found in multiple
+      * sets in this case. 
+      * By contrast, slicesByLiveness(c, sl) uses the mutex_i member to determine all the field
+      * slices that are not mutually exclusive with the candidate slice, and returns a set of all
+      * such slices.
+      * For example, suppose the following slices are allocated to a container c:
+      *
+      *   c[4:7]<--f2[0:3]
+      *   c[4:7]<--f3[0:3]
+      *
+      * where f2 and f3 are overlaid and hence mutex_i(f2, f3) = true. If slice sl is f1[0:3], such
+      * that mutex_i(f1, f2) = false and mutex_i(f1, f3) = false, a call to slicesByLiveness(c,
+      * f1[0:3]) would return the set {f2[0:3], f3[0:3]}.
+     */
+    virtual MutuallyLiveSlices slicesByLiveness(PHV::Container c, AllocSlice& sl) const;
+
     /// @returns all slices allocated for @f that include any part of @range in
     /// the field portion of the allocated slice.  May be empty (if @f is not
     /// allocated) or contain slices that do not fully cover all bits of @f (if

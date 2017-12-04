@@ -107,6 +107,16 @@ void PHV::Allocation::setGress(PHV::Container c, GressAssignment gress) {
     container_status_i[c].gress = gress;
 }
 
+PHV::Allocation::MutuallyLiveSlices
+PHV::Allocation::slicesByLiveness(PHV::Container c, AllocSlice& sl) const {
+    PHV::Allocation::MutuallyLiveSlices rs;
+    auto slices = this->slices(c);
+    for (auto& slice : slices) {
+        if (!PHV::Allocation::mutually_exclusive(mutex_i, slice.field(), sl.field()))
+            rs.insert(slice); }
+    return rs;
+}
+
 std::vector<PHV::Allocation::MutuallyLiveSlices>
 PHV::Allocation::slicesByLiveness(PHV::Container c) const {
     // Idea: set of bitvecs, where each bitvec is a collection of mutually live
