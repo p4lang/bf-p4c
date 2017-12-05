@@ -560,6 +560,11 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
         error(lineno, "No format specified in table %s", name());
     for (auto &kv : MapIterChecked(data)) {
         if (common_setup(kv, data, P4Table::MatchEntry)) {
+        } else if (kv.key == "input_xbar") {
+            if (CHECKTYPE(kv.value, tMAP))
+                input_xbar = new InputXbar(this, false, kv.value.map);
+        } else if (kv.key == "hash_dist") {
+            /* parsed in common_init_setup */
         } else if (kv.key == "selector") {
             attached.selector.setup(kv.value, this);
         } else if (kv.key == "stats") {

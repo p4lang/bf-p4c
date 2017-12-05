@@ -59,13 +59,9 @@ void Table::Call::setup(const value_t &val, Table *tbl) {
             args.emplace_back(val[i].i);
         else if (val[i].type == tCMD && val[i] == "hash_dist") {
             if (PCHECKTYPE(val[i].vec.size > 1, val[i][1], tINT)) {
-                bool ok = false;
-                for (auto &hd : tbl->hash_dist)
-                    if (hd.id == val[i][1].i) {
-                        args.emplace_back(&hd);
-                        ok = true;
-                        break; }
-                if (!ok)
+                if (auto hd = tbl->find_hash_dist(val[i][1].i))
+                    args.emplace_back(hd);
+                else
                     error(val[i].lineno, "hash_dist %d not defined in table %s", val[i][1].i,
                           tbl->name()); }
         } else if (!CHECKTYPE(val[i], tSTR)) {
@@ -882,6 +878,10 @@ void Table::Actions::Action::pass1(Table *tbl) {
         if (auto *f = tbl->lookup_field(a.second.name, name)) {
             if (a.second.hi < 0)
                 a.second.hi = f->size - 1;
+        } else if (a.second.name == "hash_dist" && a.second.lo >= 0) {
+            // nothing to be done for now.  lo..hi is the hash dist index rather than
+            // a bit index, which will cause problems if we want to later slice the alias
+            // to access only some bits of it.
         } else
             error(a.second.lineno, "No field %s(%d:%d) in table %s",
                     a.second.name.c_str(), a.second.lo, a.second.hi, tbl->name()); }

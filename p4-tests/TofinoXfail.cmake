@@ -285,13 +285,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_201_meter_constant_index.p4
   )
 
-p4c_add_xfail_reason("tofino"
-  "hash_dist .* not defined in table"
-  extensions/p4_tests/p4_14/test_config_192_stateful_driven_by_hash.p4
-  extensions/p4_tests/p4_14/test_config_209_pack_hash_dist.p4
-  )
-
-
 # COMPILER-329
 p4c_add_xfail_reason("tofino"
   "error: : Width cannot be negative or zero"
@@ -522,7 +515,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Tofino does not allow stats to use different address schemes on one table"
   testdata/p4_14_samples/counter.p4
-  extensions/p4_tests/p4_14/test_config_313_neg_test_addr_modes.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -1047,11 +1039,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Hash table .* column .* duplicated"
   extensions/p4_tests/p4_14/test_config_100_hash_action.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "hash_dist .* not defined in table"
-  extensions/p4_tests/p4_14/test_config_313_neg_test_addr_modes.p4
 )
 
 # BRIG-348

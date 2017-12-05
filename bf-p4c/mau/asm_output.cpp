@@ -621,13 +621,15 @@ void MauAsmOutput::emit_single_ixbar(std::ostream &out, indent_t indent, const I
 /* Emit the ixbar use for a particular type of table */
 void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, const IXBar::Use *use,
         const safe_vector<IXBar::HashDistUse> *hash_dist_use, const Memories::Use *mem,
-        const TableMatch *fmt) const {
-    emit_ways(out, indent, use, mem);
-    emit_hash_dist(out, indent, hash_dist_use);
+        const TableMatch *fmt, bool ternary) const {
+    if (!ternary) {
+        emit_ways(out, indent, use, mem);
+        emit_hash_dist(out, indent, hash_dist_use); }
     if ((use == nullptr || use->use.empty())
         && (hash_dist_use == nullptr || hash_dist_use->empty())) {
         return;
     }
+    if (ternary && use && !use->ternary) return;
     out << indent++ << "input_xbar:" << std::endl;
     if (use) {
         emit_single_ixbar(out, indent, use, fmt);
@@ -1408,7 +1410,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
         auto memuse_name = tbl->get_use_name();
         emit_memory(out, indent, tbl->resources->memuse.at(memuse_name));
         emit_ixbar(out, indent, &tbl->resources->match_ixbar, &tbl->resources->hash_dists,
-                   &tbl->resources->memuse.at(memuse_name), &fmt);
+                   &tbl->resources->memuse.at(memuse_name), &fmt, tbl->layout.ternary);
         if (!tbl->layout.ternary && !tbl->layout.no_match_data()) {
             emit_table_format(out, indent, tbl->resources->table_format, &fmt, false);
         }
@@ -1438,7 +1440,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
         indent_t gw_indent = indent;
         if (!tbl->gateway_only())
             out << gw_indent++ << "gateway:" << std::endl;
-        emit_ixbar(out, gw_indent, &tbl->resources->gateway_ixbar, nullptr, nullptr, &fmt);
+        emit_ixbar(out, gw_indent, &tbl->resources->gateway_ixbar, nullptr, nullptr, &fmt, false);
         for (auto &use : Values(tbl->resources->memuse)) {
             if (use.type == Memories::Use::GATEWAY) {
                 out << gw_indent << "row: " << use.row[0].row << std::endl;
@@ -1764,7 +1766,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Selector *as) {
     out << indent++ << "selection " << name << ":" << std::endl;
     out << indent << "p4: { name: " << canon_name(as->name) << " }" << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(name));
-    self.emit_ixbar(out, indent, &tbl->resources->selector_ixbar, nullptr, nullptr, nullptr);
+    self.emit_ixbar(out, indent, &tbl->resources->selector_ixbar, nullptr, nullptr, nullptr, false);
     out << indent << "mode: " << (as->mode ? as->mode.name : "fair") << " 0" << std::endl;
     out << indent << "per_flow_enable: " << "meter_pfe" << std::endl;
     // FIXME: Currently outputting default values for now, these must be brought through
@@ -1779,6 +1781,8 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::TernaryIndirect *ti) {
     auto name = tbl->get_use_name(ti);
     out << indent++ << "ternary_indirect " << name << ':' << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(name));
+    self.emit_ixbar(out, indent, &tbl->resources->match_ixbar, &tbl->resources->hash_dists,
+                    nullptr, nullptr, false);
     self.emit_table_format(out, indent, tbl->resources->table_format, nullptr, true);
     self.emit_table_indir(out, indent, tbl);
     return false;
@@ -1818,7 +1822,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
     out << indent++ << "stateful " << name << ':' << std::endl;
     out << indent << "p4: { name: " << canon_name(salu->name) << " }" << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(name));
-    self.emit_ixbar(out, indent, &tbl->resources->salu_ixbar, nullptr, nullptr, nullptr);
+    self.emit_ixbar(out, indent, &tbl->resources->salu_ixbar, nullptr, nullptr, nullptr, false);
     out << indent << "format: { lo: ";
     if (salu->dual)
         out << salu->width/2 << ", hi:" << salu->width/2;
