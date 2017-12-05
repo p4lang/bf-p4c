@@ -55,23 +55,52 @@ class InstructionSelection : public MauTransform {
     explicit InstructionSelection(PhvInfo &phv);
 };
 
-class StatefulHashDistSetup : public MauTransform, TofinoWriteContext {
+/** This pass was specifically created to deal with adding the HashDist object to different
+ *  stateful objects.  On one particular case, execute_stateful_alu_from_hash was creating
+ *  two separate instructions, a TempVar = hash function call, and an execute stateful call
+ *  addressed by this TempVar.  This pass combines these instructions into one instruction,
+ *  and correctly saves the HashDist IR into these attached tables
+ */
+class StatefulHashDistSetup : public PassManager {
     const PhvInfo &phv;
-    IR::TempVar *saved_tempvar;
-    IR::MAU::HashDist *saved_hashdist;
+    const IR::TempVar *saved_tempvar;
+    const IR::MAU::HashDist *saved_hashdist;
     ordered_set<cstring> remove_tempvars;
-    ordered_map<cstring, IR::MAU::HashDist *> stateful_alu_from_hash_dists;
-    const IR::MAU::Action *preorder(IR::MAU::Action *) override;
-    const IR::MAU::Instruction *preorder(IR::MAU::Instruction *) override;
-    const IR::TempVar *preorder(IR::TempVar *) override;
-    const IR::MAU::HashDist *preorder(IR::MAU::HashDist *) override;
-    const IR::MAU::Instruction *postorder(IR::MAU::Instruction *) override;
-    const IR::MAU::Table *postorder(IR::MAU::Table *) override;
-    IR::MAU::HashDist *find_hash_dist(const IR::Expression *expr, const IR::Primitive *prim);
+    ordered_set<const IR::Node *> remove_instr;
+    ordered_map<cstring, const IR::MAU::HashDist *> stateful_alu_from_hash_dists;
+    ordered_map<const IR::Node *, const IR::MAU::HashDist *> update_hd;
+    profile_t init_apply(const IR::Node *root) override {
+        remove_tempvars.clear();
+        remove_instr.clear();
+        stateful_alu_from_hash_dists.clear();
+        update_hd.clear();
+        return PassManager::init_apply(root); }
+    class Scan : public MauInspector, TofinoWriteContext {
+        StatefulHashDistSetup &self;
+        bool preorder(const IR::MAU::Action *) override;
+        bool preorder(const IR::MAU::Instruction *) override;
+        bool preorder(const IR::TempVar *) override;
+        bool preorder(const IR::MAU::HashDist *) override;
+        void postorder(const IR::MAU::Instruction *) override;
+        void postorder(const IR::MAU::Table *) override;
+     public:
+        explicit Scan(StatefulHashDistSetup &self) : self(self) {}
+    };
+    class Update : public MauTransform {
+        StatefulHashDistSetup &self;
+        const IR::MAU::Table *postorder(IR::MAU::Table *) override;
+        const IR::MAU::Synth2Port *preorder(IR::MAU::Synth2Port *sp) override;
+        const IR::MAU::Instruction *preorder(IR::MAU::Instruction *sp) override;
+     public:
+        explicit Update(StatefulHashDistSetup &self) : self(self) {}
+    };
+
+    const IR::MAU::HashDist *find_hash_dist(const IR::Expression *expr, const IR::Primitive *prim);
     IR::MAU::HashDist *create_hash_dist(const IR::Expression *e, const IR::Primitive *prim);
 
  public:
-    explicit StatefulHashDistSetup(const PhvInfo &p) : phv(p) {}
+    explicit StatefulHashDistSetup(const PhvInfo &p) : phv(p) {
+        addPasses({ new Scan(*this), new Update(*this) }); }
 };
 
 class ConvertCastToSlice : public MauTransform, P4WriteContext {

@@ -429,10 +429,10 @@ size_t index_operand(const IR::Primitive *prim) {
     return 1;
 }
 
-const IR::MAU::Action *StatefulHashDistSetup::preorder(IR::MAU::Action *act) {
-    remove_tempvars.clear();
+bool StatefulHashDistSetup::Scan::preorder(const IR::MAU::Action *act) {
+    self.remove_tempvars.clear();
     if (act->stateful.empty())
-        prune();
+        return false;
 
     for (auto prim : act->stateful) {
         BUG_CHECK(prim->operands.size() >= 1, "Invalid primitive %s", prim);
@@ -440,40 +440,38 @@ const IR::MAU::Action *StatefulHashDistSetup::preorder(IR::MAU::Action *act) {
         BUG_CHECK(gref, "No object named %s", prim->operands[0]);
         if (prim->operands.size() >= 2) {
             if (auto *tv = prim->operands[1]->to<IR::TempVar>()) {
-                remove_tempvars.insert(tv->name);
+                self.remove_tempvars.insert(tv->name);
             }
             if (auto *c = prim->operands[1]->to<IR::Cast>()) {
                 if (auto tv = c->expr->to<IR::TempVar>())
-                    remove_tempvars.insert(tv->name);
+                    self.remove_tempvars.insert(tv->name);
             }
         }
     }
-    return act;
+    return true;
 }
 
-const IR::MAU::Instruction *StatefulHashDistSetup::preorder(IR::MAU::Instruction *instr) {
-    saved_tempvar = nullptr;
-    saved_hashdist = nullptr;
-    return instr;
+bool StatefulHashDistSetup::Scan::preorder(const IR::MAU::Instruction *) {
+    self.saved_tempvar = nullptr;
+    self.saved_hashdist = nullptr;
+    return true;
 }
 
-const IR::TempVar *StatefulHashDistSetup::preorder(IR::TempVar *tv) {
-    if (remove_tempvars.find(tv->name) != remove_tempvars.end())
-        saved_tempvar = tv;
-    return tv;
+bool StatefulHashDistSetup::Scan::preorder(const IR::TempVar *tv) {
+    if (self.remove_tempvars.count(tv->name))
+        self.saved_tempvar = tv;
+    return true;
 }
 
-const IR::MAU::Instruction *StatefulHashDistSetup::postorder(IR::MAU::Instruction *instr) {
-    if (saved_tempvar && saved_hashdist) {
-        stateful_alu_from_hash_dists[saved_tempvar->name] = saved_hashdist;
-        return nullptr;
-    }
-    return instr;
+bool StatefulHashDistSetup::Scan::preorder(const IR::MAU::HashDist *hd) {
+    self.saved_hashdist = hd;
+    return true;
 }
 
-const IR::MAU::HashDist *StatefulHashDistSetup::preorder(IR::MAU::HashDist *hd) {
-    saved_hashdist = hd;
-    return hd;
+void StatefulHashDistSetup::Scan::postorder(const IR::MAU::Instruction *instr) {
+    if (self.saved_tempvar && self.saved_hashdist) {
+        self.stateful_alu_from_hash_dists[self.saved_tempvar->name] = self.saved_hashdist;
+        self.remove_instr.insert(instr); }
 }
 
 IR::MAU::HashDist *StatefulHashDistSetup::create_hash_dist(const IR::Expression *expr,
@@ -492,28 +490,15 @@ IR::MAU::HashDist *StatefulHashDistSetup::create_hash_dist(const IR::Expression 
     return hd;
 }
 
-
-class InitializeHashDist : public MauTransform {
-    const IR::MAU::HashDist *hd;
-    const IR::MAU::Synth2Port *preorder(IR::MAU::Synth2Port *sp) {
-        sp->hash_dist = hd;
-        prune();
-        return sp;
-    }
-
- public:
-    explicit InitializeHashDist(const IR::MAU::HashDist *h) : hd(h) {}
-};
-
 /** Either find or generate a Hash Distribution unit, given what IR::Node is in the primitive
  *  FIXME: Currently v1model always casts these particular parameters to a size.  Perhaps
  *  these casts will be gone by the time we reach extract_maupipe.
  */
-IR::MAU::HashDist *StatefulHashDistSetup::find_hash_dist(const IR::Expression *expr,
-                                                         const IR::Primitive *prim) {
+const IR::MAU::HashDist *StatefulHashDistSetup::find_hash_dist(const IR::Expression *expr,
+                                                               const IR::Primitive *prim) {
     if (auto *c = expr->to<IR::Cast>())
         return find_hash_dist(c->expr, prim);
-    IR::MAU::HashDist *hd = nullptr;
+    const IR::MAU::HashDist *hd = nullptr;
     if (auto *tv = expr->to<IR::TempVar>())
         hd = stateful_alu_from_hash_dists.at(tv->name);
     else if (phv.field(expr))
@@ -527,7 +512,7 @@ IR::MAU::HashDist *StatefulHashDistSetup::find_hash_dist(const IR::Expression *e
  *  addressed by this TempVar.  This pass combines these instructions into one instruction,
  *  and correctly saves the HashDist IR into these attached tables
  */
-const IR::MAU::Table *StatefulHashDistSetup::postorder(IR::MAU::Table *tbl) {
+void StatefulHashDistSetup::Scan::postorder(const IR::MAU::Table *tbl) {
     for (auto act : Values(tbl->actions)) {
         for (auto prim : act->stateful) {
             // typechecking should have verified
@@ -542,30 +527,40 @@ const IR::MAU::Table *StatefulHashDistSetup::postorder(IR::MAU::Table *tbl) {
                 error("%s: %s is not a %s", prim->operands[0]->srcInfo, gref->obj, type);
             }
 
+            if (prim->operands.size() >= index_operand(prim) + 1) {
+                if (auto hd = self.find_hash_dist(prim->operands[index_operand(prim)], prim))
+                    self.update_hd[synth2port] = hd;
+            }
+        }
+    }
+}
+
+const IR::MAU::Table *StatefulHashDistSetup::Update::postorder(IR::MAU::Table *tbl) {
+    for (auto act : Values(tbl->actions)) {
+        for (auto prim : act->stateful) {
+            auto gref = prim->operands[0]->to<IR::GlobalRef>();
+            auto synth2port = gref->obj->to<IR::MAU::Synth2Port>();
             if (!contains(tbl->attached, synth2port)) {
                 // FIXME -- Needed because extract_maupipe does not correctly attach tables to
                 // multiple match tables.
                 // BUG("%s not attached to %s", stateful->name, tbl->name);
                 tbl->attached.push_back(synth2port);
             }
-
-            if (prim->operands.size() >= index_operand(prim) + 1) {
-                auto hd = find_hash_dist(prim->operands[index_operand(prim)], prim);
-                if (hd == nullptr) continue;
-                // Painful code as it is unclear what is visited first, the actions or the
-                // attached tables.  Probably should separate into multiple passes
-                auto synth2port_adjust = synth2port->apply(InitializeHashDist(hd))
-                                               ->to<IR::MAU::Synth2Port>();
-                for (size_t i = 0; i < tbl->attached.size(); i++) {
-                    if (tbl->attached[i] == synth2port) {
-                        tbl->attached[i] = synth2port_adjust;
-                        break;
-                    }
-                }
-            }
         }
     }
     return tbl;
+}
+
+const IR::MAU::Synth2Port *StatefulHashDistSetup::Update::preorder(IR::MAU::Synth2Port *sp) {
+    if (auto hd = ::get(self.update_hd, getOriginal()))
+        sp->hash_dist = hd;
+    prune();
+    return sp;
+}
+
+const IR::MAU::Instruction *StatefulHashDistSetup::Update::preorder(IR::MAU::Instruction *inst) {
+    if (self.remove_instr.count(getOriginal())) return nullptr;
+    return inst;
 }
 
 const IR::MAU::Instruction *ConvertCastToSlice::preorder(IR::MAU::Instruction *instr) {

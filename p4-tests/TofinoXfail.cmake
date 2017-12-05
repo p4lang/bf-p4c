@@ -1044,5 +1044,15 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue1062-1-bmv2.p4
   )
 
+p4c_add_xfail_reason("tofino"
+  "Hash table .* column .* duplicated"
+  extensions/p4_tests/p4_14/test_config_100_hash_action.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "hash_dist .* not defined in table"
+  extensions/p4_tests/p4_14/test_config_313_neg_test_addr_modes.p4
+)
+
 # BRIG-348
 p4c_add_xfail_reason("tofino" "Couldn't resolve computed value" ${ONOS_FABRIC_P4})
