@@ -18,6 +18,6 @@ agreement with Barefoot Networks, Inc.
 #ifndef __TOFINO_VERSION__
 #define __TOFINO_VERSION__
 
-#define P4C_TOFINO_VERSION "6.0.0-pre-alpha.3"
+#define BF_P4C_VERSION "6.0.0-pre-alpha.3"
 
 #endif // __TOFINO_VERSION__

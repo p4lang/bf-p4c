@@ -14,9 +14,9 @@ OPTION(ENABLE_JBAY "Enable JBay" OFF)
 # Get the version from bf-p4c/version.h
 file (STRINGS "${BFN_P4C_SOURCE_DIR}/bf-p4c/version.h"
   __version
-  REGEX "#define P4C_TOFINO_VERSION.*"
+  REGEX "#define BF_P4C_VERSION.*"
   )
-string (REGEX MATCH ".*TOFINO_VERSION.*([0-9]+)\\.([0-9]+)\\.([0-9]+)([-0-9a-z\\.]*).*"
+string (REGEX MATCH ".*BF_P4C_VERSION.*([0-9]+)\\.([0-9]+)\\.([0-9]+)([-0-9a-z\\.]*).*"
   __bfn_p4c_version ${__version})
 set (BFN_P4C_VERSION_MAJOR ${CMAKE_MATCH_1})
 set (BFN_P4C_VERSION_MINOR ${CMAKE_MATCH_2})
@@ -32,7 +32,7 @@ execute_process (COMMAND git rev-parse --short HEAD
   OUTPUT_STRIP_TRAILING_WHITESPACE
   RESULT_VARIABLE rc)
 set (ENV{P4C_VERSION} "${BFN_P4C_VERSION} (SHA: ${BFN_P4C_GIT_SHA})")
-MESSAGE(STATUS "p4c-tofino version: $ENV{P4C_VERSION}")
+MESSAGE(STATUS "p4c-barefoot version: $ENV{P4C_VERSION}")
 
 # If we're on GCC, use the gold linker if available.
 if (CMAKE_COMPILER_IS_GNUCC)

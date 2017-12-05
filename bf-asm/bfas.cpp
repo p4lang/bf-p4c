@@ -10,7 +10,7 @@
 #include <vector>
 #include <sys/stat.h>
 #include <unistd.h>
-#include "../bf-p4c/version.h" // for P4C_TOFINO_VERSION
+#include "../bf-p4c/version.h" // for BF_P4C_VERSION
 #include "misc.h"
 
 #define MAJOR_VERSION   1
@@ -69,7 +69,7 @@ void output_all() {
     char build_date[1024];
     strftime(build_date, 1024, "%x %X", localtime(&now));
     ctxtJson["build_date"] = build_date;
-    ctxtJson["compiler_version"] = P4C_TOFINO_VERSION;
+    ctxtJson["compiler_version"] = BF_P4C_VERSION;
     ctxtJson["program_name"] = asmfile_name;
     ctxtJson["learn_quanta"] = json::vector();
     ctxtJson["dynamic_hash_calculations"] = json::vector();

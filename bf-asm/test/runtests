@@ -187,7 +187,7 @@ function findexec () {
 
 #FINDFUNC  PARAM        EXECUTABLE              NAME                    OPTIONAL SEARCH DIR PREFIX
 findexec GLSC           "shell.py"              "glass"                 ""
-findexec BRIG           "p4c-tofino"            "brig"                  ""
+findexec BRIG           "p4c-barefoot"          "brig"                  ""
 findexec STF            "simple_test_harness"   "simple_test_harness"   "model"
 findexec BFAS           "bfas"                  "bfas"                  ""
 findexec BFLINK         "bflink"                "bflink"                ""

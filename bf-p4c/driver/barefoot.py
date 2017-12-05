@@ -38,7 +38,7 @@ class BarefootBackend(BackendDriver):
         # commands
         self.add_command('preprocessor', 'cc')
         self.add_command('compiler',
-                         os.path.join(os.environ['P4C_BIN_DIR'], 'p4c-tofino'))
+                         os.path.join(os.environ['P4C_BIN_DIR'], 'p4c-barefoot'))
         self.add_command('assembler', bfas)
         self.add_command('linker', bflink)
 

@@ -9,7 +9,7 @@
 
 BFN_Options::BFN_Options() {
     target = "tofino-v1model-barefoot";
-    compilerVersion = P4C_TOFINO_VERSION;
+    compilerVersion = BF_P4C_VERSION;
 
     registerOption("--trivpa", nullptr,
         [this](const char *) { trivial_phvalloc = true; return true; },

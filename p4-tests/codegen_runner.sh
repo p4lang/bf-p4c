@@ -53,7 +53,7 @@ while [ $# -gt 1 ]; do
         echo >&2 "   -v             verbose -- print commands before running them"
         echo >&2 "   -tofino        target tofino"
         echo >&2 "   -jbay          target jbay"
-        echo >&2 "other arguments passed to p4c-tofino:"
+        echo >&2 "other arguments passed to p4c-barefoot:"
         $P4C --help
         exit 0
         ;;
