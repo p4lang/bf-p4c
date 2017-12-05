@@ -857,10 +857,9 @@ class TnaPipe {
 
     void extractPhase0(IR::BFN::Pipe* rv, gress_t gress) {
         if (gress == EGRESS) return;
-        // Check for a phase 0 table. If one exists, it'll be removed from the
-        // ingress pipeline and converted to a parser program.
-        // XXX(seth): We should be able to move this into the midend now.
-        std::tie(mau, rv) = BFN::extractPhase0(mau, rv, refMap, typeMap);
+        // Check for an @phase0 annotation and add the necessary metadata to the
+        // pipe.
+        BFN::extractPhase0(mau, rv, refMap);
     }
 
     void addMirroredFieldParser(IR::BFN::Pipe* rv,

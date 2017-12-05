@@ -1029,6 +1029,7 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "Inferred incompatible alignments for field"
+  extensions/p4_tests/p4_14/c1/COMPILER-217/port_parser.p4
   extensions/p4_tests/p4_14/jenkins/parser_intr_md/parser_intr_md.p4
   )
 

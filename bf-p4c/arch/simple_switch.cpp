@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <initializer_list>
 #include <set>
+#include "bf-p4c/arch/phase0.h"
 #include "bf-p4c/device.h"
 
 namespace BFN {
@@ -1509,6 +1510,10 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
         new GenerateTofinoProgram(structure),
         new CastFixup(structure),
         new AddIntrinsicMetadata,
+        new P4::ClonePathExpressions,
+        new P4::ClearTypeMap(typeMap),
+        new P4::TypeChecking(refMap, typeMap, true),
+        new BFN::TranslatePhase0(refMap, typeMap),
         new P4::ClonePathExpressions,
         new TranslationLast(),
         new P4::ClearTypeMap(typeMap),

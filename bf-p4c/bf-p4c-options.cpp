@@ -94,6 +94,7 @@ BFN_Options& BFNContext::options() {
 bool BFNContext::isRecognizedDiagnostic(cstring diagnostic) {
     static const std::unordered_set<cstring> recognizedDiagnostics = {
         "ccgf_contiguity_failure",
+        "phase0_annotation",
     };
 
     if (recognizedDiagnostics.count(diagnostic)) return true;

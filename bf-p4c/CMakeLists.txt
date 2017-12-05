@@ -276,6 +276,7 @@ add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_PHV_HDRS}")
 set (BF_P4C_BACKEND_ARCH_SRCS
   arch/converters.cpp
   arch/native.cpp
+  arch/phase0.cpp
   arch/program_structure.cpp
   arch/simple_switch.cpp
   )
@@ -285,6 +286,7 @@ build_unified(BF_P4C_BACKEND_ARCH_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 set (BF_P4C_BACKEND_ARCH_HDRS
   arch/converters.h
   arch/native.h
+  arch/phase0.h
   arch/program_structure.h
   arch/simple_switch.h
   )

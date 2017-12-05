@@ -11,18 +11,16 @@
 
 std::ostream& operator<<(std::ostream& out, const BFN::Phase0Info* info) {
     if (info == nullptr) return out;
-    CHECK_NULL(info->table);
     CHECK_NULL(info->packing);
 
     // Boilerplate. This is mostly just for the convenience of the assembler and
     // the driver; the only thing that varies is the table name.
     // XXX(seth): We can probably pare this down quite a bit, but for now this
     // reproduces what Glass produces.
-    auto tableName = info->table->controlPlaneName();
     indent_t indent(1);
-    out <<   indent << "phase0_match " << tableName << ":" << std::endl;
+    out <<   indent << "phase0_match " << info->tableName << ":" << std::endl;
     out << ++indent << "p4:" << std::endl;
-    out << ++indent << "name: " << tableName << std::endl;
+    out << ++indent << "name: " << info->tableName << std::endl;
     out <<   indent << "size: 288" << std::endl;
     out <<   indent << "preferred_match_type: exact" << std::endl;
     out <<   indent << "match_type: exact" << std::endl;
@@ -96,382 +94,130 @@ std::ostream& operator<<(std::ostream& out, const BFN::Phase0Info* info) {
 
 namespace BFN {
 
-typedef std::map<const IR::Member*, cstring> Phase0Extracts;
-typedef std::map<const IR::Member*, const IR::Constant*> Phase0Constants;
+namespace {
 
-class FindPhase0Table : public Inspector {
-  bool hasCorrectSize(const IR::P4Table* table) const {
-      // The phase 0 table's size must be 288.
-      auto sizeProperty = table->properties->getProperty("size");
-      if (sizeProperty == nullptr) return false;
-      if (!sizeProperty->value->is<IR::ExpressionValue>()) return false;
-      auto expression = sizeProperty->value->to<IR::ExpressionValue>()->expression;
-      if (!expression->is<IR::Constant>()) return false;
-      auto size = expression->to<IR::Constant>();
-      return size->fitsInt() && size->asInt() == 288;
-  }
+/// Search for an @phase0 annotation and create a Phase0Info object if a valid
+/// one is found.
+struct FindPhase0Annotation : public Inspector {
+    explicit FindPhase0Annotation(P4::ReferenceMap* refMap) : refMap(refMap) { }
 
-  bool hasNoSideEffects(const IR::P4Table* table) const {
-      // The phase 0 table cannot have any side effects or attached tables.
-      // XXX(seth): This isn't a complete check; for example, we should forbid
-      // stateful ALU. In general this would be easier if we waited until this
-      // table was converted into an IR::Mau::Table and just checked the list of
-      // attached tables. I've tried to avoid that because in the long term it'd
-      // be ideal to deal with the phase 0 table as part of the process of
-      // converting P4-14 programs to P4-16 TNA programs, and doing that
-      // requires that we only rely on frontend IR.
+    /// If non-null, the metadata from the program's @phase0 annotation which is
+    /// needed to generate phase 0 assembly.
+    Phase0Info* phase0Info = nullptr;
 
-      // Actions profiles aren't allowed.
-      auto implProp = P4V1::V1Model::instance.tableAttributes
-                                             .tableImplementation.name;
-      if (table->properties->getProperty(implProp) != nullptr) return false;
+    bool preorder(const IR::P4Control* control) override {
+        auto* annotation = control->type->annotations->getSingle("phase0");
+        if (!annotation) {
+            LOG4("No @phase0 annotation found on control " << control->name);
+            return false;
+        }
 
-      // Counters aren't allowed.
-      auto counterProp = P4V1::V1Model::instance.tableAttributes
-                                                .counters.name;
-      if (table->properties->getProperty(counterProp) != nullptr) return false;
+        if (annotation->expr.size() != 3 ||
+            !annotation->expr[0]->is<IR::StringLiteral>() ||
+            !annotation->expr[1]->is<IR::StringLiteral>() ||
+            !annotation->expr[2]->is<IR::TypeNameExpression>()) {
+            DIAGNOSE_WARN("phase0_annotation", "Invalid @phase0 annotation: %1%",
+                          annotation);
+            showUsage();
+            return false;
+        }
 
-      // Meters aren't allowed.
-      auto meterProp = P4V1::V1Model::instance.tableAttributes
-                                              .meters.name;
-      if (table->properties->getProperty(meterProp) != nullptr) return false;
 
-      return true;
-  }
+        cstring tableName = annotation->expr[0]->to<IR::StringLiteral>()->value;
+        cstring actionName = annotation->expr[1]->to<IR::StringLiteral>()->value;
 
-  bool hasCorrectKey(const IR::P4Table* table) const {
-      // The phase 0 table must match against 'ingress_intrinsic_metadata.ingress_port'.
-      auto key = table->getKey();
-      if (key == nullptr) return false;
-      if (key->keyElements.size() != 1) return false;
-      auto keyElem = key->keyElements[0];
-      if (!keyElem->expression->is<IR::Member>()) return false;
-      auto member = keyElem->expression->to<IR::Member>();
-      auto containingType = typeMap->getType(member->expr, true);
-      if (!containingType->is<IR::Type_Declaration>()) return false;
-      auto containingTypeDecl = containingType->to<IR::Type_Declaration>();
-      if (containingTypeDecl->name != "ingress_intrinsic_metadata_t") return false;
-      if (member->member != "ingress_port") return false;
+        auto* typeName = annotation->expr[2]->to<IR::TypeNameExpression>()->typeName;
+        auto* typeDecl = refMap->getDeclaration(typeName->path);
+        if (!typeDecl) {
+            DIAGNOSE_WARN("phase0_annotation", "No declaration for phase 0 type: %1%",
+                          typeName);
+            showUsage();
+            return false;
+        }
+        auto* type = typeDecl->to<IR::Type_Header>();
+        if (!type) {
+            DIAGNOSE_WARN("phase0_annotation", "Phase 0 type must be a header: %1%",
+                          typeDecl);
+            showUsage();
+            return false;
+        }
 
-      // The match type must be 'exact'.
-      auto matchType = refMap->getDeclaration(keyElem->matchType->path, true)
-                             ->to<IR::Declaration_ID>();
-      if (matchType->name.name != P4::P4CoreLibrary::instance.exactMatch.name)
-          return false;
+        // The phase 0 type defines the format of the phase 0 data (the static
+        // per-port metadata, in other words). The driver exposes a table-like
+        // API to the control plane, with the phase 0 data for each port exposed
+        // as a table entry. The phase 0 type describes to the driver how the
+        // fields in these table entries should be formatted so the parser can
+        // interpret them correctly. It doesn't need to actually be used in the
+        // program, although we do generate code that uses it when translating
+        // v1model code to TNA.
+        LOG4("Phase 0 fields for control " << control->name << ":");
+        auto* packing = new FieldPacking;
+        for (auto* field : type->fields) {
+            auto isPadding = bool(field->annotations->getSingle("hidden"));
 
-      return true;
-  }
+            LOG4("  - " << field->name << " (" << field->type->width_bits()
+                        << "b)" << (isPadding ? " (padding)" : ""));
 
-  /// @return true if @expression is a member of a metadata type.
-  bool isMetadata(const IR::Expression* expression) const {
-      if (!expression->is<IR::Member>()) return false;
-      auto member = expression->to<IR::Member>();
-      auto containingType = typeMap->getType(member->expr, true);
-      return containingType->is<IR::Type_Struct>();
-  }
+            if (isPadding)
+                packing->appendPadding(field->type->width_bits());
+            else
+                packing->appendField(new IR::StringLiteral(field->name),
+                                     field->name,
+                                     field->type->width_bits());
+        }
 
-  /// @return true if @expression is a parameter in the parameter list @params.
-  bool isParam(const IR::Expression* expression,
-               const IR::ParameterList* params) const {
-      if (!expression->is<IR::PathExpression>()) return false;
-      auto path = expression->to<IR::PathExpression>()->path;
-      auto decl = refMap->getDeclaration(path, true);
-      if (!decl->is<IR::Parameter>()) return false;
-      auto param = decl->to<IR::Parameter>();
-      for (auto paramElem : params->parameters)
-          if (paramElem == param) return true;
-      return false;
-  }
+        if (packing->totalWidth != Device::pardeSpec().bitPhase0Size()) {
+            DIAGNOSE_WARN("phase0_annotation",
+                          "Phase 0 type is %1%b, but its size must be exactly "
+                          "%2%b on %3%", packing->totalWidth,
+                          Device::pardeSpec().bitPhase0Size(),
+                          Device::currentDevice());
+            return false;
+        }
 
-  bool hasValidAction(const IR::P4Table* table,
-                      Phase0Extracts** extractsOut,
-                      Phase0Constants** constantsOut,
-                      std::string& actionNameOut) const {
-      auto actions = table->getActionList();
-      if (actions == nullptr) return false;
-
-      // Other than NoAction, the phase 0 table should have exactly one action.
-      const IR::ActionListElement* actionElem = nullptr;
-      for (auto elem : actions->actionList) {
-          if (elem->getName().name.startsWith("NoAction")) continue;
-          if (actionElem != nullptr) return false;
-          actionElem = elem;
-      }
-      if (actionElem == nullptr) return false;
-
-      auto decl = refMap->getDeclaration(actionElem->getPath(), true);
-      BUG_CHECK(decl->is<IR::P4Action>(), "Action list element is not an action?");
-      auto action = decl->to<IR::P4Action>();
-
-      // Save the action name for assembly output
-      actionNameOut = action->getName().originalName;
-
-      // The action should have only action data parameters.
-      for (auto param : *action->parameters)
-          if (param->direction != IR::Direction::None) return false;
-
-      *extractsOut = new Phase0Extracts;
-      *constantsOut = new Phase0Constants;
-      for (auto statement : action->body->components) {
-          // The action should contain only assignments.
-          if (!statement->is<IR::AssignmentStatement>()) return false;
-          auto assignment = statement->to<IR::AssignmentStatement>();
-
-          // The action should write to metadata fields only.
-          // XXX(seth): Ideally we'd also verify that it only writes to fields
-          // that the parser doesn't already write to.
-          if (!isMetadata(assignment->left)) return false;
-
-          // The action should only read from constants or its parameters.
-          if (assignment->right->is<IR::Constant>()) {
-              (*constantsOut)->emplace(assignment->left->to<IR::Member>(),
-                                       assignment->right->to<IR::Constant>());
-              continue;
-          }
-          if (!isParam(assignment->right, action->parameters)) return false;
-          (*extractsOut)->emplace(assignment->left->to<IR::Member>(),
-                                  assignment->right->to<IR::PathExpression>()
-                                                   ->path->name.name);
-      }
-
-      return true;
-  }
-
-  bool hasValidControlFlow(const IR::P4Table* table,
-                           const IR::MethodCallStatement** callOut) const {
-      // The phase 0 table should be applied in the control's first statement.
-      auto control = findContext<IR::P4Control>();
-      if (!control) return false;
-      if (control->body->components.size() == 0) return false;
-      auto& statements = control->body->components;
-
-      // That statement should be an 'if' statement.
-      if (!statements[0]->is<IR::IfStatement>()) return false;
-      auto ifStatement = statements[0]->to<IR::IfStatement>();
-      if (!ifStatement->condition->is<IR::Equ>()) return false;
-      auto equ = ifStatement->condition->to<IR::Equ>();
-
-      // The 'if' should check that 'ingress_intrinsic_metadata.resubmit_flag' is 0.
-      auto member = equ->left->to<IR::Member>()
-                  ? equ->left->to<IR::Member>()
-                  : equ->right->to<IR::Member>();
-      auto constant = equ->left->to<IR::Constant>()
-                    ? equ->left->to<IR::Constant>()
-                    : equ->right->to<IR::Constant>();
-      if (member == nullptr || constant == nullptr) return false;
-      auto containingType = typeMap->getType(member->expr, true);
-      if (!containingType->is<IR::Type_Declaration>()) return false;
-      auto containingTypeDecl = containingType->to<IR::Type_Declaration>();
-      if (containingTypeDecl->name != "ingress_intrinsic_metadata_t") return false;
-      if (member->member != "resubmit_flag") return false;
-      if (!constant->fitsInt() || constant->asInt() != 0) return false;
-
-      // The body of the 'if' should consist only of the table apply call.
-      if (!ifStatement->ifTrue->is<IR::MethodCallStatement>()) return false;
-      *callOut = ifStatement->ifTrue->to<IR::MethodCallStatement>();
-      auto mi = P4::MethodInstance::resolve(*callOut, refMap, typeMap);
-      if (!mi->isApply() || !mi->to<P4::ApplyMethod>()->isTableApply()) return false;
-      if (mi->object != table) return false;
-
-      return true;
-  }
-
-  bool preorder(const IR::P4Table*) override {
-      if (table != nullptr) return false;
-
-      auto* candidateTable = getOriginal<IR::P4Table>();
-      CHECK_NULL(candidateTable);
-      LOG3("Checking if " << candidateTable->name << " is a valid phase 0 table");
-      Phase0Extracts* extracts = nullptr;
-      Phase0Constants* constants = nullptr;
-      std::string actionName = "";
-      const IR::MethodCallStatement* apply = nullptr;
-
-      // Check if this table meets all of the phase 0 criteria.
-      if (!hasCorrectSize(candidateTable)) return false;
-      LOG3(" - The size is correct");
-      if (!hasNoSideEffects(candidateTable)) return false;
-      LOG3(" - It has no side effects");
-      if (!hasCorrectKey(candidateTable)) return false;
-      LOG3(" - The key is correct");
-      if (!hasValidAction(candidateTable, &extracts, &constants, actionName)) return false;
-      LOG3(" - The action is valid");
-      if (!hasValidControlFlow(candidateTable, &apply)) return false;
-      LOG3(" - The control flow is valid");
-
-      BUG_CHECK(apply != nullptr && extracts != nullptr && constants != nullptr,
-                "Found a table, but didn't gather all the metadata?");
-      LOG3(" - " << candidateTable->name << " will be used as the phase 0 table");
-      this->table = candidateTable;
-      this->extracts = extracts;
-      this->constants = constants;
-      this->actionName = actionName;
-      this->apply = apply;
-      return false;
-  }
-
-  bool preorder(const IR::Node*) override {
-      // Continue only if we haven't found the phase 0 table yet.
-      return table == nullptr;
-  }
-
- public:
-  FindPhase0Table(P4::ReferenceMap* refMap, P4::TypeMap* typeMap)
-      : refMap(refMap), typeMap(typeMap) { }
-
-  /// If non-null, the phase 0 table we found.
-  const IR::P4Table* table = nullptr;
-  /// If non-null, the extractions the phase 0 parser needs to perform.
-  Phase0Extracts* extracts = nullptr;
-  /// If non-null, the constant assignments the phase 0 parser needs to perform.
-  Phase0Constants* constants = nullptr;
-  /// If non-empty, the action name as specified in the P4 program
-  std::string actionName = "";
-
-  /// If non-null, the table apply call that's being replaced with a phase 0 parser.
-  const IR::MethodCallStatement* apply = nullptr;
-
- private:
-  P4::ReferenceMap* refMap;
-  P4::TypeMap* typeMap;
-};
-
-/**
- * Remove the apply() call that invoked the phase 0 table. Note that we
- * don't remove the table itself, since it may be invoked in more than one
- * place. If this was the only usage, it'll be implicitly removed anyway
- * when we generate the backend IR.
- */
-class RemovePhase0Table : public Transform {
- public:
-  explicit RemovePhase0Table(const IR::MethodCallStatement* apply)
-      : apply(apply) { CHECK_NULL(apply); }
-
- private:
-  const IR::Node* preorder(IR::MethodCallStatement* methodCall) override {
-      if (getOriginal<IR::MethodCallStatement>() == apply) {
-          BUG_CHECK(getParent<IR::IfStatement>() != nullptr,
-                    "Expected apply call for phase 0 table to be the body of "
-                    "an 'if' statement");
-          return new IR::BlockStatement;
-      }
-      return methodCall;
-  }
-
-  const IR::MethodCallStatement* apply;
-};
-
-/**
- * @return an assignment of the phase 0 extracted fields to ranges of bits in
- * the phase 0 data. This is used to generate the parser program and to
- * generate assembly that tells the driver how to set up the phase 0 data.
- */
-FieldPacking* packPhase0Fields(const Phase0Extracts* extracts) {
-    auto* packing = new FieldPacking;
-
-    for (auto extractItem : *extracts) {
-        const IR::Member* dest = extractItem.first;
-        cstring source = extractItem.second;
-        auto containingType = dest->expr->type;
-        BUG_CHECK(containingType->is<IR::Type_StructLike>(),
-                  "Phase 0 field is not attached to a structlike type?");
-        auto type = containingType->to<IR::Type_StructLike>();
-
-        auto field = type->getField(dest->member);
-        BUG_CHECK(field != nullptr,
-                  "Phase 0 field %1% not found in type %2%", field, type);
-        packing->appendField(dest, source, field->type->width_bits());
-        packing->padToAlignment(8);
+        phase0Info = new Phase0Info{tableName, actionName, packing};
+        return false;
     }
 
-    packing->padToAlignment(Device::pardeSpec().bitPhase0Size());
-    return packing;
-}
-
-/**
- * Replaces the placeholder '$phase0' parser state with a sequence of states
- * that extracts all the fields in the phase 0 data and performs any constant
- * assignments which are necessary.
- */
-class AddPhase0Parser : public Modifier {
- public:
-  AddPhase0Parser(const FieldPacking* packing, const Phase0Constants* constants)
-      : packing(packing), constants(constants)
-  { }
-
-  bool preorder(IR::BFN::Parser* parser) {
-      if (parser->gress != INGRESS) return false;
-
-      auto start = transformAllMatching<IR::BFN::ParserState>(parser->start,
-                   [this](const IR::BFN::ParserState* state) {
-          if (state->name != "$phase0") return state;
-
-          // This is the '$phase0' placeholder state. We'll replace it with our
-          // generated parser program. After phase 0, we'll transition to the
-          // same state that the placeholder state transitioned to, which is
-          // normally 'start$'.
-          return this->addPhase0State(state->transitions[0]->next);
-      });
-
-      parser->start = start->to<IR::BFN::ParserState>();
-      return false;
-  }
-
-  const IR::BFN::ParserState*
-  addPhase0State(const IR::BFN::ParserState* finalState) {
-      // Generate a state that extracts the packed fields.
-      auto* nextState =
-        packing->createExtractionState(INGRESS, "$phase0_extract", finalState);
-
-      // Generate a state which extracts the constants.
-      IR::Vector<IR::BFN::ParserPrimitive> extracts;
-      for (auto& constantItem : *constants) {
-          auto* dest = constantItem.first;
-          auto constant = constantItem.second->value;
-          auto* extract =
-            new IR::BFN::Extract(dest, new IR::BFN::ConstantRVal(constant));
-          extracts.push_back(extract);
-      }
-
-      return new IR::BFN::ParserState("$phase0", INGRESS, extracts, { }, {
-          new IR::BFN::Transition(match_t(), 0, nextState)
-      });
-  }
-
  private:
-  const FieldPacking* packing;
-  const Phase0Constants* constants;
+    void showUsage() const {
+        DIAGNOSE_WARN("phase0_annotation",
+                      "Use: @phase0(\"TABLE_NAME\", \"ACTION_NAME\", Phase0Type)");
+        DIAGNOSE_WARN("phase0_annotation",
+                      "\"TABLE_NAME\":  The name which should be used for the "
+                      "phase 0 table in the control plane API.");
+        DIAGNOSE_WARN("phase0_annotation",
+                      "\"ACTION_NAME\":  The name which should be used for the "
+                      "phase 0 table's action in the control plane API.");
+        DIAGNOSE_WARN("phase0_annotation",
+                      "Phase0Type:  A header type describing the fields in the "
+                      "phase 0 table entries and their layout on the wire. "
+                      "Padding fields can be hidden from the control plane API "
+                      "by marking them with the @hidden annotation.");
+        DIAGNOSE_WARN("phase0_annotation",
+                      "On %1%, Phase0Type's total size must be %2%b.",
+                      Device::currentDevice(),
+                      Device::pardeSpec().bitPhase0Size());
+    }
+
+    P4::ReferenceMap* refMap;
 };
 
-std::pair<const IR::P4Control*, IR::BFN::Pipe*>
-extractPhase0(const IR::P4Control* ingress, IR::BFN::Pipe* pipe,
-              P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {
+}  // namespace
+
+void extractPhase0(const IR::P4Control* ingress, IR::BFN::Pipe* pipe,
+                   P4::ReferenceMap* refMap) {
     CHECK_NULL(ingress);
     CHECK_NULL(pipe);
     CHECK_NULL(refMap);
-    CHECK_NULL(typeMap);
 
-    // Find and remove the phase 0 table, if it's present.
-    FindPhase0Table findPhase0(refMap, typeMap);
+    // Find the phase 0 annotation, and if it's present, save the Phase0Info
+    // data structure so we can use it generate assembly at the end of the
+    // compilation process.
+    FindPhase0Annotation findPhase0(refMap);
     ingress->apply(findPhase0);
-    if (findPhase0.table == nullptr) return std::make_pair(ingress, pipe);
-    auto ingressWithoutPhase0 =
-      ingress->apply(RemovePhase0Table(findPhase0.apply));
-
-    // Attempt to pack the fields we'll need to extract in the phase 0 parser
-    // into the available phase 0 space. This may fail.
-    auto packing = packPhase0Fields(findPhase0.extracts);
-    if (packing->totalWidth != Device::pardeSpec().bitPhase0Size())
-        return std::make_pair(ingress, pipe);
-
-    // Create the phase 0 parser and link it into place in the existing parser
-    // program.
-    AddPhase0Parser addPhase0Parser(packing, findPhase0.constants);
-    pipe->thread[INGRESS].parser =
-        pipe->thread[INGRESS].parser->apply(addPhase0Parser);
-
-    pipe->phase0Info = new Phase0Info{findPhase0.table, packing, findPhase0.actionName};
-    return std::make_pair(ingressWithoutPhase0, pipe);
+    if (findPhase0.phase0Info)
+        pipe->phase0Info = findPhase0.phase0Info;
 }
 
 }  // namespace BFN
