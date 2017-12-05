@@ -64,6 +64,10 @@ def get_parser():
                         'create the default veth ifaces and all the ifaces '
                         'listed in the file must exist and be up',
                         type=str, action='store', required=False)
+    parser.add_argument('--platform',
+                        help='String identifying the target platform on which '
+                        'tests are run',
+                        type=str, action='store', required=False)
     return parser
 
 NUM_IFACES = 8
@@ -145,7 +149,7 @@ def update_config(name, grpc_addr, p4info_path, tofino_bin_path, cxt_json_path):
     return True
 
 def run_ptf_tests(PTF, grpc_addr, ptfdir, p4info_path, port_map, stftest,
-                  extra_args=[]):
+                  platform, extra_args=[]):
     ifaces = []
     # find base_test.py
     pypath = os.path.dirname(os.path.abspath(__file__))
@@ -162,6 +166,8 @@ def run_ptf_tests(PTF, grpc_addr, ptfdir, p4info_path, port_map, stftest,
     test_params += ';grpcaddr=\'{}\''.format(grpc_addr)
     if stftest is not None:
         test_params += ';stftest=\'{}\''.format(stftest)
+    if platform is not None:
+        test_params += ';pltfm=\'{}\''.format(platform)
     cmd.append('--test-params={}'.format(test_params))
     cmd.extend(extra_args)
     info("Executing PTF command: {}".format(' '.join(cmd)))
@@ -350,7 +356,8 @@ def main():
 
     if args.test_only:
         success = run_ptf_tests(PTF, args.grpc_addr, args.ptfdir, p4info_path,
-                                port_map, args.stftest, extra_ptf_args)
+                                port_map, args.stftest, args.platform,
+                                extra_ptf_args)
         if not success:
             error("Error when running PTF tests")
             sys.exit(1)
@@ -397,7 +404,8 @@ def main():
 
             success = run_ptf_tests(PTF, args.grpc_addr, args.ptfdir,
                                     p4info_path, port_map,
-                                    args.stftest, extra_ptf_args)
+                                    args.stftest, args.platform,
+                                    extra_ptf_args)
             if not success:
                 error("Error when running PTF tests")
                 return False

@@ -71,12 +71,12 @@ class OneMemberTest(EcmpPITest):
     """Add a member, send a packet, modify the member, send another packet"""
     @autocleanup
     def runTest(self):
-        ig_port = self.swports(1)
+        ig_port = self.swports(0)
 
         nhop1 = "\x0a\x00\x01\x01"
         dmac1 = "\x00\x11\x11\x11\x11\x11"
         smac1 = "\x00\x22\x22\x22\x22\x22"
-        eg_port1 = self.swports(3)
+        eg_port1 = self.swports(2)
         eg_port1_hex = stringify(eg_port1, 2)
 
         self.common_setup()
@@ -99,7 +99,7 @@ class OneMemberTest(EcmpPITest):
         nhop2 = "\x0a\x00\x01\x02"
         dmac2 = "\x00\x11\x11\x11\x11\x00"
         smac2 = "\x00\x22\x22\x22\x22\x00"
-        eg_port2 = self.swports(4)
+        eg_port2 = self.swports(3)
         eg_port2_hex = stringify(eg_port2, 2)
 
         self.prog_other_ts(nhop2, dmac2, smac2, eg_port2_hex)
@@ -116,16 +116,16 @@ class OneGroupTest(EcmpPITest):
     """Test a group with one or two members"""
     @autocleanup
     def runTest(self):
-        ig_port = self.swports(1)
+        ig_port = self.swports(0)
         nhop1 = "\x0a\x00\x01\x01"
         dmac1 = "\x00\x11\x11\x11\x11\x11"
         smac1 = "\x00\x22\x22\x22\x22\x22"
-        eg_port1 = self.swports(3)
+        eg_port1 = self.swports(2)
         eg_port1_hex = stringify(eg_port1, 2)
         nhop2 = "\x0a\x00\x01\x02"
         dmac2 = "\x00\x11\x11\x11\x11\x00"
         smac2 = "\x00\x22\x22\x22\x22\x00"
-        eg_port2 = self.swports(4)
+        eg_port2 = self.swports(3)
         eg_port2_hex = stringify(eg_port2, 2)
 
         self.common_setup()

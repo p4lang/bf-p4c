@@ -8,7 +8,7 @@ from p4.tmp import p4config_pb2
 from p4.config import p4info_pb2
 import google.protobuf.text_format
 
-from base_test import P4RuntimeTest, stringify, autocleanup
+from base_test import P4RuntimeTest, stringify, autocleanup, skip_on_hw
 
 class FullTest(P4RuntimeTest):
     def runCommonTest(self, proto_entries):
@@ -63,12 +63,14 @@ class FullTest(P4RuntimeTest):
 
         testutils.verify_no_other_packets(self)
 
+@skip_on_hw
 class FullTestGroups(FullTest):
     @autocleanup
     def runTest(self):
         # Pick entries from 'tor.ptf/write_lpm_entries.pb.txt'
         self.runCommonTest("write_lpm_entries.pb.txt")
 
+@skip_on_hw
 class FullTestMembersOnly(FullTest):
     @autocleanup
     def runTest(self):

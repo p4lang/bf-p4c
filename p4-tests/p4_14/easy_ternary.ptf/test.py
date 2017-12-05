@@ -66,42 +66,42 @@ class SimpleTest(BaseTest):
 class SmokeTest(BaseTest):
     @autocleanup
     def runTest(self):
+        port0 = self.swports(0)
         port1 = self.swports(1)
         port2 = self.swports(2)
         port3 = self.swports(3)
-        port4 = self.swports(4)
 
-        self.add_entry(0xbeef, 4, 0x42, port1)
-        self.add_entry(0xbeef, 8, 0x43, port2)
-        self.add_entry(0xbeef, 12, 0x44, port3)
-        self.add_entry(0xbeef, 16, 0x45, port4)
+        self.add_entry(0xbeef, 4, 0x42, port0)
+        self.add_entry(0xbeef, 8, 0x43, port1)
+        self.add_entry(0xbeef, 12, 0x44, port2)
+        self.add_entry(0xbeef, 16, 0x45, port3)
 
         # Exercise all these LPM entries.
         for i in random.sample(range(0xb000, 0xbe00), 50):
             pkt = dumbPacket(f1=i, f2=0x00, f3=0x00)
-            testutils.send_packet(self, port1, str(pkt))
+            testutils.send_packet(self, port0, str(pkt))
             exp_pkt = dumbPacket(f1=i, f2=0x42, f3=0x00)
-            testutils.verify_packet(self, exp_pkt, port1)
+            testutils.verify_packet(self, exp_pkt, port0)
 
         for i in random.sample(range(0xbe00, 0xbee0), 20):
             pkt = dumbPacket(f1=i, f2=0x00, f3=0x00)
-            testutils.send_packet(self, port1, str(pkt))
+            testutils.send_packet(self, port0, str(pkt))
             exp_pkt = dumbPacket(f1=i, f2=0x43, f3=0x00)
-            testutils.verify_packet(self, exp_pkt, port2)
+            testutils.verify_packet(self, exp_pkt, port1)
 
         for i in random.sample(range(0xbee0, 0xbeef), 5):
             pkt = dumbPacket(f1=i, f2=0x00, f3=0x00)
-            testutils.send_packet(self, port1, str(pkt))
+            testutils.send_packet(self, port0, str(pkt))
             exp_pkt = dumbPacket(f1=i, f2=0x44, f3=0x00)
-            testutils.verify_packet(self, exp_pkt, port3)
+            testutils.verify_packet(self, exp_pkt, port2)
 
         pkt = dumbPacket(f1=0xbeef, f2=0x00, f3=0x00)
-        testutils.send_packet(self, port1, str(pkt))
+        testutils.send_packet(self, port0, str(pkt))
         exp_pkt = dumbPacket(f1=0xbeef, f2=0x45, f3=0x00)
-        testutils.verify_packet(self, exp_pkt, port4)
+        testutils.verify_packet(self, exp_pkt, port3)
 
         # Packets that don't match any entries, just to be safe.
         for i in random.sample(range(0xc000, 0xcfff), 100):
             pkt = dumbPacket(f1=i, f2=0x00, f3=0x00)
-            testutils.send_packet(self, port1, str(pkt))
+            testutils.send_packet(self, port0, str(pkt))
             testutils.verify_no_other_packets(self)

@@ -36,6 +36,8 @@ from p4.tmp import p4config_pb2
 from p4.config import p4info_pb2
 import google.protobuf.text_format
 
+from unittest import SkipTest
+
 # Convert integer (with length) to binary byte string
 # Equivalent to Python 3.2 int.to_bytes
 # See
@@ -64,6 +66,10 @@ class P4RuntimeTest(BaseTest):
         grpc_addr = testutils.test_param_get("grpcaddr")
         if grpc_addr is None:
             grpc_addr = 'localhost:50051'
+
+        pltfm = testutils.test_param_get("pltfm")
+        if pltfm is not None and pltfm == 'hw' and getattr(self, "_skip_on_hw", False):
+            raise SkipTest("Skipping test in HW")
 
         self.channel = grpc.insecure_channel(grpc_addr)
         self.stub = p4runtime_pb2.P4RuntimeStub(self.channel)
@@ -430,3 +436,7 @@ def autocleanup(f):
         finally:
             test.undo_write_requests(test._reqs)
     return handle
+
+def skip_on_hw(cls):
+    cls._skip_on_hw = True
+    return cls
