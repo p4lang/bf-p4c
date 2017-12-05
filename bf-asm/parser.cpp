@@ -241,11 +241,19 @@ void Parser::process() {
             error(lineno[0], "Phv register %s(R%d) used by both ingress and egress",
                   Phv::reg(reg)->name, reg); }
     for (auto &reg : multi_write)
-        if (reg.check())
-            phv_allow_multi_write[reg->reg.parser_id()] = 1;
+        if (reg.check()) {
+            int id = reg->reg.parser_id();
+            if (id >= 0)
+                phv_allow_multi_write[id] = 1;
+            else
+                error(reg.lineno, "%s is not accessable in the parser", reg->reg.name); }
     for (auto &reg : init_zero)
-        if (reg.check())
-            phv_init_valid[reg->reg.parser_id()] = 1;
+        if (reg.check()) {
+            int id = reg->reg.parser_id();
+            if (id >= 0)
+                phv_init_valid[id] = 1;
+            else
+                error(reg.lineno, "%s is not accessable in the parser", reg->reg.name); }
     if (options.match_compiler || 1) {  /* FIXME -- need proper liveness analysis */
         Phv::setuse(INGRESS, phv_use[INGRESS]);
         Phv::setuse(EGRESS, phv_use[EGRESS]); }
@@ -319,6 +327,8 @@ void Parser::Checksum::pass1(Parser *parser) {
                 warning(parser->checksum_use[gress][addr]->lineno, "previous use"); }
         } else
             parser->checksum_use[gress][addr] = this; }
+    if (dest.check() && dest->reg.parser_id() < 0)
+        error(dest.lineno, "%s is not accessable in the parser", dest->reg.name);
 }
 void Parser::Checksum::pass2(Parser *parser) {
     if (addr < 0) {
@@ -955,11 +965,15 @@ void Parser::State::Match::pass1(Parser *pa, State *state) {
     next.check(state->gress, pa, state);
     for (auto &s : save) {
         if (!s.where.check()) continue;
+        if (s.where->reg.parser_id() < 0)
+            error(s.where.lineno, "%s is not accessable in the parser", s.where->reg.name);
         pa->phv_use[state->gress][s.where->reg.uid] = 1;
         int size = s.where->reg.size;
         if (s.second) {
             if (!s.second.check()) continue;
-            if (s.second->reg.parser_id() != s.where->reg.parser_id() + 1 ||
+            if (s.second->reg.parser_id() < 0)
+                error(s.second.lineno, "%s is not accessable in the parser", s.second->reg.name);
+            else if (s.second->reg.parser_id() != s.where->reg.parser_id() + 1 ||
                 (s.where->reg.parser_id() & 1))
                 error(s.second.lineno, "Can only write into even/odd register pair");
             else if (s.second->lo || s.second->hi != size-1)
@@ -991,6 +1005,8 @@ void Parser::State::Match::pass1(Parser *pa, State *state) {
                         break; } } } } }
     for (auto &s : set) {
         if (!s.where.check()) continue;
+        if (s.where->reg.parser_id() < 0)
+            error(s.where.lineno, "%s is not accessable in the parser", s.where->reg.name);
         pa->phv_use[state->gress][s.where->reg.uid] = 1;
         if (s.where->lo || s.where->hi != s.where->reg.size-1) {
             pa->phv_allow_multi_write[s.where->reg.parser_id()] = 1;

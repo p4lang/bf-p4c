@@ -234,7 +234,11 @@ template<> void Parser::write_config(Target::JBay::parser_regs &regs) {
         if (Phv::reg(i)->size == 32) {
             regs.merge.lower.phv_owner.owner[++id] = 1;
             regs.main[INGRESS].phv_owner.owner[id] = 1;
-            regs.main[EGRESS].phv_owner.owner[id] = 1; } }
+            regs.main[EGRESS].phv_owner.owner[id] = 1;
+        } else if (Phv::reg(i)->size == 8) {
+            if (phv_use[INGRESS][i^1])
+                error(0, "Can't use %s in ingress and %s in egress in jbay parser",
+                      Phv::reg(i^1)->name, Phv::reg(i)->name); } }
 
     regs.main[INGRESS].hdr_len_adj.amt = hdr_len_adj[INGRESS];
     regs.main[EGRESS].hdr_len_adj.amt = hdr_len_adj[EGRESS];

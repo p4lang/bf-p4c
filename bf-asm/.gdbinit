@@ -54,7 +54,9 @@ class bitvecPrinter(object):
             size -= 1
             data = ptr.dereference()
         while rv == "" or data > 0:
-            if (rv.__len__() % 6 == 5): rv += ' '
+            if (rv.__len__() % 120 == 119): rv += ':'
+            elif (rv.__len__() % 30 == 29): rv += ' '
+            elif (rv.__len__() % 6 == 5): rv += '_'
             if (data & 1) == 0:
                 rv += "0"
             else:
