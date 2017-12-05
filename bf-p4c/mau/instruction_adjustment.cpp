@@ -38,6 +38,7 @@ const IR::MAU::Action *SplitInstructions::preorder(IR::MAU::Action *act) {
 
 const IR::MAU::Instruction *SplitInstructions::preorder(IR::MAU::Instruction *instr) {
     write_found = false;
+    hash_dist = false;
     split_location = split_fields.end();
     return instr;
 }
@@ -80,6 +81,7 @@ const IR::MAU::StatefulAlu *SplitInstructions::preorder(IR::MAU::StatefulAlu *sa
 }
 
 const IR::MAU::HashDist *SplitInstructions::preorder(IR::MAU::HashDist *hd) {
+    hash_dist = true;
     prune(); return hd;
 }
 
@@ -94,6 +96,9 @@ const IR::MAU::Instruction *SplitInstructions::postorder(IR::MAU::Instruction *i
     if (split_location == split_fields.end()) {
         return instr;
     } else {
+        if (hash_dist)
+            P4C_UNIMPLEMENTED("%s: Due to lacking assembler support, cannot currently split "
+                              "hash distribution units %s", instr->srcInfo, *instr);
         auto *field = *(split_location);
         removed_instrs[field] = instr;
         return nullptr;

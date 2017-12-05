@@ -20,10 +20,14 @@ void ActionAnalysis::initialize_phv_field(const IR::Expression *expr) {
 
 void ActionAnalysis::initialize_action_data(const IR::Expression *expr) {
     field_action.reads.emplace_back(ActionParam::ACTIONDATA, expr);
+    if (field_action.reads.back().unsliced_expr()->is<IR::MAU::AttachedOutput>())
+        field_action.reads.back().speciality = ActionParam::ATTACHED_OUTPUT;
+    if (field_action.reads.back().unsliced_expr()->is<IR::MAU::HashDist>())
+        field_action.reads.back().speciality = ActionParam::HASH_DIST;
 }
 
 /** Similar to phv.field, it returns the IR structure that corresponds to actiondata,
- *  If it is an ActionArg, then the type is ACTIONDATA
+ *  If it is an ActionArg, HashDist, or AttachedOutput then the type is ACTIONDATA
  *  If it is an ActionDataConstant, then the type is CONSTANT
  */
 const IR::Expression *ActionAnalysis::isActionParam(const IR::Expression *e,
@@ -36,10 +40,12 @@ const IR::Expression *ActionAnalysis::isActionParam(const IR::Expression *e,
         if (e->is<IR::MAU::ActionDataConstant>())
             BUG("No ActionDataConstant should be a member of a Slice");
     }
-    if (e->is<IR::ActionArg>() || e->is<IR::MAU::ActionDataConstant>()) {
+    if (e->is<IR::ActionArg>() || e->is<IR::MAU::ActionDataConstant>()
+        || e->is<IR::MAU::AttachedOutput>() || e->is<IR::MAU::HashDist>()) {
         if (bits_out)
             *bits_out = bits;
-        if (e->is<IR::ActionArg>() && type)
+        if ((e->is<IR::ActionArg>() || e->is<IR::MAU::AttachedOutput>()
+            || e->is<IR::MAU::HashDist>()) && type)
             *type = ActionParam::ACTIONDATA;
         if (e->is<IR::MAU::ActionDataConstant>() && type)
             *type = ActionParam::CONSTANT;
@@ -105,13 +111,13 @@ bool ActionAnalysis::preorder(const IR::MAU::ActionDataConstant *adc) {
     return false;
 }
 
-bool ActionAnalysis::preorder(const IR::MAU::HashDist *) {
-    // Currently unhandled
+bool ActionAnalysis::preorder(const IR::MAU::HashDist *hd) {
+    field_action.reads.emplace_back(ActionParam::ACTIONDATA, hd, ActionParam::HASH_DIST);
     return false;
 }
 
-bool ActionAnalysis::preorder(const IR::MAU::AttachedOutput *) {
-    // ignore these for now as well
+bool ActionAnalysis::preorder(const IR::MAU::AttachedOutput *ao) {
+    field_action.reads.emplace_back(ActionParam::ACTIONDATA, ao, ActionParam::ATTACHED_OUTPUT);
     return false;
 }
 
@@ -190,11 +196,12 @@ void ActionAnalysis::postorder(const IR::MAU::Instruction *instr) {
                 field_action_split.requires_split = true;
                 auto *write_slice = MakeSlice(field_action.write.expr, alloc.field_bit,
                                               alloc.field_hi());
-                ActionParam write_split(field_action.write.type, write_slice);
+                ActionParam write_split(field_action.write.type, write_slice,
+                                        field_action.write.speciality);
                 field_action_split.setWrite(write_split);
                 for (auto &read : field_action.reads) {
                     auto read_slice = MakeSlice(read.expr, alloc.field_bit, alloc.field_hi());
-                    field_action_split.reads.emplace_back(read.type, read_slice);
+                    field_action_split.reads.emplace_back(read.type, read_slice, read.speciality);
                 }
                 (*container_actions_map)[container].field_actions.push_back(field_action_split);
             }
@@ -312,7 +319,7 @@ bool ActionAnalysis::initialize_alignment(const ActionParam &write, const Action
         initialized = init_phv_alignment(read, cont_action, write_bits, error_message);
     } else if (read.type == ActionParam::ACTIONDATA && ad_alloc) {
         initialized = init_ad_alloc_alignment(read, cont_action, write_bits, action_name,
-                                          container);
+                                              container);
     } else {
         initialized = init_simple_alignment(read, cont_action, write_bits);
     }
@@ -367,6 +374,9 @@ bool ActionAnalysis::init_phv_alignment(const ActionParam &read, ContainerAction
  */
 bool ActionAnalysis::init_ad_alloc_alignment(const ActionParam &read, ContainerAction &cont_action,
         bitvec write_bits, cstring action_name, PHV::Container container) {
+    if (read.speciality != ActionParam::NO_SPECIAL)
+        return init_simple_alignment(read, cont_action, write_bits);
+
     auto &action_format = tbl->resources->action_format;
 
     auto &placements = action_format.arg_placement.at(action_name);
@@ -520,14 +530,14 @@ bool ActionAnalysis::verify_P4_action_with_phv(cstring action_name) {
         if (!total_init)
             continue;
 
-       cstring error_message;
-       bool verify = cont_action.verify_possible(error_message, container, action_name, phv);
-       if (!verify && error_verbose) {
-           ::warning("%s: %s", error_message, cstring::to_cstring(cont_action));
-           warning = true;
-       }
 
-       check_constant_to_actiondata(cont_action, container);
+        cstring error_message;
+        bool verify = cont_action.verify_possible(error_message, container, action_name, phv);
+        if (!verify && error_verbose) {
+            ::warning("%s: %s", error_message, cstring::to_cstring(cont_action));
+            warning = true;
+        }
+        check_constant_to_actiondata(cont_action, container);
     }
 
     // Specifically for backtracking, as ActionFormat can be configured before PHV allocation,
@@ -841,6 +851,24 @@ bool ActionAnalysis::ContainerAction::verify_phv_mau_group(PHV::Container contai
     return true;
 }
 
+void ActionAnalysis::ContainerAction::verify_speciality(PHV::Container container,
+         cstring action_name) {
+    bool speciality_found = false;
+    int ad_params = 0;
+    for (auto field_action : field_actions) {
+        for (auto read : field_action.reads) {
+            if (read.type == ActionParam::ACTIONDATA || read.type == ActionParam::CONSTANT)
+                ad_params++;
+            if (read.speciality != ActionParam::NO_SPECIAL)
+                speciality_found = true;
+        }
+    }
+    if (ad_params > 1 && speciality_found)
+        P4C_UNIMPLEMENTED("In the ALU operation over container %s in action %s, the packing is "
+                          "too complicated due to either hash distribution or attached outputs "
+                          "combined with other action data", container.toString(), action_name);
+}
+
 /** The goal of this function is to validate a container operation given the allocation
  *  the write fields and the sources of the particular operation.  The following checks are:
  *    - If the ALU operation requires too many sources
@@ -859,6 +887,7 @@ bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
         return true;
     }
 
+    verify_speciality(container, action_name);
     int actual_ad = std::min(1, counts[ActionParam::ACTIONDATA] + counts[ActionParam::CONSTANT]);
     int sources_needed = counts[ActionParam::PHV] + actual_ad;
     error_message = "In the ALU operation over container " + container.toString() +

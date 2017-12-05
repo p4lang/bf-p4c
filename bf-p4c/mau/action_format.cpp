@@ -277,6 +277,8 @@ void ActionFormat::create_placement_phv(ActionAnalysis::ContainerActionsMap &con
                 BUG("Splitting of writes handled incorrectly");
 
             for (auto &read : field_action.reads) {
+                if (read.speciality != ActionAnalysis::ActionParam::NO_SPECIAL)
+                    continue;
                 if (read.type == ActionAnalysis::ActionParam::ACTIONDATA) {
                     create_from_actiondata(adp, read, container_bits.lo);
                     initialized = true;

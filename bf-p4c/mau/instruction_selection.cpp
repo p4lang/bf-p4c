@@ -381,12 +381,25 @@ const IR::Node *InstructionSelection::postorder(IR::Primitive *prim) {
                   direct_access ? "" : "in", salu->direct ? "" : "in");
         return new IR::MAU::Instruction(prim->srcInfo, "set", new IR::TempVar(prim->type),
                                         new IR::MAU::AttachedOutput(prim->type, salu));
-    } else if (prim->name == "counter.count" || prim->name == "meter.execute_meter" ||
-               prim->name == "meter.execute") {
+    } else if (prim->name == "counter.count") {
         stateful.push_back(prim);  // needed to setup the index
         return nullptr;
-    } else if (prim->name == "direct_counter.count" || prim->name == "direct_meter.read") {
+    } else if (prim->name == "meter.execute_meter" || prim->name == "lpf.execute"
+               || prim->name == "meter.execute") {
+        auto glob = prim->operands.at(0)->to<IR::GlobalRef>();
+        auto mtr = glob->obj->to<IR::MAU::Meter>();
+        BUG_CHECK(mtr != nullptr, "%s: Cannot find associated meter for the method call %s",
+                  prim->srcInfo, *prim);
+        stateful.push_back(prim);
+        return new IR::MAU::Instruction(prim->srcInfo, "set", new IR::TempVar(prim->type),
+                                        new IR::MAU::AttachedOutput(prim->type, mtr));
+    } else if (prim->name == "direct_counter.count") {
         return nullptr;
+    } else if (prim->name == "direct_meter.read") {
+        auto glob = prim->operands.at(0)->to<IR::GlobalRef>();
+        auto mtr = glob->obj->to<IR::MAU::Meter>();
+        return new IR::MAU::Instruction(prim->srcInfo, "set", prim->operands[1],
+                                        new IR::MAU::AttachedOutput(IR::Type::Bits::get(8), mtr));
     // Convert this hash to a set a PHV field to an IR::MAU::HashDist
     } else if (prim->name == "hash") {
         unsigned size = 1;
@@ -456,11 +469,20 @@ const IR::Type *stateful_type_for_primitive(const IR::Primitive *prim) {
     if (prim->name == "counter.count" || prim->name == "direct_counter.count")
         return IR::Type_Counter::get();
     if (prim->name == "meter.execute_meter" || prim->name == "direct_meter.read" ||
-        prim->name == "meter.execute")
+        prim->name == "meter.execute" || prim->name == "lpf.execute")
         return IR::Type_Meter::get();
     if (prim->name.startsWith("register_action."))
         return IR::Type_Register::get();
     BUG("Not a stateful primitive %s", prim);
+}
+
+size_t index_operand(const IR::Primitive *prim) {
+    if (prim->name.startsWith("counter") || prim->name.startsWith("meter")
+        || prim->name.startsWith("register_action"))
+        return 1;
+    else if (prim->name.startsWith("lpf"))
+        return 2;
+    return 1;
 }
 
 const IR::MAU::Action *StatefulHashDistSetup::preorder(IR::MAU::Action *act) {
@@ -583,8 +605,8 @@ const IR::MAU::Table *StatefulHashDistSetup::postorder(IR::MAU::Table *tbl) {
                 tbl->attached.push_back(synth2port);
             }
 
-            if (prim->operands.size() >= 2) {
-                auto hd = find_hash_dist(prim->operands[1], prim);
+            if (prim->operands.size() >= index_operand(prim) + 1) {
+                auto hd = find_hash_dist(prim->operands[index_operand(prim)], prim);
                 if (hd == nullptr) continue;
                 // Painful code as it is unclear what is visited first, the actions or the
                 // attached tables.  Probably should separate into multiple passes

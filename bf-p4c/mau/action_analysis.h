@@ -38,10 +38,14 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
     struct ActionParam {
         enum type_t { PHV, ACTIONDATA, CONSTANT, TOTAL_TYPES } type;
         const IR::Expression *expr;
+        enum speciality_t { NO_SPECIAL, HASH_DIST, ATTACHED_OUTPUT } speciality = NO_SPECIAL;
 
         ActionParam() : expr(nullptr) {}
         ActionParam(type_t t, const IR::Expression *e)
             : type(t), expr(e) {}
+
+        ActionParam(type_t t, const IR::Expression *e, speciality_t s)
+            : type(t), expr(e), speciality(s) {}
 
         int size() const {
             BUG_CHECK(expr->type, "Untyped expression in backend action");
@@ -216,6 +220,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         // bool is_contig_rotate(bitvec check, int &shift, int size);
         // bitvec rotate_contig(bitvec orig, int shift, int size);
 
+        void verify_speciality(PHV::Container container, cstring action_name);
         bool verify_one_alignment(TotalAlignment &tot_alignment, int size, int &unaligned_count,
             bool bitmasked_set = false);
         void move_source_to_bit(safe_vector<int> &bit_uses, TotalAlignment &ta);

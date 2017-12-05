@@ -57,6 +57,7 @@ class SplitInstructions : public MauTransform, TofinoWriteContext {
     ordered_map<const PHV::Field *, IR::MAU::Instruction *> removed_instrs;
 
     bool write_found = false;
+    bool hash_dist = false;
     ordered_set<const PHV::Field *>::iterator split_location;
 
     const IR::MAU::Action *preorder(IR::MAU::Action *) override;

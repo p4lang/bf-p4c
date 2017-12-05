@@ -40,8 +40,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/instruct1.p4
   extensions/p4_tests/p4_14/instruct1.p4
   extensions/p4_tests/p4_14/action_conflict_2.p4
-  testdata/p4_16_samples/flowlet_switching-bmv2.p4
-  extensions/p4_tests/p4_14/test_config_96_hash_data.p4
   )
 
 # We need a deposit_field instruction, but we fail to select it.
@@ -195,8 +193,6 @@ p4c_add_xfail_reason("tofino"
 # BRIG-113
 p4c_add_xfail_reason("tofino"
   "Input xbar hash.*conflict in"
-  extensions/p4_tests/p4_14/hash_calculation_max_size.p4
-  extensions/p4_tests/p4_14/hash_calculation_multiple.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -236,6 +232,7 @@ p4c_add_xfail_reason("tofino"
 # also: BRIG-56, BRIG-182
 p4c_add_xfail_reason("tofino"
   "Can't fit table .* in .* by itself"
+  extensions/p4_tests/p4_14/test_config_13_first_selection.p4
   extensions/p4_tests/p4_14/test_config_297_big_metadata.p4
   extensions/p4_tests/p4_14/jenkins/smoke_large_tbls/smoke_large_tbls.p4
   )
@@ -773,7 +770,6 @@ p4c_add_xfail_reason("tofino"
 # backend bug
 p4c_add_xfail_reason("tofino"
   "Slice is of IR structure not handled by ActionAnalysis"
-  extensions/p4_tests/p4_14/test_config_13_first_selection.p4
   )
 # need a good way to handle global action
 p4c_add_xfail_reason("tofino"
@@ -801,7 +797,6 @@ p4c_add_xfail_reason("tofino"
   )
 p4c_add_xfail_reason("tofino"
   "does not have a PHV allocation though it is used in an action"
-  extensions/p4_tests/p4_14/test_config_132_meter_pre_color_4.p4
   )
 p4c_add_xfail_reason("tofino"
   "expression too complex for stateful alu"
@@ -943,28 +938,46 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "error: set requires 2 operands"
-  extensions/p4_tests/p4_16/stateful1.p4
-  extensions/p4_tests/p4_16/stateful2.p4
-  extensions/p4_tests/p4_14/hash_calculation_two_hash1.p4
-  extensions/p4_tests/p4_14/test_config_169_stateful_sflow_sequence.p4
-  extensions/p4_tests/p4_14/test_config_199_stateful_constant_index.p4
+  "Due to lacking assembler support, cannot currently split hash distribution units"
+  extensions/p4_tests/p4_14/hash_calculation_16.p4
+  extensions/p4_tests/p4_14/test_config_300_multi_hash.p4
   extensions/p4_tests/p4_14/hash_calculation_two_hash2.p4
   extensions/p4_tests/p4_14/hash_calculation_multiple.p4
+  extensions/p4_tests/p4_14/hash_calculation_two_hash1.p4
   extensions/p4_tests/p4_14/test_config_299_write_hash_keyless_table.p4
-  extensions/p4_tests/p4_14/test_config_156_indirect_stateful_cntr.p4
-  extensions/p4_tests/p4_14/stateful3.p4
-  extensions/p4_tests/p4_14/hash_calculation_16.p4
-  extensions/p4_tests/p4_14/test_config_184_stateful_bug1.p4
-  extensions/p4_tests/p4_14/stateful0.p4
-  extensions/p4_tests/p4_14/test_config_157_random_number_generator.p4
-  extensions/p4_tests/p4_14/test_config_300_multi_hash.p4
-  extensions/p4_tests/p4_14/test_config_153_stateful_simple_cntr_with_output.p4
   extensions/p4_tests/p4_14/test_config_261_mutually_exclusive_src_ops.p4
-  extensions/p4_tests/p4_14/stateful2.p4
-  extensions/p4_tests/p4_14/stateful1.p4
+  extensions/p4_tests/p4_14/test_config_184_stateful_bug1.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "the packing is too complicated due to either hash distribution or attached outputs"
+  extensions/p4_tests/p4_14/test_config_96_hash_data.p4
+  testdata/p4_16_samples/flowlet_switching-bmv2.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Cannot find associated meter for the method call"
+  extensions/p4_tests/p4_14/test_config_132_meter_pre_color_4.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Action Data parameter not configured properly in ActionAnalysis pass"
+  testdata/p4_14_samples/meter1.p4
   extensions/p4_tests/p4_14/hash_calculation_max_size.p4
+  testdata/p4_16_samples/named_meter_bmv2.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Can't allocate space on .*-bit part of action bus"
+  extensions/p4_tests/p4_14/test_config_199_stateful_constant_index.p4
   extensions/p4_tests/p4_14/c1/COMPILER-342/netchain.p4
+  extensions/p4_tests/p4_14/stateful3.p4
+  extensions/p4_tests/p4_14/stateful2.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "error: set requires 2 operands"
+  extensions/p4_tests/p4_14/test_config_157_random_number_generator.p4
   )
 
 # BRIG-219
