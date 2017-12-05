@@ -140,14 +140,10 @@ void AddMetadataShims::addEgressMetadata(IR::BFN::Deparser *d) {
     addDeparserParam(d, outputMeta, "force_tx_error", "force_tx_err");
     addDeparserParam(d, outputMeta, "drop_ctl", "drop_ctl");
 
-    // `egress_unicast_port` and `ecos` are a bit special in that they are made
-    // available in the parser as part of `egress_intrinsic_metadata`, but we
-    // also need to provide them to the deparser hardware. (The user also can't
-    // overwrite these; we prevent that in the architecture by making the
-    // intrinsic metadata struct an `in` parameter, so that changes made in the
-    // egress control do not propagate to the deparser.)
+    /* egress_port is how the egress deparser knows where to push
+     * the reassembled header and is absolutely necessary
+     */
     auto* egMeta = getMetadataType(pipe, "egress_intrinsic_metadata");
     addDeparserParam(d, egMeta, "egress_port", "egress_unicast_port",
                      /* canPack = */ false);
-    addDeparserParam(d, egMeta, "egress_cos", "ecos");
 }
