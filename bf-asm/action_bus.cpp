@@ -235,11 +235,12 @@ void ActionBus::pass1(Table *tbl) {
                 error(lineno, "%s extends past the end of the actions bus",
                       slot.name.c_str());
                 break; }
-            if (tbl->stage->action_bus_use[slotno]) {
-                if (tbl->stage->action_bus_use[slotno] != tbl)
-                    error(lineno, "Action bus byte %d set in table %s and table %s", byte,
-                          tbl->name(), tbl->stage->action_bus_use[slotno]->name());
-                else {
+            if (auto tbl_in_slot = tbl->stage->action_bus_use[slotno]) {
+                if (tbl_in_slot != tbl) {
+                    if (!check_sharing(tbl, tbl_in_slot))
+                        error(lineno, "Action bus byte %d set in table %s and table %s", byte,
+                            tbl->name(), tbl->stage->action_bus_use[slotno]->name());
+                } else {
                     assert(!slot.data.empty() && !use[slotno]->data.empty());
                     auto nsrc = slot.data.begin()->first;
                     unsigned noff = slot.data.begin()->second;
@@ -268,6 +269,24 @@ void ActionBus::pass1(Table *tbl) {
             for (unsigned byte = slot.lo(tbl)/8U; byte <= hi/8U; ++byte) {
                 byte_use[byte] = 1;
                 action_hv_slice_use.at(byte/16).at(slot.byte/16) |= hv_groups.at(byte%16); } } }
+}
+
+bool ActionBus::check_sharing(Table *tbl1, Table *tbl2) {
+    bool atcam_share_bytes = false;
+    bool atcam_action_share_bytes = false;
+    // Check tables are not same atcam's sharing bytes on action bus
+    if (tbl1->to<AlgTcamMatchTable>() && tbl2->to<AlgTcamMatchTable>()
+            && tbl1->p4_table->p4_name() == tbl2->p4_table->p4_name())
+        atcam_share_bytes = true;
+    // Check tables are not same atcam action tables sharing bytes on action bus
+    if (auto tbl1_at = tbl1->to<ActionTable>()) {
+        if (auto tbl2_at = tbl2->to<ActionTable>()) {
+            auto tbl1_mt = tbl1_at->get_match_table();
+            auto tbl2_mt = tbl2_at->get_match_table();
+            if (tbl1_mt->p4_table->p4_name()
+                    == tbl2_mt->p4_table->p4_name())
+                atcam_action_share_bytes = true; } }
+    return (atcam_share_bytes || atcam_action_share_bytes);
 }
 
 void ActionBus::need_alloc(Table *tbl, Table::Format::Field *f, unsigned off, unsigned size) {

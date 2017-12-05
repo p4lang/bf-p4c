@@ -166,48 +166,8 @@ void HashActionTable::gen_tbl_cfg(json::vector &out) {
             add_reference_table(meter_table_refs, m);
         add_reference_table(selection_table_refs, a->selector); }
     add_reference_table(action_data_table_refs, action);
-    // Add hash functions
-    json::vector &hash_functions = stage_tbl["hash_functions"] = json::vector();
-    // Emit hash info only if p4_param_order (match_key_fields) are present
-    // FIXME: This input_xbar is populated if its a part of the hash_action
-    // table or the hash_distribution which is incorrect. This should move
-    // inside the hash_dist so this condition does not occur in the
-    // hash_action table
-    if (!p4_params_list.empty() && input_xbar) {
-        auto ht = input_xbar->get_hash_tables();
-        if (ht.size() > 0) {
-            // Merge all bits to xor across multiple hash ways in single
-            // json::vector for each hash bit
-            json::map hash_function;
-            json::vector &hash_bits = hash_function["hash_bits"] = json::vector();
-            for (const auto hash_table : ht) {
-                MatchTable::gen_hash_bits(hash_table.second, hash_table.first, hash_bits); 
-                //for (auto &col: hash.second) {
-                //    json::map hash_bit;
-                //    bool hash_bit_added = false;
-                //    json::vector *bits_to_xor_prev;
-                //    for (auto &hb : hash_bits) {
-                //        if (hb->to<json::map>()["hash_bit"]->to<json::number>() == json::number(col.first)) {
-                //            bits_to_xor_prev = &(hb->to<json::map>()["bits_to_xor"]->to<json::vector>());
-                //            hash_bit_added = true; } }
-                //    hash_bit["hash_bit"] = col.first;
-                //    hash_bit["seed"] = input_xbar->get_seed_bit(hash.first, col.first);
-                //    json::vector &bits_to_xor = hash_bit["bits_to_xor"] = json::vector();
-                //    for (const auto &bit: col.second.data) {
-                //        json::map field;
-                //        if (auto ref = input_xbar->get_group_bit(InputXbar::Group(false, hash.first/2), bit + 64*(hash.first&1))) {
-                //            std::string field_name = ref.name();
-                //            field["field_bit"] = remove_name_tail_range(field_name) + ref.lobit();
-                //            remove_aug_names(field_name);
-                //            field["field_name"] = field_name; }
-                //        if (!hash_bit_added)
-                //            bits_to_xor.push_back(std::move(field));
-                //        else
-                //            bits_to_xor_prev->push_back(std::move(field)); }
-                //    if (!hash_bit_added)
-                //        hash_bits.push_back(std::move(hash_bit)); } }
-            hash_functions.push_back(std::move(hash_function)); } } }
-    MatchTable::gen_idletime_tbl_cfg(stage_tbl);
+    add_hash_functions(stage_tbl);
+    gen_idletime_tbl_cfg(stage_tbl);
     if (context_json)
         stage_tbl.merge(*context_json);
 }

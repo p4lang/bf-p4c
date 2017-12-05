@@ -420,21 +420,26 @@ template<class REGS> void AlgTcamMatchTable::write_regs(REGS &regs) {
 
 // FIXME: Add tbl-cfg support for ATCAM tables
 void AlgTcamMatchTable::gen_tbl_cfg(json::vector &out) {
-    //json::map &tbl = *base_tbl_cfg(out, "match", number_entries);
-    //common_tbl_cfg(tbl);
-    //json::map &match_attributes = tbl["match_attributes"];
-    //json::vector &stage_tables = match_attributes["stage_tables"];
-    //json::map &stage_tbl = *add_stage_tbl_cfg(match_attributes, "atcam" , size);
-    //stage_tbl["stage_table_type"] = "algorithmic_tcam_match";
+    unsigned number_entries = layout_size()/match.size() * 512;
+    json::map &tbl = *base_tbl_cfg(out, "match", number_entries);
+    common_tbl_cfg(tbl);
+    json::map &match_attributes = tbl["match_attributes"];
+    json::vector &stage_tables = match_attributes["stage_tables"];
+    json::map &stage_tbl = *add_stage_tbl_cfg(match_attributes, "atcam" , number_entries);
+    stage_tbl["stage_table_type"] = "algorithmic_tcam_match";
     // FIXME-JSON: If the next table is modifiable then we set it to what it's mapped
     // to. Otherwise, set it to the default next table for this stage.
-    //stage_tbl["default_next_table"] = 255;
-    //stage_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg("tcam", layout);
-    //stage_tbl["logical_table_id"] = logical_id;
-    //stage_tbl["hash_functions"] = // TODO
-    //add_result_physical_buses(stage_tbl);
-    //stage_tbl["action_format"] = // TODO
-    //MatchTable::gen_idletime_tbl_cfg(stage_tbl);
-    //if (context_json)
-    //    stage_tbl.merge(*context_json);
+    stage_tbl["default_next_table"] = 255;
+    stage_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg("tcam", layout);
+    add_result_physical_buses(stage_tbl);
+    if (actions) {
+        actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
+        actions->add_action_format(this, stage_tbl);
+    } else if (action && action->actions) {
+        action->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
+        action->actions->add_action_format(this, stage_tbl); }
+    add_hash_functions(stage_tbl);
+    gen_idletime_tbl_cfg(stage_tbl);
+    if (context_json)
+        stage_tbl.merge(*context_json);
 }

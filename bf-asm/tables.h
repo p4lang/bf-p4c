@@ -600,6 +600,7 @@ public:
     int direct_shiftcount() const override { return 64; }
     void gen_hash_bits(const std::map<int, HashCol> &hash_table,
             unsigned hash_table_id, json::vector &hash_bits);
+    void add_hash_functions(json::map &stage_tbl);
 )
 
 #define DECLARE_TABLE_TYPE(TYPE, PARENT, NAME, ...)                     \
@@ -822,9 +823,6 @@ DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,
         return table_type(); }
     const GatewayTable *get_gateway() const override {
         return match_tables.size() == 1 ? (*match_tables.begin())->get_gateway() : 0; }
-    MatchTable *get_match_table() override {
-        return match_tables.size() == 1 ? *match_tables.begin() : 0; }
-    std::set<MatchTable *> get_match_tables() override { return match_tables; }
     SelectionTable *get_selector() const override {
         return match_tables.size() == 1 ? (*match_tables.begin())->get_selector() : 0; }
     StatefulTable *get_stateful() const override {
@@ -842,6 +840,9 @@ protected:
     // Accessed by Statistics (Counter) Tables as "stats_alu_index"
     void add_alu_index(json::map &stage_tbl, std::string alu_index);
 public:
+    MatchTable *get_match_table() override {
+        return match_tables.size() == 1 ? *match_tables.begin() : 0; }
+    std::set<MatchTable *> get_match_tables() override { return match_tables; }
     bool has_per_flow_enable() const { return per_flow_enable; }
     std::string get_per_flow_enable_param() { return per_flow_enable_param; }
     Format::Field *get_per_flow_enable_param(MatchTable *m) const override {

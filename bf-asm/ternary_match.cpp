@@ -540,7 +540,7 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
         actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
     else if (action && action->actions)
         action->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
-    MatchTable::gen_idletime_tbl_cfg(stage_tbl);
+    gen_idletime_tbl_cfg(stage_tbl);
     if (context_json)
         stage_tbl.merge(*context_json);
     match_attributes["match_type"] = "ternary";

@@ -62,6 +62,7 @@ class ActionBus {
 
     int find_free(Table *tbl, int min, int max, int step, int lobyte, int bytes);
     int find_merge(Table *tbl, int offset, int bytes, int use);
+    bool check_sharing(Table *tbl1, Table *tbl2);
 public:
     int             lineno;
     ActionBus() : lineno(-1) {}

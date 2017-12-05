@@ -321,7 +321,7 @@ int MatchTable::get_address_mau_actiondata_adr_default(unsigned log2size, bool p
 }
 
 // Create json node for all hash bits
-void MatchTable::gen_hash_bits(const std::map<int, HashCol> &hash_table, 
+void MatchTable::gen_hash_bits(const std::map<int, HashCol> &hash_table,
         unsigned hash_table_id, json::vector &hash_bits) {
     for (auto &col: hash_table) {
         json::map hash_bit;
@@ -352,4 +352,23 @@ void MatchTable::gen_hash_bits(const std::map<int, HashCol> &hash_table,
                 bits_to_xor_prev->push_back(std::move(field)); }
         if (!hash_bit_added)
             hash_bits.push_back(std::move(hash_bit)); }
+}
+
+void MatchTable::add_hash_functions(json::map &stage_tbl) {
+    json::vector &hash_functions = stage_tbl["hash_functions"] = json::vector();
+    // Emit hash info only if p4_param_order (match_key_fields) are present
+    // FIXME: This input_xbar is populated if its a part of the hash_action
+    // table or the hash_distribution which is incorrect. This should move
+    // inside the hash_dist so this condition does not occur in the
+    // hash_action table
+    if (!p4_params_list.empty() && input_xbar) {
+        auto ht = input_xbar->get_hash_tables();
+        if (ht.size() > 0) {
+            // Merge all bits to xor across multiple hash ways in single
+            // json::vector for each hash bit
+            json::map hash_function;
+            json::vector &hash_bits = hash_function["hash_bits"] = json::vector();
+            for (const auto hash_table : ht) {
+                gen_hash_bits(hash_table.second, hash_table.first, hash_bits);
+            hash_functions.push_back(std::move(hash_function)); } } }
 }

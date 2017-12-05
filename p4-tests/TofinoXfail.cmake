@@ -696,15 +696,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "Action bus byte [0-9]* set in table .* and table .*"
-  extensions/p4_tests/p4_16/atcam_match_wide1.p4
-  extensions/p4_tests/p4_16/atcam_match4.p4
-  extensions/p4_tests/p4_16/atcam_match5.p4
-  extensions/p4_tests/p4_16/atcam_match3.p4
-  extensions/p4_tests/p4_14/test_config_181_first_alg_tcam.p4
-)
-
-p4c_add_xfail_reason("tofino"
    "Stage pragma provided to table .* has multiple parameters, while Brig currently"
    extensions/p4_tests/p4_14/test_config_131_placement_with_pragma.p4
 )
