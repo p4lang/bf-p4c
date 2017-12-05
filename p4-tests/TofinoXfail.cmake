@@ -55,6 +55,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Unhandled action bitmask constraint"
   extensions/p4_tests/p4_14/13-IngressEgressConflict.p4
+  extensions/p4_tests/p4_16/brig-42.p4
   testdata/p4_14_samples/mac_rewrite.p4
   )
 
@@ -1014,6 +1015,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/action_conflict_4.p4
   extensions/p4_tests/p4_14/test_config_259_large_non_multiple_8_bit.p4
   extensions/p4_tests/p4_14/action_conflict_3.p4
+  extensions/p4_tests/p4_14/brig-11.p4
   )
 
 p4c_add_xfail_reason("tofino"
