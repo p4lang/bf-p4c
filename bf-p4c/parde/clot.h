@@ -28,14 +28,15 @@ class Clot {
 
     unsigned tag = 0;
 
-    // unsigned start = 0;  // start byte offset in the packet
-                            // this will become clear during parser lowering?
+    unsigned start = 0;  // start byte offset in the packet
 
     /// num of bytes covered in this clot
     unsigned length() const;
 
     /// byte offset of field with in clot
     unsigned offset(const PHV::Field* f) const;
+
+    bool is_phv_field(const PHV::Field* f) const;
 
     std::vector<const PHV::Field*> all_fields;  // all fields covered in this clot
     std::vector<const PHV::Field*> phv_fields;  // fields that need to be replaced by

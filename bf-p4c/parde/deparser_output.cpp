@@ -20,8 +20,9 @@ namespace {
 struct OutputDictionary : public Inspector {
     std::ostream        &out;
     const PhvInfo       &phv;
-    unsigned            checksumIndex = 0;
+    const ClotInfo      &clot;
     indent_t            indent;
+    unsigned            checksumIndex = 0;
     PHV::Container      last;
     const PHV::Field    *last_pov;
 
@@ -38,39 +39,34 @@ struct OutputDictionary : public Inspector {
         auto field = phv.field(emit->source->field, &bits);
         if (!field) {
             out << indent << "# no phv: " << *emit << std::endl;
-            return false;
-        }
+            return false; }
 
         if (!field->size) {
             /* varbits? not supported */
             LOG3("skipping varbits? " << field->name);
             return false; }
 
-        bitrange povAllocBits;
-        auto povBit = phv.field(emit->povBit->field, &povAllocBits);
+        auto povBit = phv.field(emit->povBit->field);
         auto &alloc = field->for_bit(bits.lo);
-        int size = alloc.container.size() / 8;
-        if (last == alloc.container && last_pov == povBit) {
-            out << indent << "    # - " << alloc.container_bits() << ": "
-                << DeparserSourceFormatter{field, bits} << std::endl;
-            return false; }
-        last = alloc.container;
-        last_pov = povBit;
-        if (bits.size() != size * 8)
+
+        if (!(last == alloc.container && last_pov == povBit)) {
+            last = alloc.container;
+            last_pov = povBit;
+
             out << indent << alloc.container;
-        else
-            out << indent << DeparserSourceFormatter{field, bits};
 
-        if (!povBit) {
-            out << indent << " # no phv for pov: " << *emit->povBit << std::endl;
-            return false;
-        }
-        out << ": " << canon_name(trim_asm_name(povBit->name)) << std::endl;
+            if (!povBit) {
+                out << indent << " # no phv for pov: " << *emit->povBit << std::endl;
+                return false;
+            }
+            out << ": " << canon_name(trim_asm_name(povBit->name));
 
-        if (bits.size() != size * 8) {
-            out << indent << "    # - " << alloc.container_bits() << ": "
-                << DeparserSourceFormatter{field, bits} << std::endl;
+            if ((size_t)bits.size() != alloc.container.size())
+                out << std::endl;
         }
+
+        out << indent << "    # - " << alloc.container_bits() << ": "
+            << DeparserSourceFormatter{field, bits} << std::endl;
 
         return false;
     }
@@ -78,9 +74,7 @@ struct OutputDictionary : public Inspector {
     bool preorder(const IR::BFN::EmitChecksum* emit) override {
         AutoIndent emitChecksumIndent(indent);
         out << indent << "checksum " << checksumIndex;
-
-        bitrange povAllocBits;
-        auto povBit = phv.field(emit->povBit->field, &povAllocBits);
+        auto povBit = phv.field(emit->povBit->field);
         if (!povBit) {
             out << indent << " # no phv for pov: " << *emit->povBit << std::endl;
             return false;
@@ -94,17 +88,32 @@ struct OutputDictionary : public Inspector {
     bool preorder(const IR::BFN::EmitClot* emit) override {
         AutoIndent autoIndent(indent);
         out << indent << "clot " << emit->clot.tag << ":" << std::endl;
-        bitrange povAllocBits;
-        auto povBit = phv.field(emit->povBit->field, &povAllocBits);
+
+        auto povBit = phv.field(emit->povBit->field);
         AutoIndent fieldIndent(indent);
         out << indent << "pov: " << canon_name(trim_asm_name(povBit->name)) << std::endl;
-        for (auto f : emit->clot.phv_fields)
-            out << indent << emit->clot.offset(f) << " : " <<  canon_name(f->name) << std::endl;
+
+        std::set<PHV::Container> containers;
+        for (auto f : emit->clot.phv_fields) {
+            f->foreach_alloc([&](const PHV::Field::alloc_slice &alloc) {
+                containers.insert(alloc.container);
+            });
+        }
+
+        unsigned clot_offset = emit->clot.start;
+        for (auto c : containers) {
+            // TODO(zma) check if c exists
+            auto range = clot.container_range_.at(c);
+            range = range.shiftedByBytes(-clot_offset);
+            out << indent << Range(range.lo, range.hi) << " : " << c << std::endl;
+        }
+
         return false;
     }
 
-    OutputDictionary(std::ostream &out, const PhvInfo &phv, indent_t initialIndent)
-      : out(out), phv(phv), indent(initialIndent) { }
+    OutputDictionary(std::ostream &out, const PhvInfo &phv, const ClotInfo &clot,
+          indent_t initialIndent, unsigned csumIdx)
+      : out(out), phv(phv), clot(clot), indent(initialIndent), checksumIndex(csumIdx) { }
 };
 
 /// Generates the list of input PHV containers for each deparser checksum
@@ -112,8 +121,8 @@ struct OutputDictionary : public Inspector {
 struct OutputChecksums : public Inspector {
     std::ostream        &out;
     const PhvInfo       &phv;
-    unsigned            checksumIndex;
     indent_t            indent;
+    unsigned            checksumIndex = 0;
 
     bool preorder(const IR::BFN::EmitChecksum* emit) override {
         out << indent << "checksum " << checksumIndex << ":" << std::endl;
@@ -137,8 +146,16 @@ struct OutputChecksums : public Inspector {
 
             out << indent << "- " << alloc.container;
 
-            int size = alloc.container.size() / 8;
-            if (bits.size() != size * 8)
+            if (Device::currentDevice() == "JBay") {
+                auto povBit = phv.field(emit->povBit->field);
+                if (!povBit) {
+                    out << indent << " # no phv for pov: " << *emit->povBit << std::endl;
+                    return false;
+                }
+                out << ": " << canon_name(trim_asm_name(povBit->name));
+            }
+
+            if ((size_t)bits.size() != alloc.container.size())
                 out << std::endl << indent << "    # - ";
             else
                 out << "  # ";
@@ -151,8 +168,8 @@ struct OutputChecksums : public Inspector {
         return false;
     }
 
-    OutputChecksums(std::ostream &out, const PhvInfo &phv, indent_t initialIndent)
-      : out(out), phv(phv), checksumIndex(0), indent(initialIndent) { }
+    OutputChecksums(std::ostream &out, const PhvInfo &phv, indent_t initialIndent, unsigned csumIdx)
+      : out(out), phv(phv), indent(initialIndent), checksumIndex(csumIdx) { }
 };
 
 /// Generates the configuration for the intrinsic deparser parameters.
@@ -164,6 +181,7 @@ struct OutputParameters : public Inspector {
     using ParamGroup = std::vector<const IR::BFN::DeparserParameter*>;
     ParamGroup egMulticastGroup;
     ParamGroup hashLagECMP;
+    ParamGroup exclusionId;
 
     bool preorder(const IR::BFN::DeparserParameter* param) override {
         // There are a few deparser parameters that need to be grouped in the
@@ -177,6 +195,10 @@ struct OutputParameters : public Inspector {
             hashLagECMP.push_back(param);
             return false;
         }
+        if (Device::currentDevice() == "JBay" && (param->name == "xid" || param->name == "yid")) {
+            exclusionId.push_back(param);
+            return false;
+        }
 
         out << indent << param->name << ": ";
         outputParamSource(param);
@@ -188,6 +210,7 @@ struct OutputParameters : public Inspector {
     void postorder(const IR::BFN::Deparser*) override {
         outputParamGroup("egress_multicast_group", egMulticastGroup);
         outputParamGroup("hash_lag_ecmp_mcast", hashLagECMP);
+        outputParamGroup("xid", exclusionId);
     }
 
     void outputParamSource(const IR::BFN::DeparserParameter* param) const {
@@ -356,8 +379,23 @@ std::ostream &operator<<(std::ostream &out, const DeparserAsmOutput &d) {
 
     out << "deparser " << d.gress << ":" << std::endl;
     indent_t indent(1);
-    d.deparser->apply(OutputDictionary(out, d.phv, indent));
-    d.deparser->apply(OutputChecksums(out, d.phv, indent));
+
+    static int checksumIndex = 0;
+
+    OutputDictionary outputDict(out, d.phv, d.clot, indent, checksumIndex);
+    OutputChecksums outputCsum(out, d.phv, indent, checksumIndex);
+
+    d.deparser->apply(outputDict);
+    d.deparser->apply(outputCsum);
+
+    BUG_CHECK(outputDict.checksumIndex == outputCsum.checksumIndex, "how many checksums?");
+
+    // XXX(zma) JBay has a global pool of csum engines
+    // whereas Tofino's csum engines are assigned to in/egress
+    // Adding this temp fix to keep track of global csum index
+    if (Device::currentDevice() == "JBay")
+        checksumIndex = outputDict.checksumIndex;
+
     d.deparser->apply(OutputParameters(out, d.phv, indent));
     d.deparser->apply(OutputDigests(out, d.phv, indent));
     return out;

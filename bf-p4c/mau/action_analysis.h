@@ -30,7 +30,6 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
  public:
     static constexpr int LOADCONST_MAX = 20;
     static constexpr int CONST_SRC_MAX = 3;
-    static constexpr int MAU_GROUP_SIZE = 16;
     /** A way to encapsulate the information contained within a single operand of an instruction,
      *  whether the instruction is read from or written to.  Also contains the information on
      *  what particular bits of the mask are encapsulated.

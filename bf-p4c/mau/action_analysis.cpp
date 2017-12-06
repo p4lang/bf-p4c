@@ -1,6 +1,7 @@
 #include "action_analysis.h"
 #include "resource.h"
 #include "bf-p4c/common/slice.h"
+#include "bf-p4c/device.h"
 #include "bf-p4c/phv/phv_fields.h"
 
 void ActionAnalysis::initialize_phv_field(const IR::Expression *expr) {
@@ -845,7 +846,8 @@ bool ActionAnalysis::ContainerAction::verify_phv_mau_group(PHV::Container contai
         auto read_container = phv_ta.first;
         if (read_container.type() != container.type())
             return false;
-        if (read_container.index() / MAU_GROUP_SIZE != container.index() / MAU_GROUP_SIZE)
+        int group_size = Device::phvSpec().mauGroupNumAndSize(container.type()).second;
+        if (read_container.index() / group_size != container.index() / group_size)
             return false;
     }
     return true;

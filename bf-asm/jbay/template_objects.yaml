@@ -42,7 +42,7 @@
               "s2p_reg",
               "p2s_reg",
               "parde_glue_reg_rspec",  #pgluereg
-            "mirr_ebuf_reg",  # mirefreg
+            #"mirr_ebuf_reg",  # mirefreg
             # dprsr_reg
               # dprsr_reg_rspec
     ]

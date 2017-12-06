@@ -151,9 +151,11 @@ struct ExtractSimplifier {
         std::vector<alloc_slice> slices;
         std::tie(std::ignore, slices) = computeSlices(extract->dest->field, phv);
 
-        if (auto c = clot.allocated(phv.field(extract->dest->field))) {
+        auto field = phv.field(extract->dest->field);
+        if (auto c = clot.allocated(field)) {
             clotExtracts[c].push_back(extract);
-            return;
+            if (!c->is_phv_field(field))
+                return;
         }
 
         if (slices.empty()) {
@@ -402,7 +404,7 @@ using LoweredParserIRStates = std::map<const IR::BFN::ParserState*,
 /// Note that the new IR is just constructed here; ReplaceParserIR is what
 /// actually replaces the high-level IR with the lowered version.
 struct ComputeLoweredParserIR : public ParserInspector {
-    explicit ComputeLoweredParserIR(const PhvInfo& phv, const ClotInfo& clot) :
+    explicit ComputeLoweredParserIR(const PhvInfo& phv, ClotInfo& clot) :
         phv(phv), clot(clot) {
         // Initialize the map from high-level parser states to low-level parser
         // states so that null, which represents the end of the parser program
@@ -455,6 +457,18 @@ struct ComputeLoweredParserIR : public ParserInspector {
 
         auto loweredStatements = simplifier.lowerExtracts();
 
+        // XXX(zma) populate container range in clot info
+
+        for (auto stmt : loweredStatements) {
+            if (auto extract = stmt->to<IR::BFN::LoweredExtractPhv>()) {
+                if (auto* source = extract->source->to<IR::BFN::LoweredBufferlikeRVal>()) {
+                    auto bytes = source->extractedBytes();
+                    auto container = extract->dest->container;
+                    clot.container_range_[container] = bytes;
+                }
+            }
+        }
+
         forAllMatching<IR::BFN::Select>(&state->selects,
                       [&](const IR::BFN::Select* select) {
             if (auto* bufferSource = select->source->to<IR::BFN::BufferlikeRVal>()) {
@@ -501,7 +515,7 @@ struct ComputeLoweredParserIR : public ParserInspector {
     }
 
     const PhvInfo& phv;
-    const ClotInfo& clot;
+    ClotInfo& clot;
 };
 
 /// Replace the high-level parser IR version of each parser's root node with its
@@ -545,7 +559,7 @@ struct ReplaceParserIR : public ParserTransform {
 /// Generate a lowered version of the parser IR in this program and swap it in
 /// for the existing representation.
 struct LowerParserIR : public PassManager {
-    explicit LowerParserIR(const PhvInfo& phv, const ClotInfo& clot) {
+    explicit LowerParserIR(const PhvInfo& phv, ClotInfo& clot) {
         auto* computeLoweredParserIR = new ComputeLoweredParserIR(phv, clot);
         addPasses({
             computeLoweredParserIR,
@@ -662,13 +676,15 @@ struct LowerDeparserIR : public DeparserTransform {
                auto field = phv.field(emit->source->field);
                if (auto c = clot.allocated(field)) {
                    if (!newEmits.empty()) {
-                       if (auto lastEmitClot = newEmits.back()->to<IR::BFN::EmitClot>())
+                       if (auto lastEmitClot = newEmits.back()->to<IR::BFN::EmitClot>()) {
                            if (lastEmitClot->clot.tag == c->tag)
                                continue;
+                       }
                    }
 
                    auto povBit = e->to<IR::BFN::Emit>()->povBit;
                    auto clotEmit = new IR::BFN::EmitClot(*c, povBit);
+
                    newEmits.pushBackOrAppend(clotEmit);
                } else {
                    newEmits.pushBackOrAppend(e);
@@ -967,7 +983,7 @@ class ComputeBufferRequirements : public ParserModifier {
         match->bufferRequired = int(bytesRead.hi);
 
         const unsigned inputBufferSize = Device::pardeSpec().byteInputBufferSize();
-        BUG_CHECK(*match->bufferRequired < inputBufferSize,
+        BUG_CHECK(*match->bufferRequired <= inputBufferSize,
                   "Match for state %1% requires %2% bytes to be buffered, which "
                   "is more than can fit in the %3% byte input buffer",
                   findContext<IR::BFN::LoweredParserState>()->name,
@@ -977,7 +993,7 @@ class ComputeBufferRequirements : public ParserModifier {
 
 }  // namespace
 
-LowerParser::LowerParser(const PhvInfo& phv, const ClotInfo& clot) {
+LowerParser::LowerParser(const PhvInfo& phv, ClotInfo& clot) {
     addPasses({
         new LowerParserIR(phv, clot),
         new LowerDeparserIR(phv, clot),

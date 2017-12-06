@@ -16,24 +16,28 @@ template<> void VLIWInstruction::write_regs(Target::JBay::mau_regs &regs,
     assert(slot >= 0);
     unsigned group = slot / Phv::mau_groupsize();
     unsigned off = slot % Phv::mau_groupsize();
+
+    unsigned side = group % 2;
+    group = group / 2;
+
     LOG2(this);
     switch (Phv::reg(slot)->type) {
     case Phv::Register::NORMAL:
         switch (Phv::reg(slot)->size) {
         case 8:
-            imem.imem_subword8[group-4][off][iaddr].imem_subword8_instr = bits;
-            imem.imem_subword8[group-4][off][iaddr].imem_subword8_color = color;
-            imem.imem_subword8[group-4][off][iaddr].imem_subword8_parity = parity(bits) ^ color;
+            imem.imem_subword8[side][group-2][off][iaddr].imem_subword8_instr = bits;
+            imem.imem_subword8[side][group-2][off][iaddr].imem_subword8_color = color;
+            imem.imem_subword8[side][group-2][off][iaddr].imem_subword8_parity = parity(bits) ^ color;
             break;
         case 16:
-            imem.imem_subword16[group-8][off][iaddr].imem_subword16_instr = bits;
-            imem.imem_subword16[group-8][off][iaddr].imem_subword16_color = color;
-            imem.imem_subword16[group-8][off][iaddr].imem_subword16_parity = parity(bits) ^ color;
+            imem.imem_subword16[side][group-4][off][iaddr].imem_subword16_instr = bits;
+            imem.imem_subword16[side][group-4][off][iaddr].imem_subword16_color = color;
+            imem.imem_subword16[side][group-4][off][iaddr].imem_subword16_parity = parity(bits) ^ color;
             break;
         case 32:
-            imem.imem_subword32[group][off][iaddr].imem_subword32_instr = bits;
-            imem.imem_subword32[group][off][iaddr].imem_subword32_color = color;
-            imem.imem_subword32[group][off][iaddr].imem_subword32_parity = parity(bits) ^ color;
+            imem.imem_subword32[side][group][off][iaddr].imem_subword32_instr = bits;
+            imem.imem_subword32[side][group][off][iaddr].imem_subword32_color = color;
+            imem.imem_subword32[side][group][off][iaddr].imem_subword32_parity = parity(bits) ^ color;
             break;
         default:
             assert(0); }
@@ -41,21 +45,21 @@ template<> void VLIWInstruction::write_regs(Target::JBay::mau_regs &regs,
     case Phv::Register::MOCHA:
         switch (Phv::reg(slot)->size) {
         case 8:
-            imem.imem_mocha_subword8[group-4][off-12][iaddr].imem_mocha_subword_instr = bits;
-            imem.imem_mocha_subword8[group-4][off-12][iaddr].imem_mocha_subword_color = color;
-            imem.imem_mocha_subword8[group-4][off-12][iaddr].imem_mocha_subword_parity =
+            imem.imem_mocha_subword8[side][group-2][off-12][iaddr].imem_mocha_subword_instr = bits;
+            imem.imem_mocha_subword8[side][group-2][off-12][iaddr].imem_mocha_subword_color = color;
+            imem.imem_mocha_subword8[side][group-2][off-12][iaddr].imem_mocha_subword_parity =
                     parity(bits) ^ color;
             break;
         case 16:
-            imem.imem_mocha_subword16[group-8][off-12][iaddr].imem_mocha_subword_instr = bits;
-            imem.imem_mocha_subword16[group-8][off-12][iaddr].imem_mocha_subword_color = color;
-            imem.imem_mocha_subword16[group-8][off-12][iaddr].imem_mocha_subword_parity =
+            imem.imem_mocha_subword16[side][group-4][off-12][iaddr].imem_mocha_subword_instr = bits;
+            imem.imem_mocha_subword16[side][group-4][off-12][iaddr].imem_mocha_subword_color = color;
+            imem.imem_mocha_subword16[side][group-4][off-12][iaddr].imem_mocha_subword_parity =
                     parity(bits) ^ color;
             break;
         case 32:
-            imem.imem_mocha_subword32[group][off-12][iaddr].imem_mocha_subword_instr = bits;
-            imem.imem_mocha_subword32[group][off-12][iaddr].imem_mocha_subword_color = color;
-            imem.imem_mocha_subword32[group][off-12][iaddr].imem_mocha_subword_parity =
+            imem.imem_mocha_subword32[side][group][off-12][iaddr].imem_mocha_subword_instr = bits;
+            imem.imem_mocha_subword32[side][group][off-12][iaddr].imem_mocha_subword_color = color;
+            imem.imem_mocha_subword32[side][group][off-12][iaddr].imem_mocha_subword_parity =
                     parity(bits) ^ color;
             break;
         default:
@@ -64,21 +68,21 @@ template<> void VLIWInstruction::write_regs(Target::JBay::mau_regs &regs,
     case Phv::Register::DARK:
         switch (Phv::reg(slot)->size) {
         case 8:
-            imem.imem_dark_subword8[group-4][off-16][iaddr].imem_dark_subword_instr = bits;
-            imem.imem_dark_subword8[group-4][off-16][iaddr].imem_dark_subword_color = color;
-            imem.imem_dark_subword8[group-4][off-16][iaddr].imem_dark_subword_parity =
+            imem.imem_dark_subword8[side][group-2][off-16][iaddr].imem_dark_subword_instr = bits;
+            imem.imem_dark_subword8[side][group-2][off-16][iaddr].imem_dark_subword_color = color;
+            imem.imem_dark_subword8[side][group-2][off-16][iaddr].imem_dark_subword_parity =
                     parity(bits) ^ color;
             break;
         case 16:
-            imem.imem_dark_subword16[group-8][off-16][iaddr].imem_dark_subword_instr = bits;
-            imem.imem_dark_subword16[group-8][off-16][iaddr].imem_dark_subword_color = color;
-            imem.imem_dark_subword16[group-8][off-16][iaddr].imem_dark_subword_parity =
+            imem.imem_dark_subword16[side][group-4][off-16][iaddr].imem_dark_subword_instr = bits;
+            imem.imem_dark_subword16[side][group-4][off-16][iaddr].imem_dark_subword_color = color;
+            imem.imem_dark_subword16[side][group-4][off-16][iaddr].imem_dark_subword_parity =
                     parity(bits) ^ color;
             break;
         case 32:
-            imem.imem_dark_subword32[group][off-16][iaddr].imem_dark_subword_instr = bits;
-            imem.imem_dark_subword32[group][off-16][iaddr].imem_dark_subword_color = color;
-            imem.imem_dark_subword32[group][off-16][iaddr].imem_dark_subword_parity =
+            imem.imem_dark_subword32[side][group][off-16][iaddr].imem_dark_subword_instr = bits;
+            imem.imem_dark_subword32[side][group][off-16][iaddr].imem_dark_subword_color = color;
+            imem.imem_dark_subword32[side][group][off-16][iaddr].imem_dark_subword_parity =
                     parity(bits) ^ color;
             break;
         default:

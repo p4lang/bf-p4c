@@ -19,6 +19,10 @@ class ClotInfo {
     std::map<const IR::BFN::ParserState*, std::vector<const Clot*>> parser_state_to_clots_;
 
  public:
+    // TODO(zma) encapsulate this properly
+    std::map<PHV::Container, nw_byterange> container_range_;
+
+ public:
     const std::vector<const Clot*>& clots() const { return clots_; }
 
     const std::map<const IR::BFN::ParserState*, std::vector<const Clot*>>&

@@ -99,6 +99,9 @@ class NaiveClotAlloc : public Visitor {
     }
 
     void allocate(ClotAlloc* ca) {
+        if (ca->unused_bytes == 0)
+            return;
+
         if (ca->total_bytes <= MAX_BYTES_PER_CLOT) {
             Clot* cl = new Clot();
             clot.add(cl, ca->state);
@@ -108,6 +111,8 @@ class NaiveClotAlloc : public Visitor {
                     cl->phv_fields.push_back(f);
                 cl->all_fields.push_back(f);
             }
+
+            cl->start = 0;
         } else {
             // TODO(zma) state larger than 64 bytes
         }

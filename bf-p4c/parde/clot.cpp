@@ -34,8 +34,9 @@ Clot::Clot(cstring name) {
 unsigned Clot::length() const {
     unsigned len = 0;
     for (auto f : all_fields)
-        len += (f->size + 7 / 8);
-    return len;
+        len += f->size;
+    BUG_CHECK(len % 8 == 0, "clot not byte aligned?");
+    return len / 8;
 }
 
 unsigned Clot::offset(const PHV::Field* field) const {
@@ -47,11 +48,18 @@ unsigned Clot::offset(const PHV::Field* field) const {
             found = true;
             break;
         }
-        offset += (f->size + 7) / 8;
+        offset += f->size;
     }
 
     BUG_CHECK(found, "field not in clot");
-    return offset;
+    return offset / 8;
+}
+
+bool Clot::is_phv_field(const PHV::Field* field) const {
+    for (auto f : phv_fields)
+        if (f == field)
+            return true;
+    return false;
 }
 
 void Clot::toJSON(JSONGenerator& json) const {
