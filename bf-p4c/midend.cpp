@@ -159,6 +159,8 @@ MidEnd::MidEnd(BFN_Options& options) {
         }),
         new P4::SynthesizeActions(&refMap, &typeMap, new SkipControls(skip_controls)),
         new P4::MoveActionsToTables(&refMap, &typeMap),
+        new P4::UniqueNames(&refMap),
+        new P4::UniqueParameters(&refMap, &typeMap),
         new P4::TypeChecking(&refMap, &typeMap, true),
         // XXX(zma) : assuming tofino & jbay have same arch for now
         (options.arch == "native") ? nullptr : new FillFromBlockMap(&refMap, &typeMap),

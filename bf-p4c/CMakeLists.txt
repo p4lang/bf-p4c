@@ -282,6 +282,7 @@ set (BF_P4C_BACKEND_ARCH_SRCS
   arch/native.cpp
   arch/phase0.cpp
   arch/program_structure.cpp
+  arch/remove_set_metadata.cpp
   arch/simple_switch.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_ARCH_SRCS}")
@@ -292,6 +293,7 @@ set (BF_P4C_BACKEND_ARCH_HDRS
   arch/native.h
   arch/phase0.h
   arch/program_structure.h
+  arch/remove_set_metadata.h
   arch/simple_switch.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_ARCH_HDRS}")

@@ -95,7 +95,13 @@ p4c_add_xfail_reason("tofino"
   "Couldn't resolve computed value for select"
   # XXX(seth): This code just uses packet_in.lookahead() in a way which isn't supported yet.
   testdata/p4_16_samples/issue355-bmv2.p4
-  # this one should be easy to handle, but hits this issue
+  )
+
+# This test selects against tuples containing `default` expressions, but the
+# ternary match values we generate in the assembly don't mark the appropriate
+# bits as "don't care".
+p4c_add_xfail_reason("tofino"
+  "expected packets on port .* not seen"
   testdata/p4_16_samples/issue1000-bmv2.p4
   )
 
