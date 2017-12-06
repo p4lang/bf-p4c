@@ -521,10 +521,14 @@ const IR::Node* EgressParserConverter::postorder(IR::P4Parser* node) {
     tnaParams.emplace("compiler_generated_meta", param->name);
     paramList->push_back(param);
 
+    IR::IndexedVector<IR::Declaration> parserLocals;
+    parserLocals.append(structure->egressParserDeclarations);
+    parserLocals.append(node->parserLocals);
+
     auto parser_type = new IR::Type_Parser("egressParserImpl", paramList);
     auto result = new IR::BFN::TranslatedP4Parser(parser->srcInfo, "egressParserImpl",
                                                   parser_type, parser->constructorParams,
-                                                  parser->parserLocals, parser->states,
+                                                  parserLocals, parser->states,
                                                   tnaParams, EGRESS);
     return result;
 }
@@ -794,6 +798,7 @@ const IR::Node* ParserPriorityConverter::postorder(IR::AssignmentStatement* node
     auto type = new IR::Type_Name("priority");
     auto inst = new IR::Declaration_Instance(name, type, new IR::Vector<IR::Expression>());
     structure->ingressParserDeclarations.push_back(inst);
+    structure->egressParserDeclarations.push_back(inst->clone());
 
     auto member = new IR::Member(new IR::PathExpression(name), "set");
     auto result = new IR::MethodCallStatement(node->srcInfo, member, { node->right });
@@ -815,6 +820,7 @@ const IR::Node* ParserCounterConverter::postorder(IR::AssignmentStatement* ) {
     auto type = new IR::Type_Name("parser_counter");
     auto inst = new IR::Declaration_Instance(name, type, new IR::Vector<IR::Expression>());
     structure->ingressParserDeclarations.push_back(inst);
+    structure->egressParserDeclarations.push_back(inst->clone());
 
     P4C_UNIMPLEMENTED("parser counter translation is not implemented");
     return nullptr;

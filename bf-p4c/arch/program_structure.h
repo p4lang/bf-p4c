@@ -114,6 +114,7 @@ class ProgramStructure {
     std::vector<const IR::StatOrDecl *>          ingressDeparserStatements;
     safe_vector<const IR::StatOrDecl *>          egressDeparserStatements;
     std::vector<const IR::Declaration *>         ingressParserDeclarations;
+    std::vector<const IR::Declaration *>         egressParserDeclarations;
 
     ordered_map<const IR::Member*, const IR::Member*> membersToDo;
     /// maintain the paths to translate and their thread info
