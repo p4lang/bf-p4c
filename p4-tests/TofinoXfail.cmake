@@ -930,7 +930,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Cannot find associated meter for the method call"
+  "does not have a PHV allocation though it is used in an action"
   extensions/p4_tests/p4_14/test_config_132_meter_pre_color_4.p4
   )
 

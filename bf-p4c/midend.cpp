@@ -136,7 +136,7 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::StrengthReduction(),
         new P4::MoveDeclarations(),
         new P4::ValidateTableProperties({"implementation", "size", "counters",
-                                         "meters", "size", "support_timeout"}),
+                                         "meters", "support_timeout"}),
         new P4::SimplifyControlFlow(&refMap, &typeMap),
         new P4::CompileTimeOperations(),
         new P4::TableHit(&refMap, &typeMap),

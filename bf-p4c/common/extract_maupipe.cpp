@@ -254,7 +254,7 @@ static IR::MAU::BackendAttached *createIdleTime(cstring name, const IR::Annotati
         idletime->per_flow_idletime = (per_flow_enable == 1) ? true : false;
     }
 
-    /* this is weird - precision value overrides an explicit two_way_notification 
+    /* this is weird - precision value overrides an explicit two_way_notification
      * and per_flow_idletime pragma  */
     if (idletime->precision > 1)
         idletime->two_way_notification = "two_way";
@@ -267,17 +267,47 @@ static IR::MAU::BackendAttached *createIdleTime(cstring name, const IR::Annotati
     return idletime;
 }
 
+void setupParam(IR::MAU::Synth2Port* rv, const IR::Vector<IR::Expression>* args) {
+    if (args->size() == 1) {
+        rv->settype(args->at(0)->as<IR::Member>().member.name);
+        rv->direct = true;
+    } else if (args->size() == 2) {
+        rv->settype(args->at(0)->as<IR::Member>().member.name);
+        rv->size = args->at(1)->as<IR::Constant>().asInt();
+    } else {
+        LOG2("Unexpected number of arguments " << args->size());
+    }
+}
+
+const IR::Type* getBaseType(const IR::Type* type) {
+    const IR::Type* val = type;
+    if (auto* t = type->to<IR::Type_Specialized>()) {
+        val = t->baseType;
+    } else if (auto* t = type->to<IR::Type_SpecializedCanonical>()) {
+        val = t->baseType;
+    }
+    return val;
+}
+
+cstring getTypeName(const IR::Type* type) {
+    cstring tname;
+    if (auto t = type->to<IR::Type_Name>()) {
+        tname = t->path->to<IR::Path>()->name;
+    } else if (auto t = type->to<IR::Type_Extern>()) {
+        tname = t->name;
+    } else {
+        BUG("Type %s is not supported as attached table", type->toString());
+    }
+    return tname;
+}
+
 static IR::MAU::BackendAttached *createAttached(IR::MAU::Table *tt, Util::SourceInfo srcInfo,
         cstring name, const IR::Type *type, const IR::Vector<IR::Expression> *args,
         const IR::Annotations *annot, std::map<cstring, IR::MAU::ActionData *> *shared_ap,
         std::map<cstring, IR::MAU::Selector*> *shared_as) {
-    // FIXME -- this should be looking at the arch model, but the current arch model stuff
-    // is too complex -- need a way of building this automatically from the arch.p4 file.
-    // For now, hack just using the type name as a string.
-    IR::MAU::Synth2Port *rv = nullptr;
-    cstring tname = type->toString();
-    if (auto p = tname.find('<'))  // strip off type args (if any)
-        tname = tname.before(p);
+    auto baseType = getBaseType(type);
+    auto tname = getTypeName(baseType);
+
     if (tname == "action_selector") {
         if (shared_as == nullptr || shared_ap == nullptr)
             BUG("Action Selector %s used in an impossible manner", name);
@@ -339,7 +369,8 @@ static IR::MAU::BackendAttached *createAttached(IR::MAU::Table *tt, Util::Source
                 ctr->min_width = anno->expr.at(0)->as<IR::Constant>().asInt();
             else
                 WARNING("unknown annotation " << anno->name << " on " << tname); }
-        rv = ctr;
+        setupParam(ctr, args);
+        return ctr;
     } else if (tname == "meter" || tname == "direct_meter") {
         auto mtr = new IR::MAU::Meter(srcInfo, name, annot);
         for (auto anno : annot->annotations) {
@@ -351,34 +382,30 @@ static IR::MAU::BackendAttached *createAttached(IR::MAU::Table *tt, Util::Source
                 mtr->implementation = anno->expr.at(0)->as<IR::StringLiteral>();
             else
                 WARNING("unknown annotation " << anno->name << " on " << tname); }
-        rv = mtr;
-    } else {
-        LOG2("Failed to create attached table for " << type->toString());
-        return nullptr; }
+        setupParam(mtr, args);
+        return mtr;
+    } else if (tname == "lpf") {
+        auto mtr = new IR::MAU::Meter(srcInfo, name, annot);
+        mtr->implementation = IR::ID("lpf");
+        if (args->size() == 0) {
+            mtr->direct = true;
+        } else if (args->size() == 1) {
+            mtr->size = args->at(0)->as<IR::Constant>().asInt();
+        }
+        return mtr;
+    } else if (tname == "wred") {
+        auto mtr = new IR::MAU::Meter(srcInfo, name, annot);
+        mtr->implementation = IR::ID("wred");
+        if (args->size() == 2) {
+            mtr->direct = true;
+        } else if (args->size() == 1) {
+            mtr->size = args->at(2)->as<IR::Constant>().asInt();
+        }
+        return mtr;
+    }
 
-    switch (args->size()) {
-        case 1:
-            rv->settype(args->at(0)->as<IR::Member>().member.name);
-            rv->direct = true;
-            break;
-        case 2:
-            // XXX(hanw) handles both (member, constant) and
-            // (constant, member) in meter constructor
-            // because we are in the transition from v1model.p4 to tofino.p4
-            if (args->at(0)->is<IR::Member>()) {
-                rv->settype(args->at(0)->as<IR::Member>().member.name);
-                rv->size = args->at(1)->as<IR::Constant>().asInt();
-            } else if (args->at(0)->is<IR::Constant>()) {
-                rv->size = args->at(0)->as<IR::Constant>().asInt();
-                rv->settype(args->at(1)->as<IR::Member>().member.name);
-            } else {
-                BUG("unknown argument in meter %s", name);
-            }
-            break;
-        default:
-            BUG("wrong number of arguments to %s ctor %s", tname, args);
-            break; }
-    return rv;
+    LOG2("Failed to create attached table for " << tname);
+    return nullptr;
 }
 
 static void updateAttachedSalu(const P4::ReferenceMap *refMap, IR::MAU::StatefulAlu *&salu,
@@ -418,6 +445,7 @@ static void updateAttachedSalu(const P4::ReferenceMap *refMap, IR::MAU::Stateful
 }
 
 namespace {
+
 class FixP4Table : public Inspector {
     const P4::ReferenceMap *refMap;
     IR::MAU::Table *tt;
@@ -433,33 +461,17 @@ class FixP4Table : public Inspector {
         auto prop = findContext<IR::Property>();
         if (prop->name == "counters" || prop->name == "meters" ||
                    prop->name == "implementation") {
-            // counters: direct counters
-            // meters: direct meters
-            // implementation: action profile and action selector
             auto pval = ev->expression;
             IR::MAU::BackendAttached *obj = nullptr;
             if (auto cc = pval->to<IR::ConstructorCallExpression>()) {
-                cstring tname;
-                if (auto type = cc->type->to<IR::Type_SpecializedCanonical>()) {
-                    tname = type->getP4Type()->toString();
-                } else {
-                    tname = cc->type->toString();
-                }
-                if (auto p = tname.find('<'))  // strip off type args (if any)
-                    tname = tname.before(p);
+                auto baseType = getBaseType(cc->type);
+                auto tname = getTypeName(baseType);
                 unique_names.insert(tname);   // don't use the type name directly
                 tname = cstring::make_unique(unique_names, tname);
                 unique_names.insert(tname);
-
-                if (auto type = cc->type->to<IR::Type_SpecializedCanonical>()) {
-                    obj = createAttached(tt, cc->srcInfo, prop->externalName(tname),
-                            type->baseType, cc->arguments, prop->annotations,
-                            shared_ap, shared_as);
-                } else {
-                    obj = createAttached(tt, cc->srcInfo, prop->externalName(tname),
-                            cc->type, cc->arguments, prop->annotations,
-                            shared_ap, shared_as);
-                }
+                obj = createAttached(tt, cc->srcInfo, prop->externalName(tname),
+                                     baseType, cc->arguments, prop->annotations,
+                                     shared_ap, shared_as);
                 LOG3("Created " << obj->node_type_name() << ' ' << obj->name << " (pt 1)");
             } else if (auto pe = pval->to<IR::PathExpression>()) {
                 auto &d = refMap->getDeclaration(pe->path, true)->as<IR::Declaration_Instance>();
