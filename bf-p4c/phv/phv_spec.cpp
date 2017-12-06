@@ -122,13 +122,13 @@ bitvec PhvSpec::ingressOrEgressOnlyContainers(
 
 const bitvec& PhvSpec::ingressOnly() const {
     if (ingress_only_containers_i) return ingress_only_containers_i.value();
-    ingress_only_containers_i = std::move(ingressOrEgressOnlyContainers(ingressOnlyMauGroupIds));
+    ingress_only_containers_i = ingressOrEgressOnlyContainers(ingressOnlyMauGroupIds);
     return ingress_only_containers_i.value();
 }
 
 const bitvec& PhvSpec::egressOnly() const {
     if (egress_only_containers_i) return egress_only_containers_i.value();
-    egress_only_containers_i = std::move(ingressOrEgressOnlyContainers(egressOnlyMauGroupIds));
+    egress_only_containers_i = ingressOrEgressOnlyContainers(egressOnlyMauGroupIds);
     return egress_only_containers_i.value();
 }
 
@@ -315,7 +315,7 @@ bitvec JBayPhvSpec::deparserGroup(unsigned id) const {
 
 const bitvec& JBayPhvSpec::individuallyAssignedContainers() const {
     if (individually_assigned_containers_i) return individually_assigned_containers_i.value();
-    individually_assigned_containers_i = std::move(bitvec());
+    individually_assigned_containers_i.emplace();
     return individually_assigned_containers_i.value();
 }
 
