@@ -70,6 +70,7 @@ error {
     // Add more errors here.
 }
 
+@__compiler_generated
 struct compiler_generated_metadata_t {
     // This struct is intentionally left blank and to be filled by later passes.
 }
@@ -77,6 +78,7 @@ struct compiler_generated_metadata_t {
 // -----------------------------------------------------------------------------
 // INGRESS INTRINSIC METADATA
 // -----------------------------------------------------------------------------
+@__intrinsic_metadata
 header ingress_intrinsic_metadata_t {
     bit<1> resubmit_flag;                // flag distinguising original packets
                                          // from resubmitted packets.
@@ -94,6 +96,7 @@ header ingress_intrinsic_metadata_t {
 }
 
 /// Produced by Ingress Parser-Auxiliary
+@__intrinsic_metadata
 struct ingress_intrinsic_metadata_from_parser_t {
     bit<48> ingress_global_tstamp;       // global timestamp (ns) taken upon
                                          // arrival at ingress.
@@ -103,6 +106,7 @@ struct ingress_intrinsic_metadata_from_parser_t {
                                          // encountered at ingress parser.
 }
 
+@__intrinsic_metadata
 struct ingress_intrinsic_metadata_for_tm_t {
     // The ingress physical port id is passed to the TM directly from
     bit<9> ucast_egress_port;            // egress port for unicast packets. must
@@ -170,6 +174,7 @@ struct ingress_intrinsic_metadata_for_tm_t {
     bit<16> rid;                         // L3 replication id for multicast.
 }
 
+@__intrinsic_metadata
 struct ingress_intrinsic_metadata_for_deparser_t {
     bit<3> learn_idx;
     bit<3> resubmit_idx;
@@ -183,6 +188,7 @@ struct ingress_intrinsic_metadata_for_deparser_t {
                            // not really something that should be user-visible.
 }
 
+@__intrinsic_metadata
 struct ingress_intrinsic_metadata_for_mirror_buffer_t {
     bit<10> mirror_id;                   // ingress mirror id. must be presented
                                          // to mirror buffer for mirrored
@@ -192,6 +198,7 @@ struct ingress_intrinsic_metadata_for_mirror_buffer_t {
 // -----------------------------------------------------------------------------
 // EGRESS INTRINSIC METADATA
 // -----------------------------------------------------------------------------
+@__intrinsic_metadata
 header egress_intrinsic_metadata_t {
     bit<7> _pad0;
 
@@ -253,6 +260,7 @@ header egress_intrinsic_metadata_t {
     bit<16> pkt_length;                  // Packet length, in bytes
 }
 
+@__intrinsic_metadata
 struct egress_intrinsic_metadata_from_parser_t {
     bit<48> egress_global_tstamp;        // global time stamp (ns) taken at the
                                          // egress pipe.
@@ -277,6 +285,7 @@ struct egress_intrinsic_metadata_from_parser_t {
                                          // taken from other packets
 }
 
+@__intrinsic_metadata
 struct egress_intrinsic_metadata_for_deparser_t {
     bit<3> mirror_idx;
 
@@ -288,6 +297,7 @@ struct egress_intrinsic_metadata_for_deparser_t {
                            // not really something that should be user-visible.
 }
 
+@__intrinsic_metadata
 struct egress_intrinsic_metadata_for_mirror_buffer_t {
     bit<10> mirror_id;                   // egress mirror id. must be presented to
                                          // mirror buffer for mirrored packets.
@@ -298,6 +308,7 @@ struct egress_intrinsic_metadata_for_mirror_buffer_t {
                                          // buffer
 }
 
+@__intrinsic_metadata
 struct egress_intrinsic_metadata_for_output_port_t {
     bit<1> capture_tstamp_on_tx;         // request for packet departure
                                          // timestamping at egress MAC for IEEE
