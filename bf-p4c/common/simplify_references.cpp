@@ -123,8 +123,9 @@ class RemoveInstanceRef : public Transform {
 };
 
 /**
- * Remove calls to the `isValid()` method on headers and replace them with
- * references to the header's `$valid` POV bit field.
+ * Remove calls to the `isValid()`, `setValid()`, and `setInvalid()` methods on
+ * headers and replace them with references to the header's `$valid` POV bit
+ * field.
  *
  * XXX(seth): It would be nicer to deal with this in terms of the
  * frontend/midend IR, because then we could rerun type checking and resolve
@@ -132,13 +133,29 @@ class RemoveInstanceRef : public Transform {
  * bit hacky by comparison. This is considerably simpler, though, so it makes
  * sense as a first step.
  */
-class RemoveIsValid : public Transform {
- private:
+struct SimplifyHeaderValidMethods : public Transform {
     const IR::Expression* preorder(IR::MethodCallExpression* call) override {
         auto* method = call->method->to<IR::Member>();
         if (!method) return call;
-
         if (method->member != "isValid") return call;
+        return replaceWithPOVRead(call, method);
+    }
+
+    const IR::Statement* preorder(IR::MethodCallStatement* statement) override {
+        auto* call = statement->methodCall;
+        auto* method = call->method->to<IR::Member>();
+        if (!method) return statement;
+
+        if (method->member == "setValid")
+            return replaceWithPOVWrite(statement, method, 1);
+        else if (method->member == "setInvalid")
+            return replaceWithPOVWrite(statement, method, 0);
+        return statement;
+    }
+
+    const IR::Expression*
+    replaceWithPOVRead(const IR::MethodCallExpression* call,
+                       const IR::Member* method) {
         BUG_CHECK(call->arguments->size() == 0,
                   "Wrong number of arguments for method call: %1%", call);
         auto* target = method->expr;
@@ -162,6 +179,28 @@ class RemoveIsValid : public Transform {
         auto* result = new IR::Equ(call->srcInfo, member, constant);
         result->type = IR::Type::Boolean::get();
         return result;
+    }
+
+    const IR::Statement*
+    replaceWithPOVWrite(const IR::MethodCallStatement* statement,
+                        const IR::Member* method, unsigned value) {
+        BUG_CHECK(statement->methodCall->arguments->size() == 0,
+                  "Wrong number of arguments for method call: %1%", statement);
+        auto* target = method->expr;
+        BUG_CHECK(target != nullptr, "Method has no target: %1%", statement);
+        BUG_CHECK(target->type->is<IR::Type_Header>(),
+                  "Invoking isValid() on unexpected type %1%", target->type);
+
+        // On Barefoot architectures, calling a header's `setValid()` and
+        // `setInvalid()` methods is implemented by write the header's POV bit,
+        // which is a simple bit<1> value.
+        const cstring validField = "$valid";
+        auto* member = new IR::Member(statement->srcInfo, target, validField);
+        member->type = IR::Type::Bits::get(1);
+
+        // Rewrite the method call into an assignment with the same effect.
+        auto* constant = new IR::Constant(IR::Type::Bits::get(1), value);
+        return new IR::AssignmentStatement(statement->srcInfo, member, constant);
     }
 };
 
@@ -193,7 +232,7 @@ SimplifyReferences::SimplifyReferences(ParamBinding* bindings,
         new ApplyParamBindings(bindings, refMap),
         new SplitComplexInstanceRef,
         new RemoveInstanceRef,
-        new RemoveIsValid,
+        new SimplifyHeaderValidMethods,
         new ConvertIndexToHeaderStackItemRef,
         new RewriteForTofino(refMap, typeMap),
     });
