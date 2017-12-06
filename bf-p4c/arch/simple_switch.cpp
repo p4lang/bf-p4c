@@ -89,6 +89,10 @@ class LoadTargetArchitecture : public Inspector {
 
         addMetadata("standard_metadata", "drop", "ig_intr_md_for_tm", "drop_ctl", 3);
 
+        // XXX(hanw): standard_metadata.mcast_grp does not have a mapping tofino.
+        // we default to ig_intr_md_for_tm.mcast_grp_a just to pass the translation.
+        addMetadata(INGRESS, "standard_metadata", "mcast_grp",
+                             "ig_intr_md_for_tm", "mcast_grp_a", 16);
         // XXX(seth): We need to figure out what to map this to.
         // addMetadata("standard_metadata", "instance_type",
         //             "eg_intr_md", "instance_type", 32);

@@ -100,16 +100,16 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::ClearTypeMap(&typeMap),
         evaluator,
         new P4::Inline(&refMap, &typeMap, evaluator),
+        new P4::InlineActions(&refMap, &typeMap),
+        new P4::LocalizeAllActions(&refMap),
+        new P4::UniqueNames(&refMap),
+        new P4::UniqueParameters(&refMap, &typeMap),
         // translate architecture after program inlining to
         // avoid handling abitrary parameters in user defined control blocks
         (options.arch == "v1model") ?
             new BFN::SimpleSwitchTranslation(&refMap, &typeMap, options /*map*/) : nullptr,
         (options.arch == "native") ?
             new BFN::NormalizeNativeProgram(&refMap, &typeMap, options /*map*/) : nullptr,
-        new P4::InlineActions(&refMap, &typeMap),
-        new P4::LocalizeAllActions(&refMap),
-        new P4::UniqueNames(&refMap),
-        new P4::UniqueParameters(&refMap, &typeMap),
         new P4::SimplifyControlFlow(&refMap, &typeMap),
         new P4::RemoveActionParameters(&refMap, &typeMap),
         new P4::SimplifyKey(&refMap, &typeMap,

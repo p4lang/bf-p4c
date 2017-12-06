@@ -478,7 +478,6 @@ p4c_add_xfail_reason("tofino"
   "Exiting with SIGSEGV"
   extensions/p4_tests/p4_14/c1/COMPILER-635/case3468.p4
   extensions/p4_tests/p4_14/c1/COMPILER-637/case3478.p4
-  testdata/p4_16_samples/issue461-bmv2.p4
   # Same Name Conversion Bug
   extensions/p4_tests/p4_14/shared_names.p4
   )
@@ -705,6 +704,8 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Could not find declaration for standard_metadata"
   testdata/p4_14_samples/resubmit.p4
+  testdata/p4_16_samples/drop-bmv2.p4
+  testdata/p4_16_samples/std_meta_inlining.p4
   )
 # We fail to translate `standard_metadata.instance_type`.
 p4c_add_xfail_reason("tofino"
@@ -761,16 +762,6 @@ p4c_add_xfail_reason("tofino"
 # backend bug
 p4c_add_xfail_reason("tofino"
   "Slice is of IR structure not handled by ActionAnalysis"
-  )
-# need a good way to handle global action
-p4c_add_xfail_reason("tofino"
-  "Could not find declaration for drop"
-  testdata/p4_16_samples/drop-bmv2.p4
-  )
-# need a good way to handle global action
-p4c_add_xfail_reason("tofino"
-  "Could not find declaration for send_to_cpu"
-  testdata/p4_16_samples/std_meta_inlining.p4
   )
 p4c_add_xfail_reason("tofino"
   "Action argument is not found to be allocated in the action format"
@@ -1053,4 +1044,4 @@ p4c_add_xfail_reason("tofino"
   )
 
 # BRIG-348
-p4c_add_xfail_reason("tofino" "Compiler Bug" ${ONOS_FABRIC_P4})
+p4c_add_xfail_reason("tofino" "Couldn't resolve computed value" ${ONOS_FABRIC_P4})
