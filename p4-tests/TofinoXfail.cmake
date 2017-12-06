@@ -1048,4 +1048,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 # BRIG-348
-p4c_add_xfail_reason("tofino" "Couldn't resolve computed value" ${ONOS_FABRIC_P4})
+p4c_add_xfail_reason("tofino"
+  "PHV allocation was not successful"
+  ${ONOS_FABRIC_P4})
