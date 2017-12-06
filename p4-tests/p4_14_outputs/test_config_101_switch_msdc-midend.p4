@@ -1226,6 +1226,12 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".bd_action_profile") action_profile(32w16384) bd_action_profile;
+
+@name(".ecmp_action_profile") action_selector(HashAlgorithm.crc16, 32w16384, 32w10) ecmp_action_profile;
+
+@name(".lag_action_profile") action_selector(HashAlgorithm.crc16, 32w1024, 32w8) lag_action_profile;
+
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("NoAction") action NoAction_0() {
     }
@@ -1785,7 +1791,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.vlan_tag_[1].vid         : exact @name("vlan_tag_[1].vid") ;
         }
         size = 32768;
-        @name(".bd_action_profile") implementation = action_profile(32w16384);
+        implementation = bd_action_profile;
         default_action = NoAction_39();
     }
     @name(".nop") action _nop_3() {
@@ -2273,7 +2279,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.ingress_metadata.lkp_l4_dport: selector @name("ingress_metadata.lkp_l4_dport") ;
         }
         size = 1024;
-        @name(".ecmp_action_profile") implementation = action_selector(HashAlgorithm.crc16, 32w16384, 32w10);
+        implementation = ecmp_action_profile;
         default_action = NoAction_53();
     }
     @name(".nexthop") table _nexthop_0 {
@@ -2324,7 +2330,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.ingress_metadata.lkp_l4_dport  : selector @name("ingress_metadata.lkp_l4_dport") ;
         }
         size = 1024;
-        @name(".lag_action_profile") implementation = action_selector(HashAlgorithm.crc16, 32w1024, 32w8);
+        implementation = lag_action_profile;
         default_action = NoAction_56();
     }
     @name(".nop") action _nop_18() {
@@ -2497,3 +2503,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

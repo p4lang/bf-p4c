@@ -701,6 +701,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Loris") @mode("resilient") action_selector(HashAlgorithm.identity, 32w4096, 32w66) Loris;
+
+@name(".Quivero") @mode("resilient") action_selector(HashAlgorithm.identity, 32w512, 32w51) Quivero;
+
 control Alamosa2(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Alstown") action Alstown(bit<24> Ericsburg) {
         meta.Allgood.Tavistock = (meta.Allgood.Tavistock >= Ericsburg ? meta.Allgood.Tavistock : Ericsburg);
@@ -2803,7 +2807,7 @@ control Shanghai(inout headers hdr, inout metadata meta, inout standard_metadata
             meta.Segundo.Rhine : selector;
         }
         size = 2048;
-        @name(".Loris") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w4096, 32w66);
+        implementation = Loris;
     }
     apply {
         if (meta.Langlois.Baird != 11w0) {
@@ -2880,7 +2884,7 @@ control Wrenshall(inout headers hdr, inout metadata meta, inout standard_metadat
             meta.Segundo.GlenDean : selector;
         }
         size = 3072;
-        @name(".Quivero") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w512, 32w51);
+        implementation = Quivero;
     }
     apply {
         if ((meta.Trenary.Arredondo & 16w0x2000) == 16w0x2000) {
@@ -3110,3 +3114,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

@@ -510,6 +510,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Brazil") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Brazil;
+
+@name(".Tabler") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w51) Tabler;
+
 control Arial(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Gobles") action Gobles_0(bit<16> Putnam) {
         meta.Roseau.Firesteel = Putnam;
@@ -1081,7 +1085,7 @@ control Longwood(inout headers hdr, inout metadata meta, inout standard_metadata
             meta.Penrose.Philbrook : selector @name("Penrose.Philbrook") ;
         }
         size = 1024;
-        @name(".Brazil") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Brazil;
         default_action = NoAction();
     }
     apply {
@@ -1207,7 +1211,7 @@ control Meridean(inout headers hdr, inout metadata meta, inout standard_metadata
             meta.Penrose.Lathrop: selector @name("Penrose.Lathrop") ;
         }
         size = 2048;
-        @name(".Tabler") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w51);
+        implementation = Tabler;
         default_action = NoAction();
     }
     apply {
@@ -1879,3 +1883,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

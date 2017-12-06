@@ -164,6 +164,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".ActionProf") action_selector(HashAlgorithm.crc16, 32w128, 32w16) ActionProf;
+
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
     }
@@ -238,7 +240,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ethernet.srcAddr: selector @name("ethernet.srcAddr") ;
         }
         size = 1024;
-        @name(".ActionProf") implementation = action_selector(HashAlgorithm.crc16, 32w128, 32w16);
+        implementation = ActionProf;
         default_action = NoAction_5();
     }
     @name("._CounterATable") table _CounterATable {
@@ -289,3 +291,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

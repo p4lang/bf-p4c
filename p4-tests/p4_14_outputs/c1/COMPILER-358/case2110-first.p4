@@ -525,6 +525,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Husum") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Husum;
+
+@name(".Whitakers") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w51) Whitakers;
+
 control Bonilla(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Mullins") action Mullins() {
         hdr.Nuremberg.Panola = meta.CedarKey.Provencal;
@@ -944,7 +948,7 @@ control Lordstown(inout headers hdr, inout metadata meta, inout standard_metadat
             meta.Elmdale.MudLake: selector @name("Elmdale.MudLake") ;
         }
         size = 1024;
-        @name(".Husum") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Husum;
         default_action = NoAction();
     }
     apply {
@@ -1732,7 +1736,7 @@ control Tidewater(inout headers hdr, inout metadata meta, inout standard_metadat
             meta.Elmdale.Elwood   : selector @name("Elmdale.Elwood") ;
         }
         size = 2048;
-        @name(".Whitakers") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w51);
+        implementation = Whitakers;
         default_action = NoAction();
     }
     apply {
@@ -1917,3 +1921,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

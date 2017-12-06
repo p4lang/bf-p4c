@@ -677,6 +677,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Kaibab") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w66) Kaibab;
+
+@name(".Tanacross") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Tanacross;
+
 @name("Jesup") struct Jesup {
     bit<8>  Eustis;
     bit<16> Seaforth;
@@ -2313,7 +2317,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Benonine.Exell   : selector @name("Benonine.Exell") ;
         }
         size = 2048;
-        @name(".Kaibab") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w66);
+        implementation = Kaibab;
         default_action = NoAction_94();
     }
     @name(".Blakeley") action _Blakeley_2(bit<32> DuQuoin) {
@@ -2678,7 +2682,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Benonine.Pelion: selector @name("Benonine.Pelion") ;
         }
         size = 1024;
-        @name(".Tanacross") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Tanacross;
         default_action = NoAction_104();
     }
     @name(".Milan") action _Milan() {
@@ -3114,3 +3118,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

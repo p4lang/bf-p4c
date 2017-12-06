@@ -209,6 +209,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".lag_action_profile") action_selector(HashAlgorithm.crc16, 32w1024, 32w14) lag_action_profile;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".lag_mbrs") register<bit<1>>(32w1) lag_mbrs;
     register_action<bit<1>, bit<1>>(lag_mbrs) port_status_alu = {
@@ -241,7 +243,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.tcp.srcPort         : selector @name("tcp.srcPort") ;
             hdr.tcp.dstPort         : selector @name("tcp.dstPort") ;
         }
-        @name(".lag_action_profile") implementation = action_selector(HashAlgorithm.crc16, 32w1024, 32w14);
+        implementation = lag_action_profile;
         default_action = NoAction();
     }
     @name(".lag_group_fast_update") table lag_group_fast_update {
@@ -288,3 +290,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

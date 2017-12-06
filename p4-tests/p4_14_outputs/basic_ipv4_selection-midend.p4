@@ -242,6 +242,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".ecmp_action_profile") @mode("resilient") action_selector(HashAlgorithm.random, 32w4096, 32w72) ecmp_action_profile;
+
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
     }
@@ -269,7 +271,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.protocol      : selector @name("ipv4.protocol") ;
         }
         size = 512;
-        @name(".ecmp_action_profile") @mode("resilient") implementation = action_selector(HashAlgorithm.random, 32w4096, 32w72);
+        implementation = ecmp_action_profile;
         default_action = NoAction_0();
     }
     apply {
@@ -313,3 +315,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

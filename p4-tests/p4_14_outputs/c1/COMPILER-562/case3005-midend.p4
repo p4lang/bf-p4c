@@ -708,6 +708,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Allegan") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w66) Allegan;
+
+@name(".Dowell") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Dowell;
+
 @name("Kupreanof") struct Kupreanof {
     bit<8>  Accomac;
     bit<16> Holtville;
@@ -2258,7 +2262,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Newfield.Burden: selector @name("Newfield.Burden") ;
         }
         size = 2048;
-        @name(".Allegan") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w66);
+        implementation = Allegan;
         default_action = NoAction_90();
     }
     @name(".Connell") action _Connell_2(bit<32> RoseTree) {
@@ -2623,7 +2627,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Newfield.Brookston: selector @name("Newfield.Brookston") ;
         }
         size = 1024;
-        @name(".Dowell") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Dowell;
         default_action = NoAction_100();
     }
     @name(".Bledsoe") action _Bledsoe(bit<5> Bayne) {
@@ -3120,3 +3124,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

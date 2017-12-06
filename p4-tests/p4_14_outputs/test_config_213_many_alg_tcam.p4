@@ -206,6 +206,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".ap") action_profile(32w65536) ap;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".ipv4_lpm_hit") action ipv4_lpm_hit() {
         hdr.ipv4.ttl = hdr.ipv4.ttl - 8w1;
@@ -228,7 +230,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.dstAddr         : lpm;
         }
         size = 65536;
-        @name(".ap") implementation = action_profile(32w65536);
+        implementation = ap;
     }
     @name(".ipv4_lpm_partition") table ipv4_lpm_partition {
         actions = {
@@ -270,3 +272,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

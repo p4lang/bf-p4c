@@ -562,6 +562,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Poneto") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w51) Poneto;
+
+@name(".Tagus") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Tagus;
+
 control Benwood(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Hilbert") direct_counter(CounterType.packets_and_bytes) Hilbert;
     @name(".Sarasota") action Sarasota(bit<8> Bostic) {
@@ -770,7 +774,7 @@ control Elsmere(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Watters.Langston: selector;
         }
         size = 2048;
-        @name(".Poneto") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w51);
+        implementation = Poneto;
     }
     apply {
         if (meta.Arapahoe.Minetto != 11w0) {
@@ -1801,7 +1805,7 @@ control Sugarloaf(inout headers hdr, inout metadata meta, inout standard_metadat
             meta.Watters.Bleecker : selector;
         }
         size = 1024;
-        @name(".Tagus") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Tagus;
     }
     apply {
         if ((meta.Fontana.Calverton & 16w0x2000) == 16w0x2000) {
@@ -2022,3 +2026,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

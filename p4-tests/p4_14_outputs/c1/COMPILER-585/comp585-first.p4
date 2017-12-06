@@ -693,6 +693,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Ackerly") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w66) Ackerly;
+
+@name(".Luzerne") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Luzerne;
+
 control Absarokee(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Gamewell") action Gamewell(bit<32> Ketchum) {
         meta.Belcourt.Hitterdal = (meta.Belcourt.Hitterdal >= Ketchum ? meta.Belcourt.Hitterdal : Ketchum);
@@ -739,7 +743,7 @@ control Arkoe(inout headers hdr, inout metadata meta, inout standard_metadata_t 
             meta.Sagerton.Haverford: selector @name("Sagerton.Haverford") ;
         }
         size = 1024;
-        @name(".Luzerne") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Luzerne;
         default_action = NoAction();
     }
     apply {
@@ -2568,7 +2572,7 @@ control Lushton(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Sagerton.Dwight   : selector @name("Sagerton.Dwight") ;
         }
         size = 2048;
-        @name(".Ackerly") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w66);
+        implementation = Ackerly;
         default_action = NoAction();
     }
     apply {
@@ -4252,3 +4256,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

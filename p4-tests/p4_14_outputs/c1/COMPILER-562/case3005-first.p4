@@ -708,6 +708,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Allegan") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w66) Allegan;
+
+@name(".Dowell") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Dowell;
+
 control Ahuimanu(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Cornwall") action Cornwall() {
         meta.PineCity.Woodland = 1w1;
@@ -3093,7 +3097,7 @@ control Nelagoney(inout headers hdr, inout metadata meta, inout standard_metadat
             meta.Newfield.Brookston: selector @name("Newfield.Brookston") ;
         }
         size = 1024;
-        @name(".Dowell") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Dowell;
         default_action = NoAction();
     }
     apply {
@@ -3358,7 +3362,7 @@ control Raceland(inout headers hdr, inout metadata meta, inout standard_metadata
             meta.Newfield.Burden: selector @name("Newfield.Burden") ;
         }
         size = 2048;
-        @name(".Allegan") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w66);
+        implementation = Allegan;
         default_action = NoAction();
     }
     apply {
@@ -4258,3 +4262,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

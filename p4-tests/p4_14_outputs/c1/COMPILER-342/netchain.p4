@@ -238,6 +238,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".lag_ap") @mode("resilient") action_selector(HashAlgorithm.random, 32w4096, 32w66) lag_ap;
+
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
     }
@@ -280,7 +282,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ig_intr_md.ingress_port: selector;
         }
         size = 16384;
-        @name(".lag_ap") @mode("resilient") implementation = action_selector(HashAlgorithm.random, 32w4096, 32w66);
+        implementation = lag_ap;
     }
     @name(".egr_port") table egr_port {
         actions = {
@@ -353,3 +355,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

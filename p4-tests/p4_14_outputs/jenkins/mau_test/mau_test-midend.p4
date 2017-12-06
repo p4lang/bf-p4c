@@ -222,6 +222,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".sel_tbl_ap") @mode("resilient") action_selector(HashAlgorithm.random, 32w1024, 32w51) sel_tbl_ap;
+
 struct e1_alu_layout {
     int<32> lo;
     int<32> hi;
@@ -1543,7 +1545,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ethernet.etherType: selector @name("ethernet.etherType") ;
         }
         size = 1;
-        @name(".sel_tbl_ap") @mode("resilient") implementation = action_selector(HashAlgorithm.random, 32w1024, 32w51);
+        implementation = sel_tbl_ap;
         default_action = NoAction_126();
     }
     @stage(1) @name(".set_mrk_hi") table set_mrk_hi {
@@ -1712,3 +1714,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

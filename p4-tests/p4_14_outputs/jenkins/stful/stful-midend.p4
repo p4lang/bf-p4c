@@ -327,6 +327,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".lag_ap") @mode("resilient") action_selector(HashAlgorithm.random, 32w4096, 32w66) lag_ap;
+
+@name(".next_hop_ecmp_ap") @mode("fair") action_selector(HashAlgorithm.crc32, 32w4096, 32w29) next_hop_ecmp_ap;
+
 struct counter_alu_layout {
     int<32> lo;
     int<32> hi;
@@ -639,7 +643,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ig_intr_md.ingress_port: selector @name("ig_intr_md.ingress_port") ;
         }
         size = 16384;
-        @name(".lag_ap") @mode("resilient") implementation = action_selector(HashAlgorithm.random, 32w4096, 32w66);
+        implementation = lag_ap;
         default_action = NoAction_23();
     }
     @name(".egr_port") table egr_port {
@@ -727,7 +731,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.md.flowlet_hash_input: selector @name("md.flowlet_hash_input") ;
         }
         size = 4096;
-        @name(".next_hop_ecmp_ap") @mode("fair") implementation = action_selector(HashAlgorithm.crc32, 32w4096, 32w29);
+        implementation = next_hop_ecmp_ap;
         default_action = NoAction_30();
     }
     @name(".one_bit_read_1") table one_bit_read_1 {
@@ -1026,3 +1030,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

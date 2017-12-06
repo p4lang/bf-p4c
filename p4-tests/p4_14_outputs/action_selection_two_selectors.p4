@@ -33,6 +33,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".set_b1_3") @mode("fair") action_selector(HashAlgorithm.crc16, 32w160000, 32w14) set_b1_3;
+
+@name(".set_b4_6") @mode("fair") action_selector(HashAlgorithm.random, 32w1024, 32w14) set_b4_6;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".setb1") action setb1(bit<8> val1) {
         hdr.data.b1 = val1;
@@ -65,7 +69,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.h3: selector;
         }
         size = 10000;
-        @name(".set_b1_3") @mode("fair") implementation = action_selector(HashAlgorithm.crc16, 32w160000, 32w14);
+        implementation = set_b1_3;
     }
     @name(".test2") table test2 {
         actions = {
@@ -80,7 +84,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.h6: selector;
         }
         size = 5000;
-        @name(".set_b4_6") @mode("fair") implementation = action_selector(HashAlgorithm.random, 32w1024, 32w14);
+        implementation = set_b4_6;
     }
     apply {
         test1.apply();
@@ -110,3 +114,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

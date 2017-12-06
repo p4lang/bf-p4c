@@ -240,6 +240,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".ecmp_action_profile") @mode("fair") action_selector(HashAlgorithm.crc16, 32w1024, 32w14) ecmp_action_profile;
+
+@name(".indirect_action_profile") action_profile(32w1500) indirect_action_profile;
+
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".nop") action nop() {
     }
@@ -514,7 +518,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.protocol      : selector;
         }
         size = 512;
-        @name(".ecmp_action_profile") @mode("fair") implementation = action_selector(HashAlgorithm.crc16, 32w1024, 32w14);
+        implementation = ecmp_action_profile;
     }
     @immediate(1) @stage(1) @name(".ipv4_routing_stage_1") table ipv4_routing_stage_1 {
         actions = {
@@ -555,7 +559,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.version      : exact;
         }
         size = 2048;
-        @name(".indirect_action_profile") implementation = action_profile(32w1500);
+        implementation = indirect_action_profile;
     }
     @stage(2) @name(".tcam_tbl_stage_2") table tcam_tbl_stage_2 {
         actions = {
@@ -629,3 +633,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

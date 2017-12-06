@@ -681,6 +681,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Gallinas") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Gallinas;
+
+@name(".KawCity") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w66) KawCity;
+
 control Amesville(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".ShadeGap") action ShadeGap() {
         hash<bit<32>, bit<32>, tuple<bit<24>, bit<24>, bit<24>, bit<24>, bit<16>>, bit<64>>(meta.Perma.BigPark, HashAlgorithm.crc32, 32w0, { hdr.Frontenac.Wolcott, hdr.Frontenac.Glouster, hdr.Frontenac.Farner, hdr.Frontenac.Lapoint, hdr.Frontenac.WoodDale }, 64w4294967296);
@@ -914,7 +918,7 @@ control Bergoo(inout headers hdr, inout metadata meta, inout standard_metadata_t
             meta.Laneburg.Mineral: selector @name("Laneburg.Mineral") ;
         }
         size = 2048;
-        @name(".KawCity") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w66);
+        implementation = KawCity;
         default_action = NoAction();
     }
     apply {
@@ -1334,7 +1338,7 @@ control Palatka(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Laneburg.Swain    : selector @name("Laneburg.Swain") ;
         }
         size = 1024;
-        @name(".Gallinas") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Gallinas;
         default_action = NoAction();
     }
     apply {
@@ -3435,3 +3439,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

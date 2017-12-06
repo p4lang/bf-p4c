@@ -686,6 +686,12 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Belfalls") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Belfalls;
+
+@name(".Bouse") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w66) Bouse;
+
+@name(".Hawthorne") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Hawthorne;
+
 control Abernant(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Owanka") action Owanka() {
         hash<bit<32>, bit<32>, tuple<bit<24>, bit<24>, bit<24>, bit<24>, bit<16>>, bit<64>>(meta.Barstow.Oakford, HashAlgorithm.crc32, 32w0, { hdr.Greenland.Wheatland, hdr.Greenland.Wabasha, hdr.Greenland.Newberg, hdr.Greenland.Slick, hdr.Greenland.Kenefic }, 64w4294967296);
@@ -2298,7 +2304,7 @@ control Loris(inout headers hdr, inout metadata meta, inout standard_metadata_t 
             meta.Woodfield.Wauna     : selector @name("Woodfield.Wauna") ;
         }
         size = 1024;
-        @name(".Belfalls") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Belfalls;
         default_action = NoAction();
     }
     apply {
@@ -2496,7 +2502,7 @@ control Hemlock(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Woodfield.Uhland: selector @name("Woodfield.Uhland") ;
         }
         size = 2048;
-        @name(".Bouse") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w66);
+        implementation = Bouse;
         default_action = NoAction();
     }
     apply {
@@ -2553,7 +2559,7 @@ control Hettinger(inout headers hdr, inout metadata meta, inout standard_metadat
             meta.Woodfield.Wauna: selector @name("Woodfield.Wauna") ;
         }
         size = 512;
-        @name(".Hawthorne") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Hawthorne;
         default_action = NoAction();
     }
     @name(".Willamina") table Willamina {
@@ -4513,3 +4519,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

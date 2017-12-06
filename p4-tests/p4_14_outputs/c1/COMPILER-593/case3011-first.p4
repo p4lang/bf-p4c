@@ -739,6 +739,12 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".BlueAsh") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) BlueAsh;
+
+@name(".Locke") @mode("resilient") action_selector(HashAlgorithm.identity, 32w512, 32w51) Locke;
+
+@name(".OakLevel") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w66) OakLevel;
+
 control Alvordton(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Kenefic") action Kenefic(bit<32> Gresston) {
         meta.Murphy.Jeddo = (meta.Murphy.Jeddo >= Gresston ? meta.Murphy.Jeddo : Gresston);
@@ -929,7 +935,7 @@ control Boxelder(inout headers hdr, inout metadata meta, inout standard_metadata
             meta.Neosho.FlatRock     : selector @name("Neosho.FlatRock") ;
         }
         size = 128;
-        @name(".Locke") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w512, 32w51);
+        implementation = Locke;
         default_action = NoAction();
     }
     apply {
@@ -1055,7 +1061,7 @@ control Caliente(inout headers hdr, inout metadata meta, inout standard_metadata
             meta.Neosho.Shingler: selector @name("Neosho.Shingler") ;
         }
         size = 2048;
-        @name(".OakLevel") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w66);
+        implementation = OakLevel;
         default_action = NoAction();
     }
     apply {
@@ -1865,7 +1871,7 @@ control Mertens(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Neosho.FlatRock    : selector @name("Neosho.FlatRock") ;
         }
         size = 1024;
-        @name(".BlueAsh") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = BlueAsh;
         default_action = NoAction();
     }
     apply {
@@ -4444,3 +4450,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

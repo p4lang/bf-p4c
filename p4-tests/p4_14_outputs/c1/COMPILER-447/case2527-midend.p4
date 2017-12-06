@@ -547,6 +547,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Minto") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w51) Minto;
+
+@name(".Oxford") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Oxford;
+
 @name("Chatcolet") struct Chatcolet {
     bit<8>  Ferndale;
     bit<16> Borup;
@@ -1526,7 +1530,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Gunder.Pease   : selector @name("Gunder.Pease") ;
         }
         size = 2048;
-        @name(".Minto") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w51);
+        implementation = Minto;
         default_action = NoAction_59();
     }
     @name(".Arthur") action _Arthur() {
@@ -1858,7 +1862,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Gunder.Brush    : selector @name("Gunder.Brush") ;
         }
         size = 1024;
-        @name(".Oxford") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Oxford;
         default_action = NoAction_64();
     }
     @name(".Paulding") action _Paulding() {
@@ -2131,3 +2135,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

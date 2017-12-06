@@ -561,6 +561,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Jessie") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w51) Jessie;
+
+@name(".Nichols") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Nichols;
+
 control Arthur(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Desdemona") action Desdemona() {
         meta.Laplace.Martelle = meta.Renton.Newsome;
@@ -1320,7 +1324,7 @@ control Minto(inout headers hdr, inout metadata meta, inout standard_metadata_t 
             meta.Gunder.Pease   : selector @name("Gunder.Pease") ;
         }
         size = 2048;
-        @name(".Jessie") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w51);
+        implementation = Jessie;
         default_action = NoAction();
     }
     apply {
@@ -1372,7 +1376,7 @@ control Oxford(inout headers hdr, inout metadata meta, inout standard_metadata_t
             meta.Gunder.Brush    : selector @name("Gunder.Brush") ;
         }
         size = 1024;
-        @name(".Nichols") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Nichols;
         default_action = NoAction();
     }
     apply {
@@ -2182,3 +2186,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

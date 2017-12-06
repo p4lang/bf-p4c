@@ -240,6 +240,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".ecmp_action_profile") @mode("resilient") action_selector(HashAlgorithm.crc16, 32w1024, 32w10) ecmp_action_profile;
+
+@name(".indirect_action_profile") action_profile(32w1500) indirect_action_profile;
+
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".nop") action nop() {
     }
@@ -315,3 +319,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

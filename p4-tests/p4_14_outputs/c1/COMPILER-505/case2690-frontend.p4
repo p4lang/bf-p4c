@@ -575,6 +575,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Basalt") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w51) Basalt;
+
+@name(".Taconite") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Taconite;
+
 control Airmont(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Hobergs") direct_counter(CounterType.packets_and_bytes) Hobergs_0;
     @name(".BigWells") action BigWells_0() {
@@ -1387,7 +1391,7 @@ control Goulding(inout headers hdr, inout metadata meta, inout standard_metadata
             meta.Lakin.Bammel   : selector @name("Lakin.Bammel") ;
         }
         size = 1024;
-        @name(".Taconite") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Taconite;
         default_action = NoAction();
     }
     apply {
@@ -1551,7 +1555,7 @@ control Newfield(inout headers hdr, inout metadata meta, inout standard_metadata
             meta.Lakin.Bluewater: selector @name("Lakin.Bluewater") ;
         }
         size = 2048;
-        @name(".Basalt") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w51);
+        implementation = Basalt;
         default_action = NoAction();
     }
     apply {
@@ -2458,3 +2462,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

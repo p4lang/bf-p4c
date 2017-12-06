@@ -202,6 +202,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".vlan_profile") action_profile(32w2048) vlan_profile;
+
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
     }
@@ -241,7 +243,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ethernet.srcAddr: exact;
         }
         size = 16384;
-        @name(".vlan_profile") implementation = action_profile(32w2048);
+        implementation = vlan_profile;
     }
     @name(".port_based_vlan") table port_based_vlan {
         actions = {
@@ -251,7 +253,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ig_intr_md.ingress_port: exact;
         }
         size = 512;
-        @name(".vlan_profile") implementation = action_profile(32w2048);
+        implementation = vlan_profile;
     }
     @name(".protocol_based_vlan") table protocol_based_vlan {
         actions = {
@@ -261,7 +263,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.m.etherType: exact;
         }
         size = 1024;
-        @name(".vlan_profile") implementation = action_profile(32w2048);
+        implementation = vlan_profile;
     }
     @name(".set_vid") table set_vid {
         actions = {
@@ -285,7 +287,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.srcAddr: lpm;
         }
         size = 4096;
-        @name(".vlan_profile") implementation = action_profile(32w2048);
+        implementation = vlan_profile;
     }
     apply {
         if (!hdr.vlan_tag.isValid() || hdr.vlan_tag.vid == 12w0) {
@@ -334,3 +336,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

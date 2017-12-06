@@ -25,6 +25,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".set_b1_3") action_profile(32w1024) set_b1_3;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("NoAction") action NoAction_0() {
     }
@@ -59,7 +61,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.f1: exact @name("data.f1") ;
         }
         size = 10000;
-        @name(".set_b1_3") implementation = action_profile(32w1024);
+        implementation = set_b1_3;
         default_action = NoAction_0();
     }
     @name(".test2") table test2 {
@@ -73,7 +75,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.b1: exact @name("data.b1") ;
         }
         size = 5000;
-        @name(".set_b1_3") implementation = action_profile(32w1024);
+        implementation = set_b1_3;
         default_action = NoAction_3();
     }
     apply {
@@ -104,3 +106,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

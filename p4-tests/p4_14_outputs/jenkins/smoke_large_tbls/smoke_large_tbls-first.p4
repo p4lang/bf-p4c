@@ -230,6 +230,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".atcam_action_profile") action_profile(32w65536) atcam_action_profile;
+
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
     }
@@ -257,7 +259,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.srcAddr    : ternary @name("ipv4.srcAddr") ;
         }
         size = 100000;
-        @name(".atcam_action_profile") implementation = action_profile(32w65536);
+        implementation = atcam_action_profile;
         default_action = NoAction();
     }
     @pack(2) @ways(4) @atcam_partition_index("vlan_tag.vlan_id") @name(".atcam_tbl") table atcam_tbl {
@@ -356,3 +358,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

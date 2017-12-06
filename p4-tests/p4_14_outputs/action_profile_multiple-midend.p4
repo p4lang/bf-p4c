@@ -30,6 +30,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".set_b1_3") action_profile(32w1024) set_b1_3;
+
+@name(".set_b5_7") action_profile(32w2048) set_b5_7;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("NoAction") action NoAction_0() {
     }
@@ -86,7 +90,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.f1: exact @name("data.f1") ;
         }
         size = 10000;
-        @name(".set_b1_3") implementation = action_profile(32w1024);
+        implementation = set_b1_3;
         default_action = NoAction_0();
     }
     @name(".test2") table test2 {
@@ -100,7 +104,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.f2: exact @name("data.f2") ;
         }
         size = 5000;
-        @name(".set_b1_3") implementation = action_profile(32w1024);
+        implementation = set_b1_3;
         default_action = NoAction_5();
     }
     @name(".test3") table test3 {
@@ -114,7 +118,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.f3: exact @name("data.f3") ;
         }
         size = 5000;
-        @name(".set_b5_7") implementation = action_profile(32w2048);
+        implementation = set_b5_7;
         default_action = NoAction_6();
     }
     @name(".test4") table test4 {
@@ -128,7 +132,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.f4: exact @name("data.f4") ;
         }
         size = 10000;
-        @name(".set_b5_7") implementation = action_profile(32w2048);
+        implementation = set_b5_7;
         default_action = NoAction_7();
     }
     apply {
@@ -165,3 +169,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

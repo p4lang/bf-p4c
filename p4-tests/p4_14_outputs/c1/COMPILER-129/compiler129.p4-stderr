@@ -29,3 +29,6 @@ security.p4(49): warning: Could not infer type for meter_idx, using bit<8>
 action set_storm_control_meter(meter_idx) {
                                ^^^^^^^^^
 warning: The order of headers in deparser is not uniquely determined by parser!
+warning: .bd_action_profile: unused instance
+warning: .ecmp_action_profile: unused instance
+warning: .lag_action_profile: unused instance

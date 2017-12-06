@@ -581,6 +581,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Forman") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w51) Forman;
+
+@name(".Minneiska") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Minneiska;
+
 control Ballinger(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Keenes") action Keenes(bit<16> WestPark) {
         meta.Corder.Orlinda = WestPark;
@@ -595,7 +599,7 @@ control Ballinger(inout headers hdr, inout metadata meta, inout standard_metadat
             meta.Firesteel.Burtrum: selector @name("Firesteel.Burtrum") ;
         }
         size = 2048;
-        @name(".Forman") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w51);
+        implementation = Forman;
         default_action = NoAction();
     }
     apply {
@@ -987,7 +991,7 @@ control JimFalls(inout headers hdr, inout metadata meta, inout standard_metadata
             meta.Firesteel.Boysen: selector @name("Firesteel.Boysen") ;
         }
         size = 1024;
-        @name(".Minneiska") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Minneiska;
         default_action = NoAction();
     }
     apply {
@@ -2301,3 +2305,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

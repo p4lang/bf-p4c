@@ -672,6 +672,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Pittsboro") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Pittsboro;
+
+@name(".WoodDale") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w66) WoodDale;
+
 @name("Escatawpa") struct Escatawpa {
     bit<8>  Wamego;
     bit<24> Paradis;
@@ -2296,7 +2300,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.LoonLake.DimeBox : selector @name("LoonLake.DimeBox") ;
         }
         size = 2048;
-        @name(".WoodDale") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w66);
+        implementation = WoodDale;
         default_action = NoAction_92();
     }
     @name(".LaMoille") action _LaMoille_2(bit<32> Swenson) {
@@ -2661,7 +2665,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.LoonLake.Equality: selector @name("LoonLake.Equality") ;
         }
         size = 1024;
-        @name(".Pittsboro") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Pittsboro;
         default_action = NoAction_102();
     }
     @name(".Tunis") action _Tunis() {
@@ -3099,3 +3103,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

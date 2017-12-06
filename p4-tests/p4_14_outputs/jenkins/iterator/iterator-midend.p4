@@ -164,6 +164,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".ap") action_profile(32w0) ap;
+
+@name(".sel_ap") action_selector(HashAlgorithm.crc32, 32w0, 32w29) sel_ap;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("NoAction") action NoAction_0() {
     }
@@ -338,7 +342,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv6.srcAddr  : exact @name("ipv6.srcAddr") ;
             hdr.ipv6.dstAddr  : exact @name("ipv6.dstAddr") ;
         }
-        @name(".ap") implementation = action_profile(32w0);
+        implementation = ap;
         default_action = NoAction_13();
     }
     @name(".exm_sel") table exm_sel {
@@ -357,7 +361,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ethernet.dstAddr: selector @name("ethernet.dstAddr") ;
             hdr.ethernet.srcAddr: selector @name("ethernet.srcAddr") ;
         }
-        @name(".sel_ap") implementation = action_selector(HashAlgorithm.crc32, 32w0, 32w29);
+        implementation = sel_ap;
         default_action = NoAction_14();
     }
     @name(".n") action n_8() {
@@ -429,7 +433,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv6.srcAddr  : exact @name("ipv6.srcAddr") ;
             hdr.ipv6.dstAddr  : lpm @name("ipv6.dstAddr") ;
         }
-        @name(".ap") implementation = action_profile(32w0);
+        implementation = ap;
         default_action = NoAction_18();
     }
     @name(".tcam_sel") table tcam_sel {
@@ -448,7 +452,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ethernet.dstAddr: selector @name("ethernet.dstAddr") ;
             hdr.ethernet.srcAddr: selector @name("ethernet.srcAddr") ;
         }
-        @name(".sel_ap") implementation = action_selector(HashAlgorithm.crc32, 32w0, 32w29);
+        implementation = sel_ap;
         default_action = NoAction_19();
     }
     apply {
@@ -498,3 +502,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

@@ -1,12 +1,12 @@
-In file included from /home/cdodd/bf-p4c/p4c/extensions/p4_tests/p4_14/switch/p4src/switch.p4:44:0:
+switch.p4:44:0:
 headers.p4:769:0: warning: "CPU_REASON_CODE_SFLOW" redefined
  #define CPU_REASON_CODE_SFLOW       0x106 /* must match switch_hostif.h reson_code */
  ^
-In file included from /home/cdodd/bf-p4c/p4c/extensions/p4_tests/p4_14/switch/p4src/switch.p4:41:0:
-cpu_reason_codes.h:31:0: note: this is the location of the previous definition
+switch.p4:41:0:
+/home/cdodd/bf-p4c/p4c/extensions/p4_tests/p4_14/switch/p4src/includes/cpu_reason_codes.h:31:0: note: this is the location of the previous definition
  #define CPU_REASON_CODE_SFLOW            0x4
  ^
-In file included from /home/cdodd/bf-p4c/p4c/extensions/p4_tests/p4_14/switch/p4src/switch.p4:45:0:
+switch.p4:45:0:
 parser.p4:704:6: warning: missing terminating ' character
      8'0;
       ^
@@ -22,9 +22,6 @@ parser.p4:818:6: warning: missing terminating ' character
 parser.p4:1133:6: warning: missing terminating ' character
      8'0;
       ^
-wred_blackbox.p4(20): warning: wred: P4_14 extern type not fully supported
-blackbox_type wred {
-^
 l3.p4(191): warning: -1: negative value with unsigned type
     add_to_field(ipv4.ttl, -1);
                             ^
@@ -263,15 +260,4 @@ acl.p4(585): warning: Could not infer type for color, using bit<8>
                           ingress_cos, tc, color) {
                                            ^^^^^
 warning: The order of headers in deparser is not uniquely determined by parser!
-wred_blackbox.p4(20): warning: wred: extern has attributes, which are not supported in P4-16, and thus are not emitted as P4-16
-blackbox_type wred {
-^
-wred_blackbox.p4(20): warning: wred: extern has attributes, which are not supported in P4-16, and thus are not emitted as P4-16
-blackbox_type wred {
-^
-wred_blackbox.p4(20): warning: wred: extern has attributes, which are not supported in P4-16, and thus are not emitted as P4-16
-blackbox_type wred {
-^
-wred_blackbox.p4(20): warning: wred: extern has attributes, which are not supported in P4-16, and thus are not emitted as P4-16
-blackbox_type wred {
-^
+warning: .telemetry_selector_action_profile: unused instance

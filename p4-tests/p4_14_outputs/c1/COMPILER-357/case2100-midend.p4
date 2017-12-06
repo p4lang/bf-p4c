@@ -510,6 +510,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Brazil") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Brazil;
+
+@name(".Tabler") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w51) Tabler;
+
 @name("Monkstown") struct Monkstown {
     bit<8>  Bevington;
     bit<24> Crumstown;
@@ -1483,7 +1487,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Penrose.Lathrop: selector @name("Penrose.Lathrop") ;
         }
         size = 2048;
-        @name(".Tabler") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w51);
+        implementation = Tabler;
         default_action = NoAction_63();
     }
     @name(".Chenequa") action _Chenequa() {
@@ -1683,7 +1687,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Penrose.Philbrook : selector @name("Penrose.Philbrook") ;
         }
         size = 1024;
-        @name(".Brazil") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Brazil;
         default_action = NoAction_68();
     }
     @name(".Correo") action _Correo() {
@@ -1878,3 +1882,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

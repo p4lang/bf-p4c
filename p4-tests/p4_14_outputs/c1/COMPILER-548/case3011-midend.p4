@@ -738,6 +738,12 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
         }
     }
 }
+
+@name(".BlueAsh") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) BlueAsh;
+
+@name(".Locke") @mode("resilient") action_selector(HashAlgorithm.identity, 32w512, 32w51) Locke;
+
+@name(".OakLevel") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w66) OakLevel;
 #include <tofino/p4_14_prim.p4>
 
 @name("Drifton") struct Drifton {
@@ -2342,7 +2348,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Neosho.FlatRock     : selector @name("Neosho.FlatRock") ;
         }
         size = 128;
-        @name(".Locke") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w512, 32w51);
+        implementation = Locke;
         default_action = NoAction_97();
     }
     @name(".Newsome") action _Newsome_12(bit<16> Loysburg) {
@@ -2358,7 +2364,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Neosho.Shingler: selector @name("Neosho.Shingler") ;
         }
         size = 2048;
-        @name(".OakLevel") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w66);
+        implementation = OakLevel;
         default_action = NoAction_98();
     }
     @name(".Shelbiana") action _Shelbiana_2(bit<32> Luttrell) {
@@ -2738,7 +2744,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Neosho.FlatRock    : selector @name("Neosho.FlatRock") ;
         }
         size = 1024;
-        @name(".BlueAsh") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = BlueAsh;
         default_action = NoAction_109();
     }
     @name(".Achille") action _Achille(bit<5> NewRome) {
@@ -3258,3 +3264,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

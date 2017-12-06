@@ -162,6 +162,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".table_2_action_profile") action_selector(HashAlgorithm.random, 32w512, 32w72) table_2_action_profile;
+
 struct tuple_0 {
     bit<28> field;
     bit<32> field_0;
@@ -243,7 +245,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_f_16: selector @name("pkt.field_f_16") ;
         }
         size = 2048;
-        @name(".table_2_action_profile") implementation = action_selector(HashAlgorithm.random, 32w512, 32w72);
+        implementation = table_2_action_profile;
         default_action = NoAction_5();
     }
     apply {
@@ -277,3 +279,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

@@ -567,6 +567,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Bairoa") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Bairoa;
+
+@name(".Salus") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w51) Salus;
+
 control Abilene(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Enhaut") action Enhaut_1() {
         meta.Millhaven.Vacherie = 1w1;
@@ -773,7 +777,7 @@ control Coventry(inout headers hdr, inout metadata meta, inout standard_metadata
             meta.Richlawn.Berwyn: selector @name("Richlawn.Berwyn") ;
         }
         size = 1024;
-        @name(".Bairoa") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Bairoa;
         default_action = NoAction();
     }
     apply {
@@ -1755,7 +1759,7 @@ control Penrose(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Richlawn.Cabery : selector @name("Richlawn.Cabery") ;
         }
         size = 2048;
-        @name(".Salus") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w51);
+        implementation = Salus;
         default_action = NoAction();
     }
     apply {
@@ -2261,3 +2265,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

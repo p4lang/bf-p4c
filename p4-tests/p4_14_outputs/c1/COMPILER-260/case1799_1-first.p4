@@ -453,6 +453,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".JjjNMB") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) JjjNMB;
+
 control DRWcKf(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".SrTgya") action SrTgya() {
         meta.nMhNWt.MRBoTh = 1w1;
@@ -1072,7 +1074,7 @@ control fVGlMw(inout headers hdr, inout metadata meta, inout standard_metadata_t
             meta.QtOVAv.CITpsH: selector @name("QtOVAv.CITpsH") ;
         }
         size = 1024;
-        @name(".JjjNMB") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = JjjNMB;
         default_action = NoAction();
     }
     apply {
@@ -1414,3 +1416,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

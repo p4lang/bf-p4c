@@ -1,3 +1,4 @@
 emulation.p4(115): warning: Could not infer type for qid, using bit<8>
 action qos_hit_e2e_mirror(qid, mirror_id) {
                           ^^^
+[--Wwarn=unknown_diagnostic] warning: Unrecognized diagnostic: ccgf_contiguity_failure

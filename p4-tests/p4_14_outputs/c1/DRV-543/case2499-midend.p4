@@ -549,6 +549,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".DeepGap") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w51) DeepGap;
+
+@name(".Pensaukee") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Pensaukee;
+
 @name("Foristell") struct Foristell {
     bit<8>  Valdosta;
     bit<24> Geeville;
@@ -1568,7 +1572,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Ancho.Maytown   : selector @name("Ancho.Maytown") ;
         }
         size = 2048;
-        @name(".DeepGap") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w51);
+        implementation = DeepGap;
         default_action = NoAction_61();
     }
     @name(".Chugwater") action _Chugwater() {
@@ -1904,7 +1908,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Ancho.Aberfoil  : selector @name("Ancho.Aberfoil") ;
         }
         size = 1024;
-        @name(".Pensaukee") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Pensaukee;
         default_action = NoAction_66();
     }
     @name(".Myton") action _Myton() {
@@ -2110,3 +2114,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

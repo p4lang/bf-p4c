@@ -25,6 +25,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".set_b1_3") action_profile(32w1024) set_b1_3;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".setb1") action setb1(bit<8> val1) {
         hdr.data.b1 = val1;
@@ -45,7 +47,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.f1: exact;
         }
         size = 300000;
-        @name(".set_b1_3") implementation = action_profile(32w1024);
+        implementation = set_b1_3;
     }
     apply {
         test1.apply();
@@ -74,3 +76,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

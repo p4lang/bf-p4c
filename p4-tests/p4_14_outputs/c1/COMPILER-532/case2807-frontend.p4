@@ -697,6 +697,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Loris") @mode("resilient") action_selector(HashAlgorithm.identity, 32w4096, 32w66) Loris;
+
+@name(".Quivero") @mode("resilient") action_selector(HashAlgorithm.identity, 32w512, 32w51) Quivero;
+
 control Alamosa2(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     bit<24> tmp_5;
     @name(".Alstown") action Alstown_0(bit<24> Ericsburg) {
@@ -2786,7 +2790,7 @@ control Shanghai(inout headers hdr, inout metadata meta, inout standard_metadata
             meta.Segundo.Rhine : selector @name("Segundo.Rhine") ;
         }
         size = 2048;
-        @name(".Loris") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w4096, 32w66);
+        implementation = Loris;
         default_action = NoAction();
     }
     apply {
@@ -2863,7 +2867,7 @@ control Wrenshall(inout headers hdr, inout metadata meta, inout standard_metadat
             meta.Segundo.GlenDean : selector @name("Segundo.GlenDean") ;
         }
         size = 3072;
-        @name(".Quivero") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w512, 32w51);
+        implementation = Quivero;
         default_action = NoAction();
     }
     apply {
@@ -3049,3 +3053,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

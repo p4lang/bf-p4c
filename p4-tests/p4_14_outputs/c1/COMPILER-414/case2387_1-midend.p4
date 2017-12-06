@@ -548,6 +548,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Poneto") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w51) Poneto;
+
+@name(".Tagus") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Tagus;
+
 @name("Berlin") struct Berlin {
     bit<8>  Firesteel;
     bit<24> Comobabi;
@@ -1581,7 +1585,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Watters.Langston: selector @name("Watters.Langston") ;
         }
         size = 2048;
-        @name(".Poneto") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w51);
+        implementation = Poneto;
         default_action = NoAction_66();
     }
     @name(".Peosta") action _Peosta() {
@@ -1813,7 +1817,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Watters.Bleecker : selector @name("Watters.Bleecker") ;
         }
         size = 1024;
-        @name(".Tagus") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Tagus;
         default_action = NoAction_72();
     }
     @name(".Unity") action _Unity() {
@@ -2013,3 +2017,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

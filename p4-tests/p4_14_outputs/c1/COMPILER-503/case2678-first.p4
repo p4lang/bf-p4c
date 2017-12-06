@@ -586,6 +586,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Kinde") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w51) Kinde;
+
+@name(".Sedan") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Sedan;
+
 control Abernant(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Wyanet") action Wyanet() {
         hash<bit<32>, bit<32>, tuple<bit<32>, bit<32>, bit<16>, bit<16>>, bit<64>>(meta.Cropper.Vananda, HashAlgorithm.crc32, 32w0, { hdr.Scherr.Kalaloch, hdr.Scherr.Tilton, hdr.Wondervu.Clover, hdr.Wondervu.Holtville }, 64w4294967296);
@@ -1345,7 +1349,7 @@ control Hallwood(inout headers hdr, inout metadata meta, inout standard_metadata
             meta.Funston.Ivydale: selector @name("Funston.Ivydale") ;
         }
         size = 1024;
-        @name(".Sedan") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Sedan;
         default_action = NoAction();
     }
     apply {
@@ -1427,7 +1431,7 @@ control Jigger(inout headers hdr, inout metadata meta, inout standard_metadata_t
             meta.Funston.Macksburg: selector @name("Funston.Macksburg") ;
         }
         size = 2048;
-        @name(".Kinde") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w51);
+        implementation = Kinde;
         default_action = NoAction();
     }
     apply {
@@ -2417,3 +2421,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

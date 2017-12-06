@@ -696,6 +696,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
         }
     }
 }
+
+@name(".Loris") @mode("resilient") action_selector(HashAlgorithm.identity, 32w4096, 32w66) Loris;
+
+@name(".Quivero") @mode("resilient") action_selector(HashAlgorithm.identity, 32w512, 32w51) Quivero;
 #include <tofino/p4_14_prim.p4>
 
 @name("Mendocino") struct Mendocino {
@@ -2155,7 +2159,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Segundo.Rhine : selector @name("Segundo.Rhine") ;
         }
         size = 2048;
-        @name(".Loris") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w4096, 32w66);
+        implementation = Loris;
         default_action = NoAction_92();
     }
     @name(".Alstown") action _Alstown_1(bit<24> Ericsburg) {
@@ -2494,7 +2498,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Segundo.GlenDean : selector @name("Segundo.GlenDean") ;
         }
         size = 3072;
-        @name(".Quivero") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w512, 32w51);
+        implementation = Quivero;
         default_action = NoAction_102();
     }
     @name(".Tontogany") action _Tontogany(bit<8> Roswell) {
@@ -2954,3 +2958,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

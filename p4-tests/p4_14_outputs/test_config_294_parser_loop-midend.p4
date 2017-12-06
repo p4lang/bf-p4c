@@ -526,6 +526,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".l3_action_profile") @mode("fair") action_selector(HashAlgorithm.identity, 32w0, 32w14) l3_action_profile;
+
+@name(".lag_action_profile") @mode("fair") action_selector(HashAlgorithm.crc16, 32w0, 32w14) lag_action_profile;
+
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("NoAction") action NoAction_0() {
     }
@@ -895,7 +899,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.l2_metadata.mac_sa             : selector @name("l2_metadata.mac_sa") ;
             meta.l2_metadata.mac_da             : selector @name("l2_metadata.mac_da") ;
         }
-        @name(".lag_action_profile") @mode("fair") implementation = action_selector(HashAlgorithm.crc16, 32w0, 32w14);
+        implementation = lag_action_profile;
         default_action = NoAction_33();
     }
     @name(".nexthop") table nexthop_1 {
@@ -908,7 +912,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.l3_metadata.nexthop: exact @name("l3_metadata.nexthop") ;
             meta.l3_metadata.hash   : selector @name("l3_metadata.hash") ;
         }
-        @name(".l3_action_profile") @mode("fair") implementation = action_selector(HashAlgorithm.identity, 32w0, 32w14);
+        implementation = l3_action_profile;
         default_action = NoAction_34();
     }
     @name(".rmac") table rmac {
@@ -1319,3 +1323,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

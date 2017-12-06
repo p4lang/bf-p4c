@@ -509,6 +509,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Gerty") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w51) Gerty;
+
+@name(".Newburgh") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Newburgh;
+
 control Allen(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".LoonLake") action LoonLake_0(bit<16> Hookstown) {
         meta.Skillman.Achilles = Hookstown;
@@ -523,7 +527,7 @@ control Allen(inout headers hdr, inout metadata meta, inout standard_metadata_t 
             meta.Ramah.RowanBay   : selector @name("Ramah.RowanBay") ;
         }
         size = 2048;
-        @name(".Gerty") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w51);
+        implementation = Gerty;
         default_action = NoAction();
     }
     apply {
@@ -549,7 +553,7 @@ control Bethesda(inout headers hdr, inout metadata meta, inout standard_metadata
             meta.Ramah.Quinwood  : selector @name("Ramah.Quinwood") ;
         }
         size = 1024;
-        @name(".Newburgh") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Newburgh;
         default_action = NoAction();
     }
     apply {
@@ -1876,3 +1880,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

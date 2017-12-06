@@ -549,6 +549,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Corvallis") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w51) Corvallis;
+
+@name(".Troup") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Troup;
+
 @name("Moorewood") struct Moorewood {
     bit<8>  Ferndale;
     bit<16> Borup;
@@ -1533,7 +1537,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Gunder.Pease   : selector @name("Gunder.Pease") ;
         }
         size = 2048;
-        @name(".Corvallis") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w51);
+        implementation = Corvallis;
         default_action = NoAction_60();
     }
     @name(".Eldena") action _Eldena() {
@@ -1862,7 +1866,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Gunder.Brush    : selector @name("Gunder.Brush") ;
         }
         size = 1024;
-        @name(".Troup") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Troup;
         default_action = NoAction_65();
     }
     @name(".Greenlawn") action _Greenlawn() {
@@ -2147,3 +2151,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

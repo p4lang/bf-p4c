@@ -258,6 +258,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".ecmp_action_profile") @mode("resilient") action_selector(HashAlgorithm.random, 32w1024, 32w64) ecmp_action_profile;
+
+@name(".indirect_action_profile") action_profile(32w1500) indirect_action_profile;
+
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".nop") action nop() {
     }
@@ -420,7 +424,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 1024;
     }
-    @command_line("--no-dead-code-elimination") @immediate(1) @stage(0) @name(".ig_udp") table ig_udp {
+    @command_line("--no-dead-code-elimination") @command_line("--placement", "pragma") @immediate(1) @stage(0) @name(".ig_udp") table ig_udp {
         actions = {
             nop;
             udp_set_dest;
@@ -577,7 +581,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.protocol      : selector;
         }
         size = 512;
-        @name(".ecmp_action_profile") @mode("resilient") implementation = action_selector(HashAlgorithm.random, 32w1024, 32w64);
+        implementation = ecmp_action_profile;
     }
     @immediate(1) @stage(1) @name(".ipv4_routing_stage_1") table ipv4_routing_stage_1 {
         actions = {
@@ -654,7 +658,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.version      : exact;
         }
         size = 2048;
-        @name(".indirect_action_profile") implementation = action_profile(32w1500);
+        implementation = indirect_action_profile;
     }
     @stage(5) @name(".tcam_range") table tcam_range {
         actions = {
@@ -772,3 +776,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

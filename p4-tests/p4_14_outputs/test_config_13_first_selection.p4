@@ -179,6 +179,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".some_action_profile") @mode("resilient") action_selector(HashAlgorithm.random, 32w2048, 32w32) some_action_profile;
+
+@name(".some_action_profile2") @mode("resilient") action_selector(HashAlgorithm.random, 32w2048, 32w32) some_action_profile2;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".action_select") action action_select() {
         hash(hdr.ipv4.blah2, HashAlgorithm.random, (bit<32>)0, { hdr.ipv4.blah1, hdr.ipv4.blah2, hdr.ipv4.blah3 }, (bit<64>)16384);
@@ -220,7 +224,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.blah3        : selector;
         }
         size = 8192;
-        @name(".some_action_profile") @mode("resilient") implementation = action_selector(HashAlgorithm.random, 32w2048, 32w32);
+        implementation = some_action_profile;
     }
     @name(".test_select2") table test_select2 {
         actions = {
@@ -233,7 +237,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.blah3        : selector;
         }
         size = 4096;
-        @name(".some_action_profile2") @mode("resilient") implementation = action_selector(HashAlgorithm.random, 32w2048, 32w32);
+        implementation = some_action_profile2;
     }
     apply {
         test_select.apply();
@@ -265,3 +269,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

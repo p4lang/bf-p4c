@@ -1087,6 +1087,12 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".bd_action_profile") action_profile(32w1024) bd_action_profile;
+
+@name(".ecmp_action_profile") @mode("fair") action_selector(HashAlgorithm.identity, 32w1024, 32w14) ecmp_action_profile;
+
+@name(".lag_action_profile") @mode("fair") action_selector(HashAlgorithm.identity, 32w1024, 32w14) lag_action_profile;
+
 struct tuple_0 {
     bit<16> field;
     bit<16> field_0;
@@ -3016,7 +3022,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.vlan_tag_[1].vid         : exact @name("vlan_tag_[1].vid") ;
         }
         size = 4096;
-        @name(".bd_action_profile") implementation = action_profile(32w1024);
+        implementation = bd_action_profile;
         default_action = NoAction_131();
     }
     @name(".set_stp_state") action _set_stp_state(bit<3> stp_state) {
@@ -4746,7 +4752,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.hash_metadata.hash1      : selector @name("hash_metadata.hash1") ;
         }
         size = 1024;
-        @name(".ecmp_action_profile") @mode("fair") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w14);
+        implementation = ecmp_action_profile;
         default_action = NoAction_187();
     }
     @name(".nexthop") table _nexthop_0 {
@@ -4796,7 +4802,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.hash_metadata.hash2            : selector @name("hash_metadata.hash2") ;
         }
         size = 1024;
-        @name(".lag_action_profile") @mode("fair") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w14);
+        implementation = lag_action_profile;
         default_action = NoAction_190();
     }
     @name(".nop") action _nop_91() {
@@ -5191,3 +5197,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

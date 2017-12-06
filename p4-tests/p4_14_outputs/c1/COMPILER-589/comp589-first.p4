@@ -705,6 +705,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Ganado") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Ganado;
+
+@name(".Ranburne") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w66) Ranburne;
+
 control Abernant(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Moark") action Moark(bit<16> Cleta, bit<1> Gibson) {
         meta.Holliston.Tofte = Cleta;
@@ -959,7 +963,7 @@ control AukeBay(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Maloy.Mocane    : selector @name("Maloy.Mocane") ;
         }
         size = 1024;
-        @name(".Ganado") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Ganado;
         default_action = NoAction();
     }
     apply {
@@ -1809,7 +1813,7 @@ control CoalCity(inout headers hdr, inout metadata meta, inout standard_metadata
             meta.Maloy.Mantee : selector @name("Maloy.Mantee") ;
         }
         size = 2048;
-        @name(".Ranburne") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w66);
+        implementation = Ranburne;
         default_action = NoAction();
     }
     apply {
@@ -4266,3 +4270,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

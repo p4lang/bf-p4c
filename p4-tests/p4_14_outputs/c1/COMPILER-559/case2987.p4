@@ -646,6 +646,12 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Austell") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w66) Austell;
+
+@name(".Burgin") @mode("resilient") action_selector(HashAlgorithm.identity, 32w512, 32w51) Burgin;
+
+@name(".Ossineke") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Ossineke;
+
 control Amenia(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".RedCliff") action RedCliff() {
         meta.Kekoskee.Chatanika = meta.Mentone.Newland;
@@ -724,7 +730,7 @@ control Broussard(inout headers hdr, inout metadata meta, inout standard_metadat
             meta.Mackville.BigWater: selector;
         }
         size = 2048;
-        @name(".Austell") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w66);
+        implementation = Austell;
     }
     apply {
         if (meta.Gregory.Eclectic != 11w0) {
@@ -750,7 +756,7 @@ control Bufalo(inout headers hdr, inout metadata meta, inout standard_metadata_t
             meta.Mackville.Goulds: selector;
         }
         size = 1024;
-        @name(".Ossineke") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Ossineke;
     }
     apply {
         if ((meta.Portal.Glenmora & 16w0x2000) == 16w0x2000) {
@@ -1426,7 +1432,7 @@ control Lonepine(inout headers hdr, inout metadata meta, inout standard_metadata
             meta.Mackville.Goulds  : selector;
         }
         size = 128;
-        @name(".Burgin") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w512, 32w51);
+        implementation = Burgin;
     }
     apply {
         if ((meta.Pearson.Basco & 8w0x80) == 8w0x80) {
@@ -2821,3 +2827,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

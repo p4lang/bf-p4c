@@ -202,6 +202,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".vlan_profile") action_profile(32w2048) vlan_profile;
+
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
     }
@@ -245,7 +247,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ethernet.srcAddr: exact @name("ethernet.srcAddr") ;
         }
         size = 16384;
-        @name(".vlan_profile") implementation = action_profile(32w2048);
+        implementation = vlan_profile;
         default_action = NoAction();
     }
     @name(".port_based_vlan") table port_based_vlan_0 {
@@ -257,7 +259,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ig_intr_md.ingress_port: exact @name("ig_intr_md.ingress_port") ;
         }
         size = 512;
-        @name(".vlan_profile") implementation = action_profile(32w2048);
+        implementation = vlan_profile;
         default_action = NoAction();
     }
     @name(".protocol_based_vlan") table protocol_based_vlan_0 {
@@ -269,7 +271,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.m.etherType: exact @name("m.etherType") ;
         }
         size = 1024;
-        @name(".vlan_profile") implementation = action_profile(32w2048);
+        implementation = vlan_profile;
         default_action = NoAction();
     }
     @name(".set_vid") table set_vid_0 {
@@ -295,7 +297,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.srcAddr: lpm @name("ipv4.srcAddr") ;
         }
         size = 4096;
-        @name(".vlan_profile") implementation = action_profile(32w2048);
+        implementation = vlan_profile;
         default_action = NoAction();
     }
     apply {
@@ -344,3 +346,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

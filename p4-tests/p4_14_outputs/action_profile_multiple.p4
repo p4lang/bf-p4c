@@ -30,6 +30,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".set_b1_3") action_profile(32w1024) set_b1_3;
+
+@name(".set_b5_7") action_profile(32w2048) set_b5_7;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".setb1") action setb1(bit<8> val1) {
         hdr.data.b1 = val1;
@@ -59,7 +63,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.f1: exact;
         }
         size = 10000;
-        @name(".set_b1_3") implementation = action_profile(32w1024);
+        implementation = set_b1_3;
     }
     @name(".test2") table test2 {
         actions = {
@@ -71,7 +75,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.f2: exact;
         }
         size = 5000;
-        @name(".set_b1_3") implementation = action_profile(32w1024);
+        implementation = set_b1_3;
     }
     @name(".test3") table test3 {
         actions = {
@@ -83,7 +87,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.f3: exact;
         }
         size = 5000;
-        @name(".set_b5_7") implementation = action_profile(32w2048);
+        implementation = set_b5_7;
     }
     @name(".test4") table test4 {
         actions = {
@@ -95,7 +99,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.f4: exact;
         }
         size = 10000;
-        @name(".set_b5_7") implementation = action_profile(32w2048);
+        implementation = set_b5_7;
     }
     apply {
         if (hdr.data.b4 == 8w0) {
@@ -131,3 +135,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

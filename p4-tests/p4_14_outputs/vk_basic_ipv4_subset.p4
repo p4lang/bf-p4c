@@ -236,6 +236,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".indirect_action_profile") action_profile(32w2048) indirect_action_profile;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".nop") action nop() {
     }
@@ -260,7 +262,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.version      : exact;
         }
         size = 2048;
-        @name(".indirect_action_profile") implementation = action_profile(32w2048);
+        implementation = indirect_action_profile;
     }
     apply {
         if (hdr.ipv4.isValid()) {
@@ -296,3 +298,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

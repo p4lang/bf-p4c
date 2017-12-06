@@ -672,6 +672,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Pittsboro") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Pittsboro;
+
+@name(".WoodDale") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w66) WoodDale;
+
 control Ardenvoir(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Coalgate") action Coalgate(bit<9> Larue) {
         hdr.ig_intr_md_for_tm.level2_mcast_hash = (bit<13>)meta.LoonLake.Equality;
@@ -1250,7 +1254,7 @@ control Driftwood(inout headers hdr, inout metadata meta, inout standard_metadat
             meta.LoonLake.DimeBox : selector;
         }
         size = 2048;
-        @name(".WoodDale") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w66);
+        implementation = WoodDale;
     }
     apply {
         if (meta.Oklahoma.Higganum != 11w0) {
@@ -1391,7 +1395,7 @@ control WolfTrap(inout headers hdr, inout metadata meta, inout standard_metadata
             meta.LoonLake.Equality: selector;
         }
         size = 1024;
-        @name(".Pittsboro") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Pittsboro;
     }
     apply {
         if ((meta.Wegdahl.Adair & 16w0x2000) == 16w0x2000) {
@@ -4139,3 +4143,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

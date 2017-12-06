@@ -509,6 +509,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Husum") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Husum;
+
+@name(".Whitakers") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w51) Whitakers;
+
 @name("Shelby") struct Shelby {
     bit<8>  Florala;
     bit<16> Jermyn;
@@ -1480,7 +1484,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Elmdale.Elwood   : selector @name("Elmdale.Elwood") ;
         }
         size = 2048;
-        @name(".Whitakers") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w51);
+        implementation = Whitakers;
         default_action = NoAction_63();
     }
     @name(".Dizney") action _Dizney() {
@@ -1680,7 +1684,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Elmdale.MudLake: selector @name("Elmdale.MudLake") ;
         }
         size = 1024;
-        @name(".Husum") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Husum;
         default_action = NoAction_68();
     }
     @name(".Amite") action _Amite() {
@@ -1875,3 +1879,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

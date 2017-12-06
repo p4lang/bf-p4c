@@ -704,6 +704,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
         }
     }
 }
+
+@name(".Ganado") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Ganado;
+
+@name(".Ranburne") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w66) Ranburne;
 #include <tofino/p4_14_prim.p4>
 
 @name("Wimberley") struct Wimberley {
@@ -2334,7 +2338,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Maloy.Mantee : selector @name("Maloy.Mantee") ;
         }
         size = 2048;
-        @name(".Ranburne") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w66);
+        implementation = Ranburne;
         default_action = NoAction_92();
     }
     @name(".Pathfork") action _Pathfork_2(bit<32> Pettry) {
@@ -2699,7 +2703,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Maloy.Mocane    : selector @name("Maloy.Mocane") ;
         }
         size = 1024;
-        @name(".Ganado") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Ganado;
         default_action = NoAction_102();
     }
     @name(".Clovis") action _Clovis() {
@@ -3141,3 +3145,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

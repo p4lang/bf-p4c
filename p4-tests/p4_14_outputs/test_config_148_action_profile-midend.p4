@@ -161,6 +161,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".table_0_action_profile") action_profile(32w3072) table_0_action_profile;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("NoAction") action NoAction_0() {
     }
@@ -183,7 +185,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_a_32: exact @name("pkt.field_a_32") ;
         }
         size = 3072;
-        @name(".table_0_action_profile") implementation = action_profile(32w3072);
+        implementation = table_0_action_profile;
         default_action = NoAction_0();
     }
     apply {
@@ -213,3 +215,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

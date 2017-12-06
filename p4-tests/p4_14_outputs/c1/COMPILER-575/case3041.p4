@@ -695,6 +695,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Haines") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Haines;
+
+@name(".Honuapo") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w66) Honuapo;
+
 control Angus(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".McDougal") meter(32w2304, MeterType.packets) McDougal;
     @name(".Owyhee") action Owyhee(bit<32> Chatmoss) {
@@ -730,7 +734,7 @@ control Bagwell(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.IttaBena.Kamas: selector;
         }
         size = 2048;
-        @name(".Honuapo") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w66);
+        implementation = Honuapo;
     }
     apply {
         if (meta.Ramah.Pilger != 11w0) {
@@ -1822,7 +1826,7 @@ control Mentone(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.IttaBena.Covelo : selector;
         }
         size = 1024;
-        @name(".Haines") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Haines;
     }
     apply {
         if ((meta.Homeacre.Hanford & 16w0x2000) == 16w0x2000) {
@@ -3814,3 +3818,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

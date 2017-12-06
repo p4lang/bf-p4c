@@ -302,7 +302,8 @@ header egress_intrinsic_metadata_from_parser_aux_t {
     bit<48> egress_global_tstamp;
     bit<32> egress_global_ver;
     bit<16> egress_parser_err;
-    bit<8>  clone_src;
+    bit<4>  clone_digest_id;
+    bit<4>  clone_src;
     bit<8>  coalesce_sample_count;
 }
 
@@ -887,11 +888,7 @@ struct headers {
     vlan_tag_t[2]                                  vlan_tag_;
 }
 #include <tofino/stateful_alu.p4>
-
-extern wred {
-    @reads("wred_input") void execute(out bit<32> destination, @optional in int index);
-    wred();
-}
+#include <tofino/wred.p4>
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     bit<4> tmp_1;
@@ -1225,6 +1222,14 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
         }
     }
 }
+
+@name(".bd_action_profile") action_profile(32w1024) bd_action_profile;
+
+@name(".ecmp_action_profile") @mode("fair") action_selector(HashAlgorithm.identity, 32w1024, 32w14) ecmp_action_profile;
+
+@name(".lag_action_profile") @mode("fair") action_selector(HashAlgorithm.identity, 32w1024, 32w14) lag_action_profile;
+
+@name(".telemetry_selector_action_profile") @mode("fair") action_selector(HashAlgorithm.identity, 32w120, 32w14) telemetry_selector_action_profile;
 
 struct tuple_0 {
     bit<16> field_0;
@@ -1931,7 +1936,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             meta.l2_metadata.lkp_pkt_type: exact @name("l2_metadata.lkp_pkt_type") ;
         }
         size = 1024;
-        @name(".egress_bd_stats") counters = direct_counter(CounterType.packets_and_bytes);
+        counters = _egress_bd_stats_1;
         default_action = NoAction_113();
     }
     @name(".nop") action _nop_18() {
@@ -2623,7 +2628,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         if (hdr.eg_intr_md.deflection_flag == 1w0 && meta.egress_metadata.bypass == 1w0) {
             if (hdr.eg_intr_md.egress_rid != 16w0) 
                 _rid_0.apply();
-            if (hdr.eg_intr_md_from_parser_aux.clone_src == 8w0) 
+            if (hdr.eg_intr_md_from_parser_aux.clone_src == 4w0) 
                 ;
             else 
                 _mirror_0.apply();
@@ -2633,7 +2638,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
                 _replica_type_0.apply();
             switch (egress_port_mapping.apply().action_run) {
                 egress_port_type_normal_0: {
-                    if (hdr.eg_intr_md_from_parser_aux.clone_src == 8w0) 
+                    if (hdr.eg_intr_md_from_parser_aux.clone_src == 4w0) 
                         _vlan_decap_0.apply();
                     if (meta.tunnel_metadata.tunnel_terminate == 1w1) 
                         if (meta.multicast_metadata.inner_replica == 1w1 || meta.multicast_metadata.replica == 1w0) {
@@ -3143,7 +3148,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.fabric_header_cpu.ingressBd: exact @name("fabric_header_cpu.ingressBd") ;
         }
         size = 1024;
-        @name(".bd_action_profile") implementation = action_profile(32w1024);
+        implementation = bd_action_profile;
         default_action = NoAction_133();
     }
     @name(".port_vlan_to_bd_mapping") table _port_vlan_to_bd_mapping_0 {
@@ -3160,7 +3165,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.vlan_tag_[1].vid                : exact @name("vlan_tag_[1].vid") ;
         }
         size = 4096;
-        @name(".bd_action_profile") implementation = action_profile(32w1024);
+        implementation = bd_action_profile;
         default_action = NoAction_134();
     }
     @name(".port_vlan_to_ifindex_mapping") table _port_vlan_to_ifindex_mapping_0 {
@@ -4430,7 +4435,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.ipv4_metadata.lkp_ipv4_da: exact @name("ipv4_metadata.lkp_ipv4_da") ;
         }
         size = 1024;
-        @name(".ipv4_multicast_route_s_g_stats") counters = direct_counter(CounterType.packets);
+        counters = _ipv4_multicast_route_s_g_stats;
         default_action = NoAction_173();
     }
     @name(".multicast_route_star_g_miss") action _multicast_route_star_g_miss_1() {
@@ -4463,7 +4468,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.ipv4_metadata.lkp_ipv4_da: exact @name("ipv4_metadata.lkp_ipv4_da") ;
         }
         size = 1024;
-        @name(".ipv4_multicast_route_star_g_stats") counters = direct_counter(CounterType.packets);
+        counters = _ipv4_multicast_route_star_g_stats;
         default_action = NoAction_174();
     }
     @name(".ipv6_multicast_route_s_g_stats") direct_counter(CounterType.packets) _ipv6_multicast_route_s_g_stats;
@@ -4529,7 +4534,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.ipv6_metadata.lkp_ipv6_da: exact @name("ipv6_metadata.lkp_ipv6_da") ;
         }
         size = 1024;
-        @name(".ipv6_multicast_route_s_g_stats") counters = direct_counter(CounterType.packets);
+        counters = _ipv6_multicast_route_s_g_stats;
         default_action = NoAction_177();
     }
     @name(".multicast_route_star_g_miss") action _multicast_route_star_g_miss_2() {
@@ -4562,7 +4567,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.ipv6_metadata.lkp_ipv6_da: exact @name("ipv6_metadata.lkp_ipv6_da") ;
         }
         size = 1024;
-        @name(".ipv6_multicast_route_star_g_stats") counters = direct_counter(CounterType.packets);
+        counters = _ipv6_multicast_route_star_g_stats;
         default_action = NoAction_178();
     }
     @name(".meter_index") direct_meter<bit<2>>(MeterType.bytes) _meter_index_1;
@@ -4655,7 +4660,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.meter_metadata.meter_index : exact @name("meter_metadata.meter_index") ;
         }
         size = 1024;
-        @name(".meter_stats") counters = direct_counter(CounterType.packets);
+        counters = _meter_stats_0;
         default_action = NoAction_184();
     }
     @min_width(32) @name(".ingress_bd_stats") counter(32w1024, CounterType.packets_and_bytes) _ingress_bd_stats_1;
@@ -4708,7 +4713,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ig_intr_md.ingress_port     : exact @name("ig_intr_md.ingress_port") ;
         }
         size = 1024;
-        @name(".storm_control_stats") counters = direct_counter(CounterType.packets);
+        counters = _storm_control_stats_1;
         default_action = NoAction_188();
     }
     @name(".nop") action _nop_94() {
@@ -4858,7 +4863,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.hash_metadata.hash1      : selector @name("hash_metadata.hash1") ;
         }
         size = 1024;
-        @name(".ecmp_action_profile") @mode("fair") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w14);
+        implementation = ecmp_action_profile;
         default_action = NoAction_190();
     }
     @name(".nexthop") table _nexthop_0 {
@@ -4926,7 +4931,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.hash_metadata.hash2                   : selector @name("hash_metadata.hash2") ;
         }
         size = 1024;
-        @name(".lag_action_profile") @mode("fair") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w14);
+        implementation = lag_action_profile;
         default_action = NoAction_194();
     }
     @name(".nop") action _nop_99() {
@@ -5315,3 +5320,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

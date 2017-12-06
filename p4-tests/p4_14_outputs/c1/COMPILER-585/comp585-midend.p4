@@ -693,6 +693,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Ackerly") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w66) Ackerly;
+
+@name(".Luzerne") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Luzerne;
+
 @name("CityView") struct CityView {
     bit<8>  Daguao;
     bit<16> LaVale;
@@ -2318,7 +2322,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Sagerton.Dwight   : selector @name("Sagerton.Dwight") ;
         }
         size = 2048;
-        @name(".Ackerly") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w66);
+        implementation = Ackerly;
         default_action = NoAction_92();
     }
     @name(".Daykin") action _Daykin_2(bit<32> Telocaset) {
@@ -2683,7 +2687,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Sagerton.Haverford: selector @name("Sagerton.Haverford") ;
         }
         size = 1024;
-        @name(".Luzerne") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Luzerne;
         default_action = NoAction_102();
     }
     @name(".Dassel") action _Dassel() {
@@ -3125,3 +3129,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

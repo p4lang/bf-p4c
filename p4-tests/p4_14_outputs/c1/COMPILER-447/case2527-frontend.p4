@@ -547,6 +547,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Minto") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w51) Minto;
+
+@name(".Oxford") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Oxford;
+
 control Amasa(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Trail") action Trail_0(bit<6> Rosburg, bit<10> Hoven, bit<4> Glenoma, bit<12> Talkeetna) {
         meta.Laplace.Bluff = Rosburg;
@@ -1030,7 +1034,7 @@ control Embarrass(inout headers hdr, inout metadata meta, inout standard_metadat
             meta.Gunder.Brush    : selector @name("Gunder.Brush") ;
         }
         size = 1024;
-        @name(".Oxford") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Oxford;
         default_action = NoAction();
     }
     apply {
@@ -1593,7 +1597,7 @@ control Missoula(inout headers hdr, inout metadata meta, inout standard_metadata
             meta.Gunder.Pease   : selector @name("Gunder.Pease") ;
         }
         size = 2048;
-        @name(".Minto") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w51);
+        implementation = Minto;
         default_action = NoAction();
     }
     apply {
@@ -2143,3 +2147,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

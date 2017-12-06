@@ -546,6 +546,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Hewitt") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Hewitt;
+
+@name(".Sodaville") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w51) Sodaville;
+
 control Brookwood(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Croghan") action Croghan_0() {
         meta.Sylva.Rosburg = meta.Cisco.Duster;
@@ -1156,7 +1160,7 @@ control Neponset(inout headers hdr, inout metadata meta, inout standard_metadata
             meta.Sylva.Wamego   : selector @name("Sylva.Wamego") ;
         }
         size = 1024;
-        @name(".Hewitt") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Hewitt;
         default_action = NoAction();
     }
     apply {
@@ -1866,7 +1870,7 @@ control Weslaco(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Sylva.Rosburg  : selector @name("Sylva.Rosburg") ;
         }
         size = 2048;
-        @name(".Sodaville") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w51);
+        implementation = Sodaville;
         default_action = NoAction();
     }
     apply {
@@ -2012,3 +2016,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

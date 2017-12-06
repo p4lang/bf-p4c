@@ -572,6 +572,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Kinde") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w51) Kinde;
+
+@name(".Sedan") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Sedan;
+
 @name("Henning") struct Henning {
     bit<8>  Pinecreek;
     bit<24> Rawlins;
@@ -1660,7 +1664,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Funston.Macksburg: selector @name("Funston.Macksburg") ;
         }
         size = 2048;
-        @name(".Kinde") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w51);
+        implementation = Kinde;
         default_action = NoAction_63();
     }
     @name(".Dowell") action _Dowell() {
@@ -2040,7 +2044,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Funston.Ivydale: selector @name("Funston.Ivydale") ;
         }
         size = 1024;
-        @name(".Sedan") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Sedan;
         default_action = NoAction_69();
     }
     @name(".Padonia") action _Padonia(bit<1> Sudden, bit<1> Dolliver) {
@@ -2373,3 +2377,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

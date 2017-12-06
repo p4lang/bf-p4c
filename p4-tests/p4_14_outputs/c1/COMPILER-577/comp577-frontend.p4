@@ -692,6 +692,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Kensal") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Kensal;
+
+@name(".Phelps") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w66) Phelps;
+
 control Abraham(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Lauada") action Lauada_0(bit<8> Wenden_0, bit<1> Samson_0, bit<1> Portville_0, bit<1> Gibbs_0, bit<1> Flasher_0) {
         meta.Fajardo.Ammon = Wenden_0;
@@ -1111,7 +1115,7 @@ control Belvue(inout headers hdr, inout metadata meta, inout standard_metadata_t
             meta.Webbville.Moraine: selector @name("Webbville.Moraine") ;
         }
         size = 1024;
-        @name(".Kensal") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Kensal;
         default_action = NoAction();
     }
     apply {
@@ -2126,7 +2130,7 @@ control Norland(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Webbville.GlenDean: selector @name("Webbville.GlenDean") ;
         }
         size = 2048;
-        @name(".Phelps") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w66);
+        implementation = Phelps;
         default_action = NoAction();
     }
     apply {
@@ -3335,3 +3339,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

@@ -205,6 +205,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".ecmp_action_profile") action_selector(HashAlgorithm.crc16, 32w16384, 32w16) ecmp_action_profile;
+
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".rewrite_mac") action rewrite_mac(bit<48> smac) {
         hdr.ethernet.srcAddr = smac;
@@ -256,7 +258,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.tcp.dstPort  : selector @name("tcp.dstPort") ;
         }
         size = 1024;
-        @name(".ecmp_action_profile") implementation = action_selector(HashAlgorithm.crc16, 32w16384, 32w16);
+        implementation = ecmp_action_profile;
         default_action = NoAction();
     }
     @name(".forward") table forward {
@@ -300,3 +302,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

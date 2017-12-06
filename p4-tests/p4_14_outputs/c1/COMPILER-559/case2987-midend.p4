@@ -647,6 +647,12 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
         }
     }
 }
+
+@name(".Austell") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w66) Austell;
+
+@name(".Burgin") @mode("resilient") action_selector(HashAlgorithm.identity, 32w512, 32w51) Burgin;
+
+@name(".Ossineke") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Ossineke;
 #include <tofino/p4_14_prim.p4>
 
 @name("Lynne") struct Lynne {
@@ -2042,7 +2048,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Mackville.BigWater: selector @name("Mackville.BigWater") ;
         }
         size = 2048;
-        @name(".Austell") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w66);
+        implementation = Austell;
         default_action = NoAction_88();
     }
     @name(".Johnsburg") action _Johnsburg() {
@@ -2091,7 +2097,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Mackville.Goulds  : selector @name("Mackville.Goulds") ;
         }
         size = 128;
-        @name(".Burgin") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w512, 32w51);
+        implementation = Burgin;
         default_action = NoAction_90();
     }
     @name(".Poplar") action _Poplar(bit<24> Frontenac, bit<24> Suwanee, bit<16> Fosters) {
@@ -2327,7 +2333,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Mackville.Goulds: selector @name("Mackville.Goulds") ;
         }
         size = 1024;
-        @name(".Ossineke") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Ossineke;
         default_action = NoAction_96();
     }
     @name(".Clearco") action _Clearco(bit<8> Hotchkiss) {
@@ -2767,3 +2773,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

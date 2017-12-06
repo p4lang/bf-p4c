@@ -652,6 +652,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Brule") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Brule;
+
+@name(".Elmdale") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w51) Elmdale;
+
 @name("Belgrade") struct Belgrade {
     bit<8>  Scherr;
     bit<24> Yardley;
@@ -1803,7 +1807,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Bayport.Monowi   : selector @name("Bayport.Monowi") ;
         }
         size = 2048;
-        @name(".Elmdale") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w51);
+        implementation = Elmdale;
         default_action = NoAction_71();
     }
     @name(".Grinnell") action _Grinnell() {
@@ -2171,7 +2175,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Bayport.Gifford: selector @name("Bayport.Gifford") ;
         }
         size = 1024;
-        @name(".Brule") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Brule;
         default_action = NoAction_76();
     }
     @name(".Hisle") action _Hisle() {
@@ -2415,3 +2419,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

@@ -705,6 +705,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
         }
     }
 }
+
+@name(".Selah") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w66) Selah;
+
+@name(".Tillatoba") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Tillatoba;
 #include <tofino/p4_14_prim.p4>
 
 @name("Tatitlek") struct Tatitlek {
@@ -2321,7 +2325,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Goodrich.ElRio    : selector @name("Goodrich.ElRio") ;
         }
         size = 2048;
-        @name(".Selah") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w66);
+        implementation = Selah;
         default_action = NoAction_92();
     }
     @name(".Crozet") action _Crozet_2(bit<32> Raeford) {
@@ -2686,7 +2690,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Goodrich.Harrison: selector @name("Goodrich.Harrison") ;
         }
         size = 1024;
-        @name(".Tillatoba") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Tillatoba;
         default_action = NoAction_102();
     }
     @name(".Joaquin") action _Joaquin() {
@@ -3130,3 +3134,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

@@ -677,6 +677,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Kaibab") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w66) Kaibab;
+
+@name(".Tanacross") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Tanacross;
+
 control Albany(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Saragosa") direct_counter(CounterType.packets_and_bytes) Saragosa;
     @name(".Janney") action Janney() {
@@ -840,7 +844,7 @@ control Kranzburg(inout headers hdr, inout metadata meta, inout standard_metadat
             meta.Benonine.Pelion: selector @name("Benonine.Pelion") ;
         }
         size = 1024;
-        @name(".Tanacross") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Tanacross;
         default_action = NoAction();
     }
     apply {
@@ -1219,7 +1223,7 @@ control Cartago(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Benonine.Exell   : selector @name("Benonine.Exell") ;
         }
         size = 2048;
-        @name(".Kaibab") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w66);
+        implementation = Kaibab;
         default_action = NoAction();
     }
     apply {
@@ -4232,3 +4236,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

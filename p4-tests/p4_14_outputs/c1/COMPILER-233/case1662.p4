@@ -186,6 +186,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".ecmp_action_profile") action_profile(32w64) ecmp_action_profile;
+
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
     }
@@ -206,7 +208,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.dstAddr: exact;
         }
         size = 1024;
-        @name(".ecmp_action_profile") implementation = action_profile(32w64);
+        implementation = ecmp_action_profile;
     }
     @name(".ecmp_group2") table ecmp_group2 {
         actions = {
@@ -217,7 +219,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.srcAddr: exact;
         }
         size = 1024;
-        @name(".ecmp_action_profile") implementation = action_profile(32w64);
+        implementation = ecmp_action_profile;
     }
     apply {
         if (hdr.ipv4.isValid()) {
@@ -247,3 +249,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

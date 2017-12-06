@@ -554,6 +554,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Fontana") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w51) Fontana;
+
+@name(".Masontown") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Masontown;
+
 control Algonquin(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Hayward") action Hayward(bit<24> Sallisaw, bit<24> RyanPark, bit<16> Duchesne) {
         meta.Milan.OldTown = Duchesne;
@@ -700,7 +704,7 @@ control Blanding(inout headers hdr, inout metadata meta, inout standard_metadata
             meta.McGrady.Glennie   : selector @name("McGrady.Glennie") ;
         }
         size = 2048;
-        @name(".Fontana") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w51);
+        implementation = Fontana;
         default_action = NoAction();
     }
     apply {
@@ -1273,7 +1277,7 @@ control Lookeba(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.McGrady.Rhodell: selector @name("McGrady.Rhodell") ;
         }
         size = 1024;
-        @name(".Masontown") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Masontown;
         default_action = NoAction();
     }
     apply {
@@ -1995,3 +1999,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

@@ -1,3 +1,5 @@
 vk_basic_ipv4_20150706.p4(211): warning: -1: negative value with unsigned type
     add_to_field(ttl, -1);
                        ^
+warning: .ecmp_action_profile: unused instance
+warning: .indirect_action_profile: unused instance

@@ -652,6 +652,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Brule") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Brule;
+
+@name(".Elmdale") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w51) Elmdale;
+
 control Amenia(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Waretown") action Waretown_0() {
         meta.Bayport.Gifford = meta.Bieber.Arvonia;
@@ -837,7 +841,7 @@ control Aynor(inout headers hdr, inout metadata meta, inout standard_metadata_t 
             meta.Bayport.Monowi   : selector @name("Bayport.Monowi") ;
         }
         size = 2048;
-        @name(".Elmdale") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w51);
+        implementation = Elmdale;
         default_action = NoAction();
     }
     apply {
@@ -1370,7 +1374,7 @@ control Kalvesta(inout headers hdr, inout metadata meta, inout standard_metadata
             meta.Bayport.Gifford: selector @name("Bayport.Gifford") ;
         }
         size = 1024;
-        @name(".Brule") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Brule;
         default_action = NoAction();
     }
     apply {
@@ -2418,3 +2422,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

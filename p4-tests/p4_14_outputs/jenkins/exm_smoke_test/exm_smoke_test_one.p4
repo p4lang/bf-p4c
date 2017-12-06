@@ -291,6 +291,36 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".custom_action_1_profile") action_profile(32w1024) custom_action_1_profile;
+
+@name(".custom_action_2_profile") action_profile(32w2048) custom_action_2_profile;
+
+@name(".custom_action_3_1_profile") action_profile(32w1024) custom_action_3_1_profile;
+
+@name(".custom_action_3_2_profile") action_profile(32w1024) custom_action_3_2_profile;
+
+@name(".custom_action_3_profile") action_profile(32w2048) custom_action_3_profile;
+
+@name(".custom_action_4_profile") action_profile(32w1024) custom_action_4_profile;
+
+@name(".custom_action_5_profile") action_profile(32w1024) custom_action_5_profile;
+
+@name(".mod_mac_addr_profile") action_profile(32w2048) mod_mac_addr_profile;
+
+@name(".modify_tcp_dst_port_1_profile") action_profile(32w2048) modify_tcp_dst_port_1_profile;
+
+@name(".modify_tcp_dst_port_profile") action_profile(32w1024) modify_tcp_dst_port_profile;
+
+@name(".next_hop_ipv4_1_profile") action_profile(32w1024) next_hop_ipv4_1_profile;
+
+@name(".next_hop_ipv4_2_profile") action_profile(32w1024) next_hop_ipv4_2_profile;
+
+@name(".next_hop_ipv4_3_profile") action_profile(32w1024) next_hop_ipv4_3_profile;
+
+@name(".next_hop_ipv4_profile") action_profile(32w1024) next_hop_ipv4_profile;
+
+@name(".tcp_hdr_rm_profile") action_profile(32w2048) tcp_hdr_rm_profile;
+
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
     }
@@ -363,7 +393,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ethernet.srcAddr: exact;
         }
         size = 3072;
-        @name(".next_hop_ipv4_profile") implementation = action_profile(32w1024);
+        implementation = next_hop_ipv4_profile;
     }
     @stage(8) @pack(2) @ways(3) @name(".exm_3ways_2Entries") table exm_3ways_2Entries {
         actions = {
@@ -376,7 +406,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.tcp.dstPort : exact;
         }
         size = 6144;
-        @name(".custom_action_5_profile") implementation = action_profile(32w1024);
+        implementation = custom_action_5_profile;
     }
     @stage(1) @ways(4) @pack(1) @name(".exm_4ways_1Entries") table exm_4ways_1Entries {
         actions = {
@@ -388,7 +418,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.tcp.dstPort : exact;
         }
         size = 4096;
-        @name(".custom_action_2_profile") implementation = action_profile(32w2048);
+        implementation = custom_action_2_profile;
     }
     @stage(8) @pack(2) @ways(4) @name(".exm_4ways_2Entries") table exm_4ways_2Entries {
         actions = {
@@ -400,7 +430,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.tcp.srcPort : exact;
         }
         size = 8192;
-        @name(".next_hop_ipv4_3_profile") implementation = action_profile(32w1024);
+        implementation = next_hop_ipv4_3_profile;
     }
     @stage(2) @pack(1) @ways(5) @name(".exm_5ways_1Entries") table exm_5ways_1Entries {
         actions = {
@@ -412,7 +442,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.tcp.srcPort     : exact;
         }
         size = 5120;
-        @name(".custom_action_3_1_profile") implementation = action_profile(32w1024);
+        implementation = custom_action_3_1_profile;
     }
     @stage(7) @pack(2) @ways(5) @name(".exm_5ways_2Entries") table exm_5ways_2Entries {
         actions = {
@@ -425,7 +455,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.tcp.dstPort : exact;
         }
         size = 10240;
-        @name(".custom_action_4_profile") implementation = action_profile(32w1024);
+        implementation = custom_action_4_profile;
     }
     @command_line("--placement", "pragma") @command_line("--no-dead-code-elimination") @pack(7) @ways(5) @name(".exm_5ways_7Entries") table exm_5ways_7Entries {
         actions = {
@@ -438,7 +468,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ethernet.dstAddr: exact;
         }
         size = 35840;
-        @name(".custom_action_3_profile") implementation = action_profile(32w2048);
+        implementation = custom_action_3_profile;
     }
     @stage(11) @ways(5) @pack(8) @name(".exm_5ways_8Entries") table exm_5ways_8Entries {
         actions = {
@@ -449,7 +479,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.tcp.dstPort: exact;
         }
         size = 40960;
-        @name(".tcp_hdr_rm_profile") implementation = action_profile(32w2048);
+        implementation = tcp_hdr_rm_profile;
     }
     @stage(6) @pack(1) @ways(6) @name(".exm_6ways_1Entries") table exm_6ways_1Entries {
         actions = {
@@ -463,7 +493,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.tcp.srcPort     : exact;
         }
         size = 6144;
-        @name(".next_hop_ipv4_2_profile") implementation = action_profile(32w1024);
+        implementation = next_hop_ipv4_2_profile;
     }
     @stage(0) @pack(2) @ways(6) @name(".exm_6ways_2Entries") table exm_6ways_2Entries {
         actions = {
@@ -474,7 +504,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.dstAddr: exact;
         }
         size = 12288;
-        @name(".modify_tcp_dst_port_profile") implementation = action_profile(32w1024);
+        implementation = modify_tcp_dst_port_profile;
     }
     @stage(3) @ways(6) @pack(7) @name(".exm_6ways_7Entries") table exm_6ways_7Entries {
         actions = {
@@ -486,7 +516,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.srcAddr: exact;
         }
         size = 43008;
-        @name(".next_hop_ipv4_1_profile") implementation = action_profile(32w1024);
+        implementation = next_hop_ipv4_1_profile;
     }
     @stage(10) @ways(6) @pack(8) @name(".exm_6ways_8Entries") table exm_6ways_8Entries {
         actions = {
@@ -497,7 +527,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ethernet.dstAddr: exact;
         }
         size = 49152;
-        @name(".mod_mac_addr_profile") implementation = action_profile(32w2048);
+        implementation = mod_mac_addr_profile;
     }
     @stage(4) @pack(8) @name(".exm_deep_32k") table exm_deep_32k {
         actions = {
@@ -509,7 +539,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.srcAddr: exact;
         }
         size = 32768;
-        @name(".custom_action_3_2_profile") implementation = action_profile(32w1024);
+        implementation = custom_action_3_2_profile;
     }
     @stage(5) @pack(8) @name(".exm_deep_64k") table exm_deep_64k {
         actions = {
@@ -520,7 +550,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.dstAddr: exact;
         }
         size = 65536;
-        @name(".modify_tcp_dst_port_1_profile") implementation = action_profile(32w2048);
+        implementation = modify_tcp_dst_port_1_profile;
     }
     @stage(9) @name(".exm_wide_key") table exm_wide_key {
         actions = {
@@ -536,7 +566,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.tcp.srcPort     : exact;
         }
         size = 2048;
-        @name(".custom_action_1_profile") implementation = action_profile(32w1024);
+        implementation = custom_action_1_profile;
     }
     apply {
         exm_5ways_7Entries.apply();
@@ -580,3 +610,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

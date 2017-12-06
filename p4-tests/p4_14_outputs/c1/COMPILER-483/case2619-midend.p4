@@ -567,6 +567,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Forman") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w51) Forman;
+
+@name(".Minneiska") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Minneiska;
+
 @name("Madras") struct Madras {
     bit<8>  SeaCliff;
     bit<24> Alvordton;
@@ -1591,7 +1595,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Firesteel.Burtrum: selector @name("Firesteel.Burtrum") ;
         }
         size = 2048;
-        @name(".Forman") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w51);
+        implementation = Forman;
         default_action = NoAction_62();
     }
     @name(".Hines") action _Hines() {
@@ -2028,7 +2032,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Firesteel.Boysen: selector @name("Firesteel.Boysen") ;
         }
         size = 1024;
-        @name(".Minneiska") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Minneiska;
         default_action = NoAction_70();
     }
     @name(".Nipton") action _Nipton(bit<9> August) {
@@ -2252,3 +2256,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

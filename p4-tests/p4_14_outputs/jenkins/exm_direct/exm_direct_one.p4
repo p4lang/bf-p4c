@@ -291,6 +291,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".tcp_port_action_profile") @mode("resilient") action_selector(HashAlgorithm.random, 32w131072, 32w72) tcp_port_action_profile;
+
+@name(".tcp_port_action_profile_exm") @mode("non_resilient") action_selector(HashAlgorithm.random, 32w2048, 32w72) tcp_port_action_profile_exm;
+
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
     }
@@ -550,7 +554,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.protocol      : selector;
         }
         size = 512;
-        @name(".tcp_port_action_profile") @mode("resilient") implementation = action_selector(HashAlgorithm.random, 32w131072, 32w72);
+        implementation = tcp_port_action_profile;
     }
     @stage(8) @selector_max_group_size(100) @name(".tcp_port_select_exm") table tcp_port_select_exm {
         actions = {
@@ -565,7 +569,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.protocol      : selector;
         }
         size = 512;
-        @name(".tcp_port_action_profile_exm") @mode("non_resilient") implementation = action_selector(HashAlgorithm.random, 32w2048, 32w72);
+        implementation = tcp_port_action_profile_exm;
     }
     apply {
         exm_5ways_5Entries.apply();
@@ -613,3 +617,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

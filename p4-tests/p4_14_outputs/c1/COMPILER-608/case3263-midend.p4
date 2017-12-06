@@ -681,6 +681,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Gallinas") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Gallinas;
+
+@name(".KawCity") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w66) KawCity;
+
 @name("Hampton") struct Hampton {
     bit<8>  Goodyear;
     bit<16> Lofgreen;
@@ -2251,7 +2255,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Laneburg.Mineral: selector @name("Laneburg.Mineral") ;
         }
         size = 2048;
-        @name(".KawCity") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w66);
+        implementation = KawCity;
         default_action = NoAction_89();
     }
     @name(".Elcho") action _Elcho_2(bit<32> Parkway) {
@@ -2815,7 +2819,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Laneburg.Swain    : selector @name("Laneburg.Swain") ;
         }
         size = 1024;
-        @name(".Gallinas") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Gallinas;
         default_action = NoAction_104();
     }
     @name(".Hiland") direct_counter(CounterType.packets) _Hiland_0;
@@ -3132,3 +3136,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

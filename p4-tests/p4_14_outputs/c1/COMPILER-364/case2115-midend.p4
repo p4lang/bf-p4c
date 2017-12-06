@@ -509,6 +509,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Gerty") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w51) Gerty;
+
+@name(".Newburgh") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Newburgh;
+
 @name("Slick") struct Slick {
     bit<8>  Powelton;
     bit<16> Okarche;
@@ -1480,7 +1484,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Ramah.RowanBay   : selector @name("Ramah.RowanBay") ;
         }
         size = 2048;
-        @name(".Gerty") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w51);
+        implementation = Gerty;
         default_action = NoAction_63();
     }
     @name(".Mishicot") action _Mishicot() {
@@ -1680,7 +1684,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Ramah.Quinwood  : selector @name("Ramah.Quinwood") ;
         }
         size = 1024;
-        @name(".Newburgh") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Newburgh;
         default_action = NoAction_68();
     }
     @name(".Burmester") action _Burmester() {
@@ -1875,3 +1879,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

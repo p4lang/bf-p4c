@@ -258,6 +258,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".ecmp_action_profile") @mode("resilient") action_selector(HashAlgorithm.random, 32w1024, 32w64) ecmp_action_profile;
+
+@name(".indirect_action_profile") action_profile(32w1500) indirect_action_profile;
+
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".nop") action nop_0() {
     }
@@ -424,7 +428,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction();
     }
-    @command_line("--no-dead-code-elimination") @immediate(1) @stage(0) @name(".ig_udp") table ig_udp_0 {
+    @command_line("--no-dead-code-elimination") @command_line("--placement", "pragma") @immediate(1) @stage(0) @name(".ig_udp") table ig_udp_0 {
         actions = {
             nop_1();
             udp_set_dest_0();
@@ -608,7 +612,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.protocol      : selector @name("ipv4.protocol") ;
         }
         size = 512;
-        @name(".ecmp_action_profile") @mode("resilient") implementation = action_selector(HashAlgorithm.random, 32w1024, 32w64);
+        implementation = ecmp_action_profile;
         default_action = NoAction();
     }
     @immediate(1) @stage(1) @name(".ipv4_routing_stage_1") table ipv4_routing_stage {
@@ -699,7 +703,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.version      : exact @name("ipv4.version") ;
         }
         size = 2048;
-        @name(".indirect_action_profile") implementation = action_profile(32w1500);
+        implementation = indirect_action_profile;
         default_action = NoAction();
     }
     @stage(5) @name(".tcam_range") table tcam_range_0 {
@@ -830,3 +834,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

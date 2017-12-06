@@ -686,6 +686,12 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Belfalls") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Belfalls;
+
+@name(".Bouse") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w66) Bouse;
+
+@name(".Hawthorne") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Hawthorne;
+
 @name("Emajagua") struct Emajagua {
     bit<8>  Lincroft;
     bit<24> Pawtucket;
@@ -2432,7 +2438,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Woodfield.Uhland: selector @name("Woodfield.Uhland") ;
         }
         size = 2048;
-        @name(".Bouse") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w66);
+        implementation = Bouse;
         default_action = NoAction_87();
     }
     @name(".Brookwood") action _Brookwood(bit<20> Neche) {
@@ -2818,7 +2824,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Woodfield.Wauna: selector @name("Woodfield.Wauna") ;
         }
         size = 512;
-        @name(".Hawthorne") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Hawthorne;
         default_action = NoAction_97();
     }
     @name(".Willamina") table _Willamina_0 {
@@ -3010,7 +3016,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Woodfield.Wauna     : selector @name("Woodfield.Wauna") ;
         }
         size = 1024;
-        @name(".Belfalls") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Belfalls;
         default_action = NoAction_102();
     }
     @name(".Netarts") action _Netarts() {
@@ -3337,3 +3343,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

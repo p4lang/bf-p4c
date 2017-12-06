@@ -563,6 +563,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".DeepGap") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w51) DeepGap;
+
+@name(".Pensaukee") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Pensaukee;
+
 control Annandale(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".Yetter") action Yetter() {
         hash(meta.Champlin.Odell, HashAlgorithm.crc32, (bit<32>)0, { hdr.Thaxton.Mondovi, hdr.Thaxton.Hiwassee, hdr.Edmondson.Hector, hdr.Edmondson.Shubert }, (bit<64>)4294967296);
@@ -1610,7 +1614,7 @@ control Oskaloosa(inout headers hdr, inout metadata meta, inout standard_metadat
             meta.Ancho.Maytown   : selector;
         }
         size = 2048;
-        @name(".DeepGap") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w51);
+        implementation = DeepGap;
     }
     apply {
         if (meta.Sudden.Choudrant != 11w0) {
@@ -2018,7 +2022,7 @@ control Wyanet(inout headers hdr, inout metadata meta, inout standard_metadata_t
             meta.Ancho.Aberfoil  : selector;
         }
         size = 1024;
-        @name(".Pensaukee") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Pensaukee;
     }
     apply {
         if ((meta.Cusseta.Gassoway & 16w0x2000) == 16w0x2000) {
@@ -2127,3 +2131,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

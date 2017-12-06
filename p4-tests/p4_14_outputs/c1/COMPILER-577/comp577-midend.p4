@@ -691,6 +691,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
         }
     }
 }
+
+@name(".Kensal") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Kensal;
+
+@name(".Phelps") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w66) Phelps;
 #include <tofino/p4_14_prim.p4>
 
 @name("Duncombe") struct Duncombe {
@@ -2463,7 +2467,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Webbville.GlenDean: selector @name("Webbville.GlenDean") ;
         }
         size = 2048;
-        @name(".Phelps") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w66);
+        implementation = Phelps;
         default_action = NoAction_96();
     }
     @name(".CatCreek") action _CatCreek_4(bit<32> Uhland) {
@@ -2803,7 +2807,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Webbville.Moraine: selector @name("Webbville.Moraine") ;
         }
         size = 1024;
-        @name(".Kensal") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Kensal;
         default_action = NoAction_105();
     }
     @name(".Palisades") action _Palisades(bit<1> Ramhurst, bit<1> Brinkley) {
@@ -3185,3 +3189,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

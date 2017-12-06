@@ -575,6 +575,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Basalt") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w51) Basalt;
+
+@name(".Taconite") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Taconite;
+
 @name("Andrade") struct Andrade {
     bit<8>  Sagerton;
     bit<24> Angwin;
@@ -1755,7 +1759,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Lakin.Bluewater: selector @name("Lakin.Bluewater") ;
         }
         size = 2048;
-        @name(".Basalt") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w51);
+        implementation = Basalt;
         default_action = NoAction_70();
     }
     @name(".Kerrville") action _Kerrville() {
@@ -2177,7 +2181,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Lakin.Bammel   : selector @name("Lakin.Bammel") ;
         }
         size = 1024;
-        @name(".Taconite") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Taconite;
         default_action = NoAction_77();
     }
     @name(".Safford") action _Safford() {
@@ -2439,3 +2443,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

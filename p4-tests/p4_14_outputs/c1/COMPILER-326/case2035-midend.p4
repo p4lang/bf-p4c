@@ -531,6 +531,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Anselmo") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Anselmo;
+
+@name(".Canjilon") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w51) Canjilon;
+
 @name("Oklee") struct Oklee {
     bit<8>  Eclectic;
     bit<24> Sandstone;
@@ -1586,7 +1590,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Higley.Shoup   : selector @name("Higley.Shoup") ;
         }
         size = 2048;
-        @name(".Canjilon") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w51);
+        implementation = Canjilon;
         default_action = NoAction_68();
     }
     @name(".Judson") action _Judson() {
@@ -1733,7 +1737,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Higley.Valentine: selector @name("Higley.Valentine") ;
         }
         size = 1024;
-        @name(".Anselmo") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Anselmo;
         default_action = NoAction_72();
     }
     @name(".Trenary") action _Trenary() {
@@ -2010,3 +2014,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

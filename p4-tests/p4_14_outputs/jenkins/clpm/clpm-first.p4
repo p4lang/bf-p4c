@@ -177,6 +177,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".lpm_actions") action_profile(32w512) lpm_actions;
+
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
     }
@@ -223,7 +225,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.dstAddr: lpm @name("ipv4.dstAddr") ;
         }
         size = 5632;
-        @name(".lpm_actions") implementation = action_profile(32w512);
+        implementation = lpm_actions;
         default_action = NoAction();
     }
     @clpm_prefix("ipv4.dstAddr") @clpm_prefix_length(1, 7, 512) @clpm_prefix_length(8, 2048) @clpm_prefix_length(9, 23, 512) @clpm_prefix_length(24, 2048) @clpm_prefix_length(25, 32, 512) @name(".ipv4_lpm_idle") table ipv4_lpm_idle {
@@ -290,3 +292,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

@@ -164,6 +164,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".ap") action_profile(32w0) ap;
+
+@name(".sel_ap") action_selector(HashAlgorithm.crc32, 32w0, 32w29) sel_ap;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".ha_cntr") direct_counter(CounterType.packets) ha_cntr;
     @name(".cntr") @min_width(32) counter(32w1000, CounterType.packets_and_bytes) cntr;
@@ -248,7 +252,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv6.srcAddr  : exact;
             hdr.ipv6.dstAddr  : exact;
         }
-        @name(".ap") implementation = action_profile(32w0);
+        implementation = ap;
     }
     @name(".exm_sel") table exm_sel {
         actions = {
@@ -265,7 +269,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ethernet.dstAddr: selector;
             hdr.ethernet.srcAddr: selector;
         }
-        @name(".sel_ap") implementation = action_selector(HashAlgorithm.crc32, 32w0, 32w29);
+        implementation = sel_ap;
     }
     @name(".n") action n_0() {
         ha_cntr.count();
@@ -329,7 +333,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv6.srcAddr  : exact;
             hdr.ipv6.dstAddr  : lpm;
         }
-        @name(".ap") implementation = action_profile(32w0);
+        implementation = ap;
     }
     @name(".tcam_sel") table tcam_sel {
         actions = {
@@ -346,7 +350,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ethernet.dstAddr: selector;
             hdr.ethernet.srcAddr: selector;
         }
-        @name(".sel_ap") implementation = action_selector(HashAlgorithm.crc32, 32w0, 32w29);
+        implementation = sel_ap;
     }
     apply {
         if (1w0 == hdr.ig_intr_md.resubmit_flag) {
@@ -403,3 +407,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

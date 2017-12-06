@@ -449,6 +449,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Samson") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Samson;
+
 @name("Westwood") struct Westwood {
     bit<8>  Wyatte;
     bit<16> Nipton;
@@ -586,7 +588,7 @@ control Colonie(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Brinkley.Tarlton: selector;
         }
         size = 1024;
-        @name(".Samson") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Samson;
     }
     apply {
         if ((meta.Glenshaw.Segundo & 16w0x2000) == 16w0x2000) {
@@ -1440,3 +1442,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

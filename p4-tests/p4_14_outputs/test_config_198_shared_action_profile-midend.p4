@@ -161,6 +161,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".shared_action_profile") action_profile(32w1024) shared_action_profile;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("NoAction") action NoAction_0() {
     }
@@ -197,7 +199,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_a_32: ternary @name("pkt.field_a_32") ;
         }
         size = 2048;
-        @name(".shared_action_profile") implementation = action_profile(32w1024);
+        implementation = shared_action_profile;
         default_action = NoAction_0();
     }
     @name(".table_1") table table_1 {
@@ -211,7 +213,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_b_32: ternary @name("pkt.field_b_32") ;
         }
         size = 2048;
-        @name(".shared_action_profile") implementation = action_profile(32w1024);
+        implementation = shared_action_profile;
         default_action = NoAction_4();
     }
     @name(".table_2") table table_2 {
@@ -255,3 +257,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

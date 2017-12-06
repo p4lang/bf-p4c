@@ -560,6 +560,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Osman") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Osman;
+
+@name(".Toluca") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w51) Toluca;
+
 @name("Reidland") struct Reidland {
     bit<8>  Romney;
     bit<16> Syria;
@@ -1587,7 +1591,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Danbury.Arpin: selector @name("Danbury.Arpin") ;
         }
         size = 2048;
-        @name(".Toluca") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w51);
+        implementation = Toluca;
         default_action = NoAction_65();
     }
     @name(".Lugert") action _Lugert() {
@@ -1919,7 +1923,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Danbury.Carver   : selector @name("Danbury.Carver") ;
         }
         size = 1024;
-        @name(".Osman") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Osman;
         default_action = NoAction_70();
     }
     @name(".Horsehead") action _Horsehead() {
@@ -2127,3 +2131,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

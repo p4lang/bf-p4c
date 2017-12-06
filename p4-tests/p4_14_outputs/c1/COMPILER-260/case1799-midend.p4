@@ -437,6 +437,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".JjjNMB") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) JjjNMB;
+
 @name("MseOOc") struct MseOOc {
     bit<8>  JyxaUo;
     bit<16> dnnZBE;
@@ -1179,7 +1181,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.QtOVAv.CITpsH: selector @name("QtOVAv.CITpsH") ;
         }
         size = 1024;
-        @name(".JjjNMB") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = JjjNMB;
         default_action = NoAction_32();
     }
     @name(".nquBLx") action _nquBLx() {
@@ -1327,3 +1329,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

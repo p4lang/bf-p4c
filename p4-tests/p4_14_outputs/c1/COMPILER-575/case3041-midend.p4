@@ -694,6 +694,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
         }
     }
 }
+
+@name(".Haines") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Haines;
+
+@name(".Honuapo") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w66) Honuapo;
 #include <tofino/p4_14_prim.p4>
 
 @name("Chewalla") struct Chewalla {
@@ -2308,7 +2312,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.IttaBena.Kamas: selector @name("IttaBena.Kamas") ;
         }
         size = 2048;
-        @name(".Honuapo") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w66);
+        implementation = Honuapo;
         default_action = NoAction_92();
     }
     @name(".WindLake") action _WindLake_3(bit<32> Kaluaaha) {
@@ -2648,7 +2652,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.IttaBena.Covelo : selector @name("IttaBena.Covelo") ;
         }
         size = 1024;
-        @name(".Haines") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Haines;
         default_action = NoAction_101();
     }
     @name(".Maiden") action _Maiden(bit<5> Friend) {
@@ -3080,3 +3084,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

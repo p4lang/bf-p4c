@@ -546,6 +546,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+@name(".Hewitt") @mode("resilient") action_selector(HashAlgorithm.identity, 32w1024, 32w51) Hewitt;
+
+@name(".Sodaville") @mode("resilient") action_selector(HashAlgorithm.identity, 32w65536, 32w51) Sodaville;
+
 @name("Blakeslee") struct Blakeslee {
     bit<8>  Angwin;
     bit<16> DewyRose;
@@ -1573,7 +1577,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Sylva.Rosburg  : selector @name("Sylva.Rosburg") ;
         }
         size = 2048;
-        @name(".Sodaville") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w65536, 32w51);
+        implementation = Sodaville;
         default_action = NoAction_66();
     }
     @name(".Laurelton") action _Laurelton() {
@@ -1805,7 +1809,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.Sylva.Wamego   : selector @name("Sylva.Wamego") ;
         }
         size = 1024;
-        @name(".Hewitt") @mode("resilient") implementation = action_selector(HashAlgorithm.identity, 32w1024, 32w51);
+        implementation = Hewitt;
         default_action = NoAction_72();
     }
     @name(".Ottertail") action _Ottertail() {
@@ -2005,3 +2009,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+
