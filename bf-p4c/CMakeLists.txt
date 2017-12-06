@@ -89,8 +89,10 @@ set (BF_P4C_BACKEND_COMMON_SRCS
   common/param_binding.cpp
   common/parser_overlay.cpp
   common/parser_critical_path.cpp
+  common/linear_path.cpp
   common/simplify_references.cpp
   common/slice.cpp
+  common/type_categories.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_COMMON_SRCS}")
 build_unified(BF_P4C_BACKEND_COMMON_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
@@ -112,8 +114,10 @@ set (BF_P4C_BACKEND_COMMON_HDRS
   common/param_binding.h
   common/parser_overlay.h
   common/parser_critical_path.h
+  common/linear_path.h
   common/simplify_references.h
   common/slice.h
+  common/type_categories.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_COMMON_HDRS}")
 
@@ -417,6 +421,7 @@ set (GTEST_BF_P4C_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/critical_path_clusters.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_alignment.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_packing.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/linear_path.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/multiple_apply.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/parser_critical_path.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_constraints.cpp
@@ -426,6 +431,7 @@ set (GTEST_BF_P4C_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/tofino_write_context.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/tofino_gtest_utils.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/trivial_alloc.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/type_categories.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/union_find.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/vertex_weighted_coloring.cpp
   )
