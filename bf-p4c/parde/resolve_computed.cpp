@@ -317,6 +317,11 @@ struct CopyPropagateParserValues : public ParserInspector {
         if (auto* cast = sourceExpr->to<IR::Cast>())
             sourceExpr = cast->expr;
 
+        // XXX(seth): Ugh. =( This is a terrible hack, but this stuff will get
+        // replaced soon, so it's not worth using a non-hacky approach.
+        auto* outerSlice = sourceExpr->to<IR::Slice>();
+        if (outerSlice) sourceExpr = outerSlice->e0;
+
         // Create a string representation of this computed value. We consider
         // values to be equal if they have the same string representation.
         // XXX(seth): It'd be nice to move away from using strings.
@@ -331,6 +336,40 @@ struct CopyPropagateParserValues : public ParserInspector {
 
         // We found a definition; propagate it here.
         auto* resolvedValue = defs.at(sourceName)->clone();
+
+        // If this use was wrapped in a slice, try to simplify it.
+        // XXX(seth): Again, this will get replaced with something non-hacky
+        // soon. For now, this gets us very basic slice support.
+        if (outerSlice) {
+            auto* bufferlikeValue =
+                dynamic_cast<IR::BFN::BufferlikeRVal*>(resolvedValue);
+            if (!bufferlikeValue) {
+                // We can't simplify slices of other kinds of r-values for now.
+                resolvedValues[value] = value->clone();
+                return;
+            }
+
+            // Try to simplify away the slice by shrinking the input packet
+            // range we're extracting. We need to transform the slice into the
+            // same coordinate system that the input packet range is using and
+            // then intersect the two ranges.
+            const le_bitrange sliceRange = FromTo(outerSlice->getL(),
+                                                  outerSlice->getH());
+            const nw_bitinterval sliceOfValue =
+              sliceRange.toOrder<Endian::Network>(bufferlikeValue->range.size())
+                        .shiftedByBits(bufferlikeValue->range.lo)
+                        .intersectWith(bufferlikeValue->range);
+            if (sliceOfValue.empty()) {
+                ::error("Computed value resolves to a zero-width slice: %1%",
+                        value->source);
+                resolvedValues[value] = value->clone();
+                return;
+            }
+
+            // Success; we've eliminated the slice.
+            bufferlikeValue->range = *toClosedRange(sliceOfValue);
+            resolvedValue = bufferlikeValue;
+        }
 
         // If there's no other reaching definition, we know we're OK.
         if (resolvedValues.find(value) == resolvedValues.end()) {

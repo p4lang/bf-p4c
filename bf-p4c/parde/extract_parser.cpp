@@ -351,7 +351,7 @@ struct RewriteParserStatements : public Transform {
             return nullptr;
         }
 
-        ::error("Unexpected method call in parser: %1%", statement);
+        ::error("Unexpected method call in parser: %1%", statement->toString());
         return nullptr;
     }
 
@@ -360,7 +360,8 @@ struct RewriteParserStatements : public Transform {
         return expression->is<IR::Constant>() ||
                expression->is<IR::PathExpression>() ||
                expression->is<IR::Member>() ||
-               expression->is<IR::HeaderStackItemRef>();
+               expression->is<IR::HeaderStackItemRef>() ||
+               expression->is<IR::TempVar>();
     }
 
     const IR::BFN::ParserPrimitive*
@@ -383,6 +384,12 @@ struct RewriteParserStatements : public Transform {
             return new IR::BFN::Extract(s->srcInfo, s->left,
                      new IR::BFN::PacketRVal(bits));
         }
+
+        // Allow slices if we'd allow the expression being sliced.
+        if (auto* slice = rhs->to<IR::Slice>())
+            if (canEvaluateInParser(slice->e0))
+                return new IR::BFN::Extract(s->srcInfo, s->left,
+                                            new IR::BFN::ComputedRVal(rhs));
 
         if (!canEvaluateInParser(rhs)) {
             ::error("Assignment cannot be supported in the parser: %1%", rhs);
