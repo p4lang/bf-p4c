@@ -311,62 +311,6 @@ const IR::Node *InstructionSelection::postorder(IR::Primitive *prim) {
                           MakeSlice(egress_spec, 7, 8),
                           MakeSlice(ingress_port, 7, 8));
             return new IR::Vector<IR::Expression>({s1, s2}); }
-    } else if (prim->name == "add" || prim->name == "sub" || prim->name == "subtract") {
-        if (prim->operands.size() != 3) {
-            error("%s: wrong number of operands to %s", prim->srcInfo, prim->name);
-        } else if (!phv.field(dest)) {
-            error("%s: destination of %s must be a field", prim->srcInfo, prim->name);
-        } else if (!checkSrc1(prim->operands[1])) {
-            error("%s: source 1 of %s invalid", prim->srcInfo, prim->name);
-        } else if (!checkPHV(prim->operands[2])) {
-            if (checkPHV(prim->operands[1])) {
-                if (prim->name == "add") {
-                    if (checkSrc1(prim->operands[2]))
-                        return new IR::MAU::Instruction(prim->srcInfo, "add", dest,
-                                                        prim->operands[2], prim->operands[1]);
-                } else if (auto *k = prim->operands[2]->to<IR::Constant>()) {
-                    return new IR::MAU::Instruction(prim->srcInfo, "add", dest, (-*k).clone(),
-                                                    prim->operands[1]); } }
-            error("%s: source 2 of %s invalid", prim->srcInfo, prim->name);
-        } else {
-            return new IR::MAU::Instruction(*prim); }
-    } else if (prim->name == "add_to_field") {
-        if (prim->operands.size() != 2)
-            error("%s: wrong number of operands to %s", prim->srcInfo, prim->name);
-        else if (!phv.field(dest))
-            error("%s: destination of %s must be a field", prim->srcInfo, prim->name);
-        else if (!checkSrc1(prim->operands[1]))
-            error("%s: source 1 of %s invalid", prim->srcInfo, prim->name);
-        else
-            return new IR::MAU::Instruction(prim->srcInfo, "add", dest, prim->operands[1], dest);
-    } else if (prim->name == "subtract_from_field") {
-        if (prim->operands.size() != 2)
-            error("%s: wrong number of operands to %s", prim->srcInfo, prim->name);
-        else if (!phv.field(dest))
-            error("%s: destination of %s must be a field", prim->srcInfo, prim->name);
-        else if (!checkSrc1(prim->operands[1]))
-            error("%s: source 1 of %s invalid", prim->srcInfo, prim->name);
-        else if (auto *k = prim->operands[1]->to<IR::Constant>())
-            return new IR::MAU::Instruction(prim->srcInfo, "add", dest, dest, (-*k).clone());
-        else
-            return new IR::MAU::Instruction(prim->srcInfo, "sub", dest, dest, prim->operands[1]);
-    } else if (prim->name == "bit_and" || prim->name == "bit_andca" || prim->name == "bit_andcb" ||
-               prim->name == "bit_nand" || prim->name == "bit_or" || prim->name == "bit_orca" ||
-               prim->name == "bit_orcb" || prim->name == "bit_xor" || prim->name == "bit_xnor") {
-        if (prim->operands.size() != 3) {
-            error("%s: wrong number of operands to %s", prim->srcInfo, prim->name);
-        } else if (!phv.field(dest)) {
-            error("%s: destination of %s must be a field", prim->srcInfo, prim->name);
-        } else if (!checkSrc1(prim->operands[1])) {
-            error("%s: source 1 of %s invalid", prim->srcInfo, prim->name);
-        } else if (!checkSrc1(prim->operands[2])) {
-            error("%s: source 2 of %s invalid", prim->srcInfo, prim->name);
-        } else if (!checkPHV(prim->operands[1]) && !checkPHV(prim->operands[2])) {
-            error("%s: one source of %s must be a simple field", prim->srcInfo, prim->name);
-        } else {
-            auto rv = new IR::MAU::Instruction(*prim);
-            rv->name = rv->name + 4;  // strip off bit_ prefix
-            return rv; }
     } else if (prim->name == "register_action.execute" ||
                prim->name == "register_action.execute_log") {
         bool direct_access = false;
