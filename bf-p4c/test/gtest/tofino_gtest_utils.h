@@ -56,11 +56,8 @@ struct TofinoPipeTestCase {
 /// A GTest fixture for Tofino tests.
 class TofinoBackendTest : public ::testing::Test {
  public:
-    TofinoBackendTest() : autoBFNContext(new BFNContext) { }
-
-    static void SetUpTestCase() {
-        Device::reinitialize("Tofino");
-    }
+    TofinoBackendTest() : autoBFNContext(new BFNContext()) {
+        Device::reinitialize("Tofino"); }
 
  private:
     AutoCompileContext autoBFNContext;
@@ -69,11 +66,8 @@ class TofinoBackendTest : public ::testing::Test {
 /// A GTest fixture for JBay tests.
 class JBayBackendTest : public ::testing::Test {
  public:
-    JBayBackendTest() : autoBFNContext(new BFNContext) { }
-
-    static void SetUpTestCase() {
-        Device::reinitialize("JBay");
-    }
+    JBayBackendTest() : autoBFNContext(new BFNContext()) {
+        Device::reinitialize("JBay"); }
 
     static void TearDownTestCase() {
         // XXX(seth): This is a safety net to reduce surprise in the short term,
