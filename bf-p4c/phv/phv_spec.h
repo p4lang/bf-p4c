@@ -5,16 +5,25 @@
 #include <vector>
 #include "bf-p4c/phv/phv.h"
 #include "lib/ordered_map.h"
+#include "lib/bitvec.h"
 
 class cstring;
 
 class PhvSpec {
  protected:
+    // All cache fields
+    mutable boost::optional<bitvec> physical_containers_i;
+    mutable boost::optional<std::map<PHV::Type, std::vector<bitvec>>> mau_groups_i;
+    mutable boost::optional<bitvec> ingress_only_containers_i;
+    mutable boost::optional<bitvec> egress_only_containers_i;
+    mutable boost::optional<std::vector<bitvec>> tagalong_collections_i;
+    mutable boost::optional<bitvec> individually_assigned_containers_i;
+
     std::vector<PHV::Type> definedTypes;
     ordered_map<PHV::Type, unsigned> typeIdMap;
 
     /**
-     * @used to describe phv groups for mau in the device. 
+     * @used to describe phv groups for mau in the device.
      * e.g. entry { PHV::Type::W, std::pair(4,16) } means for normal 32b
      * container, there are 4 groups, each with 16 containers.
      */

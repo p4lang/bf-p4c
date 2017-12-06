@@ -69,15 +69,6 @@ class JBayBackendTest : public ::testing::Test {
     JBayBackendTest() : autoBFNContext(new BFNContext()) {
         Device::reinitialize("JBay"); }
 
-    static void TearDownTestCase() {
-        // XXX(seth): This is a safety net to reduce surprise in the short term,
-        // because right now it isn't too hard to create tests that aren't using
-        // one of these fixtures and work fine until a JBayBackendTest runs
-        // right before them. Long term we should make sure that this isn't
-        // needed.
-        Device::reinitialize("tofino");
-    }
-
  private:
     AutoCompileContext autoBFNContext;
 };

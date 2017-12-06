@@ -12,7 +12,7 @@ class Device {
      * Initialize the global device context for the provided target - e.g.
      * "Tofino" or "JBay".
      *
-     * Fatally asserts if the global device context was already initialized.
+     * No-op if the global device context was already initialized.
      *
      * This should be called as early as possible at startup, since the Device
      * singleton is available everywhere in the compiler.

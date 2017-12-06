@@ -67,16 +67,15 @@ PhvSpec::range(PHV::Type t, unsigned start, unsigned length) const {
 }
 
 const bitvec& PhvSpec::physicalContainers() const {
-    static bitvec containers;
-    if (containers == bitvec()) {
-        for (auto tg : mauGroups())
-            for (auto g : tg.second)
-                containers |= g;
-
-        for (auto g : tagalongGroups())
+    if (physical_containers_i) return physical_containers_i.value();
+    bitvec containers;
+    for (auto tg : mauGroups())
+        for (auto g : tg.second)
             containers |= g;
-    }
-    return containers;
+    for (auto g : tagalongGroups())
+        containers |= g;
+    physical_containers_i = std::move(containers);
+    return physical_containers_i.value();
 }
 
 boost::optional<bitvec> PhvSpec::mauGroup(unsigned container_id) const {
@@ -95,18 +94,16 @@ boost::optional<bitvec> PhvSpec::mauGroup(unsigned container_id) const {
 }
 
 const std::map<PHV::Type, std::vector<bitvec>>& PhvSpec::mauGroups() const {
-    static std::map<PHV::Type, std::vector<bitvec>> mau_groups;
-
-    // Initialize once
-    if (mau_groups.size() == 0) {
-        for (auto gs : mauGroupSpec) {
-            PHV::Type groupType = gs.first;
-            unsigned numGroups = gs.second.first;
-            unsigned groupSize = gs.second.second;
-            for (unsigned index = 0; index < numGroups; index++)
-                mau_groups[groupType].push_back(range(groupType, index * groupSize, groupSize)); } }
-
-    return mau_groups;
+    if (mau_groups_i) return mau_groups_i.value();
+    std::map<PHV::Type, std::vector<bitvec>> mau_groups;
+    for (auto gs : mauGroupSpec) {
+        PHV::Type groupType = gs.first;
+        unsigned numGroups = gs.second.first;
+        unsigned groupSize = gs.second.second;
+        for (unsigned index = 0; index < numGroups; index++)
+            mau_groups[groupType].push_back(range(groupType, index * groupSize, groupSize)); }
+    mau_groups_i = std::move(mau_groups);
+    return mau_groups_i.value();
 }
 
 bitvec PhvSpec::ingressOrEgressOnlyContainers(
@@ -124,40 +121,33 @@ bitvec PhvSpec::ingressOrEgressOnlyContainers(
 }
 
 const bitvec& PhvSpec::ingressOnly() const {
-    static bitvec containers;
-    if (!containers)
-        containers = ingressOrEgressOnlyContainers(ingressOnlyMauGroupIds);
-
-    return containers;
+    if (ingress_only_containers_i) return ingress_only_containers_i.value();
+    ingress_only_containers_i = std::move(ingressOrEgressOnlyContainers(ingressOnlyMauGroupIds));
+    return ingress_only_containers_i.value();
 }
 
 const bitvec& PhvSpec::egressOnly() const {
-    static bitvec containers;
-    if (!containers)
-        containers = ingressOrEgressOnlyContainers(egressOnlyMauGroupIds);
-
-    return containers;
+    if (egress_only_containers_i) return egress_only_containers_i.value();
+    egress_only_containers_i = std::move(ingressOrEgressOnlyContainers(egressOnlyMauGroupIds));
+    return egress_only_containers_i.value();
 }
 
 const std::vector<bitvec>& PhvSpec::tagalongGroups() const {
-    static std::vector<bitvec> tagalong_collections;
+    if (tagalong_collections_i) return tagalong_collections_i.value();
+    std::vector<bitvec> tagalong_collections;
 
-    // Initialize once
-    if (tagalong_collections.size() == 0) {
-        for (unsigned coll_num = 0; coll_num < numTagalongCollections; ++coll_num) {
-            bitvec collection;
-            for (auto cs : tagalongCollectionSpec) {
-                PHV::Type coll_type = cs.first;
-                unsigned coll_size = cs.second;
-                collection |= range(coll_type,
-                                    coll_num * coll_size,
-                                    coll_size);
-            }
-            tagalong_collections.push_back(collection);
-        }
-    }
+    for (unsigned coll_num = 0; coll_num < numTagalongCollections; ++coll_num) {
+        bitvec collection;
+        for (auto cs : tagalongCollectionSpec) {
+            PHV::Type coll_type = cs.first;
+            unsigned coll_size = cs.second;
+            collection |= range(coll_type,
+                                coll_num * coll_size,
+                                coll_size); }
+        tagalong_collections.push_back(collection); }
 
-    return tagalong_collections;
+    tagalong_collections_i = std::move(tagalong_collections);
+    return tagalong_collections_i.value();
 }
 
 boost::optional<bitvec> PhvSpec::tagalongGroup(unsigned container_id) const {
@@ -285,10 +275,12 @@ TofinoPhvSpec::deparserGroup(unsigned id) const {
 }
 
 const bitvec& TofinoPhvSpec::individuallyAssignedContainers() const {
-    static const bitvec containers = range(PHV::Type::B, 56, 8)
-                                   | range(PHV::Type::H, 88, 8)
-                                   | range(PHV::Type::W, 60, 4);
-    return containers;
+    if (individually_assigned_containers_i) return individually_assigned_containers_i.value();
+    bitvec containers = range(PHV::Type::B, 56, 8)
+                      | range(PHV::Type::H, 88, 8)
+                      | range(PHV::Type::W, 60, 4);
+    individually_assigned_containers_i = std::move(containers);
+    return individually_assigned_containers_i.value();
 }
 
 #if HAVE_JBAY
@@ -314,8 +306,7 @@ JBayPhvSpec::JBayPhvSpec() {
     numTagalongCollections = 0;
 }
 
-bitvec
-JBayPhvSpec::deparserGroup(unsigned id) const {
+bitvec JBayPhvSpec::deparserGroup(unsigned id) const {
     // JBay does not have deparser group constraints.
     bitvec rv;
     rv.setbit(id);
@@ -323,8 +314,9 @@ JBayPhvSpec::deparserGroup(unsigned id) const {
 }
 
 const bitvec& JBayPhvSpec::individuallyAssignedContainers() const {
-    static const bitvec containers;
-    return containers;
+    if (individually_assigned_containers_i) return individually_assigned_containers_i.value();
+    individually_assigned_containers_i = std::move(bitvec());
+    return individually_assigned_containers_i.value();
 }
 
 #endif /* HAVE_JBAY */

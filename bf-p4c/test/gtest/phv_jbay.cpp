@@ -129,7 +129,7 @@ TEST_F(JBayPhvContainer, Types) {
 }
 
 TEST_F(JBayPhvContainer, Resources) {
-    EXPECT_EQ(cstring("Tofino"), Device::currentDevice());
+    EXPECT_EQ(cstring("JBay"), Device::currentDevice());
     CheckJBayPhvContainerResources();
 }
 
