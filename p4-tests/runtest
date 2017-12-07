@@ -306,11 +306,7 @@ if [ ! -r $testdir/$name${out_ext}.out/$name.bfa ]; then
 fi
 
 if $run_stf && [ -r ${file%.p4}.stf ]; then
-    if [ $device = jbay ]; then
-        STF=$(findbin HARLYN_JBAY_STF)
-    else
-        STF=$(findbin HARLYN_STF)
-    fi
+    STF=$(findbin HARLYN_STF_${device})
 
     if [[ "$file" =~ ^/ ]]; then
         test=${file%.p4}.stf

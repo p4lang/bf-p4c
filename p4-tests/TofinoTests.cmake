@@ -30,12 +30,12 @@ set (TOFINO_TEST_SUITES
 p4c_add_bf_backend_tests("tofino" "${TOFINO_TEST_SUITES}")
 
 p4c_add_ptf_test_with_ptfdir (
-    tor.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/google-tor/p4/spec/tor.p4
+    "tofino" tor.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/google-tor/p4/spec/tor.p4
     "${testExtraArgs}" ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/tor.ptf)
 
 set (ONOS_FABRIC_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos/pipelines/fabric/src/main/resources/fabric.p4)
 p4c_add_ptf_test_with_ptfdir (
-    ${ONOS_FABRIC_P4} ${ONOS_FABRIC_P4}
+    "tofino" ${ONOS_FABRIC_P4} ${ONOS_FABRIC_P4}
     "${testExtraArgs}" ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bf-onos-ptf/fabric.ptf)
 
 set  (SWITCH_P4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch/p4src/switch.p4)

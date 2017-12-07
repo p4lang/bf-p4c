@@ -15,54 +15,6 @@
 MESSAGE("-- Adding BFN Compiler test suite")
 OPTION(ENABLE_STF2PTF "Run STF tests as PTF" OFF)
 
-if (NOT ENABLE_STF2PTF)
-  # We run STF tests on the STF framework
-  set(STF_SEARCH_PATHS
-    ${CMAKE_INSTALL_PREFIX}/bin
-    ${BFN_P4C_SOURCE_DIR}/../model/tests/simple_test_harness
-    ${BFN_P4C_SOURCE_DIR}/../model/build/tests/simple_test_harness
-    ${BFN_P4C_SOURCE_DIR}/../model/debug/tests/simple_test_harness)
-  find_program(HARLYN_STF tofino_test_harness
-    PATHS ${STF_SEARCH_PATHS})
-  find_program(HARLYN_JBAY_STF jbay_test_harness
-    PATHS ${STF_SEARCH_PATHS})
-  if (HARLYN_STF)
-    MESSAGE (STATUS "STF binary found.")
-  else()
-    MESSAGE (WARNING "STF tests need Harlyn simple_test_harness.\nLooked in ${STF_SEARCH_PATHS}.")
-  endif()
-endif()
-
-set (PTF_REQUIREMENTS_MET TRUE)
-# check for ptf
-find_program(PTF ptf
-  PATHS ${CMAKE_INSTALL_PREFIX}/bin)
-if (NOT PTF)
-  MESSAGE (WARNING "PTF tests need the ptf binary.")
-  set (PTF_REQUIREMENTS_MET FALSE)
-endif()
-# check for bf_switchd
-find_program(BF_SWITCHD bf_switchd
-  PATHS ${CMAKE_INSTALL_PREFIX}/bin)
-if (NOT BF_SWITCHD)
-  MESSAGE (WARNING "PTF tests need the bf_switchd binary.")
-  set (PTF_REQUIREMENTS_MET FALSE)
-endif()
-# check for tofino-model
-find_program(HARLYN_MODEL tofino-model
-  PATHS ${CMAKE_INSTALL_PREFIX}/bin)
-if (NOT HARLYN_MODEL)
-  MESSAGE (WARNING "PTF tests need the tofino-model binary.")
-  set (PTF_REQUIREMENTS_MET FALSE)
-endif()
-
-if (PTF_REQUIREMENTS_MET)
-  MESSAGE (STATUS "All PTF dependencies were found.")
-else()
-  MESSAGE (WARNING "PTF tests will not run as at least one requirement is not met.")
-endif()
-
-
 set (P4C_RUNTEST ${CMAKE_CURRENT_SOURCE_DIR}/runtest)
 
 set (HARLYN_PTF_DRIVER ${CMAKE_CURRENT_SOURCE_DIR}/ptf_runner.py
@@ -81,8 +33,7 @@ include(TestUtils.cmake)
 include(TofinoTests.cmake)
 
 # add jbay tests and xfails with reasons
-#include(JBayTests.cmake)
-#include(JBayXfail.cmake)
+include(JBayTests.cmake)
 
 # We have additional test inputs that are used to test the other
 # (standard) back-ends These test input programs depend on Tofino in

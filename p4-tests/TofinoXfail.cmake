@@ -15,7 +15,7 @@ set (TOFINO_XFAIL_TESTS
 
 # These tests compile successfuly and fail in the model when running the STF test
 # the reasons need more characterization
-if (HARLYN_STF AND NOT ENABLE_STF2PTF)
+if (HARLYN_STF_tofino AND NOT ENABLE_STF2PTF)
 set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
   extensions/p4_tests/p4_14/hash_calculation_32.p4
   testdata/p4_14_samples/counter4.p4
@@ -29,7 +29,7 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     extensions/p4_tests/p4_16/stack_valid.p4
     )
 
-endif() # HARLYN_STF
+endif() # HARLYN_STF_tofino
 
 # add the failures with no reason
 p4c_add_xfail_reason("tofino" "" ${TOFINO_XFAIL_TESTS})
@@ -856,7 +856,7 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
 
 endif() # ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET
 
-if (HARLYN_STF AND NOT ENABLE_STF2PTF)
+if (HARLYN_STF_tofino AND NOT ENABLE_STF2PTF)
   p4c_add_xfail_reason("tofino"
     ".* expected packet on port .* not seen"
     extensions/p4_tests/p4_16/multiple_apply1.p4

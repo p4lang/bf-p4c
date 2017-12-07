@@ -22,32 +22,6 @@ macro(p4c_add_xfail_reason tag reason)
   endforeach()
 endmacro(p4c_add_xfail_reason)
 
-# call this macro to register a PTF test with a custom PTF test directory; by
-# default the behavior is to look for a directory with the same name as the P4
-# program and a .ptf extension, which may not always be convenient when adding
-# tests for third-party P4 programs.
-# if you need to mark this test as XFAIL, please edit TofinoXfail.cmake with the
-# appropriate call to p4c_add_xfail_reason.
-# FIXME this macro still has "tofino" hardcoded
-macro(p4c_add_ptf_test_with_ptfdir alias ts args ptfdir)
-  file (RELATIVE_PATH p4test ${P4C_SOURCE_DIR} ${ts})
-  p4c_add_test_with_args ("tofino" ${P4C_RUNTEST} FALSE ${alias}
-    ${p4test} "${args} -ptfdir ${ptfdir}")
-  p4c_test_set_name(__testname "tofino" ${alias})
-if (PTF_REQUIREMENTS_MET)
-  set_tests_properties(${__testname} PROPERTIES RUN_SERIAL 1)
-  p4c_add_test_label("tofino" "ptf" ${alias})
-endif()
-endmacro(p4c_add_ptf_test_with_ptfdir)
-
-macro(p4c_add_bf_backend_tests tag tests)
-set (testExtraArgs)
-set (testExtraArgs "${testExtraArgs} -${tag}")
-# if STF is not found, disbale all stf tests
-if (NOT HARLYN_STF)
-  set (testExtraArgs "${testExtraArgs} -norun")
-endif()
-
 # tests will succeed when it finds the "reason" regex
 macro(p4c_add_codegen_success_reason reason __tests)
   foreach (t ${__tests})
@@ -69,60 +43,135 @@ macro(p4c_add_codegen_fail_reason reason __tests)
   endforeach()
 endmacro(p4c_add_codegen_fail_reason)
 
-
-if (PTF_REQUIREMENTS_MET)
-  set (testExtraArgs "${testExtraArgs} -ptf")
-  if (ENABLE_STF2PTF)
-    set (testExtraArgs "${testExtraArgs} -stf2ptf")
+# call this macro to register a PTF test with a custom PTF test directory; by
+# default the behavior is to look for a directory with the same name as the P4
+# program and a .ptf extension, which may not always be convenient when adding
+# tests for third-party P4 programs.
+# if you need to mark this test as XFAIL, please edit TofinoXfail.cmake with the
+# appropriate call to p4c_add_xfail_reason.
+macro(p4c_add_ptf_test_with_ptfdir device alias ts args ptfdir)
+  if (PTF_REQUIREMENTS_MET)
+    file (RELATIVE_PATH p4test ${P4C_SOURCE_DIR} ${ts})
+    p4c_add_test_with_args (${device} ${P4C_RUNTEST} FALSE ${alias}
+      ${p4test} "${args} -ptfdir ${ptfdir}")
+    p4c_test_set_name(__testname ${device} ${alias})
+    set_tests_properties(${__testname} PROPERTIES RUN_SERIAL 1)
+    p4c_add_test_label(${device} "ptf" ${alias})
   endif()
-endif()
+endmacro(p4c_add_ptf_test_with_ptfdir)
 
-if (ENABLE_TNA)
-  set (testExtraArgs "${testExtraArgs} -Xp4c=--native")
-endif()
+macro(simple_test_setup_check device)
+  if (NOT ENABLE_STF2PTF)
+    # We run STF tests on the STF framework
+    set(STF_SEARCH_PATHS
+      ${CMAKE_INSTALL_PREFIX}/bin
+      ${BFN_P4C_SOURCE_DIR}/../model/tests/simple_test_harness
+      ${BFN_P4C_SOURCE_DIR}/../model/build/tests/simple_test_harness
+      ${BFN_P4C_SOURCE_DIR}/../model/debug/tests/simple_test_harness)
 
-p4c_add_tests (${tag} ${P4C_RUNTEST} "${tests}"
-   "" "${testExtraArgs}")
+    find_program(HARLYN_STF_${device} ${device}_test_harness PATHS ${STF_SEARCH_PATHS})
 
-if (PTF_REQUIREMENTS_MET)
-  # PTF tests cannot be run in parallel with other tests, so we set the SERIAL
-  # property for them
-  set (__ptfCounter 0)
-  foreach (ts "${tests}")
-    file (GLOB __testfiles RELATIVE ${P4C_SOURCE_DIR} ${ts})
-    foreach (__p4file ${__testfiles})
-      set(__havePTF 0)
-      string (REGEX REPLACE ".p4$" ".ptf" __ptffile ${__p4file})
-      if (EXISTS ${P4C_SOURCE_DIR}/${__ptffile})
-        set(__havePTF 1)
-      endif()
-      string (REGEX REPLACE ".p4$" ".stf" __stffile ${__p4file})
-      if (ENABLE_STF2PTF AND NOT ${__havePTF} AND EXISTS ${P4C_SOURCE_DIR}/${__stffile})
-        # Also add as PTF test the STF
-        # MESSAGE(STATUS "STF2PTF: Generating ${P4C_BINARY_DIR}/${tag}/${__ptffile}/test.py")
-        set(__havePTF 1)
-      endif()
-      if (${__havePTF})
-        p4c_test_set_name(__testname ${tag} ${__p4file})
-        set_tests_properties(${__testname} PROPERTIES RUN_SERIAL 1)
-        p4c_add_test_label(${tag} "ptf" ${__p4file})
-        # MESSAGE(STATUS "Added PTF test: ${__testname}")
-        math (EXPR __ptfCounter "${__ptfCounter} + 1")
-      endif()
-    endforeach() # __p4file
-  endforeach() # ts
-  MESSAGE(STATUS "Added ${__ptfCounter} PTF tests")
-endif() # PTF_REQUIREMENTS_MET
+    if (HARLYN_STF_${device})
+      MESSAGE (STATUS "${device}_test_harness found.")
+    else()
+      MESSAGE (WARNING "STF tests need Harlyn ${device}_test_harness.\nLooked in ${STF_SEARCH_PATHS}.")
+    endif()
+  endif()
+endmacro(simple_test_setup_check)
 
-if (HARLYN_STF)
-  foreach (ts "${tests}")
-    file (GLOB __testfiles RELATIVE ${P4C_SOURCE_DIR} ${ts})
-    foreach (__p4file ${__testfiles})
-      string (REGEX REPLACE ".p4$" ".stf" __stffile ${__p4file})
-      if (EXISTS ${P4C_SOURCE_DIR}/${__stffile})
-        p4c_add_test_label(${tag} "stf" ${__p4file})
-      endif()
-    endforeach() # __p4file
-  endforeach()   # ts
-endif(HARLYN_STF)
+macro(packet_test_setup_check device)
+  # check for ptf
+  find_program(PTF ptf PATHS ${CMAKE_INSTALL_PREFIX}/bin)
+
+  # check for bf_switchd
+  find_program(BF_SWITCHD bf_switchd PATHS ${CMAKE_INSTALL_PREFIX}/bin)
+
+  # check for tofino-model
+  find_program(HARLYN_MODEL ${device}-model PATHS ${CMAKE_INSTALL_PREFIX}/bin)
+
+  if (PTF AND BF_SWITCHD AND HARLYN_MODEL)
+    set (PTF_REQUIREMENTS_MET TRUE)
+    MESSAGE (STATUS "All PTF dependencies were found.")
+  else()
+    set (PTF_REQUIREMENTS_MET FALSE)
+    if (NOT PTF)
+      MESSAGE (WARNING "PTF tests need the ptf binary.")
+    endif()
+    if (NOT BF_SWITCHD)
+      MESSAGE (WARNING "PTF tests need the bf_switchd binary.")
+    endif()
+    if (NOT HARLYN_MODEL)
+      MESSAGE (WARNING "PTF tests need the ${device}-model binary.")
+    endif()
+  endif()
+endmacro(packet_test_setup_check)
+
+macro(p4c_add_bf_backend_tests device tests)
+  set (testExtraArgs)
+  set (testExtraArgs "${testExtraArgs} -${device}")
+
+  simple_test_setup_check(${device})
+
+  packet_test_setup_check(${device})
+ 
+  # if STF is not found, disable all stf tests
+  if (NOT HARLYN_STF_${device})
+    set (testExtraArgs "${testExtraArgs} -norun")
+  endif()
+  
+  if (PTF_REQUIREMENTS_MET)
+    set (testExtraArgs "${testExtraArgs} -ptf")
+    if (ENABLE_STF2PTF)
+      set (testExtraArgs "${testExtraArgs} -stf2ptf")
+    endif()
+  endif()
+  
+  if (ENABLE_TNA)
+    set (testExtraArgs "${testExtraArgs} -Xp4c=--native")
+  endif()
+  
+  p4c_add_tests (${device} ${P4C_RUNTEST} "${tests}"
+     "" "${testExtraArgs}")
+  
+  if (PTF_REQUIREMENTS_MET)
+    # PTF tests cannot be run in parallel with other tests, so we set the SERIAL
+    # property for them
+    set (__ptfCounter 0)
+    foreach (ts "${tests}")
+      file (GLOB __testfiles RELATIVE ${P4C_SOURCE_DIR} ${ts})
+      foreach (__p4file ${__testfiles})
+        set(__havePTF 0)
+        string (REGEX REPLACE ".p4$" ".ptf" __ptffile ${__p4file})
+        if (EXISTS ${P4C_SOURCE_DIR}/${__ptffile})
+          set(__havePTF 1)
+        endif()
+        string (REGEX REPLACE ".p4$" ".stf" __stffile ${__p4file})
+        if (ENABLE_STF2PTF AND NOT ${__havePTF} AND EXISTS ${P4C_SOURCE_DIR}/${__stffile})
+          # Also add as PTF test the STF
+          # MESSAGE(STATUS "STF2PTF: Generating ${P4C_BINARY_DIR}/${device}/${__ptffile}/test.py")
+          set(__havePTF 1)
+        endif()
+        if (${__havePTF})
+          p4c_test_set_name(__testname ${device} ${__p4file})
+          set_tests_properties(${__testname} PROPERTIES RUN_SERIAL 1)
+          p4c_add_test_label(${device} "ptf" ${__p4file})
+          # MESSAGE(STATUS "Added PTF test: ${__testname}")
+          math (EXPR __ptfCounter "${__ptfCounter} + 1")
+        endif()
+      endforeach() # __p4file
+    endforeach() # ts
+    MESSAGE(STATUS "Added ${__ptfCounter} PTF tests")
+  endif() # PTF_REQUIREMENTS_MET
+  
+  if (HARLYN_STF_${device})
+    foreach (ts "${tests}")
+      file (GLOB __testfiles RELATIVE ${P4C_SOURCE_DIR} ${ts})
+      foreach (__p4file ${__testfiles})
+        string (REGEX REPLACE ".p4$" ".stf" __stffile ${__p4file})
+        if (EXISTS ${P4C_SOURCE_DIR}/${__stffile})
+          p4c_add_test_label(${device} "stf" ${__p4file})
+        endif()
+      endforeach() # __p4file
+    endforeach()   # ts
+  endif(HARLYN_STF_${device})
 endmacro(p4c_add_bf_backend_tests)
