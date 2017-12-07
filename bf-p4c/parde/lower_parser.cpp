@@ -3,6 +3,7 @@
 #include <boost/optional/optional_io.hpp>
 #include <boost/range/adaptor/reversed.hpp>
 
+#include <algorithm>
 #include <numeric>
 #include <sstream>
 #include <type_traits>
@@ -979,8 +980,9 @@ class ComputeBufferRequirements : public ParserModifier {
         }
 
         // We need to have buffered enough bytes to read the last byte in the
-        // range.
-        match->bufferRequired = int(bytesRead.hi);
+        // range. We also need to be sure to buffer at least as many bytes as we
+        // plan to shift.
+        match->bufferRequired = std::max(unsigned(bytesRead.hi), match->shift);
 
         const unsigned inputBufferSize = Device::pardeSpec().byteInputBufferSize();
         BUG_CHECK(*match->bufferRequired <= inputBufferSize,
