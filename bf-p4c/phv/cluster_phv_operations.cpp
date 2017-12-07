@@ -20,7 +20,19 @@ bool PHV_Field_Operations::preorder(const IR::MAU::Instruction *inst) {
     // and all destination data will be replaced.
     // TODO hanw, more ops to moved_based_ops ?
     //
-    static const ordered_set<cstring> move_based_ops = {"set"};
+    static const ordered_set<cstring> move_based_ops = {
+        "set",
+        "and",
+        "or",
+        "not",
+        "nor",
+        "andca",
+        "andcb",
+        "nand",
+        "orca",
+        "orcb",
+        "xnor"
+    };
     bool is_move_op = move_based_ops.count(inst->name);
 
     dst_i = nullptr;
@@ -71,8 +83,8 @@ void PHV_Field_Operations::end_apply() {
                 // If f can't be split but is larger than 32 bits, report an error.
                 if (f.size > 32)
                     P4C_UNIMPLEMENTED("Operands of arithmetic operations cannot be greater than "
-                                      "32b, but field %1% has %2%b",
-                                      cstring::to_cstring(f), f.size);
+                                      "32b, but field %1% has %2%b and is involved in '%3%'",
+                                      cstring::to_cstring(f), f.size, std::get<1>(op));
 
                 if (f.mau_write())  {
                     // Don't pack destinations, but we can pack sources.

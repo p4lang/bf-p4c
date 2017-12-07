@@ -486,10 +486,6 @@ p4c_add_xfail_reason("tofino"
 
 # new p4lang/p4c tests that fail
 p4c_add_xfail_reason("tofino"
-    "error: Syntax error, expecting identifier or operation"
-    testdata/p4_14_samples/issue1013.p4
-    )
-p4c_add_xfail_reason("tofino"
     "Failed to transform the program into a P4Runtime-compatible form"
     testdata/p4_16_samples/issue841.p4
     )
@@ -894,7 +890,8 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c6/COMPILER-603/loop.p4
   extensions/p4_tests/p4_14/c8/COMPILER-616/case3331.p4
   extensions/p4_tests/p4_14/c6/COMPILER-604/new_parser.p4
-  testdata/p4_16_samples/issue983-bmv2.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
+  switch_dc_basic
 
   # XXX(cole): Due to differing sized operands.
   extensions/p4_tests/p4_16/cast_widening_set.p4
@@ -983,9 +980,7 @@ p4c_add_xfail_reason("tofino"
   "Operands of arithmetic operations cannot be greater than 32b, but field .* has .*"
   extensions/p4_tests/p4_14/test_config_296_pragma_container.p4
   extensions/p4_tests/p4_14/test_config_258_wide_add.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   testdata/p4_16_samples/arith-bmv2.p4
-  switch_dc_basic
   )
 
 p4c_add_xfail_reason("tofino"
@@ -1008,6 +1003,11 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Hash table .* column .* duplicated"
   extensions/p4_tests/p4_14/test_config_100_hash_action.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Instruction selection creates an instruction that the rest of the compiler cannot correctly interpret"
+  testdata/p4_16_samples/issue983-bmv2.p4
   )
 
 # BRIG-348
