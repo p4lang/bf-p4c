@@ -64,41 +64,79 @@ class ContainerGroup {
 class FieldSlice {
     PHV::Field* field_i;
     le_bitrange range_i;
+    boost::optional<FieldAlignment> alignment_i = boost::none;
+    nw_bitrange validContainerRange_i = ZeroToMax();
 
-    /** Field name, following this scheme:
-     *   - "header.field"
-     *   - "header.field[i]" where "i" is a positive integer
-     *   - "header.$valid"
-     */
-    cstring         name;
+ public:
+    FieldSlice(Field* field, le_bitrange range)
+    : field_i(field), range_i(range) {
+        BUG_CHECK(0 <= range.lo, "Trying to create field slice with negative start");
+        BUG_CHECK(range.size() <= field->size, "Trying to create field slice larger than field");
 
-    /// Unique field ID.
-    // int             id;  // XXX(seth): Unused?
+        // Calculate relative alignment for this field slice.
+        if (field->alignment) {
+            le_bitrange field_range = StartLen(field->alignment->littleEndian, field->size);
+            le_bitrange slice_range = field_range.shiftedByBits(range_i.lo)
+                                                 .resizedToBits(range_i.size());
+            alignment_i = FieldAlignment(slice_range);
+            LOG5("Adjusting alignment of field " << field << " to " << *alignment_i <<
+                 " for slice " << range); }
+
+        // Calculate valid container range for this slice.
+        // XXX(cole): Is this right?
+        validContainerRange_i = field_i->validContainerRange_i;
+    }
+
+    /// Create a slice that holds the entirety of @field.
+    explicit FieldSlice(Field* field)
+    : FieldSlice(field, le_bitrange(StartLen(0, field->size))) { }
+
+    /// Creates a subslice of @slice from @range.lo to @range.hi.
+    FieldSlice(FieldSlice slice, le_bitrange range) : FieldSlice(slice.field(), range) {
+        BUG_CHECK(slice.range().contains(range),
+                  "Trying to create field sub-slice larger than the original slice");
+    }
+
+    bool operator==(const FieldSlice& other) const {
+        return field_i == other.field() && range_i == other.range();
+    }
+
+    bool operator!=(const FieldSlice& other) const {
+        return !(*this == other);
+    }
+
+    bool operator<(const FieldSlice& other) const {
+        if (field_i != other.field())
+            return field_i < other.field();
+        if (range_i.lo != other.range().lo)
+            return range_i.lo < other.range().lo;
+        return range_i.hi < other.range().hi;
+    }
 
     /// Whether the Field is ingress or egress.
-    // gress_t         gress;  // XXX(seth): Unused?
+    gress_t gress() const { return field_i->gress; }
 
-    /// Total size of Field in bits.
-    // int             size;  // XXX(seth): Unused?
+    /// Total size of FieldSlice in bits.
+    int size() const { return range_i.size(); }
 
-    /// The alignment requirement of this field. If boost::none, there is no
-    /// particular alignment requirement.
-    boost::optional<FieldAlignment> alignment;
+    /// The alignment requirement of this field slice. If boost::none, there is
+    /// no particular alignment requirement.
+    boost::optional<FieldAlignment> alignment() const { return alignment_i; }
 
     /// See documentation for `Field::validContainerRange()`.
     /// TODO(cole): Refactor this.
-    nw_bitrange validContainerRange_i = ZeroToMax();
+    nw_bitrange validContainerRange() const { return validContainerRange_i; }
 
-    /// Kind of this field.
-    // FieldKind kind;  // XXX(seth): Unused?
-
-    /// True if this Field is metadata bridged from ingress to egress.
-    // bool            bridged = false;  // XXX(seth): Unused?
-
- public:
-    FieldSlice(Field* field, le_bitrange range) : range_i(range) {
-        BUG_CHECK(0 <= range.lo, "Trying to create field slice with negative start");
-        BUG_CHECK(range.size() <= field->size, "Trying to create field slice larger than field");
+    /// Kind of field of this slice.
+    FieldKind kind() const {
+        // XXX(cole): PHV::Field::metadata and PHV::Field::pov should be
+        // replaced by FieldKind.
+        if (field_i->pov)
+            return FieldKind::pov;
+        else if (field_i->metadata)
+            return FieldKind::metadata;
+        else
+            return FieldKind::header;
     }
 
     /// @returns the field this is a slice of.
@@ -119,6 +157,7 @@ class AllocSlice {
  public:
     AllocSlice(PHV::Field* f, PHV::Container c, int f_bit_lo, int container_bit_lo, int width);
     AllocSlice(PHV::Field* f, PHV::Container c, le_bitrange f_slice, le_bitrange container_slice);
+    AllocSlice(FieldSlice f_slice, PHV::Container c, le_bitrange container_slice);
 
     bool operator==(const AllocSlice& other) const;
     bool operator!=(const AllocSlice& other) const;
@@ -388,25 +427,28 @@ class ClusterStats {
     /// @kind.
     virtual bool okIn(PHV::Kind kind) const = 0;
 
-    /// @returns the number of fields in this container with the
+    /// @returns the number of slices in this container with the
     /// exact_containers constraint.
     virtual int exact_containers() const = 0;
 
-    /// @returns the width of the widest field in this cluster.
+    /// @returns the width of the widest slice in this cluster.
     virtual int max_width() const = 0;
 
-    /// @returns the total number of constraints summed over all fields in this
+    /// @returns the total number of constraints summed over all slices in this
     /// cluster.
     virtual int num_constraints() const = 0;
 
-    /// @returns the sum of the widths of fields in this cluster.
+    /// @returns the sum of the widths of slices in this cluster.
     virtual size_t aggregate_size() const = 0;
 
     /// @returns true if this cluster contains @f.
     virtual bool contains(const PHV::Field* f) const = 0;
+
+    /// @returns true if this cluster contains @slice.
+    virtual bool contains(const PHV::FieldSlice& slice) const = 0;
 };
 
-/** An AlignedCluster groups fields that are involved in the same MAU
+/** An AlignedCluster groups slices that are involved in the same MAU
  * operations and, therefore, must be placed at the same alignment in
  * containers in the same MAU container group.
  *
@@ -418,21 +460,17 @@ class ClusterStats {
  * Fields a, b, c, d, and e must start at the same bit position and be placed
  * in the same MAU container group.
  *
- * XXX(cole): This is currently over-constrained, in that fields that are
- * involved in set operations are required to be at the same alignment when
- * they only need to be rotationally equivalent.  The fix is to introduce a
- * RotationalSupercluster that holds AlignedClusters that must be rotationally
- * aligned; this also requires updating cluster formation to exclude set
- * instructions, and then in a later pass form RotationalClusters as UnionFind
- * over operands of set instructions.
+ * Note that the `set` instruction (which translates to the `deposit_field` ALU
+ * operation) is a special case, because `deposit_field` can optionally rotate
+ * its source operand; hence, the operands do not need to be aligned.
  */
 class AlignedCluster : public ClusterStats {
     /// The kind of PHV container representing the minimum requirements for all
-    /// fields in this container.
+    /// slices in this container.
     PHV::Kind kind_i;
 
-    /// Fields in this cluster.
-    ordered_set<PHV::Field *> fields_i;
+    /// Field slices in this cluster.
+    ordered_set<PHV::FieldSlice> slices_i;
 
     int id_i;                // this cluster's id
     int exact_containers_i;
@@ -440,28 +478,28 @@ class AlignedCluster : public ClusterStats {
     int num_constraints_i;
     size_t aggregate_size_i;
 
-    /// If any field in the cluster needs its alignment adjusted to satisfy a
-    /// PARDE constraint, then all fields do.
-    boost::optional<unsigned> alignment_i;
+    /// If any slice in the cluster needs its alignment adjusted to satisfy a
+    /// PARDE constraint, then all slices do.
+    boost::optional<FieldAlignment> alignment_i;
 
-    /** Computes the range of valid lo bit positions where fields of this
+    /** Computes the range of valid lo bit positions where slices of this
      * cluster can be placed in containers of size @container_size, or
-     * boost::none if no valid start positions exist or if any field is too
+     * boost::none if no valid start positions exist or if any slice is too
      * large to fit in containers of @container_size.
      *
-     * If any field in this cluster has the `deparsed_bottom_bits` constraint,
-     * then the bitrange will be [0, 0], or `boost::none` if any field cannot
+     * If any slice in this cluster has the `deparsed_bottom_bits` constraint,
+     * then the bitrange will be [0, 0], or `boost::none` if any slice cannot
      * be started at container bit 0.
      *
-     * @returns the absolute alignment constraint (if any) for all fields
+     * @returns the absolute alignment constraint (if any) for all slices
      * in this cluster, or boost::none if no valid alignment exists.
      */
     boost::optional<le_bitrange>
     validContainerStartRange(PHV::Size container_size) const;
 
     // XXX(cole): This will replace validContainerStartRange() after cluster
-    // slicing.  This is simpler, in that it returns false if the field can't
-    // fit in the container at a valid offset, i.e. if any field in the cluster
+    // slicing.  This is simpler, in that it returns false if the slice can't
+    // fit in the container at a valid offset, i.e. if any slice in the cluster
     // is too large for the contianer.
     boost::optional<le_bitrange>
     validContainerStartRangeAfterSlicing(PHV::Size container_size) const;
@@ -469,16 +507,16 @@ class AlignedCluster : public ClusterStats {
     /// Helper function to set cluster id
     void set_cluster_id();
 
-    /// Helper function for the constructor that analyzes the fields that make
+    /// Helper function for the constructor that analyzes the slices that make
     /// up this cluster and extracts statistics and constraints.
     void initialize_constraints();
 
  public:
     template <typename Iterable>
-    AlignedCluster(PHV::Kind kind, Iterable fields) : kind_i(kind) {
+    AlignedCluster(PHV::Kind kind, Iterable slices) : kind_i(kind) {
         set_cluster_id();
-        for (auto* f : fields)
-            fields_i.insert(f);
+        for (auto& slice : slices)
+            slices_i.insert(slice);
         initialize_constraints();
     }
 
@@ -490,75 +528,93 @@ class AlignedCluster : public ClusterStats {
     bool okIn(PHV::Kind kind) const override;
 
     /** @returns the (little Endian) byte-relative alignment constraint (if
-     * any) for all fields in this cluster.
+     * any) for all slices in this cluster.
      */
-    boost::optional<unsigned> alignment() const { return alignment_i; }
-
-    /** @returns all the starting (low, little Endian) container bit positions at
-     * which the low bit of each field in this cluster can be placed, or
-     * an empty bitvec when no such valid position exists for containers
-     * of the specified size.
-     */
-
+    boost::optional<unsigned> alignment() const {
+        if (alignment_i)
+            return alignment_i->littleEndian;
+        return boost::none;
+    }
 
     /** Combines AlignedCluster::alignment() and
      * AlignedCluster::validContainerStartRange(@container_size) to compute the
-     * valid lo bit positions where fields of this cluster can be placed in
+     * valid lo bit positions where slices of this cluster can be placed in
      * containers of size @container_size, or boost::none if no valid start
-     * positions exist or if any field is too large to fit in containers of
+     * positions exist or if any slice is too large to fit in containers of
      * @container_size.
      *
-     * If any field in this cluster has the `deparsed_bottom_bits` constraint,
-     * then the bitvec will be [0, 0], or empty if any field cannot be started
+     * If any slice in this cluster has the `deparsed_bottom_bits` constraint,
+     * then the bitvec will be [0, 0], or empty if any slice cannot be started
      * at container bit 0.
      *
-     * @returns the set of bit positions at which all fields in this cluster
-     * all fields can be placed, if any.
+     * @returns the set of bit positions at which all slices in this cluster
+     * all slices can be placed, if any.
      */
     bitvec validContainerStart(PHV::Size container_size) const;
 
-    /// @returns the fields in this cluster.
-    const ordered_set<PHV::Field *>& fields() const { return fields_i; }
+    /// @returns the slices in this cluster.
+    const ordered_set<PHV::FieldSlice>& slices() const { return slices_i; }
 
-    using const_iterator = ordered_set<PHV::Field *>::const_iterator;
-    const_iterator begin() const { return fields_i.begin(); }
-    const_iterator end()   const { return fields_i.end(); }
+    using const_iterator = ordered_set<PHV::FieldSlice>::const_iterator;
+    const_iterator begin() const { return slices_i.begin(); }
+    const_iterator end()   const { return slices_i.end(); }
 
     // XXX(cole): Revisit the following stats/constraints getters.
 
-    /// @returns the number of fields in this container with the
+    /// @returns the number of slices in this container with the
     /// exact_containers constraint.
     int exact_containers() const override  { return exact_containers_i; }
 
-    /// @returns the width of the widest field in this cluster.
+    /// @returns the width of the widest slice in this cluster.
     int max_width() const override          { return max_width_i; }
 
-    /// @returns the total number of constraints summed over all fields in this
+    /// @returns the total number of constraints summed over all slices in this
     /// cluster.
     int num_constraints() const override    { return num_constraints_i; }
 
-    /// @returns the sum of the widths of fields in this cluster.
+    /// @returns the sum of the widths of slices in this cluster.
     size_t aggregate_size() const override  { return aggregate_size_i; }
 
     /// @returns true if this cluster contains @f.
     bool contains(const PHV::Field* f) const override;
+
+    /// @returns true if this cluster contains @slice.
+    bool contains(const PHV::FieldSlice& slice) const override;
+
+    struct SliceResult {
+        /// Associate original field slices with new field slices.
+        ordered_map<PHV::FieldSlice, std::pair<PHV::FieldSlice, PHV::FieldSlice>> slice_map;
+        /// A new cluster containing the lower field slices.
+        AlignedCluster* lo;
+        /// A new cluster containing the higher field slices.
+        AlignedCluster* hi;
+    };
+
+    /** Slices this cluster at the relative field bit @pos.  For example, if a
+     * cluster contains a field slice [3..7] and pos == 2, then `slice` will
+     * produce two clusters, one with [3..4] and the other with [5..7].
+     *
+     * If @pos is larger than the size of a field slice in this cluster, then
+     * the slice is placed entirely in the lo cluster.  If @pos is larger than
+     * all field sizes, then the hi cluster will not contain any fields.
+     *
+     * @param pos the position to split, i.e. the first bit of the upper slice.
+                  pos must be non-negative.
+     * @returns a pair of (lo, hi) clusters if the cluster can be split at @pos
+     *          or boost::none otherwise.
+     */
+    boost::optional<SliceResult> slice(int pos) const;
 };
 
 /** A rotational cluster holds groups of clusters that must be placed in the
- * same MAU group at rotationally-equivalent alignments. */
-
-
-/** A group of aligned clusters that must be placed in the same MAU group of
- * PHV containers.
+ * same MAU group at rotationally-equivalent alignments.
  */
-class SuperCluster : public ClusterStats {
- public:
-    using FieldList = std::vector<PHV::Field*>;
-
- private:
+class RotationalCluster : public ClusterStats {
+    /// AlignedClusters that make up this RotationalCluster.
     ordered_set<AlignedCluster*> clusters_i;
-    ordered_set<FieldList*> field_lists_i;
-    ordered_map<const PHV::Field*, AlignedCluster*> fields_to_clusters_i;
+
+    /// Map of slices to aligned clusters.
+    ordered_map<const PHV::FieldSlice, AlignedCluster*> slices_to_clusters_i;
 
     // Statstics gathered from clusters.
     PHV::Kind kind_i;
@@ -568,21 +624,17 @@ class SuperCluster : public ClusterStats {
     size_t aggregate_size_i = 0;
 
  public:
-    SuperCluster(ordered_set<PHV::AlignedCluster*> clusters, ordered_set<FieldList*> field_lists);
+    explicit RotationalCluster(ordered_set<PHV::AlignedCluster*> clusters);
 
     /// @returns the aligned clusters in this group.
     const ordered_set<AlignedCluster*>& clusters() const { return clusters_i; }
 
-    /// @returns the field lists that induced this grouping.
-    const ordered_set<FieldList*>& field_lists() const { return field_lists_i; }
-
-    /// @returns the cluster containing @f.
-    /// @warning fails catastrophicaly if @f is not in any cluster in this group; all fields
-    ///          in every field list are guaranteed to be present in exactly one cluster.
-    const AlignedCluster& cluster(const PHV::Field* f) const {
-        auto it = fields_to_clusters_i.find(f);
-        BUG_CHECK(it != fields_to_clusters_i.end(), "Field %1% not in cluster group",
-                  cstring::to_cstring(f));
+    /// @returns the cluster containing @slice.
+    /// @warning fails catastrophicaly if @slice is not in any cluster in this group.
+    const AlignedCluster& cluster(const PHV::FieldSlice& slice) const {
+        auto it = slices_to_clusters_i.find(slice);
+        BUG_CHECK(it != slices_to_clusters_i.end(), "Field %1% not in cluster group",
+                  cstring::to_cstring(slice));
         return *it->second;
     }
 
@@ -593,27 +645,132 @@ class SuperCluster : public ClusterStats {
     /// @returns the number of clusters in this group with the exact_containers constraint.
     int exact_containers() const override { return exact_containers_i; }
 
-    /// @returns the width of the maximum field in any cluster in this group.
+    /// @returns the width of the maximum slice in any cluster in this group.
     int max_width() const override { return max_width_i; }
 
     /// @returns the sum of constraints of all clusters in this group.
     int num_constraints() const override { return num_constraints_i; }
 
-    /// @returns the aggregate size of all fields in all clusters in this group.
+    /// @returns the aggregate size of all slices in all clusters in this group.
     size_t aggregate_size() const override { return aggregate_size_i; }
 
     /// @returns true if this cluster contains @f.
     bool contains(const PHV::Field* f) const override;
+
+    /// @returns true if this cluster contains @slice.
+    bool contains(const PHV::FieldSlice& slice) const override;
+
+    struct SliceResult {
+        /// Associate original field slices with new field slices.
+        ordered_map<PHV::FieldSlice, std::pair<PHV::FieldSlice, PHV::FieldSlice>> slice_map;
+        /// A new cluster containing the lower field slices.
+        RotationalCluster* lo;
+        /// A new cluster containing the higher field slices.
+        RotationalCluster* hi;
+    };
+
+    /** Slices all AlignedClusters in this cluster at the relative field bit
+     * @pos.  For example, if a cluster contains a field slice [3..7] and pos
+     * == 2, then `slice` will produce two clusters, one with [3..4] and the
+     * other with [5..7].
+     *
+     * If @pos is larger than the size of a field slice in this cluster, then
+     * the slice is placed entirely in the lo cluster.  If @pos is larger than
+     * all field sizes, then the hi cluster will not contain any fields.
+     *
+     * @param pos the position to split, i.e. the first bit of the upper slice.
+     *            pos must be non-negative.
+     * @returns a pair of (lo, hi) clusters if the cluster can be split at @pos
+     *          or boost::none otherwise.
+     */
+    boost::optional<SliceResult> slice(int pos) const;
+};
+
+
+/** A group of rotational clusters that must be placed in the same MAU group of
+ * PHV containers.
+ */
+class SuperCluster : public ClusterStats {
+ public:
+    using SliceList = std::vector<PHV::FieldSlice>;
+
+ private:
+    ordered_set<RotationalCluster*> clusters_i;
+    ordered_set<SliceList*> slice_lists_i;
+    ordered_map<const PHV::FieldSlice, RotationalCluster*> slices_to_clusters_i;
+
+    // Statstics gathered from clusters.
+    PHV::Kind kind_i;
+    int exact_containers_i = 0;
+    int max_width_i = 0;
+    int num_constraints_i = 0;
+    size_t aggregate_size_i = 0;
+
+ public:
+    SuperCluster(
+        ordered_set<PHV::RotationalCluster*> clusters,
+        ordered_set<SliceList*> slice_lists);
+
+    /// @returns the aligned clusters in this group.
+    const ordered_set<RotationalCluster*>& clusters() const { return clusters_i; }
+
+    /// @returns the slice lists that induced this grouping.
+    const ordered_set<SliceList*>& slice_lists() const { return slice_lists_i; }
+
+    /// @returns the rotational cluster containing @slice.
+    /// @warning fails catastrophicaly if @slice is not in any cluster in this group; all slices
+    ///          in every slice list are guaranteed to be present in exactly one cluster.
+    const RotationalCluster& cluster(const PHV::FieldSlice& slice) const {
+        auto it = slices_to_clusters_i.find(slice);
+        BUG_CHECK(it != slices_to_clusters_i.end(), "Field %1% not in cluster group",
+                  cstring::to_cstring(slice));
+        return *it->second;
+    }
+
+    /// @returns the aligned cluster containing @slice.
+    /// @warning fails catastrophicaly if @slice is not in any cluster in this group; all slices
+    ///          in every slice list are guaranteed to be present in exactly one cluster.
+    const AlignedCluster& aligned_cluster(const PHV::FieldSlice& slice) const {
+        BUG_CHECK(slices_to_clusters_i.find(slice) != slices_to_clusters_i.end(),
+                  "Field %1% not in cluster group", cstring::to_cstring(slice));
+        return slices_to_clusters_i.at(slice)->cluster(slice);
+    }
+
+    /// @returns true if this cluster can be assigned to containers of kind
+    /// @kind.
+    bool okIn(PHV::Kind kind) const override;
+
+    /// @returns the number of clusters in this group with the exact_containers constraint.
+    int exact_containers() const override { return exact_containers_i; }
+
+    /// @returns the width of the maximum slice in any cluster in this group.
+    int max_width() const override { return max_width_i; }
+
+    /// @returns the sum of constraints of all clusters in this group.
+    int num_constraints() const override { return num_constraints_i; }
+
+    /// @returns the aggregate size of all slices in all clusters in this group.
+    size_t aggregate_size() const override { return aggregate_size_i; }
+
+    /// @returns true if this cluster contains @f.
+    bool contains(const PHV::Field* f) const override;
+
+    /// @returns true if this cluster contains @slice.
+    bool contains(const PHV::FieldSlice& slice) const override;
 };
 
 std::ostream &operator<<(std::ostream &out, const Allocation&);
 std::ostream &operator<<(std::ostream &out, const Allocation*);
+std::ostream &operator<<(std::ostream &out, const FieldSlice&);
+std::ostream &operator<<(std::ostream &out, const FieldSlice*);
 std::ostream &operator<<(std::ostream &out, const AllocSlice&);
 std::ostream &operator<<(std::ostream &out, const AllocSlice*);
 std::ostream &operator<<(std::ostream &out, const ContainerGroup&);
 std::ostream &operator<<(std::ostream &out, const ContainerGroup*);
 std::ostream &operator<<(std::ostream &out, const AlignedCluster&);
 std::ostream &operator<<(std::ostream &out, const AlignedCluster*);
+std::ostream &operator<<(std::ostream &out, const RotationalCluster&);
+std::ostream &operator<<(std::ostream &out, const RotationalCluster*);
 std::ostream &operator<<(std::ostream &out, const SuperCluster&);
 std::ostream &operator<<(std::ostream &out, const SuperCluster*);
 

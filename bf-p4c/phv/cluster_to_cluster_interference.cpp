@@ -16,8 +16,9 @@ Cluster_Interference::apply_visitor(const IR::Node *node, const char *name) {
     // include both phv clusters and t_phv clusters for interference computation
     std::vector<PHV::AlignedCluster*> clusters;
     for (auto s_cl : clustering_i.cluster_groups())
-        for (auto a_cl : s_cl->clusters())
-            clusters.push_back(a_cl);
+        for (auto r_cl : s_cl->clusters())
+            for (auto a_cl : r_cl->clusters())
+                clusters.push_back(a_cl);
 
     // reduce_clusters populates clusters_i .. Substratum S1,Overlay O11,O12,S2,O21,O22,O23,S3 ...
     reduce_clusters(clusters, "phv+t_phv");
@@ -214,8 +215,10 @@ Cluster_Interference::mutually_exclusive(PHV::AlignedCluster *cl1, PHV::AlignedC
         cl_substratum = cl2;
         cl_overlay = cl1; }
     // copy of substratum_fields as list changed during overlay matching
-    std::list<PHV::Field *>
-        substratum_fs(cl_substratum->fields().begin(), cl_substratum->fields().end());
+    std::list<PHV::Field *> substratum_fs;
+    for (auto& slice : cl_substratum->slices())
+        substratum_fs.push_back(slice.field());
+
     std::map<PHV::Field *, int> substratum_containers;
     for (auto* f_s : substratum_fs)
         substratum_containers[f_s] = num_containers(f_s);
@@ -228,9 +231,10 @@ Cluster_Interference::mutually_exclusive(PHV::AlignedCluster *cl1, PHV::AlignedC
     // each overlay field maps to a separate substratum container
     // map[f_s][c] = f_o
     std::map<PHV::Field *, std::map<int, PHV::Field *>> f_s_f_o_map;
-    int o_fields_to_map = cl_overlay->fields().size();
-    for (auto* f_o : cl_overlay->fields()) {
-        PHV::Field *remove_field = 0;
+    int o_fields_to_map = cl_overlay->slices().size();
+    for (auto& slice : cl_overlay->slices()) {
+        PHV::Field* f_o = slice.field();
+        PHV::Field* remove_field = 0;
         for (auto* f_s : substratum_fs) {
             // f_o mutually exclusive with f_s
             // f_o container occupation <= f_s

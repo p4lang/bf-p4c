@@ -8,12 +8,12 @@ FieldInterference::FieldVector FieldInterference::getAllReferencedFields(
         std::vector<PHV::AlignedCluster*>& clusters,
         gress_t gress) {
     FieldVector rs;
-    for (auto *cl : clusters) {
-        for (auto *f : cl->fields()) {
-            if (f->gress != gress) continue;
-            if (std::find(rs.begin(), rs.end(), f) == rs.end())
-                rs.push_back(f);
-            field_to_cluster_map[f].insert(cl); } }
+    for (auto* cl : clusters) {
+        for (auto& slice : cl->slices()) {
+            if (slice.gress() != gress) continue;
+            if (std::find(rs.begin(), rs.end(), slice.field()) == rs.end())
+                rs.push_back(slice.field());
+            field_to_cluster_map[slice.field()].insert(cl); } }
     return rs;
 }
 
@@ -24,9 +24,10 @@ FieldInterference::apply_visitor(const IR::Node *node, const char *name) {
         LOG4(name);
 
     std::vector<PHV::AlignedCluster*> all_clusters;
-    for (auto* cluster_group : clustering_i.cluster_groups())
-        all_clusters.insert(all_clusters.end(), cluster_group->clusters().begin(),
-                                                cluster_group->clusters().end());
+    for (auto* super_cluster : clustering_i.cluster_groups())
+        for (auto* rotational_cluster : super_cluster->clusters())
+            all_clusters.insert(all_clusters.end(), rotational_cluster->clusters().begin(),
+                                                    rotational_cluster->clusters().end());
 
     FieldVector ingress_fields = getAllReferencedFields(all_clusters, INGRESS);
     FieldVector egress_fields = getAllReferencedFields(all_clusters, EGRESS);

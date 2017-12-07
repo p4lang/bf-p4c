@@ -37,6 +37,11 @@ class AllocatePHV : public Inspector {
     PhvInfo& phv_i;
     // ActionPhvConstraints& actions_i;  // XXX(seth): Not yet implemented?
 
+    /// Split @sc into container-sized chunks, prefering the largest container
+    /// sizes possible.
+    /// @returns a list of sliced SuperClusters, or @sc if no slicing occurred.
+    static std::list<PHV::SuperCluster*> split_super_cluster(PHV::SuperCluster* sc);
+
     /** The entry point.  This "pass" doesn't actually traverse the IR, but it
      * marks the place in the back end where PHV allocation does its work,
      * which is triggered by a call to `end_apply`.
@@ -68,32 +73,6 @@ class AllocatePHV : public Inspector {
      */
     static std::list<PHV::ContainerGroup *> makeDeviceContainerGroups();
 
-    /** Return a vector of consecutive bit ranges of size @slice_size starting
-     * at 0 (zero) and adding up to @aggregate_size.  The first and last slices
-     * may be smaller than @size if the starting bit in the container (@start)
-     * is non-zero.  For example:
-     *
-     *                            3                             <-- start ==  3
-     * container slices:       [---][---][---][---][---]       slice size ==  5
-     * whole field:               |------------------|     aggregate size == 20
-     * field slices:              [][---][---][---][-]         
-     *                            0 2    7    12   17
-     *
-     * @aggregate_size and @slice_size must be positive, and @start must be
-     * greater than or equal to zero.
-     */
-    static
-    std::vector<le_bitrange> make_field_slices(int aggregate_size, int slice_size, int start);
-
-    /** Produces bit ranges with coordinates relative to the container rather
-     * than the field.  The first slice is positioned at @start, the
-     * others at 0.
-     *
-     * @see make_field_slices.
-     */
-    static
-    std::vector<le_bitrange> make_container_slices(int aggregate_size, int slice_size, int start);
-
     /// @returns true if @f can overlay all fields in @slices.
     static bool can_overlay(
             SymBitMatrix mutually_exclusive_field_ids,
@@ -108,11 +87,16 @@ class AllocatePHV : public Inspector {
     bitvec satisfies_constraints(
         const PHV::ContainerGroup& group, const PHV::AlignedCluster& cluster) const;
 
-    /// @returns true if field list<-->container constraints are satisfied.
+    /// @returns true if slice list<-->container constraints are satisfied.
     bool satisfies_constraints(std::vector<PHV::AllocSlice> slices) const;
 
     /// @returns true if field<-->group constraints are satisfied.
     bool satisfies_constraints(const PHV::ContainerGroup& group, const PHV::Field* f) const;
+
+    /// @returns true if field slice<-->group constraints are satisfied.
+    bool satisfies_constraints(
+        const PHV::ContainerGroup& group,
+        const PHV::FieldSlice& slice) const;
 
     /// @returns true if @slice is a valid allocation move given the allocation
     /// statis in @alloc.
@@ -177,8 +161,8 @@ class AllocatePHV : public Inspector {
     boost::optional<PHV::Transaction> tryAlloc(
         const PHV::Allocation& alloc,
         const PHV::ContainerGroup& group,
-        const std::vector<PHV::Field*>& fields,
-        const ordered_map<const PHV::Field*, int>& start_positions);
+        const std::vector<PHV::FieldSlice>& fields,
+        const ordered_map<const PHV::FieldSlice, int>& start_positions);
 
     /** Helper function for tryAlloc that tries to allocate all the fields of a single CCGF.
      *

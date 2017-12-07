@@ -61,6 +61,12 @@ PHV::AllocSlice::AllocSlice(
               cstring::to_cstring(container_slice));
 }
 
+PHV::AllocSlice::AllocSlice(
+        PHV::FieldSlice field_slice,
+        PHV::Container c,
+        le_bitrange container_slice)
+        : AllocSlice(field_slice.field(), c, field_slice.range(), container_slice) { }
+
 bool PHV::AllocSlice::operator==(const PHV::AllocSlice& other) const {
     return field_i             == other.field_i
         && container_i         == other.container_i
@@ -455,89 +461,82 @@ void PHV::AlignedCluster::initialize_constraints() {
     aggregate_size_i = 0;
     alignment_i = boost::none;
 
-    for (auto* f : fields_i) {
+    for (auto& slice : slices_i) {
         // XXX(cole): These constraints will be subsumed by deparser schema.
-        exact_containers_i += f->exact_containers() ? 1 : 0;
-        max_width_i = std::max(max_width_i, f->size);
-        aggregate_size_i += f->size;
+        exact_containers_i += slice.field()->exact_containers() ? 1 : 0;
+        max_width_i = std::max(max_width_i, slice.size());
+        aggregate_size_i += slice.size();
 
-        auto f_alignment = boost::optional<unsigned>(f->phv_alignment());
-        if (alignment_i && f_alignment && *alignment_i != *f_alignment) {
+        auto s_alignment = slice.alignment();
+        if (alignment_i && s_alignment && *alignment_i != *s_alignment) {
             std::stringstream msg;
             msg << "Fields involved in the same MAU operations have conflicting PARDE alignment "
-                << "requirements: " << *alignment_i << " and " << *f_alignment << std::endl;
+                << "requirements: " << *alignment_i << " and " << *s_alignment << std::endl;
             msg << "Fields in cluster:" << std::endl;
-            for (auto* f : fields_i)
-                msg << "    " << f << std::endl;
+            for (auto& slice : slices_i)
+                msg << "    " << slice << std::endl;
             ::error("%1%", msg.str());
-        } else if (!alignment_i && f_alignment) {
-            alignment_i = f_alignment;
+        } else if (!alignment_i && s_alignment) {
+            alignment_i = s_alignment;
         }
 
         // XXX(cole): This should probably live in the field object.
-        if (f->deparsed())              num_constraints_i++;
-        if (f->no_pack())               num_constraints_i++;
-        if (f->deparsed_bottom_bits())  num_constraints_i++;
-        if (f->exact_containers())      num_constraints_i++;
-        if (f->mau_phv_no_pack())       num_constraints_i++; }
+        if (slice.field()->deparsed())              num_constraints_i++;
+        if (slice.field()->no_pack())               num_constraints_i++;
+        if (slice.field()->deparsed_bottom_bits())  num_constraints_i++;
+        if (slice.field()->exact_containers())      num_constraints_i++; }
 }
 
 
 boost::optional<le_bitrange>
 PHV::AlignedCluster::validContainerStartRange(PHV::Size container_size) const {
-    le_bitrange slice = StartLen(0, int(container_size));
+    le_bitrange container_slice = StartLen(0, int(container_size));
     LOG5("Computing valid container start range for cluster " <<
-         " for placement in " << slice << " slices of " << container_size << " containers.");
+         " for placement in " << container_slice << " slices of " <<
+         container_size << " containers.");
 
     // Compute the range of valid alignment of the first bit (low, little
     // Endian) of all cluster fields, which is the intersection of the valid
     // starting bit positions of each field in the cluster.
     bool has_deparsed_bottom_bits = false;
     le_bitinterval valid_start_interval = ZeroToMax();
-    for (auto* f : fields_i) {
+    for (auto& slice : slices_i) {
         // If the field has deparsed bottom bits, then all fields in the cluster
         // will need to be aligned at zero.
-        has_deparsed_bottom_bits |= f->deparsed_bottom_bits();
-        if (f->deparsed_bottom_bits())
-            LOG5("\tField " << f << " has deparsed bottom bits");
+        has_deparsed_bottom_bits |= slice.field()->deparsed_bottom_bits();
+        if (slice.field()->deparsed_bottom_bits())
+            LOG5("\tField " << slice << " has deparsed bottom bits");
 
-        // Compute the total size of the slices required to hold this field.
-        int field_placement_size = f->is_ccgf() ? f->ccgf_width() : f->size;
-        int req_slices_for_field = field_placement_size / slice.size() +
-                                   (field_placement_size % slice.size() ? 1 : 0);
-        int aggregate_slice_bits = req_slices_for_field * slice.size();
-        auto aggregate_slice_range = nw_bitrange(StartLen(0, aggregate_slice_bits));
+        BUG_CHECK(slice.size() <= int(container_size), "Slice size greater than container size");
+        LOG5("\tField slice " << slice << " to be placed in container size " << container_size <<
+             " slices has " << (slice.validContainerRange() == ZeroToMax() ? "no" :
+                 cstring::to_cstring(slice.validContainerRange())) << " alignment requirement.");
 
-        LOG5("\tField " << f << " to be placed across " << req_slices_for_field << " slices has "
-             << (f->validContainerRange() == ZeroToMax() ? "no" :
-                 cstring::to_cstring(f->validContainerRange())) << " alignment requirement.");
-
-        // ...intersecting with the valid range for this field
-        nw_bitinterval valid_interval =
-            aggregate_slice_range.intersectWith(f->validContainerRange());
+        // Intersect the valid range of this field with the container size.
+        nw_bitrange container_range = StartLen(0, int(container_size));
+        nw_bitinterval valid_interval = container_range.intersectWith(slice.validContainerRange());
         BUG_CHECK(!valid_interval.empty(), "Bad absolute container range; "
-                  "field %1% has valid container range %2%, which has no "
-                  "overlap with aggregate container range %3%",
-                  f->name, f->validContainerRange(), aggregate_slice_range);
+                  "field slice %1% has valid container range %2%, which has no "
+                  "overlap with container range %3%",
+                  slice.field()->name, slice.validContainerRange(), container_range);
 
         // ...and converted to little Endian with respect to the coordinate
-        // space formed by the sum of all slices.
+        // space formed by the container.
         le_bitrange valid_range =
-            (*toClosedRange(valid_interval)).toOrder<Endian::Little>(
-                aggregate_slice_bits);
+            (*toClosedRange(valid_interval)).toOrder<Endian::Little>(int(container_size));
 
-        // Convert from a range denoting a valid placement of the whole field
+        // Convert from a range denoting a valid placement of the whole slice
         // to a range denoting the valid placement of the first (lo, little
         // Endian) bit of the field in the first slice.
         //
         // (We add 1 to reflect that the valid starting range for a field
         // includes its first bit.)
         le_bitinterval this_valid_start_interval =
-            valid_range
-              .resizedToBits(valid_range.size() - field_placement_size + 1)
-              .intersectWith(slice);
+            valid_range.resizedToBits(valid_range.size() - slice.range().size() + 1)
+                       .intersectWith(container_slice);
 
-        LOG5("\tField " << f << " has valid start interval of " << this_valid_start_interval);
+        LOG5("\tField slice " << slice << " has valid start interval of " <<
+             this_valid_start_interval);
 
         valid_start_interval =
             valid_start_interval.intersectWith(this_valid_start_interval); }
@@ -559,7 +558,7 @@ PHV::AlignedCluster::validContainerStartRangeAfterSlicing(PHV::Size container_si
     // starting bit positions of each field in the cluster.
     bool has_deparsed_bottom_bits = false;
     le_bitinterval cluster_valid_start_interval = ZeroToMax();
-    for (auto* f : fields_i) {
+    for (auto& slice : slices_i) {
         // Return `none` if f is too large to fit in containers of this size.
         // XXX(cole): Add this in along with slicing.
         // if (int(container_size) < f->size)
@@ -567,18 +566,18 @@ PHV::AlignedCluster::validContainerStartRangeAfterSlicing(PHV::Size container_si
 
         // If the field has deparsed bottom bits, then all fields in the cluster
         // will need to be aligned at zero.
-        has_deparsed_bottom_bits |= f->deparsed_bottom_bits();
-        if (f->deparsed_bottom_bits())
-            LOG5("\tField " << f << " has deparsed bottom bits");
+        has_deparsed_bottom_bits |= slice.field()->deparsed_bottom_bits();
+        if (slice.field()->deparsed_bottom_bits())
+            LOG5("\tField slice " << slice << " has deparsed bottom bits");
 
         // Start with the range of the container
         nw_bitrange nw_container_range(StartLen(0, int(container_size)));
 
         // ...intersecting with the valid range for this field
         nw_bitinterval nw_valid_interval =
-            nw_container_range.intersectWith(f->validContainerRange());
+            nw_container_range.intersectWith(slice.validContainerRange());
 
-        if (nw_valid_interval.size() < f->size)
+        if (nw_valid_interval.size() < slice.size())
             return boost::none;
 
         // ...and converted to little Endian with respect to the coordinate
@@ -593,9 +592,9 @@ PHV::AlignedCluster::validContainerStartRangeAfterSlicing(PHV::Size container_si
         // (We add 1 to reflect that the valid starting range for a field
         // includes its first bit.)
         le_bitinterval valid_start_interval =
-            toHalfOpenRange(valid_range.resizedToBits(valid_range.size() - f->size + 1));
+            toHalfOpenRange(valid_range.resizedToBits(valid_range.size() - slice.size() + 1));
 
-        LOG5("\tField " << f << " has valid start interval of " << valid_start_interval);
+        LOG5("\tField slice " << slice << " has valid start interval of " << valid_start_interval);
 
         cluster_valid_start_interval =
             cluster_valid_start_interval.intersectWith(valid_start_interval); }
@@ -638,28 +637,129 @@ bitvec PHV::AlignedCluster::validContainerStart(PHV::Size container_size) const 
     return rv;
 }
 
-bool PHV::AlignedCluster::contains(const PHV::Field *f1) const {
-    for (auto* f2 : fields_i)
-        if (f1 == f2)
+bool PHV::AlignedCluster::contains(const PHV::Field *f) const {
+    for (auto& s : slices_i)
+        if (s.field() == f)
             return true;
     return false;
 }
 
+bool PHV::AlignedCluster::contains(const PHV::FieldSlice& s1) const {
+    for (auto& s2 : slices_i)
+        if (s1.field() == s2.field())
+            return true;
+    return false;
+}
+
+boost::optional<PHV::AlignedCluster::SliceResult>
+PHV::AlignedCluster::slice(int pos) const {
+    BUG_CHECK(pos >= 0, "Trying to slice cluster at negative position");
+    PHV::AlignedCluster::SliceResult rv;
+    std::vector<PHV::FieldSlice> lo_slices;
+    std::vector<PHV::FieldSlice> hi_slices;
+    for (auto& slice : slices_i) {
+        // Put slice in lo if pos is larger than the slice.
+        if (slice.range().size() <= pos) {
+            lo_slices.push_back(slice);
+            continue; }
+        // Check whether the field in `slice` can be sliced.
+        if (slice.field()->no_split())
+            return boost::none;
+        // Create new slices.
+        le_bitrange lo_range = StartLen(slice.range().lo, pos);
+        le_bitrange hi_range = StartLen(slice.range().lo + pos,
+                                        slice.range().size() - lo_range.size());
+        auto lo_slice = PHV::FieldSlice(slice, lo_range);
+        auto hi_slice = PHV::FieldSlice(slice, hi_range);
+        lo_slices.push_back(lo_slice);
+        hi_slices.push_back(hi_slice);
+        // Update the slice map.
+        rv.slice_map.emplace(PHV::FieldSlice(slice), std::make_pair(lo_slice, hi_slice));
+    }
+
+    rv.lo = new PHV::AlignedCluster(kind_i, lo_slices);
+    rv.hi = new PHV::AlignedCluster(kind_i, hi_slices);
+    return rv;
+}
+
+PHV::RotationalCluster::RotationalCluster(ordered_set<PHV::AlignedCluster*> clusters)
+        : clusters_i(clusters) {
+    // Populate the field-->cluster map (slices_to_clusters_i).
+    for (auto* cluster : clusters_i)
+        for (auto& slice : *cluster)
+            slices_to_clusters_i[slice] = cluster;
+
+    // Tally stats.
+    kind_i = PHV::Kind::tagalong;
+    for (auto* cluster : clusters_i) {
+        // XXX(cole): We'll need to update this for JBay.
+        if (!cluster->okIn(kind_i))
+            kind_i = PHV::Kind::normal;
+        if (cluster->exact_containers())
+            exact_containers_i++;
+        max_width_i = std::max(max_width_i, cluster->max_width());
+        num_constraints_i += cluster->num_constraints();
+        aggregate_size_i += cluster->aggregate_size(); }
+}
+
+bool PHV::RotationalCluster::okIn(PHV::Kind kind) const {
+    return kind_i <= kind;
+}
+
+bool PHV::RotationalCluster::contains(const PHV::Field* f) const {
+    for (auto& kv : slices_to_clusters_i)
+        if (f == kv.first.field())
+            return true;
+    return false;
+}
+
+bool PHV::RotationalCluster::contains(const PHV::FieldSlice& slice) const {
+    return slices_to_clusters_i.find(slice) != slices_to_clusters_i.end();
+}
+
+
+boost::optional<PHV::RotationalCluster::SliceResult>
+PHV::RotationalCluster::slice(int pos) const {
+    BUG_CHECK(pos >= 0, "Trying to slice cluster at negative position");
+    PHV::RotationalCluster::SliceResult rv;
+    ordered_set<PHV::AlignedCluster*> lo_clusters;
+    ordered_set<PHV::AlignedCluster*> hi_clusters;
+    for (auto* aligned_cluster : clusters_i) {
+        auto new_clusters = aligned_cluster->slice(pos);
+        if (!new_clusters)
+            return boost::none;
+        // Filter empty clusters, as some clusters may only have fields smaller
+        // than pos.
+        if (new_clusters->lo->slices().size())
+            lo_clusters.insert(new_clusters->lo);
+        if (new_clusters->hi->slices().size())
+            hi_clusters.insert(new_clusters->hi);
+        rv.slice_map = std::move(new_clusters->slice_map);
+    }
+
+    rv.lo = new PHV::RotationalCluster(lo_clusters);
+    rv.hi = new PHV::RotationalCluster(hi_clusters);
+    return rv;
+}
+
+
+
 PHV::SuperCluster::SuperCluster(
-        ordered_set<PHV::AlignedCluster*> clusters,
-        ordered_set<FieldList*> field_lists)
-        : clusters_i(clusters), field_lists_i(field_lists) {
-    // Populate the field-->cluster map (fields_to_clusters_i), checking that
-    // every field is present in some cluster.
-    for (auto* field_list : field_lists) {
-        for (auto* field : *field_list) {
-            for (auto* cluster : clusters) {
-                if (cluster->contains(field)) {
-                    fields_to_clusters_i[field] = cluster;
-                    break; } }
-            BUG_CHECK(fields_to_clusters_i.find(field) != fields_to_clusters_i.end(),
-                      "Trying to form cluster group with a field list containing %1%, "
-                      "which is not present in any cluster", cstring::to_cstring(field)); } }
+        ordered_set<PHV::RotationalCluster*> clusters,
+        ordered_set<SliceList*> slice_lists)
+        : clusters_i(clusters), slice_lists_i(slice_lists) {
+    // Populate the field slice-->cluster map (slices_to_clusters_i)
+    for (auto* rotational_cluster : clusters)
+        for (auto* aligned_cluster : rotational_cluster->clusters())
+            for (auto& slice : *aligned_cluster)
+                slices_to_clusters_i[slice] = rotational_cluster;
+
+    // Check that every field is present in some cluster.
+    for (auto* slice_list : slice_lists) {
+        for (auto& slice : *slice_list) {
+            BUG_CHECK(slices_to_clusters_i.find(slice) != slices_to_clusters_i.end(),
+                      "Trying to form cluster group with a slice list containing %1%, "
+                      "which is not present in any cluster", cstring::to_cstring(slice)); } }
 
     // Tally stats.
     kind_i = PHV::Kind::tagalong;
@@ -681,6 +781,13 @@ bool PHV::SuperCluster::okIn(PHV::Kind kind) const {
 bool PHV::SuperCluster::contains(const PHV::Field* f) const {
     for (auto* cluster : clusters_i)
         if (cluster->contains(f))
+            return true;
+    return false;
+}
+
+bool PHV::SuperCluster::contains(const PHV::FieldSlice& slice) const {
+    for (auto* cluster : clusters_i)
+        if (cluster->contains(slice))
             return true;
     return false;
 }
@@ -779,6 +886,20 @@ std::ostream &operator<<(std::ostream &out, const PHV::Allocation* alloc) {
     return out;
 }
 
+std::ostream &operator<<(std::ostream &out, const PHV::FieldSlice& slice) {
+    out << slice.field() << slice.range();
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, const PHV::FieldSlice* slice) {
+    if (slice)
+        out << *slice;
+    else
+        out << "-null-alloc-slice-";
+    return out;
+}
+
+
 std::ostream &operator<<(std::ostream &out, const PHV::AllocSlice& slice) {
     out << slice.container() << slice.container_slice() << "<--"
         << slice.field()->name << slice.field_slice();
@@ -816,10 +937,10 @@ std::ostream &operator<<(std::ostream &out, const PHV::ContainerGroup* g) {
 std::ostream &operator<<(std::ostream &out, const PHV::AlignedCluster& cl) {
     out << "[";
     unsigned count = 0;
-    for (auto f : cl.fields()) {
+    for (auto& slice : cl) {
         count++;
-        out << f;
-        if (count < cl.fields().size())
+        out << slice;
+        if (count < cl.slices().size())
             out << ", "; }
     out << "]";
     return out;
@@ -833,32 +954,49 @@ std::ostream &operator<<(std::ostream &out, const PHV::AlignedCluster* cl) {
     return out;
 }
 
+std::ostream &operator<<(std::ostream &out, const PHV::RotationalCluster& cl) {
+    out << "[";
+    unsigned count = 0;
+    for (auto& cluster : cl.clusters()) {
+        count++;
+        out << cluster;
+        if (count < cl.clusters().size())
+            out << ", "; }
+    out << "]";
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, const PHV::RotationalCluster* cl) {
+    if (cl)
+        out << *cl;
+    else
+        out << "-null-rotational-cluster-";
+    return out;
+}
+
 // TODO(cole): This could really stand to be improved.
 std::ostream &operator<<(std::ostream &out, const PHV::SuperCluster& g) {
-    // Print the field lists.
-    if (g.field_lists().size() == 0) {
-        out << "[ ]";
+    // Print the slice lists.
+    out << "SUPERCLUSTER" << std::endl;
+    out << "    slice lists:\t";
+    if (g.slice_lists().size() == 0) {
+        out << "[ ]" << std::endl;
     } else {
-        out << "[ ";
-        unsigned count = 0U;
-        for (auto* field_list : g.field_lists()) {
-            out << boost::format("%|8t|%1%") % cstring::to_cstring(*field_list);
-            if (++count < g.field_lists().size())
-                out << std::endl; }
-        out << " ]" << std::endl;
+        out << std::endl;
+        for (auto* slice_list : g.slice_lists()) {
+            out << boost::format("%|8t|%1%") % cstring::to_cstring(*slice_list);
+            out << std::endl; }
     }
 
     // Print aligned clusters.
+    out << "    rotational clusters:\t";
     if (g.clusters().size() == 0) {
-        out << "{ }";
+        out << "{ }" << std::endl;
     } else {
-        out << "{ ";
-        unsigned count = 0U;
+        out << std::endl;
         for (auto* cluster : g.clusters()) {
             out << boost::format("%|8t|%1%") % cstring::to_cstring(cluster);
-            if (++count < g.clusters().size())
-                out << std::endl; }
-        out << " }" << std::endl;
+            out << std::endl; }
     }
 
     return out;

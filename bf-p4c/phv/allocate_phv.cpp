@@ -3,46 +3,77 @@
 #include <boost/range/adaptor/reversed.hpp>
 #include "lib/log.h"
 
-
 /* static */
-std::vector<le_bitrange>
-AllocatePHV::make_field_slices(int aggregate_size, int slice_size, int start) {
-    BUG_CHECK(aggregate_size >= 0, "Negative aggregate slice size");
-    BUG_CHECK(slice_size >= 0, "Negative slice size");
-    BUG_CHECK(start >= 0, "Negative slice start");
+std::list<PHV::SuperCluster*> AllocatePHV::split_super_cluster(PHV::SuperCluster* sc) {
+    // XXX(cole): This is a heuristic that splits the SuperCluster into the
+    // largest container-sized slices.  We'll need to do something more
+    // sophisticated in the future.
 
-    if (aggregate_size == 0 || slice_size == 0)
-        return { };
+    // XXX(cole): This heuristic only works on SuperClusters with no slice
+    // lists.  To split slice lists, we'll need to replace them with
+    // parser/deparser schema.
+    LOG5("Trying to slice supercluster with max field slice width of " << sc->max_width() << ":");
+    LOG5(sc);
 
-    std::vector<le_bitrange> rv;
-    le_bitinterval aggregate_interval = StartLen(0, aggregate_size);
+    if (sc->slice_lists().size()) {
+        LOG5("    ...but cannot split superclusters with slice lists");
+        return { sc }; }
 
-    // The slice window may be smaller than `slice_size` for the first slice,
-    // depending on the `start` position`.
-    le_bitinterval slice_window = aggregate_interval & StartLen(0, slice_size - start);
+    std::list<PHV::SuperCluster*> rv;
+    ordered_set<PHV::RotationalCluster*> to_slice = sc->clusters();
+    int remaining_width = sc->max_width();
 
-    while (!slice_window.empty()) {
-        // Make a new slice
-        rv.emplace_back(*toClosedRange(slice_window));
+    while (remaining_width > 0) {
+        // If the widest slice is exactly a container size or smaller than 8b,
+        // then we're done.  Otherwise, decide the next split size.
+        int chunk;
+        if (remaining_width < int(PHV::Size::b8)
+                || remaining_width == int(PHV::Size::b8)
+                || remaining_width == int(PHV::Size::b16)
+                || remaining_width == int(PHV::Size::b32)) {
+            rv.push_back(new PHV::SuperCluster(to_slice, { }));
+            break;
+        } else if (remaining_width < int(PHV::Size::b16)) {
+            chunk = int(PHV::Size::b8);
+        } else if (remaining_width < int(PHV::Size::b32)) {
+            chunk = int(PHV::Size::b16);
+        } else {
+            chunk = int(PHV::Size::b32);
+        }
 
-        // Shift the slice window, then intersect with the aggregate range.
-        slice_window = slice_window.shiftedByBits(slice_window.size());
-        slice_window = slice_window.resizedToBits(slice_size);
-        slice_window &= aggregate_interval; }
+        // Slice each rotational cluster.
+        using OptResult = boost::optional<PHV::RotationalCluster::SliceResult>;
+        std::vector<OptResult> results;
+        for (auto* cluster : to_slice)
+            results.push_back(cluster->slice(chunk));
 
-    return rv;
-}
+        // If any cluster failed to slice, give up.
+        auto IsNone = [](const OptResult& res) { return res == boost::none; };
+        if (std::any_of(results.begin(), results.end(), IsNone)) {
+            rv.push_back(new PHV::SuperCluster(to_slice, { }));
+            break; }
 
-/* static */
-std::vector<le_bitrange>
-AllocatePHV::make_container_slices(int aggregate_size, int slice_size, int start) {
-    std::vector<le_bitrange> rv;
-    for (le_bitrange field_slice : make_field_slices(aggregate_size, slice_size, start)) {
-        // Align the first container slice at `start` and every slice thereafter at 0.
-        if (field_slice.lo == 0)
-            rv.push_back(field_slice.shiftedByBits(start));
-        else
-            rv.emplace_back(field_slice.shiftedByBits(-field_slice.lo)); }
+        // Add the lo clusters, which are now container-sized, to the result
+        // list, and continue slicing the hi clusters.
+        to_slice.clear();
+        ordered_set<PHV::RotationalCluster*> container_sized_clusters;
+        for (auto& res : results) {
+            container_sized_clusters.insert(res->lo);
+            to_slice.insert(res->hi); }
+        rv.push_back(new PHV::SuperCluster(container_sized_clusters, { }));
+        remaining_width -= chunk; }
+
+    if (LOGGING(5) && rv.size() == 1 && rv.front() == sc) {
+        LOG5("    ...but supercluster was not split");
+    } else if (LOGGING(5)) {
+        std::stringstream ss;
+        for (auto* cl : rv)
+            ss << cl->max_width() << " ";
+        LOG5("    ...and produced new superclusters of sizes " << ss.str() << ":");
+        for (auto* cl : rv)
+            LOG5(cl);
+    }
+
     return rv;
 }
 
@@ -84,6 +115,12 @@ bool AllocatePHV::satisfies_constraints(
              " across " << group.type().size() << " containers");
         return false; }
     return true;
+}
+
+bool AllocatePHV::satisfies_constraints(
+        const PHV::ContainerGroup& group,
+        const PHV::FieldSlice& slice) const {
+    return satisfies_constraints(group, slice.field());
 }
 
 bool AllocatePHV::satisfies_constraints(std::vector<PHV::AllocSlice> slices) const {
@@ -133,7 +170,7 @@ bool AllocatePHV::satisfies_constraints(std::vector<PHV::AllocSlice> slices) con
             return false; } }
 
     // Check if any fields have the no_pack constraint, which is mutually
-    // unsatisfiable with field lists, which induce packing.
+    // unsatisfiable with slice lists, which induce packing.
     std::vector<PHV::AllocSlice> used;
     for (auto& slice : slices)
         if ((uses_i.is_deparsed(slice.field()) || uses_i.is_used_mau(slice.field()))
@@ -146,12 +183,12 @@ bool AllocatePHV::satisfies_constraints(std::vector<PHV::AllocSlice> slices) con
                 for (auto& s : used)
                     ss << "    " << s.field() << std::endl;
                 // XXX(cole): Is there a way to immediate abort compilation?
-                // Otherwise this error is produced for every field
+                // Otherwise this error is produced for every slice
                 // list/container group pair.
                 ::error("Field %1% must be "
                         "placed alone in a PHV container, but the parser must pack it "
-                        "contiguously with its adjacent fields.  This is unsatisfiable.  The "
-                        "list of adjacent fields is:\n%2%", cstring::to_cstring(slice.field()),
+                        "contiguously with its adjacent slices.  This is unsatisfiable.  The "
+                        "list of adjacent slices is:\n%2%", cstring::to_cstring(slice.field()),
                         ss.str());
                 return false; } } }
 
@@ -167,13 +204,13 @@ bool AllocatePHV::satisfies_constraints(
     // Check gress.
     if (alloc.gress(c) && *alloc.gress(c) != f->gress) {
         LOG5("        constraint: container is " << *alloc.gress(c) <<
-                    " but field needs " << f->gress);
+                    " but slice needs " << f->gress);
         return false; }
 
     // Check no pack for this field.
     const auto& slices = alloc.slices(c);
     if (slices.size() > 0 && slice.field()->no_pack()) {
-        LOG5("        constraint: field has no_pack constraint but container has slices " <<
+        LOG5("        constraint: slice has no_pack constraint but container has slices " <<
                       slices);
         return false; }
 
@@ -197,8 +234,10 @@ bool AllocatePHV::satisfies_CCGF_constraints(
 }
 
 /* static */
-bool AllocatePHV::satisfies_constraints(const PHV::ContainerGroup&, const PHV::SuperCluster&) {
-    // TODO (cole): fill this in.
+bool AllocatePHV::satisfies_constraints(const PHV::ContainerGroup& g, const PHV::SuperCluster& sc) {
+    if (int(g.type().size()) < sc.max_width())
+        return false;
+
     return true;
 }
 
@@ -213,81 +252,9 @@ boost::optional<PHV::Transaction> AllocatePHV::tryAllocCCGF(
 
     PHV::Transaction alloc_attempt = alloc.makeTransaction();
     int container_size = int(group.type().size());
-
-    /* XXX(cole): The following several stanzas are an ad hoc approach to CCGF
-     * allocation that do the following:
-     *
-     *  - If the CCGF has members that are no_pack or deparsed_bottom_bits,
-     *    then split the CCGF into individual containers at offset 0.
-     *  - Otherwise, if the CCGF is less than the size of the container, unpack it
-     *    and assign each member field in order in a container.
-     *  - Otherwise return boost::none.
-     *
-     * Need to replace with comprehensive CCGF splitting.
-     */
-
-    // If f is a CCGF with special constraints, then allocate each member field individually.
-    bool special_ccgf_placement =
-        std::any_of(f->ccgf_fields_i.begin(), f->ccgf_fields_i.end(), [&](PHV::Field *member) {
-            return member->deparsed_bottom_bits()
-                || member->no_pack()
-                || member->mau_phv_no_pack(); });
-    if (special_ccgf_placement) {
-        // Allocate members, deconstructing CCGF.
-        LOG4("    ...and CCGF has deparsed_bottom_bits, no_pack, or mau_phv_no_pack");
-
-        // Check that this container group has enough free containers to place
-        // each CCGF member alone in a container.
-        int max_width = 0;
-        for (auto* member : f->ccgf_fields_i)
-            max_width = std::max(max_width, member->size);
-        if (container_size < max_width) {
-            LOG4("    ...but container size " << container_size <<
-                 " is too small to hold largest member field");
-            return boost::none;
-        }
-
-        for (auto* member : boost::adaptors::reverse(f->ccgf_fields_i)) {
-            // Don't allocate unreferenced fields.
-            if (!uses_i.is_referenced(member) || clot_i.allocated(member))
-                continue;
-
-            int offset = member->deparsed_bottom_bits() ? 0 : start;
-
-            // Find a container
-            boost::optional<PHV::AllocSlice> candidate = boost::none;
-            for (const PHV::Container c : group) {
-                auto slice = PHV::AllocSlice(member, c,
-                                             StartLen(0, member->size),         // field slice
-                                             StartLen(offset, member->size));   // container slice
-                if (!satisfies_constraints(alloc_attempt, slice)) {
-                    LOG5("    ...but " << slice << " doesn't satisfy constraints");
-                    continue;
-                }
-                // Prioritize overlaying
-                bool container_empty = alloc_attempt.slices(c, slice.container_slice()).size() == 0;
-                if (can_overlay(mutex_i, member, alloc_attempt.slices(c)) && !container_empty) {
-                    LOG5("    ...and can overlay" << alloc_attempt.slices(c));
-                    candidate = slice;
-                    break;
-                } else if (container_empty) {
-                    candidate = slice;
-                } else {
-                    LOG5("    ...but " << c << " already contains " << alloc_attempt.slices(c)); } }
-
-            // Prioritize overlaying vs. using a new container.  If no
-            // containers are available, return false.
-            if (!candidate) {
-                LOG4("    ...but ran out of containers allocating special CCGF fields");
-                return boost::none;
-            }
-
-            alloc_attempt.allocate(*candidate); }
-        return alloc_attempt; }
-
-    // Otherwise, if f is a normal CCGF
-    LOG5("    ...and CCGF is not special");
     int ccgf_size = 0;
+
+    // Calculate CCGF size
     for (auto* member : f->ccgf_fields_i)
         ccgf_size += member->size;
     if (f->header_stack_pov_ccgf())
@@ -376,136 +343,61 @@ boost::optional<PHV::Transaction> AllocatePHV::tryAllocCCGF(
 boost::optional<PHV::Transaction> AllocatePHV::tryAlloc(
         const PHV::Allocation& alloc,
         const PHV::ContainerGroup& group,
-        const std::vector<PHV::Field*>& fields,
-        const ordered_map<const PHV::Field*, int>& start_positions) {
-    LOG4("trying to allocate fields at container indices: ");
-    for (auto* f : fields) {
-        BUG_CHECK(start_positions.find(f) != start_positions.end(),
-                  "Trying to place field list with no container index for field %1%",
-                  cstring::to_cstring(f));
-        LOG4("  " << start_positions.at(f) << ": " << f); }
+        const std::vector<PHV::FieldSlice>& slices,
+        const ordered_map<const PHV::FieldSlice, int>& start_positions) {
+    LOG4("trying to allocate slices at container indices: ");
+    for (auto& slice : slices) {
+        BUG_CHECK(start_positions.find(slice) != start_positions.end(),
+                  "Trying to place slice list with no container index for slice %1%",
+                  cstring::to_cstring(slice));
+        LOG4("  " << start_positions.at(slice) << ": " << slice); }
 
     // Check FIELD<-->GROUP constraints for each field.
-    for (auto* f : fields) {
-        if (!satisfies_constraints(group, f)) {
-            LOG5("    ...but field " << f << " doesn't satisfy field<-->group constraints");
+    for (auto& slice : slices) {
+        if (!satisfies_constraints(group, slice)) {
+            LOG5("    ...but slice " << slice << " doesn't satisfy slice<-->group constraints");
             return boost::none; } }
 
     PHV::Transaction alloc_attempt = alloc.makeTransaction();
     int container_size = int(group.type().size());
 
-    // XXX(cole): Slicing is really a whole cluster operation.  Eventually,
-    // this method will be able to return boost::none if the whole field list
-    // can't fit in a single container.  In the meantime, distinguish between
-    // singleton lists, which will be split.
+    // XXX(cole): If the list is entirely comprised of a CCGF, allocate it.
+    if (slices.size() == 1 && slices[0].field()->is_ccgf())
+        return tryAllocCCGF(alloc, group, slices[0].field(), start_positions.at(slices[0]));
 
-    if (fields.size() == 1) {
-        /* Split f into container-sized chunks, starting at `start` (the first and
-         * last chunks may be smaller than a full container).
-         *
-         *     For each chunk, look for a container that is occupied with fields
-         *     that `f` can overlay; failing that, pick an empty container.  Mark
-         *     it.
-         *
-         * Continue until all chunks of all fields are allocated.  If no containers
-         * remain, return false.
-         */
-        PHV::Field *f = fields.front();
-        int start = start_positions.at(f);
-
-        if (f->is_ccgf())
-            return tryAllocCCGF(alloc, group, f, start);
-
-        // Return the transaction (rather than boost::none) immediately if the
-        // field is never referenced.
-        if (!uses_i.is_referenced(f)) {
-            LOG5("    ...but field is never referenced, so ignore");
-            return alloc_attempt; }
-
-        // Don't allocate fields in a CLOT.
-        if (clot_i.allocated(f)) {
-            LOG5("    ...but field is in a CLOT, so ignore");
-            return alloc_attempt; }
-
-        // Check constraints on this field and container group.
-        if (!satisfies_constraints(group, f)) {
-            LOG5("    ...but these containers do not satisfy field/container constraints");
-            return boost::none; }
-
-        // XXX(cole): This is an awful hack!  Because CCGF members can show
-        // up in clusters, they may be submitted for allocation
-        // independently of their owners.  Eventually CCGFs will go away,
-        // but in the meantime, filter out members.
-        if (!f->is_ccgf() && f->ccgf() != nullptr)
-            return alloc_attempt;
-
-        // Otherwise, tile the field across containers.
-        auto field_slices = make_field_slices(f->size, container_size, start);
-        auto container_slices = make_container_slices(f->size, container_size, start);
-        BUG_CHECK(field_slices.size() > 0, "Field with no slices: %1%", cstring::to_cstring(f));
-        for (unsigned i = 0; i < field_slices.size(); ++i) {
-            boost::optional<PHV::AllocSlice> candidate = boost::none;
-            // Find a container
-            for (const PHV::Container c : group) {
-                auto slice = PHV::AllocSlice(f, c, field_slices[i], container_slices[i]);
-                if (!satisfies_constraints(alloc_attempt, slice)
-                        || !satisfies_constraints({slice})) {
-                    LOG5("    ...but " << slice << " doesn't satisfy constraints");
-                    continue; }
-
-                // Prioritize overlaying
-                bool container_empty = alloc_attempt.slices(c, slice.container_slice()).size() == 0;
-                if (can_overlay(mutex_i, f, alloc_attempt.slices(c)) && !container_empty) {
-                    LOG5("    ...and can overlay" << alloc_attempt.slices(c));
-                    candidate = slice;
-                    break;
-                } else if (container_empty) {
-                    candidate = slice;
-                } else {
-                    LOG5("    ...but " << c << " already contains " << alloc_attempt.slices(c)); } }
-
-            // Prioritize overlaying vs. using a new container.  If no
-            // containers are available, return false.
-            if (!candidate) {
-                LOG5("    ...hence there is no suitable container");
-                return boost::none; }
-
-            alloc_attempt.allocate(*candidate); }
-
-        return alloc_attempt; }
-
-    // XXX(cole): For now, fail if a field list contains a CCGF owner or member.
-    for (auto* f : fields) {
-        if (f->is_ccgf() || f->ccgf() != nullptr) {
-            LOG5("    ...but field list contains a CCGF field " << f);
+    // XXX(cole): Otherwise, fail (for now) if a slice list contains a CCGF
+    // owner or member.
+    for (auto& slice : slices) {
+        if (slice.field()->is_ccgf() || slice.field()->ccgf() != nullptr) {
+            LOG5("    ...but slice list contains a CCGF field " << slice);
             return boost::none; } }
 
-    // Return if the fields can't fit together in a container.
+    // Return if the slices can't fit together in a container.
     int aggregate_size = 0;
-    for (auto* f : fields)
-        aggregate_size += f->size;
+    for (auto& slice : slices)
+        aggregate_size += slice.size();
     if (container_size < aggregate_size) {
-        LOG5("    ...but these fields are " << aggregate_size << "b in total and cannot fit in a "
+        LOG5("    ...but these slices are " << aggregate_size << "b in total and cannot fit in a "
              << container_size << "b container");
         return boost::none; }
 
-    // Look for a container to allocate all fields in.
+    // Look for a container to allocate all slices in.
     boost::optional<std::vector<PHV::AllocSlice>> candidate = boost::none;
     int max_overlays = 0;
     for (const PHV::Container c : group) {
-        std::vector<PHV::AllocSlice> slices;
-        for (auto* field : fields) {
-            le_bitrange field_slice = StartLen(0, field->size);
-            le_bitrange container_slice = StartLen(start_positions.at(field), field->size);
-            slices.push_back(PHV::AllocSlice(field, c, field_slice, container_slice)); }
+        std::vector<PHV::AllocSlice> alloc_slices;
+        for (auto& field_slice : slices) {
+            le_bitrange container_slice =
+                StartLen(start_positions.at(field_slice), field_slice.size());
+            alloc_slices.push_back(PHV::AllocSlice(field_slice, c, container_slice)); }
 
-        // Check field list<-->container constraints.
-        if (!satisfies_constraints(slices))
+        // Check slice list<-->container constraints.
+        if (!satisfies_constraints(alloc_slices))
             continue;
 
         // Check that each field slice satisfies slice<-->container constraints.
         bool constraints_ok =
-            std::all_of(slices.begin(), slices.end(),
+            std::all_of(alloc_slices.begin(), alloc_slices.end(),
                         [&](const PHV::AllocSlice& slice) {
                             return satisfies_constraints(alloc_attempt, slice); });
         if (!constraints_ok)
@@ -514,7 +406,7 @@ boost::optional<PHV::Transaction> AllocatePHV::tryAlloc(
         // Check that there's space.
         bool can_place = true;
         int num_overlays = 0;
-        for (auto& slice : slices) {
+        for (auto& slice : alloc_slices) {
             const auto& alloced_slices =
                 alloc_attempt.slices(slice.container(), slice.container_slice());
             if (alloced_slices.size() > 0 && can_overlay(mutex_i, slice.field(), alloced_slices)) {
@@ -524,7 +416,7 @@ boost::optional<PHV::Transaction> AllocatePHV::tryAlloc(
                 can_place = false;
                 break; } }
         if (can_place && (!candidate || num_overlays > max_overlays)) {
-            candidate = slices;
+            candidate = alloc_slices;
             max_overlays = num_overlays; } }
 
     if (!candidate) {
@@ -532,98 +424,100 @@ boost::optional<PHV::Transaction> AllocatePHV::tryAlloc(
         return boost::none; }
 
     for (auto& slice : *candidate) {
-        // XXX(cole): Is it always safe to not allocate unreferenced fields?
+        // XXX(cole): This ignores the no deadcode elimination compiler flag!
+        // It should be fixed when parser/deparser schema are introduced.
         if (uses_i.is_referenced(slice.field()) && !clot_i.allocated(slice.field()))
             alloc_attempt.allocate(slice); }
     return alloc_attempt;
 }
 
-// CLUSTER GROUP <--> CONTAINER GROUP allocation.
+// SUPERCLUSTER <--> CONTAINER GROUP allocation.
 boost::optional<PHV::Transaction> AllocatePHV::tryAlloc(
         const PHV::Allocation& alloc,
         const PHV::ContainerGroup& container_group,
-        PHV::SuperCluster& cluster_group) {
+        PHV::SuperCluster& super_cluster) {
     // Check container group/cluster group constraints.
-    if (!satisfies_constraints(container_group, cluster_group))
+    if (!satisfies_constraints(container_group, super_cluster))
         return boost::none;
 
     // Make a new transaction.
     PHV::Transaction alloc_attempt = alloc.makeTransaction();
 
-    // Try to allocate CCGFs together, storing the offsets required of each
-    // field's cluster.
+    // Try to allocate slice lists together, storing the offsets required of each
+    // slice's cluster.
     ordered_map<const PHV::AlignedCluster*, int> cluster_alignment;
-    ordered_set<const PHV::Field*> allocated;
-    for (const PHV::SuperCluster::FieldList* field_list : cluster_group.field_lists()) {
+    ordered_set<PHV::FieldSlice> allocated;
+    for (const PHV::SuperCluster::SliceList* slice_list : super_cluster.slice_lists()) {
         int le_offset = 0;
-        ordered_map<const PHV::Field*, int> field_alignment;
-        for (auto* field : *field_list) {
-            auto& cluster = cluster_group.cluster(field);
+        ordered_map<const PHV::FieldSlice, int> slice_alignment;
+        for (auto& slice : *slice_list) {
+            const PHV::AlignedCluster& cluster = super_cluster.aligned_cluster(slice);
             auto valid_start_options = satisfies_constraints(container_group, cluster);
             if (valid_start_options.empty())
                 return boost::none;
 
-            // If this is the first field, then its starting alignment can be adjusted.
+            // If this is the first slice, then its starting alignment can be adjusted.
             if (le_offset == 0)
                 le_offset = *valid_start_options.min();
 
-            // Return if the field's cluster cannot be placed at the current
+            // Return if the slice 's cluster cannot be placed at the current
             // starting offset.
             if (!valid_start_options.getbit(le_offset)) {
-                LOG5("    ...but field list requires field to start at " << le_offset <<
+                LOG5("    ...but slice list requires slice to start at " << le_offset <<
                      " which its cluster cannot support");
                 return boost::none; }
 
-            // Return if the field is part of another CCGF but was previously
+            // Return if the slice is part of another slice list but was previously
             // placed at a different start location.
             // XXX(cole): We may need to be smarter about coordinating all
-            // valid starting ranges for all CCGFs.
+            // valid starting ranges for all slice lists.
             if (cluster_alignment.find(&cluster) != cluster_alignment.end() &&
                     cluster_alignment.at(&cluster) != le_offset) {
-                LOG5("    ...but two field lists have conflicting alignment requirements for "
-                     "field %1%" << field);
+                LOG5("    ...but two slice lists have conflicting alignment requirements for "
+                     "field slice %1%" << slice);
                 return boost::none; }
 
-            // Otherwise, update the alignment for this field's cluster.
+            // Otherwise, update the alignment for this slice's cluster.
             cluster_alignment[&cluster] = le_offset;
-            field_alignment[field] = le_offset;
-            le_offset += field->size; }
+            slice_alignment[slice] = le_offset;
+            le_offset += slice.size(); }
 
-        // Try allocating the field list.
+        // Try allocating the slice list.
         auto partial_alloc =
-            tryAlloc(alloc_attempt, container_group, *field_list, field_alignment);
+            tryAlloc(alloc_attempt, container_group, *slice_list, slice_alignment);
         if (!partial_alloc)
             return boost::none;
         alloc_attempt.commit(*partial_alloc);
 
-        // Track allocated fields in order to skip them when allocating their clusters.
-        for (auto* field : *field_list)
-            allocated.insert(field); }
+        // Track allocated slices in order to skip them when allocating their clusters.
+        for (auto& slice : *slice_list)
+            allocated.insert(slice); }
 
-    // After allocating each field list, use the alignment for each field in
+    // After allocating each slice list, use the alignment for each slice in
     // each list to place its cluster.
-    for (auto* cluster : cluster_group.clusters()) {
-        for (PHV::Field* f : cluster->fields()) {
-            // Skip fields that have already been allocated above.
-            if (allocated.find(f) != allocated.end())
-                continue;
+    for (auto* rotational_cluster : super_cluster.clusters()) {
+        for (auto* cluster : rotational_cluster->clusters()) {
+            for (const PHV::FieldSlice& slice : cluster->slices()) {
+                // Skip fields that have already been allocated above.
+                if (allocated.find(slice) != allocated.end())
+                    continue;
 
-            int start = 0;
-            if (cluster_alignment.find(cluster) != cluster_alignment.end()) {
-                start = cluster_alignment.at(cluster);
-            } else {
-                auto valid_start_options = satisfies_constraints(container_group, *cluster);
-                if (valid_start_options.empty())
-                    return boost::none;
-                start = *valid_start_options.min();
-            }
+                int start = 0;
+                if (cluster_alignment.find(cluster) != cluster_alignment.end()) {
+                    start = cluster_alignment.at(cluster);
+                } else {
+                    auto valid_start_options = satisfies_constraints(container_group, *cluster);
+                    if (valid_start_options.empty())
+                        return boost::none;
+                    start = *valid_start_options.min();
+                }
 
-            ordered_map<const PHV::Field*, int> start_map = { { f, start } };
-            auto partial_alloc = tryAlloc(alloc_attempt, container_group, {f}, start_map);
-            if (partial_alloc)
-                alloc_attempt.commit(*partial_alloc);
-            else
-                return boost::none; } }
+                ordered_map<const PHV::FieldSlice, int> start_map = { { slice, start } };
+                auto partial_alloc = tryAlloc(alloc_attempt, container_group, {slice}, start_map);
+                if (partial_alloc)
+                    alloc_attempt.commit(*partial_alloc);
+                else
+                    return boost::none; } } }
 
     return alloc_attempt;
 }
@@ -777,26 +671,28 @@ void AllocatePHV::formatAndThrowError(
         msg << "Fields successfully allocated: " << std::endl;
         msg << alloc << std::endl; }
 
-    for (auto* cluster_group : unallocated) {
+    for (auto* super_cluster : unallocated) {
         msg << "---" << std::endl;
-        for (auto* cluster : cluster_group->clusters()) {
-            for (auto* f : cluster->fields()) {
-                // XXX(cole): Need to update this for JBay.
-                bool can_be_tphv = cluster->okIn(PHV::Kind::tagalong);
-                cstring s = can_be_tphv ? "tphv" : "phv";
-                msg << "    " << (LOGGING(3) ? (cstring::to_cstring(f)+" --"+s) : f->name)
-                    << std::endl;
-                unallocated_bits += f->size;
-                if (f->gress == INGRESS) {
-                    if (!can_be_tphv)
-                        ingress_phv_bits += f->size;
-                    else
-                        ingress_t_phv_bits += f->size;
-                } else {
-                    if (!can_be_tphv)
-                        egress_phv_bits += f->size;
-                    else
-                        egress_t_phv_bits += f->size; } } } }
+        for (auto* rotational_cluster : super_cluster->clusters()) {
+            for (auto* cluster : rotational_cluster->clusters()) {
+                for (auto& slice : cluster->slices()) {
+                    // XXX(cole): Need to update this for JBay.
+                    bool can_be_tphv = cluster->okIn(PHV::Kind::tagalong);
+                    cstring s = can_be_tphv ? "tphv" : "phv";
+                    msg << "    " <<
+                        (LOGGING(3) ? (cstring::to_cstring(slice)+" --"+s) : slice.field()->name)
+                        << std::endl;
+                    unallocated_bits += slice.size();
+                    if (slice.gress() == INGRESS) {
+                        if (!can_be_tphv)
+                            ingress_phv_bits += slice.size();
+                        else
+                            ingress_t_phv_bits += slice.size();
+                    } else {
+                        if (!can_be_tphv)
+                            egress_phv_bits += slice.size();
+                        else
+                            egress_t_phv_bits += slice.size(); } } } } }
 
     if (LOGGING(3)) {
         msg << std::endl
@@ -815,9 +711,12 @@ void AllocatePHV::formatAndThrowError(
 void AllocatePHV::end_apply() {
     LOG1("--- BEGIN PHV ALLOCATION ----------------------------------------------------");
 
+    // Split SuperClusters that don't have slice lists along container
+    // boundaries, preferring the largest container size possible.
     std::list<PHV::SuperCluster*> cluster_groups;
-    cluster_groups.insert(cluster_groups.begin(), clustering_i.cluster_groups().begin(),
-                                                  clustering_i.cluster_groups().end());
+    for (auto* sc : clustering_i.cluster_groups())
+        for (auto* new_sc : AllocatePHV::split_super_cluster(sc))
+            cluster_groups.push_back(new_sc);
 
     auto alloc = PHV::ConcreteAllocation(mutex_i);
     auto container_groups = AllocatePHV::makeDeviceContainerGroups();

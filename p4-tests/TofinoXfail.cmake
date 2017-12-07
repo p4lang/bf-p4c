@@ -47,6 +47,7 @@ p4c_add_xfail_reason("tofino"
   "instruction slot [0-9]+ used multiple times in action"
   extensions/p4_tests/p4_14/15-SetMetadata.p4
   extensions/p4_tests/p4_14/16-WrongSizeInfiniteLoop.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
   )
 
 # BRIG-104
@@ -241,6 +242,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_13_first_selection.p4
   extensions/p4_tests/p4_14/test_config_297_big_metadata.p4
   extensions/p4_tests/p4_14/jenkins/smoke_large_tbls/smoke_large_tbls.p4
+  extensions/p4_tests/p4_14/adb_shared3.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -427,6 +429,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "conflicting memory use between .* and .*"
   extensions/p4_tests/p4_14/jenkins/fr_test/fr_test.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
   # This is an ATCAM failure due to a stage split being in the same stage.  Much more subtle
   # now fails in PHV allocation
   # extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
@@ -551,9 +554,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/08-FullTPHV3.p4
   testdata/p4_14_samples/01-BigMatch.p4
   extensions/p4_tests/p4_14/04-FullPHV3.p4
-  extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
   extensions/p4_tests/p4_14/c1/COMPILER-133/full_tphv.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-235/vag1737_1.p4
   extensions/p4_tests/p4_14/c4/COMPILER-590/case3179.p4
   extensions/p4_tests/p4_14/c4/COMPILER-591/case3176.p4
   extensions/p4_tests/p4_14/jenkins/power/power.p4
@@ -695,6 +696,9 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
    "Stage pragma provided to table .* has multiple parameters, while Brig currently"
    extensions/p4_tests/p4_14/test_config_131_placement_with_pragma.p4
+   extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
+   extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
+   extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
 )
 
 # START: XFAILs with translation
@@ -812,7 +816,6 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     extensions/p4_tests/p4_14/stateful2.p4
     extensions/p4_tests/p4_16/multiple_apply1.p4
     extensions/p4_tests/p4_16/cast_widening_set.p4
-    extensions/p4_tests/p4_16/cast_narrowing_set.p4
     extensions/p4_tests/p4_16/container_dependency.p4
     # Brig/Glass do not follow P4_14 spec for 'drop' in the ingress pipeline
     testdata/p4_14_samples/gateway1.p4
@@ -884,15 +887,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/19-SimpleTrill.p4
   extensions/p4_tests/p4_14/01-FlexCounter.p4
   extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-235/vag1737_1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-242/case1679.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-351/case2079.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-353/case2088.p4
-  extensions/p4_tests/p4_14/c1/BRIG-5/case1715.p4
   extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
   extensions/p4_tests/p4_14/c4/COMPILER-523/vag2774.p4
   extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
   extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
@@ -901,11 +896,16 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c6/COMPILER-604/new_parser.p4
   testdata/p4_16_samples/issue983-bmv2.p4
 
-  # Lack of cluster splitting:
-  extensions/p4_tests/p4_14/c1/COMPILER-364/case2115.p4
+  # XXX(cole): Due to differing sized operands.
+  extensions/p4_tests/p4_16/cast_widening_set.p4
+  extensions/p4_tests/p4_16/cast_narrowing_set.p4
+  extensions/p4_tests/p4_14/test_config_50_action_data_different_size_fields.p4
+
+  # XXX(cole): This will be fixed with SuperCluster slice list splitting.
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
   extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
   extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
+  testdata/p4_14_samples/hash_action_two_same.p4
 
   # Lack of container packing:
   extensions/p4_tests/p4_14/15-SetMetadata.p4
@@ -913,46 +913,18 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "error: Invalid slice of"
-  testdata/p4_14_samples/instruct6.p4
-  )
-
-p4c_add_xfail_reason("tofino"
   "Due to lacking assembler support, cannot currently split hash distribution units"
-  extensions/p4_tests/p4_14/hash_calculation_16.p4
-  extensions/p4_tests/p4_14/test_config_300_multi_hash.p4
-  extensions/p4_tests/p4_14/hash_calculation_two_hash2.p4
   extensions/p4_tests/p4_14/hash_calculation_multiple.p4
-  extensions/p4_tests/p4_14/hash_calculation_two_hash1.p4
-  extensions/p4_tests/p4_14/test_config_299_write_hash_keyless_table.p4
-  extensions/p4_tests/p4_14/test_config_261_mutually_exclusive_src_ops.p4
-  extensions/p4_tests/p4_14/test_config_184_stateful_bug1.p4
   )
 
 p4c_add_xfail_reason("tofino"
   "the packing is too complicated due to either hash distribution or attached outputs"
   extensions/p4_tests/p4_14/test_config_96_hash_data.p4
-  testdata/p4_16_samples/flowlet_switching-bmv2.p4
   )
 
 p4c_add_xfail_reason("tofino"
   "does not have a PHV allocation though it is used in an action"
   extensions/p4_tests/p4_14/test_config_132_meter_pre_color_4.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "Action Data parameter not configured properly in ActionAnalysis pass"
-  testdata/p4_14_samples/meter1.p4
-  extensions/p4_tests/p4_14/hash_calculation_max_size.p4
-  testdata/p4_16_samples/named_meter_bmv2.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "Can't allocate space on .*-bit part of action bus"
-  extensions/p4_tests/p4_14/test_config_199_stateful_constant_index.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-342/netchain.p4
-  extensions/p4_tests/p4_14/stateful3.p4
-  extensions/p4_tests/p4_14/stateful2.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -982,25 +954,16 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "Unhandled action bitmask constraint"
-  extensions/p4_tests/p4_14/test_config_151_action_bus_allocation_2.p4
-  extensions/p4_tests/p4_14/test_config_90_testing_action_data_allocation_3_with_fields_in_overhead.p4
-  extensions/p4_tests/p4_14/test_config_50_action_data_different_size_fields.p4
-  extensions/p4_tests/p4_16/cast_widening_set.p4
-  switch_l2
+  testdata/p4_16_samples/flowlet_switching-bmv2.p4
   )
 
 p4c_add_xfail_reason("tofino"
   "error: immediate.* is not on the action bus"
-  extensions/p4_tests/p4_14/test_config_291_default_action.p4
+  extensions/p4_tests/p4_14/test_config_21_tcam_vpns.p4
+  extensions/p4_tests/p4_14/test_tp_1_one_table_spill.p4
   )
 
-p4c_add_xfail_reason("tofino"
-  "error: No phv record"
-  # Instruction adjustment is not splitting an instruction?
-  extensions/p4_tests/p4_14/test_config_163_stateful_table_math_unit.p4
-  )
-
-# XXX(cole): This will be fixed with SuperCluster splitting.
+# XXX(cole): This will be fixed with SuperCluster slice list splitting.
 p4c_add_xfail_reason("tofino"
   "accumulate too many fields in CCGF"
   extensions/p4_tests/p4_14/test_config_236_stateful_read_bit.p4
@@ -1045,9 +1008,30 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Hash table .* column .* duplicated"
   extensions/p4_tests/p4_14/test_config_100_hash_action.p4
-)
+  )
 
 # BRIG-348
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
-  ${ONOS_FABRIC_P4})
+  ${ONOS_FABRIC_P4}
+  )
+
+# XXX(cole): This will be fixed when action analysis is integrated into PHV
+# allocation.
+p4c_add_xfail_reason("tofino"
+  "container is not completely overwritten when the operand is over the entire container"
+  extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
+  )
+
+# XXX(cole): Accompanied by "warning: Input xbar hash group 1 mergeable
+# conflict in stage 0".
+p4c_add_xfail_reason("tofino"
+  "std::out_of_range"
+  extensions/p4_tests/p4_14/hash_calculation_multiple.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "error: hash expression width mismatch"
+  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
+  switch_l2
+  )

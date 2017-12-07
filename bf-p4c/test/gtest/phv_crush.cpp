@@ -12,88 +12,6 @@
 
 namespace Test {
 
-TEST(PHV, make_field_slices) {
-    struct InputOutput {
-        int aggregate_size;
-        int slice_size;
-        int start;
-        std::vector<le_bitrange> expected;
-    };
-    std::list<InputOutput> tests = {
-        // aggregate size == 0 --> empty vector
-        { 0, 8, 0, { } },
-
-        // slice size == 0 --> empty vector
-        { 8, 0, 0, { } },
-
-        {  7,  7, 0, { StartLen(0, 7) } },
-        {  8,  8, 0, { StartLen(0, 8) } },
-        {  7, 14, 0, { StartLen(0, 7) } },
-        { 14,  7, 0, { StartLen(0, 7), StartLen(7, 7) } },
-        { 15,  5, 0, { StartLen(0, 5), StartLen(5, 5), StartLen(10, 5) } },
-        { 15,  7, 0, { StartLen(0, 7), StartLen(7, 7), StartLen(14, 1) } },
-
-        {  6,  7, 1, { StartLen(0, 6) } },
-        {  7,  8, 1, { StartLen(0, 7) } },
-        {  7, 14, 1, { StartLen(0, 7) } },
-        { 13,  7, 1, { StartLen(0, 6), StartLen(6, 7) } },
-        { 14,  5, 1, { StartLen(0, 4), StartLen(4, 5), StartLen(9, 5) } },
-        { 15,  7, 1, { StartLen(0, 6), StartLen(6, 7), StartLen(13, 2) } },
-
-        { 20,  5, 3, { FromTo(0, 1),
-                       FromTo(2, 6),
-                       FromTo(7, 11),
-                       FromTo(12, 16),
-                       FromTo(17, 19) } },
-    };
-    
-    for (auto test : tests)
-        EXPECT_EQ(
-            test.expected,
-            AllocatePHV::make_field_slices(test.aggregate_size, test.slice_size, test.start));
-}
-
-TEST(PHV, make_container_slices) {
-    struct InputOutput {
-        int aggregate_size;
-        int slice_size;
-        int start;
-        std::vector<le_bitrange> expected;
-    };
-    std::list<InputOutput> tests = {
-        // aggregate size == 0 --> empty vector
-        { 0, 8, 0, { } },
-
-        // slice size == 0 --> empty vector
-        { 8, 0, 0, { } },
-
-        {  7,  7, 0, { StartLen(0, 7) } },
-        {  8,  8, 0, { StartLen(0, 8) } },
-        {  7, 14, 0, { StartLen(0, 7) } },
-        { 14,  7, 0, { StartLen(0, 7), StartLen(0, 7) } },
-        { 15,  5, 0, { StartLen(0, 5), StartLen(0, 5), StartLen(0, 5) } },
-        { 15,  7, 0, { StartLen(0, 7), StartLen(0, 7), StartLen(0, 1) } },
-
-        {  6,  7, 1, { StartLen(1, 6) } },
-        {  7,  8, 1, { StartLen(1, 7) } },
-        {  7, 14, 1, { StartLen(1, 7) } },
-        { 13,  7, 1, { StartLen(1, 6), StartLen(0, 7) } },
-        { 14,  5, 1, { StartLen(1, 4), StartLen(0, 5), StartLen(0, 5) } },
-        { 15,  7, 1, { StartLen(1, 6), StartLen(0, 7), StartLen(0, 2) } },
-
-        { 20,  5, 3, { StartLen(3, 2),
-                       StartLen(0, 5),
-                       StartLen(0, 5),
-                       StartLen(0, 5),
-                       StartLen(0, 3) } },
-    };
-    
-    for (auto test : tests)
-        EXPECT_EQ(
-            test.expected,
-            AllocatePHV::make_container_slices(test.aggregate_size, test.slice_size, test.start));
-}
-
 TEST(PHV, clusterAlignment) {
     // XXX(cole): This just tests the first bit of the valid bits, not all
     // valid bits.
@@ -147,7 +65,7 @@ TEST(PHV, clusterAlignment) {
 
     int field_id = 0;
     for (auto& test : tests) {
-        std::vector<PHV::Field *> fields;
+        std::vector<PHV::FieldSlice> slices;
         for (auto& fdata : test.fields) {
             auto* f = new PHV::Field();
             std::stringstream ss;
@@ -166,10 +84,10 @@ TEST(PHV, clusterAlignment) {
                     FieldAlignment(le_bitrange(StartLen(*fdata.relativeAlignment, int(test.container_size))));
             else
                 f->alignment = boost::none;
-            fields.push_back(f);
+            slices.push_back(PHV::FieldSlice(f));
         }
-        
-        PHV::AlignedCluster cl(PHV::Kind::normal, fields);
+
+        PHV::AlignedCluster cl(PHV::Kind::normal, slices);
         if (test.result)
             EXPECT_EQ(*test.result, *(cl.validContainerStart(test.container_size).min()));
         else

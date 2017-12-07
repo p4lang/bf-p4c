@@ -111,12 +111,11 @@ const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe,
     return pipe->apply(quick_backend);
 }
 
-std::vector<cstring>
-fields_to_names(const ordered_set<PHV::Field *>& fields) {
-    std::vector<cstring> rtn(fields.size());
-    transform(fields.begin(), fields.end(), rtn.begin(),
-              [] (const PHV::Field* f) {
-                  return f->name;
+std::vector<cstring> slices_to_names(const ordered_set<PHV::FieldSlice>& slices) {
+    std::vector<cstring> rtn(slices.size());
+    transform(slices.begin(), slices.end(), rtn.begin(),
+              [] (const PHV::FieldSlice& slice) {
+                  return slice.field()->name;
               });
     sort(rtn.begin(), rtn.end());
     return rtn;
@@ -125,11 +124,12 @@ fields_to_names(const ordered_set<PHV::Field *>& fields) {
 bool resultHas(const std::vector<PHV::SuperCluster *>& result,
                const std::vector<cstring>& field_names) {
     for (const auto& super_cluster : result) {
-        for (const auto& cluster : super_cluster->clusters()) {
-            const auto& fields = cluster->fields();
-            if (fields.size() == field_names.size()
-                && fields_to_names(fields) == field_names) {
-                return true; } } }
+        for (auto* rotational_cluster : super_cluster->clusters()) {
+            for (auto* aligned_cluster : rotational_cluster->clusters()) {
+                const auto& slices = aligned_cluster->slices();
+                if (slices.size() == field_names.size()
+                    && slices_to_names(slices) == field_names) {
+                    return true; } } } }
     return false;
 };
 
