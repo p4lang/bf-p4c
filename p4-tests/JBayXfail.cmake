@@ -176,3 +176,11 @@ p4c_add_xfail_reason("jbay"
    testdata/p4_14_samples/exact_match_valid1.p4
    testdata/p4_14_samples/counter1.p4
 )
+
+p4c_add_xfail_reason("jbay"
+  "error: Can't use .* in ingress and .* in egress in jbay parser"
+  testdata/p4_14_samples/tp2a.p4
+  testdata/p4_14_samples/tp2b.p4
+  testdata/p4_14_samples/tp2c.p4
+  testdata/p4_14_samples/tp3a.p4
+  )

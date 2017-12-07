@@ -265,6 +265,11 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
+  "Syntax error, expecting identifier or operation"
+  testdata/p4_14_samples/issue1013.p4
+  )
+
+p4c_add_xfail_reason("tofino"
   "Syntax error, expecting list"
   testdata/p4_14_samples/issue1057.p4
   )
@@ -886,7 +891,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
   extensions/p4_tests/p4_14/c4/COMPILER-523/vag2774.p4
   extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
   extensions/p4_tests/p4_14/c6/COMPILER-603/loop.p4
   extensions/p4_tests/p4_14/c8/COMPILER-616/case3331.p4
   extensions/p4_tests/p4_14/c6/COMPILER-604/new_parser.p4
@@ -942,6 +946,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c4/COMPILER-550/vag2899.p4
   extensions/p4_tests/p4_16/stack_valid.p4
   testdata/p4_14_samples/instruct5.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
   )
 
 p4c_add_xfail_reason("tofino"
