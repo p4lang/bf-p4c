@@ -37,8 +37,8 @@ template<> void Stage::write_regs(Target::JBay::mau_regs &regs) {
         else
             deferred_eop_bus_delay.eop_output_delay_fifo = 1;
         deferred_eop_bus_delay.eop_delay_fifo_en = 1;
-        if (stageno != 0 && stage_dep[gress] == MATCH_DEP)
-            merge.mpr_thread_delay[gress] = this[-1].pipelength(gress) - this[-1].pred_cycle(gress);
+        if (stageno != AsmStage::numstages()-1 && this[1].stage_dep[gress] == MATCH_DEP)
+            merge.mpr_thread_delay[gress] = pipelength(gress) - pred_cycle(gress) - 4;
         else
             merge.mpr_thread_delay[gress] = 0; }
     merge.mpr_stage = stageno;
