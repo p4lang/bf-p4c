@@ -1010,10 +1010,12 @@ p4c_add_xfail_reason("tofino"
   )
 
 # BRIG-348
+if (PTF_REQUIREMENTS_MET)
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
   ${ONOS_FABRIC_P4}
   )
+endif()
 
 # XXX(cole): This will be fixed when action analysis is integrated into PHV
 # allocation.
