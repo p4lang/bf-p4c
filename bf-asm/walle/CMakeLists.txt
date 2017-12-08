@@ -32,6 +32,7 @@ add_custom_command (OUTPUT ${WALLE_BINARY_DIR}/walle
   COMMAND ${PYINSTALLER} --distpath ${WALLE_BINARY_DIR} --onefile --strip ${WALLE_SRC}
   --add-data '${BFASM_SOURCE_DIR}/tofino/chip.schema:lib/tofino'
   --add-data '${BFASM_SOURCE_DIR}/jbay/chip.schema:lib/jbay'
+  --log-level=WARN
   DEPENDS ${WALLE_SRCS} ${CHIP_SCHEMA_FILES}
   COMMENT "Generating walle binary")
 
