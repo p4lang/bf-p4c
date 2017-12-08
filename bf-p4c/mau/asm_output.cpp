@@ -1751,7 +1751,8 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Meter *meter) {
         default:
             count_type = "";
     }
-    out << indent << "count: " << count_type << std::endl;
+    if (count_type != "")
+        out << indent << "count: " << count_type << std::endl;
     if (meter->indexed() && !tbl->layout.hash_action)
         out << indent << "per_flow_enable: " << "meter_pfe" << std::endl;
     return false;
