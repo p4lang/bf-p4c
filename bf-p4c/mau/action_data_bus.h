@@ -27,6 +27,12 @@
  *
  *  For immediate actions, the constraints are detailed in the uArch in section 5.4.4.2/6.4.4.2.
  *  The section is titled Immediate Action Data, under Address Distribution, under Match Central.
+ *  Unlike for action data tables, which are broken up into 8 16 byte muxes, there are only
+ *  3 muxes for each immediate section.  There is a byte by byte mux between bytes 0-15, a
+ *  half-word mux between bytes 16-63, and a full word mux between bytes 64-128.  These
+ *  muxes can only have one input per immediate word.  Immediate allocation on the action bus
+ *  occurs on a mod 4 post-shift in match central.
+ * 
  *  The constraints are similar to action data tables in that regions of the immediate data must
  *  be contiguously allocated within a 16 byte region of the action data bus.  With immediate
  *  action data, the input allocation must be 4 byte contiguous.
@@ -37,6 +43,7 @@ struct ActionDataBus {
     static constexpr int PAIRED_OFFSET = 16;
     static constexpr int BYTES_PER_RAM = 16;
     static constexpr int ADB_STARTS[3] = {0, 32, 96};
+    static constexpr int IMMED_DIVIDES[3] = {16, 64, 128};
     static constexpr int IMMED_SECT = 4;
 
 
@@ -50,6 +57,7 @@ struct ActionDataBus {
 
     safe_vector<std::pair<int, int>> immed_starts;
     std::set<cstring> atcam_updates;
+    bool reserved_immed[3] = {false, false, false};
 
 
  public:
@@ -97,7 +105,7 @@ struct ActionDataBus {
     };
 
     /** Location Algorithm: For finding an allocation within the correct type region */
-    enum loc_alg_t {FIND_NORMAL, FIND_LOWER, FIND_FULL};
+    enum loc_alg_t {FIND_NORMAL, FIND_LOWER, FIND_FULL, FIND_IMMED_UPPER};
 
     void clear();
 
@@ -112,6 +120,8 @@ struct ActionDataBus {
     bool find_lower_location(ActionFormat::cont_type_t type, bitvec adjacent,
                              int diff, int &start_byte);
     bool find_full_location(bitvec combined_adjacent, int diff, int &output);
+    bool find_immed_upper_location(ActionFormat::cont_type_t, bitvec combined_adjacent,
+                                   int diff, int &output);
 
     void analyze_full_share(Use &use, bitvec layouts[ActionFormat::CONTAINER_TYPES],
                             FullShare &full_share, int init_byte_offset,
@@ -136,6 +146,8 @@ struct ActionDataBus {
     bool alloc_ad_table(const bitvec total_layouts[ActionFormat::CONTAINER_TYPES],
                         const bitvec full_layout_bitmasked,
                         Use &use, cstring name);
+
+    bitvec paired_immediate(bitvec layout, ActionFormat::cont_type_t type);
     bool fit_immed_sect(Use &use, bitvec layout, bitvec combined_layout,
                         ActionFormat::cont_type_t type, loc_alg_t loc_alg, cstring name);
     bool alloc_unshared_immed(Use &use, ActionFormat::cont_type_t, bitvec layout,

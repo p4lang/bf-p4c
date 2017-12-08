@@ -2,6 +2,7 @@
 #include "bf-p4c/mau/resource.h"
 
 constexpr int ActionDataBus::ADB_STARTS[];
+constexpr int ActionDataBus::IMMED_DIVIDES[];
 
 /** Clears all of the allocation within the ActionDataBus, for the TableSummary
  */
@@ -143,6 +144,23 @@ bool ActionDataBus::find_full_location(bitvec combined_adjacent, int diff, int &
     return found;
 }
 
+bool ActionDataBus::find_immed_upper_location(ActionFormat::cont_type_t type,
+                                              bitvec combined_adjacent, int diff,
+                                              int &start_byte) {
+    int starter = output_to_byte(PAIRED_OFFSET, type);
+    bool found = false;
+    do {
+        bitvec total_mask = combined_adjacent;
+        if ((total_in_use & (combined_adjacent << starter)).popcount() == 0) {
+            found = true;
+            break;
+        }
+        starter += diff;
+    } while (starter != output_to_byte(PAIRED_OFFSET, type));
+    start_byte = starter;
+    return found;
+}
+
 /** Reserves the action data bus space within the bitvecs, and adds it to the Use structure
  *  for the region.  Must only reserve the spaces for the actual bytes, and comes up with
  *  the correct name for the assembly output.
@@ -173,6 +191,16 @@ void ActionDataBus::reserve_space(Use &use, ActionFormat::cont_type_t type, bitv
         int output = byte_to_output(bitpos, type);
         cont_use[type][output] = name;
         cont_in_use[type].setbit(output);
+    }
+
+    if (!immed)
+        return;
+
+    for (int i = 0; i < 3; i++) {
+        if (start_byte < IMMED_DIVIDES[i]) {
+            reserved_immed[i] = true;
+            break;
+        }
     }
 }
 
@@ -474,8 +502,8 @@ bool ActionDataBus::fit_immed_sect(Use &use, bitvec layout, bitvec combined_layo
                                    cstring name) {
     int start_byte = 0;
     bool found = false;
-    if (loc_alg == FIND_NORMAL)
-        found = find_location(type, combined_layout, IMMED_SECT, start_byte);
+    if (loc_alg == FIND_IMMED_UPPER)
+        found = find_immed_upper_location(type, combined_layout, IMMED_SECT, start_byte);
     else if (loc_alg == FIND_LOWER)
         found = find_lower_location(type, combined_layout, IMMED_SECT, start_byte);
     else if (loc_alg == FIND_FULL)
@@ -485,35 +513,60 @@ bool ActionDataBus::fit_immed_sect(Use &use, bitvec layout, bitvec combined_layo
     return true;
 }
 
+/** In the immediate section, potentially we have to allocate bytes in the half word region
+ *  and half words in the full word region.  This is to calculate the pairing of these.
+ */
+bitvec ActionDataBus::paired_immediate(bitvec layout, ActionFormat::cont_type_t type) {
+    bitvec paired_layout;
+    if (type == ActionFormat::FULL)
+        return layout;
+    auto byte_sz = find_byte_sz(type);
+
+    for (int i = 0; i < IMMED_SECT; i += byte_sz) {
+        if (layout.getrange(i, byte_sz) == 0) continue;
+        paired_layout.setrange(i, byte_sz);
+        int paired_start = (i / (byte_sz * 2)) * byte_sz * 2;
+        paired_start += (i + byte_sz) % (byte_sz * 2);
+        paired_layout.setrange(paired_start, byte_sz);
+    }
+    return paired_layout;
+}
+
 /** Allocation of both the byte and half word requirements of the immediate section, specified
- *  by type.  Because of the nature of the mod 4 per byte on the action immediate constraint,
- *  the algorithms are extremely similar for halves and bytes
+ *  by type.  Due to the fact that there are only 3 sections in which the immediate can go,
+ *  and 3 sections in which to place the immediate.  If the mux for that particular section
+ *  is being used, then it cannot be reallocated unless it is being shared.
+ *
+ *  If placing the layout in the section where it will have to be paired will require extra
+ *  action data bus slots to be reserved by clobber locations, than that is the preferred
+ *  destination
  */
 bool ActionDataBus::alloc_unshared_immed(Use &use, ActionFormat::cont_type_t type, bitvec layout,
-                                         bitvec combined_layout, cstring name) {
-    int byte_sz = find_byte_sz(type);
-    if (layout.popcount() == 0)
+                                         bitvec combined, cstring name) {
+    if (layout.empty())
         return true;
 
-    bool fully_paired = true;
-    for (int i = 0; i < IMMED_SECT; i += byte_sz * 2) {
-        if ((layout.getslice(i, byte_sz * 2).popcount() % (byte_sz * 2)) != 0) {
-            fully_paired = false;
-            break;
-        }
-    }
-
-    bool found = false;
-    if (!fully_paired) {
-        found = fit_immed_sect(use, layout, combined_layout, type, FIND_LOWER, name);
-        if (!found)
-            found = fit_immed_sect(use, layout, combined_layout, type, FIND_NORMAL, name);
-        if (!found) return false;
+    auto paired_layout = paired_immediate(layout, type);
+    int upper_type = static_cast<int>(type) + 1;
+    if (layout == paired_layout) {
+        bool found = false;
+        if (!reserved_immed[upper_type])
+            found = fit_immed_sect(use, layout, paired_layout & combined, type, FIND_IMMED_UPPER,
+                                   name);
+        if (found) return true;
+        if (!reserved_immed[type])
+            found = fit_immed_sect(use, layout, layout, type, FIND_LOWER, name);
+        return found;
     } else {
-        found = fit_immed_sect(use, layout, combined_layout, type, FIND_NORMAL, name);
-        if (!found) return false;
+        bool found = false;
+        if (!reserved_immed[type])
+            found = fit_immed_sect(use, layout, layout, type, FIND_LOWER, name);
+        if (found) return true;
+        if (!reserved_immed[upper_type])
+            found = fit_immed_sect(use, layout, paired_layout & combined, type, FIND_IMMED_UPPER,
+                                   name);
+        return found;
     }
-    return true;
 }
 
 /** Alloction of the full region in the immediate section.  Like the full section of the action
@@ -535,9 +588,15 @@ bool ActionDataBus::alloc_shared_immed(Use &use, bitvec layouts[ActionFormat::CO
 
     if (full_share.full_in_use) {
         if (full_share.shared_status == 0) {
-            bool found = fit_immed_sect(use, layouts[type], combined_layouts, type, FIND_FULL,
+            // FIXME: Again, larger range for full match
+            if (!reserved_immed[ActionFormat::FULL]) {
+                bool found = fit_immed_sect(use, layouts[type], combined_layouts, type, FIND_FULL,
                                         name);
-            if (!found) return false;
+                if (!found) return false;
+            } else {
+                BUG("Should be impossible to reach, as either the full word section is "
+                    "unallocated or two half words are already sharing");
+            }
         } else {
             int start_byte = -1;
             if ((full_share.shared_status & (1 << ActionFormat::HALF)) != 0)

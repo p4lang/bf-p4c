@@ -71,6 +71,21 @@ table test1 {
     }
 }
 
+action third (byte1, byte2, half1) {
+    modify_field(data.c1, byte1);
+    modify_field(data.c2, byte2);
+    modify_field(data.h1, half1);
+}
+
+table test2 {
+    reads {
+        data.f1 : exact;
+    }
+    actions {
+        third;
+    }
+}
+
 table setting_port {
     reads {
         data.f1 : exact;
@@ -82,5 +97,6 @@ table setting_port {
 
 control ingress {
     apply(test1);
+    apply(test2);
     apply(setting_port);
 }

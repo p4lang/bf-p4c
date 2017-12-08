@@ -32,7 +32,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_3() {
+    @name("NoAction") action NoAction_4() {
+    }
+    @name("NoAction") action NoAction_5() {
     }
     @name(".setport") action setport_0(bit<9> port) {
         standard_metadata.egress_spec = port;
@@ -49,6 +51,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.data.f3 = full1;
         hdr.data.f4 = full2;
     }
+    @name(".third") action third_0(bit<8> byte1, bit<8> byte2, bit<16> half1) {
+        hdr.data.c1 = byte1;
+        hdr.data.c2 = byte2;
+        hdr.data.h1 = half1;
+    }
     @name(".setting_port") table setting_port {
         actions = {
             setport_0();
@@ -63,15 +70,26 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             first_0();
             second_0();
-            @defaultonly NoAction_3();
+            @defaultonly NoAction_4();
         }
         key = {
             hdr.data.f1: exact @name("data.f1") ;
         }
-        default_action = NoAction_3();
+        default_action = NoAction_4();
+    }
+    @name(".test2") table test2 {
+        actions = {
+            third_0();
+            @defaultonly NoAction_5();
+        }
+        key = {
+            hdr.data.f1: exact @name("data.f1") ;
+        }
+        default_action = NoAction_5();
     }
     apply {
         test1.apply();
+        test2.apply();
         setting_port.apply();
     }
 }
@@ -98,3 +116,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+

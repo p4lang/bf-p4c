@@ -45,6 +45,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.data.f3 = full1;
         hdr.data.f4 = full2;
     }
+    @name(".third") action third(bit<8> byte1, bit<8> byte2, bit<16> half1) {
+        hdr.data.c1 = byte1;
+        hdr.data.c2 = byte2;
+        hdr.data.h1 = half1;
+    }
     @name(".setting_port") table setting_port {
         actions = {
             setport;
@@ -62,8 +67,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.f1: exact;
         }
     }
+    @name(".test2") table test2 {
+        actions = {
+            third;
+        }
+        key = {
+            hdr.data.f1: exact;
+        }
+    }
     apply {
         test1.apply();
+        test2.apply();
         setting_port.apply();
     }
 }
@@ -90,3 +104,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
 }
 
 V1Switch(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+
