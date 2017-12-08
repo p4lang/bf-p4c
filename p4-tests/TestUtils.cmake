@@ -50,13 +50,16 @@ endmacro(p4c_add_codegen_fail_reason)
 # if you need to mark this test as XFAIL, please edit TofinoXfail.cmake with the
 # appropriate call to p4c_add_xfail_reason.
 macro(p4c_add_ptf_test_with_ptfdir device alias ts args ptfdir)
+  file (RELATIVE_PATH p4test ${P4C_SOURCE_DIR} ${ts})
+  p4c_test_set_name(__testname ${device} ${alias})
   if (PTF_REQUIREMENTS_MET)
-    file (RELATIVE_PATH p4test ${P4C_SOURCE_DIR} ${ts})
     p4c_add_test_with_args (${device} ${P4C_RUNTEST} FALSE ${alias}
       ${p4test} "${args} -ptfdir ${ptfdir}")
-    p4c_test_set_name(__testname ${device} ${alias})
     set_tests_properties(${__testname} PROPERTIES RUN_SERIAL 1)
     p4c_add_test_label(${device} "ptf" ${alias})
+  else()
+    p4c_add_test_with_args (${device} ${P4C_RUNTEST} FALSE ${alias}
+      ${p4test} "${args}")
   endif()
 endmacro(p4c_add_ptf_test_with_ptfdir)
 
@@ -113,26 +116,26 @@ macro(p4c_add_bf_backend_tests device tests)
   simple_test_setup_check(${device})
 
   packet_test_setup_check(${device})
- 
+
   # if STF is not found, disable all stf tests
   if (NOT HARLYN_STF_${device})
     set (testExtraArgs "${testExtraArgs} -norun")
   endif()
-  
+
   if (PTF_REQUIREMENTS_MET)
     set (testExtraArgs "${testExtraArgs} -ptf")
     if (ENABLE_STF2PTF)
       set (testExtraArgs "${testExtraArgs} -stf2ptf")
     endif()
   endif()
-  
+
   if (ENABLE_TNA)
     set (testExtraArgs "${testExtraArgs} -Xp4c=--native")
   endif()
-  
+
   p4c_add_tests (${device} ${P4C_RUNTEST} "${tests}"
      "" "${testExtraArgs}")
-  
+
   if (PTF_REQUIREMENTS_MET)
     # PTF tests cannot be run in parallel with other tests, so we set the SERIAL
     # property for them
@@ -162,7 +165,7 @@ macro(p4c_add_bf_backend_tests device tests)
     endforeach() # ts
     MESSAGE(STATUS "Added ${__ptfCounter} PTF tests")
   endif() # PTF_REQUIREMENTS_MET
-  
+
   if (HARLYN_STF_${device})
     foreach (ts "${tests}")
       file (GLOB __testfiles RELATIVE ${P4C_SOURCE_DIR} ${ts})
