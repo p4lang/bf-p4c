@@ -62,7 +62,9 @@ template<> void Stage::write_regs(Target::JBay::mau_regs &regs) {
     // FIXME -- mau encoding of phv containers. (FIXME-PHV)
     for (int i = 0; i < 2; i++) {
         for (int j = 0; j < 14; j++) {
-            regs.dp.phv_ingress_thread[i][j] = in_use.getrange(10*phv_use_transpose[i][j], 10);
-            regs.dp.phv_egress_thread[i][j] = eg_use.getrange(10*phv_use_transpose[i][j], 10); } }
+            regs.dp.phv_ingress_thread[i][j] = regs.dp.phv_ingress_thread_imem[i][j] =
+                in_use.getrange(10*phv_use_transpose[i][j], 10);
+            regs.dp.phv_egress_thread[i][j] = regs.dp.phv_egress_thread_imem[i][j] =
+                eg_use.getrange(10*phv_use_transpose[i][j], 10); } }
 
 }

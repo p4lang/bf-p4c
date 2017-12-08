@@ -335,6 +335,21 @@ void output_jbay_field_dictionary_slice(CHUNKS &chunk, CLOTS &clots, POV &pov, D
         chunk[ch].cfg.seg_sel = byte >> 3; }
 }
 
+static void check_jbay_ownership(bitvec phv_use[2]) {
+    unsigned    mask = 0;
+    int         group = -1;
+    for (auto i : phv_use[INGRESS]) {
+        if ((i|mask) == (group|mask)) continue;
+        switch (Phv::reg(i)->size) {
+        case 8: case 16: mask = 3; break;
+        case 32:         mask = 1; break;
+        default: assert(0); }
+        group = i & ~mask;
+        if (phv_use[EGRESS].getrange(group, mask+1)) {
+            error(0, "%s..%s used by both ingress and egress deparser",
+                  Phv::reg(group)->name, Phv::reg(group|mask)->name); } }
+}
+
 static void setup_jbay_ownership(bitvec phv_use, ubits_base &phv8, ubits_base &phv16,
                                  ubits_base &phv32) {
     for (auto i : phv_use) {
@@ -503,6 +518,7 @@ template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
         Phv::unsetuse(EGRESS, phv_use[INGRESS]);
     }
 
+    check_jbay_ownership(phv_use);
     regs.dprsrreg.inp.icr.i_phv8_grp.enable();
     regs.dprsrreg.inp.icr.i_phv16_grp.enable();
     regs.dprsrreg.inp.icr.i_phv32_grp.enable();
