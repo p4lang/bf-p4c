@@ -10,144 +10,19 @@ if (HARLYN_STF AND NOT ENABLE_STF2PTF)
 set (JBAY_XFAIL_TESTS ${JBAY_XFAIL_TESTS})
 endif() # HARLYN_STF
 
-# tests that no longer fail when enable TNA translation
-# possibly due to different PHV allocation
-if (NOT ENABLE_TNA)
-endif() # NOT ENABLE_TNA
-
 # BEGIN: XFAILS that match glass XFAILS
 #END: XFAILS that match glass XFAILS
 
 if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
 endif() # ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET
 
-if (ENABLE_TNA)
-endif()  # ENABLE_TNA
-
-if (HARLYN_STF AND NOT ENABLE_STF2PTF AND ENABLE_TNA)
-endif()  # STF FAILURE IN TNA
-
-
 p4c_add_xfail_reason("jbay"
   "used by both ingress and egress deparser"
-  testdata/p4_14_samples/01-DeadMetadata1.p4
-  testdata/p4_14_samples/01-FullPHV.p4
-  testdata/p4_14_samples/01-JustEthernet.p4
-  testdata/p4_14_samples/01-NoDeps.p4
-  testdata/p4_14_samples/02-DeadMetadata2.p4
-  testdata/p4_14_samples/02-SplitEthernet.p4
-  testdata/p4_14_samples/03-DeadMetadata3.p4
-  testdata/p4_14_samples/03-Gateway.p4
-  testdata/p4_14_samples/03-SplitEthernetCompact.p4
-  testdata/p4_14_samples/04-GatewayDefault.p4
-  testdata/p4_14_samples/04-SimpleVlan.p4
-  testdata/p4_14_samples/05-FieldProblem.p4
-  testdata/p4_14_samples/05-SimpleVlan1.p4
-  testdata/p4_14_samples/06-SimpleVlanStack.p4
-  testdata/p4_14_samples/07-MultiProtocol.p4
-  testdata/p4_14_samples/07-SimpleVlanStackIP.p4
-  testdata/p4_14_samples/08-MultiProtocolIfElse.p4
-  testdata/p4_14_samples/08-SimpleVlanStackIPSplitFlags.p4
-  testdata/p4_14_samples/10-SelectPriorities.p4
-  testdata/p4_14_samples/11-MultiTags.p4
-  testdata/p4_14_samples/12-Counters.p4
-  testdata/p4_14_samples/12-MultiTagsNoLoop.p4
-  testdata/p4_14_samples/13-MultiTagsCorrect.p4
-  testdata/p4_14_samples/15-MultiProtocolIfElseMinimal.p4
-  testdata/p4_14_samples/16-NoHeaders.p4
-  testdata/p4_14_samples/16-TwoReferences.p4
-  testdata/p4_14_samples/17-Minimal.p4
-  testdata/p4_14_samples/18-EmptyPipelines.p4
-  testdata/p4_14_samples/acl1.p4
-  testdata/p4_14_samples/action_chain1.p4
-  testdata/p4_14_samples/action_inline1.p4
-  testdata/p4_14_samples/action_inline2.p4
-  testdata/p4_14_samples/basic_conditionals.p4
-  testdata/p4_14_samples/bigfield1.p4
-  testdata/p4_14_samples/bridge1.p4
-  testdata/p4_14_samples/counter1.p4
-  testdata/p4_14_samples/counter2.p4
-  testdata/p4_14_samples/counter3.p4
-  testdata/p4_14_samples/counter4.p4
-  testdata/p4_14_samples/counter5.p4
-  testdata/p4_14_samples/do_nothing.p4
-  testdata/p4_14_samples/exact_match1.p4
-  testdata/p4_14_samples/exact_match2.p4
-  testdata/p4_14_samples/exact_match3.p4
-  testdata/p4_14_samples/exact_match4.p4
-  testdata/p4_14_samples/exact_match5.p4
-  testdata/p4_14_samples/exact_match6.p4
-  testdata/p4_14_samples/exact_match7.p4
-  testdata/p4_14_samples/exact_match8.p4
-  testdata/p4_14_samples/exact_match9.p4
-  testdata/p4_14_samples/exact_match_mask1.p4
-  testdata/p4_14_samples/exact_match_valid1.p4
-  testdata/p4_14_samples/gateway1.p4
-  testdata/p4_14_samples/gateway2.p4
-  testdata/p4_14_samples/gateway3.p4
-  testdata/p4_14_samples/gateway4.p4
-  testdata/p4_14_samples/gateway5.p4
-  testdata/p4_14_samples/gateway6.p4
-  testdata/p4_14_samples/gateway7.p4
-  testdata/p4_14_samples/gateway8.p4
-  testdata/p4_14_samples/hash_action_basic.p4
-  testdata/p4_14_samples/hash_action_gateway2.p4
-  testdata/p4_14_samples/hash_action_gateway.p4
-  testdata/p4_14_samples/hash_action_two_separate.p4
-  testdata/p4_14_samples/hitmiss.p4
-  testdata/p4_14_samples/hit.p4
-  testdata/p4_14_samples/inline.p4
-  testdata/p4_14_samples/instruct2.p4
-  testdata/p4_14_samples/instruct3.p4
-  testdata/p4_14_samples/instruct4.p4
-  testdata/p4_14_samples/instruct5.p4
-  testdata/p4_14_samples/instruct6.p4
+  )
+
+p4c_add_xfail_reason("jbay"
+  "Ran out of tcam space in .* parser"
   testdata/p4_14_samples/issue583.p4
-  testdata/p4_14_samples/issue60.p4
-  testdata/p4_14_samples/issue638-2.p4
-  testdata/p4_14_samples/issue780-1.p4
-  testdata/p4_14_samples/issue780-2.p4
-  testdata/p4_14_samples/issue780-3.p4
-  testdata/p4_14_samples/issue780-5.p4
-  testdata/p4_14_samples/issue780-7.p4
-  testdata/p4_14_samples/issue780-8.p4
-  testdata/p4_14_samples/issue780-9.p4
-  testdata/p4_14_samples/issue846.p4
-  testdata/p4_14_samples/issue946.p4
-  testdata/p4_14_samples/meter1.p4
-  testdata/p4_14_samples/meter.p4
-  testdata/p4_14_samples/misc_prim.p4
-  testdata/p4_14_samples/miss.p4
-  testdata/p4_14_samples/overflow.p4
-  testdata/p4_14_samples/parser3.p4
-  testdata/p4_14_samples/register.p4
-  testdata/p4_14_samples/repeater.p4
-  testdata/p4_14_samples/selector1.p4
-  testdata/p4_14_samples/selector2.p4
-  testdata/p4_14_samples/selector3.p4
-  testdata/p4_14_samples/swap_1.p4
-  testdata/p4_14_samples/swap_2.p4
-  testdata/p4_14_samples/ternary_match0.p4
-  testdata/p4_14_samples/ternary_match1.p4
-  testdata/p4_14_samples/ternary_match2.p4
-  testdata/p4_14_samples/ternary_match3.p4
-  testdata/p4_14_samples/ternary_match4.p4
-  testdata/p4_14_samples/test_7_storm_control.p4
-  testdata/p4_14_samples/test_config_175_match_table_with_no_key.p4
-  testdata/p4_14_samples/test_config_23_same_container_modified.p4
-  testdata/p4_14_samples/testgw.p4
-  testdata/p4_14_samples/tmvalid.p4
-  testdata/p4_14_samples/tp2a.p4
-  testdata/p4_14_samples/tp2b.p4
-  testdata/p4_14_samples/tp2c.p4
-  testdata/p4_14_samples/tp3a.p4
-  testdata/p4_14_samples/triv_eth.p4
-  testdata/p4_14_samples/triv_ipv4.p4
-  testdata/p4_14_samples/truncate.p4
-  testdata/p4_14_samples/validate_outer_ethernet.p4
-  testdata/p4_14_samples/wide_action1.p4
-  testdata/p4_14_samples/wide_action2.p4
-  testdata/p4_14_samples/wide_action3.p4
   )
 
 p4c_add_xfail_reason("jbay"

@@ -67,7 +67,7 @@ PhvSpec::range(PHV::Type t, unsigned start, unsigned length) const {
 }
 
 const bitvec& PhvSpec::physicalContainers() const {
-    if (physical_containers_i) return physical_containers_i.value();
+    if (physical_containers_i) return physical_containers_i;
     bitvec containers;
     for (auto tg : mauGroups())
         for (auto g : tg.second)
@@ -75,14 +75,14 @@ const bitvec& PhvSpec::physicalContainers() const {
     for (auto g : tagalongGroups())
         containers |= g;
     physical_containers_i = std::move(containers);
-    return physical_containers_i.value();
+    return physical_containers_i;
 }
 
-boost::optional<bitvec> PhvSpec::mauGroup(unsigned container_id) const {
+bitvec PhvSpec::mauGroup(unsigned container_id) const {
     const auto containerType = idToContainerType(container_id % numContainerTypes());
     auto it = mauGroupSpec.find(containerType);
     if (it == mauGroupSpec.end())
-        return boost::none;
+        return bitvec();
 
     const unsigned index = container_id / numContainerTypes();
     unsigned groupSize = it->second.second;
@@ -90,11 +90,12 @@ boost::optional<bitvec> PhvSpec::mauGroup(unsigned container_id) const {
     auto group = mauGroups(containerType);
     if (mau_group_index < group.size())
         return group[mau_group_index];
-    return boost::none;
+    return bitvec();
 }
 
 const std::map<PHV::Type, std::vector<bitvec>>& PhvSpec::mauGroups() const {
-    if (mau_groups_i) return mau_groups_i.value();
+    if (!mau_groups_i.empty())
+        return mau_groups_i;
     std::map<PHV::Type, std::vector<bitvec>> mau_groups;
     for (auto gs : mauGroupSpec) {
         PHV::Type groupType = gs.first;
@@ -103,7 +104,7 @@ const std::map<PHV::Type, std::vector<bitvec>>& PhvSpec::mauGroups() const {
         for (unsigned index = 0; index < numGroups; index++)
             mau_groups[groupType].push_back(range(groupType, index * groupSize, groupSize)); }
     mau_groups_i = std::move(mau_groups);
-    return mau_groups_i.value();
+    return mau_groups_i;
 }
 
 bitvec PhvSpec::ingressOrEgressOnlyContainers(
@@ -121,19 +122,22 @@ bitvec PhvSpec::ingressOrEgressOnlyContainers(
 }
 
 const bitvec& PhvSpec::ingressOnly() const {
-    if (ingress_only_containers_i) return ingress_only_containers_i.value();
+    if (ingress_only_containers_i)
+        return ingress_only_containers_i;
     ingress_only_containers_i = ingressOrEgressOnlyContainers(ingressOnlyMauGroupIds);
-    return ingress_only_containers_i.value();
+    return ingress_only_containers_i;
 }
 
 const bitvec& PhvSpec::egressOnly() const {
-    if (egress_only_containers_i) return egress_only_containers_i.value();
+    if (egress_only_containers_i)
+        return egress_only_containers_i;
     egress_only_containers_i = ingressOrEgressOnlyContainers(egressOnlyMauGroupIds);
-    return egress_only_containers_i.value();
+    return egress_only_containers_i;
 }
 
 const std::vector<bitvec>& PhvSpec::tagalongGroups() const {
-    if (tagalong_collections_i) return tagalong_collections_i.value();
+    if (!tagalong_collections_i.empty())
+        return tagalong_collections_i;
     std::vector<bitvec> tagalong_collections;
 
     for (unsigned coll_num = 0; coll_num < numTagalongCollections; ++coll_num) {
@@ -147,19 +151,19 @@ const std::vector<bitvec>& PhvSpec::tagalongGroups() const {
         tagalong_collections.push_back(collection); }
 
     tagalong_collections_i = std::move(tagalong_collections);
-    return tagalong_collections_i.value();
+    return tagalong_collections_i;
 }
 
-boost::optional<bitvec> PhvSpec::tagalongGroup(unsigned container_id) const {
+bitvec PhvSpec::tagalongGroup(unsigned container_id) const {
     const auto containerType = idToContainerType(container_id % numContainerTypes());
     if (containerType.kind() != PHV::Kind::tagalong)
-        return boost::none;
+        return bitvec();
 
     const unsigned index = container_id / numContainerTypes();
     unsigned collection_num = index / tagalongCollectionSpec.at(containerType);
 
     if (tagalongGroups().size() <= collection_num)
-        return boost::none;
+        return bitvec();
 
     return tagalongGroups()[collection_num];
 }
@@ -174,9 +178,36 @@ const std::vector<bitvec>& PhvSpec::mauGroups(PHV::Type t) const {
 }
 
 const std::pair<int, int> PhvSpec::mauGroupNumAndSize(const PHV::Type t) const {
-    std::pair<int, int> emptyPair;
-    if (!mauGroupSpec.count(t)) return emptyPair;
+    if (!mauGroupSpec.count(t))
+        return std::pair<int, int>();
     return mauGroupSpec.at(t);
+}
+
+bitvec PhvSpec::deparserGroup(unsigned id) const {
+    const auto containerType = idToContainerType(id % numContainerTypes());
+    const unsigned index =  id / numContainerTypes();
+
+    // Individually assigned containers aren't part of a group, by definition.
+    if (individuallyAssignedContainers()[id])
+        return range(containerType, index, 1);
+
+    // Return a singleton for invalid containers; they have no deparser group.
+    if (!physicalContainers()[id])
+        return range(containerType, index, 1);
+
+    // We also treat overflow containers (i.e., containers which don't exist in
+    // hardware) as being individually assigned.
+    if (!physicalContainers()[id])
+        return range(containerType, index, 1);
+
+    if (containerType.kind() == PHV::Kind::tagalong)
+        return tagalongGroup(id);
+
+    // Outside of the exceptional cases above, containers are assigned to
+    // threads in groups. The grouping depends on the type of container.
+
+    unsigned groupSize = deparserGroupSize.at(containerType);
+    return range(containerType, (index / groupSize) * groupSize, groupSize);
 }
 
 TofinoPhvSpec::TofinoPhvSpec() {
@@ -214,6 +245,12 @@ TofinoPhvSpec::TofinoPhvSpec() {
         };
 
         numTagalongCollections = 8;
+
+        deparserGroupSize = {
+            { PHV::Type::B, { 8 } },
+            { PHV::Type::H, { 8 } },
+            { PHV::Type::W, { 4 } }
+        };
     } else {  // virtual tofino with 2x phv resources :)
         mauGroupSpec = {
             { PHV::Type::B, std::make_pair(8, 16) },
@@ -240,52 +277,26 @@ TofinoPhvSpec::TofinoPhvSpec() {
         };
 
         numTagalongCollections = 16;
+
+        deparserGroupSize = {
+            { PHV::Type::B, { 16 } },
+            { PHV::Type::H, { 16 } },
+            { PHV::Type::W, { 8 } }
+        };
     }
 }
 
-bitvec
-TofinoPhvSpec::deparserGroup(unsigned id) const {
-    const auto containerType = idToContainerType(id % numContainerTypes());
-    const unsigned index =  id / numContainerTypes();
-
-    // Individually assigned containers aren't part of a group, by definition.
-    if (individuallyAssignedContainers()[id])
-        return range(containerType, index, 1);
-
-    // Return a singleton for invalid containers; they have no deparser group.
-    if (!physicalContainers()[id])
-        return range(containerType, index, 1);
-
-    // We also treat overflow containers (i.e., containers which don't exist in
-    // hardware) as being individually assigned.
-    if (!physicalContainers()[id])
-        return range(containerType, index, 1);
-
-    // Outside of the exceptional cases above, containers are assigned to
-    // threads in groups. The grouping depends on the type of container.
-    if (containerType == PHV::Type::B || containerType == PHV::Type::H)
-        return range(containerType, (index / 8) * 8, 8);
-    else if (containerType == PHV::Type::W)
-        return range(containerType, (index / 4) * 4, 4);
-    else if (containerType.kind() == PHV::Kind::tagalong)
-        // Should never need the "or"
-        return tagalongGroup(id).get_value_or(range(containerType, index, 1));
-    else
-        BUG("Unexpected PHV container type %1%", containerType);
-}
-
 const bitvec& TofinoPhvSpec::individuallyAssignedContainers() const {
-    if (individually_assigned_containers_i) return individually_assigned_containers_i.value();
+    if (individually_assigned_containers_i) return individually_assigned_containers_i;
     bitvec containers = range(PHV::Type::B, 56, 8)
                       | range(PHV::Type::H, 88, 8)
                       | range(PHV::Type::W, 60, 4);
     individually_assigned_containers_i = std::move(containers);
-    return individually_assigned_containers_i.value();
+    return individually_assigned_containers_i;
 }
 
 #if HAVE_JBAY
-// XXX(zma) JBayPhvSpec is TofinoPhvSpec minus tagalongs for now,
-// will need to add dark and mochas (TODO).
+// TODO(zma) add dark and mochas
 JBayPhvSpec::JBayPhvSpec() {
     addType(PHV::Type::B);
     addType(PHV::Type::H);
@@ -304,19 +315,16 @@ JBayPhvSpec::JBayPhvSpec() {
     tagalongCollectionSpec = { };
 
     numTagalongCollections = 0;
-}
 
-bitvec JBayPhvSpec::deparserGroup(unsigned id) const {
-    // JBay does not have deparser group constraints.
-    bitvec rv;
-    rv.setbit(id);
-    return rv;
+    deparserGroupSize = {
+        { PHV::Type::B, { 4 } },
+        { PHV::Type::H, { 4 } },
+        { PHV::Type::W, { 2 } }
+    };
 }
 
 const bitvec& JBayPhvSpec::individuallyAssignedContainers() const {
-    if (individually_assigned_containers_i) return individually_assigned_containers_i.value();
-    individually_assigned_containers_i.emplace();
-    return individually_assigned_containers_i.value();
+    return individually_assigned_containers_i;
 }
 
 #endif /* HAVE_JBAY */

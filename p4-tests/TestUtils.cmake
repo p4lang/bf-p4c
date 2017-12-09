@@ -129,10 +129,6 @@ macro(p4c_add_bf_backend_tests device tests)
     endif()
   endif()
 
-  if (ENABLE_TNA)
-    set (testExtraArgs "${testExtraArgs} -Xp4c=--native")
-  endif()
-
   p4c_add_tests (${device} ${P4C_RUNTEST} "${tests}"
      "" "${testExtraArgs}")
 

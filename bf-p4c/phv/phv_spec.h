@@ -1,7 +1,6 @@
 #ifndef EXTENSIONS_BF_P4C_PHV_PHV_SPEC_H_
 #define EXTENSIONS_BF_P4C_PHV_PHV_SPEC_H_
 
-#include <boost/optional.hpp>
 #include <vector>
 #include "bf-p4c/phv/phv.h"
 #include "lib/ordered_map.h"
@@ -12,12 +11,12 @@ class cstring;
 class PhvSpec {
  protected:
     // All cache fields
-    mutable boost::optional<bitvec> physical_containers_i;
-    mutable boost::optional<std::map<PHV::Type, std::vector<bitvec>>> mau_groups_i;
-    mutable boost::optional<bitvec> ingress_only_containers_i;
-    mutable boost::optional<bitvec> egress_only_containers_i;
-    mutable boost::optional<std::vector<bitvec>> tagalong_collections_i;
-    mutable boost::optional<bitvec> individually_assigned_containers_i;
+    mutable bitvec physical_containers_i;
+    mutable std::map<PHV::Type, std::vector<bitvec>> mau_groups_i;
+    mutable bitvec ingress_only_containers_i;
+    mutable bitvec egress_only_containers_i;
+    mutable std::vector<bitvec> tagalong_collections_i;
+    mutable bitvec individually_assigned_containers_i;
 
     std::vector<PHV::Type> definedTypes;
     ordered_map<PHV::Type, unsigned> typeIdMap;
@@ -36,6 +35,8 @@ class PhvSpec {
     std::map<PHV::Type, unsigned> tagalongCollectionSpec;
 
     unsigned numTagalongCollections = 0;
+
+    std::map<PHV::Type, unsigned> deparserGroupSize;
 
     /// Add a PHV container type to the set of types which are available on this
     /// device. This should only be called inside the constructor of subclasses
@@ -77,7 +78,7 @@ class PhvSpec {
 
     /// @return the ids of every container in the same deparser group as the
     /// provided container.
-    virtual bitvec deparserGroup(unsigned id) const = 0;
+    bitvec deparserGroup(unsigned id) const;
 
     /**
      * Generates a bitvec containing a range of containers. This kind of bitvec
@@ -110,7 +111,7 @@ class PhvSpec {
 
     /// @return the ids of every container in @container_id's MAU group, or
     /// boost::none if @container_id is not part of any MAU group.
-    boost::optional<bitvec> mauGroup(unsigned container_id) const;
+    bitvec mauGroup(unsigned container_id) const;
 
     /// @return a pair <#groups, #containers per group> corresponding to the
     /// PHV Type @t
@@ -121,7 +122,7 @@ class PhvSpec {
 
     /// @return the ids of every container in @container_id's tagalong group, or
     /// boost::none if @container_id is not part of any MAU group.
-    boost::optional<bitvec> tagalongGroup(unsigned container_id) const;
+    bitvec tagalongGroup(unsigned container_id) const;
 
     /// @return the ids of containers that can be assigned to a thread
     /// individually.
@@ -137,8 +138,6 @@ class TofinoPhvSpec : public PhvSpec {
  public:
     TofinoPhvSpec();
 
-    bitvec deparserGroup(unsigned id) const override;
-
     const bitvec& individuallyAssignedContainers() const override;
 };
 
@@ -146,8 +145,6 @@ class TofinoPhvSpec : public PhvSpec {
 class JBayPhvSpec : public PhvSpec {
  public:
     JBayPhvSpec();
-
-    bitvec deparserGroup(unsigned id) const override;
 
     const bitvec& individuallyAssignedContainers() const override;
 };
