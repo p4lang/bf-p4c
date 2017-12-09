@@ -27,6 +27,7 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
   p4c_add_xfail_reason("tofino"
     "mismatch from expected.*at byte 0x"
     extensions/p4_tests/p4_16/stack_valid.p4
+    extensions/p4_tests/p4_14/adjust_instr5.p4
     )
 
 endif() # HARLYN_STF_tofino
@@ -249,14 +250,6 @@ p4c_add_xfail_reason("tofino"
   "Can't fit the minimum number of table .* entries within the memories"
   extensions/p4_tests/p4_14/dileep8.p4
 )
-
-# BRIG-146 (also was BRIG-133)
-p4c_add_xfail_reason("tofino"
-  "alias for .* has out of range index from allowed"
-  extensions/p4_tests/p4_14/adjust_instr5.p4
-  extensions/p4_tests/p4_14/test_config_112_no_phase_0_case_action_width_too_big.p4
-  extensions/p4_tests/p4_14/test_config_45_action_data_immediate_param_and_constant.p4
-  )
 
 # BRIG-149
 p4c_add_xfail_reason("tofino"

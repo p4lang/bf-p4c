@@ -881,7 +881,7 @@ void Table::Actions::Action::pass1(Table *tbl) {
                     a.second.hi += rec.lo; }
             if (rec.hi > 0 && a.second.hi < 0)
                 a.second.hi = rec.hi;
-            if (a.second.lo < rec.lo || a.second.hi > rec.hi) {
+            if (a.second.lo < rec.lo || (rec.hi >= 0 && a.second.hi > rec.hi)) {
                 error(a.second.lineno,
                         "alias for %s:%s(%d:%d) has out of range index from allowed %s:%s(%d:%d)",
                         a.first.c_str(), a.second.name.c_str(), a.second.lo, a.second.hi,
