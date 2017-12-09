@@ -51,8 +51,36 @@ endif() # HARLYN_STF
 if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
 endif() # ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET
 
+# jbay predication setup is messed up
 p4c_add_xfail_reason("jbay"
-  "used by both ingress and egress deparser"
+  "unexpected packet output on port"
+  testdata/p4_14_samples/gateway5.p4
+  testdata/p4_14_samples/gateway6.p4
+  testdata/p4_14_samples/gateway7.p4
+  testdata/p4_14_samples/gateway8.p4
+  testdata/p4_14_samples/hash_action_basic.p4
+  testdata/p4_14_samples/hash_action_gateway.p4
+  testdata/p4_14_samples/hash_action_two_separate.p4
+  )
+
+p4c_add_xfail_reason("jbay"
+  "Assertion .*kMemoryCoreSplit.* failed"
+  testdata/p4_14_samples/counter4.p4
+  testdata/p4_14_samples/exact_match3.p4
+  testdata/p4_14_samples/exact_match5.p4
+  )
+
+p4c_add_xfail_reason("jbay"
+  "expected packets? on port .* not seen"
+  testdata/p4_14_samples/07-MultiProtocol.p4
+  testdata/p4_14_samples/action_chain1.p4
+  testdata/p4_14_samples/instruct5.p4
+  )
+
+#input port metadata not set up properly (STF harness bug)
+p4c_add_xfail_reason("jbay"
+  "expected packet on port"
+  testdata/p4_14_samples/repeater.p4
   )
 
 p4c_add_xfail_reason("jbay"
@@ -171,3 +199,11 @@ p4c_add_xfail_reason("jbay"
   testdata/p4_14_samples/TLV_parsing.p4
   )
 
+# Brig/Glass do not follow P4_14 spec for 'drop' in the ingress pipeline
+p4c_add_xfail_reason("jbay"
+  "expected packet on port .* not seen"
+  #testdata/p4_14_samples/gateway1.p4  (ctd -- drop_ctl not droppoing the packet?)
+  testdata/p4_14_samples/gateway2.p4
+  testdata/p4_14_samples/gateway3.p4
+  testdata/p4_14_samples/gateway4.p4
+  )

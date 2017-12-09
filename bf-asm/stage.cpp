@@ -237,20 +237,22 @@ int Stage::tcam_delay(gress_t gress) {
 int Stage::adr_dist_delay(gress_t gress) {
     if (group_table_use[gress] & Stage::USE_SELECTOR)
         return 8;
-    else if (group_table_use[gress] & Stage::USE_METER_LPF_RED)
-        return 4;
+    else if (group_table_use[gress] & Stage::USE_STATEFUL_DIVIDE)
+        return 5;
     else if (group_table_use[gress] & Stage::USE_STATEFUL)
+        return 4;
+    else if (group_table_use[gress] & Stage::USE_METER_LPF_RED)
         return 4;
     else
         return 0;
 }
 
 int Stage::pipelength(gress_t gress) {
-    return 20 + tcam_delay(gress) + adr_dist_delay(gress);
+    return Target::MAU_BASE_DELAY() + tcam_delay(gress) + adr_dist_delay(gress);
 }
 
 int Stage::pred_cycle(gress_t gress) {
-    return 11 + tcam_delay(gress);
+    return Target::MAU_BASE_PREDICATION_DELAY() + tcam_delay(gress);
 }
 
 #include "tofino/stage.cpp"
@@ -271,10 +273,8 @@ template<class TARGET> void Stage::write_common_regs(typename TARGET::mau_regs &
             merge.exact_match_delay_thread[2] |= 1U << gress; }
         regs.rams.match.adrdist.adr_dist_pipe_delay[gress][0] =
         regs.rams.match.adrdist.adr_dist_pipe_delay[gress][1] = adr_dist_delay(gress);
-        auto &deferred_eop_bus_delay = regs.rams.match.adrdist.deferred_eop_bus_delay[gress];
-        deferred_eop_bus_delay.eop_internal_delay_fifo = pred_cycle(gress) + 3;
         regs.dp.action_output_delay[gress] = pipelength(gress) - 3;
-        regs.dp.pipelength_added_stages[gress] = pipelength(gress) - 20;
+        regs.dp.pipelength_added_stages[gress] = pipelength(gress) - TARGET::MAU_BASE_DELAY;
         if (stageno > 0 && stage_dep[gress] == MATCH_DEP)
             regs.dp.match_ie_input_mux_sel |= 1 << gress;
     }

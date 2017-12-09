@@ -26,6 +26,8 @@ class Target {
     static int NUM_MAU_STAGES();
     static int DEPARSER_CHECKSUM_UNITS();
     static int DEPARSER_MAX_POV_BYTES();
+    static int MAU_BASE_DELAY();
+    static int MAU_BASE_PREDICATION_DELAY();
     static const char *name();
 };
 
@@ -82,6 +84,8 @@ class Target::Tofino : public Target {
         DEPARSER_CHECKSUM_UNITS = 6,
         DEPARSER_MAX_POV_BYTES = 32,
         DEPARSER_MAX_FD_ENTRIES = 384,
+        MAU_BASE_DELAY = 20,
+        MAU_BASE_PREDICATION_DELAY = 11,
     };
 };
 
@@ -148,6 +152,8 @@ class Target::JBay : public Target {
         DEPARSER_CHUNK_GROUPS = 16,
         DEPARSER_CLOTS_PER_GROUP = 4,
         DEPARSER_TOTAL_CHUNKS = DEPARSER_CHUNK_GROUPS * DEPARSER_CHUNKS_PER_GROUP,
+        MAU_BASE_DELAY = 23,
+        MAU_BASE_PREDICATION_DELAY = 13,
     };
 };
 void declare_registers(const Target::JBay::top_level_regs *regs);

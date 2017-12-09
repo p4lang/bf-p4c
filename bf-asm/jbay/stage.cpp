@@ -5,19 +5,19 @@ template<> void Stage::write_regs(Target::JBay::mau_regs &regs) {
     auto &merge = regs.rams.match.merge;
     for (gress_t gress : Range(INGRESS, EGRESS)) {
         if (stageno == 0) {
-            merge.predication_ctl[gress].start_table_fifo_delay0 = pred_cycle(gress) - 1;
+            merge.predication_ctl[gress].start_table_fifo_delay0 = pred_cycle(gress) - 2;
             merge.predication_ctl[gress].start_table_fifo_enable = 1;
         } else if (stage_dep[gress] == MATCH_DEP) {
             merge.predication_ctl[gress].start_table_fifo_delay0 =
-                this[-1].pipelength(gress) - this[-1].pred_cycle(gress) + pred_cycle(gress) - 1;
+                this[-1].pipelength(gress) - this[-1].pred_cycle(gress) + pred_cycle(gress) - 3;
             merge.predication_ctl[gress].start_table_fifo_enable = 1;
             if (stageno == 10) {
                 // FIXME -- regs docs claim this is deprecated and should not be set, but
                 // FIXME -- the model complains if it is not?
-                merge.predication_ctl[gress].start_table_fifo_delay1 = 9; }
+                merge.predication_ctl[gress].start_table_fifo_delay1 = 10; }
         } else {
             assert(stage_dep[gress] == ACTION_DEP);
-            merge.predication_ctl[gress].start_table_fifo_delay0 = 1;
+            merge.predication_ctl[gress].start_table_fifo_delay0 = 0;
             merge.predication_ctl[gress].start_table_fifo_enable = 0; }
         if (stageno != 0)
             regs.dp.cur_stage_dependency_on_prev[gress] = stage_dep[gress] != MATCH_DEP;
@@ -27,13 +27,14 @@ template<> void Stage::write_regs(Target::JBay::mau_regs &regs) {
             regs.dp.next_stage_dependency_on_cur[gress] = 1;
         /* FIXME -- making this depend on the dependency of the next stage seems wrong */
         auto &deferred_eop_bus_delay = regs.rams.match.adrdist.deferred_eop_bus_delay[gress];
+        deferred_eop_bus_delay.eop_internal_delay_fifo = pred_cycle(gress) + 2;
         if (stageno == AsmStage::numstages()-1) {
             if (AsmStage::numstages() < Target::JBay::NUM_MAU_STAGES)
                 deferred_eop_bus_delay.eop_output_delay_fifo = 1;
             else
-                deferred_eop_bus_delay.eop_output_delay_fifo = pipelength(gress) - 1;
+                deferred_eop_bus_delay.eop_output_delay_fifo = pipelength(gress) - 2;
         } else if (this[1].stage_dep[gress] == MATCH_DEP)
-            deferred_eop_bus_delay.eop_output_delay_fifo = pipelength(gress) - 1;
+            deferred_eop_bus_delay.eop_output_delay_fifo = pipelength(gress) - 2;
         else
             deferred_eop_bus_delay.eop_output_delay_fifo = 1;
         deferred_eop_bus_delay.eop_delay_fifo_en = 1;

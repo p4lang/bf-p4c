@@ -173,6 +173,16 @@ int Target::DEPARSER_MAX_POV_BYTES() {
     return -1;
 }
 
+int Target::MAU_BASE_DELAY() {
+    SWITCH_FOREACH_TARGET(options.target, return TARGET::MAU_BASE_DELAY; )
+    return -1;
+}
+
+int Target::MAU_BASE_PREDICATION_DELAY() {
+    SWITCH_FOREACH_TARGET(options.target, return TARGET::MAU_BASE_PREDICATION_DELAY; )
+    return -1;
+}
+
 const char *Target::name() {
     SWITCH_FOREACH_TARGET(options.target, return TARGET::name; )
     return nullptr;
