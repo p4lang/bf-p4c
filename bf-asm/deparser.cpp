@@ -239,6 +239,7 @@ void Deparser::input(VECTOR(value_t) args, value_t data) {
                     kv.key[1].i < 0 || kv.key[1].i >= Target::DEPARSER_CHECKSUM_UNITS())
                     error(kv.key.lineno, "Invalid checksum unit number");
                 else if (CHECKTYPE2(kv.value, tVEC, tMAP)) {
+                    collapse_list_of_maps(kv.value);
                     int unit = kv.key[1].i;
                     if (kv.value.type == tVEC) {
                         for (auto &ent : kv.value.vec)

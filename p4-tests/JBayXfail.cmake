@@ -9,9 +9,10 @@ set (JBAY_XFAIL_TESTS
 if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
 
   p4c_add_xfail_reason("jbay"
-    ".*"
+    "Assertion .*kMemoryCoreSplit.* failed."
 
     # "jbay::MauSramRowReg::oflo_rd_b.* Assertion `(!kMemoryCoreSplit)"
+    testdata/p4_14_samples/basic_routing.p4
     testdata/p4_14_samples/exact_match3.p4
     testdata/p4_14_samples/exact_match5.p4
     testdata/p4_14_samples/counter4.p4
@@ -33,16 +34,16 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     testdata/p4_14_samples/gateway8.p4
 
     # "ERROR: .*mau-dependencies.cpp.* (report_bad_delay)"
-    testdata/p4_14_samples/hash_action_gateway.p4
     testdata/p4_14_samples/07-MultiProtocol.p4
-    testdata/p4_14_samples/hash_action_two_separate.p4
-    testdata/p4_14_samples/hash_action_basic.p4
   )
 
   p4c_add_xfail_reason("jbay"
-    "PHV allocation creates a container action impossible"
-    testdata/p4_14_samples/instruct5.p4
+    "unexpected packet output on port"
+    testdata/p4_14_samples/hash_action_basic.p4
+    testdata/p4_14_samples/hash_action_gateway.p4
+    testdata/p4_14_samples/hash_action_two_separate.p4
   )
+
 endif() # HARLYN_STF
 
 # BEGIN: XFAILS that match glass XFAILS
@@ -50,38 +51,6 @@ endif() # HARLYN_STF
 
 if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
 endif() # ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET
-
-# jbay predication setup is messed up
-p4c_add_xfail_reason("jbay"
-  "unexpected packet output on port"
-  testdata/p4_14_samples/gateway5.p4
-  testdata/p4_14_samples/gateway6.p4
-  testdata/p4_14_samples/gateway7.p4
-  testdata/p4_14_samples/gateway8.p4
-  testdata/p4_14_samples/hash_action_basic.p4
-  testdata/p4_14_samples/hash_action_gateway.p4
-  testdata/p4_14_samples/hash_action_two_separate.p4
-  )
-
-p4c_add_xfail_reason("jbay"
-  "Assertion .*kMemoryCoreSplit.* failed"
-  testdata/p4_14_samples/counter4.p4
-  testdata/p4_14_samples/exact_match3.p4
-  testdata/p4_14_samples/exact_match5.p4
-  )
-
-p4c_add_xfail_reason("jbay"
-  "expected packets? on port .* not seen"
-  testdata/p4_14_samples/07-MultiProtocol.p4
-  testdata/p4_14_samples/action_chain1.p4
-  testdata/p4_14_samples/instruct5.p4
-  )
-
-#input port metadata not set up properly (STF harness bug)
-p4c_add_xfail_reason("jbay"
-  "expected packet on port"
-  testdata/p4_14_samples/repeater.p4
-  )
 
 p4c_add_xfail_reason("jbay"
   "Ran out of tcam space in .* parser"
@@ -131,6 +100,7 @@ p4c_add_xfail_reason("jbay"
   "PHV allocation creates a container action impossible within a Tofino ALU"
   testdata/p4_14_samples/action_inline.p4
   testdata/p4_14_samples/instruct1.p4
+  testdata/p4_14_samples/instruct5.p4
   )
 
 p4c_add_xfail_reason("jbay"
@@ -140,7 +110,6 @@ p4c_add_xfail_reason("jbay"
 
 p4c_add_xfail_reason("jbay"
   "FIXME method call checksum.update in deparser not yet supported"
-  testdata/p4_14_samples/basic_routing.p4
   testdata/p4_14_samples/checksum1.p4
   testdata/p4_14_samples/checksum.p4
   testdata/p4_14_samples/issue894.p4
