@@ -70,12 +70,13 @@ macro(simple_test_setup_check device)
       ${CMAKE_INSTALL_PREFIX}/bin
       ${BFN_P4C_SOURCE_DIR}/../model/tests/simple_test_harness
       ${BFN_P4C_SOURCE_DIR}/../model/build/tests/simple_test_harness
-      ${BFN_P4C_SOURCE_DIR}/../model/debug/tests/simple_test_harness)
+      ${BFN_P4C_SOURCE_DIR}/../model/debug/tests/simple_test_harness
+      ${BFN_P4C_SOURCE_DIR}/bf-asm/simple_test_harness)
 
     find_program(HARLYN_STF_${device} ${device}_test_harness PATHS ${STF_SEARCH_PATHS})
 
     if (HARLYN_STF_${device})
-      MESSAGE (STATUS "${device}_test_harness found.")
+      MESSAGE (STATUS "${device}_test_harness found at ${HARLYN_STF_${device}}.")
     else()
       MESSAGE (WARNING "STF tests need Harlyn ${device}_test_harness.\nLooked in ${STF_SEARCH_PATHS}.")
     endif()

@@ -6,8 +6,43 @@ set (JBAY_XFAIL_TESTS
 
 # These tests compile successfuly and fail in the model when running the STF test
 # the reasons need more characterization
-if (HARLYN_STF AND NOT ENABLE_STF2PTF)
-set (JBAY_XFAIL_TESTS ${JBAY_XFAIL_TESTS})
+if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
+
+  p4c_add_xfail_reason("jbay"
+    ".*"
+
+    # "jbay::MauSramRowReg::oflo_rd_b.* Assertion `(!kMemoryCoreSplit)"
+    testdata/p4_14_samples/exact_match3.p4
+    testdata/p4_14_samples/exact_match5.p4
+    testdata/p4_14_samples/counter4.p4
+  )
+
+  p4c_add_xfail_reason("jbay"
+    ".* expected packet.* on port .* not seen"
+
+    testdata/p4_14_samples/repeater.p4
+    testdata/p4_14_samples/gateway2.p4
+    testdata/p4_14_samples/gateway3.p4
+    testdata/p4_14_samples/action_chain1.p4
+
+    # "ERROR: .*mau-instr-store-common.cpp.* (instr_add_simple_op)"
+    testdata/p4_14_samples/gateway4.p4
+    testdata/p4_14_samples/gateway5.p4
+    testdata/p4_14_samples/gateway6.p4
+    testdata/p4_14_samples/gateway7.p4
+    testdata/p4_14_samples/gateway8.p4
+
+    # "ERROR: .*mau-dependencies.cpp.* (report_bad_delay)"
+    testdata/p4_14_samples/hash_action_gateway.p4
+    testdata/p4_14_samples/07-MultiProtocol.p4
+    testdata/p4_14_samples/hash_action_two_separate.p4
+    testdata/p4_14_samples/hash_action_basic.p4
+  )
+
+  p4c_add_xfail_reason("jbay"
+    "PHV allocation creates a container action impossible"
+    testdata/p4_14_samples/instruct5.p4
+  )
 endif() # HARLYN_STF
 
 # BEGIN: XFAILS that match glass XFAILS
@@ -139,3 +174,4 @@ p4c_add_xfail_reason("jbay"
   "Compiler Bug.*: .*: Cannot find declaration for"
   testdata/p4_14_samples/TLV_parsing.p4
   )
+
