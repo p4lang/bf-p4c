@@ -72,7 +72,7 @@ findcmakecache() {
 }
 
 findbin() {
-    bin=$(cmake -L -N $(findcmakecache) | grep "^$1" | cut -d "=" -f 2)
+    bin=$(cmake -L -N $(findcmakecache) | grep "^$1:" | cut -d "=" -f 2)
     if [ "$bin" = "" ]; then
         echo >&2 "Could not find $1 in cmake cache"
         exit 1
