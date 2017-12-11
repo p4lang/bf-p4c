@@ -161,7 +161,7 @@ class AllocatePHV : public Inspector {
     boost::optional<PHV::Transaction> tryAlloc(
         const PHV::Allocation& alloc,
         const PHV::ContainerGroup& group,
-        const std::vector<PHV::FieldSlice>& fields,
+        const PHV::SuperCluster::SliceList& slices,
         const ordered_map<const PHV::FieldSlice, int>& start_positions);
 
     /** Helper function for tryAlloc that tries to allocate all the fields of a single CCGF.

@@ -692,12 +692,12 @@ class RotationalCluster : public ClusterStats {
  */
 class SuperCluster : public ClusterStats {
  public:
-    using SliceList = std::vector<PHV::FieldSlice>;
+    using SliceList = std::list<PHV::FieldSlice>;
 
  private:
-    ordered_set<RotationalCluster*> clusters_i;
+    ordered_set<const RotationalCluster*> clusters_i;
     ordered_set<SliceList*> slice_lists_i;
-    ordered_map<const PHV::FieldSlice, RotationalCluster*> slices_to_clusters_i;
+    ordered_map<const PHV::FieldSlice, const RotationalCluster*> slices_to_clusters_i;
 
     // Statstics gathered from clusters.
     PHV::Kind kind_i;
@@ -708,11 +708,11 @@ class SuperCluster : public ClusterStats {
 
  public:
     SuperCluster(
-        ordered_set<PHV::RotationalCluster*> clusters,
+        ordered_set<const PHV::RotationalCluster*> clusters,
         ordered_set<SliceList*> slice_lists);
 
     /// @returns the aligned clusters in this group.
-    const ordered_set<RotationalCluster*>& clusters() const { return clusters_i; }
+    const ordered_set<const RotationalCluster*>& clusters() const { return clusters_i; }
 
     /// @returns the slice lists that induced this grouping.
     const ordered_set<SliceList*>& slice_lists() const { return slice_lists_i; }
@@ -722,8 +722,8 @@ class SuperCluster : public ClusterStats {
     ///          in every slice list are guaranteed to be present in exactly one cluster.
     const RotationalCluster& cluster(const PHV::FieldSlice& slice) const {
         auto it = slices_to_clusters_i.find(slice);
-        BUG_CHECK(it != slices_to_clusters_i.end(), "Field %1% not in cluster group",
-                  cstring::to_cstring(slice));
+        BUG_CHECK(it != slices_to_clusters_i.end(), "Field %1% not in cluster group %2%",
+                  cstring::to_cstring(slice), cstring::to_cstring(this));
         return *it->second;
     }
 
@@ -773,6 +773,8 @@ std::ostream &operator<<(std::ostream &out, const RotationalCluster&);
 std::ostream &operator<<(std::ostream &out, const RotationalCluster*);
 std::ostream &operator<<(std::ostream &out, const SuperCluster&);
 std::ostream &operator<<(std::ostream &out, const SuperCluster*);
+std::ostream &operator<<(std::ostream &out, const SuperCluster::SliceList&);
+std::ostream &operator<<(std::ostream &out, const SuperCluster::SliceList*);
 
 }   // namespace PHV
 

@@ -734,8 +734,8 @@ PHV::RotationalCluster::slice(int pos) const {
             lo_clusters.insert(new_clusters->lo);
         if (new_clusters->hi->slices().size())
             hi_clusters.insert(new_clusters->hi);
-        rv.slice_map = std::move(new_clusters->slice_map);
-    }
+        for (auto& kv : new_clusters->slice_map)
+            rv.slice_map.emplace(kv.first, kv.second); }
 
     rv.lo = new PHV::RotationalCluster(lo_clusters);
     rv.hi = new PHV::RotationalCluster(hi_clusters);
@@ -745,7 +745,7 @@ PHV::RotationalCluster::slice(int pos) const {
 
 
 PHV::SuperCluster::SuperCluster(
-        ordered_set<PHV::RotationalCluster*> clusters,
+        ordered_set<const PHV::RotationalCluster*> clusters,
         ordered_set<SliceList*> slice_lists)
         : clusters_i(clusters), slice_lists_i(slice_lists) {
     // Populate the field slice-->cluster map (slices_to_clusters_i)
@@ -1007,6 +1007,28 @@ std::ostream &operator<<(std::ostream &out, const PHV::SuperCluster* g) {
         out << *g;
     else
         out << "-null-cluster-group-";
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, const SuperCluster::SliceList& list) {
+    out << "[";
+    for (auto& slice : list) {
+        if (slice == list.front())
+            out << " " << slice << std::endl;
+        else
+            out << "          " << slice << std::endl; }
+    if (list.size() > 1)
+        out << "        ]";
+    else
+        out << " ]";
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, const SuperCluster::SliceList* list) {
+    if (list)
+        out << *list;
+    else
+        out << "-null-slice-list-";
     return out;
 }
 

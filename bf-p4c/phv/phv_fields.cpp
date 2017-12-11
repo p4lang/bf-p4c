@@ -188,14 +188,14 @@ void PhvInfo::allocatePOV(const BFN::HeaderStackInfo& stacks) {
         // Create header stack CCGFs.
         for (auto &stack : stacks) {
             safe_vector<PHV::Field *> pov_fields;  // accumulate member povs of header stk pov
-            bool push_exists = false;
             StructInfo info = struct_info(stack.name);
+            bool has_push = false;
             if (info.gress == gress) {
                 if (stack.maxpush) {
                     size[gress] -= stack.maxpush;
                     add(stack.name + ".$push", gress, stack.maxpush, size[gress], true, true);
                     pov_fields.push_back(&all_fields[stack.name + ".$push"]);
-                    push_exists = true;
+                    has_push = true;
                 }
                 char buffer[16];
                 for (int i = 0; i < stack.size; ++i) {
@@ -213,21 +213,19 @@ void PhvInfo::allocatePOV(const BFN::HeaderStackInfo& stacks) {
                 // do not push ".$stkvalid" as a member
                 // members are slices of owner ".stkvalid"'s allocation span
                 // TODO FIXME: why only push_exists?  What about the $valid and $pop fields?
-                if (push_exists) {
+                if (has_push) {
                     PHV::Field *pov_stk = &all_fields[stack.name + ".$stkvalid"];
                     for (auto &f : pov_fields) {
                         pov_stk->ccgf_fields().push_back(f);
                         f->set_ccgf(pov_stk);
                         BUG_CHECK(f->validContainerRange() == nw_bitrange(ZeroToMax()),
-                            "POV bit with absolute container offset");
-                    }
-                    pov_stk->set_ccgf(pov_stk);
+                            "POV bit with absolute container offset"); }
                     pov_stk->set_header_stack_pov_ccgf(true);
+                    pov_stk->set_no_split(true);
                     LOG3("Creating HEADER STACK CCGF " << pov_stk);
                     BUG_CHECK(pov_stk->ccgf_fields().size() > 0,
                         "Creating .$stkvalid CCGF with no members: %1%",
-                        cstring::to_cstring(pov_stk));
-                }
+                        cstring::to_cstring(pov_stk)); }
             }
         }
         assert(size[gress] == 0);
@@ -967,7 +965,6 @@ std::ostream &PHV::operator<<(std::ostream &out, const PHV::Field &field) {
     if (field.header_stack_pov_ccgf()) out << " header_stack_pov_ccgf";
     if (field.simple_header_pov_ccgf()) out << " simple_header_pov_ccgf";
     if (field.ccgf()) out << " ccgf=" << field.ccgf()->id << ':' << field.ccgf()->name;
-    out << " / ";
     if (field.ccgf_fields().size()) {
         // aggregate widths of members in "container contiguous group fields"
         out << std::endl << '[';
@@ -989,8 +986,6 @@ std::ostream &PHV::operator<<(std::ostream &out, const PHV::Field &field) {
         }
         out << ']';
     }
-    if (!field.alloc_i.empty())
-        out << field.alloc_i;
     return out;
 }
 

@@ -34,8 +34,9 @@ class UnionFind {
     // sets.
     Set* internalFind(const T x) {
         BUG_CHECK(element_map_i.find(x) != element_map_i.end(),
-                  "UnionFind: looking for element not in data structure: %1%",
-                  cstring::to_cstring(x));
+                  "UnionFind: looking for element not in data structure: %1%\n"
+                  "UnionFind: data structure is\n%2%",
+                  cstring::to_cstring(x), cstring::to_cstring(this));
         return element_map_i.at(x);
     }
 
@@ -86,14 +87,41 @@ class UnionFind {
         sets_i.erase(sets_i.find(smaller));
     }
 
+    /// @returns a canonical element of the set containing @x.
+    /// @exception if @x is not present.
+    const T find(const T x) {
+        Set* internal = internalFind(x);
+        return *internal->begin();
+    }
+
     /// @returns a copy of the set containing @x.
     /// @exception if @x is not present.
-    Set* find(const T x) {
+    Set* setOf(const T x) {
         Set* internal = internalFind(x);
         auto* rv = new Set();
         rv->insert(internal->begin(), internal->end());
         return rv;
     }
 };
+
+
+template<typename T>
+std::ostream &operator<<(std::ostream &out, const UnionFind<T>& uf) {
+    for (auto* set : uf) {
+        for (auto& x : *set)
+            out << x << " ";
+        out << std::endl; }
+    return out;
+}
+
+template<typename T>
+std::ostream &operator<<(std::ostream &out, const UnionFind<T>* uf) {
+    if (uf)
+        out << *uf;
+    else
+        out << "-null-union-find-";
+    return out;
+}
+
 
 #endif  /* BF_P4C_LIB_UNION_FIND_H */

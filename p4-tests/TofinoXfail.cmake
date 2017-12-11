@@ -548,16 +548,12 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/01-BigMatch.p4
   extensions/p4_tests/p4_14/04-FullPHV3.p4
   extensions/p4_tests/p4_14/c1/COMPILER-133/full_tphv.p4
-  extensions/p4_tests/p4_14/c4/COMPILER-590/case3179.p4
-  extensions/p4_tests/p4_14/c4/COMPILER-591/case3176.p4
   extensions/p4_tests/p4_14/jenkins/power/power.p4
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
-  extensions/p4_tests/p4_14/c4/COMPILER-523/vag2774.p4
   testdata/p4_14_samples/parser_dc_full.p4
   switch_dc_basic
   testdata/p4_14_samples/port_vlan_mapping.p4
   switch_dc_basic
-  extensions/p4_tests/p4_14/jenkins/stful/stful.p4
   )
 
 # We can't (without some complex acrobatics) support conditional computed
@@ -808,7 +804,6 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     testdata/p4_16_samples/issue655-bmv2.p4
     extensions/p4_tests/p4_14/stateful2.p4
     extensions/p4_tests/p4_16/multiple_apply1.p4
-    extensions/p4_tests/p4_16/cast_widening_set.p4
     extensions/p4_tests/p4_16/container_dependency.p4
     # Brig/Glass do not follow P4_14 spec for 'drop' in the ingress pipeline
     testdata/p4_14_samples/gateway1.p4
@@ -867,38 +862,15 @@ endif()  # STF FAILURE IN TNA
 # PHV allocation.
 p4c_add_xfail_reason("tofino"
   "PHV allocation was not successful"
-  testdata/p4_14_samples/parser4.p4
   testdata/p4_14_samples/source_routing.p4
-  testdata/p4_14_samples/parser1.p4
-  testdata/p4_14_samples/parser2.p4
   testdata/p4_14_samples/03-FullPHV2.p4
   testdata/p4_14_samples/02-FullPHV1.p4
-  extensions/p4_tests/p4_14/test_config_119_tcam_range_3.p4
   extensions/p4_tests/p4_14/03-VlanProfile.p4
-  extensions/p4_tests/p4_14/23-SimpleMPLS.p4
-  extensions/p4_tests/p4_14/test_config_237_hash_action_17_bits.p4
   extensions/p4_tests/p4_14/19-SimpleTrill.p4
   extensions/p4_tests/p4_14/01-FlexCounter.p4
   extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
-  extensions/p4_tests/p4_14/c4/COMPILER-523/vag2774.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
-  extensions/p4_tests/p4_14/c6/COMPILER-603/loop.p4
-  extensions/p4_tests/p4_14/c8/COMPILER-616/case3331.p4
-  extensions/p4_tests/p4_14/c6/COMPILER-604/new_parser.p4
   extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   switch_dc_basic
-
-  # XXX(cole): Due to differing sized operands.
-  extensions/p4_tests/p4_16/cast_widening_set.p4
-  extensions/p4_tests/p4_16/cast_narrowing_set.p4
-  extensions/p4_tests/p4_14/test_config_50_action_data_different_size_fields.p4
-
-  # XXX(cole): This will be fixed with SuperCluster slice list splitting.
-  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
-  testdata/p4_14_samples/hash_action_two_same.p4
 
   # Lack of container packing:
   extensions/p4_tests/p4_14/15-SetMetadata.p4
@@ -907,6 +879,8 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "Due to lacking assembler support, cannot currently split hash distribution units"
+  extensions/p4_tests/p4_14/c4/COMPILER-591/case3176.p4
+  extensions/p4_tests/p4_14/c4/COMPILER-590/case3179.p4
   extensions/p4_tests/p4_14/hash_calculation_multiple.p4
   )
 
@@ -943,6 +917,12 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "Unhandled action bitmask constraint"
+  extensions/p4_tests/p4_14/c1/COMPILER-357/case2100.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-415/case2386.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-414/case2387_1.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-437/case2387_1.p4
+  extensions/p4_tests/p4_16/cast_widening_set.p4
   testdata/p4_16_samples/flowlet_switching-bmv2.p4
   )
 
@@ -1025,5 +1005,13 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: hash expression width mismatch"
   extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
+  extensions/p4_tests/p4_14/jenkins/stful/stful.p4
   switch_l2
   )
+
+p4c_add_xfail_reason("tofino"
+  "expected packet on port .* not seen"
+  # XXX(cole): Due to differing sized operands.
+  extensions/p4_tests/p4_16/cast_narrowing_set.p4
+  )
+

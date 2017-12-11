@@ -406,6 +406,13 @@ struct HalfOpenRange {
         return HalfOpenRange(rangeFromJSON(json));
     }
 
+    /// Total ordering, first by lo, then by hi.
+    bool operator<(const HalfOpenRange& other) const {
+        if (lo != other.lo)
+            return lo < other.lo;
+        return hi < other.hi;
+    }
+
     /// The lowest numbered index in the range. For Endian::Network, this is the
     /// most significant bit or byte; for Endian::Little, it's the least
     /// significant.
@@ -597,6 +604,13 @@ struct ClosedRange {
     void toJSON(JSONGenerator& json) const { rangeToJSON(json, lo, hi); }
     static ClosedRange fromJSON(JSONLoader& json) {
         return ClosedRange(rangeFromJSON(json));
+    }
+
+    /// @see HalfOpenRange::operator<.
+    bool operator<(const ClosedRange& other) const {
+        if (lo != other.lo)
+            return lo < other.lo;
+        return hi < other.hi;
     }
 
     /// The lowest numbered index in the range. For Endian::Network, this is the

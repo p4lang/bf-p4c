@@ -8,6 +8,10 @@ Visitor::profile_t Clustering::MakeAlignedClusters::init_apply(const IR::Node *r
     auto rv = Inspector::init_apply(root);
     // Initialize union_find_i with pointers to all fields in phv_i.
     for (auto& f : phv_i) {
+        // Skip stack POV fields; these are allocated with stkvalid.
+        if (f.ccgf() && !f.is_ccgf()) {
+            LOG5("Skipping stack POV field " << f);
+            continue; }
         LOG5("Creating AlignedCluster singleton containing field " << f);
         union_find_i.insert(std::move(PHV::FieldSlice(&f))); }
     return rv;
@@ -145,9 +149,13 @@ bool Clustering::MakeSuperClusters::preorder(const IR::HeaderRef *hr) {
                     [&](const PHV::SuperCluster::SliceList* sl) {
                         if (sl->size() != accumulator->size())
                             return false;
-                        for (unsigned idx = 0U; idx < sl->size(); ++idx)
-                            if (sl->at(idx) != accumulator->at(idx))
+                        auto acc_it = accumulator->begin();
+                        auto sl_it = sl->begin();
+                        while (acc_it != accumulator->end() && sl_it != sl->end()) {
+                            if (*acc_it != *sl_it)
                                 return false;
+                            acc_it++;
+                            sl_it++; }
                         return true; });
             if (!is_duplicate) {
                 // XXX(cole): This will need to be removed when we introduce constraint schema.
@@ -169,7 +177,7 @@ bool Clustering::MakeSuperClusters::preorder(const IR::HeaderRef *hr) {
 }
 
 void Clustering::MakeSuperClusters::end_apply() {
-    UnionFind<PHV::RotationalCluster*> cluster_union_find;
+    UnionFind<const PHV::RotationalCluster*> cluster_union_find;
     ordered_map<PHV::FieldSlice, PHV::RotationalCluster*> slices_to_clusters;
 
     for (auto* rotational_cluster : self.rotational_clusters_i) {
@@ -195,6 +203,8 @@ void Clustering::MakeSuperClusters::end_apply() {
         // If this validity bit is part of a header stack, skip it.
         if (f.header_stack_pov_ccgf() || f.ccgf())
             continue;
+
+        LOG5("Creating POV BIT LIST with " << f);
 
         PHV::SuperCluster::SliceList *current_list =
             f.gress == INGRESS ? ingress_list : egress_list;
@@ -240,7 +250,7 @@ void Clustering::MakeSuperClusters::end_apply() {
         // Collect slice lists that induced this grouping.
         // XXX(cole): Caching would be much more efficient.
         ordered_set<PHV::SuperCluster::SliceList*> these_lists;
-        for (PHV::RotationalCluster* rotational_cluster : *cluster_set)
+        for (auto* rotational_cluster : *cluster_set)
             for (auto* aligned_cluster : rotational_cluster->clusters() )
                 for (const PHV::FieldSlice& slice : *aligned_cluster)
                     for (auto* slist : slice_lists_i)

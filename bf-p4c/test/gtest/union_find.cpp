@@ -24,29 +24,29 @@ TEST(UnionFind, ops) {
     UnionFind<int> uf(universe);
 
     // After creation, all elements are in singleton sets.
-    EXPECT_TRUE(equivalent(ordered_set<int>({1}), *uf.find(1)));
-    EXPECT_TRUE(equivalent(ordered_set<int>({2}), *uf.find(2)));
-    EXPECT_TRUE(equivalent(ordered_set<int>({3}), *uf.find(3)));
+    EXPECT_TRUE(equivalent(ordered_set<int>({1}), *uf.setOf(uf.find(1))));
+    EXPECT_TRUE(equivalent(ordered_set<int>({2}), *uf.setOf(uf.find(2))));
+    EXPECT_TRUE(equivalent(ordered_set<int>({3}), *uf.setOf(uf.find(3))));
 
     // Union should merge exactly the sets of 1 and 2.
     uf.makeUnion(1, 2);
 
-    EXPECT_TRUE(equivalent(ordered_set<int>({1, 2}), *uf.find(1)));
-    EXPECT_TRUE(equivalent(ordered_set<int>({1, 2}), *uf.find(2)));
-    EXPECT_TRUE(equivalent(ordered_set<int>({3}), *uf.find(3)));
+    EXPECT_TRUE(equivalent(ordered_set<int>({1, 2}), *uf.setOf(uf.find(1))));
+    EXPECT_TRUE(equivalent(ordered_set<int>({1, 2}), *uf.setOf(uf.find(2))));
+    EXPECT_TRUE(equivalent(ordered_set<int>({3}), *uf.setOf(uf.find(3))));
 
     // Union should be idempotent.
     uf.makeUnion(1, 2);
 
-    EXPECT_TRUE(equivalent(ordered_set<int>({1, 2}), *uf.find(1)));
-    EXPECT_TRUE(equivalent(ordered_set<int>({1, 2}), *uf.find(2)));
-    EXPECT_TRUE(equivalent(ordered_set<int>({3}), *uf.find(3)));
+    EXPECT_TRUE(equivalent(ordered_set<int>({1, 2}), *uf.setOf(uf.find(1))));
+    EXPECT_TRUE(equivalent(ordered_set<int>({1, 2}), *uf.setOf(uf.find(2))));
+    EXPECT_TRUE(equivalent(ordered_set<int>({3}), *uf.setOf(uf.find(3))));
 
     uf.makeUnion(3, 2);
 
-    EXPECT_TRUE(equivalent(ordered_set<int>({1, 2, 3}), *uf.find(1)));
-    EXPECT_TRUE(equivalent(ordered_set<int>({1, 2, 3}), *uf.find(2)));
-    EXPECT_TRUE(equivalent(ordered_set<int>({1, 2, 3}), *uf.find(3)));
+    EXPECT_TRUE(equivalent(ordered_set<int>({1, 2, 3}), *uf.setOf(uf.find(1))));
+    EXPECT_TRUE(equivalent(ordered_set<int>({1, 2, 3}), *uf.setOf(uf.find(2))));
+    EXPECT_TRUE(equivalent(ordered_set<int>({1, 2, 3}), *uf.setOf(uf.find(3))));
 }
 
 }   /* end namespace Test */

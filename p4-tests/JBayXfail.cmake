@@ -35,10 +35,6 @@ p4c_add_xfail_reason("jbay"
   testdata/p4_14_samples/07-FullTPHV2.p4
   testdata/p4_14_samples/08-FullTPHV3.p4
   testdata/p4_14_samples/action_bus1.p4
-  testdata/p4_14_samples/hash_action_two_same.p4
-  testdata/p4_14_samples/parser1.p4
-  testdata/p4_14_samples/parser2.p4
-  testdata/p4_14_samples/parser4.p4
   testdata/p4_14_samples/parser_dc_full.p4
   testdata/p4_14_samples/port_vlan_mapping.p4
   testdata/p4_14_samples/source_routing.p4
