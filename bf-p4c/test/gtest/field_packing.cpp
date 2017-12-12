@@ -220,6 +220,70 @@ TEST(TofinoFieldPacking, LargePhase) {
     EXPECT_EQ(7u, packing.totalWidth);
 }
 
+TEST(TofinoFieldPacking, ForEachField) {
+    // Define a packing.
+    FieldPacking packing;
+    packing.appendPadding(3);
+    auto* field1 = new IR::Member(new IR::Constant(0), "field1");
+    packing.appendField(field1, "field1", 6);
+    auto* field2 = new IR::Member(new IR::Constant(0), "field2");
+    packing.appendField(field2, "field2", 15);
+    packing.appendPadding(9);
+    auto* field3 = new IR::Member(new IR::Constant(0), "field3");
+    packing.appendField(field3, "field3", 8);
+    packing.padToAlignment(8);
+
+    // Check that we can iterate over it correctly with network order ranges.
+    {
+        const std::vector<std::pair<cstring, nw_bitrange>> expected = {
+            { "field1", nw_bitrange(StartLen(3, 6)) },
+            { "field2", nw_bitrange(StartLen(9, 15)) },
+            { "field3", nw_bitrange(StartLen(33, 8)) },
+        };
+
+        unsigned currentField = 0;
+        packing.forEachField<Endian::Network>([&](nw_bitrange range,
+                                                  const IR::Expression* field,
+                                                  cstring source) {
+            SCOPED_TRACE(currentField);
+            ASSERT_TRUE(currentField <= 2);
+            EXPECT_EQ(expected[currentField].first, source);
+            EXPECT_EQ(expected[currentField].second, range);
+
+            auto* member = field->to<IR::Member>();
+            ASSERT_TRUE(member != nullptr);
+            EXPECT_EQ(expected[currentField].first, member->member.name);
+
+            currentField++;
+        });
+    }
+
+    // Check that we can iterate over it correctly with little endian ranges.
+    {
+        const std::vector<std::pair<cstring, le_bitrange>> expected = {
+            { "field1", le_bitrange(StartLen(39, 6)) },
+            { "field2", le_bitrange(StartLen(24, 15)) },
+            { "field3", le_bitrange(StartLen(7, 8)) },
+        };
+
+        unsigned currentField = 0;
+        packing.forEachField<Endian::Little>([&](le_bitrange range,
+                                                 const IR::Expression* field,
+                                                 cstring source) {
+            SCOPED_TRACE(currentField);
+            ASSERT_TRUE(currentField <= 2);
+            EXPECT_EQ(expected[currentField].first, source);
+            EXPECT_EQ(expected[currentField].second, range);
+
+            auto* member = field->to<IR::Member>();
+            ASSERT_TRUE(member != nullptr);
+            EXPECT_EQ(expected[currentField].first, member->member.name);
+
+            currentField++;
+        });
+    }
+}
+
 TEST(TofinoFieldPacking, CreateExtractionState) {
     // Define a packing.
     FieldPacking packing;

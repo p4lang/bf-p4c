@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "lib/cstring.h"
+#include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/ir/gress.h"
 
 namespace IR {
@@ -41,6 +42,25 @@ struct FieldPacking {
     iterator end() { return fields.end(); }
     const_iterator begin() const { return fields.begin(); }
     const_iterator end() const { return fields.end(); }
+
+    /// Iterate over each range of bits in the packing format which is occupied
+    /// by a field. The callback function should have a prototype like:
+    ///   `f(range of bits, field, field source)`
+    /// The ordering of the range of bits is specified by @tparam Order.
+    template <Endian Order, typename Func>
+    void forEachField(Func func) const {
+        int posBits = 0;
+        for (auto& field : fields) {
+            if (field.isPadding()) {
+                posBits += field.width;
+                continue;
+            }
+            const auto fieldRange = nw_bitrange(StartLen(posBits, field.width))
+                                      .toOrder<Order>(totalWidth);
+            posBits += field.width;
+            func(fieldRange, field.field, field.source);
+        }
+    }
 
     /**
      * Append a field to the sequence of packed items.
