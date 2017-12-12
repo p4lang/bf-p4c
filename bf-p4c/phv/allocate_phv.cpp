@@ -1,6 +1,7 @@
 #include "allocate_phv.h"
 #include <boost/format.hpp>
 #include <boost/range/adaptor/reversed.hpp>
+#include <numeric>
 #include "lib/log.h"
 
 /** Implements a dynamic programming algorithm for determining the best way to
@@ -165,6 +166,7 @@ class SplitSliceList {
     }
 };
 
+namespace PHV {
 // Helper for split_super_cluster;
 using ListClusterPair = std::pair<PHV::SuperCluster::SliceList*, const PHV::RotationalCluster*>;
 std::ostream &operator<<(std::ostream &out, const ListClusterPair& pair) {
@@ -178,6 +180,8 @@ std::ostream &operator<<(std::ostream &out, const ListClusterPair* pair) {
         out << "-null-listclusterpair-";
     return out;
 }
+
+}  // namespace PHV
 
 /* static */
 std::list<PHV::SuperCluster*> AllocatePHV::split_super_cluster(PHV::SuperCluster* sc) {
@@ -316,7 +320,7 @@ std::list<PHV::SuperCluster*> AllocatePHV::split_super_cluster(PHV::SuperCluster
 
         // We need to ensure that all the slice lists and clusters that overlap
         // (i.e. share slices) end up in the same SuperCluster.
-        UnionFind<ListClusterPair> uf;
+        UnionFind<PHV::ListClusterPair> uf;
         ordered_map<PHV::FieldSlice, ordered_set<PHV::SuperCluster::SliceList*>>
             slices_to_slice_lists;
 
@@ -347,7 +351,7 @@ std::list<PHV::SuperCluster*> AllocatePHV::split_super_cluster(PHV::SuperCluster
 
         // Union over clusters.
         for (auto* rotational : new_clusters) {
-            ListClusterPair first = { empty_slice_list, rotational };
+            PHV::ListClusterPair first = { empty_slice_list, rotational };
             for (auto* aligned : rotational->clusters()) {
                 for (auto& slice : *aligned) {
                     for (auto* slice_list : slices_to_slice_lists[slice])

@@ -45,12 +45,12 @@ class MauAsmOutput : public MauInspector {
         auto tableId = std::make_pair(tbl->gress, tbl->logical_id/16U);
         by_stage[tableId].push_back(TableInstance(tbl));
         return true; }
-    void postorder(const IR::MAU::Selector *as) {
+    void postorder(const IR::MAU::Selector *as) override {
         auto tbl = findContext<IR::MAU::Table>();
         auto name = tbl->get_use_name(as);
         if (tbl->resources->memuse.count(name))
             selector_memory[as] = &tbl->resources->memuse.at(name); }
-    bool preorder(const IR::MAU::StatefulAlu *) { return false; }
+    bool preorder(const IR::MAU::StatefulAlu *) override { return false; }
     friend std::ostream &operator<<(std::ostream &, const MauAsmOutput &);
     class TableMatch;
     void emit_ixbar(std::ostream &out, indent_t, const IXBar::Use *,

@@ -86,7 +86,7 @@ class Clustering : public PassManager {
 
         /// Populate union_find_i with all aligned clusters created in
         /// MakeAlignedClusters.
-        Visitor::profile_t init_apply(const IR::Node *);
+        Visitor::profile_t init_apply(const IR::Node *) override;
 
         /// Union AlignedClusters with slices that are operands of `set`
         /// instructions.
