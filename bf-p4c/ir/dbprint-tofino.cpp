@@ -227,6 +227,72 @@ void IR::BFN::Deparser::dbprint(std::ostream &out) const {
     out << unindent;
 }
 
+void IR::BFN::DigestTableEntry::dbprint(std::ostream &out) const {
+    out << "[ ";
+
+    const char* sep = "";
+    for (auto* source : sources) {
+        out << sep << *source;
+        sep = ", ";
+    }
+
+    out << " ]";
+}
+
+void IR::BFN::LearningTableEntry::dbprint(std::ostream &out) const {
+    IR::BFN::DigestTableEntry::dbprint(out);
+}
+
+void IR::BFN::LoweredDigest::dbprint(std::ostream &out) const {
+    out << endl << name << ": " << indent << endl
+                << "select: " << *selector;
+    int idx = 0;
+    for (auto* entry : entries) {
+        out << endl << name << ' ' << idx++ << ": "
+            << indent << *entry << unindent;
+    }
+    out << unindent;
+}
+
+void IR::BFN::ChecksumInput::dbprint(std::ostream &out) const {
+    out << source;
+    if (povBit) out << " if " << povBit;
+}
+
+void IR::BFN::ChecksumUnitConfig::dbprint(std::ostream &out) const {
+    out << "checksum unit " << unit << " {";
+
+    for (auto* input : inputs)
+        out << endl << indent << *input << unindent;
+
+    out << " }";
+}
+
+void IR::BFN::LoweredEmitClot::dbprint(std::ostream &out) const {
+    out << "emit clot " << tag << " (" << byteLength << "B) { ";
+
+    for (auto* phvOverride : overrides)
+        out << endl << indent << *phvOverride << unindent;
+
+    out << " }";
+}
+
+void IR::BFN::LoweredDeparser::dbprint(std::ostream &out) const {
+    out << gress << " deparser";
+    if (dbgetflags(out) & Brief)
+        return;
+    out << ':' << indent;
+    for (auto* emit : emits)
+        out << endl << *emit;
+    for (auto* param : params)
+        out << *param;
+    for (auto digest : digests)
+        out << *digest;
+    for (auto* checksumFieldList : checksums)
+        out << *checksumFieldList;
+    out << unindent;
+}
+
 void IR::BFN::Pipe::dbprint(std::ostream &out) const {
     out << "ingress:" << indent << thread[0].parser << endl << thread[0].mau << endl
                                 << thread[0].deparser << unindent << endl

@@ -5,6 +5,10 @@
 #include "bf-p4c/parde/clot.h"
 #include "bf-p4c/parde/epb_config.h"
 #include "bf-p4c/phv/phv.h"
+
+namespace BFN {
+struct FieldPacking;
+}  // namespace BFN
 #end
 
 namespace BFN {
@@ -232,6 +236,166 @@ class LoweredParser : AbstractParser {
     /// the utility methods on PardeSpec to interact with it.
     boost::optional<EgressParserBufferConfig> epbConfig;
 #end
+}
+
+/// Supertype for all lowered deparser emit primitives - i.e., actions that
+/// write data to the output packet.
+abstract LoweredEmit {
+    /// The POV bit controlling whether the data is written.
+    BFN::ContainerBitRef povBit;
+}
+
+/// A primitive that writes the contents of a PHV container to the output
+/// packet.
+class LoweredEmitPhv : LoweredEmit {
+    dbprint { out << "emit " << source << " if " << povBit; }
+
+    /// The container whose contents will be written to the packet.
+    BFN::ContainerRef source;
+}
+
+/// A primitive that writes the result of a checksum unit to the output packet.
+class LoweredEmitChecksum : LoweredEmit {
+    dbprint { out << "emit checksum " << unit << " if " << povBit; }
+
+    /// The checksum unit whose result will be written to the packet.
+    unsigned unit;
+}
+
+/// A range of bytes in a CLOT which will be replaced with the contents of a PHV
+/// container.
+class ClotPhvOverride {
+    validate {
+        BUG_CHECK(size_t(range.size()) == source->container.size(),
+                  "Overriding clot bytes %1% with container %2% which is the "
+                  "wrong size", range, source->container);
+    }
+    dbprint { out << "override " << range.lo << " with " << source; }
+
+    /// The container to replace bytes in the CLOT with.
+    BFN::ContainerRef source;
+
+    /// The CLOT bytes to replace.
+    nw_byterange range;
+}
+
+/// A primitive that writes the contents of a CLOT to the output packet.
+class LoweredEmitClot : LoweredEmit {
+    /// The tag of the CLOT which will be written to the packet.
+    unsigned tag;
+
+    /// The length in bytes of the CLOT data.
+    unsigned byteLength;
+
+    /// A sequence of byte ranges within the CLOT which should be replaced with
+    /// the contents of a PHV container.
+    inline Vector<ClotPhvOverride> overrides;
+}
+
+/// Configures the container whose value will be used to set an intrinsic
+/// deparser parameter.
+class LoweredDeparserParameter {
+    dbprint {
+        out << "parameter " << name << " = " << source->toString();
+    }
+
+    /// The deparser parameter to configure. The name is the one used in the
+    /// assembly, which in turn derives from the CSR register name.
+    cstring name;
+
+    /// The container whose contents will be used for the parameter.
+    BFN::ContainerRef source;
+
+    /// On JBay, each deparser parameter has a POV bit which determines whether
+    /// the container's contents are valid (and often implicitly enables or
+    /// disables the corresponding feature). On Tofino, the hidden per-container
+    /// validity bits serve the same role.
+    optional NullOK BFN::ContainerBitRef povBit;
+}
+
+/// An entry in a digest table, consisting of a sequence of containers.
+class DigestTableEntry {
+    /// The PHV containers in the entry.
+    inline Vector<BFN::ContainerRef> sources;
+}
+
+/// An entry in the learning digest table.
+class LearningTableEntry : DigestTableEntry {
+#noconstructor
+#emit
+    LearningTableEntry(const IR::Vector<IR::BFN::ContainerRef>& sources,
+                       cstring controlPlaneName,
+                       const ::BFN::FieldPacking* controlPlaneFormat)
+      : DigestTableEntry(sources), controlPlaneName(controlPlaneName),
+        controlPlaneFormat(controlPlaneFormat) { }
+#end
+
+    validate { CHECK_NULL(controlPlaneFormat); }
+
+    /// The control plane name for this type of learn quanta.
+    cstring controlPlaneName;
+
+#emit
+    /// The packing format for this type of learn quanta; this describes to the
+    /// driver how the fields included in the learn quantum are laid out.
+    const ::BFN::FieldPacking* controlPlaneFormat;
+#end
+}
+
+/// A lowered deparser digest. Each kind of digest has a set of table entries
+/// which identify containers to be written into a specific buffer. The table
+/// entry is chosen based on the value in the selector container.
+class LoweredDigest {
+    /// The name of the digest, identifying a special buffer to be filled in by
+    /// the deparser hardware. The name is chosen to match the corresponding
+    /// assembly directive, which in turn is named based on definitions in the
+    /// CSRs.
+    cstring name;
+
+    /// The container which selects a digest table entry.
+    BFN::ContainerRef selector;
+
+    /// The available table entries; the index of each entry in the vector
+    /// corresponds to the selector value which chooses it.
+    optional inline Vector<DigestTableEntry> entries;
+}
+
+/// An input to a checksum unit.
+class ChecksumInput {
+    /// A container whose contents will be included in the checksum.
+    BFN::ContainerRef source;
+
+    /// On JBay, each checksum input has an independent POV bit, which makes it
+    /// easier to safely compute a checksum involving headers which may be
+    /// present in different combinations. On Tofino, this is always null.
+    optional NullOK BFN::ContainerBitRef povBit;
+}
+
+/// A configuration for a checksum unit.
+class ChecksumUnitConfig {
+    /// The unit number to configure; this is referenced by LoweredEmitChecksum
+    /// to actually write the checksum unit's output to the packet. On Tofino,
+    /// these unit numbers exist in a separate namespace for ingress and egress;
+    /// on JBay, both threads share the same checksum units.
+    unsigned unit;
+
+    /// The inputs to this checksum unit.
+    optional inline Vector<ChecksumInput> inputs;
+}
+
+/// The lowered representation of the deparser. This representation is
+/// constructed after PHV allocation and refers only to PHV containers;
+/// references to high level objects like fields have all been eliminated.
+class LoweredDeparser : AbstractDeparser {
+#noconstructor
+    LoweredDeparser(gress_t gress) : AbstractDeparser(gress) { }
+#apply
+    toString { return gress ? "lowered egress deparser" : "lowered ingress deparser"; }
+
+    inline Vector<LoweredEmit> emits;
+    inline Vector<LoweredDeparserParameter> params;
+    inline Vector<LoweredDigest> digests;
+    inline Vector<ChecksumUnitConfig> checksums;
 }
 
 }  // end namespace BFN
