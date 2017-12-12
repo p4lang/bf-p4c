@@ -151,7 +151,8 @@ bool GenerateDeparser::equiv(const IR::Expression *a, const IR::Expression *b) c
 
 }  // namespace
 
-IR::BFN::Deparser::Deparser(gress_t gr, const IR::P4Control* dp) : gress(gr) {
+IR::BFN::Deparser::Deparser(gress_t gr, const IR::P4Control* dp)
+        : AbstractDeparser(gr) {
     CHECK_NULL(dp);
     dp->apply(GenerateDeparser(this));
 }

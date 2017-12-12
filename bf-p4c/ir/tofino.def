@@ -32,7 +32,7 @@ class BFN::Pipe {
     class thread_t {
         BFN::AbstractParser parser = nullptr;
         MAU::TableSeq mau = nullptr;
-        BFN::Deparser deparser = nullptr;
+        BFN::AbstractDeparser deparser = nullptr;
         operator== { return parser == a.parser && mau == a.mau && deparser == a.deparser; }
         toJSON {
             json << json.indent << "\"parser\" : " << parser << "," << std::endl

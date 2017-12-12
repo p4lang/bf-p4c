@@ -24,6 +24,46 @@ namespace {
 using alloc_slice = PHV::Field::alloc_slice;
 
 /**
+ * Construct debugging debugging information describing a slice of a field.
+ *
+ * @param fieldRef  A reference to a field.
+ * @param slice  An `alloc_slice` mapping a range of bits in the field to a
+ *               range of bits in a container.
+ * @param includeContainerInfo  If true, the result will include information
+ *                              about which bits in the container the field
+ *                              slice was mapped to.
+ * @return a string describing which bits in the field are included in the
+ * slice, and describing the corresponding bits in the container.
+ */
+cstring debugInfoFor(const IR::BFN::FieldLVal* fieldRef,
+                     const alloc_slice& slice,
+                     bool includeContainerInfo = true) {
+    std::stringstream info;
+
+    // Describe the range of bits assigned to this field slice in the container.
+    // (In some cases we break this down in more detail elsewhere, so we don't
+    // need to repeat it.)
+    if (includeContainerInfo) {
+        const le_bitrange sourceBits = slice.container_bits();
+        if (sourceBits.size() != ssize_t(slice.container.size()))
+            info << sourceBits << ": ";
+    }
+
+    // Identify the P4 field that we're writing to.
+    info << fieldRef->field->toString();
+
+    // Although it's confusing given that e.g. input buffer ranges are printed
+    // in network order, consistency with the rest of the output of the
+    // assembler requires that we describe partial writes to a field in little
+    // endian order.
+    const le_bitrange destFieldBits = slice.field_bits();
+    if (slice.field->size != destFieldBits.size())
+        info << "." << destFieldBits.lo << "-" << destFieldBits.hi;
+
+    return cstring(info);
+}
+
+/**
  * Construct a string describing how an `Extract` primitive was mapped to a
  * hardware extract operation.
  *
@@ -59,16 +99,8 @@ cstring debugInfoFor(const IR::BFN::Extract* extract,
              << slice.container << " " << slice.container_bits() << ": ";
     }
 
-    // Identify the P4 field that we're writing to.
-    info << extract->dest->field->toString();
-
-    // Although it's confusing given that the input buffer ranges we print above
-    // are in network order, consistency with the rest of the output of the
-    // assembler requires that we describe partial writes to a field in little
-    // endian order.
-    const le_bitrange destFieldBits = slice.field_bits();
-    if (slice.field->size != destFieldBits.size())
-        info << "." << destFieldBits.lo << "-" << destFieldBits.hi;
+    // Describe the field slice that we're writing to.
+    info << debugInfoFor(extract->dest, slice, /* includeContainerInfo = */ false);
 
     return cstring(info);
 }
@@ -569,140 +601,425 @@ struct LowerParserIR : public PassManager {
     }
 };
 
-/// Split deparser primitives as needed so that each deparser primitive operates
-/// on only one PHV container.
-struct LowerDeparserIR : public DeparserTransform {
-    explicit LowerDeparserIR(const PhvInfo& phv, const ClotInfo& clot) : phv(phv), clot(clot) { }
+/// Maps a sequence of fields to a sequence of PHV containers. The sequence of
+/// fields is treated as ordered and non-overlapping; the resulting container
+/// sequence is the shortest one which maintains these properties.
+IR::Vector<IR::BFN::ContainerRef>
+lowerFields(const PhvInfo& phv, const IR::Vector<IR::BFN::FieldLVal>& fields) {
+    struct LastContainerInfo {
+        /// The container into which the last field was placed.
+        IR::BFN::ContainerRef* containerRef;
+        /// The range in that container which we've already placed fields into.
+        nw_bitrange containerRange;
+    };
 
- private:
-    const IR::Node* splitExpression(const IR::BFN::FieldLVal* expr,
-                                    const bitrange& exprBits,
-                                    const std::vector<bitrange>& slices) {
-        if (slices.empty()) return expr;
-        if (slices.size() == 1 && slices[0] == exprBits) {
-            LOG3("SplitPhvUse: no need to split: " << expr->field);
-            return expr;
-        }
+    boost::optional<LastContainerInfo> last;
+    IR::Vector<IR::BFN::ContainerRef> containers;
 
-        auto rv = new IR::Vector<IR::BFN::FieldLVal>();
-        for (auto slice : boost::adaptors::reverse(slices)) {
-            auto* clone = MakeSlice(expr->field->clone(), slice.lo, slice.hi);
-            LOG3("splitExpression: creating slice " << clone);
-            rv->push_back(new IR::BFN::FieldLVal(clone));
-        }
-        return rv;
-    }
-
-    const IR::Node* splitEmit(const IR::BFN::Emit* emit,
-                              const bitrange& emitBits,
-                              const std::vector<alloc_slice>& slices) {
-        if (slices.empty()) {
-            BUG("Deparser emits field which didn't receive a PHV allocation: %1%", emit);
-            return emit;
-        }
-        if (slices.size() == 1 && slices[0].field_bits() == emitBits) {
-            LOG3("SplitPhvUse: no need to split: " << emit);
-            return emit;
-        }
-
-        auto rv = new IR::Vector<IR::BFN::DeparserPrimitive>();
-        for (auto slice : boost::adaptors::reverse(slices)) {
-            auto* clone = emit->clone();
-            le_bitrange sliceBits = slice.field_bits();
-            clone->source = new IR::BFN::FieldLVal(
-              MakeSlice(emit->source->field, sliceBits.lo, sliceBits.hi));
-            LOG3("splitEmit: creating slice " << clone);
-            rv->push_back(clone);
-        }
-        return rv;
-    }
-
-    const IR::Node* preorder(IR::BFN::Emit* emit) override {
-        prune();
-        bitrange bits;
+    // Perform a left fold over the field sequence and merge contiguous fields
+    // which have been placed in the same container into a single container
+    // reference.
+    for (auto* fieldRef : fields) {
         std::vector<alloc_slice> slices;
-        std::tie(bits, slices) = computeSlices(emit->source->field, phv);
-        return splitEmit(emit, bits, slices);
-    }
+        std::tie(std::ignore, slices) = computeSlices(fieldRef->field, phv);
+        BUG_CHECK(!slices.empty(),
+                  "Emitted field didn't receive a PHV allocation: %1%",
+                  fieldRef->field);
 
-    const IR::Node* preorder(IR::BFN::EmitChecksum* emit) override {
-        prune();
+        // Walk each slice of the field. We need to walk the slices in reverse
+        // because `foreach_alloc()` (and hence `computeSlices()`) enumerates
+        // the slices in increasing order of their little endian offset, which
+        // means that in terms of network order it walks the slices backwards.
+        for (auto& slice : boost::adaptors::reverse(slices)) {
+            BUG_CHECK(bool(slice.container), "Emitted field was allocated to "
+                      "an invalid PHV container: %1%", fieldRef->field);
 
-        // A checksum uses a list of fields as input, and we need to split each
-        // field individually.
-        IR::Vector<IR::BFN::FieldLVal> sources;
-        for (auto* source : emit->sources) {
-            bitrange bits;
-            auto* field = phv.field(source->field, &bits);
-            if (!field) {
-                sources.push_back(source);
+            const nw_bitrange containerRange = slice.container_bits()
+                .toOrder<Endian::Network>(slice.container.size());
+
+            // If this slice was allocated to the same container as the previous
+            // one and we're monotonically advancing through the container, then
+            // we combine them into a single container reference. We check that
+            // we're advancing to avoid getting tripped up by cases like this:
+            //     packet.emit(h.header);
+            //     packet.emit(h.header);
+            // If `h.header` is small enough to fit in a single container and we
+            // didn't check that we were monotonically advancing through it,
+            // we'd end up merging those two emits and only emitting `h.header`
+            // once, even though the intention is clearly to emit it twice.
+            if (last && last->containerRef->container == slice.container &&
+                        last->containerRange.hi < containerRange.lo) {
+                LOG5(" - Merging in " << fieldRef->field);
+                last->containerRef->debug.info.push_back(debugInfoFor(fieldRef, slice));
+                last->containerRange = last->containerRange.unionWith(containerRange);
                 continue;
             }
 
-            std::vector<bitrange> slices;
-            field->foreach_alloc(bits, [&](const PHV::Field::alloc_slice& alloc) {
-                slices.push_back(alloc.field_bits());
-            });
-
-            sources.pushBackOrAppend(splitExpression(source, bits, slices));
+            LOG5("Deparser: lowering field " << fieldRef->field
+                  << " to " << slice.container);
+            last = LastContainerInfo{new IR::BFN::ContainerRef(slice.container),
+                                     containerRange};
+            last->containerRef->debug.info.push_back(debugInfoFor(fieldRef, slice));
+            containers.push_back(last->containerRef);
         }
-
-        emit->sources = sources;
-        return emit;
     }
 
-    const IR::Node* postorder(IR::BFN::DeparserParameter* param) override {
-        prune();
+    return containers;
+}
+
+/// Given a sequence of fields, construct a packing format describing how the
+/// fields will be laid out once they're lowered to containers.
+/// XXX(seth): If this were a permanent thing, it'd probably be better to
+/// integrate it into `lowerFields()` and put a bit more care into it, but we
+/// know that we're going to move this functionality to `extract_maupipe()`
+/// pretty soon when we switch to the TNA-style learning extern. This is just a
+/// short term hack to let us survive until then.
+const BFN::FieldPacking*
+computeControlPlaneFormat(const PhvInfo& phv,
+                          const IR::Vector<IR::BFN::FieldLVal>& fields) {
+    struct LastContainerInfo {
+        /// The container into which the last field was placed.
+        PHV::Container container;
+        /// The number of unused bits which remain on the LSB side of the
+        /// container after the last field was placed.
+        int remainingBitsInContainer;
+    };
+
+    boost::optional<LastContainerInfo> last;
+    auto* packing = new BFN::FieldPacking;
+
+
+    // Walk over the field sequence in network order and construct a
+    // FieldPacking that reflects its structure, with padding added where
+    // necessary to reflect gaps between the fields.
+    for (auto* fieldRef : fields) {
         std::vector<alloc_slice> slices;
-        std::tie(std::ignore, slices) = computeSlices(param->source->field, phv);
+        std::tie(std::ignore, slices) = computeSlices(fieldRef->field, phv);
+        BUG_CHECK(!slices.empty(),
+                  "Emitted field didn't receive a PHV allocation: %1%",
+                  fieldRef->field);
 
-        // Deparser parameters receive their value from exactly one container,
-        // so we expect exactly one slice.
-        BUG_CHECK(!slices.empty(), "Deparser sets a parameter from a field which "
-                  "didn't receive a PHV allocation: %1%", param);
-        BUG_CHECK(slices.size() == 1, "Deparser sets a parameter from a field "
-                  "which is split between multiple PHV containers: %1% (%2%)",
-                  param, cstring::to_cstring(phv.field(param->source->field)));
+        // Confusingly, the first slice in network order is the *last* one in
+        // `slices` because `foreach_alloc()` (and hence `computeSlices()`)
+        // enumerates the slices in increasing order of their little endian
+        // offset, which means that in terms of network order it walks the
+        // slices backwards.
+        auto& firstSlice = slices.back();
+        const nw_bitrange firstContainerRange = firstSlice.container_bits()
+          .toOrder<Endian::Network>(firstSlice.container.size());
 
-        return param;
-    }
-
-    const IR::Node* preorder(IR::BFN::Deparser* deparser) override {
-        // replace Emits covered in a CLOT with EmitClot
-
-        IR::Vector<IR::BFN::DeparserPrimitive> newEmits;
-
-        for (auto e : deparser->emits) {
-           if (auto emit = e->to<IR::BFN::Emit>()) {
-               auto field = phv.field(emit->source->field);
-               if (auto c = clot.allocated(field)) {
-                   if (!newEmits.empty()) {
-                       if (auto lastEmitClot = newEmits.back()->to<IR::BFN::EmitClot>()) {
-                           if (lastEmitClot->clot.tag == c->tag)
-                               continue;
-                       }
-                   }
-
-                   auto povBit = e->to<IR::BFN::Emit>()->povBit;
-                   auto clotEmit = new IR::BFN::EmitClot(*c, povBit);
-
-                   newEmits.pushBackOrAppend(clotEmit);
-               } else {
-                   newEmits.pushBackOrAppend(e);
-               }
-           } else {
-               newEmits.pushBackOrAppend(e);
-           }
+        // If we switched containers (or if this is the very first field),
+        // appending padding equivalent to the bits at the end of the previous
+        // container and the beginning of the new container that aren't
+        // occupied.
+        if (last && last->container != firstSlice.container) {
+            packing->appendPadding(last->remainingBitsInContainer);
+            packing->appendPadding(firstContainerRange.lo);
+        } else if (!last) {
+            packing->appendPadding(firstContainerRange.lo);
         }
 
-        auto* clone = deparser->clone();
-        clone->emits = newEmits;
+        // Place the entire field at once. We're assuming it was allocated
+        // contiguously, obviously; ValidateAllocation will have complained if
+        // it wasn't.
+        packing->appendField(fieldRef->field, firstSlice.field->name,
+                             firstSlice.field->size);
 
-        return clone;
+        // Remember information about the container placement of the last slice
+        // in network order (the first one in `slices`) so we can add any
+        // necessary padding on the next pass around the loop.
+        auto& lastSlice = slices.front();
+        last = LastContainerInfo{lastSlice.container,
+                                 lastSlice.container_bits().lo};
+    }
+
+    return packing;
+}
+
+/// Maps a POV bit field to a single bit within a container, represented as a
+/// ContainerBitRef. Checks that the allocation for the POV bit field is sane.
+const IR::BFN::ContainerBitRef*
+lowerPovBit(const PhvInfo& phv, const IR::BFN::FieldLVal* fieldRef) {
+    std::vector<alloc_slice> slices;
+    std::tie(std::ignore, slices) = computeSlices(fieldRef->field, phv);
+    BUG_CHECK(!slices.empty(), "POV bit %1% didn't receive a PHV allocation",
+              fieldRef->field);
+    BUG_CHECK(slices.size() == 1, "POV bit %1% is somehow split across "
+              "multiple containers?", fieldRef->field);
+
+    auto container = new IR::BFN::ContainerRef(slices.back().container);
+    auto containerRange = slices.back().container_bits();
+    BUG_CHECK(containerRange.size() == 1, "POV bit %1% is multiple bits?",
+              fieldRef->field);
+
+    auto* povBit = new IR::BFN::ContainerBitRef(container, containerRange);
+    LOG5("Mapping POV bit field " << fieldRef->field << " to " << povBit);
+    povBit->debug.info.push_back(debugInfoFor(fieldRef, slices.back(),
+                                              /* includeContainerInfo = */ false));
+    return povBit;
+}
+
+/// Maps a field which cannot be split between multiple containers to a single
+/// container, represented as a ContainerRef. Checks that the allocation for the
+/// field is sane.
+const IR::BFN::ContainerRef*
+lowerUnsplittableField(const PhvInfo& phv,
+                           const IR::BFN::FieldLVal* fieldRef,
+                           const char* unsplittableReason) {
+    auto containers = lowerFields(phv, { fieldRef });
+    BUG_CHECK(containers.size() == 1,
+              "Field %1% must be placed in a single container because it's "
+              "used in the deparser as a %2%, but it was sliced across %3% "
+              "containers", fieldRef->field, unsplittableReason,
+              containers.size());
+    return containers.back();
+}
+
+/// Generate the lowered deparser IR by splitting references to fields in the
+/// high-level deparser IR into references to containers.
+struct ComputeLoweredDeparserIR : public DeparserInspector {
+    ComputeLoweredDeparserIR(const PhvInfo& phv, const ClotInfo& clotInfo)
+      : phv(phv), clotInfo(clotInfo), nextChecksumUnit(0) {
+        igLoweredDeparser = new IR::BFN::LoweredDeparser(INGRESS);
+        egLoweredDeparser = new IR::BFN::LoweredDeparser(EGRESS);
+    }
+
+    /// The lowered deparser IR generated by this pass.
+    IR::BFN::LoweredDeparser* igLoweredDeparser;
+    IR::BFN::LoweredDeparser* egLoweredDeparser;
+
+ private:
+    bool preorder(const IR::BFN::Deparser* deparser) override {
+        auto* loweredDeparser = deparser->gress == INGRESS ? igLoweredDeparser
+                                                           : egLoweredDeparser;
+
+        // Reset the next checksum unit if needed. On Tofino, each thread has
+        // its own checksum units. On JBay they're shared, and their ids are
+        // global, so on that device we don't reset the next checksum unit for
+        // each deparser.
+        if (Device::currentDevice() != "JBay")
+            nextChecksumUnit = 0;
+
+        struct LastSimpleEmitInfo {
+            /// The `PHV::Field::id` of the POV bit for the last simple emit.
+            int povFieldId;
+            /// The actual range of bits (of size 1) corresponding to the POV
+            /// bit for the last simple emit.
+            le_bitrange povFieldBits;
+            /// If not boost::none, the CLOT tag for the last simple emit.
+            boost::optional<unsigned> clotTag;
+        };
+
+        boost::optional<LastSimpleEmitInfo> lastSimpleEmit;
+        std::vector<std::vector<const IR::BFN::DeparserPrimitive*>> groupedEmits;
+
+        // The deparser contains a sequence of emit-like primitives which we'd
+        // like to lower to operate on containers. Each container may contain
+        // several fields, so a number of emit primitives at the field level may
+        // boil down to a single emit of a container. We need to be sure,
+        // however, that we don't merge together emits for fields which are
+        // controlled by different POV bits or are part of different CLOTs;
+        // such fields are independent entities and we can't introduce a
+        // dependency between them. For that reason, we start out by grouping
+        // emit-like primitives by POV bit and CLOT tag.
+        LOG5("Grouping deparser primitives:");
+        for (auto* prim : deparser->emits) {
+            // Some complex emit primitives exist which can't be merged with
+            // other primitives. We place this kind of primitive in a group by
+            // itself. (At this point, EmitChecksum is the only thing in this
+            // category, but one can imagine that future hardware may introduce
+            // others.)
+            if (!prim->is<IR::BFN::Emit>()) {
+                BUG_CHECK(!prim->is<IR::BFN::EmitClot>(), "Found an EmitClot, "
+                          "but we haven't lowered the deparser yet?");
+                BUG_CHECK(prim->is<IR::BFN::EmitChecksum>(), "Found a complex "
+                          "emit of an unexpected type: %1%", prim);
+                LOG5(" - Placing complex emit in its own group: " << prim);
+                groupedEmits.emplace_back(1, prim);
+                lastSimpleEmit = boost::none;
+                continue;
+            }
+
+
+            // Gather the POV bit and CLOT tag associated with this emit.
+            auto* emit = prim->to<IR::BFN::Emit>();
+            auto* field = phv.field(emit->source->field);
+            BUG_CHECK(field, "No allocation for emitted field: %1%", emit);
+            le_bitrange povFieldBits;
+            auto* povField = phv.field(emit->povBit->field, &povFieldBits);
+            BUG_CHECK(povField, "No allocation for POV bit: %1%", emit);
+
+            boost::optional<unsigned> clotTag;
+            if (auto* clot = clotInfo.allocated(field))
+                clotTag = clot->tag;
+
+            // Compare the POV bit and CLOT tag with the previous emit and
+            // decide whether to place this emit in the same group or to start a
+            // new group.
+            if (!lastSimpleEmit || groupedEmits.empty()) {
+                LOG5(" - Starting new emit group: " << emit);
+                groupedEmits.emplace_back(1, emit);
+            } else if (lastSimpleEmit->povFieldId == povField->id &&
+                       lastSimpleEmit->povFieldBits == povFieldBits &&
+                       lastSimpleEmit->clotTag == clotTag) {
+                LOG5(" - Adding emit to group: " << emit);
+                groupedEmits.back().push_back(emit);
+            } else {
+                LOG5(" - Starting new emit group: " << emit);
+                groupedEmits.emplace_back(1, emit);
+            }
+
+            lastSimpleEmit = LastSimpleEmitInfo{povField->id, povFieldBits, clotTag};
+        }
+
+        // Now we've partitioned the emit primitives into groups which can be
+        // lowered independently. Walk over the groups and lower each one.
+        for (auto& group : groupedEmits) {
+            BUG_CHECK(!group.empty(), "Generated an empty emit group?");
+
+            // If this is a checksum emit primitive, lower it.
+            if (auto* emitChecksum = group.back()->to<IR::BFN::EmitChecksum>()) {
+                BUG_CHECK(group.size() == 1,
+                          "Checksum primitives should be in a singleton group");
+
+                // Allocate a checksum unit and generate the configuration for it.
+                auto* unitConfig = new IR::BFN::ChecksumUnitConfig(nextChecksumUnit);
+                auto inputSources = lowerFields(phv, emitChecksum->sources);
+                auto* loweredPovBit = lowerPovBit(phv, emitChecksum->povBit);
+                for (auto* source : inputSources) {
+                    auto* input = new IR::BFN::ChecksumInput(source);
+                    if (Device::currentDevice() == "JBay")
+                        input->povBit = loweredPovBit;
+                    unitConfig->inputs.push_back(input);
+                }
+                loweredDeparser->checksums.push_back(unitConfig);
+
+                // Generate the lowered checksum emit.
+                auto* loweredEmit =
+                  new IR::BFN::LoweredEmitChecksum(loweredPovBit, nextChecksumUnit);
+                loweredDeparser->emits.push_back(loweredEmit);
+
+                nextChecksumUnit++;
+                continue;
+            }
+
+            // This is a group of simple emit primitives. Pull out a
+            // representative; all emits in the group will have the same POV bit
+            // and CLOT tag.
+            auto* emit = group.back()->to<IR::BFN::Emit>();
+            BUG_CHECK(emit, "Unexpected deparser primitive: %1%", group.back());
+
+            // Gather the source fields for all of the emits.
+            IR::Vector<IR::BFN::FieldLVal> sources;
+            for (auto* memberEmit : group)
+                sources.push_back(memberEmit->to<IR::BFN::Emit>()->source);
+
+            // Check if this group is covered by a CLOT, and replace it with a
+            // single EmitClot if so.
+            // XXX(seth): I was asked to remove CLOT support from this patch,
+            // but when we reenable support, this is where we'd do it.
+            auto* field = phv.field(emit->source->field);
+            if (auto* clot = clotInfo.allocated(field)) {
+              BUG("Encountered a CLOT, but CLOT support is currently disabled.");
+              // When CLOT support is reenabled, we'd add code here along these
+              // lines:
+              //   auto* overrides = lowerClotOverrides(sources);
+              //   auto* loweredPovBit = lowerPovBit(phv, emit->povBit);
+              //   auto* loweredEmit =
+              //      new IR::BFN::EmitClot(clot->tag, overrides, loweredPovBit);
+              //   loweredDeparser->emits.push_back(loweredEmit);
+              //   continue;
+            }
+
+            // Lower the source fields to containers and generate the new,
+            // lowered emit primitives.
+            auto emitSources = lowerFields(phv, sources);
+            auto* loweredPovBit = lowerPovBit(phv, emit->povBit);
+            for (auto* source : emitSources) {
+                auto* loweredEmit = new IR::BFN::LoweredEmitPhv(loweredPovBit, source);
+                loweredDeparser->emits.push_back(loweredEmit);
+            }
+        }
+
+        // Lower deparser parameters from fields to containers.
+        for (auto* param : deparser->params) {
+            auto* loweredSource =
+                lowerUnsplittableField(phv, param->source, "deparser parameter");
+            auto* lowered = new IR::BFN::LoweredDeparserParameter(param->name,
+                                                                  loweredSource);
+            if (param->povBit)
+                lowered->povBit = lowerPovBit(phv, param->povBit);
+            loweredDeparser->params.push_back(lowered);
+        }
+
+        // Lower digests from fields to containers.
+        for (auto& item : deparser->digests) {
+            auto* digest = item.second;
+            auto* loweredSelector =
+                lowerUnsplittableField(phv, digest->selector, "digest selector");
+            auto* lowered =
+              new IR::BFN::LoweredDigest(digest->name, loweredSelector);
+
+            // Each field list, when lowered, becomes a digest table entry.
+            // Learning field lists are used to generate the format for learn
+            // quanta, which are exposed to the control plane, so they have a
+            // bit more metadata than other kinds of digests.
+            for (auto* fieldList : digest->fieldLists) {
+                auto fieldListSources = lowerFields(phv, fieldList->sources);
+                IR::BFN::DigestTableEntry* entry;
+                if (digest->name == "learning") {
+                    auto* controlPlaneFormat =
+                      computeControlPlaneFormat(phv, fieldList->sources);
+                    entry = new IR::BFN::LearningTableEntry(fieldListSources,
+                                                            fieldList->controlPlaneName,
+                                                            controlPlaneFormat);
+                } else {
+                    entry = new IR::BFN::DigestTableEntry(fieldListSources);
+                }
+                lowered->entries.push_back(entry);
+            }
+
+            loweredDeparser->digests.push_back(lowered);
+        }
+
+        return false;
     }
 
     const PhvInfo& phv;
-    const ClotInfo& clot;
+    const ClotInfo& clotInfo;
+    unsigned nextChecksumUnit;
+};
+
+/// Replace the high-level deparser IR version of each deparser with the lowered
+/// version generated by ComputeLoweredDeparserIR.
+struct ReplaceDeparserIR : public DeparserTransform {
+    ReplaceDeparserIR(const IR::BFN::LoweredDeparser* igLoweredDeparser,
+                      const IR::BFN::LoweredDeparser* egLoweredDeparser)
+      : igLoweredDeparser(igLoweredDeparser),
+        egLoweredDeparser(egLoweredDeparser) { }
+
+ private:
+    const IR::BFN::LoweredDeparser*
+    preorder(IR::BFN::Deparser* deparser) override {
+        prune();
+        return deparser->gress == INGRESS ? igLoweredDeparser : egLoweredDeparser;
+    }
+
+    const IR::BFN::LoweredDeparser* igLoweredDeparser;
+    const IR::BFN::LoweredDeparser* egLoweredDeparser;
+};
+
+/// Generate a lowered version of the parser IR in this program and swap it in
+/// for the existing representation.
+struct LowerDeparserIR : public PassManager {
+    LowerDeparserIR(const PhvInfo& phv, ClotInfo& clot) {
+        auto* computeLoweredDeparserIR = new ComputeLoweredDeparserIR(phv, clot);
+        addPasses({
+            computeLoweredDeparserIR,
+            new ReplaceDeparserIR(computeLoweredDeparserIR->igLoweredDeparser,
+                                  computeLoweredDeparserIR->egLoweredDeparser)
+        });
+    }
 };
 
 /// Allocate sequences of parser primitives to one or more states while

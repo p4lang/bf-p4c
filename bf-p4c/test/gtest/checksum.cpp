@@ -63,7 +63,8 @@ createComputedChecksumTestCase(const std::string& computeChecksumSource,
 void checkComputedChecksum(const IR::BFN::Pipe* pipe,
                            const std::vector<cstring>& expected) {
     for (auto gress : { INGRESS, EGRESS }) {
-        auto& actual = pipe->thread[gress].deparser->emits;
+        auto& actual = pipe->thread[gress].deparser
+                           ->to<IR::BFN::Deparser>()->emits;
 
         for (size_t i = 0; i < expected.size(); ++i) {
             if (i >= actual.size()) {

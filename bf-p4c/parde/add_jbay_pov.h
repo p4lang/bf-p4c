@@ -23,7 +23,7 @@ class AddJBayMetadataPOV : public Transform {
         prune();
         for (auto &t : pipe->thread) {
             visit(t.deparser);
-            dp = t.deparser;
+            dp = t.deparser->to<IR::BFN::Deparser>();
             visit(t.parser);
             visit(t.mau); }
         return pipe; }

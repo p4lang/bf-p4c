@@ -420,17 +420,24 @@ class DeparserParameter {
 #end
 }
 
-class Deparser : Unit {
-    gress_t                             gress;
+/// The supertype for all BFN IR deparsers.
+abstract AbstractDeparser : Unit {
+#apply
+    int stage() const override { return 999999; /* assumed larger than the number of stages */ }
+    gress_t thread() const override { return gress; }
+
+    gress_t gress;
+}
+
+class Deparser : AbstractDeparser {
+#noconstructor
+    Deparser(gress_t gr, P4Control dp);
+#apply
+    toString { return gress ? "egress deparser" : "ingress deparser"; }
+
     inline Vector<DeparserPrimitive>    emits;
     inline Vector<DeparserParameter>    params;
     inline NameMap<Digest>              digests;
-#noconstructor
-    Deparser(gress_t gr, P4Control dp);
-    int stage() const override { return 999999; /* assumed larger than the number of stages */ }
-    gress_t thread() const override { return gress; }
-#apply
-    toString { return gress ? "egress deparser" : "ingress deparser"; }
 }
 
 }  // end namespace BFN
