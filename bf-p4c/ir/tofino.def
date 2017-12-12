@@ -1,4 +1,5 @@
 #emit
+#include "bf-p4c/common/debug_info.h"
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/ir/gress.h"
 #include "bf-p4c/parde/clot.h"
@@ -134,7 +135,12 @@ abstract BFN::Value : IR::Expression { }
  * variables.  It also includes PHV containers themselves, as some back end
  * transformations replace collections of references to field instances with
  * the PHV containers in which they reside. */
-abstract BFN::Reference : BFN::Value { }
+abstract BFN::Reference : BFN::Value {
+#emit
+    /// Debugging information about the object referred to by this reference.
+    ::BFN::DebugInfo debug;
+#end
+}
 
 
 /** A temporary variable introduced by the compiler, which must be assigned to
