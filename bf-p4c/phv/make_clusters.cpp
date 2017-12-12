@@ -20,29 +20,30 @@ Visitor::profile_t Clustering::MakeAlignedClusters::init_apply(const IR::Node *r
 // After InstructionSelection, only primitive operations should remain in
 // actions. (Except SALU operands, which may be wrapped in unary operations,
 // but we don't care about those here.)
-bool Clustering::MakeAlignedClusters::preorder(const IR::Primitive* primitive) {
+bool Clustering::MakeAlignedClusters::preorder(const IR::MAU::Instruction* inst) {
     if (LOGGING(5)) {
         std::stringstream ss;
-        ss << "Visiting primitive operation: " << primitive->name;
-        for (auto& op : primitive->operands)
+        ss << "Visiting inst operation: " << inst->name;
+        for (auto& op : inst->operands)
             ss << " " << op;
         LOG5(ss.str()); }
 
     // `set` doesn't induce alignment constraints, because the `deposit_field`
     // ALU instruction can rotate its source.
-    if (primitive->name == "set") {
+    if (inst->name == "set") {
         LOG5("    ...skipping 'set', because it doesn't induce alignment constraints");
         return false; }
 
-    if (primitive->operands.size() == 0) {
+    if (inst->operands.size() == 0) {
         return false; }
 
     // Union all operands.  Because the union operation is reflexive and
     // transitive, start with the first operand (`dst`) and union it with all
     // operands.
     PHV::Field* dst = nullptr;
-    for (auto* operand : primitive->operands) {
+    for (auto* operand : inst->operands) {
         PHV::Field* f = phv_i.field(operand);
+        LOG5("UNION over instruction " << inst);
         if (!f) continue;
         if (!dst) dst = f;
         union_find_i.makeUnion(PHV::FieldSlice(dst), PHV::FieldSlice(f)); }
@@ -71,30 +72,32 @@ Visitor::profile_t Clustering::MakeRotationalClusters::init_apply(const IR::Node
     // MakeAlignedClusters.  Ditto for slices_to_clusters_i.
     for (auto* cluster : self.aligned_clusters_i) {
         union_find_i.insert(cluster);
+        LOG5("MakeRotationalClusters: Adding singleton aligned cluster " << cluster);
         for (auto& slice : *cluster)
             slices_to_clusters_i[slice] = cluster; }
     return rv;
 }
 
-bool Clustering::MakeRotationalClusters::preorder(const IR::Primitive *prim) {
-    if (prim->name != "set")
+bool Clustering::MakeRotationalClusters::preorder(const IR::MAU::Instruction *inst) {
+    if (inst->name != "set")
         return false;
 
-    BUG_CHECK(prim->operands.size() == 2, "Primitive instruction %1% expected to have 2 operands, "
-              "but it has %2%", cstring::to_cstring(prim), prim->operands.size());
+    LOG5("MakeRotationalClusters: Visiting " << inst);
+    BUG_CHECK(inst->operands.size() == 2, "Primitive instruction %1% expected to have 2 operands, "
+              "but it has %2%", cstring::to_cstring(inst), inst->operands.size());
 
     // The destination must be a PHV-backed field.
-    PHV::Field* dst_f = phv_i.field(prim->operands[0]);
-    BUG_CHECK(dst_f, "No PHV field for dst of instruction %1%", cstring::to_cstring(prim));
+    PHV::Field* dst_f = phv_i.field(inst->operands[0]);
+    BUG_CHECK(dst_f, "No PHV field for dst of instruction %1%", cstring::to_cstring(inst));
     auto dst = PHV::FieldSlice(dst_f);
 
     // The source may be a non-PHV backed value, however.
-    PHV::Field* src_f = phv_i.field(prim->operands[1]);
+    PHV::Field* src_f = phv_i.field(inst->operands[1]);
     if (!src_f)
         return false;
     auto src = PHV::FieldSlice(src_f);
 
-    LOG5("Adding set operands from instruction " << prim);
+    LOG5("Adding set operands from instruction " << inst);
     BUG_CHECK(slices_to_clusters_i.find(dst) != slices_to_clusters_i.end(),
               "set dst operand is not present in any aligned cluster: %1%",
               cstring::to_cstring(dst));

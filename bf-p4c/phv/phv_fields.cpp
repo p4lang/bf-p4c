@@ -642,6 +642,7 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
         PHV::Field* f = phv.field(entry->selector->field);
         BUG_CHECK(f != nullptr, "Field not created in PhvInfo");
         f->set_deparsed_bottom_bits(true);
+        f->set_no_split(true);
         LOG1(".....Deparser Constraint " << entry->name << " 'digest' on field..... " << f);
 
         // For learning digests, we're done.

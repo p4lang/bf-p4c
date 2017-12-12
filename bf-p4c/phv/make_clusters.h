@@ -62,7 +62,7 @@ class Clustering : public PassManager {
         profile_t init_apply(const IR::Node *root) override;
 
         /// Union all operands of each primitive instruction.
-        bool preorder(const IR::Primitive* primitive) override;
+        bool preorder(const IR::MAU::Instruction* inst) override;
 
         /// Build AlignedClusters from the UnionFind sets.
         void end_apply() override;
@@ -90,7 +90,7 @@ class Clustering : public PassManager {
 
         /// Union AlignedClusters with slices that are operands of `set`
         /// instructions.
-        bool preorder(const IR::Primitive*) override;
+        bool preorder(const IR::MAU::Instruction*) override;
 
         /// Create rotational clusters from sets of aligned clusters in
         /// union_find_i.
