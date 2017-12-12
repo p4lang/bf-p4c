@@ -208,6 +208,8 @@ class FindDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
 
     bool preorder(const IR::MAU::TableSeq *) override;
     bool preorder(const IR::MAU::Table *) override;
+    bool preorder(const IR::MAU::Action *) override;
+    bool preorder(const IR::MAU::InputXBarRead *) override;
     void end_apply() override {
         finalize_dependence_graph();
         if (Log::verbose())

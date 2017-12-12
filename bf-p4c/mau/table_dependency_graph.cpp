@@ -227,12 +227,26 @@ bool FindDependencyGraph::preorder(const IR::MAU::Table *t) {
         action->apply(AddDependencies(*this, t, ignore_tables));
 
     // Mark fields read/written by this table in accesses.
+    // FIXME: Should have a separate gateway row IR to visit rather than other information
     for (auto &gw : t->gateway_rows)
         gw.first->apply(UpdateAccess(*this, t));
-    for (auto &action : Values(t->actions))
-        action->apply(UpdateAccess(*this, t));
+
+    // FIXME: Need to have this as part of the visitors on Actions, rather than on Attached
+    // Tables, but these visitor information really needs to be cleaned up.
     t->apply(UpdateAttached(*this, t));
     return true;
+}
+
+bool FindDependencyGraph::preorder(const IR::MAU::InputXBarRead *read) {
+    auto tbl = findContext<IR::MAU::Table>();
+    read->apply(UpdateAccess(*this, tbl));
+    return false;
+}
+
+bool FindDependencyGraph::preorder(const IR::MAU::Action *act) {
+    auto tbl = findContext<IR::MAU::Table>();
+    act->apply(UpdateAccess(*this, tbl));
+    return false;
 }
 
 template<class T>
