@@ -451,7 +451,9 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     bool                        default_only_action = false;
     std::vector<Ref>            hit_next;
     Ref                         miss_next;
-    std::set<Table *>           pred;
+    std::map<Table *, std::set<Actions::Action *>>
+                                pred;   // predecessor tables w the actions in that table that
+                                        // call this table
     std::vector<HashDistribution>       hash_dist;
     p4_params                   p4_params_list;
     std::unique_ptr<json::map>  context_json;
@@ -524,7 +526,7 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     void add_result_physical_buses(json::map &stage_tbl);
     void canon_field_list(json::vector &field_list);
     void check_next();
-    void check_next(Ref &next);
+    void check_next(Ref &next, Actions::Action *act = nullptr);
     bool choose_logical_id(const slist<Table *> *work = nullptr);
     virtual int hit_next_size() const { return hit_next.size(); }
     p4_param *find_p4_param(std::string &s) {
@@ -913,6 +915,7 @@ private:
     }                           miss;
     std::vector<Match>          table;
     template<class REGS> void payload_write_regs(REGS &, int row, int type, int bus);
+    template<class REGS> void standalone_write_regs(REGS &regs);
 public:
     table_type_t table_type() const override { return GATEWAY; }
     MatchTable *get_match_table() override { return match_table; }

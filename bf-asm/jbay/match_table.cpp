@@ -13,6 +13,7 @@ template<> void MatchTable::setup_next_table_map(Target::JBay::mau_regs &regs, T
 
 template<> void MatchTable::write_regs(Target::JBay::mau_regs &regs, int type, Table *result) {
     write_common_regs<Target::JBay>(regs, type, result);
+    // FIXME -- factor this with JBay GatewayTable::standalone_write_regs
     auto &merge = regs.rams.match.merge;
     if (pred.empty()) {
         merge.pred_always_run[gress] |= 1 << logical_id; }

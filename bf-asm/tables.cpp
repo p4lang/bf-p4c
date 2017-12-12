@@ -460,19 +460,30 @@ void Table::alloc_vpns() {
     setup_vpns(layout, 0);
 }
 
-void Table::check_next(Table::Ref &n) {
+void Table::check_next(Table::Ref &n, Table::Actions::Action *act) {
     if (n == "END") return;
     if (n.check()) {
         if (logical_id >= 0 && n->logical_id >= 0 ? table_id() > n->table_id()
                                                   : stage->stageno > n->stage->stageno)
             error(n.lineno, "Next table %s comes before %s", n->name(), name());
-        n->pred.insert(this); }
+        auto &s = n->pred[this];
+        if (act)
+            s.insert(act); }
 }
 
 void Table::check_next() {
-    for (auto &n : hit_next)
-        check_next(n);
-    check_next(miss_next);
+    auto *actions = get_actions();
+    if (actions) {
+        auto action = actions->begin();
+        for (auto &n : hit_next)
+            check_next(n, action == actions->end() ? nullptr : &*action++);
+    } else {
+        for (auto &n : hit_next)
+            check_next(n); }
+    check_next(miss_next, actions ? actions->action(default_action) : nullptr);
+    if (hit_next.size() == 1 && hit_next[0] && !miss_next && actions)
+        for (auto &act : *actions)
+            hit_next[0]->pred[this].insert(&act);
 }
 
 bool Table::choose_logical_id(const slist<Table *> *work) {
@@ -484,11 +495,11 @@ bool Table::choose_logical_id(const slist<Table *> *work) {
             warning(tbl->lineno, "loop involves table %s", tbl->name()); }
         return false; }
     slist<Table *> local(this, work);
-    for (auto *p : pred)
+    for (auto *p : Keys(pred))
         if (!p->choose_logical_id(&local))
             return false;
     int min_id = 0, max_id = LOGICAL_TABLES_PER_STAGE-1;
-    for (auto *p : pred)
+    for (auto *p : Keys(pred))
         if (p->stage->stageno == stage->stageno && p->logical_id >= min_id)
             min_id = p->logical_id + 1;
     for (auto &n : hit_next)
@@ -920,12 +931,14 @@ void Table::Actions::pass1(Table *tbl) {
         slot_use |= act.slot_use; }
 }
 
-static void find_pred_in_stage(int stageno, std::set<MatchTable *> &pred, Table *tbl) {
+static void find_pred_in_stage(int stageno,
+        std::map<MatchTable *, std::set<Table::Actions::Action *>> &pred,
+        Table *tbl, const std::set<Table::Actions::Action *> &acts) {
     for (auto *mt : tbl->get_match_tables()) {
-        if (mt->stage->stageno != stageno || pred.count(mt)) continue;
-        pred.insert(mt);
-        for (auto *t : tbl->pred)
-            find_pred_in_stage(stageno, pred, t); }
+        if (mt->stage->stageno != stageno) continue;
+        pred[mt].insert(acts.begin(), acts.end());
+        for (auto &p : tbl->pred)
+            find_pred_in_stage(stageno, pred, p.first, p.second); }
 }
 
 void Table::Actions::pass2(Table *tbl) {
@@ -1005,22 +1018,22 @@ void Table::Actions::pass2(Table *tbl) {
     if (!tbl->default_action.empty() && !exists(tbl->default_action))
         error(tbl->default_action_lineno, "no action %s in table %s", tbl->default_action.c_str(),
               tbl->name());
-    std::set<MatchTable *> pred;
-    find_pred_in_stage(tbl->stage->stageno, pred, tbl);
-    for (auto *t : pred) {
-        auto *actions = t->get_actions();
+    std::map<MatchTable *, std::set<Action *>> pred;
+    find_pred_in_stage(tbl->stage->stageno, pred, tbl, std::set<Action *>());
+    for (auto &p : pred) {
+        auto *actions = p.first->get_actions();
         if (!actions || actions == this) continue;
         if (!slot_use.intersects(actions->slot_use)) continue;
         for (auto &a1 : *this) {
             bool first = false;
-            for (auto &a2 : *actions) {
-                if (a1.slot_use.intersects(a2.slot_use)) {
+            for (auto a2 : p.second) {
+                if (a1.slot_use.intersects(a2->slot_use)) {
                     if (!first)
                         warning(a1.lineno, "Conflicting instruction slot usage for non-exlusive "
                                 "table %s action %s", tbl->name(), a1.name.c_str());
                     first = true;
-                    warning(a2.lineno, "and table %s action %s", t->name(), a2.name.c_str());
-        } } } }
+                    warning(a2->lineno, "and table %s action %s", p.first->name(),
+                            a2->name.c_str()); } } } }
 }
 
 void Table::Actions::stateful_pass2(Table *tbl) {

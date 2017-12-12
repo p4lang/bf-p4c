@@ -22,16 +22,7 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     ".* expected packet.* on port .* not seen"
 
     testdata/p4_14_samples/repeater.p4
-    testdata/p4_14_samples/gateway2.p4
-    testdata/p4_14_samples/gateway3.p4
     testdata/p4_14_samples/action_chain1.p4
-
-    # "ERROR: .*mau-instr-store-common.cpp.* (instr_add_simple_op)"
-    testdata/p4_14_samples/gateway4.p4
-    testdata/p4_14_samples/gateway5.p4
-    testdata/p4_14_samples/gateway6.p4
-    testdata/p4_14_samples/gateway7.p4
-    testdata/p4_14_samples/gateway8.p4
 
     # "ERROR: .*mau-dependencies.cpp.* (report_bad_delay)"
     testdata/p4_14_samples/07-MultiProtocol.p4

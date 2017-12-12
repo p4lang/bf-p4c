@@ -221,10 +221,8 @@ void GatewayTable::pass1() {
     if (table.size() > 4)
         error(lineno, "Gateway can only have 4 match entries max");
     for (auto &line : table)
-        if (line.next != "END")
-            line.next.check();
-    if (miss.next != "END")
-        miss.next.check();
+        check_next(line.next);
+    check_next(miss.next);
     if (error_count > 0) return;
     /* FIXME -- the rest of this function is a hack -- sometimes the compiler wants to
      * generate matches just covering the bits it names in the match and other times it wants
@@ -323,6 +321,10 @@ static bool setup_vh_xbar(REGS &regs, Table *table, Table::Layout &row, int base
     return true;
 }
 
+#if HAVE_JBAY
+#include "jbay/gateway.cpp"
+#endif // HAVE_JBAY
+
 template<class REGS>
 void GatewayTable::payload_write_regs(REGS &regs, int row, int type, int bus) {
     auto &merge = regs.rams.match.merge;
@@ -355,9 +357,12 @@ void GatewayTable::payload_write_regs(REGS &regs, int row, int type, int bus) {
         merge.gateway_payload_match_adr[row][bus][type^1] = 0x7ffff; }
 }
 
+template<class REGS> void GatewayTable::standalone_write_regs(REGS &regs) { }
+
 template<class REGS>
 void GatewayTable::write_regs(REGS &regs) {
     LOG1("### Gateway table " << name() << " write_regs");
+    if (!match_table) standalone_write_regs(regs);
     auto &row = layout[0];
     if (input_xbar) {
         input_xbar->write_regs(regs);
