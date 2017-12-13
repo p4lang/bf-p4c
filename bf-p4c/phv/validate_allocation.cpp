@@ -46,7 +46,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
     // collect information that we'll use to check container properties.
     for (auto& field : phv) {
         if (!uses.is_referenced(&field)) {
-            WARN_CHECK(field.alloc_i.empty() && !clot.allocated(&field) ,
+            WARN_CHECK(field.alloc_i.empty() && !clot.clot(&field) ,
                         "PHV allocation for unreferenced %1%field %2% (width %3%)",
                         field.bridged ? "bridged " : "",
                         cstring::to_cstring(field),
@@ -54,7 +54,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             continue;
         }
 
-        ERROR_CHECK(!field.alloc_i.empty() || clot.allocated(&field),
+        ERROR_CHECK(!field.alloc_i.empty() || clot.clot(&field),
                     "No PHV or CLOT allocation for referenced field %1%",
                     cstring::to_cstring(field));
 
@@ -63,7 +63,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
                     cstring::to_cstring(field));
 
         // TODO(zma) add clot validation
-        if (clot.allocated(&field))
+        if (clot.clot(&field))
             continue;
 
         bitvec assignedContainers;

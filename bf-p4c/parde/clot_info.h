@@ -3,20 +3,25 @@
 
 #include "clot.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/parde/parde_visitor.h"
 
 class PhvInfo;
-class PhvUse;
 
 class ClotInfo {
     friend class CollectClotInfo;
     friend class NaiveClotAlloc;
+
+    PhvUse &uses;
 
     std::map<const IR::BFN::ParserState*, std::vector<const PHV::Field*>> all_fields_;
 
     std::vector<const Clot*> clots_;
     std::map<const Clot*, const IR::BFN::ParserState*> clot_to_parser_state_;
     std::map<const IR::BFN::ParserState*, std::vector<const Clot*>> parser_state_to_clots_;
+
+ public:
+    explicit ClotInfo(PhvUse& uses) : uses(uses) {}
 
  public:
     // TODO(zma) encapsulate this properly
@@ -35,7 +40,25 @@ class ClotInfo {
         parser_state_to_clots_[state].push_back(cl);
     }
 
+    bool is_clot_candidate(const PHV::Field* field) const {
+        return !uses.is_used_mau(field) && uses.is_used_parde(field);
+    }
+
+    /// @return the CLOT if field is not used in MAU pipe
+    /// and is covered in a CLOT
     const Clot* allocated(const PHV::Field* field) const {
+        if (!is_clot_candidate(field))
+            return nullptr;
+
+        for (auto c : clots_)
+            for (auto f : c->all_fields)
+                if (f == field)
+                    return c;
+        return nullptr;
+    }
+
+    /// @return the pointer to the CLOT if field is covered in a CLOT
+    const Clot* clot(const PHV::Field* field) const {
         for (auto c : clots_)
             for (auto f : c->all_fields)
                 if (f == field)

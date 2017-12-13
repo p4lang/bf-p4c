@@ -158,6 +158,7 @@ class TableAllocPass : public PassManager {
 };
 
 Backend::Backend(const BFN_Options& options) :
+    clot(uses),
     uses(phv),
     defuse(phv) {
     addPasses({

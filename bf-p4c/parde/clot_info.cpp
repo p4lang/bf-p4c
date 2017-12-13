@@ -54,11 +54,9 @@ class NaiveClotAlloc : public Visitor {
     static const int TOTAL_CLOTS_AVAIL = 16;
 
     ClotInfo& clot;
-    const PhvUse &uses;
 
  public:
-    NaiveClotAlloc(ClotInfo& clot, const PhvUse& uses) :
-        clot(clot), uses(uses) {}
+    explicit NaiveClotAlloc(ClotInfo& clot) : clot(clot) {}
 
     struct ClotAlloc {
         ClotAlloc(const IR::BFN::ParserState* state, unsigned unused, unsigned total) :
@@ -72,10 +70,6 @@ class NaiveClotAlloc : public Visitor {
         }
     };
 
-    bool is_clot_candidate(const PHV::Field* field) {
-        return !uses.is_used_mau(field) && uses.is_used_parde(field);
-    }
-
     std::priority_queue<ClotAlloc*> compute_requirement() {
        std::priority_queue<ClotAlloc*> q;
 
@@ -84,7 +78,7 @@ class NaiveClotAlloc : public Visitor {
            unsigned state_total_bytes = 0;
 
            for (auto f : hdrs.second) {
-               if (is_clot_candidate(f))
+               if (clot.is_clot_candidate(f))
                    state_unused_bytes += num_bytes(f->size);
                state_total_bytes += num_bytes(f->size);
            }
@@ -107,7 +101,7 @@ class NaiveClotAlloc : public Visitor {
             clot.add(cl, ca->state);
 
             for (auto f : clot.all_fields_[ca->state]) {
-                if (!is_clot_candidate(f))
+                if (!clot.is_clot_candidate(f))
                     cl->phv_fields.push_back(f);
                 cl->all_fields.push_back(f);
             }
@@ -138,7 +132,7 @@ AllocateClot::AllocateClot(ClotInfo &clot, const PhvInfo &phv, PhvUse &uses) {
     addPasses({
         &uses,
         new CollectClotInfo(phv, clot),
-        new NaiveClotAlloc(clot, uses),
+        new NaiveClotAlloc(clot),
         });
 }
 
