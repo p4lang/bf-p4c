@@ -18,21 +18,10 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     testdata/p4_14_samples/counter4.p4
   )
 
+  # ingress_port isn't being setup properly (STF harness bug)
   p4c_add_xfail_reason("jbay"
     ".* expected packet.* on port .* not seen"
-
     testdata/p4_14_samples/repeater.p4
-    testdata/p4_14_samples/action_chain1.p4
-
-    # "ERROR: .*mau-dependencies.cpp.* (report_bad_delay)"
-    testdata/p4_14_samples/07-MultiProtocol.p4
-  )
-
-  p4c_add_xfail_reason("jbay"
-    "unexpected packet output on port"
-    testdata/p4_14_samples/hash_action_basic.p4
-    testdata/p4_14_samples/hash_action_gateway.p4
-    testdata/p4_14_samples/hash_action_two_separate.p4
   )
 
 endif() # HARLYN_STF
@@ -162,8 +151,9 @@ p4c_add_xfail_reason("jbay"
 # Brig/Glass do not follow P4_14 spec for 'drop' in the ingress pipeline
 p4c_add_xfail_reason("jbay"
   "expected packet on port .* not seen"
-  #testdata/p4_14_samples/gateway1.p4  (ctd -- drop_ctl not droppoing the packet?)
-  testdata/p4_14_samples/gateway2.p4
-  testdata/p4_14_samples/gateway3.p4
-  testdata/p4_14_samples/gateway4.p4
+  # CTD == these are expected to fail, but apparently drop_ctl doesn't reliably drop the packet?
+  #testdata/p4_14_samples/gateway1.p4
+  #testdata/p4_14_samples/gateway2.p4
+  #testdata/p4_14_samples/gateway3.p4
+  #testdata/p4_14_samples/gateway4.p4
   )
