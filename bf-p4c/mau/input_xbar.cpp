@@ -1794,6 +1794,18 @@ class XBarHashDist : MauInspector {
         return false;
     }
 
+    // In the IR::MAU::Action, there are two lists.  One is a list of instructions for
+    // ALU operations, another is a list of counter/meter/stateful ALU externs saved
+    // Because the hash distribution units are already saved on the BackendAttached objects,
+    // we don't want to visit them in within the action in order to not double count
+    bool preorder(const IR::Primitive *) {
+        return false;
+    }
+
+    bool preorder(const IR::MAU::Instruction *) {
+        return true;
+    }
+
     void end_apply() {
         if (!allocation_passed) {
             alloc.hash_dists.clear();

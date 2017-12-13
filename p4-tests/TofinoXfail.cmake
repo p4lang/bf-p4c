@@ -973,11 +973,6 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Hash table .* column .* duplicated"
-  extensions/p4_tests/p4_14/test_config_100_hash_action.p4
-  )
-
-p4c_add_xfail_reason("tofino"
   "Instruction selection creates an instruction that the rest of the compiler cannot correctly interpret"
   testdata/p4_16_samples/issue983-bmv2.p4
   )
