@@ -119,7 +119,9 @@ endmacro(packet_test_setup_check)
 
 macro(p4c_add_bf_backend_tests device tests)
   set (testExtraArgs)
-  set (testExtraArgs "${testExtraArgs} -${device}")
+  # do not add the device directly to testExtraArgs
+  # this is used later to add other tests for multiple configurations.
+  # set (testExtraArgs "${testExtraArgs} -${device}")
 
   simple_test_setup_check(${device})
 
@@ -138,7 +140,7 @@ macro(p4c_add_bf_backend_tests device tests)
   endif()
 
   p4c_add_tests (${device} ${P4C_RUNTEST} "${tests}"
-     "" "${testExtraArgs}")
+     "" "${testExtraArgs} -${device}")
 
   if (PTF_REQUIREMENTS_MET)
     # PTF tests cannot be run in parallel with other tests, so we set the SERIAL
