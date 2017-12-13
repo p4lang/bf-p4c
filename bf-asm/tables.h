@@ -178,8 +178,8 @@ public:
         void pass1(Table *tbl);
         void pass2(Table *tbl);
     private:
-        std::vector<std::map<std::string, Field>>                  fmt;
-        std::map<unsigned, std::map<std::string, Field>::iterator> byindex;
+        std::vector<ordered_map<std::string, Field>>                  fmt;
+        std::map<unsigned, ordered_map<std::string, Field>::iterator> byindex;
     public:
         int                     lineno = -1;
         Table                   *tbl;

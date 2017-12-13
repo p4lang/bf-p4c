@@ -529,8 +529,8 @@ void Table::need_bus(int lineno, Alloc1Dbase<Table *> &use, int idx, const char 
 }
 
 static void overlap_test(int lineno,
-    unsigned a_bit, std::map<std::string, Table::Format::Field>::iterator a,
-    unsigned b_bit, std::map<std::string, Table::Format::Field>::iterator b)
+    unsigned a_bit, ordered_map<std::string, Table::Format::Field>::iterator a,
+    unsigned b_bit, ordered_map<std::string, Table::Format::Field>::iterator b)
 {
     if (b_bit <= a->second.hi(a_bit)) {
         if (a->second.group || b->second.group)
