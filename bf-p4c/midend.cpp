@@ -104,6 +104,7 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::LocalizeAllActions(&refMap),
         new P4::UniqueNames(&refMap),
         new P4::UniqueParameters(&refMap, &typeMap),
+        new P4::SimplifyControlFlow(&refMap, &typeMap),
         // translate architecture after program inlining to
         // avoid handling abitrary parameters in user defined control blocks
         (options.arch == "v1model") ?

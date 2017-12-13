@@ -1028,6 +1028,12 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   )
 
+# Most likely a bug in validContainerRange handling.
+p4c_add_xfail_reason("tofino"
+  "Extract field slice .* into .* resulted in buffer range .* with a negative offset"
+  switch_l2
+  )
+
 #-------- New tests, new failures
 p4c_add_xfail_reason("tofino"
   "error: tcam match field.* not a multiple of .* bits"
