@@ -1,6 +1,8 @@
 #include "bf-p4c/arch/phase0.h"
 
 #include <algorithm>
+#include "bf-p4c/common/linear_path.h"
+#include "bf-p4c/common/type_categories.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/parde/field_packing.h"
 #include "frontends/common/resolveReferences/referenceMap.h"
@@ -218,14 +220,6 @@ struct FindPhase0Table : public Inspector {
         return true;
     }
 
-    /// @return true if @expression is a member of a metadata type.
-    bool isMetadata(const IR::Expression* expression) const {
-        if (!expression->is<IR::Member>()) return false;
-        auto* member = expression->to<IR::Member>();
-        auto* containingType = typeMap->getType(member->expr, true);
-        return containingType->is<IR::Type_Struct>();
-    }
-
     /// @return true if @expression is a parameter in the parameter list @params.
     bool isParam(const IR::Expression* expression,
                  const IR::ParameterList* params) const {
@@ -267,24 +261,48 @@ struct FindPhase0Table : public Inspector {
             // The action should contain only assignments.
             if (!statement->is<IR::AssignmentStatement>()) return false;
             auto* assignment = statement->to<IR::AssignmentStatement>();
+            auto* dest = assignment->left;
+            auto* source = assignment->right;
 
             // The action should write to metadata fields only.
             // XXX(seth): Ideally we'd also verify that it only writes to fields
             // that the parser doesn't already write to.
-            if (!isMetadata(assignment->left)) return false;
+            PathLinearizer path;
+            dest->apply(path);
+            if (!path.linearPath) {
+                LOG5("   - Assigning to an expression which is too complex: " << dest);
+                return false;
+            }
+
+            if (!isMetadataReference(*path.linearPath, typeMap)) {
+                LOG5("   - Assigning to an expression of non-metadata type: " << dest);
+                return false;
+            }
+
+            // Remove any casts around the source of the assignment. (These are
+            // often introduced as a side effect of translation.)
+            while (auto* cast = source->to<IR::Cast>()) {
+                source = cast->expr;
+            }
 
             // The action should only read from constants or its parameters.
-            if (assignment->right->is<IR::Constant>()) {
+            if (source->is<IR::Constant>()) {
                 phase0->constantWrites.emplace(Phase0WriteFromConstant {
-                    assignment->left->to<IR::Member>(),
-                    assignment->right->to<IR::Constant>()
+                    dest->to<IR::Member>(),
+                    source->to<IR::Constant>()
                 });
                 continue;
             }
-            if (!isParam(assignment->right, action->parameters)) return false;
+
+            if (!isParam(source, action->parameters)) {
+                LOG5("   - Assigning from a value which is not a constant or "
+                     "an action parameter: " << source);
+                return false;
+            }
+
             phase0->paramWrites.emplace(Phase0WriteFromParam {
-                assignment->left->to<IR::Member>(),
-                assignment->right->to<IR::PathExpression>()->path->name.name
+                dest->to<IR::Member>(),
+                source->to<IR::PathExpression>()->path->name.name
             });
         }
 
