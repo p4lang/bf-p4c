@@ -153,7 +153,7 @@ struct ExtractSimplifier {
         std::tie(std::ignore, slices) = computeSlices(extract->dest->field, phv);
 
         auto field = phv.field(extract->dest->field);
-        if (auto c = clot.clot(field)) {
+        if (auto c = clot.allocated(field)) {
             clotExtracts[c].push_back(extract);
             if (!c->is_phv_field(field))
                 return;
@@ -675,7 +675,7 @@ struct LowerDeparserIR : public DeparserTransform {
         for (auto e : deparser->emits) {
            if (auto emit = e->to<IR::BFN::Emit>()) {
                auto field = phv.field(emit->source->field);
-               if (auto c = clot.clot(field)) {
+               if (auto c = clot.allocated(field)) {
                    if (!newEmits.empty()) {
                        if (auto lastEmitClot = newEmits.back()->to<IR::BFN::EmitClot>()) {
                            if (lastEmitClot->clot.tag == c->tag)
