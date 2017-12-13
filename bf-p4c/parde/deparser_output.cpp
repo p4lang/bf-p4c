@@ -164,20 +164,15 @@ struct OutputParameters : public Inspector {
     void outputParamGroup(const char* groupName, const ParamGroup& group) {
         if (group.empty()) return;
 
-        out << indent << groupName << ": [";
-        const char* sep = "   ";
+        out << indent << groupName << ":" << std::endl;
 
-        {
-            AutoIndent paramGroupIndex(indent);
-            for (auto* param : group) {
-                out << std::endl << indent << sep;
-                outputParamSource(param);
-                outputDebugInfo(out, indent, param->source, param->povBit);
-                sep = " , ";
-            }
+        AutoIndent paramGroupIndex(indent);
+        for (auto* param : group) {
+            out << indent << "- ";
+            outputParamSource(param);
+            outputDebugInfo(out, indent, param->source, param->povBit);
+            out << std::endl;
         }
-
-        out << std::endl << indent << "]" << std::endl;
     }
 
     std::ostream& out;
@@ -196,10 +191,12 @@ struct OutputDigests : public Inspector {
         out << indent << digest->name << ":" << std::endl;
         AutoIndent digestIndent(indent);
 
+        out << indent << "select: " << digest->selector;
+        outputDebugInfo(out, indent, digest->selector) << std::endl;
+
         int idx = 0;
         for (auto* entry : digest->entries) {
-            out << indent << idx++ << ": [";
-            const char* sep = "   ";
+            out << indent << idx++ << ":" << std::endl;
 
             /* learning digest is a bit special here - the driver looks at the first
              * field of the digest to resolve the digest-ID and hence must be appended
@@ -210,26 +207,17 @@ struct OutputDigests : public Inspector {
              * the compilation process, and there is no need for any special
              * case here.
              */
-            {
-                AutoIndent entryIndent(indent);
-                if (digest->name == "learning") {
-                    out << std::endl << indent << sep << digest->selector;
-                    outputDebugInfo(out, indent, digest->selector);
-                    sep = " , ";
-                }
-
-                for (auto* source : entry->sources) {
-                    out << std::endl << indent << sep << source;
-                    outputDebugInfo(out, indent, source);
-                    sep = " , ";
-                }
+            AutoIndent entryIndent(indent);
+            if (digest->name == "learning") {
+                out << indent << "- " << digest->selector;
+                outputDebugInfo(out, indent, digest->selector) << std::endl;
             }
 
-            out << std::endl << indent << "]" << std::endl;
+            for (auto* source : entry->sources) {
+                out << indent << "- " << source;
+                outputDebugInfo(out, indent, source) << std::endl;
+            }
         }
-
-        out << indent << "select: " << digest->selector;
-        outputDebugInfo(out, indent, digest->selector) << std::endl;
 
         if (digest->name == "learning")
             outputLearningContextJson(digest);
@@ -244,8 +232,7 @@ struct OutputDigests : public Inspector {
 
         int idx = 0;
         for (auto* digestEntry : digest->entries) {
-            out << indent << idx++ << ": [";
-            const char* sep = "   ";
+            out << indent << idx++ << ":" << std::endl;
 
             auto* entry = digestEntry->to<IR::BFN::LearningTableEntry>();
             BUG_CHECK(entry, "Digest table entry isn't a learning table "
@@ -259,21 +246,17 @@ struct OutputDigests : public Inspector {
             // network order; we need to add 1 to compensate for the fact that
             // we don't put the digest ID in the IR representation of the table
             // entry.
+            AutoIndent formatIndent(indent);
             entry->controlPlaneFormat->forEachField<Endian::Network>(
               [&](nw_bitrange range, const IR::Expression*, cstring fieldName) {
-                AutoIndent formatIndent(indent);
                 le_bitrange leRange = range.toOrder<Endian::Little>(
                     entry->controlPlaneFormat->totalWidth);
-                out << std::endl << indent << sep
-                                 << "[ " << canon_name(fieldName)
-                                 << ", " << (leRange.hi % 8)    // Start bit.
-                                 << ", " << range.size()        // Field size.
-                                 << ", " << range.loByte() + 1  // Start byte.
-                                 << "]";
-                sep = " , ";
+                out << indent << "- [ " << canon_name(fieldName)
+                              << ", " << (leRange.hi % 8)    // Start bit.
+                              << ", " << range.size()        // Field size.
+                              << ", " << range.loByte() + 1  // Start byte.
+                              << "]" << std::endl;
             });
-
-            out << std::endl << indent << "]" << std::endl;
         }
 
         const char* sep = "";
