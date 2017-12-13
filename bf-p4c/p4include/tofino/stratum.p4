@@ -463,26 +463,28 @@ extern idle_timeout {
 }
 
 /// Counter
-extern counter<I> {
-    counter(CounterType_t type, I instance_count);
-    void count(in I index);
+extern Counter<W, S> {
+    Counter(bit<32> n_counters, CounterType_t type);
+    void count(in S index);
 }
 
-extern direct_counter {
-    direct_counter(CounterType_t type);
+extern DirectCounter<W> {
+    DirectCounter(CounterType_t type);
     void count();
 }
 
 /// Meter
-extern meter<I> {
-    meter(MeterType_t type, @optional I instance_count);
-    bit<8> execute(@optional in I index, @optional in bit<2> color);
+extern Meter<S> {
+    Meter(bit<32> n_meters, MeterType_t type);
+    bit<8> execute(in S index, @optional in bit<2> color);
+    //bit<8> execute(in S index);
 }
 
 /// direct meter is not translated.
-extern direct_meter<T> {
-    direct_meter(MeterType_t type);
-    void read(out T result);
+extern DirectMeter {
+    DirectMeter(MeterType_t type);
+    bit<8> execute(@optional in bit<2> color);
+    //bit<8> execute();
 }
 
 /// LPF

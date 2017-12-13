@@ -85,13 +85,13 @@ bool InstructionSelection::checkPHV(const IR::Expression *e) {
 bool InstructionSelection::checkSrc1(const IR::Expression *e) {
     if (auto *c = e->to<IR::Cast>())
         return checkSrc1(c->expr);
+    if (auto slice = e->to<IR::Slice>())
+        return checkSrc1(slice->e0);
     if (e->is<IR::Constant>()) return true;
     if (e->is<IR::BoolLiteral>()) return true;
     if (e->is<IR::ActionArg>()) return true;
-    if (e->is<IR::Primitive>()) return true;
     if (e->is<IR::MAU::HashDist>()) return true;
-    if (auto slice = e->to<IR::Slice>())
-        if (slice->e0->is<IR::ActionArg>()) return true;
+    if (e->is<IR::MAU::AttachedOutput>()) return true;
     return phv.field(e);
 }
 
@@ -269,6 +269,7 @@ static const IR::Primitive *makeDepositField(IR::Primitive *prim, long) {
 }
 
 const IR::Node *InstructionSelection::postorder(IR::Primitive *prim) {
+    LOG1("prim " << prim);
     if (!af) return prim;
     const IR::Expression *dest = prim->operands.size() > 0 ? prim->operands[0] : nullptr;
     if (prim->name == "modify_field") {
@@ -331,53 +332,23 @@ const IR::Node *InstructionSelection::postorder(IR::Primitive *prim) {
                   direct_access ? "" : "in", salu->direct ? "" : "in");
         return new IR::MAU::Instruction(prim->srcInfo, "set", new IR::TempVar(prim->type),
                                         new IR::MAU::AttachedOutput(prim->type, salu));
-    } else if (prim->name == "counter.count") {
+    } else if (prim->name == "Counter.count") {
         stateful.push_back(prim);  // needed to setup the index
         return nullptr;
-    } else if (prim->name == "meter.execute_meter" || prim->name == "lpf.execute"
-               || prim->name == "meter.execute") {
+    } else if (prim->name == "lpf.execute" || prim->name == "wred.execute" ||
+               prim->name == "Meter.execute") {
         auto glob = prim->operands.at(0)->to<IR::GlobalRef>();
         auto mtr = glob->obj->to<IR::MAU::Meter>();
         BUG_CHECK(mtr != nullptr, "%s: Cannot find associated meter for the method call %s",
                   prim->srcInfo, *prim);
         stateful.push_back(prim);
-        return new IR::MAU::Instruction(prim->srcInfo, "set", new IR::TempVar(prim->type),
-                                        new IR::MAU::AttachedOutput(prim->type, mtr));
-    } else if (prim->name == "direct_counter.count") {
+        return new IR::MAU::AttachedOutput(prim->type, mtr);
+    } else if (prim->name == "DirectCounter.count") {
         return nullptr;
-    } else if (prim->name == "direct_meter.read") {
+    } else if (prim->name == "DirectMeter.execute") {
         auto glob = prim->operands.at(0)->to<IR::GlobalRef>();
         auto mtr = glob->obj->to<IR::MAU::Meter>();
-        return new IR::MAU::Instruction(prim->srcInfo, "set", prim->operands[1],
-                                        new IR::MAU::AttachedOutput(IR::Type::Bits::get(8), mtr));
-    // Convert this hash to a set a PHV field to an IR::MAU::HashDist
-    } else if (prim->name == "hash") {
-        unsigned size = 1;
-        if (prim->operands[4]->to<IR::Constant>()) {
-            size = bitcount(prim->operands[4]->to<IR::Constant>()->asLong() - 1);
-            if ((1LL << size) != prim->operands[4]->to<IR::Constant>()->asLong())
-                error("%s: The hash offset must be a power of 2 in a hash calculation %s",
-                      prim->srcInfo, *prim);
-        } else {
-            error("NULL operand 4 for %s", *prim);
-        }
-        cstring algorithm;
-        if (auto *mem = prim->operands[1]->to<IR::Member>())
-            algorithm = mem->member;
-        safe_vector<int> init_units;
-        auto *hd = new IR::MAU::HashDist(prim->srcInfo, prim->operands[3], algorithm,
-                                         init_units, prim);
-        hd->bit_width = size;
-        if (auto *constant = prim->operands[2]->to<IR::Constant>()) {
-            if (constant->asInt() != 0)
-                error("%s: The initial offset for a hash calculation function has to be zero %s",
-                       prim->srcInfo, *prim);
-        }
-
-        IR::MAU::Instruction *instr =
-            new IR::MAU::Instruction( prim->srcInfo, "set",
-                new IR::Slice(prim->operands[0], size-1, 0), hd);
-        return instr;
+        return new IR::MAU::AttachedOutput(IR::Type::Bits::get(8), mtr);
     // Convert hash extern in tofino.p4
     } else if (prim->name == "hash.get_hash") {
         unsigned size = 1;
@@ -416,10 +387,10 @@ const IR::Node *InstructionSelection::postorder(IR::Primitive *prim) {
 }
 
 const IR::Type *stateful_type_for_primitive(const IR::Primitive *prim) {
-    if (prim->name == "counter.count" || prim->name == "direct_counter.count")
+    if (prim->name == "Counter.count" || prim->name == "DirectCounter.count")
         return IR::Type_Counter::get();
-    if (prim->name == "meter.execute_meter" || prim->name == "direct_meter.read" ||
-        prim->name == "meter.execute" || prim->name == "lpf.execute")
+    if (prim->name == "Meter.execute" || prim->name == "DirectMeter.execute" ||
+        prim->name == "lpf.execute" || prim->name == "wred.execute")
         return IR::Type_Meter::get();
     if (prim->name.startsWith("register_action.") || prim->name.startsWith("selector_action."))
         return IR::Type_Register::get();
@@ -427,10 +398,10 @@ const IR::Type *stateful_type_for_primitive(const IR::Primitive *prim) {
 }
 
 size_t index_operand(const IR::Primitive *prim) {
-    if (prim->name.startsWith("counter") || prim->name.startsWith("meter")
+    if (prim->name.startsWith("Counter") || prim->name.startsWith("Meter")
         || prim->name.startsWith("register_action"))
         return 1;
-    else if (prim->name.startsWith("lpf"))
+    else if (prim->name.startsWith("lpf") || prim->name.startsWith("wred"))
         return 2;
     return 1;
 }
@@ -570,6 +541,7 @@ const IR::MAU::Instruction *StatefulHashDistSetup::Update::preorder(IR::MAU::Ins
 }
 
 const IR::MAU::Instruction *ConvertCastToSlice::preorder(IR::MAU::Instruction *instr) {
+    LOG1(">>>>>" << instr);
     BUG_CHECK(findContext<IR::MAU::Instruction>() == nullptr, "nested instructions");
     contains_cast = false;
     return instr;

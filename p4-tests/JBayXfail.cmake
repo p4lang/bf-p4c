@@ -157,3 +157,10 @@ p4c_add_xfail_reason("jbay"
   #testdata/p4_14_samples/gateway3.p4
   #testdata/p4_14_samples/gateway4.p4
   )
+
+# missing support for meter in backend
+p4c_add_xfail_reason("jbay"
+  "the packing is too complicated due to either hash distribution or attached outputs combined with other action data"
+  testdata/p4_14_samples/meter1.p4
+  testdata/p4_14_samples/meter.p4
+)

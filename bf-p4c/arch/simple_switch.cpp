@@ -802,10 +802,20 @@ class ConstructSymbolTable : public Inspector {
         args->push_back(new IR::Cast(IR::Type::Bits::get(2), mce->arguments->at(3)));
         auto methodCall = new IR::MethodCallExpression(node->srcInfo, method, args);
 
-        auto stmt = new IR::MethodCallStatement(methodCall);
-        WARNING("execute_meter_with_color is translated without a return value");
-        // auto stmt = new IR::AssignmentStatement(mce->arguments->at(2), methodCall);
-        structure->executeMeterCalls.emplace(node, stmt);
+        auto meterColor = mce->arguments->at(2);
+        auto size = meterColor->type->width_bits();
+        IR::AssignmentStatement* assign = nullptr;
+        if (size > 8) {
+            assign = new IR::AssignmentStatement(
+                    meterColor, new IR::Cast(IR::Type::Bits::get(size), methodCall));
+        } else if (size < 8) {
+            assign = new IR::AssignmentStatement(meterColor,
+                                                 new IR::Slice(methodCall, size - 1, 0));
+        } else {
+            assign = new IR::AssignmentStatement(meterColor, methodCall);
+        }
+        LOG1("assign " << assign);
+        structure->executeMeterCalls.emplace(node, assign);
     }
 
     /// hash function is converted to an instance of hash extern in the enclosed control block
@@ -1094,7 +1104,7 @@ class ConstructSymbolTable : public Inspector {
             if (name == "direct_meter") {
                 structure->directMeterCalls.emplace(node, node);
             } else if (name == "meter") {
-                structure->meterCalls.emplace(mce, mce);
+                structure->meterCalls.emplace(node, node);
             } else {
                 WARNING("extern method " << name << " not converted");
             }
@@ -1508,6 +1518,7 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
         new AnalyzeV1modelProgram(structure),
         new ConstructSymbolTable(structure, refMap, typeMap),
         new GenerateTofinoProgram(structure),
+        new TranslationLast(),
         new CastFixup(structure),
         new AddIntrinsicMetadata,
         new P4::ClonePathExpressions,
@@ -1516,7 +1527,6 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
         new BFN::RemoveSetMetadata(refMap, typeMap),
         new BFN::TranslatePhase0(refMap, typeMap),
         new P4::ClonePathExpressions,
-        new TranslationLast(),
         new P4::ClearTypeMap(typeMap),
         new P4::TypeChecking(refMap, typeMap, true),
     });

@@ -20,6 +20,7 @@ using ExternMethodMap = ordered_map<const IR::MethodCallExpression*,
 using ExternFunctionMap = ordered_map<const IR::MethodCallStatement*,
                                       const IR::Statement*>;
 using ExternFunctionNameMap = ordered_map<const IR::MethodCallStatement*, cstring>;
+using ConversionMap = ordered_map<const IR::MethodCallStatement*, const IR::Node*>;
 
 using StatementMap = ordered_map<const IR::Statement*, const IR::Statement*>;
 using StatementNameMap = ordered_map<const IR::Statement*, cstring>;
@@ -84,7 +85,7 @@ class ProgramStructure {
     ExternInstanceMap                            direct_meters;
     ExternMethodMap                              counterCalls;
     ExternMethodMap                              directCounterCalls;
-    ExternMethodMap                              meterCalls;
+    ConversionMap                                meterCalls;
     ExternFunctionMap                            directMeterCalls;
     ExternFunctionMap                            hashCalls;
     ExternFunctionNameMap                        hashNames;
@@ -136,6 +137,7 @@ class ProgramStructure {
 
     /// all unique names in the program
     std::set<cstring>                            unique_names;
+    cstring makeUniqueName(cstring base);
 
     /// program control block names from P14
     const IR::ToplevelBlock*                     toplevel;

@@ -24,6 +24,7 @@
 #include "lib/safe_vector.h"
 
 namespace {
+
 class ActionArgSetup : public MauTransform {
     /* FIXME -- use ParameterSubstitution for this somehow? */
     std::map<cstring, const IR::Expression *>    args;
@@ -37,6 +38,16 @@ class ActionArgSetup : public MauTransform {
     void add_arg(cstring name, const IR::Expression *e) { args[name] = e; }
 };
 
+/// This pass assumes that if a method call expression is used in assignment
+/// statement, the assignement statement must be simple, i.e., it must be
+/// in the form of:
+///    var = method.execute();
+/// if the rhs of the assignment statement is complex, such as
+///    var = method.execute() + 1;
+/// the assignment must be transformed to two simpler assignment statements
+/// by an earlier pass.
+///    tmp = method.execute();
+///    var = tmp + 1;
 class ConvertMethodCall : public MauTransform {
     P4::ReferenceMap        *refMap;
     P4::TypeMap             *typeMap;
@@ -62,6 +73,11 @@ class ConvertMethodCall : public MauTransform {
         if (recv) prim->operands.push_back(recv);
         for (auto arg : *mc->arguments)
             prim->operands.push_back(arg);
+        // if method call returns a value
+        auto action = findContext<IR::MAU::Action>();
+        if (action) {
+            LOG1("in " << action);
+        }
         return prim;
     }
 
@@ -189,8 +205,6 @@ class ActionBodySetup : public Inspector {
     explicit ActionBodySetup(IR::MAU::Action *af) : af(af) {}
 };
 
-}  // anonymous namespace
-
 static const IR::MAU::Action *createActionFunction(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
     const IR::P4Action *ac, const IR::Vector<IR::Expression> *args) {
     auto rv = new IR::MAU::Action;
@@ -272,11 +286,12 @@ void setupParam(IR::MAU::Synth2Port* rv, const IR::Vector<IR::Expression>* args)
         rv->settype(args->at(0)->as<IR::Member>().member.name);
         rv->direct = true;
     } else if (args->size() == 2) {
-        rv->settype(args->at(0)->as<IR::Member>().member.name);
-        rv->size = args->at(1)->as<IR::Constant>().asInt();
+        rv->size = args->at(0)->as<IR::Constant>().asInt();
+        rv->settype(args->at(1)->as<IR::Member>().member.name);
     } else {
-        LOG2("Unexpected number of arguments " << args->size());
+        BUG("cannot have more than %d arguments", args->size());
     }
+    LOG1("type is " << rv->type);
 }
 
 const IR::Type* getBaseType(const IR::Type* type) {
@@ -360,19 +375,13 @@ static IR::MAU::BackendAttached *createAttached(IR::MAU::Table *tt, Util::Source
         ap->size = args->at(0)->as<IR::Constant>().asInt();
         (*shared_ap)[name] = ap;
         return ap;
-    } else if (tname == "counter" || tname == "direct_counter") {
+    } else if (tname == "Counter" || tname == "DirectCounter") {
         auto ctr = new IR::MAU::Counter(srcInfo, name, annot);
-        for (auto anno : annot->annotations) {
-            if (anno->name == "max_width")
-                ctr->max_width = anno->expr.at(0)->as<IR::Constant>().asInt();
-            else if (anno->name == "min_width")
-                ctr->min_width = anno->expr.at(0)->as<IR::Constant>().asInt();
-            else
-                WARNING("unknown annotation " << anno->name << " on " << tname); }
         setupParam(ctr, args);
         return ctr;
-    } else if (tname == "meter" || tname == "direct_meter") {
+    } else if (tname == "Meter") {
         auto mtr = new IR::MAU::Meter(srcInfo, name, annot);
+        setupParam(mtr, args);
         for (auto anno : annot->annotations) {
             if (anno->name == "result")
                 mtr->result = anno->expr.at(0);
@@ -382,6 +391,9 @@ static IR::MAU::BackendAttached *createAttached(IR::MAU::Table *tt, Util::Source
                 mtr->implementation = anno->expr.at(0)->as<IR::StringLiteral>();
             else
                 WARNING("unknown annotation " << anno->name << " on " << tname); }
+        return mtr;
+    } else if (tname == "DirectMeter") {
+        auto mtr = new IR::MAU::Meter(srcInfo, name, annot);
         setupParam(mtr, args);
         return mtr;
     } else if (tname == "lpf") {
@@ -452,8 +464,6 @@ static void updateAttachedSalu(const P4::ReferenceMap *refMap, IR::MAU::Stateful
     LOG3("Adding " << ext->name << " to StatefulAlu " << reg->name);
     ext->apply(CreateSaluInstruction(salu));
 }
-
-namespace {
 
 class FixP4Table : public Inspector {
     const P4::ReferenceMap *refMap;
@@ -654,20 +664,26 @@ class GetTofinoTables : public Inspector {
         }
     }
 
-    void setup_tt_actions(IR::MAU::Table *tt, const IR::P4Table *table) {
-        for (auto act : table->properties->getProperty("actions")->value
-                              ->to<IR::ActionList>()->actionList) {
-            if (auto action = refMap->getDeclaration(act->getPath())->to<IR::P4Action>()) {
-                auto mce = act->expression->to<IR::MethodCallExpression>();
-                auto newaction = createActionFunction(refMap, typeMap, action, mce->arguments);
-                DefaultActionInit dai(table, act, refMap);
-                auto newaction_defact = newaction->apply(dai)->to<IR::MAU::Action>();
-                if (!tt->actions.count(newaction_defact->name))
-                    tt->actions.addUnique(newaction_defact->name, newaction_defact);
-                else
-                    error("%s: action %s appears multiple times in table %s", action->name.srcInfo,
-                          action->name, tt->name); } }
-        // action_profile already pulled into TableContainer?
+    // Convert from IR::P4Action to IR::MAU::Action
+    void setup_actions(IR::MAU::Table *tt, const IR::P4Table *table) {
+        auto actionList = table->getActionList();
+        for (auto act : actionList->actionList) {
+            auto decl = refMap->getDeclaration(act->getPath())->to<IR::P4Action>();
+            BUG_CHECK(decl != nullptr,
+                      "Table %s actions property cannot contain non-action entry", table->name);
+            // act->expression can be either PathExpression or MethodCallExpression, but
+            // the createBuiltin pass in frontend has already converted IR::PathExpression
+            // to IR::MethodCallExpression.
+            auto mce = act->expression->to<IR::MethodCallExpression>();
+            auto newaction = createActionFunction(refMap, typeMap, decl, mce->arguments);
+            DefaultActionInit dai(table, act, refMap);
+            auto newaction_defact = newaction->apply(dai)->to<IR::MAU::Action>();
+            if (!tt->actions.count(newaction_defact->name))
+                tt->actions.addUnique(newaction_defact->name, newaction_defact);
+            else
+                error("%s: action %s appears multiple times in table %s", decl->name.srcInfo,
+                          decl->name, tt->name);
+        }
     }
 
     bool preorder(const IR::IndexedVector<IR::Declaration> *) override { return false; }
@@ -682,7 +698,6 @@ class GetTofinoTables : public Inspector {
             if (tables.count(el))
                 seqs.at(b)->tables.push_back(tables.at(el)); }
     bool preorder(const IR::MethodCallExpression *m) override {
-        LOG1("Method call expression " << m);
         auto mi = P4::MethodInstance::resolve(m, refMap, typeMap, true);
         if (!mi || !mi->isApply())
             BUG("Method Call %1% not apply", m);
@@ -696,7 +711,7 @@ class GetTofinoTables : public Inspector {
                 table->apply(FixP4Table(refMap, tt, unique_names,
                                         &shared_ap, shared_as))->to<IR::P4Table>();
             setup_tt_match(tt, table);
-            setup_tt_actions(tt, table);
+            setup_actions(tt, table);
         } else {
             error("%s: Multiple applies of table %s not supported", m->srcInfo, table->name); }
         return true; }
@@ -754,7 +769,6 @@ class GetTofinoTables : public Inspector {
     void postorder(const IR::Statement *st) override {
         BUG("Unhandled statement %1%", st); }
 };
-}  // anonymous namespace
 
 // model tofino native pipeline using frontend IR
 class TnaPipe {
@@ -901,7 +915,7 @@ class TnaPipe {
     }
 };
 
-const IR::BFN::Pipe* extract_native_arch(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
+const IR::BFN::Pipe* extract_tna_arch(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
                                             const IR::PackageBlock* main, bool useTna) {
     TnaPipe* pipes[2];
     pipes[INGRESS] = new TnaPipe(main, INGRESS, refMap, typeMap);
@@ -948,6 +962,8 @@ const IR::BFN::Pipe* extract_native_arch(P4::ReferenceMap* refMap, P4::TypeMap* 
     return rv->apply(finalSimplifications);
 }
 
+}  // anonymous namespace
+
 const IR::BFN::Pipe *extract_maupipe(const IR::P4Program *program, bool useTna) {
     P4::ReferenceMap  refMap;
     P4::TypeMap       typeMap;
@@ -960,5 +976,5 @@ const IR::BFN::Pipe *extract_maupipe(const IR::P4Program *program, bool useTna) 
         error("No main switch");
         return nullptr; }
 
-    return extract_native_arch(&refMap, &typeMap, top, useTna);
+    return extract_tna_arch(&refMap, &typeMap, top, useTna);
 }

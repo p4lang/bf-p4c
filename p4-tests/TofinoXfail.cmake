@@ -890,7 +890,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "does not have a PHV allocation though it is used in an action"
+  "Unknown meter type wred"
   extensions/p4_tests/p4_14/test_config_132_meter_pre_color_4.p4
   )
 
@@ -1010,3 +1010,17 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/cast_narrowing_set.p4
   )
 
+# missing support for meter in backend
+p4c_add_xfail_reason("tofino"
+  "the packing is too complicated due to either hash distribution or attached outputs combined with other action data"
+  testdata/p4_14_samples/meter1.p4
+  testdata/p4_14_samples/meter.p4
+  testdata/p4_16_samples/named_meter_bmv2.p4
+  )
+
+# missing support for random in extract_maupipe
+p4c_add_xfail_reason("tofino"
+  "source of modify_field invalid"
+  extensions/p4_tests/p4_14/test_config_157_random_number_generator.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
+  )

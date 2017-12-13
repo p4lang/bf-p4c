@@ -30,14 +30,9 @@ const IR::Node* ControlConverter::postorder(IR::Declaration_Instance* node) {
     return node;
 }
 
-const IR::Node* ControlConverter::postorder(IR::MethodCallExpression* node) {
-    auto* orig = getOriginal<IR::MethodCallExpression>();
-    RETURN_TRANSLATED_NODE_IF_FOUND(meterCalls);
-    return node;
-}
-
 const IR::Node* ControlConverter::postorder(IR::MethodCallStatement* node) {
     auto* orig = getOriginal<IR::MethodCallStatement>();
+    RETURN_TRANSLATED_NODE_IF_FOUND(meterCalls);
     RETURN_TRANSLATED_NODE_IF_FOUND(directMeterCalls);
     RETURN_TRANSLATED_NODE_IF_FOUND(hashCalls);
     RETURN_TRANSLATED_NODE_IF_FOUND(randomCalls);
@@ -666,18 +661,24 @@ const IR::Node* CounterConverter::postorder(IR::Declaration_Instance *node) {
         BUG_CHECK(type->path->name == "counter",
                   "counter converter cannot be applied to %1%", type->path->name);
 
-        auto typeArgs = node->arguments->at(0);
-        BUG_CHECK(typeArgs->is<IR::Constant>(),
-                  "Expected constant argument in %1%", type->path->name);
+        auto typeArgs = new IR::Vector<IR::Type>();
+        // type<W>
+        if (auto anno = node->annotations->getSingle("min_width")) {
+            auto min_width = anno->expr.at(0)->as<IR::Constant>().asInt();
+            typeArgs->push_back(IR::Type::Bits::get(min_width));
+        } else {
+            auto min_width = IR::Type::Bits::get(32);
+            typeArgs->push_back(min_width);
+            WARNING("Could not infer min_width for counter %s, using bit<32>" << node);
+        }
+        // type<S>
+        if (auto s = node->arguments->at(0)->to<IR::Constant>()) {
+            typeArgs->push_back(s->type->to<IR::Type_Bits>());
+        }
 
-        auto constant = typeArgs->to<IR::Constant>();
-        auto typeBits = constant->type->to<IR::Type_Bits>();
-        auto args = new IR::Vector<IR::Type>({ typeBits });
-        auto specializedType = new IR::Type_Specialized(new IR::Type_Name("counter"), args);
-        auto instanceArgs = new IR::Vector<IR::Expression>({node->arguments->at(1),
-                                                            node->arguments->at(0)});
+        auto specializedType = new IR::Type_Specialized(new IR::Type_Name("Counter"), typeArgs);
         return new IR::Declaration_Instance(node->srcInfo, node->name, node->annotations,
-                                            specializedType, instanceArgs);
+                                            specializedType, node->arguments);
     } else {
         BUG("unexpected type in counter declaration ", node);
     }
@@ -689,12 +690,19 @@ const IR::Node* CounterConverter::postorder(IR::ConstructorCallExpression *node)
     return node;
 }
 
-/*
- * counter<_>(counter_type_t.PACKETS) counter_name;
- */
 const IR::Node* DirectCounterConverter::postorder(IR::Declaration_Instance* node) {
+    auto typeArgs = new IR::Vector<IR::Type>();
+    if (auto anno = node->annotations->getSingle("min_width")) {
+        auto min_width = anno->expr.at(0)->as<IR::Constant>().asInt();
+        typeArgs->push_back(IR::Type::Bits::get(min_width));
+    } else {
+        auto min_width = IR::Type::Bits::get(32);
+        typeArgs->push_back(min_width);
+        WARNING("Could not infer min_width for counter %s, using bit<32>" << node);
+    }
+    auto specializedType = new IR::Type_Specialized(new IR::Type_Name("DirectCounter"), typeArgs);
     return new IR::Declaration_Instance(node->srcInfo, node->name, node->annotations,
-                                        new IR::Type_Name("direct_counter"), node->arguments);
+                                        specializedType, node->arguments);
 }
 
 const IR::Node* MeterConverter::postorder(IR::Declaration_Instance* node) {
@@ -702,18 +710,13 @@ const IR::Node* MeterConverter::postorder(IR::Declaration_Instance* node) {
         BUG_CHECK(type->path->name == "meter",
                   "meter converter cannot be applied to %1%", type->path->name);
 
-        auto typeArgs = node->arguments->at(0);
-        BUG_CHECK(typeArgs->is<IR::Constant>(),
-                  "Expected constant argument in %1%", type->path->name);
-
-        auto constant = typeArgs->to<IR::Constant>();
-        auto typeBits = constant->type->to<IR::Type_Bits>();
-        auto args = new IR::Vector<IR::Type>({ typeBits });
-        auto specializedType = new IR::Type_Specialized(new IR::Type_Name("meter"), args);
-        auto instanceArgs = new IR::Vector<IR::Expression>({node->arguments->at(1),
-                                                            node->arguments->at(0)});
+        auto typeArgs = new IR::Vector<IR::Type>();
+        if (auto s = node->arguments->at(0)->to<IR::Constant>()) {
+            typeArgs->push_back(s->type->to<IR::Type_Bits>());
+        }
+        auto specializedType = new IR::Type_Specialized(new IR::Type_Name("Meter"), typeArgs);
         return new IR::Declaration_Instance(node->srcInfo, node->name, node->annotations,
-                                            specializedType, instanceArgs);
+                                            specializedType, node->arguments);
     } else {
         BUG("unexpected type in meter declaration ", node);
     }
@@ -725,61 +728,66 @@ const IR::Node* MeterConverter::postorder(IR::ConstructorCallExpression *node) {
     return node;
 }
 
-const IR::Node* MeterConverter::postorder(IR::MethodCallExpression* node) {
-    auto member = node->method->to<IR::Member>();
+/// The meter
+const IR::Node* MeterConverter::postorder(IR::MethodCallStatement* node) {
+    auto orig = getOriginal<IR::MethodCallStatement>();
+    auto mce = orig->methodCall->to<IR::MethodCallExpression>();
+
+    auto member = mce->method->to<IR::Member>();
     BUG_CHECK(member->member == "execute_meter",
               "unexpected meter method %1%", member->member);
     auto method = new IR::Member(node->srcInfo, member->expr, "execute");
 
-    auto meterColor = node->arguments->at(1);
+    auto meterColor = mce->arguments->at(1);
     auto size = meterColor->type->width_bits();
     BUG_CHECK(size != 0, "meter color cannot be bit<0>");
+    auto statements = new IR::IndexedVector<IR::StatOrDecl>();
     auto args = new IR::Vector<IR::Expression>();
-    args->push_back(node->arguments->at(0));
-    if (size != 2) {
-        WARNING("casting argument " <<  node->arguments->at(1) << " to bit<2>");
-        args->push_back(new IR::Cast(IR::Type::Bits::get(2), node->arguments->at(1)));
+    args->push_back(mce->arguments->at(0));
+    auto methodcall = new IR::MethodCallExpression(node->srcInfo, method, args);
+    IR::AssignmentStatement* assign = nullptr;
+    if (size > 8) {
+        assign = new IR::AssignmentStatement(
+                meterColor, new IR::Cast(IR::Type::Bits::get(size), methodcall));
+    } else if (size < 8) {
+        assign = new IR::AssignmentStatement(meterColor, new IR::Slice(methodcall, size - 1, 0));
+    } else {
+        assign = new IR::AssignmentStatement(meterColor, methodcall);
     }
-    return new IR::MethodCallExpression(node->srcInfo, method, args);
+    statements->push_back(assign);
+    return statements;
 }
 /**
  * direct_meter(meter_type_t.PACKETS) meter_name;
  * More fixes are need to handle direct meter properly in backend, leave it to a separate PR.
  */
 const IR::Node* DirectMeterConverter::postorder(IR::Declaration_Instance* node) {
-#if 0
     return new IR::Declaration_Instance(node->srcInfo, node->name, node->annotations,
-                                        new IR::Type_Name("direct_meter"), node->arguments);
-#endif
-    return new IR::Declaration_Instance(node->srcInfo, node->name, node->annotations,
-                                        node->type, node->arguments);
+                                        new IR::Type_Name("DirectMeter"), node->arguments);
 }
 
 const IR::Node* DirectMeterConverter::postorder(IR::MethodCallStatement* node) {
-#if 0
     auto orig = getOriginal<IR::MethodCallStatement>();
     auto mce = orig->methodCall->to<IR::MethodCallExpression>();
 
     auto member = mce->method->to<IR::Member>();
-    if (member->member == "read") {
-        auto method = new IR::Member(node->srcInfo, member->expr, "execute");
+    auto method = new IR::Member(node->srcInfo, member->expr, "execute");
 
-        auto meterColor = mce->arguments->at(0);
-        auto size = meterColor->type->width_bits();
-        BUG_CHECK(size != 0, "meter color width cannot be bit<0>");
-        auto expr = new IR::MethodCallExpression(node->srcInfo, method, mce->typeArguments);
-        if (size != 8) {
-            WARNING("casting direct meter return value to bit<" << size << ">");
-            auto cast = new IR::Cast(IR::Type_Bits::get(size), expr);
-            return new IR::AssignmentStatement(node->srcInfo, mce->arguments->at(0), cast);
-        }
-        return new IR::AssignmentStatement(node->srcInfo, mce->arguments->at(0), expr);
+    auto meterColor = mce->arguments->at(0);
+    auto size = meterColor->type->width_bits();
+    BUG_CHECK(size != 0, "meter color width cannot be bit<0>");
+    auto methodcall = new IR::MethodCallExpression(node->srcInfo, method,
+                                                   new IR::Vector<IR::Expression>());
+    IR::AssignmentStatement* assign = nullptr;
+    if (size > 8) {
+        assign = new IR::AssignmentStatement(
+                meterColor, new IR::Cast(IR::Type::Bits::get(size), methodcall));
+    } else if (size < 8) {
+        assign = new IR::AssignmentStatement(meterColor, new IR::Slice(methodcall, size - 1, 0));
     } else {
-        BUG("Unexpected direct_meter method %s", member->member);
-        return node;
+        assign = new IR::AssignmentStatement(meterColor, methodcall);
     }
-#endif
-    return node;
+    return assign;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////

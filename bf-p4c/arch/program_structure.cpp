@@ -49,9 +49,14 @@ void ProgramStructure::include(cstring filename, IR::IndexedVector<IR::Node>* ve
     }
 }
 
+cstring ProgramStructure::makeUniqueName(cstring base) {
+    cstring name = cstring::make_unique(unique_names, base, '_');
+    unique_names.emplace(name);
+    return name;
+}
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
-#define TRANSLATE_NODE(NODE, TYPE, CONVERTER, METHOD) do { \
+#define TRANSLATE_NODE(NODE, CONVERTER, METHOD) do { \
     for (auto &v : NODE) {                                 \
         CONVERTER cvt(this);                               \
         v.second = cvt.METHOD(v.first);                    \
@@ -59,16 +64,16 @@ void ProgramStructure::include(cstring filename, IR::IndexedVector<IR::Node>* ve
     } while (false)
 
 #define TRANSLATE_EXTERN_INSTANCE(NODE, CONVERTER)      \
-    TRANSLATE_NODE(NODE, IR::Declaration_Instance, CONVERTER, convertExternInstance)
+    TRANSLATE_NODE(NODE, CONVERTER, convertExternInstance)
 
 #define TRANSLATE_EXTERN_CALL(NODE, CONVERTER)          \
-    TRANSLATE_NODE(NODE, IR::MethodCallExpression, CONVERTER, convertExternCall)
+    TRANSLATE_NODE(NODE, CONVERTER, convertExternCall)
 
 #define TRANSLATE_EXTERN_FUNCTION(NODE, CONVERTER)      \
-    TRANSLATE_NODE(NODE, IR::Statement, CONVERTER, convertExternFunction)
+    TRANSLATE_NODE(NODE, CONVERTER, convertExternFunction)
 
 #define TRANSLATE_STATEMENT(NODE, CONVERTER)            \
-    TRANSLATE_NODE(NODE, IR::Statement, CONVERTER, convert)
+    TRANSLATE_NODE(NODE, CONVERTER, convert)
 
 cstring ProgramStructure::getBlockName(cstring name) {
     BUG_CHECK(blockNames.find(name) != blockNames.end(),
@@ -136,10 +141,8 @@ void ProgramStructure::createControls() {
     TRANSLATE_EXTERN_INSTANCE(direct_counters, DirectCounterConverter);
     TRANSLATE_EXTERN_INSTANCE(direct_meters, DirectMeterConverter);
 
-    TRANSLATE_EXTERN_CALL(meterCalls, MeterConverter);
-    // XXX(hanw) more fixes are required to handle direct meter properly in backend
-    // leave it as a separate PR.
-    // TRANSLATE_EXTERN_FUNCTION(directMeterCalls, DirectMeterConverter);
+    TRANSLATE_STATEMENT(meterCalls, MeterConverter);
+    TRANSLATE_EXTERN_FUNCTION(directMeterCalls, DirectMeterConverter);
 
     TRANSLATE_EXTERN_FUNCTION(hashCalls, HashConverter);
     TRANSLATE_EXTERN_FUNCTION(randomCalls, RandomConverter);

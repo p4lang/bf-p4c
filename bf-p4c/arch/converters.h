@@ -22,7 +22,6 @@ class ControlConverter : public Transform {
     : structure(structure) { CHECK_NULL(structure); }
     const IR::Node* postorder(IR::Member* node) override;
     const IR::Node* postorder(IR::Declaration_Instance* node) override;
-    const IR::Node* postorder(IR::MethodCallExpression* node) override;
     const IR::Node* postorder(IR::MethodCallStatement* node) override;
 
     const IR::P4Control* convert(const IR::Node* node) {
@@ -128,6 +127,11 @@ class ExternConverter : public Transform {
                   "Conversion of %1% did not produce an extern method call", node);
         return result;
     }
+
+    const IR::Node* convert(const IR::Node* node) {
+        auto conv = node->apply(*this);
+        return conv;
+    }
 };
 
 class HashConverter : public ExternConverter {
@@ -165,7 +169,7 @@ class MeterConverter : public ExternConverter {
     : ExternConverter(structure) { CHECK_NULL(structure); }
     const IR::Node* postorder(IR::Declaration_Instance* node) override;
     const IR::Node* postorder(IR::ConstructorCallExpression* node) override;
-    const IR::Node* postorder(IR::MethodCallExpression* node) override;
+    const IR::Node* postorder(IR::MethodCallStatement* node) override;
 };
 
 class DirectMeterConverter : public ExternConverter {
