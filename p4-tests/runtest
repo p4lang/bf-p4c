@@ -345,7 +345,8 @@ if $run_ptf ; then
     PTF_RUNNER=$(findbin HARLYN_PTF_DRIVER_WRAPPER)
     if [ -d ${ptftestdir} ]; then
         PTF_CMD="$PTF_RUNNER --testdir $testdir/$name${out_ext}.out --name $name \
-                --ptfdir ${ptftestdir} --top-builddir $(findcmakecache)"
+                --ptfdir ${ptftestdir} --top-builddir $(findcmakecache) \
+                --device ${device}"
     elif $run_stf2ptf && [ -r ${file%.p4}.stf ]; then
         mydir=$(dirname $0)
         export PYTHONPATH=${PYTHONPATH}:${mydir}/tools/stf
@@ -356,7 +357,8 @@ if $run_ptf ; then
         fi
         PTF_CMD="$PTF_RUNNER --testdir $testdir/$name${out_ext}.out --name $name \
                 --stftest ${stftest} \
-                --ptfdir ${mydir}/tools/stf --top-builddir $(findcmakecache)"
+                --ptfdir ${mydir}/tools/stf --top-builddir $(findcmakecache) \
+                --device ${device}"
     fi
     if [ -n "$PTF_CMD" ]; then
         run $PTF_CMD || die

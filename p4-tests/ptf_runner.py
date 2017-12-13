@@ -68,6 +68,9 @@ def get_parser():
                         help='String identifying the target platform on which '
                         'tests are run',
                         type=str, action='store', required=False)
+    parser.add_argument('--device', help='Target device',
+                         choices=['tofino', 'jbay'], default='tofino',
+                         type=str, action='store', required=False)
     return parser
 
 NUM_IFACES = 8
@@ -115,7 +118,7 @@ def findbin(cmake_dir, varname):
         sys.exit(1)
     return m.group(1)
 
-def update_config(name, grpc_addr, p4info_path, tofino_bin_path, cxt_json_path):
+def update_config(name, grpc_addr, p4info_path, bin_path, cxt_json_path):
     channel = grpc.insecure_channel(grpc_addr)
     stub = p4runtime_pb2.P4RuntimeStub(channel)
 
@@ -126,15 +129,15 @@ def update_config(name, grpc_addr, p4info_path, tofino_bin_path, cxt_json_path):
     with open(p4info_path, 'r') as p4info_f:
         google.protobuf.text_format.Merge(p4info_f.read(), config.p4info)
     device_config = p4config_pb2.P4DeviceConfig()
-    with open(tofino_bin_path, 'rb') as tofino_bin_f:
+    with open(bin_path, 'rb') as bin_f:
         with open(cxt_json_path, 'r') as cxt_json_f:
             device_config.device_data = ""
             prog_name = name
             device_config.device_data += struct.pack("<i", len(prog_name))
             device_config.device_data += prog_name
-            tofino_bin = tofino_bin_f.read()
-            device_config.device_data += struct.pack("<i", len(tofino_bin))
-            device_config.device_data += tofino_bin
+            bin = bin_f.read()
+            device_config.device_data += struct.pack("<i", len(bin))
+            device_config.device_data += bin
             cxt_json = cxt_json_f.read()
             device_config.device_data += struct.pack("<i", len(cxt_json))
             device_config.device_data += cxt_json
@@ -287,9 +290,10 @@ def main():
         error("P4Info file {} not found".format(p4info_path))
         sys.exit(1)
 
-    tofino_bin_path = os.path.join(compiler_out_dir, 'tofino.bin')
-    if not os.path.exists(tofino_bin_path):
-        error("Binary config file {} not found".format(tofino_bin_path))
+    device = args.device
+    bin_path = os.path.join(compiler_out_dir, device + '.bin')
+    if not os.path.exists(bin_path):
+        error("Binary config file {} not found".format(bin_path))
         sys.exit(1)
 
     cxt_json_path = os.path.join(compiler_out_dir, 'context.json')
@@ -313,7 +317,7 @@ def main():
 
     if args.update_config_only:
         success = update_config(args.name, args.grpc_addr,
-                                p4info_path, tofino_bin_path, cxt_json_path)
+                                p4info_path, bin_path, cxt_json_path)
         if not success:
             error("Error when pushing P4 config to switchd")
             sys.exit(1)
@@ -397,7 +401,7 @@ def main():
                 return False
 
             success = update_config(args.name, args.grpc_addr,
-                                    p4info_path, tofino_bin_path, cxt_json_path)
+                                    p4info_path, bin_path, cxt_json_path)
             if not success:
                 error("Error when pushing P4 config to switchd")
                 return False
