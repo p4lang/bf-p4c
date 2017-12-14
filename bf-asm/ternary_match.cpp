@@ -12,8 +12,8 @@ DEFINE_TABLE_TYPE(TernaryIndirectTable)
 
 void TernaryMatchTable::vpn_params(int &width, int &depth, int &period, const char *&period_name) {
     if ((width = match.size()) == 0)
-        width = input_xbar ? input_xbar->tcam_width() : 1;
-    depth = layout_size() / width;
+        width = input_xbar->tcam_width();
+    depth = width ? layout_size() / width : 0;
     period = 1;
     period_name = 0;
 }
@@ -23,6 +23,7 @@ void TernaryMatchTable::alloc_vpns() {
     int period, width, depth;
     const char *period_name;
     vpn_params(width, depth, period, period_name);
+    if (width == 0) return;
     std::vector<Layout *> rows;
     for (auto &r : layout) {
         rows.push_back(&r);
@@ -92,7 +93,7 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
     indirect_bus = -1;
     common_init_setup(data, true, P4Table::MatchEntry);
     if (!input_xbar)
-        warning(lineno, "No input xbar specified in table %s", name());
+        input_xbar = new InputXbar(this);
     if (auto *m = get(data, "match"))
         if (CHECKTYPE2(*m, tVEC, tMAP)) {
             if (m->type == tVEC)
@@ -164,15 +165,23 @@ void TernaryMatchTable::pass1() {
     alloc_id("tcam", tcam_id, stage->pass1_tcam_id,
              TCAM_TABLES_PER_STAGE, false, stage->tcam_id_use);
     // alloc_busses(stage->tcam_match_bus_use); -- now hardwired
-    if (input_xbar) {
-        input_xbar->pass1();
-        if (match.empty()) {
-            match.resize(input_xbar->tcam_width());
-            for (unsigned i = 0; i < match.size(); i++) {
-                match[i].word_group = input_xbar->tcam_word_group(i);
-                match[i].byte_group = input_xbar->tcam_byte_group(i/2);
-                match[i].byte_config = i&1; }
-            match.back().byte_config = 3; } }
+    input_xbar->pass1();
+    if (match.empty() && input_xbar->tcam_width()) {
+        match.resize(input_xbar->tcam_width());
+        for (unsigned i = 0; i < match.size(); i++) {
+            match[i].word_group = input_xbar->tcam_word_group(i);
+            match[i].byte_group = input_xbar->tcam_byte_group(i/2);
+            match[i].byte_config = i&1; }
+        match.back().byte_config = 3; }
+    if (layout_size() == 0) layout.clear();
+    if (match.size() == 0) {
+        if (layout.size() != 0)
+            error(layout[0].lineno, "No match or input_xbar in non-empty ternary table %s", name());
+    } else if (layout.size() % match.size() != 0) {
+        error(layout[0].lineno, "Rows not a multiple of the match width in tables %s", name());
+    } else if (layout.size() == 0)
+        error(lineno, "Empty ternary table with non-empty match");
+    if (error_count > 0) return;
     alloc_vpns();
     check_next();
     indirect.check();
@@ -181,11 +190,12 @@ void TernaryMatchTable::pass1() {
     chain_rows = 0;
     unsigned row_use = 0;
     for (auto &row : layout) row_use |= 1U << row.row;
-    if (layout.size() % match.size() != 0)
-        error(layout[0].lineno, "Rows not a multiple of the match width in tables %s", name());
     unsigned word = 0;
     int prev_row = -1;
     for (auto &row : layout) {
+        if (row.cols.empty()) {
+            error(row.lineno, "Empty row in ternary table %s", name());
+            continue; }
         if (word && prev_row+1 != row.row)
             error(row.lineno, "Ternary match rows must be contiguous in ascending order"
                   "within each group of rows in a wide match");
@@ -396,7 +406,7 @@ void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
 }
 
 void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
-    unsigned number_entries = layout_size()/match.size() * 512;
+    unsigned number_entries = match.size() ? layout_size()/match.size() * 512 : 0;
     json::map &tbl = *base_tbl_cfg(out, "match_entry", number_entries);
     bool uses_versioning = false;
     unsigned version_word_group = -1;

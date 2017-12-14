@@ -138,7 +138,8 @@ void Table::setup_layout(std::vector<Layout> &layout, const value_t *row,
                          const value_t *col,
                          const value_t *bus, const char *subname) {
     if (!row) {
-        error(lineno, "No 'row' attribute in table %s%s", name(), subname);
+        if (table_type() != TERNARY)
+            error(lineno, "No 'row' attribute in table %s%s", name(), subname);
         return; }
     int err = 0;
     if (row->type == tVEC)
