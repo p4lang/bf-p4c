@@ -155,7 +155,6 @@ FieldPacking* packMirroredFieldList(const MirroredFieldList* fieldList) {
         if (source->member == "mirror_id" &&
               (type->name == "ingress_intrinsic_metadata_for_mirror_buffer_t" ||
                type->name == "egress_intrinsic_metadata_for_mirror_buffer_t")) {
-            packing->appendPadding(8);
             packing->padToAlignment(8);
             continue;
         }
