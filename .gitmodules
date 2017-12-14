@@ -14,3 +14,6 @@
 [submodule "p4-tests/p4_16/bf-onos"]
 	path = p4-tests/p4_16/bf-onos
 	url = git@github.com:barefootnetworks/bf-onos.git
+[submodule "p4-tests/p4_14/p4-tests"]
+	path = p4-tests/p4_14/p4-tests
+	url = git@github.com:barefootnetworks/p4-tests.git

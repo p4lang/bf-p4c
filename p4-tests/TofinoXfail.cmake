@@ -158,7 +158,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
 "No field named parser_counter in"
   extensions/p4_tests/p4_14/c1/COMPILER-384/case2240.p4
-  extensions/p4_tests/p4_14/jenkins/pctr/pctr.p4
+  extensions/p4_tests/p4_14/p4-tests/programs/pctr/pctr.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -194,10 +194,9 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "error: tofino supports up to 12 stages"
-  extensions/p4_tests/p4_14/jenkins/alpm_test/alpm_test.p4
-  extensions/p4_tests/p4_14/jenkins/perf_test_alpm/perf_test_alpm_one.p4
-  extensions/p4_tests/p4_14/jenkins/clpm/clpm.p4
-  extensions/p4_tests/p4_14/jenkins/multi_device/multi_device.p4
+  extensions/p4_tests/p4_14/p4-tests/programs/alpm_test/alpm_test.p4
+  extensions/p4_tests/p4_14/p4-tests/programs/perf_test_alpm/perf_test_alpm.p4
+  extensions/p4_tests/p4_14/p4-tests/programs/clpm/clpm.p4
   )
 
 # BRIG-113
@@ -244,7 +243,7 @@ p4c_add_xfail_reason("tofino"
   "Can't fit table .* in .* by itself"
   extensions/p4_tests/p4_14/test_config_13_first_selection.p4
   extensions/p4_tests/p4_14/test_config_297_big_metadata.p4
-  extensions/p4_tests/p4_14/jenkins/smoke_large_tbls/smoke_large_tbls.p4
+  extensions/p4_tests/p4_14/p4-tests/programs/smoke_large_tbls/smoke_large_tbls.p4
   extensions/p4_tests/p4_14/adb_shared3.p4
   extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
   )
@@ -322,8 +321,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case1.p4
   extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case2.p4
   extensions/p4_tests/p4_14/c5/COMPILER-594/comp594.p4
-  extensions/p4_tests/p4_14/jenkins/drivers_test/drivers_test_one.p4
-  extensions/p4_tests/p4_14/jenkins/meters/meters_one.p4
   )
 
 # COMPILER-540
@@ -408,15 +405,15 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-608/case3263.p4
   extensions/p4_tests/p4_14/c1/COMPILER-632/case3459.p4
   extensions/p4_tests/p4_14/c1/DRV-543/case2499.p4
-  extensions/p4_tests/p4_14/jenkins/iterator/iterator.p4
+  extensions/p4_tests/p4_14/p4-tests/programs/iterator/iterator.p4
   )
 
 # BRIG-186: per_flow_enable
 p4c_add_xfail_reason("tofino"
   "Field .* overlaps with .*"
   extensions/p4_tests/p4_14/c8/COMPILER-616/case3331.p4
-  extensions/p4_tests/p4_14/jenkins/action_spec_format/action_spec_format.p4
-  extensions/p4_tests/p4_14/jenkins/stats_pi/stats_pi.p4
+  extensions/p4_tests/p4_14/p4-tests/programs/action_spec_format/action_spec_format.p4
+  extensions/p4_tests/p4_14/p4-tests/programs/stats_pi/stats_pi.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -428,7 +425,7 @@ p4c_add_xfail_reason("tofino"
 # BRIG-243
 p4c_add_xfail_reason("tofino"
   "conflicting memory use between .* and .*"
-  extensions/p4_tests/p4_14/jenkins/fr_test/fr_test.p4
+  extensions/p4_tests/p4_14/p4-tests/programs/fr_test/fr_test.p4
   extensions/p4_tests/p4_14/c1/COMPILER-494/case2560_min.p4
   # This is an ATCAM failure due to a stage split being in the same stage.  Much more subtle
   # now fails in PHV allocation
@@ -551,7 +548,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/01-BigMatch.p4
   extensions/p4_tests/p4_14/04-FullPHV3.p4
   extensions/p4_tests/p4_14/c1/COMPILER-133/full_tphv.p4
-  extensions/p4_tests/p4_14/jenkins/power/power.p4
+  extensions/p4_tests/p4_14/p4-tests/programs/power/power.p4
   extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4
   testdata/p4_14_samples/parser_dc_full.p4
   switch_dc_basic
@@ -776,7 +773,7 @@ p4c_add_xfail_reason("tofino"
   )
 p4c_add_xfail_reason("tofino"
   "expression too complex for stateful alu"
-  extensions/p4_tests/p4_14/jenkins/mau_test/mau_test.p4
+  extensions/p4_tests/p4_14/p4-tests/programs/mau_test/mau_test.p4
   )
 # missing support for stateful logging
 p4c_add_xfail_reason("tofino"
@@ -965,7 +962,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Inferred incompatible alignments for field"
   extensions/p4_tests/p4_14/c1/COMPILER-217/port_parser.p4
-  extensions/p4_tests/p4_14/jenkins/parser_intr_md/parser_intr_md.p4
+  extensions/p4_tests/p4_14/p4-tests/programs/parser_intr_md/parser_intr_md.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -1006,7 +1003,7 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "error: hash expression width mismatch"
-  extensions/p4_tests/p4_14/jenkins/stful/stful.p4
+  extensions/p4_tests/p4_14/p4-tests/programs/stful/stful.p4
   switch_l2
   )
 
@@ -1029,4 +1026,43 @@ p4c_add_xfail_reason("tofino"
   "source of modify_field invalid"
   extensions/p4_tests/p4_14/test_config_157_random_number_generator.p4
   extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
+  )
+
+#-------- New tests, new failures
+p4c_add_xfail_reason("tofino"
+  "error: tcam match field.* not a multiple of .* bits"
+  extensions/p4_tests/p4_14/p4-tests/programs/entry_read_from_hw/entry_read_from_hw.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "error: Match overhead field .* not in bottom .* bits"
+  extensions/p4_tests/p4_14/p4-tests/programs/ha/ha.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "error: add_cpu_header: parameter reason_code must be bound"
+  extensions/p4_tests/p4_14/p4-tests/programs/knet_mgr_test/knet_mgr_test.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "error: hash_dist 0 not defined in table"
+  extensions/p4_tests/p4_14/p4-tests/programs/pgrs/pgrs.p4
+  )
+
+# Unsupported features
+# custom hash algorithms
+p4c_add_xfail_reason("tofino"
+  "warning: poly_0x11021_not_rev: unexpected algorithm"
+  extensions/p4_tests/p4_14/p4-tests/programs/hash_test/hash_test.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "error: Unsupported primitive count_from_hash"
+  extensions/p4_tests/p4_14/p4-tests/programs/hash_driven/hash_driven.p4
+  )
+
+# dynamic hash
+p4c_add_xfail_reason("tofino"
+  "syntax error, unexpected {,"
+  extensions/p4_tests/p4_14/p4-tests/programs/dyn_hash/dyn_hash.p4
   )

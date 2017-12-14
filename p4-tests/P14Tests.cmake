@@ -14,10 +14,10 @@ set (P14_XFAIL_TESTS
   extensions/p4_tests/p4_14/c2/COMPILER-537/case2834.p4
   extensions/p4_tests/p4_14/c2/COMPILER-533/case2736.p4
   extensions/p4_tests/p4_14/c3/COMPILER-393/case2277.p4
-  extensions/p4_tests/p4_14/jenkins/multi_device/multi_device.p4.p4
-  extensions/p4_tests/p4_14/jenkins/meters/meters_one.p4
-  extensions/p4_tests/p4_14/jenkins/drivers_test/drivers_test_one.p4
-  extensions/p4_tests/p4_14/jenkins/pctr/pctr.p4
+  extensions/p4_tests/p4_14/p4-tests/programs/multi_device/multi_device.p4
+  extensions/p4_tests/p4_14/p4-tests/programs/meters/meters.p4
+  extensions/p4_tests/p4_14/p4-tests/programs/drivers_test/drivers_test.p4
+  extensions/p4_tests/p4_14/p4-tests/programs/pctr/pctr.p4
   extensions/p4_tests/p4_14/c1/COMPILER-263/case1795.p4
   extensions/p4_tests/p4_14/c1/COMPILER-264/case1822.p4
   extensions/p4_tests/p4_14/c1/COMPILER-271/case1834.p4
@@ -64,6 +64,11 @@ set (P14_XFAIL_TESTS
   extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
   )
 
+# p4-tests has all the includes at the same level with the programs.
+set (BFN_EXCLUDE_PATTERNS "tofino.p4")
+set (BFN_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/*/*.p4")
+bfn_find_tests ("${BFN_TESTS}" BFN_TESTS_LIST EXCLUDE "${BFN_EXCLUDE_PATTERNS}")
+
 set (P14_TEST_SUITES
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/*.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c1/*/*.p4
@@ -75,7 +80,7 @@ set (P14_TEST_SUITES
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c7/*/*.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c8/*/*.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch/p4src/switch.p4
-  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/jenkins/*/*.p4
+  ${BFN_TESTS}
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch_*/switch.p4
   )
 

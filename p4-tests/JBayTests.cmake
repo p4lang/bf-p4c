@@ -5,6 +5,11 @@ set (P4TESTDATA ${P4C_SOURCE_DIR}/testdata)
 set (P4TESTS_FOR_JBAY "${P4TESTDATA}/p4_16_samples/*.p4")
 p4c_find_tests("${P4TESTS_FOR_JBAY}" v1tests INCLUDE "${V1_SEARCH_PATTERNS}")
 
+# p4-tests has all the includes at the same level with the programs.
+set (BFN_EXCLUDE_PATTERNS "tofino.p4")
+set (BFN_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/p4-tests/programs/*/*.p4")
+bfn_find_tests ("${BFN_TESTS}" BFN_TESTS_LIST EXCLUDE "${BFN_EXCLUDE_PATTERNS}")
+
 set (JBAY_TEST_SUITES
   ${P4C_SOURCE_DIR}/testdata/p4_14_samples/*.p4
 #  ${P4TESTDATA}/p4_14_samples/switch_*/switch.p4
@@ -20,7 +25,7 @@ set (JBAY_TEST_SUITES
 #  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c8/*/*.p4
   # switch DC_BASIC_PROFILE
 #  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch/p4src/switch.p4
-#  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/jenkins/*/*.p4
+#  ${BFN_TESTS}
 #  ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch_*/switch.p4
 #  ${v1tests}
   )
