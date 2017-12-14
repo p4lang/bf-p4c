@@ -373,12 +373,15 @@ template<> void Parser::write_config(Target::Tofino::parser_regs &regs) {
         if (!phv_allow_multi_write[256+i]) {
             regs.ingress.prsr_reg.no_multi_wr.t_nmw[i] = 1;
             regs.egress.prsr_reg.no_multi_wr.t_nmw[i] = 1; }
-    //if (!options.match_compiler) {
-    //    regs.memory[INGRESS].disable_if_zero();
-    //    regs.memory[EGRESS].disable_if_zero();
-    //    regs.ingress.disable_if_zero();
-    //    regs.egress.disable_if_zero();
-    //    regs.merge.disable_if_zero(); }
+    if (options.condense_json) {
+        // FIXME -- removing the uninitialized memory causes problems?
+        // FIXME -- walle gets the addresses wrong.  Might also require explicit
+        // FIXME -- zeroing in the driver on real hardware
+        // regs.memory[INGRESS].disable_if_zero();
+        // regs.memory[EGRESS].disable_if_zero();
+        regs.ingress.disable_if_zero();
+        regs.egress.disable_if_zero();
+        regs.merge.disable_if_zero(); }
     if (error_count == 0) {
         regs.memory[INGRESS].emit_json(
             *open_output("memories.all.parser.ingress.cfg.json"), "ingress");

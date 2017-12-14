@@ -256,6 +256,17 @@ template<> void Parser::write_config(Target::JBay::parser_regs &regs) {
     for (auto &ref : regs.egress.prsr)
         ref = "regs.parser.main.egress";
     if (error_count == 0) {
+        if (options.condense_json) {
+            // FIXME -- removing the uninitialized memory causes problems?
+            // FIXME -- walle gets the addresses wrong.  Might also require explicit
+            // FIXME -- zeroing in the driver on real hardware
+            // regs.memory[INGRESS].disable_if_zero();
+            // regs.memory[EGRESS].disable_if_zero();
+            regs.ingress.disable_if_zero();
+            regs.egress.disable_if_zero();
+            regs.main[INGRESS].disable_if_zero();
+            regs.main[EGRESS].disable_if_zero();
+            regs.merge.disable_if_zero(); }
         regs.memory[INGRESS].emit_json(*open_output("memories.parser.ingress.cfg.json"), "ingress");
         regs.memory[EGRESS].emit_json(*open_output("memories.parser.egress.cfg.json"), "egress");
         regs.ingress.emit_json(*open_output("regs.parser.ingress.cfg.json"));

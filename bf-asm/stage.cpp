@@ -372,9 +372,7 @@ void Stage::output(json::map &ctxt_json) {
     // The driver needs the regs to do parity error correction at runtime and it
     // checks for the base address of the register blocks to do a block DMA
     // during tofino.bin download
-    regs.dp.imem.imem_subword8.enable();
-    regs.dp.imem.imem_subword16.enable();
-    regs.dp.imem.imem_subword32.enable();
+    regs.dp.imem.enable();
     for(int row = 0; row < SRAM_ROWS; row++)
         for(int col = 0; col < MAPRAM_UNITS_PER_ROW; col++)
             regs.rams.map_alu.row[row].adrmux.mapram_config[col].enable();
