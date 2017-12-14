@@ -153,13 +153,15 @@ FieldPacking* packMirroredFieldList(const MirroredFieldList* fieldList) {
         // Skip parsing `mirror_id`, `mirror_idx`, and `mirror_source`; they're
         // handled specially.
         if (source->member == "mirror_id" &&
-              type->name == "egress_intrinsic_metadata_for_mirror_buffer_t") {
+              (type->name == "ingress_intrinsic_metadata_for_mirror_buffer_t" ||
+               type->name == "egress_intrinsic_metadata_for_mirror_buffer_t")) {
             packing->appendPadding(8);
             packing->padToAlignment(8);
             continue;
         }
         if ((source->member == "mirror_idx" ||  source->member == "mirror_source") &&
-              type->name == "egress_intrinsic_metadata_for_deparser_t") {
+              (type->name == "ingress_intrinsic_metadata_for_deparser_t" ||
+               type->name == "egress_intrinsic_metadata_for_deparser_t")) {
             packing->appendPadding(8);
             packing->padToAlignment(8);
             continue;
