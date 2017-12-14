@@ -28,6 +28,7 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     "mismatch from expected.*at byte 0x"
     extensions/p4_tests/p4_16/stack_valid.p4
     extensions/p4_tests/p4_14/adjust_instr5.p4
+    testdata/p4_14_samples/bigfield1.p4
     )
 
 endif() # HARLYN_STF_tofino
@@ -41,6 +42,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/instruct1.p4
   extensions/p4_tests/p4_14/instruct1.p4
   extensions/p4_tests/p4_14/action_conflict_2.p4
+  extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
   )
 
 # We need a deposit_field instruction, but we fail to select it.
@@ -244,6 +246,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_297_big_metadata.p4
   extensions/p4_tests/p4_14/jenkins/smoke_large_tbls/smoke_large_tbls.p4
   extensions/p4_tests/p4_14/adb_shared3.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -928,8 +931,16 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "error: immediate.* is not on the action bus"
-  extensions/p4_tests/p4_14/test_config_21_tcam_vpns.p4
-  extensions/p4_tests/p4_14/test_tp_1_one_table_spill.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Assertion .*bit == data_bit.* failed"
+  extensions/p4_tests/p4_14/test_config_285_meter_sharing.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "error: Can't put field .* into byte .* on action xbar"
+  extensions/p4_tests/p4_14/22-BigToSmallFieldWithMask8.p4
   )
 
 # XXX(cole): This will be fixed with SuperCluster slice list splitting.
@@ -943,10 +954,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/brig-11.p4
   )
 
-p4c_add_xfail_reason("tofino"
-  "No format in action table"
-  extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
-  )
 
 p4c_add_xfail_reason("tofino"
   "Operands of arithmetic operations cannot be greater than 32b, but field .* has .*"
@@ -999,7 +1006,6 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "error: hash expression width mismatch"
-  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
   extensions/p4_tests/p4_14/jenkins/stful/stful.p4
   switch_l2
   )

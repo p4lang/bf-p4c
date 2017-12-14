@@ -8,13 +8,19 @@ std::ostream &operator<<(std::ostream &out, const TableSummary &ts) {
     out << " id G                     name       xb  hb g sr tc mr ab" << std::endl;
     for (auto *t : Values(ts.order)) {
         safe_vector<LayoutOption> lo;
+        safe_vector<ActionFormat::Use> action_formats;
         ordered_set<const IR::MAU::ActionData *> sad;
+        LayoutChoices lc;
         if (t->layout.ternary || t->layout.no_match_data())
             lo.emplace_back(t->layout);
         else
             lo.emplace_back(t->layout, t->ways[0]);
+        action_formats.push_back(t->resources->action_format);
+        lc.total_layout_options[t->name] = lo;
+        lc.total_action_formats[t->name] = action_formats;
+
         int entries = t->layout.entries;
-        StageUseEstimate use(t, entries, false, false, lo, sad, true);
+        StageUseEstimate use(t, entries, &lc, sad, true);
         out << hex(t->logical_id, 3) << ' ' << (t->gress ? 'E' : 'I')
             << ' ' << std::setw(30) << t->name
             << ' ' << std::setw(2) << t->layout.ixbar_bytes

@@ -35,7 +35,7 @@ class LayoutOption {
 class LayoutChoices {
  public:
     ordered_map<cstring, safe_vector<LayoutOption>> total_layout_options;
-    ordered_map<cstring, ActionFormat::Use> total_action_formats;
+    ordered_map<cstring, safe_vector<ActionFormat::Use>> total_action_formats;
     safe_vector<LayoutOption> get_layout_options(const IR::MAU::Table *t) const {
         safe_vector<LayoutOption> empty;
         if (t == nullptr)
@@ -45,12 +45,13 @@ class LayoutChoices {
         return total_layout_options.at(t->name);
     }
 
-    ActionFormat::Use get_action_format(const IR::MAU::Table *t) const {
+    safe_vector<ActionFormat::Use> get_action_formats(const IR::MAU::Table *t) const {
         ActionFormat::Use use;
+        safe_vector<ActionFormat::Use> empty;
         if (t == nullptr)
-            return use;
+            return empty;
         else if (total_action_formats.find(t->name) == total_action_formats.end())
-            return use;
+            return empty;
         return total_action_formats.at(t->name);
     }
 
@@ -80,10 +81,12 @@ class TableLayout : public MauModifier, Backtrack {
     void check_for_ternary(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl);
     void setup_match_layout(IR::MAU::Table::Layout &, const IR::MAU::Table *);
     void setup_gateway_layout(IR::MAU::Table::Layout &, IR::MAU::Table *);
-    void setup_exact_match(IR::MAU::Table *tbl, int action_data_bytes);
-    void setup_layout_options(IR::MAU::Table *tbl, int immediate_bytes_reserved);
-    void setup_ternary_layout_options(IR::MAU::Table *tbl, int immediate_bytes_reserved);
-    void setup_layout_option_no_match(IR::MAU::Table *tbl, int immediate_bytes_reserved);
+    void setup_exact_match(IR::MAU::Table *tbl, int action_data_bytes_in_table,
+                           int action_data_bytes_in_overhead);
+    void setup_layout_options(IR::MAU::Table *tbl);
+    void setup_action_layout(IR::MAU::Table *tbl);
+    void setup_ternary_layout_options(IR::MAU::Table *tbl);
+    void setup_layout_option_no_match(IR::MAU::Table *tbl);
 
  public:
     explicit TableLayout(const PhvInfo &p, LayoutChoices &l) : phv(p), lc(l) {}

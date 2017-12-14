@@ -65,6 +65,8 @@ class PhvInfo;
 struct ActionFormat {
  public:
     enum cont_type_t {BYTE, HALF, FULL, CONTAINER_TYPES};
+    enum location_t {ADT, IMMED, LOCATIONS};
+    enum bitmasked_t {NORMAL, BITMASKED, BITMASKED_TYPES};
     static constexpr int CONTAINER_SIZES[3] = {8, 16, 32};
     static constexpr int IMMEDIATE_BYTES = 4;
 
@@ -105,6 +107,7 @@ struct ActionFormat {
         int size;          ///< Number of bits needed
         bitvec range;      ///< Total mask
         bool bitmasked_set = false;  ///< If the placement requires a mask as well
+        bool immediate = false;
 
         bool operator==(const ActionDataPlacement &a) const;
 
@@ -147,48 +150,50 @@ struct ActionFormat {
     struct ActionContainerInfo {
         cstring action;
         enum order_t {FIRST_8, FIRST_16, EITHER, NOT_SET} order = NOT_SET;
-        int counts[CONTAINER_TYPES] = {0, 0, 0};
-        int minmaxes[CONTAINER_TYPES] = {9, 17, 33};
-        int bitmasked_sets[CONTAINER_TYPES] = {0, 0, 0};
+        int counts[LOCATIONS][CONTAINER_TYPES] = {{0, 0, 0}, {0, 0, 0}};
+        int bitmasked_sets[LOCATIONS][CONTAINER_TYPES] = {{0, 0, 0}, {0, 0, 0}};
+        int minmaxes[BITMASKED_TYPES][CONTAINER_TYPES] = {{9, 17, 33}, {9, 17, 33}};
+        // int bm_minmaxes[CONTAINER_TYPES] = {9, 17, 33};
 
-        bitvec layouts[CONTAINER_TYPES];
+        bitvec layouts[LOCATIONS][CONTAINER_TYPES];
 
         int maximum = -1;
         bool offset_constraint = false;
         int offset_full_word = -1;
 
         void dbprint(std::ostream &out) const {
-            out << action << " ";
-            out << counts[BYTE] << " " << counts[HALF] << " " << counts[FULL] << " ";
-            out << layouts[BYTE] << " " << layouts[HALF] << " " << layouts[FULL];
-            out << " ";
-            out << minmaxes[BYTE] << " " << minmaxes[HALF] << " " << minmaxes[FULL];
+            out << action << std::endl;
+            out << "  Action Data Layout: " << std::endl;
+            out << "    Counts: ";
+            out << counts[ADT][BYTE] << " " << counts[ADT][HALF] << " " << counts[ADT][FULL];
+            out << std::endl << "    Layouts: 0x" << layouts[ADT][BYTE] << " 0x"
+                << layouts[ADT][HALF] << " 0x" << layouts[ADT][FULL];
+            out << std::endl << "  Immediate: " << std::endl;
+            out << "    Counts: ";
+            out << counts[IMMED][BYTE] << " " << counts[IMMED][HALF] << " "
+                << counts[IMMED][FULL];
+            out << std::endl << "    Layouts: 0x" << layouts[IMMED][BYTE] << " 0x"
+                << layouts[IMMED][HALF] << " 0x" << layouts[IMMED][FULL];
         }
 
         void reset();
-        int total_bytes() const {
-            return counts[BYTE] + counts[HALF] * 2 + counts[FULL] * 4;
+        int total_action_data_bytes() const {
+            return total_bytes(ADT) + total_bytes(IMMED);
         }
 
-        /** Counts the maximum number of bytes of each type of container, and finds the
-         *  maximum minmax
-         */ 
-        void maximize(ActionContainerInfo &a) {
-            for (int i = 0; i < CONTAINER_TYPES; i++) {
-                if (a.counts[i] > counts[i]) {
-                    counts[i] = a.counts[i];
-                    minmaxes[i] = a.minmaxes[i];
-                } else if (a.minmaxes[i] > minmaxes[i]) {
-                    minmaxes[i] = a.minmaxes[i];
-                }
-            }
+        int total_bytes(location_t loc) const {
+            return counts[loc][BYTE] + counts[loc][HALF] * 2 + counts[loc][FULL] * 4;
         }
+
+        int total(location_t loc, bitmasked_t bm, cont_type_t type) const;
+
+        cont_type_t best_candidate_to_move(int overhead_bytes);
 
         int find_maximum_immed();
         void finalize_min_maxes();
 
-        bool overlaps(int max_bytes) {
-            if (counts[BYTE] + 2 * counts[HALF] > max_bytes)
+        bool overlaps(int max_bytes, location_t loc) {
+            if (counts[loc][BYTE] + 2 * counts[loc][HALF] > max_bytes)
                 return true;
             return false;
         }
@@ -197,11 +202,11 @@ struct ActionFormat {
 
 
     typedef std::map<cstring, safe_vector<ActionDataPlacement>> ArgFormat;
-    typedef std::map<std::pair<cstring, int>, safe_vector<std::pair<int, bool>>> ArgPlacementData;
+    typedef std::map<std::pair<cstring, int>, safe_vector<int>> ArgPlacementData;
     typedef std::map<std::pair<cstring, int>, cstring> ConstantRenames;
-    bool immediate_possible = false;
-    safe_vector<ActionContainerInfo> action_counts;
 
+    int action_bytes[LOCATIONS] = {0, 0};
+    int action_data_bytes = 0;
 
     /** Contains all of the information on all the action data format and individual arguments
      *  Because we only currently have either only an action data table or action data through
@@ -211,21 +216,23 @@ struct ActionFormat {
      *  the meantime, we can keep them as separate structures.
      */
     struct Use {
-        bool has_immediate = false;
         ArgFormat action_data_format;
-        ArgFormat immediate_format;
         std::map<cstring, ArgPlacementData> arg_placement;
         std::map<cstring, ConstantRenames> constant_locations;
 
-        int action_data_bytes = 0;
+        int action_data_bytes[LOCATIONS];
+
         bitvec immediate_mask;
+        bitvec total_layouts[LOCATIONS][CONTAINER_TYPES];
+
+        /*
         bitvec total_layouts[CONTAINER_TYPES];
         bitvec total_layouts_immed[CONTAINER_TYPES];
+        */
         bitvec full_layout_bitmasked;
 
         void clear() {
             action_data_format.clear();
-            immediate_format.clear();
             immediate_mask.clear();
         }
 
@@ -247,9 +254,16 @@ struct ActionFormat {
     const PhvInfo &phv;
     bool alloc_done;
     int max_bytes = 0;
-    int action_data_bytes = 0;
     ActionContainerInfo max_total;
+    safe_vector<ActionContainerInfo> init_action_counts;
+    safe_vector<ActionContainerInfo> action_counts;
 
+    ArgFormat init_format;
+    std::map<cstring, ConstantRenames> renames;
+
+    bool split_started = false;
+
+    void analyze_all_actions();
     void create_placement_non_phv(ActionAnalysis::FieldActionsMap &field_actions_map,
                                   cstring action_name);
     void create_placement_phv(ActionAnalysis::ContainerActionsMap &container_actions_map,
@@ -260,23 +274,32 @@ struct ActionFormat {
         const ActionAnalysis::ActionParam &read, int field_bit, int container_bit,
         int &constant_to_ad_count, PHV::Container container, ConstantRenames &constant_renames);
 
-    void space_individ_immed(ActionContainerInfo &aci);
+    void initialize_action_counts();
+    void calculate_maximum();
+    bool new_action_format(bool immediate_allowed, bool &finished);
+    void setup_use(safe_vector<Use> &uses);
+    void space_containers();
+
+    void space_all_table_containers();
     int offset_constraints_and_total_layouts();
     void space_8_and_16_containers(int max_small_bytes);
     int check_full_bitmasked(ActionContainerInfo &aci, int max_small_bytes);
     void space_32_containers();
+
+    void space_all_immediate_containers();
+    void space_individ_immed(ActionContainerInfo &aci);
     void space_32_immed(ActionContainerInfo &aci);
 
-    void setup_action_counts(bool immediate);
-    void analyze_all_actions();
-    void setup_immediate_format();
-    void space_all_containers();
     void align_action_data_layouts();
-    void space_all_immediate_containers();
-    void align_immediate_layouts();
-    void sort_and_asm_name(safe_vector<ActionDataPlacement> &placement_vec, bool immediate);
+    void align_section(ArgFormat &format, ActionContainerInfo &aci, location_t loc,
+        bitmasked_t bm, bitvec layouts_placed[CONTAINER_TYPES],
+        int placed[BITMASKED_TYPES][CONTAINER_TYPES]);
+    void find_immed_last(ArgFormat &format, ActionContainerInfo &aci,
+        bitvec layouts_placed[CONTAINER_TYPES], int placed[BITMASKED_TYPES][CONTAINER_TYPES]);
+    void sort_and_asm_name(safe_vector<ActionDataPlacement> &placement_vec);
     void calculate_placement_data(safe_vector<ActionDataPlacement> &placement_vec,
-                                  ArgPlacementData &apd, bool immediate);
+                                  ArgPlacementData &apd);
+    void calculate_immed_mask();
 
  public:
     ActionFormat(const IR::MAU::Table *t, const PhvInfo &p, bool ad)
@@ -284,7 +307,7 @@ struct ActionFormat {
          max_total.action = "$MAX_TOTAL";
     }
 
-    void allocate_format(Use *use);
+    void allocate_format(safe_vector<Use> &uses, bool immediate_allowed);
 };
 
 #endif /* EXTENSIONS_BF_P4C_MAU_ACTION_FORMAT_H_ */

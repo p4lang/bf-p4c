@@ -69,22 +69,17 @@ class MauAsmOutput::TableMatch {
  */
 void MauAsmOutput::emit_action_data_alias(std::ostream &out, indent_t indent,
         const IR::MAU::Table *tbl, const IR::MAU::Action *af) const {
-    bool is_immediate = tbl->layout.action_data_bytes_in_overhead > 0;
-    const safe_vector<ActionFormat::ActionDataPlacement> *placement_vec = nullptr;
     auto &use = tbl->resources->action_format;
-    if (is_immediate)
-        placement_vec = &(use.immediate_format.at(af->name));
-    else
-        placement_vec = &(use.action_data_format.at(af->name));
+    auto placement_vec = use.action_data_format.at(af->name);
 
     out << indent << "- { ";
     size_t index = 0;
     bool last_entry = false;
-    for (auto &placement : *placement_vec) {
+    for (auto &placement : placement_vec) {
         out << placement.get_action_name();
 
         auto type = static_cast<ActionFormat::cont_type_t>(placement.gen_index());
-        out << ": " << use.get_format_name(placement.start, type, is_immediate,
+        out << ": " << use.get_format_name(placement.start, type, placement.immediate,
                                            placement.range, (placement.arg_locs.size() == 1));
         if (placement.arg_locs.size() == 1 && placement.arg_locs[0].is_constant) {
             out << ", ";
@@ -92,7 +87,7 @@ void MauAsmOutput::emit_action_data_alias(std::ostream &out, indent_t indent,
             out << ": " << placement.arg_locs[0].constant_value;
         }
 
-        if (index == placement_vec->size() - 1 && placement.arg_locs.size() == 1)
+        if (index == placement_vec.size() - 1 && placement.arg_locs.size() == 1)
             last_entry = true;
         if (!last_entry)
              out << ", ";
@@ -110,7 +105,7 @@ void MauAsmOutput::emit_action_data_alias(std::ostream &out, indent_t indent,
                     out << ": " << arg_loc.constant_value;
                 }
 
-                if (index == placement_vec->size() - 1
+                if (index == placement_vec.size() - 1
                     && arg_index == placement.arg_locs.size() - 1)
                     last_entry = true;
                 if (!last_entry)
@@ -123,7 +118,7 @@ void MauAsmOutput::emit_action_data_alias(std::ostream &out, indent_t indent,
             if (last_entry)
                 out << ", ";
             out << placement.get_mask_name();
-            out << ": " << use.get_format_name(placement.start, type, is_immediate,
+            out << ": " << use.get_format_name(placement.start, type, placement.immediate,
                                                placement.range, false,
                                                placement.bitmasked_set);
             out << ", ";
@@ -146,16 +141,28 @@ void MauAsmOutput::emit_action_data_format(std::ostream &out, indent_t indent,
     auto &placement_vec = use.action_data_format.at(af->name);
     if (placement_vec.size() == 0)
         return;
+
+    size_t max_format = 0;
+    for (auto &placement : placement_vec) {
+        if (!placement.immediate)
+            max_format++;
+    }
+    if (max_format == 0)
+        return;
+
     out << indent << "format " << canon_name(af->name) << ": { ";
     size_t index = 0;
     bool last_entry = false;
+
+
     for (auto &placement : placement_vec) {
+        if (placement.immediate) continue;
         bitvec total_range(0, placement.size);
         auto type = static_cast<ActionFormat::cont_type_t>(placement.gen_index());
         out << use.get_format_name(placement.start, type, false, total_range, false);
         out << ": " << (8 * placement.start) << ".."
             << (8 * placement.start + placement.size - 1);
-        if (index + 1 == placement_vec.size())
+        if (index + 1 == max_format)
             last_entry = true;
 
         if (!last_entry)
@@ -794,27 +801,33 @@ cstring format_name(int type, bool pfe_bit = false) {
 }
 
 void MauAsmOutput::emit_action_data_bus(std::ostream &out, indent_t indent,
-        const IR::MAU::Table *tbl) const {
+        const IR::MAU::Table *tbl, bool immediate) const {
     auto &action_data_xbar = tbl->resources->action_data_xbar;
     auto &use = tbl->resources->action_format;
-    out << indent << "action_bus: { ";
+    size_t max_total = 0;
+    for (auto &rs : action_data_xbar.action_data_locs) {
+        if (rs.immediate == immediate)
+            max_total++;
+    }
+    if (max_total == 0)
+        return;
 
-    if (tbl->layout.action_data_bytes > 0) {
-        size_t total_index = 0;
-        for (auto &rs : action_data_xbar.action_data_locs) {
-            bitvec total_range(0, ActionFormat::CONTAINER_SIZES[rs.location.type]);
-            int byte_sz = ActionFormat::CONTAINER_SIZES[rs.location.type] / 8;
-            out << rs.location.byte;
-            if (byte_sz > 1)
-                out << ".." << (rs.location.byte + byte_sz - 1);
-            out << " : " << use.get_format_name(rs.byte_offset, rs.location.type, rs.immediate,
-                                                total_range, false);
-            if (total_index != action_data_xbar.action_data_locs.size() - 1)
-                out << ", ";
-            else
-                out << " ";
-            total_index++;
-        }
+    out << indent << "action_bus: { ";
+    size_t total_index = 0;
+    for (auto &rs : action_data_xbar.action_data_locs) {
+        if (immediate != rs.immediate) continue;
+        bitvec total_range(0, ActionFormat::CONTAINER_SIZES[rs.location.type]);
+        int byte_sz = ActionFormat::CONTAINER_SIZES[rs.location.type] / 8;
+        out << rs.location.byte;
+        if (byte_sz > 1)
+            out << ".." << (rs.location.byte + byte_sz - 1);
+        out << " : " << use.get_format_name(rs.byte_offset, rs.location.type, rs.immediate,
+                                            total_range, false);
+        if (total_index != max_total - 1)
+            out << ", ";
+        else
+            out << " ";
+        total_index++;
     }
     out << "}" << std::endl;
 }
@@ -1482,8 +1495,8 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
         }
     }
 
-    if (tbl->layout.action_data_bytes_in_overhead > 0)
-        emit_action_data_bus(out, indent, tbl);
+    if (!tbl->layout.ternary)
+        emit_action_data_bus(out, indent, tbl, true);
 
     /* FIXME -- this is a mess and needs to be rewritten to be sane */
     bool have_action = false, have_indirect = false;
@@ -1493,14 +1506,12 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
             cstring name = tbl->get_use_name(ti);
             out << indent << at->kind() << ": " << name << std::endl;
         } else if (auto ad = at->to<IR::MAU::ActionData>()) {
-            bool ad_check = tbl->layout.action_data_bytes_in_overhead
-                            < tbl->layout.action_data_bytes;
+            bool ad_check = tbl->layout.action_data_bytes_in_table > 0;
             ad_check |= tbl->layout.indirect_action_addr_bits > 0;
             BUG_CHECK(ad_check, "Action Data Table %s misconfigured", ad->name);
             have_action = true; } }
     assert(have_indirect == (tbl->layout.ternary));
-    assert(have_action || (tbl->layout.action_data_bytes <=
-                           tbl->layout.action_data_bytes_in_overhead));
+    assert(have_action || tbl->layout.action_data_bytes_in_table == 0);
 
 
     if (!have_indirect)
@@ -1785,6 +1796,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::TernaryIndirect *ti) {
     self.emit_ixbar(out, indent, &tbl->resources->match_ixbar, &tbl->resources->hash_dists,
                     nullptr, nullptr, false);
     self.emit_table_format(out, indent, tbl->resources->table_format, nullptr, true);
+    self.emit_action_data_bus(out, indent, tbl, true);
     self.emit_table_indir(out, indent, tbl);
     return false;
 }
@@ -1802,10 +1814,10 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::ActionData *ad) {
     out << " }" << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(name));
     for (auto act : Values(tbl->actions)) {
-        if (act->args.empty()) continue;
+        // if (act->args.empty()) continue;
         self.emit_action_data_format(out, indent, tbl, act);
     }
-    self.emit_action_data_bus(out, indent, tbl);
+    self.emit_action_data_bus(out, indent, tbl, false);
     if (!tbl->actions.empty()) {
         out << indent++ << "actions:" << std::endl;
         for (auto act : Values(tbl->actions))

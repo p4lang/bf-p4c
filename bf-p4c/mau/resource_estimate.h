@@ -14,9 +14,8 @@ struct StageUseEstimate {
     int maprams = 0;
     int exact_ixbar_bytes = 0;
     int ternary_ixbar_groups = 0;
-    bool prev_placed = false;
-    bool has_action_data = false;
     safe_vector<LayoutOption> layout_options;
+    safe_vector<ActionFormat::Use> action_formats;
     ordered_set<const IR::MAU::ActionData *> shared_action_data;
     int preferred_index;
     StageUseEstimate() {}
@@ -28,8 +27,7 @@ struct StageUseEstimate {
         exact_ixbar_bytes += a.exact_ixbar_bytes;
         ternary_ixbar_groups += a.ternary_ixbar_groups;
         return *this; }
-    StageUseEstimate(const IR::MAU::Table *, int &, bool pp, bool had,
-                     const safe_vector<LayoutOption> &lo,
+    StageUseEstimate(const IR::MAU::Table *, int &, const LayoutChoices *lc,
                      ordered_set<const IR::MAU::ActionData *> sad
                          = ordered_set<const IR::MAU::ActionData *>(),
                      bool table_placement = false);
@@ -68,6 +66,17 @@ struct StageUseEstimate {
     else
         return &layout_options[preferred_index]; }
 
+    const ActionFormat::Use *preferred_action_format() const {
+        auto option = preferred();
+        if (option == nullptr)
+            return nullptr;
+        int bytes = option->layout.action_data_bytes_in_table;
+        for (auto &format : action_formats) {
+            if (bytes == format.action_data_bytes[ActionFormat::ADT])
+                return &format;
+        }
+        return nullptr;
+    }
     void calculate_for_leftover_srams(const IR::MAU::Table *tbl, int srams_left, int &entries);
     void calculate_for_leftover_tcams(const IR::MAU::Table *tbl, int srams_left, int tcams_left,
                                       int &entries);

@@ -4,25 +4,53 @@
 
 constexpr int ActionFormat::CONTAINER_SIZES[];
 
+/*
+void ActionFormat::ActionContainerInfo::maximize(ActionContainerInfo &a) {
+    for (int i = 0; i < LOCATIONS; i++) {
+        for (int j = 0; j < CONTAINER_TYPES; j++) {
+            if (a.counts[i][j] > counts[i][j])
+                counts[i][j] = a.counts[i][j];
+        }
+    }
+}
+*/
+
 void ActionFormat::ActionContainerInfo::reset() {
-    for (int i = 0; i < CONTAINER_TYPES; i++) {
-        counts[i] = 0; layouts[i].clear();
-        minmaxes[i] = CONTAINER_SIZES[i] + 1;
+    order = NOT_SET;
+    maximum = -1;
+    for (int i = 0; i < LOCATIONS; i++) {
+        for (int j = 0; j < CONTAINER_TYPES; j++) {
+            counts[i][j] = 0;
+            layouts[i][j].clear();
+            bitmasked_sets[i][j] = 0;
+            minmaxes[i][j] = CONTAINER_SIZES[i] + 1;
+        }
+    }
+
+    for (int i = 0; i < BITMASKED_TYPES; i++) {
+        for (int j = 0; j < CONTAINER_TYPES; j++) {
+            minmaxes[i][j] = CONTAINER_SIZES[i] + 1;
+        }
     }
 }
 
 void ActionFormat::ActionContainerInfo::finalize_min_maxes() {
-    for (int i = 0; i < CONTAINER_TYPES; i++) {
-        minmaxes[i] = minmaxes[i] == (CONTAINER_SIZES[i] + 1) ? 0 : minmaxes[i];
+    for (int i = 0; i < BITMASKED_TYPES; i++) {
+        for (int j = 0; j < CONTAINER_TYPES; j++) {
+            minmaxes[i][j] = minmaxes[i][j] == (CONTAINER_SIZES[j] + 1) ? 0 : minmaxes[i][j];
+        }
     }
 }
 
 int ActionFormat::ActionContainerInfo::find_maximum_immed() {
-    int max_byte = counts[BYTE] > 0 ? (counts[BYTE] - 1) * 8 + minmaxes[BYTE] : 0;
-    int max_half = counts[HALF] > 0 ? (counts[HALF] - 1) * 16 + minmaxes[HALF] : 0;
-    int max_full = counts[HALF] > 0 ? (counts[FULL] - 1) * 32 + minmaxes[FULL] : 0;
-    int maximum = 0;
+    int max_byte = counts[IMMED][BYTE] > 0
+        ? (counts[IMMED][BYTE] - 1) * 8 + minmaxes[NORMAL][BYTE] : 0;
+    int max_half = counts[IMMED][HALF] > 0
+        ? (counts[IMMED][HALF] - 1) * 16 + minmaxes[NORMAL][HALF] : 0;
+    int max_full = counts[IMMED][FULL] > 0
+        ? (counts[IMMED][FULL] - 1) * 32 + minmaxes[NORMAL][FULL] : 0;
 
+    int maximum = 0;
     if (max_byte > 0 && max_half > 0) {
         if (max_byte > max_half) {
             order = FIRST_8;
@@ -36,6 +64,14 @@ int ActionFormat::ActionContainerInfo::find_maximum_immed() {
         maximum = std::max(std::max(max_byte, max_half), max_full);
     }
     return maximum;
+}
+
+int ActionFormat::ActionContainerInfo::total(location_t loc, bitmasked_t bm,
+        cont_type_t type) const {
+    if (bm == BITMASKED)
+        return bitmasked_sets[loc][type];
+    else
+        return counts[loc][type] - bitmasked_sets[loc][type] * 2;
 }
 
 bool ActionFormat::ActionDataPlacement::ArgLoc::operator==(
@@ -67,7 +103,7 @@ cstring ActionFormat::Use::get_format_name(int start_byte, cont_type_t type,
     // Based on assumption, immediate is contiguous.  May have to be changed later
     cstring ret_name;
     if (immediate) {
-        if (!total_layouts_immed[type].getrange(start_byte, byte_sz))
+        if (!total_layouts[IMMED][type].getrange(start_byte, byte_sz))
             BUG("Impossible immediate format name lookup");
         bitvec lookup = immediate_mask;
         int lo = start_byte * 8;
@@ -85,7 +121,7 @@ cstring ActionFormat::Use::get_format_name(int start_byte, cont_type_t type,
         ret_name = "immediate(" +  std::to_string(lo) + "..";
         ret_name += std::to_string(hi) + ")";
     } else {
-        bitvec lookup = total_layouts[type];
+        bitvec lookup = total_layouts[ADT][type];
         ret_name = "$adf_";
         if (type == BYTE)
             ret_name += "b";
@@ -113,38 +149,35 @@ cstring ActionFormat::Use::get_format_name(int start_byte, cont_type_t type,
 
 /** The allocation scheme for the action data format and immediate format.
  */
-void ActionFormat::allocate_format(Use *u) {
+void ActionFormat::allocate_format(safe_vector<Use> &uses, bool immediate_allowed) {
     LOG2("Allocating Table Format for " << tbl->name);
-    use = u;
     analyze_all_actions();
     LOG2("Analysis finished");
 
-    if (immediate_possible) {
-        setup_immediate_format();
-        LOG2("Immediate format setup " << tbl->name);
+    while (true) {
+        LOG2("Action Format attempt");
+        bool finished = false;
+        if (!new_action_format(immediate_allowed, finished)) {
+            if (finished)
+                break;
+            continue;
+        }
+        setup_use(uses);
+        space_containers();
+        LOG2("Space containers");
+        align_action_data_layouts();
+        LOG2("Align layouts");
     }
 
-    space_all_containers();
-    LOG2("Space all containers");
-    align_action_data_layouts();
-    LOG2("Alignment");
-
-
-    if (immediate_possible) {
-        action_counts.clear();
-        setup_action_counts(true);
-        LOG2("Setup immediate containers");
-        space_all_immediate_containers();
-        LOG2("Space immediate containers");
-        align_immediate_layouts();
-        LOG2("Alignment immediate");
-    }
+    LOG2("Action Formats possible " << uses.size());
 }
 
 /** Based on the field_actions returned for the ActionAnalysis pass, this function makes
  *  a best guess on the action data requirements, and fills out the ActionDataPlacement
  *  vector fo this action with the appropriate information.
  *
+    assert(have_action || (tbl->layout.action_data_bytes_in_table 
+                           tbl->layout.action_data_bytes_in_overhead));
  *  The information provided are what arguments are in what action data slot, and the
  *  necessary sizes of the action data slots.
  */
@@ -192,8 +225,8 @@ void ActionFormat::create_placement_non_phv(ActionAnalysis::FieldActionsMap &fie
         }
     }
 
-    use->action_data_format[action_name] = adp_vector;
-    use->constant_locations[action_name] = constant_renames;
+    init_format[action_name] = adp_vector;
+    renames[action_name] = constant_renames;
 }
 
 /** Creates an ActionDataPlacement from an ActionArg, correctly verified from the PHV allocation
@@ -303,8 +336,8 @@ void ActionFormat::create_placement_phv(ActionAnalysis::ContainerActionsMap &con
         }
     }
 
-    use->action_data_format[action_name] = adp_vector;
-    use->constant_locations[action_name] = constant_renames;
+    init_format[action_name] = adp_vector;
+    renames[action_name] = constant_renames;
 }
 
 /** Performs the argument analyzer and initializes the vector of ActionContainerInfo
@@ -327,76 +360,244 @@ void ActionFormat::analyze_all_actions() {
         else
             create_placement_phv(container_actions_map, action->name);
     }
-
-    setup_action_counts(false);
-
-    if (max_bytes <= 4)
-        immediate_possible = true;
+    initialize_action_counts();
 }
 
-/** Based on the container information found in the ActionDataPlacement, determines the number of
- *  8, 16, and 32 bit action data slots need for each individual action.  These values are also
- *  maximized in the max_total ActionContainerInfo, as the action data table must have the maximum
- *  of each of these action data slot reserved.  For immediate data, the minmax of the length
- *  of the container is saved.  Essentially the minimum of each container is saved, and the maximum
- *  minimum is saved in max total
+/** Calculate how much action data space is needed per actions.
+ *
+ *  FIXME: Could be optimized in order to save space by either pairing placements that
+ *  are different sizes to better pack the action data sizes
  */
-void ActionFormat::setup_action_counts(bool immediate) {
-    max_total.reset();
-    max_total.finalize_min_maxes();
+void ActionFormat::initialize_action_counts() {
     for (auto action : Values(tbl->actions)) {
         ActionContainerInfo aci;
         aci.action = action->name;
-        auto *placement_vec = &(use->action_data_format.at(action->name));
-        if (immediate)
-            placement_vec = &(use->immediate_format.at(action->name));
-        int index = 0;
-        // Build the ACI;
-        for (auto placement : *placement_vec) {
+        auto &placement_vec = init_format.at(action->name);
+        for (auto &placement : placement_vec) {
             bool odd_container_size = true;
             for (int i = 0; i < CONTAINER_TYPES; i++) {
                 if (placement.size == CONTAINER_SIZES[i]) {
-                    aci.counts[i]++;
+                    aci.counts[ADT][i]++;
+                    int bm_type = placement.bitmasked_set ? BITMASKED : NORMAL;
+                    // Double requirements for bitmasked_sets
                     if (placement.bitmasked_set) {
-                        aci.counts[i]++;
-                        aci.bitmasked_sets[i]++;
+                        aci.counts[ADT][i]++;
+                        aci.bitmasked_sets[ADT][i]++;
                     }
-                    if (aci.minmaxes[i] > placement.range.max().index() + 1)
-                        aci.minmaxes[i] = placement.range.max().index() + 1;
+
+                    aci.minmaxes[bm_type][i] = std::min(aci.minmaxes[bm_type][i],
+                                                        placement.range.max().index() + 1);
                     odd_container_size = false;
                     break;
                 }
             }
             if (odd_container_size)
                 BUG("What happened here? %d", placement.size);
-            index++;
         }
-        // Analysis of the ACI
-        if (max_bytes < aci.total_bytes())
-            max_bytes = aci.total_bytes();
-
         aci.finalize_min_maxes();
-        if (immediate) {
-            max_total.maximum = std::max(max_total.maximum, aci.find_maximum_immed());
-        } else {
-            max_total.maximize(aci);
-        }
-        action_counts.push_back(aci);
+        init_action_counts.push_back(aci);
     }
 }
 
-/** Very basically saves all of the information into the immediate placement.  At later revision
- *  of action format, we can potentially split data between immediate and action data table, and
- *  some intelligence will have to go into that
+/** This is the algorithm to choose which bytes to move from the action data table to
+ *  immediate.  The bytes provided is the number of bytes that have to be moved from
+ *  action data table to immediate.
+ *
+ *  If, for example there are 3 bytes, then at least one byte word exists, and must be the
+ *  one to be moved from immediate.
+ *
+ *  This generally ignores the fact that even if a full word is 4 bytes for instance, the
+ *  actual number of bits in that full word may be less and could potentially be more
+ *  impactful on the format
  */
-void ActionFormat::setup_immediate_format() {
-    for (auto action_placement : use->action_data_format) {
-        auto name = action_placement.first;
-        auto placement_vec = action_placement.second;
-        use->immediate_format[name] = placement_vec;
+ActionFormat::cont_type_t
+    ActionFormat::ActionContainerInfo::best_candidate_to_move(int bytes) {
+    safe_vector<ActionFormat::cont_type_t> cont_types;
+    BUG_CHECK(bytes > 0 && bytes <= 4, "Must allocate between 0 and 4 bytes in immediate");
+    if (bytes % 2 == 1) {
+        if (counts[ActionFormat::ADT][ActionFormat::BYTE] > 0)
+            cont_types.push_back(ActionFormat::BYTE);
+    } else if (bytes % 4 == 2) {
+        if (counts[ActionFormat::ADT][ActionFormat::BYTE] >= 2)
+            cont_types.push_back(ActionFormat::BYTE);
+        if (counts[ActionFormat::ADT][ActionFormat::HALF] >= 1)
+            cont_types.push_back(ActionFormat::HALF);
+    } else if (bytes % 4 == 0) {
+        if (counts[ActionFormat::ADT][ActionFormat::BYTE]
+            + counts[ActionFormat::ADT][ActionFormat::HALF] * 2 >= 4) {
+            if (counts[ActionFormat::ADT][ActionFormat::BYTE] >= 2)
+                cont_types.push_back(ActionFormat::BYTE);
+            if (counts[ActionFormat::ADT][ActionFormat::HALF] >= 1)
+                cont_types.push_back(ActionFormat::HALF);
+        }
+        if (counts[ActionFormat::ADT][ActionFormat::FULL] >= 1) {
+            cont_types.push_back(ActionFormat::FULL);
+        }
+    }
+
+    // Of the containers that are able to be moved, pick the best candidate
+    std::sort(cont_types.begin(), cont_types.end(),
+        [=](const ActionFormat::cont_type_t &a, const ActionFormat::cont_type_t &b) {
+        int t;
+        if (total_bytes(IMMED) == 0)
+            if ((t = minmaxes[NORMAL][a] % 8 - minmaxes[NORMAL][b] % 8) != 0)
+                return t < 0;
+        // Do not prefer FULL, if not minmaxed.  FULL are easy to share
+        if (a == ActionFormat::FULL)
+            return false;
+        if (b == ActionFormat::FULL)
+            return true;
+        else if ((t = counts[ADT][a] % 2 - counts[ADT][b] % 2) != 0)
+            return t > 0;
+        else if ((t = counts[ADT][a] % 4 - counts[ADT][b] % 4) != 0)
+            return t > 0;
+        return CONTAINER_SIZES[a] > CONTAINER_SIZES[b];
+    });
+
+    if (cont_types.size() > 0)
+        return cont_types[0];
+    return ActionFormat::CONTAINER_TYPES;
+}
+
+void ActionFormat::setup_use(safe_vector<Use> &uses) {
+    uses.emplace_back();
+    use = &(uses.back());
+    use->action_data_bytes[ADT] = action_bytes[ADT];
+    use->action_data_bytes[IMMED] = action_bytes[IMMED];
+    use->constant_locations = renames;
+    calculate_maximum();
+}
+
+/** This function will iterate through all possible action data table sizes where
+ *  the required number of immediate bytes will be less than 4.  The action data table
+ *  in bytes is in powers of 2, so shrinking an action data table by a small amount may
+ *  be able to save significant space.
+ *
+ *  The first iteration is action data table only.  After that, the number of action data
+ *  bytes in the table is shrunk by half until that number of action data bytes hits 0.  The
+ *  function will return true if the number of immediate bytes is less than 4.
+ *
+ *  The actions that have more action data bytes than can fit within the action data table
+ *  must have their action data split into two locations, action data table and immediate
+ *
+ *  FIXME: Future improvements to this algorithm: Analysis could be done to actions that
+ *  could completely fit within the action data table, but could save space on the action
+ *  data bus if the byte had been moved to immediate
+ */
+bool ActionFormat::new_action_format(bool immediate_allowed, bool &finished) {
+    action_counts.clear();
+    action_counts = init_action_counts;
+    int total_bytes = 0;
+    for (auto aci : init_action_counts) {
+        total_bytes = std::max(total_bytes, aci.total_action_data_bytes());
+    }
+
+    action_data_bytes = total_bytes;
+    // First allocation has no immediate data
+    if (!split_started) {
+        split_started = true;
+        if (total_bytes != 0)
+            action_bytes[ADT] = (1 << ceil_log2(total_bytes));
+        return true;
+    }
+
+    if (!immediate_allowed || action_bytes[ADT] == 0) {
+        finished = true;
+        return false;
+    }
+
+    action_bytes[ADT] /= 2;
+    int overhead_attempt = total_bytes - action_bytes[ADT];
+
+    if (overhead_attempt > IMMEDIATE_BYTES) {
+        return false;
+    }
+
+    ActionContainerInfo min_total = max_total;
+    for (auto &aci : action_counts) {
+        if (aci.total_action_data_bytes() > action_bytes[ADT]) {
+            for (int i = 0; i < CONTAINER_TYPES; i++)
+                min_total.counts[ADT][i] = std::min(aci.counts[ADT][i], min_total.counts[ADT][i]);
+        }
+    }
+    bool overhead_increase = false;
+    bool found = false;
+
+    while (!found) {
+        // Increase the total number of action data bytes
+        action_counts = init_action_counts;
+        if (overhead_increase) {
+            overhead_attempt++;
+            if (overhead_attempt > IMMEDIATE_BYTES)
+                return false;
+            overhead_increase = false;
+        }
+
+        // Shrink each action that has more action data that can fit within the table
+        for (auto &aci : action_counts) {
+            while (action_bytes[ADT] < aci.total_bytes(ADT)) {
+                int diff = aci.total_bytes(ADT) - action_bytes[ADT];
+                auto candidate = aci.best_candidate_to_move(diff);
+                if (candidate == CONTAINER_TYPES) {
+                    overhead_increase = true;
+                    break;
+                }
+                aci.counts[IMMED][candidate]++;
+                aci.counts[ADT][candidate]--;
+            }
+            if (overhead_increase)
+                break;
+        }
+
+        // Ensure that if a bitmasked-set is required, then the action parameters are either
+        // both in immediate, or on the action data table
+        for (auto &aci : action_counts) {
+            if (aci.total_bytes(IMMED) == 0) continue;
+            for (int i = 0; i < CONTAINER_TYPES; i++) {
+                while (aci.counts[ADT][i] < 2 * aci.bitmasked_sets[ADT][i]) {
+                    aci.bitmasked_sets[ADT][i]--;
+                    aci.bitmasked_sets[IMMED][i]++;
+                }
+                if (aci.counts[IMMED][i] < 2 * aci.bitmasked_sets[IMMED][i]) {
+                    overhead_increase = true;
+                    break;
+                }
+            }
+            if (overhead_increase)
+                break;
+        }
+        found = overhead_increase == false;
+    }
+
+    action_bytes[IMMED] = overhead_attempt;
+    return true;
+}
+
+/** Based on the split between action data tables and immediate, gather the total placement
+ *  requirements of these regions.
+ */
+void ActionFormat::calculate_maximum() {
+    max_total.reset();
+    for (auto &aci : action_counts) {
+        for (int i = 0; i < LOCATIONS; i++) {
+            for (int j = 0; j < CONTAINER_TYPES; j++) {
+                max_total.counts[i][j] = std::max(aci.counts[i][j], max_total.counts[i][j]);
+            }
+        }
+    }
+
+    for (auto &aci : action_counts) {
+        if (aci.total_bytes(IMMED) == 0) continue;
+        max_total.maximum = std::max(aci.find_maximum_immed(), max_total.maximum);
     }
 }
 
+/** Find a spot for all Action Data Table and Immediate bytes
+ */
+void ActionFormat::space_containers() {
+    space_all_table_containers();
+    space_all_immediate_containers();
+}
 
 /** For non-overlapping action data formats:
  *     - Algorithm finds locations of 8's and 16's first
@@ -433,15 +634,15 @@ void ActionFormat::setup_immediate_format() {
  */
 int ActionFormat::offset_constraints_and_total_layouts() {
     for (auto &aci : action_counts) {
-        if (((aci.counts[BYTE] % 4) == 1 || (aci.counts[BYTE] % 4) == 2)
-             && (aci.counts[HALF] % 2) == 1) {
-            if (aci.total_bytes() + 1 >= (1 << ceil_log2(max_bytes))) {
+        if (((aci.counts[ADT][BYTE] % 4) == 1 || (aci.counts[ADT][BYTE] % 4) == 2)
+             && (aci.counts[ADT][HALF] % 2) == 1) {
+            if (aci.total_bytes(ADT) + 1 >= (1 << ceil_log2(max_bytes))) {
                 aci.offset_constraint = true;
             }
         }
     }
 
-    int max_small_bytes = max_total.counts[BYTE] + max_total.counts[HALF] * 2;
+    int max_small_bytes = max_total.counts[ADT][BYTE] + max_total.counts[ADT][HALF] * 2;
     max_small_bytes = (max_small_bytes + 3) & ~(0x3);
     if (max_small_bytes > (1 << ceil_log2(max_bytes)))
         max_small_bytes = (1 << ceil_log2(max_bytes));
@@ -453,17 +654,17 @@ int ActionFormat::offset_constraints_and_total_layouts() {
     for (auto &aci : action_counts) {
         if (!aci.offset_constraint) continue;
 
-        int aci_highest_8_full = (aci.counts[BYTE] - 1) / 4;
+        int aci_highest_8_full = (aci.counts[ADT][BYTE] - 1) / 4;
         aci.offset_full_word = aci_highest_8_full;
 
         offset_locs.setbit(aci.offset_full_word);
-        if ((aci.counts[BYTE] % 4) == 2)
+        if ((aci.counts[ADT][BYTE] % 4) == 2)
             offset_8count.setbit(aci.offset_full_word);
     }
 
-    use->total_layouts[BYTE].setrange(0, max_total.counts[BYTE]);
-    int starting_16_loc = max_small_bytes - max_total.counts[HALF] * 2;
-    use->total_layouts[HALF].setrange(starting_16_loc, max_total.counts[HALF] * 2);
+    use->total_layouts[ADT][BYTE].setrange(0, max_total.counts[ADT][BYTE]);
+    int starting_16_loc = max_small_bytes - max_total.counts[ADT][HALF] * 2;
+    use->total_layouts[ADT][HALF].setrange(starting_16_loc, max_total.counts[ADT][HALF] * 2);
 
     for (auto full_word : offset_locs) {
         int added = 0;
@@ -472,8 +673,8 @@ int ActionFormat::offset_constraints_and_total_layouts() {
         else
             added = 2;
 
-        use->total_layouts[BYTE].setrange(full_word * 4, added);
-        use->total_layouts[HALF].setrange(full_word * 4 + 2, 2);
+        use->total_layouts[ADT][BYTE].setrange(full_word * 4, added);
+        use->total_layouts[ADT][HALF].setrange(full_word * 4 + 2, 2);
     }
     return max_small_bytes;
 }
@@ -484,44 +685,47 @@ int ActionFormat::offset_constraints_and_total_layouts() {
  */
 void ActionFormat::space_8_and_16_containers(int max_small_bytes) {
     for (auto &aci : action_counts) {
-        int count_byte = aci.counts[BYTE];
-        int count_half = aci.counts[HALF];
+        int count_byte = aci.counts[ADT][BYTE];
+        int count_half = aci.counts[ADT][HALF];
         if (aci.offset_constraint) {
-            count_byte -= (aci.counts[BYTE] % 4);
+            count_byte -= (aci.counts[ADT][BYTE] % 4);
             count_half -= 1;
         }
 
         // Coordinate this to total layouts
         for (int i = 0; i < count_byte; i++) {
-            aci.layouts[BYTE].setbit(i);
+            aci.layouts[ADT][BYTE].setbit(i);
         }
 
         // Due to action bus constraint, any 32 bit operation must be contained within a 8-bit
         // section of the action format for an ease of allocation
         int half_ends = max_small_bytes;
-        if (aci.bitmasked_sets[FULL] > 0) {
+        if (aci.bitmasked_sets[ADT][FULL] > 0) {
             half_ends = check_full_bitmasked(aci, max_small_bytes);
         }
 
         for (int i = 0; i < count_half; i++) {
-            aci.layouts[HALF].setrange(half_ends - 2 * i - 2, 2);
+            aci.layouts[ADT][HALF].setrange(half_ends - 2 * i - 2, 2);
         }
 
         if (aci.offset_constraint) {
-            aci.layouts[BYTE].setrange(aci.offset_full_word * 4, (aci.counts[BYTE] % 4));
-            aci.layouts[HALF].setrange(aci.offset_full_word * 4 + 2, 2);
+            aci.layouts[ADT][BYTE].setrange(aci.offset_full_word * 4,
+                                           (aci.counts[ADT][BYTE] % 4));
+            aci.layouts[ADT][HALF].setrange(aci.offset_full_word * 4 + 2, 2);
         }
 
         LOG3("Aci layouts for action " << aci.action << " BYTE: "
-             << aci.layouts[BYTE] << " HALF: " << aci.layouts[HALF]);
+             << aci.layouts[ADT][BYTE] << " HALF: " << aci.layouts[ADT][HALF]);
 
-        if ((aci.layouts[BYTE] & aci.layouts[HALF]).popcount() != 0)
+        if ((aci.layouts[ADT][BYTE] & aci.layouts[ADT][HALF]).popcount() != 0)
             BUG("Collision between bytes and half word on action data format");
 
-        if ((use->total_layouts[BYTE] & aci.layouts[BYTE]).popcount() < aci.counts[BYTE])
+        if ((use->total_layouts[ADT][BYTE] & aci.layouts[ADT][BYTE]).popcount()
+            < aci.counts[ADT][BYTE])
             BUG("Error in the spread of bytes in action data format");
 
-        if ((use->total_layouts[HALF] & aci.layouts[HALF]).popcount() < aci.counts[HALF] * 2)
+        if ((use->total_layouts[ADT][HALF] & aci.layouts[ADT][HALF]).popcount()
+            < aci.counts[ADT][HALF] * 2)
             BUG("Error in the spread of half words in action data format");
     }
 }
@@ -531,10 +735,10 @@ void ActionFormat::space_8_and_16_containers(int max_small_bytes) {
  */
 int ActionFormat::check_full_bitmasked(ActionContainerInfo &aci, int max_small_bytes) {
     int diff = max_bytes - max_small_bytes;
-    if ((CONTAINER_SIZES[FULL] / 8) * aci.bitmasked_sets[FULL] < diff)
+    if ((CONTAINER_SIZES[FULL] / 8) * aci.bitmasked_sets[ADT][FULL] < diff)
         return max_small_bytes;
 
-    int small_sizes_needed = aci.counts[BYTE] + aci.counts[HALF] * 2;
+    int small_sizes_needed = aci.counts[ADT][BYTE] + aci.counts[ADT][HALF] * 2;
     return (small_sizes_needed - 1) / 4;
 }
 
@@ -544,14 +748,14 @@ int ActionFormat::check_full_bitmasked(ActionContainerInfo &aci, int max_small_b
  */
 void ActionFormat::space_32_containers() {
     for (auto &aci : action_counts) {
-        bitvec combined = aci.layouts[BYTE] | aci.layouts[HALF];
-        int count_full = aci.counts[FULL];
+        bitvec combined = aci.layouts[ADT][BYTE] | aci.layouts[ADT][HALF];
+        int count_full = aci.counts[ADT][FULL];
         for (int i = (1 << ceil_log2(max_bytes)) - 4; i >= 0; i -= 4) {
             if (count_full == 0) break;
             if (combined.getrange(i, 4) != 0)
                 continue;
-            aci.layouts[FULL].setrange(i, 4);
-            use->total_layouts[FULL].setrange(i, 4);
+            aci.layouts[ADT][FULL].setrange(i, 4);
+            use->total_layouts[ADT][FULL].setrange(i, 4);
             count_full--;
         }
         if (count_full != 0)
@@ -561,78 +765,19 @@ void ActionFormat::space_32_containers() {
 
 /** The container allocation algorithm for the action data tables
  */
-void ActionFormat::space_all_containers() {
+void ActionFormat::space_all_table_containers() {
+    max_bytes = action_bytes[ADT];
     if (max_bytes == 0)
         return;
+    for (auto aci : action_counts) {
+        BUG_CHECK(aci.total_bytes(ADT) <= max_bytes, "Somehow have more bytes than "
+                  "possibly allocate");
+    }
+
+
     int max_small_bytes = offset_constraints_and_total_layouts();
     space_8_and_16_containers(max_small_bytes);
     space_32_containers();
-}
-
-/** This function links the action data arguments with containers spaced out for the action.
- *  Action arguments know their size and linked with the correct size.  The information contained
- *  in the ActionDataPlacement may result in the adjustment of the instructions within a pass after
- *  PHV allocation.
- */
-void ActionFormat::align_action_data_layouts() {
-    for (auto aci : action_counts) {
-        auto &placement_vec = use->action_data_format[aci.action];
-        bitvec bitmasked_reservations[CONTAINER_TYPES];
-        int starts[CONTAINER_TYPES] = {0, 0, 0};
-
-        // Handle bitmasked-set requirements first, as they have to be on an even-odd pair,
-        // Algorithm is to place all bitmasked-set required placements, as those are constrained
-        // Once those are placed, fill in the other non bitmasked-sets
-        for (auto &placement : placement_vec) {
-            if (!placement.bitmasked_set) continue;
-            int byte_sz = placement.size / 8;
-            int index = placement.gen_index();
-            int lookup = starts[index];
-            int loc;
-            int max = aci.layouts[index].max().index() + 1;
-            do {
-                if ((lookup % byte_sz) != 0)
-                    BUG("Action formats are setup incorrectly");
-                loc = aci.layouts[index].ffs(lookup);
-                lookup = loc + byte_sz;
-            } while ((loc % ((byte_sz) * 2)) != 0 && lookup < max);
-
-            if (aci.layouts[index].getrange(loc, byte_sz) == 0)
-                BUG("Misalignment on the action data format");
-            placement.start = loc;
-            starts[index] = loc + byte_sz;
-            bitmasked_reservations[index].setrange(loc, byte_sz * 2);
-            if (index == FULL)
-                use->full_layout_bitmasked.setrange(loc, byte_sz * 2);
-        }
-
-        std::fill(starts, starts + CONTAINER_TYPES, 0);
-        for (auto &placement : placement_vec) {
-            if (placement.bitmasked_set) continue;
-            int byte_sz = placement.size / 8;
-            int index = placement.gen_index();
-            int lookup = starts[index];
-            int loc;
-            int max = aci.layouts[index].max().index() + 1;
-            do {
-                if ((lookup % byte_sz) != 0)
-                    BUG("Action formats are setup incorrectly");
-                loc = aci.layouts[index].ffs(lookup);
-                lookup = loc + byte_sz;
-            } while (bitmasked_reservations[index].getbit(loc) == true && lookup < max);
-
-            if (aci.layouts[index].getrange(loc, byte_sz) == 0)
-                BUG("Misalignment on the action data format");
-            placement.start = loc;
-            starts[index] = loc + byte_sz;
-        }
-
-        sort_and_asm_name(placement_vec, false);
-        ArgPlacementData &apd = use->arg_placement[aci.action];
-        calculate_placement_data(placement_vec, apd, false);
-    }
-    if (max_bytes != 0)
-        use->action_data_bytes = (1 << ceil_log2(max_bytes));
 }
 
 /** The algorithm for immediate is much simpler.  Instead of trying to best pack the action data
@@ -655,33 +800,45 @@ void ActionFormat::space_individ_immed(ActionContainerInfo &aci) {
             first = BYTE;
             second = HALF;
         }
-        if (aci.counts[first] > 0)
-            aci.layouts[first] |= bitvec(0, aci.counts[first] * (CONTAINER_SIZES[first] / 8));
+        if (aci.counts[IMMED][first] > 0)
+            aci.layouts[IMMED][first]
+                |= bitvec(0, aci.counts[IMMED][first] * (CONTAINER_SIZES[first] / 8));
         else
              BUG("Should never be reached");
-        if (aci.counts[second] > 0)
-            aci.layouts[second] |= bitvec(2, aci.counts[second] * (CONTAINER_SIZES[second] / 8));
+        if (aci.counts[IMMED][second] > 0)
+            aci.layouts[IMMED][second]
+                |= bitvec(2, aci.counts[IMMED][second] * (CONTAINER_SIZES[second] / 8));
         else
             BUG("Should never be reached");
     } else {
         // TODO: Could do even better byte packing potentially, not currently saving a byte
         for (int i = 0; i < CONTAINER_TYPES; i++) {
-            if (aci.counts[i] > 0) {
-                aci.layouts[i] |= bitvec(0, aci.counts[i] * CONTAINER_SIZES[i] / 8);
+            if (aci.counts[IMMED][i] > 0) {
+                aci.layouts[IMMED][i]
+                    |= bitvec(0, aci.counts[IMMED][i] * CONTAINER_SIZES[i] / 8);
             }
         }
     }
 
-    if ((aci.layouts[BYTE] & aci.layouts[HALF] & aci.layouts[FULL]).popcount() != 0)
+    if ((aci.layouts[IMMED][BYTE] & aci.layouts[IMMED][HALF]
+         & aci.layouts[IMMED][FULL]).popcount() != 0)
         BUG("Erroneous layout of immediate data");
 
     for (int i = 0; i < CONTAINER_TYPES; i++)
-        use->total_layouts_immed[i] |= aci.layouts[i];
+        use->total_layouts[IMMED][i] |= aci.layouts[IMMED][i];
 }
 
 
 /** Simply find the action data formats for immediate data for every single action */
 void ActionFormat::space_all_immediate_containers() {
+    max_bytes = action_bytes[IMMED];
+    if (max_bytes == 0)
+        return;
+    for (auto aci : action_counts) {
+        BUG_CHECK(aci.total_bytes(IMMED) <= max_bytes, "Somehow have more bytes than "
+                  "possibly allocate");
+    }
+
     std::sort(action_counts.begin(), action_counts.end(),
             [](const ActionContainerInfo &a, const ActionContainerInfo &b) {
         int t;
@@ -689,13 +846,13 @@ void ActionFormat::space_all_immediate_containers() {
             return true;
         if (b.order == ActionContainerInfo::NOT_SET && a.order != ActionContainerInfo::NOT_SET)
             return false;
-        if ((t = a.counts[HALF] - b.counts[HALF]) != 0)
+        if ((t = a.counts[IMMED][HALF] - b.counts[IMMED][HALF]) != 0)
             return t > 0;
-        if ((t = a.minmaxes[HALF] - b.minmaxes[HALF]) != 0)
+        if ((t = a.minmaxes[IMMED][HALF] - b.minmaxes[IMMED][HALF]) != 0)
             return t > 0;
-        if ((t = a.counts[BYTE] - b.counts[BYTE]) != 0)
+        if ((t = a.counts[IMMED][BYTE] - b.counts[IMMED][BYTE]) != 0)
             return t > 0;
-        return a.minmaxes[BYTE] > b.minmaxes[BYTE];
+        return a.minmaxes[IMMED][BYTE] > b.minmaxes[IMMED][BYTE];
     });
 
 
@@ -704,107 +861,148 @@ void ActionFormat::space_all_immediate_containers() {
     }
 }
 
-/* Similar to the align action data format, this aligns the immediate container allocation of
- *  an action to the actual arguments.  Because we are trying to minimize immediate length,
- *  the algorithm puts the containers that require the least amount of size to the back.
- *
- *  At the end of the algorithm, a bitvec describing the immediate format is calculated.
- *  This is also suboptimal, as you could potentially optimally search for the best immediate
- *  format in the number of holes one could potentially have
+/** This is to allocate a section of either immediate or action data table section, and
+ *  assign action data parameters to their reserved slots.  In the algorithm, the bitmasked
+ *  set object are allocated before all others, as those fields are required to be allocated
+ *  in pairs.
  */
-void ActionFormat::align_immediate_layouts() {
-    for (auto aci : action_counts) {
-        auto &placement_vec = use->immediate_format.at(aci.action);
-        bitvec bitmasked_reservations[CONTAINER_TYPES];
-        int starts[CONTAINER_TYPES] = {0, 0, 0};
-        bool already_maxed[CONTAINER_TYPES] = {false, false, false};
+void ActionFormat::align_section(ArgFormat &format, ActionContainerInfo &aci, location_t loc,
+        bitmasked_t bm, bitvec layouts_placed[CONTAINER_TYPES],
+        int placed[BITMASKED_TYPES][CONTAINER_TYPES]) {
+    int multiplier = static_cast<int>(bm) + 1;
+    auto &placement_vec = format[aci.action];
 
-        // Handle bitmasked-set requirements first, as they have to be on an even-odd pair,
-        // Algorithm is to place all bitmasked-set required placements, as those are constrained
-        // Once those are placed, fill in the other non bitmasked-sets
-        for (auto &placement : placement_vec) {
-            if (!placement.bitmasked_set) continue;
-            int byte_sz = placement.size / 8;
-            int index = placement.gen_index();
-            // Deals with a particular bitmasked-set case of 3 8-bit fields, ensuring that
-            // the bitmasked-set is on an even odd pair
-            if (placement.range.max().index() + 1 == aci.minmaxes[index]
-                && aci.total_bytes() % 2 == 0) {
-                // Bitmasked-set should be the last parameter
-                int start = aci.layouts[index].max().index();
-                start -= byte_sz * 2 - 1;
-                placement.start = start;
-                already_maxed[index] = true;
-                bitmasked_reservations[index].setrange(start, byte_sz * 2);
-            } else {
-                // Bitmasked-set should not be the last parameter.  Minimize immediate
-                int lookup = starts[index];
-                int loc;
-                int max = aci.layouts[index].max().index() + 1;
-                do {
-                    if ((lookup % byte_sz) != 0)
-                        BUG("Action formats are setup incorrectly");
-                    loc = aci.layouts[index].ffs(lookup);
-                    lookup = loc + byte_sz;
-                } while ((loc % ((byte_sz) * 2)) != 0 && lookup < max);
+    auto it = placement_vec.begin();
+    while (it != placement_vec.end()) {
+        if ((it->bitmasked_set && bm != BITMASKED) || (!it->bitmasked_set && bm == BITMASKED)) {
+            it++;
+            continue;
+        }
+        auto index = it->gen_index();
 
-                if (aci.layouts[index].getrange(loc, byte_sz) == 0)
-                    BUG("Misalignment on the action data format");
-                placement.start = loc;
-                starts[index] = loc + byte_sz;
-                bitmasked_reservations[index].setrange(loc, byte_sz * 2);
-            }
-            if (placement.start > IMMEDIATE_BYTES)
-                BUG("Somehow immediate bytes have 4 bytes");
+        if (placed[bm][index] >= aci.total(loc, bm, static_cast<cont_type_t>(index))) {
+            it++;
+            continue;
         }
 
+        int byte_sz = CONTAINER_SIZES[index] / 8;
+        int lookup = 0;
+        int init_byte = 0;
+        int max = aci.layouts[loc][index].max().index() + 1;
+        bool found = false;
 
-        std::fill(starts, starts + CONTAINER_TYPES, 0);
-        for (auto &placement : placement_vec) {
-            if (placement.bitmasked_set) continue;
-            int byte_sz = placement.size / 8;
-            int index = placement.gen_index();
-            if (placement.range.max().index() + 1 == aci.minmaxes[index]
-                && !already_maxed[index]) {
-                // Normal parameter should be last field to minimize immediate
-                int start = aci.layouts[index].max().index();
-                start -= byte_sz - 1;
-                placement.start = start;
-                already_maxed[index] = true;
-            } else {
-                // Normal parameter should not be last field to minimize immediate
-                int lookup = starts[index];
-                int loc;
-                int max = aci.layouts[index].max().index() + 1;
-                do {
-                    if ((lookup % byte_sz) != 0)
-                        BUG("Action formats are setup incorrectly");
-                    loc = aci.layouts[index].ffs(lookup);
-                    lookup = loc + byte_sz;
-                } while (bitmasked_reservations[index].getbit(loc) == true && lookup < max);
-                if (aci.layouts[index].getrange(loc, byte_sz) == 0)
-                    BUG("Misalignment on the action data format");
-                placement.start = loc;
-                starts[index] = loc + byte_sz;
+        // Find the location of a placement, given an action's placement within actions
+        do {
+            found = true;
+            init_byte = aci.layouts[loc][index].ffs(lookup);
+            lookup = init_byte + byte_sz;
+            if (layouts_placed[index].getrange(init_byte, byte_sz * multiplier) != 0) {
+                found = false;
+            } else if (aci.layouts[loc][index].getslice(init_byte, byte_sz * multiplier).popcount()
+                != byte_sz * multiplier) {
+                found = false;
+            } else if ((init_byte % (byte_sz * multiplier)) != 0) {
+                found = false;
             }
-            if (placement.start > IMMEDIATE_BYTES)
-                BUG("Somehow immediate bytes have 4 bytes");
-        }
-        sort_and_asm_name(placement_vec, true);
-        ArgPlacementData &apd = use->arg_placement[aci.action];
-        calculate_placement_data(placement_vec, apd, true);
+        } while (found == false && lookup < max);
+        BUG_CHECK(found, "Could not match up action data allocation byte");
+
+        it->start = init_byte;
+        it->immediate = loc == IMMED ? true : false;
+        layouts_placed[index].setrange(init_byte, byte_sz * multiplier);
+        placed[bm][index]++;
+
+        use->action_data_format.at(aci.action).push_back(*it);
+        it = placement_vec.erase(it);
     }
-    /* FIXME: Due to complication on action_bus, no longer allowed holes
-    if (tbl->layout.no_match_data()) {
-        auto max = use->immediate_mask.max();
-        if (max != use->immediate_mask.end())
-            use->immediate_mask.setrange(0, max.index());
-    }
-    */
-    auto max = use->immediate_mask.max();
-    if (max != use->immediate_mask.end())
-        use->immediate_mask.setrange(0, max.index());
 }
+
+/** For immediate section, in order to conserve space, the algorithm tries to find the
+ *  action data that has the lowest lsb, and allocate that particular slice of action data
+ *  last in order to better maximize packing.
+ */
+void ActionFormat::find_immed_last(ArgFormat &format, ActionContainerInfo &aci,
+        bitvec layouts_placed[CONTAINER_TYPES], int placed[BITMASKED_TYPES][CONTAINER_TYPES]) {
+    int max = 0;
+    int max_index = CONTAINER_TYPES;
+    // Determine which size of action data would be the best to conserve
+    for (int i = 0; i < CONTAINER_TYPES; i++) {
+        auto layout = aci.layouts[IMMED][i];
+        if (layout.max().index() > max) {
+            max = layout.max().index();
+            max_index = i;
+        }
+    }
+
+    if (max == 0)
+        return;
+    if ((aci.layouts[IMMED][max_index] - layouts_placed[max_index]).max().index() < max)
+        return;
+
+    auto byte_sz = CONTAINER_SIZES[max_index] / 8;
+    int init_byte = max - byte_sz + 1;
+
+    auto &placement_vec = format[aci.action];
+    auto it = placement_vec.begin();
+    bool found = false;
+    while (it != placement_vec.end() && !found) {
+        if (it->bitmasked_set) {
+            it++;
+            continue;
+        }
+        auto index = it->gen_index();
+        if (index != max_index) {
+            it++;
+            continue;
+        }
+        if (it->range.max().index() + 1 != aci.minmaxes[NORMAL][max_index]) {
+            it++;
+            continue;
+        }
+        it->start = init_byte;
+        it->immediate = true;
+        layouts_placed[index].setrange(init_byte, byte_sz);
+        placed[NORMAL][index]++;
+
+        use->action_data_format.at(aci.action).push_back(*it);
+        it = placement_vec.erase(it);
+        found = true;
+    }
+    BUG_CHECK(found, "Minmaxes not properly configured to match up minimum sized immediate");
+}
+
+/** Find a location for all action data parameters within the reserved slots for each of the
+ *  sizes.  First allocate for bitmasked-sets, as those have to be reserved in pairs, then
+ *  in immediate, reserve the lowest bit slot, and then lastly fill in all the remaining
+ *  spots with the associated action data.
+ */
+void ActionFormat::align_action_data_layouts() {
+    ArgFormat format = init_format;
+    for (auto aci : action_counts) {
+        safe_vector<ActionDataPlacement> adp_vector;
+        use->action_data_format[aci.action] = adp_vector;
+        for (int i = IMMED; i >= ADT; i--) {
+            int placed[BITMASKED_TYPES][CONTAINER_TYPES] = {{0, 0, 0}, {0, 0, 0}};
+            auto loc = static_cast<location_t>(i);
+            bitvec layouts_placed[CONTAINER_TYPES];
+            align_section(format, aci, loc, BITMASKED, layouts_placed, placed);
+            if (i == IMMED)
+                find_immed_last(format, aci, layouts_placed, placed);
+            align_section(format, aci, loc, NORMAL, layouts_placed, placed);
+        }
+    }
+
+    for (auto aci : action_counts) {
+        BUG_CHECK(format.at(aci.action).empty(), "Did not fully allocate the action data for "
+                  "an action %s", aci.action);
+        sort_and_asm_name(use->action_data_format.at(aci.action));
+        calculate_placement_data(use->action_data_format.at(aci.action),
+                                 use->arg_placement[aci.action]);
+    }
+    calculate_immed_mask();
+}
+
+
 
 /** This sorts the action data from lowest to highest bit position for easiest assembly output.
  *  It also verifies that two fields of action data within an individual action did not end up
@@ -812,28 +1010,30 @@ void ActionFormat::align_immediate_layouts() {
  *  action data section, this must be renamed uniquely within the action for the assembler.
  *  Thus a unique asm_name could potentially be needed, and thus could be generated.
  */
-void ActionFormat::sort_and_asm_name(safe_vector<ActionDataPlacement> &placement_vec,
-                                     bool immediate) {
+void ActionFormat::sort_and_asm_name(safe_vector<ActionDataPlacement> &placement_vec) {
     std::sort(placement_vec.begin(), placement_vec.end(),
             [](const ActionDataPlacement &a, const ActionDataPlacement &b) {
         // std::sort() in libc++ can compare an element with itself,
         // breaking our assertions below, so exit early in that case.
         if (&a == &b) return false;
 
-        if (a.start == b.start) {
-            BUG("Two containers in the same action are at the same place?");
-        }
+        if (a.immediate == b.immediate) {
+            if (a.start == b.start) {
+                BUG("Two containers in the same action are at the same place?");
+            }
 
-        if ((a.start + a.size / 8 - 1 > b.start && b.start > a.start)
-            || (b.start + b.size / 8 - 1 > a.start && a.start > b.start)) {
-            BUG("Two containers overlap in the same action");
+            if ((a.start + a.size / 8 - 1 > b.start && b.start > a.start)
+                || (b.start + b.size / 8 - 1 > a.start && a.start > b.start)) {
+                BUG("Two containers overlap in the same action");
+            }
         }
+        if (a.immediate != b.immediate)
+            return !a.immediate;
         return a.start < b.start;
     });
     int index = 0;
     int mask_index = 0;
     for (auto &placement : placement_vec) {
-        int byte_sz = placement.size  / 8;
         if (placement.arg_locs.size() > 1) {
             placement.action_name = "$data" + std::to_string(index);
             if (placement.bitmasked_set) {
@@ -843,11 +1043,6 @@ void ActionFormat::sort_and_asm_name(safe_vector<ActionDataPlacement> &placement
         } else if (placement.arg_locs.size() < 1) {
             placement.action_name = "$no_arg";
         }
-        if (immediate) {
-            use->immediate_mask |= (placement.range << (placement.start * 8));
-            if (placement.bitmasked_set)
-                use->immediate_mask |= (placement.range << ((placement.start + byte_sz) * 8));
-        }
     }
 }
 
@@ -855,12 +1050,31 @@ void ActionFormat::sort_and_asm_name(safe_vector<ActionDataPlacement> &placement
  *  entire action data placement
  */
 void ActionFormat::calculate_placement_data(safe_vector<ActionDataPlacement> &placement_vec,
-                                            ArgPlacementData &apd, bool immediate) {
+                                            ArgPlacementData &apd) {
     int index = 0;
     for (auto &container : placement_vec) {
         for (auto arg_loc : container.arg_locs) {
-            apd[std::make_pair(arg_loc.name, arg_loc.field_bit)].emplace_back(index, immediate);
+            apd[std::make_pair(arg_loc.name, arg_loc.field_bit)].push_back(index);
         }
         index++;
     }
+}
+
+/** Calculates the immediate mask needed to be reserved in the table format of either the
+ *  exact match table or the ternary indirect table
+ */
+void ActionFormat::calculate_immed_mask() {
+    for (auto &placement_vec : Values(use->action_data_format)) {
+        for (auto &placement : placement_vec) {
+            if (!placement.immediate) continue;
+            use->immediate_mask |= (placement.range << (placement.start * 8));
+            if (placement.bitmasked_set) {
+                int mask_start = placement.start + placement.size / 8;
+                use->immediate_mask |= (placement.range << (mask_start * 8));
+            }
+        }
+    }
+
+    if (!use->immediate_mask.empty())
+        use->immediate_mask.setrange(0, use->immediate_mask.max().index());
 }

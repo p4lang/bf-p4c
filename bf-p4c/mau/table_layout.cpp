@@ -242,42 +242,37 @@ void TableLayout::setup_gateway_layout(IR::MAU::Table::Layout &layout, IR::MAU::
     // should count gw tcam width and depth to support gw splitting when needed
 }
 
-static void setup_action_layout(IR::MAU::Table *tbl, LayoutChoices &lc, const PhvInfo &phv,
-                                bool alloc_done) {
+/** Initializes the list of action formats that are possible for the table, with different
+ *  layouts in both action data tables as well as immediate
+ */
+void TableLayout::setup_action_layout(IR::MAU::Table *tbl) {
     tbl->layout.action_data_bytes = 0;
-    ActionFormat::Use af_use;
+    safe_vector<ActionFormat::Use> uses;
     ActionFormat af(tbl, phv, alloc_done);
-    af.allocate_format(&af_use);
-    tbl->layout.action_data_bytes = af_use.action_data_bytes;
-    lc.total_action_formats[tbl->name] = af_use;
+    // Action Profiles cannot have any immediate data
+    af.allocate_format(uses, tbl->layout.indirect_action_addr_bits == 0);
+    lc.total_action_formats[tbl->name] = uses;
+    tbl->layout.action_data_bytes = af.action_data_bytes;
 }
 
 /* Setting up the potential layouts for ternary, either with or without immediate
    data if immediate is possible */
-void TableLayout::setup_ternary_layout_options(IR::MAU::Table *tbl, int immediate_bytes_reserved) {
-    bool no_action_data = (tbl->layout.action_data_bytes == 0);
-
-    // Add extra bit to be factored in for a single action This is because
-    // ternary always uses an indirect table with action(s)
+void TableLayout::setup_ternary_layout_options(IR::MAU::Table *tbl) {
     if (get_hit_actions(tbl) == 1)
         tbl->layout.overhead_bits++;
 
-    IR::MAU::Table::Layout layout = tbl->layout;
-    LayoutOption lo(layout);
-    lc.total_layout_options[tbl->name].push_back(lo);
-
-    if (no_action_data || tbl->layout.indirect_action_addr_bits > 0
-        || tbl->layout.action_data_bytes > 4 - immediate_bytes_reserved)
-        return;
-
-    // Potential layout with immediate data
-    layout.action_data_bytes_in_overhead = tbl->layout.action_data_bytes;
-    layout.overhead_bits += tbl->layout.action_data_bytes * 8;
-    LayoutOption lo_tern(layout);
-    lc.total_layout_options[tbl->name].push_back(lo_tern);
+    for (auto &use : lc.get_action_formats(tbl)) {
+        IR::MAU::Table::Layout layout = tbl->layout;
+        layout.action_data_bytes_in_overhead = use.action_data_bytes[ActionFormat::IMMED];
+        layout.action_data_bytes_in_table = use.action_data_bytes[ActionFormat::ADT];
+        layout.overhead_bits += 8 * layout.action_data_bytes_in_overhead;
+        LayoutOption lo(layout);
+        lc.total_layout_options[tbl->name].push_back(lo);
+    }
 }
 
-void TableLayout::setup_exact_match(IR::MAU::Table *tbl, int action_data_bytes) {
+void TableLayout::setup_exact_match(IR::MAU::Table *tbl, int action_data_bytes_in_table,
+                                    int action_data_bytes_in_overhead) {
     auto annot = tbl->match_table->getAnnotations();
     int pack_val = 0;
     if (auto s = annot->getSingle("pack")) {
@@ -301,7 +296,7 @@ void TableLayout::setup_exact_match(IR::MAU::Table *tbl, int action_data_bytes) 
         if (pack_val > 0 && entry_count != pack_val)
             continue;
 
-        int overhead_estimate = 8 * action_data_bytes + tbl->layout.overhead_bits;
+        int overhead_estimate = 8 * action_data_bytes_in_overhead + tbl->layout.overhead_bits;
         int total_match_bytes = entry_count * tbl->layout.match_bytes;
         int extra_bits = ((overhead_estimate + TableFormat::VERSION_BITS) * entry_count);
         int extra_bytes = (extra_bits + 7) / 8;
@@ -326,8 +321,9 @@ void TableLayout::setup_exact_match(IR::MAU::Table *tbl, int action_data_bytes) 
 
         IR::MAU::Table::Layout layout = tbl->layout;
         IR::MAU::Table::Way way;
-        layout.action_data_bytes_in_overhead = action_data_bytes;
-        layout.overhead_bits += action_data_bytes * 8;
+        layout.action_data_bytes_in_table = action_data_bytes_in_table;
+        layout.action_data_bytes_in_overhead = action_data_bytes_in_overhead;
+        layout.overhead_bits += action_data_bytes_in_overhead * 8;
         way.match_groups = entry_count; way.width = width;
         LayoutOption lo(layout, way);
         lc.total_layout_options[tbl->name].push_back(lo);
@@ -336,14 +332,11 @@ void TableLayout::setup_exact_match(IR::MAU::Table *tbl, int action_data_bytes) 
 
 /* Setting up the potential layouts for exact match, with different numbers of entries per row,
    different ram widths, and immediate data on and off */
-void TableLayout::setup_layout_options(IR::MAU::Table *tbl, int immediate_bytes_reserved) {
-    bool no_action_data = (tbl->layout.action_data_bytes == 0);
-    setup_exact_match(tbl, 0);
-    if (no_action_data || tbl->layout.indirect_action_addr_bits > 0
-        || tbl->layout.action_data_bytes > 4 - immediate_bytes_reserved)
-        return;
-    // Potential layouts with immediate data
-    setup_exact_match(tbl, tbl->layout.action_data_bytes);
+void TableLayout::setup_layout_options(IR::MAU::Table *tbl) {
+    for (auto &use : lc.get_action_formats(tbl)) {
+        setup_exact_match(tbl, use.action_data_bytes[ActionFormat::ADT],
+                          use.action_data_bytes[ActionFormat::IMMED]);
+    }
 }
 
 /** Checks to see if the table has a hash distribution access somewhere */
@@ -362,19 +355,25 @@ class GetHashDistReqs : public MauInspector {
 /* FIXME: This function is for the setup of a table with no match data.  This is currently hacked
    together in order to pass many of the test cases.  This needs to have some standardization
    within the assembly so that all tables that do not require match can possibly work */
-void TableLayout::setup_layout_option_no_match(IR::MAU::Table *tbl, int immediate_bytes_reserved) {
-    IR::MAU::Table::Layout layout = tbl->layout;
-    if (layout.action_data_bytes - immediate_bytes_reserved <= 4) {
-        layout.action_data_bytes_in_overhead = layout.action_data_bytes;
-    }
-
+void TableLayout::setup_layout_option_no_match(IR::MAU::Table *tbl) {
     GetHashDistReqs ghdr;
     tbl->attached.apply(ghdr);
     tbl->actions.apply(ghdr);
     if (ghdr.is_hash_dist_needed()) {
         tbl->layout.hash_action = true;
-        layout.hash_action = true;
     }
+
+    // No match tables are required to have only one layout option in a later pass, so the
+    // algorithm picks the action format that has the most immediate.  This is the option
+    // that is preferred generally, but not always, if somehow it couldn't fit on the action
+    // data bus.  Action data bus allocation could properly be optimized a lot more before this
+    // choice would have to be made
+    auto uses = lc.get_action_formats(tbl);
+    auto &use = uses.back();
+    IR::MAU::Table::Layout layout = tbl->layout;
+    layout.action_data_bytes_in_overhead = use.action_data_bytes[ActionFormat::IMMED];
+    layout.action_data_bytes_in_table = use.action_data_bytes[ActionFormat::ADT];
+    layout.overhead_bits += 8 * layout.action_data_bytes_in_overhead;
     LayoutOption lo(layout);
     lc.total_layout_options[tbl->name].push_back(lo);
 }
@@ -498,20 +497,19 @@ bool TableLayout::preorder(IR::MAU::Table *tbl) {
         setup_match_layout(tbl->layout, tbl);
     if ((tbl->layout.gateway = tbl->uses_gateway()))
         setup_gateway_layout(tbl->layout, tbl);
-    setup_action_layout(tbl, lc, phv, alloc_done);
     VisitAttached attached(&tbl->layout);
     for (auto at : tbl->attached) {
         at->apply(attached);
     }
-    int immediate_bytes_reserved = attached.immediate_reserved();
+    setup_action_layout(tbl);
     if (tbl->layout.gateway)
         return true;
     else if (tbl->layout.match_width_bits == 0)
-        setup_layout_option_no_match(tbl, immediate_bytes_reserved);
+        setup_layout_option_no_match(tbl);
     else if (tbl->layout.ternary)
-        setup_ternary_layout_options(tbl, immediate_bytes_reserved);
+        setup_ternary_layout_options(tbl);
     else
-        setup_layout_options(tbl, immediate_bytes_reserved);
+        setup_layout_options(tbl);
     return true;
 }
 

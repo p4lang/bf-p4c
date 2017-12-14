@@ -16,3 +16,5 @@ jbay_test_harness
 .*.sw*
 
 *.pyc
+
+bf-asm/simple_test_harness/jbay_test_harness

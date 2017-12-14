@@ -38,8 +38,8 @@ int RegisterPerWord(const IR::MAU::StatefulAlu *reg) {
 
 int ActionDataPerWord(const IR::MAU::Table::Layout *layout, int *width) {
     int size = 0;
-    if (layout->action_data_bytes > 0)
-        size = ceil_log2(layout->action_data_bytes);
+    if (layout->action_data_bytes_in_table > 0)
+        size = ceil_log2(layout->action_data_bytes_in_table);
     if (size > 4) {
         *width = 1 << (size-4);
         return 1; }
@@ -383,8 +383,6 @@ void StageUseEstimate::select_best_option(const IR::MAU::Table *tbl) {
             int t;
             // The first two lines are to prevent sharing a group across multiple widths,
             // as the asm doesn't yet handle this
-            if (prev_placed && has_action_data != a.layout.direct_ad_required()) return false;
-            if (prev_placed && has_action_data != b.layout.direct_ad_required()) return true;
             if ((t = a.way.match_groups % a.way.width) != 0) return false;
             if ((t = b.way.match_groups % b.way.width) != 0) return true;
             if ((t = a.srams - b.srams) != 0) return t < 0;
@@ -392,16 +390,14 @@ void StageUseEstimate::select_best_option(const IR::MAU::Table *tbl) {
             if ((t = a.way.match_groups - b.way.match_groups) != 0) return t < 0;
             if (!a.layout.direct_ad_required()) return true;
             if (!b.layout.direct_ad_required()) return false;
-            return true;
+            return a.srams < b.srams;
         });
     } else {
         std::sort(layout_options.begin(), layout_options.end(),
-            [=](const LayoutOption a, const LayoutOption b) {
+            [=](const LayoutOption &a, const LayoutOption &b) {
             int t;
             // The first two lines are to prevent sharing a group across multiple widths,
             // as the asm doesn't yet handle this
-            if (prev_placed && has_action_data != a.layout.direct_ad_required()) return false;
-            if (prev_placed && has_action_data != b.layout.direct_ad_required()) return true;
             if ((t = a.way.match_groups % a.way.width) != 0) return false;
             if ((t = b.way.match_groups % b.way.width) != 0) return true;
             if ((t = a.srams - b.srams) != 0) return t < 0;
@@ -409,7 +405,7 @@ void StageUseEstimate::select_best_option(const IR::MAU::Table *tbl) {
             if ((t = a.way.match_groups - b.way.match_groups) != 0) return t > 0;
             if (!a.layout.direct_ad_required()) return true;
             if (!b.layout.direct_ad_required()) return false;
-            return true;
+            return a.srams < b.srams;
         });
     }
     LOG3("table " << tbl->name << " requiring " << table_size << " entries.");
@@ -433,8 +429,6 @@ void StageUseEstimate::select_best_option_ternary() {
     std::sort(layout_options.begin(), layout_options.end(),
         [=](const LayoutOption &a, const LayoutOption &b) {
         int t;
-        if (prev_placed && has_action_data != a.layout.direct_ad_required()) return false;
-        if (prev_placed && has_action_data != b.layout.direct_ad_required()) return true;
         if ((t = a.srams - b.srams) != 0) return t < 0;
         if (!a.layout.ternary_indirect_required()) return true;
         if (!b.layout.ternary_indirect_required()) return false;
@@ -461,15 +455,16 @@ void StageUseEstimate::fill_estimate_from_option(int &entries) {
 }
 
 /* Constructor to estimate the number of srams, tcams, and maprams a table will require*/
-StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries, bool pp, bool had,
-                                   const safe_vector<LayoutOption> &lo,
+StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries,
+                                   const LayoutChoices *lc,
                                    ordered_set<const IR::MAU::ActionData *> sad /* Defaulted */,
                                    bool table_placement)
-    : prev_placed(pp), has_action_data(had), shared_action_data(sad) {
+    : shared_action_data(sad) {
     // Because the table is const, the layout options must be copied into the Object
     logical_ids = 1;
     layout_options.clear();
-    layout_options = lo;
+    layout_options = lc->get_layout_options(tbl);
+    action_formats = lc->get_action_formats(tbl);
     exact_ixbar_bytes = tbl->layout.ixbar_bytes;
     // FIXME: This is a quick hack to handle tables with only a default action
     if (layout_options.size() == 1 && layout_options[0].layout.no_match_data()) {
@@ -751,8 +746,6 @@ void StageUseEstimate::srams_left_best_option(int srams_left) {
     std::sort(layout_options.begin(), layout_options.end(),
         [=](const LayoutOption &a, const LayoutOption &b) {
         int t;
-        if (prev_placed && has_action_data != a.layout.direct_ad_required()) return false;
-        if (prev_placed && has_action_data != b.layout.direct_ad_required()) return true;
         if (a.srams > srams_left) return false;
         if (b.srams > srams_left) return true;
         if ((t = a.way.match_groups % a.way.width) != 0) return false;
@@ -761,7 +754,7 @@ void StageUseEstimate::srams_left_best_option(int srams_left) {
         if ((t = a.way.width - b.way.width) != 0) return t < 0;
         if (!a.layout.direct_ad_required()) return true;
         if (!b.layout.direct_ad_required()) return false;
-        return true;
+        return a.entries < b.entries;
     });
     for (auto &lo : layout_options) {
         LOG3("layout option width " << lo.way.width << " match groups " << lo.way.match_groups
@@ -820,15 +813,13 @@ void StageUseEstimate::tcams_left_best_option() {
     std::sort(layout_options.begin(), layout_options.end(),
         [=](const LayoutOption &a, const LayoutOption &b) {
         int t;
-        if (prev_placed && has_action_data != a.layout.direct_ad_required()) return false;
-        if (prev_placed && has_action_data != b.layout.direct_ad_required()) return true;
         if ((t = a.entries - b.entries) != 0) return t > 0;
         if ((t = a.srams - b.srams) != 0) return t < 0;
         if (!a.layout.ternary_indirect_required()) return true;
         if (!b.layout.ternary_indirect_required()) return false;
         if (!a.layout.direct_ad_required()) return true;
         if (!b.layout.direct_ad_required()) return false;
-        return true;
+        return a.entries < b.entries;
     });
     preferred_index = 0;
 

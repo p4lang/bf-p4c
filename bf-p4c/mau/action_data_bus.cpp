@@ -60,6 +60,7 @@ bool ActionDataBus::alloc_ad_table(const bitvec total_layouts[ActionFormat::CONT
     bitvec full_layout = total_layouts[ActionFormat::FULL];
 
     int max = byte_layout.max().index();
+
     for (int i = 0; i <= max; i += BYTES_PER_RAM) {
         bitvec layout = (byte_layout.getslice(i, BYTES_PER_RAM));
         bitvec combined_layout = combined(total_layouts).getslice(i, BYTES_PER_RAM);
@@ -78,6 +79,7 @@ bool ActionDataBus::alloc_ad_table(const bitvec total_layouts[ActionFormat::CONT
 
 
     max = full_layout.max().index();
+
     for (int i = 0; i <= max; i += BYTES_PER_RAM) {
         bitvec layouts[ActionFormat::CONTAINER_TYPES];
         for (int j = 0; j < ActionFormat::CONTAINER_TYPES; j++) {
@@ -650,16 +652,21 @@ bool ActionDataBus::alloc_immediate(const bitvec total_layouts[ActionFormat::CON
  *  TODO: When action immediate and action data table can happen simultaneously, change here
  */
 bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl, const LayoutOption *lo,
-                                          TableResourceAlloc &alloc) {
-    auto &act_format = alloc.action_format;
+                                          const ActionFormat::Use *use, TableResourceAlloc &alloc) {
     auto &ad_xbar = alloc.action_data_xbar;
     LOG1("Allocating action data bus for " << tbl->name);
+
+    // Immediate allocation
     if (lo->layout.action_data_bytes_in_overhead > 0) {
-        bool allocated = alloc_immediate(act_format.total_layouts_immed, ad_xbar, tbl->name);
+        bool allocated = alloc_immediate(use->total_layouts[ActionFormat::IMMED],
+                                         ad_xbar, tbl->name);
         if (!allocated) return false;
-    } else if (lo->layout.action_data_bytes > 0) {
-        bool allocated = alloc_ad_table(act_format.total_layouts, act_format.full_layout_bitmasked,
-                                        ad_xbar, tbl->name);
+    }
+
+    // Action data table allocation
+    if (lo->layout.action_data_bytes_in_table > 0) {
+        bool allocated = alloc_ad_table(use->total_layouts[ActionFormat::ADT],
+                                        use->full_layout_bitmasked, ad_xbar, tbl->name);
         if (!allocated) return false;
     }
 

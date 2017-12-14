@@ -303,22 +303,22 @@ int TablePlacement::get_provided_stage(const IR::MAU::Table *tbl) {
 }
 
 static bool try_alloc_format(TablePlacement::Placed *next, TableResourceAlloc *resources,
-                             StageUseEstimate &sue, const bitvec immediate_mask, bool gw_linked) {
-     resources->table_format.clear();
-     TableFormat current_format(*sue.preferred(), resources->match_ixbar, next->table,
+                             StageUseEstimate &sue, bool gw_linked) {
+    const bitvec immediate_mask = sue.preferred_action_format()->immediate_mask;
+    resources->table_format.clear();
+    TableFormat current_format(*sue.preferred(), resources->match_ixbar, next->table,
                                 immediate_mask, gw_linked);
 
-     if (!current_format.find_format(&resources->table_format)) {
-         resources->table_format.clear();
-         return false;
-     }
-     return true;
+    if (!current_format.find_format(&resources->table_format)) {
+        resources->table_format.clear();
+        return false;
+    }
+    return true;
 }
 
 static bool try_alloc_ixbar(TablePlacement::Placed *next, const TablePlacement::Placed *done,
                             const PhvInfo &phv, StageUseEstimate &sue,
-                            TableResourceAlloc *resources, const LayoutChoices &lc,
-                            bool is_gw) {
+                            TableResourceAlloc *resources, bool is_gw) {
     resources->clear_ixbar();
     IXBar current_ixbar;
     for (auto *p = done; p && p->stage == next->stage; p = p->prev) {
@@ -330,8 +330,7 @@ static bool try_alloc_ixbar(TablePlacement::Placed *next, const TablePlacement::
         resources->clear_ixbar();
         return false; }
 
-    const bitvec immediate_mask = lc.get_action_format(next->table).immediate_mask;
-    if (!is_gw && !try_alloc_format(next, resources, sue, immediate_mask, next->gw)) {
+    if (!is_gw && !try_alloc_format(next, resources, sue, next->gw)) {
         resources->clear_ixbar();
         return false;
     }
@@ -378,9 +377,12 @@ static bool try_alloc_mem(TablePlacement::Placed *next, const TablePlacement::Pl
 }
 
 static bool try_alloc_adb(TablePlacement::Placed *next, const TablePlacement::Placed *done,
-                          const LayoutOption *lo, TableResourceAlloc *resources, bool is_gw) {
+                          const StageUseEstimate &sue, TableResourceAlloc *resources, bool is_gw) {
     if (is_gw)
         return true;
+
+    BUG_CHECK(sue.preferred_action_format() != nullptr,
+              "A non gateway table has a null action data format allocation");
 
     ActionDataBus current_adb;
     resources->action_data_xbar.clear();
@@ -388,7 +390,8 @@ static bool try_alloc_adb(TablePlacement::Placed *next, const TablePlacement::Pl
     for (auto *p = done; p && p->stage == next->stage; p = p->prev) {
         current_adb.update(p->name, p->resources->action_data_xbar);
     }
-    if (!current_adb.alloc_action_data_bus(next->table, lo, *resources)) {
+    if (!current_adb.alloc_action_data_bus(next->table, sue.preferred(),
+                                           sue.preferred_action_format(), *resources)) {
         resources->action_data_xbar.clear();
         return false;
     }
@@ -454,12 +457,8 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
             set_entries = k->asInt();
         else if (auto k = t->match_table->getConstantProperty("min_size"))
             set_entries = k->asInt(); }
-    bool prev_placed = false;
-    bool has_action_data = false;
     for (auto *p = done; p; p = p->prev) {
         if (p->name == rv->name) {
-            prev_placed = true;
-            has_action_data = p->use.preferred()->layout.direct_ad_required();
             if (p->need_more == false) {
                 LOG2(" - can't place as its already done");
                 return nullptr; }
@@ -481,12 +480,12 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
         }
     }
     assert(!rv->placed[tblInfo.at(rv->table).uid]);
-    min_resources->action_format = lc.get_action_format(t);
-    resources->action_format = lc.get_action_format(t);
     const safe_vector<LayoutOption> layout_options = lc.get_layout_options(t);
     StageUseEstimate stage_current = current;
-    StageUseEstimate min_use(t, min_entries, prev_placed, has_action_data, layout_options,
-                             stage_current.shared_action_data);
+    // According to the driver team, different stage tables can have different action
+    // data allocations, so the algorithm doesn't have to prefer this allocation across
+    // stages
+    StageUseEstimate min_use(t, min_entries, &lc, stage_current.shared_action_data);
 
     bool allocated = false;
     bool ixbar_allocation_bug = false;
@@ -504,6 +503,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
     }
     LOG3("Initial stage is " << rv->stage);
 
+    bool is_gw;
     if (done && rv->stage != done->stage)
         stage_current.clear();
     /* Loop to find the right size of entries for a table to place into stage */
@@ -512,18 +512,17 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
         auto avail = StageUseEstimate::max();
         bool advance_to_next_stage = false;
         allocated = false; ixbar_allocation_bug = false; mem_allocation_bug = false;
-        rv->use = StageUseEstimate(t, rv->entries, prev_placed, has_action_data, layout_options,
-                                   stage_current.shared_action_data);
+        rv->use = StageUseEstimate(t, rv->entries, &lc, stage_current.shared_action_data);
+        is_gw = rv->entries == 0;
         // FIXME: This is not the appropriate way to check if a table is a single gateway
-        bool is_gw = rv->entries == 0;
 
-        if (!try_alloc_ixbar(rv, done, phv, min_use, min_resources, lc, is_gw)) {
+        if (!try_alloc_ixbar(rv, done, phv, min_use, min_resources, is_gw)) {
             advance_to_next_stage = true;
             ixbar_allocation_bug = true;
             LOG3("Min Use ixbar allocation did not fit");
         }
 
-        if (!try_alloc_ixbar(rv, done, phv, rv->use, resources, lc, is_gw)) {
+        if (!try_alloc_ixbar(rv, done, phv, rv->use, resources, is_gw)) {
             advance_to_next_stage = true;
             ixbar_allocation_bug = true;
             LOG3("Table Use ixbar allocation did not fit");
@@ -546,14 +545,14 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
         // FIXME: Min Use vs. Normal Use may be very different, have to fold this into
         // the code better
         if (!advance_to_next_stage &&
-            !try_alloc_adb(rv, done, min_use.preferred(),  min_resources, is_gw)) {
+            !try_alloc_adb(rv, done, min_use, min_resources, is_gw)) {
             adb_allocation_bug = true;
             advance_to_next_stage = true;
             LOG3("Min use of action data bus did not fit");
         }
 
         if (!advance_to_next_stage &&
-            !try_alloc_adb(rv, done, rv->use.preferred(), resources, is_gw)) {
+            !try_alloc_adb(rv, done, rv->use, resources, is_gw)) {
             adb_allocation_bug = true;
             advance_to_next_stage = true;
             LOG3("Normal use of action data bus did not fit");
@@ -591,14 +590,14 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
 
             LOG3(" - reducing to " << rv->entries << " of " << t->name
                  << " in stage " << rv->stage);
-            if (!try_alloc_ixbar(rv, done, phv, rv->use, resources, lc, is_gw)) {
+            if (!try_alloc_ixbar(rv, done, phv, rv->use, resources, is_gw)) {
                 ixbar_allocation_bug = true;
                 ERROR("IXBar Allocation error after previous allocation?");
                 advance_to_next_stage = true;
                 break;
             }
 
-            if (!try_alloc_adb(rv, done, rv->use.preferred(), resources, is_gw)) {
+            if (!try_alloc_adb(rv, done, rv->use, resources, is_gw)) {
                 adb_allocation_bug = true;
                 ERROR("Action Data Bus Allocation error after previous allocation?");
                 advance_to_next_stage = true;
@@ -610,6 +609,13 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
             stage_current.clear();
         }
     } while (!allocated && rv->stage <= furthest_stage);
+
+    if (!is_gw) {
+        auto format = rv->use.preferred_action_format();
+        BUG_CHECK(format != nullptr, "Action format could not be found for a particular layout "
+                  "option.");
+        resources->action_format = *format;
+    }
 
     // FIXME: for a particular test case, adding more entries actually filled in the table better
     if (rv->need_more && rv->entries >= set_entries)
@@ -655,11 +661,8 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
             rv->placed[tblInfo.at(rv->gw).uid] = true;
     } else {
         int extra_entries = set_entries - rv->entries;
-        has_action_data |= rv->use.preferred()->layout.direct_ad_required();
-        rv->extra_use = StageUseEstimate(t, extra_entries, true, has_action_data, layout_options);
+        rv->extra_use = StageUseEstimate(t, extra_entries, &lc);
     }
-    /* FIXME -- need to redo IXBar alloc if we moved to the next stage?  Or if we need less
-     * hash indexing bits for smaller ways? */
     return rv;
 }
 
@@ -981,11 +984,13 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
     // FIXME: Currently the gateway is laid out for every table, so I'm keeping the information
     // in split tables.  In the future, there should be no gw_layout for split tables
     IR::MAU::Table::Layout gw_layout;
+    bool gw_only = true;
     bool gw_layout_used = false;
 
     if (it->second->gw && it->second->gw->name == tbl->name) {
         /* fold gateway and match table together */
         auto match = it->second->table;
+        gw_only = false;
         assert(match && tbl->gateway_only() && !match->uses_gateway());
         LOG3("folding gateway " << tbl->name << " onto " << match->name);
         tbl->name = match->name;
@@ -999,9 +1004,6 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
         /* Generate the correct table layout from the options */
         gw_layout = tbl->layout;
         gw_layout_used = true;
-        select_layout_option(tbl, it->second->use.preferred());
-        add_attached_tables(tbl, it->second->use.preferred());
-        tbl->layout += gw_layout;
         auto *seq = tbl->next.at(it->second->gw_result_tag)->clone();
         tbl->next.erase(it->second->gw_result_tag);
         if (seq->tables.size() != 1) {
@@ -1034,12 +1036,17 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
                 if (gw.second && !tbl->next.count(gw.second))
                     tbl->next[gw.second] = new IR::MAU::TableSeq();
     } else if (it->second->table->match_table) {
-        select_layout_option(tbl, it->second->use.preferred());
-        add_attached_tables(tbl, it->second->use.preferred());
+        gw_only = false;
     }
 
 
     if (table_placed.count(tbl->name) == 1) {
+        if (!gw_only) {
+            select_layout_option(tbl, it->second->use.preferred());
+            add_attached_tables(tbl, it->second->use.preferred());
+            if (gw_layout_used)
+                tbl->layout += gw_layout;
+        }
         if (tbl->layout.atcam)
             return break_up_atcam(tbl, it->second);
         else
@@ -1055,6 +1062,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
         cstring suffix = "." + std::to_string(++counter);
         auto *table_part = tbl->clone();
         select_layout_option(table_part, it->second->use.preferred());
+        add_attached_tables(table_part, it->second->use.preferred());
         if (gw_layout_used)
             table_part->layout += gw_layout;
         table_part->logical_id = it->second->logical_id;

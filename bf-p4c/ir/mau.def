@@ -97,6 +97,7 @@ class Table : BFN::Unit {
         int             match_width_bits = 0;
         int             ghost_bytes = 0;
         int             action_data_bytes = 0;
+        int             action_data_bytes_in_table = 0;
         int             action_data_bytes_in_overhead = 0;
         int             overhead_bits = 0;
         int             meter_addr_bits = 0;
@@ -135,7 +136,7 @@ class Table : BFN::Unit {
                 return false;
             if (action_data_bytes == 0)
                 return false;
-            return action_data_bytes != action_data_bytes_in_overhead;
+            return action_data_bytes_in_table > 0; 
         }
         bool ternary_indirect_required() const { return ternary; }
         bool no_match_data() const { 

@@ -383,12 +383,8 @@ bool ActionAnalysis::init_ad_alloc_alignment(const ActionParam &read, ContainerA
     auto &placements = action_format.arg_placement.at(action_name);
 
     // Information on where fields are stored
-    const safe_vector<ActionFormat::ActionDataPlacement> *action_data_format = nullptr;
-    const safe_vector<ActionFormat::ActionDataPlacement> *immediate_format = nullptr;
-    action_data_format = &(action_format.action_data_format.at(action_name));
-
-    if (tbl->layout.action_data_bytes_in_overhead > 0)
-        immediate_format = &(action_format.immediate_format.at(action_name));
+    auto action_data_format = action_format.action_data_format.at(action_name);
+    // const safe_vector<ActionFormat::ActionDataPlacement> *immediate_format = nullptr;
 
     bitrange read_range;
     ActionParam::type_t type = ActionParam::ACTIONDATA;
@@ -406,20 +402,9 @@ bool ActionAnalysis::init_ad_alloc_alignment(const ActionParam &read, ContainerA
     BUG_CHECK(placements.find(pair) != placements.end(), "Action argument is not found to be "
               "allocated in the action format");
     auto &arg_placement = placements.at(pair);
-    bool is_immediate;
 
     for (auto vector_loc : arg_placement) {
-        ActionFormat::ActionDataPlacement adp;
-        if (vector_loc.second != (tbl->layout.action_data_bytes_in_overhead > 0))
-            continue;
-        // Find the location of the action data field by name
-        if (tbl->layout.action_data_bytes_in_overhead > 0) {
-            adp = (*immediate_format)[vector_loc.first];
-            is_immediate = true;
-        } else {
-            adp = (*action_data_format)[vector_loc.first];
-            is_immediate = false;
-        }
+        auto adp = action_data_format.at(vector_loc);
 
         // Look through and ensure that the slice of the arg location is correct.
         for (auto arg_loc : adp.arg_locs) {
@@ -432,11 +417,11 @@ bool ActionAnalysis::init_ad_alloc_alignment(const ActionParam &read, ContainerA
             auto &adi = cont_action.adi;
 
             if (cont_action.counts[ActionParam::ACTIONDATA] == 0) {
-                adi.initialize(adp.get_action_name(), is_immediate, adp.start,
+                adi.initialize(adp.get_action_name(), adp.immediate, adp.start,
                                adp.arg_locs.size());
                 adi.ad_alignment.add_alignment(write_bits, arg_loc.data_loc);
                 cont_action.counts[ActionParam::ACTIONDATA] = 1;
-            } else if (adi.start != adp.start || adi.immediate != is_immediate) {
+            } else if (adi.start != adp.start || adi.immediate != adp.immediate) {
                 cont_action.counts[ActionParam::ACTIONDATA]++;
             } else {
                 adi.field_affects++;

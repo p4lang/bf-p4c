@@ -24,6 +24,11 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     testdata/p4_14_samples/repeater.p4
   )
 
+  p4c_add_xfail_reason("jbay"
+    "mismatch from expected.* at byte .*"
+    testdata/p4_14_samples/bigfield1.p4
+  )
+
 endif() # HARLYN_STF
 
 # BEGIN: XFAILS that match glass XFAILS

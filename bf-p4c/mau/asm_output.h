@@ -93,7 +93,8 @@ class MauAsmOutput : public MauInspector {
             const IR::MAU::Action *af) const;
     void emit_action_data_alias(std::ostream &out, indent_t, const IR::MAU::Table *tbl,
             const IR::MAU::Action *af) const;
-    void emit_action_data_bus(std::ostream &out, indent_t, const IR::MAU::Table *tbl) const;
+    void emit_action_data_bus(std::ostream &out, indent_t, const IR::MAU::Table *tbl,
+                              bool immediate) const;
     bool emit_idletime(std::ostream &out, indent_t indent, const IR::MAU::Table *tbl,
                        const IR::MAU::IdleTime *id) const;
     class EmitAction;
