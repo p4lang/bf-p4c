@@ -252,9 +252,9 @@ struct OutputDigests : public Inspector {
                 le_bitrange leRange = range.toOrder<Endian::Little>(
                     entry->controlPlaneFormat->totalWidth);
                 out << indent << "- [ " << canon_name(fieldName)
-                              << ", " << (leRange.hi % 8)    // Start bit.
-                              << ", " << range.size()        // Field size.
                               << ", " << range.loByte() + 1  // Start byte.
+                              << ", " << range.size()        // Field width.
+                              << ", " << (leRange.hi % 8)    // Start bit.
                               << "]" << std::endl;
             });
         }
