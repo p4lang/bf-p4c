@@ -665,6 +665,22 @@ struct CollectPhvFields : public Inspector, public TofinoWriteContext {
         int fieldListIndex = 0;
         for (auto* fieldList : entry->fieldLists) {
             LOG1("\t.....field list....." << fieldList);
+
+            // The first two entries in the field list are both special and may
+            // not be split between containers. The first indicates the mirror
+            // session ID to the hardware. The second is used by the egress
+            // parser to determine which field list a mirrored packet comes
+            // from, and we need to be careful to ensure that it maintains the
+            // expected layout exactly.
+            if (!fieldList->sources.empty()) {
+                auto* fieldInfo = phv.field(fieldList->sources[0]->field);
+                if (fieldInfo) fieldInfo->set_no_split(true);
+            }
+            if (fieldList->sources.size() > 1) {
+                auto* fieldInfo = phv.field(fieldList->sources[1]->field);
+                if (fieldInfo) fieldInfo->set_no_split(true);
+            }
+
             for (auto* mirroredField : fieldList->sources) {
                 PHV::Field* mirror = phv.field(mirroredField->field);
                 if (mirror) {
