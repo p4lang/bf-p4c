@@ -21,14 +21,6 @@ namespace {
 /// statement in the phase 0 table's action that writes an action parameter into a
 /// metadata field.
 struct Phase0WriteFromParam {
-    bool operator==(const Phase0WriteFromParam& other) const {
-        return dest == other.dest && sourceParam == other.sourceParam;
-    }
-    bool operator<(const Phase0WriteFromParam& other) const {
-        if (dest != other.dest) return dest < other.dest;
-        return sourceParam < other.sourceParam;
-    }
-
     /// The destination of the write (a metadata field).
     const IR::Member* dest;
 
@@ -40,14 +32,6 @@ struct Phase0WriteFromParam {
 /// statement in the phase 0 table's action that writes a constant into a
 /// metadata field.
 struct Phase0WriteFromConstant {
-    bool operator==(const Phase0WriteFromConstant& other) const {
-        return dest == other.dest && value == other.value;
-    }
-    bool operator<(const Phase0WriteFromConstant& other) const {
-        if (dest != other.dest) return dest < other.dest;
-        return value < other.value;
-    }
-
     /// The destination of the write (a metadata field).
     const IR::Member* dest;
 
@@ -62,23 +46,26 @@ struct Phase0TableMetadata {
     /// The phase 0 table we found.
     const IR::P4Table* table = nullptr;
 
-    /// If non-empty, the name of the phase 0 table's action as specified in the
-    /// P4 program.
+    /// The name of the phase 0 table's action as specified in the P4 program.
     cstring actionName;
 
     /// The table apply call that will be replaced with a phase 0 parser.
     const IR::MethodCallStatement* applyCallToReplace = nullptr;
 
+    /// Parameters for the phase 0 table's action that need to get translated
+    /// into a phase 0 data layout.
+    const IR::ParameterList* actionParams = nullptr;
+
     /// Writes from action parameters that need to get translated into extracts
     /// from the input buffer in the phase 0 parser.
-    std::set<Phase0WriteFromParam> paramWrites;
+    std::vector<Phase0WriteFromParam> paramWrites;
 
     /// Writes from constants that need to get translated into constant extracts
     /// in the phase 0 parser.
-    std::set<Phase0WriteFromConstant> constantWrites;
+    std::vector<Phase0WriteFromConstant> constantWrites;
 
-    /// A P4 type for the phase 0 data, generated based on the writes performed
-    /// by the phase 0 table's action.
+    /// A P4 type for the phase 0 data, generated based on the parameters to the
+    /// table's action.
     const IR::Type_Header* p4Type = nullptr;
 };
 
@@ -146,7 +133,7 @@ struct FindPhase0Table : public Inspector {
         }
         LOG3(" - The control flow is valid");
 
-        if (!canPackDataIntoPhase0(phase0->paramWrites)) {
+        if (!canPackDataIntoPhase0()) {
             LOG3(" - The action parameters are too large to pack into "
                    << Device::pardeSpec().bitPhase0Size() << " bits");
             phase0 = boost::none;
@@ -257,6 +244,10 @@ struct FindPhase0Table : public Inspector {
         for (auto* param : *action->parameters)
             if (param->direction != IR::Direction::None) return false;
 
+        // Save the action parameters; we'll use them to generate the header
+        // type that defines the format of the phase 0 data.
+        phase0->actionParams = action->parameters;
+
         for (auto* statement : action->body->components) {
             // The action should contain only assignments.
             if (!statement->is<IR::AssignmentStatement>()) return false;
@@ -287,7 +278,7 @@ struct FindPhase0Table : public Inspector {
 
             // The action should only read from constants or its parameters.
             if (source->is<IR::Constant>()) {
-                phase0->constantWrites.emplace(Phase0WriteFromConstant {
+                phase0->constantWrites.emplace_back(Phase0WriteFromConstant {
                     dest->to<IR::Member>(),
                     source->to<IR::Constant>()
                 });
@@ -300,7 +291,7 @@ struct FindPhase0Table : public Inspector {
                 return false;
             }
 
-            phase0->paramWrites.emplace(Phase0WriteFromParam {
+            phase0->paramWrites.emplace_back(Phase0WriteFromParam {
                 dest->to<IR::Member>(),
                 source->to<IR::PathExpression>()->path->name.name
             });
@@ -348,29 +339,23 @@ struct FindPhase0Table : public Inspector {
         return true;
     }
 
-    bool canPackDataIntoPhase0(const std::set<Phase0WriteFromParam>& extracts) {
+    bool canPackDataIntoPhase0() {
         // Generate the phase 0 data layout.
         FieldPacking packing;
-        for (auto extract : extracts) {
-            auto* containingType = extract.dest->expr->type;
-            BUG_CHECK(containingType->is<IR::Type_StructLike>(),
-                      "Phase 0 field is not attached to a structlike type?");
-            auto* type = containingType->to<IR::Type_StructLike>();
-
-            auto* field = type->getField(extract.dest->member);
-            BUG_CHECK(field != nullptr,
-                      "Phase 0 field %1% not found in type %2%", field, type);
+        for (auto* param : *phase0->actionParams) {
+            BUG_CHECK(param->type, "No type for phase 0 parameter %1%?", param);
 
             // Align the field so that its LSB lines up with a byte boundary,
             // which (usually) reproduces the behavior of the PHV allocator.
             // XXX(seth): Once `@layout("flexible")` is properly supported in
             // the backend, we won't need this (or any padding), so we should
             // remove it at that point.
-            auto fieldSize = field->type->width_bits();
+            auto fieldSize = param->type->width_bits();
             const int nextByteBoundary = 8 * ((fieldSize + 7) / 8);
             const int alignment = nextByteBoundary - fieldSize;
             packing.padToAlignment(8, alignment);
-            packing.appendField(extract.dest, extract.sourceParam, fieldSize);
+            packing.appendField(new IR::PathExpression(param->name),
+                                param->name, fieldSize);
             packing.padToAlignment(8);
         }
 
