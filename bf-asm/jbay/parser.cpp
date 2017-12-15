@@ -290,5 +290,23 @@ template<> void Parser::write_config(Target::JBay::parser_regs &regs) {
 
 template<> 
 void Parser::gen_configuration_cache(Target::JBay::parser_regs &regs, json::vector &cfg_cache) {
-}
+    std::string reg_fqname;
+    std::string reg_name;
+    unsigned reg_value;
+    std::string reg_value_str;
+    unsigned reg_width = 13;
 
+    /* Publishing meta_opt field for chnl_ctrl register */
+    /* Are ovr_pipeid, chnl_clean, init_dprsr_credit, init_ebuf_credit always handled by the
+     * driver?
+     */
+    for (int i = 0; i < 8; i++) {
+        reg_fqname = "pardereg.pgstnreg.epbprsr4reg["
+            + std::to_string(i) + "].epbreg.chan" + std::to_string(i)
+            + "_group.chnl_ctrl.meta_opt";
+        reg_name = "parser0_chnl_ctrl_" + std::to_string(i);
+        reg_value = meta_opt;
+        reg_value_str = int_to_hex_string(meta_opt, reg_width);
+        add_cfg_reg(cfg_cache, reg_fqname, reg_name, reg_value_str);
+    }
+}
