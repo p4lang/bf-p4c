@@ -12,6 +12,7 @@ void ActionDataBus::clear() {
     for (auto &in_use : cont_in_use)
         in_use.clear();
     total_in_use.clear();
+    shared_action_profiles.clear();
 }
 
 
@@ -653,6 +654,15 @@ bool ActionDataBus::alloc_immediate(const bitvec total_layouts[ActionFormat::CON
  */
 bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl, const LayoutOption *lo,
                                           const ActionFormat::Use *use, TableResourceAlloc &alloc) {
+    for (auto at : tbl->attached) {
+        auto ad = at->to<IR::MAU::ActionData>();
+        if (ad == nullptr) continue;
+        if (shared_action_profiles.count(ad))
+            return true;
+        shared_action_profiles.emplace(ad);
+    }
+
+
     auto &ad_xbar = alloc.action_data_xbar;
     LOG1("Allocating action data bus for " << tbl->name);
 
@@ -711,11 +721,20 @@ void ActionDataBus::update(cstring name, const TableResourceAlloc *alloc) {
     update(name, alloc->action_data_xbar);
 }
 
+void ActionDataBus::update_profile(const IR::MAU::Table *tbl) {
+    for (auto at : tbl->attached) {
+        auto ad = at->to<IR::MAU::ActionData>();
+        if (ad == nullptr) continue;
+        if (shared_action_profiles.count(ad))
+            return;
+        shared_action_profiles.emplace(ad);
+    }
+}
+
 void ActionDataBus::update(const IR::MAU::Table *tbl) {
-    BUG_CHECK(tbl->is_placed(), "Cannot call update on a pre-placed table");
-    if (tbl->layout.atcam) {
+    if (tbl->layout.atcam && tbl->is_placed()) {
         auto orig_name = tbl->name.before(tbl->name.findlast('$'));
-        if (atcam_updates.find(orig_name) != atcam_updates.end())
+        if (atcam_updates.count(orig_name))
             return;
         atcam_updates.emplace(orig_name);
     }

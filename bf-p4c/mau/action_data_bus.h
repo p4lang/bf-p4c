@@ -57,6 +57,7 @@ struct ActionDataBus {
 
     safe_vector<std::pair<int, int>> immed_starts;
     std::set<cstring> atcam_updates;
+    std::set<const IR::MAU::ActionData *> shared_action_profiles;
     bool reserved_immed[3] = {false, false, false};
 
 
@@ -101,6 +102,10 @@ struct ActionDataBus {
         void clear() {
             action_data_locs.clear();
             clobber_locs.clear();
+        }
+
+        bool empty() const {
+            return action_data_locs.empty() && clobber_locs.empty();
         }
     };
 
@@ -159,10 +164,10 @@ struct ActionDataBus {
  public:
     bool alloc_action_data_bus(const IR::MAU::Table *tbl, const LayoutOption *lo,
                                const ActionFormat::Use *use, TableResourceAlloc &alloc);
-
     void update(cstring name, const Use &alloc);
     void update(cstring name, const TableResourceAlloc *alloc);
     void update(cstring name, const Use::ReservedSpace &rs);
+    void update_profile(const IR::MAU::Table *tbl);
     void update(const IR::MAU::Table *tbl);
 };
 

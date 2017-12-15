@@ -377,37 +377,40 @@ void StageUseEstimate::select_best_option(const IR::MAU::Table *tbl) {
         }
     }
 
-    if (small_table_allocation) {
-        std::sort(layout_options.begin(), layout_options.end(),
-            [=](const LayoutOption &a, const LayoutOption &b) {
-            int t;
-            // The first two lines are to prevent sharing a group across multiple widths,
-            // as the asm doesn't yet handle this
-            if ((t = a.way.match_groups % a.way.width) != 0) return false;
-            if ((t = b.way.match_groups % b.way.width) != 0) return true;
-            if ((t = a.srams - b.srams) != 0) return t < 0;
-            if ((t = a.way.width - b.way.width) != 0) return t < 0;
-            if ((t = a.way.match_groups - b.way.match_groups) != 0) return t < 0;
-            if (!a.layout.direct_ad_required()) return true;
-            if (!b.layout.direct_ad_required()) return false;
-            return a.srams < b.srams;
-        });
-    } else {
-        std::sort(layout_options.begin(), layout_options.end(),
-            [=](const LayoutOption &a, const LayoutOption &b) {
-            int t;
-            // The first two lines are to prevent sharing a group across multiple widths,
-            // as the asm doesn't yet handle this
-            if ((t = a.way.match_groups % a.way.width) != 0) return false;
-            if ((t = b.way.match_groups % b.way.width) != 0) return true;
-            if ((t = a.srams - b.srams) != 0) return t < 0;
-            if ((t = a.way.width - b.way.width) != 0) return t < 0;
-            if ((t = a.way.match_groups - b.way.match_groups) != 0) return t > 0;
-            if (!a.layout.direct_ad_required()) return true;
-            if (!b.layout.direct_ad_required()) return false;
-            return a.srams < b.srams;
-        });
-    }
+    std::sort(layout_options.begin(), layout_options.end(),
+        [=](const LayoutOption &a, const LayoutOption &b) {
+        int t;
+        // The first two lines are to prevent sharing a group across multiple widths,
+        // as the asm doesn't yet handle this
+        bool wide = a.way.match_groups < a.way.width;
+        int a_mod = 0;  int b_mod = 0;
+
+        if (wide) {
+           a_mod = a.way.width % a.way.match_groups;
+           b_mod = b.way.width % b.way.match_groups;
+        } else {
+           a_mod = a.way.match_groups % a.way.width;
+           b_mod = b.way.match_groups % b.way.width;
+        }
+
+        if (a_mod == 0 && b_mod != 0)
+            return true;
+        if (b_mod == 0 && a_mod != 0)
+            return false;
+
+        LOG1("We are here " << a.way.match_groups << " " << a.way.width << " " << a_mod);
+        LOG1("Double up " << b.way.match_groups << " " << b.way.width << " " << b_mod);
+
+        if ((t = a.srams - b.srams) != 0) return t < 0;
+        if ((t = a.way.width - b.way.width) != 0) return t < 0;
+        if ((t = a.way.match_groups - b.way.match_groups) != 0) return t < 0;
+        if (!a.layout.direct_ad_required() && b.layout.direct_ad_required())
+            return true;
+        if (a.layout.direct_ad_required() && !b.layout.direct_ad_required())
+            return false;
+        return a.layout.action_data_bytes_in_table < b.layout.action_data_bytes_in_table;
+    });
+
     LOG3("table " << tbl->name << " requiring " << table_size << " entries.");
     if (small_table_allocation)
         LOG3("small table allocation");
@@ -746,15 +749,32 @@ void StageUseEstimate::srams_left_best_option(int srams_left) {
     std::sort(layout_options.begin(), layout_options.end(),
         [=](const LayoutOption &a, const LayoutOption &b) {
         int t;
-        if (a.srams > srams_left) return false;
-        if (b.srams > srams_left) return true;
-        if ((t = a.way.match_groups % a.way.width) != 0) return false;
-        if ((t = b.way.match_groups % b.way.width) != 0) return true;
-        if ((t = a.entries - b.entries) != 0) return t > 0;
+        bool wide = a.way.match_groups < a.way.width;
+        int a_mod = 0;  int b_mod = 0;
+
+        if (wide) {
+           a_mod = a.way.width % a.way.match_groups;
+           b_mod = b.way.width % b.way.match_groups;
+        } else {
+           a_mod = a.way.match_groups % a.way.width;
+           b_mod = b.way.match_groups % b.way.width;
+        }
+
+        if (a_mod == 0 && b_mod != 0)
+            return true;
+        if (b_mod == 0 && a_mod != 0)
+            return false;
+        if (a.srams > srams_left && b.srams <= srams_left)
+            return false;
+        if (b.srams > srams_left && a.srams <= srams_left)
+            return true;
         if ((t = a.way.width - b.way.width) != 0) return t < 0;
-        if (!a.layout.direct_ad_required()) return true;
-        if (!b.layout.direct_ad_required()) return false;
-        return a.entries < b.entries;
+        if ((t = a.way.match_groups - b.way.match_groups) != 0) return t < 0;
+        if (!a.layout.direct_ad_required() && b.layout.direct_ad_required())
+            return true;
+        if (a.layout.direct_ad_required() && !b.layout.direct_ad_required())
+            return false;
+        return a.layout.action_data_bytes_in_table < b.layout.action_data_bytes_in_table;
     });
     for (auto &lo : layout_options) {
         LOG3("layout option width " << lo.way.width << " match groups " << lo.way.match_groups

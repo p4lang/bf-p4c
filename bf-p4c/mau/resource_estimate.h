@@ -45,8 +45,7 @@ struct StageUseEstimate {
         return rv; }
     bool operator<=(const StageUseEstimate &a) {
         return logical_ids <= a.logical_ids && srams <= a.srams && tcams <= a.tcams &&
-               maprams <= a.maprams && exact_ixbar_bytes <= a.exact_ixbar_bytes &&
-               ternary_ixbar_groups <= a.ternary_ixbar_groups; }
+               maprams <= a.maprams; }
     void clear() {
         logical_ids = 0; srams = 0; tcams = 0; maprams = 0;
         exact_ixbar_bytes = 0; ternary_ixbar_groups = 0;

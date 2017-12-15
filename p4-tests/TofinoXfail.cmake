@@ -31,6 +31,13 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     testdata/p4_14_samples/bigfield1.p4
     )
 
+  # Context JSON problem with one table split having action data table and one having
+  # immediate only.  Amresh to look into is this is even possible for assembler
+  p4c_add_xfail_reason("tofino"
+    "action data table .* not in right stage"
+    testdata/p4_14_samples/exact_match3.p4
+  )
+
 endif() # HARLYN_STF_tofino
 
 # add the failures with no reason
@@ -197,6 +204,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/p4-tests/programs/alpm_test/alpm_test.p4
   extensions/p4_tests/p4_14/p4-tests/programs/perf_test_alpm/perf_test_alpm.p4
   extensions/p4_tests/p4_14/p4-tests/programs/clpm/clpm.p4
+  extensions/p4_tests/p4_14/p4-tests/programs/multicast_scale/multicast_scale.p4
   )
 
 # BRIG-113
@@ -245,7 +253,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_297_big_metadata.p4
   extensions/p4_tests/p4_14/p4-tests/programs/smoke_large_tbls/smoke_large_tbls.p4
   extensions/p4_tests/p4_14/adb_shared3.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -846,6 +853,12 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     testdata/p4_14_samples/exact_match_mask1.p4
     )
 
+  # BRIG-356
+  p4c_add_xfail_reason("tofino"
+    "StatusCode.UNAVAILABLE, Endpoint read failed"
+    testdata/p4_14_samples/exact_match3.p4
+    )
+
 endif() # ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET
 
 if (HARLYN_STF_tofino AND NOT ENABLE_STF2PTF)
@@ -1003,8 +1016,13 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "error: hash expression width mismatch"
-  extensions/p4_tests/p4_14/p4-tests/programs/stful/stful.p4
   switch_l2
+  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "Ways from supposedly different hash groups have same group?"
+  extensions/p4_tests/p4_14/p4-tests/programs/stful/stful.p4
   )
 
 p4c_add_xfail_reason("tofino"

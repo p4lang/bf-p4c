@@ -388,7 +388,8 @@ static bool try_alloc_adb(TablePlacement::Placed *next, const TablePlacement::Pl
     resources->action_data_xbar.clear();
 
     for (auto *p = done; p && p->stage == next->stage; p = p->prev) {
-        current_adb.update(p->name, p->resources->action_data_xbar);
+        current_adb.update(p->name, p->resources);
+        current_adb.update_profile(p->table);
     }
     if (!current_adb.alloc_action_data_bus(next->table, sue.preferred(),
                                            sue.preferred_action_format(), *resources)) {
@@ -431,6 +432,39 @@ static void coord_selector_xbar(const TablePlacement::Placed *curr,
         if (p_as == as && !p->resources->selector_ixbar.use.empty()) {
             resource->selector_ixbar = prev_resources[j]->selector_ixbar;
             prev_resources[j]->selector_ixbar.clear();
+            break;
+        }
+        j++;
+    }
+}
+
+static void coord_action_data_xbar(const TablePlacement::Placed *curr,
+                                   const TablePlacement::Placed *done,
+                                   TableResourceAlloc *resource,
+                                   safe_vector<TableResourceAlloc *> &prev_resources) {
+    const IR::MAU::ActionData *ad = nullptr;
+    for (auto at : curr->table->attached) {
+        if ((ad = at->to<IR::MAU::ActionData>()) != nullptr) break;
+    }
+    if (ad == nullptr) return;
+    auto loc = resource->memuse.find(curr->table->get_use_name(ad));
+    if (loc == resource->memuse.end() || (loc != resource->memuse.end()
+        && !resource->action_data_xbar.empty()))
+        return;
+    int j = 0;
+    for (auto *p = done; p && p->stage == curr->stage; p = p->prev) {
+        const IR::MAU::ActionData *p_ad = nullptr;
+        if (p == curr) {
+            j++;
+            continue;
+        }
+        for (auto at : p->table->attached) {
+            if ((p_ad = at->to<IR::MAU::ActionData>()) != nullptr)
+                break;
+        }
+        if (p_ad == ad && !p->resources->action_data_xbar.empty()) {
+            resource->action_data_xbar = prev_resources[j]->action_data_xbar;
+            prev_resources[j]->action_data_xbar.clear();
             break;
         }
         j++;
@@ -646,9 +680,11 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
     int i = 0;
     for (auto *p = done; p && p->stage == rv->stage; p = p->prev) {
         coord_selector_xbar(p, done, prev_resources[i], prev_resources);
+        coord_action_data_xbar(p, done, prev_resources[i], prev_resources);
         i++;
     }
     coord_selector_xbar(rv, done, resources, prev_resources);
+    coord_action_data_xbar(rv, done, resources, prev_resources);
     if (done && rv->stage == done->stage) {
         rv->set_prev(done, true, prev_resources);
     } else {
