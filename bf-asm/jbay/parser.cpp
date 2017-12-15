@@ -300,11 +300,10 @@ void Parser::gen_configuration_cache(Target::JBay::parser_regs &regs, json::vect
     /* Are ovr_pipeid, chnl_clean, init_dprsr_credit, init_ebuf_credit always handled by the
      * driver?
      */
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < 9; i++) {
         reg_fqname = "pardereg.pgstnreg.epbprsr4reg["
-            + std::to_string(i) + "].epbreg.chan" + std::to_string(i)
-            + "_group.chnl_ctrl.meta_opt";
-        reg_name = "parser0_chnl_ctrl_" + std::to_string(i);
+            + std::to_string(i) + "].epbreg.chan0_group.chnl_ctrl.meta_opt";
+        reg_name = "epb" + std::to_string(i) + "parser0_chnl_ctrl_0";
         reg_value = meta_opt;
         reg_value_str = int_to_hex_string(meta_opt, reg_width);
         add_cfg_reg(cfg_cache, reg_fqname, reg_name, reg_value_str);
