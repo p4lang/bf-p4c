@@ -1,0 +1,114 @@
+exm_indirect_1.p4(912): warning: -1: negative value with unsigned type
+    add_to_field(ipv4.ttl, -1);
+                            ^
+exm_indirect_1.p4(205): warning: -1: negative value with unsigned type
+    add_to_field(ttl, -1);
+                       ^
+exm_indirect_1.p4(204): warning: egress_port shadows .egress_port
+action hop(ttl, egress_port) {
+                ^^^^^^^^^^^
+exm_indirect_1.p4(200)
+action egress_port(egress_port) {
+^
+exm_indirect_1.p4(219): warning: egress_port shadows .egress_port
+action next_hop_ipv4(egress_port ,srcmac, dstmac) {
+                     ^^^^^^^^^^^
+exm_indirect_1.p4(200)
+action egress_port(egress_port) {
+^
+exm_indirect_1.p4(267): warning: egress_port shadows .egress_port
+action custom_action_1(egress_port, ipAddr, dstAddr, tcpPort)
+                       ^^^^^^^^^^^
+exm_indirect_1.p4(200)
+action egress_port(egress_port) {
+^
+exm_indirect_1.p4(262): warning: egress_port shadows .egress_port
+action modify_tcp_dst_port_1(dstPort, egress_port) {
+                                      ^^^^^^^^^^^
+exm_indirect_1.p4(200)
+action egress_port(egress_port) {
+^
+exm_indirect_1.p4(282): warning: egress_port shadows .egress_port
+action custom_action_3(egress_port, dstAddr, dstIp)
+                       ^^^^^^^^^^^
+exm_indirect_1.p4(200)
+action egress_port(egress_port) {
+^
+exm_indirect_1.p4(200): warning: egress_port shadows .egress_port
+action egress_port(egress_port) {
+                   ^^^^^^^^^^^
+exm_indirect_1.p4(200)
+action egress_port(egress_port) {
+^
+exm_indirect_1.p4(275): warning: egress_port shadows .egress_port
+action custom_action_2(egress_port, ipAddr, tcpPort)
+                       ^^^^^^^^^^^
+exm_indirect_1.p4(200)
+action egress_port(egress_port) {
+^
+exm_indirect_1.p4(237): warning: egress_port shadows .egress_port
+action mod_mac_addr(egress_port, srcmac, dstmac) {
+                    ^^^^^^^^^^^
+exm_indirect_1.p4(200)
+action egress_port(egress_port) {
+^
+exm_indirect_1.p4(308): warning: egress_port shadows .egress_port
+action nhop_set(egress_port ,srcmac, dstmac) {
+                ^^^^^^^^^^^
+exm_indirect_1.p4(200)
+action egress_port(egress_port) {
+^
+exm_indirect_1.p4(727): warning: egress_port shadows .egress_port
+action act4(egress_port) {
+            ^^^^^^^^^^^
+exm_indirect_1.p4(200)
+action egress_port(egress_port) {
+^
+exm_indirect_1.p4(719): warning: egress_port shadows .egress_port
+action act1(egress_port) {
+            ^^^^^^^^^^^
+exm_indirect_1.p4(200)
+action egress_port(egress_port) {
+^
+exm_indirect_1.p4(731): warning: egress_port shadows .egress_port
+action act2(idx, egress_port) {
+                 ^^^^^^^^^^^
+exm_indirect_1.p4(200)
+action egress_port(egress_port) {
+^
+exm_indirect_1.p4(714): warning: egress_port shadows .egress_port
+action act(idx, egress_port) {
+                ^^^^^^^^^^^
+exm_indirect_1.p4(200)
+action egress_port(egress_port) {
+^
+exm_indirect_1.p4(736): warning: egress_port shadows .egress_port
+action act5(idx, egress_port) {
+                 ^^^^^^^^^^^
+exm_indirect_1.p4(200)
+action egress_port(egress_port) {
+^
+exm_indirect_1.p4(727): warning: egress_port shadows .egress_port
+action act4(egress_port) {
+            ^^^^^^^^^^^
+exm_indirect_1.p4(200)
+action egress_port(egress_port) {
+^
+exm_indirect_1.p4(719): warning: egress_port shadows .egress_port
+action act1(egress_port) {
+            ^^^^^^^^^^^
+exm_indirect_1.p4(200)
+action egress_port(egress_port) {
+^
+exm_indirect_1.p4(719): warning: egress_port shadows .egress_port
+action act1(egress_port) {
+            ^^^^^^^^^^^
+exm_indirect_1.p4(200)
+action egress_port(egress_port) {
+^
+exm_indirect_1.p4(719): warning: egress_port shadows .egress_port
+action act1(egress_port) {
+            ^^^^^^^^^^^
+exm_indirect_1.p4(200)
+action egress_port(egress_port) {
+^

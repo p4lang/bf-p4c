@@ -1,0 +1,63 @@
+exm_smoke_test.p4(200): warning: -1: negative value with unsigned type
+    add_to_field(ttl, -1);
+                       ^
+exm_smoke_test.p4(199): warning: egress_port shadows .egress_port
+action hop(ttl, egress_port) {
+                ^^^^^^^^^^^
+exm_smoke_test.p4(195)
+action egress_port(egress_port) {
+^
+exm_smoke_test.p4(214): warning: egress_port shadows .egress_port
+action next_hop_ipv4(egress_port ,srcmac, dstmac) {
+                     ^^^^^^^^^^^
+exm_smoke_test.p4(195)
+action egress_port(egress_port) {
+^
+exm_smoke_test.p4(270): warning: egress_port shadows .egress_port
+action custom_action_2(egress_port, ipAddr, tcpPort)
+                       ^^^^^^^^^^^
+exm_smoke_test.p4(195)
+action egress_port(egress_port) {
+^
+exm_smoke_test.p4(277): warning: egress_port shadows .egress_port
+action custom_action_3(egress_port, dstAddr, dstIp)
+                       ^^^^^^^^^^^
+exm_smoke_test.p4(195)
+action egress_port(egress_port) {
+^
+exm_smoke_test.p4(284): warning: egress_port shadows .egress_port
+action custom_action_4(egress_port, dstPort, srcPort)
+                       ^^^^^^^^^^^
+exm_smoke_test.p4(195)
+action egress_port(egress_port) {
+^
+exm_smoke_test.p4(195): warning: egress_port shadows .egress_port
+action egress_port(egress_port) {
+                   ^^^^^^^^^^^
+exm_smoke_test.p4(195)
+action egress_port(egress_port) {
+^
+exm_smoke_test.p4(245): warning: egress_port shadows .egress_port
+action tcp_hdr_rm (egress_port) {
+                   ^^^^^^^^^^^
+exm_smoke_test.p4(195)
+action egress_port(egress_port) {
+^
+exm_smoke_test.p4(232): warning: egress_port shadows .egress_port
+action mod_mac_addr(egress_port, srcmac, dstmac) {
+                    ^^^^^^^^^^^
+exm_smoke_test.p4(195)
+action egress_port(egress_port) {
+^
+exm_smoke_test.p4(257): warning: egress_port shadows .egress_port
+action modify_tcp_dst_port_1(dstPort, egress_port) {
+                                      ^^^^^^^^^^^
+exm_smoke_test.p4(195)
+action egress_port(egress_port) {
+^
+exm_smoke_test.p4(262): warning: egress_port shadows .egress_port
+action custom_action_1(egress_port, ipAddr, dstAddr, tcpPort)
+                       ^^^^^^^^^^^
+exm_smoke_test.p4(195)
+action egress_port(egress_port) {
+^

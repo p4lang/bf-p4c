@@ -1,0 +1,38 @@
+stful.p4(175): warning: ifid shadows .ifid
+action set_ifid(ifid) {
+                ^^^^
+stful.p4(293)
+table ifid {
+^
+stful.p4(716): warning: ifid shadows .ifid
+action set_egr_ifid(ifid) {
+                    ^^^^
+stful.p4(293)
+table ifid {
+^
+stful.p4(719): warning: ifid shadows .ifid
+action scratch_add(index, ifid) {
+                          ^^^^
+stful.p4(293)
+table ifid {
+^
+stful.p4(723): warning: ifid shadows .ifid
+action scratch_sub(index, ifid) {
+                          ^^^^
+stful.p4(293)
+table ifid {
+^
+stful.p4(727): warning: ifid shadows .ifid
+action scratch_zero(index, ifid) {
+                           ^^^^
+stful.p4(293)
+table ifid {
+^
+stful.p4(731): warning: ifid shadows .ifid
+action scratch_invert(index, ifid) {
+                             ^^^^
+stful.p4(293)
+table ifid {
+^
+warning: .next_hop_ecmp_reg: unused instance
+warning: .lag_reg: unused instance

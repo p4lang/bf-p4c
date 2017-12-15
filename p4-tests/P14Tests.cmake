@@ -62,6 +62,15 @@ set (P14_XFAIL_TESTS
   extensions/p4_tests/p4_14/c2/COMPILER-599/case3230.p4
   extensions/p4_tests/p4_14/c5/COMPILER-594/comp594.p4
   extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
+  # count_with_hash primitive unsupported
+  extensions/p4_tests/p4_14/p4-tests/programs/hash_driven/hash_driven.p4
+  # proprietary algorithms for hash
+  extensions/p4_tests/p4_14/p4-tests/programs/dyn_hash/dyn_hash.p4
+  extensions/p4_tests/p4_14/p4-tests/programs/exm_direct/exm_direct.p4
+  # hash_test.p4(171): error: set_p: parameter p must be bound
+  extensions/p4_tests/p4_14/p4-tests/programs/hash_test/hash_test.p4
+  # knet_mgr_test.p4(10): error: add_cpu_header: parameter fabric_color must be bound
+  extensions/p4_tests/p4_14/p4-tests/programs/knet_mgr_test/knet_mgr_test.p4
   )
 
 # p4-tests has all the includes at the same level with the programs.
@@ -80,7 +89,7 @@ set (P14_TEST_SUITES
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c7/*/*.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/c8/*/*.p4
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch/p4src/switch.p4
-  ${BFN_TESTS}
+  ${BFN_TESTS_LIST}
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/switch_*/switch.p4
   )
 
