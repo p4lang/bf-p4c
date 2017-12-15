@@ -429,11 +429,11 @@ void MeterTable::gen_tbl_cfg(json::vector &out) {
     case STANDARD: tbl["meter_type"] = "standard"; break;
     case LPF: tbl["meter_type"] = "lpf"; break;
     case RED: tbl["meter_type"] = "red"; break;
-    default: break; }
+    default: tbl["meter_type"] = "standard"; break; }
     switch (count) {
     case PACKETS: tbl["meter_granularity"] = "packets"; break;
     case BYTES: tbl["meter_granularity"] = "bytes"; break;
-    default: break; }
+    default: tbl["meter_granularity"] = "packets"; break; }
     tbl["enable_color_aware"] = color_aware;
     tbl["enable_color_aware_pfe"] = color_aware_per_flow_enable;
     tbl["enable_pfe"] = per_flow_enable;
