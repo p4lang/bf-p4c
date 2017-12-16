@@ -15,6 +15,7 @@
 #include "bf-p4c/mau/instruction_selection.h"
 #include "bf-p4c/mau/ixbar_realign.h"
 #include "bf-p4c/mau/push_pop.h"
+#include "bf-p4c/mau/split_alpm.h"
 #include "bf-p4c/mau/split_gateways.h"
 #include "bf-p4c/mau/stateful_alu.h"
 #include "bf-p4c/mau/table_layout.h"
@@ -185,6 +186,7 @@ Backend::Backend(const BFN_Options& options) :
         new CollectPhvInfo(phv),
         new DoInstructionSelection(phv),
         new DumpPipe("After InstructionSelection"),
+        new AlpmSetup,
         new CollectPhvInfo(phv),
         &defuse,
         (options.no_deadcode_elimination == false) ? new ElimUnused(phv, defuse) : nullptr,

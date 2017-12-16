@@ -153,6 +153,7 @@ set (BF_P4C_BACKEND_MAU_SRCS
   mau/memories.cpp
   mau/resource_estimate.cpp
   mau/resource.cpp
+  mau/split_alpm.cpp
   mau/split_gateways.cpp
   mau/stateful_alu.cpp
   mau/table_dependency_graph.cpp
@@ -182,6 +183,7 @@ set (BF_P4C_BACKEND_MAU_HDRS
   mau/push_pop.h
   mau/resource_estimate.h
   mau/resource.h
+  mau/split_alpm.h
   mau/split_gateways.h
   mau/stateful_alu.h
   mau/table_dependency_graph.h

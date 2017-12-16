@@ -88,6 +88,7 @@ class Table : BFN::Unit {
     class Layout {
         /* POD type */
         int             entries = 0;
+        bool            pre_classifier = false;
         bool            gateway = false;
         bool            ternary = false;
         bool            hash_action = false;
@@ -106,6 +107,7 @@ class Table : BFN::Unit {
         int             indirect_action_addr_bits = 0;
         int             partition_bits = 0;
         int             partition_count = 0;
+        int             pre_classifer_number_entries = 0;
         Layout() { memset(this, 0, sizeof(*this)); }
         operator== { return memcmp(this, &a, sizeof(Layout)) == 0; }
         toJSON {
@@ -156,7 +158,6 @@ class Table : BFN::Unit {
         bool no_match_miss_path() const {
             return no_match_data() && (overhead_bits > 0 || action_data_bytes > 0) && !hash_action;
         }
-
 #emit
         Layout &operator+=(const Layout &a);
 #end

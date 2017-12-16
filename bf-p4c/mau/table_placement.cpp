@@ -487,7 +487,9 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
     int min_entries = 1;
     int set_entries = 512;
     if (t->match_table) {
-        if (auto k = t->match_table->getConstantProperty("size"))
+        if (auto k = t->layout.pre_classifier)
+            set_entries = t->layout.pre_classifer_number_entries;
+        else if (auto k = t->match_table->getConstantProperty("size"))
             set_entries = k->asInt();
         else if (auto k = t->match_table->getConstantProperty("min_size"))
             set_entries = k->asInt(); }

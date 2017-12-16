@@ -122,7 +122,9 @@ void TableLayout::check_for_ternary(IR::MAU::Table::Layout &layout, const IR::MA
 }
 
 void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl) {
-    if (auto k = tbl->match_table->getConstantProperty("size"))
+    if (auto k = tbl->layout.pre_classifier)
+        layout.entries = tbl->layout.pre_classifer_number_entries;
+    else if (auto k = tbl->match_table->getConstantProperty("size"))
         layout.entries = k->asInt();
     else if (auto k = tbl->match_table->getConstantProperty("min_size"))
         layout.entries = k->asInt();
