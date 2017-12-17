@@ -103,7 +103,7 @@ const IR::Node* SplitAlpm::postorder(IR::MAU::Table* tbl) {
         }
     }
 
-    auto partition_index_bits = int(ceil(log(float(number_partitions)) / log(2.0)));
+    auto partition_index_bits = int(std::ceil(std::log(float(number_partitions)) / std::log(2.0)));
     auto pre_classifer_number_entries = number_partitions * number_subtrees_per_partition;
 
     auto lpm_cnt = 0;

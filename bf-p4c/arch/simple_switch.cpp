@@ -4,6 +4,7 @@
 #include <initializer_list>
 #include <set>
 #include "bf-p4c/arch/phase0.h"
+#include "bf-p4c/arch/remove_set_metadata.h"
 #include "bf-p4c/device.h"
 
 namespace BFN {

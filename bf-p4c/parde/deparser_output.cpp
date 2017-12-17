@@ -2,6 +2,7 @@
 #include "bf-p4c/common/asm_output.h"
 #include "bf-p4c/common/autoindent.h"
 #include "bf-p4c/parde/field_packing.h"
+#include "bf-p4c/device.h"
 
 namespace {
 
