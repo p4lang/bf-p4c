@@ -134,6 +134,7 @@ struct Memories {
         struct Row {
             int         row, bus;
             safe_vector<int> col, mapcol;
+            Row() : row(-1), bus(-1) {}
             explicit Row(int r, int b = -1) : row(r), bus(b) {}
             void dbprint(std::ostream &out) const {
                 out << "Row " << row << " with bus " << bus;

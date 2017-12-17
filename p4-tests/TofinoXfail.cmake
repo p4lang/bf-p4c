@@ -38,6 +38,14 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     testdata/p4_14_samples/exact_match3.p4
   )
 
+  p4c_add_xfail_reason("tofino"
+    "Floating point exception"
+    extensions/p4_tests/p4_14/adjust_instr3.p4
+    extensions/p4_tests/p4_14/action_default_multiple.p4
+    extensions/p4_tests/p4_14/overlay_add_header.p4
+    extensions/p4_tests/p4_14/no_match_miss.p4
+  )
+
 endif() # HARLYN_STF_tofino
 
 # add the failures with no reason
@@ -76,14 +84,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/axon.p4
   testdata/p4_16_samples/stack_complex-bmv2.p4
   testdata/p4_16_samples/issue737-bmv2.p4
-  )
-
-# BRIG-107
-p4c_add_xfail_reason("tofino"
-  "No field named counter_addr in format"
-  testdata/p4_14_samples/13-Counters1and2.p4
-  testdata/p4_14_samples/14-Counter.p4
-  extensions/p4_tests/p4_14/c1/COMPILER-386/test_config_286_stat_bugs.p4
   )
 
 # BRIG-108
@@ -269,11 +269,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Syntax error, expecting identifier or operation"
   testdata/p4_14_samples/issue1013.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "Syntax error, expecting list"
-  testdata/p4_14_samples/issue1057.p4
   )
 
 # various stateful
@@ -800,9 +795,7 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
 
   p4c_add_xfail_reason("tofino"
     "AssertionError: Expected packet was not received on device"
-    extensions/p4_tests/p4_14/action_default_multiple.p4
     extensions/p4_tests/p4_14/adb_shared2.p4
-    extensions/p4_tests/p4_14/adjust_instr3.p4
     extensions/p4_tests/p4_16/stack_valid.p4
     testdata/p4_14_samples/07-MultiProtocol.p4
     testdata/p4_14_samples/instruct5.p4
@@ -858,6 +851,16 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     "StatusCode.UNAVAILABLE, Endpoint read failed"
     testdata/p4_14_samples/exact_match3.p4
     )
+
+  #BRIG-357
+  p4c_add_xfail_reason("tofino"
+    "StatusCode.UNKNOWN, Error in first phase of device update"
+    extensions/p4_tests/p4_14/adjust_instr3.p4
+    extensions/p4_tests/p4_14/action_default_multiple.p4
+    extensions/p4_tests/p4_14/overlay_add_header.p4
+    extensions/p4_tests/p4_14/no_match_miss.p4
+  )
+    
 
 endif() # ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET
 
@@ -946,11 +949,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Assertion .*bit == data_bit.* failed"
   extensions/p4_tests/p4_14/test_config_285_meter_sharing.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "error: Can't put field .* into byte .* on action xbar"
-  extensions/p4_tests/p4_14/22-BigToSmallFieldWithMask8.p4
   )
 
 # XXX(cole): This will be fixed with SuperCluster slice list splitting.

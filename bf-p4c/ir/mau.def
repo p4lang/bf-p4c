@@ -156,7 +156,7 @@ class Table : BFN::Unit {
          *  configured by the driver when the control plane requests a change
          */
         bool no_match_miss_path() const {
-            return no_match_data() && (overhead_bits > 0 || action_data_bytes > 0) && !hash_action;
+            return no_match_data() && !no_match_hit_path();
         }
 #emit
         Layout &operator+=(const Layout &a);

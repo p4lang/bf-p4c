@@ -71,12 +71,6 @@ p4c_add_xfail_reason("jbay"
   )
 
 p4c_add_xfail_reason("jbay"
-  "No field named .*_addr in format"
-  testdata/p4_14_samples/13-Counters1and2.p4
-  testdata/p4_14_samples/14-Counter.p4
-  )
-
-p4c_add_xfail_reason("jbay"
   "Table .* is applied multiple times, and the next table information cannot correctly propagate through this multiple application"
   testdata/p4_14_samples/16-TwoReferences.p4
   )
@@ -125,7 +119,6 @@ p4c_add_xfail_reason("jbay"
 p4c_add_xfail_reason("jbay"
   "error: Syntax error,"
   testdata/p4_14_samples/issue1013.p4
-  testdata/p4_14_samples/issue1057.p4
   )
 
 p4c_add_xfail_reason("jbay"

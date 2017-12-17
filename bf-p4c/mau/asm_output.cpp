@@ -678,19 +678,24 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
     bool logical = mem.type >= Memories::Use::COUNTER;
     bool have_bus = !logical;
     bool have_mapcol = mem.is_twoport();
+    bool have_col = false;
 
     for (auto &r : mem.row) {
         if (logical) {
             row.push_back(2*r.row + (r.col[0] >= Memories::LEFT_SIDE_COLUMNS));
+            have_col = true;
         } else {
             row.push_back(r.row);
             bus.push_back(r.bus);
-            if (r.bus < 0) have_bus = false; } }
+            if (r.bus < 0) have_bus = false;
+            if (r.col.size() > 0) have_col = true;
+        }
+    }
 
     if (row.size() > 1) {
         out << indent << "row: " << row << std::endl;
         if (have_bus) out << indent << "bus: " << bus << std::endl;
-        if (/*have_col*/ true) {
+        if (have_col) {
             out << indent << "column:" << std::endl;
             for (auto &r : mem.row)
                 out << indent << "- " << memory_vector(r.col, mem.type, false) << std::endl;
@@ -703,7 +708,7 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
     } else {
         out << indent << "row: " << row[0] << std::endl;
         if (have_bus) out << indent << "bus: " << bus[0] << std::endl;
-        if (/*have_col*/ true) {
+        if (have_col) {
             out << indent << "column: " << memory_vector(mem.row[0].col, mem.type, false)
             << std::endl;
         }
@@ -1411,7 +1416,8 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
     indent_t    indent(1);
     bool no_match_hit = tbl->layout.no_match_hit_path() && !tbl->gateway_only();
     if (!tbl->gateway_only())
-        tbl_type = tbl->layout.ternary ? "ternary_match" : "exact_match";
+        tbl_type = tbl->layout.ternary || tbl->layout.no_match_miss_path()
+                   ? "ternary_match" : "exact_match";
     if (no_match_hit)
         tbl_type = "hash_action";
     if (tbl->layout.atcam)
@@ -1421,9 +1427,11 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
     if (!tbl->gateway_only()) {
         emit_table_context_json(out, indent, tbl);
         auto memuse_name = tbl->get_use_name();
-        emit_memory(out, indent, tbl->resources->memuse.at(memuse_name));
-        emit_ixbar(out, indent, &tbl->resources->match_ixbar, &tbl->resources->hash_dists,
-                   &tbl->resources->memuse.at(memuse_name), &fmt, tbl->layout.ternary);
+        if (!tbl->layout.no_match_miss_path()) {
+            emit_memory(out, indent, tbl->resources->memuse.at(memuse_name));
+            emit_ixbar(out, indent, &tbl->resources->match_ixbar, &tbl->resources->hash_dists,
+                       &tbl->resources->memuse.at(memuse_name), &fmt, tbl->layout.ternary);
+        }
         if (!tbl->layout.ternary && !tbl->layout.no_match_data()) {
             emit_table_format(out, indent, tbl->resources->table_format, &fmt, false);
         }
@@ -1495,7 +1503,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
         }
     }
 
-    if (!tbl->layout.ternary)
+    if (!tbl->layout.ternary && !tbl->layout.no_match_miss_path())
         emit_action_data_bus(out, indent, tbl, true);
 
     /* FIXME -- this is a mess and needs to be rewritten to be sane */
@@ -1510,7 +1518,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
             ad_check |= tbl->layout.indirect_action_addr_bits > 0;
             BUG_CHECK(ad_check, "Action Data Table %s misconfigured", ad->name);
             have_action = true; } }
-    assert(have_indirect == (tbl->layout.ternary));
+    assert(have_indirect == (tbl->layout.ternary || tbl->layout.no_match_miss_path()));
     assert(have_action || tbl->layout.action_data_bytes_in_table == 0);
 
 

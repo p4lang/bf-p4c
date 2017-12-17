@@ -211,8 +211,6 @@ void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::M
             }
         }
     }
-
-    layout.overhead_bits = ceil_log2(get_hit_actions(tbl));
 }
 
 int TableLayout::get_hit_actions(const IR::MAU::Table *tbl) {
@@ -495,6 +493,7 @@ bool TableLayout::preorder(IR::MAU::Table *tbl) {
     LOG1("## layout table " << tbl->name);
     tbl->layout.ixbar_bytes = tbl->layout.match_bytes = tbl->layout.match_width_bits =
     tbl->layout.action_data_bytes = tbl->layout.overhead_bits = 0;
+    tbl->layout.overhead_bits += std::max(ceil_log2(get_hit_actions(tbl)), 0);
     if (tbl->match_table)
         setup_match_layout(tbl->layout, tbl);
     if ((tbl->layout.gateway = tbl->uses_gateway()))

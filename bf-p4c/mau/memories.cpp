@@ -383,11 +383,14 @@ bool Memories::analyze_tables(mem_info &mi) {
         auto table = ta->table;
         int entries = ta->provided_entries;
         if (ta->layout_option->layout.no_match_data()) {
+            auto name = ta->table->get_use_name();
             if (ta->layout_option->layout.no_match_hit_path()) {
                 no_match_hit_tables.push_back(ta);
+                (*ta->memuse)[name].type = Use::EXACT;
             } else {
                 // In order to potentially provide potential sizes for attached tables,
                 // must at least have a size of 1
+                (*ta->memuse)[name].type = Use::TERNARY;
                 ta->calculated_entries = 1;
                 no_match_miss_tables.push_back(ta);
             }
@@ -2694,22 +2697,27 @@ bool Memories::allocate_all_no_match_miss() {
     // tind tables
     size_t no_match_tables_allocated = 0;
     for (auto *ta : no_match_miss_tables) {
-        auto name = ta->table->get_use_name();
+        auto name = ta->table->get_use_name(nullptr, false, IR::MAU::Table::TIND_NAME);
         auto &alloc = (*ta->memuse)[name];
+        alloc.type = Use::TIND;
         bool found = false;
+
+        found = false;
         for (int i = 0; i < SRAM_ROWS; i++) {
             for (int j = 0; j < BUS_COUNT; j++) {
                 if (payload_use[i][j]) continue;
-                if (sram_match_bus[i][j]) continue;
-                alloc.type = Use::EXACT;
-                sram_match_bus[i][j] = name;
+                if (tind_bus[i][j]) continue;
                 alloc.row.emplace_back(i, j);
-                no_match_tables_allocated++;
                 found = true;
                 break;
             }
             if (found) break;
         }
+
+        if (!found)
+            break;
+        else
+            no_match_tables_allocated = true;
     }
 
     if (no_match_tables_allocated != no_match_miss_tables.size())

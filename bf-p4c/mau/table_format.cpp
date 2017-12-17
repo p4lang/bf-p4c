@@ -219,9 +219,9 @@ bool TableFormat::find_format(Use *u) {
 
     if (layout_option.layout.no_match_miss_path()) {
         overhead_groups_per_RAM.push_back(1);
-        LOG3("No match table");
+        LOG3("No match miss");
         use->match_groups.emplace_back();
-        if (!allocate_all_immediate())
+        if (!allocate_overhead())
             return false;
         return true;
     } else if (layout_option.layout.no_match_hit_path()) {
