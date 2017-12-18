@@ -65,12 +65,10 @@ const IR::Statement *P4V1::WREDConverter::convertExternCall(P4V1::ProgramStructu
         BUG("Unknown method %s in wred", prim->name); }
     BUG_CHECK(prim->operands.size() >= 2 && prim->operands.size() <= 3,
               "Expected 2 or 3 operands for %s", prim->name);
-    const IR::Type *input_type = nullptr;
     auto dest = conv.convert(prim->operands.at(1));
     auto args = new IR::Vector<IR::Expression>();
     if (auto prop = ext->properties.get<IR::Property>("wred_input")) {
         if (auto ev = prop->value->to<IR::ExpressionValue>()) {
-            input_type = ev->expression->type;
             args->push_back(conv.convert(ev->expression));
         } else {
             error("%s: wred_input property is not an expression", prop->value->srcInfo);
@@ -81,8 +79,8 @@ const IR::Statement *P4V1::WREDConverter::convertExternCall(P4V1::ProgramStructu
         args->push_back(conv.convert(prim->operands.at(2)));
     auto extref = new IR::PathExpression(structure->externs.get(ext));
     auto method = new IR::Member(prim->srcInfo, extref, "execute");
-    auto mc = new IR::MethodCallExpression(prim->srcInfo, input_type, method, args);
-    rv = structure->assign(prim->srcInfo, dest, mc, input_type);
+    auto mc = new IR::MethodCallExpression(prim->srcInfo, IR::Type::Bits::get(8), method, args);
+    rv = structure->assign(prim->srcInfo, dest, mc, dest->type);
     return rv;
 }
 
