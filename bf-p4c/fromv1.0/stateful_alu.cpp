@@ -404,6 +404,7 @@ const IR::Declaration_Instance *P4V1::StatefulAluConverter::convertExternInstanc
             CreateSaluApplyFunction::create(structure, ext, info.rtype, info.utype,
                                             math ? math->name.name : cstring()) });
         auto *rv = new IR::Declaration_Instance(name, ratype, ctor_args, block);
+        LOG3("Created apply function: " << *rv);
         return rv->apply(TypeConverter(structure))->to<IR::Declaration_Instance>();
     }
     BUG("Failed to find utype for %s", ext);

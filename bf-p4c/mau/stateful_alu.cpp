@@ -25,7 +25,7 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
         BUG_CHECK(field_idx < 2, "bad field name in register layout"); }
     cstring name = field_idx ? "hi" : "lo";
     switch (idx) {
-    case 0:
+    case 0:  /* first parameter to apply:  inout value; */
         if (etype == NONE) {
             alu_write[field_idx] = true;
             etype = VALUE; }
@@ -34,7 +34,7 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
             name = (alu_write[field_idx] ? "alu_" : "mem_") + name;
         e = new IR::MAU::SaluReg(pe->type, name);
         break;
-    case 1:
+    case 1:  /* second parameter to apply:  out rv; */
         if (etype == NONE) etype = OUTPUT;
         if (!opcode) opcode = "output";
         return true;
@@ -64,13 +64,14 @@ bool CreateSaluInstruction::preorder(const IR::AssignmentStatement *as) {
     etype = NONE;
     opcode = cstring();
     visit(as->left, "left");
-    BUG_CHECK(operands.size() == (etype != OUTPUT), "recursion failure");
+    BUG_CHECK(operands.size() == (etype != OUTPUT) || ::errorCount() > 0, "recursion failure");
     if (etype == NONE) {
         error("Can't assign to %s in register action", as->left);
     } else {
         visit(as->right);
-        BUG_CHECK(operands.size() > (etype != OUTPUT), "recursion failure");
-        createInstruction(); }
+        if (::errorCount() == 0) {
+            BUG_CHECK(operands.size() > (etype != OUTPUT), "recursion failure");
+            createInstruction(); } }
     operands.clear();
     return false;
 }

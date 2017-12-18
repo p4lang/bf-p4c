@@ -57,7 +57,7 @@ if [ "$RUN_BOOTSTRAP_PTF" == "yes" ]; then
 fi
 
 mkdir -p ${builddir}/p4c/extensions/bf-p4c
-ln -sf ${mydir}/bf-p4c/.gdbinit ${builddir}/p4c/extensions/bf-p4c/p4c-tofino-gdb.gdb
+ln -sf ${mydir}/bf-p4c/.gdbinit ${builddir}/p4c/extensions/bf-p4c/p4c-barefoot-gdb.gdb
 mkdir -p ${builddir}/p4c/backends/bmv2/
 ln -sf ${mydir}/bf-p4c/.gdbinit ${builddir}/p4c/backends/bmv2/p4c-bm2-ss-gdb.gdb
 mkdir -p ${builddir}/p4c/backends/p4test
