@@ -1,3 +1,4 @@
+#include <cmath>
 #include "ir/ir.h"
 #include "split_alpm.h"
 #include "lib/log.h"
