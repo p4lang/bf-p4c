@@ -228,11 +228,17 @@ template<> void Parser::write_config(Target::JBay::parser_regs &regs) {
 
     for (int i : phv_use[EGRESS]) {
         auto id = Phv::reg(i)->parser_id();
-        regs.merge.lower.phv_owner.owner[id] = 1;
+        if (id < 128)
+            regs.merge.ul.phv_owner_127_0.owner[id] = 1;
+        else
+            regs.merge.ur.phv_owner_255_128.owner[id-128] = 1;
         regs.main[INGRESS].phv_owner.owner[id] = 1;
         regs.main[EGRESS].phv_owner.owner[id] = 1;
         if (Phv::reg(i)->size == 32) {
-            regs.merge.lower.phv_owner.owner[++id] = 1;
+            if (++id < 128)
+                regs.merge.ul.phv_owner_127_0.owner[id] = 1;
+            else
+                regs.merge.ur.phv_owner_255_128.owner[id-128] = 1;
             regs.main[INGRESS].phv_owner.owner[id] = 1;
             regs.main[EGRESS].phv_owner.owner[id] = 1;
         } else if (Phv::reg(i)->size == 8) {
@@ -244,12 +250,12 @@ template<> void Parser::write_config(Target::JBay::parser_regs &regs) {
     regs.main[EGRESS].hdr_len_adj.amt = hdr_len_adj[EGRESS];
 
     int i_start = Stage::first_table(INGRESS) & 0x1ff;
-    for (auto &reg : regs.merge.upper.i_start_table)
+    for (auto &reg : regs.merge.ll1.i_start_table)
         reg.table = i_start;
     int e_start = Stage::first_table(EGRESS) & 0x1ff;
-    for (auto &reg : regs.merge.upper.e_start_table)
+    for (auto &reg : regs.merge.lr1.e_start_table)
         reg.table = e_start;
-    regs.merge.upper.g_start_table.table = 0x1ff;
+    regs.merge.lr1.g_start_table.table = 0x1ff;
 
     for (auto &ref : regs.ingress.prsr)
         ref = "regs.parser.main.ingress";
