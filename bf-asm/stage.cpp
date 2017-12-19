@@ -213,7 +213,7 @@ int Stage::first_table(gress_t gress) {
             if (tbl->gress != gress) continue;
             if (tbl->logical_id < min_logical_id)
                 min_logical_id = tbl->logical_id; }
-        if (min_logical_id != INT_MAX) {
+        if (min_logical_id >= 0 && min_logical_id != INT_MAX) {
             assert((min_logical_id & ~0xf) == 0);
             return (st.stageno << 4) + min_logical_id; } }
     return -1;
