@@ -192,6 +192,8 @@ class Allocation {
     ordered_map<PHV::Container, ContainerStatus> container_status_i;
     ordered_map<const PHV::Field*, FieldStatus>  field_status_i;
 
+    enum class ContainerAllocStatus { EMPTY, PARTIAL, FULL };
+
  private:
     /// Uniform abstraction for setting container state.  For internal use
     /// only.  @c must exist in this Allocation.
@@ -410,6 +412,9 @@ class Transaction : public Allocation {
     /// @returns a summary of the status of each container by type and gress.
     /// @warning not yet implemented.
     cstring getSummary() const override;
+
+    /// @returns a summary of status of each container allocated in this transaction.
+    cstring getTransactionSummary() const;
 
     /// Returns the outstanding writes in this view.
     const ordered_map<PHV::Container, ContainerStatus>& getTransactionStatus() const {

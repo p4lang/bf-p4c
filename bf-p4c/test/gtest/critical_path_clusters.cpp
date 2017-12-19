@@ -121,7 +121,7 @@ std::vector<cstring> slices_to_names(const ordered_set<PHV::FieldSlice>& slices)
     return rtn;
 }
 
-bool resultHas(const std::vector<PHV::SuperCluster *>& result,
+bool resultHas(const std::set<PHV::SuperCluster *>& result,
                const std::vector<cstring>& field_names) {
     for (const auto& super_cluster : result) {
         for (auto* rotational_cluster : super_cluster->clusters()) {
@@ -176,9 +176,9 @@ TEST_F(CriticalPathClustersTest, Basic) {
                                        mutually_exclusive_field_ids,
                                        parser_critical_path);
 
-    auto *cluster_cp = new CalcCriticalPathClusters(clustering, parser_critical_path);
+    auto *cluster_cp = new CalcCriticalPathClusters(parser_critical_path);
     post_pm_pipe = post_pm_pipe->apply(*cluster_cp);
-    const std::vector<PHV::SuperCluster *>& result = cluster_cp->getCriticalPathClusters();
+    std::set<PHV::SuperCluster *> result = cluster_cp->calc_critical_clusters(clustering.cluster_groups());
 
     EXPECT_EQ(resultHas(result, {"ingress::eth.nxt"}), true);
     EXPECT_EQ(resultHas(result, {"ingress::eth.$valid"}), true);

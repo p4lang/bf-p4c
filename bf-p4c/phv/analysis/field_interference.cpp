@@ -13,7 +13,7 @@ FieldInterference::FieldVector FieldInterference::getAllReferencedFields(
             if (slice.gress() != gress) continue;
             if (std::find(rs.begin(), rs.end(), slice.field()) == rs.end())
                 rs.push_back(slice.field());
-            field_to_cluster_map[slice.field()].insert(cl); } }
+            field_to_cluster_map_i[slice.field()].insert(cl); } }
     return rs;
 }
 
@@ -32,13 +32,13 @@ FieldInterference::apply_visitor(const IR::Node *node, const char *name) {
     FieldVector ingress_fields = getAllReferencedFields(all_clusters, INGRESS);
     FieldVector egress_fields = getAllReferencedFields(all_clusters, EGRESS);
 
-    ingress_overlays = constructFieldInterference(ingress_fields);
-    egress_overlays = constructFieldInterference(egress_fields);
+    ingress_overlays_i = constructFieldInterference(ingress_fields);
+    egress_overlays_i = constructFieldInterference(egress_fields);
 
     LOG4("Ingress Overlays");
-    printFieldColorMap(ingress_overlays);
+    printFieldColorMap(ingress_overlays_i);
     LOG4("Egress Overlays");
-    printFieldColorMap(egress_overlays);
+    printFieldColorMap(egress_overlays_i);
 
     return node;
 }
@@ -53,14 +53,14 @@ FieldInterference::constructFieldInterference(FieldVector &fields) {
         boost::no_property              // No edge labels
             > Graph;
 
-    LOG5("Creating field to field interference graph");
+    LOG6("Creating field to field interference graph");
     VertexWeightedGraphBuilder<Graph> graph_builder;
     std::map<int, PHV::Field *> vertex_id_to_field;
     // add vertices with its weight
     for (const auto& f : fields) {
         int v_id = graph_builder.add_vertex(f->size);
         vertex_id_to_field[v_id] = f;
-        LOG5("\tVertex " << v_id << " <- Field " << f->name);
+        LOG6("\tVertex " << v_id << " <- Field " << f->name);
     }
 
     // Add interference edges
@@ -69,7 +69,7 @@ FieldInterference::constructFieldInterference(FieldVector &fields) {
             if (vi.first == vj.first) continue;
             if (!PHV::Allocation::mutually_exclusive(mutex_i, vi.second, vj.second)) {
                 graph_builder.add_edge(vi.first, vj.first);
-                LOG5("\tAdding interference edge: "
+                LOG6("\tAdding interference edge: "
                      << vi.second->name
                      << " <-> " << vj.second->name); } } }
 
@@ -79,10 +79,13 @@ FieldInterference::constructFieldInterference(FieldVector &fields) {
                                 decltype(graph.colors)> solver(graph);
     solver.run();
 
+    LOG5("Color Used: " << solver.max_color());
+    LOG5("Total Cost: " << solver.total_cost());
+
     // Build a color->cluster map to return. Colors are virtual MAU groups.
     ordered_map<int, std::vector<PHV::Field *>> rv;
     for (const auto& v : vertex_id_to_field) {
-        int v_color = graph.colors[v.first];
+        int v_color = graph.color_vec[v.first];
         LOG5("Field " << v.second->name << " assigned VREG " << v_color);
         rv[v_color].push_back(v.second); }
 

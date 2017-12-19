@@ -51,6 +51,21 @@ bool Clustering::MakeAlignedClusters::preorder(const IR::MAU::Instruction* inst)
     return false;
 }
 
+bool Clustering::MakeAlignedClusters::preorder(const IR::MAU::Table *tbl) {
+    CollectGatewayFields collect_fields(phv_i);
+    tbl->apply(collect_fields);
+    auto& info_set = collect_fields.info;
+    for (auto& field_info : info_set) {
+        auto* field = field_info.first;
+        auto& info = field_info.second;
+        if (info.xor_with) {
+            // instead of using const_cast, get a mutable pointer from phvInfo.
+            auto* field_a = phv_i.field(field->id);
+            auto* field_b = phv_i.field(info.xor_with->id);
+            union_find_i.makeUnion(PHV::FieldSlice(field_a), PHV::FieldSlice(field_b)); } }
+    return false;
+}
+
 void Clustering::MakeAlignedClusters::end_apply() {
     // Create AlignedClusters from sets.
     for (auto* cluster_set : union_find_i) {

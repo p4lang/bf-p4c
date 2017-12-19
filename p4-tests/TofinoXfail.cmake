@@ -66,6 +66,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/15-SetMetadata.p4
   extensions/p4_tests/p4_14/16-WrongSizeInfiniteLoop.p4
   extensions/p4_tests/p4_14/c1/COMPILER-235/case1737.p4
+  extensions/p4_tests/p4_14/test_config_255_pa_problem_3.p4
   )
 
 # BRIG-104
@@ -887,10 +888,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
   extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   switch_dc_basic
-
-  # Lack of container packing:
-  extensions/p4_tests/p4_14/15-SetMetadata.p4
-  extensions/p4_tests/p4_14/16-WrongSizeInfiniteLoop.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -920,12 +917,6 @@ p4c_add_xfail_reason("tofino"
   "PHV allocation creates a container action impossible within a Tofino ALU"
   extensions/p4_tests/p4_14/14-MultipleActionsInAContainer.p4
   extensions/p4_tests/p4_14/action_conflict_1.p4
-  extensions/p4_tests/p4_14/adjust_instr1.p4
-  extensions/p4_tests/p4_14/test_config_248_pa_problem.p4
-  extensions/p4_tests/p4_14/test_config_252_pa_required_packing.p4
-  extensions/p4_tests/p4_14/test_config_256_pa_problem_4.p4
-  extensions/p4_tests/p4_14/test_config_257_pa_problem_5.p4
-  extensions/p4_tests/p4_14/c4/COMPILER-550/vag2899.p4
   extensions/p4_tests/p4_16/stack_valid.p4
   testdata/p4_14_samples/instruct5.p4
   extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
@@ -947,7 +938,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Assertion .*bit == data_bit.* "
+  "the packing is too complicated"
   extensions/p4_tests/p4_14/test_config_285_meter_sharing.p4
   )
 
@@ -993,10 +984,10 @@ p4c_add_xfail_reason("tofino"
   )
 
 # BRIG-348
-p4c_add_xfail_reason("tofino"
-  "ig_intr_md.ingress_port not in group 0"
-  ${ONOS_FABRIC_P4}
-  )
+# p4c_add_xfail_reason("tofino"
+#   "ig_intr_md.ingress_port not in group 0"
+#   ${ONOS_FABRIC_P4}
+#   )
 
 # XXX(cole): This will be fixed when action analysis is integrated into PHV
 # allocation.

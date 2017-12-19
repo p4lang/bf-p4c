@@ -29,12 +29,12 @@ class FieldInterference : public Visitor {
 
     /// Stores a mapping from a field to its corresponding cluster
     /// Without field slicing, the ordered_set will only contain 1 cluster
-    ordered_map<PHV::Field*, ordered_set<PHV::AlignedCluster*>> field_to_cluster_map;
+    ordered_map<PHV::Field*, ordered_set<PHV::AlignedCluster*>> field_to_cluster_map_i;
 
     /// Stores sets of mutually exclusive fields belonging to ingress
-    FieldColorMap ingress_overlays;
+    FieldColorMap ingress_overlays_i;
     /// Stores sets of mutually exclusive fields belonging to egress
-    FieldColorMap egress_overlays;
+    FieldColorMap egress_overlays_i;
 
     /** @return all referenced fields in the program that belong to the list of clusters and the
       * gress specified by @clusters and @gress respectively
@@ -61,6 +61,9 @@ class FieldInterference : public Visitor {
       * ingress, PHV egress, TPHV ingress, and TPHV egress fields
       */
     const IR::Node* apply_visitor(const IR::Node *, const char *name = 0) override;
+
+    const FieldColorMap& ingress_overlays() const { return ingress_overlays_i; }
+    const FieldColorMap& egress_overlays() const { return egress_overlays_i; }
 };  // class FieldInterference
 
 #endif /* EXTENSIONS_BF_P4C_PHV_ANALYSIS_FIELD_INTERFERENCE_H_ */

@@ -343,23 +343,22 @@ PHV::Allocation::GressAssignment PHV::ConcreteAllocation::gress(PHV::Container c
 
 /// @returns a summary of the status of each container by type and gress.
 cstring PHV::ConcreteAllocation::getSummary() const {
-    enum Status { EMPTY, PARTIAL, FULL };
     std::map<boost::optional<gress_t>,
         std::map<PHV::Type,
-            std::map<Status,
+            std::map<ContainerAllocStatus,
                 int>>> alloc_status;
 
     // Compute status.
     for (auto kv : container_status_i) {
         PHV::Container c = kv.first;
-        Status status = EMPTY;
+        ContainerAllocStatus status = ContainerAllocStatus::EMPTY;
         bitvec allocatedBits;
         for (auto slice : kv.second.slices)
             allocatedBits |= bitvec(slice.container_slice().lo, slice.container_slice().size());
         if (allocatedBits == bitvec(0, c.size()))
-            status = FULL;
+            status = ContainerAllocStatus::FULL;
         else if (!allocatedBits.empty())
-            status = PARTIAL;
+            status = ContainerAllocStatus::PARTIAL;
         alloc_status[container_status_i.at(c).gress][c.type()][status]++;
     }
 
@@ -370,8 +369,10 @@ cstring PHV::ConcreteAllocation::getSummary() const {
         % "GRESS" % "TYPE" % "STATUS" % "COUNT";
 
     bool first_by_gress = true;
-    auto gresses = std::list<boost::optional<gress_t>>({INGRESS, EGRESS, boost::none});
-    auto statuses = {EMPTY, PARTIAL, FULL};
+    auto gresses = std::vector<boost::optional<gress_t>>({INGRESS, EGRESS, boost::none});
+    auto statuses = {ContainerAllocStatus::EMPTY,
+                     ContainerAllocStatus::PARTIAL,
+                     ContainerAllocStatus::FULL};
     for (auto gress : gresses) {
         first_by_gress = true;
         for (auto status : statuses) {
@@ -382,9 +383,9 @@ cstring PHV::ConcreteAllocation::getSummary() const {
                 std::string s_status;
                 ss_gress << gress;
                 switch (status) {
-                  case EMPTY:   s_status = "EMPTY"; break;
-                  case PARTIAL: s_status = "PARTIAL"; break;
-                  case FULL:    s_status = "FULL"; break; }
+                  case ContainerAllocStatus::EMPTY:   s_status = "EMPTY"; break;
+                  case ContainerAllocStatus::PARTIAL: s_status = "PARTIAL"; break;
+                  case ContainerAllocStatus::FULL:    s_status = "FULL"; break; }
                 ss << boost::format("%1% %|10t| %3% %|20t| %2% %|30t| %4%\n")
                       % (first_by_gress  ? ss_gress.str() : "")
                       % type.toString()
@@ -444,6 +445,60 @@ PHV::Transaction::slices(const PHV::Field* f, le_bitrange range) const {
                 rv.insert(slice); }
 
     return rv;
+}
+
+cstring PHV::Transaction::getTransactionSummary() const {
+    std::map<boost::optional<gress_t>,
+        std::map<PHV::Type,
+            std::map<ContainerAllocStatus,
+                int>>> alloc_status;
+
+    // Compute status.
+    for (auto kv : getTransactionStatus()) {
+        PHV::Container c = kv.first;
+        ContainerAllocStatus status = ContainerAllocStatus::EMPTY;
+        bitvec allocatedBits;
+        for (auto slice : kv.second.slices)
+            allocatedBits |= bitvec(slice.container_slice().lo, slice.container_slice().size());
+        if (allocatedBits == bitvec(0, c.size()))
+            status = ContainerAllocStatus::FULL;
+        else if (!allocatedBits.empty())
+            status = ContainerAllocStatus::PARTIAL;
+        alloc_status[container_status_i.at(c).gress][c.type()][status]++;
+    }
+
+    // Print container status.
+    std::stringstream ss;
+    ss << "TRANSACTION STATUS (Only for this transaction):" << std::endl;
+    ss << boost::format("%1% %|10t| %2% %|20t| %3% %|30t| %4%\n")
+        % "GRESS" % "TYPE" % "STATUS" % "COUNT";
+
+    bool first_by_gress = true;
+    auto gresses = std::vector<boost::optional<gress_t>>({INGRESS, EGRESS, boost::none});
+    auto statuses = {ContainerAllocStatus::EMPTY,
+                     ContainerAllocStatus::PARTIAL,
+                     ContainerAllocStatus::FULL};
+    for (auto gress : gresses) {
+        first_by_gress = true;
+        for (auto status : statuses) {
+            for (auto type : Device::phvSpec().containerTypes()) {
+                if (alloc_status[gress][type][status] == 0)
+                    continue;
+                std::stringstream ss_gress;
+                std::string s_status;
+                ss_gress << gress;
+                switch (status) {
+                  case ContainerAllocStatus::EMPTY:   s_status = "EMPTY"; break;
+                  case ContainerAllocStatus::PARTIAL: s_status = "PARTIAL"; break;
+                  case ContainerAllocStatus::FULL:    s_status = "FULL"; break; }
+                ss << boost::format("%1% %|10t| %3% %|20t| %2% %|30t| %4%\n")
+                      % (first_by_gress  ? ss_gress.str() : "")
+                      % type.toString()
+                      % s_status
+                      % alloc_status[gress][type][status];
+                first_by_gress = false; } } }
+
+    return ss.str();
 }
 
 cstring PHV::Transaction::getSummary() const {
@@ -887,7 +942,7 @@ std::ostream &operator<<(std::ostream &out, const PHV::Allocation* alloc) {
 }
 
 std::ostream &operator<<(std::ostream &out, const PHV::FieldSlice& slice) {
-    out << slice.field() << slice.range();
+    out << slice.field() << " <|> " << slice.range();
     return out;
 }
 

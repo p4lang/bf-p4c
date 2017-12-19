@@ -40,7 +40,7 @@ class Phv_Parde_Mau_Use;
 class PHVTrivialAlloc;
 class PhvUse;
 class Slice;
-class AllocatePHV;
+class CoreAllocation;
 class FieldInterference;
 
 namespace PHV {
@@ -189,7 +189,7 @@ class Field {
     friend class ::PHV::TrivialAlloc;       // phv/trivial_alloc
     friend class ::PHV::ValidateAllocation;  // phv/validate_allocation
     friend class ::PHV::AlignedCluster;
-    friend class ::AllocatePHV;
+    friend class ::CoreAllocation;
     //
     template <typename T> friend class ::Test::TofinoPHVTrivialAllocators;
     friend class ::Test::TofinoPHVManualAlloc;

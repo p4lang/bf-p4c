@@ -16,7 +16,8 @@ PHV_AnalysisPass::PHV_AnalysisPass(
     FieldDefUse &defuse, DependencyGraph &deps)
     : clustering(phv, uses),
       parser_critical_path(phv),
-      critical_path_clusters(clustering, parser_critical_path),
+      critical_path_clusters(parser_critical_path),
+      field_interference(clustering, mutually_exclusive_field_ids),
       action_constraints(phv) {
     if (options.trivial_phvalloc) {
         addPasses({
@@ -44,9 +45,10 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             new PhvInfo::DumpPhvFields(phv, uses),
             &critical_path_clusters,
             &action_constraints,
+            &field_interference,
 
             new AllocatePHV(mutually_exclusive_field_ids, clustering, uses, clot, phv,
-                            action_constraints),
+                            action_constraints, critical_path_clusters, field_interference),
 
             new PHV::ValidateAllocation(phv, clot, mutually_exclusive_field_ids),
             new PHV::ValidateActions(phv, false, true, false)

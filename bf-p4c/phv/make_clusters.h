@@ -12,6 +12,7 @@
 #include "bf-p4c/ir/tofino_write_context.h"
 #include "bf-p4c/lib/union_find.hpp"
 #include "bf-p4c/phv/utils.h"
+#include "bf-p4c/mau/gateway.h"
 
 namespace PHV {
 class Field;
@@ -63,6 +64,12 @@ class Clustering : public PassManager {
 
         /// Union all operands of each primitive instruction.
         bool preorder(const IR::MAU::Instruction* inst) override;
+
+        /** Union all operands in the gateway.
+         * TODO(yumin): gateway operands can be in a same container,
+         * and they are only required to be byte-aligned, not necessary in same MAU group.
+         */
+        bool preorder(const IR::MAU::Table *tbl) override;
 
         /// Build AlignedClusters from the UnionFind sets.
         void end_apply() override;
