@@ -983,12 +983,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue983-bmv2.p4
   )
 
-# BRIG-348
-# p4c_add_xfail_reason("tofino"
-#   "ig_intr_md.ingress_port not in group 0"
-#   ${ONOS_FABRIC_P4}
-#   )
-
 # XXX(cole): This will be fixed when action analysis is integrated into PHV
 # allocation.
 p4c_add_xfail_reason("tofino"

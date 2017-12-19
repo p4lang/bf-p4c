@@ -269,7 +269,6 @@ static const IR::Primitive *makeDepositField(IR::Primitive *prim, long) {
 }
 
 const IR::Node *InstructionSelection::postorder(IR::Primitive *prim) {
-    LOG1("prim " << prim);
     if (!af) return prim;
     const IR::Expression *dest = prim->operands.size() > 0 ? prim->operands[0] : nullptr;
     if (prim->name == "modify_field") {
@@ -541,7 +540,6 @@ const IR::MAU::Instruction *StatefulHashDistSetup::Update::preorder(IR::MAU::Ins
 }
 
 const IR::MAU::Instruction *ConvertCastToSlice::preorder(IR::MAU::Instruction *instr) {
-    LOG1(">>>>>" << instr);
     BUG_CHECK(findContext<IR::MAU::Instruction>() == nullptr, "nested instructions");
     contains_cast = false;
     return instr;

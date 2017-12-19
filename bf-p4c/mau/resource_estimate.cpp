@@ -398,9 +398,6 @@ void StageUseEstimate::select_best_option(const IR::MAU::Table *tbl) {
         if (b_mod == 0 && a_mod != 0)
             return false;
 
-        LOG1("We are here " << a.way.match_groups << " " << a.way.width << " " << a_mod);
-        LOG1("Double up " << b.way.match_groups << " " << b.way.width << " " << b_mod);
-
         if ((t = a.srams - b.srams) != 0) return t < 0;
         if ((t = a.way.width - b.way.width) != 0) return t < 0;
         if ((t = a.way.match_groups - b.way.match_groups) != 0) return t < 0;

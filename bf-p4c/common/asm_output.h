@@ -83,8 +83,22 @@ class Slice {
     int width() const { return hi - lo + 1; }
     int bytealign() const;
     Slice fullbyte() const;
-    int get_lo() { return lo; }
-    int get_hi() { return hi; }
+    const PHV::Field *get_field() const { return field; }
+    int get_lo() const { return lo; }
+    int get_hi() const { return hi; }
+    void shrink_lo(int shrink) {
+        if (shrink + lo >= hi)
+            lo = hi;
+        else
+            lo += shrink;
+    }
+
+    void shrink_hi(int shrink) {
+        if (hi - shrink <= lo)
+            hi = lo;
+        else
+            hi -= shrink;
+    }
 };
 
 /* The rest of this is pretty generic formatting stuff -- should be in lib somewhere? */

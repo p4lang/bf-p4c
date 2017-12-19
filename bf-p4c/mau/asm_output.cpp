@@ -402,6 +402,67 @@ void MauAsmOutput::emit_ixbar_hash_way_select(std::ostream &out, indent_t indent
     out << ": " << FormatHash(match_data, ghost, "exact_match") << std::endl;
 }
 
+/** This function is necessary due to the limits of the driver's handling of ATCAM tables.
+ *  The driver requires that the partition index hash be in the same order as the bits
+ *  of the partition index.
+ *
+ *  This will eventually force limitations in the implementation of ATCAM tables, i.e.
+ *  multiple fields or potentially a slice being used as the partition index.  The true
+ *  way this should be handled is the same way as an exact match table, by generating the
+ *  hash from the hash matrix provided to driver.  When this support is provided, this
+ *  function becomes unnecessary, and can just go through the same pathway that exact
+ *  match goes through.
+ */
+void MauAsmOutput::emit_ixbar_hash_atcam(std::ostream &out, indent_t indent,
+        safe_vector<Slice> &ghost, const IXBar::Use *use, int hash_group) const {
+    safe_vector<Slice> empty;
+    for (auto ghost_slice : ghost) {
+        int start_bit = 0;  int end_bit = 0;
+        if (ghost_slice.get_lo() >= TableFormat::RAM_GHOST_BITS)
+            continue;
+        start_bit = ghost_slice.get_lo();
+        Slice adapted_ghost = ghost_slice;
+        if (ghost_slice.get_hi() < TableFormat::RAM_GHOST_BITS) {
+            end_bit = ghost_slice.get_hi();
+        } else {
+            int diff = ghost_slice.get_hi() - TableFormat::RAM_GHOST_BITS + 1;
+            end_bit = TableFormat::RAM_GHOST_BITS - 1;
+            adapted_ghost.shrink_hi(diff);
+        }
+        emit_ixbar_hash_way(out, indent, empty, &adapted_ghost, use, hash_group, start_bit,
+                            end_bit);
+    }
+
+    unsigned mask_bits = 0;
+    for (auto way : use->way_use) {
+        if (way.group != hash_group)
+            continue;
+        mask_bits |= way.mask;
+    }
+
+    auto bv = bitvec(mask_bits);
+    BUG_CHECK(bv.is_contiguous() || bv.empty(), "Unsupported non-contiguous select mask for "
+                                                "ATCAM table");
+
+    for (auto ghost_slice : ghost) {
+        int start_bit = 0;  int end_bit = 0;
+        if (ghost_slice.get_hi() < TableFormat::RAM_GHOST_BITS)
+            continue;
+
+        int max_point = TableFormat::RAM_GHOST_BITS + bv.popcount() - ghost_slice.get_hi();
+        end_bit = bv.max().index() - max_point + 1;
+        start_bit = bv.min().index();
+        Slice adapted_ghost = ghost_slice;
+        if (ghost_slice.get_lo() >= TableFormat::RAM_GHOST_BITS) {
+            start_bit += ghost_slice.get_lo() - TableFormat::RAM_GHOST_BITS;
+        } else {
+            int diff = TableFormat::RAM_GHOST_BITS - ghost_slice.get_lo();
+            adapted_ghost.shrink_lo(diff);
+        }
+        emit_ixbar_hash_way_select(out, indent, empty, &adapted_ghost, start_bit, end_bit);
+    }
+}
+
 /** The purpose of this code is to output the hash matrix specifically for exact tables.
  *  This code classifies all of the ghost bits for this particular hash table.  The ghost bits
  *  are the bits that appear in the hash but not in the table format.  This reduces the
@@ -419,6 +480,12 @@ void MauAsmOutput::emit_ixbar_hash_way_select(std::ostream &out, indent_t indent
 void MauAsmOutput::emit_ixbar_hash_exact(std::ostream &out, indent_t indent,
         safe_vector<Slice> &match_data, safe_vector<Slice> &ghost, const IXBar::Use *use,
         int hash_group, int &ident_bits_prev_alloc) const {
+    // FIXME: See comments above this function, but should be unnecessary
+    if (use->atcam) {
+        emit_ixbar_hash_atcam(out, indent, ghost, use, hash_group);
+        return;
+    }
+
     // Do not specify identity ghost bits at places where ghost bits are already specified
     if (ident_bits_prev_alloc > 0) {
         emit_ixbar_hash_way(out, indent, match_data, nullptr, use, hash_group, 0,
@@ -538,13 +605,32 @@ void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent,
         else
             BUG("Unrecognized mode of the action selector");
     }
+
+    // Printing out the hash for gateway tables
     for (auto ident : use->bit_use) {
-        out << indent << (40 + ident.bit);
-        if (ident.width > 1)
-            out << ".." << (39 + ident.bit + ident.width);
-        out << ": " << Slice(phv, ident.field, ident.lo, ident.lo + ident.width - 1)
-            << std:: endl;
-        assert(hash_group == -1 || hash_group == ident.group);
+        // Gateway fields in the hash are continuous bitranges currently, must
+        // match up with the fields
+        Slice range_sl(phv, ident.field, ident.lo, ident.lo + ident.width - 1);
+        for (auto sl : match_data) {
+            if (sl.get_field()->name != ident.field)
+                continue;
+            if (range_sl.get_hi() < sl.get_lo() || range_sl.get_lo() > sl.get_hi())
+                continue;
+
+            int extra_start = std::max(0, sl.get_lo() - range_sl.get_lo());
+            auto adapted_sl = sl;
+            if (auto diff = (range_sl.get_lo() - sl.get_lo()) > 0)
+                adapted_sl.shrink_lo(diff);
+            if (auto diff = (sl.get_hi() - range_sl.get_hi()) > 0)
+                adapted_sl.shrink_hi(diff);
+
+
+            out << indent << (40 + ident.bit + extra_start);
+            if (ident.width > 1)
+                out << ".." << (40 + ident.bit + extra_start + adapted_sl.width() - 1);
+            out << ": " << adapted_sl << std:: endl;
+            assert(hash_group == -1 || hash_group == ident.group);
+        }
     }
 
     if (use->hash_dist_hash.allocated) {
