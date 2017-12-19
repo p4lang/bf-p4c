@@ -1,63 +1,30 @@
-#include "simple_switch.h"
-
 #include <algorithm>
 #include <initializer_list>
 #include <set>
 #include "bf-p4c/arch/phase0.h"
 #include "bf-p4c/arch/remove_set_metadata.h"
 #include "bf-p4c/device.h"
+#include "program_structure.h"
+#include "remove_set_metadata.h"
+#include "simple_switch.h"
 
 namespace BFN {
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-
-/// Find and remove extern method calls that the P4 programmer has requested by
-/// excluded from translation using the `@dont_translate_extern_method` pragma.
-/// Currently this pragma is only supported on actions; it takes as an argument
-/// a list of strings that identify extern method calls to remove from the action
-/// body.
-struct RemoveExternMethodCallsExcludedByAnnotation : public Transform {
-    const IR::MethodCallStatement*
-    preorder(IR::MethodCallStatement* call) override {
-        auto* action = findContext<IR::P4Action>();
-        if (!action) return call;
-
-        auto* callExpr = call->methodCall->to<IR::MethodCallExpression>();
-        BUG_CHECK(callExpr, "Malformed method call IR: %1%", call);
-
-        auto* dontTranslate = action->getAnnotation("dont_translate_extern_method");
-        if (!dontTranslate) return call;
-        for (auto* excluded : dontTranslate->expr) {
-            auto* excludedMethod = excluded->to<IR::StringLiteral>();
-            if (!excludedMethod) {
-                ::error("Non-string argument to @dont_translate_extern_method: "
-                        "%1%", excluded);
-                return call;
-            }
-
-            if (excludedMethod->value == callExpr->toString()) {
-                ::warning("Excluding method call from translation due to "
-                          "@dont_translate_extern_method: %1%", call);
-                return nullptr;
-            }
-        }
-
-        return call;
-    }
-};
+namespace V1 {
 
 class LoadTargetArchitecture : public Inspector {
-    ProgramStructure* structure;
+    ProgramStructure *structure;
 
  public:
-    explicit LoadTargetArchitecture(ProgramStructure* structure) : structure(structure) {
+    explicit LoadTargetArchitecture(ProgramStructure *structure) : structure(structure) {
         setName("LoadTargetArchitecture");
         CHECK_NULL(structure);
     }
 
     void addMetadata(gress_t gress, cstring ss, cstring sf,
-                                    cstring ds, cstring df, unsigned w) {
-        auto& nameMap = gress == INGRESS ? structure->ingressMetadataNameMap
+                     cstring ds, cstring df, unsigned w) {
+        auto &nameMap = gress == INGRESS ? structure->ingressMetadataNameMap
                                          : structure->egressMetadataNameMap;
         nameMap.emplace(MetadataField{ss, sf}, MetadataField{ds, df});
         structure->metadataTypeMap.emplace(MetadataField{ds, df}, w);
@@ -70,14 +37,14 @@ class LoadTargetArchitecture : public Inspector {
 
     void setupMetadataRenameMap() {
         addMetadata(INGRESS, "standard_metadata", "egress_spec",
-                             "ig_intr_md_for_tm", "ucast_egress_port", 9);
+                    "ig_intr_md_for_tm", "ucast_egress_port", 9);
         addMetadata(EGRESS, "standard_metadata", "egress_spec",
-                            "eg_intr_md", "egress_port", 9);
+                    "eg_intr_md", "egress_port", 9);
 
         addMetadata(INGRESS, "standard_metadata", "egress_port",
-                             "ig_intr_md_for_tm", "ucast_egress_port", 9);
+                    "ig_intr_md_for_tm", "ucast_egress_port", 9);
         addMetadata(EGRESS, "standard_metadata", "egress_port",
-                            "eg_intr_md", "egress_port", 9);
+                    "eg_intr_md", "egress_port", 9);
 
         addMetadata("standard_metadata", "ingress_port",
                     "ig_intr_md", "ingress_port", 9);
@@ -85,16 +52,16 @@ class LoadTargetArchitecture : public Inspector {
         addMetadata("standard_metadata", "packet_length", "eg_intr_md", "pkt_length", 16);
 
         addMetadata(INGRESS, "standard_metadata", "clone_spec",
-                             "ig_intr_md_for_mb", "mirror_id", 10);
+                    "ig_intr_md_for_mb", "mirror_id", 10);
         addMetadata(EGRESS, "standard_metadata", "clone_spec",
-                            "eg_intr_md_for_mb", "mirror_id", 10);
+                    "eg_intr_md_for_mb", "mirror_id", 10);
 
         addMetadata("standard_metadata", "drop", "ig_intr_md_for_tm", "drop_ctl", 3);
 
         // XXX(hanw): standard_metadata.mcast_grp does not have a mapping tofino.
         // we default to ig_intr_md_for_tm.mcast_grp_a just to pass the translation.
         addMetadata(INGRESS, "standard_metadata", "mcast_grp",
-                             "ig_intr_md_for_tm", "mcast_grp_a", 16);
+                    "ig_intr_md_for_tm", "mcast_grp_a", 16);
         // XXX(seth): We need to figure out what to map this to.
         // addMetadata("standard_metadata", "instance_type",
         //             "eg_intr_md", "instance_type", 32);
@@ -112,7 +79,7 @@ class LoadTargetArchitecture : public Inspector {
         }
     }
 
-    void postorder(const IR::P4Program*) override {
+    void postorder(const IR::P4Program *) override {
         setupMetadataRenameMap();
 
         /// append tofino.p4 architecture definition
@@ -128,7 +95,7 @@ class LoadTargetArchitecture : public Inspector {
 //////////////////////////////////////////////////////////////////////////////////////////////
 
 class IdleTimeoutTranslation : public Transform {
-    ordered_map<const IR::P4Table*, IR::Expression*> propertyMap;
+    ordered_map<const IR::P4Table *, IR::Expression *> propertyMap;
 
  public:
     IdleTimeoutTranslation() {
@@ -143,7 +110,7 @@ class IdleTimeoutTranslation : public Transform {
      * - two_way_notification
      * - per_flow_idletime_enable
      */
-    const IR::Node* postorder(IR::Property* node) override {
+    const IR::Node *postorder(IR::Property *node) override {
         if (node->name == "support_timeout") {
             auto table = findContext<IR::P4Table>();
             auto precision = table->getAnnotation("idletime_precision");
@@ -153,25 +120,25 @@ class IdleTimeoutTranslation : public Transform {
             auto param = new IR::Vector<IR::Expression>();
             /// XXX(hanw): check default value for two_way_notify and per_flow_enable
             param->push_back(precision ? precision->expr.at(0) :
-                                 new IR::Constant(IR::Type::Bits::get(3), 3));
+                             new IR::Constant(IR::Type::Bits::get(3), 3));
             param->push_back(two_way_notify ? new IR::BoolLiteral(two_way_notify) :
-                                 new IR::BoolLiteral(false));
-            param->push_back(per_flow_enable ? new IR::BoolLiteral(per_flow_enable):
-                                 new IR::BoolLiteral(false));
+                             new IR::BoolLiteral(false));
+            param->push_back(per_flow_enable ? new IR::BoolLiteral(per_flow_enable) :
+                             new IR::BoolLiteral(false));
             auto constructorExpr = new IR::ConstructorCallExpression(type, param);
             propertyMap.emplace(table, constructorExpr);
         }
         return node;
     }
 
-    const IR::Node* postorder(IR::P4Table* node) override {
+    const IR::Node *postorder(IR::P4Table *node) override {
         auto it = propertyMap.find(node);
         if (it == propertyMap.end())
             return node;
         auto impl = node->properties->getProperty("implementation");
         if (impl) {
             auto newProperties = new IR::IndexedVector<IR::Property>();
-            IR::ListExpression* newList = nullptr;
+            IR::ListExpression *newList = nullptr;
             if (auto list = impl->to<IR::ListExpression>()) {
                 // if implementation already has a list of attached tables.
                 auto components = new IR::Vector<IR::Expression>(list);
@@ -239,25 +206,27 @@ class RemoveNodesWithNoMapping : public Transform {
  public:
     RemoveNodesWithNoMapping() { setName("RemoveNodesWithNoMapping"); }
 
-    const IR::Node* preorder(IR::Type_Header* node) {
+    const IR::Node *preorder(IR::Type_Header *node) {
         auto it = removeAllOccurences.find(node->name);
         if (it != removeAllOccurences.end())
             return nullptr;
         it = removeDeclarations.find(node->name);
         if (it != removeDeclarations.end())
             return nullptr;
-        return node; }
+        return node;
+    }
 
-    const IR::Node* preorder(IR::Type_Struct* node) {
+    const IR::Node *preorder(IR::Type_Struct *node) {
         auto it = removeAllOccurences.find(node->name);
         if (it != removeAllOccurences.end())
             return nullptr;
         it = removeDeclarations.find(node->name);
         if (it != removeDeclarations.end())
             return nullptr;
-        return node; }
+        return node;
+    }
 
-    const IR::Node* preorder(IR::StructField* node) {
+    const IR::Node *preorder(IR::StructField *node) {
         auto header = findContext<IR::Type_Struct>();
         if (!header) return node;
         if (header->name != "headers") return node;
@@ -288,7 +257,7 @@ class RemoveNodesWithNoMapping : public Transform {
     ///   expr: PathExpression
     ///     type: Type_Name...
     ///     path: Path name=ig_intr_md_for_tm
-    const IR::Node* preorder(IR::Member* mem) {
+    const IR::Node *preorder(IR::Member *mem) {
         auto submem = mem->expr->to<IR::Member>();
         if (!submem) return mem;
         auto submemType = submem->type->to<IR::Type_Header>();
@@ -300,7 +269,8 @@ class RemoveNodesWithNoMapping : public Transform {
         auto newName = new IR::Path(submem->member);
         auto newExpr = new IR::PathExpression(newType, newName);
         auto newMem = new IR::Member(mem->srcInfo, mem->type, newExpr, mem->member);
-        return newMem; }
+        return newMem;
+    }
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////
@@ -311,16 +281,16 @@ class RemoveNodesWithNoMapping : public Transform {
 ///       as a result, all declarations within a control block have different names.
 /// @post: all user provided names for metadata are converted to standard names
 ///       assumed by the translation map in latter pass.
-class NormalizeV1modelProgram : public Transform {
-    ordered_map<cstring, std::vector<const IR::Node*> *> namescopes;
+class NormalizeProgram : public Transform {
+    ordered_map<cstring, std::vector<const IR::Node *> *> namescopes;
     ordered_map<cstring, cstring> renameMap;
     ordered_map<cstring, cstring> aliasMap;
 
  public:
-    NormalizeV1modelProgram() {}
+    NormalizeProgram() {}
 
-    void pushParam(const IR::Node* node, cstring param_type, cstring rename) {
-        const IR::ParameterList* list;
+    void pushParam(const IR::Node *node, cstring param_type, cstring rename) {
+        const IR::ParameterList *list;
         if (auto ctrl = node->to<IR::P4Control>()) {
             list = ctrl->type->getApplyParameters();
         } else if (auto parser = node->to<IR::P4Parser>()) {
@@ -339,7 +309,7 @@ class NormalizeV1modelProgram : public Transform {
             auto name = p->name;
             auto it = namescopes.find(name);
             if (it == namescopes.end()) {
-                auto stack = new std::vector<const IR::Node*>();
+                auto stack = new std::vector<const IR::Node *>();
                 stack->push_back(getOriginal<IR::Node>());
                 namescopes.emplace(name, stack);
                 renameMap.emplace(name, rename);
@@ -350,8 +320,8 @@ class NormalizeV1modelProgram : public Transform {
         }
     }
 
-    void popParam(const IR::Node* node, cstring param_type) {
-        const IR::ParameterList* list = nullptr;
+    void popParam(const IR::Node *node, cstring param_type) {
+        const IR::ParameterList *list = nullptr;
         if (auto ctrl = node->to<IR::P4Control>()) {
             list = ctrl->type->getApplyParameters();
         } else if (auto parser = node->to<IR::P4Parser>()) {
@@ -376,27 +346,27 @@ class NormalizeV1modelProgram : public Transform {
         }
     }
 
-    const IR::Node* preorder(IR::P4Control* node) override {
+    const IR::Node *preorder(IR::P4Control *node) override {
         pushParam(node, "standard_metadata_t", "standard_metadata");
         return node;
     }
 
-    const IR::Node* postorder(IR::P4Control* node) override {
+    const IR::Node *postorder(IR::P4Control *node) override {
         popParam(node, "standard_metadata_t");
         return node;
     }
 
-    const IR::Node* preorder(IR::P4Parser* node) override {
+    const IR::Node *preorder(IR::P4Parser *node) override {
         pushParam(node, "standard_metadata_t", "standard_metadata");
         return node;
     }
 
-    const IR::Node* postorder(IR::P4Parser* node) override {
+    const IR::Node *postorder(IR::P4Parser *node) override {
         popParam(node, "standard_metadata_t");
         return node;
     }
 
-    const IR::Node* preorder(IR::Declaration_Variable* node) override {
+    const IR::Node *preorder(IR::Declaration_Variable *node) override {
         auto name = node->name.name;
         auto it = namescopes.find(name);
         if (it != namescopes.end()) {
@@ -406,7 +376,7 @@ class NormalizeV1modelProgram : public Transform {
         return node;
     }
 
-    const IR::Node* postorder(IR::Declaration_Variable* node) override {
+    const IR::Node *postorder(IR::Declaration_Variable *node) override {
         auto name = node->name.name;
         auto it = namescopes.find(name);
         if (it != namescopes.end()) {
@@ -416,7 +386,7 @@ class NormalizeV1modelProgram : public Transform {
         return node;
     }
 
-    const IR::Node* postorder(IR::PathExpression* node) override {
+    const IR::Node *postorder(IR::PathExpression *node) override {
         auto path = node->path->name;
         auto it = namescopes.find(path);
         if (it != namescopes.end()) {
@@ -429,7 +399,7 @@ class NormalizeV1modelProgram : public Transform {
         return node;
     }
 
-    const IR::Node* postorder(IR::Parameter* node) override {
+    const IR::Node *postorder(IR::Parameter *node) override {
         auto it = namescopes.find(node->name);
         if (it != namescopes.end()) {
             auto renameIt = renameMap.find(node->name);
@@ -437,7 +407,8 @@ class NormalizeV1modelProgram : public Transform {
                 auto rename = renameIt->second;
                 return new IR::Parameter(node->srcInfo, rename, node->annotations,
                                          node->direction, node->type);
-            }}
+            }
+        }
         return node;
     }
 
@@ -457,21 +428,21 @@ class NormalizeV1modelProgram : public Transform {
         }
     }
 
-    const IR::Node* preorder(IR::Type_Typedef* node) override {
+    const IR::Node *preorder(IR::Type_Typedef *node) override {
         if (auto name = node->type->to<IR::Type_Name>()) {
             aliasMap.emplace(node->name, name->path->name);    // std_meta_t -> standard_metadata_t
         }
         return node;
     }
 
-    const IR::Node* postorder(IR::Type_Typedef* node) override {
+    const IR::Node *postorder(IR::Type_Typedef *node) override {
         if (isStandardMetadata(node->name)) {
             return nullptr;
         }
         return node;
     }
 
-    const IR::Node* postorder(IR::Type_Name* node) override {
+    const IR::Node *postorder(IR::Type_Name *node) override {
         if (isStandardMetadata(node->path->name)) {
             return new IR::Type_Name(node->srcInfo, new IR::Path("standard_metadata_t"));
         }
@@ -482,11 +453,11 @@ class NormalizeV1modelProgram : public Transform {
 //////////////////////////////////////////////////////////////////////////////////////////////
 
 /// This pass collects all top level p4program declarations.
-class AnalyzeV1modelProgram : public Inspector {
-    ProgramStructure* structure;
+class AnalyzeProgram : public Inspector {
+    ProgramStructure *structure;
 
     template<class P4Type, class BlockType>
-    void analyzeArchBlock(const IR::ToplevelBlock* blk, cstring name, cstring type) {
+    void analyzeArchBlock(const IR::ToplevelBlock *blk, cstring name, cstring type) {
         auto main = blk->getMain();
         auto ctrl = main->findParameterValue(name);
         BUG_CHECK(ctrl != nullptr, "%1%: could not find parameter %2%", main, name);
@@ -497,8 +468,11 @@ class AnalyzeV1modelProgram : public Inspector {
     }
 
  public:
-    explicit AnalyzeV1modelProgram(ProgramStructure* structure)
-    : structure(structure) { CHECK_NULL(structure); setName("AnalyzeV1modelProgram"); }
+    explicit AnalyzeProgram(ProgramStructure *structure)
+            : structure(structure) {
+        CHECK_NULL(structure);
+        setName("AnalyzeProgram");
+    }
 
     // *** architectural declarations ***
     // matchKindDeclaration
@@ -508,29 +482,41 @@ class AnalyzeV1modelProgram : public Inspector {
     // controlDeclarations
     // *** program & architectural declarations ***
     // actionDeclarations
-    void postorder(const IR::Type_Action* node) override
-    { structure->action_types.push_back(node); }
+    void postorder(const IR::Type_Action *node) override {
+        structure->action_types.push_back(node);
+    }
+
     // errorDeclaration
-    void postorder(const IR::Type_Error* node) override {
+    void postorder(const IR::Type_Error *node) override {
         for (auto m : node->members) {
             structure->errors.emplace(m->name);
         }
     }
+
     // typeDeclarations
-    void postorder(const IR::Type_Struct* node) override
-    { structure->struct_types.emplace(node->name, node); }
-    void postorder(const IR::Type_Header* node) override
-    { structure->header_types.emplace(node->name, node); }
-    void postorder(const IR::Type_HeaderUnion* node) override
-    { structure->header_union_types.emplace(node->name, node); }
-    void postorder(const IR::Type_Typedef* node) override
-    { structure->typedef_types.emplace(node->name, node); }
-    void postorder(const IR::Type_Enum* node) override
-    { structure->enums.emplace(node->name, node); }
+    void postorder(const IR::Type_Struct *node) override {
+        structure->struct_types.emplace(node->name, node);
+    }
+
+    void postorder(const IR::Type_Header *node) override {
+        structure->header_types.emplace(node->name, node);
+    }
+
+    void postorder(const IR::Type_HeaderUnion *node) override {
+        structure->header_union_types.emplace(node->name, node);
+    }
+
+    void postorder(const IR::Type_Typedef *node) override {
+        structure->typedef_types.emplace(node->name, node);
+    }
+
+    void postorder(const IR::Type_Enum *node) override {
+        structure->enums.emplace(node->name, node);
+    }
 
     // *** program only declarations ***
     // instantiation - parser
-    void postorder(const IR::P4Parser* node) override {
+    void postorder(const IR::P4Parser *node) override {
         structure->parsers.emplace(node->name, node);
         // additional info for translation
         auto params = node->getApplyParameters();
@@ -542,12 +528,12 @@ class AnalyzeV1modelProgram : public Inspector {
     }
 
     // instantiation - control
-    void postorder(const IR::P4Control* node) override {
+    void postorder(const IR::P4Control *node) override {
         structure->controls.emplace(node->name, node);
     }
 
     // instantiation - extern
-    void postorder(const IR::Declaration_Instance* node) override {
+    void postorder(const IR::Declaration_Instance *node) override {
         // look for global instances
         auto control = findContext<IR::P4Control>();
         if (control) return;
@@ -563,42 +549,52 @@ class AnalyzeV1modelProgram : public Inspector {
     }
 
     // instantiation - program
-    void postorder(const IR::P4Program*) override {
+    void postorder(const IR::P4Program *) override {
         auto params = structure->toplevel->getMain()->getConstructorParameters();
         if (params->parameters.size() != 6) {
             ::error("Expecting 6 parameters instead of %1% in the 'main' instance",
                     params->parameters.size());
             return;
         }
-        analyzeArchBlock<IR::P4Parser, IR::ParserBlock>(structure->toplevel, "p", "parser");
-        analyzeArchBlock<IR::P4Control, IR::ControlBlock>(structure->toplevel, "ig", "ingress");
-        analyzeArchBlock<IR::P4Control, IR::ControlBlock>(structure->toplevel, "eg", "egress");
-        analyzeArchBlock<IR::P4Control, IR::ControlBlock>(structure->toplevel, "dep", "deparser");
-        analyzeArchBlock<IR::P4Control, IR::ControlBlock>(structure->toplevel, "vr",
-                                                          "verifyChecksum");
-        analyzeArchBlock<IR::P4Control, IR::ControlBlock>(structure->toplevel, "ck",
-                                                          "updateChecksum");
+        analyzeArchBlock<IR::P4Parser, IR::ParserBlock>(
+                structure->toplevel, "p", ProgramStructure::INGRESS_PARSER);
+        analyzeArchBlock<IR::P4Parser, IR::ParserBlock>(
+                structure->toplevel, "p", ProgramStructure::EGRESS_PARSER);
+        analyzeArchBlock<IR::P4Control, IR::ControlBlock>(
+                structure->toplevel, "ig", ProgramStructure::INGRESS);
+        analyzeArchBlock<IR::P4Control, IR::ControlBlock>(
+                structure->toplevel, "eg", ProgramStructure::EGRESS);
+        analyzeArchBlock<IR::P4Control, IR::ControlBlock>(
+                structure->toplevel, "dep", ProgramStructure::INGRESS_DEPARSER);
+        analyzeArchBlock<IR::P4Control, IR::ControlBlock>(
+                structure->toplevel, "dep", ProgramStructure::EGRESS_DEPARSER);
+        analyzeArchBlock<IR::P4Control, IR::ControlBlock>(
+                structure->toplevel, "vr", "verifyChecksum");
+        analyzeArchBlock<IR::P4Control, IR::ControlBlock>(
+                structure->toplevel, "ck", "updateChecksum");
     }
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
 class ConstructSymbolTable : public Inspector {
-    ProgramStructure* structure;
-    P4::ReferenceMap* refMap;
-    P4::TypeMap*      typeMap;
-    unsigned          resubmitIndex;
-    unsigned          digestIndex;
-    unsigned          igCloneIndex;
-    unsigned          egCloneIndex;
+    ProgramStructure *structure;
+    P4::ReferenceMap *refMap;
+    P4::TypeMap *typeMap;
+    unsigned resubmitIndex;
+    unsigned digestIndex;
+    unsigned igCloneIndex;
+    unsigned egCloneIndex;
     std::set<cstring> globals;
 
  public:
-    ConstructSymbolTable(ProgramStructure* structure,
-                         P4::ReferenceMap* refMap, P4::TypeMap* typeMap)
-    : structure(structure), refMap(refMap), typeMap(typeMap),
-      resubmitIndex(0), digestIndex(0), igCloneIndex(0), egCloneIndex(0)
-    { CHECK_NULL(structure); setName("ConstructSymbolTable"); }
+    ConstructSymbolTable(ProgramStructure *structure,
+                           P4::ReferenceMap *refMap, P4::TypeMap *typeMap)
+            : structure(structure), refMap(refMap), typeMap(typeMap),
+              resubmitIndex(0), digestIndex(0), igCloneIndex(0), egCloneIndex(0) {
+        CHECK_NULL(structure);
+        setName("ConstructSymbolTable");
+    }
 
     /*
      * following extern methods in v1model.p4 need to be converted to an extern instance
@@ -606,7 +602,7 @@ class ConstructSymbolTable : public Inspector {
      * random, digest, mark_to_drop, hash, verify_checksum, update_checksum, resubmit
      * recirculate, clone, clone3, truncate
      */
-    void cvtDigestFunction(const IR::MethodCallStatement* node) {
+    void cvtDigestFunction(const IR::MethodCallStatement *node) {
         /*
          * translate digest() function in ingress control block to
          *
@@ -617,9 +613,10 @@ class ConstructSymbolTable : public Inspector {
         BUG_CHECK(mce != nullptr, "malformed IR in digest() function");
         auto control = findContext<IR::P4Control>();
         BUG_CHECK(control != nullptr, "digest() must be used in a control block");
-        BUG_CHECK(control->name == structure->getBlockName("ingress"),
-                  "digest() can only be used in %1%", structure->getBlockName("ingress"));
-        IR::PathExpression* path = new IR::PathExpression("ig_intr_md_for_deparser");
+        BUG_CHECK(control->name == structure->getBlockName(ProgramStructure::INGRESS),
+                  "digest() can only be used in %1%",
+                  structure->getBlockName(ProgramStructure::INGRESS));
+        IR::PathExpression *path = new IR::PathExpression("ig_intr_md_for_deparser");
         auto mem = new IR::Member(path, "learn_idx");
         auto idx = new IR::Constant(IR::Type::Bits::get(3), digestIndex++);
         auto stmt = new IR::AssignmentStatement(mem, idx);
@@ -627,8 +624,8 @@ class ConstructSymbolTable : public Inspector {
 
         BUG_CHECK(mce->typeArguments->size() == 1, "Expected 1 type parameter for %1%",
                   mce->method);
-        auto* typeArg = mce->typeArguments->at(0);
-        auto* typeName = typeArg->to<IR::Type_Name>();
+        auto *typeArg = mce->typeArguments->at(0);
+        auto *typeName = typeArg->to<IR::Type_Name>();
         BUG_CHECK(typeName != nullptr, "Expected type T in digest to be a typeName %1%", typeArg);
         auto fieldList = refMap->getDeclaration(typeName->path);
         auto declAnno = fieldList->getAnnotation("name");
@@ -642,56 +639,57 @@ class ConstructSymbolTable : public Inspector {
          *
          */
         auto field_list = mce->arguments->at(1);
-        auto args = new IR::Vector<IR::Expression>({ field_list });
+        auto args = new IR::Vector<IR::Expression>({field_list});
         auto expr = new IR::PathExpression(new IR::Path(typeName->path->name));
         auto member = new IR::Member(expr, "pack");
         auto typeArgs = new IR::Vector<IR::Type>();
         auto mcs = new IR::MethodCallStatement(
-                       new IR::MethodCallExpression(member, typeArgs, args));
+                new IR::MethodCallExpression(member, typeArgs, args));
 
         auto condExprPath = new IR::Member(
-             new IR::PathExpression(new IR::Path("ig_intr_md_for_deparser")), "learn_idx");
+                new IR::PathExpression(new IR::Path("ig_intr_md_for_deparser")), "learn_idx");
         auto condExpr = new IR::Equ(condExprPath, idx);
         auto cond = new IR::IfStatement(condExpr, mcs, nullptr);
         structure->ingressDeparserStatements.push_back(cond);
 
-        auto declArgs = new IR::Vector<IR::Expression>({ mce->arguments->at(0) });
+        auto declArgs = new IR::Vector<IR::Expression>({mce->arguments->at(0)});
         auto declType = new IR::Type_Specialized(new IR::Type_Name("_learning_packet_"),
                                                  mce->typeArguments);
         auto decl = new IR::Declaration_Instance(typeName->path->name,
-                                                 new IR::Annotations({ declAnno }),
+                                                 new IR::Annotations({declAnno}),
                                                  declType, declArgs);
         structure->ingressDeparserDeclarations.push_back(decl);
     }
 
-    void cvtCloneFunction(const IR::MethodCallStatement* node, bool hasData) {
+    void cvtCloneFunction(const IR::MethodCallStatement *node, bool hasData) {
         auto mce = node->methodCall->to<IR::MethodCallExpression>();
         BUG_CHECK(mce != nullptr, "malformed IR in clone() function");
         auto control = findContext<IR::P4Control>();
         BUG_CHECK(control != nullptr, "clone() must be used in a control block");
 
-        const bool isIngress = control->name == structure->getBlockName("ingress");
-        auto* deparserMetadataPath =
-          new IR::PathExpression(isIngress ? "ig_intr_md_for_deparser"
-                                           : "eg_intr_md_for_deparser");
-        auto* mirrorBufferMetadataPath =
-          new IR::PathExpression(isIngress ? "ig_intr_md_for_mb"
-                                           : "eg_intr_md_for_mb");
+        const bool isIngress =
+                (control->name == structure->getBlockName(ProgramStructure::INGRESS));
+        auto *deparserMetadataPath =
+                new IR::PathExpression(isIngress ? "ig_intr_md_for_deparser"
+                                                 : "eg_intr_md_for_deparser");
+        auto *mirrorBufferMetadataPath =
+                new IR::PathExpression(isIngress ? "ig_intr_md_for_mb"
+                                                 : "eg_intr_md_for_mb");
 
         // Generate a fresh index for this clone field list. This is used by the
         // hardware to select the correct mirror table entry, and to select the
         // correct parser for this field list.
-        auto* idx =
-          new IR::Constant(IR::Type::Bits::get(3), isIngress ? igCloneIndex++
-                                                             : egCloneIndex++);
+        auto *idx =
+                new IR::Constant(IR::Type::Bits::get(3), isIngress ? igCloneIndex++
+                                                                   : egCloneIndex++);
         if (idx->asInt() > 7) {
             ::error("Too many clone() calls in %1%",
-                    isIngress ? "ingress" : "egress");
+                    isIngress ? ProgramStructure::INGRESS : ProgramStructure::EGRESS);
             return;
         }
 
         {
-            auto* block = new IR::BlockStatement;
+            auto *block = new IR::BlockStatement;
 
             // Construct a value for `mirror_source`, which is
             // compiler-generated metadata that's prepended to the user field
@@ -709,25 +707,25 @@ class ConstructSymbolTable : public Inspector {
             // bits of this data, which eliminates the need for an extra PHV
             // container. We'll start doing that soon as well, but we need to
             // work out some issues with PHV allocation constraints first.
-            auto* mirrorSource = new IR::Member(deparserMetadataPath, "mirror_source");
+            auto *mirrorSource = new IR::Member(deparserMetadataPath, "mirror_source");
             const unsigned sourceIdx = idx->asInt();
             const unsigned isMirroredTag = 1 << 3;
             const unsigned gressTag = isIngress ? 0 : 1 << 4;
-            auto* source =
-              new IR::Constant(IR::Type::Bits::get(8), sourceIdx | isMirroredTag | gressTag);
+            auto *source =
+                    new IR::Constant(IR::Type::Bits::get(8), sourceIdx | isMirroredTag | gressTag);
             block->components.push_back(new IR::AssignmentStatement(mirrorSource, source));
 
             // Set `mirror_idx`, which is used as the digest selector in the
             // deparser (in other words, it selects the field list to use).
-            auto* mirrorIdx = new IR::Member(deparserMetadataPath, "mirror_idx");
+            auto *mirrorIdx = new IR::Member(deparserMetadataPath, "mirror_idx");
             block->components.push_back(new IR::AssignmentStatement(mirrorIdx, idx));
 
             // Set `mirror_id`, which configures the mirror session id that the
             // hardware uses to route mirrored packets in the TM.
             BUG_CHECK(mce->arguments->size() >= 2,
                       "No mirror session id specified: %1%", mce);
-            auto* mirrorId = new IR::Member(mirrorBufferMetadataPath, "mirror_id");
-            auto* mirrorIdValue = mce->arguments->at(1);
+            auto *mirrorId = new IR::Member(mirrorBufferMetadataPath, "mirror_id");
+            auto *mirrorIdValue = mce->arguments->at(1);
             block->components.push_back(new IR::AssignmentStatement(mirrorId,
                                                                     mirrorIdValue));
 
@@ -740,24 +738,24 @@ class ConstructSymbolTable : public Inspector {
          *    mirror.emit({});
          */
 
-        auto* newFieldList = new IR::ListExpression({
+        auto *newFieldList = new IR::ListExpression({
             new IR::Member(mirrorBufferMetadataPath, "mirror_id"),
-            new IR::Member(deparserMetadataPath, "mirror_source"),
-        });
+            new IR::Member(deparserMetadataPath, "mirror_source")});
+
         if (hasData && mce->arguments->size() > 2) {
-            auto* clonedData = mce->arguments->at(2);
-            if (auto* originalFieldList = clonedData->to<IR::ListExpression>())
+            auto *clonedData = mce->arguments->at(2);
+            if (auto *originalFieldList = clonedData->to<IR::ListExpression>())
                 newFieldList->components.pushBackOrAppend(&originalFieldList->components);
             else
                 newFieldList->components.push_back(clonedData);
         }
-        auto* args = new IR::Vector<IR::Expression>({ newFieldList });
+        auto *args = new IR::Vector<IR::Expression>({newFieldList});
 
         auto pathExpr = new IR::PathExpression(new IR::Path("mirror"));
         auto member = new IR::Member(pathExpr, "emit");
         auto typeArgs = new IR::Vector<IR::Type>();
         auto mcs = new IR::MethodCallStatement(
-             new IR::MethodCallExpression(member, typeArgs, args));
+                new IR::MethodCallExpression(member, typeArgs, args));
         auto condExprPath = new IR::Member(deparserMetadataPath, "mirror_idx");
         auto condExpr = new IR::Equ(condExprPath, idx);
         auto cond = new IR::IfStatement(condExpr, mcs, nullptr);
@@ -767,17 +765,17 @@ class ConstructSymbolTable : public Inspector {
             structure->egressDeparserStatements.push_back(cond);
     }
 
-    void cvtDropFunction(const IR::MethodCallStatement* node) {
+    void cvtDropFunction(const IR::MethodCallStatement *node) {
         auto control = findContext<IR::P4Control>();
-        if (control->name == structure->getBlockName("ingress")) {
+        if (control->name == structure->getBlockName(ProgramStructure::INGRESS)) {
             auto path = new IR::Member(
-                            new IR::PathExpression("ig_intr_md_for_tm"), "drop_ctl");
+                    new IR::PathExpression("ig_intr_md_for_tm"), "drop_ctl");
             auto val = new IR::Constant(IR::Type::Bits::get(3), 1);
             auto stmt = new IR::AssignmentStatement(path, val);
             structure->dropCalls.emplace(node, stmt);
-        } else if (control->name == structure->getBlockName("egress")) {
+        } else if (control->name == structure->getBlockName(ProgramStructure::EGRESS)) {
             auto path = new IR::Member(
-                            new IR::PathExpression("eg_intr_md_for_oport"), "drop_ctl");
+                    new IR::PathExpression("eg_intr_md_for_oport"), "drop_ctl");
             auto val = new IR::Constant(IR::Type::Bits::get(3), 1);
             auto stmt = new IR::AssignmentStatement(path, val);
             structure->dropCalls.emplace(node, stmt);
@@ -787,9 +785,10 @@ class ConstructSymbolTable : public Inspector {
     }
 
     /// execute_meter_with_color is converted to a meter extern
-    void cvtExecuteMeterFunctiion(const IR::MethodCallStatement* node) {
+    void cvtExecuteMeterFunctiion(const IR::MethodCallStatement *node) {
         auto control = findContext<IR::P4Control>();
-        BUG_CHECK(control != nullptr, "execute_meter_with_color() must be used in a control block");
+        BUG_CHECK(control != nullptr,
+                  "execute_meter_with_color() must be used in a control block");
         auto mce = node->methodCall->to<IR::MethodCallExpression>();
 
         auto inst = mce->arguments->at(0)->to<IR::PathExpression>();
@@ -805,7 +804,7 @@ class ConstructSymbolTable : public Inspector {
 
         auto meterColor = mce->arguments->at(2);
         auto size = meterColor->type->width_bits();
-        IR::AssignmentStatement* assign = nullptr;
+        IR::AssignmentStatement *assign = nullptr;
         if (size > 8) {
             assign = new IR::AssignmentStatement(
                     meterColor, new IR::Cast(IR::Type::Bits::get(size), methodCall));
@@ -820,10 +819,11 @@ class ConstructSymbolTable : public Inspector {
     }
 
     /// hash function is converted to an instance of hash extern in the enclosed control block
-    void cvtHashFunction(const IR::MethodCallStatement* node) {
+    void cvtHashFunction(const IR::MethodCallStatement *node) {
         auto control = findContext<IR::P4Control>();
         BUG_CHECK(control != nullptr, "hash() must be used in a control block");
-        const bool isIngress = control->name == structure->getBlockName("ingress");
+        const bool isIngress =
+                (control->name == structure->getBlockName(ProgramStructure::INGRESS));
 
         auto mce = node->methodCall->to<IR::MethodCallExpression>();
         BUG_CHECK(mce != nullptr, "Malformed IR: method call expression cannot be nullptr");
@@ -831,7 +831,7 @@ class ConstructSymbolTable : public Inspector {
         BUG_CHECK(mce->arguments->size() > 3, "hash extern must have at least 4 arguments");
         auto typeArgs = new IR::Vector<IR::Type>({mce->typeArguments->at(2),
                                                   mce->typeArguments->at(1),
-                                                  mce->typeArguments->at(3) });
+                                                  mce->typeArguments->at(3)});
 
         auto hashType = new IR::Type_Specialized(new IR::Type_Name("hash"), typeArgs);
         auto hashName = cstring::make_unique(structure->unique_names, "hash", '_');
@@ -842,7 +842,7 @@ class ConstructSymbolTable : public Inspector {
         CHECK_NULL(typeName);
         structure->typeNamesToDo.emplace(typeName, typeName);
         LOG3("add " << typeName << " to translation map");
-        auto hashArgs = new IR::Vector<IR::Expression>({ typeName });
+        auto hashArgs = new IR::Vector<IR::Expression>({typeName});
         auto hashInst = new IR::Declaration_Instance(hashName, hashType, hashArgs);
 
         if (isIngress) {
@@ -853,7 +853,7 @@ class ConstructSymbolTable : public Inspector {
     }
 
     /// resubmit function is converted to an assignment on resubmit_idx
-    void cvtResubmitFunction(const IR::MethodCallStatement* node) {
+    void cvtResubmitFunction(const IR::MethodCallStatement *node) {
         /*
          * translate resubmit() function in ingress control block to
          *
@@ -864,9 +864,9 @@ class ConstructSymbolTable : public Inspector {
         BUG_CHECK(mce != nullptr, "malformed IR in resubmit() function");
         auto control = findContext<IR::P4Control>();
         BUG_CHECK(control != nullptr, "resubmit() must be used in a control block");
-        BUG_CHECK(control->name == structure->getBlockName("ingress"),
+        BUG_CHECK(control->name == structure->getBlockName(ProgramStructure::INGRESS),
                   "resubmit() can only be used in ingress control");
-        IR::PathExpression* path = new IR::PathExpression("ig_intr_md_for_deparser");
+        IR::PathExpression *path = new IR::PathExpression("ig_intr_md_for_deparser");
         auto mem = new IR::Member(path, "resubmit_idx");
         auto idx = new IR::Constant(IR::Type::Bits::get(3), resubmitIndex++);
         auto stmt = new IR::AssignmentStatement(mem, idx);
@@ -883,7 +883,7 @@ class ConstructSymbolTable : public Inspector {
         /// compiler inserts resubmit_idx as the format id to
         /// identify the resubmit group, it is 3 bits in size, but
         /// will be aligned to byte boundary in backend.
-        auto new_fl = new IR::ListExpression({ mem });
+        auto new_fl = new IR::ListExpression({mem});
         for (auto f : fl->to<IR::ListExpression>()->components)
             new_fl->push_back(f);
         auto args = new IR::Vector<IR::Expression>(new_fl);
@@ -891,7 +891,7 @@ class ConstructSymbolTable : public Inspector {
         auto member = new IR::Member(expr, "emit");
         auto typeArgs = new IR::Vector<IR::Type>();
         auto mcs = new IR::MethodCallStatement(
-                       new IR::MethodCallExpression(member, typeArgs, args));
+                new IR::MethodCallExpression(member, typeArgs, args));
 
         auto condExprPath = new IR::Member(
                 new IR::PathExpression(new IR::Path("ig_intr_md_for_deparser")),
@@ -901,15 +901,16 @@ class ConstructSymbolTable : public Inspector {
         structure->ingressDeparserStatements.push_back(cond);
     }
 
-    void cvtRandomFunction(const IR::MethodCallStatement* node) {
+    void cvtRandomFunction(const IR::MethodCallStatement *node) {
         auto control = findContext<IR::P4Control>();
         BUG_CHECK(control != nullptr, "random() must be used in a control block");
-        const bool isIngress = control->name == structure->getBlockName("ingress");
+        const bool isIngress =
+                (control->name == structure->getBlockName(ProgramStructure::INGRESS));
         auto mce = node->methodCall->to<IR::MethodCallExpression>();
         BUG_CHECK(mce != nullptr, "Malformed IR: method call expression cannot be nullptr");
 
         auto baseType = mce->arguments->at(0);
-        auto typeArgs = new IR::Vector<IR::Type>({ baseType->type });
+        auto typeArgs = new IR::Vector<IR::Type>({baseType->type});
         auto type = new IR::Type_Specialized(new IR::Type_Name("random"), typeArgs);
         auto param = new IR::Vector<IR::Expression>();
         auto randName = cstring::make_unique(structure->unique_names, "random", '_');
@@ -925,20 +926,20 @@ class ConstructSymbolTable : public Inspector {
         }
     }
 
-    const IR::Declaration_Instance* cvtVerifyChecksum(const IR::MethodCallExpression* ) {
+    const IR::Declaration_Instance *cvtVerifyChecksum(const IR::MethodCallExpression *) {
         /// XXX(hanw): TBD
         return nullptr;
     }
 
     boost::optional<ChecksumSourceMap::value_type>
-    analyzeComputedChecksumStatement(const IR::MethodCallStatement* statement) {
+    analyzeComputedChecksumStatement(const IR::MethodCallStatement *statement) {
         auto methodCall = statement->methodCall->to<IR::MethodCallExpression>();
         if (!methodCall) {
             ::warning("Expected a non-empty method call expression: %1%", statement);
             return boost::none;
         }
         auto method = methodCall->method->to<IR::PathExpression>();
-        if (!method || method->path->name != "update_checksum")  {
+        if (!method || method->path->name != "update_checksum") {
             ::warning("Expected an update_checksum statement in %1%", statement);
             return boost::none;
         }
@@ -952,7 +953,7 @@ class ConstructSymbolTable : public Inspector {
         return ChecksumSourceMap::value_type(destField, methodCall);
     }
 
-    void cvtUpdateChecksum(const IR::MethodCallStatement* method) {
+    void cvtUpdateChecksum(const IR::MethodCallStatement *method) {
         auto checksum = analyzeComputedChecksumStatement(method);
         if (checksum) {
             auto csum = *checksum;
@@ -972,19 +973,21 @@ class ConstructSymbolTable : public Inspector {
 
             auto fieldlist = csum.second->arguments->at(1);
             auto dest_field = csum.second->arguments->at(2);
-            auto ig_csum = new IR::MethodCallStatement(csum.second->srcInfo,
-                               new IR::Member(new IR::PathExpression(csum_name), "update"),
-                                   {fieldlist, dest_field});
-            auto eg_csum = new IR::MethodCallStatement(csum.second->srcInfo,
-                               new IR::Member(new IR::PathExpression(csum_name), "update"),
-                                   {fieldlist, dest_field});
+            auto ig_csum = new IR::MethodCallStatement(
+                    csum.second->srcInfo,
+                    new IR::Member(new IR::PathExpression(csum_name), "update"),
+                    {fieldlist, dest_field});
+            auto eg_csum = new IR::MethodCallStatement(
+                    csum.second->srcInfo,
+                    new IR::Member(new IR::PathExpression(csum_name), "update"),
+                    {fieldlist, dest_field});
             structure->ingressDeparserStatements.push_back(ig_csum);
             structure->egressDeparserStatements.push_back(eg_csum);
         }
     }
 
     /// build up a table for all metadata member that need to be translated.
-    void postorder(const IR::Member* node) override {
+    void postorder(const IR::Member *node) override {
         /// header/struct names appeared in p4_14_include/tofino/intrinsic_metadata.p4
         ordered_set<cstring> toTranslateInControl = {"standard_metadata",
                                                      "ig_intr_md_for_tm",
@@ -1009,10 +1012,10 @@ class ConstructSymbolTable : public Inspector {
                 CHECK_NULL(path);
                 auto it = toTranslateInControl.find(path->name);
                 if (it != toTranslateInControl.end()) {
-                    if (gress->name == structure->getBlockName("ingress")) {
+                    if (gress->name == structure->getBlockName(ProgramStructure::INGRESS)) {
                         structure->pathsThread.emplace(node, INGRESS);
                         structure->pathsToDo.emplace(node, node);
-                    } else if (gress->name == structure->getBlockName("egress")) {
+                    } else if (gress->name == structure->getBlockName(ProgramStructure::EGRESS)) {
                         structure->pathsThread.emplace(node, EGRESS);
                         structure->pathsToDo.emplace(node, node);
                     } else {
@@ -1061,10 +1064,11 @@ class ConstructSymbolTable : public Inspector {
                 structure->typeNamesToDo.emplace(node, node);
             } else {
                 WARNING("Expression " << node << " is not converted");
-            }}
+            }
+        }
     }
 
-    void process_extern_declaration(const IR::Declaration_Instance* node, cstring name) {
+    void process_extern_declaration(const IR::Declaration_Instance *node, cstring name) {
         if (name == "counter") {
             structure->counters.emplace(node, node);
         } else if (name == "direct_counter") {
@@ -1078,7 +1082,7 @@ class ConstructSymbolTable : public Inspector {
         }
     }
 
-    void postorder(const IR::Declaration_Instance* node) override {
+    void postorder(const IR::Declaration_Instance *node) override {
         if (auto ts = node->type->to<IR::Type_Specialized>()) {
             if (auto typeName = ts->baseType->to<IR::Type_Name>()) {
                 if (typeName->path->name == "V1Switch") {
@@ -1088,7 +1092,9 @@ class ConstructSymbolTable : public Inspector {
                     structure->type_h = type_h->path->name;
                     structure->type_m = type_m->path->name;
                 } else {
-                    process_extern_declaration(node, typeName->path->name); } }
+                    process_extern_declaration(node, typeName->path->name);
+                }
+            }
         } else if (auto typeName = node->type->to<IR::Type_Name>()) {
             process_extern_declaration(node, typeName->path->name);
         } else {
@@ -1096,7 +1102,7 @@ class ConstructSymbolTable : public Inspector {
         }
     }
 
-    void postorder(const IR::MethodCallStatement* node) override {
+    void postorder(const IR::MethodCallStatement *node) override {
         auto mce = node->methodCall->to<IR::MethodCallExpression>();
         BUG_CHECK(mce != nullptr, "Malformed IR:: method call expression cannot be nullptr");
         auto mi = P4::MethodInstance::resolve(node, refMap, typeMap);
@@ -1146,7 +1152,7 @@ class ConstructSymbolTable : public Inspector {
 
     // if a path refers to a global declaration, move
     // the global declaration to local control;
-    void postorder(const IR::PathExpression* node) override {
+    void postorder(const IR::PathExpression *node) override {
         auto path = node->path;
         auto it = structure->global_instances.find(path->name);
         if (it != structure->global_instances.end()) {
@@ -1155,10 +1161,10 @@ class ConstructSymbolTable : public Inspector {
             auto control = findContext<IR::P4Control>();
             BUG_CHECK(control != nullptr,
                       "unable to reference global instance from non-control block");
-            if (control->name == structure->getBlockName("ingress")) {
+            if (control->name == structure->getBlockName(ProgramStructure::INGRESS)) {
                 structure->ingressDeclarations.push_back(it->second);
                 globals.insert(path->name);
-            } else if (control->name == structure->getBlockName("egress")) {
+            } else if (control->name == structure->getBlockName(ProgramStructure::EGRESS)) {
                 structure->egressDeclarations.push_back(it->second);
                 globals.insert(path->name);
             } else {
@@ -1168,55 +1174,14 @@ class ConstructSymbolTable : public Inspector {
     }
 
     // debug
-    void postorder(const IR::P4Program* node) override {
+    void postorder(const IR::P4Program *node) override {
         LOG3("program before translation " << node);
     }
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
-class GenerateTofinoProgram : public Transform {
-    ProgramStructure* structure;
- public:
-    explicit GenerateTofinoProgram(ProgramStructure* structure)
-    : structure(structure) { CHECK_NULL(structure); setName("GenerateTofinoProgram"); }
-    //
-    const IR::Node* preorder(IR::P4Program* program) override {
-        prune();
-        auto *rv = structure->create(program);
-        return rv;
-    }
-};
 
-/// The translation pass only renames intrinsic metadata. If the width of the
-/// metadata is also changed after the translation, then this pass will insert
-/// appropriate cast to the RHS of the assignment.
-class CastFixup : public Transform {
-    ProgramStructure* structure;
-
- public:
-    explicit CastFixup(ProgramStructure* structure)
-    : structure(structure) { CHECK_NULL(structure); setName("CastFixup"); }
-    const IR::AssignmentStatement* postorder(IR::AssignmentStatement* node) override {
-        auto left = node->left;
-        auto right = node->right;
-
-        if (auto mem = left->to<IR::Member>()) {
-            if (auto path = mem->expr->to<IR::PathExpression>()) {
-                MetadataField field{path->path->name, mem->member.name};
-                auto it = structure->metadataTypeMap.find(field);
-                if (it != structure->metadataTypeMap.end()) {
-                    auto type = IR::Type::Bits::get(it->second);
-                    if (type != right->type) {
-                        right = new IR::Cast(type, right);
-                        return new IR::AssignmentStatement(node->srcInfo, left, right);
-                    }
-                }
-            }
-        }
-        return node;
-    }
-};
 
 /// Add parser code to extract the standard TNA intrinsic metadata.
 struct AddIntrinsicMetadata : public Transform {
@@ -1224,23 +1189,23 @@ struct AddIntrinsicMetadata : public Transform {
     /// the P4 program and an `@name` annotation with a '$' prefix. Downstream,
     /// we search for certain '$' states and replace them with more generated
     /// parser code.
-    static IR::ParserState*
+    static IR::ParserState *
     createGeneratedParserState(cstring name,
-                               IR::IndexedVector<IR::StatOrDecl>&& statements,
-                               const IR::Expression* selectExpression) {
+                               IR::IndexedVector<IR::StatOrDecl> &&statements,
+                               const IR::Expression *selectExpression) {
         // XXX(seth): It'd be good to actually verify that this name is unique.
         auto newStateName = IR::ID(cstring("__") + name);
-        auto* newState = new IR::ParserState(newStateName, statements,
+        auto *newState = new IR::ParserState(newStateName, statements,
                                              selectExpression);
         newState->annotations = newState->annotations
-            ->addAnnotationIfNew(IR::Annotation::nameAnnotation,
-                                 new IR::StringLiteral(cstring("$") + name));
+                ->addAnnotationIfNew(IR::Annotation::nameAnnotation,
+                                     new IR::StringLiteral(cstring("$") + name));
         return newState;
     }
 
-    static IR::ParserState*
+    static IR::ParserState *
     createGeneratedParserState(cstring name,
-                               IR::IndexedVector<IR::StatOrDecl>&& statements,
+                               IR::IndexedVector<IR::StatOrDecl> &&statements,
                                cstring nextState) {
         return createGeneratedParserState(name, std::move(statements),
                                           new IR::PathExpression(nextState));
@@ -1248,76 +1213,75 @@ struct AddIntrinsicMetadata : public Transform {
 
     /// @return a SelectCase that checks for a constant value with some mask
     /// applied.
-    static IR::SelectCase*
+    static IR::SelectCase *
     createSelectCase(unsigned bitWidth, unsigned value, unsigned mask,
-                     const IR::ParserState* nextState) {
-        auto* type = IR::Type::Bits::get(bitWidth);
-        auto* valueExpr = new IR::Constant(type, value);
-        auto* maskExpr = new IR::Constant(type, mask);
-        auto* nextStateExpr = new IR::PathExpression(nextState->name);
+                     const IR::ParserState *nextState) {
+        auto *type = IR::Type::Bits::get(bitWidth);
+        auto *valueExpr = new IR::Constant(type, value);
+        auto *maskExpr = new IR::Constant(type, mask);
+        auto *nextStateExpr = new IR::PathExpression(nextState->name);
         return new IR::SelectCase(new IR::Mask(valueExpr, maskExpr), nextStateExpr);
     }
 
     /// @return an `extract()` call that extracts the given header. The header is
     /// assumed to be one of the standard TNA metadata headers.
-    static IR::Statement*
-    createExtractCall(const IR::BFN::TranslatedP4Parser* parser, cstring header) {
+    static IR::Statement *
+    createExtractCall(const IR::BFN::TranslatedP4Parser *parser, cstring header) {
         auto packetInParam = parser->tnaParams.at("pkt");
-        auto* method = new IR::Member(new IR::PathExpression(packetInParam),
+        auto *method = new IR::Member(new IR::PathExpression(packetInParam),
                                       IR::ID("extract"));
         auto headerParam = parser->tnaParams.at(header);
-        auto* args = new IR::Vector<IR::Expression>({
-            new IR::PathExpression(headerParam)
-        });
-        auto* callExpr = new IR::MethodCallExpression(method, args);
+        auto *args = new IR::Vector<IR::Expression>({
+                                                            new IR::PathExpression(headerParam)
+                                                    });
+        auto *callExpr = new IR::MethodCallExpression(method, args);
         return new IR::MethodCallStatement(callExpr);
     }
 
     /// @return a lookahead expression for the given size of `bit<>` type.
-    static IR::Expression*
-    createLookaheadExpr(const IR::BFN::TranslatedP4Parser* parser, int bits) {
+    static IR::Expression *
+    createLookaheadExpr(const IR::BFN::TranslatedP4Parser *parser, int bits) {
         auto packetInParam = parser->tnaParams.at("pkt");
-        auto* method = new IR::Member(new IR::PathExpression(packetInParam),
+        auto *method = new IR::Member(new IR::PathExpression(packetInParam),
                                       IR::ID("lookahead"));
-        auto* typeArgs = new IR::Vector<IR::Type>({
-            IR::Type::Bits::get(bits)
-        });
-        auto* lookaheadExpr =
-          new IR::MethodCallExpression(method, typeArgs,
-                                       new IR::Vector<IR::Expression>);
+        auto *typeArgs = new IR::Vector<IR::Type>({
+                                                          IR::Type::Bits::get(bits)
+                                                  });
+        auto *lookaheadExpr =
+                new IR::MethodCallExpression(method, typeArgs,
+                                             new IR::Vector<IR::Expression>);
         return lookaheadExpr;
     }
 
     /// @return an `advance()` call that advances by the given number of bits.
-    static IR::Statement*
-    createAdvanceCall(const IR::BFN::TranslatedP4Parser* parser, int bits) {
+    static IR::Statement *
+    createAdvanceCall(const IR::BFN::TranslatedP4Parser *parser, int bits) {
         auto packetInParam = parser->tnaParams.at("pkt");
-        auto* method = new IR::Member(new IR::PathExpression(packetInParam),
+        auto *method = new IR::Member(new IR::PathExpression(packetInParam),
                                       IR::ID("advance"));
-        auto* args = new IR::Vector<IR::Expression>({
-            new IR::Constant(IR::Type::Bits::get(32), bits)
-        });
-        auto* callExpr = new IR::MethodCallExpression(method, args);
+        auto *args = new IR::Vector<IR::Expression>(
+                {new IR::Constant(IR::Type::Bits::get(32), bits)});
+        auto *callExpr = new IR::MethodCallExpression(method, args);
         return new IR::MethodCallStatement(callExpr);
     }
 
     /// @return an assignment statement of the form `header.field = constant`.
-    static IR::Statement*
-    createSetMetadata(const IR::BFN::TranslatedP4Parser* parser, cstring header,
+    static IR::Statement *
+    createSetMetadata(const IR::BFN::TranslatedP4Parser *parser, cstring header,
                       cstring field, int bitWidth, int constant) {
         auto headerParam = parser->tnaParams.at(header);
-        auto* member = new IR::Member(new IR::PathExpression(headerParam),
+        auto *member = new IR::Member(new IR::PathExpression(headerParam),
                                       IR::ID(field));
-        auto* value = new IR::Constant(IR::Type::Bits::get(bitWidth), constant);
+        auto *value = new IR::Constant(IR::Type::Bits::get(bitWidth), constant);
         return new IR::AssignmentStatement(member, value);
     }
 
     /// Rename the start state of the given parser and return it. This will
     /// leave the parser without a start state, so the caller must create a new
     /// one.
-    static const IR::ParserState*
-    convertStartStateToNormalState(IR::P4Parser* parser, cstring newName) {
-        auto* origStartState = parser->getDeclByName(IR::ParserState::start);
+    static const IR::ParserState *
+    convertStartStateToNormalState(IR::P4Parser *parser, cstring newName) {
+        auto *origStartState = parser->getDeclByName(IR::ParserState::start);
         auto origStartStateIt = std::find(parser->states.begin(),
                                           parser->states.end(),
                                           origStartState);
@@ -1325,11 +1289,11 @@ struct AddIntrinsicMetadata : public Transform {
                   "Couldn't find the original start state?");
         parser->states.erase(origStartStateIt);
 
-        auto* newState = origStartState->to<IR::ParserState>()->clone();
+        auto *newState = origStartState->to<IR::ParserState>()->clone();
         newState->name = IR::ID(cstring("__") + newName);
         newState->annotations = newState->annotations
-            ->addAnnotationIfNew(IR::Annotation::nameAnnotation,
-                                 new IR::StringLiteral(IR::ParserState::start));
+                ->addAnnotationIfNew(IR::Annotation::nameAnnotation,
+                                     new IR::StringLiteral(IR::ParserState::start));
         parser->states.push_back(newState);
 
         return newState;
@@ -1337,22 +1301,22 @@ struct AddIntrinsicMetadata : public Transform {
 
     /// Add a new start state to the given parser, with a potentially
     /// non-'start' name applied via an `@name` annotation.
-    static void addNewStartState(IR::P4Parser* parser, cstring name,
+    static void addNewStartState(IR::P4Parser *parser, cstring name,
                                  cstring nextState) {
-        auto* startState =
-          new IR::ParserState(IR::ParserState::start,
-                              new IR::PathExpression(nextState));
+        auto *startState =
+                new IR::ParserState(IR::ParserState::start,
+                                    new IR::PathExpression(nextState));
         startState->annotations = startState->annotations
-            ->addAnnotationIfNew(IR::Annotation::nameAnnotation,
-                                 new IR::StringLiteral(cstring("$") + name));
+                ->addAnnotationIfNew(IR::Annotation::nameAnnotation,
+                                     new IR::StringLiteral(cstring("$") + name));
         parser->states.push_back(startState);
     }
 
     /// Add the standard TNA ingress metadata to the given parser. The original
     /// start state will remain in the program, but with a new name.
-    static void addIngressMetadata(IR::BFN::TranslatedP4Parser* parser) {
-        auto* p4EntryPointState =
-          convertStartStateToNormalState(parser, "ingress_p4_entry_point");
+    static void addIngressMetadata(IR::BFN::TranslatedP4Parser *parser) {
+        auto *p4EntryPointState =
+                convertStartStateToNormalState(parser, "ingress_p4_entry_point");
 
         // Add a state that skips over any padding between the phase 0 data and the
         // beginning of the packet.
@@ -1360,30 +1324,30 @@ struct AddIntrinsicMetadata : public Transform {
         // rather than just padding. Once we have a chance to investigate what it
         // does, we'll want to revisit this.
         const auto bitSkip = Device::pardeSpec().bitIngressPrePacketPaddingSize();
-        auto* skipToPacketState =
-          createGeneratedParserState("skip_to_packet", {
-              createAdvanceCall(parser, bitSkip)
-          }, p4EntryPointState->name);
+        auto *skipToPacketState =
+                createGeneratedParserState("skip_to_packet", {
+                        createAdvanceCall(parser, bitSkip)
+                }, p4EntryPointState->name);
         parser->states.push_back(skipToPacketState);
 
 
         // Add a state that parses the phase 0 data. This is a placeholder that
         // just skips it; if we find a phase 0 table, it'll be replaced later.
         const auto bitPhase0Size = Device::pardeSpec().bitPhase0Size();
-        auto* phase0State =
-          createGeneratedParserState("phase0", {
-              createAdvanceCall(parser, bitPhase0Size)
-          }, skipToPacketState->name);
+        auto *phase0State =
+                createGeneratedParserState("phase0", {
+                        createAdvanceCall(parser, bitPhase0Size)
+                }, skipToPacketState->name);
         parser->states.push_back(phase0State);
 
         // This state parses resubmit data. Just like phase 0, the version we're
         // generating here is a placeholder that just skips the data; we'll replace
         // it later with an actual implementation.
         const auto bitResubmitSize = Device::pardeSpec().bitResubmitSize();
-        auto* resubmitState =
-          createGeneratedParserState("resubmit", {
-              createAdvanceCall(parser, bitResubmitSize)
-          }, skipToPacketState->name);
+        auto *resubmitState =
+                createGeneratedParserState("resubmit", {
+                        createAdvanceCall(parser, bitResubmitSize)
+                }, skipToPacketState->name);
         parser->states.push_back(resubmitState);
 
         // If this is a resubmitted packet, the initial intrinsic metadata will be
@@ -1391,24 +1355,25 @@ struct AddIntrinsicMetadata : public Transform {
         // data. This state checks the resubmit flag and branches accordingly.
         auto igIntrMd = parser->tnaParams.at("ig_intr_md");
         IR::Vector<IR::Expression> selectOn = {
-            new IR::Cast(IR::Type::Bits::get(8),
-                         new IR::Member(new IR::PathExpression(igIntrMd),
-                                        "resubmit_flag"))
+                new IR::Cast(IR::Type::Bits::get(8),
+                             new IR::Member(new IR::PathExpression(igIntrMd),
+                                            "resubmit_flag"))
         };
-        auto* checkResubmitState =
-          createGeneratedParserState("check_resubmit", { },
-            new IR::SelectExpression(new IR::ListExpression(selectOn), {
-              createSelectCase(8, 0, 0x80, phase0State),
-              createSelectCase(8, 0x80, 0x80, resubmitState)
-            }));
+        auto *checkResubmitState =
+                createGeneratedParserState(
+                        "check_resubmit", {},
+                        new IR::SelectExpression(new IR::ListExpression(selectOn), {
+                                createSelectCase(8, 0, 0x80, phase0State),
+                                createSelectCase(8, 0x80, 0x80, resubmitState)
+                        }));
         parser->states.push_back(checkResubmitState);
 
         // This state handles the extraction of ingress intrinsic metadata.
-        auto* igMetadataState =
-          createGeneratedParserState("ingress_metadata", {
-              createSetMetadata(parser, "ig_intr_md_from_prsr", "ingress_parser_err", 16, 0),
-              createExtractCall(parser, "ig_intr_md")
-          }, checkResubmitState->name);
+        auto *igMetadataState =
+            createGeneratedParserState("ingress_metadata", {
+                createSetMetadata(parser, "ig_intr_md_from_prsr", "ingress_parser_err", 16, 0),
+                createExtractCall(parser, "ig_intr_md")
+            }, checkResubmitState->name);
         parser->states.push_back(igMetadataState);
 
         addNewStartState(parser, "ingress_tna_entry_point", igMetadataState->name);
@@ -1416,20 +1381,20 @@ struct AddIntrinsicMetadata : public Transform {
 
     /// Add the standard TNA egress metadata to the given parser. The original
     /// start state will remain in the program, but with a new name.
-    static void addEgressMetadata(IR::BFN::TranslatedP4Parser* parser) {
-        auto* p4EntryPointState =
-          convertStartStateToNormalState(parser, "egress_p4_entry_point");
+    static void addEgressMetadata(IR::BFN::TranslatedP4Parser *parser) {
+        auto *p4EntryPointState =
+                convertStartStateToNormalState(parser, "egress_p4_entry_point");
 
         // Add a state that parses bridged metadata. This is just a placeholder;
         // we'll replace it once we know which metadata need to be bridged.
-        auto* bridgedMetadataState =
-          createGeneratedParserState("bridged_metadata", { }, p4EntryPointState->name);
+        auto *bridgedMetadataState =
+                createGeneratedParserState("bridged_metadata", {}, p4EntryPointState->name);
         parser->states.push_back(bridgedMetadataState);
 
         // Similarly, this state is a placeholder which will eventually hold the
         // parser for mirrored data.
-        auto* mirroredState =
-          createGeneratedParserState("mirrored", { }, p4EntryPointState->name);
+        auto *mirroredState =
+                createGeneratedParserState("mirrored", {}, p4EntryPointState->name);
         parser->states.push_back(mirroredState);
 
         // If this is a mirrored packet, the hardware will have prepended the
@@ -1439,12 +1404,12 @@ struct AddIntrinsicMetadata : public Transform {
         // distinguish a mirrored packet from a normal packet because we always
         // begin the bridged metadata we attach to normal packet with an extra byte
         // which has the mirror indicator flag set to zero.
-        IR::Vector<IR::Expression> selectOn = { createLookaheadExpr(parser, 8) };
-        auto* checkMirroredState =
-          createGeneratedParserState("check_mirrored", { },
-            new IR::SelectExpression(new IR::ListExpression(selectOn), {
-              createSelectCase(8, 0, 1 << 3, bridgedMetadataState),
-              createSelectCase(8, 1 << 3, 1 << 3, mirroredState)
+        IR::Vector<IR::Expression> selectOn = {createLookaheadExpr(parser, 8)};
+        auto *checkMirroredState =
+            createGeneratedParserState("check_mirrored", {},
+                new IR::SelectExpression(new IR::ListExpression(selectOn), {
+                createSelectCase(8, 0, 1 << 3, bridgedMetadataState),
+                createSelectCase(8, 1 << 3, 1 << 3, mirroredState)
             }));
         parser->states.push_back(checkMirroredState);
 
@@ -1462,18 +1427,18 @@ struct AddIntrinsicMetadata : public Transform {
                                                     checkMirroredState);
 #endif
 
-        auto* egMetadataState =
-          createGeneratedParserState("egress_metadata", {
-              createSetMetadata(parser, "eg_intr_md_from_prsr", "egress_parser_err", 16, 0),
-              createSetMetadata(parser, "eg_intr_md_from_prsr", "coalesce_sample_count", 8, 0),
-              createExtractCall(parser, "eg_intr_md")
-          }, checkMirroredState->name);
+        auto *egMetadataState =
+            createGeneratedParserState("egress_metadata", {
+                createSetMetadata(parser, "eg_intr_md_from_prsr", "egress_parser_err", 16, 0),
+                createSetMetadata(parser, "eg_intr_md_from_prsr", "coalesce_sample_count", 8, 0),
+                createExtractCall(parser, "eg_intr_md")
+            }, checkMirroredState->name);
         parser->states.push_back(egMetadataState);
 
         addNewStartState(parser, "egress_tna_entry_point", egMetadataState->name);
     }
 
-    IR::BFN::TranslatedP4Parser* preorder(IR::BFN::TranslatedP4Parser* parser) override {
+    IR::BFN::TranslatedP4Parser *preorder(IR::BFN::TranslatedP4Parser *parser) override {
         prune();
 
         if (parser->thread == INGRESS)
@@ -1485,15 +1450,7 @@ struct AddIntrinsicMetadata : public Transform {
     }
 };
 
-class TranslationFirst : public PassManager {
- public:
-    TranslationFirst() { setName("TranslationFirst"); }
-};
-
-class TranslationLast : public PassManager {
- public:
-    TranslationLast() { setName("TranslationLast"); }
-};
+}  // namespace V1
 
 /// The general work flow of architecture translation consists of the following steps:
 /// * analyze original source program to build a programStructure that represent original program.
@@ -1506,22 +1463,22 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
     setName("Translation");
     addDebugHook(options.getDebugHook());
     auto evaluator = new P4::EvaluatorPass(refMap, typeMap);
-    auto structure = new BFN::ProgramStructure;
+    auto structure = new BFN::V1::ProgramStructure;
     addPasses({
         new RemoveExternMethodCallsExcludedByAnnotation,
-        new NormalizeV1modelProgram(),
+        new BFN::V1::NormalizeProgram(),
         evaluator,
         new VisitFunctor([structure, evaluator]() {
             structure->toplevel = evaluator->getToplevelBlock(); }),
         new TranslationFirst(),
-        new LoadTargetArchitecture(structure),
-        new RemoveNodesWithNoMapping(),
-        new AnalyzeV1modelProgram(structure),
-        new ConstructSymbolTable(structure, refMap, typeMap),
-        new GenerateTofinoProgram(structure),
-        new TranslationLast(),
-        new CastFixup(structure),
-        new AddIntrinsicMetadata,
+        new BFN::V1::LoadTargetArchitecture(structure),
+        new BFN::V1::RemoveNodesWithNoMapping(),
+        new BFN::V1::AnalyzeProgram(structure),
+        new BFN::V1::ConstructSymbolTable(structure, refMap, typeMap),
+        new BFN::GenerateTofinoProgram(structure),
+        new BFN::TranslationLast(),
+        new BFN::CastFixup(structure),
+        new BFN::V1::AddIntrinsicMetadata,
         new P4::ClonePathExpressions,
         new P4::ClearTypeMap(typeMap),
         new P4::TypeChecking(refMap, typeMap, true),

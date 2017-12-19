@@ -219,6 +219,11 @@ if [ $(expr "$file" : ".*v1_2") -gt 0 -o $(expr "$file" : ".*p4_16") -gt 0 ]; th
     # XXX(zma) assuming tofino and jbay have same arch for now
     if grep -q "tofino.p4" "$file"; then
         P4C_ARGS="$P4C_ARGS --target ${device}-native-barefoot"
+    elif grep -q "psa.p4" "$file"; then
+        P4C_ARGS="$P4C_ARGS --target ${device}-psa-barefoot"
+    # hack to use our psa-private.p4 for testing until psa.p4 is finalized
+    elif grep -q "psa-private.p4" "$file"; then
+        P4C_ARGS="$P4C_ARGS --target ${device}-psa-barefoot"
     else
         P4C_ARGS="$P4C_ARGS --target ${device}-v1model-barefoot"
     fi

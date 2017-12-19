@@ -1,6 +1,7 @@
 #include "midend.h"
 #include "arch/native.h"
 #include "arch/simple_switch.h"
+#include "arch/portable_switch.h"
 #include "frontends/common/constantFolding.h"
 #include "frontends/common/resolveReferences/resolveReferences.h"
 #include "frontends/p4/evaluator/evaluator.h"
@@ -40,14 +41,17 @@ namespace BFN {
 
 /**
 This class implements a policy suitable for the ConvertEnums pass.
-The policy is: convert all enums that are not part of the v1model.
+The policy is: convert all enums that are not part of the architecture files.
 Use 32-bit values for all enums.
 */
 class EnumOn32Bits : public P4::ChooseEnumRepresentation {
     bool convert(const IR::Type_Enum* type) const override {
         if (type->srcInfo.isValid()) {
             auto sourceFile = type->srcInfo.getSourceFile();
-            if (sourceFile.endsWith(P4V1::V1Model::instance.file.name))
+            if (sourceFile.endsWith("v1model.p4") ||
+                sourceFile.endsWith("psa-private.p4") ||
+                sourceFile.endsWith("psa.p4") ||
+                sourceFile.endsWith("tofino.p4"))
                 // Don't convert any of the standard enums
                 return false;
         }
@@ -105,8 +109,6 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::UniqueNames(&refMap),
         new P4::UniqueParameters(&refMap, &typeMap),
         new P4::SimplifyControlFlow(&refMap, &typeMap),
-        // translate architecture after program inlining to
-        // avoid handling abitrary parameters in user defined control blocks
         (options.arch == "v1model") ?
             new BFN::SimpleSwitchTranslation(&refMap, &typeMap, options /*map*/) : nullptr,
         (options.arch == "native") ?
@@ -125,7 +127,6 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::SimplifyParsers(&refMap),
         new P4::StrengthReduction(),
         new P4::EliminateTuples(&refMap, &typeMap),
-
         new P4::CopyStructures(&refMap, &typeMap),
         new P4::NestedStructs(&refMap, &typeMap),
         new P4::SimplifySelectList(&refMap, &typeMap),
@@ -136,12 +137,13 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::ConstantFolding(&refMap, &typeMap),
         new P4::StrengthReduction(),
         new P4::MoveDeclarations(),
+        (options.arch == "psa") ?
+            new BFN::PortableSwitchTranslation(&refMap, &typeMap, options /*map*/) : nullptr,
         new P4::ValidateTableProperties({"implementation", "size", "counters",
                                          "meters", "support_timeout"}),
         new P4::SimplifyControlFlow(&refMap, &typeMap),
         new P4::CompileTimeOperations(),
         new P4::TableHit(&refMap, &typeMap),
-
         evaluator,
         new VisitFunctor([=](const IR::Node *root) -> const IR::Node * {
             auto toplevel = evaluator->getToplevelBlock();

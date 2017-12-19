@@ -1,5 +1,5 @@
-#ifndef BF_P4C_ARCH_SIMPLE_SWITCH_H_
-#define BF_P4C_ARCH_SIMPLE_SWITCH_H_
+#ifndef BF_P4C_ARCH_PORTABLE_SWITCH_H_
+#define BF_P4C_ARCH_PORTABLE_SWITCH_H_
 
 #include <boost/algorithm/string.hpp>
 #include <boost/optional.hpp>
@@ -19,29 +19,16 @@
 #include "bf-p4c/ir/gress.h"
 #include "program_structure.h"
 #include "architecture.h"
-#include "converters.h"
 
 namespace BFN {
 
-enum class Target { Unknown, Simple, Tofino, Portable };
-enum class BlockType { Unknown, Parser, Ingress, Egress, Deparser};
-
-std::ostream& operator<<(std::ostream& out, BlockType block);
-bool operator>>(cstring s, BlockType& blockType);
-
-
-class SimpleSwitchTranslation : public PassManager {
+class PortableSwitchTranslation : public PassManager {
  public:
-    V1::ProgramStructure structure;
-    Target   target;
     const IR::ToplevelBlock   *toplevel = nullptr;
-
-    SimpleSwitchTranslation(P4::ReferenceMap* refMap, P4::TypeMap* typeMap, BFN_Options& options);
-
-    const IR::ToplevelBlock* getToplevelBlock() { CHECK_NULL(toplevel); return toplevel; }
+    PortableSwitchTranslation(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
+                              BFN_Options& options);
 };
-
 
 }  // namespace BFN
 
-#endif /* BF_P4C_ARCH_SIMPLE_SWITCH_H_ */
+#endif /* BF_P4C_ARCH_PORTABLE_SWITCH_H_ */

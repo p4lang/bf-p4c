@@ -10,15 +10,46 @@
 
 namespace BFN {
 
+namespace V1 {
+
 ///////////////////////////////////////////////////////////////////////////////////////////////
+class ExpressionConverter : public Transform {
+ protected:
+    ProgramStructure* structure;
+
+ public:
+    explicit ExpressionConverter(ProgramStructure* structure)
+            : structure(structure) { CHECK_NULL(structure); }
+    const IR::Expression* convert(const IR::Node* node) {
+        auto result = node->apply(*this);
+        return result->to<IR::Expression>();
+    }
+    const IR::Member* convertMember(const IR::Node* node) {
+        auto result = node->apply(*this);
+        return result->to<IR::Member>();
+    }
+};
+
+class StatementConverter : public Transform {
+ protected:
+    ProgramStructure* structure;
+
+ public:
+    explicit StatementConverter(ProgramStructure* structure)
+            : structure(structure) { CHECK_NULL(structure); }
+    const IR::Statement* convert(const IR::Node* node) {
+        auto result = node->apply(*this);
+        return result->to<IR::Statement>();
+    }
+};
 
 class ControlConverter : public Transform {
  protected:
-    ProgramStructure* structure;
+    V1::ProgramStructure* structure;
     P4::ClonePathExpressions cloner;
 
  public:
-    explicit ControlConverter(ProgramStructure* structure)
+    explicit ControlConverter(V1::ProgramStructure* structure)
     : structure(structure) { CHECK_NULL(structure); }
     const IR::Node* postorder(IR::Member* node) override;
     const IR::Node* postorder(IR::Declaration_Instance* node) override;
@@ -35,28 +66,28 @@ class ControlConverter : public Transform {
 class IngressControlConverter : public ControlConverter {
  public:
     explicit IngressControlConverter(ProgramStructure* structure)
-    : ControlConverter(structure) { CHECK_NULL(structure); }
+            : ControlConverter(structure) { CHECK_NULL(structure); }
     const IR::Node* preorder(IR::P4Control* node) override;
 };
 
 class EgressControlConverter : public ControlConverter {
  public:
     explicit EgressControlConverter(ProgramStructure* structure)
-    : ControlConverter(structure) { CHECK_NULL(structure); }
+            : ControlConverter(structure) { CHECK_NULL(structure); }
     const IR::Node* preorder(IR::P4Control* node) override;
 };
 
 class IngressDeparserConverter : public ControlConverter {
  public:
     explicit IngressDeparserConverter(ProgramStructure* structure)
-    : ControlConverter(structure) { CHECK_NULL(structure); }
+            : ControlConverter(structure) { CHECK_NULL(structure); }
     const IR::Node* preorder(IR::P4Control* node) override;
 };
 
 class EgressDeparserConverter : public ControlConverter {
  public:
     explicit EgressDeparserConverter(ProgramStructure* structure)
-    : ControlConverter(structure) { CHECK_NULL(structure); }
+            : ControlConverter(structure) { CHECK_NULL(structure); }
     const IR::Node* preorder(IR::P4Control* node) override;
 };
 
@@ -182,22 +213,6 @@ class DirectMeterConverter : public ExternConverter {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
-class ExpressionConverter : public Transform {
- protected:
-    ProgramStructure* structure;
-
- public:
-    explicit ExpressionConverter(ProgramStructure* structure)
-    : structure(structure) { CHECK_NULL(structure); }
-    const IR::Expression* convert(const IR::Node* node) {
-        auto result = node->apply(*this);
-        return result->to<IR::Expression>();
-    }
-    const IR::Member* convertMember(const IR::Node* node) {
-        auto result = node->apply(*this);
-        return result->to<IR::Member>();
-    }
-};
 
 class TypeNameExpressionConverter : public ExpressionConverter {
     // mapping enum name from v1model to tofino
@@ -233,29 +248,17 @@ class PathExpressionConverter : public ExpressionConverter {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
-class StatementConverter : public Transform {
- protected:
-    ProgramStructure* structure;
-
- public:
-    explicit StatementConverter(ProgramStructure* structure)
-    : structure(structure) { CHECK_NULL(structure); }
-    const IR::Statement* convert(const IR::Node* node) {
-        auto result = node->apply(*this);
-        return result->to<IR::Statement>();
-    }
-};
 
 class ParserPriorityConverter : public StatementConverter {
  public:
-    explicit ParserPriorityConverter(ProgramStructure* structure)
+    explicit ParserPriorityConverter(V1::ProgramStructure* structure)
     : StatementConverter(structure) { CHECK_NULL(structure); }
     const IR::Node* postorder(IR::AssignmentStatement* node) override;
 };
 
 class ParserCounterConverter : public StatementConverter {
  public:
-    explicit ParserCounterConverter(ProgramStructure *structure)
+    explicit ParserCounterConverter(V1::ProgramStructure *structure)
     : StatementConverter(structure) { CHECK_NULL(structure); }
 
     const IR::Node* postorder(IR::AssignmentStatement *node) override;
@@ -263,11 +266,139 @@ class ParserCounterConverter : public StatementConverter {
 
 class ParserCounterSelectionConverter : public StatementConverter {
  public:
-    explicit ParserCounterSelectionConverter(ProgramStructure* structure)
+    explicit ParserCounterSelectionConverter(V1::ProgramStructure* structure)
     : StatementConverter(structure) { CHECK_NULL(structure); }
 
     const IR::Node* postorder(IR::Member* node) override;
 };
+
+}  // namespace V1
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+namespace PSA {
+
+class ExpressionConverter : public Transform {
+ protected:
+    ProgramStructure* structure;
+
+ public:
+    explicit ExpressionConverter(ProgramStructure* structure)
+            : structure(structure) { CHECK_NULL(structure); }
+    const IR::Expression* convert(const IR::Node* node) {
+        auto result = node->apply(*this);
+        return result->to<IR::Expression>();
+    }
+    const IR::Member* convertMember(const IR::Node* node) {
+        auto result = node->apply(*this);
+        return result->to<IR::Member>();
+    }
+};
+
+class StatementConverter : public Transform {
+ protected:
+    ProgramStructure* structure;
+
+ public:
+    explicit StatementConverter(ProgramStructure* structure)
+            : structure(structure) { CHECK_NULL(structure); }
+    const IR::Statement* convert(const IR::Node* node) {
+        auto result = node->apply(*this);
+        return result->to<IR::Statement>();
+    }
+};
+
+class ParserConverter : public Transform {
+ protected:
+    ProgramStructure* structure;
+    P4::ClonePathExpressions cloner;
+
+ public:
+    explicit ParserConverter(ProgramStructure* structure)
+            : structure(structure) { CHECK_NULL(structure); }
+    const IR::Node* postorder(IR::Member* node) override;
+    const IR::P4Parser* convert(const IR::Node* node) {
+        auto conv = node->apply(*this);
+        auto result = conv->to<IR::P4Parser>();
+        BUG_CHECK(result != nullptr, "Conversion of %1% did not produce a parser", node);
+        return result;
+    }
+};
+
+class IngressParserConverter : public ParserConverter {
+ public:
+    explicit IngressParserConverter(ProgramStructure* structure)
+            : ParserConverter(structure) { CHECK_NULL(structure); }
+    const IR::Node* postorder(IR::P4Parser* node) override;
+};
+
+class EgressParserConverter : public ParserConverter {
+ public:
+    explicit EgressParserConverter(ProgramStructure* structure)
+            : ParserConverter(structure) { CHECK_NULL(structure); }
+    const IR::Node* postorder(IR::P4Parser* node) override;
+};
+
+class ControlConverter : public Transform {
+ protected:
+    ProgramStructure* structure;
+    P4::ClonePathExpressions cloner;
+
+ public:
+    explicit ControlConverter(ProgramStructure* structure)
+            : structure(structure) { CHECK_NULL(structure); }
+    const IR::Node* postorder(IR::Member* node) override;
+    const IR::P4Control* convert(const IR::Node* node) {
+        auto conv = node->apply(*this);
+        auto result = conv->to<IR::P4Control>();
+        BUG_CHECK(result != nullptr, "Conversion of %1% did not produce a control", node);
+        return result;
+    }
+};
+
+class IngressControlConverter : public ControlConverter {
+ public:
+    explicit IngressControlConverter(ProgramStructure* structure)
+            : ControlConverter(structure) { CHECK_NULL(structure); }
+    const IR::Node* preorder(IR::P4Control* node) override;
+};
+
+class EgressControlConverter : public ControlConverter {
+ public:
+    explicit EgressControlConverter(ProgramStructure* structure)
+            : ControlConverter(structure) { CHECK_NULL(structure); }
+    const IR::Node* preorder(IR::P4Control* node) override;
+};
+
+class IngressDeparserConverter : public ControlConverter {
+ public:
+    explicit IngressDeparserConverter(ProgramStructure* structure)
+            : ControlConverter(structure) { CHECK_NULL(structure); }
+    const IR::Node* preorder(IR::P4Control* node) override;
+};
+
+class EgressDeparserConverter : public ControlConverter {
+ public:
+    explicit EgressDeparserConverter(ProgramStructure* structure)
+            : ControlConverter(structure) { CHECK_NULL(structure); }
+    const IR::Node* preorder(IR::P4Control* node) override;
+};
+
+class MemberExpressionConverter : public ExpressionConverter {
+ public:
+    explicit MemberExpressionConverter(ProgramStructure* structure)
+            : ExpressionConverter(structure) { CHECK_NULL(structure); }
+    const IR::Node* postorder(IR::Member* node) override;
+};
+
+class PathExpressionConverter : public ExpressionConverter {
+ public:
+    explicit PathExpressionConverter(ProgramStructure* structure)
+            : ExpressionConverter(structure) { CHECK_NULL(structure); }
+    const IR::Node* postorder(IR::Member* node) override;
+};
+
+}  // namespace PSA
 
 }  // namespace BFN
 

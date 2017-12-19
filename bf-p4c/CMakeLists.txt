@@ -283,6 +283,7 @@ set (BF_P4C_BACKEND_ARCH_SRCS
   arch/converters.cpp
   arch/native.cpp
   arch/phase0.cpp
+  arch/portable_switch.cpp
   arch/program_structure.cpp
   arch/remove_set_metadata.cpp
   arch/simple_switch.cpp
@@ -291,9 +292,11 @@ add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_ARCH_SRCS}")
 build_unified(BF_P4C_BACKEND_ARCH_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
 
 set (BF_P4C_BACKEND_ARCH_HDRS
+  arch/architecture.h
   arch/converters.h
   arch/native.h
   arch/phase0.h
+  arch/portable_switch.h
   arch/program_structure.h
   arch/remove_set_metadata.h
   arch/simple_switch.h
@@ -328,6 +331,7 @@ set (BF_P4C_IR_DEF_FILES
 set (IR_DEF_FILES ${IR_DEF_FILES} ${BF_P4C_IR_DEF_FILES} PARENT_SCOPE)
 
 set (p4include_HEADERS
+  p4include/psa.p4
   p4include/tofino.p4
   p4include/tofino/lpf.p4
   p4include/tofino/stratum.p4

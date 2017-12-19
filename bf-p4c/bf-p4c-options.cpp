@@ -53,6 +53,7 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
     static const std::unordered_set<cstring> supportedTargets = {
         "tofino-v1model-barefoot",
         "tofino-native-barefoot",
+        "tofino-psa-barefoot",
 #if HAVE_JBAY
         "jbay-v1model-barefoot",
         "jbay-native-barefoot",

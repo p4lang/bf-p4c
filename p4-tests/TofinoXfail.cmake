@@ -947,7 +947,7 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Assertion .*bit == data_bit.* failed"
+  "Assertion .*bit == data_bit.* "
   extensions/p4_tests/p4_14/test_config_285_meter_sharing.p4
   )
 

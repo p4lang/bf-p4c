@@ -49,65 +49,59 @@ struct MetadataField {
     }
 };
 
-/// Experimental implementation of programStructure to facilitate the
-/// translation between P4-16 program of different architecture.
-class ProgramStructure {
+template<class converter>
+class TranslationUnit {
  public:
+    IR::Node* originalNode;
+    IR::Node* translatedNode;
+    converter* conv;
+    // convert();
+};
+
+struct ProgramStructure {
+    static const cstring INGRESS_PARSER;
+    static const cstring INGRESS;
+    static const cstring INGRESS_DEPARSER;
+    static const cstring EGRESS_PARSER;
+    static const cstring EGRESS;
+    static const cstring EGRESS_DEPARSER;
+
     /// read architecture definition in 'filename', output a list of
     /// IR::Node in 'decl'
     void include(cstring filename, IR::IndexedVector<IR::Node>* decls);
-    void include14(cstring filename, IR::IndexedVector<IR::Node>* decls);
 
     IR::IndexedVector<IR::Node>                  declarations;
     IR::IndexedVector<IR::Node>                  targetTypes;
-
     /// target architecture types
     ordered_set<cstring>                         errors;
     ordered_map<cstring, const IR::Type_Enum*>   enums;
 
-    /// maintain program declarations to reprint a valid P16 program
-    ordered_map<cstring, const IR::P4Control*>   controls;
-    ordered_map<cstring, const IR::P4Parser*>    parsers;
-    ordered_map<cstring, const IR::Type_Header*> header_types;
-    ordered_map<cstring, const IR::Type_Struct*> struct_types;
-    ordered_map<cstring, const IR::Type_HeaderUnion*> header_union_types;
-    ordered_map<cstring, const IR::Type_Typedef*> typedef_types;
-    ordered_map<cstring, const IR::Declaration_Instance*> global_instances;
-    std::vector<const IR::Type_Action*>          action_types;
-
-    // maintain symbol tables for program transformation
-    ChecksumSourceMap                            checksums;
-
-    // map ingress/egress to hash
     ExternInstanceMap                            counters;
     ExternInstanceMap                            direct_counters;
     ExternInstanceMap                            meters;
     ExternInstanceMap                            direct_meters;
-    ExternMethodMap                              counterCalls;
-    ExternMethodMap                              directCounterCalls;
-    ConversionMap                                meterCalls;
-    ExternFunctionMap                            directMeterCalls;
-    ExternFunctionMap                            hashCalls;
-    ExternFunctionNameMap                        hashNames;
-    ExternFunctionMap                            resubmitCalls;
-    ExternFunctionMap                            digestCalls;
-    ExternFunctionMap                            cloneCalls;
-    ExternFunctionMap                            dropCalls;
-    ExternFunctionMap                            randomCalls;
-    ExternFunctionNameMap                        randomNames;
-    ExternFunctionMap                            executeMeterCalls;
 
-    // parser related translations
-    StatementMap                                 priorityCalls;
-    StatementNameMap                             priorityNames;
-    StatementMap                                 parserCounterCalls;
-    SimpleNameMap                                parserCounterNames;
-    MemberStatementMap                           parserCounterSelects;
+    /// maintain program declarations to reprint a valid P16 program
+    ordered_map<cstring, const IR::P4Control*>            controls;
+    ordered_map<cstring, const IR::P4Parser*>             parsers;
+    ordered_map<cstring, const IR::Type_Header*>          header_types;
+    ordered_map<cstring, const IR::Type_Struct*>          struct_types;
+    ordered_map<cstring, const IR::Type_HeaderUnion*>     header_union_types;
+    ordered_map<cstring, const IR::Type_Typedef*>         typedef_types;
+    ordered_map<cstring, const IR::Declaration_Instance*> global_instances;
+    std::vector<const IR::Type_Action*>                   action_types;
 
-    /// user program specific info
-    cstring                                      type_h;
-    cstring                                      type_m;
-    const IR::Parameter*                         user_metadata;
+    /// program control block names from P14
+    const IR::ToplevelBlock*                     toplevel;
+
+    /// all unique names in the program
+    std::set<cstring>                            unique_names;
+
+    /// map standard parser and control block name to
+    /// arbitrary name assigned by user.
+    ordered_map<cstring, cstring>                blockNames;
+    cstring getBlockName(cstring name);
+
     std::vector<const IR::Declaration *>         ingressDeclarations;
     std::vector<const IR::Declaration *>         egressDeclarations;
     std::vector<const IR::Declaration *>         ingressDeparserDeclarations;
@@ -123,39 +117,92 @@ class ProgramStructure {
     ordered_map<const IR::Member*, gress_t>           pathsThread;
     ordered_map<const IR::Member*, const IR::Member*> typeNamesToDo;
 
-    /// map from source extern type to dest extern type
-    /// this map is populated by manually by the ReplaceArchitecture pass.
-    ordered_map<cstring, cstring>                 externNameMap;
-
     /// Map from pre-translation metadata fields to post-translation metadata
     /// fields. The mapping may be different for each thread.
     std::map<MetadataField, MetadataField> ingressMetadataNameMap;
     std::map<MetadataField, MetadataField> egressMetadataNameMap;
-
     /// Map from metadata fields to their types, specified as a width in bits.
     std::map<MetadataField, unsigned> metadataTypeMap;
-
-    /// all unique names in the program
-    std::set<cstring>                            unique_names;
-    cstring makeUniqueName(cstring base);
-
-    /// program control block names from P14
-    const IR::ToplevelBlock*                     toplevel;
-
-    /// map standard parser and control block name to
-    /// arbitrary name assigned by user.
-    ordered_map<cstring, cstring>                blockNames;
-    cstring getBlockName(cstring name);
 
     void createErrors();
     void createTofinoArch();
     void createTypes();
     void createActions();
-    void createParsers();
-    void createControls();
-    void createMain();
-    const IR::P4Program* create(const IR::P4Program* program);
+
+    virtual void createParsers() = 0;
+    virtual void createControls() = 0;
+    virtual void createMain() = 0;
+    virtual const IR::P4Program* create(const IR::P4Program* program) = 0;
 };
+
+namespace V1 {
+
+/// Experimental implementation of programStructure to facilitate the
+/// translation between P4-16 program of different architecture.
+struct ProgramStructure : BFN::ProgramStructure {
+    // maintain symbol tables for program transformation
+    ChecksumSourceMap checksums;
+
+    // map ingress/egress to hash
+    ExternMethodMap counterCalls;
+    ExternMethodMap directCounterCalls;
+    ConversionMap meterCalls;
+    ExternFunctionMap directMeterCalls;
+    ExternFunctionMap hashCalls;
+    ExternFunctionNameMap hashNames;
+    ExternFunctionMap resubmitCalls;
+    ExternFunctionMap digestCalls;
+    ExternFunctionMap cloneCalls;
+    ExternFunctionMap dropCalls;
+    ExternFunctionMap randomCalls;
+    ExternFunctionNameMap randomNames;
+    ExternFunctionMap executeMeterCalls;
+
+    // parser related translations
+    StatementMap priorityCalls;
+    StatementNameMap priorityNames;
+    StatementMap parserCounterCalls;
+    SimpleNameMap parserCounterNames;
+    MemberStatementMap parserCounterSelects;
+
+    /// user program specific info
+    cstring type_h;
+    cstring type_m;
+    const IR::Parameter *user_metadata;
+
+    /// map from source extern type to dest extern type
+    /// this map is populated by manually by the ReplaceArchitecture pass.
+    ordered_map<cstring, cstring> externNameMap;
+
+    void createParsers() override;
+
+    void createControls() override;
+
+    void createMain() override;
+
+    const IR::P4Program *create(const IR::P4Program *program) override;
+};
+
+}  // namespace V1
+
+namespace PSA {
+
+struct ProgramStructure : BFN::ProgramStructure {
+    cstring type_ih;
+    cstring type_im;
+    cstring type_eh;
+    cstring type_em;
+
+    void createParsers() override;
+
+    void createControls() override;
+
+    void createMain() override;
+
+    const IR::P4Program *create(const IR::P4Program *program) override;
+};
+
+}  // namespace PSA
 
 }  // namespace BFN
 
