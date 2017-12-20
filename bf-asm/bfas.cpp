@@ -132,11 +132,10 @@ int main(int ac, char **av) {
             for (char *arg = av[i]+1; *arg;)
                 switch (*arg++) {
                 case 'T':
-                    ++i;
                     if (*arg) {
                         Log::addDebugSpec(arg);
                         arg += strlen(arg);
-                    } else if (i < ac) {
+                    } else if (++i < ac) {
                         Log::addDebugSpec(av[i]); }
                     break;
                 case 'g':

@@ -262,8 +262,8 @@ add_custom_target(cpplint-asm-quiet
   WORKING_DIRECTORY ${BFASM_SOURCE_DIR}
   COMMENT "cpplint quietly")
 
-string(CONFIGURE "/^DECLARE_(ABSTRACT_)?TABLE_TYPE(([a-zA-Z0-9_]+)/2/c/" CTAGS_CXX_REGEXP @ONLY)
+string(CONFIGURE "/^DECLARE_(ABSTRACT_)?TABLE_TYPE\(([a-zA-Z0-9_]+)/2/c/" CTAGS_CXX_REGEXP @ONLY)
 add_custom_target(ctags-asm
   COMMAND ctags -R -I VECTOR --exclude=test --exclude=submodules
-              --regex-C++=${CTAGS_CXX_REGEXP}
+              "--regex-C++=${CTAGS_CXX_REGEXP}"
   COMMENT "Generating ctags")

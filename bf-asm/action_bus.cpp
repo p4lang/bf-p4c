@@ -159,8 +159,12 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
                 slot.name = name;
                 slot.size = sz; }
             slot.data.emplace(src, off);
+            LOG4("ActionBus::ActionBus: " << idx << ": " << name << " sz=" << sz <<
+                 " data += " << src.toString(tbl) << " off=" << off);
         } else {
-            by_byte.emplace(idx, Slot(name, idx, sz, src, off)); }
+            by_byte.emplace(idx, Slot(name, idx, sz, src, off));
+            LOG4("ActionBus::ActionBus: " << idx << ": " << name << " sz=" << sz <<
+                 " data = " << src.toString(tbl) << " off=" << off); }
         tbl->apply_to_field(name, [](Table::Format::Field *f){
             f->flags |= Table::Format::Field::USED_IMMED; });
     }
@@ -396,6 +400,8 @@ void ActionBus::do_alloc(Table *tbl, Source src, unsigned use, int lobyte,
         Slot &sl = by_byte.emplace(use, Slot(name, use, bytes*8U)).first->second;
         if (sl.size < bytes*8U) sl.size = bytes*8U;
         sl.data.emplace(src, offset);
+        LOG4("  slot " << sl.byte << "(" << sl.name << ") data += " <<
+             src.toString(tbl) << " off=" << offset);
         offset += slotsize;
         bytes -= slotsize/8U;
         use += slotsize/8U; }
@@ -465,7 +471,7 @@ void ActionBus::alloc_field(Table *tbl, Source src, unsigned offset, unsigned si
         unsigned start = (lo/8U) % step;
         if (lo % 32U) {
             if (can_merge && (use = find_merge(tbl, lo, bytes, 4)) >= 0) {
-                do_alloc(tbl, src, use, lo/8U, bytes, 0);
+                do_alloc(tbl, src, use, lo/8U, bytes, offset);
                 return; } }
         if ((can_merge && (use = find_merge(tbl, lo, bytes, 4)) >= 0) ||
             (use = find_free(tbl, 96+start+odd, 127, 8, lo/8U, bytes)) >= 0 ||
