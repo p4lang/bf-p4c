@@ -21,12 +21,7 @@ Visitor::profile_t Clustering::MakeAlignedClusters::init_apply(const IR::Node *r
 // actions. (Except SALU operands, which may be wrapped in unary operations,
 // but we don't care about those here.)
 bool Clustering::MakeAlignedClusters::preorder(const IR::MAU::Instruction* inst) {
-    if (LOGGING(5)) {
-        std::stringstream ss;
-        ss << "Visiting inst operation: " << inst->name;
-        for (auto& op : inst->operands)
-            ss << " " << op;
-        LOG5(ss.str()); }
+    LOG5("Clustering::MakeAlignedClusters: visiting instruction " << inst);
 
     // `set` doesn't induce alignment constraints, because the `deposit_field`
     // ALU instruction can rotate its source.
@@ -63,7 +58,7 @@ bool Clustering::MakeAlignedClusters::preorder(const IR::MAU::Table *tbl) {
             auto* field_a = phv_i.field(field->id);
             auto* field_b = phv_i.field(info.xor_with->id);
             union_find_i.makeUnion(PHV::FieldSlice(field_a), PHV::FieldSlice(field_b)); } }
-    return false;
+    return true;
 }
 
 void Clustering::MakeAlignedClusters::end_apply() {
