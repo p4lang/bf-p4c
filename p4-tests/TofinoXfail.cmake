@@ -165,7 +165,7 @@ p4c_add_xfail_reason("tofino"
 
 # BRIG-141
 p4c_add_xfail_reason("tofino"
-"No field named parser_counter in"
+  "Unimplemented compiler support.*: parser counter translation is not implemented"
   extensions/p4_tests/p4_14/c1/COMPILER-384/case2240.p4
   extensions/p4_tests/p4_14/p4-tests/programs/pctr/pctr.p4
   )

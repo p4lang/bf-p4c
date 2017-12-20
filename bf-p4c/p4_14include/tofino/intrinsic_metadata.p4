@@ -28,6 +28,7 @@ header_type ingress_parser_control_signals {
     fields {
         priority : 3;                   // set packet priority
         _pad     : 5;
+        parser_counter : 8;             // parser counter
     }
 }
 
