@@ -47,6 +47,14 @@ def stringify(n, length):
     s = ('0'*(len(h) % 2) + h).zfill(length*2).decode('hex')
     return s
 
+def ipv4_to_binary(addr):
+    bytes_ = [int(b, 10) for b in addr.split('.')]
+    return "".join(chr(b) for b in bytes_)
+
+def mac_to_binary(addr):
+    bytes_ = [int(b, 16) for b in addr.split(':')]
+    return "".join(chr(b) for b in bytes_)
+
 # This code is common to all tests. setUp() is invoked at the beginning of the
 # test and tearDown is called at the end, no matter whether the test passed /
 # failed / errored.
