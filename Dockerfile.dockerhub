@@ -43,8 +43,9 @@ COPY . /bfn/bf-p4c-compilers/
 COPY scripts/ptf_hugepage_setup.sh /bfn/ptf_hugepage_setup.sh
 COPY scripts/docker_entry_point.sh /bfn/docker_entry_point.sh
 WORKDIR /bfn/bf-p4c-compilers
-RUN ./bootstrap_bfn_compilers.sh -DCMAKE_BUILD_TYPE=RELEASE -DENABLE_JBAY=OFF \
-    -DENABLE_P4C_GRAPHS=OFF -DENABLE_EBPF=OFF -DENABLE_P4TEST=OFF && \
+RUN ./bootstrap_bfn_compilers.sh -DCMAKE_BUILD_TYPE=DEBUG -DENABLE_JBAY=OFF \
+    -DENABLE_P4C_GRAPHS=OFF -DENABLE_EBPF=OFF -DENABLE_P4TEST=OFF \
+    -DENABLE_BMV2=OFF -DENABLE_GTESTS=OFF && \
     cd build && \
     make && make install
 WORKDIR /bfn/
