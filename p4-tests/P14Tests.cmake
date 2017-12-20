@@ -7,16 +7,12 @@ set (P14_XFAIL_TESTS
   extensions/p4_tests/p4_14/test_config_201_meter_constant_index.p4
   extensions/p4_tests/p4_14/test_config_195_stateful_predicate_output.p4
   extensions/p4_tests/p4_14/test_config_205_modify_field_from_hash.p4
-  extensions/p4_tests/p4_14/test_config_214_full_stats.p4
   extensions/p4_tests/p4_14/shared_names.p4
   extensions/p4_tests/p4_14/c2/COMPILER-408/case2364.p4
   extensions/p4_tests/p4_14/c2/COMPILER-514/balancer_one.p4
   extensions/p4_tests/p4_14/c2/COMPILER-537/case2834.p4
   extensions/p4_tests/p4_14/c2/COMPILER-533/case2736.p4
   extensions/p4_tests/p4_14/c3/COMPILER-393/case2277.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/multi_device/multi_device.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/meters/meters.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/drivers_test/drivers_test.p4
   extensions/p4_tests/p4_14/p4-tests/programs/pctr/pctr.p4
   extensions/p4_tests/p4_14/c1/COMPILER-263/case1795.p4
   extensions/p4_tests/p4_14/c1/COMPILER-264/case1822.p4

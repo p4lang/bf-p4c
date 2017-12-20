@@ -1,6 +1,18 @@
 #include <core.p4>
 #include <v1model.p4>
 
+struct meta_t {
+    bit<10> partition_index;
+    bit<10> pad_0;
+    bit<10> vrf;
+    bit<2>  color;
+}
+
+header blah_t {
+    bit<6> blah;
+    bit<2> color;
+}
+
 header egress_intrinsic_metadata_t {
     bit<7>  _pad0;
     bit<9>  egress_port;
@@ -49,6 +61,12 @@ header egress_intrinsic_metadata_from_parser_aux_t {
     bit<4>  clone_digest_id;
     bit<4>  clone_src;
     bit<8>  coalesce_sample_count;
+}
+
+header ethernet_t {
+    bit<48> dstAddr;
+    bit<48> srcAddr;
+    bit<16> etherType;
 }
 
 header ingress_intrinsic_metadata_t {
@@ -108,25 +126,42 @@ header ingress_parser_control_signals {
     bit<5> _pad;
 }
 
-header pkt_t {
-    bit<32> field_a_32;
-    bit<32> field_b_32;
-    bit<32> field_c_32;
-    bit<32> field_d_32;
-    bit<16> field_e_16;
-    bit<16> field_f_16;
-    bit<16> field_g_16;
-    bit<16> field_h_16;
-    bit<8>  field_i_8;
-    bit<8>  field_j_8;
-    bit<8>  field_k_8;
-    bit<8>  field_l_8;
+header ipv4_t {
+    bit<4>  version;
+    bit<4>  ihl;
+    bit<8>  diffserv;
+    bit<16> totalLen;
+    bit<16> identification;
+    bit<3>  flags;
+    bit<13> fragOffset;
+    bit<8>  ttl;
+    bit<8>  protocol;
+    bit<16> hdrChecksum;
+    bit<32> srcAddr;
+    bit<32> dstAddr;
+}
+
+header tcp_t {
+    bit<16> srcPort;
+    bit<16> dstPort;
+    bit<32> seqNo;
+    bit<32> ackNo;
+    bit<4>  dataOffset;
+    bit<4>  res;
+    bit<8>  flags;
+    bit<16> window;
+    bit<16> checksum;
+    bit<16> urgentPtr;
 }
 
 struct metadata {
+    @name(".meta") 
+    meta_t meta;
 }
 
 struct headers {
+    @name(".blah") 
+    blah_t                                         blah;
     @dont_trim @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md") @pa_atomic("egress", "eg_intr_md.egress_port") @pa_fragment("egress", "eg_intr_md._pad1") @pa_fragment("egress", "eg_intr_md._pad7") @pa_fragment("egress", "eg_intr_md._pad8") @pa_mandatory_intrinsic_field("egress", "eg_intr_md.egress_port") @pa_mandatory_intrinsic_field("egress", "eg_intr_md.egress_cos") @name(".eg_intr_md") 
     egress_intrinsic_metadata_t                    eg_intr_md;
     @dont_trim @pa_intrinsic_header("egress", "eg_intr_md_for_mb") @pa_atomic("egress", "eg_intr_md_for_mb.egress_mirror_id") @pa_fragment("egress", "eg_intr_md_for_mb.coalesce_flush") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.egress_mirror_id") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.coalesce_flush") @pa_mandatory_intrinsic_field("egress", "eg_intr_md_for_mb.coalesce_length") @not_deparsed("ingress") @not_deparsed("egress") @name(".eg_intr_md_for_mb") 
@@ -135,6 +170,8 @@ struct headers {
     egress_intrinsic_metadata_for_output_port_t    eg_intr_md_for_oport;
     @pa_fragment("egress", "eg_intr_md_from_parser_aux.coalesce_sample_count") @pa_fragment("egress", "eg_intr_md_from_parser_aux.clone_src") @pa_fragment("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @pa_atomic("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md_from_parser_aux") @name(".eg_intr_md_from_parser_aux") 
     egress_intrinsic_metadata_from_parser_aux_t    eg_intr_md_from_parser_aux;
+    @name(".ethernet") 
+    ethernet_t                                     ethernet;
     @dont_trim @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md.ingress_port") @name(".ig_intr_md") 
     ingress_intrinsic_metadata_t                   ig_intr_md;
     @dont_trim @pa_intrinsic_header("ingress", "ig_intr_md_for_mb") @pa_atomic("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @not_deparsed("ingress") @not_deparsed("egress") @name(".ig_intr_md_for_mb") 
@@ -147,13 +184,30 @@ struct headers {
     generator_metadata_t_0                         ig_pg_md;
     @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_prsr_ctrl") @name(".ig_prsr_ctrl") 
     ingress_parser_control_signals                 ig_prsr_ctrl;
-    @name(".pkt") 
-    pkt_t                                          pkt;
+    @name(".ipv4") 
+    ipv4_t                                         ipv4;
+    @name(".tcp") 
+    tcp_t                                          tcp;
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".parse_ethernet") state parse_ethernet {
-        packet.extract(hdr.pkt);
+        packet.extract<ethernet_t>(hdr.ethernet);
+        transition select(hdr.ethernet.etherType) {
+            16w0x800: parse_ipv4;
+            default: accept;
+        }
+    }
+    @name(".parse_ipv4") state parse_ipv4 {
+        packet.extract<ipv4_t>(hdr.ipv4);
+        transition select(hdr.ipv4.protocol) {
+            8w0x6: parse_tcp;
+            default: accept;
+        }
+    }
+    @name(".parse_tcp") state parse_tcp {
+        packet.extract<tcp_t>(hdr.tcp);
+        packet.extract<blah_t>(hdr.blah);
         transition accept;
     }
     @name(".start") state start {
@@ -162,38 +216,59 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".action_0") action action_0(bit<16> param0) {
-        random(hdr.pkt.field_a_32, (bit<32>)0, 32w65535);
-        hdr.pkt.field_e_16 = param0;
+    @name(".counter_0") @min_width(64) counter(32w35000, CounterType.packets_and_bytes) counter_0;
+    @name(".counter_1") @min_width(64) counter(32w5000, CounterType.packets_and_bytes) counter_1;
+    @name(".meter_2") direct_meter<bit<2>>(MeterType.bytes) meter_2;
+    @name(".action_0") action action_0(bit<32> idx) {
+        counter_0.count(idx);
     }
-    @name(".do_nothing") action do_nothing() {
+    @name(".action_1") action action_1(bit<32> idx) {
+        counter_1.count(idx);
+        random<bit<8>>(hdr.ipv4.ttl, 8w0, 8w0xff);
     }
-    @name(".action_1") action action_1() {
-        random(hdr.pkt.field_d_32, (bit<32>)0, 32w0xffffff);
+    @name(".action_2") action action_2() {
     }
     @name(".table_0") table table_0 {
         actions = {
-            action_0;
-            do_nothing;
+            action_0();
+            @defaultonly NoAction();
         }
         key = {
-            hdr.pkt.field_b_32: ternary;
+            hdr.ipv4.dstAddr: lpm @name("ipv4.dstAddr") ;
         }
-        size = 512;
+        size = 1024;
+        default_action = NoAction();
     }
     @name(".table_1") table table_1 {
         actions = {
-            action_1;
-            do_nothing;
+            action_1();
+            @defaultonly NoAction();
         }
         key = {
-            hdr.pkt.field_c_32: ternary;
+            hdr.ipv4.dstAddr: lpm @name("ipv4.dstAddr") ;
         }
-        size = 512;
+        size = 1024;
+        default_action = NoAction();
+    }
+    @name(".action_2") action action_2_0() {
+        meter_2.read(hdr.blah.color);
+    }
+    @pack(1) @name(".table_2") table table_2 {
+        actions = {
+            action_2_0();
+            @defaultonly NoAction();
+        }
+        key = {
+            hdr.ipv4.dstAddr: exact @name("ipv4.dstAddr") ;
+        }
+        size = 4096;
+        meters = meter_2;
+        default_action = NoAction();
     }
     apply {
         table_0.apply();
         table_1.apply();
+        table_2.apply();
     }
 }
 
@@ -204,7 +279,10 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        packet.emit(hdr.pkt);
+        packet.emit<ethernet_t>(hdr.ethernet);
+        packet.emit<ipv4_t>(hdr.ipv4);
+        packet.emit<tcp_t>(hdr.tcp);
+        packet.emit<blah_t>(hdr.blah);
     }
 }
 
@@ -218,5 +296,5 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
     }
 }
 
-V1Switch(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
 

@@ -1,190 +1,189 @@
-case2807.p4:1042:9: warning: 'Penrose' macro redefined [-Wmacro-redefined]
-#define Penrose "/usr/lib/libar_bf_pd_default.so"
-        ^
-case2807.p4:935:9: note: previous definition is here
-#define Penrose
-        ^
-case2807.p4:1043:9: warning: 'Hotevilla' macro redefined [-Wmacro-redefined]
-#define Hotevilla "/usr/lib/libar_bf_resource_info_default.so"
-        ^
-case2807.p4:937:9: note: previous definition is here
-#define Hotevilla
-        ^
-case2807.p4:1044:9: warning: 'Newland' macro redefined [-Wmacro-redefined]
-#define Newland "/usr/share/p4/arista_switch_default/tofino.bin"
-        ^
-case2807.p4:939:9: note: previous definition is here
-#define Newland
-        ^
-case2807.p4:1045:9: warning: 'Beeler' macro redefined [-Wmacro-redefined]
-#define Beeler "/usr/share/p4/arista_switch_default/mau.context.json"
-        ^
-case2807.p4:941:9: note: previous definition is here
-#define Beeler
-        ^
-case2807.p4:1048:9: warning: 'Parmelee' macro redefined [-Wmacro-redefined]
-#define Parmelee        512
-        ^
-case2807.p4:945:9: note: previous definition is here
-#define Parmelee      65536
-        ^
-case2807.p4:1049:9: warning: 'Greenbelt' macro redefined [-Wmacro-redefined]
-#define Greenbelt      3072
-        ^
-case2807.p4:946:9: note: previous definition is here
-#define Greenbelt      65536
-        ^
-case2807.p4:1050:9: warning: 'McCleary' macro redefined [-Wmacro-redefined]
-#define McCleary 512
-        ^
-case2807.p4:947:9: note: previous definition is here
-#define McCleary 1024
-        ^
-case2807.p4:1053:9: warning: 'Whitten' macro redefined [-Wmacro-redefined]
-#define Whitten 512
-        ^
-case2807.p4:950:9: note: previous definition is here
-#define Whitten 4096
-        ^
-case2807.p4:1056:9: warning: 'Virgilina' macro redefined [-Wmacro-redefined]
-#define Virgilina     3072
-        ^
-case2807.p4:953:9: note: previous definition is here
-#define Virgilina     1024
-        ^
-case2807.p4:1057:9: warning: 'Nunnelly' macro redefined [-Wmacro-redefined]
-#define Nunnelly    512
-        ^
-case2807.p4:954:9: note: previous definition is here
-#define Nunnelly    1024
-        ^
-case2807.p4:1058:9: warning: 'Ishpeming' macro redefined [-Wmacro-redefined]
-#define Ishpeming     512
-        ^
-case2807.p4:955:9: note: previous definition is here
-#define Ishpeming     256
-        ^
-case2807.p4:1062:9: warning: 'Encinitas' macro redefined [-Wmacro-redefined]
-#define Encinitas 3071
-        ^
-case2807.p4:959:9: note: previous definition is here
-#define Encinitas 65536
-        ^
-case2807.p4:1063:9: warning: 'Benitez' macro redefined [-Wmacro-redefined]
-#define Benitez 3071
-        ^
-case2807.p4:960:9: note: previous definition is here
-#define Benitez 65536
-        ^
-case2807.p4:1066:9: warning: 'DesPeres' macro redefined [-Wmacro-redefined]
-#define DesPeres   1024
-        ^
-case2807.p4:962:9: note: previous definition is here
-#define DesPeres   16384
-        ^
-case2807.p4:1067:9: warning: 'Wartrace' macro redefined [-Wmacro-redefined]
-#define Wartrace         8192
-        ^
-case2807.p4:964:9: note: previous definition is here
-#define Wartrace         131072
-        ^
-case2807.p4:1068:9: warning: 'Shine' macro redefined [-Wmacro-redefined]
-#define Shine 3072
-        ^
-case2807.p4:965:9: note: previous definition is here
-#define Shine 65536
-        ^
-case2807.p4:1069:9: warning: 'Hewitt' macro redefined [-Wmacro-redefined]
-#define Hewitt 512
-        ^
-case2807.p4:966:9: note: previous definition is here
-#define Hewitt 1024
-        ^
-case2807.p4:1070:9: warning: 'Hallville' macro redefined [-Wmacro-redefined]
-#define Hallville 512
-        ^
-case2807.p4:967:9: note: previous definition is here
-#define Hallville 2048
-        ^
-case2807.p4:1071:9: warning: 'Palmdale' macro redefined [-Wmacro-redefined]
-#define Palmdale 4096
-        ^
-case2807.p4:968:9: note: previous definition is here
-#define Palmdale 16384
-        ^
-case2807.p4:1072:9: warning: 'Seabrook' macro redefined [-Wmacro-redefined]
-#define Seabrook 1024
-        ^
-case2807.p4:969:9: note: previous definition is here
-#define Seabrook 8192
-        ^
-case2807.p4:1073:9: warning: 'Battles' macro redefined [-Wmacro-redefined]
-#define Battles 8192
-        ^
-case2807.p4:970:9: note: previous definition is here
-#define Battles 65536
-        ^
-case2807.p4:1086:9: warning: 'Harviell' macro redefined [-Wmacro-redefined]
-#define Harviell       4096
-        ^
-case2807.p4:983:9: note: previous definition is here
-#define Harviell       65536
-        ^
-case2807.p4:1089:9: warning: 'Konnarock' macro redefined [-Wmacro-redefined]
-#define Konnarock 3072
-        ^
-case2807.p4:986:9: note: previous definition is here
-#define Konnarock 1024
-        ^
-case2807.p4:1090:9: warning: 'Humacao' macro redefined [-Wmacro-redefined]
-#define Humacao 3071
-        ^
-case2807.p4:987:9: note: previous definition is here
-#define Humacao 4096
-        ^
-case2807.p4:1091:9: warning: 'Flippen' macro redefined [-Wmacro-redefined]
-#define Flippen 3071
-        ^
-case2807.p4:988:9: note: previous definition is here
-#define Flippen 4096
-        ^
-case2807.p4:1092:9: warning: 'Newcastle' macro redefined [-Wmacro-redefined]
-#define Newcastle 512
-        ^
-case2807.p4:989:9: note: previous definition is here
-#define Newcastle 4096
-        ^
-case2807.p4:1093:9: warning: 'Hodges' macro redefined [-Wmacro-redefined]
-#define Hodges 3071
-        ^
-case2807.p4:990:9: note: previous definition is here
-#define Hodges 4096
-        ^
-case2807.p4:1094:9: warning: 'Dowell' macro redefined [-Wmacro-redefined]
-#define Dowell 3071
-        ^
-case2807.p4:991:9: note: previous definition is here
-#define Dowell 1024
-        ^
-case2807.p4:1095:9: warning: 'Otisco' macro redefined [-Wmacro-redefined]
-#define Otisco 3071
-        ^
-case2807.p4:992:9: note: previous definition is here
-#define Otisco 4096
-        ^
-case2807.p4:1096:9: warning: 'Blueberry' macro redefined [-Wmacro-redefined]
-#define Blueberry 3071
-        ^
-case2807.p4:993:9: note: previous definition is here
-#define Blueberry 128
-        ^
-case2807.p4:1124:9: warning: 'Moultrie' macro redefined [-Wmacro-redefined]
-#define Moultrie    3072
-        ^
-case2807.p4:1021:9: note: previous definition is here
-#define Moultrie    4096
-        ^
-31 warnings generated.
+case2807.p4:1042:0: warning: "Penrose" redefined
+ #define Penrose "/usr/lib/libar_bf_pd_default.so"
+ ^
+case2807.p4:935:0: note: this is the location of the previous definition
+ #define Penrose
+ ^
+case2807.p4:1043:0: warning: "Hotevilla" redefined
+ #define Hotevilla "/usr/lib/libar_bf_resource_info_default.so"
+ ^
+case2807.p4:937:0: note: this is the location of the previous definition
+ #define Hotevilla
+ ^
+case2807.p4:1044:0: warning: "Newland" redefined
+ #define Newland "/usr/share/p4/arista_switch_default/tofino.bin"
+ ^
+case2807.p4:939:0: note: this is the location of the previous definition
+ #define Newland
+ ^
+case2807.p4:1045:0: warning: "Beeler" redefined
+ #define Beeler "/usr/share/p4/arista_switch_default/mau.context.json"
+ ^
+case2807.p4:941:0: note: this is the location of the previous definition
+ #define Beeler
+ ^
+case2807.p4:1048:0: warning: "Parmelee" redefined
+ #define Parmelee        512
+ ^
+case2807.p4:945:0: note: this is the location of the previous definition
+ #define Parmelee      65536
+ ^
+case2807.p4:1049:0: warning: "Greenbelt" redefined
+ #define Greenbelt      3072
+ ^
+case2807.p4:946:0: note: this is the location of the previous definition
+ #define Greenbelt      65536
+ ^
+case2807.p4:1050:0: warning: "McCleary" redefined
+ #define McCleary 512
+ ^
+case2807.p4:947:0: note: this is the location of the previous definition
+ #define McCleary 1024
+ ^
+case2807.p4:1053:0: warning: "Whitten" redefined
+ #define Whitten 512
+ ^
+case2807.p4:950:0: note: this is the location of the previous definition
+ #define Whitten 4096
+ ^
+case2807.p4:1056:0: warning: "Virgilina" redefined
+ #define Virgilina     3072
+ ^
+case2807.p4:953:0: note: this is the location of the previous definition
+ #define Virgilina     1024
+ ^
+case2807.p4:1057:0: warning: "Nunnelly" redefined
+ #define Nunnelly    512
+ ^
+case2807.p4:954:0: note: this is the location of the previous definition
+ #define Nunnelly    1024
+ ^
+case2807.p4:1058:0: warning: "Ishpeming" redefined
+ #define Ishpeming     512
+ ^
+case2807.p4:955:0: note: this is the location of the previous definition
+ #define Ishpeming     256
+ ^
+case2807.p4:1062:0: warning: "Encinitas" redefined
+ #define Encinitas 3071
+ ^
+case2807.p4:959:0: note: this is the location of the previous definition
+ #define Encinitas 65536
+ ^
+case2807.p4:1063:0: warning: "Benitez" redefined
+ #define Benitez 3071
+ ^
+case2807.p4:960:0: note: this is the location of the previous definition
+ #define Benitez 65536
+ ^
+case2807.p4:1066:0: warning: "DesPeres" redefined
+ #define DesPeres   1024
+ ^
+case2807.p4:962:0: note: this is the location of the previous definition
+ #define DesPeres   16384
+ ^
+case2807.p4:1067:0: warning: "Wartrace" redefined
+ #define Wartrace         8192
+ ^
+case2807.p4:964:0: note: this is the location of the previous definition
+ #define Wartrace         131072
+ ^
+case2807.p4:1068:0: warning: "Shine" redefined
+ #define Shine 3072
+ ^
+case2807.p4:965:0: note: this is the location of the previous definition
+ #define Shine 65536
+ ^
+case2807.p4:1069:0: warning: "Hewitt" redefined
+ #define Hewitt 512
+ ^
+case2807.p4:966:0: note: this is the location of the previous definition
+ #define Hewitt 1024
+ ^
+case2807.p4:1070:0: warning: "Hallville" redefined
+ #define Hallville 512
+ ^
+case2807.p4:967:0: note: this is the location of the previous definition
+ #define Hallville 2048
+ ^
+case2807.p4:1071:0: warning: "Palmdale" redefined
+ #define Palmdale 4096
+ ^
+case2807.p4:968:0: note: this is the location of the previous definition
+ #define Palmdale 16384
+ ^
+case2807.p4:1072:0: warning: "Seabrook" redefined
+ #define Seabrook 1024
+ ^
+case2807.p4:969:0: note: this is the location of the previous definition
+ #define Seabrook 8192
+ ^
+case2807.p4:1073:0: warning: "Battles" redefined
+ #define Battles 8192
+ ^
+case2807.p4:970:0: note: this is the location of the previous definition
+ #define Battles 65536
+ ^
+case2807.p4:1086:0: warning: "Harviell" redefined
+ #define Harviell       4096
+ ^
+case2807.p4:983:0: note: this is the location of the previous definition
+ #define Harviell       65536
+ ^
+case2807.p4:1089:0: warning: "Konnarock" redefined
+ #define Konnarock 3072
+ ^
+case2807.p4:986:0: note: this is the location of the previous definition
+ #define Konnarock 1024
+ ^
+case2807.p4:1090:0: warning: "Humacao" redefined
+ #define Humacao 3071
+ ^
+case2807.p4:987:0: note: this is the location of the previous definition
+ #define Humacao 4096
+ ^
+case2807.p4:1091:0: warning: "Flippen" redefined
+ #define Flippen 3071
+ ^
+case2807.p4:988:0: note: this is the location of the previous definition
+ #define Flippen 4096
+ ^
+case2807.p4:1092:0: warning: "Newcastle" redefined
+ #define Newcastle 512
+ ^
+case2807.p4:989:0: note: this is the location of the previous definition
+ #define Newcastle 4096
+ ^
+case2807.p4:1093:0: warning: "Hodges" redefined
+ #define Hodges 3071
+ ^
+case2807.p4:990:0: note: this is the location of the previous definition
+ #define Hodges 4096
+ ^
+case2807.p4:1094:0: warning: "Dowell" redefined
+ #define Dowell 3071
+ ^
+case2807.p4:991:0: note: this is the location of the previous definition
+ #define Dowell 1024
+ ^
+case2807.p4:1095:0: warning: "Otisco" redefined
+ #define Otisco 3071
+ ^
+case2807.p4:992:0: note: this is the location of the previous definition
+ #define Otisco 4096
+ ^
+case2807.p4:1096:0: warning: "Blueberry" redefined
+ #define Blueberry 3071
+ ^
+case2807.p4:993:0: note: this is the location of the previous definition
+ #define Blueberry 128
+ ^
+case2807.p4:1124:0: warning: "Moultrie" redefined
+ #define Moultrie    3072
+ ^
+case2807.p4:1021:0: note: this is the location of the previous definition
+ #define Moultrie    4096
+ ^
 case2807.p4(2248): warning: Could not infer type for Macdona, using bit<8>
 action Corydon(Macdona) {
                ^^^^^^^

@@ -85,6 +85,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/axon.p4
   testdata/p4_16_samples/stack_complex-bmv2.p4
   testdata/p4_16_samples/issue737-bmv2.p4
+  testdata/p4_16_samples/psa-ether-wire.p4
   )
 
 # BRIG-108
@@ -187,11 +188,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/test_config_295_polynomial_hash.p4
   extensions/p4_tests/p4_14/test_config_308_hash_96b.p4
   extensions/p4_tests/p4_14/test_config_311_hash_adb.p4
-  )
-
-p4c_add_xfail_reason("tofino"
-  "error: .*: Cannot unify bit"
-  extensions/p4_tests/p4_14/test_config_214_full_stats.p4
   )
 
 # BRIG-102
@@ -1027,6 +1023,7 @@ p4c_add_xfail_reason("tofino"
   "source of modify_field invalid"
   extensions/p4_tests/p4_14/test_config_157_random_number_generator.p4
   extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
+  extensions/p4_tests/p4_14/test_config_214_full_stats.p4
   )
 
 # Most likely a bug in validContainerRange handling.
@@ -1054,6 +1051,11 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: hash_dist 0 not defined in table"
   extensions/p4_tests/p4_14/p4-tests/programs/pgrs/pgrs.p4
+  )
+
+p4c_add_xfail_reason("tofino"
+  "error: : Read-only value used for out/inout parameter"
+  testdata/p4_16_samples/issue1079-bmv2.p4
   )
 
 # Unsupported features

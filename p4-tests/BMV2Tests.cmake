@@ -13,7 +13,6 @@ set (BMV2_XFAIL_TESTS
   extensions/p4_tests/p4_14/test_config_185_first_lpf.p4
   extensions/p4_tests/p4_14/test_config_201_meter_constant_index.p4
   extensions/p4_tests/p4_14/test_config_205_modify_field_from_hash.p4
-  extensions/p4_tests/p4_14/test_config_214_full_stats.p4
   extensions/p4_tests/p4_14/test_config_182_warp_primitive.p4
   extensions/p4_tests/p4_14/test_config_183_sample_e2e.p4
   extensions/p4_tests/p4_14/test_config_191_invalidate.p4

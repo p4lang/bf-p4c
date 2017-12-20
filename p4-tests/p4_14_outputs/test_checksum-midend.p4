@@ -483,10 +483,10 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
         tmp_5.field_16 = hdr.inner_udp.len;
         tmp_5.field_17 = hdr.inner_udp.checksum;
         tmp_6 = hdr.inner_udp.checksum;
-        update_checksum<tuple_1, bit<16>>(meta.csum_ctrl.inner_v4_udp_enable == 1w1, tmp_5, tmp_6, HashAlgorithm.csum16);
+        update_checksum_with_payload<tuple_1, bit<16>>(meta.csum_ctrl.inner_v4_udp_enable == 1w1, tmp_5, tmp_6, HashAlgorithm.csum16);
         hdr.inner_udp.checksum = tmp_6;
         update_checksum<tuple_0, bit<16>>(true, { hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.totalLen, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.fragOffset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.srcAddr, hdr.ipv4.dstAddr }, hdr.ipv4.hdrChecksum, HashAlgorithm.csum16);
-        update_checksum<tuple_4, bit<16>>(meta.csum_ctrl.v4_tcp_enable == 1w1, { hdr.ipv4.srcAddr, hdr.ipv4.dstAddr, 8w0, hdr.ipv4.protocol, meta.l4_csum_len.len_delta, hdr.tcp.srcPort, hdr.tcp.dstPort, hdr.tcp.seqNo, hdr.tcp.ackNo, hdr.tcp.dataOffset, hdr.tcp.res, hdr.tcp.flags, hdr.tcp.window, hdr.tcp.urgentPtr }, hdr.tcp.checksum, HashAlgorithm.csum16);
+        update_checksum_with_payload<tuple_4, bit<16>>(meta.csum_ctrl.v4_tcp_enable == 1w1, { hdr.ipv4.srcAddr, hdr.ipv4.dstAddr, 8w0, hdr.ipv4.protocol, meta.l4_csum_len.len_delta, hdr.tcp.srcPort, hdr.tcp.dstPort, hdr.tcp.seqNo, hdr.tcp.ackNo, hdr.tcp.dataOffset, hdr.tcp.res, hdr.tcp.flags, hdr.tcp.window, hdr.tcp.urgentPtr }, hdr.tcp.checksum, HashAlgorithm.csum16);
         tmp_7.field_18 = hdr.ipv4.srcAddr;
         tmp_7.field_19 = hdr.ipv4.dstAddr;
         tmp_7.field_20 = 8w0;
@@ -497,7 +497,7 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
         tmp_7.field_25 = hdr.udp.len;
         tmp_7.field_26 = hdr.udp.checksum;
         tmp_8 = hdr.udp.checksum;
-        update_checksum<tuple_2, bit<16>>(meta.csum_ctrl.v4_udp_enable == 1w1, tmp_7, tmp_8, HashAlgorithm.csum16);
+        update_checksum_with_payload<tuple_2, bit<16>>(meta.csum_ctrl.v4_udp_enable == 1w1, tmp_7, tmp_8, HashAlgorithm.csum16);
         hdr.udp.checksum = tmp_8;
         tmp_9.field_27 = hdr.ipv6.srcAddr;
         tmp_9.field_28 = hdr.ipv6.dstAddr;
@@ -508,7 +508,7 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
         tmp_9.field_33 = hdr.udp.len;
         tmp_9.field_34 = tmp_8;
         tmp_10 = tmp_8;
-        update_checksum<tuple_3, bit<16>>(meta.csum_ctrl.v6_udp_enable == 1w1, tmp_9, tmp_10, HashAlgorithm.csum16);
+        update_checksum_with_payload<tuple_3, bit<16>>(meta.csum_ctrl.v6_udp_enable == 1w1, tmp_9, tmp_10, HashAlgorithm.csum16);
         hdr.udp.checksum = tmp_10;
     }
 }

@@ -167,7 +167,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("NoAction") action NoAction_3() {
     }
     @name(".action_0") action action_2(bit<16> param0) {
-        random(hdr.pkt.field_a_32, 32w0, 32w65535);
+        random<bit<32>>(hdr.pkt.field_a_32, 32w0, 32w65535);
         hdr.pkt.field_e_16 = param0;
     }
     @name(".do_nothing") action do_nothing_0() {
@@ -175,7 +175,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".do_nothing") action do_nothing_2() {
     }
     @name(".action_1") action action_3() {
-        random(hdr.pkt.field_d_32, 32w0, 32w0xffffff);
+        random<bit<32>>(hdr.pkt.field_d_32, 32w0, 32w0xffffff);
     }
     @name(".table_0") table table_0 {
         actions = {

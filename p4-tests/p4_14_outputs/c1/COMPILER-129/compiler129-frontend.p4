@@ -2677,7 +2677,7 @@ control process_egress_acl(inout headers hdr, inout metadata meta, inout standar
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".egress_port_type_normal") action egress_port_type_normal_0() {
         meta.egress_metadata.port_type = 2w0;
-        random(meta.egress_metadata.sflow_take_sample, 32w0, 32w4294967295);
+        random<bit<32>>(meta.egress_metadata.sflow_take_sample, 32w0, 32w4294967295);
     }
     @name(".egress_port_type_fabric") action egress_port_type_fabric_0() {
         meta.egress_metadata.port_type = 2w1;

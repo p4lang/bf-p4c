@@ -2730,7 +2730,7 @@ control process_egress_acl(inout headers hdr, inout metadata meta, inout standar
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".egress_port_type_normal") action egress_port_type_normal() {
         meta.egress_metadata.port_type = 2w0;
-        random(meta.egress_metadata.sflow_take_sample, (bit<32>)0, (bit<32>)32w4294967295);
+        random(meta.egress_metadata.sflow_take_sample, (bit<32>)0, 32w4294967295);
     }
     @name(".egress_port_type_fabric") action egress_port_type_fabric() {
         meta.egress_metadata.port_type = 2w1;
@@ -3349,7 +3349,7 @@ control process_global_params(inout headers hdr, inout metadata meta, inout stan
     }
     @name(".set_config_parameters") action set_config_parameters(bit<1> enable_dod) {
         deflect_on_drop(enable_dod);
-        random(meta.ingress_metadata.sflow_take_sample, (bit<32>)0, (bit<32>)32w4294967295);
+        random(meta.ingress_metadata.sflow_take_sample, (bit<32>)0, 32w4294967295);
     }
     @name(".switch_config_params") table switch_config_params {
         actions = {
