@@ -7,19 +7,19 @@
 class ActionBus {
     static struct MeterBus_t {} MeterBus;
     struct Source {
-        enum { None, Field, HashDist, TableOutput, TableRefOutput }     type;
+        enum { None, Field, HashDist, TableOutput, NameRef }     type;
         union {
             Table::Format::Field                        *field;
             HashDistribution                            *hd;
             Table                                       *table;
-            Table::Ref                                  *table_ref;
+            Table::Ref                                  *name_ref;
         };
         Source() : type(None) { field = nullptr; }
         Source(Table::Format::Field *f) : type(Field) { field = f; }
         Source(HashDistribution *h) : type(HashDist) { hd = h; }
         Source(Table *t) : type(TableOutput) { table = t; }
-        Source(Table::Ref *t) : type(TableRefOutput) { table_ref = t; }
-        Source(MeterBus_t) : type(TableRefOutput) { table_ref = nullptr; }
+        Source(Table::Ref *t) : type(NameRef) { name_ref = t; }
+        Source(MeterBus_t) : type(NameRef) { name_ref = nullptr; }
         bool operator==(const Source &a) const {
             return type == a.type && field == a.field; }
         bool operator<(const Source &a) const {
@@ -40,9 +40,10 @@ class ActionBus {
         : name(n), byte(b), size(s) { data.emplace(src, off); }
         unsigned lo(Table *tbl) const;  // low bit on the action data bus
         bool is_table_output() const {
-            for (auto &d : data)
-                if (d.first.type == Source::TableOutput || d.first.type == Source::TableRefOutput)
-                    return true;
+            for (auto &d : data) {
+                assert(d.first.type != Source::NameRef);
+                if (d.first.type == Source::TableOutput)
+                    return true; }
             return false; }
     };
     friend std::ostream &operator<<(std::ostream &, const Source &);

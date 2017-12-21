@@ -26,8 +26,8 @@ std::ostream &operator<<(std::ostream &out, const ActionBus::Source &src) {
     case ActionBus::Source::TableOutput:
         out << "TableOutput(" << (src.table ? src.table->name() : "0") << ")";
         break;
-    case ActionBus::Source::TableRefOutput:
-        out << "TableRefOutput(" << (src.table_ref ? src.table_ref->name : "0") << ")";
+    case ActionBus::Source::NameRef:
+        out << "NameRef(" << (src.name_ref ? src.name_ref->name : "0") << ")";
         break;
     default:
         out << "<invalid type 0x" << hex(src.type) << ">";
@@ -203,17 +203,37 @@ void ActionBus::pass1(Table *tbl) {
         lineno = tbl->format && tbl->format->lineno >= 0 ? tbl->format->lineno : tbl->lineno;
     Slot *use[ACTION_DATA_BUS_SLOTS] = { 0 };
     for (auto &slot : Values(by_byte)) {
-        bool ok = true;
         for (auto it = slot.data.begin(); it != slot.data.end();) {
-            if (it->first.type == Source::TableRefOutput) {
-                // Remove all TableRefOutputs and replace with TableOutputs
-                if (it->first.table_ref) {
-                    if (*it->first.table_ref)
-                        slot.data[Source(*it->first.table_ref)] = it->second;
-                    else {
-                        error(it->first.table_ref->lineno, "No format field or table named %s",
-                              it->first.table_ref->name.c_str());
-                        ok = false; }
+            if (it->first.type == Source::NameRef) {
+                // Remove all NameRef and replace with TableOutputs or Fields
+                if (it->first.name_ref) {
+                    bool ok = false;
+                    if (*it->first.name_ref) {
+                        slot.data[Source(*it->first.name_ref)] = it->second;
+                        ok = true;
+                    } else if (tbl->actions) {
+                        Table::Format::Field *found_field = nullptr;
+                        Table::Actions::Action *found_act = nullptr;
+                        for (auto act : *tbl->actions) {
+                            int lo = -1, hi = -1;
+                            auto name = act.alias_lookup(it->first.name_ref->lineno,
+                                                         it->first.name_ref->name, lo, hi);
+                            if (auto *field = tbl->lookup_field(name, act.name)) {
+                                if (found_field) {
+                                    if (field != found_field ||
+                                        slot.data.at(Source(field)) != it->second + lo)
+                                        error(it->first.name_ref->lineno, "%s has incompatible "
+                                              "aliases in actions %s and %s",
+                                              it->first.name_ref->name.c_str(),
+                                              found_act->name.c_str(), act.name.c_str());
+                                } else {
+                                    found_act = &act;
+                                    found_field = field;
+                                    slot.data[Source(field)] = it->second + lo;
+                                    ok = true; } } } }
+                    if (!ok)
+                        error(it->first.name_ref->lineno, "No format field or table named %s",
+                              it->first.name_ref->name.c_str());
                 } else {
                     auto att = tbl->get_attached();
                     if (!att || att->meters.empty())
@@ -225,7 +245,7 @@ void ActionBus::pass1(Table *tbl) {
                 it = slot.data.erase(it);
             } else {
                 ++it; } }
-        if (!ok) continue;
+        if (error_count > 0) continue;
         auto first = slot.data.begin();
         if (first != slot.data.end())
             for (auto it = next(first); it != slot.data.end(); ++it)
@@ -743,9 +763,9 @@ std::string ActionBus::Source::toString(Table *tbl) const {
         return tmp.str();
     case TableOutput:
         return table->name();
-    case TableRefOutput:
-        tmp <<  "tableref ";
-        if (table_ref) tmp << table_ref->name;
+    case NameRef:
+        tmp <<  "name ";
+        if (name_ref) tmp << name_ref->name;
         else tmp << "(meter)";
         return tmp.str();
     default:
