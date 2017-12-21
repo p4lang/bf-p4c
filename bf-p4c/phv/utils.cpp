@@ -1,6 +1,7 @@
 #include "utils.h"
 #include <boost/optional/optional_io.hpp>
 #include <iostream>
+#include <numeric>
 
 static int cluster_id_g = 0;                // global counter for assigning cluster ids
 
