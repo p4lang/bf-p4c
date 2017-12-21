@@ -207,7 +207,7 @@ ActionPhvConstraints::can_pack(const PHV::Allocation& alloc, const PHV::AllocSli
         ss << "\t\t\tActions to be checked are: ";
         for (auto *act : set_of_actions)
             ss << act->name << " ";
-        LOG5(ss); }
+        LOG5(ss.str()); }
 
     // Check if actions on the packing candidates involve WHOLE_CONTAINER operations or a mix of
     // WHOLE_CONTAINER and MOVE operations (FieldOperation::MIXED)
@@ -261,7 +261,7 @@ boost::optional<ActionPhvConstraints::FieldOperation> ActionPhvConstraints::is_w
                 ss << " by a MOVE operation.";
             else
                 ss << " by a WHOLE_CONTAINER operation.";
-            LOG5(ss); }
+            LOG5(ss.str()); }
         return *location; }
 }
 

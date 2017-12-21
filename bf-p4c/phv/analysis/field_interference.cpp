@@ -152,7 +152,7 @@ FieldInterference::printFieldColorMap(FieldInterference::SliceColorMap& m) const
             // else
             ss << " (" << slice.size() << "b) " << std::endl;
         }
-        LOG4(ss); }
+        LOG4(ss.str()); }
     LOG4("Number of colors with multiple fields: " << numMultiSets);
     LOG4("Number of metadata ovleray bits: " << n_metadata_overlays);
 }

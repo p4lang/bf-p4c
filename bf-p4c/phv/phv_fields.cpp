@@ -1113,5 +1113,5 @@ void PhvInfo::DumpPhvFields::generate_field_histogram(gress_t gress) const {
         for (size_t i = 0; i < entry.second; i++)
             row << "x";
         row << " (" << entry.second << ")";
-        LOG1(row); }
+        LOG1(row.str()); }
 }

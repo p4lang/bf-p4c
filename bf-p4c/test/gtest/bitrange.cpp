@@ -8,6 +8,9 @@
 #include "ir/ir.h"
 #include "ir/json_loader.h"
 
+// disable these tests for gcc-4.9, which for some reason
+// do not link with boost::optional
+#if (__GNUC__ > 4) || defined(__clang__)
 namespace Test {
 
 /// A fixture for testing properties that apply to all HalfOpenRange types.
@@ -1586,3 +1589,4 @@ TEST_F(TofinoIntegerMathUtils, ModuloFloor) {
 }
 
 }  // namespace Test
+#endif  // (__GNUC__ > 4) || defined(__clang__)
