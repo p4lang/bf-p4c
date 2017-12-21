@@ -740,7 +740,7 @@ p4c_add_xfail_reason("tofino"
   )
 # ingress parser need access pkt_length
 p4c_add_xfail_reason("tofino"
-  "Could not find declaration for eg_intr_md"
+  "error: standard_metadata.packet_length is not accessible in the ingress pipe"
   testdata/p4_14_samples/queueing.p4
   )
 # resubmit size is 32 bytes which exceeds max size for tofino (8 bytes).

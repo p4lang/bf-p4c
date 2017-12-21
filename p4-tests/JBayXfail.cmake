@@ -93,11 +93,15 @@ p4c_add_xfail_reason("jbay"
   )
 
 p4c_add_xfail_reason("jbay"
+  "error: standard_metadata.packet_length is not accessible in the ingress pipe"
+  testdata/p4_14_samples/queueing.p4
+  )
+
+p4c_add_xfail_reason("jbay"
   "error: Could not find declaration for .*"
   testdata/p4_14_samples/copy_to_cpu.p4
   testdata/p4_14_samples/issue1058.p4
   testdata/p4_14_samples/packet_redirect.p4
-  testdata/p4_14_samples/queueing.p4
   testdata/p4_14_samples/resubmit.p4
   testdata/p4_14_samples/simple_nat.p4
   )

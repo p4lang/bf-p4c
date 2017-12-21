@@ -3,7 +3,7 @@
 #include <lib/exceptions.h>
 #include <boost/optional/optional_io.hpp>
 
-static cstring toString(gress_t gress) {
+cstring toString(gress_t gress) {
   switch (gress) {
     case INGRESS: return "ingress";
     case EGRESS: return "egress"; }

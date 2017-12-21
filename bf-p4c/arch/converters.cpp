@@ -582,6 +582,8 @@ const IR::Node* PathExpressionConverter::postorder(IR::Member *node) {
 
     auto& nameMap = thread == INGRESS ? structure->ingressMetadataNameMap
                                       : structure->egressMetadataNameMap;
+    auto& otherMap = thread == INGRESS ? structure->egressMetadataNameMap
+                                       : structure->ingressMetadataNameMap;
     BUG_CHECK(!nameMap.empty(), "metadata translation map cannot be empty");
     auto it = nameMap.find(MetadataField{pathname, membername});
     if (it != nameMap.end()) {
@@ -592,6 +594,8 @@ const IR::Node* PathExpressionConverter::postorder(IR::Member *node) {
         LOG3("Translating " << node << " to " << result);
         return result;
     }
+    if (otherMap.count(MetadataField{pathname, membername}))
+        error("%s is not accessible in the %s pipe", node, toString(thread));
     LOG4("No translation found for " << node);
     return node;
 }

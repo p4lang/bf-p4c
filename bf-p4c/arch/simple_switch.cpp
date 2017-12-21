@@ -49,7 +49,7 @@ class LoadTargetArchitecture : public Inspector {
         addMetadata("standard_metadata", "ingress_port",
                     "ig_intr_md", "ingress_port", 9);
 
-        addMetadata("standard_metadata", "packet_length", "eg_intr_md", "pkt_length", 16);
+        addMetadata(EGRESS, "standard_metadata", "packet_length", "eg_intr_md", "pkt_length", 16);
 
         addMetadata(INGRESS, "standard_metadata", "clone_spec",
                     "ig_intr_md_for_mb", "mirror_id", 10);
