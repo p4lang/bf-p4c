@@ -135,7 +135,7 @@ bool resultHas(const std::set<PHV::SuperCluster *>& result,
 
 }  // namespace
 
-TEST_F(CriticalPathClustersTest, Basic) {
+TEST_F(CriticalPathClustersTest, DISABLED_Basic) {
     auto test = createCriticalPathClustersTestCase(P4_SOURCE(P4Headers::NONE, R"(
         action first(bit<8> param1, bit<32> param2) {
             headers.h1.f1 = param1;

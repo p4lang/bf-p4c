@@ -33,7 +33,7 @@ void MultipleApply::MutuallyExclusiveApplies::postorder(const IR::MAU::Table *tb
             if (!mutex(tbl, paired_table)) {
                 ::error("%s: Not all applies of table %s are mutually exclusive",
                         tbl->srcInfo, tbl->name);
-                errors.emplace(tbl->match_table->name);
+                errors.emplace(tbl->match_table->externalName());
             }
         }
     }
@@ -149,7 +149,7 @@ bool MultipleApply::DistinctTables::preorder(const IR::MAU::Table *tbl) {
         ::error("%s: Table %s is applied multiple times, and the next table information cannot "
                 "correctly propagate through this multiple application", tbl->srcInfo,
                 tbl->match_table->name);
-        errors.emplace(tbl->match_table->name);
+        errors.emplace(tbl->match_table->externalName());
     } else {
         distinct_tables.emplace(tbl->match_table);
     }
@@ -187,7 +187,7 @@ bool MultipleApply::UniqueGatewayChain::preorder(const IR::MAU::Table *tbl) {
                     "determining control flow are different for these instances.  Currently, "
                     "the compiler does not allow different gateway conditionals above a "
                     "repeated apply", tbl->srcInfo, tbl->name);
-            errors.emplace(tbl->name);
+            errors.emplace(tbl->match_table->externalName());
             return true;
         }
 
@@ -197,7 +197,7 @@ bool MultipleApply::UniqueGatewayChain::preorder(const IR::MAU::Table *tbl) {
                        "determining control flow are different for these instances.  Currently, "
                        "the compiler does not allow different gateway conditionals above a "
                        "repeated apply", tbl->srcInfo, tbl->name);
-                errors.emplace(tbl->name);
+                errors.emplace(tbl->match_table->externalName());
                 return true;
             }
         }

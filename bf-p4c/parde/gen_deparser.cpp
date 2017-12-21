@@ -72,7 +72,7 @@ class GenerateDeparser : public Inspector {
             }
             return false;
         } else if (method->member == "update") {
-            warning("FIXME method call %s in deparser not yet supported", mc);
+            // XXX(hanw): call to checksum.update() in deparser is handled in checksum.cpp
             return false;
         } else if (method->member == "pack") {
             auto dname = method->expr->to<IR::PathExpression>();

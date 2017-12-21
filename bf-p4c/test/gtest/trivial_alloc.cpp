@@ -86,7 +86,7 @@ TYPED_TEST_CASE(TofinoPHVTrivialAllocators, TrivialAllocators);
 // Test that the automatic allocations performed by TrivialAlloc and ManualAlloc
 // produce the expected results. (And, implicitly, that they both produce the
 // *same* results.)
-TYPED_TEST(TofinoPHVTrivialAllocators, AutomaticAllocation) {
+TYPED_TEST(TofinoPHVTrivialAllocators, DISABLED_AutomaticAllocation) {
     const auto& phvSpec = Device::phvSpec();
 
     auto testcase = SharedPhvTestCases::trivialAlloc();
@@ -286,13 +286,13 @@ class TofinoPHVManualAlloc : public TofinoBackendTest {
                     EXPECT_EQ(bitvec_ret, real); } } } }
 };
 
-TEST_F(TofinoPHVManualAlloc, SimpleAllocation) {
+TEST_F(TofinoPHVManualAlloc, DISABLED_SimpleAllocation) {
     runManualAllocTest({
         { "ingress::h1.field", { PHV::ManualAlloc::Slice{"B48", 0, 0, 8} } }
     });
 }
 
-TEST_F(TofinoPHVManualAlloc, WidthMismatch) {
+TEST_F(TofinoPHVManualAlloc, DISABLED_WidthMismatch) {
     // A set of assignments with mismatches between the width of the container
     // and the width of the field.
 
@@ -313,7 +313,7 @@ TEST_F(TofinoPHVManualAlloc, WidthMismatch) {
     }, /* isWidthMismatchTest */ true);
 }
 
-TEST_F(TofinoPHVManualAlloc, SplitAllocation) {
+TEST_F(TofinoPHVManualAlloc, DISABLED_SplitAllocation) {
     // A set of assignments that split fields between multiple containers or
     // containers between multiple fields.
 
@@ -342,7 +342,7 @@ TEST_F(TofinoPHVManualAlloc, SplitAllocation) {
     }, /* isWidthMismatchTest */ true);
 }
 
-TEST_F(TofinoPHVManualAlloc, ReservedContainerAllocation) {
+TEST_F(TofinoPHVManualAlloc, DISABLED_ReservedContainerAllocation) {
     // Check that ManualAlloc correctly ensures that container groups are never
     // assigned to more than one thread. Ordinarily ManualAlloc ignores errors
     // if they originate in the manual allocations requested by the user; for

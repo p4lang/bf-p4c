@@ -88,13 +88,9 @@ p4c_add_xfail_reason("jbay"
   )
 
 p4c_add_xfail_reason("jbay"
-  "FIXME method call checksum.update in deparser not yet supported"
-  testdata/p4_14_samples/checksum1.p4
-  testdata/p4_14_samples/checksum.p4
+  "condition too complex"
   testdata/p4_14_samples/issue894.p4
-  testdata/p4_14_samples/simple_router.p4
   )
-
 
 p4c_add_xfail_reason("jbay"
   "error: Could not find declaration for .*"

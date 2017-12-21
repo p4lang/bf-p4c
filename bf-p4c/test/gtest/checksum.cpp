@@ -352,7 +352,7 @@ TEST_F(TofinoComputedChecksum, ErrorDestFieldNot16Bit) {
     EXPECT_GT(::diagnosticCount(), 0u);
 }
 
-TEST_F(TofinoComputedChecksum, ErrorUnexpectedStatement) {
+TEST_F(TofinoComputedChecksum, DISABLED_ErrorUnexpectedStatement) {
     auto test = createComputedChecksumTestCase(P4_SOURCE(P4Headers::NONE, R"(
         update_checksum(true, {
                         headers.h1.field1,

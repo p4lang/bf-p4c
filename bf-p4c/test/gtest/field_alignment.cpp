@@ -217,7 +217,7 @@ TEST_F(TofinoFieldAlignment, NonPardeFieldsDoNotForceAlignment) {
     });
 }
 
-TEST_F(TofinoFieldAlignment, BridgedMetadataRespectsAlignment) {
+TEST_F(TofinoFieldAlignment, DISABLED_BridgedMetadataRespectsAlignment) {
     auto test = TofinoPipeTestCase::create(P4_SOURCE(P4Headers::V1MODEL, R"(
         header H { bit<8> field; }
         struct Headers { H h; }
