@@ -8,7 +8,7 @@ ENV P4C_DEPS autoconf \
              bison \
              build-essential \
              flex \
-             g++ \
+             g++-6 \
              libboost-dev \
              libboost-graph-dev \
              libboost-iostreams-dev \
@@ -35,8 +35,14 @@ ENV P4C_RUNTIME_DEPS cpp \
                      tcpdump
 
 
-RUN apt-get update && \
-    apt-get install -y $P4C_DEPS $P4C_RUNTIME_DEPS
+RUN add-apt-repository ppa:ubuntu-toolchain-r/test && \
+    apt-get update && \
+    apt-get install -y $P4C_DEPS $P4C_RUNTIME_DEPS && \
+    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-5 10 && \
+    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-6 20 && \
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-5 10 && \
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-6 20
+
 RUN pip install pyinstaller==3.2.1
 
 # Default to using 2 make jobs, which is a good default for CI. If you're
