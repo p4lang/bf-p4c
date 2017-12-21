@@ -332,7 +332,7 @@ void MauAsmOutput::emit_hash_dist(std::ostream &out, indent_t indent,
             out << "hash: " << hash_dist.groups.at(slice) << ", ";
             out << "mask: 0x" << hash_dist.masks.at(slice) << ", ";
             out << "shift: " << hash_dist.shifts.at(slice);
-            if (hash_dist.expand.at(slice) > 0)
+            if (hash_dist.expand.count(slice) > 0)
                 out << ", expand: " << hash_dist.expand.at(slice);
             out << " }" << std::endl;
         }

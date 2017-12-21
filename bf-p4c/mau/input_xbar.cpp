@@ -1715,7 +1715,7 @@ class XBarHashDist : MauInspector {
                 if (!(hd_use.pre_slices.size() == 2
                     || (hd_use.pre_slices[1] % IXBar::HASH_DIST_SLICES) == 2))
                     BUG("Wide hash distribution address doesn't fit in the table");
-                hd_use.expand[hd_use.pre_slices[0]] = 1;
+                hd_use.expand.emplace(hd_use.pre_slices[0], 7*hd_use.pre_slices[0]);
                 hd_use.slices.push_back(hd_use.pre_slices[0]);
                 slices_set = true;
             }
@@ -1723,7 +1723,6 @@ class XBarHashDist : MauInspector {
 
         if (!slices_set) {
             for (auto pre_slice : hd_use.pre_slices) {
-                hd_use.expand[pre_slice] = 0;
                 hd_use.slices.push_back(pre_slice);
             }
         }
