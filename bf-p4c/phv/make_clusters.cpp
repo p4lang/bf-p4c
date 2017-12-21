@@ -69,9 +69,7 @@ void Clustering::MakeAlignedClusters::end_apply() {
         bool tphv_candidate =
             std::all_of(cluster_set->begin(), cluster_set->end(),
                         [&](const PHV::FieldSlice& slice) {
-                            return !uses_i.is_used_mau(slice.field())
-                                && slice.kind() != FieldKind::pov
-                                && !slice.field()->deparsed_to_tm(); });
+                            return slice.field()->is_tphv_candidate(uses_i); });
         PHV::Kind kind = tphv_candidate ? PHV::Kind::tagalong : PHV::Kind::normal;
         self.aligned_clusters_i.emplace_back(new PHV::AlignedCluster(kind, *cluster_set)); }
 }

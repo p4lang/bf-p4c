@@ -1075,7 +1075,6 @@ void AllocatePHV::end_apply() {
     }
 }
 
-/* static */
 void AllocatePHV::formatAndThrowError(
         const PHV::Allocation& alloc,
         const std::list<PHV::SuperCluster *>& unallocated) {
@@ -1122,8 +1121,7 @@ void AllocatePHV::formatAndThrowError(
         msg << "..........egress t_phv bits = " << egress_t_phv_bits << std::endl;
         msg << std::endl; }
 
-    msg << alloc.getSummary() << std::endl;
-
+    msg << alloc.getSummary(uses_i) << std::endl;
     ::error("%1%", msg.str());
 }
 
@@ -1242,7 +1240,7 @@ GreedySortingAllocationStrategy::tryAllocation(
         return AllocResult(AllocResultCode::SUCCESS, std::move(rst), std::move(cluster_groups)); }
 }
 
-void BalancedPickAllocationStrategy::sortContainerByFitness(const PHV::Allocation& alloc,
+void BalancedPickAllocationStrategy::sortContainerBy(const PHV::Allocation& alloc,
         std::list<PHV::ContainerGroup *>& container_groups, const PHV::SuperCluster* cluster) {
     // The majority width of this cluster.
     int cluster_width = cluster->max_width();
@@ -1318,44 +1316,14 @@ void BalancedPickAllocationStrategy::sortContainerByFitness(const PHV::Allocatio
 
 void
 BalancedPickAllocationStrategy::greedySortClusters(std::list<PHV::SuperCluster*>& cluster_groups) {
-    std::set<PHV::SuperCluster*> critical_clusters =
-            critical_path_clusters_i.calc_critical_clusters(cluster_groups);
     // Sorts clusters by
-    // 1. whether it is a critical cluster
-    // 2. has slice lists or not
-    // 3. whether any field has the exact_containers requirement
-    // 4. then by the number of constraints
-    // 5. width.
+    // the number of constraints
+    // width.
     auto ClusterGroupComparator = [&] (PHV::SuperCluster* l, PHV::SuperCluster* r) {
-        if (critical_clusters.count(l) != critical_clusters.count(r))
-        return critical_clusters.count(l) > critical_clusters.count(r);
-
-        if (l->slice_lists().size() != r->slice_lists().size()) {
-            return l->slice_lists().size() > r->slice_lists().size(); }
-
-        if (l->exact_containers() && !r->exact_containers())
-        return true;
-        if (!l->exact_containers() && r->exact_containers())
-        return false;
-
-        // If both clusters require exact containers, try the NARROWER cluster
-        // first.
-        if (l->exact_containers() && r->exact_containers()) {
-            if (l->max_width() != r->max_width())
-            return l->max_width() < r->max_width();
-            if (l->num_constraints() != r->num_constraints())
-            return l->num_constraints() > r->num_constraints();
-
-            // XXX(cole): Aggregate size may give preference to large clusters
-            // that, despite their size, fit into fewer containers.
-            return l->aggregate_size() > r->aggregate_size(); }
-
-        // Otherwise, try the wider cluster first.
         if (l->num_constraints() != r->num_constraints())
         return l->num_constraints() > r->num_constraints();
-        if (l->aggregate_size() != r->aggregate_size())
-        return l->aggregate_size() > r->aggregate_size();
-        return l->max_width() > r->max_width(); };
+        return l->max_width() > r->max_width();
+    };
 
     cluster_groups.sort(ClusterGroupComparator);
 }
@@ -1366,7 +1334,7 @@ BalancedPickAllocationStrategy::allocLoop(PHV::Transaction& rst,
                                           std::list<PHV::ContainerGroup *>& container_groups) {
     std::list<PHV::SuperCluster*> allocated;
     for (PHV::SuperCluster* cluster_group : cluster_groups) {
-        sortContainerByFitness(rst, container_groups, cluster_group);
+        this->sortContainerBy(rst, container_groups, cluster_group);
         for (PHV::ContainerGroup* container_group : container_groups) {
             LOG4("TRY CLUSTER/GROUP pair:");
             LOG4(cluster_group);
@@ -1390,6 +1358,7 @@ BalancedPickAllocationStrategy::tryAllocation(
     const std::list<PHV::SuperCluster*>& cluster_groups_input,
     std::list<PHV::ContainerGroup *>& container_groups) {
     auto rst = alloc.makeTransaction();
+
     // slice the rest unallocated clusters.
     std::list<PHV::SuperCluster*> cluster_groups;
     for (auto* sc : cluster_groups_input)

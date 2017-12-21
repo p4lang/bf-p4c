@@ -452,6 +452,10 @@ PHV::Field::is_ccgf() const {
     return false;
 }
 
+bool PHV::Field::is_tphv_candidate(const PhvUse& uses) const {
+    return !uses.is_used_mau(this) && !pov && !metadata && !deparsed_to_tm_i;
+}
+
 boost::optional<int>
 PHV::Field::phv_alignment(bool get_ccgf_alignment) const {
     // the parameter get_ccgf_alignment distinguishes between requesting alignment

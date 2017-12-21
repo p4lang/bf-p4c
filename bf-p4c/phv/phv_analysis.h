@@ -21,7 +21,6 @@ class PHV_AnalysisPass : public PassManager {
     Clustering clustering;
     CalcParserCriticalPath parser_critical_path;  // parser critical path of both ingress/egress
     CalcCriticalPathClusters critical_path_clusters;  // critical clusters
-    FieldInterference field_interference;             // coloring of fields
     ActionPhvConstraints action_constraints;
 
  public:

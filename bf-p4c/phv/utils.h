@@ -300,7 +300,7 @@ class Allocation {
     virtual cstring toString() const;
 
     /// @returns a summary of the status of each container by type and gress.
-    virtual cstring getSummary() const = 0;
+    virtual cstring getSummary(const PhvUse& uses) const = 0;
 
     /// Create a Transaction based on this Allocation.  @see PHV::Transaction for details.
     virtual Transaction makeTransaction() const;
@@ -358,7 +358,7 @@ class ConcreteAllocation : public PHV::Allocation {
     GressAssignment gress(PHV::Container c) const override;
 
     /// @returns a summary of the status of each container by type and gress.
-    cstring getSummary() const override;
+    cstring getSummary(const PhvUse& uses) const override;
 };
 
 
@@ -411,7 +411,7 @@ class Transaction : public Allocation {
 
     /// @returns a summary of the status of each container by type and gress.
     /// @warning not yet implemented.
-    cstring getSummary() const override;
+    cstring getSummary(const PhvUse& uses) const override;
 
     /// @returns a summary of status of each container allocated in this transaction.
     cstring getTransactionSummary() const;

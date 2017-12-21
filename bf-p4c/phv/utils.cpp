@@ -342,11 +342,14 @@ PHV::Allocation::GressAssignment PHV::ConcreteAllocation::gress(PHV::Container c
 }
 
 /// @returns a summary of the status of each container by type and gress.
-cstring PHV::ConcreteAllocation::getSummary() const {
+cstring PHV::ConcreteAllocation::getSummary(const PhvUse& uses) const {
     std::map<boost::optional<gress_t>,
         std::map<PHV::Type,
             std::map<ContainerAllocStatus,
                 int>>> alloc_status;
+
+    std::map<PHV::Container, int> partial_containers_stat;
+    int total_unalloacted_bits = 0;
 
     // Compute status.
     for (auto kv : container_status_i) {
@@ -355,10 +358,15 @@ cstring PHV::ConcreteAllocation::getSummary() const {
         bitvec allocatedBits;
         for (auto slice : kv.second.slices)
             allocatedBits |= bitvec(slice.container_slice().lo, slice.container_slice().size());
-        if (allocatedBits == bitvec(0, c.size()))
+        if (allocatedBits == bitvec(0, c.size())) {
             status = ContainerAllocStatus::FULL;
-        else if (!allocatedBits.empty())
-            status = ContainerAllocStatus::PARTIAL;
+        } else if (!allocatedBits.empty()) {
+            int used = std::accumulate(allocatedBits.begin(),
+                                       allocatedBits.end(), 0,
+                                       [] (int a, int) { return a + 1; });
+            partial_containers_stat[c] = c.size() - used;
+            total_unalloacted_bits += partial_containers_stat[c];
+            status = ContainerAllocStatus::PARTIAL; }
         alloc_status[container_status_i.at(c).gress][c.type()][status]++;
     }
 
@@ -392,6 +400,67 @@ cstring PHV::ConcreteAllocation::getSummary() const {
                       % s_status
                       % alloc_status[gress][type][status];
                 first_by_gress = false; } } }
+    ss << std::endl;
+
+    // Compute overlay status.
+    std::map<PHV::Container, int> overlay_result;
+    int n_total_tphv_overlay = 0;
+    int n_total_phv_overlay = 0;
+    for (auto kv : container_status_i) {
+        PHV::Container c = kv.first;
+        int n_overlay = -c.size();
+        for (auto i = c.lsb(); i <= c.msb(); ++i) {
+            const auto& slices = kv.second.slices;
+            n_overlay += std::accumulate(
+                slices.begin(), slices.end(), 0,
+                [&] (int l, const PHV::AllocSlice& r) {
+                    return l + r.container_slice().contains(i); }); }
+        if (n_overlay > 0) {
+            overlay_result[c] = n_overlay;
+            if (c.type().kind() == PHV::Kind::tagalong) {
+                n_total_tphv_overlay += n_overlay;
+            } else {
+                n_total_phv_overlay += n_overlay; } } }
+
+    ss << "======== CONTAINER OVERLAY STAT ===========" << std::endl;
+    ss << "TOTAL T-PHV OVERLAY BITS: " << n_total_tphv_overlay << std::endl;
+    ss << "TOTAL PHV OVERLAY BITS: " << n_total_phv_overlay << std::endl;
+    for (auto kv : overlay_result) {
+        ss << kv.first << " has overlaid: " << kv.second << " bits " << std::endl;
+        for (const auto& slice : this->slices(kv.first)) {
+            ss << slice << std::endl; } }
+    ss << std::endl;
+
+    // Output Partial Containers
+    ss << "======== PARTIAL CONTAINERS STAT ==========" << std::endl;
+    ss << "TOTAL UNALLOCATED BITS: " << total_unalloacted_bits << std::endl;
+    for (const auto& kv : partial_containers_stat) {
+        ss << kv.first << " has unallocated bits: " << kv.second << std::endl;
+        for (const auto& slice : this->slices(kv.first)) {
+            ss << slice << std::endl; } }
+
+    // compute tphv fields allocated on phv fields
+    int total_tphv_on_phv = 0;
+    std::map<PHV::Container, int> tphv_on_phv;
+    for (auto kv : container_status_i) {
+        PHV::Container c = kv.first;
+        if (c.is(PHV::Kind::tagalong)) {
+            continue; }
+        int n_tphvs = 0;
+        for (auto slice : kv.second.slices) {
+            if (slice.field()->is_tphv_candidate(uses)) {
+                n_tphvs += slice.width(); } }
+        if (n_tphvs == 0) continue;
+        tphv_on_phv[c] = n_tphvs;
+        total_tphv_on_phv += n_tphvs; }
+
+    ss << "======== TPHV ON PHV STAT ========" << std::endl;
+    ss << "Total bits: " << total_tphv_on_phv << std::endl;
+    for (auto kv : tphv_on_phv) {
+        ss << kv.first << " has " << kv.second << " bits " << std::endl;
+        for (const auto& slice : slices(kv.first)) {
+            if (slice.field()->is_tphv_candidate(uses)) {
+                ss << slice << std::endl; } } }
 
     return ss.str();
 }
@@ -501,7 +570,7 @@ cstring PHV::Transaction::getTransactionSummary() const {
     return ss.str();
 }
 
-cstring PHV::Transaction::getSummary() const {
+cstring PHV::Transaction::getSummary(const PhvUse& /* uses */) const {
     P4C_UNIMPLEMENTED("Transaction::getSummary()");
 }
 

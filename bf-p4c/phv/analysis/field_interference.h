@@ -7,63 +7,43 @@
 #include "lib/ordered_map.h"
 #include "lib/symbitmatrix.h"
 
-/** Generate a field-to-field interference graph for all fields referenced in the program and use
-  * vertex coloring to create sets of mutually exclusive fields
+/** Generate a slice-to-slice interference graph for all input slices and use
+  * vertex coloring to create a map from fieldslice to color.
   *
-  * @pre Clusters determined by the MakeClusters pass, with all clusters separated into PHV and TPHV
-  * clusters
-  *
-  * @post Maps corresponding to sets of mutually exclusive fields, with each set corresponding to a
-  * single color determined by vertex coloring
-  * Currently, we generate four separate maps: phv_overlays_ingress, phv_overlays_egress,
-  * tphv_overlays_ingress, and tphv_overlays_egress
+  * The colors are represented as an integer, which is not guaranteed to start
+  * from 0, not contiguous.
   */
-class FieldInterference : public Visitor {
+class FieldInterference {
  public:
-    using FieldColorMap = ordered_map<int, std::vector<PHV::Field *>>;
-    using FieldVector = std::vector<PHV::Field *>;
+    using SliceColorMap = std::map<PHV::FieldSlice, int>;
+    using SliceVector   = std::vector<PHV::FieldSlice>;
 
  private:
-    const Clustering&           clustering_i;
-    SymBitMatrix&               mutex_i;
+    const SymBitMatrix&               mutex_i;
 
-    /// Stores a mapping from a field to its corresponding cluster
-    /// Without field slicing, the ordered_set will only contain 1 cluster
-    ordered_map<PHV::Field*, ordered_set<PHV::AlignedCluster*>> field_to_cluster_map_i;
-
-    /// Stores sets of mutually exclusive fields belonging to ingress
-    FieldColorMap ingress_overlays_i;
-    /// Stores sets of mutually exclusive fields belonging to egress
-    FieldColorMap egress_overlays_i;
-
-    /** @return all referenced fields in the program that belong to the list of clusters and the
-      * gress specified by @clusters and @gress respectively
+    /** @return all slices of the @p gress from @p clusters
       */
-    FieldVector getAllReferencedFields(std::vector<PHV::AlignedCluster*>& clusters, gress_t gress);
+    SliceVector
+    getAllSlices(const std::list<PHV::SuperCluster *>& clusters,
+                 gress_t gress,
+                 bool is_tagalong) const;
 
-    /** Build a field interference graph for all the fields
-      * @returns a FieldColorMap containing sets of mutually exclusive fields, from among the fields
-      * in @fields
-      */
-    FieldColorMap constructFieldInterference(FieldVector& fields);
-
-    /** Pretty print a FieldColorMap, containing the results of vertex coloring on the field
-      * interference graph
-      */
-    void printFieldColorMap(FieldColorMap& m);
+    SliceColorMap constructFieldInterference(SliceVector &fields) const;
 
  public:
-    FieldInterference(const Clustering& cluster, SymBitMatrix& mutex_m)
-        : clustering_i(cluster), mutex_i(mutex_m) { }
+    explicit FieldInterference(const SymBitMatrix& mutex_m)
+        : mutex_i(mutex_m) { }
 
-    /** Entry point for the FieldInterference pass
-      * Calls constructFieldInterference() to generate separate FieldColorMaps corresponding to PHV
-      * ingress, PHV egress, TPHV ingress, and TPHV egress fields
+    /** Build a fieldslice interference graph for all the slices
+      * @returns a SliceColorMap that map a PHV::FieldSlice to its color.
       */
-    const IR::Node* apply_visitor(const IR::Node *, const char *name = 0) override;
+    SliceColorMap
+    calcSliceInterference(const std::list<PHV::SuperCluster *>& clusters) const;
 
-    const FieldColorMap& ingress_overlays() const { return ingress_overlays_i; }
-    const FieldColorMap& egress_overlays() const { return egress_overlays_i; }
+    /** Pretty print a SliceColorMap, containing the results of vertex coloring on the field
+      * interference graph
+      */
+    void printFieldColorMap(SliceColorMap& m) const;
 };  // class FieldInterference
 
 #endif /* EXTENSIONS_BF_P4C_PHV_ANALYSIS_FIELD_INTERFERENCE_H_ */

@@ -285,6 +285,8 @@ class Field {
 
     int ccgf_width() const;  // phv width = aggregate size of members
 
+    bool is_tphv_candidate(const PhvUse& uses) const;
+
     //
     // constraints
     //

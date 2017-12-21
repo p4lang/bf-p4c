@@ -4,47 +4,66 @@
 #include "bf-p4c/phv/analysis/field_interference.h"
 #include "lib/log.h"
 
-FieldInterference::FieldVector FieldInterference::getAllReferencedFields(
-        std::vector<PHV::AlignedCluster*>& clusters,
-        gress_t gress) {
-    FieldVector rs;
-    for (auto* cl : clusters) {
-        for (auto& slice : cl->slices()) {
-            if (slice.gress() != gress) continue;
-            if (std::find(rs.begin(), rs.end(), slice.field()) == rs.end())
-                rs.push_back(slice.field());
-            field_to_cluster_map_i[slice.field()].insert(cl); } }
-    return rs;
+FieldInterference::SliceVector
+FieldInterference::getAllSlices(const std::list<PHV::SuperCluster *>& clusters,
+                                gress_t gress,
+                                bool is_tagalong) const {
+    SliceVector rst;
+    for (auto* super_cluster : clusters) {
+        for (auto* rotational_cluster : super_cluster->clusters()) {
+            for (auto* aligned_cluster : rotational_cluster->clusters()) {
+                if (aligned_cluster->okIn(PHV::Kind::tagalong) && !is_tagalong) continue;
+                if (!aligned_cluster->okIn(PHV::Kind::tagalong) && is_tagalong) continue;
+                for (auto slice : aligned_cluster->slices()) {
+                    if (slice.gress() == gress) rst.push_back(slice); } } } }
+    return rst;
 }
 
-const IR::Node *
-FieldInterference::apply_visitor(const IR::Node *node, const char *name) {
-    LOG4("...............Field Interference apply visitor()................");
-    if (name)
-        LOG4(name);
+FieldInterference::SliceColorMap
+FieldInterference::calcSliceInterference(const std::list<PHV::SuperCluster *>& clusters) const {
+    // Do the calculation separately to reduce the problem scale for a better result.
+    // Also, overlaying PHV fields on TPHV fields is not a good idea.
+    SliceVector ingress_tphv_fields = getAllSlices(clusters, INGRESS, true);
+    SliceVector ingress_phv_fields = getAllSlices(clusters, INGRESS, false);
+    SliceVector egress_tphv_fields = getAllSlices(clusters, EGRESS, true);
+    SliceVector egress_phv_fields = getAllSlices(clusters, EGRESS, false);
 
-    std::vector<PHV::AlignedCluster*> all_clusters;
-    for (auto* super_cluster : clustering_i.cluster_groups())
-        for (auto* rotational_cluster : super_cluster->clusters())
-            all_clusters.insert(all_clusters.end(), rotational_cluster->clusters().begin(),
-                                                    rotational_cluster->clusters().end());
+    LOG4("Ingress tphv coloring");
+    SliceColorMap ingress_tphv_overlays = constructFieldInterference(ingress_tphv_fields);
+    printFieldColorMap(ingress_tphv_overlays);
 
-    FieldVector ingress_fields = getAllReferencedFields(all_clusters, INGRESS);
-    FieldVector egress_fields = getAllReferencedFields(all_clusters, EGRESS);
+    LOG4("Ingress phv coloring");
+    SliceColorMap ingress_phv_overlays = constructFieldInterference(ingress_phv_fields);
+    printFieldColorMap(ingress_phv_overlays);
 
-    ingress_overlays_i = constructFieldInterference(ingress_fields);
-    egress_overlays_i = constructFieldInterference(egress_fields);
+    LOG4("Egress tphv coloring");
+    SliceColorMap egress_tphv_overlays = constructFieldInterference(egress_tphv_fields);
+    printFieldColorMap(egress_tphv_overlays);
 
-    LOG4("Ingress Overlays");
-    printFieldColorMap(ingress_overlays_i);
-    LOG4("Egress Overlays");
-    printFieldColorMap(egress_overlays_i);
+    LOG4("Egress phv coloring");
+    SliceColorMap egress_phv_overlays = constructFieldInterference(egress_phv_fields);
+    printFieldColorMap(egress_phv_overlays);
 
-    return node;
+    // Merge them together by update the later color of slices to eliminate color conflicts.
+    // update: later_slice.color += max_size * n_fields;
+    std::vector<size_t> sizes{
+        ingress_tphv_fields.size(), ingress_phv_fields.size(),
+        egress_tphv_fields.size(), egress_phv_fields.size() };
+    size_t max_size = *(std::max_element(sizes.begin(), sizes.end()));
+    size_t shift = max_size;
+    std::vector<SliceColorMap*> to_be_merged = { &ingress_phv_overlays,
+                                                 &egress_tphv_overlays,
+                                                 &egress_phv_overlays };
+    for (auto* overlay_result : to_be_merged) {
+        for (const auto& v : (*overlay_result)) {
+            ingress_tphv_overlays.emplace(v.first, v.second + max_size); }
+        shift += max_size; }
+
+    return ingress_tphv_overlays;
 }
 
-FieldInterference::FieldInterference::FieldColorMap
-FieldInterference::constructFieldInterference(FieldVector &fields) {
+FieldInterference::SliceColorMap
+FieldInterference::constructFieldInterference(SliceVector &slices) const {
     typedef boost::adjacency_list<
         boost::setS,                    // No duplicate edges
         boost::vecS,
@@ -55,23 +74,29 @@ FieldInterference::constructFieldInterference(FieldVector &fields) {
 
     LOG6("Creating field to field interference graph");
     VertexWeightedGraphBuilder<Graph> graph_builder;
-    std::map<int, PHV::Field *> vertex_id_to_field;
+    std::map<int, PHV::FieldSlice> vertex_id_to_slice;
+    int n_slice_size_sum = 0;
     // add vertices with its weight
-    for (const auto& f : fields) {
-        int v_id = graph_builder.add_vertex(f->size);
-        vertex_id_to_field[v_id] = f;
-        LOG6("\tVertex " << v_id << " <- Field " << f->name);
+    for (const auto& slice : slices) {
+        int v_id = graph_builder.add_vertex(slice.size());
+        vertex_id_to_slice.emplace(v_id, slice);
+        LOG6("\tVertex " << v_id << " <- Slice " << slice);
+        n_slice_size_sum += slice.size();
     }
 
     // Add interference edges
-    for (const auto& vi : vertex_id_to_field) {
-        for (const auto& vj : vertex_id_to_field) {
+    for (const auto& vi : vertex_id_to_slice) {
+        for (const auto& vj : vertex_id_to_slice) {
             if (vi.first == vj.first) continue;
-            if (!PHV::Allocation::mutually_exclusive(mutex_i, vi.second, vj.second)) {
+            // If vi and vj is from the same field, they are inclusive.
+            if (!PHV::Allocation::mutually_exclusive(
+                    mutex_i,
+                    vi.second.field(),
+                    vj.second.field())) {
                 graph_builder.add_edge(vi.first, vj.first);
                 LOG6("\tAdding interference edge: "
-                     << vi.second->name
-                     << " <-> " << vj.second->name); } } }
+                     << vi.second
+                     << " <-> " << vj.second); } } }
 
     auto graph = graph_builder.build();
     WeightedGraphColoringSolver<decltype(graph.graph),
@@ -80,24 +105,30 @@ FieldInterference::constructFieldInterference(FieldVector &fields) {
     solver.run();
 
     LOG5("Color Used: " << solver.max_color());
-    LOG5("Total Cost: " << solver.total_cost());
+    LOG5("Total Cost: " << solver.total_cost() << " out from " << n_slice_size_sum);
 
-    // Build a color->cluster map to return. Colors are virtual MAU groups.
-    ordered_map<int, std::vector<PHV::Field *>> rv;
-    for (const auto& v : vertex_id_to_field) {
+    FieldInterference::SliceColorMap rv;
+    for (const auto& v : vertex_id_to_slice) {
         int v_color = graph.color_vec[v.first];
-        LOG5("Field " << v.second->name << " assigned VREG " << v_color);
-        rv[v_color].push_back(v.second); }
+        LOG6("FieldSlice " << v.second << " assigned VREG " << v_color);
+        rv[v.second] = v_color; }
 
     return rv;
 }
 
 void
-FieldInterference::printFieldColorMap(FieldInterference::FieldColorMap& m) {
+FieldInterference::printFieldColorMap(FieldInterference::SliceColorMap& m) const {
     if (!LOGGING(4)) return;
+    size_t n_metadata_overlays = 0;
     size_t numMultiSets = 0;    // Number of colors with more than 1 field , i.e. number of sets of
                                 // multiple mutually exclusive fields instead of single fields
-    for (auto entry : m) {
+    std::map<int, std::vector<PHV::FieldSlice>> color_to_slices;
+    for (const auto& v : m) {
+        if (!color_to_slices.count(v.second)) {
+            color_to_slices[v.second] = std::vector<PHV::FieldSlice>(); }
+        color_to_slices[v.second].push_back(v.first);
+    }
+    for (auto entry : color_to_slices) {
         // Do not print groups with only one member
         // (Fields that are not part of a mutually exclusive set of fields)
         if (entry.second.size() < 2)
@@ -106,13 +137,22 @@ FieldInterference::printFieldColorMap(FieldInterference::FieldColorMap& m) {
             numMultiSets++;
         std::stringstream ss;
         ss << entry.first << "\t:\t";   // Color number
-        for (auto *f : entry.second) {
-            ss << f->name;
-            if (f->is_ccgf())
-                ss << " (ccgf, " << f->ccgf_width() << "b) ";
-            else
-                ss << " (" << f->size << "b) ";
+        bool skip_first_indent = true;
+        for (auto slice : entry.second) {
+            if (slice.field()->metadata) {
+                n_metadata_overlays += slice.size(); }
+            // output this slice
+            if (skip_first_indent) {
+                skip_first_indent = false;
+            } else {
+                ss << " \t \t"; }
+            ss << slice;
+            // if (f->is_ccgf())
+            //     ss << " (ccgf, " << f->ccgf_width() << "b) ";
+            // else
+            ss << " (" << slice.size() << "b) " << std::endl;
         }
         LOG4(ss); }
     LOG4("Number of colors with multiple fields: " << numMultiSets);
+    LOG4("Number of metadata ovleray bits: " << n_metadata_overlays);
 }

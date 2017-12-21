@@ -279,18 +279,19 @@ class BalancedPickAllocationStrategy : public AllocationStrategy {
                   const std::list<PHV::SuperCluster*>& cluster_groups_input,
                   std::list<PHV::ContainerGroup *>& container_groups) override;
 
- private:
+ protected:
     /** Sorting SuperClusters
      * This order will guide the allocation.
      */
-    void greedySortClusters(std::list<PHV::SuperCluster*>& cluster_groups);
+    virtual void greedySortClusters(std::list<PHV::SuperCluster*>& cluster_groups);
 
     /** Sort @p container_groups by how many containers that could
      * possibly hold @p cluster exists, decreasingly.
      */
-    void sortContainerByFitness(const PHV::Allocation& alloc,
-                                std::list<PHV::ContainerGroup *>& container_groups,
-                                const PHV::SuperCluster* cluster);
+    virtual void sortContainerBy(
+        const PHV::Allocation& alloc,
+        std::list<PHV::ContainerGroup *>& container_groups,
+        const PHV::SuperCluster* cluster);
 
     /** The main O(n^2) loop.
      */
@@ -314,12 +315,13 @@ class AllocatePHV : public Inspector {
  private:
     CoreAllocation core_alloc_i;
     PhvInfo& phv_i;
+    const PhvUse& uses_i;
     const Clustering& clustering_i;
     const SymBitMatrix& mutex_i;
 
-    // Used to create strategies, if needed
+    // Used to create strategies, if they need
     const CalcCriticalPathClusters& critical_path_clusters_i;
-    const FieldInterference& field_interference_i;
+    FieldInterference field_interference_i;
 
     /** The entry point.  This "pass" doesn't actually traverse the IR, but it
      * marks the place in the back end where PHV allocation does its work,
@@ -349,7 +351,7 @@ class AllocatePHV : public Inspector {
     static std::list<PHV::ContainerGroup *> makeDeviceContainerGroups();
 
     /// Throw a pretty-printed ::error when allocation fails.
-    static void formatAndThrowError(
+    void formatAndThrowError(
         const PHV::Allocation& alloc,
         const std::list<PHV::SuperCluster *>& unallocated);
 
@@ -360,11 +362,10 @@ class AllocatePHV : public Inspector {
                 const ClotInfo& clot,
                 PhvInfo& phv,
                 const ActionPhvConstraints& actions,
-                const CalcCriticalPathClusters& critical_cluster,
-                const FieldInterference& field_interference)
-        : core_alloc_i(mutex, clustering, uses, clot, actions), phv_i(phv)
+                const CalcCriticalPathClusters& critical_cluster)
+        : core_alloc_i(mutex, clustering, uses, clot, actions), phv_i(phv), uses_i(uses)
         , clustering_i(clustering), mutex_i(mutex), critical_path_clusters_i(critical_cluster)
-        , field_interference_i(field_interference) { }
+        , field_interference_i(mutex) { }
 };
 
 #endif  /* BF_P4C_PHV_ALLOCATE_PHV_H_ */
