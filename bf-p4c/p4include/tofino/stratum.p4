@@ -20,8 +20,8 @@ agreement with Barefoot Networks, Inc.
 // Barefoot architectures.
 // -----------------------------------------------------------------------------
 
-#ifndef STRATUM_P4_
-#define STRATUM_P4_
+#ifndef _STRATUM_P4_
+#define _STRATUM_P4_
 
 #include "core.p4"
 
@@ -35,6 +35,13 @@ enum PacketPath_t {
                 /// destined for egress
     RESUBMIT,   /// Packet arrival is the result of a resubmit operation
     RECIRCULATE /// Packet arrival is the result of a recirculate operation
+}
+
+/// A hack to support v1model to tofino translation, the enum is required
+/// as long as we still support v1model.p4
+enum CloneType {
+    I2E,
+    E2E
 }
 
 enum MeterType_t {
@@ -691,4 +698,4 @@ package Switch<IH, IM, EH, EM, CG>(
     Egress<EH, EM, CG> egress,
     EgressDeparser<EH, EM, CG> egress_deparser);
 
-#endif  /* STRATUM_P4_ */
+#endif  /* _STRATUM_P4_ */

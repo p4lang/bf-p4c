@@ -621,8 +621,8 @@ const IR::Node* HashConverter::postorder(IR::MethodCallStatement* node) {
     auto args = new IR::Vector<IR::Expression>( { pData, pBase, pMax });
 
     cstring hashName;
-    auto it = structure->hashNames.find(orig);
-    if (it != structure->hashNames.end()) {
+    auto it = structure->nameMap.find(orig);
+    if (it != structure->nameMap.end()) {
         hashName = it->second; }
 
     auto member = new IR::Member(new IR::PathExpression(hashName), "get_hash");
@@ -650,8 +650,8 @@ const IR::Node* RandomConverter::postorder(IR::MethodCallStatement* node) {
     args->push_back(hi);
 
     cstring randName;
-    auto it = structure->randomNames.find(orig);
-    if (it != structure->randomNames.end()) {
+    auto it = structure->nameMap.find(orig);
+    if (it != structure->nameMap.end()) {
         randName = it->second; }
 
     auto method = new IR::PathExpression(randName);
@@ -798,7 +798,7 @@ const IR::Node* ParserPriorityConverter::postorder(IR::AssignmentStatement* node
     auto stmt = getOriginal<IR::AssignmentStatement>();
     auto name = cstring::make_unique(structure->unique_names, "packet_priority", '_');
     structure->unique_names.insert(name);
-    structure->priorityNames.emplace(stmt, name);
+    structure->nameMap.emplace(stmt, name);
 
     auto type = new IR::Type_Name("priority");
     auto inst = new IR::Declaration_Instance(name, type, new IR::Vector<IR::Expression>());
@@ -858,7 +858,7 @@ const IR::Node* ParserConverter::postorder(IR::Member* node) {
 const IR::Node* IngressParserConverter::postorder(IR::P4Parser *node) {
     auto parser = node->apply(cloner);
     auto params = parser->type->getApplyParameters();
-    BUG_CHECK(params->size() == 7, "%1%: Expected 7 parameters for parser", parser);
+    BUG_CHECK(params->size() == 6, "%1%: Expected 6 parameters for parser", parser);
 
     auto* paramList = new IR::ParameterList;
     ordered_map<cstring, cstring> tnaParams;
@@ -922,7 +922,7 @@ const IR::Node* EgressParserConverter::postorder(IR::P4Parser* node) {
     auto parser = node->apply(cloner);
     auto params = parser->type->getApplyParameters();
     /// assume we are dealing with egress parser
-    BUG_CHECK(params->size() == 8, "%1%: Expected 8 parameters for parser", parser);
+    BUG_CHECK(params->size() == 7, "%1%: Expected 7 parameters for parser", parser);
 
     auto* paramList = new IR::ParameterList;
     ordered_map<cstring, cstring> tnaParams;
@@ -1243,7 +1243,7 @@ const IR::Node* EgressDeparserConverter::preorder(IR::P4Control* node) {
     auto deparser = node->apply(cloner);
 
     auto params = deparser->type->getApplyParameters();
-    BUG_CHECK(params->size() == 6, "%1% Expected 6 parameters for deparser", deparser);
+    BUG_CHECK(params->size() == 7, "%1% Expected 7 parameters for deparser", deparser);
 
     auto* paramList = new IR::ParameterList;
     ordered_map<cstring, cstring> tnaParams;

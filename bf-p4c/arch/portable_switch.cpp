@@ -252,7 +252,6 @@ class LoadTargetArchitecture : public Inspector {
     void postorder(const IR::P4Program*) override {
         setup_metadata_map();
         structure->include("tofino/stratum.p4", &structure->targetTypes);
-        structure->include("tofino/p4_14_types.p4", &structure->targetTypes);
         structure->include("tofino/p4_14_prim.p4", &structure->targetTypes);
         structure->include("tofino/p4_16_prim.p4", &structure->targetTypes);
         for (auto decl : structure->targetTypes) {

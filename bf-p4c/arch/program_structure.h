@@ -11,22 +11,9 @@
 namespace BFN {
 
 using MetadataMap = ordered_map<cstring, IR::MetadataInfo*>;
-
 using SimpleNameMap = std::map<cstring, cstring>;
-using ExternInstanceMap = ordered_map<const IR::Declaration_Instance*,
-                                      const IR::Declaration_Instance*>;
-using ExternMethodMap = ordered_map<const IR::MethodCallExpression*,
-                                    const IR::MethodCallExpression*>;
-using ExternFunctionMap = ordered_map<const IR::MethodCallStatement*,
-                                      const IR::Statement*>;
-using ExternFunctionNameMap = ordered_map<const IR::MethodCallStatement*, cstring>;
-using ConversionMap = ordered_map<const IR::MethodCallStatement*, const IR::Node*>;
-
-using StatementMap = ordered_map<const IR::Statement*, const IR::Statement*>;
-using StatementNameMap = ordered_map<const IR::Statement*, cstring>;
-
-// used by parser counter translation
-using MemberStatementMap = ordered_map<const IR::Node*, const IR::Node*>;
+using TranslationMap = ordered_map<const IR::Node*, const IR::Node*>;
+using NodeNameMap = ordered_map<const IR::Node*, cstring>;
 
 // used by checksum translation
 using ChecksumSourceMap = ordered_map<const IR::Member*,
@@ -76,20 +63,22 @@ struct ProgramStructure {
     ordered_set<cstring>                         errors;
     ordered_map<cstring, const IR::Type_Enum*>   enums;
 
-    ExternInstanceMap                            counters;
-    ExternInstanceMap                            direct_counters;
-    ExternInstanceMap                            meters;
-    ExternInstanceMap                            direct_meters;
+    TranslationMap                               counters;
+    TranslationMap                               direct_counters;
+    TranslationMap                               meters;
+    TranslationMap                               direct_meters;
+
+    NodeNameMap                                  nameMap;
 
     /// maintain program declarations to reprint a valid P16 program
-    ordered_map<cstring, const IR::P4Control*>            controls;
-    ordered_map<cstring, const IR::P4Parser*>             parsers;
-    ordered_map<cstring, const IR::Type_Header*>          header_types;
-    ordered_map<cstring, const IR::Type_Struct*>          struct_types;
-    ordered_map<cstring, const IR::Type_HeaderUnion*>     header_union_types;
-    ordered_map<cstring, const IR::Type_Typedef*>         typedef_types;
+    ordered_map<cstring, const IR::P4Control*>   controls;
+    ordered_map<cstring, const IR::P4Parser*>    parsers;
+    ordered_map<cstring, const IR::Type_Header*> header_types;
+    ordered_map<cstring, const IR::Type_Struct*> struct_types;
+    ordered_map<cstring, const IR::Type_HeaderUnion*> header_union_types;
+    ordered_map<cstring, const IR::Type_Typedef*> typedef_types;
     ordered_map<cstring, const IR::Declaration_Instance*> global_instances;
-    std::vector<const IR::Type_Action*>                   action_types;
+    std::vector<const IR::Type_Action*>          action_types;
 
     /// program control block names from P14
     const IR::ToplevelBlock*                     toplevel;
@@ -141,29 +130,23 @@ namespace V1 {
 /// translation between P4-16 program of different architecture.
 struct ProgramStructure : BFN::ProgramStructure {
     // maintain symbol tables for program transformation
-    ChecksumSourceMap checksums;
+    ChecksumSourceMap                            checksums;
 
     // map ingress/egress to hash
-    ExternMethodMap counterCalls;
-    ExternMethodMap directCounterCalls;
-    ConversionMap meterCalls;
-    ExternFunctionMap directMeterCalls;
-    ExternFunctionMap hashCalls;
-    ExternFunctionNameMap hashNames;
-    ExternFunctionMap resubmitCalls;
-    ExternFunctionMap digestCalls;
-    ExternFunctionMap cloneCalls;
-    ExternFunctionMap dropCalls;
-    ExternFunctionMap randomCalls;
-    ExternFunctionNameMap randomNames;
-    ExternFunctionMap executeMeterCalls;
-
+    TranslationMap                               meterCalls;
+    TranslationMap                               directMeterCalls;
+    TranslationMap                               hashCalls;
+    TranslationMap                               resubmitCalls;
+    TranslationMap                               digestCalls;
+    TranslationMap                               cloneCalls;
+    TranslationMap                               dropCalls;
+    TranslationMap                               randomCalls;
+    TranslationMap                               executeMeterCalls;
     // parser related translations
-    StatementMap priorityCalls;
-    StatementNameMap priorityNames;
-    StatementMap parserCounterCalls;
-    SimpleNameMap parserCounterNames;
-    MemberStatementMap parserCounterSelects;
+    TranslationMap                               priorityCalls;
+    TranslationMap                               parserCounterCalls;
+    SimpleNameMap                                parserCounterNames;
+    TranslationMap                               parserCounterSelects;
 
     /// user program specific info
     cstring type_h;
@@ -175,11 +158,8 @@ struct ProgramStructure : BFN::ProgramStructure {
     ordered_map<cstring, cstring> externNameMap;
 
     void createParsers() override;
-
     void createControls() override;
-
     void createMain() override;
-
     const IR::P4Program *create(const IR::P4Program *program) override;
 };
 
@@ -194,11 +174,8 @@ struct ProgramStructure : BFN::ProgramStructure {
     cstring type_em;
 
     void createParsers() override;
-
     void createControls() override;
-
     void createMain() override;
-
     const IR::P4Program *create(const IR::P4Program *program) override;
 };
 

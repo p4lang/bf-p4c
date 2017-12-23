@@ -1075,3 +1075,9 @@ p4c_add_xfail_reason("tofino"
   "syntax error, unexpected {,"
   extensions/p4_tests/p4_14/p4-tests/programs/dyn_hash/dyn_hash.p4
   )
+
+# shared register between ingress and egress is not supported
+p4c_add_xfail_reason("tofino"
+  "error: Could not find declaration for r"
+  testdata/p4_16_samples/issue1097-2-bmv2.p4
+  )

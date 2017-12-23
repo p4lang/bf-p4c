@@ -336,7 +336,6 @@ set (p4include_HEADERS
   p4include/tofino/lpf.p4
   p4include/tofino/stratum.p4
   p4include/tofino/p4_14_prim.p4
-  p4include/tofino/p4_14_types.p4
   p4include/tofino/p4_16_prim.p4
   p4include/tofino/stateful_alu.p4
   p4include/tofino/wred.p4
@@ -436,6 +435,7 @@ set (GTEST_BF_P4C_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_crush.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_tofino.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_jbay.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/portable_switch.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/tofino_write_context.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/tofino_gtest_utils.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/trivial_alloc.cpp

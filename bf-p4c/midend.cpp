@@ -139,8 +139,12 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::MoveDeclarations(),
         (options.arch == "psa") ?
             new BFN::PortableSwitchTranslation(&refMap, &typeMap, options /*map*/) : nullptr,
-        new P4::ValidateTableProperties({"implementation", "size", "counters",
-                                         "meters", "support_timeout"}),
+        (options.arch == "psa") ?
+            new P4::ValidateTableProperties({"implementation", "size", "psa_direct_counters",
+                                         "psa_direct_meters", "support_timeout"}) : nullptr,
+        (options.arch == "v1model" || options.arch == "native") ?
+            new P4::ValidateTableProperties({"implementation", "size", "counters",
+                                         "meters", "support_timeout"}) : nullptr,
         new P4::SimplifyControlFlow(&refMap, &typeMap),
         new P4::CompileTimeOperations(),
         new P4::TableHit(&refMap, &typeMap),

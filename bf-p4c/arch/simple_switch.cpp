@@ -84,7 +84,6 @@ class LoadTargetArchitecture : public Inspector {
 
         /// append tofino.p4 architecture definition
         structure->include("tofino/stratum.p4", &structure->targetTypes);
-        structure->include("tofino/p4_14_types.p4", &structure->targetTypes);
         structure->include("tofino/p4_14_prim.p4", &structure->targetTypes);
         structure->include("tofino/p4_16_prim.p4", &structure->targetTypes);
 
@@ -836,7 +835,7 @@ class ConstructSymbolTable : public Inspector {
         auto hashType = new IR::Type_Specialized(new IR::Type_Name("hash"), typeArgs);
         auto hashName = cstring::make_unique(structure->unique_names, "hash", '_');
         structure->unique_names.insert(hashName);
-        structure->hashNames.emplace(node, hashName);
+        structure->nameMap.emplace(node, hashName);
 
         auto typeName = mce->arguments->at(1)->clone()->to<IR::Member>();
         CHECK_NULL(typeName);
@@ -915,7 +914,7 @@ class ConstructSymbolTable : public Inspector {
         auto param = new IR::Vector<IR::Expression>();
         auto randName = cstring::make_unique(structure->unique_names, "random", '_');
         structure->unique_names.insert(randName);
-        structure->randomNames.emplace(node, randName);
+        structure->nameMap.emplace(node, randName);
 
         auto randInst = new IR::Declaration_Instance(randName, type, param);
 
