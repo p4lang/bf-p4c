@@ -1,3 +1,4 @@
+#include <inttypes.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -27,7 +28,7 @@ int dump_bin (FILE *fd) {
             if (fread(&addr, 8, 1, fd) != 1) return -1;
             if (fread(&width, 4, 1, fd) != 1) return -1;
             if (fread(&count, 4, 1, fd) != 1) return -1;
-            printf("B%08lx: %xx%x", addr, width, count);
+            printf("B%08" PRIx64 ": %xx%x", addr, width, count);
             if ((uint64_t)count * width % 32 != 0)
                 printf("  (not a multiple of 32 bits!)");
             count = (uint64_t)count * width / 32;
@@ -50,7 +51,7 @@ int dump_bin (FILE *fd) {
             if (fread(&addr, 8, 1, fd) != 1) return -1;
             if (fread(&width, 4, 1, fd) != 1) return -1;
             if (fread(&count, 4, 1, fd) != 1) return -1;
-            printf("D%011lx: %xx%x", addr, width, count);
+            printf("D%011" PRIx64 ": %xx%x", addr, width, count);
             if ((uint64_t)count * width % 64 != 0)
                 printf("  (not a multiple of 64 bits!)");
 
@@ -68,7 +69,8 @@ int dump_bin (FILE *fd) {
                     col = 0; }
                 repeat = 0;
                 if (col++ % 2 == 0) printf("\n   ");
-                printf(" %016lx%016lx", prev_chunk[1] = chunk[1], prev_chunk[0] = chunk[0]); }
+                printf(" %016" PRIx64 "%016" PRIx64, prev_chunk[1] = chunk[1],
+                       prev_chunk[0] = chunk[0]); }
 
             if (repeat > 0) {
                 printf(" x%d", repeat+1);
@@ -77,7 +79,7 @@ int dump_bin (FILE *fd) {
             if (count * width % 16 == 8) {
                 if (fread(chunk, sizeof(uint64_t), 1, fd) != 1) return -1;
                 if (col % 2 == 0) printf("\n   ");
-                printf(" %016lx", chunk[0]); }
+                printf(" %016" PRIx64, chunk[0]); }
             printf("\n");
 
         } else {

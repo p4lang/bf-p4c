@@ -17,7 +17,7 @@ agreement with Barefoot Networks, Inc.
 
 // -----------------------------------------------------------------------------
 // stratum.p4 describes the ground-zero architecture for all derived
-// architectures (tofino.p4, jbay.p4 and psa.p4).
+// Barefoot architectures.
 // -----------------------------------------------------------------------------
 
 #ifndef STRATUM_P4_

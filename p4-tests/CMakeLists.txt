@@ -32,8 +32,10 @@ include(TestUtils.cmake)
 # add tofino tests and xfails with reasons
 include(TofinoTests.cmake)
 
-# add jbay tests and xfails with reasons
-include(JBayTests.cmake)
+if (ENABLE_JBAY)
+  # add jbay tests and xfails with reasons
+  include(JBayTests.cmake)
+endif()
 
 # We have additional test inputs that are used to test the other
 # (standard) back-ends These test input programs depend on Tofino in

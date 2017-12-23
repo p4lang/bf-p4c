@@ -797,8 +797,10 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
         // its own checksum units. On JBay they're shared, and their ids are
         // global, so on that device we don't reset the next checksum unit for
         // each deparser.
+#if HAVE_JBAY
         if (Device::currentDevice() != "JBay")
             nextChecksumUnit = 0;
+#endif
 
         struct LastSimpleEmitInfo {
             /// The `PHV::Field::id` of the POV bit for the last simple emit.
@@ -888,8 +890,10 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
                 auto* loweredPovBit = lowerPovBit(phv, emitChecksum->povBit);
                 for (auto* source : inputSources) {
                     auto* input = new IR::BFN::ChecksumInput(source);
+#if HAVE_JBAY
                     if (Device::currentDevice() == "JBay")
                         input->povBit = loweredPovBit;
+#endif
                     unitConfig->inputs.push_back(input);
                 }
                 loweredDeparser->checksums.push_back(unitConfig);
@@ -1098,6 +1102,7 @@ class ExtractorAllocator {
                 allocatedExtractorsBySize[containerSize]++;
                 allocatedExtractions.push_back(extract);
             }
+#if HAVE_JBAY
         } else if (Device::currentDevice() == "JBay") {
             // JBay has one size, 16-bit extractors
             unsigned allocatedExtractors = 0;
@@ -1135,6 +1140,7 @@ class ExtractorAllocator {
                 allocatedExtractions.push_back(extract);
             }
             extractClots.clear();
+#endif  // HAVE_JBAY
         }
 
         // Compute the actual shift for this state. If we allocated everything,

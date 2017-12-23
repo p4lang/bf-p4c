@@ -763,10 +763,10 @@ def build_schema (dir, walle_version):
     The schema is a dictionary of dictionaries. The top-level keys are the
     "sections" of the chip's interface and metadata:
         - memories: Memories and large register arrays. Things like the parser
-                    TCAM are found here. Taken from the jbay_mem Semifore
+                    TCAM are found here. Taken from the <chip>_mem Semifore
                     hierarchy, in byte-granularity chip addresses
         - regs:     Registers, like statistics counters and MAU crossbars.
-                    Taken from the jbay Semifore hierarchy, in 32-bit PCIe
+                    Taken from the <chip> Semifore hierarchy, in 32-bit PCIe
                     addresses
         - _schema_hash:  An MD5 hash of the CSV file contents used to generate
                     the rest of the schema
@@ -853,4 +853,3 @@ if __name__ == "__main__":
     if z.value != "02468":
         print "Expected 40-bit field to have string value '86420'"
         print "    40 bit value was " + z.value
-

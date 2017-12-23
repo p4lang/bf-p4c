@@ -119,8 +119,10 @@ void AddMetadataShims::addIngressMetadata(IR::BFN::Deparser *d) {
 
     if (Device::currentDevice() == "Tofino")
         addDeparserParam(d, tmMeta, "packet_color", "meter_color");
+#if HAVE_JBAY
     else if (Device::currentDevice() == "JBay")
         addDeparserParam(d, tmMeta, "packet_color", "pkt_color");
+#endif
 
     addDeparserParam(d, tmMeta, "disable_ucast_cutthru", "ct_disable");
     addDeparserParam(d, tmMeta, "enable_mcast_cutthru", "ct_mcast");

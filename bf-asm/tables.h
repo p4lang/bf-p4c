@@ -155,12 +155,16 @@ public:
                     i -= chunk.size();
                     last = chunk.hi+1; }
                 if (i == 0) return last;
-                assert(0); }
+                assert(0);
+                return 0; // quiet -Wreturn-type warning
+            }
             unsigned hi(unsigned bit) {
                 for (auto &chunk : bits)
                     if (bit >= chunk.lo && bit <= chunk.hi)
                         return chunk.hi;
-                assert(0); }
+                assert(0);
+                return 0; // quiet -Wreturn-type warning
+            }
             enum flags_t { NONE=0, USED_IMMED=1, ZERO=3 };
             Field(Format *f) : fmt(f) {}
             Field(Format *f, unsigned size, unsigned lo = 0, enum flags_t fl = NONE)

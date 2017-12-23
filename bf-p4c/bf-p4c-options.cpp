@@ -38,12 +38,14 @@ BFN_Options::BFN_Options() {
     registerOption("--placement", nullptr,
         [this](const char *) { forced_placement = true; return true; },
         "ignore all dependencies during table placement");
+#if HAVE_JBAY
     registerOption("--use-clot", nullptr,
         [this](const char *) {
             ::warning("CLOTs are currently disabled");
             use_clot = false;
             return true;
         }, "use clots in JBay");
+#endif
     registerOption("--virtual-phvs", nullptr,
         [this](const char *) { virtual_phvs = true; return true; },
         "allow virtual phvs");

@@ -136,12 +136,13 @@ struct OutputParameters : public Inspector {
             hashLagECMP.push_back(param);
             return false;
         }
+#if HAVE_JBAY
         if (Device::currentDevice() == "JBay" &&
               (param->name == "xid" || param->name == "yid")) {
             exclusionId.push_back(param);
             return false;
         }
-
+#endif
         out << indent << param->name << ": ";
         outputParamSource(param);
         outputDebugInfo(out, indent, param->source, param->povBit) << std::endl;
