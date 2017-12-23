@@ -118,6 +118,7 @@ header ingress_intrinsic_metadata_from_parser_aux_t {
 header ingress_parser_control_signals {
     bit<3> priority;
     bit<5> _pad;
+    bit<8> parser_counter;
 }
 
 @pa_alias("ingress", "ig_intr_md.ingress_port", "ingress_metadata.ingress_port") header pktgen_header_t {
