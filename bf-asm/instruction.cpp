@@ -202,6 +202,7 @@ struct operand {
     struct HashDist : Base {
         Table                   *table;
         std::vector<int>        units;
+        int                     lo = -1, hi = -1;
 
         HashDist(int line, Table *t) : Base(line), table(t) {}
         HashDist(int line, Table *t, int unit) : Base(line), table(t) { units.push_back(unit); }
@@ -209,7 +210,10 @@ struct operand {
             if (v.size < 2 || v[0] != "hash_dist") return nullptr;
             auto *rv = new HashDist(v[0].lineno, tbl);
             for (int i = 1; i < v.size; ++i) {
-                if (CHECKTYPE(v[i], tINT)) {
+                if (v[i].type == tRANGE && rv->lo == -1) {
+                    rv->lo = v[i].lo;
+                    rv->hi = v[i].hi;
+                } else if (CHECKTYPE(v[i], tINT)) {
                     rv->units.push_back(v[i].i);
                 } else {
                     delete rv;
@@ -227,6 +231,7 @@ struct operand {
             } else return false; }
         HashDist *clone() override { return new HashDist(*this); }
         void pass2(int group) const override {
+            // FIXME -- check lo/hi for sanity
             if (units.size() > 2) {
                 error(lineno, "Can't use more than 2 hash_dist units together in an action");
                 return; }
@@ -250,6 +255,8 @@ struct operand {
                 if (auto hd = find_hash_dist(u)) {
                     if (!(hd->xbar_use & HashDistribution::IMMEDIATE_LOW))
                         offset = 16;
+                    if (lo > 0)
+                        offset += lo & ~7U;
                     if (table->find_on_actionbus(hd, offset, size) < 0)
                         table->need_on_actionbus(hd, offset, size);
                     offset = 16; } } }
@@ -362,6 +369,13 @@ operand::operand(Table *tbl, const Table::Actions::Action *act, const value_t &v
                 lo = v[1].lo;
                 hi = v[1].hi; } }
         name = act->alias_lookup(v.lineno, name, lo, hi);
+        if (name == "hash_dist" && lo == hi) {
+            auto hd = new HashDist(v.lineno, tbl, lo);
+            if (v.type == tCMD && v[1].type == tRANGE) {
+                hd->lo = v[1].lo;
+                hd->hi = v[1].hi; }
+            op = hd;
+            return; }
         op = new Named(v.lineno, name, lo, hi, tbl, act->name, p4name); }
 }
 

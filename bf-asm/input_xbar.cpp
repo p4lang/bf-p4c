@@ -241,7 +241,7 @@ bool InputXbar::can_merge(HashGrp &a, HashGrp &b)
     for (unsigned i = 0; i < 16; i++) {
         unsigned mask = 1U << i;
         if (!((a.tables|b.tables) & mask)) continue;
-        for (InputXbar *other : table->stage->hash_group_use[i]) {
+        for (InputXbar *other : table->stage->hash_table_use[i]) {
             if (both & mask) both_cols |= other->hash_columns_used(i);
             if (a.tables & mask) a_cols |= other->hash_columns_used(i);
             if (b.tables & mask) b_cols |= other->hash_columns_used(i); } }

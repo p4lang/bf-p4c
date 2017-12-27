@@ -889,10 +889,9 @@ p4c_add_xfail_reason("tofino"
   )
 
 p4c_add_xfail_reason("tofino"
-  "Due to lacking assembler support, cannot currently split hash distribution units"
+  "Extracted range .* with size .* doesn't match destination container .* with size .* was the PHV allocation misaligned or inconsistent"
   extensions/p4_tests/p4_14/c4/COMPILER-591/case3176.p4
   extensions/p4_tests/p4_14/c4/COMPILER-590/case3179.p4
-  extensions/p4_tests/p4_14/hash_calculation_multiple.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -985,13 +984,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "container is not completely overwritten when the operand is over the entire container"
   extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
-  )
-
-# XXX(cole): Accompanied by "warning: Input xbar hash group 1 mergeable
-# conflict in stage 0".
-p4c_add_xfail_reason("tofino"
-  "std::out_of_range"
-  extensions/p4_tests/p4_14/hash_calculation_multiple.p4
   )
 
 p4c_add_xfail_reason("tofino"

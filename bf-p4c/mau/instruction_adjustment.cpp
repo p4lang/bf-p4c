@@ -97,8 +97,8 @@ const IR::MAU::Instruction *SplitInstructions::postorder(IR::MAU::Instruction *i
         return instr;
     } else {
         if (hash_dist)
-            P4C_UNIMPLEMENTED("%s: Due to lacking assembler support, cannot currently split "
-                              "hash distribution units %s", instr->srcInfo, *instr);
+            warning("%s: Due to lacking assembler support, cannot currently split "
+                    "hash distribution units %s", instr->srcInfo, *instr);
         auto *field = *(split_location);
         removed_instrs[field] = instr;
         return nullptr;

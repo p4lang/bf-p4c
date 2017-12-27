@@ -742,7 +742,7 @@ std::string Table::Actions::Action::alias_lookup(int lineno, std::string name,
                                                  int &lo, int &hi) const {
     while (alias.count(name)) {
         auto &a = alias.at(name);
-        if (lo >= 0) {
+        if (lo >= 0 && a.name != "hash_dist") {
             if (a.lo >= 0) {
                 lo += a.lo;
                 hi += a.lo;
