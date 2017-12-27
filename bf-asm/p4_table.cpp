@@ -97,22 +97,6 @@ json::map *P4Table::base_tbl_cfg(json::vector &out, int size, Table *table) {
         tbl["name"] = p4_name();
         tbl["table_type"] = type_name[handle >> 24];
         tbl["size"] = explicit_size ? this->size : size;
-        tbl["stage_tables"] = json::mkuniq<json::vector>();
-        if (auto *attached = table->get_attached()) {
-            json::vector *vec = &(tbl["statistics_table_refs"] = json::vector());
-            for (auto &tblcall : attached->stats) {
-                json::map stats;
-                stats["name"] = tblcall->p4_name();
-                stats["handle"] = tblcall->handle();
-                stats["how_referenced"] = tblcall.args.empty() ? "direct" : "indirect";
-                vec->push_back(std::move(stats)); }
-            vec = 0;
-            for (auto &tblcall : attached->meters) {
-                if (!vec) vec = &(tbl["meter_table_refs"] = json::vector());
-                json::map meter;
-                meter["name"] = tblcall->p4_name();
-                meter["handle"] = tblcall->handle();
-                meter["how_referenced"] = tblcall.args.empty() ? "direct" : "indirect";
-                vec->push_back(std::move(meter)); } } }
+        tbl["stage_tables"] = json::mkuniq<json::vector>(); }
     return config;
 }

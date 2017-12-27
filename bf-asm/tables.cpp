@@ -1593,7 +1593,7 @@ void Table::output_field_to_pack_format(json::vector &field_list,
     for (auto &bits : field.bits) {
         json::map field_entry;
         field_entry["start_bit"] = lobit + start_bit;
-        if (this->to<TernaryIndirectTable>() || this->to<ExactMatchTable>()) {
+        if (this->to<TernaryIndirectTable>() || this->to<SRamMatchTable>()) {
             auto selector = get_selector();
             if (selector && selector->get_per_flow_enable_param() == name)
                 return; // Do not output per flow enable parameter
@@ -1621,10 +1621,15 @@ void Table::output_field_to_pack_format(json::vector &field_list,
         field_entry["lsb_mem_word_offset"] = basebit + (bits.lo % MEM_WORD_WIDTH);
         field_entry["field_name"] = json::string(name);
         //field_entry["immediate_name"] = json::string(immediate_name);
-        if (this->to<ExactMatchTable>())
+        //if (this->to<ExactMatchTable>())
+        if (this->to<SRamMatchTable>()) {
             //FIXME-JSON : match_mode only matters for ATCAM's not clear if
             //'unused' or 'exact' is used by driver
-            field_entry["match_mode"] = json::string("unused");
+            std::string match_mode = "unused";
+            // For version bits field match mode is set to "s1q0" (to match
+            // glass)
+            if (name == "version") match_mode = "s1q0";
+            field_entry["match_mode"] = match_mode; }
         field_list.push_back(std::move(field_entry));
         lobit += bits.size();
     }

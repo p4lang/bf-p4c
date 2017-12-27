@@ -607,7 +607,8 @@ public:
     int direct_shiftcount() const override { return 64; }
     void gen_hash_bits(const std::map<int, HashCol> &hash_table,
             unsigned hash_table_id, json::vector &hash_bits);
-    void add_hash_functions(json::map &stage_tbl);
+    virtual void add_hash_functions(json::map &stage_tbl);
+    void add_all_reference_tables(json::map &tbl);
 )
 
 #define DECLARE_TABLE_TYPE(TYPE, PARENT, NAME, ...)                     \
@@ -641,6 +642,14 @@ TYPE *TYPE::Type::create(int lineno, const char *name, gress_t gress,   \
 
 DECLARE_ABSTRACT_TABLE_TYPE(SRamMatchTable, MatchTable,         // exact or atcam match
 protected:
+    struct Way {
+        int                              lineno;
+        int                              group, subgroup, mask;
+        std::vector<std::pair<int, int>> rams;
+    };
+    std::vector<Way>                      ways;
+    struct WayRam { int way, index, word, bank; };
+    std::map<std::pair<int, int>, WayRam> way_map;
     std::vector<Phv::Ref>                 match;
     std::map<unsigned, Phv::Ref>          match_by_bit;
     std::vector<std::vector<Phv::Ref>>    match_in_word;
@@ -658,8 +667,25 @@ protected:
     std::vector<std::vector<int>> word_info;    /* which format group corresponds to each
                                                  * match group in each word */
     int         mgm_lineno = -1;                /* match_group_map lineno */
+    bitvec version_nibble_mask;
     template<class REGS>
     void write_attached_merge_regs(REGS &regs, int bus, int word, int word_group);
+    void common_sram_setup(pair_t &, const VECTOR(pair_t) &);
+    void common_sram_checks();
+    void alloc_vpns() override;
+    virtual void setup_ways();
+    void pass1() override;
+    template<class REGS> void write_regs(REGS &regs);
+    FOR_ALL_TARGETS(FORWARD_VIRTUAL_TABLE_WRITE_REGS)
+    virtual std::string get_match_mode(Phv::Ref &pref, int offset);
+    json::map* add_common_sram_tbl_cfgs(json::map &tbl,
+        std::string match_type, std::string stage_table_type);
+    void add_action_cfgs(json::map &tbl, json::map &stage_tbl);
+    unsigned get_number_entries();
+    unsigned get_format_width();
+    void add_field_to_pack_format(json::vector &field_list, int basebit, std::string name,
+                                  const Table::Format::Field &field,
+                                  const Table::Actions::Action *act) override;
 public:
     Format::Field *lookup_field(const std::string &n, const std::string &act = "") override;
     void setup_word_ixbar_group();
@@ -675,39 +701,41 @@ public:
 )
 
 DECLARE_TABLE_TYPE(ExactMatchTable, SRamMatchTable, "exact_match",
-    struct Way {
-        int                              lineno;
-        int                              group, subgroup, mask;
-        std::vector<std::pair<int, int>> rams;
-    };
-    std::vector<Way>                      ways;
-    struct WayRam { int way, index, word, bank; };
-    std::map<std::pair<int, int>, WayRam> way_map;
     std::map<unsigned, unsigned> hash_fn_ids;
-    void setup_ways();
-    void alloc_vpns() override;
+    void setup_ways() override;
 public:
     SelectionTable *get_selector() const override { return attached.get_selector(); }
     StatefulTable *get_stateful() const override { return attached.get_stateful(); }
     using Table::gen_memory_resource_allocation_tbl_cfg;
     std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(Way &);
-    void add_field_to_pack_format(json::vector &field_list, int basebit, std::string name,
-                                  const Table::Format::Field &field,
-                                  const Table::Actions::Action *act) override;
     int unitram_type() override { return UnitRam::MATCH; }
     table_type_t table_type() const override { return EXACT; }
     bool has_group(int grp) {
         for (auto &way: ways)
             if (way.group == grp) return true;
         return false; }
-    void gen_hash_functions(json::map &stage_tbl);
+    void add_hash_functions(json::map &stage_tbl) override;
 )
 
 DECLARE_TABLE_TYPE(AlgTcamMatchTable, SRamMatchTable, "atcam_match",
-    std::vector<int>    ixbar_subgroup, ixbar_mask;
-    bitvec              s0q1_nibbles, s1q0_nibbles;
-    void alloc_vpns() override;
+    std::map<int, int>                    col_priority_way;
+    int                                   number_partitions = 0;
+    std::string                           partition_field_name = "";
+    std::vector<int>                      ixbar_subgroup, ixbar_mask;
+    struct match_element {
+        Phv::Ref        *field;
+        unsigned        offset, width;
+    };
+    bitvec                                s0q1_nibbles, s1q0_nibbles;
+    std::vector<Phv::Ref*>                s0q1_prefs, s1q0_prefs;
+    std::map<int, match_element>          s0q1, s1q0;
+    void setup_column_priority();
     void find_tcam_match();
+    void gen_unit_cfg(json::vector &units, int size);
+    std::unique_ptr<json::vector> gen_memory_resource_allocation_tbl_cfg();
+    void setup_nibble_mask(Table::Format::Field *match, int group,
+                              std::map<int, match_element> &elems, bitvec &mask);
+    std::string get_match_mode(Phv::Ref &pref, int offset) override;
 )
 
 DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",

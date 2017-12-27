@@ -122,7 +122,7 @@ void TableLayout::check_for_ternary(IR::MAU::Table::Layout &layout, const IR::MA
 }
 
 void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl) {
-    if (auto k = tbl->layout.pre_classifier)
+    if (tbl->layout.pre_classifier)
         layout.entries = tbl->layout.pre_classifer_number_entries;
     else if (auto k = tbl->match_table->getConstantProperty("size"))
         layout.entries = k->asInt();
@@ -179,6 +179,13 @@ void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::M
             layout.match_width_bits += bits.size() * multiplier;
             if (is_partition) {
                 layout.partition_bits = bits.size();
+                // If partition count is set and requires less bits than
+                // partition index, set partition bits to lesser value. Rams are
+                // determined based on this value and below check will ensure
+                // select mask generated in ways is correct
+                if (layout.partition_count > 0)
+                    layout.partition_bits = std::min(layout.partition_bits,
+                                            ceil_log2(layout.partition_count));
             }
         } else {
             BUG("unexpected reads expression %s", ixbar_read->expr);

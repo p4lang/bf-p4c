@@ -157,15 +157,16 @@ void HashActionTable::gen_tbl_cfg(json::vector &out) {
     else if (options.match_compiler)
         stage_tbl["stage_idletime_table"] = nullptr;
     tbl["performs_hash_action"] = !hash_dist.empty();
-    json::vector &meter_table_refs = tbl["meter_table_refs"] = json::vector();
-    json::vector &selection_table_refs = tbl["selection_table_refs"] = json::vector();
-    json::vector &stateful_table_refs = tbl["stateful_table_refs"] = json::vector();
-    json::vector &action_data_table_refs = tbl["action_data_table_refs"] = json::vector();
-    if (auto a = get_attached()) {
-        for (auto m : a->meters)
-            add_reference_table(meter_table_refs, m);
-        add_reference_table(selection_table_refs, a->selector); }
-    add_reference_table(action_data_table_refs, action);
+    add_all_reference_tables(tbl);
+    //json::vector &meter_table_refs = tbl["meter_table_refs"] = json::vector();
+    //json::vector &selection_table_refs = tbl["selection_table_refs"] = json::vector();
+    //json::vector &stateful_table_refs = tbl["stateful_table_refs"] = json::vector();
+    //json::vector &action_data_table_refs = tbl["action_data_table_refs"] = json::vector();
+    //if (auto a = get_attached()) {
+    //    for (auto m : a->meters)
+    //        add_reference_table(meter_table_refs, m);
+    //    add_reference_table(selection_table_refs, a->selector); }
+    //add_reference_table(action_data_table_refs, action);
     add_hash_functions(stage_tbl);
     gen_idletime_tbl_cfg(stage_tbl);
     if (context_json)

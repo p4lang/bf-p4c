@@ -1311,6 +1311,7 @@ MauAsmOutput::TableMatch::TableMatch(const MauAsmOutput &, const PhvInfo &phv,
     }
 
     // Link match data together for an easier to read asm
+    /*
     auto it = match_fields.begin();
     while (it != match_fields.end()) {
         auto next = it;
@@ -1324,6 +1325,7 @@ MauAsmOutput::TableMatch::TableMatch(const MauAsmOutput &, const PhvInfo &phv,
         }
         it = next;
     }
+    */
 }
 
 static cstring next_for(const IR::MAU::Table *tbl, cstring what, const DefaultNext &def) {
@@ -1495,6 +1497,19 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
     }
 }
 
+void MauAsmOutput::emit_atcam_match(std::ostream &out, indent_t indent,
+        const IR::MAU::Table *tbl) const {
+    out << indent << "number_partitions: "
+        << tbl->layout.partition_count << std::endl;
+    for (auto ixr : tbl->match_key) {
+        if (ixr->partition_index) {
+            out << indent << "partition_field_name: " <<
+                canon_name(phv.field(ixr->expr)->name) << std::endl;
+            break;
+        }
+    }
+}
+
 void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) const {
     /* FIXME -- some of this should be method(s) in IR::MAU::Table? */
     TableMatch fmt(*this, phv, tbl);
@@ -1524,6 +1539,9 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
 
         if (tbl->layout.ternary)
             emit_ternary_match(out, indent, tbl->resources->table_format);
+
+        if (tbl->layout.atcam)
+            emit_atcam_match(out, indent, tbl);
     }
 
     cstring next_hit = "";  cstring next_miss = "";

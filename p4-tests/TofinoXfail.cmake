@@ -1034,11 +1034,6 @@ p4c_add_xfail_reason("tofino"
 
 #-------- New tests, new failures
 p4c_add_xfail_reason("tofino"
-  "error: tcam match field.* not a multiple of .* bits"
-  extensions/p4_tests/p4_14/p4-tests/programs/entry_read_from_hw/entry_read_from_hw.p4
-  )
-
-p4c_add_xfail_reason("tofino"
   "error: Match overhead field .* not in bottom .* bits"
   extensions/p4_tests/p4_14/p4-tests/programs/ha/ha.p4
   )
