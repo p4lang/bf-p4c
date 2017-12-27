@@ -142,7 +142,9 @@ if [ -z "$CHIP" ]; then
         echo >&2 "Can't find target, assuming tofino"
         CHIP=tofino
     fi
-    OUT=$CHIP.bin
+    if [ -z "$OUT" ]; then
+        OUT=$CHIP.bin
+    fi
 fi
 
 schema_arg=""

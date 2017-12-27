@@ -15,7 +15,7 @@ macro(genHeaderTemplate dir name json_name arch json_globals)
   add_custom_command(OUTPUT ${__out_file}
     COMMAND ${CMAKE_COMMAND} -E make_directory ${BFASM_BINARY_DIR}/gen/${dir}
     COMMAND ${BFASM_BINARY_DIR}/json2cpp +ehD ${__gopt} ${__globals} -N ${arch}
-            -run '${json_name}' -c ${__cfg_file} ${__size_file} > ${__out_file}
+            -n '${json_name}' -c ${__cfg_file} ${__size_file} > ${__out_file}
     DEPENDS ${__cfg_file} ${__size_file} json2cpp)
 endmacro(genHeaderTemplate)
 
@@ -35,7 +35,7 @@ macro(genSourceTemplate dir name json_name arch json_globals)
   add_custom_command(OUTPUT ${__out_file}
     COMMAND ${CMAKE_COMMAND} -E make_directory ${BFASM_BINARY_DIR}/gen/${dir}
     COMMAND ${BFASM_BINARY_DIR}/json2cpp +ehDD ${__gopt} ${__globals} -N ${arch}
-            -run '${json_name}' -c ${__cfg_file} -I ${name}.h ${__size_file} > ${__out_file}
+            -n '${json_name}' -c ${__cfg_file} -I ${name}.h ${__size_file} > ${__out_file}
     DEPENDS ${__cfg_file} ${__size_file} json2cpp)
 endmacro(genSourceTemplate)
 

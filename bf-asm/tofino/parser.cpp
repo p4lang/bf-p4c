@@ -382,7 +382,7 @@ template<> void Parser::write_config(Target::Tofino::parser_regs &regs) {
         regs.ingress.disable_if_zero();
         regs.egress.disable_if_zero();
         regs.merge.disable_if_zero(); }
-    if (error_count == 0) {
+    if (error_count == 0 && options.gen_json) {
         regs.memory[INGRESS].emit_json(
             *open_output("memories.all.parser.ingress.cfg.json"), "ingress");
         regs.memory[EGRESS].emit_json(
@@ -391,14 +391,15 @@ template<> void Parser::write_config(Target::Tofino::parser_regs &regs) {
         regs.egress.emit_json(*open_output("regs.all.parser.egress.cfg.json"));
         regs.merge.emit_json(*open_output("regs.all.parse_merge.cfg.json")); }
     for (int i = 0; i < 18; i++) {
-        TopLevel::regs<Target::Tofino>()->mem_pipe.i_prsr[i] = "memories.all.parser.ingress";
+        TopLevel::regs<Target::Tofino>()->mem_pipe.i_prsr[i]
+            .set("memories.all.parser.ingress", &regs.memory[INGRESS]);
         TopLevel::regs<Target::Tofino>()->reg_pipe.pmarb.ibp18_reg.ibp_reg[i]
-            = "regs.all.parser.ingress";
-        TopLevel::regs<Target::Tofino>()->mem_pipe.e_prsr[i] = "memories.all.parser.egress";
+            .set( "regs.all.parser.ingress", &regs.ingress);
+        TopLevel::regs<Target::Tofino>()->mem_pipe.e_prsr[i]
+            .set("memories.all.parser.egress", &regs.memory[EGRESS]);
         TopLevel::regs<Target::Tofino>()->reg_pipe.pmarb.ebp18_reg.ebp_reg[i]
-            = "regs.all.parser.egress";
-    }
-    TopLevel::regs<Target::Tofino>()->reg_pipe.pmarb.prsr_reg = "regs.all.parse_merge";
+            .set("regs.all.parser.egress", &regs.egress); }
+    TopLevel::regs<Target::Tofino>()->reg_pipe.pmarb.prsr_reg.set("regs.all.parse_merge", &regs.merge);
     for (auto st : all)
         TopLevel::all->name_lookup["directions"][st->gress ? "1" : "0"]
                 ["parser_states"][std::to_string(st->stateno.word1)] = st->name;

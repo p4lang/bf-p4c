@@ -40,13 +40,12 @@ class BarefootBackend(BackendDriver):
         self.add_command('compiler',
                          os.path.join(os.environ['P4C_BIN_DIR'], 'p4c-barefoot'))
         self.add_command('assembler', bfas)
-        self.add_command('linker', bflink)
         if os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
             self.add_command('verifier', os.path.join(os.environ['P4C_BIN_DIR'],
                                                       '../../scripts/validate_context_json'))
 
         # order of commands
-        self.enable_commands(['preprocessor', 'compiler', 'assembler', 'linker'])
+        self.enable_commands(['preprocessor', 'compiler', 'assembler'])
 
         # additional options
         self.add_command_line_options()
@@ -55,7 +54,7 @@ class BarefootBackend(BackendDriver):
         # BackendDriver.add_command_line_options(self)
         self._argGroup = self._argParser.add_argument_group("Barefoot Networks specific options")
         self._argGroup.add_argument("-s", dest="run_post_compiler",
-                                    help="Only run assembler and linker",
+                                    help="Only run assembler",
                                     action="store_true", default=False)
         self._argGroup.add_argument("--no-link", dest="skip_linker",
                                     help="Run up to linker",
@@ -76,11 +75,6 @@ class BarefootBackend(BackendDriver):
 
     def config_assembler(self, targetName):
         self.add_command_option('assembler', "--target " + targetName)
-
-    def config_linker(self, targetName):
-        self.add_command_option('linker', "--walle " + walle)
-        self.add_command_option('linker', "--target " + targetName)
-        self._linkerTargetName = targetName
 
 
     def process_command_line_options(self, opts):
@@ -111,16 +105,12 @@ class BarefootBackend(BackendDriver):
             self._postCmds['assembler'] = []
             self._postCmds['assembler'].append(["rm -f {}.bfa".format(basepath)])
 
-        self.add_command_option('linker', "-o {}/{}.bin".format(output_dir, self._linkerTargetName))
-        self.add_command_option('linker', "{}/*.cfg.json".format(output_dir))
-        self.add_command_option('linker', "-b {}".format(self._source_basename))
-
         src_filename, src_extension = os.path.splitext(self._source_filename)
         # local options
         if opts.run_post_compiler or src_extension == '.bfa':
-            self.enable_commands(['assembler', 'linker'])
-        if opts.skip_linker or src_extension == '.bfa':
-            self.disable_commands(['linker'])
+            self.enable_commands(['assembler'])
+        if opts.skip_linker:
+            self.add_command_option('assembler', "--no-bin")
 
         if opts.validate_output and os.environ['P4C_BUILD_TYPE'] == "DEVELOPER":
             self.add_command_option('verifier', "{}/context.json".format(output_dir))

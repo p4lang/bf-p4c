@@ -37,7 +37,7 @@ public:
         auto it = v.begin();
         for (auto &e : data) {
             if (it == v.end()) break;
-            new(&e) T(*v++); } }
+            new(&e) T(*it++); } }
     T& operator[](size_t idx) {
         if (idx >= S) ERROR("array index " << idx << " out of bounds " << this);
         if (disabled_) ERROR("Accessing disabled record " << this);

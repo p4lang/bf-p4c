@@ -17,7 +17,10 @@ public:
     virtual void output(json::map &) = 0;
     static void output_all(json::map &ctxtJson) { all->output(ctxtJson); }
     template<class T> static TopLevelTarget<T> *regs();
-    virtual void set_mau_stage(int, const char *) = 0;
+#define SET_MAU_STAGE(TARGET)                                                           \
+    virtual void set_mau_stage(int, const char *i, Target::TARGET::mau_regs *r) {       \
+        assert(!"register mismatch"); }
+    FOR_ALL_TARGETS(SET_MAU_STAGE)
 };
 
 template<class TARGET>
@@ -28,7 +31,8 @@ public:
     ~TopLevelTarget();
 
     void output(json::map &);
-    void set_mau_stage(int stage, const char *file) { this->reg_pipe.mau[stage] = file; }
+    void set_mau_stage(int stage, const char *file, typename TARGET::mau_regs *regs) {
+        this->reg_pipe.mau[stage].set(file, regs); }
 };
 
 template<class T> TopLevelTarget<T> *TopLevel::regs() {

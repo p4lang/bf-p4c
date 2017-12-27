@@ -344,11 +344,10 @@ void Deparser::process() {
 /* The following uses of specialized templates must be after the specialization... */
 void Deparser::output(json::map& map) {
     SWITCH_FOREACH_TARGET(options.target,
-        TARGET::deparser_regs    regs;
-        declare_registers(&regs);
-        write_config(regs);
-        undeclare_registers(&regs);
-        gen_learn_quanta(regs, map["learn_quanta"]);
+        auto *regs = new TARGET::deparser_regs;
+        declare_registers(regs);
+        write_config(*regs);
+        gen_learn_quanta(*regs, map["learn_quanta"]);
     )
 }
 

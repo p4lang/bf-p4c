@@ -3,9 +3,12 @@
 
 enum config_version_t { CONFIG_OLD=1, CONFIG_NEW=2, CONFIG_BOTH=3 };
 enum target_t { TOFINO=1, JBAY=2, TARGET_INDEX_LIMIT };
+enum binary_type_t { NO_BINARY, FOUR_PIPE, ONE_PIPE };
 extern struct option_t {
     config_version_t    version;
     target_t            target;
+    binary_type_t       binary;
+    bool                gen_json;
     bool                match_compiler;
     bool                condense_json;
     bool                debug_info;

@@ -14,7 +14,6 @@ TIME=false
 PARALLEL=1
 TOKEN_READ=0
 TOKEN_WRITE=0
-BFAS_OPTS="-Mvvvvl"
 
 shopt -s nullglob
 set -o pipefail
@@ -363,10 +362,12 @@ function test_p4() {
             rm $f
         fi
     done
-    if $brig && ! $diff; then
-        BFAS_OPTS="-vvvvl"
+    if $diff; then
+        BFAS_OPTS="--gen-json -M"
+    else
+        BFAS_OPTS=""
     fi
-    if $ok && run $BFAS -g -o brig $BFAS_OPTS brig/bfas.config.log $tfafile >brig/bfas.log 2>&1; then
+    if $ok && run $BFAS -g -o brig $BFAS_OPTS -vvvvl brig/bfas.config.log $tfafile >brig/bfas.log 2>&1; then
         # Validate context json output from assembler
         $SCHEMA > schema.json
         python $SCHEMA_VAL brig/context.json schema.json > context_json_schema_validate.log
@@ -503,7 +504,6 @@ function test_stf() {
     rv=0
     #if [[ ( ! -f `pwd`/$name.out/$name.tfa || $fast = false ) && ! -d $outdir ]]; then
     if ! $outdir; then
-        BFAS_OPTS="-vvvvl"
         test_p4 $name.p4
     fi
     #if [[ -r `pwd`/$name.out/$name.tfa && ( ! -r `pwd`/$name.out/$name.out/tofino-bin || $fast = false ) ]]; then

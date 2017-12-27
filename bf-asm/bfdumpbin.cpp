@@ -5,6 +5,10 @@
 #include <string.h>
 #include <string>
 
+struct {
+    bool        oneLine;
+} options;
+
 int dump_bin (FILE *fd) {
 
     uint32_t atom_typ = 0;
@@ -32,13 +36,22 @@ int dump_bin (FILE *fd) {
             if ((uint64_t)count * width % 32 != 0)
                 printf("  (not a multiple of 32 bits!)");
             count = (uint64_t)count * width / 32;
+            uint32_t data, prev;
+            int repeat = 0, col = 0;
             for (unsigned i = 0; i < count; ++i) {
-                if (i % 8 == 0) printf("\n   ");
-                uint32_t data;
                 if (fread(&data, 4, 1, fd) != 1) return -1;
-                printf(" %08x", data); }
+                if (i != 0 && data == prev) {
+                    repeat++;
+                    continue; }
+                if (repeat > 0) {
+                    printf(" x%-7d", repeat+1);
+                    if (++col > 8) col = 0; }
+                repeat = 0;
+                if (!options.oneLine && col++ % 8 == 0) printf("\n   ");
+                printf(" %08x", prev = data); }
+            if (repeat > 0)
+                printf(" x%d", repeat+1);
             printf("\n");
-
         } else if ((atom_typ >> 24) == 'D') {
             // D block -- write a range of 128-bit memory via 64-bit chip address
             // size of the range is specified as count * width (in bits), which must
@@ -68,7 +81,7 @@ int dump_bin (FILE *fd) {
                     printf(" x%d", repeat+1);
                     col = 0; }
                 repeat = 0;
-                if (col++ % 2 == 0) printf("\n   ");
+                if (!options.oneLine && col++ % 2 == 0) printf("\n   ");
                 printf(" %016" PRIx64 "%016" PRIx64, prev_chunk[1] = chunk[1],
                        prev_chunk[0] = chunk[0]); }
 
@@ -78,7 +91,7 @@ int dump_bin (FILE *fd) {
 
             if (count * width % 16 == 8) {
                 if (fread(chunk, sizeof(uint64_t), 1, fd) != 1) return -1;
-                if (col % 2 == 0) printf("\n   ");
+                if (!options.oneLine && col % 2 == 0) printf("\n   ");
                 printf(" %016" PRIx64, chunk[0]); }
             printf("\n");
 
@@ -100,8 +113,14 @@ int main(int ac, char **av) {
     int error = 0;
     for (int i = 1; i < ac; ++i) {
         if (*av[i] == '-') {
-            fprintf(stderr, "ignoring argument %s\n", av[i]);
-            error = 1;
+            for (char *arg = av[i]+1; *arg;)
+                switch (*arg++) {
+                case 'L':
+                    options.oneLine = true;
+                    break;
+                default:
+                    fprintf(stderr, "ignoring argument -%c\n", *arg);
+                    error = 1; }
         } else if (FILE *fp = fopen(av[i], "r")) {
             unsigned char magic[4] = {};
             fread(magic, 4, 1, fp);
@@ -124,6 +143,6 @@ int main(int ac, char **av) {
         }
     }
     if (error == 1)
-        fprintf(stderr, "usage: %s <file>", av[0]);
+        fprintf(stderr, "usage: %s <file>\n", av[0]);
     return error;
 }

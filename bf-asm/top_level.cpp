@@ -43,8 +43,8 @@ TopLevelTarget<TARGET>::~TopLevelTarget() {
 template<class TARGET>
 void TopLevelTarget<TARGET>::output(json::map &) {
     for (int i = 0; i < 4; i++) {
-        this->mem_top.pipes[i] = "memories.pipe";
-        this->reg_top.pipes[i] = "regs.pipe"; }
+        this->mem_top.pipes[i].set("memories.pipe", &this->mem_pipe);
+        this->reg_top.pipes[i].set("regs.pipe", &this->reg_pipe); }
     //this->reg_top.macs.disable();
     //this->reg_top.serdes.disable();
     if (options.condense_json) {
@@ -53,11 +53,19 @@ void TopLevelTarget<TARGET>::output(json::map &) {
         this->reg_top.disable_if_zero();
         this->reg_pipe.disable_if_zero(); }
     if (error_count == 0) {
-        this->mem_top.emit_json(*open_output("memories.top.cfg.json"));
-        this->mem_pipe.emit_json(*open_output("memories.pipe.cfg.json"));
-        this->reg_top.emit_json(*open_output("regs.top.cfg.json"));
-        this->reg_pipe.emit_json(*open_output("regs.pipe.cfg.json"));
-    }
+        if (options.gen_json) {
+            this->mem_top.emit_json(*open_output("memories.top.cfg.json"));
+            this->mem_pipe.emit_json(*open_output("memories.pipe.cfg.json"));
+            this->reg_top.emit_json(*open_output("regs.top.cfg.json"));
+            this->reg_pipe.emit_json(*open_output("regs.pipe.cfg.json")); }
+        if (options.binary != NO_BINARY) {
+            auto binfile = open_output("%s.bin", TARGET::name);
+            if (options.binary == FOUR_PIPE) {
+                this->mem_top.emit_binary(*binfile, 0);
+                this->reg_top.emit_binary(*binfile, 0);
+            } else if (options.binary == ONE_PIPE) {
+                this->mem_pipe.emit_binary(*binfile, 0);
+                this->reg_pipe.emit_binary(*binfile, 0); } } }
 }
 
 template class TopLevelTarget<Target::Tofino>;

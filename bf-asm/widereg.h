@@ -20,6 +20,8 @@ struct widereg_base {
     widereg_base() : read(false), write(false), disabled(false) {}
     widereg_base(bitvec v) : value(v), read(false), write(false), disabled(false) {}
     widereg_base(uintptr_t v) : value(v), read(false), write(false), disabled(false) {}
+    widereg_base(intptr_t v) : value(v), read(false), write(false), disabled(false) {}
+    widereg_base(int v) : value(v), read(false), write(false), disabled(false) {}
     operator bitvec() const { read = true; return value; }
     bool modified() const { return write; }
     bool disable_if_zero() const { return value.empty() && !write; }
@@ -59,6 +61,8 @@ template<int N> struct widereg : widereg_base {
         return *this; }
     widereg(bitvec v) : widereg_base(v) { check(); }
     widereg(uintptr_t v) : widereg_base(v) { check(); }
+    widereg(intptr_t v) : widereg_base(v) { check(); }
+    widereg(int v) : widereg_base(v) { check(); }
     widereg(const widereg &) = delete;
     widereg(widereg &&) = default;
     bitvec operator=(bitvec v) {
@@ -71,6 +75,8 @@ template<int N> struct widereg : widereg_base {
         log("=", v);
         check();
         return v; }
+    uintptr_t operator=(uintptr_t v) { *this = bitvec(v); return v; }
+    intptr_t operator=(intptr_t v) { *this = bitvec(v); return v; }
     const widereg &operator=(const widereg &v) { *this = v.value; v.read = true; return v; }
     const widereg_base &operator=(const widereg_base &v) {
         *this = v.value; v.read = true; return v; }

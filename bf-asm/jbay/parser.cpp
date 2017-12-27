@@ -280,9 +280,9 @@ template<> void Parser::write_config(Target::JBay::parser_regs &regs) {
     regs.merge.lr1.g_start_table.table = 0x1ff;
 
     for (auto &ref : regs.ingress.prsr)
-        ref = "regs.parser.main.ingress";
+        ref.set("regs.parser.main.ingress", &regs.main[INGRESS]);
     for (auto &ref : regs.egress.prsr)
-        ref = "regs.parser.main.egress";
+        ref.set("regs.parser.main.egress", &regs.main[EGRESS]);
     if (error_count == 0) {
         if (options.condense_json) {
             // FIXME -- removing the uninitialized memory causes problems?
@@ -295,22 +295,28 @@ template<> void Parser::write_config(Target::JBay::parser_regs &regs) {
             regs.main[INGRESS].disable_if_zero();
             regs.main[EGRESS].disable_if_zero();
             regs.merge.disable_if_zero(); }
-        regs.memory[INGRESS].emit_json(*open_output("memories.parser.ingress.cfg.json"), "ingress");
-        regs.memory[EGRESS].emit_json(*open_output("memories.parser.egress.cfg.json"), "egress");
-        regs.ingress.emit_json(*open_output("regs.parser.ingress.cfg.json"));
-        regs.egress.emit_json(*open_output("regs.parser.egress.cfg.json"));
-        regs.main[INGRESS].emit_json(*open_output("regs.parser.main.ingress.cfg.json"), "ingress");
-        regs.main[EGRESS].emit_json(*open_output("regs.parser.main.egress.cfg.json"), "egress");
-        regs.merge.emit_json(*open_output("regs.parse_merge.cfg.json")); }
+        if (options.gen_json) {
+            regs.memory[INGRESS].emit_json(*open_output("memories.parser.ingress.cfg.json"),
+                                           "ingress");
+            regs.memory[EGRESS].emit_json(*open_output("memories.parser.egress.cfg.json"),
+                                          "egress");
+            regs.ingress.emit_json(*open_output("regs.parser.ingress.cfg.json"));
+            regs.egress.emit_json(*open_output("regs.parser.egress.cfg.json"));
+            regs.main[INGRESS].emit_json(*open_output("regs.parser.main.ingress.cfg.json"),
+                                         "ingress");
+            regs.main[EGRESS].emit_json(*open_output("regs.parser.main.egress.cfg.json"),
+                                        "egress");
+            regs.merge.emit_json(*open_output("regs.parse_merge.cfg.json")); } }
     for (auto &ref : TopLevel::regs<Target::JBay>()->mem_pipe.parde.i_prsr_mem)
-        ref = "memories.parser.ingress";
+        ref.set("memories.parser.ingress", &regs.memory[INGRESS]);
     for (auto &ref : TopLevel::regs<Target::JBay>()->mem_pipe.parde.e_prsr_mem)
-        ref = "memories.parser.egress";
+        ref.set("memories.parser.egress", &regs.memory[EGRESS]);
     for (auto &ref : TopLevel::regs<Target::JBay>()->reg_pipe.pardereg.pgstnreg.ipbprsr4reg)
-        ref = "regs.parser.ingress";
+        ref.set("regs.parser.ingress", &regs.ingress);
     for (auto &ref : TopLevel::regs<Target::JBay>()->reg_pipe.pardereg.pgstnreg.epbprsr4reg)
-        ref = "regs.parser.egress";
-    TopLevel::regs<Target::JBay>()->reg_pipe.pardereg.pgstnreg.pmergereg = "regs.parse_merge";
+        ref.set("regs.parser.egress", &regs.egress);
+    TopLevel::regs<Target::JBay>()->reg_pipe.pardereg.pgstnreg.pmergereg
+        .set("regs.parse_merge", &regs.merge);
     for (auto st : all)
         TopLevel::all->name_lookup["directions"][st->gress ? "1" : "0"]
                 ["parser_states"][std::to_string(st->stateno.word1)] = st->name;

@@ -54,6 +54,3 @@ void ubits_base::log(const char *op, unsigned long v) const {
         LOG1(this << ' ' << op << ' ' << v <<
              (v != value ?  tmp << " (now " << value << ")", tmp : tmp).str() <<
              " (0x" << hex(value) << ")"); } }
-
-void ustring::log() const { LOG1(this << " = \"" << value << "\""); }
-

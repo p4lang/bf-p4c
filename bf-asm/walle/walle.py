@@ -49,6 +49,7 @@ import subprocess
 import pickle
 import json
 import yaml
+import copy
 
 import csr
 import chip
@@ -108,34 +109,115 @@ def print_schema_info (schema_file, schema):
             hierarchies.append(key)
     sys.stdout.write("hierarchies: "+", ".join(hierarchies)+"\n")
 
+def parse_template_args(args, params):
+    """
+    Extend argparse.Namespace with additional arguments for cpp generation
+    from templates.yaml that may not exist as command line arguments
+    FIXME -- should be a way to do this with ArgParse?
+    """
+    def bool_arg(args, attr, val):
+        if not type(val) is bool:
+            raise Exception("Attribute "+attr+" requires bool argument, got "+str(val))
+        setattr(args, attr, val)
+    def str_arg(args, attr, val):
+        if not type(val) is str:
+            raise Exception("Attribute "+attr+" requires string argument, got "+str(val))
+        setattr(args, attr, val)
+    def add_list_arg(args, attr, val): getattr(args, attr).append(val)
+    def add_set_arg(args, attr, val): getattr(args, attr).add(val)
+    def set_decl(args, attr, val): args.gen_decl = 'decl'
+    def set_defn(args, attr, val): args.gen_decl = 'defn'
+
+    options = {
+        'checked_array': (True, bool_arg),
+        'decl': (None, set_decl),
+        'delete_copy': (False, bool_arg),
+        'defn': (None, set_defn),
+        'dump_unread': (False, bool_arg),
+        'emit_binary': (False, bool_arg),
+        'emit_fieldname': (False, bool_arg),
+        'emit_json': (False, bool_arg),
+        'enable_disable': (False, bool_arg),
+        'expand_disabled_vector': (False, bool_arg),
+        'gen_decl': ('both', str_arg),
+        'global_types': (set(), add_set_arg),
+        'global': (None, lambda args, attr, val: add_set_arg(args, 'global_types', val)),
+        'include': ([], add_list_arg),
+        'name': (None, str_arg),
+        'namespace': (False, str_arg),
+        'unpack_json': (False, bool_arg),
+        'widereg': (False, bool_arg),
+        'write_dma': (set(), add_set_arg)
+    }
+
+    if not hasattr(args, 'cpp_reserved'):
+        args.cpp_reserved = set([
+            "asm", "auto", "break", "case", "catch", "char", "class", "const", "continue",
+            "default", "delete", "do", "double", "else", "enum", "extern", "float", "for",
+            "friend", "goto", "if", "inline", "int", "long", "new", "operator", "private",
+            "protected", "public", "register", "return", "short", "signed", "sizeof",
+            "static", "struct", "switch", "template", "this", "throw", "try", "typedef",
+            "union", "unsigned", "virtual", "void", "volatile", "while" ])
+    for opt in options:
+        if options[opt][0] is not None:
+            if hasattr(args, opt):
+                setattr(args, opt, copy.copy(getattr(args, opt)))
+            else:
+                setattr(args, opt, copy.copy(options[opt][0]))
+    for p in params:
+        s = p.split('=', 1)
+        if p in options:
+            options[p][1](args, p, True)
+        elif p[0] == '-' and p[1:] in options:
+            options[p[1:]][1](args, p[1:], False)
+        elif s[0] in options:
+            options[s[0]][1](args, s[0], s[1])
+        elif p[:2] == "-I":
+            args.include.append(p[2:])
+        else:
+            sys.stderr.write("Unknown parameter %s\n" % str(p));
+
+    if args.enable_disable:
+        args.cpp_reserved = args.cpp_reserved.copy()
+        args.cpp_reserved.update(["disable", "disable_if_zero", "enable", "modified"])
+
+def read_template_file(template_file, args, schema):
+    with open(template_file, "rb") as template_objects_file:
+        templatization_cfg = yaml.load(template_objects_file)
+        top_level_objs = templatization_cfg["generate"]
+        disabled_objs = templatization_cfg["ignore"]
+        if "global" in templatization_cfg:
+            parse_template_args(args, templatization_cfg["global"])
+    for section_name, section in schema.items():
+        if section_name not in top_level_objs:
+            if section_name[0] != "_":
+                sys.stderr.write("no template cfg for "+section_name+", ignoring\n");
+            continue;
+        for obj in top_level_objs[section_name]:
+            section[obj].templatization_behavior = "top_level"
+            section[obj].object_name = None
+            if top_level_objs[section_name][obj] is None: continue
+            for fname, params in top_level_objs[section_name][obj].items():
+                for p in params:
+                    if p[:5] == 'name=':
+                        section[obj].object_name = p[5:]
+                        break
+        for obj in disabled_objs[section_name]:
+            if section[obj].templatization_behavior != None:
+                raise Exception(obj+" cannot be both templatized and ignored")
+            section[obj].templatization_behavior = "disabled"
+    return top_level_objs
+
 def generate_templates (args, schema):
     if args.o == None:
         args.o = "templates"
     if not os.path.exists(args.o):
         os.makedirs(args.o)
 
-    if not os.path.isfile(args.schema):
-        sys.stderr.write("ERROR: Template list file '"+os.path.abspath(args.schema)+"' could not be opened or does not exist.\n")
-        sys.exit(1)
-    with open(args.generate_templates, "rb") as template_objects_file:
-        templatization_cfg = yaml.load(template_objects_file)
-        top_level_objs = templatization_cfg["generate"]
-        disabled_objs = templatization_cfg["ignore"]
-
+    top_level_objs = read_template_file(args.generate_templates, args, schema)
     for section_name, section in schema.items():
-        if section_name[0] == "_":
-            continue
         if section_name not in top_level_objs:
-            sys.stderr.write("no template cfg for "+section_name+", ignoring\n");
             continue;
-
-        for obj in top_level_objs[section_name]:
-            section[obj].templatization_behavior = "top_level"
-        for obj in disabled_objs[section_name]:
-            if section[obj].templatization_behavior != None:
-                raise Exception(obj+" cannot be both templatized and ignored")
-            section[obj].templatization_behavior = "disabled"
-
         for top_level_obj in top_level_objs[section_name]:
             template = section[top_level_obj].generate_template(False)
             sizes = section[top_level_obj].generate_template(True)
@@ -158,6 +240,73 @@ def generate_templates (args, schema):
             size_name = section_name+"."+top_level_obj+".size.json"
             with open(os.path.join(args.o, size_name), "wb") as outfile:
                 json.dump(sizes, outfile, indent=4, sort_keys=True)
+
+def generate_cpp_file(outfile, top_level, args, schema):
+    outfile.write("/* Autogenerated from %s and %s -- DO NOT EDIT */\n" % (
+                  args.schema, args.generate_cpp))
+    for incl in args.include:
+        outfile.write('#include "%s"\n' % incl)
+    if args.emit_json or args.emit_fieldname or args.dump_unread:
+        outfile.write('#include "indent.h"\n')
+    if args.unpack_json:
+        outfile.write('#include "json.h"\n')
+    if args.checked_array:
+        outfile.write('#include "checked_array.h"\n')
+    if args.emit_binary:
+        outfile.write('#include "binary_output.h"\n')
+    outfile.write('#include "ubits.h"\n')
+    outfile.write('#include "register_reference.h"\n')
+    if args.widereg:
+        outfile.write('#include "widereg.h"\n')
+    outfile.write('\n')
+    if len(args.global_types) > 0:
+        args.global_types_generated = {}
+        top_level.gen_global_types(outfile, args, schema)
+    if args.namespace:
+        outfile.write('namespace %s {\n\n' % args.namespace)
+    top_level.generate_cpp(outfile, args, schema)
+    outfile.write(";\n")
+    if args.namespace:
+        outfile.write('\n}  // end namespace %s\n\n' % args.namespace)
+
+def extend_args(args, params):
+    """
+    parse additional template arguments into a copy of 'args'
+    """
+    args = copy.copy(args)
+    parse_template_args(args, params)
+    return args
+
+def generate_cpp (args, schema):
+    if args.o == None:
+        args.o = "gen"
+    if not os.path.exists(args.o):
+        os.makedirs(args.o)
+
+    top_level_objs = read_template_file(args.generate_cpp, args, schema)
+    for section_name, section in schema.items():
+        if section_name not in top_level_objs:
+            continue;
+        for top_level_obj,files in top_level_objs[section_name].items():
+            if files is None: continue
+            for generate_file,params in files.items():
+                generate_cpp_file(open(os.path.join(args.o, generate_file), "w"),
+                                  section[top_level_obj], extend_args(args, params), schema)
+
+def print_schema_text(args, schema):
+    def do_print(indent, obj):
+        for key,val in obj.items():
+            if type(val) is str:
+                print "%s%s: %s" % (indent, key, val)
+            elif type(val) is dict:
+                print "%s%s:" % (indent, key)
+                do_print(indent+"  ", val)
+            elif val.templatization_behavior == "top_level":
+                print "%s%s:" % (indent, key)
+                val.print_as_text(indent+"  ")
+
+    read_template_file(args.print_schema, args, schema)
+    do_print("", schema)
 
 def build_binary_cache (args, schema):
     cache = csr.binary_cache(schema)
@@ -249,11 +398,16 @@ def walle_process(parser, args=None):
             outfile.write('\n\n' + output)
 
         if args.generate_templates != None:
+            if not os.path.isfile(args.schema):
+                sys.stderr.write("ERROR: Schema file '"+os.path.abspath(args.schema)+
+                                 "' could not be opened or does not exist.\n")
+                sys.exit(1)
             generate_templates(args, schema)
     else:
 
         if not os.path.isfile(args.schema):
-            sys.stderr.write("ERROR: Schema file '"+os.path.abspath(args.schema)+"' could not be opened or does not exist.\n")
+            sys.stderr.write("ERROR: Schema file '"+os.path.abspath(args.schema)+
+                             "' could not be opened or does not exist.\n")
             sys.exit(1)
 
         with open(args.schema, "rb") as infile:
@@ -263,8 +417,12 @@ def walle_process(parser, args=None):
             print_schema_info(os.path.abspath(args.schema), schema)
         elif args.dump_schema:
             print yaml.dump(schema)
+        elif args.print_schema:
+            print_schema_text(args, schema)
         elif args.generate_templates != None:
             generate_templates(args, schema)
+        elif args.generate_cpp != None:
+            generate_cpp(args, schema)
         else:
             if len(args.configs)==0:
                 parser.print_help()
@@ -311,6 +469,12 @@ def main():
         help="Dump chip schema as yaml"
     )
     parser.add_argument(
+        "--print-schema",
+        metavar='TOP-LEVEL-OBJS-FILE',
+        type=str,
+        help="Dump chip schema as (readable?) text"
+    )
+    parser.add_argument(
         "--generate-schema",
         metavar='BFNREGS-TARGET-DIR',
         type=str,
@@ -327,6 +491,12 @@ def main():
         metavar='TOP-LEVEL-OBJS-FILE',
         type=str,
         help="Generate an 'all-0s' template for each addressmap listed in the given top-level objects file",
+    )
+    parser.add_argument(
+        "--generate-cpp",
+        metavar='TOP-LEVEL-OBJS-FILE',
+        type=str,
+        help="Generate C++ code for each addressmap listed in the given top-level objects file",
     )
     parser.add_argument(
         "--template-indices",

@@ -267,11 +267,10 @@ void Parser::output(json::map & ctxt_json) {
     if (error_count > 0) return;
     tcam_row_use[INGRESS] = tcam_row_use[EGRESS] = PARSER_TCAM_DEPTH;
     SWITCH_FOREACH_TARGET(options.target,
-        TARGET::parser_regs       regs;
-        declare_registers(&regs);
-        write_config(regs);
-        undeclare_registers(&regs);
-        gen_configuration_cache(regs, ctxt_json["configuration_cache"]);
+        auto *regs = new TARGET::parser_regs;
+        declare_registers(regs);
+        write_config(*regs);
+        gen_configuration_cache(*regs, ctxt_json["configuration_cache"]);
     )
 }
 

@@ -355,37 +355,36 @@ template<class TARGET> void Stage::write_common_regs(typename TARGET::mau_regs &
 
 template<class TARGET>
 void Stage::output(json::map &ctxt_json) {
-    typename TARGET::mau_regs regs;
-    declare_registers(&regs, stageno);
+    auto *regs = new typename TARGET::mau_regs();
+    declare_registers(regs, stageno);
     json::map &names = TopLevel::all->name_lookup["stages"][std::to_string(stageno)];
     Phv::output_names(names["containers"]);
     json::map &table_names = names["logical_tables"];
     for (auto table : tables) {
-        table->write_regs(regs);
+        table->write_regs(*regs);
         table->gen_tbl_cfg(ctxt_json["tables"]);
         if (table->logical_id >= 0)
             table->gen_name_lookup(table_names[std::to_string(table->logical_id)]); }
-    write_regs(regs);
+    write_regs(*regs);
     if (options.condense_json)
-        regs.disable_if_zero();
+        regs->disable_if_zero();
     // Enable mapram_config and imem regs -
     // These are cached by the driver, so if they are disabled they wont go
     // into tofino.bin as dma block writes and driver will complain
     // The driver needs the regs to do parity error correction at runtime and it
     // checks for the base address of the register blocks to do a block DMA
     // during tofino.bin download
-    regs.dp.imem.enable();
+    regs->dp.imem.enable();
     for(int row = 0; row < SRAM_ROWS; row++)
         for(int col = 0; col < MAPRAM_UNITS_PER_ROW; col++)
-            regs.rams.map_alu.row[row].adrmux.mapram_config[col].enable();
-    if (error_count == 0)
-        regs.emit_json(*open_output("regs.match_action_stage.%02x.cfg.json", stageno) , stageno);
+            regs->rams.map_alu.row[row].adrmux.mapram_config[col].enable();
+    if (error_count == 0 && options.gen_json)
+        regs->emit_json(*open_output("regs.match_action_stage.%02x.cfg.json", stageno) , stageno);
     char buf[64];
     sprintf(buf, "regs.match_action_stage.%02x", stageno);
     if (stageno < Target::NUM_MAU_STAGES())
-        TopLevel::all->set_mau_stage(stageno, buf);
-    undeclare_registers(&regs);
-    gen_configuration_cache(regs, ctxt_json["configuration_cache"]);
+        TopLevel::all->set_mau_stage(stageno, buf, regs);
+    gen_configuration_cache(*regs, ctxt_json["configuration_cache"]);
 }
 
 template<class REGS>

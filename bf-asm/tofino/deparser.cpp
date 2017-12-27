@@ -350,11 +350,13 @@ template<> void Deparser::write_config(Target::Tofino::deparser_regs &regs) {
     if (options.condense_json) {
         regs.input.disable_if_zero();
         regs.header.disable_if_zero(); }
-    if (error_count == 0) {
+    if (error_count == 0 && options.gen_json) {
         regs.input.emit_json(*open_output("regs.all.deparser.input_phase.cfg.json"));
         regs.header.emit_json(*open_output("regs.all.deparser.header_phase.cfg.json")); }
-    TopLevel::regs<Target::Tofino>()->reg_pipe.deparser.hdr = "regs.all.deparser.header_phase";
-    TopLevel::regs<Target::Tofino>()->reg_pipe.deparser.inp = "regs.all.deparser.input_phase";
+    TopLevel::regs<Target::Tofino>()->reg_pipe.deparser.hdr
+            .set("regs.all.deparser.header_phase", &regs.header);
+    TopLevel::regs<Target::Tofino>()->reg_pipe.deparser.inp
+            .set("regs.all.deparser.input_phase", &regs.input);
 }
 
 template<> unsigned Deparser::FDEntry::Checksum::encode<Target::Tofino>() {

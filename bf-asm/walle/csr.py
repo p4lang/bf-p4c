@@ -8,6 +8,7 @@ import csv
 import os.path
 import hashlib
 import copy
+import string
 
 from operator import mul
 from types import StringTypes
@@ -19,8 +20,10 @@ import chip
 
 def array_str(array_idx):
     """
-    TODO: docstring
+    Given a list of integers, return a string containing those integers in []
+    for generating a C++ index expression
     """
+    if array_idx is None: return ""
     return reduce(lambda x,y: x+"[%i]"%y,array_idx,"")
 
 def product(seq):
@@ -63,9 +66,35 @@ def nd_array_loop(count, data, func, context=None, current_dim=0):
     if current_dim < len(count)-1:
         for idx in range(0, count[current_dim]):
             context[current_dim] = idx
-            nd_array_loop(count, data[idx], func, context, current_dim+1)
+            nd_array_loop(count, None if data is None else data[idx], func, context, current_dim+1)
     else:
         func(data, context)
+
+def count_array_loop(count, func, context=None, current_dim=0):
+    """
+    Given a vector of dimensions, call func for each possible legal index
+    Essentially a variable-depth nested for loop.
+
+    @param   count  A list of integers recording the number of elements
+                    in each dimension of the data. Should be N elements
+                    long.
+    @param   func   A function that takes one argument, which is called on
+                    on every legal set of indexes of the given dimensions
+                    Its argument is the 'context' of this function call: a list of
+                    integers recording at which index in each dimension.
+
+                      This list is SHARED ACROSS ALL INVOCATIONS of func(),
+                      so while it's safe to modify it should be copied if
+                      intended to be stored beyond the current scope.
+    """
+    if context == None:
+        context = [0]*len(count)
+    if current_dim < len(count):
+        for idx in range(0, count[current_dim]):
+            context[current_dim] = idx
+            count_array_loop(count, func, context, current_dim+1)
+    else:
+        func(context)
 
 ########################################################################
 ## Structures
@@ -178,7 +207,694 @@ class csr_object (object):
         else:
             return templatized_self
 
-class address_map(csr_object):
+    def is_field(self):
+        return False
+    def is_singleton(self):
+        return False
+    def singleton_obj(self):
+        return self
+
+class csr_composite_object (csr_object):
+    """
+    Base class for composite (non-leaf) CSR objects.  All such objects have one
+    or more children
+    """
+    def __init__(self, name, count):
+        csr_object.__init__(self, name, count)
+    def children(self):
+        raise CsrException("Unimplemented abstract method for " + type(self))
+
+    def gen_method_declarator(self, outfile, args, rtype, classname, name, argdecls, suffix):
+        outfile.write("%s " % rtype)
+        if args.gen_decl == 'defn': outfile.write("%s::" % classname)
+        outfile.write("%s(" % name)
+        first = True
+        for a in argdecls:
+            if not first:
+                outfile.write(", ")
+            outfile.write(a)
+            first = False
+        outfile.write(")")
+        if suffix != '':
+            outfile.write(" %s" % suffix)
+        if args.gen_decl == 'decl':
+            outfile.write(";\n")
+            return True
+        outfile.write(" {\n")
+        return False
+
+    def gen_emit_method(self, outfile, args, schema, classname, name, nameargs, indent):
+        outfile.write(indent)
+        argdecls = ["std::ostream &out"]
+        for idx, argtype in enumerate(nameargs):
+            argdecls.append("%sna%d" % (argtype, idx))
+        if args.gen_decl == 'defn':
+            argdecls.append("indent_t indent")
+        else:
+            argdecls.append("indent_t indent = 1")
+        if self.gen_method_declarator(outfile, args, "void", classname,
+                                      "emit_json", argdecls, "const"):
+            return
+        indent += "  "
+        if args.enable_disable:
+            outfile.write("%sif (disabled_) {\n" % indent)
+            outfile.write('%s  out << "0";\n' % indent)
+            outfile.write("%s  return; }\n" % indent)
+        outfile.write("%sout << '{' << std::endl;\n" % indent)
+        first = True
+        if self.top_level():
+            if len(nameargs) > 0:
+                tmplen = len(name) + len(nameargs)*10 + 32
+                outfile.write("%schar tmp[%d];\n" % (indent, tmplen))
+                outfile.write('%ssnprintf(tmp, sizeof(tmp), "%s"' % (indent, name))
+                for i in range(0, len(nameargs)):
+                    outfile.write(", na%d" % i)
+                outfile.write(");\n")
+                outfile.write('%sout << indent << "\\"_name\\": \\"" << tmp << "\\"";\n' % indent)
+            else:
+                outfile.write('%sout << indent << "\\"_name\\": \\"%s\\"";\n' % (indent, name))
+            outfile.write('%sout << ", \\n";\n' % indent)
+            outfile.write('%sout << indent << "\\"_reg_version\\": \\"%s\\"";\n' %
+                          (indent, schema["_reg_version"]))
+            outfile.write('%sout << ", \\n";\n' % indent)
+            outfile.write('%sout << indent << "\\"_schema_hash\\": \\"%s\\"";\n' %
+                          (indent, schema["_schema_hash"]))
+            outfile.write('%sout << ", \\n";\n' % indent)
+            outfile.write('%sout << indent << "\\"_section\\": \\"%s\\"";\n' %
+                          (indent, self.parent))
+            outfile.write('%sout << ", \\n";\n' % indent)
+            outfile.write('%sout << indent << "\\"_type\\": \\"%s.%s\\"";\n' %
+                          (indent, self.parent, self.name))
+            outfile.write('%sout << ", \\n";\n' % indent)
+            outfile.write('%sout << indent << "\\"_walle_version\\": \\"%s\\"";\n' %
+                          (indent, schema["_walle_version"]))
+            first = False
+        for a in sorted(self.children(), key=lambda a: a.name):
+            if not first:
+                outfile.write('%sout << ", \\n";\n' % indent)
+            outfile.write('%sout << indent << "\\"%s\\": ";\n' % (indent, a.name))
+            if a.disabled() and not args.expand_disabled_vector:
+                outfile.write('%sout << "0";\n' % indent)
+                continue
+            field_name = a.name
+            if field_name in args.cpp_reserved:
+                field_name += '_'
+            if a.count != (1,):
+                for idx_num, idx in enumerate(a.count):
+                    if args.enable_disable and args.checked_array and not a.disabled():
+                        outfile.write("%sif (%s" % (indent, field_name))
+                        for i in range(0, idx_num):
+                            outfile.write("[i%d]" % i)
+                        outfile.write(".disabled()) {\n")
+                        outfile.write('%s  out << "0";\n' % indent)
+                        outfile.write("%s} else {\n" % indent)
+                        indent += '  '
+                    outfile.write('%sout << "[\\n" << ++indent;\n' % indent)
+                    outfile.write('%sfor (int i%d = 0; i%d < %d; i%d++) { \n' %
+                                  (indent, idx_num, idx_num, idx, idx_num))
+                    outfile.write('%s  if (i%d) out << ", \\n" << indent;\n' % (indent, idx_num))
+                    indent += '  '
+            single = a.singleton_obj()
+            if single != a:
+                outfile.write('%sout << "{\\n" << indent+1 << "\\"%s\\": " << %s' %
+                              (indent, a.name, field_name))
+                if a.count != (1,):
+                    for i in range(0, len(a.count)):
+                        outfile.write("[i%d]" % i)
+                outfile.write(" << '\\n';\n")
+                outfile.write("%sout << indent << '}';\n" % indent)
+            elif a.is_field() or a.top_level():
+                outfile.write("%sout << %s" % (indent, field_name))
+                if a.count != (1,):
+                    for i in range(0, len(a.count)):
+                        outfile.write("[i%d]" % i)
+                outfile.write(";\n")
+            elif a.disabled():
+                outfile.write('%sout << 0;\n' % indent)
+            else:
+                outfile.write("%s%s" % (indent, field_name))
+                if a.count != (1,):
+                    for i in range(0, len(a.count)):
+                        outfile.write("[i%d]" % i)
+                outfile.write(".emit_json(out, indent+1);\n")
+            if a.count != (1,):
+                for i in range(0, len(a.count)):
+                    indent = indent[2:]
+                    outfile.write("%s}\n" % indent)
+                    outfile.write("%sout << '\\n' << --indent << ']';\n" % indent)
+                    if args.enable_disable and args.checked_array and not a.disabled():
+                        indent = indent[2:]
+                        outfile.write("%s}\n" %indent)
+            first = False
+        outfile.write("%sout << '\\n' << indent-1 << \"}\";\n" % indent)
+        indent = indent[2:]
+        outfile.write("%s}\n" % indent)
+
+    def gen_emit_binary_method(self, outfile, args, classname, indent):
+        outfile.write(indent)
+        if self.gen_method_declarator(outfile, args, "void", classname, "emit_binary",
+                ["std::ostream &out", "uint64_t a"], "const"):
+            return
+        indent += "  "
+        outfile.write("%sif (disabled_) return;\n" % indent)
+        root_parent = self.parent
+        while type(root_parent) is not str:
+            root_parent = root_parent.parent
+        addr_decl = "auto "
+        for a in self.children():
+            addr_var = "a"
+            if a.disabled(): continue
+            field_name = a.name
+            if field_name in args.cpp_reserved:
+                field_name += '_'
+            if root_parent=="memories":
+                indirect = True
+                width_unit = 128
+                address_unit = 16
+                type_tag = 'D'
+            elif a.name in args.write_dma:
+                indirect = True
+                width_unit = 32
+                address_unit = 1
+                type_tag = 'B'
+            else:
+                indirect = False
+                width_unit = 32
+                address_unit = 1
+                type_tag = 'R'
+            if indirect and type(a) is reg:
+                outfile.write("%sout << binout::tag('%s') << binout::byte8" % (indent, type_tag) +
+                              "(a + 0x%x) << binout::byte4(%d) << binout::byte4(%d);\n" %
+                              (a.offset//address_unit, width_unit,
+                               product(a.count) * a.width // width_unit))
+            if a.count != (1,):
+                outfile.write("%s%saddr = a;\n" % (indent, addr_decl))
+                addr_decl = ""
+                addr_var = "addr"
+                for idx_num, idx in enumerate(a.count):
+                    outfile.write('%sfor (int j%d = 0; j%d < %d; j%d++) { \n' %
+                                  (indent, idx_num, idx_num, idx, idx_num))
+                    indent += '  '
+            outfile.write(indent)
+            if not indirect and a.singleton_obj() != a:
+                outfile.write("out << binout::tag('R') << binout::byte4(%s " % addr_var +
+                              "+ 0x%x) << binout::byte4(" % (a.offset//address_unit))
+            elif a.top_level():
+                outfile.write("if (%s" % field_name)
+                if a.count != (1,):
+                    for i in range(0, len(a.count)):
+                        outfile.write("[j%d]" % i)
+                outfile.write(") ")
+            outfile.write(field_name)
+            if a.count != (1,):
+                for i in range(0, len(a.count)):
+                    outfile.write("[j%d]" % i)
+            if not indirect and a.singleton_obj() != a:
+                outfile.write(");\n")
+            else:
+                outfile.write("->" if a.top_level() else ".")
+                outfile.write("emit_binary(out, %s + 0x%x);\n" %
+                              (addr_var, a.offset//address_unit))
+            if a.count != (1,):
+                outfile.write("%saddr += 0x%x;\n" % (indent, a.address_stride()//address_unit))
+                for i in range(0, len(a.count)):
+                    indent = indent[2:]
+                    outfile.write("%s}\n" % indent)
+        indent = indent[2:]
+        outfile.write("%s}\n" % indent)
+
+    def gen_fieldname_method(self, outfile, args, classname, indent):
+        outfile.write(indent)
+        if self.gen_method_declarator(outfile, args, "void", classname, "emit_fieldname",
+                ["std::ostream &out", "const char *addr", "const void *end"], "const"):
+            return
+        indent += "  "
+        if not self.is_singleton():
+            outfile.write("%sif ((void *)addr == this && end == this+1) return;\n" % indent)
+        first = True
+        for a in sorted(self.children(), key=lambda a: a.name, reverse=True):
+            if a.disabled(): continue
+            field_name = a.name
+            if field_name in args.cpp_reserved:
+                field_name += '_'
+            outfile.write(indent)
+            if first: first = False
+            else: outfile.write("} else ")
+            outfile.write("if (addr >= (char *)&%s) {\n" % field_name)
+            indent += "  "
+            outfile.write('%sout << ".%s";\n' % (indent, a.name))
+            if a.count != (1,):
+                for i, idx in enumerate(a.count):
+                    outfile.write("%sint i%d = (addr - (char *)&%s" % (indent, i, field_name))
+                    for j in range(0, i):
+                        outfile.write("[i%d]" % j)
+                    outfile.write("[0])/sizeof(%s" % field_name)
+                    for j in range(0, i+1):
+                        outfile.write("[0]")
+                    outfile.write(");\n")
+                    if idx > 1:
+                        outfile.write("%sif (i%d == 0 && 1 + &%s" % (indent, i, field_name))
+                        for j in range(0, i):
+                            outfile.write("[i%d]" % j)
+                        outfile.write(" == end) return;\n")
+                    outfile.write("%sout << '[' << i%d << ']';\n" % (indent, i))
+            single = a.singleton_obj()
+            if not single.is_field() and not single.top_level():
+                outfile.write("%s%s" % (indent, field_name))
+                if a.count != (1,):
+                    for i in range(0, len(a.count)):
+                        outfile.write("[i%d]" % i)
+                outfile.write(".emit_fieldname(out, addr, end);\n")
+            indent = indent[2:]
+        if not first:
+            outfile.write("%s}\n" % indent)
+        indent = indent[2:]
+        outfile.write("%s}\n" % indent)
+
+    def gen_unpack_method(self, outfile, args, classname, indent):
+        outfile.write(indent)
+        if self.gen_method_declarator(outfile, args, "int", classname, "unpack_json",
+                ["json::obj *obj"], ""):
+            return
+        indent += "  "
+        outfile.write("%sint rv = 0;\n" % indent)
+        outfile.write("%sjson::map *m = dynamic_cast<json::map *>(obj);\n" % indent)
+        outfile.write("%sif (!m) return -1;\n" % indent)
+        for a in sorted(self.children(), key=lambda a: a.name):
+            if a.disabled(): continue
+            index_num = 0
+            if a.count != (1,):
+                for index_num, idx in enumerate(a.count):
+                    outfile.write("%sif (json::vector *v%s = dynamic_cast<json::vector *>(" %
+                                  (indent, index_num))
+                    indent += "  "
+                    if index_num > 0:
+                        outfile.write("(*v%d)[i%d].get()" % (index_num-1, index_num-1))
+                    else: outfile.write('(*m)["%s"].get()' % a.name)
+                    outfile.write("))\n")
+                    outfile.write("%sfor (int i%d = 0; i%d < %d; i%d++)\n" %
+                                  (indent, index_num, index_num, idx, index_num))
+                    indent += "  "
+                index_num = len(a.count)
+            single = a.singleton_obj()
+            field_name = a.name
+            if field_name in args.cpp_reserved:
+                field_name += '_'
+            if single != a:
+                outfile.write("%sif (json::map *s = dynamic_cast<json::map *>(" % indent)
+                indent += "  "
+                if index_num > 0:
+                    outfile.write("(*v%d)[i%d].get()" % (index_num-1, index_num-1))
+                else: outfile.write('(*m)["%s"].get()' % a.name)
+                outfile.write("))\n")
+                outfile.write("%sif (json::number *n = dynamic_cast<json::number *>" % indent)
+                indent += "  "
+                outfile.write('((*s)["%s"].get()))\n' % a.name)
+                outfile.write("%s%s" % (indent, field_name))
+                if a.count != (1,):
+                    for i in range(0, len(a.count)):
+                        outfile.write("[i%d]" % i)
+                outfile.write(" = n->val;\n")
+                indent = indent[2:]
+                outfile.write("%selse rv = -1;\n" % indent)
+                indent = indent[2:]
+                outfile.write("%selse rv = -1;\n" % indent)
+            elif not a.is_field() and not a.top_level():
+                outfile.write("%srv |= %s" % (indent, field_name))
+                if a.count != (1,):
+                    for i in range(0, len(a.count)):
+                        outfile.write("[i%d]" % i)
+                outfile.write(".unpack_json(")
+                if index_num > 0:
+                    outfile.write("(*v%d)[i%d].get()" % (index_num-1, index_num-1))
+                else: outfile.write('(*m)["%s"].get()' % a.name)
+                outfile.write(");\n")
+            else:
+                jtype = "json::number"
+                access = "n->val"
+                if a.top_level():
+                    jtype = "json::string"
+                    access = "*n"
+                outfile.write("%sif (%s *n = dynamic_cast<%s *>(" % (indent, jtype, jtype))
+                indent += "  "
+                if index_num > 0:
+                    outfile.write("(*v%d)[i%d].get()" % (index_num-1, index_num-1))
+                else: outfile.write('(*m)["%s"].get()' % a.name)
+                outfile.write(")) {\n")
+                outfile.write("%s%s" % (indent, field_name))
+                if a.count != (1,):
+                    for i in range(0, len(a.count)):
+                        outfile.write("[i%d]" % i)
+                outfile.write(" = %s;\n" % access)
+                if a.top_level():
+                    outfile.write("%s} else if (json::number *n = dynamic_cast<json::number *>(" %
+                                  indent[2:])
+                    if index_num > 0:
+                        outfile.write("(*v%d)[i%d].get()" % (index_num-1, index_num-1))
+                    else: outfile.write('(*m)["%s"].get()' % a.name)
+                    outfile.write(")) {\n")
+                    outfile.write("%sif (n->val) rv = -1;\n" % indent)
+                indent = indent[2:]
+                outfile.write("%s} else rv = -1;\n" % indent)
+            for i in range(0, index_num):
+                indent = indent[4:]
+                outfile.write("%selse rv = -1;\n" % indent)
+        outfile.write("%sreturn rv;\n" % indent)
+        indent = indent[2:]
+        outfile.write("%s}\n" % indent)
+
+    def gen_dump_unread_method(self, outfile, args, classname, indent):
+        outfile.write(indent)
+        if self.gen_method_declarator(outfile, args, "void", classname, "dump_unread",
+                ["std::ostream &out", "prefix *pfx"], "const"):
+            return
+        indent += "  "
+        need_lpfx = True
+        for a in sorted(self.children(), key=lambda a: a.name):
+            if a.disabled(): continue
+            field_name = a.name
+            if field_name in args.cpp_reserved:
+                field_name += '_'
+            if not a.singleton_obj().is_field() and not a.top_level():
+                if need_lpfx:
+                    outfile.write("%sprefix lpfx(pfx, 0);\n" % indent)
+                    need_lpfx = False
+                outfile.write('%slpfx.str = "%s' % (indent, a.name))
+                if a.count != (1,):
+                    for idx in a.count:
+                        outfile.write("[%d]" % idx)
+                outfile.write('";\n')
+                outfile.write("%s%s" % (indent, field_name))
+                if a.count != (1,):
+                    for idx in a.count:
+                        outfile.write("[0]")
+                outfile.write(".dump_unread(out, &lpfx);\n")
+            else:
+                outfile.write("%sif (!%s" % (indent, field_name))
+                if a.count != (1,):
+                    for idx in a.count:
+                        outfile.write("[0]")
+                outfile.write('.read) out << pfx << ".%s' % a.name)
+                if a.count != (1,):
+                    for idx in a.count:
+                        outfile.write("[%d]" % idx)
+                outfile.write('" << std::endl;\n')
+        indent = indent[2:]
+        outfile.write("%s}\n" % indent)
+
+    def gen_modified_method(self, outfile, args, classname, indent):
+        outfile.write(indent)
+        if self.gen_method_declarator(outfile, args, "bool", classname, "modified", [], "const"):
+            return
+        indent += "  "
+        for a in sorted(self.children(), key=lambda a: a.name):
+            if a.disabled(): continue
+            field_name = a.name
+            if field_name in args.cpp_reserved:
+                field_name += '_'
+            if not args.checked_array:
+                if a.count != (1,):
+                    for index_num, idx in enumerate(a.count):
+                        outfile.write("%sfor (int i%d = 0; i%d < %d; i%d++)\n" %
+                                      (indent, index_num, index_num, idx, index_num))
+                        indent += "  "
+                outfile.write("%sif (%s" % (indent, field_name))
+                if a.count != (1,):
+                    for i in range(0, len(a.count)):
+                        outfile.write("[i%d]" % i)
+                outfile.write(".modified()) return true;\n")
+                if a.count != (1,):
+                    indent = indent[2*len(a.count):]
+            else:
+                outfile.write("%sif (%s.modified()) return true;\n" % (indent, field_name))
+        outfile.write("%sreturn false;\n" % indent)
+        indent = indent[2:]
+        outfile.write("%s}\n" % indent)
+
+    def gen_disable_method(self, outfile, args, classname, indent):
+        outfile.write(indent)
+        if self.gen_method_declarator(outfile, args, "bool", classname, "disable", [], ""):
+            return
+        indent += "  "
+        outfile.write("%sbool rv = true;\n" % indent)
+        outfile.write("%sif (modified()) {\n" % indent)
+        outfile.write('%s  std::clog << "ERROR: Disabling modified record ";\n' % indent)
+        outfile.write("%s  print_regname(std::clog, this, this+1);\n" % indent)
+        outfile.write("%s  std::clog << std::endl; \n" % indent)
+        outfile.write("%s  return false; }\n" % indent)
+        for a in sorted(self.children(), key=lambda a: a.name):
+            if a.disabled(): continue
+            field_name = a.name
+            if field_name in args.cpp_reserved:
+                field_name += '_'
+            if not args.checked_array:
+                if a.count != (1,):
+                    for index_num, idx in enumerate(a.count):
+                        outfile.write("%sfor (int i%d = 0; i%d < %d; i%d++)\n" %
+                                      (indent, index_num, index_num, idx, index_num))
+                        indent += "  "
+                outfile.write("%sif (%s" % (indent, field_name))
+                if a.count != (1,):
+                    for i in range(0, len(a.count)):
+                        outfile.write("[i%d]" % i)
+                outfile.write(".disable()) rv = true;\n")
+                if a.count != (1,):
+                    indent = indent[2*len(a.count):]
+            else:
+                outfile.write("%sif (%s.disable()) rv = true;\n" % (indent, field_name))
+        outfile.write("%sif (rv) disabled_ = true;\n" % indent)
+        outfile.write("%sreturn rv;\n" % indent)
+        indent = indent[2:]
+        outfile.write("%s}\n" % indent)
+
+    def gen_disable_if_zero_method(self, outfile, args, classname, indent):
+        outfile.write(indent)
+        if self.gen_method_declarator(outfile, args, "bool", classname, "disable_if_zero", [], ""):
+            return
+        indent += "  "
+        outfile.write("%sbool rv = true;\n" % indent)
+        for a in sorted(self.children(), key=lambda a: a.name):
+            if a.disabled(): continue
+            field_name = a.name
+            if field_name in args.cpp_reserved:
+                field_name += '_'
+            if not args.checked_array:
+                if a.count != (1,):
+                    for index_num, idx in enumerate(a.count):
+                        outfile.write("%sfor (int i%d = 0; i%d < %d; i%d++)\n" %
+                                      (indent, index_num, index_num, idx, index_num))
+                        indent += "  "
+                outfile.write("%sif (!%s" % (indent, field_name))
+                if a.count != (1,):
+                    for i in range(0, len(a.count)):
+                        outfile.write("[i%d]" % i)
+                outfile.write(".disable_if_zero()) rv = false;\n")
+                if a.count != (1,):
+                    indent = indent[2*len(a.count):]
+            else:
+                outfile.write("%sif (!%s.disable_if_zero()) rv = false;\n" % (indent, field_name))
+        outfile.write("%sif (rv && modified()) {\n" % indent)
+        outfile.write('%s  std::clog << "Disabling modified zero record ";\n' % indent)
+        outfile.write("%s  print_regname(std::clog, this, this+1);\n" % indent)
+        outfile.write("%s  std::clog << std::endl;\n" % indent)
+        outfile.write("%s  rv = false; }\n" % indent)
+        outfile.write("%sif (rv) disabled_ = true;\n" % indent)
+        outfile.write("%sreturn rv;\n" % indent)
+        indent = indent[2:]
+        outfile.write("%s}\n" % indent)
+
+    def gen_enable_method(self, outfile, args, classname, indent):
+        outfile.write(indent)
+        if self.gen_method_declarator(outfile, args, "void", classname, "enable", [], ""):
+            return
+        indent += "  "
+        for a in sorted(self.children(), key=lambda a: a.name):
+            if a.disabled(): continue
+            field_name = a.name
+            if field_name in args.cpp_reserved:
+                field_name += '_'
+            if not args.checked_array:
+                if a.count != (1,):
+                    for index_num, idx in enumerate(a.count):
+                        outfile.write("%sfor (int i%d = 0; i%d < %d; i%d++)\n" %
+                                      (indent, index_num, index_num, idx, index_num))
+                        indent += "  "
+                outfile.write("%s%s" % (indent, field_name))
+                if a.count != (1,):
+                    for i in range(0, len(a.count)):
+                        outfile.write("[i%d]" % i)
+                outfile.write(".enable();\n")
+                if a.count != (1,):
+                    indent = indent[2*len(a.count):]
+            else:
+                outfile.write("%s%s.enable();\n" % (indent, field_name))
+        outfile.write("%sdisabled_ = false;\n" % indent)
+        indent = indent[2:]
+        outfile.write("%s}\n" % indent)
+
+    def need_ctor(self):
+        for el in self.children():
+            s = el.singleton_obj()
+            if s.is_field() and s.default and s.default != 0:
+                if type(s.default) is tuple:
+                    for v in s.default:
+                        if v != 0:
+                            return True
+                else:
+                    return True
+        return False
+
+    def gen_ctor(self, outfile, args, namestr, indent):
+        outfile.write("%s%s() : " % (indent, namestr))
+        first = True
+        if args.enable_disable:
+            outfile.write("disabled_(false)")
+            first = False
+        for el in sorted(self.children(), key=lambda a: a.name):
+            if el.disabled(): continue
+            s = el.singleton_obj()
+            if s.is_field() and s.default and s.default != 0:
+                if type(s.default) is tuple:
+                    ok = True
+                    for v in s.default:
+                        if v != 0:
+                            ok = False
+                            break
+                    if ok: continue
+                if first:
+                    first = False
+                else:
+                    outfile.write(", ")
+                outfile.write(el.name)
+                if el.name in args.cpp_reserved:
+                    outfile.write('_')
+                if type(s.default) is tuple and len(s.default) > 1:
+                    outfile.write("({ ")
+                    for v in s.default:
+                        outfile.write(str(v)+", ")
+                    outfile.write("})")
+                else:
+                    outfile.write('(%d)' % s.default)
+        outfile.write(' {}\n')
+
+    def canon_name(self, name):
+        namestr = ''
+        nameargs = []
+        format = False
+        islong = False
+        for ch in name:
+            if format:
+                if ch in string.digits:
+                    continue
+                elif ch == 'l':
+                    islong = True
+                    continue
+                elif ch == 'd' or ch == 'i' or ch == 'u' or ch == 'x':
+                    nameargs.append('long ' if islong else 'int ')
+                elif ch == 'e' or ch == 'f' or ch == 'g':
+                    nameargs.append('double ' if islong else 'float ')
+                elif ch == 's':
+                    nameargs.append('const char *')
+                else:
+                    raise CsrException("unknown conversion '%%%s' in name\n" % ch)
+                format = False
+            elif ch in string.letters or ch in string.digits or ch == '_':
+                namestr += ch
+            elif ch == '.':
+                namestr += '_'
+            elif ch == '%':
+                format = True
+                islong = False
+            else:
+                raise CsrException("invalid character '%s' in name\n" % ch)
+        return namestr, nameargs
+
+    def gen_type(self, outfile, args, schema, parent, name, indent):
+        namestr, nameargs = self.canon_name(name)
+        classname = parent
+        if classname != '':
+            classname += '::'
+        classname += namestr
+        if args.gen_decl != 'defn':
+            indent += "  "
+            outfile.write("struct %s {\n" % namestr)
+            if args.enable_disable:
+                outfile.write("%sbool disabled_;\n" % indent)
+            if args.enable_disable or self.need_ctor():
+                self.gen_ctor(outfile, args, namestr, indent)
+        for el in sorted(self.children(), key=lambda a: a.name):
+            if el.disabled(): continue
+            typ = el.singleton_obj()
+            notclass = typ.is_field() or typ.top_level()
+            isglobal = el.name in args.global_types
+            if args.gen_decl != 'defn':
+                outfile.write(indent)
+                if args.checked_array and notclass and el.count != (1,):
+                    for idx in el.count:
+                        outfile.write("checked_array<%d, " % idx)
+            if not isglobal:
+                typ.gen_type(outfile, args, schema, classname, "_" + el.name, indent)
+            if args.gen_decl != 'defn':
+                field_name = el.name
+                if field_name in args.cpp_reserved:
+                    field_name += '_'
+                if args.checked_array and el.count != (1,):
+                    if not notclass:
+                        if not isglobal:
+                            outfile.write(";\n%s" % indent)
+                        for idx in el.count:
+                            outfile.write("checked_array<%d, " % idx)
+                        outfile.write('::' if isglobal else '_')
+                        outfile.write(el.name)
+                    if el.count != (1,):
+                        for idx in el.count:
+                            outfile.write(">")
+                    outfile.write(" %s;\n" % field_name)
+                else:
+                    outfile.write(" %s" % field_name)
+                    if el.count != (1,):
+                        for idx in el.count:
+                            outfile.write("[%d]" % idx)
+                    outfile.write(";\n")
+        if args.delete_copy and args.gen_decl != 'defn':
+            if not args.enable_disable and not self.need_ctor():
+                outfile.write("%s%s() = default;\n" % (indent, namestr))
+            outfile.write("%s%s(const %s &) = delete;\n" % (indent, namestr, namestr))
+            outfile.write("%s%s(%s &&) = delete;\n" % (indent, namestr, namestr))
+        if args.emit_json:
+            self.gen_emit_method(outfile, args, schema, classname, name, nameargs, indent)
+        if args.emit_binary:
+            self.gen_emit_binary_method(outfile, args, classname, indent)
+        if args.emit_fieldname:
+            self.gen_fieldname_method(outfile, args, classname, indent)
+        if args.unpack_json:
+            self.gen_unpack_method(outfile, args, classname, indent)
+        if args.dump_unread:
+            self.gen_dump_unread_method(outfile, args, classname, indent)
+        if args.enable_disable:
+            self.gen_modified_method(outfile, args, classname, indent)
+            self.gen_disable_method(outfile, args, classname, indent)
+            self.gen_disable_if_zero_method(outfile, args, classname, indent)
+            self.gen_enable_method(outfile, args, classname, indent)
+        if args.gen_decl != 'defn':
+            indent = indent[2:]
+            outfile.write("%s}" % indent)
+
+    def gen_global_types(self, outfile, args, schema):
+        for a in sorted(self.children(), key=lambda a: a.name):
+            if a.disabled(): continue
+            if not a.is_field() and not a.top_level():
+                a.gen_global_types(outfile, args, schema)
+                if a.name in args.global_types:
+                    if a.name in args.global_types_generated:
+                        if args.global_types_generated[a.name] != a:
+                            raise CsrException("Inconsistent definition of type "+a.name)
+                    else:
+                        args.global_types_generated[a.name] = a
+                        a.gen_type(outfile, args, schema, "", a.name, "")
+                        outfile.write(";\n")
+
+class address_map(csr_composite_object):
     """
     A Semifore addressmap. Contains registers and instances of other
     addressmaps.
@@ -205,7 +921,7 @@ class address_map(csr_object):
         falls under ("memories" or "regs)
     """
     def __init__(self, name, count, parent):
-        csr_object.__init__(self, name, count)
+        csr_composite_object.__init__(self, name, count)
 
         self.templatization_behavior = None
         self.objs = []
@@ -303,8 +1019,10 @@ class address_map(csr_object):
                         # is written with block writes, forcing this register
                         # configuration on the same path removes the race.
 
-                        registers_to_write_with_dma = ["mapram_config", "imem_subword16", "imem_subword32", "imem_subword8"]
-
+                        registers_to_write_with_dma = [ "mapram_config",
+                            "imem_dark_subword16", "imem_dark_subword32", "imem_dark_subword8",
+                            "imem_mocha_subword16", "imem_mocha_subword32", "imem_mocha_subword8",
+                            "imem_subword16", "imem_subword32", "imem_subword8" ]
                         if product(obj.count) > 4 and (root_parent=="memories" or obj.name in registers_to_write_with_dma):
                             mem = chip.dma_block(obj.offset, obj.width, src_key=obj.name, is_reg=root_parent=="regs")
                             def mem_loop(sub_data, context):
@@ -370,13 +1088,39 @@ class address_map(csr_object):
             self_dict[obj.name] = obj.generate_template(inject_size)
         return self.replicate(self_dict)
 
+    def children(self):
+        return self.objs
+    def disabled(self):
+        return self.templatization_behavior == "disabled"
+    def top_level(self):
+        return self.templatization_behavior == "top_level"
 
-class address_map_instance(csr_object):
+    def generate_cpp(self, outfile, args, schema):
+        try:
+            name = args.name
+        except AttributeError:
+            name = self.name
+        self.gen_type(outfile, args, schema, '', name, '')
+
+    def print_as_text(self, indent):
+        if self.templatization_behavior != "disabled":
+            print "%saddress_map %s%s:" % (indent, self.name, str(self.count))
+            for ch in self.objs:
+                ch.print_as_text(indent+"  ")
+
+class address_map_instance(csr_composite_object):
     """
     TODO: docstring
+    @attr offset
+        offset from the start of the containing address_map (instance)
+    @attr map
+        address_map object that is an instance of
+    @attr stride
+        If @count is not (1,), this is the offset from each instance in the array to
+        the next.  If @count is (1,) this should be null
     """
     def __init__(self, name, count, offset, addrmap, stride):
-        csr_object.__init__(self, name, count)
+        csr_composite_object.__init__(self, name, count)
 
         self.offset = offset
         self.map = addrmap
@@ -399,9 +1143,46 @@ class address_map_instance(csr_object):
         else:
             return self.replicate(self.map.generate_template(inject_size))
 
+    def children(self):
+        return self.map.objs
+    def disabled(self):
+        return self.map.templatization_behavior == "disabled"
+    def top_level(self):
+        return self.map.templatization_behavior == "top_level"
+    def address_stride(self):
+        return self.stride
+
+    def gen_type(self, outfile, args, schema, parent, name, indent):
+        if self.map.templatization_behavior == "disabled":
+            raise CsrException("disabled address_map hit in gen_type")
+        elif self.map.templatization_behavior == "top_level":
+            if args.gen_decl != 'defn':
+                tname = self.map.object_name
+                if tname is None:
+                    tname = self.map.parent + '.' + self.map.name
+                outfile.write("register_reference<struct %s>" % self.canon_name(tname)[0])
+        else:
+            self.map.gen_type(outfile, args, schema, parent, name, indent)
+
+    def print_as_text(self, indent):
+        print "%saddress_map_instance %s%s: offset=0x%x%s" % (
+            indent, self.name, str(self.count), self.offset,
+            " stride=0x%x" % self.stride if self.stride else "")
+        if self.map.templatization_behavior == "top_level":
+            print "%s  address_map %s%s: (top level %s)" % (
+                indent, self.name, str(self.count), self.map.name)
+        else:
+            self.map.print_as_text(indent+"  ")
+
+
 class group(address_map):
     """
     TODO: docstring
+    @attr stride
+        If @count is not (1,) this the offset from each element to the next
+        If @count is (1,) this should be null
+    @attr offset
+        offset from the start of the containing addres_map
     """
     def __init__(self, name, count, offset, parent, stride):
         address_map.__init__(self, name, count, parent)
@@ -424,12 +1205,31 @@ class group(address_map):
         else:
             return address_map.min_width(self, round_to_power_of_2=False)
 
-class reg(csr_object):
+    def address_stride(self):
+        return self.stride
+
+    def print_as_text(self, indent):
+        print "%sgroup %s%s: offset=0x%x%s" % (
+            indent, self.name, str(self.count), self.offset,
+            " stride=0x%x" % self.stride if self.stride else "")
+        for ch in self.objs:
+            ch.print_as_text(indent+"  ")
+
+
+class reg(csr_composite_object):
     """
     TODO: docstring
+    @attr parent
+        Containing address_map object
+    @attr offset
+        Offset from the start of the containing address_map_instance
+    @attr width
+        width in bits
+    @attr fields
+        vector of fields in the register
     """
     def __init__(self, name, count, offset, width, parent):
-        csr_object.__init__(self, name, count)
+        csr_composite_object.__init__(self, name, count)
 
         self.parent = parent
         self.offset = offset
@@ -545,10 +1345,117 @@ class reg(csr_object):
             self_dict[field.name] = field.generate_template(inject_size)
         return self.replicate(self_dict)
 
+    def children(self):
+        return self.fields
+    def is_singleton(self):
+        return len(self.fields) == 1 and self.fields[0].count == (1,)
+    def singleton_obj(self):
+        if self.is_singleton() and self.fields[0].name == self.name:
+            return self.fields[0]
+        return self
+    def address_stride(self):
+        return self.width // 8
+        
+    def disabled(self):
+        return False
+    def top_level(self):
+        return False
+
+    def gen_emit_binary_method(self, outfile, args, classname, indent):
+        outfile.write(indent)
+        if self.gen_method_declarator(outfile, args, "void", classname, "emit_binary",
+                ["std::ostream &out", "uint64_t a"], "const"):
+            return
+        indent += "  "
+        if self.count != (1,):
+            pass
+        class context:
+            shift = 0
+            words = []
+        context.words = [None] * (self.width // 32)
+        indirect = ((self.parent.parent=="memories") or (self.name in args.write_dma))
+        if not indirect:
+            outfile.write("%sif (!disabled_) {\n" % indent);
+            indent += "  "
+        for a in self.fields:
+            field_name = a.name
+            if field_name in args.cpp_reserved:
+                field_name += '_'
+            context.shift = a.lsb;
+            def emit_field_slice(field, word, shift):
+                if context.words[word] is None:
+                    context.words[word] = ''
+                else:
+                    context.words[word] += " + "
+                if shift != 0:
+                    context.words[word] += "("
+                context.words[word] += field
+                if shift > 0:
+                    context.words[word] += " << %d)" % shift
+                elif shift < 0:
+                    context.words[word] += " >> %d)" % -shift
+            def emit_ubits_field(index_list):
+                word = context.shift // 32
+                shift = context.shift % 32
+                name = field_name + array_str(index_list)
+                emit_field_slice(name, word, shift)
+                if shift + a.msb - a.lsb >= 32:
+                    emit_field_slice(name, word+1, shift - 32)
+                if shift + a.msb - a.lsb >= 64:
+                    emit_field_slice(name, word+2, shift - 64)
+                context.shift = context.shift + a.msb - a.lsb + 1
+            def emit_widereg_field(index_list):
+                word = context.shift // 32
+                shift = context.shift % 32
+                name = field_name + array_str(index_list) + ".value.getrange("
+                emit_field_slice(name + "0, %d)" % (32 - shift), word, shift)
+                shift = 32 - shift
+                while shift < a.msb - a.lsb + 1:
+                    word += 1
+                    emit_field_slice(name + "%d, 32)" % shift, word, 0)
+                    shift += 32
+            if a.count != (1,):
+                if a.msb - a.lsb + 1 > 64:
+                    count_array_loop(a.count, emit_widereg_field)
+                else:
+                    count_array_loop(a.count, emit_ubits_field)
+            else:
+                if a.msb - a.lsb + 1 > 64:
+                    emit_widereg_field(None)
+                else:
+                    emit_ubits_field(None)
+        for idx, val in enumerate(context.words):
+            if val is None:
+                if not indirect: continue
+                val = '0'
+            outfile.write("%sout << " % indent);
+            if not indirect:
+                outfile.write("binout::tag('R') << binout::byte4(a + %d)\n" % (idx*4))
+                outfile.write("%s    << " % indent)
+            outfile.write("binout::byte4(%s);\n" % val)
+        if not indirect:
+            indent = indent[2:]
+            outfile.write("%s}\n" % indent)
+        indent = indent[2:]
+        outfile.write("%s}\n" % indent)
+
+    def print_as_text(self, indent):
+        print "%sreg %s%s: offset=0x%x width=%d" % (
+            indent, self.name, str(self.count), self.offset, self.width)
+        for ch in self.fields:
+            ch.print_as_text(indent+"  ")
+
 
 class field(csr_object):
     """
     TODO: docstring
+    @attr default
+        default (reset-init) value
+    @attr parent
+        containing register object
+    @attr msb, lsb
+        Range of bits in containing register for this field.  If @count is not (1,), this
+        is just the first element; the second will be at lsb = msb+1 etc
     """
     def __init__(self, name, count, msb, lsb, default, parent):
         csr_object.__init__(self, name, count)
@@ -567,8 +1474,27 @@ class field(csr_object):
             else:
                 return self.default
 
+    def is_field(self):
+        return True
+    def disabled(self):
+        return False
+    def top_level(self):
+        return False
+    def gen_type(self, outfile, args, schema, parent, name, indent):
+        size = self.msb-self.lsb+1
+        if args.gen_decl != 'defn':
+            if size > 64:
+                outfile.write("widereg<%d>" % size)
+            else:
+                outfile.write("ubits<%d>" % size)
+
     def __str__(self):
         return "name = %s  count = %s  msb = %s  lsb = %s  parent = %s" % (str(self.name), str(self.count), str(self.msb), str(self.lsb), str(self.parent))
+
+    def print_as_text(self, indent):
+        print "%sfield %s%s: [%d:%d]%s" % (
+            indent, self.name, str(self.count), self.msb, self.lsb, 
+            " default=" + str(self.default) if self.default else "")
 
 
 ########################################################################

@@ -19,6 +19,8 @@
 option_t options = {
     .version = CONFIG_OLD,
     .target = TOFINO,
+    .binary = FOUR_PIPE,
+    .gen_json = false,
     .match_compiler = false,
     .condense_json = true,
     .debug_info = false,
@@ -111,6 +113,15 @@ int main(int ac, char **av) {
     for (int i = 1; i < ac; i++) {
         if (av[i][0] == '-' && av[i][1] == 0) {
             asm_parse_file("<stdin>", stdin);
+        } else if (!strcmp(av[i], "--allpipes")) {
+            options.binary = FOUR_PIPE;
+        } else if (!strcmp(av[i], "--gen_json")) {
+            options.gen_json = true;
+            options.binary = NO_BINARY;
+        } else if (!strcmp(av[i], "--no-bin")) {
+            options.binary = NO_BINARY;
+        } else if (!strcmp(av[i], "--singlepipe")) {
+            options.binary = ONE_PIPE;
         } else if (!strcmp(av[i], "--target")) {
             ++i;
             if (!av[i]) {
@@ -132,15 +143,22 @@ int main(int ac, char **av) {
             bool flag = av[i][0] == '+';
             for (char *arg = av[i]+1; *arg;)
                 switch (*arg++) {
-                case 'T':
-                    if (*arg) {
-                        Log::addDebugSpec(arg);
-                        arg += strlen(arg);
-                    } else if (++i < ac) {
-                        Log::addDebugSpec(av[i]); }
+                case 'a':
+                    options.binary = FOUR_PIPE;
+                    break;
+                case 'C':
+                    options.condense_json = true;
+                    break;
+                case 'G':
+                    options.gen_json = true;
+                    options.binary = NO_BINARY;
                     break;
                 case 'g':
                     options.debug_info = true;
+                    break;
+                case 'h':
+                    std::cout << usage(av[0]) << std::endl;
+                    return 0;
                     break;
                 case 'l':
                     ++i;
@@ -158,9 +176,6 @@ int main(int ac, char **av) {
                             std::cerr << "Can't open " << av[i]
                                       << " for writing" << std::endl;
                             delete tmp; } }
-                    break;
-                case 'C':
-                    options.condense_json = true;
                     break;
                 case 'M':
                     options.match_compiler = true;
@@ -186,6 +201,16 @@ int main(int ac, char **av) {
                 case 'q':
                     std::clog.setstate(std::ios::failbit);
                     break;
+                case 's':
+                    options.binary = ONE_PIPE;
+                    break;
+                case 'T':
+                    if (*arg) {
+                        Log::addDebugSpec(arg);
+                        arg += strlen(arg);
+                    } else if (++i < ac) {
+                        Log::addDebugSpec(av[i]); }
+                    break;
                 case 't':
                     ++i;
                     if (!av[i]) {
@@ -198,10 +223,6 @@ int main(int ac, char **av) {
                     break;
                 case 'v':
                     Log::increaseVerbosity();
-                    break;
-                case 'h':
-                    std::cout << usage(av[0]) << std::endl;
-                    return 0;
                     break;
                 case 'W':
                     if (strcmp(arg, "error"))

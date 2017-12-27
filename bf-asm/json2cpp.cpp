@@ -319,12 +319,12 @@ static void gen_unpack_method(std::ostream &out, json::map *m, indent_t indent,
                 out << "[i" << i << ']';
             out << " = " << access << ";" << std::endl;
             if (dynamic_cast<json::string *>(type)) {
-                out << indent++ << "else if (json::number *n = dynamic_cast<json::number *>(";
+                out << indent-1 << "} else if (json::number *n = dynamic_cast<json::number *>(";
                 if (index_num)
                     out << "(*v" << (index_num-1) << ")[i" << (index_num-1) << "].get()";
                 else out << "(*m)[" << name << "].get()";
                 out << ")) {" << std::endl;
-                out << indent << "if (n->v) rv = -1;" << std::endl; }
+                out << indent << "if (n->val) rv = -1;" << std::endl; }
             out << --indent << "} else rv = -1;" << std::endl; }
         while (--index_num >= 0)
             out << ----indent << "else rv = -1;" << std::endl;

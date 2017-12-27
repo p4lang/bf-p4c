@@ -12,7 +12,6 @@ project (BFASM)
 set (CMAKE_MODULE_PATH ${BFN_P4C_SOURCE_DIR}/p4c/cmake)
 
 include(UnifiedBuild)
-include (cmake/BFNUtils.cmake) # for macros to generate registers
 
 MESSAGE("-- Adding bf-asm")
 
@@ -61,11 +60,6 @@ set (CMAKE_CXX_STANDARD_REQUIRED ON)
 install (PROGRAMS bflink
   DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 
-# json2cpp
-set (JSON2CPP_SOURCES json2cpp.cpp json.cpp)
-build_unified(JSON2CPP_SOURCES ALL)
-add_executable (json2cpp ${JSON2CPP_SOURCES})
-
 # json_diff
 set (JSONDIFF_SOURCES json_diff.cpp json.cpp fdstream.cpp)
 build_unified(JSONDIFF_SOURCES ALL)
@@ -75,15 +69,6 @@ add_executable (json_diff ${JSONDIFF_SOURCES})
 set (BFDUMPBIN_SOURCES bfdumpbin.cpp)
 build_unified(BFDUMPBIN_SOURCES ALL)
 add_executable (bfdumpbin ${BFDUMPBIN_SOURCES})
-
-# hashdump
-# FIXME -- how do we get tit generate templates and generated files in the correct order?  This
-# FIXME -- fails with "No rule to make target 'bf-asm/templates/tofino/regs.mau_addrmap.cfg.json'"
-# FIXME -- the first time "make" runs on an empty build directory (but subsequent reruns work...)
-#genRegTemplate("tofino" "disas.regs.mau_addrmap.h" "regs.mau_addrmap" "Tofino" "-ref")
-#set (HASHDUMP_SOURCES hashdump.cpp json.cpp ubits.cpp log.cpp)
-#build_unified(HASHDUMP_SOURCES ALL)
-#add_executable(hashdump ${HASHDUMP_SOURCES} gen/tofino/disas.regs.mau_addrmap.h)
 
 # reflow
 set (REFLOW_SOURCES reflow.cpp)
@@ -159,6 +144,7 @@ SET (BFAS_COMMON_HEADERS
   parser.h
   phv.h
   power_ctl.h
+  register_reference.h
   rvalue_reference_wrapper.h
   sections.h
   slist.h
@@ -236,10 +222,6 @@ target_link_libraries (bfas ${BFASM_LIBS} ${BFASM_LIB_DEPS})
 
 install (TARGETS bfas
   RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
-
-# gen/disas.%.h: templates/%.size.json json2cpp
-# 	@mkdir -p gen/$(dir $*)/.deps
-# 	$(AM_V_GEN) ./json2cpp +hru -en $* $< >$@ || { rm $@; false; }
 
 add_custom_target(check-asm
   COMMAND export BUILDDIR=${BFASM_BINARY_DIR} && cd ${BFASM_SOURCE_DIR}/test &&
