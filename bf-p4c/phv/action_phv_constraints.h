@@ -3,6 +3,7 @@
 
 #include <boost/optional.hpp>
 #include "ir/ir.h"
+#include "bf-p4c/lib/union_find.hpp"
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/mau/action_analysis.h"
 #include "bf-p4c/phv/phv_fields.h"
@@ -16,10 +17,18 @@
   * actions. 
  */
 class ActionPhvConstraints : public Inspector {
- public:
-    using CohabitSet = ordered_set<const PHV::Field*>;
-
  private:
+    /// Defines a struct for returning number of containers
+    struct NumContainers {
+        size_t num_allocated;
+        size_t num_unallocated;
+
+        explicit NumContainers(const size_t numAlloc, const size_t numUnalloc) :
+            num_allocated(numAlloc), num_unallocated(numUnalloc) {}
+
+        NumContainers() : num_allocated(0), num_unallocated(0) {}
+    };
+
     /// Defines a struct for a particular field operation: either read or write
     // TODO: Will we ever need a boolean indicating read or write in this
     // struct?
@@ -55,8 +64,6 @@ class ActionPhvConstraints : public Inspector {
         FieldOperation() : phv_used(nullptr) {}
     };
 
-    const PhvInfo &phv;
-
     profile_t init_apply(const IR::Node *root) override;
     /** Builds the data structures to be used in the API function call 
       * Also checks that the actions can be scheduled on Tofino in the same stage
@@ -66,6 +73,11 @@ class ActionPhvConstraints : public Inspector {
     /** Print out all the maps created in ActionPhvConstraints
       */
     void end_apply() override;
+
+    /** Debug function to print the total number of reads and writes across all actions for the
+      * fields in the vector of AllocSlices represented by @slices
+      */
+    void field_ordering(std::vector<PHV::AllocSlice>& slices);
 
     /// Any action within this set will have written the key field
     ordered_map<const PHV::Field *, ordered_set<const IR::MAU::Action *>>
@@ -87,10 +99,13 @@ class ActionPhvConstraints : public Inspector {
 
     /** Given the state of PHV allocation represented by @alloc and @container_state, a vector of
       * slices to be packed together and mutually live in a given container
+      * Also populates the UnionFind structure @copacking_constraints, used to report new packing
+      * constraints induced by can_pack()
       * @returns the number of container sources used in @action
       */
-    size_t num_container_sources(const PHV::Allocation& alloc, PHV::Allocation::MutuallyLiveSlices
-            container_state, const IR::MAU::Action* action);
+    NumContainers num_container_sources(const PHV::Allocation& alloc,
+            PHV::Allocation::MutuallyLiveSlices container_state, const IR::MAU::Action* action,
+            UnionFind<PHV::FieldSlice>& copacking_constraints);
 
     /** @returns true if @fields packed in the same container read from action data or from constant
       * in action @act
@@ -122,17 +137,80 @@ class ActionPhvConstraints : public Inspector {
     unsigned container_operation_type(ordered_set<const IR::MAU::Action*>&, std::vector<const
             PHV::Field*>&);
 
+    /** Given a set of MutuallyLiveSlices @container_state and the state of allocation @alloc, this
+      * function generates packing constraints induced by instructions in the action @action. These
+      * induced packing constraints are added to the UnionFind structure @packing_constraints.
+      * Finally, when @pack_unallocated_only is false, all field slices (both allocated and
+      * unallocated sources) in @container_state must be packed in the same container. When
+      * @pack_unallocated_only is true, only unallocated field slices in @container_state must be
+      * packed together.
+      */
+    void pack_slices_together(const PHV::Allocation& alloc, PHV::Allocation::MutuallyLiveSlices&
+            container_state, UnionFind<PHV::FieldSlice> &packing_constraints, const
+            IR::MAU::Action* action, bool pack_unallocated_only);
+
     /** Print the state of the maps */
     void printMapStates();
 
  public:
     explicit ActionPhvConstraints(const PhvInfo &p) : phv(p) {}
 
+    const PhvInfo &phv;
+
     /** Checks whether packing @fields into a container will violate MAU action constraints.
+      * @returns a boost::optional<UnionFind<PHV::FieldSlice>> object, which is interpreted as
+      * follows:
+      * - When boost::none is returned, @slice cannot be packed in container @c with
+      *   mutually live slices specified by @container_state.
+      * - The UnionFind object (when it is returned) contains a set of sets of field slices,
+      *   requiring that each field slice in the inner set be packed together.
+      *
+      * Example,
+      *   Metadata m {a, b, c, d, ...}  // Metadata header
+      *   Header vlan {                 // VLAN header
+      *       bit<3> priority;
+      *       bit<1> cfi;
+      *       bit<12> tag; }
+      *   Also, there are other headers m1 and m2 of type metadata m
+      *
+      *   Action {
+      *       m1.a = m2.a;
+      *       priority = m.c;
+      *       tag = m.d; }
+      *
+      * In this case, if container_state is {priority, cfi} and the candidate slice (slice) is tag,
+      * then the UnionFind structure will return {{m2.a}, {m.c, m.d}}.
+      *
+      * xxx(deep): Right now, the packing constraints generated by can_pack() have one limitation.
+      * Suppose there are n sources related to moves for a container in a particular action, and 2
+      * of the sources (s1 and s2) are already allocated. In that case, valid packing requires the
+      * remaining n-2 sources to be packed with either s1 or s2. Right now, s1, s2, and all the
+      * other sources are put in the same set in the UnionFind. The allocator needs to be aware of
+      * this case.
       */
-    boost::optional<std::vector<CohabitSet>> can_pack(const PHV::Allocation& alloc, const
-            PHV::AllocSlice& slice, PHV::Allocation::MutuallyLiveSlices container_state, const
-            PHV::Container c);
+    boost::optional<UnionFind<PHV::FieldSlice>> can_pack(const PHV::Allocation& alloc, const
+            PHV::AllocSlice& slice);
+
+    /** In case of SliceLists, we might try to pack multiple AllocSlices together into a container.
+      * This function checks whether such a packing is possible by internally calling the above
+      * can_pack method
+      */
+    boost::optional<UnionFind<PHV::FieldSlice>> can_pack(const PHV::Allocation& alloc,
+            std::vector<PHV::AllocSlice>& slices);
+
+    /** Approximates a topographical sorting of field lists such that all source-only slice lists
+      * are considered for allocation before destination-only slice lists.
+      * Sorts a given list of slice list such that the slice lists used the least times as sources
+      * are first allocated containers. If the number of times fields in a slice list is used as
+      * sources is the same as another slice list, the slice list which is written to in more
+      * actions ranks earlier in the sorting.
+      */
+    void sort(std::list<const PHV::SuperCluster::SliceList*>& slice_list);
+
+    /** Approximates a topographical sorting of FieldSlices such that all FieldSlices used only as
+      * sources are considered for allocation before destination-only FieldSlices
+      */
+    void sort(std::vector<PHV::FieldSlice>& slice_list);
 
     /** For GTest function.
       * Checks if the field_writes_to_actions ordered_map entry is valid or not
@@ -147,6 +225,5 @@ class ActionPhvConstraints : public Inspector {
       */
     bool is_in_write_to_reads(cstring, const IR::MAU::Action *, cstring) const;
 };
-
 
 #endif  /* BF_P4C_PHV_ACTION_PHV_CONSTRAINTS_H_ */

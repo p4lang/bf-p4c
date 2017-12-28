@@ -62,12 +62,6 @@ PHV::AllocSlice::AllocSlice(
               cstring::to_cstring(container_slice));
 }
 
-PHV::AllocSlice::AllocSlice(
-        PHV::FieldSlice field_slice,
-        PHV::Container c,
-        le_bitrange container_slice)
-        : AllocSlice(field_slice.field(), c, field_slice.range(), container_slice) { }
-
 bool PHV::AllocSlice::operator==(const PHV::AllocSlice& other) const {
     return field_i             == other.field_i
         && container_i         == other.container_i
@@ -115,12 +109,24 @@ void PHV::Allocation::setGress(PHV::Container c, GressAssignment gress) {
 }
 
 PHV::Allocation::MutuallyLiveSlices
-PHV::Allocation::slicesByLiveness(PHV::Container c, AllocSlice& sl) const {
+PHV::Allocation::slicesByLiveness(const PHV::Container c, const AllocSlice& sl) const {
     PHV::Allocation::MutuallyLiveSlices rs;
     auto slices = this->slices(c);
     for (auto& slice : slices) {
         if (!PHV::Allocation::mutually_exclusive(mutex_i, slice.field(), sl.field()))
             rs.insert(slice); }
+    return rs;
+}
+
+PHV::Allocation::MutuallyLiveSlices
+PHV::Allocation::slicesByLiveness(const PHV::Container c,
+                                  std::vector<AllocSlice>& slices) const {
+    PHV::Allocation::MutuallyLiveSlices rs;
+    auto existingSlices = this->slices(c);
+    for (auto& slice : existingSlices) {
+        for (auto sl : slices) {
+            if (!PHV::Allocation::mutually_exclusive(mutex_i, slice.field(), sl.field()))
+                rs.insert(slice); } }
     return rs;
 }
 
@@ -1011,20 +1017,6 @@ std::ostream &operator<<(std::ostream &out, const PHV::Allocation* alloc) {
     return out;
 }
 
-std::ostream &operator<<(std::ostream &out, const PHV::FieldSlice& slice) {
-    out << slice.field() << " <|> " << slice.range();
-    return out;
-}
-
-std::ostream &operator<<(std::ostream &out, const PHV::FieldSlice* slice) {
-    if (slice)
-        out << *slice;
-    else
-        out << "-null-alloc-slice-";
-    return out;
-}
-
-
 std::ostream &operator<<(std::ostream &out, const PHV::AllocSlice& slice) {
     out << slice.container() << slice.container_slice() << "<--"
         << slice.field()->name << slice.field_slice();
@@ -1154,6 +1146,22 @@ std::ostream &operator<<(std::ostream &out, const SuperCluster::SliceList* list)
         out << *list;
     else
         out << "-null-slice-list-";
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, const PHV::FieldSlice& fs) {
+    if (fs.field() == nullptr)
+        out << "-null-field-slice ";
+    else
+        out << fs.field()->name << " [" << fs.range().lo << "," << fs.range().hi << "] ";
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, const PHV::FieldSlice* fs) {
+    if (fs)
+        out << *fs;
+    else
+        out << "-null-field-slice ";
     return out;
 }
 

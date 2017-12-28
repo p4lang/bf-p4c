@@ -85,14 +85,14 @@ class Cluster_Interference : public Visitor {
      * @cl2 and all its fields.
      * Compute whether/how c1 and c2 can overlay
      */
-    boost::optional<std::map<PHV::Field *, std::map<int, PHV::Field *>>>
+    boost::optional<std::map<const PHV::Field *, std::map<int, const PHV::Field *>>>
         mutually_exclusive(PHV::AlignedCluster *cl1, PHV::AlignedCluster *cl2);
 
     /** True if @cl1 and @cl2 are mutually_exclusive
      * and all constraints necessary for them to be overlaid are satisfiable
      * Compute whether c1 and c2 can overlay
      */
-    boost::optional<std::map<PHV::Field *, std::map<int, PHV::Field *>>>
+    boost::optional<std::map<const PHV::Field *, std::map<int, const PHV::Field *>>>
         can_overlay(PHV::AlignedCluster *cl1, PHV::AlignedCluster *cl2);
 
     /** Checks that owners own unique virtual groups, and that overlaid

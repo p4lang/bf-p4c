@@ -181,7 +181,7 @@ void Cluster_Interference::reduce_clusters(
     LOG3("....End: Cluster_Interference::reduce_clusters() = " << clusters.size() << "  " << msg);
 }
 
-boost::optional<std::map<PHV::Field *, std::map<int, PHV::Field *>>>
+boost::optional<std::map<const PHV::Field *, std::map<int, const PHV::Field *>>>
 Cluster_Interference::can_overlay(PHV::AlignedCluster *cl1, PHV::AlignedCluster *cl2) {
     // additional constraints to mutual exclusion that must be satisfied for overlay
     // if both clusters have exact container requirements, their container widths must match
@@ -198,11 +198,11 @@ Cluster_Interference::can_overlay(PHV::AlignedCluster *cl1, PHV::AlignedCluster 
     return mutually_exclusive(cl1, cl2);
 }
 
-static int num_containers(PHV::Field *field) {
+static int num_containers(const PHV::Field *field) {
     return field->size / int(PHV::Size::b8) + (field->size % int(PHV::Size::b8) ? 1 : 0);
 }
 
-boost::optional<std::map<PHV::Field *, std::map<int, PHV::Field *>>>
+boost::optional<std::map<const PHV::Field *, std::map<int, const PHV::Field *>>>
 Cluster_Interference::mutually_exclusive(PHV::AlignedCluster *cl1, PHV::AlignedCluster *cl2) {
     // check if possible to get a mapping of all fields in cl1 mutual exclusive to fields in cl2
     // consider the largest cluster as substratum and the other as overlay
@@ -215,11 +215,11 @@ Cluster_Interference::mutually_exclusive(PHV::AlignedCluster *cl1, PHV::AlignedC
         cl_substratum = cl2;
         cl_overlay = cl1; }
     // copy of substratum_fields as list changed during overlay matching
-    std::list<PHV::Field *> substratum_fs;
+    std::list<const PHV::Field *> substratum_fs;
     for (auto& slice : cl_substratum->slices())
         substratum_fs.push_back(slice.field());
 
-    std::map<PHV::Field *, int> substratum_containers;
+    std::map<const PHV::Field *, int> substratum_containers;
     for (auto* f_s : substratum_fs)
         substratum_containers[f_s] = num_containers(f_s);
 
@@ -230,11 +230,11 @@ Cluster_Interference::mutually_exclusive(PHV::AlignedCluster *cl1, PHV::AlignedC
     // overlaying several fields on a single substratum is considered
     // each overlay field maps to a separate substratum container
     // map[f_s][c] = f_o
-    std::map<PHV::Field *, std::map<int, PHV::Field *>> f_s_f_o_map;
+    std::map<const PHV::Field *, std::map<int, const PHV::Field *>> f_s_f_o_map;
     int o_fields_to_map = cl_overlay->slices().size();
     for (auto& slice : cl_overlay->slices()) {
-        PHV::Field* f_o = slice.field();
-        PHV::Field* remove_field = 0;
+        const PHV::Field* f_o = slice.field();
+        const PHV::Field* remove_field;
         for (auto* f_s : substratum_fs) {
             // f_o mutually exclusive with f_s
             // f_o container occupation <= f_s

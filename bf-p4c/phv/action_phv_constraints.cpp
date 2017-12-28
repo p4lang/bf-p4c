@@ -57,14 +57,73 @@ bool ActionPhvConstraints::preorder(const IR::MAU::Action *act) {
     return true;
 }
 
+void ActionPhvConstraints::field_ordering(std::vector<PHV::AllocSlice>& slices) {
+    ordered_map<PHV::AllocSlice, size_t> field_slices_to_writes;
+    ordered_map<PHV::AllocSlice, size_t> field_slices_to_reads;
+    for (auto sl : slices) {
+        field_slices_to_writes[sl] = field_writes_to_actions[sl.field()].size();
+        field_slices_to_reads[sl] = read_to_writes_per_action[sl.field()].size();
+    }
+    LOG6("\t\t\t\t\t\t\tField Ordering Map");
+    for (auto sl : slices) {
+        LOG6("\t\t\t\t\t\t\t" << sl << "\t" << field_slices_to_writes[sl] << "\t" <<
+                field_slices_to_reads[sl]); }
+}
+
+void ActionPhvConstraints::sort(std::list<const PHV::SuperCluster::SliceList*>& slice_list) {
+    auto SliceListComparator = [this](const PHV::SuperCluster::SliceList* l, const
+            PHV::SuperCluster::SliceList* r) {
+        auto l_reads = 0;
+        auto l_writes = 0;
+        auto r_reads = 0;
+        auto r_writes = 0;
+
+        for (auto& sl : *l) {
+            l_reads += this->read_to_writes_per_action[sl.field()].size();
+            l_writes += this->field_writes_to_actions[sl.field()].size(); }
+
+        for (auto &sl : *r) {
+            r_reads += this->read_to_writes_per_action[sl.field()].size();
+            r_writes += this->field_writes_to_actions[sl.field()].size(); }
+
+        if (l_writes < r_writes) {
+            return l;
+        } else if (l_writes > r_writes) {
+            return r;
+        } else {
+            if (l_reads >= r_reads) {
+                return l;
+            } else {
+                return r; } } };
+
+    slice_list.sort(SliceListComparator);
+}
+
+void ActionPhvConstraints::sort(std::vector<PHV::FieldSlice>& slice_list) {
+    std::sort(slice_list.begin(), slice_list.end(),
+            [this](PHV::FieldSlice l, PHV::FieldSlice r) {
+            auto l_reads = this->read_to_writes_per_action[l.field()].size();
+            auto l_writes = this->field_writes_to_actions[l.field()].size();
+            auto r_reads = this->read_to_writes_per_action[r.field()].size();
+            auto r_writes = this->field_writes_to_actions[r.field()].size();
+
+            if (l_writes != r_writes)
+                return l_writes < r_writes;
+            return l_reads >= r_reads; });
+}
+
 void ActionPhvConstraints::end_apply() {
     LOG5("*****Printing  ActionPhvConstraints Maps*****");
     printMapStates();
     LOG5("*****End Print ActionPhvConstraints Maps*****");
 }
 
-size_t ActionPhvConstraints::num_container_sources(const PHV::Allocation &alloc,
-        PHV::Allocation::MutuallyLiveSlices container_state, const IR::MAU::Action* action) {
+ActionPhvConstraints::NumContainers
+ActionPhvConstraints::num_container_sources(
+        const PHV::Allocation &alloc,
+        PHV::Allocation::MutuallyLiveSlices container_state,
+        const IR::MAU::Action* action,
+        UnionFind<PHV::FieldSlice>& packing_constraints) {
     ordered_set<PHV::Container> containerList;
     size_t num_unallocated = 0;
     for (auto slice : container_state) {
@@ -75,8 +134,22 @@ size_t ActionPhvConstraints::num_container_sources(const PHV::Allocation &alloc,
         for (auto operand : write_to_reads_per_action[field][action]) {
             if (operand.ad || operand.constant) continue;
             const PHV::Field* fieldRead = operand.phv_used;
+
             // assume aligned clusters. so, range for operands is the same as the range for
-            // destination.
+            // destination
+            // xxx(deep): Except when the source slice is smaller than the destination slice, the
+            // range should reflect the size of the smaller source slice
+            // Insert all the source slices into the universe of packing_constraints
+            if (range.size() > fieldRead->size) {
+                le_bitrange range1 = StartLen(0, fieldRead->size);
+                LOG6("\t\t\t\t\tInserting " << fieldRead->name << " [" << range1.lo << ", " <<
+                        range1.hi << "] into copacking_constraints");
+                packing_constraints.insert(PHV::FieldSlice(fieldRead, range1));
+            } else {
+                LOG6("\t\t\t\t\tInserting " << fieldRead->name << " [" << range.lo << ", " <<
+                        range.hi << "] into copacking_constraints");
+                packing_constraints.insert(PHV::FieldSlice(fieldRead, range)); }
+
             ordered_set<PHV::Container> per_source_containers;
             ordered_set<PHV::AllocSlice> per_source_slices = alloc.slices(fieldRead, range);
             for (auto slice : per_source_slices)
@@ -85,12 +158,12 @@ size_t ActionPhvConstraints::num_container_sources(const PHV::Allocation &alloc,
                 LOG5("\t\t\t\tSource " << fieldRead->name << " has not been allocated yet.");
                 ++num_unallocated;
             } else {
-                LOG5("\t\t\t\tField " << field->name << " written by action data or constant."); } }
-        }
+                containerList.insert(per_source_containers.begin(), per_source_containers.end()); }
+        } }
     LOG5("\t\t\t\tNumber of allocated sources  : " << containerList.size());
     LOG5("\t\t\t\tNumber of unallocated sources: " << num_unallocated);
     LOG5("\t\t\t\tTotal number of sources      : " << (containerList.size() + num_unallocated));
-    return (containerList.size() + num_unallocated);
+    return NumContainers(containerList.size(), num_unallocated);
 }
 
 //  Note: If both action data and constant are used in the same action as operands on the same
@@ -114,7 +187,7 @@ int ActionPhvConstraints::unallocated_bits(PHV::Allocation::MutuallyLiveSlices s
     for (auto slice : slices) {
         size_used += slice.width(); }
     if (int(c.size()) < size_used)
-        ::warning("Total size of mutually live slices is greater than the size of the container");
+        LOG4("Total size of mutually live slices is greater than the size of the container");
     return (c.size() - size_used);
 }
 
@@ -158,23 +231,100 @@ unsigned ActionPhvConstraints::container_operation_type(ordered_set<const IR::MA
     return FieldOperation::MOVE;
 }
 
-boost::optional<std::vector<ActionPhvConstraints::CohabitSet>>
-ActionPhvConstraints::can_pack(const PHV::Allocation& alloc, const PHV::AllocSlice& slice,
-        PHV::Allocation::MutuallyLiveSlices container_state, const PHV::Container c) {
+void ActionPhvConstraints::pack_slices_together(
+        const PHV::Allocation &alloc,
+        PHV::Allocation::MutuallyLiveSlices& container_state,
+        UnionFind<PHV::FieldSlice>& packing_constraints,
+        const IR::MAU::Action* action,
+        bool pack_unallocated_only  /*If true, only unallocated slices will be packed together*/) {
+    if (pack_unallocated_only)
+        LOG5("\t\t\t\t\tPack all unallocated slices together. All bits in container are occupied.");
+    else
+        LOG5("\t\t\t\t\tPack all slices together.");
+    ordered_set<PHV::FieldSlice> pack_together;
+    for (auto slice : container_state) {
+        auto *field = slice.field();
+        auto range = slice.field_slice();
+        for (auto operand : write_to_reads_per_action[field][action]) {
+            if (operand.ad || operand.constant) continue;
+            const PHV::Field* fieldRead = operand.phv_used;
+            if (pack_unallocated_only) {
+                ordered_set<PHV::Container> containers;
+                ordered_set<PHV::AllocSlice> per_source_slices = alloc.slices(fieldRead, range);
+                for (auto slice : per_source_slices)
+                    containers.insert(slice.container());
+                if (containers.size() != 0) continue; }
+            // If size of the source is less than the size of the destination slice, then range must
+            // be reduced to the size of the smaller source FieldSlice
+            if (range.size() > fieldRead->size) {
+                le_bitrange range1 = StartLen(0, fieldRead->size);
+                // Insert the slices to be packed together into the UnionFind structure
+                LOG6("\t\t\t\t\tInserting " << fieldRead->name << " [" << range1.lo << ", " <<
+                        range1.hi << "] into copacking_constraints");
+                pack_together.insert(PHV::FieldSlice(fieldRead, range1));
+
+            } else {
+                // Insert the slices to be packed together into the UnionFind structure
+                LOG6("\t\t\t\t\tInserting " << fieldRead->name << " [" << range.lo << ", " <<
+                        range.hi << "] into copacking_constraints");
+                pack_together.insert(PHV::FieldSlice(fieldRead, range)); } } }
+
+    if (LOGGING(5)) {
+        std::stringstream ss;
+        for (auto slice : pack_together)
+            ss << slice;
+        LOG5("\t\t\t\t\tPack together: " << ss); }
+
+    PHV::FieldSlice *firstSlice = nullptr;
+    for (auto slice : pack_together) {
+        if (firstSlice == nullptr) {
+            LOG5("\t\t\t\t\t\tSetting first slice to  " << slice);
+            firstSlice = new PHV::FieldSlice(slice.field(), slice.range()); }
+        LOG5("\t\t\t\t\tUnion " << *firstSlice << " with " << slice);
+        packing_constraints.makeUnion(*firstSlice, slice); }
+}
+
+boost::optional<UnionFind<PHV::FieldSlice>>
+ActionPhvConstraints::can_pack(const PHV::Allocation& alloc, const PHV::AllocSlice& slice) {
+    std::vector<PHV::AllocSlice> slices;
+    slices.push_back(slice);
+    return can_pack(alloc, slices);
+}
+
+boost::optional<UnionFind<PHV::FieldSlice>>
+ActionPhvConstraints::can_pack(const PHV::Allocation& alloc, std::vector<PHV::AllocSlice>& slices) {
+    PHV::Container c;
+    bool container_uninitialized = true;
+    int total_slice_width = 0;
+    for (auto slice : slices) {
+        total_slice_width += slice.width();
+        if (container_uninitialized) {
+            c = slice.container();
+            continue; }
+        BUG_CHECK(c == slice.container(), "Candidate field slices assigned to different "
+                "containers"); }
+
+    PHV::Allocation::MutuallyLiveSlices container_state = alloc.slicesByLiveness(c, slices);
+    LOG6("\t\tExisting container state: ");
+    for (auto slice : container_state)
+        LOG6("\t\t\t" << slice);
+
     // Determine if there are any unallocated bits in the container corresponding to the given
     // mutually live slices
     int available_bits = unallocated_bits(container_state, c);
+    LOG5("\t\tAvailable bits: " << available_bits);
+    LOG5("\t\tRequired width: " << total_slice_width);
 
     // If no available bits, cannot pack
     if (!available_bits) {
         LOG5("\t\tContainer " << c << " is full");
-        return boost::none; }
+       return boost::none; }
 
     // If bits available but lesser in width than the size requested, cannot pack
     // It is important to distinguish between these cases because we might want to slice
     // fields to enable packing in the future
-    if (available_bits < slice.width()) {
-        LOG5("\t\tSlice requires " << slice.width() << "b. Container " << c << " has " <<
+    if (available_bits < total_slice_width) {
+        LOG5("\t\tSlice(s) require " << total_slice_width << "b. Container " << c << " has " <<
                 available_bits << "b available.");
         return boost::none; }
 
@@ -187,10 +337,17 @@ ActionPhvConstraints::can_pack(const PHV::Allocation& alloc, const PHV::AllocSli
                 LOG5("\t\tExisting slice has a no pack property");
                 return boost::none; } } }
 
-    LOG5("\t\tChecking whether field " << slice.field()->name << " (" << slice.field()->size << "b)"
-            " can be packed into container " << container_state << " already containing " <<
+    LOG5("\t\tChecking whether field slice(s) ");
+    for (auto slice : slices)
+        LOG5("\t\t\t" << slice.field()->name << " (" << slice.width() << "b)");
+    LOG5("\t\tcan be packed into container " << container_state << " already containing " <<
             container_state.size() << " slices");
-    container_state.insert(slice);
+
+    field_ordering(slices);
+
+    // Create candidate packing
+    for (auto slice : slices)
+        container_state.insert(slice);
 
     // Merge actions for all the candidate fields into a set
     std::vector<const PHV::Field *> fields;
@@ -220,30 +377,89 @@ ActionPhvConstraints::can_pack(const PHV::Allocation& alloc, const PHV::AllocSli
 
     // Perform analysis related to number of sources for every action
     // Only MOVE operations get here
+    // Store all the packing constraints induced by this possible packing in this UnionFind
+    // structure.
+    UnionFind<PHV::FieldSlice> copacking_constraints;
     for (auto &action : set_of_actions) {
-        LOG5("\t\t\tNeed to check container sources now");
-        size_t num_source_containers = num_container_sources(alloc, container_state, action);
+        LOG5("\t\t\tNeed to check container sources now for action " << action->name);
+        NumContainers sources = num_container_sources(alloc, container_state, action,
+                copacking_constraints);
         bool has_ad_constant_sources = has_ad_or_constant_sources(fields, action);
+        size_t num_source_containers = sources.num_allocated + sources.num_unallocated;
+
+        // If there are less than 2 containers as sources (includes packing of the candidate field),
+        // then packing is valid
         if (num_source_containers == 1) continue;
         if (num_source_containers == 0) continue;
-        if (num_source_containers > 2) {
+
+        // If source fields have already been allocated and number of sources greater than 2, then
+        // packing is not possible (TOO_MANY_SOURCES)
+        if (sources.num_allocated > 2) {
             LOG5("\t\t\t\tAction " << action->name << " uses more than two PHV sources.");
             return boost::none; }
-        if (num_source_containers == 2 && has_ad_constant_sources) {
+
+        // num_source_containers == 2 if execution gets here
+        // If source fields have already been allocated and there are two PHV sources in addition to
+        // an action data/constant sourcem then packing is not possible (TOO_MANY_SOURCES)
+        if (sources.num_allocated == 2 && has_ad_constant_sources) {
             LOG5("\t\t\t\tAction " << action->name << " uses action data/constant in addition to "
                     "two PHV sources");
             return boost::none; }
-        // Number of source containers = 2, No action data/constant operands
+
+        // Special packing constraints are introduced when number of source containers > 2 and
+        // number of allocated containers is less than or equal to 2.
+        // At this point of the loop, sources.num_allocated <= 2, sources.num_unallocated may be any
+        // value.
+        size_t num_fields_not_written_to = 0;
+        size_t num_bits_not_written_to = available_bits - total_slice_width;
         for (auto field : fields) {
             boost::optional<FieldOperation> fw = is_written(action, field);
-            if (!fw) {
-                // Partial write to a container which will cause bits to get clobbered
-                LOG5("\t\t\t\tBits of field " << field->name << " will get clobbered.");
-                return boost::none; } } }
+            if (!fw) num_fields_not_written_to++; }
 
-    std::vector<CohabitSet> packing_constraints;
+        // If some field is not written to, then one of the sources for the move has to be the
+        // container itself.
+        // If sources.num_allocated == 2, this packing is not possible (TOO_MANY_SOURCES)
+        if (num_fields_not_written_to && sources.num_allocated == 2) {
+            LOG5("\t\t\t\tSome fields not written in action " << action->name << " will get "
+                    "clobbered.");
+            return boost::none; }
 
-    return packing_constraints;
+        // If some bits in the container are not written to, then one of the sources of the move has
+        // to be the container itself.
+        // If sources.num_allocated == 2, this packing is not possible (TOO_MANY_SOURCES)
+        if (num_bits_not_written_to && sources.num_allocated == 2) {
+            LOG5("\t\t\t\tSome unallocated bits in the container will get clobbered by writes in "
+                    "action" << action->name);
+            return boost::none; }
+
+        // If sources.num_allocated == 2 and sources.num_unallocated == 0, then packing is valid and
+        // no other packing constraints are induced
+        if (sources.num_allocated == 2 && sources.num_unallocated == 0)
+            continue;
+
+        // If sources.num_allocated == 2 and sources.num_unallocated > 0, then all unallocated
+        // fields have to be packed together with one of the allocated fields
+        // xxx(deep): What's the best way to choose which allocated slice to pack with
+        if (sources.num_allocated == 2 && sources.num_unallocated > 0) {
+            pack_slices_together(alloc, container_state, copacking_constraints, action, false);
+        }
+
+        // If sources.num_allocated == 1 and sources.num_unallocated > 0, then
+        if (sources.num_allocated <= 1 && sources.num_unallocated > 0) {
+            if (num_fields_not_written_to || num_bits_not_written_to) {
+                // Pack all slices together (both allocated and unallocated)
+                // Can only have src2 as src1 is always the destination container itself
+                pack_slices_together(alloc, container_state, copacking_constraints, action, false);
+            } else {
+                // For this case, sources need not be packed together as we may have (at most) 2
+                // source containers
+                if (num_source_containers == 2) continue;
+                // Only pack unallocated slices together
+                pack_slices_together(alloc, container_state, copacking_constraints, action, true); }
+        }
+    }
+
+    return copacking_constraints;
 }
 
 boost::optional<ActionPhvConstraints::FieldOperation> ActionPhvConstraints::is_written(const

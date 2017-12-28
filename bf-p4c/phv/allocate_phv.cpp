@@ -557,7 +557,7 @@ bool CoreAllocation::satisfies_constraints(std::vector<PHV::AllocSlice> slices) 
 bool CoreAllocation::satisfies_constraints(
         const PHV::Allocation& alloc,
         PHV::AllocSlice slice) const {
-    PHV::Field* f = slice.field();
+    const PHV::Field* f = slice.field();
     PHV::Container c = slice.container();
 
     // Check gress.
@@ -579,6 +579,16 @@ bool CoreAllocation::satisfies_constraints(
             LOG5("        constraint: field " << slice.field() << " has no_pack constraint and is "
                          "already placed in this container");
             return false; } }
+
+    // Check action analysis induced constraints if multiple slices are to be packed in the same
+    // container.
+    if (slices.size() > 0) {
+        boost::optional<UnionFind<PHV::FieldSlice>> rv = actions_i.can_pack(alloc, slice);
+        if (!rv) {
+            LOG5("        ...action constraint: cannot pack into container " << c);
+            return false;
+        } else {
+            LOG5("        ...action constraint: can pack into container " << c); } }
 
     return true;
 }
@@ -742,8 +752,8 @@ CoreAllocation::tryAllocSliceList(
 
     // XXX(cole): If the list is entirely comprised of a CCGF, allocate it.
     if (slices.size() == 1 && slices.front().field()->is_ccgf()) {
-        auto rst = tryAllocCCGF(alloc, group, slices.front().field(),
-                                start_positions.at(slices.front()));
+        auto rst = tryAllocCCGF(alloc, group, phv_i.field(slices.front().field()->id),
+                start_positions.at(slices.front()));
         if (!rst) return boost::none;
         return std::make_pair(*rst, MatchScore(0, 0)); }
 
@@ -771,14 +781,16 @@ CoreAllocation::tryAllocSliceList(
         int n_packings = int(alloc_attempt.slices(c).size() > 0);  // 1: hasPacking, 0: not.
         MatchScore score(0 , n_packings);
 
-        // If we already have a condidate and this is an empty container, skip it.
+        // If we already have a candidate and this is an empty container, skip it.
         if (candidate && n_packings == 0) continue;
 
         // Generate alloc_slices if we choose this container.
         for (auto& field_slice : slices) {
             le_bitrange container_slice =
                 StartLen(start_positions.at(field_slice), field_slice.size());
-            alloc_slices.push_back(PHV::AllocSlice(field_slice, c, container_slice)); }
+            // Field slice has a const Field*, so get the non-const version using the PhvInfo object
+            alloc_slices.push_back(PHV::AllocSlice(phv_i.field(field_slice.field()->id),
+                        c, field_slice.range(), container_slice)); }
 
         // Check slice list<-->container constraints.
         if (!satisfies_constraints(alloc_slices))
@@ -791,6 +803,17 @@ CoreAllocation::tryAllocSliceList(
                             return satisfies_constraints(alloc_attempt, slice); });
         if (!constraints_ok)
             continue;
+
+        // In case there are multiple members in alloc_slices, need to check how their packing is
+        // affected by action induced constraints
+        if (alloc_slices.size() > 1) {
+            boost::optional<UnionFind<PHV::FieldSlice>> rv = actions_i.can_pack(alloc_attempt,
+                    alloc_slices);
+            if (!rv) {
+                LOG5("        ...action constraint: cannot pack into container " << c);
+                continue;
+            } else {
+                LOG5("        ...action constraint: can pack into container " << c); } }
 
         auto calc_overlay_length = [&] (const PHV::AllocSlice& slice,
                                         const ordered_set<PHV::AllocSlice>& alloced_slices) {
@@ -851,7 +874,13 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAlloc(
     // slice's cluster.
     ordered_map<const PHV::AlignedCluster*, int> cluster_alignment;
     ordered_set<PHV::FieldSlice> allocated;
-    for (const PHV::SuperCluster::SliceList* slice_list : super_cluster.slice_lists()) {
+    std::list<const PHV::SuperCluster::SliceList*> slice_lists;
+    for (const PHV::SuperCluster::SliceList* slice_list : super_cluster.slice_lists())
+        slice_lists.push_back(slice_list);
+    // Sort slice lists according to the number of times they have been written to and read from in
+    // various actions. This helps simplify constraints by placing destinations before sources
+    actions_i.sort(slice_lists);
+    for (const PHV::SuperCluster::SliceList* slice_list : slice_lists) {
         int le_offset = 0;
         ordered_map<const PHV::FieldSlice, int> slice_alignment;
         for (auto& slice : *slice_list) {
@@ -901,6 +930,13 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAlloc(
     // each list to place its cluster.
     for (auto* rotational_cluster : super_cluster.clusters()) {
         for (auto* aligned_cluster : rotational_cluster->clusters()) {
+            // Sort all field slices in an aligned cluster based on the number of times they are
+            // written to or read from in different actions
+            std::vector<PHV::FieldSlice> slice_list;
+            for (PHV::FieldSlice slice : aligned_cluster->slices())
+                slice_list.push_back(slice);
+            actions_i.sort(slice_list);
+
             // Forall fields in an aligned cluster, they must share a same start position.
             // Compute possible starts.
             bitvec starts;
@@ -920,7 +956,8 @@ boost::optional<PHV::Transaction> CoreAllocation::tryAlloc(
                 alloc_results.emplace_back(alloc_attempt.makeTransaction());
                 auto possible_alloc = std::prev(alloc_results.end());
                 MatchScore score(0, 0);
-                for (const PHV::FieldSlice& slice : aligned_cluster->slices()) {
+                for (const PHV::FieldSlice &slice : slice_list) {
+                // for (const PHV::FieldSlice &slice : aligned_cluster->slices()) {
                     // Skip fields that have already been allocated above.
                     if (allocated.find(slice) != allocated.end()) continue;
                     ordered_map<const PHV::FieldSlice, int> start_map = { { slice, start } };

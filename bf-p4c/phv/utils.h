@@ -62,13 +62,15 @@ class ContainerGroup {
 };
 
 class FieldSlice {
-    PHV::Field* field_i;
+    // There is no reason for a FieldSlice to change the field it is representing, so make this
+    // const (also used in ActionPhvConstraints)
+    const PHV::Field* field_i;
     le_bitrange range_i;
     boost::optional<FieldAlignment> alignment_i = boost::none;
     nw_bitrange validContainerRange_i = ZeroToMax();
 
  public:
-    FieldSlice(Field* field, le_bitrange range)
+    FieldSlice(const Field* field, le_bitrange range)
     : field_i(field), range_i(range) {
         BUG_CHECK(0 <= range.lo, "Trying to create field slice with negative start");
         BUG_CHECK(range.size() <= field->size, "Trying to create field slice larger than field");
@@ -88,7 +90,7 @@ class FieldSlice {
     }
 
     /// Create a slice that holds the entirety of @field.
-    explicit FieldSlice(Field* field)
+    explicit FieldSlice(const Field* field)
     : FieldSlice(field, le_bitrange(StartLen(0, field->size))) { }
 
     /// Creates a subslice of @slice from @range.lo to @range.hi.
@@ -140,7 +142,7 @@ class FieldSlice {
     }
 
     /// @returns the field this is a slice of.
-    PHV::Field* field() const   { return field_i; }
+    const PHV::Field* field() const   { return field_i; }
 
     /// @returns the bits of the field included in this field slice.
     le_bitrange range() const   { return range_i; }
@@ -157,7 +159,6 @@ class AllocSlice {
  public:
     AllocSlice(PHV::Field* f, PHV::Container c, int f_bit_lo, int container_bit_lo, int width);
     AllocSlice(PHV::Field* f, PHV::Container c, le_bitrange f_slice, le_bitrange container_slice);
-    AllocSlice(FieldSlice f_slice, PHV::Container c, le_bitrange container_slice);
 
     bool operator==(const AllocSlice& other) const;
     bool operator!=(const AllocSlice& other) const;
@@ -269,7 +270,9 @@ class Allocation {
       * that mutex_i(f1, f2) = false and mutex_i(f1, f3) = false, a call to slicesByLiveness(c,
       * f1[0:3]) would return the set {f2[0:3], f3[0:3]}.
      */
-    virtual MutuallyLiveSlices slicesByLiveness(PHV::Container c, AllocSlice& sl) const;
+    virtual MutuallyLiveSlices slicesByLiveness(const PHV::Container c, const AllocSlice& sl) const;
+    virtual MutuallyLiveSlices slicesByLiveness(const PHV::Container c, std::vector<AllocSlice>&
+            slices) const;
 
     /// @returns all slices allocated for @f that include any part of @range in
     /// the field portion of the allocated slice.  May be empty (if @f is not
@@ -780,6 +783,8 @@ std::ostream &operator<<(std::ostream &out, const SuperCluster&);
 std::ostream &operator<<(std::ostream &out, const SuperCluster*);
 std::ostream &operator<<(std::ostream &out, const SuperCluster::SliceList&);
 std::ostream &operator<<(std::ostream &out, const SuperCluster::SliceList*);
+std::ostream &operator<<(std::ostream &out, const FieldSlice&);
+std::ostream &operator<<(std::ostream &out, const FieldSlice*);
 
 }   // namespace PHV
 

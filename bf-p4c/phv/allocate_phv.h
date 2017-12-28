@@ -25,7 +25,10 @@ class CoreAllocation {
     const Clustering& clustering_i;
     const PhvUse& uses_i;
     const ClotInfo& clot_i;
-    // ActionPhvConstraints& actions_i;  // XXX(seth): Not yet implemented?
+
+    // Modified in this pass.
+    PhvInfo& phv_i;
+    ActionPhvConstraints& actions_i;
 
     /** The score of a match.
      * + n_overlays, the number of overlaying bits.
@@ -58,8 +61,10 @@ class CoreAllocation {
                    const Clustering& clustering,
                    const PhvUse& uses,
                    const ClotInfo& clot,
-                   const ActionPhvConstraints& /* actions */)
-        : mutex_i(mutex), clustering_i(clustering), uses_i(uses), clot_i(clot) { }
+                   PhvInfo& phv,
+                   ActionPhvConstraints& actions)
+        : mutex_i(mutex), clustering_i(clustering), uses_i(uses), clot_i(clot), phv_i(phv),
+        actions_i(actions) { }
 
     /// Split @sc into container-sized chunks, prefering the largest container
     /// sizes possible.
@@ -320,6 +325,8 @@ class AllocatePHV : public Inspector {
     const SymBitMatrix& mutex_i;
 
     // Used to create strategies, if they need
+    ActionPhvConstraints& actions_i;
+    // Used to create strategies, if needed
     const CalcCriticalPathClusters& critical_path_clusters_i;
     FieldInterference field_interference_i;
 
@@ -361,11 +368,11 @@ class AllocatePHV : public Inspector {
                 const PhvUse& uses,
                 const ClotInfo& clot,
                 PhvInfo& phv,
-                const ActionPhvConstraints& actions,
+                ActionPhvConstraints& actions,
                 const CalcCriticalPathClusters& critical_cluster)
-        : core_alloc_i(mutex, clustering, uses, clot, actions), phv_i(phv), uses_i(uses)
-        , clustering_i(clustering), mutex_i(mutex), critical_path_clusters_i(critical_cluster)
-        , field_interference_i(mutex) { }
+        : core_alloc_i(mutex, clustering, uses, clot, phv, actions), phv_i(phv), uses_i(uses),
+        clustering_i(clustering), mutex_i(mutex), actions_i(actions),
+        critical_path_clusters_i(critical_cluster) , field_interference_i(mutex) { }
 };
 
 #endif  /* BF_P4C_PHV_ALLOCATE_PHV_H_ */

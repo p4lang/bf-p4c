@@ -553,6 +553,7 @@ p4c_add_xfail_reason("tofino"
   switch_dc_basic
   testdata/p4_14_samples/port_vlan_mapping.p4
   switch_dc_basic
+  extensions/p4_tests/p4_14/action_conflict_1.p4
   )
 
 # We can't (without some complex acrobatics) support conditional computed
@@ -912,7 +913,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "PHV allocation creates a container action impossible within a Tofino ALU"
   extensions/p4_tests/p4_14/14-MultipleActionsInAContainer.p4
-  extensions/p4_tests/p4_14/action_conflict_1.p4
   extensions/p4_tests/p4_16/stack_valid.p4
   testdata/p4_14_samples/instruct5.p4
   extensions/p4_tests/p4_14/c1/COMPILER-326/case2035.p4
