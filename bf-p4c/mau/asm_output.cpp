@@ -30,7 +30,8 @@ class MauAsmOutput::EmitAttached : public Inspector {
     bool preorder(const IR::MAU::IdleTime *) override { return false; }
     bool preorder(const IR::Attached *att) override {
         BUG("unknown attached table type %s", typeid(*att).name()); }
-    EmitAttached(const MauAsmOutput &s, std::ostream &o, const IR::MAU::Table *t, int stg, gress_t gt)
+    EmitAttached(const MauAsmOutput &s, std::ostream &o, const IR::MAU::Table *t,
+        int stg, gress_t gt)
     : self(s), out(o), tbl(t), stage(stg), gress(gt) {}};
 
 std::ostream &operator<<(std::ostream &out, const MauAsmOutput &mauasm) {
@@ -42,7 +43,8 @@ std::ostream &operator<<(std::ostream &out, const MauAsmOutput &mauasm) {
             if (tbl.phase0Info)
                 out << tbl.phase0Info;
             else
-                mauasm.emit_table(out, tbl.tableInfo, stage.first.second /* stage */, stage.first.first /* gress */);
+                mauasm.emit_table(out, tbl.tableInfo, stage.first.second /* stage */,
+                    stage.first.first /* gress */);
         }
     }
     return out;
@@ -192,7 +194,7 @@ struct FormatHash {
     cstring alg;
     const int sliceindex;
     FormatHash(const safe_vector<Slice>& md, const Slice *g,
-               cstring a, int idx=0)
+               cstring a, int idx = 0)
         : match_data(md), ghost(g), alg(a), sliceindex(idx) {}
 };
 
@@ -1503,7 +1505,7 @@ void MauAsmOutput::emit_atcam_match(std::ostream &out, indent_t indent,
     }
 }
 
-void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int stage, 
+void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int stage,
 gress_t gress) const {
     /* FIXME -- some of this should be method(s) in IR::MAU::Table? */
     TableMatch fmt(*this, phv, tbl);
@@ -1974,7 +1976,8 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
         if (!seltbl) {
             BUG("SALU Selector Table not found?");
         } else {
-            out << indent << "selection_table: " << seltbl->get_use_name(salu->selector) << std::endl;
+            out << indent << "selection_table: " << seltbl->get_use_name(salu->selector)
+              << std::endl;
         }
     }
 

@@ -58,6 +58,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/instruct1.p4
   extensions/p4_tests/p4_14/action_conflict_2.p4
   extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
+  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
   )
 
 # We need a deposit_field instruction, but we fail to select it.
@@ -996,7 +997,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: hash expression width mismatch"
   switch_l2
-  extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
   )
 
 p4c_add_xfail_reason("tofino"

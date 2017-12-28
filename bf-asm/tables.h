@@ -822,7 +822,7 @@ DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
         depth = layout_size() / width;
         period = 1;
         period_name = 0; }
-    Actions *get_actions() override { return actions ? actions : match_table->actions; }
+    Actions *get_actions() override { return actions ? actions : (match_table ? match_table->actions : nullptr); }
     const AttachedTables *get_attached() const override { return &attached; }
     const GatewayTable *get_gateway() const override { return match_table->get_gateway(); }
     MatchTable *get_match_table() override { return match_table; }
