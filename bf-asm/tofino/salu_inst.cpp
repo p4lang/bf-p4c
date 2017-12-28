@@ -43,7 +43,7 @@ void AluOP::write_regs(Target::Tofino::mau_regs &regs, Table *tbl_, Table::Actio
         } else if (auto k = srcb.to<operand::Const>()) {
             salu.salu_bsrc_phv = 0;
             if (k->value >= -8 && k->value < 8) {
-                salu.salu_const_src = k->value;
+                salu.salu_const_src = k->value & 0xf;
                 salu.salu_regfile_const = 0;
             } else {
                 salu.salu_const_src = tbl->get_const(k->value);
@@ -101,7 +101,6 @@ void OutOP::write_regs(Target::Tofino::mau_regs &regs, Table *tbl, Table::Action
     auto &switch_ctl = regs.rams.array.switchbox.row[logical_home_row/2U].ctl;
     auto &action_hv_xbar = regs.rams.array.row[logical_home_row/2U].action_hv_xbar;
     auto &salu = meter_group.stateful.salu_instr_output_alu[act->code];
-    salu.salu_output_cmpfn = STATEFUL_PREDICATION_ENCODE_UNCOND;
     if (predication_encode) {
         salu.salu_output_cmpfn = predication_encode;
         // Not clear if this is the best place for the rest of these -- should perhaps
@@ -114,7 +113,9 @@ void OutOP::write_regs(Target::Tofino::mau_regs &regs, Table *tbl, Table::Action
         // disable action data address huffman decoding, on the assumtion we're not trying
         // to combine this with an action data table on the same home row.  Otherwise, the
         // huffman decoding will think this is an 8-bit value and replicate it.
-        action_hv_xbar.action_hv_xbar_disable_ram_adr.action_hv_xbar_disable_ram_adr_right = 1; }
+        action_hv_xbar.action_hv_xbar_disable_ram_adr.action_hv_xbar_disable_ram_adr_right = 1; 
+    } else {
+        salu.salu_output_cmpfn = STATEFUL_PREDICATION_ENCODE_UNCOND; }
     salu.salu_output_asrc = output_mux;
 }
 void OutOP::write_regs(Target::Tofino::mau_regs &regs, Table *tbl, Table::Actions::Action *act) {

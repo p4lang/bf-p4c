@@ -301,6 +301,9 @@ Instruction *AluOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
     if ((rv->srca.to<operand::Phv>() || rv->srca.to<operand::MathFn>()) && swap_args) {
         operands = (rv->opc = swap_args)->operands;
         std::swap(rv->srca, rv->srcb);
+    } else if ((rv->srcb.to<operand::Memory>() && rv->srca.to<operand::Const>()) && swap_args) {
+        operands = (rv->opc = swap_args)->operands;
+        std::swap(rv->srca, rv->srcb);
     } else if (operands == B) {
         std::swap(rv->srca, rv->srcb); }
     if (idx < op.size || (operands == A && rv->srcb) || (operands == B && rv->srca))

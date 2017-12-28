@@ -362,9 +362,9 @@ bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p
  * FIXME -- a compatible way
  */
 bool Table::allow_ram_sharing(const Table *t1, const Table *t2) {
-    if (t1->table_type() == STATEFUL && t2->table_type() == SELECTION)
+    if (t1->table_type() == STATEFUL && t2->table_type() == SELECTION && t1->to<StatefulTable>()->bound_selector == t2)
         return true;
-    if (t2->table_type() == STATEFUL && t1->table_type() == SELECTION)
+    if (t2->table_type() == STATEFUL && t1->table_type() == SELECTION && t2->to<StatefulTable>()->bound_selector == t1)
         return true;
     return false;
 }
@@ -378,9 +378,10 @@ void Table::alloc_rams(bool logical, Alloc2Dbase<Table *> &use, Alloc2Dbase<Tabl
                 r >>= 1; }
             try {
                 if (Table *old = use[r][c]) {
-                    if (!allow_ram_sharing(this, old))
+                    if (!allow_ram_sharing(this, old)) {
                         error(lineno, "Table %s trying to use (%d,%d) which is already in use "
                               "by table %s", name(), row.row, col, old->name());
+                    }
                 } else
                     use[r][c] = this;
             } catch(const char *oob) {
@@ -720,6 +721,15 @@ bool Table::Actions::Action::equiv(Action *a) {
     return true;
 }
 
+
+bool Table::Actions::Action::equivVLIW(Action *a) {
+    if (instr.size() != a->instr.size()) return false;
+    for (unsigned i = 0; i < instr.size(); i++)
+        if (!instr[i]->equiv(a->instr[i]))
+            return false;
+    return true;
+}
+
 std::map<std::string, std::vector<Table::Actions::Action::alias_value_t *>>
 Table::Actions::Action::reverse_alias() const {
     std::map<std::string, std::vector<alias_value_t *>>      rv;
@@ -982,7 +992,7 @@ void Table::Actions::pass2(Table *tbl) {
         if (act.addr < 0) {
             for (int i = 0; i < ACTION_IMEM_ADDR_MAX; i++) {
                 if (auto old = tbl->stage->imem_addr_use[tbl->gress][i]) {
-                    if (act.equiv(old)) {
+                    if (act.equivVLIW(old)) {
                         act.addr = i;
                         break; }
                     continue; }

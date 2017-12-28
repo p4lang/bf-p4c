@@ -16,6 +16,8 @@ class MauAsmOutput::EmitAttached : public Inspector {
     const MauAsmOutput          &self;
     std::ostream                &out;
     const IR::MAU::Table        *tbl;
+    int                         stage;
+    gress_t                     gress;
     bool is_unattached(const IR::MAU::BackendAttached *at);
     bool preorder(const IR::MAU::Counter *) override;
     bool preorder(const IR::MAU::Meter *) override;
@@ -28,8 +30,8 @@ class MauAsmOutput::EmitAttached : public Inspector {
     bool preorder(const IR::MAU::IdleTime *) override { return false; }
     bool preorder(const IR::Attached *att) override {
         BUG("unknown attached table type %s", typeid(*att).name()); }
-    EmitAttached(const MauAsmOutput &s, std::ostream &o, const IR::MAU::Table *t)
-    : self(s), out(o), tbl(t) {}};
+    EmitAttached(const MauAsmOutput &s, std::ostream &o, const IR::MAU::Table *t, int stg, gress_t gt)
+    : self(s), out(o), tbl(t), stage(stg), gress(gt) {}};
 
 std::ostream &operator<<(std::ostream &out, const MauAsmOutput &mauasm) {
     for (auto &stage : mauasm.by_stage) {
@@ -40,7 +42,7 @@ std::ostream &operator<<(std::ostream &out, const MauAsmOutput &mauasm) {
             if (tbl.phase0Info)
                 out << tbl.phase0Info;
             else
-                mauasm.emit_table(out, tbl.tableInfo);
+                mauasm.emit_table(out, tbl.tableInfo, stage.first.second /* stage */, stage.first.first /* gress */);
         }
     }
     return out;
@@ -53,7 +55,6 @@ class MauAsmOutput::TableMatch {
 
     TableMatch(const MauAsmOutput &s, const PhvInfo &phv, const IR::MAU::Table *tbl);
 };
-
 
 /** Function that emits the action data aliases needed for consistency across the action data
  *  bus.  The aliases are to be used to set up parameters for the Context JSON, and if necessary
@@ -189,9 +190,10 @@ struct FormatHash {
     safe_vector<Slice> match_data;
     const Slice *ghost;
     cstring alg;
+    const int sliceindex;
     FormatHash(const safe_vector<Slice>& md, const Slice *g,
-               cstring a)
-        : match_data(md), ghost(g), alg(a) {}
+               cstring a, int idx=0)
+        : match_data(md), ghost(g), alg(a), sliceindex(idx) {}
 };
 
 // FIXME: This is a simple function for crc polynomial.  Probably needs to be expanded for
@@ -223,9 +225,9 @@ std::ostream &operator<<(std::ostream &out, const FormatHash &hash) {
     } else if (checkEqual(hash.alg, "crc32")) {
         out << "stripe(crc(" << crc_poly(32) << ", " << emit_vector(hash.match_data, ", ") << "))";
     } else if (checkEqual(hash.alg, "identity")) {
-        out << hash.match_data[0];
+        out << "stripe(" << hash.match_data[hash.sliceindex] << ")";
     } else if (checkEqual(hash.alg, "selector_identity")) {
-        out << "stripe(" << hash.match_data[0] << ")";
+        out << "stripe(" << hash.match_data[hash.sliceindex] << ")";
     } else {
         BUG("Hashing Algorithm is not recognized");
     }
@@ -635,7 +637,7 @@ void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent,
 
     if (use->hash_dist_hash.allocated) {
         auto &hdh = use->hash_dist_hash;
-        for (int i = 0; i < IXBar::HASH_DIST_SLICES; i++) {
+        for (int i = 0, sliceIdx = 0; i < IXBar::HASH_DIST_SLICES; i++) {
             if (((1 << i) & hdh.slice) == 0) continue;
             int first_bit = -1;
             int last_bit = -1;
@@ -657,20 +659,11 @@ void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent,
                     BUG("Split in address bits for hash distribution");
                 }
             }
-            // FIXME: this cannot work for larger than 16 bit addresses?
-            if (hdh.algorithm == "identity") {
-                for (auto slice : match_data) {
-                    out << indent << (first_bit + slice.get_lo());
-                    if (slice.width() > 1)
-                        out << ".." << (first_bit + slice.get_hi());
-                    out << ": " << slice << std::endl;
-                }
-            } else {
-                if (last_bit == -1)
+            if (last_bit == -1)
                 last_bit = (i + 1) * IXBar::HASH_DIST_BITS - 1;
-                out << indent << first_bit << ".." << last_bit;
-                out << ": " << FormatHash(match_data, nullptr, hdh.algorithm) << std::endl;
-            }
+            out << indent << first_bit << ".." << last_bit;
+            out << ": " << FormatHash(match_data, nullptr, hdh.algorithm, sliceIdx) << std::endl;
+            sliceIdx++;
         }
     }
 }
@@ -1510,7 +1503,8 @@ void MauAsmOutput::emit_atcam_match(std::ostream &out, indent_t indent,
     }
 }
 
-void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) const {
+void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int stage, 
+gress_t gress) const {
     /* FIXME -- some of this should be method(s) in IR::MAU::Table? */
     TableMatch fmt(*this, phv, tbl);
     const char *tbl_type = "gateway";
@@ -1640,7 +1634,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
         emit_idletime(out, indent, tbl, idletime);
 
     for (auto at : tbl->attached)
-        at->apply(EmitAttached(*this, out, tbl));
+        at->apply(EmitAttached(*this, out, tbl, stage, gress));
 }
 
 class MauAsmOutput::UnattachedName : public MauInspector {
@@ -1957,6 +1951,33 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
     else
         out << salu->width;
     out << " }" << std::endl;
+
+    // Write out the table the selector points to
+    /* iterate on the "attached" vector on all the tables in the current gress and stage until
+     * we find the salu->selector we are looking for */
+    if (salu->selector) {
+        auto sel = salu->selector->to<IR::MAU::Selector>();
+        const IR::MAU::Table *seltbl = nullptr;
+        auto ti = self.by_stage.find(std::make_pair(gress, stage));
+        if (ti != self.by_stage.end()) {
+            for (auto itbl : ti->second) {
+                for (auto at : itbl.tableInfo->attached) {
+                    if (at == sel) {
+                        seltbl = itbl.tableInfo;
+                        break;
+                    }
+                    if (seltbl) break;
+                }
+                if (seltbl) break;
+            }
+        }
+        if (!seltbl) {
+          BUG("SALU Selector Table not found?");
+        } else {
+            out << indent << "selection_table: " << seltbl->get_use_name(salu->selector) << std::endl;
+        }
+    }
+
     if (salu->math.valid) {
         out << indent++ << "math_table:" << std::endl;
         out << indent << "invert: " << salu->math.exp_invert << std::endl;

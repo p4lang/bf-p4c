@@ -168,7 +168,10 @@ void AttachedTables::pass1(MatchTable *self) {
                 error(s.lineno, "No field named %s in format", s.args.at(1).name());
             auto f1 = s.args.at(0).field();
             auto f2 = s.args.at(1).field();
-            if (f1 && f2) {
+            /* If format is a NULL, this is a ternary_table and we dont need to check for match group
+             * consistency
+             */
+            if (self->format && f1 && f2) {
                 int off = f1->bits[0].lo - f2->bits[0].lo;
                 for (int i = self->format->groups()-1; i > 0; --i)
                     if (off != f1->by_group[i]->bits[0].lo - f2->by_group[i]->bits[0].lo) {

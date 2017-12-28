@@ -322,6 +322,7 @@ public:
             Action(Table *, Actions *, pair_t &);
             Action(const char *n, int l) : name(n), lineno(l) {}
             bool equiv(Action *a);
+            bool equivVLIW(Action *a);
             typedef const decltype(alias)::value_type alias_value_t;
             std::map<std::string, std::vector<alias_value_t *>> reverse_alias() const;
             std::string alias_lookup(int lineno, std::string name, int &lo, int &hi) const;
@@ -430,6 +431,7 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     virtual bool run_at_eop() { return false; }
     template<class REGS> void write_mapram_regs(REGS &regs, int row, int col, int vpn, int type);
     template<class T> T *to() { return dynamic_cast<T *>(this); }
+    template<class T> const T *to() const { return dynamic_cast<const T *>(this); }
 
     std::string                 name_;
     P4Table                     *p4_table = 0;
@@ -1090,7 +1092,6 @@ DECLARE_TABLE_TYPE(StatefulTable, Synth2Port, "stateful",
     template<class REGS> void write_merge_regs(REGS &regs, MatchTable *match, int type, int bus,
                                                const std::vector<Call::Arg> &args);
     FOR_ALL_TARGETS(FORWARD_VIRTUAL_TABLE_WRITE_MERGE_REGS_WITH_ARGS)
-    Ref                 bound_selector;
     std::vector<long>   const_vals;
     struct MathTable {
         int                     lineno = -1;
@@ -1102,6 +1103,7 @@ DECLARE_TABLE_TYPE(StatefulTable, Synth2Port, "stateful",
     }                   math_table;
     bool dual_mode = false;
 public:
+    Ref                 bound_selector;
     unsigned phv_byte_mask = 0;
     int instruction_set() override { return 1; /* STATEFUL_ALU */ }
     int direct_shiftcount() const override;
