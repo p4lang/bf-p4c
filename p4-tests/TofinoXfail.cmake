@@ -859,7 +859,7 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     extensions/p4_tests/p4_14/overlay_add_header.p4
     extensions/p4_tests/p4_14/no_match_miss.p4
   )
-    
+
 
 endif() # ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET
 
@@ -1075,4 +1075,10 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: Could not find declaration for r"
   testdata/p4_16_samples/issue1097-2-bmv2.p4
+  )
+
+# BRIG-372
+p4c_add_xfail_reason("tofino"
+  "error: Could not find declaration for key_1"
+  extensions/p4_tests/p4_14/c1/BRIG-372/case4346.p4
   )
