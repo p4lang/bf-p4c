@@ -1972,7 +1972,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
             }
         }
         if (!seltbl) {
-          BUG("SALU Selector Table not found?");
+            BUG("SALU Selector Table not found?");
         } else {
             out << indent << "selection_table: " << seltbl->get_use_name(salu->selector) << std::endl;
         }
