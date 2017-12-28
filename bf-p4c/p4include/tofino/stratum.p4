@@ -49,6 +49,8 @@ enum MeterType_t {
     BYTES
 }
 
+enum MeterColor_t { RED, GREEN, YELLOW };
+
 /// Counter
 enum CounterType_t {
     PACKETS,

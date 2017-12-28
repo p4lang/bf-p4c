@@ -17,7 +17,9 @@ void enable_psa_target() {
 }
 
 boost::optional<TofinoPipeTestCase> createPSAIngressTest(const std::string& ingressDecl,
-                                                         const std::string& ingressApply) {
+                                                         const std::string& ingressApply,
+                                                         const std::string& ingressMeta = ""
+) {
     auto source = P4_SOURCE(P4Headers::PSA, R"(
         typedef bit<48>  EthernetAddress;
 
@@ -46,6 +48,7 @@ boost::optional<TofinoPipeTestCase> createPSAIngressTest(const std::string& ingr
             bit<16> h1;
             bit<16> h2;
             bit<16> h3;
+%INGRESS_METADATA%
         }
 
         typedef bit<8> clone_i2e_format_t;
@@ -159,6 +162,7 @@ boost::optional<TofinoPipeTestCase> createPSAIngressTest(const std::string& ingr
 
         PSA_Switch(ip, PacketReplicationEngine(), ep, BufferingQueueingEngine()) main;
     )");
+    boost::replace_first(source, "%INGRESS_METADATA%", ingressMeta);
     boost::replace_first(source, "%INGRESS_DECL%", ingressDecl);
     boost::replace_first(source, "%INGRESS_APPLY%", ingressApply);
     enable_psa_target();
@@ -311,10 +315,8 @@ P4_SOURCE(R"(
     EXPECT_EQ(::diagnosticCount(), 0u);
 }
 
-// Meter can be invoked in an action, however, it is not possible
-// to pass MeterColor_t as a control plane parameter through
-// action arguments.
-TEST_F(PortableSwitchTest, MeterInAction) {
+// ConvertEnum is not supported on MeterColor_t.
+TEST_F(PortableSwitchTest, MeterUnableToConvertEnum) {
     auto test = createPSAIngressTest(
 P4_SOURCE(R"(
         Meter<bit<12>>(1024, MeterType_t.PACKETS) meter0;
@@ -335,10 +337,459 @@ P4_SOURCE(R"(
 )"));
 
     EXPECT_FALSE(test);
-    //XXX(hanw): I am expecting this errorCount to be 1.
-    EXPECT_EQ(::errorCount(), 0u);
 }
 
+// Casting is not supported on meter.execute() output.
+// Error message is:
+//   cast: Illegal cast from MeterColor_t to bit<16>
+TEST_F(PortableSwitchTest, MeterUnableToCastToBit) {
+    auto test = createPSAIngressTest(
+P4_SOURCE(R"(
+        Meter<bit<12>>(1024, MeterType_t.PACKETS) meter0;
+
+        action execute(bit<12> index) {
+          meta.data.h1 = (bit<16>)meter0.execute(index, MeterColor_t.GREEN);
+        }
+
+        table tbl {
+          key = {
+            hdr.ethernet.srcAddr : exact;
+          }
+          actions = { NoAction; execute; }
+        }
+)"),
+P4_SOURCE(R"(
+         tbl.apply();
+)"));
+
+    EXPECT_FALSE(test);
+}
+
+// Comparison is not supported on meter.execute to MeterColor_t
+// Error message is:
+//    ==: not defined on bit<8> and MeterColor_t
+TEST_F(PortableSwitchTest, MeterUnableToCompareToEnum) {
+    auto test = createPSAIngressTest(
+P4_SOURCE(R"(
+        Meter<bit<12>>(1024, MeterType_t.PACKETS) meter0;
+
+        table tbl {
+          key = {
+            hdr.ethernet.srcAddr : exact;
+          }
+          actions = { NoAction; }
+        }
+)"),
+P4_SOURCE(R"(
+        if (meter0.execute(0) == MeterColor_t.GREEN) {
+           tbl.apply();
+        }
+)"));
+
+    EXPECT_FALSE(test);
+}
+
+/// Direct meter can be invoked by table without explicit call
+/// to execute in action.
+TEST_F(PortableSwitchTest, DirectMeterNoInvoke) {
+    auto test = createPSAIngressTest(
+P4_SOURCE(R"(
+        DirectMeter(MeterType_t.PACKETS) meter0;
+
+        table tbl {
+          key = {
+            hdr.ethernet.srcAddr : exact;
+          }
+          actions = { NoAction; }
+          psa_direct_meters = { meter0 };
+        }
+)"),
+P4_SOURCE(R"(
+        tbl.apply();
+)"));
+
+    EXPECT_EQ(::diagnosticCount(), 0u);
+}
+
+/// Direct meter can be invoked in an action
+TEST_F(PortableSwitchTest, DirectMeterInvokedInAction) {
+    auto test = createPSAIngressTest(
+P4_SOURCE(R"(
+        DirectMeter(MeterType_t.PACKETS) meter0;
+
+        action execute_meter () {
+          meter0.execute();
+        }
+
+        table tbl {
+          key = {
+            hdr.ethernet.srcAddr : exact;
+          }
+          actions = { NoAction; }
+          psa_direct_meters = { meter0 };
+        }
+)"),
+P4_SOURCE(R"(
+        tbl.apply();
+)"));
+
+    EXPECT_EQ(::diagnosticCount(), 0u);
+}
+
+/// Direct meter cannot be invoked in the table that does not
+/// own it. This test case should fail in the backend.
+TEST_F(PortableSwitchTest, DISABLED_DirectMeterInvokedInWrongTable) {
+    auto test = createPSAIngressTest(
+P4_SOURCE(R"(
+        DirectMeter(MeterType_t.PACKETS) meter0;
+
+        action execute_meter () {
+          meter0.execute();
+        }
+
+        table tbl {
+          key = {
+            hdr.ethernet.srcAddr : exact;
+          }
+          actions = { NoAction; }
+          psa_direct_meters = { meter0 };
+        }
+
+        table tbl2 {
+          key = {
+            hdr.ethernet.srcAddr : exact;
+          }
+          actions = { NoAction; execute_meter; }
+        }
+)"),
+P4_SOURCE(R"(
+        tbl.apply();
+        tbl2.apply();
+)"));
+
+    EXPECT_FALSE(test);
+}
+
+/// Registers are stateful memory that can be accessed in an action
+/// Error message is:
+///   Could not find declaration for Register
+/// The backend should convert Register extern into StatefulAlu extern
+/// that is supported by Tofino.
+TEST_F(PortableSwitchTest, RegisterReadInAction) {
+    auto test = createPSAIngressTest(
+P4_SOURCE(R"(
+        Register<bit<10>, bit<10>>(1024) reg;
+
+        action execute_register(bit<10> idx) {
+          bit<10> data = reg.read(idx);
+        }
+
+        table tbl {
+          key = {
+            hdr.ethernet.srcAddr : exact;
+          }
+          actions = { NoAction; execute_register; }
+        }
+)"),
+P4_SOURCE(R"(
+        tbl.apply();
+)"));
+
+    EXPECT_FALSE(test);
+}
+
+/// Register can be written in an action
+TEST_F(PortableSwitchTest, RegisterWriteInAction) {
+    auto test = createPSAIngressTest(
+P4_SOURCE(R"(
+        Register<bit<16>, bit<10>>(1024) reg;
+
+        action execute_register(bit<10> idx) {
+          reg.write(idx, meta.data.h1);
+        }
+
+        table tbl {
+          key = {
+            hdr.ethernet.srcAddr : exact;
+          }
+          actions = { NoAction; execute_register; }
+        }
+)"),
+P4_SOURCE(R"(
+        tbl.apply();
+)"));
+
+    EXPECT_FALSE(test);
+}
+
+/// Register access may be out-of-bound.
+/// PSA specifies an out of bounds write has no effect on the state of the system.
+TEST_F(PortableSwitchTest, RegisterOutOfBound) {
+    auto test = createPSAIngressTest(
+P4_SOURCE(R"(
+        Register<bit<16>, bit<10>>(512) reg;
+
+        action execute_register(bit<10> idx) {
+          reg.write(idx, meta.data.h1);
+        }
+
+        table tbl {
+          key = {
+            hdr.ethernet.srcAddr : exact;
+          }
+          actions = { NoAction; execute_register; }
+        }
+)"),
+P4_SOURCE(R"(
+        tbl.apply();
+)"));
+
+    EXPECT_FALSE(test);
+}
+
+// An 'Random' extern generates a random number in an action
+TEST_F(PortableSwitchTest, RandomInAction) {
+    auto test = createPSAIngressTest(
+P4_SOURCE(R"(
+        Random<bit<16>>(200, 400) rand;
+
+        action execute_random() {
+          meta.data.h1 = rand.read();
+        }
+
+        table tbl {
+          key = {
+            hdr.ethernet.srcAddr : exact;
+          }
+          actions = { NoAction; execute_random; }
+        }
+)"),
+P4_SOURCE(R"(
+        tbl.apply();
+)"));
+
+    EXPECT_FALSE(test);
+}
+
+/// Action profile is used as an implementation to table.
+TEST_F(PortableSwitchTest, ActionProfileInTable) {
+    auto test = createPSAIngressTest(
+P4_SOURCE(R"(
+        ActionProfile(1024) ap;
+
+        action a1() { }
+        action a2() { }
+
+        table tbl {
+          key = {
+            hdr.ethernet.srcAddr : exact;
+          }
+          actions = { NoAction; a1; a2; }
+          psa_implementation = ap;
+        }
+)"),
+P4_SOURCE(R"(
+        tbl.apply();
+)"));
+
+    EXPECT_FALSE(test);
+}
+
+/// Multiple action profile in the same table is not supported
+TEST_F(PortableSwitchTest, ActionProfileMultiple) {
+    auto test = createPSAIngressTest(
+P4_SOURCE(R"(
+        ActionProfile(1024) ap;
+        ActionProfile(1024) ap1;
+
+        action a1() { }
+        action a2() { }
+
+        table tbl {
+          key = {
+            hdr.ethernet.srcAddr : exact;
+          }
+          actions = { NoAction; a1; a2; }
+          psa_implementation = { ap, ap1 };
+        }
+)"),
+P4_SOURCE(R"(
+        tbl.apply();
+)"));
+
+    EXPECT_FALSE(test);
+}
+
+/// Action profile can be shared between tables if all tables
+/// implements the same set of actions
+TEST_F(PortableSwitchTest, ActionProfileInMultipleTablesWithSameSet) {
+    auto test = createPSAIngressTest(
+P4_SOURCE(R"(
+        ActionProfile(1024) ap;
+
+        action a1() { }
+        action a2() { }
+
+        table tbl {
+          key = {
+            hdr.ethernet.srcAddr : exact;
+          }
+          actions = { NoAction; a1; a2; }
+          psa_implementation = ap;
+        }
+
+        table tbl2 {
+          key = {
+            hdr.ethernet.srcAddr : exact;
+          }
+          actions = { NoAction; a1; a2; }
+          psa_implementation = ap;
+        }
+)"),
+P4_SOURCE(R"(
+        tbl.apply();
+        tbl2.apply();
+)"));
+
+    EXPECT_FALSE(test);
+}
+
+/// Action profile cannot be shared between tables if the
+/// tables implements a different set of actions
+TEST_F(PortableSwitchTest, ActionProfileInMultipleTablesWithDiffSet) {
+    auto test = createPSAIngressTest(
+P4_SOURCE(R"(
+        ActionProfile(1024) ap;
+
+        action a1() { }
+        action a2() { }
+
+        table tbl {
+          key = {
+            hdr.ethernet.srcAddr : exact;
+          }
+          actions = { NoAction; a2; }
+          psa_implementation = ap;
+        }
+
+        table tbl2 {
+          key = {
+            hdr.ethernet.srcAddr : exact;
+          }
+          actions = { NoAction; a1; }
+          psa_implementation = ap;
+        }
+)"),
+P4_SOURCE(R"(
+        tbl.apply();
+        tbl2.apply();
+)"));
+
+    EXPECT_FALSE(test);
+}
+
+/// action selector uses key:selector as selection bits
+TEST_F(PortableSwitchTest, ActionSelectorInTableWithSingleKey) {
+    auto test = createPSAIngressTest(
+P4_SOURCE(R"(
+        ActionSelector(HashAlgorithm_t.CRC32, 32w1024, 32w16) as;
+
+        action a1() { }
+        action a2() { }
+
+        table tbl {
+          key = {
+            hdr.ethernet.srcAddr : exact;
+            meta.data.h1 : selector;
+          }
+          actions = { NoAction; a1; a2; }
+          psa_implementation = as;
+        }
+)"),
+P4_SOURCE(R"(
+        tbl.apply();
+)"));
+
+    EXPECT_FALSE(test);
+}
+
+/// multiple selector key can be used in action selector
+TEST_F(PortableSwitchTest, ActionSelectorInTableWithMultipleKeys) {
+    auto test = createPSAIngressTest(
+P4_SOURCE(R"(
+        ActionSelector(HashAlgorithm_t.CRC32, 32w1024, 32w16) as;
+
+        action a1() { }
+        action a2() { }
+
+        table tbl {
+          key = {
+            hdr.ethernet.srcAddr : exact;
+            meta.data.h1 : selector;
+            meta.data.h2 : selector;
+          }
+          actions = { NoAction; a1; a2; }
+          psa_implementation = as;
+        }
+)"),
+P4_SOURCE(R"(
+        tbl.apply();
+)"));
+
+    EXPECT_FALSE(test);
+}
+
+/// it is illegal to define 'selector' type match field if the
+/// table does not have an action selector implementation.
+TEST_F(PortableSwitchTest, ActionSelectorIllegalSelectorKey) {
+    auto test = createPSAIngressTest(
+P4_SOURCE(R"(
+        action a1() { }
+        action a2() { }
+
+        table tbl {
+          key = {
+            hdr.ethernet.srcAddr : exact;
+            meta.data.h1 : selector;
+            meta.data.h2 : selector;
+          }
+          actions = { NoAction; a1; a2; }
+        }
+)"),
+P4_SOURCE(R"(
+        tbl.apply();
+)"));
+
+    // FIXME This test case should fail.
+    EXPECT_TRUE(test);
+}
+
+// ParserValueSet
+
+// Hash
+TEST_F(PortableSwitchTest, HashInAction) {
+     auto test = createPSAIngressTest(
+P4_SOURCE(R"(
+        Hash<bit<16>>(HashAlgorithm_t.CRC16) h;
+
+        action a1() {
+          meta.data.h1 = h.get_hash(hdr.ethernet);
+        }
+
+        table tbl {
+          key = {
+            hdr.ethernet.srcAddr : exact;
+          }
+          actions = { NoAction; a1; }
+        }
+)"),
+P4_SOURCE(R"(
+        tbl.apply();
+)"));
+
+    // FIXME This test case should pass.
+    EXPECT_FALSE(test);
+}
 
 
 }  // namespace Test
