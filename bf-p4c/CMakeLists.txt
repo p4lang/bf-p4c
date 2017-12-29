@@ -93,6 +93,7 @@ set (BF_P4C_BACKEND_COMMON_SRCS
   common/simplify_references.cpp
   common/slice.cpp
   common/type_categories.cpp
+  common/collect_global_pragma.cpp
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_COMMON_SRCS}")
 build_unified(BF_P4C_BACKEND_COMMON_SRCS ${BF_P4C_UNIFIED_SOURCE_CHUNK_SIZE})
@@ -118,6 +119,7 @@ set (BF_P4C_BACKEND_COMMON_HDRS
   common/simplify_references.h
   common/slice.h
   common/type_categories.h
+  common/collect_global_pragma.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_COMMON_HDRS}")
 
@@ -430,6 +432,7 @@ set (GTEST_BF_P4C_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/field_packing.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/linear_path.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/multiple_apply.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/pa_mutually_exclusive_pragma.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/parser_critical_path.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_constraints.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/phv_crush.cpp

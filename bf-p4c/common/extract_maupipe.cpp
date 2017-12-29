@@ -8,6 +8,7 @@
 #include "frontends/p4/evaluator/evaluator.h"
 #include "frontends/p4/methodInstance.h"
 #include "bf-p4c/bf-p4c-options.h"
+#include "bf-p4c/common/collect_global_pragma.h"
 #include "bf-p4c/common/copy_header_eliminator.h"
 #include "bf-p4c/common/param_binding.h"
 #include "bf-p4c/common/simplify_references.h"
@@ -916,7 +917,8 @@ class TnaPipe {
 };
 
 const IR::BFN::Pipe* extract_tna_arch(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
-                                            const IR::PackageBlock* main, bool useTna) {
+                                      const IR::PackageBlock* main, bool useTna,
+                                      const IR::P4Program *program) {
     TnaPipe* pipes[2];
     pipes[INGRESS] = new TnaPipe(main, INGRESS, refMap, typeMap);
     pipes[EGRESS] = new TnaPipe(main, EGRESS, refMap, typeMap);
@@ -925,6 +927,12 @@ const IR::BFN::Pipe* extract_tna_arch(P4::ReferenceMap* refMap, P4::TypeMap* typ
     SimplifyReferences simplifyReferences(&bindings, refMap, typeMap);
 
     auto rv = new IR::BFN::Pipe();
+
+    // collect and set global_pragmas
+    CollectGlobalPragma collect_pragma;
+    program->apply(collect_pragma);
+    rv->global_pragmas = collect_pragma.global_pragmas();
+
     for (auto gress : {INGRESS, EGRESS}) {
         pipes[gress]->bindParams(&bindings /* out */);
         pipes[gress]->extractMetadata(rv /* out */, &bindings /* in */, gress);
@@ -976,5 +984,5 @@ const IR::BFN::Pipe *extract_maupipe(const IR::P4Program *program, bool useTna) 
         error("No main switch");
         return nullptr; }
 
-    return extract_tna_arch(&refMap, &typeMap, top, useTna);
+    return extract_tna_arch(&refMap, &typeMap, top, useTna, program);
 }

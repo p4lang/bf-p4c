@@ -50,6 +50,7 @@ class BuildParserOverlay : public BFN::ControlFlowVisitor,
 
     bool preorder(const IR::BFN::Extract*) override;
     bool preorder(const IR::BFN::Deparser*) override { return false; }
+    void postorder(const IR::BFN::Pipe*) override;
 
     void flow_merge(Visitor &) override;
     void end_apply() override;
