@@ -54,10 +54,7 @@ p4c_add_xfail_reason("tofino" "" ${TOFINO_XFAIL_TESTS})
 # BRIG-103
 p4c_add_xfail_reason("tofino"
   "instruction slot [0-9]+ used multiple times in action"
-  testdata/p4_14_samples/instruct1.p4
-  extensions/p4_tests/p4_14/instruct1.p4
   extensions/p4_tests/p4_14/action_conflict_2.p4
-  extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
   extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
   )
 
@@ -552,6 +549,9 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/port_vlan_mapping.p4
   switch_dc_basic
   extensions/p4_tests/p4_14/action_conflict_1.p4
+  testdata/p4_14_samples/instruct1.p4
+  extensions/p4_tests/p4_14/instruct1.p4
+  extensions/p4_tests/p4_14/c7/COMPILER-623/case3375.p4
   )
 
 # We can't (without some complex acrobatics) support conditional computed
@@ -883,13 +883,13 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/c1/COMPILER-235/case1737_1.p4
   extensions/p4_tests/p4_14/c1/COMPILER-129/compiler129.p4
   switch_dc_basic
-  )
-
-p4c_add_xfail_reason("tofino"
-  "Extracted range .* with size .* doesn't match destination container .* with size .* was the PHV allocation misaligned or inconsistent"
   extensions/p4_tests/p4_14/c4/COMPILER-591/case3176.p4
   extensions/p4_tests/p4_14/c4/COMPILER-590/case3179.p4
   )
+
+#p4c_add_xfail_reason("tofino"
+#  "Extracted range .* with size .* doesn't match destination container .* with size .* was the PHV allocation misaligned or inconsistent"
+#  )
 
 p4c_add_xfail_reason("tofino"
   "the packing is too complicated due to either hash distribution or attached outputs"

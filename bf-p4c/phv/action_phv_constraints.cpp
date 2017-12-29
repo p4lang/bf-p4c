@@ -166,6 +166,34 @@ ActionPhvConstraints::num_container_sources(
     return NumContainers(containerList.size(), num_unallocated);
 }
 
+boost::optional<PHV::AllocSlice> ActionPhvConstraints::getSourcePHVSlice(const PHV::Allocation
+        &alloc, PHV::AllocSlice& slice, const IR::MAU::Action* action, size_t source_num) {
+    LOG5("\t\t\t\tgetSourcePHVSlices for action: " << action->name << " and slice " << slice);
+    auto *field = slice.field();
+    auto range = slice.field_slice();
+    if (write_to_reads_per_action[field][action].size() == 0)
+        LOG5("\t\t\t\tField " << field->name << " is not written in action " << action->name);
+    size_t i = 0;
+    for (auto operand : write_to_reads_per_action[field][action]) {
+        if (operand.ad || operand.constant) continue;
+        if (i != source_num) {
+            i++;
+            continue;
+        }
+        const PHV::Field* fieldRead = operand.phv_used;
+        ordered_set<PHV::AllocSlice> per_source_slices = alloc.slices(fieldRead, range);
+        LOG5("\t\t\t\t\tNumber of source slices: " << per_source_slices.size());
+        if (per_source_slices.size() > 1) {
+            for (auto sl : per_source_slices)
+                LOG5("\t\t\t\t\t" << sl); }
+        BUG_CHECK(per_source_slices.size() <= 1, "Multiple source slices found in "
+                "getSourcePHVSlice");
+        for (auto sl : per_source_slices)
+            return sl;
+    }
+    return boost::optional<PHV::AllocSlice>{};
+}
+
 //  Note: If both action data and constant are used in the same action as operands on the same
 //  container, action data allocation folds them into one action data parameter to ensure a
 //  legal Tofino action. Same is true when multiple action data and/or multiple constants are used
@@ -295,7 +323,11 @@ boost::optional<UnionFind<PHV::FieldSlice>>
 ActionPhvConstraints::can_pack(const PHV::Allocation& alloc, std::vector<PHV::AllocSlice>& slices) {
     PHV::Container c;
     bool container_uninitialized = true;
+    ordered_map<const IR::MAU::Action*, bool> usesActionDataConstant;
+    ordered_map<const IR::MAU::Action*, bool> phvMustBeAligned;
+    ordered_map<const IR::MAU::Action*, size_t> numSourceContainers;
     int total_slice_width = 0;
+
     for (auto slice : slices) {
         total_slice_width += slice.width();
         if (container_uninitialized) {
@@ -368,7 +400,7 @@ ActionPhvConstraints::can_pack(const PHV::Allocation& alloc, std::vector<PHV::Al
 
     // Check if actions on the packing candidates involve WHOLE_CONTAINER operations or a mix of
     // WHOLE_CONTAINER and MOVE operations (FieldOperation::MIXED)
-    // If they do, the fields cannot be packed together
+
     unsigned cont_operation = container_operation_type(set_of_actions, fields);
     if (cont_operation == FieldOperation::WHOLE_CONTAINER || cont_operation ==
             FieldOperation::MIXED) {
@@ -385,11 +417,11 @@ ActionPhvConstraints::can_pack(const PHV::Allocation& alloc, std::vector<PHV::Al
         NumContainers sources = num_container_sources(alloc, container_state, action,
                 copacking_constraints);
         bool has_ad_constant_sources = has_ad_or_constant_sources(fields, action);
+        usesActionDataConstant[action] = has_ad_constant_sources;
         size_t num_source_containers = sources.num_allocated + sources.num_unallocated;
+        numSourceContainers[action] = num_source_containers;
 
-        // If there are less than 2 containers as sources (includes packing of the candidate field),
-        // then packing is valid
-        if (num_source_containers == 1) continue;
+        // If no PHV containers, then packing is valid
         if (num_source_containers == 0) continue;
 
         // If source fields have already been allocated and number of sources greater than 2, then
@@ -415,6 +447,23 @@ ActionPhvConstraints::can_pack(const PHV::Allocation& alloc, std::vector<PHV::Al
         for (auto field : fields) {
             boost::optional<FieldOperation> fw = is_written(action, field);
             if (!fw) num_fields_not_written_to++; }
+
+        if (has_ad_constant_sources) {
+            // At this point, at least one PHV container is present, so we have both action
+            // data/constant source as well as a PHV source.
+            // Therefore, no bits or fields can be unwritten in any given action.
+            if (num_fields_not_written_to || num_bits_not_written_to) {
+                LOG5("\t\t\t\tSome bits not written in action " << action->name << " will get "
+                        "clobbered because there is at least one PHV source and another action"
+                        " data/ constant source");
+                return boost::none; }
+            // At this point, analysis determines that the full container is written and there is at
+            // least 1 PHV source. So phvMustBeAligned for this action is true.
+            phvMustBeAligned[action] = true;
+        } else {
+            // No Action data or constant sources and only 1 PHV container as source. So, the
+            // packing is valid without any other induced constraints.
+            if (num_source_containers == 1) continue; }
 
         // If some field is not written to, then one of the sources for the move has to be the
         // container itself.
@@ -458,6 +507,20 @@ ActionPhvConstraints::can_pack(const PHV::Allocation& alloc, std::vector<PHV::Al
                 pack_slices_together(alloc, container_state, copacking_constraints, action, true); }
         }
     }
+
+    LOG5("\t\tChecking rotational alignment");
+    for (auto &action : set_of_actions) {
+        for (auto slice : container_state) {
+            LOG5("\t\t\tphvMustBeAligned: " << phvMustBeAligned[action] << " numSourceContainers: "
+                    << numSourceContainers[action] << " action: " << action->name << " slice: " <<
+                    slice);
+            if (phvMustBeAligned[action] && numSourceContainers[action] == 1) {
+                // The single phv source must be aligned
+                boost::optional<PHV::AllocSlice> source = getSourcePHVSlice(alloc, slice, action);
+                if (!source) continue;
+                if (slice.container_slice() != source->container_slice()) {
+                    LOG5("\t\t\t\tContainer alignment for slice and source do not match");
+                    return boost::none; } } } }
 
     return copacking_constraints;
 }

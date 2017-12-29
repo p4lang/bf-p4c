@@ -107,6 +107,9 @@ class ActionPhvConstraints : public Inspector {
             PHV::Allocation::MutuallyLiveSlices container_state, const IR::MAU::Action* action,
             UnionFind<PHV::FieldSlice>& copacking_constraints);
 
+    boost::optional<PHV::AllocSlice> getSourcePHVSlice(const PHV::Allocation& alloc,
+            PHV::AllocSlice& slice, const IR::MAU::Action* action, size_t source_num = 0);
+
     /** @returns true if @fields packed in the same container read from action data or from constant
       * in action @act
       */

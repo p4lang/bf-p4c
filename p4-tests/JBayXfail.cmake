@@ -55,6 +55,7 @@ p4c_add_xfail_reason("jbay"
   testdata/p4_14_samples/parser_dc_full.p4
   testdata/p4_14_samples/port_vlan_mapping.p4
   testdata/p4_14_samples/source_routing.p4
+  testdata/p4_14_samples/instruct1.p4
   )
 
 p4c_add_xfail_reason("jbay"
@@ -78,7 +79,6 @@ p4c_add_xfail_reason("jbay"
 p4c_add_xfail_reason("jbay"
   "PHV allocation creates a container action impossible within a Tofino ALU"
   testdata/p4_14_samples/action_inline.p4
-  testdata/p4_14_samples/instruct1.p4
   testdata/p4_14_samples/instruct5.p4
   )
 
