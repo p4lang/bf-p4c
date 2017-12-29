@@ -373,6 +373,7 @@ public:
 public:
     const char *name() const { return name_.c_str(); }
     const char *p4_name() const { if(p4_table) return p4_table->p4_name(); return ""; }
+    unsigned p4_size() const { if(p4_table) return p4_table->p4_size(); return 0; }
     unsigned handle() const { if(p4_table) return p4_table->get_handle(); return -1; }
     int table_id() const;
     virtual void pass1() = 0;
@@ -406,7 +407,7 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
             const char *type, std::vector<Layout> &layout, bool skip_spare_bank = false);
     virtual void common_tbl_cfg(json::map &tbl);
     enum table_type_t { OTHER=0, TERNARY_INDIRECT, GATEWAY, ACTION, SELECTION, COUNTER,
-                        METER, IDLETIME, STATEFUL, HASH_ACTION, EXACT, TERNARY, PHASE0 };
+                        METER, IDLETIME, STATEFUL, HASH_ACTION, EXACT, TERNARY, PHASE0, ATCAM };
     virtual table_type_t table_type() const { return OTHER; }
     virtual int instruction_set() { return 0; /* VLIW_ALU */ }
     virtual table_type_t set_match_table(MatchTable *m, bool indirect) { assert(0); return OTHER; }
@@ -504,6 +505,7 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     virtual void need_on_actionbus(Table *attached, int off, int size);
     virtual int find_on_actionbus(HashDistribution *hd, int off, int size);
     virtual void need_on_actionbus(HashDistribution *hd, int off, int size);
+    static bool allow_bus_sharing(Table *t1, Table *t2); 
     virtual Call &action_call() { return action; }
     virtual Actions *get_actions() { return actions; }
     void add_reference_table(json::vector &table_refs, const Table::Call& c);
@@ -538,6 +540,10 @@ FOR_ALL_TARGETS(VIRTUAL_TARGET_METHODS)
     p4_param *find_p4_param(std::string &s) {
         for (auto &p : p4_params_list)
             if (p.name == s) return &p;
+        return nullptr; }
+    p4_param *find_p4_param_type(std::string &s) {
+        for (auto &p : p4_params_list)
+            if (p.type == s) return &p;
         return nullptr; }
     bool is_wide_format();
     int get_entries_per_table_word();
@@ -596,6 +602,8 @@ DECLARE_ABSTRACT_TABLE_TYPE(MatchTable, Table,
     bool common_setup(pair_t &, const VECTOR(pair_t) &, P4Table::type) override;
     int get_address_mau_actiondata_adr_default(unsigned log2size, bool per_flow_enable);
 public:
+    bool is_alpm() {
+        if (p4_table) return p4_table->is_alpm(); return false; }
     const AttachedTables *get_attached() const override { return &attached; }
     const GatewayTable *get_gateway() const override { return gateway; }
     MatchTable *get_match_table() override { return this; }
@@ -722,6 +730,7 @@ public:
 DECLARE_TABLE_TYPE(AlgTcamMatchTable, SRamMatchTable, "atcam_match",
     std::map<int, int>                    col_priority_way;
     int                                   number_partitions = 0;
+    int                                   max_subtrees_per_partition = 0;
     std::string                           partition_field_name = "";
     std::vector<int>                      ixbar_subgroup, ixbar_mask;
     struct match_element {
@@ -731,6 +740,7 @@ DECLARE_TABLE_TYPE(AlgTcamMatchTable, SRamMatchTable, "atcam_match",
     bitvec                                s0q1_nibbles, s1q0_nibbles;
     std::vector<Phv::Ref*>                s0q1_prefs, s1q0_prefs;
     std::map<int, match_element>          s0q1, s1q0;
+    table_type_t table_type() const override { return ATCAM; }
     void setup_column_priority();
     void find_tcam_match();
     void gen_unit_cfg(json::vector &units, int size);
@@ -738,6 +748,24 @@ DECLARE_TABLE_TYPE(AlgTcamMatchTable, SRamMatchTable, "atcam_match",
     void setup_nibble_mask(Table::Format::Field *match, int group,
                               std::map<int, match_element> &elems, bitvec &mask);
     std::string get_match_mode(Phv::Ref &pref, int offset) override;
+    void gen_alpm_cfg(json::vector &out); 
+    void base_alpm_atcam_tbl_cfg(json::map &atcam_tbl, const char *type, int size) {
+        if (p4_table) p4_table->base_alpm_tbl_cfg(atcam_tbl, size, this, P4Table::Atcam); }
+
+    std::string get_lpm_field_name() {
+        std::string lpm = "lpm";
+        if(auto *p = find_p4_param_type(lpm))
+            return p->name;
+        else error(lineno, 
+            "'lpm' type field not found in alpm atcam '%s-%s' p4 param order", 
+                name(), p4_name());
+        return ""; }
+    unsigned get_partition_action_handle() {
+        if (p4_table) return p4_table->get_partition_action_handle(); 
+        return 0; }
+    std::string get_partition_field_name() {
+        if (p4_table) return p4_table->get_partition_field_name(); 
+        return ""; }
 )
 
 DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
@@ -796,6 +824,14 @@ public:
     void gen_entry_cfg(json::vector &out, std::string name, \
         unsigned lsb_offset, unsigned lsb_idx, unsigned msb_idx, \
         std::string source, unsigned start_bit, unsigned field_width);
+    void gen_alpm_cfg(json::vector &out); 
+    void set_partition_action_handle(unsigned handle) {
+        if (p4_table) p4_table->set_partition_action_handle(handle); }
+    void set_partition_field_name(std::string name) {
+        if (p4_table) p4_table->set_partition_field_name(name); }
+    void base_alpm_pre_classifier_tbl_cfg(json::map &pre_classifier_tbl, const char *type, int size){
+        if (p4_table) 
+            p4_table->base_alpm_tbl_cfg(pre_classifier_tbl, size, this, P4Table::PreClassifier); }
 )
 
 DECLARE_TABLE_TYPE(Phase0MatchTable, MatchTable, "phase0_match",

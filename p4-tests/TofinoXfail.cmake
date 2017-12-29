@@ -199,8 +199,6 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "error: tofino supports up to 12 stages"
-  extensions/p4_tests/p4_14/p4-tests/programs/alpm_test/alpm_test.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/perf_test_alpm/perf_test_alpm.p4
   extensions/p4_tests/p4_14/p4-tests/programs/clpm/clpm.p4
   extensions/p4_tests/p4_14/p4-tests/programs/multicast_scale/multicast_scale.p4
   )
@@ -249,7 +247,6 @@ p4c_add_xfail_reason("tofino"
   "Can't fit table .* in .* by itself"
   extensions/p4_tests/p4_14/test_config_13_first_selection.p4
   extensions/p4_tests/p4_14/test_config_297_big_metadata.p4
-  extensions/p4_tests/p4_14/p4-tests/programs/smoke_large_tbls/smoke_large_tbls.p4
   extensions/p4_tests/p4_14/adb_shared3.p4
   )
 

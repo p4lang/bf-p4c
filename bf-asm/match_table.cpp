@@ -356,6 +356,12 @@ void MatchTable::gen_hash_bits(const std::map<int, HashCol> &hash_table,
 
 void MatchTable::add_hash_functions(json::map &stage_tbl) {
     json::vector &hash_functions = stage_tbl["hash_functions"] = json::vector();
+    // XXX(amresh): Hash functions are not generated for ALPM atcams as the
+    // partition index bits used in hash which is a compiler generated field and
+    // should not be in 'match_key_fields'. The tests in p4factory are written
+    // with match_spec to not include the partition index field. Glass also
+    // generates an empty 'hash_functions' node
+    if (is_alpm()) return;
     // Emit hash info only if p4_param_order (match_key_fields) are present
     // FIXME: This input_xbar is populated if its a part of the hash_action
     // table or the hash_distribution which is incorrect. This should move

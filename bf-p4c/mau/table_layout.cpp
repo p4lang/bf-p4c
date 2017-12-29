@@ -101,6 +101,16 @@ void TableLayout::check_for_atcam(IR::MAU::Table::Layout &layout, const IR::MAU:
         layout.partition_count = partition_count;
 }
 
+void TableLayout::check_for_alpm(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl,
+                                  cstring &partition_index) {
+    auto hdr_instance_name = tbl->name + "__metadata";
+    auto pidx_field_name = tbl->name + "_partition_index";
+    partition_index = hdr_instance_name + "." + pidx_field_name;
+    ERROR_CHECK(phv.field(partition_index) != nullptr, "%s: The partition index %s for table "
+                "%s is not found in the PHV", tbl->srcInfo, partition_index, tbl->name);
+}
+
+
 void TableLayout::check_for_ternary(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl) {
     auto annot = tbl->match_table->getAnnotations();
     if (auto s = annot->getSingle("ternary")) {
@@ -133,13 +143,19 @@ void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::M
         return;
 
     cstring partition_index;
-    check_for_atcam(layout, tbl, partition_index);
+    if (layout.alpm)
+        check_for_alpm(layout, tbl, partition_index);
+    if (!layout.atcam)
+        check_for_atcam(layout, tbl, partition_index);
     if (!layout.atcam)
         check_for_ternary(layout, tbl);
 
     safe_vector<int> byte_sizes;
     bool partition_found = false;
 
+    for (auto ixbar_read : tbl->match_key) {
+        LOG1("Key: " << ixbar_read->expr);
+    }
     for (auto ixbar_read : tbl->match_key) {
         if (ixbar_read->match_type.name == "selector") continue;
         bitrange bits = { 0, 0 };
@@ -153,6 +169,7 @@ void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::M
              * is consistent.  Should fix PHV alloc to not make such bad allocations */
              bool is_partition = false;
              if (layout.atcam) {
+                LOG1("Field name : " << field->name << "partition_index: " << partition_index);
                  if (field->name == partition_index) {
                      multiplier = 0;
                      is_partition = true;
@@ -546,13 +563,20 @@ bool TableLayout::preorder(IR::MAU::Action *act) {
 bool TableLayout::preorder(IR::MAU::InputXBarRead *read) {
     auto tbl = findContext<IR::MAU::Table>();
     if (tbl->layout.atcam) {
-        auto annot = tbl->match_table->getAnnotations();
-        auto s = annot->getSingle("atcam_partition_index");
-        auto partition_index = s->expr.at(0)->to<IR::StringLiteral>()->value;
-        if (VisitingThread(this) == INGRESS)
-            partition_index = "ingress::" + partition_index;
-        else
-            partition_index = "egress::" + partition_index;
+        cstring partition_index;
+        if (tbl->layout.alpm) {
+            auto hdr_instance_name = tbl->name + "__metadata";
+            auto pidx_field_name = tbl->name + "_partition_index";
+            partition_index = hdr_instance_name + "." + pidx_field_name;
+        } else {
+            auto annot = tbl->match_table->getAnnotations();
+            auto s = annot->getSingle("atcam_partition_index");
+            partition_index = s->expr.at(0)->to<IR::StringLiteral>()->value;
+            if (VisitingThread(this) == INGRESS)
+                partition_index = "ingress::" + partition_index;
+            else
+                partition_index = "egress::" + partition_index;
+        }
         if (phv.field(read->expr)->name == partition_index)
             read->partition_index = true;
     }

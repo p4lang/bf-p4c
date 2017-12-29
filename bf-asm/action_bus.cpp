@@ -415,7 +415,11 @@ void ActionBus::do_alloc(Table *tbl, Source src, unsigned use, int lobyte,
     while (bytes > 0) {
         int slot = Stage::action_bus_slot_map[use];
         int slotsize = Stage::action_bus_slot_size[slot];
-        assert(!tbl->stage->action_bus_use[slot] || tbl->stage->action_bus_use[slot] == tbl);
+        auto slot_tbl = tbl->stage->action_bus_use[slot];
+        // Atcam tables are mutually exclusive and should be allowed to share
+        // bytes on action bus
+        if (!Table::allow_bus_sharing(tbl, slot_tbl))
+            assert(!slot_tbl || (slot_tbl == tbl));
         tbl->stage->action_bus_use[slot] = tbl;
         Slot &sl = by_byte.emplace(use, Slot(name, use, bytes*8U)).first->second;
         if (sl.size < bytes*8U) sl.size = bytes*8U;

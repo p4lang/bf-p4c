@@ -238,6 +238,8 @@ void TernaryMatchTable::pass1() {
         idletime->logical_id = logical_id;
         idletime->pass1(); }
 }
+
+
 void TernaryMatchTable::pass2() {
     LOG1("### Ternary match table " << name() << " pass2");
     if (logical_id < 0) choose_logical_id();
@@ -253,6 +255,21 @@ void TernaryMatchTable::pass2() {
     if (actions) actions->pass2(this);
     if (gateway) gateway->pass2();
     if (idletime) idletime->pass2();
+    // If ternary is a pre-classifier to an ALPM table, check that it has only 1
+    // action. This action sets the partition index and must be specified
+    // separately in the ALPM context json
+    if (is_alpm()) {
+        auto *acts = get_actions();
+        if (auto a = get_action())
+            acts = a->get_actions();
+        if (acts) {
+            if (acts->count() == 1) {
+                auto act = acts->begin();
+                set_partition_action_handle(act->handle);
+                if (act->p4_params_list.size() == 1)
+                    set_partition_field_name(act->p4_params_list[0].name);
+            } else { 
+                error(lineno, "For ALPM pre_classifier '%s-%s' only 1 action expected to set parition index but found %d", p4_name(), name(), acts->count()); } } }
 }
 
 extern int get_address_mau_actiondata_adr_default(unsigned log2size, bool per_flow_enable);
@@ -405,9 +422,29 @@ void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
         { "field_width", json::number(field_width) }});
 }
 
+void TernaryMatchTable::gen_alpm_cfg(json::vector &out) {
+}
+
 void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
     unsigned number_entries = match.size() ? layout_size()/match.size() * 512 : 0;
-    json::map &tbl = *base_tbl_cfg(out, "match_entry", number_entries);
+    json::map *tbl_ptr;
+    // For ALPM tables, this sets up the top level ALPM table and this ternary
+    // table as its preclassifier. As the pre_classifier is always in the
+    // previous stage as the atcams, this function will be called before the
+    // atcam cfg generation. The atcam will check for presence of this table and
+    // add the atcam cfg gen
+    if (is_alpm()) {
+        json::map *alpm_ptr = base_tbl_cfg(out, "match_entry", number_entries);
+        json::map &alpm = *alpm_ptr;
+        json::map &match_attributes = alpm["match_attributes"];
+        match_attributes["match_type"] = "algorithmic_lpm";
+        json::map &alpm_pre_classifier = match_attributes["pre_classifier"];
+        base_alpm_pre_classifier_tbl_cfg(alpm_pre_classifier, "match_entry", number_entries);
+        tbl_ptr = &alpm_pre_classifier;
+    } else {
+        tbl_ptr = base_tbl_cfg(out, "match_entry", number_entries);
+    }
+    json::map &tbl = *tbl_ptr;
     bool uses_versioning = false;
     unsigned version_word_group = -1;
     unsigned match_index = match.size() - 1;

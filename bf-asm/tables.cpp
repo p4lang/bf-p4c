@@ -369,6 +369,26 @@ bool Table::allow_ram_sharing(const Table *t1, const Table *t2) {
     return false;
 }
 
+/** check two tables to see if they can share action bus
+ * Two ATCAM tables or their action tables can occur in the same stage and share
+ * bytes on the action bus which is valid as they are always mutually exclusive
+ */
+bool Table::allow_bus_sharing(Table *t1, Table *t2) {
+    if (!t1 || !t2) return false;
+    if ((t1->table_type() == ATCAM) && (t2->table_type() == ATCAM)
+            && (t1->p4_name() == t2->p4_name()))
+        return true;
+    if ((t1->table_type() == ACTION) && (t2->table_type() == ACTION)
+            && (t1->p4_name() == t2->p4_name())) {
+        // Check if action tables are attached to atcam's
+        auto *m1 = t1->to<ActionTable>()->get_match_table();
+        auto *m2 = t2->to<ActionTable>()->get_match_table();
+        if (m1 && m2){
+            if ((m1->table_type() == ATCAM) && (m2->table_type() == ATCAM))
+                return true; } }
+    return false;
+}
+
 void Table::alloc_rams(bool logical, Alloc2Dbase<Table *> &use, Alloc2Dbase<Table *> *bus_use) {
     for (auto &row : layout) {
         for (int col : row.cols) {

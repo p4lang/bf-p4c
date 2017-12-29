@@ -13,11 +13,6 @@ const IR::MAU::Table* SplitAlpm::create_pre_classifier_tcam(
         unsigned pre_classifer_number_entries) {
     auto clone = tbl->clone();
 
-    auto partition_index = new IR::MAU::InputXBarRead(tv, "ternary");
-
-    /// pre_classifier table has only one key.
-    clone->match_key.clear();
-    clone->match_key.push_back(partition_index);
     clone->name = tbl->name + "__alpm_preclassifier";
 
     auto action_name = clone->name + "__set_partition_index";
@@ -41,7 +36,9 @@ const IR::MAU::Table* SplitAlpm::create_pre_classifier_tcam(
     return clone;
 }
 
-const IR::MAU::Table* SplitAlpm::create_atcam(IR::MAU::Table* tbl, IR::TempVar* tv) {
+const IR::MAU::Table* SplitAlpm::create_atcam(IR::MAU::Table* tbl, IR::TempVar* tv,
+        unsigned partition_count, unsigned partition_index_bits,
+        unsigned subtrees_per_partition) {
     // add partition_index key to list of;
     auto clone = tbl->clone();
 
@@ -49,6 +46,11 @@ const IR::MAU::Table* SplitAlpm::create_atcam(IR::MAU::Table* tbl, IR::TempVar* 
     clone->match_key.push_back(partition_index);
 
     clone->layout.atcam = true;
+    clone->layout.alpm = true;
+    clone->layout.ternary = false;
+    clone->layout.partition_count = partition_count;
+    clone->layout.partition_bits = partition_index_bits;
+    clone->layout.subtrees_per_partition = subtrees_per_partition;
     return clone;
 }
 
@@ -104,7 +106,7 @@ const IR::Node* SplitAlpm::postorder(IR::MAU::Table* tbl) {
         }
     }
 
-    auto partition_index_bits = int(std::ceil(std::log(float(number_partitions)) / std::log(2.0)));
+    auto partition_index_bits = ceil_log2(number_partitions);
     auto pre_classifer_number_entries = number_partitions * number_subtrees_per_partition;
 
     auto lpm_cnt = 0;
@@ -120,12 +122,13 @@ const IR::Node* SplitAlpm::postorder(IR::MAU::Table* tbl) {
     auto hdr_instance_name = tbl->name + "__metadata";
     auto pidx_field_name = tbl->name + "_partition_index";
     auto tv_name = hdr_instance_name + "." + pidx_field_name;
-    auto tv = new IR::TempVar(IR::Type_Bits::get(partition_index_bits), false);
+    auto tv = new IR::TempVar(IR::Type_Bits::get(partition_index_bits), false, tv_name.c_str());
 
     auto tables = new IR::Vector<IR::MAU::Table>();
     tables->push_back(create_pre_classifier_tcam(tbl, tv, partition_index_bits,
                                                  pre_classifer_number_entries));
-    tables->push_back(create_atcam(tbl, tv));
+    tables->push_back(create_atcam(tbl, tv, number_partitions,
+                partition_index_bits, number_subtrees_per_partition));
     return tables;
 }
 

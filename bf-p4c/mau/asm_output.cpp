@@ -1468,6 +1468,8 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
     out << indent << "p4: { name: " << canon_name(tbl->match_table->externalName());
     if (auto k = tbl->match_table->getConstantProperty("size"))
         out << ", size: " << k->asInt();
+    if (tbl->layout.pre_classifier || tbl->layout.alpm)
+        out << ", match_type: alpm";
     for (auto at : tbl->attached)
         if (auto ap = at->to<IR::MAU::ActionData>())
             if (!ap->direct)
@@ -1496,6 +1498,9 @@ void MauAsmOutput::emit_atcam_match(std::ostream &out, indent_t indent,
         const IR::MAU::Table *tbl) const {
     out << indent << "number_partitions: "
         << tbl->layout.partition_count << std::endl;
+    if (tbl->layout.alpm)
+        out << indent << "subtrees_per_partition: "
+            << tbl->layout.subtrees_per_partition << std::endl;
     for (auto ixr : tbl->match_key) {
         if (ixr->partition_index) {
             out << indent << "partition_field_name: " <<

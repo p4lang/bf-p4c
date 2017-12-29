@@ -93,6 +93,7 @@ class Table : BFN::Unit {
         bool            ternary = false;
         bool            hash_action = false;
         bool            atcam = false;
+        bool            alpm = false;
         int             ixbar_bytes = 0;
         int             match_bytes = 0;
         int             match_width_bits = 0;
@@ -108,6 +109,7 @@ class Table : BFN::Unit {
         int             partition_bits = 0;
         int             partition_count = 0;
         int             pre_classifer_number_entries = 0;
+        int             subtrees_per_partition = 0;
         Layout() { memset(this, 0, sizeof(*this)); }
         operator== { return memcmp(this, &a, sizeof(Layout)) == 0; }
         toJSON {

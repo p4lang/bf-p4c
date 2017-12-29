@@ -100,3 +100,41 @@ json::map *P4Table::base_tbl_cfg(json::vector &out, int size, Table *table) {
         tbl["stage_tables"] = json::mkuniq<json::vector>(); }
     return config;
 }
+
+void P4Table::base_alpm_tbl_cfg(json::map &out, int size, Table *table, P4Table::alpm_type atype) {
+    if (is_alpm()) {
+        bool cfg_present = false;
+        json::map **alpm_cfg;
+        unsigned *alpm_table_handle;
+        if (atype == P4Table::PreClassifier) {
+            cfg_present = (alpm.alpm_pre_classifier_table_cfg) ? true : false;
+            alpm_cfg = &alpm.alpm_pre_classifier_table_cfg;
+            alpm_table_handle = &alpm.alpm_pre_classifier_table_handle;
+        } else if (atype == P4Table::Atcam) {
+            cfg_present = (alpm.alpm_atcam_table_cfg) ? true : false;
+            alpm_cfg = &alpm.alpm_atcam_table_cfg;
+            alpm_table_handle = &alpm.alpm_atcam_table_handle; }
+        if (!cfg_present) {
+            *alpm_cfg = &out;
+            json::map &tbl = out;
+            tbl["direction"] = table->gress ? "egress" : "ingress";
+            if (!(*alpm_table_handle & 0xffffff))
+                *alpm_table_handle = (P4Table::MatchEntry << 24) + (++max_handle[handle >> 24]);
+            if (*alpm_table_handle)
+                tbl["handle"] = *alpm_table_handle;
+            if (atype == P4Table::PreClassifier)
+                tbl["name"] = table->name();
+            else if (atype == P4Table::Atcam)
+                tbl["name"] = p4_name();
+            tbl["table_type"] = type_name[handle >> 24];
+            tbl["size"] = explicit_size ? this->size : size;
+            tbl["stage_tables"] = json::mkuniq<json::vector>();
+        } else {
+            if (atype == P4Table::PreClassifier) {
+                error(lineno, "Adding ALPM pre-classifier table '%s' which already exists for '%s'",
+                        table->name(), name.c_str());
+            } else if (atype == P4Table::Atcam) {
+                if (*alpm_cfg != &out) {
+                    error(lineno, "Adding atcam table '%s' to incorrect config %s",
+                            table->name(), name.c_str()); } } } }
+}

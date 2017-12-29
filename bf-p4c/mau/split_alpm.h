@@ -13,7 +13,9 @@ class SplitAlpm : public Transform {
     const IR::MAU::Table* create_pre_classifier_tcam(
             IR::MAU::Table* tbl, IR::TempVar* tv, unsigned partition_index_bits,
             unsigned pre_classifer_number_entries);
-    const IR::MAU::Table* create_atcam(IR::MAU::Table* table, IR::TempVar* tv);
+    const IR::MAU::Table* create_atcam(IR::MAU::Table* table, IR::TempVar* tv,
+            unsigned partition_count, unsigned partition_index_bits,
+            unsigned subtrees_per_partition);
  public:
     SplitAlpm() {}
 };
