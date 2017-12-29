@@ -43,6 +43,8 @@ void AttachedTable::pass1() {
                 } else {
                     per_flow_enable_bit = pfe_bit;
                     pfe_set = true; }
+            } else if (per_flow_enable_param == "false") {
+                per_flow_enable = false;
             } else {
                 error(lineno, "no format found for per_flow_enable param %s",
                       per_flow_enable_param.c_str()); } } }

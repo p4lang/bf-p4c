@@ -353,6 +353,15 @@ struct operand {
 
 };
 
+static void parse_slice(const VECTOR(value_t) &vec, int idx, int &lo, int &hi) {
+    if (PCHECKTYPE2(vec.size == idx+1, vec[idx], tINT, tRANGE)) {
+        if (vec[idx].type == tINT)
+            lo = hi = vec[idx].i;
+        else {
+            lo = vec[idx].lo;
+            hi = vec[idx].hi; } }
+}
+
 operand::operand(Table *tbl, const Table::Actions::Action *act, const value_t &v) : op(0) {
     if (v.type == tINT) {
         op = new Const(v.lineno, v.i);
@@ -363,11 +372,14 @@ operand::operand(Table *tbl, const Table::Actions::Action *act, const value_t &v
         if (v.type == tCMD) {
             if (v == "hash_dist" && (op = HashDist::parse(tbl, v.vec)))
                 return;
-            if (!PCHECKTYPE2(v.vec.size == 2, v[1], tINT, tRANGE)) return;
-            if (v[1].type == tINT) lo = hi = v[1].i;
-            else {
-                lo = v[1].lo;
-                hi = v[1].hi; } }
+            if (v.vec.size > 1 && v[1] == "color") {
+                // FIXME -- mark the Named as being table color rather than table output?
+                if (v[1].type == tCMD)
+                    parse_slice(v[1].vec, 1, lo, hi);
+                else if (v.vec.size > 2)
+                    parse_slice(v.vec, 2, lo, hi);
+            } else {
+                parse_slice(v.vec, 1, lo, hi); } }
         name = act->alias_lookup(v.lineno, name, lo, hi);
         if (name == "hash_dist" && lo == hi) {
             auto hd = new HashDist(v.lineno, tbl, lo);

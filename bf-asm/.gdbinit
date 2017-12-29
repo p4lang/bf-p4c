@@ -96,10 +96,14 @@ class value_t_Printer(object):
             cmd = self.val['vec']['data']
             count = self.val['vec']['size']
             rv = str(cmd.dereference())
+            rv += "("
             while count > 1:
                 count -= 1
                 cmd += 1
-                rv += " " + str(cmd.dereference())
+                rv += str(cmd.dereference())
+                if count > 1:
+                    rv += ", "
+            rv += ")"
             return rv;
         else:
             return "<value_t type " + hex(typ) + ">"

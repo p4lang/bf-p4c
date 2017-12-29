@@ -7,7 +7,7 @@
 class ActionBus {
     static struct MeterBus_t {} MeterBus;
     struct Source {
-        enum { None, Field, HashDist, TableOutput, NameRef }     type;
+        enum { None, Field, HashDist, TableOutput, TableColor, NameRef, ColorRef }     type;
         union {
             Table::Format::Field                        *field;
             HashDistribution                            *hd;

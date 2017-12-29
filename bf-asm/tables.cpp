@@ -572,6 +572,15 @@ static void append_bits(std::vector<Table::Format::bitrange_t> &vec, int lo, int
     vec.emplace_back(lo, hi);
 }
 
+bool Table::Format::equiv(const ordered_map<std::string, Field> &a,
+                          const ordered_map<std::string, Field> &b) {
+    if (a.size() != b.size()) return false;
+    for (auto &el : a)
+        if (!b.count(el.first) || b.at(el.first) != el.second)
+            return false;
+    return true;
+}
+
 Table::Format::Format(Table *t, const VECTOR(pair_t) &data, bool may_overlap) : tbl(t) {
     unsigned nextbit = 0;
     fmt.resize(1);
@@ -631,7 +640,7 @@ Table::Format::Format(Table *t, const VECTOR(pair_t) &data, bool may_overlap) : 
                             continue; }
                     byindex[piece.lo] = it; } } } }
     for (size_t i = 1; i < fmt.size(); i++)
-        if (fmt[0] != fmt[i])
+        if (!equiv(fmt[0], fmt[i]))
             error(data[0].key.lineno, "Format group %zu doesn't match group 0", i);
     for (log2size = 0; (1U << log2size) < size; log2size++);
     if (error_count > 0) return;

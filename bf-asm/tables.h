@@ -184,6 +184,8 @@ public:
     private:
         std::vector<ordered_map<std::string, Field>>                  fmt;
         std::map<unsigned, ordered_map<std::string, Field>::iterator> byindex;
+        static bool equiv(const ordered_map<std::string, Field> &,
+                          const ordered_map<std::string, Field> &);
     public:
         int                     lineno = -1;
         Table                   *tbl;

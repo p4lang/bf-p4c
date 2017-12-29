@@ -26,8 +26,14 @@ std::ostream &operator<<(std::ostream &out, const ActionBus::Source &src) {
     case ActionBus::Source::TableOutput:
         out << "TableOutput(" << (src.table ? src.table->name() : "0") << ")";
         break;
+    case ActionBus::Source::TableColor:
+        out << "TableColor(" << (src.table ? src.table->name() : "0") << ")";
+        break;
     case ActionBus::Source::NameRef:
         out << "NameRef(" << (src.name_ref ? src.name_ref->name : "0") << ")";
+        break;
+    case ActionBus::Source::ColorRef:
+        out << "ColorRef(" << (src.name_ref ? src.name_ref->name : "0") << ")";
         break;
     default:
         out << "<invalid type 0x" << hex(src.type) << ">";
@@ -85,7 +91,7 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
                 name = kv.value[0].s;
                 name_ref = nullptr;
             } else {
-                if (!PCHECKTYPEM(kv.value.vec.size == 2, kv.value[1], tRANGE,
+                if (!PCHECKTYPE2M(kv.value.vec.size == 2, kv.value[1], tRANGE, tSTR,
                                  "field name or slice"))
                     continue;
                 //if ((kv.value[1].lo & 7) != 0 || (kv.value[1].hi & 7) != 7) {
@@ -93,8 +99,11 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
                 //    continue; }
                 name = kv.value[0].s;
                 name_ref = &kv.value[0];
-                off = kv.value[1].lo;
-                sz = kv.value[1].hi - kv.value[1].lo + 1; } }
+                if (kv.value[1].type == tRANGE) {
+                    off = kv.value[1].lo;
+                    sz = kv.value[1].hi - kv.value[1].lo + 1;
+                } else if (kv.value[1] != "color") {
+                    error(kv.value[1].lineno, "unexpected %s", kv.value[1].s); } } }
         Table::Format::Field *f = tbl->lookup_field(name, "*");
         Source src;
         const char *p = name-1;
@@ -106,8 +115,10 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
                 continue;
             } else if (kv.value == "meter") {
                 src = Source(MeterBus);
-                // FIXME -- meter color could be ORed into any byte of the immediate?
-                if (!sz) off = 24, sz = 8;
+                if (kv.value.type == tCMD && kv.value[1] == "color") {
+                    src.type = Source::ColorRef;
+                    // FIXME -- meter color could be ORed into any byte of the immediate?
+                    if (!sz) off = 24, sz = 8; }
             } else if (kv.value.type == tCMD && kv.value == "hash_dist") {
                 if (auto hd = tbl->find_hash_dist(kv.value[1].i))
                     src = Source(hd);
@@ -131,8 +142,13 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
                         error(kv.value[i].lineno, "Unexpected hash_dist %s",
                               value_desc(kv.value[i]));
                         break; } }
+                src = Source(new Table::Ref(*name_ref));
             } else if (name_ref) {
                 src = Source(new Table::Ref(*name_ref));
+                if (kv.value.type == tCMD && kv.value[1] == "color") {
+                    src.type = Source::ColorRef;
+                    // FIXME -- meter color could be ORed into any byte of the immediate?
+                    if (!sz) off = 24, sz = 8; }
             } else if (tbl->format) {
                 error(kv.value.lineno, "No field %s in format", name);
                 continue; }
@@ -204,12 +220,16 @@ void ActionBus::pass1(Table *tbl) {
     Slot *use[ACTION_DATA_BUS_SLOTS] = { 0 };
     for (auto &slot : Values(by_byte)) {
         for (auto it = slot.data.begin(); it != slot.data.end();) {
-            if (it->first.type == Source::NameRef) {
+            if (it->first.type == Source::NameRef || it->first.type == Source::ColorRef) {
                 // Remove all NameRef and replace with TableOutputs or Fields
+                // ColorRef turns into TableColor
                 if (it->first.name_ref) {
                     bool ok = false;
                     if (*it->first.name_ref) {
-                        slot.data[Source(*it->first.name_ref)] = it->second;
+                        Source src(*it->first.name_ref);
+                        if (it->first.type == Source::ColorRef)
+                            src.type = Source::TableColor;
+                        slot.data[src] = it->second;
                         ok = true;
                     } else if (tbl->actions) {
                         Table::Format::Field *found_field = nullptr;
@@ -240,8 +260,11 @@ void ActionBus::pass1(Table *tbl) {
                         error(lineno, "No meter table attached to %s", tbl->name());
                     else if (att->meters.size() > 1)
                         error(lineno, "Multiple meter tables attached to %s", tbl->name());
-                    else
-                        slot.data[Source(att->meters.at(0))] = it->second; }
+                    else {
+                        Source src(att->meters.at(0));
+                        if (it->first.type == Source::ColorRef)
+                            src.type = Source::TableColor;
+                        slot.data[src] = it->second; } }
                 it = slot.data.erase(it);
             } else {
                 ++it; } }

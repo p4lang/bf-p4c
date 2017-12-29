@@ -342,9 +342,8 @@ void MatchTable::gen_hash_bits(const std::map<int, HashCol> &hash_table,
                 remove_aug_names(field_name);
                 field["field_bit"] = remove_name_tail_range(field_name) + ref.lobit();
                 // Sanity check to see if field_name is also in p4_param_list.
-                if (!find_p4_param(field_name)) {
-                    error(col.second.lineno, "Cannot find field name %s in p4_param_order for table %s", field_name.c_str(), name());
-                    continue; }
+                if (!find_p4_param(field_name))
+                    warning(col.second.lineno, "Cannot find field name %s in p4_param_order for table %s", field_name.c_str(), name());
                 field["field_name"] = field_name; }
             if (!hash_bit_added)
                 bits_to_xor.push_back(std::move(field));

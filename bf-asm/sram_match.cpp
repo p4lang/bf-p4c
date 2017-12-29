@@ -564,7 +564,10 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
                 word = way.word; }
             setup_muxctl(vh_adr_xbar.exactmatch_mem_hashadr_xbar_ctl[col],
                          ways[way.way].subgroup + row.bus*5);
-            if (ways[way.way].mask) {
+            if (options.match_compiler || ways[way.way].mask) {
+                // Glass always sets this.  When mask == 0, bank will also be 0, and the
+                // comparison will always match, so the bus need not be read (inp_sel).
+                // CSR suggests it should NOT be set if not needed to save power.
                 auto &bank_enable = vh_adr_xbar.exactmatch_bank_enable[col];
                 bank_enable.exactmatch_bank_enable_bank_mask = ways[way.way].mask;
                 bank_enable.exactmatch_bank_enable_bank_id = way.bank;
