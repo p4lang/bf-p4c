@@ -57,17 +57,6 @@ header ethernet_t {
     bit<16> etherType;
 }
 
-header fabric_header_t {
-    bit<3>  packetType;
-    bit<2>  headerVersion;
-    bit<2>  packetVersion;
-    bit<1>  pad1;
-    bit<3>  fabricColor;
-    bit<5>  fabricQos;
-    bit<8>  dstDevice;
-    bit<16> dstPortOrGroup;
-}
-
 header ingress_intrinsic_metadata_t {
     bit<1>  resubmit_flag;
     bit<1>  _pad1;
@@ -155,8 +144,6 @@ struct headers {
     egress_intrinsic_metadata_from_parser_aux_t    eg_intr_md_from_parser_aux;
     @name(".ethernet") 
     ethernet_t                                     ethernet;
-    @name(".fabric_header") 
-    fabric_header_t                                fabric_header;
     @dont_trim @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md.ingress_port") @name(".ig_intr_md") 
     ingress_intrinsic_metadata_t                   ig_intr_md;
     @dont_trim @pa_intrinsic_header("ingress", "ig_intr_md_for_mb") @pa_atomic("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @not_deparsed("ingress") @not_deparsed("egress") @name(".ig_intr_md_for_mb") 
@@ -169,7 +156,7 @@ struct headers {
     generator_metadata_t_0                         ig_pg_md;
     @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_prsr_ctrl") @name(".ig_prsr_ctrl") 
     ingress_parser_control_signals                 ig_prsr_ctrl;
-    @pa_container("ingress", "ipv4.srcAddr", 1) @name(".ipv4") 
+    @name(".ipv4") 
     ipv4_t                                         ipv4;
 }
 
@@ -181,48 +168,67 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
             default: accept;
         }
     }
-    @name(".parse_fabric_header") state parse_fabric_header {
-        packet.extract<ethernet_t>(hdr.ethernet);
-        packet.extract<fabric_header_t>(hdr.fabric_header);
-        transition accept;
-    }
     @name(".parse_ipv4") state parse_ipv4 {
         packet.extract<ipv4_t>(hdr.ipv4);
         transition accept;
     }
     @name(".start") state start {
-        transition select(hdr.ig_intr_md.ingress_port) {
-            default: parse_ethernet;
-        }
+        transition parse_ethernet;
     }
 }
 
+@name(".prof") @mode("fair") action_selector(HashAlgorithm.random, 32w4096, 32w64) prof;
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".fwd_to_fabric") action fwd_to_fabric(bit<9> egress_port) {
-        hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+    @name(".sel_action_0") action sel_action_0(bit<16> p0, bit<8> p1) {
+        hdr.ethernet.etherType = p0;
+        hdr.ipv4.diffserv = p1;
     }
-    @name(".fwd_to_server") action fwd_to_server(bit<9> egress_port) {
-        hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+    @name(".sel_action_1") action sel_action_1(bit<16> p0, bit<8> p1, bit<32> p2) {
+        hdr.ethernet.etherType = p0;
+        hdr.ipv4.diffserv = p1;
+        hdr.ipv4.dstAddr = p2;
     }
-    @name(".fwd_drop") action fwd_drop() {
-        mark_to_drop();
+    @name(".do_nothing") action do_nothing() {
     }
-    @name(".fwd_packet") table fwd_packet {
+    @name(".set_p") action set_p(bit<9> p) {
+        hdr.ig_intr_md_for_tm.ucast_egress_port = p;
+    }
+    @selector_max_group_size(121) @name(".t0") table t0 {
         actions = {
-            fwd_to_fabric();
-            fwd_to_server();
-            fwd_drop();
+            sel_action_0();
+            sel_action_1();
+            do_nothing();
             @defaultonly NoAction();
         }
         key = {
-            hdr.ipv4.isValid()         : exact @name("ipv4.$valid$") ;
-            hdr.fabric_header.isValid(): exact @name("fabric_header.$valid$") ;
+            hdr.ethernet.etherType : exact @name("ethernet.etherType") ;
+            hdr.ethernet.srcAddr   : exact @name("ethernet.srcAddr") ;
+            hdr.ethernet.etherType : selector @name("ethernet.etherType") ;
+            hdr.ipv4.totalLen      : selector @name("ipv4.totalLen") ;
+            hdr.ipv4.identification: selector @name("ipv4.identification") ;
+            hdr.ipv4.dstAddr       : selector @name("ipv4.dstAddr") ;
+            hdr.ipv4.srcAddr       : selector @name("ipv4.srcAddr") ;
         }
-        size = 4;
+        size = 8192;
+        implementation = prof;
+        default_action = NoAction();
+    }
+    @name(".t1") table t1 {
+        actions = {
+            do_nothing();
+            set_p();
+            @defaultonly NoAction();
+        }
+        key = {
+            hdr.ipv4.diffserv: ternary @name("ipv4.diffserv") ;
+        }
+        size = 512;
         default_action = NoAction();
     }
     apply {
-        fwd_packet.apply();
+        t0.apply();
+        t1.apply();
     }
 }
 
@@ -234,7 +240,6 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
         packet.emit<ethernet_t>(hdr.ethernet);
-        packet.emit<fabric_header_t>(hdr.fabric_header);
         packet.emit<ipv4_t>(hdr.ipv4);
     }
 }

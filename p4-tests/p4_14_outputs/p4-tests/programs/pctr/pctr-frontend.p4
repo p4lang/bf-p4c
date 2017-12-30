@@ -292,12 +292,12 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".set_egress_port") action set_egress_port_0() {
-        hdr.ig_intr_md_for_tm.ucast_egress_port = 9w1;
+    @name(".set_egress_port") action set_egress_port_0(bit<9> egress_port) {
+        hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
     }
-    @name(".rewrite_ipv6_and_set_egress_port") action rewrite_ipv6_and_set_egress_port_0() {
+    @name(".rewrite_ipv6_and_set_egress_port") action rewrite_ipv6_and_set_egress_port_0(bit<9> egress_port) {
         hdr.ipv6.dstAddr = hdr.active_segment.sid;
-        hdr.ig_intr_md_for_tm.ucast_egress_port = 9w1;
+        hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
     }
     @name(".ipv4_option_lookup") table ipv4_option_lookup_0 {
         actions = {

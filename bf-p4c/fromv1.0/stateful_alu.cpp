@@ -437,12 +437,11 @@ const IR::Statement *P4V1::StatefulAluConverter::convertExternCall(
             error("%s: Expected a field_list_calculation", prim->operands.at(1));
             return nullptr; }
         auto ttype = IR::Type_Bits::get(flc->output_width);
-        auto algo = new IR::TypeNameExpression(structure->v1model.algorithm.Id());
         block = new IR::BlockStatement;
         cstring temp = structure->makeUniqueName("temp");
         block->push_back(new IR::Declaration_Variable(temp, ttype));
         args->push_back(new IR::PathExpression(new IR::Path(temp)));
-        args->push_back(new IR::Member(algo, flc->algorithm));
+        args->push_back(structure->convertHashAlgorithms(flc->algorithm));
         args->push_back(new IR::Constant(ttype, 0));
         args->push_back(conv.convert(flc->input_fields));
         args->push_back(new IR::Constant(IR::Type_Bits::get(flc->output_width + 1),

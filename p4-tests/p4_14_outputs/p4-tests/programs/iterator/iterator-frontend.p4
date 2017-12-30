@@ -297,7 +297,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = n_1();
         counters = ha_cntr_0;
     }
-    @name(".p0") table p0_0 {
+    @command_line("--no-dead-code-elimination") @name(".p0") table p0_0 {
         actions = {
             N_0();
             @defaultonly NoAction();

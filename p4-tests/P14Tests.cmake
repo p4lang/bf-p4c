@@ -40,14 +40,8 @@ set (P14_XFAIL_TESTS
   extensions/p4_tests/p4_14/test_config_295_polynomial_hash.p4
   extensions/p4_tests/p4_14/test_config_308_hash_96b.p4
   extensions/p4_tests/p4_14/test_config_311_hash_adb.p4
-  extensions/p4_tests/p4_14/test_config_307_dyn_selection.p4
   extensions/p4_tests/p4_14/test_config_309_wide_dyn_selection.p4
   extensions/p4_tests/p4_14/test_config_314_sym_hash.p4
-  extensions/p4_tests/p4_14/test_config_315_sym_hash_neg_test_1.p4
-  extensions/p4_tests/p4_14/test_config_316_sym_hash_neg_test_2.p4
-  extensions/p4_tests/p4_14/test_config_317_sym_hash_neg_test_3.p4
-  extensions/p4_tests/p4_14/test_config_318_sym_hash_neg_test_4.p4
-  extensions/p4_tests/p4_14/test_config_319_sym_hash_neg_test_5.p4
   extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case1.p4
   extensions/p4_tests/p4_14/c4/COMPILER-529/dnets_bng_case2.p4
   extensions/p4_tests/p4_14/c1/COMPILER-548/case2895.p4

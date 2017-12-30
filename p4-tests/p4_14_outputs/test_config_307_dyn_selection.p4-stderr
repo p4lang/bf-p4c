@@ -1,0 +1,3 @@
+test_config_307_dyn_selection.p4(78): warning: : Mulitple algorithms in a field list not supported in P4_16 -- using only the first
+       crc32;
+       ^^^^^

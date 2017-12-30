@@ -198,11 +198,11 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".fwd_to_fabric") action fwd_to_fabric() {
-        hdr.ig_intr_md_for_tm.ucast_egress_port = 9w3;
+    @name(".fwd_to_fabric") action fwd_to_fabric(bit<9> egress_port) {
+        hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
     }
-    @name(".fwd_to_server") action fwd_to_server() {
-        hdr.ig_intr_md_for_tm.ucast_egress_port = 9w4;
+    @name(".fwd_to_server") action fwd_to_server(bit<9> egress_port) {
+        hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
     }
     @name(".fwd_drop") action fwd_drop() {
         mark_to_drop();
