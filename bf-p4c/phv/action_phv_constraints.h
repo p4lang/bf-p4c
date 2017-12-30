@@ -37,8 +37,8 @@ class ActionPhvConstraints : public Inspector {
         enum field_read_flags_t { MOVE = 1,
                                   WHOLE_CONTAINER = (1 << 1),
                                   ANOTHER_OPERAND = (1 << 2),
-                                  MIXED = (1 << 3)
-        };
+                                  MIXED = (1 << 3),
+                                  WHOLE_CONTAINER_SAME_FIELD = (1 << 4) };
         uint8_t flags = 0;
         bool ad = false;
         bool constant = false;
@@ -129,6 +129,11 @@ class ActionPhvConstraints : public Inspector {
       * in container @c
       */
     int unallocated_bits(PHV::Allocation::MutuallyLiveSlices, const PHV::Container) const;
+
+    /** @returns true if all the alloc slices in the set @container_state together make up
+      * adjacent slices of the same field
+      */
+    bool are_successive_field_slices(PHV::Allocation::MutuallyLiveSlices container_state);
 
     /** @returns the type of operation (FieldOperation::MOVE or FieldOperation::WHOLE_CONTAINER)  
       * if for every action in @actions, the fields in @fields are all written using

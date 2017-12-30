@@ -113,9 +113,9 @@ void ActionPhvConstraints::sort(std::vector<PHV::FieldSlice>& slice_list) {
 }
 
 void ActionPhvConstraints::end_apply() {
-    LOG5("*****Printing  ActionPhvConstraints Maps*****");
+    LOG7("*****Printing  ActionPhvConstraints Maps*****");
     printMapStates();
-    LOG5("*****End Print ActionPhvConstraints Maps*****");
+    LOG7("*****End Print ActionPhvConstraints Maps*****");
 }
 
 ActionPhvConstraints::NumContainers
@@ -189,8 +189,7 @@ boost::optional<PHV::AllocSlice> ActionPhvConstraints::getSourcePHVSlice(const P
         BUG_CHECK(per_source_slices.size() <= 1, "Multiple source slices found in "
                 "getSourcePHVSlice");
         for (auto sl : per_source_slices)
-            return sl;
-    }
+            return sl; }
     return boost::optional<PHV::AllocSlice>{};
 }
 
@@ -225,18 +224,23 @@ unsigned ActionPhvConstraints::container_operation_type(ordered_set<const IR::MA
         LOG5("\t\t\tChecking container operation type for action: " << action->name);
         unsigned type_of_operation = 0;
         size_t num_fields_not_written = 0;
+        ordered_set<const PHV::Field*> observed_fields;
+
         for (auto *f : fields) {
             boost::optional<FieldOperation> fw = is_written(action, f);
             if (!fw) {
                 num_fields_not_written++;
             } else {
-                if (fw->flags & FieldOperation::MOVE)
+                if (fw->flags & FieldOperation::MOVE) {
                     type_of_operation |= FieldOperation::MOVE;
-                else if (fw->flags & FieldOperation::WHOLE_CONTAINER)
+                } else if (fw->flags & FieldOperation::WHOLE_CONTAINER) {
                     type_of_operation |= FieldOperation::WHOLE_CONTAINER;
-                else
+                    // Check if it a whole container operation on adjacent slices of the same field
+                    observed_fields.insert(f);
+
+                } else {
                     ::warning("Detected a write that is neither move nor whole container "
-                            "operation."); } }
+                            "operation."); } } }
 
         // If there is a WHOLE_CONTAINER operation present, do not pack.
         // TODO: In the long run, we need to distinguish between bitwise operations and carry-based
@@ -254,9 +258,39 @@ unsigned ActionPhvConstraints::container_operation_type(ordered_set<const IR::MA
                         "operations for fields in the proposed packing.");
                 return FieldOperation::MIXED; }
 
+            LOG5("\t\t\t\tNumber of fields written to by this whole container operation: " <<
+                    observed_fields.size());
+            if (observed_fields.size())
+                return FieldOperation::WHOLE_CONTAINER_SAME_FIELD;
+
             return FieldOperation::WHOLE_CONTAINER; } }
 
     return FieldOperation::MOVE;
+}
+
+bool ActionPhvConstraints::are_successive_field_slices(PHV::Allocation::MutuallyLiveSlices
+        container_state) {
+    int last_hi = 0;
+    int last_lo = 0;
+    bool firstSlice = true;
+    const PHV::Field* field;
+    for (auto slice : container_state) {
+        auto range = slice.field_slice();
+        if (firstSlice) {
+            firstSlice = false;
+            last_hi = range.hi;
+            last_lo = range.lo;
+            field = slice.field();
+        } else {
+            BUG_CHECK(field == slice.field(), "All field slices must belong to the same field");
+            if (last_hi + 1 != range.lo) {
+                LOG5("\t\t\t\t\tSlices [" << last_lo << ", " << last_hi << "] and [" << range.lo <<
+                        ", " << range.hi << "] of field " << field->name << " are not adjacent.");
+                return false; }
+            last_hi = range.hi;
+            last_lo = range.lo; }
+    }
+    return true;
 }
 
 void ActionPhvConstraints::pack_slices_together(
@@ -393,18 +427,26 @@ ActionPhvConstraints::can_pack(const PHV::Allocation& alloc, std::vector<PHV::Al
     // Debug info: print the names of all actions under consideration for these fields
     if (LOGGING(5)) {
         std::stringstream ss;
-        ss << "\t\t\tActions to be checked are: ";
+        ss << "\t\t\tMust check " << set_of_actions.size() << " actions: ";
         for (auto *act : set_of_actions)
             ss << act->name << " ";
         LOG5(ss.str()); }
 
     // Check if actions on the packing candidates involve WHOLE_CONTAINER operations or a mix of
     // WHOLE_CONTAINER and MOVE operations (FieldOperation::MIXED)
-
     unsigned cont_operation = container_operation_type(set_of_actions, fields);
-    if (cont_operation == FieldOperation::WHOLE_CONTAINER || cont_operation ==
-            FieldOperation::MIXED) {
-        LOG5("\t\t\tCannot pack because of presence of whole container operations");
+    if (cont_operation == FieldOperation::WHOLE_CONTAINER) {
+        LOG5("\t\t\tCannot pack because of a whole container operation.");
+        return boost::none; }
+
+    if (cont_operation == FieldOperation::WHOLE_CONTAINER_SAME_FIELD) {
+        if (!are_successive_field_slices(container_state)) {
+            return boost::none;
+        } else {
+            LOG5("\t\t\t\tMultiple slices involved in whole container operation are adjacent"); } }
+
+    if (cont_operation == FieldOperation::MIXED) {
+        LOG5("\t\t\tCannot pack because of a mixture of whole container and move operations.");
         return boost::none; }
 
     // Perform analysis related to number of sources for every action
@@ -505,7 +547,7 @@ ActionPhvConstraints::can_pack(const PHV::Allocation& alloc, std::vector<PHV::Al
                 if (num_source_containers == 2) continue;
                 // Only pack unallocated slices together
                 pack_slices_together(alloc, container_state, copacking_constraints, action, true); }
-        }
+            }
     }
 
     LOG5("\t\tChecking rotational alignment");
@@ -545,31 +587,31 @@ boost::optional<ActionPhvConstraints::FieldOperation> ActionPhvConstraints::is_w
 }
 
 void ActionPhvConstraints::printMapStates() {
-    if (!LOGGING(5)) return;
+    if (!LOGGING(7)) return;
     for (auto &act : action_to_writes) {
-        LOG5("Action: " << act.first->name << " writes fields: ");
+        LOG7("Action: " << act.first->name << " writes fields: ");
         for (auto &fi : act.second) {
-            LOG5("\t\t" << fi.phv_used->name << ", written by a MOVE? " << (fi.flags ==
+            LOG7("\t\t" << fi.phv_used->name << ", written by a MOVE? " << (fi.flags ==
                         FieldOperation::MOVE)); } }
 
         for (auto &f : write_to_reads_per_action) {
             const PHV::Field* key = f.first;
-            LOG5("Key field: " << key->name << " uses operands: ");
+            LOG7("Key field: " << key->name << " uses operands: ");
             for (auto &fi : f.second) {
-                LOG5("\tAction: " << fi.first->name);
+                LOG7("\tAction: " << fi.first->name);
                 for (auto &fii : fi.second) {
                     if (!fii.ad && !fii.constant)
-                        LOG5("\t\tField: " << fii.phv_used->name);
+                        LOG7("\t\tField: " << fii.phv_used->name);
                     else
-                        LOG5("\t\tAction data."); } } }
+                        LOG7("\t\tAction data."); } } }
 
         for (auto &f : read_to_writes_per_action) {
             const PHV::Field* key = f.first;
-            LOG5("Key field: " << key->name << " is read by the field(s): ");
+            LOG7("Key field: " << key->name << " is read by the field(s): ");
             for (auto &fi : f.second) {
-                LOG5("\tAction: " << fi.first->name);
+                LOG7("\tAction: " << fi.first->name);
                 for (auto &fii : fi.second)
-                    LOG5("\t\tField: " << fii->name); } }
+                    LOG7("\t\tField: " << fii->name); } }
 }
 
 bool ActionPhvConstraints::is_in_field_writes_to_actions(cstring write, const IR::MAU::Action*
