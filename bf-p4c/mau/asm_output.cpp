@@ -1152,10 +1152,62 @@ class MauAsmOutput::EmitAction : public Inspector {
             out << indent << "# " << *expr << std::endl;
         }
     }
+
+    /** In order to handle slices on hash distribution, i.e. a 8 bit portion of a 16
+     *  bit hash distribution unit, the assumption is that the hash distribution is aligned
+     *  at 16 bit intervals, and that the slicing is coordinated to that.  Until the hash
+     *  distribution is moved into the action format, then this assumption will have
+     *  to work.
+     */
+    void handle_hash_dist(const IR::Expression *expr) {
+        int lo = -1; int hi = -1;
+        const IR::MAU::HashDist *hd = nullptr;
+        if (auto sl = expr->to<IR::Slice>()) {
+            hd = sl->e0->to<IR::MAU::HashDist>();
+            lo = sl->getL();
+            hi = sl->getH();
+        } else {
+            hd = expr->to<IR::MAU::HashDist>();
+        }
+        assert(sep);
+        BUG_CHECK(hd != nullptr, "Printing an ivlaid the hash distribution in assembly");
+        out << sep << "hash_dist(";
+        sep = "";
+        safe_vector<int> units;
+        if (lo == -1 && hi == -1) {
+            units.insert(units.end(), hd->units.begin(), hd->units.end());
+        } else {
+            if (lo < IXBar::HASH_DIST_BITS)
+                units.push_back(hd->units[0]);
+            if (hi >= IXBar::HASH_DIST_BITS)
+                units.push_back(hd->units[1]);
+        }
+
+        for (size_t i = 0; i < units.size(); i++) {
+            out << units[i];
+            if (i != units.size() - 1)
+                out << ", ";
+        }
+
+        if (lo >= 0 && hi >= 0) {
+            out << ", ";
+            if (units.size() > 1)
+                out << lo << ".." << hi;
+            else
+                out << (lo % IXBar::HASH_DIST_BITS) << ".." << (hi % IXBar::HASH_DIST_BITS);
+        }
+
+        out << ")";
+        sep = ", ";
+    }
+
     bool preorder(const IR::Slice *sl) override {
         assert(sep);
         if (self.phv.field(sl)) {
             handle_phv_expr(sl);
+            return false;
+        } else if (sl->e0->is<IR::MAU::HashDist>()) {
+            handle_hash_dist(sl);
             return false;
         }
         visit(sl->e0);
@@ -1208,16 +1260,7 @@ class MauAsmOutput::EmitAction : public Inspector {
         sep = ", ";
         return false; }
     bool preorder(const IR::MAU::HashDist *hd) override {
-        assert(sep);
-        out << sep << "hash_dist(";
-        sep = "";
-        for (size_t i = 0; i < hd->units.size(); i++) {
-            out << hd->units[i];
-            if (i != hd->units.size() - 1)
-                out << ",";
-        }
-        out << ")";
-        sep = ", ";
+        handle_hash_dist(hd);
         return false; }
     bool preorder(const IR::LNot *) override {
         out << sep << "!";

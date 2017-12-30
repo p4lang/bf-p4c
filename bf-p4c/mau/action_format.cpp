@@ -1054,7 +1054,10 @@ void ActionFormat::calculate_placement_data(safe_vector<ActionDataPlacement> &pl
     int index = 0;
     for (auto &container : placement_vec) {
         for (auto arg_loc : container.arg_locs) {
-            apd[std::make_pair(arg_loc.name, arg_loc.field_bit)].push_back(index);
+            int bit_location = arg_loc.field_bit;
+            if (arg_loc.is_constant)
+                bit_location = 0;
+            apd[std::make_pair(arg_loc.name, bit_location)].push_back(index);
         }
         index++;
     }

@@ -410,7 +410,7 @@ bool ActionAnalysis::init_ad_alloc_alignment(const ActionParam &read, ContainerA
         for (auto arg_loc : adp.arg_locs) {
             if (arg_loc.name != arg_name) continue;
             if (static_cast<size_t>(adp.size) != container.size()) continue;
-            int lo = arg_loc.field_bit;
+            int lo = arg_loc.is_constant ? 0 : arg_loc.field_bit;
             int hi = lo + arg_loc.data_loc.popcount() - 1;
 
             if (!(lo <= read_range.lo && hi >= read_range.hi)) continue;

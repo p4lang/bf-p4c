@@ -54,6 +54,7 @@ p4c_add_xfail_reason("tofino" "" ${TOFINO_XFAIL_TESTS})
 # BRIG-103
 p4c_add_xfail_reason("tofino"
   "instruction slot [0-9]+ used multiple times in action"
+  testdata/p4_16_samples/slice-def-use1.p4
   extensions/p4_tests/p4_14/action_conflict_2.p4
   extensions/p4_tests/p4_14/c1/COMPILER-358/case2110.p4
   )
@@ -748,14 +749,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/13-ResubmitMetadataSize.p4
   )
 
-# backend bug
-p4c_add_xfail_reason("tofino"
-  "Slice is of IR structure not handled by ActionAnalysis"
-  )
-p4c_add_xfail_reason("tofino"
-  "Action argument is not found to be allocated in the action format"
-  testdata/p4_16_samples/slice-def-use1.p4
-  )
+
 # translation bug: smeta
 p4c_add_xfail_reason("tofino"
   "Could not find declaration for smeta"

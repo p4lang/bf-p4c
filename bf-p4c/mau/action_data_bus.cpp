@@ -159,7 +159,8 @@ bool ActionDataBus::find_immed_upper_location(ActionFormat::cont_type_t type,
             break;
         }
         starter += diff;
-    } while (starter != output_to_byte(PAIRED_OFFSET, type));
+        LOG1("Starter " << starter << " " << output_to_byte(PAIRED_OFFSET, type));
+    } while (starter != output_to_byte(OUTPUTS, type));
     start_byte = starter;
     return found;
 }
