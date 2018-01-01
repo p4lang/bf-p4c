@@ -1,21 +1,36 @@
+#include "bf-p4c/phv/analysis/field_interference.h"
 #include <boost/graph/adjacency_list.hpp>
+#include <algorithm>
+#include <numeric>
 #include "bf-p4c/lib/vertex_weighted_coloring.h"
 
-#include "bf-p4c/phv/analysis/field_interference.h"
-#include "lib/log.h"
-
-FieldInterference::SliceVector
-FieldInterference::getAllSlices(const std::list<PHV::SuperCluster *>& clusters,
-                                gress_t gress,
-                                bool is_tagalong) const {
-    SliceVector rst;
+FieldInterference::SliceListVector
+FieldInterference::getSliceLists(const std::list<PHV::SuperCluster *>& clusters,
+                                  gress_t gress,
+                                  bool is_tagalong) const {
+    SliceListVector rst;
     for (auto* super_cluster : clusters) {
+        // Add all slicelist
+        std::set<PHV::FieldSlice> already_in_lists;
+        for (const auto& slice_list : super_cluster->slice_lists()) {
+            bool is_tagalong_list =
+                std::all_of(slice_list->begin(), slice_list->end(),
+                            [this] (const PHV::FieldSlice& s) {
+                                return s.field()->is_tphv_candidate(uses_i); });
+            if (slice_list->front().gress() != gress) continue;
+            if (is_tagalong != is_tagalong_list) continue;
+            already_in_lists.insert(slice_list->begin(), slice_list->end());
+            rst.emplace_back(slice_list->begin(), slice_list->end()); }
+
+        // For the rest slices, create singleton slicelist for them.
         for (auto* rotational_cluster : super_cluster->clusters()) {
             for (auto* aligned_cluster : rotational_cluster->clusters()) {
-                if (aligned_cluster->okIn(PHV::Kind::tagalong) && !is_tagalong) continue;
-                if (!aligned_cluster->okIn(PHV::Kind::tagalong) && is_tagalong) continue;
                 for (auto slice : aligned_cluster->slices()) {
-                    if (slice.gress() == gress) rst.push_back(slice); } } } }
+                    if (slice.gress() != gress) continue;
+                    if (slice.field()->is_tphv_candidate(uses_i) != is_tagalong) continue;
+                    if (!already_in_lists.count(slice)) {
+                        rst.push_back({ slice }); }
+                } } } }
     return rst;
 }
 
@@ -23,10 +38,10 @@ FieldInterference::SliceColorMap
 FieldInterference::calcSliceInterference(const std::list<PHV::SuperCluster *>& clusters) const {
     // Do the calculation separately to reduce the problem scale for a better result.
     // Also, overlaying PHV fields on TPHV fields is not a good idea.
-    SliceVector ingress_tphv_fields = getAllSlices(clusters, INGRESS, true);
-    SliceVector ingress_phv_fields = getAllSlices(clusters, INGRESS, false);
-    SliceVector egress_tphv_fields = getAllSlices(clusters, EGRESS, true);
-    SliceVector egress_phv_fields = getAllSlices(clusters, EGRESS, false);
+    SliceListVector ingress_tphv_fields = getSliceLists(clusters, INGRESS, true);
+    SliceListVector ingress_phv_fields  = getSliceLists(clusters, INGRESS, false);
+    SliceListVector egress_tphv_fields  = getSliceLists(clusters, EGRESS, true);
+    SliceListVector egress_phv_fields   = getSliceLists(clusters, EGRESS, false);
 
     LOG4("Ingress tphv coloring");
     SliceColorMap ingress_tphv_overlays = constructFieldInterference(ingress_tphv_fields);
@@ -62,8 +77,22 @@ FieldInterference::calcSliceInterference(const std::list<PHV::SuperCluster *>& c
     return ingress_tphv_overlays;
 }
 
+bool
+FieldInterference::is_mutually_exclusive(const SliceList& a,
+                                          const SliceList& b) const {
+    for (const auto& a_slice : a) {
+        for (const auto& b_slice : b) {
+            if (!PHV::Allocation::mutually_exclusive(
+                    mutex_i,
+                    a_slice.field(),
+                    b_slice.field())) {
+                return false; }
+        } }
+    return true;
+}
+
 FieldInterference::SliceColorMap
-FieldInterference::constructFieldInterference(SliceVector &slices) const {
+FieldInterference::constructFieldInterference(SliceListVector &slice_lists) const {
     typedef boost::adjacency_list<
         boost::setS,                    // No duplicate edges
         boost::vecS,
@@ -74,29 +103,31 @@ FieldInterference::constructFieldInterference(SliceVector &slices) const {
 
     LOG6("Creating field to field interference graph");
     VertexWeightedGraphBuilder<Graph> graph_builder;
-    std::map<int, PHV::FieldSlice> vertex_id_to_slice;
+    std::map<int, const SliceList*> vertex_id_to_slicelist;
     int n_slice_size_sum = 0;
     // add vertices with its weight
-    for (const auto& slice : slices) {
-        int v_id = graph_builder.add_vertex(slice.size());
-        vertex_id_to_slice.emplace(v_id, slice);
-        LOG6("\tVertex " << v_id << " <- Slice " << slice);
-        n_slice_size_sum += slice.size();
+    for (const auto& slice_list : slice_lists) {
+        int list_size =
+            std::accumulate(slice_list.begin(), slice_list.end(), 0,
+                            [] (int a, const PHV::FieldSlice& slice) {
+                                return a + slice.size();
+                            });
+        int v_id = graph_builder.add_vertex(list_size);
+        vertex_id_to_slicelist.emplace(v_id, &slice_list);
+        LOG6("\tVertex " << v_id << " <- Slice " << slice_list);
+        n_slice_size_sum += list_size;
     }
 
     // Add interference edges
-    for (const auto& vi : vertex_id_to_slice) {
-        for (const auto& vj : vertex_id_to_slice) {
+    for (const auto& vi : vertex_id_to_slicelist) {
+        for (const auto& vj : vertex_id_to_slicelist) {
             if (vi.first == vj.first) continue;
             // If vi and vj is from the same field, they are inclusive.
-            if (!PHV::Allocation::mutually_exclusive(
-                    mutex_i,
-                    vi.second.field(),
-                    vj.second.field())) {
+            if (!is_mutually_exclusive(*vi.second, *vj.second)) {
                 graph_builder.add_edge(vi.first, vj.first);
                 LOG6("\tAdding interference edge: "
-                     << vi.second
-                     << " <-> " << vj.second); } } }
+                     << *vi.second
+                     << " <-> " << *vj.second); } } }
 
     auto graph = graph_builder.build();
     WeightedGraphColoringSolver<decltype(graph.graph),
@@ -104,14 +135,18 @@ FieldInterference::constructFieldInterference(SliceVector &slices) const {
                                 decltype(graph.colors)> solver(graph);
     solver.run();
 
-    LOG5("Color Used: " << solver.max_color());
-    LOG5("Total Cost: " << solver.total_cost() << " out from " << n_slice_size_sum);
-
     FieldInterference::SliceColorMap rv;
-    for (const auto& v : vertex_id_to_slice) {
+    for (const auto& v : vertex_id_to_slicelist) {
         int v_color = graph.color_vec[v.first];
-        LOG6("FieldSlice " << v.second << " assigned VREG " << v_color);
-        rv[v.second] = v_color; }
+        LOG6("SliceList " << *v.second << " assigned VREG " << v_color);
+        for (const auto& slice : *v.second) {
+            rv[slice] = v_color; }
+    }
+
+    LOG5("Total Bits: " << n_slice_size_sum);
+    LOG5("If Alloc-Like-Coloring, Total Bits: " << solver.total_cost());
+    LOG5("Potential Overlay Bits: " << n_slice_size_sum - solver.total_cost());
+    LOG5("Color Used: " << solver.max_color());
 
     return rv;
 }
@@ -155,4 +190,21 @@ FieldInterference::printFieldColorMap(FieldInterference::SliceColorMap& m) const
         LOG4(ss.str()); }
     LOG4("Number of colors with multiple fields: " << numMultiSets);
     LOG4("Number of metadata ovleray bits: " << n_metadata_overlays);
+    LOG4("========================================");
+}
+
+std::ostream& operator<<(std::ostream &out, const FieldInterference::SliceList& list) {
+    out << "[";
+    for (auto& slice : list) {
+        if (slice == list.front()) {
+            out << " " << slice;
+        } else {
+            out << "          " << slice; }
+        if (slice != list.back()) out << "\n";
+    }
+    if (list.size() > 1)
+        out << "        ]";
+    else
+        out << " ]";
+    return out;
 }

@@ -372,7 +372,7 @@ class AllocatePHV : public Inspector {
                 const CalcCriticalPathClusters& critical_cluster)
         : core_alloc_i(mutex, clustering, uses, clot, phv, actions), phv_i(phv), uses_i(uses),
         clustering_i(clustering), mutex_i(mutex), actions_i(actions),
-        critical_path_clusters_i(critical_cluster) , field_interference_i(mutex) { }
+      critical_path_clusters_i(critical_cluster) , field_interference_i(mutex, uses) { }
 };
 
 #endif  /* BF_P4C_PHV_ALLOCATE_PHV_H_ */
