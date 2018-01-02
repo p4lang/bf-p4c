@@ -493,14 +493,14 @@ ActionPhvConstraints::can_pack(const PHV::Allocation& alloc, std::vector<PHV::Al
         if (has_ad_constant_sources) {
             // At this point, at least one PHV container is present, so we have both action
             // data/constant source as well as a PHV source.
-            // Therefore, no bits or fields can be unwritten in any given action.
-            if (num_fields_not_written_to || num_bits_not_written_to) {
+            // Therefore, no fields can be unwritten in any given action.
+            if (num_fields_not_written_to) {
                 LOG5("\t\t\t\tSome bits not written in action " << action->name << " will get "
                         "clobbered because there is at least one PHV source and another action"
                         " data/ constant source");
                 return boost::none; }
-            // At this point, analysis determines that the full container is written and there is at
-            // least 1 PHV source. So phvMustBeAligned for this action is true.
+            // At this point, analysis determines there is at least 1 PHV source. So
+            // phvMustBeAligned for this action is true.
             phvMustBeAligned[action] = true;
         } else {
             // No Action data or constant sources and only 1 PHV container as source. So, the
