@@ -1,5 +1,6 @@
 #!/bin/bash
 
+umask 0022
 cd $(dirname $0)
 curdir=$(basename $PWD)
 topdir=$(dirname $PWD)

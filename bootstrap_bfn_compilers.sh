@@ -17,6 +17,7 @@
 # extensions and invokes the p4lang/p4c/bootstrap to configure the
 # build environment
 
+umask 0022
 set -e
 
 mydir=`dirname $0`
