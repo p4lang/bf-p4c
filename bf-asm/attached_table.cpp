@@ -15,17 +15,18 @@ void AttachedTable::pass1() {
     bool pfe_set = false;
     if (per_flow_enable && !per_flow_enable_param.empty()) {
         for (auto m : match_tables) {
+            auto addr = m->find_address_field(this);
+            unsigned pfe_bit = 0;
             if (auto f = m->lookup_field(per_flow_enable_param)) {
                 // Get pfe bit position from format entry
                 // This value is then adjusted based on address
-                unsigned pfe_bit = 0;
                 if (f->size == 1)
                     pfe_bit = f->bit(0);
                 else
                     error(lineno, "pfe bit %s is not a 1 bit in table %s format",
                           per_flow_enable_param.c_str(), m->name());
-                if (auto addr = m->find_address_field(this)) {
-                    pfe_bit -= addr->bits[0].lo;
+                if (addr) {
+                    pfe_bit -= addr->bit(0);
                     for (int i = m->format ? m->format->groups() - 1 : 0; i >= 1; --i) {
                         // For multiple entries check if each of the pfe bits are in the same
                         // position relative to address
@@ -35,19 +36,23 @@ void AttachedTable::pass1() {
                                   per_flow_enable_param.c_str(), i); }
                 } else
                     pfe_bit = 0; // we use the primary shift to get at the pfe bit
-                if (pfe_set) {
-                    if (pfe_bit != per_flow_enable_bit) {
-                        // FIXME -- this should be ok, but we can't handle it currently
-                        error(lineno, "pfe_bit %s at different locations in different match tables",
-                              per_flow_enable_param.c_str()); }
-                } else {
-                    per_flow_enable_bit = pfe_bit;
-                    pfe_set = true; }
             } else if (per_flow_enable_param == "false") {
                 per_flow_enable = false;
+                continue;
+            } else if (per_flow_enable_param == "true" && addr) {
+                pfe_bit = addr->bit(addr->size-1) - addr->bit(0) + default_pfe_adjust();
             } else {
                 error(lineno, "no format found for per_flow_enable param %s",
-                      per_flow_enable_param.c_str()); } } }
+                      per_flow_enable_param.c_str());
+                continue; }
+            if (pfe_set) {
+                if (pfe_bit != per_flow_enable_bit) {
+                    // FIXME -- this should be ok, but we can't handle it currently
+                    error(lineno, "pfe_bit %s at different locations in different match tables",
+                          per_flow_enable_param.c_str()); }
+            } else {
+                per_flow_enable_bit = pfe_bit;
+                pfe_set = true; } } }
 }
 
 // ---------------

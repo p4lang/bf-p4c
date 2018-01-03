@@ -937,6 +937,7 @@ public:
         return per_flow_enable ? m->lookup_field(per_flow_enable_param) : nullptr; }
     bool get_per_flow_enable() { return per_flow_enable; }
     bool is_direct() const { return direct; }
+    virtual int default_pfe_adjust() const { return 0; }
 )
 
 DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",
@@ -1140,6 +1141,7 @@ public:
     int home_row() const override { return layout.at(0).row | 3; }
     bool uses_colormaprams() const override { return !color_maprams.empty(); }
     void add_cfg_reg(json::vector &cfg_cache, std::string full_name, std::string name, unsigned val, unsigned width);
+    int default_pfe_adjust() const override { return color_aware ? -METER_TYPE_BITS : 0; }
 )
 
 DECLARE_TABLE_TYPE(StatefulTable, Synth2Port, "stateful",

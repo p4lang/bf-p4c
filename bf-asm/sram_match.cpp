@@ -272,11 +272,18 @@ void SRamMatchTable::write_attached_merge_regs(REGS &regs, int bus, int word, in
     for (auto &m : attached.meters) {
         if (m.args.empty()) {
             merge.mau_meter_adr_exact_shiftcount[bus][word_group] = m->direct_shiftcount();
+            if (m->uses_colormaprams()) {
+                merge.mau_idletime_adr_exact_shiftcount[bus][word_group] = 64;
+                merge.mau_payload_shifter_enable[0][bus].idletime_adr_payload_shifter_en = 1; }
         } else if (group_info[group].overhead_word == (int)word) {
             if (m.args[0].type == Call::Arg::Field) {
                 assert(m.args[0].field()->by_group[group]->bit(0)/128U == word);
+                auto bit = m.args[0].field()->by_group[group]->bit(0)%128U;
                 merge.mau_meter_adr_exact_shiftcount[bus][word_group] =
-                    m.args[0].field()->by_group[group]->bit(0)%128U + m->indirect_shiftcount();
+                    bit + m->indirect_shiftcount();
+                if (m->uses_colormaprams()) {
+                    merge.mau_idletime_adr_exact_shiftcount[bus][word_group] = bit;
+                    merge.mau_payload_shifter_enable[0][bus].idletime_adr_payload_shifter_en = 1; }
             } else if (auto f = m->get_per_flow_enable_param(this)) {
                 merge.mau_meter_adr_exact_shiftcount[bus][word_group] =
                     f->bit(0) + METER_ADDRESS_ZERO_PAD;
@@ -286,9 +293,6 @@ void SRamMatchTable::write_attached_merge_regs(REGS &regs, int bus, int word, in
         } else if (options.match_compiler) {
             /* unused, so should not be set... */
             merge.mau_meter_adr_exact_shiftcount[bus][word_group] = 16; }
-        if (m->uses_colormaprams()) {
-            merge.mau_idletime_adr_exact_shiftcount[bus][word_group] = 64;
-            merge.mau_payload_shifter_enable[0][bus].idletime_adr_payload_shifter_en = 1; }
         break; /* all must be the same, only config once */ }
     for (auto &s : attached.statefuls) {
         if (s.args.size() <= 1) {
@@ -308,8 +312,6 @@ void SRamMatchTable::write_attached_merge_regs(REGS &regs, int bus, int word, in
             /* unused, so should not be set... */
             merge.mau_meter_adr_exact_shiftcount[bus][word_group] = 16; }
         break; /* all must be the same, only config once */ }
-    if (idletime)
-        merge.mau_idletime_adr_exact_shiftcount[bus][word_group] = idletime->direct_shiftcount();
 }
 FOR_ALL_TARGETS(INSTANTIATE_TARGET_TEMPLATE,
                 void SRamMatchTable::write_attached_merge_regs, mau_regs &, int, int, int)
@@ -710,7 +712,7 @@ template<class REGS> void SRamMatchTable::write_regs(REGS &regs) {
                             get_selector()->address_shift(); } }
             if (idletime)
                 merge.mau_idletime_adr_exact_shiftcount[bus][word_group] =
-                    68 - idletime->precision_shift();
+                    idletime->direct_shiftcount();
             write_attached_merge_regs(regs, bus, word, word_group); }
         for (auto col : row.cols) {
             int word_group = 0;

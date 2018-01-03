@@ -104,6 +104,8 @@ template<class REGS> void MeterTable::write_merge_regs(REGS &regs, MatchTable *m
             int type, int bus, const std::vector<Call::Arg> &args) {
     auto &merge = regs.rams.match.merge;
     assert(args.size() <= 1);
+    // color_aware_per_flow_enable implies color_aware
+    assert(!color_aware_per_flow_enable || color_aware);
     //if (args.empty()) { // direct access
     //    merge.mau_meter_adr_mask[type][bus] =  0x7fff80;
     //} else if (args[0].type == Call::Arg::Field) {
@@ -178,18 +180,23 @@ template<class REGS> void MeterTable::write_merge_regs(REGS &regs, MatchTable *m
     } else
         merge.mau_meter_adr_mask[type][bus] |= meter_adr_mask;
 
-    if (!per_flow_enable) {
+    if (!per_flow_enable && per_flow_enable_param != "false") {
         // we compute a default per_flow enable bit to be used UNLESS per_flow_enable
-        // was explicitly set to false
-        //ptr_bits += METER_LOWER_HUFFMAN_BITS; //When should these be added?
+        // was explicitly set to false.  FIXME -- do we actually need this?  This seems
+        // redundant with AttachedTable::pass1
+        per_flow_enable = true;
         if (!color_aware)
             per_flow_enable_bit = ptr_bits - 1;
         else if (!color_aware_per_flow_enable)
             per_flow_enable_bit = ptr_bits - METER_TYPE_BITS - 1;
         else
             per_flow_enable_bit = ptr_bits - 1; }
-    if (per_flow_enable || per_flow_enable_param != "false")
+    if (per_flow_enable) {
         merge.mau_meter_adr_per_entry_en_mux_ctl[type][bus] = per_flow_enable_bit + address_shift();
+        if (uses_colormaprams())
+            merge.mau_idletime_adr_per_entry_en_mux_ctl[type][bus] =
+                per_flow_enable_bit + IDLETIME_HUFFMAN_BITS;
+    }
 
     unsigned meter_adr_type = 0;
     if (!color_aware)
@@ -294,7 +301,7 @@ void MeterTable::write_regs(REGS &regs) {
                 adr_ctl.adr_dist_oflo_adr_xbar_source_sel = AdrDist::METER; }
             adr_ctl.adr_dist_oflo_adr_xbar_enable = 1; } }
     auto &merge = regs.rams.match.merge;
-    int color_map_color = color_maprams.empty() ? 0 : (color_maprams[0].row & 2) >> 1;
+    int color_map_color = color_maprams.empty() ? 0 : (home->row/4U) & 1;
     for (Layout &row : color_maprams) {
         if (row.row == home->row/2U) { /* on the home row */
             if (color_map_color)
@@ -376,7 +383,7 @@ void MeterTable::write_regs(REGS &regs) {
         //    regs.cfg_regs.mau_cfg_lt_meter_are_direct |= 1 << m->logical_id;
         if (!color_maprams.empty()) {
             merge.mau_mapram_color_map_to_logical_ctl[m->logical_id/8].set_subfield(
-                0x4 | (color_maprams[0].row/2U), 3 * (m->logical_id%8U), 3);
+                0x4 | (home->row/4U), 3 * (m->logical_id%8U), 3);
             // FIXME -- this bus_index calculation is probably wrong
             int bus_index = color_maprams[0].bus;
             if (color_maprams[0].row >= 4) bus_index += 10;

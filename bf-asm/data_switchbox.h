@@ -29,27 +29,19 @@ public:
             if (prev_row == home_row) {
                 swbox[prev_row].ctl.r_stats_alu_o_mux_select.r_stats_alu_o_sel_oflo_rd_b_i = 1;
                 swbox[prev_row].ctl.b_oflo_wr_o_mux_select.b_oflo_wr_o_sel_stats_wr_r_i = 1;
-                //map_alu.row[prev_row].wadr_swbox.ctl.b_oflo_wadr_o_mux_select
-                //    .b_oflo_wadr_o_sel_r_stats_wadr_i = 1;
                 prev_syn2port_ctl[side].stats_to_vbus_below = 1;
             } else {
                 swbox[prev_row].ctl.t_oflo_rd_o_mux_select.t_oflo_rd_o_sel_oflo_rd_b_i = 1;
                 swbox[prev_row].ctl.b_oflo_wr_o_mux_select.b_oflo_wr_o_sel_oflo_wr_t_i = 1;
-                //map_alu.row[prev_row].wadr_swbox.ctl.b_oflo_wadr_o_mux_select
-                //    .b_oflo_wadr_o_sel_t_oflo_wadr_i = 1;
                 prev_syn2port_ctl[side].synth2port_connect_below2above = 1;
-                /* need to also program left side overflow connections?
-                 * see ram_bus_path.py:560 */
+                /* need to also program left side below2above connections
+                 * see ram_bus_path.py:254 -- 'Mike F.' comment */
                 prev_syn2port_ctl[0].synth2port_connect_below2above = 1;
-                if (options.match_compiler) {
-                    /* FIXME -- always flow down over left side even if the next row not in use? */
-                    map_alu.row[prev_row-1].i2portctl.synth2port_fabric_ctl[0][0]
-                        .synth2port_connect_below2above = 1; } }
+                prev_syn2port_ctl[side].oflo_to_vbus_below = 1; }
             prev_syn2port_ctl[side].synth2port_connect_below = 1;
             if (--prev_row == row) {
                 swbox[row].ctl.t_oflo_rd_o_mux_select.t_oflo_rd_o_sel_oflo_rd_r_i = 1;
                 swbox[row].ctl.r_oflo_wr_o_mux_select = 1;
-                //map_alu.row[prev_row].wadr_swbox.ctl.r_oflo_wadr_o_mux_select = 1;
                 syn2port_ctl.oflo_to_vbus_above = 1;
                 syn2port_ctl.synth2port_connect_above = 1; } }
         if (row == home_row)
