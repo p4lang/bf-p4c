@@ -612,21 +612,32 @@ bitvec ActionAnalysis::ContainerAction::total_write() const {
  *  It also checks if the fields are unaligned
  */
 bool ActionAnalysis::ContainerAction::verify_one_alignment(TotalAlignment &tot_alignment,
-        int size, int &unaligned_count, bool bitmasked_set) {
+        int size, int &unaligned_count, int &non_contiguous_count) {
     (void) size;
     if (tot_alignment.write_bits.popcount() != tot_alignment.read_bits.popcount()) {
         return false;
     }
 
-    if (!bitmasked_set &&
-       (!tot_alignment.write_bits.is_contiguous() || !tot_alignment.read_bits.is_contiguous())) {
-        // FIXME: Eventually can support rotational shifts, but not yet with IR::Slice setup
-        // || !is_contig_rotate(tot_alignment.read_bits, read_rot_shift, size)) {
-        return false;
+    bool contiguous = true;
+    bool aligned = true;
+
+    if (!tot_alignment.write_bits.is_contiguous() || !tot_alignment.read_bits.is_contiguous()) {
+        contiguous = false;
     }
 
-    if ((tot_alignment.write_bits - tot_alignment.read_bits).popcount() != 0)
+    if ((tot_alignment.write_bits - tot_alignment.read_bits).popcount() != 0) {
+        aligned = false;
+    }
+
+    // FIXME: Eventually can support rotational shifts, but not yet with IR::Slice setup
+    // || !is_contig_rotate(tot_alignment.read_bits, read_rot_shift, size)) {
+    if (!aligned && !contiguous)
+        return false;
+
+    if (!aligned)
         unaligned_count++;
+    if (!contiguous)
+        non_contiguous_count++;
     return true;
     /*
     // FIXME: Verify on an individual field by field basis on the instruction on alignment
@@ -654,14 +665,15 @@ bool ActionAnalysis::ContainerAction::verify_one_alignment(TotalAlignment &tot_a
  *  now MergeInstructions
  */
 bool ActionAnalysis::ContainerAction::verify_alignment(int max_phv_unaligned,
-        int max_ad_unaligned, bool bitmasked_set, PHV::Container container) {
+        int max_ad_unaligned, int max_non_contiguous, PHV::Container container) {
     int unaligned_count = 0;
+    int non_contiguous_count = 0;
 
     for (auto &tot_align_info : phv_alignment) {
         auto &tot_alignment = tot_align_info.second;
         // Verify on an individual field by field basis on the instruction on alignment
         bool verify = verify_one_alignment(tot_alignment, container.size(),
-                                           unaligned_count, false);
+                                           unaligned_count, non_contiguous_count);
         if (!verify)
             return false;
     }
@@ -669,16 +681,21 @@ bool ActionAnalysis::ContainerAction::verify_alignment(int max_phv_unaligned,
     if (unaligned_count > max_phv_unaligned)
         return false;
 
+    // Only one PHV field can be non-contiguous within a deposit-field right now
+
     unaligned_count = 0;
     if (counts[ActionParam::ACTIONDATA] > 0) {
         bool verify = verify_one_alignment(adi.ad_alignment, container.size(), unaligned_count,
-                                           bitmasked_set);
+                                           non_contiguous_count);
         if (!verify)
             return false;
 
         if (unaligned_count > max_ad_unaligned)
             return false;
     }
+
+    if (non_contiguous_count > max_non_contiguous)
+        return false;
 
     // If no src1 has been assigned, then PHV is the src1 information.  If a PHV write and read
     // bits are unaligned, then that PHV field is src1, else either PHV source could be
@@ -945,7 +962,10 @@ bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
     bool can_ad_be_unaligned = name == "set" && actual_ad > 0 && ad_bitmask.is_contiguous();
     int ad_unaligned = can_ad_be_unaligned ? 1 : 0;
 
-    bool aligned = verify_alignment(phv_unaligned, ad_unaligned, to_bitmasked_set, container);
+    int single_non_contiguous = name == "set" && !to_bitmasked_set;
+    int max_non_contiguous = single_non_contiguous ? 1 : 2;
+
+    bool aligned = verify_alignment(phv_unaligned, ad_unaligned, max_non_contiguous, container);
 
     if (!aligned) {
         error_code |= IMPOSSIBLE_ALIGNMENT;

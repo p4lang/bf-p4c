@@ -222,13 +222,13 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
 
         void verify_speciality(PHV::Container container, cstring action_name);
         bool verify_one_alignment(TotalAlignment &tot_alignment, int size, int &unaligned_count,
-            bool bitmasked_set = false);
+            int &non_contiguous_count);
         void move_source_to_bit(safe_vector<int> &bit_uses, TotalAlignment &ta);
         bool verify_source_to_bit(int operands, PHV::Container container);
         bool verify_overwritten(PHV::Container container, const PhvInfo &phv);
         bool verify_possible(cstring &error_message, PHV::Container container,
                              cstring action_name, const PhvInfo &phv);
-        bool verify_alignment(int max_phv_unaligned, int max_ad_unaligned, bool bitmasked_set,
+        bool verify_alignment(int max_phv_unaligned, int max_ad_unaligned, int max_non_contiguous,
                               PHV::Container container);
         bool verify_phv_mau_group(PHV::Container container);
 
