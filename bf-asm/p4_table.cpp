@@ -96,8 +96,7 @@ json::map *P4Table::base_tbl_cfg(json::vector &out, int size, Table *table) {
         if (handle) tbl["handle"] = handle;
         tbl["name"] = p4_name();
         tbl["table_type"] = type_name[handle >> 24];
-        tbl["size"] = explicit_size ? this->size : size;
-        tbl["stage_tables"] = json::mkuniq<json::vector>(); }
+        tbl["size"] = explicit_size ? this->size : size; }
     return config;
 }
 

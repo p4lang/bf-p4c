@@ -378,18 +378,21 @@ void MatchTable::add_hash_functions(json::map &stage_tbl) {
             hash_functions.push_back(std::move(hash_function)); } } }
 }
 
-void MatchTable::add_all_reference_tables(json::map &tbl) {
-    tbl["stateful_table_refs"] = json::vector();
-    json::vector &action_data_table_refs = tbl["action_data_table_refs"] = json::vector();
-    add_reference_table(action_data_table_refs, action);
-    if (auto a = get_attached()) {
-        json::vector &selection_table_refs = tbl["selection_table_refs"] = json::vector();
-        tbl["default_selector_mask"] = 0; //FIXME-JSON
-        tbl["default_selector_value"] = 0; //FIXME-JSON
-        add_reference_table(selection_table_refs, a->selector);
-        json::vector &meter_table_refs = tbl["meter_table_refs"] = json::vector();
+void MatchTable::add_all_reference_tables(json::map &tbl, Table *match_table) {
+    if (!match_table) match_table = this;
+    json::vector &action_data_table_refs = tbl["action_data_table_refs"];
+    json::vector &selection_table_refs = tbl["selection_table_refs"];
+    json::vector &meter_table_refs = tbl["meter_table_refs"];
+    json::vector &statistics_table_refs = tbl["statistics_table_refs"];
+    json::vector &stateful_table_refs = tbl["stateful_table_refs"];
+    add_reference_table(action_data_table_refs, match_table->action);
+    if (auto a = match_table->get_attached()) { 
+        if (a->selector) {
+            tbl["default_selector_mask"] = 0; //FIXME-JSON
+            tbl["default_selector_value"] = 0; //FIXME-JSON
+            add_reference_table(selection_table_refs, a->selector); }
         for (auto &m : a->meters) { add_reference_table(meter_table_refs, m); }
-        json::vector &statistics_table_refs = tbl["statistics_table_refs"] = json::vector();
-        for (auto &s : a->stats) { add_reference_table(statistics_table_refs, s); } }
+        for (auto &s : a->stats) { add_reference_table(statistics_table_refs, s); }
+        for (auto &s : a->statefuls) { add_reference_table(stateful_table_refs, s); } }
 }
 

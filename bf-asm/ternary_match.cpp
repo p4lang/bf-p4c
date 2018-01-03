@@ -404,6 +404,11 @@ std::unique_ptr<json::map> TernaryMatchTable::gen_memory_resource_allocation_tbl
                 mem_units = json::vector();
                 word = 0; }
             done = false; } }
+    // For keyless table, add empty vectors
+    if (mem_units_and_vpns.size() == 0)
+        mem_units_and_vpns.push_back(json::map {
+                { "memory_units", json::vector() },
+                { "vpns", json::vector() } } );
     mra["spare_bank_memory_unit"] = lrow;
     return json::mkuniq<json::map>(std::move(mra));
 }
@@ -425,6 +430,19 @@ void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
 void TernaryMatchTable::gen_alpm_cfg(json::vector &out) {
 }
 
+void TernaryMatchTable::gen_match_fields_pvp(json::vector &match_field_list, int word, 
+        bool uses_versioning, unsigned version_word_group) {
+   // Insert payload (bit 0), parity (bit 45, 46) and
+   // version bits(bits 43, 44 if specified) for new word
+   gen_entry_cfg(match_field_list, "--tcam_payload_" +
+                 std::to_string(word) + "--", 0, word, word, "payload", 0, 1);
+   if (uses_versioning && (version_word_group == word)) {
+       gen_entry_cfg(match_field_list, "--version--", \
+                     43, word, word, "version", 0, 2); }
+   gen_entry_cfg(match_field_list, "--tcam_parity_" +
+                 std::to_string(word) + "--", 45, word, word, "parity", 0, 2);
+}
+
 void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
     unsigned number_entries = match.size() ? layout_size()/match.size() * 512 : 0;
     json::map *tbl_ptr;
@@ -442,6 +460,8 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
         base_alpm_pre_classifier_tbl_cfg(alpm_pre_classifier, "match_entry", number_entries);
         tbl_ptr = &alpm_pre_classifier;
     } else {
+        if (!number_entries)
+            number_entries = 512; // Set a default size of 512, driver will fail assert for any other size
         tbl_ptr = base_tbl_cfg(out, "match_entry", number_entries);
     }
     json::map &tbl = *tbl_ptr;
@@ -462,7 +482,10 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
     stage_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg("tcam", layout);
     // FIXME-JSON: If the next table is modifiable then we set it to what it's mapped
     // to. Otherwise, set it to the default next table for this stage.
-    stage_tbl["default_next_table"] = 255;
+    //stage_tbl["default_next_table"] = 255;
+    // FIXME: How to deal with multiple next hit tables?
+    stage_tbl["default_next_table"] = (hit_next.size() > 0) ?
+        ((hit_next[0].name != "END") ? hit_next[0]->logical_id : 255) : 255;
     add_result_physical_buses(stage_tbl);
     json::vector match_field_list, match_entry_list;
     unsigned curWord = -1;
@@ -471,15 +494,7 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
         int word = match_index - match_word(field.first.index);
         if (word < 0) continue;
         if (curWord != word) {
-            // Insert payload (bit 0), parity (bit 45, 46) and
-            // version bits(bits 43, 44 if specified) for new word
-            gen_entry_cfg(match_field_list, "--tcam_payload_" +
-                          std::to_string(word) + "--", 0, word, word, "payload", 0, 1);
-            if (uses_versioning && (version_word_group == word)) {
-                gen_entry_cfg(match_field_list, "--version--", \
-                              43, word, word, "version", 0, 2); }
-            gen_entry_cfg(match_field_list, "--tcam_parity_" +
-                          std::to_string(word) + "--", 45, word, word, "parity", 0, 2);
+            gen_match_fields_pvp(match_field_list, word, uses_versioning, version_word_group);
             curWord = word; }
         std::string source = "spec";
         std::string field_name = field.second.what.name();
@@ -508,22 +523,23 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
                           lsb_mem_word_offset, word, word, source, \
                           field.second.what.lobit(), \
                           field.second.hi - field.second.lo + 1); } }
+    // For keyless table, just add parity & payload bits
+    if (p4_params_list.empty())
+        gen_match_fields_pvp(match_field_list, 0, false, -1);
     canon_field_list(match_field_list);
     pack_fmt["entries"] = json::vector {
         json::map {
             { "entry_number",  json::number(0) },
             { "fields",  std::move(match_field_list) }}};
-    json::vector &action_data_table_refs = tbl["action_data_table_refs"] = json::vector();
-    add_reference_table(action_data_table_refs, action);
-    tbl["meter_table_refs"] = json::vector();
-    tbl["selection_table_refs"] = json::vector();
+    add_all_reference_tables(tbl);
     json::map &tind = stage_tbl["ternary_indirection_stage_table"] = json::map();
     if (indirect) {
         unsigned fmt_width = 1U << indirect->format->log2size;
         //json::map tind;
         tind["stage_number"] = stage->stageno;
         tind["stage_table_type"] = "ternary_indirection";
-        tind["size"] = indirect->layout_size()*128/fmt_width * 1024;
+        int tind_size = indirect->layout_size()*128/fmt_width * 1024;
+        tind["size"] = tind_size ? tind_size : 512;
         indirect->add_pack_format(tind, indirect->format);
         tind["memory_resource_allocation"] =
             indirect->gen_memory_resource_allocation_tbl_cfg("sram", indirect->layout, true);
@@ -535,21 +551,7 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
         //if (acts->count() > 0) {
         //    auto &p4_params = tind["p4_parameters"] = json::vector();
         //for (auto act: *acts) acts->add_p4_params(act, p4_params); } }
-        //stage_tbl["ternary_indirection_stage_table"] = std::move(tind);
-        if (auto a = indirect->get_attached()) {
-            json::vector &selection_table_refs = tbl["selection_table_refs"] = json::vector();
-            tbl["default_selector_mask"] = 0; //FIXME-JSON
-            tbl["default_selector_value"] = 0; //FIXME-JSON
-            add_reference_table(selection_table_refs, a->selector);
-            json::vector &meter_table_refs = tbl["meter_table_refs"] = json::vector();
-            for (auto &m : a->meters) { add_reference_table(meter_table_refs, m); }
-            json::vector &stats_table_refs = tbl["statistics_table_refs"] = json::vector();
-            for (auto &s : a->stats) { add_reference_table(stats_table_refs, s); }
-            json::vector &stateful_table_refs = tbl["stateful_table_refs"] = json::vector();
-            for (auto &s : a->statefuls) { add_reference_table(stateful_table_refs, s); }
-        }
-        json::vector &action_data_table_refs = tbl["action_data_table_refs"] = json::vector();
-        add_reference_table(action_data_table_refs, indirect->action);
+        add_all_reference_tables(tbl, indirect);
         if (indirect->actions) {
             indirect->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
             indirect->actions->add_next_table_mapping(indirect, stage_tbl);

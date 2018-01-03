@@ -377,6 +377,7 @@ public:
     const char *p4_name() const { if(p4_table) return p4_table->p4_name(); return ""; }
     unsigned p4_size() const { if(p4_table) return p4_table->p4_size(); return 0; }
     unsigned handle() const { if(p4_table) return p4_table->get_handle(); return -1; }
+    std::string action_profile() const { if(p4_table) return p4_table->action_profile; return ""; }
     int table_id() const;
     virtual void pass1() = 0;
     virtual void pass2() = 0;
@@ -620,7 +621,7 @@ public:
     void gen_hash_bits(const std::map<int, HashCol> &hash_table,
             unsigned hash_table_id, json::vector &hash_bits);
     virtual void add_hash_functions(json::map &stage_tbl);
-    void add_all_reference_tables(json::map &tbl);
+    void add_all_reference_tables(json::map &tbl, Table *math_table=nullptr);
 )
 
 #define DECLARE_TABLE_TYPE(TYPE, PARENT, NAME, ...)                     \
@@ -834,6 +835,8 @@ public:
     void base_alpm_pre_classifier_tbl_cfg(json::map &pre_classifier_tbl, const char *type, int size){
         if (p4_table) 
             p4_table->base_alpm_tbl_cfg(pre_classifier_tbl, size, this, P4Table::PreClassifier); }
+    void gen_match_fields_pvp(json::vector &match_field_list, int word, 
+        bool uses_versioning, unsigned version_word_group); 
 )
 
 DECLARE_TABLE_TYPE(Phase0MatchTable, MatchTable, "phase0_match",

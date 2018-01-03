@@ -938,9 +938,7 @@ void Table::Actions::Action::pass1(Table *tbl) {
                         a.first.c_str(), a.second.name.c_str(), a.second.lo, a.second.hi,
                         a.second.name.c_str(), rec.name.c_str(), rec.lo, rec.hi );
                 break; }
-            a.second.name = rec.name;
-            a.second.is_constant = rec.is_constant;
-            a.second.value = rec.value; }
+            a.second.name = rec.name; }
         if (auto *f = tbl->lookup_field(a.second.name, name)) {
             if (a.second.hi < 0)
                 a.second.hi = f->size - 1;
@@ -1176,6 +1174,11 @@ void Table::Actions::gen_tbl_cfg(json::vector &cfg) {
         // to the compiler this must reflect "has_rng" or similar string.
         if (!act.default_allowed)
             action_cfg["disallowed_as_default_action_reason"] = act.default_disallowed_reason;
+        // XXX(amresh): These will be set to 'true' & "" for a keyless table to
+        // allow any action to be set as default by the control plane
+        if (table->p4_params_list.empty()) {
+            action_cfg["allowed_as_default_action"] = true;
+            action_cfg["disallowed_as_default_action_reason"] = ""; }
         json::vector &p4_params = action_cfg["p4_parameters"] = json::vector();
         add_p4_params(act, p4_params);
         action_cfg["override_meter_addr"] = false;
@@ -1489,12 +1492,17 @@ json::map *Table::add_stage_tbl_cfg(json::map &tbl, const char *type, int size) 
 
 void Table::add_reference_table(json::vector &table_refs, const Table::Call& c) {
     if (c) {
+        auto t_name = c->name();
+        if (c->p4_table)
+            t_name = c->p4_table->p4_name();
+        // Dont add ref table if already present in table_refs vector
+        for (auto &tref : table_refs) {
+            auto tref_name = tref->to<json::map>()["name"];
+            if (!strcmp(tref_name->as_string()->c_str(),t_name)) return; } 
         json::map table_ref;
         table_ref["how_referenced"] = c->to<AttachedTable>()->is_direct() ? "direct" : "indirect";
         table_ref["handle"] = c->handle();
-        table_ref["name"] = c->name();
-            if (c->p4_table)
-                table_ref["name"] = c->p4_table->p4_name();
+        table_ref["name"] = t_name;
         table_refs.push_back(std::move(table_ref)); }
 }
 
@@ -1820,7 +1828,7 @@ json::map &Table::add_pack_format(json::map &stage_tbl, Table::Format *format,
 void Table::common_tbl_cfg(json::map &tbl) {
     if (!default_action.empty())
         tbl["default_action_handle"] = default_action_handle;
-    tbl["action_profile"] = p4_table->action_profile;
+    tbl["action_profile"] = action_profile();
     // FIXME-JSON : If next table is present, set default_next_table_mask to
     // 2^(width of next table field called '--next_tbl--') - 1
     // matters if test is changing default action
